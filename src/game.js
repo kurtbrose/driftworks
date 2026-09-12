@@ -78,6 +78,7 @@
         accumulator -= STEP_SECONDS;
       }
 
+      world = scene.applyCameraFocus(world, frameSeconds);
       scene.sync(world);
       scene.render(world, accumulator / STEP_SECONDS, frameSeconds);
       hud.update(world, scene.getStats());
@@ -118,7 +119,7 @@
       '<button type="button" data-action="reset">Reset</button>' +
       '<button type="button" data-action="stress">Stress</button>' +
       '</section>' +
-      '<section class="hint">LMB select/drag-box · RMB move · wheel zoom · Space/MMB drag pan</section>';
+      '<section class="hint">LMB select/drag-box · RMB move · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
 
     var stressButton = host.querySelector('[data-action="stress"]');
     host.querySelector('[data-action="save"]').addEventListener('click', actions.onSave);
@@ -175,6 +176,7 @@
     });
     var shipGraphics = {};
     var asteroidGraphics = {};
+    var droneGraphics = {};
     var stressLayer = null;
     var stressEnabled = false;
     var dragMode = 'none';
@@ -186,6 +188,13 @@
     var fpsTimer = 0;
     var effects = [];
     var lastStoredOre = null;
+    var previousSelected = {};
+    var cameraFocusTarget = null;
+    var drones = [];
+    var shotCooldown = 0;
+    var combatTime = 0;
+    var cameraShake = 0;
+    var visualTimeScale = 1;
 
     host.appendChild(app.view);
     host.addEventListener('contextmenu', function (event) {
@@ -225,6 +234,8 @@
 
     window.addEventListener('keydown', function (event) {
       if (event.code === 'Space') spaceDown = true;
+      if (event.code === 'KeyF') requestSelectionFocus(getWorld());
+      if (event.code === 'KeyH') spawnHostileDrones(getWorld());
     });
     window.addEventListener('keyup', function (event) {
       if (event.code === 'Space') spaceDown = false;
@@ -232,10 +243,13 @@
 
     function sync(world) {
       updateStarfield(starfield, world.camera, viewport());
-      worldLayer.position.set(app.renderer.width / 2, app.renderer.height / 2);
+      var shakeX = cameraShake > 0 ? (Math.sin(world.elapsedSeconds * 97) * cameraShake) : 0;
+      var shakeY = cameraShake > 0 ? (Math.cos(world.elapsedSeconds * 83) * cameraShake) : 0;
+      worldLayer.position.set(app.renderer.width / 2 + shakeX, app.renderer.height / 2 + shakeY);
       worldLayer.scale.set(world.camera.zoom);
       worldLayer.pivot.set(world.camera.x, world.camera.y);
 
+      var selectedNow = {};
       world.ships.forEach(function (ship) {
         var graphic = shipGraphics[ship.id];
         if (!graphic) {
@@ -243,8 +257,14 @@
           shipGraphics[ship.id] = graphic;
           worldLayer.addChild(graphic);
         }
-        paintShip(graphic, ship, world.selectedShipIds.indexOf(ship.id) !== -1);
+        var selected = world.selectedShipIds.indexOf(ship.id) !== -1;
+        if (selected) selectedNow[ship.id] = true;
+        if (selected && !previousSelected[ship.id]) {
+          pushSelectionPulse(effects, ship.position, ship.type === 'mothership' ? 42 : 20);
+        }
+        paintShip(graphic, ship, selected, world.elapsedSeconds);
       });
+      previousSelected = selectedNow;
 
       world.asteroids.forEach(function (asteroid) {
         var asteroidGraphic = asteroidGraphics[asteroid.id];
@@ -255,9 +275,20 @@
         }
         paintAsteroid(asteroidGraphic, asteroid);
       });
+
+      drones.forEach(function (drone) {
+        var droneGraphic = droneGraphics[drone.id];
+        if (!droneGraphic) {
+          droneGraphic = new PIXI.Graphics();
+          droneGraphics[drone.id] = droneGraphic;
+          worldLayer.addChild(droneGraphic);
+        }
+        paintDrone(droneGraphic, drone);
+      });
     }
 
     function render(world, alpha, dt) {
+      var visualDt = dt * visualTimeScale;
       world.ships.forEach(function (ship) {
         var graphic = shipGraphics[ship.id];
         if (!graphic) return;
@@ -267,11 +298,14 @@
         graphic.rotation = ship.rotation;
       });
 
-      spawnStateEffects(world, dt);
-      updateEffects(effectsLayer, effects, dt);
+      updateCombatVignette(world, visualDt);
+      spawnStateEffects(world, visualDt);
+      updateEffects(effectsLayer, effects, visualDt);
+      cameraShake = Math.max(0, cameraShake - dt * 18);
+      visualTimeScale += (1 - visualTimeScale) * Math.min(1, dt * 3.5);
 
       if (stressLayer && stressEnabled) {
-        stressLayer.update(dt);
+        stressLayer.update(visualDt);
       }
       updateFps(dt, world);
     }
@@ -307,6 +341,130 @@
       })[0];
     }
 
+    function spawnHostileDrones(world) {
+      drones = [];
+      Object.keys(droneGraphics).forEach(function (id) {
+        droneGraphics[id].destroy();
+      });
+      droneGraphics = {};
+      var center = selectedCenter(world) || { x: world.camera.x, y: world.camera.y };
+      for (var i = 0; i < 3; i += 1) {
+        drones.push({
+          id: 'drone-' + Math.floor(world.elapsedSeconds * 1000) + '-' + i,
+          position: { x: center.x + 420 + i * 48, y: center.y - 160 + i * 130 },
+          velocity: { x: -18 - i * 5, y: 8 - i * 6 },
+          hp: 3,
+          flash: 0
+        });
+      }
+      shotCooldown = 0.2;
+      combatTime = 0;
+      pushFloatText(effects, { x: center.x, y: center.y - 86 }, 'HOSTILE CONTACT');
+    }
+
+    function updateCombatVignette(world, dt) {
+      if (!drones.length) return;
+      combatTime += dt;
+      shotCooldown -= dt;
+
+      drones.forEach(function (drone) {
+        drone.position.x += drone.velocity.x * dt;
+        drone.position.y += drone.velocity.y * dt;
+        drone.flash = Math.max(0, drone.flash - dt * 5);
+      });
+
+      var escort = findShipByType(world, 'escort');
+      if (escort && shotCooldown <= 0) {
+        var target = nearestDrone(escort.position);
+        if (target) {
+          fireEscortShot(escort, target);
+          shotCooldown = 0.34;
+        }
+      }
+    }
+
+    function fireEscortShot(escort, drone) {
+      drone.hp -= 1;
+      drone.flash = 1;
+      pushProjectile(effects, escort.position, drone.position);
+      pushMuzzleFlash(effects, escort.position, escort.rotation);
+      pushImpactSparks(effects, drone.position, drone.velocity);
+      if (drone.hp <= 0) {
+        destroyDrone(drone);
+      }
+    }
+
+    function destroyDrone(drone) {
+      var wasFinal = drones.length === 1;
+      pushExplosion(effects, drone.position, drone.velocity, wasFinal);
+      cameraShake = wasFinal ? 1.8 : 0;
+      if (wasFinal) {
+        visualTimeScale = 0.25;
+        pushFloatText(effects, { x: drone.position.x, y: drone.position.y - 36 }, 'DRONE KILL');
+      }
+      if (droneGraphics[drone.id]) {
+        droneGraphics[drone.id].destroy();
+        delete droneGraphics[drone.id];
+      }
+      drones = drones.filter(function (candidate) {
+        return candidate.id !== drone.id;
+      });
+    }
+
+    function requestSelectionFocus(world) {
+      var selected = selectedShips(world);
+      if (!selected.length) {
+        pushFloatText(effects, { x: world.camera.x, y: world.camera.y - 42 }, 'SELECT A SHIP');
+        return;
+      }
+
+      cameraFocusTarget = computeSelectionFocus(world);
+      pushFocusPulse(effects, cameraFocusTarget, selected.length > 1 ? 58 : 34);
+      pushFloatText(effects, { x: cameraFocusTarget.x, y: cameraFocusTarget.y - 48 }, focusLabel(selected));
+    }
+
+    function focusLabel(selected) {
+      if (selected.length === 1) return 'FOCUS ' + selected[0].name.toUpperCase();
+      return 'FOCUS ' + selected.length + ' SHIPS';
+    }
+
+    function nearestDrone(position) {
+      var best = null;
+      var bestDistance = Infinity;
+      drones.forEach(function (drone) {
+        var d = Math.hypot(drone.position.x - position.x, drone.position.y - position.y);
+        if (d < bestDistance) {
+          best = drone;
+          bestDistance = d;
+        }
+      });
+      return best;
+    }
+
+    function selectedCenter(world) {
+      var selected = selectedShips(world);
+      if (!selected.length) return null;
+      var x = 0;
+      var y = 0;
+      selected.forEach(function (ship) {
+        x += ship.position.x;
+        y += ship.position.y;
+      });
+      return { x: x / selected.length, y: y / selected.length };
+    }
+
+    function selectedShips(world) {
+      return world.ships.filter(function (ship) {
+        return world.selectedShipIds.indexOf(ship.id) !== -1;
+      });
+    }
+
+    function findShipByType(world, type) {
+      return world.ships.filter(function (ship) {
+        return ship.type === type;
+      })[0];
+    }
+
     function createShipGraphic(shipId) {
       var graphic = new PIXI.Graphics();
       graphic.eventMode = 'static';
@@ -326,7 +484,9 @@
       lastPointer = point;
 
       if (event.button === 2) {
-        setWorld(sim.issueContextOrder(getWorld(), screenToWorld(point, getWorld().camera, viewport())));
+        var target = screenToWorld(point, getWorld().camera, viewport());
+        pushMoveReticle(effects, target);
+        setWorld(sim.issueContextOrder(getWorld(), target));
         return;
       }
 
@@ -374,7 +534,7 @@
 
     function getStats() {
       var world = getWorld();
-      var baseCount = world.ships.length + world.asteroids.length;
+      var baseCount = world.ships.length + world.asteroids.length + drones.length;
       var count = stressEnabled && stressLayer ? stressLayer.count + baseCount : baseCount;
       return {
         fps: fps,
@@ -401,9 +561,53 @@
       };
     }
 
+    function applyCameraFocus(world, dt) {
+      if (!cameraFocusTarget) return world;
+      var t = Math.min(1, dt * 4.5);
+      var camera = {
+        x: world.camera.x + (cameraFocusTarget.x - world.camera.x) * t,
+        y: world.camera.y + (cameraFocusTarget.y - world.camera.y) * t,
+        zoom: world.camera.zoom + (cameraFocusTarget.zoom - world.camera.zoom) * t
+      };
+      if (
+        Math.abs(camera.x - cameraFocusTarget.x) < 0.5 &&
+        Math.abs(camera.y - cameraFocusTarget.y) < 0.5 &&
+        Math.abs(camera.zoom - cameraFocusTarget.zoom) < 0.01
+      ) {
+        camera = cameraFocusTarget;
+        cameraFocusTarget = null;
+      }
+      return withCamera(world, camera);
+    }
+
+    function computeSelectionFocus(world) {
+      var selected = world.ships.filter(function (ship) {
+        return world.selectedShipIds.indexOf(ship.id) !== -1;
+      });
+      if (!selected.length) return null;
+
+      var minX = selected[0].position.x;
+      var maxX = selected[0].position.x;
+      var minY = selected[0].position.y;
+      var maxY = selected[0].position.y;
+      selected.forEach(function (ship) {
+        minX = Math.min(minX, ship.position.x);
+        maxX = Math.max(maxX, ship.position.x);
+        minY = Math.min(minY, ship.position.y);
+        maxY = Math.max(maxY, ship.position.y);
+      });
+      var span = Math.max(maxX - minX, maxY - minY, 120);
+      return {
+        x: (minX + maxX) / 2,
+        y: (minY + maxY) / 2,
+        zoom: Math.max(0.8, Math.min(1.75, 260 / span))
+      };
+    }
+
     return {
       sync: sync,
       render: render,
+      applyCameraFocus: applyCameraFocus,
       setStressEnabled: setStressEnabled,
       getStats: getStats
     };
@@ -491,7 +695,7 @@
     graphics.lineTo(0, 1800);
   }
 
-  function paintShip(graphics, ship, selected) {
+  function paintShip(graphics, ship, selected, elapsedSeconds) {
     var style = SHIP_STYLES[ship.type];
     graphics.clear();
     drawEnginePlume(graphics, ship, style.radius);
@@ -501,6 +705,7 @@
     if (ship.type === 'mothership') {
       graphics.drawRoundedRect(-36, -17, 72, 34, 5);
       graphics.drawRect(-10, -28, 20, 56);
+      drawMothershipLights(graphics, elapsedSeconds);
     } else {
       graphics.moveTo(style.radius, 0);
       graphics.lineTo(-style.radius * 0.72, -style.radius * 0.62);
@@ -531,6 +736,20 @@
     }
   }
 
+  function drawMothershipLights(graphics, elapsedSeconds) {
+    var pulse = 0.45 + 0.25 * Math.sin(elapsedSeconds * 1.7);
+    graphics.lineStyle(0);
+    graphics.beginFill(0xbdd9e4, pulse);
+    graphics.drawCircle(-26, -12, 2.1);
+    graphics.drawCircle(-26, 12, 2.1);
+    graphics.drawCircle(26, -12, 2.1);
+    graphics.drawCircle(26, 12, 2.1);
+    graphics.endFill();
+    graphics.beginFill(0x89c9e2, 0.08 + pulse * 0.1);
+    graphics.drawCircle(0, 0, 28);
+    graphics.endFill();
+  }
+
   function drawEnginePlume(graphics, ship, radius) {
     if (!ship.previousVelocity || ship.speed <= 0) return;
     var ax = ship.velocity.x - ship.previousVelocity.x;
@@ -540,7 +759,7 @@
 
     graphics.lineStyle(0);
     plumes.forEach(function (plume) {
-      graphics.beginFill(ship.cargo > 0 ? 0xe1b65b : 0x8fd7e4, plume.alpha);
+      graphics.beginFill(0x9fdceb, plume.alpha);
       graphics.moveTo(plume.origin.x + plume.side.x * plume.width, plume.origin.y + plume.side.y * plume.width);
       graphics.lineTo(plume.origin.x + plume.direction.x * plume.length, plume.origin.y + plume.direction.y * plume.length);
       graphics.lineTo(plume.origin.x - plume.side.x * plume.width, plume.origin.y - plume.side.y * plume.width);
@@ -572,9 +791,9 @@
       origin: { x: radius * originScale.x, y: radius * originScale.y },
       direction: normalized,
       side: { x: -normalized.y, y: normalized.x },
-      length: (5 + 16 * intensity) * (loadedReturn ? 1.15 : 1),
-      width: 2 + 3.5 * intensity,
-      alpha: 0.12 + 0.5 * intensity
+      length: (4 + 13 * intensity) * (loadedReturn ? 1.08 : 1),
+      width: 1.5 + 2.8 * intensity,
+      alpha: 0.1 + 0.36 * intensity
     });
   }
 
@@ -632,6 +851,23 @@
     graphics.lineTo(radius * 0.44, radius * 0.18);
   }
 
+  function paintDrone(graphics, drone) {
+    var flash = drone.flash || 0;
+    graphics.clear();
+    graphics.position.set(drone.position.x, drone.position.y);
+    graphics.rotation = Math.atan2(drone.velocity.y, drone.velocity.x);
+    graphics.lineStyle(1.5, flash > 0 ? 0xffffff : 0xf0a1a8, 0.9);
+    graphics.beginFill(flash > 0 ? 0xffd0d4 : 0x7b2f3c, 0.9);
+    graphics.moveTo(13, 0);
+    graphics.lineTo(-8, -8);
+    graphics.lineTo(-4, 0);
+    graphics.lineTo(-8, 8);
+    graphics.closePath();
+    graphics.endFill();
+    graphics.lineStyle(1, 0xffb2b8, 0.45);
+    graphics.drawCircle(0, 0, 15);
+  }
+
   function drawSelectionBox(graphics, a, b) {
     graphics.clear();
     graphics.lineStyle(1, 0xc6e6f2, 0.9);
@@ -655,6 +891,119 @@
       container: container,
       layers: layers
     };
+  }
+
+  function pushMoveReticle(effects, position) {
+    var ring = new PIXI.Graphics();
+    ring.lineStyle(1.5, 0xaed8e8, 0.85);
+    ring.drawCircle(0, 0, 14);
+    ring.lineStyle(1, 0xaed8e8, 0.6);
+    ring.moveTo(-20, 0);
+    ring.lineTo(-9, 0);
+    ring.moveTo(9, 0);
+    ring.lineTo(20, 0);
+    ring.moveTo(0, -20);
+    ring.lineTo(0, -9);
+    ring.moveTo(0, 9);
+    ring.lineTo(0, 20);
+    ring.position.set(position.x, position.y);
+    effects.push({ graphic: ring, age: 0, life: 0.65, vx: 0, vy: 0, scale: 0.7, alpha: 1, grow: 1.2 });
+  }
+
+  function pushSelectionPulse(effects, position, radius) {
+    var pulse = new PIXI.Graphics();
+    pulse.lineStyle(2, 0xffffff, 0.9);
+    pulse.drawCircle(0, 0, radius);
+    pulse.position.set(position.x, position.y);
+    effects.push({ graphic: pulse, age: 0, life: 0.34, vx: 0, vy: 0, scale: 0.75, alpha: 0.9, grow: 1.5 });
+  }
+
+  function pushFocusPulse(effects, position, radius) {
+    var pulse = new PIXI.Graphics();
+    pulse.lineStyle(1.5, 0xaed8e8, 0.8);
+    pulse.drawCircle(0, 0, radius);
+    pulse.lineStyle(1, 0xffffff, 0.45);
+    pulse.moveTo(-radius - 8, 0);
+    pulse.lineTo(-radius + 8, 0);
+    pulse.moveTo(radius - 8, 0);
+    pulse.lineTo(radius + 8, 0);
+    pulse.moveTo(0, -radius - 8);
+    pulse.lineTo(0, -radius + 8);
+    pulse.moveTo(0, radius - 8);
+    pulse.lineTo(0, radius + 8);
+    pulse.position.set(position.x, position.y);
+    effects.push({ graphic: pulse, age: 0, life: 0.55, vx: 0, vy: 0, scale: 0.85, alpha: 0.95, grow: 1.28 });
+  }
+
+  function pushProjectile(effects, from, to) {
+    var streak = new PIXI.Graphics();
+    streak.lineStyle(2, 0xdaf7ff, 0.95);
+    streak.moveTo(from.x, from.y);
+    streak.lineTo(to.x, to.y);
+    effects.push({ graphic: streak, age: 0, life: 0.09, vx: 0, vy: 0, scale: 1, alpha: 1, screenSpace: false });
+  }
+
+  function pushMuzzleFlash(effects, position, rotation) {
+    var flash = new PIXI.Graphics();
+    flash.beginFill(0xf7f0c8, 0.95);
+    flash.drawCircle(0, 0, 4);
+    flash.endFill();
+    flash.position.set(position.x + Math.cos(rotation) * 15, position.y + Math.sin(rotation) * 15);
+    effects.push({ graphic: flash, age: 0, life: 0.08, vx: 0, vy: 0, scale: 1, alpha: 1, grow: 1.2 });
+  }
+
+  function pushImpactSparks(effects, position, velocity) {
+    for (var i = 0; i < 6; i += 1) {
+      var angle = i * Math.PI * 0.35 + 0.4;
+      var spark = new PIXI.Graphics();
+      spark.beginFill(0xf4d29a, 0.95);
+      spark.drawCircle(0, 0, 1.4);
+      spark.endFill();
+      spark.position.set(position.x, position.y);
+      effects.push({
+        graphic: spark,
+        age: 0,
+        life: 0.25,
+        vx: velocity.x * 0.4 + Math.cos(angle) * 80,
+        vy: velocity.y * 0.4 + Math.sin(angle) * 80,
+        scale: 1,
+        alpha: 1
+      });
+    }
+  }
+
+  function pushExplosion(effects, position, velocity, finalKill) {
+    var flash = new PIXI.Graphics();
+    flash.beginFill(0xffeef0, 0.95);
+    flash.drawCircle(0, 0, finalKill ? 22 : 15);
+    flash.endFill();
+    flash.position.set(position.x, position.y);
+    effects.push({ graphic: flash, age: 0, life: 0.18, vx: 0, vy: 0, scale: 0.6, alpha: 1, grow: 2.5 });
+
+    var cloud = new PIXI.Graphics();
+    cloud.beginFill(0xb7c0c5, 0.25);
+    cloud.drawCircle(0, 0, finalKill ? 28 : 20);
+    cloud.endFill();
+    cloud.position.set(position.x, position.y);
+    effects.push({ graphic: cloud, age: 0, life: 0.9, vx: velocity.x * 0.2, vy: velocity.y * 0.2, scale: 0.7, alpha: 0.9, grow: 1.8 });
+
+    for (var i = 0; i < 9; i += 1) {
+      var fragment = new PIXI.Graphics();
+      fragment.lineStyle(2, 0xd6b5aa, 0.9);
+      fragment.moveTo(-3, 0);
+      fragment.lineTo(3, 0);
+      fragment.position.set(position.x, position.y);
+      fragment.rotation = i * 0.7;
+      effects.push({
+        graphic: fragment,
+        age: 0,
+        life: 0.7,
+        vx: velocity.x * 0.7 + Math.cos(i * 0.7) * (55 + i * 5),
+        vy: velocity.y * 0.7 + Math.sin(i * 0.7) * (55 + i * 5),
+        scale: 1,
+        alpha: 1
+      });
+    }
   }
 
   function createStarLayer(rng, width, height, count, parallax, alpha) {
@@ -745,7 +1094,7 @@
       effect.graphic.x += effect.vx * dt;
       effect.graphic.y += effect.vy * dt;
       effect.graphic.alpha = Math.max(0, 1 - effect.age / effect.life) * effect.alpha;
-      effect.graphic.scale.set(effect.scale + effect.age * 0.25);
+      effect.graphic.scale.set(effect.scale + effect.age * (effect.grow || 0.25));
       if (effect.age >= effect.life) {
         effect.graphic.destroy();
         effects.splice(i, 1);

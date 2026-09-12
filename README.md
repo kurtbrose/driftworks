@@ -13,6 +13,8 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - HUD ore quota and remaining field ore readouts.
 - Subtle parallax starfield below the grid.
 - Acceleration-driven engine plumes, mining motes, and delivery feedback text.
+- Move-order reticles, selection pulses, mothership running lights, and focus-selection camera key with visible focus feedback.
+- Debug hostile-drone vignette with escort fire, impacts, destruction fragments, very light final-hit shake, and final-kill slow motion.
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
 - Versioned localStorage save/load of serializable game state.
 - Toggleable stress mode that animates thousands of simple sprites.
@@ -44,6 +46,11 @@ Then open:
 - Tests: http://localhost:8000/tests/
 
 The app uses ordinary scripts, not JavaScript modules. Serving over HTTP is still the recommended path because browser behavior around local files varies, and it matches GitHub Pages or any static host.
+
+Debug controls:
+
+- `F`: ease camera onto the selected ship or fleet and flash a focus reticle.
+- `H`: spawn a short hostile-drone combat vignette near the current selection.
 
 ## Deploy
 
