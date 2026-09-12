@@ -189,7 +189,7 @@
     var effects = [];
     var lastStoredOre = null;
     var previousSelected = {};
-    var cameraFocusTarget = null;
+    var cameraFocusSelectionIds = null;
     var drones = [];
     var shotCooldown = 0;
     var combatTime = 0;
@@ -222,6 +222,7 @@
         event.preventDefault();
         var bounds = host.getBoundingClientRect();
         var world = getWorld();
+        cameraFocusSelectionIds = null;
         setWorld(withCamera(world, zoomCameraAt(
             world.camera,
             { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
@@ -419,9 +420,12 @@
         return;
       }
 
-      cameraFocusTarget = computeSelectionFocus(world);
-      pushFocusPulse(effects, cameraFocusTarget, selected.length > 1 ? 58 : 34);
-      pushFloatText(effects, { x: cameraFocusTarget.x, y: cameraFocusTarget.y - 48 }, focusLabel(selected));
+      cameraFocusSelectionIds = selected.map(function (ship) {
+        return ship.id;
+      });
+      var focus = computeSelectionFocus(world, cameraFocusSelectionIds);
+      pushFocusPulse(effects, focus, selected.length > 1 ? 58 : 34);
+      pushFloatText(effects, { x: focus.x, y: focus.y - 48 }, focusLabel(selected));
     }
 
     function focusLabel(selected) {
@@ -497,6 +501,7 @@
     function onPointerMove(event) {
       var point = { x: event.global.x, y: event.global.y };
       if (dragMode === 'pan') {
+        cameraFocusSelectionIds = null;
         var world = getWorld();
         setWorld(withCamera(world, panCamera(world.camera, {
             x: point.x - lastPointer.x,
@@ -560,46 +565,23 @@
     }
 
     function applyCameraFocus(world, dt) {
-      if (!cameraFocusTarget) return world;
-      var t = Math.min(1, dt * 4.5);
-      var camera = {
-        x: world.camera.x + (cameraFocusTarget.x - world.camera.x) * t,
-        y: world.camera.y + (cameraFocusTarget.y - world.camera.y) * t,
-        zoom: world.camera.zoom + (cameraFocusTarget.zoom - world.camera.zoom) * t
-      };
-      if (
-        Math.abs(camera.x - cameraFocusTarget.x) < 0.5 &&
-        Math.abs(camera.y - cameraFocusTarget.y) < 0.5 &&
-        Math.abs(camera.zoom - cameraFocusTarget.zoom) < 0.01
-      ) {
-        camera = cameraFocusTarget;
-        cameraFocusTarget = null;
+      if (!cameraFocusSelectionIds) return world;
+      if (!focusSelectionStillActive(world, cameraFocusSelectionIds)) {
+        cameraFocusSelectionIds = null;
+        return world;
       }
-      return withCamera(world, camera);
+      var target = computeSelectionFocus(world, cameraFocusSelectionIds);
+      if (!target) {
+        cameraFocusSelectionIds = null;
+        return world;
+      }
+      return focusCameraToward(world, target, dt);
     }
 
-    function computeSelectionFocus(world) {
-      var selected = world.ships.filter(function (ship) {
-        return world.selectedShipIds.indexOf(ship.id) !== -1;
+    function focusSelectionStillActive(world, shipIds) {
+      return shipIds.every(function (shipId) {
+        return world.selectedShipIds.indexOf(shipId) !== -1;
       });
-      if (!selected.length) return null;
-
-      var minX = selected[0].position.x;
-      var maxX = selected[0].position.x;
-      var minY = selected[0].position.y;
-      var maxY = selected[0].position.y;
-      selected.forEach(function (ship) {
-        minX = Math.min(minX, ship.position.x);
-        maxX = Math.max(maxX, ship.position.x);
-        minY = Math.min(minY, ship.position.y);
-        maxY = Math.max(maxY, ship.position.y);
-      });
-      var span = Math.max(maxX - minX, maxY - minY, 120);
-      return {
-        x: (minX + maxX) / 2,
-        y: (minY + maxY) / 2,
-        zoom: Math.max(0.8, Math.min(1.75, 260 / span))
-      };
     }
 
     return {
@@ -623,6 +605,40 @@
       width: app.screen.width,
       height: app.screen.height
     };
+  }
+
+  function computeSelectionFocus(world, shipIds) {
+    var ids = shipIds || world.selectedShipIds;
+    var selected = world.ships.filter(function (ship) {
+      return ids.indexOf(ship.id) !== -1;
+    });
+    if (!selected.length) return null;
+
+    var minX = selected[0].position.x;
+    var maxX = selected[0].position.x;
+    var minY = selected[0].position.y;
+    var maxY = selected[0].position.y;
+    selected.forEach(function (ship) {
+      minX = Math.min(minX, ship.position.x);
+      maxX = Math.max(maxX, ship.position.x);
+      minY = Math.min(minY, ship.position.y);
+      maxY = Math.max(maxY, ship.position.y);
+    });
+    var span = Math.max(maxX - minX, maxY - minY, 120);
+    return {
+      x: (minX + maxX) / 2,
+      y: (minY + maxY) / 2,
+      zoom: Math.max(0.8, Math.min(1.75, 260 / span))
+    };
+  }
+
+  function focusCameraToward(world, target, dt) {
+    var t = Math.min(1, dt * 4.5);
+    return withCamera(world, {
+      x: world.camera.x + (target.x - world.camera.x) * t,
+      y: world.camera.y + (target.y - world.camera.y) * t,
+      zoom: world.camera.zoom + (target.zoom - world.camera.zoom) * t
+    });
   }
 
   function worldToScreen(point, camera, viewport) {
@@ -1167,7 +1183,9 @@
     enginePlumeGeometry: enginePlumeGeometry,
     screenToWorld: screenToWorld,
     worldToScreen: worldToScreen,
-    viewportFromApp: viewportFromApp
+    viewportFromApp: viewportFromApp,
+    computeSelectionFocus: computeSelectionFocus,
+    focusCameraToward: focusCameraToward
   };
 
   if (!global.DRIFTWORKS_TEST_MODE) {

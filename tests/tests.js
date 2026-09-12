@@ -139,6 +139,24 @@
     assertClose(world.y, -125);
   });
 
+  test('focus camera tracks the current selected ship position', function () {
+    var world = sim.selectShips(sim.createInitialWorld(), ['escort-01']);
+    world.camera = { x: 0, y: 0, zoom: 1 };
+    var ids = ['escort-01'];
+    var initialFocus = game.computeSelectionFocus(world, ids);
+    var escort = findShip(world, 'escort-01');
+
+    escort.position = { x: 520, y: -280 };
+    var movedFocus = game.computeSelectionFocus(world, ids);
+    var focusedWorld = game.focusCameraToward(world, movedFocus, 1);
+
+    assertClose(initialFocus.x, 210);
+    assertClose(movedFocus.x, 520);
+    assertClose(movedFocus.y, -280);
+    assertClose(focusedWorld.camera.x, 520);
+    assertClose(focusedWorld.camera.y, -280);
+  });
+
   test('save serialization round-trips world state', function () {
     var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));
