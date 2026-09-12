@@ -157,6 +157,17 @@
     assertClose(focusedWorld.camera.y, -280);
   });
 
+  test('mining effect becomes diffuse when miner overlaps asteroid', function () {
+    var position = { x: 40, y: -20 };
+    var rotation = Math.PI / 2;
+    var geometry = game.miningEffectGeometry(position, position, rotation);
+
+    assert(geometry.beamOrigin === null, 'Overlapped mining should not draw a directional beam');
+    assertClose(geometry.contact.x, 40);
+    assertClose(geometry.contact.y, -2);
+    assertClose(geometry.seedAngle, Math.PI / 2);
+  });
+
   test('save serialization round-trips world state', function () {
     var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));

@@ -317,7 +317,7 @@
         if (ship.type === 'miner' && ship.order.kind === 'mine' && ship.cargo > (ship.previousCargo || 0)) {
           var asteroid = findAsteroidById(world, ship.order.asteroidId);
           if (asteroid) {
-            spawnMiningEffects(effects, asteroid.position, ship.position, ship.cargo - (ship.previousCargo || 0));
+            spawnMiningEffects(effects, asteroid.position, ship, ship.cargo - (ship.previousCargo || 0));
           }
         }
       });
@@ -1058,32 +1058,92 @@
     });
   }
 
-  function spawnMiningEffects(effects, source, target, amount) {
-    var count = Math.max(1, Math.min(4, Math.ceil(amount * 8)));
-    var dx = target.x - source.x;
-    var dy = target.y - source.y;
-    var distance = Math.max(1, Math.hypot(dx, dy));
-    var dirX = dx / distance;
-    var dirY = dy / distance;
+  function spawnMiningEffects(effects, source, ship, amount) {
+    var geometry = miningEffectGeometry(source, ship.position, ship.rotation);
+    if (geometry.beamOrigin) {
+      var beam = new PIXI.Graphics();
+      beam.lineStyle(1.25, 0xf1d08a, 0.4);
+      beam.moveTo(geometry.beamOrigin.x, geometry.beamOrigin.y);
+      beam.lineTo(geometry.contact.x, geometry.contact.y);
+      beam.lineStyle(3, 0xf1d08a, 0.09);
+      beam.moveTo(geometry.beamOrigin.x, geometry.beamOrigin.y);
+      beam.lineTo(geometry.contact.x, geometry.contact.y);
+      effects.push({
+        graphic: beam,
+        age: 0,
+        life: 0.06,
+        vx: 0,
+        vy: 0,
+        scale: 1,
+        alpha: 1,
+        grow: 0
+      });
+    }
+
+    var puff = new PIXI.Graphics();
+    puff.beginFill(0xd5bd82, 0.16);
+    puff.drawCircle(0, 0, 5);
+    puff.endFill();
+    puff.position.set(geometry.contact.x, geometry.contact.y);
+    effects.push({
+      graphic: puff,
+      age: 0,
+      life: 0.34,
+      vx: 0,
+      vy: 0,
+      scale: 0.6,
+      alpha: 1,
+      grow: 1.7
+    });
+
+    var count = Math.max(4, Math.min(8, Math.ceil(amount * 11)));
     for (var i = 0; i < count; i += 1) {
       var t = i / Math.max(1, count - 1);
-      var x = source.x + (target.x - source.x) * (0.2 + t * 0.22);
-      var y = source.y + (target.y - source.y) * (0.2 + t * 0.22);
+      var angle = geometry.seedAngle + i * 2.399963 + amount * 0.37;
+      var speed = 14 + ((i * 17) % 29) + amount * 8;
       var mote = new PIXI.Graphics();
-      mote.beginFill(0xe4bd66, 0.92);
-      mote.drawCircle(0, 0, 1.8);
+      mote.beginFill(i % 3 === 0 ? 0xf0d38a : 0xc7a762, 0.62);
+      mote.drawCircle(0, 0, 0.9 + t * 0.8);
       mote.endFill();
-      mote.position.set(x, y);
+      mote.position.set(
+        geometry.contact.x + Math.cos(angle) * (2 + (i % 3)),
+        geometry.contact.y + Math.sin(angle) * (2 + (i % 3))
+      );
       effects.push({
         graphic: mote,
         age: 0,
-        life: 0.28 + t * 0.18,
-        vx: dirX * 120 + (t - 0.5) * 28,
-        vy: dirY * 120 - 20 + (0.5 - t) * 18,
+        life: 0.22 + t * 0.24,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
         scale: 1,
-        alpha: 1
+        alpha: 0.78,
+        grow: 0.85
       });
     }
+  }
+
+  function miningEffectGeometry(source, target, rotation) {
+    var dx = target.x - source.x;
+    var dy = target.y - source.y;
+    var distance = Math.hypot(dx, dy);
+    var separated = distance >= 18;
+    var dir = separated
+      ? { x: dx / distance, y: dy / distance }
+      : { x: Math.cos(rotation), y: Math.sin(rotation) };
+    var beamLength = Math.min(24, Math.max(10, distance * 0.55));
+    var contactDistance = separated ? 13 + beamLength : 18;
+
+    return {
+      beamOrigin: separated ? {
+        x: target.x - dir.x * 13,
+        y: target.y - dir.y * 13
+      } : null,
+      contact: {
+        x: target.x + dir.x * contactDistance * (separated ? -1 : 1),
+        y: target.y + dir.y * contactDistance * (separated ? -1 : 1)
+      },
+      seedAngle: Math.atan2(dir.y, dir.x)
+    };
   }
 
   function pushFloatText(effects, position, text) {
@@ -1115,7 +1175,8 @@
       effect.graphic.x += effect.vx * dt;
       effect.graphic.y += effect.vy * dt;
       effect.graphic.alpha = Math.max(0, 1 - effect.age / effect.life) * effect.alpha;
-      effect.graphic.scale.set(effect.scale + effect.age * (effect.grow || 0.25));
+      var grow = effect.grow === undefined ? 0.25 : effect.grow;
+      effect.graphic.scale.set(effect.scale + effect.age * grow);
       if (effect.age >= effect.life) {
         effect.graphic.destroy();
         effects.splice(i, 1);
@@ -1185,7 +1246,8 @@
     worldToScreen: worldToScreen,
     viewportFromApp: viewportFromApp,
     computeSelectionFocus: computeSelectionFocus,
-    focusCameraToward: focusCameraToward
+    focusCameraToward: focusCameraToward,
+    miningEffectGeometry: miningEffectGeometry
   };
 
   if (!global.DRIFTWORKS_TEST_MODE) {
