@@ -192,6 +192,145 @@
     assert(game.stepDefenderWeapon(escorts[0], [drone], timers, 0.1) === null, 'Escorts must still respect weapon range');
   });
 
+  test('destroyed drones persist as distinct salvage wrecks across save and camera changes', function () {
+    var world = sim.createInitialWorld();
+    var destroyed = { position: { x: 300, y: 100 }, velocity: { x: 10, y: -5 } };
+    world = sim.addWreck(sim.addWreck(world, destroyed), destroyed);
+    assert(world.wrecks.length === 2 && world.wrecks[0].id !== world.wrecks[1].id, 'Each wreck needs a stable unique identity');
+    var restored = sim.deserializeWorld(sim.serializeWorld(world));
+    restored = game.withCamera(restored, { x: 100, y: 100, zoom: 2 });
+    assert(JSON.stringify(restored.wrecks) === JSON.stringify(world.wrecks), 'Camera and save changes must preserve wrecks');
+  });
+
+  test('hauler picks up a wreck beneath its frame and salvages it exactly once', function () {
+    var world = sim.addWreck(sim.createInitialWorld(), { position: { x: 165, y: 120 }, velocity: { x: 0, y: 1 } });
+    world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
+    assert(findShip(world, 'tug-01').order.kind === 'recover', 'Right-click should dispatch recovery');
+    world = sim.stepWorld(world, 1 / 30);
+    var hauler = findShip(world, 'tug-01');
+    assert(hauler.towTarget && world.wrecks[0].towedBy === hauler.id, 'Pickup should attach the wreck');
+    assertClose(world.wrecks[0].position.x, hauler.position.x);
+    assertClose(world.wrecks[0].position.y, hauler.position.y);
+    world = sim.issueMoveOrder(world, { x: 600, y: -200 });
+    for (var i = 0; i < 120; i += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+      hauler = findShip(world, 'tug-01');
+      assertClose(world.wrecks[0].position.x, hauler.position.x);
+      assertClose(world.wrecks[0].position.y, hauler.position.y);
+      assertClose(world.wrecks[0].rotation, hauler.rotation);
+    }
+    assert(Math.hypot(hauler.velocity.x, hauler.velocity.y) < hauler.speed * 0.6, 'Recovered hull should count as a heavy load');
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    world = sim.issueReturnOrder(world);
+    for (var tick = 0; tick < 1500; tick += 1) world = sim.stepWorld(world, 1 / 30);
+    assert(world.wrecks.length === 0, 'Delivered wreck should disappear');
+    assertClose(world.recovery.salvagedOre, 24);
+    assertClose(world.mothership.storage.ore + world.mothership.storage.constructionMass, 24);
+    assert(!findShip(world, 'tug-01').towTarget, 'Hauler should be free after delivery');
+  });
+
+  test('disabled fighters cannot move or fire and recover after being carried home', function () {
+    var world = sim.createInitialWorld();
+    var fighter = findShip(world, 'escort-01');
+    fighter.position = { x: 165, y: 120 };
+    world = sim.damageFighter(world, fighter.id, 0.4);
+    assert(!findShip(world, fighter.id).disabled, 'Partial damage should not disable the fighter');
+    world = sim.damageFighter(world, fighter.id, 0.6);
+    world = sim.issueMoveOrder(sim.selectShips(world, [fighter.id]), { x: 900, y: 900 });
+    world = sim.stepWorld(world, 1 / 30);
+    fighter = findShip(world, fighter.id);
+    assert(fighter.disabled && fighter.order.kind === 'idle', 'Disabled fighter should reject movement');
+    assertClose(fighter.position.x, 165);
+    assert(game.stepDefenderWeapon(fighter, [{ position: fighter.position }], {}, 1) === null, 'Disabled fighter must not shoot');
+    world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), fighter.position);
+    for (var i = 0; i < 1000 && !findShip(world, fighter.id).repairRemaining; i += 1) world = sim.stepWorld(world, 1 / 30);
+    fighter = findShip(world, fighter.id);
+    assert(fighter.disabled && fighter.repairRemaining > 0 && !fighter.towedBy, 'Delivery should start a docked repair');
+    var mothership = world.ships.filter(function (ship) { return ship.type === 'mothership'; })[0];
+    assertClose(fighter.position.x, mothership.position.x);
+    assertClose(fighter.position.y, mothership.position.y);
+    assert(!findShip(world, 'tug-01').towTarget, 'Hauler can leave while repairs proceed');
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    for (var j = 0; j < 400; j += 1) world = sim.stepWorld(world, 1 / 30);
+    fighter = findShip(world, fighter.id);
+    assert(!fighter.disabled && fighter.damage === 0, 'Repair should restore fighter');
+    assertClose(world.recovery.repairedShips, 1);
+    assertClose(world.recovery.salvagedOre, 0);
+    world = sim.issueMoveOrder(sim.selectShips(world, [fighter.id]), { x: 900, y: 900 });
+    assert(findShip(sim.stepWorld(world, 1 / 30), fighter.id).velocity.x > 0, 'Repaired fighter should accept orders');
+  });
+
+  test('recovery approach builds speed and arrives from a distance', function () {
+    var world = sim.addWreck(sim.createInitialWorld(), { position: { x: 400, y: 120 }, velocity: { x: 1, y: 0 } });
+    world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
+    for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30);
+    assert(findShip(world, 'tug-01').velocity.x > 50, 'Approach should retain velocity between ticks');
+    for (var j = 0; j < 150; j += 1) world = sim.stepWorld(world, 1 / 30);
+    assert(findShip(world, 'tug-01').towTarget, 'Hauler should reach and collect a nearby wreck within six seconds');
+  });
+
+  test('repaired fighters launch slowly from inside the mothership before accepting orders', function () {
+    var world = sim.damageFighter(sim.createInitialWorld(), 'escort-01', 1);
+    var fighter = findShip(world, 'escort-01');
+    var mothership = world.ships.filter(function (ship) { return ship.type === 'mothership'; })[0];
+    mothership.rotation = Math.PI / 2;
+    fighter.repairRemaining = 1 / 30;
+    world = sim.stepWorld(world, 1 / 30);
+    fighter = findShip(world, fighter.id);
+    assert(fighter.launchElapsed === 0 && fighter.disabled, 'Repair should enter a protected launch phase');
+    assertClose(fighter.position.x, mothership.position.x);
+    assertClose(fighter.position.y, mothership.position.y);
+    for (var i = 0; i < 90; i += 1) {
+      var before = findShip(world, fighter.id).position;
+      world = sim.stepWorld(world, 1 / 30);
+      var after = findShip(world, fighter.id).position;
+      assert(Math.hypot(after.x - before.x, after.y - before.y) <= 18 / 30 + 0.000001, 'Launch should ease out below normal flight speed');
+    }
+    fighter = findShip(world, fighter.id);
+    assertClose(fighter.position.x, mothership.position.x);
+    assertClose(fighter.position.y, mothership.position.y + 36);
+    world = sim.issueMoveOrder(sim.selectShips(world, [fighter.id]), { x: 900, y: 900 });
+    assert(findShip(world, fighter.id).order.kind === 'idle', 'Orders should not interrupt clearance from the dock');
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    for (var j = 0; j < 100; j += 1) world = sim.stepWorld(world, 1 / 30);
+    fighter = findShip(world, fighter.id);
+    assert(!fighter.disabled && fighter.launchElapsed === null, 'Cleared fighter should become operational');
+    assertClose(fighter.position.y, mothership.position.y + 72);
+    assertClose(world.recovery.repairedShips, 1);
+  });
+
+  test('recovery cannot double-claim a wreck or stack payloads', function () {
+    var world = sim.addWreck(sim.createInitialWorld(), { position: { x: 165, y: 120 }, velocity: { x: 1, y: 0 } });
+    world.ships.push(sim.createShip('tug-02', 'Second Hauler', 'tug', 160, 120, 62));
+    world = sim.issueContextOrder(sim.selectShips(world, ['tug-01', 'tug-02']), world.wrecks[0].position);
+    world = sim.stepWorld(world, 1 / 30);
+    assert(world.ships.filter(function (ship) { return ship.towTarget; }).length === 1, 'Only one hauler can pick up each wreck');
+    var loaded = findShip(world, 'tug-01');
+    world = sim.issueBuildOrder(sim.selectShips(world, [loaded.id]));
+    assert(findShip(world, loaded.id).order.kind === 'return', 'Carried hull prevents accepting a module');
+    var other = findShip(world, 'tug-02');
+    other.carryingSection = true;
+    world = sim.addWreck(world, { position: { x: 400, y: 100 }, velocity: { x: 1, y: 0 } });
+    world = sim.issueContextOrder(sim.selectShips(world, [other.id]), world.wrecks[1].position);
+    assert(findShip(world, other.id).order.kind !== 'recover', 'Carried module prevents accepting a hull');
+  });
+
+  test('legacy saves receive empty recovery defaults', function () {
+    var world = sim.createInitialWorld();
+    delete world.wrecks;
+    delete world.nextWreckId;
+    delete world.recovery;
+    world.ships.forEach(function (ship) {
+      delete ship.towTarget;
+      delete ship.towedBy;
+      delete ship.disabled;
+      delete ship.repairRemaining;
+    });
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    assert(world.wrecks.length === 0 && world.nextWreckId === 1, 'Legacy world should load without wrecks');
+    assert(world.ships.every(function (ship) { return !ship.disabled && !ship.towTarget; }), 'Legacy ships should stay operational');
+  });
+
   test('operation exposure starts quiet and rises with industrial work', function () {
     var world = sim.createInitialWorld();
     assertClose(game.operationExposure(world), 0);

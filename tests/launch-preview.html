@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Recovery preview setup</title></head><body>
+<button id="carry">Preview carried fighter</button>
+<button id="launch">Preview repair and launch</button>
+<script src="../src/sim.js"></script>
+<script>
+function preview(carry) {
+  var sim = Driftworks.sim;
+  var world = sim.damageFighter(sim.createInitialWorld(), 'escort-01', 1);
+  var fighter = world.ships.find(function (ship) { return ship.id === 'escort-01'; });
+  var hauler = world.ships.find(function (ship) { return ship.id === 'tug-01'; });
+  world.camera.zoom = 2.3;
+  if (carry) {
+    hauler.position = { x: 100, y: 60 };
+    hauler.previousPosition = { x: 100, y: 60 };
+    hauler.towTarget = { kind: 'ship', id: fighter.id };
+    fighter.towedBy = hauler.id;
+    fighter.position = { x: 100, y: 60 };
+    world.selectedShipIds = [hauler.id];
+  } else {
+    fighter.repairRemaining = 6;
+    fighter.position = { x: 0, y: 0 };
+    fighter.previousPosition = { x: 0, y: 0 };
+    world.selectedShipIds = [fighter.id];
+  }
+  sim.saveWorld(world);
+  location.href = '../index.html';
+}
+document.querySelector('#carry').onclick = function () { preview(true); };
+document.querySelector('#launch').onclick = function () { preview(false); };
+</script></body></html>

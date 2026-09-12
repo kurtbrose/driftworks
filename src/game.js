@@ -57,11 +57,13 @@
       },
       onLoad: function () {
         world = loadOrInitial();
+        scene.resetCombat();
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
       onReset: function () {
         world = sim.createInitialWorld();
+        scene.resetCombat();
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
@@ -128,6 +130,8 @@
       '<div class="row"><span>Depot</span><strong data-role="depot"></strong></div>' +
       '<div class="row"><span>Sections</span><strong data-role="sections"></strong></div>' +
       '<div class="row"><span>Contacts</span><strong data-role="contacts"></strong></div>' +
+      '<div class="row"><span>Recovery</span><strong data-role="recovery"></strong></div>' +
+      '<div class="row"><span>Salvaged</span><strong data-role="salvaged"></strong></div>' +
       '<div class="row"><span>Sim Clock</span><strong data-role="clock"></strong></div>' +
       '<div class="row"><span>Entities</span><strong data-role="entities"></strong></div>' +
       '<div class="row"><span>Selection</span><strong data-role="selection"></strong></div>' +
@@ -165,6 +169,9 @@
         host.querySelector('[data-role="sections"]').textContent =
           world.mothership.storage.depotSections + ' ready · ' + Math.floor(world.mothership.storage.constructionMass) + ' t mass';
         host.querySelector('[data-role="contacts"]').textContent = stats.contacts;
+        host.querySelector('[data-role="recovery"]').textContent = (world.wrecks || []).length + ' wrecks · ' +
+          world.ships.filter(function (ship) { return ship.disabled; }).length + ' disabled';
+        host.querySelector('[data-role="salvaged"]').textContent = (world.recovery ? world.recovery.salvagedOre : 0) + ' t';
         host.querySelector('[data-role="clock"]').textContent = world.elapsedSeconds.toFixed(1) + ' s';
         host.querySelector('[data-role="entities"]').textContent = stats.entityCount + ' @ ' + (stats.fps || '--') + ' FPS';
 
@@ -176,7 +183,9 @@
               return world.selectedShipIds.indexOf(ship.id) !== -1;
             })
             .map(function (ship) {
-              return ship.name;
+              var status = ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
+                ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : '';
+              return ship.name + (status ? ' (' + status + ')' : '');
             })
             .join(', ');
         }
@@ -207,6 +216,8 @@
     var grid = new PIXI.Graphics();
     var depotGraphic = new PIXI.Graphics();
     var coverageGraphic = new PIXI.Graphics();
+    var recoveryGraphic = new PIXI.Graphics();
+    var launchLayer = new PIXI.Container();
     var selectionBox = new PIXI.Graphics();
     var readout = new PIXI.Text('', {
       fontFamily: 'Consolas, monospace',
@@ -237,6 +248,7 @@
     var visualTimeScale = 1;
     var laserPaintTimers = {};
     var director = createThreatDirector();
+    var previousRecovery = null;
 
     host.appendChild(app.view);
     host.addEventListener('contextmenu', function (event) {
@@ -248,6 +260,9 @@
     worldLayer.addChild(depotGraphic);
     coverageGraphic.eventMode = 'none';
     worldLayer.addChild(coverageGraphic);
+    recoveryGraphic.eventMode = 'none';
+    worldLayer.addChild(recoveryGraphic);
+    worldLayer.addChild(launchLayer);
     worldLayer.addChild(effectsLayer);
     app.stage.addChild(selectionBox);
     app.stage.addChild(readout);
@@ -283,6 +298,15 @@
       if (event.code === 'Space') spaceDown = true;
       if (event.code === 'KeyF') requestSelectionFocus(getWorld());
       if (event.code === 'KeyH') spawnHostileDrones(getWorld());
+      if (event.code === 'KeyJ' && !event.repeat) {
+        var fighter = getWorld().ships.filter(function (ship) {
+          return ship.type === 'escort' && !ship.disabled && getWorld().selectedShipIds.indexOf(ship.id) !== -1;
+        })[0];
+        if (fighter) {
+          setWorld(sim.damageFighter(getWorld(), fighter.id, 1));
+          pushFloatText(effects, fighter.position, 'DISABLED');
+        }
+      }
     });
     window.addEventListener('keyup', function (event) {
       if (event.code === 'Space') spaceDown = false;
@@ -292,6 +316,7 @@
       updateStarfield(starfield, world.camera, viewport());
       paintDepot(depotGraphic, world.depot);
       paintDefenderCoverage(coverageGraphic, world);
+      paintRecovery(recoveryGraphic, world);
       var shakeX = cameraShake > 0 ? (Math.sin(world.elapsedSeconds * 97) * cameraShake) : 0;
       var shakeY = cameraShake > 0 ? (Math.cos(world.elapsedSeconds * 83) * cameraShake) : 0;
       var view = viewport();
@@ -309,10 +334,13 @@
         }
         var selected = world.selectedShipIds.indexOf(ship.id) !== -1;
         if (selected) selectedNow[ship.id] = true;
-        if (selected && !previousSelected[ship.id]) {
+        if (selected && !previousSelected[ship.id] && !ship.repairRemaining && ship.launchElapsed == null) {
           pushSelectionPulse(effects, ship.position, ship.type === 'mothership' ? 42 : 20);
         }
         paintShip(graphic, ship, selected, world.elapsedSeconds);
+        graphic.visible = !ship.towedBy && !ship.repairRemaining;
+        var parent = ship.launchElapsed != null ? launchLayer : worldLayer;
+        if (graphic.parent !== parent) parent.addChild(graphic);
       });
       previousSelected = selectedNow;
 
@@ -350,6 +378,7 @@
 
       updateThreatDirector(world, visualDt);
       updateCombatVignette(world, visualDt);
+      world = getWorld();
       spawnStateEffects(world, visualDt);
       updateAudioTelemetry(world);
       updateEffects(effectsLayer, effects, visualDt);
@@ -363,6 +392,17 @@
     }
 
     function spawnStateEffects(world, dt) {
+      if (world.recovery && previousRecovery) {
+        var recovered = world.recovery.salvagedOre - previousRecovery.salvagedOre;
+        var repaired = world.recovery.repairedShips - previousRecovery.repairedShips;
+        var home = findShipByType(world, 'mothership');
+        if (home && (recovered > 0 || repaired > 0)) {
+          pushFloatText(effects, { x: home.position.x, y: home.position.y - 50 },
+            recovered > 0 ? '+' + recovered + ' SALVAGE' : 'FIGHTER REPAIRED');
+          if (audio) audio.playDelivery();
+        }
+      }
+      previousRecovery = world.recovery ? Object.assign({}, world.recovery) : null;
       world.ships.forEach(function (ship) {
         if (ship.type === 'miner' && ship.order.kind === 'mine' && ship.cargo > (ship.previousCargo || 0)) {
           var asteroid = findAsteroidById(world, ship.order.asteroidId);
@@ -422,7 +462,8 @@
           speed: 58 + i * 8,
           hp: 3,
           flash: 0,
-          underFire: 0
+          underFire: 0,
+          fireCooldown: 0.6 + i * 0.12
         });
       }
       shotCooldown = 0.2;
@@ -509,7 +550,14 @@
       shotCooldown -= dt;
 
       drones.forEach(function (drone) {
-        var target = droneTargetPosition(world, drone);
+        var fighter = getWorld().ships.filter(function (ship) {
+          return ship.type === 'escort' && !ship.disabled &&
+            Math.hypot(ship.position.x - drone.position.x, ship.position.y - drone.position.y) <= 300;
+        }).sort(function (a, b) {
+          return Math.hypot(a.position.x - drone.position.x, a.position.y - drone.position.y) -
+            Math.hypot(b.position.x - drone.position.x, b.position.y - drone.position.y);
+        })[0];
+        var target = fighter ? fighter.position : droneTargetPosition(world, drone);
         var dx = target.x - drone.position.x;
         var dy = target.y - drone.position.y;
         var distance = Math.max(1, Math.hypot(dx, dy));
@@ -520,10 +568,21 @@
         }
         drone.flash = Math.max(0, drone.flash - dt * 5);
         drone.underFire = Math.max(0, (drone.underFire || 0) - dt * 0.35);
+        drone.fireCooldown = Math.max(0, (drone.fireCooldown || 0) - dt);
+        if (fighter && distance <= 220 && drone.fireCooldown === 0) {
+          drone.fireCooldown = 0.75;
+          pushProjectile(effects, drone.position, fighter.position);
+          pushImpactSparks(effects, fighter.position, fighter.velocity);
+          if (audio) audio.playImpact(0.4);
+          setWorld(sim.damageFighter(getWorld(), fighter.id, 0.4));
+          if (getWorld().ships.some(function (ship) { return ship.id === fighter.id && ship.disabled; })) {
+            pushFloatText(effects, fighter.position, 'DISABLED');
+          }
+        }
       });
 
-      world.ships.filter(function (ship) {
-        return ship.type === 'escort';
+      getWorld().ships.filter(function (ship) {
+        return ship.type === 'escort' && !ship.disabled;
       }).forEach(function (escort) {
         var attack = stepDefenderWeapon(escort, drones, laserPaintTimers, dt);
         if (attack) {
@@ -576,6 +635,7 @@
       drones = drones.filter(function (candidate) {
         return candidate.id !== drone.id;
       });
+      setWorld(sim.addWreck(getWorld(), drone));
     }
 
     function requestSelectionFocus(world) {
@@ -721,7 +781,7 @@
 
     function getStats() {
       var world = getWorld();
-      var baseCount = world.ships.length + world.asteroids.length + drones.length;
+      var baseCount = world.ships.length + world.asteroids.length + drones.length + (world.wrecks || []).length;
       var count = stressEnabled && stressLayer ? stressLayer.count + baseCount : baseCount;
       return {
         fps: fps,
@@ -788,7 +848,7 @@
       var selected = selectedShips(world);
       var strongest = 0;
       selected.forEach(function (ship) {
-        if (!ship.previousVelocity) return;
+        if (!ship.previousVelocity || ship.disabled) return;
         var ax = ship.velocity.x - ship.previousVelocity.x;
         var ay = ship.velocity.y - ship.previousVelocity.y;
         var level = Math.hypot(ax, ay) / Math.max(1, ship.acceleration / 30);
@@ -798,6 +858,14 @@
     }
 
     return {
+      resetCombat: function () {
+        drones = [];
+        Object.keys(droneGraphics).forEach(function (id) { droneGraphics[id].destroy(); });
+        droneGraphics = {};
+        laserPaintTimers = {};
+        director = createThreatDirector();
+        previousRecovery = null;
+      },
       sync: sync,
       render: render,
       applyCameraFocus: applyCameraFocus,
@@ -855,6 +923,7 @@
   }
 
   function stepDefenderWeapon(escort, drones, timers, dt) {
+    if (escort.disabled) return null;
     timers[escort.id] = Math.max(0, (timers[escort.id] || 0) - dt);
     var target = null;
     var bestDistance = Infinity;
@@ -909,19 +978,7 @@
   }
 
   function withCamera(world, camera) {
-    return {
-      version: world.version,
-      seed: world.seed,
-      elapsedSeconds: world.elapsedSeconds,
-      campaign: world.campaign,
-      camera: camera,
-      selectedShipIds: world.selectedShipIds,
-      mothership: world.mothership,
-      depot: world.depot,
-      contract: world.contract,
-      asteroids: world.asteroids,
-      ships: world.ships
-    };
+    return Object.assign({}, world, { camera: camera });
   }
 
   function shipsInsideScreenRect(world, start, end, viewport) {
@@ -961,7 +1018,7 @@
   function paintDefenderCoverage(graphics, world) {
     graphics.clear();
     world.ships.forEach(function (ship) {
-      if (ship.type !== 'escort' || world.selectedShipIds.indexOf(ship.id) === -1) return;
+      if (ship.type !== 'escort' || ship.disabled || world.selectedShipIds.indexOf(ship.id) === -1) return;
       graphics.lineStyle(1.25, 0xf0b7b9, 0.32);
       graphics.beginFill(0xb76c6f, 0.035);
       graphics.drawCircle(ship.position.x, ship.position.y, DEFENDER_RANGE);
@@ -969,10 +1026,45 @@
     });
   }
 
+  function paintRecovery(graphics, world) {
+    graphics.clear();
+    (world.wrecks || []).forEach(function (wreck) {
+      if (wreck.towedBy) return;
+      var cos = Math.cos(wreck.rotation);
+      var sin = Math.sin(wreck.rotation);
+      var points = [];
+      [[13, 0], [-8, -8], [-3, -1], [-6, 3], [-8, 8]].forEach(function (point) {
+        points.push(wreck.position.x + point[0] * cos - point[1] * sin,
+          wreck.position.y + point[0] * sin + point[1] * cos);
+      });
+      graphics.lineStyle(1.2, 0x9d9095, 0.6);
+      graphics.beginFill(0x5f5158, 0.45);
+      graphics.drawPolygon(points);
+      graphics.endFill();
+      if (!wreck.towedBy) {
+        graphics.lineStyle(1, 0xc4ae7d, 0.65);
+        graphics.moveTo(wreck.position.x - 5, wreck.position.y + 18);
+        graphics.lineTo(wreck.position.x + 5, wreck.position.y + 18);
+      }
+    });
+    world.ships.forEach(function (ship) {
+      if (ship.disabled && !ship.towedBy && !ship.repairRemaining && ship.launchElapsed == null) {
+        graphics.lineStyle(1.5, ship.repairRemaining ? 0x8fc6ba : 0xd5ae65, 0.85);
+        graphics.moveTo(ship.position.x - 7, ship.position.y + 18);
+        graphics.lineTo(ship.position.x + 7, ship.position.y + 18);
+        if (!ship.repairRemaining) {
+          graphics.moveTo(ship.position.x, ship.position.y + 15);
+          graphics.lineTo(ship.position.x, ship.position.y + 21);
+        }
+      }
+    });
+  }
+
   function paintShip(graphics, ship, selected, elapsedSeconds) {
     var style = SHIP_STYLES[ship.type];
     graphics.clear();
-    drawEnginePlume(graphics, ship, style.radius);
+    graphics.alpha = ship.disabled && ship.launchElapsed == null ? 0.45 : 1;
+    if (!ship.disabled) drawEnginePlume(graphics, ship, style.radius);
     if (ship.type === 'mothership') {
       paintMothership(graphics, selected, elapsedSeconds);
       drawShipOrderAndBadges(graphics, ship, style);
@@ -981,6 +1073,20 @@
 
     if (ship.type === 'tug' && ship.carryingSection) {
       paintConstructorCargo(graphics, style);
+    }
+    if (ship.type === 'tug' && ship.towTarget) {
+      graphics.lineStyle(1.5, 0xe0aeb2, 0.95);
+      graphics.beginFill(0xa86470, 0.95);
+      graphics.drawPolygon(ship.towTarget.kind === 'wreck' ? [13, 0, -8, -8, -3, -1, -6, 3, -8, 8] :
+        [24, 0, -15, -13, -9, 0, -15, 13]);
+      graphics.endFill();
+      graphics.lineStyle(2, style.stroke, 0.7);
+      [-0.58, 0.58].forEach(function (x) {
+        [-1, 1].forEach(function (side) {
+          graphics.moveTo(x * style.radius, side * 0.4 * style.radius);
+          graphics.lineTo(x * style.radius, side * 0.84 * style.radius);
+        });
+      });
     }
     graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
     if (ship.type === 'miner') {
@@ -1066,7 +1172,7 @@
     } else if (ship.order.kind === 'return') {
       graphics.lineStyle(1, 0x9ed6c8, 0.65);
       drawWorldOrderLine(graphics, ship);
-    } else if (ship.order.kind === 'build') {
+    } else if (ship.order.kind === 'build' || ship.order.kind === 'recover') {
       graphics.lineStyle(1, 0xbfd6ea, 0.7);
       drawWorldOrderLine(graphics, ship);
     }
@@ -1079,11 +1185,18 @@
       graphics.endFill();
     }
 
+    if (ship.type === 'escort' && ship.damage > 0 && !ship.disabled) {
+      graphics.lineStyle(0);
+      graphics.beginFill(0xd5ae65, 0.8);
+      graphics.drawRect(-8, 13, 16 * Math.max(0, 1 - ship.damage), 2);
+      graphics.endFill();
+    }
+
   }
 
   function paintMothership(graphics, selected, elapsedSeconds) {
     graphics.lineStyle(0);
-    graphics.beginFill(SHIP_STYLES.mothership.fill, 0.88);
+    graphics.beginFill(SHIP_STYLES.mothership.fill, 1);
     graphics.drawRoundedRect(-36, -17, 72, 34, 5);
     graphics.endFill();
 
@@ -1096,7 +1209,7 @@
     graphics.endFill();
 
     graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : SHIP_STYLES.mothership.stroke, selected ? 1 : 0.9);
-    graphics.beginFill(0x6f7d86, 0.82);
+    graphics.beginFill(0x6f7d86, 1);
     graphics.drawRect(-10, -28, 20, 56);
     graphics.endFill();
   }
@@ -1678,6 +1791,7 @@
     viewportFromApp: viewportFromApp,
     computeSelectionFocus: computeSelectionFocus,
     focusCameraToward: focusCameraToward,
+    withCamera: withCamera,
     miningEffectGeometry: miningEffectGeometry,
     operationExposure: operationExposure,
     stepDefenderWeapon: stepDefenderWeapon,

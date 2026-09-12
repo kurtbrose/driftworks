@@ -12,6 +12,7 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - Miners automatically return full cargo to the mothership and deposit it into storage.
 - Mothership processes delivered ore into 80t depot sections.
 - Tug can carry fabricated depot sections from the mothership to the depot site.
+- Utility haulers can retrieve persistent drone wrecks for salvage and carry disabled fighters home for repair.
 - HUD ore quota, depot progress, construction section stock, and remaining field ore readouts.
 - Subtle parallax starfield below the grid.
 - Acceleration-driven engine plumes, mining motes, and delivery feedback text.
@@ -54,12 +55,22 @@ Debug controls:
 
 - `F`: ease camera onto the selected ship or fleet and flash a focus reticle.
 - `H`: manually spawn a short hostile-raider vignette; selected escorts show their coverage circle.
+- `J`: disable a selected fighter to try a recovery mission without waiting for combat damage.
 
 Construction controls:
 
 - Deliver ore to the mothership until a depot section is ready.
 - Select `Linehorse`, then right-click the depot ghost to carry a ready section to the site.
 - Once mining or construction is underway, contacts can appear automatically after a warning.
+
+Recovery controls:
+
+- Select `Linehorse` and right-click a faded drone wreck or disabled fighter to retrieve it.
+- The hauler approaches, clamps the hull beneath its frame, and returns automatically at reduced speed. One module or recovered hull at a time.
+- Wrecks provide 24t ore at the mothership, feeding the existing construction processing chain.
+- Disabled fighters stay inert and cannot fire. Retrieval starts a six-second repair inside the mothership, followed by a slow six-second launch from its forward end. The restored fighter awaits orders once clear.
+- Move orders can redirect a loaded hauler; right-click the mothership to resume delivery.
+- Wrecks, carried hulls, damage, and repair progress are included in saves. Active hostile encounters remain transient.
 
 ## Deploy
 

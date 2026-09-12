@@ -10,6 +10,7 @@
   var MINING_RATE = 10;
   var DEPOT_SECTION_MASS = 80;
   var DEPOT_STAGE_COUNT = 3;
+  var REPAIR_SECONDS = 6;
 
   function createInitialWorld() {
     return {
@@ -27,6 +28,9 @@
         zoom: 1
       },
       selectedShipIds: [],
+      wrecks: [],
+      nextWreckId: 1,
+      recovery: { salvagedOre: 0, repairedShips: 0 },
       mothership: {
         storage: {
           ore: 0,
@@ -87,6 +91,11 @@
       cargo: 0,
       previousCargo: 0,
       carryingSection: false,
+      towTarget: null,
+      towedBy: null,
+      disabled: false,
+      repairRemaining: 0,
+      launchElapsed: null,
       cargoCapacity: type === 'tug' ? 180 : 80,
       damage: 0,
       speed: speed,
@@ -133,7 +142,7 @@
       selected[id] = true;
     });
     next.ships.forEach(function (ship) {
-      if (selected[ship.id] && ship.speed > 0) {
+      if (selected[ship.id] && ship.speed > 0 && !ship.disabled) {
         ship.order = {
           kind: 'move',
           target: { x: target.x, y: target.y }
@@ -144,6 +153,10 @@
   }
 
   function issueContextOrder(world, target) {
+    var recoverable = nearestRecoverable(world, target, 26);
+    if (recoverable && selectedType(world, 'tug')) {
+      return issueRecoveryOrder(world, recoverable);
+    }
     var asteroid = findNearestAsteroid(world, target, 38);
     var mothership = findMothership(world);
     var depot = world.depot;
@@ -192,7 +205,7 @@
     }
 
     next.ships.forEach(function (ship) {
-      if (selected[ship.id] && ship.type === 'tug') {
+      if (selected[ship.id] && ship.type === 'tug' && !ship.disabled && !ship.towTarget) {
         ship.order = {
           kind: 'build',
           target: clonePlain(ship.carryingSection ? next.depot.position : mothership.position)
@@ -211,7 +224,7 @@
     }
 
     next.ships.forEach(function (ship) {
-      if (selected[ship.id] && ship.speed > 0) {
+      if (selected[ship.id] && ship.speed > 0 && !ship.disabled) {
         ship.order = {
           kind: 'return',
           target: { x: mothership.position.x, y: mothership.position.y }
@@ -230,7 +243,7 @@
     var mothershipShip = findMothership(next);
     processConstructionMass(mothership, depot);
 
-    return {
+    var stepped = {
       version: next.version,
       seed: next.seed,
       elapsedSeconds: next.elapsedSeconds + dt,
@@ -241,10 +254,15 @@
       depot: depot,
       contract: contract,
       asteroids: asteroids,
+      wrecks: next.wrecks,
+      nextWreckId: next.nextWreckId,
+      recovery: next.recovery,
       ships: next.ships.map(function (ship) {
         return stepShip(ship, dt, asteroids, mothership, mothershipShip, depot);
       })
     };
+    stepRecovery(stepped, dt);
+    return stepped;
   }
 
   function stepShip(ship, dt, asteroids, mothership, mothershipShip, depot) {
@@ -252,6 +270,12 @@
     next.previousPosition = { x: ship.position.x, y: ship.position.y };
     next.previousVelocity = { x: ship.velocity.x, y: ship.velocity.y };
     next.previousCargo = ship.cargo;
+
+    if (next.disabled) {
+      next.velocity = { x: 0, y: 0 };
+      return next;
+    }
+    if (next.order.kind === 'recover') return next;
 
     if (next.order.kind === 'mine') {
       return stepMiningShip(next, dt, asteroids, mothershipShip);
@@ -372,7 +396,7 @@
     var currentSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
     var stoppingDistance = Math.max(0, distance - arrivalDistance);
     var load = ship.type === 'miner' ? Math.max(0, Math.min(1, ship.cargo / Math.max(1, ship.cargoCapacity))) :
-      (ship.type === 'tug' && ship.carryingSection ? 1 : 0);
+      (ship.type === 'tug' && (ship.carryingSection || ship.towTarget) ? 1 : 0);
     var haulingSpeed = ship.speed * (1 - load * (ship.type === 'tug' ? 0.45 : 0.35));
     var haulingAcceleration = ship.acceleration * (1 - load * (ship.type === 'tug' ? 0.5 : 0.4));
     var stoppingSpeed = Math.sqrt(2 * haulingAcceleration * stoppingDistance);
@@ -450,6 +474,9 @@
   function normalizeWorld(world) {
     var initial = createInitialWorld();
     var next = clonePlain(world);
+    next.wrecks = next.wrecks || [];
+    next.nextWreckId = next.nextWreckId || 1;
+    next.recovery = next.recovery || { salvagedOre: 0, repairedShips: 0 };
     next.mothership = next.mothership || initial.mothership;
     next.mothership.storage = next.mothership.storage || {};
     next.mothership.storage.ore = typeof next.mothership.storage.ore === 'number' ? next.mothership.storage.ore : 0;
@@ -468,6 +495,11 @@
         ship.turnRate = ship.speed > 0 ? Math.max(1.4, Math.min(2.8, 180 / ship.speed)) : 0;
       }
       ship.carryingSection = !!ship.carryingSection;
+      ship.towTarget = ship.towTarget || null;
+      ship.towedBy = ship.towedBy || null;
+      ship.disabled = !!ship.disabled;
+      ship.repairRemaining = ship.repairRemaining || 0;
+      ship.launchElapsed = ship.launchElapsed == null ? null : ship.launchElapsed;
     });
     next.selectedShipIds = next.selectedShipIds || [];
     next.camera = next.camera || initial.camera;
@@ -475,6 +507,150 @@
     next.elapsedSeconds = typeof next.elapsedSeconds === 'number' ? next.elapsedSeconds : 0;
     next.version = next.version || WORLD_VERSION;
     return next;
+  }
+
+  function addWreck(world, destroyed) {
+    var next = normalizeWorld(world);
+    next.wrecks.push({
+      id: 'wreck-' + next.nextWreckId++,
+      position: clonePlain(destroyed.position),
+      rotation: Math.atan2(destroyed.velocity.y, destroyed.velocity.x),
+      salvageOre: 24,
+      towedBy: null
+    });
+    return next;
+  }
+
+  function damageFighter(world, id, amount) {
+    var next = normalizeWorld(world);
+    var ship = next.ships.filter(function (candidate) { return candidate.id === id; })[0];
+    if (!ship || ship.type !== 'escort' || ship.disabled) return next;
+    ship.damage = Math.min(1, (ship.damage || 0) + Math.max(0, amount));
+    if (ship.damage >= 1) {
+      ship.disabled = true;
+      ship.order = { kind: 'idle' };
+      ship.velocity = { x: 0, y: 0 };
+      ship.previousVelocity = { x: 0, y: 0 };
+    }
+    return next;
+  }
+
+  function recoveryTarget(world, reference) {
+    if (!reference) return null;
+    var candidates = reference.kind === 'wreck' ? world.wrecks : world.ships;
+    return (candidates || []).filter(function (target) {
+      return target.id === reference.id && (reference.kind === 'wreck' ||
+        (target.type === 'escort' && target.disabled && !target.repairRemaining && target.launchElapsed == null));
+    })[0] || null;
+  }
+
+  function nearestRecoverable(world, point, range) {
+    var best = null;
+    (world.wrecks || []).map(function (wreck) { return { kind: 'wreck', id: wreck.id }; })
+      .concat(world.ships.filter(function (ship) { return ship.type === 'escort' && ship.disabled; })
+        .map(function (ship) { return { kind: 'ship', id: ship.id }; }))
+      .forEach(function (reference) {
+        var target = recoveryTarget(world, reference);
+        if (!target || target.towedBy) return;
+        var gap = distance(target.position, point);
+        if (gap <= range) {
+          best = reference;
+          range = gap;
+        }
+      });
+    return best;
+  }
+
+  function issueRecoveryOrder(world, reference) {
+    var next = normalizeWorld(world);
+    var target = recoveryTarget(next, reference);
+    if (!target || target.towedBy) return next;
+    next.ships.forEach(function (ship) {
+      if (next.selectedShipIds.indexOf(ship.id) < 0 || ship.type !== 'tug' ||
+        ship.disabled || ship.carryingSection || ship.towTarget) return;
+      ship.order = { kind: 'recover', recoveryTarget: clonePlain(reference), target: clonePlain(target.position) };
+    });
+    return next;
+  }
+
+  function stepRecovery(world, dt) {
+    var mothership = findMothership(world);
+    world.ships.forEach(function (ship) {
+      if (ship.repairRemaining > 0) {
+        if (mothership) {
+          ship.position = clonePlain(mothership.position);
+          ship.previousPosition = clonePlain(ship.position);
+          ship.rotation = mothership.rotation;
+        }
+        ship.repairRemaining = Math.max(0, ship.repairRemaining - dt);
+        if (ship.repairRemaining === 0) {
+          ship.damage = 0;
+          ship.launchElapsed = 0;
+        }
+      } else if (ship.launchElapsed != null && mothership) {
+        ship.launchElapsed = Math.min(6, ship.launchElapsed + dt);
+        var t = ship.launchElapsed / 6;
+        var offset = 72 * t * t * (3 - 2 * t);
+        ship.rotation = mothership.rotation;
+        ship.position = {
+          x: mothership.position.x + Math.cos(ship.rotation) * offset,
+          y: mothership.position.y + Math.sin(ship.rotation) * offset
+        };
+        ship.velocity = {
+          x: (ship.position.x - ship.previousPosition.x) / Math.max(dt, 0.000001),
+          y: (ship.position.y - ship.previousPosition.y) / Math.max(dt, 0.000001)
+        };
+        if (ship.launchElapsed >= 6) {
+          ship.launchElapsed = null;
+          ship.disabled = false;
+          ship.velocity = { x: 0, y: 0 };
+          world.recovery.repairedShips += 1;
+        }
+      }
+    });
+    world.ships.forEach(function (hauler) {
+      if (hauler.type !== 'tug' || hauler.disabled) return;
+      if (hauler.order.kind === 'recover' && !hauler.towTarget) {
+        var pickup = recoveryTarget(world, hauler.order.recoveryTarget);
+        if (!pickup || pickup.towedBy || hauler.carryingSection || !mothership) {
+          hauler.order = { kind: 'idle' };
+          return;
+        }
+        hauler.order.target = clonePlain(pickup.position);
+        if (distance(hauler.position, pickup.position) > 18) {
+          stepTowardOrderTarget(hauler, dt, 12, false);
+          return;
+        }
+        hauler.towTarget = clonePlain(hauler.order.recoveryTarget);
+        pickup.towedBy = hauler.id;
+        hauler.order = { kind: 'return', target: clonePlain(mothership.position) };
+      }
+      if (!hauler.towTarget) return;
+      var payload = recoveryTarget(world, hauler.towTarget);
+      if (!payload || payload.towedBy !== hauler.id) {
+        hauler.towTarget = null;
+        return;
+      }
+      payload.position = clonePlain(hauler.position);
+      if (hauler.towTarget.kind === 'ship') payload.previousPosition = clonePlain(hauler.previousPosition);
+      payload.rotation = hauler.rotation;
+      if (mothership && distance(hauler.position, mothership.position) <= DOCK_DISTANCE) {
+        if (hauler.towTarget.kind === 'wreck') {
+          world.mothership.storage.ore += payload.salvageOre;
+          world.recovery.salvagedOre += payload.salvageOre;
+          world.wrecks = world.wrecks.filter(function (wreck) { return wreck.id !== payload.id; });
+        } else {
+          payload.towedBy = null;
+          payload.repairRemaining = REPAIR_SECONDS;
+          payload.position = clonePlain(mothership.position);
+          payload.rotation = mothership.rotation;
+          payload.previousPosition = clonePlain(payload.position);
+        }
+        hauler.towTarget = null;
+        hauler.order = { kind: 'idle' };
+        hauler.velocity = { x: 0, y: 0 };
+      }
+    });
   }
 
   function selectedLookup(world) {
@@ -565,6 +741,9 @@
     issueMineOrder: issueMineOrder,
     issueBuildOrder: issueBuildOrder,
     issueReturnOrder: issueReturnOrder,
+    issueRecoveryOrder: issueRecoveryOrder,
+    addWreck: addWreck,
+    damageFighter: damageFighter,
     stepWorld: stepWorld,
     serializeWorld: serializeWorld,
     deserializeWorld: deserializeWorld,

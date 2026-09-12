@@ -124,6 +124,11 @@ button[data-active="true"] {
   white-space: nowrap;
 }
 
+.row strong[data-role="selection"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .controls {
   grid-column: 3;
   align-self: end;
