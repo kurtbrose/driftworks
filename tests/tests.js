@@ -65,6 +65,48 @@
     assert(miner.velocity.x > 0, 'Miner should not instantly reverse horizontal velocity');
   });
 
+  test('industrial loads reduce acceleration and cruise speed without changing base stats', function () {
+    ['miner-01', 'tug-01'].forEach(function (id) {
+      function cruise(load, ticks) {
+        var world = sim.selectShips(sim.createInitialWorld(), [id]);
+        var ship = findShip(world, id);
+        ship.cargo = ship.cargoCapacity * load;
+        ship.carryingSection = load > 0;
+        world = sim.issueMoveOrder(world, { x: ship.position.x + 10000, y: ship.position.y });
+        for (var i = 0; i < ticks; i += 1) world = sim.stepWorld(world, 1 / 30);
+        return world;
+      }
+      var empty = findShip(cruise(0, 1), id);
+      var loaded = findShip(cruise(1, 1), id);
+      assert(loaded.velocity.x < empty.velocity.x, 'Payload should reduce acceleration');
+      var loadedWorld = cruise(1, 180);
+      loaded = findShip(loadedWorld, id);
+      empty = findShip(cruise(0, 180), id);
+      assert(loaded.velocity.x < empty.velocity.x * 0.75, 'Full load should reduce cruise speed noticeably');
+      assertClose(loaded.speed, empty.speed);
+      assertClose(loaded.acceleration, empty.acceleration);
+      if (id === 'miner-01') {
+        var half = findShip(cruise(0.5, 180), id);
+        assert(half.velocity.x > loaded.velocity.x && half.velocity.x < empty.velocity.x, 'Partial ore load should have an intermediate penalty');
+      }
+      loaded.cargo = 0;
+      loaded.carryingSection = false;
+      for (var i = 0; i < 180; i += 1) loadedWorld = sim.stepWorld(loadedWorld, 1 / 30);
+      assertClose(findShip(loadedWorld, id).velocity.x, empty.velocity.x);
+    });
+  });
+
+  test('picking up cargo does not instantly clamp existing velocity', function () {
+    var world = sim.selectShips(sim.createInitialWorld(), ['miner-01']);
+    var miner = findShip(world, 'miner-01');
+    miner.velocity = { x: miner.speed, y: 0 };
+    miner.cargo = miner.cargoCapacity;
+    world = sim.issueMoveOrder(world, { x: miner.position.x + 10000, y: miner.position.y });
+    var next = findShip(sim.stepWorld(world, 1 / 30), 'miner-01');
+    assert(next.velocity.x < miner.speed, 'Loaded ship should begin slowing');
+    assert(miner.speed - next.velocity.x <= miner.acceleration / 30, 'Loaded ship should decelerate gradually');
+  });
+
   test('rotation limits sudden in-place facing changes', function () {
     var world = sim.selectShips(sim.createInitialWorld(), ['escort-01']);
     var escort = findShip(world, 'escort-01');

@@ -371,8 +371,12 @@
     };
     var currentSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
     var stoppingDistance = Math.max(0, distance - arrivalDistance);
-    var stoppingSpeed = Math.sqrt(2 * ship.acceleration * stoppingDistance);
-    var desiredSpeed = Math.min(ship.speed, stoppingSpeed);
+    var load = ship.type === 'miner' ? Math.max(0, Math.min(1, ship.cargo / Math.max(1, ship.cargoCapacity))) :
+      (ship.type === 'tug' && ship.carryingSection ? 1 : 0);
+    var haulingSpeed = ship.speed * (1 - load * (ship.type === 'tug' ? 0.45 : 0.35));
+    var haulingAcceleration = ship.acceleration * (1 - load * (ship.type === 'tug' ? 0.5 : 0.4));
+    var stoppingSpeed = Math.sqrt(2 * haulingAcceleration * stoppingDistance);
+    var desiredSpeed = Math.min(haulingSpeed, stoppingSpeed);
     var desiredVelocity = {
       x: direction.x * desiredSpeed,
       y: direction.y * desiredSpeed
@@ -382,7 +386,7 @@
       y: desiredVelocity.y - ship.velocity.y
     };
     var deltaLength = Math.hypot(deltaVelocity.x, deltaVelocity.y);
-    var maxDelta = ship.acceleration * dt;
+    var maxDelta = haulingAcceleration * dt;
 
     if (deltaLength > maxDelta && deltaLength > 0) {
       deltaVelocity.x = (deltaVelocity.x / deltaLength) * maxDelta;

@@ -980,6 +980,9 @@
       return;
     }
 
+    if (ship.type === 'tug' && ship.carryingSection) {
+      paintConstructorCargo(graphics, style);
+    }
     graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
     if (ship.type === 'miner') {
       paintMiner(graphics, style);
@@ -1013,6 +1016,26 @@
     graphics.lineStyle(1, style.stroke, 0.35);
     graphics.moveTo(0.45 * r, -0.3 * r);
     graphics.lineTo(0.45 * r, 0.3 * r);
+  }
+
+  function paintConstructorCargo(graphics, style) {
+    var r = style.radius;
+    graphics.lineStyle(1, 0xaabac4, 0.85);
+    graphics.beginFill(0x53616b, 1);
+    graphics.drawRoundedRect(-0.72 * r, -0.65 * r, 1.44 * r, 1.3 * r, 1.5);
+    graphics.endFill();
+    graphics.lineStyle(1, 0x28353e, 0.8);
+    [-0.36, 0.36].forEach(function (y) {
+      graphics.moveTo(-0.48 * r, y * r);
+      graphics.lineTo(0.48 * r, y * r);
+    });
+    graphics.lineStyle(2, style.stroke, 0.7);
+    [-0.58, 0.58].forEach(function (x) {
+      [-1, 1].forEach(function (side) {
+        graphics.moveTo(x * r, side * 0.65 * r);
+        graphics.lineTo(x * r, side * 0.84 * r);
+      });
+    });
   }
 
   function paintConstructor(graphics, style) {
@@ -1057,12 +1080,6 @@
       graphics.endFill();
     }
 
-    if (ship.type === 'tug' && ship.carryingSection) {
-      graphics.lineStyle(1, 0xd7dee4, 0.9);
-      graphics.beginFill(0x8fa5af, 0.55);
-      graphics.drawRect(-8, style.radius + 7, 16, 7);
-      graphics.endFill();
-    }
   }
 
   function paintMothership(graphics, selected, elapsedSeconds) {
