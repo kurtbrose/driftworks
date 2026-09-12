@@ -1,0 +1,67 @@
+# Driftworks
+
+Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This first repository state is deliberately small: a static tactical sandbox for selecting and moving a persistent handful of industrial spacecraft.
+
+## What Works Now
+
+- Full-window PixiJS tactical scene using vendored runtime code.
+- Geometric placeholder mothership, miners, tug, and escort.
+- Single-click selection and drag-box multi-selection.
+- Right-click move orders with fixed-step simulation and interpolated rendering.
+- Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
+- Versioned localStorage save/load of serializable game state.
+- Toggleable stress mode that animates thousands of simple sprites.
+- DOM HUD with selected ships, simulation time, entity count, and measured FPS.
+- Browser-native simulation tests at `./tests/`.
+
+## No Build Pipeline
+
+There is intentionally no Node, npm, package manager, TypeScript, Vite, bundler, transpiler, lockfile, or generated build output. The repository itself is the deployable static artifact.
+
+## Run Locally
+
+From the repository root:
+
+```sh
+python -m http.server 8000
+```
+
+Or use the tiny launcher for your platform:
+
+```sh
+serve.bat
+./serve.sh
+```
+
+Then open:
+
+- Game: http://localhost:8000/
+- Tests: http://localhost:8000/tests/
+
+The app uses ordinary scripts, not JavaScript modules. Serving over HTTP is still the recommended path because browser behavior around local files varies, and it matches GitHub Pages or any static host.
+
+## Deploy
+
+Deploy the repository contents directly as a static site, including to GitHub Pages. All application URLs are relative, so the game can run from a domain root or a repository subpath.
+
+## Vendored Runtime
+
+PixiJS is vendored at `vendor/pixi/pixi.min.js`.
+
+- Version: PixiJS 7.4.2
+- Source: `https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js`
+- License: MIT, copied to `vendor/pixi/LICENSE` from the PixiJS 7.4.2 repository tag.
+
+The game does not load code, fonts, art, telemetry, or other runtime resources from the network.
+
+## Browser Assumptions
+
+- Ordinary browser scripts loaded in explicit order.
+- Canvas/WebGL support through PixiJS.
+- `localStorage`.
+- Pointer events.
+- `requestAnimationFrame`.
+
+## Next Vertical-Slice Milestone
+
+The next milestone is the first compact mining contract loop: accept one contract, choose a simple transfer, deploy this fleet into an asteroid field, mine under timed pressure, return cargo/damage/money to the strategic screen, and save the consequences.

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Driftworks Browser Tests</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0b1014;
+        color: #dce7eb;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 32px 20px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+      }
+
+      #summary {
+        border: 1px solid #526873;
+        border-radius: 6px;
+        margin: 18px 0;
+        padding: 14px;
+      }
+
+      #summary.pass {
+        border-color: #75be93;
+        background: rgba(72, 130, 92, 0.18);
+      }
+
+      #summary.fail {
+        border-color: #d48686;
+        background: rgba(130, 72, 72, 0.18);
+      }
+
+      li {
+        margin: 7px 0;
+      }
+
+      .pass {
+        color: #94d9ac;
+      }
+
+      .fail {
+        color: #efabab;
+      }
+
+      pre {
+        overflow: auto;
+        border-radius: 6px;
+        background: #151d22;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Driftworks Browser Tests</h1>
+      <p>Ordinary-script tests for deterministic simulation and save/load behavior.</p>
+      <section id="summary">Running...</section>
+      <ol id="results"></ol>
+    </main>
+    <script src="../src/sim.js"></script>
+    <script src="./tests.js"></script>
+  </body>
+</html>
