@@ -5,16 +5,19 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 ## What Works Now
 
 - Full-window PixiJS tactical scene using vendored runtime code.
-- Geometric placeholder mothership, miners, tug, and escort.
+- Geometric placeholder mothership, miners, tug, and two escort craft.
 - Single-click selection and drag-box multi-selection.
 - Right-click move orders with fixed-step simulation and interpolated rendering.
 - Right-click asteroid nodes with selected miners to extract ore.
 - Miners automatically return full cargo to the mothership and deposit it into storage.
-- HUD ore quota and remaining field ore readouts.
+- Mothership processes delivered ore into 80t depot sections.
+- Tug can carry fabricated depot sections from the mothership to the depot site.
+- HUD ore quota, depot progress, construction section stock, and remaining field ore readouts.
 - Subtle parallax starfield below the grid.
 - Acceleration-driven engine plumes, mining motes, and delivery feedback text.
 - Move-order reticles, selection pulses, mothership running lights, and focus-selection camera key with visible focus feedback.
-- Debug hostile-drone vignette with escort fire, impacts, destruction fragments, very light final-hit shake, and final-kill slow motion.
+- Debug hostile-raider vignette with industrial target selection, escort range coverage, laser dwell, impacts, destruction fragments, very light final-hit shake, and final-kill slow motion.
+- Simple threat director that warns, then sends raiders once mining/construction activity exposes the operation.
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
 - Versioned localStorage save/load of serializable game state.
 - Toggleable stress mode that animates thousands of simple sprites.
@@ -50,7 +53,13 @@ The app uses ordinary scripts, not JavaScript modules. Serving over HTTP is stil
 Debug controls:
 
 - `F`: ease camera onto the selected ship or fleet and flash a focus reticle.
-- `H`: spawn a short hostile-drone combat vignette near the current selection.
+- `H`: manually spawn a short hostile-raider vignette; selected escorts show their coverage circle.
+
+Construction controls:
+
+- Deliver ore to the mothership until a depot section is ready.
+- Select `Linehorse`, then right-click the depot ghost to carry a ready section to the site.
+- Once mining or construction is underway, contacts can appear automatically after a warning.
 
 ## Deploy
 

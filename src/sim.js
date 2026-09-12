@@ -8,6 +8,8 @@
   var MINE_DISTANCE = 18;
   var DOCK_DISTANCE = 44;
   var MINING_RATE = 10;
+  var DEPOT_SECTION_MASS = 80;
+  var DEPOT_STAGE_COUNT = 3;
 
   function createInitialWorld() {
     return {
@@ -27,8 +29,16 @@
       selectedShipIds: [],
       mothership: {
         storage: {
-          ore: 0
+          ore: 0,
+          constructionMass: 0,
+          depotSections: 0
         }
+      },
+      depot: {
+        name: 'Transfer Depot Site',
+        position: { x: 360, y: 300 },
+        builtStages: 0,
+        totalStages: DEPOT_STAGE_COUNT
       },
       contract: {
         id: 'contract-ore-01',
@@ -46,7 +56,8 @@
         createShip('miner-01', 'Prospector One', 'miner', -180, -90, 82),
         createShip('miner-02', 'Prospector Two', 'miner', -220, 100, 78),
         createShip('tug-01', 'Linehorse', 'tug', 160, 120, 62),
-        createShip('escort-01', 'Watchdog', 'escort', 210, -125, 115)
+        createShip('escort-01', 'Watchdog', 'escort', 210, -125, 115),
+        createShip('escort-02', 'Longbow', 'escort', 250, -165, 110)
       ]
     };
   }
@@ -75,6 +86,7 @@
       order: { kind: 'idle' },
       cargo: 0,
       previousCargo: 0,
+      carryingSection: false,
       cargoCapacity: type === 'tug' ? 180 : 80,
       damage: 0,
       speed: speed,
@@ -134,9 +146,14 @@
   function issueContextOrder(world, target) {
     var asteroid = findNearestAsteroid(world, target, 38);
     var mothership = findMothership(world);
+    var depot = world.depot;
 
     if (asteroid) {
       return issueMineOrder(world, asteroid.id);
+    }
+
+    if (depot && distance(target, depot.position) <= 48 && selectedType(world, 'tug')) {
+      return issueBuildOrder(world);
     }
 
     if (mothership && distance(target, mothership.position) <= DOCK_DISTANCE + 18) {
@@ -160,6 +177,25 @@
           kind: 'mine',
           asteroidId: asteroid.id,
           target: { x: asteroid.position.x, y: asteroid.position.y }
+        };
+      }
+    });
+    return next;
+  }
+
+  function issueBuildOrder(world) {
+    var next = cloneWorld(world);
+    var selected = selectedLookup(next);
+    var mothership = findMothership(next);
+    if (!mothership || !next.depot || next.depot.builtStages >= next.depot.totalStages) {
+      return next;
+    }
+
+    next.ships.forEach(function (ship) {
+      if (selected[ship.id] && ship.type === 'tug') {
+        ship.order = {
+          kind: 'build',
+          target: clonePlain(ship.carryingSection ? next.depot.position : mothership.position)
         };
       }
     });
@@ -190,7 +226,9 @@
     var asteroids = next.asteroids.map(clonePlain);
     var mothership = clonePlain(next.mothership);
     var contract = clonePlain(next.contract);
+    var depot = clonePlain(next.depot);
     var mothershipShip = findMothership(next);
+    processConstructionMass(mothership, depot);
 
     return {
       version: next.version,
@@ -200,15 +238,16 @@
       camera: clonePlain(next.camera),
       selectedShipIds: next.selectedShipIds.slice(),
       mothership: mothership,
+      depot: depot,
       contract: contract,
       asteroids: asteroids,
       ships: next.ships.map(function (ship) {
-        return stepShip(ship, dt, asteroids, mothership, mothershipShip);
+        return stepShip(ship, dt, asteroids, mothership, mothershipShip, depot);
       })
     };
   }
 
-  function stepShip(ship, dt, asteroids, mothership, mothershipShip) {
+  function stepShip(ship, dt, asteroids, mothership, mothershipShip, depot) {
     var next = clonePlain(ship);
     next.previousPosition = { x: ship.position.x, y: ship.position.y };
     next.previousVelocity = { x: ship.velocity.x, y: ship.velocity.y };
@@ -220,6 +259,10 @@
 
     if (next.order.kind === 'return') {
       return stepReturningShip(next, dt, mothership, mothershipShip);
+    }
+
+    if (next.order.kind === 'build') {
+      return stepBuildingShip(next, dt, mothership, mothershipShip, depot);
     }
 
     if (next.order.kind !== 'move' || next.speed <= 0) {
@@ -252,6 +295,38 @@
       ship.order = mothershipShip ? { kind: 'return', target: clonePlain(mothershipShip.position) } : { kind: 'idle' };
     }
 
+    return ship;
+  }
+
+  function stepBuildingShip(ship, dt, mothership, mothershipShip, depot) {
+    if (!mothershipShip || !depot || depot.builtStages >= depot.totalStages) {
+      ship.order = { kind: 'idle' };
+      ship.carryingSection = false;
+      return ship;
+    }
+
+    if (!ship.carryingSection) {
+      ship.order.target = clonePlain(mothershipShip.position);
+      if (distance(ship.position, mothershipShip.position) > DOCK_DISTANCE) {
+        return stepTowardOrderTarget(ship, dt, DOCK_DISTANCE, false);
+      }
+      if (mothership.storage.depotSections <= 0) {
+        ship.velocity = { x: 0, y: 0 };
+        return ship;
+      }
+      mothership.storage.depotSections -= 1;
+      ship.carryingSection = true;
+    }
+
+    ship.order.target = clonePlain(depot.position);
+    if (distance(ship.position, depot.position) > DOCK_DISTANCE) {
+      return stepTowardOrderTarget(ship, dt, DOCK_DISTANCE, false);
+    }
+
+    depot.builtStages += 1;
+    ship.carryingSection = false;
+    ship.velocity = { x: 0, y: 0 };
+    ship.order = { kind: 'idle' };
     return ship;
   }
 
@@ -372,6 +447,15 @@
     var initial = createInitialWorld();
     var next = clonePlain(world);
     next.mothership = next.mothership || initial.mothership;
+    next.mothership.storage = next.mothership.storage || {};
+    next.mothership.storage.ore = typeof next.mothership.storage.ore === 'number' ? next.mothership.storage.ore : 0;
+    next.mothership.storage.constructionMass =
+      typeof next.mothership.storage.constructionMass === 'number' ? next.mothership.storage.constructionMass : 0;
+    next.mothership.storage.depotSections =
+      typeof next.mothership.storage.depotSections === 'number' ? next.mothership.storage.depotSections : 0;
+    next.depot = next.depot || initial.depot;
+    next.depot.builtStages = typeof next.depot.builtStages === 'number' ? next.depot.builtStages : 0;
+    next.depot.totalStages = next.depot.totalStages || DEPOT_STAGE_COUNT;
     next.contract = next.contract || initial.contract;
     next.asteroids = next.asteroids || initial.asteroids;
     next.ships = next.ships || initial.ships;
@@ -379,6 +463,7 @@
       if (typeof ship.turnRate !== 'number') {
         ship.turnRate = ship.speed > 0 ? Math.max(1.4, Math.min(2.8, 180 / ship.speed)) : 0;
       }
+      ship.carryingSection = !!ship.carryingSection;
     });
     next.selectedShipIds = next.selectedShipIds || [];
     next.camera = next.camera || initial.camera;
@@ -394,6 +479,13 @@
       selected[id] = true;
     });
     return selected;
+  }
+
+  function selectedType(world, type) {
+    var selected = selectedLookup(world);
+    return world.ships.some(function (ship) {
+      return selected[ship.id] && ship.type === type;
+    });
   }
 
   function findMothership(world) {
@@ -425,6 +517,21 @@
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
+  function processConstructionMass(mothership, depot) {
+    if (!mothership || !mothership.storage || !depot) return;
+    var needed = Math.max(0, depot.totalStages - depot.builtStages - mothership.storage.depotSections);
+    if (needed <= 0) return;
+    while (mothership.storage.ore > 0 && mothership.storage.constructionMass < DEPOT_SECTION_MASS) {
+      var processed = Math.min(mothership.storage.ore, DEPOT_SECTION_MASS - mothership.storage.constructionMass);
+      mothership.storage.ore -= processed;
+      mothership.storage.constructionMass += processed;
+    }
+    while (mothership.storage.constructionMass >= DEPOT_SECTION_MASS && mothership.storage.depotSections < needed) {
+      mothership.storage.constructionMass -= DEPOT_SECTION_MASS;
+      mothership.storage.depotSections += 1;
+    }
+  }
+
   function angleDelta(from, to) {
     var delta = (to - from) % (Math.PI * 2);
     if (delta > Math.PI) delta -= Math.PI * 2;
@@ -452,6 +559,7 @@
     issueMoveOrder: issueMoveOrder,
     issueContextOrder: issueContextOrder,
     issueMineOrder: issueMineOrder,
+    issueBuildOrder: issueBuildOrder,
     issueReturnOrder: issueReturnOrder,
     stepWorld: stepWorld,
     serializeWorld: serializeWorld,

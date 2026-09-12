@@ -17,6 +17,11 @@
   var ASTEROID_FILL = 0x655f57;
   var ASTEROID_STROKE = 0xb6aa9b;
   var MAX_EFFECTS = 260;
+  var DEFENDER_RANGE = 280;
+  var DEFENDER_DWELL_SECONDS = 1.35;
+  var DIRECTOR_WARNING_SECONDS = 8;
+  var DIRECTOR_COOLDOWN_SECONDS = 44;
+  var DIRECTOR_MAX_WAVES = 3;
 
   function boot() {
     var sceneHost = document.querySelector('#scene');
@@ -120,6 +125,9 @@
       '<div class="row"><span>Cash</span><strong data-role="money"></strong></div>' +
       '<div class="row"><span>Ore Quota</span><strong data-role="quota"></strong></div>' +
       '<div class="row"><span>Ore Field</span><strong data-role="field"></strong></div>' +
+      '<div class="row"><span>Depot</span><strong data-role="depot"></strong></div>' +
+      '<div class="row"><span>Sections</span><strong data-role="sections"></strong></div>' +
+      '<div class="row"><span>Contacts</span><strong data-role="contacts"></strong></div>' +
       '<div class="row"><span>Sim Clock</span><strong data-role="clock"></strong></div>' +
       '<div class="row"><span>Entities</span><strong data-role="entities"></strong></div>' +
       '<div class="row"><span>Selection</span><strong data-role="selection"></strong></div>' +
@@ -152,6 +160,11 @@
         host.querySelector('[data-role="quota"]').textContent =
           Math.floor(world.mothership.storage.ore) + ' / ' + world.contract.quotaOre + ' t';
         host.querySelector('[data-role="field"]').textContent = Math.floor(totalOreRemaining(world)) + ' t';
+        host.querySelector('[data-role="depot"]').textContent =
+          world.depot.builtStages + ' / ' + world.depot.totalStages + ' stages';
+        host.querySelector('[data-role="sections"]').textContent =
+          world.mothership.storage.depotSections + ' ready · ' + Math.floor(world.mothership.storage.constructionMass) + ' t mass';
+        host.querySelector('[data-role="contacts"]').textContent = stats.contacts;
         host.querySelector('[data-role="clock"]').textContent = world.elapsedSeconds.toFixed(1) + ' s';
         host.querySelector('[data-role="entities"]').textContent = stats.entityCount + ' @ ' + (stats.fps || '--') + ' FPS';
 
@@ -192,6 +205,8 @@
     var worldLayer = new PIXI.Container();
     var effectsLayer = new PIXI.Container();
     var grid = new PIXI.Graphics();
+    var depotGraphic = new PIXI.Graphics();
+    var coverageGraphic = new PIXI.Graphics();
     var selectionBox = new PIXI.Graphics();
     var readout = new PIXI.Text('', {
       fontFamily: 'Consolas, monospace',
@@ -220,6 +235,8 @@
     var combatTime = 0;
     var cameraShake = 0;
     var visualTimeScale = 1;
+    var laserPaintTimer = 0;
+    var director = createThreatDirector();
 
     host.appendChild(app.view);
     host.addEventListener('contextmenu', function (event) {
@@ -228,6 +245,9 @@
     app.stage.addChild(starfield.container);
     app.stage.addChild(worldLayer);
     worldLayer.addChild(grid);
+    worldLayer.addChild(depotGraphic);
+    coverageGraphic.eventMode = 'none';
+    worldLayer.addChild(coverageGraphic);
     worldLayer.addChild(effectsLayer);
     app.stage.addChild(selectionBox);
     app.stage.addChild(readout);
@@ -270,6 +290,8 @@
 
     function sync(world) {
       updateStarfield(starfield, world.camera, viewport());
+      paintDepot(depotGraphic, world.depot);
+      paintDefenderCoverage(coverageGraphic, world);
       var shakeX = cameraShake > 0 ? (Math.sin(world.elapsedSeconds * 97) * cameraShake) : 0;
       var shakeY = cameraShake > 0 ? (Math.cos(world.elapsedSeconds * 83) * cameraShake) : 0;
       var view = viewport();
@@ -326,6 +348,7 @@
         graphic.rotation = ship.rotation;
       });
 
+      updateThreatDirector(world, visualDt);
       updateCombatVignette(world, visualDt);
       spawnStateEffects(world, visualDt);
       updateAudioTelemetry(world);
@@ -376,19 +399,30 @@
     }
 
     function spawnHostileDrones(world) {
+      spawnHostileWave(world, 'debug');
+    }
+
+    function spawnHostileWave(world, reason) {
       drones = [];
       Object.keys(droneGraphics).forEach(function (id) {
         droneGraphics[id].destroy();
       });
       droneGraphics = {};
-      var center = selectedCenter(world) || { x: world.camera.x, y: world.camera.y };
-      for (var i = 0; i < 3; i += 1) {
+      var targets = industrialTargets(world);
+      var center = targets[0] ? targets[0].position : (selectedCenter(world) || { x: world.camera.x, y: world.camera.y });
+      var count = reason === 'director' && director.wavesSpawned >= 2 ? 4 : 3;
+      for (var i = 0; i < count; i += 1) {
+        var target = targets[i % targets.length] || { id: 'mothership', kind: 'ship' };
         drones.push({
           id: 'drone-' + Math.floor(world.elapsedSeconds * 1000) + '-' + i,
-          position: { x: center.x + 420 + i * 48, y: center.y - 160 + i * 130 },
-          velocity: { x: -18 - i * 5, y: 8 - i * 6 },
+          targetId: target.id,
+          targetKind: target.kind,
+          position: { x: center.x + 430 + i * 62, y: center.y - 180 + i * 120 },
+          velocity: { x: 0, y: 0 },
+          speed: 58 + i * 8,
           hp: 3,
-          flash: 0
+          flash: 0,
+          underFire: 0
         });
       }
       shotCooldown = 0.2;
@@ -397,24 +431,122 @@
       if (audio) audio.playWarning();
     }
 
+    function createThreatDirector() {
+      return {
+        state: 'idle',
+        timer: 0,
+        cooldown: 10,
+        wavesSpawned: 0
+      };
+    }
+
+    function updateThreatDirector(world, dt) {
+      if (director.wavesSpawned >= DIRECTOR_MAX_WAVES) return;
+      if (drones.length) return;
+      if (world.depot && world.depot.builtStages >= world.depot.totalStages) return;
+
+      if (director.state === 'warning') {
+        director.timer -= dt;
+        if (director.timer <= 0) {
+          director.state = 'cooldown';
+          director.cooldown = DIRECTOR_COOLDOWN_SECONDS;
+          director.wavesSpawned += 1;
+          spawnHostileWave(world, 'director');
+        }
+        return;
+      }
+
+      if (director.state === 'cooldown') {
+        director.cooldown -= dt;
+        if (director.cooldown > 0) return;
+        director.state = 'idle';
+      }
+
+      if (operationExposure(world) >= 1) {
+        director.state = 'warning';
+        director.timer = DIRECTOR_WARNING_SECONDS;
+        pushFloatText(effects, incomingWarningPosition(world), 'CONTACT INBOUND');
+        if (audio) audio.playWarning();
+      }
+    }
+
+    function incomingWarningPosition(world) {
+      var targets = industrialTargets(world);
+      return targets[0] ? { x: targets[0].position.x, y: targets[0].position.y - 96 } : { x: world.camera.x, y: world.camera.y - 96 };
+    }
+
+    function industrialTargets(world) {
+      var targets = [];
+      world.ships.forEach(function (ship) {
+        if (ship.type === 'miner' && ship.cargo > 0) {
+          targets.push({ id: ship.id, kind: 'ship', position: ship.position });
+        }
+        if (ship.type === 'tug' && (ship.carryingSection || ship.order.kind === 'build')) {
+          targets.push({ id: ship.id, kind: 'ship', position: ship.position });
+        }
+      });
+      if (world.depot && world.depot.builtStages < world.depot.totalStages) {
+        targets.push({ id: 'depot', kind: 'depot', position: world.depot.position });
+      }
+      var mothership = findShipByType(world, 'mothership');
+      if (mothership) {
+        targets.push({ id: mothership.id, kind: 'ship', position: mothership.position });
+      }
+      return targets;
+    }
+
+    function droneTargetPosition(world, drone) {
+      if (drone.targetKind === 'depot' && world.depot) return world.depot.position;
+      var ship = findShipById(world, drone.targetId);
+      if (ship) return ship.position;
+      var mothership = findShipByType(world, 'mothership');
+      return mothership ? mothership.position : { x: 0, y: 0 };
+    }
+
     function updateCombatVignette(world, dt) {
       if (!drones.length) return;
       combatTime += dt;
       shotCooldown -= dt;
+      laserPaintTimer -= dt;
 
       drones.forEach(function (drone) {
-        drone.position.x += drone.velocity.x * dt;
-        drone.position.y += drone.velocity.y * dt;
+        var target = droneTargetPosition(world, drone);
+        var dx = target.x - drone.position.x;
+        var dy = target.y - drone.position.y;
+        var distance = Math.max(1, Math.hypot(dx, dy));
+        drone.velocity = { x: (dx / distance) * drone.speed, y: (dy / distance) * drone.speed };
+        if (distance > 20) {
+          drone.position.x += drone.velocity.x * dt;
+          drone.position.y += drone.velocity.y * dt;
+        }
         drone.flash = Math.max(0, drone.flash - dt * 5);
+        drone.underFire = Math.max(0, (drone.underFire || 0) - dt * 0.35);
       });
 
-      var escort = findShipByType(world, 'escort');
-      if (escort && shotCooldown <= 0) {
-        var target = nearestDrone(escort.position);
+      var assigned = {};
+      world.ships.filter(function (ship) {
+        return ship.type === 'escort';
+      }).forEach(function (escort) {
+        var target = nearestDroneInRange(escort.position, assigned, DEFENDER_RANGE);
         if (target) {
-          fireEscortShot(escort, target);
-          shotCooldown = 0.34;
+          assigned[target.id] = true;
+          holdDefensiveLaser(escort, target, dt);
         }
+      });
+    }
+
+    function holdDefensiveLaser(escort, drone, dt) {
+      drone.underFire = (drone.underFire || 0) + dt;
+      drone.flash = 1;
+      if (laserPaintTimer <= 0) {
+        pushProjectile(effects, escort.position, drone.position);
+        pushImpactSparks(effects, drone.position, drone.velocity);
+        if (audio) audio.playImpact(drone.underFire);
+        laserPaintTimer = 0.08;
+      }
+      if (drone.underFire >= DEFENDER_DWELL_SECONDS) {
+        if (audio) audio.playGunshot();
+        destroyDrone(drone);
       }
     }
 
@@ -483,6 +615,20 @@
       return best;
     }
 
+    function nearestDroneInRange(position, assigned, range) {
+      var best = null;
+      var bestDistance = Infinity;
+      drones.forEach(function (drone) {
+        if (assigned[drone.id]) return;
+        var d = Math.hypot(drone.position.x - position.x, drone.position.y - position.y);
+        if (d <= range && d < bestDistance) {
+          best = drone;
+          bestDistance = d;
+        }
+      });
+      return best;
+    }
+
     function selectedCenter(world) {
       var selected = selectedShips(world);
       if (!selected.length) return null;
@@ -504,6 +650,12 @@
     function findShipByType(world, type) {
       return world.ships.filter(function (ship) {
         return ship.type === type;
+      })[0];
+    }
+
+    function findShipById(world, shipId) {
+      return world.ships.filter(function (ship) {
+        return ship.id === shipId;
       })[0];
     }
 
@@ -592,8 +744,17 @@
       return {
         fps: fps,
         stressEnabled: stressEnabled,
-        entityCount: count
+        entityCount: count,
+        contacts: contactStatus()
       };
+    }
+
+    function contactStatus() {
+      if (drones.length) return drones.length + ' active';
+      if (director.state === 'warning') return 'inbound ' + Math.max(0, Math.ceil(director.timer)) + 's';
+      if (director.wavesSpawned >= DIRECTOR_MAX_WAVES) return 'quiet';
+      if (director.state === 'cooldown') return 'quiet ' + Math.max(0, Math.ceil(director.cooldown)) + 's';
+      return 'quiet';
     }
 
     function updateFps(dt, world) {
@@ -711,6 +872,17 @@
     });
   }
 
+  function operationExposure(world) {
+    var exposure = 0;
+    if (world.mothership.storage.constructionMass > 0 || world.mothership.storage.depotSections > 0) exposure += 1;
+    if (world.depot && world.depot.builtStages > 0) exposure += 1;
+    world.ships.forEach(function (ship) {
+      if (ship.type === 'miner' && (ship.cargo > 20 || ship.order.kind === 'mine' || ship.order.kind === 'return')) exposure += 1;
+      if (ship.type === 'tug' && (ship.carryingSection || ship.order.kind === 'build')) exposure += 1;
+    });
+    return exposure;
+  }
+
   function worldToScreen(point, camera, viewport) {
     return {
       x: (point.x - camera.x) * camera.zoom + viewport.width / 2,
@@ -746,6 +918,7 @@
       camera: camera,
       selectedShipIds: world.selectedShipIds,
       mothership: world.mothership,
+      depot: world.depot,
       contract: world.contract,
       asteroids: world.asteroids,
       ships: world.ships
@@ -786,27 +959,40 @@
     graphics.lineTo(0, 1800);
   }
 
+  function paintDefenderCoverage(graphics, world) {
+    graphics.clear();
+    world.ships.forEach(function (ship) {
+      if (ship.type !== 'escort' || world.selectedShipIds.indexOf(ship.id) === -1) return;
+      graphics.lineStyle(1.25, 0xf0b7b9, 0.32);
+      graphics.beginFill(0xb76c6f, 0.035);
+      graphics.drawCircle(ship.position.x, ship.position.y, DEFENDER_RANGE);
+      graphics.endFill();
+    });
+  }
+
   function paintShip(graphics, ship, selected, elapsedSeconds) {
     var style = SHIP_STYLES[ship.type];
     graphics.clear();
     drawEnginePlume(graphics, ship, style.radius);
-    graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
-    graphics.beginFill(style.fill, ship.type === 'mothership' ? 0.88 : 0.96);
-
     if (ship.type === 'mothership') {
-      graphics.drawRoundedRect(-36, -17, 72, 34, 5);
-      graphics.drawRect(-10, -28, 20, 56);
-      drawMothershipLights(graphics, elapsedSeconds);
-    } else {
-      graphics.moveTo(style.radius, 0);
-      graphics.lineTo(-style.radius * 0.72, -style.radius * 0.62);
-      graphics.lineTo(-style.radius * 0.45, 0);
-      graphics.lineTo(-style.radius * 0.72, style.radius * 0.62);
-      graphics.closePath();
+      paintMothership(graphics, selected, elapsedSeconds);
+      drawShipOrderAndBadges(graphics, ship, style);
+      return;
     }
 
+    graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
+    graphics.beginFill(style.fill, 0.96);
+    graphics.moveTo(style.radius, 0);
+    graphics.lineTo(-style.radius * 0.72, -style.radius * 0.62);
+    graphics.lineTo(-style.radius * 0.45, 0);
+    graphics.lineTo(-style.radius * 0.72, style.radius * 0.62);
+    graphics.closePath();
     graphics.endFill();
 
+    drawShipOrderAndBadges(graphics, ship, style);
+  }
+
+  function drawShipOrderAndBadges(graphics, ship, style) {
     if (ship.order.kind === 'move') {
       graphics.lineStyle(1, 0x7aa9c2, 0.5);
       drawWorldOrderLine(graphics, ship);
@@ -815,6 +1001,9 @@
       drawWorldOrderLine(graphics, ship);
     } else if (ship.order.kind === 'return') {
       graphics.lineStyle(1, 0x9ed6c8, 0.65);
+      drawWorldOrderLine(graphics, ship);
+    } else if (ship.order.kind === 'build') {
+      graphics.lineStyle(1, 0xbfd6ea, 0.7);
       drawWorldOrderLine(graphics, ship);
     }
 
@@ -825,20 +1014,93 @@
       graphics.drawRect(-10, style.radius + 6, 20 * filled, 3);
       graphics.endFill();
     }
+
+    if (ship.type === 'tug' && ship.carryingSection) {
+      graphics.lineStyle(1, 0xd7dee4, 0.9);
+      graphics.beginFill(0x8fa5af, 0.55);
+      graphics.drawRect(-8, style.radius + 7, 16, 7);
+      graphics.endFill();
+    }
+  }
+
+  function paintMothership(graphics, selected, elapsedSeconds) {
+    graphics.lineStyle(0);
+    graphics.beginFill(SHIP_STYLES.mothership.fill, 0.88);
+    graphics.drawRoundedRect(-36, -17, 72, 34, 5);
+    graphics.endFill();
+
+    drawMothershipDrumSurface(graphics, elapsedSeconds);
+    drawMothershipLights(graphics, elapsedSeconds);
+
+    graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : SHIP_STYLES.mothership.stroke, selected ? 1 : 0.9);
+    graphics.beginFill(SHIP_STYLES.mothership.fill, 0);
+    graphics.drawRoundedRect(-36, -17, 72, 34, 5);
+    graphics.endFill();
+
+    graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : SHIP_STYLES.mothership.stroke, selected ? 1 : 0.9);
+    graphics.beginFill(0x6f7d86, 0.82);
+    graphics.drawRect(-10, -28, 20, 56);
+    graphics.endFill();
+  }
+
+  function drawMothershipDrumSurface(graphics, elapsedSeconds) {
+    var bands = mothershipDrumMarkers(elapsedSeconds);
+    graphics.lineStyle(1, 0xd3e4ea, 0.08);
+    graphics.moveTo(-32, -13);
+    graphics.lineTo(32, -13);
+
+    bands.forEach(function (band) {
+      if (!band.top) return;
+      graphics.lineStyle(band.width, 0xbdd9e4, band.alpha);
+      graphics.moveTo(-band.halfWidth, band.y);
+      graphics.lineTo(band.halfWidth, band.y);
+    });
+
+    graphics.lineStyle(1, 0x89c9e2, 0.09);
+    graphics.moveTo(-36, 0);
+    graphics.lineTo(36, 0);
+  }
+
+  function mothershipDrumMarkers(elapsedSeconds) {
+    var cycle = 30;
+    var drift = (elapsedSeconds * cycle / 38) % cycle;
+    var markers = [];
+    for (var i = 0; i < 6; i += 1) {
+      var y = -15 + ((i * 5 + drift) % cycle);
+      var edgeFade = Math.max(0, 1 - Math.abs(y) / 17);
+      markers.push({
+        y: y,
+        halfWidth: mothershipHullHalfWidthAtY(y),
+        width: 0.55 + edgeFade * 0.55,
+        alpha: 0.04 + edgeFade * 0.14,
+        top: y < 0
+      });
+    }
+    return markers;
+  }
+
+  function mothershipHullHalfWidthAtY(y) {
+    var absY = Math.abs(y);
+    if (absY <= 12) return 36;
+    var cornerInset = absY - 12;
+    return 31 + Math.sqrt(Math.max(0, 25 - cornerInset * cornerInset));
   }
 
   function drawMothershipLights(graphics, elapsedSeconds) {
-    var pulse = 0.45 + 0.25 * Math.sin(elapsedSeconds * 1.7);
+    var spin = elapsedSeconds * Math.PI * 2 / 38;
+    var xPositions = [-26, 26];
     graphics.lineStyle(0);
-    graphics.beginFill(0xbdd9e4, pulse);
-    graphics.drawCircle(-26, -12, 2.1);
-    graphics.drawCircle(-26, 12, 2.1);
-    graphics.drawCircle(26, -12, 2.1);
-    graphics.drawCircle(26, 12, 2.1);
-    graphics.endFill();
-    graphics.beginFill(0x89c9e2, 0.08 + pulse * 0.1);
-    graphics.drawCircle(0, 0, 28);
-    graphics.endFill();
+    xPositions.forEach(function (x, xIndex) {
+      for (var i = 0; i < 2; i += 1) {
+        var phase = spin + i * Math.PI + xIndex * 0.24;
+        var y = Math.sin(phase) * 12;
+        if (y >= 0) continue;
+        var near = 0.35 + Math.max(0, -Math.sin(phase)) * 0.55;
+        graphics.beginFill(0xbdd9e4, near);
+        graphics.drawCircle(x, y, 1.6 + near * 0.9);
+        graphics.endFill();
+      }
+    });
   }
 
   function drawEnginePlume(graphics, ship, radius) {
@@ -920,6 +1182,30 @@
       x: vector.x / length,
       y: vector.y / length
     };
+  }
+
+  function paintDepot(graphics, depot) {
+    graphics.clear();
+    if (!depot) return;
+    graphics.position.set(depot.position.x, depot.position.y);
+    graphics.lineStyle(1.5, 0x9eb8c5, 0.55);
+    graphics.beginFill(0x26333a, 0.16);
+    graphics.drawRoundedRect(-50, -32, 100, 64, 4);
+    graphics.endFill();
+    graphics.lineStyle(1, 0x9eb8c5, 0.25);
+    graphics.moveTo(-62, 0);
+    graphics.lineTo(62, 0);
+    graphics.moveTo(0, -44);
+    graphics.lineTo(0, 44);
+
+    for (var i = 0; i < depot.totalStages; i += 1) {
+      var x = -33 + i * 33;
+      var built = i < depot.builtStages;
+      graphics.lineStyle(1.5, built ? 0xd7dee4 : 0x6d828e, built ? 0.95 : 0.5);
+      graphics.beginFill(built ? 0x788891 : 0x1b252b, built ? 0.72 : 0.22);
+      graphics.drawRoundedRect(x - 12, -18, 24, 36, 3);
+      graphics.endFill();
+    }
   }
 
   function paintAsteroid(graphics, asteroid) {
@@ -1317,7 +1603,10 @@
     viewportFromApp: viewportFromApp,
     computeSelectionFocus: computeSelectionFocus,
     focusCameraToward: focusCameraToward,
-    miningEffectGeometry: miningEffectGeometry
+    miningEffectGeometry: miningEffectGeometry,
+    operationExposure: operationExposure,
+    mothershipDrumMarkers: mothershipDrumMarkers,
+    mothershipHullHalfWidthAtY: mothershipHullHalfWidthAtY
   };
 
   if (!global.DRIFTWORKS_TEST_MODE) {

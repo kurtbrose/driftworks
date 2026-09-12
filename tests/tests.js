@@ -111,6 +111,38 @@
     assert(findShip(world, 'miner-01').cargo === 0, 'Miner cargo should empty after deposit');
   });
 
+  test('mothership processes ore into depot construction sections', function () {
+    var world = sim.createInitialWorld();
+    world.mothership.storage.ore = 80;
+    world = sim.stepWorld(world, 1 / 30);
+    assertClose(world.mothership.storage.ore, 0);
+    assertClose(world.mothership.storage.depotSections, 1);
+    assertClose(world.mothership.storage.constructionMass, 0);
+  });
+
+  test('tug carries a fabricated section to the depot site', function () {
+    var world = sim.createInitialWorld();
+    world.mothership.storage.depotSections = 1;
+    world = sim.issueBuildOrder(sim.selectShips(world, ['tug-01']));
+    var guard = 0;
+    while (world.depot.builtStages < 1 && guard < 900) {
+      world = sim.stepWorld(world, 1 / 30);
+      guard += 1;
+    }
+    assert(world.depot.builtStages === 1, 'Tug should deliver one depot section');
+    assert(world.mothership.storage.depotSections === 0, 'Delivered section should leave mothership storage');
+    assert(findShip(world, 'tug-01').carryingSection === false, 'Tug should no longer carry the section');
+  });
+
+  test('operation exposure starts quiet and rises with industrial work', function () {
+    var world = sim.createInitialWorld();
+    assertClose(game.operationExposure(world), 0);
+    world = sim.issueMineOrder(sim.selectShips(world, ['miner-01']), 'ast-ceres-01');
+    assert(game.operationExposure(world) > 0, 'Mining work should expose the operation to contact risk');
+    world.mothership.storage.depotSections = 1;
+    assert(game.operationExposure(world) > 1, 'Ready construction sections should add operational exposure');
+  });
+
   test('order line local vector rotates back to world target direction', function () {
     var position = { x: -180, y: -90 };
     var target = { x: 220, y: -240 };
@@ -189,6 +221,23 @@
     assertClose(geometry.contact.x, 40);
     assertClose(geometry.contact.y, -2);
     assertClose(geometry.seedAngle, Math.PI / 2);
+  });
+
+  test('mothership drum bands roll top to bottom across the side silhouette', function () {
+    var start = game.mothershipDrumMarkers(0);
+    var later = game.mothershipDrumMarkers(4);
+    var topCount = start.filter(function (marker) {
+      return marker.top;
+    }).length;
+
+    assert(start.length === 6, 'Drum should expose a few schematic surface bands');
+    assert(topCount > 0 && topCount < start.length, 'Only part of the surface should read as the visible top');
+    start.forEach(function (marker) {
+      assert(marker.halfWidth > 31 && marker.halfWidth <= 36, 'Band should extend to the rounded hull edge');
+      assert(marker.y >= -15 && marker.y <= 15, 'Band should stay on the visible cylindrical side');
+      assert(marker.top === (marker.y < 0), 'Only top-half bands should be visible through the hull');
+    });
+    assert(later[0].y > start[0].y, 'Surface bands should roll from top to bottom over time');
   });
 
   test('save serialization round-trips world state', function () {
