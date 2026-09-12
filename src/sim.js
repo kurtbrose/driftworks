@@ -5,6 +5,9 @@
   var WORLD_VERSION = 1;
   var SAVE_KEY = 'driftworks.save.v1';
   var ARRIVAL_DISTANCE = 5;
+  var MINE_DISTANCE = 18;
+  var DOCK_DISTANCE = 44;
+  var MINING_RATE = 10;
 
   function createInitialWorld() {
     return {
@@ -22,6 +25,22 @@
         zoom: 1
       },
       selectedShipIds: [],
+      mothership: {
+        storage: {
+          ore: 0
+        }
+      },
+      contract: {
+        id: 'contract-ore-01',
+        name: 'Starter Regolith Lot',
+        quotaOre: 240,
+        reward: 18000
+      },
+      asteroids: [
+        createAsteroid('ast-ceres-01', 'Carbonaceous Chunk', -330, 220, 180),
+        createAsteroid('ast-ceres-02', 'Nickel-Iron Slab', 220, -240, 150),
+        createAsteroid('ast-ceres-03', 'Hydrated Rubble', 470, 95, 210)
+      ],
       ships: [
         createShip('msv-hardshell', 'MSV Hardshell', 'mothership', 0, 0, 0),
         createShip('miner-01', 'Prospector One', 'miner', -180, -90, 82),
@@ -29,6 +48,17 @@
         createShip('tug-01', 'Linehorse', 'tug', 160, 120, 62),
         createShip('escort-01', 'Watchdog', 'escort', 210, -125, 115)
       ]
+    };
+  }
+
+  function createAsteroid(id, name, x, y, ore) {
+    return {
+      id: id,
+      name: name,
+      position: { x: x, y: y },
+      ore: ore,
+      oreInitial: ore,
+      radius: Math.max(20, Math.min(42, 18 + ore / 10))
     };
   }
 
@@ -98,59 +128,179 @@
     return next;
   }
 
+  function issueContextOrder(world, target) {
+    var asteroid = findNearestAsteroid(world, target, 38);
+    var mothership = findMothership(world);
+
+    if (asteroid) {
+      return issueMineOrder(world, asteroid.id);
+    }
+
+    if (mothership && distance(target, mothership.position) <= DOCK_DISTANCE + 18) {
+      return issueReturnOrder(world);
+    }
+
+    return issueMoveOrder(world, target);
+  }
+
+  function issueMineOrder(world, asteroidId) {
+    var next = cloneWorld(world);
+    var asteroid = findAsteroid(next, asteroidId);
+    var selected = selectedLookup(next);
+    if (!asteroid || asteroid.ore <= 0) {
+      return next;
+    }
+
+    next.ships.forEach(function (ship) {
+      if (selected[ship.id] && ship.type === 'miner') {
+        ship.order = {
+          kind: 'mine',
+          asteroidId: asteroid.id,
+          target: { x: asteroid.position.x, y: asteroid.position.y }
+        };
+      }
+    });
+    return next;
+  }
+
+  function issueReturnOrder(world) {
+    var next = cloneWorld(world);
+    var mothership = findMothership(next);
+    var selected = selectedLookup(next);
+    if (!mothership) {
+      return next;
+    }
+
+    next.ships.forEach(function (ship) {
+      if (selected[ship.id] && ship.speed > 0) {
+        ship.order = {
+          kind: 'return',
+          target: { x: mothership.position.x, y: mothership.position.y }
+        };
+      }
+    });
+    return next;
+  }
+
   function stepWorld(world, dt) {
+    var next = normalizeWorld(world);
+    var asteroids = next.asteroids.map(clonePlain);
+    var mothership = clonePlain(next.mothership);
+    var contract = clonePlain(next.contract);
+    var mothershipShip = findMothership(next);
+
     return {
-      version: world.version,
-      seed: world.seed,
-      elapsedSeconds: world.elapsedSeconds + dt,
-      campaign: clonePlain(world.campaign),
-      camera: clonePlain(world.camera),
-      selectedShipIds: world.selectedShipIds.slice(),
-      ships: world.ships.map(function (ship) {
-        return stepShip(ship, dt);
+      version: next.version,
+      seed: next.seed,
+      elapsedSeconds: next.elapsedSeconds + dt,
+      campaign: clonePlain(next.campaign),
+      camera: clonePlain(next.camera),
+      selectedShipIds: next.selectedShipIds.slice(),
+      mothership: mothership,
+      contract: contract,
+      asteroids: asteroids,
+      ships: next.ships.map(function (ship) {
+        return stepShip(ship, dt, asteroids, mothership, mothershipShip);
       })
     };
   }
 
-  function stepShip(ship, dt) {
+  function stepShip(ship, dt, asteroids, mothership, mothershipShip) {
     var next = clonePlain(ship);
     next.previousPosition = { x: ship.position.x, y: ship.position.y };
+
+    if (next.order.kind === 'mine') {
+      return stepMiningShip(next, dt, asteroids, mothershipShip);
+    }
+
+    if (next.order.kind === 'return') {
+      return stepReturningShip(next, dt, mothership, mothershipShip);
+    }
 
     if (next.order.kind !== 'move' || next.speed <= 0) {
       next.velocity = { x: 0, y: 0 };
       return next;
     }
 
+    return stepTowardOrderTarget(next, dt, ARRIVAL_DISTANCE, true);
+  }
+
+  function stepMiningShip(ship, dt, asteroids, mothershipShip) {
+    var asteroid = findAsteroid({ asteroids: asteroids }, ship.order.asteroidId);
+    if (!asteroid || asteroid.ore <= 0 || ship.cargo >= ship.cargoCapacity) {
+      ship.order = mothershipShip ? { kind: 'return', target: clonePlain(mothershipShip.position) } : { kind: 'idle' };
+      return ship;
+    }
+
+    ship.order.target = clonePlain(asteroid.position);
+    if (distance(ship.position, asteroid.position) > MINE_DISTANCE) {
+      return stepTowardOrderTarget(ship, dt, MINE_DISTANCE, false);
+    }
+
+    var room = ship.cargoCapacity - ship.cargo;
+    var extracted = Math.min(room, asteroid.ore, MINING_RATE * dt);
+    ship.velocity = { x: 0, y: 0 };
+    ship.cargo += extracted;
+    asteroid.ore -= extracted;
+
+    if (ship.cargo >= ship.cargoCapacity || asteroid.ore <= 0) {
+      ship.order = mothershipShip ? { kind: 'return', target: clonePlain(mothershipShip.position) } : { kind: 'idle' };
+    }
+
+    return ship;
+  }
+
+  function stepReturningShip(ship, dt, mothership, mothershipShip) {
+    if (!mothershipShip) {
+      ship.order = { kind: 'idle' };
+      return ship;
+    }
+
+    ship.order.target = clonePlain(mothershipShip.position);
+    if (distance(ship.position, mothershipShip.position) > DOCK_DISTANCE) {
+      return stepTowardOrderTarget(ship, dt, DOCK_DISTANCE, false);
+    }
+
+    mothership.storage.ore += ship.cargo;
+    ship.cargo = 0;
+    ship.velocity = { x: 0, y: 0 };
+    ship.order = { kind: 'idle' };
+    return ship;
+  }
+
+  function stepTowardOrderTarget(ship, dt, arrivalDistance, snapOnArrival) {
     var toTarget = {
-      x: next.order.target.x - next.position.x,
-      y: next.order.target.y - next.position.y
+      x: ship.order.target.x - ship.position.x,
+      y: ship.order.target.y - ship.position.y
     };
     var distance = Math.hypot(toTarget.x, toTarget.y);
 
-    if (distance <= ARRIVAL_DISTANCE) {
-      next.position = { x: next.order.target.x, y: next.order.target.y };
-      next.previousPosition = { x: next.position.x, y: next.position.y };
-      next.velocity = { x: 0, y: 0 };
-      next.order = { kind: 'idle' };
-      return next;
+    if (distance <= arrivalDistance) {
+      if (snapOnArrival) {
+        ship.position = { x: ship.order.target.x, y: ship.order.target.y };
+        ship.previousPosition = { x: ship.position.x, y: ship.position.y };
+        ship.order = { kind: 'idle' };
+      }
+      ship.velocity = { x: 0, y: 0 };
+      return ship;
     }
 
     var direction = {
       x: toTarget.x / distance,
       y: toTarget.y / distance
     };
-    var currentSpeed = Math.hypot(next.velocity.x, next.velocity.y);
-    var brakingDistance = (currentSpeed * currentSpeed) / Math.max(1, 2 * next.acceleration);
-    var desiredSpeed = distance <= brakingDistance + 12 ? Math.max(18, currentSpeed - next.acceleration * dt) : next.speed;
-    var speed = Math.min(next.speed, currentSpeed + next.acceleration * dt, desiredSpeed);
+    var currentSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
+    var brakingDistance = (currentSpeed * currentSpeed) / Math.max(1, 2 * ship.acceleration);
+    var desiredSpeed = distance <= brakingDistance + 12 ? Math.max(18, currentSpeed - ship.acceleration * dt) : ship.speed;
+    var speed = Math.min(ship.speed, currentSpeed + ship.acceleration * dt, desiredSpeed);
     var travel = Math.min(distance, speed * dt);
 
-    next.position.x += direction.x * travel;
-    next.position.y += direction.y * travel;
-    next.velocity = { x: direction.x * speed, y: direction.y * speed };
-    next.rotation = Math.atan2(direction.y, direction.x);
+    ship.position.x += direction.x * travel;
+    ship.position.y += direction.y * travel;
+    ship.velocity = { x: direction.x * speed, y: direction.y * speed };
+    ship.rotation = Math.atan2(direction.y, direction.x);
 
-    return next;
+    return ship;
   }
 
   function serializeWorld(world) {
@@ -169,7 +319,7 @@
     if (envelope.world.version !== WORLD_VERSION) {
       throw new Error('Unsupported Driftworks world version: ' + envelope.world.version);
     }
-    return envelope.world;
+    return normalizeWorld(envelope.world);
   }
 
   function saveWorld(world, storage) {
@@ -185,15 +335,71 @@
     return JSON.parse(JSON.stringify(value));
   }
 
+  function normalizeWorld(world) {
+    var initial = createInitialWorld();
+    var next = clonePlain(world);
+    next.mothership = next.mothership || initial.mothership;
+    next.contract = next.contract || initial.contract;
+    next.asteroids = next.asteroids || initial.asteroids;
+    next.ships = next.ships || initial.ships;
+    next.selectedShipIds = next.selectedShipIds || [];
+    next.camera = next.camera || initial.camera;
+    next.campaign = next.campaign || initial.campaign;
+    next.elapsedSeconds = typeof next.elapsedSeconds === 'number' ? next.elapsedSeconds : 0;
+    next.version = next.version || WORLD_VERSION;
+    return next;
+  }
+
+  function selectedLookup(world) {
+    var selected = {};
+    world.selectedShipIds.forEach(function (id) {
+      selected[id] = true;
+    });
+    return selected;
+  }
+
+  function findMothership(world) {
+    return world.ships.filter(function (ship) {
+      return ship.type === 'mothership';
+    })[0];
+  }
+
+  function findAsteroid(world, asteroidId) {
+    return (world.asteroids || []).filter(function (asteroid) {
+      return asteroid.id === asteroidId;
+    })[0];
+  }
+
+  function findNearestAsteroid(world, target, maxDistance) {
+    var best = null;
+    var bestDistance = maxDistance;
+    (world.asteroids || []).forEach(function (asteroid) {
+      var currentDistance = distance(target, asteroid.position);
+      if (asteroid.ore > 0 && currentDistance <= bestDistance) {
+        best = asteroid;
+        bestDistance = currentDistance;
+      }
+    });
+    return best;
+  }
+
+  function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
   Driftworks.sim = {
     WORLD_VERSION: WORLD_VERSION,
     createInitialWorld: createInitialWorld,
     createShip: createShip,
+    createAsteroid: createAsteroid,
     cloneWorld: cloneWorld,
     createRng: createRng,
     randomBetween: randomBetween,
     selectShips: selectShips,
     issueMoveOrder: issueMoveOrder,
+    issueContextOrder: issueContextOrder,
+    issueMineOrder: issueMineOrder,
+    issueReturnOrder: issueReturnOrder,
     stepWorld: stepWorld,
     serializeWorld: serializeWorld,
     deserializeWorld: deserializeWorld,

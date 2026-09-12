@@ -1,6 +1,6 @@
 # Driftworks
 
-Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This first repository state is deliberately small: a static tactical sandbox for selecting and moving a persistent handful of industrial spacecraft.
+Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository state is deliberately small: a static tactical sandbox where a persistent handful of industrial spacecraft can begin doing useful work.
 
 ## What Works Now
 
@@ -8,6 +8,9 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This first repo
 - Geometric placeholder mothership, miners, tug, and escort.
 - Single-click selection and drag-box multi-selection.
 - Right-click move orders with fixed-step simulation and interpolated rendering.
+- Right-click asteroid nodes with selected miners to extract ore.
+- Miners automatically return full cargo to the mothership and deposit it into storage.
+- HUD ore quota and remaining field ore readouts.
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
 - Versioned localStorage save/load of serializable game state.
 - Toggleable stress mode that animates thousands of simple sprites.
@@ -64,4 +67,4 @@ The game does not load code, fonts, art, telemetry, or other runtime resources f
 
 ## Next Vertical-Slice Milestone
 
-The next milestone is the first compact mining contract loop: accept one contract, choose a simple transfer, deploy this fleet into an asteroid field, mine under timed pressure, return cargo/damage/money to the strategic screen, and save the consequences.
+The next milestone is pressure and consequence: add a simple extraction timer, a director-triggered pirate warning/attack, and persistent damage/cargo/money changes after the mining operation ends.

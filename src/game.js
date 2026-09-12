@@ -13,6 +13,8 @@
     tug: { radius: 18, fill: 0x6fb6a7, stroke: 0xc3eee5 },
     escort: { radius: 13, fill: 0xb76c6f, stroke: 0xf0b7b9 }
   };
+  var ASTEROID_FILL = 0x655f57;
+  var ASTEROID_STROKE = 0xb6aa9b;
 
   function boot() {
     var sceneHost = document.querySelector('#scene');
@@ -75,6 +77,7 @@
         accumulator -= STEP_SECONDS;
       }
 
+      scene.sync(world);
       scene.render(world, accumulator / STEP_SECONDS, frameSeconds);
       hud.update(world, scene.getStats());
       requestAnimationFrame(frame);
@@ -102,6 +105,8 @@
       '<section class="panel readout">' +
       '<div class="row"><span>Location</span><strong data-role="location"></strong></div>' +
       '<div class="row"><span>Cash</span><strong data-role="money"></strong></div>' +
+      '<div class="row"><span>Ore Quota</span><strong data-role="quota"></strong></div>' +
+      '<div class="row"><span>Ore Field</span><strong data-role="field"></strong></div>' +
       '<div class="row"><span>Sim Clock</span><strong data-role="clock"></strong></div>' +
       '<div class="row"><span>Entities</span><strong data-role="entities"></strong></div>' +
       '<div class="row"><span>Selection</span><strong data-role="selection"></strong></div>' +
@@ -124,6 +129,9 @@
       update: function (world, stats) {
         host.querySelector('[data-role="location"]').textContent = world.campaign.location;
         host.querySelector('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
+        host.querySelector('[data-role="quota"]').textContent =
+          Math.floor(world.mothership.storage.ore) + ' / ' + world.contract.quotaOre + ' t';
+        host.querySelector('[data-role="field"]').textContent = Math.floor(totalOreRemaining(world)) + ' t';
         host.querySelector('[data-role="clock"]').textContent = world.elapsedSeconds.toFixed(1) + ' s';
         host.querySelector('[data-role="entities"]').textContent = stats.entityCount + ' @ ' + (stats.fps || '--') + ' FPS';
 
@@ -161,6 +169,7 @@
       fill: 0xd8e4ea
     });
     var shipGraphics = {};
+    var asteroidGraphics = {};
     var stressLayer = null;
     var stressEnabled = false;
     var dragMode = 'none';
@@ -226,6 +235,16 @@
         }
         paintShip(graphic, ship, world.selectedShipIds.indexOf(ship.id) !== -1);
       });
+
+      world.asteroids.forEach(function (asteroid) {
+        var asteroidGraphic = asteroidGraphics[asteroid.id];
+        if (!asteroidGraphic) {
+          asteroidGraphic = new PIXI.Graphics();
+          asteroidGraphics[asteroid.id] = asteroidGraphic;
+          worldLayer.addChildAt(asteroidGraphic, 1);
+        }
+        paintAsteroid(asteroidGraphic, asteroid);
+      });
     }
 
     function render(world, alpha, dt) {
@@ -263,7 +282,7 @@
       lastPointer = point;
 
       if (event.button === 2) {
-        setWorld(sim.issueMoveOrder(getWorld(), screenToWorld(point, getWorld().camera, viewport())));
+        setWorld(sim.issueContextOrder(getWorld(), screenToWorld(point, getWorld().camera, viewport())));
         return;
       }
 
@@ -310,7 +329,9 @@
     }
 
     function getStats() {
-      var count = stressEnabled && stressLayer ? stressLayer.count + getWorld().ships.length : getWorld().ships.length;
+      var world = getWorld();
+      var baseCount = world.ships.length + world.asteroids.length;
+      var count = stressEnabled && stressLayer ? stressLayer.count + baseCount : baseCount;
       return {
         fps: fps,
         stressEnabled: stressEnabled,
@@ -385,6 +406,9 @@
       campaign: world.campaign,
       camera: camera,
       selectedShipIds: world.selectedShipIds,
+      mothership: world.mothership,
+      contract: world.contract,
+      asteroids: world.asteroids,
       ships: world.ships
     };
   }
@@ -444,9 +468,59 @@
 
     if (ship.order.kind === 'move') {
       graphics.lineStyle(1, 0x7aa9c2, 0.5);
-      graphics.moveTo(0, 0);
-      graphics.lineTo(ship.order.target.x - ship.position.x, ship.order.target.y - ship.position.y);
+      drawWorldOrderLine(graphics, ship);
+    } else if (ship.order.kind === 'mine') {
+      graphics.lineStyle(1, 0xd3a449, 0.65);
+      drawWorldOrderLine(graphics, ship);
+    } else if (ship.order.kind === 'return') {
+      graphics.lineStyle(1, 0x9ed6c8, 0.65);
+      drawWorldOrderLine(graphics, ship);
     }
+
+    if (ship.type === 'miner' && ship.cargo > 0) {
+      var filled = Math.max(0, Math.min(1, ship.cargo / ship.cargoCapacity));
+      graphics.lineStyle(0);
+      graphics.beginFill(0xd3a449, 0.95);
+      graphics.drawRect(-10, style.radius + 6, 20 * filled, 3);
+      graphics.endFill();
+    }
+  }
+
+  function drawWorldOrderLine(graphics, ship) {
+    var local = worldVectorToShipLocalLine(ship.position, ship.order.target, ship.rotation);
+    graphics.moveTo(0, 0);
+    graphics.lineTo(local.x, local.y);
+  }
+
+  function worldVectorToShipLocalLine(position, target, rotation) {
+    var dx = target.x - position.x;
+    var dy = target.y - position.y;
+    var cos = Math.cos(-rotation);
+    var sin = Math.sin(-rotation);
+    return {
+      x: dx * cos - dy * sin,
+      y: dx * sin + dy * cos
+    };
+  }
+
+  function paintAsteroid(graphics, asteroid) {
+    var depletion = asteroid.oreInitial > 0 ? asteroid.ore / asteroid.oreInitial : 0;
+    var radius = Math.max(12, asteroid.radius * (0.65 + 0.35 * depletion));
+    graphics.clear();
+    graphics.position.set(asteroid.position.x, asteroid.position.y);
+    graphics.lineStyle(2, ASTEROID_STROKE, asteroid.ore > 0 ? 0.82 : 0.28);
+    graphics.beginFill(ASTEROID_FILL, asteroid.ore > 0 ? 0.86 : 0.26);
+    graphics.moveTo(radius, -3);
+    graphics.lineTo(radius * 0.35, radius * 0.72);
+    graphics.lineTo(-radius * 0.58, radius * 0.5);
+    graphics.lineTo(-radius, -radius * 0.12);
+    graphics.lineTo(-radius * 0.35, -radius * 0.78);
+    graphics.lineTo(radius * 0.55, -radius * 0.48);
+    graphics.closePath();
+    graphics.endFill();
+    graphics.lineStyle(1, 0x2c3337, 0.5);
+    graphics.moveTo(-radius * 0.55, -radius * 0.08);
+    graphics.lineTo(radius * 0.44, radius * 0.18);
   }
 
   function drawSelectionBox(graphics, a, b) {
@@ -500,13 +574,22 @@
     };
   }
 
+  function totalOreRemaining(world) {
+    return world.asteroids.reduce(function (total, asteroid) {
+      return total + asteroid.ore;
+    }, 0);
+  }
+
   Driftworks.game = {
-    boot: boot
+    boot: boot,
+    worldVectorToShipLocalLine: worldVectorToShipLocalLine
   };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
-  } else {
-    boot();
+  if (!global.DRIFTWORKS_TEST_MODE) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', boot);
+    } else {
+      boot();
+    }
   }
 })(window);

@@ -2,6 +2,7 @@
   'use strict';
 
   var sim = window.Driftworks.sim;
+  var game = window.Driftworks.game;
   var tests = [];
 
   function test(name, fn) {
@@ -52,6 +53,42 @@
     assertClose(escort.position.y, -125);
   });
 
+  test('miners extract ore from asteroid nodes', function () {
+    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01']), 'ast-ceres-01');
+    var initialOre = findAsteroid(world, 'ast-ceres-01').ore;
+    var guard = 0;
+    while (findShip(world, 'miner-01').cargo <= 0 && guard < 500) {
+      world = sim.stepWorld(world, 1 / 30);
+      guard += 1;
+    }
+    assert(findShip(world, 'miner-01').cargo > 0, 'Miner should carry extracted ore');
+    assert(findAsteroid(world, 'ast-ceres-01').ore < initialOre, 'Asteroid ore should decrease');
+  });
+
+  test('miners return cargo to mothership storage', function () {
+    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01']), 'ast-ceres-01');
+    var guard = 0;
+    while (world.mothership.storage.ore <= 0 && guard < 1200) {
+      world = sim.stepWorld(world, 1 / 30);
+      guard += 1;
+    }
+    assert(world.mothership.storage.ore > 0, 'Mothership should receive ore');
+    assert(findShip(world, 'miner-01').cargo === 0, 'Miner cargo should empty after deposit');
+  });
+
+  test('order line local vector rotates back to world target direction', function () {
+    var position = { x: -180, y: -90 };
+    var target = { x: 220, y: -240 };
+    var rotation = Math.PI * 0.63;
+    var local = game.worldVectorToShipLocalLine(position, target, rotation);
+    var cos = Math.cos(rotation);
+    var sin = Math.sin(rotation);
+    var worldX = local.x * cos - local.y * sin;
+    var worldY = local.x * sin + local.y * cos;
+    assertClose(worldX, target.x - position.x);
+    assertClose(worldY, target.y - position.y);
+  });
+
   test('save serialization round-trips world state', function () {
     var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));
@@ -73,6 +110,12 @@
   function findShip(world, id) {
     return world.ships.filter(function (ship) {
       return ship.id === id;
+    })[0];
+  }
+
+  function findAsteroid(world, id) {
+    return world.asteroids.filter(function (asteroid) {
+      return asteroid.id === id;
     })[0];
   }
 
