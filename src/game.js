@@ -15,6 +15,7 @@
   };
   var ASTEROID_FILL = 0x655f57;
   var ASTEROID_STROKE = 0xb6aa9b;
+  var MAX_EFFECTS = 260;
 
   function boot() {
     var sceneHost = document.querySelector('#scene');
@@ -160,7 +161,9 @@
       antialias: true,
       resizeTo: host
     });
+    var starfield = createStarfield(app.renderer.width, app.renderer.height);
     var worldLayer = new PIXI.Container();
+    var effectsLayer = new PIXI.Container();
     var grid = new PIXI.Graphics();
     var selectionBox = new PIXI.Graphics();
     var readout = new PIXI.Text('', {
@@ -179,13 +182,17 @@
     var frames = 0;
     var fps = 0;
     var fpsTimer = 0;
+    var effects = [];
+    var lastStoredOre = null;
 
     host.appendChild(app.view);
     host.addEventListener('contextmenu', function (event) {
       event.preventDefault();
     });
+    app.stage.addChild(starfield.container);
     app.stage.addChild(worldLayer);
     worldLayer.addChild(grid);
+    worldLayer.addChild(effectsLayer);
     app.stage.addChild(selectionBox);
     app.stage.addChild(readout);
     readout.position.set(14, 14);
@@ -222,6 +229,7 @@
     });
 
     function sync(world) {
+      updateStarfield(starfield, world.camera, viewport());
       worldLayer.position.set(app.renderer.width / 2, app.renderer.height / 2);
       worldLayer.scale.set(world.camera.zoom);
       worldLayer.pivot.set(world.camera.x, world.camera.y);
@@ -257,10 +265,44 @@
         graphic.rotation = ship.rotation;
       });
 
+      spawnStateEffects(world, dt);
+      updateEffects(effectsLayer, effects, dt);
+
       if (stressLayer && stressEnabled) {
         stressLayer.update(dt);
       }
       updateFps(dt, world);
+    }
+
+    function spawnStateEffects(world, dt) {
+      world.ships.forEach(function (ship) {
+        if (ship.type === 'miner' && ship.order.kind === 'mine' && ship.cargo > (ship.previousCargo || 0)) {
+          var asteroid = findAsteroidById(world, ship.order.asteroidId);
+          if (asteroid) {
+            spawnMiningEffects(effects, asteroid.position, ship.position, ship.cargo - (ship.previousCargo || 0));
+          }
+        }
+      });
+
+      if (lastStoredOre === null) {
+        lastStoredOre = world.mothership.storage.ore;
+      } else if (world.mothership.storage.ore > lastStoredOre) {
+        pushFloatText(effects, { x: 0, y: -52 }, '+' + Math.floor(world.mothership.storage.ore - lastStoredOre) + ' ore');
+        lastStoredOre = world.mothership.storage.ore;
+      } else {
+        lastStoredOre = world.mothership.storage.ore;
+      }
+
+      while (effects.length > MAX_EFFECTS) {
+        var removed = effects.shift();
+        removed.graphic.destroy();
+      }
+    }
+
+    function findAsteroidById(world, asteroidId) {
+      return world.asteroids.filter(function (asteroid) {
+        return asteroid.id === asteroidId;
+      })[0];
     }
 
     function createShipGraphic(shipId) {
@@ -450,6 +492,7 @@
   function paintShip(graphics, ship, selected) {
     var style = SHIP_STYLES[ship.type];
     graphics.clear();
+    drawEnginePlume(graphics, ship, style.radius);
     graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
     graphics.beginFill(style.fill, ship.type === 'mothership' ? 0.88 : 0.96);
 
@@ -486,6 +529,34 @@
     }
   }
 
+  function drawEnginePlume(graphics, ship, radius) {
+    if (!ship.previousVelocity || ship.speed <= 0) return;
+    var ax = ship.velocity.x - ship.previousVelocity.x;
+    var ay = ship.velocity.y - ship.previousVelocity.y;
+    var accel = Math.hypot(ax, ay);
+    if (accel < 0.18) return;
+
+    var local = worldDeltaToShipLocal(ax, ay, ship.rotation);
+    var localLength = Math.max(0.0001, Math.hypot(local.x, local.y));
+    var awayX = -local.x / localLength;
+    var awayY = -local.y / localLength;
+    var sideX = -awayY;
+    var sideY = awayX;
+    var intensity = Math.min(1, accel / Math.max(1, ship.acceleration / 24));
+    var length = (8 + 18 * intensity) * (ship.order.kind === 'return' && ship.cargo > 0 ? 1.2 : 1);
+    var width = 3 + 4 * intensity;
+    var originX = awayX * (radius * 0.75);
+    var originY = awayY * (radius * 0.75);
+
+    graphics.lineStyle(0);
+    graphics.beginFill(ship.cargo > 0 ? 0xe1b65b : 0x8fd7e4, 0.16 + 0.48 * intensity);
+    graphics.moveTo(originX + sideX * width, originY + sideY * width);
+    graphics.lineTo(originX + awayX * length, originY + awayY * length);
+    graphics.lineTo(originX - sideX * width, originY - sideY * width);
+    graphics.closePath();
+    graphics.endFill();
+  }
+
   function drawWorldOrderLine(graphics, ship) {
     var local = worldVectorToShipLocalLine(ship.position, ship.order.target, ship.rotation);
     graphics.moveTo(0, 0);
@@ -495,6 +566,15 @@
   function worldVectorToShipLocalLine(position, target, rotation) {
     var dx = target.x - position.x;
     var dy = target.y - position.y;
+    var cos = Math.cos(-rotation);
+    var sin = Math.sin(-rotation);
+    return {
+      x: dx * cos - dy * sin,
+      y: dx * sin + dy * cos
+    };
+  }
+
+  function worldDeltaToShipLocal(dx, dy, rotation) {
     var cos = Math.cos(-rotation);
     var sin = Math.sin(-rotation);
     return {
@@ -529,6 +609,124 @@
     graphics.beginFill(0x89c9e2, 0.08);
     graphics.drawRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(a.x - b.x), Math.abs(a.y - b.y));
     graphics.endFill();
+  }
+
+  function createStarfield(width, height) {
+    var container = new PIXI.Container();
+    var rng = sim.createRng(40291);
+    var layers = [
+      createStarLayer(rng, width, height, 70, 0.08, 0.12),
+      createStarLayer(rng, width, height, 46, 0.16, 0.18),
+      createStarLayer(rng, width, height, 24, 0.26, 0.25)
+    ];
+    layers.forEach(function (layer) {
+      container.addChild(layer.graphics);
+    });
+    return {
+      container: container,
+      layers: layers
+    };
+  }
+
+  function createStarLayer(rng, width, height, count, parallax, alpha) {
+    var stars = [];
+    for (var i = 0; i < count; i += 1) {
+      stars.push({
+        x: sim.randomBetween(rng, 0, width),
+        y: sim.randomBetween(rng, 0, height),
+        size: sim.randomBetween(rng, 0.6, 1.7)
+      });
+    }
+    return {
+      graphics: new PIXI.Graphics(),
+      stars: stars,
+      parallax: parallax,
+      alpha: alpha
+    };
+  }
+
+  function updateStarfield(starfield, camera, viewport) {
+    starfield.layers.forEach(function (layer) {
+      var graphics = layer.graphics;
+      graphics.clear();
+      graphics.beginFill(0xc8d6dd, layer.alpha);
+      layer.stars.forEach(function (star) {
+        var x = wrap(star.x - camera.x * layer.parallax, viewport.width);
+        var y = wrap(star.y - camera.y * layer.parallax, viewport.height);
+        graphics.drawCircle(x, y, star.size);
+      });
+      graphics.endFill();
+    });
+  }
+
+  function spawnMiningEffects(effects, source, target, amount) {
+    var count = Math.max(1, Math.min(4, Math.ceil(amount * 8)));
+    var dx = target.x - source.x;
+    var dy = target.y - source.y;
+    var distance = Math.max(1, Math.hypot(dx, dy));
+    var dirX = dx / distance;
+    var dirY = dy / distance;
+    for (var i = 0; i < count; i += 1) {
+      var t = i / Math.max(1, count - 1);
+      var x = source.x + (target.x - source.x) * (0.2 + t * 0.22);
+      var y = source.y + (target.y - source.y) * (0.2 + t * 0.22);
+      var mote = new PIXI.Graphics();
+      mote.beginFill(0xe4bd66, 0.92);
+      mote.drawCircle(0, 0, 1.8);
+      mote.endFill();
+      mote.position.set(x, y);
+      effects.push({
+        graphic: mote,
+        age: 0,
+        life: 0.28 + t * 0.18,
+        vx: dirX * 120 + (t - 0.5) * 28,
+        vy: dirY * 120 - 20 + (0.5 - t) * 18,
+        scale: 1,
+        alpha: 1
+      });
+    }
+  }
+
+  function pushFloatText(effects, position, text) {
+    var label = new PIXI.Text(text, {
+      fontFamily: 'Consolas, monospace',
+      fontSize: 13,
+      fill: 0xf0d38a
+    });
+    label.anchor.set(0.5, 0.5);
+    label.position.set(position.x, position.y);
+    effects.push({
+      graphic: label,
+      age: 0,
+      life: 1.35,
+      vx: 0,
+      vy: -26,
+      scale: 1,
+      alpha: 1
+    });
+  }
+
+  function updateEffects(container, effects, dt) {
+    for (var i = effects.length - 1; i >= 0; i -= 1) {
+      var effect = effects[i];
+      if (!effect.graphic.parent) {
+        container.addChild(effect.graphic);
+      }
+      effect.age += dt;
+      effect.graphic.x += effect.vx * dt;
+      effect.graphic.y += effect.vy * dt;
+      effect.graphic.alpha = Math.max(0, 1 - effect.age / effect.life) * effect.alpha;
+      effect.graphic.scale.set(effect.scale + effect.age * 0.25);
+      if (effect.age >= effect.life) {
+        effect.graphic.destroy();
+        effects.splice(i, 1);
+      }
+    }
+  }
+
+  function wrap(value, size) {
+    var wrapped = value % size;
+    return wrapped < 0 ? wrapped + size : wrapped;
   }
 
   function createStressLayer() {

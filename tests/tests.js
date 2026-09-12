@@ -53,6 +53,18 @@
     assertClose(escort.position.y, -125);
   });
 
+  test('acceleration limits sudden direction reversal', function () {
+    var world = sim.selectShips(sim.createInitialWorld(), ['miner-01']);
+    var miner = findShip(world, 'miner-01');
+    miner.position = { x: 0, y: 0 };
+    miner.previousPosition = { x: 0, y: 0 };
+    miner.velocity = { x: miner.speed, y: 0 };
+    world = sim.issueMoveOrder(world, { x: -300, y: 0 });
+    world = sim.stepWorld(world, 1 / 30);
+    miner = findShip(world, 'miner-01');
+    assert(miner.velocity.x > 0, 'Miner should not instantly reverse horizontal velocity');
+  });
+
   test('miners extract ore from asteroid nodes', function () {
     var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01']), 'ast-ceres-01');
     var initialOre = findAsteroid(world, 'ast-ceres-01').ore;

@@ -70,9 +70,11 @@
       position: { x: x, y: y },
       previousPosition: { x: x, y: y },
       velocity: { x: 0, y: 0 },
+      previousVelocity: { x: 0, y: 0 },
       rotation: 0,
       order: { kind: 'idle' },
       cargo: 0,
+      previousCargo: 0,
       cargoCapacity: type === 'tug' ? 180 : 80,
       damage: 0,
       speed: speed,
@@ -208,6 +210,8 @@
   function stepShip(ship, dt, asteroids, mothership, mothershipShip) {
     var next = clonePlain(ship);
     next.previousPosition = { x: ship.position.x, y: ship.position.y };
+    next.previousVelocity = { x: ship.velocity.x, y: ship.velocity.y };
+    next.previousCargo = ship.cargo;
 
     if (next.order.kind === 'mine') {
       return stepMiningShip(next, dt, asteroids, mothershipShip);
@@ -290,15 +294,43 @@
       y: toTarget.y / distance
     };
     var currentSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
-    var brakingDistance = (currentSpeed * currentSpeed) / Math.max(1, 2 * ship.acceleration);
-    var desiredSpeed = distance <= brakingDistance + 12 ? Math.max(18, currentSpeed - ship.acceleration * dt) : ship.speed;
-    var speed = Math.min(ship.speed, currentSpeed + ship.acceleration * dt, desiredSpeed);
-    var travel = Math.min(distance, speed * dt);
+    var stoppingDistance = Math.max(0, distance - arrivalDistance);
+    var stoppingSpeed = Math.sqrt(2 * ship.acceleration * stoppingDistance);
+    var desiredSpeed = Math.min(ship.speed, stoppingSpeed);
+    var desiredVelocity = {
+      x: direction.x * desiredSpeed,
+      y: direction.y * desiredSpeed
+    };
+    var deltaVelocity = {
+      x: desiredVelocity.x - ship.velocity.x,
+      y: desiredVelocity.y - ship.velocity.y
+    };
+    var deltaLength = Math.hypot(deltaVelocity.x, deltaVelocity.y);
+    var maxDelta = ship.acceleration * dt;
 
-    ship.position.x += direction.x * travel;
-    ship.position.y += direction.y * travel;
-    ship.velocity = { x: direction.x * speed, y: direction.y * speed };
-    ship.rotation = Math.atan2(direction.y, direction.x);
+    if (deltaLength > maxDelta && deltaLength > 0) {
+      deltaVelocity.x = (deltaVelocity.x / deltaLength) * maxDelta;
+      deltaVelocity.y = (deltaVelocity.y / deltaLength) * maxDelta;
+    }
+
+    ship.velocity = {
+      x: ship.velocity.x + deltaVelocity.x,
+      y: ship.velocity.y + deltaVelocity.y
+    };
+
+    var nextSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
+    if (nextSpeed > ship.speed) {
+      ship.velocity.x = (ship.velocity.x / nextSpeed) * ship.speed;
+      ship.velocity.y = (ship.velocity.y / nextSpeed) * ship.speed;
+      nextSpeed = ship.speed;
+    }
+
+    var travel = Math.min(distance, nextSpeed * dt);
+    if (nextSpeed > 0.001) {
+      ship.position.x += (ship.velocity.x / nextSpeed) * travel;
+      ship.position.y += (ship.velocity.y / nextSpeed) * travel;
+      ship.rotation = Math.atan2(ship.velocity.y, ship.velocity.x);
+    }
 
     return ship;
   }

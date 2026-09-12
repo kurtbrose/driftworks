@@ -11,6 +11,8 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - Right-click asteroid nodes with selected miners to extract ore.
 - Miners automatically return full cargo to the mothership and deposit it into storage.
 - HUD ore quota and remaining field ore readouts.
+- Subtle parallax starfield below the grid.
+- Acceleration-driven engine plumes, mining motes, and delivery feedback text.
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
 - Versioned localStorage save/load of serializable game state.
 - Toggleable stress mode that animates thousands of simple sprites.
