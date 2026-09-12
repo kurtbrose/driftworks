@@ -164,7 +164,7 @@
       resolution: Math.min(global.devicePixelRatio || 1, 2),
       resizeTo: host
     });
-    var starfield = createStarfield(app.renderer.width, app.renderer.height);
+    var starfield = createStarfield(app.screen.width, app.screen.height);
     var worldLayer = new PIXI.Container();
     var effectsLayer = new PIXI.Container();
     var grid = new PIXI.Graphics();
@@ -245,7 +245,8 @@
       updateStarfield(starfield, world.camera, viewport());
       var shakeX = cameraShake > 0 ? (Math.sin(world.elapsedSeconds * 97) * cameraShake) : 0;
       var shakeY = cameraShake > 0 ? (Math.cos(world.elapsedSeconds * 83) * cameraShake) : 0;
-      worldLayer.position.set(app.renderer.width / 2 + shakeX, app.renderer.height / 2 + shakeY);
+      var view = viewport();
+      worldLayer.position.set(view.width / 2 + shakeX, view.height / 2 + shakeY);
       worldLayer.scale.set(world.camera.zoom);
       worldLayer.pivot.set(world.camera.x, world.camera.y);
 
@@ -555,10 +556,7 @@
     }
 
     function viewport() {
-      return {
-        width: app.renderer.width,
-        height: app.renderer.height
-      };
+      return viewportFromApp(app);
     }
 
     function applyCameraFocus(world, dt) {
@@ -617,6 +615,13 @@
     return {
       x: (point.x - viewport.width / 2) / camera.zoom + camera.x,
       y: (point.y - viewport.height / 2) / camera.zoom + camera.y
+    };
+  }
+
+  function viewportFromApp(app) {
+    return {
+      width: app.screen.width,
+      height: app.screen.height
     };
   }
 
@@ -1159,7 +1164,10 @@
   Driftworks.game = {
     boot: boot,
     worldVectorToShipLocalLine: worldVectorToShipLocalLine,
-    enginePlumeGeometry: enginePlumeGeometry
+    enginePlumeGeometry: enginePlumeGeometry,
+    screenToWorld: screenToWorld,
+    worldToScreen: worldToScreen,
+    viewportFromApp: viewportFromApp
   };
 
   if (!global.DRIFTWORKS_TEST_MODE) {

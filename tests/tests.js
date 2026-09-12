@@ -122,6 +122,23 @@
     assertClose(portTranslate.origin.y, -radius * 0.82);
   });
 
+  test('camera math uses logical screen pixels under high-DPI rendering', function () {
+    var viewport = game.viewportFromApp({
+      screen: { width: 1280, height: 720 },
+      renderer: { width: 1920, height: 1080 }
+    });
+    var camera = { x: 210, y: -125, zoom: 1.75 };
+    var screen = game.worldToScreen({ x: 210, y: -125 }, camera, viewport);
+    var world = game.screenToWorld({ x: 640, y: 360 }, camera, viewport);
+
+    assertClose(viewport.width, 1280);
+    assertClose(viewport.height, 720);
+    assertClose(screen.x, 640);
+    assertClose(screen.y, 360);
+    assertClose(world.x, 210);
+    assertClose(world.y, -125);
+  });
+
   test('save serialization round-trips world state', function () {
     var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));
