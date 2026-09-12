@@ -226,18 +226,21 @@
   test('mothership drum bands roll top to bottom across the side silhouette', function () {
     var start = game.mothershipDrumMarkers(0);
     var later = game.mothershipDrumMarkers(4);
-    var topCount = start.filter(function (marker) {
-      return marker.top;
+    var visibleCount = start.filter(function (marker) {
+      return marker.visible;
     }).length;
 
     assert(start.length === 6, 'Drum should expose a few schematic surface bands');
-    assert(topCount > 0 && topCount < start.length, 'Only part of the surface should read as the visible top');
+    assert(visibleCount === 3, 'Only the exposed hemisphere should be visible');
+    assert(start.some(function (marker) { return marker.visible && marker.y < -1; }), 'Exposed surface should reach above the center');
+    assert(start.some(function (marker) { return marker.visible && marker.y > 1; }), 'Exposed surface should reach below the center');
     start.forEach(function (marker) {
       assert(marker.halfWidth > 31 && marker.halfWidth <= 36, 'Band should extend to the rounded hull edge');
-      assert(marker.y >= -15 && marker.y <= 15, 'Band should stay on the visible cylindrical side');
-      assert(marker.top === (marker.y < 0), 'Only top-half bands should be visible through the hull');
+      assert(marker.y >= -16.5 && marker.y <= 16.5, 'Band should stay on the visible cylindrical side');
     });
     assert(later[0].y > start[0].y, 'Surface bands should roll from top to bottom over time');
+    assert(!game.mothershipDrumMarkers(19)[0].visible, 'A band should disappear underneath for the other half of its rotation');
+    assert(game.mothershipDrumMarkers(38)[0].visible, 'A band should reappear after one full rotation');
   });
 
   test('save serialization round-trips world state', function () {

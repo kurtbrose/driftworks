@@ -981,15 +981,57 @@
     }
 
     graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
-    graphics.beginFill(style.fill, 0.96);
-    graphics.moveTo(style.radius, 0);
-    graphics.lineTo(-style.radius * 0.72, -style.radius * 0.62);
-    graphics.lineTo(-style.radius * 0.45, 0);
-    graphics.lineTo(-style.radius * 0.72, style.radius * 0.62);
-    graphics.closePath();
-    graphics.endFill();
+    if (ship.type === 'miner') {
+      paintMiner(graphics, style);
+    } else if (ship.type === 'tug') {
+      paintConstructor(graphics, style);
+    } else {
+      graphics.beginFill(style.fill, 0.96);
+      graphics.moveTo(style.radius, 0);
+      graphics.lineTo(-style.radius * 0.72, -style.radius * 0.62);
+      graphics.lineTo(-style.radius * 0.45, 0);
+      graphics.lineTo(-style.radius * 0.72, style.radius * 0.62);
+      graphics.closePath();
+      graphics.endFill();
+    }
 
     drawShipOrderAndBadges(graphics, ship, style);
+  }
+
+  function paintMiner(graphics, style) {
+    var r = style.radius;
+    graphics.beginFill(style.fill, 0.85);
+    [-0.55, 0, 0.55].forEach(function (x) {
+      [-1, 1].forEach(function (side) {
+        graphics.drawRoundedRect((x - 0.15) * r, (side < 0 ? -0.83 : 0.4) * r, 0.3 * r, 0.43 * r, 1);
+      });
+    });
+    graphics.endFill();
+    graphics.beginFill(style.fill, 1);
+    graphics.drawRoundedRect(-0.86 * r, -0.56 * r, 1.72 * r, 1.12 * r, 0.35 * r);
+    graphics.endFill();
+    graphics.lineStyle(1, style.stroke, 0.35);
+    graphics.moveTo(0.45 * r, -0.3 * r);
+    graphics.lineTo(0.45 * r, 0.3 * r);
+  }
+
+  function paintConstructor(graphics, style) {
+    var r = style.radius;
+    graphics.beginFill(style.fill, 0.8);
+    [-0.58, 0.58].forEach(function (x) {
+      graphics.drawRoundedRect((x - 0.055) * r, -0.88 * r, 0.11 * r, 1.76 * r, 0.6);
+    });
+    [-1, 1].forEach(function (side) {
+      graphics.drawRoundedRect(-0.88 * r, (side < 0 ? -0.96 : 0.84) * r, 0.66 * r, 0.12 * r, 0.6);
+      graphics.drawRoundedRect(0.22 * r, (side < 0 ? -0.96 : 0.84) * r, 0.66 * r, 0.12 * r, 0.6);
+    });
+    graphics.endFill();
+    graphics.beginFill(style.fill, 1);
+    graphics.drawRoundedRect(-0.9 * r, -0.23 * r, 1.8 * r, 0.46 * r, 1.8);
+    graphics.endFill();
+    graphics.lineStyle(1, style.stroke, 0.4);
+    graphics.moveTo(0.6 * r, -0.15 * r);
+    graphics.lineTo(0.6 * r, 0.15 * r);
   }
 
   function drawShipOrderAndBadges(graphics, ship, style) {
@@ -1050,7 +1092,7 @@
     graphics.lineTo(32, -13);
 
     bands.forEach(function (band) {
-      if (!band.top) return;
+      if (!band.visible) return;
       graphics.lineStyle(band.width, 0xbdd9e4, band.alpha);
       graphics.moveTo(-band.halfWidth, band.y);
       graphics.lineTo(band.halfWidth, band.y);
@@ -1062,18 +1104,20 @@
   }
 
   function mothershipDrumMarkers(elapsedSeconds) {
-    var cycle = 30;
-    var drift = (elapsedSeconds * cycle / 38) % cycle;
+    var spin = elapsedSeconds * Math.PI * 2 / 38;
     var markers = [];
     for (var i = 0; i < 6; i += 1) {
-      var y = -15 + ((i * 5 + drift) % cycle);
-      var edgeFade = Math.max(0, 1 - Math.abs(y) / 17);
+      var phase = spin + i * Math.PI / 3;
+      var y = Math.sin(phase) * 16.5;
+      // Depth hides the underside; the exposed surface spans both screen halves.
+      var depth = Math.cos(phase);
+      var facing = Math.max(0, depth);
       markers.push({
         y: y,
         halfWidth: mothershipHullHalfWidthAtY(y),
-        width: 0.55 + edgeFade * 0.55,
-        alpha: 0.04 + edgeFade * 0.14,
-        top: y < 0
+        width: 0.55 + facing * 0.55,
+        alpha: facing * 0.18,
+        visible: depth > 0
       });
     }
     return markers;
@@ -1093,9 +1137,10 @@
     xPositions.forEach(function (x, xIndex) {
       for (var i = 0; i < 2; i += 1) {
         var phase = spin + i * Math.PI + xIndex * 0.24;
-        var y = Math.sin(phase) * 12;
-        if (y >= 0) continue;
-        var near = 0.35 + Math.max(0, -Math.sin(phase)) * 0.55;
+        var y = Math.sin(phase) * 15;
+        var depth = Math.cos(phase);
+        if (depth <= 0) continue;
+        var near = depth * 0.9;
         graphics.beginFill(0xbdd9e4, near);
         graphics.drawCircle(x, y, 1.6 + near * 0.9);
         graphics.endFill();
@@ -1107,7 +1152,7 @@
     if (!ship.previousVelocity || ship.speed <= 0) return;
     var ax = ship.velocity.x - ship.previousVelocity.x;
     var ay = ship.velocity.y - ship.previousVelocity.y;
-    var plumes = enginePlumeGeometry(ax, ay, ship.rotation, ship.acceleration, radius, ship.order.kind === 'return' && ship.cargo > 0);
+    var plumes = enginePlumeGeometry(ax, ay, ship.rotation, ship.acceleration, radius, ship.order.kind === 'return' && ship.cargo > 0, ship.type);
     if (!plumes.length) return;
 
     graphics.lineStyle(0);
@@ -1121,7 +1166,7 @@
     });
   }
 
-  function enginePlumeGeometry(worldAccelX, worldAccelY, rotation, acceleration, radius, loadedReturn) {
+  function enginePlumeGeometry(worldAccelX, worldAccelY, rotation, acceleration, radius, loadedReturn, shipType) {
     var accel = Math.hypot(worldAccelX, worldAccelY);
     if (accel < 0.18) return [];
 
@@ -1132,6 +1177,20 @@
     addThrusterPlume(plumes, 'brake-starboard', Math.max(0, -local.x), acceleration, radius, { x: 0.72, y: 0.42 }, { x: 1, y: 0 }, loadedReturn);
     addThrusterPlume(plumes, 'port-translate', Math.max(0, local.y), acceleration, radius, { x: -0.2, y: -0.82 }, { x: 0, y: -1 }, loadedReturn);
     addThrusterPlume(plumes, 'starboard-translate', Math.max(0, -local.y), acceleration, radius, { x: -0.2, y: 0.82 }, { x: 0, y: 1 }, loadedReturn);
+    if (shipType === 'miner' || shipType === 'tug') {
+      plumes.forEach(function (plume) {
+        var constructor = shipType === 'tug';
+        if (plume.id === 'main-aft') {
+          plume.origin.x = -(constructor ? 0.9 : 0.86) * radius;
+        } else if (plume.id.indexOf('brake-') === 0) {
+          plume.origin.x = (constructor ? 0.9 : 0.82) * radius;
+          plume.origin.y = Math.sign(plume.origin.y) * (constructor ? 0.16 : 0.3) * radius;
+        } else {
+          plume.origin.x = (constructor ? -0.58 : 0) * radius;
+          plume.origin.y = Math.sign(plume.origin.y) * (constructor ? 0.96 : 0.83) * radius;
+        }
+      });
+    }
     return plumes;
   }
 
