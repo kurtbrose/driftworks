@@ -3,6 +3,7 @@
 
   var Driftworks = (global.Driftworks = global.Driftworks || {});
   var sim = Driftworks.sim;
+  var audio = Driftworks.audio;
   var PIXI = global.PIXI;
   var STEP_SECONDS = 1 / 30;
   var MAX_FRAME_SECONDS = 0.2;
@@ -62,6 +63,16 @@
       onStressToggle: function () {
         scene.setStressEnabled(!scene.getStats().stressEnabled);
         hud.update(world, scene.getStats());
+      },
+      onSfxToggle: function () {
+        if (!audio) return;
+        audio.setSfxEnabled(!audio.status().sfx);
+        hud.update(world, scene.getStats());
+      },
+      onMusicToggle: function () {
+        if (!audio) return;
+        audio.setMusicEnabled(!audio.status().music);
+        hud.update(world, scene.getStats());
       }
     });
 
@@ -118,17 +129,24 @@
       '<button type="button" data-action="load">Load</button>' +
       '<button type="button" data-action="reset">Reset</button>' +
       '<button type="button" data-action="stress">Stress</button>' +
+      '<button type="button" data-action="sfx">SFX</button>' +
+      '<button type="button" data-action="music">Music</button>' +
       '</section>' +
       '<section class="hint">LMB select/drag-box · RMB move · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
 
     var stressButton = host.querySelector('[data-action="stress"]');
+    var sfxButton = host.querySelector('[data-action="sfx"]');
+    var musicButton = host.querySelector('[data-action="music"]');
     host.querySelector('[data-action="save"]').addEventListener('click', actions.onSave);
     host.querySelector('[data-action="load"]').addEventListener('click', actions.onLoad);
     host.querySelector('[data-action="reset"]').addEventListener('click', actions.onReset);
     stressButton.addEventListener('click', actions.onStressToggle);
+    sfxButton.addEventListener('click', actions.onSfxToggle);
+    musicButton.addEventListener('click', actions.onMusicToggle);
 
     return {
       update: function (world, stats) {
+        var audioStatus = audio ? audio.status() : { sfx: false, music: false, available: false };
         host.querySelector('[data-role="location"]').textContent = world.campaign.location;
         host.querySelector('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
         host.querySelector('[data-role="quota"]').textContent =
@@ -152,6 +170,12 @@
 
         stressButton.dataset.active = stats.stressEnabled ? 'true' : 'false';
         stressButton.textContent = stats.stressEnabled ? 'Stress On' : 'Stress';
+        sfxButton.dataset.active = audioStatus.sfx ? 'true' : 'false';
+        sfxButton.disabled = !audioStatus.available;
+        sfxButton.textContent = audioStatus.sfx ? 'SFX On' : 'SFX Off';
+        musicButton.dataset.active = audioStatus.music ? 'true' : 'false';
+        musicButton.disabled = !audioStatus.available;
+        musicButton.textContent = audioStatus.music ? 'Music On' : 'Music Off';
       }
     };
   }
@@ -188,6 +212,7 @@
     var fpsTimer = 0;
     var effects = [];
     var lastStoredOre = null;
+    var lastMiningSoundAt = -Infinity;
     var previousSelected = {};
     var cameraFocusSelectionIds = null;
     var drones = [];
@@ -234,6 +259,7 @@
     );
 
     window.addEventListener('keydown', function (event) {
+      unlockAudio();
       if (event.code === 'Space') spaceDown = true;
       if (event.code === 'KeyF') requestSelectionFocus(getWorld());
       if (event.code === 'KeyH') spawnHostileDrones(getWorld());
@@ -302,6 +328,7 @@
 
       updateCombatVignette(world, visualDt);
       spawnStateEffects(world, visualDt);
+      updateAudioTelemetry(world);
       updateEffects(effectsLayer, effects, visualDt);
       cameraShake = Math.max(0, cameraShake - dt * 18);
       visualTimeScale += (1 - visualTimeScale) * Math.min(1, dt * 3.5);
@@ -318,6 +345,10 @@
           var asteroid = findAsteroidById(world, ship.order.asteroidId);
           if (asteroid) {
             spawnMiningEffects(effects, asteroid.position, ship, ship.cargo - (ship.previousCargo || 0));
+            if (audio && world.selectedShipIds.indexOf(ship.id) !== -1 && world.elapsedSeconds - lastMiningSoundAt > 0.13) {
+              audio.playMiningTick();
+              lastMiningSoundAt = world.elapsedSeconds;
+            }
           }
         }
       });
@@ -326,6 +357,7 @@
         lastStoredOre = world.mothership.storage.ore;
       } else if (world.mothership.storage.ore > lastStoredOre) {
         pushFloatText(effects, { x: 0, y: -52 }, '+' + Math.floor(world.mothership.storage.ore - lastStoredOre) + ' ore');
+        if (audio) audio.playDelivery();
         lastStoredOre = world.mothership.storage.ore;
       } else {
         lastStoredOre = world.mothership.storage.ore;
@@ -362,6 +394,7 @@
       shotCooldown = 0.2;
       combatTime = 0;
       pushFloatText(effects, { x: center.x, y: center.y - 86 }, 'HOSTILE CONTACT');
+      if (audio) audio.playWarning();
     }
 
     function updateCombatVignette(world, dt) {
@@ -388,6 +421,10 @@
     function fireEscortShot(escort, drone) {
       drone.hp -= 1;
       drone.flash = 1;
+      if (audio) {
+        audio.playGunshot();
+        audio.playImpact(3 - drone.hp);
+      }
       pushProjectile(effects, escort.position, drone.position);
       pushMuzzleFlash(effects, escort.position, escort.rotation);
       pushImpactSparks(effects, drone.position, drone.velocity);
@@ -475,23 +512,31 @@
       graphic.eventMode = 'static';
       graphic.cursor = 'pointer';
       graphic.on('pointerdown', function (event) {
+        unlockAudio();
         if (event.button === 0) {
           event.stopPropagation();
           setWorld(sim.selectShips(getWorld(), [shipId]));
+          if (audio) audio.playSelect();
         }
       });
       return graphic;
     }
 
     function onPointerDown(event) {
+      unlockAudio();
       var point = { x: event.global.x, y: event.global.y };
       dragStart = point;
       lastPointer = point;
 
       if (event.button === 2) {
+        var beforeOrder = getWorld();
         var target = screenToWorld(point, getWorld().camera, viewport());
         pushMoveReticle(effects, target);
         setWorld(sim.issueContextOrder(getWorld(), target));
+        if (audio) {
+          if (beforeOrder.selectedShipIds.length) audio.playMove();
+          else audio.playInvalid();
+        }
         return;
       }
 
@@ -518,7 +563,9 @@
       if (dragMode === 'select') {
         var distance = Math.hypot(point.x - dragStart.x, point.y - dragStart.y);
         if (distance > 8) {
-          setWorld(sim.selectShips(getWorld(), shipsInsideScreenRect(getWorld(), dragStart, point, viewport())));
+          var selectedIds = shipsInsideScreenRect(getWorld(), dragStart, point, viewport());
+          setWorld(sim.selectShips(getWorld(), selectedIds));
+          if (audio && selectedIds.length) audio.playSelect();
         } else {
           setWorld(sim.selectShips(getWorld(), []));
         }
@@ -582,6 +629,29 @@
       return shipIds.every(function (shipId) {
         return world.selectedShipIds.indexOf(shipId) !== -1;
       });
+    }
+
+    function unlockAudio() {
+      if (audio) audio.unlock();
+    }
+
+    function updateAudioTelemetry(world) {
+      if (!audio) return;
+      var level = selectedThrustLevel(world);
+      audio.setEngineThrust(level);
+    }
+
+    function selectedThrustLevel(world) {
+      var selected = selectedShips(world);
+      var strongest = 0;
+      selected.forEach(function (ship) {
+        if (!ship.previousVelocity) return;
+        var ax = ship.velocity.x - ship.previousVelocity.x;
+        var ay = ship.velocity.y - ship.previousVelocity.y;
+        var level = Math.hypot(ax, ay) / Math.max(1, ship.acceleration / 30);
+        strongest = Math.max(strongest, Math.min(1, level));
+      });
+      return strongest;
     }
 
     return {
