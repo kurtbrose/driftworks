@@ -65,6 +65,29 @@
     assert(miner.velocity.x > 0, 'Miner should not instantly reverse horizontal velocity');
   });
 
+  test('rotation limits sudden in-place facing changes', function () {
+    var world = sim.selectShips(sim.createInitialWorld(), ['escort-01']);
+    var escort = findShip(world, 'escort-01');
+    escort.position = { x: 0, y: 0 };
+    escort.previousPosition = { x: 0, y: 0 };
+    escort.velocity = { x: 0, y: escort.speed };
+    escort.rotation = 0;
+    escort.turnRate = 1.5;
+    world = sim.issueMoveOrder(world, { x: 0, y: 300 });
+    world = sim.stepWorld(world, 1 / 30);
+    escort = findShip(world, 'escort-01');
+    assert(escort.rotation > 0, 'Escort should begin rotating toward its travel direction');
+    assert(escort.rotation <= escort.turnRate / 30 + 0.000001, 'Escort should not exceed max turn rate in one tick');
+  });
+
+  test('rotateToward uses the shortest wrapped angle', function () {
+    var current = Math.PI - 0.02;
+    var target = -Math.PI + 0.02;
+    var next = sim.rotateToward(current, target, 0.03);
+    assert(next > current, 'Wrapped target should rotate through +pi instead of the long way around');
+    assertClose(sim.angleDelta(next, target), 0.01);
+  });
+
   test('miners extract ore from asteroid nodes', function () {
     var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01']), 'ast-ceres-01');
     var initialOre = findAsteroid(world, 'ast-ceres-01').ore;

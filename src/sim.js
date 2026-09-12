@@ -78,7 +78,8 @@
       cargoCapacity: type === 'tug' ? 180 : 80,
       damage: 0,
       speed: speed,
-      acceleration: speed > 0 ? Math.max(42, speed * 1.3) : 0
+      acceleration: speed > 0 ? Math.max(42, speed * 1.3) : 0,
+      turnRate: speed > 0 ? Math.max(1.4, Math.min(2.8, 180 / speed)) : 0
     };
   }
 
@@ -329,7 +330,7 @@
     if (nextSpeed > 0.001) {
       ship.position.x += (ship.velocity.x / nextSpeed) * travel;
       ship.position.y += (ship.velocity.y / nextSpeed) * travel;
-      ship.rotation = Math.atan2(ship.velocity.y, ship.velocity.x);
+      ship.rotation = rotateToward(ship.rotation || 0, Math.atan2(ship.velocity.y, ship.velocity.x), ship.turnRate * dt);
     }
 
     return ship;
@@ -374,6 +375,11 @@
     next.contract = next.contract || initial.contract;
     next.asteroids = next.asteroids || initial.asteroids;
     next.ships = next.ships || initial.ships;
+    next.ships.forEach(function (ship) {
+      if (typeof ship.turnRate !== 'number') {
+        ship.turnRate = ship.speed > 0 ? Math.max(1.4, Math.min(2.8, 180 / ship.speed)) : 0;
+      }
+    });
     next.selectedShipIds = next.selectedShipIds || [];
     next.camera = next.camera || initial.camera;
     next.campaign = next.campaign || initial.campaign;
@@ -419,6 +425,19 @@
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
+  function angleDelta(from, to) {
+    var delta = (to - from) % (Math.PI * 2);
+    if (delta > Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    return delta;
+  }
+
+  function rotateToward(current, target, maxStep) {
+    var delta = angleDelta(current, target);
+    if (Math.abs(delta) <= maxStep) return target;
+    return current + Math.sign(delta) * maxStep;
+  }
+
   Driftworks.sim = {
     WORLD_VERSION: WORLD_VERSION,
     createInitialWorld: createInitialWorld,
@@ -427,6 +446,8 @@
     cloneWorld: cloneWorld,
     createRng: createRng,
     randomBetween: randomBetween,
+    angleDelta: angleDelta,
+    rotateToward: rotateToward,
     selectShips: selectShips,
     issueMoveOrder: issueMoveOrder,
     issueContextOrder: issueContextOrder,
