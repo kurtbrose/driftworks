@@ -158,8 +158,31 @@
   }
 
   function playMiningTick() {
-    noiseBurst(0.055, 0.035, 'bandpass', 1700 + Math.random() * 500);
-    beep(1700 + Math.random() * 320, 0.035, 0.02, 'triangle', 0.015);
+    if (!settings.sfx || !unlock()) return;
+    var start = context.currentTime;
+    var source = context.createBufferSource();
+    var lowpass = context.createBiquadFilter();
+    var growl = context.createOscillator();
+    var growlGain = context.createGain();
+    var envelope = context.createGain();
+    source.buffer = createNoiseBuffer(0.18);
+    lowpass.type = 'lowpass';
+    lowpass.frequency.setValueAtTime(230 + Math.random() * 70, start);
+    lowpass.Q.value = 3.8;
+    growl.type = 'sawtooth';
+    growl.frequency.setValueAtTime(58 + Math.random() * 12, start);
+    growl.frequency.linearRampToValueAtTime(44 + Math.random() * 8, start + 0.18);
+    growlGain.gain.setValueAtTime(0.0001, start);
+    growlGain.gain.exponentialRampToValueAtTime(0.028, start + 0.012);
+    growlGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+    envelope.gain.setValueAtTime(0.0001, start);
+    envelope.gain.exponentialRampToValueAtTime(0.065, start + 0.012);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, start + 0.19);
+    source.connect(lowpass).connect(envelope).connect(sfxBus);
+    growl.connect(growlGain).connect(sfxBus);
+    source.start(start);
+    growl.start(start);
+    growl.stop(start + 0.2);
   }
 
   function playGunshot() {

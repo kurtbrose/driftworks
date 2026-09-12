@@ -345,7 +345,7 @@
           var asteroid = findAsteroidById(world, ship.order.asteroidId);
           if (asteroid) {
             spawnMiningEffects(effects, asteroid.position, ship, ship.cargo - (ship.previousCargo || 0));
-            if (audio && world.selectedShipIds.indexOf(ship.id) !== -1 && world.elapsedSeconds - lastMiningSoundAt > 0.13) {
+            if (audio && world.elapsedSeconds - lastMiningSoundAt > 0.18) {
               audio.playMiningTick();
               lastMiningSoundAt = world.elapsedSeconds;
             }
