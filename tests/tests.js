@@ -101,6 +101,27 @@
     assertClose(worldY, target.y - position.y);
   });
 
+  test('engine plume mixes fixed maneuvering thrusters', function () {
+    var radius = 14;
+    var forward = game.enginePlumeGeometry(20, 0, 0, 100, radius, false);
+    var braking = game.enginePlumeGeometry(-20, 0, 0, 100, radius, false);
+    var lateral = game.enginePlumeGeometry(0, 20, 0, 100, radius, false);
+    var main = findPlume(forward, 'main-aft');
+    var brakePort = findPlume(braking, 'brake-port');
+    var brakeStarboard = findPlume(braking, 'brake-starboard');
+    var portTranslate = findPlume(lateral, 'port-translate');
+
+    assert(main, 'Forward acceleration should use aft main thruster');
+    assert(brakePort && brakeStarboard, 'Braking should use paired forward brake ports');
+    assert(portTranslate, 'Lateral acceleration should use a side maneuvering thruster');
+    assertClose(main.origin.x, -radius * 0.82);
+    assertClose(main.origin.y, 0);
+    assertClose(brakePort.origin.x, radius * 0.72);
+    assertClose(brakePort.origin.y, -radius * 0.42);
+    assertClose(brakeStarboard.origin.y, radius * 0.42);
+    assertClose(portTranslate.origin.y, -radius * 0.82);
+  });
+
   test('save serialization round-trips world state', function () {
     var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));
@@ -128,6 +149,12 @@
   function findAsteroid(world, id) {
     return world.asteroids.filter(function (asteroid) {
       return asteroid.id === id;
+    })[0];
+  }
+
+  function findPlume(plumes, id) {
+    return plumes.filter(function (plume) {
+      return plume.id === id;
     })[0];
   }
 

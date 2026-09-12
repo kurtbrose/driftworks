@@ -533,28 +533,47 @@
     if (!ship.previousVelocity || ship.speed <= 0) return;
     var ax = ship.velocity.x - ship.previousVelocity.x;
     var ay = ship.velocity.y - ship.previousVelocity.y;
-    var accel = Math.hypot(ax, ay);
-    if (accel < 0.18) return;
-
-    var local = worldDeltaToShipLocal(ax, ay, ship.rotation);
-    var localLength = Math.max(0.0001, Math.hypot(local.x, local.y));
-    var awayX = -local.x / localLength;
-    var awayY = -local.y / localLength;
-    var sideX = -awayY;
-    var sideY = awayX;
-    var intensity = Math.min(1, accel / Math.max(1, ship.acceleration / 24));
-    var length = (8 + 18 * intensity) * (ship.order.kind === 'return' && ship.cargo > 0 ? 1.2 : 1);
-    var width = 3 + 4 * intensity;
-    var originX = awayX * (radius * 0.75);
-    var originY = awayY * (radius * 0.75);
+    var plumes = enginePlumeGeometry(ax, ay, ship.rotation, ship.acceleration, radius, ship.order.kind === 'return' && ship.cargo > 0);
+    if (!plumes.length) return;
 
     graphics.lineStyle(0);
-    graphics.beginFill(ship.cargo > 0 ? 0xe1b65b : 0x8fd7e4, 0.16 + 0.48 * intensity);
-    graphics.moveTo(originX + sideX * width, originY + sideY * width);
-    graphics.lineTo(originX + awayX * length, originY + awayY * length);
-    graphics.lineTo(originX - sideX * width, originY - sideY * width);
-    graphics.closePath();
-    graphics.endFill();
+    plumes.forEach(function (plume) {
+      graphics.beginFill(ship.cargo > 0 ? 0xe1b65b : 0x8fd7e4, plume.alpha);
+      graphics.moveTo(plume.origin.x + plume.side.x * plume.width, plume.origin.y + plume.side.y * plume.width);
+      graphics.lineTo(plume.origin.x + plume.direction.x * plume.length, plume.origin.y + plume.direction.y * plume.length);
+      graphics.lineTo(plume.origin.x - plume.side.x * plume.width, plume.origin.y - plume.side.y * plume.width);
+      graphics.closePath();
+      graphics.endFill();
+    });
+  }
+
+  function enginePlumeGeometry(worldAccelX, worldAccelY, rotation, acceleration, radius, loadedReturn) {
+    var accel = Math.hypot(worldAccelX, worldAccelY);
+    if (accel < 0.18) return [];
+
+    var local = worldDeltaToShipLocal(worldAccelX, worldAccelY, rotation);
+    var plumes = [];
+    addThrusterPlume(plumes, 'main-aft', Math.max(0, local.x), acceleration, radius, { x: -0.82, y: 0 }, { x: -1, y: 0 }, loadedReturn);
+    addThrusterPlume(plumes, 'brake-port', Math.max(0, -local.x), acceleration, radius, { x: 0.72, y: -0.42 }, { x: 1, y: 0 }, loadedReturn);
+    addThrusterPlume(plumes, 'brake-starboard', Math.max(0, -local.x), acceleration, radius, { x: 0.72, y: 0.42 }, { x: 1, y: 0 }, loadedReturn);
+    addThrusterPlume(plumes, 'port-translate', Math.max(0, local.y), acceleration, radius, { x: -0.2, y: -0.82 }, { x: 0, y: -1 }, loadedReturn);
+    addThrusterPlume(plumes, 'starboard-translate', Math.max(0, -local.y), acceleration, radius, { x: -0.2, y: 0.82 }, { x: 0, y: 1 }, loadedReturn);
+    return plumes;
+  }
+
+  function addThrusterPlume(plumes, id, thrust, acceleration, radius, originScale, direction, loadedReturn) {
+    if (thrust < 0.12) return;
+    var intensity = Math.min(1, thrust / Math.max(1, acceleration / 24));
+    var normalized = normalize(direction);
+    plumes.push({
+      id: id,
+      origin: { x: radius * originScale.x, y: radius * originScale.y },
+      direction: normalized,
+      side: { x: -normalized.y, y: normalized.x },
+      length: (5 + 16 * intensity) * (loadedReturn ? 1.15 : 1),
+      width: 2 + 3.5 * intensity,
+      alpha: 0.12 + 0.5 * intensity
+    });
   }
 
   function drawWorldOrderLine(graphics, ship) {
@@ -580,6 +599,14 @@
     return {
       x: dx * cos - dy * sin,
       y: dx * sin + dy * cos
+    };
+  }
+
+  function normalize(vector) {
+    var length = Math.max(0.0001, Math.hypot(vector.x, vector.y));
+    return {
+      x: vector.x / length,
+      y: vector.y / length
     };
   }
 
@@ -780,7 +807,8 @@
 
   Driftworks.game = {
     boot: boot,
-    worldVectorToShipLocalLine: worldVectorToShipLocalLine
+    worldVectorToShipLocalLine: worldVectorToShipLocalLine,
+    enginePlumeGeometry: enginePlumeGeometry
   };
 
   if (!global.DRIFTWORKS_TEST_MODE) {
