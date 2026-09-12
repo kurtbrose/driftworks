@@ -235,7 +235,7 @@
     var combatTime = 0;
     var cameraShake = 0;
     var visualTimeScale = 1;
-    var laserPaintTimer = 0;
+    var laserPaintTimers = {};
     var director = createThreatDirector();
 
     host.appendChild(app.view);
@@ -507,7 +507,6 @@
       if (!drones.length) return;
       combatTime += dt;
       shotCooldown -= dt;
-      laserPaintTimer -= dt;
 
       drones.forEach(function (drone) {
         var target = droneTargetPosition(world, drone);
@@ -523,26 +522,23 @@
         drone.underFire = Math.max(0, (drone.underFire || 0) - dt * 0.35);
       });
 
-      var assigned = {};
       world.ships.filter(function (ship) {
         return ship.type === 'escort';
       }).forEach(function (escort) {
-        var target = nearestDroneInRange(escort.position, assigned, DEFENDER_RANGE);
-        if (target) {
-          assigned[target.id] = true;
-          holdDefensiveLaser(escort, target, dt);
+        var attack = stepDefenderWeapon(escort, drones, laserPaintTimers, dt);
+        if (attack) {
+          holdDefensiveLaser(escort, attack.target, dt, attack.paint);
         }
       });
     }
 
-    function holdDefensiveLaser(escort, drone, dt) {
+    function holdDefensiveLaser(escort, drone, dt, paint) {
       drone.underFire = (drone.underFire || 0) + dt;
       drone.flash = 1;
-      if (laserPaintTimer <= 0) {
+      if (paint) {
         pushProjectile(effects, escort.position, drone.position);
         pushImpactSparks(effects, drone.position, drone.velocity);
         if (audio) audio.playImpact(drone.underFire);
-        laserPaintTimer = 0.08;
       }
       if (drone.underFire >= DEFENDER_DWELL_SECONDS) {
         if (audio) audio.playGunshot();
@@ -608,20 +604,6 @@
       drones.forEach(function (drone) {
         var d = Math.hypot(drone.position.x - position.x, drone.position.y - position.y);
         if (d < bestDistance) {
-          best = drone;
-          bestDistance = d;
-        }
-      });
-      return best;
-    }
-
-    function nearestDroneInRange(position, assigned, range) {
-      var best = null;
-      var bestDistance = Infinity;
-      drones.forEach(function (drone) {
-        if (assigned[drone.id]) return;
-        var d = Math.hypot(drone.position.x - position.x, drone.position.y - position.y);
-        if (d <= range && d < bestDistance) {
           best = drone;
           bestDistance = d;
         }
@@ -870,6 +852,23 @@
       y: world.camera.y + (target.y - world.camera.y) * t,
       zoom: world.camera.zoom + (target.zoom - world.camera.zoom) * t
     });
+  }
+
+  function stepDefenderWeapon(escort, drones, timers, dt) {
+    timers[escort.id] = Math.max(0, (timers[escort.id] || 0) - dt);
+    var target = null;
+    var bestDistance = Infinity;
+    drones.forEach(function (drone) {
+      var distance = Math.hypot(drone.position.x - escort.position.x, drone.position.y - escort.position.y);
+      if (distance <= DEFENDER_RANGE && distance < bestDistance) {
+        target = drone;
+        bestDistance = distance;
+      }
+    });
+    if (!target) return null;
+    var paint = timers[escort.id] === 0;
+    if (paint) timers[escort.id] = 0.08;
+    return { target: target, paint: paint };
   }
 
   function operationExposure(world) {
@@ -1681,6 +1680,7 @@
     focusCameraToward: focusCameraToward,
     miningEffectGeometry: miningEffectGeometry,
     operationExposure: operationExposure,
+    stepDefenderWeapon: stepDefenderWeapon,
     mothershipDrumMarkers: mothershipDrumMarkers,
     mothershipHullHalfWidthAtY: mothershipHullHalfWidthAtY
   };

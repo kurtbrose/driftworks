@@ -176,6 +176,22 @@
     assert(findShip(world, 'tug-01').carryingSection === false, 'Tug should no longer carry the section');
   });
 
+  test('escorts can engage the same hostile with independent laser timers', function () {
+    var escorts = sim.createInitialWorld().ships.filter(function (ship) { return ship.type === 'escort'; });
+    escorts.forEach(function (ship) { ship.position = { x: 0, y: 0 }; });
+    var drone = { id: 'shared-target', position: { x: 100, y: 0 } };
+    var timers = {};
+    var first = game.stepDefenderWeapon(escorts[0], [drone], timers, 0.01);
+    var second = game.stepDefenderWeapon(escorts[1], [drone], timers, 0.01);
+    assert(first.target === drone && second.target === drone, 'Both escorts should engage the same hostile');
+    assert(first.paint && second.paint, 'Both escorts should visibly fire on the same frame');
+    assert(!game.stepDefenderWeapon(escorts[0], [drone], timers, 0.02).paint, 'First escort should respect its own laser cadence');
+    assert(game.stepDefenderWeapon(escorts[1], [drone], timers, 0.08).paint, 'Second escort should fire independently of the first timer');
+    assert(game.stepDefenderWeapon(escorts[0], [], timers, 0.1) === null, 'Destroyed targets should not remain reserved');
+    drone.position.x = 1000;
+    assert(game.stepDefenderWeapon(escorts[0], [drone], timers, 0.1) === null, 'Escorts must still respect weapon range');
+  });
+
   test('operation exposure starts quiet and rises with industrial work', function () {
     var world = sim.createInitialWorld();
     assertClose(game.operationExposure(world), 0);
