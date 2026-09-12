@@ -159,6 +159,8 @@
     var app = new PIXI.Application({
       background: '#080c10',
       antialias: true,
+      autoDensity: true,
+      resolution: Math.min(global.devicePixelRatio || 1, 2),
       resizeTo: host
     });
     var starfield = createStarfield(app.renderer.width, app.renderer.height);
