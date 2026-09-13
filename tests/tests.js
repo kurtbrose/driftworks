@@ -747,6 +747,41 @@
     assertClose(findShip(world, 'escort-01').order.anchor.x, miner.position.x + 100);
   });
 
+  test('formation travels together at the slower wingmate pace', function () {
+    var world = sim.createInitialWorld();
+    findShip(world, 'escort-02').speed = 55;
+    world = sim.issueDefendOrder(sim.selectShips(world, ['escort-01', 'escort-02']), { x: 1800, y: -150 });
+    var arrival = {};
+    for (var i = 0; i < 1600; i += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+      var a = findShip(world, 'escort-01'), b = findShip(world, 'escort-02');
+      if (i > 120) {
+        var ax = a.position.x - a.order.offset.x, ay = a.position.y - a.order.offset.y;
+        var bx = b.position.x - b.order.offset.x, by = b.position.y - b.order.offset.y;
+        assert(Math.hypot(ax - bx, ay - by) < 10, 'Fast fighter must hold formation throughout transit');
+      }
+      [a, b].forEach(function (s) {
+        if (!arrival[s.id] && Math.hypot(s.position.x - s.order.anchor.x - s.order.offset.x, s.position.y - s.order.anchor.y - s.order.offset.y) < 5) arrival[s.id] = i;
+      });
+    }
+    assert(arrival['escort-01'] && arrival['escort-02'], 'Both fighters must reach the destination');
+    assert(Math.abs(arrival['escort-01'] - arrival['escort-02']) <= 3, 'Wingmates should arrive within a tenth of a second');
+  });
+
+  test('formation waits for stragglers and releases disabled wingmates', function () {
+    var world = sim.createInitialWorld();
+    findShip(world, 'escort-02').position.x = -700;
+    world = sim.issueDefendOrder(sim.selectShips(world, ['escort-01', 'escort-02']), { x: 1800, y: 0 });
+    var start = findShip(world, 'escort-01').order.formation.position.x;
+    for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30);
+    assertClose(findShip(world, 'escort-01').order.formation.position.x, start);
+    world = sim.damageFighter(world, 'escort-02', 1);
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    for (i = 0; i < 900; i += 1) world = sim.stepWorld(world, 1 / 30);
+    var s = findShip(world, 'escort-01');
+    assert(Math.hypot(s.position.x - s.order.anchor.x - s.order.offset.x, s.position.y - s.order.anchor.y - s.order.offset.y) < 5, 'Survivor must continue without waiting forever');
+  });
+
   run();
 
   function findShip(world, id) {

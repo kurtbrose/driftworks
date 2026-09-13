@@ -57,12 +57,14 @@
     });
     var center = members.reduce(function (p, s) { p.x += s.position.x / members.length; p.y += s.position.y / members.length; return p; }, { x: 0, y: 0 });
     var angle = Math.atan2(target.y - center.y, target.x - center.x);
+    var groupId = next.ships.reduce(function (id, s) { return Math.max(id, s.order.groupId || 0); }, 0) + 1;
     var shapes = { 1: [[0, 0]], 2: [[24, -32], [-24, 32]], 3: [[42, 0], [-21, -48], [-21, 48]], 4: [[64, 0], [0, -48], [0, 48], [-64, 0]] };
     members.forEach(function (s, i) {
       var slot = shapes[members.length] ? shapes[members.length][i] : [Math.cos(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16), Math.sin(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16)];
       if (shipId && members.length === 1) slot = [0, 80];
       if (shipId) slot = [slot[0] * 1.7, slot[1] * 1.7];
       s.order = { kind: 'defend', anchor: clonePlain(target), anchorShipId: shipId || null,
+        groupId: groupId, formation: { position: clonePlain(center), velocity: { x: 0, y: 0 } },
         leashRadius: FIGHTER_LEASH, side: i % 2 ? -1 : 1,
         offset: { x: slot[0] * Math.cos(angle) - slot[1] * Math.sin(angle), y: slot[0] * Math.sin(angle) + slot[1] * Math.cos(angle) }, target: clonePlain(target) };
     });
@@ -85,11 +87,14 @@
     if (protectedShip) order.anchor = clonePlain(protectedShip.position);
     var anchor = order.anchor;
     var radius = order.leashRadius;
-    var target = { x: anchor.x + order.offset.x, y: anchor.y + order.offset.y };
+    var formation = order.formation;
+    var center = formation ? formation.position : anchor;
+    var target = { x: center.x + order.offset.x, y: center.y + order.offset.y };
     var threat = threats.filter(function (t) { return distance(t.position, anchor) <= radius + FIGHTER_RANGE; }).sort(function (a, b) {
       return distance(a.position, anchor) - distance(b.position, anchor);
     })[0];
-    if (threat && distance(ship.position, anchor) <= radius) {
+    var fighting = threat && distance(ship.position, anchor) <= radius && (!formation || distance(center, anchor) < 80 || distance(ship.position, threat.position) < FIGHTER_RANGE);
+    if (fighting) {
       var dx = ship.position.x - threat.position.x, dy = ship.position.y - threat.position.y;
       var gap = Math.hypot(dx, dy);
       var ux = gap > 0.001 ? dx / gap : 1, uy = gap > 0.001 ? dy / gap : 0;
@@ -105,10 +110,14 @@
       });
     }
     var tx = target.x - anchor.x, ty = target.y - anchor.y, length = Math.hypot(tx, ty);
-    if (length > radius) target = { x: anchor.x + tx / length * radius, y: anchor.y + ty / length * radius };
+    if (length > radius && (fighting || !formation || distance(center, anchor) < radius - 400)) target = { x: anchor.x + tx / length * radius, y: anchor.y + ty / length * radius };
     order.target = target;
     var before = distance(ship.position, anchor);
-    stepTowardOrderTarget(ship, dt, ARRIVAL_DISTANCE, false);
+    var velocity = formation && !fighting ? {
+      x: formation.velocity.x + (target.x - ship.position.x) * 2,
+      y: formation.velocity.y + (target.y - ship.position.y) * 2
+    } : null;
+    stepTowardOrderTarget(ship, dt, ARRIVAL_DISTANCE, false, velocity);
     // Remove outward momentum at the boundary; distant new orders still travel normally.
     var after = distance(ship.position, anchor);
     if (before <= radius && after > radius) {
@@ -118,6 +127,37 @@
       ship.velocity.x -= outward * nx; ship.velocity.y -= outward * ny;
     }
     return ship;
+  }
+
+  function stepFormations(world, dt) {
+    var groups = {};
+    world.ships.forEach(function (s) {
+      if (s.disabled || s.order.kind !== 'defend' || !s.order.formation) return;
+      (groups[s.order.groupId] || (groups[s.order.groupId] = [])).push(s);
+    });
+    Object.keys(groups).forEach(function (id) {
+      var members = groups[id], order = members[0].order;
+      var guarded = world.ships.filter(function (s) { return s.id === order.anchorShipId; })[0];
+      var anchor = guarded ? guarded.position : order.anchor;
+      var formation = clonePlain(order.formation);
+      var error = 0, speed = Infinity, acceleration = Infinity;
+      members.forEach(function (s) {
+        error = Math.max(error, distance(s.position, { x: formation.position.x + s.order.offset.x, y: formation.position.y + s.order.offset.y }));
+        speed = Math.min(speed, s.speed);
+        acceleration = Math.min(acceleration, s.acceleration);
+      });
+      // Reserve catch-up speed and ease to a halt when any wingmate loses its slot.
+      var cohesion = Math.max(0, Math.min(1, (85 - error) / 60));
+      var gap = distance(formation.position, anchor);
+      var cruise = Math.min(speed * 0.72 * cohesion, Math.sqrt(2 * acceleration * 0.5 * gap), gap * 2);
+      var desired = { x: gap ? (anchor.x - formation.position.x) / gap * cruise : 0, y: gap ? (anchor.y - formation.position.y) / gap * cruise : 0 };
+      var dx = desired.x - formation.velocity.x, dy = desired.y - formation.velocity.y;
+      var change = Math.hypot(dx, dy), limit = acceleration * 0.5 * dt;
+      var fraction = change ? Math.min(1, limit / change) : 0;
+      formation.velocity.x += dx * fraction; formation.velocity.y += dy * fraction;
+      formation.position.x += formation.velocity.x * dt; formation.position.y += formation.velocity.y * dt;
+      members.forEach(function (s) { s.order.formation = clonePlain(formation); });
+    });
   }
 
   function createInitialWorld() {
@@ -367,6 +407,7 @@
 
   function stepWorld(world, dt, threats) {
     var next = normalizeWorld(world);
+    stepFormations(next, dt);
     var asteroids = next.asteroids.map(function (asteroid) {
       asteroid.rotation += asteroid.angularVelocity * dt;
       return asteroid;
@@ -536,14 +577,14 @@
     return ship;
   }
 
-  function stepTowardOrderTarget(ship, dt, arrivalDistance, snapOnArrival) {
+  function stepTowardOrderTarget(ship, dt, arrivalDistance, snapOnArrival, formationVelocity) {
     var toTarget = {
       x: ship.order.target.x - ship.position.x,
       y: ship.order.target.y - ship.position.y
     };
     var distance = Math.hypot(toTarget.x, toTarget.y);
 
-    if (distance <= arrivalDistance) {
+    if (distance <= arrivalDistance && !formationVelocity) {
       if (snapOnArrival) {
         ship.position = { x: ship.order.target.x, y: ship.order.target.y };
         ship.order = { kind: 'idle' };
@@ -553,8 +594,8 @@
     }
 
     var direction = {
-      x: toTarget.x / distance,
-      y: toTarget.y / distance
+      x: distance ? toTarget.x / distance : 0,
+      y: distance ? toTarget.y / distance : 0
     };
     var currentSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
     var stoppingDistance = Math.max(0, distance - arrivalDistance);
@@ -566,6 +607,7 @@
       x: direction.x * desiredSpeed,
       y: direction.y * desiredSpeed
     };
+    if (formationVelocity) desiredVelocity = formationVelocity;
     var deltaVelocity = {
       x: desiredVelocity.x - ship.velocity.x,
       y: desiredVelocity.y - ship.velocity.y
@@ -590,7 +632,7 @@
       nextSpeed = ship.speed;
     }
 
-    var travel = Math.min(distance, nextSpeed * dt);
+    var travel = formationVelocity ? nextSpeed * dt : Math.min(distance, nextSpeed * dt);
     if (nextSpeed > 0.001) {
       ship.position.x += (ship.velocity.x / nextSpeed) * travel;
       ship.position.y += (ship.velocity.y / nextSpeed) * travel;
