@@ -472,14 +472,38 @@
   test('extended zoom retains the world point under the pointer and respects limits', function () {
     var view = { width: 1200, height: 800 };
     var pointer = { x: 230, y: 570 };
-    var camera = { x: 71, y: -83, zoom: 30 };
+    var camera = { x: 71, y: -83, zoom: 120 };
     var before = game.screenToWorld(pointer, camera, view);
     var next = game.zoomCameraAt(camera, pointer, view, -1);
     var after = game.screenToWorld(pointer, next, view);
-    assertClose(next.zoom, 32);
+    assertClose(next.zoom, 128);
     assertClose(after.x, before.x);
     assertClose(after.y, before.y);
     assertClose(game.zoomCameraAt({ x: 0, y: 0, zoom: 0.35 }, pointer, view, 1).zoom, 0.35);
+  });
+
+  test('detail zoom magnifies all hulls fourfold without changing relative proportions', function () {
+    ['escort', 'miner', 'tug', 'mothership', 'asteroid', 'depot'].forEach(function (type) {
+      var base = game.semanticScale(type, 32);
+      assertClose(game.semanticScale(type, 32.000001), base, 0.000001);
+      assertClose(game.semanticScale(type, 31.999999), base, 0.000001);
+      [48, 64, 128].forEach(function (zoom) {
+        assertClose(game.semanticScale(type, zoom), base);
+      });
+      assertClose(game.semanticScale(type, 128) * 128 / (base * 32), 4);
+    });
+    var view = { width: 1200, height: 800 };
+    var pointer = { x: 230, y: 570 };
+    [30, 32, 64, 128].forEach(function (zoom) {
+      [-1, 1].forEach(function (wheel) {
+        var camera = { x: 71, y: -83, zoom: zoom };
+        var before = game.screenToWorld(pointer, camera, view);
+        var next = game.zoomCameraAt(camera, pointer, view, wheel);
+        var after = game.screenToWorld(pointer, next, view);
+        assertClose(after.x, before.x);
+        assertClose(after.y, before.y);
+      });
+    });
   });
 
   test('close zoom recovery targets do not capture empty-space move orders', function () {

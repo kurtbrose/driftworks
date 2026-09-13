@@ -66,68 +66,6 @@ button[data-active="true"] {
   backdrop-filter: blur(8px);
 }
 
-.inspector {
-  width: 242px;
-  max-width: 100%;
-  align-self: start;
-  overflow: hidden;
-}
-
-.inspector-heading {
-  height: 32px;
-  padding: 8px 12px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.inspector-heading button {
-  min-height: 24px;
-  padding: 0 8px;
-  font-size: 11px;
-}
-
-.inspector-view {
-  position: relative;
-  height: 142px;
-  background: radial-gradient(ellipse at center, rgba(87, 139, 143, 0.12), transparent 70%);
-}
-
-.inspector-view canvas {
-  display: block;
-  width: 100%;
-  height: 142px;
-}
-
-.inspector-view span {
-  position: absolute;
-  inset: 0;
-  align-content: center;
-  text-align: center;
-  color: #81969f;
-  font-size: 12px;
-}
-
-.inspector-name {
-  padding: 0 12px;
-  font-size: 14px;
-  font-weight: 650;
-}
-
-.inspector-status {
-  padding: 4px 12px 12px;
-  color: #9cafb7;
-  font-size: 11px;
-  text-transform: capitalize;
-}
-
-.eyebrow {
-  color: #8bb8c8;
-  font-family: Consolas, "SFMono-Regular", monospace;
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
 .readout {
   grid-column: 3;
   padding: 10px 12px;
@@ -192,7 +130,7 @@ button[data-active="true"] {
   .hud {
     inset: 10px;
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto 1fr auto;
+    grid-template-rows: auto 1fr auto;
   }
 
   .readout,

@@ -24,7 +24,7 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - Debug hostile-raider vignette with industrial target selection, escort range coverage, laser dwell, impacts, destruction fragments, very light final-hit shake, and final-kill slow motion.
 - Simple threat director that warns, then sends raiders once mining/construction activity exposes the operation.
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
-- Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 32×, with geometric scaling for the asteroid (keeping surface attachments aligned), nearly geometric scaling for other large bodies and modest screen-size growth for small craft. Movement and simulation distances remain unchanged.
+- Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 128×. Through 32×, the asteroid scales geometrically (keeping surface attachments aligned), other large bodies nearly geometrically, and small craft grow modestly on screen. Above 32×, artwork proportions hold steady and everything magnifies together, making craft four times longer at 128× than at 32×. These remain schematic proportions, not a literal physical hull scale. Movement and simulation distances remain unchanged.
 - Versioned localStorage save/load of serializable game state.
 - Toggleable stress mode that animates thousands of simple sprites.
 - DOM HUD with selected ships, simulation time, entity count, and measured FPS.

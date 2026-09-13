@@ -7,6 +7,8 @@
   var PIXI = global.PIXI;
   var STEP_SECONDS = 1 / 30;
   var MAX_FRAME_SECONDS = 0.2;
+  var DETAIL_ZOOM_START = 32;
+  var MAX_ZOOM = 128;
 
   var SHIP_STYLES = {
     mothership: { radius: 34, fill: 0x7d8790, stroke: 0xd7dee4 },
@@ -24,15 +26,17 @@
   var DIRECTOR_MAX_WAVES = 3;
 
   // Local artwork scale; the camera still scales positions geometrically.
-  // Zoom 1 is the existing tactical view. Large bodies retain almost all of
-  // their world size while small craft shed their schematic magnification.
+  // Through 32x, small craft shed their schematic magnification. Beyond that,
+  // freeze local artwork scale so camera zoom magnifies every object together.
+  // This preserves inspection proportions; it is not a physical hull calibration.
   function semanticScale(type, zoom) {
     if (type === 'asteroid') return 1;
     var large = type === 'mothership' || type === 'asteroid';
     var exponent = large ? 0.95 : (type === 'miner' || type === 'tug' || type === 'depot' ? 0.12 : 0.08);
     // Every class stops shrinking on screen below the baseline. Keeping the
     // same floor for all classes preserves their tactical size hierarchy.
-    return Math.pow(Math.max(1, zoom), exponent) / zoom;
+    var tacticalZoom = Math.min(DETAIL_ZOOM_START, zoom);
+    return Math.pow(Math.max(1, tacticalZoom), exponent) / tacticalZoom;
   }
 
   function boot() {
@@ -129,12 +133,6 @@
 
   function createHud(host, actions) {
     host.innerHTML =
-      '<section class="panel inspector" aria-label="Selected ship close-up">' +
-      '<div class="inspector-heading"><span class="eyebrow">SELECTED CRAFT</span><button type="button" data-action="inspect-next" hidden>Next</button></div>' +
-      '<div class="inspector-view" data-role="portrait"><span data-role="portrait-empty">Select a craft to inspect</span></div>' +
-      '<div class="inspector-name" data-role="portrait-name">No selection</div>' +
-      '<div class="inspector-status" data-role="portrait-status">Live close-up</div>' +
-      '</section>' +
       '<section class="panel readout">' +
       '<div class="row"><span>Location</span><strong data-role="location"></strong></div>' +
       '<div class="row"><span>Cash</span><strong data-role="money"></strong></div>' +
@@ -159,20 +157,6 @@
       '</section>' +
       '<section class="hint">LMB select/drag-box · RMB move · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
 
-    var portrait = new PIXI.Application({ width: 240, height: 142, backgroundAlpha: 0,
-      antialias: true, autoDensity: true, resolution: Math.min(global.devicePixelRatio || 1, 2), autoStart: false });
-    host.querySelector('[data-role="portrait"]').appendChild(portrait.view);
-    portrait.view.setAttribute('aria-hidden', 'true');
-    var portraitShip = new PIXI.Graphics();
-    portraitShip.inspector = true;
-    portrait.stage.addChild(portraitShip);
-    var inspectedId = null;
-    var inspectionShips = [];
-    var nextButton = host.querySelector('[data-action="inspect-next"]');
-    nextButton.addEventListener('click', function () {
-      var index = inspectionShips.findIndex(function (ship) { return ship.id === inspectedId; });
-      if (inspectionShips.length) inspectedId = inspectionShips[(index + 1) % inspectionShips.length].id;
-    });
     var stressButton = host.querySelector('[data-action="stress"]');
     var sfxButton = host.querySelector('[data-action="sfx"]');
     var musicButton = host.querySelector('[data-action="music"]');
@@ -185,26 +169,6 @@
 
     return {
       update: function (world, stats) {
-        inspectionShips = world.ships.filter(function (ship) { return world.selectedShipIds.indexOf(ship.id) !== -1; });
-        var inspected = inspectionShips.find(function (ship) { return ship.id === inspectedId; }) || inspectionShips[0];
-        if (portraitShip.shipId !== (inspected && inspected.id)) portraitShip.engineResponse = null;
-        inspectedId = inspected ? inspected.id : null;
-        portraitShip.shipId = inspectedId;
-        portraitShip.visible = !!inspected;
-        nextButton.hidden = inspectionShips.length < 2;
-        host.querySelector('[data-role="portrait-empty"]').hidden = !!inspected;
-        host.querySelector('[data-role="portrait-name"]').textContent = inspected ? inspected.name : 'No selection';
-        host.querySelector('[data-role="portrait-status"]').textContent = inspected ?
-          (inspected.repairRemaining ? 'Repairing' : inspected.disabled ? 'Disabled' : inspected.launchElapsed != null ? 'Launching' :
-            inspected.order.phase === 'landed' ? 'Mining' : inspected.order.kind) +
-          (inspectionShips.length > 1 ? ' · ' + (inspectionShips.indexOf(inspected) + 1) + ' / ' + inspectionShips.length + ' selected' : '') : 'Live close-up';
-        if (inspected) {
-          // Stable hull-local view keeps engine detail readable through turns and camera zoom.
-          portraitShip.scale.set(inspected.type === 'mothership' ? 1.65 : 2.45);
-          portraitShip.position.set(128, 66);
-          paintShip(portraitShip, inspected, false, world.elapsedSeconds);
-        }
-        portrait.renderer.render(portrait.stage);
         var audioStatus = audio ? audio.status() : { sfx: false, music: false, available: false };
         host.querySelector('[data-role="location"]').textContent = world.campaign.location;
         host.querySelector('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
@@ -393,6 +357,7 @@
           pushSelectionPulse(effects, ship.position, ship.type === 'mothership' ? 42 : 20, ship.type);
         }
         graphic.scale.set(semanticScale(ship.type, world.camera.zoom));
+        graphic.engineScreenScale = world.camera.zoom * graphic.scale.x;
         if (ship.type !== 'mothership') {
           graphic.hitArea = new PIXI.Circle(0, 0, Math.max(SHIP_STYLES[ship.type].radius + 3,
             12 / (world.camera.zoom * graphic.scale.x)));
@@ -1062,7 +1027,7 @@
 
   function zoomCameraAt(camera, screenPoint, viewport, wheelDelta) {
     var before = screenToWorld(screenPoint, camera, viewport);
-    var zoom = Math.max(0.35, Math.min(32, camera.zoom * (wheelDelta > 0 ? 0.9 : 1.1)));
+    var zoom = Math.max(0.35, Math.min(MAX_ZOOM, camera.zoom * (wheelDelta > 0 ? 0.9 : 1.1)));
     var after = screenToWorld(screenPoint, { x: camera.x, y: camera.y, zoom: zoom }, viewport);
     return {
       x: camera.x + before.x - after.x,
@@ -1411,7 +1376,7 @@
       drawPlumeDiamond(graphics, plume, 0, length * 0.1, length * 0.84, plume.width * 0.48, 0x9fe9df, alpha * 0.72);
       drawPlumeDiamond(graphics, plume, 0, length * 0.06, length * 0.67, plume.width * 0.16, 0xe5fff3, alpha * 1.35);
       // Tiny distant exhaust keeps its silhouette without subpixel bands.
-      if (length * Math.abs(graphics.scale.x) >= 10) {
+      if (length * Math.abs(graphics.engineScreenScale || graphics.scale.x) >= 10) {
         for (var node = 0; node < 3; node += 1) {
           var center = length * (0.2 + node * 0.2 + pulse * 0.008);
           var halfLength = length * (0.065 - node * 0.01);
@@ -1481,7 +1446,6 @@
   }
 
   function drawWorldOrderLine(graphics, ship) {
-    if (graphics.inspector) return;
     var local = worldVectorToShipLocalLine(ship.position, ship.order.target, ship.rotation);
     graphics.moveTo(0, 0);
     graphics.lineTo(local.x / graphics.scale.x, local.y / graphics.scale.y);
