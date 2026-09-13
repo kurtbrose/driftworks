@@ -18,11 +18,20 @@
   function loadSettings() {
     try {
       var saved = global.localStorage && global.localStorage.getItem(storageKey);
-      if (saved) return Object.assign({ sfx: true, music: false }, JSON.parse(saved));
+      if (saved) {
+        var parsed = JSON.parse(saved) || {};
+        var sfxVolume = volumeValue(parsed.sfxVolume, parsed.sfx === false ? 0 : 1);
+        var musicVolume = volumeValue(parsed.musicVolume, parsed.music ? 1 : 0);
+        return { sfx: sfxVolume > 0, music: musicVolume > 0, sfxVolume: sfxVolume, musicVolume: musicVolume };
+      }
     } catch (error) {
       // Audio preferences are noncritical.
     }
-    return { sfx: true, music: false };
+    return { sfx: true, music: false, sfxVolume: 1, musicVolume: 0 };
+  }
+
+  function volumeValue(value, fallback) {
+    return typeof value === 'number' && isFinite(value) ? Math.max(0, Math.min(1, value)) : fallback;
   }
 
   function saveSettings() {
@@ -41,9 +50,9 @@
       sfxBus = context.createGain();
       musicBus = context.createGain();
       engineBus = context.createGain();
-      master.gain.value = 0.65;
-      sfxBus.gain.value = settings.sfx ? 1 : 0;
-      musicBus.gain.value = settings.music ? 1 : 0;
+      master.gain.value = 2.6; // 4x original output; channel sliders retain their 0–100% range.
+      sfxBus.gain.value = settings.sfxVolume;
+      musicBus.gain.value = settings.musicVolume;
       engineBus.gain.value = 0.0001;
       sfxBus.connect(master);
       musicBus.connect(master);
@@ -68,24 +77,36 @@
       available: !!AudioContextCtor,
       unlocked: !!context && context.state === 'running',
       sfx: !!settings.sfx,
-      music: !!settings.music
+      music: !!settings.music,
+      sfxVolume: settings.sfxVolume,
+      musicVolume: settings.musicVolume
     };
   }
 
   function setSfxEnabled(enabled) {
-    settings.sfx = !!enabled;
+    setSfxVolume(enabled ? 1 : 0);
+  }
+
+  function setSfxVolume(value) {
+    settings.sfxVolume = volumeValue(value, settings.sfxVolume);
+    settings.sfx = settings.sfxVolume > 0;
     saveSettings();
-    if (ensureContext()) {
-      sfxBus.gain.setTargetAtTime(settings.sfx ? 1 : 0, context.currentTime, 0.015);
+    if (unlock()) {
+      sfxBus.gain.setTargetAtTime(settings.sfxVolume, context.currentTime, 0.015);
       if (!settings.sfx) setEngineThrust(0);
     }
   }
 
   function setMusicEnabled(enabled) {
-    settings.music = !!enabled;
+    setMusicVolume(enabled ? 1 : 0);
+  }
+
+  function setMusicVolume(value) {
+    settings.musicVolume = volumeValue(value, settings.musicVolume);
+    settings.music = settings.musicVolume > 0;
     saveSettings();
     if (ensureContext()) {
-      musicBus.gain.setTargetAtTime(settings.music ? 1 : 0, context.currentTime, 0.08);
+      musicBus.gain.setTargetAtTime(settings.musicVolume, context.currentTime, 0.08);
       unlock();
     }
   }
@@ -250,6 +271,8 @@
     status: status,
     setSfxEnabled: setSfxEnabled,
     setMusicEnabled: setMusicEnabled,
+    setSfxVolume: setSfxVolume,
+    setMusicVolume: setMusicVolume,
     playSelect: playSelect,
     playMove: playMove,
     playInvalid: playInvalid,

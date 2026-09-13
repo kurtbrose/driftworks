@@ -87,14 +87,14 @@
         scene.setStressEnabled(!scene.getStats().stressEnabled);
         hud.update(world, scene.getStats());
       },
-      onSfxToggle: function () {
+      onSfxVolume: function (value) {
         if (!audio) return;
-        audio.setSfxEnabled(!audio.status().sfx);
+        audio.setSfxVolume(value);
         hud.update(world, scene.getStats());
       },
-      onMusicToggle: function () {
+      onMusicVolume: function (value) {
         if (!audio) return;
-        audio.setMusicEnabled(!audio.status().music);
+        audio.setMusicVolume(value);
         hud.update(world, scene.getStats());
       }
     });
@@ -152,24 +152,24 @@
       '<button type="button" data-action="load">Load</button>' +
       '<button type="button" data-action="reset">Reset</button>' +
       '<button type="button" data-action="stress">Stress</button>' +
-      '<button type="button" data-action="sfx">SFX</button>' +
-      '<button type="button" data-action="music">Music</button>' +
+      '<label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label>' +
+      '<label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label>' +
       '</section>' +
       '<section class="hint">LMB select/drag-box · RMB move · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
 
     var stressButton = host.querySelector('[data-action="stress"]');
-    var sfxButton = host.querySelector('[data-action="sfx"]');
-    var musicButton = host.querySelector('[data-action="music"]');
+    var sfxSlider = host.querySelector('[data-action="sfx"]');
+    var musicSlider = host.querySelector('[data-action="music"]');
     host.querySelector('[data-action="save"]').addEventListener('click', actions.onSave);
     host.querySelector('[data-action="load"]').addEventListener('click', actions.onLoad);
     host.querySelector('[data-action="reset"]').addEventListener('click', actions.onReset);
     stressButton.addEventListener('click', actions.onStressToggle);
-    sfxButton.addEventListener('click', actions.onSfxToggle);
-    musicButton.addEventListener('click', actions.onMusicToggle);
+    sfxSlider.addEventListener('input', function () { actions.onSfxVolume(Number(sfxSlider.value) / 100); });
+    musicSlider.addEventListener('input', function () { actions.onMusicVolume(Number(musicSlider.value) / 100); });
 
     return {
       update: function (world, stats) {
-        var audioStatus = audio ? audio.status() : { sfx: false, music: false, available: false };
+        var audioStatus = audio ? audio.status() : { sfxVolume: 0, musicVolume: 0, available: false };
         host.querySelector('[data-role="location"]').textContent = world.campaign.location;
         host.querySelector('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
         host.querySelector('[data-role="quota"]').textContent =
@@ -206,12 +206,12 @@
 
         stressButton.dataset.active = stats.stressEnabled ? 'true' : 'false';
         stressButton.textContent = stats.stressEnabled ? 'Stress On' : 'Stress';
-        sfxButton.dataset.active = audioStatus.sfx ? 'true' : 'false';
-        sfxButton.disabled = !audioStatus.available;
-        sfxButton.textContent = audioStatus.sfx ? 'SFX On' : 'SFX Off';
-        musicButton.dataset.active = audioStatus.music ? 'true' : 'false';
-        musicButton.disabled = !audioStatus.available;
-        musicButton.textContent = audioStatus.music ? 'Music On' : 'Music Off';
+        sfxSlider.value = Math.round(audioStatus.sfxVolume * 100);
+        sfxSlider.disabled = !audioStatus.available;
+        host.querySelector('[data-role="sfx-volume"]').textContent = sfxSlider.value + '%';
+        musicSlider.value = Math.round(audioStatus.musicVolume * 100);
+        musicSlider.disabled = !audioStatus.available;
+        host.querySelector('[data-role="music-volume"]').textContent = musicSlider.value + '%';
       }
     };
   }
