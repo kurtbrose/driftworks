@@ -596,7 +596,7 @@
         drone.flash = Math.max(0, drone.flash - dt * 5);
         drone.underFire = Math.max(0, (drone.underFire || 0) - dt * 0.35);
         drone.fireCooldown = Math.max(0, (drone.fireCooldown || 0) - dt);
-        if (fighter && distance <= 220 && drone.fireCooldown === 0) {
+        if (fighter && distance <= sim.RAIDER_RANGE && drone.fireCooldown === 0) {
           drone.fireCooldown = 0.75;
           pushProjectile(effects, drone.position, fighter.position);
           pushImpactSparks(effects, fighter.position, fighter.velocity);
@@ -1005,6 +1005,10 @@
       var distance = Math.hypot(drone.position.x - escort.position.x, drone.position.y - escort.position.y);
       var anchor = escort.order && escort.order.kind === 'defend' ? escort.order.anchor : escort.position;
       var priority = Math.hypot(drone.position.x - anchor.x, drone.position.y - anchor.y);
+      if (escort.order && escort.order.kind === 'defend') {
+        priority = priority * 0.25 + distance * 0.75 - (drone.underFire || 0) * 100;
+        if (distance < sim.RAIDER_RANGE + 20) priority -= 80;
+      }
       if (distance <= DEFENDER_RANGE && priority < bestDistance) {
         target = drone;
         bestDistance = priority;

@@ -50,6 +50,63 @@
   var FIGHTER_RANGE = 280;
   var FIGHTER_LEASH = FIGHTER_RANGE * 2.5;
   var SLOT_TOLERANCE = 6;
+  var RAIDER_RANGE = 220;
+
+  function combatVelocity(ship, threats, anchor, radius, style, nominal, ships) {
+    var nearby = threats.filter(function (t) { return distance(t.position, ship.position) < FIGHTER_RANGE + 240; });
+    if (!nearby.length) return null;
+    var closest = nearby.slice().sort(function (a, b) { return distance(a.position, ship.position) - distance(b.position, ship.position); })[0];
+    var dx = ship.position.x - closest.position.x, dy = ship.position.y - closest.position.y;
+    var gap = Math.max(0.001, Math.hypot(dx, dy)), ux = dx / gap, uy = dy / gap;
+    var enemyVelocity = closest.velocity || { x: 0, y: 0 };
+    var closing = Math.max(0, enemyVelocity.x * ux + enemyVelocity.y * uy);
+    var radial = Math.max(-ship.speed * 0.5, Math.min(ship.speed, closing + (260 - gap) * 2.5));
+    var desired = { x: ux * radial - uy * 12 * ship.order.side, y: uy * radial + ux * 12 * ship.order.side };
+    var best = { x: 0, y: 0 }, bestScore = Infinity;
+    var candidates = [best, desired];
+    for (var i = 0; i < 24; i += 1) {
+      [0.5, 1].forEach(function (scale) {
+        candidates.push({ x: Math.cos(i * Math.PI / 12) * ship.speed * scale, y: Math.sin(i * Math.PI / 12) * ship.speed * scale });
+      });
+    }
+    candidates.forEach(function (candidate) {
+      var v = { x: candidate.x, y: candidate.y };
+      var speed = Math.hypot(v.x, v.y), cap = ship.speed * style.speed;
+      if (speed > cap) { v.x *= cap / speed; v.y *= cap / speed; }
+      // Start turning along the boundary before outward momentum carries us over it.
+      var edge = distance(ship.position, anchor);
+      if (edge > radius - 35 && edge > 0) {
+        var nx = (ship.position.x - anchor.x) / edge, ny = (ship.position.y - anchor.y) / edge;
+        var outward = Math.max(0, v.x * nx + v.y * ny);
+        v.x -= nx * outward; v.y -= ny * outward;
+      }
+      var score = ((v.x - desired.x) * (v.x - desired.x) + (v.y - desired.y) * (v.y - desired.y)) * 0.002;
+      [0.4, 1].forEach(function (horizon) {
+        var change = Math.hypot(v.x - ship.velocity.x, v.y - ship.velocity.y);
+        var ramp = Math.min(horizon, change / (ship.acceleration * style.acceleration));
+        var p = { x: ship.position.x + v.x * horizon + (ship.velocity.x - v.x) * ramp * 0.5,
+          y: ship.position.y + v.y * horizon + (ship.velocity.y - v.y) * ramp * 0.5 };
+        var nearest = Infinity;
+        nearby.forEach(function (t) {
+          var tv = t.velocity || { x: 0, y: 0 };
+          var d = distance(p, { x: t.position.x + tv.x * horizon, y: t.position.y + tv.y * horizon });
+          nearest = Math.min(nearest, d);
+          // Every nearby enemy counts: never kite one target straight into another.
+          score += Math.pow(Math.max(0, RAIDER_RANGE + 20 - d), 2) * 8;
+        });
+        score += Math.pow(Math.max(0, nearest - 270), 2) * 0.12;
+        score += Math.pow(Math.max(0, distance(p, anchor) - radius), 2) * 40;
+        score += Math.pow(Math.max(0, distance(p, nominal) - 150), 2) * 0.0005;
+        ships.forEach(function (ally) {
+          if (ally.id === ship.id || ally.type !== 'escort' || ally.disabled) return;
+          var separation = distance(p, { x: ally.position.x + ally.velocity.x * horizon, y: ally.position.y + ally.velocity.y * horizon });
+          score += Math.pow(Math.max(0, 45 - separation), 2) * 0.2;
+        });
+      });
+      if (score < bestScore) { bestScore = score; best = v; }
+    });
+    return best;
+  }
 
   function fighterStyle(ship) {
     var hash = 0;
@@ -113,6 +170,8 @@
       return distance(a.position, anchor) - distance(b.position, anchor);
     })[0];
     var fighting = threat && distance(ship.position, anchor) <= radius && (!formation || distance(center, anchor) < 80 || distance(ship.position, threat.position) < FIGHTER_RANGE);
+    var tacticalVelocity = distance(ship.position, anchor) <= radius ? combatVelocity(ship, threats, anchor, radius, style, nominal, world.ships) : null;
+    if (tacticalVelocity) fighting = true;
     if (fighting) {
       var dx = ship.position.x - threat.position.x, dy = ship.position.y - threat.position.y;
       var gap = Math.hypot(dx, dy);
@@ -144,6 +203,10 @@
       x: formation.velocity.x + (target.x - ship.position.x) * correction,
       y: formation.velocity.y + (target.y - ship.position.y) * correction
     } : null;
+    if (tacticalVelocity) {
+      velocity = tacticalVelocity;
+      order.target = { x: ship.position.x + velocity.x, y: ship.position.y + velocity.y };
+    }
     stepTowardOrderTarget(ship, dt, ARRIVAL_DISTANCE, false, velocity, style);
     // Remove outward momentum at the boundary; distant new orders still travel normally.
     var after = distance(ship.position, anchor);
@@ -988,6 +1051,7 @@
   }
 
   Driftworks.sim = {
+    RAIDER_RANGE: RAIDER_RANGE,
     FIGHTER_RANGE: FIGHTER_RANGE,
     FIGHTER_LEASH: FIGHTER_LEASH,
     issueDefendOrder: issueDefendOrder,

@@ -817,6 +817,49 @@
     });
   });
 
+  test('defender kites a closing raider before entering its firing range', function () {
+    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var s = findShip(world, 'escort-01');
+    s.position = { x: 0, y: 0 };
+    s.velocity = { x: 80, y: 0 }; // Already approaching: the AI must brake proactively.
+    var threat = { position: { x: 290, y: 0 }, velocity: { x: -60, y: 0 } };
+    var firingFrames = 0;
+    for (var i = 0; i < 150; i += 1) {
+      s = findShip(world, s.id);
+      var dx = s.position.x - threat.position.x, dy = s.position.y - threat.position.y, d = Math.hypot(dx, dy);
+      threat.velocity = { x: dx / d * 60, y: dy / d * 60 };
+      world = sim.stepWorld(world, 1 / 30, [threat]);
+      threat.position.x += threat.velocity.x / 30; threat.position.y += threat.velocity.y / 30;
+      s = findShip(world, s.id);
+      var gap = Math.hypot(s.position.x - threat.position.x, s.position.y - threat.position.y);
+      assert(gap > sim.RAIDER_RANGE, 'Defender should avoid raider fire throughout approach');
+      if (gap <= sim.FIGHTER_RANGE) firingFrames += 1;
+    }
+    assert(firingFrames > 100, 'Kiting must retain enough range to return fire');
+  });
+
+  test('defender avoids retreating into a second raider', function () {
+    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var s = findShip(world, 'escort-01');
+    s.position = { x: 0, y: 0 };
+    var threats = [{ position: { x: 230, y: 0 } }, { position: { x: -240, y: 0 } }];
+    for (var i = 0; i < 60; i += 1) {
+      world = sim.stepWorld(world, 1 / 30, threats);
+      s = findShip(world, s.id);
+      threats.forEach(function (t) { assert(Math.hypot(t.position.x - s.position.x, t.position.y - s.position.y) > sim.RAIDER_RANGE, 'Escape route must respect both threats'); });
+    }
+    assert(Math.abs(s.position.y) > 30, 'Fighter should escape sideways between opposing threats');
+  });
+
+  test('defenders favor finishing an enemy already under sustained fire', function () {
+    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var s = findShip(world, 'escort-01');
+    s.position = { x: 0, y: 0 };
+    var fresh = { position: { x: 250, y: 0 }, underFire: 0 };
+    var damaged = { position: { x: 265, y: 0 }, underFire: 1 };
+    assert(game.stepDefenderWeapon(s, [fresh, damaged], {}, 1 / 30).target === damaged, 'Finish reachable weakened enemies');
+  });
+
   run();
 
   function findShip(world, id) {
