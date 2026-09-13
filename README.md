@@ -12,7 +12,8 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - Right-click its surface with selected miners: they choose a site, match surface motion, land, and rotate with the body while extracting ore.
 - The asteroid retains its physical size as ore is depleted; older multi-asteroid saves merge remaining ore into one large body.
 - Miners automatically return full cargo to the mothership and deposit it into storage.
-- Mothership processes delivered ore into 80t depot sections.
+- Mothership processes delivered ore into 1,500t depot sections.
+- Canonical physical sizes, masses and thrust drive loaded acceleration and braking. See [physical units](PHYSICAL_UNITS.md) for calibration, conversions and save migration.
 - Tug can carry fabricated depot sections from the mothership to the depot site.
 - Utility haulers can retrieve persistent drone wrecks for salvage and carry disabled fighters home for repair.
 - HUD ore quota, depot progress, construction section stock, and remaining asteroid ore readouts.
@@ -69,7 +70,7 @@ Construction controls:
 Recovery controls:
 
 - Select `Linehorse` and right-click a faded drone wreck or disabled fighter to retrieve it.
-- The hauler approaches, clamps the hull beneath its frame, and returns automatically at reduced speed. One module or recovered hull at a time.
+- The hauler approaches, clamps the hull beneath its frame, and returns automatically with acceleration determined by combined mass. One module or recovered hull at a time.
 - Wrecks provide 24t ore at the mothership, feeding the existing construction processing chain.
 - Disabled fighters stay inert and cannot fire. Retrieval starts a six-second repair inside the mothership, followed by a slow six-second launch from its forward end. The restored fighter awaits orders once clear.
 - Move orders can redirect a loaded hauler; right-click the mothership to resume delivery.

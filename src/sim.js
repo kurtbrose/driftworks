@@ -7,14 +7,51 @@
   // Precision arrival avoids a visible jump at inspection zoom (32x).
   var ARRIVAL_DISTANCE = 0.001;
   var DOCK_DISTANCE = 44;
-  var MINING_RATE = 10;
-  var DEPOT_SECTION_MASS = 80;
+  var MINING_RATE = 187.5; // tonnes per tactical second
+  var DEPOT_SECTION_MASS = 1500;
+  var DEPOT_SECTION = { lengthM: 60, widthM: 40, massKg: DEPOT_SECTION_MASS * 1000 };
+  var DEPOT_FRAME = { lengthM: 80, widthM: 160 };
+  var METERS_PER_UNIT = 10000 / 600;
+  var PHYSICAL_SECONDS_PER_SECOND = 60;
+  var MASS_MIGRATION = 1500 / 80;
+  var HULLS = {
+    escort: { lengthM: 20, dryMassKg: 75000, thrustN: 73549.875 },
+    miner: { lengthM: 40, dryMassKg: 500000, thrustN: 196133 },
+    tug: { lengthM: 80, dryMassKg: 3000000, thrustN: 588399 },
+    mothership: { lengthM: 1000, dryMassKg: 3000000000, thrustN: 2941995 }
+  };
+
+  function physicalStats(world, ship) {
+    var hull = ship.physical || HULLS[ship.type];
+    var payload = recoveryTarget(world, ship.towTarget);
+    var payloadKg = payload ? (payload.physical ? payload.physical.dryMassKg + (payload.cargo || 0) * 1000 : payload.massKg || 75000) : 0;
+    var massKg = hull.dryMassKg + (ship.cargo || 0) * 1000 +
+      (ship.carryingSection ? DEPOT_SECTION_MASS * 1000 : 0) + payloadKg;
+    if (ship.type === 'mothership' && world.mothership) {
+      var storage = world.mothership.storage;
+      massKg += (storage.ore + storage.constructionMass + storage.depotSections * DEPOT_SECTION_MASS) * 1000;
+    }
+    return { lengthM: hull.lengthM, massKg: massKg, payloadKg: massKg - hull.dryMassKg,
+      thrustN: hull.thrustN, accelerationMps2: hull.thrustN / massKg,
+      turnRateRadps: ship.turnRate / PHYSICAL_SECONDS_PER_SECOND };
+  }
+
+  function movementAcceleration(world, ship) {
+    return physicalStats(world, ship).accelerationMps2 * PHYSICAL_SECONDS_PER_SECOND * PHYSICAL_SECONDS_PER_SECOND / METERS_PER_UNIT;
+  }
+
+  function asteroidPhysicalStats(asteroid) {
+    var radiusM = asteroid.radius * METERS_PER_UNIT;
+    return { diameterM: radiusM * 2, massKg: 4 / 3 * Math.PI * Math.pow(radiusM, 3) * 2000, densityKgM3: 2000,
+      rotationPeriodSeconds: asteroid.angularVelocity ? Math.PI * 2 / Math.abs(asteroid.angularVelocity) * PHYSICAL_SECONDS_PER_SECOND : Infinity };
+  }
   var DEPOT_STAGE_COUNT = 3;
   var REPAIR_SECONDS = 6;
 
   function createInitialWorld() {
     return {
       version: WORLD_VERSION,
+      physicalUnitsVersion: 1,
       seed: 1729,
       elapsedSeconds: 0,
       campaign: {
@@ -47,11 +84,11 @@
       contract: {
         id: 'contract-ore-01',
         name: 'Starter Regolith Lot',
-        quotaOre: 240,
+        quotaOre: 4500,
         reward: 18000
       },
       asteroids: [
-        createAsteroid('ast-ceres-01', 'Carbonaceous Monolith', -650, 400, 540)
+        createAsteroid('ast-ceres-01', 'Carbonaceous Monolith', -650, 400, 10125)
       ],
       ships: [
         createShip('msv-hardshell', 'MSV Hardshell', 'mothership', 0, 0, 0),
@@ -106,10 +143,11 @@
       disabled: false,
       repairRemaining: 0,
       launchElapsed: null,
-      cargoCapacity: type === 'tug' ? 180 : 80,
+      cargoCapacity: type === 'miner' ? 1500 : 0,
+      physical: clonePlain(HULLS[type]),
       damage: 0,
       speed: speed,
-      acceleration: speed > 0 ? Math.max(42, speed * 1.3) : 0,
+      acceleration: HULLS[type].thrustN / HULLS[type].dryMassKg * PHYSICAL_SECONDS_PER_SECOND * PHYSICAL_SECONDS_PER_SECOND / METERS_PER_UNIT,
       turnRate: speed > 0 ? Math.max(1.4, Math.min(2.8, 180 / speed)) : 0
     };
   }
@@ -261,6 +299,7 @@
 
     var stepped = {
       version: next.version,
+      physicalUnitsVersion: 1,
       seed: next.seed,
       elapsedSeconds: next.elapsedSeconds + dt,
       campaign: clonePlain(next.campaign),
@@ -278,6 +317,7 @@
       })
     };
     stepRecovery(stepped, dt);
+    stepped.ships.forEach(function (ship) { ship.acceleration = movementAcceleration(stepped, ship); });
     return stepped;
   }
 
@@ -382,6 +422,7 @@
       }
       mothership.storage.depotSections -= 1;
       ship.carryingSection = true;
+      ship.acceleration = movementAcceleration({ ships: [], wrecks: [] }, ship);
     }
 
     ship.order.target = clonePlain(depot.position);
@@ -436,10 +477,8 @@
     };
     var currentSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
     var stoppingDistance = Math.max(0, distance - arrivalDistance);
-    var load = ship.type === 'miner' ? Math.max(0, Math.min(1, ship.cargo / Math.max(1, ship.cargoCapacity))) :
-      (ship.type === 'tug' && (ship.carryingSection || ship.towTarget) ? 1 : 0);
-    var haulingSpeed = ship.speed * (1 - load * (ship.type === 'tug' ? 0.45 : 0.35));
-    var haulingAcceleration = ship.acceleration * (1 - load * (ship.type === 'tug' ? 0.5 : 0.4));
+    var haulingSpeed = ship.speed; // Work-zone guidance limit, not a physical maximum.
+    var haulingAcceleration = ship.acceleration;
     var stoppingSpeed = Math.sqrt(2 * haulingAcceleration * stoppingDistance);
     var desiredSpeed = Math.min(haulingSpeed, stoppingSpeed);
     var desiredVelocity = {
@@ -558,6 +597,20 @@
     next.campaign = next.campaign || initial.campaign;
     next.elapsedSeconds = typeof next.elapsedSeconds === 'number' ? next.elapsedSeconds : 0;
     next.version = next.version || WORLD_VERSION;
+    if (!next.physicalUnitsVersion) {
+      if (world.asteroids) next.asteroids.forEach(function (body) { body.ore *= MASS_MIGRATION; body.oreInitial *= MASS_MIGRATION; });
+      next.ships.forEach(function (ship) { ship.cargo *= MASS_MIGRATION; ship.previousCargo = ship.cargo; });
+      next.mothership.storage.ore *= MASS_MIGRATION;
+      next.mothership.storage.constructionMass *= MASS_MIGRATION;
+      if (world.contract) next.contract.quotaOre *= MASS_MIGRATION;
+      next.ships.forEach(function (ship) { ship.cargoCapacity = ship.type === 'miner' ? 1500 : 0; });
+      next.physicalUnitsVersion = 1;
+    }
+    next.ships.forEach(function (ship) {
+      ship.physical = ship.physical || clonePlain(HULLS[ship.type]);
+      if (typeof ship.cargoCapacity !== 'number') ship.cargoCapacity = ship.type === 'miner' ? 1500 : 0;
+      ship.acceleration = movementAcceleration(next, ship);
+    });
     return next;
   }
 
@@ -568,6 +621,7 @@
       position: clonePlain(destroyed.position),
       rotation: Math.atan2(destroyed.velocity.y, destroyed.velocity.x),
       salvageOre: 24,
+      massKg: 75000,
       towedBy: null
     });
     return next;
@@ -778,6 +832,12 @@
   }
 
   Driftworks.sim = {
+    DEPOT_SECTION: DEPOT_SECTION,
+    DEPOT_FRAME: DEPOT_FRAME,
+    physicalStats: physicalStats,
+    asteroidPhysicalStats: asteroidPhysicalStats,
+    METERS_PER_UNIT: METERS_PER_UNIT,
+    PHYSICAL_SECONDS_PER_SECOND: PHYSICAL_SECONDS_PER_SECOND,
     surfaceRadius: surfaceRadius,
     WORLD_VERSION: WORLD_VERSION,
     createInitialWorld: createInitialWorld,

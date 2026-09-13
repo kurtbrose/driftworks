@@ -28,8 +28,8 @@
   // their world size while small craft shed their schematic magnification.
   function semanticScale(type, zoom) {
     if (type === 'asteroid') return 1;
-    var large = type === 'mothership' || type === 'asteroid' || type === 'depot';
-    var exponent = large ? 0.95 : (type === 'miner' || type === 'tug' ? 0.12 : 0.08);
+    var large = type === 'mothership' || type === 'asteroid';
+    var exponent = large ? 0.95 : (type === 'miner' || type === 'tug' || type === 'depot' ? 0.12 : 0.08);
     // Every class stops shrinking on screen below the baseline. Keeping the
     // same floor for all classes preserves their tactical size hierarchy.
     return Math.pow(Math.max(1, zoom), exponent) / zoom;
@@ -175,11 +175,12 @@
         host.querySelector('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
         host.querySelector('[data-role="quota"]').textContent =
           Math.floor(world.mothership.storage.ore) + ' / ' + world.contract.quotaOre + ' t';
-        host.querySelector('[data-role="field"]').textContent = Math.floor(totalOreRemaining(world)) + ' t';
+        host.querySelector('[data-role="field"]').textContent = Math.floor(totalOreRemaining(world)) + ' t accessible · ' +
+          (sim.asteroidPhysicalStats(world.asteroids[0]).diameterM / 1000).toFixed(1) + ' km body';
         host.querySelector('[data-role="depot"]').textContent =
-          world.depot.builtStages + ' / ' + world.depot.totalStages + ' stages';
+          world.depot.builtStages + ' / ' + world.depot.totalStages + ' modules · ' + sim.DEPOT_FRAME.lengthM + ' × ' + sim.DEPOT_FRAME.widthM + ' m';
         host.querySelector('[data-role="sections"]').textContent =
-          world.mothership.storage.depotSections + ' ready · ' + Math.floor(world.mothership.storage.constructionMass) + ' t mass';
+          world.mothership.storage.depotSections + ' ready · ' + sim.DEPOT_SECTION.lengthM + ' × ' + sim.DEPOT_SECTION.widthM + ' m · ' + Math.floor(world.mothership.storage.constructionMass) + ' t feedstock';
         host.querySelector('[data-role="contacts"]').textContent = stats.contacts;
         host.querySelector('[data-role="recovery"]').textContent = (world.wrecks || []).length + ' wrecks · ' +
           world.ships.filter(function (ship) { return ship.disabled; }).length + ' disabled';
@@ -197,7 +198,9 @@
             .map(function (ship) {
               var status = ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
                 ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : ship.order.kind === 'mine' ? (ship.order.phase === 'landed' ? 'landed / mining' : ship.order.phase === 'matching' ? 'matching surface' : 'approaching site') : '';
-              return ship.name + (status ? ' (' + status + ')' : '');
+              var physical = sim.physicalStats(world, ship);
+              return ship.name + (status ? ' (' + status + ')' : '') + ' · ' + physical.lengthM + ' m · ' +
+                Math.round(physical.massKg / 1000) + ' t · ' + physical.accelerationMps2.toFixed(3) + ' m/s²';
             })
             .join(', ');
         }
@@ -931,7 +934,7 @@
       return hits(item, 'asteroid', sim.surfaceRadius(item, Math.atan2(target.y - item.position.y, target.x - item.position.x) - item.rotation));
     })[0];
     if (asteroid) return sim.issueMineOrder(world, asteroid.id);
-    if (hasTug && world.depot && hits(world.depot, 'depot', 58)) return sim.issueBuildOrder(world);
+    if (hasTug && world.depot && hits(world.depot, 'depot', 44)) return sim.issueBuildOrder(world);
     var home = world.ships.filter(function (ship) { return ship.type === 'mothership'; })[0];
     if (home && hits(home, 'mothership', 38)) return sim.issueReturnOrder(world);
     return sim.issueMoveOrder(world, target);
@@ -1185,9 +1188,10 @@
 
   function paintConstructorCargo(graphics, style) {
     var r = style.radius;
+    var module = cargoModuleGeometry();
     graphics.lineStyle(1, 0xaabac4, 0.85);
     graphics.beginFill(0x53616b, 1);
-    graphics.drawRoundedRect(-0.72 * r, -0.65 * r, 1.44 * r, 1.3 * r, 1.5);
+    graphics.drawRoundedRect(-module.length / 2, -module.width / 2, module.length, module.width, 1.5);
     graphics.endFill();
     graphics.lineStyle(1, 0x28353e, 0.8);
     [-0.36, 0.36].forEach(function (y) {
@@ -1197,7 +1201,7 @@
     graphics.lineStyle(2, style.stroke, 0.7);
     [-0.58, 0.58].forEach(function (x) {
       [-1, 1].forEach(function (side) {
-        graphics.moveTo(x * r, side * 0.65 * r);
+        graphics.moveTo(x * r, side * module.width / 2);
         graphics.lineTo(x * r, side * 0.84 * r);
       });
     });
@@ -1432,26 +1436,34 @@
     };
   }
 
+  // Same schematic metres-to-artwork ratio as a carried module, at every zoom.
+  function cargoModuleGeometry() {
+    return { length: sim.DEPOT_SECTION.lengthM * 0.45, width: sim.DEPOT_SECTION.widthM * 0.45 };
+  }
+
   function paintDepot(graphics, depot) {
     graphics.clear();
     if (!depot) return;
     graphics.position.set(depot.position.x, depot.position.y);
     graphics.lineStyle(1.5, 0x9eb8c5, 0.55);
     graphics.beginFill(0x26333a, 0.16);
-    graphics.drawRoundedRect(-50, -32, 100, 64, 4);
+    var length = sim.DEPOT_FRAME.lengthM * 0.45;
+    var width = sim.DEPOT_FRAME.widthM * 0.45;
+    var module = cargoModuleGeometry();
+    graphics.drawRoundedRect(-length / 2, -width / 2, length, width, 4);
     graphics.endFill();
     graphics.lineStyle(1, 0x9eb8c5, 0.25);
-    graphics.moveTo(-62, 0);
-    graphics.lineTo(62, 0);
-    graphics.moveTo(0, -44);
-    graphics.lineTo(0, 44);
+    graphics.moveTo(-length / 2 - 5, 0);
+    graphics.lineTo(length / 2 + 5, 0);
+    graphics.moveTo(0, -width / 2 - 5);
+    graphics.lineTo(0, width / 2 + 5);
 
     for (var i = 0; i < depot.totalStages; i += 1) {
-      var x = -33 + i * 33;
+      var y = (i - (depot.totalStages - 1) / 2) * (module.width + 4.5);
       var built = i < depot.builtStages;
       graphics.lineStyle(1.5, built ? 0xd7dee4 : 0x6d828e, built ? 0.95 : 0.5);
       graphics.beginFill(built ? 0x788891 : 0x1b252b, built ? 0.72 : 0.22);
-      graphics.drawRoundedRect(x - 12, -18, 24, 36, 3);
+      graphics.drawRoundedRect(-module.length / 2, y - module.width / 2, module.length, module.width, 1.5);
       graphics.endFill();
     }
   }

@@ -65,13 +65,13 @@
     assert(miner.velocity.x > 0, 'Miner should not instantly reverse horizontal velocity');
   });
 
-  test('industrial loads reduce acceleration and cruise speed without changing base stats', function () {
+  test('industrial loads reduce acceleration through mass while retaining guidance speed', function () {
     ['miner-01', 'tug-01'].forEach(function (id) {
       function cruise(load, ticks) {
         var world = sim.selectShips(sim.createInitialWorld(), [id]);
         var ship = findShip(world, id);
         ship.cargo = ship.cargoCapacity * load;
-        ship.carryingSection = load > 0;
+        ship.carryingSection = ship.type === 'tug' && load > 0;
         world = sim.issueMoveOrder(world, { x: ship.position.x + 10000, y: ship.position.y });
         for (var i = 0; i < ticks; i += 1) world = sim.stepWorld(world, 1 / 30);
         return world;
@@ -82,12 +82,12 @@
       var loadedWorld = cruise(1, 180);
       loaded = findShip(loadedWorld, id);
       empty = findShip(cruise(0, 180), id);
-      assert(loaded.velocity.x < empty.velocity.x * 0.75, 'Full load should reduce cruise speed noticeably');
+      assertClose(loaded.velocity.x, empty.velocity.x);
       assertClose(loaded.speed, empty.speed);
-      assertClose(loaded.acceleration, empty.acceleration);
+      assertClose(loaded.acceleration / empty.acceleration, id === 'miner-01' ? 0.25 : 2 / 3);
       if (id === 'miner-01') {
-        var half = findShip(cruise(0.5, 180), id);
-        assert(half.velocity.x > loaded.velocity.x && half.velocity.x < empty.velocity.x, 'Partial ore load should have an intermediate penalty');
+        var half = findShip(cruise(0.5, 1), id);
+        assert(half.acceleration > loaded.acceleration && half.acceleration < empty.acceleration, 'Partial ore load should have an intermediate penalty');
       }
       loaded.cargo = 0;
       loaded.carryingSection = false;
@@ -103,7 +103,7 @@
     miner.cargo = miner.cargoCapacity;
     world = sim.issueMoveOrder(world, { x: miner.position.x + 10000, y: miner.position.y });
     var next = findShip(sim.stepWorld(world, 1 / 30), 'miner-01');
-    assert(next.velocity.x < miner.speed, 'Loaded ship should begin slowing');
+    assertClose(next.velocity.x, miner.speed);
     assert(miner.speed - next.velocity.x <= miner.acceleration / 30, 'Loaded ship should decelerate gradually');
   });
 
@@ -155,7 +155,7 @@
 
   test('mothership processes ore into depot construction sections', function () {
     var world = sim.createInitialWorld();
-    world.mothership.storage.ore = 80;
+    world.mothership.storage.ore = 1500;
     world = sim.stepWorld(world, 1 / 30);
     assertClose(world.mothership.storage.ore, 0);
     assertClose(world.mothership.storage.depotSections, 1);
@@ -219,7 +219,7 @@
       assertClose(world.wrecks[0].position.y, hauler.position.y);
       assertClose(world.wrecks[0].rotation, hauler.rotation);
     }
-    assert(Math.hypot(hauler.velocity.x, hauler.velocity.y) < hauler.speed * 0.6, 'Recovered hull should count as a heavy load');
+    assertClose(sim.physicalStats(world, hauler).massKg, 3075000);
     world = sim.deserializeWorld(sim.serializeWorld(world));
     world = sim.issueReturnOrder(world);
     for (var tick = 0; tick < 1500; tick += 1) world = sim.stepWorld(world, 1 / 30);
@@ -264,7 +264,7 @@
     var world = sim.addWreck(sim.createInitialWorld(), { position: { x: 400, y: 120 }, velocity: { x: 1, y: 0 } });
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
     for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30);
-    assert(findShip(world, 'tug-01').velocity.x > 50, 'Approach should retain velocity between ticks');
+    assert(findShip(world, 'tug-01').velocity.x > 40, 'Approach should retain velocity between ticks');
     for (var j = 0; j < 150; j += 1) world = sim.stepWorld(world, 1 / 30);
     assert(findShip(world, 'tug-01').towTarget, 'Hauler should reach and collect a nearby wreck within six seconds');
   });
@@ -583,7 +583,7 @@
     world.asteroids.push(sim.createAsteroid('old', 'Old rock', 100, 100, 80));
     world = sim.deserializeWorld(sim.serializeWorld(world));
     assert(world.asteroids.length === 1);
-    assertClose(world.asteroids[0].ore, 620);
+    assertClose(world.asteroids[0].ore, 10205);
   });
 
   test('miners choose distinct sites on the visible face', function () {
@@ -611,6 +611,42 @@
     ship.rotation = 2;
     game.drawMiningPlume(graphics, ship, 14, 1);
     assert(JSON.stringify(circles) === initial, 'Hull transform must handle anchoring, not world-space particle offsets');
+  });
+
+  test('physical scale and payload masses have canonical values', function () {
+    var world = sim.createInitialWorld();
+    var miner = findShip(world, 'miner-01');
+    assertClose(sim.asteroidPhysicalStats(world.asteroids[0]).diameterM, 10000);
+    assertClose(sim.physicalStats(world, miner).accelerationMps2, 0.392266);
+    miner.cargo = 1500;
+    assertClose(sim.physicalStats(world, miner).massKg, 2000000);
+    assertClose(sim.physicalStats(world, miner).accelerationMps2, 0.0980665);
+    var tug = findShip(world, 'tug-01');
+    var fighter = findShip(world, 'escort-01');
+    fighter.disabled = true;
+    tug.towTarget = { kind: 'ship', id: fighter.id };
+    assertClose(sim.physicalStats(world, tug).massKg, 3075000);
+    fighter.physical.dryMassKg = 3000000;
+    assertClose(sim.physicalStats(world, tug).accelerationMps2, 0.0980665);
+  });
+
+  test('legacy physical-unit migration preserves load fraction and runs once', function () {
+    var world = sim.createInitialWorld();
+    delete world.physicalUnitsVersion;
+    world.asteroids[0].ore = 540;
+    world.asteroids[0].oreInitial = 540;
+    world.contract.quotaOre = 240;
+    var miner = findShip(world, 'miner-01');
+    delete miner.physical;
+    miner.cargo = 40;
+    miner.cargoCapacity = 80;
+    world.mothership.storage.constructionMass = 40;
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    assertClose(findShip(world, 'miner-01').cargo, 750);
+    assertClose(world.asteroids[0].ore, 10125);
+    assertClose(world.mothership.storage.constructionMass, 750);
+    assertClose(world.contract.quotaOre, 4500);
+    assert(JSON.stringify(sim.deserializeWorld(sim.serializeWorld(world))) === JSON.stringify(world));
   });
 
   run();
