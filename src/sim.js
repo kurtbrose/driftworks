@@ -4,7 +4,8 @@
   var Driftworks = (global.Driftworks = global.Driftworks || {});
   var WORLD_VERSION = 1;
   var SAVE_KEY = 'driftworks.save.v1';
-  var ARRIVAL_DISTANCE = 5;
+  // Precision arrival avoids a visible jump at inspection zoom (32x).
+  var ARRIVAL_DISTANCE = 0.001;
   var MINE_DISTANCE = 18;
   var DOCK_DISTANCE = 44;
   var MINING_RATE = 10;
@@ -382,7 +383,6 @@
     if (distance <= arrivalDistance) {
       if (snapOnArrival) {
         ship.position = { x: ship.order.target.x, y: ship.order.target.y };
-        ship.previousPosition = { x: ship.position.x, y: ship.position.y };
         ship.order = { kind: 'idle' };
       }
       ship.velocity = { x: 0, y: 0 };

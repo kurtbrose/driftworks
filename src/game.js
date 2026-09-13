@@ -23,6 +23,17 @@
   var DIRECTOR_COOLDOWN_SECONDS = 44;
   var DIRECTOR_MAX_WAVES = 3;
 
+  // Local artwork scale; the camera still scales positions geometrically.
+  // Zoom 1 is the existing tactical view. Large bodies retain almost all of
+  // their world size while small craft shed their schematic magnification.
+  function semanticScale(type, zoom) {
+    var large = type === 'mothership' || type === 'asteroid' || type === 'depot';
+    var exponent = large ? 0.95 : (type === 'miner' || type === 'tug' ? 0.12 : 0.08);
+    // Every class stops shrinking on screen below the baseline. Keeping the
+    // same floor for all classes preserves their tactical size hierarchy.
+    return Math.pow(Math.max(1, zoom), exponent) / zoom;
+  }
+
   function boot() {
     var sceneHost = document.querySelector('#scene');
     var hudHost = document.querySelector('#hud');
@@ -313,8 +324,13 @@
     });
 
     function sync(world) {
+      if (grid.drawnZoom !== world.camera.zoom) {
+        drawGrid(grid, world.camera.zoom);
+        grid.drawnZoom = world.camera.zoom;
+      }
       updateStarfield(starfield, world.camera, viewport());
       paintDepot(depotGraphic, world.depot);
+      depotGraphic.scale.set(semanticScale('depot', world.camera.zoom));
       paintDefenderCoverage(coverageGraphic, world);
       paintRecovery(recoveryGraphic, world);
       var shakeX = cameraShake > 0 ? (Math.sin(world.elapsedSeconds * 97) * cameraShake) : 0;
@@ -335,7 +351,12 @@
         var selected = world.selectedShipIds.indexOf(ship.id) !== -1;
         if (selected) selectedNow[ship.id] = true;
         if (selected && !previousSelected[ship.id] && !ship.repairRemaining && ship.launchElapsed == null) {
-          pushSelectionPulse(effects, ship.position, ship.type === 'mothership' ? 42 : 20);
+          pushSelectionPulse(effects, ship.position, ship.type === 'mothership' ? 42 : 20, ship.type);
+        }
+        graphic.scale.set(semanticScale(ship.type, world.camera.zoom));
+        if (ship.type !== 'mothership') {
+          graphic.hitArea = new PIXI.Circle(0, 0, Math.max(SHIP_STYLES[ship.type].radius + 3,
+            12 / (world.camera.zoom * graphic.scale.x)));
         }
         paintShip(graphic, ship, selected, world.elapsedSeconds);
         graphic.visible = !ship.towedBy && !ship.repairRemaining;
@@ -352,6 +373,7 @@
           worldLayer.addChildAt(asteroidGraphic, 1);
         }
         paintAsteroid(asteroidGraphic, asteroid);
+        asteroidGraphic.scale.set(semanticScale('asteroid', world.camera.zoom));
       });
 
       drones.forEach(function (drone) {
@@ -362,6 +384,7 @@
           worldLayer.addChild(droneGraphic);
         }
         paintDrone(droneGraphic, drone);
+        droneGraphic.scale.set(semanticScale('escort', world.camera.zoom));
       });
     }
 
@@ -381,7 +404,7 @@
       world = getWorld();
       spawnStateEffects(world, visualDt);
       updateAudioTelemetry(world);
-      updateEffects(effectsLayer, effects, visualDt);
+      updateEffects(effectsLayer, effects, visualDt, world.camera.zoom);
       cameraShake = Math.max(0, cameraShake - dt * 18);
       visualTimeScale += (1 - visualTimeScale) * Math.min(1, dt * 3.5);
 
@@ -726,7 +749,7 @@
         var beforeOrder = getWorld();
         var target = screenToWorld(point, getWorld().camera, viewport());
         pushMoveReticle(effects, target);
-        setWorld(sim.issueContextOrder(getWorld(), target));
+        setWorld(issueVisualContextOrder(getWorld(), target));
         if (audio) {
           if (beforeOrder.selectedShipIds.length) audio.playMove();
           else audio.playInvalid();
@@ -881,6 +904,40 @@
     };
   }
 
+  function issueVisualContextOrder(world, target) {
+    var zoom = world.camera.zoom;
+    function hits(entity, type, radius) {
+      return Math.hypot(target.x - entity.position.x, target.y - entity.position.y) <=
+        Math.max(12 / zoom, radius * semanticScale(type, zoom));
+    }
+    var hasTug = world.ships.some(function (ship) {
+      return ship.type === 'tug' && world.selectedShipIds.indexOf(ship.id) !== -1;
+    });
+    if (hasTug) {
+      var recoverables = (world.wrecks || []).map(function (wreck) {
+        return { entity: wreck, kind: 'wreck' };
+      }).concat(world.ships.filter(function (ship) {
+        return ship.disabled && !ship.repairRemaining && ship.launchElapsed == null;
+      }).map(function (ship) { return { entity: ship, kind: 'ship' }; }));
+      var recovery = recoverables.filter(function (item) {
+        return !item.entity.towedBy && hits(item.entity, 'escort', 26);
+      }).sort(function (a, b) {
+        return Math.hypot(target.x - a.entity.position.x, target.y - a.entity.position.y) -
+          Math.hypot(target.x - b.entity.position.x, target.y - b.entity.position.y);
+      })[0];
+      if (recovery) return sim.issueRecoveryOrder(world, { kind: recovery.kind, id: recovery.entity.id });
+    }
+    var asteroid = world.asteroids.filter(function (item) {
+      var depletion = item.oreInitial > 0 ? item.ore / item.oreInitial : 0;
+      return hits(item, 'asteroid', Math.max(12, item.radius * (0.65 + 0.35 * depletion)));
+    })[0];
+    if (asteroid) return sim.issueMineOrder(world, asteroid.id);
+    if (hasTug && world.depot && hits(world.depot, 'depot', 58)) return sim.issueBuildOrder(world);
+    var home = world.ships.filter(function (ship) { return ship.type === 'mothership'; })[0];
+    if (home && hits(home, 'mothership', 38)) return sim.issueReturnOrder(world);
+    return sim.issueMoveOrder(world, target);
+  }
+
   function viewportFromApp(app) {
     return {
       width: app.screen.width,
@@ -968,7 +1025,7 @@
 
   function zoomCameraAt(camera, screenPoint, viewport, wheelDelta) {
     var before = screenToWorld(screenPoint, camera, viewport);
-    var zoom = Math.max(0.35, Math.min(2.6, camera.zoom * (wheelDelta > 0 ? 0.9 : 1.1)));
+    var zoom = Math.max(0.35, Math.min(32, camera.zoom * (wheelDelta > 0 ? 0.9 : 1.1)));
     var after = screenToWorld(screenPoint, { x: camera.x, y: camera.y, zoom: zoom }, viewport);
     return {
       x: camera.x + before.x - after.x,
@@ -997,9 +1054,10 @@
       });
   }
 
-  function drawGrid(graphics) {
+  function drawGrid(graphics, zoom) {
+    zoom = zoom || 1;
     graphics.clear();
-    graphics.lineStyle(1, 0x24323b, 0.52);
+    graphics.lineStyle(1 / zoom, 0x24323b, 0.52);
     for (var x = -2400; x <= 2400; x += 120) {
       graphics.moveTo(x, -1800);
       graphics.lineTo(x, 1800);
@@ -1008,7 +1066,7 @@
       graphics.moveTo(-2400, y);
       graphics.lineTo(2400, y);
     }
-    graphics.lineStyle(2, 0x536877, 0.75);
+    graphics.lineStyle(2 / zoom, 0x536877, 0.75);
     graphics.moveTo(-2400, 0);
     graphics.lineTo(2400, 0);
     graphics.moveTo(0, -1800);
@@ -1019,7 +1077,7 @@
     graphics.clear();
     world.ships.forEach(function (ship) {
       if (ship.type !== 'escort' || ship.disabled || world.selectedShipIds.indexOf(ship.id) === -1) return;
-      graphics.lineStyle(1.25, 0xf0b7b9, 0.32);
+      graphics.lineStyle(1.25 / world.camera.zoom, 0xf0b7b9, 0.32);
       graphics.beginFill(0xb76c6f, 0.035);
       graphics.drawCircle(ship.position.x, ship.position.y, DEFENDER_RANGE);
       graphics.endFill();
@@ -1032,29 +1090,31 @@
       if (wreck.towedBy) return;
       var cos = Math.cos(wreck.rotation);
       var sin = Math.sin(wreck.rotation);
+      var scale = semanticScale('escort', world.camera.zoom);
       var points = [];
       [[13, 0], [-8, -8], [-3, -1], [-6, 3], [-8, 8]].forEach(function (point) {
-        points.push(wreck.position.x + point[0] * cos - point[1] * sin,
-          wreck.position.y + point[0] * sin + point[1] * cos);
+        points.push(wreck.position.x + (point[0] * cos - point[1] * sin) * scale,
+          wreck.position.y + (point[0] * sin + point[1] * cos) * scale);
       });
-      graphics.lineStyle(1.2, 0x9d9095, 0.6);
+      graphics.lineStyle(1.2 * scale, 0x9d9095, 0.6);
       graphics.beginFill(0x5f5158, 0.45);
       graphics.drawPolygon(points);
       graphics.endFill();
       if (!wreck.towedBy) {
-        graphics.lineStyle(1, 0xc4ae7d, 0.65);
-        graphics.moveTo(wreck.position.x - 5, wreck.position.y + 18);
-        graphics.lineTo(wreck.position.x + 5, wreck.position.y + 18);
+        graphics.lineStyle(scale, 0xc4ae7d, 0.65);
+        graphics.moveTo(wreck.position.x - 5 * scale, wreck.position.y + 18 * scale);
+        graphics.lineTo(wreck.position.x + 5 * scale, wreck.position.y + 18 * scale);
       }
     });
     world.ships.forEach(function (ship) {
       if (ship.disabled && !ship.towedBy && !ship.repairRemaining && ship.launchElapsed == null) {
-        graphics.lineStyle(1.5, ship.repairRemaining ? 0x8fc6ba : 0xd5ae65, 0.85);
-        graphics.moveTo(ship.position.x - 7, ship.position.y + 18);
-        graphics.lineTo(ship.position.x + 7, ship.position.y + 18);
+        var scale = semanticScale(ship.type, world.camera.zoom);
+        graphics.lineStyle(1.5 * scale, ship.repairRemaining ? 0x8fc6ba : 0xd5ae65, 0.85);
+        graphics.moveTo(ship.position.x - 7 * scale, ship.position.y + 18 * scale);
+        graphics.lineTo(ship.position.x + 7 * scale, ship.position.y + 18 * scale);
         if (!ship.repairRemaining) {
-          graphics.moveTo(ship.position.x, ship.position.y + 15);
-          graphics.lineTo(ship.position.x, ship.position.y + 21);
+          graphics.moveTo(ship.position.x, ship.position.y + 15 * scale);
+          graphics.lineTo(ship.position.x, ship.position.y + 21 * scale);
         }
       }
     });
@@ -1341,7 +1401,7 @@
   function drawWorldOrderLine(graphics, ship) {
     var local = worldVectorToShipLocalLine(ship.position, ship.order.target, ship.rotation);
     graphics.moveTo(0, 0);
-    graphics.lineTo(local.x, local.y);
+    graphics.lineTo(local.x / graphics.scale.x, local.y / graphics.scale.y);
   }
 
   function worldVectorToShipLocalLine(position, target, rotation) {
@@ -1472,15 +1532,15 @@
     ring.moveTo(0, 9);
     ring.lineTo(0, 20);
     ring.position.set(position.x, position.y);
-    effects.push({ graphic: ring, age: 0, life: 0.65, vx: 0, vy: 0, scale: 0.7, alpha: 1, grow: 1.2 });
+    effects.push({ graphic: ring, age: 0, life: 0.65, vx: 0, vy: 0, scale: 0.7, alpha: 1, grow: 1.2, screenSpace: true });
   }
 
-  function pushSelectionPulse(effects, position, radius) {
+  function pushSelectionPulse(effects, position, radius, type) {
     var pulse = new PIXI.Graphics();
     pulse.lineStyle(2, 0xffffff, 0.9);
     pulse.drawCircle(0, 0, radius);
     pulse.position.set(position.x, position.y);
-    effects.push({ graphic: pulse, age: 0, life: 0.34, vx: 0, vy: 0, scale: 0.75, alpha: 0.9, grow: 1.5 });
+    effects.push({ graphic: pulse, age: 0, life: 0.34, vx: 0, vy: 0, scale: 0.75, alpha: 0.9, grow: 1.5, semanticType: type });
   }
 
   function pushFocusPulse(effects, position, radius) {
@@ -1497,7 +1557,7 @@
     pulse.moveTo(0, radius - 8);
     pulse.lineTo(0, radius + 8);
     pulse.position.set(position.x, position.y);
-    effects.push({ graphic: pulse, age: 0, life: 0.55, vx: 0, vy: 0, scale: 0.85, alpha: 0.95, grow: 1.28 });
+    effects.push({ graphic: pulse, age: 0, life: 0.55, vx: 0, vy: 0, scale: 0.85, alpha: 0.95, grow: 1.28, screenSpace: true });
   }
 
   function pushProjectile(effects, from, to) {
@@ -1705,22 +1765,27 @@
       vx: 0,
       vy: -26,
       scale: 1,
-      alpha: 1
+      alpha: 1,
+      screenSpace: true
     });
   }
 
-  function updateEffects(container, effects, dt) {
+  function updateEffects(container, effects, dt, zoom) {
+    zoom = zoom || 1;
     for (var i = effects.length - 1; i >= 0; i -= 1) {
       var effect = effects[i];
       if (!effect.graphic.parent) {
         container.addChild(effect.graphic);
       }
       effect.age += dt;
-      effect.graphic.x += effect.vx * dt;
-      effect.graphic.y += effect.vy * dt;
+      var motionScale = effect.screenSpace ? 1 / zoom : 1;
+      effect.graphic.x += effect.vx * dt * motionScale;
+      effect.graphic.y += effect.vy * dt * motionScale;
       effect.graphic.alpha = Math.max(0, 1 - effect.age / effect.life) * effect.alpha;
       var grow = effect.grow === undefined ? 0.25 : effect.grow;
-      effect.graphic.scale.set(effect.scale + effect.age * grow);
+      var displayScale = effect.screenSpace ? 1 / zoom :
+        (effect.semanticType ? semanticScale(effect.semanticType, zoom) : 1);
+      effect.graphic.scale.set((effect.scale + effect.age * grow) * displayScale);
       if (effect.age >= effect.life) {
         effect.graphic.destroy();
         effects.splice(i, 1);
@@ -1784,6 +1849,10 @@
 
   Driftworks.game = {
     boot: boot,
+    semanticScale: semanticScale,
+    updateEffects: updateEffects,
+    zoomCameraAt: zoomCameraAt,
+    issueVisualContextOrder: issueVisualContextOrder,
     worldVectorToShipLocalLine: worldVectorToShipLocalLine,
     enginePlumeGeometry: enginePlumeGeometry,
     screenToWorld: screenToWorld,

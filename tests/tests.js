@@ -456,6 +456,97 @@
     assert(rejected, 'Unsupported versions should throw a useful error');
   });
 
+  test('semantic zoom preserves baseline and reveals relative scale continuously', function () {
+    ['escort', 'miner', 'tug', 'mothership', 'asteroid', 'depot'].forEach(function (type) {
+      assertClose(game.semanticScale(type, 1), 1);
+      assertClose(game.semanticScale(type, 1.000001), 1, 0.00001);
+    });
+    assertClose(game.semanticScale('escort', 0.35) * 0.35, 1);
+    var fighter = game.semanticScale('escort', 32) * 32;
+    var home = game.semanticScale('mothership', 32) * 32;
+    assert(fighter >= 1 && fighter < 1.5, 'Fighters remain readable with modest growth');
+    assert(home / fighter > 20, 'Close zoom reveals substantially smaller relative craft');
+    assert(game.semanticScale('mothership', 32) > 0.8, 'Large bodies retain most world size');
+  });
+
+  test('extended zoom retains the world point under the pointer and respects limits', function () {
+    var view = { width: 1200, height: 800 };
+    var pointer = { x: 230, y: 570 };
+    var camera = { x: 71, y: -83, zoom: 30 };
+    var before = game.screenToWorld(pointer, camera, view);
+    var next = game.zoomCameraAt(camera, pointer, view, -1);
+    var after = game.screenToWorld(pointer, next, view);
+    assertClose(next.zoom, 32);
+    assertClose(after.x, before.x);
+    assertClose(after.y, before.y);
+    assertClose(game.zoomCameraAt({ x: 0, y: 0, zoom: 0.35 }, pointer, view, 1).zoom, 0.35);
+  });
+
+  test('close zoom recovery targets do not capture empty-space move orders', function () {
+    var world = sim.createInitialWorld();
+    var escort = findShip(world, 'escort-01');
+    escort.disabled = true;
+    escort.position = { x: 900, y: 900 };
+    world.camera.zoom = 32;
+    var tug = world.ships.filter(function (ship) { return ship.type === 'tug'; })[0];
+    world = sim.selectShips(world, [tug.id]);
+    var move = game.issueVisualContextOrder(world, { x: 915, y: 900 });
+    assert(findShip(move, tug.id).order.kind === 'move');
+    var recover = game.issueVisualContextOrder(world, escort.position);
+    assert(findShip(recover, tug.id).order.kind === 'recover');
+  });
+
+  test('zooming out preserves default size hierarchy for every object class', function () {
+    [0.35, 0.5, 0.8, 1].forEach(function (zoom) {
+      ['mothership', 'asteroid', 'depot', 'escort', 'miner', 'tug'].forEach(function (type) {
+        assertClose(game.semanticScale(type, zoom) * zoom, 1);
+      });
+    });
+  });
+
+  test('UI effects retain pixel size across live zoom changes while selection follows ships', function () {
+    function graphic() {
+      return { parent: true, x: 12, y: 34, scale: { set: function (value) { this.x = value; } } };
+    }
+    var marker = { graphic: graphic(), age: 0, life: 10, vx: 0, vy: 0, scale: 1, grow: 0, alpha: 1, screenSpace: true };
+    var selection = { graphic: graphic(), age: 0, life: 10, vx: 0, vy: 0, scale: 1, grow: 0, alpha: 1, semanticType: 'escort' };
+    var worldEffect = { graphic: graphic(), age: 0, life: 10, vx: 0, vy: 0, scale: 1, grow: 0, alpha: 1 };
+    [1, 32, 0.35, 8].forEach(function (zoom) {
+      game.updateEffects({}, [marker, selection, worldEffect], 0.01, zoom);
+      assertClose(marker.graphic.scale.x * zoom, 1);
+      assertClose(selection.graphic.scale.x, game.semanticScale('escort', zoom));
+      assertClose(worldEffect.graphic.scale.x, 1);
+      assertClose(marker.graphic.x, 12);
+      assertClose(marker.graphic.y, 34);
+    });
+  });
+
+  test('short move orders accelerate instead of teleporting within the old arrival radius', function () {
+    var world = sim.createInitialWorld();
+    var fighter = findShip(world, 'escort-01');
+    var start = { x: fighter.position.x, y: fighter.position.y };
+    var target = { x: start.x + 4, y: start.y };
+    world = sim.issueMoveOrder(sim.selectShips(world, [fighter.id]), target);
+    var arrived = false;
+    for (var i = 0; i < 600; i += 1) {
+      var before = findShip(world, fighter.id);
+      world = sim.stepWorld(world, 1 / 30);
+      var after = findShip(world, fighter.id);
+      assertClose(after.previousPosition.x, before.position.x);
+      assertClose(after.previousPosition.y, before.position.y);
+      var travel = Math.hypot(after.position.x - before.position.x, after.position.y - before.position.y);
+      var speed = Math.hypot(before.velocity.x, before.velocity.y);
+      assert(travel <= (speed + after.acceleration / 30) / 30 + 0.001,
+        'Every step must respect acceleration, including the final arrival');
+      if (after.order.kind === 'idle') {
+        assertClose(after.position.x, target.x);
+        arrived = true;
+        break;
+      }
+    }
+    assert(arrived, 'Precision arrival must settle');
+  });
+
   run();
 
   function findShip(world, id) {
