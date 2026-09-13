@@ -6,7 +6,6 @@
   var SAVE_KEY = 'driftworks.save.v1';
   // Precision arrival avoids a visible jump at inspection zoom (32x).
   var ARRIVAL_DISTANCE = 0.001;
-  var MINE_DISTANCE = 18;
   var DOCK_DISTANCE = 44;
   var MINING_RATE = 10;
   var DEPOT_SECTION_MASS = 80;
@@ -52,9 +51,7 @@
         reward: 18000
       },
       asteroids: [
-        createAsteroid('ast-ceres-01', 'Carbonaceous Chunk', -330, 220, 180),
-        createAsteroid('ast-ceres-02', 'Nickel-Iron Slab', 220, -240, 150),
-        createAsteroid('ast-ceres-03', 'Hydrated Rubble', 470, 95, 210)
+        createAsteroid('ast-ceres-01', 'Carbonaceous Monolith', -650, 400, 540)
       ],
       ships: [
         createShip('msv-hardshell', 'MSV Hardshell', 'mothership', 0, 0, 0),
@@ -74,8 +71,20 @@
       position: { x: x, y: y },
       ore: ore,
       oreInitial: ore,
-      radius: Math.max(20, Math.min(42, 18 + ore / 10))
+      radius: 300,
+      rotation: 0,
+      angularVelocity: (Math.random() < 0.5 ? -1 : 1) * (0.008 + Math.random() * 0.006)
     };
+  }
+
+  function miningSiteDepth(id) {
+    var hash = 0;
+    for (var i = 0; i < id.length; i += 1) hash = Math.imul(hash, 31) + id.charCodeAt(i) | 0;
+    return 0.3 + createRng(hash)() * 0.45;
+  }
+
+  function surfaceRadius(asteroid, angle) {
+    return asteroid.radius * (0.88 + 0.07 * Math.cos(angle * 3) + 0.05 * Math.sin(angle * 5));
   }
 
   function createShip(id, name, type, x, y, speed) {
@@ -186,10 +195,13 @@
     }
 
     next.ships.forEach(function (ship) {
-      if (selected[ship.id] && ship.type === 'miner') {
+      if (selected[ship.id] && ship.type === 'miner' && !ship.disabled) {
         ship.order = {
           kind: 'mine',
           asteroidId: asteroid.id,
+          phase: 'approach',
+          siteDepth: miningSiteDepth(ship.id),
+          siteAngle: Math.atan2(ship.position.y - asteroid.position.y, ship.position.x - asteroid.position.x) - asteroid.rotation,
           target: { x: asteroid.position.x, y: asteroid.position.y }
         };
       }
@@ -237,7 +249,10 @@
 
   function stepWorld(world, dt) {
     var next = normalizeWorld(world);
-    var asteroids = next.asteroids.map(clonePlain);
+    var asteroids = next.asteroids.map(function (asteroid) {
+      asteroid.rotation += asteroid.angularVelocity * dt;
+      return asteroid;
+    });
     var mothership = clonePlain(next.mothership);
     var contract = clonePlain(next.contract);
     var depot = clonePlain(next.depot);
@@ -305,14 +320,40 @@
       return ship;
     }
 
-    ship.order.target = clonePlain(asteroid.position);
-    if (distance(ship.position, asteroid.position) > MINE_DISTANCE) {
-      return stepTowardOrderTarget(ship, dt, MINE_DISTANCE, false);
+    if (typeof ship.order.siteAngle !== 'number') {
+      ship.order.siteAngle = Math.atan2(ship.position.y - asteroid.position.y, ship.position.x - asteroid.position.x) - asteroid.rotation;
     }
+    var angle = ship.order.siteAngle + asteroid.rotation;
+    // A top-down view exposes the face, not only the silhouette's rim.
+    // Preserve old landed sites on load; new approaches choose an interior site.
+    if (typeof ship.order.siteDepth !== 'number') ship.order.siteDepth = ship.order.phase === 'landed' ? 1 : miningSiteDepth(ship.id);
+    var radius = surfaceRadius(asteroid, ship.order.siteAngle) * ship.order.siteDepth;
+    var site = { x: asteroid.position.x + Math.cos(angle) * radius, y: asteroid.position.y + Math.sin(angle) * radius };
+    var surfaceVelocity = { x: -Math.sin(angle) * radius * asteroid.angularVelocity, y: Math.cos(angle) * radius * asteroid.angularVelocity };
+    ship.order.target = site;
+    if (ship.order.phase !== 'landed') {
+      var gap = distance(ship.position, site);
+      ship.order.phase = gap < 30 ? 'matching' : 'approach';
+      // Track the moving site with velocity feed-forward and a damped approach.
+      var desired = { x: surfaceVelocity.x + (site.x - ship.position.x) * 1.5, y: surfaceVelocity.y + (site.y - ship.position.y) * 1.5 };
+      var speed = Math.hypot(desired.x, desired.y);
+      if (speed > ship.speed) { desired.x *= ship.speed / speed; desired.y *= ship.speed / speed; }
+      var dx = desired.x - ship.velocity.x, dy = desired.y - ship.velocity.y;
+      var change = Math.hypot(dx, dy), factor = Math.min(1, ship.acceleration * dt / Math.max(change, 0.000001));
+      ship.velocity.x += dx * factor;
+      ship.velocity.y += dy * factor;
+      ship.position.x += ship.velocity.x * dt;
+      ship.position.y += ship.velocity.y * dt;
+      ship.rotation = rotateToward(ship.rotation, angle + Math.PI, ship.turnRate * dt);
+      if (gap > 0.15 || Math.hypot(ship.velocity.x - surfaceVelocity.x, ship.velocity.y - surfaceVelocity.y) > 0.3 || Math.abs(angleDelta(ship.rotation, angle + Math.PI)) > 0.02) return ship;
+      ship.order.phase = 'landed';
+    }
+    ship.position = site;
+    ship.rotation = angle + Math.PI;
+    ship.velocity = surfaceVelocity;
 
     var room = ship.cargoCapacity - ship.cargo;
     var extracted = Math.min(room, asteroid.ore, MINING_RATE * dt);
-    ship.velocity = { x: 0, y: 0 };
     ship.cargo += extracted;
     asteroid.ore -= extracted;
 
@@ -489,6 +530,17 @@
     next.depot.totalStages = next.depot.totalStages || DEPOT_STAGE_COUNT;
     next.contract = next.contract || initial.contract;
     next.asteroids = next.asteroids || initial.asteroids;
+    if (next.asteroids.length > 1 || (next.asteroids[0] && typeof next.asteroids[0].angularVelocity !== 'number')) {
+      var ore = next.asteroids.reduce(function (sum, item) { return sum + item.ore; }, 0);
+      var body = initial.asteroids[0];
+      body.ore = ore;
+      body.oreInitial = Math.max(540, ore);
+      body.angularVelocity = 0.01;
+      next.asteroids = [body];
+      (next.ships || []).forEach(function (ship) {
+        if (ship.order.kind === 'mine') ship.order = { kind: 'mine', asteroidId: body.id };
+      });
+    }
     next.ships = next.ships || initial.ships;
     next.ships.forEach(function (ship) {
       if (typeof ship.turnRate !== 'number') {
@@ -684,7 +736,7 @@
     var best = null;
     var bestDistance = maxDistance;
     (world.asteroids || []).forEach(function (asteroid) {
-      var currentDistance = distance(target, asteroid.position);
+      var currentDistance = Math.max(0, distance(target, asteroid.position) - surfaceRadius(asteroid, Math.atan2(target.y - asteroid.position.y, target.x - asteroid.position.x) - asteroid.rotation));
       if (asteroid.ore > 0 && currentDistance <= bestDistance) {
         best = asteroid;
         bestDistance = currentDistance;
@@ -726,6 +778,7 @@
   }
 
   Driftworks.sim = {
+    surfaceRadius: surfaceRadius,
     WORLD_VERSION: WORLD_VERSION,
     createInitialWorld: createInitialWorld,
     createShip: createShip,

@@ -27,6 +27,7 @@
   // Zoom 1 is the existing tactical view. Large bodies retain almost all of
   // their world size while small craft shed their schematic magnification.
   function semanticScale(type, zoom) {
+    if (type === 'asteroid') return 1;
     var large = type === 'mothership' || type === 'asteroid' || type === 'depot';
     var exponent = large ? 0.95 : (type === 'miner' || type === 'tug' ? 0.12 : 0.08);
     // Every class stops shrinking on screen below the baseline. Keeping the
@@ -137,7 +138,7 @@
       '<div class="row"><span>Location</span><strong data-role="location"></strong></div>' +
       '<div class="row"><span>Cash</span><strong data-role="money"></strong></div>' +
       '<div class="row"><span>Ore Quota</span><strong data-role="quota"></strong></div>' +
-      '<div class="row"><span>Ore Field</span><strong data-role="field"></strong></div>' +
+      '<div class="row"><span>Asteroid Ore</span><strong data-role="field"></strong></div>' +
       '<div class="row"><span>Depot</span><strong data-role="depot"></strong></div>' +
       '<div class="row"><span>Sections</span><strong data-role="sections"></strong></div>' +
       '<div class="row"><span>Contacts</span><strong data-role="contacts"></strong></div>' +
@@ -195,7 +196,7 @@
             })
             .map(function (ship) {
               var status = ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
-                ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : '';
+                ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : ship.order.kind === 'mine' ? (ship.order.phase === 'landed' ? 'landed / mining' : ship.order.phase === 'matching' ? 'matching surface' : 'approaching site') : '';
               return ship.name + (status ? ' (' + status + ')' : '');
             })
             .join(', ');
@@ -430,7 +431,6 @@
         if (ship.type === 'miner' && ship.order.kind === 'mine' && ship.cargo > (ship.previousCargo || 0)) {
           var asteroid = findAsteroidById(world, ship.order.asteroidId);
           if (asteroid) {
-            spawnMiningEffects(effects, asteroid.position, ship, ship.cargo - (ship.previousCargo || 0));
             if (audio && world.elapsedSeconds - lastMiningSoundAt > 0.18) {
               audio.playMiningTick();
               lastMiningSoundAt = world.elapsedSeconds;
@@ -928,8 +928,7 @@
       if (recovery) return sim.issueRecoveryOrder(world, { kind: recovery.kind, id: recovery.entity.id });
     }
     var asteroid = world.asteroids.filter(function (item) {
-      var depletion = item.oreInitial > 0 ? item.ore / item.oreInitial : 0;
-      return hits(item, 'asteroid', Math.max(12, item.radius * (0.65 + 0.35 * depletion)));
+      return hits(item, 'asteroid', sim.surfaceRadius(item, Math.atan2(target.y - item.position.y, target.x - item.position.x) - item.rotation));
     })[0];
     if (asteroid) return sim.issueMineOrder(world, asteroid.id);
     if (hasTug && world.depot && hits(world.depot, 'depot', 58)) return sim.issueBuildOrder(world);
@@ -1125,6 +1124,7 @@
     graphics.clear();
     graphics.alpha = ship.disabled && ship.launchElapsed == null ? 0.45 : 1;
     if (!ship.disabled) drawEnginePlume(graphics, ship, style.radius);
+    drawMiningPlume(graphics, ship, style.radius, elapsedSeconds);
     if (ship.type === 'mothership') {
       paintMothership(graphics, selected, elapsedSeconds);
       drawShipOrderAndBadges(graphics, ship, style);
@@ -1338,7 +1338,7 @@
   }
 
   function drawEnginePlume(graphics, ship, radius) {
-    if (!ship.previousVelocity || ship.speed <= 0) return;
+    if (!ship.previousVelocity || ship.speed <= 0 || ship.order.phase === 'landed') return;
     var ax = ship.velocity.x - ship.previousVelocity.x;
     var ay = ship.velocity.y - ship.previousVelocity.y;
     var plumes = enginePlumeGeometry(ax, ay, ship.rotation, ship.acceleration, radius, ship.order.kind === 'return' && ship.cargo > 0, ship.type);
@@ -1457,23 +1457,26 @@
   }
 
   function paintAsteroid(graphics, asteroid) {
-    var depletion = asteroid.oreInitial > 0 ? asteroid.ore / asteroid.oreInitial : 0;
-    var radius = Math.max(12, asteroid.radius * (0.65 + 0.35 * depletion));
+    var radius = asteroid.radius;
     graphics.clear();
     graphics.position.set(asteroid.position.x, asteroid.position.y);
-    graphics.lineStyle(2, ASTEROID_STROKE, asteroid.ore > 0 ? 0.82 : 0.28);
-    graphics.beginFill(ASTEROID_FILL, asteroid.ore > 0 ? 0.86 : 0.26);
-    graphics.moveTo(radius, -3);
-    graphics.lineTo(radius * 0.35, radius * 0.72);
-    graphics.lineTo(-radius * 0.58, radius * 0.5);
-    graphics.lineTo(-radius, -radius * 0.12);
-    graphics.lineTo(-radius * 0.35, -radius * 0.78);
-    graphics.lineTo(radius * 0.55, -radius * 0.48);
+    graphics.rotation = asteroid.rotation;
+    graphics.lineStyle(1, ASTEROID_STROKE, 0.82);
+    graphics.beginFill(ASTEROID_FILL, 0.92);
+    for (var i = 0; i <= 120; i += 1) {
+      var angle = i / 120 * Math.PI * 2;
+      var r = sim.surfaceRadius(asteroid, angle);
+      if (i === 0) graphics.moveTo(r, 0);
+      else graphics.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+    }
     graphics.closePath();
     graphics.endFill();
-    graphics.lineStyle(1, 0x2c3337, 0.5);
-    graphics.moveTo(-radius * 0.55, -radius * 0.08);
-    graphics.lineTo(radius * 0.44, radius * 0.18);
+    graphics.lineStyle(1, 0x393632, 0.65);
+    for (var j = 0; j < 18; j += 1) {
+      var a = j * 2.39996;
+      var d = radius * (0.2 + 0.52 * ((j * 7 % 17) / 17));
+      graphics.drawEllipse(Math.cos(a) * d, Math.sin(a) * d, radius * (0.025 + (j % 4) * 0.012), radius * 0.025);
+    }
   }
 
   function paintDrone(graphics, drone) {
@@ -1662,67 +1665,22 @@
     });
   }
 
-  function spawnMiningEffects(effects, source, ship, amount) {
-    var geometry = miningEffectGeometry(source, ship.position, ship.rotation);
-    if (geometry.beamOrigin) {
-      var beam = new PIXI.Graphics();
-      beam.lineStyle(1.25, 0xf1d08a, 0.4);
-      beam.moveTo(geometry.beamOrigin.x, geometry.beamOrigin.y);
-      beam.lineTo(geometry.contact.x, geometry.contact.y);
-      beam.lineStyle(3, 0xf1d08a, 0.09);
-      beam.moveTo(geometry.beamOrigin.x, geometry.beamOrigin.y);
-      beam.lineTo(geometry.contact.x, geometry.contact.y);
-      effects.push({
-        graphic: beam,
-        age: 0,
-        life: 0.06,
-        vx: 0,
-        vy: 0,
-        scale: 1,
-        alpha: 1,
-        grow: 0
-      });
-    }
-
-    var puff = new PIXI.Graphics();
-    puff.beginFill(0xd5bd82, 0.16);
-    puff.drawCircle(0, 0, 5);
-    puff.endFill();
-    puff.position.set(geometry.contact.x, geometry.contact.y);
-    effects.push({
-      graphic: puff,
-      age: 0,
-      life: 0.34,
-      vx: 0,
-      vy: 0,
-      scale: 0.6,
-      alpha: 1,
-      grow: 1.7
-    });
-
-    var count = Math.max(4, Math.min(8, Math.ceil(amount * 11)));
-    for (var i = 0; i < count; i += 1) {
-      var t = i / Math.max(1, count - 1);
-      var angle = geometry.seedAngle + i * 2.399963 + amount * 0.37;
-      var speed = 14 + ((i * 17) % 29) + amount * 8;
-      var mote = new PIXI.Graphics();
-      mote.beginFill(i % 3 === 0 ? 0xf0d38a : 0xc7a762, 0.62);
-      mote.drawCircle(0, 0, 0.9 + t * 0.8);
-      mote.endFill();
-      mote.position.set(
-        geometry.contact.x + Math.cos(angle) * (2 + (i % 3)),
-        geometry.contact.y + Math.sin(angle) * (2 + (i % 3))
-      );
-      effects.push({
-        graphic: mote,
-        age: 0,
-        life: 0.22 + t * 0.24,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        scale: 1,
-        alpha: 0.78,
-        grow: 0.85
-      });
+  // Like engine exhaust, dust is drawn in hull-local coordinates so position,
+  // rotation, interpolation and semantic zoom all follow the ship exactly.
+  function drawMiningPlume(graphics, ship, radius, elapsedSeconds) {
+    if (ship.disabled || ship.order.kind !== 'mine' || ship.order.phase !== 'landed') return;
+    graphics.lineStyle(0);
+    graphics.beginFill(0xd5bd82, 0.16);
+    graphics.drawCircle(radius * 0.95, 0, radius * 0.28);
+    graphics.endFill();
+    for (var i = 0; i < 12; i += 1) {
+      var age = (elapsedSeconds * 1.8 + i / 12) % 1;
+      var angle = (i * 2.399963) % (Math.PI * 2);
+      var travel = radius * age * 0.9;
+      graphics.beginFill(i % 3 === 0 ? 0xf0d38a : 0xc7a762, (1 - age) * 0.6);
+      graphics.drawCircle(radius * 0.95 + Math.cos(angle) * travel,
+        Math.sin(angle) * travel, radius * (0.035 + age * 0.035));
+      graphics.endFill();
     }
   }
 
@@ -1862,6 +1820,7 @@
     focusCameraToward: focusCameraToward,
     withCamera: withCamera,
     miningEffectGeometry: miningEffectGeometry,
+    drawMiningPlume: drawMiningPlume,
     operationExposure: operationExposure,
     stepDefenderWeapon: stepDefenderWeapon,
     mothershipDrumMarkers: mothershipDrumMarkers,

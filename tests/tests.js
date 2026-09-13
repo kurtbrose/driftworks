@@ -498,7 +498,7 @@
 
   test('zooming out preserves default size hierarchy for every object class', function () {
     [0.35, 0.5, 0.8, 1].forEach(function (zoom) {
-      ['mothership', 'asteroid', 'depot', 'escort', 'miner', 'tug'].forEach(function (type) {
+      ['mothership', 'depot', 'escort', 'miner', 'tug'].forEach(function (type) {
         assertClose(game.semanticScale(type, zoom) * zoom, 1);
       });
     });
@@ -545,6 +545,72 @@
       }
     }
     assert(arrived, 'Precision arrival must settle');
+  });
+
+  test('one large asteroid rotates and landed miners retain their surface site', function () {
+    [-0.012, 0.012].forEach(function (spin) {
+      var world = sim.createInitialWorld();
+      assert(world.asteroids.length === 1 && world.asteroids[0].radius >= 300);
+      world.asteroids[0].angularVelocity = spin;
+      world = sim.issueMineOrder(sim.selectShips(world, ['miner-01']), world.asteroids[0].id);
+      var landed = false;
+      for (var i = 0; i < 1000; i += 1) {
+        world = sim.stepWorld(world, 1 / 30);
+        var miner = findShip(world, 'miner-01'), body = world.asteroids[0];
+        if (miner.order.phase === 'landed') {
+          landed = true;
+          var angle = miner.order.siteAngle + body.rotation;
+          assertClose(miner.position.x, body.position.x + Math.cos(angle) * sim.surfaceRadius(body, miner.order.siteAngle) * miner.order.siteDepth);
+          assertClose(miner.position.y, body.position.y + Math.sin(angle) * sim.surfaceRadius(body, miner.order.siteAngle) * miner.order.siteDepth);
+          assertClose(miner.rotation, angle + Math.PI);
+          assertClose(miner.velocity.x, -(miner.position.y - body.position.y) * spin);
+          world = sim.deserializeWorld(sim.serializeWorld(world));
+        }
+        if (miner.order.kind === 'return') {
+          assertClose(miner.cargo, miner.cargoCapacity);
+          assert(Math.hypot(miner.velocity.x, miner.velocity.y) > 0, 'Release retains surface velocity');
+          break;
+        }
+      }
+      assert(landed, 'Miner must attach before extracting');
+      assert(findShip(world, 'miner-01').order.kind === 'return');
+      assertClose(world.asteroids[0].radius, 300);
+    });
+  });
+
+  test('legacy fields merge ore into one large asteroid', function () {
+    var world = sim.createInitialWorld();
+    world.asteroids.push(sim.createAsteroid('old', 'Old rock', 100, 100, 80));
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    assert(world.asteroids.length === 1);
+    assertClose(world.asteroids[0].ore, 620);
+  });
+
+  test('miners choose distinct sites on the visible face', function () {
+    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01', 'miner-02']), 'ast-ceres-01');
+    var first = findShip(world, 'miner-01'), second = findShip(world, 'miner-02');
+    [first, second].forEach(function (ship) {
+      assert(ship.order.siteDepth >= 0.3 && ship.order.siteDepth <= 0.75, 'Site should be well inside the rim');
+    });
+    assert(first.order.siteDepth !== second.order.siteDepth, 'Miners should spread across the face');
+  });
+
+  test('mining plume uses hull-local geometry and only appears while landed', function () {
+    var ship = findShip(sim.createInitialWorld(), 'miner-01');
+    var circles = [];
+    var graphics = { lineStyle: function () {}, beginFill: function () {}, endFill: function () {}, drawCircle: function (x, y, r) { circles.push([x, y, r]); } };
+    ship.order = { kind: 'mine', phase: 'approach' };
+    game.drawMiningPlume(graphics, ship, 14, 1);
+    assert(circles.length === 0);
+    ship.order.phase = 'landed';
+    game.drawMiningPlume(graphics, ship, 14, 1);
+    assert(circles.length === 13);
+    var initial = JSON.stringify(circles);
+    circles = [];
+    ship.position = { x: 900, y: -1200 };
+    ship.rotation = 2;
+    game.drawMiningPlume(graphics, ship, 14, 1);
+    assert(JSON.stringify(circles) === initial, 'Hull transform must handle anchoring, not world-space particle offsets');
   });
 
   run();

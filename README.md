@@ -8,19 +8,21 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - Geometric placeholder mothership, miners, tug, and two escort craft.
 - Single-click selection and drag-box multi-selection.
 - Right-click move orders with fixed-step simulation and interpolated rendering.
-- Right-click asteroid nodes with selected miners to extract ore.
+- One large asteroid occupies the tactical environment, with a slow, randomly clockwise or counterclockwise spin.
+- Right-click its surface with selected miners: they choose a site, match surface motion, land, and rotate with the body while extracting ore.
+- The asteroid retains its physical size as ore is depleted; older multi-asteroid saves merge remaining ore into one large body.
 - Miners automatically return full cargo to the mothership and deposit it into storage.
 - Mothership processes delivered ore into 80t depot sections.
 - Tug can carry fabricated depot sections from the mothership to the depot site.
 - Utility haulers can retrieve persistent drone wrecks for salvage and carry disabled fighters home for repair.
-- HUD ore quota, depot progress, construction section stock, and remaining field ore readouts.
+- HUD ore quota, depot progress, construction section stock, and remaining asteroid ore readouts.
 - Subtle parallax starfield below the grid.
 - Acceleration-driven engine plumes, mining motes, and delivery feedback text.
 - Move-order reticles, selection pulses, mothership running lights, and focus-selection camera key with visible focus feedback.
 - Debug hostile-raider vignette with industrial target selection, escort range coverage, laser dwell, impacts, destruction fragments, very light final-hit shake, and final-kill slow motion.
 - Simple threat director that warns, then sends raiders once mining/construction activity exposes the operation.
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
-- Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 32×, with nearly geometric scaling for large bodies and modest screen-size growth for small craft. Movement and simulation distances remain unchanged.
+- Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 32×, with geometric scaling for the asteroid (keeping surface attachments aligned), nearly geometric scaling for other large bodies and modest screen-size growth for small craft. Movement and simulation distances remain unchanged.
 - Versioned localStorage save/load of serializable game state.
 - Toggleable stress mode that animates thousands of simple sprites.
 - DOM HUD with selected ships, simulation time, entity count, and measured FPS.
