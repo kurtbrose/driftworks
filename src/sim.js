@@ -49,6 +49,21 @@
   var REPAIR_SECONDS = 6;
   var FIGHTER_RANGE = 280;
   var FIGHTER_LEASH = FIGHTER_RANGE * 2.5;
+  var SLOT_TOLERANCE = 6;
+
+  function fighterStyle(ship) {
+    var hash = 0;
+    for (var i = 0; i < ship.id.length; i += 1) hash = Math.imul(hash, 31) + ship.id.charCodeAt(i) | 0;
+    var random = createRng(hash);
+    var angle = random() * Math.PI * 2, radius = 3 + random() * 4;
+    return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius,
+      speed: 0.94 + random() * 0.06, acceleration: 0.88 + random() * 0.12 };
+  }
+
+  function occupiedSlot(order, center, style, looseness) {
+    return { x: center.x + order.offset.x * (1 + looseness * 0.65) + style.x * (1 + looseness * 3),
+      y: center.y + order.offset.y * (1 + looseness * 0.65) + style.y * (1 + looseness * 3) };
+  }
 
   function issueDefendOrder(world, target, shipId) {
     var next = cloneWorld(world);
@@ -89,7 +104,11 @@
     var radius = order.leashRadius;
     var formation = order.formation;
     var center = formation ? formation.position : anchor;
-    var target = { x: center.x + order.offset.x, y: center.y + order.offset.y };
+    var style = fighterStyle(ship);
+    var looseness = formation ? formation.looseness || 0 : 0;
+    var tolerance = SLOT_TOLERANCE + looseness * 24;
+    var target = occupiedSlot(order, center, style, looseness);
+    var nominal = target;
     var threat = threats.filter(function (t) { return distance(t.position, anchor) <= radius + FIGHTER_RANGE; }).sort(function (a, b) {
       return distance(a.position, anchor) - distance(b.position, anchor);
     })[0];
@@ -100,12 +119,18 @@
       var ux = gap > 0.001 ? dx / gap : 1, uy = gap > 0.001 ? dy / gap : 0;
       var radial = gap < FIGHTER_RANGE * 0.72 ? 110 : gap > FIGHTER_RANGE * 0.9 ? -110 : 0;
       target = { x: ship.position.x + ux * radial - uy * 55 * order.side, y: ship.position.y + uy * radial + ux * 55 * order.side };
+      // A broad preference for the slot, subordinate to range management and the leash.
+      var slotGap = distance(ship.position, nominal);
+      var pull = slotGap > 100 ? Math.min(25, (slotGap - 100) * 0.15) / slotGap : 0;
+      target.x += (nominal.x - ship.position.x) * pull;
+      target.y += (nominal.y - ship.position.y) * pull;
       world.ships.forEach(function (other) {
         if (other.id === ship.id || other.type !== 'escort' || other.disabled) return;
         var d = distance(ship.position, other.position);
-        if (d < 45 && d > 0.001) {
-          target.x += (ship.position.x - other.position.x) / d * (45 - d);
-          target.y += (ship.position.y - other.position.y) / d * (45 - d);
+        var spacing = 45 + looseness * 35;
+        if (d < spacing && d > 0.001) {
+          target.x += (ship.position.x - other.position.x) / d * (spacing - d);
+          target.y += (ship.position.y - other.position.y) / d * (spacing - d);
         }
       });
     }
@@ -113,11 +138,13 @@
     if (length > radius && (fighting || !formation || distance(center, anchor) < radius - 400)) target = { x: anchor.x + tx / length * radius, y: anchor.y + ty / length * radius };
     order.target = target;
     var before = distance(ship.position, anchor);
+    var error = distance(target, ship.position);
+    var correction = error > tolerance ? (error - tolerance) / error * 1.5 : 0;
     var velocity = formation && !fighting ? {
-      x: formation.velocity.x + (target.x - ship.position.x) * 2,
-      y: formation.velocity.y + (target.y - ship.position.y) * 2
+      x: formation.velocity.x + (target.x - ship.position.x) * correction,
+      y: formation.velocity.y + (target.y - ship.position.y) * correction
     } : null;
-    stepTowardOrderTarget(ship, dt, ARRIVAL_DISTANCE, false, velocity);
+    stepTowardOrderTarget(ship, dt, ARRIVAL_DISTANCE, false, velocity, style);
     // Remove outward momentum at the boundary; distant new orders still travel normally.
     var after = distance(ship.position, anchor);
     if (before <= radius && after > radius) {
@@ -129,7 +156,7 @@
     return ship;
   }
 
-  function stepFormations(world, dt) {
+  function stepFormations(world, dt, threats) {
     var groups = {};
     world.ships.forEach(function (s) {
       if (s.disabled || s.order.kind !== 'defend' || !s.order.formation) return;
@@ -140,11 +167,17 @@
       var guarded = world.ships.filter(function (s) { return s.id === order.anchorShipId; })[0];
       var anchor = guarded ? guarded.position : order.anchor;
       var formation = clonePlain(order.formation);
+      var contact = threats.some(function (t) {
+        return distance(t.position, anchor) <= order.leashRadius + FIGHTER_RANGE &&
+          (distance(formation.position, anchor) < 80 || members.some(function (s) { return distance(s.position, t.position) < FIGHTER_RANGE * 1.25; }));
+      });
+      formation.looseness = (formation.looseness || 0) + ((contact ? 1 : 0) - (formation.looseness || 0)) * (1 - Math.exp(-dt / 2));
       var error = 0, speed = Infinity, acceleration = Infinity;
       members.forEach(function (s) {
-        error = Math.max(error, distance(s.position, { x: formation.position.x + s.order.offset.x, y: formation.position.y + s.order.offset.y }));
-        speed = Math.min(speed, s.speed);
-        acceleration = Math.min(acceleration, s.acceleration);
+        var style = fighterStyle(s);
+        error = Math.max(error, Math.max(0, distance(s.position, occupiedSlot(s.order, formation.position, style, formation.looseness)) - SLOT_TOLERANCE - formation.looseness * 24));
+        speed = Math.min(speed, s.speed * style.speed);
+        acceleration = Math.min(acceleration, s.acceleration * style.acceleration);
       });
       // Reserve catch-up speed and ease to a halt when any wingmate loses its slot.
       var cohesion = Math.max(0, Math.min(1, (85 - error) / 60));
@@ -407,7 +440,7 @@
 
   function stepWorld(world, dt, threats) {
     var next = normalizeWorld(world);
-    stepFormations(next, dt);
+    stepFormations(next, dt, threats || []);
     var asteroids = next.asteroids.map(function (asteroid) {
       asteroid.rotation += asteroid.angularVelocity * dt;
       return asteroid;
@@ -577,7 +610,7 @@
     return ship;
   }
 
-  function stepTowardOrderTarget(ship, dt, arrivalDistance, snapOnArrival, formationVelocity) {
+  function stepTowardOrderTarget(ship, dt, arrivalDistance, snapOnArrival, formationVelocity, guidanceStyle) {
     var toTarget = {
       x: ship.order.target.x - ship.position.x,
       y: ship.order.target.y - ship.position.y
@@ -599,8 +632,8 @@
     };
     var currentSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
     var stoppingDistance = Math.max(0, distance - arrivalDistance);
-    var haulingSpeed = ship.speed; // Work-zone guidance limit, not a physical maximum.
-    var haulingAcceleration = ship.acceleration;
+    var haulingSpeed = ship.speed * (guidanceStyle ? guidanceStyle.speed : 1); // Work-zone guidance limit, not a physical maximum.
+    var haulingAcceleration = ship.acceleration * (guidanceStyle ? guidanceStyle.acceleration : 1);
     var stoppingSpeed = Math.sqrt(2 * haulingAcceleration * stoppingDistance);
     var desiredSpeed = Math.min(haulingSpeed, stoppingSpeed);
     var desiredVelocity = {
@@ -626,10 +659,10 @@
     };
 
     var nextSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
-    if (nextSpeed > ship.speed) {
-      ship.velocity.x = (ship.velocity.x / nextSpeed) * ship.speed;
-      ship.velocity.y = (ship.velocity.y / nextSpeed) * ship.speed;
-      nextSpeed = ship.speed;
+    if (nextSpeed > haulingSpeed) {
+      ship.velocity.x = (ship.velocity.x / nextSpeed) * haulingSpeed;
+      ship.velocity.y = (ship.velocity.y / nextSpeed) * haulingSpeed;
+      nextSpeed = haulingSpeed;
     }
 
     var travel = formationVelocity ? nextSpeed * dt : Math.min(distance, nextSpeed * dt);
