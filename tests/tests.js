@@ -700,6 +700,53 @@
     assert(fighter.engineResponse === null && fighter.fills === 12, 'Disabled engines must stop immediately');
   });
 
+  test('fighter groups form up and retain their defense anchor', function () {
+    for (var count = 2; count <= 7; count += 1) {
+      var world = sim.createInitialWorld();
+      while (world.ships.filter(function (s) { return s.type === 'escort'; }).length < count) world = sim.spawnFighter(world);
+      var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
+      world = game.issueVisualContextOrder(sim.selectShips(world, ids), { x: 900, y: -500 });
+      for (var i = 0; i < 600; i += 1) world = sim.stepWorld(world, 1 / 30);
+      var slots = {};
+      ids.forEach(function (id) {
+        var s = findShip(world, id);
+        assert(s.order.kind === 'defend');
+        assert(Math.hypot(s.position.x - s.order.target.x, s.position.y - s.order.target.y) < 1, 'Formation should settle');
+        slots[s.order.offset.x + ':' + s.order.offset.y] = true;
+      });
+      assert(Object.keys(slots).length === count, 'Each fighter needs a distinct slot');
+    }
+  });
+
+  test('fighters slide at the leash and return after threats leave', function () {
+    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var s = findShip(world, 'escort-01');
+    s.position = { x: sim.FIGHTER_LEASH - 1, y: 0 };
+    var startY = s.position.y;
+    for (var i = 0; i < 300; i += 1) {
+      s = findShip(world, s.id);
+      var threat = { position: { x: s.position.x - 50, y: s.position.y } };
+      world = sim.stepWorld(world, 1 / 30, [threat]);
+      s = findShip(world, s.id);
+      assert(Math.hypot(s.position.x, s.position.y) <= sim.FIGHTER_LEASH + 0.001, 'Must remain inside leash');
+    }
+    assert(Math.abs(s.position.y - startY) > 50, 'Must slide instead of stopping at boundary');
+    for (i = 0; i < 600; i += 1) world = sim.stepWorld(world, 1 / 30);
+    s = findShip(world, s.id);
+    assert(Math.hypot(s.position.x, s.position.y) < 1, 'Must reclaim anchor');
+  });
+
+  test('ship defense follows its anchor and survives saves', function () {
+    var world = sim.createInitialWorld();
+    var miner = findShip(world, 'miner-01');
+    world = game.issueVisualContextOrder(sim.selectShips(world, ['escort-01']), miner.position);
+    assert(findShip(world, 'escort-01').order.anchorShipId === miner.id);
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    findShip(world, miner.id).position.x += 100;
+    world = sim.stepWorld(world, 1 / 30);
+    assertClose(findShip(world, 'escort-01').order.anchor.x, miner.position.x + 100);
+  });
+
   run();
 
   function findShip(world, id) {

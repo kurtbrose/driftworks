@@ -47,6 +47,78 @@
   }
   var DEPOT_STAGE_COUNT = 3;
   var REPAIR_SECONDS = 6;
+  var FIGHTER_RANGE = 280;
+  var FIGHTER_LEASH = FIGHTER_RANGE * 2.5;
+
+  function issueDefendOrder(world, target, shipId) {
+    var next = cloneWorld(world);
+    var members = next.ships.filter(function (s) {
+      return s.type === 'escort' && !s.disabled && s.id !== shipId && next.selectedShipIds.indexOf(s.id) !== -1;
+    });
+    var center = members.reduce(function (p, s) { p.x += s.position.x / members.length; p.y += s.position.y / members.length; return p; }, { x: 0, y: 0 });
+    var angle = Math.atan2(target.y - center.y, target.x - center.x);
+    var shapes = { 1: [[0, 0]], 2: [[24, -32], [-24, 32]], 3: [[42, 0], [-21, -48], [-21, 48]], 4: [[64, 0], [0, -48], [0, 48], [-64, 0]] };
+    members.forEach(function (s, i) {
+      var slot = shapes[members.length] ? shapes[members.length][i] : [Math.cos(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16), Math.sin(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16)];
+      if (shipId && members.length === 1) slot = [0, 80];
+      if (shipId) slot = [slot[0] * 1.7, slot[1] * 1.7];
+      s.order = { kind: 'defend', anchor: clonePlain(target), anchorShipId: shipId || null,
+        leashRadius: FIGHTER_LEASH, side: i % 2 ? -1 : 1,
+        offset: { x: slot[0] * Math.cos(angle) - slot[1] * Math.sin(angle), y: slot[0] * Math.sin(angle) + slot[1] * Math.cos(angle) }, target: clonePlain(target) };
+    });
+    return next;
+  }
+
+  function spawnFighter(world) {
+    var next = cloneWorld(world);
+    var id = 1;
+    while (next.ships.some(function (s) { return s.id === 'debug-fighter-' + id; })) id += 1;
+    var home = findMothership(next);
+    var p = home ? home.position : next.camera;
+    next.ships.push(createShip('debug-fighter-' + id, 'Fighter ' + id, 'escort', p.x + 150 + (id % 6) * 35, p.y - 200 - Math.floor(id / 6) * 35, 115));
+    return next;
+  }
+
+  function stepDefense(ship, world, threats, dt) {
+    var order = ship.order;
+    var protectedShip = world.ships.filter(function (s) { return s.id === order.anchorShipId; })[0];
+    if (protectedShip) order.anchor = clonePlain(protectedShip.position);
+    var anchor = order.anchor;
+    var radius = order.leashRadius;
+    var target = { x: anchor.x + order.offset.x, y: anchor.y + order.offset.y };
+    var threat = threats.filter(function (t) { return distance(t.position, anchor) <= radius + FIGHTER_RANGE; }).sort(function (a, b) {
+      return distance(a.position, anchor) - distance(b.position, anchor);
+    })[0];
+    if (threat && distance(ship.position, anchor) <= radius) {
+      var dx = ship.position.x - threat.position.x, dy = ship.position.y - threat.position.y;
+      var gap = Math.hypot(dx, dy);
+      var ux = gap > 0.001 ? dx / gap : 1, uy = gap > 0.001 ? dy / gap : 0;
+      var radial = gap < FIGHTER_RANGE * 0.72 ? 110 : gap > FIGHTER_RANGE * 0.9 ? -110 : 0;
+      target = { x: ship.position.x + ux * radial - uy * 55 * order.side, y: ship.position.y + uy * radial + ux * 55 * order.side };
+      world.ships.forEach(function (other) {
+        if (other.id === ship.id || other.type !== 'escort' || other.disabled) return;
+        var d = distance(ship.position, other.position);
+        if (d < 45 && d > 0.001) {
+          target.x += (ship.position.x - other.position.x) / d * (45 - d);
+          target.y += (ship.position.y - other.position.y) / d * (45 - d);
+        }
+      });
+    }
+    var tx = target.x - anchor.x, ty = target.y - anchor.y, length = Math.hypot(tx, ty);
+    if (length > radius) target = { x: anchor.x + tx / length * radius, y: anchor.y + ty / length * radius };
+    order.target = target;
+    var before = distance(ship.position, anchor);
+    stepTowardOrderTarget(ship, dt, ARRIVAL_DISTANCE, false);
+    // Remove outward momentum at the boundary; distant new orders still travel normally.
+    var after = distance(ship.position, anchor);
+    if (before <= radius && after > radius) {
+      var nx = (ship.position.x - anchor.x) / after, ny = (ship.position.y - anchor.y) / after;
+      ship.position = { x: anchor.x + nx * radius, y: anchor.y + ny * radius };
+      var outward = Math.max(0, ship.velocity.x * nx + ship.velocity.y * ny);
+      ship.velocity.x -= outward * nx; ship.velocity.y -= outward * ny;
+    }
+    return ship;
+  }
 
   function createInitialWorld() {
     return {
@@ -201,6 +273,14 @@
   }
 
   function issueContextOrder(world, target) {
+    var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
+    if (fighters.length) {
+      var guarded = world.ships.filter(function (s) { return world.selectedShipIds.indexOf(s.id) === -1 && distance(s.position, target) <= (s.type === 'mothership' ? 38 : 16); })
+        .sort(function (a, b) { return distance(a.position, target) - distance(b.position, target); })[0];
+      var rest = world.selectedShipIds.filter(function (id) { return !fighters.some(function (s) { return s.id === id; }); });
+      var next = rest.length ? issueContextOrder(selectShips(world, rest), target) : cloneWorld(world);
+      return issueDefendOrder(selectShips(next, world.selectedShipIds), guarded ? guarded.position : target, guarded && guarded.id);
+    }
     var recoverable = nearestRecoverable(world, target, 26);
     if (recoverable && selectedType(world, 'tug')) {
       return issueRecoveryOrder(world, recoverable);
@@ -285,7 +365,7 @@
     return next;
   }
 
-  function stepWorld(world, dt) {
+  function stepWorld(world, dt, threats) {
     var next = normalizeWorld(world);
     var asteroids = next.asteroids.map(function (asteroid) {
       asteroid.rotation += asteroid.angularVelocity * dt;
@@ -313,7 +393,7 @@
       nextWreckId: next.nextWreckId,
       recovery: next.recovery,
       ships: next.ships.map(function (ship) {
-        return stepShip(ship, dt, asteroids, mothership, mothershipShip, depot);
+        return stepShip(ship, dt, asteroids, mothership, mothershipShip, depot, next, threats || []);
       })
     };
     stepRecovery(stepped, dt);
@@ -321,7 +401,7 @@
     return stepped;
   }
 
-  function stepShip(ship, dt, asteroids, mothership, mothershipShip, depot) {
+  function stepShip(ship, dt, asteroids, mothership, mothershipShip, depot, world, threats) {
     var next = clonePlain(ship);
     next.previousPosition = { x: ship.position.x, y: ship.position.y };
     next.previousVelocity = { x: ship.velocity.x, y: ship.velocity.y };
@@ -332,6 +412,7 @@
       return next;
     }
     if (next.order.kind === 'recover') return next;
+    if (next.order.kind === 'defend') return stepDefense(next, world, threats, dt);
 
     if (next.order.kind === 'mine') {
       return stepMiningShip(next, dt, asteroids, mothershipShip);
@@ -832,6 +913,10 @@
   }
 
   Driftworks.sim = {
+    FIGHTER_RANGE: FIGHTER_RANGE,
+    FIGHTER_LEASH: FIGHTER_LEASH,
+    issueDefendOrder: issueDefendOrder,
+    spawnFighter: spawnFighter,
     DEPOT_SECTION: DEPOT_SECTION,
     DEPOT_FRAME: DEPOT_FRAME,
     physicalStats: physicalStats,

@@ -61,6 +61,15 @@ Debug controls:
 - `F`: ease camera onto the selected ship or fleet and flash a focus reticle.
 - `H`: manually spawn a short hostile-raider vignette; selected escorts show their coverage circle.
 - `J`: disable a selected fighter to try a recovery mission without waiting for combat damage.
+- `K`: spawn another friendly fighter near the mothership; repeat to build a larger wing.
+
+Fighter defense controls:
+
+- Select fighters and right-click empty space to defend that point. Two form a staggered wing, three a V, four a diamond, and larger groups a ring. Formations face the ordered destination.
+- Right-click another, unselected friendly ship to escort it in a looser formation. Its position becomes the moving defense anchor.
+- Fighters prioritize threats near the anchor, kite and orbit in weapon range, separate from nearby fighters, and return to their formation when threats leave. At the leash boundary they slide sideways instead of retreating farther.
+- Selected fighters show weapon range and a faint operating-area circle with a cross at the anchor. The hard-coded group leash is `FIGHTER_LEASH` in `src/sim.js`: currently 700 simulation units, or 2.5 times weapon range. There is no tuning UI yet.
+- Defense orders and formation slots survive saves; hostile encounters remain transient. Use `K` to build a wing, box-select it, right-click a defense point, then press `H` to try combat.
 
 Construction controls:
 

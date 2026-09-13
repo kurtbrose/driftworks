@@ -19,7 +19,7 @@
   var ASTEROID_FILL = 0x655f57;
   var ASTEROID_STROKE = 0xb6aa9b;
   var MAX_EFFECTS = 260;
-  var DEFENDER_RANGE = 280;
+  var DEFENDER_RANGE = sim.FIGHTER_RANGE;
   var DEFENDER_DWELL_SECONDS = 1.35;
   var DIRECTOR_WARNING_SECONDS = 8;
   var DIRECTOR_COOLDOWN_SECONDS = 44;
@@ -108,7 +108,7 @@
       accumulator += frameSeconds;
 
       while (accumulator >= STEP_SECONDS) {
-        world = sim.stepWorld(world, STEP_SECONDS);
+        world = sim.stepWorld(world, STEP_SECONDS, scene.getThreats());
         accumulator -= STEP_SECONDS;
       }
 
@@ -312,6 +312,7 @@
       if (event.code === 'Space') spaceDown = true;
       if (event.code === 'KeyF') requestSelectionFocus(getWorld());
       if (event.code === 'KeyH') spawnHostileDrones(getWorld());
+      if (event.code === 'KeyK' && !event.repeat) setWorld(sim.spawnFighter(getWorld()));
       if (event.code === 'KeyJ' && !event.repeat) {
         var fighter = getWorld().ships.filter(function (ship) {
           return ship.type === 'escort' && !ship.disabled && getWorld().selectedShipIds.indexOf(ship.id) !== -1;
@@ -893,6 +894,7 @@
         previousRecovery = null;
       },
       sync: sync,
+      getThreats: function () { return drones; },
       render: render,
       applyCameraFocus: applyCameraFocus,
       setStressEnabled: setStressEnabled,
@@ -912,6 +914,19 @@
     function hits(entity, type, radius) {
       return Math.hypot(target.x - entity.position.x, target.y - entity.position.y) <=
         Math.max(12 / zoom, radius * semanticScale(type, zoom));
+    }
+    var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
+    if (fighters.length) {
+      var guarded = world.ships.filter(function (s) {
+        return world.selectedShipIds.indexOf(s.id) === -1 && hits(s, s.type, s.type === 'mothership' ? 38 : 16);
+      }).sort(function (a, b) {
+        return Math.hypot(a.position.x - target.x, a.position.y - target.y) - Math.hypot(b.position.x - target.x, b.position.y - target.y);
+      })[0];
+      var selectedIds = world.selectedShipIds.slice();
+      var rest = selectedIds.filter(function (id) { return !fighters.some(function (s) { return s.id === id; }); });
+      var next = rest.length ? issueVisualContextOrder(sim.selectShips(world, rest), target) : sim.cloneWorld(world);
+      next = sim.selectShips(next, selectedIds);
+      return sim.issueDefendOrder(next, guarded ? guarded.position : target, guarded && guarded.id);
     }
     var hasTug = world.ships.some(function (ship) {
       return ship.type === 'tug' && world.selectedShipIds.indexOf(ship.id) !== -1;
@@ -988,9 +1003,11 @@
     var bestDistance = Infinity;
     drones.forEach(function (drone) {
       var distance = Math.hypot(drone.position.x - escort.position.x, drone.position.y - escort.position.y);
-      if (distance <= DEFENDER_RANGE && distance < bestDistance) {
+      var anchor = escort.order && escort.order.kind === 'defend' ? escort.order.anchor : escort.position;
+      var priority = Math.hypot(drone.position.x - anchor.x, drone.position.y - anchor.y);
+      if (distance <= DEFENDER_RANGE && priority < bestDistance) {
         target = drone;
-        bestDistance = distance;
+        bestDistance = priority;
       }
     });
     if (!target) return null;
@@ -1077,12 +1094,26 @@
 
   function paintDefenderCoverage(graphics, world) {
     graphics.clear();
+    var anchors = {};
     world.ships.forEach(function (ship) {
       if (ship.type !== 'escort' || ship.disabled || world.selectedShipIds.indexOf(ship.id) === -1) return;
       graphics.lineStyle(1.25 / world.camera.zoom, 0xf0b7b9, 0.32);
       graphics.beginFill(0xb76c6f, 0.035);
       graphics.drawCircle(ship.position.x, ship.position.y, DEFENDER_RANGE);
       graphics.endFill();
+      if (ship.order.kind === 'defend') {
+        var anchor = ship.order.anchor;
+        var key = anchor.x + ':' + anchor.y + ':' + ship.order.leashRadius;
+        if (!anchors[key]) {
+          anchors[key] = true;
+          graphics.lineStyle(1 / world.camera.zoom, 0x9ed6c8, 0.2);
+          graphics.drawCircle(anchor.x, anchor.y, ship.order.leashRadius);
+          graphics.moveTo(anchor.x - 6 / world.camera.zoom, anchor.y);
+          graphics.lineTo(anchor.x + 6 / world.camera.zoom, anchor.y);
+          graphics.moveTo(anchor.x, anchor.y - 6 / world.camera.zoom);
+          graphics.lineTo(anchor.x, anchor.y + 6 / world.camera.zoom);
+        }
+      }
     });
   }
 
