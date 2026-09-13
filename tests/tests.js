@@ -720,6 +720,7 @@
 
   test('fighters slide at the leash and return after threats leave', function () {
     var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    deployTestFormation(world);
     var s = findShip(world, 'escort-01');
     s.position = { x: sim.FIGHTER_LEASH - 1, y: 0 };
     var startY = s.position.y;
@@ -819,6 +820,7 @@
 
   test('defender kites a closing raider before entering its firing range', function () {
     var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    deployTestFormation(world);
     var s = findShip(world, 'escort-01');
     s.position = { x: 0, y: 0 };
     s.velocity = { x: 80, y: 0 }; // Already approaching: the AI must brake proactively.
@@ -840,6 +842,7 @@
 
   test('defender avoids retreating into a second raider', function () {
     var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    deployTestFormation(world);
     var s = findShip(world, 'escort-01');
     s.position = { x: 0, y: 0 };
     var threats = [{ position: { x: 230, y: 0 } }, { position: { x: -240, y: 0 } }];
@@ -858,6 +861,66 @@
     var fresh = { position: { x: 250, y: 0 }, underFire: 0 };
     var damaged = { position: { x: 265, y: 0 }, underFire: 1 };
     assert(game.stepDefenderWeapon(s, [fresh, damaged], {}, 1 / 30).target === damaged, 'Finish reachable weakened enemies');
+  });
+
+  function deployTestFormation(world) {
+    var s = findShip(world, 'escort-01');
+    var formation = world.formations[s.order.groupId];
+    formation.position = { x: s.order.anchor.x, y: s.order.anchor.y };
+    formation.relocating = false;
+  }
+
+  test('out-of-leash contact cannot crash the entire simulation', function () {
+    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    deployTestFormation(world);
+    findShip(world, 'escort-01').position = { x: 650, y: 0 };
+    world = sim.issueMoveOrder(sim.selectShips(world, ['miner-01']), { x: -400, y: -90 });
+    var start = findShip(world, 'miner-01').position.x;
+    var threat = { position: { x: 1100, y: 0 } }; // Nearby fighter scan sees it; anchor scan excludes it.
+    for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30, [threat]);
+    assert(world.elapsedSeconds > 0.9 && findShip(world, 'miner-01').position.x < start, 'Clock and unrelated ships must keep moving');
+  });
+
+  test('new formation orders disengage from old combat and reach their destination', function () {
+    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    deployTestFormation(world);
+    findShip(world, 'escort-01').position = { x: 0, y: 0 };
+    var id = findShip(world, 'escort-01').order.groupId;
+    var threat = { position: { x: 270, y: 0 } };
+    world = sim.issueDefendOrder(world, { x: -450, y: 0 });
+    assert(findShip(world, 'escort-01').order.groupId === id, 'Whole-wing orders retain the formation identity');
+    var reached = false;
+    for (var i = 0; i < 300; i += 1) {
+      world = sim.stepWorld(world, 1 / 30, [threat]);
+      if (findShip(world, 'escort-01').position.x < -420) reached = true;
+    }
+    assert(reached, 'Kiting must not pin a retreating formation in its old fight');
+  });
+
+  test('persistent formations close gaps after casualties and reassignment', function () {
+    var world = sim.spawnFighter(sim.spawnFighter(sim.createInitialWorld()));
+    var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
+    world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 500, y: 0 });
+    var id = findShip(world, ids[0]).order.groupId;
+    world = sim.damageFighter(world, ids[3], 1);
+    world = sim.stepWorld(world, 1 / 30);
+    assert(world.formations[id].memberIds.length === 3, 'Disabled member leaves the persistent wing');
+    var offsets = world.formations[id].memberIds.map(function (member) { return findShip(world, member).order.offset; });
+    assert(Math.abs(offsets.reduce(function (sum, p) { return sum + p.x; }, 0)) < 0.001, 'Three survivors form a centered V');
+    world = sim.issueDefendOrder(sim.selectShips(world, [ids[2]]), { x: -800, y: 0 });
+    world = sim.stepWorld(world, 1 / 30);
+    assert(world.formations[id].memberIds.length === 2, 'Reassigned fighter leaves its old wing');
+    var a = findShip(world, ids[0]).order.offset, b = findShip(world, ids[1]).order.offset;
+    assertClose(a.x + b.x, 0); assertClose(a.y + b.y, 0);
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    assert(world.formations[id].memberIds.length === 2, 'Membership survives saves');
+    world = sim.damageFighter(world, ids[1], 1);
+    world = sim.stepWorld(world, 1 / 30);
+    assertClose(findShip(world, ids[0]).order.offset.x, 0);
+    assertClose(findShip(world, ids[0]).order.offset.y, 0);
+    world = sim.damageFighter(world, ids[0], 1);
+    world = sim.stepWorld(world, 1 / 30);
+    assert(!world.formations[id], 'Empty formations are retired');
   });
 
   run();

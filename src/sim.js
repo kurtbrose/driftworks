@@ -122,6 +122,19 @@
       y: center.y + order.offset.y * (1 + looseness * 0.65) + style.y * (1 + looseness * 3) };
   }
 
+  function assignFormationSlots(members, formation, shipId) {
+    var shapes = { 1: [[0, 0]], 2: [[24, -32], [-24, 32]], 3: [[42, 0], [-21, -48], [-21, 48]], 4: [[64, 0], [0, -48], [0, 48], [-64, 0]] };
+    var angle = formation.angle || 0;
+    members.forEach(function (s, i) {
+      var slot = shapes[members.length] ? shapes[members.length][i] : [Math.cos(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16), Math.sin(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16)];
+      if (shipId && members.length === 1) slot = [0, 80];
+      if (shipId) slot = [slot[0] * 1.7, slot[1] * 1.7];
+      s.order.offset = { x: slot[0] * Math.cos(angle) - slot[1] * Math.sin(angle), y: slot[0] * Math.sin(angle) + slot[1] * Math.cos(angle) };
+      s.order.side = i % 2 ? -1 : 1;
+    });
+    formation.memberIds = members.map(function (s) { return s.id; });
+  }
+
   function issueDefendOrder(world, target, shipId) {
     var next = cloneWorld(world);
     var members = next.ships.filter(function (s) {
@@ -129,17 +142,23 @@
     });
     var center = members.reduce(function (p, s) { p.x += s.position.x / members.length; p.y += s.position.y / members.length; return p; }, { x: 0, y: 0 });
     var angle = Math.atan2(target.y - center.y, target.x - center.x);
-    var groupId = next.ships.reduce(function (id, s) { return Math.max(id, s.order.groupId || 0); }, 0) + 1;
-    var shapes = { 1: [[0, 0]], 2: [[24, -32], [-24, 32]], 3: [[42, 0], [-21, -48], [-21, 48]], 4: [[64, 0], [0, -48], [0, 48], [-64, 0]] };
+    if (!members.length) return next;
+    next.formations = next.formations || {};
+    var oldId = members[0].order.groupId;
+    var oldMembers = next.ships.filter(function (s) { return !s.disabled && s.order.kind === 'defend' && s.order.groupId === oldId; });
+    var reuse = oldId && oldMembers.length === members.length && members.every(function (s) { return s.order.groupId === oldId; });
+    var groupId = reuse ? oldId : Math.max(next.nextFormationId || 1, next.ships.reduce(function (id, s) { return Math.max(id, (s.order.groupId || 0) + 1); }, 1));
+    next.nextFormationId = Math.max(next.nextFormationId || 1, groupId + 1);
+    var formation = { position: clonePlain(center), velocity: { x: 0, y: 0 }, angle: angle, relocating: true };
+    next.formations[groupId] = formation;
     members.forEach(function (s, i) {
-      var slot = shapes[members.length] ? shapes[members.length][i] : [Math.cos(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16), Math.sin(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16)];
-      if (shipId && members.length === 1) slot = [0, 80];
-      if (shipId) slot = [slot[0] * 1.7, slot[1] * 1.7];
       s.order = { kind: 'defend', anchor: clonePlain(target), anchorShipId: shipId || null,
-        groupId: groupId, formation: { position: clonePlain(center), velocity: { x: 0, y: 0 } },
+        groupId: groupId,
         leashRadius: FIGHTER_LEASH, side: i % 2 ? -1 : 1,
-        offset: { x: slot[0] * Math.cos(angle) - slot[1] * Math.sin(angle), y: slot[0] * Math.sin(angle) + slot[1] * Math.cos(angle) }, target: clonePlain(target) };
+        target: clonePlain(target) };
     });
+    assignFormationSlots(members, formation, shipId);
+    members.forEach(function (s) { s.order.formation = clonePlain(formation); });
     return next;
   }
 
@@ -166,32 +185,21 @@
     var tolerance = SLOT_TOLERANCE + looseness * 24;
     var target = occupiedSlot(order, center, style, looseness);
     var nominal = target;
-    var threat = threats.filter(function (t) { return distance(t.position, anchor) <= radius + FIGHTER_RANGE; }).sort(function (a, b) {
-      return distance(a.position, anchor) - distance(b.position, anchor);
-    })[0];
-    var fighting = threat && distance(ship.position, anchor) <= radius && (!formation || distance(center, anchor) < 80 || distance(ship.position, threat.position) < FIGHTER_RANGE);
-    var tacticalVelocity = distance(ship.position, anchor) <= radius ? combatVelocity(ship, threats, anchor, radius, style, nominal, world.ships) : null;
-    if (tacticalVelocity) fighting = true;
-    if (fighting) {
-      var dx = ship.position.x - threat.position.x, dy = ship.position.y - threat.position.y;
-      var gap = Math.hypot(dx, dy);
-      var ux = gap > 0.001 ? dx / gap : 1, uy = gap > 0.001 ? dy / gap : 0;
-      var radial = gap < FIGHTER_RANGE * 0.72 ? 110 : gap > FIGHTER_RANGE * 0.9 ? -110 : 0;
-      target = { x: ship.position.x + ux * radial - uy * 55 * order.side, y: ship.position.y + uy * radial + ux * 55 * order.side };
-      // A broad preference for the slot, subordinate to range management and the leash.
-      var slotGap = distance(ship.position, nominal);
-      var pull = slotGap > 100 ? Math.min(25, (slotGap - 100) * 0.15) / slotGap : 0;
-      target.x += (nominal.x - ship.position.x) * pull;
-      target.y += (nominal.y - ship.position.y) * pull;
-      world.ships.forEach(function (other) {
-        if (other.id === ship.id || other.type !== 'escort' || other.disabled) return;
-        var d = distance(ship.position, other.position);
-        var spacing = 45 + looseness * 35;
-        if (d < spacing && d > 0.001) {
-          target.x += (ship.position.x - other.position.x) / d * (spacing - d);
-          target.y += (ship.position.y - other.position.y) / d * (spacing - d);
-        }
-      });
+    var eligible = threats.filter(function (t) { return distance(t.position, anchor) <= radius + FIGHTER_RANGE; });
+    var relocating = formation && formation.relocating;
+    // New player destinations take priority over voluntarily staying in a fight.
+    var tacticalVelocity = !relocating && distance(ship.position, anchor) <= radius ?
+      combatVelocity(ship, eligible, anchor, radius, style, nominal, world.ships) : null;
+    var fighting = !!tacticalVelocity;
+    if (!relocating && !fighting && eligible.length && distance(ship.position, anchor) <= radius) {
+      var threat = eligible.slice().sort(function (a, b) { return distance(a.position, ship.position) - distance(b.position, ship.position); })[0];
+      var gap = distance(ship.position, threat.position);
+      // Intercept distant threats without driving all the way into their position.
+      if (gap > FIGHTER_RANGE) {
+        target = { x: threat.position.x + (ship.position.x - threat.position.x) / gap * 260,
+          y: threat.position.y + (ship.position.y - threat.position.y) / gap * 260 };
+        fighting = true;
+      }
     }
     var tx = target.x - anchor.x, ty = target.y - anchor.y, length = Math.hypot(tx, ty);
     if (length > radius && (fighting || !formation || distance(center, anchor) < radius - 400)) target = { x: anchor.x + tx / length * radius, y: anchor.y + ty / length * radius };
@@ -220,16 +228,23 @@
   }
 
   function stepFormations(world, dt, threats) {
+    world.formations = world.formations || {};
     var groups = {};
     world.ships.forEach(function (s) {
       if (s.disabled || s.order.kind !== 'defend' || !s.order.formation) return;
       (groups[s.order.groupId] || (groups[s.order.groupId] = [])).push(s);
     });
+    Object.keys(world.formations).forEach(function (id) { if (!groups[id]) delete world.formations[id]; });
     Object.keys(groups).forEach(function (id) {
       var members = groups[id], order = members[0].order;
       var guarded = world.ships.filter(function (s) { return s.id === order.anchorShipId; })[0];
       var anchor = guarded ? guarded.position : order.anchor;
-      var formation = clonePlain(order.formation);
+      var formation = clonePlain(world.formations[id] || order.formation);
+      var memberIds = members.map(function (s) { return s.id; });
+      if (!formation.memberIds || formation.memberIds.join('|') !== memberIds.join('|')) {
+        assignFormationSlots(members, formation, order.anchorShipId);
+      }
+      if (distance(formation.position, anchor) < 20) formation.relocating = false;
       var contact = threats.some(function (t) {
         return distance(t.position, anchor) <= order.leashRadius + FIGHTER_RANGE &&
           (distance(formation.position, anchor) < 80 || members.some(function (s) { return distance(s.position, t.position) < FIGHTER_RANGE * 1.25; }));
@@ -252,6 +267,7 @@
       var fraction = change ? Math.min(1, limit / change) : 0;
       formation.velocity.x += dx * fraction; formation.velocity.y += dy * fraction;
       formation.position.x += formation.velocity.x * dt; formation.position.y += formation.velocity.y * dt;
+      world.formations[id] = formation;
       members.forEach(function (s) { s.order.formation = clonePlain(formation); });
     });
   }
@@ -273,6 +289,8 @@
         zoom: 1
       },
       selectedShipIds: [],
+      formations: {},
+      nextFormationId: 1,
       wrecks: [],
       nextWreckId: 1,
       recovery: { salvagedOre: 0, repairedShips: 0 },
@@ -529,6 +547,8 @@
       wrecks: next.wrecks,
       nextWreckId: next.nextWreckId,
       recovery: next.recovery,
+      formations: next.formations,
+      nextFormationId: next.nextFormationId,
       ships: next.ships.map(function (ship) {
         return stepShip(ship, dt, asteroids, mothership, mothershipShip, depot, next, threats || []);
       })
@@ -773,6 +793,8 @@
   function normalizeWorld(world) {
     var initial = createInitialWorld();
     var next = clonePlain(world);
+    next.formations = next.formations || {};
+    next.nextFormationId = next.nextFormationId || 1;
     next.wrecks = next.wrecks || [];
     next.nextWreckId = next.nextWreckId || 1;
     next.recovery = next.recovery || { salvagedOre: 0, repairedShips: 0 };
