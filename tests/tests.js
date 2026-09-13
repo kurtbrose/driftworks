@@ -649,6 +649,33 @@
     assert(JSON.stringify(sim.deserializeWorld(sim.serializeWorld(world))) === JSON.stringify(world));
   });
 
+  test('textured thrusters ramp by ship role and stop on coast or disable', function () {
+    function graphics() {
+      var g = { scale: { x: 1 }, fills: 0 };
+      ['lineStyle', 'moveTo', 'lineTo', 'closePath', 'endFill'].forEach(function (name) { g[name] = function () {}; });
+      g.beginFill = function () { g.fills += 1; };
+      return g;
+    }
+    var ship = { id: 'engine-test', type: 'escort', speed: 100, acceleration: 100,
+      rotation: 0, velocity: { x: 20, y: 0 }, previousVelocity: { x: 0, y: 0 }, order: { kind: 'move' } };
+    var fighter = graphics();
+    var industrial = graphics();
+    game.drawEnginePlume(fighter, ship, 10, 1);
+    game.drawEnginePlume(fighter, ship, 10, 1.1);
+    ship.type = 'miner';
+    game.drawEnginePlume(industrial, ship, 10, 1);
+    game.drawEnginePlume(industrial, ship, 10, 1.1);
+    assert(fighter.engineResponse.levels['main-aft'] > industrial.engineResponse.levels['main-aft'], 'Fighters should ignite faster');
+    assert(fighter.fills === 12, 'Each plume should have three layers and three nodes');
+    ship.velocity.x = 0;
+    game.drawEnginePlume(industrial, ship, 10, 1.2);
+    assert(industrial.engineResponse === null && industrial.fills === 12, 'Coasting should clear exhaust');
+    ship.velocity.x = 20;
+    ship.disabled = true;
+    game.drawEnginePlume(fighter, ship, 10, 1.2);
+    assert(fighter.engineResponse === null && fighter.fills === 12, 'Disabled engines must stop immediately');
+  });
+
   run();
 
   function findShip(world, id) {

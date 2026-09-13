@@ -129,10 +129,11 @@
 
   function createHud(host, actions) {
     host.innerHTML =
-      '<section class="panel brand">' +
-      '<div class="eyebrow">DRIFTWORKS</div>' +
-      '<h1>Tactical Deployment Sandbox</h1>' +
-      '<p>Static prototype: select, move, persist, and stress-test a small industrial fleet.</p>' +
+      '<section class="panel inspector" aria-label="Selected ship close-up">' +
+      '<div class="inspector-heading"><span class="eyebrow">SELECTED CRAFT</span><button type="button" data-action="inspect-next" hidden>Next</button></div>' +
+      '<div class="inspector-view" data-role="portrait"><span data-role="portrait-empty">Select a craft to inspect</span></div>' +
+      '<div class="inspector-name" data-role="portrait-name">No selection</div>' +
+      '<div class="inspector-status" data-role="portrait-status">Live close-up</div>' +
       '</section>' +
       '<section class="panel readout">' +
       '<div class="row"><span>Location</span><strong data-role="location"></strong></div>' +
@@ -158,6 +159,20 @@
       '</section>' +
       '<section class="hint">LMB select/drag-box · RMB move · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
 
+    var portrait = new PIXI.Application({ width: 240, height: 142, backgroundAlpha: 0,
+      antialias: true, autoDensity: true, resolution: Math.min(global.devicePixelRatio || 1, 2), autoStart: false });
+    host.querySelector('[data-role="portrait"]').appendChild(portrait.view);
+    portrait.view.setAttribute('aria-hidden', 'true');
+    var portraitShip = new PIXI.Graphics();
+    portraitShip.inspector = true;
+    portrait.stage.addChild(portraitShip);
+    var inspectedId = null;
+    var inspectionShips = [];
+    var nextButton = host.querySelector('[data-action="inspect-next"]');
+    nextButton.addEventListener('click', function () {
+      var index = inspectionShips.findIndex(function (ship) { return ship.id === inspectedId; });
+      if (inspectionShips.length) inspectedId = inspectionShips[(index + 1) % inspectionShips.length].id;
+    });
     var stressButton = host.querySelector('[data-action="stress"]');
     var sfxButton = host.querySelector('[data-action="sfx"]');
     var musicButton = host.querySelector('[data-action="music"]');
@@ -170,6 +185,26 @@
 
     return {
       update: function (world, stats) {
+        inspectionShips = world.ships.filter(function (ship) { return world.selectedShipIds.indexOf(ship.id) !== -1; });
+        var inspected = inspectionShips.find(function (ship) { return ship.id === inspectedId; }) || inspectionShips[0];
+        if (portraitShip.shipId !== (inspected && inspected.id)) portraitShip.engineResponse = null;
+        inspectedId = inspected ? inspected.id : null;
+        portraitShip.shipId = inspectedId;
+        portraitShip.visible = !!inspected;
+        nextButton.hidden = inspectionShips.length < 2;
+        host.querySelector('[data-role="portrait-empty"]').hidden = !!inspected;
+        host.querySelector('[data-role="portrait-name"]').textContent = inspected ? inspected.name : 'No selection';
+        host.querySelector('[data-role="portrait-status"]').textContent = inspected ?
+          (inspected.repairRemaining ? 'Repairing' : inspected.disabled ? 'Disabled' : inspected.launchElapsed != null ? 'Launching' :
+            inspected.order.phase === 'landed' ? 'Mining' : inspected.order.kind) +
+          (inspectionShips.length > 1 ? ' · ' + (inspectionShips.indexOf(inspected) + 1) + ' / ' + inspectionShips.length + ' selected' : '') : 'Live close-up';
+        if (inspected) {
+          // Stable hull-local view keeps engine detail readable through turns and camera zoom.
+          portraitShip.scale.set(inspected.type === 'mothership' ? 1.65 : 2.45);
+          portraitShip.position.set(128, 66);
+          paintShip(portraitShip, inspected, false, world.elapsedSeconds);
+        }
+        portrait.renderer.render(portrait.stage);
         var audioStatus = audio ? audio.status() : { sfx: false, music: false, available: false };
         host.querySelector('[data-role="location"]').textContent = world.campaign.location;
         host.querySelector('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
@@ -1126,7 +1161,7 @@
     var style = SHIP_STYLES[ship.type];
     graphics.clear();
     graphics.alpha = ship.disabled && ship.launchElapsed == null ? 0.45 : 1;
-    if (!ship.disabled) drawEnginePlume(graphics, ship, style.radius);
+    drawEnginePlume(graphics, ship, style.radius, elapsedSeconds);
     drawMiningPlume(graphics, ship, style.radius, elapsedSeconds);
     if (ship.type === 'mothership') {
       paintMothership(graphics, selected, elapsedSeconds);
@@ -1341,22 +1376,65 @@
     });
   }
 
-  function drawEnginePlume(graphics, ship, radius) {
-    if (!ship.previousVelocity || ship.speed <= 0 || ship.order.phase === 'landed') return;
+  function drawEnginePlume(graphics, ship, radius, elapsedSeconds) {
+    if (ship.disabled || !ship.previousVelocity || ship.speed <= 0 || ship.order.phase === 'landed') {
+      graphics.engineResponse = null;
+      return;
+    }
     var ax = ship.velocity.x - ship.previousVelocity.x;
     var ay = ship.velocity.y - ship.previousVelocity.y;
     var plumes = enginePlumeGeometry(ax, ay, ship.rotation, ship.acceleration, radius, ship.order.kind === 'return' && ship.cargo > 0, ship.type);
-    if (!plumes.length) return;
+    if (!plumes.length) {
+      graphics.engineResponse = null;
+      return;
+    }
 
+    var fighter = ship.type === 'escort';
+    var time = elapsedSeconds || 0;
+    var response = graphics.engineResponse;
+    if (!response || time < response.time) response = { time: time, levels: {} };
+    var dt = Math.max(0, Math.min(0.1, time - response.time));
+    var levels = {};
+    var seed = 0;
+    for (var i = 0; i < ship.id.length; i += 1) seed = (seed * 31 + ship.id.charCodeAt(i)) >>> 0;
     graphics.lineStyle(0);
-    plumes.forEach(function (plume) {
-      graphics.beginFill(0x9fdceb, plume.alpha);
-      graphics.moveTo(plume.origin.x + plume.side.x * plume.width, plume.origin.y + plume.side.y * plume.width);
-      graphics.lineTo(plume.origin.x + plume.direction.x * plume.length, plume.origin.y + plume.direction.y * plume.length);
-      graphics.lineTo(plume.origin.x - plume.side.x * plume.width, plume.origin.y - plume.side.y * plume.width);
-      graphics.closePath();
-      graphics.endFill();
+    plumes.forEach(function (plume, index) {
+      var previous = response.levels[plume.id];
+      var level = previous == null ? 0.55 : previous;
+      level += (1 - level) * (1 - Math.exp(-dt / (fighter ? 0.035 : 0.22)));
+      levels[plume.id] = level;
+      var phase = time * (fighter ? 24 : 7) + seed % 997 + index * 2.4;
+      var pulse = Math.sin(phase) * 0.65 + Math.sin(phase * 1.73) * 0.35;
+      var length = plume.length * (0.65 + level * 0.35) * (1 + pulse * (fighter ? 0.075 : 0.025));
+      var alpha = plume.alpha * (0.7 + level * 0.3);
+      drawPlumeDiamond(graphics, plume, 0, length * 0.16, length, plume.width, 0x73c9c1, alpha * 0.48);
+      drawPlumeDiamond(graphics, plume, 0, length * 0.1, length * 0.84, plume.width * 0.48, 0x9fe9df, alpha * 0.72);
+      drawPlumeDiamond(graphics, plume, 0, length * 0.06, length * 0.67, plume.width * 0.16, 0xe5fff3, alpha * 1.35);
+      // Tiny distant exhaust keeps its silhouette without subpixel bands.
+      if (length * Math.abs(graphics.scale.x) >= 10) {
+        for (var node = 0; node < 3; node += 1) {
+          var center = length * (0.2 + node * 0.2 + pulse * 0.008);
+          var halfLength = length * (0.065 - node * 0.01);
+          drawPlumeDiamond(graphics, plume, center - halfLength, center, center + halfLength,
+            plume.width * (0.3 - node * 0.065), 0xeafff4, alpha * (1.3 - node * 0.23));
+        }
+      }
     });
+    graphics.engineResponse = { time: time, levels: levels };
+  }
+
+  function drawPlumeDiamond(graphics, plume, start, center, end, width, color, alpha) {
+    var x = plume.origin.x;
+    var y = plume.origin.y;
+    var dx = plume.direction.x;
+    var dy = plume.direction.y;
+    graphics.beginFill(color, Math.min(1, alpha));
+    graphics.moveTo(x + dx * start, y + dy * start);
+    graphics.lineTo(x + dx * center + plume.side.x * width, y + dy * center + plume.side.y * width);
+    graphics.lineTo(x + dx * end, y + dy * end);
+    graphics.lineTo(x + dx * center - plume.side.x * width, y + dy * center - plume.side.y * width);
+    graphics.closePath();
+    graphics.endFill();
   }
 
   function enginePlumeGeometry(worldAccelX, worldAccelY, rotation, acceleration, radius, loadedReturn, shipType) {
@@ -1403,6 +1481,7 @@
   }
 
   function drawWorldOrderLine(graphics, ship) {
+    if (graphics.inspector) return;
     var local = worldVectorToShipLocalLine(ship.position, ship.order.target, ship.rotation);
     graphics.moveTo(0, 0);
     graphics.lineTo(local.x / graphics.scale.x, local.y / graphics.scale.y);
@@ -1825,6 +1904,7 @@
     issueVisualContextOrder: issueVisualContextOrder,
     worldVectorToShipLocalLine: worldVectorToShipLocalLine,
     enginePlumeGeometry: enginePlumeGeometry,
+    drawEnginePlume: drawEnginePlume,
     screenToWorld: screenToWorld,
     worldToScreen: worldToScreen,
     viewportFromApp: viewportFromApp,

@@ -18,7 +18,8 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - Utility haulers can retrieve persistent drone wrecks for salvage and carry disabled fighters home for repair.
 - HUD ore quota, depot progress, construction section stock, and remaining asteroid ore readouts.
 - Subtle parallax starfield below the grid.
-- Acceleration-driven engine plumes, mining motes, and delivery feedback text.
+- Acceleration-driven engine plumes with translucent envelopes, bright cores, and animated internal nodes. Fighters ignite sharply; industrial engines build more steadily. Fine plume detail drops out at distance.
+- Mining motes and delivery feedback text.
 - Move-order reticles, selection pulses, mothership running lights, and focus-selection camera key with visible focus feedback.
 - Debug hostile-raider vignette with industrial target selection, escort range coverage, laser dwell, impacts, destruction fragments, very light final-hit shake, and final-kill slow motion.
 - Simple threat director that warns, then sends raiders once mining/construction activity exposes the operation.
