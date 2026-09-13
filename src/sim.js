@@ -125,12 +125,26 @@
   function assignFormationSlots(members, formation, shipId) {
     var shapes = { 1: [[0, 0]], 2: [[24, -32], [-24, 32]], 3: [[42, 0], [-21, -48], [-21, 48]], 4: [[64, 0], [0, -48], [0, 48], [-64, 0]] };
     var angle = formation.angle || 0;
-    members.forEach(function (s, i) {
+    var slots = members.map(function (s, i) {
       var slot = shapes[members.length] ? shapes[members.length][i] : [Math.cos(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16), Math.sin(i * Math.PI * 2 / members.length) * Math.min(220, members.length * 16)];
       if (shipId && members.length === 1) slot = [0, 80];
       if (shipId) slot = [slot[0] * 1.7, slot[1] * 1.7];
-      s.order.offset = { x: slot[0] * Math.cos(angle) - slot[1] * Math.sin(angle), y: slot[0] * Math.sin(angle) + slot[1] * Math.cos(angle) };
-      s.order.side = i % 2 ? -1 : 1;
+      return { x: slot[0] * Math.cos(angle) - slot[1] * Math.sin(angle), y: slot[0] * Math.sin(angle) + slot[1] * Math.cos(angle) };
+    });
+    // Match nearby occupants once when the shape changes, not on every frame.
+    var choices = [];
+    members.forEach(function (ship, member) {
+      slots.forEach(function (slot, index) {
+        choices.push({ member: member, slot: index, cost: distance(ship.position, { x: formation.position.x + slot.x, y: formation.position.y + slot.y }) });
+      });
+    });
+    choices.sort(function (a, b) { return a.cost - b.cost || a.member - b.member || a.slot - b.slot; });
+    var usedMembers = {}, usedSlots = {};
+    choices.forEach(function (choice) {
+      if (usedMembers[choice.member] || usedSlots[choice.slot]) return;
+      usedMembers[choice.member] = true; usedSlots[choice.slot] = true;
+      members[choice.member].order.offset = slots[choice.slot];
+      members[choice.member].order.side = choice.slot % 2 ? -1 : 1;
     });
     formation.memberIds = members.map(function (s) { return s.id; });
   }
@@ -149,7 +163,11 @@
     var reuse = oldId && oldMembers.length === members.length && members.every(function (s) { return s.order.groupId === oldId; });
     var groupId = reuse ? oldId : Math.max(next.nextFormationId || 1, next.ships.reduce(function (id, s) { return Math.max(id, (s.order.groupId || 0) + 1); }, 1));
     next.nextFormationId = Math.max(next.nextFormationId || 1, groupId + 1);
-    var formation = { position: clonePlain(center), velocity: { x: 0, y: 0 }, angle: angle, relocating: true };
+    var prior = reuse && (next.formations[oldId] || members[0].order.formation);
+    var formation = prior ? clonePlain(prior) : { position: clonePlain(center), velocity: { x: 0, y: 0 }, angle: angle };
+    formation.pivoting = Math.hypot(formation.velocity.x, formation.velocity.y) < 15 || Math.abs(angleDelta(formation.angle, angle)) > Math.PI / 3;
+    formation.directTravel = false;
+    formation.relocating = true;
     next.formations[groupId] = formation;
     members.forEach(function (s, i) {
       s.order = { kind: 'defend', anchor: clonePlain(target), anchorShipId: shipId || null,
@@ -206,10 +224,13 @@
     order.target = target;
     var before = distance(ship.position, anchor);
     var error = distance(target, ship.position);
-    var correction = error > tolerance ? (error - tolerance) / error * 1.5 : 0;
+    var moving = formation && Math.hypot(formation.velocity.x, formation.velocity.y) > 15 && error < 35;
+    var correction = error > tolerance ? Math.min((error - tolerance) * (moving ? 0.65 : 1.5), moving ? ship.speed * 0.22 : ship.speed) / error : 0;
+    var omega = formation ? formation.angularVelocity || 0 : 0;
+    var rx = target.x - center.x, ry = target.y - center.y;
     var velocity = formation && !fighting ? {
-      x: formation.velocity.x + (target.x - ship.position.x) * correction,
-      y: formation.velocity.y + (target.y - ship.position.y) * correction
+      x: formation.velocity.x - omega * ry + (target.x - ship.position.x) * correction,
+      y: formation.velocity.y + omega * rx + (target.y - ship.position.y) * correction
     } : null;
     if (tacticalVelocity) {
       velocity = tacticalVelocity;
@@ -250,22 +271,56 @@
           (distance(formation.position, anchor) < 80 || members.some(function (s) { return distance(s.position, t.position) < FIGHTER_RANGE * 1.25; }));
       });
       formation.looseness = (formation.looseness || 0) + ((contact ? 1 : 0) - (formation.looseness || 0)) * (1 - Math.exp(-dt / 2));
-      var error = 0, speed = Infinity, acceleration = Infinity;
+      var error = 0, speed = Infinity, acceleration = Infinity, extent = 1;
       members.forEach(function (s) {
         var style = fighterStyle(s);
         error = Math.max(error, Math.max(0, distance(s.position, occupiedSlot(s.order, formation.position, style, formation.looseness)) - SLOT_TOLERANCE - formation.looseness * 24));
         speed = Math.min(speed, s.speed * style.speed);
         acceleration = Math.min(acceleration, s.acceleration * style.acceleration);
+        extent = Math.max(extent, Math.hypot(s.order.offset.x, s.order.offset.y) * (1 + formation.looseness * 0.65));
       });
       // Reserve catch-up speed and ease to a halt when any wingmate loses its slot.
-      var cohesion = Math.max(0, Math.min(1, (85 - error) / 60));
+      var cohesion = Math.max(error < 120 ? 0.35 : 0, Math.min(1, (85 - error) / 60));
       var gap = distance(formation.position, anchor);
+      var oldAngle = formation.angle || 0;
+      var turn = gap > 35 ? angleDelta(oldAngle, Math.atan2(anchor.y - formation.position.y, anchor.x - formation.position.x)) : 0;
+      if (Math.abs(turn) > Math.PI / 3) formation.pivoting = true;
+      var pivoting = formation.pivoting;
+      // Leave headroom for the outside of the wheel instead of forcing those ships to cut across it.
+      var turnLimit = Math.min(0.65, speed * 0.25 / extent);
+      var desiredTurn = Math.max(-turnLimit, Math.min(turnLimit, turn * 1.2));
+      var angularVelocity = formation.angularVelocity || 0;
+      angularVelocity += Math.max(-0.7 * dt, Math.min(0.7 * dt, desiredTurn - angularVelocity));
+      var rotation = pivoting ? (gap > 1 ? angleDelta(oldAngle, Math.atan2(anchor.y - formation.position.y, anchor.x - formation.position.x)) : 0) : angularVelocity * dt;
+      formation.angle = oldAngle + rotation;
+      formation.angularVelocity = pivoting ? 0 : angularVelocity;
+      if (pivoting) {
+        assignFormationSlots(members, formation, order.anchorShipId);
+        formation.pivoting = false;
+        formation.directTravel = true;
+      } else {
+        members.forEach(function (s) {
+          var offset = s.order.offset;
+          s.order.offset = { x: offset.x * Math.cos(rotation) - offset.y * Math.sin(rotation), y: offset.x * Math.sin(rotation) + offset.y * Math.cos(rotation) };
+        });
+      }
       var cruise = Math.min(speed * 0.72 * cohesion, Math.sqrt(2 * acceleration * 0.5 * gap), gap * 2);
-      var desired = { x: gap ? (anchor.x - formation.position.x) / gap * cruise : 0, y: gap ? (anchor.y - formation.position.y) / gap * cruise : 0 };
-      var dx = desired.x - formation.velocity.x, dy = desired.y - formation.velocity.y;
-      var change = Math.hypot(dx, dy), limit = acceleration * 0.5 * dt;
-      var fraction = change ? Math.min(1, limit / change) : 0;
-      formation.velocity.x += dx * fraction; formation.velocity.y += dy * fraction;
+      // Tight turns slow the center moderately, while keeping forward motion through the arc.
+      cruise *= 1 - Math.min(1, Math.abs(turn) / Math.PI) * 0.35;
+      var currentSpeed = Math.hypot(formation.velocity.x, formation.velocity.y);
+      currentSpeed += Math.max(-acceleration * 0.35 * dt, Math.min(acceleration * 0.35 * dt, cruise - currentSpeed));
+      if (formation.directTravel) {
+        var desired = { x: gap ? (anchor.x - formation.position.x) / gap * cruise : 0, y: gap ? (anchor.y - formation.position.y) / gap * cruise : 0 };
+        var dx = desired.x - formation.velocity.x, dy = desired.y - formation.velocity.y;
+        var change = Math.hypot(dx, dy);
+        var blend = change ? Math.min(1, acceleration * 0.35 * dt / change) : 0;
+        formation.velocity.x += dx * blend; formation.velocity.y += dy * blend;
+      } else if (gap > 35) {
+        formation.velocity = { x: Math.cos(formation.angle) * currentSpeed, y: Math.sin(formation.angle) * currentSpeed };
+      } else {
+        // Final arrival may brake normally; don't wheel around an almost-reached destination.
+        formation.velocity = { x: gap ? (anchor.x - formation.position.x) / gap * currentSpeed : 0, y: gap ? (anchor.y - formation.position.y) / gap * currentSpeed : 0 };
+      }
       formation.position.x += formation.velocity.x * dt; formation.position.y += formation.velocity.y * dt;
       world.formations[id] = formation;
       members.forEach(function (s) { s.order.formation = clonePlain(formation); });

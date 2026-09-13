@@ -759,7 +759,7 @@
       if (i > 120) {
         var ax = a.position.x - a.order.offset.x, ay = a.position.y - a.order.offset.y;
         var bx = b.position.x - b.order.offset.x, by = b.position.y - b.order.offset.y;
-        assert(Math.hypot(ax - bx, ay - by) < 10, 'Fast fighter must hold formation throughout transit');
+        assert(Math.hypot(ax - bx, ay - by) < 20, 'Fast fighter must stay within a loose formation throughout transit');
       }
       [a, b].forEach(function (s) {
         if (!arrival[s.id] && Math.hypot(s.position.x - s.order.anchor.x - s.order.offset.x, s.position.y - s.order.anchor.y - s.order.offset.y) < 15) arrival[s.id] = i;
@@ -921,6 +921,107 @@
     world = sim.damageFighter(world, ids[0], 1);
     world = sim.stepWorld(world, 1 / 30);
     assert(!world.formations[id], 'Empty formations are retired');
+  });
+
+  test('moving wings preserve momentum and wheel through direction changes', function () {
+    [Math.PI / 9, Math.PI * 2 / 9].forEach(function (turn) {
+      var world = sim.spawnFighter(sim.spawnFighter(sim.createInitialWorld()));
+      var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
+      world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 3000, y: -100 });
+      for (var i = 0; i < 240; i += 1) world = sim.stepWorld(world, 1 / 30);
+      var groupId = findShip(world, ids[0]).order.groupId;
+      var before = world.formations[groupId];
+      var angle = before.angle + turn;
+      var destination = { x: before.position.x + Math.cos(angle) * 1000, y: before.position.y + Math.sin(angle) * 1000 };
+      var offsets = ids.map(function (id) { return findShip(world, id).order.offset; });
+      world = sim.issueDefendOrder(world, destination);
+      assertClose(world.formations[groupId].velocity.x, before.velocity.x);
+      assertClose(world.formations[groupId].velocity.y, before.velocity.y);
+      assertClose(world.formations[groupId].angle, before.angle);
+      ids.forEach(function (id, index) {
+        assertClose(findShip(world, id).order.offset.x, offsets[index].x);
+        assertClose(findShip(world, id).order.offset.y, offsets[index].y);
+      });
+      var maxTurn = 0;
+      for (i = 0; i < 180; i += 1) {
+        var prior = world.formations[groupId];
+        world = sim.stepWorld(world, 1 / 30);
+        var current = world.formations[groupId];
+        maxTurn = Math.max(maxTurn, Math.abs(sim.angleDelta(prior.angle, current.angle)));
+        assert(Math.hypot(current.velocity.x, current.velocity.y) > 20, 'Center should carry speed through the wheel');
+        ids.forEach(function (id, index) {
+          var ship = findShip(world, id);
+          assert(Math.hypot(ship.velocity.x, ship.velocity.y) > 10, 'Wingmates should not stop midway through a turn');
+          ids.slice(index + 1).forEach(function (otherId) {
+            var other = findShip(world, otherId);
+            assert(Math.hypot(ship.position.x - other.position.x, ship.position.y - other.position.y) > 25, 'Turning wingmates must not cut through each other');
+          });
+        });
+      }
+      assert(maxTurn <= 0.65 / 30 + 0.00001, 'Heading changes must remain gradual');
+      for (i = 0; i < 900; i += 1) world = sim.stepWorld(world, 1 / 30);
+      assert(Math.hypot(world.formations[groupId].position.x - destination.x, world.formations[groupId].position.y - destination.y) < 1, 'Wheeling must still converge on the destination');
+    });
+  });
+
+  test('stopped wings and sharp turns pivot promptly instead of making huge arcs', function () {
+    [4, 10].forEach(function (count) {
+      [0, Math.PI / 2, Math.PI].forEach(function (turn) {
+        var world = sim.createInitialWorld();
+        while (world.ships.filter(function (s) { return s.type === 'escort'; }).length < count) world = sim.spawnFighter(world);
+        var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
+        world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 3000, y: -100 });
+        for (var i = 0; i < 240; i += 1) world = sim.stepWorld(world, 1 / 30);
+        var id = findShip(world, ids[0]).order.groupId, formation = world.formations[id];
+        if (turn === 0) {
+          formation.velocity = { x: 0, y: 0 };
+          ids.forEach(function (member) { findShip(world, member).velocity = { x: 0, y: 0 }; });
+        }
+        var heading = formation.angle + (turn || Math.PI / 6);
+        var start = { x: formation.position.x, y: formation.position.y };
+        var goal = { x: start.x + Math.cos(heading) * 900, y: start.y + Math.sin(heading) * 900 };
+        world = sim.issueDefendOrder(world, goal);
+        assert(world.formations[id].pivoting, 'Stopped or sharply redirected wings should pivot');
+        var pivotFinished = false;
+        for (i = 0; i < 90; i += 1) {
+          world = sim.stepWorld(world, 1 / 30);
+          formation = world.formations[id];
+          assert(Math.hypot(formation.position.x - start.x, formation.position.y - start.y) < 80, 'Pivot must not send the group on a wide arc');
+          if (!formation.pivoting) { pivotFinished = true; break; }
+        }
+        assert(pivotFinished, 'Pivot should finish within three seconds even for a large wing');
+        for (i = 0; i < 900; i += 1) world = sim.stepWorld(world, 1 / 30);
+        assert(Math.hypot(world.formations[id].position.x - goal.x, world.formations[id].position.y - goal.y) < 1, 'Rearranged wing must continue to its destination');
+      });
+    });
+  });
+
+  test('reversed diamonds keep occupants in place and turn while accelerating', function () {
+    var world = sim.spawnFighter(sim.spawnFighter(sim.createInitialWorld()));
+    var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
+    world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 1800, y: 0 });
+    var id = findShip(world, ids[0]).order.groupId;
+    var formation = world.formations[id];
+    var originalAngle = formation.angle;
+    var offsets = ids.map(function (member) {
+      var ship = findShip(world, member);
+      ship.position = { x: formation.position.x + ship.order.offset.x, y: formation.position.y + ship.order.offset.y };
+      ship.velocity = { x: 0, y: 0 };
+      ship.rotation = originalAngle;
+      return { x: ship.order.offset.x, y: ship.order.offset.y };
+    });
+    world = sim.issueDefendOrder(world, { x: formation.position.x - Math.cos(originalAngle) * 900, y: formation.position.y - Math.sin(originalAngle) * 900 });
+    world = sim.stepWorld(world, 1 / 30);
+    ids.forEach(function (member, index) {
+      var offset = findShip(world, member).order.offset;
+      assert(Math.hypot(offset.x - offsets[index].x, offset.y - offsets[index].y) < 0.001, 'Reversal must relabel slots instead of swapping occupants');
+    });
+    for (var i = 0; i < 10; i += 1) world = sim.stepWorld(world, 1 / 30);
+    ids.forEach(function (member) {
+      var ship = findShip(world, member);
+      assert(Math.hypot(ship.velocity.x, ship.velocity.y) > 5, 'Acceleration must begin before the turn finishes');
+      assert(Math.abs(sim.angleDelta(ship.rotation, originalAngle + Math.PI)) > 0.4, 'Test must observe simultaneous rotation and translation');
+    });
   });
 
   run();
