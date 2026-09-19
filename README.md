@@ -5,13 +5,13 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 ## What Works Now
 
 - Full-window PixiJS tactical scene using vendored runtime code.
-- Geometric placeholder mothership, miners, tug, and two escort craft.
+- Geometric mothership, two cargo carriers with mining platforms, tug, and two escort craft.
 - Single-click selection and drag-box multi-selection.
 - Right-click move orders with fixed-step simulation and interpolated rendering.
 - One large asteroid occupies the tactical environment, with a slow, randomly clockwise or counterclockwise spin.
-- Right-click its surface with selected miners: they choose a site, match surface motion, land, and rotate with the body while extracting ore.
+- Right-click its surface with selected cargo carriers: they match a rotating site, deploy their platforms, and return home. Platforms remain attached and extract ore.
 - The asteroid retains its physical size as ore is depleted; older multi-asteroid saves merge remaining ore into one large body.
-- Miners automatically return full cargo to the mothership and deposit it into storage.
+- Platforms send ballistic ore packets every four tactical seconds. The mothership catches packets inside its 32 m/s relative-speed envelope.
 - Mothership processes delivered ore into 1,500t depot sections.
 - Canonical physical sizes, masses and thrust drive loaded acceleration and braking. See [physical units](PHYSICAL_UNITS.md) for calibration, conversions and save migration.
 - Tug can carry fabricated depot sections from the mothership to the depot site.
@@ -19,7 +19,7 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - HUD ore quota, depot progress, construction section stock, and remaining asteroid ore readouts.
 - Subtle parallax starfield below the grid.
 - Acceleration-driven engine plumes with translucent envelopes, bright cores, and animated internal nodes. Fighters ignite sharply; industrial engines build more steadily. Fine plume detail drops out at distance.
-- Mining motes and delivery feedback text.
+- Visible mining platforms, travelling ore packets, and delivery feedback text.
 - Move-order reticles, selection pulses, mothership running lights, and focus-selection camera key with visible focus feedback.
 - Debug hostile-raider vignette with industrial target selection, escort range coverage, laser dwell, impacts, destruction fragments, very light final-hit shake, and final-kill slow motion.
 - Simple threat director that warns, then sends raiders once mining/construction activity exposes the operation.
@@ -29,11 +29,23 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - Toggleable stress mode that animates thousands of simple sprites.
 - DOM HUD with selected ships, simulation time, entity count, and measured FPS.
 - Prominent in-game mission clock with inline units (00h 00m 00s) and Pause, 1×, 2×, and 4× controls. Simulation, combat, and effects follow the selected speed; camera and selection remain usable while paused. Saves retain elapsed mission time; playback speed is session-only.
-- Browser-native simulation tests at `./tests/`.
+- Browser-native simulation tests at `./tests/`; the same suite runs headlessly with `node tests/run.cjs` (optional, no dependencies).
+
+## Propellant, launchers, and mining platforms
+
+- Mobile craft carry propellant mass. Acceleration uses current wet mass; engine velocity changes consume fuel using the rocket equation. Loaded ships have less remaining Δv. Empty ships coast.
+- The fleet panel shows remaining Δv in m/s and lets you select docked craft. Selection details include fuel tonnes. The initial fleet is staged outside the mothership; right-click home to dock it.
+- Right-click the mothership to return, including with fighters selected. Low-fuel craft automatically leave their current assignment when they reach a conservative return reserve. Return guidance allows a nonzero intercept velocity.
+- The mothership catches craft within 44 world units and at up to 32 m/s relative velocity. Docking refills tanks immediately; a subsequent outbound order receives a free launcher impulse up to the same 32 m/s. Launcher speed also respects the work-zone guidance speed and nearby stopping distance.
+- Select Carrier One or Carrier Two and right-click the asteroid to deploy its platform. Each carrier holds one reusable platform. Platforms launch ore packets; carriers do not shuttle extracted ore.
+- Right-click a deployed platform with an empty carrier to retrieve it early. **End mining & recover** stops extraction and assigns available carriers to collect all platforms. Buffered ore comes home with the platform; packets already in flight continue. Mining becomes complete only after every platform is aboard a docked carrier and no packets remain.
+- Old saves convert miners into carriers with one platform each, retaining existing ore and other progress. Active old mining orders reset to idle. Fuel, platforms, packets and recovery progress persist.
+
+Tuning is intentionally provisional: engines use a 3,000 m/s effective exhaust velocity; tank capacities are 12 t for fighters, 180 t for carriers and 450 t for the tug. Propellant supply at the mothership is currently unlimited. The launcher/catcher is a gameplay abstraction: mothership recoil, stored launcher energy, structural load limits, gravity and orbital motion remain outside this slice. Propulsion math is isolated in src/propulsion.js; orders and platform lifecycle live in src/sim.js.
 
 ## No Build Pipeline
 
-There is intentionally no Node, npm, package manager, TypeScript, Vite, bundler, transpiler, lockfile, or generated build output. The repository itself is the deployable static artifact.
+There is intentionally no required Node runtime, npm, package manager, TypeScript, Vite, bundler, transpiler, lockfile, or generated build output. The repository itself is the deployable static artifact.
 
 ## Run Locally
 

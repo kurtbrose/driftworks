@@ -2,6 +2,9 @@
   'use strict';
 
   var Driftworks = (global.Driftworks = global.Driftworks || {});
+  var propulsion = Driftworks.propulsion;
+  var VELOCITY_TO_MPS = 10000 / 600 / 60;
+  var PLATFORM_MASS_KG = 100000;
   var WORLD_VERSION = 1;
   var SAVE_KEY = 'driftworks.save.v1';
   // Precision arrival avoids a visible jump at inspection zoom (32x).
@@ -16,7 +19,7 @@
   var MASS_MIGRATION = 1500 / 80;
   var HULLS = {
     escort: { lengthM: 20, dryMassKg: 75000, thrustN: 73549.875 },
-    miner: { lengthM: 40, dryMassKg: 500000, thrustN: 196133 },
+    cargo: { lengthM: 40, dryMassKg: 500000, thrustN: 196133 },
     tug: { lengthM: 80, dryMassKg: 3000000, thrustN: 588399 },
     mothership: { lengthM: 1000, dryMassKg: 3000000000, thrustN: 2941995 }
   };
@@ -24,8 +27,8 @@
   function physicalStats(world, ship) {
     var hull = ship.physical || HULLS[ship.type];
     var payload = recoveryTarget(world, ship.towTarget);
-    var payloadKg = payload ? (payload.physical ? payload.physical.dryMassKg + (payload.cargo || 0) * 1000 : payload.massKg || 75000) : 0;
-    var massKg = hull.dryMassKg + (ship.cargo || 0) * 1000 +
+    var payloadKg = payload ? (payload.physical ? payload.physical.dryMassKg + (payload.propulsion ? payload.propulsion.fuelKg : 0) + (payload.cargo || 0) * 1000 : payload.massKg || 75000) : 0;
+    var massKg = hull.dryMassKg + (ship.propulsion ? ship.propulsion.fuelKg : 0) + (ship.platformId ? PLATFORM_MASS_KG : 0) + (ship.cargo || 0) * 1000 +
       (ship.carryingSection ? DEPOT_SECTION_MASS * 1000 : 0) + payloadKg;
     if (ship.type === 'mothership' && world.mothership) {
       var storage = world.mothership.storage;
@@ -237,14 +240,6 @@
       order.target = { x: ship.position.x + velocity.x, y: ship.position.y + velocity.y };
     }
     stepTowardOrderTarget(ship, dt, ARRIVAL_DISTANCE, false, velocity, style);
-    // Remove outward momentum at the boundary; distant new orders still travel normally.
-    var after = distance(ship.position, anchor);
-    if (before <= radius && after > radius) {
-      var nx = (ship.position.x - anchor.x) / after, ny = (ship.position.y - anchor.y) / after;
-      ship.position = { x: anchor.x + nx * radius, y: anchor.y + ny * radius };
-      var outward = Math.max(0, ship.velocity.x * nx + ship.velocity.y * ny);
-      ship.velocity.x -= outward * nx; ship.velocity.y -= outward * ny;
-    }
     return ship;
   }
 
@@ -346,6 +341,11 @@
       selectedShipIds: [],
       formations: {},
       nextFormationId: 1,
+      logisticsVersion: 1,
+      miningMission: 'active',
+      platforms: [createPlatform('platform-01', 'miner-01'), createPlatform('platform-02', 'miner-02')],
+      packets: [],
+      nextPacketId: 1,
       wrecks: [],
       nextWreckId: 1,
       recovery: { salvagedOre: 0, repairedShips: 0 },
@@ -373,8 +373,8 @@
       ],
       ships: [
         createShip('msv-hardshell', 'MSV Hardshell', 'mothership', 0, 0, 0),
-        createShip('miner-01', 'Prospector One', 'miner', -180, -90, 82),
-        createShip('miner-02', 'Prospector Two', 'miner', -220, 100, 78),
+        createShip('miner-01', 'Carrier One', 'cargo', -180, -90, 82),
+        createShip('miner-02', 'Carrier Two', 'cargo', -220, 100, 78),
         createShip('tug-01', 'Linehorse', 'tug', 160, 120, 62),
         createShip('escort-01', 'Watchdog', 'escort', 210, -125, 115),
         createShip('escort-02', 'Longbow', 'escort', 250, -165, 110)
@@ -406,7 +406,7 @@
   }
 
   function createShip(id, name, type, x, y, speed) {
-    return {
+    var ship = {
       id: id,
       name: name,
       type: type,
@@ -424,13 +424,18 @@
       disabled: false,
       repairRemaining: 0,
       launchElapsed: null,
-      cargoCapacity: type === 'miner' ? 1500 : 0,
+      cargoCapacity: 0,
+      platformId: type === 'cargo' ? id.replace('miner-', 'platform-') : null,
+      docked: false,
       physical: clonePlain(HULLS[type]),
       damage: 0,
       speed: speed,
-      acceleration: HULLS[type].thrustN / HULLS[type].dryMassKg * PHYSICAL_SECONDS_PER_SECOND * PHYSICAL_SECONDS_PER_SECOND / METERS_PER_UNIT,
+      acceleration: 0,
       turnRate: speed > 0 ? Math.max(1.4, Math.min(2.8, 180 / speed)) : 0
     };
+    propulsion.initialize(ship);
+    ship.acceleration = movementAcceleration({ ships: [], wrecks: [] }, ship);
+    return ship;
   }
 
   function cloneWorld(world) {
@@ -482,6 +487,10 @@
   }
 
   function issueContextOrder(world, target) {
+    var home = findMothership(world);
+    if (home && distance(target, home.position) <= DOCK_DISTANCE + 18) return issueReturnOrder(world);
+    var platform = (world.platforms || []).filter(function (p) { return p.state === 'deployed' && distance(target, p.position) < 22; })[0];
+    if (platform) return issuePlatformRecovery(world, platform.id);
     var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
     if (fighters.length) {
       var guarded = world.ships.filter(function (s) { return world.selectedShipIds.indexOf(s.id) === -1 && distance(s.position, target) <= (s.type === 'mothership' ? 38 : 16); })
@@ -521,16 +530,13 @@
       return next;
     }
 
+    if (next.miningMission !== 'active') return next;
     next.ships.forEach(function (ship) {
-      if (selected[ship.id] && ship.type === 'miner' && !ship.disabled) {
-        ship.order = {
-          kind: 'mine',
-          asteroidId: asteroid.id,
-          phase: 'approach',
+      if (selected[ship.id] && ship.type === 'cargo' && ship.platformId && !ship.disabled) {
+        ship.order = { kind: 'deploy', asteroidId: asteroid.id,
           siteDepth: miningSiteDepth(ship.id),
           siteAngle: Math.atan2(ship.position.y - asteroid.position.y, ship.position.x - asteroid.position.x) - asteroid.rotation,
-          target: { x: asteroid.position.x, y: asteroid.position.y }
-        };
+          target: clonePlain(asteroid.position) };
       }
     });
     return next;
@@ -588,6 +594,11 @@
     processConstructionMass(mothership, depot);
 
     var stepped = {
+      logisticsVersion: 1,
+      miningMission: next.miningMission,
+      platforms: next.platforms,
+      packets: next.packets,
+      nextPacketId: next.nextPacketId,
       version: next.version,
       physicalUnitsVersion: 1,
       seed: next.seed,
@@ -609,6 +620,7 @@
       })
     };
     stepRecovery(stepped, dt);
+    stepLogistics(stepped, dt);
     stepped.ships.forEach(function (ship) { ship.acceleration = movementAcceleration(stepped, ship); });
     return stepped;
   }
@@ -623,12 +635,21 @@
       next.velocity = { x: 0, y: 0 };
       return next;
     }
+    if (next.docked && next.order.kind === 'idle') {
+      next.position = berthPosition(next, mothershipShip);
+      next.velocity = clonePlain(mothershipShip.velocity);
+      return next;
+    }
+    launchShip(next, mothershipShip);
+    next.burnMassKg = physicalStats(world, next).massKg;
+    if (next.propulsion && !next.docked && next.order.kind !== 'return' && mothershipShip &&
+        remainingDeltaV(world, next) < returnReserve(next, mothershipShip)) {
+      next.order = { kind: 'return', target: clonePlain(mothershipShip.position), automatic: true };
+    }
+    if (next.order.kind === 'deploy' || next.order.kind === 'retrieve-platform') return stepPlatformCarrier(next, world, dt);
     if (next.order.kind === 'recover') return next;
     if (next.order.kind === 'defend') return stepDefense(next, world, threats, dt);
 
-    if (next.order.kind === 'mine') {
-      return stepMiningShip(next, dt, asteroids, mothershipShip);
-    }
 
     if (next.order.kind === 'return') {
       return stepReturningShip(next, dt, mothership, mothershipShip);
@@ -639,62 +660,194 @@
     }
 
     if (next.order.kind !== 'move' || next.speed <= 0) {
-      next.velocity = { x: 0, y: 0 };
+      next.position.x += next.velocity.x * dt;
+      next.position.y += next.velocity.y * dt;
       return next;
     }
 
     return stepTowardOrderTarget(next, dt, ARRIVAL_DISTANCE, true);
   }
 
-  function stepMiningShip(ship, dt, asteroids, mothershipShip) {
-    var asteroid = findAsteroid({ asteroids: asteroids }, ship.order.asteroidId);
-    if (!asteroid || asteroid.ore <= 0 || ship.cargo >= ship.cargoCapacity) {
-      ship.order = mothershipShip ? { kind: 'return', target: clonePlain(mothershipShip.position) } : { kind: 'idle' };
-      return ship;
-    }
+  function remainingDeltaV(world, ship) {
+    return propulsion.remaining(ship, physicalStats(world, ship).massKg);
+  }
 
-    if (typeof ship.order.siteAngle !== 'number') {
-      ship.order.siteAngle = Math.atan2(ship.position.y - asteroid.position.y, ship.position.x - asteroid.position.x) - asteroid.rotation;
-    }
-    var angle = ship.order.siteAngle + asteroid.rotation;
-    // A top-down view exposes the face, not only the silhouette's rim.
-    // Preserve old landed sites on load; new approaches choose an interior site.
-    if (typeof ship.order.siteDepth !== 'number') ship.order.siteDepth = ship.order.phase === 'landed' ? 1 : miningSiteDepth(ship.id);
-    var radius = surfaceRadius(asteroid, ship.order.siteAngle) * ship.order.siteDepth;
-    var site = { x: asteroid.position.x + Math.cos(angle) * radius, y: asteroid.position.y + Math.sin(angle) * radius };
-    var surfaceVelocity = { x: -Math.sin(angle) * radius * asteroid.angularVelocity, y: Math.cos(angle) * radius * asteroid.angularVelocity };
-    ship.order.target = site;
-    if (ship.order.phase !== 'landed') {
-      var gap = distance(ship.position, site);
-      ship.order.phase = gap < 30 ? 'matching' : 'approach';
-      // Track the moving site with velocity feed-forward and a damped approach.
-      var desired = { x: surfaceVelocity.x + (site.x - ship.position.x) * 1.5, y: surfaceVelocity.y + (site.y - ship.position.y) * 1.5 };
-      var speed = Math.hypot(desired.x, desired.y);
-      if (speed > ship.speed) { desired.x *= ship.speed / speed; desired.y *= ship.speed / speed; }
-      var dx = desired.x - ship.velocity.x, dy = desired.y - ship.velocity.y;
-      var change = Math.hypot(dx, dy), factor = Math.min(1, ship.acceleration * dt / Math.max(change, 0.000001));
-      ship.velocity.x += dx * factor;
-      ship.velocity.y += dy * factor;
-      ship.position.x += ship.velocity.x * dt;
-      ship.position.y += ship.velocity.y * dt;
-      ship.rotation = rotateToward(ship.rotation, angle + Math.PI, ship.turnRate * dt);
-      if (gap > 0.15 || Math.hypot(ship.velocity.x - surfaceVelocity.x, ship.velocity.y - surfaceVelocity.y) > 0.3 || Math.abs(angleDelta(ship.rotation, angle + Math.PI)) > 0.02) return ship;
-      ship.order.phase = 'landed';
-    }
-    ship.position = site;
-    ship.rotation = angle + Math.PI;
-    ship.velocity = surfaceVelocity;
+  function applyBurn(ship, delta) {
+    var mass = ship.burnMassKg || physicalStats({ ships: [], wrecks: [] }, ship).massKg;
+    var before = ship.propulsion ? ship.propulsion.fuelKg : 0;
+    var fraction = propulsion.burn(ship, mass, Math.hypot(delta.x, delta.y) * VELOCITY_TO_MPS);
+    ship.velocity.x += delta.x * fraction;
+    ship.velocity.y += delta.y * fraction;
+    ship.burnMassKg = mass - (before - (ship.propulsion ? ship.propulsion.fuelKg : 0));
+  }
 
-    var room = ship.cargoCapacity - ship.cargo;
-    var extracted = Math.min(room, asteroid.ore, MINING_RATE * dt);
-    ship.cargo += extracted;
-    asteroid.ore -= extracted;
+  function returnReserve(ship, home) {
+    // Budget a full velocity reversal, a homeward cruise and a margin for guidance.
+    // The catcher supplies terminal braking inside the exchange envelope.
+    return (Math.hypot(ship.velocity.x - home.velocity.x, ship.velocity.y - home.velocity.y) +
+      ship.speed) * VELOCITY_TO_MPS * 1.5 + 35;
+  }
 
-    if (ship.cargo >= ship.cargoCapacity || asteroid.ore <= 0) {
-      ship.order = mothershipShip ? { kind: 'return', target: clonePlain(mothershipShip.position) } : { kind: 'idle' };
+  function canCatch(ship, home) {
+    return propulsion.canCatch(ship.position, ship.velocity, home, DOCK_DISTANCE, VELOCITY_TO_MPS);
+  }
+
+  function dockShip(ship, home) {
+    ship.docked = true;
+    ship.position = berthPosition(ship, home);
+    ship.velocity = clonePlain(home.velocity);
+    if (ship.propulsion) ship.propulsion.fuelKg = ship.propulsion.capacityKg;
+  }
+
+  function berthPosition(ship, home) {
+    var angle = fighterStyle(ship).x;
+    return { x: home.position.x + Math.cos(angle) * 35, y: home.position.y + Math.sin(angle) * 35 };
+  }
+
+  function launchShip(ship, home) {
+    if (!ship.docked || !home || !ship.order.target || ship.order.kind === 'return') return;
+    if (ship.order.kind === 'build' && !ship.carryingSection) return;
+    var dx = ship.order.target.x - home.position.x, dy = ship.order.target.y - home.position.y;
+    var gap = Math.hypot(dx, dy);
+    ship.docked = false;
+    if (gap <= ARRIVAL_DISTANCE) return;
+    var speed = Math.min(ship.speed, propulsion.exchangeMps / VELOCITY_TO_MPS,
+      Math.sqrt(ship.acceleration * gap));
+    ship.velocity = { x: home.velocity.x + dx / gap * speed, y: home.velocity.y + dy / gap * speed };
+    ship.docked = false;
+  }
+
+  function createPlatform(id, carrierId) {
+    return { id: id, carrierId: carrierId, state: 'carried', position: { x: 0, y: 0 },
+      asteroidId: null, siteAngle: 0, siteDepth: 0.5, ore: 0, packetTimer: 0 };
+  }
+
+  function migrateLogistics(world) {
+    world.platforms = world.platforms || [];
+    world.ships.forEach(function (ship) {
+      if (ship.type !== 'miner') return;
+      ship.type = 'cargo';
+      ship.name = ship.name.replace('Prospector', 'Carrier');
+      ship.physical = clonePlain(HULLS.cargo);
+      ship.platformId = 'platform-' + ship.id;
+      world.platforms.push(createPlatform(ship.platformId, ship.id));
+      ship.order = { kind: 'idle' };
+      ship.cargoCapacity = 0;
+    });
+    world.logisticsVersion = 1;
+  }
+
+  function platformSite(platform, asteroid) {
+    var angle = platform.siteAngle + asteroid.rotation;
+    var radius = surfaceRadius(asteroid, platform.siteAngle) * platform.siteDepth;
+    return { position: { x: asteroid.position.x + Math.cos(angle) * radius,
+      y: asteroid.position.y + Math.sin(angle) * radius },
+      velocity: { x: -Math.sin(angle) * radius * asteroid.angularVelocity,
+        y: Math.cos(angle) * radius * asteroid.angularVelocity } };
+  }
+
+  function issuePlatformRecovery(world, id) {
+    var next = cloneWorld(world), selected = selectedLookup(next);
+    var platform = (next.platforms || []).filter(function (p) { return p.id === id && p.state === 'deployed'; })[0];
+    if (!platform) return next;
+    var carrier = next.ships.filter(function (s) { return selected[s.id] && s.type === 'cargo' &&
+      !s.disabled && !s.platformId; })[0];
+    if (carrier) carrier.order = { kind: 'retrieve-platform', platformId: id, target: clonePlain(platform.position) };
+    return next;
+  }
+
+  function endMining(world) {
+    var next = cloneWorld(world);
+    next.miningMission = 'recovering';
+    next.ships.forEach(function (s) {
+      if (s.type === 'cargo' && s.order.kind === 'deploy') s.order = { kind: 'return', target: clonePlain(findMothership(next).position) };
+    });
+    return next;
+  }
+
+  function stepPlatformCarrier(ship, world, dt) {
+    var deploying = ship.order.kind === 'deploy';
+    var platform = world.platforms.filter(function (p) { return p.id === (deploying ? ship.platformId : ship.order.platformId); })[0];
+    var asteroid = findAsteroid(world, deploying ? ship.order.asteroidId : platform && platform.asteroidId);
+    if (!platform || !asteroid || (!deploying && platform.state !== 'deployed')) {
+      ship.order = { kind: 'idle' }; return ship;
     }
-
+    var site = platformSite(deploying ? ship.order : platform, asteroid);
+    ship.order.target = site.position;
+    var dx = site.position.x - ship.position.x, dy = site.position.y - ship.position.y;
+    var gap = Math.hypot(dx, dy);
+    var speed = Math.min(ship.speed, Math.sqrt(2 * ship.acceleration * gap), gap * 1.5);
+    stepTowardOrderTarget(ship, dt, 0, false, { x: site.velocity.x + dx / Math.max(gap, 0.001) * speed,
+      y: site.velocity.y + dy / Math.max(gap, 0.001) * speed });
+    if (gap > 1 || distance(ship.velocity, site.velocity) > 1) return ship;
+    if (deploying) {
+      platform.state = 'deployed'; platform.carrierId = null;
+      platform.asteroidId = asteroid.id; platform.siteAngle = ship.order.siteAngle; platform.siteDepth = ship.order.siteDepth;
+      platform.position = site.position;
+      ship.platformId = null;
+    } else {
+      platform.state = 'carried'; platform.carrierId = ship.id;
+      ship.platformId = platform.id;
+      ship.cargo += platform.ore; platform.ore = 0;
+    }
+    ship.order = { kind: 'return', target: clonePlain(findMothership(world).position) };
     return ship;
+  }
+
+  function stepLogistics(world, dt) {
+    var home = findMothership(world);
+    if (!home) return;
+    world.platforms.forEach(function (platform) {
+      if (platform.state === 'carried') {
+        var carrier = world.ships.filter(function (s) { return s.id === platform.carrierId; })[0];
+        if (carrier) platform.position = clonePlain(carrier.position);
+        return;
+      }
+      var asteroid = findAsteroid(world, platform.asteroidId);
+      if (!asteroid) return;
+      platform.position = platformSite(platform, asteroid).position;
+      if (world.miningMission !== 'active') return;
+      var extracted = Math.min(asteroid.ore, MINING_RATE * dt);
+      asteroid.ore -= extracted; platform.ore += extracted; platform.packetTimer += dt;
+      if (platform.ore > 0 && (platform.packetTimer >= 4 || asteroid.ore === 0)) {
+        var dx = home.position.x - platform.position.x, dy = home.position.y - platform.position.y;
+        var gap = Math.max(0.001, Math.hypot(dx, dy));
+        var speed = propulsion.exchangeMps / VELOCITY_TO_MPS * 0.8;
+        world.packets.push({ id: world.nextPacketId++, position: clonePlain(platform.position),
+          velocity: { x: home.velocity.x + dx / gap * speed, y: home.velocity.y + dy / gap * speed }, ore: platform.ore });
+        platform.ore = 0; platform.packetTimer = 0;
+      }
+    });
+    world.packets = world.packets.filter(function (packet) {
+      // Closest point on the swept relative trajectory prevents tunnelling past the catcher.
+      var dx = (packet.velocity.x - home.velocity.x) * dt, dy = (packet.velocity.y - home.velocity.y) * dt;
+      var t = Math.max(0, Math.min(1, ((home.position.x - packet.position.x) * dx +
+        (home.position.y - packet.position.y) * dy) / Math.max(1e-12, dx * dx + dy * dy)));
+      var closest = { x: packet.position.x + dx * t, y: packet.position.y + dy * t };
+      if (propulsion.canCatch(closest, packet.velocity, home, DOCK_DISTANCE, VELOCITY_TO_MPS)) {
+        world.mothership.storage.ore += packet.ore; return false;
+      }
+      packet.position.x += packet.velocity.x * dt; packet.position.y += packet.velocity.y * dt;
+      return true;
+    });
+    if (world.miningMission !== 'recovering') return;
+    var reserved = {};
+    world.ships.forEach(function (s) { if (s.order.kind === 'retrieve-platform') reserved[s.order.platformId] = true; });
+    world.ships.forEach(function (s) {
+      if (s.type !== 'cargo' || s.disabled || s.order.kind !== 'idle') return;
+      if (s.platformId) {
+        if (!s.docked) s.order = { kind: 'return', target: clonePlain(home.position) };
+        return;
+      }
+      var platform = world.platforms.filter(function (p) { return p.state === 'deployed' && !reserved[p.id]; })[0];
+      if (platform) {
+        reserved[platform.id] = true;
+        s.order = { kind: 'retrieve-platform', platformId: platform.id, target: clonePlain(platform.position) };
+      }
+    });
+    if (!world.packets.length && world.platforms.every(function (p) {
+      return p.state === 'carried' && world.ships.some(function (s) { return s.id === p.carrierId && s.docked; });
+    })) world.miningMission = 'complete';
   }
 
   function stepBuildingShip(ship, dt, mothership, mothershipShip, depot) {
@@ -706,9 +859,10 @@
 
     if (!ship.carryingSection) {
       ship.order.target = clonePlain(mothershipShip.position);
-      if (distance(ship.position, mothershipShip.position) > DOCK_DISTANCE) {
+      if (!canCatch(ship, mothershipShip)) {
         return stepTowardOrderTarget(ship, dt, DOCK_DISTANCE, false);
       }
+      dockShip(ship, mothershipShip);
       if (mothership.storage.depotSections <= 0) {
         ship.velocity = { x: 0, y: 0 };
         return ship;
@@ -716,11 +870,13 @@
       mothership.storage.depotSections -= 1;
       ship.carryingSection = true;
       ship.acceleration = movementAcceleration({ ships: [], wrecks: [] }, ship);
+      ship.burnMassKg = physicalStats({ ships: [], wrecks: [] }, ship).massKg;
     }
 
     ship.order.target = clonePlain(depot.position);
-    if (distance(ship.position, depot.position) > DOCK_DISTANCE) {
-      return stepTowardOrderTarget(ship, dt, DOCK_DISTANCE, false);
+    launchShip(ship, mothershipShip);
+    if (distance(ship.position, depot.position) > ARRIVAL_DISTANCE || Math.hypot(ship.velocity.x, ship.velocity.y) > 0.01) {
+      return stepTowardOrderTarget(ship, dt, ARRIVAL_DISTANCE, false);
     }
 
     depot.builtStages += 1;
@@ -737,10 +893,15 @@
     }
 
     ship.order.target = clonePlain(mothershipShip.position);
-    if (distance(ship.position, mothershipShip.position) > DOCK_DISTANCE) {
-      return stepTowardOrderTarget(ship, dt, DOCK_DISTANCE, false);
+    if (!canCatch(ship, mothershipShip)) {
+      var gap = distance(ship.position, mothershipShip.position);
+      var speed = Math.min(ship.speed, propulsion.exchangeMps / VELOCITY_TO_MPS * 0.9);
+      return stepTowardOrderTarget(ship, dt, 0, false, {
+        x: mothershipShip.velocity.x + (mothershipShip.position.x - ship.position.x) / Math.max(gap, 0.001) * speed,
+        y: mothershipShip.velocity.y + (mothershipShip.position.y - ship.position.y) / Math.max(gap, 0.001) * speed
+      });
     }
-
+    dockShip(ship, mothershipShip);
     mothership.storage.ore += ship.cargo;
     ship.cargo = 0;
     ship.velocity = { x: 0, y: 0 };
@@ -755,7 +916,7 @@
     };
     var distance = Math.hypot(toTarget.x, toTarget.y);
 
-    if (distance <= arrivalDistance && !formationVelocity) {
+    if (distance <= arrivalDistance && !formationVelocity && Math.hypot(ship.velocity.x, ship.velocity.y) < 0.01 && (!ship.propulsion || ship.propulsion.fuelKg > 0)) {
       if (snapOnArrival) {
         ship.position = { x: ship.order.target.x, y: ship.order.target.y };
         ship.order = { kind: 'idle' };
@@ -769,11 +930,11 @@
       y: distance ? toTarget.y / distance : 0
     };
     var currentSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
-    var stoppingDistance = Math.max(0, distance - arrivalDistance);
+    var stoppingDistance = Math.max(0, distance - (arrivalDistance > 1 ? arrivalDistance : 0));
     var haulingSpeed = ship.speed * (guidanceStyle ? guidanceStyle.speed : 1); // Work-zone guidance limit, not a physical maximum.
     var haulingAcceleration = ship.acceleration * (guidanceStyle ? guidanceStyle.acceleration : 1);
     var stoppingSpeed = Math.sqrt(2 * haulingAcceleration * stoppingDistance);
-    var desiredSpeed = Math.min(haulingSpeed, stoppingSpeed);
+    var desiredSpeed = Math.min(haulingSpeed, stoppingSpeed, stoppingDistance * 4);
     var desiredVelocity = {
       x: direction.x * desiredSpeed,
       y: direction.y * desiredSpeed
@@ -791,19 +952,10 @@
       deltaVelocity.y = (deltaVelocity.y / deltaLength) * maxDelta;
     }
 
-    ship.velocity = {
-      x: ship.velocity.x + deltaVelocity.x,
-      y: ship.velocity.y + deltaVelocity.y
-    };
+    applyBurn(ship, deltaVelocity);
 
     var nextSpeed = Math.hypot(ship.velocity.x, ship.velocity.y);
-    if (nextSpeed > haulingSpeed) {
-      ship.velocity.x = (ship.velocity.x / nextSpeed) * haulingSpeed;
-      ship.velocity.y = (ship.velocity.y / nextSpeed) * haulingSpeed;
-      nextSpeed = haulingSpeed;
-    }
-
-    var travel = formationVelocity ? nextSpeed * dt : Math.min(distance, nextSpeed * dt);
+    var travel = nextSpeed * dt;
     if (nextSpeed > 0.001) {
       ship.position.x += (ship.velocity.x / nextSpeed) * travel;
       ship.position.y += (ship.velocity.y / nextSpeed) * travel;
@@ -899,10 +1051,16 @@
       next.mothership.storage.ore *= MASS_MIGRATION;
       next.mothership.storage.constructionMass *= MASS_MIGRATION;
       if (world.contract) next.contract.quotaOre *= MASS_MIGRATION;
-      next.ships.forEach(function (ship) { ship.cargoCapacity = ship.type === 'miner' ? 1500 : 0; });
+      next.ships.forEach(function (ship) { ship.cargoCapacity = 0; });
       next.physicalUnitsVersion = 1;
     }
+    if (!next.logisticsVersion) migrateLogistics(next);
+    next.platforms = next.platforms || [];
+    next.packets = next.packets || [];
+    next.nextPacketId = next.nextPacketId || 1;
+    next.miningMission = next.miningMission || 'active';
     next.ships.forEach(function (ship) {
+      propulsion.initialize(ship);
       ship.physical = ship.physical || clonePlain(HULLS[ship.type]);
       if (typeof ship.cargoCapacity !== 'number') ship.cargoCapacity = ship.type === 'miner' ? 1500 : 0;
       ship.acceleration = movementAcceleration(next, ship);
@@ -987,6 +1145,7 @@
         ship.repairRemaining = Math.max(0, ship.repairRemaining - dt);
         if (ship.repairRemaining === 0) {
           ship.damage = 0;
+          if (ship.propulsion) ship.propulsion.fuelKg = ship.propulsion.capacityKg;
           ship.launchElapsed = 0;
         }
       } else if (ship.launchElapsed != null && mothership) {
@@ -1036,7 +1195,7 @@
       payload.position = clonePlain(hauler.position);
       if (hauler.towTarget.kind === 'ship') payload.previousPosition = clonePlain(hauler.previousPosition);
       payload.rotation = hauler.rotation;
-      if (mothership && distance(hauler.position, mothership.position) <= DOCK_DISTANCE) {
+      if (mothership && canCatch(hauler, mothership)) {
         if (hauler.towTarget.kind === 'wreck') {
           world.mothership.storage.ore += payload.salvageOre;
           world.recovery.salvagedOre += payload.salvageOre;
@@ -1128,6 +1287,12 @@
   }
 
   Driftworks.sim = {
+    remainingDeltaV: remainingDeltaV,
+    returnReserve: returnReserve,
+    canCatch: canCatch,
+    endMining: endMining,
+    issuePlatformRecovery: issuePlatformRecovery,
+    EXCHANGE_MPS: propulsion.exchangeMps,
     RAIDER_RANGE: RAIDER_RANGE,
     FIGHTER_RANGE: FIGHTER_RANGE,
     FIGHTER_LEASH: FIGHTER_LEASH,

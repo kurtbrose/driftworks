@@ -12,7 +12,7 @@
 
   var SHIP_STYLES = {
     mothership: { radius: 34, fill: 0x7d8790, stroke: 0xd7dee4 },
-    miner: { radius: 14, fill: 0xd3a449, stroke: 0xf3d99b },
+    cargo: { radius: 14, fill: 0xd3a449, stroke: 0xf3d99b },
     tug: { radius: 18, fill: 0x6fb6a7, stroke: 0xc3eee5 },
     escort: { radius: 13, fill: 0xb76c6f, stroke: 0xf0b7b9 }
   };
@@ -32,7 +32,7 @@
   function semanticScale(type, zoom) {
     if (type === 'asteroid') return 1;
     var large = type === 'mothership' || type === 'asteroid';
-    var exponent = large ? 0.95 : (type === 'miner' || type === 'tug' || type === 'depot' ? 0.12 : 0.08);
+    var exponent = large ? 0.95 : (type === 'cargo' || type === 'tug' || type === 'depot' ? 0.12 : 0.08);
     // Every class stops shrinking on screen below the baseline. Keeping the
     // same floor for all classes preserves their tactical size hierarchy.
     var tacticalZoom = Math.min(DETAIL_ZOOM_START, zoom);
@@ -72,6 +72,16 @@
       onTimeScale: function (value) {
         timeScale = value;
         lastTime = performance.now();
+        hud.update(world, scene.getStats());
+      },
+      onEndMining: function () {
+        world = sim.endMining(world);
+        scene.sync(world);
+        hud.update(world, scene.getStats());
+      },
+      onSelectShip: function (id) {
+        world = sim.selectShips(world, [id]);
+        scene.sync(world);
         hud.update(world, scene.getStats());
       },
       onSave: function () {
@@ -158,13 +168,17 @@
       '<div class="row"><span>Asteroid Ore</span><strong data-role="field"></strong></div>' +
       '<div class="row"><span>Depot</span><strong data-role="depot"></strong></div>' +
       '<div class="row"><span>Sections</span><strong data-role="sections"></strong></div>' +
+      '<div class="row"><span>Mining</span><strong data-role="mining"></strong></div>' +
+      '<div class="row"><span>Launch / catch</span><strong>32 m/s Δv</strong></div>' +
       '<div class="row"><span>Contacts</span><strong data-role="contacts"></strong></div>' +
       '<div class="row"><span>Recovery</span><strong data-role="recovery"></strong></div>' +
       '<div class="row"><span>Salvaged</span><strong data-role="salvaged"></strong></div>' +
       '<div class="row"><span>Entities</span><strong data-role="entities"></strong></div>' +
       '<div class="row"><span>Selection</span><strong data-role="selection"></strong></div>' +
       '</section>' +
+      '<section class="panel fleet-panel" aria-label="Fleet delta-v"><div class="time-heading">FLEET · REMAINING Δv</div><div data-role="fleet"></div></section>' +
       '<section class="panel controls">' +
+      '<button type="button" data-action="end-mining">End mining & recover</button>' +
       '<button type="button" data-action="save">Save</button>' +
       '<button type="button" data-action="load">Load</button>' +
       '<button type="button" data-action="reset">Reset</button>' +
@@ -172,9 +186,15 @@
       '<label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label>' +
       '<label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label>' +
       '</section>' +
-      '<section class="hint">LMB select/drag-box · RMB move · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
+      '<section class="hint">LMB select/drag-box · RMB asteroid: deploy · RMB home: return · RMB platform: retrieve · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
 
+    host.querySelector('[data-action="end-mining"]').addEventListener('click', actions.onEndMining);
     var stressButton = host.querySelector('[data-action="stress"]');
+    var fleet = host.querySelector('[data-role="fleet"]');
+    fleet.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-ship]');
+      if (button) actions.onSelectShip(button.dataset.ship);
+    });
     var timeButtons = host.querySelectorAll('[data-speed]');
     timeButtons.forEach(function (button) {
       button.addEventListener('click', function () { actions.onTimeScale(Number(button.dataset.speed)); });
@@ -190,6 +210,20 @@
 
     return {
       update: function (world, stats) {
+        world.ships.filter(function (s) { return s.type !== 'mothership'; }).forEach(function (ship) {
+          var button = Array.from(fleet.children).filter(function (b) { return b.dataset.ship === ship.id; })[0];
+          if (!button) {
+            button = document.createElement('button'); button.type = 'button'; button.dataset.ship = ship.id;
+            fleet.appendChild(button);
+          }
+          var label = ship.name + ' · ' + Math.floor(sim.remainingDeltaV(world, ship)) + ' m/s' +
+            (ship.disabled ? ' · disabled' : ship.docked ? ' · docked' : ship.order.automatic ? ' · returning' : '');
+          if (button.textContent !== label) button.textContent = label;
+          button.dataset.active = String(world.selectedShipIds.indexOf(ship.id) !== -1);
+        });
+        Array.from(fleet.children).forEach(function (b) {
+          if (!world.ships.some(function (s) { return s.id === b.dataset.ship; })) b.remove();
+        });
         var audioStatus = audio ? audio.status() : { sfxVolume: 0, musicVolume: 0, available: false };
         host.querySelector('[data-role="location"]').textContent = world.campaign.location;
         host.querySelector('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
@@ -201,6 +235,9 @@
           world.depot.builtStages + ' / ' + world.depot.totalStages + ' modules · ' + sim.DEPOT_FRAME.lengthM + ' × ' + sim.DEPOT_FRAME.widthM + ' m';
         host.querySelector('[data-role="sections"]').textContent =
           world.mothership.storage.depotSections + ' ready · ' + sim.DEPOT_SECTION.lengthM + ' × ' + sim.DEPOT_SECTION.widthM + ' m · ' + Math.floor(world.mothership.storage.constructionMass) + ' t feedstock';
+        host.querySelector('[data-role="mining"]').textContent = world.miningMission + ' · ' +
+          world.platforms.filter(function (p) { return p.state === 'deployed'; }).length + ' deployed · ' + world.packets.length + ' packets';
+        host.querySelector('[data-action="end-mining"]').disabled = world.miningMission !== 'active';
         host.querySelector('[data-role="contacts"]').textContent = stats.contacts;
         host.querySelector('[data-role="recovery"]').textContent = (world.wrecks || []).length + ' wrecks · ' +
           world.ships.filter(function (ship) { return ship.disabled; }).length + ' disabled';
@@ -227,9 +264,12 @@
             .map(function (ship) {
               var status = ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
                 ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : ship.order.kind === 'mine' ? (ship.order.phase === 'landed' ? 'landed / mining' : ship.order.phase === 'matching' ? 'matching surface' : 'approaching site') : '';
+              if (!status) status = ship.docked ? 'docked / refuelled' : ship.order.kind === 'return' ?
+                (ship.order.automatic ? 'fuel reserve / returning' : 'returning') : ship.order.kind === 'deploy' ? 'deploying platform' :
+                ship.order.kind === 'retrieve-platform' ? 'retrieving platform' : ship.propulsion && ship.propulsion.fuelKg < 0.001 ? 'fuel empty / coasting' : '';
               var physical = sim.physicalStats(world, ship);
               return ship.name + (status ? ' (' + status + ')' : '') + ' · ' + physical.lengthM + ' m · ' +
-                Math.round(physical.massKg / 1000) + ' t · ' + physical.accelerationMps2.toFixed(3) + ' m/s²';
+                Math.round(physical.massKg / 1000) + ' t · ' + physical.accelerationMps2.toFixed(3) + ' m/s²' + (ship.propulsion ? ' · Δv ' + Math.floor(sim.remainingDeltaV(world, ship)) + ' m/s · fuel ' + (ship.propulsion.fuelKg / 1000).toFixed(1) + ' t' : '') + (ship.platformId ? ' · platform aboard' : '');
             })
             .join(', ');
         }
@@ -261,6 +301,7 @@
     var depotGraphic = new PIXI.Graphics();
     var coverageGraphic = new PIXI.Graphics();
     var recoveryGraphic = new PIXI.Graphics();
+    var logisticsGraphic = new PIXI.Graphics();
     var launchLayer = new PIXI.Container();
     var selectionBox = new PIXI.Graphics();
     var readout = new PIXI.Text('', {
@@ -306,6 +347,8 @@
     worldLayer.addChild(coverageGraphic);
     recoveryGraphic.eventMode = 'none';
     worldLayer.addChild(recoveryGraphic);
+    logisticsGraphic.eventMode = "none";
+    worldLayer.addChild(logisticsGraphic);
     worldLayer.addChild(launchLayer);
     worldLayer.addChild(effectsLayer);
     app.stage.addChild(selectionBox);
@@ -319,6 +362,11 @@
     app.stage.on('pointermove', onPointerMove);
     app.stage.on('pointerup', onPointerUp);
     app.stage.on('pointerupoutside', onPointerUp);
+    app.stage.on('pointercancel', cancelDrag);
+    window.addEventListener('blur', cancelDrag);
+    window.addEventListener('pointercancel', cancelDrag);
+    // DOM release also covers a pointer released over the HUD or outside the canvas.
+    window.addEventListener('pointerup', cancelDrag);
 
     host.addEventListener(
       'wheel',
@@ -367,6 +415,25 @@
       depotGraphic.scale.set(semanticScale('depot', world.camera.zoom));
       paintDefenderCoverage(coverageGraphic, world);
       paintRecovery(recoveryGraphic, world);
+      logisticsGraphic.clear();
+      world.platforms.forEach(function (p) {
+        if (p.state !== 'deployed') return;
+        var size = 12 * semanticScale('cargo', world.camera.zoom);
+        logisticsGraphic.lineStyle(1 / world.camera.zoom, 0xffda81, 1);
+        logisticsGraphic.beginFill(0x77552a, 1);
+        logisticsGraphic.drawRect(p.position.x - size, p.position.y - size, size * 2, size * 2);
+        logisticsGraphic.endFill();
+        logisticsGraphic.moveTo(p.position.x - size * 1.5, p.position.y);
+        logisticsGraphic.lineTo(p.position.x + size * 1.5, p.position.y);
+        logisticsGraphic.moveTo(p.position.x, p.position.y - size * 1.5);
+        logisticsGraphic.lineTo(p.position.x, p.position.y + size * 1.5);
+      });
+      world.packets.forEach(function (p) {
+        logisticsGraphic.lineStyle(0);
+        logisticsGraphic.beginFill(0x8ceac4, 1);
+        logisticsGraphic.drawCircle(p.position.x, p.position.y, 3 / world.camera.zoom);
+        logisticsGraphic.endFill();
+      });
       var shakeX = cameraShake > 0 ? (Math.sin(world.elapsedSeconds * 97) * cameraShake) : 0;
       var shakeY = cameraShake > 0 ? (Math.cos(world.elapsedSeconds * 83) * cameraShake) : 0;
       var view = viewport();
@@ -465,7 +532,7 @@
       }
       previousRecovery = world.recovery ? Object.assign({}, world.recovery) : null;
       world.ships.forEach(function (ship) {
-        if (ship.type === 'miner' && ship.order.kind === 'mine' && ship.cargo > (ship.previousCargo || 0)) {
+        if (ship.type === 'cargo' && ship.order.kind === 'mine' && ship.cargo > (ship.previousCargo || 0)) {
           var asteroid = findAsteroidById(world, ship.order.asteroidId);
           if (asteroid) {
             if (audio && world.elapsedSeconds - lastMiningSoundAt > 0.18) {
@@ -579,7 +646,7 @@
     function industrialTargets(world) {
       var targets = [];
       world.ships.forEach(function (ship) {
-        if (ship.type === 'miner' && ship.cargo > 0) {
+        if (ship.type === 'cargo' && ship.cargo > 0) {
           targets.push({ id: ship.id, kind: 'ship', position: ship.position });
         }
         if (ship.type === 'tug' && (ship.carryingSection || ship.order.kind === 'build')) {
@@ -778,6 +845,7 @@
 
     function onPointerDown(event) {
       unlockAudio();
+      cancelDrag();
       var point = { x: event.global.x, y: event.global.y };
       dragStart = point;
       lastPointer = point;
@@ -814,7 +882,10 @@
 
     function onPointerUp(event) {
       var point = { x: event.global.x, y: event.global.y };
-      if (dragMode === 'select') {
+      var selecting = dragMode === 'select';
+      // Clear input state before committing a selection, which invokes rendering.
+      cancelDrag();
+      if (selecting) {
         var distance = Math.hypot(point.x - dragStart.x, point.y - dragStart.y);
         if (distance > 8) {
           var selectedIds = shipsInsideScreenRect(getWorld(), dragStart, point, viewport());
@@ -824,6 +895,9 @@
           setWorld(sim.selectShips(getWorld(), []));
         }
       }
+    }
+
+    function cancelDrag() {
       dragMode = 'none';
       selectionBox.clear();
     }
@@ -948,6 +1022,10 @@
       return Math.hypot(target.x - entity.position.x, target.y - entity.position.y) <=
         Math.max(12 / zoom, radius * semanticScale(type, zoom));
     }
+    var homeHit = world.ships.filter(function (s) { return s.type === 'mothership' && hits(s, s.type, 38); })[0];
+    if (homeHit) return sim.issueReturnOrder(world);
+    var platformHit = (world.platforms || []).filter(function (p) { return p.state === 'deployed' && hits(p, 'cargo', 22); })[0];
+    if (platformHit) return sim.issuePlatformRecovery(world, platformHit.id);
     var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
     if (fighters.length) {
       var guarded = world.ships.filter(function (s) {
@@ -1054,11 +1132,11 @@
   }
 
   function operationExposure(world) {
-    var exposure = 0;
+    var exposure = (world.platforms || []).filter(function (p) { return p.state === 'deployed'; }).length;
     if (world.mothership.storage.constructionMass > 0 || world.mothership.storage.depotSections > 0) exposure += 1;
     if (world.depot && world.depot.builtStages > 0) exposure += 1;
     world.ships.forEach(function (ship) {
-      if (ship.type === 'miner' && (ship.cargo > 20 || ship.order.kind === 'mine' || ship.order.kind === 'return')) exposure += 1;
+      if (ship.type === 'cargo' && (ship.cargo > 20 || ship.order.kind === 'deploy' || ship.order.kind === 'return')) exposure += 1;
       if (ship.type === 'tug' && (ship.carryingSection || ship.order.kind === 'build')) exposure += 1;
     });
     return exposure;
@@ -1220,7 +1298,7 @@
       });
     }
     graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
-    if (ship.type === 'miner') {
+    if (ship.type === 'cargo') {
       paintMiner(graphics, style);
     } else if (ship.type === 'tug') {
       paintConstructor(graphics, style);
@@ -1298,7 +1376,7 @@
     if (ship.order.kind === 'move') {
       graphics.lineStyle(1, 0x7aa9c2, 0.5);
       drawWorldOrderLine(graphics, ship);
-    } else if (ship.order.kind === 'mine') {
+    } else if (ship.order.kind === 'deploy' || ship.order.kind === 'retrieve-platform') {
       graphics.lineStyle(1, 0xd3a449, 0.65);
       drawWorldOrderLine(graphics, ship);
     } else if (ship.order.kind === 'return') {
@@ -1309,8 +1387,8 @@
       drawWorldOrderLine(graphics, ship);
     }
 
-    if (ship.type === 'miner' && ship.cargo > 0) {
-      var filled = Math.max(0, Math.min(1, ship.cargo / ship.cargoCapacity));
+    if (ship.type === 'cargo' && (ship.cargo > 0 || ship.platformId)) {
+      var filled = 1;
       graphics.lineStyle(0);
       graphics.beginFill(0xd3a449, 0.95);
       graphics.drawRect(-10, style.radius + 6, 20 * filled, 3);
@@ -1481,7 +1559,7 @@
     addThrusterPlume(plumes, 'brake-starboard', Math.max(0, -local.x), acceleration, radius, { x: 0.72, y: 0.42 }, { x: 1, y: 0 }, loadedReturn);
     addThrusterPlume(plumes, 'port-translate', Math.max(0, local.y), acceleration, radius, { x: -0.2, y: -0.82 }, { x: 0, y: -1 }, loadedReturn);
     addThrusterPlume(plumes, 'starboard-translate', Math.max(0, -local.y), acceleration, radius, { x: -0.2, y: 0.82 }, { x: 0, y: 1 }, loadedReturn);
-    if (shipType === 'miner' || shipType === 'tug') {
+    if (shipType === 'cargo' || shipType === 'tug') {
       plumes.forEach(function (plume) {
         var constructor = shipType === 'tug';
         if (plume.id === 'main-aft') {

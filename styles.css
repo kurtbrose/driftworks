@@ -148,6 +148,12 @@ button:focus-visible { outline: 2px solid #bff5e7; outline-offset: 3px; }
   padding: 10px;
 }
 
+.controls [data-action="end-mining"] { grid-column: 1 / -1; }
+button:disabled { opacity: 0.5; cursor: default; }
+.fleet-panel { grid-column: 1; grid-row: 2; align-self: end; padding: 10px; max-height: 40vh; overflow-y: auto; }
+.fleet-panel button { display: block; width: 100%; text-align: left; font-size: 12px; margin-top: 6px; padding: 5px 8px; }
+.readout { max-height: 65vh; overflow-y: auto; align-self: start; }
+
 .volume-control {
   grid-column: 1 / -1;
   display: grid;
@@ -187,20 +193,20 @@ button:focus-visible { outline: 2px solid #bff5e7; outline-offset: 3px; }
 @media (max-width: 820px) {
   .hud {
     inset: 10px;
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto auto;
   }
 
   .time-panel { grid-column: 1; grid-row: 1; width: 100%; }
-  .readout { grid-row: 2; overflow-y: auto; align-self: start; max-height: 100%; }
-  .controls { grid-row: 3; }
-  .hint { grid-row: 4; }
-
-  .readout,
-  .controls,
-  .hint {
-    grid-column: 1;
-  }
+  .mission-clock { font-size: 23px; }
+  .time-heading { font-size: 9px; }
+  .readout { grid-column: 2; grid-row: 1; max-height: 160px; padding: 5px; }
+  .row { gap: 5px; }
+  .row strong { max-width: 150px; }
+  .fleet-panel { grid-column: 1; grid-row: 3; max-height: 145px; }
+  .controls { grid-column: 2; grid-row: 3; gap: 4px; padding: 5px; }
+  .controls button { padding: 2px; font-size: 11px; }
+  .hint { grid-column: 1 / -1; grid-row: 4; }
 
   .hint {
     justify-self: stretch;
