@@ -26,12 +26,13 @@ Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 | Module | Responsibility and interface |
 | --- | --- |
 | `src/propulsion.js` | `Driftworks.propulsion`: tank initialization, rocket-equation burns/remaining delta-v, catcher envelope. Uses kg and m/s; `burn` mutates the supplied ship's fuel and returns the achievable burn fraction. |
-| `src/sim.js` | `Driftworks.sim`: plain-data constructors, commands, fixed-step movement/industry/recovery, physical conversions, and save migration. Public world commands and `stepWorld(world, dt, threats)` return replacement worlds. Internal helpers mutate those working copies. |
-| `src/game.js` | `Driftworks.game` exposes testable UI/geometry helpers; `createApp` owns the current world, timing, scene and HUD. `createScene` owns Pixi objects, input, camera focus, combat and effects, communicating through `getWorld`/`setWorld`. |
+| `src/sim.js` | `Driftworks.sim`: constructors, commands, fixed-step movement/industry/recovery/combat, director, physical conversions, and save migration. Public commands and `stepWorld(world, dt)` return replacement worlds. Internal helpers mutate those working copies. |
+| `src/game.js` | `Driftworks.game` exposes testable UI/geometry helpers; `createApp` owns the current world, timing, scene and HUD. `createScene` owns Pixi objects, input, camera focus and effects, communicating through `getWorld`/`setWorld` and observing combat events. |
 | `src/audio.js` | `Driftworks.audio`: lazily unlocked Web Audio resources, sound events, engine telemetry and separately persisted volume settings. No simulation ownership. |
 | `src/hud.js` | `Driftworks.hud`: DOM panels, fleet/readouts, control availability and event binding. Reads simulation queries and audio status; delegates actions to the app. No Pixi or scene dependency. |
 | `styles.css`, `index.html` | DOM layout and static entry point. |
 | `tests/tests.js` | Shared browser/headless regression suite for simulation and exposed game helpers. |
+| `tests/scenario.js`, `tests/scenarios.cjs` | Shared deterministic replay/assertion helpers and Node JSON fixture entry point; see [scenario replay](scenarios.md). |
 
 New durable gameplay rules belong in simulation transitions. Rendering should
 consume world snapshots, and input should translate gestures into commands.
@@ -45,7 +46,7 @@ Browser objects, audio nodes and functions must never enter the world. See
 `{ update(world, stats) }`. `stats` supplies `contacts`, `entityCount`, `fps` and
 `stressEnabled`; world is read-only to the HUD. Actions are `getTimeScale`,
 `onTimeScale(speed)`, `onSelectShip(id)`, `onDeployPlatform`, `onEndMining`,
-`onSave`, `onLoad`, `onReset`, `onStressToggle`, `onSfxVolume(volume)` and
+`onSave`, `onExport`, `onLoad`, `onReset`, `onStressToggle`, `onSfxVolume(volume)` and
 `onMusicVolume(volume)` (volumes range from 0 to 1). The app owns these callbacks
 and replaces world or changes session/audio state in response.
 `Driftworks.hud.miningControlState(world)` exposes the control-availability query
@@ -58,43 +59,58 @@ for tests; formatting and ore aggregation remain private to the HUD.
 1. Clamp wall-clock frame time to 0.2 seconds and add it, multiplied by the
    session playback speed, to the accumulator.
 2. While the accumulator holds at least 1/30 second, replace world with
-   `sim.stepWorld(world, 1/30, scene.getThreats())` and subtract that interval.
+   `sim.stepWorld(world, 1/30)` and subtract that interval. Immediately pass that
+   tick's `world.combat.events` to `scene.consumeCombatEvents`, so events are not
+   lost when one frame advances multiple ticks.
 3. Apply camera focus using wall-clock time, then synchronize scene graphics.
-4. Render ships between `previousPosition` and `position` using the remaining
-   accumulator fraction. Rotation is rendered directly. Run the scene's combat,
-   effects and audio updates, then update the DOM HUD and request another frame.
+4. Render friendly and hostile ships between `previousPosition` and `position`
+   using the remaining accumulator fraction. Rotation is rendered directly.
+   Update effects, audio and the DOM HUD, then request another frame.
 
 Within `stepWorld`, order matters:
 
 1. Clone/normalize the incoming world, including compatibility defaults.
-2. Reconcile and advance shared formations using the supplied threats.
+2. Clear prior combat events, advance the director and hostile movement, then
+   reconcile formations using those updated hostile positions.
 3. Rotate asteroids; process stored ore into construction feedstock/sections.
 4. Reconstruct the next top-level world and step ships. Each ship snapshots its
    previous motion/cargo before guidance; disabled/docked states take precedence.
    Low fuel can replace an assignment with an automatic return.
 5. Advance recovery/repair/towing, then platform logistics and ballistic packets.
-6. Recompute loaded accelerations and return the world with advanced mission time.
+6. Select all weapons from the post-movement state, then resolve damage. Both
+   sides can fire on the tick they are disabled/destroyed; a disabled ship from
+   a prior tick cannot fire. Multiple fighters add dwell to the same target;
+   destruction produces exactly one wreck and one destruction event.
+7. Recompute loaded accelerations and return the world with advanced mission time.
 
 Consequently, ore delivered by recovery or packets becomes construction input
 on a later tick. Ship stepping uses the normalized pre-step ship collection for
 cross-ship lookups, while storage/depot and platform working data are shared
 within the tick. Do not assume every subsystem sees a fully advanced world.
 
+Combat and the director need neither Pixi nor a DOM. `createInitialWorld(seed)`
+uses seeded asteroid spin; the director's RNG state advances only when making a
+random decision and survives saves. Warning durations (8–10 seconds), cooldowns
+(44–52 seconds) and wave approach angles vary reproducibly. The director still
+caps automatic waves at three and suspends its timers while hostiles remain or
+the depot is complete. Industrial objects remain approach targets; as before,
+raider weapons damage fighters, not industrial hulls.
+
+`stepWorld` retains an optional third `Threat[]` argument for isolated steering
+tests. These are extra noncombat guidance probes, not renderer-owned hostiles;
+the app and scenario runner do not need them. Weapon-selection/exposure helpers
+now live on `Driftworks.sim`, not `Driftworks.game`.
+
 ## Existing exceptions to the boundaries
 
-- **Combat is partly frame-driven.** `createScene` owns hostile drones, weapon
-  timers and the threat director. `render` advances these using scaled frame
-  time, and calls `sim.damageFighter`/`sim.addWreck` through `setWorld` to persist
-  consequences. `scene.getThreats()` supplies drones to fixed-step fighter
-  guidance. Multiple ticks in one frame see threats before that frame's combat
-  update; simulation tests alone do not cover an entire encounter.
-- **Final-kill slow motion is scene-local.** `visualTimeScale` affects combat and
-  effects, not the fixed-step accumulator. Playback speed affects both; pause
+- **Final-kill slow motion is scene-local.** `visualTimeScale` affects only
+  effects, not combat or the fixed-step accumulator. Playback speed affects both; pause
   leaves camera/selection usable. Do not infer simulation timing from effects.
 - **Camera and selection are saved UI state.** They live in world even though
   game input owns their changes. Playback speed, focus animation, graphics,
-  stress sprites, effects and hostile encounters remain session state. Load and
-  reset clear combat; audio preferences use their own localStorage key.
+  stress sprites and effects remain session state. Load restores combat and
+  clears visual effects; reset creates a fresh world. Audio preferences use
+  their own localStorage key.
 - **Two context-order paths exist.** `sim.issueContextOrder` uses simulation
   distances; `game.issueVisualContextOrder` uses semantic-zoom hit areas before
   dispatching simulation commands. Changes to right-click priority or eligible

@@ -16,7 +16,8 @@
   /** @typedef {{ id: string, origin: Vec2, direction: Vec2, side: Vec2, length: number, width: number, alpha: number }} Plume */
   /** @typedef {import('./types').HudController} HudController */
   /** @typedef {{ graphic: PIXI.DisplayObject, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
-  /** @typedef {{ id: string, targetId: string, targetKind: string, position: { x: number, y: number }, velocity: { x: number, y: number }, speed: number, hp: number, flash: number, underFire: number, fireCooldown: number }} Drone */
+  /** @typedef {import('./types').Drone} Drone */
+  /** @typedef {import('./types').CombatEvent} CombatEvent */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
   var sim = /** @type {SimApi} */ (Driftworks.sim);
@@ -37,11 +38,6 @@
   var ASTEROID_FILL = 0x655f57;
   var ASTEROID_STROKE = 0xb6aa9b;
   var MAX_EFFECTS = 260;
-  var DEFENDER_RANGE = sim.FIGHTER_RANGE;
-  var DEFENDER_DWELL_SECONDS = 1.35;
-  var DIRECTOR_WARNING_SECONDS = 8;
-  var DIRECTOR_COOLDOWN_SECONDS = 44;
-  var DIRECTOR_MAX_WAVES = 3;
 
   // Local artwork scale; the camera still scales positions geometrically.
   // Through 32x, small craft shed their schematic magnification. Beyond that,
@@ -115,6 +111,36 @@
         sim.saveWorld(world);
         hud.update(world, scene.getStats());
       },
+      onExport: function () {
+        var scenario = { version: 1, name: 'gameplay-capture', world: world,
+          ticks: 300, commands: [], assertions: [] };
+        var dialog = document.createElement('dialog');
+        dialog.className = 'scenario-export';
+        dialog.innerHTML = '<h2>Export scenario</h2><p>Copy this snapshot or download it, then add commands and expected results for replay.</p>' +
+          '<textarea aria-label="Scenario JSON" readonly></textarea><div><button type="button" data-export="download">Download JSON</button> ' +
+          '<button type="button" data-export="close">Close</button></div>';
+        var field = dialog.querySelector('textarea');
+        var download = dialog.querySelector('[data-export="download"]');
+        var close = dialog.querySelector('[data-export="close"]');
+        if (!field || !download || !close) throw new Error('Missing scenario export controls');
+        field.value = JSON.stringify(scenario, null, 2);
+        var json = field.value;
+        download.addEventListener('click', function () {
+          var url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+          var link = document.createElement('a');
+          link.href = url;
+          link.download = 'driftworks-scenario.json';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        });
+        close.addEventListener('click', function () { dialog.close(); });
+        dialog.addEventListener('close', function () { dialog.remove(); });
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        field.select();
+      },
       onLoad: function () {
         world = loadOrInitial();
         accumulator = 0;
@@ -155,7 +181,8 @@
       accumulator += frameSeconds * timeScale;
 
       while (accumulator >= STEP_SECONDS) {
-        world = sim.stepWorld(world, STEP_SECONDS, scene.getThreats());
+        world = sim.stepWorld(world, STEP_SECONDS);
+        scene.consumeCombatEvents(world.combat.events);
         accumulator -= STEP_SECONDS;
       }
 
@@ -230,15 +257,8 @@
     var previousSelected = {};
     /** @type {string[] | null} */
     var cameraFocusSelectionIds = null;
-    /** @type {Drone[]} */
-    var drones = [];
-    var shotCooldown = 0;
-    var combatTime = 0;
     var cameraShake = 0;
     var visualTimeScale = 1;
-    /** @type {Record<string, number>} */
-    var laserPaintTimers = {};
-    var director = createThreatDirector();
     /** @type {{ salvagedOre: number, repairedShips: number } | null} */
     var previousRecovery = null;
 
@@ -296,7 +316,11 @@
       unlockAudio();
       if (event.code === 'Space') spaceDown = true;
       if (event.code === 'KeyF') requestSelectionFocus(getWorld());
-      if (event.code === 'KeyH') spawnHostileDrones(getWorld());
+      if (event.code === 'KeyH' && !event.repeat) {
+        var next = sim.spawnHostileWave(getWorld());
+        setWorld(next);
+        consumeCombatEvents(next.combat.events);
+      }
       if (event.code === 'KeyK' && !event.repeat) setWorld(sim.spawnFighter(getWorld()));
       if (event.code === 'KeyJ' && !event.repeat) {
         var fighter = getWorld().ships.filter(function (ship) {
@@ -392,7 +416,13 @@
         asteroidGraphic.scale.set(semanticScale('asteroid', world.camera.zoom));
       });
 
-      drones.forEach(function (drone) {
+      Object.keys(droneGraphics).forEach(function (id) {
+        if (!world.combat.drones.some(function (drone) { return drone.id === id; })) {
+          droneGraphics[id].destroy();
+          delete droneGraphics[id];
+        }
+      });
+      world.combat.drones.forEach(function (drone) {
         var droneGraphic = droneGraphics[drone.id];
         if (!droneGraphic) {
           droneGraphic = new PIXI.Graphics();
@@ -416,11 +446,12 @@
         graphic.rotation = ship.rotation;
       });
 
-      if (dt > 0) {
-        updateThreatDirector(world, visualDt);
-        updateCombatVignette(world, visualDt);
-      }
-      world = getWorld();
+      world.combat.drones.forEach(function (drone) {
+        var graphic = droneGraphics[drone.id];
+        if (graphic) graphic.position.set(
+          drone.previousPosition.x + (drone.position.x - drone.previousPosition.x) * alpha,
+          drone.previousPosition.y + (drone.position.y - drone.previousPosition.y) * alpha);
+      });
       if (dt > 0) spawnStateEffects(world, visualDt);
       if (dt > 0) updateAudioTelemetry(world);
       else if (audio) audio.setEngineThrust(0);
@@ -482,214 +513,28 @@
       })[0];
     }
 
-    /** @param {World} world */
-    function spawnHostileDrones(world) {
-      spawnHostileWave(world, 'debug');
-    }
-
-    /** @param {World} world @param {string} reason */
-    function spawnHostileWave(world, reason) {
-      drones = [];
-      Object.keys(droneGraphics).forEach(function (id) {
-        droneGraphics[id].destroy();
-      });
-      droneGraphics = {};
-      var targets = industrialTargets(world);
-      var center = targets[0] ? targets[0].position : (selectedCenter(world) || { x: world.camera.x, y: world.camera.y });
-      var count = reason === 'director' && director.wavesSpawned >= 2 ? 4 : 3;
-      for (var i = 0; i < count; i += 1) {
-        var target = targets[i % targets.length] || { id: 'mothership', kind: 'ship' };
-        drones.push({
-          id: 'drone-' + Math.floor(world.elapsedSeconds * 1000) + '-' + i,
-          targetId: target.id,
-          targetKind: target.kind,
-          position: { x: center.x + 430 + i * 62, y: center.y - 180 + i * 120 },
-          velocity: { x: 0, y: 0 },
-          speed: 58 + i * 8,
-          hp: 3,
-          flash: 0,
-          underFire: 0,
-          fireCooldown: 0.6 + i * 0.12
-        });
-      }
-      shotCooldown = 0.2;
-      combatTime = 0;
-      pushFloatText(effects, { x: center.x, y: center.y - 86 }, 'HOSTILE CONTACT');
-      if (audio) audio.playWarning();
-    }
-
-    function createThreatDirector() {
-      return {
-        state: 'idle',
-        timer: 0,
-        cooldown: 10,
-        wavesSpawned: 0
-      };
-    }
-
-    /** @param {World} world @param {number} dt */
-    function updateThreatDirector(world, dt) {
-      if (director.wavesSpawned >= DIRECTOR_MAX_WAVES) return;
-      if (drones.length) return;
-      if (world.depot && world.depot.builtStages >= world.depot.totalStages) return;
-
-      if (director.state === 'warning') {
-        director.timer -= dt;
-        if (director.timer <= 0) {
-          director.state = 'cooldown';
-          director.cooldown = DIRECTOR_COOLDOWN_SECONDS;
-          director.wavesSpawned += 1;
-          spawnHostileWave(world, 'director');
-        }
-        return;
-      }
-
-      if (director.state === 'cooldown') {
-        director.cooldown -= dt;
-        if (director.cooldown > 0) return;
-        director.state = 'idle';
-      }
-
-      if (operationExposure(world) >= 1) {
-        director.state = 'warning';
-        director.timer = DIRECTOR_WARNING_SECONDS;
-        pushFloatText(effects, incomingWarningPosition(world), 'CONTACT INBOUND');
-        if (audio) audio.playWarning();
-      }
-    }
-
-    /** @param {World} world */
-    function incomingWarningPosition(world) {
-      var targets = industrialTargets(world);
-      return targets[0] ? { x: targets[0].position.x, y: targets[0].position.y - 96 } : { x: world.camera.x, y: world.camera.y - 96 };
-    }
-
-    /** @param {World} world */
-    function industrialTargets(world) {
-      var targets = [];
-      world.ships.forEach(function (ship) {
-        if (ship.type === 'tug' && (ship.cargo > 0 || ship.platformId)) {
-          targets.push({ id: ship.id, kind: 'ship', position: ship.position });
-        }
-        if (ship.type === 'tug' && (ship.carryingSection || ship.order.kind === 'build')) {
-          targets.push({ id: ship.id, kind: 'ship', position: ship.position });
-        }
-      });
-      if (world.depot && world.depot.builtStages < world.depot.totalStages) {
-        targets.push({ id: 'depot', kind: 'depot', position: world.depot.position });
-      }
-      var mothership = findShipByType(world, 'mothership');
-      if (mothership) {
-        targets.push({ id: mothership.id, kind: 'ship', position: mothership.position });
-      }
-      return targets;
-    }
-
-    /** @param {World} world @param {Drone} drone */
-    function droneTargetPosition(world, drone) {
-      if (drone.targetKind === 'depot' && world.depot) return world.depot.position;
-      var ship = findShipById(world, drone.targetId);
-      if (ship) return ship.position;
-      var mothership = findShipByType(world, 'mothership');
-      return mothership ? mothership.position : { x: 0, y: 0 };
-    }
-
-    /** @param {World} world @param {number} dt */
-    function updateCombatVignette(world, dt) {
-      if (!drones.length) return;
-      combatTime += dt;
-      shotCooldown -= dt;
-
-      drones.forEach(function (drone) {
-        var fighter = getWorld().ships.filter(function (ship) {
-          return ship.type === 'escort' && !ship.disabled &&
-            Math.hypot(ship.position.x - drone.position.x, ship.position.y - drone.position.y) <= 300;
-        }).sort(function (a, b) {
-          return Math.hypot(a.position.x - drone.position.x, a.position.y - drone.position.y) -
-            Math.hypot(b.position.x - drone.position.x, b.position.y - drone.position.y);
-        })[0];
-        var target = fighter ? fighter.position : droneTargetPosition(world, drone);
-        var dx = target.x - drone.position.x;
-        var dy = target.y - drone.position.y;
-        var distance = Math.max(1, Math.hypot(dx, dy));
-        drone.velocity = { x: (dx / distance) * drone.speed, y: (dy / distance) * drone.speed };
-        if (distance > 20) {
-          drone.position.x += drone.velocity.x * dt;
-          drone.position.y += drone.velocity.y * dt;
-        }
-        drone.flash = Math.max(0, drone.flash - dt * 5);
-        drone.underFire = Math.max(0, (drone.underFire || 0) - dt * 0.35);
-        drone.fireCooldown = Math.max(0, (drone.fireCooldown || 0) - dt);
-        if (fighter && distance <= sim.RAIDER_RANGE && drone.fireCooldown === 0) {
-          drone.fireCooldown = 0.75;
-          pushProjectile(effects, drone.position, fighter.position);
-          pushImpactSparks(effects, fighter.position, fighter.velocity);
-          if (audio) audio.playImpact(0.4);
-          setWorld(sim.damageFighter(getWorld(), fighter.id, 0.4));
-          if (getWorld().ships.some(function (ship) { return ship.id === fighter.id && ship.disabled; })) {
-            pushFloatText(effects, fighter.position, 'DISABLED');
+    /** @param {CombatEvent[]} events */
+    function consumeCombatEvents(events) {
+      events.forEach(function (event) {
+        if (event.kind === 'contact-warning' || event.kind === 'wave-spawned') {
+          pushFloatText(effects, event.position, event.kind === 'contact-warning' ? 'CONTACT INBOUND' : 'HOSTILE CONTACT');
+          if (audio) audio.playWarning();
+        } else if (event.kind === 'weapon-fired' && event.source) {
+          pushProjectile(effects, event.source, event.position);
+          pushImpactSparks(effects, event.position, event.velocity || { x: 0, y: 0 });
+          if (audio) audio.playImpact(event.amount || 0.4);
+        } else if (event.kind === 'ship-disabled') {
+          pushFloatText(effects, event.position, 'DISABLED');
+        } else if (event.kind === 'ship-destroyed') {
+          pushExplosion(effects, event.position, event.velocity || { x: 0, y: 0 }, !!event.final);
+          if (audio) audio.playGunshot();
+          if (event.final) {
+            cameraShake = 1.8;
+            visualTimeScale = 0.25;
+            pushFloatText(effects, { x: event.position.x, y: event.position.y - 36 }, 'DRONE KILL');
           }
         }
       });
-
-      getWorld().ships.filter(function (ship) {
-        return ship.type === 'escort' && !ship.disabled;
-      }).forEach(function (escort) {
-        var attack = stepDefenderWeapon(escort, drones, laserPaintTimers, dt);
-        if (attack) {
-          holdDefensiveLaser(escort, attack.target, dt, attack.paint);
-        }
-      });
-    }
-
-    /** @param {Ship} escort @param {Drone} drone @param {number} dt @param {boolean} paint */
-    function holdDefensiveLaser(escort, drone, dt, paint) {
-      drone.underFire = (drone.underFire || 0) + dt;
-      drone.flash = 1;
-      if (paint) {
-        pushProjectile(effects, escort.position, drone.position);
-        pushImpactSparks(effects, drone.position, drone.velocity);
-        if (audio) audio.playImpact(drone.underFire);
-      }
-      if (drone.underFire >= DEFENDER_DWELL_SECONDS) {
-        if (audio) audio.playGunshot();
-        destroyDrone(drone);
-      }
-    }
-
-    /** @param {Ship} escort @param {Drone} drone */
-    function fireEscortShot(escort, drone) {
-      drone.hp -= 1;
-      drone.flash = 1;
-      if (audio) {
-        audio.playGunshot();
-        audio.playImpact(3 - drone.hp);
-      }
-      pushProjectile(effects, escort.position, drone.position);
-      pushMuzzleFlash(effects, escort.position, escort.rotation);
-      pushImpactSparks(effects, drone.position, drone.velocity);
-      if (drone.hp <= 0) {
-        destroyDrone(drone);
-      }
-    }
-
-    /** @param {Drone} drone */
-    function destroyDrone(drone) {
-      var wasFinal = drones.length === 1;
-      pushExplosion(effects, drone.position, drone.velocity, wasFinal);
-      cameraShake = wasFinal ? 1.8 : 0;
-      if (wasFinal) {
-        visualTimeScale = 0.25;
-        pushFloatText(effects, { x: drone.position.x, y: drone.position.y - 36 }, 'DRONE KILL');
-      }
-      if (droneGraphics[drone.id]) {
-        droneGraphics[drone.id].destroy();
-        delete droneGraphics[drone.id];
-      }
-      drones = drones.filter(function (candidate) {
-        return candidate.id !== drone.id;
-      });
-      setWorld(sim.addWreck(getWorld(), drone));
     }
 
     /** @param {World} world */
@@ -713,21 +558,6 @@
     function focusLabel(selected) {
       if (selected.length === 1) return 'FOCUS ' + selected[0].name.toUpperCase();
       return 'FOCUS ' + selected.length + ' SHIPS';
-    }
-
-    /** @param {Vec2} position @returns {Drone | null} */
-    function nearestDrone(position) {
-      /** @type {Drone | null} */
-      var best = null;
-      var bestDistance = Infinity;
-      drones.forEach(function (drone) {
-        var d = Math.hypot(drone.position.x - position.x, drone.position.y - position.y);
-        if (d < bestDistance) {
-          best = drone;
-          bestDistance = d;
-        }
-      });
-      return best;
     }
 
     /** @param {World} world */
@@ -856,7 +686,7 @@
 
     function getStats() {
       var world = getWorld();
-      var baseCount = world.ships.length + world.asteroids.length + drones.length + (world.wrecks || []).length;
+      var baseCount = world.ships.length + world.asteroids.length + world.combat.drones.length + (world.wrecks || []).length;
       var count = stressEnabled && stressLayer ? stressLayer.count + baseCount : baseCount;
       return {
         fps: fps,
@@ -867,9 +697,11 @@
     }
 
     function contactStatus() {
+      var combat = getWorld().combat;
+      var drones = combat.drones, director = combat.director;
       if (drones.length) return drones.length + ' active';
       if (director.state === 'warning') return 'inbound ' + Math.max(0, Math.ceil(director.timer)) + 's';
-      if (director.wavesSpawned >= DIRECTOR_MAX_WAVES) return 'quiet';
+      if (director.wavesSpawned >= sim.DIRECTOR_MAX_WAVES) return 'quiet';
       if (director.state === 'cooldown') return 'quiet ' + Math.max(0, Math.ceil(director.cooldown)) + 's';
       return 'quiet';
     }
@@ -939,15 +771,16 @@
 
     return {
       resetCombat: function () {
-        drones = [];
         Object.keys(droneGraphics).forEach(function (id) { droneGraphics[id].destroy(); });
         droneGraphics = {};
-        laserPaintTimers = {};
-        director = createThreatDirector();
+        effects.forEach(function (effect) { effect.graphic.destroy(); });
+        effects.length = 0;
+        cameraShake = 0;
+        visualTimeScale = 1;
         previousRecovery = null;
       },
       sync: sync,
-      getThreats: function () { return drones; },
+      consumeCombatEvents: consumeCombatEvents,
       render: render,
       applyCameraFocus: applyCameraFocus,
       setStressEnabled: setStressEnabled,
@@ -1059,44 +892,6 @@
     });
   }
 
-  /** @param {Ship} escort @param {Drone[]} drones @param {Record<string, number>} timers @param {number} dt @returns {{ target: Drone, paint: boolean } | null} */
-  function stepDefenderWeapon(escort, drones, timers, dt) {
-    if (escort.disabled) return null;
-    timers[escort.id] = Math.max(0, (timers[escort.id] || 0) - dt);
-    /** @type {Drone | null} */
-    var target = null;
-    var bestDistance = Infinity;
-    drones.forEach(function (drone) {
-      var distance = Math.hypot(drone.position.x - escort.position.x, drone.position.y - escort.position.y);
-      var anchor = escort.order && escort.order.kind === 'defend' ? escort.order.anchor : escort.position;
-      var priority = Math.hypot(drone.position.x - anchor.x, drone.position.y - anchor.y);
-      if (escort.order && escort.order.kind === 'defend') {
-        priority = priority * 0.25 + distance * 0.75 - (drone.underFire || 0) * 100;
-        if (distance < sim.RAIDER_RANGE + 20) priority -= 80;
-      }
-      if (distance <= DEFENDER_RANGE && priority < bestDistance) {
-        target = drone;
-        bestDistance = priority;
-      }
-    });
-    if (!target) return null;
-    var paint = timers[escort.id] === 0;
-    if (paint) timers[escort.id] = 0.08;
-    return { target: target, paint: paint };
-  }
-
-  /** @param {World} world */
-  function operationExposure(world) {
-    var exposure = (world.platforms || []).filter(function (p) { return p.state === 'deployed'; }).length;
-    if (world.mothership.storage.constructionMass > 0 || world.mothership.storage.depotSections > 0) exposure += 1;
-    if (world.depot && world.depot.builtStages > 0) exposure += 1;
-    world.ships.forEach(function (ship) {
-      if (ship.type === 'tug' && (ship.cargo > 20 || ship.order.kind === 'deploy' || ship.platformId)) exposure += 1;
-      if (ship.type === 'tug' && (ship.carryingSection || ship.order.kind === 'build')) exposure += 1;
-    });
-    return exposure;
-  }
-
   /** @param {Vec2} point @param {Camera} camera @param {Viewport} viewport */
   function worldToScreen(point, camera, viewport) {
     return {
@@ -1177,7 +972,7 @@
       if (ship.type !== 'escort' || ship.disabled || world.selectedShipIds.indexOf(ship.id) === -1) return;
       graphics.lineStyle(1.25 / world.camera.zoom, 0xf0b7b9, 0.32);
       graphics.beginFill(0xb76c6f, 0.035);
-      graphics.drawCircle(ship.position.x, ship.position.y, DEFENDER_RANGE);
+      graphics.drawCircle(ship.position.x, ship.position.y, sim.FIGHTER_RANGE);
       graphics.endFill();
       if (ship.order.kind === 'defend') {
         var anchor = ship.order.anchor;
@@ -2027,8 +1822,6 @@
     miningEffectGeometry: miningEffectGeometry,
     drawMiningPlume: drawMiningPlume,
     paintRecovery: paintRecovery,
-    operationExposure: operationExposure,
-    stepDefenderWeapon: stepDefenderWeapon,
     mothershipDrumMarkers: mothershipDrumMarkers,
     mothershipHullHalfWidthAtY: mothershipHullHalfWidthAtY
   };

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "battle-consequences",
+  "seed": 12345,
+  "ticks": 2400,
+  "commands": [
+    { "tick": 0, "action": "select", "args": [["escort-01", "escort-02"]] },
+    { "tick": 0, "action": "defend", "args": [{ "x": 360, "y": 300 }] },
+    { "tick": 0, "action": "spawnHostileWave", "args": [] }
+  ],
+  "assertions": [
+    { "path": "wrecks.length", "op": "equal", "value": 1 },
+    { "path": "combat.drones.length", "op": "equal", "value": 2 },
+    { "path": "ships.escort-01.disabled", "op": "equal", "value": true },
+    { "path": "ships.escort-02.disabled", "op": "equal", "value": true }
+  ]
+}

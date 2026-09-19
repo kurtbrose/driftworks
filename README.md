@@ -76,7 +76,7 @@ The app uses ordinary scripts, not JavaScript modules. Serving over HTTP is stil
 Debug controls:
 
 - `F`: ease camera onto the selected ship or fleet and flash a focus reticle.
-- `H`: manually spawn a short hostile-raider vignette; selected escorts show their coverage circle.
+- `H`: manually add a hostile-raider wave; selected escorts show their coverage circle.
 - `J`: disable a selected fighter to try a recovery mission without waiting for combat damage.
 - `K`: spawn another friendly fighter near the mothership; repeat to build a larger wing.
 
@@ -91,7 +91,7 @@ Fighter defense controls:
 - Right-click another, unselected friendly ship to escort it in a looser formation. Its position becomes the moving defense anchor.
 - Fighters prioritize threats near the anchor, kite and orbit in weapon range, separate from nearby fighters, and return to their formation when threats leave. At the leash boundary they slide sideways instead of retreating farther.
 - Selected fighters show weapon range and a faint operating-area circle with a cross at the anchor. The hard-coded group leash is `FIGHTER_LEASH` in `src/sim.js`: currently 700 simulation units, or 2.5 times weapon range. There is no tuning UI yet.
-- Defense orders and formation slots survive saves; hostile encounters remain transient. Use `K` to build a wing, box-select it, right-click a defense point, then press `H` to try combat.
+- Defense orders, formation slots, hostile encounters, and director/weapon timers survive saves. Use `K` to build a wing, box-select it, right-click a defense point, then press `H` to try combat.
 
 Construction controls:
 
@@ -106,7 +106,16 @@ Recovery controls:
 - Wrecks provide 24t ore at the mothership, feeding the existing construction processing chain.
 - Disabled fighters stay inert and cannot fire. Retrieval starts a six-second repair inside the mothership, followed by a slow six-second launch from its forward end. The restored fighter awaits orders once clear.
 - Move orders can redirect a loaded hauler; right-click the mothership to resume delivery.
-- Wrecks, carried hulls, damage, and repair progress are included in saves. Active hostile encounters remain transient.
+- Wrecks, carried hulls, damage, repair progress, and active hostile encounters are included in saves.
+
+## Reproduce a gameplay bug
+
+Pause and click **Export scenario** to copy or download the current world as JSON.
+Add commands, a tick count, and expected results, then run
+`node tests/scenarios.cjs path/to/scenario.json`. Place permanent regressions in
+`tests/scenarios/` to include them in `npm run check`.
+See [scenario replay](docs/scenarios.md) for the format and examples.
+Entire battles run headlessly at 30 Hz; visual effects and audio observe simulation events.
 
 ## Deploy
 

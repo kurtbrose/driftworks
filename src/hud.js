@@ -51,6 +51,7 @@
       '<button type="button" data-action="deploy-platform">Deploy mining platform</button>' +
       '<button type="button" data-action="end-mining">End mining & recover</button>' +
       '<button type="button" data-action="save">Save</button>' +
+      '<button type="button" data-action="export">Export scenario</button>' +
       '<button type="button" data-action="load">Load</button>' +
       '<button type="button" data-action="reset">Reset</button>' +
       '<button type="button" data-action="stress">Stress</button>' +
@@ -79,6 +80,7 @@
     var musicSlider = /** @type {HTMLInputElement} */ (host.querySelector('[data-action="music"]'));
     if (!sfxSlider || !musicSlider) throw new Error('Missing audio controls');
     requiredElement('[data-action="save"]').addEventListener('click', actions.onSave);
+    requiredElement('[data-action="export"]').addEventListener('click', actions.onExport);
     requiredElement('[data-action="load"]').addEventListener('click', actions.onLoad);
     requiredElement('[data-action="reset"]').addEventListener('click', actions.onReset);
     stressButton.addEventListener('click', actions.onStressToggle);

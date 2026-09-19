@@ -82,6 +82,7 @@ export type Propulsion = {
 };
 
 export type World = {
+  combat: CombatState;
   time?: number;
   nextFormationId: number;
   ships: Ship[];
@@ -115,6 +116,16 @@ export type Depot = { name: string; position: Vec2; builtStages: number; totalSt
 export type Packet = { id: number; position: Vec2; velocity: Vec2; ore: number };
 export type MothershipState = { storage: { ore: number; constructionMass: number; depotSections: number } };
 export type Threat = { position: Vec2; velocity?: Vec2 };
+export type Drone = { id: string; targetId: string; targetKind: string; position: Vec2; previousPosition: Vec2; velocity: Vec2; speed: number; hp: number; flash: number; underFire: number; fireCooldown: number };
+export type CombatEvent = { kind: 'contact-warning' | 'wave-spawned' | 'weapon-fired' | 'ship-damaged' | 'ship-disabled' | 'ship-destroyed'; position: Vec2; velocity?: Vec2; source?: Vec2; sourceId?: string; targetId?: string; amount?: number; final?: boolean };
+export type CombatState = {
+  drones: Drone[];
+  nextDroneId: number;
+  rngState: number;
+  director: { state: string; timer: number; cooldown: number; wavesSpawned: number };
+  weaponTimers: Record<string, number>;
+  events: CombatEvent[];
+};
 export type FighterStyle = { x: number; y: number; speed: number; acceleration: number };
 export type Rng = () => number;
 
@@ -144,8 +155,10 @@ export type SimApi = {
   saveWorld: (world: World, storage?: Storage) => void;
   resetWorld: (storage?: Storage) => World;
   loadWorld: (storage?: Storage) => World;
-  createInitialWorld: () => World;
-  stepWorld: (world: World, dt: number, threats: Threat[]) => World;
+  createInitialWorld: (seed?: number) => World;
+  stepWorld: (world: World, dt: number, threats?: Threat[]) => World;
+  spawnHostileWave: (world: World) => World;
+  DIRECTOR_MAX_WAVES: number;
   spawnFighter: (world: World) => World;
   damageFighter: (world: World, id: string, amount: number) => World;
   RAIDER_RANGE: number;
@@ -171,7 +184,7 @@ export type SimApi = {
 };
 export type AudioApi = { unlock: () => boolean; setSfxEnabled: (enabled: boolean) => void; setSfxVolume: (value: number) => void; setMusicEnabled: (enabled: boolean) => void; setMusicVolume: (value: number) => void; setEngineThrust: (level: number) => void; playSelect: () => void; playMove: () => void; playInvalid: () => void; playMiningTick: () => void; playGunshot: () => void; playImpact: (strength: number) => void; playDock: () => void; playDelivery: () => void; playWarning: () => void; _test?: Record<string, unknown>; status: () => { available: boolean; sfxVolume: number; musicVolume: number } };
 export type HudActions = {
-  onEndMining: EventListener; onDeployPlatform: EventListener; onSave: EventListener; onLoad: EventListener; onReset: EventListener;
+  onEndMining: EventListener; onDeployPlatform: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;
   onStressToggle: EventListener; onSelectShip: (id: string | undefined) => void; onTimeScale: (scale: number) => void;
   onSfxVolume: (value: number) => void; onMusicVolume: (value: number) => void; getTimeScale: () => number;
 };

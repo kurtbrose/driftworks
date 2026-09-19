@@ -11,8 +11,11 @@ global.document = {
   },
   createElement: () => ({ appendChild: () => {} })
 };
-for (const file of ['src/propulsion.js', 'src/sim.js', 'src/audio.js', 'src/hud.js', 'src/game.js', 'tests/tests.js']) {
+for (const file of ['src/propulsion.js', 'src/sim.js', 'src/audio.js', 'src/hud.js', 'src/game.js', 'tests/scenario.js', 'tests/tests.js']) {
   vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: file });
 }
 console.log(summary.textContent);
+const path = require('node:path');
+const scenarioDir = path.join(__dirname, 'scenarios');
+failures += require('./scenarios.cjs').runFiles(fs.readdirSync(scenarioDir).filter(file => file.endsWith('.json')).sort().map(file => path.join(scenarioDir, file)));
 process.exitCode = failures ? 1 : 0;

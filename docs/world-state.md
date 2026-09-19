@@ -17,7 +17,7 @@ tonnes; `physical` and `propulsion` use SI units. See
 | Fields | Meaning/owner |
 | --- | --- |
 | `version: 1`, `physicalUnitsVersion: 1`, `logisticsVersion: 2` | Independent world and migration markers. |
-| `seed`, `elapsedSeconds`, `campaign` | Seed metadata, tactical mission time, and `{ timeDays, money, location }`. Campaign time is not advanced by tactical ticks; initial asteroid spin uses `Math.random`, so the seed alone does not reproduce initialization. |
+| `seed`, `elapsedSeconds`, `campaign` | Seeded initialization, tactical mission time, and `{ timeDays, money, location }`. Campaign time is not advanced by tactical ticks. The same seed reproduces initial asteroid spin and combat decisions. |
 | `camera: { x, y, zoom }`, `selectedShipIds: string[]` | Saved presentation state; selection drives most command issuers. |
 | `ships`, `asteroids`, `platforms`, `packets`, `wrecks` | Entity collections described below. |
 | `formations`, `nextFormationId` | Object keyed by numeric group ID (JSON keys are strings), plus allocation counter. |
@@ -27,6 +27,7 @@ tonnes; `physical` and `propulsion` use SI units. See
 | `contract` | `{ id, name, quotaOre, reward }`; metadata/quota, not an automatic reward transaction. |
 | `miningMission` | `active`, `recovering`, or `complete`. |
 | `recovery` | `{ salvagedOre, repairedShips }`, cumulative counters also observed by visual feedback. |
+| `combat` | Hostile entities, ID allocator, random state, director/weapon timers and last-tick events; see below. |
 
 `stepWorld` explicitly constructs the next root object. A new root field must be
 carried through there or it disappears on the next tick. Never put DOM/Pixi/audio
@@ -146,6 +147,40 @@ refills fuel, while launch completion clears disabled and increments the repair
 counter. Damage reaching one clears the fighter's order and motion, leaving the
 entity present for recovery. Do not equate zero damage with operational status.
 
+## Combat ownership
+
+`combat` contains `drones`, `nextDroneId`, `rngState`, `director`, `weaponTimers`
+and `events`. It is initialized, normalized for old saves, and carried through
+`stepWorld`'s explicit reconstruction. Old saves receive an idle director and
+no hostiles; loading a current save never resets encounters or random state.
+
+Drones have stable `drone-N` IDs; `targetId`/`targetKind` identify their approach
+target. They own `position`, `previousPosition`, `velocity`, `speed`, `hp`,
+`underFire`, `flash` and `fireCooldown`. `underFire` is accumulated laser dwell,
+decaying by 0.35 per second and destroyed at 1.35 seconds of accumulated dwell.
+`hp` retains the hull health field; current fighter weapons use dwell. Wrecks
+use the separate world wreck-ID allocator. Debug wave spawning adds hostiles
+without removing existing ones or counting toward the automatic wave limit.
+
+The director owns `state`, warning `timer`, `cooldown` and `wavesSpawned`.
+`rngState` is an unsigned 32-bit state, advanced explicitly with each seeded
+random draw; no random closure or pointer is saved. `weaponTimers` is keyed by
+friendly ship ID and throttles laser presentation pulses; dwell advances every
+tick regardless of whether a pulse is emitted. Raider firing cooldowns affect
+actual shots and live on each drone.
+
+Movement precedes weapon selection. Damage resolves after all shots are chosen,
+so simultaneous lethal fire is allowed. Disabled fighters remain for recovery;
+destroyed drones are removed and become one salvage wreck each. All consequences
+originate in simulation code, never rendering.
+
+`events` contains the most recent tick's `contact-warning`, `wave-spawned`,
+`weapon-fired`, `ship-damaged`, `ship-disabled` and `ship-destroyed` records, with
+copied positions and source/target IDs where relevant. These JSON-safe diagnostic
+records are included in snapshots but cleared before the next tick; they are
+not a history or pending gameplay work. The app consumes events once immediately
+after each step, never replays them on load, and uses them only for effects/audio.
+
 ## Persistence and compatibility
 
 `serializeWorld` saves the entire world in `{ version: 1, savedAt, world }` under
@@ -161,7 +196,7 @@ version 2 while preserving their cargo ore. Repeated loads must not reapply unit
 conversion. Existing physical hull values survive; missing ones receive defaults.
 
 Saved: orders and pending work, formations, fuel, damage/repair, attachments,
-platforms, packets, economy, elapsed time, camera and selection. Not saved in
-world: hostile encounters/director timers, effects, weapon timers, playback speed,
+platforms, packets, economy, elapsed time, camera, selection, hostile encounters,
+director/RNG state and weapon timers. Not saved in world: effects, playback speed,
 camera-focus animation, stress graphics or audio resources. Audio preferences
 persist separately under `driftworks-audio-settings-v1`.

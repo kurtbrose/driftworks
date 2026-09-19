@@ -21,6 +21,101 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('seeded initialization and scenario replay are deterministic without rendering', function () {
+    var replay = window.Driftworks.scenario;
+    var scenario = { version: 1, seed: 12345, ticks: 300, commands: [
+      { tick: 0, action: 'select', args: [['tug-01']] },
+      { tick: 0, action: 'move', args: [{ x: 200, y: 120 }] },
+      { tick: 299, action: 'return', args: [] }
+    ] };
+    var a = replay.run(scenario), b = replay.run(scenario);
+    assert(JSON.stringify(a) === JSON.stringify(b), 'Same seed and commands must yield identical worlds');
+    assert(sim.createInitialWorld(12345).asteroids[0].angularVelocity !== sim.createInitialWorld(12346).asteroids[0].angularVelocity, 'Seed must control initialization');
+    var initial = sim.createInitialWorld(12345), serialized = JSON.stringify(initial);
+    var actual = replay.run({ version: 1, world: initial, ticks: 1, commands: scenario.commands.slice(0, 2) });
+    var expected = sim.stepWorld(sim.issueMoveOrder(sim.selectShips(initial, ['tug-01']), { x: 200, y: 120 }), 1 / 30);
+    assert(JSON.stringify(actual) === JSON.stringify(expected), 'Tick zero commands precede the first step, in listed order');
+    assert(JSON.stringify(initial) === serialized, 'Replay must not mutate a captured world');
+    assert(replay.run({ version: 1, world: initial, ticks: 0 }).elapsedSeconds === 0, 'Zero ticks must not advance');
+    replay.check(actual, [{ path: 'ships.tug-01.order.kind', op: 'equal', value: 'move' }]);
+    [function () { replay.check(actual, []); },
+      function () { replay.check(actual, [{ path: 'ships.missing.damage', op: 'equal', value: 0 }]); },
+      function () { replay.check(actual, [{ path: 'elapsedSeconds', op: 'near', value: 100, tolerance: 0.1 }]); },
+      function () { replay.run({ version: 1, ticks: 1, commands: [{ tick: 1, action: 'return', args: [] }] }); },
+      function () { replay.run({ version: 1, ticks: 1, commands: [{ tick: 0, action: 'typo', args: [] }] }); }
+    ].forEach(function (reject) {
+      var threw = false;
+      try { reject(); } catch (error) { threw = true; }
+      assert(threw, 'Malformed or failing scenarios must fail loudly');
+    });
+  });
+
+  test('old saves gain deterministic combat defaults and repeated loading preserves encounters', function () {
+    var old = sim.createInitialWorld(12345);
+    delete old.combat;
+    var repaired = sim.deserializeWorld(sim.serializeWorld(old));
+    assert(repaired.combat.drones.length === 0 && repaired.combat.director.state === 'idle', 'Old saves should start with no encounters');
+    var active = sim.spawnHostileWave(repaired);
+    active = sim.stepWorld(active, 1 / 30);
+    var loaded = sim.deserializeWorld(sim.serializeWorld(active));
+    assert(JSON.stringify(loaded) === JSON.stringify(active), 'Encounter, cooldowns, RNG and IDs must survive loading');
+    assert(JSON.stringify(sim.deserializeWorld(sim.serializeWorld(loaded))) === JSON.stringify(loaded), 'Loading must be idempotent');
+    var spawned = sim.spawnHostileWave(loaded);
+    assert(new Set(spawned.combat.drones.map(function (d) { return d.id; })).size === 6, 'Spawn IDs must remain unique across loading');
+  });
+
+  test('director warning and random sequence survive a save during the warning', function () {
+    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(12345), ['msv-hardshell']), 'ast-ceres-01');
+    world = sim.stepWorld(world, 1 / 30);
+    assert(world.combat.director.state === 'warning', 'Exposed work starts a warning');
+    assert(world.combat.events.some(function (e) { return e.kind === 'contact-warning'; }), 'Warning originates in the simulation');
+    var loaded = sim.deserializeWorld(sim.serializeWorld(world));
+    for (var tick = 0; tick < 310; tick += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+      loaded = sim.stepWorld(loaded, 1 / 30);
+    }
+    assert(world.combat.director.wavesSpawned === 1 && world.combat.drones.length > 0, 'Director spawns without Pixi');
+    assert(JSON.stringify(world) === JSON.stringify(loaded), 'Warning continuation must reproduce the same wave');
+  });
+
+  test('battle replay matches after save/load and across render-frame groupings for 10000 ticks', function () {
+    var initial = sim.spawnHostileWave(sim.createInitialWorld(12345));
+    var a = initial, b = initial, ticks = 0, sawShot = false, sawDamage = false;
+    // These are identical fixed ticks grouped as if frames ran at 30 Hz versus 5 Hz.
+    while (ticks < 10000) {
+      var count = Math.min(6, 10000 - ticks);
+      for (var i = 0; i < count; i += 1) {
+        a = sim.stepWorld(a, 1 / 30);
+        sawShot = sawShot || a.combat.events.some(function (e) { return e.kind === 'weapon-fired'; });
+        sawDamage = sawDamage || a.combat.events.some(function (e) { return e.kind === 'ship-damaged'; });
+      }
+      for (var j = 0; j < count; j += 1) b = sim.stepWorld(b, 1 / 30);
+      ticks += count;
+      if (ticks === 300) b = sim.deserializeWorld(sim.serializeWorld(b));
+    }
+    assert(sawShot && sawDamage, 'The replay must exercise weapons and damage');
+    assert(JSON.stringify(a) === JSON.stringify(b), 'Frame grouping and mid-battle loading cannot affect outcomes');
+    assert(initial.elapsedSeconds === 0 && initial.combat.drones.length === 3, 'Stepping must preserve the input world');
+  });
+
+  test('combat resolves simultaneous lethal fire once and leaves a recoverable wreck', function () {
+    var world = sim.spawnHostileWave(sim.createInitialWorld(42));
+    world.ships = world.ships.filter(function (ship) { return ship.id !== 'escort-02'; });
+    var fighter = findShip(world, 'escort-01');
+    fighter.damage = 0.8;
+    var drone = world.combat.drones[0];
+    world.combat.drones = [drone];
+    drone.position = { x: fighter.position.x + 100, y: fighter.position.y };
+    drone.underFire = 1.34;
+    drone.fireCooldown = 0;
+    var next = sim.stepWorld(world, 1 / 30);
+    assert(findShip(next, fighter.id).disabled, 'A drone killed this tick still gets its final shot');
+    assert(next.combat.drones.length === 0 && next.wrecks.length === 1, 'A fighter disabled this tick still completes its laser dwell');
+    assert(next.combat.events.filter(function (e) { return e.kind === 'ship-destroyed'; }).length === 1, 'Destruction emits once');
+    var later = sim.stepWorld(next, 1 / 30);
+    assert(later.wrecks.length === 1 && later.combat.events.length === 0, 'Events and salvage must not repeat on later ticks');
+  });
+
   test('legacy wrecks without rotation render finite recovery geometry', function () {
     var world = sim.createInitialWorld();
     world.wrecks = [{ id: 'legacy-wreck', position: { x: 10, y: 20 } }];
@@ -192,15 +287,15 @@
     escorts.forEach(function (ship) { ship.position = { x: 0, y: 0 }; });
     var drone = { id: 'shared-target', position: { x: 100, y: 0 } };
     var timers = {};
-    var first = game.stepDefenderWeapon(escorts[0], [drone], timers, 0.01);
-    var second = game.stepDefenderWeapon(escorts[1], [drone], timers, 0.01);
+    var first = sim.stepDefenderWeapon(escorts[0], [drone], timers, 0.01);
+    var second = sim.stepDefenderWeapon(escorts[1], [drone], timers, 0.01);
     assert(first.target === drone && second.target === drone, 'Both escorts should engage the same hostile');
     assert(first.paint && second.paint, 'Both escorts should visibly fire on the same frame');
-    assert(!game.stepDefenderWeapon(escorts[0], [drone], timers, 0.02).paint, 'First escort should respect its own laser cadence');
-    assert(game.stepDefenderWeapon(escorts[1], [drone], timers, 0.08).paint, 'Second escort should fire independently of the first timer');
-    assert(game.stepDefenderWeapon(escorts[0], [], timers, 0.1) === null, 'Destroyed targets should not remain reserved');
+    assert(!sim.stepDefenderWeapon(escorts[0], [drone], timers, 0.02).paint, 'First escort should respect its own laser cadence');
+    assert(sim.stepDefenderWeapon(escorts[1], [drone], timers, 0.08).paint, 'Second escort should fire independently of the first timer');
+    assert(sim.stepDefenderWeapon(escorts[0], [], timers, 0.1) === null, 'Destroyed targets should not remain reserved');
     drone.position.x = 1000;
-    assert(game.stepDefenderWeapon(escorts[0], [drone], timers, 0.1) === null, 'Escorts must still respect weapon range');
+    assert(sim.stepDefenderWeapon(escorts[0], [drone], timers, 0.1) === null, 'Escorts must still respect weapon range');
   });
 
   test('destroyed drones persist as distinct salvage wrecks across save and camera changes', function () {
@@ -234,7 +329,7 @@
     world = sim.deserializeWorld(sim.serializeWorld(world));
     world = sim.issueReturnOrder(world);
     for (var tick = 0; tick < 1500; tick += 1) world = sim.stepWorld(world, 1 / 30);
-    assert(world.wrecks.length === 0, 'Delivered wreck should disappear');
+    assert(!world.wrecks.some(function (wreck) { return wreck.id === 'wreck-1'; }), 'Delivered wreck should disappear even when combat creates new wrecks');
     assertClose(world.recovery.salvagedOre, 24);
     assertClose(world.mothership.storage.ore + world.mothership.storage.constructionMass, 24);
     assert(!findShip(world, 'tug-01').towTarget, 'Hauler should be free after delivery');
@@ -252,7 +347,7 @@
     fighter = findShip(world, fighter.id);
     assert(fighter.disabled && fighter.order.kind === 'idle', 'Disabled fighter should reject movement');
     assertClose(fighter.position.x, 165);
-    assert(game.stepDefenderWeapon(fighter, [{ position: fighter.position }], {}, 1) === null, 'Disabled fighter must not shoot');
+    assert(sim.stepDefenderWeapon(fighter, [{ position: fighter.position }], {}, 1) === null, 'Disabled fighter must not shoot');
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), fighter.position);
     for (var i = 0; i < 1000 && !findShip(world, fighter.id).repairRemaining; i += 1) world = sim.stepWorld(world, 1 / 30);
     fighter = findShip(world, fighter.id);
@@ -344,11 +439,11 @@
 
   test('operation exposure starts quiet and rises with industrial work', function () {
     var world = sim.createInitialWorld();
-    assertClose(game.operationExposure(world), 0);
+    assertClose(sim.operationExposure(world), 0);
     world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), 'ast-ceres-01');
-    assert(game.operationExposure(world) > 0, 'Mining work should expose the operation to contact risk');
+    assert(sim.operationExposure(world) > 0, 'Mining work should expose the operation to contact risk');
     world.mothership.storage.depotSections = 1;
-    assert(game.operationExposure(world) > 1, 'Ready construction sections should add operational exposure');
+    assert(sim.operationExposure(world) > 1, 'Ready construction sections should add operational exposure');
   });
 
   test('order line local vector rotates back to world target direction', function () {
@@ -861,7 +956,7 @@
     s.position = { x: 0, y: 0 };
     var fresh = { position: { x: 250, y: 0 }, underFire: 0 };
     var damaged = { position: { x: 265, y: 0 }, underFire: 1 };
-    assert(game.stepDefenderWeapon(s, [fresh, damaged], {}, 1 / 30).target === damaged, 'Finish reachable weakened enemies');
+    assert(sim.stepDefenderWeapon(s, [fresh, damaged], {}, 1 / 30).target === damaged, 'Finish reachable weakened enemies');
   });
 
   function deployTestFormation(world) {

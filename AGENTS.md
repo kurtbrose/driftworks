@@ -12,6 +12,8 @@ use relative URLs and do not introduce runtime network dependencies.
   type check and the dependency-free test suite.
 - Run the dependency-free suite with `node tests/run.cjs`, or open
   `http://localhost:8000/tests/`. Both execute `tests/tests.js`.
+- For a captured gameplay bug, follow [scenario replay](docs/scenarios.md).
+  Add JSON regressions to `tests/scenarios/`; the Node suite discovers them.
 - For behavior changes, add focused regression coverage to that suite. The
   headless runner stubs the DOM and disables boot; it does not exercise Pixi,
   real input, or Web Audio. Verify visual/input/audio changes in the browser.
@@ -24,7 +26,7 @@ use relative URLs and do not introduce runtime network dependencies.
 | Fuel, delta-v, launcher/catcher envelope | `src/propulsion.js`; conversions and payload mass in `src/sim.js` |
 | Save compatibility or new persistent fields | `src/sim.js`: constructors, `normalizeWorld`, `stepWorld`, serialization; `docs/world-state.md` |
 | Selection, right-click behavior, camera, zoom | `src/game.js`: `createScene`, `issueVisualContextOrder`, coordinate helpers; also `sim.issueContextOrder` |
-| Hostiles, weapons, threat director | `src/game.js`: `updateCombatVignette`, `updateThreatDirector`, `stepDefenderWeapon`; fighter steering/damage in `src/sim.js` |
+| Hostiles, weapons, threat director | `src/sim.js`: `stepDirector`, `stepHostiles`, `stepWeapons`; event-driven effects in `src/game.js` |
 | Artwork, effects | `src/game.js`: paint/geometry helpers |
 | DOM HUD, fleet/readouts, control availability | `src/hud.js`; `styles.css` |
 | Sound and audio preferences | `src/audio.js`; event/telemetry calls in `src/game.js` |

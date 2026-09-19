@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "name": "tug-arrival",
+  "seed": 12345,
+  "ticks": 2400,
+  "commands": [
+    { "tick": 0, "action": "select", "args": [["tug-01"]] },
+    { "tick": 0, "action": "move", "args": [{ "x": 200, "y": 120 }] }
+  ],
+  "assertions": [
+    { "path": "ships.tug-01.position.x", "op": "near", "value": 200, "tolerance": 2 },
+    { "path": "ships.tug-01.position.y", "op": "near", "value": 120, "tolerance": 2 }
+  ]
+}
