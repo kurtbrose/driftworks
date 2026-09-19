@@ -7,8 +7,8 @@ catalogue and conversions; each ship saves its own `physical` hull values.
 | Object | Length | Dry mass | Installed thrust | Empty acceleration |
 | --- | ---: | ---: | ---: | ---: |
 | Escort | 20 m | 75 t | 73.55 kN | 0.981 m/s² (0.10 g) |
-| Cargo carrier | 40 m | 500 t | 196.13 kN | 0.392 m/s² (0.04 g) |
-| Tug | 80 m | 3,000 t | 588.40 kN | 0.196 m/s² (0.02 g) |
+| Mining platform | 40 m | 100 t | None | None |
+| Cargo ship (internal type: tug) | 80 m | 3,000 t | 588.40 kN | 0.196 m/s² (0.02 g) |
 | Mothership | 1,000 m | 3,000,000 t | 2.94 MN | 0.000981 m/s² (0.0001 g) |
 
 The mothership remains parked by gameplay policy. Its stored ore, fabrication
@@ -47,7 +47,7 @@ are not simulated.
 All economy quantities labelled tonnes are metric tonnes; physical mass is kg.
 Thrust is in newtons. Acceleration follows `thrustN / totalMassKg`.
 
-- Cargo carrier: 500 t dry hull, 180 t propellant and one 100 t platform: 780 t at deployment load, giving 0.251 m/s². Platforms extract 187.5 t/tactical second and send buffered ore every four tactical seconds. Retrieval adds the platform and any unsent ore to carrier mass.
+- Cargo ship: 3,000 t dry hull, 450 t propellant and one 100 t platform: 3,550 t at deployment load, giving 0.166 m/s². Two platforms initially live in mothership storage. Platforms extract 187.5 t/tactical second and send buffered ore every four tactical seconds. Retrieval adds the platform and any unsent ore to cargo-ship mass; docking unloads it into storage so the same ship can retrieve the next platform.
 - Depot section: 60 × 40 m, 1,500 t. The fully fuelled tug plus section is 4,950 t, giving
   0.119 m/s². Three sections consume 4,500 t
   and occupy an 80 × 160 m frame. These are ship-scale structures. Carried and
@@ -80,8 +80,8 @@ changing time compression changes tactical acceleration quadratically.
 
 ## Propulsion and momentum exchange
 
-src/propulsion.js owns tank defaults, effective exhaust velocity and the shared 32 m/s launcher/catcher envelope. All engine changes use Δv = vₑ ln(m₀/m₁); fuel mass is included in m₀ and falls after each burn. Remaining Δv uses current payload mass. Exhaust velocity is 3,000 m/s for the initial profiles; fighter/carrier/tug tanks hold 12/180/450 t. The catalogue acceleration column above is dry-hull acceleration, not full-tank acceleration.
+src/propulsion.js owns tank defaults, effective exhaust velocity and the shared 32 m/s launcher/catcher envelope. All engine changes use Δv = vₑ ln(m₀/m₁); fuel mass is included in m₀ and falls after each burn. Remaining Δv uses current payload mass. Exhaust velocity is 3,000 m/s for the initial profiles; fighter/cargo-ship tanks hold 12/450 t. The catalogue acceleration column above is dry-hull acceleration, not full-tank acceleration.
 
 Ships retain velocity on fuel exhaustion. Cruise speeds are guidance targets, never instantaneous physical caps. Return reserves budget the current relative velocity plus homeward cruise, with a 50% guidance margin and 35 m/s contingency; this is a conservative heuristic for the current parked-mothership scene, not an orbital transfer planner. The catcher supplies terminal braking inside 44 world units at relative speeds ≤32 m/s. Packet collision uses a swept segment to avoid tunnelling. Ship arrivals retain a tiny numerical settling tolerance.
 
-Docking instantly refills from an unlimited depot supply for this slice. An outbound order from a docked craft receives a free impulse capped at 32 m/s, its guidance speed and a nearby stopping-distance limit. Launcher energy and mothership recoil are not modelled. Platform packet launchers similarly have no propellant budget yet. Mining lifecycle and all in-flight packets are saved. A separate logisticsVersion: 1 migration converts old miners once, preserving their ore and replacing old extraction orders with idle carriers.
+Docking instantly refills from an unlimited depot supply for this slice. An outbound order from a docked craft receives a free impulse capped at 32 m/s, its guidance speed and a nearby stopping-distance limit. Launcher energy and mothership recoil are not modelled. Platform packet launchers similarly have no propellant budget yet. Mining lifecycle and all in-flight packets are saved. A separate logisticsVersion: 2 migration retires obsolete miner/carrier hulls, preserves their ore in mothership storage and keeps existing platforms. The original cargo ship handles platform deployment, construction and recovery.

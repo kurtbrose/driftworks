@@ -12,8 +12,8 @@
 
   var SHIP_STYLES = {
     mothership: { radius: 34, fill: 0x7d8790, stroke: 0xd7dee4 },
-    cargo: { radius: 14, fill: 0xd3a449, stroke: 0xf3d99b },
-    tug: { radius: 18, fill: 0x6fb6a7, stroke: 0xc3eee5 },
+    platform: { radius: 14, fill: 0xd3a449, stroke: 0xf3d99b },
+    tug: { radius: 18, fill: 0x6fa9ce, stroke: 0xc3e5ff },
     escort: { radius: 13, fill: 0xb76c6f, stroke: 0xf0b7b9 }
   };
   var ASTEROID_FILL = 0x655f57;
@@ -32,7 +32,7 @@
   function semanticScale(type, zoom) {
     if (type === 'asteroid') return 1;
     var large = type === 'mothership' || type === 'asteroid';
-    var exponent = large ? 0.95 : (type === 'cargo' || type === 'tug' || type === 'depot' ? 0.12 : 0.08);
+    var exponent = large ? 0.95 : (type === 'platform' || type === 'tug' || type === 'depot' ? 0.12 : 0.08);
     // Every class stops shrinking on screen below the baseline. Keeping the
     // same floor for all classes preserves their tactical size hierarchy.
     var tacticalZoom = Math.min(DETAIL_ZOOM_START, zoom);
@@ -84,6 +84,12 @@
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
+      onDeployPlatform: function () {
+        var asteroid = world.asteroids.filter(function (a) { return a.ore > 0; })[0];
+        if (asteroid) world = sim.issueMineOrder(world, asteroid.id);
+        scene.sync(world);
+        hud.update(world, scene.getStats());
+      },
       onSave: function () {
         sim.saveWorld(world);
         hud.update(world, scene.getStats());
@@ -96,7 +102,7 @@
         hud.update(world, scene.getStats());
       },
       onReset: function () {
-        world = sim.createInitialWorld();
+        world = sim.resetWorld();
         accumulator = 0;
         scene.resetCombat();
         scene.sync(world);
@@ -178,6 +184,7 @@
       '</section>' +
       '<section class="panel fleet-panel" aria-label="Fleet delta-v"><div class="time-heading">FLEET · REMAINING Δv</div><div data-role="fleet"></div></section>' +
       '<section class="panel controls">' +
+      '<button type="button" data-action="deploy-platform">Deploy mining platform</button>' +
       '<button type="button" data-action="end-mining">End mining & recover</button>' +
       '<button type="button" data-action="save">Save</button>' +
       '<button type="button" data-action="load">Load</button>' +
@@ -186,9 +193,11 @@
       '<label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label>' +
       '<label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label>' +
       '</section>' +
-      '<section class="hint">LMB select/drag-box · RMB asteroid: deploy · RMB home: return · RMB platform: retrieve · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
+      '<section class="hint">Select mothership → Deploy mining platform · RMB home: return · Cargo ship + RMB platform: retrieve · wheel zoom · Space/MMB drag pan · F focus</section>';
 
     host.querySelector('[data-action="end-mining"]').addEventListener('click', actions.onEndMining);
+    var deployButton = host.querySelector('[data-action="deploy-platform"]');
+    deployButton.addEventListener('click', actions.onDeployPlatform);
     var stressButton = host.querySelector('[data-action="stress"]');
     var fleet = host.querySelector('[data-role="fleet"]');
     fleet.addEventListener('click', function (event) {
@@ -210,7 +219,13 @@
 
     return {
       update: function (world, stats) {
-        world.ships.filter(function (s) { return s.type !== 'mothership'; }).forEach(function (ship) {
+        var miningControls = miningControlState(world);
+        deployButton.disabled = !miningControls.canDeploy;
+        deployButton.title = miningControls.deployHint;
+        var endMiningButton = host.querySelector('[data-action="end-mining"]');
+        endMiningButton.disabled = !miningControls.canEnd;
+        endMiningButton.textContent = miningControls.endLabel;
+        world.ships.forEach(function (ship) {
           var button = Array.from(fleet.children).filter(function (b) { return b.dataset.ship === ship.id; })[0];
           if (!button) {
             button = document.createElement('button'); button.type = 'button'; button.dataset.ship = ship.id;
@@ -218,6 +233,7 @@
           }
           var label = ship.name + ' · ' + Math.floor(sim.remainingDeltaV(world, ship)) + ' m/s' +
             (ship.disabled ? ' · disabled' : ship.docked ? ' · docked' : ship.order.automatic ? ' · returning' : '');
+          if (ship.type === 'mothership') label = ship.name + ' · ' + world.platforms.filter(function (p) { return p.state === 'stored'; }).length + ' platforms aboard';
           if (button.textContent !== label) button.textContent = label;
           button.dataset.active = String(world.selectedShipIds.indexOf(ship.id) !== -1);
         });
@@ -237,7 +253,6 @@
           world.mothership.storage.depotSections + ' ready · ' + sim.DEPOT_SECTION.lengthM + ' × ' + sim.DEPOT_SECTION.widthM + ' m · ' + Math.floor(world.mothership.storage.constructionMass) + ' t feedstock';
         host.querySelector('[data-role="mining"]').textContent = world.miningMission + ' · ' +
           world.platforms.filter(function (p) { return p.state === 'deployed'; }).length + ' deployed · ' + world.packets.length + ' packets';
-        host.querySelector('[data-action="end-mining"]').disabled = world.miningMission !== 'active';
         host.querySelector('[data-role="contacts"]').textContent = stats.contacts;
         host.querySelector('[data-role="recovery"]').textContent = (world.wrecks || []).length + ' wrecks · ' +
           world.ships.filter(function (ship) { return ship.disabled; }).length + ' disabled';
@@ -263,7 +278,7 @@
             })
             .map(function (ship) {
               var status = ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
-                ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : ship.order.kind === 'mine' ? (ship.order.phase === 'landed' ? 'landed / mining' : ship.order.phase === 'matching' ? 'matching surface' : 'approaching site') : '';
+                ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : '';
               if (!status) status = ship.docked ? 'docked / refuelled' : ship.order.kind === 'return' ?
                 (ship.order.automatic ? 'fuel reserve / returning' : 'returning') : ship.order.kind === 'deploy' ? 'deploying platform' :
                 ship.order.kind === 'retrieve-platform' ? 'retrieving platform' : ship.propulsion && ship.propulsion.fuelKg < 0.001 ? 'fuel empty / coasting' : '';
@@ -310,6 +325,7 @@
       fill: 0xd8e4ea
     });
     var shipGraphics = {};
+    var platformGraphics = {};
     var asteroidGraphics = {};
     var droneGraphics = {};
     var stressLayer = null;
@@ -416,17 +432,22 @@
       paintDefenderCoverage(coverageGraphic, world);
       paintRecovery(recoveryGraphic, world);
       logisticsGraphic.clear();
+      Object.keys(platformGraphics).forEach(function (id) { platformGraphics[id].visible = false; });
       world.platforms.forEach(function (p) {
         if (p.state !== 'deployed') return;
-        var size = 12 * semanticScale('cargo', world.camera.zoom);
-        logisticsGraphic.lineStyle(1 / world.camera.zoom, 0xffda81, 1);
-        logisticsGraphic.beginFill(0x77552a, 1);
-        logisticsGraphic.drawRect(p.position.x - size, p.position.y - size, size * 2, size * 2);
-        logisticsGraphic.endFill();
-        logisticsGraphic.moveTo(p.position.x - size * 1.5, p.position.y);
-        logisticsGraphic.lineTo(p.position.x + size * 1.5, p.position.y);
-        logisticsGraphic.moveTo(p.position.x, p.position.y - size * 1.5);
-        logisticsGraphic.lineTo(p.position.x, p.position.y + size * 1.5);
+        var graphic = platformGraphics[p.id];
+        if (!graphic) {
+          graphic = platformGraphics[p.id] = new PIXI.Graphics();
+          graphic.eventMode = 'none'; worldLayer.addChild(graphic);
+        }
+        var asteroid = world.asteroids.filter(function (a) { return a.id === p.asteroidId; })[0];
+        graphic.clear(); graphic.visible = true;
+        graphic.position.set(p.position.x, p.position.y);
+        graphic.rotation = p.siteAngle + (asteroid ? asteroid.rotation : 0) + Math.PI;
+        graphic.scale.set(semanticScale('platform', world.camera.zoom));
+        drawMiningPlume(graphic, world.miningMission === 'active' && asteroid && asteroid.ore > 0, 14, world.elapsedSeconds);
+        graphic.lineStyle(1.5, SHIP_STYLES.platform.stroke, 0.9);
+        paintMiningPlatform(graphic, SHIP_STYLES.platform);
       });
       world.packets.forEach(function (p) {
         logisticsGraphic.lineStyle(0);
@@ -531,10 +552,10 @@
         }
       }
       previousRecovery = world.recovery ? Object.assign({}, world.recovery) : null;
-      world.ships.forEach(function (ship) {
-        if (ship.type === 'cargo' && ship.order.kind === 'mine' && ship.cargo > (ship.previousCargo || 0)) {
-          var asteroid = findAsteroidById(world, ship.order.asteroidId);
-          if (asteroid) {
+      world.platforms.forEach(function (platform) {
+        if (platform.state === 'deployed' && world.miningMission === 'active') {
+          var asteroid = findAsteroidById(world, platform.asteroidId);
+          if (asteroid && asteroid.ore > 0) {
             if (audio && world.elapsedSeconds - lastMiningSoundAt > 0.18) {
               audio.playMiningTick();
               lastMiningSoundAt = world.elapsedSeconds;
@@ -646,7 +667,7 @@
     function industrialTargets(world) {
       var targets = [];
       world.ships.forEach(function (ship) {
-        if (ship.type === 'cargo' && ship.cargo > 0) {
+        if (ship.type === 'tug' && (ship.cargo > 0 || ship.platformId)) {
           targets.push({ id: ship.id, kind: 'ship', position: ship.position });
         }
         if (ship.type === 'tug' && (ship.carryingSection || ship.order.kind === 'build')) {
@@ -1024,7 +1045,7 @@
     }
     var homeHit = world.ships.filter(function (s) { return s.type === 'mothership' && hits(s, s.type, 38); })[0];
     if (homeHit) return sim.issueReturnOrder(world);
-    var platformHit = (world.platforms || []).filter(function (p) { return p.state === 'deployed' && hits(p, 'cargo', 22); })[0];
+    var platformHit = (world.platforms || []).filter(function (p) { return p.state === 'deployed' && hits(p, 'platform', 22); })[0];
     if (platformHit) return sim.issuePlatformRecovery(world, platformHit.id);
     var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
     if (fighters.length) {
@@ -1136,7 +1157,7 @@
     if (world.mothership.storage.constructionMass > 0 || world.mothership.storage.depotSections > 0) exposure += 1;
     if (world.depot && world.depot.builtStages > 0) exposure += 1;
     world.ships.forEach(function (ship) {
-      if (ship.type === 'cargo' && (ship.cargo > 20 || ship.order.kind === 'deploy' || ship.order.kind === 'return')) exposure += 1;
+      if (ship.type === 'tug' && (ship.cargo > 20 || ship.order.kind === 'deploy' || ship.platformId)) exposure += 1;
       if (ship.type === 'tug' && (ship.carryingSection || ship.order.kind === 'build')) exposure += 1;
     });
     return exposure;
@@ -1273,7 +1294,6 @@
     graphics.clear();
     graphics.alpha = ship.disabled && ship.launchElapsed == null ? 0.45 : 1;
     drawEnginePlume(graphics, ship, style.radius, elapsedSeconds);
-    drawMiningPlume(graphics, ship, style.radius, elapsedSeconds);
     if (ship.type === 'mothership') {
       paintMothership(graphics, selected, elapsedSeconds);
       drawShipOrderAndBadges(graphics, ship, style);
@@ -1298,9 +1318,12 @@
       });
     }
     graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
-    if (ship.type === 'cargo') {
-      paintMiner(graphics, style);
-    } else if (ship.type === 'tug') {
+    if (ship.type === 'tug') {
+      if (ship.platformId) {
+        graphics.lineStyle(1.5, SHIP_STYLES.platform.stroke, 0.9);
+        paintMiningPlatform(graphics, SHIP_STYLES.platform);
+        graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, 0.9);
+      }
       paintConstructor(graphics, style);
     } else {
       graphics.beginFill(style.fill, 0.96);
@@ -1315,7 +1338,7 @@
     drawShipOrderAndBadges(graphics, ship, style);
   }
 
-  function paintMiner(graphics, style) {
+  function paintMiningPlatform(graphics, style) {
     var r = style.radius;
     graphics.beginFill(style.fill, 0.85);
     [-0.55, 0, 0.55].forEach(function (x) {
@@ -1387,7 +1410,7 @@
       drawWorldOrderLine(graphics, ship);
     }
 
-    if (ship.type === 'cargo' && (ship.cargo > 0 || ship.platformId)) {
+    if (ship.type === 'tug' && (ship.cargo > 0 || ship.platformId)) {
       var filled = 1;
       graphics.lineStyle(0);
       graphics.beginFill(0xd3a449, 0.95);
@@ -1559,7 +1582,7 @@
     addThrusterPlume(plumes, 'brake-starboard', Math.max(0, -local.x), acceleration, radius, { x: 0.72, y: 0.42 }, { x: 1, y: 0 }, loadedReturn);
     addThrusterPlume(plumes, 'port-translate', Math.max(0, local.y), acceleration, radius, { x: -0.2, y: -0.82 }, { x: 0, y: -1 }, loadedReturn);
     addThrusterPlume(plumes, 'starboard-translate', Math.max(0, -local.y), acceleration, radius, { x: -0.2, y: 0.82 }, { x: 0, y: 1 }, loadedReturn);
-    if (shipType === 'cargo' || shipType === 'tug') {
+    if (shipType === 'tug') {
       plumes.forEach(function (plume) {
         var constructor = shipType === 'tug';
         if (plume.id === 'main-aft') {
@@ -1868,8 +1891,8 @@
 
   // Like engine exhaust, dust is drawn in hull-local coordinates so position,
   // rotation, interpolation and semantic zoom all follow the ship exactly.
-  function drawMiningPlume(graphics, ship, radius, elapsedSeconds) {
-    if (ship.disabled || ship.order.kind !== 'mine' || ship.order.phase !== 'landed') return;
+  function drawMiningPlume(graphics, active, radius, elapsedSeconds) {
+    if (!active) return;
     graphics.lineStyle(0);
     graphics.beginFill(0xd5bd82, 0.16);
     graphics.drawCircle(radius * 0.95, 0, radius * 0.28);
@@ -2007,6 +2030,24 @@
       String(wholeSeconds % 60).padStart(2, '0') + 's';
   }
 
+  function miningControlState(world) {
+    var homeSelected = world.ships.some(function (s) {
+      return s.type === 'mothership' && world.selectedShipIds.indexOf(s.id) !== -1;
+    });
+    var working = world.platforms.some(function (p) { return p.state !== 'stored'; }) ||
+      world.ships.some(function (s) { return s.order.kind === 'deploy'; });
+    return {
+      canDeploy: homeSelected && sim.canDeployPlatform(world),
+      deployHint: !homeSelected ? 'Select the mothership to deploy a mining platform.' :
+        world.miningMission !== 'active' ? 'Mining has ended for this mission.' :
+        !sim.canDeployPlatform(world) ? 'Requires a stored platform, accessible ore, and an idle cargo ship with an empty hold.' :
+        'Send the blue cargo ship to collect and deploy a stored platform.',
+      canEnd: world.miningMission === 'active' && working,
+      endLabel: world.miningMission === 'recovering' ? 'Recovering platforms…' :
+        world.miningMission === 'complete' ? 'Mining ended · platforms recovered' : 'End mining & recover'
+    };
+  }
+
   function totalOreRemaining(world) {
     return world.asteroids.reduce(function (total, asteroid) {
       return total + asteroid.ore;
@@ -2015,6 +2056,7 @@
 
   Driftworks.game = {
     boot: boot,
+    miningControlState: miningControlState,
     semanticScale: semanticScale,
     updateEffects: updateEffects,
     zoomCameraAt: zoomCameraAt,

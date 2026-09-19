@@ -5,11 +5,11 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 ## What Works Now
 
 - Full-window PixiJS tactical scene using vendored runtime code.
-- Geometric mothership, two cargo carriers with mining platforms, tug, and two escort craft.
+- Mothership, one blue cargo ship (Linehorse), two escort craft, and two stored mining platforms. There are no mining ships.
 - Single-click selection and drag-box multi-selection.
 - Right-click move orders with fixed-step simulation and interpolated rendering.
 - One large asteroid occupies the tactical environment, with a slow, randomly clockwise or counterclockwise spin.
-- Right-click its surface with selected cargo carriers: they match a rotating site, deploy their platforms, and return home. Platforms remain attached and extract ore.
+- Select the mothership and choose **Deploy mining platform**: Linehorse collects one from storage, matches a rotating site, deploys it, and returns home. Platforms use the former mining-ship artwork and remain attached while extracting ore.
 - The asteroid retains its physical size as ore is depleted; older multi-asteroid saves merge remaining ore into one large body.
 - Platforms send ballistic ore packets every four tactical seconds. The mothership catches packets inside its 32 m/s relative-speed envelope.
 - Mothership processes delivered ore into 1,500t depot sections.
@@ -37,11 +37,12 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - The fleet panel shows remaining Δv in m/s and lets you select docked craft. Selection details include fuel tonnes. The initial fleet is staged outside the mothership; right-click home to dock it.
 - Right-click the mothership to return, including with fighters selected. Low-fuel craft automatically leave their current assignment when they reach a conservative return reserve. Return guidance allows a nonzero intercept velocity.
 - The mothership catches craft within 44 world units and at up to 32 m/s relative velocity. Docking refills tanks immediately; a subsequent outbound order receives a free launcher impulse up to the same 32 m/s. Launcher speed also respects the work-zone guidance speed and nearby stopping distance.
-- Select Carrier One or Carrier Two and right-click the asteroid to deploy its platform. Each carrier holds one reusable platform. Platforms launch ore packets; carriers do not shuttle extracted ore.
-- Right-click a deployed platform with an empty carrier to retrieve it early. **End mining & recover** stops extraction and assigns available carriers to collect all platforms. Buffered ore comes home with the platform; packets already in flight continue. Mining becomes complete only after every platform is aboard a docked carrier and no packets remain.
-- Old saves convert miners into carriers with one platform each, retaining existing ore and other progress. Active old mining orders reset to idle. Fuel, platforms, packets and recovery progress persist.
+- Select **MSV Hardshell** in the fleet panel or scene, then choose **Deploy mining platform**. The idle blue cargo ship collects one platform from the mothership and deploys it on the asteroid. Repeat after it returns to deploy the second platform. The cargo ship carries one platform, construction section, or recovered hull at a time. Platforms launch ore packets themselves.
+- Select Linehorse and right-click a deployed platform to retrieve it early. **End mining & recover** stops extraction and assigns the cargo ship to collect every deployed platform in successive trips. Buffered ore comes home with the platform; packets already in flight continue. Mining becomes complete only after every platform is back in mothership storage and no packets remain.
+- Old saves retire obsolete mining ships and the intermediate Carrier One/Two hulls, preserving their ore in mothership storage. Deployed platforms and in-flight packets persist. Stored platforms, fuel, and recovery progress survive saves.
+- Save/Load retain pending deployment and mining/recovery phases. Reset replaces the saved world as well as the live mission. Mining controls remain visible; select the mothership to enable deployment when its cargo ship is available.
 
-Tuning is intentionally provisional: engines use a 3,000 m/s effective exhaust velocity; tank capacities are 12 t for fighters, 180 t for carriers and 450 t for the tug. Propellant supply at the mothership is currently unlimited. The launcher/catcher is a gameplay abstraction: mothership recoil, stored launcher energy, structural load limits, gravity and orbital motion remain outside this slice. Propulsion math is isolated in src/propulsion.js; orders and platform lifecycle live in src/sim.js.
+Tuning is intentionally provisional: engines use a 3,000 m/s effective exhaust velocity; tank capacities are 12 t for fighters and 450 t for the cargo ship. Propellant supply at the mothership is currently unlimited. The launcher/catcher is a gameplay abstraction: mothership recoil, stored launcher energy, structural load limits, gravity and orbital motion remain outside this slice. Propulsion math is isolated in src/propulsion.js; orders and platform lifecycle live in src/sim.js.
 
 ## No Build Pipeline
 

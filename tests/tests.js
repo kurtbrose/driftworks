@@ -30,7 +30,7 @@
   });
 
   test('fixed-step advancement is deterministic', function () {
-    var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01']), { x: 100, y: -90 });
+    var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['tug-01']), { x: 100, y: -90 });
     var a = sim.stepWorld(sim.stepWorld(world, 1 / 30), 1 / 30);
     var b = sim.stepWorld(sim.stepWorld(world, 1 / 30), 1 / 30);
     assert(JSON.stringify(a) === JSON.stringify(b), 'Repeated stepping from the same state should match');
@@ -54,19 +54,19 @@
   });
 
   test('acceleration limits sudden direction reversal', function () {
-    var world = sim.selectShips(sim.createInitialWorld(), ['miner-01']);
-    var miner = findShip(world, 'miner-01');
+    var world = sim.selectShips(sim.createInitialWorld(), ['tug-01']);
+    var miner = findShip(world, 'tug-01');
     miner.position = { x: 0, y: 0 };
     miner.previousPosition = { x: 0, y: 0 };
     miner.velocity = { x: miner.speed, y: 0 };
     world = sim.issueMoveOrder(world, { x: -300, y: 0 });
     world = sim.stepWorld(world, 1 / 30);
-    miner = findShip(world, 'miner-01');
+    miner = findShip(world, 'tug-01');
     assert(miner.velocity.x > 0, 'Miner should not instantly reverse horizontal velocity');
   });
 
   test('industrial loads reduce acceleration through mass while retaining guidance speed', function () {
-    ['miner-01', 'tug-01'].forEach(function (id) {
+    ['tug-01'].forEach(function (id) {
       function cruise(load, ticks) {
         var world = sim.selectShips(sim.createInitialWorld(), [id]);
         var ship = findShip(world, id);
@@ -85,7 +85,7 @@
       assertClose(loaded.velocity.x, empty.velocity.x);
       assertClose(loaded.speed, empty.speed);
       assert(loaded.acceleration < empty.acceleration, 'Wet payload mass must reduce acceleration');
-      if (id === 'miner-01') {
+      if (id === 'tug-01') {
         var half = findShip(cruise(0.5, 1), id);
         assert(half.acceleration > loaded.acceleration && half.acceleration < empty.acceleration, 'Partial ore load should have an intermediate penalty');
       }
@@ -97,12 +97,12 @@
   });
 
   test('picking up cargo does not instantly clamp existing velocity', function () {
-    var world = sim.selectShips(sim.createInitialWorld(), ['miner-01']);
-    var miner = findShip(world, 'miner-01');
+    var world = sim.selectShips(sim.createInitialWorld(), ['tug-01']);
+    var miner = findShip(world, 'tug-01');
     miner.velocity = { x: miner.speed, y: 0 };
     miner.cargo = miner.cargoCapacity;
     world = sim.issueMoveOrder(world, { x: miner.position.x + 10000, y: miner.position.y });
-    var next = findShip(sim.stepWorld(world, 1 / 30), 'miner-01');
+    var next = findShip(sim.stepWorld(world, 1 / 30), 'tug-01');
     assertClose(next.velocity.x, miner.speed);
     assert(miner.speed - next.velocity.x <= miner.acceleration / 30, 'Loaded ship should decelerate gradually');
   });
@@ -131,23 +131,23 @@
   });
 
   test('deployed platforms extract ore while carriers return empty', function () {
-    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01']), 'ast-ceres-01');
-    for (var i = 0; i < 900; i++) world = sim.stepWorld(world, 1 / 30);
+    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']), 'ast-ceres-01');
+    for (var i = 0; i < 1500; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'deployed');
     assert(world.asteroids[0].ore < world.asteroids[0].oreInitial);
-    assert(findShip(world, 'miner-01').cargo === 0);
-    assert(findShip(world, 'miner-01').docked);
+    assert(findShip(world, 'tug-01').cargo === 0);
+    assert(findShip(world, 'tug-01').docked);
   });
 
   test('ore packets deliver platform production to mothership storage', function () {
-    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01']), 'ast-ceres-01');
+    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']), 'ast-ceres-01');
     var guard = 0;
     while (world.mothership.storage.ore <= 0 && guard < 1200) {
       world = sim.stepWorld(world, 1 / 30);
       guard += 1;
     }
     assert(world.mothership.storage.ore > 0, 'Mothership should receive ore');
-    assert(findShip(world, 'miner-01').cargo === 0, 'Miner cargo should empty after deposit');
+    assert(findShip(world, 'tug-01').cargo === 0, 'Miner cargo should empty after deposit');
   });
 
   test('mothership processes ore into depot construction sections', function () {
@@ -331,7 +331,7 @@
   test('operation exposure starts quiet and rises with industrial work', function () {
     var world = sim.createInitialWorld();
     assertClose(game.operationExposure(world), 0);
-    world = sim.issueMineOrder(sim.selectShips(world, ['miner-01']), 'ast-ceres-01');
+    world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), 'ast-ceres-01');
     assert(game.operationExposure(world) > 0, 'Mining work should expose the operation to contact risk');
     world.mothership.storage.depotSections = 1;
     assert(game.operationExposure(world) > 1, 'Ready construction sections should add operational exposure');
@@ -571,8 +571,8 @@
   test('deployed platforms retain rotating surface sites across saves', function () {
     [-0.012, 0.012].forEach(function (spin) {
       var world = sim.createInitialWorld(); world.asteroids[0].angularVelocity = spin;
-      world = sim.issueMineOrder(sim.selectShips(world, ['miner-01']), world.asteroids[0].id);
-      for (var i = 0; i < 700; i++) world = sim.stepWorld(world, 1 / 30);
+      world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), world.asteroids[0].id);
+      for (var i = 0; i < 1200; i++) world = sim.stepWorld(world, 1 / 30);
       assert(world.platforms[0].state === 'deployed');
       world = sim.deserializeWorld(sim.serializeWorld(world));
       world = sim.stepWorld(world, 1);
@@ -591,41 +591,47 @@
     assertClose(world.asteroids[0].ore, 10205);
   });
 
-  test('carriers choose distinct platform sites on the visible face', function () {
-    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01', 'miner-02']), 'ast-ceres-01');
-    var first = findShip(world, 'miner-01'), second = findShip(world, 'miner-02');
-    [first, second].forEach(function (ship) {
-      assert(ship.order.siteDepth >= 0.3 && ship.order.siteDepth <= 0.75, 'Site should be well inside the rim');
-    });
-    assert(first.order.siteDepth !== second.order.siteDepth, 'Miners should spread across the face');
+  test('mothership dispatches the existing cargo ship and rejects duplicate jobs', function () {
+    var world = sim.createInitialWorld();
+    assert(world.ships.length === 4 && world.ships.every(function (s) { return s.type !== 'miner' && s.type !== 'cargo'; }));
+    assert(world.platforms.every(function (p) { return p.state === 'stored'; }));
+    world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), 'ast-ceres-01');
+    var carrier = findShip(world, 'tug-01');
+    assert(carrier.order.kind === 'deploy' && !carrier.platformId, 'Cargo ship must collect platform at mothership first');
+    assert(carrier.order.siteDepth >= 0.3 && carrier.order.siteDepth <= 0.75);
+    var order = JSON.stringify(carrier.order);
+    assert(!sim.canDeployPlatform(world));
+    world = sim.issueMineOrder(world, 'ast-ceres-01');
+    assert(JSON.stringify(findShip(world, 'tug-01').order) === order);
   });
 
   test('mining plume uses hull-local geometry and only appears while landed', function () {
-    var ship = findShip(sim.createInitialWorld(), 'miner-01');
+    var ship = findShip(sim.createInitialWorld(), 'tug-01');
     var circles = [];
     var graphics = { lineStyle: function () {}, beginFill: function () {}, endFill: function () {}, drawCircle: function (x, y, r) { circles.push([x, y, r]); } };
     ship.order = { kind: 'mine', phase: 'approach' };
-    game.drawMiningPlume(graphics, ship, 14, 1);
+    game.drawMiningPlume(graphics, false, 14, 1);
     assert(circles.length === 0);
     ship.order.phase = 'landed';
-    game.drawMiningPlume(graphics, ship, 14, 1);
+    game.drawMiningPlume(graphics, true, 14, 1);
     assert(circles.length === 13);
     var initial = JSON.stringify(circles);
     circles = [];
     ship.position = { x: 900, y: -1200 };
     ship.rotation = 2;
-    game.drawMiningPlume(graphics, ship, 14, 1);
+    game.drawMiningPlume(graphics, true, 14, 1);
     assert(JSON.stringify(circles) === initial, 'Hull transform must handle anchoring, not world-space particle offsets');
   });
 
   test('physical scale and payload masses have canonical values', function () {
     var world = sim.createInitialWorld();
-    var miner = findShip(world, 'miner-01');
+    var miner = findShip(world, 'tug-01');
     assertClose(sim.asteroidPhysicalStats(world.asteroids[0]).diameterM, 10000);
-    assertClose(sim.physicalStats(world, miner).accelerationMps2, 196133 / 780000);
+    assertClose(sim.physicalStats(world, miner).accelerationMps2, 588399 / 3450000);
     miner.cargo = 1500;
-    assertClose(sim.physicalStats(world, miner).massKg, 2280000);
-    assertClose(sim.physicalStats(world, miner).accelerationMps2, 196133 / 2280000);
+    assertClose(sim.physicalStats(world, miner).massKg, 4950000);
+    assertClose(sim.physicalStats(world, miner).accelerationMps2, 588399 / 4950000);
+    miner.cargo = 0;
     var tug = findShip(world, 'tug-01');
     var fighter = findShip(world, 'escort-01');
     fighter.disabled = true;
@@ -641,13 +647,13 @@
     world.asteroids[0].ore = 540;
     world.asteroids[0].oreInitial = 540;
     world.contract.quotaOre = 240;
-    var miner = findShip(world, 'miner-01');
+    var miner = findShip(world, 'tug-01');
     delete miner.physical;
     miner.cargo = 40;
     miner.cargoCapacity = 80;
     world.mothership.storage.constructionMass = 40;
     world = sim.deserializeWorld(sim.serializeWorld(world));
-    assertClose(findShip(world, 'miner-01').cargo, 750);
+    assertClose(findShip(world, 'tug-01').cargo, 750);
     assertClose(world.asteroids[0].ore, 10125);
     assertClose(world.mothership.storage.constructionMass, 750);
     assertClose(world.contract.quotaOre, 4500);
@@ -667,7 +673,7 @@
     var industrial = graphics();
     game.drawEnginePlume(fighter, ship, 10, 1);
     game.drawEnginePlume(fighter, ship, 10, 1.1);
-    ship.type = 'miner';
+    ship.type = 'tug';
     game.drawEnginePlume(industrial, ship, 10, 1);
     game.drawEnginePlume(industrial, ship, 10, 1.1);
     assert(fighter.engineResponse.levels['main-aft'] > industrial.engineResponse.levels['main-aft'], 'Fighters should ignite faster');
@@ -720,7 +726,7 @@
 
   test('ship defense follows its anchor and survives saves', function () {
     var world = sim.createInitialWorld();
-    var miner = findShip(world, 'miner-01');
+    var miner = findShip(world, 'tug-01');
     world = game.issueVisualContextOrder(sim.selectShips(world, ['escort-01']), miner.position);
     assert(findShip(world, 'escort-01').order.anchorShipId === miner.id);
     world = sim.deserializeWorld(sim.serializeWorld(world));
@@ -855,11 +861,11 @@
     var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     findShip(world, 'escort-01').position = { x: 650, y: 0 };
-    world = sim.issueMoveOrder(sim.selectShips(world, ['miner-01']), { x: -400, y: -90 });
-    var start = findShip(world, 'miner-01').position.x;
+    world = sim.issueMoveOrder(sim.selectShips(world, ['tug-01']), { x: -400, y: -90 });
+    var start = findShip(world, 'tug-01').position.x;
     var threat = { position: { x: 1100, y: 0 } }; // Nearby fighter scan sees it; anchor scan excludes it.
     for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30, [threat]);
-    assert(world.elapsedSeconds > 0.9 && findShip(world, 'miner-01').position.x < start, 'Clock and unrelated ships must keep moving');
+    assert(world.elapsedSeconds > 0.9 && findShip(world, 'tug-01').position.x < start, 'Clock and unrelated ships must keep moving');
   });
 
   test('new formation orders disengage from old combat and reach their destination', function () {
@@ -1073,17 +1079,21 @@
   });
 
   test('end mining retrieves all platforms, drains packets and conserves material across saves', function () {
-    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['miner-01', 'miner-02']), 'ast-ceres-01');
-    for (var i = 0; i < 650; i++) world = sim.stepWorld(world, 1 / 30);
+    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']), 'ast-ceres-01');
+    for (var i = 0; i < 1800 && !findShip(world, 'tug-01').docked; i++) world = sim.stepWorld(world, 1 / 30);
+    assert(world.platforms[0].state === 'deployed');
+    world = sim.issueMineOrder(world, 'ast-ceres-01');
+    for (i = 0; i < 1800 && world.platforms[1].state !== 'deployed'; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms.every(function (p) { return p.state === 'deployed'; }));
     assert(world.packets.length > 0);
     world = sim.endMining(sim.deserializeWorld(sim.serializeWorld(world)));
     var ore = world.asteroids[0].ore;
-    for (var j = 0; j < 2200 && world.miningMission !== 'complete'; j++) {
+    for (var j = 0; j < 3500 && world.miningMission !== 'complete'; j++) {
       world = sim.stepWorld(world, 1 / 30);
       if (j === 300) world = sim.deserializeWorld(sim.serializeWorld(world));
     }
-    assert(world.miningMission === 'complete', 'Every platform must return aboard a docked carrier');
+    assert(world.miningMission === 'complete', 'The single cargo ship must return both platforms to mothership storage');
+    assert(world.platforms.every(function (p) { return p.state === 'stored'; }));
     assertClose(world.asteroids[0].ore, ore);
     assert(world.packets.length === 0);
     var storage = world.mothership.storage;
@@ -1093,15 +1103,60 @@
   test('legacy miners migrate once without losing ore or manufacturing platforms twice', function () {
     var world = sim.createInitialWorld();
     delete world.logisticsVersion; delete world.platforms; delete world.packets;
-    var ship = findShip(world, 'miner-01'); ship.type = 'miner'; ship.cargo = 123;
+    var ship = sim.cloneWorld(findShip(world, 'tug-01')); ship.id = 'old-miner'; ship.type = 'miner'; ship.cargo = 123;
+    world.ships.push(ship);
     delete ship.propulsion;
     ship.order = { kind: 'mine' };
     world = sim.deserializeWorld(sim.serializeWorld(world));
-    assert(findShip(world, ship.id).type === 'cargo');
-    assertClose(findShip(world, ship.id).cargo, 123);
-    assert(world.platforms.length === 1);
+    assert(!findShip(world, ship.id));
+    assertClose(world.mothership.storage.ore, 123);
+    assert(world.platforms.length === 2);
     world = sim.deserializeWorld(sim.serializeWorld(world));
-    assert(world.platforms.length === 1);
+    assert(world.platforms.length === 2);
+  });
+
+  test('saved mining phases restore control state and pending deployment', function () {
+    var slots = {};
+    var storage = { setItem: function (key, value) { slots[key] = value; }, getItem: function (key) { return slots[key]; } };
+    var world = sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']);
+    assert(game.miningControlState(world).canDeploy);
+    assert(!game.miningControlState(world).canEnd);
+    world = sim.issueMineOrder(world, world.asteroids[0].id);
+    var order = JSON.stringify(findShip(world, 'tug-01').order);
+    sim.saveWorld(world, storage);
+    world = sim.loadWorld(storage);
+    assert(JSON.stringify(findShip(world, 'tug-01').order) === order);
+    assert(!game.miningControlState(world).canDeploy && game.miningControlState(world).canEnd);
+    world = sim.endMining(world);
+    sim.saveWorld(world, storage);
+    world = sim.loadWorld(storage);
+    assert(world.miningMission === 'recovering');
+    assert(game.miningControlState(world).endLabel === 'Recovering platforms…');
+    assert(!game.miningControlState(world).canDeploy && !game.miningControlState(world).canEnd);
+    for (var i = 0; i < 300 && world.miningMission !== 'complete'; i++) world = sim.stepWorld(world, 1 / 30);
+    sim.saveWorld(world, storage);
+    world = sim.loadWorld(storage);
+    assert(world.miningMission === 'complete');
+    assert(game.miningControlState(world).endLabel === 'Mining ended · platforms recovered');
+  });
+
+  test('reset clears mining progress in memory and in the saved world', function () {
+    var slots = {};
+    var storage = { setItem: function (key, value) { slots[key] = value; }, getItem: function (key) { return slots[key]; } };
+    var world = sim.endMining(sim.createInitialWorld());
+    world.platforms[0].state = 'deployed';
+    world.packets.push({ id: 1, ore: 10, position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } });
+    sim.saveWorld(world, storage);
+    var reset = sim.resetWorld(storage), reloaded = sim.loadWorld(storage);
+    [reset, reloaded].forEach(function (fresh) {
+      assert(fresh.miningMission === 'active');
+      assert(fresh.platforms.length === 2 && fresh.platforms.every(function (p) { return p.state === 'stored'; }));
+      assert(fresh.packets.length === 0 && fresh.elapsedSeconds === 0);
+      assert(!game.miningControlState(fresh).canEnd);
+      assert(game.miningControlState(fresh).endLabel === 'End mining & recover');
+      fresh = sim.selectShips(fresh, ['msv-hardshell']);
+      assert(game.miningControlState(fresh).canDeploy);
+    });
   });
 
   run();

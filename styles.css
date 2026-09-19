@@ -149,6 +149,7 @@ button:focus-visible { outline: 2px solid #bff5e7; outline-offset: 3px; }
 }
 
 .controls [data-action="end-mining"] { grid-column: 1 / -1; }
+.controls [data-action="deploy-platform"] { grid-column: 1 / -1; }
 button:disabled { opacity: 0.5; cursor: default; }
 .fleet-panel { grid-column: 1; grid-row: 2; align-self: end; padding: 10px; max-height: 40vh; overflow-y: auto; }
 .fleet-panel button { display: block; width: 100%; text-align: left; font-size: 12px; margin-top: 6px; padding: 5px 8px; }

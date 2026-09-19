@@ -4,7 +4,6 @@
   // SI units at this boundary; the tactical simulation converts velocities once.
   var PROFILES = {
     escort: { capacityKg: 12000, exhaustMps: 3000 },
-    cargo: { capacityKg: 180000, exhaustMps: 3000 },
     tug: { capacityKg: 450000, exhaustMps: 3000 }
   };
   var EXCHANGE_MPS = 32;
