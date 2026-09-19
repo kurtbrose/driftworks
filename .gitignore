@@ -1,0 +1,12 @@
+# Local development dependencies
+node_modules/
+
+# TypeScript and tooling output
+*.tsbuildinfo
+coverage/
+
+# Local editor and OS metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
