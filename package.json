@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "check": "npm run check:types && npm test",
     "test": "node tests/run.cjs",
     "check:types": "node tests/check-types.cjs"
   },

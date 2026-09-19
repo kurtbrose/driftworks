@@ -8,6 +8,8 @@ use relative URLs and do not introduce runtime network dependencies.
 
 - From the repository root, run `python -m http.server 8000`, `serve.bat` on
   Windows, or `./serve.sh` on Unix. Open `http://localhost:8000/`.
+- Run `npm run check` before considering a task complete. It performs both the
+  type check and the dependency-free test suite.
 - Run the dependency-free suite with `node tests/run.cjs`, or open
   `http://localhost:8000/tests/`. Both execute `tests/tests.js`.
 - For behavior changes, add focused regression coverage to that suite. The
