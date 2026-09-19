@@ -1,5 +1,21 @@
 # Architecture
 
+## Static type checks
+
+All five application scripts in `src/` are checked with strict TypeScript via
+JSDoc and `src/types.d.ts`. Run `npm run check:types` (or
+`node tests/check-types.cjs`) after installing the optional development dependency.
+The check also rejects explicit `any` annotations and identifiers inferred as
+`any`, including values escaping from JSON parsing. Tests and vendored Pixi are
+outside this static-check scope; `node tests/run.cjs` remains dependency-free.
+The local Pixi declarations describe the browser API used here, not the full library.
+
+JSON cloning and save/preferences parsing have explicit typed boundaries.
+These do not provide full runtime schema validation: save normalization continues
+to repair historical fields. Normalized worlds include camera zoom and elapsed
+seconds; legacy wreck artwork defaults a missing rotation to zero. The game
+exports `paintRecovery` alongside its other rendering helpers for regression checks.
+
 ## Intended boundaries
 
 The site loads ordinary scripts into `window.Driftworks`; there are no ES module

@@ -32,6 +32,7 @@
     try {
       var saved = global.localStorage && global.localStorage.getItem(storageKey);
       if (saved) {
+        /** @type {{ sfxVolume?: unknown, musicVolume?: unknown, sfx?: unknown, music?: unknown }} */
         var parsed = JSON.parse(saved) || {};
         var sfxVolume = volumeValue(parsed.sfxVolume, parsed.sfx === false ? 0 : 1);
         var musicVolume = volumeValue(parsed.musicVolume, parsed.music ? 1 : 0);

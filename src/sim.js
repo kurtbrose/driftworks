@@ -1126,6 +1126,8 @@
 
   /** @param {string} serialized @returns {World} */
   function deserializeWorld(serialized) {
+    // Save normalization repairs historical fields; it is not schema validation.
+    /** @type {{ version?: unknown, world?: World } | null} */
     var envelope = JSON.parse(serialized);
     if (!envelope || envelope.version !== WORLD_VERSION || !envelope.world) {
       throw new Error('Unsupported Driftworks save version: ' + (envelope && envelope.version));
@@ -1231,7 +1233,7 @@
     return next;
   }
 
-  /** @param {World} world @param {Ship} destroyed @returns {World} */
+  /** @param {World} world @param {{ position: Vec2, velocity: Vec2 }} destroyed @returns {World} */
   function addWreck(world, destroyed) {
     var next = normalizeWorld(world);
     next.wrecks.push({
@@ -1272,6 +1274,7 @@
 
   /** @param {World} world @param {Vec2} point @param {number} range @returns {RecoveryRef | null} */
   function nearestRecoverable(world, point, range) {
+    /** @type {RecoveryRef | null} */
     var best = null;
     /** @type {RecoveryRef[]} */
     var references = (world.wrecks || []).map(function (wreck) { return /** @type {RecoveryRef} */ ({ kind: 'wreck', id: wreck.id }); })
@@ -1423,6 +1426,7 @@
 
   /** @param {World} world @param {Vec2} target @param {number} maxDistance @returns {Asteroid | null} */
   function findNearestAsteroid(world, target, maxDistance) {
+    /** @type {Asteroid | null} */
     var best = null;
     var bestDistance = maxDistance;
     (world.asteroids || []).forEach(function (asteroid) {

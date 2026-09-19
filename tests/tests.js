@@ -21,6 +21,19 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('legacy wrecks without rotation render finite recovery geometry', function () {
+    var world = sim.createInitialWorld();
+    world.wrecks = [{ id: 'legacy-wreck', position: { x: 10, y: 20 } }];
+    var points;
+    game.paintRecovery({
+      clear: function () {}, lineStyle: function () {}, beginFill: function () {},
+      endFill: function () {}, moveTo: function () {}, lineTo: function () {},
+      drawPolygon: function (vertices) { points = vertices; }
+    }, world);
+    assert(points && points.length === 10, 'Wreck silhouette should be drawn');
+    assert(points.every(Number.isFinite), 'Missing rotation should use zero, not NaN');
+  });
+
   test('seeded RNG produces deterministic output', function () {
     var a = sim.createRng(1234);
     var b = sim.createRng(1234);

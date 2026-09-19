@@ -5,8 +5,17 @@
   /** @typedef {import('./types').SimApi} SimApi */
   /** @typedef {import('./types').AudioApi} AudioApi */
   /** @typedef {import('./types').World} World */
+  /** @typedef {import('./types').Vec2} Vec2 */
+  /** @typedef {import('./types').Ship} Ship */
+  /** @typedef {import('./types').Camera} Camera */
+  /** @typedef {import('./types').Viewport} Viewport */
+  /** @typedef {import('./types').Asteroid} Asteroid */
+  /** @typedef {import('./types').Depot} Depot */
+  /** @typedef {import('./types').Rng} Rng */
+  /** @typedef {{ radius: number, fill: number, stroke: number }} ShipStyle */
+  /** @typedef {{ id: string, origin: Vec2, direction: Vec2, side: Vec2, length: number, width: number, alpha: number }} Plume */
   /** @typedef {import('./types').HudController} HudController */
-  /** @typedef {{ graphic: PIXI.Graphics, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
+  /** @typedef {{ graphic: PIXI.DisplayObject, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
   /** @typedef {{ id: string, targetId: string, targetKind: string, position: { x: number, y: number }, velocity: { x: number, y: number }, speed: number, hp: number, flash: number, underFire: number, fireCooldown: number }} Drone */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
@@ -18,6 +27,7 @@
   var DETAIL_ZOOM_START = 32;
   var MAX_ZOOM = 128;
 
+  /** @type {Record<string, ShipStyle>} */
   var SHIP_STYLES = {
     mothership: { radius: 34, fill: 0x7d8790, stroke: 0xd7dee4 },
     platform: { radius: 14, fill: 0xd3a449, stroke: 0xf3d99b },
@@ -201,7 +211,7 @@
     var asteroidGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
     var droneGraphics = {};
-    /** @type {PIXI.Container | null} */
+    /** @type {ReturnType<typeof createStressLayer> | null} */
     var stressLayer = null;
     var stressEnabled = false;
     var dragMode = 'none';
@@ -216,6 +226,7 @@
     /** @type {number | null} */
     var lastStoredOre = null;
     var lastMiningSoundAt = -Infinity;
+    /** @type {Record<string, boolean>} */
     var previousSelected = {};
     /** @type {string[] | null} */
     var cameraFocusSelectionIds = null;
@@ -301,6 +312,7 @@
       if (event.code === 'Space') spaceDown = false;
     });
 
+    /** @param {World} world */
     function sync(world) {
       if (grid.drawnZoom !== world.camera.zoom) {
         drawGrid(grid, world.camera.zoom);
@@ -342,6 +354,7 @@
       worldLayer.scale.set(world.camera.zoom);
       worldLayer.pivot.set(world.camera.x, world.camera.y);
 
+      /** @type {Record<string, boolean>} */
       var selectedNow = {};
       world.ships.forEach(function (ship) {
         var graphic = shipGraphics[ship.id];
@@ -391,6 +404,7 @@
       });
     }
 
+    /** @param {World} world @param {number} alpha @param {number} dt @param {number} realDt */
     function render(world, alpha, dt, realDt) {
       var visualDt = dt * visualTimeScale;
       world.ships.forEach(function (ship) {
@@ -420,6 +434,7 @@
       updateFps(realDt, world);
     }
 
+    /** @param {World} world @param {number} dt */
     function spawnStateEffects(world, dt) {
       if (world.recovery && previousRecovery) {
         var recovered = world.recovery.salvagedOre - previousRecovery.salvagedOre;
@@ -456,20 +471,23 @@
 
       while (effects.length > MAX_EFFECTS) {
         var removed = effects.shift();
-        removed.graphic.destroy();
+        if (removed) removed.graphic.destroy();
       }
     }
 
+    /** @param {World} world @param {string | null} asteroidId */
     function findAsteroidById(world, asteroidId) {
       return world.asteroids.filter(function (asteroid) {
         return asteroid.id === asteroidId;
       })[0];
     }
 
+    /** @param {World} world */
     function spawnHostileDrones(world) {
       spawnHostileWave(world, 'debug');
     }
 
+    /** @param {World} world @param {string} reason */
     function spawnHostileWave(world, reason) {
       drones = [];
       Object.keys(droneGraphics).forEach(function (id) {
@@ -509,6 +527,7 @@
       };
     }
 
+    /** @param {World} world @param {number} dt */
     function updateThreatDirector(world, dt) {
       if (director.wavesSpawned >= DIRECTOR_MAX_WAVES) return;
       if (drones.length) return;
@@ -539,11 +558,13 @@
       }
     }
 
+    /** @param {World} world */
     function incomingWarningPosition(world) {
       var targets = industrialTargets(world);
       return targets[0] ? { x: targets[0].position.x, y: targets[0].position.y - 96 } : { x: world.camera.x, y: world.camera.y - 96 };
     }
 
+    /** @param {World} world */
     function industrialTargets(world) {
       var targets = [];
       world.ships.forEach(function (ship) {
@@ -564,6 +585,7 @@
       return targets;
     }
 
+    /** @param {World} world @param {Drone} drone */
     function droneTargetPosition(world, drone) {
       if (drone.targetKind === 'depot' && world.depot) return world.depot.position;
       var ship = findShipById(world, drone.targetId);
@@ -572,6 +594,7 @@
       return mothership ? mothership.position : { x: 0, y: 0 };
     }
 
+    /** @param {World} world @param {number} dt */
     function updateCombatVignette(world, dt) {
       if (!drones.length) return;
       combatTime += dt;
@@ -619,6 +642,7 @@
       });
     }
 
+    /** @param {Ship} escort @param {Drone} drone @param {number} dt @param {boolean} paint */
     function holdDefensiveLaser(escort, drone, dt, paint) {
       drone.underFire = (drone.underFire || 0) + dt;
       drone.flash = 1;
@@ -633,6 +657,7 @@
       }
     }
 
+    /** @param {Ship} escort @param {Drone} drone */
     function fireEscortShot(escort, drone) {
       drone.hp -= 1;
       drone.flash = 1;
@@ -648,6 +673,7 @@
       }
     }
 
+    /** @param {Drone} drone */
     function destroyDrone(drone) {
       var wasFinal = drones.length === 1;
       pushExplosion(effects, drone.position, drone.velocity, wasFinal);
@@ -666,6 +692,7 @@
       setWorld(sim.addWreck(getWorld(), drone));
     }
 
+    /** @param {World} world */
     function requestSelectionFocus(world) {
       var selected = selectedShips(world);
       if (!selected.length) {
@@ -677,16 +704,20 @@
         return ship.id;
       });
       var focus = computeSelectionFocus(world, cameraFocusSelectionIds);
+      if (!focus) return;
       pushFocusPulse(effects, focus, selected.length > 1 ? 58 : 34);
       pushFloatText(effects, { x: focus.x, y: focus.y - 48 }, focusLabel(selected));
     }
 
+    /** @param {Ship[]} selected */
     function focusLabel(selected) {
       if (selected.length === 1) return 'FOCUS ' + selected[0].name.toUpperCase();
       return 'FOCUS ' + selected.length + ' SHIPS';
     }
 
+    /** @param {Vec2} position @returns {Drone | null} */
     function nearestDrone(position) {
+      /** @type {Drone | null} */
       var best = null;
       var bestDistance = Infinity;
       drones.forEach(function (drone) {
@@ -699,6 +730,7 @@
       return best;
     }
 
+    /** @param {World} world */
     function selectedCenter(world) {
       var selected = selectedShips(world);
       if (!selected.length) return null;
@@ -711,24 +743,28 @@
       return { x: x / selected.length, y: y / selected.length };
     }
 
+    /** @param {World} world */
     function selectedShips(world) {
       return world.ships.filter(function (ship) {
         return world.selectedShipIds.indexOf(ship.id) !== -1;
       });
     }
 
+    /** @param {World} world @param {string} type */
     function findShipByType(world, type) {
       return world.ships.filter(function (ship) {
         return ship.type === type;
       })[0];
     }
 
+    /** @param {World} world @param {string} shipId */
     function findShipById(world, shipId) {
       return world.ships.filter(function (ship) {
         return ship.id === shipId;
       })[0];
     }
 
+    /** @param {string} shipId */
     function createShipGraphic(shipId) {
       var graphic = new PIXI.Graphics();
       graphic.eventMode = 'static';
@@ -744,6 +780,7 @@
       return graphic;
     }
 
+    /** @param {PIXI.FederatedPointerEvent} event */
     function onPointerDown(event) {
       unlockAudio();
       cancelDrag();
@@ -766,6 +803,7 @@
       dragMode = event.button === 1 || spaceDown ? 'pan' : 'select';
     }
 
+    /** @param {PIXI.FederatedPointerEvent} event */
     function onPointerMove(event) {
       var point = { x: event.global.x, y: event.global.y };
       if (dragMode === 'pan') {
@@ -781,6 +819,7 @@
       lastPointer = point;
     }
 
+    /** @param {PIXI.FederatedPointerEvent} event */
     function onPointerUp(event) {
       var point = { x: event.global.x, y: event.global.y };
       var selecting = dragMode === 'select';
@@ -803,6 +842,7 @@
       selectionBox.clear();
     }
 
+    /** @param {boolean} enabled */
     function setStressEnabled(enabled) {
       stressEnabled = enabled;
       if (enabled && !stressLayer) {
@@ -834,6 +874,7 @@
       return 'quiet';
     }
 
+    /** @param {number} dt @param {World} world */
     function updateFps(dt, world) {
       frames += 1;
       fpsTimer += dt;
@@ -849,6 +890,7 @@
       return viewportFromApp(app);
     }
 
+    /** @param {World} world @param {number} dt */
     function applyCameraFocus(world, dt) {
       if (!cameraFocusSelectionIds) return world;
       if (!focusSelectionStillActive(world, cameraFocusSelectionIds)) {
@@ -863,6 +905,7 @@
       return focusCameraToward(world, target, dt);
     }
 
+    /** @param {World} world @param {string[]} shipIds */
     function focusSelectionStillActive(world, shipIds) {
       return shipIds.every(function (shipId) {
         return world.selectedShipIds.indexOf(shipId) !== -1;
@@ -873,12 +916,14 @@
       if (audio) audio.unlock();
     }
 
+    /** @param {World} world */
     function updateAudioTelemetry(world) {
       if (!audio) return;
       var level = selectedThrustLevel(world);
       audio.setEngineThrust(level);
     }
 
+    /** @param {World} world */
     function selectedThrustLevel(world) {
       var selected = selectedShips(world);
       var strongest = 0;
@@ -910,6 +955,7 @@
     };
   }
 
+  /** @param {Vec2} point @param {Camera} camera @param {Viewport} viewport */
   function screenToWorld(point, camera, viewport) {
     return {
       x: (point.x - viewport.width / 2) / camera.zoom + camera.x,
@@ -917,8 +963,10 @@
     };
   }
 
+  /** @param {World} world @param {Vec2} target @returns {World} */
   function issueVisualContextOrder(world, target) {
     var zoom = world.camera.zoom;
+    /** @param {{ position: Vec2 }} entity @param {string} type @param {number} radius */
     function hits(entity, type, radius) {
       return Math.hypot(target.x - entity.position.x, target.y - entity.position.y) <=
         Math.max(12 / zoom, radius * semanticScale(type, zoom));
@@ -944,11 +992,11 @@
       return ship.type === 'tug' && world.selectedShipIds.indexOf(ship.id) !== -1;
     });
     if (hasTug) {
-      var recoverables = (world.wrecks || []).map(function (wreck) {
+      var recoverables = (world.wrecks || []).map(/** @returns {{ entity: import('./types').Wreck | Ship, kind: 'ship' | 'wreck' }} */ function (wreck) {
         return { entity: wreck, kind: 'wreck' };
       }).concat(world.ships.filter(function (ship) {
         return ship.disabled && !ship.repairRemaining && ship.launchElapsed == null;
-      }).map(function (ship) { return { entity: ship, kind: 'ship' }; }));
+      }).map(function (ship) { return { entity: ship, kind: /** @type {const} */ ('ship') }; }));
       var recovery = recoverables.filter(function (item) {
         return !item.entity.towedBy && hits(item.entity, 'escort', 26);
       }).sort(function (a, b) {
@@ -967,6 +1015,7 @@
     return sim.issueMoveOrder(world, target);
   }
 
+  /** @param {Pick<PIXI.Application, "screen">} app */
   function viewportFromApp(app) {
     return {
       width: app.screen.width,
@@ -974,6 +1023,7 @@
     };
   }
 
+  /** @param {World} world @param {string[]} [shipIds] */
   function computeSelectionFocus(world, shipIds) {
     var ids = shipIds || world.selectedShipIds;
     var selected = world.ships.filter(function (ship) {
@@ -999,6 +1049,7 @@
     };
   }
 
+  /** @param {World} world @param {Camera} target @param {number} dt */
   function focusCameraToward(world, target, dt) {
     var t = Math.min(1, dt * 4.5);
     return withCamera(world, {
@@ -1008,9 +1059,11 @@
     });
   }
 
+  /** @param {Ship} escort @param {Drone[]} drones @param {Record<string, number>} timers @param {number} dt @returns {{ target: Drone, paint: boolean } | null} */
   function stepDefenderWeapon(escort, drones, timers, dt) {
     if (escort.disabled) return null;
     timers[escort.id] = Math.max(0, (timers[escort.id] || 0) - dt);
+    /** @type {Drone | null} */
     var target = null;
     var bestDistance = Infinity;
     drones.forEach(function (drone) {
@@ -1032,6 +1085,7 @@
     return { target: target, paint: paint };
   }
 
+  /** @param {World} world */
   function operationExposure(world) {
     var exposure = (world.platforms || []).filter(function (p) { return p.state === 'deployed'; }).length;
     if (world.mothership.storage.constructionMass > 0 || world.mothership.storage.depotSections > 0) exposure += 1;
@@ -1043,6 +1097,7 @@
     return exposure;
   }
 
+  /** @param {Vec2} point @param {Camera} camera @param {Viewport} viewport */
   function worldToScreen(point, camera, viewport) {
     return {
       x: (point.x - camera.x) * camera.zoom + viewport.width / 2,
@@ -1050,6 +1105,7 @@
     };
   }
 
+  /** @param {Camera} camera @param {Vec2} screenDelta */
   function panCamera(camera, screenDelta) {
     return {
       x: camera.x - screenDelta.x / camera.zoom,
@@ -1058,6 +1114,7 @@
     };
   }
 
+  /** @param {Camera} camera @param {Vec2} screenPoint @param {Viewport} viewport @param {number} wheelDelta */
   function zoomCameraAt(camera, screenPoint, viewport, wheelDelta) {
     var before = screenToWorld(screenPoint, camera, viewport);
     var zoom = Math.max(0.35, Math.min(MAX_ZOOM, camera.zoom * (wheelDelta > 0 ? 0.9 : 1.1)));
@@ -1069,10 +1126,12 @@
     };
   }
 
+  /** @param {World} world @param {Camera} camera */
   function withCamera(world, camera) {
     return Object.assign({}, world, { camera: camera });
   }
 
+  /** @param {World} world @param {Vec2} start @param {Vec2} end @param {Viewport} viewport */
   function shipsInsideScreenRect(world, start, end, viewport) {
     var minX = Math.min(start.x, end.x);
     var maxX = Math.max(start.x, end.x);
@@ -1089,6 +1148,7 @@
       });
   }
 
+  /** @param {PIXI.Graphics} graphics @param {number} [zoom] */
   function drawGrid(graphics, zoom) {
     zoom = zoom || 1;
     graphics.clear();
@@ -1108,8 +1168,10 @@
     graphics.lineTo(0, 1800);
   }
 
+  /** @param {PIXI.Graphics} graphics @param {World} world */
   function paintDefenderCoverage(graphics, world) {
     graphics.clear();
+    /** @type {Record<string, boolean>} */
     var anchors = {};
     world.ships.forEach(function (ship) {
       if (ship.type !== 'escort' || ship.disabled || world.selectedShipIds.indexOf(ship.id) === -1) return;
@@ -1133,13 +1195,15 @@
     });
   }
 
+  /** @param {PIXI.Graphics} graphics @param {World} world */
   function paintRecovery(graphics, world) {
     graphics.clear();
     (world.wrecks || []).forEach(function (wreck) {
       if (wreck.towedBy) return;
-      var cos = Math.cos(wreck.rotation);
-      var sin = Math.sin(wreck.rotation);
+      var cos = Math.cos(wreck.rotation || 0);
+      var sin = Math.sin(wreck.rotation || 0);
       var scale = semanticScale('escort', world.camera.zoom);
+      /** @type {number[]} */
       var points = [];
       [[13, 0], [-8, -8], [-3, -1], [-6, 3], [-8, 8]].forEach(function (point) {
         points.push(wreck.position.x + (point[0] * cos - point[1] * sin) * scale,
@@ -1169,6 +1233,7 @@
     });
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Ship} ship @param {boolean} selected @param {number} elapsedSeconds */
   function paintShip(graphics, ship, selected, elapsedSeconds) {
     var style = SHIP_STYLES[ship.type];
     graphics.clear();
@@ -1218,6 +1283,7 @@
     drawShipOrderAndBadges(graphics, ship, style);
   }
 
+  /** @param {PIXI.Graphics} graphics @param {ShipStyle} style */
   function paintMiningPlatform(graphics, style) {
     var r = style.radius;
     graphics.beginFill(style.fill, 0.85);
@@ -1235,6 +1301,7 @@
     graphics.lineTo(0.45 * r, 0.3 * r);
   }
 
+  /** @param {PIXI.Graphics} graphics @param {ShipStyle} style */
   function paintConstructorCargo(graphics, style) {
     var r = style.radius;
     var module = cargoModuleGeometry();
@@ -1256,6 +1323,7 @@
     });
   }
 
+  /** @param {PIXI.Graphics} graphics @param {ShipStyle} style */
   function paintConstructor(graphics, style) {
     var r = style.radius;
     graphics.beginFill(style.fill, 0.8);
@@ -1275,6 +1343,7 @@
     graphics.lineTo(0.6 * r, 0.15 * r);
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Ship} ship @param {ShipStyle} style */
   function drawShipOrderAndBadges(graphics, ship, style) {
     if (ship.order.kind === 'move') {
       graphics.lineStyle(1, 0x7aa9c2, 0.5);
@@ -1307,6 +1376,7 @@
 
   }
 
+  /** @param {PIXI.Graphics} graphics @param {boolean} selected @param {number} elapsedSeconds */
   function paintMothership(graphics, selected, elapsedSeconds) {
     graphics.lineStyle(0);
     graphics.beginFill(SHIP_STYLES.mothership.fill, 1);
@@ -1327,6 +1397,7 @@
     graphics.endFill();
   }
 
+  /** @param {PIXI.Graphics} graphics @param {number} elapsedSeconds */
   function drawMothershipDrumSurface(graphics, elapsedSeconds) {
     var bands = mothershipDrumMarkers(elapsedSeconds);
     graphics.lineStyle(1, 0xd3e4ea, 0.08);
@@ -1345,6 +1416,7 @@
     graphics.lineTo(36, 0);
   }
 
+  /** @param {number} elapsedSeconds */
   function mothershipDrumMarkers(elapsedSeconds) {
     var spin = elapsedSeconds * Math.PI * 2 / 38;
     var markers = [];
@@ -1365,6 +1437,7 @@
     return markers;
   }
 
+  /** @param {number} y */
   function mothershipHullHalfWidthAtY(y) {
     var absY = Math.abs(y);
     if (absY <= 12) return 36;
@@ -1372,6 +1445,7 @@
     return 31 + Math.sqrt(Math.max(0, 25 - cornerInset * cornerInset));
   }
 
+  /** @param {PIXI.Graphics} graphics @param {number} elapsedSeconds */
   function drawMothershipLights(graphics, elapsedSeconds) {
     var spin = elapsedSeconds * Math.PI * 2 / 38;
     var xPositions = [-26, 26];
@@ -1390,8 +1464,9 @@
     });
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Ship} ship @param {number} radius @param {number} elapsedSeconds */
   function drawEnginePlume(graphics, ship, radius, elapsedSeconds) {
-    if (ship.disabled || !ship.previousVelocity || ship.speed <= 0 || ship.order.phase === 'landed') {
+    if (ship.disabled || !ship.previousVelocity || ship.speed <= 0 || ('phase' in ship.order && ship.order.phase === 'landed')) {
       graphics.engineResponse = null;
       return;
     }
@@ -1405,9 +1480,10 @@
 
     var fighter = ship.type === 'escort';
     var time = elapsedSeconds || 0;
-    var response = graphics.engineResponse;
-    if (!response || time < response.time) response = { time: time, levels: {} };
+    var response = graphics.engineResponse && time >= graphics.engineResponse.time
+      ? graphics.engineResponse : { time: time, levels: {} };
     var dt = Math.max(0, Math.min(0.1, time - response.time));
+    /** @type {Record<string, number>} */
     var levels = {};
     var seed = 0;
     for (var i = 0; i < ship.id.length; i += 1) seed = (seed * 31 + ship.id.charCodeAt(i)) >>> 0;
@@ -1437,6 +1513,7 @@
     graphics.engineResponse = { time: time, levels: levels };
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Plume} plume @param {number} start @param {number} center @param {number} end @param {number} width @param {number} color @param {number} alpha */
   function drawPlumeDiamond(graphics, plume, start, center, end, width, color, alpha) {
     var x = plume.origin.x;
     var y = plume.origin.y;
@@ -1451,11 +1528,13 @@
     graphics.endFill();
   }
 
+  /** @param {number} worldAccelX @param {number} worldAccelY @param {number} rotation @param {number} acceleration @param {number} radius @param {boolean} loadedReturn @param {string} shipType */
   function enginePlumeGeometry(worldAccelX, worldAccelY, rotation, acceleration, radius, loadedReturn, shipType) {
     var accel = Math.hypot(worldAccelX, worldAccelY);
     if (accel < 0.18) return [];
 
     var local = worldDeltaToShipLocal(worldAccelX, worldAccelY, rotation);
+    /** @type {Plume[]} */
     var plumes = [];
     addThrusterPlume(plumes, 'main-aft', Math.max(0, local.x), acceleration, radius, { x: -0.82, y: 0 }, { x: -1, y: 0 }, loadedReturn);
     addThrusterPlume(plumes, 'brake-port', Math.max(0, -local.x), acceleration, radius, { x: 0.72, y: -0.42 }, { x: 1, y: 0 }, loadedReturn);
@@ -1479,6 +1558,7 @@
     return plumes;
   }
 
+  /** @param {Plume[]} plumes @param {string} id @param {number} thrust @param {number} acceleration @param {number} radius @param {Vec2} originScale @param {Vec2} direction @param {boolean} loadedReturn */
   function addThrusterPlume(plumes, id, thrust, acceleration, radius, originScale, direction, loadedReturn) {
     if (thrust < 0.12) return;
     var intensity = Math.min(1, thrust / Math.max(1, acceleration / 24));
@@ -1494,12 +1574,15 @@
     });
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Ship} ship */
   function drawWorldOrderLine(graphics, ship) {
+    if (!('target' in ship.order) || !ship.order.target) return;
     var local = worldVectorToShipLocalLine(ship.position, ship.order.target, ship.rotation);
     graphics.moveTo(0, 0);
     graphics.lineTo(local.x / graphics.scale.x, local.y / graphics.scale.y);
   }
 
+  /** @param {Vec2} position @param {Vec2} target @param {number} rotation */
   function worldVectorToShipLocalLine(position, target, rotation) {
     var dx = target.x - position.x;
     var dy = target.y - position.y;
@@ -1511,6 +1594,7 @@
     };
   }
 
+  /** @param {number} dx @param {number} dy @param {number} rotation */
   function worldDeltaToShipLocal(dx, dy, rotation) {
     var cos = Math.cos(-rotation);
     var sin = Math.sin(-rotation);
@@ -1520,6 +1604,7 @@
     };
   }
 
+  /** @param {Vec2} vector */
   function normalize(vector) {
     var length = Math.max(0.0001, Math.hypot(vector.x, vector.y));
     return {
@@ -1533,6 +1618,7 @@
     return { length: sim.DEPOT_SECTION.lengthM * 0.45, width: sim.DEPOT_SECTION.widthM * 0.45 };
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Depot} depot */
   function paintDepot(graphics, depot) {
     graphics.clear();
     if (!depot) return;
@@ -1560,6 +1646,7 @@
     }
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Asteroid} asteroid */
   function paintAsteroid(graphics, asteroid) {
     var radius = asteroid.radius;
     graphics.clear();
@@ -1583,6 +1670,7 @@
     }
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Drone} drone */
   function paintDrone(graphics, drone) {
     var flash = drone.flash || 0;
     graphics.clear();
@@ -1600,6 +1688,7 @@
     graphics.drawCircle(0, 0, 15);
   }
 
+  /** @param {PIXI.Graphics} graphics @param {Vec2} a @param {Vec2} b */
   function drawSelectionBox(graphics, a, b) {
     graphics.clear();
     graphics.lineStyle(1, 0xc6e6f2, 0.9);
@@ -1608,6 +1697,7 @@
     graphics.endFill();
   }
 
+  /** @param {number} width @param {number} height */
   function createStarfield(width, height) {
     var container = new PIXI.Container();
     var rng = sim.createRng(40291);
@@ -1625,6 +1715,7 @@
     };
   }
 
+  /** @param {VisualEffect[]} effects @param {Vec2} position */
   function pushMoveReticle(effects, position) {
     var ring = new PIXI.Graphics();
     ring.lineStyle(1.5, 0xaed8e8, 0.85);
@@ -1642,6 +1733,7 @@
     effects.push({ graphic: ring, age: 0, life: 0.65, vx: 0, vy: 0, scale: 0.7, alpha: 1, grow: 1.2, screenSpace: true });
   }
 
+  /** @param {VisualEffect[]} effects @param {Vec2} position @param {number} radius @param {string} type */
   function pushSelectionPulse(effects, position, radius, type) {
     var pulse = new PIXI.Graphics();
     pulse.lineStyle(2, 0xffffff, 0.9);
@@ -1650,6 +1742,7 @@
     effects.push({ graphic: pulse, age: 0, life: 0.34, vx: 0, vy: 0, scale: 0.75, alpha: 0.9, grow: 1.5, semanticType: type });
   }
 
+  /** @param {VisualEffect[]} effects @param {Vec2} position @param {number} radius */
   function pushFocusPulse(effects, position, radius) {
     var pulse = new PIXI.Graphics();
     pulse.lineStyle(1.5, 0xaed8e8, 0.8);
@@ -1667,6 +1760,7 @@
     effects.push({ graphic: pulse, age: 0, life: 0.55, vx: 0, vy: 0, scale: 0.85, alpha: 0.95, grow: 1.28, screenSpace: true });
   }
 
+  /** @param {VisualEffect[]} effects @param {Vec2} from @param {Vec2} to */
   function pushProjectile(effects, from, to) {
     var streak = new PIXI.Graphics();
     streak.lineStyle(2, 0xdaf7ff, 0.95);
@@ -1675,6 +1769,7 @@
     effects.push({ graphic: streak, age: 0, life: 0.09, vx: 0, vy: 0, scale: 1, alpha: 1, screenSpace: false });
   }
 
+  /** @param {VisualEffect[]} effects @param {Vec2} position @param {number} rotation */
   function pushMuzzleFlash(effects, position, rotation) {
     var flash = new PIXI.Graphics();
     flash.beginFill(0xf7f0c8, 0.95);
@@ -1684,6 +1779,7 @@
     effects.push({ graphic: flash, age: 0, life: 0.08, vx: 0, vy: 0, scale: 1, alpha: 1, grow: 1.2 });
   }
 
+  /** @param {VisualEffect[]} effects @param {Vec2} position @param {Vec2} velocity */
   function pushImpactSparks(effects, position, velocity) {
     for (var i = 0; i < 6; i += 1) {
       var angle = i * Math.PI * 0.35 + 0.4;
@@ -1704,6 +1800,7 @@
     }
   }
 
+  /** @param {VisualEffect[]} effects @param {Vec2} position @param {Vec2} velocity @param {boolean} finalKill */
   function pushExplosion(effects, position, velocity, finalKill) {
     var flash = new PIXI.Graphics();
     flash.beginFill(0xffeef0, 0.95);
@@ -1738,6 +1835,7 @@
     }
   }
 
+  /** @param {Rng} rng @param {number} width @param {number} height @param {number} count @param {number} parallax @param {number} alpha */
   function createStarLayer(rng, width, height, count, parallax, alpha) {
     var stars = [];
     for (var i = 0; i < count; i += 1) {
@@ -1755,6 +1853,7 @@
     };
   }
 
+  /** @param {ReturnType<typeof createStarfield>} starfield @param {Camera} camera @param {Viewport} viewport */
   function updateStarfield(starfield, camera, viewport) {
     starfield.layers.forEach(function (layer) {
       var graphics = layer.graphics;
@@ -1771,6 +1870,7 @@
 
   // Like engine exhaust, dust is drawn in hull-local coordinates so position,
   // rotation, interpolation and semantic zoom all follow the ship exactly.
+  /** @param {PIXI.Graphics} graphics @param {boolean} active @param {number} radius @param {number} elapsedSeconds */
   function drawMiningPlume(graphics, active, radius, elapsedSeconds) {
     if (!active) return;
     graphics.lineStyle(0);
@@ -1788,6 +1888,7 @@
     }
   }
 
+  /** @param {Vec2} source @param {Vec2} target @param {number} rotation */
   function miningEffectGeometry(source, target, rotation) {
     var dx = target.x - source.x;
     var dy = target.y - source.y;
@@ -1812,6 +1913,7 @@
     };
   }
 
+  /** @param {VisualEffect[]} effects @param {Vec2} position @param {string} text */
   function pushFloatText(effects, position, text) {
     var label = new PIXI.Text(text, {
       fontFamily: 'Consolas, monospace',
@@ -1832,6 +1934,7 @@
     });
   }
 
+  /** @param {PIXI.Container} container @param {VisualEffect[]} effects @param {number} dt @param {number} zoom */
   function updateEffects(container, effects, dt, zoom) {
     zoom = zoom || 1;
     for (var i = effects.length - 1; i >= 0; i -= 1) {
@@ -1855,6 +1958,7 @@
     }
   }
 
+  /** @param {number} value @param {number} size */
   function wrap(value, size) {
     var wrapped = value % size;
     return wrapped < 0 ? wrapped + size : wrapped;
@@ -1864,6 +1968,7 @@
     var container = new PIXI.Container();
     var rng = sim.createRng(9503);
     var bounds = 1800;
+    /** @type {{ graphic: PIXI.Graphics, x: number, y: number, vx: number, vy: number, spin: number }[]} */
     var sprites = [];
     var count = 3000;
 
@@ -1890,6 +1995,7 @@
     return {
       container: container,
       count: count,
+      /** @param {number} dt */
       update: function (dt) {
         sprites.forEach(function (sprite) {
           sprite.x += sprite.vx * dt;
@@ -1920,6 +2026,7 @@
     withCamera: withCamera,
     miningEffectGeometry: miningEffectGeometry,
     drawMiningPlume: drawMiningPlume,
+    paintRecovery: paintRecovery,
     operationExposure: operationExposure,
     stepDefenderWeapon: stepDefenderWeapon,
     mothershipDrumMarkers: mothershipDrumMarkers,

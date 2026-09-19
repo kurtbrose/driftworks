@@ -1,6 +1,8 @@
 /** Shared, checkable contracts for the plain-JavaScript simulation. */
 
 export type Vec2 = { x: number; y: number };
+export type Camera = Vec2 & { zoom: number };
+export type Viewport = { width: number; height: number };
 
 export type EntityRef =
   | { kind: 'ship'; id: string }
@@ -88,11 +90,11 @@ export type World = {
   wrecks: Wreck[];
   formations: Record<string, Formation>;
   selectedShipIds: string[];
-  camera: Vec2;
+  camera: Camera;
   version?: number;
   physicalUnitsVersion?: number;
   seed?: number;
-  elapsedSeconds?: number;
+  elapsedSeconds: number;
   logisticsVersion?: number;
   miningMission: string;
   depot: Depot;
@@ -146,6 +148,18 @@ export type SimApi = {
   stepWorld: (world: World, dt: number, threats: Threat[]) => World;
   spawnFighter: (world: World) => World;
   damageFighter: (world: World, id: string, amount: number) => World;
+  RAIDER_RANGE: number;
+  createRng: (seed: number) => Rng;
+  randomBetween: (rng: Rng, min: number, max: number) => number;
+  surfaceRadius: (asteroid: Asteroid, angle: number) => number;
+  cloneWorld: (world: World) => World;
+  addWreck: (world: World, destroyed: { position: Vec2; velocity: Vec2 }) => World;
+  issueReturnOrder: (world: World) => World;
+  issuePlatformRecovery: (world: World, platformId: string) => World;
+  issueDefendOrder: (world: World, target: Vec2, shipId?: string | null) => World;
+  issueRecoveryOrder: (world: World, target: RecoveryRef) => World;
+  issueBuildOrder: (world: World) => World;
+  issueMoveOrder: (world: World, target: Vec2) => World;
   FIGHTER_RANGE: number;
   asteroidPhysicalStats: (asteroid: Asteroid) => { diameterM: number };
   physicalStats: (world: World, ship: Ship) => { lengthM: number; massKg: number; accelerationMps2: number };
@@ -166,12 +180,21 @@ export type GameStats = { contacts: string; entityCount: number; fps?: number; s
 
 declare global {
   namespace PIXI {
+    interface FederatedPointerEvent {
+      global: Vec2;
+      button: number;
+      stopPropagation: () => void;
+    }
     class DisplayObject {
-      position: { x: number; y: number; set: (x: number, y: number) => void };
+      x: number;
+      y: number;
+      cursor: string;
+      engineResponse?: { time: number; levels: Record<string, number> } | null;
+      position: { x: number; y: number; set: (x: number, y?: number) => void };
       visible: boolean;
       alpha: number;
       rotation: number;
-      scale: { x: number; y: number; set: (x: number, y: number) => void };
+      scale: { x: number; y: number; set: (x: number, y?: number) => void };
       parent: Container | null;
       eventMode: string;
       hitArea: unknown;
@@ -183,11 +206,15 @@ declare global {
       children: DisplayObject[];
       addChild: (...children: DisplayObject[]) => DisplayObject;
       addChildAt: (child: DisplayObject, index: number) => DisplayObject;
-      pivot: { set: (x: number, y: number) => void };
+      pivot: { set: (x: number, y?: number) => void };
       removeChildren: () => void;
-      on: (event: string, handler: (...args: never[]) => void) => void;
+      on: (event: string, handler: (event: FederatedPointerEvent) => void) => void;
     }
     class Graphics extends Container {
+      closePath: () => this;
+      drawPolygon: (points: number[]) => this;
+      drawEllipse: (x: number, y: number, width: number, height: number) => this;
+      drawRoundedRect: (x: number, y: number, width: number, height: number, radius?: number) => this;
       clear: () => this; beginFill: (color: number, alpha?: number) => this; endFill: () => this;
       lineStyle: (width: number, color?: number, alpha?: number) => this;
       drawCircle: (x: number, y?: number, radius?: number) => this;
@@ -195,7 +222,7 @@ declare global {
       moveTo: (x: number, y: number) => this; lineTo: (x: number, y: number) => this;
       arc: (x: number, y: number, radius: number, start: number, end: number) => this;
     }
-    class Text extends Container { constructor(text: string, style?: unknown); text: string; style: unknown; }
+    class Text extends Container { anchor: { set: (x: number, y?: number) => void }; constructor(text: string, style?: unknown); text: string; style: unknown; }
     class Circle { constructor(x: number, y: number, radius: number); }
     class Application {
       stage: Container; view: HTMLCanvasElement; ticker: { add: (handler: (delta: number) => void) => void };
@@ -205,6 +232,7 @@ declare global {
     }
   }
   interface Window {
+    DRIFTWORKS_TEST_MODE?: boolean;
     Driftworks: DriftworksNamespace;
     webkitAudioContext?: typeof AudioContext;
     PIXI: typeof PIXI;
