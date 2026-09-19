@@ -1,9 +1,17 @@
 (function (global) {
   'use strict';
 
+  /** @typedef {import('./types').DriftworksNamespace} DriftworksNamespace */
+  /** @typedef {import('./types').SimApi} SimApi */
+  /** @typedef {import('./types').AudioApi} AudioApi */
+  /** @typedef {import('./types').World} World */
+  /** @typedef {import('./types').HudController} HudController */
+  /** @typedef {{ graphic: PIXI.Graphics, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
+  /** @typedef {{ id: string, targetId: string, targetKind: string, position: { x: number, y: number }, velocity: { x: number, y: number }, speed: number, hp: number, flash: number, underFire: number, fireCooldown: number }} Drone */
+  /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
-  var sim = Driftworks.sim;
-  var audio = Driftworks.audio;
+  var sim = /** @type {SimApi} */ (Driftworks.sim);
+  var audio = /** @type {AudioApi} */ (Driftworks.audio);
   var PIXI = global.PIXI;
   var STEP_SECONDS = 1 / 30;
   var MAX_FRAME_SECONDS = 0.2;
@@ -29,6 +37,7 @@
   // Through 32x, small craft shed their schematic magnification. Beyond that,
   // freeze local artwork scale so camera zoom magnifies every object together.
   // This preserves inspection proportions; it is not a physical hull calibration.
+  /** @param {string} type @param {number} zoom @returns {number} */
   function semanticScale(type, zoom) {
     if (type === 'asteroid') return 1;
     var large = type === 'mothership' || type === 'asteroid';
@@ -50,9 +59,10 @@
       throw new Error('Vendored PixiJS did not load.');
     }
 
-    createApp(sceneHost, hudHost);
+    createApp(/** @type {HTMLElement} */ (sceneHost), /** @type {HTMLElement} */ (hudHost));
   }
 
+  /** @param {HTMLElement} sceneHost @param {HTMLElement} hudHost */
   function createApp(sceneHost, hudHost) {
     var world = loadOrInitial();
     var accumulator = 0;
@@ -61,13 +71,14 @@
 
     var scene = createScene(sceneHost, function () {
       return world;
-    }, function (nextWorld) {
+      }, function (nextWorld) {
       world = nextWorld;
       scene.sync(world);
       hud.update(world, scene.getStats());
     });
 
-    var hud = Driftworks.hud.create(hudHost, {
+    if (!Driftworks.hud) throw new Error('HUD module did not load.');
+    var hud = /** @type {HudController} */ (Driftworks.hud.create(hudHost, {
       getTimeScale: function () { return timeScale; },
       onTimeScale: function (value) {
         timeScale = value;
@@ -80,7 +91,7 @@
         hud.update(world, scene.getStats());
       },
       onSelectShip: function (id) {
-        world = sim.selectShips(world, [id]);
+        if (id) world = sim.selectShips(world, [id]);
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
@@ -122,11 +133,12 @@
         audio.setMusicVolume(value);
         hud.update(world, scene.getStats());
       }
-    });
+    }));
 
     scene.sync(world);
     hud.update(world, scene.getStats());
 
+    /** @param {number} now */
     function frame(now) {
       var frameSeconds = Math.min((now - lastTime) / 1000, MAX_FRAME_SECONDS);
       lastTime = now;
@@ -147,6 +159,7 @@
     requestAnimationFrame(frame);
   }
 
+  /** @returns {World} */
   function loadOrInitial() {
     try {
       return sim.loadWorld();
@@ -156,6 +169,7 @@
     }
   }
 
+  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld */
   function createScene(host, getWorld, setWorld) {
     var app = new PIXI.Application({
       background: '#080c10',
@@ -179,10 +193,15 @@
       fontSize: 12,
       fill: 0xd8e4ea
     });
+    /** @type {Record<string, PIXI.Graphics>} */
     var shipGraphics = {};
+    /** @type {Record<string, PIXI.Graphics>} */
     var platformGraphics = {};
+    /** @type {Record<string, PIXI.Graphics>} */
     var asteroidGraphics = {};
+    /** @type {Record<string, PIXI.Graphics>} */
     var droneGraphics = {};
+    /** @type {PIXI.Container | null} */
     var stressLayer = null;
     var stressEnabled = false;
     var dragMode = 'none';
@@ -192,18 +211,24 @@
     var frames = 0;
     var fps = 0;
     var fpsTimer = 0;
+    /** @type {VisualEffect[]} */
     var effects = [];
+    /** @type {number | null} */
     var lastStoredOre = null;
     var lastMiningSoundAt = -Infinity;
     var previousSelected = {};
+    /** @type {string[] | null} */
     var cameraFocusSelectionIds = null;
+    /** @type {Drone[]} */
     var drones = [];
     var shotCooldown = 0;
     var combatTime = 0;
     var cameraShake = 0;
     var visualTimeScale = 1;
+    /** @type {Record<string, number>} */
     var laserPaintTimers = {};
     var director = createThreatDirector();
+    /** @type {{ salvagedOre: number, repairedShips: number } | null} */
     var previousRecovery = null;
 
     host.appendChild(app.view);

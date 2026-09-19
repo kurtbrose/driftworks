@@ -7,10 +7,23 @@
   /** @typedef {import('./types').Vec2} Vec2 */
   /** @typedef {import('./types').Threat} Threat */
   /** @typedef {import('./types').FighterStyle} FighterStyle */
+  /** @typedef {import('./types').Formation} Formation */
+  /** @typedef {import('./types').DefendOrder} DefendOrder */
+  /** @typedef {import('./types').Order} Order */
+  /** @typedef {import('./types').PropulsionApi} PropulsionApi */
+  /** @typedef {import('./types').Rng} Rng */
+  /** @typedef {import('./types').Depot} Depot */
+  /** @typedef {import('./types').MothershipState} MothershipState */
+  /** @typedef {import('./types').Platform} Platform */
+  /** @typedef {import('./types').WorldLike} WorldLike */
+  /** @typedef {import('./types').Packet} Packet */
+  /** @typedef {import('./types').RecoveryRef} RecoveryRef */
+  /** @typedef {import('./types').Wreck} Wreck */
   /** @typedef {import('./types').DriftworksNamespace} DriftworksNamespace */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
-  var propulsion = Driftworks.propulsion;
+  /** @type {PropulsionApi} */
+  var propulsion = /** @type {PropulsionApi} */ (Driftworks.propulsion);
   var VELOCITY_TO_MPS = 10000 / 600 / 60;
   var PLATFORM_MASS_KG = 100000;
   var WORLD_VERSION = 1;
@@ -25,17 +38,18 @@
   var METERS_PER_UNIT = 10000 / 600;
   var PHYSICAL_SECONDS_PER_SECOND = 60;
   var MASS_MIGRATION = 1500 / 80;
+  /** @type {Record<string, { lengthM: number, dryMassKg: number, thrustN: number }>} */
   var HULLS = {
     escort: { lengthM: 20, dryMassKg: 75000, thrustN: 73549.875 },
     tug: { lengthM: 80, dryMassKg: 3000000, thrustN: 588399 },
     mothership: { lengthM: 1000, dryMassKg: 3000000000, thrustN: 2941995 }
   };
 
-  /** @param {World} world @param {Ship} ship */
+  /** @param {WorldLike} world @param {Ship} ship */
   function physicalStats(world, ship) {
     var hull = ship.physical || HULLS[ship.type];
     var payload = recoveryTarget(world, ship.towTarget);
-    var payloadKg = payload ? (payload.physical ? payload.physical.dryMassKg + (payload.propulsion ? payload.propulsion.fuelKg : 0) + (payload.cargo || 0) * 1000 : payload.massKg || 75000) : 0;
+    var payloadKg = payload ? (payload.physical ? payload.physical.dryMassKg + (payload.propulsion ? payload.propulsion.fuelKg : 0) + (payload.cargo || 0) * 1000 : ('massKg' in payload ? payload.massKg || 0 : 75000)) : 0;
     var massKg = hull.dryMassKg + (ship.propulsion ? ship.propulsion.fuelKg : 0) + (ship.platformId ? PLATFORM_MASS_KG : 0) + (ship.cargo || 0) * 1000 +
       (ship.carryingSection ? DEPOT_SECTION_MASS * 1000 : 0) + payloadKg;
     if (ship.type === 'mothership' && world.mothership) {
@@ -48,7 +62,7 @@
       turnRateRadps: ship.turnRate / PHYSICAL_SECONDS_PER_SECOND };
   }
 
-  /** @param {World} world @param {Ship} ship */
+  /** @param {WorldLike} world @param {Ship} ship */
   function movementAcceleration(world, ship) {
     return physicalStats(world, ship).accelerationMps2 * PHYSICAL_SECONDS_PER_SECOND * PHYSICAL_SECONDS_PER_SECOND / METERS_PER_UNIT;
   }
@@ -76,7 +90,8 @@
     var enemyVelocity = closest.velocity || { x: 0, y: 0 };
     var closing = Math.max(0, enemyVelocity.x * ux + enemyVelocity.y * uy);
     var radial = Math.max(-ship.speed * 0.5, Math.min(ship.speed, closing + (260 - gap) * 2.5));
-    var desired = { x: ux * radial - uy * 12 * ship.order.side, y: uy * radial + ux * 12 * ship.order.side };
+    var side = ship.order.kind === 'defend' ? ship.order.side : 1;
+    var desired = { x: ux * radial - uy * 12 * side, y: uy * radial + ux * 12 * side };
     var best = { x: 0, y: 0 }, bestScore = Infinity;
     var candidates = [best, desired];
     for (var i = 0; i < 24; i += 1) {
@@ -133,12 +148,16 @@
       speed: 0.94 + random() * 0.06, acceleration: 0.88 + random() * 0.12 };
   }
 
+  /** @param {{ offset?: Vec2 }} order @param {Vec2} center @param {FighterStyle} style @param {number} looseness @returns {Vec2} */
   function occupiedSlot(order, center, style, looseness) {
-    return { x: center.x + order.offset.x * (1 + looseness * 0.65) + style.x * (1 + looseness * 3),
-      y: center.y + order.offset.y * (1 + looseness * 0.65) + style.y * (1 + looseness * 3) };
+    var offset = order.offset || { x: 0, y: 0 };
+    return { x: center.x + offset.x * (1 + looseness * 0.65) + style.x * (1 + looseness * 3),
+      y: center.y + offset.y * (1 + looseness * 0.65) + style.y * (1 + looseness * 3) };
   }
 
+  /** @param {Ship[]} members @param {Formation} formation @param {string | null | undefined} shipId */
   function assignFormationSlots(members, formation, shipId) {
+    /** @type {Record<number, number[][]>} */
     var shapes = { 1: [[0, 0]], 2: [[24, -32], [-24, 32]], 3: [[42, 0], [-21, -48], [-21, 48]], 4: [[64, 0], [0, -48], [0, 48], [-64, 0]] };
     var angle = formation.angle || 0;
     var slots = members.map(function (s, i) {
@@ -148,6 +167,7 @@
       return { x: slot[0] * Math.cos(angle) - slot[1] * Math.sin(angle), y: slot[0] * Math.sin(angle) + slot[1] * Math.cos(angle) };
     });
     // Match nearby occupants once when the shape changes, not on every frame.
+    /** @type {{ member: number, slot: number, cost: number }[]} */
     var choices = [];
     members.forEach(function (ship, member) {
       slots.forEach(function (slot, index) {
@@ -155,16 +175,22 @@
       });
     });
     choices.sort(function (a, b) { return a.cost - b.cost || a.member - b.member || a.slot - b.slot; });
-    var usedMembers = {}, usedSlots = {};
+    /** @type {Record<number, boolean>} */
+    var usedMembers = {};
+    /** @type {Record<number, boolean>} */
+    var usedSlots = {};
     choices.forEach(function (choice) {
       if (usedMembers[choice.member] || usedSlots[choice.slot]) return;
       usedMembers[choice.member] = true; usedSlots[choice.slot] = true;
-      members[choice.member].order.offset = slots[choice.slot];
-      members[choice.member].order.side = choice.slot % 2 ? -1 : 1;
+      if (members[choice.member].order.kind !== 'defend') return;
+      var order = /** @type {DefendOrder} */ (members[choice.member].order);
+      order.offset = slots[choice.slot];
+      order.side = choice.slot % 2 ? -1 : 1;
     });
     formation.memberIds = members.map(function (s) { return s.id; });
   }
 
+  /** @param {World} world @param {Vec2} target @param {string | null | undefined} shipId @returns {World} */
   function issueDefendOrder(world, target, shipId) {
     var next = cloneWorld(world);
     var members = next.ships.filter(function (s) {
@@ -174,12 +200,14 @@
     var angle = Math.atan2(target.y - center.y, target.x - center.x);
     if (!members.length) return next;
     next.formations = next.formations || {};
-    var oldId = members[0].order.groupId;
+    var oldId = members[0].order.kind === 'defend' ? members[0].order.groupId : 0;
     var oldMembers = next.ships.filter(function (s) { return !s.disabled && s.order.kind === 'defend' && s.order.groupId === oldId; });
-    var reuse = oldId && oldMembers.length === members.length && members.every(function (s) { return s.order.groupId === oldId; });
-    var groupId = reuse ? oldId : Math.max(next.nextFormationId || 1, next.ships.reduce(function (id, s) { return Math.max(id, (s.order.groupId || 0) + 1); }, 1));
+    var reuse = oldId && oldMembers.length === members.length && members.every(function (s) { return s.order.kind === 'defend' && s.order.groupId === oldId; });
+    var groupId = reuse ? oldId : Math.max(next.nextFormationId || 1, next.ships.reduce(function (id, s) {
+      return Math.max(id, (s.order.kind === 'defend' ? s.order.groupId : 0) + 1);
+    }, 1));
     next.nextFormationId = Math.max(next.nextFormationId || 1, groupId + 1);
-    var prior = reuse && (next.formations[oldId] || members[0].order.formation);
+    var prior = reuse && (next.formations[oldId] || (members[0].order.kind === 'defend' ? members[0].order.formation : null));
     var formation = prior ? clonePlain(prior) : { position: clonePlain(center), velocity: { x: 0, y: 0 }, angle: angle };
     formation.pivoting = Math.hypot(formation.velocity.x, formation.velocity.y) < 15 || Math.abs(angleDelta(formation.angle, angle)) > Math.PI / 3;
     formation.directTravel = false;
@@ -189,13 +217,14 @@
       s.order = { kind: 'defend', anchor: clonePlain(target), anchorShipId: shipId || null,
         groupId: groupId,
         leashRadius: FIGHTER_LEASH, side: i % 2 ? -1 : 1,
-        target: clonePlain(target) };
+        target: clonePlain(target), offset: { x: 0, y: 0 } };
     });
     assignFormationSlots(members, formation, shipId);
-    members.forEach(function (s) { s.order.formation = clonePlain(formation); });
+    members.forEach(function (s) { if (s.order.kind === 'defend') s.order.formation = clonePlain(formation); });
     return next;
   }
 
+  /** @param {World} world @returns {World} */
   function spawnFighter(world) {
     var next = cloneWorld(world);
     var id = 1;
@@ -206,12 +235,15 @@
     return next;
   }
 
+  /** @param {Ship} ship @param {World} world @param {Threat[]} threats @param {number} dt @returns {Ship} */
   function stepDefense(ship, world, threats, dt) {
+    if (ship.order.kind !== 'defend') return ship;
+    /** @type {DefendOrder} */
     var order = ship.order;
     var protectedShip = world.ships.filter(function (s) { return s.id === order.anchorShipId; })[0];
     if (protectedShip) order.anchor = clonePlain(protectedShip.position);
     var anchor = order.anchor;
-    var radius = order.leashRadius;
+    var radius = order.leashRadius || FIGHTER_LEASH;
     var formation = order.formation;
     var center = formation ? formation.position : anchor;
     var style = fighterStyle(ship);
@@ -256,8 +288,10 @@
     return ship;
   }
 
+  /** @param {World} world @param {number} dt @param {Threat[]} threats */
   function stepFormations(world, dt, threats) {
     world.formations = world.formations || {};
+    /** @type {Record<string, Ship[]>} */
     var groups = {};
     world.ships.forEach(function (s) {
       if (s.disabled || s.order.kind !== 'defend' || !s.order.formation) return;
@@ -265,27 +299,35 @@
     });
     Object.keys(world.formations).forEach(function (id) { if (!groups[id]) delete world.formations[id]; });
     Object.keys(groups).forEach(function (id) {
-      var members = groups[id], order = members[0].order;
+      var members = groups[id];
+      if (!members || members[0].order.kind !== 'defend') return;
+      /** @type {DefendOrder} */
+      var order = members[0].order;
       var guarded = world.ships.filter(function (s) { return s.id === order.anchorShipId; })[0];
       var anchor = guarded ? guarded.position : order.anchor;
+      /** @type {Formation} */
       var formation = clonePlain(world.formations[id] || order.formation);
       var memberIds = members.map(function (s) { return s.id; });
       if (!formation.memberIds || formation.memberIds.join('|') !== memberIds.join('|')) {
         assignFormationSlots(members, formation, order.anchorShipId);
       }
       if (distance(formation.position, anchor) < 20) formation.relocating = false;
+      var formationLooseness = formation.looseness || 0;
       var contact = threats.some(function (t) {
-        return distance(t.position, anchor) <= order.leashRadius + FIGHTER_RANGE &&
+        return distance(t.position, anchor) <= (order.leashRadius || FIGHTER_LEASH) + FIGHTER_RANGE &&
           (distance(formation.position, anchor) < 80 || members.some(function (s) { return distance(s.position, t.position) < FIGHTER_RANGE * 1.25; }));
       });
-      formation.looseness = (formation.looseness || 0) + ((contact ? 1 : 0) - (formation.looseness || 0)) * (1 - Math.exp(-dt / 2));
+      formation.looseness = formationLooseness + ((contact ? 1 : 0) - formationLooseness) * (1 - Math.exp(-dt / 2));
+      formationLooseness = formation.looseness;
       var error = 0, speed = Infinity, acceleration = Infinity, extent = 1;
       members.forEach(function (s) {
         var style = fighterStyle(s);
-        error = Math.max(error, Math.max(0, distance(s.position, occupiedSlot(s.order, formation.position, style, formation.looseness)) - SLOT_TOLERANCE - formation.looseness * 24));
+        if (s.order.kind !== 'defend') return;
+        error = Math.max(error, Math.max(0, distance(s.position, occupiedSlot(s.order, formation.position, style, formationLooseness)) - SLOT_TOLERANCE - formationLooseness * 24));
         speed = Math.min(speed, s.speed * style.speed);
         acceleration = Math.min(acceleration, s.acceleration * style.acceleration);
-        extent = Math.max(extent, Math.hypot(s.order.offset.x, s.order.offset.y) * (1 + formation.looseness * 0.65));
+        var offset = s.order.kind === 'defend' && s.order.offset ? s.order.offset : { x: 0, y: 0 };
+        extent = Math.max(extent, Math.hypot(offset.x, offset.y) * (1 + formationLooseness * 0.65));
       });
       // Reserve catch-up speed and ease to a halt when any wingmate loses its slot.
       var cohesion = Math.max(error < 120 ? 0.35 : 0, Math.min(1, (85 - error) / 60));
@@ -308,7 +350,8 @@
         formation.directTravel = true;
       } else {
         members.forEach(function (s) {
-          var offset = s.order.offset;
+          if (s.order.kind !== 'defend') return;
+          var offset = s.order.offset || { x: 0, y: 0 };
           s.order.offset = { x: offset.x * Math.cos(rotation) - offset.y * Math.sin(rotation), y: offset.x * Math.sin(rotation) + offset.y * Math.cos(rotation) };
         });
       }
@@ -331,7 +374,7 @@
       }
       formation.position.x += formation.velocity.x * dt; formation.position.y += formation.velocity.y * dt;
       world.formations[id] = formation;
-      members.forEach(function (s) { s.order.formation = clonePlain(formation); });
+      members.forEach(function (s) { if (s.order.kind === 'defend') s.order.formation = clonePlain(formation); });
     });
   }
 
@@ -395,6 +438,7 @@
     return world;
   }
 
+  /** @param {string} id @param {string} name @param {number} x @param {number} y @param {number} ore @returns {Asteroid} */
   function createAsteroid(id, name, x, y, ore) {
     return {
       id: id,
@@ -408,16 +452,19 @@
     };
   }
 
+  /** @param {string} id @returns {number} */
   function miningSiteDepth(id) {
     var hash = 0;
     for (var i = 0; i < id.length; i += 1) hash = Math.imul(hash, 31) + id.charCodeAt(i) | 0;
     return 0.3 + createRng(hash)() * 0.45;
   }
 
+  /** @param {Asteroid} asteroid @param {number} angle @returns {number} */
   function surfaceRadius(asteroid, angle) {
     return asteroid.radius * (0.88 + 0.07 * Math.cos(angle * 3) + 0.05 * Math.sin(angle * 5));
   }
 
+  /** @param {string} id @param {string} name @param {string} type @param {number} x @param {number} y @param {number} speed @returns {Ship} */
   function createShip(id, name, type, x, y, speed) {
     var ship = {
       id: id,
@@ -428,6 +475,7 @@
       velocity: { x: 0, y: 0 },
       previousVelocity: { x: 0, y: 0 },
       rotation: 0,
+      /** @type {Order} */
       order: { kind: 'idle' },
       cargo: 0,
       previousCargo: 0,
@@ -451,10 +499,12 @@
     return ship;
   }
 
+  /** @param {World} world @returns {World} */
   function cloneWorld(world) {
     return JSON.parse(JSON.stringify(world));
   }
 
+  /** @param {number} seed @returns {Rng} */
   function createRng(seed) {
     var state = seed >>> 0;
     return function next() {
@@ -466,12 +516,15 @@
     };
   }
 
+  /** @param {Rng} rng @param {number} min @param {number} max @returns {number} */
   function randomBetween(rng, min, max) {
     return min + (max - min) * rng();
   }
 
+  /** @param {World} world @param {string[]} shipIds @returns {World} */
   function selectShips(world, shipIds) {
     var next = cloneWorld(world);
+    /** @type {Record<string, boolean>} */
     var knownIds = {};
     next.ships.forEach(function (ship) {
       knownIds[ship.id] = true;
@@ -482,8 +535,10 @@
     return next;
   }
 
+  /** @param {World} world @param {Vec2} target @returns {World} */
   function issueMoveOrder(world, target) {
     var next = cloneWorld(world);
+    /** @type {Record<string, boolean>} */
     var selected = {};
     next.selectedShipIds.forEach(function (id) {
       selected[id] = true;
@@ -499,6 +554,7 @@
     return next;
   }
 
+  /** @param {World} world @param {Vec2} target @returns {World} */
   function issueContextOrder(world, target) {
     var home = findMothership(world);
     if (home && distance(target, home.position) <= DOCK_DISTANCE + 18) return issueReturnOrder(world);
@@ -535,6 +591,7 @@
     return issueMoveOrder(world, target);
   }
 
+  /** @param {World} world @param {string} asteroidId @returns {World} */
   function issueMineOrder(world, asteroidId) {
     var next = cloneWorld(world);
     var asteroid = findAsteroid(next, asteroidId);
@@ -556,6 +613,7 @@
     return next;
   }
 
+  /** @param {World} world @returns {World} */
   function issueBuildOrder(world) {
     var next = cloneWorld(world);
     var selected = selectedLookup(next);
@@ -563,18 +621,20 @@
     if (!mothership || !next.depot || next.depot.builtStages >= next.depot.totalStages) {
       return next;
     }
+    var buildHome = mothership;
 
     next.ships.forEach(function (ship) {
       if (selected[ship.id] && ship.type === 'tug' && !ship.disabled && !ship.towTarget && !ship.platformId) {
         ship.order = {
           kind: 'build',
-          target: clonePlain(ship.carryingSection ? next.depot.position : mothership.position)
+          target: clonePlain(ship.carryingSection ? next.depot.position : buildHome.position)
         };
       }
     });
     return next;
   }
 
+  /** @param {World} world @returns {World} */
   function issueReturnOrder(world) {
     var next = cloneWorld(world);
     var mothership = findMothership(next);
@@ -582,28 +642,31 @@
     if (!mothership) {
       return next;
     }
+    var returnHome = mothership;
 
     next.ships.forEach(function (ship) {
       if (selected[ship.id] && ship.speed > 0 && !ship.disabled) {
         ship.order = {
           kind: 'return',
-          target: { x: mothership.position.x, y: mothership.position.y }
+          target: { x: returnHome.position.x, y: returnHome.position.y }
         };
       }
     });
     return next;
   }
 
+  /** @param {World} world @param {number} dt @param {Threat[]} threats @returns {World} */
   function stepWorld(world, dt, threats) {
     var next = normalizeWorld(world);
     stepFormations(next, dt, threats || []);
     var asteroids = next.asteroids.map(function (asteroid) {
-      asteroid.rotation += asteroid.angularVelocity * dt;
+      asteroid.rotation = (asteroid.rotation || 0) + (asteroid.angularVelocity || 0) * dt;
       return asteroid;
     });
-    var mothership = clonePlain(next.mothership);
+    /** @type {MothershipState} */
+    var mothership = /** @type {MothershipState} */ (clonePlain(next.mothership));
     var contract = clonePlain(next.contract);
-    var depot = clonePlain(next.depot);
+    var depot = /** @type {Depot} */ (clonePlain(next.depot));
     var mothershipShip = findMothership(next);
     processConstructionMass(mothership, depot);
 
@@ -616,7 +679,7 @@
       version: next.version,
       physicalUnitsVersion: 1,
       seed: next.seed,
-      elapsedSeconds: next.elapsedSeconds + dt,
+      elapsedSeconds: (next.elapsedSeconds || 0) + dt,
       campaign: clonePlain(next.campaign),
       camera: clonePlain(next.camera),
       selectedShipIds: next.selectedShipIds.slice(),
@@ -639,6 +702,7 @@
     return stepped;
   }
 
+  /** @param {Ship} ship @param {number} dt @param {Asteroid[]} asteroids @param {MothershipState} mothership @param {Ship | undefined} mothershipShip @param {Depot} depot @param {World} world @param {Threat[]} threats @returns {Ship} */
   function stepShip(ship, dt, asteroids, mothership, mothershipShip, depot, world, threats) {
     var next = clonePlain(ship);
     next.previousPosition = { x: ship.position.x, y: ship.position.y };
@@ -649,7 +713,7 @@
       next.velocity = { x: 0, y: 0 };
       return next;
     }
-    if (next.docked && next.order.kind === 'idle') {
+    if (next.docked && next.order.kind === 'idle' && mothershipShip) {
       next.position = berthPosition(next, mothershipShip);
       next.velocity = clonePlain(mothershipShip.velocity);
       return next;
@@ -682,10 +746,12 @@
     return stepTowardOrderTarget(next, dt, ARRIVAL_DISTANCE, true);
   }
 
+  /** @param {World} world @param {Ship} ship @returns {number} */
   function remainingDeltaV(world, ship) {
     return propulsion.remaining(ship, physicalStats(world, ship).massKg);
   }
 
+  /** @param {Ship} ship @param {Vec2} delta */
   function applyBurn(ship, delta) {
     var mass = ship.burnMassKg || physicalStats({ ships: [], wrecks: [] }, ship).massKg;
     var before = ship.propulsion ? ship.propulsion.fuelKg : 0;
@@ -695,6 +761,7 @@
     ship.burnMassKg = mass - (before - (ship.propulsion ? ship.propulsion.fuelKg : 0));
   }
 
+  /** @param {Ship} ship @param {Ship} home @returns {number} */
   function returnReserve(ship, home) {
     // Budget a full velocity reversal, a homeward cruise and a margin for guidance.
     // The catcher supplies terminal braking inside the exchange envelope.
@@ -702,10 +769,12 @@
       ship.speed) * VELOCITY_TO_MPS * 1.5 + 35;
   }
 
+  /** @param {Ship} ship @param {Ship} home @returns {boolean} */
   function canCatch(ship, home) {
     return propulsion.canCatch(ship.position, ship.velocity, home, DOCK_DISTANCE, VELOCITY_TO_MPS);
   }
 
+  /** @param {Ship} ship @param {Ship} home */
   function dockShip(ship, home) {
     ship.docked = true;
     ship.position = berthPosition(ship, home);
@@ -713,15 +782,18 @@
     if (ship.propulsion) ship.propulsion.fuelKg = ship.propulsion.capacityKg;
   }
 
+  /** @param {Ship} ship @param {Ship} home @returns {Vec2} */
   function berthPosition(ship, home) {
     var angle = fighterStyle(ship).x;
     return { x: home.position.x + Math.cos(angle) * 35, y: home.position.y + Math.sin(angle) * 35 };
   }
 
+  /** @param {Ship} ship @param {Ship | undefined} home */
   function launchShip(ship, home) {
-    if (!ship.docked || !home || !ship.order.target || ship.order.kind === 'return') return;
+    if (!ship.docked || !home || ship.order.kind === 'idle' || !('target' in ship.order) || !ship.order.target || ship.order.kind === 'return') return;
+    var target = ship.order.target;
     if (ship.order.kind === 'build' && !ship.carryingSection) return;
-    var dx = ship.order.target.x - home.position.x, dy = ship.order.target.y - home.position.y;
+    var dx = target.x - home.position.x, dy = target.y - home.position.y;
     var gap = Math.hypot(dx, dy);
     ship.docked = false;
     if (gap <= ARRIVAL_DISTANCE) return;
@@ -731,13 +803,16 @@
     ship.docked = false;
   }
 
+  /** @param {string} id @returns {Platform} */
   function createPlatform(id) {
     return { id: id, carrierId: null, state: 'stored', position: { x: 0, y: 0 },
       asteroidId: null, siteAngle: 0, siteDepth: 0.5, ore: 0, packetTimer: 0 };
   }
 
+  /** @param {World} world */
   function migrateLogistics(world) {
     world.platforms = world.platforms || [createPlatform('platform-01'), createPlatform('platform-02')];
+    if (!world.mothership) return;
     world.ships = world.ships.filter(function (ship) {
       if (ship.type !== 'miner' && ship.type !== 'cargo') return true;
       // Retire obsolete mining hulls, preserving any ore already aboard.
@@ -753,26 +828,33 @@
     world.logisticsVersion = 2;
   }
 
+  /** @param {World} world @returns {Ship | undefined} */
   function availablePlatformCarrier(world) {
     return world.ships.filter(function (s) { return s.type === 'tug' && !s.disabled &&
       !s.platformId && !s.carryingSection && !s.towTarget && s.order.kind === 'idle'; })[0];
   }
 
+  /** @param {World} world @returns {boolean} */
   function canDeployPlatform(world) {
     return world.miningMission === 'active' && !!availablePlatformCarrier(world) &&
       world.platforms.some(function (p) { return p.state === 'stored'; }) &&
       world.asteroids.some(function (a) { return a.ore > 0; });
   }
 
+  /** @param {Platform} platform @param {Asteroid} asteroid @returns {{ position: Vec2, velocity: Vec2 }} */
   function platformSite(platform, asteroid) {
-    var angle = platform.siteAngle + asteroid.rotation;
-    var radius = surfaceRadius(asteroid, platform.siteAngle) * platform.siteDepth;
+    var siteAngle = platform.siteAngle || 0;
+    var rotation = asteroid.rotation || 0;
+    var angularVelocity = asteroid.angularVelocity || 0;
+    var angle = siteAngle + rotation;
+    var radius = surfaceRadius(asteroid, siteAngle) * (platform.siteDepth || 0.5);
     return { position: { x: asteroid.position.x + Math.cos(angle) * radius,
       y: asteroid.position.y + Math.sin(angle) * radius },
-      velocity: { x: -Math.sin(angle) * radius * asteroid.angularVelocity,
-        y: Math.cos(angle) * radius * asteroid.angularVelocity } };
+      velocity: { x: -Math.sin(angle) * radius * angularVelocity,
+        y: Math.cos(angle) * radius * angularVelocity } };
   }
 
+  /** @param {World} world @param {string} id @returns {World} */
   function issuePlatformRecovery(world, id) {
     var next = cloneWorld(world), selected = selectedLookup(next);
     var platform = (next.platforms || []).filter(function (p) { return p.id === id && p.state === 'deployed'; })[0];
@@ -783,25 +865,34 @@
     return next;
   }
 
+  /** @param {World} world @returns {World} */
   function endMining(world) {
     var next = cloneWorld(world);
     next.miningMission = 'recovering';
+    var home = findMothership(next);
+    if (!home) return next;
+    var homePosition = clonePlain(home.position);
     next.ships.forEach(function (s) {
-      if (s.type === 'tug' && s.order.kind === 'deploy') s.order = { kind: 'return', target: clonePlain(findMothership(next).position) };
+      if (s.type === 'tug' && s.order.kind === 'deploy') s.order = { kind: 'return', target: homePosition };
     });
     return next;
   }
 
+  /** @param {Ship} ship @param {World} world @param {number} dt @returns {Ship} */
   function stepPlatformCarrier(ship, world, dt) {
-    var deploying = ship.order.kind === 'deploy';
-    var platform = world.platforms.filter(function (p) { return p.id === ship.order.platformId; })[0];
-    var asteroid = findAsteroid(world, deploying ? ship.order.asteroidId : platform && platform.asteroidId);
+    if (ship.order.kind !== 'deploy' && ship.order.kind !== 'retrieve-platform') return ship;
+    var order = ship.order;
+    var deploying = order.kind === 'deploy';
+    var platform = world.platforms.filter(function (p) { return p.id === (deploying ? order.platformId : order.platformId); })[0];
+    var asteroidId = order.kind === 'deploy' ? order.asteroidId : platform && platform.asteroidId;
+    var asteroid = findAsteroid(world, asteroidId);
     if (!platform || !asteroid || (!deploying && platform.state !== 'deployed')) {
       ship.order = { kind: 'idle' }; return ship;
     }
     var home = findMothership(world);
     if (deploying && !ship.platformId) {
       if (platform.state !== 'stored') { ship.order = { kind: 'idle' }; return ship; }
+      if (!home) return ship;
       ship.order.target = clonePlain(home.position);
       if (!canCatch(ship, home)) return stepTowardOrderTarget(ship, dt, 0, false);
       dockShip(ship, home);
@@ -810,7 +901,9 @@
       ship.acceleration = movementAcceleration(world, ship);
       ship.burnMassKg = physicalStats(world, ship).massKg;
     }
-    var site = platformSite(deploying ? ship.order : platform, asteroid);
+    var siteAngle = order.kind === 'deploy' ? order.siteAngle : platform.siteAngle;
+    var siteDepth = order.kind === 'deploy' ? order.siteDepth : platform.siteDepth;
+    var site = platformSite(deploying ? { id: platform.id, state: platform.state, position: platform.position, carrierId: null, asteroidId: null, ore: 0, packetTimer: 0, siteAngle: siteAngle, siteDepth: siteDepth } : platform, asteroid);
     ship.order.target = site.position;
     launchShip(ship, home);
     var dx = site.position.x - ship.position.x, dy = site.position.y - ship.position.y;
@@ -821,23 +914,27 @@
     if (gap > 1 || distance(ship.velocity, site.velocity) > 1) return ship;
     if (deploying) {
       platform.state = 'deployed'; platform.carrierId = null;
-      platform.asteroidId = asteroid.id; platform.siteAngle = ship.order.siteAngle; platform.siteDepth = ship.order.siteDepth;
+      platform.asteroidId = asteroid.id; platform.siteAngle = siteAngle; platform.siteDepth = siteDepth;
       platform.position = site.position;
       ship.platformId = null;
     } else {
       platform.state = 'carried'; platform.carrierId = ship.id;
       ship.platformId = platform.id;
-      ship.cargo += platform.ore; platform.ore = 0;
+      ship.cargo += platform.ore || 0; platform.ore = 0;
     }
-    ship.order = { kind: 'return', target: clonePlain(findMothership(world).position) };
+    var home = findMothership(world);
+    if (!home) return ship;
+    ship.order = { kind: 'return', target: clonePlain(home.position) };
     return ship;
   }
 
+  /** @param {World} world @param {number} dt */
   function stepLogistics(world, dt) {
     var home = findMothership(world);
     if (!home) return;
+    var logisticsHome = home;
     world.platforms.forEach(function (platform) {
-      if (platform.state === 'stored') { platform.position = clonePlain(home.position); return; }
+      if (platform.state === 'stored') { platform.position = clonePlain(logisticsHome.position); return; }
       if (platform.state === 'carried') {
         var carrier = world.ships.filter(function (s) { return s.id === platform.carrierId; })[0];
         if (carrier) {
@@ -852,36 +949,37 @@
       if (!asteroid) return;
       platform.position = platformSite(platform, asteroid).position;
       if (world.miningMission !== 'active') return;
-      var extracted = Math.min(asteroid.ore, MINING_RATE * dt);
+      var extracted = Math.min(asteroid.ore || 0, MINING_RATE * dt);
       asteroid.ore -= extracted; platform.ore += extracted; platform.packetTimer += dt;
       if (platform.ore > 0 && (platform.packetTimer >= 4 || asteroid.ore === 0)) {
-        var dx = home.position.x - platform.position.x, dy = home.position.y - platform.position.y;
+        var dx = logisticsHome.position.x - platform.position.x, dy = logisticsHome.position.y - platform.position.y;
         var gap = Math.max(0.001, Math.hypot(dx, dy));
         var speed = propulsion.exchangeMps / VELOCITY_TO_MPS * 0.8;
         world.packets.push({ id: world.nextPacketId++, position: clonePlain(platform.position),
-          velocity: { x: home.velocity.x + dx / gap * speed, y: home.velocity.y + dy / gap * speed }, ore: platform.ore });
+          velocity: { x: logisticsHome.velocity.x + dx / gap * speed, y: logisticsHome.velocity.y + dy / gap * speed }, ore: platform.ore });
         platform.ore = 0; platform.packetTimer = 0;
       }
     });
     world.packets = world.packets.filter(function (packet) {
       // Closest point on the swept relative trajectory prevents tunnelling past the catcher.
-      var dx = (packet.velocity.x - home.velocity.x) * dt, dy = (packet.velocity.y - home.velocity.y) * dt;
-      var t = Math.max(0, Math.min(1, ((home.position.x - packet.position.x) * dx +
-        (home.position.y - packet.position.y) * dy) / Math.max(1e-12, dx * dx + dy * dy)));
+      var dx = (packet.velocity.x - logisticsHome.velocity.x) * dt, dy = (packet.velocity.y - logisticsHome.velocity.y) * dt;
+      var t = Math.max(0, Math.min(1, ((logisticsHome.position.x - packet.position.x) * dx +
+        (logisticsHome.position.y - packet.position.y) * dy) / Math.max(1e-12, dx * dx + dy * dy)));
       var closest = { x: packet.position.x + dx * t, y: packet.position.y + dy * t };
-      if (propulsion.canCatch(closest, packet.velocity, home, DOCK_DISTANCE, VELOCITY_TO_MPS)) {
+      if (propulsion.canCatch(closest, packet.velocity, logisticsHome, DOCK_DISTANCE, VELOCITY_TO_MPS)) {
         world.mothership.storage.ore += packet.ore; return false;
       }
       packet.position.x += packet.velocity.x * dt; packet.position.y += packet.velocity.y * dt;
       return true;
     });
     if (world.miningMission !== 'recovering') return;
+    /** @type {Record<string, boolean>} */
     var reserved = {};
     world.ships.forEach(function (s) { if (s.order.kind === 'retrieve-platform') reserved[s.order.platformId] = true; });
     world.ships.forEach(function (s) {
       if (s.type !== 'tug' || s.disabled || s.order.kind !== 'idle' || s.carryingSection || s.towTarget) return;
       if (s.platformId) {
-        if (!s.docked) s.order = { kind: 'return', target: clonePlain(home.position) };
+        if (!s.docked) s.order = { kind: 'return', target: clonePlain(logisticsHome.position) };
         return;
       }
       var platform = world.platforms.filter(function (p) { return p.state === 'deployed' && !reserved[p.id]; })[0];
@@ -895,7 +993,9 @@
     })) world.miningMission = 'complete';
   }
 
+  /** @param {Ship} ship @param {number} dt @param {MothershipState} mothership @param {Ship | undefined} mothershipShip @param {Depot | undefined} depot @returns {Ship} */
   function stepBuildingShip(ship, dt, mothership, mothershipShip, depot) {
+    if (ship.order.kind !== 'build') return ship;
     if (!mothershipShip || !depot || depot.builtStages >= depot.totalStages) {
       ship.order = { kind: 'idle' };
       ship.carryingSection = false;
@@ -931,7 +1031,9 @@
     return ship;
   }
 
+  /** @param {Ship} ship @param {number} dt @param {MothershipState} mothership @param {Ship | undefined} mothershipShip @returns {Ship} */
   function stepReturningShip(ship, dt, mothership, mothershipShip) {
+    if (ship.order.kind !== 'return') return ship;
     if (!mothershipShip) {
       ship.order = { kind: 'idle' };
       return ship;
@@ -954,16 +1056,19 @@
     return ship;
   }
 
+  /** @param {Ship} ship @param {number} dt @param {number} arrivalDistance @param {boolean} snapOnArrival @param {Vec2 | null | undefined} [formationVelocity] @param {FighterStyle | undefined} [guidanceStyle] @returns {Ship} */
   function stepTowardOrderTarget(ship, dt, arrivalDistance, snapOnArrival, formationVelocity, guidanceStyle) {
+    if (!('target' in ship.order) || !ship.order.target) return ship;
+    var target = ship.order.target;
     var toTarget = {
-      x: ship.order.target.x - ship.position.x,
-      y: ship.order.target.y - ship.position.y
+      x: target.x - ship.position.x,
+      y: target.y - ship.position.y
     };
     var distance = Math.hypot(toTarget.x, toTarget.y);
 
     if (distance <= arrivalDistance && !formationVelocity && Math.hypot(ship.velocity.x, ship.velocity.y) < 0.01 && (!ship.propulsion || ship.propulsion.fuelKg > 0)) {
       if (snapOnArrival) {
-        ship.position = { x: ship.order.target.x, y: ship.order.target.y };
+        ship.position = { x: target.x, y: target.y };
         ship.order = { kind: 'idle' };
       }
       ship.velocity = { x: 0, y: 0 };
@@ -1010,6 +1115,7 @@
     return ship;
   }
 
+  /** @param {World} world @returns {string} */
   function serializeWorld(world) {
     return JSON.stringify({
       version: WORLD_VERSION,
@@ -1018,6 +1124,7 @@
     });
   }
 
+  /** @param {string} serialized @returns {World} */
   function deserializeWorld(serialized) {
     var envelope = JSON.parse(serialized);
     if (!envelope || envelope.version !== WORLD_VERSION || !envelope.world) {
@@ -1029,25 +1136,30 @@
     return normalizeWorld(envelope.world);
   }
 
+  /** @param {World} world @param {Storage | undefined} storage */
   function saveWorld(world, storage) {
     (storage || global.localStorage).setItem(SAVE_KEY, serializeWorld(world));
   }
 
+  /** @param {Storage | undefined} storage @returns {World} */
   function loadWorld(storage) {
     var serialized = (storage || global.localStorage).getItem(SAVE_KEY);
     return serialized ? deserializeWorld(serialized) : createInitialWorld();
   }
 
+  /** @param {Storage | undefined} storage @returns {World} */
   function resetWorld(storage) {
     var world = createInitialWorld();
     saveWorld(world, storage);
     return world;
   }
 
+  /** @template T @param {T} value @returns {T} */
   function clonePlain(value) {
     return JSON.parse(JSON.stringify(value));
   }
 
+  /** @param {World} world @returns {World} */
   function normalizeWorld(world) {
     var initial = createInitialWorld();
     var next = clonePlain(world);
@@ -1057,7 +1169,7 @@
     next.nextWreckId = next.nextWreckId || 1;
     next.recovery = next.recovery || { salvagedOre: 0, repairedShips: 0 };
     next.mothership = next.mothership || initial.mothership;
-    next.mothership.storage = next.mothership.storage || {};
+    next.mothership.storage = next.mothership.storage || { ore: 0, constructionMass: 0, depotSections: 0 };
     next.mothership.storage.ore = typeof next.mothership.storage.ore === 'number' ? next.mothership.storage.ore : 0;
     next.mothership.storage.constructionMass =
       typeof next.mothership.storage.constructionMass === 'number' ? next.mothership.storage.constructionMass : 0;
@@ -1119,6 +1231,7 @@
     return next;
   }
 
+  /** @param {World} world @param {Ship} destroyed @returns {World} */
   function addWreck(world, destroyed) {
     var next = normalizeWorld(world);
     next.wrecks.push({
@@ -1132,6 +1245,7 @@
     return next;
   }
 
+  /** @param {World} world @param {string} id @param {number} amount @returns {World} */
   function damageFighter(world, id, amount) {
     var next = normalizeWorld(world);
     var ship = next.ships.filter(function (candidate) { return candidate.id === id; })[0];
@@ -1146,6 +1260,7 @@
     return next;
   }
 
+  /** @param {WorldLike} world @param {RecoveryRef | null | undefined} reference @returns {Ship | Wreck | null} */
   function recoveryTarget(world, reference) {
     if (!reference) return null;
     var candidates = reference.kind === 'wreck' ? world.wrecks : world.ships;
@@ -1155,12 +1270,14 @@
     })[0] || null;
   }
 
+  /** @param {World} world @param {Vec2} point @param {number} range @returns {RecoveryRef | null} */
   function nearestRecoverable(world, point, range) {
     var best = null;
-    (world.wrecks || []).map(function (wreck) { return { kind: 'wreck', id: wreck.id }; })
+    /** @type {RecoveryRef[]} */
+    var references = (world.wrecks || []).map(function (wreck) { return /** @type {RecoveryRef} */ ({ kind: 'wreck', id: wreck.id }); })
       .concat(world.ships.filter(function (ship) { return ship.type === 'escort' && ship.disabled; })
-        .map(function (ship) { return { kind: 'ship', id: ship.id }; }))
-      .forEach(function (reference) {
+        .map(function (ship) { return /** @type {RecoveryRef} */ ({ kind: 'ship', id: ship.id }); }));
+    references.forEach(function (reference) {
         var target = recoveryTarget(world, reference);
         if (!target || target.towedBy) return;
         var gap = distance(target.position, point);
@@ -1172,18 +1289,21 @@
     return best;
   }
 
+  /** @param {World} world @param {RecoveryRef} reference @returns {World} */
   function issueRecoveryOrder(world, reference) {
     var next = normalizeWorld(world);
     var target = recoveryTarget(next, reference);
     if (!target || target.towedBy) return next;
+    var targetPosition = clonePlain(target.position);
     next.ships.forEach(function (ship) {
       if (next.selectedShipIds.indexOf(ship.id) < 0 || ship.type !== 'tug' ||
         ship.disabled || ship.carryingSection || ship.platformId || ship.towTarget) return;
-      ship.order = { kind: 'recover', recoveryTarget: clonePlain(reference), target: clonePlain(target.position) };
+      ship.order = { kind: 'recover', recoveryTarget: clonePlain(reference), target: targetPosition };
     });
     return next;
   }
 
+  /** @param {World} world @param {number} dt */
   function stepRecovery(world, dt) {
     var mothership = findMothership(world);
     world.ships.forEach(function (ship) {
@@ -1243,14 +1363,18 @@
         hauler.towTarget = null;
         return;
       }
+      var payloadEntity = payload;
       payload.position = clonePlain(hauler.position);
       if (hauler.towTarget.kind === 'ship') payload.previousPosition = clonePlain(hauler.previousPosition);
       payload.rotation = hauler.rotation;
       if (mothership && canCatch(hauler, mothership)) {
         if (hauler.towTarget.kind === 'wreck') {
-          world.mothership.storage.ore += payload.salvageOre;
-          world.recovery.salvagedOre += payload.salvageOre;
-          world.wrecks = world.wrecks.filter(function (wreck) { return wreck.id !== payload.id; });
+          /** @type {Wreck} */
+          var wreck = payloadEntity;
+          var salvageOre = wreck.salvageOre || 0;
+          world.mothership.storage.ore += salvageOre;
+          world.recovery.salvagedOre += salvageOre;
+          world.wrecks = world.wrecks.filter(function (wreck) { return wreck.id !== payloadEntity.id; });
         } else {
           payload.towedBy = null;
           payload.repairRemaining = REPAIR_SECONDS;
@@ -1265,7 +1389,9 @@
     });
   }
 
+  /** @param {World} world @returns {Record<string, boolean>} */
   function selectedLookup(world) {
+    /** @type {Record<string, boolean>} */
     var selected = {};
     world.selectedShipIds.forEach(function (id) {
       selected[id] = true;
@@ -1273,6 +1399,7 @@
     return selected;
   }
 
+  /** @param {World} world @param {string} type @returns {boolean} */
   function selectedType(world, type) {
     var selected = selectedLookup(world);
     return world.ships.some(function (ship) {
@@ -1280,18 +1407,21 @@
     });
   }
 
+  /** @param {World} world @returns {Ship | undefined} */
   function findMothership(world) {
     return world.ships.filter(function (ship) {
       return ship.type === 'mothership';
     })[0];
   }
 
+  /** @param {World} world @param {string | null | undefined} asteroidId @returns {Asteroid | undefined} */
   function findAsteroid(world, asteroidId) {
     return (world.asteroids || []).filter(function (asteroid) {
       return asteroid.id === asteroidId;
     })[0];
   }
 
+  /** @param {World} world @param {Vec2} target @param {number} maxDistance @returns {Asteroid | null} */
   function findNearestAsteroid(world, target, maxDistance) {
     var best = null;
     var bestDistance = maxDistance;
@@ -1305,10 +1435,12 @@
     return best;
   }
 
+  /** @param {Vec2} a @param {Vec2} b @returns {number} */
   function distance(a, b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
+  /** @param {MothershipState | undefined} mothership @param {Depot | undefined} depot */
   function processConstructionMass(mothership, depot) {
     if (!mothership || !mothership.storage || !depot) return;
     var needed = Math.max(0, depot.totalStages - depot.builtStages - mothership.storage.depotSections);
@@ -1324,6 +1456,7 @@
     }
   }
 
+  /** @param {number} from @param {number} to @returns {number} */
   function angleDelta(from, to) {
     var delta = (to - from) % (Math.PI * 2);
     if (delta > Math.PI) delta -= Math.PI * 2;
@@ -1331,6 +1464,7 @@
     return delta;
   }
 
+  /** @param {number} current @param {number} target @param {number} maxStep @returns {number} */
   function rotateToward(current, target, maxStep) {
     var delta = angleDelta(current, target);
     if (Math.abs(delta) <= maxStep) return target;

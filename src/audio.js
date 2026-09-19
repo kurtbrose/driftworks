@@ -1,17 +1,30 @@
+/** @param {Window} global */
 (function (global) {
   'use strict';
 
+  /** @typedef {import('./types').DriftworksNamespace} DriftworksNamespace */
+  /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
+  /** @type {typeof AudioContext | undefined} */
   var AudioContextCtor = global.AudioContext || global.webkitAudioContext;
   var storageKey = 'driftworks-audio-settings-v1';
+  /** @type {AudioContext | null} */
   var context = null;
+  /** @type {GainNode | null} */
   var master = null;
+  /** @type {GainNode | null} */
   var sfxBus = null;
+  /** @type {GainNode | null} */
   var musicBus = null;
+  /** @type {GainNode | null} */
   var engineBus = null;
+  /** @type {AudioBufferSourceNode | null} */
   var engineSource = null;
+  /** @type {BiquadFilterNode | null} */
   var engineFilter = null;
+  /** @type {AudioNode[]} */
   var musicNodes = [];
+  /** @type {{ sfx: boolean, music: boolean, sfxVolume: number, musicVolume: number }} */
   var settings = loadSettings();
   var lastEngineLevel = 0;
 
@@ -30,6 +43,7 @@
     return { sfx: true, music: false, sfxVolume: 1, musicVolume: 0 };
   }
 
+  /** @param {unknown} value @param {number} fallback @returns {number} */
   function volumeValue(value, fallback) {
     return typeof value === 'number' && isFinite(value) ? Math.max(0, Math.min(1, value)) : fallback;
   }
@@ -65,7 +79,7 @@
   }
 
   function unlock() {
-    if (!ensureContext()) return false;
+    if (!ensureContext() || !context) return false;
     if (context.state === 'suspended') {
       context.resume();
     }
@@ -83,36 +97,41 @@
     };
   }
 
+  /** @param {boolean} enabled */
   function setSfxEnabled(enabled) {
     setSfxVolume(enabled ? 1 : 0);
   }
 
+  /** @param {number} value */
   function setSfxVolume(value) {
     settings.sfxVolume = volumeValue(value, settings.sfxVolume);
     settings.sfx = settings.sfxVolume > 0;
     saveSettings();
-    if (unlock()) {
+    if (unlock() && context && sfxBus) {
       sfxBus.gain.setTargetAtTime(settings.sfxVolume, context.currentTime, 0.015);
       if (!settings.sfx) setEngineThrust(0);
     }
   }
 
+  /** @param {boolean} enabled */
   function setMusicEnabled(enabled) {
     setMusicVolume(enabled ? 1 : 0);
   }
 
+  /** @param {number} value */
   function setMusicVolume(value) {
     settings.musicVolume = volumeValue(value, settings.musicVolume);
     settings.music = settings.musicVolume > 0;
     saveSettings();
-    if (ensureContext()) {
+    if (ensureContext() && context && musicBus) {
       musicBus.gain.setTargetAtTime(settings.musicVolume, context.currentTime, 0.08);
       unlock();
     }
   }
 
+  /** @param {number} frequency @param {number} duration @param {number} gain @param {OscillatorType} type @param {number} [delay] */
   function beep(frequency, duration, gain, type, delay) {
-    if (!settings.sfx || !unlock()) return;
+    if (!settings.sfx || !unlock() || !context || !sfxBus) return;
     var start = context.currentTime + (delay || 0);
     var oscillator = context.createOscillator();
     var envelope = context.createGain();
@@ -126,8 +145,9 @@
     oscillator.stop(start + duration + 0.02);
   }
 
+  /** @param {number} duration @param {number} gain @param {BiquadFilterType} filterType @param {number} filterFrequency @param {number} [delay] */
   function noiseBurst(duration, gain, filterType, filterFrequency, delay) {
-    if (!settings.sfx || !unlock()) return;
+    if (!settings.sfx || !unlock() || !context || !sfxBus) return;
     var start = context.currentTime + (delay || 0);
     var source = context.createBufferSource();
     var filter = context.createBiquadFilter();
@@ -143,7 +163,9 @@
     source.start(start);
   }
 
+  /** @param {number} duration @returns {AudioBuffer} */
   function createNoiseBuffer(duration) {
+    if (!context) throw new Error('Audio context is not initialized');
     var length = Math.max(1, Math.floor(context.sampleRate * duration));
     var buffer = context.createBuffer(1, length, context.sampleRate);
     var data = buffer.getChannelData(0);
@@ -163,7 +185,7 @@
   }
 
   function playInvalid() {
-    if (!settings.sfx || !unlock()) return;
+    if (!settings.sfx || !unlock() || !context || !sfxBus) return;
     var start = context.currentTime;
     var oscillator = context.createOscillator();
     var envelope = context.createGain();
@@ -179,7 +201,7 @@
   }
 
   function playMiningTick() {
-    if (!settings.sfx || !unlock()) return;
+    if (!settings.sfx || !unlock() || !context || !sfxBus) return;
     var start = context.currentTime;
     var source = context.createBufferSource();
     var lowpass = context.createBiquadFilter();
@@ -211,6 +233,7 @@
     beep(86, 0.09, 0.04, 'sine');
   }
 
+  /** @param {number} strength */
   function playImpact(strength) {
     noiseBurst(0.16, 0.055 + Math.min(0.04, (strength || 0) * 0.01), 'lowpass', 520 + Math.random() * 200);
   }
@@ -233,6 +256,7 @@
   }
 
   function startEngineNoise() {
+    if (!context || !engineBus) return;
     engineSource = context.createBufferSource();
     engineSource.buffer = createNoiseBuffer(1.5);
     engineSource.loop = true;
@@ -244,8 +268,9 @@
     engineSource.start();
   }
 
+  /** @param {number} level */
   function setEngineThrust(level) {
-    if (!context) return;
+    if (!context || !engineBus || !engineFilter) return;
     var clamped = settings.sfx ? Math.max(0, Math.min(1, level || 0)) : 0;
     lastEngineLevel = clamped;
     var now = context.currentTime;
@@ -254,13 +279,16 @@
   }
 
   function startMusicBed() {
+    if (!context || !musicBus) return;
+    var audioContext = context;
+    var musicOutput = musicBus;
     [82.41, 123.47, 164.81].forEach(function (frequency, index) {
-      var oscillator = context.createOscillator();
-      var gain = context.createGain();
+      var oscillator = audioContext.createOscillator();
+      var gain = audioContext.createGain();
       oscillator.type = index === 0 ? 'sine' : 'triangle';
       oscillator.frequency.value = frequency;
       gain.gain.value = index === 0 ? 0.012 : 0.006;
-      oscillator.connect(gain).connect(musicBus);
+      oscillator.connect(gain).connect(musicOutput);
       oscillator.start();
       musicNodes.push(oscillator);
     });
