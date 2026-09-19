@@ -1,6 +1,12 @@
 (function (global) {
   'use strict';
 
+  /** @typedef {import('./types').World} World */
+  /** @typedef {import('./types').Ship} Ship */
+  /** @typedef {import('./types').Asteroid} Asteroid */
+  /** @typedef {import('./types').Vec2} Vec2 */
+  /** @typedef {import('./types').DriftworksNamespace} DriftworksNamespace */
+  /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
   var propulsion = Driftworks.propulsion;
   var VELOCITY_TO_MPS = 10000 / 600 / 60;
@@ -23,6 +29,7 @@
     mothership: { lengthM: 1000, dryMassKg: 3000000000, thrustN: 2941995 }
   };
 
+  /** @param {World} world @param {Ship} ship */
   function physicalStats(world, ship) {
     var hull = ship.physical || HULLS[ship.type];
     var payload = recoveryTarget(world, ship.towTarget);
@@ -39,10 +46,12 @@
       turnRateRadps: ship.turnRate / PHYSICAL_SECONDS_PER_SECOND };
   }
 
+  /** @param {World} world @param {Ship} ship */
   function movementAcceleration(world, ship) {
     return physicalStats(world, ship).accelerationMps2 * PHYSICAL_SECONDS_PER_SECOND * PHYSICAL_SECONDS_PER_SECOND / METERS_PER_UNIT;
   }
 
+  /** @param {Asteroid} asteroid */
   function asteroidPhysicalStats(asteroid) {
     var radiusM = asteroid.radius * METERS_PER_UNIT;
     return { diameterM: radiusM * 2, massKg: 4 / 3 * Math.PI * Math.pow(radiusM, 3) * 2000, densityKgM3: 2000,

@@ -44,6 +44,12 @@ export type Ship = {
   towTarget: EntityRef | null;
   velocity: Vec2;
   propulsion?: Propulsion;
+  physical?: { lengthM: number; dryMassKg: number; thrustN: number };
+  cargo?: number;
+  platformId?: string | null;
+  carryingSection?: boolean;
+  turnRate: number;
+  acceleration: number;
 };
 
 export type Propulsion = {
@@ -56,11 +62,16 @@ export type World = {
   time: number;
   nextFormationId: number;
   ships: Ship[];
-  asteroids: unknown[];
-  platforms: unknown[];
-  wrecks: unknown[];
+  asteroids: Asteroid[];
+  platforms: Platform[];
+  wrecks: Wreck[];
+  mothership?: { storage: { ore: number; constructionMass: number; depotSections: number } };
   formations: Record<number, Formation>;
 };
+
+export type Asteroid = { id: string; position: Vec2; radius: number; angularVelocity?: number };
+export type Platform = { id: string; state: string; position: Vec2; asteroidId?: string | null };
+export type Wreck = { id: string; position: Vec2; physical?: { dryMassKg: number }; massKg?: number; propulsion?: Propulsion; cargo?: number };
 
 export type PropulsionApi = {
   initialize: (ship: Ship) => void;
