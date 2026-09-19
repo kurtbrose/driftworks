@@ -5,6 +5,8 @@
   /** @typedef {import('./types').Ship} Ship */
   /** @typedef {import('./types').Asteroid} Asteroid */
   /** @typedef {import('./types').Vec2} Vec2 */
+  /** @typedef {import('./types').Threat} Threat */
+  /** @typedef {import('./types').FighterStyle} FighterStyle */
   /** @typedef {import('./types').DriftworksNamespace} DriftworksNamespace */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
@@ -64,6 +66,7 @@
   var SLOT_TOLERANCE = 6;
   var RAIDER_RANGE = 220;
 
+  /** @param {Ship} ship @param {Threat[]} threats @param {Vec2} anchor @param {number} radius @param {FighterStyle} style @param {Vec2} nominal @param {Ship[]} ships */
   function combatVelocity(ship, threats, anchor, radius, style, nominal, ships) {
     var nearby = threats.filter(function (t) { return distance(t.position, ship.position) < FIGHTER_RANGE + 240; });
     if (!nearby.length) return null;
@@ -120,6 +123,7 @@
     return best;
   }
 
+  /** @param {Ship} ship @returns {FighterStyle} */
   function fighterStyle(ship) {
     var hash = 0;
     for (var i = 0; i < ship.id.length; i += 1) hash = Math.imul(hash, 31) + ship.id.charCodeAt(i) | 0;

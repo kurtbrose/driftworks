@@ -8,9 +8,14 @@ export type EntityRef =
   | { kind: 'asteroid'; id: string };
 
 export type Formation = {
-  spacing: number;
-  looseness: number;
-  rotation: number;
+  position: Vec2;
+  velocity: Vec2;
+  angle: number;
+  looseness?: number;
+  pivoting?: boolean;
+  directTravel?: boolean;
+  relocating?: boolean;
+  memberIds?: string[];
 };
 
 export type Order =
@@ -29,6 +34,8 @@ export type Order =
       groupId: number;
       offset: Vec2;
       side: number;
+      leashRadius?: number;
+      target?: Vec2;
       formation?: Formation;
     };
 
@@ -67,11 +74,15 @@ export type World = {
   wrecks: Wreck[];
   mothership?: { storage: { ore: number; constructionMass: number; depotSections: number } };
   formations: Record<number, Formation>;
+  selectedShipIds: string[];
+  camera: Vec2;
 };
 
 export type Asteroid = { id: string; position: Vec2; radius: number; angularVelocity?: number };
 export type Platform = { id: string; state: string; position: Vec2; asteroidId?: string | null };
 export type Wreck = { id: string; position: Vec2; physical?: { dryMassKg: number }; massKg?: number; propulsion?: Propulsion; cargo?: number };
+export type Threat = { position: Vec2; velocity?: Vec2 };
+export type FighterStyle = { x: number; y: number; speed: number; acceleration: number };
 
 export type PropulsionApi = {
   initialize: (ship: Ship) => void;
