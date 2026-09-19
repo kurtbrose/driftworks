@@ -3,6 +3,7 @@
 
   var sim = window.Driftworks.sim;
   var game = window.Driftworks.game;
+  var hud = window.Driftworks.hud;
   var tests = [];
 
   function test(name, fn) {
@@ -1119,25 +1120,25 @@
     var slots = {};
     var storage = { setItem: function (key, value) { slots[key] = value; }, getItem: function (key) { return slots[key]; } };
     var world = sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']);
-    assert(game.miningControlState(world).canDeploy);
-    assert(!game.miningControlState(world).canEnd);
+    assert(hud.miningControlState(world).canDeploy);
+    assert(!hud.miningControlState(world).canEnd);
     world = sim.issueMineOrder(world, world.asteroids[0].id);
     var order = JSON.stringify(findShip(world, 'tug-01').order);
     sim.saveWorld(world, storage);
     world = sim.loadWorld(storage);
     assert(JSON.stringify(findShip(world, 'tug-01').order) === order);
-    assert(!game.miningControlState(world).canDeploy && game.miningControlState(world).canEnd);
+    assert(!hud.miningControlState(world).canDeploy && hud.miningControlState(world).canEnd);
     world = sim.endMining(world);
     sim.saveWorld(world, storage);
     world = sim.loadWorld(storage);
     assert(world.miningMission === 'recovering');
-    assert(game.miningControlState(world).endLabel === 'Recovering platforms…');
-    assert(!game.miningControlState(world).canDeploy && !game.miningControlState(world).canEnd);
+    assert(hud.miningControlState(world).endLabel === 'Recovering platforms…');
+    assert(!hud.miningControlState(world).canDeploy && !hud.miningControlState(world).canEnd);
     for (var i = 0; i < 300 && world.miningMission !== 'complete'; i++) world = sim.stepWorld(world, 1 / 30);
     sim.saveWorld(world, storage);
     world = sim.loadWorld(storage);
     assert(world.miningMission === 'complete');
-    assert(game.miningControlState(world).endLabel === 'Mining ended · platforms recovered');
+    assert(hud.miningControlState(world).endLabel === 'Mining ended · platforms recovered');
   });
 
   test('reset clears mining progress in memory and in the saved world', function () {
@@ -1152,10 +1153,10 @@
       assert(fresh.miningMission === 'active');
       assert(fresh.platforms.length === 2 && fresh.platforms.every(function (p) { return p.state === 'stored'; }));
       assert(fresh.packets.length === 0 && fresh.elapsedSeconds === 0);
-      assert(!game.miningControlState(fresh).canEnd);
-      assert(game.miningControlState(fresh).endLabel === 'End mining & recover');
+      assert(!hud.miningControlState(fresh).canEnd);
+      assert(hud.miningControlState(fresh).endLabel === 'End mining & recover');
       fresh = sim.selectShips(fresh, ['msv-hardshell']);
-      assert(game.miningControlState(fresh).canDeploy);
+      assert(hud.miningControlState(fresh).canDeploy);
     });
   });
 

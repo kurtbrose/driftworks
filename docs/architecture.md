@@ -4,7 +4,7 @@
 
 The site loads ordinary scripts into `window.Driftworks`; there are no ES module
 imports or build artifacts. `index.html` loads Pixi, propulsion, simulation,
-audio, then game. The test entry points load the same application scripts without
+audio, HUD, then game. The test entry points load the same application scripts without
 Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 
 | Module | Responsibility and interface |
@@ -13,6 +13,7 @@ Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 | `src/sim.js` | `Driftworks.sim`: plain-data constructors, commands, fixed-step movement/industry/recovery, physical conversions, and save migration. Public world commands and `stepWorld(world, dt, threats)` return replacement worlds. Internal helpers mutate those working copies. |
 | `src/game.js` | `Driftworks.game` exposes testable UI/geometry helpers; `createApp` owns the current world, timing, scene and HUD. `createScene` owns Pixi objects, input, camera focus, combat and effects, communicating through `getWorld`/`setWorld`. |
 | `src/audio.js` | `Driftworks.audio`: lazily unlocked Web Audio resources, sound events, engine telemetry and separately persisted volume settings. No simulation ownership. |
+| `src/hud.js` | `Driftworks.hud`: DOM panels, fleet/readouts, control availability and event binding. Reads simulation queries and audio status; delegates actions to the app. No Pixi or scene dependency. |
 | `styles.css`, `index.html` | DOM layout and static entry point. |
 | `tests/tests.js` | Shared browser/headless regression suite for simulation and exposed game helpers. |
 
@@ -21,6 +22,18 @@ consume world snapshots, and input should translate gestures into commands.
 Browser objects, audio nodes and functions must never enter the world. See
 [world-state](world-state.md) for the data contract and
 [physical units](../PHYSICAL_UNITS.md) for conversions and tuning.
+
+### HUD interface
+
+`Driftworks.hud.create(host, actions)` builds the DOM once and returns
+`{ update(world, stats) }`. `stats` supplies `contacts`, `entityCount`, `fps` and
+`stressEnabled`; world is read-only to the HUD. Actions are `getTimeScale`,
+`onTimeScale(speed)`, `onSelectShip(id)`, `onDeployPlatform`, `onEndMining`,
+`onSave`, `onLoad`, `onReset`, `onStressToggle`, `onSfxVolume(volume)` and
+`onMusicVolume(volume)` (volumes range from 0 to 1). The app owns these callbacks
+and replaces world or changes session/audio state in response.
+`Driftworks.hud.miningControlState(world)` exposes the control-availability query
+for tests; formatting and ore aggregation remain private to the HUD.
 
 ## Update and render sequence
 
