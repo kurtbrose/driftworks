@@ -56,6 +56,7 @@
   function createApp(sceneHost, hudHost) {
     var world = loadOrInitial();
     var accumulator = 0;
+    var timeScale = 1;
     var lastTime = performance.now();
 
     var scene = createScene(sceneHost, function () {
@@ -67,18 +68,26 @@
     });
 
     var hud = createHud(hudHost, {
+      getTimeScale: function () { return timeScale; },
+      onTimeScale: function (value) {
+        timeScale = value;
+        lastTime = performance.now();
+        hud.update(world, scene.getStats());
+      },
       onSave: function () {
         sim.saveWorld(world);
         hud.update(world, scene.getStats());
       },
       onLoad: function () {
         world = loadOrInitial();
+        accumulator = 0;
         scene.resetCombat();
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
       onReset: function () {
         world = sim.createInitialWorld();
+        accumulator = 0;
         scene.resetCombat();
         scene.sync(world);
         hud.update(world, scene.getStats());
@@ -105,7 +114,7 @@
     function frame(now) {
       var frameSeconds = Math.min((now - lastTime) / 1000, MAX_FRAME_SECONDS);
       lastTime = now;
-      accumulator += frameSeconds;
+      accumulator += frameSeconds * timeScale;
 
       while (accumulator >= STEP_SECONDS) {
         world = sim.stepWorld(world, STEP_SECONDS, scene.getThreats());
@@ -114,7 +123,7 @@
 
       world = scene.applyCameraFocus(world, frameSeconds);
       scene.sync(world);
-      scene.render(world, accumulator / STEP_SECONDS, frameSeconds);
+      scene.render(world, accumulator / STEP_SECONDS, frameSeconds * timeScale, frameSeconds);
       hud.update(world, scene.getStats());
       requestAnimationFrame(frame);
     }
@@ -133,6 +142,15 @@
 
   function createHud(host, actions) {
     host.innerHTML =
+      '<section class="panel time-panel" aria-label="Simulation time" aria-live="off">' +
+      '<div class="time-heading"><span>MISSION TIME · IN-GAME</span><strong data-role="time-speed" aria-live="polite"></strong></div>' +
+      '<div class="mission-clock" data-role="clock"></div>' +
+      '<div class="time-buttons" role="group" aria-label="Simulation speed">' +
+      '<button type="button" data-speed="0" aria-label="Pause simulation" title="Pause"><span aria-hidden="true">Ⅱ</span></button>' +
+      '<button type="button" data-speed="1" aria-label="Play at normal speed" title="Normal speed">▶ 1×</button>' +
+      '<button type="button" data-speed="2" aria-label="Fast forward at 2 times speed" title="Fast forward 2×">▶▶ 2×</button>' +
+      '<button type="button" data-speed="4" aria-label="Fast forward at 4 times speed" title="Fast forward 4×">▶▶ 4×</button>' +
+      '</div></section>' +
       '<section class="panel readout">' +
       '<div class="row"><span>Location</span><strong data-role="location"></strong></div>' +
       '<div class="row"><span>Cash</span><strong data-role="money"></strong></div>' +
@@ -143,7 +161,6 @@
       '<div class="row"><span>Contacts</span><strong data-role="contacts"></strong></div>' +
       '<div class="row"><span>Recovery</span><strong data-role="recovery"></strong></div>' +
       '<div class="row"><span>Salvaged</span><strong data-role="salvaged"></strong></div>' +
-      '<div class="row"><span>Sim Clock</span><strong data-role="clock"></strong></div>' +
       '<div class="row"><span>Entities</span><strong data-role="entities"></strong></div>' +
       '<div class="row"><span>Selection</span><strong data-role="selection"></strong></div>' +
       '</section>' +
@@ -158,6 +175,10 @@
       '<section class="hint">LMB select/drag-box · RMB move · wheel zoom · Space/MMB drag pan · F focus · H hostile vignette</section>';
 
     var stressButton = host.querySelector('[data-action="stress"]');
+    var timeButtons = host.querySelectorAll('[data-speed]');
+    timeButtons.forEach(function (button) {
+      button.addEventListener('click', function () { actions.onTimeScale(Number(button.dataset.speed)); });
+    });
     var sfxSlider = host.querySelector('[data-action="sfx"]');
     var musicSlider = host.querySelector('[data-action="music"]');
     host.querySelector('[data-action="save"]').addEventListener('click', actions.onSave);
@@ -184,7 +205,16 @@
         host.querySelector('[data-role="recovery"]').textContent = (world.wrecks || []).length + ' wrecks · ' +
           world.ships.filter(function (ship) { return ship.disabled; }).length + ' disabled';
         host.querySelector('[data-role="salvaged"]').textContent = (world.recovery ? world.recovery.salvagedOre : 0) + ' t';
-        host.querySelector('[data-role="clock"]').textContent = world.elapsedSeconds.toFixed(1) + ' s';
+        host.querySelector('[data-role="clock"]').textContent = formatMissionTime(world.elapsedSeconds * sim.PHYSICAL_SECONDS_PER_SECOND);
+        var speed = actions.getTimeScale();
+        var speedLabel = speed === 0 ? 'PAUSED' : speed + '× SPEED';
+        var speedReadout = host.querySelector('[data-role="time-speed"]');
+        if (speedReadout.textContent !== speedLabel) speedReadout.textContent = speedLabel;
+        timeButtons.forEach(function (button) {
+          var active = Number(button.dataset.speed) === speed;
+          button.dataset.active = String(active);
+          button.setAttribute('aria-pressed', String(active));
+        });
         host.querySelector('[data-role="entities"]').textContent = stats.entityCount + ' @ ' + (stats.fps || '--') + ' FPS';
 
         if (world.selectedShipIds.length === 0) {
@@ -393,7 +423,7 @@
       });
     }
 
-    function render(world, alpha, dt) {
+    function render(world, alpha, dt, realDt) {
       var visualDt = dt * visualTimeScale;
       world.ships.forEach(function (ship) {
         var graphic = shipGraphics[ship.id];
@@ -404,11 +434,14 @@
         graphic.rotation = ship.rotation;
       });
 
-      updateThreatDirector(world, visualDt);
-      updateCombatVignette(world, visualDt);
+      if (dt > 0) {
+        updateThreatDirector(world, visualDt);
+        updateCombatVignette(world, visualDt);
+      }
       world = getWorld();
-      spawnStateEffects(world, visualDt);
-      updateAudioTelemetry(world);
+      if (dt > 0) spawnStateEffects(world, visualDt);
+      if (dt > 0) updateAudioTelemetry(world);
+      else if (audio) audio.setEngineThrust(0);
       updateEffects(effectsLayer, effects, visualDt, world.camera.zoom);
       cameraShake = Math.max(0, cameraShake - dt * 18);
       visualTimeScale += (1 - visualTimeScale) * Math.min(1, dt * 3.5);
@@ -416,7 +449,7 @@
       if (stressLayer && stressEnabled) {
         stressLayer.update(visualDt);
       }
-      updateFps(dt, world);
+      updateFps(realDt, world);
     }
 
     function spawnStateEffects(world, dt) {
@@ -1887,6 +1920,13 @@
         });
       }
     };
+  }
+
+  function formatMissionTime(seconds) {
+    var wholeSeconds = Math.floor(Math.max(0, seconds));
+    return String(Math.floor(wholeSeconds / 3600)).padStart(2, '0') + 'h ' +
+      String(Math.floor(wholeSeconds / 60) % 60).padStart(2, '0') + 'm ' +
+      String(wholeSeconds % 60).padStart(2, '0') + 's';
   }
 
   function totalOreRemaining(world) {

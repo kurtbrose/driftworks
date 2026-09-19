@@ -28,6 +28,7 @@ Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository
 - Versioned localStorage save/load of serializable game state.
 - Toggleable stress mode that animates thousands of simple sprites.
 - DOM HUD with selected ships, simulation time, entity count, and measured FPS.
+- Prominent in-game mission clock with inline units (00h 00m 00s) and Pause, 1×, 2×, and 4× controls. Simulation, combat, and effects follow the selected speed; camera and selection remain usable while paused. Saves retain elapsed mission time; playback speed is session-only.
 - Browser-native simulation tests at `./tests/`.
 
 ## No Build Pipeline

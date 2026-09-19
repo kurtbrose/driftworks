@@ -68,8 +68,43 @@ button[data-active="true"] {
 
 .readout {
   grid-column: 3;
+  grid-row: 1;
   padding: 10px 12px;
 }
+
+.time-panel {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  padding: 12px;
+}
+
+.time-heading {
+  display: flex;
+  justify-content: space-between;
+  color: #9cafb7;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.time-heading strong { color: #9ed6c8; }
+
+.mission-clock {
+  padding: 8px 0 12px;
+  font-family: Consolas, "SFMono-Regular", monospace;
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.time-buttons button { padding: 0 4px; font-size: 13px; }
+.time-buttons button[data-active="true"] { border-color: #9ed6c8; color: #bff5e7; background: #24413d; }
+button:focus-visible { outline: 2px solid #bff5e7; outline-offset: 3px; }
 
 .row {
   display: flex;
@@ -153,8 +188,13 @@ button[data-active="true"] {
   .hud {
     inset: 10px;
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
   }
+
+  .time-panel { grid-column: 1; grid-row: 1; width: 100%; }
+  .readout { grid-row: 2; overflow-y: auto; align-self: start; max-height: 100%; }
+  .controls { grid-row: 3; }
+  .hint { grid-row: 4; }
 
   .readout,
   .controls,
