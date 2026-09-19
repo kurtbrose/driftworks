@@ -2,6 +2,9 @@
 
 Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository state is deliberately small: a static tactical sandbox where a persistent handful of industrial spacecraft can begin doing useful work.
 
+For code changes, start with [AGENTS.md](AGENTS.md), then consult the
+[architecture map](docs/architecture.md) and [world-state contract](docs/world-state.md).
+
 ## What Works Now
 
 - Full-window PixiJS tactical scene using vendored runtime code.
