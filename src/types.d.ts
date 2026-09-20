@@ -39,6 +39,7 @@ export type Order =
       offset?: Vec2;
       side: number;
       leashRadius?: number;
+      automatic?: boolean;
       target?: Vec2;
       formation?: Formation;
     };
@@ -71,6 +72,7 @@ export type Ship = {
   previousCargo: number;
   cargoCapacity: number;
   repairRemaining: number;
+  /** Normal emergence is 0..1 seconds; repaired-fighter clearance is 0..6 seconds. */
   launchElapsed: number | null;
   damage: number;
 };

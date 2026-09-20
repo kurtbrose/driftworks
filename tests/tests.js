@@ -21,6 +21,73 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  var createFreshWorld = sim.createInitialWorld;
+  function createDeployedWorld(seed) {
+    var world = createFreshWorld(seed);
+    var positions = { 'tug-01': { x: 160, y: 120 }, 'escort-01': { x: 210, y: -125 }, 'escort-02': { x: 250, y: -165 } };
+    world.ships.forEach(function (ship) {
+      if (!positions[ship.id]) return;
+      ship.position = Object.assign({}, positions[ship.id]);
+      ship.previousPosition = Object.assign({}, ship.position);
+      ship.docked = false;
+    });
+    return world;
+  }
+
+  test('fresh fleet is stored inside the mothership and launches only on assignment', function () {
+    var world = createFreshWorld();
+    var home = findShip(world, 'msv-hardshell');
+    ['tug-01', 'escort-01', 'escort-02'].forEach(function (id) {
+      var ship = findShip(world, id);
+      assert(ship.docked && ship.order.kind === 'idle', id + ' should start stored and idle');
+      assertClose(ship.position.x, home.position.x);
+      assertClose(ship.position.y, home.position.y);
+    });
+    world = sim.issueMoveOrder(sim.selectShips(world, ['tug-01']), { x: 600, y: 0 });
+    world = sim.stepWorld(world, 0.5);
+    var tug = findShip(world, 'tug-01');
+    assert(!tug.docked && tug.launchElapsed === 0.5, 'A job should begin a one-second emergence');
+    assertClose(tug.position.x, home.position.x + 36);
+    world = sim.issueMoveOrder(world, { x: -500, y: 0 });
+    assert(findShip(world, 'tug-01').order.target.x === 600, 'New orders must wait until emergence clears');
+    world = sim.stepWorld(world, 0.5);
+    tug = findShip(world, 'tug-01');
+    assert(tug.launchElapsed === null && tug.position.x > 0, 'Guidance should begin once emergence clears');
+  });
+
+  test('hostile appearance scrambles docked fighters and returns only automatic defenders', function () {
+    var world = createFreshWorld();
+    findShip(world, 'escort-02').disabled = true;
+    world = sim.spawnHostileWave(world);
+    world = sim.stepWorld(world, 1 / 30);
+    ['escort-01', 'escort-02'].forEach(function (id) {
+      var fighter = findShip(world, id);
+      if (id === 'escort-01') assert(fighter.order.kind === 'defend' && fighter.order.automatic, 'Available docked fighters should scramble automatically');
+      else assert(fighter.disabled && fighter.order.kind === 'idle', 'Disabled fighters should not scramble');
+    });
+    var manual = createFreshWorld();
+    manual = sim.issueDefendOrder(sim.selectShips(manual, ['escort-01']), { x: 200, y: 0 });
+    manual = sim.spawnHostileWave(manual);
+    manual = sim.stepWorld(manual, 1 / 30);
+    assert(findShip(manual, 'escort-01').order.kind === 'defend' && !findShip(manual, 'escort-01').order.automatic,
+      'A player-assigned fighter must keep its own deployment order');
+    world.combat.drones = [];
+    world = sim.stepWorld(world, 1 / 30);
+    assert(findShip(world, 'escort-01').order.kind === 'return' && findShip(world, 'escort-01').order.automatic,
+      'Automatically scrambled fighters should return when the last hostile is gone');
+  });
+
+  test('normalization preserves an already deployed craft in older saves', function () {
+    var world = createFreshWorld();
+    var tug = findShip(world, 'tug-01');
+    tug.docked = false;
+    tug.position = { x: 700, y: -300 };
+    var loaded = sim.deserializeWorld(sim.serializeWorld(world));
+    assert(!findShip(loaded, tug.id).docked, 'Loading must not force a deployed craft into internal storage');
+    assertClose(findShip(loaded, tug.id).position.x, 700);
+    assert(JSON.stringify(sim.deserializeWorld(sim.serializeWorld(loaded))) === JSON.stringify(loaded), 'Repeated loading should stay stable');
+  });
+
   test('seeded initialization and scenario replay are deterministic without rendering', function () {
     var replay = window.Driftworks.scenario;
     var scenario = { version: 1, seed: 12345, ticks: 300, commands: [
@@ -30,8 +97,8 @@
     ] };
     var a = replay.run(scenario), b = replay.run(scenario);
     assert(JSON.stringify(a) === JSON.stringify(b), 'Same seed and commands must yield identical worlds');
-    assert(sim.createInitialWorld(12345).asteroids[0].angularVelocity !== sim.createInitialWorld(12346).asteroids[0].angularVelocity, 'Seed must control initialization');
-    var initial = sim.createInitialWorld(12345), serialized = JSON.stringify(initial);
+    assert(createDeployedWorld(12345).asteroids[0].angularVelocity !== createDeployedWorld(12346).asteroids[0].angularVelocity, 'Seed must control initialization');
+    var initial = createDeployedWorld(12345), serialized = JSON.stringify(initial);
     var actual = replay.run({ version: 1, world: initial, ticks: 1, commands: scenario.commands.slice(0, 2) });
     var expected = sim.stepWorld(sim.issueMoveOrder(sim.selectShips(initial, ['tug-01']), { x: 200, y: 120 }), 1 / 30);
     assert(JSON.stringify(actual) === JSON.stringify(expected), 'Tick zero commands precede the first step, in listed order');
@@ -59,7 +126,7 @@
     ] };
     var first = replay.run(scenario);
     var second = replay.run(scenario);
-    assert(first.wrecks.length > 0 && first.combat.drones.length > 0,
+    assert(first.ships.some(function (ship) { return ship.type === 'escort' && ship.disabled; }) && first.combat.drones.length > 0,
       'Determinism replay must exercise combat consequences');
     assert(JSON.stringify(first) === JSON.stringify(second),
       'Running the same combat scenario twice must produce identical complete worlds');
@@ -81,7 +148,7 @@
   });
 
   test('old saves gain deterministic combat defaults and repeated loading preserves encounters', function () {
-    var old = sim.createInitialWorld(12345);
+    var old = createDeployedWorld(12345);
     delete old.combat;
     var repaired = sim.deserializeWorld(sim.serializeWorld(old));
     assert(repaired.combat.drones.length === 0 && repaired.combat.director.state === 'idle', 'Old saves should start with no encounters');
@@ -95,7 +162,7 @@
   });
 
   test('director warning and random sequence survive a save during the warning', function () {
-    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(12345), ['msv-hardshell']), 'ast-ceres-01');
+    var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(12345), ['msv-hardshell']), 'ast-ceres-01');
     world = sim.stepWorld(world, 1 / 30);
     assert(world.combat.director.state === 'warning', 'Exposed work starts a warning');
     assert(world.combat.events.some(function (e) { return e.kind === 'contact-warning'; }), 'Warning originates in the simulation');
@@ -109,7 +176,7 @@
   });
 
   test('battle replay matches after save/load and across render-frame groupings for 10000 ticks', function () {
-    var initial = sim.spawnHostileWave(sim.createInitialWorld(12345));
+    var initial = sim.spawnHostileWave(createDeployedWorld(12345));
     var a = initial, b = initial, ticks = 0, sawShot = false, sawDamage = false;
     // These are identical fixed ticks grouped as if frames ran at 30 Hz versus 5 Hz.
     while (ticks < 10000) {
@@ -129,7 +196,7 @@
   });
 
   test('combat resolves simultaneous lethal fire once and leaves a recoverable wreck', function () {
-    var world = sim.spawnHostileWave(sim.createInitialWorld(42));
+    var world = sim.spawnHostileWave(createDeployedWorld(42));
     world.ships = world.ships.filter(function (ship) { return ship.id !== 'escort-02'; });
     var fighter = findShip(world, 'escort-01');
     fighter.damage = 0.8;
@@ -147,7 +214,7 @@
   });
 
   test('legacy wrecks without rotation render finite recovery geometry', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     world.wrecks = [{ id: 'legacy-wreck', position: { x: 10, y: 20 } }];
     var points;
     game.paintRecovery({
@@ -169,7 +236,7 @@
   });
 
   test('fixed-step advancement is deterministic', function () {
-    var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['tug-01']), { x: 100, y: -90 });
+    var world = sim.issueMoveOrder(sim.selectShips(createDeployedWorld(), ['tug-01']), { x: 100, y: -90 });
     var a = sim.stepWorld(sim.stepWorld(world, 1 / 30), 1 / 30);
     var b = sim.stepWorld(sim.stepWorld(world, 1 / 30), 1 / 30);
     assert(JSON.stringify(a) === JSON.stringify(b), 'Repeated stepping from the same state should match');
@@ -177,7 +244,7 @@
   });
 
   test('move orders transition to arrival', function () {
-    var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 240, y: -125 });
+    var world = sim.issueMoveOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 240, y: -125 });
     var guard = 0;
     var escort = null;
     while (guard < 300) {
@@ -193,7 +260,7 @@
   });
 
   test('acceleration limits sudden direction reversal', function () {
-    var world = sim.selectShips(sim.createInitialWorld(), ['tug-01']);
+    var world = sim.selectShips(createDeployedWorld(), ['tug-01']);
     var miner = findShip(world, 'tug-01');
     miner.position = { x: 0, y: 0 };
     miner.previousPosition = { x: 0, y: 0 };
@@ -207,7 +274,7 @@
   test('industrial loads reduce acceleration through mass while retaining guidance speed', function () {
     ['tug-01'].forEach(function (id) {
       function cruise(load, ticks) {
-        var world = sim.selectShips(sim.createInitialWorld(), [id]);
+        var world = sim.selectShips(createDeployedWorld(), [id]);
         var ship = findShip(world, id);
         ship.cargo = 1500 * load;
         ship.carryingSection = ship.type === 'tug' && load > 0;
@@ -236,7 +303,7 @@
   });
 
   test('picking up cargo does not instantly clamp existing velocity', function () {
-    var world = sim.selectShips(sim.createInitialWorld(), ['tug-01']);
+    var world = sim.selectShips(createDeployedWorld(), ['tug-01']);
     var miner = findShip(world, 'tug-01');
     miner.velocity = { x: miner.speed, y: 0 };
     miner.cargo = miner.cargoCapacity;
@@ -247,7 +314,7 @@
   });
 
   test('rotation limits sudden in-place facing changes', function () {
-    var world = sim.selectShips(sim.createInitialWorld(), ['escort-01']);
+    var world = sim.selectShips(createDeployedWorld(), ['escort-01']);
     var escort = findShip(world, 'escort-01');
     escort.position = { x: 0, y: 0 };
     escort.previousPosition = { x: 0, y: 0 };
@@ -270,7 +337,7 @@
   });
 
   test('deployed platforms extract ore while carriers return empty', function () {
-    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']), 'ast-ceres-01');
+    var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
     for (var i = 0; i < 1500; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'deployed');
     assert(world.asteroids[0].ore < world.asteroids[0].oreInitial);
@@ -279,7 +346,7 @@
   });
 
   test('ore packets deliver platform production to mothership storage', function () {
-    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']), 'ast-ceres-01');
+    var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
     var guard = 0;
     while (world.mothership.storage.ore <= 0 && guard < 1200) {
       world = sim.stepWorld(world, 1 / 30);
@@ -290,7 +357,7 @@
   });
 
   test('mothership processes ore into depot construction sections', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     world.mothership.storage.ore = 1500;
     world = sim.stepWorld(world, 1 / 30);
     assertClose(world.mothership.storage.ore, 0);
@@ -299,7 +366,7 @@
   });
 
   test('tug carries a fabricated section to the depot site', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     world.mothership.storage.depotSections = 1;
     world = sim.issueBuildOrder(sim.selectShips(world, ['tug-01']));
     var guard = 0;
@@ -313,7 +380,7 @@
   });
 
   test('escorts can engage the same hostile with independent laser timers', function () {
-    var escorts = sim.createInitialWorld().ships.filter(function (ship) { return ship.type === 'escort'; });
+    var escorts = createDeployedWorld().ships.filter(function (ship) { return ship.type === 'escort'; });
     escorts.forEach(function (ship) { ship.position = { x: 0, y: 0 }; });
     var drone = { id: 'shared-target', position: { x: 100, y: 0 } };
     var timers = {};
@@ -329,7 +396,7 @@
   });
 
   test('destroyed drones persist as distinct salvage wrecks across save and camera changes', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     var destroyed = { position: { x: 300, y: 100 }, velocity: { x: 10, y: -5 } };
     world = sim.addWreck(sim.addWreck(world, destroyed), destroyed);
     assert(world.wrecks.length === 2 && world.wrecks[0].id !== world.wrecks[1].id, 'Each wreck needs a stable unique identity');
@@ -339,7 +406,7 @@
   });
 
   test('hauler picks up a wreck beneath its frame and salvages it exactly once', function () {
-    var world = sim.addWreck(sim.createInitialWorld(), { position: { x: 165, y: 120 }, velocity: { x: 0, y: 1 } });
+    var world = sim.addWreck(createDeployedWorld(), { position: { x: 165, y: 120 }, velocity: { x: 0, y: 1 } });
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
     assert(findShip(world, 'tug-01').order.kind === 'recover', 'Right-click should dispatch recovery');
     world = sim.stepWorld(world, 1 / 30);
@@ -366,7 +433,7 @@
   });
 
   test('disabled fighters cannot move or fire and recover after being carried home', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     var fighter = findShip(world, 'escort-01');
     fighter.position = { x: 165, y: 120 };
     world = sim.damageFighter(world, fighter.id, 0.4);
@@ -397,7 +464,7 @@
   });
 
   test('recovery approach builds speed and arrives from a distance', function () {
-    var world = sim.addWreck(sim.createInitialWorld(), { position: { x: 400, y: 120 }, velocity: { x: 1, y: 0 } });
+    var world = sim.addWreck(createDeployedWorld(), { position: { x: 400, y: 120 }, velocity: { x: 1, y: 0 } });
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
     for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30);
     assert(findShip(world, 'tug-01').velocity.x > 35, 'Approach should retain velocity between ticks');
@@ -406,7 +473,7 @@
   });
 
   test('repaired fighters launch slowly from inside the mothership before accepting orders', function () {
-    var world = sim.damageFighter(sim.createInitialWorld(), 'escort-01', 1);
+    var world = sim.damageFighter(createDeployedWorld(), 'escort-01', 1);
     var fighter = findShip(world, 'escort-01');
     var mothership = world.ships.filter(function (ship) { return ship.type === 'mothership'; })[0];
     mothership.rotation = Math.PI / 2;
@@ -436,7 +503,7 @@
   });
 
   test('recovery cannot double-claim a wreck or stack payloads', function () {
-    var world = sim.addWreck(sim.createInitialWorld(), { position: { x: 165, y: 120 }, velocity: { x: 1, y: 0 } });
+    var world = sim.addWreck(createDeployedWorld(), { position: { x: 165, y: 120 }, velocity: { x: 1, y: 0 } });
     world.ships.push(sim.createShip('tug-02', 'Second Hauler', 'tug', 160, 120, 62));
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01', 'tug-02']), world.wrecks[0].position);
     world = sim.stepWorld(world, 1 / 30);
@@ -452,7 +519,7 @@
   });
 
   test('legacy saves receive empty recovery defaults', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     delete world.wrecks;
     delete world.nextWreckId;
     delete world.recovery;
@@ -468,7 +535,7 @@
   });
 
   test('operation exposure starts quiet and rises with industrial work', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     assertClose(sim.operationExposure(world), 0);
     world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), 'ast-ceres-01');
     assert(sim.operationExposure(world) > 0, 'Mining work should expose the operation to contact risk');
@@ -528,7 +595,7 @@
   });
 
   test('focus camera tracks the current selected ship position', function () {
-    var world = sim.selectShips(sim.createInitialWorld(), ['escort-01']);
+    var world = sim.selectShips(createDeployedWorld(), ['escort-01']);
     world.camera = { x: 0, y: 0, zoom: 1 };
     var ids = ['escort-01'];
     var initialFocus = game.computeSelectionFocus(world, ids);
@@ -577,7 +644,7 @@
   });
 
   test('save serialization round-trips world state', function () {
-    var world = sim.issueMoveOrder(sim.selectShips(sim.createInitialWorld(), ['tug-01']), { x: -40, y: 90 });
+    var world = sim.issueMoveOrder(sim.selectShips(createDeployedWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));
     assert(JSON.stringify(restored) === JSON.stringify(world), 'Restored world should match saved world');
   });
@@ -585,7 +652,7 @@
   test('unsupported save versions are rejected', function () {
     var rejected = false;
     try {
-      sim.deserializeWorld(JSON.stringify({ version: 99, world: sim.createInitialWorld() }));
+      sim.deserializeWorld(JSON.stringify({ version: 99, world: createDeployedWorld() }));
     } catch (error) {
       rejected = /Unsupported Driftworks save version/.test(error.message);
     }
@@ -643,7 +710,7 @@
   });
 
   test('close zoom recovery targets do not capture empty-space move orders', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     var escort = findShip(world, 'escort-01');
     escort.disabled = true;
     escort.position = { x: 900, y: 900 };
@@ -682,7 +749,7 @@
   });
 
   test('short move orders accelerate instead of teleporting within the old arrival radius', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     var fighter = findShip(world, 'escort-01');
     var start = { x: fighter.position.x, y: fighter.position.y };
     var target = { x: start.x + 4, y: start.y };
@@ -709,7 +776,7 @@
 
   test('deployed platforms retain rotating surface sites across saves', function () {
     [-0.012, 0.012].forEach(function (spin) {
-      var world = sim.createInitialWorld(); world.asteroids[0].angularVelocity = spin;
+      var world = createDeployedWorld(); world.asteroids[0].angularVelocity = spin;
       world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), world.asteroids[0].id);
       for (var i = 0; i < 1200; i++) world = sim.stepWorld(world, 1 / 30);
       assert(world.platforms[0].state === 'deployed');
@@ -723,7 +790,7 @@
   });
 
   test('legacy fields merge ore into one large asteroid', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     world.asteroids.push(sim.createAsteroid('old', 'Old rock', 100, 100, 80));
     world = sim.deserializeWorld(sim.serializeWorld(world));
     assert(world.asteroids.length === 1);
@@ -731,7 +798,7 @@
   });
 
   test('mothership dispatches the existing cargo ship and rejects duplicate jobs', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     assert(world.ships.length === 4 && world.ships.every(function (s) { return s.type !== 'miner' && s.type !== 'cargo'; }));
     assert(world.platforms.every(function (p) { return p.state === 'stored'; }));
     world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), 'ast-ceres-01');
@@ -745,7 +812,7 @@
   });
 
   test('mining plume uses hull-local geometry and only appears while landed', function () {
-    var ship = findShip(sim.createInitialWorld(), 'tug-01');
+    var ship = findShip(createDeployedWorld(), 'tug-01');
     var circles = [];
     var graphics = { lineStyle: function () {}, beginFill: function () {}, endFill: function () {}, drawCircle: function (x, y, r) { circles.push([x, y, r]); } };
     ship.order = { kind: 'mine', phase: 'approach' };
@@ -763,7 +830,7 @@
   });
 
   test('physical scale and payload masses have canonical values', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     var miner = findShip(world, 'tug-01');
     assertClose(sim.asteroidPhysicalStats(world.asteroids[0]).diameterM, 10000);
     assertClose(sim.physicalStats(world, miner).accelerationMps2, 588399 / 3450000);
@@ -781,7 +848,7 @@
   });
 
   test('legacy physical-unit migration preserves load fraction and runs once', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     delete world.physicalUnitsVersion;
     world.asteroids[0].ore = 540;
     world.asteroids[0].oreInitial = 540;
@@ -828,7 +895,7 @@
 
   test('fighter groups form up and retain their defense anchor', function () {
     for (var count = 2; count <= 7; count += 1) {
-      var world = sim.createInitialWorld();
+      var world = createDeployedWorld();
       while (world.ships.filter(function (s) { return s.type === 'escort'; }).length < count) world = sim.spawnFighter(world);
       var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
       world = game.issueVisualContextOrder(sim.selectShips(world, ids), { x: 900, y: -500 });
@@ -845,7 +912,7 @@
   });
 
   test('fighters slide at the leash and return after threats leave', function () {
-    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     var s = findShip(world, 'escort-01');
     s.position = { x: sim.FIGHTER_LEASH - 1, y: 0 };
@@ -864,7 +931,7 @@
   });
 
   test('ship defense follows its anchor and survives saves', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     var miner = findShip(world, 'tug-01');
     world = game.issueVisualContextOrder(sim.selectShips(world, ['escort-01']), miner.position);
     assert(findShip(world, 'escort-01').order.anchorShipId === miner.id);
@@ -875,7 +942,7 @@
   });
 
   test('formation travels together at the slower wingmate pace', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     findShip(world, 'escort-02').speed = 55;
     world = sim.issueDefendOrder(sim.selectShips(world, ['escort-01', 'escort-02']), { x: 1800, y: -150 });
     var arrival = {};
@@ -896,7 +963,7 @@
   });
 
   test('formation waits for stragglers and releases disabled wingmates', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     findShip(world, 'escort-02').position.x = -700;
     world = sim.issueDefendOrder(sim.selectShips(world, ['escort-01', 'escort-02']), { x: 1800, y: 0 });
     var start = findShip(world, 'escort-01').order.formation.position.x;
@@ -910,7 +977,7 @@
   });
 
   test('fighter slot tolerance leaves small deviations alone and corrects large ones', function () {
-    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     for (var i = 0; i < 600; i += 1) world = sim.stepWorld(world, 1 / 30);
     var s = findShip(world, 'escort-01');
     s.position = { x: s.order.target.x + 3, y: s.order.target.y };
@@ -928,7 +995,7 @@
   });
 
   test('combat loosens the wing gradually without reassigning slots', function () {
-    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01', 'escort-02']), { x: 0, y: 0 });
+    var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01', 'escort-02']), { x: 0, y: 0 });
     for (var i = 0; i < 600; i += 1) world = sim.stepWorld(world, 1 / 30);
     var slots = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return JSON.stringify(s.order.offset); });
     var threats = [{ position: { x: 200, y: 0 } }];
@@ -945,7 +1012,7 @@
   });
 
   test('defender kites a closing raider before entering its firing range', function () {
-    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     var s = findShip(world, 'escort-01');
     s.position = { x: 0, y: 0 };
@@ -967,7 +1034,7 @@
   });
 
   test('defender avoids retreating into a second raider', function () {
-    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     var s = findShip(world, 'escort-01');
     s.position = { x: 0, y: 0 };
@@ -981,7 +1048,7 @@
   });
 
   test('defenders favor finishing an enemy already under sustained fire', function () {
-    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     var s = findShip(world, 'escort-01');
     s.position = { x: 0, y: 0 };
     var fresh = { position: { x: 250, y: 0 }, underFire: 0 };
@@ -997,7 +1064,7 @@
   }
 
   test('out-of-leash contact cannot crash the entire simulation', function () {
-    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     findShip(world, 'escort-01').position = { x: 650, y: 0 };
     world = sim.issueMoveOrder(sim.selectShips(world, ['tug-01']), { x: -400, y: -90 });
@@ -1008,7 +1075,7 @@
   });
 
   test('new formation orders disengage from old combat and reach their destination', function () {
-    var world = sim.issueDefendOrder(sim.selectShips(sim.createInitialWorld(), ['escort-01']), { x: 0, y: 0 });
+    var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     findShip(world, 'escort-01').position = { x: 0, y: 0 };
     var id = findShip(world, 'escort-01').order.groupId;
@@ -1024,7 +1091,7 @@
   });
 
   test('persistent formations close gaps after casualties and reassignment', function () {
-    var world = sim.spawnFighter(sim.spawnFighter(sim.createInitialWorld()));
+    var world = sim.spawnFighter(sim.spawnFighter(createDeployedWorld()));
     var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
     world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 500, y: 0 });
     var id = findShip(world, ids[0]).order.groupId;
@@ -1051,7 +1118,7 @@
 
   test('moving wings preserve momentum and wheel through direction changes', function () {
     [Math.PI / 9, Math.PI * 2 / 9].forEach(function (turn) {
-      var world = sim.spawnFighter(sim.spawnFighter(sim.createInitialWorld()));
+      var world = sim.spawnFighter(sim.spawnFighter(createDeployedWorld()));
       var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
       world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 3000, y: -100 });
       for (var i = 0; i < 240; i += 1) world = sim.stepWorld(world, 1 / 30);
@@ -1093,7 +1160,7 @@
   test('stopped wings and sharp turns pivot promptly instead of making huge arcs', function () {
     [4, 10].forEach(function (count) {
       [0, Math.PI / 2, Math.PI].forEach(function (turn) {
-        var world = sim.createInitialWorld();
+        var world = createDeployedWorld();
         while (world.ships.filter(function (s) { return s.type === 'escort'; }).length < count) world = sim.spawnFighter(world);
         var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
         world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 3000, y: -100 });
@@ -1123,7 +1190,7 @@
   });
 
   test('reversed diamonds keep occupants in place and turn while accelerating', function () {
-    var world = sim.spawnFighter(sim.spawnFighter(sim.createInitialWorld()));
+    var world = sim.spawnFighter(sim.spawnFighter(createDeployedWorld()));
     var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
     world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 1800, y: 0 });
     var id = findShip(world, ids[0]).order.groupId;
@@ -1151,7 +1218,7 @@
   });
 
   test('rocket equation charges velocity changes and payload reduces delta-v', function () {
-    var world = sim.createInitialWorld(), ship = findShip(world, 'escort-01');
+    var world = createDeployedWorld(), ship = findShip(world, 'escort-01');
     var mass = sim.physicalStats(world, ship).massKg, fuel = ship.propulsion.fuelKg;
     var available = sim.remainingDeltaV(world, ship);
     assertClose(available, 3000 * Math.log(mass / (mass - fuel)));
@@ -1164,7 +1231,7 @@
   });
 
   test('empty tanks coast without speed caps, arrival snaps or negative fuel', function () {
-    var world = sim.createInitialWorld(), ship = findShip(world, 'escort-01');
+    var world = createDeployedWorld(), ship = findShip(world, 'escort-01');
     ship.position = { x: 900, y: 0 }; ship.velocity = { x: 500, y: 20 };
     ship.propulsion.fuelKg = 0;
     world = sim.issueMoveOrder(sim.selectShips(world, [ship.id]), { x: 901, y: 0 });
@@ -1176,7 +1243,7 @@
   });
 
   test('launch and catch share a finite relative velocity envelope', function () {
-    var world = sim.createInitialWorld(), ship = findShip(world, 'escort-01'), home = world.ships[0];
+    var world = createDeployedWorld(), ship = findShip(world, 'escort-01'), home = world.ships[0];
     ship.position = { x: 30, y: 0 }; ship.velocity = { x: -100, y: 0 };
     assert(sim.canCatch(ship, home));
     ship.velocity.x = -200; assert(!sim.canCatch(ship, home));
@@ -1186,7 +1253,7 @@
     ship = findShip(world, ship.id); assert(ship.docked);
     var fuel = ship.propulsion.fuelKg;
     world = sim.issueMoveOrder(world, { x: 2000, y: 0 });
-    world = sim.stepWorld(world, 0);
+    world = sim.stepWorld(world, 1);
     ship = findShip(world, ship.id);
     assert(!ship.docked && Math.hypot(ship.velocity.x, ship.velocity.y) > 100);
     assertClose(ship.propulsion.fuelKg, fuel);
@@ -1194,7 +1261,7 @@
   });
 
   test('fuel reserves recall fighters and allow a catch before exhaustion', function () {
-    var world = sim.createInitialWorld(), ship = findShip(world, 'escort-01');
+    var world = createDeployedWorld(), ship = findShip(world, 'escort-01');
     ship.position = { x: 1000, y: 0 }; ship.velocity = { x: 100, y: 0 };
     ship.propulsion.fuelKg = 2500;
     world = sim.issueDefendOrder(sim.selectShips(world, [ship.id]), { x: 2000, y: 0 });
@@ -1207,7 +1274,7 @@
   });
 
   test('packets use the catch envelope and conserve ore exactly once', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     world.packets = [{ id: 1, position: { x: 100, y: 0 }, velocity: { x: -100, y: 0 }, ore: 50 },
       { id: 2, position: { x: 100, y: 0 }, velocity: { x: -200, y: 0 }, ore: 75 }];
     world = sim.stepWorld(world, 2);
@@ -1218,9 +1285,10 @@
   });
 
   test('end mining retrieves all platforms, drains packets and conserves material across saves', function () {
-    var world = sim.issueMineOrder(sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']), 'ast-ceres-01');
-    for (var i = 0; i < 1800 && !findShip(world, 'tug-01').docked; i++) world = sim.stepWorld(world, 1 / 30);
+    var world = sim.issueMineOrder(sim.selectShips(createFreshWorld(), ['msv-hardshell']), 'ast-ceres-01');
+    for (var i = 0; i < 1800 && world.platforms[0].state !== 'deployed'; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'deployed');
+    for (i = 0; i < 1800 && !findShip(world, 'tug-01').docked; i++) world = sim.stepWorld(world, 1 / 30);
     world = sim.issueMineOrder(world, 'ast-ceres-01');
     for (i = 0; i < 1800 && world.platforms[1].state !== 'deployed'; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms.every(function (p) { return p.state === 'deployed'; }));
@@ -1240,7 +1308,7 @@
   });
 
   test('legacy miners migrate once without losing ore or manufacturing platforms twice', function () {
-    var world = sim.createInitialWorld();
+    var world = createDeployedWorld();
     delete world.logisticsVersion; delete world.platforms; delete world.packets;
     var ship = sim.cloneWorld(findShip(world, 'tug-01')); ship.id = 'old-miner'; ship.type = 'miner'; ship.cargo = 123;
     world.ships.push(ship);
@@ -1257,7 +1325,7 @@
   test('saved mining phases restore control state and pending deployment', function () {
     var slots = {};
     var storage = { setItem: function (key, value) { slots[key] = value; }, getItem: function (key) { return slots[key]; } };
-    var world = sim.selectShips(sim.createInitialWorld(), ['msv-hardshell']);
+    var world = sim.selectShips(createDeployedWorld(), ['msv-hardshell']);
     assert(hud.miningControlState(world).canDeploy);
     assert(!hud.miningControlState(world).canEnd);
     world = sim.issueMineOrder(world, world.asteroids[0].id);
@@ -1282,7 +1350,7 @@
   test('reset clears mining progress in memory and in the saved world', function () {
     var slots = {};
     var storage = { setItem: function (key, value) { slots[key] = value; }, getItem: function (key) { return slots[key]; } };
-    var world = sim.endMining(sim.createInitialWorld());
+    var world = sim.endMining(createDeployedWorld());
     world.platforms[0].state = 'deployed';
     world.packets.push({ id: 1, ore: 10, position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } });
     sim.saveWorld(world, storage);

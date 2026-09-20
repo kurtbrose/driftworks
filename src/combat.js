@@ -138,7 +138,7 @@
     /** @param {World} world @param {Drone} drone */
     function nearestFighter(world, drone) {
       return world.ships.filter(function (ship) {
-        return ship.type === 'escort' && !ship.disabled && distance(ship.position, drone.position) <= 300;
+        return ship.type === 'escort' && !ship.disabled && !ship.docked && ship.launchElapsed == null && distance(ship.position, drone.position) <= 300;
       }).sort(function (a, b) {
         return distance(a.position, drone.position) - distance(b.position, drone.position);
       })[0];
@@ -167,7 +167,7 @@
 
     /** @param {Ship} escort @param {Drone[]} drones @param {Record<string, number>} timers @param {number} dt @returns {{ target: Drone, paint: boolean } | null} */
     function stepDefenderWeapon(escort, drones, timers, dt) {
-      if (escort.disabled) return null;
+      if (escort.disabled || escort.docked || escort.launchElapsed != null) return null;
       timers[escort.id] = Math.max(0, (timers[escort.id] || 0) - dt);
       /** @type {Drone | null} */
       var target = null;
@@ -209,7 +209,7 @@
           source: clonePlain(drone.position), position: clonePlain(fighter.position), velocity: clonePlain(fighter.velocity), amount: 0.4 });
       });
       world.ships.forEach(function (ship) {
-        if (ship.type !== 'escort' || ship.disabled) return;
+        if (ship.type !== 'escort' || ship.disabled || ship.docked || ship.launchElapsed != null) return;
         var attack = stepDefenderWeapon(ship, combat.drones, combat.weaponTimers, dt);
         if (!attack) return;
         var target = attack.target;

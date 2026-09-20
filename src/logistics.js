@@ -122,6 +122,7 @@
       var site = platformSite(platform, asteroid, siteAngle, siteDepth);
       ship.order.target = site.position;
       api.launchShip(ship, home);
+      if (ship.launchElapsed != null) return ship;
       var dx = site.position.x - ship.position.x, dy = site.position.y - ship.position.y;
       var gap = Math.hypot(dx, dy);
       var speed = Math.min(ship.speed, Math.sqrt(2 * ship.acceleration * gap), gap * 1.5);
@@ -238,11 +239,13 @@
       }
       ship.order.target = api.clonePlain(depot.position);
       api.launchShip(ship, mothershipShip);
+      if (ship.launchElapsed != null) return ship;
       if (api.distance(ship.position, depot.position) > api.arrivalDistance || Math.hypot(ship.velocity.x, ship.velocity.y) > 0.01) {
         return api.stepTowardOrderTarget(ship, dt, api.arrivalDistance, false);
       }
       depot.builtStages += 1; ship.carryingSection = false;
-      ship.velocity = { x: 0, y: 0 }; ship.order = { kind: 'idle' };
+      ship.velocity = { x: 0, y: 0 };
+      ship.order = mothershipShip ? { kind: 'return', target: api.clonePlain(mothershipShip.position) } : { kind: 'idle' };
       return ship;
     }
 

@@ -410,7 +410,8 @@
             12 / (world.camera.zoom * graphic.scale.x)));
         }
         paintShip(graphic, ship, selected, world.elapsedSeconds);
-        graphic.visible = !ship.towedBy && !ship.repairRemaining;
+        graphic.visible = !ship.docked && !ship.towedBy && !ship.repairRemaining;
+        graphic.eventMode = ship.docked || ship.towedBy || ship.repairRemaining ? 'none' : 'static';
         var parent = ship.launchElapsed != null ? launchLayer : worldLayer;
         if (graphic.parent !== parent) parent.addChild(graphic);
       });

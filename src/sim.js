@@ -173,11 +173,13 @@
       ],
       ships: [
         createShip('msv-hardshell', 'MSV Hardshell', 'mothership', 0, 0, 0),
-        createShip('tug-01', 'Linehorse', 'tug', 160, 120, 62),
-        createShip('escort-01', 'Watchdog', 'escort', 210, -125, 115),
-        createShip('escort-02', 'Longbow', 'escort', 250, -165, 110)
-      ]
-    };
+        createShip('tug-01', 'Linehorse', 'tug', 0, 0, 62),
+        createShip('escort-01', 'Watchdog', 'escort', 0, 0, 115),
+        createShip('escort-02', 'Longbow', 'escort', 0, 0, 110)
+    ]
+  };
+    world.ships.filter(function (ship) { return ship.type !== 'mothership'; })
+      .forEach(function (ship) { ship.docked = true; });
     world.ships.forEach(function (ship) { ship.acceleration = movementAcceleration(world, ship); });
     return world;
   }
@@ -289,7 +291,7 @@
       selected[id] = true;
     });
     next.ships.forEach(function (ship) {
-      if (selected[ship.id] && ship.speed > 0 && !ship.disabled) {
+      if (selected[ship.id] && ship.speed > 0 && !ship.disabled && !ship.repairRemaining && ship.launchElapsed == null) {
         ship.order = {
           kind: 'move',
           target: { x: target.x, y: target.y }
@@ -391,6 +393,7 @@
 
     next.ships.forEach(function (ship) {
       if (selected[ship.id] && ship.speed > 0 && !ship.disabled) {
+        if (ship.docked) { ship.order = { kind: 'idle' }; ship.launchElapsed = null; return; }
         ship.order = {
           kind: 'return',
           target: { x: returnHome.position.x, y: returnHome.position.y }
@@ -406,6 +409,26 @@
     next.combat.events = [];
     combatSystem.stepDirector(next, dt);
     combatSystem.stepHostiles(next, dt);
+    if (next.combat.drones.length) {
+      var homeForDefense = findMothership(next);
+      var scrambleIds = next.ships.filter(function (ship) {
+        return ship.type === 'escort' && !ship.disabled && ship.docked && ship.order.kind === 'idle' && !ship.repairRemaining;
+      }).map(function (ship) { return ship.id; });
+      if (homeForDefense && scrambleIds.length) {
+        var priorSelection = next.selectedShipIds.slice();
+        next = issueDefendOrder(selectShips(next, scrambleIds), homeForDefense.position, homeForDefense.id);
+        next.ships.forEach(function (ship) {
+          if (scrambleIds.indexOf(ship.id) !== -1 && ship.order.kind === 'defend') ship.order.automatic = true;
+        });
+        next.selectedShipIds = priorSelection;
+      }
+    } else {
+      next.ships.forEach(function (ship) {
+        if (ship.type === 'escort' && ship.order.kind === 'defend' && ship.order.automatic) {
+          ship.order = { kind: 'return', target: clonePlain((findMothership(next) || ship).position), automatic: true };
+        }
+      });
+    }
     /** @type {Threat[]} */
     var activeThreats = next.combat.drones;
     activeThreats = activeThreats.concat(threats || []);
@@ -466,12 +489,25 @@
       next.velocity = { x: 0, y: 0 };
       return next;
     }
-    if (next.docked && next.order.kind === 'idle' && mothershipShip) {
-      next.position = berthPosition(next, mothershipShip);
+    if (next.docked && mothershipShip) {
+      next.position = clonePlain(mothershipShip.position);
       next.velocity = clonePlain(mothershipShip.velocity);
-      return next;
+      if (next.order.kind === 'idle' || next.order.kind === 'return') return next;
+      if (next.launchElapsed == null && launchOrderIsValid(next)) next.launchElapsed = 0;
     }
-    launchShip(next, mothershipShip);
+    if (next.launchElapsed != null && next.launchElapsed < 1 && !next.disabled && mothershipShip) {
+      next.launchElapsed = Math.min(1, next.launchElapsed + dt);
+      next.docked = false;
+      var launchT = next.launchElapsed;
+      var clearance = 72 * launchT * launchT * (3 - 2 * launchT);
+      next.position = { x: mothershipShip.position.x + Math.cos(mothershipShip.rotation) * clearance,
+        y: mothershipShip.position.y + Math.sin(mothershipShip.rotation) * clearance };
+      next.velocity = { x: mothershipShip.velocity.x, y: mothershipShip.velocity.y };
+      next.rotation = mothershipShip.rotation;
+      if (next.launchElapsed < 1) return next;
+      next.launchElapsed = null;
+      applyLauncherImpulse(next, mothershipShip);
+    }
     next.burnMassKg = physicalStats(world, next).massKg;
     if (next.propulsion && !next.docked && next.order.kind !== 'return' && mothershipShip &&
         remainingDeltaV(world, next) < returnReserve(next, mothershipShip)) {
@@ -530,30 +566,36 @@
   /** @param {Ship} ship @param {Ship} home */
   function dockShip(ship, home) {
     ship.docked = true;
-    ship.position = berthPosition(ship, home);
+    ship.position = clonePlain(home.position);
     ship.velocity = clonePlain(home.velocity);
     if (ship.propulsion) ship.propulsion.fuelKg = ship.propulsion.capacityKg;
   }
 
-  /** @param {Ship} ship @param {Ship} home @returns {Vec2} */
-  function berthPosition(ship, home) {
-    var angle = formations.fighterStyle(ship).x;
-    return { x: home.position.x + Math.cos(angle) * 35, y: home.position.y + Math.sin(angle) * 35 };
+  /** @param {Ship} ship @returns {boolean} */
+  function launchOrderIsValid(ship) {
+    if (ship.order.kind === 'idle' || ship.order.kind === 'return') return false;
+    if (!('target' in ship.order) || !ship.order.target) return false;
+    if (ship.order.kind === 'build' && !ship.carryingSection) return false;
+    if (ship.order.kind === 'deploy' && !ship.platformId) return false;
+    return true;
   }
 
   /** @param {Ship} ship @param {Ship | undefined} home */
   function launchShip(ship, home) {
-    if (!ship.docked || !home || ship.order.kind === 'idle' || !('target' in ship.order) || !ship.order.target || ship.order.kind === 'return') return;
+    if (!ship.docked || !home || !launchOrderIsValid(ship)) return;
+    if (ship.launchElapsed == null) ship.launchElapsed = 0;
+  }
+
+  /** @param {Ship} ship @param {Ship | undefined} home */
+  function applyLauncherImpulse(ship, home) {
+    if (!home || !launchOrderIsValid(ship) || !('target' in ship.order) || !ship.order.target) return;
     var target = ship.order.target;
-    if (ship.order.kind === 'build' && !ship.carryingSection) return;
     var dx = target.x - home.position.x, dy = target.y - home.position.y;
     var gap = Math.hypot(dx, dy);
-    ship.docked = false;
     if (gap <= ARRIVAL_DISTANCE) return;
     var speed = Math.min(ship.speed, propulsion.exchangeMps / VELOCITY_TO_MPS,
       Math.sqrt(ship.acceleration * gap));
     ship.velocity = { x: home.velocity.x + dx / gap * speed, y: home.velocity.y + dy / gap * speed };
-    ship.docked = false;
   }
 
   /** @param {World} world */
@@ -885,7 +927,7 @@
           if (ship.propulsion) ship.propulsion.fuelKg = ship.propulsion.capacityKg;
           ship.launchElapsed = 0;
         }
-      } else if (ship.launchElapsed != null && mothership) {
+      } else if (ship.launchElapsed != null && mothership && ship.disabled) {
         ship.launchElapsed = Math.min(6, ship.launchElapsed + dt);
         var t = ship.launchElapsed / 6;
         var offset = 72 * t * t * (3 - 2 * t);
@@ -949,8 +991,8 @@
           payload.previousPosition = clonePlain(payload.position);
         }
         hauler.towTarget = null;
+        dockShip(hauler, mothership);
         hauler.order = { kind: 'idle' };
-        hauler.velocity = { x: 0, y: 0 };
       }
     });
   }

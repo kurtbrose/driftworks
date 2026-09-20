@@ -50,22 +50,25 @@ and `escort`. Stable string `id` identifies a ship; name is only a label.
   `carryingSection`, `platformId`, `towTarget`. A tug's module/hull attachment
   slot holds one section, platform, or recovered hull. Buffered platform ore
   becomes `cargo` on retrieval and contributes additional mass.
-- Lifecycle: `docked`, `damage` in [0, 1], `disabled`, `towedBy`,
-  `repairRemaining`, `launchElapsed` (`null` when not launching).
+- Lifecycle: `docked` means stored inside the mothership at its position and
+  velocity; docked craft remain in `ships` for fleet selection but are not
+  scene entities. `damage` in [0, 1], `disabled`, `towedBy`, `repairRemaining`,
+  and `launchElapsed` (null when not launching; 0..1 seconds for normal
+  emergence, 0..6 seconds for protected post-repair launch).
 
 `order` is a tagged object. `target` is a world-space point, often refreshed by
 guidance; it is not necessarily the durable identity of the destination.
 
 | `kind` | Fields beyond `kind` and interpretation |
 | --- | --- |
-| `idle` | None required; idle does not imply docked or stationary. |
+| `idle` | None required; an idle craft may be internally docked or deployed. |
 | `move` | `target`. Generic mobile-ship movement; normal fighter context clicks issue defense instead. |
 | `return` | `target`; optional `automatic: true` for low-fuel diversion. Home position is refreshed. |
 | `build` | `target`. `carryingSection` determines whether to collect stock at home or deliver to depot. |
 | `deploy` | `asteroidId`, `platformId`, `siteAngle`, `siteDepth`, `target`. The order reserves deployment intent before a stored platform is physically picked up. |
 | `retrieve-platform` | `platformId`, `target`. Platform retains asteroid/site identity; target tracks its rotating site. |
 | `recover` | `recoveryTarget: { kind: 'wreck' \| 'ship', id }`, `target`. Approach intent; successful pickup establishes towing and switches to return. |
-| `defend` | `anchor`, nullable `anchorShipId`, `groupId`, `leashRadius`, `offset`, `side`, `target`, `formation`. Anchor ship is resolved by ID with the saved point as fallback; target is the current steering point. |
+| `defend` | `anchor`, nullable `anchorShipId`, `groupId`, optional `automatic`, `leashRadius`, `offset`, `side`, `target`, `formation`. `automatic: true` marks a threat-response scramble that returns home after the last hostile is gone. Anchor ship is resolved by ID with the saved point as fallback; target is the current steering point. |
 
 Legacy `mine` orders may appear in migration code; they are not a current mining
 command. `issueMineOrder` now assigns platform deployment through the selected
@@ -147,6 +150,13 @@ clears towing and starts six seconds of repair, then six seconds of launch.
 refills fuel, while launch completion clears disabled and increments the repair
 counter. Damage reaching one clears the fighter's order and motion, leaving the
 entity present for recovery. Do not equate zero damage with operational status.
+
+New missions begin with the tug and escorts internally docked. A valid outbound
+job starts one second of emergence before guidance can proceed; repair launches
+retain their separate six-second protected clearance. When raiders are present,
+idle docked operational escorts receive automatic mothership-defense orders.
+They return and dock after all hostiles are gone. Manual fighter orders do not
+carry the automatic marker and are not recalled by this transition.
 
 ## Combat ownership
 
