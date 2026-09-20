@@ -407,15 +407,9 @@
         graphic.lineStyle(2.5, world.selectedPlatformId === p.id ? 0xffffff : SHIP_STYLES.platform.stroke, 1);
         paintMiningPlatform(graphic, SHIP_STYLES.platform);
         if (p.state === 'setting-up' || p.state === 'packing-up') {
-          var count = Math.min(5, (p.workerIds || []).length);
-          for (var worker = 0; worker < count; worker += 1) {
-            var phase = world.elapsedSeconds * (p.state === 'packing-up' ? -2 : 2) + worker * Math.PI * 2 / Math.max(1, count);
-            var workRadius = 21 + 2 * Math.sin(world.elapsedSeconds * 3 + worker);
-            graphic.lineStyle(1, 0xc5d9d8, 0.9);
-            graphic.beginFill(0xe7f0e5, 1);
-            graphic.drawCircle(Math.cos(phase) * workRadius, Math.sin(phase) * workRadius, 1.8);
-            graphic.endFill();
-          }
+          (p.workerIds || []).slice(0, 5).forEach(function (personId, workerIndex) {
+            drawPlatformWorker(graphic, personId, workerIndex, world.elapsedSeconds, p.state === 'packing-up');
+          });
         }
       });
       world.packets.forEach(function (p) {
@@ -1071,6 +1065,31 @@
     graphics.lineTo(centerX - 4 * hullScale, centerY - 4 * hullScale);
     graphics.moveTo(-0.25 * tugStyle.radius, 0.25 * tugStyle.radius);
     graphics.lineTo(centerX - 4 * hullScale, centerY + 4 * hullScale);
+  }
+
+  /** @param {PIXI.Graphics} graphics @param {string} personId @param {number} index @param {number} elapsedSeconds @param {boolean} packingUp */
+  function drawPlatformWorker(graphics, personId, index, elapsedSeconds, packingUp) {
+    var seed = 0;
+    for (var i = 0; i < personId.length; i += 1) seed = (seed * 31 + personId.charCodeAt(i)) >>> 0;
+    var homeAngle = (seed % 6283) / 1000;
+    var radius = 20 + (seed >>> 8) % 7;
+    var period = 11 + (seed >>> 16) % 8;
+    var activityTime = elapsedSeconds / period + (seed % 997) / 997;
+    var segment = Math.floor(activityTime);
+    var blend = activityTime - segment;
+    blend = blend * blend * (3 - 2 * blend);
+    var fromOffset = (Math.floor((seed % 37) / 11) - 1) * 0.18;
+    var toOffset = (Math.floor(((seed >>> 5) % 37) / 11) - 1) * 0.18;
+    if (packingUp) { fromOffset *= -1; toOffset *= -1; }
+    var fromAngle = homeAngle + fromOffset;
+    var toAngle = homeAngle + toOffset;
+    var drift = Math.sin(elapsedSeconds * (0.13 + (seed % 5) * 0.012) + index * 2.1 + seed % 53) * 1.4;
+    var angle = fromAngle + (toAngle - fromAngle) * blend + drift / radius;
+    var distance = radius + Math.sin(elapsedSeconds * 0.19 + index * 1.7 + seed % 29) * 1.8;
+    graphics.lineStyle(1, 0xc5d9d8, 0.9);
+    graphics.beginFill(0xe7f0e5, 1);
+    graphics.drawCircle(Math.cos(angle) * distance, Math.sin(angle) * distance, 1.8);
+    graphics.endFill();
   }
 
   /** @param {PIXI.Graphics} graphics @param {ShipStyle} style */
