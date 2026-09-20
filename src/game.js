@@ -70,7 +70,7 @@
       fractureDensity: 0.38, craterSharpness: 0.55, rimStrength: 0.52, boulderiness: 0.48, smoothing: 0.32 }
   ];
   var WORLD_LIGHT = { x: -0.813733, y: -0.581238, z: 0.68 };
-  var ASTEROID_MAX_CRATERS = 20;
+  var ASTEROID_MAX_CRATERS = 48;
   var ASTEROID_MAX_FIELD_BLOBS = 12;
   var ASTEROID_LIGHT_STEP = Math.PI / 60; // retained only by the dormant legacy painter
   var MAX_EFFECTS = 260;
@@ -1517,7 +1517,7 @@
 
   /** @typedef {{ x: number, y: number, z: number }} AsteroidNormal */
   /** @typedef {{ phase: number, blobs: { x: number, y: number, sigma: number, amp: number }[] }} AsteroidRelief */
-  /** @typedef {{ x: number, y: number, rx: number, ry: number, angle: number, depth: number }} AsteroidReliefCrater */
+  /** @typedef {{ x: number, y: number, rx: number, ry: number, angle: number, depth: number, rimScale?: number }} AsteroidReliefCrater */
   /** @typedef {{ roughnessAmp:number, roughnessFreq:number, grazingBoost:number, pittingDensity:number, fractureDensity:number, craterSharpness:number, rimStrength:number, boulderiness:number, smoothing:number, state:string }} AsteroidSurfaceProfile */
 
   /** Shared pseudo-height field in asteroid-radius units.
@@ -1542,7 +1542,8 @@
       // crater relief beneath its footprint before stamping its own profile.
       craterHeight *= smoothstep((distance - 0.7) / 0.48);
       var bowl = distance < 1 ? -(1 - distance * distance) * crater.depth : 0;
-      var rim = Math.exp(-Math.pow((distance - 1) / 0.16, 2)) * crater.depth * 0.34;
+      var rim = Math.exp(-Math.pow((distance - 1) / 0.16, 2)) * crater.depth * 0.34 *
+        (crater.rimScale === undefined ? 1 : crater.rimScale);
       craterHeight += bowl + rim;
     });
     return height + craterHeight;
@@ -2100,28 +2101,43 @@
     for (var lump = 0; lump < 5; lump += 1) relief.blobs.push({ x: (rng() - 0.5) * 1.15,
       y: (rng() - 0.5) * 1.15, sigma: 0.22 + rng() * 0.22,
       amp: (rng() - 0.42) * (0.1 + surfaceProfile.boulderiness * 0.07) });
-    /** @type {{x:number,y:number,rx:number,ry:number,angle:number,depth:number,age:number}[]} */
+    /** @type {{x:number,y:number,rx:number,ry:number,angle:number,depth:number,age:number,rimScale:number,sizeClass:string}[]} */
     var craters = [];
     var craterRng = sim.createRng((seed ^ 0x9e3779b9) >>> 0);
     var craterCount = Math.min(ASTEROID_MAX_CRATERS,
-      4 + Math.floor(craterRng() * (9 + surfaceProfile.pittingDensity * 7)));
+      34 + Math.floor(craterRng() * 7 + surfaceProfile.pittingDensity * 11));
     for (var craterIndex = 0; craterIndex < craterCount; craterIndex += 1) {
-      var major = 0.025 + craterRng() * 0.055;
-      var locationAngle = craterRng() * Math.PI * 2;
-      var locationDistance = 0.12 + craterRng() * 0.55;
-      var x = Math.cos(locationAngle) * locationDistance, y = Math.sin(locationAngle) * locationDistance;
-      if (craters.length && craterRng() < 0.42) {
-        var parent = craters[Math.floor(craterRng() * craters.length)];
-        var overlapAngle = craterRng() * Math.PI * 2;
-        var overlapDistance = (parent.rx + major) * (0.22 + craterRng() * 0.62);
-        x = parent.x + Math.cos(overlapAngle) * overlapDistance;
-        y = parent.y + Math.sin(overlapAngle) * overlapDistance;
+      var sizeRoll = craterRng();
+      var sizeClass = 'small';
+      /** @type {number} */
+      var major = 0;
+      if (sizeRoll < 0.7) {
+        major = 0.007 + Math.pow(craterRng(), 1.6) * 0.016;
+      } else if (sizeRoll < 0.94) {
+        sizeClass = 'medium'; major = 0.023 + craterRng() * 0.045;
+      } else if (sizeRoll < 0.99) {
+        sizeClass = 'large'; major = 0.072 + craterRng() * 0.065;
+      } else {
+        sizeClass = 'basin'; major = 0.15 + craterRng() * 0.11;
       }
+      var locationAngle = craterRng() * Math.PI * 2;
+      // Uniform visible-hemisphere surface area, projected onto the screen.
+      // Compared with uniform disk pixels this correctly represents the much
+      // larger amount of edge-on terrain compressed near the limb.
+      var surfaceZ = craterRng();
+      var projectedRadius = Math.sqrt(Math.max(0, 1 - surfaceZ * surfaceZ)) * 0.96;
+      var directionalRadius = 0.88 + 0.07 * Math.cos(locationAngle * 3) +
+        0.05 * Math.sin(locationAngle * 5);
+      var locationDistance = projectedRadius * directionalRadius;
+      var x = Math.cos(locationAngle) * locationDistance, y = Math.sin(locationAngle) * locationDistance;
       var patchNormal = asteroidNormalAt(relief, craters, x, y);
       var foreshorten = 0.52 + patchNormal.z * 0.43;
+      var ageSoftening = 0.58 + (craterIndex / Math.max(1, craterCount - 1)) * 0.42;
+      var basinSoftening = sizeClass === 'basin' ? 0.42 : (sizeClass === 'large' ? 0.76 : 1);
       craters.push({ x: x, y: y, rx: major, ry: major * foreshorten,
         angle: Math.atan2(patchNormal.y, patchNormal.x) + Math.PI / 2,
-        depth: major * (0.24 + surfaceProfile.craterSharpness * 0.16 + craterRng() * 0.2), age: craterIndex });
+        depth: major * (0.22 + surfaceProfile.craterSharpness * 0.14 + craterRng() * 0.18) * basinSoftening,
+        rimScale: ageSoftening * (sizeClass === 'basin' ? 0.42 : 1), age: craterIndex, sizeClass: sizeClass });
     }
     return { seed: relief.phase * 0.017, bulk: bulk, heterogeneity: heterogeneity,
       fields: fields, relief: relief, surfaceProfile: surfaceProfile,
@@ -2139,8 +2155,8 @@
     'uniform vec4 uRelief[5];',
     'uniform vec4 uFieldBlobs[12];',
     'uniform float uBlobMaterial[12];',
-    'uniform vec4 uCraterA[20];',
-    'uniform vec4 uCraterB[20];',
+    'uniform vec4 uCraterA[48];',
+    'uniform vec4 uCraterB[48];',
     'uniform float uCraterCount;',
     'uniform float uHeterogeneity;',
     'uniform float uSeed;',
@@ -2155,7 +2171,7 @@
     ' float h=wave(p,uSeed,2.15)*.035;',
     ' for(int i=0;i<5;i++){vec4 b=uRelief[i];vec2 d=p-b.xy;h+=b.w*exp(-dot(d,d)/(2.0*b.z*b.z));}',
     ' float ch=0.0;',
-    ' for(int i=0;i<20;i++){if(float(i)<uCraterCount){vec4 a=uCraterA[i];vec4 b=uCraterB[i];vec2 d=p-a.xy;vec2 e=vec2((d.x*b.x+d.y*b.y)/a.z,(-d.x*b.y+d.y*b.x)/a.w);float q=length(e);if(q<1.35){ch*=smoothstep(.7,1.18,q);float bowl=q<1.0?-(1.0-q*q)*b.z:0.0;float rim=exp(-pow((q-1.0)/.16,2.0))*b.z*.34;ch+=bowl+rim;}}}',
+    ' for(int i=0;i<48;i++){if(float(i)<uCraterCount){vec4 a=uCraterA[i];vec4 b=uCraterB[i];vec2 d=p-a.xy;vec2 e=vec2((d.x*b.x+d.y*b.y)/a.z,(-d.x*b.y+d.y*b.x)/a.w);float q=length(e);if(q<1.35){ch*=smoothstep(.7,1.18,q);float bowl=q<1.0?-(1.0-q*q)*b.z:0.0;float rim=exp(-pow((q-1.0)/.16,2.0))*b.z*.34*b.w;ch+=bowl+rim;}}}',
     ' return h+ch;',
     '}',
     'float microRelief(vec2 p){float f=13.0+uProfile.y*27.0;return (wave(p,uSeed*1.73,f)*.66+wave(p,uSeed*2.31,f*1.91)*.34)*uProfile.x*.009;}',
@@ -2170,7 +2186,7 @@
     ' score.w+=broad*wave(p,uFieldLow.w,1.8)+med*wave(p,uFieldMed.w,5.0)+chunk*blobField(p,3.0);',
     ' float peak=max(max(score.x,score.y),max(score.z,score.w));vec4 value=exp((score-peak)/temp);value=max(value/dot(value,vec4(1.0)),vec4(.03));return value/dot(value,vec4(1.0));',
     '}',
-    'float craterOcclusion(vec2 p){float occ=0.0;float overlaps=0.0;for(int i=0;i<20;i++){if(float(i)<uCraterCount){vec4 a=uCraterA[i];vec4 b=uCraterB[i];vec2 d=p-a.xy;float q=length(vec2((d.x*b.x+d.y*b.y)/a.z,(-d.x*b.y+d.y*b.x)/a.w));if(q<1.0){occ=max(occ,(1.0-q)*.42);overlaps+=1.0;}}}return min(.58,occ+max(0.0,overlaps-1.0)*.1);}',
+    'float craterOcclusion(vec2 p){float occ=0.0;float overlaps=0.0;for(int i=0;i<48;i++){if(float(i)<uCraterCount){vec4 a=uCraterA[i];vec4 b=uCraterB[i];vec2 d=p-a.xy;float q=length(vec2((d.x*b.x+d.y*b.y)/a.z,(-d.x*b.y+d.y*b.x)/a.w));if(q<1.0){occ=max(occ,(1.0-q)*.42);overlaps+=1.0;}}}return min(.58,occ+max(0.0,overlaps-1.0)*.1);}',
     'void main(){',
     ' vec2 p=vLocalCoord;float q=length(p)/boundary(p);float aa=.0025;float alpha=1.0-smoothstep(1.0-aa,1.0+aa,q);if(alpha<=0.0){gl_FragColor=vec4(0.0);return;}',
     ' vec3 n=normalAt(p);vec3 light=normalize(uLight);float ndl=dot(n,light);float lit=pow(max(0.0,ndl),.82);float limb=sqrt(max(0.0,1.0-q*q));float grazing=pow(1.0-sat(ndl),1.25);',
@@ -2208,7 +2224,7 @@
     var craterA = new Float32Array(ASTEROID_MAX_CRATERS * 4), craterB = new Float32Array(ASTEROID_MAX_CRATERS * 4);
     visual.craters.forEach(function (crater, i) {
       craterA.set([crater.x, crater.y, crater.rx, crater.ry], i * 4);
-      craterB.set([Math.cos(crater.angle), Math.sin(crater.angle), crater.depth, crater.age], i * 4);
+      craterB.set([Math.cos(crater.angle), Math.sin(crater.angle), crater.depth, crater.rimScale], i * 4);
     });
     return { uLight: new Float32Array([WORLD_LIGHT.x, WORLD_LIGHT.y, WORLD_LIGHT.z]), uBulk: new Float32Array(visual.bulk),
       uFieldLow: new Float32Array(visual.fields.map(function (field) { return field.low; })),

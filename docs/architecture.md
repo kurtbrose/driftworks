@@ -158,7 +158,14 @@ term, keeping frontal faces quiet while revealing texture near the terminator.
 Craters are stamped oldest to newest into the same relief field. New bowls erase
 older crater relief locally, so surviving rims, concave wall counter-shading and
 overlap shadows all follow the combined geometry rather than drawn ellipse
-bands. The container rotates with the body; `paintAsteroid` inverse-transforms a
+bands. Each body carries a bounded 34–48-impact population: roughly 70% small,
+24% medium, 5% large and 1% basin-scale. Older rims soften, basin-scale impacts
+are broad and shallow, and independently sampled centers may overlap naturally
+or approach the limb so the silhouette clips their geometry. Centers are sampled
+uniformly over visible-hemisphere surface area and then projected through the
+directional silhouette, rather than sampled uniformly from screen pixels. This
+accounts for the larger amount of edge-on terrain compressed near the limb. The
+container rotates with the body; `paintAsteroid` inverse-transforms a
 fixed world light into a shader uniform every frame without rebuilding geology.
 The shader silhouette uses the same directional-radius equation as
 `sim.surfaceRadius`, keeping artwork, mining sites and hit testing aligned.
