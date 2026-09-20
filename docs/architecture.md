@@ -159,7 +159,9 @@ mining sites and hit testing agree.
 `paintAsteroid` retains Pixi vector geometry per graphic and ID/radius, updating
 only transforms each frame; this avoids texture resolution limits at inspection
 zoom. No artwork fields are serialized. `tests/asteroid-art.html` displays twenty
-seeded examples using the production painter.
+fixed seeded examples using the production painter;
+`tests/asteroid-playground.html` generates a fresh random panel on every load for
+visual exploration without changing the deterministic study or test fixtures.
 
 ## Population session boundary
 

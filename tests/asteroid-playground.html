@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asteroid playground</title>
+<style>
+  :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#10171b;color:#c9d1d2;font:14px system-ui}
+  header{display:flex;align-items:flex-start;gap:24px;padding:20px 28px}header div:first-child{flex:1}h1{font-size:20px;margin:0 0 8px}
+  p{margin:0;color:#95a4aa}.seed{font-family:ui-monospace,monospace;color:#73858d;margin-top:5px}
+  .controls{display:flex;gap:8px}button{background:#24343e;color:#dbe7eb;border:1px solid #53616a;padding:8px 16px;cursor:pointer;white-space:nowrap}
+  button:hover{background:#304650}canvas{display:block;margin:auto;width:min(1100px,100%)!important;height:auto!important}
+</style>
+<header>
+  <div><h1>Asteroid playground · fresh specimens every visit</h1><p>Production asteroid geometry, composition and shared relief lighting.</p><p class="seed" id="seed"></p></div>
+  <div class="controls"><button id="regenerate">New panel</button><button id="rotation">Pause rotation</button></div>
+</header>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+<script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
+<script src="../src/propulsion.js?v=20260920-population1"></script>
+<script src="../src/combat.js?v=20260920-population1"></script>
+<script src="../src/logistics.js?v=20260920-population1"></script>
+<script src="../src/formations.js?v=20260920-population1"></script>
+<script src="../src/sim.js?v=20260920-population1"></script>
+<script src="../src/population.js"></script>
+<script src="../src/session.js"></script>
+<script src="../src/tactical/camera.js?v=20260920-population1"></script>
+<script src="../src/audio.js?v=20260920-population1"></script>
+<script src="../src/hud.js?v=20260920-population1"></script>
+<script src="../src/game.js?v=20260920-asteroid-relief1"></script>
+<script>
+  const seedBytes=new Uint32Array(1);crypto.getRandomValues(seedBytes);const panelSeed=seedBytes[0];
+  document.querySelector('#seed').textContent='Panel seed: '+panelSeed.toString(16).padStart(8,'0');
+  let state=panelSeed||1;const random=()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return(state>>>0)/4294967296;};
+  const app=new PIXI.Application({width:1100,height:720,backgroundAlpha:0,antialias:true,resolution:devicePixelRatio,autoDensity:true});
+  document.body.appendChild(app.view);const names=['Ice','Volatiles','Metals','Silicates'];const samples=[];
+  for(let i=0;i<20;i++){
+    const radius=55+Math.round(random()*15);const a={id:'play-'+panelSeed+'-'+i+'-'+Math.floor(random()*0xffffffff),radius,
+      position:{x:110+(i%5)*220,y:80+Math.floor(i/5)*175},rotation:random()*Math.PI*2,ore:100,oreInitial:100,
+      angularVelocity:(random()<.5?-1:1)*(.025+random()*.055)};
+    const g=Driftworks.game.createAsteroidGraphic();app.stage.addChild(g.container);Driftworks.game.paintAsteroid(g,a);samples.push({a,g});
+    const v=Driftworks.game.asteroidVisualDescription(a);const dominant=v.bulk.indexOf(Math.max(...v.bulk));
+    const label=new PIXI.Text(names[dominant],{fontFamily:'system-ui',fontSize:13,fill:0xc9d1d2});label.anchor.set(.5);
+    label.position.set(a.position.x,a.position.y+78);app.stage.addChild(label);
+  }
+  let rotating=true;document.querySelector('#rotation').onclick=function(){rotating=!rotating;this.textContent=rotating?'Pause rotation':'Resume rotation';};
+  document.querySelector('#regenerate').onclick=()=>location.reload();
+  app.ticker.add(delta=>{if(rotating)samples.forEach(({a,g})=>{a.rotation+=delta/60*a.angularVelocity;Driftworks.game.paintAsteroid(g,a);});});
+</script>
+</html>

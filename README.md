@@ -33,6 +33,7 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 - Opaque DOM HUD with a thin mission bar, an unobstructed tactical viewport, and a bottom shelf separating fleet, selection, local operations, and contextual commands. Entity count and measured FPS live in its developer menu.
 - Prominent in-game mission clock with inline units (00h 00m 00s) and Pause, 1×, 2×, and 4× controls. Simulation, combat, and effects follow the selected speed; camera and selection remain usable while paused. Saves retain elapsed mission time; playback speed is session-only.
 - Browser-native simulation tests at `./tests/`; the same suite runs headlessly with `node tests/run.cjs` (optional, no dependencies).
+- Asteroid playground at `./tests/asteroid-playground.html`; every refresh creates twenty new seeded specimens using the production painter.
 
 ## Propellant, launchers, and mining platforms
 
@@ -71,6 +72,7 @@ Then open:
 
 - Game: http://localhost:8000/
 - Tests: http://localhost:8000/tests/
+- Asteroid playground: http://localhost:8000/tests/asteroid-playground.html
 
 The app uses ordinary scripts, not JavaScript modules. Serving over HTTP is still the recommended path because browser behavior around local files varies, and it matches GitHub Pages or any static host.
 
