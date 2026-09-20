@@ -7,6 +7,7 @@
   /** @typedef {import('./types').World} World */
   /** @typedef {import('./types').Vec2} Vec2 */
   /** @typedef {import('./types').Ship} Ship */
+  /** @typedef {import('./types').Wreck} Wreck */
   /** @typedef {import('./types').Camera} Camera */
   /** @typedef {import('./types').Viewport} Viewport */
   /** @typedef {import('./types').Asteroid} Asteroid */
@@ -110,6 +111,11 @@
       },
       onEndMining: function () {
         setWorld(sim.endMining(world));
+        scene.sync(world);
+        hud.update(world, scene.getStats());
+      },
+      onSalvageAll: function () {
+        setWorld(sim.issueSalvageAllOrder(world));
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
@@ -434,7 +440,17 @@
           graphic.hitArea = new PIXI.Circle(0, 0, Math.max(SHIP_STYLES[ship.type].radius + 3,
             12 / (world.camera.zoom * graphic.scale.x)));
         }
-        paintShip(graphic, ship, selected, world.elapsedSeconds);
+        var towTarget = ship.towTarget;
+        /** @type {Ship | Wreck | undefined} */
+        var towedEntity;
+        if (towTarget) {
+          var targetId = towTarget.id;
+          towedEntity = towTarget.kind === 'wreck'
+            ? world.wrecks.filter(function (wreck) { return wreck.id === targetId; })[0]
+            : world.ships.filter(function (target) { return target.id === targetId; })[0];
+        }
+        paintShip(graphic, ship, selected, world.elapsedSeconds, towedEntity,
+          semanticScale('escort', world.camera.zoom) / semanticScale(ship.type, world.camera.zoom));
         graphic.visible = !ship.docked && !ship.towedBy && !ship.repairRemaining;
         graphic.eventMode = ship.docked || ship.towedBy || ship.repairRemaining ? 'none' : 'static';
         var parent = ship.launchElapsed != null ? launchLayer : worldLayer;
@@ -970,8 +986,8 @@
     });
   }
 
-  /** @param {PIXI.Graphics} graphics @param {Ship} ship @param {boolean} selected @param {number} elapsedSeconds */
-  function paintShip(graphics, ship, selected, elapsedSeconds) {
+  /** @param {PIXI.Graphics} graphics @param {Ship} ship @param {boolean} selected @param {number} elapsedSeconds @param {Ship | Wreck | undefined} towedEntity @param {number} towedScale */
+  function paintShip(graphics, ship, selected, elapsedSeconds, towedEntity, towedScale) {
     var style = SHIP_STYLES[ship.type];
     graphics.clear();
     graphics.alpha = ship.disabled && ship.launchElapsed == null ? 0.45 : 1;
@@ -985,20 +1001,6 @@
     if (ship.type === 'tug' && ship.carryingSection) {
       paintConstructorCargo(graphics, style);
     }
-    if (ship.type === 'tug' && ship.towTarget) {
-      graphics.lineStyle(1.5, 0xe0aeb2, 0.95);
-      graphics.beginFill(0xa86470, 0.95);
-      graphics.drawPolygon(ship.towTarget.kind === 'wreck' ? [13, 0, -8, -8, -3, -1, -6, 3, -8, 8] :
-        [24, 0, -15, -13, -9, 0, -15, 13]);
-      graphics.endFill();
-      graphics.lineStyle(2, style.stroke, 0.7);
-      [-0.58, 0.58].forEach(function (x) {
-        [-1, 1].forEach(function (side) {
-          graphics.moveTo(x * style.radius, side * 0.4 * style.radius);
-          graphics.lineTo(x * style.radius, side * 0.84 * style.radius);
-        });
-      });
-    }
     graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
     if (ship.type === 'tug') {
       if (ship.platformId) {
@@ -1007,6 +1009,7 @@
         graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, 0.9);
       }
       paintConstructor(graphics, style);
+      if (ship.towTarget) paintTowedHull(graphics, ship.towTarget.kind, towedEntity, style, towedScale);
     } else if (ship.type === 'shuttle') {
       graphics.beginFill(style.fill, 1);
       graphics.drawRoundedRect(-8, -4, 16, 8, 3);
@@ -1025,6 +1028,36 @@
     }
 
     drawShipOrderAndBadges(graphics, ship, style);
+  }
+
+  /** @param {PIXI.Graphics} graphics @param {string} kind @param {Ship | Wreck | undefined} entity @param {ShipStyle} tugStyle @param {number} hullScale */
+  function paintTowedHull(graphics, kind, entity, tugStyle, hullScale) {
+    var centerX = 0;
+    var centerY = -1;
+    var points = kind === 'wreck'
+      ? [[11, 0], [-8, -7], [-2, -1], [-6, 3], [-8, 7]]
+      : [[13, 0], [-9, -8], [-4, 0], [-9, 8]];
+    /** @type {number[]} */
+    var polygon = [];
+    points.forEach(function (point) {
+      polygon.push(centerX + point[0] * hullScale, centerY + point[1] * hullScale);
+    });
+    var stroke = kind === 'wreck' ? 0xc4ae7d : SHIP_STYLES.escort.stroke;
+    var fill = kind === 'wreck' ? 0x5f5158 : SHIP_STYLES.escort.fill;
+    graphics.lineStyle(1.5, stroke, kind === 'wreck' ? 0.9 : 1);
+    graphics.beginFill(fill, kind === 'wreck' ? 0.8 : 0.98);
+    graphics.drawPolygon(polygon);
+    graphics.endFill();
+    if (kind === 'ship' && entity && entity.disabled) {
+      graphics.lineStyle(1, 0xffffff, 0.65);
+      graphics.moveTo(centerX - 4 * hullScale, centerY);
+      graphics.lineTo(centerX + 3 * hullScale, centerY);
+    }
+    graphics.lineStyle(1.5, tugStyle.stroke, 0.9);
+    graphics.moveTo(-0.25 * tugStyle.radius, -0.25 * tugStyle.radius);
+    graphics.lineTo(centerX - 4 * hullScale, centerY - 4 * hullScale);
+    graphics.moveTo(-0.25 * tugStyle.radius, 0.25 * tugStyle.radius);
+    graphics.lineTo(centerX - 4 * hullScale, centerY + 4 * hullScale);
   }
 
   /** @param {PIXI.Graphics} graphics @param {ShipStyle} style */
@@ -1103,7 +1136,7 @@
       drawWorldOrderLine(graphics, ship);
     }
 
-    if (ship.type === 'tug' && (ship.cargo > 0 || ship.platformId)) {
+    if (ship.type === 'tug' && ship.cargo > 0) {
       var filled = 1;
       graphics.lineStyle(0);
       graphics.beginFill(0xd3a449, 0.95);

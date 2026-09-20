@@ -432,6 +432,20 @@
     assert(!findShip(world, 'tug-01').towTarget, 'Hauler should be free after delivery');
   });
 
+  test('salvage-all is opt-in and sends the tug for every recoverable target', function () {
+    var world = createDeployedWorld();
+    world = sim.addWreck(world, { position: { x: 165, y: 120 }, velocity: { x: 0, y: 0 } });
+    world = sim.addWreck(world, { position: { x: 175, y: 120 }, velocity: { x: 0, y: 0 } });
+    assert(findShip(world, 'tug-01').order.kind === 'idle', 'The tug should not salvage automatically');
+    world = sim.issueSalvageAllOrder(sim.selectShips(world, ['tug-01']));
+    assert(findShip(world, 'tug-01').order.kind === 'recover' && findShip(world, 'tug-01').order.salvageAll,
+      'Explicit salvage-all should begin a recovery trip');
+    for (var i = 0; i < 6000 && world.wrecks.length; i += 1) world = sim.stepWorld(world, 1 / 30);
+    assert(world.wrecks.length === 0, 'The tug should deliver every untowed wreck in successive trips');
+    assertClose(world.recovery.salvagedOre, 48);
+    assert(findShip(world, 'tug-01').docked, 'The tug should finish at the mothership');
+  });
+
   test('disabled fighters cannot move or fire and recover after being carried home', function () {
     var world = createDeployedWorld();
     var fighter = findShip(world, 'escort-01');

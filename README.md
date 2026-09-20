@@ -103,6 +103,7 @@ Construction controls:
 Recovery controls:
 
 - Select `Linehorse` and right-click a faded drone wreck or disabled fighter to retrieve it.
+- Select `Linehorse` and choose **Salvage all** to explicitly send it on repeated recovery trips for every available wreck and disabled fighter. This is a player-controlled command; it does not start on its own. Right-click home to send it back and cancel the run.
 - The hauler approaches, clamps the hull beneath its frame, and returns automatically with acceleration determined by combined mass. One module or recovered hull at a time.
 - Wrecks provide 24t ore at the mothership, feeding the existing construction processing chain.
 - Disabled fighters stay inert and cannot fire. Retrieval starts a six-second repair inside the mothership, followed by a slow six-second launch from its forward end. The restored fighter awaits orders once clear.

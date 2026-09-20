@@ -50,6 +50,7 @@
       '<section class="panel controls">' +
       '<button type="button" data-action="deploy-platform">Deploy mining platform</button>' +
       '<button type="button" data-action="end-mining">End mining & recover</button>' +
+      '<button type="button" data-action="salvage-all">Salvage all</button>' +
       '<button type="button" data-action="save">Save</button>' +
       '<button type="button" data-action="export">Export scenario</button>' +
       '<button type="button" data-action="load">Load</button>' +
@@ -58,11 +59,12 @@
       '<label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label>' +
       '<label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label>' +
       '</section>' +
-      '<section class="hint">Select mothership → Deploy mining platform · RMB home: return · Cargo ship + RMB platform: retrieve · wheel zoom · Space/MMB drag pan · F focus</section>';
+      '<section class="hint">Select mothership → Deploy mining platform · Select cargo ship → Salvage all to repeatedly recover wrecks and disabled fighters · RMB home: return · Cargo ship + RMB platform: retrieve · wheel zoom · Space/MMB drag pan · F focus</section>';
 
     var deployButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="deploy-platform"]'));
     if (!deployButton) throw new Error('Missing deploy button');
     requiredElement('[data-action="end-mining"]').addEventListener('click', actions.onEndMining);
+    requiredElement('[data-action="salvage-all"]').addEventListener('click', actions.onSalvageAll);
     deployButton.addEventListener('click', actions.onDeployPlatform);
     var stressButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="stress"]'));
     var fleet = /** @type {HTMLElement} */ (host.querySelector('[data-role="fleet"]'));
@@ -139,6 +141,14 @@
           } else personPanel.textContent = 'Select a crew member to inspect their service history.';
         }
         var miningControls = miningControlState(world);
+        var salvageButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="salvage-all"]'));
+        var selectedTug = world.ships.some(function (ship) {
+          return ship.type === 'tug' && !ship.disabled && world.selectedShipIds.indexOf(ship.id) !== -1 &&
+            !ship.carryingSection && !ship.platformId && !ship.towTarget &&
+            (ship.order.kind === 'idle' || ship.order.kind === 'return');
+        });
+        salvageButton.disabled = !selectedTug || !world.wrecks.some(function (wreck) { return !wreck.towedBy; }) &&
+          !world.ships.some(function (ship) { return ship.type === 'escort' && ship.disabled && !ship.repairRemaining && ship.launchElapsed == null && !ship.towedBy; });
         deployButton.disabled = !miningControls.canDeploy;
         deployButton.title = miningControls.deployHint;
         var endMiningButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="end-mining"]'));

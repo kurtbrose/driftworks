@@ -527,7 +527,8 @@
     next.burnMassKg = physicalStats(world, next).massKg;
     if (next.propulsion && !next.docked && next.order.kind !== 'return' && mothershipShip &&
         remainingDeltaV(world, next) < returnReserve(next, mothershipShip)) {
-      next.order = { kind: 'return', target: clonePlain(mothershipShip.position), automatic: true };
+      next.order = { kind: 'return', target: clonePlain(mothershipShip.position), automatic: true,
+        salvageAll: 'salvageAll' in next.order ? next.order.salvageAll : undefined };
     }
     if (next.order.kind === 'deploy' || next.order.kind === 'retrieve-platform') return logistics.stepPlatformCarrier(next, world, dt);
     if (next.order.kind === 'shuttle') return logistics.stepShuttle(next, world, dt);
@@ -663,7 +664,7 @@
     mothership.storage.ore += ship.cargo;
     ship.cargo = 0;
     ship.velocity = { x: 0, y: 0 };
-    ship.order = { kind: 'idle' };
+    ship.order = ship.order.salvageAll ? { kind: 'return', target: clonePlain(mothershipShip.position), salvageAll: true } : { kind: 'idle' };
     return ship;
   }
 
@@ -929,6 +930,25 @@
     return next;
   }
 
+  /** @param {World} world @returns {World} */
+  function issueSalvageAllOrder(world) {
+    var next = normalizeWorld(world);
+    var target = findMothership(next);
+    if (!target) return next;
+    var assigned = false;
+    next.ships.forEach(function (ship) {
+      if (next.selectedShipIds.indexOf(ship.id) < 0 || ship.type !== 'tug' || ship.disabled || ship.carryingSection ||
+        ship.platformId || ship.towTarget || (ship.order.kind !== 'idle' && ship.order.kind !== 'return')) return;
+      var reference = nearestRecoverable(next, ship.position, Infinity);
+      if (!reference) return;
+      var recoverable = recoveryTarget(next, reference);
+      if (!recoverable) return;
+      ship.order = { kind: 'recover', recoveryTarget: clonePlain(reference), target: clonePlain(recoverable.position), salvageAll: true };
+      assigned = true;
+    });
+    return assigned ? next : world;
+  }
+
   /** @param {World} world @param {number} dt */
   function stepRecovery(world, dt) {
     var mothership = findMothership(world);
@@ -968,6 +988,20 @@
     });
     world.ships.forEach(function (hauler) {
       if (hauler.type !== 'tug' || hauler.disabled) return;
+      if (hauler.order.kind === 'salvage-all') {
+        var nextTarget = nearestRecoverable(world, hauler.position, Infinity);
+        var nextPayload = nextTarget && recoveryTarget(world, nextTarget);
+        if (nextTarget && nextPayload) {
+          hauler.order = { kind: 'recover', recoveryTarget: clonePlain(nextTarget), target: clonePlain(nextPayload.position), salvageAll: true };
+        } else if (hauler.docked) {
+          hauler.order = { kind: 'idle' };
+        } else if (mothership) {
+          hauler.order = { kind: 'return', target: clonePlain(mothership.position), salvageAll: true };
+        }
+      }
+      if (hauler.order.kind === 'return' && hauler.order.salvageAll && hauler.docked && !hauler.towTarget) {
+        hauler.order = { kind: 'salvage-all' };
+      }
       if (hauler.order.kind === 'recover' && !hauler.towTarget) {
         var pickup = recoveryTarget(world, hauler.order.recoveryTarget);
         if (!pickup || pickup.towedBy || hauler.carryingSection || !mothership) {
@@ -981,7 +1015,7 @@
         }
         hauler.towTarget = clonePlain(hauler.order.recoveryTarget);
         pickup.towedBy = hauler.id;
-        hauler.order = { kind: 'return', target: clonePlain(mothership.position) };
+        hauler.order = { kind: 'return', target: clonePlain(mothership.position), salvageAll: hauler.order.salvageAll };
       }
       if (!hauler.towTarget) return;
       var payload = recoveryTarget(world, hauler.towTarget);
@@ -1010,7 +1044,7 @@
         }
         hauler.towTarget = null;
         dockShip(hauler, mothership);
-        hauler.order = { kind: 'idle' };
+        hauler.order = 'salvageAll' in hauler.order && hauler.order.salvageAll ? { kind: 'salvage-all' } : { kind: 'idle' };
       }
     });
   }
@@ -1124,6 +1158,7 @@
     issueBuildOrder: issueBuildOrder,
     issueReturnOrder: issueReturnOrder,
     issueRecoveryOrder: issueRecoveryOrder,
+    issueSalvageAllOrder: issueSalvageAllOrder,
     addWreck: addWreck,
     damageFighter: damageFighter,
     stepWorld: stepWorld,

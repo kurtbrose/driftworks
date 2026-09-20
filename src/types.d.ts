@@ -26,8 +26,9 @@ export type Order =
   | { kind: 'shuttle'; platformId: string; target: Vec2; evacuation: boolean }
   | { kind: 'idle' }
   | { kind: 'move'; target: Vec2 }
-  | { kind: 'return'; target: Vec2; automatic?: boolean }
-  | { kind: 'recover'; recoveryTarget: RecoveryRef; target: Vec2 }
+  | { kind: 'return'; target: Vec2; automatic?: boolean; salvageAll?: boolean }
+  | { kind: 'recover'; recoveryTarget: RecoveryRef; target: Vec2; salvageAll?: boolean }
+  | { kind: 'salvage-all' }
   | { kind: 'retrieve-platform'; platformId: string; target: Vec2 }
   | { kind: 'deploy'; asteroidId: string; platformId: string; target: Vec2; siteAngle: number; siteDepth: number }
   | { kind: 'mine'; asteroidId: string }
@@ -282,6 +283,7 @@ export type SimApi = {
   issuePlatformRecovery: (world: World, platformId: string) => World;
   issueDefendOrder: (world: World, target: Vec2, shipId?: string | null) => World;
   issueRecoveryOrder: (world: World, target: RecoveryRef) => World;
+  issueSalvageAllOrder: (world: World) => World;
   issueBuildOrder: (world: World) => World;
   issueMoveOrder: (world: World, target: Vec2) => World;
   FIGHTER_RANGE: number;
@@ -296,7 +298,7 @@ export type SimApi = {
 export type AudioApi = { unlock: () => boolean; setSfxEnabled: (enabled: boolean) => void; setSfxVolume: (value: number) => void; setMusicEnabled: (enabled: boolean) => void; setMusicVolume: (value: number) => void; setEngineThrust: (level: number) => void; playSelect: () => void; playMove: () => void; playInvalid: () => void; playMiningTick: () => void; playGunshot: () => void; playImpact: (strength: number) => void; playDock: () => void; playDelivery: () => void; playWarning: () => void; _test?: Record<string, unknown>; status: () => { available: boolean; sfxVolume: number; musicVolume: number } };
 export type HudActions = {
   getPopulation?: () => PopulationState;
-  onEndMining: EventListener; onDeployPlatform: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;
+  onEndMining: EventListener; onDeployPlatform: EventListener; onSalvageAll: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;
   onStressToggle: EventListener; onSelectShip: (id: string | undefined) => void; onTimeScale: (scale: number) => void;
   onSfxVolume: (value: number) => void; onMusicVolume: (value: number) => void; getTimeScale: () => number;
 };
