@@ -1503,10 +1503,12 @@
 
   /** @param {number[]} bulk @param {{ low: number, med: number, blobs: { x: number, y: number, sigma: number, amp: number }[] }[]} fields @param {number} heterogeneity @param {number} x @param {number} y @returns {number[]} */
   function asteroidCompositionAt(bulk, fields, heterogeneity, x, y) {
-    var broad = 0.15 + heterogeneity * 0.55;
-    var medium = 0.05 + heterogeneity * 0.2;
-    var chunk = heterogeneity * 0.5;
-    var temperature = 1.35 - heterogeneity * 0.6;
+    // High-heterogeneity bodies need enough log-space range to overturn a
+    // strong bulk bias; quiet bodies remain close to their global mixture.
+    var broad = 0.18 + heterogeneity * heterogeneity * 2.45;
+    var medium = 0.06 + heterogeneity * 0.52;
+    var chunk = heterogeneity * heterogeneity * 1.65;
+    var temperature = 1.32 - heterogeneity * 0.62;
     var scores = fields.map(function (field, index) {
       var blobs = field.blobs.reduce(function (sum, blob) {
         var dx = x - blob.x, dy = y - blob.y;
@@ -1524,19 +1526,19 @@
     return values.map(function (value) { return value / total; });
   }
 
-  /** @param {number[]} composition @param {number} topography @returns {number} */
-  function asteroidCompositionColor(composition, topography) {
+  /** @param {number[]} composition @param {number} lightness @returns {number} */
+  function asteroidCompositionColor(composition, lightness) {
     var mixed = [0, 0, 0];
     var dominant = 0;
     composition.forEach(function (fraction, index) {
       if (fraction > composition[dominant]) dominant = index;
       ASTEROID_PALETTES[index].rgb.forEach(function (channel, c) { mixed[c] += fraction * channel; });
     });
-    var boost = smoothstep((composition[dominant] - 0.45) / 0.35) * 0.25;
+    var boost = smoothstep((composition[dominant] - 0.36) / 0.44) * 0.42;
     var target = ASTEROID_PALETTES[dominant].rgb;
     return asteroidColor(mixed.map(function (channel, index) {
       return channel + (target[index] - channel) * boost;
-    }), 1 + topography * 0.055);
+    }), lightness);
   }
 
   /** Deterministic body-local artwork, independent of simulation RNG and depletion.
@@ -1561,8 +1563,8 @@
       return { low: rng() * 100, med: rng() * 100, blobs: blobs };
     });
     var radius = asteroid.radius;
-    var angleCount = 32;
-    var ringCount = 5;
+    var angleCount = 48;
+    var ringCount = 8;
     var angles = [];
     for (var i = 0; i < angleCount; i += 1) angles.push((i + (rng() - 0.5) * 0.42) / angleCount * Math.PI * 2);
     /** @type {number[][][]} */
@@ -1584,8 +1586,13 @@
       x /= points.length / 2; y /= points.length / 2;
       var nx = x / radius, ny = y / radius;
       var composition = asteroidCompositionAt(bulk, fields, heterogeneity, nx, ny);
-      var topo = asteroidWave(nx, ny, seed * 0.0001, 4.2) * 0.7 + asteroidWave(nx, ny, seed * 0.00017, 9) * 0.3;
-      cells.push({ points: points, composition: composition, color: asteroidCompositionColor(composition, topo) });
+      var normalizedDistance = Math.min(1, Math.hypot(nx, ny) / 0.95);
+      var surfaceZ = Math.sqrt(Math.max(0, 1 - normalizedDistance * normalizedDistance));
+      var directional = nx * -0.28 + ny * -0.34 + surfaceZ * 0.62;
+      var fineTexture = asteroidWave(nx, ny, seed * 0.00017, 13) * 0.018;
+      var lightness = 0.9 + directional * 0.16 + fineTexture;
+      cells.push({ points: points, composition: composition,
+        color: asteroidCompositionColor(composition, lightness) });
     }
     for (var sector = 0; sector < angleCount; sector += 1) {
       var next = (sector + 1) % angleCount;
@@ -1605,7 +1612,7 @@
       var cd = radius * (0.12 + craterRng() * 0.55);
       var x = Math.cos(ca) * cd, y = Math.sin(ca) * cd;
       var local = asteroidCompositionAt(bulk, fields, heterogeneity, x / radius, y / radius);
-      var localColor = asteroidCompositionColor(local, 0);
+      var localColor = asteroidCompositionColor(local, 1);
       var rgb = [(localColor >> 16) & 255, (localColor >> 8) & 255, localColor & 255];
       craters.push({ x: x, y: y, rx: radius * (0.022 + craterRng() * 0.05),
         ry: radius * (0.016 + craterRng() * 0.025), angle: craterRng() * Math.PI,
@@ -1630,7 +1637,7 @@
       graphics.drawPolygon(cell.points);
       graphics.endFill();
     });
-    var outline = asteroidCompositionColor(visual.bulk, 0);
+    var outline = asteroidCompositionColor(visual.bulk, 1);
     var outlineRgb = [(outline >> 16) & 255, (outline >> 8) & 255, outline & 255];
     graphics.lineStyle(1, asteroidColor(outlineRgb, 1.28), 0.82);
     graphics.drawPolygon(visual.shape);

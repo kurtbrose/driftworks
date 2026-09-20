@@ -132,12 +132,15 @@ four-material bulk composition and a body-local composition field from the
 asteroid ID. Every point is a normalized mixture of ice, volatiles, metals and
 silicates; there is no generic host rock or deposit overlay. Low- and
 medium-frequency fields plus sparse radial blobs bias the local mixture around
-the bulk average. Heterogeneity varies per body, controlling field strength and
-softmax temperature. Local fractions are clamped away from pure materials.
+the bulk average. High-heterogeneity bodies reach roughly 2.6 log units of broad
+variation, enough for regional dominance to differ from the bulk. Heterogeneity
+also lowers softmax temperature. Local fractions are clamped away from pure
+materials.
 
-The painter tessellates the complete silhouette into irregular radial cells and
-colors each cell from its local mixed composition, with a small independent
-topographic lightness shift. Craters are generated independently and tinted from
+The painter tessellates the complete silhouette into 384 fine irregular radial
+cells and colors each cell from its local mixed composition. A coherent
+directional-light field and subtle fine texture supply physical form separately
+from composition. Craters are generated independently and tinted from
 the composition beneath them. The outline continues to use `sim.surfaceRadius`
 so mining sites and hit testing agree.
 `paintAsteroid` retains Pixi vector geometry per graphic and ID/radius, updating

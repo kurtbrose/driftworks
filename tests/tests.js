@@ -47,7 +47,7 @@
       bulkWinners.add(winner);
       assertClose(visual.bulk.reduce(function (a, b) { return a + b; }, 0), 1);
       assert(visual.bulk.every(function (fraction) { return fraction > 0; }), 'Every bulk material must be present');
-      assert(visual.cells.length === 160);
+      assert(visual.cells.length === 384);
       visual.cells.forEach(function (cell) {
         assertClose(cell.composition.reduce(function (a, b) { return a + b; }, 0), 1);
         assert(cell.composition.every(function (fraction) { return fraction >= 0.025 && fraction <= 0.91; }),
