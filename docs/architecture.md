@@ -125,6 +125,23 @@ exceptions. New state must survive the explicit `stepWorld` reconstruction and
 save normalization; new browser behavior needs browser verification in addition
 to the shared helper tests.
 
+## Asteroid artwork
+
+Asteroid artwork in `game.js` uses `asteroidVisualDescription` to derive a stable
+material mix and body-local deposits/craters from the asteroid ID. These mixes
+are illustrative: simulation still models undifferentiated ore. The outline
+is visually dominant: small opaque, unoutlined, irregular inclusions occupy less
+than 20% of the surface, independent of bulk material ratios. Deposits do not
+overlap, and craters stay on exposed host rock, away from deposit boundaries.
+Centers are seeded across the full body rather than spaced around a ring;
+deposits reaching the limb are trimmed to the sampled silhouette.
+The outline
+continues to use `sim.surfaceRadius` so mining sites and hit testing agree.
+`paintAsteroid` retains Pixi vector geometry per graphic and ID/radius, updating
+only transforms each frame; this avoids texture resolution limits at inspection
+zoom. No artwork fields are serialized. `tests/asteroid-art.html` displays twenty
+seeded examples using the production painter.
+
 ## Population session boundary
 
 `population.js` loads after simulation and before `session.js`; both precede HUD

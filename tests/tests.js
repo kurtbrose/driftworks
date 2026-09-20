@@ -22,6 +22,79 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('asteroid artwork is stable through movement, depletion and save reload', function () {
+    var world = createFreshWorld();
+    var asteroid = world.asteroids[0];
+    var before = JSON.stringify(game.asteroidVisualDescription(asteroid));
+    var changed = Object.assign({}, asteroid, { rotation: 2, ore: 0, position: { x: 999, y: -42 } });
+    assert(JSON.stringify(game.asteroidVisualDescription(changed)) === before);
+    var loaded = sim.deserializeWorld(sim.serializeWorld(world));
+    assert(JSON.stringify(game.asteroidVisualDescription(loaded.asteroids[0])) === before);
+  });
+
+  test('asteroid materials vary and deposits remain inside the physical outline', function () {
+    var base = createFreshWorld().asteroids[0];
+    var palettes = new Set();
+    var craterCounts = new Set();
+    var edgeDeposits = 0;
+    var centralDeposits = 0;
+    for (var n = 0; n < 80; n += 1) {
+      var asteroid = Object.assign({}, base, { id: 'sample-' + n });
+      var visual = game.asteroidVisualDescription(asteroid);
+      palettes.add(visual.dominant);
+      craterCounts.add(visual.craters.length);
+      assertClose(visual.composition.reduce(function (a, b) { return a + b; }, 0), 1);
+      assert(visual.deposits.length >= 3 && visual.deposits.length <= 5);
+      function area(points) {
+        var sum = 0;
+        for (var p = 0; p < points.length; p += 2) {
+          var next = (p + 2) % points.length;
+          sum += points[p] * points[next + 1] - points[next] * points[p + 1];
+        }
+        return Math.abs(sum) / 2;
+      }
+      var exposure = visual.deposits.reduce(function (sum, deposit) { return sum + area(deposit.points); }, 0) / area(visual.shape);
+      assert(exposure < 0.2, 'Deposits must remain subordinate to the host rock');
+      visual.deposits.forEach(function (deposit, index) {
+        visual.deposits.slice(index + 1).forEach(function (other) {
+          assert(Math.hypot(deposit.x - other.x, deposit.y - other.y) > deposit.extent + other.extent);
+        });
+        visual.craters.forEach(function (crater) {
+          assert(Math.hypot(deposit.x - crater.x, deposit.y - crater.y) > deposit.extent + Math.max(crater.rx, crater.ry));
+        });
+      });
+      visual.deposits.forEach(function (deposit) {
+        assert(visual.composition[deposit.material] > 0);
+        var distance = Math.hypot(deposit.x, deposit.y);
+        if (distance < asteroid.radius * 0.3) centralDeposits++;
+        if (distance + deposit.extent > sim.surfaceRadius(asteroid, Math.atan2(deposit.y, deposit.x))) edgeDeposits++;
+        for (var i = 0; i < deposit.points.length; i += 2) {
+          var x = deposit.points[i], y = deposit.points[i + 1];
+          assert(Math.hypot(x, y) <= sim.surfaceRadius(asteroid, Math.atan2(y, x)) + asteroid.radius * 0.002);
+        }
+      });
+      for (var k = 0; k < visual.shape.length; k += 2) {
+        assertClose(Math.hypot(visual.shape[k], visual.shape[k + 1]), sim.surfaceRadius(asteroid, k / 2 / 120 * Math.PI * 2));
+      }
+    }
+    assert(palettes.size === 4);
+    assert(craterCounts.size > 5);
+    assert(edgeDeposits > 20, 'Deposits should sometimes intersect the limb');
+    assert(centralDeposits > 10, 'Placement must include the interior, not a fixed ring');
+  });
+
+  test('asteroid renderer retains geometry while updating body transforms', function () {
+    var clears = 0;
+    var graphic = { position: { set: function (x, y) { this.x = x; this.y = y; } },
+      clear: function () { clears++; }, lineStyle: function () {}, beginFill: function () {},
+      drawPolygon: function () {}, endFill: function () {}, moveTo: function () {}, lineTo: function () {} };
+    var asteroid = createFreshWorld().asteroids[0];
+    game.paintAsteroid(graphic, asteroid);
+    game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 1.5 }));
+    assert(clears === 1 && graphic.rotation === 1.5);
+    game.paintAsteroid(graphic, Object.assign({}, asteroid, { radius: asteroid.radius * 2 }));
+    assert(clears === 2);
+  });
   function createDeployedWorld(seed) {
     var world = createFreshWorld(seed);
     var positions = { 'tug-01': { x: 160, y: 120 }, 'escort-01': { x: 210, y: -125 }, 'escort-02': { x: 250, y: -165 } };

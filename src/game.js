@@ -50,8 +50,15 @@
     shuttle: { radius: 8, fill: 0xf4f5f0, stroke: 0xffffff },
     escort: { radius: 13, fill: 0xb76c6f, stroke: 0xf0b7b9 }
   };
-  var ASTEROID_FILL = 0x655f57;
-  var ASTEROID_STROKE = 0xb6aa9b;
+  // Artwork-only mixes: simulation currently has one undifferentiated ore resource.
+  var ASTEROID_PALETTES = [
+    { name: 'ice', fill: 0x718d9b, stroke: 0xadc2cb, deposit: 0x859faa, detail: 0x49636e },
+    { name: 'volatiles', fill: 0x625953, stroke: 0x9b9085, deposit: 0x897166, detail: 0x403d39 },
+    { name: 'metals', fill: 0x707978, stroke: 0xaaa99c, deposit: 0x96978b, detail: 0x4d5656 },
+    { name: 'silicates', fill: 0x655f57, stroke: 0xb6aa9b, deposit: 0x827b6f, detail: 0x393632 }
+  ];
+  /** @type {WeakMap<PIXI.Graphics, string>} */
+  var asteroidArtworkKeys = new WeakMap();
   var MAX_EFFECTS = 260;
 
   // Local artwork scale; the camera still scales positions geometrically.
@@ -407,9 +414,7 @@
         graphic.lineStyle(2.5, world.selectedPlatformId === p.id ? 0xffffff : SHIP_STYLES.platform.stroke, 1);
         paintMiningPlatform(graphic, SHIP_STYLES.platform);
         if (p.state === 'setting-up' || p.state === 'packing-up') {
-          (p.workerIds || []).slice(0, 5).forEach(function (personId, workerIndex) {
-            drawPlatformWorker(graphic, personId, workerIndex, world.elapsedSeconds, p.state === 'packing-up');
-          });
+          drawPlatformWorkers(graphic, (p.workerIds || []).slice(0, 5), world.elapsedSeconds, p.state === 'packing-up');
         }
       });
       world.packets.forEach(function (p) {
@@ -1067,29 +1072,52 @@
     graphics.lineTo(centerX - 4 * hullScale, centerY + 4 * hullScale);
   }
 
-  /** @param {PIXI.Graphics} graphics @param {string} personId @param {number} index @param {number} elapsedSeconds @param {boolean} packingUp */
-  function drawPlatformWorker(graphics, personId, index, elapsedSeconds, packingUp) {
-    var seed = 0;
-    for (var i = 0; i < personId.length; i += 1) seed = (seed * 31 + personId.charCodeAt(i)) >>> 0;
-    var homeAngle = (seed % 6283) / 1000;
-    var radius = 20 + (seed >>> 8) % 7;
-    var period = 11 + (seed >>> 16) % 8;
-    var activityTime = elapsedSeconds / period + (seed % 997) / 997;
-    var segment = Math.floor(activityTime);
-    var blend = activityTime - segment;
-    blend = blend * blend * (3 - 2 * blend);
-    var fromOffset = (Math.floor((seed % 37) / 11) - 1) * 0.18;
-    var toOffset = (Math.floor(((seed >>> 5) % 37) / 11) - 1) * 0.18;
-    if (packingUp) { fromOffset *= -1; toOffset *= -1; }
-    var fromAngle = homeAngle + fromOffset;
-    var toAngle = homeAngle + toOffset;
-    var drift = Math.sin(elapsedSeconds * (0.13 + (seed % 5) * 0.012) + index * 2.1 + seed % 53) * 1.4;
-    var angle = fromAngle + (toAngle - fromAngle) * blend + drift / radius;
-    var distance = radius + Math.sin(elapsedSeconds * 0.19 + index * 1.7 + seed % 29) * 1.8;
-    graphics.lineStyle(1, 0xc5d9d8, 0.9);
-    graphics.beginFill(0xe7f0e5, 1);
-    graphics.drawCircle(Math.cos(angle) * distance, Math.sin(angle) * distance, 1.8);
-    graphics.endFill();
+  /** @param {PIXI.Graphics} graphics @param {string[]} workerIds @param {number} elapsedSeconds @param {boolean} packingUp */
+  function drawPlatformWorkers(graphics, workerIds, elapsedSeconds, packingUp) {
+    var positions = workerIds.map(function (personId, index) {
+      var seed = 0;
+      for (var i = 0; i < personId.length; i += 1) seed = (seed * 31 + personId.charCodeAt(i)) >>> 0;
+      var homeAngle = (seed % 6283) / 1000;
+      var radius = 21 + (seed >>> 8) % 7;
+      var period = 17 + (seed >>> 16) % 11;
+      var activityTime = elapsedSeconds / period + (seed % 997) / 997;
+      var segment = Math.floor(activityTime);
+      var blend = activityTime - segment;
+      blend = blend * blend * (3 - 2 * blend);
+      var fromOffset = (Math.floor((seed % 37) / 11) - 1) * 0.45;
+      var toOffset = (Math.floor(((seed >>> 5) % 37) / 11) - 1) * 0.45;
+      if (packingUp) { fromOffset *= -1; toOffset *= -1; }
+      var fromAngle = homeAngle + fromOffset + segment * (0.13 + index * 0.035);
+      var toAngle = homeAngle + toOffset + (segment + 1) * (0.13 + index * 0.035);
+      var angle = fromAngle + (toAngle - fromAngle) * blend;
+      var distance = radius + Math.sin(elapsedSeconds * 0.17 + index * 1.7 + seed % 29) * 2.5;
+      return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
+    });
+    var separationX = workerIds.map(function () { return 0; });
+    var separationY = workerIds.map(function () { return 0; });
+    positions.forEach(function (position, index) {
+      positions.forEach(function (other, otherIndex) {
+        if (index === otherIndex) return;
+        var dx = position.x - other.x;
+        var dy = position.y - other.y;
+        var distanceSquared = dx * dx + dy * dy;
+        if (distanceSquared > 0 && distanceSquared < 12 * 12) {
+          var strength = (12 - Math.sqrt(distanceSquared)) / 12;
+          separationX[index] += dx / Math.sqrt(distanceSquared) * strength * 5;
+          separationY[index] += dy / Math.sqrt(distanceSquared) * strength * 5;
+        }
+      });
+    });
+    positions.forEach(function (position, index) {
+      var x = position.x + separationX[index];
+      var y = position.y + separationY[index];
+      var distance = Math.sqrt(x * x + y * y);
+      if (distance > 32) { x *= 32 / distance; y *= 32 / distance; }
+      graphics.lineStyle(1, 0xc5d9d8, 0.9);
+      graphics.beginFill(0xe7f0e5, 1);
+      graphics.drawCircle(x, y, 1.8);
+      graphics.endFill();
+    });
   }
 
   /** @param {PIXI.Graphics} graphics @param {ShipStyle} style */
@@ -1455,28 +1483,128 @@
     }
   }
 
-  /** @param {PIXI.Graphics} graphics @param {Asteroid} asteroid */
-  function paintAsteroid(graphics, asteroid) {
+  /** Deterministic body-local artwork, independent of simulation RNG and depletion.
+   * @param {Asteroid} asteroid
+   */
+  function asteroidVisualDescription(asteroid) {
+    var seed = 2166136261;
+    for (var h = 0; h < asteroid.id.length; h += 1) seed = Math.imul(seed ^ asteroid.id.charCodeAt(h), 16777619);
+    var rng = sim.createRng(seed >>> 0);
+    var dominant = Math.floor(rng() * 4);
+    var secondary = (dominant + 1 + Math.floor(rng() * 3)) % 4;
+    var tertiary = [0, 1, 2, 3].filter(function (m) { return m !== dominant && m !== secondary; })[0];
+    var composition = [0, 0, 0, 0];
+    composition[dominant] = 0.55 + rng() * 0.2;
+    composition[secondary] = (1 - composition[dominant]) * (0.6 + rng() * 0.25);
+    composition[tertiary] = 1 - composition[dominant] - composition[secondary];
     var radius = asteroid.radius;
-    graphics.clear();
-    graphics.position.set(asteroid.position.x, asteroid.position.y);
-    graphics.rotation = asteroid.rotation;
-    graphics.lineStyle(1, ASTEROID_STROKE, 0.82);
-    graphics.beginFill(ASTEROID_FILL, 0.92);
-    for (var i = 0; i <= 120; i += 1) {
+    var shape = [];
+    for (var i = 0; i < 120; i += 1) {
       var angle = i / 120 * Math.PI * 2;
       var r = sim.surfaceRadius(asteroid, angle);
-      if (i === 0) graphics.moveTo(r, 0);
-      else graphics.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+      shape.push(Math.cos(angle) * r, Math.sin(angle) * r);
     }
-    graphics.closePath();
+    /** @type {{ material: number, points: number[], x: number, y: number, extent: number }[]} */
+    var deposits = [];
+    var count = 3 + Math.floor(rng() * 2);
+    for (var j = 0; j < count; j += 1) {
+      var material = j % 2 === 0 ? secondary : tertiary;
+      // Surface exposure is deliberately independent of bulk abundance.
+      var size = radius * (0.21 + rng() * 0.03);
+      var a = 0, x = 0, y = 0;
+      var placed = false;
+      for (var attempt = 0; attempt < 80; attempt += 1) {
+        a = rng() * Math.PI * 2;
+        var distance = Math.sqrt(rng()) * sim.surfaceRadius(asteroid, a) * 0.98;
+        x = Math.cos(a) * distance; y = Math.sin(a) * distance;
+        if (deposits.every(function (other) {
+          return Math.hypot(x - other.x, y - other.y) > size + other.extent;
+        })) { placed = true; break; }
+      }
+      if (!placed) continue;
+      var points = [];
+      var corners = 15 + Math.floor(rng() * 5);
+      var aspect = 0.72 + rng() * 0.2;
+      for (var k = 0; k < corners; k += 1) {
+        var theta = a + k / corners * Math.PI * 2;
+        var roughness = 0.68 + rng() * 0.32;
+        points.push(x + Math.cos(theta) * size * roughness,
+          y + Math.sin(theta) * size * aspect * roughness);
+      }
+      // Sample patch edges before trimming them to the exact rendered outline.
+      // Dense samples follow the curved limb rather than joining cut ends with a chord.
+      var trimmed = [];
+      for (var edge = 0; edge < points.length; edge += 2) {
+        var next = (edge + 2) % points.length;
+        for (var sample = 0; sample < 8; sample += 1) {
+          var blend = sample / 8;
+          var px = points[edge] + (points[next] - points[edge]) * blend;
+          var py = points[edge + 1] + (points[next + 1] - points[edge + 1]) * blend;
+          var theta = (Math.atan2(py, px) + Math.PI * 2) % (Math.PI * 2);
+          var segment = Math.floor(theta / (Math.PI * 2) * 120) * 2;
+          var following = (segment + 2) % shape.length;
+          var ax = shape[segment], ay = shape[segment + 1];
+          var dx = shape[following] - ax, dy = shape[following + 1] - ay;
+          var limit = (ax * dy - ay * dx) / (Math.cos(theta) * dy - Math.sin(theta) * dx);
+          var scale = Math.min(1, limit / Math.hypot(px, py));
+          trimmed.push(px * scale, py * scale);
+        }
+      }
+      deposits.push({ material: material, points: trimmed, x: x, y: y, extent: size });
+    }
+    /** @type {{ x: number, y: number, rx: number, ry: number, angle: number }[]} */
+    var craters = [];
+    var craterCount = Math.floor(rng() * (dominant === 0 ? 4 : 10));
+    var cluster = rng() * Math.PI * 2;
+    for (var c = 0; c < craterCount; c += 1) {
+      var ca = cluster + (rng() - 0.5) * 3.8;
+      var cd = radius * (0.15 + rng() * 0.48);
+      var crater = { x: Math.cos(ca) * cd, y: Math.sin(ca) * cd,
+        rx: radius * (0.025 + rng() * 0.055), ry: radius * (0.018 + rng() * 0.025), angle: rng() * Math.PI };
+      var extent = Math.max(crater.rx, crater.ry);
+      // Craters occupy exposed host rock rather than drawing across inclusions.
+      if (deposits.every(function (deposit) {
+        return Math.hypot(crater.x - deposit.x, crater.y - deposit.y) > deposit.extent + extent + radius * 0.012;
+      }) && craters.every(function (other) {
+        return Math.hypot(crater.x - other.x, crater.y - other.y) > extent + Math.max(other.rx, other.ry);
+      })) craters.push(crater);
+    }
+    return { shape: shape, composition: composition, dominant: dominant, deposits: deposits, craters: craters };
+  }
+
+  /** @param {PIXI.Graphics} graphics @param {Asteroid} asteroid */
+  function paintAsteroid(graphics, asteroid) {
+    graphics.position.set(asteroid.position.x, asteroid.position.y);
+    graphics.rotation = asteroid.rotation;
+    var key = asteroid.id + ':' + asteroid.radius;
+    if (asteroidArtworkKeys.get(graphics) === key) return;
+    asteroidArtworkKeys.set(graphics, key);
+    var visual = asteroidVisualDescription(asteroid);
+    var palette = ASTEROID_PALETTES[visual.dominant];
+    graphics.clear();
+    graphics.lineStyle(1, palette.stroke, 0.82);
+    graphics.beginFill(palette.fill);
+    graphics.drawPolygon(visual.shape);
     graphics.endFill();
-    graphics.lineStyle(1, 0x393632, 0.65);
-    for (var j = 0; j < 18; j += 1) {
-      var a = j * 2.39996;
-      var d = radius * (0.2 + 0.52 * ((j * 7 % 17) / 17));
-      graphics.drawEllipse(Math.cos(a) * d, Math.sin(a) * d, radius * (0.025 + (j % 4) * 0.012), radius * 0.025);
-    }
+    visual.deposits.forEach(function (deposit) {
+      var material = ASTEROID_PALETTES[deposit.material];
+      graphics.lineStyle(0);
+      graphics.beginFill(material.deposit, 1);
+      graphics.drawPolygon(deposit.points);
+      graphics.endFill();
+    });
+    graphics.lineStyle(1, palette.detail, 0.6);
+    visual.craters.forEach(function (crater) {
+      var points = [];
+      for (var i = 0; i < 24; i += 1) {
+        var a = i / 24 * Math.PI * 2;
+        var x = Math.cos(a) * crater.rx;
+        var y = Math.sin(a) * crater.ry;
+        points.push(crater.x + x * Math.cos(crater.angle) - y * Math.sin(crater.angle),
+          crater.y + x * Math.sin(crater.angle) + y * Math.cos(crater.angle));
+      }
+      graphics.drawPolygon(points);
+    });
   }
 
   /** @param {PIXI.Graphics} graphics @param {Drone} drone */
@@ -1820,6 +1948,8 @@
 
   Driftworks.game = {
     boot: boot,
+    asteroidVisualDescription: asteroidVisualDescription,
+    paintAsteroid: paintAsteroid,
     semanticScale: semanticScale,
     updateEffects: updateEffects,
     zoomCameraAt: zoomCameraAt,
