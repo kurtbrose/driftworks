@@ -30,7 +30,7 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 - Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 128×. Through 32×, the asteroid scales geometrically (keeping surface attachments aligned), other large bodies nearly geometrically, and small craft grow modestly on screen. Above 32×, artwork proportions hold steady and everything magnifies together, making craft four times longer at 128× than at 32×. These remain schematic proportions, not a literal physical hull scale. Movement and simulation distances remain unchanged.
 - Versioned localStorage save/load of serializable game state.
 - Toggleable stress mode that animates thousands of simple sprites.
-- DOM HUD with selected ships, simulation time, entity count, and measured FPS.
+- Opaque DOM HUD with a thin mission bar, an unobstructed tactical viewport, and a bottom shelf separating fleet, selection, local operations, and contextual commands. Entity count and measured FPS live in its developer menu.
 - Prominent in-game mission clock with inline units (00h 00m 00s) and Pause, 1×, 2×, and 4× controls. Simulation, combat, and effects follow the selected speed; camera and selection remain usable while paused. Saves retain elapsed mission time; playback speed is session-only.
 - Browser-native simulation tests at `./tests/`; the same suite runs headlessly with `node tests/run.cjs` (optional, no dependencies).
 
@@ -38,7 +38,7 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 
 - Mobile craft carry propellant mass. Acceleration uses current wet mass; engine velocity changes consume fuel using the rocket equation. Loaded ships have less remaining Δv. Empty ships coast.
 - The fleet panel shows remaining Δv in m/s and lets you select craft stored inside the mothership. Selection details include fuel tonnes. New missions begin with Linehorse and both fighters docked internally; docked craft are hidden in the scene.
-- Right-click the mothership to return deployed craft. Low-fuel craft automatically leave their current assignment when they reach a conservative return reserve. Return guidance allows a nonzero intercept velocity.
+- Right-click the mothership or use **Return to mothership** in the selected craft's command panel to return deployed craft. Low-fuel craft automatically leave their current assignment when they reach a conservative return reserve. Return guidance allows a nonzero intercept velocity.
 - Craft assigned a job emerge from the mothership over one second before normal guidance begins. The mothership catches craft within 44 world units and at up to 32 m/s relative velocity. Docking places craft inside and refills tanks; outbound emergence receives a free launcher impulse up to the same 32 m/s, subject to work-zone guidance and stopping distance.
 - When raiders spawn, available docked fighters emerge into a mothership-centered skirmish formation and return inside after the last hostile is destroyed. Manually deployed fighters keep their assignments.
 - Select **MSV Hardshell** in the fleet panel or scene, then choose **Deploy mining platform**. The idle blue cargo ship takes a platform and its first five workers to the asteroid. Setup takes three physical hours before extraction starts. Repeat after it returns to deploy the second platform. The cargo ship can carry platform crews as well as its one platform, construction section, or recovered hull.

@@ -299,7 +299,7 @@ export type SimApi = {
 export type AudioApi = { unlock: () => boolean; setSfxEnabled: (enabled: boolean) => void; setSfxVolume: (value: number) => void; setMusicEnabled: (enabled: boolean) => void; setMusicVolume: (value: number) => void; setEngineThrust: (level: number) => void; playSelect: () => void; playMove: () => void; playInvalid: () => void; playMiningTick: () => void; playGunshot: () => void; playImpact: (strength: number) => void; playDock: () => void; playDelivery: () => void; playWarning: () => void; _test?: Record<string, unknown>; status: () => { available: boolean; sfxVolume: number; musicVolume: number } };
 export type HudActions = {
   getPopulation?: () => PopulationState;
-  onEndMining: EventListener; onDeployPlatform: EventListener; onSalvageAll: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;
+  onEndMining: EventListener; onDeployPlatform: EventListener; onSalvageAll: EventListener; onReturnHome: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;
   onStressToggle: EventListener; onSelectShip: (id: string | undefined) => void; onTimeScale: (scale: number) => void;
   onSfxVolume: (value: number) => void; onMusicVolume: (value: number) => void; getTimeScale: () => number;
 };

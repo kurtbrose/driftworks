@@ -126,6 +126,11 @@
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
+      onReturnHome: function () {
+        setWorld(sim.issueReturnOrder(world));
+        scene.sync(world);
+        hud.update(world, scene.getStats());
+      },
       onSelectShip: function (id) {
         if (id) world = sim.selectShips(world, [id]);
         scene.sync(world);
@@ -262,11 +267,6 @@
     var logisticsGraphic = new PIXI.Graphics();
     var launchLayer = new PIXI.Container();
     var selectionBox = new PIXI.Graphics();
-    var readout = new PIXI.Text('', {
-      fontFamily: 'Consolas, monospace',
-      fontSize: 12,
-      fill: 0xd8e4ea
-    });
     /** @type {Record<string, PIXI.Graphics>} */
     var shipGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
@@ -316,8 +316,6 @@
     worldLayer.addChild(launchLayer);
     worldLayer.addChild(effectsLayer);
     app.stage.addChild(selectionBox);
-    app.stage.addChild(readout);
-    readout.position.set(14, 14);
     drawGrid(grid);
 
     app.stage.eventMode = 'static';
@@ -786,7 +784,6 @@
         frames = 0;
         fpsTimer = 0;
       }
-      readout.text = 'FPS ' + (fps || '--') + ' · entities ' + getStats().entityCount + ' · sim ' + world.elapsedSeconds.toFixed(1) + 's';
     }
 
     function viewport() {

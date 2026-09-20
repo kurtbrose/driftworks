@@ -34,16 +34,17 @@
       '<div class="quota"><strong>ORE <span data-role="quota"></span></strong><progress data-role="quota-progress" max="1" value="0"></progress></div></div></header>' +
       '<section class="command-shelf" aria-label="Command shelf">' +
       '<section class="shelf-region fleet-panel" aria-label="Fleet delta-v"><div class="shelf-heading">FLEET <span>REMAINING Δv</span></div><div class="fleet-list" data-role="fleet"></div></section>' +
-      '<section class="shelf-region selection-panel" aria-label="Selection details"><div class="shelf-heading">SELECTION</div>' +
-      '<strong class="selection-title" data-role="selection"></strong>' +
-      '<div class="selection-readouts"><div><span>Asteroid</span><strong data-role="field"></strong></div><div><span>Depot</span><strong data-role="depot"></strong></div>' +
-      '<div><span>Sections</span><strong data-role="sections"></strong></div><div><span>Launch / catch</span><strong>32 m/s Δv</strong></div></div>' +
-      '<details class="population-panel"><summary><span>People aboard</span><strong data-role="population"></strong></summary><div data-role="platform-staff"></div><div data-role="crew"></div><div data-role="person" aria-live="polite"></div></details></section>' +
+      '<section class="shelf-region selection-panel" aria-label="Selection and local operations"><div class="selection-card"><div class="shelf-heading">SELECTION</div>' +
+      '<strong class="selection-title" data-role="selection"></strong><span class="selection-status" data-role="selection-status"></span>' +
+      '<div class="selection-metrics"><div><span>Δv remaining</span><strong data-role="selection-dv">—</strong></div><div><span>Fuel</span><strong data-role="selection-fuel">—</strong></div></div></div></section>' +
+      '<section class="shelf-region operations-panel" aria-label="Local operations"><div class="operations-card"><div class="shelf-heading">LOCAL OPERATIONS</div><div class="selection-readouts"><div><span>Asteroid ore</span><strong data-role="field"></strong></div><div><span>Mining</span><strong data-role="mining"></strong></div><div><span>Recovery</span><strong data-role="recovery"></strong></div><div><span>Depot</span><strong data-role="depot"></strong></div><div><span>Sections</span><strong data-role="sections"></strong></div><div><span>Launch / catch</span><strong>32 m/s Δv</strong></div></div>' +
+      '<details class="population-panel"><summary><span>People aboard</span><strong data-role="population"></strong></summary><div data-role="platform-staff"></div><div data-role="crew"></div><div data-role="person" aria-live="polite"></div></details></div></section>' +
       '<section class="shelf-region controls" aria-label="Commands"><div class="shelf-heading">COMMANDS</div><div class="command-buttons">' +
+      '<button type="button" class="primary-command" data-action="return-home">Return to mothership</button>' +
       '<button type="button" data-action="deploy-platform">Deploy mining platform</button>' +
       '<button type="button" data-action="end-mining">End mining & recover</button>' +
       '<button type="button" data-action="salvage-all">Salvage all</button>' +
-      '</div><div class="shelf-status"><span data-role="mining"></span><strong data-role="contacts"></strong><span data-role="recovery"></span><span>Salvaged <strong data-role="salvaged"></strong></span></div>' +
+      '</div><div class="shelf-status"><strong data-role="contacts"></strong><span>Salvaged <strong data-role="salvaged"></strong></span></div>' +
       '<div class="shelf-menus"><details><summary>Menu</summary><div class="menu-popover"><button type="button" data-action="save">Save</button><button type="button" data-action="export">Export scenario</button><button type="button" data-action="load">Load</button><button type="button" data-action="reset">Reset</button></div></details>' +
       '<details><summary>Settings</summary><div class="menu-popover"><label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label><label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label></div></details>' +
       '<details><summary>Help</summary><div class="menu-popover hint">RMB: order / return · Wheel: zoom · Space or MMB: pan · F: focus selection</div></details>' +
@@ -53,6 +54,7 @@
     if (!deployButton) throw new Error('Missing deploy button');
     requiredElement('[data-action="end-mining"]').addEventListener('click', actions.onEndMining);
     requiredElement('[data-action="salvage-all"]').addEventListener('click', actions.onSalvageAll);
+    requiredElement('[data-action="return-home"]').addEventListener('click', actions.onReturnHome);
     deployButton.addEventListener('click', actions.onDeployPlatform);
     var stressButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="stress"]'));
     var fleet = /** @type {HTMLElement} */ (host.querySelector('[data-role="fleet"]'));
@@ -144,6 +146,12 @@
             !ship.carryingSection && !ship.platformId && !ship.towTarget &&
             (ship.order.kind === 'idle' || ship.order.kind === 'return');
         });
+        var selectedShips = world.ships.filter(function (ship) { return world.selectedShipIds.indexOf(ship.id) !== -1; });
+        var canReturnHome = selectedShips.some(function (ship) {
+          return ship.type !== 'mothership' && ship.type !== 'shuttle' && ship.speed > 0 && !ship.disabled && !ship.docked;
+        });
+        var returnButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="return-home"]'));
+        returnButton.hidden = !canReturnHome;
         salvageButton.disabled = !selectedTug || !world.wrecks.some(function (wreck) { return !wreck.towedBy; }) &&
           !world.ships.some(function (ship) { return ship.type === 'escort' && ship.disabled && !ship.repairRemaining && ship.launchElapsed == null && !ship.towedBy; });
         salvageButton.hidden = !selectedTug;
@@ -207,26 +215,32 @@
 
         if (world.selectedPlatformId) {
           var selectedPlatform = world.platforms.filter(function (platform) { return platform.id === world.selectedPlatformId; })[0];
-          requiredElement('[data-role="selection"]').textContent = selectedPlatform ? selectedPlatform.id + ' · mining platform · ' +
-            (selectedPlatform.workerIds || []).length + '/5 workers · ' + selectedPlatform.state : 'None';
+          requiredElement('[data-role="selection"]').textContent = selectedPlatform ? selectedPlatform.id : 'None';
+          requiredElement('[data-role="selection-status"]').textContent = selectedPlatform ? 'Mining platform · ' +
+            (selectedPlatform.workerIds || []).length + '/5 workers · ' + selectedPlatform.state : '';
+          requiredElement('[data-role="selection-dv"]').textContent = '—';
+          requiredElement('[data-role="selection-fuel"]').textContent = '—';
         } else if (world.selectedShipIds.length === 0) {
           requiredElement('[data-role="selection"]').textContent = 'None';
+          requiredElement('[data-role="selection-status"]').textContent = 'Select an entity in the viewport or fleet.';
+          requiredElement('[data-role="selection-dv"]').textContent = '—';
+          requiredElement('[data-role="selection-fuel"]').textContent = '—';
         } else {
-          requiredElement('[data-role="selection"]').textContent = world.ships
-            .filter(function (ship) {
-              return world.selectedShipIds.indexOf(ship.id) !== -1;
-            })
-            .map(function (ship) {
+          var selectedDetails = selectedShips.map(function (ship) {
               var status = (ship.unloadRemainingSeconds || 0) > 0 ? 'unloading cargo' : ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
                 ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : '';
               if (!status) status = ship.docked ? 'docked / refuelled' : ship.order.kind === 'return' ?
                 (ship.order.kind === 'return' && ship.order.automatic ? 'fuel reserve / returning' : 'returning') : ship.order.kind === 'deploy' ? 'deploying platform' :
                 ship.order.kind === 'retrieve-platform' ? 'retrieving platform' : ship.propulsion && ship.propulsion.fuelKg < 0.001 ? 'fuel empty / coasting' : '';
               var physical = sim.physicalStats(world, ship);
-              return ship.name + (status ? ' (' + status + ')' : '') + ' · ' + physical.lengthM + ' m · ' +
-                Math.round(physical.massKg / 1000) + ' t · ' + physical.accelerationMps2.toFixed(3) + ' m/s²' + (ship.propulsion ? ' · Δv ' + Math.floor(sim.remainingDeltaV(world, ship)) + ' m/s · fuel ' + (ship.propulsion.fuelKg / 1000).toFixed(1) + ' t' : '') + (ship.platformId ? ' · platform aboard' : '');
-            })
-            .join(', ');
+              return { ship: ship, status: status, physical: physical };
+            });
+          requiredElement('[data-role="selection"]').textContent = selectedDetails.map(function (detail) { return detail.ship.name; }).join(', ');
+          requiredElement('[data-role="selection-status"]').textContent = selectedDetails.map(function (detail) {
+            return (detail.status || 'active') + ' · ' + detail.physical.lengthM + ' m · ' + Math.round(detail.physical.massKg / 1000) + ' t · ' + detail.physical.accelerationMps2.toFixed(3) + ' m/s²' + (detail.ship.platformId ? ' · platform aboard' : '');
+          }).join(', ');
+          requiredElement('[data-role="selection-dv"]').textContent = selectedDetails.length === 1 && selectedDetails[0].ship.propulsion ? Math.floor(sim.remainingDeltaV(world, selectedDetails[0].ship)) + ' m/s' : '—';
+          requiredElement('[data-role="selection-fuel"]').textContent = selectedDetails.length === 1 && selectedDetails[0].ship.propulsion ? (selectedDetails[0].ship.propulsion.fuelKg / 1000).toFixed(1) + ' t' : '—';
         }
 
         stressButton.dataset.active = stats.stressEnabled ? 'true' : 'false';
