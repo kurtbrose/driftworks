@@ -26,7 +26,7 @@
 <script src="../src/tactical/camera.js?v=20260920-population1"></script>
 <script src="../src/audio.js?v=20260920-population1"></script>
 <script src="../src/hud.js?v=20260920-population1"></script>
-<script src="../src/game.js?v=20260920-asteroid-shader6"></script>
+<script src="../src/game.js?v=20260920-asteroid-shader12"></script>
 <script>
   const seedBytes=new Uint32Array(1);crypto.getRandomValues(seedBytes);const panelSeed=seedBytes[0];
   document.querySelector('#seed').textContent='Panel seed: '+panelSeed.toString(16).padStart(8,'0');
@@ -37,7 +37,7 @@
     const radius=55+Math.round(random()*15);const a={id:'play-'+panelSeed+'-'+i+'-'+Math.floor(random()*0xffffffff),radius,
       position:{x:110+(i%5)*220,y:80+Math.floor(i/5)*175},rotation:random()*Math.PI*2,ore:100,oreInitial:100,
       angularVelocity:(random()<.5?-1:1)*(.025+random()*.055)};
-    const g=Driftworks.game.createAsteroidGraphic();app.stage.addChild(g.container);Driftworks.game.paintAsteroid(g,a);samples.push({a,g});
+    const g=Driftworks.game.createAsteroidGraphic();app.stage.addChild(g.container);Driftworks.game.paintAsteroid(g,a,app.stage.scale.x);samples.push({a,g});
     const v=Driftworks.game.asteroidVisualDescription(a);const dominant=v.bulk.indexOf(Math.max(...v.bulk));
     const label=new PIXI.Text(names[dominant]+' · '+v.surfaceProfile.state,{fontFamily:'system-ui',fontSize:12,fill:0xc9d1d2});label.anchor.set(.5);
     label.position.set(a.position.x,a.position.y+78);app.stage.addChild(label);
@@ -45,12 +45,13 @@
   let rotating=true;document.querySelector('#rotation').onclick=function(){rotating=!rotating;this.textContent=rotating?'Pause rotation':'Resume rotation';};
   function updateLight(){const azimuth=Number(document.querySelector('#azimuth').value)*Math.PI/180;
     const elevation=Number(document.querySelector('#elevation').value)*Math.PI/180;Driftworks.game.setAsteroidLight(azimuth,elevation);
-    samples.forEach(({a,g})=>Driftworks.game.paintAsteroid(g,a));}
+    samples.forEach(({a,g})=>Driftworks.game.paintAsteroid(g,a,app.stage.scale.x));}
   document.querySelector('#azimuth').oninput=updateLight;document.querySelector('#elevation').oninput=updateLight;
   document.querySelector('#regenerate').onclick=()=>location.reload();
   const zoomLevels=[1,6,128],zoomLabels=['Close-up','128×','Overview'];let zoomIndex=0;
   document.querySelector('#detail').onclick=function(){zoomIndex=(zoomIndex+1)%zoomLevels.length;const zoom=zoomLevels[zoomIndex];this.textContent=zoomLabels[zoomIndex];
-    app.stage.scale.set(zoom);app.stage.position.set(zoom===1?0:550-samples[0].a.position.x*zoom,zoom===1?0:360-samples[0].a.position.y*zoom);};
-  app.ticker.add(delta=>{if(rotating)samples.forEach(({a,g})=>{a.rotation+=delta/60*a.angularVelocity;Driftworks.game.paintAsteroid(g,a);});});
+    app.stage.scale.set(zoom);app.stage.position.set(zoom===1?0:550-samples[0].a.position.x*zoom,zoom===1?0:360-samples[0].a.position.y*zoom);
+    samples.forEach(({a,g})=>Driftworks.game.paintAsteroid(g,a,zoom));};
+  app.ticker.add(delta=>{if(rotating)samples.forEach(({a,g})=>{a.rotation+=delta/60*a.angularVelocity;Driftworks.game.paintAsteroid(g,a,app.stage.scale.x);});});
 </script>
 </html>

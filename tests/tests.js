@@ -51,7 +51,7 @@
       roughnessByDominant[winner].push(visual.surfaceProfile.roughnessAmp);
       assertClose(visual.bulk.reduce(function (a, b) { return a + b; }, 0), 1);
       assert(visual.bulk.every(function (fraction) { return fraction > 0; }), 'Every bulk material must be present');
-      assert(visual.craters.length >= 34 && visual.craters.length <= 48, 'Shader crater population is dense and bounded');
+      assert(visual.craters.length >= 102 && visual.craters.length <= 144, 'Shader crater population is dense and bounded');
       assert(visual.relief.blobs.length === 5, 'Every asteroid has a coherent large-scale relief field');
       assert(['fresh', 'dusty', 'battered', 'fractured', 'rubble-pile'].indexOf(visual.surfaceProfile.state) >= 0);
       assert(visual.surfaceProfile.roughnessAmp > 0 && visual.surfaceProfile.grazingBoost > 0);
@@ -104,10 +104,11 @@
     var visual = graphic.visual;
     var uniforms = graphic.shader.uniforms;
     var firstLight = [uniforms.uLight[0], uniforms.uLight[1]];
-    game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.01 }));
+    game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.01 }), 8);
     assert(graphic.visual === visual && graphic.shader.uniforms === uniforms && graphic.container.rotation === 0.01);
     assert(uniforms.uLight[0] !== firstLight[0] || uniforms.uLight[1] !== firstLight[1],
       'Rotation updates continuous local-light uniforms');
+    assertClose(uniforms.uPixelFootprint, 1 / (asteroid.radius * 8), 0.0000001);
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.1 }));
     assert(graphic.visual === visual, 'Rotation does not rebuild procedural geology');
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { radius: asteroid.radius * 2 }));

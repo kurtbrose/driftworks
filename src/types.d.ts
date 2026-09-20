@@ -384,7 +384,11 @@ declare global {
       moveTo: (x: number, y: number) => this; lineTo: (x: number, y: number) => this;
       arc: (x: number, y: number, radius: number, start: number, end: number) => this;
     }
-    class Texture { static WHITE: Texture; }
+    class Texture {
+      static WHITE: Texture;
+      static from(source: unknown): Texture;
+      baseTexture: { scaleMode: number; alphaMode: number; update: () => void };
+    }
     class Filter {
       uniforms: Record<string, unknown>;
       padding: number;

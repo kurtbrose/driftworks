@@ -19,7 +19,7 @@
   /** @typedef {{ graphic: PIXI.DisplayObject, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
   /** @typedef {import('./types').Drone} Drone */
   /** @typedef {import('./types').CombatEvent} CombatEvent */
-  /** @typedef {{ container: PIXI.Container, mesh: PIXI.Mesh, shader: PIXI.Shader, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string }} AsteroidGraphic */
+  /** @typedef {{ container: PIXI.Container, mesh: PIXI.Mesh, shader: PIXI.Shader, craterCanvas: HTMLCanvasElement, craterTexture: PIXI.Texture, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string }} AsteroidGraphic */
   /** @typedef {{ container: PIXI.Container, base: PIXI.Graphics, lighting: PIXI.Graphics, visual: ReturnType<typeof legacyAsteroidVisualDescription> | null, artworkKey: string, lightBucket: number }} LegacyAsteroidGraphic */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
@@ -70,7 +70,9 @@
       fractureDensity: 0.38, craterSharpness: 0.55, rimStrength: 0.52, boulderiness: 0.48, smoothing: 0.32 }
   ];
   var WORLD_LIGHT = { x: -0.813733, y: -0.581238, z: 0.68 };
-  var ASTEROID_MAX_CRATERS = 48;
+  var ASTEROID_MAX_CRATERS = 144;
+  var ASTEROID_CRATER_TEXELS = 4;
+  var ASTEROID_CRATER_TEXTURE_WIDTH = ASTEROID_MAX_CRATERS * ASTEROID_CRATER_TEXELS;
   var ASTEROID_MAX_FIELD_BLOBS = 12;
   var ASTEROID_LIGHT_STEP = Math.PI / 60; // retained only by the dormant legacy painter
   var MAX_EFFECTS = 260;
@@ -487,7 +489,7 @@
           asteroidGraphics[asteroid.id] = asteroidGraphic;
           worldLayer.addChildAt(asteroidGraphic.container, 1);
         }
-        paintAsteroid(asteroidGraphic, asteroid);
+        paintAsteroid(asteroidGraphic, asteroid, world.camera.zoom);
         asteroidGraphic.container.scale.set(semanticScale('asteroid', world.camera.zoom));
       });
 
@@ -2105,7 +2107,7 @@
     var craters = [];
     var craterRng = sim.createRng((seed ^ 0x9e3779b9) >>> 0);
     var craterCount = Math.min(ASTEROID_MAX_CRATERS,
-      34 + Math.floor(craterRng() * 7 + surfaceProfile.pittingDensity * 11));
+      102 + Math.floor(craterRng() * 21 + surfaceProfile.pittingDensity * 33));
     for (var craterIndex = 0; craterIndex < craterCount; craterIndex += 1) {
       var sizeRoll = craterRng();
       var sizeClass = 'small';
@@ -2155,16 +2157,31 @@
     'uniform vec4 uRelief[5];',
     'uniform vec4 uFieldBlobs[12];',
     'uniform float uBlobMaterial[12];',
-    'uniform vec4 uCraterA[48];',
-    'uniform vec4 uCraterB[48];',
+    'uniform sampler2D uCraterData;',
+    'uniform float uCraterTextureWidth;',
     'uniform float uCraterCount;',
     'uniform float uHeterogeneity;',
     'uniform float uSeed;',
+    'uniform float uPixelFootprint;',
     'const float PI=3.141592653589793;',
     'float sat(float x){return clamp(x,0.0,1.0);}',
-    'float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}',
-    'float valueNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);float a=hash21(i),b=hash21(i+vec2(1.0,0.0)),c=hash21(i+vec2(0.0,1.0)),d=hash21(i+vec2(1.0,1.0));return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}',
-    'float wave(vec2 p,float phase,float scale){return valueNoise(p*scale+vec2(phase*.73,phase*1.17))*2.0-1.0;}',
+    'vec2 mod289(vec2 x){return x-floor(x*(1.0/289.0))*289.0;}',
+    'vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}',
+    'vec3 permute(vec3 x){return mod289(((x*34.0)+1.0)*x);}',
+    'float simplexNoise(vec2 v){',
+    ' const vec4 C=vec4(.211324865405187,.366025403784439,-.577350269189626,.024390243902439);',
+    ' vec2 i=floor(v+dot(v,C.yy));vec2 x0=v-i+dot(i,C.xx);vec2 i1=x0.x>x0.y?vec2(1.0,0.0):vec2(0.0,1.0);',
+    ' vec4 x12=x0.xyxy+C.xxzz;x12.xy-=i1;i=mod289(i);',
+    ' vec3 p=permute(permute(i.y+vec3(0.0,i1.y,1.0))+i.x+vec3(0.0,i1.x,1.0));',
+    ' vec3 m=max(.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.0);m=m*m;m=m*m;',
+    ' vec3 x=2.0*fract(p*C.www)-1.0;vec3 h=abs(x)-.5;vec3 ox=floor(x+.5);vec3 a0=x-ox;',
+    ' m*=1.79284291400159-.85373472095314*(a0*a0+h*h);',
+    ' vec3 g;g.x=a0.x*x0.x+h.x*x0.y;g.yz=a0.yz*x12.xz+h.yz*x12.yw;return 130.0*dot(m,g);',
+    '}',
+    'float wave(vec2 p,float phase,float scale){return simplexNoise(p*scale+vec2(phase*.73,phase*1.17));}',
+    'float filteredFbm(vec2 p,float phase,float baseFrequency,float footprint){float sum=0.0;float amplitude=1.0;float frequency=baseFrequency;for(int octave=0;octave<7;octave++){float visibility=1.0-smoothstep(.28,.72,frequency*footprint);if(visibility>.001){sum+=wave(p,phase+float(octave)*17.13,frequency)*amplitude*visibility;}frequency*=2.03;amplitude*=.49;}return sum;}',
+    'float unpack16(vec2 bytes){return (bytes.x*65280.0+bytes.y*255.0)/65535.0;}',
+    'vec4 craterTexel(float crater,float offset){return texture2D(uCraterData,vec2((crater*4.0+offset+.5)/uCraterTextureWidth,.5));}',
     'float boundary(vec2 p){float a=atan(p.y,p.x);return .88+.07*cos(a*3.0)+.05*sin(a*5.0);}',
     'float blobField(vec2 p,float material){float value=0.0;for(int i=0;i<12;i++){vec4 b=uFieldBlobs[i];if(abs(uBlobMaterial[i]-material)<.25&&b.z>0.0){vec2 d=p-b.xy;value+=b.w*exp(-dot(d,d)/(2.0*b.z*b.z));}}return value;}',
     'float baseReliefHeight(vec2 p){',
@@ -2172,13 +2189,13 @@
     ' for(int i=0;i<5;i++){vec4 b=uRelief[i];vec2 d=p-b.xy;h+=b.w*exp(-dot(d,d)/(2.0*b.z*b.z));}',
     ' return h;',
     '}',
-    'float microRelief(vec2 p){float f=13.0+uProfile.y*27.0;return (wave(p,uSeed*1.73,f)*.66+wave(p,uSeed*2.31,f*1.91)*.34)*uProfile.x*.009;}',
-    'float baseHeightAt(vec2 p){float q=min(.997,length(p)/max(.001,boundary(p)));float dome=sqrt(max(.002,1.0-q*q))*.78;return dome+baseReliefHeight(p)+microRelief(p);}',
+    'float microRelief(vec2 p,float footprint){float f=13.0+uProfile.y*27.0;return filteredFbm(p,uSeed*1.73,f,footprint)*uProfile.x*.0055;}',
+    'float baseHeightAt(vec2 p,float footprint){float q=min(.997,length(p)/max(.001,boundary(p)));float dome=sqrt(max(.002,1.0-q*q))*.78;return dome+baseReliefHeight(p)+microRelief(p,footprint);}',
     // Returns age-ordered crater height, analytic x/y slope, and occlusion.
     'vec4 craterSurface(vec2 p){',
     ' float h=0.0;vec2 grad=vec2(0.0);float occ=0.0;float overlaps=0.0;',
-    ' for(int i=0;i<48;i++){if(float(i)<uCraterCount){vec4 a=uCraterA[i];vec4 b=uCraterB[i];vec2 d=p-a.xy;float bound=max(a.z,a.w)*1.35;',
-    '  if(abs(d.x)<bound&&abs(d.y)<bound){vec2 e=vec2((d.x*b.x+d.y*b.y)/a.z,(-d.x*b.y+d.y*b.x)/a.w);float q=length(e);',
+    ' for(int i=0;i<144;i++){if(float(i)<uCraterCount){float fi=float(i);vec4 p0=craterTexel(fi,0.0);vec4 p1=craterTexel(fi,1.0);vec4 a=vec4(unpack16(p0.rg)*2.5-1.25,unpack16(p0.ba)*2.5-1.25,unpack16(p1.rg)*.3,unpack16(p1.ba)*.3);vec2 d=p-a.xy;float bound=max(a.z,a.w)*1.35;',
+    '  if(abs(d.x)<bound&&abs(d.y)<bound){vec4 p2=craterTexel(fi,2.0);vec4 p3=craterTexel(fi,3.0);vec4 b=vec4(unpack16(p2.rg)*2.0-1.0,unpack16(p2.ba)*2.0-1.0,unpack16(p3.rg)*.12,unpack16(p3.ba));vec2 e=vec2((d.x*b.x+d.y*b.y)/a.z,(-d.x*b.y+d.y*b.x)/a.w);float q=length(e);',
     '   if(q<1.35){float safeQ=max(q,.00001);vec2 dq=vec2((e.x*b.x/a.z-e.y*b.y/a.w)/safeQ,(e.x*b.y/a.z+e.y*b.x/a.w)/safeQ);',
     '    float t=clamp((q-.7)/.48,0.0,1.0);float mask=t*t*(3.0-2.0*t);float dm=(q>.7&&q<1.18)?6.0*t*(1.0-t)/.48:0.0;',
     '    float oldH=h;grad=grad*mask+oldH*dm*dq;h=oldH*mask;',
@@ -2189,7 +2206,7 @@
     ' }}',
     ' return vec4(h,grad,min(.58,occ+max(0.0,overlaps-1.0)*.1));',
     '}',
-    'vec3 normalAt(vec2 p,vec2 craterGradient){float e=.0035;float dx=(baseHeightAt(p+vec2(e,0.0))-baseHeightAt(p-vec2(e,0.0)))/(2.0*e)+craterGradient.x;float dy=(baseHeightAt(p+vec2(0.0,e))-baseHeightAt(p-vec2(0.0,e)))/(2.0*e)+craterGradient.y;return normalize(vec3(-dx,-dy,1.0));}',
+    'vec3 normalAt(vec2 p,vec2 craterGradient,float footprint){float e=max(.00035,min(.0035,footprint*.7));float dx=(baseHeightAt(p+vec2(e,0.0),footprint)-baseHeightAt(p-vec2(e,0.0),footprint))/(2.0*e)+craterGradient.x;float dy=(baseHeightAt(p+vec2(0.0,e),footprint)-baseHeightAt(p-vec2(0.0,e),footprint))/(2.0*e)+craterGradient.y;return normalize(vec3(-dx,-dy,1.0));}',
     'vec4 composition(vec2 p){',
     ' float broad=.18+uHeterogeneity*uHeterogeneity*2.45;float med=.06+uHeterogeneity*.52;float chunk=uHeterogeneity*uHeterogeneity*1.65;float temp=1.32-uHeterogeneity*.62;',
     ' vec4 score=log(max(uBulk,vec4(.000001)));',
@@ -2201,9 +2218,9 @@
     '}',
     'void main(){',
     ' vec2 p=vLocalCoord;float q=length(p)/boundary(p);float aa=.0025;float alpha=1.0-smoothstep(1.0-aa,1.0+aa,q);if(alpha<=0.0){gl_FragColor=vec4(0.0);return;}',
-    ' vec4 crater=craterSurface(p);vec3 n=normalAt(p,crater.yz);vec3 light=normalize(uLight);float ndl=dot(n,light);float lit=pow(max(0.0,ndl),.82);float limb=sqrt(max(0.0,1.0-q*q));float grazing=pow(1.0-sat(ndl),1.25);',
+    ' float footprint=uPixelFootprint;vec4 crater=craterSurface(p);vec3 n=normalAt(p,crater.yz,footprint);vec3 light=normalize(uLight);float ndl=dot(n,light);float lit=pow(max(0.0,ndl),.82);float limb=sqrt(max(0.0,1.0-q*q));float grazing=pow(1.0-sat(ndl),1.25);',
     ' vec4 c=composition(p);vec3 albedo=c.x*vec3(.627,.714,.761)+c.y*vec3(.471,.408,.361)+c.z*vec3(.569,.541,.494)+c.w*vec3(.494,.518,.502);',
-    ' float rough=microRelief(p)/max(.001,uProfile.x*.009);float brightness=(.22+lit*.98)*(.66+limb*.34)-crater.w;brightness+=rough*uProfile.z*grazing*.16;',
+    ' float rough=microRelief(p,footprint)/max(.001,uProfile.x*.011);float brightness=(.22+lit*.98)*(.66+limb*.34)-crater.w;brightness+=rough*uProfile.z*grazing*.16;',
     ' vec3 color=albedo*clamp(brightness,.12,1.28);color+=vec3(1.0,.94,.81)*pow(max(0.0,ndl),8.0)*.035;',
     ' gl_FragColor=vec4(color*alpha,alpha);',
     '}'
@@ -2233,35 +2250,66 @@
       if (blobIndex >= ASTEROID_MAX_FIELD_BLOBS) return;
       fieldBlobs.set([blob.x, blob.y, blob.sigma, blob.amp], blobIndex * 4); blobMaterial[blobIndex] = material; blobIndex += 1;
     }); });
-    var craterA = new Float32Array(ASTEROID_MAX_CRATERS * 4), craterB = new Float32Array(ASTEROID_MAX_CRATERS * 4);
-    visual.craters.forEach(function (crater, i) {
-      craterA.set([crater.x, crater.y, crater.rx, crater.ry], i * 4);
-      craterB.set([Math.cos(crater.angle), Math.sin(crater.angle), crater.depth, crater.rimScale], i * 4);
-    });
     return { uLight: new Float32Array([WORLD_LIGHT.x, WORLD_LIGHT.y, WORLD_LIGHT.z]), uBulk: new Float32Array(visual.bulk),
       uFieldLow: new Float32Array(visual.fields.map(function (field) { return field.low; })),
       uFieldMed: new Float32Array(visual.fields.map(function (field) { return field.med; })),
       uProfile: new Float32Array([visual.surfaceProfile.roughnessAmp, visual.surfaceProfile.roughnessFreq,
         visual.surfaceProfile.grazingBoost, visual.surfaceProfile.pittingDensity]),
       uRelief: relief, uFieldBlobs: fieldBlobs, uBlobMaterial: blobMaterial,
-      uCraterA: craterA, uCraterB: craterB, uCraterCount: visual.craters.length,
-      uHeterogeneity: visual.heterogeneity, uSeed: visual.seed };
+      uCraterCount: visual.craters.length,
+      uHeterogeneity: visual.heterogeneity, uSeed: visual.seed, uPixelFootprint: 0.01 };
+  }
+
+  /** Pack two normalized scalars into one RGBA8 texel at 16-bit precision.
+   * @param {Uint8ClampedArray} bytes @param {number} texel @param {number} first @param {number} second
+   */
+  function packAsteroidCraterTexel(bytes, texel, first, second) {
+    var a = Math.round(Math.max(0, Math.min(1, first)) * 65535);
+    var b = Math.round(Math.max(0, Math.min(1, second)) * 65535);
+    var offset = texel * 4;
+    bytes[offset] = a >> 8; bytes[offset + 1] = a & 255;
+    bytes[offset + 2] = b >> 8; bytes[offset + 3] = b & 255;
+  }
+
+  /** @param {AsteroidGraphic} graphic @param {ReturnType<typeof asteroidVisualDescription>} visual */
+  function updateAsteroidCraterTexture(graphic, visual) {
+    var context = graphic.craterCanvas.getContext('2d');
+    if (!context) return;
+    var image = context.createImageData(ASTEROID_CRATER_TEXTURE_WIDTH, 1);
+    visual.craters.forEach(function (crater, index) {
+      var texel = index * ASTEROID_CRATER_TEXELS;
+      packAsteroidCraterTexel(image.data, texel, (crater.x + 1.25) / 2.5, (crater.y + 1.25) / 2.5);
+      packAsteroidCraterTexel(image.data, texel + 1, crater.rx / 0.3, crater.ry / 0.3);
+      packAsteroidCraterTexel(image.data, texel + 2, (Math.cos(crater.angle) + 1) / 2,
+        (Math.sin(crater.angle) + 1) / 2);
+      packAsteroidCraterTexel(image.data, texel + 3, crater.depth / 0.12, crater.rimScale);
+    });
+    context.putImageData(image, 0, 0);
+    graphic.craterTexture.baseTexture.update();
   }
 
   /** @returns {AsteroidGraphic} */
   function createAsteroidGraphic() {
     var container = new PIXI.Container();
+    var craterCanvas = document.createElement('canvas');
+    craterCanvas.width = ASTEROID_CRATER_TEXTURE_WIDTH;
+    craterCanvas.height = 1;
+    var craterTexture = PIXI.Texture.from(craterCanvas);
+    craterTexture.baseTexture.scaleMode = 0;
+    craterTexture.baseTexture.alphaMode = 0;
     var geometry = new PIXI.Geometry()
       .addAttribute('aVertexPosition', [-1.02, -1.02, 1.02, -1.02, 1.02, 1.02, -1.02, 1.02], 2)
       .addIndex([0, 1, 2, 0, 2, 3]);
-    var shader = PIXI.Shader.from(ASTEROID_VERTEX_SHADER, ASTEROID_FRAGMENT_SHADER, {});
+    var shader = PIXI.Shader.from(ASTEROID_VERTEX_SHADER, ASTEROID_FRAGMENT_SHADER,
+      { uCraterData: craterTexture, uCraterTextureWidth: ASTEROID_CRATER_TEXTURE_WIDTH });
     var mesh = new PIXI.Mesh(geometry, shader);
     container.addChild(mesh);
-    return { container: container, mesh: mesh, shader: shader, visual: null, artworkKey: '' };
+    return { container: container, mesh: mesh, shader: shader, craterCanvas: craterCanvas,
+      craterTexture: craterTexture, visual: null, artworkKey: '' };
   }
 
-  /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid */
-  function paintAsteroid(graphic, asteroid) {
+  /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid @param {number} [zoom] */
+  function paintAsteroid(graphic, asteroid, zoom) {
     graphic.container.position.set(asteroid.position.x, asteroid.position.y);
     graphic.container.rotation = asteroid.rotation;
     var key = asteroid.id + ':' + asteroid.radius;
@@ -2269,6 +2317,7 @@
       graphic.visual = asteroidVisualDescription(asteroid);
       graphic.artworkKey = key;
       graphic.mesh.scale.set(asteroid.radius);
+      if (graphic.craterCanvas) updateAsteroidCraterTexture(graphic, graphic.visual);
       var nextUniforms = /** @type {Record<string, unknown>} */ (asteroidShaderUniforms(graphic.visual));
       Object.keys(nextUniforms).forEach(function (name) { graphic.shader.uniforms[name] = nextUniforms[name]; });
     }
@@ -2277,6 +2326,7 @@
     lightUniform[0] = WORLD_LIGHT.x * c - WORLD_LIGHT.y * s;
     lightUniform[1] = WORLD_LIGHT.x * s + WORLD_LIGHT.y * c;
     lightUniform[2] = WORLD_LIGHT.z;
+    graphic.shader.uniforms.uPixelFootprint = 1 / Math.max(1, asteroid.radius * (zoom || 1));
   }
 
   /** Playground/debug control; azimuth and elevation are radians. */

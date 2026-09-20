@@ -145,9 +145,18 @@ spheroid dome, five broad bulges/basins, low-frequency undulation, crater bowls,
 raised rims and fine relief. Finite differences across that field derive the
 local normal. The same shader applies diffuse light, limb rolloff and crater
 occlusion. Fine texture comes only from the relief response; explicit dot and
-line texture marks are not drawn.
+line texture marks are not drawn. Relief and material variation use seeded 2D
+simplex noise so no axis-aligned noise cells can appear as square patches.
+Microrelief is a seven-octave asteroid-local fBm hierarchy. Fragment derivatives
+measure the local-space pixel footprint; each octave fades out before it becomes
+subpixel and fades back in as zoom makes it resolvable. Zoom therefore refines
+the same seeded surface instead of resampling or replacing it, while unresolved
+high-frequency work contributes neither aliasing nor visible crawling.
 
-Crater work is a single bounded pass per fragment. A conservative axis-aligned
+Crater parameters are packed once into a one-row RGBA8 data texture, using two
+16-bit fixed-point values per texel and four texels per crater. This avoids
+fragment-uniform limits while remaining compatible with WebGL implementations
+that do not expose floating-point textures. Crater work is a single bounded pass per fragment. A conservative axis-aligned
 bound rejects distant craters before ellipse transforms. For contributing
 craters, the shader accumulates age-ordered height, analytic height gradients
 and occlusion together; finite-difference normal samples evaluate only the cheap
@@ -165,7 +174,7 @@ term, keeping frontal faces quiet while revealing texture near the terminator.
 Craters are stamped oldest to newest into the same relief field. New bowls erase
 older crater relief locally, so surviving rims, concave wall counter-shading and
 overlap shadows all follow the combined geometry rather than drawn ellipse
-bands. Each body carries a bounded 34–48-impact population: roughly 70% small,
+bands. Each body carries a bounded 102–144-impact population: roughly 70% small,
 24% medium, 5% large and 1% basin-scale. Older rims soften, basin-scale impacts
 are broad and shallow, and independently sampled centers may overlap naturally
 or approach the limb so the silhouette clips their geometry. Centers are sampled
