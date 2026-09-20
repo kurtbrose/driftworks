@@ -52,10 +52,10 @@
   };
   // Artwork-only mixes: simulation currently has one undifferentiated ore resource.
   var ASTEROID_PALETTES = [
-    { name: 'ice', fill: 0x718d9b, stroke: 0xadc2cb, deposit: 0x859faa, detail: 0x49636e },
-    { name: 'volatiles', fill: 0x625953, stroke: 0x9b9085, deposit: 0x897166, detail: 0x403d39 },
-    { name: 'metals', fill: 0x707978, stroke: 0xaaa99c, deposit: 0x96978b, detail: 0x4d5656 },
-    { name: 'silicates', fill: 0x655f57, stroke: 0xb6aa9b, deposit: 0x827b6f, detail: 0x393632 }
+    { name: 'ice', rgb: [160, 182, 194] },
+    { name: 'volatiles', rgb: [120, 104, 92] },
+    { name: 'metals', rgb: [145, 138, 126] },
+    { name: 'silicates', rgb: [126, 132, 128] }
   ];
   /** @type {WeakMap<PIXI.Graphics, string>} */
   var asteroidArtworkKeys = new WeakMap();
@@ -1483,6 +1483,65 @@
     }
   }
 
+  /** @param {number} value @returns {number} */
+  function smoothstep(value) {
+    value = Math.max(0, Math.min(1, value));
+    return value * value * (3 - 2 * value);
+  }
+
+  /** @param {number[]} rgb @param {number} lightness @returns {number} */
+  function asteroidColor(rgb, lightness) {
+    /** @param {number} value */
+    var channel = function (value) { return Math.max(0, Math.min(255, Math.round(value * lightness))); };
+    return channel(rgb[0]) * 0x10000 + channel(rgb[1]) * 0x100 + channel(rgb[2]);
+  }
+
+  /** Smooth deterministic field in roughly [-1, 1].
+   * @param {number} x @param {number} y @param {number} phase @param {number} scale
+   */
+  function asteroidWave(x, y, phase, scale) {
+    return (Math.sin((x * 1.17 + y * 0.73) * scale + phase) +
+      Math.cos((x * -0.61 + y * 1.31) * scale + phase * 1.63)) * 0.5;
+  }
+
+  /** @param {number[]} bulk @param {{ low: number, med: number, blobs: { x: number, y: number, sigma: number, amp: number }[] }[]} fields @param {number} heterogeneity @param {number} x @param {number} y @returns {number[]} */
+  function asteroidCompositionAt(bulk, fields, heterogeneity, x, y) {
+    var broad = 0.15 + heterogeneity * 0.55;
+    var medium = 0.05 + heterogeneity * 0.2;
+    var chunk = heterogeneity * 0.5;
+    var temperature = 1.35 - heterogeneity * 0.6;
+    var scores = fields.map(function (field, index) {
+      var blobs = field.blobs.reduce(function (sum, blob) {
+        var dx = x - blob.x, dy = y - blob.y;
+        return sum + blob.amp * Math.exp(-(dx * dx + dy * dy) / (2 * blob.sigma * blob.sigma));
+      }, 0);
+      return Math.log(bulk[index] + 0.000001) +
+        broad * asteroidWave(x, y, field.low, 1.8) +
+        medium * asteroidWave(x, y, field.med, 5) + chunk * blobs;
+    });
+    var peak = Math.max.apply(null, scores);
+    var values = scores.map(function (score) { return Math.exp((score - peak) / temperature); });
+    var total = values.reduce(function (sum, value) { return sum + value; }, 0);
+    values = values.map(function (value) { return Math.max(0.03, Math.min(0.9, value / total)); });
+    total = values.reduce(function (sum, value) { return sum + value; }, 0);
+    return values.map(function (value) { return value / total; });
+  }
+
+  /** @param {number[]} composition @param {number} topography @returns {number} */
+  function asteroidCompositionColor(composition, topography) {
+    var mixed = [0, 0, 0];
+    var dominant = 0;
+    composition.forEach(function (fraction, index) {
+      if (fraction > composition[dominant]) dominant = index;
+      ASTEROID_PALETTES[index].rgb.forEach(function (channel, c) { mixed[c] += fraction * channel; });
+    });
+    var boost = smoothstep((composition[dominant] - 0.45) / 0.35) * 0.25;
+    var target = ASTEROID_PALETTES[dominant].rgb;
+    return asteroidColor(mixed.map(function (channel, index) {
+      return channel + (target[index] - channel) * boost;
+    }), 1 + topography * 0.055);
+  }
+
   /** Deterministic body-local artwork, independent of simulation RNG and depletion.
    * @param {Asteroid} asteroid
    */
@@ -1490,120 +1549,73 @@
     var seed = 2166136261;
     for (var h = 0; h < asteroid.id.length; h += 1) seed = Math.imul(seed ^ asteroid.id.charCodeAt(h), 16777619);
     var rng = sim.createRng(seed >>> 0);
-    var dominant = Math.floor(rng() * 4);
-    var secondary = (dominant + 1 + Math.floor(rng() * 3)) % 4;
-    var tertiary = [0, 1, 2, 3].filter(function (m) { return m !== dominant && m !== secondary; })[0];
-    var composition = [0, 0, 0, 0];
-    var secondaryCount = rng() < 0.15 ? 0 : (rng() < 0.65 ? 1 : 2);
-    composition[dominant] = 0.55 + rng() * 0.2;
-    composition[secondary] = (1 - composition[dominant]) * (0.6 + rng() * 0.25);
-    composition[tertiary] = 1 - composition[dominant] - composition[secondary];
-    if (secondaryCount < 2) { composition[secondary] += composition[tertiary]; composition[tertiary] = 0; }
-    if (!secondaryCount) { composition[dominant] = 1; composition[secondary] = 0; }
-    var radius = asteroid.radius;
-    var shape = [];
-    for (var i = 0; i < 120; i += 1) {
-      var angle = i / 120 * Math.PI * 2;
-      var r = sim.surfaceRadius(asteroid, angle);
-      shape.push(Math.cos(angle) * r, Math.sin(angle) * r);
-    }
-    /** @type {{ material: number, points: number[], x: number, y: number, extent: number, satellite: boolean }[]} */
-    var deposits = [];
-    var count = secondaryCount ? 1 + Math.floor(rng() * 3) : 0;
-    for (var j = 0; j < count; j += 1) {
-      var material = secondaryCount === 2 && rng() < 0.3 ? tertiary : secondary;
-      // Surface exposure is deliberately independent of bulk abundance.
-      var size = radius * (0.22 + rng() * (count === 1 ? 0.09 : 0.035));
-      var a = 0, x = 0, y = 0;
-      var placed = false;
-      for (var attempt = 0; attempt < 80; attempt += 1) {
-        a = rng() * Math.PI * 2;
-        var distance = Math.sqrt(rng()) * sim.surfaceRadius(asteroid, a) * 0.98;
-        x = Math.cos(a) * distance; y = Math.sin(a) * distance;
-        if (deposits.every(function (other) {
-          return Math.hypot(x - other.x, y - other.y) > size + other.extent;
-        })) { placed = true; break; }
+    var weights = [0.85 + rng() * 0.4, 0.85 + rng() * 0.4, 0.85 + rng() * 0.4, 0.85 + rng() * 0.4];
+    var bulk = weights.map(function (weight) { return -Math.log(Math.max(0.000001, rng())) * weight; });
+    var bulkTotal = bulk.reduce(function (sum, value) { return sum + value; }, 0);
+    bulk = bulk.map(function (value) { return value / bulkTotal; });
+    var heterogeneity = rng();
+    var fields = ASTEROID_PALETTES.map(function () {
+      var blobs = [];
+      var blobCount = Math.floor(rng() * (1 + Math.round(heterogeneity * 3)));
+      for (var b = 0; b < blobCount; b += 1) {
+        blobs.push({ x: rng() - 0.5, y: rng() - 0.5,
+          sigma: 0.12 + rng() * 0.16, amp: -0.6 + rng() * 1.4 });
       }
-      if (!placed) continue;
-      var points = [];
-      var corners = 15 + Math.floor(rng() * 5);
-      var aspect = 0.72 + rng() * 0.2;
-      // Elongate along the local limb tangent, derived from the shared surface.
-      var before = sim.surfaceRadius(asteroid, a - 0.01);
-      var after = sim.surfaceRadius(asteroid, a + 0.01);
-      var tangent = Math.atan2(Math.sin(a + 0.01) * after - Math.sin(a - 0.01) * before,
-        Math.cos(a + 0.01) * after - Math.cos(a - 0.01) * before);
-      for (var k = 0; k < corners; k += 1) {
-        var theta = k / corners * Math.PI * 2;
-        var roughness = 0.68 + rng() * 0.32;
-        var localX = Math.cos(theta) * size * roughness;
-        var localY = Math.sin(theta) * size * aspect * roughness;
-        points.push(x + localX * Math.cos(tangent) - localY * Math.sin(tangent),
-          y + localX * Math.sin(tangent) + localY * Math.cos(tangent));
-      }
-      // Sample patch edges before trimming them to the exact rendered outline.
-      // Dense samples follow the curved limb rather than joining cut ends with a chord.
-      var trimmed = [];
-      for (var edge = 0; edge < points.length; edge += 2) {
-        var next = (edge + 2) % points.length;
-        for (var sample = 0; sample < 8; sample += 1) {
-          var blend = sample / 8;
-          var px = points[edge] + (points[next] - points[edge]) * blend;
-          var py = points[edge + 1] + (points[next + 1] - points[edge + 1]) * blend;
-          var theta = (Math.atan2(py, px) + Math.PI * 2) % (Math.PI * 2);
-          var segment = Math.floor(theta / (Math.PI * 2) * 120) * 2;
-          var following = (segment + 2) % shape.length;
-          var ax = shape[segment], ay = shape[segment + 1];
-          var dx = shape[following] - ax, dy = shape[following + 1] - ay;
-          var limit = (ax * dy - ay * dx) / (Math.cos(theta) * dy - Math.sin(theta) * dx);
-          var scale = Math.min(1, limit / Math.hypot(px, py));
-          trimmed.push(px * scale, py * scale);
-        }
-      }
-      deposits.push({ material: material, points: trimmed, x: x, y: y, extent: size, satellite: false });
-    }
-    deposits.slice().forEach(function (parent) {
-      if (rng() >= 0.25) return;
-      var size = radius * (0.025 + rng() * 0.02);
-      for (var attempt = 0; attempt < 16; attempt += 1) {
-        var angle = rng() * Math.PI * 2;
-        var distance = parent.extent + size + radius * 0.015;
-        var x = parent.x + Math.cos(angle) * distance;
-        var y = parent.y + Math.sin(angle) * distance;
-        // Keep these tiny fragments on the body and clear of other inclusions.
-        if (Math.hypot(x, y) + size > radius * 0.75 || !deposits.every(function (other) {
-          return Math.hypot(x - other.x, y - other.y) > size + other.extent;
-        })) continue;
-        var points = [];
-        for (var k = 0; k < 9; k += 1) {
-          var theta = k / 9 * Math.PI * 2;
-          var extent = size * (0.65 + rng() * 0.35);
-          points.push(x + Math.cos(theta) * extent, y + Math.sin(theta) * extent);
-        }
-        deposits.push({ material: parent.material, points: points, x: x, y: y, extent: size, satellite: true });
-        break;
-      }
+      return { low: rng() * 100, med: rng() * 100, blobs: blobs };
     });
-    /** @type {{ x: number, y: number, rx: number, ry: number, angle: number }[]} */
-    var craters = [];
-    // An independent stream lets bare bodies be heavily cratered and rich ones quiet.
-    rng = sim.createRng((seed ^ 0x9e3779b9) >>> 0);
-    var craterCount = rng() < 0.25 ? 0 : 2 + Math.floor(rng() * 15);
-    var cluster = rng() * Math.PI * 2;
-    for (var c = 0; c < craterCount; c += 1) {
-      var ca = cluster + (rng() - 0.5) * 3.8;
-      var cd = radius * (0.15 + rng() * 0.48);
-      var crater = { x: Math.cos(ca) * cd, y: Math.sin(ca) * cd,
-        rx: radius * (0.025 + rng() * 0.055), ry: radius * (0.018 + rng() * 0.025), angle: rng() * Math.PI };
-      var extent = Math.max(crater.rx, crater.ry);
-      // Craters occupy exposed host rock rather than drawing across inclusions.
-      if (deposits.every(function (deposit) {
-        return Math.hypot(crater.x - deposit.x, crater.y - deposit.y) > deposit.extent + extent + radius * 0.012;
-      }) && craters.every(function (other) {
-        return Math.hypot(crater.x - other.x, crater.y - other.y) > extent + Math.max(other.rx, other.ry);
-      })) craters.push(crater);
+    var radius = asteroid.radius;
+    var angleCount = 32;
+    var ringCount = 5;
+    var angles = [];
+    for (var i = 0; i < angleCount; i += 1) angles.push((i + (rng() - 0.5) * 0.42) / angleCount * Math.PI * 2);
+    /** @type {number[][][]} */
+    var rings = [];
+    for (var ring = 1; ring <= ringCount; ring += 1) {
+      rings.push(angles.map(function (angle, index) {
+        var fraction = ring === ringCount ? 1 : ring / ringCount + 0.025 * Math.sin(index * 2.17 + ring * 1.31);
+        var r = sim.surfaceRadius(asteroid, angle) * fraction;
+        return [Math.cos(angle) * r, Math.sin(angle) * r];
+      }));
     }
-    return { shape: shape, composition: composition, dominant: dominant, deposits: deposits, craters: craters };
+    var center = [(rng() - 0.5) * radius * 0.04, (rng() - 0.5) * radius * 0.04];
+    /** @type {{ points: number[], composition: number[], color: number }[]} */
+    var cells = [];
+    /** @param {number[]} points */
+    function addCell(points) {
+      var x = 0, y = 0;
+      for (var p = 0; p < points.length; p += 2) { x += points[p]; y += points[p + 1]; }
+      x /= points.length / 2; y /= points.length / 2;
+      var nx = x / radius, ny = y / radius;
+      var composition = asteroidCompositionAt(bulk, fields, heterogeneity, nx, ny);
+      var topo = asteroidWave(nx, ny, seed * 0.0001, 4.2) * 0.7 + asteroidWave(nx, ny, seed * 0.00017, 9) * 0.3;
+      cells.push({ points: points, composition: composition, color: asteroidCompositionColor(composition, topo) });
+    }
+    for (var sector = 0; sector < angleCount; sector += 1) {
+      var next = (sector + 1) % angleCount;
+      addCell([center[0], center[1], rings[0][sector][0], rings[0][sector][1], rings[0][next][0], rings[0][next][1]]);
+      for (var band = 1; band < ringCount; band += 1) {
+        addCell([rings[band - 1][sector][0], rings[band - 1][sector][1],
+          rings[band][sector][0], rings[band][sector][1], rings[band][next][0], rings[band][next][1],
+          rings[band - 1][next][0], rings[band - 1][next][1]]);
+      }
+    }
+    /** @type {{ x: number, y: number, rx: number, ry: number, angle: number, fill: number, stroke: number }[]} */
+    var craters = [];
+    var craterRng = sim.createRng((seed ^ 0x9e3779b9) >>> 0);
+    var craterCount = craterRng() < 0.22 ? 0 : 2 + Math.floor(craterRng() * 14);
+    for (var c = 0; c < craterCount; c += 1) {
+      var ca = craterRng() * Math.PI * 2;
+      var cd = radius * (0.12 + craterRng() * 0.55);
+      var x = Math.cos(ca) * cd, y = Math.sin(ca) * cd;
+      var local = asteroidCompositionAt(bulk, fields, heterogeneity, x / radius, y / radius);
+      var localColor = asteroidCompositionColor(local, 0);
+      var rgb = [(localColor >> 16) & 255, (localColor >> 8) & 255, localColor & 255];
+      craters.push({ x: x, y: y, rx: radius * (0.022 + craterRng() * 0.05),
+        ry: radius * (0.016 + craterRng() * 0.025), angle: craterRng() * Math.PI,
+        fill: asteroidColor(rgb, 0.88), stroke: asteroidColor(rgb, 0.62) });
+    }
+    var shape = rings[ringCount - 1].reduce(function (points, point) { return points.concat(point); }, []);
+    return { shape: shape, bulk: bulk, heterogeneity: heterogeneity, fields: fields, cells: cells, craters: craters };
   }
 
   /** @param {PIXI.Graphics} graphics @param {Asteroid} asteroid */
@@ -1614,20 +1626,17 @@
     if (asteroidArtworkKeys.get(graphics) === key) return;
     asteroidArtworkKeys.set(graphics, key);
     var visual = asteroidVisualDescription(asteroid);
-    var palette = ASTEROID_PALETTES[visual.dominant];
     graphics.clear();
-    graphics.lineStyle(1, palette.stroke, 0.82);
-    graphics.beginFill(palette.fill);
-    graphics.drawPolygon(visual.shape);
-    graphics.endFill();
-    visual.deposits.forEach(function (deposit) {
-      var material = ASTEROID_PALETTES[deposit.material];
+    visual.cells.forEach(function (cell) {
       graphics.lineStyle(0);
-      graphics.beginFill(material.deposit, 1);
-      graphics.drawPolygon(deposit.points);
+      graphics.beginFill(cell.color, 1);
+      graphics.drawPolygon(cell.points);
       graphics.endFill();
     });
-    graphics.lineStyle(1, palette.detail, 0.6);
+    var outline = asteroidCompositionColor(visual.bulk, 0);
+    var outlineRgb = [(outline >> 16) & 255, (outline >> 8) & 255, outline & 255];
+    graphics.lineStyle(1, asteroidColor(outlineRgb, 1.28), 0.82);
+    graphics.drawPolygon(visual.shape);
     visual.craters.forEach(function (crater) {
       var points = [];
       for (var i = 0; i < 24; i += 1) {
@@ -1637,7 +1646,10 @@
         points.push(crater.x + x * Math.cos(crater.angle) - y * Math.sin(crater.angle),
           crater.y + x * Math.sin(crater.angle) + y * Math.cos(crater.angle));
       }
+      graphics.lineStyle(1, crater.stroke, 0.62);
+      graphics.beginFill(crater.fill, 0.34);
       graphics.drawPolygon(points);
+      graphics.endFill();
     });
   }
 

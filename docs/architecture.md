@@ -128,19 +128,18 @@ to the shared helper tests.
 ## Asteroid artwork
 
 Asteroid artwork in `game.js` uses `asteroidVisualDescription` to derive a stable
-material mix and body-local deposits/craters from the asteroid ID. These mixes
-are illustrative: simulation still models undifferentiated ore. The outline
-is visually dominant: small opaque, unoutlined, irregular inclusions occupy less
-than 20% of the surface, independent of bulk material ratios. Deposits do not
-overlap, and craters stay on exposed host rock, away from deposit boundaries.
-Centers are seeded across the full body rather than spaced around a ring;
-deposits reaching the limb are trimmed to the sampled silhouette.
-Most bodies have 1–3 main deposits of 1–2 secondary materials; some are bare.
-Each main deposit has a 25% chance to try placing a tiny satellite fleck nearby.
-Patches align loosely with the local limb tangent. Crater density uses its own
-seeded random stream so bare rocks can be crater-heavy and rich rocks quiet.
-The outline
-continues to use `sim.surfaceRadius` so mining sites and hit testing agree.
+four-material bulk composition and a body-local composition field from the
+asteroid ID. Every point is a normalized mixture of ice, volatiles, metals and
+silicates; there is no generic host rock or deposit overlay. Low- and
+medium-frequency fields plus sparse radial blobs bias the local mixture around
+the bulk average. Heterogeneity varies per body, controlling field strength and
+softmax temperature. Local fractions are clamped away from pure materials.
+
+The painter tessellates the complete silhouette into irregular radial cells and
+colors each cell from its local mixed composition, with a small independent
+topographic lightness shift. Craters are generated independently and tinted from
+the composition beneath them. The outline continues to use `sim.surfaceRadius`
+so mining sites and hit testing agree.
 `paintAsteroid` retains Pixi vector geometry per graphic and ID/radius, updating
 only transforms each frame; this avoids texture resolution limits at inspection
 zoom. No artwork fields are serialized. `tests/asteroid-art.html` displays twenty

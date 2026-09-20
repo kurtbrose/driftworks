@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><title>Asteroid material study</title>
 <style>body{margin:0;background:#10171b;color:#c9d1d2;font:14px system-ui}header{padding:20px 28px}h1{font-size:20px;margin:0 0 8px}p{margin:0;color:#95a4aa}canvas{display:block;margin:auto;width:min(1100px,100%);height:auto!important;width:min(1100px,100%)!important}button{float:right;background:#24343e;color:#dbe7eb;border:1px solid #53616a;padding:8px 16px;cursor:pointer}</style>
-<header><button id="rotation">Pause rotation</button><h1>Asteroid material study · 20 seeded examples</h1><p>Existing silhouette · muted deposits · sparse craters · illustrative composition, not mineable resource ratios</p></header>
+<header><button id="rotation">Pause rotation</button><h1>Asteroid material study · 20 seeded examples</h1><p>Four-material composition field · regional mixing · independent craters · illustrative until mining uses local composition</p></header>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
 <script src="../src/propulsion.js?v=20260920-population1"></script>
@@ -13,7 +13,7 @@
 <script src="../src/tactical/camera.js?v=20260920-population1"></script>
 <script src="../src/audio.js?v=20260920-population1"></script>
 <script src="../src/hud.js?v=20260920-population1"></script>
-<script src="../src/game.js?v=20260920-asteroid5"></script><script>
+<script src="../src/game.js?v=20260920-asteroid6"></script><script>
 const app = new PIXI.Application({width:1100,height:720,backgroundAlpha:0,antialias:true,resolution:devicePixelRatio,autoDensity:true});
 document.body.appendChild(app.view);
 const names=['Ice','Volatiles','Metals','Silicates'];
@@ -22,7 +22,8 @@ for(let i=0;i<20;i++){
  const a={id:'sample-'+i,radius:67,position:{x:110+(i%5)*220,y:80+Math.floor(i/5)*175},rotation:i*1.7,ore:100,oreInitial:100,angularVelocity:0.04};
  const g=new PIXI.Graphics();app.stage.addChild(g);Driftworks.game.paintAsteroid(g,a);samples.push({a,g});
  const v=Driftworks.game.asteroidVisualDescription(a);
- const label=new PIXI.Text(names[v.dominant],{fontFamily:'system-ui',fontSize:13,fill:0xc9d1d2});label.anchor.set(.5);label.position.set(a.position.x,a.position.y+77);app.stage.addChild(label);
+ const dominant=v.bulk.indexOf(Math.max(...v.bulk));
+ const label=new PIXI.Text(names[dominant],{fontFamily:'system-ui',fontSize:13,fill:0xc9d1d2});label.anchor.set(.5);label.position.set(a.position.x,a.position.y+77);app.stage.addChild(label);
 }
 let rotating=true;document.querySelector('button').onclick=function(){rotating=!rotating;this.textContent=rotating?'Pause rotation':'Resume rotation';};
 app.ticker.add(delta=>{if(rotating)samples.forEach(({a,g})=>{a.rotation+=delta/60*.08;Driftworks.game.paintAsteroid(g,a);});});
