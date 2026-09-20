@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '..');
 function load() {
   const context = vm.createContext({});
   context.window = context;
-  for (const file of ['src/propulsion.js', 'src/combat.js', 'src/sim.js', 'tests/scenario.js']) {
+  for (const file of ['src/propulsion.js', 'src/combat.js', 'src/logistics.js', 'src/sim.js', 'tests/scenario.js']) {
     vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
   }
   return context.Driftworks.scenario;

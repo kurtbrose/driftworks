@@ -162,6 +162,40 @@ export type CombatModule = {
   }) => CombatApi;
 };
 
+export type LogisticsModule = {
+  create: (dependencies: {
+    cloneWorld: (world: World) => World;
+    clonePlain: <T>(value: T) => T;
+    selectedLookup: (world: World) => Record<string, boolean>;
+    findMothership: (world: World) => Ship | undefined;
+    findAsteroid: (world: World, asteroidId: string | null | undefined) => Asteroid | undefined;
+    surfaceRadius: (asteroid: Asteroid, angle: number) => number;
+    distance: (a: Vec2, b: Vec2) => number;
+    movementAcceleration: (world: WorldLike, ship: Ship) => number;
+    physicalStats: (world: WorldLike, ship: Ship) => { massKg: number };
+    stepTowardOrderTarget: (ship: Ship, dt: number, arrivalDistance: number, snapOnArrival: boolean, formationVelocity?: Vec2 | null) => Ship;
+    launchShip: (ship: Ship, home: Ship | undefined) => void;
+    dockShip: (ship: Ship, home: Ship) => void;
+    canCatch: (ship: Ship, home: Ship) => boolean;
+    canCatchPacket: (position: Vec2, velocity: Vec2, home: Ship) => boolean;
+    exchangeMps: number;
+    velocityToMps: number;
+    dockDistance: number;
+    arrivalDistance: number;
+  }) => {
+    createPlatform: (id: string) => Platform;
+    migrate: (world: World) => void;
+    availablePlatformCarrier: (world: World) => Ship | undefined;
+    canDeployPlatform: (world: World) => boolean;
+    issuePlatformRecovery: (world: World, id: string) => World;
+    endMining: (world: World) => World;
+    stepPlatformCarrier: (ship: Ship, world: World, dt: number) => Ship;
+    step: (world: World, dt: number) => void;
+    processConstructionMass: (mothership: MothershipState, depot: Depot) => void;
+    stepBuildingShip: (ship: Ship, dt: number, mothership: MothershipState, mothershipShip: Ship | undefined, depot: Depot) => Ship;
+  };
+};
+
 export type CameraApi = {
   screenToWorld: (point: Vec2, camera: Camera, viewport: Viewport) => Vec2;
   viewportFromApp: (app: { screen: Viewport }) => Viewport;
@@ -177,6 +211,7 @@ export type CameraApi = {
 export type DriftworksNamespace = {
   propulsion?: PropulsionApi;
   combat?: CombatModule;
+  logistics?: LogisticsModule;
   sim?: SimApi;
   camera?: CameraApi;
   audio?: AudioApi;
