@@ -22,44 +22,32 @@
   /** @param {HTMLElement} host @param {HudActions} actions */
   function createHud(host, actions) {
     host.innerHTML =
-      '<section class="panel time-panel" aria-label="Simulation time" aria-live="off">' +
-      '<div class="time-heading"><span>MISSION TIME · IN-GAME</span><strong data-role="time-speed" aria-live="polite"></strong></div>' +
+      '<header class="top-bar" aria-label="Mission status" aria-live="off">' +
       '<div class="mission-clock" data-role="clock"></div>' +
       '<div class="time-buttons" role="group" aria-label="Simulation speed">' +
       '<button type="button" data-speed="0" aria-label="Pause simulation" title="Pause"><span aria-hidden="true">Ⅱ</span></button>' +
       '<button type="button" data-speed="1" aria-label="Play at normal speed" title="Normal speed">▶ 1×</button>' +
-      '<button type="button" data-speed="2" aria-label="Fast forward at 2 times speed" title="Fast forward 2×">▶▶ 2×</button>' +
-      '<button type="button" data-speed="4" aria-label="Fast forward at 4 times speed" title="Fast forward 4×">▶▶ 4×</button>' +
-      '</div><section class="population-panel" aria-label="Population and crews"><div class="time-heading">PEOPLE ABOARD</div><div data-role="population"></div><div data-role="platform-staff"></div><div data-role="crew"></div><div data-role="person" aria-live="polite"></div></section></section>' +
-      '<section class="panel readout">' +
-      '<div class="row"><span>Location</span><strong data-role="location"></strong></div>' +
-      '<div class="row"><span>Cash</span><strong data-role="money"></strong></div>' +
-      '<div class="row"><span>Ore Quota</span><strong data-role="quota"></strong></div>' +
-      '<div class="row"><span>Asteroid Ore</span><strong data-role="field"></strong></div>' +
-      '<div class="row"><span>Depot</span><strong data-role="depot"></strong></div>' +
-      '<div class="row"><span>Sections</span><strong data-role="sections"></strong></div>' +
-      '<div class="row"><span>Mining</span><strong data-role="mining"></strong></div>' +
-      '<div class="row"><span>Launch / catch</span><strong>32 m/s Δv</strong></div>' +
-      '<div class="row"><span>Contacts</span><strong data-role="contacts"></strong></div>' +
-      '<div class="row"><span>Recovery</span><strong data-role="recovery"></strong></div>' +
-      '<div class="row"><span>Salvaged</span><strong data-role="salvaged"></strong></div>' +
-      '<div class="row"><span>Entities</span><strong data-role="entities"></strong></div>' +
-      '<div class="row"><span>Selection</span><strong data-role="selection"></strong></div>' +
-      '</section>' +
-      '<section class="panel fleet-panel" aria-label="Fleet delta-v"><div class="time-heading">FLEET · REMAINING Δv</div><div data-role="fleet"></div></section>' +
-      '<section class="panel controls">' +
+      '<button type="button" data-speed="2" aria-label="Fast forward at 2 times speed" title="Fast forward 2×">2×</button>' +
+      '<button type="button" data-speed="4" aria-label="Fast forward at 4 times speed" title="Fast forward 4×">4×</button>' +
+      '</div><strong class="sr-only" data-role="time-speed" aria-live="polite"></strong>' +
+      '<div class="mission-summary"><strong data-role="location"></strong><span aria-hidden="true">·</span><strong data-role="money"></strong><span aria-hidden="true">·</span>' +
+      '<div class="quota"><strong>ORE <span data-role="quota"></span></strong><progress data-role="quota-progress" max="1" value="0"></progress></div></div></header>' +
+      '<section class="command-shelf" aria-label="Command shelf">' +
+      '<section class="shelf-region fleet-panel" aria-label="Fleet delta-v"><div class="shelf-heading">FLEET <span>REMAINING Δv</span></div><div class="fleet-list" data-role="fleet"></div></section>' +
+      '<section class="shelf-region selection-panel" aria-label="Selection details"><div class="shelf-heading">SELECTION</div>' +
+      '<strong class="selection-title" data-role="selection"></strong>' +
+      '<div class="selection-readouts"><div><span>Asteroid</span><strong data-role="field"></strong></div><div><span>Depot</span><strong data-role="depot"></strong></div>' +
+      '<div><span>Sections</span><strong data-role="sections"></strong></div><div><span>Launch / catch</span><strong>32 m/s Δv</strong></div></div>' +
+      '<details class="population-panel"><summary><span>People aboard</span><strong data-role="population"></strong></summary><div data-role="platform-staff"></div><div data-role="crew"></div><div data-role="person" aria-live="polite"></div></details></section>' +
+      '<section class="shelf-region controls" aria-label="Commands"><div class="shelf-heading">COMMANDS</div><div class="command-buttons">' +
       '<button type="button" data-action="deploy-platform">Deploy mining platform</button>' +
       '<button type="button" data-action="end-mining">End mining & recover</button>' +
       '<button type="button" data-action="salvage-all">Salvage all</button>' +
-      '<button type="button" data-action="save">Save</button>' +
-      '<button type="button" data-action="export">Export scenario</button>' +
-      '<button type="button" data-action="load">Load</button>' +
-      '<button type="button" data-action="reset">Reset</button>' +
-      '<button type="button" data-action="stress">Stress</button>' +
-      '<label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label>' +
-      '<label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label>' +
-      '</section>' +
-      '<section class="hint">Select mothership → Deploy mining platform · Select cargo ship → Salvage all to repeatedly recover wrecks and disabled fighters · RMB home: return · Cargo ship + RMB platform: retrieve · wheel zoom · Space/MMB drag pan · F focus</section>';
+      '</div><div class="shelf-status"><span data-role="mining"></span><strong data-role="contacts"></strong><span data-role="recovery"></span><span>Salvaged <strong data-role="salvaged"></strong></span></div>' +
+      '<div class="shelf-menus"><details><summary>Menu</summary><div class="menu-popover"><button type="button" data-action="save">Save</button><button type="button" data-action="export">Export scenario</button><button type="button" data-action="load">Load</button><button type="button" data-action="reset">Reset</button></div></details>' +
+      '<details><summary>Settings</summary><div class="menu-popover"><label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label><label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label></div></details>' +
+      '<details><summary>Help</summary><div class="menu-popover hint">RMB: order / return · Wheel: zoom · Space or MMB: pan · F: focus selection</div></details>' +
+      '<details><summary>Dev</summary><div class="menu-popover"><button type="button" data-action="stress">Stress</button><span data-role="entities"></span></div></details></div></section></section>';
 
     var deployButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="deploy-platform"]'));
     if (!deployButton) throw new Error('Missing deploy button');
@@ -148,6 +136,9 @@
         }
         var miningControls = miningControlState(world);
         var salvageButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="salvage-all"]'));
+        var homeSelected = world.ships.some(function (ship) {
+          return ship.type === 'mothership' && world.selectedShipIds.indexOf(ship.id) !== -1;
+        });
         var selectedTug = world.ships.some(function (ship) {
           return ship.type === 'tug' && !ship.disabled && world.selectedShipIds.indexOf(ship.id) !== -1 &&
             !ship.carryingSection && !ship.platformId && !ship.towTarget &&
@@ -155,10 +146,13 @@
         });
         salvageButton.disabled = !selectedTug || !world.wrecks.some(function (wreck) { return !wreck.towedBy; }) &&
           !world.ships.some(function (ship) { return ship.type === 'escort' && ship.disabled && !ship.repairRemaining && ship.launchElapsed == null && !ship.towedBy; });
+        salvageButton.hidden = !selectedTug;
         deployButton.disabled = !miningControls.canDeploy;
+        deployButton.hidden = !homeSelected;
         deployButton.title = miningControls.deployHint;
         var endMiningButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="end-mining"]'));
         endMiningButton.disabled = !miningControls.canEnd;
+        endMiningButton.hidden = !homeSelected;
         endMiningButton.textContent = miningControls.endLabel;
         world.ships.forEach(function (ship) {
           var button = /** @type {HTMLButtonElement | undefined} */ (Array.from(fleet.children).filter(function (b) { return /** @type {HTMLElement} */ (b).dataset.ship === ship.id; })[0]);
@@ -184,6 +178,8 @@
         requiredElement('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
         requiredElement('[data-role="quota"]').textContent =
           Math.floor(world.mothership.storage.ore) + ' / ' + world.contract.quotaOre + ' t';
+        var quotaProgress = /** @type {HTMLProgressElement} */ (host.querySelector('[data-role="quota-progress"]'));
+        quotaProgress.value = Math.min(1, world.mothership.storage.ore / world.contract.quotaOre);
         requiredElement('[data-role="field"]').textContent = Math.floor(totalOreRemaining(world)) + ' t accessible · ' +
           (sim.asteroidPhysicalStats(world.asteroids[0]).diameterM / 1000).toFixed(1) + ' km body';
         requiredElement('[data-role="depot"]').textContent =
@@ -193,6 +189,7 @@
         requiredElement('[data-role="mining"]').textContent = world.miningMission + ' · ' +
           world.platforms.filter(function (p) { return p.state === 'deployed'; }).length + ' deployed · ' + world.packets.length + ' packets';
         requiredElement('[data-role="contacts"]').textContent = String(stats.contacts);
+        requiredElement('[data-role="contacts"]').hidden = String(stats.contacts).toLowerCase() === 'quiet';
         requiredElement('[data-role="recovery"]').textContent = (world.wrecks || []).length + ' wrecks · ' +
           world.ships.filter(function (ship) { return ship.disabled; }).length + ' disabled';
         requiredElement('[data-role="salvaged"]').textContent = (world.recovery ? world.recovery.salvagedOre : 0) + ' t';
