@@ -387,6 +387,7 @@ declare global {
     class Texture {
       static WHITE: Texture;
       static from(source: unknown): Texture;
+      static fromBuffer(buffer: Uint8Array, width: number, height: number): Texture;
       baseTexture: { scaleMode: number; alphaMode: number; update: () => void };
     }
     class Filter {
