@@ -140,6 +140,7 @@
         zoom: 1
       },
       selectedShipIds: [],
+      selectedPlatformId: null,
       formations: {},
       nextFormationId: 1,
       logisticsVersion: 2,
@@ -280,6 +281,17 @@
     next.selectedShipIds = shipIds.filter(function (id) {
       return knownIds[id];
     });
+    next.selectedPlatformId = null;
+    return next;
+  }
+
+  /** @param {World} world @param {string | null} platformId @returns {World} */
+  function selectPlatform(world, platformId) {
+    var next = cloneWorld(world);
+    next.selectedShipIds = [];
+    next.selectedPlatformId = next.platforms.some(function (platform) {
+      return platform.id === platformId && platform.state === 'deployed';
+    }) ? platformId : null;
     return next;
   }
 
@@ -460,6 +472,7 @@
       campaign: clonePlain(next.campaign),
       camera: clonePlain(next.camera),
       selectedShipIds: next.selectedShipIds.slice(),
+      selectedPlatformId: next.selectedPlatformId || null,
       mothership: mothership,
       depot: depot,
       contract: contract,
@@ -805,6 +818,7 @@
       ship.launchElapsed = ship.launchElapsed == null ? null : ship.launchElapsed;
     });
     next.selectedShipIds = next.selectedShipIds || [];
+    next.selectedPlatformId = next.selectedPlatformId || null;
     next.camera = next.camera || initial.camera;
     next.campaign = next.campaign || initial.campaign;
     next.elapsedSeconds = typeof next.elapsedSeconds === 'number' ? next.elapsedSeconds : 0;
@@ -1103,6 +1117,7 @@
     angleDelta: angleDelta,
     rotateToward: rotateToward,
     selectShips: selectShips,
+    selectPlatform: selectPlatform,
     issueMoveOrder: issueMoveOrder,
     issueContextOrder: issueContextOrder,
     issueMineOrder: issueMineOrder,

@@ -112,7 +112,9 @@
           var ids = selected.reduce(function (all, s) { return all.concat(s.crewIds || [], s.passengerIds || []); }, /** @type {string[]} */ ([]));
           // Home inspection also exposes deployed workers, so their stories remain reachable.
           if (selected.some(function (s) { return s.type === 'mothership'; })) world.platforms.forEach(function (p) { ids = ids.concat(p.workerIds || []); });
-          var signature = ids.join(',') + ':' + population.seed;
+          var selectedPlatform = world.platforms.filter(function (p) { return p.id === world.selectedPlatformId; })[0];
+          if (selectedPlatform) ids = ids.concat(selectedPlatform.workerIds || []);
+          var signature = ids.join(',') + ':' + population.seed + ':' + world.selectedPlatformId;
           if (signature !== crewSignature) {
             crewSignature = signature;
             crewPanel.replaceChildren();
@@ -188,7 +190,11 @@
         });
         requiredElement('[data-role="entities"]').textContent = stats.entityCount + ' @ ' + (stats.fps || '--') + ' FPS';
 
-        if (world.selectedShipIds.length === 0) {
+        if (world.selectedPlatformId) {
+          var selectedPlatform = world.platforms.filter(function (platform) { return platform.id === world.selectedPlatformId; })[0];
+          requiredElement('[data-role="selection"]').textContent = selectedPlatform ? selectedPlatform.id + ' · mining platform · ' +
+            (selectedPlatform.workerIds || []).length + '/5 workers · ' + selectedPlatform.state : 'None';
+        } else if (world.selectedShipIds.length === 0) {
           requiredElement('[data-role="selection"]').textContent = 'None';
         } else {
           requiredElement('[data-role="selection"]').textContent = world.ships

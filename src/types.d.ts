@@ -98,6 +98,7 @@ export type World = {
   wrecks: Wreck[];
   formations: Record<string, Formation>;
   selectedShipIds: string[];
+  selectedPlatformId?: string | null;
   camera: Camera;
   version?: number;
   physicalUnitsVersion?: number;
@@ -260,6 +261,7 @@ export type SimApi = {
   canCatch: (ship: Ship, home: Ship) => boolean;
   endMining: (world: World) => World;
   selectShips: (world: World, ids: string[]) => World;
+  selectPlatform: (world: World, platformId: string | null) => World;
   issueMineOrder: (world: World, asteroidId: string) => World;
   saveWorld: (world: World, storage?: Storage) => void;
   resetWorld: (storage?: Storage) => World;

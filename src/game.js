@@ -378,15 +378,27 @@
         var graphic = platformGraphics[p.id];
         if (!graphic) {
           graphic = platformGraphics[p.id] = new PIXI.Graphics();
-          graphic.eventMode = 'none'; worldLayer.addChild(graphic);
+          graphic.eventMode = 'static';
+          graphic.cursor = 'pointer';
+          graphic.on('pointerdown', function (event) {
+            unlockAudio();
+            if (event.button === 0) {
+              event.stopPropagation();
+              setWorld(sim.selectPlatform(getWorld(), p.id));
+              if (audio) audio.playSelect();
+            }
+          });
+          worldLayer.addChild(graphic);
         }
         var asteroid = world.asteroids.filter(function (a) { return a.id === p.asteroidId; })[0];
         graphic.clear(); graphic.visible = true;
         graphic.position.set(p.position.x, p.position.y);
         graphic.rotation = p.siteAngle + (asteroid ? asteroid.rotation : 0) + Math.PI;
         graphic.scale.set(semanticScale('platform', world.camera.zoom));
+        graphic.hitArea = new PIXI.Circle(0, 0, Math.max(17, 12 / (world.camera.zoom * graphic.scale.x)));
+        graphic.lineStyle(2.5, world.selectedPlatformId === p.id ? 0xffffff : SHIP_STYLES.platform.stroke, 1);
         drawMiningPlume(graphic, world.miningMission === 'active' && asteroid && asteroid.ore > 0, 14, world.elapsedSeconds);
-        graphic.lineStyle(1.5, SHIP_STYLES.platform.stroke, 0.9);
+        graphic.lineStyle(2.5, world.selectedPlatformId === p.id ? 0xffffff : SHIP_STYLES.platform.stroke, 1);
         paintMiningPlatform(graphic, SHIP_STYLES.platform);
       });
       world.packets.forEach(function (p) {
@@ -684,7 +696,15 @@
         var distance = Math.hypot(point.x - dragStart.x, point.y - dragStart.y);
         if (distance > 8) {
           var selectedIds = shipsInsideScreenRect(getWorld(), dragStart, point, viewport());
-          setWorld(sim.selectShips(getWorld(), selectedIds));
+          var world = getWorld();
+          var minX = Math.min(dragStart.x, point.x), maxX = Math.max(dragStart.x, point.x);
+          var minY = Math.min(dragStart.y, point.y), maxY = Math.max(dragStart.y, point.y);
+          var selectedPlatform = world.platforms.filter(function (platform) {
+            if (platform.state !== 'deployed') return false;
+            var screen = worldToScreen(platform.position, world.camera, viewport());
+            return screen.x >= minX && screen.x <= maxX && screen.y >= minY && screen.y <= maxY;
+          })[0];
+          setWorld(selectedPlatform && !selectedIds.length ? sim.selectPlatform(world, selectedPlatform.id) : sim.selectShips(world, selectedIds));
           if (audio && selectedIds.length) audio.playSelect();
         } else {
           setWorld(sim.selectShips(getWorld(), []));
