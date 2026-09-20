@@ -52,23 +52,31 @@
         ship.crewIds = population.assign(state, ship.type === 'tug' ? 'tug operator' : ship.type === 'shuttle' ? 'shuttle pilot' : 'fighter pilot', ship.id, 1);
       }
     });
+    world.ships.forEach(function (ship) {
+      var order = ship.order;
+      if (ship.type !== 'tug' || order.kind !== 'deploy' || (ship.passengerIds || []).length) return;
+      var platformId = order.platformId;
+      var platform = world.platforms.filter(function (item) { return item.id === platformId && item.state === 'stored'; })[0];
+      if (!platform) return;
+      var initialWorkers = population.assign(state, 'platform worker', platform.id + ':initial', 5);
+      if (initialWorkers.length === 5) ship.passengerIds = initialWorkers;
+    });
     var shuttle = world.ships.filter(function (s) { return s.type === 'shuttle' && s.docked && !s.disabled && s.order.kind === 'idle' && !(s.passengerIds || []).length && (s.crewIds || []).length; })[0];
     if (!shuttle) return;
     var time = world.elapsedSeconds * sim.PHYSICAL_SECONDS_PER_SECOND;
     /** @param {import('./types').Platform} p */
     function priority(p) {
-      if (p.evacuationRequested || world.miningMission !== 'active') return (p.workerIds || []).length ? 0 : 9;
+      if (p.evacuationRequested || world.miningMission !== 'active') return 9;
       if (!(p.workerIds || []).length) return 1;
       return time - (p.shiftStartedSeconds || 0) >= SHIFT_SECONDS ? 2 : 9;
     }
     var platform = world.platforms.filter(function (p) { return p.state === 'deployed' && priority(p) < 9; })
       .sort(function (a, b) { return priority(a) - priority(b) || a.id.localeCompare(b.id); })[0];
     if (!platform) return;
-    var evacuation = priority(platform) === 0;
-    var passengers = evacuation ? [] : population.assign(state, 'platform worker', platform.id + ':shift:' + time, 5);
-    if (!evacuation && passengers.length !== 5) return;
+    var passengers = population.assign(state, 'platform worker', platform.id + ':shift:' + time, 5);
+    if (passengers.length !== 5) return;
     shuttle.passengerIds = passengers;
-    shuttle.order = { kind: 'shuttle', platformId: platform.id, evacuation: evacuation, target: Object.assign({}, platform.position) };
+    shuttle.order = { kind: 'shuttle', platformId: platform.id, evacuation: false, target: Object.assign({}, platform.position) };
   }
 
   // Only active references are inspected; background residents and histories are never scanned per tick.

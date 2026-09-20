@@ -19,6 +19,8 @@
   function create(api) {
     var MINING_RATE = 187.5;
     var DEPOT_SECTION_MASS = 1500;
+    var PLATFORM_SETUP_SECONDS = 3 * 3600;
+    var PLATFORM_PACK_SECONDS = 3 * 3600;
 
     /** @param {string} id @returns {Platform} */
     function createPlatform(id) {
@@ -47,7 +49,8 @@
     /** @param {World} world @returns {Ship | undefined} */
     function availablePlatformCarrier(world) {
       return world.ships.filter(function (s) { return s.type === 'tug' && !s.disabled &&
-        !s.platformId && !s.carryingSection && !s.towTarget && s.order.kind === 'idle'; })[0];
+        !s.platformId && !s.carryingSection && !s.towTarget && !(s.passengerIds || []).length &&
+        !((s.unloadRemainingSeconds || 0) > 0) && s.order.kind === 'idle'; })[0];
     }
 
     /** @param {World} world @returns {boolean} */
@@ -73,10 +76,13 @@
     /** @param {World} world @param {string} id @returns {World} */
     function issuePlatformRecovery(world, id) {
       var next = api.cloneWorld(world), selected = api.selectedLookup(next);
-      var platform = (next.platforms || []).filter(function (p) { return p.id === id && p.state === 'deployed'; })[0];
+      var platform = (next.platforms || []).filter(function (p) {
+        return p.id === id && (p.state === 'deployed' || p.state === 'setting-up');
+      })[0];
       if (!platform) return next;
       var carrier = next.ships.filter(function (s) { return selected[s.id] && s.type === 'tug' &&
-        !s.disabled && !s.platformId && !s.carryingSection && !s.towTarget; })[0];
+        !s.disabled && !s.platformId && !s.carryingSection && !s.towTarget &&
+        !(s.passengerIds || []).length && !((s.unloadRemainingSeconds || 0) > 0); })[0];
       if (carrier) {
         platform.evacuationRequested = true;
         carrier.order = { kind: 'retrieve-platform', platformId: id, target: api.clonePlain(platform.position) };
@@ -105,7 +111,7 @@
       var platform = world.platforms.filter(function (p) { return p.id === order.platformId; })[0];
       var asteroidId = order.kind === 'deploy' ? order.asteroidId : platform && platform.asteroidId;
       var asteroid = api.findAsteroid(world, asteroidId);
-      if (!platform || !asteroid || (!deploying && platform.state !== 'deployed')) {
+      if (!platform || !asteroid || (!deploying && platform.state !== 'deployed' && platform.state !== 'setting-up' && platform.state !== 'packing-up')) {
         ship.order = { kind: 'idle' }; return ship;
       }
       var home = api.findMothership(world);
@@ -133,13 +139,25 @@
         y: site.velocity.y + dy / Math.max(gap, 0.001) * speed });
       if (gap > 1 || api.distance(ship.velocity, site.velocity) > 1) return ship;
       if (deploying) {
-        platform.state = 'deployed'; platform.carrierId = null;
-        platform.evacuationRequested = false; platform.shiftStartedSeconds = undefined;
+        platform.state = 'setting-up'; platform.carrierId = null;
+        platform.evacuationRequested = false; platform.shiftStartedSeconds = (world.elapsedSeconds + dt) * api.physicalSecondsPerSecond;
         platform.asteroidId = asteroid.id; platform.siteAngle = siteAngle; platform.siteDepth = siteDepth;
         platform.position = site.position;
+        platform.setupRemainingSeconds = PLATFORM_SETUP_SECONDS;
+        platform.packRemainingSeconds = undefined;
+        platform.workerIds = ship.passengerIds || [];
+        ship.passengerIds = [];
         ship.platformId = null;
       } else {
-        if ((platform.workerIds || []).length) return ship;
+        if (platform.state !== 'packing-up') {
+          platform.state = 'packing-up';
+          platform.packRemainingSeconds = PLATFORM_PACK_SECONDS;
+          return ship;
+        }
+        if ((platform.packRemainingSeconds || 0) > 0) return ship;
+        if ((ship.passengerIds || []).length) return ship;
+        ship.passengerIds = platform.workerIds || [];
+        platform.workerIds = [];
         platform.state = 'carried'; platform.carrierId = ship.id;
         ship.platformId = platform.id;
         ship.cargo += platform.ore || 0; platform.ore = 0;
@@ -190,10 +208,12 @@
       if (!home) return;
       var logisticsHome = home;
       world.ships.forEach(function (s) {
-        if (s.type === 'shuttle' && s.docked && (s.order.kind === 'idle' || s.order.kind === 'return')) {
+        var shuttleReturned = s.type === 'shuttle' && s.docked && (s.order.kind === 'idle' || s.order.kind === 'return');
+        var tugReturned = s.type === 'tug' && s.docked && s.order.kind === 'idle' && (s.unloadRemainingSeconds || 0) <= 0;
+        if ((shuttleReturned || tugReturned) && (s.passengerIds || []).length) {
           world.returnedPersonIds = (world.returnedPersonIds || []).concat(s.passengerIds || []);
           s.passengerIds = [];
-          s.order = { kind: 'idle' };
+          if (s.type === 'shuttle') s.order = { kind: 'idle' };
         }
       });
       world.platforms.forEach(function (platform) {
@@ -202,7 +222,7 @@
           var carrier = world.ships.filter(function (s) { return s.id === platform.carrierId; })[0];
           if (carrier) {
             platform.position = api.clonePlain(carrier.position);
-            if (carrier.docked && carrier.order.kind === 'idle') {
+            if (carrier.docked && carrier.order.kind === 'idle' && (carrier.unloadRemainingSeconds || 0) <= 0) {
               platform.state = 'stored'; platform.carrierId = null; carrier.platformId = null;
             }
           }
@@ -211,6 +231,17 @@
         var asteroid = api.findAsteroid(world, platform.asteroidId);
         if (!asteroid) return;
         platform.position = platformSite(platform, asteroid).position;
+        if (platform.state === 'setting-up') {
+          platform.setupRemainingSeconds = Math.max(0, (platform.setupRemainingSeconds || 0) - dt * api.physicalSecondsPerSecond);
+          if (platform.setupRemainingSeconds <= 0) {
+            platform.setupRemainingSeconds = 0;
+            platform.state = 'deployed';
+          }
+        } else if (platform.state === 'packing-up') {
+          platform.packRemainingSeconds = Math.max(0, (platform.packRemainingSeconds || 0) - dt * api.physicalSecondsPerSecond);
+        }
+        if (platform.state === 'setting-up') return;
+        if (platform.state === 'packing-up') return;
         if (world.miningMission !== 'active') return;
         if (world.staffingEnabled && (platform.workerIds || []).length < 5) return;
         var extracted = Math.min(asteroid.ore || 0, MINING_RATE * dt);
@@ -235,6 +266,13 @@
         packet.position.x += packet.velocity.x * dt; packet.position.y += packet.velocity.y * dt;
         return true;
       });
+      world.ships.forEach(function (ship) {
+        if (ship.type !== 'tug' || !((ship.unloadRemainingSeconds || 0) > 0) || !ship.docked ||
+            (ship.order.kind !== 'idle' && !(ship.order.kind === 'return' && ship.order.salvageAll))) return;
+        ship.unloadRemainingSeconds = Math.max(0, (ship.unloadRemainingSeconds || 0) - dt * api.physicalSecondsPerSecond);
+        if (ship.unloadRemainingSeconds > 0) return;
+        if (ship.cargo > 0) { world.mothership.storage.ore += ship.cargo; ship.cargo = 0; }
+      });
       if (world.miningMission !== 'recovering') return;
       /** @type {Record<string, boolean>} */
       var reserved = {};
@@ -245,14 +283,17 @@
           if (!s.docked) s.order = { kind: 'return', target: api.clonePlain(logisticsHome.position) };
           return;
         }
-        var platform = world.platforms.filter(function (p) { return p.state === 'deployed' && !reserved[p.id]; })[0];
+        var platform = world.platforms.filter(function (p) {
+          return (p.state === 'deployed' || p.state === 'setting-up') && !reserved[p.id];
+        })[0];
         if (platform) {
           reserved[platform.id] = true;
           s.order = { kind: 'retrieve-platform', platformId: platform.id, target: api.clonePlain(platform.position) };
         }
       });
       if (!world.packets.length && world.platforms.every(function (p) { return p.state === 'stored' && !(p.workerIds || []).length; }) &&
-          world.ships.every(function (s) { return s.type !== 'shuttle' || (s.docked && !(s.passengerIds || []).length); })) world.miningMission = 'complete';
+          world.ships.every(function (s) { return (s.type !== 'shuttle' && s.type !== 'tug') ||
+            (s.docked && !(s.passengerIds || []).length && !((s.unloadRemainingSeconds || 0) > 0)); })) world.miningMission = 'complete';
     }
 
     /** @param {MothershipState | undefined} mothership @param {Depot | undefined} depot */

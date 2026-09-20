@@ -290,7 +290,7 @@
     var next = cloneWorld(world);
     next.selectedShipIds = [];
     next.selectedPlatformId = next.platforms.some(function (platform) {
-      return platform.id === platformId && platform.state === 'deployed';
+      return platform.id === platformId && (platform.state === 'deployed' || platform.state === 'setting-up' || platform.state === 'packing-up');
     }) ? platformId : null;
     return next;
   }
@@ -318,7 +318,9 @@
   function issueContextOrder(world, target) {
     var home = findMothership(world);
     if (home && distance(target, home.position) <= DOCK_DISTANCE + 18) return issueReturnOrder(world);
-    var platform = (world.platforms || []).filter(function (p) { return p.state === 'deployed' && distance(target, p.position) < 22; })[0];
+    var platform = (world.platforms || []).filter(function (p) {
+      return (p.state === 'deployed' || p.state === 'setting-up') && distance(target, p.position) < 22;
+    })[0];
     if (platform) return issuePlatformRecovery(world, platform.id);
     var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
     if (fighters.length) {
@@ -661,9 +663,10 @@
       });
     }
     dockShip(ship, mothershipShip);
-    mothership.storage.ore += ship.cargo;
-    ship.cargo = 0;
     ship.velocity = { x: 0, y: 0 };
+    if (ship.cargo > 0 || ship.platformId || (ship.passengerIds || []).length || ship.towTarget) {
+      ship.unloadRemainingSeconds = 3 * 60;
+    }
     ship.order = ship.order.salvageAll ? { kind: 'return', target: clonePlain(mothershipShip.position), salvageAll: true } : { kind: 'idle' };
     return ship;
   }
@@ -1028,6 +1031,7 @@
       if (hauler.towTarget.kind === 'ship') payload.previousPosition = clonePlain(hauler.previousPosition);
       payload.rotation = hauler.rotation;
       if (mothership && canCatch(hauler, mothership)) {
+        if ((hauler.unloadRemainingSeconds || 0) > 0) return;
         if (hauler.towTarget.kind === 'wreck') {
           /** @type {Wreck} */
           var wreck = payloadEntity;

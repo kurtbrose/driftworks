@@ -336,9 +336,12 @@
     assertClose(sim.angleDelta(next, target), 0.01);
   });
 
-  test('deployed platforms extract ore while carriers return empty', function () {
+  test('platform deployment waits through setup before extraction while carrier returns empty', function () {
     var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
     for (var i = 0; i < 1500; i++) world = sim.stepWorld(world, 1 / 30);
+    assert(world.platforms[0].state === 'setting-up');
+    assert(world.asteroids[0].ore === world.asteroids[0].oreInitial, 'No ore is mined during setup');
+    for (i = 0; i < 5500; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'deployed');
     assert(world.asteroids[0].ore < world.asteroids[0].oreInitial);
     assert(findShip(world, 'tug-01').cargo === 0);
@@ -348,7 +351,7 @@
   test('ore packets deliver platform production to mothership storage', function () {
     var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
     var guard = 0;
-    while (world.mothership.storage.ore <= 0 && guard < 1200) {
+    while (world.mothership.storage.ore <= 0 && guard < 9000) {
       world = sim.stepWorld(world, 1 / 30);
       guard += 1;
     }
@@ -793,7 +796,7 @@
       var world = createDeployedWorld(); world.asteroids[0].angularVelocity = spin;
       world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), world.asteroids[0].id);
       for (var i = 0; i < 1200; i++) world = sim.stepWorld(world, 1 / 30);
-      assert(world.platforms[0].state === 'deployed');
+      assert(world.platforms[0].state === 'setting-up');
       world = sim.deserializeWorld(sim.serializeWorld(world));
       world = sim.stepWorld(world, 1);
       var p = world.platforms[0], a = world.asteroids[0], angle = p.siteAngle + a.rotation;
@@ -1300,16 +1303,16 @@
 
   test('end mining retrieves all platforms, drains packets and conserves material across saves', function () {
     var world = sim.issueMineOrder(sim.selectShips(createFreshWorld(), ['msv-hardshell']), 'ast-ceres-01');
-    for (var i = 0; i < 1800 && world.platforms[0].state !== 'deployed'; i++) world = sim.stepWorld(world, 1 / 30);
+    for (var i = 0; i < 7500 && world.platforms[0].state !== 'deployed'; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'deployed');
-    for (i = 0; i < 1800 && !findShip(world, 'tug-01').docked; i++) world = sim.stepWorld(world, 1 / 30);
+    for (i = 0; i < 6000 && !findShip(world, 'tug-01').docked; i++) world = sim.stepWorld(world, 1 / 30);
     world = sim.issueMineOrder(world, 'ast-ceres-01');
-    for (i = 0; i < 1800 && world.platforms[1].state !== 'deployed'; i++) world = sim.stepWorld(world, 1 / 30);
+    for (i = 0; i < 7500 && world.platforms[1].state !== 'deployed'; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms.every(function (p) { return p.state === 'deployed'; }));
-    assert(world.packets.length > 0);
+    assert(world.asteroids[0].ore < world.asteroids[0].oreInitial, 'Operational platforms have produced ore');
     world = sim.endMining(sim.deserializeWorld(sim.serializeWorld(world)));
     var ore = world.asteroids[0].ore;
-    for (var j = 0; j < 3500 && world.miningMission !== 'complete'; j++) {
+    for (var j = 0; j < 24000 && world.miningMission !== 'complete'; j++) {
       world = sim.stepWorld(world, 1 / 30);
       if (j === 300) world = sim.deserializeWorld(sim.serializeWorld(world));
     }

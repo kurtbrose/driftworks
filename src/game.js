@@ -380,7 +380,7 @@
       logisticsGraphic.clear();
       Object.keys(platformGraphics).forEach(function (id) { platformGraphics[id].visible = false; });
       world.platforms.forEach(function (p) {
-        if (p.state !== 'deployed') return;
+        if (p.state !== 'deployed' && p.state !== 'setting-up' && p.state !== 'packing-up') return;
         var graphic = platformGraphics[p.id];
         if (!graphic) {
           graphic = platformGraphics[p.id] = new PIXI.Graphics();
@@ -403,9 +403,20 @@
         graphic.scale.set(semanticScale('platform', world.camera.zoom));
         graphic.hitArea = new PIXI.Circle(0, 0, Math.max(17, 12 / (world.camera.zoom * graphic.scale.x)));
         graphic.lineStyle(2.5, world.selectedPlatformId === p.id ? 0xffffff : SHIP_STYLES.platform.stroke, 1);
-        drawMiningPlume(graphic, world.miningMission === 'active' && asteroid && asteroid.ore > 0, 14, world.elapsedSeconds);
+        drawMiningPlume(graphic, p.state === 'deployed' && world.miningMission === 'active' && asteroid && asteroid.ore > 0, 14, world.elapsedSeconds);
         graphic.lineStyle(2.5, world.selectedPlatformId === p.id ? 0xffffff : SHIP_STYLES.platform.stroke, 1);
         paintMiningPlatform(graphic, SHIP_STYLES.platform);
+        if (p.state === 'setting-up' || p.state === 'packing-up') {
+          var count = Math.min(5, (p.workerIds || []).length);
+          for (var worker = 0; worker < count; worker += 1) {
+            var phase = world.elapsedSeconds * (p.state === 'packing-up' ? -2 : 2) + worker * Math.PI * 2 / Math.max(1, count);
+            var workRadius = 21 + 2 * Math.sin(world.elapsedSeconds * 3 + worker);
+            graphic.lineStyle(1, 0xc5d9d8, 0.9);
+            graphic.beginFill(0xe7f0e5, 1);
+            graphic.drawCircle(Math.cos(phase) * workRadius, Math.sin(phase) * workRadius, 1.8);
+            graphic.endFill();
+          }
+        }
       });
       world.packets.forEach(function (p) {
         logisticsGraphic.lineStyle(0);
@@ -716,7 +727,7 @@
           var minX = Math.min(dragStart.x, point.x), maxX = Math.max(dragStart.x, point.x);
           var minY = Math.min(dragStart.y, point.y), maxY = Math.max(dragStart.y, point.y);
           var selectedPlatform = world.platforms.filter(function (platform) {
-            if (platform.state !== 'deployed') return false;
+            if (platform.state !== 'deployed' && platform.state !== 'setting-up' && platform.state !== 'packing-up') return false;
             var screen = worldToScreen(platform.position, world.camera, viewport());
             return screen.x >= minX && screen.x <= maxX && screen.y >= minY && screen.y <= maxY;
           })[0];
@@ -859,7 +870,9 @@
     }
     var homeHit = world.ships.filter(function (s) { return s.type === 'mothership' && hits(s, s.type, 38); })[0];
     if (homeHit) return sim.issueReturnOrder(world);
-    var platformHit = (world.platforms || []).filter(function (p) { return p.state === 'deployed' && hits(p, 'platform', 22); })[0];
+    var platformHit = (world.platforms || []).filter(function (p) {
+      return (p.state === 'deployed' || p.state === 'setting-up') && hits(p, 'platform', 22);
+    })[0];
     if (platformHit) return sim.issuePlatformRecovery(world, platformHit.id);
     var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
     if (fighters.length) {

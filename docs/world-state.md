@@ -49,7 +49,9 @@ and `escort`. Stable string `id` identifies a ship; name is only a label.
 - Load: `cargo`/`previousCargo` in tonnes, legacy `cargoCapacity` (currently zero),
   `carryingSection`, `platformId`, `towTarget`. A tug's module/hull attachment
   slot holds one section, platform, or recovered hull. Buffered platform ore
-  becomes `cargo` on retrieval and contributes additional mass.
+  becomes `cargo` on retrieval and contributes additional mass. `passengerIds`
+  holds platform workers on the tug; `unloadRemainingSeconds` records the physical
+  three-minute delivery delay at home.
 - Lifecycle: `docked` means stored inside the mothership at its position and
   velocity; docked craft remain in `ships` for fleet selection but are not
   scene entities. `damage` in [0, 1], `disabled`, `towedBy`, `repairRemaining`,
@@ -105,11 +107,18 @@ Platforms have `id`, `state`, nullable `carrierId`/`asteroidId`, `position`,
 
 - `stored`: belongs to mothership storage, no carrier; position follows home.
 - `carried`: `carrierId` resolves to a tug whose `platformId` points back.
-  Position follows that tug. Docked + idle unloads the platform and clears both
-  links; docking during deployment pickup must not immediately unload it.
+  Position follows that tug. Docking starts the three-minute offload; completion
+  clears both links. Docking during deployment pickup must not unload it.
+- `setting-up`: Linehorse delivered the initial five workers with the rig.
+  `setupRemainingSeconds` counts down three physical hours before this becomes
+  `deployed` and extraction starts.
+- `packing-up`: workers remain on the platform while the tug performs recovery.
+  `packRemainingSeconds` counts down three physical hours; afterward workers board
+  the tug and the rig changes to `carried`.
 - `deployed`: no carrier; `asteroidId` and asteroid-local site angle/depth define
   the attachment. Position is derived from asteroid rotation, not independently
-  integrated. Site fields may remain after storage; interpret them by state.
+  integrated. Extraction runs only in this state. Site fields may remain after
+  storage; interpret them by state.
 
 Extraction transfers asteroid ore into the platform buffer. Launch transfers
 that buffer into a packet `{ id, position, velocity, ore }`. Packets are persistent
@@ -119,9 +128,10 @@ shared velocity envelope. Retrieval transfers unsent ore to tug cargo exactly
 once; returning unloads cargo to storage.
 
 `endMining` enters `recovering`, cancels deployment orders into returns, and stops
-extraction. Logistics assigns successive retrieval trips; in-flight packets
-continue. Completion requires **all platforms stored and no packets remaining**,
-not merely an empty asteroid. Starting a new mission requires reset/current code
+extraction. Logistics assigns successive retrieval trips; the tug takes each
+platform's final workers home, and in-flight packets continue. Completion waits
+for platforms stored, crews and cargo unloaded, and no packets remaining—not
+merely an empty asteroid. Starting a new mission requires reset/current code
 changes; deployment is allowed only while `active`.
 
 Construction transfers storage ore into `constructionMass`, then ready sections;
@@ -217,7 +227,8 @@ persist separately under `driftworks-audio-settings-v1`.
 The browser now saves a coordinated session rather than calling the tactical
 serializer alone. Population stays outside World. `staffingEnabled` opts a World
 into staffed extraction; ships carry `crewIds` and `passengerIds`, platforms carry
-`workerIds`, `shiftStartedSeconds` (physical mission seconds), and
-`evacuationRequested`. `shuttle` orders carry platform ID, target, and an evacuation
-flag. `stepWorld` preserves the staffing marker. See [population](population.md)
+`workerIds`, `shiftStartedSeconds` (physical mission seconds), setup/pack timers,
+and `evacuationRequested`. `shuttle` orders carry platform ID, target, and an
+evacuation flag for compatibility with existing saves. `stepWorld` preserves the
+staffing marker. See [population](population.md)
 for ownership, migration, exchange, completion, and transient arrival records.

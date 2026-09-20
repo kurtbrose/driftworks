@@ -52,9 +52,11 @@ introduced. Explicit death processing is available in `population.consume`.
 ## Shuttle logistics
 
 One automatic shuttle has one pilot seat and five passenger seats. Each platform
-shift has five workers. A newly deployed platform cannot extract until all five
-arrive. Dispatch priority is evacuation, initial staffing, then overdue replacement;
-platform ID breaks ties. Returning shuttles refuel through normal docking.
+shift has five workers. Linehorse brings the initial five on deployment and takes
+the final crew home after packing; setup and packing last three physical hours.
+The shuttle handles mid-mission replacements only. Dispatch priority is initial
+staffing, then overdue replacement; platform ID breaks ties. Returning shuttles
+refuel through normal docking.
 
 Transfers require a surface rendezvous matching position and velocity. Incoming
 workers disembark, then outgoing workers embark: platform occupancy is not capped
@@ -62,10 +64,11 @@ at five. The shuttle retains passengers through a fuel diversion or cancelled
 delivery until it physically arrives home. Manual flight commands do not control it.
 
 Manual platform retrieval marks an evacuation request, even if the tug is later
-redirected. It remains latched until the platform is recovered. Tug pickup waits
-for zero workers. Ending mining stops extraction and requires all platforms stored,
-packets caught, and the shuttle and workers home before completion. Redeployment
-clears the previous evacuation request and shift timestamp.
+redirected. It remains latched until the platform is recovered. Workers remain on
+the platform during packing and then board Linehorse. Home delivery takes three
+physical minutes to unload the platform, ore, and passengers. Ending mining stops
+extraction and waits for all platforms stored, packets caught, and crews unloaded.
+Redeployment clears the previous evacuation request and resets setup/shift timers.
 
 ## Saves and replay
 

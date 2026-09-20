@@ -41,8 +41,8 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 - Right-click the mothership to return deployed craft. Low-fuel craft automatically leave their current assignment when they reach a conservative return reserve. Return guidance allows a nonzero intercept velocity.
 - Craft assigned a job emerge from the mothership over one second before normal guidance begins. The mothership catches craft within 44 world units and at up to 32 m/s relative velocity. Docking places craft inside and refills tanks; outbound emergence receives a free launcher impulse up to the same 32 m/s, subject to work-zone guidance and stopping distance.
 - When raiders spawn, available docked fighters emerge into a mothership-centered skirmish formation and return inside after the last hostile is destroyed. Manually deployed fighters keep their assignments.
-- Select **MSV Hardshell** in the fleet panel or scene, then choose **Deploy mining platform**. The idle blue cargo ship collects one platform from the mothership and deploys it on the asteroid. Repeat after it returns to deploy the second platform. The cargo ship carries one platform, construction section, or recovered hull at a time. Platforms launch ore packets themselves.
-- Select Linehorse and right-click a deployed platform to retrieve it early. **End mining & recover** stops extraction and assigns the cargo ship to collect every deployed platform in successive trips. Buffered ore comes home with the platform; packets already in flight continue. Mining becomes complete only after every platform is back in mothership storage and no packets remain.
+- Select **MSV Hardshell** in the fleet panel or scene, then choose **Deploy mining platform**. The idle blue cargo ship takes a platform and its first five workers to the asteroid. Setup takes three physical hours before extraction starts. Repeat after it returns to deploy the second platform. The cargo ship can carry platform crews as well as its one platform, construction section, or recovered hull.
+- Select Linehorse and right-click a deployed platform to retrieve it early. **End mining & recover** stops extraction and assigns the cargo ship to collect each platform in turn. Workers stay through the three-hour packing job, then ride home with the rig; the shuttle remains available for mid-mission shift changes. Platform, ore, people, and recovered-hull deliveries take three physical minutes to unload. Packets already in flight continue.
 - Old saves retire obsolete mining ships and the intermediate Carrier One/Two hulls, preserving their ore in mothership storage. Deployed platforms and in-flight packets persist. Stored platforms, fuel, and recovery progress survive saves.
 - Save/Load retain pending deployment and mining/recovery phases. Reset replaces the saved world as well as the live mission. Mining controls remain visible; select the mothership to enable deployment when its cargo ship is available.
 
@@ -151,12 +151,12 @@ The mothership starts with 10,000 residents. Select a craft in the fleet and cli
 a crew name to inspect their location, duty time, and service history. Select the
 mothership to inspect workers on deployed platforms. Named people persist in saves.
 
-A small white shuttle automatically carries one pilot and up to five passengers.
-Mining waits for its first five workers. Shifts last eight in-game hours; the
-shuttle drops off five replacements, then brings the previous five home. Delayed
-replacements leave the current crew working overtime. End mining or retrieve a
-platform to evacuate workers before the tug packs it up. The shuttle is automatic;
-fleet selection is for inspection, not manual flight orders.
+A small white shuttle automatically carries one pilot and up to five passengers
+for mid-mission shift changes. The first platform crew rides to the site in
+Linehorse, and the last shift stays to pack and ride home with the rig. Platform
+setup and packing each take three physical hours; mining starts only after setup.
+Shifts last eight physical hours, with delayed replacements leaving the current
+crew working overtime. Shuttle selection is for inspection, not manual flight orders.
 
 Save/Load now preserve the population and tactical mission together; old saves
 receive crews automatically. Reset starts a new population and mission.

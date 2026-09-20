@@ -105,10 +105,16 @@
           var population = actions.getPopulation();
           var populationTime = Math.max(population.timeSeconds, world.campaign.timeDays * 86400 + world.elapsedSeconds * sim.PHYSICAL_SECONDS_PER_SECOND);
           requiredElement('[data-role="population"]').textContent = population.total.toLocaleString() + ' residents · ' + Math.round(population.civilianShare * 100) + '% civilian background';
-          requiredElement('[data-role="platform-staff"]').textContent = world.platforms.filter(function (p) { return p.state === 'deployed'; }).map(function (p) {
+          requiredElement('[data-role="platform-staff"]').textContent = world.platforms.filter(function (p) {
+            return p.state === 'deployed' || p.state === 'setting-up' || p.state === 'packing-up';
+          }).map(function (p) {
             var count = (p.workerIds || []).length;
             var remaining = 8 * 3600 - (world.elapsedSeconds * sim.PHYSICAL_SECONDS_PER_SECOND - (p.shiftStartedSeconds || 0));
-            return p.id + ' · ' + count + '/5 workers · ' + (p.evacuationRequested || world.miningMission !== 'active' ? 'awaiting evacuation' : !count ? 'waiting for crew' : remaining > 0 ? 'shift ends in ' + formatMissionTime(remaining) : 'replacement overdue ' + formatMissionTime(-remaining));
+            var operation = p.state === 'setting-up' ? 'setting up · ' + formatMissionTime(p.setupRemainingSeconds || 0) :
+              p.state === 'packing-up' ? 'packing up · ' + formatMissionTime(p.packRemainingSeconds || 0) :
+              p.evacuationRequested || world.miningMission !== 'active' ? 'awaiting recovery' :
+              !count ? 'waiting for crew' : remaining > 0 ? 'shift ends in ' + formatMissionTime(remaining) : 'replacement overdue ' + formatMissionTime(-remaining);
+            return p.id + ' · ' + count + '/5 workers · ' + operation;
           }).join('\n');
           var selected = world.ships.filter(function (s) { return world.selectedShipIds.indexOf(s.id) !== -1; });
           var ids = selected.reduce(function (all, s) { return all.concat(s.crewIds || [], s.passengerIds || []); }, /** @type {string[]} */ ([]));
@@ -163,6 +169,8 @@
           var label = ship.name + ' · ' + Math.floor(sim.remainingDeltaV(world, ship)) + ' m/s' +
             (ship.disabled ? ' · disabled' : ship.docked ? ' · docked' : ship.order.kind === 'return' && ship.order.automatic ? ' · returning' : '');
           if (ship.type === 'mothership') label = ship.name + ' · ' + world.platforms.filter(function (p) { return p.state === 'stored'; }).length + ' platforms aboard';
+          if (ship.type === 'tug' && (ship.passengerIds || []).length) label += ' · ' + (ship.passengerIds || []).length + ' platform crew';
+          if (ship.type === 'tug' && (ship.unloadRemainingSeconds || 0) > 0) label += ' · unloading ' + formatMissionTime(ship.unloadRemainingSeconds || 0);
           if (ship.type === 'shuttle') label += ' · ' + (ship.passengerIds || []).length + '/5 passengers · ' + (ship.order.kind === 'shuttle' ? (ship.order.evacuation ? 'evacuating ' : 'crew to ') + ship.order.platformId : ship.order.kind === 'return' ? 'returning home' : 'automatic');
           if (button.textContent !== label) button.textContent = label;
           button.dataset.active = String(world.selectedShipIds.indexOf(ship.id) !== -1);
@@ -212,7 +220,7 @@
               return world.selectedShipIds.indexOf(ship.id) !== -1;
             })
             .map(function (ship) {
-              var status = ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
+              var status = (ship.unloadRemainingSeconds || 0) > 0 ? 'unloading cargo' : ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
                 ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : '';
               if (!status) status = ship.docked ? 'docked / refuelled' : ship.order.kind === 'return' ?
                 (ship.order.kind === 'return' && ship.order.automatic ? 'fuel reserve / returning' : 'returning') : ship.order.kind === 'deploy' ? 'deploying platform' :

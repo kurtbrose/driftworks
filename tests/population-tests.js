@@ -89,6 +89,28 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     home(s);
     first.forEach(function (id) { assert(s.population.people[id].location === 'home' && s.population.people[id].assignment === null); });
   });
+  test('Linehorse delivers the initial platform crew and setup delays extraction for three hours', function () {
+    var s = fresh();
+    sessions.transition(s, function (w) { return sim.issueMineOrder(sim.selectShips(w, ['msv-hardshell']), w.asteroids[0].id); });
+    var tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
+    var platform = s.world.platforms[0], asteroid = s.world.asteroids[0];
+    assert(tug.passengerIds.length === 5 && shuttle(s).passengerIds.length === 0);
+    asteroid.angularVelocity = 0; asteroid.rotation = 0; platform.state = 'carried'; platform.carrierId = tug.id;
+    tug.platformId = platform.id; tug.docked = false; tug.launchElapsed = null;
+    platform.asteroidId = asteroid.id; platform.siteAngle = 0; platform.siteDepth = 0.5;
+    tug.order.siteAngle = 0; tug.order.siteDepth = 0.5;
+    var radius = sim.surfaceRadius(asteroid, 0) * platform.siteDepth;
+    tug.position = { x: asteroid.position.x + radius, y: asteroid.position.y }; tug.velocity = { x: 0, y: 0 };
+    sessions.step(s, 1 / 30);
+    platform = s.world.platforms[0]; tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
+    assert(platform.state === 'setting-up' && platform.workerIds.length === 5);
+    assert(tug.passengerIds.length === 0 && platform.setupRemainingSeconds === 3 * 3600 - 2);
+    var ore = s.world.asteroids[0].ore;
+    sessions.step(s, 179);
+    assert(s.world.platforms[0].state === 'setting-up' && s.world.asteroids[0].ore === ore, 'Setup must last the full three physical hours');
+    sessions.step(s, 1);
+    assert(s.world.platforms[0].state === 'deployed' && s.world.asteroids[0].ore < ore, 'Extraction begins after setup is complete');
+  });
   test('Cancelled delivery and low fuel keep passengers aboard until home', function () {
     var s = fresh(); deploy(s); sessions.step(s, 1 / 30);
     var ids = shuttle(s).passengerIds.slice();
@@ -102,25 +124,40 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     sessions.step(s, 1 / 30);
     assert(shuttle(s).order.kind === 'return' && shuttle(s).passengerIds.length === 5);
   });
-  test('Staffed platform retrieval waits for evacuation and mission waits for shuttle', function () {
+  test('Tug takes the final shift, packs the platform and unloads the crew at home', function () {
     var s = fresh(); deploy(s); sessions.step(s, 1 / 30); arrive(s); home(s);
     sessions.transition(s, function (w) { return sim.issuePlatformRecovery(sim.selectShips(w, ['tug-01']), w.platforms[0].id); });
     var tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
     tug.docked = false; tug.launchElapsed = null; tug.position = Object.assign({}, s.world.platforms[0].position); tug.velocity = { x: 0, y: 0 };
     sessions.step(s, 1 / 30);
-    assert(s.world.platforms[0].state === 'deployed' && s.world.platforms[0].workerIds.length === 5);
-    assert(shuttle(s).order.evacuation);
-    arrive(s); assert(s.world.platforms[0].workerIds.length === 0 && shuttle(s).passengerIds.length === 5);
-    sessions.step(s, 1 / 30); assert(s.world.platforms[0].state === 'carried');
-    s.world.platforms.forEach(function (p) { p.state = 'stored'; }); s.world.packets = []; s.world.miningMission = 'recovering';
-    sessions.step(s, 1 / 30); assert(s.world.miningMission === 'recovering');
-    home(s); assert(s.world.miningMission === 'complete');
-  });
-  test('Evacuation outranks initial staffing and overdue replacement', function () {
-    var s = fresh(); deploy(s); sessions.step(s, 1 / 30); arrive(s); home(s);
-    deploy(s, 1); s.world.platforms[0].evacuationRequested = true;
+    assert(s.world.platforms[0].state === 'packing-up' && s.world.platforms[0].workerIds.length === 5);
+    assert(shuttle(s).order.kind === 'idle' && shuttle(s).passengerIds.length === 0);
+    var ids = s.world.platforms[0].workerIds.slice();
+    s.world.platforms[0].ore = 50;
+    var storedBefore = s.world.mothership.storage.ore + s.world.mothership.storage.constructionMass;
+    sessions.step(s, 180);
     sessions.step(s, 1 / 30);
-    assert(shuttle(s).order.platformId === s.world.platforms[0].id && shuttle(s).order.evacuation);
+    assert(s.world.platforms[0].state === 'carried' && s.world.platforms[0].workerIds.length === 0);
+    tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
+    assert(JSON.stringify(tug.passengerIds) === JSON.stringify(ids));
+    assert(ids.every(function (id) { return s.population.people[id].location === tug.id; }));
+    var mothership = s.world.ships.find(function (ship) { return ship.type === 'mothership'; });
+    tug.position = Object.assign({}, mothership.position); tug.velocity = { x: 0, y: 0 }; tug.order = { kind: 'return', target: Object.assign({}, mothership.position) };
+    sessions.step(s, 1 / 30);
+    tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
+    assert(tug.unloadRemainingSeconds > 0 && s.world.platforms[0].state === 'carried');
+    assert(s.world.mothership.storage.ore + s.world.mothership.storage.constructionMass === storedBefore,
+      'Cargo should stay aboard during the unloading delay');
+    sessions.step(s, 3); sessions.step(s, 1 / 30);
+    assert(s.world.platforms[0].state === 'stored');
+    assert(s.world.mothership.storage.ore + s.world.mothership.storage.constructionMass === storedBefore + 50);
+    assert(ids.every(function (id) { return s.population.people[id].location === 'home'; }));
+  });
+  test('End mining reserves the tug for retrieval without dispatching shuttle evacuation', function () {
+    var s = fresh(); deploy(s); sessions.step(s, 1 / 30); arrive(s); home(s);
+    sessions.transition(s, sim.endMining); sessions.step(s, 1 / 30);
+    assert(s.world.ships.find(function (ship) { return ship.id === 'tug-01'; }).order.kind === 'retrieve-platform');
+    assert(shuttle(s).order.kind === 'idle' && shuttle(s).passengerIds.length === 0);
   });
   test('Initial staffing outranks an overdue shift and overdue workers keep mining', function () {
     var s = fresh(); deploy(s); sessions.step(s, 1 / 30); arrive(s); home(s);
