@@ -6,6 +6,6 @@
     "strict": true,
     "lib": ["ES2020", "DOM"]
   },
-  "include": ["src/propulsion.js", "src/combat.js", "src/sim.js", "src/audio.js", "src/hud.js", "src/game.js", "src/types.d.ts"],
-  "exclude": ["vendor"]
+  "include": ["src/**/*.js", "src/**/*.d.ts"],
+  "exclude": ["vendor", "node_modules"]
 }
