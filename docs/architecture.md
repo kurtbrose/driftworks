@@ -137,41 +137,32 @@ variation, enough for regional dominance to differ from the bulk. Heterogeneity
 also lowers softmax temperature. Local fractions are clamped away from pure
 materials.
 
-The painter uses a seeded Delaunay triangulation of boundary and interior points,
-then colors each irregular triangle from its local mixed composition. This keeps
-mesh edges from converging at the center. A separate seeded pseudo-height field
-combines a softened spheroid dome, five broad bulges/basins, low-frequency
-undulation, crater bowls and raised rims. Finite differences across that full
-height field derive a local normal for every triangle; a separate grazing-angle
-term darkens the limb. Fine
-nondirectional texture remains in the cached base layer, while those normals
-drive the dynamic relief-light overlay. Sparse pits and fractures add small-scale
-texture across material regions.
+The display path is a Pixi fragment shader over a transparent body-sized quad.
+It evaluates the continuous composition field per visible screen pixel, so no
+mesh or backing-texture resolution appears at inspection zoom. A seeded
+pseudo-height field combines the exact `sim.surfaceRadius` silhouette, a rounded
+spheroid dome, five broad bulges/basins, low-frequency undulation, crater bowls,
+raised rims and fine relief. Finite differences across that field derive the
+local normal. The same shader applies diffuse light, limb rolloff, crater
+occlusion, procedural pitting and constant-screen-width fracture lines.
 
 Each visual description also derives a `surfaceProfile` by blending the four
 material presets according to bulk composition, then applying one independently
 seeded history state: fresh, dusty, battered, fractured or rubble-pile. The
 profile biases roughness frequency/amplitude, grazing response, pitting,
-fractures, crater sharpness, rims and broad lumpiness. Fine relief samples draw
-subtle paired highlight/shadow cues only where the world light grazes their local
-macro normal, keeping frontal faces quiet while revealing texture near the
-terminator and limb.
+fractures, crater sharpness, rims and broad lumpiness. Microrelief perturbs the
+shared height field and receives an additional restrained grazing-angle contrast
+term, keeping frontal faces quiet while revealing texture near the terminator.
 
-Craters are tinted from the composition beneath them and stamped oldest to newest
-into the same relief field. New bowls erase older crater relief locally, and
-sampled rim masks suppress older arcs cut by later impacts. Their ellipses are
-oriented and foreshortened from the local terrain normal. Crater depth and
-overlapping bowls also contribute a small ambient-occlusion term. Each asteroid display is a container
-with a cached base and a dynamic relief-light layer. The container rotates with
-the body; a fixed world light with a viewer-facing Z component is transformed by
-the inverse sampled body rotation before shading facets and drawing crater rim,
-wall and floor cues. Dynamic lighting redraws in three-degree buckets, while the
-expensive composition mesh does not repaint. The outline continues to use
-`sim.surfaceRadius` so
-mining sites and hit testing agree.
-`paintAsteroid` retains Pixi vector geometry per graphic and ID/radius, updating
-only transforms each frame; this avoids texture resolution limits at inspection
-zoom. No artwork fields are serialized. `tests/asteroid-art.html` displays twenty
+Craters are stamped oldest to newest into the same relief field. New bowls erase
+older crater relief locally, so surviving rims, concave wall counter-shading and
+overlap shadows all follow the combined geometry rather than drawn ellipse
+bands. The container rotates with the body; `paintAsteroid` inverse-transforms a
+fixed world light into a shader uniform every frame without rebuilding geology.
+The shader silhouette uses the same directional-radius equation as
+`sim.surfaceRadius`, keeping artwork, mining sites and hit testing aligned.
+Descriptions contain bounded normalized uniform data and are cached by ID and
+radius; no artwork fields are serialized. `tests/asteroid-art.html` displays twenty
 fixed seeded examples using the production painter;
 `tests/asteroid-playground.html` generates a fresh random panel on every load for
 visual exploration without changing the deterministic study or test fixtures.

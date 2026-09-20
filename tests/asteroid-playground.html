@@ -7,12 +7,12 @@
   :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#10171b;color:#c9d1d2;font:14px system-ui}
   header{display:flex;align-items:flex-start;gap:24px;padding:20px 28px}header div:first-child{flex:1}h1{font-size:20px;margin:0 0 8px}
   p{margin:0;color:#95a4aa}.seed{font-family:ui-monospace,monospace;color:#73858d;margin-top:5px}
-  .controls{display:flex;gap:8px}button{background:#24343e;color:#dbe7eb;border:1px solid #53616a;padding:8px 16px;cursor:pointer;white-space:nowrap}
+  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.controls label{display:grid;gap:3px;color:#95a4aa;font-size:12px}.controls input{width:120px}button{background:#24343e;color:#dbe7eb;border:1px solid #53616a;padding:8px 16px;cursor:pointer;white-space:nowrap}
   button:hover{background:#304650}canvas{display:block;margin:auto;width:min(1100px,100%)!important;height:auto!important}
 </style>
 <header>
-  <div><h1>Asteroid playground · fresh specimens every visit</h1><p>Production asteroid geometry, composition and shared relief lighting.</p><p class="seed" id="seed"></p></div>
-  <div class="controls"><button id="regenerate">New panel</button><button id="detail">Close-up</button><button id="rotation">Pause rotation</button></div>
+  <div><h1>Asteroid playground · fresh specimens every visit</h1><p>Per-pixel procedural geology and grazing-angle relief lighting.</p><p class="seed" id="seed"></p></div>
+  <div class="controls"><label>Light direction<input id="azimuth" type="range" min="-180" max="180" value="-144"></label><label>Light elevation<input id="elevation" type="range" min="8" max="80" value="34"></label><button id="regenerate">New panel</button><button id="detail">Close-up</button><button id="rotation">Pause rotation</button></div>
 </header>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
@@ -26,7 +26,7 @@
 <script src="../src/tactical/camera.js?v=20260920-population1"></script>
 <script src="../src/audio.js?v=20260920-population1"></script>
 <script src="../src/hud.js?v=20260920-population1"></script>
-<script src="../src/game.js?v=20260920-asteroid-surface12"></script>
+<script src="../src/game.js?v=20260920-asteroid-shader1"></script>
 <script>
   const seedBytes=new Uint32Array(1);crypto.getRandomValues(seedBytes);const panelSeed=seedBytes[0];
   document.querySelector('#seed').textContent='Panel seed: '+panelSeed.toString(16).padStart(8,'0');
@@ -43,9 +43,14 @@
     label.position.set(a.position.x,a.position.y+78);app.stage.addChild(label);
   }
   let rotating=true;document.querySelector('#rotation').onclick=function(){rotating=!rotating;this.textContent=rotating?'Pause rotation':'Resume rotation';};
+  function updateLight(){const azimuth=Number(document.querySelector('#azimuth').value)*Math.PI/180;
+    const elevation=Number(document.querySelector('#elevation').value)*Math.PI/180;Driftworks.game.setAsteroidLight(azimuth,elevation);
+    samples.forEach(({a,g})=>Driftworks.game.paintAsteroid(g,a));}
+  document.querySelector('#azimuth').oninput=updateLight;document.querySelector('#elevation').oninput=updateLight;
   document.querySelector('#regenerate').onclick=()=>location.reload();
-  let closeUp=false;document.querySelector('#detail').onclick=function(){closeUp=!closeUp;this.textContent=closeUp?'Overview':'Close-up';
-    app.stage.scale.set(closeUp?6:1);app.stage.position.set(closeUp?-110:0,closeUp?-120:0);};
+  const zoomLevels=[1,6,128],zoomLabels=['Close-up','128×','Overview'];let zoomIndex=0;
+  document.querySelector('#detail').onclick=function(){zoomIndex=(zoomIndex+1)%zoomLevels.length;const zoom=zoomLevels[zoomIndex];this.textContent=zoomLabels[zoomIndex];
+    app.stage.scale.set(zoom);app.stage.position.set(zoom===1?0:550-samples[0].a.position.x*zoom,zoom===1?0:360-samples[0].a.position.y*zoom);};
   app.ticker.add(delta=>{if(rotating)samples.forEach(({a,g})=>{a.rotation+=delta/60*a.angularVelocity;Driftworks.game.paintAsteroid(g,a);});});
 </script>
 </html>

@@ -384,6 +384,19 @@ declare global {
       moveTo: (x: number, y: number) => this; lineTo: (x: number, y: number) => this;
       arc: (x: number, y: number, radius: number, start: number, end: number) => this;
     }
+    class Texture { static WHITE: Texture; }
+    class Filter {
+      uniforms: Record<string, unknown>;
+      padding: number;
+      constructor(vertex?: string, fragment?: string, uniforms?: Record<string, unknown>);
+    }
+    class Sprite extends Container {
+      anchor: { set: (x: number, y?: number) => void };
+      width: number;
+      height: number;
+      filters: Filter[];
+      constructor(texture?: Texture);
+    }
     class Text extends Container { anchor: { set: (x: number, y?: number) => void }; constructor(text: string, style?: unknown); text: string; style: unknown; }
     class Circle { constructor(x: number, y: number, radius: number); }
     class Application {

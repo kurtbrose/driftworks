@@ -37,8 +37,6 @@
     var craterCounts = new Set();
     var bulkWinners = new Set();
     var heterogeneities = [];
-    var colorCounts = [];
-    var brokenRims = 0;
     var roughnessByDominant = [[], [], [], []];
     for (var n = 0; n < 80; n += 1) {
       var asteroid = Object.assign({}, base, { id: 'sample-' + n });
@@ -50,37 +48,28 @@
       roughnessByDominant[winner].push(visual.surfaceProfile.roughnessAmp);
       assertClose(visual.bulk.reduce(function (a, b) { return a + b; }, 0), 1);
       assert(visual.bulk.every(function (fraction) { return fraction > 0; }), 'Every bulk material must be present');
-      assert(visual.cells.length > 200);
-      visual.cells.forEach(function (cell) {
-        assert(cell.points.length === 6, 'Composition mesh should use irregular triangles');
-        assertClose(cell.composition.reduce(function (a, b) { return a + b; }, 0), 1);
-        assert(cell.composition.every(function (fraction) { return fraction >= 0.025 && fraction <= 0.91; }),
-          'Every local cell remains a mixture');
-        assertClose(Math.hypot(cell.normal.x, cell.normal.y, cell.normal.z), 1, 0.00001);
-      });
-      colorCounts.push(new Set(visual.cells.map(function (cell) { return cell.color; })).size);
-      assert(visual.craters.length >= 4, 'Artwork pass keeps craters visible for evaluation');
+      assert(visual.craters.length >= 4 && visual.craters.length <= 20, 'Shader crater data stays visible and bounded');
+      assert(visual.fractures.length <= 32, 'Shader fracture data stays bounded');
       assert(visual.relief.blobs.length === 5, 'Every asteroid has a coherent large-scale relief field');
       assert(['fresh', 'dusty', 'battered', 'fractured', 'rubble-pile'].indexOf(visual.surfaceProfile.state) >= 0);
       assert(visual.surfaceProfile.roughnessAmp > 0 && visual.surfaceProfile.grazingBoost > 0);
-      assert(visual.microBumps.length >= 70, 'Fine relief supplies enough samples for grazing-angle texture');
-      visual.microBumps.forEach(function (bump) {
-        assertClose(Math.hypot(bump.normal.x, bump.normal.y, bump.normal.z), 1, 0.00001);
-      });
       visual.craters.forEach(function (crater) {
         assert(crater.ry <= crater.rx && crater.ry >= crater.rx * 0.5,
           'Crater ellipses are foreshortened by their local surface orientation');
-        assertClose(Math.hypot(crater.normal.x, crater.normal.y, crater.normal.z), 1, 0.00001);
-        assert(crater.rimMask.length === 28, 'Crater rims expose sampled survival geometry');
-        if (crater.rimMask.some(function (visible) { return !visible; })) brokenRims += 1;
+        assert(crater.depth > 0 && crater.depth < crater.rx, 'Crater relief is normalized for shader evaluation');
       });
-      var centerCells = visual.cells.filter(function (cell) { return cell.limb > 0.9; });
-      var edgeCells = visual.cells.filter(function (cell) { return cell.limb < 0.55; });
-      assert(centerCells.length && edgeCells.length, 'Surface mesh spans dome center and limb');
-      assert(centerCells.reduce(function (sum, cell) { return sum + cell.normal.z; }, 0) / centerCells.length >
-        edgeCells.reduce(function (sum, cell) { return sum + cell.normal.z; }, 0) / edgeCells.length,
-      'Full-height normals curve away from the viewer near the limb');
-      assert(visual.pits.length >= 28 && visual.fractures.length >= 2);
+      var center = game.asteroidSurfaceSample(visual, 0, 0);
+      var edge = game.asteroidSurfaceSample(visual, 0.78, 0);
+      assertClose(center.composition.reduce(function (a, b) { return a + b; }, 0), 1);
+      assert(center.composition.every(function (fraction) { return fraction >= 0.025 && fraction <= 0.91; }),
+        'Every sampled point remains a material mixture');
+      assertClose(Math.hypot(center.normal.x, center.normal.y, center.normal.z), 1, 0.00001);
+      assert(center.normal.z > edge.normal.z, 'Full-height normals curve away from the viewer near the limb');
+      var crater = visual.craters[visual.craters.length - 1];
+      var floor = game.asteroidSurfaceSample(visual, crater.x, crater.y);
+      var outside = game.asteroidSurfaceSample(visual, crater.x + crater.rx * 1.35, crater.y);
+      assert(floor.height < outside.height || floor.occlusion > outside.occlusion,
+        'Newest crater is represented as concave or occluded relief');
     }
     assert(bulkWinners.size === 4, 'All four materials can dominate bulk composition');
     var averageRoughness = roughnessByDominant.map(function (values) {
@@ -88,30 +77,26 @@
     });
     assert(averageRoughness[3] > averageRoughness[0], 'Silicate-dominant surfaces are rougher on average than ice-dominant surfaces');
     assert(craterCounts.size > 5);
-    assert(brokenRims > 40, 'Age-ordered overlapping impacts break older crater rims');
     assert(Math.min.apply(null, heterogeneities) < 0.1 && Math.max.apply(null, heterogeneities) > 0.9,
       'Field heterogeneity should span nearly homogeneous to chunky');
-    assert(Math.max.apply(null, colorCounts) > Math.min.apply(null, colorCounts),
-      'Surface busyness should vary');
   });
 
-  test('asteroid renderer retains geometry while updating body transforms', function () {
-    function mockGraphics() {
-      return { clears: 0, clear: function () { this.clears++; }, lineStyle: function () {}, beginFill: function () {},
-        drawPolygon: function () {}, drawCircle: function () {}, endFill: function () {}, moveTo: function () {}, lineTo: function () {} };
-    }
-    var base = mockGraphics();
-    var lighting = mockGraphics();
+  test('asteroid renderer retains shader geometry while updating light uniforms', function () {
     var graphic = { container: { position: { set: function (x, y) { this.x = x; this.y = y; } }, rotation: 0 },
-      base: base, lighting: lighting, visual: null, artworkKey: '', lightBucket: Infinity };
+      sprite: { width: 0, height: 0 }, filter: { uniforms: {} }, visual: null, artworkKey: '' };
     var asteroid = createFreshWorld().asteroids[0];
     game.paintAsteroid(graphic, asteroid);
+    var visual = graphic.visual;
+    var uniforms = graphic.filter.uniforms;
+    var firstLight = [uniforms.uLight[0], uniforms.uLight[1]];
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.01 }));
-    assert(base.clears === 1 && lighting.clears === 1 && graphic.container.rotation === 0.01);
+    assert(graphic.visual === visual && graphic.filter.uniforms === uniforms && graphic.container.rotation === 0.01);
+    assert(uniforms.uLight[0] !== firstLight[0] || uniforms.uLight[1] !== firstLight[1],
+      'Rotation updates continuous local-light uniforms');
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.1 }));
-    assert(base.clears === 1 && lighting.clears === 2, 'Only lighting redraws after a quantized rotation');
+    assert(graphic.visual === visual, 'Rotation does not rebuild procedural geology');
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { radius: asteroid.radius * 2 }));
-    assert(base.clears === 2 && lighting.clears === 3);
+    assert(graphic.visual !== visual && graphic.sprite.width === asteroid.radius * 4.08);
   });
   function createDeployedWorld(seed) {
     var world = createFreshWorld(seed);
