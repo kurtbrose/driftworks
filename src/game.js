@@ -19,6 +19,7 @@
   /** @typedef {{ graphic: PIXI.DisplayObject, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
   /** @typedef {import('./types').Drone} Drone */
   /** @typedef {import('./types').CombatEvent} CombatEvent */
+  /** @typedef {{ container: PIXI.Container, base: PIXI.Graphics, lighting: PIXI.Graphics, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string, lightBucket: number }} AsteroidGraphic */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
   var sim = /** @type {SimApi} */ (Driftworks.sim);
@@ -57,8 +58,8 @@
     { name: 'metals', rgb: [145, 138, 126] },
     { name: 'silicates', rgb: [126, 132, 128] }
   ];
-  /** @type {WeakMap<PIXI.Graphics, string>} */
-  var asteroidArtworkKeys = new WeakMap();
+  var WORLD_LIGHT = { x: -0.813733, y: -0.581238 };
+  var ASTEROID_LIGHT_STEP = Math.PI / 60;
   var MAX_EFFECTS = 260;
 
   // Local artwork scale; the camera still scales positions geometrically.
@@ -271,7 +272,7 @@
     var shipGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
     var platformGraphics = {};
-    /** @type {Record<string, PIXI.Graphics>} */
+    /** @type {Record<string, AsteroidGraphic>} */
     var asteroidGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
     var droneGraphics = {};
@@ -469,12 +470,12 @@
       world.asteroids.forEach(function (asteroid) {
         var asteroidGraphic = asteroidGraphics[asteroid.id];
         if (!asteroidGraphic) {
-          asteroidGraphic = new PIXI.Graphics();
+          asteroidGraphic = createAsteroidGraphic();
           asteroidGraphics[asteroid.id] = asteroidGraphic;
-          worldLayer.addChildAt(asteroidGraphic, 1);
+          worldLayer.addChildAt(asteroidGraphic.container, 1);
         }
         paintAsteroid(asteroidGraphic, asteroid);
-        asteroidGraphic.scale.set(semanticScale('asteroid', world.camera.zoom));
+        asteroidGraphic.container.scale.set(semanticScale('asteroid', world.camera.zoom));
       });
 
       Object.keys(droneGraphics).forEach(function (id) {
@@ -1501,6 +1502,49 @@
       Math.cos((x * -0.61 + y * 1.31) * scale + phase * 1.63)) * 0.5;
   }
 
+  /** @typedef {{ x: number, y: number, z: number }} AsteroidNormal */
+  /** @typedef {{ phase: number, blobs: { x: number, y: number, sigma: number, amp: number }[] }} AsteroidRelief */
+  /** @typedef {{ x: number, y: number, rx: number, ry: number, angle: number, depth: number }} AsteroidReliefCrater */
+
+  /** Shared pseudo-height field in asteroid-radius units.
+   * @param {AsteroidRelief} relief @param {AsteroidReliefCrater[]} craters
+   * @param {number} x @param {number} y @returns {number}
+   */
+  function asteroidReliefAt(relief, craters, x, y) {
+    var height = asteroidWave(x, y, relief.phase, 2.15) * 0.035;
+    relief.blobs.forEach(function (blob) {
+      var dx = x - blob.x, dy = y - blob.y;
+      height += blob.amp * Math.exp(-(dx * dx + dy * dy) / (2 * blob.sigma * blob.sigma));
+    });
+    craters.forEach(function (crater) {
+      var dx = x - crater.x, dy = y - crater.y;
+      var c = Math.cos(crater.angle), s = Math.sin(crater.angle);
+      var ex = (dx * c + dy * s) / crater.rx;
+      var ey = (-dx * s + dy * c) / crater.ry;
+      var distance = Math.sqrt(ex * ex + ey * ey);
+      if (distance >= 1.35) return;
+      var bowl = distance < 1 ? -(1 - distance * distance) * crater.depth : 0;
+      var rim = Math.exp(-Math.pow((distance - 1) / 0.16, 2)) * crater.depth * 0.34;
+      height += bowl + rim;
+    });
+    return height;
+  }
+
+  /** Derive a rounded-body normal perturbed by the shared relief field.
+   * @param {AsteroidRelief} relief @param {AsteroidReliefCrater[]} craters
+   * @param {number} x @param {number} y @returns {AsteroidNormal}
+   */
+  function asteroidNormalAt(relief, craters, x, y) {
+    var epsilon = 0.012;
+    var dx = (asteroidReliefAt(relief, craters, x + epsilon, y) - asteroidReliefAt(relief, craters, x - epsilon, y)) / (2 * epsilon);
+    var dy = (asteroidReliefAt(relief, craters, x, y + epsilon) - asteroidReliefAt(relief, craters, x, y - epsilon)) / (2 * epsilon);
+    var radial = Math.min(0.94, Math.hypot(x, y));
+    var z = Math.sqrt(Math.max(0.12, 1 - radial * radial));
+    var nx = x - dx * 1.7, ny = y - dy * 1.7;
+    var length = Math.hypot(nx, ny, z) || 1;
+    return { x: nx / length, y: ny / length, z: z / length };
+  }
+
   /** @param {number[]} bulk @param {{ low: number, med: number, blobs: { x: number, y: number, sigma: number, amp: number }[] }[]} fields @param {number} heterogeneity @param {number} x @param {number} y @returns {number[]} */
   function asteroidCompositionAt(bulk, fields, heterogeneity, x, y) {
     // High-heterogeneity bodies need enough log-space range to overturn a
@@ -1541,6 +1585,52 @@
     }), lightness);
   }
 
+  /** @param {number[][]} points @param {number[]} triangle @returns {{ x: number, y: number, radiusSquared: number } | null} */
+  function asteroidCircumcircle(points, triangle) {
+    var a = points[triangle[0]], b = points[triangle[1]], c = points[triangle[2]];
+    var divisor = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]));
+    if (Math.abs(divisor) < 0.000001) return null;
+    var aa = a[0] * a[0] + a[1] * a[1];
+    var bb = b[0] * b[0] + b[1] * b[1];
+    var cc = c[0] * c[0] + c[1] * c[1];
+    var x = (aa * (b[1] - c[1]) + bb * (c[1] - a[1]) + cc * (a[1] - b[1])) / divisor;
+    var y = (aa * (c[0] - b[0]) + bb * (a[0] - c[0]) + cc * (b[0] - a[0])) / divisor;
+    return { x: x, y: y, radiusSquared: (x - a[0]) * (x - a[0]) + (y - a[1]) * (y - a[1]) };
+  }
+
+  /** Bowyer-Watson triangulation for the small, once-per-asteroid artwork mesh.
+   * @param {number[][]} source @param {number} extent @returns {number[][]}
+   */
+  function asteroidTriangulation(source, extent) {
+    var count = source.length;
+    var points = source.concat([[-extent * 4, extent * 3], [0, -extent * 5], [extent * 4, extent * 3]]);
+    var triangles = [[count, count + 1, count + 2]];
+    for (var index = 0; index < count; index += 1) {
+      var point = points[index];
+      var bad = triangles.filter(function (triangle) {
+        var circle = asteroidCircumcircle(points, triangle);
+        return circle && (point[0] - circle.x) * (point[0] - circle.x) +
+          (point[1] - circle.y) * (point[1] - circle.y) <= circle.radiusSquared;
+      });
+      /** @type {Record<string, { edge: number[], count: number }>} */
+      var edges = {};
+      bad.forEach(function (triangle) {
+        [[triangle[0], triangle[1]], [triangle[1], triangle[2]], [triangle[2], triangle[0]]].forEach(function (edge) {
+          var key = Math.min(edge[0], edge[1]) + ':' + Math.max(edge[0], edge[1]);
+          if (!edges[key]) edges[key] = { edge: edge, count: 0 };
+          edges[key].count += 1;
+        });
+      });
+      triangles = triangles.filter(function (triangle) { return bad.indexOf(triangle) < 0; });
+      Object.keys(edges).forEach(function (key) {
+        if (edges[key].count === 1) triangles.push([edges[key].edge[0], edges[key].edge[1], index]);
+      });
+    }
+    return triangles.filter(function (triangle) {
+      return triangle[0] < count && triangle[1] < count && triangle[2] < count;
+    });
+  }
+
   /** Deterministic body-local artwork, independent of simulation RNG and depletion.
    * @param {Asteroid} asteroid
    */
@@ -1563,21 +1653,53 @@
       return { low: rng() * 100, med: rng() * 100, blobs: blobs };
     });
     var radius = asteroid.radius;
-    var angleCount = 48;
-    var ringCount = 8;
-    var angles = [];
-    for (var i = 0; i < angleCount; i += 1) angles.push((i + (rng() - 0.5) * 0.42) / angleCount * Math.PI * 2);
-    /** @type {number[][][]} */
-    var rings = [];
-    for (var ring = 1; ring <= ringCount; ring += 1) {
-      rings.push(angles.map(function (angle, index) {
-        var fraction = ring === ringCount ? 1 : ring / ringCount + 0.025 * Math.sin(index * 2.17 + ring * 1.31);
-        var r = sim.surfaceRadius(asteroid, angle) * fraction;
-        return [Math.cos(angle) * r, Math.sin(angle) * r];
-      }));
+    /** @type {AsteroidRelief} */
+    var relief = { phase: rng() * 100, blobs: [] };
+    for (var lump = 0; lump < 5; lump += 1) {
+      relief.blobs.push({ x: (rng() - 0.5) * 1.15, y: (rng() - 0.5) * 1.15,
+        sigma: 0.22 + rng() * 0.22, amp: (rng() - 0.42) * 0.13 });
     }
-    var center = [(rng() - 0.5) * radius * 0.04, (rng() - 0.5) * radius * 0.04];
-    /** @type {{ points: number[], composition: number[], color: number }[]} */
+    /** @type {{ x: number, y: number, rx: number, ry: number, angle: number, depth: number, floor: number, rim: number, shadow: number, normal?: AsteroidNormal }[]} */
+    var craters = [];
+    var craterRng = sim.createRng((seed ^ 0x9e3779b9) >>> 0);
+    var craterCount = 4 + Math.floor(craterRng() * 13);
+    for (var c = 0; c < craterCount; c += 1) {
+      var ca = craterRng() * Math.PI * 2;
+      var cd = 0.12 + craterRng() * 0.55;
+      var cx = Math.cos(ca) * cd, cy = Math.sin(ca) * cd;
+      var local = asteroidCompositionAt(bulk, fields, heterogeneity, cx, cy);
+      var localColor = asteroidCompositionColor(local, 1);
+      var rgb = [(localColor >> 16) & 255, (localColor >> 8) & 255, localColor & 255];
+      var patchNormal = asteroidNormalAt(relief, [], cx, cy);
+      var major = 0.025 + craterRng() * 0.055;
+      var foreshorten = 0.52 + patchNormal.z * 0.43;
+      craters.push({ x: cx, y: cy, rx: major, ry: major * foreshorten,
+        angle: Math.atan2(patchNormal.y, patchNormal.x) + Math.PI / 2,
+        depth: major * (0.28 + craterRng() * 0.25), floor: asteroidColor(rgb, 0.67),
+        rim: asteroidColor(rgb, 1.18), shadow: asteroidColor(rgb, 0.46) });
+    }
+    var normalizedCraters = craters.map(function (crater) {
+      return { x: crater.x, y: crater.y, rx: crater.rx, ry: crater.ry,
+        angle: crater.angle, depth: crater.depth };
+    });
+    craters.forEach(function (crater) {
+      crater.normal = asteroidNormalAt(relief, normalizedCraters, crater.x, crater.y);
+      crater.x *= radius; crater.y *= radius; crater.rx *= radius; crater.ry *= radius; crater.depth *= radius;
+    });
+    var boundaryCount = 64;
+    /** @type {number[][]} */
+    var points = [];
+    for (var i = 0; i < boundaryCount; i += 1) {
+      var angle = i / boundaryCount * Math.PI * 2;
+      var surface = sim.surfaceRadius(asteroid, angle);
+      points.push([Math.cos(angle) * surface, Math.sin(angle) * surface]);
+    }
+    for (var interior = 0; interior < 125; interior += 1) {
+      var interiorAngle = rng() * Math.PI * 2;
+      var distance = Math.sqrt(rng()) * sim.surfaceRadius(asteroid, interiorAngle) * 0.94;
+      points.push([Math.cos(interiorAngle) * distance, Math.sin(interiorAngle) * distance]);
+    }
+    /** @type {{ points: number[], composition: number[], normal: AsteroidNormal, color: number }[]} */
     var cells = [];
     /** @param {number[]} points */
     function addCell(points) {
@@ -1586,51 +1708,90 @@
       x /= points.length / 2; y /= points.length / 2;
       var nx = x / radius, ny = y / radius;
       var composition = asteroidCompositionAt(bulk, fields, heterogeneity, nx, ny);
-      var normalizedDistance = Math.min(1, Math.hypot(nx, ny) / 0.95);
-      var surfaceZ = Math.sqrt(Math.max(0, 1 - normalizedDistance * normalizedDistance));
-      var directional = nx * -0.28 + ny * -0.34 + surfaceZ * 0.62;
-      var fineTexture = asteroidWave(nx, ny, seed * 0.00017, 13) * 0.018;
-      var lightness = 0.9 + directional * 0.16 + fineTexture;
+      // Static albedo carries only nondirectional relief. World-space lighting
+      // belongs to the dynamic overlay so it does not rotate with the rock.
+      var fineTexture = asteroidWave(nx, ny, seed * 0.00017, 13) * 0.014;
+      var lightness = 0.96 + fineTexture;
       cells.push({ points: points, composition: composition,
+        normal: asteroidNormalAt(relief, normalizedCraters, nx, ny),
         color: asteroidCompositionColor(composition, lightness) });
     }
-    for (var sector = 0; sector < angleCount; sector += 1) {
-      var next = (sector + 1) % angleCount;
-      addCell([center[0], center[1], rings[0][sector][0], rings[0][sector][1], rings[0][next][0], rings[0][next][1]]);
-      for (var band = 1; band < ringCount; band += 1) {
-        addCell([rings[band - 1][sector][0], rings[band - 1][sector][1],
-          rings[band][sector][0], rings[band][sector][1], rings[band][next][0], rings[band][next][1],
-          rings[band - 1][next][0], rings[band - 1][next][1]]);
+    asteroidTriangulation(points, radius).forEach(function (triangle) {
+      var vertices = triangle.map(function (index) { return points[index]; });
+      var checks = vertices.concat(vertices.map(function (point, index) {
+        var next = vertices[(index + 1) % 3];
+        return [(point[0] + next[0]) / 2, (point[1] + next[1]) / 2];
+      }));
+      if (!checks.every(function (point) {
+        return Math.hypot(point[0], point[1]) <= sim.surfaceRadius(asteroid, Math.atan2(point[1], point[0])) + radius * 0.002;
+      })) return;
+      addCell(vertices.reduce(function (flat, point) { return flat.concat(point); }, []));
+    });
+    /** @type {{ x: number, y: number, radius: number, color: number }[]} */
+    var pits = [];
+    for (var pit = 0; pit < 28 + Math.floor(rng() * 38); pit += 1) {
+      var pitAngle = rng() * Math.PI * 2;
+      var pitDistance = Math.sqrt(rng()) * sim.surfaceRadius(asteroid, pitAngle) * 0.82;
+      var pitX = Math.cos(pitAngle) * pitDistance, pitY = Math.sin(pitAngle) * pitDistance;
+      var pitComposition = asteroidCompositionAt(bulk, fields, heterogeneity, pitX / radius, pitY / radius);
+      var pitBase = asteroidCompositionColor(pitComposition, 1);
+      var pitRgb = [(pitBase >> 16) & 255, (pitBase >> 8) & 255, pitBase & 255];
+      pits.push({ x: pitX, y: pitY, radius: radius * (0.003 + rng() * 0.008), color: asteroidColor(pitRgb, 0.62) });
+    }
+    /** @type {{ points: number[], color: number }[]} */
+    var fractures = [];
+    var fractureBase = asteroidCompositionColor(bulk, 1);
+    var fractureRgb = [(fractureBase >> 16) & 255, (fractureBase >> 8) & 255, fractureBase & 255];
+    for (var fracture = 0; fracture < 2 + Math.floor(rng() * 4); fracture += 1) {
+      var startAngle = rng() * Math.PI * 2;
+      var startDistance = rng() * radius * 0.45;
+      var fx = Math.cos(startAngle) * startDistance, fy = Math.sin(startAngle) * startDistance;
+      var direction = rng() * Math.PI * 2;
+      var fracturePoints = [fx, fy];
+      for (var segment = 0; segment < 3 + Math.floor(rng() * 4); segment += 1) {
+        direction += (rng() - 0.5) * 0.75;
+        fx += Math.cos(direction) * radius * (0.035 + rng() * 0.045);
+        fy += Math.sin(direction) * radius * (0.035 + rng() * 0.045);
+        if (Math.hypot(fx, fy) > sim.surfaceRadius(asteroid, Math.atan2(fy, fx)) * 0.85) break;
+        fracturePoints.push(fx, fy);
       }
+      if (fracturePoints.length >= 6) fractures.push({ points: fracturePoints, color: asteroidColor(fractureRgb, 0.55) });
     }
-    /** @type {{ x: number, y: number, rx: number, ry: number, angle: number, fill: number, stroke: number }[]} */
-    var craters = [];
-    var craterRng = sim.createRng((seed ^ 0x9e3779b9) >>> 0);
-    var craterCount = craterRng() < 0.22 ? 0 : 2 + Math.floor(craterRng() * 14);
-    for (var c = 0; c < craterCount; c += 1) {
-      var ca = craterRng() * Math.PI * 2;
-      var cd = radius * (0.12 + craterRng() * 0.55);
-      var x = Math.cos(ca) * cd, y = Math.sin(ca) * cd;
-      var local = asteroidCompositionAt(bulk, fields, heterogeneity, x / radius, y / radius);
-      var localColor = asteroidCompositionColor(local, 1);
-      var rgb = [(localColor >> 16) & 255, (localColor >> 8) & 255, localColor & 255];
-      craters.push({ x: x, y: y, rx: radius * (0.022 + craterRng() * 0.05),
-        ry: radius * (0.016 + craterRng() * 0.025), angle: craterRng() * Math.PI,
-        fill: asteroidColor(rgb, 0.88), stroke: asteroidColor(rgb, 0.62) });
-    }
-    var shape = rings[ringCount - 1].reduce(function (points, point) { return points.concat(point); }, []);
-    return { shape: shape, bulk: bulk, heterogeneity: heterogeneity, fields: fields, cells: cells, craters: craters };
+    var shape = points.slice(0, boundaryCount).reduce(function (flat, point) { return flat.concat(point); }, []);
+    return { shape: shape, bulk: bulk, heterogeneity: heterogeneity, fields: fields, relief: relief,
+      cells: cells, craters: craters, pits: pits, fractures: fractures };
   }
 
-  /** @param {PIXI.Graphics} graphics @param {Asteroid} asteroid */
-  function paintAsteroid(graphics, asteroid) {
-    graphics.position.set(asteroid.position.x, asteroid.position.y);
-    graphics.rotation = asteroid.rotation;
-    var key = asteroid.id + ':' + asteroid.radius;
-    if (asteroidArtworkKeys.get(graphics) === key) return;
-    asteroidArtworkKeys.set(graphics, key);
-    var visual = asteroidVisualDescription(asteroid);
+  /** @returns {AsteroidGraphic} */
+  function createAsteroidGraphic() {
+    var container = new PIXI.Container();
+    var base = new PIXI.Graphics();
+    var lighting = new PIXI.Graphics();
+    container.addChild(base, lighting);
+    return { container: container, base: base, lighting: lighting,
+      visual: null, artworkKey: '', lightBucket: Infinity };
+  }
+
+  /** @param {{ x: number, y: number, rx: number, ry: number, angle: number }} crater @param {number} scale @param {number} offsetX @param {number} offsetY @returns {number[]} */
+  function asteroidCraterEllipse(crater, scale, offsetX, offsetY) {
+    var points = [];
+    for (var i = 0; i < 28; i += 1) {
+      var a = i / 28 * Math.PI * 2;
+      var x = Math.cos(a) * crater.rx * scale;
+      var y = Math.sin(a) * crater.ry * scale;
+      points.push(crater.x + offsetX + x * Math.cos(crater.angle) - y * Math.sin(crater.angle),
+        crater.y + offsetY + x * Math.sin(crater.angle) + y * Math.cos(crater.angle));
+    }
+    return points;
+  }
+
+  /** @param {PIXI.Graphics} graphics @param {ReturnType<typeof asteroidVisualDescription>} visual */
+  function paintAsteroidBase(graphics, visual) {
     graphics.clear();
+    graphics.lineStyle(0);
+    graphics.beginFill(asteroidCompositionColor(visual.bulk, 0.96), 1);
+    graphics.drawPolygon(visual.shape);
+    graphics.endFill();
     visual.cells.forEach(function (cell) {
       graphics.lineStyle(0);
       graphics.beginFill(cell.color, 1);
@@ -1641,19 +1802,88 @@
     var outlineRgb = [(outline >> 16) & 255, (outline >> 8) & 255, outline & 255];
     graphics.lineStyle(1, asteroidColor(outlineRgb, 1.28), 0.82);
     graphics.drawPolygon(visual.shape);
-    visual.craters.forEach(function (crater) {
-      var points = [];
-      for (var i = 0; i < 24; i += 1) {
-        var a = i / 24 * Math.PI * 2;
-        var x = Math.cos(a) * crater.rx;
-        var y = Math.sin(a) * crater.ry;
-        points.push(crater.x + x * Math.cos(crater.angle) - y * Math.sin(crater.angle),
-          crater.y + x * Math.sin(crater.angle) + y * Math.cos(crater.angle));
+    visual.fractures.forEach(function (fracture) {
+      graphics.lineStyle(1, fracture.color, 0.34);
+      graphics.moveTo(fracture.points[0], fracture.points[1]);
+      for (var point = 2; point < fracture.points.length; point += 2) {
+        graphics.lineTo(fracture.points[point], fracture.points[point + 1]);
       }
-      graphics.lineStyle(1, crater.stroke, 0.62);
-      graphics.beginFill(crater.fill, 0.34);
-      graphics.drawPolygon(points);
+    });
+    visual.pits.forEach(function (pit) {
+      graphics.lineStyle(0);
+      graphics.beginFill(pit.color, 0.55);
+      graphics.drawCircle(pit.x, pit.y, pit.radius);
       graphics.endFill();
+    });
+    visual.craters.forEach(function (crater) {
+      graphics.lineStyle(0);
+      graphics.beginFill(crater.rim, 0.48);
+      graphics.drawPolygon(asteroidCraterEllipse(crater, 1.16, 0, 0));
+      graphics.endFill();
+      graphics.beginFill(crater.floor, 0.94);
+      graphics.drawPolygon(asteroidCraterEllipse(crater, 0.92, 0, 0));
+      graphics.endFill();
+    });
+  }
+
+  /** @param {PIXI.Graphics} graphics @param {ReturnType<typeof asteroidVisualDescription>} visual @param {{ x: number, y: number }} localLight */
+  function paintAsteroidLighting(graphics, visual, localLight) {
+    graphics.clear();
+    var lightZ = 0.68;
+    var lightScale = 1 / Math.hypot(localLight.x, localLight.y, lightZ);
+    var lx = localLight.x * lightScale, ly = localLight.y * lightScale, lz = lightZ * lightScale;
+    visual.cells.forEach(function (cell) {
+      var diffuse = cell.normal.x * lx + cell.normal.y * ly + cell.normal.z * lz;
+      var delta = diffuse - 0.42;
+      graphics.lineStyle(0);
+      graphics.beginFill(delta >= 0 ? 0xfff3d5 : 0x101722,
+        Math.min(delta >= 0 ? 0.13 : 0.3, Math.abs(delta) * 0.42));
+      graphics.drawPolygon(cell.points);
+      graphics.endFill();
+    });
+    visual.craters.forEach(function (crater) {
+      var adjustedX = localLight.x - (crater.normal ? crater.normal.x * 0.32 : 0);
+      var adjustedY = localLight.y - (crater.normal ? crater.normal.y * 0.32 : 0);
+      var lightDirection = Math.atan2(adjustedY, adjustedX) - crater.angle;
+      var shadowDirection = lightDirection + Math.PI;
+      graphics.lineStyle(0);
+      graphics.beginFill(crater.shadow, 0.18);
+      graphics.drawPolygon(asteroidCraterEllipse(crater, 0.7,
+        -adjustedX * crater.rx * 0.1, -adjustedY * crater.ry * 0.12));
+      graphics.endFill();
+      [lightDirection, shadowDirection].forEach(function (direction, index) {
+        graphics.lineStyle(index ? 2 : 1.8, index ? crater.shadow : crater.rim, 0.94);
+        for (var step = -5; step <= 5; step += 1) {
+          var a = direction + step * 0.105;
+          var x = crater.x + Math.cos(a) * crater.rx * 1.06 * Math.cos(crater.angle) -
+            Math.sin(a) * crater.ry * 1.06 * Math.sin(crater.angle);
+          var y = crater.y + Math.cos(a) * crater.rx * 1.06 * Math.sin(crater.angle) +
+            Math.sin(a) * crater.ry * 1.06 * Math.cos(crater.angle);
+          if (step === -5) graphics.moveTo(x, y); else graphics.lineTo(x, y);
+        }
+      });
+    });
+  }
+
+  /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid */
+  function paintAsteroid(graphic, asteroid) {
+    graphic.container.position.set(asteroid.position.x, asteroid.position.y);
+    graphic.container.rotation = asteroid.rotation;
+    var key = asteroid.id + ':' + asteroid.radius;
+    if (graphic.artworkKey !== key || !graphic.visual) {
+      graphic.visual = asteroidVisualDescription(asteroid);
+      graphic.artworkKey = key;
+      graphic.lightBucket = Infinity;
+      paintAsteroidBase(graphic.base, graphic.visual);
+    }
+    var bucket = Math.round(asteroid.rotation / ASTEROID_LIGHT_STEP);
+    if (graphic.lightBucket === bucket) return;
+    graphic.lightBucket = bucket;
+    var sampledRotation = bucket * ASTEROID_LIGHT_STEP;
+    var c = Math.cos(-sampledRotation), s = Math.sin(-sampledRotation);
+    paintAsteroidLighting(graphic.lighting, graphic.visual, {
+      x: WORLD_LIGHT.x * c - WORLD_LIGHT.y * s,
+      y: WORLD_LIGHT.x * s + WORLD_LIGHT.y * c
     });
   }
 
@@ -1999,6 +2229,7 @@
   Driftworks.game = {
     boot: boot,
     asteroidVisualDescription: asteroidVisualDescription,
+    createAsteroidGraphic: createAsteroidGraphic,
     paintAsteroid: paintAsteroid,
     semanticScale: semanticScale,
     updateEffects: updateEffects,

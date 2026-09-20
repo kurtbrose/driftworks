@@ -47,13 +47,23 @@
       bulkWinners.add(winner);
       assertClose(visual.bulk.reduce(function (a, b) { return a + b; }, 0), 1);
       assert(visual.bulk.every(function (fraction) { return fraction > 0; }), 'Every bulk material must be present');
-      assert(visual.cells.length === 384);
+      assert(visual.cells.length > 200);
       visual.cells.forEach(function (cell) {
+        assert(cell.points.length === 6, 'Composition mesh should use irregular triangles');
         assertClose(cell.composition.reduce(function (a, b) { return a + b; }, 0), 1);
         assert(cell.composition.every(function (fraction) { return fraction >= 0.025 && fraction <= 0.91; }),
           'Every local cell remains a mixture');
+        assertClose(Math.hypot(cell.normal.x, cell.normal.y, cell.normal.z), 1, 0.00001);
       });
       colorCounts.push(new Set(visual.cells.map(function (cell) { return cell.color; })).size);
+      assert(visual.craters.length >= 4, 'Artwork pass keeps craters visible for evaluation');
+      assert(visual.relief.blobs.length === 5, 'Every asteroid has a coherent large-scale relief field');
+      visual.craters.forEach(function (crater) {
+        assert(crater.ry <= crater.rx && crater.ry >= crater.rx * 0.5,
+          'Crater ellipses are foreshortened by their local surface orientation');
+        assertClose(Math.hypot(crater.normal.x, crater.normal.y, crater.normal.z), 1, 0.00001);
+      });
+      assert(visual.pits.length >= 28 && visual.fractures.length >= 2);
     }
     assert(bulkWinners.size === 4, 'All four materials can dominate bulk composition');
     assert(craterCounts.size > 5);
@@ -64,16 +74,22 @@
   });
 
   test('asteroid renderer retains geometry while updating body transforms', function () {
-    var clears = 0;
-    var graphic = { position: { set: function (x, y) { this.x = x; this.y = y; } },
-      clear: function () { clears++; }, lineStyle: function () {}, beginFill: function () {},
-      drawPolygon: function () {}, endFill: function () {}, moveTo: function () {}, lineTo: function () {} };
+    function mockGraphics() {
+      return { clears: 0, clear: function () { this.clears++; }, lineStyle: function () {}, beginFill: function () {},
+        drawPolygon: function () {}, drawCircle: function () {}, endFill: function () {}, moveTo: function () {}, lineTo: function () {} };
+    }
+    var base = mockGraphics();
+    var lighting = mockGraphics();
+    var graphic = { container: { position: { set: function (x, y) { this.x = x; this.y = y; } }, rotation: 0 },
+      base: base, lighting: lighting, visual: null, artworkKey: '', lightBucket: Infinity };
     var asteroid = createFreshWorld().asteroids[0];
     game.paintAsteroid(graphic, asteroid);
-    game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 1.5 }));
-    assert(clears === 1 && graphic.rotation === 1.5);
+    game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.01 }));
+    assert(base.clears === 1 && lighting.clears === 1 && graphic.container.rotation === 0.01);
+    game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.1 }));
+    assert(base.clears === 1 && lighting.clears === 2, 'Only lighting redraws after a quantized rotation');
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { radius: asteroid.radius * 2 }));
-    assert(clears === 2);
+    assert(base.clears === 2 && lighting.clears === 3);
   });
   function createDeployedWorld(seed) {
     var world = createFreshWorld(seed);

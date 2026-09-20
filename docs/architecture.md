@@ -137,12 +137,25 @@ variation, enough for regional dominance to differ from the bulk. Heterogeneity
 also lowers softmax temperature. Local fractions are clamped away from pure
 materials.
 
-The painter tessellates the complete silhouette into 384 fine irregular radial
-cells and colors each cell from its local mixed composition. A coherent
-directional-light field and subtle fine texture supply physical form separately
-from composition. Craters are generated independently and tinted from
-the composition beneath them. The outline continues to use `sim.surfaceRadius`
-so mining sites and hit testing agree.
+The painter uses a seeded Delaunay triangulation of boundary and interior points,
+then colors each irregular triangle from its local mixed composition. This keeps
+mesh edges from converging at the center. A separate seeded pseudo-height field
+combines five broad bulges/basins, low-frequency undulation, crater bowls and
+raised rims. Finite differences derive a local normal for every triangle. Fine
+nondirectional texture remains in the cached base layer, while those normals
+drive the dynamic relief-light overlay. Sparse pits and fractures add small-scale
+texture across material regions.
+
+Craters are tinted from the composition beneath them and contribute depressions
+and raised rims to the same relief field. Their ellipses are oriented and
+foreshortened from the local terrain normal. Each asteroid display is a container
+with a cached base and a dynamic relief-light layer. The container rotates with
+the body; a fixed world light with a viewer-facing Z component is transformed by
+the inverse sampled body rotation before shading facets and drawing crater rim,
+wall and floor cues. Dynamic lighting redraws in three-degree buckets, while the
+expensive composition mesh does not repaint. The outline continues to use
+`sim.surfaceRadius` so
+mining sites and hit testing agree.
 `paintAsteroid` retains Pixi vector geometry per graphic and ID/radius, updating
 only transforms each frame; this avoids texture resolution limits at inspection
 zoom. No artwork fields are serialized. `tests/asteroid-art.html` displays twenty
