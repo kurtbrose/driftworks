@@ -11,7 +11,7 @@ global.document = {
   },
   createElement: () => ({ appendChild: () => {} })
 };
-for (const file of ['src/propulsion.js', 'src/combat.js', 'src/sim.js', 'src/audio.js', 'src/hud.js', 'src/game.js', 'tests/scenario.js', 'tests/tests.js']) {
+for (const file of ['src/propulsion.js', 'src/combat.js', 'src/sim.js', 'src/tactical/camera.js', 'src/audio.js', 'src/hud.js', 'src/game.js', 'tests/scenario.js', 'tests/tests.js']) {
   vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: file });
 }
 console.log(summary.textContent);

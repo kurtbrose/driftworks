@@ -162,10 +162,23 @@ export type CombatModule = {
   }) => CombatApi;
 };
 
+export type CameraApi = {
+  screenToWorld: (point: Vec2, camera: Camera, viewport: Viewport) => Vec2;
+  viewportFromApp: (app: { screen: Viewport }) => Viewport;
+  computeSelectionFocus: (world: World, shipIds?: string[]) => Camera | null;
+  focusCameraToward: (world: World, target: Camera, dt: number) => World;
+  worldToScreen: (point: Vec2, camera: Camera, viewport: Viewport) => Vec2;
+  panCamera: (camera: Camera, screenDelta: Vec2) => Camera;
+  zoomCameraAt: (camera: Camera, screenPoint: Vec2, viewport: Viewport, wheelDelta: number) => Camera;
+  withCamera: (world: World, camera: Camera) => World;
+  shipsInsideScreenRect: (world: World, start: Vec2, end: Vec2, viewport: Viewport) => string[];
+};
+
 export type DriftworksNamespace = {
   propulsion?: PropulsionApi;
   combat?: CombatModule;
   sim?: SimApi;
+  camera?: CameraApi;
   audio?: AudioApi;
   hud?: { create: (host: HTMLElement, actions: HudActions) => HudController; miningControlState: (world: World) => unknown };
   [key: string]: unknown;
