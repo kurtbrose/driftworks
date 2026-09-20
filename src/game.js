@@ -1751,7 +1751,7 @@
       var foreshorten = 0.52 + patchNormal.z * 0.43;
       craters.push({ x: cx, y: cy, rx: major, ry: major * foreshorten,
         angle: Math.atan2(patchNormal.y, patchNormal.x) + Math.PI / 2,
-        depth: major * (0.24 + surfaceProfile.craterSharpness * 0.16 + craterRng() * 0.2), floor: asteroidColor(rgb, 0.67),
+        depth: major * (0.24 + surfaceProfile.craterSharpness * 0.16 + craterRng() * 0.2), floor: asteroidColor(rgb, 0.79),
         rim: asteroidColor(rgb, 1.06 + surfaceProfile.rimStrength * 0.2), shadow: asteroidColor(rgb, 0.4), age: c });
     }
     var normalizedCraters = craters.map(function (crater) {
@@ -1858,9 +1858,9 @@
       var signal = asteroidWave(microX, microY, seed * 0.00023, 16 + surfaceProfile.roughnessFreq * 20) * 0.65 +
         asteroidWave(microX, microY, seed * 0.00037, 31 + surfaceProfile.roughnessFreq * 24) * 0.35;
       microBumps.push({ x: microX * radius, y: microY * radius,
-        radius: radius * (0.0015 + surfaceRng() * 0.0025) * (0.72 + surfaceProfile.roughnessAmp * 0.55),
+        radius: radius * (0.003 + surfaceRng() * 0.006) * (0.72 + surfaceProfile.roughnessAmp * 0.55),
         aspect: 0.42 + surfaceRng() * 0.7,
-        strength: (signal < 0 ? -1 : 1) * (0.35 + Math.abs(signal) * 0.65) * surfaceProfile.roughnessAmp,
+        strength: (0.35 + Math.abs(signal) * 0.65) * surfaceProfile.roughnessAmp,
         normal: asteroidNormalAt(relief, normalizedCraters, microX, microY) });
     }
     var shape = points.slice(0, boundaryCount).reduce(function (flat, point) { return flat.concat(point); }, []);
@@ -1899,6 +1899,55 @@
     return crater.rimMask[Math.round(wrapped / (Math.PI * 2) * 28) % 28];
   }
 
+  /** @param {{x:number,y:number,rx:number,ry:number,angle:number}} crater @param {number} angle @param {number} scale */
+  function asteroidCraterPoint(crater, angle, scale) {
+    return {
+      x: crater.x + Math.cos(angle) * crater.rx * scale * Math.cos(crater.angle) -
+        Math.sin(angle) * crater.ry * scale * Math.sin(crater.angle),
+      y: crater.y + Math.cos(angle) * crater.rx * scale * Math.sin(crater.angle) +
+        Math.sin(angle) * crater.ry * scale * Math.cos(crater.angle)
+    };
+  }
+
+  /** Draw a sampled half-wall as independent quads, avoiding stroke miters at inspection zoom.
+   * @param {PIXI.Graphics} graphics
+   * @param {{x:number,y:number,rx:number,ry:number,angle:number,rimMask?:boolean[]}} crater
+   * @param {number} direction @param {number} innerScale @param {number} outerScale
+   * @param {number} color @param {number} alpha
+   */
+  function paintAsteroidCraterBand(graphics, crater, direction, innerScale, outerScale, color, alpha) {
+    graphics.lineStyle(0);
+    graphics.beginFill(color, alpha);
+    for (var step = -6; step < 6; step += 1) {
+      var a = direction + step * 0.105, next = direction + (step + 1) * 0.105;
+      if (!asteroidCraterRimVisible(crater, a) || !asteroidCraterRimVisible(crater, next)) continue;
+      var outerA = asteroidCraterPoint(crater, a, outerScale);
+      var outerB = asteroidCraterPoint(crater, next, outerScale);
+      var innerB = asteroidCraterPoint(crater, next, innerScale);
+      var innerA = asteroidCraterPoint(crater, a, innerScale);
+      graphics.drawPolygon([outerA.x, outerA.y, outerB.x, outerB.y,
+        innerB.x, innerB.y, innerA.x, innerA.y]);
+    }
+    graphics.endFill();
+  }
+
+  /** @param {PIXI.Graphics} graphics
+   * @param {{x:number,y:number,rx:number,ry:number,angle:number,rimMask?:boolean[]}} crater
+   * @param {number} innerScale @param {number} outerScale @param {number} color @param {number} alpha
+   */
+  function paintAsteroidCraterRing(graphics, crater, innerScale, outerScale, color, alpha) {
+    graphics.lineStyle(0);
+    graphics.beginFill(color, alpha);
+    for (var step = 0; step < 28; step += 1) {
+      var a = step / 28 * Math.PI * 2, next = (step + 1) / 28 * Math.PI * 2;
+      if (!asteroidCraterRimVisible(crater, a) || !asteroidCraterRimVisible(crater, next)) continue;
+      var outerA = asteroidCraterPoint(crater, a, outerScale), outerB = asteroidCraterPoint(crater, next, outerScale);
+      var innerB = asteroidCraterPoint(crater, next, innerScale), innerA = asteroidCraterPoint(crater, a, innerScale);
+      graphics.drawPolygon([outerA.x, outerA.y, outerB.x, outerB.y, innerB.x, innerB.y, innerA.x, innerA.y]);
+    }
+    graphics.endFill();
+  }
+
   /** @param {PIXI.Graphics} graphics @param {ReturnType<typeof asteroidVisualDescription>} visual */
   function paintAsteroidBase(graphics, visual) {
     graphics.clear();
@@ -1934,17 +1983,7 @@
       graphics.beginFill(crater.floor, 0.96);
       graphics.drawPolygon(asteroidCraterEllipse(crater, 0.92, 0, 0));
       graphics.endFill();
-      graphics.lineStyle(2.6, crater.rim, 0.38);
-      var drawing = false;
-      var rimPoints = asteroidCraterEllipse(crater, 1.06, 0, 0);
-      for (var rimStep = 0; rimStep <= 28; rimStep += 1) {
-        var rimAngle = rimStep / 28 * Math.PI * 2;
-        var rimIndex = (rimStep % 28) * 2;
-        if (!asteroidCraterRimVisible(crater, rimAngle)) { drawing = false; continue; }
-        if (!drawing) graphics.moveTo(rimPoints[rimIndex], rimPoints[rimIndex + 1]);
-        else graphics.lineTo(rimPoints[rimIndex], rimPoints[rimIndex + 1]);
-        drawing = true;
-      }
+      paintAsteroidCraterRing(graphics, crater, 1.01, 1.11, crater.rim, 0.38);
     });
   }
 
@@ -1969,11 +2008,13 @@
       var microDiffuse = bump.normal.x * lx + bump.normal.y * ly + bump.normal.z * lz;
       var grazing = Math.pow(1 - Math.max(0, Math.min(1, microDiffuse)), 0.9) *
         smoothstep((microDiffuse + 0.45) / 0.85);
-      var alpha = Math.min(0.3, Math.abs(bump.strength) * visual.surfaceProfile.grazingBoost *
-        grazing * (0.55 + bump.normal.z * 0.45) * 2.8);
+      var alpha = Math.min(0.44, Math.abs(bump.strength) * visual.surfaceProfile.grazingBoost *
+        grazing * (0.55 + bump.normal.z * 0.45) * 4);
       if (alpha < 0.01) return;
-      var direction = bump.strength < 0 ? -1 : 1;
-      var alongX = lx * direction, alongY = ly * direction;
+      // Fine roughness represents raised grains. Explicit pits and crater bowls
+      // carry the inverse lighting language; mixing both here made half of this
+      // field read as bumps with shadows pointing toward the light.
+      var alongX = lx, alongY = ly;
       var acrossX = -alongY * bump.aspect, acrossY = alongX * bump.aspect;
       var reach = bump.radius * (1.1 + grazing * 0.75);
       graphics.lineStyle(0);
@@ -1998,20 +2039,12 @@
       graphics.drawPolygon(asteroidCraterEllipse(crater, 0.7,
         -adjustedX * crater.rx * 0.1, -adjustedY * crater.ry * 0.12));
       graphics.endFill();
-      [lightDirection, shadowDirection].forEach(function (direction, index) {
-        graphics.lineStyle(index ? 2.4 : 2, index ? crater.shadow : crater.rim, index ? 0.98 : 0.96);
-        var drawing = false;
-        for (var step = -5; step <= 5; step += 1) {
-          var a = direction + step * 0.105;
-          var x = crater.x + Math.cos(a) * crater.rx * 1.06 * Math.cos(crater.angle) -
-            Math.sin(a) * crater.ry * 1.06 * Math.sin(crater.angle);
-          var y = crater.y + Math.cos(a) * crater.rx * 1.06 * Math.sin(crater.angle) +
-            Math.sin(a) * crater.ry * 1.06 * Math.cos(crater.angle);
-          if (!asteroidCraterRimVisible(crater, a)) { drawing = false; continue; }
-          if (!drawing) graphics.moveTo(x, y); else graphics.lineTo(x, y);
-          drawing = true;
-        }
-      });
+      // The raised outer lip lights like a bump, but the concave inner wall is
+      // counter-shaded: its near/lightward wall is dark and the far wall faces
+      // back toward the light. Keeping these cues separate makes the bowl read.
+      paintAsteroidCraterBand(graphics, crater, lightDirection, 1.04, 1.09, crater.rim, 0.42);
+      paintAsteroidCraterBand(graphics, crater, lightDirection, 0.79, 0.91, crater.shadow, 0.82);
+      paintAsteroidCraterBand(graphics, crater, shadowDirection, 0.8, 0.91, crater.rim, 0.7);
     });
   }
 
