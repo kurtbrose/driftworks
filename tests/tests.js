@@ -50,6 +50,36 @@
     });
   });
 
+  test('combat scenario replay produces the same complete world twice', function () {
+    var replay = window.Driftworks.scenario;
+    var scenario = { version: 1, seed: 12345, ticks: 2400, commands: [
+      { tick: 0, action: 'select', args: [['escort-01', 'escort-02']] },
+      { tick: 0, action: 'defend', args: [{ x: 360, y: 300 }] },
+      { tick: 0, action: 'spawnHostileWave', args: [] }
+    ] };
+    var first = replay.run(scenario);
+    var second = replay.run(scenario);
+    assert(first.wrecks.length > 0 && first.combat.drones.length > 0,
+      'Determinism replay must exercise combat consequences');
+    assert(JSON.stringify(first) === JSON.stringify(second),
+      'Running the same combat scenario twice must produce identical complete worlds');
+  });
+
+  test('combat scenario matches after saving and reloading midway', function () {
+    var replay = window.Driftworks.scenario;
+    var commands = [
+      { tick: 0, action: 'select', args: [['escort-01', 'escort-02']] },
+      { tick: 0, action: 'defend', args: [{ x: 360, y: 300 }] },
+      { tick: 0, action: 'spawnHostileWave', args: [] }
+    ];
+    var uninterrupted = replay.run({ version: 1, seed: 12345, ticks: 2400, commands: commands });
+    var midpoint = replay.run({ version: 1, seed: 12345, ticks: 1200, commands: commands });
+    var reloaded = sim.deserializeWorld(sim.serializeWorld(midpoint));
+    var resumed = replay.run({ version: 1, world: reloaded, ticks: 1200 });
+    assert(JSON.stringify(resumed) === JSON.stringify(uninterrupted),
+      'A midpoint save/load must preserve the complete final combat world');
+  });
+
   test('old saves gain deterministic combat defaults and repeated loading preserves encounters', function () {
     var old = sim.createInitialWorld(12345);
     delete old.combat;
