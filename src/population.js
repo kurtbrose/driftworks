@@ -33,8 +33,11 @@
         var n = state.nextPersonId++;
         var hash = Math.imul(state.seed ^ n, 2654435761) >>> 0;
         var id = 'person-' + n;
+        // Operational residents are drawn from the established settlement. Give
+        // each a seeded arrival date within the preceding 2–30 years.
+        var tenureSeconds = (2 + ((hash >>> 20) % 29)) * 365.25 * 86400;
         person = { id: id, name: firstNames[hash % firstNames.length] + ' ' + surnames[(hash >>> 12) % surnames.length],
-          role: role, joinedSeconds: 0, alive: true, location: 'home', assignment: null,
+          role: role, joinedSeconds: state.timeSeconds - tenureSeconds, alive: true, location: 'home', assignment: null,
           preferredAssignment: null, dutyStartedSeconds: null, dutySeconds: 0, overtimeSeconds: 0, history: [] };
         state.people[id] = person;
       }

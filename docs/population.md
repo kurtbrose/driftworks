@@ -24,7 +24,10 @@ seconds (480 tactical seconds), matching the HUD clock. Pausing advances neither
 `session.advanceCampaign(session, days)` advances population and campaign time
 only with the fleet recovered, no passengers aboard, and platforms stored.
 
-People store role, location, assignment, joining time, duty totals, overtime, and
+Newly materialized operational residents are established settlement residents:
+their seeded arrival dates fall 2–30 years before population time. This keeps
+their tenure plausible and deterministic while leaving the background population
+sparse. People store role, location, assignment, joining time, duty totals, overtime, and
 service history. Duty starts when leaving home/boarding transport and ends at home,
 so duty and overtime include travel. Platform shift duration starts on arrival.
 An unavailable replacement leaves workers on duty and mining continues.

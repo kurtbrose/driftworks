@@ -31,6 +31,8 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     var ids = pop.assign(a, 'pilot', 'fighter', 1);
     assert(JSON.stringify(ids) === JSON.stringify(pop.assign(b, 'pilot', 'fighter', 1)));
     assert(JSON.stringify(a) === JSON.stringify(b));
+    assert(a.people[ids[0]].joinedSeconds < 0 && a.people[ids[0]].joinedSeconds >= -30.5 * 365.25 * 86400,
+      'Initial residents should have a plausible, seeded history before campaign day zero');
     assert(a.total === 10000 && a.operationalCapacity === 3000);
     assert(pop.assign(a, 'pilot', 'other', 1)[0] !== ids[0]);
     pop.consume(a, [{ id: 1, personId: ids[0], kind: 'duty-completed', atSeconds: 0, location: 'home', assignment: null, missionId: 'test' }]);
