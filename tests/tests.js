@@ -38,6 +38,8 @@
     var bulkWinners = new Set();
     var heterogeneities = [];
     var colorCounts = [];
+    var brokenRims = 0;
+    var roughnessByDominant = [[], [], [], []];
     for (var n = 0; n < 80; n += 1) {
       var asteroid = Object.assign({}, base, { id: 'sample-' + n });
       var visual = game.asteroidVisualDescription(asteroid);
@@ -45,6 +47,7 @@
       heterogeneities.push(visual.heterogeneity);
       var winner = visual.bulk.indexOf(Math.max.apply(null, visual.bulk));
       bulkWinners.add(winner);
+      roughnessByDominant[winner].push(visual.surfaceProfile.roughnessAmp);
       assertClose(visual.bulk.reduce(function (a, b) { return a + b; }, 0), 1);
       assert(visual.bulk.every(function (fraction) { return fraction > 0; }), 'Every bulk material must be present');
       assert(visual.cells.length > 200);
@@ -58,15 +61,34 @@
       colorCounts.push(new Set(visual.cells.map(function (cell) { return cell.color; })).size);
       assert(visual.craters.length >= 4, 'Artwork pass keeps craters visible for evaluation');
       assert(visual.relief.blobs.length === 5, 'Every asteroid has a coherent large-scale relief field');
+      assert(['fresh', 'dusty', 'battered', 'fractured', 'rubble-pile'].indexOf(visual.surfaceProfile.state) >= 0);
+      assert(visual.surfaceProfile.roughnessAmp > 0 && visual.surfaceProfile.grazingBoost > 0);
+      assert(visual.microBumps.length >= 70, 'Fine relief supplies enough samples for grazing-angle texture');
+      visual.microBumps.forEach(function (bump) {
+        assertClose(Math.hypot(bump.normal.x, bump.normal.y, bump.normal.z), 1, 0.00001);
+      });
       visual.craters.forEach(function (crater) {
         assert(crater.ry <= crater.rx && crater.ry >= crater.rx * 0.5,
           'Crater ellipses are foreshortened by their local surface orientation');
         assertClose(Math.hypot(crater.normal.x, crater.normal.y, crater.normal.z), 1, 0.00001);
+        assert(crater.rimMask.length === 28, 'Crater rims expose sampled survival geometry');
+        if (crater.rimMask.some(function (visible) { return !visible; })) brokenRims += 1;
       });
+      var centerCells = visual.cells.filter(function (cell) { return cell.limb > 0.9; });
+      var edgeCells = visual.cells.filter(function (cell) { return cell.limb < 0.55; });
+      assert(centerCells.length && edgeCells.length, 'Surface mesh spans dome center and limb');
+      assert(centerCells.reduce(function (sum, cell) { return sum + cell.normal.z; }, 0) / centerCells.length >
+        edgeCells.reduce(function (sum, cell) { return sum + cell.normal.z; }, 0) / edgeCells.length,
+      'Full-height normals curve away from the viewer near the limb');
       assert(visual.pits.length >= 28 && visual.fractures.length >= 2);
     }
     assert(bulkWinners.size === 4, 'All four materials can dominate bulk composition');
+    var averageRoughness = roughnessByDominant.map(function (values) {
+      return values.reduce(function (sum, value) { return sum + value; }, 0) / values.length;
+    });
+    assert(averageRoughness[3] > averageRoughness[0], 'Silicate-dominant surfaces are rougher on average than ice-dominant surfaces');
     assert(craterCounts.size > 5);
+    assert(brokenRims > 40, 'Age-ordered overlapping impacts break older crater rims');
     assert(Math.min.apply(null, heterogeneities) < 0.1 && Math.max.apply(null, heterogeneities) > 0.9,
       'Field heterogeneity should span nearly homogeneous to chunky');
     assert(Math.max.apply(null, colorCounts) > Math.min.apply(null, colorCounts),

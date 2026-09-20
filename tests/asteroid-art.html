@@ -13,7 +13,7 @@
 <script src="../src/tactical/camera.js?v=20260920-population1"></script>
 <script src="../src/audio.js?v=20260920-population1"></script>
 <script src="../src/hud.js?v=20260920-population1"></script>
-<script src="../src/game.js?v=20260920-asteroid9"></script><script>
+<script src="../src/game.js?v=20260920-asteroid-surface5"></script><script>
 const app = new PIXI.Application({width:1100,height:720,backgroundAlpha:0,antialias:true,resolution:devicePixelRatio,autoDensity:true});
 document.body.appendChild(app.view);
 const names=['Ice','Volatiles','Metals','Silicates'];
@@ -23,7 +23,7 @@ for(let i=0;i<20;i++){
  const g=Driftworks.game.createAsteroidGraphic();app.stage.addChild(g.container);Driftworks.game.paintAsteroid(g,a);samples.push({a,g});
  const v=Driftworks.game.asteroidVisualDescription(a);
  const dominant=v.bulk.indexOf(Math.max(...v.bulk));
- const label=new PIXI.Text(names[dominant],{fontFamily:'system-ui',fontSize:13,fill:0xc9d1d2});label.anchor.set(.5);label.position.set(a.position.x,a.position.y+77);app.stage.addChild(label);
+ const label=new PIXI.Text(names[dominant]+' · '+v.surfaceProfile.state,{fontFamily:'system-ui',fontSize:12,fill:0xc9d1d2});label.anchor.set(.5);label.position.set(a.position.x,a.position.y+77);app.stage.addChild(label);
 }
 let rotating=true;document.querySelector('button').onclick=function(){rotating=!rotating;this.textContent=rotating?'Pause rotation':'Resume rotation';};
 app.ticker.add(delta=>{if(rotating)samples.forEach(({a,g})=>{a.rotation+=delta/60*.08;Driftworks.game.paintAsteroid(g,a);});});

@@ -140,15 +140,28 @@ materials.
 The painter uses a seeded Delaunay triangulation of boundary and interior points,
 then colors each irregular triangle from its local mixed composition. This keeps
 mesh edges from converging at the center. A separate seeded pseudo-height field
-combines five broad bulges/basins, low-frequency undulation, crater bowls and
-raised rims. Finite differences derive a local normal for every triangle. Fine
+combines a softened spheroid dome, five broad bulges/basins, low-frequency
+undulation, crater bowls and raised rims. Finite differences across that full
+height field derive a local normal for every triangle; a separate grazing-angle
+term darkens the limb. Fine
 nondirectional texture remains in the cached base layer, while those normals
 drive the dynamic relief-light overlay. Sparse pits and fractures add small-scale
 texture across material regions.
 
-Craters are tinted from the composition beneath them and contribute depressions
-and raised rims to the same relief field. Their ellipses are oriented and
-foreshortened from the local terrain normal. Each asteroid display is a container
+Each visual description also derives a `surfaceProfile` by blending the four
+material presets according to bulk composition, then applying one independently
+seeded history state: fresh, dusty, battered, fractured or rubble-pile. The
+profile biases roughness frequency/amplitude, grazing response, pitting,
+fractures, crater sharpness, rims and broad lumpiness. Fine relief samples draw
+subtle paired highlight/shadow cues only where the world light grazes their local
+macro normal, keeping frontal faces quiet while revealing texture near the
+terminator and limb.
+
+Craters are tinted from the composition beneath them and stamped oldest to newest
+into the same relief field. New bowls erase older crater relief locally, and
+sampled rim masks suppress older arcs cut by later impacts. Their ellipses are
+oriented and foreshortened from the local terrain normal. Crater depth and
+overlapping bowls also contribute a small ambient-occlusion term. Each asteroid display is a container
 with a cached base and a dynamic relief-light layer. The container rotates with
 the body; a fixed world light with a viewer-facing Z component is transformed by
 the inverse sampled body rotation before shading facets and drawing crater rim,
