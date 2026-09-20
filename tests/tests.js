@@ -49,7 +49,6 @@
       assertClose(visual.bulk.reduce(function (a, b) { return a + b; }, 0), 1);
       assert(visual.bulk.every(function (fraction) { return fraction > 0; }), 'Every bulk material must be present');
       assert(visual.craters.length >= 4 && visual.craters.length <= 20, 'Shader crater data stays visible and bounded');
-      assert(visual.fractures.length <= 32, 'Shader fracture data stays bounded');
       assert(visual.relief.blobs.length === 5, 'Every asteroid has a coherent large-scale relief field');
       assert(['fresh', 'dusty', 'battered', 'fractured', 'rubble-pile'].indexOf(visual.surfaceProfile.state) >= 0);
       assert(visual.surfaceProfile.roughnessAmp > 0 && visual.surfaceProfile.grazingBoost > 0);
@@ -83,20 +82,21 @@
 
   test('asteroid renderer retains shader geometry while updating light uniforms', function () {
     var graphic = { container: { position: { set: function (x, y) { this.x = x; this.y = y; } }, rotation: 0 },
-      sprite: { width: 0, height: 0 }, filter: { uniforms: {} }, visual: null, artworkKey: '' };
+      mesh: { scale: { value: 0, set: function (value) { this.value = value; } } },
+      shader: { uniforms: {} }, visual: null, artworkKey: '' };
     var asteroid = createFreshWorld().asteroids[0];
     game.paintAsteroid(graphic, asteroid);
     var visual = graphic.visual;
-    var uniforms = graphic.filter.uniforms;
+    var uniforms = graphic.shader.uniforms;
     var firstLight = [uniforms.uLight[0], uniforms.uLight[1]];
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.01 }));
-    assert(graphic.visual === visual && graphic.filter.uniforms === uniforms && graphic.container.rotation === 0.01);
+    assert(graphic.visual === visual && graphic.shader.uniforms === uniforms && graphic.container.rotation === 0.01);
     assert(uniforms.uLight[0] !== firstLight[0] || uniforms.uLight[1] !== firstLight[1],
       'Rotation updates continuous local-light uniforms');
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.1 }));
     assert(graphic.visual === visual, 'Rotation does not rebuild procedural geology');
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { radius: asteroid.radius * 2 }));
-    assert(graphic.visual !== visual && graphic.sprite.width === asteroid.radius * 4.08);
+    assert(graphic.visual !== visual && graphic.mesh.scale.value === asteroid.radius * 2);
   });
   function createDeployedWorld(seed) {
     var world = createFreshWorld(seed);

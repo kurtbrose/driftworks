@@ -397,6 +397,17 @@ declare global {
       filters: Filter[];
       constructor(texture?: Texture);
     }
+    class Geometry {
+      addAttribute: (name: string, data: number[], size: number) => this;
+      addIndex: (data: number[]) => this;
+    }
+    class Shader {
+      uniforms: Record<string, unknown>;
+      static from(vertex: string, fragment: string, uniforms?: Record<string, unknown>): Shader;
+    }
+    class Mesh extends Container {
+      constructor(geometry: Geometry, shader: Shader);
+    }
     class Text extends Container { anchor: { set: (x: number, y?: number) => void }; constructor(text: string, style?: unknown); text: string; style: unknown; }
     class Circle { constructor(x: number, y: number, radius: number); }
     class Application {

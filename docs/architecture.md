@@ -143,8 +143,9 @@ mesh or backing-texture resolution appears at inspection zoom. A seeded
 pseudo-height field combines the exact `sim.surfaceRadius` silhouette, a rounded
 spheroid dome, five broad bulges/basins, low-frequency undulation, crater bowls,
 raised rims and fine relief. Finite differences across that field derive the
-local normal. The same shader applies diffuse light, limb rolloff, crater
-occlusion, procedural pitting and constant-screen-width fracture lines.
+local normal. The same shader applies diffuse light, limb rolloff and crater
+occlusion. Fine texture comes only from the relief response; explicit dot and
+line texture marks are not drawn.
 
 Each visual description also derives a `surfaceProfile` by blending the four
 material presets according to bulk composition, then applying one independently
