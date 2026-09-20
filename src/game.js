@@ -1494,9 +1494,12 @@
     var secondary = (dominant + 1 + Math.floor(rng() * 3)) % 4;
     var tertiary = [0, 1, 2, 3].filter(function (m) { return m !== dominant && m !== secondary; })[0];
     var composition = [0, 0, 0, 0];
+    var secondaryCount = rng() < 0.15 ? 0 : (rng() < 0.65 ? 1 : 2);
     composition[dominant] = 0.55 + rng() * 0.2;
     composition[secondary] = (1 - composition[dominant]) * (0.6 + rng() * 0.25);
     composition[tertiary] = 1 - composition[dominant] - composition[secondary];
+    if (secondaryCount < 2) { composition[secondary] += composition[tertiary]; composition[tertiary] = 0; }
+    if (!secondaryCount) { composition[dominant] = 1; composition[secondary] = 0; }
     var radius = asteroid.radius;
     var shape = [];
     for (var i = 0; i < 120; i += 1) {
@@ -1504,13 +1507,13 @@
       var r = sim.surfaceRadius(asteroid, angle);
       shape.push(Math.cos(angle) * r, Math.sin(angle) * r);
     }
-    /** @type {{ material: number, points: number[], x: number, y: number, extent: number }[]} */
+    /** @type {{ material: number, points: number[], x: number, y: number, extent: number, satellite: boolean }[]} */
     var deposits = [];
-    var count = 3 + Math.floor(rng() * 2);
+    var count = secondaryCount ? 1 + Math.floor(rng() * 3) : 0;
     for (var j = 0; j < count; j += 1) {
-      var material = j % 2 === 0 ? secondary : tertiary;
+      var material = secondaryCount === 2 && rng() < 0.3 ? tertiary : secondary;
       // Surface exposure is deliberately independent of bulk abundance.
-      var size = radius * (0.21 + rng() * 0.03);
+      var size = radius * (0.22 + rng() * (count === 1 ? 0.09 : 0.035));
       var a = 0, x = 0, y = 0;
       var placed = false;
       for (var attempt = 0; attempt < 80; attempt += 1) {
@@ -1525,11 +1528,18 @@
       var points = [];
       var corners = 15 + Math.floor(rng() * 5);
       var aspect = 0.72 + rng() * 0.2;
+      // Elongate along the local limb tangent, derived from the shared surface.
+      var before = sim.surfaceRadius(asteroid, a - 0.01);
+      var after = sim.surfaceRadius(asteroid, a + 0.01);
+      var tangent = Math.atan2(Math.sin(a + 0.01) * after - Math.sin(a - 0.01) * before,
+        Math.cos(a + 0.01) * after - Math.cos(a - 0.01) * before);
       for (var k = 0; k < corners; k += 1) {
-        var theta = a + k / corners * Math.PI * 2;
+        var theta = k / corners * Math.PI * 2;
         var roughness = 0.68 + rng() * 0.32;
-        points.push(x + Math.cos(theta) * size * roughness,
-          y + Math.sin(theta) * size * aspect * roughness);
+        var localX = Math.cos(theta) * size * roughness;
+        var localY = Math.sin(theta) * size * aspect * roughness;
+        points.push(x + localX * Math.cos(tangent) - localY * Math.sin(tangent),
+          y + localX * Math.sin(tangent) + localY * Math.cos(tangent));
       }
       // Sample patch edges before trimming them to the exact rendered outline.
       // Dense samples follow the curved limb rather than joining cut ends with a chord.
@@ -1550,11 +1560,35 @@
           trimmed.push(px * scale, py * scale);
         }
       }
-      deposits.push({ material: material, points: trimmed, x: x, y: y, extent: size });
+      deposits.push({ material: material, points: trimmed, x: x, y: y, extent: size, satellite: false });
     }
+    deposits.slice().forEach(function (parent) {
+      if (rng() >= 0.25) return;
+      var size = radius * (0.025 + rng() * 0.02);
+      for (var attempt = 0; attempt < 16; attempt += 1) {
+        var angle = rng() * Math.PI * 2;
+        var distance = parent.extent + size + radius * 0.015;
+        var x = parent.x + Math.cos(angle) * distance;
+        var y = parent.y + Math.sin(angle) * distance;
+        // Keep these tiny fragments on the body and clear of other inclusions.
+        if (Math.hypot(x, y) + size > radius * 0.75 || !deposits.every(function (other) {
+          return Math.hypot(x - other.x, y - other.y) > size + other.extent;
+        })) continue;
+        var points = [];
+        for (var k = 0; k < 9; k += 1) {
+          var theta = k / 9 * Math.PI * 2;
+          var extent = size * (0.65 + rng() * 0.35);
+          points.push(x + Math.cos(theta) * extent, y + Math.sin(theta) * extent);
+        }
+        deposits.push({ material: parent.material, points: points, x: x, y: y, extent: size, satellite: true });
+        break;
+      }
+    });
     /** @type {{ x: number, y: number, rx: number, ry: number, angle: number }[]} */
     var craters = [];
-    var craterCount = Math.floor(rng() * (dominant === 0 ? 4 : 10));
+    // An independent stream lets bare bodies be heavily cratered and rich ones quiet.
+    rng = sim.createRng((seed ^ 0x9e3779b9) >>> 0);
+    var craterCount = rng() < 0.25 ? 0 : 2 + Math.floor(rng() * 15);
     var cluster = rng() * Math.PI * 2;
     for (var c = 0; c < craterCount; c += 1) {
       var ca = cluster + (rng() - 0.5) * 3.8;

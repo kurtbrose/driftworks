@@ -135,6 +135,10 @@ than 20% of the surface, independent of bulk material ratios. Deposits do not
 overlap, and craters stay on exposed host rock, away from deposit boundaries.
 Centers are seeded across the full body rather than spaced around a ring;
 deposits reaching the limb are trimmed to the sampled silhouette.
+Most bodies have 1–3 main deposits of 1–2 secondary materials; some are bare.
+Each main deposit has a 25% chance to try placing a tiny satellite fleck nearby.
+Patches align loosely with the local limb tangent. Crater density uses its own
+seeded random stream so bare rocks can be crater-heavy and rich rocks quiet.
 The outline
 continues to use `sim.surfaceRadius` so mining sites and hit testing agree.
 `paintAsteroid` retains Pixi vector geometry per graphic and ID/radius, updating

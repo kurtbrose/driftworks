@@ -38,13 +38,23 @@
     var craterCounts = new Set();
     var edgeDeposits = 0;
     var centralDeposits = 0;
+    var depositCounts = new Set();
+    var satellites = 0;
+    var bareCratered = false;
+    var richQuiet = false;
     for (var n = 0; n < 80; n += 1) {
       var asteroid = Object.assign({}, base, { id: 'sample-' + n });
       var visual = game.asteroidVisualDescription(asteroid);
       palettes.add(visual.dominant);
       craterCounts.add(visual.craters.length);
       assertClose(visual.composition.reduce(function (a, b) { return a + b; }, 0), 1);
-      assert(visual.deposits.length >= 3 && visual.deposits.length <= 5);
+      var mains = visual.deposits.filter(function (deposit) { return !deposit.satellite; });
+      depositCounts.add(mains.length);
+      satellites += visual.deposits.length - mains.length;
+      bareCratered = bareCratered || (!mains.length && visual.craters.length >= 5);
+      richQuiet = richQuiet || (mains.length === 3 && !visual.craters.length);
+      assert(mains.length <= 3);
+      assert(new Set(visual.deposits.map(function (deposit) { return deposit.material; })).size <= 2);
       function area(points) {
         var sum = 0;
         for (var p = 0; p < points.length; p += 2) {
@@ -81,6 +91,9 @@
     assert(craterCounts.size > 5);
     assert(edgeDeposits > 20, 'Deposits should sometimes intersect the limb');
     assert(centralDeposits > 10, 'Placement must include the interior, not a fixed ring');
+    assert(depositCounts.size === 4, 'Include bare rocks and one, two or three main deposits');
+    assert(satellites > 0 && satellites < 80, 'Satellite flecks should be occasional');
+    assert(bareCratered && richQuiet, 'Crater density should vary independently of deposits');
   });
 
   test('asteroid renderer retains geometry while updating body transforms', function () {
