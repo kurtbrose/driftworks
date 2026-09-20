@@ -2,7 +2,7 @@
 
 ## Static type checks
 
-All five application scripts in `src/` are checked with strict TypeScript via
+All six application scripts in `src/` are checked with strict TypeScript via
 JSDoc and `src/types.d.ts`. Run `npm run check:types` (or
 `node tests/check-types.cjs`) after installing the optional development dependency.
 The check also rejects explicit `any` annotations and identifiers inferred as
@@ -19,14 +19,15 @@ exports `paintRecovery` alongside its other rendering helpers for regression che
 ## Intended boundaries
 
 The site loads ordinary scripts into `window.Driftworks`; there are no ES module
-imports or build artifacts. `index.html` loads Pixi, propulsion, simulation,
-audio, HUD, then game. The test entry points load the same application scripts without
+imports or build artifacts. `index.html` loads Pixi, propulsion, combat,
+simulation, audio, HUD, then game. The test entry points load the same application scripts without
 Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 
 | Module | Responsibility and interface |
 | --- | --- |
 | `src/propulsion.js` | `Driftworks.propulsion`: tank initialization, rocket-equation burns/remaining delta-v, catcher envelope. Uses kg and m/s; `burn` mutates the supplied ship's fuel and returns the achievable burn fraction. |
-| `src/sim.js` | `Driftworks.sim`: constructors, commands, fixed-step movement/industry/recovery/combat, director, physical conversions, and save migration. Public commands and `stepWorld(world, dt)` return replacement worlds. Internal helpers mutate those working copies. |
+| `src/combat.js` | `Driftworks.combat`: deterministic combat state, threat director, hostile movement, weapon selection, damage resolution, and combat events. |
+| `src/sim.js` | `Driftworks.sim`: constructors, commands, fixed-step movement/industry/recovery, combat update orchestration, physical conversions, and save migration. Public commands and `stepWorld(world, dt)` return replacement worlds. Internal helpers mutate those working copies. |
 | `src/game.js` | `Driftworks.game` exposes testable UI/geometry helpers; `createApp` owns the current world, timing, scene and HUD. `createScene` owns Pixi objects, input, camera focus and effects, communicating through `getWorld`/`setWorld` and observing combat events. |
 | `src/audio.js` | `Driftworks.audio`: lazily unlocked Web Audio resources, sound events, engine telemetry and separately persisted volume settings. No simulation ownership. |
 | `src/hud.js` | `Driftworks.hud`: DOM panels, fleet/readouts, control availability and event binding. Reads simulation queries and audio status; delegates actions to the app. No Pixi or scene dependency. |

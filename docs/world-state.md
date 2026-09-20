@@ -1,8 +1,9 @@
 # World state contract
 
 This is the reference for simulation relationships and valid state transitions.
-Constructors, order issuers, `normalizeWorld` and subsystem steps in
-`src/sim.js` implement it. Use those APIs rather than assembling partial worlds.
+Constructors, order issuers, `normalizeWorld` and subsystem orchestration in
+`src/sim.js`, with combat transitions in `src/combat.js`, implement it. Use those
+APIs rather than assembling partial worlds.
 Normalization fills historical defaults; it is not a validator for arbitrary
 JSON or broken references.
 

@@ -26,7 +26,7 @@ use relative URLs and do not introduce runtime network dependencies.
 | Fuel, delta-v, launcher/catcher envelope | `src/propulsion.js`; conversions and payload mass in `src/sim.js` |
 | Save compatibility or new persistent fields | `src/sim.js`: constructors, `normalizeWorld`, `stepWorld`, serialization; `docs/world-state.md` |
 | Selection, right-click behavior, camera, zoom | `src/game.js`: `createScene`, `issueVisualContextOrder`, coordinate helpers; also `sim.issueContextOrder` |
-| Hostiles, weapons, threat director | `src/sim.js`: `stepDirector`, `stepHostiles`, `stepWeapons`; event-driven effects in `src/game.js` |
+| Hostiles, weapons, threat director | `src/combat.js`; update ordering in `src/sim.js`; event-driven effects in `src/game.js` |
 | Artwork, effects | `src/game.js`: paint/geometry helpers |
 | DOM HUD, fleet/readouts, control availability | `src/hud.js`; `styles.css` |
 | Sound and audio preferences | `src/audio.js`; event/telemetry calls in `src/game.js` |
@@ -34,7 +34,7 @@ use relative URLs and do not introduce runtime network dependencies.
 
 ## Constraints to preserve
 
-- Load scripts in dependency order: propulsion, simulation, audio, HUD, game;
+- Load scripts in dependency order: propulsion, combat, simulation, audio, HUD, game;
   Pixi precedes game boot. APIs live on `window.Driftworks`.
 - Keep persistent rules and serializable state in simulation code, SI propulsion
   math in propulsion, and browser resources in game/HUD/audio. Existing combat and

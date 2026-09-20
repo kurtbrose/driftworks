@@ -137,8 +137,34 @@ export type PropulsionApi = {
   exchangeMps: number;
 };
 
+export type CombatApi = {
+  createCombat: (seed: number) => CombatState;
+  spawnHostileWave: (world: World) => World;
+  stepDirector: (world: World, dt: number) => void;
+  stepHostiles: (world: World, dt: number) => void;
+  stepWeapons: (world: World, dt: number) => void;
+  stepDefenderWeapon: (escort: Ship, drones: Drone[], timers: Record<string, number>, dt: number) => { target: Drone; paint: boolean } | null;
+  operationExposure: (world: World) => number;
+  DIRECTOR_MAX_WAVES: number;
+  FIGHTER_RANGE: number;
+  RAIDER_RANGE: number;
+};
+
+export type CombatModule = {
+  create: (dependencies: {
+    createRng: (seed: number) => Rng;
+    clonePlain: <T>(value: T) => T;
+    distance: (a: Vec2, b: Vec2) => number;
+    findMothership: (world: World) => Ship | undefined;
+    normalizeWorld: (world: World) => World;
+    appendWreck: (world: World, destroyed: { position: Vec2; velocity: Vec2 }) => void;
+    applyFighterDamage: (ship: Ship, amount: number) => void;
+  }) => CombatApi;
+};
+
 export type DriftworksNamespace = {
   propulsion?: PropulsionApi;
+  combat?: CombatModule;
   sim?: SimApi;
   audio?: AudioApi;
   hud?: { create: (host: HTMLElement, actions: HudActions) => HudController; miningControlState: (world: World) => unknown };
