@@ -196,6 +196,26 @@ export type LogisticsModule = {
   };
 };
 
+export type FormationModule = {
+  create: (dependencies: {
+    cloneWorld: (world: World) => World;
+    clonePlain: <T>(value: T) => T;
+    createRng: (seed: number) => Rng;
+    distance: (a: Vec2, b: Vec2) => number;
+    angleDelta: (from: number, to: number) => number;
+    stepTowardOrderTarget: (ship: Ship, dt: number, arrivalDistance: number, snapOnArrival: boolean, formationVelocity?: Vec2 | null, guidanceStyle?: FighterStyle) => Ship;
+    arrivalDistance: number;
+    fighterRange: number;
+    raiderRange: number;
+  }) => {
+    issueDefendOrder: (world: World, target: Vec2, shipId?: string | null) => World;
+    assignFormationSlots: (members: Ship[], formation: Formation, shipId?: string | null) => void;
+    stepDefender: (ship: Ship, world: World, threats: Threat[], dt: number) => Ship;
+    step: (world: World, dt: number, threats: Threat[]) => void;
+    fighterStyle: (ship: Ship) => FighterStyle;
+  };
+};
+
 export type CameraApi = {
   screenToWorld: (point: Vec2, camera: Camera, viewport: Viewport) => Vec2;
   viewportFromApp: (app: { screen: Viewport }) => Viewport;
@@ -212,6 +232,7 @@ export type DriftworksNamespace = {
   propulsion?: PropulsionApi;
   combat?: CombatModule;
   logistics?: LogisticsModule;
+  formations?: FormationModule;
   sim?: SimApi;
   camera?: CameraApi;
   audio?: AudioApi;
