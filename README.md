@@ -143,3 +143,19 @@ The game does not load code, fonts, art, telemetry, or other runtime resources f
 ## Next Vertical-Slice Milestone
 
 The next milestone is pressure and consequence: add a simple extraction timer, a director-triggered pirate warning/attack, and persistent damage/cargo/money changes after the mining operation ends.
+
+### People and platform shifts
+
+The mothership starts with 10,000 residents. Select a craft in the fleet and click
+a crew name to inspect their location, duty time, and service history. Select the
+mothership to inspect workers on deployed platforms. Named people persist in saves.
+
+A small white shuttle automatically carries one pilot and up to five passengers.
+Mining waits for its first five workers. Shifts last eight in-game hours; the
+shuttle drops off five replacements, then brings the previous five home. Delayed
+replacements leave the current crew working overtime. End mining or retrieve a
+platform to evacuate workers before the tug packs it up. The shuttle is automatic;
+fleet selection is for inspection, not manual flight orders.
+
+Save/Load now preserve the population and tactical mission together; old saves
+receive crews automatically. Reset starts a new population and mission.

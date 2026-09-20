@@ -6,6 +6,7 @@ catalogue and conversions; each ship saves its own `physical` hull values.
 
 | Object | Length | Dry mass | Installed thrust | Empty acceleration |
 | --- | ---: | ---: | ---: | ---: |
+| Shuttle | 12 m | 18 t | 22.065 kN | 1.226 m/s² |
 | Escort | 20 m | 75 t | 73.55 kN | 0.981 m/s² (0.10 g) |
 | Mining platform | 40 m | 100 t | None | None |
 | Cargo ship (internal type: tug) | 80 m | 3,000 t | 588.40 kN | 0.196 m/s² (0.02 g) |
@@ -19,8 +20,8 @@ feedstock, and ready sections count toward its reported mass.
 - One world distance unit is 16⅔ metres. Positions and asteroid geometry use this
   conversion; the asteroid's nominal radius of 300 units means a 10 km diameter.
 - One tactical simulation second represents 60 physical seconds. Pausing and
-  combat slow motion slow that same simulation clock. The HUD clock remains
-  tactical seconds; campaign days are a separate, currently inactive clock.
+  playback speed control that same simulation clock. The HUD displays physical
+  mission time; campaign days advance separately through the session coordinator.
 - Physical velocity is tactical velocity × 16⅔ / 60, in m/s.
 - Tactical acceleration is physical acceleration × 60² / 16⅔.
 - Existing ship `speed` values are work-zone guidance limits, not engine maximum
@@ -85,3 +86,12 @@ src/propulsion.js owns tank defaults, effective exhaust velocity and the shared 
 Ships retain velocity on fuel exhaustion. Cruise speeds are guidance targets, never instantaneous physical caps. Return reserves budget the current relative velocity plus homeward cruise, with a 50% guidance margin and 35 m/s contingency; this is a conservative heuristic for the current parked-mothership scene, not an orbital transfer planner. The catcher supplies terminal braking inside 44 world units at relative speeds ≤32 m/s. Packet collision uses a swept segment to avoid tunnelling. Ship arrivals retain a tiny numerical settling tolerance.
 
 Docking instantly refills from an unlimited depot supply for this slice. An outbound order from a docked craft receives a free impulse capped at 32 m/s, its guidance speed and a nearby stopping-distance limit. Launcher energy and mothership recoil are not modelled. Platform packet launchers similarly have no propellant budget yet. Mining lifecycle and all in-flight packets are saved. A separate logisticsVersion: 2 migration retires obsolete miner/carrier hulls, preserves their ore in mothership storage and keeps existing platforms. The original cargo ship handles platform deployment, construction and recovery.
+
+## Population transport
+
+The shuttle carries 3 t of propellant at 3,000 m/s exhaust velocity, uses a
+100-unit tactical speed limit, and has one pilot plus five passenger seats.
+Each person aboard a craft contributes 100 kg including personal equipment.
+Shuttle fuel burns, low-fuel return reserve, launch and catch use the same SI
+conversions as other mobile ships. White 16-unit schematic artwork is smaller
+than the fighter and does not change simulation distance or physical length.

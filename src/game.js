@@ -27,6 +27,7 @@
     throw new Error('Tactical camera module did not load.');
   }
   var PIXI = global.PIXI;
+  var sessions = /** @type {import('./types').SessionApi} */ (Driftworks.session);
   var STEP_SECONDS = 1 / 30;
   var MAX_FRAME_SECONDS = 0.2;
   var DETAIL_ZOOM_START = 32;
@@ -45,6 +46,7 @@
     mothership: { radius: 34, fill: 0x7d8790, stroke: 0xd7dee4 },
     platform: { radius: 14, fill: 0xd3a449, stroke: 0xf3d99b },
     tug: { radius: 18, fill: 0x6fa9ce, stroke: 0xc3e5ff },
+    shuttle: { radius: 8, fill: 0xf4f5f0, stroke: 0xffffff },
     escort: { radius: 13, fill: 0xb76c6f, stroke: 0xf0b7b9 }
   };
   var ASTEROID_FILL = 0x655f57;
@@ -81,7 +83,10 @@
 
   /** @param {HTMLElement} sceneHost @param {HTMLElement} hudHost */
   function createApp(sceneHost, hudHost) {
-    var world = loadOrInitial();
+    var session = loadOrInitial();
+    var world = session.world;
+    /** @param {World} next */
+    function setWorld(next) { session.world = next; sessions.transition(session, function (w) { return w; }); world = session.world; }
     var accumulator = 0;
     var timeScale = 1;
     var lastTime = performance.now();
@@ -89,13 +94,14 @@
     var scene = createScene(sceneHost, function () {
       return world;
       }, function (nextWorld) {
-      world = nextWorld;
+      setWorld(nextWorld);
       scene.sync(world);
       hud.update(world, scene.getStats());
     });
 
     if (!Driftworks.hud) throw new Error('HUD module did not load.');
     var hud = /** @type {HudController} */ (Driftworks.hud.create(hudHost, {
+      getPopulation: function () { return session.population; },
       getTimeScale: function () { return timeScale; },
       onTimeScale: function (value) {
         timeScale = value;
@@ -103,7 +109,7 @@
         hud.update(world, scene.getStats());
       },
       onEndMining: function () {
-        world = sim.endMining(world);
+        setWorld(sim.endMining(world));
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
@@ -114,16 +120,18 @@
       },
       onDeployPlatform: function () {
         var asteroid = world.asteroids.filter(function (a) { return a.ore > 0; })[0];
-        if (asteroid) world = sim.issueMineOrder(world, asteroid.id);
+        if (asteroid) setWorld(sim.issueMineOrder(world, asteroid.id));
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
       onSave: function () {
-        sim.saveWorld(world);
+        session.world = world;
+        sessions.save(session);
         hud.update(world, scene.getStats());
       },
       onExport: function () {
-        var scenario = { version: 1, name: 'gameplay-capture', world: world,
+        session.world = world;
+        var scenario = { version: 1, name: 'gameplay-capture', world: world, session: /** @type {unknown} */ (JSON.parse(sessions.serialize(session))),
           ticks: 300, commands: [], assertions: [] };
         var dialog = document.createElement('dialog');
         dialog.className = 'scenario-export';
@@ -153,14 +161,17 @@
         field.select();
       },
       onLoad: function () {
-        world = loadOrInitial();
+        session = loadOrInitial();
+        world = session.world;
         accumulator = 0;
         scene.resetCombat();
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
       onReset: function () {
-        world = sim.resetWorld();
+        session = sessions.create();
+        world = session.world;
+        sessions.save(session);
         accumulator = 0;
         scene.resetCombat();
         scene.sync(world);
@@ -192,7 +203,9 @@
       accumulator += frameSeconds * timeScale;
 
       while (accumulator >= STEP_SECONDS) {
-        world = sim.stepWorld(world, STEP_SECONDS);
+        session.world = world;
+        sessions.step(session, STEP_SECONDS);
+        world = session.world;
         scene.consumeCombatEvents(world.combat.events);
         accumulator -= STEP_SECONDS;
       }
@@ -207,13 +220,13 @@
     requestAnimationFrame(frame);
   }
 
-  /** @returns {World} */
+  /** @returns {import('./types').Session} */
   function loadOrInitial() {
     try {
-      return sim.loadWorld();
+      return sessions.load();
     } catch (error) {
       console.warn('Save could not be loaded. Starting a fresh world.', error);
-      return sim.createInitialWorld();
+      return sessions.create();
     }
   }
 
@@ -974,6 +987,13 @@
         graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, 0.9);
       }
       paintConstructor(graphics, style);
+    } else if (ship.type === 'shuttle') {
+      graphics.beginFill(style.fill, 1);
+      graphics.drawRoundedRect(-8, -4, 16, 8, 3);
+      graphics.endFill();
+      graphics.beginFill(0x395366, 1);
+      graphics.drawRoundedRect(2, -2.5, 3, 5, 1);
+      graphics.endFill();
     } else {
       graphics.beginFill(style.fill, 0.96);
       graphics.moveTo(style.radius, 0);

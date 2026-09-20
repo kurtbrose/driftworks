@@ -236,3 +236,11 @@ button:disabled { opacity: 0.5; cursor: default; }
   color: #d7dee4;
   font: 12px/1.4 monospace;
 }
+
+.population-panel { font-size: 12px; line-height: 1.5; }
+.population-panel [data-role=platform-staff], .population-panel [data-role=person] { white-space: pre-line; margin-top: 8px; }
+.population-panel [data-role=crew] { display: grid; gap: 4px; margin-top: 8px; }
+.population-panel button { text-align: left; font-size: 12px; }
+
+.time-panel .population-panel { margin-top: 12px; padding-top: 10px; border-top: 1px solid #384950; max-height: 32vh; overflow-y: auto; }
+.population-panel button { padding: 5px 8px; }

@@ -211,3 +211,13 @@ platforms, packets, economy, elapsed time, camera, selection, hostile encounters
 director/RNG state and weapon timers. Not saved in world: effects, playback speed,
 camera-focus animation, stress graphics or audio resources. Audio preferences
 persist separately under `driftworks-audio-settings-v1`.
+
+## Population-aware sessions
+
+The browser now saves a coordinated session rather than calling the tactical
+serializer alone. Population stays outside World. `staffingEnabled` opts a World
+into staffed extraction; ships carry `crewIds` and `passengerIds`, platforms carry
+`workerIds`, `shiftStartedSeconds` (physical mission seconds), and
+`evacuationRequested`. `shuttle` orders carry platform ID, target, and an evacuation
+flag. `stepWorld` preserves the staffing marker. See [population](population.md)
+for ownership, migration, exchange, completion, and transient arrival records.

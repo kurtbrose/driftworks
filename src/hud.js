@@ -30,7 +30,7 @@
       '<button type="button" data-speed="1" aria-label="Play at normal speed" title="Normal speed">▶ 1×</button>' +
       '<button type="button" data-speed="2" aria-label="Fast forward at 2 times speed" title="Fast forward 2×">▶▶ 2×</button>' +
       '<button type="button" data-speed="4" aria-label="Fast forward at 4 times speed" title="Fast forward 4×">▶▶ 4×</button>' +
-      '</div></section>' +
+      '</div><section class="population-panel" aria-label="Population and crews"><div class="time-heading">PEOPLE ABOARD</div><div data-role="population"></div><div data-role="platform-staff"></div><div data-role="crew"></div><div data-role="person" aria-live="polite"></div></section></section>' +
       '<section class="panel readout">' +
       '<div class="row"><span>Location</span><strong data-role="location"></strong></div>' +
       '<div class="row"><span>Cash</span><strong data-role="money"></strong></div>' +
@@ -66,6 +66,15 @@
     deployButton.addEventListener('click', actions.onDeployPlatform);
     var stressButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="stress"]'));
     var fleet = /** @type {HTMLElement} */ (host.querySelector('[data-role="fleet"]'));
+    var crewPanel = requiredElement('[data-role="crew"]');
+    var personPanel = requiredElement('[data-role="person"]');
+    var inspectedPerson = '';
+    var crewSignature = '';
+    crewPanel.addEventListener('click', function (event) {
+      var target = /** @type {Element | null} */ (event.target);
+      var button = target && target.closest('[data-person]');
+      if (button) inspectedPerson = /** @type {HTMLElement} */ (button).dataset.person || '';
+    });
     if (!stressButton || !fleet) throw new Error('Missing HUD controls');
     fleet.addEventListener('click', function (event) {
       var eventTarget = /** @type {Element | null} */ (event.target);
@@ -90,6 +99,43 @@
     return {
       /** @param {World} world @param {GameStats} stats */
       update: function (world, stats) {
+        if (actions.getPopulation) {
+          var population = actions.getPopulation();
+          var populationTime = Math.max(population.timeSeconds, world.campaign.timeDays * 86400 + world.elapsedSeconds * sim.PHYSICAL_SECONDS_PER_SECOND);
+          requiredElement('[data-role="population"]').textContent = population.total.toLocaleString() + ' residents · ' + Math.round(population.civilianShare * 100) + '% civilian background';
+          requiredElement('[data-role="platform-staff"]').textContent = world.platforms.filter(function (p) { return p.state === 'deployed'; }).map(function (p) {
+            var count = (p.workerIds || []).length;
+            var remaining = 8 * 3600 - (world.elapsedSeconds * sim.PHYSICAL_SECONDS_PER_SECOND - (p.shiftStartedSeconds || 0));
+            return p.id + ' · ' + count + '/5 workers · ' + (p.evacuationRequested || world.miningMission !== 'active' ? 'awaiting evacuation' : !count ? 'waiting for crew' : remaining > 0 ? 'shift ends in ' + formatMissionTime(remaining) : 'replacement overdue ' + formatMissionTime(-remaining));
+          }).join('\n');
+          var selected = world.ships.filter(function (s) { return world.selectedShipIds.indexOf(s.id) !== -1; });
+          var ids = selected.reduce(function (all, s) { return all.concat(s.crewIds || [], s.passengerIds || []); }, /** @type {string[]} */ ([]));
+          // Home inspection also exposes deployed workers, so their stories remain reachable.
+          if (selected.some(function (s) { return s.type === 'mothership'; })) world.platforms.forEach(function (p) { ids = ids.concat(p.workerIds || []); });
+          var signature = ids.join(',') + ':' + population.seed;
+          if (signature !== crewSignature) {
+            crewSignature = signature;
+            crewPanel.replaceChildren();
+            ids.forEach(function (id) {
+              var person = population.people[id];
+              if (!person) return;
+              var button = document.createElement('button');
+              button.type = 'button'; button.dataset.person = id;
+              button.textContent = person.name + ' · ' + person.role;
+              crewPanel.appendChild(button);
+            });
+          }
+          var person = population.people[inspectedPerson];
+          if (person) {
+            var locationShip = world.ships.filter(function (s) { return s.id === person.location; })[0];
+            var location = person.location === 'home' ? 'Mothership' : locationShip ? locationShip.name : person.location;
+            personPanel.textContent = person.name + ' · ' + person.role + '\n' + location + (person.alive ? '' : ' · deceased') +
+              '\nAboard for ' + Math.floor((populationTime - person.joinedSeconds) / 86400) + ' days · duty ' + formatMissionTime(person.dutySeconds + (person.dutyStartedSeconds === null ? 0 : populationTime - person.dutyStartedSeconds)) +
+              '\nOvertime ' + formatMissionTime(person.overtimeSeconds) + '\n' + (person.history.length ? person.history.slice(-6).map(function (e) {
+                return e.kind.replace(/-/g, ' ') + ' · ' + e.location + ' · ' + e.missionId + ' · day ' + (e.atSeconds / 86400).toFixed(2);
+              }).join('\n') : 'No deployments yet.');
+          } else personPanel.textContent = 'Select a crew member to inspect their service history.';
+        }
         var miningControls = miningControlState(world);
         deployButton.disabled = !miningControls.canDeploy;
         deployButton.title = miningControls.deployHint;
@@ -105,6 +151,7 @@
           var label = ship.name + ' · ' + Math.floor(sim.remainingDeltaV(world, ship)) + ' m/s' +
             (ship.disabled ? ' · disabled' : ship.docked ? ' · docked' : ship.order.kind === 'return' && ship.order.automatic ? ' · returning' : '');
           if (ship.type === 'mothership') label = ship.name + ' · ' + world.platforms.filter(function (p) { return p.state === 'stored'; }).length + ' platforms aboard';
+          if (ship.type === 'shuttle') label += ' · ' + (ship.passengerIds || []).length + '/5 passengers · ' + (ship.order.kind === 'shuttle' ? (ship.order.evacuation ? 'evacuating ' : 'crew to ') + ship.order.platformId : ship.order.kind === 'return' ? 'returning home' : 'automatic');
           if (button.textContent !== label) button.textContent = label;
           button.dataset.active = String(world.selectedShipIds.indexOf(ship.id) !== -1);
         });

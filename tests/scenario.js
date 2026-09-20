@@ -31,11 +31,19 @@
     var world = scenario.world
       ? sim.deserializeWorld(JSON.stringify({ version: sim.WORLD_VERSION, world: scenario.world }))
       : sim.createInitialWorld(scenario.seed);
+    var session = scenario.session ? global.Driftworks.session.deserialize(JSON.stringify(scenario.session)) : null;
+    if (session) world = session.world;
     for (var tick = 0; tick < scenario.ticks; tick += 1) {
       events.forEach(function (event) {
-        if (event.tick === tick) world = sim[commands[event.action]].apply(null, [world].concat(event.args));
+        if (event.tick === tick) {
+          world = sim[commands[event.action]].apply(null, [world].concat(event.args));
+          if (session) global.Driftworks.session.transition(session, function () { return world; });
+        }
       });
-      world = sim.stepWorld(world, 1 / 30, scenario.threats || []);
+      if (session) {
+        global.Driftworks.session.step(session, 1 / 30);
+        world = session.world;
+      } else world = sim.stepWorld(world, 1 / 30, scenario.threats || []);
     }
     return world;
   }

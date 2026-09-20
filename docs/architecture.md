@@ -2,7 +2,7 @@
 
 ## Static type checks
 
-All six application scripts in `src/` are checked with strict TypeScript via
+All application scripts in `src/` are checked with strict TypeScript via
 JSDoc and `src/types.d.ts`. Run `npm run check:types` (or
 `node tests/check-types.cjs`) after installing the optional development dependency.
 The check also rejects explicit `any` annotations and identifiers inferred as
@@ -124,3 +124,11 @@ These are descriptions of current behavior, not reasons to extend those
 exceptions. New state must survive the explicit `stepWorld` reconstruction and
 save normalization; new browser behavior needs browser verification in addition
 to the shared helper tests.
+
+## Population session boundary
+
+`population.js` loads after simulation and before `session.js`; both precede HUD
+and game. The app owns a session containing separate world and population state.
+Operational transitions pass through the coordinator; rendering only reads it.
+Population is never included in tactical cloning or fixed-step normalization.
+See [population](population.md) for clock, event, transport, and save contracts.

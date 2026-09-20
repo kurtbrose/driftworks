@@ -10,6 +10,7 @@
   // SI units at this boundary; the tactical simulation converts velocities once.
   /** @type {Record<string, { capacityKg: number, exhaustMps: number }>} */
   var PROFILES = {
+    shuttle: { capacityKg: 3000, exhaustMps: 3000 },
     escort: { capacityKg: 12000, exhaustMps: 3000 },
     tug: { capacityKg: 450000, exhaustMps: 3000 }
   };

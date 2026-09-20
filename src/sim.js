@@ -55,10 +55,11 @@
     stepTowardOrderTarget: stepTowardOrderTarget, launchShip: launchShip, dockShip: dockShip, canCatch: canCatch,
     canCatchPacket: /** @param {Vec2} position @param {Vec2} velocity @param {Ship} home */ function (position, velocity, home) { return propulsion.canCatch(position, velocity, home, DOCK_DISTANCE, VELOCITY_TO_MPS); },
     exchangeMps: propulsion.exchangeMps, velocityToMps: VELOCITY_TO_MPS,
-    dockDistance: DOCK_DISTANCE, arrivalDistance: ARRIVAL_DISTANCE
+    dockDistance: DOCK_DISTANCE, arrivalDistance: ARRIVAL_DISTANCE, physicalSecondsPerSecond: PHYSICAL_SECONDS_PER_SECOND
   });
   /** @type {Record<string, { lengthM: number, dryMassKg: number, thrustN: number }>} */
   var HULLS = {
+    shuttle: { lengthM: 12, dryMassKg: 18000, thrustN: 22065 },
     escort: { lengthM: 20, dryMassKg: 75000, thrustN: 73549.875 },
     tug: { lengthM: 80, dryMassKg: 3000000, thrustN: 588399 },
     mothership: { lengthM: 1000, dryMassKg: 3000000000, thrustN: 2941995 }
@@ -70,7 +71,7 @@
     var payload = recoveryTarget(world, ship.towTarget);
     var payloadKg = payload ? (payload.physical ? payload.physical.dryMassKg + (payload.propulsion ? payload.propulsion.fuelKg : 0) + (payload.cargo || 0) * 1000 : ('massKg' in payload ? payload.massKg || 0 : 75000)) : 0;
     var massKg = hull.dryMassKg + (ship.propulsion ? ship.propulsion.fuelKg : 0) + (ship.platformId ? PLATFORM_MASS_KG : 0) + (ship.cargo || 0) * 1000 +
-      (ship.carryingSection ? DEPOT_SECTION_MASS * 1000 : 0) + payloadKg;
+      (ship.carryingSection ? DEPOT_SECTION_MASS * 1000 : 0) + payloadKg + ((ship.crewIds || []).length + (ship.passengerIds || []).length) * 100;
     if (ship.type === 'mothership' && world.mothership) {
       var storage = world.mothership.storage;
       massKg += (storage.ore + storage.constructionMass + storage.depotSections * DEPOT_SECTION_MASS) * 1000;
@@ -291,7 +292,7 @@
       selected[id] = true;
     });
     next.ships.forEach(function (ship) {
-      if (selected[ship.id] && ship.speed > 0 && !ship.disabled && !ship.repairRemaining && ship.launchElapsed == null) {
+      if (selected[ship.id] && ship.type !== 'shuttle' && ship.speed > 0 && !ship.disabled && !ship.repairRemaining && ship.launchElapsed == null) {
         ship.order = {
           kind: 'move',
           target: { x: target.x, y: target.y }
@@ -392,7 +393,7 @@
     var returnHome = mothership;
 
     next.ships.forEach(function (ship) {
-      if (selected[ship.id] && ship.speed > 0 && !ship.disabled) {
+      if (selected[ship.id] && ship.type !== 'shuttle' && ship.speed > 0 && !ship.disabled) {
         if (ship.docked) { ship.order = { kind: 'idle' }; ship.launchElapsed = null; return; }
         ship.order = {
           kind: 'return',
@@ -445,6 +446,7 @@
     logistics.processConstructionMass(mothership, depot);
 
     var stepped = {
+      staffingEnabled: next.staffingEnabled,
       logisticsVersion: 2,
       miningMission: next.miningMission,
       platforms: next.platforms,
@@ -485,6 +487,7 @@
     next.previousVelocity = { x: ship.velocity.x, y: ship.velocity.y };
     next.previousCargo = ship.cargo;
 
+    if (world.staffingEnabled && next.type !== 'mothership' && !(next.crewIds || []).length) return next;
     if (next.disabled) {
       next.velocity = { x: 0, y: 0 };
       return next;
@@ -514,6 +517,7 @@
       next.order = { kind: 'return', target: clonePlain(mothershipShip.position), automatic: true };
     }
     if (next.order.kind === 'deploy' || next.order.kind === 'retrieve-platform') return logistics.stepPlatformCarrier(next, world, dt);
+    if (next.order.kind === 'shuttle') return logistics.stepShuttle(next, world, dt);
     if (next.order.kind === 'recover') return next;
     if (next.order.kind === 'defend') return formations.stepDefender(next, world, threats, dt);
 

@@ -1366,6 +1366,7 @@
     });
   });
 
+  window.registerPopulationTests(test, assert, assertClose);
   run();
 
   function findShip(world, id) {

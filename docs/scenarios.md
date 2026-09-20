@@ -79,3 +79,8 @@ hostiles, firing cadence, damage, disablement and salvage all advance in
 Pixi effects, audio, real input and camera animation still require browser checks.
 Reproducibility is for the same simulation version, seed/snapshot and commands;
 an intentional gameplay change may require reviewing a fixture's expectations.
+
+Population-aware gameplay exports include an optional `session` checkpoint as well
+as `world`. When present, replay advances the session coordinator for crew dispatch
+and staffing; existing tactical-only fixtures remain unchanged. Assertions still
+address the final tactical world, including manifests and platform worker IDs.

@@ -23,6 +23,7 @@ export type Formation = {
 };
 
 export type Order =
+  | { kind: 'shuttle'; platformId: string; target: Vec2; evacuation: boolean }
   | { kind: 'idle' }
   | { kind: 'move'; target: Vec2 }
   | { kind: 'return'; target: Vec2; automatic?: boolean }
@@ -47,6 +48,8 @@ export type Order =
 export type DefendOrder = Extract<Order, { kind: 'defend' }>;
 
 export type Ship = {
+  crewIds?: string[];
+  passengerIds?: string[];
   id: string;
   name: string;
   type: string;
@@ -84,6 +87,8 @@ export type Propulsion = {
 };
 
 export type World = {
+  staffingEnabled?: boolean;
+  returnedPersonIds?: string[];
   combat: CombatState;
   time?: number;
   nextFormationId: number;
@@ -112,7 +117,7 @@ export type World = {
 export type WorldLike = { ships: Ship[]; wrecks: Wreck[]; platforms?: Platform[]; mothership?: MothershipState };
 
 export type Asteroid = { id: string; name?: string; position: Vec2; radius: number; angularVelocity: number; ore: number; oreInitial: number; rotation: number };
-export type Platform = { id: string; state: string; position: Vec2; carrierId: string | null; asteroidId: string | null; siteAngle: number; siteDepth: number; ore: number; packetTimer: number };
+export type Platform = { workerIds?: string[]; shiftStartedSeconds?: number; evacuationRequested?: boolean; id: string; state: string; position: Vec2; carrierId: string | null; asteroidId: string | null; siteAngle: number; siteDepth: number; ore: number; packetTimer: number };
 export type Wreck = { id: string; position: Vec2; type?: string; rotation?: number; salvageOre?: number; towedBy?: string | null; disabled?: boolean; repairRemaining?: number; launchElapsed?: number | null; previousPosition?: Vec2; physical?: { dryMassKg: number }; massKg?: number; propulsion?: Propulsion; cargo?: number };
 export type Depot = { name: string; position: Vec2; builtStages: number; totalStages: number };
 export type Packet = { id: number; position: Vec2; velocity: Vec2; ore: number };
@@ -184,6 +189,7 @@ export type LogisticsModule = {
     velocityToMps: number;
     dockDistance: number;
     arrivalDistance: number;
+    physicalSecondsPerSecond: number;
   }) => {
     createPlatform: (id: string) => Platform;
     migrate: (world: World) => void;
@@ -192,6 +198,7 @@ export type LogisticsModule = {
     issuePlatformRecovery: (world: World, id: string) => World;
     endMining: (world: World) => World;
     stepPlatformCarrier: (ship: Ship, world: World, dt: number) => Ship;
+    stepShuttle: (ship: Ship, world: World, dt: number) => Ship;
     step: (world: World, dt: number) => void;
     processConstructionMass: (mothership: MothershipState, depot: Depot) => void;
     stepBuildingShip: (ship: Ship, dt: number, mothership: MothershipState, mothershipShip: Ship | undefined, depot: Depot) => Ship;
@@ -231,6 +238,8 @@ export type CameraApi = {
 };
 
 export type DriftworksNamespace = {
+  population?: PopulationApi;
+  session?: SessionApi;
   propulsion?: PropulsionApi;
   combat?: CombatModule;
   logistics?: LogisticsModule;
@@ -243,6 +252,9 @@ export type DriftworksNamespace = {
 };
 
 export type SimApi = {
+  createShip: (id: string, name: string, type: string, x: number, y: number, speed: number) => Ship;
+  serializeWorld: (world: World) => string;
+  deserializeWorld: (text: string) => World;
   remainingDeltaV: (world: World, ship: Ship) => number;
   returnReserve: (ship: Ship, home: Ship) => number;
   canCatch: (ship: Ship, home: Ship) => boolean;
@@ -281,12 +293,47 @@ export type SimApi = {
 };
 export type AudioApi = { unlock: () => boolean; setSfxEnabled: (enabled: boolean) => void; setSfxVolume: (value: number) => void; setMusicEnabled: (enabled: boolean) => void; setMusicVolume: (value: number) => void; setEngineThrust: (level: number) => void; playSelect: () => void; playMove: () => void; playInvalid: () => void; playMiningTick: () => void; playGunshot: () => void; playImpact: (strength: number) => void; playDock: () => void; playDelivery: () => void; playWarning: () => void; _test?: Record<string, unknown>; status: () => { available: boolean; sfxVolume: number; musicVolume: number } };
 export type HudActions = {
+  getPopulation?: () => PopulationState;
   onEndMining: EventListener; onDeployPlatform: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;
   onStressToggle: EventListener; onSelectShip: (id: string | undefined) => void; onTimeScale: (scale: number) => void;
   onSfxVolume: (value: number) => void; onMusicVolume: (value: number) => void; getTimeScale: () => number;
 };
 export type HudController = { update: (world: World, stats: GameStats) => void };
 export type GameStats = { contacts: string; entityCount: number; fps?: number; stressEnabled: boolean };
+
+export type Person = {
+  id: string; name: string; role: string; joinedSeconds: number; alive: boolean;
+  location: string; assignment: string | null; preferredAssignment: string | null;
+  dutyStartedSeconds: number | null; dutySeconds: number; overtimeSeconds: number;
+  history: PopulationEvent[];
+};
+export type PopulationEvent = {
+  id: number; personId: string; kind: 'deployment' | 'arrival' | 'duty-completed' | 'recovery' | 'death';
+  atSeconds: number; location: string; assignment: string | null; missionId: string;
+};
+export type PopulationState = {
+  version: 1; seed: number; total: number; civilianShare: number; operationalCapacity: number;
+  nextPersonId: number; lastEventId: number; timeSeconds: number; people: Record<string, Person>;
+};
+export type PopulationApi = {
+  create: (seed?: number, total?: number, civilianShare?: number) => PopulationState;
+  assign: (state: PopulationState, role: string, assignment: string, count: number) => string[];
+  consume: (state: PopulationState, events: PopulationEvent[]) => void;
+  advanceTo: (state: PopulationState, seconds: number) => void;
+  serialize: (state: PopulationState) => string;
+  deserialize: (text: string) => PopulationState;
+};
+export type Session = { version: 1; world: World; population: PopulationState; nextEventId: number; campaignOffsetSeconds: number };
+export type SessionApi = {
+  create: (world?: World, legacy?: boolean) => Session;
+  transition: (session: Session, command: (world: World) => World) => Session;
+  step: (session: Session, dt: number) => Session;
+  advanceCampaign: (session: Session, days: number) => Session;
+  serialize: (session: Session) => string;
+  deserialize: (text: string) => Session;
+  save: (session: Session, storage?: Storage) => void;
+  load: (storage?: Storage) => Session;
+};
 
 declare global {
   namespace PIXI {
