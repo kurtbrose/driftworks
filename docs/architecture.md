@@ -147,6 +147,13 @@ local normal. The same shader applies diffuse light, limb rolloff and crater
 occlusion. Fine texture comes only from the relief response; explicit dot and
 line texture marks are not drawn.
 
+Crater work is a single bounded pass per fragment. A conservative axis-aligned
+bound rejects distant craters before ellipse transforms. For contributing
+craters, the shader accumulates age-ordered height, analytic height gradients
+and occlusion together; finite-difference normal samples evaluate only the cheap
+dome, broad relief and microrelief fields. Crater cost is therefore one candidate
+test per crater per pixel rather than four relief passes plus an occlusion pass.
+
 Each visual description also derives a `surfaceProfile` by blending the four
 material presets according to bulk composition, then applying one independently
 seeded history state: fresh, dusty, battered, fractured or rubble-pile. The
