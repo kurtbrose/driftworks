@@ -872,6 +872,27 @@
     assertClose(quarterTurn.z, initial.z);
   });
 
+  test('mothership habitat shader tracks spin, world light and screen pixel size', function () {
+    var initial = game.mothershipHabitatUniforms(0, 0, 2);
+    var later = game.mothershipHabitatUniforms(19, Math.PI / 2, 8);
+    assertClose(initial.uSpin, 0);
+    assertClose(later.uSpin, Math.PI);
+    assertClose(initial.uPixelFootprint, 0.5);
+    assertClose(later.uPixelFootprint, 0.125);
+    assertClose(initial.uLight[0], -0.813733);
+    assertClose(later.uLight[0], -0.581238);
+    assertClose(later.uLight[1], 0.813733);
+  });
+
+  test('mothership habitat hides lamps rotating across the far side', function () {
+    var front = game.mothershipHabitatLampVisibility(0);
+    var back = game.mothershipHabitatLampVisibility(Math.PI);
+    var shoulder = game.mothershipHabitatLampVisibility(Math.PI / 2);
+    assertClose(front.left, 1); assertClose(front.right, 0);
+    assertClose(back.left, 0); assertClose(back.right, 1);
+    assertClose(shoulder.left, 0); assertClose(shoulder.right, 0);
+  });
+
   test('save serialization round-trips world state', function () {
     var world = sim.issueMoveOrder(sim.selectShips(createDeployedWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));

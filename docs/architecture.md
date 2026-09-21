@@ -213,6 +213,21 @@ fixed seeded examples using the production painter;
 `tests/asteroid-playground.html` generates a fresh random panel on every load for
 visual exploration without changing the deterministic study or test fixtures.
 
+## Mothership habitat artwork
+
+The mothership remains a layered schematic. Only its horizontal rotating habitat
+uses a fragment shader; the stationary bearing, center spine, antenna, attached
+modules, selection brackets and order indicators remain Pixi vector graphics.
+The habitat shader evaluates a rounded-box signed-distance silhouette on a small
+transparent mesh, with a camera-derived pixel footprint providing a roughly
+one-screen-pixel antialiasing transition at every zoom. It also computes the
+cylinder normal continuously from the habitat-local vertical coordinate, applies
+the same fixed world light used by the asteroid renderer, and generates rotating
+bands, lamps, ribs and the service panel procedurally from one spin phase. This
+keeps the rounded shoulders and lighting continuous instead of approximating them
+with horizontal vector strips. The shader layer sits behind the ordinary bearing
+and core layers, and none of its presentation state is serialized.
+
 ## Population session boundary
 
 `population.js` loads after simulation and before `session.js`; both precede HUD

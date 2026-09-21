@@ -377,6 +377,7 @@ declare global {
     }
     class Container extends DisplayObject {
       children: DisplayObject[];
+      mothershipParts?: { base: Graphics; habitat: Mesh; shader: Shader; overlay: Graphics };
       addChild: (...children: DisplayObject[]) => DisplayObject;
       addChildAt: (child: DisplayObject, index: number) => DisplayObject;
       pivot: { set: (x: number, y?: number) => void };

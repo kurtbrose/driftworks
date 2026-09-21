@@ -283,7 +283,7 @@
     var logisticsGraphic = new PIXI.Graphics();
     var launchLayer = new PIXI.Container();
     var selectionBox = new PIXI.Graphics();
-    /** @type {Record<string, PIXI.Graphics>} */
+    /** @type {Record<string, PIXI.Graphics | PIXI.Container>} */
     var shipGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
     var platformGraphics = {};
@@ -476,7 +476,7 @@
       world.ships.forEach(function (ship) {
         var graphic = shipGraphics[ship.id];
         if (!graphic) {
-          graphic = createShipGraphic(ship.id);
+          graphic = createShipGraphic(ship.id, ship.type);
           shipGraphics[ship.id] = graphic;
           worldLayer.addChild(graphic);
         }
@@ -698,9 +698,9 @@
       })[0];
     }
 
-    /** @param {string} shipId */
-    function createShipGraphic(shipId) {
-      var graphic = new PIXI.Graphics();
+    /** @param {string} shipId @param {string} type */
+    function createShipGraphic(shipId, type) {
+      var graphic = type === 'mothership' ? createMothershipGraphic() : new PIXI.Graphics();
       graphic.eventMode = 'static';
       graphic.cursor = 'pointer';
       graphic.on('pointerdown', function (event) {
@@ -1038,36 +1038,47 @@
     });
   }
 
-  /** @param {PIXI.Graphics} graphics @param {Ship} ship @param {boolean} selected @param {number} elapsedSeconds @param {Ship | Wreck | undefined} towedEntity @param {number} towedScale @param {number} zoom */
+  /** @param {PIXI.Graphics | PIXI.Container} graphics @param {Ship} ship @param {boolean} selected @param {number} elapsedSeconds @param {Ship | Wreck | undefined} towedEntity @param {number} towedScale @param {number} zoom */
   function paintShip(graphics, ship, selected, elapsedSeconds, towedEntity, towedScale, zoom) {
     var style = SHIP_STYLES[ship.type];
-    graphics.clear();
-    graphics.alpha = ship.disabled && ship.launchElapsed == null ? 0.45 : 1;
-    drawEnginePlume(graphics, ship, style.radius, elapsedSeconds);
+    if (ship.type === 'mothership' && graphics.mothershipParts) {
+      var parts = graphics.mothershipParts;
+      parts.base.clear();
+      parts.base.engineScreenScale = graphics.engineScreenScale;
+      drawEnginePlume(parts.base, ship, style.radius, elapsedSeconds);
+      paintMothershipShader(parts, selected, elapsedSeconds, ship.rotation || 0,
+        zoom * (graphics.scale ? graphics.scale.x : 1));
+      drawShipOrderAndBadges(parts.base, ship, style);
+      return;
+    }
+    var g = /** @type {PIXI.Graphics} */ (graphics);
+    g.clear();
+    g.alpha = ship.disabled && ship.launchElapsed == null ? 0.45 : 1;
+    drawEnginePlume(g, ship, style.radius, elapsedSeconds);
     if (ship.type === 'mothership') {
-      paintMothership(graphics, selected, elapsedSeconds, ship.rotation || 0);
-      drawShipOrderAndBadges(graphics, ship, style);
+      paintMothership(g, selected, elapsedSeconds, ship.rotation || 0);
+      drawShipOrderAndBadges(g, ship, style);
       return;
     }
 
     if (ship.type === 'tug' && ship.carryingSection) {
-      paintConstructorCargo(graphics, style);
+      paintConstructorCargo(g, style);
     }
-    graphics.lineStyle(0);
+    g.lineStyle(0);
     if (ship.type === 'tug') {
       if (ship.platformId) {
-        paintIndustrialPlatform(graphics, 0, false, elapsedSeconds, zoom, ship.rotation);
+        paintIndustrialPlatform(g, 0, false, elapsedSeconds, zoom, ship.rotation);
       }
-      if (ship.towTarget) paintTowedHull(graphics, ship.towTarget.kind, towedEntity, style, towedScale, zoom, ship.rotation);
-      paintSlimTug(graphics, zoom, ship.rotation);
+      if (ship.towTarget) paintTowedHull(g, ship.towTarget.kind, towedEntity, style, towedScale, zoom, ship.rotation);
+      paintSlimTug(g, zoom, ship.rotation);
       if (ship.cargoOperation && ship.cargoOperation.remainingSeconds > 0) {
-        drawCargoEvaWorkers(graphics, ship.id, elapsedSeconds,
+        drawCargoEvaWorkers(g, ship.id, elapsedSeconds,
           ship.cargoOperation.kind === 'deploy-platform' || ship.cargoOperation.kind === 'deploy-section');
       }
     } else if (ship.type === 'shuttle') {
-      paintShuttleHull(graphics, zoom, ship.rotation);
+      paintShuttleHull(g, zoom, ship.rotation);
     } else {
-      paintFighterHull(graphics, zoom, ship.rotation, 1);
+      paintFighterHull(g, zoom, ship.rotation, 1);
     }
 
     if (selected) {
@@ -1078,9 +1089,9 @@
         halfY = Math.max(halfY, cargoModuleGeometry().width / 2);
       }
       if (ship.towTarget) { halfX = Math.max(halfX, 14 * towedScale); halfY = Math.max(halfY, 9 * towedScale); }
-      drawCraftBrackets(graphics, halfX, halfY, zoom * semanticScale(ship.type, zoom));
+      drawCraftBrackets(g, halfX, halfY, zoom * semanticScale(ship.type, zoom));
     }
-    drawShipOrderAndBadges(graphics, ship, style);
+    drawShipOrderAndBadges(g, ship, style);
   }
 
   /** @param {number} zoom */
@@ -1548,6 +1559,81 @@
     drawMothershipBearing(graphics, elapsedSeconds);
     drawMothershipCore(graphics, shipRotation);
     if (selected) drawMothershipSelectionBrackets(graphics, elapsedSeconds);
+  }
+
+  var MOTHERSHIP_VERTEX_SHADER = [
+    'precision highp float;',
+    'attribute vec2 aVertexPosition;',
+    'uniform mat3 translationMatrix;',
+    'uniform mat3 projectionMatrix;',
+    'varying vec2 vLocalCoord;',
+    'void main(){vLocalCoord=aVertexPosition;vec3 p=projectionMatrix*translationMatrix*vec3(aVertexPosition,1.0);gl_Position=vec4(p.xy,0.0,1.0);}'
+  ].join('\n');
+
+  var MOTHERSHIP_FRAGMENT_SHADER = [
+    'precision highp float;',
+    'varying vec2 vLocalCoord;',
+    'uniform vec3 uLight;',
+    'uniform float uSpin;',
+    'uniform float uPixelFootprint;',
+    'const float PI=3.141592653589793;',
+    'float roundedBox(vec2 p,vec2 b,float r){vec2 q=abs(p)-b;return length(max(q,0.0))+min(max(q.x,q.y),0.0)-r;}',
+    'float lineMask(float value,float center,float halfWidth,float aa){return 1.0-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}',
+    'void main(){',
+    ' vec2 p=vLocalCoord;float aa=max(.035,uPixelFootprint);float dist=roundedBox(p,vec2(31.0,12.0),5.0);float alpha=1.0-smoothstep(-aa,aa,dist);',
+    ' if(alpha<=0.0){gl_FragColor=vec4(0.0);return;}',
+    ' float ny=clamp(p.y/17.0,-1.0,1.0);float nz=sqrt(max(0.0,1.0-ny*ny));vec3 n=vec3(0.0,ny,nz);float diffuse=max(0.0,dot(n,normalize(uLight)));',
+    ' vec3 color=vec3(.49,.529,.565)*(.61+diffuse*.55);',
+    ' float edge=1.0-smoothstep(0.0,2.2,-dist);color=mix(color,vec3(.20,.275,.314),edge*.72);',
+    ' float theta=asin(ny);float bandWave=abs(sin((theta-uSpin)*3.0));float bands=1.0-smoothstep(.0,.055+aa*.018,bandWave);color=mix(color,vec3(.74,.85,.89),bands*.25*nz);',
+    ' float ribs=0.0;ribs=max(ribs,lineMask(p.x,-25.0,.42,aa));ribs=max(ribs,lineMask(p.x,-15.0,.42,aa));ribs=max(ribs,lineMask(p.x,15.0,.42,aa));ribs=max(ribs,lineMask(p.x,25.0,.42,aa));color=mix(color,vec3(.21,.29,.33),ribs*.72);',
+    ' float lightY=sin(uSpin)*15.0;float lampA=(1.0-smoothstep(1.25,1.25+aa,length(p-vec2(-26.0,lightY))))*max(0.0,cos(uSpin));float lampB=(1.0-smoothstep(1.25,1.25+aa,length(p-vec2(26.0,-lightY))))*max(0.0,cos(uSpin+PI));color=mix(color,vec3(.74,.88,.92),clamp(lampA+lampB,0.0,1.0)*nz);',
+    ' float panelPhase=uSpin+.72;float panelY=sin(panelPhase)*16.5;float panelFront=max(0.0,cos(panelPhase));float panel=1.0-smoothstep(-aa,aa,roundedBox(p-vec2(22.5,panelY),vec2(3.5,1.0),1.0));color=mix(color,vec3(.23,.28,.30),panel*panelFront*.9);',
+    ' float panelEdge=(1.0-smoothstep(-aa,aa,roundedBox(p-vec2(22.5,panelY),vec2(4.2,1.7),1.0)))-panel;color=mix(color,vec3(.91,.76,.43),max(0.0,panelEdge)*panelFront*.8);',
+    ' gl_FragColor=vec4(color*alpha,alpha);',
+    '}'
+  ].join('\n');
+
+  function createMothershipGraphic() {
+    var container = new PIXI.Container();
+    var base = new PIXI.Graphics();
+    var geometry = new PIXI.Geometry()
+      .addAttribute('aVertexPosition', [-37, -18, 37, -18, 37, 18, -37, 18], 2)
+      .addIndex([0, 1, 2, 0, 2, 3]);
+    var shader = PIXI.Shader.from(MOTHERSHIP_VERTEX_SHADER, MOTHERSHIP_FRAGMENT_SHADER,
+      mothershipHabitatUniforms(0, 0, 1));
+    var habitat = new PIXI.Mesh(geometry, shader);
+    var overlay = new PIXI.Graphics();
+    container.addChild(base, habitat, overlay);
+    container.mothershipParts = { base: base, habitat: habitat, shader: shader, overlay: overlay };
+    container.hitArea = new PIXI.Circle(0, 0, 42);
+    return container;
+  }
+
+  /** @param {number} elapsedSeconds @param {number} shipRotation @param {number} screenScale */
+  function mothershipHabitatUniforms(elapsedSeconds, shipRotation, screenScale) {
+    var light = mothershipLocalLight(shipRotation);
+    return { uLight: new Float32Array([light.x, light.y, light.z]),
+      uSpin: elapsedSeconds * Math.PI * 2 / 38,
+      uPixelFootprint: 1 / Math.max(1, screenScale || 1) };
+  }
+
+  /** CPU reference for the shader's front-hemisphere lamp rejection. @param {number} spin */
+  function mothershipHabitatLampVisibility(spin) {
+    return { left: Math.max(0, Math.cos(spin)), right: Math.max(0, Math.cos(spin + Math.PI)) };
+  }
+
+  /** @param {{base:PIXI.Graphics, habitat:PIXI.Mesh, shader:PIXI.Shader, overlay:PIXI.Graphics}} parts @param {boolean} selected @param {number} elapsedSeconds @param {number} shipRotation @param {number} screenScale */
+  function paintMothershipShader(parts, selected, elapsedSeconds, shipRotation, screenScale) {
+    var uniforms = mothershipHabitatUniforms(elapsedSeconds, shipRotation, screenScale);
+    var light = /** @type {Float32Array} */ (parts.shader.uniforms.uLight);
+    light.set(uniforms.uLight);
+    parts.shader.uniforms.uSpin = uniforms.uSpin;
+    parts.shader.uniforms.uPixelFootprint = uniforms.uPixelFootprint;
+    parts.overlay.clear();
+    drawMothershipBearing(parts.overlay, elapsedSeconds);
+    drawMothershipCore(parts.overlay, shipRotation);
+    if (selected) drawMothershipSelectionBrackets(parts.overlay, elapsedSeconds);
   }
 
   /** @param {number} angle */
@@ -3142,6 +3228,8 @@
     platformIsWorking: platformIsWorking,
     drumSurfaceAt: drumSurfaceAt,
     mothershipLocalLight: mothershipLocalLight,
+    mothershipHabitatUniforms: mothershipHabitatUniforms,
+    mothershipHabitatLampVisibility: mothershipHabitatLampVisibility,
     mothershipDrumMarkers: mothershipDrumMarkers,
     mothershipHullHalfWidthAtY: mothershipHullHalfWidthAtY
   };
