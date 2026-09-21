@@ -349,12 +349,16 @@ export type SessionApi = {
 
 declare global {
   namespace PIXI {
+    class Matrix {
+      constructor(a?: number, b?: number, c?: number, d?: number, tx?: number, ty?: number);
+    }
     interface FederatedPointerEvent {
       global: Vec2;
       button: number;
       stopPropagation: () => void;
     }
     class DisplayObject {
+      transform: { setFromMatrix: (matrix: Matrix) => void };
       x: number;
       y: number;
       cursor: string;

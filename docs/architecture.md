@@ -24,6 +24,15 @@ or simulation attachment points. Platform anchors derive their extension from
 existing lifecycle timers using `logistics.setupSeconds` and `packSeconds`;
 excavation effects require the same deployed, staffed, ore-available conditions
 as extraction. Selection brackets use screen-scaled strokes independently of hull shading.
+Attached platforms use a cached asteroid-local terrain normal (the shader's
+broad dome plus shared relief, excluding microtexture). Rotate that normal into
+world space and compose slope-aligned tangent projection after the platform
+heading, with compression clamped to 0.2. Project individual footpads onto this
+plane; chassis and machinery vertices additionally move by their height times
+the surface normal's screen components. Shaded side walls and articulated legs
+connect the elevated body to its ground contacts, with rear legs drawn first.
+Workers use projected positions with a small height offset; selection brackets
+stay uncompressed. Simulation positions and carried geometry remain unchanged.
 
 The site loads ordinary scripts into `window.Driftworks`; there are no ES module
 imports or build artifacts. `index.html` loads Pixi, propulsion, combat,

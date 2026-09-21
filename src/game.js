@@ -287,6 +287,8 @@
     var shipGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
     var platformGraphics = {};
+    /** @type {Record<string, { key: string, normal: AsteroidNormal }>} */
+    var platformNormals = {};
     /** @type {Record<string, AsteroidGraphic>} */
     var asteroidGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
@@ -419,16 +421,41 @@
         }
         var asteroid = world.asteroids.filter(function (a) { return a.id === p.asteroidId; })[0];
         graphic.clear(); graphic.visible = true;
-        graphic.position.set(p.position.x, p.position.y);
-        graphic.rotation = p.siteAngle + (asteroid ? asteroid.rotation : 0) + Math.PI;
-        graphic.scale.set(semanticScale('platform', world.camera.zoom));
-        graphic.hitArea = new PIXI.Circle(0, 0, Math.max(17, 12 / (world.camera.zoom * graphic.scale.x)));
+        var heading = p.siteAngle + (asteroid ? asteroid.rotation : 0) + Math.PI;
+        var artworkScale = semanticScale('platform', world.camera.zoom);
+        var normal = { x: 0, y: 0, z: 1 };
+        if (asteroid) {
+          var rock = asteroidGraphics[asteroid.id];
+          if (!rock) {
+            rock = asteroidGraphics[asteroid.id] = createAsteroidGraphic();
+            worldLayer.addChildAt(rock.container, 1);
+          }
+          if (!rock.visual) paintAsteroid(rock, asteroid, world.camera.zoom);
+          var normalKey = asteroid.id + ':' + asteroid.radius + ':' + p.siteAngle + ':' + p.siteDepth;
+          var cached = platformNormals[p.id];
+          if (!cached || cached.key !== normalKey) {
+            var localSite = worldDeltaToShipLocal(p.position.x - asteroid.position.x,
+              p.position.y - asteroid.position.y, asteroid.rotation);
+            normal = rock.visual ? platformSurfaceNormal(rock.visual, localSite.x / asteroid.radius,
+              localSite.y / asteroid.radius) : normal;
+            cached = platformNormals[p.id] = { key: normalKey, normal: normal };
+          }
+          var rc = Math.cos(asteroid.rotation), rs = Math.sin(asteroid.rotation);
+          normal = { x: cached.normal.x * rc - cached.normal.y * rs,
+            y: cached.normal.x * rs + cached.normal.y * rc, z: cached.normal.z };
+        }
+        var localNormalXY = worldDeltaToShipLocal(normal.x, normal.y, heading);
+        var localNormal = { x: localNormalXY.x, y: localNormalXY.y, z: normal.z };
+        graphic.transform.setFromMatrix(new PIXI.Matrix(Math.cos(heading) * artworkScale,
+          Math.sin(heading) * artworkScale, -Math.sin(heading) * artworkScale,
+          Math.cos(heading) * artworkScale, p.position.x, p.position.y));
+        graphic.hitArea = new PIXI.Circle(0, 0, Math.max(28, 12 / (world.camera.zoom * artworkScale)));
         var working = platformIsWorking(p, world, asteroid);
-        paintIndustrialPlatform(graphic, platformDeployment(p), working, world.elapsedSeconds,
-          world.camera.zoom, graphic.rotation);
-        if (world.selectedPlatformId === p.id) drawCraftBrackets(graphic, 24, 23, world.camera.zoom * graphic.scale.x);
+        paintRaisedPlatform(graphic, platformDeployment(p), working, world.elapsedSeconds,
+          world.camera.zoom, heading, localNormal);
+        if (world.selectedPlatformId === p.id) drawCraftBrackets(graphic, 28, 28, world.camera.zoom * artworkScale);
         if (p.state === 'setting-up' || p.state === 'packing-up') {
-          drawPlatformWorkers(graphic, (p.workerIds || []).slice(0, 5), world.elapsedSeconds, p.state === 'packing-up');
+          drawPlatformWorkers(graphic, (p.workerIds || []).slice(0, 5), world.elapsedSeconds, p.state === 'packing-up', localNormal);
         }
       });
       world.packets.forEach(function (p) {
@@ -1076,6 +1103,40 @@
     return Math.max(0, Math.min(1, value));
   }
 
+  /** Slope-aligned tangent projection composed AFTER the platform heading.
+   * @param {AsteroidNormal} normal @param {number} heading @param {number} scale
+   */
+  function platformProjection(normal, heading, scale) {
+    var length = Math.hypot(normal.x, normal.y, normal.z) || 1;
+    var compression = Math.max(0.2, Math.min(1, normal.z / length));
+    var slopeSquared = normal.x * normal.x + normal.y * normal.y;
+    var k = slopeSquared > 1e-12 ? (1 - compression) / slopeSquared : 0;
+    var xx = 1 - normal.x * normal.x * k, xy = -normal.x * normal.y * k;
+    var yy = 1 - normal.y * normal.y * k;
+    var c = Math.cos(heading), s = Math.sin(heading);
+    return { a: scale * (xx * c + xy * s), b: scale * (xy * c + yy * s),
+      c: scale * (-xx * s + xy * c), d: scale * (-xy * s + yy * c), compression: compression };
+  }
+
+  /** Sample the shader's broad dome and shared relief, without pixel-level noise.
+   * @param {ReturnType<typeof asteroidVisualDescription>} visual @param {number} x @param {number} y
+   * @returns {AsteroidNormal}
+   */
+  function platformSurfaceNormal(visual, x, y) {
+    /** @param {number} px @param {number} py */
+    function height(px, py) {
+      var angle = Math.atan2(py, px);
+      var boundary = 0.88 + 0.07 * Math.cos(angle * 3) + 0.05 * Math.sin(angle * 5);
+      var q = Math.min(0.997, Math.hypot(px, py) / boundary);
+      return Math.sqrt(Math.max(0.002, 1 - q * q)) * 0.78 + asteroidReliefAt(visual.relief, visual.craters, px, py);
+    }
+    var e = 0.0035;
+    var dx = (height(x + e, y) - height(x - e, y)) / (2 * e);
+    var dy = (height(x, y + e) - height(x, y - e)) / (2 * e);
+    var length = Math.hypot(dx, dy, 1);
+    return { x: -dx / length, y: -dy / length, z: 1 / length };
+  }
+
   /** @param {import('./types').Platform} platform @param {World} world @param {Asteroid | undefined} asteroid */
   function platformIsWorking(platform, world, asteroid) {
     return platform.state === 'deployed' && world.miningMission === 'active' && !!asteroid && asteroid.ore > 0 &&
@@ -1157,6 +1218,91 @@
     });
   }
 
+  /** Local tangent coordinates plus elevation along the outward surface normal.
+   * @param {AsteroidNormal} normal @param {number} x @param {number} y @param {number} height
+   */
+  function platformRaisedPoint(normal, x, y, height) {
+    var p = platformProjection(normal, 0, 1);
+    return { x: p.a * x + p.c * y + normal.x * height,
+      y: p.b * x + p.d * y + normal.y * height };
+  }
+
+  /** @param {PIXI.Graphics} g @param {number} deployment @param {boolean} working @param {number} time @param {number} zoom @param {number} rotation @param {AsteroidNormal} normal */
+  function paintRaisedPlatform(g, deployment, working, time, zoom, rotation, normal) {
+    var light = mothershipLocalLight(rotation), detail = craftDetail(zoom);
+    var plane = platformProjection(normal, 0, 1);
+    // Tangent axes' Z components establish which side walls face the camera.
+    var tx = { x: plane.a, y: plane.b, z: -normal.x };
+    var ty = { x: plane.c, y: plane.d, z: -normal.y };
+    /** @param {number} color @param {AsteroidNormal} face */
+    function lit(color, face) {
+      var denominator = Math.hypot(light.x, light.y, light.z) * Math.hypot(face.x, face.y, face.z);
+      return shadeMechanicalColor(color, 0.38 + 0.8 * Math.max(0,
+        (face.x * light.x + face.y * light.y + face.z * light.z) / Math.max(0.001, denominator)));
+    }
+    /** @param {number[][]} points @param {number} color @param {number} [alpha] */
+    function polygon(points, color, alpha) {
+      var flat = points.map(function (v) { return platformRaisedPoint(normal, v[0], v[1], v[2]); });
+      g.lineStyle(0); g.beginFill(color, alpha === undefined ? 1 : alpha);
+      g.drawPolygon(flat.reduce(function (out, point) { return out.concat([point.x, point.y]); }, /** @type {number[]} */ ([])));
+      g.endFill();
+    }
+    /** @param {number} x @param {number} y @param {number} w @param {number} h @param {number} bottom @param {number} top @param {number} color */
+    function box(x, y, w, h, bottom, top, color) {
+      [-1, 1].forEach(function (side) {
+        if (side * tx.z > 0) {
+          var edgeX = side < 0 ? x : x + w;
+          polygon([[edgeX,y,bottom],[edgeX,y+h,bottom],[edgeX,y+h,top],[edgeX,y,top]],
+            lit(color, {x:side*tx.x,y:side*tx.y,z:side*tx.z}));
+        }
+        if (side * ty.z > 0) {
+          var edgeY = side < 0 ? y : y + h;
+          polygon([[x,edgeY,bottom],[x+w,edgeY,bottom],[x+w,edgeY,top],[x,edgeY,top]],
+            lit(color, {x:side*ty.x,y:side*ty.y,z:side*ty.z}));
+        }
+      });
+      polygon([[x,y,top],[x+w,y,top],[x+w,y+h,top],[x,y+h,top]], lit(color,normal));
+    }
+    // A restrained ground shadow separates the body from its contact plane.
+    polygon([[-12,-8,0],[12,-8,0],[12,8,0],[-12,8,0]],0x080e12,0.24);
+    /** @type {{x:number,side:number,depth:number}[]} */
+    var legs = [];
+    [-9,-3,3,9].forEach(function (x) { [-1,1].forEach(function (side) {
+      legs.push({x:x,side:side,depth:-normal.x*x-normal.y*side*12});
+    }); });
+    legs.sort(function (a,b) { return a.depth-b.depth; });
+    /** @param {{x:number,side:number,depth:number}} leg */
+    function drawLeg(leg) {
+      var x=leg.x, side=leg.side;
+      var footX=x*(1+deployment*0.7), footY=side*(9+deployment*10);
+      var kneeX=x*(1+deployment*0.25), kneeY=side*(7.5+deployment*5);
+      var root=platformRaisedPoint(normal,x,side*5,5);
+      var knee=platformRaisedPoint(normal,kneeX,kneeY,3.5);
+      var foot=platformRaisedPoint(normal,footX,footY,0.6);
+      box(footX-2.2,footY-1.7,4.4,3.4,0,0.6,0x77817a);
+      g.lineStyle(3.5,lit(0xb99243,normal),1); g.moveTo(root.x,root.y); g.lineTo(knee.x,knee.y);
+      g.lineStyle(2.7,lit(0x89928b,normal),1); g.moveTo(knee.x,knee.y); g.lineTo(foot.x,foot.y);
+      box(kneeX-1.7,kneeY-1.3,3.4,2.6,3,4.3,0xb99243);
+    }
+    legs.filter(function (leg) { return leg.depth<=0; }).forEach(drawLeg);
+    box(-12,-8,24,16,3.5,8,0xd3a449);
+    // Recessed top compartment and raised sorting/excavation hardware.
+    polygon([[-6,-4.5,8.02],[6,-4.5,8.02],[6,3,8.02],[-6,3,8.02]],0x253137);
+    box(3,-3,6+deployment*5,3,8,10,0x9b8857);
+    box(8+deployment*5,-4,3,7,6,10,0x35454a);
+    if (detail.machinery>0) {
+      [-1,1].forEach(function (side) { box(-9,side*5,4,1,8,8.5,0xe3bd68); });
+    }
+    if (working) {
+      for (var i=0;i<4;i+=1) {
+        var phase=(time*1.8+i/4)%1;
+        box(-4+phase*8,-2,1.1,2,8.05,8.5,0xaa9a71);
+      }
+      box(13,-1+Math.sin(time*8)*1.2,2,2,9.8,10.3,0x8c9999);
+    }
+    legs.filter(function (leg) { return leg.depth>0; }).forEach(drawLeg);
+  }
+
   /** @param {PIXI.Graphics} g @param {number} deployment @param {boolean} working @param {number} time @param {number} zoom @param {number} rotation */
   function paintIndustrialPlatform(g, deployment, working, time, zoom, rotation) {
     var detail = craftDetail(zoom);
@@ -1232,8 +1378,8 @@
     graphics.lineTo(centerX - 4 * hullScale, centerY + 4 * hullScale);
   }
 
-  /** @param {PIXI.Graphics} graphics @param {string[]} workerIds @param {number} elapsedSeconds @param {boolean} packingUp */
-  function drawPlatformWorkers(graphics, workerIds, elapsedSeconds, packingUp) {
+  /** @param {PIXI.Graphics} graphics @param {string[]} workerIds @param {number} elapsedSeconds @param {boolean} packingUp @param {AsteroidNormal} [normal] */
+  function drawPlatformWorkers(graphics, workerIds, elapsedSeconds, packingUp, normal) {
     var positions = workerIds.map(function (personId, index) {
       var seed = 0;
       for (var i = 0; i < personId.length; i += 1) seed = (seed * 31 + personId.charCodeAt(i)) >>> 0;
@@ -1273,6 +1419,10 @@
       var y = position.y + separationY[index];
       var distance = Math.sqrt(x * x + y * y);
       if (distance > 32) { x *= 32 / distance; y *= 32 / distance; }
+      if (normal) {
+        var projectedWorker = platformRaisedPoint(normal, x, y, 1.8);
+        x = projectedWorker.x; y = projectedWorker.y;
+      }
       graphics.lineStyle(1, 0xc5d9d8, 0.9);
       graphics.beginFill(0xe7f0e5, 1);
       graphics.drawCircle(x, y, 1.8);
@@ -2986,6 +3136,9 @@
     paintIndustrialPlatform: paintIndustrialPlatform,
     drawCraftBrackets: drawCraftBrackets,
     platformDeployment: platformDeployment,
+    platformProjection: platformProjection,
+    platformRaisedPoint: platformRaisedPoint,
+    paintRaisedPlatform: paintRaisedPlatform,
     platformIsWorking: platformIsWorking,
     drumSurfaceAt: drumSurfaceAt,
     mothershipLocalLight: mothershipLocalLight,

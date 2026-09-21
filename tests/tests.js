@@ -811,6 +811,32 @@
     assertClose(game.craftDetail(128).fine, 1);
   });
 
+  test('platform tangent projection preserves cross-slope length and clamps the limb', function () {
+    var normal = { x: 0.48, y: 0.64, z: 0.6 };
+    var p = game.platformProjection(normal, 0, 1);
+    assertClose(Math.hypot(p.a * 0.6 + p.c * 0.8, p.b * 0.6 + p.d * 0.8), 0.6);
+    assertClose(Math.hypot(p.a * -0.8 + p.c * 0.6, p.b * -0.8 + p.d * 0.6), 1);
+    var front = game.platformProjection({ x: 0, y: 0, z: 1 }, Math.PI / 2, 2);
+    assertClose(front.a, 0); assertClose(front.b, 2); assertClose(front.c, -2); assertClose(front.d, 0);
+    var limb = game.platformProjection({ x: 1, y: 0, z: 0 }, 0, 1);
+    assertClose(limb.a, 0.2); assertClose(limb.d, 1);
+    var turned = game.platformProjection(normal, Math.PI / 2, 1);
+    assertClose(turned.a, p.c); assertClose(turned.b, p.d);
+    assertClose(turned.c, -p.a); assertClose(turned.d, -p.b);
+    assertClose(normal.x, 0.48);
+  });
+
+  test('raised platform preserves ground contacts while height separates the chassis', function () {
+    var normal={x:0.48,y:0.64,z:0.6};
+    var foot=game.platformRaisedPoint(normal,4,7,0);
+    var body=game.platformRaisedPoint(normal,4,7,8);
+    assertClose(body.x-foot.x,8*normal.x); assertClose(body.y-foot.y,8*normal.y);
+    var front=game.platformRaisedPoint({x:0,y:0,z:1},4,7,8);
+    assertClose(front.x,4); assertClose(front.y,7);
+    var limb=game.platformRaisedPoint({x:1,y:0,z:0},4,7,8);
+    assertClose(limb.x,8.8); assertClose(limb.y,7);
+  });
+
   test('platform presentation follows lifecycle without mutating state', function () {
     var world = sim.createInitialWorld();
     var platform = world.platforms[0];
