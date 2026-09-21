@@ -227,7 +227,10 @@
           requiredElement('[data-role="selection-fuel"]').textContent = '—';
         } else {
           var selectedDetails = selectedShips.map(function (ship) {
-              var status = (ship.unloadRemainingSeconds || 0) > 0 ? 'unloading cargo' : ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
+              var status = ship.cargoOperation && ship.cargoOperation.remainingSeconds > 0 ?
+                (ship.cargoOperation.kind === 'deploy-platform' || ship.cargoOperation.kind === 'deploy-section' ?
+                  'EVA unstrapping ' : 'EVA securing ') + Math.ceil(ship.cargoOperation.remainingSeconds / 60) + 'm' :
+                (ship.unloadRemainingSeconds || 0) > 0 ? 'unloading cargo' : ship.repairRemaining ? 'repair ' + Math.ceil(ship.repairRemaining) + 's' :
                 ship.launchElapsed != null ? 'launching' : ship.disabled ? 'disabled' : ship.towTarget ? 'hauling ' + (ship.towTarget.kind === 'wreck' ? 'wreck' : 'fighter') : ship.order.kind === 'recover' ? 'recovering' : '';
               if (!status) status = ship.docked ? 'docked / refuelled' : ship.order.kind === 'return' ?
                 (ship.order.kind === 'return' && ship.order.automatic ? 'fuel reserve / returning' : 'returning') : ship.order.kind === 'deploy' ? 'deploying platform' :

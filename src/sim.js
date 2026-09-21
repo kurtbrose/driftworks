@@ -47,6 +47,7 @@
   var DEPOT_FRAME = { lengthM: 80, widthM: 160 };
   var METERS_PER_UNIT = 10000 / 600;
   var PHYSICAL_SECONDS_PER_SECOND = 60;
+  var CARGO_HANDLING_SECONDS = 15 * 60;
   var MASS_MIGRATION = 1500 / 80;
   var logistics = /** @type {import('./types').LogisticsModule} */ (Driftworks.logistics).create({
     cloneWorld: cloneWorld, clonePlain: clonePlain, selectedLookup: selectedLookup,
@@ -234,6 +235,7 @@
       disabled: false,
       repairRemaining: 0,
       launchElapsed: null,
+      cargoOperation: null,
       cargoCapacity: 0,
       platformId: null,
       docked: false,
@@ -820,6 +822,7 @@
       ship.disabled = !!ship.disabled;
       ship.repairRemaining = ship.repairRemaining || 0;
       ship.launchElapsed = ship.launchElapsed == null ? null : ship.launchElapsed;
+      ship.cargoOperation = ship.cargoOperation || null;
     });
     next.selectedShipIds = next.selectedShipIds || [];
     next.selectedPlatformId = next.selectedPlatformId || null;
@@ -1006,6 +1009,7 @@
         hauler.order = { kind: 'salvage-all' };
       }
       if (hauler.order.kind === 'recover' && !hauler.towTarget) {
+        var recoveryOrder = hauler.order;
         var pickup = recoveryTarget(world, hauler.order.recoveryTarget);
         if (!pickup || pickup.towedBy || hauler.carryingSection || !mothership) {
           hauler.order = { kind: 'idle' };
@@ -1013,9 +1017,31 @@
         }
         hauler.order.target = clonePlain(pickup.position);
         if (distance(hauler.position, pickup.position) > 18) {
+          hauler.cargoOperation = null;
           stepTowardOrderTarget(hauler, dt, 12, false);
           return;
         }
+        var claimedByAnother = world.ships.some(function (other) {
+          return other.id !== hauler.id && other.cargoOperation && other.cargoOperation.kind === 'recover' &&
+            other.order.kind === 'recover' && other.order.recoveryTarget.kind === recoveryOrder.recoveryTarget.kind &&
+            other.order.recoveryTarget.id === recoveryOrder.recoveryTarget.id;
+        });
+        if (claimedByAnother) {
+          hauler.order = { kind: 'idle' };
+          hauler.cargoOperation = null;
+          return;
+        }
+        var pickupVelocity = 'velocity' in pickup && pickup.velocity ? pickup.velocity : { x: 0, y: 0 };
+        hauler.position = clonePlain(pickup.position);
+        hauler.velocity = clonePlain(pickupVelocity);
+        if (!hauler.cargoOperation || hauler.cargoOperation.kind !== 'recover') {
+          hauler.cargoOperation = { kind: 'recover', remainingSeconds: CARGO_HANDLING_SECONDS,
+            totalSeconds: CARGO_HANDLING_SECONDS };
+        }
+        hauler.cargoOperation.remainingSeconds = Math.max(0,
+          hauler.cargoOperation.remainingSeconds - dt * PHYSICAL_SECONDS_PER_SECOND);
+        if (hauler.cargoOperation.remainingSeconds > 0) return;
+        hauler.cargoOperation = null;
         hauler.towTarget = clonePlain(hauler.order.recoveryTarget);
         pickup.towedBy = hauler.id;
         hauler.order = { kind: 'return', target: clonePlain(mothership.position), salvageAll: hauler.order.salvageAll };

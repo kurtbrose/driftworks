@@ -1035,6 +1035,10 @@
       }
       paintConstructor(graphics, style);
       if (ship.towTarget) paintTowedHull(graphics, ship.towTarget.kind, towedEntity, style, towedScale);
+      if (ship.cargoOperation && ship.cargoOperation.remainingSeconds > 0) {
+        drawCargoEvaWorkers(graphics, ship.id, elapsedSeconds,
+          ship.cargoOperation.kind === 'deploy-platform' || ship.cargoOperation.kind === 'deploy-section');
+      }
     } else if (ship.type === 'shuttle') {
       graphics.beginFill(style.fill, 1);
       graphics.drawRoundedRect(-8, -4, 16, 8, 3);
@@ -1129,6 +1133,25 @@
       graphics.lineStyle(1, 0xc5d9d8, 0.9);
       graphics.beginFill(0xe7f0e5, 1);
       graphics.drawCircle(x, y, 1.8);
+      graphics.endFill();
+    });
+  }
+
+  /** @param {PIXI.Graphics} graphics @param {string} shipId @param {number} elapsedSeconds @param {boolean} deploying */
+  function drawCargoEvaWorkers(graphics, shipId, elapsedSeconds, deploying) {
+    var seed = 0;
+    for (var i = 0; i < shipId.length; i += 1) seed = (seed * 31 + shipId.charCodeAt(i)) >>> 0;
+    [0, 1].forEach(function (index) {
+      var direction = index ? -1 : 1;
+      var phase = elapsedSeconds * (0.7 + index * 0.11) + seed * 0.001 + index * Math.PI;
+      var reach = 22 + Math.sin(phase * 0.63) * 4;
+      var x = (deploying ? 1 : -1) * 4 + Math.cos(phase) * reach;
+      var y = direction * 7 + Math.sin(phase * 0.83) * 12;
+      graphics.lineStyle(0.8, 0xb8d2d5, 0.55);
+      graphics.moveTo(x - Math.cos(phase) * 3, y - Math.sin(phase * 0.83) * 3);
+      graphics.lineTo(x, y);
+      graphics.beginFill(index ? 0xe7f0e5 : 0xd5b66f, 1);
+      graphics.drawCircle(x, y, 1.9);
       graphics.endFill();
     });
   }

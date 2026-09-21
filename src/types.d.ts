@@ -75,6 +75,11 @@ export type Ship = {
   previousVelocity: Vec2;
   previousCargo: number;
   unloadRemainingSeconds?: number;
+  cargoOperation?: {
+    kind: 'deploy-platform' | 'retrieve-platform' | 'deploy-section' | 'recover';
+    remainingSeconds: number;
+    totalSeconds: number;
+  } | null;
   cargoCapacity: number;
   repairRemaining: number;
   /** Normal emergence is 0..1 seconds; repaired-fighter clearance is 0..6 seconds. */

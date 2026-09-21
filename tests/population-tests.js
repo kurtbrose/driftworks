@@ -102,9 +102,11 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     var radius = sim.surfaceRadius(asteroid, 0) * platform.siteDepth;
     tug.position = { x: asteroid.position.x + radius, y: asteroid.position.y }; tug.velocity = { x: 0, y: 0 };
     sessions.step(s, 1 / 30);
+    for (var handlingTick = 0; handlingTick < 450; handlingTick += 1) sessions.step(s, 1 / 30);
     platform = s.world.platforms[0]; tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
     assert(platform.state === 'setting-up' && platform.workerIds.length === 5);
-    assert(tug.passengerIds.length === 0 && platform.setupRemainingSeconds === 3 * 3600 - 2);
+    assert(tug.passengerIds.length === 0 && platform.setupRemainingSeconds <= 3 * 3600 - 2 &&
+      platform.setupRemainingSeconds >= 3 * 3600 - 4);
     var ore = s.world.asteroids[0].ore;
     sessions.step(s, 179);
     assert(s.world.platforms[0].state === 'setting-up' && s.world.asteroids[0].ore === ore, 'Setup must last the full three physical hours');
@@ -137,6 +139,7 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     var storedBefore = s.world.mothership.storage.ore + s.world.mothership.storage.constructionMass;
     sessions.step(s, 180);
     sessions.step(s, 1 / 30);
+    sessions.step(s, 15);
     assert(s.world.platforms[0].state === 'carried' && s.world.platforms[0].workerIds.length === 0);
     tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
     assert(JSON.stringify(tug.passengerIds) === JSON.stringify(ids));

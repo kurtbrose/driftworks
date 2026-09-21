@@ -21,6 +21,7 @@
     var DEPOT_SECTION_MASS = 1500;
     var PLATFORM_SETUP_SECONDS = 3 * 3600;
     var PLATFORM_PACK_SECONDS = 3 * 3600;
+    var CARGO_HANDLING_SECONDS = 15 * 60;
 
     /** @param {string} id @returns {Platform} */
     function createPlatform(id) {
@@ -138,6 +139,26 @@
       api.stepTowardOrderTarget(ship, dt, 0, false, { x: site.velocity.x + dx / Math.max(gap, 0.001) * speed,
         y: site.velocity.y + dy / Math.max(gap, 0.001) * speed });
       if (gap > 1 || api.distance(ship.velocity, site.velocity) > 1) return ship;
+      ship.position = api.clonePlain(site.position);
+      ship.velocity = api.clonePlain(site.velocity);
+      if (!deploying) {
+        if (platform.state !== 'packing-up') {
+          platform.state = 'packing-up';
+          platform.packRemainingSeconds = PLATFORM_PACK_SECONDS;
+          return ship;
+        }
+        if ((platform.packRemainingSeconds || 0) > 0) return ship;
+      }
+      var operationKind = /** @type {'deploy-platform' | 'retrieve-platform'} */ (
+        deploying ? 'deploy-platform' : 'retrieve-platform');
+      if (!ship.cargoOperation || ship.cargoOperation.kind !== operationKind) {
+        ship.cargoOperation = { kind: operationKind, remainingSeconds: CARGO_HANDLING_SECONDS,
+          totalSeconds: CARGO_HANDLING_SECONDS };
+      }
+      var cargoOperation = ship.cargoOperation;
+      cargoOperation.remainingSeconds = Math.max(0, cargoOperation.remainingSeconds - dt * api.physicalSecondsPerSecond);
+      if (cargoOperation.remainingSeconds > 0) return ship;
+      ship.cargoOperation = null;
       if (deploying) {
         platform.state = 'setting-up'; platform.carrierId = null;
         platform.evacuationRequested = false; platform.shiftStartedSeconds = (world.elapsedSeconds + dt) * api.physicalSecondsPerSecond;
@@ -149,12 +170,6 @@
         ship.passengerIds = [];
         ship.platformId = null;
       } else {
-        if (platform.state !== 'packing-up') {
-          platform.state = 'packing-up';
-          platform.packRemainingSeconds = PLATFORM_PACK_SECONDS;
-          return ship;
-        }
-        if ((platform.packRemainingSeconds || 0) > 0) return ship;
         if ((ship.passengerIds || []).length) return ship;
         ship.passengerIds = platform.workerIds || [];
         platform.workerIds = [];
@@ -333,6 +348,16 @@
       if (api.distance(ship.position, depot.position) > api.arrivalDistance || Math.hypot(ship.velocity.x, ship.velocity.y) > 0.01) {
         return api.stepTowardOrderTarget(ship, dt, api.arrivalDistance, false);
       }
+      ship.position = api.clonePlain(depot.position);
+      ship.velocity = { x: 0, y: 0 };
+      if (!ship.cargoOperation || ship.cargoOperation.kind !== 'deploy-section') {
+        ship.cargoOperation = { kind: 'deploy-section', remainingSeconds: CARGO_HANDLING_SECONDS,
+          totalSeconds: CARGO_HANDLING_SECONDS };
+      }
+      ship.cargoOperation.remainingSeconds = Math.max(0,
+        ship.cargoOperation.remainingSeconds - dt * api.physicalSecondsPerSecond);
+      if (ship.cargoOperation.remainingSeconds > 0) return ship;
+      ship.cargoOperation = null;
       depot.builtStages += 1; ship.carryingSection = false;
       ship.velocity = { x: 0, y: 0 };
       ship.order = mothershipShip ? { kind: 'return', target: api.clonePlain(mothershipShip.position) } : { kind: 'idle' };

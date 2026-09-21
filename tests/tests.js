@@ -440,6 +440,32 @@
     assert(findShip(world, 'tug-01').docked);
   });
 
+  test('platform transfer holds a zero-relative-velocity rendezvous for fifteen physical minutes', function () {
+    var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
+    var carrier;
+    for (var i = 0; i < 2500; i += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+      carrier = findShip(world, 'tug-01');
+      if (carrier.cargoOperation) break;
+    }
+    assert(carrier.cargoOperation && carrier.cargoOperation.kind === 'deploy-platform', 'EVA handling should start after rendezvous');
+    assert(world.platforms[0].state === 'carried', 'Platform must remain strapped on during handling');
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    var before = findShip(world, 'tug-01').cargoOperation.remainingSeconds;
+    world = sim.stepWorld(world, 1 / 30);
+    carrier = findShip(world, 'tug-01');
+    assertClose(carrier.cargoOperation.remainingSeconds, before - 2);
+    var asteroid = world.asteroids[0], platform = world.platforms[0];
+    var angle = carrier.order.siteAngle + asteroid.rotation;
+    var radius = sim.surfaceRadius(asteroid, carrier.order.siteAngle) * carrier.order.siteDepth;
+    assertClose(carrier.position.x, asteroid.position.x + Math.cos(angle) * radius);
+    assertClose(carrier.position.y, asteroid.position.y + Math.sin(angle) * radius);
+    assertClose(carrier.velocity.x, -Math.sin(angle) * radius * asteroid.angularVelocity);
+    assertClose(carrier.velocity.y, Math.cos(angle) * radius * asteroid.angularVelocity);
+    for (i = 0; i < 500 && world.platforms[0].state === 'carried'; i += 1) world = sim.stepWorld(world, 1 / 30);
+    assert(world.platforms[0].state === 'setting-up', 'Platform should release after the handling timer');
+  });
+
   test('ore packets deliver platform production to mothership storage', function () {
     var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
     var guard = 0;
@@ -506,6 +532,13 @@
     assert(findShip(world, 'tug-01').order.kind === 'recover', 'Right-click should dispatch recovery');
     world = sim.stepWorld(world, 1 / 30);
     var hauler = findShip(world, 'tug-01');
+    assert(hauler.cargoOperation && hauler.cargoOperation.kind === 'recover', 'Matched wreck pickup should begin EVA securing');
+    assert(!hauler.towTarget && !world.wrecks[0].towedBy, 'Wreck must remain free until securing finishes');
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    for (var handlingTick = 0; handlingTick < 500 && !findShip(world, 'tug-01').towTarget; handlingTick += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+    }
+    hauler = findShip(world, 'tug-01');
     assert(hauler.towTarget && world.wrecks[0].towedBy === hauler.id, 'Pickup should attach the wreck');
     assertClose(world.wrecks[0].position.x, hauler.position.x);
     assertClose(world.wrecks[0].position.y, hauler.position.y);
@@ -529,6 +562,7 @@
 
   test('salvage-all is opt-in and sends the tug for every recoverable target', function () {
     var world = createDeployedWorld();
+    world.combat.director.wavesSpawned = 3;
     world = sim.addWreck(world, { position: { x: 165, y: 120 }, velocity: { x: 0, y: 0 } });
     world = sim.addWreck(world, { position: { x: 175, y: 120 }, velocity: { x: 0, y: 0 } });
     assert(findShip(world, 'tug-01').order.kind === 'idle', 'The tug should not salvage automatically');
@@ -577,8 +611,8 @@
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
     for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30);
     assert(findShip(world, 'tug-01').velocity.x > 35, 'Approach should retain velocity between ticks');
-    for (var j = 0; j < 150; j += 1) world = sim.stepWorld(world, 1 / 30);
-    assert(findShip(world, 'tug-01').towTarget, 'Hauler should reach and collect a nearby wreck within six seconds');
+    for (var j = 0; j < 650; j += 1) world = sim.stepWorld(world, 1 / 30);
+    assert(findShip(world, 'tug-01').towTarget, 'Hauler should rendezvous and secure a nearby wreck');
   });
 
   test('repaired fighters launch slowly from inside the mothership before accepting orders', function () {
@@ -616,7 +650,11 @@
     world.ships.push(sim.createShip('tug-02', 'Second Hauler', 'tug', 160, 120, 62));
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01', 'tug-02']), world.wrecks[0].position);
     world = sim.stepWorld(world, 1 / 30);
-    assert(world.ships.filter(function (ship) { return ship.towTarget; }).length === 1, 'Only one hauler can pick up each wreck');
+    assert(world.ships.filter(function (ship) { return ship.cargoOperation; }).length === 1, 'Only one hauler can secure each wreck');
+    for (var claimTick = 0; claimTick < 500 && !world.ships.some(function (ship) { return ship.towTarget; }); claimTick += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+    }
+    assert(world.ships.filter(function (ship) { return ship.towTarget; }).length === 1, 'Only the securing hauler can attach the wreck');
     var loaded = findShip(world, 'tug-01');
     world = sim.issueBuildOrder(sim.selectShips(world, [loaded.id]));
     assert(findShip(world, loaded.id).order.kind === 'return', 'Carried hull prevents accepting a module');

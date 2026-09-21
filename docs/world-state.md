@@ -52,6 +52,10 @@ and `escort`. Stable string `id` identifies a ship; name is only a label.
   becomes `cargo` on retrieval and contributes additional mass. `passengerIds`
   holds platform workers on the tug; `unloadRemainingSeconds` records the physical
   three-minute delivery delay at home.
+  Cargo transfer after a matched position/velocity rendezvous uses the optional
+  `cargoOperation` timer. Platform deployment/retrieval, depot-section release,
+  and hull recovery take fifteen physical minutes; the payload changes ownership
+  only when it expires.
 - Lifecycle: `docked` means stored inside the mothership at its position and
   velocity; docked craft remain in `ships` for fleet selection but are not
   scene entities. `damage` in [0, 1], `disabled`, `towedBy`, `repairRemaining`,
