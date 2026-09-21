@@ -1160,12 +1160,23 @@
   /** @param {PIXI.Graphics} g @param {number} deployment @param {boolean} working @param {number} time @param {number} zoom @param {number} rotation */
   function paintIndustrialPlatform(g, deployment, working, time, zoom, rotation) {
     var detail = craftDetail(zoom);
-    [-1, 1].forEach(function (x) { [-1, 1].forEach(function (y) {
-      var footX = x * (10 + deployment * 9), footY = y * (9 + deployment * 8);
-      g.lineStyle(1.5, 0x5b6461, 1);
-      g.moveTo(x * 7, y * 5); g.lineTo(x * (9 + deployment * 3), y * (8 + deployment * 3));
-      g.lineTo(footX, footY);
-      mechanicalBlock(g, 0x263238, footX - 2, footY - 1, 4, 2);
+    // Four independently articulated legs on each flank. Broad armored upper
+    // links and angular feet keep these readable as excavator legs, not wheels.
+    [-9, -3, 3, 9].forEach(function (rootX) { [-1, 1].forEach(function (side) {
+      var kneeX = rootX * (1 + deployment * 0.25);
+      var kneeY = side * (7.5 + deployment * 5);
+      var footX = rootX * (1 + deployment * 0.7);
+      var footY = side * (9 + deployment * 10);
+      g.lineStyle(3.8, mechanicalFace(0xb99243, rotation, side), 1);
+      g.moveTo(rootX, side * 5); g.lineTo(kneeX, kneeY);
+      g.lineStyle(2.8, mechanicalFace(0x89928b, rotation, side), 1);
+      g.moveTo(kneeX, kneeY); g.lineTo(footX, footY);
+      g.lineStyle(0.65, 0xc8d0c8, 0.65);
+      g.moveTo(kneeX - 0.65, kneeY); g.lineTo(footX - 0.65, footY);
+      mechanicalBlock(g, 0x3a403a, kneeX - 1.9, kneeY - 1.5, 3.8, 3);
+      mechanicalBlock(g, mechanicalFace(0xd3a449, rotation, side), kneeX - 1.4, kneeY - 1.1, 2.8, 1.5);
+      mechanicalBlock(g, 0x263238, footX - 2.2, footY - 1.7, 4.4, 3.4);
+      mechanicalBlock(g, 0x77817a, footX - 1.9, footY - 1.4, 3.8, 0.65);
     }); });
     g.lineStyle(0); g.beginFill(mechanicalFace(0xd3a449, rotation, -1), 1);
     g.drawRoundedRect(-12, -8, 24, 16, 4); g.endFill();
