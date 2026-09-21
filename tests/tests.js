@@ -790,6 +790,25 @@
     assert(game.mothershipDrumMarkers(38)[0].visible, 'A band should reappear after one full rotation');
   });
 
+  test('mothership rotating details share one cylindrical projection', function () {
+    var top = game.drumSurfaceAt(Math.PI / 2);
+    var near = game.drumSurfaceAt(0);
+    assertClose(top.y, 16.5);
+    assertClose(top.depth, 0);
+    assertClose(near.y, 0);
+    assertClose(near.depth, 1);
+  });
+
+  test('mothership lighting remains fixed in world space as the hull turns', function () {
+    var initial = game.mothershipLocalLight(0);
+    var quarterTurn = game.mothershipLocalLight(Math.PI / 2);
+    assertClose(initial.x, -0.813733);
+    assertClose(initial.y, -0.581238);
+    assertClose(quarterTurn.x, -0.581238);
+    assertClose(quarterTurn.y, 0.813733);
+    assertClose(quarterTurn.z, initial.z);
+  });
+
   test('save serialization round-trips world state', function () {
     var world = sim.issueMoveOrder(sim.selectShips(createDeployedWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));
