@@ -283,6 +283,12 @@
     var logisticsGraphic = new PIXI.Graphics();
     var launchLayer = new PIXI.Container();
     var selectionBox = new PIXI.Graphics();
+    var contactOverlay = new PIXI.Container();
+    var contactMarker = new PIXI.Graphics();
+    var contactLabel = new PIXI.Text('', {
+      fontFamily: 'Consolas, monospace', fontSize: 12, fill: 0xf0c778,
+      stroke: 0x080c10, strokeThickness: 4
+    });
     /** @type {Record<string, PIXI.Graphics | PIXI.Container>} */
     var shipGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
@@ -334,6 +340,10 @@
     worldLayer.addChild(launchLayer);
     worldLayer.addChild(effectsLayer);
     app.stage.addChild(selectionBox);
+    contactOverlay.eventMode = 'none';
+    contactOverlay.addChild(contactMarker);
+    contactOverlay.addChild(contactLabel);
+    app.stage.addChild(contactOverlay);
     drawGrid(grid);
 
     app.stage.eventMode = 'static';
@@ -536,6 +546,7 @@
         paintDrone(droneGraphic, drone);
         droneGraphic.scale.set(semanticScale('escort', world.camera.zoom));
       });
+      paintContactOverlay(contactMarker, contactLabel, world, view);
     }
 
     /** @param {World} world @param {number} alpha @param {number} dt @param {number} realDt */
@@ -621,7 +632,6 @@
     function consumeCombatEvents(events) {
       events.forEach(function (event) {
         if (event.kind === 'contact-warning' || event.kind === 'wave-spawned') {
-          pushFloatText(effects, event.position, event.kind === 'contact-warning' ? 'CONTACT INBOUND' : 'HOSTILE CONTACT');
           if (audio) audio.playWarning();
         } else if (event.kind === 'weapon-fired' && event.source) {
           pushProjectile(effects, event.source, event.position);
@@ -2855,6 +2865,59 @@
       occlusion: asteroidOcclusionAt(visual.craters, x, y) };
   }
 
+  /**
+   * @param {Vec2} target @param {Viewport} view @param {number} [inset]
+   * @returns {{ visible: boolean, position: Vec2, direction: Vec2 }}
+   */
+  function contactEdgeMarker(target, view, inset) {
+    inset = inset === undefined ? 26 : inset;
+    var center = { x: view.width / 2, y: view.height / 2 };
+    var minX = inset, maxX = Math.max(inset, view.width - inset);
+    var minY = inset, maxY = Math.max(inset, view.height - inset);
+    var dx = target.x - center.x, dy = target.y - center.y;
+    var length = Math.hypot(dx, dy) || 1;
+    var direction = { x: dx / length, y: dy / length };
+    if (target.x >= minX && target.x <= maxX && target.y >= minY && target.y <= maxY) {
+      return { visible: false, position: target, direction: direction };
+    }
+    var tx = dx > 0 ? (maxX - center.x) / dx : dx < 0 ? (minX - center.x) / dx : Infinity;
+    var ty = dy > 0 ? (maxY - center.y) / dy : dy < 0 ? (minY - center.y) / dy : Infinity;
+    var scale = Math.min(tx > 0 ? tx : Infinity, ty > 0 ? ty : Infinity);
+    return { visible: true, position: { x: center.x + dx * scale, y: center.y + dy * scale }, direction: direction };
+  }
+
+  /** @param {PIXI.Graphics} marker @param {PIXI.Text} label @param {World} world @param {Viewport} view */
+  function paintContactOverlay(marker, label, world, view) {
+    var offscreen = world.combat.drones.filter(function (drone) {
+      return contactEdgeMarker(worldToScreen(drone.position, world.camera, view), view).visible;
+    });
+    marker.clear();
+    marker.visible = offscreen.length > 0;
+    label.visible = offscreen.length > 0;
+    if (!offscreen.length) return;
+    var average = offscreen.reduce(function (sum, drone) {
+      var screen = worldToScreen(drone.position, world.camera, view);
+      return { x: sum.x + screen.x / offscreen.length, y: sum.y + screen.y / offscreen.length };
+    }, { x: 0, y: 0 });
+    var edge = contactEdgeMarker(average, view);
+    var d = edge.direction, side = { x: -d.y, y: d.x }, p = edge.position;
+    marker.lineStyle(2, 0xf0c778, 0.95);
+    marker.moveTo(p.x + side.x * 8, p.y + side.y * 8);
+    marker.lineTo(p.x, p.y);
+    marker.lineTo(p.x - side.x * 8, p.y - side.y * 8);
+    marker.moveTo(p.x, p.y);
+    marker.lineTo(p.x - d.x * 18, p.y - d.y * 18);
+    marker.lineStyle(1, 0xf0c778, 0.28);
+    marker.moveTo(p.x - d.x * 24 + side.x * 12, p.y - d.y * 24 + side.y * 12);
+    marker.lineTo(p.x - d.x * 24 - side.x * 12, p.y - d.y * 24 - side.y * 12);
+    var screenGap = Math.hypot(average.x - p.x, average.y - p.y);
+    var speed = offscreen.reduce(function (sum, drone) { return sum + Math.max(1, drone.speed); }, 0) / offscreen.length;
+    var eta = Math.max(1, Math.ceil(screenGap / Math.max(0.01, world.camera.zoom) / speed));
+    label.text = 'CONTACT 01  ·  ' + offscreen.length + (offscreen.length === 1 ? ' SOURCE' : ' SOURCES') + '  ·  ' + eta + 's';
+    label.anchor.set(d.x > 0.35 ? 1 : d.x < -0.35 ? 0 : 0.5, d.y > 0.35 ? 1 : 0);
+    label.position.set(p.x - d.x * 30, p.y - d.y * 30);
+  }
+
   /** @param {PIXI.Graphics} graphics @param {Drone} drone */
   function paintDrone(graphics, drone) {
     var flash = drone.flash || 0;
@@ -3210,6 +3273,7 @@
     drawEnginePlume: drawEnginePlume,
     screenToWorld: screenToWorld,
     worldToScreen: worldToScreen,
+    contactEdgeMarker: contactEdgeMarker,
     viewportFromApp: viewportFromApp,
     computeSelectionFocus: computeSelectionFocus,
     focusCameraToward: focusCameraToward,

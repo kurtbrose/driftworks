@@ -218,7 +218,7 @@
     ] };
     var first = replay.run(scenario);
     var second = replay.run(scenario);
-    assert(first.ships.some(function (ship) { return ship.type === 'escort' && ship.disabled; }) && first.combat.drones.length > 0,
+    assert(first.wrecks.length > 0 || first.ships.some(function (ship) { return ship.type === 'escort' && ship.disabled; }),
       'Determinism replay must exercise combat consequences');
     assert(JSON.stringify(first) === JSON.stringify(second),
       'Running the same combat scenario twice must produce identical complete worlds');
@@ -438,6 +438,26 @@
     assert(world.asteroids[0].ore < world.asteroids[0].oreInitial);
     assert(findShip(world, 'tug-01').cargo === 0);
     assert(findShip(world, 'tug-01').docked);
+  });
+
+  test('hostile waves begin beyond the local map and approach from their entry bearing', function () {
+    var world = createFreshWorld();
+    var target = findShip(world, 'msv-hardshell').position;
+    world = sim.spawnHostileWave(world);
+    assert(world.combat.drones.length === 3, 'A debug wave should contain three raiders');
+    world.combat.drones.forEach(function (drone) {
+      var dx = drone.position.x - target.x, dy = drone.position.y - target.y;
+      assert(Math.hypot(dx, dy) > 1700, 'Raiders should already exist beyond the local map edge');
+      assert(dx * drone.velocity.x + dy * drone.velocity.y < 0, 'Initial velocity should carry raiders inward');
+    });
+    var before = world.combat.drones.map(function (drone) {
+      return Math.hypot(drone.position.x - target.x, drone.position.y - target.y);
+    });
+    world = sim.stepWorld(world, 1 / 30);
+    world.combat.drones.forEach(function (drone, index) {
+      assert(Math.hypot(drone.position.x - target.x, drone.position.y - target.y) < before[index],
+        'Raiders should approach continuously rather than appearing at the battle line');
+    });
   });
 
   test('platform transfer holds a zero-relative-velocity rendezvous for fifteen physical minutes', function () {
@@ -739,6 +759,18 @@
     assertClose(screen.y, 360);
     assertClose(world.x, 210);
     assertClose(world.y, -125);
+  });
+
+  test('offscreen contacts clamp to the viewport edge and hand off once visible', function () {
+    var view = { width: 1280, height: 720 };
+    var right = game.contactEdgeMarker({ x: 1800, y: 460 }, view, 26);
+    assert(right.visible, 'A distant contact should use an edge marker');
+    assertClose(right.position.x, 1254);
+    assert(right.position.y > 360 && right.position.y < 694, 'Bearing should determine marker position along the edge');
+    var corner = game.contactEdgeMarker({ x: -200, y: -100 }, view, 26);
+    assert(corner.visible && (corner.position.x === 26 || corner.position.y === 26), 'Corner bearings should intersect an inset edge');
+    assert(!game.contactEdgeMarker({ x: 900, y: 500 }, view, 26).visible,
+      'The marker should disappear when the contact becomes visible');
   });
 
   test('focus camera tracks the current selected ship position', function () {

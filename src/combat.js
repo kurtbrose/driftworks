@@ -14,6 +14,9 @@
   var DEFENDER_DWELL_SECONDS = 1.35;
   var FIGHTER_RANGE = 280;
   var RAIDER_RANGE = 220;
+  // At the default camera zoom this is comfortably beyond every viewport edge.
+  // Raiders exist and travel in world space before entering the local area.
+  var HOSTILE_APPROACH_DISTANCE = 1800;
 
   /**
    * @param {{
@@ -71,16 +74,20 @@
       var targets = industrialTargets(world);
       var center = targets[0] ? targets[0].position : { x: 0, y: 0 };
       var count = combat.director.wavesSpawned >= 2 ? 4 : 3;
-      var angle = (combatRandom(combat) - 0.5) * 0.8;
+      var angle = combatRandom(combat) * Math.PI * 2;
+      var approach = { x: Math.cos(angle), y: Math.sin(angle) };
+      var tangent = { x: -approach.y, y: approach.x };
       for (var i = 0; i < count; i += 1) {
         var target = targets[i % targets.length] || { id: 'msv-hardshell', kind: 'ship' };
-        var x = 430 + i * 62, y = -180 + i * 120;
-        var position = { x: center.x + x * Math.cos(angle) - y * Math.sin(angle),
-          y: center.y + x * Math.sin(angle) + y * Math.cos(angle) };
+        var spread = (i - (count - 1) / 2) * 90;
+        var position = { x: center.x + approach.x * (HOSTILE_APPROACH_DISTANCE + i * 35) + tangent.x * spread,
+          y: center.y + approach.y * (HOSTILE_APPROACH_DISTANCE + i * 35) + tangent.y * spread };
+        var speed = 58 + i * 8;
         combat.drones.push({
           id: 'drone-' + combat.nextDroneId++, targetId: target.id, targetKind: target.kind,
-          position: position, previousPosition: clonePlain(position), velocity: { x: 0, y: 0 },
-          speed: 58 + i * 8, hp: 3, flash: 0, underFire: 0, fireCooldown: 0.6 + i * 0.12
+          position: position, previousPosition: clonePlain(position),
+          velocity: { x: -approach.x * speed, y: -approach.y * speed },
+          speed: speed, hp: 3, flash: 0, underFire: 0, fireCooldown: 0.6 + i * 0.12
         });
       }
       combat.events.push({ kind: 'wave-spawned', position: { x: center.x, y: center.y - 86 } });

@@ -9,9 +9,9 @@
     { "tick": 0, "action": "spawnHostileWave", "args": [] }
   ],
   "assertions": [
-    { "path": "wrecks.length", "op": "equal", "value": 0 },
-    { "path": "combat.drones.length", "op": "equal", "value": 3 },
-    { "path": "ships.escort-01.disabled", "op": "equal", "value": true },
-    { "path": "ships.escort-02.disabled", "op": "equal", "value": true }
+    { "path": "wrecks.length", "op": "equal", "value": 3 },
+    { "path": "combat.drones.length", "op": "equal", "value": 0 },
+    { "path": "ships.escort-01.disabled", "op": "equal", "value": false },
+    { "path": "ships.escort-02.disabled", "op": "equal", "value": false }
   ]
 }

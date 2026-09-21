@@ -186,6 +186,12 @@ decaying by 0.35 per second and destroyed at 1.35 seconds of accumulated dwell.
 `hp` retains the hull health field; current fighter weapons use dwell. Wrecks
 use the separate world wreck-ID allocator. Debug wave spawning adds hostiles
 without removing existing ones or counting toward the automatic wave limit.
+New waves are placed beyond the default local viewport on a seeded bearing and
+start with an inward velocity. They remain ordinary world-space entities while
+approaching and cross into the visible operating area without a boundary spawn.
+The renderer projects offscreen raiders to a fixed-size bearing marker on the
+inset viewport edge, with grouped source count and estimated time to the visible
+area. The marker disappears only when the ordinary world-space craft is visible.
 
 The director owns `state`, warning `timer`, `cooldown` and `wavesSpawned`.
 `rngState` is an unsigned 32-bit state, advanced explicitly with each seeded
