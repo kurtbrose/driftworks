@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Craft artwork inspection</title>
+<style>body{margin:20px;background:#10191f;color:#c4d3dd;font:14px system-ui} canvas{display:block}label{margin-right:20px}</style></head>
+<body><h1>Craft artwork inspection</h1><p>Grid: fighter, shuttle, empty tug / loaded tug, platform carrier, recovered fighter / setup platform, active platform, packing platform.</p>
+<label>Zoom <select id="zoom"><option>1</option><option>8</option><option selected>32</option><option>64</option><option>128</option></select></label>
+<label><input id="selected" type="checkbox" checked>Selected</label>
+<label>Heading <select id="heading"><option>0</option><option>90</option><option>180</option><option>270</option></select></label>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+<script src="../vendor/pixi/pixi.min.js"></script><script src="../src/propulsion.js"></script><script src="../src/combat.js"></script><script src="../src/logistics.js?v=20260921-craft1"></script><script src="../src/formations.js"></script><script src="../src/sim.js"></script><script src="../src/population.js"></script><script src="../src/session.js"></script><script src="../src/tactical/camera.js"></script><script src="../src/audio.js"></script><script src="../src/game.js?v=20260921-craft2"></script>
+<script>
+var app=new PIXI.Application({width:1150,height:840,background:'#10191f',antialias:true});document.body.appendChild(app.view);
+var game=Driftworks.game, world=Driftworks.sim.createInitialWorld();
+var graphics=Array.from({length:9},()=>{var g=new PIXI.Graphics();app.stage.addChild(g);return g;});
+app.ticker.add(()=>{var zoom=Number(document.querySelector('#zoom').value), heading=Number(document.querySelector('#heading').value)*Math.PI/180;
+graphics.forEach((g,i)=>{g.clear();var type=i===0?'escort':i===1?'shuttle':i<6?'tug':'platform';var scale=zoom*game.semanticScale(type,zoom);
+g.position.set(180+(i%3)*380,140+Math.floor(i/3)*280);g.scale.set(scale);g.rotation=heading;
+if(i<6){var base=world.ships.find(s=>s.type===type)||world.ships.find(s=>s.type==='tug');var ship=JSON.parse(JSON.stringify(base));ship.type=type;ship.rotation=heading;ship.docked=false;ship.order={kind:'idle'};
+ship.carryingSection=i===3;ship.platformId=i===4?'preview':null;ship.towTarget=i===5?{kind:'ship',id:'preview'}:null;
+game.paintShip(g,ship,document.querySelector('#selected').checked,performance.now()/1000,world.ships.find(s=>s.type==='escort'),game.semanticScale('escort',zoom)/game.semanticScale(type,zoom),zoom);
+}else{game.paintIndustrialPlatform(g,i===7?1:0.5,i===7,performance.now()/1000,zoom,heading);if(document.querySelector('#selected').checked)game.drawCraftBrackets(g,24,23,scale);}
+});});
+</script></body></html>

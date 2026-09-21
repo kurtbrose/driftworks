@@ -11,6 +11,8 @@
   /** @typedef {import('./types').Depot} Depot */
   /** @typedef {import('./types').Vec2} Vec2 */
 
+  var PLATFORM_SETUP_SECONDS = 3 * 3600;
+  var PLATFORM_PACK_SECONDS = 3 * 3600;
   /**
    * Industrial operations. Shared movement, docking, asteroid, and cloning
    * behavior is supplied by sim.js so logistics owns rules, not flight.
@@ -19,8 +21,6 @@
   function create(api) {
     var MINING_RATE = 187.5;
     var DEPOT_SECTION_MASS = 1500;
-    var PLATFORM_SETUP_SECONDS = 3 * 3600;
-    var PLATFORM_PACK_SECONDS = 3 * 3600;
     var CARGO_HANDLING_SECONDS = 15 * 60;
 
     /** @param {string} id @returns {Platform} */
@@ -372,5 +372,5 @@
 
   /** @type {DriftworksNamespace} */
   var namespace = Driftworks;
-  namespace.logistics = { create: create };
+  namespace.logistics = { create: create, setupSeconds: PLATFORM_SETUP_SECONDS, packSeconds: PLATFORM_PACK_SECONDS };
 })(window);

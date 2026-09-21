@@ -799,6 +799,43 @@
     assertClose(near.depth, 1);
   });
 
+  test('craft detail fades continuously across zoom boundaries', function () {
+    [8, 32, 96].forEach(function (zoom) {
+      var before = game.craftDetail(zoom - 0.0001);
+      var after = game.craftDetail(zoom + 0.0001);
+      assertClose(before.machinery, after.machinery, 0.0001);
+      assertClose(before.fine, after.fine, 0.0001);
+    });
+    assertClose(game.craftDetail(1).machinery, 0);
+    assertClose(game.craftDetail(32).machinery, 1);
+    assertClose(game.craftDetail(128).fine, 1);
+  });
+
+  test('platform presentation follows lifecycle without mutating state', function () {
+    var world = sim.createInitialWorld();
+    var platform = world.platforms[0];
+    [['carried', 0, 0], ['setting-up', 10800, 0], ['setting-up', 5400, 0.5],
+      ['deployed', 0, 1], ['packing-up', 5400, 0.5], ['packing-up', 0, 0]].forEach(function (row) {
+      platform.state = row[0]; platform.setupRemainingSeconds = row[1]; platform.packRemainingSeconds = row[1];
+      var before = JSON.stringify(world);
+      assertClose(game.platformDeployment(platform), row[2]);
+      assert(JSON.stringify(world) === before, 'Presentation must not change the world');
+    });
+  });
+
+  test('excavation artwork only runs when extraction can run', function () {
+    var world = sim.createInitialWorld(), platform = world.platforms[0], asteroid = world.asteroids[0];
+    world.miningMission = 'active'; platform.state = 'deployed'; world.staffingEnabled = true;
+    platform.workerIds = []; asteroid.ore = 100;
+    assert(!game.platformIsWorking(platform, world, asteroid), 'Unstaffed rig stays idle');
+    platform.workerIds = ['a', 'b', 'c', 'd', 'e'];
+    assert(game.platformIsWorking(platform, world, asteroid), 'Staffed rig with ore works');
+    asteroid.ore = 0;
+    assert(!game.platformIsWorking(platform, world, asteroid), 'Exhausted rig stays idle');
+    asteroid.ore = 100; platform.state = 'packing-up';
+    assert(!game.platformIsWorking(platform, world, asteroid), 'Packing rig stays idle');
+  });
+
   test('mothership lighting remains fixed in world space as the hull turns', function () {
     var initial = game.mothershipLocalLight(0);
     var quarterTurn = game.mothershipLocalLight(Math.PI / 2);

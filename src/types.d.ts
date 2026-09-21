@@ -178,6 +178,8 @@ export type CombatModule = {
 };
 
 export type LogisticsModule = {
+  setupSeconds: number;
+  packSeconds: number;
   create: (dependencies: {
     cloneWorld: (world: World) => World;
     clonePlain: <T>(value: T) => T;

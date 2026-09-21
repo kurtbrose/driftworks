@@ -423,10 +423,10 @@
         graphic.rotation = p.siteAngle + (asteroid ? asteroid.rotation : 0) + Math.PI;
         graphic.scale.set(semanticScale('platform', world.camera.zoom));
         graphic.hitArea = new PIXI.Circle(0, 0, Math.max(17, 12 / (world.camera.zoom * graphic.scale.x)));
-        graphic.lineStyle(2.5, world.selectedPlatformId === p.id ? 0xffffff : SHIP_STYLES.platform.stroke, 1);
-        drawMiningPlume(graphic, p.state === 'deployed' && world.miningMission === 'active' && asteroid && asteroid.ore > 0, 14, world.elapsedSeconds);
-        graphic.lineStyle(2.5, world.selectedPlatformId === p.id ? 0xffffff : SHIP_STYLES.platform.stroke, 1);
-        paintMiningPlatform(graphic, SHIP_STYLES.platform);
+        var working = platformIsWorking(p, world, asteroid);
+        paintIndustrialPlatform(graphic, platformDeployment(p), working, world.elapsedSeconds,
+          world.camera.zoom, graphic.rotation);
+        if (world.selectedPlatformId === p.id) drawCraftBrackets(graphic, 24, 23, world.camera.zoom * graphic.scale.x);
         if (p.state === 'setting-up' || p.state === 'packing-up') {
           drawPlatformWorkers(graphic, (p.workerIds || []).slice(0, 5), world.elapsedSeconds, p.state === 'packing-up');
         }
@@ -474,7 +474,7 @@
             : world.ships.filter(function (target) { return target.id === targetId; })[0];
         }
         paintShip(graphic, ship, selected, world.elapsedSeconds, towedEntity,
-          semanticScale('escort', world.camera.zoom) / semanticScale(ship.type, world.camera.zoom));
+          semanticScale('escort', world.camera.zoom) / semanticScale(ship.type, world.camera.zoom), world.camera.zoom);
         graphic.visible = !ship.docked && !ship.towedBy && !ship.repairRemaining;
         graphic.eventMode = ship.docked || ship.towedBy || ship.repairRemaining ? 'none' : 'static';
         var parent = ship.launchElapsed != null ? launchLayer : worldLayer;
@@ -1011,8 +1011,8 @@
     });
   }
 
-  /** @param {PIXI.Graphics} graphics @param {Ship} ship @param {boolean} selected @param {number} elapsedSeconds @param {Ship | Wreck | undefined} towedEntity @param {number} towedScale */
-  function paintShip(graphics, ship, selected, elapsedSeconds, towedEntity, towedScale) {
+  /** @param {PIXI.Graphics} graphics @param {Ship} ship @param {boolean} selected @param {number} elapsedSeconds @param {Ship | Wreck | undefined} towedEntity @param {number} towedScale @param {number} zoom */
+  function paintShip(graphics, ship, selected, elapsedSeconds, towedEntity, towedScale, zoom) {
     var style = SHIP_STYLES[ship.type];
     graphics.clear();
     graphics.alpha = ship.disabled && ship.launchElapsed == null ? 0.45 : 1;
@@ -1026,43 +1026,175 @@
     if (ship.type === 'tug' && ship.carryingSection) {
       paintConstructorCargo(graphics, style);
     }
-    graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, selected ? 1 : 0.9);
+    graphics.lineStyle(0);
     if (ship.type === 'tug') {
       if (ship.platformId) {
-        graphics.lineStyle(1.5, SHIP_STYLES.platform.stroke, 0.9);
-        paintMiningPlatform(graphics, SHIP_STYLES.platform);
-        graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : style.stroke, 0.9);
+        paintIndustrialPlatform(graphics, 0, false, elapsedSeconds, zoom, ship.rotation);
       }
-      paintConstructor(graphics, style);
-      if (ship.towTarget) paintTowedHull(graphics, ship.towTarget.kind, towedEntity, style, towedScale);
+      if (ship.towTarget) paintTowedHull(graphics, ship.towTarget.kind, towedEntity, style, towedScale, zoom, ship.rotation);
+      paintSlimTug(graphics, zoom, ship.rotation);
       if (ship.cargoOperation && ship.cargoOperation.remainingSeconds > 0) {
         drawCargoEvaWorkers(graphics, ship.id, elapsedSeconds,
           ship.cargoOperation.kind === 'deploy-platform' || ship.cargoOperation.kind === 'deploy-section');
       }
     } else if (ship.type === 'shuttle') {
-      graphics.beginFill(style.fill, 1);
-      graphics.drawRoundedRect(-8, -4, 16, 8, 3);
-      graphics.endFill();
-      graphics.beginFill(0x395366, 1);
-      graphics.drawRoundedRect(2, -2.5, 3, 5, 1);
-      graphics.endFill();
+      paintShuttleHull(graphics, zoom, ship.rotation);
     } else {
-      graphics.beginFill(style.fill, 0.96);
-      graphics.moveTo(style.radius, 0);
-      graphics.lineTo(-style.radius * 0.72, -style.radius * 0.62);
-      graphics.lineTo(-style.radius * 0.45, 0);
-      graphics.lineTo(-style.radius * 0.72, style.radius * 0.62);
-      graphics.closePath();
-      graphics.endFill();
+      paintFighterHull(graphics, zoom, ship.rotation, 1);
     }
 
+    if (selected) {
+      var halfX = ship.type === 'tug' ? 18 : style.radius + 1;
+      var halfY = ship.type === 'tug' ? 18 : ship.type === 'shuttle' ? 5 : 11;
+      if (ship.carryingSection) {
+        halfX = Math.max(halfX, cargoModuleGeometry().length / 2);
+        halfY = Math.max(halfY, cargoModuleGeometry().width / 2);
+      }
+      if (ship.towTarget) { halfX = Math.max(halfX, 14 * towedScale); halfY = Math.max(halfY, 9 * towedScale); }
+      drawCraftBrackets(graphics, halfX, halfY, zoom * semanticScale(ship.type, zoom));
+    }
     drawShipOrderAndBadges(graphics, ship, style);
   }
 
-  /** @param {PIXI.Graphics} graphics @param {string} kind @param {Ship | Wreck | undefined} entity @param {ShipStyle} tugStyle @param {number} hullScale */
-  function paintTowedHull(graphics, kind, entity, tugStyle, hullScale) {
+  /** @param {number} zoom */
+  function craftDetail(zoom) {
+    /** @param {number} start @param {number} end */
+    function fade(start, end) {
+      var t = Math.max(0, Math.min(1, (zoom - start) / (end - start)));
+      return t * t * (3 - 2 * t);
+    }
+    return { machinery: fade(8, 32), fine: fade(32, 96) };
+  }
+
+  /** @param {import('./types').Platform} platform */
+  function platformDeployment(platform) {
+    var logistics = Driftworks.logistics;
+    if (!logistics) return 0;
+    var value = platform.state === 'deployed' ? 1 : platform.state === 'setting-up'
+      ? 1 - (platform.setupRemainingSeconds || 0) / logistics.setupSeconds
+      : platform.state === 'packing-up' ? (platform.packRemainingSeconds || 0) / logistics.packSeconds : 0;
+    return Math.max(0, Math.min(1, value));
+  }
+
+  /** @param {import('./types').Platform} platform @param {World} world @param {Asteroid | undefined} asteroid */
+  function platformIsWorking(platform, world, asteroid) {
+    return platform.state === 'deployed' && world.miningMission === 'active' && !!asteroid && asteroid.ore > 0 &&
+      (!world.staffingEnabled || (platform.workerIds || []).length >= 5);
+  }
+
+  /** @param {PIXI.Graphics} g @param {number} color @param {number} x @param {number} y @param {number} w @param {number} h @param {number} [alpha] */
+  function mechanicalBlock(g, color, x, y, w, h, alpha) {
+    g.lineStyle(0); g.beginFill(color, alpha === undefined ? 1 : alpha);
+    g.drawRect(x, y, w, h); g.endFill();
+  }
+
+  /** @param {number} color @param {number} rotation @param {number} side */
+  function mechanicalFace(color, rotation, side) {
+    var light = mothershipLocalLight(rotation);
+    return shadeMechanicalColor(color, 0.48 + 0.6 * Math.max(0, light.z * 0.8 + side * light.y * 0.6));
+  }
+
+  /** @param {PIXI.Graphics} g @param {number} halfX @param {number} halfY @param {number} screenScale */
+  function drawCraftBrackets(g, halfX, halfY, screenScale) {
+    var length = 5 / screenScale, pad = 4 / screenScale;
+    g.lineStyle(1 / screenScale, 0xd9f5ff, 0.75);
+    [-1, 1].forEach(function (x) { [-1, 1].forEach(function (y) {
+      var px = x * (halfX + pad), py = y * (halfY + pad);
+      g.moveTo(px - x * length, py); g.lineTo(px, py); g.lineTo(px, py - y * length);
+    }); });
+  }
+
+  /** @param {PIXI.Graphics} g @param {number} zoom @param {number} rotation @param {number} scale */
+  function paintFighterHull(g, zoom, rotation, scale) {
+    var detail = craftDetail(zoom);
+    [-1, 1].forEach(function (side) {
+      g.lineStyle(0); g.beginFill(mechanicalFace(0xb76c6f, rotation, side), 1);
+      g.drawPolygon([13 * scale, 0, -9.36 * scale, side * 8.06 * scale, -5.85 * scale, 0]); g.endFill();
+    });
+    g.beginFill(0x263b47, 1);
+    g.drawPolygon([7 * scale, 0, -3 * scale, -1.5 * scale, -5 * scale, 0, -3 * scale, 1.5 * scale]); g.endFill();
+    mechanicalBlock(g, 0x162630, -10.66 * scale, -1.5 * scale, 3 * scale, 3 * scale);
+    [-1, 1].forEach(function (side) {
+      mechanicalBlock(g, 0x202d35, -7 * scale, side * 5 * scale - scale, 3 * scale, 2 * scale, detail.machinery);
+      mechanicalBlock(g, 0xd1afb0, scale, side * 2.2 * scale, 2 * scale, 0.35 * scale, detail.fine);
+    });
+  }
+
+  /** @param {PIXI.Graphics} g @param {number} zoom @param {number} rotation */
+  function paintShuttleHull(g, zoom, rotation) {
+    var detail = craftDetail(zoom);
+    g.lineStyle(0); g.beginFill(mechanicalFace(0xdde4df, rotation, -1), 1);
+    g.drawRoundedRect(-8, -4, 16, 8, 3); g.endFill();
+    mechanicalBlock(g, mechanicalFace(0xdde4df, rotation, 1), -5, 0, 10, 3);
+    mechanicalBlock(g, 0x243d4b, 2, -2, 3, 4);
+    mechanicalBlock(g, 0x243039, -8, -1.5, 2, 3);
+    mechanicalBlock(g, 0x839da7, -1, -4, 2, 1.2, detail.machinery);
+    mechanicalBlock(g, 0x485d67, -3, -2.6, 0.35, 5.2, detail.fine);
+  }
+
+  /** @param {PIXI.Graphics} g @param {number} zoom @param {number} rotation */
+  function paintSlimTug(g, zoom, rotation) {
+    var detail = craftDetail(zoom), steel = mechanicalFace(0x79909d, rotation, -1);
+    [-10.44, 10.44].forEach(function (x) {
+      mechanicalBlock(g, 0x253640, x - 0.6, -15.84, 1.2, 31.68);
+      mechanicalBlock(g, steel, x - 0.6, -15.84, 0.45, 31.68);
+      [-1, 1].forEach(function (side) {
+        mechanicalBlock(g, steel, x - 5.4, side * 16.2 - 0.55, 10.8, 1.1);
+        mechanicalBlock(g, 0x1d2d37, x - 1.1, side * 16.2 - 1, 2.2, 2);
+        g.lineStyle(0.45, 0x92aab4, detail.machinery * 0.7);
+        g.moveTo(x, side * 7); g.lineTo(x - 4, side * 15.6);
+        mechanicalBlock(g, 0xc6aa62, x - 2, side * 8 - 0.6, 4, 1.2, detail.machinery);
+      });
+    });
+    mechanicalBlock(g, steel, -16.2, -0.65, 32.4, 1.3);
+    mechanicalBlock(g, 0x345a70, -3, -2.4, 6, 4.8);
+    mechanicalBlock(g, 0x83aec2, -2.7, -2.2, 5.4, 0.7);
+    mechanicalBlock(g, 0x172b36, -1, -1.3, 3, 2.6, detail.machinery);
+    mechanicalBlock(g, 0x192832, -16.8, -1.6, 2.5, 3.2);
+    [-1, 1].forEach(function (side) {
+      mechanicalBlock(g, 0x192832, 14.5, side * 2.88 - 0.8, 2, 1.6);
+      mechanicalBlock(g, 0xe0bb67, 6, side * 0.7, 2, 0.3, detail.fine);
+    });
+  }
+
+  /** @param {PIXI.Graphics} g @param {number} deployment @param {boolean} working @param {number} time @param {number} zoom @param {number} rotation */
+  function paintIndustrialPlatform(g, deployment, working, time, zoom, rotation) {
+    var detail = craftDetail(zoom);
+    [-1, 1].forEach(function (x) { [-1, 1].forEach(function (y) {
+      var footX = x * (10 + deployment * 9), footY = y * (9 + deployment * 8);
+      g.lineStyle(1.5, 0x5b6461, 1);
+      g.moveTo(x * 7, y * 5); g.lineTo(x * (9 + deployment * 3), y * (8 + deployment * 3));
+      g.lineTo(footX, footY);
+      mechanicalBlock(g, 0x263238, footX - 2, footY - 1, 4, 2);
+    }); });
+    g.lineStyle(0); g.beginFill(mechanicalFace(0xd3a449, rotation, -1), 1);
+    g.drawRoundedRect(-12, -8, 24, 16, 4); g.endFill();
+    mechanicalBlock(g, mechanicalFace(0xb28434, rotation, 1), -9, 3, 18, 4);
+    mechanicalBlock(g, 0x273136, -6, -4.5, 12, 7.5);
+    mechanicalBlock(g, 0x806e48, 3, -3, 6 + deployment * 5, 3);
+    mechanicalBlock(g, 0x17272d, 8 + deployment * 5, -4, 3, 7);
+    [-1, 1].forEach(function (side) {
+      mechanicalBlock(g, 0xe3bd68, -9, side * 5, 4, 1, detail.machinery);
+      mechanicalBlock(g, 0x514532, -10, side * 6, 18, 0.35, detail.fine);
+    });
+    if (working) {
+      for (var i = 0; i < 4; i += 1) {
+        var phase = (time * 1.8 + i / 4) % 1;
+        mechanicalBlock(g, 0xaa9a71, -4 + phase * 8, -2, 1.1, 2, 0.6);
+        mechanicalBlock(g, 0xa89572, 16 + phase * 4, (i - 1.5) * 1.4, 0.6, 0.6, 1 - phase);
+      }
+      mechanicalBlock(g, 0x8c9999, 13, Math.sin(time * 8) * 1.2 - 1, 2, 2);
+    }
+  }
+
+  /** @param {PIXI.Graphics} graphics @param {string} kind @param {Ship | Wreck | undefined} entity @param {ShipStyle} tugStyle @param {number} hullScale @param {number} zoom @param {number} rotation */
+  function paintTowedHull(graphics, kind, entity, tugStyle, hullScale, zoom, rotation) {
     var centerX = 0;
     var centerY = -1;
+    if (kind === 'ship') {
+      paintFighterHull(graphics, zoom, rotation, hullScale);
+      return;
+    }
     var points = kind === 'wreck'
       ? [[11, 0], [-8, -7], [-2, -1], [-6, 3], [-8, 7]]
       : [[13, 0], [-9, -8], [-4, 0], [-9, 8]];
@@ -1178,7 +1310,7 @@
   function paintConstructorCargo(graphics, style) {
     var r = style.radius;
     var module = cargoModuleGeometry();
-    graphics.lineStyle(1, 0xaabac4, 0.85);
+    graphics.lineStyle(0.45, 0x24343f, 0.6);
     graphics.beginFill(0x53616b, 1);
     graphics.drawRoundedRect(-module.length / 2, -module.width / 2, module.length, module.width, 1.5);
     graphics.endFill();
@@ -1187,7 +1319,7 @@
       graphics.moveTo(-0.48 * r, y * r);
       graphics.lineTo(0.48 * r, y * r);
     });
-    graphics.lineStyle(2, style.stroke, 0.7);
+    graphics.lineStyle(0.7, 0x819ca9, 0.6);
     [-0.58, 0.58].forEach(function (x) {
       [-1, 1].forEach(function (side) {
         graphics.moveTo(x * r, side * module.width / 2);
@@ -2838,6 +2970,12 @@
     miningEffectGeometry: miningEffectGeometry,
     drawMiningPlume: drawMiningPlume,
     paintRecovery: paintRecovery,
+    craftDetail: craftDetail,
+    paintShip: paintShip,
+    paintIndustrialPlatform: paintIndustrialPlatform,
+    drawCraftBrackets: drawCraftBrackets,
+    platformDeployment: platformDeployment,
+    platformIsWorking: platformIsWorking,
     drumSurfaceAt: drumSurfaceAt,
     mothershipLocalLight: mothershipLocalLight,
     mothershipDrumMarkers: mothershipDrumMarkers,

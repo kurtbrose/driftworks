@@ -18,6 +18,13 @@ exports `paintRecovery` alongside its other rendering helpers for regression che
 
 ## Intended boundaries
 
+Small-craft artwork uses world-light shading and continuous detail fades at
+8–32× and 32–96× zoom. Presentation geometry does not change physical dimensions
+or simulation attachment points. Platform anchors derive their extension from
+existing lifecycle timers using `logistics.setupSeconds` and `packSeconds`;
+excavation effects require the same deployed, staffed, ore-available conditions
+as extraction. Selection brackets use screen-scaled strokes independently of hull shading.
+
 The site loads ordinary scripts into `window.Driftworks`; there are no ES module
 imports or build artifacts. `index.html` loads Pixi, propulsion, combat,
 simulation, audio, HUD, then game. The test entry points load the same application scripts without
