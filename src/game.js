@@ -1252,8 +1252,9 @@
   /** @param {PIXI.Graphics} graphics @param {boolean} selected @param {number} elapsedSeconds @param {number} shipRotation */
   function paintMothership(graphics, selected, elapsedSeconds, shipRotation) {
     drawMothershipHabitat(graphics, elapsedSeconds, shipRotation);
-    drawMothershipBearing(graphics, elapsedSeconds, selected);
-    drawMothershipCore(graphics, selected, shipRotation);
+    drawMothershipBearing(graphics, elapsedSeconds);
+    drawMothershipCore(graphics, shipRotation);
+    if (selected) drawMothershipSelectionBrackets(graphics, elapsedSeconds);
   }
 
   /** @param {number} angle */
@@ -1303,9 +1304,6 @@
       graphics.moveTo(x, -15.5);
       graphics.lineTo(x, 15.5);
     });
-    graphics.lineStyle(1, 0xc9dce2, 0.28);
-    graphics.moveTo(-31, -11.5); graphics.lineTo(31, -11.5);
-    graphics.moveTo(-34, 11.5); graphics.lineTo(34, 11.5);
 
     // One deliberately asymmetric service panel makes the drum's motion legible.
     var service = drumSurfaceAt(elapsedSeconds * Math.PI * 2 / 38 + 0.72);
@@ -1317,15 +1315,15 @@
       graphics.moveTo(20, service.y); graphics.lineTo(25, service.y);
     }
 
-    graphics.lineStyle(1, 0xa9bec7, 0.9);
+    graphics.lineStyle(0.65, 0x1d2b33, 0.62);
     graphics.beginFill(SHIP_STYLES.mothership.fill, 0);
     graphics.drawRoundedRect(-36, -17, 72, 34, 5);
     graphics.endFill();
   }
 
-  /** @param {PIXI.Graphics} graphics @param {number} elapsedSeconds @param {boolean} selected */
-  function drawMothershipBearing(graphics, elapsedSeconds, selected) {
-    graphics.lineStyle(selected ? 1.8 : 1, selected ? 0xffffff : 0x18252d, 0.95);
+  /** @param {PIXI.Graphics} graphics @param {number} elapsedSeconds */
+  function drawMothershipBearing(graphics, elapsedSeconds) {
+    graphics.lineStyle(0.7, 0x101a20, 0.8);
     graphics.beginFill(0x142129, 1);
     graphics.drawRoundedRect(-12, -19, 24, 38, 3);
     graphics.endFill();
@@ -1342,14 +1340,18 @@
     });
   }
 
-  /** @param {PIXI.Graphics} graphics @param {boolean} selected @param {number} shipRotation */
-  function drawMothershipCore(graphics, selected, shipRotation) {
+  /** @param {PIXI.Graphics} graphics @param {number} shipRotation */
+  function drawMothershipCore(graphics, shipRotation) {
     var light = mothershipLocalLight(shipRotation);
     var coreFill = shadeMechanicalColor(0x657680, 0.82 + Math.max(0, light.x) * 0.18);
-    graphics.lineStyle(selected ? 3 : 1.5, selected ? 0xffffff : SHIP_STYLES.mothership.stroke, selected ? 1 : 0.9);
+    graphics.lineStyle(0.75, 0x1b2a32, 0.72);
     graphics.beginFill(coreFill, 1);
     graphics.drawRoundedRect(-8.5, -29, 17, 58, 2.5);
     graphics.endFill();
+    graphics.lineStyle(0.65, 0xb9cbd1, 0.38);
+    graphics.moveTo(-7, -26); graphics.lineTo(-7, 25);
+    graphics.lineStyle(1, 0x17242b, 0.65);
+    graphics.moveTo(7, -25); graphics.lineTo(7, 26);
     graphics.lineStyle(1, 0x25343d, 0.8);
     graphics.moveTo(-4.5, -27); graphics.lineTo(-4.5, 27);
     graphics.moveTo(4.5, -27); graphics.lineTo(4.5, 27);
@@ -1378,22 +1380,27 @@
   }
 
   /** @param {PIXI.Graphics} graphics @param {number} elapsedSeconds */
+  function drawMothershipSelectionBrackets(graphics, elapsedSeconds) {
+    var alpha = 0.68 + Math.sin(elapsedSeconds * 3.2) * 0.12;
+    var left = -42, right = 42, top = -43, bottom = 43, length = 8;
+    graphics.lineStyle(1.1, 0xd9f5ff, alpha);
+    [[left, top, 1, 1], [right, top, -1, 1],
+      [left, bottom, 1, -1], [right, bottom, -1, -1]].forEach(function (corner) {
+      graphics.moveTo(corner[0], corner[1] + corner[3] * length);
+      graphics.lineTo(corner[0], corner[1]);
+      graphics.lineTo(corner[0] + corner[2] * length, corner[1]);
+    });
+  }
+
+  /** @param {PIXI.Graphics} graphics @param {number} elapsedSeconds */
   function drawMothershipDrumSurface(graphics, elapsedSeconds) {
     var bands = mothershipDrumMarkers(elapsedSeconds);
-    graphics.lineStyle(1, 0xd3e4ea, 0.08);
-    graphics.moveTo(-32, -13);
-    graphics.lineTo(32, -13);
-
     bands.forEach(function (band) {
       if (!band.visible) return;
       graphics.lineStyle(band.width, 0xbdd9e4, band.alpha);
       graphics.moveTo(-band.halfWidth, band.y);
       graphics.lineTo(band.halfWidth, band.y);
     });
-
-    graphics.lineStyle(1, 0x89c9e2, 0.09);
-    graphics.moveTo(-36, 0);
-    graphics.lineTo(36, 0);
   }
 
   /** @param {number} elapsedSeconds */
@@ -1411,7 +1418,7 @@
         y: y,
         halfWidth: mothershipHullHalfWidthAtY(y),
         width: 0.55 + facing * 0.55,
-        alpha: facing * 0.18,
+        alpha: facing * 0.32,
         visible: depth > 0
       });
     }
@@ -1434,8 +1441,9 @@
     xPositions.forEach(function (x, xIndex) {
       for (var i = 0; i < 2; i += 1) {
         var phase = spin + i * Math.PI + xIndex * 0.24;
-        var y = Math.sin(phase) * 15;
-        var depth = Math.cos(phase);
+        var surface = drumSurfaceAt(phase);
+        var y = surface.y * 15 / 16.5;
+        var depth = surface.depth;
         if (depth <= 0) continue;
         var near = depth * 0.9;
         graphics.beginFill(0xbdd9e4, near);
