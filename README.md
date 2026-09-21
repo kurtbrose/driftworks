@@ -26,7 +26,7 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 - Move-order reticles, selection pulses, mothership running lights, and focus-selection camera key with visible focus feedback.
 - Debug hostile-raider vignette with industrial target selection, escort range coverage, laser dwell, impacts, destruction fragments, very light final-hit shake, and final-kill slow motion.
 - Simple threat director that warns, then sends raiders from beyond the local map once mining/construction activity exposes the operation.
-- Offscreen inbound groups remain visible as compact bearing markers on the viewport edge, with source count and estimated time to local space.
+- Offscreen inbound groups develop from faint, ambiguous `POSSIBLE` contacts through `TRACKING`, `RESOLVED` and `LOCAL` edge markers, progressively tightening bearing, source count and ETA before visual acquisition.
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
 - Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 128×. Through 32×, the asteroid scales geometrically (keeping surface attachments aligned), other large bodies nearly geometrically, and small craft grow modestly on screen. Above 32×, artwork proportions hold steady and everything magnifies together, making craft four times longer at 128× than at 32×. These remain schematic proportions, not a literal physical hull scale. Movement and simulation distances remain unchanged.
 - Versioned localStorage save/load of serializable game state.

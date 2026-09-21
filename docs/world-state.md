@@ -191,7 +191,14 @@ start with an inward velocity. They remain ordinary world-space entities while
 approaching and cross into the visible operating area without a boundary spawn.
 The renderer projects offscreen raiders to a fixed-size bearing marker on the
 inset viewport edge, with grouped source count and estimated time to the visible
-area. The marker disappears only when the ordinary world-space craft is visible.
+area. ETA is measured to a fixed 700-unit local operating boundary centered on
+the mothership, so camera pan and zoom do not alter it. The marker disappears
+only when the ordinary world-space craft is visible.
+Waves begin 4,800 units out, allowing the derived passive-sensor presentation
+to mature through `POSSIBLE`, `TRACKING`, `RESOLVED` and `LOCAL`. Early stages
+show wider bearing uncertainty, reduced opacity, rounded ETA and deliberately
+ambiguous source counts. These estimates tighten monotonically with world-space
+approach distance and never jitter with the camera or reroll each frame.
 
 The director owns `state`, warning `timer`, `cooldown` and `wavesSpawned`.
 `rngState` is an unsigned 32-bit state, advanced explicitly with each seeded

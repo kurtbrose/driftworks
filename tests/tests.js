@@ -447,7 +447,7 @@
     assert(world.combat.drones.length === 3, 'A debug wave should contain three raiders');
     world.combat.drones.forEach(function (drone) {
       var dx = drone.position.x - target.x, dy = drone.position.y - target.y;
-      assert(Math.hypot(dx, dy) > 1700, 'Raiders should already exist beyond the local map edge');
+      assert(Math.hypot(dx, dy) > 4700, 'Raiders should begin far enough out for sensor tracks to develop');
       assert(dx * drone.velocity.x + dy * drone.velocity.y < 0, 'Initial velocity should carry raiders inward');
     });
     var before = world.combat.drones.map(function (drone) {
@@ -771,6 +771,26 @@
     assert(corner.visible && (corner.position.x === 26 || corner.position.y === 26), 'Corner bearings should intersect an inset edge');
     assert(!game.contactEdgeMarker({ x: 900, y: 500 }, view, 26).visible,
       'The marker should disappear when the contact becomes visible');
+  });
+
+  test('contact ETA uses the world-space operating area rather than the camera viewport', function () {
+    var drone = { position: { x: 1900, y: 0 }, velocity: { x: -60, y: 0 } };
+    assertClose(game.contactEtaSeconds(drone, { x: 0, y: 0 }, 700), 20);
+    drone.position = { x: 700, y: 0 };
+    assertClose(game.contactEtaSeconds(drone, { x: 0, y: 0 }, 700), 0);
+    drone.position = { x: 1900, y: 0 };
+    drone.velocity = { x: 60, y: 0 };
+    assert(game.contactEtaSeconds(drone, { x: 0, y: 0 }, 700) === Infinity,
+      'A receding contact should not claim an arrival time');
+  });
+
+  test('inbound sensor tracks resolve through stable distance-based stages', function () {
+    function droneAt(distance) { return [{ position: { x: distance, y: 0 } }]; }
+    var center = { x: 0, y: 0 };
+    assert(game.contactTrackState(droneAt(4800), center).key === 'possible', 'Distant tracks should be ambiguous');
+    assert(game.contactTrackState(droneAt(3000), center).key === 'tracking', 'Continued observation should establish a track');
+    assert(game.contactTrackState(droneAt(1600), center).key === 'resolved', 'Approaching groups should resolve');
+    assert(game.contactTrackState(droneAt(900), center).key === 'local', 'Near contacts should become local tracks');
   });
 
   test('focus camera tracks the current selected ship position', function () {

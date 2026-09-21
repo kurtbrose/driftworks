@@ -34,6 +34,7 @@
   var STEP_SECONDS = 1 / 30;
   var MAX_FRAME_SECONDS = 0.2;
   var DETAIL_ZOOM_START = 32;
+  var LOCAL_OPERATING_AREA_RADIUS = 700;
   var screenToWorld = cameraTools.screenToWorld;
   var viewportFromApp = cameraTools.viewportFromApp;
   var computeSelectionFocus = cameraTools.computeSelectionFocus;
@@ -2886,6 +2887,27 @@
     return { visible: true, position: { x: center.x + dx * scale, y: center.y + dy * scale }, direction: direction };
   }
 
+  /** @param {Drone} drone @param {Vec2} center @param {number} [radius] */
+  function contactEtaSeconds(drone, center, radius) {
+    radius = radius === undefined ? LOCAL_OPERATING_AREA_RADIUS : radius;
+    var dx = drone.position.x - center.x, dy = drone.position.y - center.y;
+    var distance = Math.hypot(dx, dy);
+    if (distance <= radius) return 0;
+    var closingSpeed = distance ? -(dx * drone.velocity.x + dy * drone.velocity.y) / distance : 0;
+    return closingSpeed > 0.01 ? Math.max(0, (distance - radius) / closingSpeed) : Infinity;
+  }
+
+  /** @param {Drone[]} drones @param {Vec2} center */
+  function contactTrackState(drones, center) {
+    var nearest = drones.reduce(function (distance, drone) {
+      return Math.min(distance, Math.hypot(drone.position.x - center.x, drone.position.y - center.y));
+    }, Infinity);
+    if (nearest > 3500) return { key: 'possible', label: 'POSSIBLE', uncertainty: 0.34, alpha: 0.42 };
+    if (nearest > 2200) return { key: 'tracking', label: 'TRACKING', uncertainty: 0.2, alpha: 0.66 };
+    if (nearest > 1000) return { key: 'resolved', label: 'RESOLVED', uncertainty: 0.08, alpha: 0.9 };
+    return { key: 'local', label: 'LOCAL', uncertainty: 0, alpha: 1 };
+  }
+
   /** @param {PIXI.Graphics} marker @param {PIXI.Text} label @param {World} world @param {Viewport} view */
   function paintContactOverlay(marker, label, world, view) {
     var offscreen = world.combat.drones.filter(function (drone) {
@@ -2910,10 +2932,41 @@
     marker.lineStyle(1, 0xf0c778, 0.28);
     marker.moveTo(p.x - d.x * 24 + side.x * 12, p.y - d.y * 24 + side.y * 12);
     marker.lineTo(p.x - d.x * 24 - side.x * 12, p.y - d.y * 24 - side.y * 12);
-    var screenGap = Math.hypot(average.x - p.x, average.y - p.y);
-    var speed = offscreen.reduce(function (sum, drone) { return sum + Math.max(1, drone.speed); }, 0) / offscreen.length;
-    var eta = Math.max(1, Math.ceil(screenGap / Math.max(0.01, world.camera.zoom) / speed));
-    label.text = 'CONTACT 01  ·  ' + offscreen.length + (offscreen.length === 1 ? ' SOURCE' : ' SOURCES') + '  ·  ' + eta + 's';
+    var home = world.ships.filter(function (ship) { return ship.type === 'mothership'; })[0];
+    var localCenter = home ? home.position : { x: 0, y: 0 };
+    var track = contactTrackState(world.combat.drones, localCenter);
+    marker.alpha = track.alpha;
+    var angle = Math.atan2(d.y, d.x);
+    if (track.uncertainty > 0) {
+      var reach = track.key === 'possible' ? 38 : track.key === 'tracking' ? 31 : 25;
+      marker.lineStyle(1, 0xb8cbd1, track.key === 'possible' ? 0.28 : 0.42);
+      marker.moveTo(p.x, p.y);
+      marker.lineTo(p.x - Math.cos(angle - track.uncertainty) * reach, p.y - Math.sin(angle - track.uncertainty) * reach);
+      marker.moveTo(p.x, p.y);
+      marker.lineTo(p.x - Math.cos(angle + track.uncertainty) * reach, p.y - Math.sin(angle + track.uncertainty) * reach);
+    }
+    if (track.key === 'local') {
+      marker.lineStyle(1.5, 0xf0c778, 0.85);
+      marker.drawCircle(p.x - d.x * 13, p.y - d.y * 13, 8);
+    } else if (track.key === 'resolved') {
+      marker.beginFill(0xf0c778, 0.9);
+      marker.moveTo(p.x, p.y);
+      marker.lineTo(p.x - d.x * 17 + side.x * 6, p.y - d.y * 17 + side.y * 6);
+      marker.lineTo(p.x - d.x * 17 - side.x * 6, p.y - d.y * 17 - side.y * 6);
+      marker.closePath();
+      marker.endFill();
+    }
+    var eta = offscreen.reduce(function (soonest, drone) {
+      return Math.min(soonest, contactEtaSeconds(drone, localCenter));
+    }, Infinity);
+    var etaStep = track.key === 'possible' ? 10 : track.key === 'tracking' ? 5 : 1;
+    var etaText = Number.isFinite(eta) ? (track.key === 'possible' || track.key === 'tracking' ? '~' : '') +
+      Math.max(0, Math.ceil(eta / etaStep) * etaStep) + 's' : '—';
+    var sources = track.key === 'possible' ? 'MULTIPLE?' : track.key === 'tracking' ?
+      Math.max(1, offscreen.length - 1) + '–' + (offscreen.length + 1) + ' SOURCES' :
+      offscreen.length + (offscreen.length === 1 ? ' SOURCE' : ' SOURCES');
+    label.alpha = track.alpha;
+    label.text = 'CONTACT 01  ·  ' + track.label + '  ·  ' + sources + '  ·  ' + etaText;
     label.anchor.set(d.x > 0.35 ? 1 : d.x < -0.35 ? 0 : 0.5, d.y > 0.35 ? 1 : 0);
     label.position.set(p.x - d.x * 30, p.y - d.y * 30);
   }
@@ -3274,6 +3327,8 @@
     screenToWorld: screenToWorld,
     worldToScreen: worldToScreen,
     contactEdgeMarker: contactEdgeMarker,
+    contactEtaSeconds: contactEtaSeconds,
+    contactTrackState: contactTrackState,
     viewportFromApp: viewportFromApp,
     computeSelectionFocus: computeSelectionFocus,
     focusCameraToward: focusCameraToward,

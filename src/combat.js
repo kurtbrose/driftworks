@@ -16,7 +16,9 @@
   var RAIDER_RANGE = 220;
   // At the default camera zoom this is comfortably beyond every viewport edge.
   // Raiders exist and travel in world space before entering the local area.
-  var HOSTILE_APPROACH_DISTANCE = 1800;
+  // Gives passive sensors roughly a minute to refine an inbound track before
+  // the group reaches the 700-unit local operating boundary.
+  var HOSTILE_APPROACH_DISTANCE = 4800;
 
   /**
    * @param {{
