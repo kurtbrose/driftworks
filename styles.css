@@ -39,9 +39,21 @@ button[data-active="true"] {
 .scene {
   position: fixed;
   inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.night-sky-background {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .scene canvas {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;

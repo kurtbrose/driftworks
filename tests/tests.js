@@ -22,6 +22,19 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('background settings default safely and clamp persisted brightness', function () {
+    var defaults = game.normalizeBackgroundSettings(null);
+    assert(defaults.image === 'all-sky-milky-way' && defaults.brightness === 0.28);
+    var repaired = game.normalizeBackgroundSettings({ image: 'missing', brightness: 8 });
+    assert(repaired.image === 'all-sky-milky-way' && repaired.brightness === 1);
+    var black = game.normalizeBackgroundSettings({ image: 'black', brightness: -1 });
+    assert(black.image === 'black' && black.brightness === 0);
+    var options = game.backgroundOptions();
+    assert(options.length === 6);
+    assert(options.filter(function (option) { return option.id === 'all-sky-low-exposure'; })[0].contrast > 1);
+    assert(options.filter(function (option) { return option.id === 'all-sky-stars-only'; })[0].contrast >
+      options.filter(function (option) { return option.id === 'all-sky-low-exposure'; })[0].contrast);
+  });
   test('asteroid artwork is stable through movement, depletion and save reload', function () {
     var world = createFreshWorld();
     var asteroid = world.asteroids[0];

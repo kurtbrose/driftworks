@@ -48,7 +48,7 @@
       '<div class="shelf-menus"><details><summary>Menu</summary><div class="menu-popover"><button type="button" data-action="save">Save</button><button type="button" data-action="export">Export scenario</button><button type="button" data-action="load">Load</button><button type="button" data-action="reset">Reset</button></div></details>' +
       '<details><summary>Settings</summary><div class="menu-popover"><label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label><label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label></div></details>' +
       '<details><summary>Help</summary><div class="menu-popover hint">RMB: order / return · Wheel: zoom · Space or MMB: pan · F: focus selection</div></details>' +
-      '<details><summary>Dev</summary><div class="menu-popover"><button type="button" data-action="stress">Stress</button><span data-role="entities"></span></div></details></div></section></section>';
+      '<details><summary>Dev</summary><div class="menu-popover"><label>Night sky<select data-action="background" aria-label="Night sky background"></select></label><label class="volume-control">Background brightness<input type="range" min="0" max="100" step="1" data-action="background-brightness" aria-label="Background brightness"><output data-role="background-brightness"></output></label><small data-role="background-credit"></small><button type="button" data-action="stress">Stress</button><span data-role="entities"></span></div></details></div></section></section>';
 
     var deployButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="deploy-platform"]'));
     if (!deployButton) throw new Error('Missing deploy button');
@@ -79,7 +79,15 @@
     });
     var sfxSlider = /** @type {HTMLInputElement} */ (host.querySelector('[data-action="sfx"]'));
     var musicSlider = /** @type {HTMLInputElement} */ (host.querySelector('[data-action="music"]'));
-    if (!sfxSlider || !musicSlider) throw new Error('Missing audio controls');
+    var backgroundSelect = /** @type {HTMLSelectElement} */ (host.querySelector('[data-action="background"]'));
+    var backgroundBrightness = /** @type {HTMLInputElement} */ (host.querySelector('[data-action="background-brightness"]'));
+    if (!sfxSlider || !musicSlider || !backgroundSelect || !backgroundBrightness) throw new Error('Missing settings controls');
+    actions.getBackgroundOptions().forEach(function (option) {
+      var element = document.createElement('option');
+      element.value = option.id;
+      element.textContent = option.label;
+      backgroundSelect.appendChild(element);
+    });
     requiredElement('[data-action="save"]').addEventListener('click', actions.onSave);
     requiredElement('[data-action="export"]').addEventListener('click', actions.onExport);
     requiredElement('[data-action="load"]').addEventListener('click', actions.onLoad);
@@ -87,6 +95,8 @@
     stressButton.addEventListener('click', actions.onStressToggle);
     sfxSlider.addEventListener('input', function () { actions.onSfxVolume(Number(sfxSlider.value) / 100); });
     musicSlider.addEventListener('input', function () { actions.onMusicVolume(Number(musicSlider.value) / 100); });
+    backgroundSelect.addEventListener('change', function () { actions.onBackgroundImage(backgroundSelect.value); });
+    backgroundBrightness.addEventListener('input', function () { actions.onBackgroundBrightness(Number(backgroundBrightness.value) / 100); });
 
     return {
       /** @param {World} world @param {GameStats} stats */
@@ -254,6 +264,12 @@
         musicSlider.value = String(Math.round(audioStatus.musicVolume * 100));
         musicSlider.disabled = !audioStatus.available;
         requiredElement('[data-role="music-volume"]').textContent = musicSlider.value + '%';
+        var backgroundSettings = actions.getBackgroundSettings();
+        var backgroundOption = actions.getBackgroundOptions().filter(function (option) { return option.id === backgroundSettings.image; })[0];
+        backgroundSelect.value = backgroundSettings.image;
+        backgroundBrightness.value = String(Math.round(backgroundSettings.brightness * 100));
+        requiredElement('[data-role="background-brightness"]').textContent = backgroundBrightness.value + '%';
+        requiredElement('[data-role="background-credit"]').textContent = backgroundOption && backgroundOption.credit ? 'Image: ' + backgroundOption.credit + ' · CC BY 4.0' : 'No image attribution required.';
       }
     };
   }

@@ -30,6 +30,7 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
 - Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 128×. Through 32×, the asteroid scales geometrically (keeping surface attachments aligned), other large bodies nearly geometrically, and small craft grow modestly on screen. Above 32×, artwork proportions hold steady and everything magnifies together, making craft four times longer at 128× than at 32×. These remain schematic proportions, not a literal physical hull scale. Movement and simulation distances remain unchanged.
 - Versioned localStorage save/load of serializable game state.
+- Stationary ESO night-sky backgrounds with developer-selectable imagery, pure black, and adjustable brightness.
 - Toggleable stress mode that animates thousands of simple sprites.
 - Opaque DOM HUD with a thin mission bar, an unobstructed tactical viewport, and a bottom shelf separating fleet, selection, local operations, and contextual commands. Entity count and measured FPS live in its developer menu.
 - Prominent in-game mission clock with inline units (00h 00m 00s) and Pause, 1×, 2×, and 4× controls. Simulation, combat, and effects follow the selected speed; camera and selection remain usable while paused. Saves retain elapsed mission time; playback speed is session-only.

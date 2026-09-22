@@ -77,6 +77,42 @@
   var ASTEROID_MAX_FIELD_BLOBS = 12;
   var ASTEROID_LIGHT_STEP = Math.PI / 60; // retained only by the dormant legacy painter
   var MAX_EFFECTS = 260;
+  var BACKGROUND_SETTINGS_KEY = 'driftworks-background-settings-v1';
+  var BACKGROUNDS = [
+    { id: 'black', label: 'Pure black', url: '', credit: '', contrast: 1 },
+    { id: 'all-sky-milky-way', label: 'Milky Way · all sky', url: './assets/backgrounds/all-sky-milky-way.jpg', credit: 'ESO/S. Brunier', contrast: 1 },
+    { id: 'all-sky-low-exposure', label: 'Stars · low exposure', url: './assets/backgrounds/all-sky-milky-way.jpg', credit: 'ESO/S. Brunier', contrast: 1.65 },
+    { id: 'all-sky-stars-only', label: 'Stars · very low exposure', url: './assets/backgrounds/all-sky-milky-way.jpg', credit: 'ESO/S. Brunier', contrast: 2.15 },
+    { id: 'coalsack', label: 'Medium · Coalsack', url: './assets/backgrounds/coalsack-wide-field.jpg', credit: 'ESO/Digitized Sky Survey 2. Acknowledgment: Davide De Martin', contrast: 1 },
+    { id: 'deep-field', label: 'Sparse · FORS deep field', url: './assets/backgrounds/deep-field.jpg', credit: 'ESO', contrast: 1 }
+  ];
+
+  /** @param {unknown} value @returns {{ image: string, brightness: number }} */
+  function normalizeBackgroundSettings(value) {
+    var candidate = value && typeof value === 'object' ? /** @type {{ image?: unknown, brightness?: unknown }} */ (value) : {};
+    var image = typeof candidate.image === 'string' && BACKGROUNDS.some(function (option) { return option.id === candidate.image; }) ? candidate.image : 'all-sky-milky-way';
+    var brightness = typeof candidate.brightness === 'number' && isFinite(candidate.brightness) ? candidate.brightness : 0.28;
+    return { image: image, brightness: Math.max(0, Math.min(1, brightness)) };
+  }
+
+  /** @param {Storage=} storage */
+  function loadBackgroundSettings(storage) {
+    try {
+      var text = (storage || global.localStorage).getItem(BACKGROUND_SETTINGS_KEY);
+      return normalizeBackgroundSettings(text ? JSON.parse(text) : null);
+    } catch (error) {
+      return normalizeBackgroundSettings(null);
+    }
+  }
+
+  /** @param {{ image: string, brightness: number }} settings @param {Storage=} storage */
+  function saveBackgroundSettings(settings, storage) {
+    try {
+      (storage || global.localStorage).setItem(BACKGROUND_SETTINGS_KEY, JSON.stringify(settings));
+    } catch (error) {
+      // Visual preferences are optional when storage is unavailable.
+    }
+  }
 
   // Local artwork scale; the camera still scales positions geometrically.
   // Through 32x, small craft shed their schematic magnification. Beyond that,
@@ -115,6 +151,7 @@
     var accumulator = 0;
     var timeScale = 1;
     var lastTime = performance.now();
+    var backgroundSettings = loadBackgroundSettings();
 
     var scene = createScene(sceneHost, function () {
       return world;
@@ -225,9 +262,24 @@
         if (!audio) return;
         audio.setMusicVolume(value);
         hud.update(world, scene.getStats());
+      },
+      getBackgroundOptions: function () { return BACKGROUNDS.slice(); },
+      getBackgroundSettings: function () { return Object.assign({}, backgroundSettings); },
+      onBackgroundImage: function (image) {
+        backgroundSettings = normalizeBackgroundSettings({ image: image, brightness: backgroundSettings.brightness });
+        saveBackgroundSettings(backgroundSettings);
+        scene.setBackground(backgroundSettings);
+        hud.update(world, scene.getStats());
+      },
+      onBackgroundBrightness: function (brightness) {
+        backgroundSettings = normalizeBackgroundSettings({ image: backgroundSettings.image, brightness: brightness });
+        saveBackgroundSettings(backgroundSettings);
+        scene.setBackground(backgroundSettings);
+        hud.update(world, scene.getStats());
       }
     }));
 
+    scene.setBackground(backgroundSettings);
     scene.sync(world);
     hud.update(world, scene.getStats());
 
@@ -268,13 +320,14 @@
   /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld */
   function createScene(host, getWorld, setWorld) {
     var app = new PIXI.Application({
-      background: '#080c10',
+      backgroundAlpha: 0,
       antialias: true,
       autoDensity: true,
       resolution: Math.min(global.devicePixelRatio || 1, 2),
       resizeTo: host
     });
-    var starfield = createStarfield(app.screen.width, app.screen.height);
+    var background = document.createElement('div');
+    background.className = 'night-sky-background';
     var worldLayer = new PIXI.Container();
     var effectsLayer = new PIXI.Container();
     var grid = new PIXI.Graphics();
@@ -324,11 +377,11 @@
     /** @type {{ salvagedOre: number, repairedShips: number } | null} */
     var previousRecovery = null;
 
+    host.appendChild(background);
     host.appendChild(app.view);
     host.addEventListener('contextmenu', function (event) {
       event.preventDefault();
     });
-    app.stage.addChild(starfield.container);
     app.stage.addChild(worldLayer);
     worldLayer.addChild(grid);
     worldLayer.addChild(depotGraphic);
@@ -406,7 +459,6 @@
         drawGrid(grid, world.camera.zoom);
         grid.drawnZoom = world.camera.zoom;
       }
-      updateStarfield(starfield, world.camera, viewport());
       paintDepot(depotGraphic, world.depot);
       depotGraphic.scale.set(semanticScale('depot', world.camera.zoom));
       paintDefenderCoverage(coverageGraphic, world);
@@ -807,6 +859,14 @@
       }
     }
 
+    /** @param {{ image: string, brightness: number }} settings */
+    function setBackground(settings) {
+      var option = BACKGROUNDS.filter(function (candidate) { return candidate.id === settings.image; })[0] || BACKGROUNDS[0];
+      background.style.backgroundImage = option.url ? 'url("' + option.url + '")' : 'none';
+      background.style.filter = 'contrast(' + option.contrast + ') brightness(' + settings.brightness + ')';
+      background.dataset.background = option.id;
+    }
+
     function getStats() {
       var world = getWorld();
       var baseCount = world.ships.length + world.asteroids.length + world.combat.drones.length + (world.wrecks || []).length;
@@ -906,6 +966,7 @@
       render: render,
       applyCameraFocus: applyCameraFocus,
       setStressEnabled: setStressEnabled,
+      setBackground: setBackground,
       getStats: getStats
     };
   }
@@ -3350,7 +3411,10 @@
     mothershipHabitatUniforms: mothershipHabitatUniforms,
     mothershipHabitatLampVisibility: mothershipHabitatLampVisibility,
     mothershipDrumMarkers: mothershipDrumMarkers,
-    mothershipHullHalfWidthAtY: mothershipHullHalfWidthAtY
+    mothershipHullHalfWidthAtY: mothershipHullHalfWidthAtY,
+    backgroundOptions: function () { return BACKGROUNDS.slice(); },
+    normalizeBackgroundSettings: normalizeBackgroundSettings,
+    loadBackgroundSettings: loadBackgroundSettings
   };
 
   if (!global.DRIFTWORKS_TEST_MODE) {

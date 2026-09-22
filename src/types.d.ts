@@ -309,6 +309,9 @@ export type HudActions = {
   onEndMining: EventListener; onDeployPlatform: EventListener; onSalvageAll: EventListener; onReturnHome: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;
   onStressToggle: EventListener; onSelectShip: (id: string | undefined) => void; onTimeScale: (scale: number) => void;
   onSfxVolume: (value: number) => void; onMusicVolume: (value: number) => void; getTimeScale: () => number;
+  getBackgroundOptions: () => { id: string; label: string; url: string; credit: string; contrast: number }[];
+  getBackgroundSettings: () => { image: string; brightness: number };
+  onBackgroundImage: (image: string) => void; onBackgroundBrightness: (brightness: number) => void;
 };
 export type HudController = { update: (world: World, stats: GameStats) => void };
 export type GameStats = { contacts: string; entityCount: number; fps?: number; stressEnabled: boolean };
