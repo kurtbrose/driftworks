@@ -90,8 +90,9 @@ Within `stepWorld`, order matters:
 2. Clear prior combat events, advance the director and hostile movement, then
    reconcile formations using those updated hostile positions.
 3. Rotate asteroids; process stored ore into construction feedstock/sections.
-4. Reconstruct the next top-level world and step ships. Each ship snapshots its
-   previous motion/cargo before guidance; disabled/docked states take precedence.
+4. Reconstruct the next top-level world, coast untowed wrecks, and step ships. Each
+   ship snapshots its previous motion/cargo before guidance; disabled ships coast
+   without guidance, while docked states take precedence for operational ships.
    Low fuel can replace an assignment with an automatic return.
 5. Advance recovery/repair/towing, then platform logistics and ballistic packets.
 6. Select all weapons from the post-movement state, then resolve damage. Both

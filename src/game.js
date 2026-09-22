@@ -691,6 +691,7 @@
           pushImpactSparks(effects, event.position, event.velocity || { x: 0, y: 0 });
           if (audio) audio.playImpact(event.amount || 0.4);
         } else if (event.kind === 'ship-disabled') {
+          pushDebris(effects, event.position, event.velocity || { x: 0, y: 0 }, 5);
           pushFloatText(effects, event.position, 'DISABLED');
         } else if (event.kind === 'ship-destroyed') {
           pushExplosion(effects, event.position, event.velocity || { x: 0, y: 0 }, !!event.final);
@@ -3178,7 +3179,12 @@
     cloud.position.set(position.x, position.y);
     effects.push({ graphic: cloud, age: 0, life: 0.9, vx: velocity.x * 0.2, vy: velocity.y * 0.2, scale: 0.7, alpha: 0.9, grow: 1.8 });
 
-    for (var i = 0; i < 9; i += 1) {
+    pushDebris(effects, position, velocity, 9);
+  }
+
+  /** @param {VisualEffect[]} effects @param {Vec2} position @param {Vec2} velocity @param {number} count */
+  function pushDebris(effects, position, velocity, count) {
+    for (var i = 0; i < count; i += 1) {
       var fragment = new PIXI.Graphics();
       fragment.lineStyle(2, 0xd6b5aa, 0.9);
       fragment.moveTo(-3, 0);
@@ -3188,7 +3194,7 @@
       effects.push({
         graphic: fragment,
         age: 0,
-        life: 0.7,
+        life: 0.7 + (i % 3) * 0.12,
         vx: velocity.x * 0.7 + Math.cos(i * 0.7) * (55 + i * 5),
         vy: velocity.y * 0.7 + Math.sin(i * 0.7) * (55 + i * 5),
         scale: 1,

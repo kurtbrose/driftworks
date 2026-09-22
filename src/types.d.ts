@@ -127,7 +127,7 @@ export type WorldLike = { ships: Ship[]; wrecks: Wreck[]; platforms?: Platform[]
 
 export type Asteroid = { id: string; name?: string; position: Vec2; radius: number; angularVelocity: number; ore: number; oreInitial: number; rotation: number };
 export type Platform = { workerIds?: string[]; shiftStartedSeconds?: number; evacuationRequested?: boolean; setupRemainingSeconds?: number; packRemainingSeconds?: number; id: string; state: string; position: Vec2; carrierId: string | null; asteroidId: string | null; siteAngle: number; siteDepth: number; ore: number; packetTimer: number };
-export type Wreck = { id: string; position: Vec2; type?: string; rotation?: number; salvageOre?: number; towedBy?: string | null; disabled?: boolean; repairRemaining?: number; launchElapsed?: number | null; previousPosition?: Vec2; physical?: { dryMassKg: number }; massKg?: number; propulsion?: Propulsion; cargo?: number };
+export type Wreck = { id: string; position: Vec2; velocity?: Vec2; type?: string; rotation?: number; salvageOre?: number; towedBy?: string | null; disabled?: boolean; repairRemaining?: number; launchElapsed?: number | null; previousPosition?: Vec2; physical?: { dryMassKg: number }; massKg?: number; propulsion?: Propulsion; cargo?: number };
 export type Depot = { name: string; position: Vec2; builtStages: number; totalStages: number };
 export type Packet = { id: number; position: Vec2; velocity: Vec2; ore: number };
 export type MothershipState = { storage: { ore: number; constructionMass: number; depotSections: number } };

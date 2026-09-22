@@ -484,7 +484,15 @@
       depot: depot,
       contract: contract,
       asteroids: asteroids,
-      wrecks: next.wrecks,
+      wrecks: next.wrecks.map(function (wreck) {
+        var moved = clonePlain(wreck);
+        if (!moved.towedBy) {
+          var wreckVelocity = moved.velocity || { x: 0, y: 0 };
+          moved.position.x += wreckVelocity.x * dt;
+          moved.position.y += wreckVelocity.y * dt;
+        }
+        return moved;
+      }),
       nextWreckId: next.nextWreckId,
       recovery: next.recovery,
       formations: next.formations,
@@ -507,11 +515,12 @@
     next.previousVelocity = { x: ship.velocity.x, y: ship.velocity.y };
     next.previousCargo = ship.cargo;
 
-    if (world.staffingEnabled && next.type !== 'mothership' && !(next.crewIds || []).length) return next;
     if (next.disabled) {
-      next.velocity = { x: 0, y: 0 };
+      next.position.x += next.velocity.x * dt;
+      next.position.y += next.velocity.y * dt;
       return next;
     }
+    if (world.staffingEnabled && next.type !== 'mothership' && !(next.crewIds || []).length) return next;
     if (next.docked && mothershipShip) {
       next.position = clonePlain(mothershipShip.position);
       next.velocity = clonePlain(mothershipShip.velocity);
@@ -792,6 +801,9 @@
     next.formations = next.formations || {};
     next.nextFormationId = next.nextFormationId || 1;
     next.wrecks = next.wrecks || [];
+    next.wrecks.forEach(function (wreck) {
+      wreck.velocity = wreck.velocity || { x: 0, y: 0 };
+    });
     next.nextWreckId = next.nextWreckId || 1;
     next.recovery = next.recovery || { salvagedOre: 0, repairedShips: 0 };
     next.mothership = next.mothership || initial.mothership;
@@ -872,6 +884,7 @@
     world.wrecks.push({
       id: 'wreck-' + world.nextWreckId++,
       position: clonePlain(destroyed.position),
+      velocity: clonePlain(destroyed.velocity),
       rotation: Math.atan2(destroyed.velocity.y, destroyed.velocity.x),
       salvageOre: 24,
       massKg: 75000,
@@ -894,8 +907,6 @@
     if (ship.damage >= 1) {
       ship.disabled = true;
       ship.order = { kind: 'idle' };
-      ship.velocity = { x: 0, y: 0 };
-      ship.previousVelocity = { x: 0, y: 0 };
     }
   }
 
@@ -1023,9 +1034,16 @@
           return;
         }
         hauler.order.target = clonePlain(pickup.position);
+        var pickupVelocity = 'velocity' in pickup && pickup.velocity ? pickup.velocity : { x: 0, y: 0 };
         if (distance(hauler.position, pickup.position) > 18) {
           hauler.cargoOperation = null;
-          stepTowardOrderTarget(hauler, dt, 12, false);
+          var approachX = pickup.position.x - hauler.position.x;
+          var approachY = pickup.position.y - hauler.position.y;
+          var approachGap = Math.hypot(approachX, approachY);
+          stepTowardOrderTarget(hauler, dt, 12, false, {
+            x: pickupVelocity.x + approachX / Math.max(approachGap, 0.001) * hauler.speed,
+            y: pickupVelocity.y + approachY / Math.max(approachGap, 0.001) * hauler.speed
+          });
           return;
         }
         var claimedByAnother = world.ships.some(function (other) {
@@ -1038,7 +1056,6 @@
           hauler.cargoOperation = null;
           return;
         }
-        var pickupVelocity = 'velocity' in pickup && pickup.velocity ? pickup.velocity : { x: 0, y: 0 };
         hauler.position = clonePlain(pickup.position);
         hauler.velocity = clonePlain(pickupVelocity);
         if (!hauler.cargoOperation || hauler.cargoOperation.kind !== 'recover') {

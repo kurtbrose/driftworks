@@ -318,6 +318,35 @@
     assert(later.wrecks.length === 1 && later.combat.events.length === 0, 'Events and salvage must not repeat on later ticks');
   });
 
+  test('disabled fighters and destroyed wrecks keep coasting on their last vectors', function () {
+    var world = createDeployedWorld();
+    var fighter = findShip(world, 'escort-01');
+    fighter.position = { x: 100, y: 200 };
+    fighter.velocity = { x: 12, y: -4 };
+    world = sim.damageFighter(world, fighter.id, 1);
+    fighter = findShip(world, fighter.id);
+    assertClose(fighter.velocity.x, 12);
+    assertClose(fighter.velocity.y, -4);
+    world = sim.stepWorld(world, 2);
+    fighter = findShip(world, fighter.id);
+    assertClose(fighter.position.x, 124);
+    assertClose(fighter.position.y, 192);
+    assertClose(fighter.velocity.x, 12);
+    assertClose(fighter.velocity.y, -4);
+
+    world = sim.addWreck(world, { position: { x: 10, y: 20 }, velocity: { x: -3, y: 5 } });
+    world = sim.stepWorld(world, 2);
+    assertClose(world.wrecks[0].position.x, 4);
+    assertClose(world.wrecks[0].position.y, 30);
+    assertClose(world.wrecks[0].velocity.x, -3);
+    assertClose(world.wrecks[0].velocity.y, 5);
+
+    world.wrecks.push({ id: 'legacy-stationary-wreck', position: { x: 7, y: 9 } });
+    world = sim.stepWorld(world, 2);
+    assertClose(world.wrecks[1].position.x, 7);
+    assertClose(world.wrecks[1].position.y, 9);
+  });
+
   test('legacy wrecks without rotation render finite recovery geometry', function () {
     var world = createDeployedWorld();
     world.wrecks = [{ id: 'legacy-wreck', position: { x: 10, y: 20 } }];
@@ -772,6 +801,19 @@
     assertClose(screen.y, 360);
     assertClose(world.x, 210);
     assertClose(world.y, -125);
+  });
+
+  test('salvage-all intercepts a wreck moving faster than the tug work-zone speed', function () {
+    var world = sim.addWreck(createDeployedWorld(), {
+      position: { x: 400, y: 120 }, velocity: { x: 82, y: 0 }
+    });
+    world = sim.issueSalvageAllOrder(sim.selectShips(world, ['tug-01']));
+    for (var i = 0; i < 1800 && !findShip(world, 'tug-01').towTarget; i += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+    }
+    var hauler = findShip(world, 'tug-01');
+    assert(hauler.towTarget && hauler.towTarget.id === world.wrecks[0].id,
+      'Moving-frame guidance should catch and secure a fast outbound wreck');
   });
 
   test('offscreen contacts clamp to the viewport edge and hand off once visible', function () {

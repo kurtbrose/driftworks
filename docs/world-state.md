@@ -148,7 +148,8 @@ loads; mothership reporting also includes its storage and stored platforms.
 ## Recovery and entity references
 
 References are IDs, not array indices or embedded entities. Wrecks carry `id`,
-`position`, `rotation`, `massKg`, `salvageOre`, and nullable `towedBy`. Salvage yield
+`position`, `velocity`, `rotation`, `massKg`, `salvageOre`, and nullable `towedBy`. Untowed
+wrecks coast ballistically; legacy wrecks default to zero velocity. Salvage yield
 is distinct from tow mass. A recoverable ship is a disabled escort that is neither
 repairing nor launching.
 
@@ -159,13 +160,18 @@ the hauler; a missing/mismatched payload clears the hauler reference. Preserve
 reciprocity in any new removal or transfer path; normalization does not repair
 every dangling relationship.
 
+Recovery guidance operates in the target's moving frame: the hauler matches the
+recoverable's velocity while adding its normal work-zone speed as closing speed.
+This lets salvage missions intercept fast coasting wrecks rather than following
+their stale positions at a lower absolute speed.
+
 At home, wreck delivery credits salvage and removes the wreck after the five-minute
 dock service. Fighter delivery
 clears towing and starts six seconds of repair, then six seconds of launch.
 `disabled` stays true through both phases; repair completion clears damage and
 refills fuel, while launch completion clears disabled and increments the repair
-counter. Damage reaching one clears the fighter's order and motion, leaving the
-entity present for recovery. Do not equate zero damage with operational status.
+counter. Damage reaching one clears the fighter's order but preserves its velocity,
+leaving the disabled hull to coast until recovery. Do not equate zero damage with operational status.
 
 New missions begin with the tug and escorts internally docked. A valid outbound
 job starts one second of emergence before guidance can proceed; repair launches

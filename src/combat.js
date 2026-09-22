@@ -231,7 +231,8 @@
         if (!ship || ship.disabled) return;
         applyFighterDamage(ship, hit.amount);
         combat.events.push({ kind: 'ship-damaged', targetId: ship.id, position: clonePlain(ship.position), amount: hit.amount });
-        if (ship.disabled) combat.events.push({ kind: 'ship-disabled', targetId: ship.id, position: clonePlain(ship.position) });
+        if (ship.disabled) combat.events.push({ kind: 'ship-disabled', targetId: ship.id, position: clonePlain(ship.position),
+          velocity: clonePlain(ship.velocity) });
       });
       var destroyed = combat.drones.filter(function (drone) {
         if (dwell[drone.id]) {
