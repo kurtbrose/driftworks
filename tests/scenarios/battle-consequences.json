@@ -2,7 +2,7 @@
   "version": 1,
   "name": "battle-consequences",
   "seed": 12345,
-  "ticks": 2400,
+  "ticks": 3000,
   "commands": [
     { "tick": 0, "action": "select", "args": [["escort-01", "escort-02"]] },
     { "tick": 0, "action": "defend", "args": [{ "x": 360, "y": 300 }] },

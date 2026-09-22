@@ -13,6 +13,7 @@
 
   var PLATFORM_SETUP_SECONDS = 3 * 3600;
   var PLATFORM_PACK_SECONDS = 3 * 3600;
+  var CREW_TRANSFER_SECONDS = 5 * 60;
   /**
    * Industrial operations. Shared movement, docking, asteroid, and cloning
    * behavior is supplied by sim.js so logistics owns rules, not flight.
@@ -138,7 +139,10 @@
       var speed = Math.min(ship.speed, Math.sqrt(2 * ship.acceleration * gap), gap * 1.5);
       api.stepTowardOrderTarget(ship, dt, 0, false, { x: site.velocity.x + dx / Math.max(gap, 0.001) * speed,
         y: site.velocity.y + dy / Math.max(gap, 0.001) * speed });
-      if (gap > 1 || api.distance(ship.velocity, site.velocity) > 1) return ship;
+      if (gap > 1 || api.distance(ship.velocity, site.velocity) > 1) {
+        ship.cargoOperation = null;
+        return ship;
+      }
       ship.position = api.clonePlain(site.position);
       ship.velocity = api.clonePlain(site.velocity);
       if (!deploying) {
@@ -175,6 +179,7 @@
         platform.workerIds = [];
         platform.state = 'carried'; platform.carrierId = ship.id;
         ship.platformId = platform.id;
+        ship.unloadRemainingSeconds = Math.max(ship.unloadRemainingSeconds || 0, api.dockServiceSeconds);
         ship.cargo += platform.ore || 0; platform.ore = 0;
       }
       if (!home) return ship;
@@ -202,6 +207,14 @@
       api.stepTowardOrderTarget(ship, dt, 0, false, { x: site.velocity.x + dx / Math.max(gap, 0.001) * speed,
         y: site.velocity.y + dy / Math.max(gap, 0.001) * speed });
       if (gap > 1 || api.distance(ship.velocity, site.velocity) > 1) return ship;
+      if (!ship.cargoOperation || ship.cargoOperation.kind !== 'exchange-crew') {
+        ship.cargoOperation = { kind: 'exchange-crew', remainingSeconds: CREW_TRANSFER_SECONDS,
+          totalSeconds: CREW_TRANSFER_SECONDS };
+      }
+      ship.cargoOperation.remainingSeconds = Math.max(0,
+        ship.cargoOperation.remainingSeconds - dt * api.physicalSecondsPerSecond);
+      if (ship.cargoOperation.remainingSeconds > 0) return ship;
+      ship.cargoOperation = null;
       var outgoing = platform.workerIds || [];
       if (order.evacuation) {
         if ((ship.passengerIds || []).length) { ship.order = { kind: 'return', target: api.clonePlain(home.position) }; return ship; }
@@ -223,7 +236,8 @@
       if (!home) return;
       var logisticsHome = home;
       world.ships.forEach(function (s) {
-        var shuttleReturned = s.type === 'shuttle' && s.docked && (s.order.kind === 'idle' || s.order.kind === 'return');
+        var shuttleReturned = s.type === 'shuttle' && s.docked && (s.order.kind === 'idle' || s.order.kind === 'return') &&
+          (s.unloadRemainingSeconds || 0) <= 0;
         var tugReturned = s.type === 'tug' && s.docked && s.order.kind === 'idle' && (s.unloadRemainingSeconds || 0) <= 0;
         if ((shuttleReturned || tugReturned) && (s.passengerIds || []).length) {
           world.returnedPersonIds = (world.returnedPersonIds || []).concat(s.passengerIds || []);
@@ -282,10 +296,10 @@
         return true;
       });
       world.ships.forEach(function (ship) {
-        if (ship.type !== 'tug' || !((ship.unloadRemainingSeconds || 0) > 0) || !ship.docked ||
-            (ship.order.kind !== 'idle' && !(ship.order.kind === 'return' && ship.order.salvageAll))) return;
+        if (!((ship.unloadRemainingSeconds || 0) > 0) || !ship.docked) return;
         ship.unloadRemainingSeconds = Math.max(0, (ship.unloadRemainingSeconds || 0) - dt * api.physicalSecondsPerSecond);
         if (ship.unloadRemainingSeconds > 0) return;
+        if (ship.propulsion) ship.propulsion.fuelKg = ship.propulsion.capacityKg;
         if (ship.cargo > 0) { world.mothership.storage.ore += ship.cargo; ship.cargo = 0; }
       });
       if (world.miningMission !== 'recovering') return;
@@ -339,6 +353,7 @@
         api.dockShip(ship, mothershipShip);
         if (mothership.storage.depotSections <= 0) { ship.velocity = { x: 0, y: 0 }; return ship; }
         mothership.storage.depotSections -= 1; ship.carryingSection = true;
+        ship.unloadRemainingSeconds = Math.max(ship.unloadRemainingSeconds || 0, api.dockServiceSeconds);
         ship.acceleration = api.movementAcceleration({ ships: [], wrecks: [] }, ship);
         ship.burnMassKg = api.physicalStats({ ships: [], wrecks: [] }, ship).massKg;
       }

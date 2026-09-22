@@ -51,7 +51,8 @@ and `escort`. Stable string `id` identifies a ship; name is only a label.
   slot holds one section, platform, or recovered hull. Buffered platform ore
   becomes `cargo` on retrieval and contributes additional mass. `passengerIds`
   holds platform workers on the tug; `unloadRemainingSeconds` records the physical
-  three-minute delivery delay at home.
+  five-minute dock-service delay for passenger/cargo transfer, stored-payload
+  loading, and refueling at home.
   Cargo transfer after a matched position/velocity rendezvous uses the optional
   `cargoOperation` timer. Platform deployment/retrieval, depot-section release,
   and hull recovery take fifteen physical minutes; the payload changes ownership
@@ -111,7 +112,7 @@ Platforms have `id`, `state`, nullable `carrierId`/`asteroidId`, `position`,
 
 - `stored`: belongs to mothership storage, no carrier; position follows home.
 - `carried`: `carrierId` resolves to a tug whose `platformId` points back.
-  Position follows that tug. Docking starts the three-minute offload; completion
+  Position follows that tug. Docking starts the five-minute dock service; completion
   clears both links. Docking during deployment pickup must not unload it.
 - `setting-up`: Linehorse delivered the initial five workers with the rig.
   `setupRemainingSeconds` counts down three physical hours before this becomes
@@ -158,7 +159,8 @@ the hauler; a missing/mismatched payload clears the hauler reference. Preserve
 reciprocity in any new removal or transfer path; normalization does not repair
 every dangling relationship.
 
-At home, wreck delivery credits salvage and removes the wreck. Fighter delivery
+At home, wreck delivery credits salvage and removes the wreck after the five-minute
+dock service. Fighter delivery
 clears towing and starts six seconds of repair, then six seconds of launch.
 `disabled` stays true through both phases; repair completion clears damage and
 refills fuel, while launch completion clears disabled and increments the repair

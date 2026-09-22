@@ -74,9 +74,10 @@ export type Ship = {
   previousPosition: Vec2;
   previousVelocity: Vec2;
   previousCargo: number;
+  /** Five-physical-minute dock service: loading/unloading people and cargo, plus refueling. */
   unloadRemainingSeconds?: number;
   cargoOperation?: {
-    kind: 'deploy-platform' | 'retrieve-platform' | 'deploy-section' | 'recover';
+    kind: 'deploy-platform' | 'retrieve-platform' | 'deploy-section' | 'recover' | 'exchange-crew';
     remainingSeconds: number;
     totalSeconds: number;
   } | null;
@@ -200,6 +201,7 @@ export type LogisticsModule = {
     dockDistance: number;
     arrivalDistance: number;
     physicalSecondsPerSecond: number;
+    dockServiceSeconds: number;
   }) => {
     createPlatform: (id: string) => Platform;
     migrate: (world: World) => void;
@@ -299,6 +301,7 @@ export type SimApi = {
   physicalStats: (world: World, ship: Ship) => { lengthM: number; massKg: number; accelerationMps2: number };
   canDeployPlatform: (world: World) => boolean;
   PHYSICAL_SECONDS_PER_SECOND: number;
+  DOCK_SERVICE_SECONDS: number;
   DEPOT_FRAME: { lengthM: number; widthM: number };
   DEPOT_SECTION: { lengthM: number; widthM: number };
   [key: string]: unknown;

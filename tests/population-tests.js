@@ -19,11 +19,21 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     craft.docked = false; craft.launchElapsed = null;
     craft.position = Object.assign({}, p.position); craft.velocity = { x: 0, y: 0 };
     sessions.step(s, 1 / 30);
+    craft = shuttle(s);
+    assert(craft.cargoOperation && craft.cargoOperation.kind === 'exchange-crew',
+      'Crew should remain aboard while the five-minute surface transfer starts');
+    for (var transferTick = 0; transferTick < 150; transferTick += 1) sessions.step(s, 1 / 30);
   }
   function home(s) {
     var craft = shuttle(s), mothership = s.world.ships[0];
+    var hadPassengers = craft.passengerIds.length > 0;
     craft.position = Object.assign({}, mothership.position); craft.velocity = { x: 0, y: 0 };
     craft.launchElapsed = null; craft.order = { kind: 'return', target: Object.assign({}, mothership.position) };
+    sessions.step(s, 1 / 30);
+    craft = shuttle(s);
+    if (hadPassengers) assert(craft.passengerIds.length > 0 && craft.unloadRemainingSeconds > 0,
+      'Returning passengers should remain aboard during dock service');
+    for (var serviceTick = 0; serviceTick < 150; serviceTick += 1) sessions.step(s, 1 / 30);
     sessions.step(s, 1 / 30);
   }
   test('Population identities are deterministic, conserved, exclusive and reused', function () {
@@ -130,11 +140,13 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     var s = fresh(); deploy(s); sessions.step(s, 1 / 30); arrive(s); home(s);
     sessions.transition(s, function (w) { return sim.issuePlatformRecovery(sim.selectShips(w, ['tug-01']), w.platforms[0].id); });
     var tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
-    tug.docked = false; tug.launchElapsed = null; tug.position = Object.assign({}, s.world.platforms[0].position); tug.velocity = { x: 0, y: 0 };
+    tug.docked = false; tug.launchElapsed = null; tug.unloadRemainingSeconds = 0;
+    tug.position = Object.assign({}, s.world.platforms[0].position); tug.velocity = { x: 0, y: 0 };
     sessions.step(s, 1 / 30);
     assert(s.world.platforms[0].state === 'packing-up' && s.world.platforms[0].workerIds.length === 5);
     assert(shuttle(s).order.kind === 'idle' && shuttle(s).passengerIds.length === 0);
     var ids = s.world.platforms[0].workerIds.slice();
+    s.world.packets = [];
     s.world.platforms[0].ore = 50;
     var storedBefore = s.world.mothership.storage.ore + s.world.mothership.storage.constructionMass;
     sessions.step(s, 180);
@@ -152,6 +164,9 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     assert(s.world.mothership.storage.ore + s.world.mothership.storage.constructionMass === storedBefore,
       'Cargo should stay aboard during the unloading delay');
     sessions.step(s, 3); sessions.step(s, 1 / 30);
+    assert(s.world.platforms[0].state === 'carried' && tug.passengerIds.length === ids.length,
+      'The former three-minute point should still be mid-service');
+    sessions.step(s, 2); sessions.step(s, 1 / 30);
     assert(s.world.platforms[0].state === 'stored');
     assert(s.world.mothership.storage.ore + s.world.mothership.storage.constructionMass === storedBefore + 50);
     assert(ids.every(function (id) { return s.population.people[id].location === 'home'; }));

@@ -59,7 +59,10 @@
       var platform = world.platforms.filter(function (item) { return item.id === platformId && item.state === 'stored'; })[0];
       if (!platform) return;
       var initialWorkers = population.assign(state, 'platform worker', platform.id + ':initial', 5);
-      if (initialWorkers.length === 5) ship.passengerIds = initialWorkers;
+      if (initialWorkers.length === 5) {
+        ship.passengerIds = initialWorkers;
+        ship.unloadRemainingSeconds = Math.max(ship.unloadRemainingSeconds || 0, sim.DOCK_SERVICE_SECONDS);
+      }
     });
     var shuttle = world.ships.filter(function (s) { return s.type === 'shuttle' && s.docked && !s.disabled && s.order.kind === 'idle' && !(s.passengerIds || []).length && (s.crewIds || []).length; })[0];
     if (!shuttle) return;
@@ -76,6 +79,7 @@
     var passengers = population.assign(state, 'platform worker', platform.id + ':shift:' + time, 5);
     if (passengers.length !== 5) return;
     shuttle.passengerIds = passengers;
+    shuttle.unloadRemainingSeconds = Math.max(shuttle.unloadRemainingSeconds || 0, sim.DOCK_SERVICE_SECONDS);
     shuttle.order = { kind: 'shuttle', platformId: platform.id, evacuation: false, target: Object.assign({}, platform.position) };
   }
 

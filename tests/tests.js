@@ -524,7 +524,7 @@
     world.mothership.storage.depotSections = 1;
     world = sim.issueBuildOrder(sim.selectShips(world, ['tug-01']));
     var guard = 0;
-    while (world.depot.builtStages < 1 && guard < 900) {
+    while (world.depot.builtStages < 1 && guard < 1200) {
       world = sim.stepWorld(world, 1 / 30);
       guard += 1;
     }
@@ -1585,6 +1585,10 @@
     assert(ship.order.kind === 'return' && ship.order.automatic);
     for (var i = 0; i < 900 && !findShip(world, ship.id).docked; i++) world = sim.stepWorld(world, 1 / 30);
     ship = findShip(world, ship.id); assert(ship.docked);
+    assert(ship.propulsion.fuelKg < ship.propulsion.capacityKg && ship.unloadRemainingSeconds > 0,
+      'Docking should begin refueling rather than filling the tank instantly');
+    world = sim.stepWorld(world, 5);
+    ship = findShip(world, ship.id);
     assertClose(ship.propulsion.fuelKg, ship.propulsion.capacityKg);
   });
 

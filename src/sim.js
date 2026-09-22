@@ -47,6 +47,7 @@
   var DEPOT_FRAME = { lengthM: 80, widthM: 160 };
   var METERS_PER_UNIT = 10000 / 600;
   var PHYSICAL_SECONDS_PER_SECOND = 60;
+  var DOCK_SERVICE_SECONDS = 5 * 60;
   var CARGO_HANDLING_SECONDS = 15 * 60;
   var MASS_MIGRATION = 1500 / 80;
   var logistics = /** @type {import('./types').LogisticsModule} */ (Driftworks.logistics).create({
@@ -56,7 +57,8 @@
     stepTowardOrderTarget: stepTowardOrderTarget, launchShip: launchShip, dockShip: dockShip, canCatch: canCatch,
     canCatchPacket: /** @param {Vec2} position @param {Vec2} velocity @param {Ship} home */ function (position, velocity, home) { return propulsion.canCatch(position, velocity, home, DOCK_DISTANCE, VELOCITY_TO_MPS); },
     exchangeMps: propulsion.exchangeMps, velocityToMps: VELOCITY_TO_MPS,
-    dockDistance: DOCK_DISTANCE, arrivalDistance: ARRIVAL_DISTANCE, physicalSecondsPerSecond: PHYSICAL_SECONDS_PER_SECOND
+    dockDistance: DOCK_DISTANCE, arrivalDistance: ARRIVAL_DISTANCE, physicalSecondsPerSecond: PHYSICAL_SECONDS_PER_SECOND,
+    dockServiceSeconds: DOCK_SERVICE_SECONDS
   });
   /** @type {Record<string, { lengthM: number, dryMassKg: number, thrustN: number }>} */
   var HULLS = {
@@ -236,6 +238,7 @@
       repairRemaining: 0,
       launchElapsed: null,
       cargoOperation: null,
+      unloadRemainingSeconds: 0,
       cargoCapacity: 0,
       platformId: null,
       docked: false,
@@ -513,7 +516,7 @@
       next.position = clonePlain(mothershipShip.position);
       next.velocity = clonePlain(mothershipShip.velocity);
       if (next.order.kind === 'idle' || next.order.kind === 'return') return next;
-      if (next.launchElapsed == null && launchOrderIsValid(next)) next.launchElapsed = 0;
+      if ((next.unloadRemainingSeconds || 0) <= 0 && next.launchElapsed == null && launchOrderIsValid(next)) next.launchElapsed = 0;
     }
     if (next.launchElapsed != null && next.launchElapsed < 1 && !next.disabled && mothershipShip) {
       next.launchElapsed = Math.min(1, next.launchElapsed + dt);
@@ -587,10 +590,13 @@
 
   /** @param {Ship} ship @param {Ship} home */
   function dockShip(ship, home) {
+    var wasDocked = ship.docked;
     ship.docked = true;
     ship.position = clonePlain(home.position);
     ship.velocity = clonePlain(home.velocity);
-    if (ship.propulsion) ship.propulsion.fuelKg = ship.propulsion.capacityKg;
+    if (!wasDocked && ship.propulsion && ship.propulsion.fuelKg < ship.propulsion.capacityKg) {
+      ship.unloadRemainingSeconds = Math.max(ship.unloadRemainingSeconds || 0, DOCK_SERVICE_SECONDS);
+    }
   }
 
   /** @param {Ship} ship @returns {boolean} */
@@ -604,7 +610,7 @@
 
   /** @param {Ship} ship @param {Ship | undefined} home */
   function launchShip(ship, home) {
-    if (!ship.docked || !home || !launchOrderIsValid(ship)) return;
+    if (!ship.docked || !home || (ship.unloadRemainingSeconds || 0) > 0 || !launchOrderIsValid(ship)) return;
     if (ship.launchElapsed == null) ship.launchElapsed = 0;
   }
 
@@ -667,7 +673,7 @@
     dockShip(ship, mothershipShip);
     ship.velocity = { x: 0, y: 0 };
     if (ship.cargo > 0 || ship.platformId || (ship.passengerIds || []).length || ship.towTarget) {
-      ship.unloadRemainingSeconds = 3 * 60;
+      ship.unloadRemainingSeconds = Math.max(ship.unloadRemainingSeconds || 0, DOCK_SERVICE_SECONDS);
     }
     ship.order = ship.order.salvageAll ? { kind: 'return', target: clonePlain(mothershipShip.position), salvageAll: true } : { kind: 'idle' };
     return ship;
@@ -823,6 +829,7 @@
       ship.repairRemaining = ship.repairRemaining || 0;
       ship.launchElapsed = ship.launchElapsed == null ? null : ship.launchElapsed;
       ship.cargoOperation = ship.cargoOperation || null;
+      ship.unloadRemainingSeconds = Math.max(0, ship.unloadRemainingSeconds || 0);
     });
     next.selectedShipIds = next.selectedShipIds || [];
     next.selectedPlatformId = next.selectedPlatformId || null;
@@ -1170,6 +1177,7 @@
     asteroidPhysicalStats: asteroidPhysicalStats,
     METERS_PER_UNIT: METERS_PER_UNIT,
     PHYSICAL_SECONDS_PER_SECOND: PHYSICAL_SECONDS_PER_SECOND,
+    DOCK_SERVICE_SECONDS: DOCK_SERVICE_SECONDS,
     surfaceRadius: surfaceRadius,
     WORLD_VERSION: WORLD_VERSION,
     createInitialWorld: createInitialWorld,
