@@ -19,7 +19,7 @@
   /** @typedef {{ graphic: PIXI.DisplayObject, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
   /** @typedef {import('./types').Drone} Drone */
   /** @typedef {import('./types').CombatEvent} CombatEvent */
-  /** @typedef {{ container: PIXI.Container, mesh: PIXI.Mesh, interior: PIXI.Graphics, shader: PIXI.Shader, craterBytes: Uint8Array, craterTexture: PIXI.Texture, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string, excavationKey: string }} AsteroidGraphic */
+  /** @typedef {{ container: PIXI.Container, mesh: PIXI.Mesh, shader: PIXI.Shader, craterBytes: Uint8Array, craterTexture: PIXI.Texture, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string }} AsteroidGraphic */
   /** @typedef {{ container: PIXI.Container, base: PIXI.Graphics, lighting: PIXI.Graphics, visual: ReturnType<typeof legacyAsteroidVisualDescription> | null, artworkKey: string, lightBucket: number }} LegacyAsteroidGraphic */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
@@ -2813,17 +2813,28 @@
     ' score.w+=broad*wave(p,uFieldLow.w,1.8)+med*wave(p,uFieldMed.w,5.0)+chunk*blobField(p,3.0);',
     ' float peak=max(max(score.x,score.y),max(score.z,score.w));vec4 value=exp((score-peak)/temp);value=max(value/dot(value,vec4(1.0)),vec4(.03));return value/dot(value,vec4(1.0));',
     '}',
+    'vec3 materialColor(vec4 c){return c.x*vec3(.627,.714,.761)+c.y*vec3(.471,.408,.361)+c.z*vec3(.569,.541,.494)+c.w*vec3(.494,.518,.502);}',
+    'vec2 cavityField(vec2 p){',
+    ' vec2 d=p-uPocket.xy;vec2 q=d/vec2(max(.001,uPocket.z),max(.001,uPocket.z*.72));float a=atan(q.y,q.x);vec2 direction=vec2(cos(a),sin(a));',
+    ' float distortion=1.0+wave(direction*.72+uPocket.xy,uSeed+31.0,2.0)*.075+wave(direction*1.61,uSeed+77.0,1.0)*.035;',
+    ' float tunnelSide=atan(sin(a-uTunnel.x),cos(a-uTunnel.x));float notch=exp(-(tunnelSide*tunnelSide)/.085)*.12;',
+    ' float radial=length(q)/max(.72,distortion-notch);float mask=(1.0-smoothstep(.985,1.025,radial))*uPocket.w;return vec2(radial,mask);',
+    '}',
     'void main(){',
     ' vec2 p=vLocalCoord;float q=length(p)/boundary(p);float aa=uPixelFootprint/max(boundary(p),.001);float alpha=1.0-smoothstep(1.0-aa,1.0,q);if(alpha<=0.0){gl_FragColor=vec4(0.0);return;}',
     ' float footprint=uPixelFootprint;vec4 crater=craterSurface(p);vec3 n=normalAt(p,crater.yz,footprint);vec3 light=normalize(uLight);float ndl=dot(n,light);float lit=pow(max(0.0,ndl),.82);float limb=sqrt(max(0.0,1.0-q*q));float grazing=pow(1.0-sat(ndl),1.25);',
-    ' vec4 c=composition(p);vec3 albedo=c.x*vec3(.627,.714,.761)+c.y*vec3(.471,.408,.361)+c.z*vec3(.569,.541,.494)+c.w*vec3(.494,.518,.502);',
+    ' vec4 c=composition(p);vec3 albedo=materialColor(c);',
     ' float rough=microRelief(p,footprint)/max(.001,uProfile.x*.011);float brightness=(.22+lit*.98)*(.66+limb*.34)-crater.w;brightness+=rough*uProfile.z*grazing*.16;',
     ' vec3 color=albedo*clamp(brightness,.12,1.28);color+=vec3(1.0,.94,.81)*pow(max(0.0,ndl),8.0)*.035;',
-    ' vec2 pocketDelta=(p-uPocket.xy)/vec2(max(.001,uPocket.z),max(.001,uPocket.z*.72));float pocket=1.0-smoothstep(.84,1.0,length(pocketDelta));',
-    ' color=mix(color,color*vec3(.22,.3,.34)+vec3(.012,.022,.028),pocket*uPocket.w*.78);',
-    ' vec2 mouthDir=vec2(cos(uTunnel.x),sin(uTunnel.x));vec2 mouthCenter=mouthDir*boundary(mouthDir)*.91;vec2 mouthDelta=p-mouthCenter;',
-    ' float mouth=1.0-smoothstep(1.0,1.18,length(vec2(dot(mouthDelta,mouthDir)/max(.001,uTunnel.z),dot(mouthDelta,vec2(-mouthDir.y,mouthDir.x))/max(.001,uTunnel.y))));',
-    ' color=mix(color,vec3(.008,.012,.014),mouth*uTunnel.w);',
+    ' vec2 cavity=cavityField(p);float cavityRadius=cavity.x;float cavityMask=cavity.y;vec2 floorPoint=uPocket.xy+(p-uPocket.xy)*.48;vec3 floorAlbedo=materialColor(composition(floorPoint));',
+    ' float floorRough=microRelief(floorPoint,footprint*.72)/max(.001,uProfile.x*.011);float depth=pow(max(0.0,1.0-cavityRadius*cavityRadius),.62);float floorZone=1.0-smoothstep(.58,.79,cavityRadius);',
+    ' float wallLight=sat(dot(normalize((p-uPocket.xy)+vec2(.0001)),normalize(uLight.xy)))*.09;vec3 floorColor=floorAlbedo*(.20+depth*.16+floorRough*.025)+vec3(.018,.023,.022);',
+    ' vec3 wallColor=floorAlbedo*(.075+wallLight+depth*.035);float rimHighlight=smoothstep(.78,.91,cavityRadius)*(1.0-smoothstep(.91,1.01,cavityRadius))*sat(dot(normalize(uLight.xy),-normalize((p-uPocket.xy)+vec2(.0001))));',
+    ' vec3 cavityColor=mix(wallColor,floorColor,floorZone)+floorAlbedo*rimHighlight*.12;color=mix(color,cavityColor,cavityMask);',
+    ' vec2 mouthDir=vec2(cos(uTunnel.x),sin(uTunnel.x));vec2 mouthTangent=vec2(-mouthDir.y,mouthDir.x);vec2 mouthCenter=mouthDir*boundary(mouthDir)*.94;vec2 mouthDelta=p-mouthCenter;',
+    ' float mouthAlong=dot(mouthDelta,mouthDir)/max(.001,uTunnel.z);float mouthAcross=dot(mouthDelta,mouthTangent)/max(.001,uTunnel.y);float mouthNoise=wave(p*19.0,uSeed+113.0,2.0)*.13;',
+    ' float mouthShape=length(vec2(mouthAlong*1.25,mouthAcross))-(1.0+mouthNoise);float mouth=1.0-smoothstep(-.05,.14,mouthShape);float throat=sat(1.0-length(vec2(mouthAlong*1.7,mouthAcross*.82)));',
+    ' color=mix(color,materialColor(composition(mouthCenter))*.055,mouth*uTunnel.w*(.72+throat*.28));',
     ' gl_FragColor=vec4(color*alpha,alpha);',
     '}'
   ].join('\n');
@@ -2903,27 +2914,8 @@
       { uCraterData: craterTexture, uCraterTextureWidth: ASTEROID_CRATER_TEXTURE_WIDTH });
     var mesh = new PIXI.Mesh(geometry, shader);
     container.addChild(mesh);
-    var interior = new PIXI.Graphics();
-    container.addChild(interior);
     return { container: container, mesh: mesh, shader: shader, craterBytes: craterBytes,
-      craterTexture: craterTexture, interior: interior, visual: null, artworkKey: '', excavationKey: '' };
-  }
-
-  /** @param {PIXI.Graphics} g @param {Asteroid} asteroid */
-  function paintAsteroidInterior(g, asteroid) {
-    var excavation = asteroid.excavation;
-    g.clear();
-    if (!excavation || excavation.level <= 0) return;
-    var radius = asteroid.radius, x = excavation.pocketOffset.x * radius, y = excavation.pocketOffset.y * radius;
-    var pocketRadius = excavation.pocketRadius * radius;
-    g.beginFill(0x07151b, 0.78); g.drawEllipse(x, y, pocketRadius, pocketRadius * 0.72); g.endFill();
-    g.lineStyle(Math.max(1, radius * 0.006), 0x72d7e8, 0.55);
-    g.drawCircle(x, y, pocketRadius * 0.42);
-    g.lineStyle(Math.max(1, radius * 0.004), 0xb8f4ff, 0.85);
-    g.drawRect(x - pocketRadius * 0.34, y - pocketRadius * 0.12, pocketRadius * 0.68, pocketRadius * 0.24);
-    g.beginFill(0xffd27a, 0.9);
-    for (var lamp = -2; lamp <= 2; lamp += 1) g.drawCircle(x + lamp * pocketRadius * 0.13, y, Math.max(1.2, radius * 0.007));
-    g.endFill();
+      craterTexture: craterTexture, visual: null, artworkKey: '' };
   }
 
   /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid @param {number} [zoom] */
@@ -2949,14 +2941,7 @@
     graphic.shader.uniforms.uPocket = new Float32Array(excavation ?
       [excavation.pocketOffset.x, excavation.pocketOffset.y, excavation.pocketRadius, excavation.level > 0 ? 1 : 0] : [0, 0, 0.001, 0]);
     graphic.shader.uniforms.uTunnel = new Float32Array(excavation ?
-      [excavation.tunnelAngle, 0.032, 0.065, excavation.level > 0 ? 1 : 0] : [0, 0.001, 0.001, 0]);
-    if (graphic.interior) {
-      var excavationKey = JSON.stringify(excavation || null) + ':' + asteroid.radius;
-      if (graphic.excavationKey !== excavationKey) {
-        paintAsteroidInterior(graphic.interior, asteroid);
-        graphic.excavationKey = excavationKey;
-      }
-    }
+      [excavation.tunnelAngle, 0.021, 0.048, excavation.level > 0 ? 1 : 0] : [0, 0.001, 0.001, 0]);
   }
 
   /** Playground/debug control; azimuth and elevation are radians. */
