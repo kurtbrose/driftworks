@@ -592,9 +592,15 @@
     var world = sim.addWreck(createDeployedWorld(), { position: { x: 165, y: 120 }, velocity: { x: 0, y: 1 } });
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
     assert(findShip(world, 'tug-01').order.kind === 'recover', 'Right-click should dispatch recovery');
-    world = sim.stepWorld(world, 1 / 30);
+    for (var rendezvousTick = 0; rendezvousTick < 300 && !findShip(world, 'tug-01').cargoOperation; rendezvousTick += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+    }
     var hauler = findShip(world, 'tug-01');
     assert(hauler.cargoOperation && hauler.cargoOperation.kind === 'recover', 'Matched wreck pickup should begin EVA securing');
+    assertClose(hauler.position.x, world.wrecks[0].position.x);
+    assertClose(hauler.position.y, world.wrecks[0].position.y);
+    assertClose(hauler.velocity.x, world.wrecks[0].velocity.x);
+    assertClose(hauler.velocity.y, world.wrecks[0].velocity.y);
     assert(!hauler.towTarget && !world.wrecks[0].towedBy, 'Wreck must remain free until securing finishes');
     world = sim.deserializeWorld(sim.serializeWorld(world));
     for (var handlingTick = 0; handlingTick < 500 && !findShip(world, 'tug-01').towTarget; handlingTick += 1) {
@@ -673,7 +679,7 @@
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
     for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30);
     assert(findShip(world, 'tug-01').velocity.x > 35, 'Approach should retain velocity between ticks');
-    for (var j = 0; j < 650; j += 1) world = sim.stepWorld(world, 1 / 30);
+    for (var j = 0; j < 1500 && !findShip(world, 'tug-01').towTarget; j += 1) world = sim.stepWorld(world, 1 / 30);
     assert(findShip(world, 'tug-01').towTarget, 'Hauler should rendezvous and secure a nearby wreck');
   });
 
@@ -711,7 +717,9 @@
     var world = sim.addWreck(createDeployedWorld(), { position: { x: 165, y: 120 }, velocity: { x: 1, y: 0 } });
     world.ships.push(sim.createShip('tug-02', 'Second Hauler', 'tug', 160, 120, 62));
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01', 'tug-02']), world.wrecks[0].position);
-    world = sim.stepWorld(world, 1 / 30);
+    for (var rendezvousTick = 0; rendezvousTick < 300 && !world.ships.some(function (ship) { return ship.cargoOperation; }); rendezvousTick += 1) {
+      world = sim.stepWorld(world, 1 / 30);
+    }
     assert(world.ships.filter(function (ship) { return ship.cargoOperation; }).length === 1, 'Only one hauler can secure each wreck');
     for (var claimTick = 0; claimTick < 500 && !world.ships.some(function (ship) { return ship.towTarget; }); claimTick += 1) {
       world = sim.stepWorld(world, 1 / 30);
@@ -808,12 +816,17 @@
       position: { x: 400, y: 120 }, velocity: { x: 82, y: 0 }
     });
     world = sim.issueSalvageAllOrder(sim.selectShips(world, ['tug-01']));
-    for (var i = 0; i < 1800 && !findShip(world, 'tug-01').towTarget; i += 1) {
+    for (var i = 0; i < 1800 && !findShip(world, 'tug-01').cargoOperation; i += 1) {
       world = sim.stepWorld(world, 1 / 30);
     }
     var hauler = findShip(world, 'tug-01');
-    assert(hauler.towTarget && hauler.towTarget.id === world.wrecks[0].id,
-      'Moving-frame guidance should catch and secure a fast outbound wreck');
+    var wreck = world.wrecks[0];
+    assert(hauler.cargoOperation && hauler.cargoOperation.kind === 'recover',
+      'Moving-frame guidance should catch a fast outbound wreck');
+    assertClose(hauler.position.x, wreck.position.x);
+    assertClose(hauler.position.y, wreck.position.y);
+    assertClose(hauler.velocity.x, wreck.velocity.x);
+    assertClose(hauler.velocity.y, wreck.velocity.y);
   });
 
   test('offscreen contacts clamp to the viewport edge and hand off once visible', function () {

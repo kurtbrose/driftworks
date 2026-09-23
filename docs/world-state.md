@@ -163,7 +163,11 @@ every dangling relationship.
 Recovery guidance operates in the target's moving frame: the hauler matches the
 recoverable's velocity while adding its normal work-zone speed as closing speed.
 This lets salvage missions intercept fast coasting wrecks rather than following
-their stale positions at a lower absolute speed.
+their stale positions at a lower absolute speed. Closing speed is reduced by
+stopping distance near the target; EVA securing begins only after position and
+relative velocity converge to effectively zero, when their tiny residuals are
+clamped to an exact 0/0 rendezvous. The matched hauler and recoverable then coast
+together on that shared vector for the duration of EVA securing.
 
 At home, wreck delivery credits salvage and removes the wreck after the five-minute
 dock service. Fighter delivery

@@ -548,7 +548,13 @@
     }
     if (next.order.kind === 'deploy' || next.order.kind === 'retrieve-platform') return logistics.stepPlatformCarrier(next, world, dt);
     if (next.order.kind === 'shuttle') return logistics.stepShuttle(next, world, dt);
-    if (next.order.kind === 'recover') return next;
+    if (next.order.kind === 'recover') {
+      if (next.cargoOperation && next.cargoOperation.kind === 'recover') {
+        next.position.x += next.velocity.x * dt;
+        next.position.y += next.velocity.y * dt;
+      }
+      return next;
+    }
     if (next.order.kind === 'defend') return formations.stepDefender(next, world, threats, dt);
 
 
@@ -1035,14 +1041,16 @@
         }
         hauler.order.target = clonePlain(pickup.position);
         var pickupVelocity = 'velocity' in pickup && pickup.velocity ? pickup.velocity : { x: 0, y: 0 };
-        if (distance(hauler.position, pickup.position) > 18) {
+        var approachX = pickup.position.x - hauler.position.x;
+        var approachY = pickup.position.y - hauler.position.y;
+        var approachGap = Math.hypot(approachX, approachY);
+        var relativeVelocity = Math.hypot(hauler.velocity.x - pickupVelocity.x, hauler.velocity.y - pickupVelocity.y);
+        if (approachGap > ARRIVAL_DISTANCE || relativeVelocity > 0.01) {
           hauler.cargoOperation = null;
-          var approachX = pickup.position.x - hauler.position.x;
-          var approachY = pickup.position.y - hauler.position.y;
-          var approachGap = Math.hypot(approachX, approachY);
+          var closingSpeed = Math.min(hauler.speed, Math.sqrt(2 * hauler.acceleration * approachGap), approachGap * 4);
           stepTowardOrderTarget(hauler, dt, 12, false, {
-            x: pickupVelocity.x + approachX / Math.max(approachGap, 0.001) * hauler.speed,
-            y: pickupVelocity.y + approachY / Math.max(approachGap, 0.001) * hauler.speed
+            x: pickupVelocity.x + approachX / Math.max(approachGap, 0.001) * closingSpeed,
+            y: pickupVelocity.y + approachY / Math.max(approachGap, 0.001) * closingSpeed
           });
           return;
         }
@@ -1056,6 +1064,8 @@
           hauler.cargoOperation = null;
           return;
         }
+        // Clamp only the final sub-millimeter/sub-centimeter-per-second residual so
+        // cargo work begins from an exact position and velocity match.
         hauler.position = clonePlain(pickup.position);
         hauler.velocity = clonePlain(pickupVelocity);
         if (!hauler.cargoOperation || hauler.cargoOperation.kind !== 'recover') {
