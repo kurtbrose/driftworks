@@ -2771,7 +2771,10 @@
     ' return h;',
     '}',
     'float microRelief(vec2 p,float footprint){float f=13.0+uProfile.y*27.0;return filteredFbm(p,uSeed*1.73,f,footprint)*uProfile.x*.0055;}',
-    'float baseHeightAt(vec2 p,float footprint){float q=min(.997,length(p)/max(.001,boundary(p)));float dome=sqrt(max(.002,1.0-q*q))*.78;return dome+baseReliefHeight(p)+microRelief(p,footprint);}',
+    'float reliefHeightAt(vec2 p,float footprint){return baseReliefHeight(p)+microRelief(p,footprint);}',
+    // Analytic gradient of the boundary-shaped dome. Finite differences cross the
+    // silhouette at high zoom and turn its former safety clamp into a visible band.
+    'vec2 domeGradient(vec2 p){float r=length(p);if(r<.00001){return vec2(0.0);}float a=atan(p.y,p.x);float b=max(.001,boundary(p));float dbda=-.21*sin(a*3.0)+.25*cos(a*5.0);vec2 gradA=vec2(-p.y,p.x)/(r*r);vec2 gradQ=p/(r*b)-(r*dbda/(b*b))*gradA;float q=min(.999999,r/b);return (-.78*q/sqrt(max(.000001,1.0-q*q)))*gradQ;}',
     // Returns age-ordered crater height, analytic x/y slope, and occlusion.
     'vec4 craterSurface(vec2 p){',
     ' float h=0.0;vec2 grad=vec2(0.0);float occ=0.0;float overlaps=0.0;',
@@ -2789,7 +2792,7 @@
     ' }}',
     ' return vec4(h,grad,min(.58,occ+max(0.0,overlaps-1.0)*.1));',
     '}',
-    'vec3 normalAt(vec2 p,vec2 craterGradient,float footprint){float e=max(.00035,min(.0035,footprint*.7));float dx=(baseHeightAt(p+vec2(e,0.0),footprint)-baseHeightAt(p-vec2(e,0.0),footprint))/(2.0*e)+craterGradient.x;float dy=(baseHeightAt(p+vec2(0.0,e),footprint)-baseHeightAt(p-vec2(0.0,e),footprint))/(2.0*e)+craterGradient.y;return normalize(vec3(-dx,-dy,1.0));}',
+    'vec3 normalAt(vec2 p,vec2 craterGradient,float footprint){float e=max(.00035,min(.0035,footprint*.7));float dx=(reliefHeightAt(p+vec2(e,0.0),footprint)-reliefHeightAt(p-vec2(e,0.0),footprint))/(2.0*e);float dy=(reliefHeightAt(p+vec2(0.0,e),footprint)-reliefHeightAt(p-vec2(0.0,e),footprint))/(2.0*e);vec2 gradient=domeGradient(p)+vec2(dx,dy)+craterGradient;return normalize(vec3(-gradient,1.0));}',
     'vec4 composition(vec2 p){',
     ' float broad=.18+uHeterogeneity*uHeterogeneity*2.45;float med=.06+uHeterogeneity*.52;float chunk=uHeterogeneity*uHeterogeneity*1.65;float temp=1.32-uHeterogeneity*.62;',
     ' vec4 score=log(max(uBulk,vec4(.000001)));',
