@@ -155,6 +155,12 @@
     assertClose(uniforms.uPixelFootprint, 1 / (asteroid.radius * 8), 0.0000001);
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { rotation: 0.1 }));
     assert(graphic.visual === visual, 'Rotation does not rebuild procedural geology');
+    assertClose(graphic.shader.uniforms.uCavityParallax[0], 0);
+    assertClose(graphic.shader.uniforms.uCavityParallax[1], 0);
+    game.paintAsteroid(graphic, asteroid, 1, { x: asteroid.position.x + asteroid.radius / 2,
+      y: asteroid.position.y - asteroid.radius / 2, zoom: 1 });
+    assert(graphic.shader.uniforms.uCavityParallax[0] < 0, 'Moving the camera right should reveal floor to the left');
+    assert(graphic.shader.uniforms.uCavityParallax[1] > 0, 'Moving the camera up should reveal floor below');
     game.paintAsteroid(graphic, Object.assign({}, asteroid, { radius: asteroid.radius * 2 }));
     assert(graphic.visual !== visual && graphic.mesh.scale.value === asteroid.radius * 2);
   });

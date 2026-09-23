@@ -19,7 +19,7 @@
   /** @typedef {{ graphic: PIXI.DisplayObject, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
   /** @typedef {import('./types').Drone} Drone */
   /** @typedef {import('./types').CombatEvent} CombatEvent */
-  /** @typedef {{ container: PIXI.Container, mesh: PIXI.Mesh, shader: PIXI.Shader, craterBytes: Uint8Array, craterTexture: PIXI.Texture, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string }} AsteroidGraphic */
+  /** @typedef {{ container: PIXI.Container, mesh: PIXI.Mesh, shader: PIXI.Shader, craterBytes: Uint8Array, craterTexture: PIXI.Texture, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string, cavityParallax?: Vec2 }} AsteroidGraphic */
   /** @typedef {{ container: PIXI.Container, base: PIXI.Graphics, lighting: PIXI.Graphics, visual: ReturnType<typeof legacyAsteroidVisualDescription> | null, artworkKey: string, lightBucket: number }} LegacyAsteroidGraphic */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
@@ -502,7 +502,7 @@
             rock = asteroidGraphics[asteroid.id] = createAsteroidGraphic();
             worldLayer.addChildAt(rock.container, 1);
           }
-          if (!rock.visual) paintAsteroid(rock, asteroid, world.camera.zoom);
+          if (!rock.visual) paintAsteroid(rock, asteroid, world.camera.zoom, world.camera);
           var normalKey = asteroid.id + ':' + asteroid.radius + ':' + p.siteAngle + ':' + p.siteDepth;
           var cached = platformNormals[p.id];
           if (!cached || cached.key !== normalKey) {
@@ -588,7 +588,7 @@
           asteroidGraphics[asteroid.id] = asteroidGraphic;
           worldLayer.addChildAt(asteroidGraphic.container, 1);
         }
-        paintAsteroid(asteroidGraphic, asteroid, world.camera.zoom);
+        paintAsteroid(asteroidGraphic, asteroid, world.camera.zoom, world.camera);
         asteroidGraphic.container.scale.set(semanticScale('asteroid', world.camera.zoom));
       });
 
@@ -2766,6 +2766,8 @@
     'uniform float uPixelFootprint;',
     'uniform vec4 uPocket;', // center x/y, radius, enabled
     'uniform vec4 uTunnel;', // angle, width, depth, enabled
+    'uniform vec2 uCavityParallax;',
+    'uniform vec2 uCavityShadow;',
     'const float PI=3.141592653589793;',
     'float sat(float x){return clamp(x,0.0,1.0);}',
     'float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}',
@@ -2814,27 +2816,42 @@
     ' float peak=max(max(score.x,score.y),max(score.z,score.w));vec4 value=exp((score-peak)/temp);value=max(value/dot(value,vec4(1.0)),vec4(.03));return value/dot(value,vec4(1.0));',
     '}',
     'vec3 materialColor(vec4 c){return c.x*vec3(.627,.714,.761)+c.y*vec3(.471,.408,.361)+c.z*vec3(.569,.541,.494)+c.w*vec3(.494,.518,.502);}',
+    // A deliberately constructed cut plane: six unequal straight edges, not a
+    // crater-like radial outline. This is only a stencil through the upper layer.
     'vec2 cavityField(vec2 p){',
-    ' vec2 d=p-uPocket.xy;vec2 q=d/vec2(max(.001,uPocket.z),max(.001,uPocket.z*.72));float a=atan(q.y,q.x);vec2 direction=vec2(cos(a),sin(a));',
-    ' float distortion=1.0+wave(direction*.72+uPocket.xy,uSeed+31.0,2.0)*.075+wave(direction*1.61,uSeed+77.0,1.0)*.035;',
-    ' float tunnelSide=atan(sin(a-uTunnel.x),cos(a-uTunnel.x));float notch=exp(-(tunnelSide*tunnelSide)/.085)*.12;',
-    ' float radial=length(q)/max(.72,distortion-notch);float mask=(1.0-smoothstep(.985,1.025,radial))*uPocket.w;return vec2(radial,mask);',
+    ' vec2 d=(p-uPocket.xy)/max(.001,uPocket.z);float ca=.982,sa=.189;vec2 q=vec2(d.x*ca-d.y*sa,d.x*sa+d.y*ca);q.y/=.78;',
+    ' float shape=dot(q,vec2(.94,.34))/.96;shape=max(shape,dot(q,vec2(.12,.99))/.82);shape=max(shape,dot(q,vec2(-.78,.62))/.92);',
+    ' shape=max(shape,dot(q,vec2(-.98,-.18))/.88);shape=max(shape,dot(q,vec2(-.28,-.96))/.84);shape=max(shape,dot(q,vec2(.72,-.69))/.91);',
+    ' float aa=max(.006,uPixelFootprint/max(.001,uPocket.z));float mask=(1.0-smoothstep(1.0-aa,1.0+aa,shape))*uPocket.w;return vec2(shape,mask);',
+    '}',
+    // A flatter broken-rock height field with its own normals. Excavation removes
+    // broad exterior geology, but the exposed material remains visibly rough.
+    'float interiorHeight(vec2 p,float footprint){return filteredFbm(p,uSeed*2.31,16.0,footprint)*.026+wave(p,uSeed+149.0,4.2)*.012;}',
+    'vec3 interiorNormal(vec2 p,float footprint){float e=max(.00045,min(.004,footprint*.8));float dx=(interiorHeight(p+vec2(e,0.0),footprint)-interiorHeight(p-vec2(e,0.0),footprint))/(2.0*e);float dy=(interiorHeight(p+vec2(0.0,e),footprint)-interiorHeight(p-vec2(0.0,e),footprint))/(2.0*e);return normalize(vec3(-dx,-dy,1.0));}',
+    // Engineered access uses the same height/gradient/occlusion contract as a
+    // crater, so it participates in exterior lighting instead of painting black.
+    'vec4 engineeredOpening(vec2 p){',
+    ' vec2 radial=vec2(cos(uTunnel.x),sin(uTunnel.x));vec2 tangent=vec2(-radial.y,radial.x);vec2 center=radial*boundary(radial)*.982;vec2 d=p-center;',
+    ' float rx=max(.001,uTunnel.z),ry=max(.001,uTunnel.y);vec2 e=vec2(dot(d,radial)/rx,dot(d,tangent)/ry);float q=length(e);if(q>=1.22||uTunnel.w<=0.0)return vec4(0.0);',
+    ' float safeQ=max(q,.00001);vec2 dq=(e.x*radial/rx+e.y*tangent/ry)/safeQ;float h=0.0;vec2 grad=vec2(0.0);float occ=0.0;',
+    ' if(q<1.0){float bowl=1.0-q*q;h=-bowl*.052;grad=2.0*.052*q*dq;occ=(1.0-q)*.68;}',
+    ' float rimD=(q-1.0)/.13;float rim=exp(-rimD*rimD)*.005;h+=rim;grad+=rim*(-2.0*(q-1.0)/(.13*.13))*dq;',
+    ' return vec4(h,grad,occ)*uTunnel.w;',
     '}',
     'void main(){',
     ' vec2 p=vLocalCoord;float q=length(p)/boundary(p);float aa=uPixelFootprint/max(boundary(p),.001);float alpha=1.0-smoothstep(1.0-aa,1.0,q);if(alpha<=0.0){gl_FragColor=vec4(0.0);return;}',
-    ' float footprint=uPixelFootprint;vec4 crater=craterSurface(p);vec3 n=normalAt(p,crater.yz,footprint);vec3 light=normalize(uLight);float ndl=dot(n,light);float lit=pow(max(0.0,ndl),.82);float limb=sqrt(max(0.0,1.0-q*q));float grazing=pow(1.0-sat(ndl),1.25);',
+    ' float footprint=uPixelFootprint;vec4 crater=craterSurface(p);vec4 opening=engineeredOpening(p);vec3 n=normalAt(p,crater.yz+opening.yz,footprint);vec3 light=normalize(uLight);float ndl=dot(n,light);float lit=pow(max(0.0,ndl),.82);float limb=sqrt(max(0.0,1.0-q*q));float grazing=pow(1.0-sat(ndl),1.25);',
     ' vec4 c=composition(p);vec3 albedo=materialColor(c);',
-    ' float rough=microRelief(p,footprint)/max(.001,uProfile.x*.011);float brightness=(.22+lit*.98)*(.66+limb*.34)-crater.w;brightness+=rough*uProfile.z*grazing*.16;',
+    ' float rough=microRelief(p,footprint)/max(.001,uProfile.x*.011);float brightness=(.22+lit*.98)*(.66+limb*.34)-crater.w-opening.w;brightness+=rough*uProfile.z*grazing*.16;',
     ' vec3 color=albedo*clamp(brightness,.12,1.28);color+=vec3(1.0,.94,.81)*pow(max(0.0,ndl),8.0)*.035;',
-    ' vec2 cavity=cavityField(p);float cavityRadius=cavity.x;float cavityMask=cavity.y;vec2 floorPoint=uPocket.xy+(p-uPocket.xy)*.48;vec3 floorAlbedo=materialColor(composition(floorPoint));',
-    ' float floorRough=microRelief(floorPoint,footprint*.72)/max(.001,uProfile.x*.011);float depth=pow(max(0.0,1.0-cavityRadius*cavityRadius),.62);float floorZone=1.0-smoothstep(.58,.79,cavityRadius);',
-    ' float wallLight=sat(dot(normalize((p-uPocket.xy)+vec2(.0001)),normalize(uLight.xy)))*.09;vec3 floorColor=floorAlbedo*(.20+depth*.16+floorRough*.025)+vec3(.018,.023,.022);',
-    ' vec3 wallColor=floorAlbedo*(.075+wallLight+depth*.035);float rimHighlight=smoothstep(.78,.91,cavityRadius)*(1.0-smoothstep(.91,1.01,cavityRadius))*sat(dot(normalize(uLight.xy),-normalize((p-uPocket.xy)+vec2(.0001))));',
-    ' vec3 cavityColor=mix(wallColor,floorColor,floorZone)+floorAlbedo*rimHighlight*.12;color=mix(color,cavityColor,cavityMask);',
-    ' vec2 mouthDir=vec2(cos(uTunnel.x),sin(uTunnel.x));vec2 mouthTangent=vec2(-mouthDir.y,mouthDir.x);vec2 mouthCenter=mouthDir*boundary(mouthDir)*.94;vec2 mouthDelta=p-mouthCenter;',
-    ' float mouthAlong=dot(mouthDelta,mouthDir)/max(.001,uTunnel.z);float mouthAcross=dot(mouthDelta,mouthTangent)/max(.001,uTunnel.y);float mouthNoise=wave(p*19.0,uSeed+113.0,2.0)*.13;',
-    ' float mouthShape=length(vec2(mouthAlong*1.25,mouthAcross))-(1.0+mouthNoise);float mouth=1.0-smoothstep(-.05,.14,mouthShape);float throat=sat(1.0-length(vec2(mouthAlong*1.7,mouthAcross*.82)));',
-    ' color=mix(color,materialColor(composition(mouthCenter))*.055,mouth*uTunnel.w*(.72+throat*.28));',
+    ' vec2 cavity=cavityField(p);float reveal=cavity.y;float projectedLight=cavityField(p-uCavityShadow).y;',
+    ' vec2 floorPoint=uPocket.xy+(p-uPocket.xy-uCavityParallax)*.62;vec3 floorAlbedo=materialColor(composition(floorPoint));',
+    ' vec3 floorN=interiorNormal(floorPoint,footprint*.62);vec3 workLight=normalize(vec3(-.38,-.22,.9));float floorNdl=max(0.0,dot(floorN,light));float workNdl=max(0.0,dot(floorN,workLight));float floorGrain=interiorHeight(floorPoint,footprint*.62);',
+    ' float workPool=.72+wave(floorPoint,uSeed+211.0,2.4)*.18;float castLight=.16+.84*projectedLight;float floorBrightness=.12+pow(floorNdl,.82)*.2*castLight+pow(workNdl,.72)*.2*workPool+floorGrain*.88;',
+    ' vec3 floorColor=floorAlbedo*clamp(floorBrightness,.13,.64)+vec3(.052,.036,.018)*(.42+workNdl*.58)*workPool;',
+    // The lower plane is unbounded: the aperture clips it, never its own edge.
+    // Separation comes from texture parallax and the upper stencil's cast shadow.
+    ' color=mix(color,floorColor,reveal);',
     ' gl_FragColor=vec4(color*alpha,alpha);',
     '}'
   ].join('\n');
@@ -2915,11 +2932,11 @@
     var mesh = new PIXI.Mesh(geometry, shader);
     container.addChild(mesh);
     return { container: container, mesh: mesh, shader: shader, craterBytes: craterBytes,
-      craterTexture: craterTexture, visual: null, artworkKey: '' };
+      craterTexture: craterTexture, visual: null, artworkKey: '', cavityParallax: { x: 0, y: 0 } };
   }
 
-  /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid @param {number} [zoom] */
-  function paintAsteroid(graphic, asteroid, zoom) {
+  /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid @param {number} [zoom] @param {import('./types').Camera} [camera] */
+  function paintAsteroid(graphic, asteroid, zoom, camera) {
     graphic.container.position.set(asteroid.position.x, asteroid.position.y);
     graphic.container.rotation = asteroid.rotation;
     var key = asteroid.id + ':' + asteroid.radius;
@@ -2942,6 +2959,22 @@
       [excavation.pocketOffset.x, excavation.pocketOffset.y, excavation.pocketRadius, excavation.level > 0 ? 1 : 0] : [0, 0, 0.001, 0]);
     graphic.shader.uniforms.uTunnel = new Float32Array(excavation ?
       [excavation.tunnelAngle, 0.021, 0.048, excavation.level > 0 ? 1 : 0] : [0, 0.001, 0.001, 0]);
+    var cameraOffsetX = camera ? (camera.x - asteroid.position.x) / asteroid.radius : 0;
+    var cameraOffsetY = camera ? (camera.y - asteroid.position.y) / asteroid.radius : 0;
+    // Cast the view ray through the upper aperture onto the deeper plane. Convert
+    // the world-space camera displacement into asteroid-local coordinates, then
+    // move the visible floor in the opposite direction to the camera.
+    var localCameraX = cameraOffsetX * c - cameraOffsetY * s;
+    var localCameraY = cameraOffsetX * s + cameraOffsetY * c;
+    var desiredParallaxX = excavation ? Math.max(-0.085, Math.min(0.085, -localCameraX * 0.16)) : 0;
+    var desiredParallaxY = excavation ? Math.max(-0.07, Math.min(0.07, -localCameraY * 0.13)) : 0;
+    var cavityParallax = graphic.cavityParallax || (graphic.cavityParallax = { x: desiredParallaxX, y: desiredParallaxY });
+    cavityParallax.x += (desiredParallaxX - cavityParallax.x) * 0.18;
+    cavityParallax.y += (desiredParallaxY - cavityParallax.y) * 0.18;
+    graphic.shader.uniforms.uCavityParallax = new Float32Array([cavityParallax.x, cavityParallax.y]);
+    var shadowScale = 0.045 / Math.max(0.2, lightUniform[2]);
+    graphic.shader.uniforms.uCavityShadow = new Float32Array(excavation ?
+      [-lightUniform[0] * shadowScale, -lightUniform[1] * shadowScale] : [0, 0]);
   }
 
   /** Playground/debug control; azimuth and elevation are radians. */
