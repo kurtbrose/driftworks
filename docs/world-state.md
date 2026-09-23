@@ -105,7 +105,11 @@ combat. Selection itself does not define membership.
 ## Platforms, ore and construction
 
 Asteroids have `id`, `name`, `position`, `ore`, `oreInitial`, `radius`, `rotation`,
-`angularVelocity`. Depletion changes accessible ore, not physical radius.
+`angularVelocity`, and an optional `excavation`. Depletion changes accessible ore,
+not physical radius. Excavation is asteroid-local normalized data: `pocketOffset`,
+`pocketRadius`, `tunnelAngle`, `tunnelTurn`, and visual/build `level`. Old saves gain
+the current starter excavation during normalization. Surface platform placement
+keeps clear of both the inhabited pocket and tunnel mouth.
 
 Platforms have `id`, `state`, nullable `carrierId`/`asteroidId`, `position`,
 `siteAngle`, `siteDepth`, buffered `ore`, and `packetTimer`:

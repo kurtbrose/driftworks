@@ -200,7 +200,9 @@
       oreInitial: ore,
       radius: 300,
       rotation: 0,
-      angularVelocity: (rng() < 0.5 ? -1 : 1) * (0.008 + rng() * 0.006)
+      angularVelocity: (rng() < 0.5 ? -1 : 1) * (0.008 + rng() * 0.006),
+      excavation: { pocketOffset: { x: 0.08, y: -0.04 }, pocketRadius: 0.2,
+        tunnelAngle: -0.58, tunnelTurn: 0.14, level: 1 }
     };
   }
 
@@ -290,6 +292,23 @@
     return next;
   }
 
+  /** Pick a deterministic attachment site outside the inhabited cavern and its entrance. */
+  /** @param {Asteroid} asteroid @param {string} platformId @param {number} preferredAngle */
+  function miningSite(asteroid, platformId, preferredAngle) {
+    var depth = miningSiteDepth(platformId);
+    var excavation = asteroid.excavation;
+    if (!excavation) return { angle: preferredAngle, depth: depth };
+    for (var attempt = 0; attempt < 12; attempt += 1) {
+      var angle = preferredAngle + attempt * Math.PI * 2 / 12;
+      var normalizedRadius = surfaceRadius(asteroid, angle) / asteroid.radius * depth;
+      var x = Math.cos(angle) * normalizedRadius, y = Math.sin(angle) * normalizedRadius;
+      var clearPocket = Math.hypot(x - excavation.pocketOffset.x, y - excavation.pocketOffset.y) > excavation.pocketRadius + 0.1;
+      var mouthDelta = Math.abs(angleDelta(angle, excavation.tunnelAngle));
+      if (clearPocket && mouthDelta > 0.22) return { angle: angle, depth: depth };
+    }
+    return { angle: preferredAngle + Math.PI, depth: depth };
+  }
+
   /** @param {World} world @param {string | null} platformId @returns {World} */
   function selectPlatform(world, platformId) {
     var next = cloneWorld(world);
@@ -373,9 +392,10 @@
     var ship = availablePlatformCarrier(next);
     var platform = next.platforms.filter(function (p) { return p.state === 'stored'; })[0];
     if (!ship || !platform) return next;
+    var site = miningSite(asteroid, platform.id,
+      Math.atan2(home.position.y - asteroid.position.y, home.position.x - asteroid.position.x) - asteroid.rotation);
     ship.order = { kind: 'deploy', asteroidId: asteroid.id, platformId: platform.id,
-      siteDepth: miningSiteDepth(platform.id),
-      siteAngle: Math.atan2(home.position.y - asteroid.position.y, home.position.x - asteroid.position.x) - asteroid.rotation,
+      siteDepth: site.depth, siteAngle: site.angle,
       target: clonePlain(home.position) };
     return next;
   }
@@ -835,6 +855,9 @@
         if (ship.order.kind === 'mine') ship.order = { kind: 'mine', asteroidId: body.id };
       });
     }
+    next.asteroids.forEach(function (body) {
+      if (!body.excavation) body.excavation = clonePlain(initial.asteroids[0].excavation);
+    });
     next.ships = next.ships || initial.ships;
     next.ships.forEach(function (ship) {
       if (typeof ship.turnRate !== 'number') {

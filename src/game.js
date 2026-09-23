@@ -19,7 +19,7 @@
   /** @typedef {{ graphic: PIXI.DisplayObject, age: number, life: number, vx: number, vy: number, scale: number, alpha: number, grow?: number, screenSpace?: boolean, semanticType?: string }} VisualEffect */
   /** @typedef {import('./types').Drone} Drone */
   /** @typedef {import('./types').CombatEvent} CombatEvent */
-  /** @typedef {{ container: PIXI.Container, mesh: PIXI.Mesh, shader: PIXI.Shader, craterBytes: Uint8Array, craterTexture: PIXI.Texture, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string }} AsteroidGraphic */
+  /** @typedef {{ container: PIXI.Container, mesh: PIXI.Mesh, interior: PIXI.Graphics, shader: PIXI.Shader, craterBytes: Uint8Array, craterTexture: PIXI.Texture, visual: ReturnType<typeof asteroidVisualDescription> | null, artworkKey: string, excavationKey: string }} AsteroidGraphic */
   /** @typedef {{ container: PIXI.Container, base: PIXI.Graphics, lighting: PIXI.Graphics, visual: ReturnType<typeof legacyAsteroidVisualDescription> | null, artworkKey: string, lightBucket: number }} LegacyAsteroidGraphic */
   /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
@@ -2755,6 +2755,8 @@
     'uniform float uHeterogeneity;',
     'uniform float uSeed;',
     'uniform float uPixelFootprint;',
+    'uniform vec4 uPocket;', // center x/y, radius, enabled
+    'uniform vec4 uTunnel;', // angle, width, depth, enabled
     'const float PI=3.141592653589793;',
     'float sat(float x){return clamp(x,0.0,1.0);}',
     'float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}',
@@ -2808,6 +2810,11 @@
     ' vec4 c=composition(p);vec3 albedo=c.x*vec3(.627,.714,.761)+c.y*vec3(.471,.408,.361)+c.z*vec3(.569,.541,.494)+c.w*vec3(.494,.518,.502);',
     ' float rough=microRelief(p,footprint)/max(.001,uProfile.x*.011);float brightness=(.22+lit*.98)*(.66+limb*.34)-crater.w;brightness+=rough*uProfile.z*grazing*.16;',
     ' vec3 color=albedo*clamp(brightness,.12,1.28);color+=vec3(1.0,.94,.81)*pow(max(0.0,ndl),8.0)*.035;',
+    ' vec2 pocketDelta=(p-uPocket.xy)/vec2(max(.001,uPocket.z),max(.001,uPocket.z*.72));float pocket=1.0-smoothstep(.84,1.0,length(pocketDelta));',
+    ' color=mix(color,color*vec3(.22,.3,.34)+vec3(.012,.022,.028),pocket*uPocket.w*.78);',
+    ' vec2 mouthDir=vec2(cos(uTunnel.x),sin(uTunnel.x));vec2 mouthCenter=mouthDir*boundary(mouthDir)*.91;vec2 mouthDelta=p-mouthCenter;',
+    ' float mouth=1.0-smoothstep(1.0,1.18,length(vec2(dot(mouthDelta,mouthDir)/max(.001,uTunnel.z),dot(mouthDelta,vec2(-mouthDir.y,mouthDir.x))/max(.001,uTunnel.y))));',
+    ' color=mix(color,vec3(.008,.012,.014),mouth*uTunnel.w);',
     ' gl_FragColor=vec4(color*alpha,alpha);',
     '}'
   ].join('\n');
@@ -2887,8 +2894,27 @@
       { uCraterData: craterTexture, uCraterTextureWidth: ASTEROID_CRATER_TEXTURE_WIDTH });
     var mesh = new PIXI.Mesh(geometry, shader);
     container.addChild(mesh);
+    var interior = new PIXI.Graphics();
+    container.addChild(interior);
     return { container: container, mesh: mesh, shader: shader, craterBytes: craterBytes,
-      craterTexture: craterTexture, visual: null, artworkKey: '' };
+      craterTexture: craterTexture, interior: interior, visual: null, artworkKey: '', excavationKey: '' };
+  }
+
+  /** @param {PIXI.Graphics} g @param {Asteroid} asteroid */
+  function paintAsteroidInterior(g, asteroid) {
+    var excavation = asteroid.excavation;
+    g.clear();
+    if (!excavation || excavation.level <= 0) return;
+    var radius = asteroid.radius, x = excavation.pocketOffset.x * radius, y = excavation.pocketOffset.y * radius;
+    var pocketRadius = excavation.pocketRadius * radius;
+    g.beginFill(0x07151b, 0.78); g.drawEllipse(x, y, pocketRadius, pocketRadius * 0.72); g.endFill();
+    g.lineStyle(Math.max(1, radius * 0.006), 0x72d7e8, 0.55);
+    g.drawCircle(x, y, pocketRadius * 0.42);
+    g.lineStyle(Math.max(1, radius * 0.004), 0xb8f4ff, 0.85);
+    g.drawRect(x - pocketRadius * 0.34, y - pocketRadius * 0.12, pocketRadius * 0.68, pocketRadius * 0.24);
+    g.beginFill(0xffd27a, 0.9);
+    for (var lamp = -2; lamp <= 2; lamp += 1) g.drawCircle(x + lamp * pocketRadius * 0.13, y, Math.max(1.2, radius * 0.007));
+    g.endFill();
   }
 
   /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid @param {number} [zoom] */
@@ -2910,6 +2936,18 @@
     lightUniform[1] = WORLD_LIGHT.x * s + WORLD_LIGHT.y * c;
     lightUniform[2] = WORLD_LIGHT.z;
     graphic.shader.uniforms.uPixelFootprint = 1 / Math.max(1, asteroid.radius * (zoom || 1));
+    var excavation = asteroid.excavation;
+    graphic.shader.uniforms.uPocket = new Float32Array(excavation ?
+      [excavation.pocketOffset.x, excavation.pocketOffset.y, excavation.pocketRadius, excavation.level > 0 ? 1 : 0] : [0, 0, 0.001, 0]);
+    graphic.shader.uniforms.uTunnel = new Float32Array(excavation ?
+      [excavation.tunnelAngle, 0.032, 0.065, excavation.level > 0 ? 1 : 0] : [0, 0.001, 0.001, 0]);
+    if (graphic.interior) {
+      var excavationKey = JSON.stringify(excavation || null) + ':' + asteroid.radius;
+      if (graphic.excavationKey !== excavationKey) {
+        paintAsteroidInterior(graphic.interior, asteroid);
+        graphic.excavationKey = excavationKey;
+      }
+    }
   }
 
   /** Playground/debug control; azimuth and elevation are radians. */

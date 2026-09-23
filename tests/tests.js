@@ -45,6 +45,25 @@
     assert(JSON.stringify(game.asteroidVisualDescription(loaded.asteroids[0])) === before);
   });
 
+  test('asteroid excavation persists, repairs old saves and reserves mining clearance', function () {
+    var world = createFreshWorld();
+    var excavation = world.asteroids[0].excavation;
+    assert(excavation && excavation.level === 1 && excavation.pocketRadius > 0);
+    var old = JSON.parse(JSON.stringify(world));
+    delete old.asteroids[0].excavation;
+    var repaired = sim.deserializeWorld(sim.serializeWorld(old));
+    assert(JSON.stringify(repaired.asteroids[0].excavation) === JSON.stringify(excavation),
+      'Old saves should gain the deterministic starter cavern');
+    repaired = sim.selectShips(repaired, ['msv-hardshell']);
+    repaired = sim.issueMineOrder(repaired, repaired.asteroids[0].id);
+    var order = repaired.ships.filter(function (ship) { return ship.id === 'tug-01'; })[0].order;
+    assert(order.kind === 'deploy');
+    var a = repaired.asteroids[0], normalizedRadius = sim.surfaceRadius(a, order.siteAngle) / a.radius * order.siteDepth;
+    var siteX = Math.cos(order.siteAngle) * normalizedRadius, siteY = Math.sin(order.siteAngle) * normalizedRadius;
+    assert(Math.hypot(siteX - excavation.pocketOffset.x, siteY - excavation.pocketOffset.y) > excavation.pocketRadius + 0.1,
+      'Mining sites should not overlap the cavern');
+  });
+
   test('asteroid surface is a normalized four-material composition field', function () {
     var base = createFreshWorld().asteroids[0];
     var craterCounts = new Set();
