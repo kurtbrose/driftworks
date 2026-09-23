@@ -202,7 +202,7 @@
       rotation: 0,
       angularVelocity: (rng() < 0.5 ? -1 : 1) * (0.008 + rng() * 0.006),
       excavation: { pocketOffset: { x: 0.08, y: -0.04 }, pocketRadius: 0.2,
-        tunnelAngle: -0.58, tunnelTurn: 0.14, level: 1 }
+        tunnelAngle: -0.58, tunnelTurn: 0.14, level: 0 }
     };
   }
 
@@ -216,6 +216,20 @@
   /** @param {Asteroid} asteroid @param {number} angle @returns {number} */
   function surfaceRadius(asteroid, angle) {
     return asteroid.radius * (0.88 + 0.07 * Math.cos(angle * 3) + 0.05 * Math.sin(angle * 5));
+  }
+
+  /** Dev-facing prototype control: preserve cavern geometry while toggling its active level. */
+  /** @param {World} world @param {string} asteroidId @returns {World} */
+  function toggleAsteroidExcavation(world, asteroidId) {
+    var next = cloneWorld(world);
+    var asteroid = findAsteroid(next, asteroidId);
+    if (!asteroid) return next;
+    if (!asteroid.excavation) {
+      asteroid.excavation = clonePlain(createInitialWorld(next.seed).asteroids[0].excavation);
+    }
+    var excavation = asteroid.excavation;
+    if (excavation) excavation.level = excavation.level > 0 ? 0 : 1;
+    return next;
   }
 
   /** @param {string} id @param {string} name @param {string} type @param {number} x @param {number} y @param {number} speed @returns {Ship} */
@@ -297,7 +311,7 @@
   function miningSite(asteroid, platformId, preferredAngle) {
     var depth = miningSiteDepth(platformId);
     var excavation = asteroid.excavation;
-    if (!excavation) return { angle: preferredAngle, depth: depth };
+    if (!excavation || excavation.level <= 0) return { angle: preferredAngle, depth: depth };
     for (var attempt = 0; attempt < 12; attempt += 1) {
       var angle = preferredAngle + attempt * Math.PI * 2 / 12;
       var normalizedRadius = surfaceRadius(asteroid, angle) / asteroid.radius * depth;
@@ -1225,6 +1239,7 @@
     DEPOT_FRAME: DEPOT_FRAME,
     physicalStats: physicalStats,
     asteroidPhysicalStats: asteroidPhysicalStats,
+    toggleAsteroidExcavation: toggleAsteroidExcavation,
     METERS_PER_UNIT: METERS_PER_UNIT,
     PHYSICAL_SECONDS_PER_SECOND: PHYSICAL_SECONDS_PER_SECOND,
     DOCK_SERVICE_SECONDS: DOCK_SERVICE_SECONDS,

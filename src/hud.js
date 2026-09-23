@@ -48,7 +48,7 @@
       '<div class="shelf-menus"><details><summary>Menu</summary><div class="menu-popover"><button type="button" data-action="save">Save</button><button type="button" data-action="export">Export scenario</button><button type="button" data-action="load">Load</button><button type="button" data-action="reset">Reset</button></div></details>' +
       '<details><summary>Settings</summary><div class="menu-popover"><label class="volume-control">SFX<input type="range" min="0" max="100" step="1" data-action="sfx" aria-label="Sound effects volume"><output data-role="sfx-volume"></output></label><label class="volume-control">Music<input type="range" min="0" max="100" step="1" data-action="music" aria-label="Music volume"><output data-role="music-volume"></output></label></div></details>' +
       '<details><summary>Help</summary><div class="menu-popover hint">RMB: order / return · Wheel: zoom · Space or MMB: pan · F: focus selection</div></details>' +
-      '<details><summary>Dev</summary><div class="menu-popover"><label>Night sky<select data-action="background" aria-label="Night sky background"></select></label><label class="volume-control">Background brightness<input type="range" min="0" max="100" step="1" data-action="background-brightness" aria-label="Background brightness"><output data-role="background-brightness"></output></label><small data-role="background-credit"></small><button type="button" data-action="stress">Stress</button><span data-role="entities"></span></div></details></div></section></section>';
+      '<details><summary>Dev</summary><div class="menu-popover"><label>Night sky<select data-action="background" aria-label="Night sky background"></select></label><label class="volume-control">Background brightness<input type="range" min="0" max="100" step="1" data-action="background-brightness" aria-label="Background brightness"><output data-role="background-brightness"></output></label><small data-role="background-credit"></small><button type="button" data-action="excavation">Excavate asteroid</button><button type="button" data-action="stress">Stress</button><span data-role="entities"></span></div></details></div></section></section>';
 
     var deployButton = /** @type {HTMLButtonElement} */ (host.querySelector('[data-action="deploy-platform"]'));
     if (!deployButton) throw new Error('Missing deploy button');
@@ -93,6 +93,7 @@
     requiredElement('[data-action="load"]').addEventListener('click', actions.onLoad);
     requiredElement('[data-action="reset"]').addEventListener('click', actions.onReset);
     stressButton.addEventListener('click', actions.onStressToggle);
+    requiredElement('[data-action="excavation"]').addEventListener('click', actions.onToggleExcavation);
     sfxSlider.addEventListener('input', function () { actions.onSfxVolume(Number(sfxSlider.value) / 100); });
     musicSlider.addEventListener('input', function () { actions.onMusicVolume(Number(musicSlider.value) / 100); });
     backgroundSelect.addEventListener('change', function () { actions.onBackgroundImage(backgroundSelect.value); });
@@ -258,6 +259,9 @@
 
         stressButton.dataset.active = stats.stressEnabled ? 'true' : 'false';
         stressButton.textContent = stats.stressEnabled ? 'Stress On' : 'Stress';
+        var excavationButton = requiredElement('[data-action="excavation"]');
+        var excavation = world.asteroids[0] && world.asteroids[0].excavation;
+        excavationButton.textContent = excavation && excavation.level > 0 ? 'Unexcavate asteroid' : 'Excavate asteroid';
         sfxSlider.value = String(Math.round(audioStatus.sfxVolume * 100));
         sfxSlider.disabled = !audioStatus.available;
         requiredElement('[data-role="sfx-volume"]').textContent = sfxSlider.value + '%';

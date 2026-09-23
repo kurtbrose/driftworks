@@ -48,7 +48,7 @@
   test('asteroid excavation persists, repairs old saves and reserves mining clearance', function () {
     var world = createFreshWorld();
     var excavation = world.asteroids[0].excavation;
-    assert(excavation && excavation.level === 1 && excavation.pocketRadius > 0);
+    assert(excavation && excavation.level === 0 && excavation.pocketRadius > 0);
     var old = JSON.parse(JSON.stringify(world));
     delete old.asteroids[0].excavation;
     var repaired = sim.deserializeWorld(sim.serializeWorld(old));
@@ -62,6 +62,18 @@
     var siteX = Math.cos(order.siteAngle) * normalizedRadius, siteY = Math.sin(order.siteAngle) * normalizedRadius;
     assert(Math.hypot(siteX - excavation.pocketOffset.x, siteY - excavation.pocketOffset.y) > excavation.pocketRadius + 0.1,
       'Mining sites should not overlap the cavern');
+  });
+
+  test('dev excavation toggle preserves its geometry and round-trips through saves', function () {
+    var world = createFreshWorld();
+    var asteroid = world.asteroids[0], geometry = JSON.stringify(asteroid.excavation);
+    world = sim.toggleAsteroidExcavation(world, asteroid.id);
+    assert(world.asteroids[0].excavation.level === 1);
+    world = sim.deserializeWorld(sim.serializeWorld(world));
+    assert(world.asteroids[0].excavation.level === 1, 'Excavated state should survive loading');
+    world = sim.toggleAsteroidExcavation(world, asteroid.id);
+    assert(world.asteroids[0].excavation.level === 0);
+    assert(JSON.stringify(world.asteroids[0].excavation) === geometry, 'Toggling should preserve cavern placement');
   });
 
   test('asteroid surface is a normalized four-material composition field', function () {

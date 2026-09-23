@@ -253,6 +253,15 @@
         scene.setStressEnabled(!scene.getStats().stressEnabled);
         hud.update(world, scene.getStats());
       },
+      onToggleExcavation: function () {
+        var asteroid = world.asteroids[0];
+        if (!asteroid) return;
+        setWorld(sim.toggleAsteroidExcavation(world, asteroid.id));
+        world = withCamera(world, { x: asteroid.position.x, y: asteroid.position.y,
+          zoom: Math.min(world.camera.zoom, 0.8) });
+        scene.sync(world);
+        hud.update(world, scene.getStats());
+      },
       onSfxVolume: function (value) {
         if (!audio) return;
         audio.setSfxVolume(value);

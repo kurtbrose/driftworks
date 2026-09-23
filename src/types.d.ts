@@ -288,6 +288,7 @@ export type SimApi = {
   createRng: (seed: number) => Rng;
   randomBetween: (rng: Rng, min: number, max: number) => number;
   surfaceRadius: (asteroid: Asteroid, angle: number) => number;
+  toggleAsteroidExcavation: (world: World, asteroidId: string) => World;
   cloneWorld: (world: World) => World;
   addWreck: (world: World, destroyed: { position: Vec2; velocity: Vec2 }) => World;
   issueReturnOrder: (world: World) => World;
@@ -311,7 +312,7 @@ export type AudioApi = { unlock: () => boolean; setSfxEnabled: (enabled: boolean
 export type HudActions = {
   getPopulation?: () => PopulationState;
   onEndMining: EventListener; onDeployPlatform: EventListener; onSalvageAll: EventListener; onReturnHome: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;
-  onStressToggle: EventListener; onSelectShip: (id: string | undefined) => void; onTimeScale: (scale: number) => void;
+  onStressToggle: EventListener; onToggleExcavation: EventListener; onSelectShip: (id: string | undefined) => void; onTimeScale: (scale: number) => void;
   onSfxVolume: (value: number) => void; onMusicVolume: (value: number) => void; getTimeScale: () => number;
   getBackgroundOptions: () => { id: string; label: string; url: string; credit: string; contrast: number }[];
   getBackgroundSettings: () => { image: string; brightness: number };
