@@ -176,7 +176,7 @@
     for(var i=0;i<high.length;i+=6)samples.add(high[i]+':'+high[i+1]+':'+high[i+2]);
     for(var j=0;j<low.length;j+=6)assert(samples.has(low[j]+':'+low[j+1]+':'+low[j+2]),'Refinement preserves all existing seeded vertices');
     var morph=scene.rubblePatch(a,20,25,2,true);
-    assert(morph.length===high.length*2&&morph.every(Number.isFinite),'Coarse and detailed morph endpoints stay finite');
+    assert(morph.length===high.length*3&&morph.every(Number.isFinite),'Coarse and detailed morph endpoints stay finite');
     var below=scene.rubbleLod(48-.00001,160000),above=scene.rubbleLod(48+.00001,160000);
     assert(below.morph>.999&&above.morph<.001,'Adjacent LODs meet at the same coarse surface');
   });

@@ -370,7 +370,10 @@ New vertices and normals morph from the preceding topology in the vertex
 shader, avoiding silhouette jumps at subdivision boundaries. Conservative tile
 bounds cull off-screen tiles; partly visible tiles retain all their rocks.
 An LRU cache retains 32 tile/level buffers, invalidated by geology changes.
-Continuous distance alpha fades rubble between 0.025 and 0.085 body radii.
+Between 0.025 and 0.085 body radii, whole rocks smoothly sink along their
+terrain normal until buried. Rocks stay opaque and depth-writing; per-rock
+centers keep every vertex on the same transition, without transparency or
+pixel stippling.
 This budget covers rubble, not the base asteroid mesh, shader work, or total
 frame time. Asteroid terrain still uses its existing fixed mesh; excavated
 cutaways and orbit mode omit rubble. Cast shadows are not yet implemented.
