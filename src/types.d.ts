@@ -267,6 +267,8 @@ export type DriftworksNamespace = {
     shaderSource: string;
   };
   scene3d?: {
+    habitatMesh: () => Float32Array;
+    roundedHullMesh: (width: number, length: number, depth: number, radius: number) => Float32Array;
     visualFor: (asteroid: Asteroid) => AsteroidVisual;
     surfaceHeight: (asteroid: Asteroid, x: number, y: number) => number;
     project: (point: [number, number, number], camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => Vec2 & { depth: number };

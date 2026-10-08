@@ -22,6 +22,28 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('3D mothership habitat preserves the rounded silhouette with real circular depth', function () {
+    var mesh = window.Driftworks.scene3d.habitatMesh();
+    var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    for (var i = 0; i < mesh.length; i += 6) {
+      for (var axis = 0; axis < 3; axis++) { min[axis] = Math.min(min[axis], mesh[i + axis]); max[axis] = Math.max(max[axis], mesh[i + axis]); }
+      assertClose(Math.hypot(mesh[i + 3], mesh[i + 4], mesh[i + 5]), 1, 0.000001);
+      if (Math.abs(mesh[i]) < 32) assertClose(Math.hypot(mesh[i + 1], mesh[i + 2]), 17, 0.000002);
+    }
+    assertClose(min[0], -36); assertClose(max[0], 36);
+    assertClose(min[1], -17); assertClose(max[1], 17);
+    assertClose(min[2], -17); assertClose(max[2], 17);
+    assert(mesh.length % 18 === 0);
+  });
+  test('3D mothership close inspection stays above the raised fixed machinery', function () {
+    var w = createFreshWorld(), home = w.ships.find(function (s) { return s.type === 'mothership'; });
+    w.camera = { x: home.position.x, y: home.position.y, zoom: 128 };
+    var before = JSON.stringify(w), height = window.Driftworks.scene3d.inspectionHeight(w);
+    assert(height > 29 * game.semanticScale('mothership', w.camera.zoom));
+    assert(JSON.stringify(w) === before);
+    w.camera.zoom = 1;
+    assert(window.Driftworks.scene3d.inspectionHeight(w) === 0);
+  });
   test('3D asteroid uses the original seeded geology and crater data', function () {
     var scene = window.Driftworks.scene3d, art = window.Driftworks.asteroidArt;
     var a = createFreshWorld().asteroids[0], before = JSON.stringify(a);

@@ -113,7 +113,11 @@
   function inspectionHeight(world) {
     var camera = world.camera;
     var a = world.asteroids.find(function (a) { return Math.hypot(camera.x - a.position.x, camera.y - a.position.y) < a.radius * 0.85; });
-    if (!a) return 0;
+    if (!a) {
+      var scale = Math.pow(Math.max(1, Math.min(32, camera.zoom)), .95) / Math.min(32, camera.zoom);
+      var home = world.ships.find(function (ship) { return ship.type === 'mothership' && Math.hypot(camera.x - ship.position.x, camera.y - ship.position.y) < 40 * scale; });
+      return home ? (30 * scale + 2) * Math.max(0, Math.min(1, (camera.zoom - 4) / 8)) : 0;
+    }
     var e = a.excavation;
     var x = camera.x - a.position.x, y = camera.y - a.position.y;
     var c = Math.cos(a.rotation), s = Math.sin(a.rotation);
@@ -231,6 +235,53 @@
     return new Float32Array(data);
   }
 
+  /** Translate the existing rounded 72 x 34 habitat silhouette into a drum. */
+  function habitatMesh() {
+    /** @type {number[]} */ var data = [];
+    var rings = [-36, -35.9, -35.5, -35, -34, -33, -32, -31, 31, 32, 33, 34, 35, 35.5, 35.9, 36];
+    /** @param {number} x */
+    function radius(x) { return Math.abs(x) <= 31 ? 17 : 12 + Math.sqrt(Math.max(0, 25 - Math.pow(Math.abs(x) - 31, 2))); }
+    /** @param {number} x @param {number} angle @param {number} [cap] */
+    function vertex(x, angle, cap) {
+      var r = radius(x), slope = Math.abs(x) <= 31 ? 0 : -(Math.abs(x) - 31) * Math.sign(x) / Math.sqrt(Math.max(.001, 25 - Math.pow(Math.abs(x) - 31, 2)));
+      var length = Math.hypot(1, slope);
+      data.push(x, r * Math.sin(angle), r * Math.cos(angle), cap || -slope / length, cap ? 0 : Math.sin(angle) / length, cap ? 0 : Math.cos(angle) / length);
+    }
+    for (var ring = 0; ring < rings.length - 1; ring++) for (var i = 0; i < 96; i++) {
+      var a = i * Math.PI * 2 / 96, b = (i + 1) * Math.PI * 2 / 96;
+      vertex(rings[ring], a); vertex(rings[ring + 1], a); vertex(rings[ring + 1], b);
+      vertex(rings[ring], a); vertex(rings[ring + 1], b); vertex(rings[ring], b);
+    }
+    [-1, 1].forEach(function (side) {
+      for (var i = 0; i < 96; i++) {
+        data.push(side * 36, 0, 0, side, 0, 0);
+        vertex(side * 36, i * Math.PI * 2 / 96, side); vertex(side * 36, (i + 1) * Math.PI * 2 / 96, side);
+      }
+    });
+    return new Float32Array(data);
+  }
+
+  /** Rounded extrusions for the original bearing, spine and fixed machinery. */
+  /** @param {number} width @param {number} length @param {number} depth @param {number} radius */
+  function roundedHullMesh(width, length, depth, radius) {
+    /** @type {number[]} */ var data = [];
+    /** @type {Vec2[]} */ var outline = [];
+    for (var corner = 0; corner < 4; corner++) {
+      var angle = corner * Math.PI / 2;
+      var cx = Math.cos(angle + Math.PI / 4) > 0 ? width / 2 - radius : -width / 2 + radius;
+      var cy = Math.sin(angle + Math.PI / 4) > 0 ? length / 2 - radius : -length / 2 + radius;
+      for (var i = 0; i <= 8; i++) { var t = angle + i * Math.PI / 16; outline.push({ x: cx + Math.cos(t) * radius, y: cy + Math.sin(t) * radius }); }
+    }
+    outline.forEach(function (p, i) {
+      var q = outline[(i + 1) % outline.length], nx = q.y - p.y, ny = p.x - q.x;
+      var len = Math.hypot(nx, ny) || 1; nx /= len; ny /= len;
+      data.push(p.x,p.y,-depth/2,nx,ny,0, q.x,q.y,-depth/2,nx,ny,0, q.x,q.y,depth/2,nx,ny,0,
+        p.x,p.y,-depth/2,nx,ny,0, q.x,q.y,depth/2,nx,ny,0, p.x,p.y,depth/2,nx,ny,0);
+      [-1, 1].forEach(function (side) { data.push(0,0,side*depth/2,0,0,side, p.x,p.y,side*depth/2,0,0,side, q.x,q.y,side*depth/2,0,0,side); });
+    });
+    return new Float32Array(data);
+  }
+
   /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld */
   function create(host, getWorld, setWorld) {
     var canvas = document.createElement('canvas');
@@ -265,8 +316,10 @@
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
       'attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation; varying vec3 vNormal,vLocal; varying float vDepth; void main(){ float c=cos(uRotation),s=sin(uRotation); vec3 p=aPosition*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=aPosition; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
-      '\nvarying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor; uniform float uRock,uRotation,uCut,uCutHeight;\n'+
+      '\nvarying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor; uniform float uRock,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
+      'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
+      'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
       'void main(){vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=uPixelFootprint;'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
@@ -277,13 +330,19 @@
       'float rough=microRelief(p,footprint)/max(.001,uProfile.x*.011);float grazing=pow(1.-sat(ndl),1.25);'+
       'float brightness=(.22+lit*.98)*(.66+limb*.34)-occ+rough*uProfile.z*grazing*.16;'+
       'col=materialColor(composition(p))*clamp(brightness,.12,1.28);col+=vec3(1.,.94,.81)*pow(max(0.,ndl),8.)*.035;'+
-      '}else{col*=.22+.78*max(0.,dot(n,light));}gl_FragColor=vec4(col,1.);}'));
+      '}else if(uHabitat>.5){float aa=max(.015,uHullFootprint);float theta=atan(vLocal.y,vLocal.z);float diffuse=max(0.,dot(n,light));col=vec3(.49,.529,.565)*(.61+diffuse*.55);'+
+      'float bands=1.-smoothstep(0.,.055+aa*.018,abs(sin((theta-uSpin)*3.)));col=mix(col,vec3(.74,.85,.89),bands*.25);'+
+      'float ribs=max(max(stripe(vLocal.x,-25.,.42,aa),stripe(vLocal.x,-15.,.42,aa)),max(stripe(vLocal.x,15.,.42,aa),stripe(vLocal.x,25.,.42,aa)));col=mix(col,vec3(.21,.29,.33),ribs*.72);'+
+      'float lampA=1.-smoothstep(1.25,1.25+aa,length(vec2(vLocal.x+26.,angularDistance(theta,uSpin)*17.)));float lampB=1.-smoothstep(1.25,1.25+aa,length(vec2(vLocal.x-26.,angularDistance(theta,uSpin+PI)*17.)));col=mix(col,vec3(.74,.88,.92),max(lampA,lampB));'+
+      'float panelY=angularDistance(theta,uSpin+.72)*16.5;float panel=stripe(vLocal.x,22.5,4.5,aa)*stripe(panelY,0.,2.,aa);float border=stripe(vLocal.x,22.5,5.2,aa)*stripe(panelY,0.,2.7,aa);col=mix(col,vec3(.91,.76,.43),max(0.,border-panel)*.8);col=mix(col,vec3(.23,.28,.30),panel*.9);'+
+      'float end=1.-smoothstep(31.,36.,abs(vLocal.x));col*=.65+.35*end;'+
+      '}else{col*=.61+.55*max(0.,dot(n,light));}gl_FragColor=vec4(col,1.);}'));
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Shader linking failed');
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
-    ['Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
+    ['Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
     /** @param {import('./types').AsteroidVisual} visual */
     function craterTexture(visual) {
@@ -303,6 +362,10 @@
     }
     var box = upload(boxMesh());
     var grid = upload(new Float32Array(600));
+    var habitat = upload(habitatMesh());
+    var bearing = upload(roundedHullMesh(24, 38, 8, 3));
+    var spine = upload(roundedHullMesh(17, 58, 8, 2.5));
+    var hatch = upload(roundedHullMesh(11, 8, 1, 2));
     /** @param {Mesh} mesh @param {V3} origin @param {V3} scale @param {number} rotation @param {V3} color @param {boolean} [rock] @param {boolean} [lines] */
     function draw(mesh, origin, scale, rotation, color, rock, lines) {
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
@@ -311,6 +374,48 @@
       gl.uniform3fv(uniforms.Origin, origin); gl.uniform3fv(uniforms.Scale, scale); gl.uniform3fv(uniforms.Color, color);
       gl.uniform1f(uniforms.Rotation, rotation); gl.uniform1f(uniforms.Rock, rock ? 1 : 0);
       gl.drawArrays(lines ? gl.LINES : gl.TRIANGLES, 0, mesh.count);
+    }
+    /** Existing layout in ship-local coordinates; only the habitat surface spins. */
+    /** @param {number} x @param {number} y @param {number} scale @param {number} rotation @param {number} elapsed */
+    function drawMothership(x, y, scale, rotation, elapsed) {
+      var c = Math.cos(rotation), s = Math.sin(rotation);
+      /** @param {Mesh} mesh @param {V3} local @param {V3} size @param {V3} color @param {number} [angle] */
+      function part(mesh, local, size, color, angle) {
+        draw(mesh, [x + (local[0] * c - local[1] * s) * scale, y + (local[0] * s + local[1] * c) * scale, local[2] * scale],
+          [size[0] * scale, size[1] * scale, size[2] * scale], rotation + (angle || 0), color);
+      }
+      var game = /** @type {{ mothershipHabitatUniforms: (elapsed: number, rotation: number, scale: number) => { uSpin: number } }} */ (DW.game);
+      var phase = game.mothershipHabitatUniforms(elapsed, rotation, scale).uSpin;
+      var projected = project([x, y, 0], getWorld().camera, viewport(), orbit);
+      var v = view(getWorld().camera, viewport(), orbit);
+      gl.uniform1f(uniforms.Spin, phase);
+      gl.uniform1f(uniforms.HullFootprint, Math.max(.01, projected.depth / v.distance / (scale * getWorld().camera.zoom)));
+      gl.uniform1f(uniforms.Habitat, 1);
+      part(habitat, [0, 0, 0], [1, 1, 1], [.49, .529, .565]);
+      gl.uniform1f(uniforms.Habitat, 0);
+      part(bearing, [0, 0, 17], [1, 1, 1], [.08, .13, .16]);
+      [-12.5, 12.5].forEach(function (by) {
+        part(box, [0, by, 21.2], [11, 2.5, .7], [.2, .26, .3]);
+        part(box, [0, by - 2, 22], [10, .3, .25], [.56, .81, .77]);
+        var travel = (elapsed * 4.5) % 16;
+        part(box, [-8 + travel, by, 22], [.65, .65, .35], [.72, .95, .86]);
+      });
+      part(spine, [0, 0, 25], [1, 1, 1], [.396, .463, .502]);
+      [-7, -4.5, 4.5, 7].forEach(function (px) {
+        part(box, [px, 0, 29.15], [.18, 25.5, .15], px === -7 ? [.72, .8, .82] : [.1, .16, .2]);
+      });
+      [-21, 21].forEach(function (py) {
+        part(hatch, [0, py, 29.7], [1, 1, 1], [.09, .16, .2]);
+        part(box, [0, py, 30.4], [3.5, .4, .2], [.61, .72, .76]);
+        part(box, [0, py, 10], [4, 2, 10], [.16, .23, .27]);
+      });
+      [[-12, -20], [12, 20]].forEach(function (p) {
+        part(box, [p[0], p[1], 23], [3, 5, 3], [.17, .24, .27]);
+        part(box, [p[0] - 1, p[1], 26.2], [.35, 4, .2], [.61, .7, .74]);
+      });
+      part(box, [0, -32, 27], [.45, 3, .45], [.57, .67, .7]);
+      part(box, [2.5, -37, 27], [.45, 3.2, .45], [.57, .67, .7], .9);
+      part(box, [5, -39, 27], [.8, .8, .8], [.72, .95, .86]);
     }
     /** @returns {Viewport} */ function viewport() { return { width: host.clientWidth, height: host.clientHeight }; }
     /** @param {PointerEvent | WheelEvent} e */
@@ -523,8 +628,11 @@
         var scale = semanticScale(s.type, w.camera.zoom);
         /** @type {V3} */ var color = s.disabled ? [0.28, 0.28, 0.29] : s.type === 'escort' ? [0.7, 0.28, 0.28] : s.type === 'tug' ? [0.28, 0.58, 0.76] : [0.72, 0.77, 0.79];
         var big = s.type === 'mothership', length = big ? 34 : s.type === 'tug' ? 18 : 10;
-        draw(box, [x, y, 0], [length * scale, (big ? 13 : 5) * scale, (big ? 8 : 3) * scale], s.rotation, color);
-        draw(box, [x, y, 5 * scale], [(big ? 12 : 4) * scale, (big ? 24 : 9) * scale, 2 * scale], s.rotation, color);
+        if (big) drawMothership(x, y, scale, s.rotation, w.elapsedSeconds);
+        else {
+          draw(box, [x, y, 0], [length * scale, 5 * scale, 3 * scale], s.rotation, color);
+          draw(box, [x, y, 5 * scale], [4 * scale, 9 * scale, 2 * scale], s.rotation, color);
+        }
         var p = project([x, y, 0], w.camera, vp, orbit);
         if (p.depth <= 0) return;
         if (w.selectedShipIds.indexOf(s.id) >= 0) {
@@ -588,5 +696,5 @@
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
     rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    visualFor: visualFor, surfaceHeight: surfaceHeight };
+    visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

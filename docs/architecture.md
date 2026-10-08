@@ -274,6 +274,18 @@ visual exploration without changing the deterministic study or test fixtures.
 
 ## Mothership habitat artwork
 
+The optional 3D backend translates the existing 72 x 34 rounded habitat into a
+96-segment drum about the ship-local x axis, including rounded shoulders and
+closed end caps. The original 38-second spin phase comes from
+`game.mothershipHabitatUniforms`. Surface bands, ribs, lamps and the asymmetric
+gold-edged service panel use angular coordinates around that actual cylinder;
+mesh depth testing hides the far side. The bearing, raised spine, hatches,
+antenna, status lamps and side modules are separate fixed meshes preserving
+the existing plan-view layout and mechanical palette. They turn with the ship
+but do not spin with the habitat. Close inspection derives camera height above
+the raised machinery; geometry and presentation height remain outside saves.
+The default Pixi implementation below remains unchanged.
+
 The mothership remains a layered schematic. Only its horizontal rotating habitat
 uses a fragment shader; the stationary bearing, center spine, antenna, attached
 modules, selection brackets and order indicators remain Pixi vector graphics.
