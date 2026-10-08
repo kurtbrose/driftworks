@@ -89,7 +89,9 @@ state; existing saves retain their planar camera position and zoom.
 
 This first 3D pass demonstrates geometry, depth, and camera interaction. It has
 directional shading rather than cast shadows, a fixed-resolution asteroid mesh,
-basic combat effects, and placeholder craft models. The Pixi artwork study pages
+basic combat effects, and placeholder craft models. The asteroid now reuses the
+original seeded composition, crater population, surface profile and procedural
+material shader; broad relief and crater bowls also shape the 3D mesh. The Pixi artwork study pages
 continue to use the previous renderer. No additional runtime dependency or build
 step is required.
 

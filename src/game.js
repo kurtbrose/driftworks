@@ -2906,8 +2906,14 @@
 
   /** @param {AsteroidGraphic} graphic @param {ReturnType<typeof asteroidVisualDescription>} visual */
   function updateAsteroidCraterTexture(graphic, visual) {
-    var image = { data: graphic.craterBytes };
-    image.data.fill(0);
+    graphic.craterBytes.set(asteroidCraterBytes(visual));
+    graphic.craterTexture.baseTexture.update();
+  }
+
+  /** Shared raw data upload for both rendering backends. */
+  /** @param {ReturnType<typeof asteroidVisualDescription>} visual */
+  function asteroidCraterBytes(visual) {
+    var image = { data: new Uint8Array(ASTEROID_CRATER_TEXTURE_WIDTH * 4) };
     visual.craters.forEach(function (crater, index) {
       var texel = index * ASTEROID_CRATER_TEXELS;
       packAsteroidCraterTexel(image.data, texel, (crater.x + 1.25) / 2.5, (crater.y + 1.25) / 2.5);
@@ -2916,7 +2922,7 @@
         (Math.sin(crater.angle) + 1) / 2);
       packAsteroidCraterTexel(image.data, texel + 3, crater.depth / 0.12, crater.rimScale);
     });
-    graphic.craterTexture.baseTexture.update();
+    return image.data;
   }
 
   /** @returns {AsteroidGraphic} */
@@ -3451,6 +3457,16 @@
       }
     };
   }
+
+  Driftworks.asteroidArt = {
+    describe: asteroidVisualDescription,
+    reliefAt: function (visual, x, y) { return asteroidReliefAt(visual.relief, visual.craters, x, y); },
+    uniforms: asteroidShaderUniforms,
+    craterBytes: asteroidCraterBytes,
+    // Share the existing geology functions verbatim; each backend supplies its
+    // own geometry, normal transformation, visibility and main shading path.
+    shaderSource: ASTEROID_FRAGMENT_SHADER.slice(0, ASTEROID_FRAGMENT_SHADER.indexOf('vec2 cavityField'))
+  };
 
   Driftworks.game = {
     boot: boot,

@@ -22,6 +22,36 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('3D asteroid uses the original seeded geology and crater data', function () {
+    var scene = window.Driftworks.scene3d, art = window.Driftworks.asteroidArt;
+    var a = createFreshWorld().asteroids[0], before = JSON.stringify(a);
+    var visual = scene.visualFor(a);
+    assert(JSON.stringify(visual) === JSON.stringify(game.asteroidVisualDescription(a)), 'Reuse original visual description');
+    assert(scene.visualFor(a) === visual, 'Cache geology across camera movement');
+    var bytes = art.craterBytes(visual);
+    assert(bytes.length === 576 * 4);
+    function unpack(texel, offset) { return (bytes[texel * 4 + offset] * 256 + bytes[texel * 4 + offset + 1]) / 65535; }
+    visual.craters.forEach(function (crater, i) {
+      assertClose(unpack(i * 4, 0) * 2.5 - 1.25, crater.x, 0.00004);
+      assertClose(unpack(i * 4 + 3, 0) * 0.12, crater.depth, 0.000003);
+    });
+    assert(art.shaderSource.indexOf('vec4 craterSurface') >= 0 && art.shaderSource.indexOf('vec4 composition') >= 0);
+    assert(art.shaderSource.indexOf('void main') === -1, 'Backends share geology while supplying their own main');
+    assert(JSON.stringify(a) === before, 'Artwork remains outside serialized world state');
+  });
+  test('3D surface translates authored broad relief and crater bowls into mesh height', function () {
+    var scene = window.Driftworks.scene3d, art = window.Driftworks.asteroidArt;
+    var a = createFreshWorld().asteroids[0], visual = scene.visualFor(a);
+    var crater = visual.craters.filter(function (c) { return Math.hypot(c.x, c.y) < 0.55; }).sort(function (a, b) { return b.depth - a.depth; })[0];
+    assert(crater && crater.depth > 0.002);
+    var x = crater.x, y = crater.y, r = sim.surfaceRadius(a, Math.atan2(y, x)) / a.radius;
+    var dome = 0.78 * Math.sqrt(1 - (x * x + y * y) / (r * r));
+    assertClose(scene.surfaceHeight(a, x, y), dome + art.reliefAt(visual, x, y));
+    var point = [x, y, scene.surfaceHeight(a, x, y)];
+    assertClose(scene.rockField(a, point), 0);
+    assert(scene.rockField(a, [x, y, point[2] - 0.005]) < 0);
+    assert(scene.rockField(a, [x, y, point[2] + 0.005]) > 0);
+  });
   test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
     [0.25, 1, 8, 128].forEach(function (zoom) {

@@ -47,15 +47,27 @@ Height is derived presentation state and is never serialized.
 
 Asteroid meshes use cached marching tetrahedra over a body-local solid field.
 The equatorial silhouette matches `sim.surfaceRadius`; vertical extent and
-surface relief are presentation geometry. When excavation is active, the field
+surface relief are presentation geometry. `Driftworks.asteroidArt`, exposed by
+game.js before boot, shares the existing seeded visual description, CPU relief,
+GLSL geology functions, uniform packing and raw RGBA8 crater data across both
+backends. The 3D mesh uses the authored broad relief and age-ordered crater
+bowls/rims over a rounded dome, with relief tapered at the equator to preserve
+the simulation silhouette. Its 88-cell meshing grid samples relief once per x/y
+column and interpolates those samples for mesh normals. Sub-mesh crater detail
+and seven-octave microrelief retain the original per-fragment shading and pixel
+footprint filtering. Color comes from the same four-material composition fields,
+not a substitute noise palette. Geometry and camera normals remain specific to
+the 3D backend; real cut faces use their own mesh normals and shared material.
+When excavation is active, the field
 subtracts a sphere at `pocketOffset` and a bent capsule tunnel following
 `tunnelAngle`/`tunnelTurn`, using `depthM / METERS_PER_UNIT` explicitly.
 A horizontal cut through the chamber center removes the upper shell. The cut
 face, inner walls, floor and outer shell belong to the same mesh, so depth testing
 and orbiting provide real interior occlusion/parallax. Excavation parameters and
 radius invalidate the mesh cache; camera motion and body spin do not.
-Rendering never adds durable fields or mutates the world. Platform height is
-derived from the same equatorial radius and rounded body (or exposed cut height).
+Rendering never adds durable fields or mutates the world. Platform height and
+inspection camera elevation derive from that same relief-bearing surface (or
+exposed cut height). All geology and GPU caches remain renderer-owned.
 
 This is a rendering/input prototype, with blockout craft, directional shading,
 fixed mesh resolution and basic combat effects. The detailed Pixi artwork below

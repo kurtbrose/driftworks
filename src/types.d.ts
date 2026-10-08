@@ -250,8 +250,25 @@ export type CameraApi = {
   shipsInsideScreenRect: (world: World, start: Vec2, end: Vec2, viewport: Viewport) => string[];
 };
 
+export type AsteroidVisual = {
+  seed: number; bulk: number[]; heterogeneity: number;
+  fields: { low: number; med: number; blobs: { x: number; y: number; sigma: number; amp: number }[] }[];
+  relief: { phase: number; blobs: { x: number; y: number; sigma: number; amp: number }[] };
+  surfaceProfile: { roughnessAmp: number; roughnessFreq: number; grazingBoost: number; pittingDensity: number; fractureDensity: number; craterSharpness: number; rimStrength: number; boulderiness: number; smoothing: number; state: string };
+  craters: { x: number; y: number; rx: number; ry: number; angle: number; depth: number; age: number; rimScale: number; sizeClass: string }[];
+};
+
 export type DriftworksNamespace = {
+  asteroidArt?: {
+    describe: (asteroid: Asteroid) => AsteroidVisual;
+    reliefAt: (visual: AsteroidVisual, x: number, y: number) => number;
+    uniforms: (visual: AsteroidVisual) => { uLight: Float32Array; uBulk: Float32Array; uFieldLow: Float32Array; uFieldMed: Float32Array; uProfile: Float32Array; uRelief: Float32Array; uFieldBlobs: Float32Array; uBlobMaterial: Float32Array; uCraterCount: number; uHeterogeneity: number; uSeed: number; uPixelFootprint: number };
+    craterBytes: (visual: AsteroidVisual) => Uint8Array;
+    shaderSource: string;
+  };
   scene3d?: {
+    visualFor: (asteroid: Asteroid) => AsteroidVisual;
+    surfaceHeight: (asteroid: Asteroid, x: number, y: number) => number;
     project: (point: [number, number, number], camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => Vec2 & { depth: number };
     unproject: (point: Vec2, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }, z?: number) => Vec2 | null;
     view: (camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number }) => { right: [number, number, number]; up: [number, number, number]; back: [number, number, number]; distance: number; focal: number };
