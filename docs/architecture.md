@@ -67,8 +67,13 @@ The 88-cell marching-tetrahedra mesh stores broad surface normals on exterior
 vertices and real geometric normals on exposed interior faces. The shader adds
 crater gradients once, preserving fine impacts below mesh resolution without
 doubling slopes already represented in the mesh. The original composition
-palette and filtered seven-octave microrelief use smooth three-axis blending,
-avoiding a UV seam or pole stretching. Lighting is world-fixed diffuse plus a
+palette uses smooth three-axis blending. Fine surface bumps use a seeded,
+filtered seven-octave solid 3D noise field evaluated directly at the deformed
+physical body position. Orthogonal octave rotations avoid repeated lattice-axis
+patterns. There is no normalized-sphere or planar texture domain to stretch
+under broad deformation; finite differences in those same physical coordinates
+produce a world-metric gradient projected onto the actual surface tangent plane.
+Exterior and cut surfaces share this noise field, with no UV seam or pole mapping. Lighting is world-fixed diffuse plus a
 small ambient fill, with crater occlusion reducing that fill. A broad-normal
 terminator gate prevents normal-map bumps on the unlit hemisphere from receiving
 sunlight. There is no camera-facing limb multiplier or additive grazing noise
