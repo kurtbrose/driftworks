@@ -62,7 +62,10 @@ Per-fragment spherical crater gradients retain finer detail below mesh resolutio
 The original composition palette and filtered seven-octave microrelief use
 smooth three-axis blending, avoiding a UV seam or pole stretching. Limb shading
 uses the camera-facing normal rather than the original top-view dome silhouette.
-Real cut faces use their own mesh normals and shared material. Alt-drag spans
+Real cut faces use their own mesh normals and shared material. The standalone `tests/asteroid-orbit.html` viewer uses `scene3d.create` with
+`study: true` to disable the tactical grid, center the inspection camera on the
+body, and use ordinary left-drag for orbiting. `getOrbit`/`setOrbit` expose only
+renderer-owned camera angles to its animation loop. Alt-drag spans
 both hemispheres; Underside provides a direct inspection view. The lattice plane
 moves behind the body when viewing from below.
 When excavation is active, the field

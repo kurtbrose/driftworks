@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Asteroid orbit · Driftworks</title>
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;background:#080d11;color:#dce6e9;font:14px system-ui;overflow:hidden}
+#viewer{position:fixed;inset:0;width:100%;height:100%}.scene3d-controls{display:none}
+header{position:fixed;z-index:5;top:24px;left:28px;right:28px;pointer-events:none;display:flex;align-items:start;justify-content:space-between;gap:20px}
+h1{font-size:22px;font-weight:500;margin:0 0 8px;letter-spacing:.02em}p{margin:0;color:#9baeb8;line-height:1.6}
+nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#dce6e9;padding:10px 14px;font:inherit;cursor:pointer;text-decoration:none}button:hover,a:hover{background:#253944}button:focus-visible,a:focus-visible{outline:2px solid #ade5f2}
+footer{position:fixed;bottom:24px;left:28px;z-index:5;color:#859aa5;pointer-events:none;font-size:12px}
+@media(max-width:650px){header{top:16px;left:16px;right:16px;flex-direction:column}h1{font-size:18px}footer{left:16px}}
+</style>
+</head>
+<body>
+<div id="viewer" class="scene" aria-label="Orbiting 3D asteroid"></div>
+<header><div><h1>Asteroid orbit</h1><p>Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="cut" aria-pressed="false">Cutaway</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
+<footer>Driftworks · live 3D geology · camera orbit, stationary asteroid</footer>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+    <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
+    <script src="../src/propulsion.js?v=20260920-population1"></script>
+    <script src="../src/combat.js?v=20260921-sensor-track1"></script>
+    <script src="../src/logistics.js?v=20260921-craft1"></script>
+    <script src="../src/formations.js?v=20260920-population1"></script>
+    <script src="../src/sim.js?v=20260922-cavern10"></script>
+    <script src="../src/population.js"></script>
+    <script src="../src/session.js"></script>
+    <script src="../src/tactical/camera.js?v=20260920-population1"></script>
+    <script src="../src/audio.js?v=20260920-population1"></script>
+    <script src="../src/hud.js?v=20260922-cavern1"></script>
+    <script src="../src/scene3d.js?v=20261007-3d-mothership1"></script>
+    <script src="../src/game.js?v=20261007-3d-geology2"></script>
+<script>
+(function(){
+  var world=Driftworks.sim.createInitialWorld(), host=document.getElementById('viewer');
+  var asteroid=world.asteroids[0];
+  asteroid.position={x:0,y:0}; asteroid.rotation=0;
+  world.ships=[];world.platforms=[];world.wrecks=[];world.packets=[];world.selectedShipIds=[];world.combat.drones=[];
+  world.asteroids=[asteroid];
+  function resetCamera(){world.camera={x:0,y:0,zoom:Math.min(host.clientWidth,host.clientHeight)*.32/asteroid.radius};}
+  resetCamera();
+  var scene=Driftworks.scene3d.create(host,function(){return world;},function(value){world=value;},{study:true});
+  host.querySelector('.night-sky-background').style.backgroundImage='url("../assets/backgrounds/coalsack-wide-field.jpg")';
+  host.querySelector('.night-sky-background').style.filter='brightness(.28)';
+
+  var rotating=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=-.49, previous=0;
+  var motion=document.getElementById('motion');
+  function updateMotion(){motion.textContent=rotating?'Pause orbit':'Resume orbit';motion.setAttribute('aria-pressed',String(!rotating));}
+  updateMotion();scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);
+  motion.onclick=function(){rotating=!rotating;updateMotion();};
+  host.addEventListener('pointerdown',function(){rotating=false;updateMotion();});
+  document.getElementById('reset').onclick=function(){resetCamera();phase=-.49;scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);};
+  document.getElementById('cut').onclick=function(){world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];var open=asteroid.excavation.level>0;this.textContent=open?'Close cutaway':'Cutaway';this.setAttribute('aria-pressed',String(open));scene.sync(world);};
+  function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;previous=now;
+    if(rotating){phase+=dt*.16;var orbit=scene.getOrbit();scene.setOrbit({yaw:orbit.yaw+dt*.18,tilt:1.3+.85*Math.sin(phase)});}
+    scene.sync(world);scene.render(world,1,0,dt);requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

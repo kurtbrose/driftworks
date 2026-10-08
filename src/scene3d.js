@@ -324,8 +324,9 @@
     return new Float32Array(data);
   }
 
-  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld */
-  function create(host, getWorld, setWorld) {
+  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{study?: boolean}} [options] */
+  function create(host, getWorld, setWorld, options) {
+    var study = !!(options && options.study);
     var canvas = document.createElement('canvas');
     canvas.setAttribute('aria-label', '3D tactical scene');
     var context = canvas.getContext('webgl', { antialias: true, alpha: true });
@@ -506,7 +507,7 @@
         var game = /** @type {{ issueVisualContextOrder: (world: World, target: Vec2) => World }} */ (DW.game);
         setWorld(game.issueVisualContextOrder(w, target)); if (DW.audio) DW.audio.playMove(); return;
       }
-      drag = { start: p, last: p, mode: e.altKey ? 'orbit' : e.button === 1 || space ? 'pan' : 'select' };
+      drag = { start: p, last: p, mode: e.altKey || (study && e.button === 0 && !space) ? 'orbit' : e.button === 1 || space ? 'pan' : 'select' };
       canvas.setPointerCapture(e.pointerId); e.preventDefault();
     });
     canvas.addEventListener('pointermove', function (e) {
@@ -602,7 +603,7 @@
 
     /** @param {World} w */
     function sync(w) {
-      orbit.height = inspectionHeight(w) * (orbit.tilt > Math.PI / 2 ? -1 : 1);
+      orbit.height = study ? 0 : inspectionHeight(w) * (orbit.tilt > Math.PI / 2 ? -1 : 1);
       Object.keys(rocks).forEach(function (id) { if (!w.asteroids.some(function (a) { return a.id === id; })) { gl.deleteBuffer(rocks[id].mesh.buffer); gl.deleteTexture(rocks[id].texture); delete rocks[id]; } });
       w.asteroids.forEach(function (a) {
         var key = a.radius + ':' + JSON.stringify(a.excavation || null);
@@ -673,7 +674,7 @@
           gridX - extent, gridY + i * gridStep, gridZ, 0, 0, 1, gridX + extent, gridY + i * gridStep, gridZ, 0, 0, 1);
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, grid.buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(gridData), gl.DYNAMIC_DRAW);
-      draw(grid, [0, 0, 0], [1, 1, 1], 0, [0.035, 0.055, 0.065], false, true);
+      if (!study) draw(grid, [0, 0, 0], [1, 1, 1], 0, [0.035, 0.055, 0.065], false, true);
       w.ships.forEach(function (s) {
         if (s.docked) return;
         var x = s.previousPosition.x + (s.position.x - s.previousPosition.x) * alpha;
@@ -710,7 +711,7 @@
           d.previousPosition.y + (d.position.y - d.previousPosition.y) * alpha, 0], [9 * scale, 5 * scale, 4 * scale], Math.atan2(d.velocity.y, d.velocity.x), [0.86, 0.22, 0.16]);
       });
       var ds = semanticScale('depot', w.camera.zoom);
-      for (var stage = 0; stage < Math.max(1, w.depot.builtStages); stage++) draw(box,
+      for (var stage = 0; stage < (study ? 0 : Math.max(1, w.depot.builtStages)); stage++) draw(box,
         [w.depot.position.x, w.depot.position.y + stage * 8 * ds, 0], [24 * ds, 3 * ds, 6 * ds], 0, [0.4, 0.55, 0.6]);
       w.packets.forEach(function (p) { draw(box, [p.position.x, p.position.y, 0], [2 / w.camera.zoom, 2 / w.camera.zoom, 2 / w.camera.zoom], 0, [0.9, 0.75, 0.3]); });
       if (stress) for (var j = 0; j < 1000; j++) draw(box, [Math.sin(j * 12.3 + w.elapsedSeconds * 0.01) * 1600,
@@ -725,6 +726,9 @@
       if (DW.audio) DW.audio.setEngineThrust(Math.min(1, Math.max.apply(null, w.ships.map(function (s) { return s.disabled || s.docked ? 0 : Math.hypot(s.velocity.x - s.previousVelocity.x, s.velocity.y - s.previousVelocity.y) / Math.max(1, s.acceleration / 30); }))));
     }
     return {
+      getOrbit: function () { return { yaw: orbit.yaw, tilt: orbit.tilt }; },
+      /** @param {{yaw: number, tilt: number}} value */
+      setOrbit: function (value) { orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       sync: sync, render: render, consumeCombatEvents: consume,
       resetCombat: function () { effects = []; focus = false; },
       /** @param {World} w @param {number} dt */

@@ -280,7 +280,9 @@ export type DriftworksNamespace = {
     pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
     inspectionHeight: (world: World) => number;
-    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void) => {
+    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean}) => {
+      getOrbit: () => {yaw: number; tilt: number};
+      setOrbit: (value: {yaw: number; tilt: number}) => void;
       sync: (world: World) => void;
       render: (world: World, alpha: number, dt: number, wallDt: number) => void;
       consumeCombatEvents: (events: CombatEvent[]) => void;
