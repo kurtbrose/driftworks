@@ -68,12 +68,16 @@ vertices and real geometric normals on exposed interior faces. The shader adds
 crater gradients once, preserving fine impacts below mesh resolution without
 doubling slopes already represented in the mesh. The original composition
 palette uses smooth three-axis blending. Fine surface bumps use a seeded,
-filtered seven-octave solid 3D noise field evaluated directly at the deformed
+filtered fourteen-octave solid 3D noise field evaluated directly at the deformed
 physical body position. Orthogonal octave rotations avoid repeated lattice-axis
 patterns. There is no normalized-sphere or planar texture domain to stretch
-under broad deformation; finite differences in those same physical coordinates
+under broad deformation; analytic trilinear-noise derivatives in those same physical coordinates
 produce a world-metric gradient projected onto the actual surface tangent plane.
-Exterior and cut surfaces share this noise field, with no UV seam or pole mapping. Lighting is world-fixed diffuse plus a
+Per-fragment depth sets the pixel footprint; unresolved layers fade out and
+terminate the loop before doing further noise work. One analytic evaluation per
+layer replaces six finite-difference evaluations. Viewer wheel zoom focuses on
+the picked surface and pauses orbit, allowing close inspection without entering
+the body. Exterior and cut surfaces share this noise field, with no UV seam or pole mapping. Lighting is world-fixed diffuse plus a
 small ambient fill, with crater occlusion reducing that fill. A broad-normal
 terminator gate prevents normal-map bumps on the unlit hemisphere from receiving
 sunlight. There is no camera-facing limb multiplier or additive grazing noise
@@ -88,7 +92,17 @@ and heterogeneity controls outside world state. Composition overrides participat
 in the material-dependent surface profile, rather than merely tinting an existing
 specimen. Reapplying parameters starts from authored defaults, never multiplying
 previous edits. Replaced visual objects invalidate CPU geology and GPU mesh/impact
-texture caches. The main game omits all study parameters. Alt-drag spans
+texture caches. The main game omits all study parameters. Surface walk keeps a viewer-local
+radial position and transports its heading onto the terrain tangent plane.
+`surfaceFrame` intersects the closed solid field and derives its outward normal;
+the eye stays above that surface, and the camera up axis follows local terrain.
+WASD/arrows and the on-screen step controls move tangentially; drag adjusts yaw
+and pitch. `setSurfaceCamera` supplies an orthonormal camera basis to the shared
+projection path without changing simulation camera rules. Leaving walk restores
+the previous orbit position, angles and inspection height. Cutaway and reseeding
+exit walking; changing material parameters resamples the walking surface.
+Pixel footprint is derived from focal length, viewport size and fragment depth
+for both perspective camera modes. Alt-drag spans
 both hemispheres; Underside provides a direct inspection view. The lattice plane
 moves behind the body when viewing from below.
 When excavation is active, the field

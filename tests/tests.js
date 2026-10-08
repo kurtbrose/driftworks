@@ -143,6 +143,18 @@
     var reseeded=art.describe(Object.assign({},a,{id:'another-parameter-seed'}));
     assert(JSON.stringify(reseeded.craters)!==JSON.stringify(original.craters),'Changing the seed changes the impact population');
   });
+  test('Surface walking frames follow the closed terrain with outward unit normals', function () {
+    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
+    [[0,0,1],[0,0,-1],[1,0,0],[-1,1,.4],[.4,-.7,.6]].forEach(function(direction){
+      var frame=scene.surfaceFrame(a,direction),p=frame.point,n=frame.normal;
+      assertClose(scene.rockField(a,p),0,.000001);
+      assertClose(Math.hypot(n[0],n[1],n[2]),1);
+      assert(n[0]*p[0]+n[1]*p[1]+n[2]*p[2]>0,'Walking up faces away from the body');
+      assert(scene.rockField(a,p.map(function(v,i){return v+n[i]*.012;}))>0,'Eye clearance stays above the terrain');
+      assert(frame.point.every(Number.isFinite)&&frame.normal.every(Number.isFinite));
+    });
+    assert(JSON.stringify(a)===before,'Walking has no durable world state');
+  });
   test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
     [0.25, 1, 8, 128].forEach(function (zoom) {

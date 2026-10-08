@@ -75,7 +75,7 @@ Then open:
 - Game: http://localhost:8000/
 - Tests: http://localhost:8000/tests/
 - Asteroid playground: http://localhost:8000/tests/asteroid-playground.html
-- 3D asteroid orbit viewer: http://localhost:8000/tests/asteroid-orbit.html (automatic camera orbit, drag/zoom, cutaway, re-seeding, composition presets and geology sliders)
+- 3D asteroid orbit viewer: http://localhost:8000/tests/asteroid-orbit.html (automatic camera orbit, drag/zoom, cutaway, surface walking, re-seeding, composition presets and geology sliders)
 
 The game keeps the existing Pixi artwork by default. Open `?renderer=3d` to try
 the rough 3D geometry prototype. **Cutaway** focuses the asteroid

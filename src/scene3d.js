@@ -6,7 +6,7 @@
   /** @typedef {import('./types').Viewport} Viewport */
   /** @typedef {import('./types').Asteroid} Asteroid */
   /** @typedef {[number, number, number]} V3 */
-  /** @typedef {{ yaw: number, tilt: number, height?: number }} Orbit */
+  /** @typedef {{ yaw: number, tilt: number, height?: number, surface?: View }} Orbit */
   /** @typedef {{ right: V3, up: V3, back: V3, distance: number, focal: number }} View */
   /** @typedef {{ buffer: WebGLBuffer, count: number }} Mesh */
   /** @type {import('./types').DriftworksNamespace} */
@@ -181,10 +181,23 @@
     return (lo + hi) / 2;
   }
 
+  /** @param {Asteroid} asteroid @param {V3} direction */
+  function surfaceFrame(asteroid,direction) {
+    var length=Math.hypot.apply(null,direction);
+    /** @type {V3} */ var d=[direction[0]/length,direction[1]/length,direction[2]/length];
+    var lo=0,hi=1.1;
+    for(var i=0;i<25;i++){var mid=(lo+hi)/2;if(rockField(asteroid,[d[0]*mid,d[1]*mid,d[2]*mid])<0)lo=mid;else hi=mid;}
+    /** @type {V3} */ var point=[d[0]*(lo+hi)/2,d[1]*(lo+hi)/2,d[2]*(lo+hi)/2];
+    var e=.0005;
+    /** @type {V3} */ var normal=[rockField(asteroid,[point[0]+e,point[1],point[2]])-rockField(asteroid,[point[0]-e,point[1],point[2]]),rockField(asteroid,[point[0],point[1]+e,point[2]])-rockField(asteroid,[point[0],point[1]-e,point[2]]),rockField(asteroid,[point[0],point[1],point[2]+e])-rockField(asteroid,[point[0],point[1],point[2]-e])];
+    var magnitude=Math.hypot.apply(null,normal)||1;
+    return {point:point,normal:/** @type {V3} */ ([normal[0]/magnitude,normal[1]/magnitude,normal[2]/magnitude])};
+  }
   /** @param {V3} a @param {V3} b */
   function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
   /** @param {Camera} camera @param {Viewport} viewport @param {Orbit} orbit @returns {View} */
   function view(camera, viewport, orbit) {
+    if(orbit.surface)return orbit.surface;
     var s = Math.sin(orbit.yaw), c = Math.cos(orbit.yaw);
     var st = Math.sin(orbit.tilt), ct = Math.cos(orbit.tilt);
     return { right: [c, s, 0], up: [s * ct, -c * ct, st], back: [-s * st, c * st, ct],
@@ -437,6 +450,7 @@
     toolbar.innerHTML = '<strong>3D RTS prototype</strong><span>Alt + drag: orbit · Middle / Space + drag: pan · Wheel: zoom</span><button type="button" data-cut>Cutaway</button><button type="button" data-orbit aria-label="Orbit camera">Orbit ↻</button><button type="button" data-overview>Overview</button><button type="button" data-top>Top view</button><button type="button" data-under>Underside</button><a href="?renderer=2d">2D renderer</a>';
     host.appendChild(toolbar);
     /** @type {Orbit} */ var orbit = { yaw: 0, tilt: 0.48 };
+    var studyHeight = 0;
     var focus = false, space = false, stress = false, fps = 0;
     /** @type {{ start: Vec2, last: Vec2, mode: string } | null} */ var drag = null;
     /** @type {{ event: import('./types').CombatEvent, age: number }[]} */ var effects = [];
@@ -452,7 +466,7 @@
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
       'attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation; varying vec3 vNormal,vLocal; varying float vDepth; void main(){ float c=cos(uRotation),s=sin(uRotation); vec3 p=aPosition*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=aPosition; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
-      '\nvarying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor,uBack; uniform float uRock,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint;\n'+
+      '\nvarying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor,uBack; uniform float uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
       'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
@@ -465,14 +479,16 @@
       // No sphere normalization, ellipsoid rescaling or planar projection.
       'float hash31(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453123);}\n'+
       'float noise3(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash31(i),hash31(i+vec3(1,0,0)),f.x),mix(hash31(i+vec3(0,1,0)),hash31(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash31(i+vec3(0,0,1)),hash31(i+vec3(1,0,1)),f.x),mix(hash31(i+vec3(0,1,1)),hash31(i+vec3(1,1,1)),f.x),f.y),f.z);}\n'+
-      'float rockMicro(vec3 p,float fp){float sum=0.,amplitude=1.,frequency=13.+uProfile.y*27.;vec3 domain=p;for(int octave=0;octave<7;octave++){float visibility=1.-smoothstep(.28,.72,frequency*fp);if(visibility>.001){sum+=(noise3(domain*frequency+vec3(uSeed*1.73+float(octave)*17.13))- .5)*2.*amplitude*visibility;}domain=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*domain;frequency*=2.03;amplitude*=.49;}return sum*uProfile.x*.0055;}\n'+
+      // Analytic value-noise derivatives: eight hashes per layer, not six noise evaluations.
+      'vec4 noiseGradient3(vec3 p){vec3 i=mod(floor(p),256.),t=fract(p),f=t*t*(3.-2.*t),df=6.*t*(1.-t);float a=hash31(i),b=hash31(i+vec3(1,0,0)),c=hash31(i+vec3(0,1,0)),d=hash31(i+vec3(1,1,0)),e=hash31(i+vec3(0,0,1)),g=hash31(i+vec3(1,0,1)),h=hash31(i+vec3(0,1,1)),j=hash31(i+vec3(1,1,1));float lo=mix(mix(a,b,f.x),mix(c,d,f.x),f.y),hi=mix(mix(e,g,f.x),mix(h,j,f.x),f.y);return vec4(mix(lo,hi,f.z),mix(mix(b-a,d-c,f.y),mix(g-e,j-h,f.y),f.z)*df.x,mix(mix(c-a,d-b,f.x),mix(h-e,j-g,f.x),f.z)*df.y,(hi-lo)*df.z);}\n'+
+      'vec3 rockBump(vec3 p,float fp){vec3 gradient=vec3(0.);float amplitude=1.,frequency=13.+uProfile.y*27.;mat3 basis=mat3(1.);for(int octave=0;octave<14;octave++){float visibility=1.-smoothstep(.28,.72,frequency*fp);if(visibility<.001)break;vec4 sampleValue=noiseGradient3(basis*p*frequency+vec3(uSeed*1.73+float(octave)*17.13));vec3 derivative=vec3(dot(basis[0],sampleValue.yzw),dot(basis[1],sampleValue.yzw),dot(basis[2],sampleValue.yzw));gradient+=derivative*frequency*amplitude*visibility*2.;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;frequency*=2.03;amplitude*=.49;}return gradient*uProfile.x*.0055;}\n'+
       'vec3 globeColor(vec3 p){vec3 w=globeWeights(p);return materialColor(composition(p.yz))*w.x+materialColor(composition(p.zx))*w.y+materialColor(composition(p.xy))*w.z;}\n'+
       'void main(){vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
-      'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=uPixelFootprint;'+
+      'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
-      'if(exterior>.5){float e=max(.00045,min(.004,footprint*.8));vec3 gradient=vec3(rockMicro(vLocal+vec3(e,0,0),footprint)-rockMicro(vLocal-vec3(e,0,0),footprint),rockMicro(vLocal+vec3(0,e,0),footprint)-rockMicro(vLocal-vec3(0,e,0),footprint),rockMicro(vLocal+vec3(0,0,e),footprint)-rockMicro(vLocal-vec3(0,0,e),footprint))/(2.*e);vec3 bump=rotateNormal(gradient+crater.xyz);bump-=bodyNormal*dot(bump,bodyNormal);n=normalize(bodyNormal-bump);}'+
-      'else{float e=max(.00045,min(.004,footprint*.8));vec3 gradient=vec3(rockMicro(vLocal+vec3(e,0,0),footprint)-rockMicro(vLocal-vec3(e,0,0),footprint),rockMicro(vLocal+vec3(0,e,0),footprint)-rockMicro(vLocal-vec3(0,e,0),footprint),rockMicro(vLocal+vec3(0,0,e),footprint)-rockMicro(vLocal-vec3(0,0,e),footprint))/(2.*e);vec3 bump=rotateNormal(gradient);n=normalize(n-(bump-n*dot(bump,n))*.6);occ=clamp((uCutHeight-vLocal.z)*1.1,0.,.22);}'+
+      'vec3 fineGradient=rockBump(vLocal,footprint);if(exterior>.5){vec3 bump=rotateNormal(fineGradient+crater.xyz);bump-=bodyNormal*dot(bump,bodyNormal);n=normalize(bodyNormal-bump);}'+
+      'else{vec3 bump=rotateNormal(fineGradient);n=normalize(n-(bump-n*dot(bump,n))*.6);occ=clamp((uCutHeight-vLocal.z)*1.1,0.,.22);}'+
       'float ndl=max(0.,dot(n,light));float sunlight=exterior>.5?smoothstep(-.03,.10,dot(bodyNormal,light)):1.;float lit=pow(ndl,.82)*sunlight;'+
       'float ambient=.17*(1.-occ*.7);float brightness=ambient+lit*.98;'+
       'col=globeColor(sphere)*brightness;col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
@@ -488,7 +504,7 @@
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
-    ['Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
+    ['Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
     /** @param {Asteroid} asteroid */
     function craterTexture(asteroid) {
@@ -582,6 +598,7 @@
     }
     canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     canvas.addEventListener('pointerdown', function (e) {
+      if(orbit.surface)return;
       unlock(); focus = false; var p = pointer(e), w = getWorld();
       if (e.button === 2 && !e.altKey) {
         var target = unproject(p, w.camera, viewport(), orbit);
@@ -651,7 +668,12 @@
     });
     canvas.addEventListener('pointercancel', function () { drag = null; });
     canvas.addEventListener('wheel', function (e) {
+      if(orbit.surface){e.preventDefault();return;}
       e.preventDefault(); focus = false; var w = getWorld(), p = pointer(e), vp = viewport();
+      if(study && e.deltaY<0 && w.asteroids[0]) {
+        var hit=pickAsteroid(p,w.asteroids[0],w.camera,vp,orbit);
+        if(hit){studyHeight=hit.position[2];orbit.height=studyHeight;w=Object.assign({},w,{camera:{x:hit.position[0],y:hit.position[1],zoom:w.camera.zoom}});}
+      }
       var before = unproject(p, w.camera, vp, orbit, orbit.height);
       var camera = { x: w.camera.x, y: w.camera.y, zoom: Math.max(0.2, Math.min(128, w.camera.zoom * Math.exp(-Math.max(-300, Math.min(300, e.deltaY)) * 0.0015))) };
       var after = unproject(p, camera, vp, orbit, orbit.height);
@@ -659,6 +681,7 @@
       setWorld(Object.assign({}, w, { camera: camera }));
     }, { passive: false });
     window.addEventListener('keydown', function (e) {
+      if(orbit.surface)return;
       if (e.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
       if (e.code === 'Space') { space = true; e.preventDefault(); }
       if (e.code === 'KeyF') focus = true;
@@ -698,7 +721,7 @@
 
     /** @param {World} w */
     function sync(w) {
-      orbit.height = study ? 0 : inspectionHeight(w) * (orbit.tilt > Math.PI / 2 ? -1 : 1);
+      orbit.height = study ? studyHeight : inspectionHeight(w) * (orbit.tilt > Math.PI / 2 ? -1 : 1);
       Object.keys(rocks).forEach(function (id) {
         if (!w.asteroids.some(function (a) { return a.id === id; })) {
           gl.deleteBuffer(rocks[id].mesh.buffer); gl.deleteTexture(rocks[id].texture);
@@ -749,7 +772,8 @@
         gl.uniform1f(uniforms.CraterCount, impactsFor(a).length); gl.uniform1f(uniforms.CraterTextureWidth, 1440);
         gl.uniform1f(uniforms.Heterogeneity, values.uHeterogeneity); gl.uniform1f(uniforms.Seed, values.uSeed);
         var center = project([a.position.x, a.position.y, 0], w.camera, vp, orbit);
-        gl.uniform1f(uniforms.PixelFootprint, Math.max(0.000001, center.depth / v.distance / (a.radius * w.camera.zoom * dpr)));
+        gl.uniform1f(uniforms.RockDistance, center.depth);
+        gl.uniform1f(uniforms.PixelFootprint, Math.max(0.000001, 2 / (vp.height*v.focal*a.radius*dpr)));
         gl.uniform1f(uniforms.Cut, a.excavation && a.excavation.level > 0 ? 1 : 0);
         gl.uniform1f(uniforms.CutHeight, a.excavation ? -Math.min(.42, Math.max(.03, a.excavation.depthM / sim.METERS_PER_UNIT / a.radius)) : 0);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, rock.texture); gl.uniform1i(uniforms.CraterData, 0);
@@ -826,9 +850,17 @@
       if (DW.audio) DW.audio.setEngineThrust(Math.min(1, Math.max.apply(null, w.ships.map(function (s) { return s.disabled || s.docked ? 0 : Math.hypot(s.velocity.x - s.previousVelocity.x, s.velocity.y - s.previousVelocity.y) / Math.max(1, s.acceleration / 30); }))));
     }
     return {
-      getOrbit: function () { return { yaw: orbit.yaw, tilt: orbit.tilt }; },
-      /** @param {{yaw: number, tilt: number}} value */
-      setOrbit: function (value) { orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
+      /** @param {{eye: V3, right: V3, up: V3, back: V3} | null} pose */
+      setSurfaceCamera: function(pose) {
+        if(!study)return;
+        if(!pose){delete orbit.surface;studyHeight=0;return;}
+        orbit.surface={right:pose.right,up:pose.up,back:pose.back,distance:1,focal:FOCAL};
+        studyHeight=pose.eye[2]-pose.back[2];orbit.height=studyHeight;
+        var w=getWorld();setWorld(Object.assign({},w,{camera:{x:pose.eye[0]-pose.back[0],y:pose.eye[1]-pose.back[1],zoom:w.camera.zoom}}));
+      },
+      getOrbit: function () { return { yaw: orbit.yaw, tilt: orbit.tilt, height: studyHeight }; },
+      /** @param {{yaw: number, tilt: number, height?: number}} value */
+      setOrbit: function (value) { if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       sync: sync, render: render, consumeCombatEvents: consume,
       resetCombat: function () { effects = []; focus = false; },
       /** @param {World} w @param {number} dt */
@@ -853,5 +885,5 @@
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
     rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
+    surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

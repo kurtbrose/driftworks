@@ -13,13 +13,13 @@ h1{font-size:22px;font-weight:500;margin:0 0 8px;letter-spacing:.02em}p{margin:0
 nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#dce6e9;padding:10px 14px;font:inherit;cursor:pointer;text-decoration:none}button:hover,a:hover{background:#253944}button:focus-visible,a:focus-visible{outline:2px solid #ade5f2}
 .parameters{position:fixed;z-index:5;left:20px;top:145px;width:270px;padding:16px;background:#101c24ed;border:1px solid #344853;border-radius:10px;max-height:calc(100vh - 200px);overflow:auto}
 .parameters h2{font-size:14px;margin:0 0 8px;font-weight:500}.parameters label{display:block;color:#b5c8d2;font-size:12px;margin-top:12px}.parameters input[type=text]{width:100%;box-sizing:border-box;background:#071118;color:#dce6e9;border:1px solid #40505b;border-radius:5px;padding:9px;margin-top:7px;font:inherit}.parameters input[type=range]{width:100%;margin:9px 0 0;accent-color:#afd1dd}.parameters button{padding:7px 9px;font-size:12px;white-space:nowrap}.seed-row{display:flex;gap:8px;margin-top:9px}.seed-row button{flex:1}.presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.presets button{flex:1 0 calc(33.333% - 6px)}.presets button[aria-pressed=true]{background:#365764;border-color:#9dc6d5;color:#fff}.parameters output{float:right;color:#dce6e9}.mix{font-size:12px;color:#92aab6;line-height:1.6;margin-top:10px}.parameters small{display:block;font-size:11px;color:#839aa7;margin-top:8px;line-height:1.5}
-footer{position:fixed;bottom:24px;left:28px;z-index:5;color:#859aa5;pointer-events:none;font-size:12px}
+.walk-controls{position:fixed;right:24px;bottom:24px;z-index:6;display:flex;gap:6px}.walk-controls[hidden]{display:none}footer{position:fixed;bottom:24px;left:28px;z-index:5;color:#859aa5;pointer-events:none;font-size:12px}
 @media(max-width:700px){#viewer{inset:0;width:100%}.parameters{top:auto;bottom:45px;left:16px;width:205px;max-height:33vh;padding:12px}header nav{gap:5px}header button,header a{padding:7px 9px}header{top:16px;left:16px;right:16px;flex-direction:column}h1{font-size:18px}footer{left:16px}}
 </style>
 </head>
 <body>
 <div id="viewer" class="scene" aria-label="Orbiting 3D asteroid"></div>
-<header><div><h1>Asteroid orbit</h1><p>Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="cut" aria-pressed="false">Cutaway</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
+<header><div><h1>Asteroid orbit</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="cut" aria-pressed="false">Cutaway</button><button id="walk" aria-pressed="false">Surface walk</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
 <section class="parameters" aria-label="Asteroid parameters">
 <h2>Geology controls</h2>
 <label for="seed">Seed</label><input id="seed" type="text" maxlength="64" autocomplete="off" spellcheck="false">
@@ -31,7 +31,7 @@ footer{position:fixed;bottom:24px;left:28px;z-index:5;color:#859aa5;pointer-even
 <div id="mix" class="mix" aria-live="polite"></div><small>Drag sliders, then release to apply.</small>
 <button id="defaults" style="margin-top:8px">Reset parameters</button>
 </section>
-<footer>Driftworks · live 3D geology · camera orbit, stationary asteroid</footer>
+<div id="walk-controls" class="walk-controls" hidden><button data-step="left" aria-label="Step left">←</button><button data-step="forward" aria-label="Step forward">↑</button><button data-step="back" aria-label="Step backward">↓</button><button data-step="right" aria-label="Step right">→</button></div><footer>Driftworks · live 3D geology · camera orbit, stationary asteroid</footer>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
     <script src="../src/propulsion.js?v=20260920-population1"></script>
@@ -74,21 +74,47 @@ footer{position:fixed;bottom:24px;left:28px;z-index:5;color:#859aa5;pointer-even
   }
   document.querySelectorAll('[data-material]').forEach(function(button){button.onclick=function(){material=button.dataset.material;applyParameters();};});
   [roughness,depth,patchiness].forEach(function(input){input.oninput=labels;input.onchange=applyParameters;});
-  function applySeed(){var seed=seedInput.value.trim();if(!seed){seedInput.value=asteroid.id;return;}asteroid.id=seed;applyParameters();}
+  function applySeed(){if(walking)leaveWalk();var seed=seedInput.value.trim();if(!seed){seedInput.value=asteroid.id;return;}asteroid.id=seed;applyParameters();}
   document.getElementById('reseed').onclick=function(){seedInput.value='orbit-'+crypto.getRandomValues(new Uint32Array(1))[0].toString(36);applySeed();};
   document.getElementById('apply-seed').onclick=applySeed;
   seedInput.onkeydown=function(event){if(event.key==='Enter')applySeed();};
   document.getElementById('defaults').onclick=function(){material='mixed';roughness.value=1;depth.value=1;patchiness.value=Driftworks.asteroidArt.describe(asteroid).heterogeneity.toFixed(2);applyParameters();};
   applyParameters();
+  var walking=false, savedView=null, walkDirection=[-.4,-.5,.75], walkHeading=[0,1,0], walkPitch=-.12, keys={}, lookDrag=null;
+  var walkButton=document.getElementById('walk'), help=document.getElementById('viewer-help');
+  function normalize(v){var length=Math.hypot.apply(null,v)||1;return v.map(function(x){return x/length;});}
+  function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+  function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+  function tangent(v,n){var axial=dot(v,n);return normalize(v.map(function(x,i){return x-n[i]*axial;}));}
+  function walkPose(dt){
+    var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection), n=frame.normal;
+    walkHeading=tangent(walkHeading,n);var right=normalize(cross(walkHeading,n));
+    var forward=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0), sideways=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+    if(forward||sideways){var speed=.006*dt*(keys.ShiftLeft||keys.ShiftRight?4:1)/Math.max(1,Math.hypot(forward,sideways));walkDirection=normalize(frame.point.map(function(v,i){return v+speed*(walkHeading[i]*forward+right[i]*sideways);}));frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection);n=frame.normal;walkHeading=tangent(walkHeading,n);right=normalize(cross(walkHeading,n));}
+    var forwardView=normalize(walkHeading.map(function(v,i){return v*Math.cos(walkPitch)+n[i]*Math.sin(walkPitch);}));
+    var up=normalize(cross(right,forwardView)), back=forwardView.map(function(v){return -v;});
+    var eye=frame.point.map(function(v,i){return (v+n[i]*.012)*asteroid.radius;});
+    scene.setSurfaceCamera({eye:eye,right:right,up:up,back:back});
+  }
+  function leaveWalk(){walking=false;keys={};lookDrag=null;scene.setSurfaceCamera(null);if(savedView){world.camera=savedView.camera;scene.setOrbit(savedView.orbit);}document.getElementById('walk-controls').hidden=true;walkButton.textContent='Surface walk';walkButton.setAttribute('aria-pressed','false');help.innerHTML='Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan';motion.disabled=false;}
+  walkButton.onclick=function(){if(walking){leaveWalk();return;}if(asteroid.excavation.level>0){world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];document.getElementById('cut').textContent='Cutaway';document.getElementById('cut').setAttribute('aria-pressed','false');}savedView={camera:Object.assign({},world.camera),orbit:scene.getOrbit()};walking=true;rotating=false;updateMotion();motion.disabled=true;walkDirection=normalize([-.4,-.5,.75]);walkHeading=[0,1,0];walkPitch=-.12;document.getElementById('walk-controls').hidden=false;walkButton.textContent='Return to orbit';walkButton.setAttribute('aria-pressed','true');help.innerHTML='WASD / arrows: walk · Shift: faster<br>Drag: look around · Esc: return to orbit';walkPose(0);};
+  document.querySelectorAll('[data-step]').forEach(function(button){button.onclick=function(){if(!walking)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),forward=tangent(walkHeading,frame.normal),right=cross(forward,frame.normal),kind=button.dataset.step,axis=kind==='left'||kind==='right'?right:forward,sign=kind==='left'||kind==='back'?-1:1;walkDirection=normalize(frame.point.map(function(v,i){return v+axis[i]*sign*.006;}));walkPose(0);};});
+  window.addEventListener('keydown',function(event){if(!walking||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if(event.code==='Escape'){leaveWalk();return;}if(/^(Key[WASD]|Arrow(Up|Down|Left|Right)|Shift(Left|Right))$/.test(event.code)){keys[event.code]=true;event.preventDefault();}});
+  window.addEventListener('keyup',function(event){delete keys[event.code];});window.addEventListener('blur',function(){keys={};lookDrag=null;});
+  host.addEventListener('pointerdown',function(event){if(!walking)return;lookDrag={x:event.clientX,y:event.clientY};event.target.setPointerCapture(event.pointerId);});
+  host.addEventListener('pointermove',function(event){if(!walking||!lookDrag)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),n=frame.normal,angle=-(event.clientX-lookDrag.x)*.004;walkHeading=tangent(walkHeading,n);var side=cross(n,walkHeading);walkHeading=normalize(walkHeading.map(function(v,i){return v*Math.cos(angle)+side[i]*Math.sin(angle);}));walkPitch=Math.max(-1.3,Math.min(1.3,walkPitch-(event.clientY-lookDrag.y)*.004));lookDrag={x:event.clientX,y:event.clientY};});
+  host.addEventListener('pointerup',function(){lookDrag=null;});host.addEventListener('pointercancel',function(){lookDrag=null;});
   var rotating=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=-.49, previous=0;
   var motion=document.getElementById('motion');
   function updateMotion(){motion.textContent=rotating?'Pause orbit':'Resume orbit';motion.setAttribute('aria-pressed',String(!rotating));}
   updateMotion();scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);
   motion.onclick=function(){rotating=!rotating;updateMotion();};
   host.addEventListener('pointerdown',function(){rotating=false;updateMotion();});
-  document.getElementById('reset').onclick=function(){resetCamera();phase=-.49;scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);};
-  document.getElementById('cut').onclick=function(){world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];var open=asteroid.excavation.level>0;this.textContent=open?'Close cutaway':'Cutaway';this.setAttribute('aria-pressed',String(open));scene.sync(world);};
+  host.addEventListener('wheel',function(){rotating=false;updateMotion();},{passive:true});
+  document.getElementById('reset').onclick=function(){if(walking)leaveWalk();resetCamera();phase=-.49;scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);};
+  document.getElementById('cut').onclick=function(){if(walking)leaveWalk();world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];var open=asteroid.excavation.level>0;this.textContent=open?'Close cutaway':'Cutaway';this.setAttribute('aria-pressed',String(open));scene.sync(world);};
   function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;previous=now;
+    if(walking)walkPose(dt);
     if(rotating){phase+=dt*.16;var orbit=scene.getOrbit();scene.setOrbit({yaw:orbit.yaw+dt*.18,tilt:1.3+.85*Math.sin(phase)});}
     scene.sync(world);scene.render(world,1,0,dt);requestAnimationFrame(frame);
   }
