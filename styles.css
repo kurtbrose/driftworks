@@ -59,6 +59,31 @@ button[data-active="true"] {
   height: 100%;
 }
 
+.scene canvas.scene3d-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scene3d-controls {
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  max-width: calc(100% - 32px);
+  padding: 8px 12px;
+  border: 1px solid #405863;
+  border-radius: 6px;
+  background: #101a20;
+  font-size: 12px;
+}
+
+.scene3d-controls span { color: #9fb5c0; }
+.scene3d-controls a { color: #b3d7e5; }
+
 .hud {
   pointer-events: none;
   position: fixed;

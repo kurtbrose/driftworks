@@ -202,7 +202,7 @@
       rotation: 0,
       angularVelocity: (rng() < 0.5 ? -1 : 1) * (0.008 + rng() * 0.006),
       excavation: { pocketOffset: { x: 0.08, y: -0.04 }, pocketRadius: 0.2,
-        tunnelAngle: -0.58, tunnelTurn: 0.14, level: 0 }
+        tunnelAngle: -0.58, tunnelTurn: 0.14, depthM: 500, level: 0 }
     };
   }
 
@@ -871,6 +871,7 @@
     }
     next.asteroids.forEach(function (body) {
       if (!body.excavation) body.excavation = clonePlain(initial.asteroids[0].excavation);
+      else if (typeof body.excavation.depthM !== 'number') body.excavation.depthM = 500;
     });
     next.ships = next.ships || initial.ships;
     next.ships.forEach(function (ship) {

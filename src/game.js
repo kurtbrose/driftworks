@@ -136,7 +136,7 @@
     if (!sceneHost || !hudHost) {
       throw new Error('Driftworks could not find its root DOM nodes.');
     }
-    if (!PIXI) {
+    if (!PIXI && (!Driftworks.scene3d || new URLSearchParams(global.location.search).get('renderer') !== '3d')) {
       throw new Error('Vendored PixiJS did not load.');
     }
     createApp(/** @type {HTMLElement} */ (sceneHost), /** @type {HTMLElement} */ (hudHost));
@@ -328,6 +328,9 @@
 
   /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld */
   function createScene(host, getWorld, setWorld) {
+    if (Driftworks.scene3d && new URLSearchParams(global.location.search).get('renderer') === '3d') {
+      return Driftworks.scene3d.create(host, getWorld, setWorld);
+    }
     var app = new PIXI.Application({
       backgroundAlpha: 0,
       antialias: true,
@@ -502,7 +505,7 @@
             rock = asteroidGraphics[asteroid.id] = createAsteroidGraphic();
             worldLayer.addChildAt(rock.container, 1);
           }
-          if (!rock.visual) paintAsteroid(rock, asteroid, world.camera.zoom, world.camera);
+          if (!rock.visual) paintAsteroid(rock, asteroid, world.camera.zoom, world.camera, viewport().height);
           var normalKey = asteroid.id + ':' + asteroid.radius + ':' + p.siteAngle + ':' + p.siteDepth;
           var cached = platformNormals[p.id];
           if (!cached || cached.key !== normalKey) {
@@ -588,7 +591,7 @@
           asteroidGraphics[asteroid.id] = asteroidGraphic;
           worldLayer.addChildAt(asteroidGraphic.container, 1);
         }
-        paintAsteroid(asteroidGraphic, asteroid, world.camera.zoom, world.camera);
+        paintAsteroid(asteroidGraphic, asteroid, world.camera.zoom, world.camera, viewport().height);
         asteroidGraphic.container.scale.set(semanticScale('asteroid', world.camera.zoom));
       });
 
@@ -2935,8 +2938,8 @@
       craterTexture: craterTexture, visual: null, artworkKey: '', cavityParallax: { x: 0, y: 0 } };
   }
 
-  /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid @param {number} [zoom] @param {import('./types').Camera} [camera] */
-  function paintAsteroid(graphic, asteroid, zoom, camera) {
+  /** @param {AsteroidGraphic} graphic @param {Asteroid} asteroid @param {number} [zoom] @param {import('./types').Camera} [camera] @param {number} [viewportHeight] */
+  function paintAsteroid(graphic, asteroid, zoom, camera, viewportHeight) {
     graphic.container.position.set(asteroid.position.x, asteroid.position.y);
     graphic.container.rotation = asteroid.rotation;
     var key = asteroid.id + ':' + asteroid.radius;
@@ -2966,13 +2969,17 @@
     // move the visible floor in the opposite direction to the camera.
     var localCameraX = cameraOffsetX * c - cameraOffsetY * s;
     var localCameraY = cameraOffsetX * s + cameraOffsetY * c;
-    var desiredParallaxX = excavation ? Math.max(-0.085, Math.min(0.085, -localCameraX * 0.16)) : 0;
-    var desiredParallaxY = excavation ? Math.max(-0.07, Math.min(0.07, -localCameraY * 0.13)) : 0;
+    var depthUnits = excavation ? excavation.depthM / sim.METERS_PER_UNIT : 0;
+    var worldViewportHeight = (viewportHeight || 570) / Math.max(0.01, zoom || 1);
+    var virtualCameraHeight = worldViewportHeight * 0.5 / Math.tan(Math.PI / 12);
+    var depthToCamera = depthUnits / Math.max(depthUnits + 1, virtualCameraHeight);
+    var desiredParallaxX = excavation ? Math.max(-0.085, Math.min(0.085, -localCameraX * depthToCamera)) : 0;
+    var desiredParallaxY = excavation ? Math.max(-0.07, Math.min(0.07, -localCameraY * depthToCamera)) : 0;
     var cavityParallax = graphic.cavityParallax || (graphic.cavityParallax = { x: desiredParallaxX, y: desiredParallaxY });
     cavityParallax.x += (desiredParallaxX - cavityParallax.x) * 0.18;
     cavityParallax.y += (desiredParallaxY - cavityParallax.y) * 0.18;
     graphic.shader.uniforms.uCavityParallax = new Float32Array([cavityParallax.x, cavityParallax.y]);
-    var shadowScale = 0.045 / Math.max(0.2, lightUniform[2]);
+    var shadowScale = depthUnits / asteroid.radius / Math.max(0.2, lightUniform[2]);
     graphic.shader.uniforms.uCavityShadow = new Float32Array(excavation ?
       [-lightUniform[0] * shadowScale, -lightUniform[1] * shadowScale] : [0, 0]);
   }

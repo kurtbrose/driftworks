@@ -125,7 +125,7 @@ export type World = {
 };
 export type WorldLike = { ships: Ship[]; wrecks: Wreck[]; platforms?: Platform[]; mothership?: MothershipState };
 
-export type AsteroidExcavation = { pocketOffset: Vec2; pocketRadius: number; tunnelAngle: number; tunnelTurn: number; level: number };
+export type AsteroidExcavation = { pocketOffset: Vec2; pocketRadius: number; tunnelAngle: number; tunnelTurn: number; depthM: number; level: number };
 export type Asteroid = { id: string; name?: string; position: Vec2; radius: number; angularVelocity: number; ore: number; oreInitial: number; rotation: number; excavation?: AsteroidExcavation };
 export type Platform = { workerIds?: string[]; shiftStartedSeconds?: number; evacuationRequested?: boolean; setupRemainingSeconds?: number; packRemainingSeconds?: number; id: string; state: string; position: Vec2; carrierId: string | null; asteroidId: string | null; siteAngle: number; siteDepth: number; ore: number; packetTimer: number };
 export type Wreck = { id: string; position: Vec2; velocity?: Vec2; type?: string; rotation?: number; salvageOre?: number; towedBy?: string | null; disabled?: boolean; repairRemaining?: number; launchElapsed?: number | null; previousPosition?: Vec2; physical?: { dryMassKg: number }; massKg?: number; propulsion?: Propulsion; cargo?: number };
@@ -251,6 +251,26 @@ export type CameraApi = {
 };
 
 export type DriftworksNamespace = {
+  scene3d?: {
+    project: (point: [number, number, number], camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => Vec2 & { depth: number };
+    unproject: (point: Vec2, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }, z?: number) => Vec2 | null;
+    view: (camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number }) => { right: [number, number, number]; up: [number, number, number]; back: [number, number, number]; distance: number; focal: number };
+    rockField: (asteroid: Asteroid, point: [number, number, number]) => number;
+    asteroidMesh: (asteroid: Asteroid, resolution?: number) => Float32Array;
+    pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
+    platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
+    inspectionHeight: (world: World) => number;
+    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void) => {
+      sync: (world: World) => void;
+      render: (world: World, alpha: number, dt: number, wallDt: number) => void;
+      consumeCombatEvents: (events: CombatEvent[]) => void;
+      resetCombat: () => void;
+      applyCameraFocus: (world: World, dt: number) => World;
+      setStressEnabled: (enabled: boolean) => void;
+      setBackground: (settings: { image: string; brightness: number }) => void;
+      getStats: () => { fps: number; stressEnabled: boolean; entityCount: number; contacts: string };
+    };
+  };
   population?: PopulationApi;
   session?: SessionApi;
   propulsion?: PropulsionApi;
@@ -303,6 +323,7 @@ export type SimApi = {
   physicalStats: (world: World, ship: Ship) => { lengthM: number; massKg: number; accelerationMps2: number };
   canDeployPlatform: (world: World) => boolean;
   PHYSICAL_SECONDS_PER_SECOND: number;
+  METERS_PER_UNIT: number;
   DOCK_SERVICE_SECONDS: number;
   DEPOT_FRAME: { lengthM: number; widthM: number };
   DEPOT_SECTION: { lengthM: number; widthM: number };

@@ -1,13 +1,13 @@
 # Driftworks
 
-Driftworks is a browser-based 2D hard-SF economic/RTS prototype. This repository state is deliberately small: a static tactical sandbox where a persistent handful of industrial spacecraft can begin doing useful work.
+Driftworks is a browser-based hard-SF economic/RTS prototype with planar fleet movement and an optional 3D rendering experiment. This repository state is deliberately small: a static tactical sandbox where a persistent handful of industrial spacecraft can begin doing useful work.
 
 For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 [architecture map](docs/architecture.md) and [world-state contract](docs/world-state.md).
 
 ## What Works Now
 
-- Full-window PixiJS tactical scene using vendored runtime code.
+- PixiJS tactical scene using vendored runtime code. An optional whole-scene WebGL geometry prototype at `?renderer=3d` tests a shared perspective orbit camera, depth-tested asteroid volumes, and a meshed tunnel/chamber cutaway. Its ship and platform models are temporary blockouts; the detailed plumes and artwork described below belong to the default Pixi renderer.
 - Mothership, one blue cargo ship (Linehorse), two escort craft, and two stored mining platforms. There are no mining ships.
 - Single-click selection and drag-box multi-selection.
 - Right-click move orders with fixed-step simulation and interpolated rendering.
@@ -75,6 +75,23 @@ Then open:
 - Game: http://localhost:8000/
 - Tests: http://localhost:8000/tests/
 - Asteroid playground: http://localhost:8000/tests/asteroid-playground.html
+
+The game keeps the existing Pixi artwork by default. Open `?renderer=3d` to try
+the rough 3D geometry prototype. **Cutaway** focuses the asteroid
+and exposes its existing excavation geometry; **Orbit ↻** steps around it.
+Hold **Alt** while dragging to orbit continuously, use middle-drag or
+Space-drag to pan, and use the wheel to zoom about the cursor. **Top view** resets
+the camera angle; **Overview** frames the fleet and asteroid together. Left-click
+or box-drag selects craft (Shift adds/toggles); right-click issues the existing
+context orders on the movement plane or the picked object. Fleet/HUD controls,
+pause, saves, and the F/H/J/K controls remain available. Orbit angles are session
+state; existing saves retain their planar camera position and zoom.
+
+This first 3D pass demonstrates geometry, depth, and camera interaction. It has
+directional shading rather than cast shadows, a fixed-resolution asteroid mesh,
+basic combat effects, and placeholder craft models. The Pixi artwork study pages
+continue to use the previous renderer. No additional runtime dependency or build
+step is required.
 
 The app uses ordinary scripts, not JavaScript modules. Serving over HTTP is still the recommended path because browser behavior around local files varies, and it matches GitHub Pages or any static host.
 

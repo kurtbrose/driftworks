@@ -22,6 +22,87 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
+    var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
+    [0.25, 1, 8, 128].forEach(function (zoom) {
+      [0, 0.8, 2.7].forEach(function (yaw) {
+        [0.06, 0.48, 1.12].forEach(function (tilt) {
+          var camera = { x: 640, y: -280, zoom: zoom }, orbit = { yaw: yaw, tilt: tilt };
+          var point = [camera.x + 60 / zoom, camera.y - 35 / zoom, 0];
+          var screen = scene.project(point, camera, viewport, orbit);
+          var picked = scene.unproject(screen, camera, viewport, orbit);
+          assert(picked !== null);
+          assertClose(picked.x, point[0]); assertClose(picked.y, point[1]);
+        });
+      });
+    });
+  });
+  test('3D perspective orbit changes interior parallax according to depth', function () {
+    var scene = window.Driftworks.scene3d, camera = { x: 0, y: 0, zoom: 1 }, viewport = { width: 1400, height: 900 };
+    var front = scene.project([0, 0, 0], camera, viewport, { yaw: 0, tilt: 0.6 });
+    var behind = scene.project([0, 0, -100], camera, viewport, { yaw: 0, tilt: 0.6 });
+    assert(Math.abs(front.y - behind.y) > 30, 'Interior should project behind the cut surface');
+    var turned = scene.project([100, 0, -100], camera, viewport, { yaw: 1, tilt: 0.6 });
+    var original = scene.project([100, 0, -100], camera, viewport, { yaw: 0, tilt: 0.6 });
+    assert(Math.abs(turned.x - original.x) > 20);
+  });
+  test('3D rock solid preserves the equator and excavates real chamber and tunnel voids', function () {
+    var scene = window.Driftworks.scene3d, a = createFreshWorld().asteroids[0];
+    for (var angle = 0; angle < Math.PI * 2; angle += 0.3) {
+      var r = sim.surfaceRadius(a, angle) / a.radius;
+      assertClose(scene.rockField(a, [Math.cos(angle) * r, Math.sin(angle) * r, 0]), 0);
+    }
+    var before = JSON.stringify(a), e = a.excavation;
+    scene.asteroidMesh(a, 12);
+    assert(JSON.stringify(a) === before, 'Rendering must not mutate saves');
+    a = sim.toggleAsteroidExcavation(createFreshWorld(), a.id).asteroids[0]; e = a.excavation;
+    var depth = e.depthM / sim.METERS_PER_UNIT / a.radius;
+    assert(scene.rockField(a, [e.pocketOffset.x, e.pocketOffset.y, -depth]) > 0, 'Chamber is empty');
+    assert(scene.rockField(a, [e.pocketOffset.x, e.pocketOffset.y, -depth - e.pocketRadius - 0.04]) < 0, 'Rock remains beneath chamber');
+    assert(scene.rockField(a, [0, 0, 0.3]) > 0, 'Cut removes upper shell');
+    var mesh = scene.asteroidMesh(a, 20);
+    assert(mesh.length > 100 && mesh.length % 18 === 0);
+    assert(Array.from(mesh).every(Number.isFinite), 'Mesh has finite positions and normals');
+    var deepest = 0;
+    for (var i = 0; i < mesh.length; i += 6) {
+      if (Math.hypot(mesh[i] - e.pocketOffset.x, mesh[i + 1] - e.pocketOffset.y) < 0.1 && mesh[i + 5] > 0.4) deepest = Math.min(deepest, mesh[i + 2]);
+    }
+    assert(deepest < -depth - 0.1, 'Mesh contains an upward-facing chamber floor below the cut');
+  });
+  test('3D asteroid picking reaches the chamber floor and respects body rotation', function () {
+    var scene = window.Driftworks.scene3d, w = createFreshWorld();
+    var a = sim.toggleAsteroidExcavation(w, w.asteroids[0].id).asteroids[0];
+    a.rotation = 1.2;
+    var e = a.excavation, c = Math.cos(a.rotation), s = Math.sin(a.rotation);
+    var x = a.position.x + (e.pocketOffset.x * c - e.pocketOffset.y * s) * a.radius;
+    var y = a.position.y + (e.pocketOffset.x * s + e.pocketOffset.y * c) * a.radius;
+    var camera = { x: a.position.x, y: a.position.y, zoom: 1 }, viewport = { width: 1200, height: 800 }, orbit = { yaw: 0.4, tilt: 0 };
+    var screen = scene.project([x, y, 0], camera, viewport, orbit);
+    var hit = scene.pickAsteroid(screen, a, camera, viewport, orbit);
+    assert(hit !== null);
+    var projected = scene.project(hit.position, camera, viewport, orbit);
+    assertClose(projected.x, screen.x); assertClose(projected.y, screen.y);
+    assert(hit.position[2] < -e.depthM / sim.METERS_PER_UNIT - a.radius * 0.1, 'Picking sees actual floor depth through the opening');
+    var miss = scene.pickAsteroid(scene.project([a.position.x + 2 * a.radius, a.position.y, 0], camera, viewport, orbit), a, camera, viewport, orbit);
+    assert(miss === null);
+  });
+  test('3D inspection keeps close zoom above the visible surface without changing world state', function () {
+    var scene = window.Driftworks.scene3d, w = createFreshWorld(), a = w.asteroids[0];
+    w.camera = { x: a.position.x, y: a.position.y, zoom: 128 };
+    var snapshot = JSON.stringify(w);
+    assert(scene.inspectionHeight(w) >= a.radius * 0.72, 'Camera target rises onto the outer shell');
+    assert(JSON.stringify(w) === snapshot);
+    w = sim.toggleAsteroidExcavation(w, a.id);
+    var height = scene.inspectionHeight(w), viewport = { width: 1200, height: 800 };
+    assertClose(height, -a.excavation.depthM / sim.METERS_PER_UNIT);
+    var orbit = { yaw: 0.8, tilt: 0.7, height: height };
+    var point = [a.position.x + 1, a.position.y - 1, height];
+    var screen = scene.project(point, w.camera, viewport, orbit);
+    var picked = scene.unproject(screen, w.camera, viewport, orbit, height);
+    assert(picked !== null); assertClose(picked.x, point[0]); assertClose(picked.y, point[1]);
+    w.camera.x += a.radius * 2;
+    assert(scene.inspectionHeight(w) === 0, 'Away from asteroids the camera targets the movement plane');
+  });
   test('background settings default safely and clamp persisted brightness', function () {
     var defaults = game.normalizeBackgroundSettings(null);
     assert(defaults.image === 'all-sky-milky-way' && defaults.brightness === 0.28);
@@ -48,12 +129,16 @@
   test('asteroid excavation persists, repairs old saves and reserves mining clearance', function () {
     var world = createFreshWorld();
     var excavation = world.asteroids[0].excavation;
-    assert(excavation && excavation.level === 0 && excavation.pocketRadius > 0);
+    assert(excavation && excavation.level === 0 && excavation.pocketRadius > 0 && excavation.depthM === 500);
     var old = JSON.parse(JSON.stringify(world));
     delete old.asteroids[0].excavation;
     var repaired = sim.deserializeWorld(sim.serializeWorld(old));
     assert(JSON.stringify(repaired.asteroids[0].excavation) === JSON.stringify(excavation),
       'Old saves should gain the deterministic starter cavern');
+    var shallowLegacy = JSON.parse(JSON.stringify(world));
+    delete shallowLegacy.asteroids[0].excavation.depthM;
+    assert(sim.deserializeWorld(sim.serializeWorld(shallowLegacy)).asteroids[0].excavation.depthM === 500,
+      'Existing excavation saves should gain physical depth');
     repaired = sim.selectShips(repaired, ['msv-hardshell']);
     repaired = sim.issueMineOrder(repaired, repaired.asteroids[0].id);
     var order = repaired.ships.filter(function (ship) { return ship.id === 'tug-01'; })[0].order;

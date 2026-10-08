@@ -18,6 +18,52 @@ exports `paintRecovery` alongside its other rendering helpers for regression che
 
 ## Intended boundaries
 
+### 3D scene prototype
+
+`src/scene3d.js` supplies `Driftworks.scene3d.create(host, getWorld, setWorld)`
+with the same scene controller interface as the Pixi scene. `game.createScene`
+selects it only with `?renderer=3d`; the default and `?renderer=2d` use the existing
+Pixi implementation with its detailed artwork.
+Load `scene3d.js` after simulation/camera/audio and before game. The backend uses
+browser WebGL directly, ordinary scripts and relative assets, with no new
+runtime dependency or build step. Game timing, session ownership and the DOM HUD
+remain in the existing modules.
+
+All objects render through one perspective camera. Simulation x/y map to the
+z=0 movement plane. Orbit yaw/tilt, GPU buffers and effects are session state;
+the existing saved camera x/y/zoom still describe the view target and scale.
+`project` and `unproject` share the renderer's camera basis and perspective;
+unprojection intersects the movement plane for panning, cursor-anchored zoom
+and empty-space orders. Asteroid surface picks ray cast against the same solid
+field used for mesh generation, transformed into the rotating body frame.
+Object context picks dispatch through the existing visual context order rules.
+The dim reference lattice sits below the bodies; selection/order cues use a
+screen overlay projected with the same camera.
+
+At inspection zoom, camera target height rises to the derived outer surface or
+the exposed cut plane to avoid driving the eye inside the solid. Pan and zoom
+intersect that inspection plane; empty-space commands still intersect z=0.
+Height is derived presentation state and is never serialized.
+
+Asteroid meshes use cached marching tetrahedra over a body-local solid field.
+The equatorial silhouette matches `sim.surfaceRadius`; vertical extent and
+surface relief are presentation geometry. When excavation is active, the field
+subtracts a sphere at `pocketOffset` and a bent capsule tunnel following
+`tunnelAngle`/`tunnelTurn`, using `depthM / METERS_PER_UNIT` explicitly.
+A horizontal cut through the chamber center removes the upper shell. The cut
+face, inner walls, floor and outer shell belong to the same mesh, so depth testing
+and orbiting provide real interior occlusion/parallax. Excavation parameters and
+radius invalidate the mesh cache; camera motion and body spin do not.
+Rendering never adds durable fields or mutates the world. Platform height is
+derived from the same equatorial radius and rounded body (or exposed cut height).
+
+This is a rendering/input prototype, with blockout craft, directional shading,
+fixed mesh resolution and basic combat effects. The detailed Pixi artwork below
+remains available through the previous renderer and study pages. The shared
+headless suite checks camera inverse projection, depth parallax, the equatorial
+outline, excavation geometry and surface picking; browser verification is needed
+for WebGL, native input and audio.
+
 Small-craft artwork uses world-light shading and continuous detail fades at
 8–32× and 32–96× zoom. Presentation geometry does not change physical dimensions
 or simulation attachment points. Platform anchors derive their extension from
