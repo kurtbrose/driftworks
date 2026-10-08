@@ -97,7 +97,9 @@ radial position and transports its heading onto the terrain tangent plane.
 `surfaceFrame` intersects the closed solid field and derives its outward normal;
 the eye stays above that surface, and the camera up axis follows local terrain.
 WASD/arrows and the on-screen step controls move tangentially; drag adjusts yaw
-and pitch. `setSurfaceCamera` supplies an orthonormal camera basis to the shared
+and pitch. The wheel raises/lowers normal-relative altitude exponentially between
+0.004 and 0.3 body radii, with a physical-meter readout. Wheel input over the
+parameter panel scrolls that panel instead. `setSurfaceCamera` supplies an orthonormal camera basis to the shared
 projection path without changing simulation camera rules. Leaving walk restores
 the previous orbit position, angles and inspection height. Cutaway and reseeding
 exit walking; changing material parameters resamples the walking surface.

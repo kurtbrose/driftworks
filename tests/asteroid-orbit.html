@@ -31,7 +31,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 <div id="mix" class="mix" aria-live="polite"></div><small>Drag sliders, then release to apply.</small>
 <button id="defaults" style="margin-top:8px">Reset parameters</button>
 </section>
-<div id="walk-controls" class="walk-controls" hidden><button data-step="left" aria-label="Step left">←</button><button data-step="forward" aria-label="Step forward">↑</button><button data-step="back" aria-label="Step backward">↓</button><button data-step="right" aria-label="Step right">→</button></div><footer>Driftworks · live 3D geology · camera orbit, stationary asteroid</footer>
+<div id="walk-controls" class="walk-controls" hidden><span id="walk-altitude" style="background:#15232cdc;border:1px solid #40505b;border-radius:6px;padding:10px 12px">Altitude</span><button data-step="left" aria-label="Step left">←</button><button data-step="forward" aria-label="Step forward">↑</button><button data-step="back" aria-label="Step backward">↓</button><button data-step="right" aria-label="Step right">→</button></div><footer>Driftworks · live 3D geology · camera orbit, stationary asteroid</footer>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
     <script src="../src/propulsion.js?v=20260920-population1"></script>
@@ -80,7 +80,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   seedInput.onkeydown=function(event){if(event.key==='Enter')applySeed();};
   document.getElementById('defaults').onclick=function(){material='mixed';roughness.value=1;depth.value=1;patchiness.value=Driftworks.asteroidArt.describe(asteroid).heterogeneity.toFixed(2);applyParameters();};
   applyParameters();
-  var walking=false, savedView=null, walkDirection=[-.4,-.5,.75], walkHeading=[0,1,0], walkPitch=-.12, keys={}, lookDrag=null;
+  var walking=false, savedView=null, walkDirection=[-.4,-.5,.75], walkHeading=[0,1,0], walkPitch=-.12, walkAltitude=.012, keys={}, lookDrag=null;
   var walkButton=document.getElementById('walk'), help=document.getElementById('viewer-help');
   function normalize(v){var length=Math.hypot.apply(null,v)||1;return v.map(function(x){return x/length;});}
   function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
@@ -93,11 +93,12 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     if(forward||sideways){var speed=.006*dt*(keys.ShiftLeft||keys.ShiftRight?4:1)/Math.max(1,Math.hypot(forward,sideways));walkDirection=normalize(frame.point.map(function(v,i){return v+speed*(walkHeading[i]*forward+right[i]*sideways);}));frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection);n=frame.normal;walkHeading=tangent(walkHeading,n);right=normalize(cross(walkHeading,n));}
     var forwardView=normalize(walkHeading.map(function(v,i){return v*Math.cos(walkPitch)+n[i]*Math.sin(walkPitch);}));
     var up=normalize(cross(right,forwardView)), back=forwardView.map(function(v){return -v;});
-    var eye=frame.point.map(function(v,i){return (v+n[i]*.012)*asteroid.radius;});
+    var eye=frame.point.map(function(v,i){return (v+n[i]*walkAltitude)*asteroid.radius;});
     scene.setSurfaceCamera({eye:eye,right:right,up:up,back:back});
+    var altitudeLabel=document.getElementById('walk-altitude'), altitudeText='Altitude '+Math.round(walkAltitude*asteroid.radius*Driftworks.sim.METERS_PER_UNIT).toLocaleString()+' m';if(altitudeLabel.textContent!==altitudeText)altitudeLabel.textContent=altitudeText;
   }
   function leaveWalk(){walking=false;keys={};lookDrag=null;scene.setSurfaceCamera(null);if(savedView){world.camera=savedView.camera;scene.setOrbit(savedView.orbit);}document.getElementById('walk-controls').hidden=true;walkButton.textContent='Surface walk';walkButton.setAttribute('aria-pressed','false');help.innerHTML='Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan';motion.disabled=false;}
-  walkButton.onclick=function(){if(walking){leaveWalk();return;}if(asteroid.excavation.level>0){world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];document.getElementById('cut').textContent='Cutaway';document.getElementById('cut').setAttribute('aria-pressed','false');}savedView={camera:Object.assign({},world.camera),orbit:scene.getOrbit()};walking=true;rotating=false;updateMotion();motion.disabled=true;walkDirection=normalize([-.4,-.5,.75]);walkHeading=[0,1,0];walkPitch=-.12;document.getElementById('walk-controls').hidden=false;walkButton.textContent='Return to orbit';walkButton.setAttribute('aria-pressed','true');help.innerHTML='WASD / arrows: walk · Shift: faster<br>Drag: look around · Esc: return to orbit';walkPose(0);};
+  walkButton.onclick=function(){if(walking){leaveWalk();return;}if(asteroid.excavation.level>0){world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];document.getElementById('cut').textContent='Cutaway';document.getElementById('cut').setAttribute('aria-pressed','false');}savedView={camera:Object.assign({},world.camera),orbit:scene.getOrbit()};walking=true;rotating=false;updateMotion();motion.disabled=true;walkDirection=normalize([-.4,-.5,.75]);walkHeading=[0,1,0];walkPitch=-.12;document.getElementById('walk-controls').hidden=false;walkButton.textContent='Return to orbit';walkButton.setAttribute('aria-pressed','true');help.innerHTML='WASD / arrows: walk · Shift: faster<br>Drag: look · Wheel: altitude<br>Esc: return to orbit';walkPose(0);};
   document.querySelectorAll('[data-step]').forEach(function(button){button.onclick=function(){if(!walking)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),forward=tangent(walkHeading,frame.normal),right=cross(forward,frame.normal),kind=button.dataset.step,axis=kind==='left'||kind==='right'?right:forward,sign=kind==='left'||kind==='back'?-1:1;walkDirection=normalize(frame.point.map(function(v,i){return v+axis[i]*sign*.006;}));walkPose(0);};});
   window.addEventListener('keydown',function(event){if(!walking||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if(event.code==='Escape'){leaveWalk();return;}if(/^(Key[WASD]|Arrow(Up|Down|Left|Right)|Shift(Left|Right))$/.test(event.code)){keys[event.code]=true;event.preventDefault();}});
   window.addEventListener('keyup',function(event){delete keys[event.code];});window.addEventListener('blur',function(){keys={};lookDrag=null;});
@@ -110,7 +111,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   updateMotion();scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);
   motion.onclick=function(){rotating=!rotating;updateMotion();};
   host.addEventListener('pointerdown',function(){rotating=false;updateMotion();});
-  host.addEventListener('wheel',function(){rotating=false;updateMotion();},{passive:true});
+  host.addEventListener('wheel',function(event){rotating=false;updateMotion();if(walking){event.preventDefault();var delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?host.clientHeight:1);walkAltitude=Math.max(.004,Math.min(.3,walkAltitude*Math.exp(-Math.max(-300,Math.min(300,delta))*.002)));walkPose(0);}},{passive:false});
   document.getElementById('reset').onclick=function(){if(walking)leaveWalk();resetCamera();phase=-.49;scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);};
   document.getElementById('cut').onclick=function(){if(walking)leaveWalk();world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];var open=asteroid.excavation.level>0;this.textContent=open?'Close cutaway':'Cutaway';this.setAttribute('aria-pressed',String(open));scene.sync(world);};
   function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;previous=now;
