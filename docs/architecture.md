@@ -358,14 +358,19 @@ See [population](population.md) for clock, event, transport, and save contracts.
 ### Viewer surface rubble
 
 Surface walking adds deterministic rubble tiles on a fixed 128-by-64 angular
-partition. Tile RNG uses the asteroid ID and wrapped tile coordinates; camera
-movement cannot change a tile's rock positions or shapes. Composition-derived
-boulderiness controls density. Rocks are irregular, flattened 1,280-triangle meshes with shared smooth normals
-placed in the actual terrain-normal frame and partly buried. The shader shares
-the surface palette and physical-space microtexture. Each tile batches its rocks
-into one static buffer, requiring at most 21 nearby tile draws and 378 rocks.
-An LRU cache retains at most 32 tiles; material or geology changes invalidate it.
-Per-fragment physical distance fades rubble with continuous alpha
-blending between 0.025 and 0.085 body radii. No planetary mesh subdivision or
-simulation entity is added. This first rubble pass has directional shading and
-no cast shadows; orbit mode and excavated cutaways omit the tile layer.
+partition. Tile RNG uses the asteroid ID and wrapped tile coordinates. Each
+rock samples one continuous seeded shape at subdivision levels 0–4 (20 to
+5,120 triangles). Refinement preserves existing vertices. Smooth vertex normals
+and physical-space shader texture retain the surface palette.
+
+Visible tile bounds select detail from projected pixel diameter. Tiles are
+prioritized by apparent size and reserve their worst-case 18-rock triangle
+cost before drawing; total submitted rubble cannot exceed 160,000 triangles.
+New vertices and normals morph from the preceding topology in the vertex
+shader, avoiding silhouette jumps at subdivision boundaries. Conservative tile
+bounds cull off-screen tiles; partly visible tiles retain all their rocks.
+An LRU cache retains 32 tile/level buffers, invalidated by geology changes.
+Continuous distance alpha fades rubble between 0.025 and 0.085 body radii.
+This budget covers rubble, not the base asteroid mesh, shader work, or total
+frame time. Asteroid terrain still uses its existing fixed mesh; excavated
+cutaways and orbit mode omit rubble. Cast shadows are not yet implemented.

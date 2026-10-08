@@ -267,7 +267,8 @@ export type DriftworksNamespace = {
     shaderSource: string;
   };
   scene3d?: {
-    rubblePatch: (asteroid: Asteroid, longitude: number, latitude: number) => Float32Array;
+    rubbleLod: (diameterPixels: number, remainingTriangles: number) => {level:number; morph:number};
+    rubblePatch: (asteroid: Asteroid, longitude: number, latitude: number, detail?: number, morphData?: boolean) => Float32Array;
     surfaceFrame: (asteroid: Asteroid, direction: [number, number, number]) => {point: [number, number, number]; normal: [number, number, number]};
     setStudyParameters: (asteroid: Asteroid, parameters: {bulk?: number[]; roughness?: number; craterDepth?: number; heterogeneity?: number}) => AsteroidVisual;
     impactsFor: (asteroid: Asteroid) => {center: [number, number, number]; normal: [number, number, number]; radius: number; depth: number; rim: number}[];

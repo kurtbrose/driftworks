@@ -8,7 +8,7 @@
   /** @typedef {[number, number, number]} V3 */
   /** @typedef {{ yaw: number, tilt: number, height?: number, surface?: View }} Orbit */
   /** @typedef {{ right: V3, up: V3, back: V3, distance: number, focal: number }} View */
-  /** @typedef {{ buffer: WebGLBuffer, count: number }} Mesh */
+  /** @typedef {{ buffer: WebGLBuffer, count: number, stride?: number }} Mesh */
   /** @type {import('./types').DriftworksNamespace} */
   var DW = global.Driftworks;
   var sim = /** @type {import('./types').SimApi} */ (DW.sim);
@@ -367,9 +367,16 @@
     return new Float32Array(output);
   }
 
+  /** Screen-space silhouette error with a conservative 18-rock tile budget.
+   * @param {number} diameterPixels @param {number} remainingTriangles */
+  function rubbleLod(diameterPixels,remainingTriangles) {
+    var continuous=Math.max(0,Math.min(4,Math.log(Math.max(1,diameterPixels)/12)/Math.log(2))),level=Math.ceil(continuous);
+    while(level>=0 && 18*20*Math.pow(4,level)>remainingTriangles)level--;
+    return {level:level,morph:level<=0?1:Math.max(0,Math.min(1,continuous-(level-1)))};
+  }
   /** Deterministic fixed global surface tiles; camera movement never seeds geometry. */
-  /** @param {Asteroid} asteroid @param {number} longitude @param {number} latitude */
-  function rubblePatch(asteroid,longitude,latitude) {
+  /** @param {Asteroid} asteroid @param {number} longitude @param {number} latitude @param {number} [detail] @param {boolean} [morphData] */
+  function rubblePatch(asteroid,longitude,latitude,detail,morphData) {
     longitude=((longitude%128)+128)%128;latitude=Math.max(0,Math.min(63,latitude));
     var seed=2166136261, key=asteroid.id+':rubble:'+longitude+':'+latitude;
     for(var i=0;i<key.length;i++)seed=Math.imul(seed^key.charCodeAt(i),16777619);
@@ -377,10 +384,14 @@
     var vertices=[[-1,phi,0],[1,phi,0],[-1,-phi,0],[1,-phi,0],[0,-1,phi],[0,1,phi],[0,-1,-phi],[0,1,-phi],[phi,0,-1],[phi,0,1],[-phi,0,-1],[-phi,0,1]];
     var faces=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
     vertices=vertices.map(function(v){var m=Math.hypot.apply(null,v);return v.map(function(x){return x/m;});});
-    for(var subdivision=0;subdivision<3;subdivision++) {
+    var level=detail===undefined?3:Math.max(0,Math.min(4,Math.floor(detail)));
+    /** @type {number[][]} */ var parents=[];
+    var coarseFaces=faces;
+    for(var subdivision=0;subdivision<level;subdivision++) {
+      coarseFaces=faces;parents=vertices.map(function(v,i){return [i,i];});
       /** @type {Object<string,number>} */ var edges={};
       /** @param {number} a @param {number} b */
-      var midpoint=function(a,b){var edge=Math.min(a,b)+':'+Math.max(a,b);if(edges[edge]!==undefined)return edges[edge];var point=vertices[a].map(function(x,j){return x+vertices[b][j];}),m=Math.hypot.apply(null,point);edges[edge]=vertices.length;vertices.push(point.map(function(x){return x/m;}));return edges[edge];};
+      var midpoint=function(a,b){var edge=Math.min(a,b)+':'+Math.max(a,b);if(edges[edge]!==undefined)return edges[edge];var point=vertices[a].map(function(x,j){return x+vertices[b][j];}),m=Math.hypot.apply(null,point);edges[edge]=vertices.length;vertices.push(point.map(function(x){return x/m;}));parents.push([a,b]);return edges[edge];};
       faces=faces.reduce(function(result,f){var ab=midpoint(f[0],f[1]),bc=midpoint(f[1],f[2]),ca=midpoint(f[2],f[0]);result.push([f[0],ab,ca],[f[1],bc,ab],[f[2],ca,bc],[ab,bc,ca]);return result;}, /** @type {number[][]} */ ([]));
     }
     /** @type {number[]} */ var output=[];
@@ -398,7 +409,10 @@
       var normals=points.map(function(){return [0,0,0];});
       faces.forEach(function(face){var a=points[face[0]],b=points[face[1]],c=points[face[2]],u=b.map(function(v,j){return v-a[j];}),v=c.map(function(value,j){return value-a[j];}),normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];face.forEach(function(index){for(var j=0;j<3;j++)normals[index][j]+=normal[j];});});
       normals=normals.map(function(normal){var m=Math.hypot.apply(null,normal)||1;return normal.map(function(x){return x/m;});});
-      faces.forEach(function(face){face.forEach(function(index){output.push.apply(output,points[index].concat(normals[index]));});});
+      var coarseNormals=points.map(function(){return [0,0,0];});
+      coarseFaces.forEach(function(face){var a=points[face[0]],b=points[face[1]],c=points[face[2]],u=b.map(function(x,j){return x-a[j];}),v=c.map(function(x,j){return x-a[j];}),normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];face.forEach(function(index){for(var j=0;j<3;j++)coarseNormals[index][j]+=normal[j];});});
+      coarseNormals=coarseNormals.map(function(n){var m=Math.hypot.apply(null,n)||1;return n.map(function(x){return x/m;});});
+      faces.forEach(function(face){face.forEach(function(index){var data=points[index].concat(normals[index]);if(morphData){var pair=parents[index]||[index,index];data=data.concat(points[pair[0]].map(function(x,j){return (x+points[pair[1]][j])*.5;}),coarseNormals[pair[0]].map(function(x,j){return (x+coarseNormals[pair[1]][j])*.5;}));}output.push.apply(output,data);});});
     }
     return new Float32Array(output);
   }
@@ -501,7 +515,7 @@
     }
     var program = gl.createProgram(); if (!program) throw new Error('Program allocation failed');
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
-      'attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation; varying vec3 vNormal,vLocal; varying float vDepth; void main(){ float c=cos(uRotation),s=sin(uRotation); vec3 p=aPosition*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=aPosition; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
+      'attribute vec3 aPosition,aNormal,aCoarsePosition,aCoarseNormal; uniform float uMorph; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation; varying vec3 vNormal,vLocal; varying float vDepth; void main(){ float c=cos(uRotation),s=sin(uRotation); vec3 local=mix(aCoarsePosition,aPosition,uMorph); vec3 p=local*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=mix(aCoarseNormal,aNormal,uMorph)/uScale; vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
       '\nvarying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor,uBack,uRubbleEye; uniform float uRubbleFade,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
@@ -539,9 +553,9 @@
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Shader linking failed');
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
-    var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal');
+    var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal'),coarsePos=gl.getAttribLocation(program,'aCoarsePosition'),coarseNormal=gl.getAttribLocation(program,'aCoarseNormal');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
-    ['Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'RubbleEye', 'RubbleFade', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
+    ['Morph', 'Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'RubbleEye', 'RubbleFade', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
     gl.uniform1f(uniforms.RubbleFade,1);
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
     /** @param {Asteroid} asteroid */
@@ -554,11 +568,11 @@
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       return texture;
     }
-    /** @param {Float32Array} data @returns {Mesh} */
-    function upload(data) {
+    /** @param {Float32Array} data @param {number} [stride] @returns {Mesh} */
+    function upload(data,stride) {
       var buffer = gl.createBuffer(); if (!buffer) throw new Error('Mesh allocation failed');
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-      return { buffer: buffer, count: data.length / 6 };
+      return { buffer: buffer, count: data.length / (stride||6),stride:stride||6 };
     }
     var box = upload(boxMesh());
     var grid = upload(new Float32Array(600));
@@ -570,7 +584,10 @@
     function draw(mesh, origin, scale, rotation, color, rock, lines) {
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
       gl.enableVertexAttribArray(pos); gl.enableVertexAttribArray(normal);
-      gl.vertexAttribPointer(pos, 3, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(normal, 3, gl.FLOAT, false, 24, 12);
+      var stride=(mesh.stride||6)*4;
+      gl.vertexAttribPointer(pos,3,gl.FLOAT,false,stride,0);gl.vertexAttribPointer(normal,3,gl.FLOAT,false,stride,12);
+      if(stride===48){gl.enableVertexAttribArray(coarsePos);gl.enableVertexAttribArray(coarseNormal);gl.vertexAttribPointer(coarsePos,3,gl.FLOAT,false,stride,24);gl.vertexAttribPointer(coarseNormal,3,gl.FLOAT,false,stride,36);}
+      else{gl.disableVertexAttribArray(coarsePos);gl.disableVertexAttribArray(coarseNormal);gl.uniform1f(uniforms.Morph,1);}
       gl.uniform3fv(uniforms.Origin, origin); gl.uniform3fv(uniforms.Scale, scale); gl.uniform3fv(uniforms.Color, color);
       gl.uniform1f(uniforms.Rotation, rotation); gl.uniform1f(uniforms.Rock, rock ? 1 : 0);
       gl.drawArrays(lines ? gl.LINES : gl.TRIANGLES, 0, mesh.count);
@@ -823,15 +840,34 @@
         var lon=Math.atan2(eye[1],eye[0])/(Math.PI*2)*128,lat=Math.acos(Math.max(-1,Math.min(1,eye[2]/len)))/Math.PI*64;
         var visual=visualFor(body);rubbleClock++;
         gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+        /** @type {{ix:number,iy:number,diameter:number,distance:number}[]} */ var tiles=[];
+        /** @type {Record<string,boolean>} */ var seenTiles={};
         for(var ty=-2;ty<=2;ty++)for(var tx=-2;tx<=2;tx++) {
           if(tx*tx+ty*ty>5)continue;
-          var ix=((Math.floor(lon)+tx)%128+128)%128,iy=Math.max(0,Math.min(63,Math.floor(lat)+ty)),key=body.id+':'+ix+':'+iy;
-          if(!rubble[key])rubble[key]={mesh:upload(rubblePatch(body,ix,iy)),used:rubbleClock};
-          rubble[key].used=rubbleClock;
-          gl.uniform3fv(uniforms.RubbleEye,[eye[0]/body.radius,eye[1]/body.radius,eye[2]/body.radius]);
-          gl.uniform1f(uniforms.RubbleFade,2);
-          draw(rubble[key].mesh,[body.position.x,body.position.y,0],[body.radius,body.radius,body.radius],body.rotation,[.40+visual.bulk[0]*.15,.41+visual.bulk[0]*.18,.4+visual.bulk[0]*.21],false);
+          var ix=((Math.floor(lon)+tx)%128+128)%128,iy=Math.max(0,Math.min(63,Math.floor(lat)+ty)),tileKey=ix+':'+iy;
+          if(seenTiles[tileKey])continue;seenTiles[tileKey]=true;
+          var az=(ix+.5)/128*Math.PI*2,polar=(iy+.5)/64*Math.PI;
+          var point=surfaceFrame(body,[Math.cos(az)*Math.sin(polar),Math.sin(az)*Math.sin(polar),Math.cos(polar)]).point;
+          var worldPoint=point.map(function(x){return x*body.radius;}),screen=project(/** @type {V3} */ (worldPoint),w.camera,vp,orbit),bound=body.radius*.04;
+          if(screen.depth+bound<=.1)continue;
+          var screenBound=bound*vp.height*v.focal/(2*Math.max(.1,screen.depth-bound));
+          if(screen.x+screenBound<0||screen.x-screenBound>vp.width||screen.y+screenBound<0||screen.y-screenBound>vp.height)continue;
+          var distance=Math.max(.004,Math.hypot(worldPoint[0]-eye[0],worldPoint[1]-eye[1],worldPoint[2]-eye[2])/body.radius-.035);
+          tiles.push({ix:ix,iy:iy,diameter:.0087*vp.height*dpr*v.focal/(2*distance),distance:distance});
         }
+        tiles.sort(function(a,b){return b.diameter-a.diameter;});
+        var triangleBudget=160000,usedTriangles=0;
+        tiles.forEach(function(tile){
+          var request=rubbleLod(tile.diameter,triangleBudget-usedTriangles),level=request.level;
+          if(level<0)return;
+          var key=body.id+':'+tile.ix+':'+tile.iy+':'+level;
+          if(!rubble[key])rubble[key]={mesh:upload(rubblePatch(body,tile.ix,tile.iy,level,true),12),used:rubbleClock};
+          rubble[key].used=rubbleClock;usedTriangles+=rubble[key].mesh.count/3;
+          gl.uniform1f(uniforms.Morph,request.morph);
+          gl.uniform3fv(uniforms.RubbleEye,[eye[0]/body.radius,eye[1]/body.radius,eye[2]/body.radius]);gl.uniform1f(uniforms.RubbleFade,2);
+          draw(rubble[key].mesh,[body.position.x,body.position.y,0],[body.radius,body.radius,body.radius],body.rotation,[.40+visual.bulk[0]*.15,.41+visual.bulk[0]*.18,.4+visual.bulk[0]*.21],false);
+        });
+        hud.canvas.dataset.rubbleTriangles=String(usedTriangles);
         gl.uniform1f(uniforms.RubbleFade,1);gl.disable(gl.BLEND);
         var keys=Object.keys(rubble).sort(function(a,b){return rubble[b].used-rubble[a].used;});
         keys.slice(32).forEach(function(key){gl.deleteBuffer(rubble[key].mesh.buffer);delete rubble[key];});
@@ -942,5 +978,5 @@
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
     rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    rubblePatch: rubblePatch, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
+    rubbleLod: rubbleLod, rubblePatch: rubblePatch, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

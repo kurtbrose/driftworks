@@ -167,6 +167,19 @@
     assert(first.length!==other.length||first.some(function(v,i){return v!==other[i];}),'Re-seeding changes rubble');
     assert(JSON.stringify(a)===before,'Rubble is renderer-owned');
   });
+  test('Rubble LOD spends a bounded screen-space budget and preserves seeded samples', function () {
+    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],remaining=160000;
+    [2000,800,400,100,40,20,10,2].forEach(function(pixels){var request=scene.rubbleLod(pixels,remaining);assert(request.morph>=0&&request.morph<=1,'Morph stays bounded');if(request.level>=0){var cost=18*20*Math.pow(4,request.level);assert(cost<=remaining,'Worst-case tile fits the remaining budget');remaining-=cost;}});
+    assert(scene.rubbleLod(1000,359).level===-1,'Insufficient budget skips a tile');
+    assert(scene.rubbleLod(500,160000).level>scene.rubbleLod(10,160000).level,'Larger projected rocks receive more detail');
+    var low=scene.rubblePatch(a,20,25,1),high=scene.rubblePatch(a,20,25,2),samples=new Set();
+    for(var i=0;i<high.length;i+=6)samples.add(high[i]+':'+high[i+1]+':'+high[i+2]);
+    for(var j=0;j<low.length;j+=6)assert(samples.has(low[j]+':'+low[j+1]+':'+low[j+2]),'Refinement preserves all existing seeded vertices');
+    var morph=scene.rubblePatch(a,20,25,2,true);
+    assert(morph.length===high.length*2&&morph.every(Number.isFinite),'Coarse and detailed morph endpoints stay finite');
+    var below=scene.rubbleLod(48-.00001,160000),above=scene.rubbleLod(48+.00001,160000);
+    assert(below.morph>.999&&above.morph<.001,'Adjacent LODs meet at the same coarse surface');
+  });
   test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
     [0.25, 1, 8, 128].forEach(function (zoom) {
