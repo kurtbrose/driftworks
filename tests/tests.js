@@ -155,6 +155,18 @@
     });
     assert(JSON.stringify(a)===before,'Walking has no durable world state');
   });
+  test('Rubble patches are deterministic, bounded and wrap the longitude seam', function () {
+    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
+    var first=scene.rubblePatch(a,20,25),again=scene.rubblePatch(a,148,25);
+    assert(first.length>0&&first.length<=18*1280*3*6,'Patch geometry has a fixed rock budget');
+    assert(first.length===again.length&&first.every(function(v,i){return v===again[i];}),'The same tile has identical rocks across the longitude seam');
+    assert(first.every(Number.isFinite),'Boulder coordinates and normals stay finite');
+    var shared=Object.create(null);
+    for(var i=0;i<first.length;i+=6){var key=first[i]+':'+first[i+1]+':'+first[i+2],normal=[first[i+3],first[i+4],first[i+5]];if(shared[key])assert(normal.every(function(v,j){return v===shared[key][j];}),'Shared vertices have continuous shading normals');else shared[key]=normal;assert(Math.abs(Math.hypot.apply(null,normal)-1)<.00001,'Shading normals have unit length');}
+    var other=scene.rubblePatch(Object.assign({},a,{id:'other-rubble-seed'}),20,25);
+    assert(first.length!==other.length||first.some(function(v,i){return v!==other[i];}),'Re-seeding changes rubble');
+    assert(JSON.stringify(a)===before,'Rubble is renderer-owned');
+  });
   test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
     [0.25, 1, 8, 128].forEach(function (zoom) {

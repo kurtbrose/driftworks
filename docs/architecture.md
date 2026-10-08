@@ -354,3 +354,18 @@ and game. The app owns a session containing separate world and population state.
 Operational transitions pass through the coordinator; rendering only reads it.
 Population is never included in tactical cloning or fixed-step normalization.
 See [population](population.md) for clock, event, transport, and save contracts.
+
+### Viewer surface rubble
+
+Surface walking adds deterministic rubble tiles on a fixed 128-by-64 angular
+partition. Tile RNG uses the asteroid ID and wrapped tile coordinates; camera
+movement cannot change a tile's rock positions or shapes. Composition-derived
+boulderiness controls density. Rocks are irregular, flattened 1,280-triangle meshes with shared smooth normals
+placed in the actual terrain-normal frame and partly buried. The shader shares
+the surface palette and physical-space microtexture. Each tile batches its rocks
+into one static buffer, requiring at most 21 nearby tile draws and 378 rocks.
+An LRU cache retains at most 32 tiles; material or geology changes invalidate it.
+Per-fragment physical distance fades rubble with continuous alpha
+blending between 0.025 and 0.085 body radii. No planetary mesh subdivision or
+simulation entity is added. This first rubble pass has directional shading and
+no cast shadows; orbit mode and excavated cutaways omit the tile layer.

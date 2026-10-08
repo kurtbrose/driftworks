@@ -367,6 +367,41 @@
     return new Float32Array(output);
   }
 
+  /** Deterministic fixed global surface tiles; camera movement never seeds geometry. */
+  /** @param {Asteroid} asteroid @param {number} longitude @param {number} latitude */
+  function rubblePatch(asteroid,longitude,latitude) {
+    longitude=((longitude%128)+128)%128;latitude=Math.max(0,Math.min(63,latitude));
+    var seed=2166136261, key=asteroid.id+':rubble:'+longitude+':'+latitude;
+    for(var i=0;i<key.length;i++)seed=Math.imul(seed^key.charCodeAt(i),16777619);
+    var rng=sim.createRng(seed>>>0), phi=(1+Math.sqrt(5))/2;
+    var vertices=[[-1,phi,0],[1,phi,0],[-1,-phi,0],[1,-phi,0],[0,-1,phi],[0,1,phi],[0,-1,-phi],[0,1,-phi],[phi,0,-1],[phi,0,1],[-phi,0,-1],[-phi,0,1]];
+    var faces=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+    vertices=vertices.map(function(v){var m=Math.hypot.apply(null,v);return v.map(function(x){return x/m;});});
+    for(var subdivision=0;subdivision<3;subdivision++) {
+      /** @type {Object<string,number>} */ var edges={};
+      /** @param {number} a @param {number} b */
+      var midpoint=function(a,b){var edge=Math.min(a,b)+':'+Math.max(a,b);if(edges[edge]!==undefined)return edges[edge];var point=vertices[a].map(function(x,j){return x+vertices[b][j];}),m=Math.hypot.apply(null,point);edges[edge]=vertices.length;vertices.push(point.map(function(x){return x/m;}));return edges[edge];};
+      faces=faces.reduce(function(result,f){var ab=midpoint(f[0],f[1]),bc=midpoint(f[1],f[2]),ca=midpoint(f[2],f[0]);result.push([f[0],ab,ca],[f[1],bc,ab],[f[2],ca,bc],[ab,bc,ca]);return result;}, /** @type {number[][]} */ ([]));
+    }
+    /** @type {number[]} */ var output=[];
+    var visual=visualFor(asteroid), density=.5+visual.surfaceProfile.boulderiness*.5;
+    var count=Math.min(18,Math.max(4,Math.round(12*density*Math.sin((latitude+.5)/64*Math.PI))));
+    for(var rock=0;rock<count;rock++) {
+      var lon=(longitude+rng())/128*Math.PI*2,lat=(latitude+rng())/64*Math.PI;
+      var frame=surfaceFrame(asteroid,[Math.cos(lon)*Math.sin(lat),Math.sin(lon)*Math.sin(lat),Math.cos(lat)]),n=frame.normal;
+      /** @type {V3} */ var tangent=Math.abs(n[2])<.9?[-n[1],n[0],0]:[0,-n[2],n[1]];
+      var length=Math.hypot.apply(null,tangent);tangent=[tangent[0]/length,tangent[1]/length,tangent[2]/length];
+      /** @type {V3} */ var side=[n[1]*tangent[2]-n[2]*tangent[1],n[2]*tangent[0]-n[0]*tangent[2],n[0]*tangent[1]-n[1]*tangent[0]];
+      var size=.00035+Math.pow(rng(),3)*.004,angle=rng()*Math.PI*2,flatten=.5+rng()*.45;
+      var phase=rng()*Math.PI*2,stretch=.75+rng()*.5;
+      var points=vertices.map(function(v){var shape=1+.14*Math.sin(v[0]*3.7+phase)*Math.cos(v[1]*4.3-phase)+.08*Math.sin(v[2]*7+v[0]*3+phase)+.035*Math.cos(v[1]*14+v[2]*9+phase),scale=size*shape,x=(v[0]*Math.cos(angle)-v[1]*Math.sin(angle))*scale*stretch,y=(v[0]*Math.sin(angle)+v[1]*Math.cos(angle))*scale,z=v[2]*scale*flatten+size*.08;return frame.point.map(function(p,j){return p+tangent[j]*x+side[j]*y+n[j]*z;});});
+      var normals=points.map(function(){return [0,0,0];});
+      faces.forEach(function(face){var a=points[face[0]],b=points[face[1]],c=points[face[2]],u=b.map(function(v,j){return v-a[j];}),v=c.map(function(value,j){return value-a[j];}),normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];face.forEach(function(index){for(var j=0;j<3;j++)normals[index][j]+=normal[j];});});
+      normals=normals.map(function(normal){var m=Math.hypot.apply(null,normal)||1;return normal.map(function(x){return x/m;});});
+      faces.forEach(function(face){face.forEach(function(index){output.push.apply(output,points[index].concat(normals[index]));});});
+    }
+    return new Float32Array(output);
+  }
   /** @returns {Float32Array} */
   function boxMesh() {
     /** @type {number[]} */ var data = [];
@@ -450,6 +485,8 @@
     toolbar.innerHTML = '<strong>3D RTS prototype</strong><span>Alt + drag: orbit · Middle / Space + drag: pan · Wheel: zoom</span><button type="button" data-cut>Cutaway</button><button type="button" data-orbit aria-label="Orbit camera">Orbit ↻</button><button type="button" data-overview>Overview</button><button type="button" data-top>Top view</button><button type="button" data-under>Underside</button><a href="?renderer=2d">2D renderer</a>';
     host.appendChild(toolbar);
     /** @type {Orbit} */ var orbit = { yaw: 0, tilt: 0.48 };
+    /** @type {Record<string, {mesh: Mesh, used: number}>} */ var rubble={};
+    var rubbleClock=0;
     var studyHeight = 0;
     var focus = false, space = false, stress = false, fps = 0;
     /** @type {{ start: Vec2, last: Vec2, mode: string } | null} */ var drag = null;
@@ -466,7 +503,7 @@
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
       'attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation; varying vec3 vNormal,vLocal; varying float vDepth; void main(){ float c=cos(uRotation),s=sin(uRotation); vec3 p=aPosition*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=aPosition; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
-      '\nvarying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor,uBack; uniform float uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint;\n'+
+      '\nvarying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor,uBack,uRubbleEye; uniform float uRubbleFade,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
       'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
@@ -483,7 +520,7 @@
       'vec4 noiseGradient3(vec3 p){vec3 i=mod(floor(p),256.),t=fract(p),f=t*t*(3.-2.*t),df=6.*t*(1.-t);float a=hash31(i),b=hash31(i+vec3(1,0,0)),c=hash31(i+vec3(0,1,0)),d=hash31(i+vec3(1,1,0)),e=hash31(i+vec3(0,0,1)),g=hash31(i+vec3(1,0,1)),h=hash31(i+vec3(0,1,1)),j=hash31(i+vec3(1,1,1));float lo=mix(mix(a,b,f.x),mix(c,d,f.x),f.y),hi=mix(mix(e,g,f.x),mix(h,j,f.x),f.y);return vec4(mix(lo,hi,f.z),mix(mix(b-a,d-c,f.y),mix(g-e,j-h,f.y),f.z)*df.x,mix(mix(c-a,d-b,f.x),mix(h-e,j-g,f.x),f.z)*df.y,(hi-lo)*df.z);}\n'+
       'vec3 rockBump(vec3 p,float fp){vec3 gradient=vec3(0.);float amplitude=1.,frequency=13.+uProfile.y*27.;mat3 basis=mat3(1.);for(int octave=0;octave<14;octave++){float visibility=1.-smoothstep(.28,.72,frequency*fp);if(visibility<.001)break;vec4 sampleValue=noiseGradient3(basis*p*frequency+vec3(uSeed*1.73+float(octave)*17.13));vec3 derivative=vec3(dot(basis[0],sampleValue.yzw),dot(basis[1],sampleValue.yzw),dot(basis[2],sampleValue.yzw));gradient+=derivative*frequency*amplitude*visibility*2.;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;frequency*=2.03;amplitude*=.49;}return gradient*uProfile.x*.0055;}\n'+
       'vec3 globeColor(vec3 p){vec3 w=globeWeights(p);return materialColor(composition(p.yz))*w.x+materialColor(composition(p.zx))*w.y+materialColor(composition(p.xy))*w.z;}\n'+
-      'void main(){vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
+      'void main(){float coverage=uRubbleFade>1.5?1.-smoothstep(.025,.085,length(vLocal-uRubbleEye)):uRubbleFade;if(coverage<=0.)discard;vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
@@ -498,13 +535,14 @@
       'float lampA=1.-smoothstep(1.25,1.25+aa,length(vec2(vLocal.x+26.,angularDistance(theta,uSpin)*17.)));float lampB=1.-smoothstep(1.25,1.25+aa,length(vec2(vLocal.x-26.,angularDistance(theta,uSpin+PI)*17.)));col=mix(col,vec3(.74,.88,.92),max(lampA,lampB));'+
       'float panelY=angularDistance(theta,uSpin+.72)*16.5;float panel=stripe(vLocal.x,22.5,4.5,aa)*stripe(panelY,0.,2.,aa);float border=stripe(vLocal.x,22.5,5.2,aa)*stripe(panelY,0.,2.7,aa);col=mix(col,vec3(.91,.76,.43),max(0.,border-panel)*.8);col=mix(col,vec3(.23,.28,.30),panel*.9);'+
       'float end=1.-smoothstep(31.,36.,abs(vLocal.x));col*=.65+.35*end;'+
-      '}else{col*=.61+.55*max(0.,dot(n,light));}gl_FragColor=vec4(col,1.);}'));
+      '}else if(uRubbleFade>1.5){vec3 bump=rotateNormal(rockBump(vLocal, max(.000000001,uPixelFootprint*vDepth)));n=normalize(n-(bump-n*dot(bump,n))*.65);col=globeColor(vLocal)*(.17+.98*max(0.,dot(n,light)));}else{col*=.61+.55*max(0.,dot(n,light));}gl_FragColor=vec4(col,coverage);}'));
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Shader linking failed');
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
-    ['Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
+    ['Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'RubbleEye', 'RubbleFade', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
+    gl.uniform1f(uniforms.RubbleFade,1);
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
     /** @param {Asteroid} asteroid */
     function craterTexture(asteroid) {
@@ -732,6 +770,7 @@
         var key = a.radius + ':' + JSON.stringify(a.excavation || null);
         if (!rocks[a.id] || rocks[a.id].key !== key || rocks[a.id].visual !== visualFor(a)) {
           if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer); gl.deleteTexture(rocks[a.id].texture); }
+          Object.keys(rubble).forEach(function(key){gl.deleteBuffer(rubble[key].mesh.buffer);delete rubble[key];});
           var visual = visualFor(a);
           rocks[a.id] = { key: key, mesh: upload(asteroidMesh(a)), texture: craterTexture(a), visual: visual };
         }
@@ -779,6 +818,24 @@
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, rock.texture); gl.uniform1i(uniforms.CraterData, 0);
         draw(rock.mesh, [a.position.x, a.position.y, 0], [a.radius, a.radius, a.radius], a.rotation, [0.45, 0.43, 0.4], true);
       });
+      if(study && orbit.surface && w.asteroids[0] && !(w.asteroids[0].excavation && w.asteroids[0].excavation.level>0)) {
+        var body=w.asteroids[0],eye=[w.camera.x+v.back[0],w.camera.y+v.back[1],(orbit.height||0)+v.back[2]],len=Math.hypot.apply(null,eye);
+        var lon=Math.atan2(eye[1],eye[0])/(Math.PI*2)*128,lat=Math.acos(Math.max(-1,Math.min(1,eye[2]/len)))/Math.PI*64;
+        var visual=visualFor(body);rubbleClock++;
+        gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+        for(var ty=-2;ty<=2;ty++)for(var tx=-2;tx<=2;tx++) {
+          if(tx*tx+ty*ty>5)continue;
+          var ix=((Math.floor(lon)+tx)%128+128)%128,iy=Math.max(0,Math.min(63,Math.floor(lat)+ty)),key=body.id+':'+ix+':'+iy;
+          if(!rubble[key])rubble[key]={mesh:upload(rubblePatch(body,ix,iy)),used:rubbleClock};
+          rubble[key].used=rubbleClock;
+          gl.uniform3fv(uniforms.RubbleEye,[eye[0]/body.radius,eye[1]/body.radius,eye[2]/body.radius]);
+          gl.uniform1f(uniforms.RubbleFade,2);
+          draw(rubble[key].mesh,[body.position.x,body.position.y,0],[body.radius,body.radius,body.radius],body.rotation,[.40+visual.bulk[0]*.15,.41+visual.bulk[0]*.18,.4+visual.bulk[0]*.21],false);
+        }
+        gl.uniform1f(uniforms.RubbleFade,1);gl.disable(gl.BLEND);
+        var keys=Object.keys(rubble).sort(function(a,b){return rubble[b].used-rubble[a].used;});
+        keys.slice(32).forEach(function(key){gl.deleteBuffer(rubble[key].mesh.buffer);delete rubble[key];});
+      }
       hud.setTransform(dpr, 0, 0, dpr, 0, 0); hud.clearRect(0, 0, vp.width, vp.height);
       hud.font = '11px system-ui'; hud.textAlign = 'center';
       /** @param {V3} a @param {V3} b @param {string} color */
@@ -885,5 +942,5 @@
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
     rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
+    rubblePatch: rubblePatch, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);
