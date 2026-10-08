@@ -267,10 +267,11 @@ export type DriftworksNamespace = {
     shaderSource: string;
   };
   scene3d?: {
+    globeRelief: (asteroid: Asteroid, direction: [number, number, number]) => number;
     habitatMesh: () => Float32Array;
     roundedHullMesh: (width: number, length: number, depth: number, radius: number) => Float32Array;
     visualFor: (asteroid: Asteroid) => AsteroidVisual;
-    surfaceHeight: (asteroid: Asteroid, x: number, y: number) => number;
+    surfaceHeight: (asteroid: Asteroid, x: number, y: number, lower?: boolean) => number;
     project: (point: [number, number, number], camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => Vec2 & { depth: number };
     unproject: (point: Vec2, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }, z?: number) => Vec2 | null;
     view: (camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number }) => { right: [number, number, number]; up: [number, number, number]; back: [number, number, number]; distance: number; focal: number };

@@ -50,14 +50,21 @@ The equatorial silhouette matches `sim.surfaceRadius`; vertical extent and
 surface relief are presentation geometry. `Driftworks.asteroidArt`, exposed by
 game.js before boot, shares the existing seeded visual description, CPU relief,
 GLSL geology functions, uniform packing and raw RGBA8 crater data across both
-backends. The 3D mesh uses the authored broad relief and age-ordered crater
-bowls/rims over a rounded dome, with relief tapered at the equator to preserve
-the simulation silhouette. Its 88-cell meshing grid samples relief once per x/y
-column and interpolates those samples for mesh normals. Sub-mesh crater detail
-and seven-octave microrelief retain the original per-fragment shading and pixel
-footprint filtering. Color comes from the same four-material composition fields,
-not a substitute noise palette. Geometry and camera normals remain specific to
-the 3D backend; real cut faces use their own mesh normals and shared material.
+backends. The 3D backend lifts the authored crater centers onto a complete
+spheroid, undoing their original .96 projected-radius compression so impact
+density continues through the equator. A rotated lower-hemisphere population
+extends the same seeded impact sizes, depths and age ordering around the back.
+Crater bowls/rims use spherical tangent distances rather than projected ellipses.
+A periodic 128-by-64 angular relief table feeds the closed solid field; its
+88-cell marching-tetrahedra mesh, surface attachments and ray picking all use
+that field. Geometry samples broad relief and impact bowls over the full shell.
+Per-fragment spherical crater gradients retain finer detail below mesh resolution.
+The original composition palette and filtered seven-octave microrelief use
+smooth three-axis blending, avoiding a UV seam or pole stretching. Limb shading
+uses the camera-facing normal rather than the original top-view dome silhouette.
+Real cut faces use their own mesh normals and shared material. Alt-drag spans
+both hemispheres; Underside provides a direct inspection view. The lattice plane
+moves behind the body when viewing from below.
 When excavation is active, the field
 subtracts a sphere at `pocketOffset` and a bent capsule tunnel following
 `tunnelAngle`/`tunnelTurn`, using `depthM / METERS_PER_UNIT` explicitly.
@@ -72,8 +79,7 @@ exposed cut height). All geology and GPU caches remain renderer-owned.
 This is a rendering/input prototype, with blockout craft, directional shading,
 fixed mesh resolution and basic combat effects. The detailed Pixi artwork below
 remains available through the previous renderer and study pages. The shared
-headless suite checks camera inverse projection, depth parallax, the equatorial
-outline, excavation geometry and surface picking; browser verification is needed
+headless suite checks camera inverse projection, depth parallax, full-shell continuity and body scale, excavation geometry and surface picking; browser verification is needed
 for WebGL, native input and audio.
 
 Small-craft artwork uses world-light shading and continuous detail fades at

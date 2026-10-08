@@ -61,24 +61,48 @@
     assert(art.shaderSource.indexOf('void main') === -1, 'Backends share geology while supplying their own main');
     assert(JSON.stringify(a) === before, 'Artwork remains outside serialized world state');
   });
-  test('3D surface translates authored broad relief and crater bowls into mesh height', function () {
+  test('3D surface intersects the full relief shell above and below', function () {
     var scene = window.Driftworks.scene3d, art = window.Driftworks.asteroidArt;
     var a = createFreshWorld().asteroids[0], visual = scene.visualFor(a);
     var crater = visual.craters.filter(function (c) { return Math.hypot(c.x, c.y) < 0.55; }).sort(function (a, b) { return b.depth - a.depth; })[0];
     assert(crater && crater.depth > 0.002);
-    var x = crater.x, y = crater.y, r = sim.surfaceRadius(a, Math.atan2(y, x)) / a.radius;
-    var dome = 0.78 * Math.sqrt(1 - (x * x + y * y) / (r * r));
-    assertClose(scene.surfaceHeight(a, x, y), dome + art.reliefAt(visual, x, y));
+    var x = crater.x, y = crater.y;
+    assert(scene.surfaceHeight(a, x, y) > .4, 'Preserve the rounded body');
     var point = [x, y, scene.surfaceHeight(a, x, y)];
     assertClose(scene.rockField(a, point), 0);
     assert(scene.rockField(a, [x, y, point[2] - 0.005]) < 0);
     assert(scene.rockField(a, [x, y, point[2] + 0.005]) > 0);
+    var lower = -scene.surfaceHeight(a, x, y, true);
+    assertClose(scene.rockField(a, [x, y, lower]), 0);
+    assert(scene.rockField(a, [x, y, lower + .005]) < 0);
+    assert(scene.rockField(a, [x, y, lower - .005]) > 0);
+  });
+  test('3D crater relief covers both hemispheres and stays continuous across the equator and longitude seam', function () {
+    var scene = window.Driftworks.scene3d, a = createFreshWorld().asteroids[0];
+    var craters = scene.visualFor(a).craters, upper = 0, lower = 0;
+    craters.forEach(function (c) {
+      var r = sim.surfaceRadius(a, Math.atan2(c.y, c.x)) / a.radius;
+      var x = c.x / (r * .96), y = c.y / (r * .96), z = Math.sqrt(Math.max(.001, 1 - x*x - y*y));
+      var length = Math.hypot(x,y,z); x/=length; y/=length; z/=length;
+      if (scene.globeRelief(a,[x,y,z]) < -.001) upper++;
+      if (scene.globeRelief(a,[-y,x,-z]) < -.001) lower++;
+    });
+    assert(upper > craters.length * .7 && lower > craters.length * .7, 'Impact bowls continue around the back');
+    for (var angle = 0; angle < Math.PI * 2; angle += .1) {
+      var x = Math.cos(angle)*.9, y = Math.sin(angle)*.9;
+      assertClose(scene.rockField(a,[x,y,.000001]), scene.rockField(a,[x,y,-.000001]), .0001);
+    }
+    assertClose(scene.rockField(a,[.8,.000001,.3]), scene.rockField(a,[.8,-.000001,.3]), .0001);
+    assert(Number.isFinite(scene.rockField(a,[0,0,.78])) && Number.isFinite(scene.rockField(a,[0,0,-.78])), 'Both poles remain finite');
+    var picked = scene.pickAsteroid({x:700,y:450}, a,
+      {x:a.position.x,y:a.position.y,zoom:.5}, {width:1400,height:900}, {yaw:.6,tilt:2.4});
+    assert(picked && picked.position[2] < 0, 'Picking from below reaches the lower shell');
   });
   test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
     [0.25, 1, 8, 128].forEach(function (zoom) {
       [0, 0.8, 2.7].forEach(function (yaw) {
-        [0.06, 0.48, 1.12].forEach(function (tilt) {
+        [0.06, 0.48, 1.12, 2.4, 3.08].forEach(function (tilt) {
           var camera = { x: 640, y: -280, zoom: zoom }, orbit = { yaw: yaw, tilt: tilt };
           var point = [camera.x + 60 / zoom, camera.y - 35 / zoom, 0];
           var screen = scene.project(point, camera, viewport, orbit);
@@ -98,11 +122,11 @@
     var original = scene.project([100, 0, -100], camera, viewport, { yaw: 0, tilt: 0.6 });
     assert(Math.abs(turned.x - original.x) > 20);
   });
-  test('3D rock solid preserves the equator and excavates real chamber and tunnel voids', function () {
+  test('3D rock solid retains the body scale and excavates real chamber and tunnel voids', function () {
     var scene = window.Driftworks.scene3d, a = createFreshWorld().asteroids[0];
     for (var angle = 0; angle < Math.PI * 2; angle += 0.3) {
       var r = sim.surfaceRadius(a, angle) / a.radius;
-      assertClose(scene.rockField(a, [Math.cos(angle) * r, Math.sin(angle) * r, 0]), 0);
+      assert(Math.abs(scene.rockField(a, [Math.cos(angle) * r, Math.sin(angle) * r, 0])) < .12, 'Geology remains a small displacement of the simulation body');
     }
     var before = JSON.stringify(a), e = a.excavation;
     scene.asteroidMesh(a, 12);

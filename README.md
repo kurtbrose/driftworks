@@ -81,7 +81,8 @@ the rough 3D geometry prototype. **Cutaway** focuses the asteroid
 and exposes its existing excavation geometry; **Orbit ↻** steps around it.
 Hold **Alt** while dragging to orbit continuously, use middle-drag or
 Space-drag to pan, and use the wheel to zoom about the cursor. **Top view** resets
-the camera angle; **Overview** frames the fleet and asteroid together. Left-click
+the camera angle; **Underside** shows the lower surface. Alt-drag can orbit
+through both hemispheres. **Overview** frames the fleet and asteroid together. Left-click
 or box-drag selects craft (Shift adds/toggles); right-click issues the existing
 context orders on the movement plane or the picked object. Fleet/HUD controls,
 pause, saves, and the F/H/J/K controls remain available. Orbit angles are session
@@ -93,7 +94,8 @@ basic combat effects, and placeholder models for the smaller craft. The mothersh
 preserves the existing rotating habitat, fixed bearing/spine, antenna and side
 modules as real 3D surfaces. The asteroid now reuses the
 original seeded composition, crater population, surface profile and procedural
-material shader; broad relief and crater bowls also shape the 3D mesh. The Pixi artwork study pages
+material shader. Craters wrap around the complete body, with seamless rock
+texture across the sides and poles; broad relief and crater bowls also shape the 3D mesh. The Pixi artwork study pages
 continue to use the previous renderer. No additional runtime dependency or build
 step is required.
 
