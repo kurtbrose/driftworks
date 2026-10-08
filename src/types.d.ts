@@ -260,13 +260,14 @@ export type AsteroidVisual = {
 
 export type DriftworksNamespace = {
   asteroidArt?: {
-    describe: (asteroid: Asteroid) => AsteroidVisual;
+    describe: (asteroid: Asteroid, bulkOverride?: number[]) => AsteroidVisual;
     reliefAt: (visual: AsteroidVisual, x: number, y: number) => number;
     uniforms: (visual: AsteroidVisual) => { uLight: Float32Array; uBulk: Float32Array; uFieldLow: Float32Array; uFieldMed: Float32Array; uProfile: Float32Array; uRelief: Float32Array; uFieldBlobs: Float32Array; uBlobMaterial: Float32Array; uCraterCount: number; uHeterogeneity: number; uSeed: number; uPixelFootprint: number };
     craterBytes: (visual: AsteroidVisual) => Uint8Array;
     shaderSource: string;
   };
   scene3d?: {
+    setStudyParameters: (asteroid: Asteroid, parameters: {bulk?: number[]; roughness?: number; craterDepth?: number; heterogeneity?: number}) => AsteroidVisual;
     impactsFor: (asteroid: Asteroid) => {center: [number, number, number]; normal: [number, number, number]; radius: number; depth: number; rim: number}[];
     craterDistance: (impact: {center: [number, number, number]; normal: [number, number, number]; radius: number}, point: [number, number, number]) => number;
     impactBytes: (asteroid: Asteroid) => Uint8Array;

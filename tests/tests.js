@@ -125,6 +125,24 @@
     var varied=impacts.some(function(impact){var c=impact.center,n=impact.normal,l=Math.hypot(c[0],c[1],c[2]);return Math.abs(n[2]-c[2]/l)>.1;});
     assert(varied,'Axes follow the irregular spheroid rather than an unstretched sphere');
   });
+  test('Asteroid study parameters are reproducible and never alter saved world data', function () {
+    var scene=window.Driftworks.scene3d, art=window.Driftworks.asteroidArt;
+    var a=Object.assign({},createFreshWorld().asteroids[0],{id:'parameter-study-test'}), before=JSON.stringify(a);
+    var original=art.describe(a), custom=scene.setStudyParameters(a,{bulk:[0,0,10,0],roughness:.5,craterDepth:1.5,heterogeneity:.2});
+    assertClose(custom.bulk[2],1);
+    assert(custom.surfaceProfile.roughnessAmp!==original.surfaceProfile.roughnessAmp,'Materials affect the surface profile');
+    assertClose(custom.heterogeneity,.2);
+    assert(scene.visualFor(a)===custom,'Renderer sees the replacement artwork');
+    var first=JSON.stringify(custom);
+    scene.impactsFor(a);scene.asteroidMesh(a,12);
+    assert(JSON.stringify(scene.setStudyParameters(a,{bulk:[0,0,10,0],roughness:.5,craterDepth:1.5,heterogeneity:.2}))===first,'Applying twice does not compound multipliers');
+    var reset=scene.setStudyParameters(a,{});
+    assert(JSON.stringify(reset)===JSON.stringify(original),'Defaults restore the seeded specimen');
+    assert(JSON.stringify(a)===before,'Study controls do not write persistent artwork state');
+    assert(JSON.stringify(art.describe(a,[0,0,0,0]))===JSON.stringify(original),'Empty composition falls back safely');
+    var reseeded=art.describe(Object.assign({},a,{id:'another-parameter-seed'}));
+    assert(JSON.stringify(reseeded.craters)!==JSON.stringify(original.craters),'Changing the seed changes the impact population');
+  });
   test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
     [0.25, 1, 8, 128].forEach(function (zoom) {

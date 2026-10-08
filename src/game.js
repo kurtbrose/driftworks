@@ -2683,8 +2683,8 @@
   // The shader description deliberately contains only bounded, normalized data.
   // The legacy generator remains above as the deterministic geology authoring
   // pass; none of its polygon geometry reaches the display path.
-  /** @param {Asteroid} asteroid */
-  function asteroidVisualDescription(asteroid) {
+  /** @param {Asteroid} asteroid @param {number[]} [bulkOverride] */
+  function asteroidVisualDescription(asteroid, bulkOverride) {
     var seed = 2166136261;
     for (var h = 0; h < asteroid.id.length; h += 1) seed = Math.imul(seed ^ asteroid.id.charCodeAt(h), 16777619);
     var rng = sim.createRng(seed >>> 0);
@@ -2692,6 +2692,10 @@
     var bulk = weights.map(function (weight) { return -Math.log(Math.max(0.000001, rng())) * weight; });
     var total = bulk.reduce(function (sum, value) { return sum + value; }, 0);
     bulk = bulk.map(function (value) { return value / total; });
+    if (bulkOverride && bulkOverride.length === 4 && bulkOverride.every(function (value) { return Number.isFinite(value) && value >= 0; })) {
+      var overrideTotal = bulkOverride.reduce(function (sum, value) { return sum + value; }, 0);
+      if (overrideTotal > 0) bulk = bulkOverride.map(function (value) { return value / overrideTotal; });
+    }
     var surfaceRng = sim.createRng((seed ^ 0x6d2b79f5) >>> 0);
     var surfaceProfile = asteroidSurfaceProfile(bulk, surfaceRng);
     var heterogeneity = rng();

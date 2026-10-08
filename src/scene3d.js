@@ -22,6 +22,18 @@
     if (!cached || cached.radius !== asteroid.radius) cached = geology[asteroid.id] = { radius: asteroid.radius, visual: DW.asteroidArt.describe(asteroid) };
     return cached.visual;
   }
+  /** Viewer-only artwork controls; never change persistent asteroid fields. */
+  /** @param {Asteroid} asteroid @param {{bulk?: number[], roughness?: number, craterDepth?: number, heterogeneity?: number}} parameters */
+  function setStudyParameters(asteroid, parameters) {
+    if (!DW.asteroidArt) throw new Error('Shared asteroid artwork did not load');
+    var visual = DW.asteroidArt.describe(asteroid, parameters.bulk);
+    if (Number.isFinite(parameters.roughness)) visual.surfaceProfile.roughnessAmp *= Math.max(0, Math.min(2, /** @type {number} */ (parameters.roughness)));
+    if (Number.isFinite(parameters.craterDepth)) visual.craters.forEach(function (crater) { crater.depth = Math.min(.12, crater.depth * Math.max(.25, Math.min(2, /** @type {number} */ (parameters.craterDepth)))); });
+    if (Number.isFinite(parameters.heterogeneity)) visual.heterogeneity = Math.max(0, Math.min(1, /** @type {number} */ (parameters.heterogeneity)));
+    geology[asteroid.id] = {radius: asteroid.radius, visual: visual};
+    delete shells[asteroid.id]; delete impacts[asteroid.id];
+    return visual;
+  }
   /** @typedef {{center: V3, normal: V3, radius: number, depth: number, rim: number}} Impact */
   /** @type {Record<string, { radius: number, table: Float32Array }>} */
   var shells = {};
@@ -683,10 +695,15 @@
     /** @param {World} w */
     function sync(w) {
       orbit.height = study ? 0 : inspectionHeight(w) * (orbit.tilt > Math.PI / 2 ? -1 : 1);
-      Object.keys(rocks).forEach(function (id) { if (!w.asteroids.some(function (a) { return a.id === id; })) { gl.deleteBuffer(rocks[id].mesh.buffer); gl.deleteTexture(rocks[id].texture); delete rocks[id]; } });
+      Object.keys(rocks).forEach(function (id) {
+        if (!w.asteroids.some(function (a) { return a.id === id; })) {
+          gl.deleteBuffer(rocks[id].mesh.buffer); gl.deleteTexture(rocks[id].texture);
+          delete rocks[id]; delete geology[id]; delete shells[id]; delete impacts[id];
+        }
+      });
       w.asteroids.forEach(function (a) {
         var key = a.radius + ':' + JSON.stringify(a.excavation || null);
-        if (!rocks[a.id] || rocks[a.id].key !== key) {
+        if (!rocks[a.id] || rocks[a.id].key !== key || rocks[a.id].visual !== visualFor(a)) {
           if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer); gl.deleteTexture(rocks[a.id].texture); }
           var visual = visualFor(a);
           rocks[a.id] = { key: key, mesh: upload(asteroidMesh(a)), texture: craterTexture(a), visual: visual };
@@ -832,5 +849,5 @@
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
     rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
+    setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

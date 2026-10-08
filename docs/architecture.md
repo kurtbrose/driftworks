@@ -76,7 +76,14 @@ that can make dark-side pixels glow while orbiting.
 Real cut faces use their own mesh normals and shared material. The standalone `tests/asteroid-orbit.html` viewer uses `scene3d.create` with
 `study: true` to disable the tactical grid, center the inspection camera on the
 body, and use ordinary left-drag for orbiting. `getOrbit`/`setOrbit` expose only
-renderer-owned camera angles to its animation loop. Alt-drag spans
+renderer-owned camera angles to its animation loop. Its seed input changes only
+the isolated specimen ID. `setStudyParameters` regenerates the seeded artwork
+with an optional normalized bulk mix, then applies bounded roughness, crater-depth
+and heterogeneity controls outside world state. Composition overrides participate
+in the material-dependent surface profile, rather than merely tinting an existing
+specimen. Reapplying parameters starts from authored defaults, never multiplying
+previous edits. Replaced visual objects invalidate CPU geology and GPU mesh/impact
+texture caches. The main game omits all study parameters. Alt-drag spans
 both hemispheres; Underside provides a direct inspection view. The lattice plane
 moves behind the body when viewing from below.
 When excavation is active, the field

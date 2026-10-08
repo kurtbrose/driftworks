@@ -7,17 +7,30 @@
 <link rel="stylesheet" href="../styles.css">
 <style>
 body{margin:0;background:#080d11;color:#dce6e9;font:14px system-ui;overflow:hidden}
-#viewer{position:fixed;inset:0;width:100%;height:100%}.scene3d-controls{display:none}
+#viewer{position:fixed;inset:0 0 0 310px;width:calc(100% - 310px);height:100%}.scene3d-controls{display:none}
 header{position:fixed;z-index:5;top:24px;left:28px;right:28px;pointer-events:none;display:flex;align-items:start;justify-content:space-between;gap:20px}
 h1{font-size:22px;font-weight:500;margin:0 0 8px;letter-spacing:.02em}p{margin:0;color:#9baeb8;line-height:1.6}
 nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#dce6e9;padding:10px 14px;font:inherit;cursor:pointer;text-decoration:none}button:hover,a:hover{background:#253944}button:focus-visible,a:focus-visible{outline:2px solid #ade5f2}
+.parameters{position:fixed;z-index:5;left:20px;top:145px;width:270px;padding:16px;background:#101c24ed;border:1px solid #344853;border-radius:10px;max-height:calc(100vh - 200px);overflow:auto}
+.parameters h2{font-size:14px;margin:0 0 8px;font-weight:500}.parameters label{display:block;color:#b5c8d2;font-size:12px;margin-top:12px}.parameters input[type=text]{width:100%;box-sizing:border-box;background:#071118;color:#dce6e9;border:1px solid #40505b;border-radius:5px;padding:9px;margin-top:7px;font:inherit}.parameters input[type=range]{width:100%;margin:9px 0 0;accent-color:#afd1dd}.parameters button{padding:7px 9px;font-size:12px;white-space:nowrap}.seed-row{display:flex;gap:8px;margin-top:9px}.seed-row button{flex:1}.presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.presets button{flex:1 0 calc(33.333% - 6px)}.presets button[aria-pressed=true]{background:#365764;border-color:#9dc6d5;color:#fff}.parameters output{float:right;color:#dce6e9}.mix{font-size:12px;color:#92aab6;line-height:1.6;margin-top:10px}.parameters small{display:block;font-size:11px;color:#839aa7;margin-top:8px;line-height:1.5}
 footer{position:fixed;bottom:24px;left:28px;z-index:5;color:#859aa5;pointer-events:none;font-size:12px}
-@media(max-width:650px){header{top:16px;left:16px;right:16px;flex-direction:column}h1{font-size:18px}footer{left:16px}}
+@media(max-width:700px){#viewer{inset:0;width:100%}.parameters{top:auto;bottom:45px;left:16px;width:205px;max-height:33vh;padding:12px}header nav{gap:5px}header button,header a{padding:7px 9px}header{top:16px;left:16px;right:16px;flex-direction:column}h1{font-size:18px}footer{left:16px}}
 </style>
 </head>
 <body>
 <div id="viewer" class="scene" aria-label="Orbiting 3D asteroid"></div>
 <header><div><h1>Asteroid orbit</h1><p>Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="cut" aria-pressed="false">Cutaway</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
+<section class="parameters" aria-label="Asteroid parameters">
+<h2>Geology controls</h2>
+<label for="seed">Seed</label><input id="seed" type="text" maxlength="64" autocomplete="off" spellcheck="false">
+<div class="seed-row"><button id="reseed">Re-seed</button><button id="apply-seed">Apply seed</button></div>
+<label>Composition</label><div class="presets" role="group" aria-label="Composition presets"><button data-material="mixed" aria-pressed="true">Mixed</button><button data-material="0" aria-pressed="false">Ice</button><button data-material="1" aria-pressed="false">Volatiles</button><button data-material="2" aria-pressed="false">Metals</button><button data-material="3" aria-pressed="false">Silicates</button></div>
+<label for="roughness">Surface roughness <output id="roughness-value">1.00×</output></label><input id="roughness" type="range" min="0" max="2" step="0.05" value="1">
+<label for="depth">Crater depth <output id="depth-value">1.00×</output></label><input id="depth" type="range" min="0.25" max="2" step="0.05" value="1">
+<label for="patchiness">Material patchiness <output id="patchiness-value"></output></label><input id="patchiness" type="range" min="0" max="1" step="0.05">
+<div id="mix" class="mix" aria-live="polite"></div><small>Drag sliders, then release to apply.</small>
+<button id="defaults" style="margin-top:8px">Reset parameters</button>
+</section>
 <footer>Driftworks · live 3D geology · camera orbit, stationary asteroid</footer>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
@@ -37,6 +50,7 @@ footer{position:fixed;bottom:24px;left:28px;z-index:5;color:#859aa5;pointer-even
 (function(){
   var world=Driftworks.sim.createInitialWorld(), host=document.getElementById('viewer');
   var asteroid=world.asteroids[0];
+  var seedInput=document.getElementById('seed');seedInput.value=asteroid.id;
   asteroid.position={x:0,y:0}; asteroid.rotation=0;
   world.ships=[];world.platforms=[];world.wrecks=[];world.packets=[];world.selectedShipIds=[];world.combat.drones=[];
   world.asteroids=[asteroid];
@@ -46,6 +60,26 @@ footer{position:fixed;bottom:24px;left:28px;z-index:5;color:#859aa5;pointer-even
   host.querySelector('.night-sky-background').style.backgroundImage='url("../assets/backgrounds/coalsack-wide-field.jpg")';
   host.querySelector('.night-sky-background').style.filter='brightness(.28)';
 
+  var material='mixed', names=['Ice','Volatiles','Metals','Silicates'];
+  var roughness=document.getElementById('roughness'), depth=document.getElementById('depth'), patchiness=document.getElementById('patchiness');
+  patchiness.value=Driftworks.scene3d.visualFor(asteroid).heterogeneity.toFixed(2);
+  function labels(){document.getElementById('roughness-value').textContent=Number(roughness.value).toFixed(2)+'×';document.getElementById('depth-value').textContent=Number(depth.value).toFixed(2)+'×';document.getElementById('patchiness-value').textContent=Math.round(Number(patchiness.value)*100)+'%';}
+  function applyParameters(){
+    var bulk;
+    if(material!=='mixed'){bulk=[.05,.05,.05,.05];bulk[Number(material)]=.85;}
+    var visual=Driftworks.scene3d.setStudyParameters(asteroid,{bulk:bulk,roughness:Number(roughness.value),craterDepth:Number(depth.value),heterogeneity:Number(patchiness.value)});
+    document.getElementById('mix').textContent=names.map(function(name,i){return name+' '+Math.round(visual.bulk[i]*100)+'%';}).join(' · ')+' | '+visual.surfaceProfile.state;
+    document.querySelectorAll('[data-material]').forEach(function(button){button.setAttribute('aria-pressed',String(button.dataset.material===material));});
+    labels();scene.sync(world);
+  }
+  document.querySelectorAll('[data-material]').forEach(function(button){button.onclick=function(){material=button.dataset.material;applyParameters();};});
+  [roughness,depth,patchiness].forEach(function(input){input.oninput=labels;input.onchange=applyParameters;});
+  function applySeed(){var seed=seedInput.value.trim();if(!seed){seedInput.value=asteroid.id;return;}asteroid.id=seed;applyParameters();}
+  document.getElementById('reseed').onclick=function(){seedInput.value='orbit-'+crypto.getRandomValues(new Uint32Array(1))[0].toString(36);applySeed();};
+  document.getElementById('apply-seed').onclick=applySeed;
+  seedInput.onkeydown=function(event){if(event.key==='Enter')applySeed();};
+  document.getElementById('defaults').onclick=function(){material='mixed';roughness.value=1;depth.value=1;patchiness.value=Driftworks.asteroidArt.describe(asteroid).heterogeneity.toFixed(2);applyParameters();};
+  applyParameters();
   var rotating=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=-.49, previous=0;
   var motion=document.getElementById('motion');
   function updateMotion(){motion.textContent=rotating?'Pause orbit':'Resume orbit';motion.setAttribute('aria-pressed',String(!rotating));}
