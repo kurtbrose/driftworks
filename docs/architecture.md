@@ -54,14 +54,25 @@ backends. The 3D backend lifts the authored crater centers onto a complete
 spheroid, undoing their original .96 projected-radius compression so impact
 density continues through the equator. A rotated lower-hemisphere population
 extends the same seeded impact sizes, depths and age ordering around the back.
-Crater bowls/rims use spherical tangent distances rather than projected ellipses.
-A periodic 128-by-64 angular relief table feeds the closed solid field; its
-88-cell marching-tetrahedra mesh, surface attachments and ray picking all use
-that field. Geometry samples broad relief and impact bowls over the full shell.
-Per-fragment spherical crater gradients retain finer detail below mesh resolution.
-The original composition palette and filtered seven-octave microrelief use
-smooth three-axis blending, avoiding a UV seam or pole stretching. Limb shading
-uses the camera-facing normal rather than the original top-view dome silhouette.
+Each impact center sits on the uncratered broad surface. Finite differences of
+that surface field establish its actual outward normal; circular world-space
+footprints use distance in this local tangent plane, avoiding sphere-to-spheroid
+stretching. The 3D backend packs these centers, normals, radii, depths and rims
+into its own five-texel RGBA8 impact records. CPU meshing and GPU shading use the
+same frames and age-ordered bowl/rim profile. Spatial bins accelerate CPU stamps
+without changing overlap order. A periodic 128-by-64 angular table caches only
+broad relief; crater displacements are evaluated in physical local coordinates
+in the closed solid field used by meshing, attachments and ray picking.
+The 88-cell marching-tetrahedra mesh stores broad surface normals on exterior
+vertices and real geometric normals on exposed interior faces. The shader adds
+crater gradients once, preserving fine impacts below mesh resolution without
+doubling slopes already represented in the mesh. The original composition
+palette and filtered seven-octave microrelief use smooth three-axis blending,
+avoiding a UV seam or pole stretching. Lighting is world-fixed diffuse plus a
+small ambient fill, with crater occlusion reducing that fill. A broad-normal
+terminator gate prevents normal-map bumps on the unlit hemisphere from receiving
+sunlight. There is no camera-facing limb multiplier or additive grazing noise
+that can make dark-side pixels glow while orbiting.
 Real cut faces use their own mesh normals and shared material. The standalone `tests/asteroid-orbit.html` viewer uses `scene3d.create` with
 `study: true` to disable the tactical grid, center the inspection camera on the
 body, and use ordinary left-drag for orbiting. `getOrbit`/`setOrbit` expose only

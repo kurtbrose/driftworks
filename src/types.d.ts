@@ -267,6 +267,9 @@ export type DriftworksNamespace = {
     shaderSource: string;
   };
   scene3d?: {
+    impactsFor: (asteroid: Asteroid) => {center: [number, number, number]; normal: [number, number, number]; radius: number; depth: number; rim: number}[];
+    craterDistance: (impact: {center: [number, number, number]; normal: [number, number, number]; radius: number}, point: [number, number, number]) => number;
+    impactBytes: (asteroid: Asteroid) => Uint8Array;
     globeRelief: (asteroid: Asteroid, direction: [number, number, number]) => number;
     habitatMesh: () => Float32Array;
     roundedHullMesh: (width: number, length: number, depth: number, radius: number) => Float32Array;

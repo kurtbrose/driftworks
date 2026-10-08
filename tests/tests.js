@@ -98,6 +98,33 @@
       {x:a.position.x,y:a.position.y,zoom:.5}, {width:1400,height:900}, {yaw:.6,tilt:2.4});
     assert(picked && picked.position[2] < 0, 'Picking from below reaches the lower shell');
   });
+  test('3D impacts stay circular in actual surface tangent planes and survive GPU packing', function () {
+    var scene = window.Driftworks.scene3d, a = createFreshWorld().asteroids[0];
+    var impacts = scene.impactsFor(a), bytes = scene.impactBytes(a);
+    assert(impacts.length === scene.visualFor(a).craters.length * 2);
+    impacts.forEach(function(impact,index) {
+      var n=impact.normal, c=impact.center;
+      assertClose(Math.hypot(n[0],n[1],n[2]),1);
+      assert(n[0]*c[0]+n[1]*c[1]+n[2]*c[2]>0, 'Impact axis faces out of the body');
+      var axis=Math.abs(n[2])<.9?[0,0,1]:[1,0,0];
+      var t=[n[1]*axis[2]-n[2]*axis[1],n[2]*axis[0]-n[0]*axis[2],n[0]*axis[1]-n[1]*axis[0]];
+      var length=Math.hypot(t[0],t[1],t[2]);t=t.map(function(v){return v/length;});
+      var b=[n[1]*t[2]-n[2]*t[1],n[2]*t[0]-n[0]*t[2],n[0]*t[1]-n[1]*t[0]];
+      for(var angle=0;angle<Math.PI*2;angle+=.4){
+        var point=c.map(function(v,i){return v+impact.radius*(t[i]*Math.cos(angle)+b[i]*Math.sin(angle));});
+        assertClose(scene.craterDistance(impact,point),1);
+        var raised=point.map(function(v,i){return v+n[i]*.03;});
+        assertClose(scene.craterDistance(impact,raised),1, .000001);
+      }
+      function unpack(i){return (bytes[index*20+i*2]*256+bytes[index*20+i*2+1])/65535;}
+      c.forEach(function(v,i){assertClose(unpack(i)*2.4-1.2,v,.00004);});
+      n.forEach(function(v,i){assertClose(unpack(i+3)*2-1,v,.00004);});
+      assertClose(unpack(6)*.4,impact.radius,.00001);
+      assertClose(unpack(7)*.12,impact.depth,.000003);
+    });
+    var varied=impacts.some(function(impact){var c=impact.center,n=impact.normal,l=Math.hypot(c[0],c[1],c[2]);return Math.abs(n[2]-c[2]/l)>.1;});
+    assert(varied,'Axes follow the irregular spheroid rather than an unstretched sphere');
+  });
   test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
     [0.25, 1, 8, 128].forEach(function (zoom) {

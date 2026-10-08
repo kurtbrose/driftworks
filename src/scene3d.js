@@ -22,29 +22,105 @@
     if (!cached || cached.radius !== asteroid.radius) cached = geology[asteroid.id] = { radius: asteroid.radius, visual: DW.asteroidArt.describe(asteroid) };
     return cached.visual;
   }
+  /** @typedef {{center: V3, normal: V3, radius: number, depth: number, rim: number}} Impact */
   /** @type {Record<string, { radius: number, table: Float32Array }>} */
   var shells = {};
-  /** Full-surface relief: lifted impact centers and round tangent-plane bowls. */
+  /** @type {Record<string, {radius: number, impacts: Impact[], buckets: Record<string, Impact[]>}>} */
+  var impacts = {};
+  /** @param {Asteroid} asteroid @param {V3} direction */
+  function broadRadius(asteroid, direction) {
+    var visual = visualFor(asteroid), broad = Object.assign({}, visual, {craters: []});
+    var w = direction.map(function (v) { return Math.pow(Math.abs(v), 8); });
+    var sum = w[0] + w[1] + w[2];
+    var art = /** @type {NonNullable<typeof DW.asteroidArt>} */ (DW.asteroidArt);
+    return 1 + (art.reliefAt(broad, direction[1], direction[2]) * w[0] + art.reliefAt(broad, direction[2], direction[0]) * w[1] + art.reliefAt(broad, direction[0], direction[1]) * w[2]) / sum;
+  }
+  /** @param {Asteroid} asteroid @param {V3} direction @returns {V3} */
+  function broadPoint(asteroid, direction) {
+    var r = sim.surfaceRadius(asteroid, Math.atan2(direction[1], direction[0])) / asteroid.radius;
+    var h = broadRadius(asteroid, direction);
+    return [direction[0]*r*h, direction[1]*r*h, direction[2]*.78*h];
+  }
+  /** Exact uncratered field, used only to author local impact frames. */
+  /** @param {Asteroid} asteroid @param {V3} p */
+  function broadField(asteroid, p) {
+    var r = sim.surfaceRadius(asteroid, Math.atan2(p[1], p[0])) / asteroid.radius;
+    /** @type {V3} */ var d = [p[0]/r, p[1]/r, p[2]/.78];
+    var length = Math.hypot.apply(null, d);
+    return length - broadRadius(asteroid, [d[0]/length,d[1]/length,d[2]/length]);
+  }
+  /** Circular footprints live in the actual body tangent plane, in world units. */
+  /** @param {Asteroid} asteroid */
+  function impactsFor(asteroid) {
+    var cached = impacts[asteroid.id];
+    if (cached && cached.radius === asteroid.radius) return cached.impacts;
+    /** @type {Impact[]} */ var list = [];
+    for (var side = 0; side < 2; side++) visualFor(asteroid).craters.forEach(function (crater) {
+      var r = sim.surfaceRadius(asteroid, Math.atan2(crater.y, crater.x)) / asteroid.radius;
+      var x = crater.x/(r*.96), y = crater.y/(r*.96), z = Math.sqrt(Math.max(.001,1-x*x-y*y));
+      var length = Math.hypot(x,y,z);
+      /** @type {V3} */ var direction = side ? [-y/length,x/length,-z/length] : [x/length,y/length,z/length];
+      var center = broadPoint(asteroid, direction), e = .0005;
+      /** @type {V3} */ var gradient = [
+        broadField(asteroid,[center[0]+e,center[1],center[2]])-broadField(asteroid,[center[0]-e,center[1],center[2]]),
+        broadField(asteroid,[center[0],center[1]+e,center[2]])-broadField(asteroid,[center[0],center[1]-e,center[2]]),
+        broadField(asteroid,[center[0],center[1],center[2]+e])-broadField(asteroid,[center[0],center[1],center[2]-e])];
+      var magnitude = Math.hypot.apply(null,gradient);
+      list.push({center:center,normal:[gradient[0]/magnitude,gradient[1]/magnitude,gradient[2]/magnitude],radius:crater.rx,depth:crater.depth,rim:crater.rimScale});
+    });
+    /** @type {Record<string, Impact[]>} */ var buckets = {};
+    list.forEach(function(impact) {
+      var bound = impact.radius*1.6;
+      for(var z=Math.floor((impact.center[2]-bound)/.15);z<=Math.floor((impact.center[2]+bound)/.15);z++)
+        for(var y=Math.floor((impact.center[1]-bound)/.15);y<=Math.floor((impact.center[1]+bound)/.15);y++)
+          for(var x=Math.floor((impact.center[0]-bound)/.15);x<=Math.floor((impact.center[0]+bound)/.15);x++) {
+            var key=x+','+y+','+z;
+            if(!buckets[key]) buckets[key]=[];
+            buckets[key].push(impact);
+          }
+    });
+    impacts[asteroid.id] = {radius:asteroid.radius,impacts:list,buckets:buckets};
+    return list;
+  }
+  /** @param {Pick<Impact, 'center' | 'normal' | 'radius'>} impact @param {V3} point */
+  function craterDistance(impact, point) {
+    /** @type {V3} */ var d = [point[0]-impact.center[0],point[1]-impact.center[1],point[2]-impact.center[2]];
+    var axial = dot(d,impact.normal);
+    return Math.hypot(d[0]-axial*impact.normal[0],d[1]-axial*impact.normal[1],d[2]-axial*impact.normal[2])/impact.radius;
+  }
   /** @param {Asteroid} asteroid @param {V3} direction */
   function globeRelief(asteroid, direction) {
-    var visual = visualFor(asteroid), h = 0;
-    for (var side = 0; side < 2; side++) visual.craters.forEach(function (crater) {
-      var r = sim.surfaceRadius(asteroid, Math.atan2(crater.y, crater.x)) / asteroid.radius;
-      var cx = crater.x / (r * .96), cy = crater.y / (r * .96), cz = Math.sqrt(Math.max(.001, 1 - cx * cx - cy * cy));
-      var length = Math.hypot(cx, cy, cz); cx /= length; cy /= length; cz /= length;
-      var x = side ? -cy : cx, y = side ? cx : cy, z = side ? -cz : cz;
-      var cosine = direction[0] * x + direction[1] * y + direction[2] * z;
-      var size = crater.rx / (r * .96);
-      if (cosine <= 0 || Math.hypot(direction[0] - x, direction[1] - y, direction[2] - z) >= size * 1.5) return;
-      var q = Math.sqrt(Math.max(0, 1 - cosine * cosine)) / size;
+    return physicalRelief(asteroid,broadPoint(asteroid,direction));
+  }
+  /** Spatial bins retain age order and avoid scanning every impact per voxel. */
+  /** @param {Asteroid} asteroid @param {V3} point */
+  function physicalRelief(asteroid,point) {
+    impactsFor(asteroid);
+    var h = 0, key = Math.floor(point[0]/.15)+','+Math.floor(point[1]/.15)+','+Math.floor(point[2]/.15);
+    var candidates = impacts[asteroid.id].buckets[key] || [];
+    candidates.forEach(function (impact) {
+      /** @type {V3} */ var d = [point[0]-impact.center[0],point[1]-impact.center[1],point[2]-impact.center[2]];
+      // The opposite side of a closed body must not receive this impact stamp.
+      if (dot(d,d) > impact.radius*impact.radius*2.56) return;
+      var q = craterDistance(impact,point);
       if (q >= 1.35) return;
-      var t = Math.max(0, Math.min(1, (q - .7) / .48));
-      h *= t * t * (3 - 2 * t);
-      if (q < 1) h -= (1 - q * q) * crater.depth;
-      var rim = (q - 1) / .16;
-      h += Math.exp(-rim * rim) * crater.depth * .34 * crater.rimScale;
+      var t = Math.max(0,Math.min(1,(q-.7)/.48));
+      h *= t*t*(3-2*t);
+      if(q<1) h -= (1-q*q)*impact.depth;
+      var rim = (q-1)/.16;
+      h += Math.exp(-rim*rim)*impact.depth*.34*impact.rim;
     });
     return h;
+  }
+  /** RGBA8, five texels per impact: center, local normal, radius, depth, rim. */
+  /** @param {Asteroid} asteroid */
+  function impactBytes(asteroid) {
+    var list = impactsFor(asteroid), bytes = new Uint8Array(288*20);
+    list.forEach(function(impact,index) {
+      var values = impact.center.map(function(v){return (v+1.2)/2.4;}).concat(impact.normal.map(function(v){return (v+1)/2;}),[impact.radius/.4,impact.depth/.12,impact.rim,0]);
+      values.forEach(function(value,i){var packed=Math.round(Math.max(0,Math.min(1,value))*65535);bytes[index*20+i*2]=packed>>8;bytes[index*20+i*2+1]=packed&255;});
+    });
+    return bytes;
   }
   /** Cache angular relief once; voxel evaluation and picking share this shell. */
   /** @param {Asteroid} asteroid @param {V3} direction */
@@ -52,32 +128,34 @@
     var cached = shells[asteroid.id], nx = 128, ny = 64;
     if (!cached || cached.radius !== asteroid.radius) {
       var table = new Float32Array((nx + 1) * (ny + 1));
-      var visual = visualFor(asteroid), broad = Object.assign({}, visual, { craters: [] });
       for (var iy = 0; iy <= ny; iy++) for (var ix = 0; ix <= nx; ix++) {
         var longitude = ix / nx * Math.PI * 2, latitude = iy / ny * Math.PI;
-        /** @type {V3} */ var d = [Math.cos(longitude) * Math.sin(latitude), Math.sin(longitude) * Math.sin(latitude), Math.cos(latitude)];
-        var w = d.map(function (v) { return Math.pow(Math.abs(v), 8); });
-        var sum = w[0] + w[1] + w[2];
-        var art = /** @type {NonNullable<typeof DW.asteroidArt>} */ (DW.asteroidArt);
-        var relief = (art.reliefAt(broad, d[1], d[2]) * w[0] + art.reliefAt(broad, d[2], d[0]) * w[1] + art.reliefAt(broad, d[0], d[1]) * w[2]) / sum;
-        table[ix + (nx + 1) * iy] = 1 + relief + globeRelief(asteroid, d);
+        /** @type {V3} */ var d = [Math.cos(longitude)*Math.sin(latitude),Math.sin(longitude)*Math.sin(latitude),Math.cos(latitude)];
+        table[ix+(nx+1)*iy] = broadRadius(asteroid,d);
       }
       cached = shells[asteroid.id] = { radius: asteroid.radius, table: table };
     }
+    var samples = cached.table;
     var gx = ((Math.atan2(direction[1], direction[0]) / (Math.PI * 2) + 1) % 1) * nx;
     var gy = Math.acos(Math.max(-1, Math.min(1, direction[2]))) / Math.PI * ny;
     var x = Math.floor(gx), y = Math.min(ny - 1, Math.floor(gy)), tx = gx - x, ty = gy - y;
-    var a = cached.table[x + (nx + 1) * y] * (1 - tx) + cached.table[x + 1 + (nx + 1) * y] * tx;
-    var b = cached.table[x + (nx + 1) * (y + 1)] * (1 - tx) + cached.table[x + 1 + (nx + 1) * (y + 1)] * tx;
+    var a = samples[x + (nx + 1) * y] * (1 - tx) + samples[x + 1 + (nx + 1) * y] * tx;
+    var b = samples[x + (nx + 1) * (y + 1)] * (1 - tx) + samples[x + 1 + (nx + 1) * (y + 1)] * tx;
     return a * (1 - ty) + b * ty;
   }
-  /** @param {Asteroid} asteroid @param {V3} p */
-  function outerField(asteroid, p) {
+  /** @param {Asteroid} asteroid @param {V3} p @param {boolean} [broadOnly] */
+  function outerField(asteroid, p, broadOnly) {
     var r = sim.surfaceRadius(asteroid, Math.atan2(p[1], p[0])) / asteroid.radius;
     /** @type {V3} */ var d = [p[0] / r, p[1] / r, p[2] / .78];
     var length = Math.hypot.apply(null, d);
     if (length < .000001) return -1;
-    return length - shellRadius(asteroid, [d[0] / length, d[1] / length, d[2] / length]);
+    var base = length - shellRadius(asteroid, [d[0]/length,d[1]/length,d[2]/length]);
+    if (broadOnly || Math.abs(base) > .2) return base;
+    var a = Math.atan2(p[1],p[0]), dr = -.21*Math.sin(a*3)+.25*Math.cos(a*5);
+    var gx = p[0]/(r*r*length)+dr*p[1]/(r*r*r*length);
+    var gy = p[1]/(r*r*length)-dr*p[0]/(r*r*r*length);
+    var gz = p[2]/(.78*.78*length);
+    return base - physicalRelief(asteroid,p)*Math.hypot(gx,gy,gz);
   }
   /** Surface attachments intersect the complete closed shell. */
   /** @param {Asteroid} asteroid @param {number} x @param {number} y @param {boolean} [lower] */
@@ -230,9 +308,12 @@
     /** @param {V3} p */
     function vertex(p) {
       var h = 0.0005;
-      var dx = sampledField([p[0] + h, p[1], p[2]]) - sampledField([p[0] - h, p[1], p[2]]);
-      var dy = sampledField([p[0], p[1] + h, p[2]]) - sampledField([p[0], p[1] - h, p[2]]);
-      var dz = sampledField([p[0], p[1], p[2] + h]) - sampledField([p[0], p[1], p[2] - h]);
+      var exterior = !asteroid.excavation || asteroid.excavation.level <= 0 || Math.abs(outerField(asteroid,p)) < .012;
+      /** @param {V3} point */
+      function normalField(point) { return exterior ? outerField(asteroid,point,true) : sampledField(point); }
+      var dx = normalField([p[0] + h, p[1], p[2]]) - normalField([p[0] - h, p[1], p[2]]);
+      var dy = normalField([p[0], p[1] + h, p[2]]) - normalField([p[0], p[1] - h, p[2]]);
+      var dz = normalField([p[0], p[1], p[2] + h]) - normalField([p[0], p[1], p[2] - h]);
       var length = Math.hypot(dx, dy, dz) || 1;
       output.push(p[0], p[1], p[2], dx / length, dy / length, dz / length);
     }
@@ -363,24 +444,22 @@
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
       'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
-      // Evaluate crater disks on the unit sphere, rather than projecting every
-      // face through XY. The back population is rotated to avoid a mirrored map.
+      // Packed physical centers and normals define circular local tangent disks.
+      'vec4 impactTexel(float impact,float offset){return texture2D(uCraterData,vec2((impact*5.+offset+.5)/uCraterTextureWidth,.5));}\n'+
       'vec4 globeCraters(vec3 p){float h=0.;vec3 grad=vec3(0.);float occ=0.;'+
-      'for(int side=0;side<2;side++){for(int i=0;i<144;i++){if(float(i)<uCraterCount){float fi=float(i);vec4 t0=craterTexel(fi,0.);vec4 t1=craterTexel(fi,1.);vec2 xy=vec2(unpack16(t0.rg),unpack16(t0.ba))*2.5-1.25;float r=boundary(xy);vec2 uv=xy/(r*.96);vec3 center=normalize(vec3(uv,sqrt(max(.001,1.-dot(uv,uv)))));'+
-      'if(side==1)center=vec3(-center.y,center.x,-center.z);float size=unpack16(t1.rg)*.3/(r*.96);float cosine=dot(p,center);if(cosine>0.&&length(p-center)<size*1.5){vec4 t3=craterTexel(fi,3.);float depth=unpack16(t3.rg)*.12;float rimScale=unpack16(t3.ba);vec3 delta=p-center*cosine;float distance=length(delta);float q=distance/max(.001,size);if(q<1.35){vec3 dq=distance>.00001?delta/(distance*size):vec3(0.);float t=clamp((q-.7)/.48,0.,1.);float mask=t*t*(3.-2.*t);float dm=(q>.7&&q<1.18)?6.*t*(1.-t)/.48:0.;grad=grad*mask+h*dm*dq;h*=mask;if(q<1.){h-=(1.-q*q)*depth;grad+=2.*depth*q*dq;occ=max(occ,(1.-q)*.42);}float rd=(q-1.)/.16;float rim=exp(-rd*rd)*depth*.34*rimScale;h+=rim;grad+=rim*(-2.*(q-1.)/(.16*.16))*dq;}}}}}return vec4(grad,min(.58,occ));}\n'+
+      'for(int i=0;i<288;i++){if(float(i)<uCraterCount){float fi=float(i);vec4 t0=impactTexel(fi,0.);vec4 t1=impactTexel(fi,1.);vec4 t2=impactTexel(fi,2.);vec4 t3=impactTexel(fi,3.);vec4 t4=impactTexel(fi,4.);vec3 center=vec3(unpack16(t0.rg),unpack16(t0.ba),unpack16(t1.rg))*2.4-1.2;vec3 axis=normalize(vec3(unpack16(t1.ba),unpack16(t2.rg),unpack16(t2.ba))*2.-1.);float size=unpack16(t3.rg)*.4;vec3 d=p-center;if(length(d)<size*1.6){vec3 tangent=d-axis*dot(d,axis);float distance=length(tangent);float q=distance/max(.001,size);if(q<1.35){float depth=unpack16(t3.ba)*.12;float rimScale=unpack16(t4.rg);vec3 dq=distance>.00001?tangent/(distance*size):vec3(0.);float t=clamp((q-.7)/.48,0.,1.);float mask=t*t*(3.-2.*t);float dm=(q>.7&&q<1.18)?6.*t*(1.-t)/.48:0.;grad=grad*mask+h*dm*dq;h*=mask;if(q<1.){h-=(1.-q*q)*depth;grad+=2.*depth*q*dq;occ=max(occ,(1.-q)*.42);}float rd=(q-1.)/.16;float rim=exp(-rd*rd)*depth*.34*rimScale;h+=rim;grad+=rim*(-2.*(q-1.)/(.16*.16))*dq;}}}}return vec4(grad,min(.58,occ));}\n'+
       'vec3 globeWeights(vec3 p){vec3 w=pow(abs(p),vec3(8.));return w/(w.x+w.y+w.z);}\n'+
       'float globeMicro(vec3 p,float fp){vec3 w=globeWeights(p);return microRelief(p.yz,fp)*w.x+microRelief(p.zx,fp)*w.y+microRelief(p.xy,fp)*w.z;}\n'+
       'vec3 globeColor(vec3 p){vec3 w=globeWeights(p);return materialColor(composition(p.yz))*w.x+materialColor(composition(p.zx))*w.y+materialColor(composition(p.xy))*w.z;}\n'+
       'void main(){vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=uPixelFootprint;'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
-      'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec4 crater=globeCraters(sphere);float occ=crater.w*exterior;'+
-      'if(exterior>.5){float e=max(.00045,min(.004,footprint*.8));vec3 gradient=vec3(globeMicro(sphere+vec3(e,0,0),footprint)-globeMicro(sphere-vec3(e,0,0),footprint),globeMicro(sphere+vec3(0,e,0),footprint)-globeMicro(sphere-vec3(0,e,0),footprint),globeMicro(sphere+vec3(0,0,e),footprint)-globeMicro(sphere-vec3(0,0,e),footprint))/(2.*e);gradient+=crater.xyz;vec3 bump=rotateNormal(gradient-sphere*dot(gradient,sphere));n=normalize(n-bump);}'+
+      'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
+      'if(exterior>.5){float e=max(.00045,min(.004,footprint*.8));vec3 gradient=vec3(globeMicro(sphere+vec3(e,0,0),footprint)-globeMicro(sphere-vec3(e,0,0),footprint),globeMicro(sphere+vec3(0,e,0),footprint)-globeMicro(sphere-vec3(0,e,0),footprint),globeMicro(sphere+vec3(0,0,e),footprint)-globeMicro(sphere-vec3(0,0,e),footprint))/(2.*e);gradient=(gradient-sphere*dot(gradient,sphere))/vec3(boundary(p),boundary(p),.78);vec3 bump=rotateNormal(gradient+crater.xyz);bump-=bodyNormal*dot(bump,bodyNormal);n=normalize(bodyNormal-bump);}'+
       'else{float e=max(.00045,min(.004,footprint*.8));vec2 gradient=vec2(microRelief(p+vec2(e,0),footprint)-microRelief(p-vec2(e,0),footprint),microRelief(p+vec2(0,e),footprint)-microRelief(p-vec2(0,e),footprint))/(2.*e);vec3 bump=rotateNormal(vec3(-gradient,0));n=normalize(n+(bump-n*dot(bump,n))*.6);occ=clamp((uCutHeight-vLocal.z)*1.1,0.,.22);}'+
-      'float ndl=dot(n,light);float lit=pow(max(0.,ndl),.82);float limb=exterior>.5?sqrt(max(0.,dot(n,uBack))):1.;'+
-      'float rough=globeMicro(sphere,footprint)/max(.001,uProfile.x*.011);float grazing=pow(1.-sat(ndl),1.25);'+
-      'float brightness=(.22+lit*.98)*(.66+limb*.34)-occ+rough*uProfile.z*grazing*.16;'+
-      'col=globeColor(sphere)*clamp(brightness,.12,1.28);col+=vec3(1.,.94,.81)*pow(max(0.,ndl),8.)*.035;'+
+      'float ndl=max(0.,dot(n,light));float sunlight=exterior>.5?smoothstep(-.03,.10,dot(bodyNormal,light)):1.;float lit=pow(ndl,.82)*sunlight;'+
+      'float ambient=.17*(1.-occ*.7);float brightness=ambient+lit*.98;'+
+      'col=globeColor(sphere)*brightness;col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
       '}else if(uHabitat>.5){float aa=max(.015,uHullFootprint);float theta=atan(vLocal.y,vLocal.z);float diffuse=max(0.,dot(n,light));col=vec3(.49,.529,.565)*(.61+diffuse*.55);'+
       'float bands=1.-smoothstep(0.,.055+aa*.018,abs(sin((theta-uSpin)*3.)));col=mix(col,vec3(.74,.85,.89),bands*.25);'+
       'float ribs=max(max(stripe(vLocal.x,-25.,.42,aa),stripe(vLocal.x,-15.,.42,aa)),max(stripe(vLocal.x,15.,.42,aa),stripe(vLocal.x,25.,.42,aa)));col=mix(col,vec3(.21,.29,.33),ribs*.72);'+
@@ -395,12 +474,12 @@
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
     ['Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
-    /** @param {import('./types').AsteroidVisual} visual */
-    function craterTexture(visual) {
+    /** @param {Asteroid} asteroid */
+    function craterTexture(asteroid) {
       var texture = gl.createTexture(); if (!texture) throw new Error('Crater texture allocation failed');
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 576, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, art.craterBytes(visual));
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1440, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, impactBytes(asteroid));
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       return texture;
@@ -610,7 +689,7 @@
         if (!rocks[a.id] || rocks[a.id].key !== key) {
           if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer); gl.deleteTexture(rocks[a.id].texture); }
           var visual = visualFor(a);
-          rocks[a.id] = { key: key, mesh: upload(asteroidMesh(a)), texture: craterTexture(visual), visual: visual };
+          rocks[a.id] = { key: key, mesh: upload(asteroidMesh(a)), texture: craterTexture(a), visual: visual };
         }
       });
       var button = /** @type {HTMLButtonElement} */ (toolbar.querySelector('[data-cut]'));
@@ -646,7 +725,7 @@
           if (value instanceof Float32Array) gl.uniform4fv(uniforms[name], value);
         });
         gl.uniform1fv(uniforms.BlobMaterial, values.uBlobMaterial);
-        gl.uniform1f(uniforms.CraterCount, values.uCraterCount); gl.uniform1f(uniforms.CraterTextureWidth, 576);
+        gl.uniform1f(uniforms.CraterCount, impactsFor(a).length); gl.uniform1f(uniforms.CraterTextureWidth, 1440);
         gl.uniform1f(uniforms.Heterogeneity, values.uHeterogeneity); gl.uniform1f(uniforms.Seed, values.uSeed);
         var center = project([a.position.x, a.position.y, 0], w.camera, vp, orbit);
         gl.uniform1f(uniforms.PixelFootprint, Math.max(0.000001, center.depth / v.distance / (a.radius * w.camera.zoom * dpr)));
@@ -753,5 +832,5 @@
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
     rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
+    impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);
