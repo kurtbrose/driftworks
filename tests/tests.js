@@ -22,6 +22,25 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('mothership close inspection refines curved silhouettes within a fixed ceiling', function () {
+    var scene=window.Driftworks.scene3d;
+    assert(scene.habitatLod(100) === 96);
+    assert(scene.habitatLod(800) === 192);
+    assert(scene.habitatLod(5000) === 384);
+    assert(scene.habitatLod(1000000) === 384, 'Refinement remains bounded');
+    var previous=0;
+    [1,2,4].forEach(function(detail){
+      var mesh=scene.habitatMesh(96*detail),groups=scene.mothershipHardware(detail);
+      var hardware=Object.keys(groups).reduce(function(total,key){return total+groups[key].length/18;},0);
+      assert(mesh.length>previous, 'Caps and circular shell refine together');
+      previous=mesh.length;
+      assert(mesh.length/18+hardware<240000, 'Whole ship has a fixed close-up triangle budget');
+      for(var i=0;i<mesh.length;i+=6){
+        assertClose(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5]),1,.000002);
+        if(Math.abs(mesh[i])<=31)assertClose(Math.hypot(mesh[i+1],mesh[i+2]),17,.000002);
+      }
+    });
+  });
   test('3D station hardware has finite unit normals and a bounded geometry budget', function () {
     var groups = window.Driftworks.scene3d.mothershipHardware(), triangles = 0;
     assert(Object.keys(groups).length <= 8, 'Hardware stays within eight material batches');
@@ -45,7 +64,7 @@
     for (var i = 0; i < mesh.length; i += 6) {
       for (var axis = 0; axis < 3; axis++) { min[axis] = Math.min(min[axis], mesh[i + axis]); max[axis] = Math.max(max[axis], mesh[i + axis]); }
       assertClose(Math.hypot(mesh[i + 3], mesh[i + 4], mesh[i + 5]), 1, 0.000001);
-      if (Math.abs(mesh[i]) < 32) assertClose(Math.hypot(mesh[i + 1], mesh[i + 2]), 17, 0.000002);
+      if (Math.abs(mesh[i]) <= 31) assertClose(Math.hypot(mesh[i + 1], mesh[i + 2]), 17, 0.000002);
     }
     assertClose(min[0], -36); assertClose(max[0], 36);
     assertClose(min[1], -17); assertClose(max[1], 17);

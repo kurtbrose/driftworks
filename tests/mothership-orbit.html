@@ -19,7 +19,7 @@ button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#
 <body>
 <div id="viewer" class="scene" aria-label="Interactive 3D mothership"></div>
 <header><div><h1>Mothership study</h1><p>Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="orbit" aria-pressed="false">Pause orbit</button><button id="animation" aria-pressed="false">Pause machinery</button><button id="reset">Reset view</button><a href="./asteroid-orbit.html">Asteroid study</a><a href="../?renderer=3d">Back to game</a></nav></header>
-<section class="panel" aria-label="Mothership inspection controls"><h2>Inspect the ship</h2><div class="views"><button data-yaw="0" data-tilt="0.06">Top</button><button data-yaw="0" data-tilt="1.57">Side</button><button data-yaw="1.57" data-tilt="1.57">End</button><button data-yaw="0" data-tilt="3.08">Under</button><button data-yaw="-0.5" data-tilt="0.9">Three-quarter</button></div><label for="time">Animation time <output id="time-value">0.0 s</output></label><input id="time" type="range" min="0" max="120" step="0.1" value="0"><p>1,000 m mothership · rotating habitat, fixed bearings, industrial truss, radiators and docking complex. The berthed utility shuttle provides a scale reference. Scrub time to hold a machinery pose.</p></section>
+<section class="panel" aria-label="Mothership inspection controls"><h2>Inspect the ship</h2><div class="views"><button data-yaw="0" data-tilt="0.06">Top</button><button data-yaw="0" data-tilt="1.57">Side</button><button data-yaw="1.57" data-tilt="1.57">End</button><button data-yaw="0" data-tilt="3.08">Under</button><button data-yaw="-0.5" data-tilt="0.9">Three-quarter</button><button id="detail">Hull detail</button></div><label for="time">Animation time <output id="time-value">0.0 s</output></label><input id="time" type="range" min="0" max="120" step="0.1" value="0"><p>1,000 m mothership · rotating habitat, fixed bearings, industrial truss, radiators and docking complex. Zoom in for procedural bolts, welds and surface grain. Scrub time to hold a machinery pose.</p></section>
 <footer>Driftworks · production 3D mothership artwork</footer>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
@@ -33,7 +33,7 @@ button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#
     <script src="../src/tactical/camera.js?v=20260920-population1"></script>
     <script src="../src/audio.js?v=20260920-population1"></script>
     <script src="../src/hud.js?v=20260922-cavern1"></script>
-    <script src="../src/scene3d.js?v=20261010-coaxial2"></script>
+    <script src="../src/scene3d.js?v=20261010-hull-detail3"></script>
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
 <script>
 (function(){
@@ -55,6 +55,7 @@ button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#
   function manual(){rotating=false;labels();}
   host.addEventListener('pointerdown',manual);host.addEventListener('wheel',manual,{passive:true});
   document.querySelectorAll('[data-yaw]').forEach(function(button){button.onclick=function(){manual();resetCamera();scene.setOrbit({yaw:Number(button.dataset.yaw),tilt:Number(button.dataset.tilt),height:15});};});
+  document.getElementById('detail').onclick=function(){manual();world.camera={x:2,y:0,zoom:96};scene.setOrbit({yaw:0,tilt:.12,height:16});};
   time.oninput=function(){animating=false;world.elapsedSeconds=Number(time.value);labels();};
   document.getElementById('reset').onclick=resetCamera;
   function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;previous=now;

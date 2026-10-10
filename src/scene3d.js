@@ -433,9 +433,13 @@
   }
 
   /** Translate the existing rounded 72 x 34 habitat silhouette into a drum. */
-  function habitatMesh() {
+  /** @param {number} [segments] */
+  function habitatMesh(segments) {
+    var count = segments || 96;
     /** @type {number[]} */ var data = [];
-    var rings = [-36, -35.9, -35.5, -35, -34, -33, -32, -31, 31, 32, 33, 34, 35, 35.5, 35.9, 36];
+    var capSteps=count/8, rings=[];
+    for(var cap=capSteps;cap>=0;cap--)rings.push(-31-5*Math.sin(cap*Math.PI/(2*capSteps)));
+    for(var cap=0;cap<=capSteps;cap++)rings.push(31+5*Math.sin(cap*Math.PI/(2*capSteps)));
     /** @param {number} x */
     function radius(x) { return Math.abs(x) <= 31 ? 17 : 12 + Math.sqrt(Math.max(0, 25 - Math.pow(Math.abs(x) - 31, 2))); }
     /** @param {number} x @param {number} angle @param {number} [cap] */
@@ -444,15 +448,15 @@
       var length = Math.hypot(1, slope);
       data.push(x, r * Math.sin(angle), r * Math.cos(angle), cap || -slope / length, cap ? 0 : Math.sin(angle) / length, cap ? 0 : Math.cos(angle) / length);
     }
-    for (var ring = 0; ring < rings.length - 1; ring++) for (var i = 0; i < 96; i++) {
-      var a = i * Math.PI * 2 / 96, b = (i + 1) * Math.PI * 2 / 96;
+    for (var ring = 0; ring < rings.length - 1; ring++) for (var i = 0; i < count; i++) {
+      var a = i * Math.PI * 2 / count, b = (i + 1) * Math.PI * 2 / count;
       vertex(rings[ring], a); vertex(rings[ring + 1], a); vertex(rings[ring + 1], b);
       vertex(rings[ring], a); vertex(rings[ring + 1], b); vertex(rings[ring], b);
     }
     [-1, 1].forEach(function (side) {
-      for (var i = 0; i < 96; i++) {
+      for (var i = 0; i < count; i++) {
         data.push(side * 36, 0, 0, side, 0, 0);
-        vertex(side * 36, i * Math.PI * 2 / 96, side); vertex(side * 36, (i + 1) * Math.PI * 2 / 96, side);
+        vertex(side * 36, i * Math.PI * 2 / count, side); vertex(side * 36, (i + 1) * Math.PI * 2 / count, side);
       }
     });
     return new Float32Array(data);
@@ -479,8 +483,16 @@
     return new Float32Array(data);
   }
 
+  /** Keep circular silhouette error below roughly half a screen pixel. */
+  /** @param {number} radiusPixels */
+  function habitatLod(radiusPixels) {
+    return radiusPixels > 2000 ? 384 : radiusPixels > 500 ? 192 : 96;
+  }
+
   /** Static station hardware is batched by finish, with no per-detail draw calls. */
-  function mothershipHardware() {
+  /** @param {number} [detail] */
+  function mothershipHardware(detail) {
+    var refinement=detail || 1;
     /** @param {V3} v @returns {V3} */
     function normalize3(v){var length=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/length,v[1]/length,v[2]/length];}
     /** @param {V3} a @param {V3} b @returns {V3} */
@@ -488,7 +500,7 @@
     /** @type {Record<string, number[]>} */ var groups = {};
     /** @param {string} material @param {V3} a @param {V3} b @param {number} radius @param {number} [sides] */
     function tube(material, a, b, radius, sides) {
-      var count = sides || 8, axis = normalize3([b[0]-a[0],b[1]-a[1],b[2]-a[2]]);
+      var count = Math.min(64,(sides || 8)*refinement), axis = normalize3([b[0]-a[0],b[1]-a[1],b[2]-a[2]]);
       var right = normalize3(cross(axis, Math.abs(axis[2]) < .9 ? [0,0,1] : [0,1,0])), up = cross(axis,right);
       var data = groups[material] || (groups[material] = []);
       /** @param {V3} center @param {number} angle @param {number} [cap] */
@@ -510,7 +522,16 @@
     }
     /** @param {string} material @param {number} x @param {number} radius @param {number} thickness */
     function ring(material,x,radius,thickness) {
-      for(var i=0;i<48;i++){var a=i*Math.PI/24,b=(i+1)*Math.PI/24;tube(material,[x,Math.sin(a)*radius,Math.cos(a)*radius],[x,Math.sin(b)*radius,Math.cos(b)*radius],thickness,6);}
+      var data=groups[material]||(groups[material]=[]), count=96*refinement, sides=8+2*Math.log2(refinement);
+      /** @param {number} along @param {number} around */
+      function vertex(along,around){
+        var nx=Math.sin(around), radial=Math.cos(around), ny=Math.sin(along)*radial,nz=Math.cos(along)*radial;
+        data.push(x+thickness*nx,Math.sin(along)*(radius+thickness*radial),Math.cos(along)*(radius+thickness*radial),nx,ny,nz);
+      }
+      for(var i=0;i<count;i++)for(var j=0;j<sides;j++){
+        var a=i*Math.PI*2/count,b=(i+1)*Math.PI*2/count,c=j*Math.PI*2/sides,d=(j+1)*Math.PI*2/sides;
+        vertex(a,c);vertex(b,c);vertex(b,d);vertex(a,c);vertex(b,d);vertex(a,d);
+      }
     }
     // Fixed bearing cages embrace the spinning shell; axial hubs remain stationary.
     [-38,38].forEach(function(x){
@@ -609,7 +630,7 @@
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
       'attribute vec3 aPosition,aNormal,aCoarsePosition,aCoarseNormal,aRockCenter,aBurial; uniform float uMorph,uRubbleFade; uniform vec3 uRubbleEye; varying float vExposure; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; void main(){ float c=cos(uRotation),s=sin(uRotation); vec3 local=mix(aCoarsePosition,aPosition,uMorph); vExposure=uRubbleFade>1.5?1.-smoothstep(.025,.085,length(aRockCenter-uRubbleEye)):1.; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=(local-aBurial*(1.-vExposure))*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=mix(aCoarseNormal,aNormal,uMorph)/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
-      '\nvarying float vExposure; varying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor,uBack,uRubbleEye; uniform float uRubbleFade,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uFinish;\n'+
+      '\nvarying float vExposure; varying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor,uBack,uRubbleEye; uniform float uRubbleFade,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
       'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
@@ -626,6 +647,12 @@
       'vec4 noiseGradient3(vec3 p){vec3 i=mod(floor(p),256.),t=fract(p),f=t*t*(3.-2.*t),df=6.*t*(1.-t);float a=hash31(i),b=hash31(i+vec3(1,0,0)),c=hash31(i+vec3(0,1,0)),d=hash31(i+vec3(1,1,0)),e=hash31(i+vec3(0,0,1)),g=hash31(i+vec3(1,0,1)),h=hash31(i+vec3(0,1,1)),j=hash31(i+vec3(1,1,1));float lo=mix(mix(a,b,f.x),mix(c,d,f.x),f.y),hi=mix(mix(e,g,f.x),mix(h,j,f.x),f.y);return vec4(mix(lo,hi,f.z),mix(mix(b-a,d-c,f.y),mix(g-e,j-h,f.y),f.z)*df.x,mix(mix(c-a,d-b,f.x),mix(h-e,j-g,f.x),f.z)*df.y,(hi-lo)*df.z);}\n'+
       'vec3 rockBump(vec3 p,float fp){vec3 gradient=vec3(0.);float amplitude=1.,frequency=13.+uProfile.y*27.;mat3 basis=mat3(1.);for(int octave=0;octave<14;octave++){float visibility=1.-smoothstep(.28,.72,frequency*fp);if(visibility<.001)break;vec4 sampleValue=noiseGradient3(basis*p*frequency+vec3(uSeed*1.73+float(octave)*17.13));vec3 derivative=vec3(dot(basis[0],sampleValue.yzw),dot(basis[1],sampleValue.yzw),dot(basis[2],sampleValue.yzw));gradient+=derivative*frequency*amplitude*visibility*2.;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;frequency*=2.03;amplitude*=.49;}return gradient*uProfile.x*.0055;}\n'+
       'vec3 globeColor(vec3 p){vec3 w=globeWeights(p);return materialColor(composition(p.yz))*w.x+materialColor(composition(p.zx))*w.y+materialColor(composition(p.xy))*w.z;}\n'+
+      // Filtered object-space height field: welds and fasteners resolve only nearby.
+      'float shipLine(float d,float width,float fp){return (1.-smoothstep(width,width+fp,abs(d)))*(1.-smoothstep(width*2.,width*7.,fp));}'+
+      'vec2 shipCell(vec2 p,vec2 period){return mod(p+period*.5,period)-period*.5;}'+
+      'vec3 hullMasks(vec2 p,float fp){vec2 cell=shipCell(p,vec2(10.,8.9));float seam=min(abs(cell.x),abs(cell.y));float weld=shipLine(seam,.045,fp);float bead=.75+.25*cos(p.x*130.+p.y*130.);vec2 boltCell=shipCell(p,vec2(.65,.65));float boltDistance=min(length(vec2(abs(cell.x)-.22,boltCell.y)),length(vec2(boltCell.x,abs(cell.y)-.22)));float bolt=shipLine(boltDistance,.042,fp);float groove=shipLine(seam,.025,fp);return vec3(weld*bead,bolt,groove);}'+
+      'float hullHeight(vec2 p,float fp){vec3 mask=hullMasks(p,fp);return .018*mask.x+.024*mask.y-.025*mask.z;}'+
+      'vec3 hullSurface(vec2 p,vec3 normal,float theta,float fp){float e=max(.003,fp*.5);float h=hullHeight(p,fp);vec2 gradient=vec2(hullHeight(p+vec2(e,0.),fp)-h,hullHeight(p+vec2(0.,e),fp)-h)/e;vec3 axial=rotateNormal(vec3(1.,0.,0.)),tangent=rotateNormal(vec3(0.,cos(theta),-sin(theta)));return normalize(normal-axial*gradient.x-tangent*gradient.y);}'+
       'void main(){if(vExposure<=0.)discard;vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
@@ -635,17 +662,19 @@
       'float ndl=max(0.,dot(n,light));float sunlight=exterior>.5?smoothstep(-.03,.10,dot(bodyNormal,light)):1.;float lit=pow(ndl,.82)*sunlight;'+
       'float ambient=.17*(1.-occ*.7);float brightness=ambient+lit*.98;'+
       'col=globeColor(sphere)*brightness;col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
-      '}else if(uHabitat>.5){float aa=max(.015,uHullFootprint);float theta=atan(vLocal.y,vLocal.z)-uSpin;float diffuse=max(0.,dot(n,light));col=vec3(.82,.79,.70)*(.26+diffuse*.88);'+
-      'float axial=abs(mod(vLocal.x+5.,10.)-5.);float circum=abs(mod(theta*17.+4.45,8.9)-4.45);float seam=(1.-smoothstep(.05,.05+aa,axial))*.5+(1.-smoothstep(.045,.045+aa,circum))*.32;col*=1.-seam;'+
-      'float track=1.-smoothstep(.07,.07+aa,abs(mod(theta*17.+8.9,17.8)-8.9));col=mix(col,vec3(.34,.36,.34),track*.65);'+
-      'float end=smoothstep(30.,35.5,abs(vLocal.x));col=mix(col,col*.55,end);'+
-      '}else if(uRubbleFade>1.5){vec3 bump=rotateNormal(rockBump(vLocal, max(.000000001,uPixelFootprint*vDepth)));n=normalize(n-(bump-n*dot(bump,n))*.65);col=globeColor(vLocal)*(.17+.98*max(0.,dot(n,light)));}else{float diffuse=max(0.,dot(n,light));col*=uFinish>.5?.25+.92*diffuse:.61+.55*diffuse;if(uFinish>.5&&uFinish<2.5){vec3 halfVector=normalize(light+uBack);col+=vec3(.85,.90,1.)*pow(max(0.,dot(n,halfVector)),uFinish<1.5?36.:12.)*.28;}if(uFinish>6.5)col=uColor*.95;}gl_FragColor=vec4(col,1.);}'));
+      '}else if(uHabitat>.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float angle=atan(vLocal.y,vLocal.z);vec2 p=vec2(vLocal.x,(angle-uSpin)*17.);float shell=1.-smoothstep(30.,35.5,abs(vLocal.x));vec3 masks=hullMasks(p,fp);n=mix(n,hullSurface(p,n,angle,fp),shell);float diffuse=max(0.,dot(n,light));'+
+      'vec2 plate=floor((p+vec2(5.,4.45))/vec2(10.,8.9));float tone=hash31(vec3(plate,2.));vec3 base=vec3(.82,.79,.70)*(.94+.09*tone);float seam=min(abs(shipCell(p,vec2(10.,8.9)).x),abs(shipCell(p,vec2(10.,8.9)).y));float cavity=1.-smoothstep(.06,.06+fp,seam);base*=1.-cavity*.22;'+
+      'float close=1.-smoothstep(.018,.08,fp);float grain=noise3(vec3(p*70.,4.));base*=1.+(grain-.5)*.055*close;float grime=noise3(vec3(p*.45,3.))*exp(-seam*7.);base*=1.-grime*.14;col=base*(.26+diffuse*.88);'+
+      'vec3 halfVector=normalize(light+uBack);col+=vec3(.91,.89,.80)*pow(max(0.,dot(n,halfVector)),18.+tone*15.)*.045;col=mix(col,vec3(.57,.59,.57)*(.28+diffuse*.8),masks.y*.8*shell);'+
+      'vec2 hatch=shipCell(p+vec2(2.,1.),vec2(20.,17.8));vec2 edge=abs(hatch)-vec2(.8,.6);float hatchDistance=max(edge.x,edge.y);float hatchMask=(1.-smoothstep(0.,fp,hatchDistance))*(1.-smoothstep(.18,.5,fp))*shell;float hatchRim=shipLine(hatchDistance,.035,fp)*shell;col=mix(col,col*.78,hatchMask);col+=vec3(.12,.13,.12)*hatchRim;'+
+      'col*=.7+.3*shell;'+
+      '}else if(uRubbleFade>1.5){vec3 bump=rotateNormal(rockBump(vLocal, max(.000000001,uPixelFootprint*vDepth)));n=normalize(n-(bump-n*dot(bump,n))*.65);col=globeColor(vLocal)*(.17+.98*max(0.,dot(n,light))); }else{if(uFinish>.5&&uFinish<6.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float near=1.-smoothstep(.02,.1,fp);vec3 gradient=noiseGradient3(vLocal*42.).yzw;vec3 grain=rotateNormal(gradient);n=normalize(n-(grain-n*dot(grain,n))*.09*near);float rough=noise3(vLocal*12.);col*=1.+(rough-.5)*.07*near;if(uFinish>2.5&&uFinish<4.5){float joint=abs(mod(abs(vLocal.x)-42.,5.5)-.12);float weld=shipLine(joint,.04,fp);col=mix(col,col*.7,weld*.5);}}float diffuse=max(0.,dot(n,light));col*=uFinish>.5?.25+.92*diffuse:.61+.55*diffuse;if(uFinish>.5&&uFinish<2.5){vec3 halfVector=normalize(light+uBack);col+=vec3(.85,.90,1.)*pow(max(0.,dot(n,halfVector)),uFinish<1.5?36.:12.)*.28;}if(uFinish>6.5)col=uColor*.95;}gl_FragColor=vec4(col,1.);}'));
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Shader linking failed');
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal'),coarsePos=gl.getAttribLocation(program,'aCoarsePosition'),coarseNormal=gl.getAttribLocation(program,'aCoarseNormal'),rockCenter=gl.getAttribLocation(program,'aRockCenter'),burial=gl.getAttribLocation(program,'aBurial');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
-    ['Finish', 'AxialSpin', 'Morph', 'Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'RubbleEye', 'RubbleFade', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
+    ['HullDepth', 'Finish', 'AxialSpin', 'Morph', 'Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'RubbleEye', 'RubbleFade', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
     gl.uniform1f(uniforms.RubbleFade,1);
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
     /** @param {Asteroid} asteroid */
@@ -666,11 +695,19 @@
     }
     var box = upload(boxMesh());
     var grid = upload(new Float32Array(600));
-    var habitat = upload(habitatMesh());
-    var hardware = mothershipHardware();
+    var habitatLevels = [96,192,384].map(function(segments){return {segments:segments,mesh:upload(habitatMesh(segments))};});
+    /** @type {Record<number, {mesh: Mesh, color: V3, rotor: boolean, finish: number}[]>} */
+    var hardwareLevels = {};
     /** @type {Record<string, V3>} */
     var finishes = {metal:[.57,.61,.63],dark:[.12,.16,.18],shell:[.82,.79,.69],thermal:[.73,.77,.79],tank:[.65,.64,.56],orange:[.86,.36,.10],light:[.64,.93,.89],rotor:[.39,.43,.44]};
-    var stationMeshes = Object.keys(hardware).map(function(key){return {mesh:upload(new Float32Array(hardware[key])),color:finishes[key],rotor:key==='rotor',finish:key==='metal'||key==='rotor'?1:key==='dark'?2:key==='light'?7:3};});
+    /** @param {number} detail */
+    function stationLevel(detail){
+      if(!hardwareLevels[detail]){
+        var hardware=mothershipHardware(detail);
+        hardwareLevels[detail]=Object.keys(hardware).map(function(key){return {mesh:upload(new Float32Array(hardware[key])),color:finishes[key],rotor:key==='rotor',finish:key==='metal'||key==='rotor'?1:key==='dark'?2:key==='light'?7:key==='tank'?4:key==='thermal'?5:key==='orange'?6:3};});
+      }
+      return hardwareLevels[detail];
+    }
     /** @param {Mesh} mesh @param {V3} origin @param {V3} scale @param {number} rotation @param {V3} color @param {boolean} [rock] @param {boolean} [lines] */
     function draw(mesh, origin, scale, rotation, color, rock, lines) {
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
@@ -697,11 +734,14 @@
       var projected = project([x, y, 0], getWorld().camera, viewport(), orbit);
       var v = view(getWorld().camera, viewport(), orbit);
       gl.uniform1f(uniforms.Spin, phase);
-      gl.uniform1f(uniforms.HullFootprint, Math.max(.01, projected.depth / v.distance / (scale * getWorld().camera.zoom)));
+      gl.uniform1f(uniforms.HullFootprint, Math.max(.00001, projected.depth / v.distance / (scale * getWorld().camera.zoom)));
+      gl.uniform1f(uniforms.HullDepth,projected.depth);
+      var segments=habitatLod(17*scale*getWorld().camera.zoom*v.distance/Math.max(.01,projected.depth));
+      var habitat=habitatLevels.filter(function(level){return level.segments===segments;})[0].mesh;
       gl.uniform1f(uniforms.Habitat, 1);
       part(habitat, [0, 0, 0], [1, 1, 1], [.49, .529, .565]);
       gl.uniform1f(uniforms.Habitat, 0);
-      stationMeshes.forEach(function(item){
+      stationLevel(segments/96).forEach(function(item){
         gl.uniform1f(uniforms.AxialSpin,item.rotor?phase:0);
         gl.uniform1f(uniforms.Finish,item.finish);
         part(item.mesh,[0,0,0],[1,1,1],item.color);
@@ -805,7 +845,7 @@
         if(hit){studyHeight=hit.position[2];orbit.height=studyHeight;w=Object.assign({},w,{camera:{x:hit.position[0],y:hit.position[1],zoom:w.camera.zoom}});}
       }
       var before = unproject(p, w.camera, vp, orbit, orbit.height);
-      var camera = { x: w.camera.x, y: w.camera.y, zoom: Math.max(0.2, Math.min(128, w.camera.zoom * Math.exp(-Math.max(-300, Math.min(300, e.deltaY)) * 0.0015))) };
+      var camera = { x: w.camera.x, y: w.camera.y, zoom: Math.max(0.2, Math.min(study ? 512 : 128, w.camera.zoom * Math.exp(-Math.max(-300, Math.min(300, e.deltaY)) * 0.0015))) };
       var after = unproject(p, camera, vp, orbit, orbit.height);
       if (before && after) { camera.x += before.x - after.x; camera.y += before.y - after.y; }
       setWorld(Object.assign({}, w, { camera: camera }));
@@ -1053,5 +1093,5 @@
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
     rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    rubbleLod: rubbleLod, rubblePatch: rubblePatch, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
+    rubbleLod: rubbleLod, rubblePatch: rubblePatch, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

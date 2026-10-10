@@ -391,8 +391,26 @@ Panel seams share the game habitat clock; a separate axial shader
 transform rotates the batched external ribs and tracks about that same axis.
 
 `mothershipHardware()` returns deterministic position/normal triangle arrays
-grouped into eight finishes. They upload once per scene and draw in eight
-batches, with fewer than 30,000 hardware triangles per ship. Metal receives
+grouped into eight finishes. Each refinement uploads once per scene and draws in eight
+batches. Overview hardware stays below 30,000 triangles; the full ship,
+including the habitat, stays below 240,000 triangles at the finest level. Metal receives
 a directional highlight, insulated surfaces remain matte, and service lights
 stay emissive. This pass uses the existing sun and fill without dynamic shadows.
 The 2D painter retains its existing artwork; saves and hit radii are unchanged.
+
+#### Mothership surface detail and refinement
+
+The opaque drum uses cylindrical object-space panel coordinates tied to its
+spin clock. A procedural height field adds paired fasteners and weld beads;
+finite-difference gradients perturb the lighting normal. Access plates, cavity
+grime, panel tone and insulation grain supply larger and smaller material cues.
+Materials on fixed hardware receive restrained surface grain and joint marks.
+The surface is shaded relief, not displaced geometry or physical damage.
+
+Projected local units per pixel, adjusted by fragment depth and grazing angle,
+filter masks and fade tiny details before they become subpixel noise. No texture
+fetches, external assets, fragment loops or dynamic shadows are added.
+`habitatLod(radiusPixels)` chooses 96, 192 or 384 circumferential segments;
+rounded caps, bearing tori and service tubing refine with that level. Shared
+levels are bounded and cached. The study allows zoom up to 512 and offers a
+Hull detail preset; tactical zoom limits and simulation state are unchanged.
