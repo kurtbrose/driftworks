@@ -275,6 +275,7 @@ export type DriftworksNamespace = {
     craterDistance: (impact: {center: [number, number, number]; normal: [number, number, number]; radius: number}, point: [number, number, number]) => number;
     impactBytes: (asteroid: Asteroid) => Uint8Array;
     globeRelief: (asteroid: Asteroid, direction: [number, number, number]) => number;
+    mothershipHardware: () => Record<string, number[]>;
     habitatMesh: () => Float32Array;
     roundedHullMesh: (width: number, length: number, depth: number, radius: number) => Float32Array;
     visualFor: (asteroid: Asteroid) => AsteroidVisual;

@@ -7,19 +7,19 @@
 <link rel="stylesheet" href="../styles.css">
 <style>
 body{margin:0;background:#080d11;color:#dce6e9;font:14px system-ui;overflow:hidden}
-#viewer{position:fixed;inset:0}.scene3d-controls{display:none}
+#viewer{position:fixed;inset:0 0 0 300px;width:calc(100% - 300px)}.scene3d-controls{display:none}
 header{position:fixed;z-index:5;top:24px;left:28px;right:28px;pointer-events:none;display:flex;justify-content:space-between;gap:20px}
 h1{font-size:22px;font-weight:500;margin:0 0 8px}p{margin:0;color:#9baeb8;line-height:1.6}
 nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap;align-content:start}
 button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#dce6e9;padding:10px 14px;font:inherit;cursor:pointer;text-decoration:none}button:hover,a:hover{background:#253944}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #ade5f2}
 .panel{position:fixed;z-index:5;bottom:48px;left:28px;width:240px;padding:16px;background:#101c24ed;border:1px solid #344853;border-radius:10px}.panel h2{font-size:14px;margin:0 0 12px;font-weight:500}.views{display:flex;gap:6px;flex-wrap:wrap}.views button{padding:7px 10px}.panel label{display:block;margin-top:16px;color:#b5c8d2}.panel input{width:100%;accent-color:#afd1dd}.panel output{float:right}.panel p{font-size:12px;margin-top:12px}footer{position:fixed;bottom:20px;left:28px;color:#859aa5;font-size:12px;pointer-events:none}
-@media(max-width:700px){header{top:16px;left:16px;right:16px;flex-direction:column}nav{gap:5px}nav button,nav a{padding:7px 9px}.panel{left:16px;bottom:42px;width:200px;padding:12px}footer{left:16px;font-size:11px}}
+@media(max-width:700px){#viewer{inset:0;width:100%}.panel{max-height:35vh;overflow:auto}header{top:16px;left:16px;right:16px;flex-direction:column}nav{gap:5px}nav button,nav a{padding:7px 9px}.panel{left:16px;bottom:42px;width:200px;padding:12px}footer{left:16px;font-size:11px}}
 </style>
 </head>
 <body>
 <div id="viewer" class="scene" aria-label="Interactive 3D mothership"></div>
 <header><div><h1>Mothership study</h1><p>Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="orbit" aria-pressed="false">Pause orbit</button><button id="animation" aria-pressed="false">Pause machinery</button><button id="reset">Reset view</button><a href="./asteroid-orbit.html">Asteroid study</a><a href="../?renderer=3d">Back to game</a></nav></header>
-<section class="panel" aria-label="Mothership inspection controls"><h2>Inspect the ship</h2><div class="views"><button data-yaw="0" data-tilt="0.06">Top</button><button data-yaw="0" data-tilt="1.57">Side</button><button data-yaw="1.57" data-tilt="1.57">End</button><button data-yaw="0" data-tilt="3.08">Under</button><button data-yaw="-0.5" data-tilt="0.9">Three-quarter</button></div><label for="time">Animation time <output id="time-value">0.0 s</output></label><input id="time" type="range" min="0" max="120" step="0.1" value="0"><p>Inspect the habitat drum, bearings, spine and docking hardware. Scrub time to hold a machinery pose.</p></section>
+<section class="panel" aria-label="Mothership inspection controls"><h2>Inspect the ship</h2><div class="views"><button data-yaw="0" data-tilt="0.06">Top</button><button data-yaw="0" data-tilt="1.57">Side</button><button data-yaw="1.57" data-tilt="1.57">End</button><button data-yaw="0" data-tilt="3.08">Under</button><button data-yaw="-0.5" data-tilt="0.9">Three-quarter</button></div><label for="time">Animation time <output id="time-value">0.0 s</output></label><input id="time" type="range" min="0" max="120" step="0.1" value="0"><p>1,000 m mothership · rotating habitat, fixed bearings, industrial truss, radiators and docking complex. The berthed utility shuttle provides a scale reference. Scrub time to hold a machinery pose.</p></section>
 <footer>Driftworks · production 3D mothership artwork</footer>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
@@ -33,7 +33,7 @@ button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#
     <script src="../src/tactical/camera.js?v=20260920-population1"></script>
     <script src="../src/audio.js?v=20260920-population1"></script>
     <script src="../src/hud.js?v=20260922-cavern1"></script>
-    <script src="../src/scene3d.js?v=20261007-3d-mothership1"></script>
+    <script src="../src/scene3d.js?v=20261010-coaxial2"></script>
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
 <script>
 (function(){

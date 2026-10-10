@@ -22,6 +22,23 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('3D station hardware has finite unit normals and a bounded geometry budget', function () {
+    var groups = window.Driftworks.scene3d.mothershipHardware(), triangles = 0;
+    assert(Object.keys(groups).length <= 8, 'Hardware stays within eight material batches');
+    Object.keys(groups).forEach(function (key) {
+      var mesh = groups[key];
+      assert(mesh.length > 0 && mesh.length % 18 === 0, 'Complete triangle vertices');
+      triangles += mesh.length / 18;
+      for (var i = 0; i < mesh.length; i += 6) {
+        for (var j = 0; j < 6; j++) assert(Number.isFinite(mesh[i+j]), 'Finite hardware geometry');
+        assertClose(Math.hypot(mesh[i+3],mesh[i+4],mesh[i+5]),1);
+        assert(Math.abs(mesh[i]) < 73 && Math.abs(mesh[i+1]) < 33 && Math.abs(mesh[i+2]) < 40, 'Artwork stays within its authored envelope');
+        if (key === 'rotor') assert(Math.hypot(mesh[i+1],mesh[i+2]) > 16.9, 'Rotating hardware clears the habitat shell');
+        else assert(Math.abs(mesh[i]) > 35, 'Fixed hardware extends from the axial hubs, leaving the drum exterior clear');
+      }
+    });
+    assert(triangles < 30000, 'Station hardware has a fixed triangle ceiling');
+  });
   test('3D mothership habitat preserves the rounded silhouette with real circular depth', function () {
     var mesh = window.Driftworks.scene3d.habitatMesh();
     var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];

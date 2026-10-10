@@ -359,7 +359,7 @@ See [population](population.md) for clock, event, transport, and save contracts.
 
 Surface walking adds deterministic rubble tiles on a fixed 128-by-64 angular
 partition. Tile RNG uses the asteroid ID and wrapped tile coordinates. Each
-rock samples one continuous seeded shape at subdivision levels 0–4 (20 to
+rock samples one continuous seeded shape at subdivision levels 0ï¿½4 (20 to
 5,120 triangles). Refinement preserves existing vertices. Smooth vertex normals
 and physical-space shader texture retain the surface palette.
 
@@ -377,3 +377,22 @@ pixel stippling.
 This budget covers rubble, not the base asteroid mesh, shader work, or total
 frame time. Asteroid terrain still uses its existing fixed mesh; excavated
 cutaways and orbit mode omit rubble. Cast shadows are not yet implemented.
+
+### Mothership 3D artwork
+
+The game and `tests/mothership-orbit.html` share the production model in
+`scene3d.js`. The habitat retains its schematic 72-by-34 silhouette; canonical
+hull length remains 1,000 m, and semantic zoom does not alter physical rules.
+A coaxial stationary truss extends from both habitat hubs with service modules, tank farms, radiator wings,
+docking collars, a berthed utility shuttle and an aft propulsion cluster.
+Stationary end-bearing cages surround the rotating habitat. The opaque outer
+shell represents the interior floor, with insulation seams rather than windows.
+Panel seams share the game habitat clock; a separate axial shader
+transform rotates the batched external ribs and tracks about that same axis.
+
+`mothershipHardware()` returns deterministic position/normal triangle arrays
+grouped into eight finishes. They upload once per scene and draw in eight
+batches, with fewer than 30,000 hardware triangles per ship. Metal receives
+a directional highlight, insulated surfaces remain matte, and service lights
+stay emissive. This pass uses the existing sun and fill without dynamic shadows.
+The 2D painter retains its existing artwork; saves and hit radii are unchanged.
