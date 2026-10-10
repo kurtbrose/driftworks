@@ -414,3 +414,30 @@ fetches, external assets, fragment loops or dynamic shadows are added.
 rounded caps, bearing tori and service tubing refine with that level. Shared
 levels are bounded and cached. The study allows zoom up to 512 and offers a
 Hull detail preset; tactical zoom limits and simulation state are unchanged.
+
+Hardware smart materials also use functional object-space masks: bearing bolt
+patterns and machining grooves near the hubs, beaded welds at truss stations,
+tank circumferential joints, equipment access seams and stencil bars, radiator
+cooling channels and edge screws, and alternating safety bands on orange
+collars. These add constant-cost arithmetic to the existing material branch;
+no geometry, draw batches, textures or additional noise layers are added.
+Masks use the same pixel-footprint filtering as the drum. Hardware detail in
+the study frames the aft service section for visual inspection.
+
+#### Mothership study navigation
+
+The mothership study provides orbit and free-flight camera modes. Orbit stores
+a focus with full three-dimensional height; free flight uses the existing
+study pose interface (`setSurfaceCamera`) with a perspective-derived zoom
+calibration. Mode transitions preserve viewpoint; presets and Reset restore
+orbit navigation. Study mothership artwork holds a fixed scale, avoiding
+semantic zoom changing the inspected geometry beneath a flying camera.
+
+Mouse drag aims in free flight, WASD translates along view axes, Q/E changes
+world altitude, Shift increases speed, and middle/Space drag slides in the
+view plane. Keys clear on blur and mode changes. Inputs retain normal typing.
+Escape returns to orbit. Double-click or Pick focus casts a two-sided ray
+against cached habitat and fixed hardware triangles via `pickStudySurface`,
+selects the nearest positive hit, and keeps the camera eye while retargeting
+its orbit. Misses leave the view intact. Picking runs on demand, not per frame.
+These controls do not modify the game camera or simulation rules.

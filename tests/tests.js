@@ -22,6 +22,17 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('study focus picks the nearest surface from either side and rejects misses', function () {
+    var pick=window.Driftworks.scene3d.pickStudySurface;
+    var front=[-1,-1,2,0,0,1, 1,-1,2,0,0,1, 0,1,2,0,0,1];
+    var back=front.map(function(x,i){return i%6===2?x-2:x;});
+    var hit=pick([0,0,5],[0,0,-1],[back,front]);
+    assert(hit);assertClose(hit[2],2);
+    hit=pick([0,0,-5],[0,0,1],[front,back]);assert(hit);assertClose(hit[2],0);
+    assert(pick([3,0,5],[0,0,-1],[front])===null);
+    assert(pick([0,0,5],[1,0,0],[front])===null);
+    assert(pick([0,0,5],[0,0,1],[front])===null);
+  });
   test('mothership close inspection refines curved silhouettes within a fixed ceiling', function () {
     var scene=window.Driftworks.scene3d;
     assert(scene.habitatLod(100) === 96);
