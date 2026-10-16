@@ -432,6 +432,15 @@
     radio.reset();assert(radio.speakerId()===null);
   });
 
+  test('flight comms retains a bounded newest-first subtitle history', function () {
+    var items=[],history={children:items,ownerDocument:{createElement:function(){return {textContent:''};}},prepend:function(item){items.unshift(item);}};
+    Object.defineProperty(history,'lastElementChild',{get:function(){return {remove:function(){items.pop();}};}});
+    var fields=[{textContent:''},{textContent:''}],panel={ownerDocument:{getElementById:function(){return history;}},querySelector:function(s){return s==='[data-speaker]'?fields[0]:fields[1];},classList:{add:function(){},remove:function(){},toggle:function(){}}};
+    var radio=window.Driftworks.flightComms.mount(panel,{setAttribute:function(){}}),pilot={id:'wing',index:0,team:'ally',mode:'approach',hp:90},combat={enabled:true,dead:false,hull:100,enemies:[pilot]};
+    for(var i=0;i<15;i++){radio.reset();pilot.mode='approach';radio.update(0,combat);pilot.mode='evade';radio.update(0,combat);}
+    assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
+  });
+
   test('speaker halo draws a white outline with contrast underlay', function () {
     var strokes=[],saved=0,ctx={save:function(){saved++;},restore:function(){saved--;},setLineDash:function(){},beginPath:function(){},arc:function(x,y,r){assert(x===5&&y===9&&r===10);},stroke:function(){strokes.push([this.strokeStyle,this.lineWidth]);}};
     window.Driftworks.flightRadar.speakerHalo(ctx,5,9,10);

@@ -16,7 +16,7 @@
     ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
   }
   function draw(ctx,state,contacts,units,range,w,h,paused){
-    var radius=Math.min(86,w*.19,h*.17),cx=w/2,cy=h-radius-(paused?190:38);
+    var radius=Math.min(86,w*.19,h*.17),cx=w/2,cy=h-radius-38;
     ctx.save();ctx.translate(cx,cy);ctx.font='10px ui-monospace,monospace';ctx.textAlign='center';
     ctx.fillStyle='rgba(4,18,25,.88)';ctx.strokeStyle='#477e78';
     ctx.beginPath();ctx.arc(0,0,radius+9,0,Math.PI*2);ctx.fill();ctx.stroke();

@@ -389,6 +389,7 @@
     return line;
   }
   function mount(panel, toggle) {
+    var history = panel.ownerDocument && panel.ownerDocument.getElementById('comms-history');
     var clock = create(), context, source, generation = 0, muted = false, remaining = 0, channelRemaining = 0, currentSpeaker = null;
     var speaker = panel.querySelector('[data-speaker]'), subtitle = panel.querySelector('[data-subtitle]');
     function stop() { generation++; channelRemaining = 0; currentSpeaker = null; if (source) { source.onended = null; source.stop(); source.disconnect(); source = null; } panel.classList.remove('transmitting'); }
@@ -399,7 +400,11 @@
     }
     function speak(line) {
       currentSpeaker = line.craftId && line.craftId !== 'control' ? line.craftId : null;
-      speaker.textContent = line.speaker; subtitle.textContent = line.text;
+      var emotionField=panel.ownerDocument && panel.querySelector('[data-emotion]');
+      speaker.textContent = emotionField ? line.speaker.split(' / ')[0] : line.speaker; subtitle.textContent = line.text;
+      if(emotionField)emotionField.textContent=line.emotion && line.emotion.current!=='calm'?line.emotion.current:line.speaker.split(' / ')[1]||'CHANNEL';
+      if(history){var item=history.ownerDocument.createElement('li');item.textContent=line.speaker+': '+line.text;history.prepend(item);while(history.children.length>12)history.lastElementChild.remove();}
+      panel.classList.remove('idle');
       panel.classList.toggle('hostile', line.hostile); panel.classList.add('transmitting'); remaining = 9;
       try {
         var api = DW.mumble, rate = 22050;
@@ -420,11 +425,11 @@
       speakerId: function () { return currentSpeaker; },
       unlock: unlock,
       pause: stop,
-      reset: function () { stop(); clock = create(); remaining = 0; speaker.textContent = 'RANGE COMMS'; subtitle.textContent = 'Standing by for flight.'; panel.classList.remove('hostile'); },
+      reset: function () { stop(); clock = create(); remaining = 0; speaker.textContent = 'RANGE COMMS'; var emotionField=panel.ownerDocument && panel.querySelector('[data-emotion]'); if(emotionField)emotionField.textContent=''; subtitle.textContent = 'Standing by for flight.'; panel.classList.remove('hostile'); panel.classList.remove('idle'); },
       update: function (dt, combat, player) {
         remaining = Math.max(0, remaining - dt); channelRemaining = Math.max(0, channelRemaining - dt);
         if (!source && channelRemaining <= 0) currentSpeaker = null;
-        if (!remaining) { panel.classList.remove('transmitting'); subtitle.textContent = 'Channel clear.'; }
+        if (!remaining) { panel.classList.remove('transmitting'); subtitle.textContent = 'Channel clear.'; panel.classList.add('idle'); }
         var line = step(clock, dt, combat, !!source || channelRemaining > 0, Math.random, player); if (line) speak(line);
       }
     };

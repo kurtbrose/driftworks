@@ -201,6 +201,8 @@ also links back to it.
 ### Arcade flight experiment
 
 Open [the flight lab](experiments/flight.html) from the same static server.
+
+The flight HUD groups objectives, shield/hull bars, speed/thrust, and weapon status around an open center. Comms subtitles sit above the radar. Press **F3** to toggle lab controls and diagnostics; the comms history and independent dialogue-size slider are in that panel. History keeps the latest 12 transmissions for the current page session.
 This separate cockpit experiment reuses the production 3D asteroid and background.
 Choose Ulysses (baseline), Hercules (heavy), Myrmidon (fast), or Medusa (bomber).
 The maneuver values are extracted exactly from the installed retail FreeSpace 2

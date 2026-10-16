@@ -21,12 +21,13 @@
   function resetMeasurements(){measurements=performanceTools.create();pace.next=null;previous=0;lastStatsUpdate=0;}
   ['render-mode','flat-materials','render-scale','fps-cap','draw-rubble','draw-mothership','draw-enemies'].forEach(function(id){document.getElementById(id).addEventListener('change',resetMeasurements);});
   document.getElementById('perf-reset').onclick=resetMeasurements;
+  document.getElementById('dialogue-size').oninput=function(e){document.documentElement.style.setProperty('--dialogue-size',e.target.value+'px');};
   var radarRanges=[1000,2500,5000,10000],radarRangeIndex=2;
   var comms=DW.flightComms.mount(document.getElementById('comms'),document.getElementById('comms-voice'));
   var combat=DW.training.create(document.getElementById('combat-mode').value);
-  var artSelect=document.getElementById('enemy-art'),allyArt=document.getElementById('ally-art');DW.shipPackModels.populate(artSelect,true);DW.shipPackModels.populate(allyArt,true);[artSelect,allyArt].forEach(function(select){var option=document.createElement('option');option.value='mixed';option.textContent='Mixed fleet � all ship models';select.insertBefore(option,select.firstChild);select.value='mixed';});
-  function artCredit(){var entry=DW.shipPackModels.find(artSelect.value);document.getElementById('art-credit').textContent=artSelect.value==='mixed'?'Mixed fleet � Quaternius CC0 library � changes each wave':entry?entry.pack.author+' / '+entry.model.name+' · '+entry.pack.license+' · '+entry.model.triangles.toLocaleString()+' triangles per ship':'Original six-triangle training hull';}
-  function allyCredit(){var entry=DW.shipPackModels.find(allyArt.value);document.getElementById('ally-credit').textContent=allyArt.value==='mixed'?'Mixed fleet � Quaternius CC0 library � changes each wave':entry?entry.pack.author+' / '+entry.model.name+' · '+entry.pack.license:'Original training blockout';}
+  var artSelect=document.getElementById('enemy-art'),allyArt=document.getElementById('ally-art');DW.shipPackModels.populate(artSelect,true);DW.shipPackModels.populate(allyArt,true);[artSelect,allyArt].forEach(function(select){var option=document.createElement('option');option.value='mixed';option.textContent='Mixed fleet · all ship models';select.insertBefore(option,select.firstChild);select.value='mixed';});
+  function artCredit(){var entry=DW.shipPackModels.find(artSelect.value);document.getElementById('art-credit').textContent=artSelect.value==='mixed'?'Mixed fleet · Quaternius CC0 library · changes each wave':entry?entry.pack.author+' / '+entry.model.name+' · '+entry.pack.license+' · '+entry.model.triangles.toLocaleString()+' triangles per ship':'Original six-triangle training hull';}
+  function allyCredit(){var entry=DW.shipPackModels.find(allyArt.value);document.getElementById('ally-credit').textContent=allyArt.value==='mixed'?'Mixed fleet · Quaternius CC0 library · changes each wave':entry?entry.pack.author+' / '+entry.model.name+' · '+entry.pack.license:'Original training blockout';}
   allyArt.onchange=allyCredit;allyCredit();artSelect.onchange=artCredit;artCredit();
 
   function hullContact(e,start,end){var selection=e.team==='ally'?allyArt.value:artSelect.value;return DW.shipPackModels.hullHit(DW.shipPackModels.craftModel(e,selection,combat.wave),e.pose,start,end,units);}
@@ -79,6 +80,7 @@
   document.addEventListener('pointerlockerror',captureFailure);
   window.addEventListener('blur',pause);document.addEventListener('visibilitychange',function(){if(document.hidden)pause();});
   window.addEventListener('keydown',function(e){
+    if(e.code==='F3'&&!e.repeat){e.preventDefault();var show=document.body.classList.toggle('diagnostics');document.getElementById('perf-enabled').checked=show;return;}
     if(e.code==='Escape'){pause();return;}
     if(/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName))return;
     if(e.code==='KeyC'&&!paused){mouse=[0,0];e.preventDefault();return;}
@@ -179,8 +181,12 @@
       combatHud.strokeStyle='#a6efde';combatHud.beginPath();combatHud.moveTo(cx,cy);combatHud.lineTo(sx,sy);combatHud.stroke();combatHud.beginPath();combatHud.arc(sx,sy,5,0,Math.PI*2);combatHud.stroke();
     }
     var speakerId=comms.speakerId(),living=DW.training.alive(combat),selected=living.find(function(e){return e.id===combat.targetId;});
-    document.getElementById('combat-status').textContent=!combat.enabled?'Free flight':combat.dead?'TRAINING OVER · '+combat.kills+' kills · Restart training':
-      (combat.mode==='furball'?'FURBALL '+(combat.wave||1)+' · '+living.filter(function(e){return e.team==='ally';}).length+' allies / '+living.filter(function(e){return e.team==='enemy';}).length+' enemies':'WAVE '+(combat.wave||1)+' · '+living.length+' hostiles')+' · '+combat.kills+' reds down\nSHIELD '+Math.ceil(combat.shield)+' / 120   HULL '+Math.ceil(combat.hull)+' / 100'+(!living.length||combat.roundOver?'\nNext wave in '+Math.max(0,Math.ceil(combat.countdown))+' s':'');
+    document.getElementById('combat-status').textContent=!combat.enabled?'FREE FLIGHT':combat.dead?'SORTIE OVER / '+combat.kills+' KILLS':living.filter(function(e){return e.team==='enemy';}).length+' HOSTILES / '+living.filter(function(e){return e.team==='ally';}).length+' WINGMEN / '+combat.kills+' KILLS'+(!living.length||combat.roundOver?' / NEXT WAVE '+Math.max(0,Math.ceil(combat.countdown))+'s':'');
+    document.getElementById('shield-meter').value=combat.shield;document.getElementById('hull-meter').value=combat.hull;
+    document.getElementById('speed-value').textContent=Math.round(Math.hypot.apply(null,state.velocity));
+    document.getElementById('thrust-value').textContent='THRUST '+Math.round(state.throttle*100)+'%';document.getElementById('thrust-meter').value=state.throttle;
+    document.getElementById('weapon-name').textContent=gunSelect.options[gunSelect.selectedIndex].textContent;
+    var targetPanel=document.getElementById('target-info');targetPanel.hidden=!selected;if(selected)targetPanel.textContent=(selected.team==='ally'?'WINGMAN / ':'TARGET / ')+selected.pilot+' / '+Math.ceil(selected.hp)+'% HULL';
     if(combat.hitFlash>0){combatHud.fillStyle='rgba(255,55,25,'+(combat.hitFlash*.28)+')';combatHud.fillRect(0,0,w,h);}
     var radarContacts=living.map(function(e){return {point:e.pose.eye,color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId,speaking:e.id===speakerId};});
     radarContacts.push({point:[0,0,0],color:'#a6aeb7',landmark:true});
