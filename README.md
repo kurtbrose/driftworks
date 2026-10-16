@@ -245,3 +245,8 @@ are retained for future work; this range has unlimited weapon energy and no
 health simulation. Generic twin parallel barrels replace model-specific mounts.
 Bolts use fixed world speed (retail non-additive velocity), never hitscan, and
 swept terrain contact. Sounds reuse Driftworks' synthesized gun/impact effects.
+
+The flight range also parks the production mothership 900 m east and 1,800 m
+north of the asteroid center (about 2 km separation). Its habitat animates while
+flight is active; the HUD reports distance to its center. It is a visual fly-around
+landmark in this prototype, without a ship collider or damage model.

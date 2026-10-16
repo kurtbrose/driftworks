@@ -490,7 +490,14 @@ sphere followed by swept samples at no more than 1 m spacing and bisection
 against `scene3d.rockField`. Impacts do not excavate or damage the asteroid.
 `scene3d.setStudyEffects` accepts up to four position/normal triangle batches
 and colors; only study scenes draw them. Reused dynamic GPU buffers render
-emissive bolt quads and flashes through the same camera/depth buffer as terrain.
+soft additive bolt billboards and flashes through the same camera/depth buffer as terrain.
 Two generic barrels fire per volley, independent of the original POF gun mounts;
 there is no linked-bank or energy simulation yet. Existing synthesized audio
 honors the main game's sound preferences.
+
+Flight effect batches use their three normal slots as unnormalized UV/opacity
+attributes, carried separately into the effect shader. Camera-facing ellipses
+project the bolt length onto the view plane and retain a round end-on footprint.
+A narrow bright core and fading glow replace crossed opaque rectangles. Depth
+testing remains enabled while additive effects disable depth writes; impact
+opacity fades with age. Weapon dimensions and ballistics are unchanged.

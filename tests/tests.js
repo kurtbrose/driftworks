@@ -50,7 +50,7 @@
   test('gun rendering batches are bounded and contain world-space triangles', function () {
     var model=window.Driftworks.flightGuns,guns=model.create(),pose=window.Driftworks.arcade.create(18);
     model.step(guns,pose,window.Driftworks.retailWeapons[0],true,1/120);
-    var batches=model.geometry(guns,pose);assert(batches.length===3);assert(batches[0].vertices.length===144);
+    var batches=model.geometry(guns,pose);assert(batches.length===3);assert(batches[0].vertices.length===72);
     assert(batches[1].vertices.length===0);batches[0].vertices.forEach(function(x){assert(Number.isFinite(x));});
   });
 

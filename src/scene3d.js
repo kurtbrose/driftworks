@@ -650,9 +650,9 @@
     }
     var program = gl.createProgram(); if (!program) throw new Error('Program allocation failed');
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
-      'attribute vec3 aPosition,aNormal,aCoarsePosition,aCoarseNormal,aRockCenter,aBurial; uniform float uMorph,uRubbleFade; uniform vec3 uRubbleEye; varying float vExposure; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; void main(){ float c=cos(uRotation),s=sin(uRotation); vec3 local=mix(aCoarsePosition,aPosition,uMorph); vExposure=uRubbleFade>1.5?1.-smoothstep(.025,.085,length(aRockCenter-uRubbleEye)):1.; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=(local-aBurial*(1.-vExposure))*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=mix(aCoarseNormal,aNormal,uMorph)/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
+      'attribute vec3 aPosition,aNormal,aCoarsePosition,aCoarseNormal,aRockCenter,aBurial; uniform float uMorph,uRubbleFade; uniform vec3 uRubbleEye; varying float vExposure; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; void main(){vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=mix(aCoarsePosition,aPosition,uMorph); vExposure=uRubbleFade>1.5?1.-smoothstep(.025,.085,length(aRockCenter-uRubbleEye)):1.; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=(local-aBurial*(1.-vExposure))*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=mix(aCoarseNormal,aNormal,uMorph)/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
-      '\nvarying float vExposure; varying vec3 vNormal,vLocal; varying float vDepth; uniform vec3 uColor,uBack,uRubbleEye; uniform float uRubbleFade,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish;\n'+
+      '\nvarying float vExposure; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; uniform vec3 uColor,uBack,uRubbleEye; uniform float uRubbleFade,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
       'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
@@ -681,7 +681,7 @@
       'else if(uFinish<4.5){float tank=uFinish>3.5?1.:0.;float localY=p.y-tank*sign(p.y)*6.;float circumference=atan(localY,p.z)*(tank>0.?2.:3.2);float joint=tank>0.?min(abs(x-54.),min(abs(x-58.),abs(x-62.))):min(abs(x-44.),abs(x-53.));weld=shipLine(joint-.18,.045,fp)*(.75+.25*cos(circumference*110.));bolt=shipLine(length(vec2(joint-.32,mod(circumference+.22,.44)-.22)),.04,fp);float panel=max(abs(x-48.5)-.8,abs(circumference-1.5)-.55);channel=shipLine(panel,.03,fp)*(1.-tank);mark=(1.-smoothstep(0.,fp,panel))*(1.-tank)*shipLine(mod(x+.08,.16)-.08,.03,fp)*step(1.35,circumference);}'+
       'else if(uFinish<5.5){float edge=min(abs(x-44.3),abs(x-61.7));float panelEdge=abs(mod(abs(p.y)-12.+4.,8.)-4.);bolt=shipLine(length(vec2(edge,abs(panelEdge-3.1))),.055,fp);channel=shipLine(mod(p.y+.15,.3)-.15,.018,fp);weld=shipLine(edge,.035,fp);}'+
       'else{mark=(.5+.5*cos((p.x+p.y+p.z)*12.))*close;}return vec4(bolt,weld,channel,mark); }'+
-      'void main(){if(vExposure<=0.)discard;vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
+      'void main(){if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(vExposure<=0.)discard;vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
@@ -1098,14 +1098,15 @@
       effects = effects.filter(function (fx) { return fx.age < 0.5; });
       if (drag && drag.mode === 'select') { hud.strokeStyle = '#b4e8ef'; hud.strokeRect(drag.start.x, drag.start.y, drag.last.x - drag.start.x, drag.last.y - drag.start.y); }
       if(study && studyEffects.length){
-        gl.uniform1f(uniforms.Finish,7);gl.uniform1f(uniforms.Habitat,0);gl.uniform1f(uniforms.RubbleFade,1);gl.uniform1f(uniforms.AxialSpin,0);
+        gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.depthMask(false);
+        gl.uniform1f(uniforms.Finish,9);gl.uniform1f(uniforms.Habitat,0);gl.uniform1f(uniforms.RubbleFade,1);gl.uniform1f(uniforms.AxialSpin,0);
         studyEffects.forEach(function(batch,index){
           if(!batch.vertices.length)return;
           if(!studyEffectMeshes[index])studyEffectMeshes[index]=upload(new Float32Array(0));
           var mesh=studyEffectMeshes[index];gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bufferData(gl.ARRAY_BUFFER,batch.vertices,gl.DYNAMIC_DRAW);mesh.count=batch.vertices.length/6;
           draw(mesh,[0,0,0],[1,1,1],0,batch.color);
         });
-        gl.uniform1f(uniforms.Finish,0);
+        gl.depthMask(true);gl.disable(gl.BLEND);gl.uniform1f(uniforms.Finish,0);
       }
       if (wallDt > 0) fps = fps * 0.9 + Math.min(240, 1 / wallDt) * 0.1;
       if (DW.audio) DW.audio.setEngineThrust(Math.min(1, Math.max.apply(null, w.ships.map(function (s) { return s.disabled || s.docked ? 0 : Math.hypot(s.velocity.x - s.previousVelocity.x, s.velocity.y - s.previousVelocity.y) / Math.max(1, s.acceleration / 30); }))));

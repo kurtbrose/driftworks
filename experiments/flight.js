@@ -3,7 +3,11 @@
   var DW=window.Driftworks,model=DW.arcade,world=DW.sim.createInitialWorld(),host=document.getElementById('viewer');
   var asteroid=world.asteroids[0],units=DW.sim.METERS_PER_UNIT;
   asteroid.position={x:0,y:0};asteroid.rotation=0;asteroid.radius=300/units;
-  world.asteroids=[asteroid];world.ships=[];world.platforms=[];world.wrecks=[];world.packets=[];world.selectedShipIds=[];world.combat.drones=[];
+  var mothership=world.ships.find(function(ship){return ship.type==='mothership';});
+  // Fixed production artwork scale, roughly 2 km between the body and ship centers.
+  mothership.position={x:900/units,y:1800/units};mothership.previousPosition={x:900/units,y:1800/units};mothership.rotation=0;
+  mothership.velocity={x:0,y:0};mothership.previousVelocity={x:0,y:0};
+  world.asteroids=[asteroid];world.ships=[mothership];world.platforms=[];world.wrecks=[];world.packets=[];world.selectedShipIds=[];world.combat.drones=[];
   var scene=DW.scene3d.create(host,function(){return world;},function(w){world=w;},{study:true,rubbleMaxDetail:2,rubbleTriangleBudget:40000});
   var skybox=DW.flightSkybox.create(host);
   var select=document.getElementById('profile'),stats=document.getElementById('stats'),status=document.getElementById('status'),telemetry=document.getElementById('telemetry');
@@ -62,8 +66,10 @@
       }
       pose();status.textContent=contact?'Surface contact · throttle cut':'Flight controls active';
     }
+    var shipDistance=Math.hypot(state.eye[0]-mothership.position.x,state.eye[1]-mothership.position.y,state.eye[2])*units;
     var distance=Math.hypot.apply(null,state.eye),speed=Math.hypot.apply(null,state.velocity);
-    telemetry.textContent=speed.toFixed(0)+' m/s   /   '+Math.round(state.throttle*100)+'% THR\n'+Math.round(distance*units)+' m TO CENTER\n'+Math.round(asteroid.radius*2*units)+' m BODY DIAMETER\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
+    telemetry.textContent=speed.toFixed(0)+' m/s   /   '+Math.round(state.throttle*100)+'% THR\n'+Math.round(distance*units)+' m TO CENTER\n'+Math.round(asteroid.radius*2*units)+' m BODY DIAMETER\n'+Math.round(shipDistance)+' m TO MOTHERSHIP\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
+    if(!paused)world.elapsedSeconds+=elapsed;
     scene.setStudyEffects(DW.flightGuns.geometry(guns,state));skybox.render(state);scene.sync(world);scene.render(world,1,0,elapsed);requestAnimationFrame(frame);
   }
   labels();banks();pose();requestAnimationFrame(frame);

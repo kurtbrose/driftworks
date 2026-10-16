@@ -45,19 +45,23 @@
   }
   function geometry(guns,pose){
     var groups=window.Driftworks.retailWeapons.map(function(w){return {weapon:w,data:[]};});
-    function quad(data,head,tail,side,width){
-      var corners=[head.map(function(x,i){return x+side[i]*width;}),head.map(function(x,i){return x-side[i]*width;}),tail.map(function(x,i){return x-side[i]*width;}),tail.map(function(x,i){return x+side[i]*width;})];
-      [0,1,2,0,2,3].forEach(function(index){data.push.apply(data,corners[index].concat([0,0,1]));});
+    function dot(a,b){return a.reduce(function(sum,x,i){return sum+x*b[i];},0);}
+    function quad(data,center,along,side,halfLength,width,opacity){
+      var uv=[[-1,-1],[-1,1],[1,1],[-1,-1],[1,1],[1,-1]];
+      uv.forEach(function(p){data.push.apply(data,center.map(function(x,i){return x+along[i]*p[0]*halfLength+side[i]*p[1]*width;}).concat([p[0],p[1],opacity]));});
     }
     guns.bolts.forEach(function(bolt){
       var group=groups.find(function(g){return g.weapon===bolt.weapon;});if(!group)return;
-      var tail=bolt.position.map(function(x,i){return x-bolt.direction[i]*bolt.weapon.length/units;});
-      // Crossed quads remain visible when looking along a barrel or across its path.
-      quad(group.data,bolt.position,tail,pose.right,bolt.weapon.headRadius/units);
-      quad(group.data,bolt.position,tail,pose.up,bolt.weapon.headRadius/units);
+      var center=bolt.position.map(function(x,i){return x-bolt.direction[i]*bolt.weapon.length*.5/units;});
+      var along=bolt.direction.map(function(x,i){return x-pose.back[i]*dot(bolt.direction,pose.back);});
+      var projected=Math.hypot.apply(null,along);
+      along=projected>.0001?along.map(function(x){return x/projected;}):pose.up;
+      var side=[pose.back[1]*along[2]-pose.back[2]*along[1],pose.back[2]*along[0]-pose.back[0]*along[2],pose.back[0]*along[1]-pose.back[1]*along[0]];
+      var width=bolt.weapon.headRadius/units;
+      quad(group.data,center,along,side,Math.max(width,bolt.weapon.length*.5/units*projected+width),width,1);
     });
-    var batches=groups.map(function(g){return {vertices:new Float32Array(g.data),color:g.weapon.color.map(function(x){return Math.max(.15,x/255);})};});
-    var impacts=[];guns.impacts.forEach(function(hit){var r=(.5+hit.age*12)/units;quad(impacts,hit.position.map(function(x,i){return x+pose.up[i]*r;}),hit.position.map(function(x,i){return x-pose.up[i]*r;}),pose.right,r);});
+    var batches=groups.map(function(g){return {vertices:new Float32Array(g.data),color:g.weapon.color.map(function(x){return Math.max(.04,x/255);})};});
+    var impacts=[];guns.impacts.forEach(function(hit){var r=(.5+hit.age*12)/units;var center=hit.position.map(function(x,i){return x+pose.back[i]*.08/units;});quad(impacts,center,pose.up,pose.right,r,r,1-hit.age/.22);});
     batches.push({vertices:new Float32Array(impacts),color:[1,.75,.3]});return batches;
   }
   window.Driftworks.flightGuns={create:create,step:step,intersect:intersect,geometry:geometry};

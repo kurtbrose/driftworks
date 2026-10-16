@@ -5,7 +5,7 @@ body{margin:0;background:#070d12;color:#adf5df;font:13px ui-monospace,monospace;
 #viewer canvas.flight-skybox{position:absolute;inset:0;pointer-events:none}#viewer .night-sky-background{display:none}
 </style></head><body>
 <div id="viewer" class="scene" aria-label="Arcade flight around a Driftworks asteroid"></div>
-<header><h1>DRIFTWORKS / FLIGHT LAB</h1><span>01 · Asteroid handling range</span><div id="status" role="status">Paused · Click Fly to begin</div></header>
+<header><h1>DRIFTWORKS / FLIGHT LAB</h1><span>01 · Asteroid & mothership range</span><div id="status" role="status">Paused · Click Fly to begin</div></header>
 <aside><label for="profile">Handling profile</label><select id="profile"></select><div id="stats"></div><label for="gun">Primary bank</label><select id="gun"></select><small id="gun-stats"></small><label>Asteroid diameter (m) <input id="diameter" type="number" min="200" max="4000" step="100" value="600"></label><button id="fly">Fly / resume</button> <button id="reset">Reset</button><p><a href="../">Main game</a></p><small>Exact retail FreeSpace 2 maneuver values. Existing Driftworks geology. Standard engine power; Unlimited afterburner and weapon energy. Generic twin gun mounts; asteroid hits do not cause damage.</small></aside>
 <div id="reticle" aria-hidden="true"></div><div id="telemetry"></div>
 <footer>W/S throttle · X stop · Shift afterburner<br>Arrows pitch/yaw · Q/E roll · Retail profiles have no strafe thrust<br>Space / right mouse fire · G switch bank<br>Drag to steer · Esc pause · 1–4 profiles<br>Sky panorama: ESO/S. Brunier</footer>
@@ -21,6 +21,6 @@ body{margin:0;background:#070d12;color:#adf5df;font:13px ui-monospace,monospace;
 <script src="../src/tactical/camera.js?v=20260920-population1"></script>
 <script src="../src/audio.js?v=20260920-population1"></script>
 <script src="../src/hud.js?v=20260922-cavern1"></script>
-<script src="../src/scene3d.js?v=20261015-guns1"></script>
+<script src="../src/scene3d.js?v=20261015-softbolts1"></script>
 <script src="../src/game.js?v=20261007-3d-geology2"></script>
-<script src="retail-profiles.js"></script><script src="flight-model.js"></script><script src="skybox.js?v=20261015-sky2"></script><script src="retail-weapons.js"></script><script src="guns.js?v=20261015-guns1"></script><script src="flight.js?v=20261015-guns1"></script></body></html>
+<script src="retail-profiles.js"></script><script src="flight-model.js"></script><script src="skybox.js?v=20261015-sky2"></script><script src="retail-weapons.js"></script><script src="guns.js?v=20261015-softbolts1"></script><script src="flight.js?v=20261015-mothership1"></script></body></html>
