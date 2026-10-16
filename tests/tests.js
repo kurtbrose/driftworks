@@ -22,6 +22,38 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('retail primary guns retain table ballistics and cadence', function () {
+    var weapons=window.Driftworks.retailWeapons,model=window.Driftworks.flightGuns;
+    assert(weapons[0].speed===450 && weapons[0].fireWait===.2 && weapons[0].lifetime===2 && weapons[0].length===10);
+    assert(weapons[1].speed===450 && weapons[1].fireWait===.45 && weapons[1].lifetime===2 && weapons[1].length===15);
+    weapons.forEach(function(w,index){
+      var guns=model.create(),pose=window.Driftworks.arcade.create(18);pose.velocity=[0,150,0];
+      for(var i=0;i<120;i++)model.step(guns,pose,w,true,1/120);
+      assert(guns.fired===(index===0?10:6));
+      var bolt=guns.bolts[0],before=bolt.position.slice();model.step(guns,pose,w,false,1/120);
+      assertClose((bolt.position[1]-before[1])*sim.METERS_PER_UNIT,w.speed/120);
+      assertClose(bolt.position[0],before[0]);
+      for(var j=0;j<250;j++)model.step(guns,pose,w,false,1/120);
+      assert(guns.bolts.length===0);
+    });
+  });
+  test('gun sweeps hit terrain between endpoints and remove bolts at impact', function () {
+    var model=window.Driftworks.flightGuns,field=function(p){return Math.hypot.apply(null,p)-1;};
+    var hit=model.intersect([0,-2,0],[0,2,0],1,field);assert(hit);assertClose(hit[1],-1,.001);
+    assert(model.intersect([2,-2,0],[2,2,0],1,field)===null);
+    var guns=model.create(),pose=window.Driftworks.arcade.create(18),w=window.Driftworks.retailWeapons[0];
+    model.step(guns,pose,w,true,1/120);assert(guns.bolts.length===2);
+    model.step(guns,pose,w,false,1/120,function(start,end){return end;});
+    assert(guns.bolts.length===0 && guns.hits===2 && guns.impacts.length===2);
+    for(var i=0;i<30;i++)model.step(guns,pose,w,false,1/120);assert(guns.impacts.length===0);
+  });
+  test('gun rendering batches are bounded and contain world-space triangles', function () {
+    var model=window.Driftworks.flightGuns,guns=model.create(),pose=window.Driftworks.arcade.create(18);
+    model.step(guns,pose,window.Driftworks.retailWeapons[0],true,1/120);
+    var batches=model.geometry(guns,pose);assert(batches.length===3);assert(batches[0].vertices.length===144);
+    assert(batches[1].vertices.length===0);batches[0].vertices.forEach(function(x){assert(Number.isFinite(x));});
+  });
+
   test('flight sky directions rotate with the cockpit, ignore translation, and cover the sphere', function () {
     var sky=window.Driftworks.flightSkybox,pose={right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     var center=sky.project([0,1,0],pose,2);assert(center);assertClose(center.x,0);assertClose(center.y,0);

@@ -480,3 +480,17 @@ of view. Translation never enters sky projection. The locally vendored ESO
 all-sky panorama supplies the Milky Way; sharper procedural points provide
 rotation cues at its limited resolution. The opaque background canvas sits
 behind the transparent production scene. Other viewers retain their backgrounds.
+
+
+Flight guns live in `experiments/guns.js`, independently of tactical combat or
+saves. The controller advances cadence, projectiles and short-lived impacts on
+the same substeps as flight; pausing freezes them and reset clears them. Bolts
+retain their weapon reference across bank changes. Collision uses an enclosing
+sphere followed by swept samples at no more than 1 m spacing and bisection
+against `scene3d.rockField`. Impacts do not excavate or damage the asteroid.
+`scene3d.setStudyEffects` accepts up to four position/normal triangle batches
+and colors; only study scenes draw them. Reused dynamic GPU buffers render
+emissive bolt quads and flashes through the same camera/depth buffer as terrain.
+Two generic barrels fire per volley, independent of the original POF gun mounts;
+there is no linked-bank or energy simulation yet. Existing synthesized audio
+honors the main game's sound preferences.

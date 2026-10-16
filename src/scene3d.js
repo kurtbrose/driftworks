@@ -721,6 +721,8 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       return { buffer: buffer, count: data.length / (stride||6),stride:stride||6 };
     }
+    /** @type {{vertices:Float32Array,color:V3}[]} */ var studyEffects=[];
+    /** @type {Mesh[]} */ var studyEffectMeshes=[];
     var box = upload(boxMesh());
     var grid = upload(new Float32Array(600));
     var habitatLevels = [96,192,384].map(function(segments){return {segments:segments,mesh:upload(habitatMesh(segments))};});
@@ -1095,6 +1097,16 @@
       });
       effects = effects.filter(function (fx) { return fx.age < 0.5; });
       if (drag && drag.mode === 'select') { hud.strokeStyle = '#b4e8ef'; hud.strokeRect(drag.start.x, drag.start.y, drag.last.x - drag.start.x, drag.last.y - drag.start.y); }
+      if(study && studyEffects.length){
+        gl.uniform1f(uniforms.Finish,7);gl.uniform1f(uniforms.Habitat,0);gl.uniform1f(uniforms.RubbleFade,1);gl.uniform1f(uniforms.AxialSpin,0);
+        studyEffects.forEach(function(batch,index){
+          if(!batch.vertices.length)return;
+          if(!studyEffectMeshes[index])studyEffectMeshes[index]=upload(new Float32Array(0));
+          var mesh=studyEffectMeshes[index];gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bufferData(gl.ARRAY_BUFFER,batch.vertices,gl.DYNAMIC_DRAW);mesh.count=batch.vertices.length/6;
+          draw(mesh,[0,0,0],[1,1,1],0,batch.color);
+        });
+        gl.uniform1f(uniforms.Finish,0);
+      }
       if (wallDt > 0) fps = fps * 0.9 + Math.min(240, 1 / wallDt) * 0.1;
       if (DW.audio) DW.audio.setEngineThrust(Math.min(1, Math.max.apply(null, w.ships.map(function (s) { return s.disabled || s.docked ? 0 : Math.hypot(s.velocity.x - s.previousVelocity.x, s.velocity.y - s.previousVelocity.y) / Math.max(1, s.acceleration / 30); }))));
     }
@@ -1110,6 +1122,8 @@
       getOrbit: function () { return { yaw: orbit.yaw, tilt: orbit.tilt, height: studyHeight }; },
       /** @param {{yaw: number, tilt: number, height?: number}} value */
       setOrbit: function (value) { if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
+      /** @param {{vertices:Float32Array,color:V3}[]} batches */
+      setStudyEffects: function(batches){if(study)studyEffects=batches.slice(0,4);},
       sync: sync, render: render, consumeCombatEvents: consume,
       resetCombat: function () { effects = []; focus = false; },
       /** @param {World} w @param {number} dt */

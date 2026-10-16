@@ -208,7 +208,7 @@ Keys 1–4 select profiles and reset the starting pose; changing the dropdown al
 resets it. After using a form control, click Fly to return to flight input.
 Reset stops the craft facing the asteroid. The diameter control (200–4,000 m)
 resets the range to compare scale; it defaults to 600 m. Surface contact stops
-the craft with a 5 m clearance. There are no weapons or damage in this experiment.
+the craft with a 5 m clearance. Asteroid impacts provide visual feedback without damage or excavation.
 
 `experiments/retail-profiles.js` preserves max velocity vectors, rear velocity,
 rotation times (pitch/yaw/roll seconds per revolution), forward and slide accel/
@@ -226,9 +226,22 @@ independent of the tactical simulation clock. The lab never loads or writes save
 
 The numerical data comes from the local retail installation; response semantics
 were checked against the [FS Open physics implementation](https://github.com/scp-fs2open/fs2open.github.com/blob/master/code/physics/physics.cpp).
-No FreeSpace artwork, weapons, armor, or loadouts are imported.
+No FreeSpace artwork or audio is imported.
 
 The flight lab sky is an environment at infinity using the local ESO Milky Way
 panorama and seeded stars. It follows pitch, yaw and roll with the same perspective
 as the asteroid, providing orientation cues even when the asteroid is off screen.
 Translation leaves the sky fixed in world directions.
+
+
+Hold Space or right mouse to fire the selected primary bank; G switches banks.
+The primary-bank selector follows each ship's retail default weapon order:
+Ulysses/Hercules use Subach HL-7 then Prometheus R, Myrmidon reverses that order,
+and Medusa uses Prometheus R. Both weapons travel at 450 m/s for 2 seconds
+(900 m); fire intervals are 0.20 s and 0.45 s. Numeric weapon fields, including
+bolt length/radii, damage factors and energy cost, are extracted directly into
+`experiments/retail-weapons.js` with the retail table hash. Damage/energy fields
+are retained for future work; this range has unlimited weapon energy and no
+health simulation. Generic twin parallel barrels replace model-specific mounts.
+Bolts use fixed world speed (retail non-additive velocity), never hitscan, and
+swept terrain contact. Sounds reuse Driftworks' synthesized gun/impact effects.
