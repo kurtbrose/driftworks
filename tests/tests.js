@@ -21,6 +21,123 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('pilot emotions survive maneuver changes and decay on active flight time', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    var a={id:'a',team:'ally',hp:90,mode:'approach'},r={id:'r',team:'enemy',hp:90,mode:'approach'};
+    var t={enabled:true,wave:1,hull:100,enemies:[a,r]};
+    api.step(clock,0,t,true,rng);a.hp=20;
+    api.step(clock,0,t,true,rng);
+    assert(clock.emotions.a.current==='panicked');
+    a.mode='attack';api.step(clock,2,t,true,rng);
+    assert(clock.emotions.a.current==='panicked'&&clock.emotions.a.intensity===1);
+    var line=api.step(clock,2,t,false,rng);
+    assert(line.craftId==='a'&&line.emotion.current==='panicked');
+    api.step(clock,15,t,true,rng);
+    assert(clock.emotions.a.current==='afraid'&&clock.emotions.a.stress>0.25&&clock.emotions.a.intensity<1);
+    api.step(clock,11,t,true,rng);assert(clock.emotions.a.current==='calm');
+    a.hp=1;api.step(clock,0,t,true,rng);assert(clock.emotions.a.current==='panicked');
+    t.wave=2;api.step(clock,0,t,true,rng);assert(clock.emotions.a.current==='calm');
+    a.hp=0;api.step(clock,0,t,true,rng);assert(!clock.emotions.a);
+    t.enabled=false;api.step(clock,0,t,true,rng);assert(Object.keys(clock.emotions).length===0);
+    assert(Object.keys(api.create().emotions).length===0);
+  });
+
+  test('sustained pressure prompts an emotional reply without a tactical order', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    var a={id:'a',team:'ally',hp:90,mode:'evade'},h={id:'h',team:'ally',hp:90,mode:'recover'};
+    var r={id:'r',team:'enemy',hp:90,mode:'attack',targetId:'a'};
+    var t={enabled:true,wave:1,hull:100,enemies:[a,h,r]};
+    api.step(clock,0,t,true,rng);api.step(clock,6,t,true,rng);
+    assert(clock.emotions.a.current==='afraid');
+    var call=api.step(clock,2,t,false,rng);
+    assert(call.event==='emotion'&&call.craftId==='a'&&call.text==='Help me!');
+    var reply=api.step(clock,2,t,false,rng);
+    assert(reply.event==='emotionalReply'&&reply.craftId==='h'&&reply.replyTo==='a');
+    assert(reply.emotion.current==='reassuring'&&h.mode==='recover'&&!h.targetId);
+    assert(clock.emotions.h.current==='calm'&&!clock.emotionalConversation);
+    api.step(clock,6,t,true,rng);assert(clock.emotions.a.current==='panicked');
+    a.mode='attack';api.step(clock,0,t,true,rng);assert(clock.emotions.a.current==='panicked');
+  });
+
+  test('emotional replies expire and require a living composed teammate', function () {
+    var api=window.Driftworks.flightComms,rng=function(){return 0;};
+    ['expired','dead','enemy','panicked'].forEach(function(reason){
+      var clock=api.create(),a={id:'a',team:'ally',hp:90,mode:'attack'},h={id:'h',team:'ally',hp:90,mode:'attack'};
+      var t={enabled:true,wave:1,hull:100,enemies:[a,h]};
+      api.step(clock,0,t,true,rng);clock.wait=100;
+      clock.emotionalConversation={caller:'a',emotion:'afraid',expires:14};
+      if(reason==='dead')a.hp=0;
+      if(reason==='enemy')h.team='enemy';
+      if(reason==='panicked'){clock.emotions.h.current='panicked';clock.emotions.h.stress=1;clock.emotions.h.recoverAfter=20;clock.emotions.h.announced='panicked';}
+      assert(api.step(clock,reason==='expired'?15:2,t,false,rng)===null,reason);
+      if(reason==='expired'||reason==='dead')assert(!clock.emotionalConversation);
+    });
+  });
+
+  test('stress accumulates from small hits and blocks cheerful modifiers after damage', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    var a={id:'a',team:'ally',hp:90,mode:'attack'},h={id:'h',team:'ally',hp:90,mode:'recover'};
+    var r={id:'r',team:'enemy',hp:90,mode:'attack',targetId:'a'};
+    var t={enabled:true,wave:1,time:0,hull:100,enemies:[a,h,r],radioEvents:[]};
+    api.step(clock,0,t,true,rng);
+    for(var i=0;i<4;i++){a.hp-=8;api.step(clock,0,t,true,rng);}
+    assert(clock.emotions.a.current==='afraid'&&clock.emotions.a.stress>0.35);
+    a.hp=20;api.step(clock,0,t,true,rng);a.mode='recover';r.targetId='h';
+    api.step(clock,5,t,true,rng);
+    assert(clock.emotions.a.current==='panicked'&&clock.emotions.a.modifier.current==='relieved');
+    // Kill praise nominates a as witness, while its stress still forbids confidence.
+    r.hp=0;t.radioEvents=[{serial:1,wave:1,time:0,kind:'destroyed',victim:'r',team:'enemy',killer:'h'}];
+    api.step(clock,0,t,true,rng);
+    assert(clock.emotions.a.current==='panicked'&&clock.emotions.a.modifier.current==='confident');
+    var line=api.step(clock,2,t,false,rng);
+    assert(line.craftId==='a'&&line.emotion.stress>0.9&&line.emotion.current==='panicked');
+    var stressed=api.voiceOptions(window.Driftworks.mumble.presets.Scout,line.emotion);
+    assert(stressed.tremor>0.19);
+    api.step(clock,40,t,true,rng);assert(clock.emotions.a.current==='calm'&&clock.emotions.a.stress===0);
+  });
+
+  test('stress thresholds have hysteresis and recovery is independent of frame size', function () {
+    var api=window.Driftworks.flightComms,rng=function(){return 0;};
+    function run(parts){
+      var clock=api.create(),a={id:'a',team:'ally',hp:90,mode:'attack'},t={enabled:true,hull:100,enemies:[a]};
+      api.step(clock,0,t,true,rng);a.hp=20;api.step(clock,0,t,true,rng);
+      parts.forEach(function(dt){api.step(clock,dt,t,true,rng);});return clock.emotions.a;
+    }
+    assertClose(run([20]).stress,run(Array(40).fill(0.5)).stress);
+    assert(run([13]).current==='panicked'); // Below entry threshold, above exit threshold.
+    assert(run([17]).current==='afraid');
+  });
+
+  test('combat outcomes set frustration, confidence, confusion and relief', function () {
+    var api=window.Driftworks.flightComms,rng=function(){return 0;};
+    var a={id:'a',index:0,team:'ally',hp:90,mode:'attack',targetId:'r',fire:true};
+    var h={id:'h',index:1,team:'ally',hp:90,mode:'approach'};
+    var r={id:'r',team:'enemy',hp:90,mode:'attack',targetId:'a'};
+    var t={enabled:true,wave:1,time:0,hull:100,enemies:[a,h,r],radioEvents:[]},clock=api.create();
+    api.step(clock,0,t,true,rng);a.mode='recover';api.step(clock,0,t,true,rng);
+    assert(clock.emotions.a.current==='frustrated');
+    clock=api.create();api.step(clock,0,t,true,rng);r.targetId='h';api.step(clock,0,t,true,rng);
+    assert(clock.emotions.a.current==='relieved');
+    t.radioEvents=[{serial:1,wave:1,time:0,kind:'destroyed',victim:'r',team:'enemy',killer:'a'}];
+    r.hp=0;api.step(clock,0,t,true,rng);assert(clock.emotions.h.current==='confident');
+    a.hp=0;t.radioEvents.push({serial:2,wave:1,time:0,kind:'destroyed',victim:'a',team:'ally'});
+    api.step(clock,0,t,true,rng);assert(clock.emotions.h.current==='confused');
+  });
+
+  test('emotions shape synthetic delivery while retaining the pilot voice', function () {
+    var api=window.Driftworks.flightComms,mumble=window.Driftworks.mumble,base=mumble.presets.Scout;
+    var afraid=api.voiceOptions(base,{current:'afraid',intensity:1});
+    var panic=api.voiceOptions(base,{current:'panicked',intensity:1});
+    var steady=api.voiceOptions(base,{current:'reassuring',intensity:1});
+    assert(afraid.pitch>base.pitch&&afraid.speed>base.speed&&afraid.tremor>0);
+    assert(panic.variation>afraid.variation&&steady.speed<base.speed);
+    assert(afraid.resonance===base.resonance&&base.pitch===210);
+    [afraid,panic,steady].forEach(function(v){
+      var plan=mumble.analyze('Stay with me.',v),pcm=mumble.render(plan,8000);
+      assert(plan.duration>0&&pcm.length>0&&pcm.every(Number.isFinite));
+    });
+  });
+
   test('flight comms spaces lines and uses living combatants', function () {
     var api=window.Driftworks.flightComms, clock=api.create(), combat={enabled:true,dead:false,hull:100,enemies:[{hp:10,team:'enemy'}]}, rng=function(){return 0;};
     assert(api.step(clock,3,combat,false,rng)===null);

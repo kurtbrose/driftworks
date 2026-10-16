@@ -681,3 +681,33 @@ text and template keys. `compose` retains source keys on its returned array;
 selects randomly among the lowest scores, and avoids immediate exact repeats
 when alternatives exist. This history is global across speakers, clears on
 reset, and permits singleton choices. Work is bounded by variants times 24.
+
+Flight radio tracks one continuous `stress` value (0 to 1) per living pilot in
+its `emotions` map, keyed by craft ID. Observed pursuit adds .06 stress per
+active second (.10 for multiple attackers); each hull point lost adds .015.
+Critical hull damage raises stress to 1 and damage delays recovery for six
+seconds. Safe flight then removes .035 per second. Fear enters at .35 and
+exits below .25; panic enters at .80 and exits below .65. These separate entry
+and exit thresholds prevent flickering near a boundary. Derived intensity
+follows stress, so voice delivery also recovers gradually.
+
+Losses/confusion, missed passes/frustration, kill praise/confidence, and escape/
+relief create ten-second modifiers, fading during their final three seconds.
+Confusion and frustration also add .08 stress; outnumbering raises it to at
+least .85. Fear and panic always override modifiers, so positive events cannot
+erase accumulated stress. Expired modifiers never reappear after recovery.
+Maneuver changes do not reset stress. Death, disabling combat, wave changes,
+and restart remove observations. These are presentation-only flight lab fields,
+not persistent world fields or AI inputs.
+
+Non-calm pilots can voice their feeling and use emotional variants for routine
+maneuvers; factual reports retain their information. Transmissions carry a copied
+`emotion` descriptor. `voiceOptions` adjusts the existing character preset's
+pitch, pace, variation and tremor without changing voice identity. A single
+14-second emotional exchange retains caller ID and emotional category. A living,
+same-team pilot who is not afraid or panicked can reassure or acknowledge them,
+without needing to attack the caller's pursuer. Replies share channel, pilot and
+activity cooldowns; urgent tactical calls and verified cover replies retain
+priority. Reassuring delivery is local to the reply and does not overwrite the
+responding pilot's own emotion. Emotional observations continue on busy radio;
+expired feelings never form a backlog of old emotional calls.

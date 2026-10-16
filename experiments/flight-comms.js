@@ -17,6 +17,81 @@
     recover: ['Coming around for another pass.', 'Regrouping. Keep them occupied!', 'Getting back in the fight.'],
     reposition: ['Moving into position. Cover me.', 'Swinging wide. Hold them here!', 'Setting up another run.']
   };
+  var emotionalLines = {
+    confused: ['Where is everybody?', "What's happening?", "Which one's ours?"],
+    panicked: ["They're everywhere!", "There's too many!", "I can't get away!"],
+    afraid: ['Help me!', "I can't shake him!", "I'm hit! I'm hit!"],
+    frustrated: ['Come on!', 'Just hold still!', 'I had him!'],
+    confident: ["We can do this.", 'One more.', 'Stay with me.'],
+    relieved: ["I'm clear!", 'Oh, thank God.', "We're still here."]
+  };
+  var emotionalReplies = {
+    confused: ["I'm here! I'm here!", 'Stay with my voice. We are together.'],
+    panicked: ["Keep your cool. We're still in this.", 'Breathe. One at a time.'],
+    afraid: ["I'm not leaving you. Just keep moving!", 'Keep your cool. Stay with me.'],
+    frustrated: ['Take your time. You will get another shot.', 'We can do this.'],
+    relieved: ["We're still here.", 'Good. Stay with us.']
+  };
+  var emotionStrength = {calm:0,confident:1,relieved:1,frustrated:2,confused:2,afraid:3,panicked:4};
+  // Stress is the continuous baseline. Brief event modifiers never suppress fear.
+  function deriveEmotion(emotion,time) {
+    var was=emotion.current;
+    var panic=was==='panicked'?0.65:0.8;
+    var fear=was==='afraid'||was==='panicked'?0.25:0.35;
+    var modifier=emotion.modifier&&time<emotion.modifier.until?emotion.modifier:null;
+    emotion.current=emotion.stress>=panic?'panicked':emotion.stress>=fear?'afraid':modifier?modifier.current:'calm';
+    emotion.intensity=emotion.current==='panicked'||emotion.current==='afraid'?emotion.stress:modifier?modifier.intensity*Math.min(1,(modifier.until-time)/3):0;
+    if(was!==emotion.current)emotion.announced=null;
+  }
+  function setEmotion(state,id,current,intensity) {
+    var emotion=state.emotions[id];
+    if(!emotion)return;
+    if(current==='panicked'||current==='afraid'){
+      emotion.stress=Math.max(emotion.stress,current==='panicked'?0.85:0.5);
+      emotion.recoverAfter=state.time+6;
+    }else{
+      emotion.modifier={current:current,intensity:intensity,until:state.time+10};
+      if(current==='confused'||current==='frustrated')emotion.stress=Math.min(1,emotion.stress+0.08);
+    }
+    deriveEmotion(emotion,state.time);
+  }
+  function observeEmotions(state,living,combat,dt) {
+    if(state.emotionWave!==combat.wave){state.emotions={};state.emotionalConversation=null;state.emotionWave=combat.wave;}
+    var previous=state.situation;
+    living.forEach(function(craft){
+      var emotion=state.emotions[craft.id];
+      if(!emotion)emotion=state.emotions[craft.id]={current:'calm',intensity:0,stress:0,recoverAfter:0,modifier:null};
+      var old=previous&&previous.wave===combat.wave&&previous.craft[craft.id];
+      var pursuers=living.filter(function(e){return e.team!==craft.team&&e.targetId===craft.id&&e.mode==='attack';}).length;
+      // Integrate only an observed interval, not time before a craft appeared.
+      if(old){
+        if(old.pursued&&pursuers)emotion.stress=Math.min(1,emotion.stress+dt*(pursuers>1?0.1:0.06));
+        else if(!old.pursued&&!pursuers){
+          var recovery=Math.max(0,state.time-Math.max(state.time-dt,emotion.recoverAfter));
+          emotion.stress=Math.max(0,emotion.stress-recovery*0.035);
+        }
+        var damage=Math.max(0,old.hp-craft.hp);
+        if(damage){
+          emotion.stress=Math.min(1,emotion.stress+damage*0.015);
+          if(craft.hp<=30)emotion.stress=Math.max(emotion.stress,1);
+          emotion.recoverAfter=state.time+6;
+        }
+        if(old.pursued&&!pursuers)emotion.modifier={current:'relieved',intensity:0.7,until:state.time+10};
+      }
+      deriveEmotion(emotion,state.time);
+    });
+    Object.keys(state.emotions).forEach(function(id){if(!living.some(function(c){return String(c.id)===id;}))delete state.emotions[id];});
+  }
+  function voiceOptions(preset,emotion) {
+    var v=Object.assign({},preset),e=emotion||{current:'calm',intensity:0},n=e.intensity;
+    var fear=e.current==='afraid'||e.current==='panicked';
+    var strain=Math.max(fear?n:0,e.stress||0);
+    v.pitch=(v.pitch||150)*(1+0.16*strain+(e.current==='frustrated'?0.06*n:0));
+    v.speed=(v.speed||1)*(1+(fear?0.18:e.current==='relieved'?-0.1:e.current==='reassuring'?-0.12:0)*n);
+    v.variation=(v.variation===undefined?0.35:v.variation)+(e.current==='panicked'?0.3:e.current==='reassuring'?-0.12:0)*n;
+    v.tremor=(v.tremor||0)+0.22*strain;
+    return v;
+  }
   var templates = {
     loss: ['We lost {pilot}!', '{pilot} is gone. Stay together!', 'We have lost {count}. Keep your eyes open.'],
     kill: ['Nice shooting, {pilot}!', '{pilot} got one. Keep it up!', 'Good kill, {pilot}!'],
@@ -87,6 +162,8 @@
     function offer(craft,event,data,fact){
       if(!craft)return;
       var entry={craft:craft,event:event,data:data||{},texts:compose(event,data||{})};
+      var feeling={loss:'confused',kill:'confident',missed:'frustrated',outnumbered:'panicked'}[event];
+      if(feeling)setEmotion(state,craft.id,feeling,0.8);
       if(fact){entry.expires=state.time+7;entry.wave=wave;state.facts.push(entry);}else result.push(entry);
     }
     function witness(team,except){return living.filter(function(e){return (e.team||'enemy')===team&&e.id!==except;}).sort(function(a,b){return (state.spoken[a.id]===undefined?-Infinity:state.spoken[a.id])-(state.spoken[b.id]===undefined?-Infinity:state.spoken[b.id]);})[0] || (team==='ally'?{id:'control',team:'ally',mode:'range'}:null);}
@@ -144,7 +221,7 @@
     state.facts=state.facts.filter(function(entry){return entry.expires>=state.time&&entry.wave===wave&&(!entry.contactId||living.some(function(e){var c=e.id===entry.contactId&&e.pose?contactData(player,e.pose.eye):null;return c&&c.distance<=3000;}))&&(entry.event!=='remaining'||entry.data.count===enemies)&&(entry.event!=='shield'||combat.shield<=0)&&(entry.event!=='outnumbered'||(allies>0&&enemies>allies))&&(entry.craft.id==='control'||living.some(function(e){return e.id===entry.craft.id;}));}).slice(-12);
     return result.concat(state.facts);
   }
-  function create() { return { wait: 4, serial: 0, last: '', recentLines: [], danger: false, quiet: 2, time: 0, modes: {}, activity: {}, spoken: {}, quietGap: 2, lastCraft: null, recentActivities: [], activitySpoken: {}, conversation: null, situation: null, radioSerial: 0, facts: [], contactReports: {} }; }
+  function create() { return { wait: 4, serial: 0, last: '', recentLines: [], danger: false, quiet: 2, time: 0, modes: {}, activity: {}, spoken: {}, quietGap: 2, lastCraft: null, recentActivities: [], activitySpoken: {}, conversation: null, situation: null, radioSerial: 0, facts: [], contactReports: {}, emotions: {}, emotionWave: null, emotionalConversation: null }; }
   function activityKind(event) { return event === 'attack' || event === 'firing' ? 'offense' : event; }
   function onTail(craft, living) {
     return craft.pose && living.some(function (other) {
@@ -180,8 +257,9 @@
     state.quiet = busy ? 0 : state.quiet + dt;
     random = random || Math.random;
     var living = combat.enabled ? combat.enemies.filter(function (e) { return e.hp > 0; }) : [];
+    observeEmotions(state,living,combat,dt);
     var modes = {}, activity = {}, candidates = combat.enabled ? richer(state,combat,living,player) : [];
-    if(!combat.enabled){state.facts=[];state.situation=null;state.contactReports={};state.radioSerial=combat.radioSerial||0;}
+    if(!combat.enabled){state.emotionalConversation=null;state.facts=[];state.situation=null;state.contactReports={};state.radioSerial=combat.radioSerial||0;}
     living.forEach(function (craft) {
       modes[craft.id] = craft.mode;
       var previous = state.activity[craft.id], event = null;
@@ -198,6 +276,20 @@
     Object.keys(state.spoken).forEach(function (id) { if (!(id in modes)) delete state.spoken[id]; });
     var helper = responder(state, living);
     if (helper) candidates.push({craft: helper, event: 'support'});
+    var exchange=state.emotionalConversation;
+    if(exchange){
+      var caller=living.find(function(c){return c.id===exchange.caller;});
+      if(!caller||state.time>exchange.expires)state.emotionalConversation=null;
+      else {
+        var listener=living.find(function(c){var e=state.emotions[c.id];return c.id!==caller.id&&c.team===caller.team&&e&&emotionStrength[e.current]<3&&state.time-(state.spoken[c.id]===undefined?-Infinity:state.spoken[c.id])>=10;});
+        if(listener)candidates.push({craft:listener,event:'emotionalReply',texts:emotionalReplies[exchange.emotion]});
+      }
+    }
+    living.forEach(function(c){
+      var e=state.emotions[c.id];
+      if(e.current!=='calm'&&e.announced!==e.current)candidates.push({craft:c,event:'emotion',texts:emotionalLines[e.current]});
+      if(e.current==='calm')e.announced=null;
+    });
     if (busy || combat.dead || state.quiet < state.quietGap) return null;
     var kind, choices, craft;
     // Frequent events share airtime limits; attack and firing describe the same activity.
@@ -211,6 +303,7 @@
     if (candidates.length) {
       var urgent = candidates.filter(function (e) { return e.event === 'loss' || e.event === 'shield' || e.event === 'damaged' || e.event === 'evade' || e.event === 'break'; });
       var replies = candidates.filter(function (e) { return e.event === 'support'; });
+      if(!replies.length)replies=candidates.filter(function(e){return e.event==='emotionalReply';});
       var pool = urgent.length ? urgent : replies.length ? replies : candidates;
       // Choose an activity before a pilot: eight shooters get no more weight than one recovering craft.
       var categories = [];
@@ -232,6 +325,8 @@
       if(selected.event==='loss') {selected.data.count=(combat.enemies||[]).filter(function(e){return e.hp<=0&&(e.team||'enemy')===(craft.team||'enemy');}).length;selected.texts=compose('loss',selected.data);}
       if(selected.event==='outnumbered'){selected.texts=compose('outnumbered',{friends:living.filter(function(e){return e.team==='ally';}).length,enemies:living.filter(function(e){return e.team!=='ally';}).length});}
       choices = selected.texts || (selected.event === 'evade' && onTail(craft, living) ? ["He's on my tail! Cover me!"] : calls[selected.event]);
+      var feeling=state.emotions[craft.id];
+      if(feeling&&feeling.current!=='calm'&&/^(attack|firing|target|recover|reposition)$/.test(selected.event))choices=emotionalLines[feeling.current];
       state.facts=state.facts.filter(function(entry){return entry!==selected;});
       state.spoken[craft.id] = state.time;
       state.activitySpoken[chosen] = state.time;
@@ -246,6 +341,13 @@
     choices = choices || lines[kind];
     var text = pickLine(state,choices,random);
     var replyTo = null;
+    var feeling=craft&&state.emotions[craft.id];
+    if(craft&&selected.event==='emotionalReply'){
+      replyTo=state.emotionalConversation.caller;state.emotionalConversation=null;
+    }else if(feeling&&feeling.current!=='calm'&&/^(emotion|attack|firing|target|recover|reposition|damaged|escaped|loss|outnumbered|missed)$/.test(selected.event)){
+      feeling.announced=feeling.current;
+      if(emotionalReplies[feeling.current]&&!state.emotionalConversation)state.emotionalConversation={caller:craft.id,emotion:feeling.current,expires:state.time+14};
+    }
     if (craft && selected.event === 'support') {
       replyTo = state.conversation.caller; state.conversation = null;
     } else if (craft && !state.conversation && /cover me|need a hand|get this fighter|on my tail/i.test(text)) {
@@ -254,7 +356,8 @@
     }
     state.last = text; state.serial++; state.quiet = 0; state.quietGap = 0.9 + random() * 2.8; state.lastCraft = craft ? craft.id : null; state.wait = 18 + random() * 12;
     var line = { text: text, speaker: kind === 'enemy' ? 'BANDIT / OPEN CHANNEL' : kind === 'ally' ? 'WING / FLIGHT CHANNEL' : 'CONTROL / RANGE CHANNEL', voice: kind === 'enemy' ? 'Pirate' : kind === 'ally' ? 'Scout' : 'Navigator', hostile: kind === 'enemy', seed: state.serial + 37 };
-    if (craft) { line.speaker = (craft.team === 'ally' ? 'WING ' : 'BANDIT ') + (Number.isFinite(craft.index) ? craft.index + 1 : craft.id) + ' / ' + (selected.event==='support'? 'COVER' : selected.event.toUpperCase()); line.craftId = craft.id; line.mode = craft.mode; line.event = selected.event; if(craft.id==='control')line.speaker='CONTROL / RANGE CHANNEL'; if (replyTo) line.replyTo = replyTo; }
+    if (craft) { line.speaker = (craft.team === 'ally' ? 'WING ' : 'BANDIT ') + (Number.isFinite(craft.index) ? craft.index + 1 : craft.id) + ' / ' + (selected.event==='support'? 'COVER' : selected.event==='emotionalReply'?'REASSURANCE':selected.event==='emotion'?feeling.current.toUpperCase():selected.event.toUpperCase()); line.craftId = craft.id; line.mode = craft.mode; line.event = selected.event; if(craft.id==='control')line.speaker='CONTROL / RANGE CHANNEL'; if (replyTo) line.replyTo = replyTo; }
+    if(feeling)line.emotion={current:selected.event==='emotionalReply'?'reassuring':feeling.current,intensity:selected.event==='emotionalReply'?0.8:feeling.intensity,stress:feeling.stress};
     return line;
   }
   function mount(panel, toggle) {
@@ -272,7 +375,7 @@
       panel.classList.toggle('hostile', line.hostile); panel.classList.add('transmitting'); remaining = 9;
       try {
         var api = DW.mumble, rate = 22050;
-        var plan = api.analyze(line.text, Object.assign({}, api.presets[line.voice], { seed: line.seed, volume: 0.42 }));
+        var plan = api.analyze(line.text, Object.assign(voiceOptions(api.presets[line.voice],line.emotion), { seed: line.seed, volume: 0.42 }));
         channelRemaining = plan.duration + 0.5;
         if (muted || !context || context.state !== 'running') return;
         var transmission = api.transmit(api.render(plan, rate), rate, { mode: 'radio', effects: 0.45, seed: line.seed });
@@ -298,5 +401,5 @@
       }
     };
   }
-  DW.flightComms = { create: create, step: step, mount: mount, compose: compose, numberWords: numberWords, contactData: contactData, pickLine: pickLine };
+  DW.flightComms = { create: create, step: step, mount: mount, compose: compose, numberWords: numberWords, contactData: contactData, pickLine: pickLine, voiceOptions: voiceOptions };
 }());
