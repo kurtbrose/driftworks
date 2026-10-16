@@ -429,3 +429,8 @@ AI maneuver changes, firing runs, and target switches trigger short pilot
 callouts. Clear-channel gaps vary from roughly one to four seconds; distress
 takes priority, speakers take turns, and each pilot has a ten-second cooldown. Pause stops
 speech; **Voice on/off** mutes speech while keeping subtitles.
+
+Comms favors a varied account of the fight: activity types get airtime before
+pilots are chosen, and recently repeated activities get less weight and longer
+cooldowns. Attack and firing share a budget so shooting cannot crowd out the
+other maneuvers just because more pilots are doing it.

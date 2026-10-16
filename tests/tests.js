@@ -88,6 +88,26 @@
     assert(api.step(clock,5,combat,false,rng)===null); // No replay when the action stays unchanged.
   });
 
+  test('flight comms balances activities instead of counting pilots', function () {
+    var api=window.Driftworks.flightComms, clock=api.create();
+    var craft=Array.from({length:9},function(_,i){return {id:'c'+i,hp:90,team:'ally',mode:'approach',fire:false};});
+    var combat={enabled:true,dead:false,hull:100,enemies:craft};
+    api.step(clock,0,combat,false,function(){return 0;});
+    craft.forEach(function(c,i){c.mode=i===8?'recover':'attack';});
+    var call=api.step(clock,0,combat,false,function(){return 0.6;});
+    assert(call.event==='recover'); // One recovery has half the activity vote against eight attacks.
+    clock=api.create();craft.forEach(function(c){c.mode='attack';c.fire=false;});
+    api.step(clock,0,combat,false,function(){return 0;});craft[0].fire=true;
+    assert(api.step(clock,0,combat,false,function(){return 0;}).event==='firing');
+    craft[1].fire=true;assert(api.step(clock,3,combat,false,function(){return 0;})===null);
+    craft[2].mode='recover';assert(api.step(clock,0,combat,false,function(){return 0;}).event==='recover');
+    api.step(clock,4,combat,false,function(){return 0;});craft[3].fire=true;
+    assert(api.step(clock,0,combat,false,function(){return 0;}).event==='firing');
+    craft[4].mode='approach';api.step(clock,8,combat,false,function(){return 0;});
+    craft[4].mode='attack';assert(api.step(clock,0,combat,false,function(){return 0;})===null); // Attack shares the shooting budget.
+    assert(clock.recentActivities.join(',')==='offense,recover,offense');
+  });
+
   test('flight radar uses player basis, meters, spherical range and altitude', function(){
     var radar=window.Driftworks.flightRadar,state={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     var front=radar.project(state,[10,25,30],100,1000);

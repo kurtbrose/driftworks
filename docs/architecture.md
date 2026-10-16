@@ -628,3 +628,8 @@ precedes other transitions. Firing starts and target switches also offer calls,
 and another speaker is preferred when several pilots have something to say. Speaker labels identify craft and maneuver. Tail
 calls additionally require a pursuing opponent behind the speaker. Muted
 subtitles reserve the estimated speech duration too. Reset clears observations.
+
+Radio airtime is balanced by activity before selecting a pilot. Attack and firing
+share an offense category. The last eight reactive calls bias selection toward
+less-heard categories and extend category cooldowns (4 + 3 seconds per recent
+call), leaving room for rarer maneuvers without inventing events or queuing them.

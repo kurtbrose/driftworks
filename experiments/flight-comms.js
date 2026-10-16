@@ -16,7 +16,8 @@
     recover: ['Coming around for another pass.', 'Regrouping. Keep them occupied!', 'Getting back in the fight.'],
     reposition: ['Moving into position. Cover me.', 'Swinging wide. Hold them here!', 'Setting up another run.']
   };
-  function create() { return { wait: 4, serial: 0, last: '', danger: false, quiet: 2, time: 0, modes: {}, activity: {}, spoken: {}, quietGap: 2, lastCraft: null }; }
+  function create() { return { wait: 4, serial: 0, last: '', danger: false, quiet: 2, time: 0, modes: {}, activity: {}, spoken: {}, quietGap: 2, lastCraft: null, recentActivities: [], activitySpoken: {} }; }
+  function activityKind(event) { return event === 'attack' || event === 'firing' ? 'offense' : event; }
   function onTail(craft, living) {
     return craft.pose && living.some(function (other) {
       if (other.team === craft.team || other.mode !== 'attack' || other.targetId !== craft.id || !other.pose) return false;
@@ -49,10 +50,23 @@
     Object.keys(state.spoken).forEach(function (id) { if (!(id in modes)) delete state.spoken[id]; });
     if (busy || combat.dead || state.quiet < state.quietGap) return null;
     var kind, choices, craft;
-    // Distress calls take priority; shuffle peers so array order does not pick the speaker.
+    // Frequent events share airtime limits; attack and firing describe the same activity.
+    var counts = {};
+    state.recentActivities.forEach(function (kind) { counts[kind] = (counts[kind] || 0) + 1; });
+    candidates = candidates.filter(function (entry) {
+      var category = activityKind(entry.event), last = state.activitySpoken[category];
+      return last === undefined || state.time - last >= 4 + (counts[category] || 0) * 3;
+    });
     if (candidates.length) {
       var urgent = candidates.filter(function (e) { return e.event === 'evade' || e.event === 'break'; });
       var pool = urgent.length ? urgent : candidates;
+      // Choose an activity before a pilot: eight shooters get no more weight than one recovering craft.
+      var categories = [];
+      pool.forEach(function (entry) { var category = activityKind(entry.event); if (categories.indexOf(category) < 0) categories.push(category); });
+      var weights = categories.map(function (category) { return 1 / Math.pow(1 + (counts[category] || 0), 2); });
+      var draw = random() * weights.reduce(function (sum, weight) { return sum + weight; }, 0), chosen = categories[categories.length - 1];
+      for (var i = 0; i < categories.length; i++) { draw -= weights[i]; if (draw <= 0) { chosen = categories[i]; break; } }
+      pool = pool.filter(function (entry) { return activityKind(entry.event) === chosen; });
       var otherSpeakers = pool.filter(function (e) { return e.craft.id !== state.lastCraft; });
       if (otherSpeakers.length) pool = otherSpeakers;
       var selected = pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
@@ -60,6 +74,9 @@
       kind = craft.team === 'ally' ? 'ally' : 'enemy';
       choices = selected.event === 'evade' && onTail(craft, living) ? ["He's on my tail! Cover me!"] : calls[selected.event];
       state.spoken[craft.id] = state.time;
+      state.activitySpoken[chosen] = state.time;
+      state.recentActivities.push(chosen);
+      if (state.recentActivities.length > 8) state.recentActivities.shift();
     } else if (state.wait > 0) return null;
     var enemies = living.some(function (e) { return e.team !== 'ally'; });
     var allies = living.some(function (e) { return e.team === 'ally'; });
