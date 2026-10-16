@@ -460,3 +460,35 @@ favoring unheard wording and then older, less-repeated lines. Template history
 also counts: changing a pilot number or range does not make a repeated phrase new.
 
 The ship inspection viewer now defaults to Quaternius Striker with original glTF base-color texture, UVs and normals; both inspection and flight use the original source appearance. The offline converter reads the archived self-contained glTF 2.0 triangle exports and writes inspection vertex data plus local PNGs in `textures/`. This supports these single-mesh exports, not general glTF/GLB, scene transforms, animation, or full PBR. Flight uses the same source textures, UVs and normals, grouping ships by model and texture. Deployment still uses only relative local assets and needs no build.
+
+Voice lab timbre controls: `formant1/2/3` independently scale vowel resonances
+(0.7–1.3, default 1). `brightness` tilts harmonic energy (0–1, default 0.5);
+Rendered utterances receive one fixed RMS gain (target 0.12 times volume),
+with peak headroom capped at 0.95 times volume. This matches levels across voice
+textures while preserving within-line dynamics and the volume control.
+`nasality` adds a 300 Hz pole and 1100 Hz notch; `creak` alternates glottal
+pulse strength; `clipping` shortens audible bursts without changing reveal timing.
+These last three range from 0–1 and default to 0. `contour` (0–1, default 0.5)
+scales phrase gestures; zero expression and zero contour give a flat pitch curve.
+The three Study presets share a 150 Hz fundamental: dark smooth, nasal clipped,
+and raspy creak. Compare the same line and seed in Local, then Radio, to judge
+perceptual separation. Presets are starting points for listening, not validated
+speaker identities. Old serialized plans receive neutral defaults when rendered.
+
+Furball radio assigns 16 curated adult pilot voices by craft index, with four
+masculine and four feminine voices in each wing. Pitch, independent formants,
+brightness, nasality, rasp, breath, creak, pace, and contour vary across the cast;
+no child or elderly presets are used. Voice settings and synthesis seed remain
+stable across lines and rounds. Emotion modifies delivery over that identity,
+and output level matching applies to the whole cast. Control retains a separate
+steady voice. `flightComms.pilotVoice(craft)` returns a fresh settings object;
+radio lines carry `voiceSettings` and the matching stable `seed` for playback.
+
+Radio latches vary in duration, irregular crackle segments, strength, and click frequency.
+The radio-only lab test runs for six seconds; repeat it to compare clean and noisy takes.
+Occasional 25-120 ms static bursts interrupt transmissions (60% of takes have no bursts; the remainder
+use exponential random gaps averaging about 2.2 seconds). Radio effects level controls both; clean Local
+playback is unaffected. Each preview take and furball transmission uses a separate
+radio seed from the stable voice seed. `transmit` remains deterministic for a
+fixed seed; `staticBursts: false` disables intermittent bursts for comparisons.
+Bookend timing and subtitle offsets remain fixed.

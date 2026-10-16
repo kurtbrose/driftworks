@@ -1,7 +1,10 @@
 (function () {
   'use strict';
-  var defaults = { pitch: 150, resonance: 1, roughness: 0.18, tremor: 0, breath: 0.12, speed: 1, pauseScale: 1, compactWords: true, enunciation: 0.35, variation: 0.35, volume: 0.65, seed: 7, emotion: 'neutral' };
+  var defaults = { pitch: 150, resonance: 1, formant1: 1, formant2: 1, formant3: 1, brightness: 0.5, nasality: 0, creak: 0, clipping: 0, contour: 0.5, roughness: 0.18, tremor: 0, breath: 0.12, speed: 1, pauseScale: 1, compactWords: true, enunciation: 0.35, variation: 0.35, volume: 0.65, seed: 7, emotion: 'neutral' };
   var presets = {
+    'Study · dark smooth': { pitch: 150, formant1: 0.9, formant2: 0.85, formant3: 0.9, brightness: 0.08, breath: 0.4, roughness: 0, variation: 0.15, contour: 0.15 },
+    'Study · nasal clipped': { pitch: 150, formant1: 1.1, formant2: 1.15, formant3: 1.1, brightness: 0.9, nasality: 0.85, clipping: 0.2, breath: 0.04, roughness: 0.05, contour: 0.9 },
+    'Study · raspy creak': { pitch: 150, formant1: 1.15, formant2: 0.9, formant3: 1.05, brightness: 0.75, creak: 0.85, roughness: 0.7, breath: 0.08, contour: 0.35 },
     Scout: { pitch: 210, resonance: 1.2, roughness: 0.08, breath: 0.1, speed: 1.2 },
     Veteran: { pitch: 95, resonance: 0.8, roughness: 0.45, breath: 0.22, speed: 0.85 },
     Navigator: { pitch: 155, resonance: 1, roughness: 0.1, breath: 0.2, speed: 1 },
@@ -17,9 +20,10 @@
   };
   function voice(options) {
     var v = Object.assign({}, defaults, options);
-    ['pitch', 'resonance', 'roughness', 'tremor', 'breath', 'speed', 'variation', 'volume', 'pauseScale', 'enunciation', 'seed'].forEach(function (key) { if (!Number.isFinite(v[key])) v[key] = defaults[key]; });
+    ['formant1', 'formant2', 'formant3', 'brightness', 'nasality', 'creak', 'clipping', 'contour', 'pitch', 'resonance', 'roughness', 'tremor', 'breath', 'speed', 'variation', 'volume', 'pauseScale', 'enunciation', 'seed'].forEach(function (key) { if (!Number.isFinite(v[key])) v[key] = defaults[key]; });
     v.pitch = Math.max(60, Math.min(360, v.pitch)); v.speed = Math.max(0.5, Math.min(2, v.speed)); v.resonance = Math.max(0.5, Math.min(1.6, v.resonance));
-    ['roughness', 'tremor', 'breath', 'variation', 'volume', 'pauseScale', 'enunciation'].forEach(function (key) { v[key] = Math.max(0, Math.min(1, v[key])); });
+    ['brightness', 'nasality', 'creak', 'clipping', 'contour', 'roughness', 'tremor', 'breath', 'variation', 'volume', 'pauseScale', 'enunciation'].forEach(function (key) { v[key] = Math.max(0, Math.min(1, v[key])); });
+    ['formant1', 'formant2', 'formant3'].forEach(function (key) { v[key] = Math.max(0.7, Math.min(1.3, v[key])); });
     return v;
   }
   function random(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t ^= t + Math.imul(t ^ t >>> 7, 61 | t); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -90,11 +94,11 @@
       var first = phrase[0], last = phrase[phrase.length - 1];
       var span = last.start + last.duration - first.start;
       var base = v.pitch * (v.emotion === 'urgent' ? 1.15 : 1);
-      var bounce = 0.055 + v.variation * 0.10;
+      var bounce = v.variation * (0.157 + v.contour * 0.2);
       function contour(time) {
         var x = Math.max(0, Math.min(1, (time - first.start) / span));
         var ending = mark === '?' ? 0.22 * x * x : mark === '!' ? 0.025 * x : -0.035 * x;
-        return base * Math.pow(2, (bounce * Math.sin(2 * Math.PI * 1.25 * x - 0.6) + ending) / 1);
+        return base * Math.pow(2, (bounce * Math.sin(2 * Math.PI * 1.25 * x - 0.6) + ending * v.contour * 2) / 1);
       }
       phrase.forEach(function(event) {
         event.pitchCurve = [contour(event.start), contour(event.start + event.duration / 2), contour(event.start + event.duration)];
@@ -115,7 +119,7 @@
     var style = options && options.style || 'vowel-groups';
     var flowing = style === 'flowing';
     var popping = style === 'vowel-groups';
-    sampleRate = sampleRate || 22050; var pcm = new Float32Array(Math.ceil(plan.duration * sampleRate)), v = plan.voice, rng = random(hash(plan.text, v.seed)), phase = 0;
+    sampleRate = sampleRate || 22050; var pcm = new Float32Array(Math.ceil(plan.duration * sampleRate)), v = voice(plan.voice), rng = random(hash(plan.text, v.seed)), phase = 0;
     plan.events.forEach(function (event, eventIndex) {
       if (event.kind !== 'syllable') return;
       var nextIndex = eventIndex + 1;
@@ -126,6 +130,7 @@
       // B treats every vowel as a short vocal gesture, never a spelling-length hold.
       // Event/reveal timing is unchanged; the unused time becomes a micropause.
       var soundDuration = popping ? Math.min(event.duration * 0.72, 0.075) : event.duration + extra;
+      soundDuration *= 1 - v.clipping * 0.55;
       var group = popping && plan.text.slice(event.sourceFrom, event.sourceTo).toLowerCase().match(/[aeiou][aeiouyw]?/);
       var mapped = group && vowelGroups[group[0]];
       var formants = vowels[mapped ? mapped[0] : event.vowel], targetFormants = vowels[mapped ? mapped[1] : event.vowelEnd] || formants, count = Math.floor(soundDuration * sampleRate), start = Math.floor(event.start * sampleRate);
@@ -142,10 +147,17 @@
         if (popping) glide = Math.min(1, t / soundDuration);
         phase += 2 * Math.PI * frequency / sampleRate; var value = 0;
         for (var h = 1; h <= 24; h++) {
-          var hz = frequency * h, weight = 0.06 / h;
-          for (var f = 0; f < 3; f++) weight += Math.exp(-Math.pow((hz - (formants[f] * (1 - glide) + targetFormants[f] * glide) * v.resonance * (flowing ? 1 : 1.04 - 0.08 * p)) / (100 + f * 65), 2)) * (0.7 / (f + 1));
+          var hz = frequency * h;
+          if (hz >= sampleRate * 0.5) break;
+          var weight = 0.06 / h;
+          for (var f = 0; f < 3; f++) weight += Math.exp(-Math.pow((hz - (formants[f] * (1 - glide) + targetFormants[f] * glide) * v.resonance * v['formant' + (f + 1)] * (flowing ? 1 : 1.04 - 0.08 * p)) / (100 + f * 65), 2)) * (0.7 / (f + 1));
+          // Nasal pole plus a broad antiresonance color the same harmonic source.
+          weight = weight * (1 - v.nasality * 0.7 * Math.exp(-Math.pow((hz - 1100) / 350, 2))) + v.nasality * 0.65 * Math.exp(-Math.pow((hz - 300) / 100, 2));
+          weight *= Math.pow(h, (v.brightness - 0.5) * 1.6);
           value += Math.sin(phase * h) * weight;
         }
+        // Alternate glottal pulses and flutter add creak without changing the pitch control.
+        value *= 1 - v.creak * (0.35 + 0.3 * Math.sin(phase * 0.5) + 0.2 * Math.sin(phase * 0.23));
         var noise = rng() * 2 - 1, envelope = Math.min(1, t / 0.018) * Math.min(1, (event.duration - t) / 0.04);
         if (flowing) {
           var attackTime = Math.min(0.008, soundDuration * 0.1), releaseTime = Math.min(0.035, soundDuration * 0.3);
@@ -162,6 +174,14 @@
         pcm[start + i] += Math.tanh(value * (1 + v.roughness)) * (flowing ? 0.38 : 0.48) * v.volume;
       }
     });
+    // Match utterance RMS after timbre/envelopes, preserving the volume control.
+    // One fixed gain preserves the performance dynamics without pumping between vowels.
+    var energy = 0, peak = 0;
+    for (var j = 0; j < pcm.length; j++) { energy += pcm[j] * pcm[j]; peak = Math.max(peak, Math.abs(pcm[j])); }
+    if (energy > 0) {
+      var gain = Math.min(0.12 * v.volume / Math.sqrt(energy / pcm.length), 0.95 * v.volume / peak);
+      for (var k = 0; k < pcm.length; k++) pcm[k] *= gain;
+    }
     return pcm;
   }
   // Contextual transmission is separate from character identity and speech timing.
@@ -174,7 +194,24 @@
     var volume = Number.isFinite(options.volume) ? Math.max(0, Math.min(1, options.volume)) : defaults.volume;
     var effects = Number.isFinite(options.effects) ? Math.max(0, Math.min(1, options.effects)) : 0.65;
     var noise = random((options.seed || 0) ^ 0x52414449), low = 0, band = 0, hissLow = 0, noiseBand = 0;
+    var character = random((options.seed || 0) ^ 0x53515545);
+    function latch() {
+      var gate={delay:character()*0.025,duration:0.014+character()*0.05,frequency:1200+character()*1400,steps:[]},time=0;
+      while(time<gate.duration) { time+=0.001+character()*0.009; gate.steps.push({until:time,gain:character()<0.35?0.03:0.2+character()*0.65}); }
+      return gate;
+    }
+    var openLatch=latch(), closeLatch=latch();
+    // Most transmissions are clean; eligible ones still wait an exponential random gap.
+    var burstRate = options.staticBursts === false || character() < 0.6 ? 0 : 0.45;
+    function waitBurst() { return -Math.log(Math.max(0.000001,1-character())) / 0.45; }
+    var nextBurst = lead/sampleRate + waitBurst(), burstEnd = 0, burstStart = 0, burstGain = 0;
     for (var i = 0; i < output.length; i++) {
+      var now = i/sampleRate;
+      if (burstRate && now >= nextBurst && i < lead+samples.length) {
+        burstStart=now; burstEnd=now+0.025+character()*0.095; burstGain=0.25+character()*0.4;
+        nextBurst=burstEnd+waitBurst();
+      }
+      var burst = burstRate && now < burstEnd ? burstGain*Math.min(1,(now-burstStart)/0.002,(burstEnd-now)/0.004) : 0;
       var speech = i >= lead && i < lead + samples.length ? samples[i - lead] : 0;
       low += 0.08 * (speech - low); band += 0.55 * (speech - low - band);
       var raw = noise() * 2 - 1; hissLow += 0.2 * (raw - hissLow);
@@ -184,15 +221,16 @@
       var edgeTime = opening ? i / sampleRate : (i - lead - samples.length) / sampleRate;
       // Electrical gate, not a vocal envelope: steady carrier, sharply keyed
       // crackle bursts, and a brief mechanical contact click at each latch.
-      var latchTime = opening ? edgeTime : edgeTime - 0.12;
-      if ((opening || closing) && latchTime >= 0 && latchTime < 0.028) {
-        squelch = Math.floor(latchTime / 0.004) % 3 === 1 ? 0.12 : 0.65;
-        chirp = Math.exp(-latchTime * 650) * Math.cos(2 * Math.PI * 1800 * latchTime) * 0.24;
+      var gate = opening ? openLatch : closeLatch;
+      var latchTime = (opening ? edgeTime : edgeTime - 0.12) - gate.delay;
+      if ((opening || closing) && latchTime >= 0 && latchTime < gate.duration) {
+        for (var g=0;g<gate.steps.length;g++) { if(latchTime<gate.steps[g].until) { squelch=gate.steps[g].gain;break; } }
+        chirp = Math.exp(-latchTime * 650) * Math.cos(2 * Math.PI * gate.frequency * latchTime) * 0.24;
       }
       var carrier = opening || closing ? 0.16 : 0.075;
       // Only a 1–3 ms edge ramp prevents digital discontinuities; no soft swell.
       var fade = Math.min(1, i / (0.001 * sampleRate), (output.length - 1 - i) / (0.003 * sampleRate));
-      output[i] = (Math.tanh(band * 2.2) * 0.65 + volume * effects * (hiss * (carrier + squelch) + chirp)) * fade;
+      output[i] = (Math.tanh(band * 2.2) * 0.65 + volume * effects * (hiss * (carrier + squelch + burst) + chirp)) * fade;
     }
     return { samples: output, speechOffset: lead / sampleRate, duration: output.length / sampleRate };
   }

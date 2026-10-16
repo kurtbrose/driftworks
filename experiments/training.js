@@ -91,19 +91,20 @@
       radioEvent(t,{kind:'destroyed',victim:e.id,team:e.team||'enemy',index:e.index,killer:typeof shooter==='object'?shooter.id:shooter||null});
       var pose={eye:e.pose.eye.slice(),right:e.pose.right.slice(),up:e.pose.up.slice(),back:e.pose.back.slice(),velocity:e.pose.velocity.slice(),throttle:0};
       var axis=unit(add(pose.right,scale(pose.up,e.index%2?-.7:.7)));
-      t.wrecks.push({id:e.id+'-wreck',index:e.index,team:e.team,artWave:t.wave,pose:pose,axis:axis,spin:(e.index%2?-1:1)*(.25+(e.index%5)*.09),age:0});
+      t.wrecks.push({id:e.id+'-wreck',index:e.index,team:e.team,artWave:t.wave,pose:pose,axis:axis,spin:(e.index%2?-1:1)*(.25+(e.index%5)*.09),age:0,scorches:e.scorches||[]});
       // Keep debris across waves, with a bounded rendering/memory budget.
       if(t.wrecks.length>48)t.wrecks.shift();
       e.fire=false;e.pose.throttle=0;
       if(e.team!=='ally')t.kills++;if(!alive(t).length)t.countdown=5;t.flashes.push({position:e.pose.eye.slice(),age:0,scale:14});}
   }
   function trace(t,start,end,bolt,team,terrainHit,player){
-    var hit=terrainHit?terrainHit(start,end):null,best=hit?length(sub(hit,start)):Infinity,victim=null;
+    var hit=terrainHit?terrainHit(start,end):null,best=hit?length(sub(hit,start)):Infinity,victim=null,surface=null;
     var shooter=typeof team==='object'?team:null,faction=shooter?shooter.team:team==='player'?'ally':'enemy';
     if(t.mode==='furball'){
-      alive(t).forEach(function(e){if(e.team===faction)return;var candidate=sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;}}});
-    }else if(team==='player')alive(t).forEach(function(e){var candidate=sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;}}});
+      alive(t).forEach(function(e){if(e.team===faction)return;var candidate=t.hullHit?t.hullHit(e,start,end):sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;surface=candidate;}}});
+    }else if(team==='player')alive(t).forEach(function(e){var candidate=t.hullHit?t.hullHit(e,start,end):sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;surface=candidate;}}});
     if(faction==='enemy'&&!t.dead){var candidate=sphereHit(start,end,player.eye,7/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim='player';}}}
+    if(victim&&victim!=='player'&&surface&&surface.model)DW.shipPackModels.addScorch(victim,surface);
     if(victim==='player')damagePlayer(t,bolt.weapon);else if(victim)damageEnemy(t,victim,bolt.weapon,shooter||team);
     // Report close projectile passes, clipped at the first collision so occluded bolts cannot speak.
     var endPoint=hit||end,delta=sub(endPoint,start),span=dot(delta,delta);

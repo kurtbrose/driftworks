@@ -123,10 +123,73 @@
     });
     return {vertices:new Float32Array(data),color:[.25,.65,1]};
   }
+  // Collision and decals share the displayed model's local metre coordinates.
+  var blockout={id:'blockout',vertices:[]};
+  (function(){var p=[[0,11,0],[-7,-6,0],[0,-3,2.5],[7,-6,0],[0,-6,-2]];
+    [[0,1,2],[0,2,3],[0,4,1],[0,3,4],[1,4,2],[2,4,3]].forEach(function(f){
+      var n=normal(p[f[0]],p[f[1]],p[f[2]]);f.forEach(function(i){blockout.vertices.push.apply(blockout.vertices,p[i].concat(n));});
+    });
+  }());
+  function dot3(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+  function minus(a,b){return a.map(function(v,i){return v-b[i];});}
+  function cross3(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+  function normal(a,b,c){var n=cross3(minus(b,a),minus(c,a)),l=Math.hypot.apply(null,n)||1;return n.map(function(v){return v/l;});}
+  function craftModel(e,selection,wave){return selection==='mixed'?mixedModel(e.index,e.artWave||wave):(find(selection)||{}).model||blockout;}
+  function localPoint(p,world,units){var d=minus(world,p.eye);return [dot3(d,p.right)*units,-dot3(d,p.back)*units,dot3(d,p.up)*units];}
+  var hullBounds=new WeakMap();
+  function hullHit(model,pose,start,end,units){
+    var a=localPoint(pose,start,units),d=minus(localPoint(pose,end,units),a),v=model.vertices,best=null;
+    var radius=hullBounds.get(model);
+    if(radius===undefined){radius=0;for(var b=0;b<v.length;b+=6)radius=Math.max(radius,Math.hypot(v[b],v[b+1],v[b+2]));hullBounds.set(model,radius);}
+    var span=dot3(d,d),fraction=span?Math.max(0,Math.min(1,-dot3(a,d)/span)):0;
+    if(Math.hypot.apply(null,a.map(function(x,j){return x+d[j]*fraction;}))>radius)return null;
+    for(var i=0;i<v.length;i+=18){
+      var p=v.slice(i,i+3),e=minus(v.slice(i+6,i+9),p),f=minus(v.slice(i+12,i+15),p);
+      var h=cross3(d,f),det=dot3(e,h);if(Math.abs(det)<1e-10)continue;
+      var offset=minus(a,p),u=dot3(offset,h)/det;if(u<0||u>1)continue;
+      var q=cross3(offset,e),w=dot3(d,q)/det;if(w<0||u+w>1)continue;
+      var t=dot3(f,q)/det;if(t<0||t>1||best&&t>=best.fraction)continue;
+      var n=normal(p,v.slice(i+6,i+9),v.slice(i+12,i+15));
+      best={fraction:t,point:start.map(function(x,j){return x+(end[j]-x)*t;}),
+        local:a.map(function(x,j){return x+d[j]*t;}),normal:n,model:model};
+    }
+    return best;
+  }
+  function addScorch(e,hit){
+    var n=hit.normal,center=hit.local,axis=Math.abs(n[2])<.9?[0,0,1]:[0,1,0];
+    var tangent=normal([0,0,0],n,axis),side=cross3(n,tangent),layers=[[],[],[],[],[]];
+    // Clip a small polygonal burn to nearby hull triangles. No floating quads,
+    // back-side bleed, textures, or per-frame mesh projection.
+    var v=hit.model.vertices;
+    for(var i=0;i<v.length;i+=18){
+      var tri=[v.slice(i,i+3),v.slice(i+6,i+9),v.slice(i+12,i+15)],face=normal(tri[0],tri[1],tri[2]);
+      if(dot3(face,n)<.35||[0,1,2].some(function(k){return Math.min(tri[0][k],tri[1][k],tri[2][k])>center[k]+1.4||Math.max(tri[0][k],tri[1][k],tri[2][k])<center[k]-1.4;}))continue;
+      [.78,.63,.48,.33,.18].forEach(function(radius,layer){
+        var poly=tri;
+        function clip(direction,limit){
+          var out=[];poly.forEach(function(a,j){var b=poly[(j+1)%poly.length],da=dot3(minus(a,center),direction)-limit,db=dot3(minus(b,center),direction)-limit;
+            if(da<=0)out.push(a);if((da<=0)!==(db<=0)){var t=da/(da-db);out.push(a.map(function(x,k){return x+(b[k]-x)*t;}));}
+          });poly=out;
+        }
+        clip(n,.3);clip(n.map(function(x){return -x;}),.3);
+        for(var edge=0;edge<12&&poly.length;edge++){var angle=edge*Math.PI/6;
+          clip(tangent.map(function(x,k){return x*Math.cos(angle)+side[k]*Math.sin(angle);}),radius*(1+.22*Math.sin(edge*7.3+center[0]*2.1+center[1]*3.7+center[2])));
+        }
+        for(var j=1;j+1<poly.length;j++)[poly[0],poly[j],poly[j+1]].forEach(function(p){layers[layer].push.apply(layers[layer],p.map(function(x,k){return x+face[k]*(.012+layer*.004);}).concat(face));});
+      });
+    }
+    if(!e.scorches)e.scorches=[];e.scorches.push({modelId:hit.model.id,layers:layers});if(e.scorches.length>24)e.scorches.shift();
+  }
+  function scorchGeometry(craft,selection,wave,units){
+    var layers=[[],[],[],[],[]];craft.forEach(function(e){var model=craftModel(e,selection,wave);
+      (e.scorches||[]).forEach(function(mark){if(mark.modelId!==model.id)return;mark.layers.forEach(function(source,i){var batch=geometry({vertices:source},[e.pose],units)[0];layers[i].push.apply(layers[i],batch.vertices);});});
+    });
+    return layers.map(function(data,i){return {vertices:new Float32Array(data),color:[.22,.20,.17],opacity:[.10,.13,.16,.18,.12][i]};});
+  }
   function populate(select,blockout){
     if(blockout){var option=document.createElement('option');option.value='';option.textContent='Driftworks · training blockout';select.appendChild(option);}
     (DW.shipPacks||[]).forEach(function(pack){var group=document.createElement('optgroup');group.label=pack.author+' / '+pack.id;pack.models.forEach(function(model){var option=document.createElement('option');option.value=model.id;option.textContent=model.name+' · '+model.triangles.toLocaleString()+' tris';group.appendChild(option);});select.appendChild(group);});
   }
   function paintColor(hex){return /^#[0-9a-f]{6}$/i.test(hex)?[parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255]:undefined;}
-  DW.shipPackModels={paintColor:paintColor,find:find,loadTextures:loadTextures,sourceGeometry:sourceGeometry,sourceFleetGeometry:sourceFleetGeometry,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,engineAnchors:engineAnchors,engineGeometry:engineGeometry,populate:populate};
+  DW.shipPackModels={craftModel:craftModel,hullHit:hullHit,addScorch:addScorch,scorchGeometry:scorchGeometry,paintColor:paintColor,find:find,loadTextures:loadTextures,sourceGeometry:sourceGeometry,sourceFleetGeometry:sourceFleetGeometry,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,engineAnchors:engineAnchors,engineGeometry:engineGeometry,populate:populate};
 }());

@@ -82,6 +82,33 @@
     });
     Object.keys(state.emotions).forEach(function(id){if(!living.some(function(c){return String(c.id)===id;}))delete state.emotions[id];});
   }
+  // Four adult masculine/feminine pairs per wing; index owns identity across rounds.
+  // Columns: pitch, F1, F2, F3, brightness, nasal, rasp, breath, creak, rate, contour.
+  var pilotCast = [
+    [105, .92, .86, .9, .12, .05, .12, .3, 0, .94, .25],
+    [195, 1.06, 1.12, 1.1, .65, .15, .04, .12, 0, 1.12, .8],
+    [140, 1.12, .95, 1.05, .8, .1, .55, .08, .45, 1.04, .4],
+    [225, .94, 1.18, 1.12, .85, .65, .05, .06, 0, 1.16, .65],
+    [165, 1.05, 1.14, 1.02, .65, .6, .08, .08, 0, 1.1, .75],
+    [175, .88, .94, 1.04, .18, .05, .08, .36, 0, .92, .4],
+    [120, 1.18, .9, .95, .5, .3, .3, .12, .2, .88, .15],
+    [205, 1.1, 1.02, 1.18, .6, .12, .4, .16, .3, 1.02, .55],
+    [150, .86, 1.08, .92, .3, .45, .14, .2, 0, .96, .65],
+    [185, 1.16, .92, 1.08, .75, .05, .5, .08, .4, 1.08, .25],
+    [95, 1.08, .82, .88, .2, .1, .45, .14, .35, .9, .4],
+    [240, 1.08, 1.2, 1.16, .7, .25, .02, .18, 0, 1.18, .9],
+    [175, .92, 1.16, 1.12, .9, .7, .1, .05, 0, 1.14, .5],
+    [165, 1.12, .88, .94, .15, .1, .12, .4, 0, .98, .2],
+    [130, 1.2, 1.06, .9, .7, .1, .65, .08, .55, 1.06, .35],
+    [215, .9, 1.08, 1.2, .4, .4, .18, .22, .1, 1, .7]
+  ];
+  function pilotVoice(craft) {
+    var index = craft && Number.isFinite(craft.index) ? Math.abs(Math.floor(craft.index)) % pilotCast.length : -1;
+    if (!craft || craft.id === 'control' || index < 0) return {pitch:155,resonance:1,roughness:0.1,breath:0.2,speed:1,seed:19};
+    var row = pilotCast[index], result = {resonance:1,tremor:0,clipping:index%4===3?0.2:0,enunciation:0.3+(index%3)*0.08,variation:0.2+(index%4)*0.1,seed:101+index*37};
+    ['pitch','formant1','formant2','formant3','brightness','nasality','roughness','breath','creak','speed','contour'].forEach(function(key,i) { result[key]=row[i]; });
+    return result;
+  }
   function voiceOptions(preset,emotion) {
     var v=Object.assign({},preset),e=emotion||{current:'calm',intensity:0},n=e.intensity;
     var fear=e.current==='afraid'||e.current==='panicked';
@@ -357,6 +384,7 @@
     state.last = text; state.serial++; state.quiet = 0; state.quietGap = 0.9 + random() * 2.8; state.lastCraft = craft ? craft.id : null; state.wait = 18 + random() * 12;
     var line = { text: text, speaker: kind === 'enemy' ? 'BANDIT / OPEN CHANNEL' : kind === 'ally' ? 'WING / FLIGHT CHANNEL' : 'CONTROL / RANGE CHANNEL', voice: kind === 'enemy' ? 'Pirate' : kind === 'ally' ? 'Scout' : 'Navigator', hostile: kind === 'enemy', seed: state.serial + 37 };
     if (craft) { line.speaker = (craft.team === 'ally' ? 'WING ' : 'BANDIT ') + (Number.isFinite(craft.index) ? craft.index + 1 : craft.id) + ' / ' + (selected.event==='support'? 'COVER' : selected.event==='emotionalReply'?'REASSURANCE':selected.event==='emotion'?feeling.current.toUpperCase():selected.event.toUpperCase()); line.craftId = craft.id; line.mode = craft.mode; line.event = selected.event; if(craft.id==='control')line.speaker='CONTROL / RANGE CHANNEL'; if (replyTo) line.replyTo = replyTo; }
+    line.voiceSettings = pilotVoice(craft); line.seed = line.voiceSettings.seed; line.radioSeed = state.serial * 7919 + line.seed;
     if(feeling)line.emotion={current:selected.event==='emotionalReply'?'reassuring':feeling.current,intensity:selected.event==='emotionalReply'?0.8:feeling.intensity,stress:feeling.stress};
     return line;
   }
@@ -375,10 +403,10 @@
       panel.classList.toggle('hostile', line.hostile); panel.classList.add('transmitting'); remaining = 9;
       try {
         var api = DW.mumble, rate = 22050;
-        var plan = api.analyze(line.text, Object.assign(voiceOptions(api.presets[line.voice],line.emotion), { seed: line.seed, volume: 0.42 }));
+        var plan = api.analyze(line.text, Object.assign(voiceOptions(line.voiceSettings || api.presets[line.voice],line.emotion), { seed: line.seed, volume: 0.42 }));
         channelRemaining = plan.duration + 0.5;
         if (muted || !context || context.state !== 'running') return;
-        var transmission = api.transmit(api.render(plan, rate), rate, { mode: 'radio', effects: 0.45, seed: line.seed });
+        var transmission = api.transmit(api.render(plan, rate), rate, { mode: 'radio', effects: 0.45, seed: line.radioSeed });
         var buffer = context.createBuffer(1, transmission.samples.length, rate); buffer.copyToChannel(transmission.samples, 0);
         source = context.createBufferSource(); source.buffer = buffer; source.connect(context.destination);
         var ticket = generation, playing = source;
@@ -401,5 +429,5 @@
       }
     };
   }
-  DW.flightComms = { create: create, step: step, mount: mount, compose: compose, numberWords: numberWords, contactData: contactData, pickLine: pickLine, voiceOptions: voiceOptions };
+  DW.flightComms = { create: create, step: step, mount: mount, compose: compose, numberWords: numberWords, contactData: contactData, pickLine: pickLine, voiceOptions: voiceOptions, pilotVoice: pilotVoice };
 }());

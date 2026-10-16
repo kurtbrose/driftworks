@@ -21,6 +21,25 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('furball pilots keep a varied adult cast across lines and rounds', function () {
+    var api=window.Driftworks.flightComms,seen={};
+    for(var i=0;i<16;i++) {
+      var craft={id:'wave-1-'+i,index:i,team:i<8?'ally':'enemy'},v=api.pilotVoice(craft);
+      assert(v.pitch>=95&&v.pitch<=240&&v.tremor===0);
+      assert(v.clipping<=0.2);
+      assert(!seen[JSON.stringify(v)]);seen[JSON.stringify(v)]=true;
+      craft.id='wave-2-'+i;assert(JSON.stringify(v)===JSON.stringify(api.pilotVoice(craft)));
+      var stressed=api.voiceOptions(v,{current:'afraid',intensity:1});
+      assert(stressed.formant2===v.formant2&&stressed.seed===v.seed&&stressed.pitch>v.pitch);
+    }
+    var clock=api.create(),craft={id:'pilot',index:3,team:'ally',hp:90,mode:'approach'};
+    var combat={enabled:true,wave:1,hull:100,enemies:[craft]};
+    api.step(clock,0,combat,true,function(){return 0;});craft.hp=20;
+    var line=api.step(clock,2,combat,false,function(){return 0;});
+    assert(line.craftId===craft.id&&line.seed===api.pilotVoice(craft).seed);
+    assert(JSON.stringify(line.voiceSettings)===JSON.stringify(api.pilotVoice(craft)));
+  });
+
   test('pilot emotions survive maneuver changes and decay on active flight time', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var a={id:'a',team:'ally',hp:90,mode:'approach'},r={id:'r',team:'enemy',hp:90,mode:'approach'};
@@ -611,6 +630,54 @@
     assert(JSON.stringify(plan) === JSON.stringify(api.analyze('Keep cool, scout!',{compactWords:true})));
   });
 
+  test('voice character controls independently affect audio and repair old plans', function () {
+    var api = window.Driftworks.mumble, text = 'Keep cool, pilot!', base = api.render(api.analyze(text),8000);
+    ['formant1','formant2','formant3','brightness','nasality','creak','clipping','contour'].forEach(function(key) {
+      var options = {}; options[key] = key.indexOf('formant') === 0 ? 1.3 : 1;
+      var plan = api.analyze(text,options), pcm = api.render(plan,8000);
+      assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v)<=1; }));
+      assert(pcm.some(function(v,i) { return Math.abs(v-base[i])>0.001; }),key);
+      var again = api.render(plan,8000); assert(pcm.every(function(v,i) { return v === again[i]; }));
+      options[key] = NaN; assert(api.analyze(text,options).voice[key] === api.defaults[key]);
+      options[key] = 100; assert(api.analyze(text,options).voice[key] === (key.indexOf('formant') === 0 ? 1.3 : 1));
+    });
+    var old = api.analyze(text);
+    ['formant1','formant2','formant3','brightness','nasality','creak','clipping','contour'].forEach(function(key) { delete old.voice[key]; });
+    assert(api.render(old,8000).every(function(v,i) { return v === base[i]; }));
+    var flat = api.analyze(text,{variation:0,contour:0});
+    assert(flat.events.filter(function(e) { return e.kind === 'syllable'; }).every(function(e) { return e.pitchCurve.every(function(p) { return p === 150; }); }));
+  });
+
+  test('all voice presets match output level while volume scales and mute stays silent', function () {
+    var api = window.Driftworks.mumble;
+    function rms(pcm) { return Math.sqrt(pcm.reduce(function(sum,v) { return sum+v*v; },0)/pcm.length); }
+    ['Keep cool, pilot!', "We've got company. Keep your eyes on that asteroid field!"].forEach(function(line) {
+      Object.keys(api.presets).forEach(function(name) {
+        var options = Object.assign({},api.presets[name],{volume:0.65});
+        var pcm = api.render(api.analyze(line,options),22050);
+        assert(Math.abs(rms(pcm)-0.12*0.65)<0.00001, name+' matched RMS');
+        options.volume = 0.325;
+        var quiet = api.render(api.analyze(line,options),22050);
+        assert(Math.abs(rms(quiet)/rms(pcm)-0.5)<0.00001, name+' volume scales');
+        assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v)<=0.95*0.65+0.00001; }));
+      });
+    });
+  });
+
+  test('study voices keep comparable levels and nasal bursts retain most of their duration', function () {
+    var api = window.Driftworks.mumble, line = "We've got company. Keep your eyes on that asteroid field!";
+    var levels = ['Study · dark smooth','Study · nasal clipped','Study · raspy creak'].map(function(name) {
+      var pcm = api.render(api.analyze(line,api.presets[name]),22050);
+      return Math.sqrt(pcm.reduce(function(sum,v) { return sum + v*v; },0)/pcm.length);
+    });
+    assert(Math.max.apply(null,levels)/Math.min.apply(null,levels) < 2, 'study levels within 6 dB');
+    var preset = api.presets['Study · nasal clipped'];
+    var plan = api.analyze('Hello',preset), pcm = api.render(plan,22050);
+    var event = plan.events[0], last = 0;
+    pcm.forEach(function(v,i) { if (Math.abs(v)>0.000001) last=i; });
+    assert(last/22050 > Math.min(event.duration*0.72,0.075)*0.85, 'nasal gesture keeps at least 85% of its base burst');
+  });
+
   test('expanded mumble cast renders distinct bounded voices with optional deterministic tremor', function () {
     var api = window.Driftworks.mumble;
     ['Child','Woman · warm','Woman · bright','Old woman','Old man','Man · baritone','Pirate','Ship computer'].forEach(function(name) {
@@ -653,6 +720,27 @@
     bed.samples.slice(1000,7000).forEach(function(v) { energy+=v*v; });
     assert(Math.sqrt(energy/6000)>0.01);
     assert(api.transmit(pcm,8000,{mode:'local',effects:1}).samples===pcm);
+  });
+
+  test('radio latches vary by take and intermittent static preserves timing and effects controls', function () {
+    var api=window.Driftworks.mumble,rate=8000,pcm=new Float32Array(rate*12);
+    var a=api.transmit(pcm,rate,{mode:'radio',seed:42}),again=api.transmit(pcm,rate,{mode:'radio',seed:42});
+    var b=api.transmit(pcm,rate,{mode:'radio',seed:43}),bed=api.transmit(pcm,rate,{mode:'radio',seed:42,staticBursts:false});
+    assert(a.samples.every(function(v,i){return Number.isFinite(v)&&v===again.samples[i];}));
+    assert(a.samples.slice(0,1280).some(function(v,i){return Math.abs(v-b.samples[i])>0.01;}));
+    var changed=0,unchanged=0;
+    for(var i=1280;i<1280+pcm.length;i++) {
+      if(Math.abs(a.samples[i]-bed.samples[i])>0.000001)changed++;else unchanged++;
+    }
+    assert(unchanged>pcm.length*0.7,'static remains intermittent');
+    var cleanTakes=0,noisyTakes=0;
+    for(var seed=0;seed<12;seed++) {
+      var take=api.transmit(pcm,rate,{mode:'radio',seed:seed}),quiet=api.transmit(pcm,rate,{mode:'radio',seed:seed,staticBursts:false});
+      if(take.samples.some(function(v,i){return v!==quiet.samples[i];}))noisyTakes++;else cleanTakes++;
+    }
+    assert(cleanTakes>0&&noisyTakes>0,'some entire takes stay free of static bursts');
+    assert(a.speechOffset===bed.speechOffset&&a.duration===bed.duration);
+    assert(api.transmit(pcm,rate,{mode:'radio',effects:0,seed:42}).samples.every(function(v){return v===0;}));
   });
 
   test('radio carrier hangs after speech before the closing latch', function () {
@@ -3088,6 +3176,48 @@
       fresh = sim.selectShips(fresh, ['msv-hardshell']);
       assert(hud.miningControlState(fresh).canDeploy);
     });
+  });
+
+  test('Flight hull hits use model triangles and scorches stay on the surface', function () {
+    var models=window.Driftworks.shipPackModels,U=sim.METERS_PER_UNIT;
+    var model={id:'plate',vertices:[-2,-2,0,0,0,1, 2,-2,0,0,0,1, 0,2,0,0,0,1]};
+    var pose={eye:[10,20,30],right:[1,0,0],back:[0,-1,0],up:[0,0,1]};
+    var hit=models.hullHit(model,pose,[10,20,30+2/U],[10,20,30-2/U],U);
+    assert(hit);assertClose(hit.fraction,.5);assertClose(hit.point[2],30);
+    assert(!models.hullHit(model,pose,[10+1.9/U,20+1.9/U,30+2/U],[10+1.9/U,20+1.9/U,30-2/U],U), 'Sphere-only near misses pass through');
+    assert(!models.hullHit(model,pose,[10,20,30+2/U],[10,20,30+1/U],U), 'No collision beyond the swept segment');
+    var e={pose:pose};models.addScorch(e,hit);
+    e.scorches[0].layers.forEach(function(layer){assert(layer.length>0);for(var i=0;i<layer.length;i+=6){assert(layer[i]>=-2&&layer[i]<=2);assert(layer[i+1]>=-2&&layer[i+1]<=2);assert(layer[i+2]>0&&layer[i+2]<.03);}});
+    for(var j=0;j<30;j++)models.addScorch(e,hit);assert(e.scorches.length===24);
+    var ai=window.Driftworks.training,t=ai.create();
+    Object.assign(e,{hp:1,index:0,id:'test',pose:Object.assign(pose,{velocity:[0,0,0]}),team:'enemy'});
+    t.enemies=[e];ai.damageEnemy(t,e,{damage:2,armorFactor:1},'player');
+    assert(t.wrecks[0].scorches===e.scorches, 'The wreck retains its hull burns');
+  });
+
+  test('Flight traces burn only the first unobstructed hull and preserve lethal impacts', function () {
+    var models=window.Driftworks.shipPackModels,ai=window.Driftworks.training,U=sim.METERS_PER_UNIT;
+    var t=ai.create(),pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,0,0]},e={id:'target',index:0,hp:10,pose:pose};
+    t.enemies=[e];t.hullHit=function(craft,start,end){return models.hullHit(models.craftModel(craft,'',1),craft.pose,start,end,U);};
+    var bolt={weapon:{damage:20,armorFactor:1}},start=[0,0,10/U],end=[0,0,-10/U];
+    var obstruction=[0,0,8/U],player={eye:[20,20,20]};
+    assert(ai.trace(t,start,end,bolt,'player',function(){return obstruction;},player)===obstruction);
+    assert(e.hp===10&&!e.scorches, 'Terrain shields the hull from damage and marks');
+    var impact=ai.trace(t,start,end,bolt,'player',null,player);
+    assert(impact&&e.hp===0&&e.scorches.length===1);
+    assert(t.wrecks[0].scorches.length===1, 'The killing shot marks the wreck');
+  });
+
+  test('Flight scorch batches follow translated and rotated hull poses', function () {
+    var models=window.Driftworks.shipPackModels,U=sim.METERS_PER_UNIT;
+    var pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},e={index:0,pose:pose};
+    var model=models.craftModel(e,'',1),hit=models.hullHit(model,pose,[0,0,10/U],[0,0,-10/U],U);
+    assert(hit);models.addScorch(e,hit);
+    var before=models.scorchGeometry([e],'',1,U)[0].vertices;
+    e.pose={eye:[10,20,30],right:[0,1,0],back:[1,0,0],up:[0,0,1]};
+    var after=models.scorchGeometry([e],'',1,U)[0].vertices;
+    assert(before.length>0&&before.length===after.length);
+    for(var i=0;i<before.length;i+=6){assertClose(after[i],10-before[i+1],.00001);assertClose(after[i+1],20+before[i],.00001);assertClose(after[i+2],30+before[i+2],.00001);}
   });
 
   window.registerPopulationTests(test, assert, assertClose);

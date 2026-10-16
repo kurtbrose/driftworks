@@ -29,6 +29,7 @@
   function allyCredit(){var entry=DW.shipPackModels.find(allyArt.value);document.getElementById('ally-credit').textContent=allyArt.value==='mixed'?'Mixed fleet · Quaternius CC0 library · changes each wave':entry?entry.pack.author+' / '+entry.model.name+' Â· '+entry.pack.license:'Original training blockout';}
   allyArt.onchange=allyCredit;allyCredit();artSelect.onchange=artCredit;artCredit();
 
+  function hullContact(e,start,end){var selection=e.team==='ally'?allyArt.value:artSelect.value;return DW.shipPackModels.hullHit(DW.shipPackModels.craftModel(e,selection,combat.wave),e.pose,start,end,units);}
   function weapon(){return DW.retailWeapons[Number(gunSelect.value)];}
   function gunLabels(){var w=weapon();document.getElementById('gun-stats').textContent=w.speed+' m/s Â· '+w.fireWait+' s / volley Â· '+(w.speed*w.lifetime)+' m range';}
   function banks(){
@@ -125,6 +126,7 @@
         state.throttle=Math.max(0,Math.min(1,state.throttle+(axis('KeyW','KeyS')+controls.throttleRate)*dt*.5));if(keys.KeyX)state.throttle=0;
         model.step(state,profile(),{pitch:axis('ArrowUp','ArrowDown')+look[0]+controls.pitch,yaw:axis('ArrowLeft','ArrowRight')+look[1]+controls.yaw,roll:axis('KeyQ','KeyE')+controls.roll,side:axis('KeyD','KeyA'),vertical:axis('KeyR','KeyF'),boost:keys.ShiftLeft||keys.ShiftRight||controls.boost},dt);
         function terrainHit(start,end){return DW.flightGuns.intersect(start,end,asteroid.radius,function(point){return DW.scene3d.rockField(asteroid,point);});}
+        combat.hullHit=hullContact;
         var playerHitBefore=combat.lastHit;
         DW.training.step(combat,state,dt,asteroid.radius,terrainHit);
         var firedBefore=guns.fired,hitsBefore=guns.hits;
@@ -147,6 +149,7 @@
     if(!paused){world.elapsedSeconds+=elapsed;comms.update(elapsed,combat,state);}
     var livingArt=DW.training.alive(combat).concat(combat.wrecks),actorBatches=[];
     ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),selection=team==='ally'?allyArt.value:artSelect.value;if(!craft.length)return;var batches=selection?DW.shipPackModels.sourceFleetGeometry(craft,selection,combat.wave,units,shipImages,document.getElementById('faction-paint').checked?DW.shipPackModels.paintColor(document.getElementById(team+'-color').value):undefined):DW.training.geometry({enemies:craft.map(function(e){return Object.assign({},e,{hp:1});})});batches.forEach(function(batch){actorBatches.push(batch);});});
+    ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;});DW.shipPackModels.scorchGeometry(craft,team==='ally'?allyArt.value:artSelect.value,combat.wave,units).forEach(function(batch){actorBatches.push(batch);});});
     scene.setStudyActors(actorBatches);var effectBatches=DW.flightGuns.geometry(DW.training.allGuns(combat,guns),state),engineParts=[];
     ['ally','enemy'].forEach(function(team){var craft=DW.training.alive(combat).filter(function(e){return (e.team||'enemy')===team;});engineParts.push(DW.shipPackModels.engineGeometry(craft,team==='ally'?allyArt.value:artSelect.value,combat.wave,units,state,world.elapsedSeconds).vertices);});
     var engines=new Float32Array(engineParts.reduce(function(n,p){return n+p.length;},0)),engineOffset=0;engineParts.forEach(function(p){engines.set(p,engineOffset);engineOffset+=p.length;});

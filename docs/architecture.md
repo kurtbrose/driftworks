@@ -619,6 +619,12 @@ Flight lab communications live in `experiments/flight-comms.js`. The pure
 combatants. `mount` owns subtitles and a gesture-unlocked Web Audio context,
 using `mumble.js` synthesis and radio processing. Only one voice plays at a
 time; pause, reset, and page exit stop playback. Comms state is not persisted.
+`pilotVoice(craft)` assigns 16 curated adult timbres by stable craft index in
+furball, mixing masculine and feminine voices on both teams. Lines carry fresh
+`voiceSettings` and a character seed. Playback applies emotion over that stable
+identity. Control has a separate profile; mumble owns output level matching.
+Lines carry a separate `radioSeed` derived from transmission serial for varying
+squelch and intermittent static without changing speaker identity.
 
 Comms observes living craft mode transitions each flight frame (attack, evade,
 break, recover, reposition). It records transitions even while blocked and
@@ -721,3 +727,18 @@ Faction paint in the ship inspection viewer and flight lab is an optional per-ba
 The inspection viewer enables faction paint by default. Picking a primary color enables paint immediately (including after restoring source paint), without resetting the orbit or zoom. Turning off faction paint still restores the original texture.
 
 Paint brightness follows the chosen RGB color rather than being normalized to the original orange luminance, so dark liveries remain dark. Default flight liveries are forest green (#607451) and burnt orange (#bd713f); color inputs also suggest dark navy (#415d7d).
+
+Flight lab hull contacts use `shipPackModels.hullHit`: a cached sphere bounds
+check followed by a swept triangle query against the selected artwork (including
+the training blockout). `training.trace` resolves the nearest terrain or hull
+contact and uses that point for impact flashes and damage. The optional hull
+query is installed by `flight.js`; standalone training callers retain sphere
+queries. Scorches are clipped surface geometry baked once per hit in local ship
+metres, rendered in five translucent soot layers, and transformed with the hull each frame.
+Each craft retains at most 24 burns. Wrecks inherit them; round/restart lifecycle
+and the existing wreck cap bound retention. Changing artwork hides marks from a
+different model. These experimental cosmetic fields are not production saves.
+
+Study actor batches may specify `opacity`; translucent batches blend over the
+opaque hull with depth testing retained and depth writes disabled. Scorch layers
+use this to preserve the underlying texture instead of covering it in solid black.

@@ -294,7 +294,7 @@ export type DriftworksNamespace = {
     create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; rubbleMaxDetail?: number; rubbleTriangleBudget?: number}) => {
       setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; rubble: boolean; mothership: boolean; actors: boolean}) => void;
       getRenderStats: () => {drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
-      setStudyActors: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;
+      setStudyActors: (batches: {vertices: Float32Array; color: [number,number,number]; opacity?: number}[]) => void;
       setStudyEffects: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;
       getOrbit: () => {yaw: number; tilt: number; height?: number};
       setSurfaceCamera: (pose: {eye: [number, number, number]; right: [number, number, number]; up: [number, number, number]; back: [number, number, number]} | null) => void;
