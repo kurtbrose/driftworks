@@ -22,3 +22,5 @@ const scenarioDir = path.join(__dirname, 'scenarios');
 failures += require('./scenarios.cjs').runFiles(fs.readdirSync(scenarioDir).filter(file => file.endsWith('.json')).sort().map(file => path.join(scenarioDir, file)));
 process.exitCode = failures ? 1 : 0;
 
+
+require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'ship-viewer.cjs')], {stdio: 'inherit'});

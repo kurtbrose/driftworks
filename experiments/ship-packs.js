@@ -55,14 +55,14 @@
     return merged.map(function(group){var vertices=new Float32Array(group.length),offset=0;group.parts.forEach(function(part){vertices.set(part,offset);offset+=part.length;});return {vertices:vertices,color:group.color,finish:group.finish};});
   }
   // Preserve the artist's UVs and smooth normals while baking flight poses.
-  function sourceGeometry(model,poses,units,texture){
+  function sourceGeometry(model,poses,units,texture,paint){
     var source=model.texturedVertices,data=new Float32Array(source.length*poses.length),offset=0;
     poses.forEach(function(p){for(var i=0;i<source.length;i+=8){
       for(var a=0;a<3;a++)data[offset+a]=p.eye[a]+(p.right[a]*source[i]-p.back[a]*source[i+1]+p.up[a]*source[i+2])/units;
       for(var b=0;b<3;b++)data[offset+3+b]=p.right[b]*source[i+3]-p.back[b]*source[i+4]+p.up[b]*source[i+5];
       data[offset+6]=source[i+6];data[offset+7]=source[i+7];offset+=8;
     }});
-    return {vertices:data,color:[1,1,1],texture:texture,stride:8};
+    return {vertices:data,color:[1,1,1],texture:texture,stride:8,paint:paint};
   }
   var textureImages=new Map();
   function loadTextures(){
@@ -72,26 +72,27 @@
       textureImages.set(model.id,pending);return pending;
     }));})).then(function(images){var result=new Map();(DW.shipPacks||[]).forEach(function(pack,p){pack.models.forEach(function(model,m){result.set(model.id,images[p][m]);});});return result;});
   }
-  function sourceFleetGeometry(craft,selection,wave,units,images){
+  function sourceFleetGeometry(craft,selection,wave,units,images,paint){
     var groups=new Map();
     craft.forEach(function(e){var model=selection==='mixed'?mixedModel(e.index,e.artWave||wave):(find(selection)||{}).model;if(!model)return;if(!groups.has(model))groups.set(model,[]);groups.get(model).push(e.pose);});
-    var batches=[];groups.forEach(function(poses,model){batches.push(sourceGeometry(model,poses,units,images.get(model.id)));});return batches;
+    var batches=[];groups.forEach(function(poses,model){batches.push(sourceGeometry(model,poses,units,images.get(model.id),paint));});return batches;
   }
-  var exhaustCache=new WeakMap();
-  function engineAnchors(model){
-    if(exhaustCache.has(model))return exhaustCache.get(model);
-    var v=model.vertices,minY=Infinity,maxY=-Infinity,maxX=0;
-    for(var i=0;i<v.length;i+=6){minY=Math.min(minY,v[i+1]);maxY=Math.max(maxY,v[i+1]);maxX=Math.max(maxX,Math.abs(v[i]));}
-    var bins=[null,null,null];
-    for(var j=0;j<v.length;j+=18){
-      var x=(v[j]+v[j+6]+v[j+12])/3,y=(v[j+1]+v[j+7]+v[j+13])/3,z=(v[j+2]+v[j+8]+v[j+14])/3;
-      if(v[j+4]>-.55||y>minY+(maxY-minY)*.3)continue;
-      var bin=x<-maxX*.2?0:x>maxX*.2?2:1;
-      if(!bins[bin]||y<bins[bin][1])bins[bin]=[x,y-.06,z];
-    }
-    var anchors=bins[0]&&bins[2]?[bins[0],bins[2]]:bins[1]?[bins[1]]:[bins[0]||bins[2]||[0,minY-.06,0]];
-    exhaustCache.set(model,anchors);return anchors;
-  }
+  // Reviewed nozzle centers in normalized ship metres: right X, forward Y, up Z.
+  // Fourth value is nozzle radius. These are art attachments, not physics data.
+  var engineMounts={
+    Bob:[[-1.69,-3.23,-.267,.85],[1.69,-3.23,-.267,.85]],
+    Challenger:[[-1.345,-5.73,-.746,.65],[1.345,-5.73,-.746,.65]],
+    Dispatcher:[[-1.564,-7.63,-.22,.48],[1.564,-7.63,-.22,.48],[0,-7.99,.436,.35]],
+    Executioner:[[-5.574,-5.92,.007,.48],[5.574,-5.92,.007,.48],[-1.185,-5.70,-.388,.48],[1.185,-5.70,-.388,.48]],
+    Imperial:[[-2.556,-7.85,-.306,.48],[2.556,-7.85,-.306,.48],[0,-7.50,-.329,.8]],
+    Insurgent:[[-2.295,-7.66,.271,.4],[2.295,-7.66,.271,.4],[-3.531,-7.23,-1.02,.45],[3.531,-7.23,-1.02,.45]],
+    Omen:[[-2.029,-4.61,-.823,.65],[2.029,-4.61,-.823,.65]],
+    Pancake:[[-2.041,-3.71,.286,.75],[2.041,-3.71,.286,.75]],
+    Spitfire:[[-6.421,-4.20,.906,.65],[-6.421,-4.20,-1.095,.65],[6.421,-4.20,.906,.65],[6.421,-4.20,-1.095,.65]],
+    Striker:[[-2.176,-6.09,-.273,.38],[2.176,-6.09,-.273,.38],[0,-8.05,.632,.27]],
+    Zenith:[[-1.47,-7.68,-.088,.6],[1.47,-7.68,-.088,.6]]
+  };
+  function engineAnchors(model){return engineMounts[model.name]||[];}
   function engineGeometry(craft,selection,wave,units,view,time){
     var data=[];
     function quad(center,along,side,length,width,opacity){
@@ -106,17 +107,18 @@
       var anchors=entry?engineAnchors(entry):[[0,-6,0]],p=e.pose;
       var power=Math.min(1,Math.max(0,p.throttle)),pulse=1+.035*Math.sin(time*23+e.index*2.7);
       anchors.forEach(function(anchor){
+        var radius=anchor[3]||.65;
         var center=p.eye.map(function(x,i){return x+(p.right[i]*anchor[0]-p.back[i]*anchor[1]+p.up[i]*anchor[2])/units;});
         // Rear-facing halo shrinks from the front; the hull still occludes it.
         var facing=Math.max(0,p.back.reduce(function(sum,v,i){return sum+v*view.back[i];},0));
-        quad(center,view.up,view.right,1.7*pulse,1.7*pulse,(.3+.7*facing)*(.45+.55*power));
+        quad(center,view.up,view.right,radius*1.4*pulse,radius*1.4*pulse,(.3+.7*facing)*(.45+.55*power));
         var projected=p.back.map(function(v,i){return v-view.back[i]*p.back.reduce(function(sum,n,j){return sum+n*view.back[j];},0);});
         var size=Math.hypot.apply(null,projected);
         var along=size>.001?projected.map(function(v){return v/size;}):view.up;
         var side=[view.back[1]*along[2]-view.back[2]*along[1],view.back[2]*along[0]-view.back[0]*along[2],view.back[0]*along[1]-view.back[1]*along[0]];
-        var tail=(1.8+power*4)*pulse;
-        var plume=center.map(function(v,i){return v+p.back[i]*tail*.45/units;});
-        quad(plume,along,side,Math.max(.7,tail*.65*size),.65+power*.35,.6+power*.35);
+        var tail=radius*(2.8+power*6)*pulse;
+        var plume=center.map(function(v,i){return v+p.back[i]*tail*.5/units;});
+        quad(plume,along,side,Math.max(radius*.15,tail*.5*size),radius*(.6+power*.3),.6+power*.35);
       });
     });
     return {vertices:new Float32Array(data),color:[.25,.65,1]};
@@ -125,5 +127,6 @@
     if(blockout){var option=document.createElement('option');option.value='';option.textContent='Driftworks · training blockout';select.appendChild(option);}
     (DW.shipPacks||[]).forEach(function(pack){var group=document.createElement('optgroup');group.label=pack.author+' / '+pack.id;pack.models.forEach(function(model){var option=document.createElement('option');option.value=model.id;option.textContent=model.name+' · '+model.triangles.toLocaleString()+' tris';group.appendChild(option);});select.appendChild(group);});
   }
-  DW.shipPackModels={find:find,loadTextures:loadTextures,sourceGeometry:sourceGeometry,sourceFleetGeometry:sourceFleetGeometry,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,engineAnchors:engineAnchors,engineGeometry:engineGeometry,populate:populate};
+  function paintColor(hex){return /^#[0-9a-f]{6}$/i.test(hex)?[parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255]:undefined;}
+  DW.shipPackModels={paintColor:paintColor,find:find,loadTextures:loadTextures,sourceGeometry:sourceGeometry,sourceFleetGeometry:sourceFleetGeometry,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,engineAnchors:engineAnchors,engineGeometry:engineGeometry,populate:populate};
 }());

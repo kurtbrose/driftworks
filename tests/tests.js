@@ -697,6 +697,13 @@
       for(var i=0;i<v.length;i+=8){assert(v.slice(i,i+8).every(Number.isFinite));assert(Math.hypot.apply(null,v.slice(i,i+3))<=8.50001);assertClose(Math.hypot.apply(null,v.slice(i+3,i+6)),1,.0001);assert(v[i+6]>=0&&v[i+6]<=1);assert(v[i+7]>=0&&v[i+7]<=1);}
     });
   });
+  test('faction paint is optional and stays separate from shared source textures',function(){
+    var api=window.Driftworks.shipPackModels,model=window.Driftworks.shipPacks[0].models[0],texture={},images=new Map([[model.id,texture]]),pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},craft=[{index:0,pose:pose}];
+    var green=api.paintColor('#38BFA0');assertClose(green[0],56/255,.000001);assert(api.paintColor('bad')===undefined);
+    var direct=api.sourceGeometry(model,[pose],10,texture,green),original=api.sourceGeometry(model,[pose],10,texture);
+    assert(direct.paint===green);assert(original.paint===undefined);assert(direct.texture===original.texture);assert(direct.vertices.every(function(v,i){return v===original.vertices[i];}));
+    var mixed=api.sourceFleetGeometry(craft,'mixed',1,10,images,green);assert(mixed.length===1&&mixed[0].paint===green);
+  });
   test('source ship fleets preserve artist UVs and normals across poses without dropping models',function(){
     var api=window.Driftworks.shipPackModels,models=window.Driftworks.shipPacks[0].models,images=new Map(),craft=[];
     models.forEach(function(m,i){images.set(m.id,{name:m.name});craft.push({index:i,pose:{eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]}});});
@@ -740,7 +747,7 @@
     window.Driftworks.shipPacks.forEach(function(pack){pack.models.forEach(function(model){
       var anchors=api.engineAnchors(model),v=model.vertices,lo=Infinity,hi=-Infinity;
       for(var i=0;i<v.length;i+=6){lo=Math.min(lo,v[i+1]);hi=Math.max(hi,v[i+1]);}
-      assert(anchors.length>=1&&anchors.length<=2);anchors.forEach(function(p){assert(p.every(Number.isFinite));assert(p[1]<lo+(hi-lo)*.3);});
+      assert(anchors.length>=1&&anchors.length<=4);anchors.forEach(function(p){assert(p.every(Number.isFinite));assert(p[1]<0);assert(p[3]>0&&p[3]<1);});
       var craft={index:0,hp:90,pose:pose},batch=api.engineGeometry([craft],model.id,1,10,pose,1);
       assert(batch.vertices.length===anchors.length*72);assert(batch.vertices.every(Number.isFinite));
       craft.hp=0;assert(api.engineGeometry([craft],model.id,1,10,pose,1).vertices.length===0);
@@ -749,6 +756,14 @@
     pose.throttle=0;assert(api.engineGeometry([{hp:90,index:0,pose:pose}],'mixed',1,10,pose,1).vertices.length===0);
   });
 
+  test('four-nozzle ships emit from both engine pairs at their own heights',function(){
+    var api=window.Driftworks.shipPackModels,pose={eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1],throttle:1};
+    ['Executioner','Spitfire','Insurgent'].forEach(function(name){var id='quaternius-ultimate-spaceships:'+name,m=api.find(id).model,anchors=api.engineAnchors(m);assert(anchors.length===4);assert(new Set(anchors.map(function(p){return p.slice(0,3).join(',');})).size===4);
+      var b=api.engineGeometry([{index:0,hp:1,pose:pose}],id,1,10,pose,0).vertices;
+      anchors.forEach(function(a,i){var center=[0,0,0];for(var j=0;j<6;j++)for(var k=0;k<3;k++)center[k]+=b[i*72+j*6+k]/6;assertClose(center[0],3+a[1]/10,.00001);assertClose(center[1],4+a[0]/10,.00001);assertClose(center[2],5+a[2]/10,.00001);});
+    });
+    var spit=api.engineAnchors(api.find('quaternius-ultimate-spaceships:Spitfire').model);assert(new Set(spit.map(function(p){return p[2];})).size===2);
+  });
   test('fighter finishes retain source geometry and batch all poses with finite normals',function(){
     var api=window.Driftworks.shipPackModels,pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]};
     window.Driftworks.shipPacks.forEach(function(pack){pack.models.forEach(function(model){
