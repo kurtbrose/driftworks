@@ -11,7 +11,7 @@
   var scene=DW.scene3d.create(host,function(){return world;},function(w){world=w;},{study:true,rubbleMaxDetail:2,rubbleTriangleBudget:40000});
   var skybox=DW.flightSkybox.create(host);
   var select=document.getElementById('profile'),stats=document.getElementById('stats'),status=document.getElementById('status'),telemetry=document.getElementById('telemetry');
-  var state=model.create(asteroid.radius),keys={},paused=true,mouse=[0,0],look=[0,0],previous=0,contact=false;
+  var state=model.createSortie(asteroid.radius,model.profiles[Number(select.value)||0]),keys={},paused=true,mouse=[0,0],look=[0,0],previous=0,contact=false;
   model.profiles.forEach(function(p,i){var option=document.createElement('option');option.value=String(i);option.textContent=p.name;select.appendChild(option);});
   var guns=DW.flightGuns.create(),gunSelect=document.getElementById('gun');
   var performanceTools=DW.flightPerformance,pace=performanceTools.pacer(),measurements=performanceTools.create(),lastStatsUpdate=0;
@@ -39,9 +39,9 @@
   function profile(){return model.profiles[Number(select.value)];}
   function labels(){var p=profile();stats.textContent=p.role+'\nCruise / boost '+p.maxVelocity[2]+' / '+p.afterburnerVelocity[2]+' m/s\nAccel / decel '+p.forwardAccel+' / '+p.forwardDecel+' s\nPitch / yaw / roll (s/360°)\n'+p.rotationTime.join(' / ')+'\nDamp / rotdamp '+p.damp+' / '+p.rotdamp;}
   function clear(){keys={};mouse=[0,0];look=[0,0];}
-  function pause(){paused=true;comms.pause();document.body.classList.remove('flight-active');clear();if(document.pointerLockElement===host)document.exitPointerLock();document.body.classList.remove('mouse-captured');status.textContent='Paused · Click Fly to resume';}
+  function pause(){paused=true;comms.pause();document.body.classList.remove('flight-active');clear();if(document.pointerLockElement===host)document.exitPointerLock();document.body.classList.remove('mouse-captured');document.getElementById('fly').textContent=combat.dead?'Restart flight':'Resume flight';status.textContent='Paused - Resume flight when ready';}
   function pose(){scene.setSurfaceCamera({eye:state.eye,right:state.right,up:state.up,back:state.back});}
-  function reset(){clear();comms.reset();combat=DW.training.create(document.getElementById('combat-mode').value);combat.enabled=document.getElementById('combat-toggle').checked;guns=DW.flightGuns.create();state=model.create(asteroid.radius);contact=false;pose();}
+  function reset(){clear();comms.reset();combat=DW.training.create(document.getElementById('combat-mode').value);combat.enabled=document.getElementById('combat-toggle').checked;guns=DW.flightGuns.create();state=model.createSortie(asteroid.radius,model.profiles[Number(select.value)||0]);contact=false;if(combat.enabled)DW.training.spawn(combat,state,asteroid.radius);document.getElementById('fly').textContent='Start flight';pose();}
   document.getElementById('combat-mode').onchange=function(){pause();reset();};
   select.onchange=function(){reset();labels();banks();};
   document.getElementById('diameter').onchange=function(e){var d=Number(e.target.value);if(!Number.isFinite(d)||d<200||d>4000){e.target.value=String(asteroid.radius*units*2);return;}asteroid.radius=d/2/units;reset();};
@@ -67,7 +67,7 @@
   function resume(){if(combat.dead){status.textContent='Training over · Restart training to fly again';return;}DW.audio.unlock();comms.unlock();clear();previousButtons={bank:false,pause:false};paused=false;document.body.classList.add('flight-active');document.activeElement.blur();status.textContent='Flight controls active · Esc pauses';}
   function captureFailure(error){pause();if(error&&error.message)status.dataset.captureError=error.message;else if(!status.dataset.captureError)status.dataset.captureError='Pointer lock rejected by browser';status.textContent='Mouse capture unavailable. Retry Fly or select Controller / keyboard.';}
   document.getElementById('fly').onclick=function(){
-    if(combat.dead){status.textContent='Training over · Restart training to fly again';return;}
+    if(combat.dead)reset();
     if(inputMode.value!=='mouse'){resume();return;}
     if(!host.requestPointerLock){captureFailure();return;}
     try{var result=host.requestPointerLock();if(result&&result.catch)result.catch(captureFailure);}catch(error){captureFailure();}
@@ -201,5 +201,5 @@
     });
     if(selected){var lead=DW.training.intercept(state.eye,selected.pose.eye,selected.pose.velocity.map(function(v){return v/units;}),weapon().speed/units),q=projection(lead.point);if(q&&Math.abs(q.x)<1&&Math.abs(q.y)<1){combatHud.strokeStyle='#a9e5dc';combatHud.setLineDash([2,3]);combatHud.beginPath();combatHud.arc(w*(q.x+1)/2,h*(1-q.y)/2,7,0,Math.PI*2);combatHud.stroke();combatHud.setLineDash([]);}}
   }
-  labels();banks();pose();requestAnimationFrame(frame);
+  labels();banks();reset();requestAnimationFrame(frame);
 }());

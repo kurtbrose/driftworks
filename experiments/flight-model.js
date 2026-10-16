@@ -5,6 +5,8 @@
   function unit(v){var n=Math.hypot.apply(null,v);return v.map(function(x){return x/n;});}
   function rotate(v,axis,angle){var c=Math.cos(angle),s=Math.sin(angle),d=v.reduce(function(t,x,i){return t+x*axis[i];},0),k=cross(axis,v);return v.map(function(x,i){return x*c+k[i]*s+axis[i]*d*(1-c);});}
   function create(radius){return {eye:[0,-radius*2.6,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0],velocity:[0,0,0],rates:[0,0,0],ramp:[0,0,0],throttle:0};}
+  // Start above the asteroid so the forward combat approach stays clear of terrain.
+  function createSortie(radius,profile){var state=create(radius);state.eye[2]=radius+300/window.Driftworks.sim.METERS_PER_UNIT;state.throttle=1;state.ramp[2]=profile.maxVelocity[2];state.velocity=state.back.map(function(v){return -v*profile.maxVelocity[2];});return state;}
   function dot(a,b){return a.reduce(function(sum,x,i){return sum+x*b[i];},0);}
   function ramp(current,target,tau,dt){
     var distance=Math.abs(target-current);
@@ -46,6 +48,6 @@
     state.eye=unit(state.eye).map(function(x){return x*limit;});
     state.velocity=[0,0,0];state.ramp=[0,0,0];state.throttle=0;return true;
   }
-  window.Driftworks.arcade={profiles:profiles,create:create,step:step,contact:contact};
+  window.Driftworks.arcade={profiles:profiles,create:create,createSortie:createSortie,step:step,contact:contact};
 }());
 

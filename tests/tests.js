@@ -970,6 +970,17 @@
       assertClose(state.rates[0],2*Math.PI/p.rotationTime[0]*(1-Math.exp(-.05/p.rotdamp)));
     });
   });
+  test('flight sortie starts at full cruise with a clear approach to the furball', function () {
+    var model=window.Driftworks.arcade,U=sim.METERS_PER_UNIT;
+    model.profiles.forEach(function(p){
+      var state=model.createSortie(300/U,p),t=window.Driftworks.training.create('furball');
+      assert(state.throttle===1);assertClose(state.velocity[1],p.maxVelocity[2]);
+      model.step(state,p,{},.05);assertClose(state.velocity[1],p.maxVelocity[2]);
+      window.Driftworks.training.spawn(t,state,300/U);
+      assert(t.enemies.length===16);
+      t.enemies.forEach(function(e){assert(e.pose.eye[1]>state.eye[1]);assert(e.pose.eye[2]>300/U);});
+    });
+  });
   test('arcade handling accelerates, caps cruise, brakes and preserves orthonormal attitude', function () {
     var model=window.Driftworks.arcade;
     model.profiles.forEach(function(p){

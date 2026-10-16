@@ -355,7 +355,7 @@ before deciding to simplify models or shaders.
 
 The [ship pack inspection](experiments/ship-packs.html) compares separate Mehrasaur and Quaternius libraries; choose imported enemy artwork in the paused flight lab. This first pass renders neutral geometry, with original archives, licenses and provenance under `assets/ships/`.
 
-Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Select each wing's imported artwork while paused. Pilots dogfight each other; your shots spare allies, and Tab targets enemies. A defeated wing starts a new round after five seconds. Use Combat scenario to return to solo training.
+Flight lab starts paused with a centered Start flight button; Esc brings back Resume flight. You begin at full cruise above the asteroid, facing the already assembled combat wings. W/S adjusts throttle and X stops. Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Select each wing's imported artwork while paused. Pilots dogfight each other; your shots spare allies, and Tab targets enemies. A defeated wing starts a new round after five seconds. Use Combat scenario to return to solo training.
 
 ### Mumble voice lab
 
