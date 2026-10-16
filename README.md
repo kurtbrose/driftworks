@@ -366,6 +366,15 @@ rasp, breathiness, radio color, volume, seed, and enunciation. Lower enunciation
 (default 0.35, labeled Sound retention) drops interior syllables and consonant
 attacks, keeping a sparse first/last vowel signature. Skipped sounds take no
 audio time. Short word-level timing budgets keep long words from dragging. Raise it to 1 for full articulation. Stop interrupts playback.
+The chosen voice is now the default: popping vowel groups with compact word
+rhythm. Vowel groups retain spelling cues (oo, ee, ou, etc.), voiced bursts stop
+within 75 ms, word timing varies, and function words pass quickly. Commas use
+40% of their original pause; sentence-ending punctuation keeps its original pause.
+The A/B selector has been removed. Vowel test line inserts a comparison phrase.
+`analyze` defaults `compactWords` to true and `pauseScale` to 1. `render` defaults
+to the chosen `vowel-groups` style. Legacy `original` and `flowing` styles remain
+available explicitly through render options for development comparisons.
+Rendering does not mutate the plan.
 Controls apply on the next playback; text is limited to 600 characters.
 
 `experiments/mumble.js` exposes `window.Driftworks.mumble`: `analyze(text, options)`

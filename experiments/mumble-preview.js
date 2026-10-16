@@ -17,6 +17,7 @@
   byId('preset').value = 'Navigator'; byId('preset').onchange();
   function stop() { generation++; if (source) { source.onended = null; source.stop(); source.disconnect(); source = null; } cancelAnimationFrame(frame); byId('mouth').textContent = '━'; byId('status').textContent = 'READY'; }
   byId('stop').onclick = stop;
+  byId('sample').onclick = function () { stop(); byId('text').value = 'Keep your cool. Meet the crew by the moon. Wait outside, scout!'; byId('text').focus(); };
   byId('play').onclick = async function () {
     stop(); var ticket = generation, text = byId('text').value;
     if (!text.trim()) { byId('status').textContent = 'TYPE A LINE'; return; }

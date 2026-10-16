@@ -49,7 +49,7 @@
   }
   function fleetGeometry(craft,selection,wave,units){
     var groups=new Map();
-    craft.forEach(function(e){var entry=selection==='mixed'?mixedModel(e.index,wave):(find(selection)||{}).model;if(!entry)return;if(!groups.has(entry))groups.set(entry,[]);groups.get(entry).push(e.pose);});
+    craft.forEach(function(e){var entry=selection==='mixed'?mixedModel(e.index,e.artWave||wave):(find(selection)||{}).model;if(!entry)return;if(!groups.has(entry))groups.set(entry,[]);groups.get(entry).push(e.pose);});
     var merged=[];
     groups.forEach(function(poses,model){detailedGeometry(model,poses,units).forEach(function(batch,index){if(!merged[index])merged[index]={parts:[],length:0,color:batch.color,finish:batch.finish};merged[index].parts.push(batch.vertices);merged[index].length+=batch.vertices.length;});});
     return merged.map(function(group){var vertices=new Float32Array(group.length),offset=0;group.parts.forEach(function(part){vertices.set(part,offset);offset+=part.length;});return {vertices:vertices,color:group.color,finish:group.finish};});

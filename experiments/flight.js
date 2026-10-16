@@ -142,8 +142,8 @@
     var distance=Math.hypot.apply(null,state.eye),speed=Math.hypot.apply(null,state.velocity);
     telemetry.textContent=speed.toFixed(0)+' m/s   /   '+Math.round(state.throttle*100)+'% THR\n'+Math.round(distance*units)+' m TO CENTER\n'+Math.round(asteroid.radius*2*units)+' m BODY DIAMETER\n'+Math.round(shipDistance)+' m TO MOTHERSHIP\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
     if(!paused)world.elapsedSeconds+=elapsed;
-    var livingArt=DW.training.alive(combat),actorBatches=[];
-    ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),selection=team==='ally'?allyArt.value:artSelect.value;if(!craft.length)return;var batches=selection?DW.shipPackModels.fleetGeometry(craft,selection,combat.wave,units):DW.training.geometry({enemies:craft});batches.forEach(function(batch){actorBatches.push(batch);});});
+    var livingArt=DW.training.alive(combat).concat(combat.wrecks),actorBatches=[];
+    ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),selection=team==='ally'?allyArt.value:artSelect.value;if(!craft.length)return;var batches=selection?DW.shipPackModels.fleetGeometry(craft,selection,combat.wave,units):DW.training.geometry({enemies:craft.map(function(e){return Object.assign({},e,{hp:1});})});batches.forEach(function(batch){actorBatches.push(batch);});});
     scene.setStudyActors(actorBatches);scene.setStudyEffects(DW.flightGuns.geometry(DW.training.allGuns(combat,guns),state));var comparison=diagnostics();scene.setStudyDiagnostics(comparison);skybox.render(state,comparison.scale,comparison.mode==='empty');scene.sync(world);scene.render(world,1,0,elapsed);drawCombat();
     performanceTools.record(measurements,actualElapsed*1000,performance.now()-frameStart);
     var perfElement=document.getElementById('perf-overlay');perfElement.hidden=!document.getElementById('perf-enabled').checked;

@@ -10,3 +10,6 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local source archive (too large for GitHub)
+/assets/ships/quaternius-ultimate-spaceships/source/quaternius_pack.zip

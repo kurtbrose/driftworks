@@ -53,14 +53,14 @@
     assert(api.analyze('你好, pilot 👋').events.length > 0);
   });
   test('low enunciation compresses syllables and preserves complete text coverage', function () {
-    var api = window.Driftworks.mumble, text = 'Navigation communication, ready?', clear = api.analyze(text, {enunciation: 1}), loose = api.analyze(text, {enunciation: 0});
+    var api = window.Driftworks.mumble, text = 'Navigation communication, ready?', clear = api.analyze(text, {enunciation: 1, compactWords:false}), loose = api.analyze(text, {enunciation: 0, compactWords:false});
     assert(loose.duration < clear.duration * 0.8);
     assert(loose.events.length < clear.events.length);
     var offset = 0;
     loose.events.forEach(function(e) { assert(e.from === offset); offset = e.to; });
     assert(offset === text.length);
     assert(loose.voice.pitch === clear.voice.pitch);
-    assert(JSON.stringify(loose) === JSON.stringify(api.analyze(text, {enunciation: 0})));
+    assert(JSON.stringify(loose) === JSON.stringify(api.analyze(text, {enunciation: 0, compactWords:false})));
     assert(api.analyze(text, {enunciation: NaN}).voice.enunciation === api.defaults.enunciation);
     var pcm = api.render(loose, 8000);
     assert(pcm.some(function(v) { return v !== 0; }));
@@ -69,7 +69,7 @@
 
   test('sound retention drops actual interior sounds without charging their duration', function () {
     var api = window.Driftworks.mumble, text = 'communication';
-    var full = api.analyze(text, {enunciation: 1}), short = api.analyze(text, {enunciation: 0.35});
+    var full = api.analyze(text, {enunciation: 1, compactWords:false}), short = api.analyze(text, {enunciation: 0.35, compactWords:false});
     var a = full.events.filter(function(e) { return e.kind === 'syllable'; });
     var b = short.events.filter(function(e) { return e.kind === 'syllable'; });
     assert(b.length < a.length);
@@ -86,9 +86,9 @@
   test('field has a moving vowel and consonant closure rather than a held beep', function () {
     var api = window.Driftworks.mumble, plan = api.analyze('field', api.presets.Scout), event = plan.events[0];
     assert(event.vowel === 'i' && event.vowelEnd === 'e' && event.closed);
-    var samples = api.render(plan, 8000);
+    var samples = api.render(plan, 8000, {style:'original'});
     var staticPlan = JSON.parse(JSON.stringify(plan)); staticPlan.events[0].vowelEnd = 'i'; staticPlan.events[0].closed = false;
-    var staticSamples = api.render(staticPlan, 8000);
+    var staticSamples = api.render(staticPlan, 8000, {style:'original'});
     assert(samples.some(function(v, i) { return Math.abs(v - staticSamples[i]) > 0.01; }));
     assert(samples.every(function(v) { return Number.isFinite(v) && Math.abs(v) <= 1; }));
   });
@@ -105,6 +105,81 @@
     var question = api.analyze('Ready?').events[0], statement = api.analyze('Ready.').events[0];
     assert(question.pitchCurve[2] > statement.pitchCurve[2]);
     assert(api.analyze('Oh!').events[0].pitchCurve[0] !== api.analyze('Oh!').events[0].pitchCurve[2]);
+  });
+
+  test('flowing vowel comparison overlaps only nearby syllables without changing the plan', function () {
+    var api = window.Driftworks.mumble, plan = api.analyze('Keep your eyes. Field!', api.presets.Scout), original = JSON.stringify(plan);
+    var a = api.render(plan, 8000), b = api.render(plan, 8000, {style: 'flowing'}), again = api.render(plan, 8000, {style: 'flowing'});
+    assert(JSON.stringify(plan) === original && a.length === b.length);
+    assert(b.some(function(v, i) { return Math.abs(v - a[i]) > 0.01; }));
+    assert(b.every(function(v, i) { return Number.isFinite(v) && Math.abs(v) <= 1 && v === again[i]; }));
+    var changed = JSON.parse(original); changed.events.forEach(function(e) { e.attack = !e.attack; e.closed = !e.closed; });
+    var noConsonants = api.render(changed, 8000, {style: 'flowing'});
+    assert(b.every(function(v, i) { return v === noConsonants[i]; }));
+    var first = plan.events[0], gap = Math.floor((first.start + first.duration + 0.002) * 8000);
+    assert(a[gap] === 0 && Math.abs(b[gap]) > 0.000001);
+    var stop = plan.events.find(function(e) { return plan.text.slice(e.from,e.to) === '.'; });
+    assert(b[Math.floor((stop.start + 0.06) * 8000)] === 0);
+  });
+
+  test('popping vowel groups keep word signatures without held vowels', function () {
+    var api = window.Driftworks.mumble;
+    ['cool', 'meet', 'field', 'wait', 'out', 'cat'].forEach(function(text) {
+      var plan = api.analyze(text, {enunciation: 1, speed: 0.5}), original = JSON.stringify(plan);
+      var a = api.render(plan, 8000), b = api.render(plan, 8000, {style:'vowel-groups'});
+      assert(a.length === b.length && JSON.stringify(plan) === original);
+      assert(b.some(function(v) { return Math.abs(v) > 0.01; }));
+      plan.events.filter(function(e) { return e.kind === 'syllable'; }).forEach(function(e) {
+        var end = Math.floor(e.start * 8000) + Math.floor(Math.min(e.duration * 0.72, 0.075) * 8000);
+        var next = Math.floor((e.start + e.duration) * 8000);
+        assert(b.slice(end, next).every(function(v) { return v === 0; }), 'every vowel must release early, including at slow rates');
+      });
+      assert(b.every(function(v) { return Number.isFinite(v) && Math.abs(v) <= 1; }));
+      var again = api.render(plan, 8000, {style:'vowel-groups'}); assert(b.every(function(v,i) { return v === again[i]; }));
+    });
+    var plan = api.analyze('cool', {enunciation:1}), changed = JSON.parse(JSON.stringify(plan));
+    changed.text = 'caal';
+    var oo = api.render(plan,8000,{style:'vowel-groups'}), aa = api.render(changed,8000,{style:'vowel-groups'});
+    assert(oo.some(function(v,i) { return Math.abs(v-aa[i]) > 0.01; }), 'vowel spelling still changes timbre');
+  });
+
+  test('tighter mumble pauses shorten phrases without lengthening or compressing vowel bursts', function () {
+    var api = window.Driftworks.mumble, text = 'Keep cool. Wait, scout!', a = api.analyze(text, {compactWords:false}), b = api.analyze(text, {pauseScale:0.45, compactWords:false});
+    assert(b.duration < a.duration);
+    assert(b.events.length === a.events.length);
+    b.events.forEach(function(e,i) {
+      var old = a.events[i]; assert(e.from === old.from && e.to === old.to);
+      if (e.kind === 'syllable') assertClose(e.duration,old.duration);
+      else { assert(e.duration > 0); assertClose(e.duration,old.duration*0.45); }
+      if (i) assert(e.start >= b.events[i-1].start+b.events[i-1].duration-0.000001);
+    });
+    var pcm = api.render(b,8000,{style:'vowel-groups'});
+    assert(pcm.length === Math.ceil(b.duration*8000));
+    assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v)<=1; }));
+  });
+
+  test('compact word rhythm varies onsets while preserving sentence pauses', function () {
+    var api = window.Driftworks.mumble, text = 'Keep your eyes on that asteroid field! Wait, scout.', a = api.analyze(text,{compactWords:false}), b = api.analyze(text,{compactWords:true});
+    assert(b.duration < a.duration);
+    b.events.forEach(function(e,i) {
+      if (e.kind === 'pause') {
+        if (text.slice(e.from,e.to) === ',') assertClose(e.duration,a.events[i].duration*0.4);
+        else if (/[.!?;]/.test(text.slice(e.from,e.to))) assertClose(e.duration,a.events[i].duration);
+        else assert(e.duration < a.events[i].duration);
+      }
+    });
+    var notes = b.events.filter(function(e) { return e.kind === 'syllable'; });
+    assert(new Set(notes.map(function(e) { return e.duration.toFixed(3); })).size > 4);
+    assert(JSON.stringify(b) === JSON.stringify(api.analyze(text,{compactWords:true})));
+    var pcm = api.render(b,8000,{style:'vowel-groups'}); assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v)<=1; }));
+  });
+
+  test('mumble defaults lock in popping vowels and compact word rhythm', function () {
+    var api = window.Driftworks.mumble, plan = api.analyze('Keep cool, scout!');
+    assert(plan.voice.compactWords === true);
+    var defaults = api.render(plan,8000), explicit = api.render(plan,8000,{style:'vowel-groups'});
+    assert(defaults.every(function(v,i) { return v === explicit[i]; }));
+    assert(JSON.stringify(plan) === JSON.stringify(api.analyze('Keep cool, scout!',{compactWords:true})));
   });
 
   test('Scout exclamations retain energy without a steep final pitch drop', function () {
@@ -231,6 +306,20 @@
       gun.step(guns,player,weapon,fire,1/120,function(a,b,bolt){return ai.trace(t,a,b,bolt,'player',null,player);});
     }
     assert(t.kills>=3 && t.wave===2 && !t.dead);
+  });
+
+  test('disabled fighters drift and tumble across waves without remaining combat targets',function(){
+    var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18),U=sim.METERS_PER_UNIT;
+    ai.spawn(t,player,18);var e=t.enemies[8];e.pose.velocity=[20,-30,10];var position=e.pose.eye.slice(),back=e.pose.back.slice(),index=e.index;
+    ai.damageEnemy(t,e,{damage:1000,armorFactor:1});assert(t.wrecks.length===1&&t.kills===1);assert(!ai.alive(t).some(function(s){return s.id===e.id;}));
+    ai.damageEnemy(t,e,{damage:1000,armorFactor:1});assert(t.wrecks.length===1&&t.kills===1);
+    var wreck=t.wrecks[0];assert(wreck.pose!==e.pose&&wreck.pose.velocity!==e.pose.velocity);assert(!e.fire&&wreck.pose.throttle===0);
+    ai.stepWrecks(t,2,null);wreck.pose.eye.forEach(function(v,i){assertClose(v,position[i]+[20,-30,10][i]*2/U,.000001);});assert(wreck.pose.back.some(function(v,i){return Math.abs(v-back[i])>.01;}));
+    [wreck.pose.right,wreck.pose.up,wreck.pose.back].forEach(function(v){assertClose(Math.hypot.apply(null,v),1,.000001);});
+    var art=window.Driftworks.shipPackModels.mixedModel(index,wreck.artWave);ai.spawn(t,player,18);assert(t.wrecks[0]===wreck);assert(window.Driftworks.shipPackModels.mixedModel(index,wreck.artWave)===art);
+    ai.stepWrecks(t,1,function(){return [0,0,0];});assert(wreck.pose.velocity.every(function(v){return v===0;})&&wreck.spin===0);
+    ai.stepWrecks(t,120,null);assert(t.wrecks.length===0);
+    for(var wave=0;wave<4;wave++){ai.spawn(t,player,18);t.enemies.forEach(function(s){ai.damageEnemy(t,s,{damage:1000,armorFactor:1});});}assert(t.wrecks.length===48);assert(ai.create().wrecks.length===0);
   });
 
   test('training waves are bounded, delayed and allocate at most two attackers', function () {

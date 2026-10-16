@@ -8,7 +8,7 @@
   function length(v){return Math.hypot.apply(null,v);}
   function unit(v){var n=length(v);return n>1e-8?scale(v,1/n):[0,1,0];}
   function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
-  function create(mode){return {mode:mode||'training',roundOver:false,enabled:true,time:0,wave:0,countdown:3,enemies:[],kills:0,shield:120,hull:100,lastHit:-100,hitFlash:0,dead:false,targetId:null,slots:[],slotTimer:0,flashes:[]};}
+  function create(mode){return {mode:mode||'training',roundOver:false,enabled:true,time:0,wave:0,countdown:3,enemies:[],wrecks:[],kills:0,shield:120,hull:100,lastHit:-100,hitFlash:0,dead:false,targetId:null,slots:[],slotTimer:0,flashes:[]};}
   function alive(t){return t.enemies.filter(function(e){return e.hp>0;});}
   function face(pose,direction){var forward=unit(direction),reference=Math.abs(forward[2])>.95?[0,1,0]:[0,0,1];pose.right=unit(cross(forward,reference));pose.up=unit(cross(pose.right,forward));pose.back=scale(forward,-1);}
   // Constant-speed intercept in SI seconds, using world-space target velocity.
@@ -79,7 +79,14 @@
   }
   function damageEnemy(t,e,weapon){
     if(e.hp<=0)return;e.hp=Math.max(0,e.hp-weapon.damage*weapon.armorFactor);e.damagedAt=t.time;
-    if(e.hp<=0){if(e.team!=='ally')t.kills++;if(!alive(t).length)t.countdown=5;t.flashes.push({position:e.pose.eye.slice(),age:0,scale:14});}
+    if(e.hp<=0){
+      var pose={eye:e.pose.eye.slice(),right:e.pose.right.slice(),up:e.pose.up.slice(),back:e.pose.back.slice(),velocity:e.pose.velocity.slice(),throttle:0};
+      var axis=unit(add(pose.right,scale(pose.up,e.index%2?-.7:.7)));
+      t.wrecks.push({id:e.id+'-wreck',index:e.index,team:e.team,artWave:t.wave,pose:pose,axis:axis,spin:(e.index%2?-1:1)*(.25+(e.index%5)*.09),age:0});
+      // Keep debris across waves, with a bounded rendering/memory budget.
+      if(t.wrecks.length>48)t.wrecks.shift();
+      e.fire=false;e.pose.throttle=0;
+      if(e.team!=='ally')t.kills++;if(!alive(t).length)t.countdown=5;t.flashes.push({position:e.pose.eye.slice(),age:0,scale:14});}
   }
   function trace(t,start,end,bolt,team,terrainHit,player){
     var hit=terrainHit?terrainHit(start,end):null,best=hit?length(sub(hit,start)):Infinity,victim=null;
@@ -91,8 +98,20 @@
     if(victim==='player')damagePlayer(t,bolt.weapon);else if(victim)damageEnemy(t,victim,bolt.weapon);
     return hit;
   }
+  function stepWrecks(t,dt,terrainHit){
+    t.wrecks=t.wrecks.filter(function(w){
+      w.age+=dt;if(w.age>=120)return false;
+      var p=w.pose,next=add(p.eye,scale(p.velocity,dt/U)),hit=terrainHit?terrainHit(p.eye,next):null;
+      if(hit){p.velocity=[0,0,0];w.spin=0;}else p.eye=next;
+      var angle=w.spin*dt,c=Math.cos(angle),s=Math.sin(angle);
+      function rotate(v){return add(add(scale(v,c),scale(cross(w.axis,v),s)),scale(w.axis,dot(w.axis,v)*(1-c)));}
+      p.back=unit(rotate(p.back));p.right=unit(cross(rotate(p.up),p.back));p.up=unit(cross(p.back,p.right));
+      return true;
+    });
+  }
   function step(t,player,dt,radius,terrainHit){
     if(!t.enabled||t.dead)return;
+    stepWrecks(t,dt,terrainHit);
     t.time+=dt;t.hitFlash=Math.max(0,t.hitFlash-dt);t.flashes=t.flashes.filter(function(f){f.age+=dt;return f.age<.22;});
     if(t.time-t.lastHit>7)t.shield=Math.min(120,t.shield+12*dt);
     var living=alive(t);
@@ -146,5 +165,5 @@
     return [{vertices:new Float32Array(data),color:[.85,.29,.12]}];
   }
   function allGuns(t,playerGuns){var result={bolts:playerGuns.bolts.slice(),impacts:playerGuns.impacts.concat(t.flashes)};t.enemies.forEach(function(e){result.bolts=result.bolts.concat(e.guns.bolts.map(function(b){return Object.assign({},b,{team:e.team||'enemy'});}));result.impacts=result.impacts.concat(e.guns.impacts);});return result;}
-  DW.training={create:create,alive:alive,spawn:spawn,steer:steer,intercept:intercept,sphereHit:sphereHit,damageEnemy:damageEnemy,damagePlayer:damagePlayer,trace:trace,step:step,cycle:cycle,geometry:geometry,allGuns:allGuns};
+  DW.training={create:create,alive:alive,spawn:spawn,stepWrecks:stepWrecks,steer:steer,intercept:intercept,sphereHit:sphereHit,damageEnemy:damageEnemy,damagePlayer:damagePlayer,trace:trace,step:step,cycle:cycle,geometry:geometry,allGuns:allGuns};
 }());

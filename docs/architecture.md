@@ -595,3 +595,12 @@ interleaves both libraries by immutable pilot index and wave, cycling through al
 21 models over successive waves; casualties never reshuffle survivors. Per-model
 geometry is merged into four finish batches per team, retaining the eight-batch
 renderer limit. Selecting a specific model or the blockout still overrides the mix.
+
+Disabled flight-lab pilots create presentation wrecks with a copied pose, inherited
+SI velocity and a deterministic world-space tumble axis. These coast without flight
+damping or thrust, persist across waves, and retain their original wave's mixed
+model assignment. They are excluded from targeting, radar, weapon collision and
+kill accounting after the initial disable. Terrain contact stops drift and spin.
+Wrecks expire after 120 simulation seconds and the oldest is removed above 48;
+restart clears them. They share live craft's material batches and use intact hulls.
+This is isolated training state, not the main game's salvage/recovery lifecycle.
