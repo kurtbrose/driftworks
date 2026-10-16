@@ -190,3 +190,45 @@ crew working overtime. Shuttle selection is for inspection, not manual flight or
 
 Save/Load now preserve the population and tactical mission together; old saves
 receive crews automatically. Reset starts a new population and mission.
+
+
+### Arcade flight experiment
+
+Open [the flight lab](experiments/flight.html) from the same static server.
+This separate cockpit experiment reuses the production 3D asteroid and background.
+Choose Ulysses (baseline), Hercules (heavy), Myrmidon (fast), or Medusa (bomber).
+The maneuver values are extracted exactly from the installed retail FreeSpace 2
+`Root_fs2.vp` / `ships.tbl`; `experiments/retail-profiles.js` records those numeric
+fields and the source table hash. Hercules means the original Hercules, not Mk II.
+
+Click **Fly / resume**. W/S raises/lowers throttle, X cuts throttle and brakes,
+Shift holds afterburner, arrows pitch/yaw, Q/E roll.
+Retail lateral and reverse speeds are zero, so there is no strafe thrust. Left-drag steers. Escape, losing focus, or hiding the tab pauses flight.
+Keys 1–4 select profiles and reset the starting pose; changing the dropdown also
+resets it. After using a form control, click Fly to return to flight input.
+Reset stops the craft facing the asteroid. The diameter control (200–4,000 m)
+resets the range to compare scale; it defaults to 600 m. Surface contact stops
+the craft with a 5 m clearance. There are no weapons or damage in this experiment.
+
+`experiments/retail-profiles.js` preserves max velocity vectors, rear velocity,
+rotation times (pitch/yaw/roll seconds per revolution), forward and slide accel/
+decel time constants, damping, rotational damping, afterburner velocity/accel,
+and engine-overclock speed. Normal flight uses standard engine power; overclock
+is recorded but there is no energy-transfer control yet. Afterburner is unlimited
+for handling tests; fuel capacity and recharge are outside this experiment.
+
+The flight model uses exponential engine ramps, rotational damping and lateral
+slip damping, including automatic bank with yaw. These are time constants, not
+constant m/s² accelerations. It reproduces the ordinary-flight response equations;
+it is not a complete port of FreeSpace's input, collision, or energy systems.
+Distance uses the existing meters-per-unit conversion with real elapsed seconds,
+independent of the tactical simulation clock. The lab never loads or writes saves.
+
+The numerical data comes from the local retail installation; response semantics
+were checked against the [FS Open physics implementation](https://github.com/scp-fs2open/fs2open.github.com/blob/master/code/physics/physics.cpp).
+No FreeSpace artwork, weapons, armor, or loadouts are imported.
+
+The flight lab sky is an environment at infinity using the local ESO Milky Way
+panorama and seeded stars. It follows pitch, yaw and roll with the same perspective
+as the asteroid, providing orientation cues even when the asteroid is off screen.
+Translation leaves the sky fixed in world directions.

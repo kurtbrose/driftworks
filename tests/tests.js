@@ -22,6 +22,81 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('flight sky directions rotate with the cockpit, ignore translation, and cover the sphere', function () {
+    var sky=window.Driftworks.flightSkybox,pose={right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+    var center=sky.project([0,1,0],pose,2);assert(center);assertClose(center.x,0);assertClose(center.y,0);
+    assert(sky.project([0,-1,0],pose,2)===null);
+    var star=[.2,1,.3],before=sky.project(star,pose,2);pose.eye=[10000,20000,-5000];
+    assert(JSON.stringify(before)===JSON.stringify(sky.project(star,pose,2)));
+    var rolled={right:[0,0,1],up:[-1,0,0],back:[0,-1,0]},after=sky.project(star,rolled,2);
+    assertClose(after.x,before.y/2);assertClose(after.y,-before.x*2);
+    var data=sky.stars();assert(data.length===12800);assert(JSON.stringify(Array.from(data))===JSON.stringify(Array.from(sky.stars())));
+    var hemispheres=[0,0];for(var i=0;i<data.length;i+=4){assertClose(Math.hypot(data[i],data[i+1],data[i+2]),1,.000001);hemispheres[data[i+2]>0?0:1]++;}
+    assert(hemispheres[0]>1000 && hemispheres[1]>1000);
+  });
+
+  test('flight rubble caps detail while respecting the remaining triangle budget', function () {
+    var lod=window.Driftworks.scene3d.rubbleLod;
+    assert(lod(10000,40000,2).level===2);
+    assert(lod(10000,40000).level===3);
+    assert(lod(10000,1000,2).level===0);
+    assert(lod(10000,359,2).level===-1);
+    assert(lod(24,40000,2).level===1);
+  });
+
+  test('retail maneuver tables preserve original values and axis order', function () {
+    var profiles=window.Driftworks.arcade.profiles;
+    var expected=[
+      [70,150,2,1.5,.1,.35,3,2.6,5,.7,94],
+      [50,120,3,1.5,.2,.35,4,4.5,4,.7,64],
+      [75,135,2.4,2,.2,.35,4,3.7,5,.8,95],
+      [50,100,4,2,.35,.55,5,4.5,5,.7,65]
+    ];
+    profiles.forEach(function(p,i){
+      var values=[p.maxVelocity[2],p.afterburnerVelocity[2],p.forwardAccel,p.forwardDecel,p.damp,p.rotdamp].concat(p.rotationTime,[p.afterburnerAccel,p.overclockSpeed]);
+      assert(JSON.stringify(values)===JSON.stringify(expected[i]));
+      assert(p.maxVelocity[0]===0 && p.maxVelocity[1]===0 && p.rearVelocity===0);
+      var state=window.Driftworks.arcade.create(18);
+      window.Driftworks.arcade.step(state,p,{pitch:1},.05);
+      assertClose(state.rates[0],2*Math.PI/p.rotationTime[0]*(1-Math.exp(-.05/p.rotdamp)));
+    });
+  });
+  test('arcade handling accelerates, caps cruise, brakes and preserves orthonormal attitude', function () {
+    var model=window.Driftworks.arcade;
+    model.profiles.forEach(function(p){
+      var state=model.create(18);state.throttle=1;
+      model.step(state,p,{},.05);
+      assertClose(Math.hypot.apply(null,state.velocity),p.maxVelocity[2]*(1-Math.exp(-.05/p.forwardAccel)));
+      for(var i=0;i<4000;i++)model.step(state,p,{},.01);
+      assertClose(Math.hypot.apply(null,state.velocity),p.maxVelocity[2],.01);
+      state.throttle=0;
+      for(var j=0;j<1000;j++)model.step(state,p,{},.01);
+      assertClose(Math.hypot.apply(null,state.velocity),0,.4);
+      for(var k=0;k<1000;k++)model.step(state,p,{pitch:1,yaw:-1,roll:.5},.01);
+      [state.right,state.up,state.back].forEach(function(v){assertClose(Math.hypot.apply(null,v),1);});
+      assertClose(state.right.reduce(function(sum,x,i){return sum+x*state.back[i];},0),0);
+      assertClose(state.up.reduce(function(sum,x,i){return sum+x*state.back[i];},0),0);
+    });
+  });
+  test('arcade contact scales normalized geology by body radius and retains five meter clearance', function () {
+    var model=window.Driftworks.arcade,state=model.create(18);
+    state.eye=[0,-17,0];state.velocity=[0,80,0];state.throttle=1;
+    assert(model.contact(state,[0,-1,0],18));
+    assertClose(Math.hypot.apply(null,state.eye),18+5/sim.METERS_PER_UNIT);
+    assertClose(Math.hypot.apply(null,state.velocity),0,.4);assert(state.throttle===0);
+    assert(!model.contact(state,[0,-1,0],18));
+  });
+  test('arcade boost, strafe and physical distance use lab units without simulation time scaling', function () {
+    var model=window.Driftworks.arcade,p=model.profiles[0],state=model.create(18);
+    state.throttle=1;
+    for(var i=0;i<1000;i++)model.step(state,p,{boost:true},.01);
+    assertClose(Math.hypot.apply(null,state.velocity),p.afterburnerVelocity[2],.01);
+    var before=state.eye.slice();model.step(state,p,{boost:true},.01);
+    assertClose((state.eye[1]-before[1])*sim.METERS_PER_UNIT,p.afterburnerVelocity[2]*.01);
+    var side=model.create(18);model.step(side,p,{side:1},.05);assertClose(side.velocity[0],0);
+    assert(model.profiles[2].maxVelocity[2]>p.maxVelocity[2]);
+  });
+
   test('study focus picks the nearest surface from either side and rejects misses', function () {
     var pick=window.Driftworks.scene3d.pickStudySurface;
     var front=[-1,-1,2,0,0,1, 1,-1,2,0,0,1, 0,1,2,0,0,1];

@@ -368,9 +368,9 @@
   }
 
   /** Screen-space silhouette error with a conservative 18-rock tile budget.
-   * @param {number} diameterPixels @param {number} remainingTriangles */
-  function rubbleLod(diameterPixels,remainingTriangles) {
-    var continuous=Math.max(0,Math.min(4,Math.log(Math.max(1,diameterPixels)/12)/Math.log(2))),level=Math.ceil(continuous);
+   * @param {number} diameterPixels @param {number} remainingTriangles @param {number} [maxDetail] */
+  function rubbleLod(diameterPixels,remainingTriangles,maxDetail) {
+    var continuous=Math.max(0,Math.min(maxDetail===undefined?4:Math.max(0,Math.min(4,maxDetail)),Math.log(Math.max(1,diameterPixels)/12)/Math.log(2))),level=Math.ceil(continuous);
     while(level>=0 && 18*20*Math.pow(4,level)>remainingTriangles)level--;
     return {level:level,morph:level<=0?1:Math.max(0,Math.min(1,continuous-(level-1)))};
   }
@@ -613,7 +613,7 @@
     return groups;
   }
 
-  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{study?: boolean}} [options] */
+  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{study?: boolean, rubbleMaxDetail?: number, rubbleTriangleBudget?: number}} [options] */
   function create(host, getWorld, setWorld, options) {
     var study = !!(options && options.study);
     var canvas = document.createElement('canvas');
@@ -635,6 +635,7 @@
     /** @type {Orbit} */ var orbit = { yaw: 0, tilt: 0.48 };
     /** @type {Record<string, {mesh: Mesh, used: number}>} */ var rubble={};
     var rubbleClock=0;
+    /** @type {Record<string, V3>} */ var rubbleCenters={};
     var studyHeight = 0;
     var focus = false, space = false, stress = false, fps = 0;
     /** @type {{ start: Vec2, last: Vec2, mode: string } | null} */ var drag = null;
@@ -931,6 +932,7 @@
         if (!rocks[a.id] || rocks[a.id].key !== key || rocks[a.id].visual !== visualFor(a)) {
           if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer); gl.deleteTexture(rocks[a.id].texture); }
           Object.keys(rubble).forEach(function(key){gl.deleteBuffer(rubble[key].mesh.buffer);delete rubble[key];});
+          rubbleCenters={};
           var visual = visualFor(a);
           rocks[a.id] = { key: key, mesh: upload(asteroidMesh(a)), texture: craterTexture(a), visual: visual };
         }
@@ -990,7 +992,9 @@
           var ix=((Math.floor(lon)+tx)%128+128)%128,iy=Math.max(0,Math.min(63,Math.floor(lat)+ty)),tileKey=ix+':'+iy;
           if(seenTiles[tileKey])continue;seenTiles[tileKey]=true;
           var az=(ix+.5)/128*Math.PI*2,polar=(iy+.5)/64*Math.PI;
-          var point=surfaceFrame(body,[Math.cos(az)*Math.sin(polar),Math.sin(az)*Math.sin(polar),Math.cos(polar)]).point;
+          var centerKey=body.id+':'+tileKey;
+          var point=rubbleCenters[centerKey];
+          if(!point)point=rubbleCenters[centerKey]=surfaceFrame(body,[Math.cos(az)*Math.sin(polar),Math.sin(az)*Math.sin(polar),Math.cos(polar)]).point;
           var worldPoint=point.map(function(x){return x*body.radius;}),screen=project(/** @type {V3} */ (worldPoint),w.camera,vp,orbit),bound=body.radius*.04;
           if(screen.depth+bound<=.1)continue;
           var screenBound=bound*vp.height*v.focal/(2*Math.max(.1,screen.depth-bound));
@@ -999,21 +1003,30 @@
           tiles.push({ix:ix,iy:iy,diameter:.0087*vp.height*dpr*v.focal/(2*distance),distance:distance});
         }
         tiles.sort(function(a,b){return b.diameter-a.diameter;});
-        var triangleBudget=160000,usedTriangles=0;
+        var triangleBudget=options && options.rubbleTriangleBudget!==undefined?Math.max(360,Math.min(160000,options.rubbleTriangleBudget)):160000,usedTriangles=0,builds=0;
         tiles.forEach(function(tile){
-          var request=rubbleLod(tile.diameter,triangleBudget-usedTriangles),level=request.level;
+          var request=rubbleLod(tile.diameter,triangleBudget-usedTriangles,options && options.rubbleMaxDetail),level=request.level;
           if(level<0)return;
           var key=body.id+':'+tile.ix+':'+tile.iy+':'+level;
-          if(!rubble[key])rubble[key]={mesh:upload(rubblePatch(body,tile.ix,tile.iy,level,true),18),used:rubbleClock};
+          if(!rubble[key]) {
+            if(builds<1){rubble[key]={mesh:upload(rubblePatch(body,tile.ix,tile.iy,level,true),18),used:rubbleClock};builds++;}
+            else {
+              // Keep an existing coarser mesh while refinements are queued across frames.
+              for(var fallback=level-1;fallback>=0;fallback--){var candidate=body.id+':'+tile.ix+':'+tile.iy+':'+fallback;if(rubble[candidate]){key=candidate;break;}}
+              if(!rubble[key])return;
+              request.morph=1;
+            }
+          }
           rubble[key].used=rubbleClock;usedTriangles+=rubble[key].mesh.count/3;
           gl.uniform1f(uniforms.Morph,request.morph);
           gl.uniform3fv(uniforms.RubbleEye,[eye[0]/body.radius,eye[1]/body.radius,eye[2]/body.radius]);gl.uniform1f(uniforms.RubbleFade,2);
           draw(rubble[key].mesh,[body.position.x,body.position.y,0],[body.radius,body.radius,body.radius],body.rotation,[.40+visual.bulk[0]*.15,.41+visual.bulk[0]*.18,.4+visual.bulk[0]*.21],false);
         });
         hud.canvas.dataset.rubbleTriangles=String(usedTriangles);
+        hud.canvas.dataset.rubbleBuilds=String(builds);
         gl.uniform1f(uniforms.RubbleFade,1);gl.disable(gl.BLEND);
         var keys=Object.keys(rubble).sort(function(a,b){return rubble[b].used-rubble[a].used;});
-        keys.slice(32).forEach(function(key){gl.deleteBuffer(rubble[key].mesh.buffer);delete rubble[key];});
+        keys.slice(64).forEach(function(key){gl.deleteBuffer(rubble[key].mesh.buffer);delete rubble[key];});
       }
       hud.setTransform(dpr, 0, 0, dpr, 0, 0); hud.clearRect(0, 0, vp.width, vp.height);
       hud.font = '11px system-ui'; hud.textAlign = 'center';

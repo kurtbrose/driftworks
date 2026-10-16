@@ -369,7 +369,7 @@ cost before drawing; total submitted rubble cannot exceed 160,000 triangles.
 New vertices and normals morph from the preceding topology in the vertex
 shader, avoiding silhouette jumps at subdivision boundaries. Conservative tile
 bounds cull off-screen tiles; partly visible tiles retain all their rocks.
-An LRU cache retains 32 tile/level buffers, invalidated by geology changes.
+An LRU cache retains 64 tile/level buffers, invalidated by geology changes.
 Between 0.025 and 0.085 body radii, whole rocks smoothly sink along their
 terrain normal until buried. Rocks stay opaque and depth-writing; per-rock
 centers keep every vertex on the same transition, without transparency or
@@ -441,3 +441,42 @@ against cached habitat and fixed hardware triangles via `pickStudySurface`,
 selects the nearest positive hit, and keeps the camera eye while retargeting
 its orbit. Misses leave the view intact. Picking runs on demand, not per frame.
 These controls do not modify the game camera or simulation rules.
+
+
+### Isolated arcade flight lab
+
+`experiments/flight.html` loads the ordinary production script stack with boot
+disabled, then a separate flight model and page controller. The model exposes
+`Driftworks.arcade` (profiles, create, step, contact); it owns 3D cockpit position,
+velocity and an orthonormal attitude basis. SI speeds convert through
+`sim.METERS_PER_UNIT`, without tactical time acceleration. Its page controller
+uses `scene3d.create(..., {study:true})` and `setSurfaceCamera` to reuse production
+geology, with no changes to persistent simulation state or save rules. The
+controller substeps at no more than 1/120 second, caps stalls at 0.1 second,
+and clears input on pause/blur/visibility changes. Radial surface sampling stops
+contact with 5 m clearance; this is an arcade stop, not a rigid-body collision.
+Both dependency-free test entry points load the extracted retail maneuver data
+before the flight model. The profile fields retain table units: seconds for
+accel/decel constants and rotation times, m/s for speed vectors. Forward engine
+ramping and lateral slip damping are separate; rotational damping and yaw banking
+are also applied. See README for engine-power and afterburner assumptions.
+
+
+Flight lab rubble caps subdivision at level 2 and submitted geometry at 40,000
+triangles. Other study views retain level 4 and the 160,000 triangle ceiling.
+`scene3d.create` accepts optional `rubbleMaxDetail` and `rubbleTriangleBudget`.
+All study views build/upload at most one new rubble tile per rendered frame,
+retaining a cached coarser mesh while waiting. Tile-center surface samples are
+cached and cleared with geology changes. Overlay canvas data attributes
+`rubbleTriangles` and `rubbleBuilds` expose the work submitted in the last frame.
+Flight collision queries skip detailed terrain outside its enclosing 1.12-radius
+sphere; the original per-substep contact sampling remains active near terrain.
+
+
+The flight lab uses `experiments/skybox.js` for a perspective environment at
+infinity: a single full-screen panorama pass and one batch of 3,200 seeded star
+points. Both use the cockpit basis and the production 45-degree vertical field
+of view. Translation never enters sky projection. The locally vendored ESO
+all-sky panorama supplies the Milky Way; sharper procedural points provide
+rotation cues at its limited resolution. The opaque background canvas sits
+behind the transparent production scene. Other viewers retain their backgrounds.

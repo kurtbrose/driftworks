@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flight lab · Driftworks</title><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;background:#070d12;color:#adf5df;font:13px ui-monospace,monospace;overflow:hidden}#viewer{position:fixed;inset:0;width:100%;height:100%}.scene3d-controls{display:none}header,aside,footer{position:fixed;z-index:4;padding:18px;background:#07151dcc;border:1px solid #386059;border-radius:6px}header{top:20px;left:20px}h1{font:18px system-ui;margin:0 0 10px}aside{top:20px;right:20px;width:240px}footer{bottom:20px;left:20px;line-height:1.8}button,select,input{font:inherit;color:inherit;background:#122c31;border:1px solid #578178;border-radius:4px;padding:7px}label{display:block;margin:12px 0}input{width:90px}button{cursor:pointer}a{color:inherit}#reticle{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:42px;height:42px;border:1px solid #adf5df88;border-radius:50%;pointer-events:none}#reticle:after{content:'+';position:absolute;left:17px;top:12px}#telemetry{position:fixed;bottom:30px;right:30px;white-space:pre;line-height:1.9;text-align:right;pointer-events:none;font-size:16px}#status{margin-top:10px;max-width:300px;color:#edf8e8}small{display:block;line-height:1.6;color:#90aaa8}#stats{white-space:pre;line-height:1.7;margin-top:12px}@media(max-width:700px){aside{top:auto;bottom:160px;width:190px;padding:10px}footer{font-size:10px;padding:10px}header{padding:10px;top:10px;left:10px}#telemetry{font-size:12px;bottom:100px}}
+#viewer canvas.flight-skybox{position:absolute;inset:0;pointer-events:none}#viewer .night-sky-background{display:none}
+</style></head><body>
+<div id="viewer" class="scene" aria-label="Arcade flight around a Driftworks asteroid"></div>
+<header><h1>DRIFTWORKS / FLIGHT LAB</h1><span>01 · Asteroid handling range</span><div id="status" role="status">Paused · Click Fly to begin</div></header>
+<aside><label for="profile">Handling profile</label><select id="profile"></select><div id="stats"></div><label>Asteroid diameter (m) <input id="diameter" type="number" min="200" max="4000" step="100" value="600"></label><button id="fly">Fly / resume</button> <button id="reset">Reset</button><p><a href="../">Main game</a></p><small>Exact retail FreeSpace 2 maneuver values. Existing Driftworks geology. Standard engine power; unlimited afterburner for handling tests.</small></aside>
+<div id="reticle" aria-hidden="true"></div><div id="telemetry"></div>
+<footer>W/S throttle · X stop · Shift afterburner<br>Arrows pitch/yaw · Q/E roll · Retail profiles have no strafe thrust<br>Drag to steer · Esc pause · 1–4 profiles<br>Sky panorama: ESO/S. Brunier</footer>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+<script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
+<script src="../src/propulsion.js?v=20260920-population1"></script>
+<script src="../src/combat.js?v=20260921-sensor-track1"></script>
+<script src="../src/logistics.js?v=20260921-craft1"></script>
+<script src="../src/formations.js?v=20260920-population1"></script>
+<script src="../src/sim.js?v=20260922-cavern10"></script>
+<script src="../src/population.js"></script>
+<script src="../src/session.js"></script>
+<script src="../src/tactical/camera.js?v=20260920-population1"></script>
+<script src="../src/audio.js?v=20260920-population1"></script>
+<script src="../src/hud.js?v=20260922-cavern1"></script>
+<script src="../src/scene3d.js?v=20261015-flight-performance1"></script>
+<script src="../src/game.js?v=20261007-3d-geology2"></script>
+<script src="retail-profiles.js"></script><script src="flight-model.js"></script><script src="skybox.js?v=20261015-sky2"></script><script src="flight.js?v=20261015-sky1"></script></body></html>
