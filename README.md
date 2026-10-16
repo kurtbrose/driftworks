@@ -55,6 +55,15 @@ Tuning is intentionally provisional: engines use a 3,000 m/s effective exhaust v
 
 There is intentionally no required Node runtime, npm, package manager, TypeScript, Vite, bundler, transpiler, lockfile, or generated build output. The repository itself is the deployable static artifact.
 
+The flight experiment's script and stylesheet URLs carry content hashes to avoid
+reusing stale browser/CDN assets. After editing those files, run
+`node tools/refresh-flight-assets.cjs` and deploy the updated
+`experiments/flight.html` together with its assets. This is a development helper,
+not a build or runtime dependency; `npm run check` detects stale versions.
+Configure the host to revalidate HTML (`Cache-Control: no-cache`) so visitors
+receive the latest asset URLs. If the CDN ignores query strings in its cache
+key, configure it to include them or invalidate affected assets when deploying.
+
 ## Run Locally
 
 From the repository root:
@@ -202,7 +211,7 @@ also links back to it.
 
 Open [the flight lab](experiments/flight.html) from the same static server.
 
-The flight HUD groups objectives, shield/hull bars, speed/thrust, and weapon status around an open center. Comms subtitles sit above the radar. The selected target has gold corner brackets and an upper-right live model monitor with range and hull; Tab cycles targets. The monitor tracks target aspect at 15 FPS. Press **F3** to toggle lab controls and diagnostics; the comms history and independent dialogue-size slider are in that panel. History keeps the latest 12 transmissions for the current page session.
+The flight HUD groups objectives, shield/hull bars, speed/thrust, and weapon status around an open center. Comms subtitles sit above the radar. The selected target has gold corner brackets and an upper-right live model monitor with range and hull; Tab cycles targets. The monitor tracks target aspect at 15 FPS. Pilots have recurring callsigns (Rook, Jinx, Viper, and others), shared by comms, spoken references, and target labels; each keeps the same voice across waves. Press **F3** to toggle lab controls and diagnostics; the comms history and independent dialogue-size slider are in that panel. History keeps the latest 12 transmissions for the current page session.
 This separate cockpit experiment reuses the production 3D asteroid and background.
 Choose Ulysses (baseline), Hercules (heavy), Myrmidon (fast), or Medusa (bomber).
 The maneuver values are extracted exactly from the installed retail FreeSpace 2

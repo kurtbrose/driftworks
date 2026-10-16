@@ -319,7 +319,7 @@
     var wing={id:'w',index:0,team:'ally',mode:'attack',hp:90},lost={id:'four',index:3,team:'ally',mode:'attack',hp:0};
     var combat={enabled:true,dead:false,wave:1,time:1,hull:100,enemies:[wing,lost],radioEvents:[{serial:1,wave:1,time:1,kind:'destroyed',victim:'four',index:3,team:'ally'}]};
     api.step(clock,0,combat,true,rng);assert(clock.facts.length===1);
-    var line=api.step(clock,2,combat,false,rng);assert(line.event==='loss'&&line.text==='We lost Four!'&&line.craftId==='w');
+    var line=api.step(clock,2,combat,false,rng);assert(line.event==='loss'&&line.text==='We lost Echo!'&&line.craftId==='w');
     assert(api.step(clock,0,combat,false,rng)===null);
     clock=api.create();api.step(clock,0,combat,true,rng);combat.wave=2;
     api.step(clock,0,combat,true,rng);assert(clock.facts.length===0);
@@ -334,7 +334,7 @@
     var t={enabled:true,dead:false,wave:1,time:1,hull:100,enemies:craft,radioEvents:[],playerKills:0};
     api.step(clock,0,t,true,rng);craft[2].hp=0;t.radioEvents=[{serial:1,wave:1,time:1,kind:'destroyed',victim:'red1',team:'enemy',killer:'three'}];
     api.step(clock,0,t,true,rng);
-    assert(clock.facts.some(function(e){return e.event==='kill'&&e.texts[0]==='Nice shooting, Three!';}));
+    assert(clock.facts.some(function(e){return e.event==='kill'&&e.texts[0]==='Nice shooting, Flint!';}));
     assert(clock.facts.some(function(e){return e.event==='remaining'&&e.data.count===1;}));
     craft[0].hp=0;api.step(clock,0,t,true,rng);
     craft[1].hp=0;api.step(clock,0,t,true,rng);
@@ -353,7 +353,7 @@
     var t={enabled:true,dead:false,wave:1,hull:100,time:1,enemies:[ally,red]},player={eye:[0,0,0],velocity:[0,0,0]};
     api.step(clock,0,t,true,rng,player);red.hp=20;api.step(clock,0,t,true,rng,player);
     assert(clock.facts.some(function(e){return e.event==='damaged';}));
-    assert(clock.facts.some(function(e){return e.event==='vulnerable'&&e.data.pilot==='Nine';}));
+    assert(clock.facts.some(function(e){return e.event==='vulnerable'&&e.data.pilot==='Viper';}));
     clock=api.create();red.hp=90;api.step(clock,0,t,false,rng,player);red.targetId='other';
     assert(api.step(clock,0,t,false,rng,player).event==='escaped');
     clock=api.create();red.pose.velocity=[0,0,0];api.step(clock,0,t,false,rng,player);red.pose.velocity=[-70,0,0];
@@ -439,6 +439,18 @@
     var radio=window.Driftworks.flightComms.mount(panel,{setAttribute:function(){}}),pilot={id:'wing',index:0,team:'ally',mode:'approach',hp:90},combat={enabled:true,dead:false,hull:100,enemies:[pilot]};
     for(var i=0;i<15;i++){radio.reset();pilot.mode='approach';radio.update(0,combat);pilot.mode='evade';radio.update(0,combat);}
     assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
+  });
+
+  test('flight callsigns are unique, stable across waves, and shared by comms', function () {
+    var api=window.Driftworks.training,U=sim.METERS_PER_UNIT,player=window.Driftworks.arcade.create(300/U),combat=api.create('furball');
+    api.spawn(combat,player,300/U);
+    var names=combat.enemies.map(function(e){return api.callsign(e);});
+    assert(new Set(names).size===16);assert(names[0]==='Rook'&&names[8]==='Viper');
+    api.spawn(combat,player,300/U);assert(combat.enemies.every(function(e,i){return e.callsign===names[i];}));
+    var clock=window.Driftworks.flightComms.create(),pilot={id:'wing',index:0,team:'ally',hp:90,mode:'approach'},fight={enabled:true,dead:false,hull:100,enemies:[pilot]};
+    window.Driftworks.flightComms.step(clock,0,fight,false,function(){return 0;});pilot.mode='evade';
+    var line=window.Driftworks.flightComms.step(clock,0,fight,false,function(){return 0;});assert(line.speaker.indexOf('WING Rook / ')===0);
+    assert(api.callsign({index:0})==='Rook'&&api.callsign({id:'control'})==='Control');
   });
 
   test('target camera centers a copy, fits hull bounds and caps redraws', function () {

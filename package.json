@@ -1,7 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "check": "npm run check:types && npm test",
+    "check": "npm run check:types && npm run check:assets && npm test",
+    "check:assets": "node tools/refresh-flight-assets.cjs --check",
     "test": "node tests/run.cjs",
     "check:types": "node tests/check-types.cjs"
   },

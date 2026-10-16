@@ -142,7 +142,7 @@
     if(n<1000)return small[Math.floor(n/100)]+' hundred'+(n%100?' '+numberWords(n%100):'');
     return numberWords(Math.floor(n/1000))+' thousand'+(n%1000?' '+numberWords(n%1000):'');
   }
-  function callsign(craft) { return craft && Number.isFinite(craft.index) ? numberWords(craft.index+1).replace(/^./,function(c){return c.toUpperCase();}) : 'pilot'; }
+  function callsign(craft) { return craft ? DW.training.callsign(craft) : 'pilot'; }
   function compose(kind,data) {
     var variants=kind==='remaining'&&data.count===1?["One left. Let's wrap this up.",'Last hostile. Finish this!']:templates[kind];
     if(kind==='contact'&&data.vertical)variants=['Pilot, contact {direction}, about {range} meters.', 'Hostile {direction}. Roughly {range} meters out.'];
@@ -383,7 +383,7 @@
     }
     state.last = text; state.serial++; state.quiet = 0; state.quietGap = 0.9 + random() * 2.8; state.lastCraft = craft ? craft.id : null; state.wait = 18 + random() * 12;
     var line = { text: text, speaker: kind === 'enemy' ? 'BANDIT / OPEN CHANNEL' : kind === 'ally' ? 'WING / FLIGHT CHANNEL' : 'CONTROL / RANGE CHANNEL', voice: kind === 'enemy' ? 'Pirate' : kind === 'ally' ? 'Scout' : 'Navigator', hostile: kind === 'enemy', seed: state.serial + 37 };
-    if (craft) { line.speaker = (craft.team === 'ally' ? 'WING ' : 'BANDIT ') + (Number.isFinite(craft.index) ? craft.index + 1 : craft.id) + ' / ' + (selected.event==='support'? 'COVER' : selected.event==='emotionalReply'?'REASSURANCE':selected.event==='emotion'?feeling.current.toUpperCase():selected.event.toUpperCase()); line.craftId = craft.id; line.mode = craft.mode; line.event = selected.event; if(craft.id==='control')line.speaker='CONTROL / RANGE CHANNEL'; if (replyTo) line.replyTo = replyTo; }
+    if (craft) { line.speaker = (craft.team === 'ally' ? 'WING ' : 'BANDIT ') + callsign(craft) + ' / ' + (selected.event==='support'? 'COVER' : selected.event==='emotionalReply'?'REASSURANCE':selected.event==='emotion'?feeling.current.toUpperCase():selected.event.toUpperCase()); line.craftId = craft.id; line.mode = craft.mode; line.event = selected.event; if(craft.id==='control')line.speaker='CONTROL / RANGE CHANNEL'; if (replyTo) line.replyTo = replyTo; }
     line.voiceSettings = pilotVoice(craft); line.seed = line.voiceSettings.seed; line.radioSeed = state.serial * 7919 + line.seed;
     if(feeling)line.emotion={current:selected.event==='emotionalReply'?'reassuring':feeling.current,intensity:selected.event==='emotionalReply'?0.8:feeling.intensity,stress:feeling.stress};
     return line;

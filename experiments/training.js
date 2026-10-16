@@ -8,6 +8,13 @@
   function length(v){return Math.hypot.apply(null,v);}
   function unit(v){var n=length(v);return n>1e-8?scale(v,1/n):[0,1,0];}
   function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+  // Cast slots also own the recurring voices; names stay stable across waves.
+  var pilotCallsigns=['Rook','Jinx','Flint','Echo','Mako','Sable','Patch','Nova','Viper','Wraith','Razor','Hex','Talon','Knell','Cinder','Shade'];
+  function callsign(craft){
+    if(!craft||craft.id==='control')return 'Control';
+    if(craft.callsign)return craft.callsign;
+    return Number.isFinite(craft.index)?pilotCallsigns[Math.abs(Math.floor(craft.index))%pilotCallsigns.length]:'Unknown';
+  }
   function create(mode){return {mode:mode||'training',roundOver:false,enabled:true,time:0,wave:0,countdown:3,enemies:[],wrecks:[],kills:0,shield:120,hull:100,lastHit:-100,hitFlash:0,dead:false,targetId:null,slots:[],slotTimer:0,flashes:[],radioEvents:[],radioSerial:0,playerKills:0};}
   function radioEvent(t,event){
     t.radioEvents=t.radioEvents||[];t.radioSerial=(t.radioSerial||0)+1;
@@ -32,7 +39,7 @@
       var safe=radius+90/U;if(length(pose.eye)<safe)pose.eye=scale(unit(pose.eye),safe);
       face(pose,sub(player.eye,pose.eye));pose.throttle=.6;
       var skill=Math.min(2,Math.floor((t.wave-1+i)/3));
-      t.enemies.push({id:'wave-'+t.wave+'-'+i,index:i,pose:pose,profile:DW.arcade.profiles[i%3===1?1:0],hp:90,maxHp:90,pilot:['Rookie','Veteran','Ace'][skill],skill:skill,mode:'approach',decision:i*.13,until:0,goal:player.eye.slice(),guns:DW.flightGuns.create(),damagedAt:-100,fire:false});
+      t.enemies.push({id:'wave-'+t.wave+'-'+i,index:i,callsign:callsign({index:i}),pose:pose,profile:DW.arcade.profiles[i%3===1?1:0],hp:90,maxHp:90,pilot:['Rookie','Veteran','Ace'][skill],skill:skill,mode:'approach',decision:i*.13,until:0,goal:player.eye.slice(),guns:DW.flightGuns.create(),damagedAt:-100,fire:false});
     }
     if(t.mode==='furball'){
       // Two opposing wings meet above the near side of the asteroid.
@@ -185,5 +192,5 @@
     return [{vertices:new Float32Array(data),color:[.85,.29,.12]}];
   }
   function allGuns(t,playerGuns){var result={bolts:playerGuns.bolts.slice(),impacts:playerGuns.impacts.concat(t.flashes)};t.enemies.forEach(function(e){result.bolts=result.bolts.concat(e.guns.bolts.map(function(b){return Object.assign({},b,{team:e.team||'enemy'});}));result.impacts=result.impacts.concat(e.guns.impacts);});return result;}
-  DW.training={create:create,alive:alive,spawn:spawn,stepWrecks:stepWrecks,steer:steer,intercept:intercept,sphereHit:sphereHit,damageEnemy:damageEnemy,damagePlayer:damagePlayer,trace:trace,step:step,cycle:cycle,geometry:geometry,allGuns:allGuns};
+  DW.training={callsign:callsign,create:create,alive:alive,spawn:spawn,stepWrecks:stepWrecks,steer:steer,intercept:intercept,sphereHit:sphereHit,damageEnemy:damageEnemy,damagePlayer:damagePlayer,trace:trace,step:step,cycle:cycle,geometry:geometry,allGuns:allGuns};
 }());
