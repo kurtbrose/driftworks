@@ -723,6 +723,8 @@
     }
     /** @type {{vertices:Float32Array,color:V3}[]} */ var studyEffects=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
+    /** @type {{vertices:Float32Array,color:V3}[]} */ var studyActors=[];
+    /** @type {Mesh[]} */ var studyActorMeshes=[];
     var box = upload(boxMesh());
     var grid = upload(new Float32Array(600));
     var habitatLevels = [96,192,384].map(function(segments){return {segments:segments,mesh:upload(habitatMesh(segments))};});
@@ -1097,6 +1099,15 @@
       });
       effects = effects.filter(function (fx) { return fx.age < 0.5; });
       if (drag && drag.mode === 'select') { hud.strokeStyle = '#b4e8ef'; hud.strokeRect(drag.start.x, drag.start.y, drag.last.x - drag.start.x, drag.last.y - drag.start.y); }
+      if(study && studyActors.length){
+        gl.uniform1f(uniforms.Finish,0);gl.uniform1f(uniforms.Habitat,0);gl.uniform1f(uniforms.RubbleFade,1);gl.uniform1f(uniforms.AxialSpin,0);
+        studyActors.forEach(function(batch,index){
+          if(!batch.vertices.length)return;
+          if(!studyActorMeshes[index])studyActorMeshes[index]=upload(new Float32Array(0));
+          var mesh=studyActorMeshes[index];gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bufferData(gl.ARRAY_BUFFER,batch.vertices,gl.DYNAMIC_DRAW);mesh.count=batch.vertices.length/6;
+          draw(mesh,[0,0,0],[1,1,1],0,batch.color);
+        });
+      }
       if(study && studyEffects.length){
         gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.depthMask(false);
         gl.uniform1f(uniforms.Finish,9);gl.uniform1f(uniforms.Habitat,0);gl.uniform1f(uniforms.RubbleFade,1);gl.uniform1f(uniforms.AxialSpin,0);
@@ -1125,6 +1136,8 @@
       setOrbit: function (value) { if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       /** @param {{vertices:Float32Array,color:V3}[]} batches */
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice(0,4);},
+      /** @param {{vertices:Float32Array,color:V3}[]} batches */
+      setStudyActors: function(batches){if(study)studyActors=batches.slice(0,4);},
       sync: sync, render: render, consumeCombatEvents: consume,
       resetCombat: function () { effects = []; focus = false; },
       /** @param {World} w @param {number} dt */

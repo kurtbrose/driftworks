@@ -9,7 +9,7 @@
     guns.bolts=guns.bolts.filter(function(bolt){
       var travel=Math.min(dt,bolt.weapon.lifetime-bolt.age);
       var end=bolt.position.map(function(x,i){return x+bolt.direction[i]*bolt.weapon.speed*travel/units;});
-      var hit=hitTest?hitTest(bolt.position,end):null;
+      var hit=hitTest?hitTest(bolt.position,end,bolt):null;
       bolt.age+=dt;
       if(hit){guns.impacts.push({position:hit,age:0});guns.hits++;return false;}
       bolt.position=end;return bolt.age<bolt.weapon.lifetime;
@@ -61,7 +61,7 @@
       quad(group.data,center,along,side,Math.max(width,bolt.weapon.length*.5/units*projected+width),width,1);
     });
     var batches=groups.map(function(g){return {vertices:new Float32Array(g.data),color:g.weapon.color.map(function(x){return Math.max(.04,x/255);})};});
-    var impacts=[];guns.impacts.forEach(function(hit){var r=(.5+hit.age*12)/units;var center=hit.position.map(function(x,i){return x+pose.back[i]*.08/units;});quad(impacts,center,pose.up,pose.right,r,r,1-hit.age/.22);});
+    var impacts=[];guns.impacts.forEach(function(hit){var r=(.5+hit.age*12)*(hit.scale||1)/units;var center=hit.position.map(function(x,i){return x+pose.back[i]*.08/units;});quad(impacts,center,pose.up,pose.right,r,r,1-hit.age/.22);});
     batches.push({vertices:new Float32Array(impacts),color:[1,.75,.3]});return batches;
   }
   window.Driftworks.flightGuns={create:create,step:step,intersect:intersect,geometry:geometry};

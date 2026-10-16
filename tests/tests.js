@@ -22,6 +22,89 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('training combat can clear a wave using the same player flight and gun models', function () {
+    var ai=window.Driftworks.training,flight=window.Driftworks.arcade,gun=window.Driftworks.flightGuns;
+    var player=flight.create(18),t=ai.create(),guns=gun.create(),weapon=window.Driftworks.retailWeapons[0];t.countdown=.01;
+    for(var i=0;i<120*45&&!t.dead&&t.wave<2;i++){
+      var target=ai.alive(t).find(function(e){return e.id===t.targetId;}),control={},fire=false;
+      if(target){var lead=ai.intercept(player.eye,target.pose.eye,target.pose.velocity.map(function(v){return v/sim.METERS_PER_UNIT;}),weapon.speed/sim.METERS_PER_UNIT);control=ai.steer(player,lead.point);player.throttle=.5;fire=Math.abs(control.pitch)<.15&&Math.abs(control.yaw)<.15;}
+      flight.step(player,flight.profiles[0],control,1/120);ai.step(t,player,1/120,18);
+      gun.step(guns,player,weapon,fire,1/120,function(a,b,bolt){return ai.trace(t,a,b,bolt,'player',null,player);});
+    }
+    assert(t.kills>=3 && t.wave===2 && !t.dead);
+  });
+
+  test('training waves are bounded, delayed and allocate at most two attackers', function () {
+    var ai=window.Driftworks.training,t=ai.create(),player=window.Driftworks.arcade.create(18);
+    t.countdown=.01;ai.step(t,player,.02,18);assert(t.wave===1 && ai.alive(t).length===3 && t.slots.length===2);
+    t.enemies.forEach(function(e){ai.damageEnemy(t,e,{damage:1000,armorFactor:1});});
+    assert(t.kills===3 && t.countdown===5);ai.step(t,player,.1,18);assert(t.wave===1);
+    for(var i=0;i<50;i++)ai.step(t,player,.1,18);
+    assert(t.wave===2 && ai.alive(t).length===4);
+    for(var j=0;j<10;j++)ai.spawn(t,player,18);assert(ai.alive(t).length===6);
+    ai.step(t,player,.01,18);assert(t.slots.length===2);
+  });
+  test('training steering uses local pitch and yaw and preserves physical flight limits', function () {
+    var ai=window.Driftworks.training,t=ai.create(),player=window.Driftworks.arcade.create(18);
+    assert(ai.steer(player,[1,0,0]).yaw<0);assert(ai.steer(player,[0,0,100]).pitch>0);
+    ai.spawn(t,player,18);
+    for(var i=0;i<600;i++)ai.step(t,player,1/120,18);
+    t.enemies.forEach(function(e){
+      e.pose.eye.forEach(function(x){assert(Number.isFinite(x));});
+      assert(Math.hypot.apply(null,e.pose.velocity)<=e.profile.afterburnerVelocity[2]+.01);
+      assertClose(Math.hypot.apply(null,e.pose.back),1);
+      if(t.slots.indexOf(e.id)<0)assert(!e.fire);
+    });
+  });
+  test('training shots sweep targets and stop at the nearest obstruction', function () {
+    var ai=window.Driftworks.training,t=ai.create(),player=window.Driftworks.arcade.create(18),weapon=window.Driftworks.retailWeapons[0];
+    ai.spawn(t,player,18);t.enemies[0].pose.eye=[0,2,0];t.enemies[1].pose.eye=[0,4,0];t.enemies[2].pose.eye=[5,5,0];
+    var hit=ai.trace(t,[0,0,0],[0,6,0],{weapon:weapon},'player',function(){return [0,1,0];},player);
+    assertClose(hit[1],1);assert(t.enemies[0].hp===90);
+    hit=ai.trace(t,[0,0,0],[0,6,0],{weapon:weapon},'player',null,player);
+    assert(hit[1]<2 && t.enemies[0].hp<90 && t.enemies[1].hp===90);
+    ai.damageEnemy(t,t.enemies[0],{damage:1000,armorFactor:1});var kills=t.kills;
+    ai.damageEnemy(t,t.enemies[0],weapon);assert(t.kills===kills);
+  });
+  test('training shield absorption, recovery, death and restart have independent lifecycles', function () {
+    var ai=window.Driftworks.training,t=ai.create(),weapon=window.Driftworks.retailWeapons[0],player=window.Driftworks.arcade.create(18);
+    ai.damagePlayer(t,weapon);assert(t.shield<120 && t.hull===100);
+    t.shield=1;ai.damagePlayer(t,weapon);assert(t.shield===0 && t.hull<100);
+    t.time=20;t.lastHit=0;ai.step(t,player,.1,18);assert(t.shield>0);
+    t.shield=0;t.hull=1;ai.damagePlayer(t,weapon);assert(t.dead && t.hull===0);
+    var before=t.time;ai.step(t,player,1,18);assert(t.time===before);
+    var fresh=ai.create();assert(!fresh.dead && fresh.shield===120 && fresh.kills===0);
+  });
+  test('training intercept leads moving targets and models are simple bounded triangles', function () {
+    var ai=window.Driftworks.training,lead=ai.intercept([0,0,0],[0,20,0],[2,0,0],27);
+    assert(lead.time>0 && lead.point[0]>0);
+    var t=ai.create();ai.spawn(t,window.Driftworks.arcade.create(18),18);
+    var mesh=ai.geometry(t)[0].vertices;assert(mesh.length===3*6*3*6);mesh.forEach(function(x){assert(Number.isFinite(x));});
+    var guns=window.Driftworks.flightGuns.create();assert(ai.allGuns(t,guns).bolts.length===0);
+  });
+
+  test('controller deadzones rescale travel and reject noisy or missing values', function () {
+    var input=window.Driftworks.flightInput;
+    assertClose(input.deadzone(.1,.12),0);assertClose(input.deadzone(-.1,.12),0);
+    assertClose(input.deadzone(.56,.12),.5);assertClose(input.deadzone(-1,.12),-1);
+    assertClose(input.deadzone(NaN,.12),0);
+  });
+  test('standard gamepad maps aim, roll, throttle and buttons without neutral throttle override', function () {
+    var input=window.Driftworks.flightInput,map=input.defaults(true),pad={axes:[1,-1,-1,0],buttons:[]};
+    pad.buttons[7]={pressed:true,value:1};pad.buttons[0]={pressed:true,value:1};pad.buttons[12]={pressed:true,value:1};
+    var c=input.read(pad,map);assert(c.pitch===1 && c.yaw===-1 && c.roll===1);
+    assert(c.throttle===null && c.throttleRate===1 && c.fire && c.boost);
+    assert(!c.bank && !c.pause);
+  });
+  test('joystick permits inverted axes, absolute throttle and custom buttons', function () {
+    var input=window.Driftworks.flightInput,map=input.defaults(false),pad={axes:[.12,1,-1,-1],buttons:[]};
+    map.fire=5;map.pause=6;pad.buttons[5]={pressed:true,value:1};pad.buttons[6]={pressed:true,value:1};
+    var c=input.read(pad,map);assert(c.pitch===1 && c.yaw===0 && c.roll===1 && c.throttle===1 && c.fire && c.pause);
+    map.pitchInvert=true;map.throttleInvert=false;c=input.read(pad,map);assert(c.pitch===-1 && c.throttle===0);
+    map.pitch=9;map.throttle=9;c=input.read(pad,map);assert(c.pitch===0 && c.throttle===null);
+    c=input.read({axes:[],buttons:[]},map);assert(!c.fire && !c.boost && !c.pause);
+  });
+
   test('retail primary guns retain table ballistics and cadence', function () {
     var weapons=window.Driftworks.retailWeapons,model=window.Driftworks.flightGuns;
     assert(weapons[0].speed===450 && weapons[0].fireWait===.2 && weapons[0].lifetime===2 && weapons[0].length===10);

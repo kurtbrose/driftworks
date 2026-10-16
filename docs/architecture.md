@@ -492,7 +492,7 @@ against `scene3d.rockField`. Impacts do not excavate or damage the asteroid.
 and colors; only study scenes draw them. Reused dynamic GPU buffers render
 soft additive bolt billboards and flashes through the same camera/depth buffer as terrain.
 Two generic barrels fire per volley, independent of the original POF gun mounts;
-there is no linked-bank or energy simulation yet. Existing synthesized audio
+there is no linked-bank or energy simulation yet. Training combat supplies separate health and enemy logic. Existing synthesized audio
 honors the main game's sound preferences.
 
 Flight effect batches use their three normal slots as unnormalized UV/opacity
@@ -501,3 +501,45 @@ project the bolt length onto the view plane and retain a round end-on footprint.
 A narrow bright core and fading glow replace crossed opaque rectangles. Depth
 testing remains enabled while additive effects disable depth writes; impact
 opacity fades with age. Weapon dimensions and ballistics are unchanged.
+
+
+`experiments/input.js` provides pure controller mapping and deadzone helpers.
+The flight page polls `navigator.getGamepads` once per rendered frame and feeds
+that snapshot into the flight substeps. Button edges control bank switching and
+pause; axes and held fire/boost are continuous. Mouse deltas accumulate once per
+frame and become rate demand normalized by frame time, then clear. Pointer lock
+is acquired only from Fly's user gesture; success starts flight, while failure
+leaves it paused. Pointer-lock loss, Escape, blur, hidden tabs and controller
+disconnection clear transient input and pause. Controller/keyboard mode uses an
+explicit Fly action without pointer lock. No controller mappings enter world
+state or tactical saves. Standard and configurable raw mappings share the same
+physical flight/weapon model.
+
+
+### Flight training combat
+
+`experiments/training.js` owns the isolated wave director, pilot decisions,
+steering primitives, training health, target IDs, and simple enemy geometry.
+The page calls its simulation on the same 1/120 s substeps as player flight.
+The wave director spawns three to six craft and assigns no more than two attack
+slots. Decisions update every 0.28–0.65 s, with committed break/evade/recover
+windows; continuous steering supplies pitch/yaw/roll/throttle/boost to the same
+`arcade.step` used by the player. Predictive aim uses target velocity with
+pilot-dependent lead and deterministic error. Fire is gated by range, alignment,
+attack assignment, and short burst windows. Steering separates nearby enemies
+and avoids a conservative asteroid shell. It does not port FreeSpace source.
+
+Projectile sweeps choose the nearest terrain or opposing training hit sphere
+before applying damage. Dead targets cannot take repeated damage or score twice.
+Destroyed enemies stop steering/firing but their already-fired bolts expire
+normally. Clearing a wave starts a five-second countdown. Common lab shields,
+hull and health tuning are separate from retail maneuver profiles. Death stops
+the run; pause freezes all combat clocks. Reset creates a fresh training session
+and respects the free-flight checkbox. No training state enters tactical saves.
+
+`scene3d.setStudyActors` submits up to four opaque position/normal triangle
+batches through reused dynamic buffers and the production depth test. The
+training craft use six triangles each. Soft bolts, hit/death flashes share the
+existing study-effects batches; a separate DOM-owned canvas draws contact
+brackets, off-screen direction cues and a selected-target intercept pip.
+Actor/effect buffers and UI resources stay outside simulation state.

@@ -192,6 +192,12 @@ Save/Load now preserve the population and tactical mission together; old saves
 receive crews automatically. Reset starts a new population and mission.
 
 
+### Experiments index
+
+Open [the experiments index](experiments/) for the flight lab, both game renderers,
+and the artwork viewers. The main game links to it under Menu; the flight lab
+also links back to it.
+
 ### Arcade flight experiment
 
 Open [the flight lab](experiments/flight.html) from the same static server.
@@ -203,12 +209,12 @@ fields and the source table hash. Hercules means the original Hercules, not Mk I
 
 Click **Fly / resume**. W/S raises/lowers throttle, X cuts throttle and brakes,
 Shift holds afterburner, arrows pitch/yaw, Q/E roll.
-Retail lateral and reverse speeds are zero, so there is no strafe thrust. Left-drag steers. Escape, losing focus, or hiding the tab pauses flight.
+Retail lateral and reverse speeds are zero, so there is no strafe thrust. Captured mouse movement steers. Escape, losing focus, or hiding the tab pauses flight.
 Keys 1–4 select profiles and reset the starting pose; changing the dropdown also
 resets it. After using a form control, click Fly to return to flight input.
 Reset stops the craft facing the asteroid. The diameter control (200–4,000 m)
 resets the range to compare scale; it defaults to 600 m. Surface contact stops
-the craft with a 5 m clearance. Asteroid impacts provide visual feedback without damage or excavation.
+the craft with a 5 m clearance. Asteroid impacts provide visual feedback without terrain damage or excavation.
 
 `experiments/retail-profiles.js` preserves max velocity vectors, rear velocity,
 rotation times (pitch/yaw/roll seconds per revolution), forward and slide accel/
@@ -240,9 +246,9 @@ Ulysses/Hercules use Subach HL-7 then Prometheus R, Myrmidon reverses that order
 and Medusa uses Prometheus R. Both weapons travel at 450 m/s for 2 seconds
 (900 m); fire intervals are 0.20 s and 0.45 s. Numeric weapon fields, including
 bolt length/radii, damage factors and energy cost, are extracted directly into
-`experiments/retail-weapons.js` with the retail table hash. Damage/energy fields
-are retained for future work; this range has unlimited weapon energy and no
-health simulation. Generic twin parallel barrels replace model-specific mounts.
+`experiments/retail-weapons.js` with the retail table hash. Damage factors are used by training combat;
+weapon energy remains unlimited. Training combat uses its own hull/shield tuning.
+Generic twin parallel barrels replace model-specific mounts.
 Bolts use fixed world speed (retail non-additive velocity), never hitscan, and
 swept terrain contact. Sounds reuse Driftworks' synthesized gun/impact effects.
 
@@ -250,3 +256,58 @@ The flight range also parks the production mothership 900 m east and 1,800 m
 north of the asteroid center (about 2 km separation). Its habitat animates while
 flight is active; the HUD reports distance to its center. It is a visual fly-around
 landmark in this prototype, without a ship collider or damage model.
+
+
+Flight input defaults to **Captured mouse + keyboard**. Click Fly to capture the
+pointer; move the mouse to steer and hold either mouse button to fire. Escape
+pauses and releases the pointer. Capture loss, blur and hiding the tab also pause.
+The configuration panel hides while captured. Mouse sensitivity is adjustable;
+turn rates still obey each ship's maneuvering limits. If capture is unavailable,
+select **Controller / keyboard** to fly without capturing the pointer.
+
+The **Gamepad / joystick setup** section detects devices exposed by the browser's
+Gamepad API; press a device button if it hasn't appeared. Standard gamepads use
+left-stick pitch/yaw, right-stick X roll, D-pad up/down throttle, RT fire, A boost,
+Y switch bank and Start pause. Nonstandard joysticks default to axes 0/1 for
+yaw/pitch, axis 2 roll and axis 3 throttle, with buttons 0/1/2/7 for fire/boost/
+bank/pause. Select the device and remap any axis/button, invert axes and adjust
+the deadzone using live values. Axis throttle is absolute; choose None to use
+keyboard/D-pad throttle instead. Mappings are session-local. Resume requires the
+Fly button; controllers cannot silently resume a paused game. Losing the active
+device pauses. Hardware support depends on what the browser exposes.
+
+Pointer capture was rejected by the Codex in-app browser during automated
+verification. If it also refuses your click, open this same local page in a
+browser that supports pointer lock, or use Controller / keyboard mode.
+
+
+### Flight training arcade
+
+The flight lab now starts training waves three seconds after flight resumes.
+Wave 1 contains three simple orange fighters; later waves grow to a maximum of
+six. Destroy the wave and the next arrives after five seconds. **Tab** cycles
+targets. Brackets identify enemies; the dashed cyan circle is a projectile lead
+cue. Off-screen chevrons point toward contacts (sensor markers can show through
+terrain). Shield/hull and kills appear at the top left. Escape pauses everything
+and restores the configuration panel. **Restart training** resets the run; turn
+off **Training waves** for the original free-flight range. Reset, changing ship
+profiles, and changing asteroid diameter also restart the range.
+
+Training uses common player shields (120), hull (100), and enemy hull (90), not
+retail ship durability. Shields recover after seven seconds without a hit; hull
+damage persists. Player destruction ends the run until Restart. Weapon damage
+and shield/armor factors use the extracted retail weapon values. Enemy bolts
+and player bolts use the same swept hits and ballistic timing, with 9 m enemy
+and 7 m player hit spheres. Asteroid terrain blocks shots; the mothership remains
+scenery without collision or damage. No friendly fire or ramming damage yet.
+
+At most two enemies hold attack slots. The others reposition; pilots commit to
+attack runs, break away at close range, recover, and evade when damaged. Rookie,
+veteran and ace pilots differ in decision interval and target prediction, rather
+than hull inflation. All use the existing retail flight profiles and ordinary
+flight controls; enemy steering also avoids the asteroid and nearby craft.
+This is an independent, deliberately forgiving AI starting point inspired by
+[FreeSpace's combat behavior inventory](https://github.com/scp-fs2open/fs2open.github.com/blob/master/code/ai/aicode.cpp)
+and [Reynolds' steering behaviors](https://www.red3d.com/cwr/steer/), not an exact
+port of FreeSpace AI or its difficulty tables. Pilot labels describe these lab
+profiles. There are no external runtime dependencies or tactical-save changes.
