@@ -108,6 +108,225 @@
     assert(clock.recentActivities.join(',')==='offense,recover,offense');
   });
 
+  test('flight comms answers cover requests only when a wingmate is helping', function () {
+    var api=window.Driftworks.flightComms, rng=function(){return 0;}, clock=api.create();
+    var caller={id:'caller',team:'ally',hp:90,mode:'attack'};
+    var threat={id:'threat',team:'enemy',hp:90,mode:'attack',targetId:'caller',pose:{eye:[10,0,0]}};
+    var helper={id:'helper',team:'ally',hp:90,mode:'attack',targetId:'other',pose:{eye:[0,0,0],velocity:[1,0,0]}};
+    var combat={enabled:true,dead:false,hull:100,enemies:[caller,threat,helper]};
+    api.step(clock,0,combat,false,rng);caller.mode='evade';
+    assert(api.step(clock,0,combat,false,rng).text.indexOf('Cover me')>=0);
+    assert(clock.conversation.threat==='threat');
+    api.step(clock,1,combat,true,rng);assert(api.step(clock,2,combat,false,rng)===null);
+    helper.targetId='threat';helper.pose.velocity=[-1,0,0];
+    api.step(clock,0,combat,true,rng); // Drop the separate target-switch announcement.
+    assert(api.step(clock,2,combat,false,rng)===null); // Heading away cannot claim to help.
+    helper.pose.velocity=[1,0,0];var reply=api.step(clock,0,combat,false,rng);
+    assert(reply.event==='support' && reply.craftId==='helper' && reply.replyTo==='caller');
+    assert(reply.text.indexOf("I've got him")>=0 && clock.conversation===null);
+    assert(api.step(clock,3,combat,false,rng)===null); // One answer per request.
+  });
+
+  test('flight comms cancels cover exchanges when the fight changes', function () {
+    var api=window.Driftworks.flightComms, rng=function(){return 0;};
+    ['dead caller','dead threat','retarget','expired','disabled','wrong team','wrong target','not attacking'].forEach(function (reason) {
+      var clock=api.create(), caller={id:'c',team:'ally',hp:90,mode:'evade'};
+      var threat={id:'t',team:'enemy',hp:90,mode:'attack',targetId:'c'};
+      var helper={id:'h',team:'ally',hp:90,mode:'attack',targetId:'t',fire:true};
+      var combat={enabled:true,dead:false,hull:100,enemies:[caller,threat,helper]};
+      clock.conversation={caller:'c',threat:'t',expires:14};clock.wait=30;
+      if(reason==='dead caller')caller.hp=0;
+      if(reason==='dead threat')threat.hp=0;
+      if(reason==='retarget')threat.targetId='other';
+      if(reason==='disabled')combat.enabled=false;
+      if(reason==='wrong team')helper.team='enemy';
+      if(reason==='wrong target')helper.targetId='other';
+      if(reason==='not attacking')helper.mode='recover';
+      assert(api.step(clock,reason==='expired'?15:0,combat,false,rng)===null,reason);
+    });
+  });
+
+  test('radio templates speak dynamic numbers and keep singular remaining calls accurate', function () {
+    var api=window.Driftworks.flightComms;
+    assert(api.numberWords(70)==='seventy' && api.numberWords(125)==='one hundred twenty five');
+    assert(api.numberWords(Infinity)==='zero');
+    assert(api.compose('loss',{pilot:'Four',count:4})[0]==='We lost Four!');
+    assert(api.compose('closing',{pilot:'Nine',speed:70})[0]==='Nine closing at seventy meters per second.');
+    assert(api.compose('remaining',{count:5}).every(function(t){return t.indexOf('One left')<0 && t.indexOf('five')>=0;}));
+    assert(api.compose('remaining',{count:1})[0].indexOf('One left')===0);
+  });
+
+  test('training records attributed deaths once and real shield depletion', function () {
+    var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18);
+    ai.spawn(t,player,18);var victim=t.enemies[8],killer=t.enemies[2],weapon={damage:1000,armorFactor:1,shieldFactor:1};
+    ai.damageEnemy(t,victim,weapon,killer);ai.damageEnemy(t,victim,weapon,killer);
+    assert(t.radioEvents.length===1 && t.radioEvents[0].killer===killer.id && t.radioEvents[0].index===8);
+    ai.damageEnemy(t,t.enemies[9],weapon,'player');assert(t.playerKills===1);
+    t.shield=1;ai.damagePlayer(t,{damage:2,armorFactor:1,shieldFactor:1});
+    assert(t.radioEvents.filter(function(e){return e.kind==='shield';}).length===1);
+    ai.damagePlayer(t,{damage:2,armorFactor:1,shieldFactor:1});
+    assert(t.radioEvents.filter(function(e){return e.kind==='shield';}).length===1);
+  });
+
+  test('training near misses use clipped projectile segments and throttle repeat reports', function () {
+    var ai=window.Driftworks.training,t=ai.create(),U=sim.METERS_PER_UNIT,player={eye:[0,20/U,0]},bolt={weapon:{damage:1,armorFactor:1,shieldFactor:1}};
+    ai.trace(t,[-50/U,0,0],[50/U,0,0],bolt,'enemy',null,player);
+    assert(t.radioEvents.length===1 && t.radioEvents[0].kind==='near');
+    ai.trace(t,[-50/U,0,0],[50/U,0,0],bolt,'enemy',null,player);assert(t.radioEvents.length===1);
+    t.time=7;
+    ai.trace(t,[-50/U,0,0],[50/U,0,0],bolt,'enemy',function(){return [-45/U,0,0];},player);
+    assert(t.radioEvents.length===1); // Rock intercepts the bolt before its close pass.
+  });
+
+  test('radio announces losses from surviving witnesses and expires facts across waves', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    var wing={id:'w',index:0,team:'ally',mode:'attack',hp:90},lost={id:'four',index:3,team:'ally',mode:'attack',hp:0};
+    var combat={enabled:true,dead:false,wave:1,time:1,hull:100,enemies:[wing,lost],radioEvents:[{serial:1,wave:1,time:1,kind:'destroyed',victim:'four',index:3,team:'ally'}]};
+    api.step(clock,0,combat,true,rng);assert(clock.facts.length===1);
+    var line=api.step(clock,2,combat,false,rng);assert(line.event==='loss'&&line.text==='We lost Four!'&&line.craftId==='w');
+    assert(api.step(clock,0,combat,false,rng)===null);
+    clock=api.create();api.step(clock,0,combat,true,rng);combat.wave=2;
+    api.step(clock,0,combat,true,rng);assert(clock.facts.length===0);
+    clock=api.create();combat.wave=1;api.step(clock,0,combat,true,rng);
+    api.step(clock,8,combat,true,rng);assert(clock.facts.length===0);
+  });
+
+  test('radio tracks kill praise, player streaks and changing force counts', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    var craft=[{id:'one',index:0,team:'ally',hp:90,mode:'attack'},{id:'three',index:2,team:'ally',hp:90,mode:'attack'},
+      {id:'red1',team:'enemy',hp:90,mode:'attack'},{id:'red2',team:'enemy',hp:90,mode:'attack'}];
+    var t={enabled:true,dead:false,wave:1,time:1,hull:100,enemies:craft,radioEvents:[],playerKills:0};
+    api.step(clock,0,t,true,rng);craft[2].hp=0;t.radioEvents=[{serial:1,wave:1,time:1,kind:'destroyed',victim:'red1',team:'enemy',killer:'three'}];
+    api.step(clock,0,t,true,rng);
+    assert(clock.facts.some(function(e){return e.event==='kill'&&e.texts[0]==='Nice shooting, Three!';}));
+    assert(clock.facts.some(function(e){return e.event==='remaining'&&e.data.count===1;}));
+    craft[0].hp=0;api.step(clock,0,t,true,rng);
+    craft[1].hp=0;api.step(clock,0,t,true,rng);
+    assert(!clock.facts.some(function(e){return e.craft.id==='one'||e.craft.id==='three';}));
+    clock=api.create();craft[0].hp=90;craft[1].hp=90;craft[2].hp=90;
+    t.radioEvents=[];api.step(clock,0,t,true,rng);craft[0].hp=0;api.step(clock,0,t,true,rng);
+    assert(clock.facts.some(function(e){return e.event==='outnumbered';}));
+    t.playerKills=2;t.radioEvents=[1,2].map(function(n){return {serial:n,wave:1,time:1,kind:'destroyed',victim:'x'+n,team:'enemy',killer:'player'};});
+    api.step(clock,0,t,true,rng);assert(clock.facts.some(function(e){return e.event==='streak'&&e.data.count===2;}));
+  });
+
+  test('radio observes hull vulnerability, shaken pursuit and actual closing speed', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    var ally={id:'a',team:'ally',hp:90,mode:'evade',targetId:'r'};
+    var red={id:'r',index:8,team:'enemy',hp:90,mode:'attack',targetId:'a',pose:{eye:[10,0,0],velocity:[0,0,0]}};
+    var t={enabled:true,dead:false,wave:1,hull:100,time:1,enemies:[ally,red]},player={eye:[0,0,0],velocity:[0,0,0]};
+    api.step(clock,0,t,true,rng,player);red.hp=20;api.step(clock,0,t,true,rng,player);
+    assert(clock.facts.some(function(e){return e.event==='damaged';}));
+    assert(clock.facts.some(function(e){return e.event==='vulnerable'&&e.data.pilot==='Nine';}));
+    clock=api.create();red.hp=90;api.step(clock,0,t,false,rng,player);red.targetId='other';
+    assert(api.step(clock,0,t,false,rng,player).event==='escaped');
+    clock=api.create();red.pose.velocity=[0,0,0];api.step(clock,0,t,false,rng,player);red.pose.velocity=[-70,0,0];
+    var call=api.step(clock,0,t,false,rng,player);assert(call.event==='closing'&&call.text.indexOf('seventy')>=0);
+  });
+
+  test('radio only calls a firing pass missed when the target took no damage', function () {
+    var api=window.Driftworks.flightComms,rng=function(){return 0;};
+    [false,true].forEach(function(hit){
+      var clock=api.create(),a={id:'a',team:'ally',mode:'attack',hp:90,fire:true,targetId:'r'},r={id:'r',team:'enemy',mode:'approach',hp:90};
+      var t={enabled:true,dead:false,wave:1,hull:100,enemies:[a,r]};
+      api.step(clock,0,t,false,rng);a.fire=false;if(hit)r.hp=80;
+      api.step(clock,0,t,false,rng);a.mode='recover';
+      var call=api.step(clock,0,t,false,rng);
+      assert(call && (hit?call.event==='recover':call.event==='missed'));
+    });
+  });
+
+  test('radio discards obsolete shield and remaining-count facts', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    var a={id:'a',team:'ally',hp:90,mode:'attack'},r={id:'r',team:'enemy',hp:90,mode:'attack'},s={id:'s',team:'enemy',hp:90,mode:'attack'};
+    var t={enabled:true,dead:false,wave:1,time:1,hull:100,shield:0,enemies:[a,r,s],radioEvents:[]};
+    api.step(clock,0,t,true,rng);s.hp=0;
+    t.radioEvents=[{serial:1,wave:1,time:1,kind:'shield',victim:'player',team:'ally'}];
+    api.step(clock,0,t,true,rng);assert(clock.facts.some(function(e){return e.event==='shield';}));
+    assert(clock.facts.some(function(e){return e.event==='remaining';}));
+    t.shield=12;r.hp=0;api.step(clock,0,t,true,rng);
+    assert(!clock.facts.some(function(e){return e.event==='shield'||e.event==='remaining';}));
+  });
+
+  test('contact reports use player-relative clock directions and rounded SI ranges', function () {
+    var api=window.Driftworks.flightComms,U=sim.METERS_PER_UNIT;
+    var player={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+    var front=api.contactData(player,[10,20+644/U,30]);
+    assert(front.bearing==="twelve o'clock"&&front.range===600&&front.direction==='ahead of you');
+    assert(api.contactData(player,[10+500/U,20,30]).bearing==="three o'clock");
+    assert(api.contactData(player,[10-500/U,20,30]).bearing==="nine o'clock");
+    assert(api.contactData(player,[10,20-500/U,30]).bearing==="six o'clock");
+    var high=api.contactData(player,[10,20+500/U,30+300/U]);assert(high.height===' high');
+    var overhead=api.contactData(player,[10,20,30+500/U]);
+    assert(overhead.vertical && api.compose('contact',overhead).every(function(t){return t.indexOf('above you')>=0&&t.indexOf("o'clock")<0;}));
+    player.right=[0,1,0];player.back=[1,0,0];
+    assert(api.contactData(player,[10,20+500/U,30]).bearing==="three o'clock");
+    assert(api.contactData({},[0,0,0])===null);
+  });
+
+  test('contact acquisition refreshes bearing before speech and prevents duplicate reports', function () {
+    var api=window.Driftworks.flightComms,U=sim.METERS_PER_UNIT,clock=api.create(),rng=function(){return 0;};
+    var player={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0],velocity:[0,0,0]};
+    var red={id:'r',team:'enemy',hp:90,mode:'approach',pose:{eye:[0,500/U,0],velocity:[0,0,0]}};
+    var t={enabled:true,dead:false,wave:1,hull:100,enemies:[red]};
+    api.step(clock,0,t,true,rng,player);assert(clock.facts.filter(function(e){return e.event==='contact';}).length===1);
+    red.pose.eye=[600/U,0,0];api.step(clock,0,t,true,rng,player);
+    var line=api.step(clock,2,t,false,rng,player);
+    assert(line.event==='contact'&&line.text.indexOf("three o'clock")>=0&&line.text.indexOf('six hundred')>=0);
+    assert(api.step(clock,1,t,false,rng,player)===null);
+    red.pose.eye=[4000/U,0,0];api.step(clock,1,t,true,rng,player);
+    red.pose.eye=[2900/U,0,0];api.step(clock,1,t,true,rng,player);assert(clock.facts.length===0);
+    red.pose.eye=[2400/U,0,0];api.step(clock,1,t,true,rng,player);assert(clock.facts.length===1);
+    red.hp=0;api.step(clock,1,t,true,rng,player);assert(clock.facts.length===0);
+  });
+
+  test('comms speaker highlight follows transmission lifetime, mute, pause and reset', function () {
+    var api=window.Driftworks.flightComms,fields=[{textContent:''},{textContent:''}];
+    var panel={querySelector:function(selector){return selector==='[data-speaker]'?fields[0]:fields[1];},classList:{add:function(){},remove:function(){},toggle:function(){}}};
+    var toggle={setAttribute:function(){},textContent:''},radio=api.mount(panel,toggle);
+    var pilot={id:'wing',index:0,team:'ally',mode:'approach',hp:90},combat={enabled:true,dead:false,hull:100,enemies:[pilot]};
+    radio.update(0,combat);assert(radio.speakerId()===null);
+    pilot.mode='evade';radio.update(0,combat);assert(radio.speakerId()==='wing');
+    radio.pause();assert(radio.speakerId()===null);
+    radio.reset();pilot.mode='approach';radio.update(0,combat);pilot.mode='evade';radio.update(0,combat);
+    toggle.onclick();assert(radio.speakerId()===null);
+    radio.reset();pilot.mode='approach';radio.update(0,combat);pilot.mode='evade';radio.update(0,combat);
+    assert(radio.speakerId()==='wing'); // Muted subtitles still identify the transmitting pilot.
+    radio.update(15,combat);assert(radio.speakerId()===null);
+    radio.reset();assert(radio.speakerId()===null);
+  });
+
+  test('speaker halo draws a white outline with contrast underlay', function () {
+    var strokes=[],saved=0,ctx={save:function(){saved++;},restore:function(){saved--;},setLineDash:function(){},beginPath:function(){},arc:function(x,y,r){assert(x===5&&y===9&&r===10);},stroke:function(){strokes.push([this.strokeStyle,this.lineWidth]);}};
+    window.Driftworks.flightRadar.speakerHalo(ctx,5,9,10);
+    assert(saved===0&&strokes.length===2);
+    assert(strokes[0][1]===4 && strokes[1][0]==='rgba(255,255,255,.95)' && strokes[1][1]===2);
+  });
+
+  test('radio prefers unheard lines, then older and less frequent lines', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;},choices=['Alpha','Bravo','Charlie'];
+    assert(api.pickLine(clock,choices,rng)==='Alpha');
+    assert(api.pickLine(clock,choices,rng)==='Bravo');
+    assert(api.pickLine(clock,choices,rng)==='Charlie');
+    assert(api.pickLine(clock,choices,rng)==='Alpha');
+    clock.recentLines=[{text:'Alpha',key:'Alpha'},{text:'Bravo',key:'Bravo'},{text:'Alpha',key:'Alpha'}];clock.last='Charlie';
+    assert(api.pickLine(clock,['Alpha','Bravo'],rng)==='Bravo');
+    for(var i=0;i<50;i++)api.pickLine(clock,choices,rng);
+    assert(clock.recentLines.length===24);
+    assert(api.create().recentLines.length===0);
+    assert(api.pickLine(clock,['Only line'],rng)==='Only line');
+    assert(api.pickLine(clock,['Only line'],rng)==='Only line'); // A single truthful option remains usable.
+  });
+
+  test('radio remembers template delivery across changing names and counts', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    assert(api.pickLine(clock,api.compose('loss',{pilot:'Four',count:1}),rng)==='We lost Four!');
+    var second=api.pickLine(clock,api.compose('loss',{pilot:'Five',count:2}),rng);
+    assert(second==='Five is gone. Stay together!');
+    var third=api.pickLine(clock,api.compose('loss',{pilot:'Six',count:3}),rng);
+    assert(third==='We have lost three. Keep your eyes open.');
+  });
+
   test('flight radar uses player basis, meters, spherical range and altitude', function(){
     var radar=window.Driftworks.flightRadar,state={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     var front=radar.project(state,[10,25,30],100,1000);

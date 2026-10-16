@@ -434,3 +434,27 @@ Comms favors a varied account of the fight: activity types get airtime before
 pilots are chosen, and recently repeated activities get less weight and longer
 cooldowns. Attack and firing share a budget so shooting cannot crowd out the
 other maneuvers just because more pilots are doing it.
+
+Pilots can answer cover requests: a wingmate engaging the caller's attacker
+may reply with a covering call. Replies require actual fire or movement toward
+that attacker; requests expire when the threat changes or after 14 flight seconds.
+
+The fight radio also reacts to wing losses, credited kills, near misses, player
+shield depletion, badly damaged hulls, shaken pursuit, missed firing passes,
+rapid player kills, changing odds, and remaining hostiles. Calls can include
+pilot numbers, live counts, and relative closing speeds in meters per second.
+Numbers are expanded into spoken words before whole-sentence mumble synthesis.
+AI fighters have hull health only: their damage calls do not claim shields.
+
+Contact reports call out newly acquired hostiles using your ship's facing:
+clock directions, ahead/behind, left/right, high/low, and rounded meter ranges.
+Position reports have a separate airtime limit and refresh their geometry before
+speaking. Later updates require a changed sector or range after 30 seconds.
+
+A transmitting pilot gets a white ring around their radar blip and on-screen
+ship marker (or off-screen direction arrow). The ring follows the transmission,
+including muted subtitle calls, and clears on pause or reset.
+
+Radio line selection remembers the last 24 transmissions across all pilots,
+favoring unheard wording and then older, less-repeated lines. Template history
+also counts: changing a pilot number or range does not make a repeated phrase new.

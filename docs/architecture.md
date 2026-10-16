@@ -633,3 +633,51 @@ Radio airtime is balanced by activity before selecting a pilot. Attack and firin
 share an offense category. The last eight reactive calls bias selection toward
 less-heard categories and extend category cooldowns (4 + 3 seconds per recent
 call), leaving room for rarer maneuvers without inventing events or queuing them.
+
+Comms retains one short-lived cover exchange using caller/threat IDs only.
+Replies revalidate both living participants, the threat's target, and a same-team
+helper attacking that threat while firing or moving toward it. Requests expire
+after 14 active seconds or when invalid. Support replies have their own airtime
+category, observe channel/pilot cooldowns, and consume the request once spoken;
+they observe AI behavior without issuing orders or changing combat decisions.
+
+Training exposes a bounded `radioEvents` journal (64 entries, increasing
+`radioSerial`) for attributed destruction, player shield depletion, and
+projectile near misses. `damageEnemy` accepts an optional shooter ID source
+(player string or AI craft); `trace` supplies it. `playerKills` counts only
+player-attributed kills, unlike `kills`, which counts all hostile losses.
+Near misses use segments clipped at the first hit, a 10-30 meter clearance,
+and six seconds between reports per recipient. These are isolated lab fields.
+
+Comms snapshots hull, pursuit, firing-pass outcome, wing counts, and relative
+closing speed; `update` now accepts player pose. Important facts can wait up to
+seven active seconds in a bounded 12-entry buffer, unlike transient maneuvers.
+Wave changes and dead speakers invalidate buffered facts; remaining counts and
+shield depletion are rechecked before speaking. Reactive activity balancing
+still governs richer calls. `compose(kind,data)` expands templates, and
+`numberWords` supplies spoken numeric fragments before full-line synthesis.
+AI fighters have no shields; only the real player shield pool produces shield
+callouts. Hull vulnerability is explicitly described as hull damage.
+
+`flightComms.contactData(player,point)` projects contacts into the player basis
+using SI distances, rounded 100-meter ranges, clock sectors and elevation.
+Acquisition uses 2.5 km entry / 3 km exit hysteresis. A newly acquired contact
+can offer a report; subsequent reports need a changed sector/range and 30 seconds
+since its previous announcement. Only the nearest new contact is offered per
+frame. Pending reports are deduplicated, expire with other facts, and revalidate
+target survival, range and current geometry before playback. Contact airtime
+has an 18-second base cooldown plus the usual recent-activity penalty.
+
+The comms mount exposes `speakerId()`, the active transmission's craft ID or
+null for control/anonymous chatter. It clears on completion, pause, mute and
+reset; muted subsequent calls use the estimated speech duration. Flight HUD
+contacts pass a `speaking` flag to radar. `flightRadar.speakerHalo` draws a shared
+white ring with dark underlay on the radar tip, ship marker or edge arrow,
+preserving faction and selected-target colors.
+
+Comms line choice uses a bounded 24-record `recentLines` history of rendered
+text and template keys. `compose` retains source keys on its returned array;
+`pickLine` scores exact-text and template matches by frequency and recency,
+selects randomly among the lowest scores, and avoids immediate exact repeats
+when alternatives exist. This history is global across speakers, clears on
+reset, and permits singleton choices. Work is bounded by variants times 24.

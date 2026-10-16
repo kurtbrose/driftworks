@@ -8,7 +8,12 @@
   function length(v){return Math.hypot.apply(null,v);}
   function unit(v){var n=length(v);return n>1e-8?scale(v,1/n):[0,1,0];}
   function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
-  function create(mode){return {mode:mode||'training',roundOver:false,enabled:true,time:0,wave:0,countdown:3,enemies:[],wrecks:[],kills:0,shield:120,hull:100,lastHit:-100,hitFlash:0,dead:false,targetId:null,slots:[],slotTimer:0,flashes:[]};}
+  function create(mode){return {mode:mode||'training',roundOver:false,enabled:true,time:0,wave:0,countdown:3,enemies:[],wrecks:[],kills:0,shield:120,hull:100,lastHit:-100,hitFlash:0,dead:false,targetId:null,slots:[],slotTimer:0,flashes:[],radioEvents:[],radioSerial:0,playerKills:0};}
+  function radioEvent(t,event){
+    t.radioEvents=t.radioEvents||[];t.radioSerial=(t.radioSerial||0)+1;
+    event.serial=t.radioSerial;event.time=t.time;event.wave=t.wave;t.radioEvents.push(event);
+    if(t.radioEvents.length>64)t.radioEvents.shift();
+  }
   function alive(t){return t.enemies.filter(function(e){return e.hp>0;});}
   function face(pose,direction){var forward=unit(direction),reference=Math.abs(forward[2])>.95?[0,1,0]:[0,0,1];pose.right=unit(cross(forward,reference));pose.up=unit(cross(pose.right,forward));pose.back=scale(forward,-1);}
   // Constant-speed intercept in SI seconds, using world-space target velocity.
@@ -74,12 +79,16 @@
   function damagePlayer(t,weapon){
     if(t.dead)return;
     var shieldDamage=weapon.damage*weapon.shieldFactor,absorbed=Math.min(t.shield,shieldDamage);
+    var shieldBefore=t.shield;
     t.shield-=absorbed;t.hull=Math.max(0,t.hull+(-weapon.damage*weapon.armorFactor)*(1-(shieldDamage>0?absorbed/shieldDamage:0)));
+    if(shieldBefore>0&&t.shield<=0)radioEvent(t,{kind:'shield',victim:'player',team:'ally'});
     t.lastHit=t.time;t.hitFlash=.35;if(t.hull<=0)t.dead=true;
   }
-  function damageEnemy(t,e,weapon){
+  function damageEnemy(t,e,weapon,shooter){
     if(e.hp<=0)return;e.hp=Math.max(0,e.hp-weapon.damage*weapon.armorFactor);e.damagedAt=t.time;
     if(e.hp<=0){
+      if(shooter==='player')t.playerKills=(t.playerKills||0)+1;
+      radioEvent(t,{kind:'destroyed',victim:e.id,team:e.team||'enemy',index:e.index,killer:typeof shooter==='object'?shooter.id:shooter||null});
       var pose={eye:e.pose.eye.slice(),right:e.pose.right.slice(),up:e.pose.up.slice(),back:e.pose.back.slice(),velocity:e.pose.velocity.slice(),throttle:0};
       var axis=unit(add(pose.right,scale(pose.up,e.index%2?-.7:.7)));
       t.wrecks.push({id:e.id+'-wreck',index:e.index,team:e.team,artWave:t.wave,pose:pose,axis:axis,spin:(e.index%2?-1:1)*(.25+(e.index%5)*.09),age:0});
@@ -95,7 +104,17 @@
       alive(t).forEach(function(e){if(e.team===faction)return;var candidate=sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;}}});
     }else if(team==='player')alive(t).forEach(function(e){var candidate=sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;}}});
     if(faction==='enemy'&&!t.dead){var candidate=sphereHit(start,end,player.eye,7/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim='player';}}}
-    if(victim==='player')damagePlayer(t,bolt.weapon);else if(victim)damageEnemy(t,victim,bolt.weapon);
+    if(victim==='player')damagePlayer(t,bolt.weapon);else if(victim)damageEnemy(t,victim,bolt.weapon,shooter||team);
+    // Report close projectile passes, clipped at the first collision so occluded bolts cannot speak.
+    var endPoint=hit||end,delta=sub(endPoint,start),span=dot(delta,delta);
+    function near(pose,entity,id,factionName){
+      if(!pose||span<1e-12||t.time-(entity.nearMissAt===undefined?-100:entity.nearMissAt)<6)return;
+      var fraction=Math.max(0,Math.min(1,dot(sub(pose.eye,start),delta)/span));
+      var meters=length(sub(pose.eye,add(start,scale(delta,fraction))))*U;
+      if(meters>10&&meters<30){entity.nearMissAt=t.time;radioEvent(t,{kind:'near',victim:id,team:factionName});}
+    }
+    alive(t).forEach(function(e){if((e.team||'enemy')!==faction&&victim!==e)near(e.pose,e,e.id,e.team||'enemy');});
+    if(faction==='enemy'&&victim!=='player'&&!t.dead)near(player,t,'player','ally');
     return hit;
   }
   function stepWrecks(t,dt,terrainHit){

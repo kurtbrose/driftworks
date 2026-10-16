@@ -35,7 +35,7 @@
   }
   gunSelect.onchange=gunLabels;
   document.getElementById('restart-training').onclick=function(){pause();reset();document.activeElement.blur();};
-  document.getElementById('combat-toggle').onchange=function(e){combat=DW.training.create(document.getElementById('combat-mode').value);combat.enabled=e.target.checked;if(!combat.enabled){combat.enemies=[];combat.countdown=0;}};
+  document.getElementById('combat-toggle').onchange=function(e){comms.reset();combat=DW.training.create(document.getElementById('combat-mode').value);combat.enabled=e.target.checked;if(!combat.enabled){combat.enemies=[];combat.countdown=0;}};
   function profile(){return model.profiles[Number(select.value)];}
   function labels(){var p=profile();stats.textContent=p.role+'\nCruise / boost '+p.maxVelocity[2]+' / '+p.afterburnerVelocity[2]+' m/s\nAccel / decel '+p.forwardAccel+' / '+p.forwardDecel+' s\nPitch / yaw / roll (s/360°)\n'+p.rotationTime.join(' / ')+'\nDamp / rotdamp '+p.damp+' / '+p.rotdamp;}
   function clear(){keys={};mouse=[0,0];look=[0,0];}
@@ -142,7 +142,7 @@
     var shipDistance=Math.hypot(state.eye[0]-mothership.position.x,state.eye[1]-mothership.position.y,state.eye[2])*units;
     var distance=Math.hypot.apply(null,state.eye),speed=Math.hypot.apply(null,state.velocity);
     telemetry.textContent=speed.toFixed(0)+' m/s   /   '+Math.round(state.throttle*100)+'% THR\n'+Math.round(distance*units)+' m TO CENTER\n'+Math.round(asteroid.radius*2*units)+' m BODY DIAMETER\n'+Math.round(shipDistance)+' m TO MOTHERSHIP\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
-    if(!paused){world.elapsedSeconds+=elapsed;comms.update(elapsed,combat);}
+    if(!paused){world.elapsedSeconds+=elapsed;comms.update(elapsed,combat,state);}
     var livingArt=DW.training.alive(combat).concat(combat.wrecks),actorBatches=[];
     ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),selection=team==='ally'?allyArt.value:artSelect.value;if(!craft.length)return;var batches=selection?DW.shipPackModels.fleetGeometry(craft,selection,combat.wave,units):DW.training.geometry({enemies:craft.map(function(e){return Object.assign({},e,{hp:1});})});batches.forEach(function(batch){actorBatches.push(batch);});});
     scene.setStudyActors(actorBatches);var effectBatches=DW.flightGuns.geometry(DW.training.allGuns(combat,guns),state),engineParts=[];
@@ -173,11 +173,11 @@
       combatHud.strokeStyle='rgba(166,239,222,.3)';combatHud.beginPath();combatHud.arc(cx,cy,range,0,Math.PI*2);combatHud.stroke();combatHud.beginPath();combatHud.arc(cx,cy,range*.08,0,Math.PI*2);combatHud.stroke();
       combatHud.strokeStyle='#a6efde';combatHud.beginPath();combatHud.moveTo(cx,cy);combatHud.lineTo(sx,sy);combatHud.stroke();combatHud.beginPath();combatHud.arc(sx,sy,5,0,Math.PI*2);combatHud.stroke();
     }
-    var living=DW.training.alive(combat),selected=living.find(function(e){return e.id===combat.targetId;});
+    var speakerId=comms.speakerId(),living=DW.training.alive(combat),selected=living.find(function(e){return e.id===combat.targetId;});
     document.getElementById('combat-status').textContent=!combat.enabled?'Free flight':combat.dead?'TRAINING OVER · '+combat.kills+' kills · Restart training':
       (combat.mode==='furball'?'FURBALL '+(combat.wave||1)+' · '+living.filter(function(e){return e.team==='ally';}).length+' allies / '+living.filter(function(e){return e.team==='enemy';}).length+' enemies':'WAVE '+(combat.wave||1)+' · '+living.length+' hostiles')+' · '+combat.kills+' reds down\nSHIELD '+Math.ceil(combat.shield)+' / 120   HULL '+Math.ceil(combat.hull)+' / 100'+(!living.length||combat.roundOver?'\nNext wave in '+Math.max(0,Math.ceil(combat.countdown))+' s':'');
     if(combat.hitFlash>0){combatHud.fillStyle='rgba(255,55,25,'+(combat.hitFlash*.28)+')';combatHud.fillRect(0,0,w,h);}
-    var radarContacts=living.map(function(e){return {point:e.pose.eye,color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId};});
+    var radarContacts=living.map(function(e){return {point:e.pose.eye,color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId,speaking:e.id===speakerId};});
     radarContacts.push({point:[0,0,0],color:'#a6aeb7',landmark:true});
     radarContacts.push({point:[mothership.position.x,mothership.position.y,0],color:'#69cfff',landmark:true});
     DW.flightRadar.draw(combatHud,state,radarContacts,units,radarRanges[radarRangeIndex],w,h,paused);
@@ -188,6 +188,7 @@
       if(q&&Math.abs(q.x)<.9&&Math.abs(q.y)<.78){
         var x=w*(q.x+1)/2,y=h*(1-q.y)/2,r=target?18:12;
         if(e.team==='ally'){combatHud.strokeRect(x-r,y-r,r*2,r*2);}else{combatHud.beginPath();combatHud.moveTo(x,y-r);combatHud.lineTo(x+r,y);combatHud.lineTo(x,y+r);combatHud.lineTo(x-r,y);combatHud.closePath();combatHud.stroke();}
+        if(e.id===speakerId)DW.flightRadar.speakerHalo(combatHud,x,y,r+6);
         combatHud.fillText(Math.round(Math.hypot.apply(null,e.pose.eye.map(function(v,i){return v-state.eye[i];}))*units)+' m',x,y+r+15);
         if(target){combatHud.fillText('ENEMY · '+e.pilot+' · '+e.mode+' · '+Math.ceil(e.hp)+' HP',x,y-r-9);}
       }else{
@@ -195,6 +196,7 @@
         if(Math.abs(dx)+Math.abs(dy)<.0001)dx=1;
         var angle=Math.atan2(dy,dx),edge=Math.min(w*.44/Math.max(.001,Math.abs(Math.cos(angle))),h*.34/Math.max(.001,Math.abs(Math.sin(angle))));
         var x=w/2+Math.cos(angle)*edge,y=h/2+Math.sin(angle)*edge;combatHud.save();combatHud.translate(x,y);combatHud.rotate(angle);combatHud.beginPath();combatHud.moveTo(8,0);combatHud.lineTo(-5,-5);combatHud.lineTo(-5,5);combatHud.closePath();combatHud.stroke();combatHud.restore();
+        if(e.id===speakerId)DW.flightRadar.speakerHalo(combatHud,x,y,13);
       }
     });
     if(selected){var lead=DW.training.intercept(state.eye,selected.pose.eye,selected.pose.velocity.map(function(v){return v/units;}),weapon().speed/units),q=projection(lead.point);if(q&&Math.abs(q.x)<1&&Math.abs(q.y)<1){combatHud.strokeStyle='#a9e5dc';combatHud.setLineDash([2,3]);combatHud.beginPath();combatHud.arc(w*(q.x+1)/2,h*(1-q.y)/2,7,0,Math.PI*2);combatHud.stroke();combatHud.setLineDash([]);}}

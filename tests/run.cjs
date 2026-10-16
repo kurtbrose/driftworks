@@ -3,6 +3,8 @@ const fs = require('fs');
 const vm = require('vm');
 global.window = global;
 global.DRIFTWORKS_TEST_MODE = true;
+// Browser-resource mounts register lifecycle cleanup; headless tests drive it directly.
+global.addEventListener = () => {};
 let failures = 0;
 const summary = {};
 global.document = {
