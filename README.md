@@ -55,6 +55,10 @@ Tuning is intentionally provisional: engines use a 3,000 m/s effective exhaust v
 
 There is intentionally no required Node runtime, npm, package manager, TypeScript, Vite, bundler, transpiler, lockfile, or generated build output. The repository itself is the deployable static artifact.
 
+The root `.nojekyll` file tells GitHub Pages to serve the repository directly,
+without running its Markdown and source files through Jekyll. Keep it in the
+published root.
+
 The flight experiment's script and stylesheet URLs carry content hashes to avoid
 reusing stale browser/CDN assets. After editing those files, run
 `node tools/refresh-flight-assets.cjs` and deploy the updated

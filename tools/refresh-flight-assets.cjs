@@ -10,7 +10,10 @@ const after = before.replace(/(<(?:script|link)\b[^>]*\b(?:src|href)=")([^"?#]+)
   (match, prefix, asset, query, suffix) => {
     if (/^(?:[a-z]+:|\/\/)/i.test(asset) || !/\.(?:js|css)$/.test(asset)) return match;
     const file = path.resolve(path.dirname(page), asset);
-    const version = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex').slice(0, 12);
+    // Git may check text out with CRLF on Windows and LF on Linux. Normalize
+    // only line endings, preserving all other bytes (including legacy encodings).
+    const bytes = fs.readFileSync(file).toString('latin1').replace(/\r\n/g, '\n');
+    const version = crypto.createHash('sha256').update(bytes, 'latin1').digest('hex').slice(0, 12);
     const params = new URLSearchParams(query);
     params.set('v', version);
     return prefix + asset + '?' + params.toString() + suffix;
