@@ -22,6 +22,27 @@
   }
 
   var createFreshWorld = sim.createInitialWorld;
+  test('rubble culling keeps tiles intersecting the emergence range and skips fully buried tiles', function () {
+    var visible=window.Driftworks.scene3d.rubbleTileVisible;
+    assert(visible(.02));assert(visible(.12));assert(!visible(.13));
+    assert(visible(.15,.08));assert(!visible(.2,.08));
+  });
+
+  test('flight frame cap follows 60 Hz on high-refresh screens without accumulating stalls', function () {
+    var perf=window.Driftworks.flightPerformance,clock=perf.pacer(),frames=0;
+    for(var i=0;i<144;i++)if(perf.due(clock,i*1000/144,60))frames++;
+    assert(frames===60);assert(perf.due(clock,10000,60));assert(!perf.due(clock,10001,60));
+    assert(perf.due(clock,10002,0));assert(perf.due(clock,10003,0));
+    clock=perf.pacer();frames=0;for(var j=0;j<144;j++)if(perf.due(clock,j*1000/144,15))frames++;assert(frames===15);
+  });
+  test('flight diagnostics retain a bounded rolling window and a resettable worst frame', function () {
+    var perf=window.Driftworks.flightPerformance,s=perf.create();perf.record(s,100,8);
+    for(var i=0;i<150;i++)perf.record(s,20,2);
+    var result=perf.summary(s);assert(s.frames.length===120 && s.cpu.length===120);
+    assertClose(result.fps,50);assertClose(result.p95,20);assertClose(result.worst,100);assertClose(result.cpu,2);
+    assert(perf.summary(perf.create()).worst===0);
+  });
+
   test('training combat can clear a wave using the same player flight and gun models', function () {
     var ai=window.Driftworks.training,flight=window.Driftworks.arcade,gun=window.Driftworks.flightGuns;
     var player=flight.create(18),t=ai.create(),guns=gun.create(),weapon=window.Driftworks.retailWeapons[0];t.countdown=.01;

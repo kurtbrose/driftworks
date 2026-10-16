@@ -311,3 +311,37 @@ This is an independent, deliberately forgiving AI starting point inspired by
 and [Reynolds' steering behaviors](https://www.red3d.com/cwr/steer/), not an exact
 port of FreeSpace AI or its difficulty tables. Pilot labels describe these lab
 profiles. There are no external runtime dependencies or tactical-save changes.
+
+
+### Flight renderer profiling
+
+Open **Renderer diagnostics** in the flight lab. **P** toggles the debug overlay:
+rolling FPS/frame time and p95 (120 samples), worst interval since reset, CPU work,
+scene submission time, draw calls, submitted triangles, unique drawn GPU meshes,
+material variants, actual WebGL dimensions and effective pixel ratio. Sky draws
+and points are included. Materials are finish/color variants in the custom
+renderer, not separate shader programs. GPU execution time is not measured;
+CPU submission can stay cheap while fragment work keeps the GPU busy.
+
+Flight is capped at 60 FPS by default (30 and uncapped comparison options exist).
+Paused rendering is capped at 15 FPS. The cap only schedules frames; flight,
+weapons and AI continue to use real elapsed time with their existing substeps.
+Long frame intervals are measured before the simulation's 0.1 s stall clamp.
+
+For a controlled comparison, turn training waves off, hold a fixed viewpoint,
+and use Reset measurements after warm-up. Compare Production artwork against:
+Empty space (scene and sky draws disabled), Simple boxes (asteroid/mothership
+geometry), Flat unlit materials (procedural fragment shading bypassed), 50%
+resolution (half width/height, approximately one quarter of the pixels), and the
+boulder/mothership/enemy-model visibility switches. These switches change drawing,
+not gameplay or collision. Sky and scene use the same resolution multiplier.
+There are no dynamic shadow passes in this renderer.
+
+An initial local-browser sample at 1598 x 1191 showed 12 draws / 156,562 submitted
+triangles, including the sky. Hiding the mothership reduced that to 3 draws /
+125,670 triangles. Simple boxes submitted 4 draws / 26 triangles; Empty space
+submitted zero. These are one-view counts, not GPU timings or universal budgets.
+A close-surface sample submitted 31 draws / 195,622 triangles and ran near the
+60 FPS cap; flat shading also reached the cap. These samples do not establish a
+GPU bottleneck. A GPU trace or comparisons on the affected hardware are needed
+before deciding to simplify models or shaders.

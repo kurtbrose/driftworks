@@ -14,6 +14,11 @@
   var state=model.create(asteroid.radius),keys={},paused=true,mouse=[0,0],look=[0,0],previous=0,contact=false;
   model.profiles.forEach(function(p,i){var option=document.createElement('option');option.value=String(i);option.textContent=p.name;select.appendChild(option);});
   var guns=DW.flightGuns.create(),gunSelect=document.getElementById('gun');
+  var performanceTools=DW.flightPerformance,pace=performanceTools.pacer(),measurements=performanceTools.create(),lastStatsUpdate=0;
+  function diagnostics(){return {mode:document.getElementById('render-mode').value,flat:document.getElementById('flat-materials').checked,scale:Number(document.getElementById('render-scale').value),rubble:document.getElementById('draw-rubble').checked,mothership:document.getElementById('draw-mothership').checked,actors:document.getElementById('draw-enemies').checked};}
+  function resetMeasurements(){measurements=performanceTools.create();pace.next=null;previous=0;lastStatsUpdate=0;}
+  ['render-mode','flat-materials','render-scale','fps-cap','draw-rubble','draw-mothership','draw-enemies'].forEach(function(id){document.getElementById(id).addEventListener('change',resetMeasurements);});
+  document.getElementById('perf-reset').onclick=resetMeasurements;
   var combat=DW.training.create();
   function weapon(){return DW.retailWeapons[Number(gunSelect.value)];}
   function gunLabels(){var w=weapon();document.getElementById('gun-stats').textContent=w.speed+' m/s · '+w.fireWait+' s / volley · '+(w.speed*w.lifetime)+' m range';}
@@ -65,6 +70,7 @@
   window.addEventListener('keydown',function(e){
     if(e.code==='Escape'){pause();return;}
     if(/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName))return;
+    if(e.code==='KeyP'&&!e.repeat){var overlayToggle=document.getElementById('perf-enabled');overlayToggle.checked=!overlayToggle.checked;return;}
     if(e.code==='Tab'&&!paused){e.preventDefault();DW.training.cycle(combat);return;}
     if(e.code==='KeyG'&&!e.repeat){gunSelect.selectedIndex=(gunSelect.selectedIndex+1)%gunSelect.options.length;gunLabels();return;}
     if(/^Digit[1-4]$/.test(e.code)){select.value=String(Number(e.code.slice(-1))-1);select.onchange();return;}
@@ -77,7 +83,10 @@
   document.addEventListener('mousemove',function(e){if(!paused&&document.pointerLockElement===host){mouse[0]-=e.movementY;mouse[1]-=e.movementX;}});
   function axis(a,b){return (keys[a]?1:0)-(keys[b]?1:0);}
   function frame(t){
-    var elapsed=previous?Math.min(.1,(t-previous)/1000):0;previous=t;
+    var cap=Number(document.getElementById('fps-cap').value),limit=paused?Math.min(cap||60,15):cap;
+    if(!performanceTools.due(pace,t,limit)){requestAnimationFrame(frame);return;}
+    var frameStart=performance.now();
+    var actualElapsed=previous?(t-previous)/1000:0,elapsed=Math.min(.1,actualElapsed);previous=t;
     var connected=pads(),signature=connected.map(function(p){return p.index+':'+p.id;}).join('|');
     if(signature!==padSignature){
       var selected=device.value;padSignature=signature;device.textContent='';connected.forEach(function(p){var option=document.createElement('option');option.value=String(p.index);option.textContent=p.id;device.appendChild(option);});
@@ -124,7 +133,22 @@
     var distance=Math.hypot.apply(null,state.eye),speed=Math.hypot.apply(null,state.velocity);
     telemetry.textContent=speed.toFixed(0)+' m/s   /   '+Math.round(state.throttle*100)+'% THR\n'+Math.round(distance*units)+' m TO CENTER\n'+Math.round(asteroid.radius*2*units)+' m BODY DIAMETER\n'+Math.round(shipDistance)+' m TO MOTHERSHIP\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
     if(!paused)world.elapsedSeconds+=elapsed;
-    scene.setStudyActors(DW.training.geometry(combat));scene.setStudyEffects(DW.flightGuns.geometry(DW.training.allGuns(combat,guns),state));skybox.render(state);scene.sync(world);scene.render(world,1,0,elapsed);drawCombat();requestAnimationFrame(frame);
+    scene.setStudyActors(DW.training.geometry(combat));scene.setStudyEffects(DW.flightGuns.geometry(DW.training.allGuns(combat,guns),state));var comparison=diagnostics();scene.setStudyDiagnostics(comparison);skybox.render(state,comparison.scale,comparison.mode==='empty');scene.sync(world);scene.render(world,1,0,elapsed);drawCombat();
+    performanceTools.record(measurements,actualElapsed*1000,performance.now()-frameStart);
+    var perfElement=document.getElementById('perf-overlay');perfElement.hidden=!document.getElementById('perf-enabled').checked;
+    if(t-lastStatsUpdate>250){
+      lastStatsUpdate=t;var summary=performanceTools.summary(measurements),render=scene.getRenderStats(),skyStats=skybox.getRenderStats();
+      perfElement.textContent=(paused?'PAUSED / 15 FPS CAP':'FLIGHT / '+(cap?cap+' FPS CAP':'UNCAPPED'))+' · '+comparison.mode+(comparison.flat?' / flat':'')+
+        '\n'+summary.fps.toFixed(1)+' FPS · '+summary.frame.toFixed(1)+' ms/frame'+
+        '\np95 '+summary.p95.toFixed(1)+' ms · worst '+summary.worst.toFixed(1)+' ms'+
+        '\nCPU '+summary.cpu.toFixed(2)+' ms · scene submit '+render.cpuMs.toFixed(2)+' ms'+
+        '\nDraw calls '+(render.drawCalls+skyStats.drawCalls)+' · triangles '+Math.round(render.triangles+skyStats.triangles).toLocaleString()+
+        '\nMeshes '+(render.meshes+skyStats.meshes)+' · material variants '+(render.materials+skyStats.materials)+
+        '\n'+render.width+' × '+render.height+' · pixel ratio '+render.pixelRatio.toFixed(2)+
+        '\nSky points '+skyStats.points+' · shadow passes 0'+
+        '\nCPU timing only; GPU time not measured';
+    }
+    requestAnimationFrame(frame);
   }
   var combatCanvas=document.createElement('canvas');combatCanvas.className='combat-overlay';combatCanvas.setAttribute('aria-hidden','true');document.body.appendChild(combatCanvas);var combatHud=combatCanvas.getContext('2d');
   function drawCombat(){

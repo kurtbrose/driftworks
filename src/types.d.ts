@@ -267,7 +267,8 @@ export type DriftworksNamespace = {
     shaderSource: string;
   };
   scene3d?: {
-    rubbleLod: (diameterPixels: number, remainingTriangles: number) => {level:number; morph:number};
+    rubbleTileVisible: (centerDistance: number, bound?: number) => boolean;
+    rubbleLod: (diameterPixels: number, remainingTriangles: number, maxDetail?: number) => {level:number; morph:number};
     rubblePatch: (asteroid: Asteroid, longitude: number, latitude: number, detail?: number, morphData?: boolean) => Float32Array;
     surfaceFrame: (asteroid: Asteroid, direction: [number, number, number]) => {point: [number, number, number]; normal: [number, number, number]};
     setStudyParameters: (asteroid: Asteroid, parameters: {bulk?: number[]; roughness?: number; craterDepth?: number; heterogeneity?: number}) => AsteroidVisual;
@@ -290,7 +291,11 @@ export type DriftworksNamespace = {
     pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
     inspectionHeight: (world: World) => number;
-    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean}) => {
+    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; rubbleMaxDetail?: number; rubbleTriangleBudget?: number}) => {
+      setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; rubble: boolean; mothership: boolean; actors: boolean}) => void;
+      getRenderStats: () => {drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
+      setStudyActors: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;
+      setStudyEffects: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;
       getOrbit: () => {yaw: number; tilt: number; height?: number};
       setSurfaceCamera: (pose: {eye: [number, number, number]; right: [number, number, number]; up: [number, number, number]; back: [number, number, number]} | null) => void;
       setOrbit: (value: {yaw: number; tilt: number; height?: number}) => void;

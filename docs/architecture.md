@@ -543,3 +543,30 @@ training craft use six triangles each. Soft bolts, hit/death flashes share the
 existing study-effects batches; a separate DOM-owned canvas draws contact
 brackets, off-screen direction cues and a selected-target intercept pip.
 Actor/effect buffers and UI resources stay outside simulation state.
+
+
+### Renderer diagnostics and pacing
+
+`scene3d.getRenderStats` reports actual submitted draw/triangle/line counts,
+unique drawn buffers and finish/color variants, buffer size, pixel ratio, and CPU
+submission duration. Counters are updated at the common draw function; no
+synchronous WebGL state readback or GPU timing is performed. Cached but undrawn
+meshes are excluded. `setStudyDiagnostics` controls study-only normal/empty/boxes
+modes, flat fragment output, resolution scale and layer visibility. Boxes bypass
+mothership detail selection and asteroid material setup; empty mode bypasses
+scene submission and sync mesh generation. Existing resident caches remain
+available when switching back. Non-study scenes retain production rendering.
+
+Flight's sky renderer reports its own two draws / two triangles / 3,200 points;
+the page combines those with scene counters. `experiments/performance.js` owns a
+bounded timing window and a frame pacer. rAF continues to schedule, but skipped
+frames do not simulate or draw. Accepted frames retain real elapsed time for the
+existing simulation substeps and record unclamped display intervals for spikes.
+The default cap is 60 FPS active and 15 paused. The full CPU number includes
+input, simulation, geometry preparation, HUD and submission; it is not GPU time.
+
+Rubble tiles whose center-distance bounds cannot intersect the shader's .085
+normalized emergence range are culled before draw and mesh requests. The .04
+tile bound matches the existing conservative visibility sphere; tiles near the
+fade boundary remain eligible. This avoids invisible, fully buried boulder draws
+at distant cockpit positions without removing close-up surface rocks.

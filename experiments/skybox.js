@@ -31,9 +31,11 @@
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     var image=new Image();image.onload=function(){gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);canvas.dataset.panorama='ready';};image.src='../assets/backgrounds/all-sky-milky-way.jpg';
     function uniforms(p,pose,aspect,dpr){gl.useProgram(p);['right','up','back'].forEach(function(key){gl.uniform3fv(gl.getUniformLocation(p,key),pose[key]);});gl.uniform1f(gl.getUniformLocation(p,'aspect'),aspect);gl.uniform1f(gl.getUniformLocation(p,'focal'),focal);gl.uniform1f(gl.getUniformLocation(p,'pixelRatio'),dpr);}
-    return {render:function(pose){
-      var dpr=Math.min(2,window.devicePixelRatio||1),width=Math.round(host.clientWidth*dpr),height=Math.round(host.clientHeight*dpr);if(!width||!height)return;
+    var stats={drawCalls:0,triangles:0,points:0,meshes:0,materials:0};
+    return {getRenderStats:function(){return stats;},render:function(pose,renderScale,empty){
+      var dpr=Math.min(2,window.devicePixelRatio||1)*(renderScale||1),width=Math.round(host.clientWidth*dpr),height=Math.round(host.clientHeight*dpr);if(!width||!height)return;
       if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}gl.viewport(0,0,width,height);
+      if(empty){gl.clearColor(0,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT);stats={drawCalls:0,triangles:0,points:0,meshes:0,materials:0};return;}stats={drawCalls:2,triangles:2,points:starData.length/4,meshes:2,materials:2};
       gl.disable(gl.BLEND);uniforms(sky,pose,width/height,dpr);gl.bindBuffer(gl.ARRAY_BUFFER,quad);var a=gl.getAttribLocation(sky,'position');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.drawArrays(gl.TRIANGLES,0,6);gl.disableVertexAttribArray(a);
       uniforms(points,pose,width/height,dpr);gl.bindBuffer(gl.ARRAY_BUFFER,starBuffer);a=gl.getAttribLocation(points,'star');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,4,gl.FLOAT,false,0,0);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.drawArrays(gl.POINTS,0,starData.length/4);gl.disableVertexAttribArray(a);
     }};
