@@ -731,7 +731,7 @@
     }
     /** @type {{vertices:Float32Array,color:V3}[]} */ var studyEffects=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{vertices:Float32Array,color:V3}[]} */ var studyActors=[];
+    /** @type {{vertices:Float32Array,color:V3,finish?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     var box = upload(boxMesh());
     var grid = upload(new Float32Array(600));
@@ -1126,6 +1126,7 @@
           if(!batch.vertices.length)return;
           if(!studyActorMeshes[index])studyActorMeshes[index]=upload(new Float32Array(0));
           var mesh=studyActorMeshes[index];gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bufferData(gl.ARRAY_BUFFER,batch.vertices,gl.DYNAMIC_DRAW);mesh.count=batch.vertices.length/6;
+          setFinish(batch.finish || 0);
           draw(mesh,[0,0,0],[1,1,1],0,batch.color);
         });
       }
@@ -1158,8 +1159,8 @@
       setOrbit: function (value) { if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       /** @param {{vertices:Float32Array,color:V3}[]} batches */
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice(0,4);},
-      /** @param {{vertices:Float32Array,color:V3}[]} batches */
-      setStudyActors: function(batches){if(study)studyActors=batches.slice(0,4);},
+      /** @param {{vertices:Float32Array,color:V3,finish?:number}[]} batches */
+      setStudyActors: function(batches){if(study)studyActors=batches.slice(0,8);},
       sync: sync, render: render, consumeCombatEvents: consume,
       resetCombat: function () { effects = []; focus = false; },
       /** @param {World} w @param {number} dt */

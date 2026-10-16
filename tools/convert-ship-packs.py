@@ -17,7 +17,10 @@ for key,author,url in PACKS:
    fields=line.split()
    if not fields: continue
    if fields[0]=='v':
-    x,y,z=map(float,fields[1:4]);points.append([x,-z,y])
+    x,y,z=map(float,fields[1:4])
+    # Quaternius noses point +Z; Mehrasaur noses point -Z.
+    # Rotate Quaternius 180 degrees about up, preserving winding/handedness.
+    points.append([-x,z,y] if key=='quaternius-ultimate-spaceships' else [x,-z,y])
    elif fields[0]=='f':
     indices=[int(v.split('/')[0]) for v in fields[1:]]
     indices=[i-1 if i>0 else len(points)+i for i in indices]

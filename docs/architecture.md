@@ -576,3 +576,16 @@ at distant cockpit positions without removing close-up surface rocks.
 `assets/ships/` keeps each creator pack in its own directory with its untouched ZIP, provenance manifest, source OBJ/MTL subset, and derived `meshes.js`. `tools/convert-ship-packs.py` is an optional offline standard-library converter; deployment needs no build. `experiments/ship-packs.js` transforms normalized meshes into existing study actor batches, shared by the inspection page and flight enemies. Models use one neutral material in this pass; original textures remain archived. Artwork fits an 8.5 m radius inside the training hit sphere, without changing flight or combat rules.
 
 Flight training state accepts a `furball` mode with two eight-ship wings. Craft IDs own committed opponent targets, decisions run at pilot intervals, and the existing arcade controller executes steering. Swept bolts filter same-team hulls and hit the nearest opposing ship or scenery; player fire belongs to the allied team. Round replacement is bounded to 16 craft. Ship artwork and soft bolt effects batch by team (two opaque and four effect batches maximum).
+
+### Flight lab fighter finishes
+
+`experiments/ship-packs.js` keeps the original neutral `geometry` API and offers
+`detailedGeometry` for the flight lab and ship inspection viewer. It caches model-local
+armor seams and flush service stripes, and classifies faces into four shared finishes:
+painted armor, exposed metal, dark glazing and ochre markings. Surface placement is
+heuristic across the CC0 packs, not an authored UV layout. Existing silhouettes and
+source meshes remain intact. Pose transforms batch each finish across a fleet; the
+study renderer accepts eight actor batches (four per team) and optional `finish`
+values using its existing lighting. Friendly square and hostile diamond HUD contacts,
+plus radar colors, carry allegiance independently of hull paint. No runtime assets or
+network dependencies are added.

@@ -19,6 +19,7 @@
   function resetMeasurements(){measurements=performanceTools.create();pace.next=null;previous=0;lastStatsUpdate=0;}
   ['render-mode','flat-materials','render-scale','fps-cap','draw-rubble','draw-mothership','draw-enemies'].forEach(function(id){document.getElementById(id).addEventListener('change',resetMeasurements);});
   document.getElementById('perf-reset').onclick=resetMeasurements;
+  var radarRanges=[1000,2500,5000,10000],radarRangeIndex=2;
   var combat=DW.training.create(document.getElementById('combat-mode').value);
   var artSelect=document.getElementById('enemy-art'),allyArt=document.getElementById('ally-art');DW.shipPackModels.populate(artSelect,true);DW.shipPackModels.populate(allyArt,true);artSelect.value='quaternius-ultimate-spaceships:Challenger';allyArt.value='mehrasaur-3d-spaceships:ship1';
   function artCredit(){var entry=DW.shipPackModels.find(artSelect.value);document.getElementById('art-credit').textContent=entry?entry.pack.author+' / '+entry.model.name+' · '+entry.pack.license+' · '+entry.model.triangles.toLocaleString()+' triangles per ship':'Original six-triangle training hull';}
@@ -79,6 +80,7 @@
     if(e.code==='KeyC'&&!paused){mouse=[0,0];e.preventDefault();return;}
     if(e.code==='KeyP'&&!e.repeat){var overlayToggle=document.getElementById('perf-enabled');overlayToggle.checked=!overlayToggle.checked;return;}
     if(e.code==='Tab'&&!paused){e.preventDefault();DW.training.cycle(combat);return;}
+    if(e.code==='KeyV'&&!e.repeat){radarRangeIndex=(radarRangeIndex+1)%radarRanges.length;e.preventDefault();return;}
     if(e.code==='KeyG'&&!e.repeat){gunSelect.selectedIndex=(gunSelect.selectedIndex+1)%gunSelect.options.length;gunLabels();return;}
     if(/^Digit[1-4]$/.test(e.code)){select.value=String(Number(e.code.slice(-1))-1);select.onchange();return;}
     if(['Space','KeyW','KeyS','KeyX','KeyQ','KeyE','KeyA','KeyD','KeyR','KeyF','ShiftLeft','ShiftRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.code)>=0){e.preventDefault();if(!paused)keys[e.code]=true;}
@@ -141,7 +143,7 @@
     telemetry.textContent=speed.toFixed(0)+' m/s   /   '+Math.round(state.throttle*100)+'% THR\n'+Math.round(distance*units)+' m TO CENTER\n'+Math.round(asteroid.radius*2*units)+' m BODY DIAMETER\n'+Math.round(shipDistance)+' m TO MOTHERSHIP\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
     if(!paused)world.elapsedSeconds+=elapsed;
     var livingArt=DW.training.alive(combat),actorBatches=[];
-    ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),art=DW.shipPackModels.find(team==='ally'?allyArt.value:artSelect.value);if(!craft.length)return;var batches=art?DW.shipPackModels.geometry(art.model,craft.map(function(e){return e.pose;}),units):DW.training.geometry({enemies:craft});batches.forEach(function(batch){batch.color=team==='ally'?[.12,.85,.32]:[.95,.15,.12];actorBatches.push(batch);});});
+    ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),art=DW.shipPackModels.find(team==='ally'?allyArt.value:artSelect.value);if(!craft.length)return;var batches=art?DW.shipPackModels.detailedGeometry(art.model,craft.map(function(e){return e.pose;}),units):DW.training.geometry({enemies:craft});batches.forEach(function(batch){actorBatches.push(batch);});});
     scene.setStudyActors(actorBatches);scene.setStudyEffects(DW.flightGuns.geometry(DW.training.allGuns(combat,guns),state));var comparison=diagnostics();scene.setStudyDiagnostics(comparison);skybox.render(state,comparison.scale,comparison.mode==='empty');scene.sync(world);scene.render(world,1,0,elapsed);drawCombat();
     performanceTools.record(measurements,actualElapsed*1000,performance.now()-frameStart);
     var perfElement=document.getElementById('perf-overlay');perfElement.hidden=!document.getElementById('perf-enabled').checked;
@@ -171,13 +173,17 @@
     document.getElementById('combat-status').textContent=!combat.enabled?'Free flight':combat.dead?'TRAINING OVER · '+combat.kills+' kills · Restart training':
       (combat.mode==='furball'?'FURBALL '+(combat.wave||1)+' · '+living.filter(function(e){return e.team==='ally';}).length+' allies / '+living.filter(function(e){return e.team==='enemy';}).length+' enemies':'WAVE '+(combat.wave||1)+' · '+living.length+' hostiles')+' · '+combat.kills+' reds down\nSHIELD '+Math.ceil(combat.shield)+' / 120   HULL '+Math.ceil(combat.hull)+' / 100'+(!living.length||combat.roundOver?'\nNext wave in '+Math.max(0,Math.ceil(combat.countdown))+' s':'');
     if(combat.hitFlash>0){combatHud.fillStyle='rgba(255,55,25,'+(combat.hitFlash*.28)+')';combatHud.fillRect(0,0,w,h);}
+    var radarContacts=living.map(function(e){return {point:e.pose.eye,color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId};});
+    radarContacts.push({point:[0,0,0],color:'#a6aeb7',landmark:true});
+    radarContacts.push({point:[mothership.position.x,mothership.position.y,0],color:'#69cfff',landmark:true});
+    DW.flightRadar.draw(combatHud,state,radarContacts,units,radarRanges[radarRangeIndex],w,h,paused);
     combatHud.font='12px ui-monospace,monospace';combatHud.textAlign='center';
     function projection(point){return DW.flightSkybox.project(point.map(function(x,i){return x-state.eye[i];}),state,w/h);}
     living.forEach(function(e){
       var q=projection(e.pose.eye),target=e.id===combat.targetId;combatHud.strokeStyle=e.team==='ally'?'#63f58d':target?'#ffe7a3':'#ff655d';combatHud.fillStyle=combatHud.strokeStyle;
       if(q&&Math.abs(q.x)<.9&&Math.abs(q.y)<.78){
         var x=w*(q.x+1)/2,y=h*(1-q.y)/2,r=target?18:12;
-        combatHud.strokeRect(x-r,y-r,r*2,r*2);
+        if(e.team==='ally'){combatHud.strokeRect(x-r,y-r,r*2,r*2);}else{combatHud.beginPath();combatHud.moveTo(x,y-r);combatHud.lineTo(x+r,y);combatHud.lineTo(x,y+r);combatHud.lineTo(x-r,y);combatHud.closePath();combatHud.stroke();}
         combatHud.fillText(Math.round(Math.hypot.apply(null,e.pose.eye.map(function(v,i){return v-state.eye[i];}))*units)+' m',x,y+r+15);
         if(target){combatHud.fillText('ENEMY · '+e.pilot+' · '+e.mode+' · '+Math.ceil(e.hp)+' HP',x,y-r-9);}
       }else{

@@ -21,6 +21,20 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('flight radar uses player basis, meters, spherical range and altitude', function(){
+    var radar=window.Driftworks.flightRadar,state={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+    var front=radar.project(state,[10,25,30],100,1000);
+    assertClose(front.y,-.5);assertClose(front.x,0);assertClose(front.distance,500);
+    assertClose(radar.project(state,[10,15,30],100,1000).y,.5);
+    var elevated=radar.project(state,[13,20,34],100,1000);
+    assertClose(elevated.x,.3);assertClose(elevated.altitude,.4);assertClose(elevated.distance,500);
+    assert(radar.project(state,[18,28,30],100,1000)===null);
+    assertClose(radar.project(state,state.eye,100,1000).distance,0);
+    state.right=[0,1,0];state.back=[1,0,0];
+    assertClose(radar.project(state,[10,25,30],100,1000).x,.5);
+    assertClose(radar.project(state,[20,20,30],100,1000).y,1);
+  });
+
   test('mumble produces deterministic syllables, pauses, and finite bounded audio', function () {
     var api = window.Driftworks.mumble, line = 'Stay close, pilot! Ready?', plan = api.analyze(line, {seed: 42});
     assert(JSON.stringify(plan) === JSON.stringify(api.analyze(line, {seed: 42})));
@@ -62,6 +76,31 @@
   test('imported ship geometry transforms positions and normals without changing the source',function(){
     var api=window.Driftworks.shipPackModels,m=window.Driftworks.shipPacks[0].models[0],original=m.vertices.slice(),pose={eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]};
     var batch=api.geometry(m,[pose,pose],10)[0];assert(batch.vertices.length===m.vertices.length*2);assertClose(batch.vertices[0],3+m.vertices[1]/10,.00001);assertClose(batch.vertices[1],4+m.vertices[0]/10,.00001);assertClose(batch.vertices[3],m.vertices[4],.00001);assert(m.vertices.every(function(v,i){return v===original[i];}));assert(api.geometry(m,[],10)[0].vertices.length===0);
+  });
+
+  test('default fighter noses face pose forward after pack axis conversion',function(){
+    var api=window.Driftworks.shipPackModels;
+    ['mehrasaur-3d-spaceships:ship1','quaternius-ultimate-spaceships:Challenger'].forEach(function(id){
+      var model=api.find(id).model,v=model.vertices,lo=Infinity,hi=-Infinity;
+      for(var i=0;i<v.length;i+=6){lo=Math.min(lo,v[i+1]);hi=Math.max(hi,v[i+1]);}
+      var noseWidth=0,tailWidth=0;
+      for(var j=0;j<v.length;j+=6){if(v[j+1]>hi-(hi-lo)*.1)noseWidth=Math.max(noseWidth,Math.abs(v[j]));if(v[j+1]<lo+(hi-lo)*.1)tailWidth=Math.max(tailWidth,Math.abs(v[j]));}
+      assert(noseWidth<tailWidth*.6,'nose must lead narrow end for '+id);
+      var pose={eye:[3,4,5],right:[1,0,0],back:[0,1,0],up:[0,0,1]},batch=api.geometry(model,[pose],10)[0];
+      var nose=0;for(var k=0;k<v.length;k+=6)if(v[k+1]>v[nose+1])nose=k;
+      assert(batch.vertices[nose+1]<pose.eye[1],'nose must project along -back');
+    });
+  });
+
+  test('fighter finishes retain source geometry and batch all poses with finite normals',function(){
+    var api=window.Driftworks.shipPackModels,pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]};
+    window.Driftworks.shipPacks.forEach(function(pack){pack.models.forEach(function(model){
+      var original=model.vertices.slice(),one=api.detailedGeometry(model,[pose],10),two=api.detailedGeometry(model,[pose,pose],10);
+      assert(one.length===4);var count=0;
+      one.forEach(function(batch,index){assert(batch.vertices.length%18===0);count+=batch.vertices.length;assert(two[index].vertices.length===batch.vertices.length*2);for(var i=0;i<batch.vertices.length;i+=6){for(var a=0;a<6;a++)assert(Number.isFinite(batch.vertices[i+a]));assertClose(Math.hypot.apply(null,batch.vertices.slice(i+3,i+6)),1,.0001);}});
+      assert(count>=original.length&&count<=original.length*7);assert(model.vertices.every(function(v,i){return v===original[i];}));
+      assert(api.detailedGeometry(model,[],10).every(function(b){return b.vertices.length===0;}));
+    });});
   });
 
   test('rubble culling keeps tiles intersecting the emergence range and skips fully buried tiles', function () {

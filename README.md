@@ -283,6 +283,13 @@ browser that supports pointer lock, or use Controller / keyboard mode.
 
 ### Flight training arcade
 
+The bottom-center radar follows your ship's heading and roll: forward is up,
+aft is down, and vertical stems show contacts above or below your flight plane.
+Red dots are hostiles, green dots are allies, and a gold ring marks the Tab-selected
+target. Gray and blue squares mark the asteroid and mothership centers.
+Press **V** to cycle the spherical detection range through 1, 2.5, 5 (default),
+and 10 km. Contacts outside that range disappear; the radar also works in free flight.
+
 The flight lab now starts training waves three seconds after flight resumes.
 Wave 1 contains three simple orange fighters; later waves grow to a maximum of
 six. Destroy the wave and the next arrives after five seconds. **Tab** cycles
