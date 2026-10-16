@@ -441,6 +441,19 @@
     assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
   });
 
+  test('target camera centers a copy, fits hull bounds and caps redraws', function () {
+    var api=window.Driftworks.flightTargetCamera,DW=window.Driftworks,original=DW.scene3d.create,draws=0,batches;
+    DW.scene3d.create=function(){return {setStudyDiagnostics:function(){},setOrbit:function(){},setStudyActors:function(value){batches=value;},setStudyEffects:function(){},sync:function(){},render:function(){draws++;}};};
+    try{
+      var radio=api.mount({clientWidth:210,clientHeight:125}),pose={eye:[50,60,70],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},target={id:'test',index:0,hp:90,pose:pose};
+      radio.update(null,'',1,1,new Map(),undefined,pose,0);assert(draws===0);
+      radio.update(target,'',1,1,new Map(),undefined,pose,0);assert(draws===1&&batches.length===1);assert(pose.eye[0]===50);
+      radio.update(target,'',1,1,new Map(),undefined,pose,.01);assert(draws===1);
+      radio.update(target,'',1,1,new Map(),undefined,pose,.1);assert(draws===2);
+      assert(api.radius({vertices:[3,4,0,0,0,1]})===5);
+    }finally{DW.scene3d.create=original;}
+  });
+
   test('speaker halo draws a white outline with contrast underlay', function () {
     var strokes=[],saved=0,ctx={save:function(){saved++;},restore:function(){saved--;},setLineDash:function(){},beginPath:function(){},arc:function(x,y,r){assert(x===5&&y===9&&r===10);},stroke:function(){strokes.push([this.strokeStyle,this.lineWidth]);}};
     window.Driftworks.flightRadar.speakerHalo(ctx,5,9,10);

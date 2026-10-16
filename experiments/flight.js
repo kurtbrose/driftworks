@@ -22,6 +22,7 @@
   ['render-mode','flat-materials','render-scale','fps-cap','draw-rubble','draw-mothership','draw-enemies'].forEach(function(id){document.getElementById(id).addEventListener('change',resetMeasurements);});
   document.getElementById('perf-reset').onclick=resetMeasurements;
   document.getElementById('dialogue-size').oninput=function(e){document.documentElement.style.setProperty('--dialogue-size',e.target.value+'px');};
+  var targetCamera=DW.flightTargetCamera.mount(document.getElementById('target-camera'));
   var radarRanges=[1000,2500,5000,10000],radarRangeIndex=2;
   var comms=DW.flightComms.mount(document.getElementById('comms'),document.getElementById('comms-voice'));
   var combat=DW.training.create(document.getElementById('combat-mode').value);
@@ -186,7 +187,14 @@
     document.getElementById('speed-value').textContent=Math.round(Math.hypot.apply(null,state.velocity));
     document.getElementById('thrust-value').textContent='THRUST '+Math.round(state.throttle*100)+'%';document.getElementById('thrust-meter').value=state.throttle;
     document.getElementById('weapon-name').textContent=gunSelect.options[gunSelect.selectedIndex].textContent;
-    var targetPanel=document.getElementById('target-info');targetPanel.hidden=!selected;if(selected)targetPanel.textContent=(selected.team==='ally'?'WINGMAN / ':'TARGET / ')+selected.pilot+' / '+Math.ceil(selected.hp)+'% HULL';
+    var targetPanel=document.getElementById('target-info');targetPanel.hidden=!selected;
+    if(selected){
+      var selection=selected.team==='ally'?allyArt.value:artSelect.value,art=DW.shipPackModels.craftModel(selected,selection,combat.wave);
+      document.getElementById('target-label').textContent=(selected.team==='ally'?'WING / ':'TARGET / ')+selected.pilot;
+      document.getElementById('target-detail').textContent=(art.name||'Training fighter')+' / '+Math.round(Math.hypot.apply(null,selected.pose.eye.map(function(v,i){return v-state.eye[i];}))*units)+' m / '+Math.ceil(selected.hp)+'% HULL';
+      document.getElementById('target-hull').value=selected.hp;
+      targetCamera.update(selected,selection,combat.wave,units,shipImages,document.getElementById('faction-paint').checked?DW.shipPackModels.paintColor(document.getElementById(selected.team==='ally'?'ally-color':'enemy-color').value):undefined,state,performance.now()/1000);
+    }
     if(combat.hitFlash>0){combatHud.fillStyle='rgba(255,55,25,'+(combat.hitFlash*.28)+')';combatHud.fillRect(0,0,w,h);}
     var radarContacts=living.map(function(e){return {point:e.pose.eye,color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId,speaking:e.id===speakerId};});
     radarContacts.push({point:[0,0,0],color:'#a6aeb7',landmark:true});
@@ -201,7 +209,11 @@
         if(e.team==='ally'){combatHud.strokeRect(x-r,y-r,r*2,r*2);}else{combatHud.beginPath();combatHud.moveTo(x,y-r);combatHud.lineTo(x+r,y);combatHud.lineTo(x,y+r);combatHud.lineTo(x-r,y);combatHud.closePath();combatHud.stroke();}
         if(e.id===speakerId)DW.flightRadar.speakerHalo(combatHud,x,y,r+6);
         combatHud.fillText(Math.round(Math.hypot.apply(null,e.pose.eye.map(function(v,i){return v-state.eye[i];}))*units)+' m',x,y+r+15);
-        if(target){combatHud.fillText('ENEMY · '+e.pilot+' · '+e.mode+' · '+Math.ceil(e.hp)+' HP',x,y-r-9);}
+        if(target){
+          combatHud.save();combatHud.strokeStyle='#ffe7a3';combatHud.lineWidth=2;combatHud.shadowColor='#000';combatHud.shadowBlur=4;
+          [-1,1].forEach(function(a){[-1,1].forEach(function(b){combatHud.beginPath();combatHud.moveTo(x+a*28,y+b*17);combatHud.lineTo(x+a*28,y+b*28);combatHud.lineTo(x+a*17,y+b*28);combatHud.stroke();});});combatHud.restore();
+          combatHud.fillText((e.team==='ally'?'WING / ':'TARGET / ')+e.pilot,x,y-37);
+        }
       }else{
         var delta=e.pose.eye.map(function(v,i){return v-state.eye[i];}),dx=delta.reduce(function(sum,v,i){return sum+v*state.right[i];},0),dy=-delta.reduce(function(sum,v,i){return sum+v*state.up[i];},0);
         if(Math.abs(dx)+Math.abs(dy)<.0001)dx=1;

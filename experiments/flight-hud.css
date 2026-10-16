@@ -6,3 +6,5 @@ body:not(.flight-active) #comms{visibility:hidden}body.flight-active #comms{bott
 
 /* Radio badge uses geometry rather than a font glyph. */
 #comms:before{background:radial-gradient(circle at center,#afd9d5 0 3px,transparent 4px 8px,#afd9d5 9px 10px,transparent 11px 14px,#afd9d5 15px 16px,transparent 17px),#96d4da19}
+
+#target-info{padding:12px 14px}#target-label{font-size:11px;letter-spacing:.12em;color:#ffe7a3}#target-camera{position:relative;width:100%;height:125px;overflow:hidden;margin:6px 0;background:radial-gradient(ellipse,#17353d88,#061119cc);border-radius:5px}#target-camera canvas{position:absolute;inset:0;width:100%;height:100%}#target-camera .scene3d-controls,#target-camera .night-sky-background{display:none}#target-detail{font-size:10px;line-height:1.6;color:#adc9c6}#target-hull{height:7px} @media(max-width:700px){#target-camera{height:80px}#target-info{width:170px}}
