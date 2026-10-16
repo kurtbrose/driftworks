@@ -362,7 +362,7 @@ Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Sel
 Open `experiments/mumble.html` from the local server for a standalone procedural
 voice preview. Enter speaks the line; Shift+Enter inserts a newline. Choose a
 character and delivery, then adjust pitch, resonance, speaking rate, expression,
-rasp, breathiness, radio color, volume, seed, and enunciation. Lower enunciation
+rasp, slow voice tremor, breathiness, radio color, volume, seed, and enunciation. Lower enunciation
 (default 0.35, labeled Sound retention) drops interior syllables and consonant
 attacks, keeping a sparse first/last vowel signature. Skipped sounds take no
 audio time. Short word-level timing budgets keep long words from dragging. Raise it to 1 for full articulation. Stop interrupts playback.
@@ -392,3 +392,32 @@ Web Audio playback and text/mouth synchronization. No assets, network services,
 AudioWorklet, build step, or game audio changes are needed.
 
 Flight lab mouse steering uses a persistent virtual joystick: displacement from screen center sets pitch/yaw demand, with a radial deadzone and limit. The stick holds when the mouse stops moving. Move back to center or press C to neutralize; pause, reset, or resume also centers it. Esc pauses and releases capture. The HUD shows stick position and travel.
+
+Mumble presets include Scout, Veteran, Navigator, warm/bright women, baritone man,
+Child, Old woman, Old man, Pirate, Ship computer, and Alien. Each combines pitch,
+vocal resonance, texture, and pace. Older voices add a continuous 2 Hz pitch tremor
+(`tremor`, 0–1, default 0); it follows utterance time rather than restarting on each
+syllable. All presets keep the chosen popping synthesis and compact word rhythm.
+
+Transmission selects Local (default, clean playback) or Radio (band-limited voice,
+faint static, 160 ms opening crackle/carrier and 240 ms closing carrier/latch). This is independent
+of character presets and the Radio color timbre slider. `transmit(pcm, sampleRate,
+{mode: "radio", volume, seed, effects})` returns `{samples, speechOffset, duration}` without
+mutating speech PCM. The preview offsets subtitles/mouth timing by `speechOffset`;
+Stop cancels the entire transmission. Effects follow volume, including mute.
+
+Radio effects level adjusts static and squelch independently of voice (0–1,
+default 0.65). Zero disables the noise effects while retaining radio filtering.
+
+Test radio effects only plays the opening burst, half a second of static, and the
+closing burst without speech, at the current voice volume and radio effects level.
+Radio noise is concentrated in the midrange with a short chirping squelch.
+
+The radio carrier hangs for 120 ms after speech before the closing latch, then
+switches off with a 3 ms edge ramp. Opening and closing latches use keyed 28 ms
+noise crackles and short mechanical contact clicks, not vocal swells or vowel
+formants. A steady carrier is stronger during the bookends.
+
+For radio, the preview supplies `speechDuration` to `transmit` at the end of the
+last voiced burst, excluding trailing punctuation silence. Closing static starts
+immediately there; pauses inside the line remain intact. Local timing is unchanged.

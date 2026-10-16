@@ -182,6 +182,69 @@
     assert(JSON.stringify(plan) === JSON.stringify(api.analyze('Keep cool, scout!',{compactWords:true})));
   });
 
+  test('expanded mumble cast renders distinct bounded voices with optional deterministic tremor', function () {
+    var api = window.Driftworks.mumble;
+    ['Child','Woman · warm','Woman · bright','Old woman','Old man','Man · baritone','Pirate','Ship computer'].forEach(function(name) {
+      assert(api.presets[name]);
+      var plan = api.analyze('Hello, pilot!',api.presets[name]), pcm = api.render(plan,8000);
+      assert(pcm.some(function(v) { return v !== 0; }));
+      assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v)<=1; }));
+      assert(plan.voice.compactWords);
+    });
+    var old = api.analyze('Welcome home.',api.presets['Old woman']), dry = JSON.parse(JSON.stringify(old)); dry.voice.tremor = 0;
+    var a = api.render(old,8000), b = api.render(dry,8000), again = api.render(old,8000);
+    assert(a.some(function(v,i) { return Math.abs(v-b[i])>0.01; }));
+    assert(a.every(function(v,i) { return v === again[i]; }));
+    assert(api.analyze('Hi',{tremor:NaN}).voice.tremor === 0);
+    assert(api.analyze('Hi',{tremor:10}).voice.tremor === 1);
+    assert(api.presets.Child.resonance > api.presets['Man · baritone'].resonance);
+  });
+
+  test('radio transmission adds deterministic bookends and quiet static without changing local speech', function () {
+    var api = window.Driftworks.mumble, pcm = api.render(api.analyze('Hello, pilot!'),8000), original = Array.from(pcm);
+    var local = api.transmit(pcm,8000,{mode:'local'}), radio = api.transmit(pcm,8000,{mode:'radio',seed:9,volume:0.6});
+    assert(local.samples === pcm && local.speechOffset === 0);
+    assertClose(radio.speechOffset,0.16); assert(radio.samples.length === pcm.length+3200);
+    assert(radio.samples.slice(0,1280).some(function(v) { return Math.abs(v)>0.001; }));
+    assert(radio.samples.slice(1280+pcm.length).some(function(v) { return Math.abs(v)>0.001; }));
+    assert(radio.samples[0] === 0 && radio.samples[radio.samples.length-1] === 0);
+    var again = api.transmit(pcm,8000,{mode:'radio',seed:9,volume:0.6});
+    assert(radio.samples.every(function(v,i) { return v===again.samples[i] && Number.isFinite(v) && Math.abs(v)<=1; }));
+    assert(pcm.every(function(v,i) { return v===original[i]; }));
+    var silent = api.transmit(new Float32Array(800),8000,{mode:'radio',volume:0}); assert(silent.samples.every(function(v) { return v===0; }));
+    assert(api.transmit(new Float32Array(0),8000,{mode:'radio'}).samples.length===0);
+  });
+
+  test('radio effects level makes squelch and static adjustable independently of voice', function () {
+    var api = window.Driftworks.mumble, pcm = api.render(api.analyze('Hello!'),8000);
+    var off = api.transmit(pcm,8000,{mode:'radio',effects:0}), on = api.transmit(pcm,8000,{mode:'radio',effects:1});
+    assert(off.samples.slice(0,1280).every(function(v) { return v===0; }));
+    assert(on.samples.slice(0,1280).some(function(v) { return Math.abs(v)>0.05; }));
+    var bed = api.transmit(new Float32Array(8000),8000,{mode:'radio',effects:1}), energy = 0;
+    bed.samples.slice(1000,7000).forEach(function(v) { energy+=v*v; });
+    assert(Math.sqrt(energy/6000)>0.01);
+    assert(api.transmit(pcm,8000,{mode:'local',effects:1}).samples===pcm);
+  });
+
+  test('radio carrier hangs after speech before the closing latch', function () {
+    var api=window.Driftworks.mumble, rate=8000, pcm=new Float32Array(rate/2), result=api.transmit(pcm,rate,{mode:'radio',effects:1});
+    var start=Math.round(result.speechOffset*rate)+pcm.length, energy=0;
+    result.samples.slice(start+160,start+800).forEach(function(v) { energy+=v*v; });
+    assert(Math.sqrt(energy/640)>0.015, 'audible carrier must persist through the post-speech beat');
+    assert(result.samples.length-start===1920);
+    assert(result.samples[result.samples.length-1]===0);
+  });
+
+  test('radio closes after the last voiced burst instead of waiting for final punctuation', function () {
+    var api=window.Driftworks.mumble, plan=api.analyze('Wait outside, scout!'), pcm=api.render(plan,8000);
+    var last=plan.events.filter(function(e) { return e.kind==='syllable'; }).pop();
+    var speechDuration=last.start+Math.min(last.duration*0.72,0.075);
+    var radio=api.transmit(pcm,8000,{mode:'radio',speechDuration:speechDuration});
+    assert(speechDuration < plan.duration-0.1);
+    assert(radio.samples.length === Math.ceil(speechDuration*8000)+3200);
+    assert(api.transmit(pcm,8000,{mode:'local',speechDuration:speechDuration}).samples === pcm);
+  });
+
   test('Scout exclamations retain energy without a steep final pitch drop', function () {
     var api = window.Driftworks.mumble;
     [0, 7, 42, 99].forEach(function(seed) {
@@ -228,6 +291,20 @@
     assert(batches.length===4);assert(batches.reduce(function(n,b){return n+b.vertices.length;},0)===expected);
     assert(api.mixedModel(2,1)===api.mixedModel(craft.filter(function(e){return e.index===2;})[0].index,1));
     assert(api.fleetGeometry([],'mixed',1,10).length===0);
+  });
+
+  test('fighter exhaust stays aft, batches finite glow geometry and shuts down on disable',function(){
+    var api=window.Driftworks.shipPackModels,pose={eye:[3,4,5],right:[1,0,0],back:[0,-1,0],up:[0,0,1],throttle:.8};
+    window.Driftworks.shipPacks.forEach(function(pack){pack.models.forEach(function(model){
+      var anchors=api.engineAnchors(model),v=model.vertices,lo=Infinity,hi=-Infinity;
+      for(var i=0;i<v.length;i+=6){lo=Math.min(lo,v[i+1]);hi=Math.max(hi,v[i+1]);}
+      assert(anchors.length>=1&&anchors.length<=2);anchors.forEach(function(p){assert(p.every(Number.isFinite));assert(p[1]<lo+(hi-lo)*.3);});
+      var craft={index:0,hp:90,pose:pose},batch=api.engineGeometry([craft],model.id,1,10,pose,1);
+      assert(batch.vertices.length===anchors.length*72);assert(batch.vertices.every(Number.isFinite));
+      craft.hp=0;assert(api.engineGeometry([craft],model.id,1,10,pose,1).vertices.length===0);
+      craft.hp=90;craft.age=0;assert(api.engineGeometry([craft],model.id,1,10,pose,1).vertices.length===0);
+    });});
+    pose.throttle=0;assert(api.engineGeometry([{hp:90,index:0,pose:pose}],'mixed',1,10,pose,1).vertices.length===0);
   });
 
   test('fighter finishes retain source geometry and batch all poses with finite normals',function(){

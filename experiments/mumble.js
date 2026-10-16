@@ -1,17 +1,25 @@
 (function () {
   'use strict';
-  var defaults = { pitch: 150, resonance: 1, roughness: 0.18, breath: 0.12, speed: 1, pauseScale: 1, compactWords: true, enunciation: 0.35, variation: 0.35, volume: 0.65, radio: 0, seed: 7, emotion: 'neutral' };
+  var defaults = { pitch: 150, resonance: 1, roughness: 0.18, tremor: 0, breath: 0.12, speed: 1, pauseScale: 1, compactWords: true, enunciation: 0.35, variation: 0.35, volume: 0.65, radio: 0, seed: 7, emotion: 'neutral' };
   var presets = {
     Scout: { pitch: 210, resonance: 1.2, roughness: 0.08, breath: 0.1, speed: 1.2 },
     Veteran: { pitch: 95, resonance: 0.8, roughness: 0.45, breath: 0.22, speed: 0.85 },
     Navigator: { pitch: 155, resonance: 1, roughness: 0.1, breath: 0.2, speed: 1 },
+    'Woman · warm': { pitch: 185, resonance: 1.16, roughness: 0.07, breath: 0.22, speed: 1.05 },
+    'Woman · bright': { pitch: 235, resonance: 1.32, roughness: 0.04, breath: 0.12, speed: 1.12 },
+    'Man · baritone': { pitch: 105, resonance: 0.88, roughness: 0.16, breath: 0.12, speed: 0.96 },
+    Child: { pitch: 305, resonance: 1.48, roughness: 0.03, breath: 0.16, speed: 1.22, variation: 0.5 },
+    'Old woman': { pitch: 175, resonance: 1.12, roughness: 0.25, breath: 0.32, speed: 0.92, tremor: 0.75 },
+    'Old man': { pitch: 125, resonance: 0.94, roughness: 0.34, breath: 0.28, speed: 0.88, tremor: 0.65 },
+    Pirate: { pitch: 115, resonance: 0.72, roughness: 0.65, breath: 0.16, speed: 0.98, enunciation: 0.2 },
+    'Ship computer': { pitch: 175, resonance: 1.05, roughness: 0, breath: 0, speed: 1.08, variation: 0, radio: 0.35 },
     Alien: { pitch: 260, resonance: 0.65, roughness: 0.25, breath: 0.06, speed: 1.1 }
   };
   function voice(options) {
     var v = Object.assign({}, defaults, options);
-    ['pitch', 'resonance', 'roughness', 'breath', 'speed', 'variation', 'volume', 'radio', 'pauseScale', 'enunciation', 'seed'].forEach(function (key) { if (!Number.isFinite(v[key])) v[key] = defaults[key]; });
+    ['pitch', 'resonance', 'roughness', 'tremor', 'breath', 'speed', 'variation', 'volume', 'radio', 'pauseScale', 'enunciation', 'seed'].forEach(function (key) { if (!Number.isFinite(v[key])) v[key] = defaults[key]; });
     v.pitch = Math.max(60, Math.min(360, v.pitch)); v.speed = Math.max(0.5, Math.min(2, v.speed)); v.resonance = Math.max(0.5, Math.min(1.6, v.resonance));
-    ['roughness', 'breath', 'variation', 'volume', 'radio', 'pauseScale', 'enunciation'].forEach(function (key) { v[key] = Math.max(0, Math.min(1, v[key])); });
+    ['roughness', 'tremor', 'breath', 'variation', 'volume', 'radio', 'pauseScale', 'enunciation'].forEach(function (key) { v[key] = Math.max(0, Math.min(1, v[key])); });
     return v;
   }
   function random(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t ^= t + Math.imul(t ^ t >>> 7, 61 | t); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -126,7 +134,7 @@
         var curve = event.pitchCurve || [event.pitch, event.pitch, event.pitch];
         var segment = p < 0.5 ? 0 : 1, blend = p < 0.5 ? p * 2 : (p - 0.5) * 2;
         var movingPitch = curve[segment] * Math.pow(curve[segment + 1] / curve[segment], blend);
-        var frequency = movingPitch * (1 + 0.025 * Math.sin(t * 32) + v.roughness * 0.035 * Math.sin(t * 173));
+        var frequency = movingPitch * (1 + 0.025 * Math.sin(t * 32) + v.roughness * 0.035 * Math.sin(t * 173) + (v.tremor || 0) * 0.045 * Math.sin(2 * Math.PI * 2 * (event.start + t)));
         // Move the vocal tract through the syllable instead of holding a static tone.
         var glide = Math.min(1, Math.max(0, (p - 0.15) / 0.7));
         // Flowing speech uses small mouth-shape changes, not a full wah sweep.
@@ -160,6 +168,38 @@
     }
     return pcm;
   }
+  // Contextual transmission is separate from character identity and speech timing.
+  function transmit(samples, sampleRate, options) {
+    options = options || {};
+    if (options.mode !== 'radio' || !samples.length) return { samples: samples, speechOffset: 0, duration: samples.length / sampleRate };
+    if (Number.isFinite(options.speechDuration)) samples = samples.subarray(0, Math.max(0, Math.min(samples.length, Math.ceil(options.speechDuration * sampleRate))));
+    var lead = Math.round(0.16 * sampleRate), tail = Math.round(0.24 * sampleRate);
+    var output = new Float32Array(lead + samples.length + tail);
+    var volume = Number.isFinite(options.volume) ? Math.max(0, Math.min(1, options.volume)) : defaults.volume;
+    var effects = Number.isFinite(options.effects) ? Math.max(0, Math.min(1, options.effects)) : 0.65;
+    var noise = random((options.seed || 0) ^ 0x52414449), low = 0, band = 0, hissLow = 0, noiseBand = 0;
+    for (var i = 0; i < output.length; i++) {
+      var speech = i >= lead && i < lead + samples.length ? samples[i - lead] : 0;
+      low += 0.08 * (speech - low); band += 0.55 * (speech - low - band);
+      var raw = noise() * 2 - 1; hissLow += 0.2 * (raw - hissLow);
+      noiseBand += 0.35 * (raw - hissLow - noiseBand);
+      var hiss = noiseBand * 2, squelch = 0, chirp = 0;
+      var opening = i < lead, closing = i >= lead + samples.length;
+      var edgeTime = opening ? i / sampleRate : (i - lead - samples.length) / sampleRate;
+      // Electrical gate, not a vocal envelope: steady carrier, sharply keyed
+      // crackle bursts, and a brief mechanical contact click at each latch.
+      var latchTime = opening ? edgeTime : edgeTime - 0.12;
+      if ((opening || closing) && latchTime >= 0 && latchTime < 0.028) {
+        squelch = Math.floor(latchTime / 0.004) % 3 === 1 ? 0.12 : 0.65;
+        chirp = Math.exp(-latchTime * 650) * Math.cos(2 * Math.PI * 1800 * latchTime) * 0.24;
+      }
+      var carrier = opening || closing ? 0.16 : 0.075;
+      // Only a 1–3 ms edge ramp prevents digital discontinuities; no soft swell.
+      var fade = Math.min(1, i / (0.001 * sampleRate), (output.length - 1 - i) / (0.003 * sampleRate));
+      output[i] = (Math.tanh(band * 2.2) * 0.65 + volume * effects * (hiss * (carrier + squelch) + chirp)) * fade;
+    }
+    return { samples: output, speechOffset: lead / sampleRate, duration: output.length / sampleRate };
+  }
   window.Driftworks = window.Driftworks || {};
-  window.Driftworks.mumble = { defaults: defaults, presets: presets, analyze: analyze, render: render };
+  window.Driftworks.mumble = { defaults: defaults, presets: presets, analyze: analyze, render: render, transmit: transmit };
 }());

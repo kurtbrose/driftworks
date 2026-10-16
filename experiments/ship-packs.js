@@ -38,7 +38,7 @@
       }
       finishes.set(model,baked);
     }
-    var colors=[[.49,.52,.47],[.17,.20,.22],[.055,.13,.18],[.78,.65,.32]];
+    var colors=[[.68,.71,.65],[.28,.33,.36],[.075,.18,.24],[.88,.74,.39]];
     return baked.map(function(source,index){var batch=geometry({vertices:source},poses,units)[0];batch.color=colors[index];batch.finish=index===1||index===2?1:0;return batch;});
   }
   function mixedModel(index,wave){
@@ -54,9 +54,53 @@
     groups.forEach(function(poses,model){detailedGeometry(model,poses,units).forEach(function(batch,index){if(!merged[index])merged[index]={parts:[],length:0,color:batch.color,finish:batch.finish};merged[index].parts.push(batch.vertices);merged[index].length+=batch.vertices.length;});});
     return merged.map(function(group){var vertices=new Float32Array(group.length),offset=0;group.parts.forEach(function(part){vertices.set(part,offset);offset+=part.length;});return {vertices:vertices,color:group.color,finish:group.finish};});
   }
+  var exhaustCache=new WeakMap();
+  function engineAnchors(model){
+    if(exhaustCache.has(model))return exhaustCache.get(model);
+    var v=model.vertices,minY=Infinity,maxY=-Infinity,maxX=0;
+    for(var i=0;i<v.length;i+=6){minY=Math.min(minY,v[i+1]);maxY=Math.max(maxY,v[i+1]);maxX=Math.max(maxX,Math.abs(v[i]));}
+    var bins=[null,null,null];
+    for(var j=0;j<v.length;j+=18){
+      var x=(v[j]+v[j+6]+v[j+12])/3,y=(v[j+1]+v[j+7]+v[j+13])/3,z=(v[j+2]+v[j+8]+v[j+14])/3;
+      if(v[j+4]>-.55||y>minY+(maxY-minY)*.3)continue;
+      var bin=x<-maxX*.2?0:x>maxX*.2?2:1;
+      if(!bins[bin]||y<bins[bin][1])bins[bin]=[x,y-.06,z];
+    }
+    var anchors=bins[0]&&bins[2]?[bins[0],bins[2]]:bins[1]?[bins[1]]:[bins[0]||bins[2]||[0,minY-.06,0]];
+    exhaustCache.set(model,anchors);return anchors;
+  }
+  function engineGeometry(craft,selection,wave,units,view,time){
+    var data=[];
+    function quad(center,along,side,length,width,opacity){
+      [[-1,-1],[-1,1],[1,1],[-1,-1],[1,1],[1,-1]].forEach(function(uv){
+        for(var a=0;a<3;a++)data.push(center[a]+(along[a]*uv[0]*length+side[a]*uv[1]*width)/units);
+        data.push(uv[0],uv[1],opacity);
+      });
+    }
+    craft.forEach(function(e){
+      if(e.hp<=0||e.age!==undefined||e.pose.throttle<=0)return;
+      var entry=selection==='mixed'?mixedModel(e.index,e.artWave||wave):(find(selection)||{}).model;
+      var anchors=entry?engineAnchors(entry):[[0,-6,0]],p=e.pose;
+      var power=Math.min(1,Math.max(0,p.throttle)),pulse=1+.035*Math.sin(time*23+e.index*2.7);
+      anchors.forEach(function(anchor){
+        var center=p.eye.map(function(x,i){return x+(p.right[i]*anchor[0]-p.back[i]*anchor[1]+p.up[i]*anchor[2])/units;});
+        // Rear-facing halo shrinks from the front; the hull still occludes it.
+        var facing=Math.max(0,p.back.reduce(function(sum,v,i){return sum+v*view.back[i];},0));
+        quad(center,view.up,view.right,1.7*pulse,1.7*pulse,(.3+.7*facing)*(.45+.55*power));
+        var projected=p.back.map(function(v,i){return v-view.back[i]*p.back.reduce(function(sum,n,j){return sum+n*view.back[j];},0);});
+        var size=Math.hypot.apply(null,projected);
+        var along=size>.001?projected.map(function(v){return v/size;}):view.up;
+        var side=[view.back[1]*along[2]-view.back[2]*along[1],view.back[2]*along[0]-view.back[0]*along[2],view.back[0]*along[1]-view.back[1]*along[0]];
+        var tail=(1.8+power*4)*pulse;
+        var plume=center.map(function(v,i){return v+p.back[i]*tail*.45/units;});
+        quad(plume,along,side,Math.max(.7,tail*.65*size),.65+power*.35,.6+power*.35);
+      });
+    });
+    return {vertices:new Float32Array(data),color:[.25,.65,1]};
+  }
   function populate(select,blockout){
     if(blockout){var option=document.createElement('option');option.value='';option.textContent='Driftworks · training blockout';select.appendChild(option);}
     (DW.shipPacks||[]).forEach(function(pack){var group=document.createElement('optgroup');group.label=pack.author+' / '+pack.id;pack.models.forEach(function(model){var option=document.createElement('option');option.value=model.id;option.textContent=model.name+' · '+model.triangles.toLocaleString()+' tris';group.appendChild(option);});select.appendChild(group);});
   }
-  DW.shipPackModels={find:find,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,populate:populate};
+  DW.shipPackModels={find:find,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,engineAnchors:engineAnchors,engineGeometry:engineGeometry,populate:populate};
 }());
