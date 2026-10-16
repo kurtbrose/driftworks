@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var api = window.Driftworks.mumble, byId = function (id) { return document.getElementById(id); }, context, source, frame, generation = 0;
-  var fields = [['pitch', 'Pitch', 60, 360, 1], ['resonance', 'Vocal size / resonance', 0.5, 1.6, 0.01], ['speed', 'Speaking rate', 0.5, 2, 0.01], ['enunciation', 'Sound retention (low = skip syllables)', 0, 1, 0.01], ['variation', 'Pitch expression', 0, 1, 0.01], ['roughness', 'Rasp', 0, 1, 0.01], ['tremor', 'Slow voice tremor', 0, 1, 0.01], ['breath', 'Breathiness', 0, 1, 0.01], ['radio', 'Radio color', 0, 1, 0.01], ['volume', 'Volume', 0, 1, 0.01]];
+  var fields = [['pitch', 'Pitch', 60, 360, 1], ['resonance', 'Vocal size / resonance', 0.5, 1.6, 0.01], ['speed', 'Speaking rate', 0.5, 2, 0.01], ['enunciation', 'Sound retention (low = skip syllables)', 0, 1, 0.01], ['variation', 'Pitch expression', 0, 1, 0.01], ['roughness', 'Rasp', 0, 1, 0.01], ['tremor', 'Slow voice tremor', 0, 1, 0.01], ['breath', 'Breathiness', 0, 1, 0.01], ['volume', 'Volume', 0, 1, 0.01]];
   fields.forEach(function (field) {
     var row = document.createElement('div'); row.className = 'control';
     var label = document.createElement('label'); label.htmlFor = field[0]; label.textContent = field[1];

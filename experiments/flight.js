@@ -20,6 +20,7 @@
   ['render-mode','flat-materials','render-scale','fps-cap','draw-rubble','draw-mothership','draw-enemies'].forEach(function(id){document.getElementById(id).addEventListener('change',resetMeasurements);});
   document.getElementById('perf-reset').onclick=resetMeasurements;
   var radarRanges=[1000,2500,5000,10000],radarRangeIndex=2;
+  var comms=DW.flightComms.mount(document.getElementById('comms'),document.getElementById('comms-voice'));
   var combat=DW.training.create(document.getElementById('combat-mode').value);
   var artSelect=document.getElementById('enemy-art'),allyArt=document.getElementById('ally-art');DW.shipPackModels.populate(artSelect,true);DW.shipPackModels.populate(allyArt,true);[artSelect,allyArt].forEach(function(select){var option=document.createElement('option');option.value='mixed';option.textContent='Mixed fleet � all ship models';select.insertBefore(option,select.firstChild);select.value='mixed';});
   function artCredit(){var entry=DW.shipPackModels.find(artSelect.value);document.getElementById('art-credit').textContent=artSelect.value==='mixed'?'Mixed fleet � both CC0 libraries � changes each wave':entry?entry.pack.author+' / '+entry.model.name+' · '+entry.pack.license+' · '+entry.model.triangles.toLocaleString()+' triangles per ship':'Original six-triangle training hull';}
@@ -38,9 +39,9 @@
   function profile(){return model.profiles[Number(select.value)];}
   function labels(){var p=profile();stats.textContent=p.role+'\nCruise / boost '+p.maxVelocity[2]+' / '+p.afterburnerVelocity[2]+' m/s\nAccel / decel '+p.forwardAccel+' / '+p.forwardDecel+' s\nPitch / yaw / roll (s/360°)\n'+p.rotationTime.join(' / ')+'\nDamp / rotdamp '+p.damp+' / '+p.rotdamp;}
   function clear(){keys={};mouse=[0,0];look=[0,0];}
-  function pause(){paused=true;document.body.classList.remove('flight-active');clear();if(document.pointerLockElement===host)document.exitPointerLock();document.body.classList.remove('mouse-captured');status.textContent='Paused · Click Fly to resume';}
+  function pause(){paused=true;comms.pause();document.body.classList.remove('flight-active');clear();if(document.pointerLockElement===host)document.exitPointerLock();document.body.classList.remove('mouse-captured');status.textContent='Paused · Click Fly to resume';}
   function pose(){scene.setSurfaceCamera({eye:state.eye,right:state.right,up:state.up,back:state.back});}
-  function reset(){clear();combat=DW.training.create(document.getElementById('combat-mode').value);combat.enabled=document.getElementById('combat-toggle').checked;guns=DW.flightGuns.create();state=model.create(asteroid.radius);contact=false;pose();}
+  function reset(){clear();comms.reset();combat=DW.training.create(document.getElementById('combat-mode').value);combat.enabled=document.getElementById('combat-toggle').checked;guns=DW.flightGuns.create();state=model.create(asteroid.radius);contact=false;pose();}
   document.getElementById('combat-mode').onchange=function(){pause();reset();};
   select.onchange=function(){reset();labels();banks();};
   document.getElementById('diameter').onchange=function(e){var d=Number(e.target.value);if(!Number.isFinite(d)||d<200||d>4000){e.target.value=String(asteroid.radius*units*2);return;}asteroid.radius=d/2/units;reset();};
@@ -63,7 +64,7 @@
   device.onchange=function(){pause();lastPad=null;var pad=pads().find(function(p){return String(p.index)===device.value;});if(pad){lastPad=pad.index;configure(pad);}};
   document.getElementById('deadzone').onchange=function(e){mapping.deadzone=Math.max(0,Math.min(.5,Number(e.target.value)||0));e.target.value=String(mapping.deadzone);};
   inputMode.onchange=pause;
-  function resume(){if(combat.dead){status.textContent='Training over · Restart training to fly again';return;}DW.audio.unlock();clear();previousButtons={bank:false,pause:false};paused=false;document.body.classList.add('flight-active');document.activeElement.blur();status.textContent='Flight controls active · Esc pauses';}
+  function resume(){if(combat.dead){status.textContent='Training over · Restart training to fly again';return;}DW.audio.unlock();comms.unlock();clear();previousButtons={bank:false,pause:false};paused=false;document.body.classList.add('flight-active');document.activeElement.blur();status.textContent='Flight controls active · Esc pauses';}
   function captureFailure(error){pause();if(error&&error.message)status.dataset.captureError=error.message;else if(!status.dataset.captureError)status.dataset.captureError='Pointer lock rejected by browser';status.textContent='Mouse capture unavailable. Retry Fly or select Controller / keyboard.';}
   document.getElementById('fly').onclick=function(){
     if(combat.dead){status.textContent='Training over · Restart training to fly again';return;}
@@ -141,7 +142,7 @@
     var shipDistance=Math.hypot(state.eye[0]-mothership.position.x,state.eye[1]-mothership.position.y,state.eye[2])*units;
     var distance=Math.hypot.apply(null,state.eye),speed=Math.hypot.apply(null,state.velocity);
     telemetry.textContent=speed.toFixed(0)+' m/s   /   '+Math.round(state.throttle*100)+'% THR\n'+Math.round(distance*units)+' m TO CENTER\n'+Math.round(asteroid.radius*2*units)+' m BODY DIAMETER\n'+Math.round(shipDistance)+' m TO MOTHERSHIP\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
-    if(!paused)world.elapsedSeconds+=elapsed;
+    if(!paused){world.elapsedSeconds+=elapsed;comms.update(elapsed,combat);}
     var livingArt=DW.training.alive(combat).concat(combat.wrecks),actorBatches=[];
     ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),selection=team==='ally'?allyArt.value:artSelect.value;if(!craft.length)return;var batches=selection?DW.shipPackModels.fleetGeometry(craft,selection,combat.wave,units):DW.training.geometry({enemies:craft.map(function(e){return Object.assign({},e,{hp:1});})});batches.forEach(function(batch){actorBatches.push(batch);});});
     scene.setStudyActors(actorBatches);var effectBatches=DW.flightGuns.geometry(DW.training.allGuns(combat,guns),state),engineParts=[];

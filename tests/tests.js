@@ -21,6 +21,73 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('flight comms spaces lines and uses living combatants', function () {
+    var api=window.Driftworks.flightComms, clock=api.create(), combat={enabled:true,dead:false,hull:100,enemies:[{hp:10,team:'enemy'}]}, rng=function(){return 0;};
+    assert(api.step(clock,3,combat,false,rng)===null);
+    assert(api.step(clock,1,combat,true,rng)===null);
+    var first=api.step(clock,2,combat,false,rng);assert(first.hostile && first.voice==='Pirate');
+    assert(api.step(clock,17,combat,false,rng)===null);
+    assert(api.step(clock,1,combat,false,rng).text!==first.text);
+    combat.enemies[0].hp=0;assert(!api.step(clock,18,combat,false,rng).hostile);
+    combat.enemies=[{hp:10,team:'ally'}];assert(api.step(clock,18,combat,false,rng).voice==='Scout');
+    combat.hull=20;assert(api.step(clock,18,combat,false,rng).text.indexOf('Shields')>=0);
+    combat.enabled=false;assert(api.step(clock,18,combat,false,rng).voice==='Navigator');
+    combat.dead=true;assert(api.step(clock,30,combat,false,rng)===null);
+    assert(api.create().wait===4);
+  });
+
+  test('flight comms reacts to transitions after two quiet seconds without stale calls', function () {
+    var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0;};
+    var wing={id:'wing',index:0,team:'ally',hp:90,mode:'approach'};
+    var combat={enabled:true,dead:false,hull:100,enemies:[wing]};
+    assert(api.step(clock,0,combat,false,rng)===null); // Establish a baseline, not a spawn call.
+    wing.mode='attack';var call=api.step(clock,0,combat,false,rng);
+    assert(call.craftId==='wing' && call.mode==='attack' && call.text==="I've got him!");
+    wing.mode='break';assert(api.step(clock,1,combat,true,rng)===null);
+    assert(api.step(clock,2,combat,false,rng)===null); // Dropped transition never queues.
+    wing.mode='recover';assert(api.step(clock,0,combat,false,rng)===null); // Per-pilot cooldown.
+    api.step(clock,7,combat,false,rng);wing.mode='reposition';
+    assert(api.step(clock,0,combat,false,rng).mode==='reposition');
+    wing.mode='attack';api.step(clock,1,combat,true,rng);
+    clock.quietGap=2;
+    var bandit={id:'red',team:'enemy',hp:90,mode:'attack'};combat.enemies.push(bandit);
+    api.step(clock,1,combat,false,rng);bandit.mode='break';
+    assert(api.step(clock,0.9,combat,false,rng)===null);
+    bandit.mode='recover';assert(api.step(clock,0.1,combat,false,rng).craftId==='red');
+    combat.enemies=[];api.step(clock,0,combat,false,rng);
+    assert(Object.keys(clock.modes).length===0 && Object.keys(clock.spoken).length===0);
+  });
+
+  test('flight comms prioritizes distress and checks tail geometry', function () {
+    var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0;};
+    var wing={id:'wing',team:'ally',hp:90,mode:'attack',pose:{eye:[0,0,0],back:[0,0,1]}};
+    var red={id:'red',team:'enemy',hp:90,mode:'approach',targetId:'wing',pose:{eye:[0,0,5]}};
+    var combat={enabled:true,dead:false,hull:100,enemies:[red,wing]};
+    api.step(clock,0,combat,false,rng);red.mode='attack';wing.mode='evade';
+    var call=api.step(clock,0,combat,false,rng);
+    assert(call.craftId==='wing' && call.text.indexOf('tail')>=0);
+    clock=api.create();wing.mode='attack';api.step(clock,0,combat,false,rng);
+    red.pose.eye=[0,0,-5];wing.mode='evade';
+    assert(api.step(clock,0,combat,false,rng).text.indexOf('tail')<0);
+    clock=api.create();wing.mode='attack';api.step(clock,0,combat,false,rng);
+    wing.mode='evade';wing.hp=0;assert(api.step(clock,0,combat,false,rng)===null);
+  });
+
+  test('flight comms varies gaps and describes firing and target changes', function () {
+    var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0.8;};
+    var red={id:'red',hp:90,team:'enemy',mode:'attack',targetId:'one',fire:false};
+    var combat={enabled:true,dead:false,hull:100,enemies:[red]};
+    api.step(clock,0,combat,false,rng);red.fire=true;
+    assert(api.step(clock,0,combat,false,rng).event==='firing');
+    assertClose(clock.quietGap,3.14);
+    api.step(clock,1,combat,true,rng);red.fire=false;
+    assert(api.step(clock,2,combat,false,rng)===null);
+    api.step(clock,8,combat,false,rng);red.targetId='two';
+    assert(api.step(clock,0,combat,false,function(){return 0;}).event==='target');
+    assertClose(clock.quietGap,0.9);
+    assert(api.step(clock,5,combat,false,rng)===null); // No replay when the action stays unchanged.
+  });
+
   test('flight radar uses player basis, meters, spherical range and altitude', function(){
     var radar=window.Driftworks.flightRadar,state={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     var front=radar.project(state,[10,25,30],100,1000);
@@ -49,8 +116,14 @@
     assert(api.render(api.analyze('')).length === 0);
     assert(api.analyze('x'.repeat(900)).text.length === 600);
     assert(api.analyze('Hello', {pitch: NaN, speed: -1}).duration > 0);
-    var muted = api.render(api.analyze('Quiet!', {volume: 0, radio: 1})); assert(muted.every(function(v) { return v === 0; }));
+    var muted = api.render(api.analyze('Quiet!', {volume: 0})); assert(muted.every(function(v) { return v === 0; }));
     assert(api.analyze('你好, pilot 👋').events.length > 0);
+  });
+  test('retired radio color does not alter synthesized speech', function () {
+    var api = window.Driftworks.mumble, clean = api.render(api.analyze('Ready, pilot!', {seed: 42}), 8000);
+    var legacy = api.render(api.analyze('Ready, pilot!', {seed: 42, radio: 1}), 8000);
+    assert(clean.length === legacy.length);
+    assert(clean.every(function (value, i) { return value === legacy[i]; }));
   });
   test('low enunciation compresses syllables and preserves complete text coverage', function () {
     var api = window.Driftworks.mumble, text = 'Navigation communication, ready?', clear = api.analyze(text, {enunciation: 1, compactWords:false}), loose = api.analyze(text, {enunciation: 0, compactWords:false});

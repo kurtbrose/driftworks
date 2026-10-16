@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  var defaults = { pitch: 150, resonance: 1, roughness: 0.18, tremor: 0, breath: 0.12, speed: 1, pauseScale: 1, compactWords: true, enunciation: 0.35, variation: 0.35, volume: 0.65, radio: 0, seed: 7, emotion: 'neutral' };
+  var defaults = { pitch: 150, resonance: 1, roughness: 0.18, tremor: 0, breath: 0.12, speed: 1, pauseScale: 1, compactWords: true, enunciation: 0.35, variation: 0.35, volume: 0.65, seed: 7, emotion: 'neutral' };
   var presets = {
     Scout: { pitch: 210, resonance: 1.2, roughness: 0.08, breath: 0.1, speed: 1.2 },
     Veteran: { pitch: 95, resonance: 0.8, roughness: 0.45, breath: 0.22, speed: 0.85 },
@@ -12,14 +12,14 @@
     'Old woman': { pitch: 175, resonance: 1.12, roughness: 0.25, breath: 0.32, speed: 0.92, tremor: 0.75 },
     'Old man': { pitch: 125, resonance: 0.94, roughness: 0.34, breath: 0.28, speed: 0.88, tremor: 0.65 },
     Pirate: { pitch: 115, resonance: 0.72, roughness: 0.65, breath: 0.16, speed: 0.98, enunciation: 0.2 },
-    'Ship computer': { pitch: 175, resonance: 1.05, roughness: 0, breath: 0, speed: 1.08, variation: 0, radio: 0.35 },
+    'Ship computer': { pitch: 175, resonance: 1.05, roughness: 0, breath: 0, speed: 1.08, variation: 0 },
     Alien: { pitch: 260, resonance: 0.65, roughness: 0.25, breath: 0.06, speed: 1.1 }
   };
   function voice(options) {
     var v = Object.assign({}, defaults, options);
-    ['pitch', 'resonance', 'roughness', 'tremor', 'breath', 'speed', 'variation', 'volume', 'radio', 'pauseScale', 'enunciation', 'seed'].forEach(function (key) { if (!Number.isFinite(v[key])) v[key] = defaults[key]; });
+    ['pitch', 'resonance', 'roughness', 'tremor', 'breath', 'speed', 'variation', 'volume', 'pauseScale', 'enunciation', 'seed'].forEach(function (key) { if (!Number.isFinite(v[key])) v[key] = defaults[key]; });
     v.pitch = Math.max(60, Math.min(360, v.pitch)); v.speed = Math.max(0.5, Math.min(2, v.speed)); v.resonance = Math.max(0.5, Math.min(1.6, v.resonance));
-    ['roughness', 'tremor', 'breath', 'variation', 'volume', 'radio', 'pauseScale', 'enunciation'].forEach(function (key) { v[key] = Math.max(0, Math.min(1, v[key])); });
+    ['roughness', 'tremor', 'breath', 'variation', 'volume', 'pauseScale', 'enunciation'].forEach(function (key) { v[key] = Math.max(0, Math.min(1, v[key])); });
     return v;
   }
   function random(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t ^= t + Math.imul(t ^ t >>> 7, 61 | t); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -162,10 +162,6 @@
         pcm[start + i] += Math.tanh(value * (1 + v.roughness)) * (flowing ? 0.38 : 0.48) * v.volume;
       }
     });
-    if (v.radio) {
-      var low = 0, band = 0;
-      for (var n = 0; n < pcm.length; n++) { low += 0.09 * (pcm[n] - low); band += 0.5 * (pcm[n] - low - band); pcm[n] = pcm[n] * (1 - v.radio) + Math.tanh(band * 3) * 0.5 * v.radio; }
-    }
     return pcm;
   }
   // Contextual transmission is separate from character identity and speech timing.

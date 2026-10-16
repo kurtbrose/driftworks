@@ -11,7 +11,7 @@ global.document = {
   },
   createElement: () => ({ appendChild: () => {} })
 };
-for (const file of ['src/propulsion.js', 'src/combat.js', 'src/logistics.js', 'src/formations.js', 'src/sim.js', 'src/population.js', 'src/session.js', 'src/tactical/camera.js', 'src/audio.js', 'src/hud.js', 'src/scene3d.js', 'src/game.js', 'tests/scenario.js', 'tests/population-tests.js', 'experiments/retail-profiles.js', 'experiments/skybox.js', 'experiments/retail-weapons.js', 'experiments/guns.js', 'experiments/training.js', 'experiments/performance.js', 'experiments/input.js', 'experiments/flight-model.js', 'experiments/radar.js', 'assets/ships/mehrasaur-3d-spaceships/meshes.js', 'assets/ships/quaternius-ultimate-spaceships/meshes.js', 'experiments/ship-packs.js', 'experiments/mumble.js', 'tests/tests.js']) {
+for (const file of ['src/propulsion.js', 'src/combat.js', 'src/logistics.js', 'src/formations.js', 'src/sim.js', 'src/population.js', 'src/session.js', 'src/tactical/camera.js', 'src/audio.js', 'src/hud.js', 'src/scene3d.js', 'src/game.js', 'tests/scenario.js', 'tests/population-tests.js', 'experiments/retail-profiles.js', 'experiments/skybox.js', 'experiments/retail-weapons.js', 'experiments/guns.js', 'experiments/training.js', 'experiments/performance.js', 'experiments/input.js', 'experiments/flight-model.js', 'experiments/radar.js', 'assets/ships/mehrasaur-3d-spaceships/meshes.js', 'assets/ships/quaternius-ultimate-spaceships/meshes.js', 'experiments/ship-packs.js', 'experiments/mumble.js', 'experiments/flight-comms.js', 'tests/tests.js']) {
   vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: file });
 }
 console.log(summary.textContent);

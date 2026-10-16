@@ -362,7 +362,7 @@ Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Sel
 Open `experiments/mumble.html` from the local server for a standalone procedural
 voice preview. Enter speaks the line; Shift+Enter inserts a newline. Choose a
 character and delivery, then adjust pitch, resonance, speaking rate, expression,
-rasp, slow voice tremor, breathiness, radio color, volume, seed, and enunciation. Lower enunciation
+rasp, slow voice tremor, breathiness, volume, seed, and enunciation. Lower enunciation
 (default 0.35, labeled Sound retention) drops interior syllables and consonant
 attacks, keeping a sparse first/last vowel signature. Skipped sounds take no
 audio time. Short word-level timing budgets keep long words from dragging. Raise it to 1 for full articulation. Stop interrupts playback.
@@ -401,7 +401,7 @@ syllable. All presets keep the chosen popping synthesis and compact word rhythm.
 
 Transmission selects Local (default, clean playback) or Radio (band-limited voice,
 faint static, 160 ms opening crackle/carrier and 240 ms closing carrier/latch). This is independent
-of character presets and the Radio color timbre slider. `transmit(pcm, sampleRate,
+of character presets. `transmit(pcm, sampleRate,
 {mode: "radio", volume, seed, effects})` returns `{samples, speechOffset, duration}` without
 mutating speech PCM. The preview offsets subtitles/mouth timing by `speechOffset`;
 Stop cancels the entire transmission. Effects follow volume, including mute.
@@ -421,3 +421,11 @@ formants. A steady carrier is stronger during the bookends.
 For radio, the preview supplies `speechDuration` to `transmit` at the end of the
 last voiced burst, excluding trailing punctuation silence. Closing static starts
 immediately there; pauses inside the line remain intact. Local timing is unchanged.
+
+The flight lab has a lower-left comms panel with control chatter, wingmate calls,
+and hostile taunts using local mumble voices and radio effects. Lines begin after
+four active flight seconds, then ambient chatter is spaced 18-30 seconds apart.
+AI maneuver changes, firing runs, and target switches trigger short pilot
+callouts. Clear-channel gaps vary from roughly one to four seconds; distress
+takes priority, speakers take turns, and each pilot has a ten-second cooldown. Pause stops
+speech; **Voice on/off** mutes speech while keeping subtitles.

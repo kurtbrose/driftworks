@@ -613,3 +613,18 @@ anchor into one additive effect batch shared by both teams. Camera-facing quads
 use the existing soft emissive shader and depth testing; they are visual cues,
 not dynamic lights or bloom. Disabled/idle craft emit no exhaust. The study effect
 budget is five batches (the existing four gun/impact batches plus engines).
+
+Flight lab communications live in `experiments/flight-comms.js`. The pure
+`create`/`step` scheduler consumes active flight seconds and living training
+combatants. `mount` owns subtitles and a gesture-unlocked Web Audio context,
+using `mumble.js` synthesis and radio processing. Only one voice plays at a
+time; pause, reset, and page exit stop playback. Comms state is not persisted.
+
+Comms observes living craft mode transitions each flight frame (attack, evade,
+break, recover, reposition). It records transitions even while blocked and
+drops those calls rather than queuing stale maneuvers. Reactive calls require
+a varied 0.9-3.7 seconds of clear channel and ten seconds since that pilot last spoke; distress
+precedes other transitions. Firing starts and target switches also offer calls,
+and another speaker is preferred when several pilots have something to say. Speaker labels identify craft and maneuver. Tail
+calls additionally require a pursuing opponent behind the speaker. Muted
+subtitles reserve the estimated speech duration too. Reset clears observations.
