@@ -687,9 +687,22 @@
 
   var createFreshWorld = sim.createInitialWorld;
   test('imported ship libraries retain distinct provenance and bounded valid geometry', function(){
-    var packs=window.Driftworks.shipPacks,ids={};assert(packs.length===2);assert(packs[0].models.length===10);assert(packs[1].models.length===11);
+    var packs=window.Driftworks.shipPacks,ids={};assert(packs.length===1);assert(packs[0].id==='quaternius-ultimate-spaceships');assert(packs[0].models.length===11);
     packs.forEach(function(pack){assert(pack.license==='CC0-1.0');assert(pack.url.indexOf('https://')===0);pack.models.forEach(function(m){assert(!ids[m.id]);ids[m.id]=true;assert(m.id.indexOf(pack.id+':')===0);assert(m.sha256.length===64);assert(m.vertices.length===m.triangles*18);for(var i=0;i<m.vertices.length;i+=6){assert(Math.hypot.apply(null,m.vertices.slice(i,i+3))<=8.50001);assertClose(Math.hypot.apply(null,m.vertices.slice(i+3,i+6)),1,.00001);}});});
     assert(window.Driftworks.shipPackModels.find('missing')===null);
+  });
+  test('Quaternius glTF previews preserve UVs, source normals and bounded geometry',function(){
+    window.Driftworks.shipPacks[0].models.forEach(function(m){
+      var v=m.texturedVertices;assert(v.length%24===0);assert(v.length>=m.triangles*24);assert(m.texture==='textures/'+m.name+'.png');assert(m.gltfSource.endsWith('/'+m.name+'.gltf'));
+      for(var i=0;i<v.length;i+=8){assert(v.slice(i,i+8).every(Number.isFinite));assert(Math.hypot.apply(null,v.slice(i,i+3))<=8.50001);assertClose(Math.hypot.apply(null,v.slice(i+3,i+6)),1,.0001);assert(v[i+6]>=0&&v[i+6]<=1);assert(v[i+7]>=0&&v[i+7]<=1);}
+    });
+  });
+  test('source ship fleets preserve artist UVs and normals across poses without dropping models',function(){
+    var api=window.Driftworks.shipPackModels,models=window.Driftworks.shipPacks[0].models,images=new Map(),craft=[];
+    models.forEach(function(m,i){images.set(m.id,{name:m.name});craft.push({index:i,pose:{eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]}});});
+    var batches=api.sourceFleetGeometry(craft,'mixed',1,10,images);assert(batches.length===11);
+    batches.forEach(function(b,i){var v=models[i].texturedVertices;assert(b.stride===8);assert(b.texture===images.get(models[i].id));assert(b.vertices.length===v.length);assertClose(b.vertices[0],3+v[1]/10,.00001);assertClose(b.vertices[1],4+v[0]/10,.00001);assertClose(b.vertices[3],v[4],.00001);for(var j=0;j<v.length;j+=8){assertClose(b.vertices[j+6],v[j+6],.000001);assertClose(b.vertices[j+7],v[j+7],.000001);}});
+    assert(api.sourceFleetGeometry([],'mixed',1,10,images).length===0);
   });
   test('imported ship geometry transforms positions and normals without changing the source',function(){
     var api=window.Driftworks.shipPackModels,m=window.Driftworks.shipPacks[0].models[0],original=m.vertices.slice(),pose={eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]};
@@ -698,7 +711,7 @@
 
   test('default fighter noses face pose forward after pack axis conversion',function(){
     var api=window.Driftworks.shipPackModels;
-    ['mehrasaur-3d-spaceships:ship1','quaternius-ultimate-spaceships:Challenger'].forEach(function(id){
+    ['quaternius-ultimate-spaceships:Challenger'].forEach(function(id){
       var model=api.find(id).model,v=model.vertices,lo=Infinity,hi=-Infinity;
       for(var i=0;i<v.length;i+=6){lo=Math.min(lo,v[i+1]);hi=Math.max(hi,v[i+1]);}
       var noseWidth=0,tailWidth=0;
@@ -710,10 +723,10 @@
     });
   });
 
-  test('mixed fighter fleets cover both libraries, keep assignments and merge finishes',function(){
+  test('mixed fighter fleets cover the Quaternius library, keep assignments and merge finishes',function(){
     var api=window.Driftworks.shipPackModels,seen={},pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},craft=[];
     for(var wave=1;wave<=3;wave++)for(var i=0;i<16;i++){var model=api.mixedModel(i,wave);seen[model.id]=true;assert(api.mixedModel(i,wave)===model);}
-    assert(Object.keys(seen).length===21);
+    assert(Object.keys(seen).length===11);
     for(var j=0;j<8;j++)craft.push({index:j,pose:pose});
     var batches=api.fleetGeometry(craft,'mixed',1,10),expected=0;
     craft.forEach(function(e){api.detailedGeometry(api.mixedModel(e.index,1),[pose],10).forEach(function(b){expected+=b.vertices.length;});});

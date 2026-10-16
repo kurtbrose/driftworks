@@ -658,9 +658,9 @@
     }
     var program = gl.createProgram(); if (!program) throw new Error('Program allocation failed');
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
-      'attribute vec3 aPosition,aNormal,aCoarsePosition,aCoarseNormal,aRockCenter,aBurial; uniform float uMorph,uRubbleFade; uniform vec3 uRubbleEye; varying float vExposure; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; void main(){vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=mix(aCoarsePosition,aPosition,uMorph); vExposure=uRubbleFade>1.5?1.-smoothstep(.025,.085,length(aRockCenter-uRubbleEye)):1.; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=(local-aBurial*(1.-vExposure))*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=mix(aCoarseNormal,aNormal,uMorph)/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
+      'attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal,aCoarsePosition,aCoarseNormal,aRockCenter,aBurial; uniform float uMorph,uRubbleFade; uniform vec3 uRubbleEye; varying float vExposure; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; void main(){vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=mix(aCoarsePosition,aPosition,uMorph); vExposure=uRubbleFade>1.5?1.-smoothstep(.025,.085,length(aRockCenter-uRubbleEye)):1.; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=(local-aBurial*(1.-vExposure))*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=mix(aCoarseNormal,aNormal,uMorph)/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
-      '\nvarying float vExposure; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; uniform vec3 uColor,uBack,uRubbleEye; uniform float uFlat,uRubbleFade,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
+      '\nvarying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured; varying float vExposure; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; uniform vec3 uColor,uBack,uRubbleEye; uniform float uFlat,uRubbleFade,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
       'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
@@ -689,7 +689,7 @@
       'else if(uFinish<4.5){float tank=uFinish>3.5?1.:0.;float localY=p.y-tank*sign(p.y)*6.;float circumference=atan(localY,p.z)*(tank>0.?2.:3.2);float joint=tank>0.?min(abs(x-54.),min(abs(x-58.),abs(x-62.))):min(abs(x-44.),abs(x-53.));weld=shipLine(joint-.18,.045,fp)*(.75+.25*cos(circumference*110.));bolt=shipLine(length(vec2(joint-.32,mod(circumference+.22,.44)-.22)),.04,fp);float panel=max(abs(x-48.5)-.8,abs(circumference-1.5)-.55);channel=shipLine(panel,.03,fp)*(1.-tank);mark=(1.-smoothstep(0.,fp,panel))*(1.-tank)*shipLine(mod(x+.08,.16)-.08,.03,fp)*step(1.35,circumference);}'+
       'else if(uFinish<5.5){float edge=min(abs(x-44.3),abs(x-61.7));float panelEdge=abs(mod(abs(p.y)-12.+4.,8.)-4.);bolt=shipLine(length(vec2(edge,abs(panelEdge-3.1))),.055,fp);channel=shipLine(mod(p.y+.15,.3)-.15,.018,fp);weld=shipLine(edge,.035,fp);}'+
       'else{mark=(.5+.5*cos((p.x+p.y+p.z)*12.))*close;}return vec4(bolt,weld,channel,mark); }'+
-      'void main(){if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,1.);return;}if(vExposure<=0.)discard;vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;'+
+      'void main(){if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,1.);return;}if(vExposure<=0.)discard;vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;col*=tex.rgb;}'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
@@ -708,9 +708,12 @@
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Shader linking failed');
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+    var uv = gl.getAttribLocation(program,'aUV');
     var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal'),coarsePos=gl.getAttribLocation(program,'aCoarsePosition'),coarseNormal=gl.getAttribLocation(program,'aCoarseNormal'),rockCenter=gl.getAttribLocation(program,'aRockCenter'),burial=gl.getAttribLocation(program,'aBurial');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
     ['CraftFill', 'HullDepth', 'Flat', 'Finish', 'AxialSpin', 'Morph', 'Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'RubbleEye', 'RubbleFade', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
+    uniforms.Textured=gl.getUniformLocation(program,'uTextured');uniforms.ShipTexture=gl.getUniformLocation(program,'uShipTexture');
+    gl.uniform1i(uniforms.ShipTexture,1);
     gl.uniform1f(uniforms.RubbleFade,1);
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
     /** @param {Asteroid} asteroid */
@@ -731,8 +734,27 @@
     }
     /** @type {{vertices:Float32Array,color:V3}[]} */ var studyEffects=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{vertices:Float32Array,color:V3,finish?:number}[]} */ var studyActors=[];
+    /** @type {{vertices:Float32Array,color:V3,finish?:number,texture?:HTMLImageElement,stride?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
+    /** @type {WeakMap<HTMLImageElement,WebGLTexture>} */ var shipTextures=new WeakMap();
+    /** @param {HTMLImageElement | undefined} image */
+    function bindShipTexture(image){
+      gl.uniform1f(uniforms.Textured,image?1:0);
+      if(!image)return;
+      var texture=shipTextures.get(image);
+      if(!texture){
+        texture=gl.createTexture();if(!texture)throw new Error('Ship texture allocation failed');
+        gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,0);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+        if((image.width & (image.width-1))===0 && (image.height & (image.height-1))===0){gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);}
+        shipTextures.set(image,texture);
+      }
+      gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,texture);gl.activeTexture(gl.TEXTURE0);
+    }
     var box = upload(boxMesh());
     var grid = upload(new Float32Array(600));
     var habitatLevels = [96,192,384].map(function(segments){return {segments:segments,mesh:upload(habitatMesh(segments))};});
@@ -755,6 +777,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
       gl.enableVertexAttribArray(pos); gl.enableVertexAttribArray(normal);
       var stride=(mesh.stride||6)*4;
+      if(stride===32){gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,stride,24);}else{gl.disableVertexAttribArray(uv);gl.vertexAttrib2f(uv,0,0);}
       gl.vertexAttribPointer(pos,3,gl.FLOAT,false,stride,0);gl.vertexAttribPointer(normal,3,gl.FLOAT,false,stride,12);
       if(stride===72){gl.enableVertexAttribArray(coarsePos);gl.enableVertexAttribArray(coarseNormal);gl.vertexAttribPointer(coarsePos,3,gl.FLOAT,false,stride,24);gl.vertexAttribPointer(coarseNormal,3,gl.FLOAT,false,stride,36);gl.enableVertexAttribArray(rockCenter);gl.enableVertexAttribArray(burial);gl.vertexAttribPointer(rockCenter,3,gl.FLOAT,false,stride,48);gl.vertexAttribPointer(burial,3,gl.FLOAT,false,stride,60);}
       else{gl.disableVertexAttribArray(rockCenter);gl.disableVertexAttribArray(burial);gl.vertexAttrib3f(burial,0,0,0);gl.disableVertexAttribArray(coarsePos);gl.disableVertexAttribArray(coarseNormal);gl.uniform1f(uniforms.Morph,1);}
@@ -1126,11 +1149,13 @@
         studyActors.forEach(function(batch,index){
           if(!batch.vertices.length)return;
           if(!studyActorMeshes[index])studyActorMeshes[index]=upload(new Float32Array(0));
-          var mesh=studyActorMeshes[index];gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bufferData(gl.ARRAY_BUFFER,batch.vertices,gl.DYNAMIC_DRAW);mesh.count=batch.vertices.length/6;
+          var mesh=studyActorMeshes[index];gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bufferData(gl.ARRAY_BUFFER,batch.vertices,gl.DYNAMIC_DRAW);mesh.stride=batch.stride || (batch.texture?8:6);mesh.count=batch.vertices.length/mesh.stride;
+          bindShipTexture(batch.texture);
           setFinish(batch.finish || 0);
           draw(mesh,[0,0,0],[1,1,1],0,batch.color);
         });
       }
+      bindShipTexture(undefined);
       gl.uniform1f(uniforms.CraftFill,0);
       if(study && studyEffects.length){
         gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.depthMask(false);
@@ -1161,8 +1186,8 @@
       setOrbit: function (value) { if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       /** @param {{vertices:Float32Array,color:V3}[]} batches */
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice(0,5);},
-      /** @param {{vertices:Float32Array,color:V3,finish?:number}[]} batches */
-      setStudyActors: function(batches){if(study)studyActors=batches.slice(0,8);},
+      /** @param {{vertices:Float32Array,color:V3,finish?:number,texture?:HTMLImageElement,stride?:number}[]} batches */
+      setStudyActors: function(batches){if(study)studyActors=batches.slice();},
       sync: sync, render: render, consumeCombatEvents: consume,
       resetCombat: function () { effects = []; focus = false; },
       /** @param {World} w @param {number} dt */

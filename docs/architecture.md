@@ -573,7 +573,7 @@ at distant cockpit positions without removing close-up surface rocks.
 
 ## Imported flight artwork experiment
 
-`assets/ships/` keeps each creator pack in its own directory with its untouched ZIP, provenance manifest, source OBJ/MTL subset, and derived `meshes.js`. `tools/convert-ship-packs.py` is an optional offline standard-library converter; deployment needs no build. `experiments/ship-packs.js` transforms normalized meshes into existing study actor batches, shared by the inspection page and flight enemies. Models use one neutral material in this pass; original textures remain archived. Artwork fits an 8.5 m radius inside the training hit sphere, without changing flight or combat rules.
+`assets/ships/` keeps each creator pack in its own directory with its untouched ZIP, provenance manifest, source OBJ/MTL subset, and derived `meshes.js`. `tools/convert-ship-packs.py` is an optional offline standard-library converter; deployment needs no build. `experiments/ship-packs.js` transforms normalized meshes into existing study actor batches, shared by the inspection page and flight enemies. Flight and inspection render original Quaternius textures imported offline from archived glTF. Artwork fits an 8.5 m radius inside the training hit sphere, without changing flight or combat rules.
 
 Flight training state accepts a `furball` mode with two eight-ship wings. Craft IDs own committed opponent targets, decisions run at pilot intervals, and the existing arcade controller executes steering. Swept bolts filter same-team hulls and hit the nearest opposing ship or scenery; player fire belongs to the allied team. Round replacement is bounded to 16 craft. Ship artwork and soft bolt effects batch by team (two opaque and four effect batches maximum).
 
@@ -591,10 +591,10 @@ plus radar colors, carry allegiance independently of hull paint. No runtime asse
 network dependencies are added.
 
 The flight lab defaults both artwork selectors to Mixed fleet. Model assignment
-interleaves both libraries by immutable pilot index and wave, cycling through all
-21 models over successive waves; casualties never reshuffle survivors. Per-model
-geometry is merged into four finish batches per team, retaining the eight-batch
-renderer limit. Selecting a specific model or the blockout still overrides the mix.
+cycles through the Quaternius library by immutable pilot index and wave, covering all
+11 models over successive waves; casualties never reshuffle survivors. Per-model
+geometry is merged into one source-textured batch per model per team. The study
+renderer accepts all model batches so mixed fleets do not lose ships. Selecting a specific model or the blockout still overrides the mix.
 
 Disabled flight-lab pilots create presentation wrecks with a copied pose, inherited
 SI velocity and a deterministic world-space tumble axis. These coast without flight
@@ -711,3 +711,5 @@ activity cooldowns; urgent tactical calls and verified cover replies retain
 priority. Reassuring delivery is local to the reply and does not overwrite the
 responding pilot's own emotion. Emotional observations continue on busy radio;
 expired feelings never form a backlog of old emotional calls.
+
+The ship inspection viewer now defaults to Quaternius Striker with original glTF base-color texture, UVs and normals; both inspection and flight use the original source appearance. The offline converter reads the archived self-contained glTF 2.0 triangle exports and writes inspection vertex data plus local PNGs in `textures/`. This supports these single-mesh exports, not general glTF/GLB, scene transforms, animation, or full PBR. Flight uses the same source textures, UVs and normals, grouping ships by model and texture. Deployment still uses only relative local assets and needs no build.

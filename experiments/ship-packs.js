@@ -43,7 +43,7 @@
   }
   function mixedModel(index,wave){
     var packs=DW.shipPacks||[],models=[],longest=Math.max.apply(null,packs.map(function(p){return p.models.length;}));
-    // Interleave creators so even a small wave samples both libraries.
+    // Cycle through the available Quaternius models across waves.
     for(var i=0;i<longest;i++)packs.forEach(function(pack){if(pack.models[i])models.push(pack.models[i]);});
     return models.length?models[(index+Math.max(0,wave-1)*16)%models.length]:null;
   }
@@ -53,6 +53,29 @@
     var merged=[];
     groups.forEach(function(poses,model){detailedGeometry(model,poses,units).forEach(function(batch,index){if(!merged[index])merged[index]={parts:[],length:0,color:batch.color,finish:batch.finish};merged[index].parts.push(batch.vertices);merged[index].length+=batch.vertices.length;});});
     return merged.map(function(group){var vertices=new Float32Array(group.length),offset=0;group.parts.forEach(function(part){vertices.set(part,offset);offset+=part.length;});return {vertices:vertices,color:group.color,finish:group.finish};});
+  }
+  // Preserve the artist's UVs and smooth normals while baking flight poses.
+  function sourceGeometry(model,poses,units,texture){
+    var source=model.texturedVertices,data=new Float32Array(source.length*poses.length),offset=0;
+    poses.forEach(function(p){for(var i=0;i<source.length;i+=8){
+      for(var a=0;a<3;a++)data[offset+a]=p.eye[a]+(p.right[a]*source[i]-p.back[a]*source[i+1]+p.up[a]*source[i+2])/units;
+      for(var b=0;b<3;b++)data[offset+3+b]=p.right[b]*source[i+3]-p.back[b]*source[i+4]+p.up[b]*source[i+5];
+      data[offset+6]=source[i+6];data[offset+7]=source[i+7];offset+=8;
+    }});
+    return {vertices:data,color:[1,1,1],texture:texture,stride:8};
+  }
+  var textureImages=new Map();
+  function loadTextures(){
+    return Promise.all((DW.shipPacks||[]).map(function(pack){return Promise.all(pack.models.map(function(model){
+      if(textureImages.has(model.id))return textureImages.get(model.id);
+      var pending=new Promise(function(resolve,reject){var image=new Image();image.onload=function(){resolve(image);};image.onerror=function(){reject(new Error('Could not load '+model.texture));};image.src='../assets/ships/'+pack.id+'/'+model.texture;});
+      textureImages.set(model.id,pending);return pending;
+    }));})).then(function(images){var result=new Map();(DW.shipPacks||[]).forEach(function(pack,p){pack.models.forEach(function(model,m){result.set(model.id,images[p][m]);});});return result;});
+  }
+  function sourceFleetGeometry(craft,selection,wave,units,images){
+    var groups=new Map();
+    craft.forEach(function(e){var model=selection==='mixed'?mixedModel(e.index,e.artWave||wave):(find(selection)||{}).model;if(!model)return;if(!groups.has(model))groups.set(model,[]);groups.get(model).push(e.pose);});
+    var batches=[];groups.forEach(function(poses,model){batches.push(sourceGeometry(model,poses,units,images.get(model.id)));});return batches;
   }
   var exhaustCache=new WeakMap();
   function engineAnchors(model){
@@ -102,5 +125,5 @@
     if(blockout){var option=document.createElement('option');option.value='';option.textContent='Driftworks · training blockout';select.appendChild(option);}
     (DW.shipPacks||[]).forEach(function(pack){var group=document.createElement('optgroup');group.label=pack.author+' / '+pack.id;pack.models.forEach(function(model){var option=document.createElement('option');option.value=model.id;option.textContent=model.name+' · '+model.triangles.toLocaleString()+' tris';group.appendChild(option);});select.appendChild(group);});
   }
-  DW.shipPackModels={find:find,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,engineAnchors:engineAnchors,engineGeometry:engineGeometry,populate:populate};
+  DW.shipPackModels={find:find,loadTextures:loadTextures,sourceGeometry:sourceGeometry,sourceFleetGeometry:sourceFleetGeometry,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,engineAnchors:engineAnchors,engineGeometry:engineGeometry,populate:populate};
 }());

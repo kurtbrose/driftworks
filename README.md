@@ -353,7 +353,7 @@ A close-surface sample submitted 31 draws / 195,622 triangles and ran near the
 GPU bottleneck. A GPU trace or comparisons on the affected hardware are needed
 before deciding to simplify models or shaders.
 
-The [ship pack inspection](experiments/ship-packs.html) compares separate Mehrasaur and Quaternius libraries; choose imported enemy artwork in the paused flight lab. This first pass renders neutral geometry, with original archives, licenses and provenance under `assets/ships/`.
+The [ship pack inspection](experiments/ship-packs.html) shows the Quaternius ship library; choose imported enemy artwork in the paused flight lab. The viewer and flight lab use original Quaternius textures, with original archives, licenses and provenance under `assets/ships/`.
 
 Flight lab starts paused with a centered Start flight button; Esc brings back Resume flight. You begin at full cruise above the asteroid, facing the already assembled combat wings. W/S adjusts throttle and X stops. Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Select each wing's imported artwork while paused. Pilots dogfight each other; your shots spare allies, and Tab targets enemies. A defeated wing starts a new round after five seconds. Use Combat scenario to return to solo training.
 
@@ -458,3 +458,5 @@ including muted subtitle calls, and clears on pause or reset.
 Radio line selection remembers the last 24 transmissions across all pilots,
 favoring unheard wording and then older, less-repeated lines. Template history
 also counts: changing a pilot number or range does not make a repeated phrase new.
+
+The ship inspection viewer now defaults to Quaternius Striker with original glTF base-color texture, UVs and normals; both inspection and flight use the original source appearance. The offline converter reads the archived self-contained glTF 2.0 triangle exports and writes inspection vertex data plus local PNGs in `textures/`. This supports these single-mesh exports, not general glTF/GLB, scene transforms, animation, or full PBR. Flight uses the same source textures, UVs and normals, grouping ships by model and texture. Deployment still uses only relative local assets and needs no build.
