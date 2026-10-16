@@ -21,7 +21,49 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('mumble produces deterministic syllables, pauses, and finite bounded audio', function () {
+    var api = window.Driftworks.mumble, line = 'Stay close, pilot! Ready?', plan = api.analyze(line, {seed: 42});
+    assert(JSON.stringify(plan) === JSON.stringify(api.analyze(line, {seed: 42})));
+    assert(JSON.stringify(plan) !== JSON.stringify(api.analyze(line, {seed: 43})));
+    assert(plan.events.some(function(e) { return e.kind === 'pause' && e.duration >= 0.12; }));
+    var end = 0;
+    plan.events.forEach(function(e) { assert(e.start >= end - 0.000001); assert(e.duration > 0); assert(e.to > e.from && e.to <= line.length); end = e.start + e.duration; });
+    var a = api.render(plan, 8000), b = api.render(plan, 8000), peak = 0;
+    assert(a.length === Math.ceil(plan.duration * 8000));
+    a.forEach(function(value, i) { assert(Number.isFinite(value) && Math.abs(value) <= 1); assert(value === b[i]); peak = Math.max(peak, Math.abs(value)); }); assert(peak > 0.01);
+    assert(api.analyze(line, {speed: 2}).duration < plan.duration);
+    assert(api.render(api.analyze('')).length === 0);
+    assert(api.analyze('x'.repeat(900)).text.length === 600);
+    assert(api.analyze('Hello', {pitch: NaN, speed: -1}).duration > 0);
+    var muted = api.render(api.analyze('Quiet!', {volume: 0, radio: 1})); assert(muted.every(function(v) { return v === 0; }));
+    assert(api.analyze('你好, pilot 👋').events.length > 0);
+  });
+  test('low enunciation compresses syllables and preserves complete text coverage', function () {
+    var api = window.Driftworks.mumble, text = 'Navigation communication, ready?', clear = api.analyze(text, {enunciation: 1}), loose = api.analyze(text, {enunciation: 0});
+    assert(loose.duration < clear.duration * 0.8);
+    assert(loose.events.length < clear.events.length);
+    var offset = 0;
+    loose.events.forEach(function(e) { assert(e.from === offset); offset = e.to; });
+    assert(offset === text.length);
+    assert(loose.voice.pitch === clear.voice.pitch);
+    assert(JSON.stringify(loose) === JSON.stringify(api.analyze(text, {enunciation: 0})));
+    assert(api.analyze(text, {enunciation: NaN}).voice.enunciation === api.defaults.enunciation);
+    var pcm = api.render(loose, 8000);
+    assert(pcm.some(function(v) { return v !== 0; }));
+    assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v) <= 1; }));
+  });
+
   var createFreshWorld = sim.createInitialWorld;
+  test('imported ship libraries retain distinct provenance and bounded valid geometry', function(){
+    var packs=window.Driftworks.shipPacks,ids={};assert(packs.length===2);assert(packs[0].models.length===10);assert(packs[1].models.length===11);
+    packs.forEach(function(pack){assert(pack.license==='CC0-1.0');assert(pack.url.indexOf('https://')===0);pack.models.forEach(function(m){assert(!ids[m.id]);ids[m.id]=true;assert(m.id.indexOf(pack.id+':')===0);assert(m.sha256.length===64);assert(m.vertices.length===m.triangles*18);for(var i=0;i<m.vertices.length;i+=6){assert(Math.hypot.apply(null,m.vertices.slice(i,i+3))<=8.50001);assertClose(Math.hypot.apply(null,m.vertices.slice(i+3,i+6)),1,.00001);}});});
+    assert(window.Driftworks.shipPackModels.find('missing')===null);
+  });
+  test('imported ship geometry transforms positions and normals without changing the source',function(){
+    var api=window.Driftworks.shipPackModels,m=window.Driftworks.shipPacks[0].models[0],original=m.vertices.slice(),pose={eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]};
+    var batch=api.geometry(m,[pose,pose],10)[0];assert(batch.vertices.length===m.vertices.length*2);assertClose(batch.vertices[0],3+m.vertices[1]/10,.00001);assertClose(batch.vertices[1],4+m.vertices[0]/10,.00001);assertClose(batch.vertices[3],m.vertices[4],.00001);assert(m.vertices.every(function(v,i){return v===original[i];}));assert(api.geometry(m,[],10)[0].vertices.length===0);
+  });
+
   test('rubble culling keeps tiles intersecting the emergence range and skips fully buried tiles', function () {
     var visible=window.Driftworks.scene3d.rubbleTileVisible;
     assert(visible(.02));assert(visible(.12));assert(!visible(.13));
@@ -41,6 +83,40 @@
     var result=perf.summary(s);assert(s.frames.length===120 && s.cpu.length===120);
     assertClose(result.fps,50);assertClose(result.p95,20);assertClose(result.worst,100);assertClose(result.cpu,2);
     assert(perf.summary(perf.create()).worst===0);
+  });
+
+  test('furball wings acquire opposing targets, retain flight limits and spare friendlies',function(){
+    var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18),U=sim.METERS_PER_UNIT;
+    ai.spawn(t,player,18);assert(ai.alive(t).length===16);assert(t.enemies.filter(function(e){return e.team==='ally';}).length===8);
+    for(var i=0;i<1200;i++)ai.step(t,player,1/120,18);
+    t.enemies.forEach(function(e){var target=t.enemies.find(function(other){return other.id===e.targetId;});if(target)assert(target.team!==e.team);e.pose.eye.forEach(function(v){assert(Number.isFinite(v));});assert(Math.hypot.apply(null,e.pose.velocity)<=e.profile.afterburnerVelocity[2]+.01);});
+    var ally=t.enemies[0],enemy=t.enemies[8],weapon=window.Driftworks.retailWeapons[0];
+    t.enemies.forEach(function(e){e.pose.eye=[100,100,100];});ally.pose.eye=[0,2,0];enemy.pose.eye=[0,4,0];var hp=ally.hp,redHp=enemy.hp;
+    ai.trace(t,[0,0,0],[0,6,0],{weapon:weapon},'player',null,player);assert(ally.hp===hp&&enemy.hp<redHp);
+    ai.cycle(t);assert(t.enemies.find(function(e){return e.id===t.targetId;}).team==='enemy');
+  });
+  test('furball rounds reset after a defeated wing and green fire damages red ships',function(){
+    var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18);ai.spawn(t,player,18);
+    t.enemies.forEach(function(e){e.pose.eye=[100,100,100];});var ally=t.enemies[0],enemy=t.enemies[8];enemy.pose.eye=[0,2,0];
+    ai.trace(t,[0,0,0],[0,3,0],{weapon:window.Driftworks.retailWeapons[0]},ally,null,player);assert(enemy.hp<90);
+    t.enemies.filter(function(e){return e.team==='enemy';}).forEach(function(e){ai.damageEnemy(t,e,{damage:1000,armorFactor:1});});
+    ai.step(t,player,.01,18);assert(t.roundOver&&t.countdown===5);for(var i=0;i<51;i++)ai.step(t,player,.1,18);assert(t.wave===2&&ai.alive(t).length===16&&!t.roundOver);
+    var all=ai.allGuns(t,window.Driftworks.flightGuns.create());assert(all.bolts.every(function(b){return b.team==='ally'||b.team==='enemy';}));
+  });
+
+  test('autonomous furball produces shots and casualties without player fire',function(){
+    var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18),shots=0;
+    for(var i=0;i<14400;i++){ai.step(t,player,1/120,18);if(i%120===0)shots=Math.max(shots,t.enemies.reduce(function(n,e){return n+e.guns.fired;},0));}
+    assert(shots>30);assert(t.kills>0);assert(t.enemies.length===16);assert(!t.dead);
+  });
+
+  test('virtual mouse stick holds displacement, returns to center and clamps diagonally',function(){
+    var input=window.Driftworks.flightInput,p=input.moveStick([0,0],80,-40,160,1),d=input.stickDemand(p,.08);
+    assert(d[0]>0&&d[1]<0);assert(input.moveStick(p,0,0,160,1).every(function(v,i){return v===p[i];}));
+    var center=input.moveStick(p,-80,40,160,1);assert(input.stickDemand(center,.08).every(function(v){return v===0;}));
+    assert(input.stickDemand([.02,.02],.08).every(function(v){return v===0;}));
+    var edge=input.moveStick([0,0],1000,1000,160,1);assertClose(Math.hypot.apply(null,edge),1);assertClose(Math.hypot.apply(null,input.stickDemand(edge,.08)),1);
+    assertClose(input.moveStick([0,0],40,0,160,2)[0],.5);
   });
 
   test('training combat can clear a wave using the same player flight and gun models', function () {
@@ -154,8 +230,8 @@
   test('gun rendering batches are bounded and contain world-space triangles', function () {
     var model=window.Driftworks.flightGuns,guns=model.create(),pose=window.Driftworks.arcade.create(18);
     model.step(guns,pose,window.Driftworks.retailWeapons[0],true,1/120);
-    var batches=model.geometry(guns,pose);assert(batches.length===3);assert(batches[0].vertices.length===72);
-    assert(batches[1].vertices.length===0);batches[0].vertices.forEach(function(x){assert(Number.isFinite(x));});
+    var batches=model.geometry(guns,pose);assert(batches.length===4);assert(batches[2].vertices.length===72);
+    assert(batches[1].vertices.length===0);batches[2].vertices.forEach(function(x){assert(Number.isFinite(x));});
   });
 
   test('flight sky directions rotate with the cockpit, ignore translation, and cover the sphere', function () {
@@ -2327,3 +2403,4 @@
     summary.textContent = failed === 0 ? 'All ' + passed + ' browser-native tests passed.' : failed + ' of ' + tests.length + ' browser-native tests failed.';
   }
 })();
+

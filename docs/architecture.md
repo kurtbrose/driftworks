@@ -570,3 +570,9 @@ normalized emergence range are culled before draw and mesh requests. The .04
 tile bound matches the existing conservative visibility sphere; tiles near the
 fade boundary remain eligible. This avoids invisible, fully buried boulder draws
 at distant cockpit positions without removing close-up surface rocks.
+
+## Imported flight artwork experiment
+
+`assets/ships/` keeps each creator pack in its own directory with its untouched ZIP, provenance manifest, source OBJ/MTL subset, and derived `meshes.js`. `tools/convert-ship-packs.py` is an optional offline standard-library converter; deployment needs no build. `experiments/ship-packs.js` transforms normalized meshes into existing study actor batches, shared by the inspection page and flight enemies. Models use one neutral material in this pass; original textures remain archived. Artwork fits an 8.5 m radius inside the training hit sphere, without changing flight or combat rules.
+
+Flight training state accepts a `furball` mode with two eight-ship wings. Craft IDs own committed opponent targets, decisions run at pilot intervals, and the existing arcade controller executes steering. Swept bolts filter same-team hulls and hit the nearest opposing ship or scenery; player fire belongs to the allied team. Round replacement is bounded to 16 craft. Ship artwork and soft bolt effects batch by team (two opaque and four effect batches maximum).

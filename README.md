@@ -345,3 +345,29 @@ A close-surface sample submitted 31 draws / 195,622 triangles and ran near the
 60 FPS cap; flat shading also reached the cap. These samples do not establish a
 GPU bottleneck. A GPU trace or comparisons on the affected hardware are needed
 before deciding to simplify models or shaders.
+
+The [ship pack inspection](experiments/ship-packs.html) compares separate Mehrasaur and Quaternius libraries; choose imported enemy artwork in the paused flight lab. This first pass renders neutral geometry, with original archives, licenses and provenance under `assets/ships/`.
+
+Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Select each wing's imported artwork while paused. Pilots dogfight each other; your shots spare allies, and Tab targets enemies. A defeated wing starts a new round after five seconds. Use Combat scenario to return to solo training.
+
+### Mumble voice lab
+
+Open `experiments/mumble.html` from the local server for a standalone procedural
+voice preview. Enter speaks the line; Shift+Enter inserts a newline. Choose a
+character and delivery, then adjust pitch, resonance, speaking rate, expression,
+rasp, breathiness, radio color, volume, seed, and enunciation. Lower enunciation
+(default 0.35) merges syllables, softens consonants, and shortens gaps for faster
+mumbling. Raise it to 1 for full articulation. Stop interrupts playback.
+Controls apply on the next playback; text is limited to 600 characters.
+
+`experiments/mumble.js` exposes `window.Driftworks.mumble`: `analyze(text, options)`
+returns JSON-safe syllable/pause events with seconds-based `start`/`duration` and
+UTF-16 `from`/`to` text offsets; `render(plan, sampleRate = 22050)` returns mono
+Float32 PCM. Both are deterministic for the same input and settings. Analysis
+uses approximate Latin vowel groups, with a fallback for other scripts, rather
+than pronunciation rules. The renderer uses harmonic vowel formants, noisy
+consonant attacks, and punctuation-shaped pitch and pauses. The preview owns
+Web Audio playback and text/mouth synchronization. No assets, network services,
+AudioWorklet, build step, or game audio changes are needed.
+
+Flight lab mouse steering uses a persistent virtual joystick: displacement from screen center sets pitch/yaw demand, with a radial deadzone and limit. The stick holds when the mouse stops moving. Move back to center or press C to neutralize; pause, reset, or resume also centers it. Esc pauses and releases capture. The HUD shows stick position and travel.

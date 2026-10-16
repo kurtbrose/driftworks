@@ -8,7 +8,7 @@
   function length(v){return Math.hypot.apply(null,v);}
   function unit(v){var n=length(v);return n>1e-8?scale(v,1/n):[0,1,0];}
   function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
-  function create(){return {enabled:true,time:0,wave:0,countdown:3,enemies:[],kills:0,shield:120,hull:100,lastHit:-100,hitFlash:0,dead:false,targetId:null,slots:[],slotTimer:0,flashes:[]};}
+  function create(mode){return {mode:mode||'training',roundOver:false,enabled:true,time:0,wave:0,countdown:3,enemies:[],kills:0,shield:120,hull:100,lastHit:-100,hitFlash:0,dead:false,targetId:null,slots:[],slotTimer:0,flashes:[]};}
   function alive(t){return t.enemies.filter(function(e){return e.hp>0;});}
   function face(pose,direction){var forward=unit(direction),reference=Math.abs(forward[2])>.95?[0,1,0]:[0,0,1];pose.right=unit(cross(forward,reference));pose.up=unit(cross(pose.right,forward));pose.back=scale(forward,-1);}
   // Constant-speed intercept in SI seconds, using world-space target velocity.
@@ -20,7 +20,7 @@
   }
   function spawn(t,player,radius){
     t.wave++;t.countdown=0;t.slotTimer=0;t.slots=[];
-    var count=Math.min(6,t.wave+2);t.enemies=[];
+    var count=t.mode==='furball'?16:Math.min(6,t.wave+2);t.roundOver=false;t.enemies=[];
     for(var i=0;i<count;i++){
       var pose=DW.arcade.create(radius),lateral=(i-(count-1)/2)*180;
       pose.eye=add(player.eye,add(scale(player.back,-(350+i*65)/U),add(scale(player.right,lateral/U),scale(player.up,(85+(i%2)*65)/U))));
@@ -29,11 +29,20 @@
       var skill=Math.min(2,Math.floor((t.wave-1+i)/3));
       t.enemies.push({id:'wave-'+t.wave+'-'+i,index:i,pose:pose,profile:DW.arcade.profiles[i%3===1?1:0],hp:90,maxHp:90,pilot:['Rookie','Veteran','Ace'][skill],skill:skill,mode:'approach',decision:i*.13,until:0,goal:player.eye.slice(),guns:DW.flightGuns.create(),damagedAt:-100,fire:false});
     }
-    t.targetId=t.enemies[0].id;
+    if(t.mode==='furball'){
+      // Two opposing wings meet above the near side of the asteroid.
+      var center=add(player.eye,add(scale(player.back,-450/U),scale(player.up,40/U)));
+      if(length(center)<radius+100/U)center=scale(unit(center),radius+100/U);
+      t.enemies.forEach(function(e,i){e.team=i<8?'ally':'enemy';var side=i<8?-1:1,j=i%8;
+        e.pose.eye=add(center,add(scale(player.right,side*(300+(j%2)*80)/U),add(scale(player.back,(j-3.5)*65/U),scale(player.up,((j%3)-1)*85/U))));
+        face(e.pose,sub(center,e.pose.eye));e.pose.throttle=.85;e.pose.velocity=scale(e.pose.back,-45);e.goal=center.slice();e.targetId=null;e.retarget=0;
+      });
+    }
+    t.targetId=t.enemies.find(function(e){return e.team!=='ally';}).id;
   }
   function steer(pose,goal){var d=unit(sub(goal,pose.eye)),f=-dot(d,pose.back);return {pitch:Math.max(-1,Math.min(1,Math.atan2(dot(d,pose.up),f)*2)),yaw:Math.max(-1,Math.min(1,-Math.atan2(dot(d,pose.right),f)*2)),roll:0};}
   function decide(t,e,player){
-    var distance=length(sub(player.eye,e.pose.eye))*U,active=t.slots.indexOf(e.id)>=0;
+    var distance=length(sub(player.eye,e.pose.eye))*U,active=t.mode==='furball'||t.slots.indexOf(e.id)>=0;
     if(t.time>=e.until){
       if(distance<140){e.mode='break';e.until=t.time+2.5+(2-e.skill)*.6;}
       else if(e.hp<45&&t.time-e.damagedAt<3){e.mode='evade';e.until=t.time+2.5;}
@@ -70,12 +79,15 @@
   }
   function damageEnemy(t,e,weapon){
     if(e.hp<=0)return;e.hp=Math.max(0,e.hp-weapon.damage*weapon.armorFactor);e.damagedAt=t.time;
-    if(e.hp<=0){t.kills++;if(!alive(t).length)t.countdown=5;t.flashes.push({position:e.pose.eye.slice(),age:0,scale:14});}
+    if(e.hp<=0){if(e.team!=='ally')t.kills++;if(!alive(t).length)t.countdown=5;t.flashes.push({position:e.pose.eye.slice(),age:0,scale:14});}
   }
   function trace(t,start,end,bolt,team,terrainHit,player){
     var hit=terrainHit?terrainHit(start,end):null,best=hit?length(sub(hit,start)):Infinity,victim=null;
-    if(team==='player')alive(t).forEach(function(e){var candidate=sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;}}});
-    else if(!t.dead){var candidate=sphereHit(start,end,player.eye,7/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){hit=candidate.point;victim='player';}}}
+    var shooter=typeof team==='object'?team:null,faction=shooter?shooter.team:team==='player'?'ally':'enemy';
+    if(t.mode==='furball'){
+      alive(t).forEach(function(e){if(e.team===faction)return;var candidate=sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;}}});
+    }else if(team==='player')alive(t).forEach(function(e){var candidate=sphereHit(start,end,e.pose.eye,9/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim=e;}}});
+    if(faction==='enemy'&&!t.dead){var candidate=sphereHit(start,end,player.eye,7/U);if(candidate){var d=length(sub(candidate.point,start));if(d<best){best=d;hit=candidate.point;victim='player';}}}
     if(victim==='player')damagePlayer(t,bolt.weapon);else if(victim)damageEnemy(t,victim,bolt.weapon);
     return hit;
   }
@@ -84,7 +96,7 @@
     t.time+=dt;t.hitFlash=Math.max(0,t.hitFlash-dt);t.flashes=t.flashes.filter(function(f){f.age+=dt;return f.age<.22;});
     if(t.time-t.lastHit>7)t.shield=Math.min(120,t.shield+12*dt);
     var living=alive(t);
-    if(!living.length){t.countdown-=dt;if(t.countdown<=0){spawn(t,player,radius);living=alive(t);}}
+    if(!living.length||t.roundOver){t.countdown-=dt;if(t.countdown<=0){spawn(t,player,radius);living=alive(t);}}
     t.slotTimer-=dt;
     if(t.slotTimer<=0){
       // Two committed attack slots rotate every six seconds; other pilots reposition.
@@ -94,32 +106,45 @@
     t.enemies.forEach(function(e){
       e.fire=false;
       if(e.hp>0){
-        e.decision-=dt;if(e.decision<=0)decide(t,e,player);
+        var opponent=player;
+        if(t.mode==='furball'){
+          e.retarget-=dt;var target=living.find(function(other){return other.id===e.targetId&&other.hp>0&&other.team!==e.team;});
+          if(!target||e.retarget<=0){
+            var choices=living.filter(function(other){return other.hp>0&&other.team!==e.team;});
+            choices.sort(function(a,b){return length(sub(a.pose.eye,e.pose.eye))-length(sub(b.pose.eye,e.pose.eye));});
+            // Commit to a nearby opponent for a few seconds rather than snapping targets.
+            target=choices[e.index%Math.min(3,choices.length)];e.targetId=target?target.id:null;e.retarget=2.5+(e.index%3)*.7;
+          }
+          opponent=target?target.pose:e.team==='enemy'?player:null;
+        }
+        e.decision-=dt;if(e.decision<=0&&opponent)decide(t,e,opponent);
         var goal=e.goal;
         var future=add(e.pose.eye,scale(e.pose.velocity,1.6/U)),avoid=radius+65/U;
         if(length(future)<avoid||length(e.pose.eye)<avoid)goal=add(e.pose.eye,add(scale(unit(e.pose.eye),400/U),scale(e.pose.right,180/U)));
         // Separate nearby craft using steering demand, never velocity changes.
         living.forEach(function(other){if(other.id===e.id)return;var away=sub(e.pose.eye,other.pose.eye),d=length(away)*U;if(d<50)goal=add(goal,scale(unit(away),(50-d)*8/U));});
-        var control=steer(e.pose,goal),distance=length(sub(player.eye,e.pose.eye))*U;
+        var control=steer(e.pose,goal),distance=opponent?length(sub(opponent.eye,e.pose.eye))*U:Infinity;
         control.roll=e.mode==='evade'?Math.sin(t.time*1.8+e.index)*.65:0;
         control.boost=distance>1200&&dot(unit(sub(goal,e.pose.eye)),scale(e.pose.back,-1))>.95;
         DW.arcade.step(e.pose,e.profile,control,dt);
         // Conservative safety shell keeps AI craft clear of the asteroid.
         var safe=radius+20/U;if(length(e.pose.eye)<safe){e.pose.eye=scale(unit(e.pose.eye),safe);e.mode='break';e.until=t.time+2;}
         var aim=unit(sub(e.goal,e.pose.eye)),aligned=dot(aim,scale(e.pose.back,-1));
-        e.fire=t.slots.indexOf(e.id)>=0&&e.mode==='attack'&&distance>130&&distance<760&&aligned>.996&&((t.time+e.index*.77)%3)<.8;
+        e.fire=!!opponent&&(t.mode==='furball'||t.slots.indexOf(e.id)>=0)&&e.mode==='attack'&&distance>130&&distance<760&&aligned>.996&&((t.time+e.index*.77)%3)<.8;
       }
-      DW.flightGuns.step(e.guns,e.pose,DW.retailWeapons[0],e.fire,dt,function(start,end,bolt){return trace(t,start,end,bolt,'enemy',terrainHit,player);});
+      DW.flightGuns.step(e.guns,e.pose,DW.retailWeapons[0],e.fire,dt,function(start,end,bolt){return trace(t,start,end,bolt,t.mode==='furball'?e:'enemy',terrainHit,player);});
     });
     var nowAlive=alive(t);if(living.length&&!nowAlive.length)t.countdown=5;
-    if(t.targetId&&!nowAlive.some(function(e){return e.id===t.targetId;}))t.targetId=nowAlive.length?nowAlive[0].id:null;
+    if(t.mode==='furball'&&!t.roundOver&&t.wave>0&&(!nowAlive.some(function(e){return e.team==='ally';})||!nowAlive.some(function(e){return e.team==='enemy';}))){t.roundOver=true;t.countdown=5;}
+    var targets=nowAlive.filter(function(e){return e.team!=='ally';});
+    if(t.targetId&&!targets.some(function(e){return e.id===t.targetId;}))t.targetId=targets.length?targets[0].id:null;
   }
-  function cycle(t){var list=alive(t),index=list.findIndex(function(e){return e.id===t.targetId;});t.targetId=list.length?list[(index+1)%list.length].id:null;}
+  function cycle(t){var list=alive(t).filter(function(e){return e.team!=='ally';}),index=list.findIndex(function(e){return e.id===t.targetId;});t.targetId=list.length?list[(index+1)%list.length].id:null;}
   function geometry(t){
     var data=[],points=[[0,11,0],[-7,-6,0],[0,-3,2.5],[7,-6,0],[0,-6,-2]],faces=[[0,1,2],[0,2,3],[0,4,1],[0,3,4],[1,4,2],[2,4,3]];
     alive(t).forEach(function(e){var p=e.pose,world=points.map(function(v){return add(p.eye,add(scale(p.right,v[0]/U),add(scale(p.back,-v[1]/U),scale(p.up,v[2]/U))));});faces.forEach(function(f){var n=unit(cross(sub(world[f[1]],world[f[0]]),sub(world[f[2]],world[f[0]])));f.forEach(function(i){data.push.apply(data,world[i].concat(n));});});});
     return [{vertices:new Float32Array(data),color:[.85,.29,.12]}];
   }
-  function allGuns(t,playerGuns){var result={bolts:playerGuns.bolts.slice(),impacts:playerGuns.impacts.concat(t.flashes)};t.enemies.forEach(function(e){result.bolts=result.bolts.concat(e.guns.bolts);result.impacts=result.impacts.concat(e.guns.impacts);});return result;}
+  function allGuns(t,playerGuns){var result={bolts:playerGuns.bolts.slice(),impacts:playerGuns.impacts.concat(t.flashes)};t.enemies.forEach(function(e){result.bolts=result.bolts.concat(e.guns.bolts.map(function(b){return Object.assign({},b,{team:e.team||'enemy'});}));result.impacts=result.impacts.concat(e.guns.impacts);});return result;}
   DW.training={create:create,alive:alive,spawn:spawn,steer:steer,intercept:intercept,sphereHit:sphereHit,damageEnemy:damageEnemy,damagePlayer:damagePlayer,trace:trace,step:step,cycle:cycle,geometry:geometry,allGuns:allGuns};
 }());

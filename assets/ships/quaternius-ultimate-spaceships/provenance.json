@@ -1,0 +1,12 @@
+{
+  "author": "Quaternius",
+  "pack": "quaternius-ultimate-spaceships",
+  "sourceURL": "https://quaternius.com/packs/ultimatespaceships.html",
+  "license": "CC0-1.0",
+  "acquired": "2026-10-15",
+  "acquisition": "ZIP supplied by the user in assets/ships; moved into this pack-specific source folder. The temporary third-party sample downloads were removed and are not used.",
+  "archive": {
+    "path": "source/quaternius_pack.zip",
+    "sha256": "77605ccf06f1a9409465fad6d7bd49c49be4aace41168ff4f232e53ced171889"
+  }
+}
