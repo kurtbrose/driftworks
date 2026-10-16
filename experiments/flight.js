@@ -21,9 +21,9 @@
   document.getElementById('perf-reset').onclick=resetMeasurements;
   var radarRanges=[1000,2500,5000,10000],radarRangeIndex=2;
   var combat=DW.training.create(document.getElementById('combat-mode').value);
-  var artSelect=document.getElementById('enemy-art'),allyArt=document.getElementById('ally-art');DW.shipPackModels.populate(artSelect,true);DW.shipPackModels.populate(allyArt,true);artSelect.value='quaternius-ultimate-spaceships:Challenger';allyArt.value='mehrasaur-3d-spaceships:ship1';
-  function artCredit(){var entry=DW.shipPackModels.find(artSelect.value);document.getElementById('art-credit').textContent=entry?entry.pack.author+' / '+entry.model.name+' Â· '+entry.pack.license+' Â· '+entry.model.triangles.toLocaleString()+' triangles per ship':'Original six-triangle training hull';}
-  function allyCredit(){var entry=DW.shipPackModels.find(allyArt.value);document.getElementById('ally-credit').textContent=entry?entry.pack.author+' / '+entry.model.name+' Â· '+entry.pack.license:'Original training blockout';}
+  var artSelect=document.getElementById('enemy-art'),allyArt=document.getElementById('ally-art');DW.shipPackModels.populate(artSelect,true);DW.shipPackModels.populate(allyArt,true);[artSelect,allyArt].forEach(function(select){var option=document.createElement('option');option.value='mixed';option.textContent='Mixed fleet · all ship models';select.insertBefore(option,select.firstChild);select.value='mixed';});
+  function artCredit(){var entry=DW.shipPackModels.find(artSelect.value);document.getElementById('art-credit').textContent=artSelect.value==='mixed'?'Mixed fleet · both CC0 libraries · changes each wave':entry?entry.pack.author+' / '+entry.model.name+' Â· '+entry.pack.license+' Â· '+entry.model.triangles.toLocaleString()+' triangles per ship':'Original six-triangle training hull';}
+  function allyCredit(){var entry=DW.shipPackModels.find(allyArt.value);document.getElementById('ally-credit').textContent=allyArt.value==='mixed'?'Mixed fleet · both CC0 libraries · changes each wave':entry?entry.pack.author+' / '+entry.model.name+' Â· '+entry.pack.license:'Original training blockout';}
   allyArt.onchange=allyCredit;allyCredit();artSelect.onchange=artCredit;artCredit();
 
   function weapon(){return DW.retailWeapons[Number(gunSelect.value)];}
@@ -143,7 +143,7 @@
     telemetry.textContent=speed.toFixed(0)+' m/s   /   '+Math.round(state.throttle*100)+'% THR\n'+Math.round(distance*units)+' m TO CENTER\n'+Math.round(asteroid.radius*2*units)+' m BODY DIAMETER\n'+Math.round(shipDistance)+' m TO MOTHERSHIP\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
     if(!paused)world.elapsedSeconds+=elapsed;
     var livingArt=DW.training.alive(combat),actorBatches=[];
-    ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),art=DW.shipPackModels.find(team==='ally'?allyArt.value:artSelect.value);if(!craft.length)return;var batches=art?DW.shipPackModels.detailedGeometry(art.model,craft.map(function(e){return e.pose;}),units):DW.training.geometry({enemies:craft});batches.forEach(function(batch){actorBatches.push(batch);});});
+    ['ally','enemy'].forEach(function(team){var craft=livingArt.filter(function(e){return (e.team||'enemy')===team;}),selection=team==='ally'?allyArt.value:artSelect.value;if(!craft.length)return;var batches=selection?DW.shipPackModels.fleetGeometry(craft,selection,combat.wave,units):DW.training.geometry({enemies:craft});batches.forEach(function(batch){actorBatches.push(batch);});});
     scene.setStudyActors(actorBatches);scene.setStudyEffects(DW.flightGuns.geometry(DW.training.allGuns(combat,guns),state));var comparison=diagnostics();scene.setStudyDiagnostics(comparison);skybox.render(state,comparison.scale,comparison.mode==='empty');scene.sync(world);scene.render(world,1,0,elapsed);drawCombat();
     performanceTools.record(measurements,actualElapsed*1000,performance.now()-frameStart);
     var perfElement=document.getElementById('perf-overlay');perfElement.hidden=!document.getElementById('perf-enabled').checked;

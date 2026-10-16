@@ -67,6 +67,57 @@
     assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v) <= 1; }));
   });
 
+  test('sound retention drops actual interior sounds without charging their duration', function () {
+    var api = window.Driftworks.mumble, text = 'communication';
+    var full = api.analyze(text, {enunciation: 1}), short = api.analyze(text, {enunciation: 0.35});
+    var a = full.events.filter(function(e) { return e.kind === 'syllable'; });
+    var b = short.events.filter(function(e) { return e.kind === 'syllable'; });
+    assert(b.length < a.length);
+    assert(b[0].sourceFrom === a[0].sourceFrom);
+    assert(b[b.length - 1].sourceTo === a[a.length - 1].sourceTo);
+    assert(b.some(function(e) { return e.to - e.from > e.sourceTo - e.sourceFrom; }));
+    b.forEach(function(e) { assert(a.some(function(original) { return original.sourceFrom === e.sourceFrom && original.sourceTo === e.sourceTo && original.vowel === e.vowel; })); });
+    assert(short.duration < full.duration * 0.65);
+    assert(api.analyze(text, {enunciation: 0}).events.every(function(e) { return !e.attack; }));
+    var line = api.analyze('Navigation communication asteroid approaching the perimeter.', {enunciation: 0.35});
+    assert(line.duration < 6 * 60 / 240, 'default reduced speech should fit a 240-word/minute reading budget for this line');
+  });
+
+  test('field has a moving vowel and consonant closure rather than a held beep', function () {
+    var api = window.Driftworks.mumble, plan = api.analyze('field', api.presets.Scout), event = plan.events[0];
+    assert(event.vowel === 'i' && event.vowelEnd === 'e' && event.closed);
+    var samples = api.render(plan, 8000);
+    var staticPlan = JSON.parse(JSON.stringify(plan)); staticPlan.events[0].vowelEnd = 'i'; staticPlan.events[0].closed = false;
+    var staticSamples = api.render(staticPlan, 8000);
+    assert(samples.some(function(v, i) { return Math.abs(v - staticSamples[i]) > 0.01; }));
+    assert(samples.every(function(v) { return Number.isFinite(v) && Math.abs(v) <= 1; }));
+  });
+
+  test('mumble pitch travels through phrases and inside syllables without resetting at words', function () {
+    var api = window.Driftworks.mumble, plan = api.analyze('Keep your eyes on that asteroid field!', api.presets.Scout);
+    var notes = plan.events.filter(function(e) { return e.kind === 'syllable'; });
+    assert(notes.every(function(e) { return e.pitchCurve.length === 3 && e.pitchCurve.every(function(p) { return Number.isFinite(p) && p > 0; }); }));
+    assert(notes.every(function(e) { return Math.max.apply(null, e.pitchCurve) - Math.min.apply(null, e.pitchCurve) > 0.01; }));
+    var rises = false, falls = false;
+    notes.forEach(function(e) { if (e.pitchCurve[2] > e.pitchCurve[0]) rises = true; else falls = true; });
+    assert(rises && falls);
+    for (var n = 1; n < notes.length; n++) assert(Math.abs(Math.log2(notes[n].pitchCurve[0] / notes[n-1].pitchCurve[2])) < 0.04);
+    var question = api.analyze('Ready?').events[0], statement = api.analyze('Ready.').events[0];
+    assert(question.pitchCurve[2] > statement.pitchCurve[2]);
+    assert(api.analyze('Oh!').events[0].pitchCurve[0] !== api.analyze('Oh!').events[0].pitchCurve[2]);
+  });
+
+  test('Scout exclamations retain energy without a steep final pitch drop', function () {
+    var api = window.Driftworks.mumble;
+    [0, 7, 42, 99].forEach(function(seed) {
+      var plan = api.analyze("We've got company. Keep your eyes on that asteroid field!", Object.assign({}, api.presets.Scout, {seed: seed}));
+      var notes = plan.events.filter(function(e) { return e.kind === 'syllable'; });
+      assert(notes[notes.length - 1].pitch >= notes[notes.length - 2].pitch * 0.95);
+    });
+    var flat = api.analyze('Ready', {variation: 0}), question = api.analyze('Ready?', {variation: 0});
+    assert(question.events[0].pitch > flat.events[0].pitch);
+  });
+
   var createFreshWorld = sim.createInitialWorld;
   test('imported ship libraries retain distinct provenance and bounded valid geometry', function(){
     var packs=window.Driftworks.shipPacks,ids={};assert(packs.length===2);assert(packs[0].models.length===10);assert(packs[1].models.length===11);
@@ -90,6 +141,18 @@
       var nose=0;for(var k=0;k<v.length;k+=6)if(v[k+1]>v[nose+1])nose=k;
       assert(batch.vertices[nose+1]<pose.eye[1],'nose must project along -back');
     });
+  });
+
+  test('mixed fighter fleets cover both libraries, keep assignments and merge finishes',function(){
+    var api=window.Driftworks.shipPackModels,seen={},pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},craft=[];
+    for(var wave=1;wave<=3;wave++)for(var i=0;i<16;i++){var model=api.mixedModel(i,wave);seen[model.id]=true;assert(api.mixedModel(i,wave)===model);}
+    assert(Object.keys(seen).length===21);
+    for(var j=0;j<8;j++)craft.push({index:j,pose:pose});
+    var batches=api.fleetGeometry(craft,'mixed',1,10),expected=0;
+    craft.forEach(function(e){api.detailedGeometry(api.mixedModel(e.index,1),[pose],10).forEach(function(b){expected+=b.vertices.length;});});
+    assert(batches.length===4);assert(batches.reduce(function(n,b){return n+b.vertices.length;},0)===expected);
+    assert(api.mixedModel(2,1)===api.mixedModel(craft.filter(function(e){return e.index===2;})[0].index,1));
+    assert(api.fleetGeometry([],'mixed',1,10).length===0);
   });
 
   test('fighter finishes retain source geometry and batch all poses with finite normals',function(){

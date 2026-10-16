@@ -41,9 +41,22 @@
     var colors=[[.49,.52,.47],[.17,.20,.22],[.055,.13,.18],[.78,.65,.32]];
     return baked.map(function(source,index){var batch=geometry({vertices:source},poses,units)[0];batch.color=colors[index];batch.finish=index===1||index===2?1:0;return batch;});
   }
+  function mixedModel(index,wave){
+    var packs=DW.shipPacks||[],models=[],longest=Math.max.apply(null,packs.map(function(p){return p.models.length;}));
+    // Interleave creators so even a small wave samples both libraries.
+    for(var i=0;i<longest;i++)packs.forEach(function(pack){if(pack.models[i])models.push(pack.models[i]);});
+    return models.length?models[(index+Math.max(0,wave-1)*16)%models.length]:null;
+  }
+  function fleetGeometry(craft,selection,wave,units){
+    var groups=new Map();
+    craft.forEach(function(e){var entry=selection==='mixed'?mixedModel(e.index,wave):(find(selection)||{}).model;if(!entry)return;if(!groups.has(entry))groups.set(entry,[]);groups.get(entry).push(e.pose);});
+    var merged=[];
+    groups.forEach(function(poses,model){detailedGeometry(model,poses,units).forEach(function(batch,index){if(!merged[index])merged[index]={parts:[],length:0,color:batch.color,finish:batch.finish};merged[index].parts.push(batch.vertices);merged[index].length+=batch.vertices.length;});});
+    return merged.map(function(group){var vertices=new Float32Array(group.length),offset=0;group.parts.forEach(function(part){vertices.set(part,offset);offset+=part.length;});return {vertices:vertices,color:group.color,finish:group.finish};});
+  }
   function populate(select,blockout){
     if(blockout){var option=document.createElement('option');option.value='';option.textContent='Driftworks · training blockout';select.appendChild(option);}
     (DW.shipPacks||[]).forEach(function(pack){var group=document.createElement('optgroup');group.label=pack.author+' / '+pack.id;pack.models.forEach(function(model){var option=document.createElement('option');option.value=model.id;option.textContent=model.name+' · '+model.triangles.toLocaleString()+' tris';group.appendChild(option);});select.appendChild(group);});
   }
-  DW.shipPackModels={find:find,geometry:geometry,detailedGeometry:detailedGeometry,populate:populate};
+  DW.shipPackModels={find:find,geometry:geometry,detailedGeometry:detailedGeometry,mixedModel:mixedModel,fleetGeometry:fleetGeometry,populate:populate};
 }());

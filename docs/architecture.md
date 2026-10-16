@@ -589,3 +589,9 @@ study renderer accepts eight actor batches (four per team) and optional `finish`
 values using its existing lighting. Friendly square and hostile diamond HUD contacts,
 plus radar colors, carry allegiance independently of hull paint. No runtime assets or
 network dependencies are added.
+
+The flight lab defaults both artwork selectors to Mixed fleet. Model assignment
+interleaves both libraries by immutable pilot index and wave, cycling through all
+21 models over successive waves; casualties never reshuffle survivors. Per-model
+geometry is merged into four finish batches per team, retaining the eight-batch
+renderer limit. Selecting a specific model or the blockout still overrides the mix.

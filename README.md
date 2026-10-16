@@ -363,17 +363,22 @@ Open `experiments/mumble.html` from the local server for a standalone procedural
 voice preview. Enter speaks the line; Shift+Enter inserts a newline. Choose a
 character and delivery, then adjust pitch, resonance, speaking rate, expression,
 rasp, breathiness, radio color, volume, seed, and enunciation. Lower enunciation
-(default 0.35) merges syllables, softens consonants, and shortens gaps for faster
-mumbling. Raise it to 1 for full articulation. Stop interrupts playback.
+(default 0.35, labeled Sound retention) drops interior syllables and consonant
+attacks, keeping a sparse first/last vowel signature. Skipped sounds take no
+audio time. Short word-level timing budgets keep long words from dragging. Raise it to 1 for full articulation. Stop interrupts playback.
 Controls apply on the next playback; text is limited to 600 characters.
 
 `experiments/mumble.js` exposes `window.Driftworks.mumble`: `analyze(text, options)`
 returns JSON-safe syllable/pause events with seconds-based `start`/`duration` and
-UTF-16 `from`/`to` text offsets; `render(plan, sampleRate = 22050)` returns mono
+UTF-16 `from`/`to` reveal offsets (including skipped text), plus `sourceFrom`/
+`sourceTo` offsets identifying the syllable actually voiced; `render(plan, sampleRate = 22050)` returns mono
 Float32 PCM. Both are deterministic for the same input and settings. Analysis
 uses approximate Latin vowel groups, with a fallback for other scripts, rather
-than pronunciation rules. The renderer uses harmonic vowel formants, noisy
-consonant attacks, and punctuation-shaped pitch and pauses. The preview owns
+than pronunciation rules. The renderer uses moving harmonic vowel formants, consonant closures, noisy
+consonant attacks, and punctuation-shaped pitch and pauses. Questions rise, statements settle gently,
+and exclamations keep an energetic finish. Phrase-wide pitch arcs rise and fall
+across words; each syllable carries a three-point `pitchCurve` in Hz that the
+renderer interpolates continuously, with punctuation starting a fresh gesture. The preview owns
 Web Audio playback and text/mouth synchronization. No assets, network services,
 AudioWorklet, build step, or game audio changes are needed.
 
