@@ -441,6 +441,17 @@ geology, with no changes to persistent simulation state or save rules. The
 controller substeps at no more than 1/120 second, caps stalls at 0.1 second,
 and clears input on pause/blur/visibility changes. Radial surface sampling stops
 contact with 5 m clearance; this is an arcade stop, not a rigid-body collision.
+The flight session advances a six-hour +Z asteroid spin in simulation time (pause
+freezes it; sortie resets preserve its phase). Rendering, surface crews and the
+work light share that phase. Cockpit surface directions and projectile field
+samples are inverse-rotated into body coordinates; sampled contact points return
+to world coordinates. A craft stopped against terrain follows its rotation and
+attitude while contact persists. This remains an arcade surface stop.
+Flight surface rigs and crew cache immutable body-space vertex buffers. Rotation
+and translation update study actor draw uniforms, without resampling terrain or
+rebuilding/uploading those buffers. Radius, excavation or source pose changes
+invalidate the attachment cache. Study batches opt into upload reuse with
+`staticGeometry`; dynamic actors retain their existing upload behavior.
 Both dependency-free test entry points load the extracted retail maneuver data
 before the flight model. The profile fields retain table units: seconds for
 accel/decel constants and rotation times, m/s for speed vectors. Forward engine
@@ -938,3 +949,30 @@ Production terrain contacts: `scene3d.platformSurface(platform, asteroid, open)`
 `tests/mining-platform-gameplay.html` uses the production world-platform path (no study actors) for landing scrubbing, spin and zoom inspection; `?renderer=2d` selects the production Pixi path. The Node regression verifies shared solver identity, exact sweep-only leaf geometry, eight world-space contact points across spin, fixed scale and cache reuse across zoom, thick-leaf clearance during opening, and physical airborne height.
 
 The comparison defaults to Original appearance rock response, with Standard physical available as an A/B control. The legacy renderer multiplies display-space geology colors by sunlight and fill; reusing its coefficients in linear-light PBR lifts shadows and changes surface contrast. The original response evaluates the shared broad-normal gate, .82 diffuse exponent, subtle solar highlight and crater-occluded fill in the original display space, then converts the result to linear light for Three.js output. This changes only the rock material: Three.js still supplies directional-light colors, shadow visibility, camera and geometry, and the local lamp retains its standard material response. Legacy cavity darkening affects fill and lamp contributions rather than multiplying sunlight globally in this mode. GPU tests disable cast shadows for the material-only comparison (the legacy renderer has no solar shadow map) and require the orbital result to reduce image error against the reference compared with Standard physical. With shadows enabled, Three.js solar terrain shadows remain an intentional visual difference. Performance exports record the response mode.
+
+The migration comparison uses fixture-specific worksite camera presets. Selecting the rig or re-entering Worksite places the camera outside its deployed ramps, aimed at the lamp-lit ground by a leg; posts retain their close inspection view. The study rig is offset sideways from the fixed lamp so a ramp does not fill the beam. Both backends share the staging and camera. GPU checks cover unobstructed camera framing, repeatable orbit/worksite re-entry and visible rig cast-shadow pixels. This affects only the comparison fixture, not production rig placement.
+
+
+Flight hull rendering uses `shipPackModels.sourceDraw` (or the transform option
+of `sourceFleetGeometry`) to pair an immutable model buffer with origin, uniform
+scale and a column-major orthonormal basis. The vertex shader applies the same
+right / negative-back / up conversion as `sourceGeometry`, which remains the
+CPU-baked API for other callers. Each renderer shares static actor GPU buffers
+by vertex-array identity and deletes buffers when no submitted actor uses them.
+Paint, texture and pose are draw state and do not invalidate mesh data. Replacing
+a model's source array invalidates its CPU buffer cache. The target monitor uses
+the same draw path and caches its fit radius by model/source-array identity.
+Asteroid shader parameter packing is cached with the renderer's existing visual
+cache; the tactical grid is neither built nor uploaded in study/flight scenes.
+
+Run `node tools/profile-flight.cjs 240` for a repeatable CPU benchmark of a
+16-craft sortie after warmup. It instruments production session and presentation
+code, with browser resource stubs, and reports stage times and estimated vertex
+upload bytes. Add `--baked` to compare the retained CPU-baked hull path under
+the same workload. Stage rows include both parent and child timings; do not add
+them together. It excludes GPU execution, DOM layout and audio. Use the flight
+lab's F3 diagnostics to check real browser frame pacing and submission cost.
+
+Mining rig fixtures live in scene3d's cached miningPlatformLights geometry. The shared mining-lights module separates 51 visible fixtures from three broad cargo, apron and docking illumination fields. Both renderers use the same rig-local fields; roof grazing heads illuminate the docking coaming even without sunlight. Coarse deck/pod occlusion preserves structural depth without per-fixture shadow maps or additional shadow passes. Lighting frames follow the fitted landing pose and remain derived renderer data.
+
+The fixed upper pod uses miningLights.bakeDocking to cache a separate RGB vertex lighting attribute in model coordinates. Production and study renderers upload that attribute alongside geometry and add it after sun shading; toggling rig lights disables the contribution. Landing transformations carry the attribute unchanged. Meshes with the bake skip the docking field in the fragment shader, while cargo/apron fields and asteroid illumination remain dynamic. Custom consumers must carry bakedDocking alongside vertex positions and normals; raw triangles alone do not include illumination. The bake approximates broad illumination at existing vertices, not fine normal-map detail.

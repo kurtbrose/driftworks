@@ -8,7 +8,7 @@
         }, terrainHit: function (start, end) {
             var asteroid = session.snapshot().asteroid;
             return DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
-                return DW.scene3d.rockField(asteroid, /** @type {[number, number, number]} */ (point));
+                return DW.scene3d.rockField(asteroid, /** @type {[number, number, number]} */ (DW.flightSession.rotateVector(point, -asteroid.rotation)));
             });
         }, surfaceFrame: function (asteroid, direction) {
             return DW.scene3d.surfaceFrame(asteroid, /** @type {[number, number, number]} */ (direction));

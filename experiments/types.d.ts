@@ -183,7 +183,14 @@ export type Pack = {
     models: Model[];
 };
 export type Batch = {
+    basis?: Float32Array;
+    scale?: number;
+    origin?: [number,number,number];
+    rotation?: number;
+    staticGeometry?: boolean;
+    asteroidId?: string;
     vertices: Float32Array;
+    bakedDocking?: Float32Array;
     color: [
         number,
         number,
@@ -285,6 +292,7 @@ export type ControlEnvironment = {
 export type SessionEnvironment = {
     hullHit: NonNullable<Combat['hullHit']>;
     terrainHit: TerrainHit;
+    /** Direction and returned normalized point are in the asteroid body frame. */
     surfaceFrame: (asteroid: Asteroid, direction: Vector) => {
         point: Vector;
     };
@@ -522,8 +530,9 @@ export type ExperimentModules = {
         detailedGeometry: (model: Model, poses: Pose[], units: number) => Batch[];
         mixedModel: (index: number, wave: number) => Model | null;
         fleetGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number) => Batch[];
+        sourceDraw: (model: Model, pose: Pose, units: number, texture?: HTMLImageElement, paint?: Vector) => Batch;
         sourceGeometry: (model: Model, poses: Pose[], units: number, texture?: HTMLImageElement, paint?: Vector) => Batch;
-        sourceFleetGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, images: Images, paint?: Vector) => Batch[];
+        sourceFleetGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, images: Images, paint?: Vector, transforms?: boolean) => Batch[];
         loadTextures: () => Promise<Images>;
         engineAnchors: (model: Model) => number[][];
         engineGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, view: Pose, time: number) => Batch;
@@ -537,7 +546,7 @@ export type ExperimentModules = {
     flightInput: {
         deadzone: (value: number, zone: number) => number;
         moveStick: (position: number[], dx: number, dy: number, range: number, sensitivity: number) => number[];
-        stickDemand: (position: number[], zone: number) => number[];
+        stickDemand: (position: number[], zone: number, exponent?: number) => number[];
         defaults: (standard: boolean) => Mapping;
         read: (pad: Gamepad, map: Mapping) => PadDemand;
     };
@@ -590,6 +599,7 @@ export type ExperimentModules = {
         };
     };
     flightSession: {
+        rotateVector: (vector: number[], angle: number) => number[];
         create: (environment: SessionEnvironment) => {
             snapshot: () => Snapshot;
             reset: (config: {
@@ -680,6 +690,7 @@ export type ExperimentModules = {
     };
 };
 export type Elements = {
+    'steering-preset': HTMLSelectElement;
     'volume': HTMLInputElement;
     'breath': HTMLInputElement;
     'tremor': HTMLInputElement;

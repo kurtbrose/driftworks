@@ -13,6 +13,18 @@
         var get = DW.experimentDom(document);
         var inputMode = get('input-mode'), device = get('device'), bindingHost = get('bindings'), input = DW.flightInput;
         var keys = /** @type {Record<string, boolean>} */ ({}), mouse = [0, 0], mapping = input.defaults(true), padSignature = '', lastPad = /** @type {number | null} */ (null), previousButtons = { bank: false, pause: false };
+        var steeringPreset = get('steering-preset');
+        steeringPreset.value = 'wide-linear';
+        try {
+            var savedSteering = window.localStorage.getItem('driftworks.flight.steering');
+            if (savedSteering === 'medium-soft' || savedSteering === 'wide-soft' || savedSteering === 'wide-linear')
+                steeringPreset.value = savedSteering;
+        } catch (error) { /* Storage can be unavailable in private or embedded browsers. */ }
+        steeringPreset.onchange = function () {
+            actions.pause();
+            clear();
+            try { window.localStorage.setItem('driftworks.flight.steering', steeringPreset.value); } catch (error) { /* Session controls still work. */ }
+        };
         function clear() {
             keys = /** @type {Record<string, boolean>} */ ({});
             mouse = [0, 0];
@@ -186,7 +198,8 @@
             }
         });
         function stickRange() {
-            return Math.min(160, Math.min(host.clientWidth, host.clientHeight) * .2);
+            var shorter = Math.min(host.clientWidth, host.clientHeight);
+            return steeringPreset.value === 'medium-soft' ? Math.min(240, shorter * .3) : shorter * .45;
         }
         /** @param {string} a @param {string} b */
         function axis(a, b) {
@@ -249,7 +262,7 @@
                 actions.nextWeapon();
             }
             previousButtons = { bank: controls.bank, pause: controls.pause };
-            var look = inputMode.value === 'mouse' ? input.stickDemand(mouse, .08) : [0, 0];
+            var look = inputMode.value === 'mouse' ? input.stickDemand(mouse, .08, steeringPreset.value === 'wide-linear' ? 1 : 1.6) : [0, 0];
             return { throttle: controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA'), vertical: axis('KeyR', 'KeyF'), boost: keys.ShiftLeft || keys.ShiftRight || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
         }
         function view() {

@@ -8,13 +8,21 @@ panel.style.cssText='position:fixed;inset:0;z-index:20;background:#101820;displa
 panel.innerHTML='<div style="position:absolute;z-index:2;top:12px;left:16px;background:#101c24dd;padding:12px;max-width:720px"><button id="fps-back">Back to orbit</button> <button id="fps-entry">Cargo deck</button> <button id="fps-middle">Pod entry</button> <button id="fps-bridge">Bridge</button> <button id="fps-roof">Roof</button> <label style="display:inline-flex">Cargo <input id="fps-cargo" type="range" min="0" max="1" step=".01" value="0"></label><p>Click view for mouse look · WASD move · Shift faster · F deck / free flight · Space / C up / down (enters free flight) · E operate nearby door · R reset · Esc release mouse</p><p id="fps-status" role="status"></p></div><div style="position:absolute;left:50%;top:50%;pointer-events:none;color:white">+</div>';
 document.body.append(panel);
 const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x101820);
 panel.prepend(renderer.domElement);
-const scene=new THREE.Scene();scene.add(new THREE.HemisphereLight(0xdbefff,0x63706c,2.4));
+const scene=new THREE.Scene();scene.add(new THREE.HemisphereLight(0xdbefff,0x63706c,.65));
 const sun=new THREE.DirectionalLight(0xffecd2,2);sun.position.set(12,-15,30);scene.add(sun);
 const camera=new THREE.PerspectiveCamera(75,1,.04,250);camera.up.set(0,0,1);
 const rig=new THREE.Group();scene.add(rig);
 const cargo=new THREE.Group();scene.add(cargo);
+// Numerous visible fixtures share three broad, unshadowed lighting proxies.
+const floodlights=new THREE.Group();scene.add(floodlights);
+for(const field of window.Driftworks.miningLights.fields){
+  const color=new THREE.Color(...field.color);
+  const lamp=new THREE.PointLight(color,field.power*70,Math.max(...field.radii)*1.8,2);
+  lamp.position.set(...field.center);floodlights.add(lamp);
+}
 let cargoKey=-1;
 function updateCargo(){
   const fill=Number(document.getElementById('cargo').value);if(fill===cargoKey)return;cargoKey=fill;
@@ -41,7 +49,7 @@ function addCrew(){
   }
 }
 const ray=new THREE.Raycaster();const keys=new Set();
-const colors={ochre:0xd4a34a,steel:0x758784,dark:0x243438,light:0xe3ca7d};
+const colors={ochre:0xd4a34a,steel:0x758784,dark:0x243438,light:0xe3ca7d,lamp:0xfff0c7,marker:0x59f2d9};
 const doors=[{name:'Downward cargo hatch',position:[2.75,0,7.24],size:[2.86,2.76,.12],travel:3,open:false},{name:'Inner pressure door',position:[1.2,0,8.43],size:[.12,1.36,2.10],travel:1.65,open:false}];
 let yaw=0,pitch=0,flight=false,last=0,active=false;
 const status=panel.querySelector('#fps-status');
@@ -65,7 +73,7 @@ function build(){
     }
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
     if(glass.length){const panes=new THREE.BufferGeometry();panes.setAttribute('position',new THREE.Float32BufferAttribute(glass,3));panes.computeVertexNormals();rig.add(new THREE.Mesh(panes,new THREE.MeshStandardMaterial({color:0x7baeb7,transparent:true,opacity:.18,depthWrite:false,side:THREE.DoubleSide})));}
-    rig.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:colors[key],side:THREE.DoubleSide,roughness:.85})));
+    rig.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:colors[key],side:THREE.DoubleSide,roughness:.85,emissive:key==='lamp'||key==='marker'?colors[key]:0,emissiveIntensity:1})));
   }
   // Thin mullions retain the faceted window silhouette around transparent study glazing.
   const outline=[[-6,-3],[-4,-4.5],[4,-4.5],[6,-3],[6,3],[4,4.5],[-4,4.5],[-6,3]];
@@ -123,6 +131,7 @@ function tick(now){
   requestAnimationFrame(tick);const dt=Math.min(.035,(now-last)/1000||0);last=now;if(!active)return;
   for(const d of doors){const target=d.open?d.travel:0;d.offset+=(target-d.offset)*Math.min(1,dt*7);d.mesh.position.y=d.position[1]+d.offset;}
   rig.updateMatrixWorld(true);
+  floodlights.visible=document.getElementById('floodlights').checked;
   addCrew();updateCargo();
   const directions=viewDirections(yaw,pitch);
   const forward=new THREE.Vector3(...directions.forward);

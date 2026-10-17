@@ -8,6 +8,13 @@
     /** @typedef {import('./types').Weapon} Weapon */
     /** @typedef {import('../src/types').World} World */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade;
+    // Six-hour principal-axis spin; vectors use the renderer's +Z axis.
+    var spinRate = 2 * Math.PI / (6 * 60 * 60);
+    /** @param {number[]} vector @param {number} angle */
+    function rotateVector(vector, angle) {
+        var c = Math.cos(angle), s = Math.sin(angle);
+        return [vector[0] * c - vector[1] * s, vector[0] * s + vector[1] * c, vector[2]];
+    }
     // Browser resources and artwork queries are supplied by the flight composition root.
     /** @param {SessionEnvironment} environment */
     function create(environment) {
@@ -34,7 +41,7 @@
         world.packets = [];
         world.selectedShipIds = [];
         world.combat.drones = [];
-        var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.training.create('training'), contact = false;
+        var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.training.create('training'), contact = false, grounded = false;
         // A short-lived view of session-owned objects, not a detached copy.
         // Read again after transitions that may replace state, combat, guns or world.
         /** @returns {Snapshot} */
@@ -58,6 +65,7 @@
             guns = DW.flightGuns.create();
             state = model.createSortie(asteroid.radius, config.profile);
             contact = false;
+            grounded = false;
             if (combat.enabled)
                 DW.training.spawn(combat, state, asteroid.radius);
             return snapshot();
@@ -70,6 +78,16 @@
             while (remaining > 0) {
                 var dt = Math.min(1 / 120, remaining);
                 remaining -= dt;
+                var wasGrounded = grounded, angle = spinRate * dt;
+                asteroid.rotation = (asteroid.rotation + angle) % (2 * Math.PI);
+                // Contact is an arcade stop relative to the moving terrain.
+                if (grounded) {
+                    state.eye = rotateVector(state.eye, angle);
+                    state.right = rotateVector(state.right, angle);
+                    state.up = rotateVector(state.up, angle);
+                    state.back = rotateVector(state.back, angle);
+                }
+                grounded = false;
                 if (controls.throttle !== null)
                     state.throttle = controls.throttle;
                 state.throttle = Math.max(0, Math.min(1, state.throttle + (controls.throttleRate) * dt * .5));
@@ -93,9 +111,13 @@
                     return x / (length || 1);
                 });
                 if (length < asteroid.radius * 1.12 + 5 / units) {
-                    var surface = environment.surfaceFrame(asteroid, direction);
-                    if (model.contact(state, surface.point, asteroid.radius))
-                        contact = true;
+                    var surface = environment.surfaceFrame(asteroid, rotateVector(direction, -asteroid.rotation));
+                    grounded = model.contact(state, rotateVector(surface.point, asteroid.rotation), asteroid.radius);
+                    // Preserve resting contact at the exact clearance boundary.
+                    if (!grounded && wasGrounded && Math.hypot.apply(null, state.velocity) < 1e-8 &&
+                        Math.abs(Math.hypot.apply(null, state.eye) - Math.hypot.apply(null, surface.point) * asteroid.radius - 5 / units) < 1e-9)
+                        grounded = true;
+                    if (grounded) contact = true;
                 }
             }
             return snapshot();
@@ -104,5 +126,5 @@
                 world = value;
             } };
     }
-    DW.flightSession = { create: create };
+    DW.flightSession = { create: create, rotateVector: rotateVector };
 }());

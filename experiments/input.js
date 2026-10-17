@@ -14,9 +14,10 @@
         var x = position[0] + dx * sensitivity / Math.max(1, range), y = position[1] + dy * sensitivity / Math.max(1, range), length = Math.hypot(x, y);
         return length > 1 ? [x / length, y / length] : [x, y];
     }
-    /** @param {number[]} position @param {number} zone */
-    function stickDemand(position, zone) {
-        var length = Math.hypot(position[0], position[1]), demand = deadzone(Math.min(1, length), zone);
+    /** @param {number[]} position @param {number} zone @param {number} [exponent] */
+    function stickDemand(position, zone, exponent) {
+        // Linear radial demand keeps equal travel increments equally responsive.
+        var length = Math.hypot(position[0], position[1]), demand = Math.pow(deadzone(Math.min(1, length), zone), exponent || 1);
         return length > 0 ? [-position[1] * demand / length, -position[0] * demand / length] : [0, 0];
     }
     /** @param {boolean} standard */

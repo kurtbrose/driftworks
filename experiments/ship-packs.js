@@ -172,6 +172,23 @@
         });
         return { vertices: data, color: [1, 1, 1], texture: texture, stride: 8, paint: paint };
     }
+    /** @type {WeakMap<Model,{source:number[],vertices:Float32Array}>} */
+    var sourceBuffers = new WeakMap();
+    /** Immutable model mesh plus a small per-craft transform; no posed vertex bake.
+     * @param {Model} model @param {Pose} pose @param {number} units
+     * @param {HTMLImageElement} [texture] @param {Vector} [paint] @returns {Batch} */
+    function sourceDraw(model, pose, units, texture, paint) {
+        var source = model.texturedVertices;
+        if (!source) throw new Error('Model has no textured vertices: ' + model.id);
+        var cached = sourceBuffers.get(model);
+        if (!cached || cached.source !== source) {
+            cached = {source:source,vertices:new Float32Array(source)};
+            sourceBuffers.set(model,cached);
+        }
+        return {vertices:cached.vertices,color:[1,1,1],stride:8,texture:texture,paint:paint,
+            staticGeometry:true,origin:/** @type {[number,number,number]} */ (pose.eye),scale:1/units,
+            basis:new Float32Array([pose.right[0],pose.right[1],pose.right[2],-pose.back[0],-pose.back[1],-pose.back[2],pose.up[0],pose.up[1],pose.up[2]])};
+    }
     /** @type {Map<string, Promise<HTMLImageElement>>} */
     var textureImages = new Map();
     function loadTextures() {
@@ -204,8 +221,8 @@
             return result;
         });
     }
-    /** @param {ArtCraft[]} craft @param {string} selection @param {number} wave @param {number} units @param {Images} images @param {Vector} [paint] */
-    function sourceFleetGeometry(craft, selection, wave, units, images, paint) {
+    /** @param {ArtCraft[]} craft @param {string} selection @param {number} wave @param {number} units @param {Images} images @param {Vector} [paint] @param {boolean} [transforms] */
+    function sourceFleetGeometry(craft, selection, wave, units, images, paint, transforms) {
         /** @type {Map<Model, Pose[]>} */
         var groups = new Map();
         craft.forEach(function (e) {
@@ -220,7 +237,10 @@
         });
         var batches = /** @type {Batch[]} */ ([]);
         groups.forEach(function (poses, model) {
-            batches.push(sourceGeometry(model, poses, units, images.get(model.id), paint));
+            if (transforms) poses.forEach(function (pose) {
+                batches.push(sourceDraw(model, pose, units, images.get(model.id), paint));
+            });
+            else batches.push(sourceGeometry(model, poses, units, images.get(model.id), paint));
         });
         return batches;
     }
@@ -469,5 +489,5 @@
     function paintColor(hex) {
         return /^#[0-9a-f]{6}$/i.test(hex) ? [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255] : undefined;
     }
-    DW.shipPackModels = { craftModel: craftModel, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
+    DW.shipPackModels = { craftModel: craftModel, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
 }());

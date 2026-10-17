@@ -118,9 +118,9 @@ function updateFixtures(){
     }
     shape.dispose();source.dispose();
   }else{
-    const foot=ground(24,0);
+    const foot=ground(24,30);
     if(foot){const groups=api.miningPlatformGeometry(1,0,false,1),scale=36/(32*units);
-      const colors={ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49]};
+      const colors={ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49],lamp:[1,.94,.78],marker:[.35,.95,.85]};
       for(const [key,data] of Object.entries(groups)){
         const vertices=new Float32Array(data.length);
         for(let i=0;i<data.length;i+=6)for(let k=0;k<3;k++){
@@ -145,9 +145,13 @@ function rebuild(){
   const light=api.surfaceSpotlight(asteroid);lamp.position.fromArray(light.position);lamp.target.position.copy(lamp.position).add(vec(light.direction));lamp.visible=lightOn;
   raw.sync(world);updateFixtures();updateLightSources();dirty=true;
 }
+function resetWorksiteCamera(){
+  const rig=document.getElementById('fixture').value==='rig';
+  walkX=rig?-22:0;walkY=rig?-14:0;lookYaw=rig?.7:0;lookPitch=rig?-.08:-.12;
+}
 function setPose(value){
   if(value==='surface'&&asteroid.excavation.level>0){world=DW.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];document.getElementById('cut').setAttribute('aria-pressed','false');rebuild();}
-  mode=value;walkX=walkY=lookYaw=0;lookPitch=-.12;
+  mode=value;resetWorksiteCamera();
   raw.setSurfaceCamera(null);yaw=0;tilt=value==='underside'?Math.PI-.75:.9;
   world.camera={x:0,y:0,zoom:Math.min(rawHost.clientWidth,rawHost.clientHeight)*.32/asteroid.radius};
   for(const b of document.querySelectorAll('[data-pose]'))b.setAttribute('aria-pressed',String(b.dataset.pose===value));
@@ -160,7 +164,7 @@ for(const button of document.querySelectorAll('[data-pose]'))button.onclick=()=>
 document.getElementById('cut').onclick=function(){world=DW.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];this.setAttribute('aria-pressed',String(asteroid.excavation.level>0));if(mode==='surface')setPose('orbit');rebuild();};
 document.getElementById('light').onclick=function(){lightOn=!lightOn;this.setAttribute('aria-pressed',String(lightOn));toggleRaw('[data-spotlight]');if(lightOn&&document.getElementById('light-source').value==='all')document.getElementById('light-source').value='work';else if(!lightOn&&document.getElementById('light-source').value==='work')document.getElementById('light-source').value='all';updateLightSources();renderer.shadowMap.needsUpdate=true;if(lightOn&&mode!=='surface')setPose('surface');dirty=true;};
 document.getElementById('shadows').onclick=function(){shadows=!shadows;this.setAttribute('aria-pressed',String(shadows));toggleRaw('[data-work-shadows]');lamp.castShadow=shadows;sun.castShadow=shadows;renderer.shadowMap.needsUpdate=true;dirty=true;};
-document.getElementById('fixture').onchange=()=>{updateFixtures();dirty=true;};
+document.getElementById('fixture').onchange=()=>{resetWorksiteCamera();updateFixtures();dirty=true;};
 document.getElementById('surface').onchange=()=>{
   rock.material.dispose();rock.material=document.getElementById('surface').value==='clay'?new THREE.MeshBasicMaterial({color:new THREE.Color().setRGB(.45,.43,.4,THREE.SRGBColorSpace),side:THREE.DoubleSide}):makeRockMaterial();
   raw.setStudyDiagnostics({mode:'normal',flat:document.getElementById('surface').value==='clay',scale:1,mothership:false,actors:true});dirty=true;
@@ -263,6 +267,7 @@ if(new URLSearchParams(location.search).has('test'))requestAnimationFrame(()=>{
   const result=document.createElement('output');result.id='comparison-test-result';document.querySelector('footer').append(result);
   let cases=0,maxDifference=0;
   const choose=(id,value)=>{const element=document.getElementById(id);element.value=value;element.dispatchEvent(new Event('change'));};
+  const eyeForRegression=()=>camera.position.toArray();
   const capture=()=>{draw();const canvas=rawHost.querySelector('canvas'),gl=canvas.getContext('webgl'),a=new Uint8Array(canvas.width*canvas.height*4),b=new Uint8Array(renderer.domElement.width*renderer.domElement.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,a);renderer.getContext().readPixels(0,0,renderer.domElement.width,renderer.domElement.height,renderer.getContext().RGBA,renderer.getContext().UNSIGNED_BYTE,b);if(gl.getError()||renderer.getContext().getError())throw new Error('WebGL error');return [a,b];};
   try{
     choose('fixture','none');choose('surface','clay');
@@ -301,7 +306,14 @@ if(new URLSearchParams(location.search).has('test'))requestAnimationFrame(()=>{
     const [,withShadows]=capture();document.getElementById('shadows').click();const [,withoutShadows]=capture();
     let darkened=0;for(let i=0;i<withShadows.length;i+=4)if(withoutShadows[i]+withoutShadows[i+1]+withoutShadows[i+2]-withShadows[i]-withShadows[i+1]-withShadows[i+2]>8)darkened++;
     if(darkened<50)throw new Error('No Three.js cast shadows detected');document.getElementById('shadows').click();cases++;
-    choose('fixture','rig');capture();if(!fixtureBatches.length)throw new Error('No rig fixture');cases++;
+    choose('fixture','rig');choose('detail','legacy');const [,rigShadowed]=capture();if(!fixtureBatches.length)throw new Error('No rig fixture');
+    const rigRay=new THREE.Raycaster();rigRay.setFromCamera(new THREE.Vector2(0,0),camera);
+    const rigHits=rigRay.intersectObjects(fixtureGroup.children);if(rigHits.length&&rigHits[0].distance*units<2)throw new Error('Rig inspection camera is obstructed');
+    const savedRigEye=eyeForRegression();setPose('orbit');setPose('surface');capture();if(savedRigEye.some((v,i)=>Math.abs(v-eyeForRegression()[i])>1e-8))throw new Error('Rig camera preset did not survive re-entry');cases++;
+    document.getElementById('shadows').click();const [,rigUnshadowed]=capture();document.getElementById('shadows').click();
+    let rigShadowPixels=0;for(let i=0;i<rigShadowed.length;i+=4)if(rigUnshadowed[i]+rigUnshadowed[i+1]+rigUnshadowed[i+2]-rigShadowed[i]-rigShadowed[i+1]-rigShadowed[i+2]>8)rigShadowPixels++;
+    if(rigShadowPixels<20)throw new Error('No rig floodlight shadows visible: '+rigShadowPixels);cases++;
+
     document.getElementById('light').click();document.getElementById('seed').value='ast-ceres-01';document.getElementById('apply').click();choose('fixture','posts');setPose('orbit');choose('surface','clay');
     const [returnedRaw,returnedThree]=capture();let returnedUnion=0,returnedDifference=0;
     for(let i=0;i<returnedRaw.length;i+=4){const a=returnedRaw[i+3]>127,b=returnedThree[i]>61;if(a||b)returnedUnion++;if(a!==b)returnedDifference++;}

@@ -259,6 +259,9 @@ export type AsteroidVisual = {
   craters: { x: number; y: number; rx: number; ry: number; angle: number; depth: number; age: number; rimScale: number; sizeClass: string }[];
 };
 
+export type RigLightUniforms = {uRigCount:number;uRigProjected:number;uRigPower:Float32Array;uRigOrigin:Float32Array;uRigX:Float32Array;uRigY:Float32Array;uRigZ:Float32Array};
+export type RigLightMount = {id:string;position:number[];target:number[];anchor:number[];range:number;power:number};
+export type RigLighting = {origin:number[];right:number[];forward:number[];up:number[];scale:number;power:number};
 export type PlatformSurface = {fit:TerrainFit;sample:TerrainSampler;scale:number;site:number[];heading:number;ramps:number[]|null};
 export type TerrainHit = {point:number[];normal:number[];distance:number};
 export type TerrainSampler = {stats:{raycasts:number;rampQueries:number};ray:(origin:number[],direction:number[])=>TerrainHit|null;at:(x:number,y:number)=>TerrainHit|null;collides:(points:number[][])=>boolean;triangleCount:number};
@@ -279,6 +282,7 @@ export type LandingOptions = {unitsPerMetre?:number; spin?:number};
 export type LandingSample = {time:number; altitude:number; deployment:number; ramps:number; match:number; travel:number; offset:number[]; headingOffset:number; contact:boolean; done:boolean; phase:string};
 export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
+  miningLights?:{bakeDocking:(data:ArrayLike<number>)=>Float32Array;fields:{id:string;center:number[];radii:number[];power:number;color:number[]}[];fixtureCounts:Record<string,number>;model:RigLighting;irradiance:(rig:RigLighting,point:number[],normal:number[])=>number[];shaderSource:string;uniforms:(rigs:RigLighting[],origin:number[],angle:number,scale:number)=>RigLightUniforms;mounts:RigLightMount[];basis:(direction:number[])=>number[][];rig:(pose:{world:(p:number[])=>number[];rotate:(p:number[])=>number[]},scale:number,power?:number)=>RigLighting};
   miningTerrain?: MiningTerrain;
   miningLanding?: {duration:number; sample:(time:number)=>LandingSample; pose:(fit:LandingFit,time:number,options?:LandingOptions)=>LandingPose};
   asteroidArt?: {
@@ -298,6 +302,7 @@ export interface DriftworksNamespace {
     craterDistance: (impact: {center: [number, number, number]; normal: [number, number, number]; radius: number}, point: [number, number, number]) => number;
     impactBytes: (asteroid: Asteroid) => Uint8Array;
     globeRelief: (asteroid: Asteroid, direction: [number, number, number]) => number;
+    miningPlatformLights:()=>Record<string,number[]>;
     miningPlatformRampGeometry:(panelOpen:number)=>Record<string,number[]>;
     platformSurface:(platform:Platform,asteroid:Asteroid,open?:boolean)=>PlatformSurface|null;
     platformSurfaceGeometry:(surface:PlatformSurface,deployment:number,ramps:number)=>Record<string,number[]>;
@@ -324,7 +329,9 @@ export interface DriftworksNamespace {
     create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean}) => {
       setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean}) => void;
       getRenderStats: () => {drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
-      setStudyActors: (batches: {vertices: Float32Array; color: [number,number,number]; opacity?: number}[]) => void;
+      setStudyLightRigs:(rigs:RigLighting[])=>void;
+    setRigLightsEnabled:(enabled:boolean)=>void;
+    setStudyActors: (batches: {vertices: Float32Array; bakedDocking?:Float32Array; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
       setStudyEffects: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;
       getOrbit: () => {yaw: number; tilt: number; height?: number};
       setSurfaceCamera: (pose: {eye: [number, number, number]; right: [number, number, number]; up: [number, number, number]; back: [number, number, number]} | null) => void;

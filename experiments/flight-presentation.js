@@ -19,11 +19,11 @@
         var closedRig = DW.scene3d.miningPlatformGeometry(1, 0, false, 0, '');
         var openRig = DW.scene3d.miningPlatformGeometry(1, 0, false, 1, '');
         /** @type {Record<string, [number,number,number]>} */
-        var colors = {ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49]};
+        var colors = {ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49],lamp:[1,.94,.78],marker:[.35,.95,.85]};
         var units = DW.sim.METERS_PER_UNIT, rigScale = 36 / 32;
         const poses = DW.miningStudyCrew && DW.miningStudyCrew.poses;
-        /** @type {{vertices:number[],color:[number,number,number]}[]} */
-        var groups = [];
+        /** @type {Batch[]} */
+        var batches = [];
         /** @type {{position:number[],yaw:number,pose:'standing'|'servicing'}[]} */
         var placements = [
             {position:[-9,19,0],yaw:0,pose:'standing'},
@@ -33,18 +33,19 @@
             {position:[3,0,13.74],yaw:Math.PI/2,pose:'standing'}
         ];
         world.asteroids.forEach(function (asteroid) {
+            /** @type {{vertices:number[],color:[number,number,number]}[]} */
+            var groups = [];
             [[-.32,-.85,.65],[.42,-.65,.72],[-.6,.25,.8]].forEach(function (direction, siteIndex) {
                 var rig = siteIndex === 1 ? closedRig : openRig;
                 var frame = DW.scene3d.surfaceFrame(asteroid, /** @type {[number,number,number]} */ (direction));
                 var z = frame.normal, h = Math.hypot(z[0],z[1]) || 1;
                 var x = [-z[1]/h,z[0]/h,0], y = [z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];
-                var c = Math.cos(asteroid.rotation), s = Math.sin(asteroid.rotation);
                 /** @param {number[]} p @param {number[]} n @param {number} group @param {[number,number,number]} color */
                 function vertex(p, n, group, color) {
                     var out = groups[group] || (groups[group] = {vertices:[],color:color});
                     var local=p.map(function(_,k){return frame.point[k]*asteroid.radius+(x[k]*p[0]+y[k]*p[1]+z[k]*p[2])/units;});
                     var normal=n.map(function(_,k){return x[k]*n[0]+y[k]*n[1]+z[k]*n[2];});
-                    out.vertices.push(asteroid.position.x+local[0]*c-local[1]*s,asteroid.position.y+local[0]*s+local[1]*c,local[2],normal[0]*c-normal[1]*s,normal[0]*s+normal[1]*c,normal[2]);
+                    out.vertices.push(local[0],local[1],local[2],normal[0],normal[1],normal[2]);
                 }
                 Object.keys(rig).forEach(function (material,index) {
                     var v=rig[material];
@@ -60,12 +61,15 @@
                     }
                     poses[placement.pose].forEach(function (batch,index) {
                         var v=batch.vertices;
-                        for(var i=0;i<v.length;i+=6) vertex([offset[0]+(v[i]*pc-v[i+1]*ps)*1.8,offset[1]+(v[i]*ps+v[i+1]*pc)*1.8,offset[2]+v[i+2]*1.8],[v[i+3]*pc-v[i+4]*ps,v[i+3]*ps+v[i+4]*pc,v[i+5]],4+index,batch.color);
+                        for(var i=0;i<v.length;i+=6) vertex([offset[0]+(v[i]*pc-v[i+1]*ps)*1.8,offset[1]+(v[i]*ps+v[i+1]*pc)*1.8,offset[2]+v[i+2]*1.8],[v[i+3]*pc-v[i+4]*ps,v[i+3]*ps+v[i+4]*pc,v[i+5]],Object.keys(rig).length+index,batch.color);
                     });
                 });
             });
+            groups.forEach(function (batch) {
+                batches.push({vertices:new Float32Array(batch.vertices),color:batch.color,asteroidId:asteroid.id,staticGeometry:true});
+            });
         });
-        return groups.map(function (batch) { return {vertices:new Float32Array(batch.vertices),color:batch.color}; });
+        return batches;
     }
     /** @param {ArtCraft} craft @param {number} wave @param {Pick<Appearance, 'allyArt' | 'enemyArt'>} appearance */
     function model(craft, wave, appearance) {
@@ -137,7 +141,7 @@
                 }), selection = team === 'ally' ? appearance.allyArt : appearance.enemyArt;
                 if (!craft.length)
                     return;
-                var batches = selection ? DW.shipPackModels.sourceFleetGeometry(craft, selection, combat.wave, units, appearance.shipImages, appearance.paint[team]) : DW.training.geometry({ enemies: craft.map(function (e) {
+                var batches = selection ? DW.shipPackModels.sourceFleetGeometry(craft, selection, combat.wave, units, appearance.shipImages, appearance.paint[team], true) : DW.training.geometry({ enemies: craft.map(function (e) {
                         return Object.assign({}, e, { hp: 1 });
                     }) });
                 batches.forEach(function (batch) {
@@ -152,10 +156,13 @@
                     actorBatches.push(batch);
                 });
             });
-            var nextCrewKey = JSON.stringify(world.asteroids.map(function (a) { return [a.id,a.radius,a.rotation,a.position]; }));
+            var nextCrewKey = JSON.stringify(world.asteroids.map(function (a) { return [a.id,a.radius,a.excavation]; }));
             var nextPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses;
             if (nextCrewKey !== crewKey || nextPoses !== crewPoses) { crews = surfaceCrews(world); crewKey = nextCrewKey; crewPoses = nextPoses; }
-            scene.setStudyActors(actorBatches.concat(crews));
+            scene.setStudyActors(actorBatches.concat(crews.map(function (batch) {
+                var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });
+                return Object.assign({}, batch, {origin: /** @type {[number,number,number]} */ ([asteroid ? asteroid.position.x : 0, asteroid ? asteroid.position.y : 0, 0]), rotation: asteroid ? asteroid.rotation : 0});
+            })));
             var effectBatches = DW.flightGuns.geometry(DW.training.allGuns(combat, guns), state), engineParts = /** @type {Float32Array[]} */ ([]);
             ['ally', 'enemy'].forEach(function (team) {
                 var craft = DW.training.alive(combat).filter(function (e) {

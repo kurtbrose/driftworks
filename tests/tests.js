@@ -165,20 +165,40 @@
         presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
       } finally { DW.scene3d.miningPlatformGeometry=rigGeometry; }
       assert(rampStates.join(',')==='0,1','Flight scenery includes both closed and fully open source rigs');
-      var crewBatches=actors.slice(-4);
-      assert(crewBatches.length===4&&crewBatches.every(function(b){return b.vertices.length>0&&b.vertices.length%18===0&&Array.from(b.vertices).every(Number.isFinite);}));
+      var materialCount=Object.keys(DW.scene3d.miningPlatformGeometry(1,0,false,0,'')).length;
+      var crewBatches=actors.slice(-materialCount);
+      assert(crewBatches.length===materialCount&&crewBatches.every(function(b){return b.vertices.length>0&&b.vertices.length%18===0&&Array.from(b.vertices).every(Number.isFinite);}));
       var sourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,0,'');
       var openSourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,1,'');
       Object.keys(sourceRig).forEach(function(material,index){assert(crewBatches[index].vertices.length===sourceRig[material].length+openSourceRig[material].length*2,'Three complete current rigs: two open, one closed');});
       assert(JSON.stringify(world)===beforeCrews,'Surface scenery must not change persistent world state');
       presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
-      assert(actors[actors.length-1]===crewBatches[3],'Static crew geometry is reused across frames');
+      assert(actors[actors.length-1].vertices===crewBatches[materialCount-1].vertices,'Static crew geometry is reused across frames');
+      var surfaceQuery=DW.scene3d.surfaceFrame, queries=0;
+      try {
+        DW.scene3d.surfaceFrame=function(a,d){queries++;return surfaceQuery(a,d);};
+        for(var spinFrame=0;spinFrame<20;spinFrame++) {
+          world.asteroids[0].rotation+=.001;
+          world.asteroids[0].position.x+=1;
+          presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
+          var attached=actors.slice(-materialCount);
+          attached.forEach(function(batch,index){
+            assert(batch.vertices===crewBatches[index].vertices&&batch.staticGeometry);
+            assertClose(batch.rotation,world.asteroids[0].rotation);
+            assertClose(batch.origin[0],world.asteroids[0].position.x);
+          });
+        }
+        assert(queries===0,'Spin and translation must not repeat attachment terrain sampling');
+        world.asteroids[0].radius+=1;
+        presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
+        assert(queries>0&&actors[actors.length-1].vertices!==crewBatches[materialCount-1].vertices,'Resizing rebuilds attachment geometry');
+      } finally { DW.scene3d.surfaceFrame=surfaceQuery; }
       var savedCrew=DW.miningStudyCrew;
       try {
         var pose=[{vertices:[0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1],color:[.8,.8,.8]}];
         DW.miningStudyCrew={poses:{standing:pose,servicing:pose},error:null};
         presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
-        assert(actors.length===9&&actors[8].vertices.length===18*5*3,'Loaded source poses add five astronauts per rig');
+        assert(actors.length===4+materialCount+1&&actors[actors.length-1].vertices.length===18*5*3,'Loaded source poses add five astronauts per rig');
         assert(actors[4]!==crewBatches[0],'Asynchronous pose loading invalidates the scenery cache');
       } finally { DW.miningStudyCrew=savedCrew; }
       world.asteroids=[];
@@ -233,13 +253,30 @@
     f.host.requestPointerLock=function(){return {catch:function(fn){fn(new Error('rejected'));}};};c.capture();assert(f.counts.failure===3);
     f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===1);
     f.doc.emit('mousemove',{movementX:80,movementY:-40});
-    var demand=c.sample();assert(demand.pitch>0&&demand.yaw<0);assertClose(c.view().stickRange,160);
+    var demand=c.sample();assert(demand.pitch>0&&demand.yaw<0);assertClose(c.view().stickRange,360);
+    assertClose(c.view().mouse[0],80/360);
+    f.host.clientWidth=1920;f.host.clientHeight=1080;assertClose(c.view().stickRange,486);
+    f.host.clientWidth=600;f.host.clientHeight=900;assertClose(c.view().stickRange,270);
     f.doc.emit('mousedown',{button:2});assert(c.sample().fire);
     f.doc.emit('mouseup',{button:2});assert(!c.sample().fire);
     f.key('KeyC');assert(c.sample().pitch===0&&c.view().mouse[0]===0);
     f.doc.getElementById('input-mode').value='controller';f.doc.emit('mousemove',{movementX:80,movementY:40});assert(c.sample().yaw===0);
     c.release();assert(f.doc.pointerLockElement===null);f.doc.emit('pointerlockchange');assert(f.counts.pause===1);
     f.setDead(true);f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===1&&f.counts.pause===2);
+  });
+
+  test('paused steering presets preserve all three travel and response combinations',function(){
+    var f=flightControlsFixture(),c=f.controls,preset=f.elements['steering-preset'];
+    assert(preset.value==='wide-linear');assertClose(c.view().stickRange,360);
+    preset.value='medium-soft';preset.onchange();assert(f.counts.pause===1);assertClose(c.view().stickRange,240);
+    f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');
+    f.doc.emit('mousemove',{movementX:129.6,movementY:0});assertClose(c.sample().yaw,-Math.pow(.5,1.6));
+    preset.value='wide-soft';preset.onchange();assertClose(c.view().stickRange,360);assertClose(c.view().mouse[0],0);
+    f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');
+    f.doc.emit('mousemove',{movementX:194.4,movementY:0});assertClose(c.sample().yaw,-Math.pow(.5,1.6));
+    preset.value='wide-linear';preset.onchange();
+    f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');
+    f.doc.emit('mousemove',{movementX:194.4,movementY:0});assertClose(c.sample().yaw,-.5);
   });
 
   test('flight controls retain controller edges, editable bindings and disconnect pause',function(){
@@ -285,6 +322,37 @@
     session.setWorld(replacement);
     assert(session.snapshot().world===replacement && session.snapshot().world!==initial.world);
     assert(session.snapshot().combat===toggled.combat);
+  });
+
+  test('flight asteroid spins in simulation time and contact queries use its body frame', function () {
+    var DW=window.Driftworks, sampled, session=DW.flightSession.create({
+      surfaceFrame:function(a,d){sampled=d;return {point:d};},
+      terrainHit:function(){return null;},onGunshot:function(){},onImpact:function(){}
+    });
+    var view=session.snapshot(), config={profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]};
+    var controls={throttle:0,throttleRate:0,stop:true,fire:false};
+    view.asteroid.rotation=Math.PI/2;
+    view.state.eye=[view.asteroid.radius,0,0];
+    session.advance(1/120,controls,config);
+    var phase=Math.PI/2+2*Math.PI/(6*3600*120);
+    assertClose(view.asteroid.rotation,phase);
+    assertClose(sampled[0],Math.cos(phase));
+    assertClose(sampled[1],-Math.sin(phase));
+    assert(session.snapshot().contact);
+    var before=view.state.eye.slice(),right=view.state.right.slice();
+    session.advance(1/120,controls,config);
+    var expected=DW.flightSession.rotateVector(before,2*Math.PI/(6*3600*120));
+    assertClose(view.state.eye[0],expected[0]);assertClose(view.state.eye[1],expected[1]);
+    expected=DW.flightSession.rotateVector(right,2*Math.PI/(6*3600*120));
+    assertClose(view.state.right[0],expected[0]);assertClose(view.state.right[1],expected[1]);
+    assert(session.snapshot().contact);
+    var phaseBefore=view.asteroid.rotation;
+    session.advance(0,controls,config);assertClose(view.asteroid.rotation,phaseBefore);
+    session.reset({mode:'training',enabled:false,profile:config.profile});
+    assertClose(view.asteroid.rotation,phaseBefore);
+    var p=[.3,.8,-.2],local=DW.flightSession.rotateVector(p,-phaseBefore);
+    var roundtrip=DW.flightSession.rotateVector(local,phaseBefore);
+    p.forEach(function(v,i){assertClose(roundtrip[i],v);});
   });
 
   test('flight session substeps preserve movement, training, guns, audio and contact order', function () {
@@ -1139,6 +1207,39 @@
     batches.forEach(function(b,i){var v=models[i].texturedVertices;assert(b.stride===8);assert(b.texture===images.get(models[i].id));assert(b.vertices.length===v.length);assertClose(b.vertices[0],3+v[1]/10,.00001);assertClose(b.vertices[1],4+v[0]/10,.00001);assertClose(b.vertices[3],v[4],.00001);for(var j=0;j<v.length;j+=8){assertClose(b.vertices[j+6],v[j+6],.000001);assertClose(b.vertices[j+7],v[j+7],.000001);}});
     assert(api.sourceFleetGeometry([],'mixed',1,10,images).length===0);
   });
+  test('cached flight draw transforms match baked hull positions, normals and UVs',function(){
+    var DW=window.Driftworks,api=DW.shipPackModels,models=DW.shipPacks[0].models;
+    var half=Math.SQRT1_2,pose={eye:[3,4,5],right:[half,half,0],back:[.5,-.5,half],up:[-.5,.5,half]},images=new Map();
+    var craft=models.map(function(model,index){return {index:index,pose:pose};});
+    var draws=api.sourceFleetGeometry(craft,'mixed',1,10,images,undefined,true);
+    assert(draws.length===models.length);
+    draws.forEach(function(batch,index){
+      var baked=api.sourceGeometry(models[index],[pose],10),v=batch.vertices,m=batch.basis;
+      assert(batch.staticGeometry&&batch.stride===8&&batch.origin===pose.eye&&batch.scale===.1);
+      for(var i=0;i<v.length;i+=8){
+        for(var k=0;k<3;k++){
+          assertClose(batch.origin[k]+batch.scale*(m[k]*v[i]+m[k+3]*v[i+1]+m[k+6]*v[i+2]),baked.vertices[i+k],.00001);
+          assertClose(m[k]*v[i+3]+m[k+3]*v[i+4]+m[k+6]*v[i+5],baked.vertices[i+3+k],.00001);
+        }
+        assertClose(v[i+6],baked.vertices[i+6],.000001);assertClose(v[i+7],baked.vertices[i+7],.000001);
+      }
+      var moved=Object.assign({},pose,{eye:[6,7,8]});
+      var next=api.sourceDraw(models[index],moved,20,undefined,[.2,.3,.4]);
+      assert(next.vertices===v&&next.origin===moved.eye&&next.scale===.05&&next.paint[0]===.2);
+    });
+    var model={id:'replaceable',texturedVertices:[0,0,0,0,0,1,0,0]};
+    var first=api.sourceDraw(model,pose,10);
+    model.texturedVertices=[1,0,0,0,0,1,0,0];
+    assert(api.sourceDraw(model,pose,10).vertices!==first.vertices,'Replacing source data invalidates the mesh cache');
+  });
+  test('target bounds scan each source vertex array once',function(){
+    var reads=0,source=new Proxy([3,4,0,0,0,1],{get:function(target,key){if(key==='0'||key==='1'||key==='2')reads++;return target[key];}});
+    var model={vertices:source},api=window.Driftworks.flightTargetCamera;
+    assert(api.radius(model)===5&&reads===3);
+    assert(api.radius(model)===5&&reads===3);
+    model.vertices=[0,0,12,0,0,1];assert(api.radius(model)===12);
+  });
+
   test('imported ship geometry transforms positions and normals without changing the source',function(){
     var api=window.Driftworks.shipPackModels,m=window.Driftworks.shipPacks[0].models[0],original=m.vertices.slice(),pose={eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]};
     var batch=api.geometry(m,[pose,pose],10)[0];assert(batch.vertices.length===m.vertices.length*2);assertClose(batch.vertices[0],3+m.vertices[1]/10,.00001);assertClose(batch.vertices[1],4+m.vertices[0]/10,.00001);assertClose(batch.vertices[3],m.vertices[4],.00001);assert(m.vertices.every(function(v,i){return v===original[i];}));assert(api.geometry(m,[],10)[0].vertices.length===0);
@@ -1251,6 +1352,17 @@
     assert(input.stickDemand([.02,.02],.08).every(function(v){return v===0;}));
     var edge=input.moveStick([0,0],1000,1000,160,1);assertClose(Math.hypot.apply(null,edge),1);assertClose(Math.hypot.apply(null,input.stickDemand(edge,.08)),1);
     assertClose(input.moveStick([0,0],40,0,160,2)[0],.5);
+  });
+
+  test('mouse stick response stays linear throughout travel and preserves direction and full turns',function(){
+    var input=window.Driftworks.flightInput;
+    var half=input.stickDemand([.54,0],.08),diagonal=input.stickDemand([.324,.432],.08);
+    assertClose(half[0],0);assertClose(half[1],-.5);
+    for(var i=0;i<=100;i++)assertClose(input.stickDemand([.08+.92*i/100,0],.08)[1],-i/100);
+    assertClose(Math.hypot.apply(null,diagonal),Math.abs(half[1]));
+    assertClose(diagonal[0]/diagonal[1],4/3);
+    assertClose(input.stickDemand([0,-1],.08)[0],1);
+    assertClose(input.stickDemand([1,0],.08)[1],-1);
   });
 
   test('training combat can clear a wave using the same player flight and gun models', function () {

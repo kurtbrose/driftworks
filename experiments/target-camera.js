@@ -8,11 +8,16 @@
     /** @typedef {import('./types').Vector} Vector */
     /** @typedef {import('./types').Pose} Pose */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks);
+    /** @type {WeakMap<Model,{source:number[],radius:number}>} */
+    var bounds = new WeakMap();
     /** @param {Model} model */
     function radius(model) {
+        var cached = bounds.get(model);
+        if (cached && cached.source === model.vertices) return cached.radius;
         var v = model.vertices, r = 1;
         for (var i = 0; i < v.length; i += 6)
             r = Math.max(r, Math.hypot(v[i], v[i + 1], v[i + 2]));
+        bounds.set(model,{source:v,radius:r});
         return r;
     }
     /** @param {HTMLElement} host */
@@ -46,7 +51,7 @@
                 // Track aspect relative to the player's view, with a small elevated sensor angle.
                 var yaw = Math.atan2(view.back[0], -view.back[1]);
                 scene.setOrbit({ yaw: yaw, tilt: 1.12, height: 0 });
-                scene.setStudyActors(model.texturedVertices ? [DW.shipPackModels.sourceGeometry(model, [pose], units, images.get(model.id), paint)] : DW.shipPackModels.geometry(model, [pose], units));
+                scene.setStudyActors(model.texturedVertices ? [DW.shipPackModels.sourceDraw(model, pose, units, images.get(model.id), paint)] : DW.shipPackModels.geometry(model, [pose], units));
                 scene.setStudyEffects(DW.shipPackModels.scorchGeometry([centered], selection, wave, units));
                 scene.sync(world);
                 scene.render(world, 1, 0, 1 / 15);
