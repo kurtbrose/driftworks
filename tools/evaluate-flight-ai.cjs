@@ -27,7 +27,7 @@ if(replayPath) {
     const skills=value('--skill','all')==='all'?[0,1,2]:[Number(value('--skill','all'))];
     const rows=[];let last;
     for(const start of starts)for(const category of categories)for(const flavor of category==='perfect'?['practiced']:flavors)for(const skill of skills) {
-        last=api.run({start,category,flavor,skill,duration,seed,profile:Number(value('--ship','0')),opponentProfile:Number(value('--opponent-ship','-1')),weapon:Number(value('--weapon','-1')),opponentWeapon:Number(value('--opponent-weapon','-2')),unshielded:args.includes('--unshielded')});rows.push(last.summary());
+        last=api.run({opponentStyle:value('--style','baseline'),start,category,flavor,skill,duration,seed,profile:Number(value('--ship','0')),opponentProfile:Number(value('--opponent-ship','-1')),weapon:Number(value('--weapon','-1')),opponentWeapon:Number(value('--opponent-weapon','-2')),unshielded:args.includes('--unshielded')});rows.push(last.summary());
     }
     const recordPath=value('--record','');
     if(recordPath) {

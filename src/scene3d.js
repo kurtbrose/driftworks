@@ -344,8 +344,32 @@
     return Math.hypot(q[0] - t * d[0], q[1] - t * d[1], q[2] - t * d[2]);
   }
   /** Solid field in asteroid-local normalized coordinates; negative means rock. */
-  /** @param {Asteroid} asteroid @param {V3} p */
-  function rockField(asteroid, p) {
+  /** Piecewise-linear, repeatable fracture displacement; no rounded wave bands.
+   * @param {V3} p */
+  function excavationFracture(p) {
+    var x=p[0]*31, y=p[1]*31, z=p[2]*31;
+    var ix=Math.floor(x), iy=Math.floor(y), iz=Math.floor(z);
+    x-=ix;y-=iy;z-=iz;
+    var value=0;
+    for(var k=0;k<2;k++)for(var j=0;j<2;j++)for(var i=0;i<2;i++){
+      var hash=Math.sin((ix+i)*127.1+(iy+j)*311.7+(iz+k)*74.7)*43758.5453;
+      value+=(hash-Math.floor(hash))*(i?x:1-x)*(j?y:1-y)*(k?z:1-z);
+    }
+    return value*2-1;
+  }
+  /** Octagonal excavation along a segment, with planar sides and sloping haunches.
+   * @param {V3} p @param {V3} a @param {V3} b */
+  function excavatedPassage(p,a,b){
+    var dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],length=Math.hypot(dx,dy,dz);
+    var t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy+(p[2]-a[2])*dz)/(length*length)));
+    var qx=p[0]-a[0]-dx*t,qy=p[1]-a[1]-dy*t,qz=p[2]-a[2]-dz*t;
+    var horizontal=Math.hypot(dx,dy),side=Math.abs((-dy*qx+dx*qy)/horizontal);
+    var up=Math.abs((qz*horizontal-(qx*dx+qy*dy)*dz/horizontal)/length);
+    var end=Math.abs((qx*dx+qy*dy+qz*dz)/length);
+    return Math.max(side*.94,up*1.12,(side+up)*.77,end)-.062;
+  }
+  /** @param {Asteroid} asteroid @param {V3} p @param {boolean} [cutaway] */
+  function rockField(asteroid, p, cutaway) {
     var outer = outerField(asteroid, p);
     var e = asteroid.excavation;
     if (!e || e.level <= 0) return outer;
@@ -354,10 +378,19 @@
     /** @type {V3} */ var entrance = [Math.cos(e.tunnelAngle) * 1.08, Math.sin(e.tunnelAngle) * 1.08, -depth];
     /** @type {V3} */ var bend = [Math.cos(e.tunnelAngle + e.tunnelTurn) * 0.43,
       Math.sin(e.tunnelAngle + e.tunnelTurn) * 0.43, -depth - 0.035];
-    var cavity = Math.hypot(p[0] - center[0], p[1] - center[1], p[2] - center[2]) - e.pocketRadius;
-    var tunnel = Math.min(segmentDistance(p, entrance, bend), segmentDistance(p, bend, center)) - 0.062;
-    // Remove upper rock through the chamber center. All exposed faces are meshed.
-    return Math.max(outer, p[2] + depth, -Math.min(cavity, tunnel));
+    var x = p[0] - center[0], y = p[1] - center[1], z = p[2] - center[2];
+    // Intersect offset joint planes instead of carving a smooth ellipsoid.
+    // Oblique faces form broken shoulders, a pitched roof and uneven walls.
+    var r=e.pocketRadius, broken=excavationFracture(p);
+    var cavity=Math.max(Math.abs(x)/1.16-r,Math.abs(y)/.88-r,Math.abs(z)/.82-r,
+      (x*.63+y*.51+z*.58)-r*.98,(-x*.72+y*.33+z*.61)-r*.94,
+      (x*.31-y*.81+z*.49)-r*.93,(-x*.4-y*.63-z*.66)-r*.96,
+      (x*.75+y*.52-z*.4)-r*.98)+.018*broken;
+    var tunnel=Math.min(excavatedPassage(p,entrance,bend),excavatedPassage(p,bend,center))+.012*broken;
+    var solid = Math.max(outer, -Math.min(cavity, tunnel));
+    // Cutaway is an inspection operation, separate from the excavated solid.
+    // Existing callers retain their established cutaway presentation.
+    return cutaway === false ? solid : Math.max(solid, p[2] + depth);
   }
 
   /** CPU terrain is shared with rendering; contact solutions never live in saves.
@@ -417,8 +450,8 @@
   }
 
   /** Marching tetrahedra: cached closed solid including cut face and cavity walls. */
-  /** @param {Asteroid} asteroid @param {number} [resolution] */
-  function asteroidMesh(asteroid, resolution) {
+  /** @param {Asteroid} asteroid @param {number} [resolution] @param {boolean} [cutaway] */
+  function asteroidMesh(asteroid, resolution, cutaway) {
     var n = resolution || 88, stride = n + 1;
     var field = new Float32Array(stride * stride * stride);
     var step = 2.2 / n;
@@ -427,9 +460,9 @@
     /** @param {number} x @param {number} y @param {number} z */
     function index(x, y, z) { return x + stride * (y + stride * z); }
     /** @param {V3} p */
-    function sampledField(p) { return rockField(asteroid, p); }
+    function sampledField(p) { return rockField(asteroid, p, cutaway); }
     for (var z = 0; z <= n; z++) for (var y = 0; y <= n; y++) for (var x = 0; x <= n; x++) {
-      field[index(x, y, z)] = rockField(asteroid, point(x, y, z));
+      field[index(x, y, z)] = sampledField(point(x, y, z));
     }
     var corners = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]];
     var tetrahedra = [[0, 5, 1, 6], [0, 1, 2, 6], [0, 2, 3, 6], [0, 3, 7, 6], [0, 7, 4, 6], [0, 4, 5, 6]];

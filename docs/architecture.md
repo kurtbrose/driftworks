@@ -109,8 +109,16 @@ for both perspective camera modes. Alt-drag spans
 both hemispheres; Underside provides a direct inspection view. The lattice plane
 moves behind the body when viewing from below.
 When excavation is active, the field
-subtracts a sphere at `pocketOffset` and a bent capsule tunnel following
+subtracts a chamber bounded by offset joint planes at `pocketOffset` and an octagonal tunnel following
 `tunnelAngle`/`tunnelTurn`, using `depthM / METERS_PER_UNIT` explicitly.
+Bounded piecewise-linear fracture displacement breaks up excavated walls while preserving
+centerline clearance. `rockField(asteroid, point, false)` evaluates the excavated
+solid with its roof intact; `asteroidMesh(asteroid, resolution, false)` meshes it.
+Omitting the final argument retains the existing cutaway presentation. These
+inspection arguments do not modify persistent excavation data.
+`tests/excavation-study.html` inspects that shared geometry with neutral rock
+shading, terrain shadows, an inspection light, entrance/interior camera presets,
+and a chamber-radius control in physical meters.
 A horizontal cut through the chamber center removes the upper shell. The cut
 face, inner walls, floor and outer shell belong to the same mesh, so depth testing
 and orbiting provide real interior occlusion/parallax. Excavation parameters and
@@ -482,7 +490,15 @@ against `scene3d.rockField`. Impacts do not excavate or damage the asteroid.
 `scene3d.setStudyEffects` accepts up to four position/normal triangle batches
 and colors; only study scenes draw them. Reused dynamic GPU buffers render
 soft additive bolt billboards and flashes through the same camera/depth buffer as terrain.
-Two generic barrels fire per volley, independent of the original POF gun mounts;
+Two generic barrels fire per volley, independent of the original POF gun mounts.
+Their mounts are 3 m left/right, 1.3 m down and 4 m forward of the eye;
+normalized firing directions converge at a shared point on the crosshair ray,
+retaining the weapon speed. At volley emission, `training.convergencePoint`
+selects the nearest living hostile hull surface within weapon range, excluding
+surfaces behind the muzzles and terrain-occluded hulls. The gun controller
+accepts an optional lazy aim-point callback, called once per volley; a null point
+falls back to 300 m forward of the eye. Player sessions, duels and AI craft use
+the same query. This does not snap to off-axis targets or predict their motion;
 there is no linked-bank or energy simulation yet. Training combat supplies separate health and enemy logic. Existing synthesized audio
 honors the main game's sound preferences.
 

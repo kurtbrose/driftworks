@@ -2,7 +2,7 @@
 
 Research date: 2026-10-17. Scope: the experimental flight lab, not the strategic combat in `src/combat.js`. This report proposes changes; it does not change gameplay, physics, weapons, balance, or visuals. Expected benefits below are hypotheses from source inspection, not measured playtest results.
 
-Implementation status: the initial validation harness and testing pilots are now available; see [flight AI validation](flight-ai-validation.md) for commands, contracts, baseline results and limitations. Opponent improvements proposed here remain unimplemented.
+Implementation status: the initial validation harness and testing pilots are now available; see [flight AI validation](flight-ai-validation.md) for commands, contracts, baseline results and limitations. Initial opt-in adaptations of recommendations 1 and 2 are implemented as `fso-pursuit` and `fso-breaker`; see [combat research implementation and results](combat-research.md#freespace-technique-experiment). Other recommendations remain proposals. These are adaptations, not copied FreeSpace algorithms or established improvements in enjoyment.
 
 ## Executive summary
 

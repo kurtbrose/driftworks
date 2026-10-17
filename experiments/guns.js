@@ -8,12 +8,14 @@
     /** @typedef {import('./types').Bolt} Bolt */
     /** @typedef {import('./types').Batch} Batch */
     var units = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).sim.METERS_PER_UNIT;
+    // Shared crosshair aim point, measured forward from the eye in metres.
+    var convergenceM = 300;
     /** @returns {Guns} */
     function create() {
         return { bolts: [], impacts: [], cooldown: 0, fired: 0, hits: 0 };
     }
-    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] */
-    function step(guns, pose, weapon, trigger, dt, hitTest) {
+    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] */
+    function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint) {
         var ready = guns.cooldown <= 1e-9;
         guns.cooldown -= dt;
         guns.impacts = guns.impacts.filter(function (hit) {
@@ -41,12 +43,18 @@
             return;
         }
         if (ready) {
+            var target = aimPoint && aimPoint();
             [-1, 1].forEach(function (side) {
                 var position = pose.eye.map(function (x, i) {
                     return x + (pose.right[i] * side * 3 - pose.up[i] * 1.3 - pose.back[i] * 4) / units;
                 });
-                guns.bolts.push({ position: position, direction: pose.back.map(function (x) {
-                        return -x;
+                var aim = pose.back.map(function (x, i) {
+                    return target ? (target[i] - position[i]) * units :
+                        -x * (convergenceM - 4) - pose.right[i] * side * 3 + pose.up[i] * 1.3;
+                });
+                var distance = Math.hypot.apply(null, aim);
+                guns.bolts.push({ position: position, direction: aim.map(function (x) {
+                        return x / distance;
                     }), weapon: weapon, age: 0 });
             });
             guns.fired += 2;

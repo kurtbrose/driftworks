@@ -23,6 +23,7 @@ aside select{max-width:100%}
 <label for="watch-defense">Defenses · both pilots</label><select id="watch-defense"><option value="retail">Ship's retail hull and shields</option><option value="unshielded">Unshielded training variant</option></select>
 <details><summary>Starting setup</summary>
 <label for="watch-start">Starting geometry</label><select id="watch-start"><option value="headOn">Head-on merge</option><option value="crossing" selected>Crossing paths</option><option value="tail">Tail chase</option><option value="turning">Offset parallel / turning</option><option value="opening">Opening range</option></select>
+<label for="watch-style">Opponent style - experimental</label><select id="watch-style"><option value="baseline">Baseline - existing opponent</option><option value="aggressor">Aggressor - close pressure</option><option value="interceptor">Interceptor - cut ahead</option><option value="fso-pursuit">FreeSpace-inspired pursuit</option><option value="fso-breaker">FreeSpace-inspired pursuit + escape</option><option value="passer">Passer - attack, extend, return</option></select><small>Style also applies when flying manually in the normal training lab. Watch mode keeps matched one-on-one setups.</small>
 <label for="watch-skill">Opponent pilot</label><select id="watch-skill"><option value="0">Rookie</option><option value="1" selected>Veteran</option><option value="2">Ace</option></select>
 <label for="watch-seed">Seed</label><input id="watch-seed" type="number" min="0" max="4294967295" step="1" value="1">
 </details>
@@ -57,13 +58,13 @@ aside select{max-width:100%}
 <script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
 <script src="../src/audio.js?v=6e0151663084"></script>
 <script src="../src/hud.js?v=b41c310fa59d"></script>
-<script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/scene3d.js?v=99e846557f8f"></script>
+<script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/scene3d.js?v=fc453c5ce7c6"></script>
 <script src="../src/game.js?v=28388fb25a28"></script>
 <script src="dom.js?v=c1d4287e76cd"></script>
-<script src="retail-profiles.js?v=ff0cae63892e"></script><script src="flight-model.js?v=f6471383e49a"></script><script src="radar.js?v=5b94bf01c95c"></script><script src="skybox.js?v=024820197f3f"></script><script src="retail-weapons.js?v=642a0025bb1b"></script><script src="guns.js?v=b10829b80e6e"></script><script src="input.js?v=c8646362ecc7"></script><script src="training.js?v=a64c39b825c7"></script><script src="performance.js?v=ba17efe880d9"></script><script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=0fc9a4cc50fb"></script><script src="ship-packs.js?v=f942d13439f5"></script><script src="mumble.js?v=360b3c36d97c"></script><script src="flight-dialogue.js?v=fec783fbcf5d"></script>
+<script src="retail-profiles.js?v=ff0cae63892e"></script><script src="flight-model.js?v=f6471383e49a"></script><script src="radar.js?v=5b94bf01c95c"></script><script src="skybox.js?v=024820197f3f"></script><script src="retail-weapons.js?v=642a0025bb1b"></script><script src="guns.js?v=ec7edf898f38"></script><script src="input.js?v=c8646362ecc7"></script><script src="training.js?v=8fc8dcb8175b"></script><script src="performance.js?v=ba17efe880d9"></script><script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=0fc9a4cc50fb"></script><script src="ship-packs.js?v=f942d13439f5"></script><script src="mumble.js?v=360b3c36d97c"></script><script src="flight-dialogue.js?v=fec783fbcf5d"></script>
 <script src="flight-comms.js?v=caf6461d1fd5"></script>
-<script src="flight-radio.js?v=3588a7cfe6a4"></script><script src="target-camera.js?v=4eaf88c0470f"></script><script src="flight-presentation.js?v=1e53205c4f2b"></script><script src="flight-diagnostics.js?v=37cdbc19585f"></script><script src="flight-controls.js?v=ea2a580494e3"></script><script src="flight-session.js?v=c0575eaad90d"></script><script src="flight-hud.js?v=a656aef129a6"></script>
+<script src="flight-radio.js?v=3588a7cfe6a4"></script><script src="target-camera.js?v=4eaf88c0470f"></script><script src="flight-presentation.js?v=1e53205c4f2b"></script><script src="flight-diagnostics.js?v=37cdbc19585f"></script><script src="flight-controls.js?v=ea2a580494e3"></script><script src="flight-session.js?v=4765f69c47c2"></script><script src="flight-hud.js?v=a656aef129a6"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js"}}</script>
 <script type="module" src="../assets/characters/quaternius-astronaut/poses.js?v=5b153d4d6b3a"></script>
-<script src="flight-ai.js?v=6aafa3682577"></script><script src="flight-duel.js?v=3749051b2b4d"></script><script src="flight-watch.js?v=88771be8f480"></script>
-<script src="flight.js?v=49de8247f575"></script></body></html>
+<script src="flight-ai.js?v=6aafa3682577"></script><script src="flight-duel.js?v=c5caae4edb8b"></script><script src="flight-watch.js?v=88771be8f480"></script>
+<script src="flight.js?v=12112fbf1690"></script></body></html>

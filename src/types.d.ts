@@ -323,8 +323,8 @@ export interface DriftworksNamespace {
     project: (point: [number, number, number], camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => Vec2 & { depth: number };
     unproject: (point: Vec2, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }, z?: number) => Vec2 | null;
     view: (camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number }) => { right: [number, number, number]; up: [number, number, number]; back: [number, number, number]; distance: number; focal: number };
-    rockField: (asteroid: Asteroid, point: [number, number, number]) => number;
-    asteroidMesh: (asteroid: Asteroid, resolution?: number) => Float32Array;
+    rockField: (asteroid: Asteroid, point: [number, number, number], cutaway?: boolean) => number;
+    asteroidMesh: (asteroid: Asteroid, resolution?: number, cutaway?: boolean) => Float32Array;
     pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
     inspectionHeight: (world: World) => number;

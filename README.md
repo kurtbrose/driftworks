@@ -263,7 +263,7 @@ and Medusa uses Prometheus R. Both weapons travel at 450 m/s for 2 seconds
 bolt length/radii, damage factors and energy cost, are extracted directly into
 `experiments/retail-weapons.js` with the retail table hash. Damage factors are used by training combat;
 weapon energy remains unlimited. The expanded catalog has ten bolt weapons; the selector starts with the ship's first supported retail primary, then offers sandbox overrides. Both sides now receive their own class hull/shield capacity, with symmetric pooled shields and Driftworks recharge rules. See [retail loadouts](docs/retail-flight-loadouts.md) for exact provenance and adaptation limits.
-Generic twin parallel barrels replace model-specific mounts.
+Generic twin barrels, 6 m apart, converge on the nearest hostile hull under the crosshair within weapon range, falling back to 300 m ahead of the camera when aiming into empty space. This also applies to AI craft; it does not lead moving targets.
 Bolts use fixed world speed (retail non-additive velocity), never hitscan, and
 swept terrain contact. Sounds reuse Driftworks' synthesized gun/impact effects.
 
@@ -514,6 +514,7 @@ Bookend timing and subtitle offsets remain fixed.
 
 - 3D mining platform study: http://localhost:8000/tests/mining-platform-orbit.html (four simultaneous pod views: fixed side/front/top and interactive raised orbit; terrain-fitted anchors and ramps; **Play landing - 50 m** finds a safe nearby site, matches slow asteroid rotation, translates, unfolds legs, descends to contact, then opens ground-limited ramps. Gameplay uses the same terrain solver and fitted rig geometry in both renderers. Pause/resume, replay, or return to Manual study).
 
+- Excavation geometry study: http://localhost:8000/tests/excavation-study.html (entrance, tunnel and irregular chamber; inspect the intact roof or cutaway and adjust chamber size in meters).
 - Production mining contact regression: http://localhost:8000/tests/mining-platform-gameplay.html (actual world platforms; scrub landing time, rotate the asteroid, orbit and zoom; append `?renderer=2d` to check the Pixi projection).
 
 ### Flight joystick controls

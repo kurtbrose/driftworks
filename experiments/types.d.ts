@@ -54,7 +54,9 @@ export type Demand = FlightInput & {
 };
 /** Complete legal control request shared by evaluation pilots and replay. */
 export type PilotInput = Required<FlightInput> & { throttle: number; fire: boolean };
+export type OpponentStyle = 'baseline'|'aggressor'|'interceptor'|'passer'|'fso-pursuit'|'fso-breaker';
 export type DuelOptions = {
+    opponentStyle?: OpponentStyle;
     start?: 'headOn'|'crossing'|'tail'|'turning'|'opening';
     category?: 'perfect'|'human';
     flavor?: 'novice'|'practiced'|'expert';
@@ -81,12 +83,12 @@ export type DuelSummary = {
     category:string; flavor:string; skill:number; start:string; seed:number; profile:string; weapon:string;
     playerHull:number; playerShield:number; opponentHull:number; opponentShield:number;
     playerMaxHull:number; playerMaxShield:number; opponentMaxHull:number; opponentMaxShield:number;
-    opponentProfile:string; opponentWeapon:string; unshielded:boolean;
+    opponentProfile:string; opponentWeapon:string; unshielded:boolean; opponentStyle:OpponentStyle;
     playerShots:number; opponentShots:number; longestDry:number;
-    metrics:{playerOpportunities:number;opponentOpportunities:number;playerDamageSteps:number;opponentDamageSteps:number;modeChanges:number;minRange:number;maxRange:number};
+    metrics:{playerOpportunities:number;opponentOpportunities:number;playerDamageSteps:number;opponentDamageSteps:number;modeChanges:number;minRange:number;maxRange:number;rangeIntegral:number;attackSeconds:number;extendSeconds:number;rearThreatSeconds:number;separations:number;progressEscapes:number};
 };
 export type StudyConfig = {
-    ships:number[];weapons:number[];starts:NonNullable<DuelOptions['start']>[];pilots:('perfect'|'novice'|'practiced'|'expert')[];skills:number[];
+    styles?:OpponentStyle[];ships:number[];weapons:number[];starts:NonNullable<DuelOptions['start']>[];pilots:('perfect'|'novice'|'practiced'|'expert')[];skills:number[];
     seeds:number;seed:number;duration:number;pairing:'mirror'|'all'|'anchor';defenses:'retail'|'unshielded'|'paired';
 };
 export type StudyCase = {id:string;options:DuelOptions};
@@ -175,6 +177,18 @@ export type Craft = ArtCraft & {
     pilot: string;
     skill: number;
     mode: string;
+    opponentStyle?: OpponentStyle;
+    extensionGoal?: Vector;
+    gunGoal?: Vector;
+    gunValid?: boolean;
+    reentryGoal?: Vector;
+    opportunityHold?: number;
+    noProgress?: number;
+    maneuverAt?: number;
+    breakCooldown?: number;
+    breakReason?: string;
+    separations?: number;
+    progressEscapes?: number;
     decision: number;
     until: number;
     goal: Vector;
@@ -202,6 +216,7 @@ export type RadioEvent = {
     wave: number;
 };
 export type Combat = {
+    opponentStyle?: OpponentStyle;
     player: Craft;
     configured: boolean;
     useHullModels?: boolean;
@@ -542,7 +557,7 @@ export type Line = {
 export type ExperimentModules = {
     flightStudy:{plan:(config:StudyConfig)=>StudyCase[];analyze:(rows:StudyRow[])=>{
         total:number;wins:number;losses:number;timeouts:number;medianKill:number|null;flagged:StudyRow[];
-        groups:{label:string;pilot:string;skill:number;weapons:string;unshielded:boolean;n:number;wins:number;losses:number;timeouts:number;medianKill:number|null;observedMean:number;longestDry:number}[];
+        groups:{separations:number;progressEscapes:number;style:OpponentStyle;meanRange:number;attackFraction:number;extendFraction:number;rearThreatFraction:number;opportunityFraction:number;label:string;pilot:string;skill:number;weapons:string;unshielded:boolean;n:number;wins:number;losses:number;timeouts:number;medianKill:number|null;observedMean:number;longestDry:number}[];
         shieldPairs:number;pairsCensored:number;observedShieldDelta:number|null;
     };watchUrl:(options:DuelOptions)=>string};
     flightWatch:{create:(getScenery:()=>Snapshot, options:DuelOptions)=>{
@@ -550,7 +565,7 @@ export type ExperimentModules = {
         snapshot:(chase:boolean)=>Snapshot;
         summary:()=>DuelSummary;replay:DuelReplay;
     }};
-    flightDuel: {create:(options?:DuelOptions)=>Duel;run:(options?:DuelOptions)=>Duel;replay:(record:DuelReplay)=>Duel;readWatchSearch:(search:string)=>Required<DuelOptions>|null;starts:string[];dt:number};
+    flightDuel: {create:(options?:DuelOptions)=>Duel;run:(options?:DuelOptions)=>Duel;replay:(record:DuelReplay)=>Duel;readWatchSearch:(search:string)=>Required<DuelOptions>|null;styles:OpponentStyle[];starts:string[];dt:number};
     flightAI: {
         version: string;
         flavors: Record<'novice'|'practiced'|'expert', {reaction:number;sample:number;noise:number;gain:number;damping:number;lead:number}>;
@@ -584,7 +599,7 @@ export type ExperimentModules = {
     };
     flightGuns: {
         create: () => Guns;
-        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null) => void;
+        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null) => void;
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
     };
@@ -595,6 +610,7 @@ export type ExperimentModules = {
         participants: (combat: Combat) => Craft[];
         bindPlayer: (combat: Combat, pose: FlightState) => Craft;
         hullHit: (craft: Craft, start: Vector, end: Vector) => Hit | null;
+        convergencePoint: (combat: Combat, shooter: Craft, weapon: Weapon, terrainHit?: TerrainHit) => Vector | null;
         defaultWeapon:(profile:Profile)=>number;
         configure:(combat:Combat,profile:Profile,unshielded?:boolean)=>void;
         equip:(craft:Craft,profile:Profile,weaponIndex:number,unshielded?:boolean)=>void;
@@ -799,6 +815,7 @@ export type Elements = {
     'watch-enemy-art':HTMLSelectElement;
     'watch-pilot': HTMLSelectElement;
     'watch-start': HTMLSelectElement;
+    'watch-style': HTMLSelectElement;
     'watch-skill': HTMLSelectElement;
     'watch-seed': HTMLInputElement;
     'watch-speed': HTMLSelectElement;

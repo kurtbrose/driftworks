@@ -3,6 +3,7 @@
     /** @typedef {import('./types').DuelOptions} Options */
     /** @typedef {import('./types').DuelReplay} Replay */
     var DW = /** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks), U = DW.sim.METERS_PER_UNIT, DT = 1 / 120;
+    var styles=/** @type {import('./types').OpponentStyle[]} */ (['baseline','aggressor','interceptor','passer','fso-pursuit','fso-breaker']);
     var starts = {
         headOn: {position:[0,600,0], forward:[0,-1,0]},
         crossing: {position:[350,350,0], forward:[-1,0,0]},
@@ -21,8 +22,8 @@
     }
     /** @param {Options} [configuration] */
     function create(configuration) {
-        var options=Object.assign(/** @type {Required<Options>} */ ({start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0,opponentProfile:-1,weapon:-1,opponentWeapon:-2,unshielded:false}),configuration);
-        if(!Object.prototype.hasOwnProperty.call(starts,options.start) || !Number.isFinite(options.duration) || options.duration<=0 || ![0,1,2].includes(options.skill) || !DW.arcade.profiles[options.profile] || !Number.isInteger(options.seed) || options.seed<0 || options.seed>4294967295) throw new Error('Invalid duel options');
+        var options=Object.assign(/** @type {Required<Options>} */ ({opponentStyle:'baseline',start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0,opponentProfile:-1,weapon:-1,opponentWeapon:-2,unshielded:false}),configuration);
+        if(!styles.includes(options.opponentStyle) || !Object.prototype.hasOwnProperty.call(starts,options.start) || !Number.isFinite(options.duration) || options.duration<=0 || ![0,1,2].includes(options.skill) || !DW.arcade.profiles[options.profile] || !Number.isInteger(options.seed) || options.seed<0 || options.seed>4294967295) throw new Error('Invalid duel options');
         var profile=DW.arcade.profiles[options.profile], enemyProfile=options.opponentProfile === -1 ? profile : DW.arcade.profiles[options.opponentProfile];
         var weaponIndex=options.weapon === -1 ? DW.training.defaultWeapon(profile) : options.weapon;
         var requestedEnemyWeapon=options.opponentWeapon === -2 ? options.weapon : options.opponentWeapon;
@@ -34,14 +35,14 @@
         DW.training.spawn(combat,player,0); combat.enemies=combat.enemies.slice(0,1);
         var enemy=combat.enemies[0], initial=starts[options.start];
         DW.training.equip(enemy,enemyProfile,enemyWeaponIndex,options.unshielded);
-        enemy.skill=options.skill; enemy.pilot=['Rookie','Veteran','Ace'][options.skill]; enemy.decision=0;
+        enemy.opponentStyle=options.opponentStyle; enemy.skill=options.skill; enemy.pilot=['Rookie','Veteran','Ace'][options.skill]; enemy.decision=0;
         setup(enemy.pose,initial.position,initial.forward,enemyProfile);
         combat.slots=[enemy.id];
         var pilot=DW.flightAI.create(options.category,options.flavor,options.seed), guns=DW.flightGuns.create();
         DW.training.bindPlayer(combat, player).guns = guns;
         combat.player.weaponIndex = weaponIndex;
         var tick=0, remainder=0, done=false, lastMode=enemy.mode, longestDry=0, dry=0;
-        var metrics={playerOpportunities:0,opponentOpportunities:0,playerDamageSteps:0,opponentDamageSteps:0,modeChanges:0,minRange:Infinity,maxRange:0};
+        var metrics={playerOpportunities:0,opponentOpportunities:0,playerDamageSteps:0,opponentDamageSteps:0,modeChanges:0,minRange:Infinity,maxRange:0,rangeIntegral:0,attackSeconds:0,extendSeconds:0,rearThreatSeconds:0,separations:0,progressEscapes:0};
         var replay=/** @type {Replay} */ ({version:2,policy:pilot.version,observation:pilot.observation,cadence:DT,options:Object.assign({},options),inputs:[]});
         /** @param {number} elapsed @param {import('./types').PilotInput[]} [inputStream] */
         function advance(elapsed, inputStream) {
@@ -58,16 +59,21 @@
                 DW.training.step(combat,player,DT,0);
                 if(combat.hull<hullBefore || combat.shield<shieldBefore) metrics.opponentDamageSteps++;
                 var hpBefore=enemy.hp, enemyShieldBefore=enemy.shield;
-                DW.flightGuns.step(guns,player,weapon,!combat.dead && input.fire,DT,function(a,b,bolt){return DW.training.trace(combat,a,b,bolt,'player',undefined,player);});
+                DW.flightGuns.step(guns,player,weapon,!combat.dead && input.fire,DT,function(a,b,bolt){return DW.training.trace(combat,a,b,bolt,'player',undefined,player);},function(){return DW.training.convergencePoint(combat,combat.player,weapon);});
                 if(enemy.hp<hpBefore || (enemy.shield || 0)<(enemyShieldBefore || 0)) metrics.playerDamageSteps++;
                 var own=DW.flightAI.solution(player,enemy.pose.eye,enemy.pose.velocity,weapon), other=DW.flightAI.solution(enemy.pose,player.eye,player.velocity,DW.retailWeapons[enemyWeaponIndex]);
                 var a=own.valid&&own.dot>.996, b=other.valid&&other.dot>.996;
+                metrics.rangeIntegral+=own.range*DT;
+                if(enemy.mode==='attack')metrics.attackSeconds+=DT;
+                if(enemy.mode==='break'||enemy.mode==='recover'||enemy.mode==='evade')metrics.extendSeconds+=DT;
+                var toEnemy=enemy.pose.eye.map(function(v,i){return v-player.eye[i];}), distance=Math.hypot.apply(null,toEnemy);
+                if(distance>0&&toEnemy.reduce(function(n,v,i){return n-v*player.back[i]/distance;},0)<-.65)metrics.rearThreatSeconds+=DT;
                 if(a) metrics.playerOpportunities+=DT;
                 if(b) metrics.opponentOpportunities+=DT;
                 dry=own.range<800 && !a && !b && enemy.hp===hpBefore && (enemy.shield || 0)>=(enemyShieldBefore || 0) && combat.lastHit<combat.time-DT/2 ? dry+DT : 0;
                 longestDry=Math.max(longestDry,dry);
                 metrics.minRange=Math.min(metrics.minRange,own.range); metrics.maxRange=Math.max(metrics.maxRange,own.range);
-                if(lastMode!==enemy.mode) {metrics.modeChanges++;lastMode=enemy.mode;}
+                if(lastMode!==enemy.mode) {metrics.modeChanges++;if(enemy.mode==='break')metrics.separations++;lastMode=enemy.mode;}
                 tick++;
                 done=combat.dead || enemy.hp<=0 || tick>=Math.ceil(options.duration/DT);
             }
@@ -78,8 +84,8 @@
                 category:pilot.category,flavor:pilot.flavor,skill:options.skill,start:options.start,seed:options.seed,profile:profile.name,weapon:weapon.name,
                 playerHull:combat.hull,playerShield:combat.shield,opponentHull:enemy.hp,playerShots:guns.fired,opponentShots:enemy.guns.fired,
                 opponentShield:enemy.shield || 0,playerMaxHull:combat.maxHull || 0,playerMaxShield:combat.maxShield || 0,opponentMaxHull:enemy.maxHp,opponentMaxShield:enemy.maxShield || 0,
-                opponentProfile:enemyProfile.name,opponentWeapon:DW.retailWeapons[enemyWeaponIndex].name,unshielded:options.unshielded,
-                longestDry:longestDry,metrics:Object.assign({},metrics)};
+                opponentStyle:options.opponentStyle,opponentProfile:enemyProfile.name,opponentWeapon:DW.retailWeapons[enemyWeaponIndex].name,unshielded:options.unshielded,
+                longestDry:longestDry,metrics:Object.assign({},metrics,{progressEscapes:enemy.progressEscapes||0})};
         }
         return {advance:advance,summary:summary,replay:replay,player:player,enemy:enemy,combat:combat,guns:guns};
     }
@@ -104,6 +110,7 @@
         /** @type {('profile'|'opponentProfile'|'weapon'|'opponentWeapon'|'skill'|'seed'|'duration')[]} */
         var numeric=['profile','opponentProfile','weapon','opponentWeapon','skill','seed','duration'];
         numeric.forEach(function(key){if(params.has(key))options[key]=Number(params.get(key));});
+        if(params.has('opponentStyle'))options.opponentStyle=/** @type {Options['opponentStyle']} */(params.get('opponentStyle'));
         if(params.has('category'))options.category=/** @type {Options['category']} */(params.get('category'));
         if(params.has('flavor'))options.flavor=/** @type {Options['flavor']} */(params.get('flavor'));
         if(params.has('start'))options.start=/** @type {Options['start']} */(params.get('start'));
@@ -111,5 +118,5 @@
         if(options.duration!==undefined&&options.duration>120)throw new Error('Watch links support at most 120 seconds');
         return create(options).replay.options;
     }
-    DW.flightDuel={create:create,run:run,replay:replay,readWatchSearch:readWatchSearch,starts:Object.keys(starts),dt:DT};
+    DW.flightDuel={create:create,run:run,replay:replay,readWatchSearch:readWatchSearch,styles:styles,starts:Object.keys(starts),dt:DT};
 }());

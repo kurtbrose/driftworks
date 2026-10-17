@@ -1770,11 +1770,55 @@
       for(var i=0;i<120;i++)model.step(guns,pose,w,true,1/120);
       assert(guns.fired===2*Math.ceil((1-1e-8)/w.fireWait));
       var bolt=guns.bolts[0],before=bolt.position.slice();model.step(guns,pose,w,false,1/120);
-      assertClose((bolt.position[1]-before[1])*sim.METERS_PER_UNIT,w.speed/120);
-      assertClose(bolt.position[0],before[0]);
+      assertClose(Math.hypot.apply(null,bolt.position.map(function(x,i){return x-before[i];}))*sim.METERS_PER_UNIT,w.speed/120);
       for(var j=0;j<Math.ceil((w.lifetime+.1)*120);j++)model.step(guns,pose,w,false,1/120);
       assert(guns.bolts.length===0);
     });
+  });
+  test('twin guns converge on the crosshair at 300 metres in any pose', function () {
+    var DW=window.Driftworks,U=sim.METERS_PER_UNIT;
+    [
+      {eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]},
+      {eye:[12,-8,3],right:[0,.6,.8],up:[1,0,0],back:[0,.8,-.6]}
+    ].forEach(function(pose){
+      var guns=DW.flightGuns.create();DW.flightGuns.step(guns,pose,DW.retailWeapons[0],true,1/120);
+      assert(guns.bolts.length===2);
+      var separation=Math.hypot.apply(null,guns.bolts[0].position.map(function(x,i){return x-guns.bolts[1].position[i];}));
+      assertClose(separation*U,6);
+      guns.bolts.forEach(function(bolt){
+        assertClose(Math.hypot.apply(null,bolt.direction),1);
+        var target=pose.eye.map(function(x,i){return x-pose.back[i]*300/U;});
+        var distance=Math.hypot.apply(null,target.map(function(x,i){return x-bolt.position[i];}));
+        target.forEach(function(x,i){assertClose(bolt.position[i]+bolt.direction[i]*distance,x);});
+      });
+    });
+  });
+  test('close tail shots converge on the nearest crosshair hull and both hit', function () {
+    var DW=window.Driftworks,U=sim.METERS_PER_UNIT,ai=DW.training,weapon=DW.retailWeapons[0];
+    var pose=DW.arcade.create(18),combat=ai.create('training'),player=ai.bindPlayer(combat,pose);
+    var enemyPose=DW.arcade.create(18);enemyPose.eye=pose.eye.map(function(x,i){return x-pose.back[i]*30/U;});
+    var enemy=ai.createCraft('close-target',enemyPose,'enemy');enemy.collision={kind:'sphere',radiusM:1};enemy.shield=0;
+    combat.enemies=[enemy];
+    var aim=ai.convergencePoint(combat,player,weapon);assert(aim);assertClose((aim[1]-pose.eye[1])*U,29);
+    // A narrow hull at 30 m fits between the fixed 300 m trajectories.
+    function volley(adaptive){
+      var guns=DW.flightGuns.create(),queries=0;
+      DW.flightGuns.step(guns,pose,weapon,true,1/120,undefined,adaptive?function(){queries++;return ai.convergencePoint(combat,player,weapon);}:undefined);
+      for(var i=0;i<12;i++)DW.flightGuns.step(guns,pose,weapon,false,1/120,function(a,b,bolt){return ai.trace(combat,a,b,bolt,'player',undefined,pose);});
+      if(adaptive)assert(queries===1,'Resolve aim once per volley, not per projectile/substep');
+      return guns.hits;
+    }
+    assert(volley(false)===0);assert(volley(true)===2);
+    enemy.hp=100;
+    var farPose=DW.arcade.create(18);farPose.eye=pose.eye.map(function(x,i){return x-pose.back[i]*60/U;});
+    var far=ai.createCraft('far-target',farPose,'enemy');far.collision={kind:'sphere',radiusM:1};
+    combat.enemies=[far,enemy];assertClose((ai.convergencePoint(combat,player,weapon)[1]-pose.eye[1])*U,29);
+    assert(ai.convergencePoint(combat,player,weapon,function(){return pose.eye.map(function(x,i){return x-pose.back[i]*10/U;});})===null,'Terrain occludes the hull');
+    enemy.hp=0;assertClose((ai.convergencePoint(combat,player,weapon)[1]-pose.eye[1])*U,59);
+    far.pose.eye[0]+=10/U;assert(ai.convergencePoint(combat,player,weapon)===null,'Do not snap to off-crosshair hulls');
+    far.pose.eye[0]-=10/U;far.team='ally';assert(ai.convergencePoint(combat,player,weapon)===null);
+    far.team='enemy';far.pose.eye[1]=pose.eye[1]+(weapon.speed*weapon.lifetime+20)/U;
+    assert(ai.convergencePoint(combat,player,weapon)===null,'Ignore hulls beyond weapon range');
   });
   test('gun sweeps hit terrain between endpoints and remove bolts at impact', function () {
     var model=window.Driftworks.flightGuns,field=function(p){return Math.hypot.apply(null,p)-1;};
@@ -2326,6 +2370,37 @@
     var turned = scene.project([100, 0, -100], camera, viewport, { yaw: 1, tilt: 0.6 });
     var original = scene.project([100, 0, -100], camera, viewport, { yaw: 0, tilt: 0.6 });
     assert(Math.abs(turned.x - original.x) > 20);
+  });
+  test('excavation retains its roof independently of cutaway inspection and keeps a connected passage', function () {
+    var scene = window.Driftworks.scene3d, world = createFreshWorld();
+    var a = sim.toggleAsteroidExcavation(world, world.asteroids[0].id).asteroids[0], e = a.excavation;
+    var before = JSON.stringify(a), depth = e.depthM / sim.METERS_PER_UNIT / a.radius;
+    var center = [e.pocketOffset.x, e.pocketOffset.y, -depth];
+    var entrance = [Math.cos(e.tunnelAngle)*1.08, Math.sin(e.tunnelAngle)*1.08, -depth];
+    var bend = [Math.cos(e.tunnelAngle+e.tunnelTurn)*.43, Math.sin(e.tunnelAngle+e.tunnelTurn)*.43, -depth-.035];
+    assert(scene.rockField(a, [0, 0, .3], false) < 0, 'Roof remains solid');
+    assert(scene.rockField(a, [0, 0, .3], true) > 0, 'Inspection removes roof');
+    [entrance, center].forEach(function (end) {
+      for (var i = 0; i <= 40; i++) {
+        var t = i/40, p = bend.map(function (v, k) { return v*(1-t)+end[k]*t; });
+        assert(scene.rockField(a, p, false) > .04, 'Passage has continuous center clearance');
+      }
+    });
+    var roofMesh = scene.asteroidMesh(a, 20, false), cutMesh = scene.asteroidMesh(a, 20, true);
+    assert(Array.from(roofMesh).every(Number.isFinite), 'Intact mesh is finite');
+    assert(roofMesh.some(function (v, i) { return i%6 === 2 && v > .3; }), 'Intact mesh contains upper shell');
+    assert(!cutMesh.some(function (v, i) { return i%6 === 2 && v > .001; }), 'Cut mesh omits upper shell');
+    assert(JSON.stringify(a) === before, 'Inspection and meshing never change saved excavation');
+  });
+  test('excavation preserves the exterior field away from its entrance', function () {
+    var scene=window.Driftworks.scene3d, world=createFreshWorld();
+    var intact=world.asteroids[0], excavated=sim.toggleAsteroidExcavation(world,intact.id).asteroids[0];
+    for(var i=0;i<24;i++){
+      var angle=i*Math.PI/12;
+      // Upper hemisphere remains rock: inspection clipping is disabled here.
+      var p=[Math.cos(angle)*.72,Math.sin(angle)*.72,.6];
+      assert(scene.rockField(intact,p,false)===scene.rockField(excavated,p,false), 'Excavation must not alter exterior geology');
+    }
   });
   test('3D rock solid retains the body scale and excavates real chamber and tunnel voids', function () {
     var scene = window.Driftworks.scene3d, a = createFreshWorld().asteroids[0];
@@ -4240,6 +4315,71 @@
     assert(JSON.stringify(parsed)===JSON.stringify(options));
     assert(DW.flightDuel.readWatchSearch('?unrelated=1')===null);
     var rejected=false;try{DW.flightDuel.readWatchSearch('?duel=1&seed=-1');}catch(e){rejected=true;}assert(rejected);
+  });
+
+  test('Opponent studies hold setup fixed across styles and preserve watch/replay identity', function () {
+    var DW=window.Driftworks,config={styles:['baseline','aggressor','interceptor','passer'],ships:[1],weapons:[-1],starts:['headOn'],pilots:['perfect'],skills:[1],seeds:2,seed:7,duration:6,pairing:'mirror',defenses:'retail'};
+    var cases=DW.flightStudy.plan(config);assert(cases.length===4);
+    cases.forEach(function(c){var duel=DW.flightDuel.run(c.options),summary=duel.summary();
+      assert(summary.opponentStyle===c.options.opponentStyle);
+      var query=DW.flightStudy.watchUrl(duel.replay.options).split('?')[1];
+      assert(DW.flightDuel.readWatchSearch(query).opponentStyle===summary.opponentStyle);
+      assert(JSON.stringify(DW.flightDuel.replay(duel.replay).summary())===JSON.stringify(summary));
+      assert(summary.metrics.attackSeconds+summary.metrics.extendSeconds<=summary.seconds+.00001);
+      assert(Number.isFinite(summary.metrics.rangeIntegral));
+    });
+    var invalid=false;try{DW.flightDuel.create({opponentStyle:'unknown'});}catch(e){invalid=true;}assert(invalid);
+  });
+
+  test('Pass fighter commits to an exit while aggressor maintains close pressure', function () {
+    var DW=window.Driftworks;
+    var aggressive=DW.flightDuel.run({opponentStyle:'aggressor',duration:12,category:'perfect',start:'headOn',profile:1}).summary();
+    var passer=DW.flightDuel.run({opponentStyle:'passer',duration:12,category:'perfect',start:'headOn',profile:1}).summary();
+    assert(passer.metrics.extendSeconds>aggressive.metrics.extendSeconds,'Pass fighter spends longer on committed exits');
+    var duel=DW.flightDuel.create({opponentStyle:'passer',duration:10,category:'perfect',start:'turning'});
+    duel.advance(.1);assert(duel.enemy.mode==='break');var goal=duel.enemy.extensionGoal.slice();
+    duel.advance(.6);assert(JSON.stringify(goal)===JSON.stringify(duel.enemy.extensionGoal),'Exit heading does not track the opponent every decision');
+  });
+
+  test('FreeSpace pursuit uses closure control without stopping or altering shared physics', function () {
+    var DW=window.Driftworks,U=sim.METERS_PER_UNIT;
+    function fixture(speed){var d=DW.flightDuel.create({opponentStyle:'fso-pursuit',duration:2,profile:1,start:'tail'});
+      d.enemy.pose.eye=d.player.eye.map(function(v,i){return v-(i===1?330/U:0);});
+      d.enemy.pose.back=[0,-1,0];d.enemy.pose.right=[1,0,0];d.enemy.pose.up=[0,0,1];
+      d.enemy.pose.velocity=[0,speed,0];d.player.velocity=[0,40,0];d.advance(1/120);return d;}
+    var closing=fixture(75),receding=fixture(10);
+    assert(closing.enemy.pose.throttle<receding.enemy.pose.throttle,'Closing fighter reduces throttle');
+    assert(closing.enemy.pose.throttle>=.45&&receding.enemy.pose.throttle<=1);
+    assert(closing.enemy.mode==='attack','Productive aligned pursuit is preserved');
+    assert(closing.enemy.gunGoal&&closing.enemy.goal,'Navigation and gun target are separately represented');
+    assert(closing.enemy.profile===DW.arcade.profiles[1]);
+  });
+
+  test('FreeSpace no-progress escape is opt-in, committed, bounded and followed by re-entry', function () {
+    var DW=window.Driftworks;
+    function fixture(style){var d=DW.flightDuel.create({opponentStyle:style,duration:15,start:'crossing',profile:1});d.enemy.noProgress=8;d.advance(1/120);return d;}
+    var pursuit=fixture('fso-pursuit'),breaker=fixture('fso-breaker');
+    assert(pursuit.enemy.mode==='attack'&&breaker.enemy.mode==='break');
+    assert(breaker.enemy.progressEscapes===1&&breaker.enemy.breakReason==='no-progress');
+    var exit=breaker.enemy.extensionGoal.slice();breaker.advance(.8);
+    assert(JSON.stringify(exit)===JSON.stringify(breaker.enemy.extensionGoal),'Exit point stays fixed');
+    breaker.advance(4.4);assert(breaker.enemy.mode!=='break','Escape ends by deadline');
+    assert(breaker.enemy.reentryGoal&&breaker.enemy.breakCooldown>breaker.combat.time,'Re-entry and cooldown follow escape');
+    assert(breaker.enemy.progressEscapes===1,'Cooldown prevents repeated escape chatter');
+  });
+
+  test('FreeSpace variants are deterministic through replay and study links', function () {
+    var DW=window.Driftworks;
+    ['fso-pursuit','fso-breaker'].forEach(function(style){var d=DW.flightDuel.run({opponentStyle:style,category:'human',flavor:'practiced',seed:4,duration:4});
+      assert(JSON.stringify(DW.flightDuel.replay(d.replay).summary())===JSON.stringify(d.summary()));
+      var url=DW.flightStudy.watchUrl(d.replay.options);assert(DW.flightDuel.readWatchSearch(url.split('?')[1]).opponentStyle===style);
+    });
+  });
+
+  test('Manual training spawns inherit the selected experimental opponent policy', function () {
+    var DW=window.Driftworks,t=DW.training.create('training'),pose=DW.arcade.create(0);
+    t.opponentStyle='fso-breaker';DW.training.spawn(t,pose,0);
+    assert(t.enemies.length>0&&t.enemies.every(function(e){return e.opponentStyle==='fso-breaker';}));
   });
 
   window.registerPopulationTests(test, assert, assertClose);

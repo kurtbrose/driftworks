@@ -101,12 +101,14 @@
         comms.reset();
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
+        session.snapshot().combat.opponentStyle=/** @type {import('./types').OpponentStyle} */(get('watch-style').value);
+        session.snapshot().combat.enemies.forEach(function(enemy){enemy.opponentStyle=session.snapshot().combat.opponentStyle;});
         var seed = Number(get('watch-seed').value);
         if (!Number.isSafeInteger(seed) || seed < 0 || seed > 4294967295) seed = 1;
         get('watch-seed').value = String(seed);
         watch = observing ? DW.flightWatch.create(session.snapshot, {category:pilot === 'perfect' ? 'perfect' : 'human',
             flavor:/** @type {'novice'|'practiced'|'expert'} */ (pilot === 'perfect' ? 'practiced' : pilot.replace('human-', '')), seed:seed,
-            start:/** @type {import('./types').DuelOptions['start']} */ (get('watch-start').value), skill:Number(get('watch-skill').value), duration:watchDuration,
+            start:/** @type {import('./types').DuelOptions['start']} */ (get('watch-start').value), opponentStyle:/** @type {import('./types').OpponentStyle} */(get('watch-style').value), skill:Number(get('watch-skill').value), duration:watchDuration,
             profile:Number(get('watch-profile').value),opponentProfile:Number(get('watch-opponent-profile').value),weapon:Number(get('watch-weapon').value),opponentWeapon:watchOpponentWeapon,unshielded:get('watch-defense').value==='unshielded'}) : null;
         document.body.classList.toggle('watching-ai', observing);
         get('watch-panel').classList.toggle('watch-running', observing);
@@ -121,12 +123,12 @@
         get('watch-play').disabled = !watch;
         get('watch-restart').disabled = !watch;
         get('watch-play').textContent = watch && watch.summary().done ? 'Replay duel' : paused ? 'Play' : 'Pause';
-        if (!watch) { get('watch-readout').textContent = 'Select an AI to watch a one-on-one benchmark duel.'; return; }
+        if (!watch) { get('watch-readout').textContent = 'Manual training opponent style: '+get('watch-style').value+'\nNormal lab ship and wave settings apply. Select an AI pilot for a matched one-on-one duel.'; return; }
         var result = watch.summary(), input = watch.replay.inputs[watch.replay.inputs.length - 1];
         get('watch-readout').textContent = result.seconds.toFixed(2) + 's / '+watch.replay.options.duration+'s · ' + (result.done ? result.outcome === 'player-win' ? 'Test pilot wins' : result.outcome === 'opponent-win' ? 'Opponent wins' : 'Time limit' : paused ? 'Paused' : 'Flying') +
             '\nPilot: ' + result.profile + '\nHull ' + result.playerHull.toFixed(0) + '/' + result.playerMaxHull + ' · shield ' + result.playerShield.toFixed(0) + '/' + result.playerMaxShield +
             '\nOpponent: ' + result.opponentProfile + '\nHull ' + result.opponentHull.toFixed(0) + '/' + result.opponentMaxHull + ' · shield ' + result.opponentShield.toFixed(0) + '/' + result.opponentMaxShield +
-            '\nGuns: ' + result.weapon + ' / ' + result.opponentWeapon + '\nOpponent mode: ' + view().combat.enemies[0].mode +
+            '\nGuns: ' + result.weapon + ' / ' + result.opponentWeapon + '\nOpponent style: '+result.opponentStyle+' · mode: ' + view().combat.enemies[0].mode+'\nSeparations '+result.metrics.separations+' · no-progress escapes '+result.metrics.progressEscapes +
             (input ? '\nPitch ' + input.pitch.toFixed(2) + ' · yaw ' + input.yaw.toFixed(2) + '\nThrottle ' + Math.round(input.throttle * 100) + '% · boost ' + (input.boost ? 'on' : 'off') + ' · fire ' + (input.fire ? 'on' : 'off') : '\nWaiting to start');
     }
     [get('watch-profile'),get('watch-opponent-profile')].forEach(function (control) {
@@ -138,7 +140,7 @@
         Array.from(source.options).forEach(function (option) { destination.appendChild(option.cloneNode(true)); });
         destination.value=source.value;destination.onchange=function(){source.value=destination.value;source.dispatchEvent(new Event('change'));blurActiveControl();};
     });
-    [get('watch-pilot'), get('watch-start'), get('watch-skill'), get('watch-seed'),get('watch-profile'),get('watch-opponent-profile'),get('watch-weapon'),get('watch-defense')].forEach(function (control) {
+    [get('watch-pilot'), get('watch-start'), get('watch-skill'),get('watch-style'), get('watch-seed'),get('watch-profile'),get('watch-opponent-profile'),get('watch-weapon'),get('watch-defense')].forEach(function (control) {
         control.onchange = function () { if(control===get('watch-weapon'))watchOpponentWeapon=-2;pause(); reset(); blurActiveControl(); };
     });
     get('watch-camera').onchange = function () { updateWatch(); pose(); blurActiveControl(); };
@@ -284,7 +286,7 @@
     try {
         var imported=DW.flightDuel.readWatchSearch(location.search);
         if(imported){
-            watchDuration=imported.duration;watchOpponentWeapon=imported.opponentWeapon;
+            get('watch-style').value=imported.opponentStyle;watchDuration=imported.duration;watchOpponentWeapon=imported.opponentWeapon;
             get('watch-pilot').value=imported.category==='perfect'?'perfect':'human-'+imported.flavor;
             get('watch-start').value=imported.start;get('watch-skill').value=String(imported.skill);get('watch-seed').value=String(imported.seed);
             get('watch-profile').value=String(imported.profile);get('watch-opponent-profile').value=String(imported.opponentProfile);
