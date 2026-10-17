@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 global.window=global;global.DRIFTWORKS_TEST_MODE=true;global.addEventListener=()=>{};global.document={};
-for(const name of ['propulsion','combat','logistics','formations','sim','population','session','tactical/camera','audio','hud','mesh-builder','mining-rig','scene3d','game']){
+for(const name of ['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','population','session','tactical/camera','audio','hud','mesh-builder','mining-rig','scene3d','game']){
   vm.runInThisContext(fs.readFileSync(require('node:path').join(__dirname,'../src',name+'.js'),'utf8'),{filename:name});
 }
 (async()=>{
@@ -25,6 +25,31 @@ for(const name of ['propulsion','combat','logistics','formations','sim','populat
   check({x:0,y:-1,zoom:4},{yaw:0,tilt:1,height:2,surface:{right:[1,0,0],up:[0,0,1],back:[0,-1,0],distance:1,focal:1/Math.tan(Math.PI/8)}},[[0,3,0],[1,4,2],[-1,5,3]]);
   assert.ok(comparisons>60);
   const shader=api.rockSurfaceShader();assert.ok(shader.startsWith(Driftworks.asteroidArt.shaderSource));assert.ok(shader.includes('vec3 rockBump')&&shader.includes('vec4 globeCraters'));
+  const {createRockMaterial}=await import('./asteroid-rock-material.js');
+  const shared=createRockMaterial(asteroid,null);
+  const compiled={uniforms:{},vertexShader:THREE.ShaderLib.physical.vertexShader,fragmentShader:THREE.ShaderLib.physical.fragmentShader};
+  shared.material.onBeforeCompile(compiled);
+  assert.equal(shared.uniforms.uOriginalResponse.value,1,'Study uses original appearance');
+  assert.equal(shared.uniforms.uCraterCount.value,api.impactsFor(asteroid).length);
+  assert.ok(compiled.fragmentShader.includes('vec3 fine=rockBump(vRockLocal,footprint)'));
+  assert.ok(compiled.fragmentShader.includes('globeCraters(vRockLocal)'));
+  const studySource=fs.readFileSync(require('node:path').join(__dirname,'excavation-study.js'),'utf8');
+  const comparisonSource=fs.readFileSync(require('node:path').join(__dirname,'asteroid-three-comparison.js'),'utf8');
+  assert.ok(studySource.includes("import {createRockMaterial} from './asteroid-rock-material.js'"));
+  assert.ok(comparisonSource.includes("import {createRockMaterial} from './asteroid-rock-material.js'"));
+  shared.material.dispose();
+  const {excavationRigs}=await import('./excavation-rigs.js');
+  const cavern=Driftworks.sim.toggleAsteroidExcavation(Driftworks.sim.createInitialWorld(),asteroid.id).asteroids[0];
+  const saved=JSON.stringify(cavern),cavernMesh=api.asteroidMesh(cavern,88,false);
+  const rigs=excavationRigs(cavern,cavernMesh);
+  assert.equal(rigs.length,2,'Two rigs find supported cavern floor sites');
+  for(const rig of rigs){
+    assert.ok(rig.fit.valid&&rig.fit.contacts.every(c=>c.reachable),'Every leg reaches rendered rock');
+    near(rig.scale*32*cavern.radius*Driftworks.sim.METERS_PER_UNIT,36);
+    assert.ok(rig.pose.world([0,0,0])[2]<-cavern.excavation.depthM/(cavern.radius*Driftworks.sim.METERS_PER_UNIT),'Rigs sit beneath the chamber center, not on its roof');
+    assert.ok(rig.groups.lamp.length>0,'Work-light fixtures accompany the rigs');
+  }
+  assert.equal(JSON.stringify(cavern),saved,'Study rigs never mutate saved world state');
   geometry.dispose();
   console.log(`PASS Three.js asteroid bridge: original interleaved positions/normals and ${comparisons} projected landmarks across orbit, underside, pan, zoom and surface cameras`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

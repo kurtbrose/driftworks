@@ -263,6 +263,8 @@ and Medusa uses Prometheus R. Both weapons travel at 450 m/s for 2 seconds
 bolt length/radii, damage factors and energy cost, are extracted directly into
 `experiments/retail-weapons.js` with the retail table hash. Damage factors are used by training combat;
 weapon energy remains unlimited. The expanded catalog has ten bolt weapons; the selector starts with the ship's first supported retail primary, then offers sandbox overrides. Both sides now receive their own class hull/shield capacity, with symmetric pooled shields and Driftworks recharge rules. See [retail loadouts](docs/retail-flight-loadouts.md) for exact provenance and adaptation limits.
+In normal flight, the allied/enemy hull selectors change both the displayed model and its triangle collision hull, including new waves. AI watch and headless tests use the same triangle collision rules. Watch hull changes restart the duel; replays and study links record the model IDs.
+
 Generic twin barrels, 6 m apart, converge on the nearest hostile hull under the crosshair within weapon range, falling back to 300 m ahead of the camera when aiming into empty space. At point-blank range the launch positions retract behind the aimed surface so shots do not start past it. This also applies to AI craft; it does not lead moving targets.
 Bolts use fixed world speed (retail non-additive velocity), never hitscan, and
 swept terrain contact. Sounds reuse Driftworks' synthesized gun/impact effects.
@@ -319,8 +321,8 @@ Training uses common player shields (120), hull (100), and enemy hull (90), not
 retail ship durability. Shields recover after seven seconds without a hit; hull
 damage persists. Player destruction ends the run until Restart. Weapon damage
 and shield/armor factors use the extracted retail weapon values. Enemy bolts
-and player bolts use the same swept hits and ballistic timing, with 9 m enemy
-and 7 m player hit spheres. Asteroid terrain blocks shots; the mothership remains
+and player bolts use the same swept triangle hull hits and ballistic timing in
+the flight lab. Standalone legacy training fixtures retain sphere hit shapes. Asteroid terrain blocks shots; the mothership remains
 scenery without collision or damage. No friendly fire or ramming damage yet.
 
 At most two enemies hold attack slots. The others reposition; pilots commit to
@@ -374,7 +376,7 @@ The [character and animation viewer](experiments/characters.html) inspects the Q
 
 Flight lab starts paused with a centered Start flight button; Esc brings back Resume flight. You begin at full cruise above the asteroid, facing the already assembled combat wings. W/S adjusts throttle and X stops. Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Select each wing's imported artwork while paused. Pilots dogfight each other; your shots spare allies, and Tab targets enemies. A defeated wing starts a new round after five seconds. Use Combat scenario to return to solo training.
 
-To watch the testing AIs, use **AI DUEL / WATCH PILOT** in the flight lab. Select Perfect AI or a human simulator flavor, choose a starting geometry, opponent skill and seed, and press Play. Chase/cockpit cameras, half/quarter-speed playback, pause and deterministic restart let you inspect the actual control inputs without steering the ship yourself. These are one-on-one open-space benchmark duels with selectable retail ship/weapon stats, class shields for both pilots, and separate cosmetic artwork. The existing opponent maneuver policy is retained. Select Fly manually to return to ordinary flight. See [flight AI validation](docs/flight-ai-validation.md) for the testing policies and limitations.
+To watch the testing AIs, use **AI DUEL / WATCH PILOT** in the flight lab. Select Perfect AI or a human simulator flavor, choose a starting geometry, opponent skill and seed, and press Play. Chase/cockpit cameras, half/quarter-speed playback, pause and deterministic restart let you inspect the actual control inputs without steering the ship yourself. These are one-on-one open-space benchmark duels with selectable retail ship/weapon stats, class shields for both pilots, and selected ship models whose triangle hulls are used for collision. Changing a hull restarts the duel. The existing opponent maneuver policy is retained. Select Fly manually to return to ordinary flight. See [flight AI validation](docs/flight-ai-validation.md) for the testing policies and limitations.
 
 ### Mumble voice lab
 

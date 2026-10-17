@@ -107,12 +107,13 @@
         if (!Number.isSafeInteger(seed) || seed < 0 || seed > 4294967295) seed = 1;
         get('watch-seed').value = String(seed);
         watch = observing ? DW.flightWatch.create(session.snapshot, {category:pilot === 'perfect' ? 'perfect' : 'human',
+            allyHull:get('watch-art').value,enemyHull:get('watch-enemy-art').value,
             flavor:/** @type {'novice'|'practiced'|'expert'} */ (pilot === 'perfect' ? 'practiced' : pilot.replace('human-', '')), seed:seed,
             start:/** @type {import('./types').DuelOptions['start']} */ (get('watch-start').value), opponentStyle:/** @type {import('./types').OpponentStyle} */(get('watch-style').value), skill:Number(get('watch-skill').value), duration:watchDuration,
             profile:Number(get('watch-profile').value),opponentProfile:Number(get('watch-opponent-profile').value),weapon:Number(get('watch-weapon').value),opponentWeapon:watchOpponentWeapon,unshielded:get('watch-defense').value==='unshielded'}) : null;
         document.body.classList.toggle('watching-ai', observing);
         get('watch-panel').classList.toggle('watch-running', observing);
-        [select, gunSelect, get('combat-mode'), get('diameter'), get('combat-toggle')].forEach(function (control) { control.disabled = observing; });
+        [select, gunSelect, get('combat-mode'), get('diameter'), get('combat-toggle'),get('ally-art'),get('enemy-art')].forEach(function (control) { control.disabled = observing; });
         get('fly').textContent = observing ? 'Watch duel' : 'Start flight';
         status.textContent = observing ? 'AI duel paused · Play to watch' : 'Ready · Start flight when ready';
         updateWatch();
@@ -138,7 +139,7 @@
     [['watch-art','ally-art'],['watch-enemy-art','enemy-art']].forEach(function (ids) {
         var destination = get(/** @type {'watch-art'|'watch-enemy-art'} */ (ids[0])), source = get(/** @type {'ally-art'|'enemy-art'} */ (ids[1]));
         Array.from(source.options).forEach(function (option) { destination.appendChild(option.cloneNode(true)); });
-        destination.value=source.value;destination.onchange=function(){source.value=destination.value;source.dispatchEvent(new Event('change'));blurActiveControl();};
+        destination.value=source.value;destination.onchange=function(){source.value=destination.value;source.dispatchEvent(new Event('change'));if(watch){pause();reset();}blurActiveControl();};
     });
     [get('watch-pilot'), get('watch-start'), get('watch-skill'),get('watch-style'), get('watch-seed'),get('watch-profile'),get('watch-opponent-profile'),get('watch-weapon'),get('watch-defense')].forEach(function (control) {
         control.onchange = function () { if(control===get('watch-weapon'))watchOpponentWeapon=-2;pause(); reset(); blurActiveControl(); };
@@ -245,6 +246,9 @@
             return;
         }
         var elapsed = timing.elapsed;
+        var appearance = presentation.appearance();
+        if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
+        if (!watch) DW.training.configureHulls(session.snapshot().combat, appearance.allyArt, appearance.enemyArt);
         var demand = controls.sample();
         if (!paused) {
             var before = view(), lastHit = before.combat.lastHit, shield = before.combat.shield, fired = before.guns.fired, contact = before.contact;
@@ -270,7 +274,7 @@
             if (!watch) currentView.world.elapsedSeconds += elapsed;
             comms.update(elapsed, currentView.combat, currentView.state);
         }
-        var appearance = presentation.appearance(), comparison = diagnostics.settings();
+        var comparison = diagnostics.settings();
         presentation.render(currentView, appearance, comparison, elapsed);
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
@@ -286,6 +290,7 @@
     try {
         var imported=DW.flightDuel.readWatchSearch(location.search);
         if(imported){
+            get('watch-art').value=imported.allyHull==='blockout'?'':imported.allyHull;get('watch-enemy-art').value=imported.enemyHull==='blockout'?'':imported.enemyHull;
             get('watch-style').value=imported.opponentStyle;watchDuration=imported.duration;watchOpponentWeapon=imported.opponentWeapon;
             get('watch-pilot').value=imported.category==='perfect'?'perfect':'human-'+imported.flavor;
             get('watch-start').value=imported.start;get('watch-skill').value=String(imported.skill);get('watch-seed').value=String(imported.seed);

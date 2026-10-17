@@ -1,5 +1,7 @@
 import * as THREE from '../vendor/three/build/three.module.js';
 import {geometryFromInterleaved} from './asteroid-three-bridge.js';
+import {createRockMaterial} from './asteroid-rock-material.js';
+import {excavationRigs} from './excavation-rigs.js';
 
 const DW=window.Driftworks, api=DW.scene3d;
 const asteroid=DW.sim.createInitialWorld().asteroids[0];
@@ -22,6 +24,11 @@ sun.shadow.bias=-.0001;sun.shadow.normalBias=.001;
 // Camera-mounted inspection light exposes the interior without adding kit assets.
 const lamp=new THREE.PointLight(0xe1edf5,0,3,2);scene.add(lamp);
 const material=new THREE.MeshStandardMaterial({color:0x726c62,roughness:1,side:THREE.DoubleSide});
+const craterTexture=new THREE.DataTexture(api.impactBytes(asteroid),1440,1,THREE.RGBAFormat,THREE.UnsignedByteType);
+craterTexture.needsUpdate=true;craterTexture.generateMipmaps=false;
+const exterior=createRockMaterial(asteroid,craterTexture);
+exterior.uniforms.uRockCut.value=0;
+const cutMaterial=new THREE.MeshStandardMaterial({color:0x726c62,roughness:1,side:THREE.DoubleSide});
 material.onBeforeCompile=shader=>{
   shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vRockPoint; attribute float excavationWall; varying float vExcavationWall;')
     .replace('#include <begin_vertex>','#include <begin_vertex>\nvRockPoint=position;vExcavationWall=excavationWall;');
@@ -48,12 +55,45 @@ diffuseColor.rgb*=mix(vec3(1.),vec3(1.04,1.1,1.08)*rockTone,vExcavationWall);`)
     .replace('#include <normal_fragment_begin>',`#include <normal_fragment_begin>
 if(vExcavationWall>.5){normal=normalize(cross(dFdx(vViewPosition),dFdy(vViewPosition)));}`);
 };
-let rock=null, cutaway=true, target=center.clone(), yaw=-.8, pitch=.65, distance=2.7;
+let rock=null, cutaway=false, target=center.clone(), yaw=-.8, pitch=.65, distance=2.7;
+const rigGroup=new THREE.Group();scene.add(rigGroup);
+let rigs=[],rigLights=[],lightsOn=true;
+const rigColors={ochre:0xd4a34a,steel:0x758785,dark:0x19262b,light:0xe3c94e,lamp:0xffefc7,marker:0x59f2d6};
+function rebuildRigs(data){
+  for(const child of [...rigGroup.children]){
+    rigGroup.remove(child);child.geometry?.dispose();child.material?.dispose();
+    if(child.isLight)child.dispose();
+  }
+  rigs=excavationRigs(asteroid,data);rigLights=[];
+  for(const rig of rigs){
+    for(const [name,vertices] of Object.entries(rig.groups)){
+      const placed=DW.miningTerrain.transform({vertices:new Float32Array(vertices)},rig.pose);
+      const emissive=name==='lamp'||name==='marker';
+      const mat=new THREE.MeshStandardMaterial({color:rigColors[name],roughness:.8,side:THREE.DoubleSide,emissive:emissive?rigColors[name]:0,emissiveIntensity:emissive?1.5:0});
+      mat.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_begin>','#include <normal_fragment_begin>\nnormal=normalize(vNormal);nonPerturbedNormal=normal;');};
+      const mesh=new THREE.Mesh(geometryFromInterleaved(placed.vertices),mat);mesh.castShadow=true;mesh.receiveShadow=true;rigGroup.add(mesh);
+    }
+    for(const mount of DW.miningLights.mounts){
+      // The study uses body-radius coordinates. Three's inverse-square floor
+      // assumes meter-sized coordinates, so use bounded constant-power beams.
+      const light=new THREE.SpotLight(0xffecc4,mount.power*1.6,mount.range*rig.scale,.95,.55,0);
+      light.position.fromArray(rig.pose.world(mount.position));light.target.position.fromArray(rig.pose.world(mount.target));
+      light.visible=lightsOn;
+      // One shadow-casting work light per rig; the remaining fixtures fill its apron.
+      if(mount.id==='tower-1-1'){
+        light.castShadow=true;light.shadow.mapSize.set(1024,1024);
+        light.shadow.camera.near=rig.scale*.2;light.shadow.bias=-.0001;light.shadow.normalBias=rig.scale*.03;
+      }
+      rigLights.push(light);rigGroup.add(light,light.target);
+    }
+  }
+}
 const radiusInput=document.getElementById('radius');radiusInput.value=String(Math.round(e.pocketRadius*metres));
 function rebuild(){
   if(rock){rock.geometry.dispose();scene.remove(rock);}
   const data=api.asteroidMesh(asteroid,112,cutaway);
   const walls=new Float32Array(data.length/6);
+  const surfaces=[[],[],[]];
   const uncut=Object.assign({},asteroid,{excavation:Object.assign({},e,{level:0})});
   // The legacy renderer is two-sided. Standard materials also use winding to
   // orient lighting, so align each triangle with the field's outward normals.
@@ -66,14 +106,21 @@ function rebuild(){
     const centroid=[(data[i]+data[i+6]+data[i+12])/3,(data[i+1]+data[i+7]+data[i+13])/3,(data[i+2]+data[i+8]+data[i+14])/3];
     const exterior=Math.abs(api.rockField(uncut,centroid,false))<.014;
     const cutFace=cutaway&&Math.abs(centroid[2]+depth)<.001;
-    walls.fill(exterior||cutFace?0:1,i/6,i/6+3);
+    surfaces[exterior?0:cutFace?2:1].push(...data.subarray(i,i+18));
   }
-  const geometry=geometryFromInterleaved(data);
+  const sorted=new Float32Array(data.length);
+  let offset=0;
+  for(const surface of surfaces){sorted.set(surface,offset);offset+=surface.length;}
+  const geometry=geometryFromInterleaved(sorted);
+  offset=0;
+  surfaces.forEach((surface,index)=>{geometry.addGroup(offset/6,surface.length/6,index);offset+=surface.length;});
+  walls.fill(1);
   geometry.setAttribute('excavationWall',new THREE.BufferAttribute(walls,1));
-  rock=new THREE.Mesh(geometry,material);
+  rock=new THREE.Mesh(geometry,[exterior.material,material,cutMaterial]);
   rock.castShadow=true;rock.receiveShadow=true;renderer.shadowMap.needsUpdate=true;
   scene.add(rock);
-  status.textContent=`${cutaway?'Cutaway inspection':'Roof intact'} · Chamber reference radius ${Math.round(e.pocketRadius*metres)} m · ${Math.round(rock.geometry.attributes.position.count/3).toLocaleString()} triangles`;
+  rebuildRigs(data);
+  status.textContent=`${cutaway?'Cutaway inspection':'Roof intact'} · Chamber radius ${Math.round(e.pocketRadius*metres)} m · ${rigs.length} rigs, 36 m chassis each`;
 }
 function pose(name){
   if(name!=='orbit' && cutaway){cutaway=false;document.getElementById('cut').setAttribute('aria-pressed','false');rebuild();}
@@ -86,10 +133,18 @@ function pose(name){
   if(name==='chamber'){
     target.copy(center);yaw=e.tunnelAngle+Math.PI;pitch=-.15;distance=e.pocketRadius*.45;lamp.intensity=.06;
   }
+  if(name==='rig'&&rigs.length){
+    target.set(0,0,0);
+    for(const rig of rigs)target.add(new THREE.Vector3().fromArray(rig.pose.world([0,0,6])));
+    target.multiplyScalar(1/rigs.length);
+    yaw=-Math.PI/2;pitch=.35;distance=180/metres;lamp.intensity=0;camera.fov=58;
+  }
 }
 document.getElementById('orbit').onclick=()=>pose('orbit');
 document.getElementById('entrance').onclick=()=>pose('entrance');
 document.getElementById('chamber').onclick=()=>pose('chamber');
+document.getElementById('rig').onclick=()=>pose('rig');
+document.getElementById('rig-lights').onclick=function(){lightsOn=!lightsOn;this.setAttribute('aria-pressed',String(lightsOn));for(const light of rigLights)light.visible=lightsOn;renderer.shadowMap.needsUpdate=true;};
 document.getElementById('cut').onclick=function(){cutaway=!cutaway;this.setAttribute('aria-pressed',String(cutaway));rebuild();};
 document.getElementById('apply').onclick=()=>{
   const value=Number(radiusInput.value);
@@ -108,7 +163,10 @@ function draw(){
   const width=host.clientWidth,height=Math.max(1,host.clientHeight);
   renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
   camera.position.set(target.x+Math.cos(yaw)*Math.cos(pitch)*distance,target.y+Math.sin(yaw)*Math.cos(pitch)*distance,target.z+Math.sin(pitch)*distance);
-  camera.lookAt(target);lamp.position.copy(camera.position);renderer.render(scene,camera);
+  camera.lookAt(target);camera.updateMatrixWorld(true);
+  exterior.uniforms.uRockNormalMatrix.value.setFromMatrix4(camera.matrixWorldInverse);
+  exterior.uniforms.uPixelFootprint.value=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/(height*renderer.getPixelRatio());
+  lamp.position.copy(camera.position);renderer.render(scene,camera);
   requestAnimationFrame(draw);
 }
 window.addEventListener('error',event=>{status.textContent='Study error: '+event.message;});

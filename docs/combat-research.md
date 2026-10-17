@@ -1,5 +1,34 @@
 # Combat research laboratory
 
+## Team furball benchmark
+
+Run `node tools/evaluate-flight-furballs.cjs --seconds 120 --seeds 5` for matched
+2v2, 3v3 and 4v4 shielded/unshielded fights. Optional `--style` selects the live
+opponent maneuver policy (default `baseline`). Both wings use the live furball
+controller at veteran skill, mirrored Hercules/Ulysses loadouts with native guns,
+mixed triangle collision hulls, and the normal shield recharge. Seeds perturb
+opening positions and decision timing. This tests ordinary NPC combat, rather
+than the separate Perfect/human testing pilot. No player participates, terrain
+interferes, or replacement waves spawn; the run stops when a wing is eliminated
+or reaches the time limit.
+
+The JSON includes source hashes, individual runs, zero-kill counts, unfinished
+rounds, kills per fight, and first-kill times. A first-kill median excludes
+zero-kill runs, which are censored at the time limit; always read both together.
+Unfinished rounds can still have kills. `longestQuiet` includes the opening and
+final interval without kills. The runner checks team sizes, defense setup and
+deterministic replay. The captured baseline is
+[flight-furballs.json](../tests/benchmarks/flight-furballs.json); results describe
+that source revision and setup, not all ship matchups or human enjoyment.
+
+The initial five-opening, 120-second baseline produced zero kills in all five
+runs of every size, with or without shields. Every shielded craft retained full
+hull. Unshielded mean combined hull remaining was 676.4/860 (2v2),
+1028.3/1220 (3v3), and 1420.7/1580 (4v4). These cases show a broader lack of
+sustained lethal damage in the baseline NPC policy; shields also prevented all
+hull progress. They do not isolate recharge from capacity or establish results
+for other policies/loadouts.
+
 Open [the combat study page](../experiments/flight-study.html) through the local static server. It runs the existing fixed-step duel in a Web Worker without graphics, audio, or real-time pacing. No simulation data leaves the browser. The flight lab and headless runner share ship physics, guns, damage and AI policies.
 
 ## Research questions and stages

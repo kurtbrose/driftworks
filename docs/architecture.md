@@ -116,9 +116,20 @@ centerline clearance. `rockField(asteroid, point, false)` evaluates the excavate
 solid with its roof intact; `asteroidMesh(asteroid, resolution, false)` meshes it.
 Omitting the final argument retains the existing cutaway presentation. These
 inspection arguments do not modify persistent excavation data.
-`tests/excavation-study.html` inspects that shared geometry with neutral rock
-shading, terrain shadows, an inspection light, entrance/interior camera presets,
+`tests/excavation-study.html` inspects that shared geometry with the original
+exterior geology material, terrain shadows, an inspection light, entrance/interior camera presets,
 and a chamber-radius control in physical meters.
+It opens with the roof intact. The study and renderer comparison both use
+`tests/asteroid-rock-material.js` for exterior color, crater normals and fine
+relief; excavated walls use a separate fractured-rock material and section
+faces use a separate neutral material.
+The study places two production mining rigs through `tests/excavation-rigs.js`.
+It casts from inside the chamber onto the rendered floor, applies the production
+eight-leg contact fit and ramp stops, and preserves the 36 m chassis scale.
+Study spotlights follow the existing rig fixture mounts and physical ranges;
+constant-power attenuation avoids Three.js's meter-scale inverse-square clamp
+in this body's normalized coordinates. Rig view frames both sites; Rig lights
+toggles the fixture beams. These are renderer-owned study actors, not saved platforms.
 A horizontal cut through the chamber center removes the upper shell. The cut
 face, inner walls, floor and outer shell belong to the same mesh, so depth testing
 and orbiting provide real interior occlusion/parallax. Excavation parameters and
@@ -538,7 +549,8 @@ pilot-dependent lead and deterministic error. Fire is gated by range, alignment,
 attack assignment, and short burst windows. Steering separates nearby enemies
 and avoids a conservative asteroid shell. It does not port FreeSpace source.
 
-Projectile sweeps choose the nearest terrain or opposing training hit sphere
+Projectile sweeps choose the nearest terrain or opposing hull contact
+(triangles in flight/duels, explicit spheres in standalone legacy fixtures)
 before applying damage. Dead targets cannot take repeated damage or score twice.
 Destroyed enemies stop steering/firing but their already-fired bolts expire
 normally. Clearing a wave starts a five-second countdown. Common lab shields,
@@ -576,7 +588,7 @@ input, simulation, geometry preparation, HUD and submission; it is not GPU time.
 
 ## Imported flight artwork experiment
 
-`assets/ships/` keeps each creator pack in its own directory with its untouched ZIP, provenance manifest, source OBJ/MTL subset, and derived `meshes.js`. `tools/convert-ship-packs.py` is an optional offline standard-library converter; deployment needs no build. `experiments/ship-packs.js` transforms normalized meshes into existing study actor batches, shared by the inspection page and flight enemies. Flight and inspection render original Quaternius textures imported offline from archived glTF. Artwork fits an 8.5 m radius inside the training hit sphere, without changing flight or combat rules.
+`assets/ships/` keeps each creator pack in its own directory with its untouched ZIP, provenance manifest, source OBJ/MTL subset, and derived `meshes.js`. `tools/convert-ship-packs.py` is an optional offline standard-library converter; deployment needs no build. `experiments/ship-packs.js` transforms normalized meshes into existing study actor batches, shared by the inspection page and flight enemies. Flight and inspection render original Quaternius textures imported offline from archived glTF. Artwork is normalized to an 8.5 m radius; flight and duel collision queries use those same normalized model triangles.
 
 Flight training state accepts a `furball` mode with two eight-ship wings. Craft IDs own committed opponent targets, decisions run at pilot intervals, and the existing arcade controller executes steering. Swept bolts filter same-team hulls and hit the nearest opposing ship or scenery; player fire belongs to the allied team. Round replacement is bounded to 16 craft. Ship artwork and soft bolt effects batch by team (two opaque and four effect batches maximum).
 
@@ -739,9 +751,18 @@ Flight lab hull contacts use `shipPackModels.hullHit`: a cached sphere bounds
 check followed by a swept triangle query against a simulation-owned model ID
 (including the training blockout). `training.trace` resolves the nearest terrain or hull
 contact and uses that point for impact flashes and damage. Flight sessions assign
-fixed mixed-fleet collision model IDs when spawning craft. Appearance controls
-never select collision geometry. Standalone training/duel callers retain explicit
-7 m controlled-craft and 9 m AI sphere shapes for existing benchmark calibration.
+mixed-fleet collision model IDs by default. In normal flight, each frame samples
+hull selections once and calls `training.configureHulls` before advancing or
+rendering. That explicit simulation input assigns the same `craftModel` IDs used
+by presentation to both teams and the player. Team selections are stored in
+`combat.hullModels`, so new waves inherit them before firing. A changed mesh
+clears old surface marks; unchanged IDs preserve marks and descriptors. Standalone training callers retain explicit sphere shapes. Watch and headless
+duels call the same `configureHulls` API as normal flight for both participants.
+Duel options `allyHull` and `enemyHull` resolve to canonical model IDs, included
+in summaries, study links and version-3 replays. Hull changes restart watch
+duels; the chase camera uses the actual player craft model. Versions 1 and 2
+of duel replays are rejected because their collision rules differ. The worker
+and CLI load and fingerprint the same vendored meshes and ship-pack code.
 `training.hullHit` resolves a craft's JSON-safe `collision` descriptor using shared
 mesh geometry, without a presentation callback; unknown model IDs fail explicitly. Scorches are clipped surface geometry baked once per hit in local ship
 metres, rendered in five translucent soot layers, and transformed with the hull each frame.
@@ -812,9 +833,9 @@ class hull/shield maxima; `training.equip` assigns craft class defenses and prim
 weapon. Configured spawns use those defenses, and both sides share shield
 absorption/spillover, seven-second delay and 12-points/s recovery. Unconfigured
 test fixtures retain legacy defaults. `DuelOptions` records both profile/weapon
-choices and a symmetric unshielded override; replay schema 2 rejects legacy
-defense semantics. Watch controls choose gameplay stats independently from
-cosmetic models. See [retail loadouts](retail-flight-loadouts.md) for unsupported
+choices, hull model IDs and a symmetric unshielded override; replay schema 3
+rejects legacy defense/collision semantics. Watch controls choose handling and
+defense stats independently from the visible/collision hull models. See [retail loadouts](retail-flight-loadouts.md) for unsupported
 ETS, quadrant, energy, hardpoint and special-ability behavior.
 
 `experiments/flight-hud.js` mounts the overlay canvas and target camera and owns

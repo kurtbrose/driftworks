@@ -56,6 +56,7 @@ export type Demand = FlightInput & {
 export type PilotInput = Required<FlightInput> & { throttle: number; fire: boolean };
 export type OpponentStyle = 'baseline'|'aggressor'|'interceptor'|'passer'|'fso-pursuit'|'fso-breaker';
 export type DuelOptions = {
+    allyHull?: string; enemyHull?: string;
     opponentStyle?: OpponentStyle;
     start?: 'headOn'|'crossing'|'tail'|'turning'|'opening';
     category?: 'perfect'|'human';
@@ -84,6 +85,7 @@ export type DuelSummary = {
     playerHull:number; playerShield:number; opponentHull:number; opponentShield:number;
     playerMaxHull:number; playerMaxShield:number; opponentMaxHull:number; opponentMaxShield:number;
     opponentProfile:string; opponentWeapon:string; unshielded:boolean; opponentStyle:OpponentStyle;
+    allyHull:string; enemyHull:string;
     playerShots:number; opponentShots:number; longestDry:number;
     metrics:{playerOpportunities:number;opponentOpportunities:number;playerDamageSteps:number;opponentDamageSteps:number;modeChanges:number;minRange:number;maxRange:number;rangeIntegral:number;attackSeconds:number;extendSeconds:number;rearThreatSeconds:number;separations:number;progressEscapes:number};
 };
@@ -220,6 +222,7 @@ export type Combat = {
     player: Craft;
     configured: boolean;
     useHullModels?: boolean;
+    hullModels?: { ally: string; enemy: string };
     mode: string;
     roundOver: boolean;
     enabled: boolean;
@@ -608,6 +611,7 @@ export type ExperimentModules = {
         damageCraft: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
         createCraft: (id: string, pose: FlightState, team: string) => Craft;
         participants: (combat: Combat) => Craft[];
+        configureHulls: (combat: Combat, ally: string, enemy: string) => void;
         bindPlayer: (combat: Combat, pose: FlightState) => Craft;
         hullHit: (craft: Craft, start: Vector, end: Vector) => Hit | null;
         convergencePoint: (combat: Combat, shooter: Craft, weapon: Weapon, terrainHit?: TerrainHit) => Vector | null;

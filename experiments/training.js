@@ -85,6 +85,20 @@
     }
     /** @param {Combat} t @returns {Craft[]} */
     function participants(t) { return [t.player].concat(t.enemies); }
+    /** Apply shared flight/duel model choices before stepping or rendering.
+     * @param {Combat} t @param {string} ally @param {string} enemy */
+    function configureHulls(t, ally, enemy) {
+        t.useHullModels = true;
+        t.hullModels = { ally: ally, enemy: enemy };
+        participants(t).forEach(function (craft) {
+            var selection = (craft.team || 'enemy') === 'ally' ? ally : enemy;
+            var id = DW.shipPackModels.craftModel(craft, selection, t.wave).id;
+            if (craft.collision.kind === 'model' && craft.collision.modelId === id) return;
+            craft.collision = { kind: 'model', modelId: id };
+            // Surface marks belong to their original mesh.
+            craft.scorches = [];
+        });
+    }
     /** @param {Combat} t @param {FlightState} pose */
     function bindPlayer(t, pose) { t.player.pose = pose; return t.player; }
     /** @param {string} mode @returns {Combat} */
@@ -214,7 +228,8 @@
             });
         }
         if (t.useHullModels) t.enemies.forEach(function (e) {
-            e.collision = { kind: 'model', modelId: DW.shipPackModels.craftModel(e, 'mixed', t.wave).id };
+            var selection = t.hullModels ? ((e.team || 'enemy') === 'ally' ? t.hullModels.ally : t.hullModels.enemy) : 'mixed';
+            e.collision = { kind: 'model', modelId: DW.shipPackModels.craftModel(e, selection, t.wave).id };
         });
         var target = t.enemies.find(function (e) {
             return e.team !== 'ally';
@@ -654,5 +669,5 @@
         });
         return result;
     }
-    DW.training = { stepInput: stepInput, createCraft: createCraft, participants: participants, bindPlayer: bindPlayer, hullHit: hullHit, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
+    DW.training = { stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
 }());

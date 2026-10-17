@@ -19,7 +19,7 @@
                 var own = duel.player;
                 view.camera = {eye:own.eye.map(function (v, i) { return v + (own.back[i] * 75 + own.up[i] * 18) / units; }),
                     right:own.right.slice(), up:own.up.slice(), back:own.back.slice()};
-                view.observerCraft = {pose:own,index:0,team:'ally',hp:duel.combat.dead ? 0 : 100};
+                view.observerCraft = Object.assign({},duel.combat.player,{pose:own});
             }
             return view;
         }

@@ -3,7 +3,7 @@
     var scope=/** @type {import('./types').StudyWorkerScope} */ (/** @type {unknown} */ (globalThis));
     scope.window=scope;
     scope.DRIFTWORKS_TEST_MODE=true;
-    var files=['../src/propulsion.js','../src/combat.js','../src/logistics.js','../src/formations.js','../src/sim.js','retail-profiles.js','retail-weapons.js','guns.js','training.js','flight-model.js','flight-ai.js','flight-duel.js','flight-study.js'];
+    var files=['../src/propulsion.js','../src/combat.js','../src/logistics.js','../src/formations.js','../src/sim.js','retail-profiles.js','retail-weapons.js','guns.js','training.js','flight-model.js','../assets/ships/quaternius-ultimate-spaceships/meshes.js','ship-packs.js','flight-ai.js','flight-duel.js','flight-study.js'];
     scope.onmessage=async function(event){
         try {
             var hashes=/** @type {Record<string,string>} */ ({});
@@ -25,7 +25,7 @@
             });
             var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
             var cases=DW.flightStudy.plan(event.data);
-            scope.postMessage({kind:'ready',total:cases.length,manifest:{policy:DW.flightAI.version,cadence:DW.flightDuel.dt,replaySchema:2,hashes:hashes}});
+            scope.postMessage({kind:'ready',total:cases.length,manifest:{policy:DW.flightAI.version,cadence:DW.flightDuel.dt,replaySchema:3,hashes:hashes}});
             var batch=/** @type {import('./types').StudyRow[]} */ ([]);
             for(var i=0;i<cases.length;i++){
                 var duel=DW.flightDuel.run(cases[i].options);

@@ -109,6 +109,36 @@
     sphere.collision.radiusM=4;assert(api.hullHit(sphere,[3/U,-10/U,0],[3/U,10/U,0]));
   });
 
+  test('normal flight hull selections match rendered models across changes, waves and reloads', function () {
+    var DW=window.Driftworks,api=DW.training,models=DW.shipPackModels,U=sim.METERS_PER_UNIT;
+    var session=DW.flightSession.create({}),view=session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]});
+    var catalog=DW.shipPacks[0].models,choices=[['mixed','mixed'],[catalog[0].id,catalog[1].id],['',''],[catalog[1].id,catalog[0].id]];
+    function verify(combat,ally,enemy){
+      api.participants(combat).forEach(function(craft){
+        var visible=DW.flightPresentation.model(craft,combat.wave,{allyArt:ally,enemyArt:enemy});
+        assert(craft.collision.kind==='model'&&craft.collision.modelId===visible.id,'Visible and collision model must be identical');
+        var start=craft.pose.eye.map(function(x,i){return x+craft.pose.up[i]*100/U;}),end=craft.pose.eye.map(function(x,i){return x-craft.pose.up[i]*100/U;});
+        var expected=models.hullHit(visible,craft.pose,start,end,U),actual=api.hullHit(craft,start,end);
+        assert(!!actual===!!expected);
+        if(expected){assert(actual.model.id===visible.id);expected.point.forEach(function(x,i){assertClose(actual.point[i],x);});}
+      });
+    }
+    choices.forEach(function(choice){
+      var previousId=view.combat.enemies[0].collision.modelId;
+      view.combat.enemies[0].scorches=[{modelId:'old-mesh'}];
+      api.configureHulls(view.combat,choice[0],choice[1]);verify(view.combat,choice[0],choice[1]);
+      if(previousId!==view.combat.enemies[0].collision.modelId)assert(view.combat.enemies[0].scorches.length===0,'Changing hull clears marks belonging to the old mesh');
+      var shape=view.combat.enemies[0].collision,marks=view.combat.enemies[0].scorches;
+      api.configureHulls(view.combat,choice[0],choice[1]);
+      assert(view.combat.enemies[0].collision===shape&&view.combat.enemies[0].scorches===marks,'Unchanged selections preserve hull and marks');
+      var clone=JSON.parse(JSON.stringify(view.combat));verify(clone,choice[0],choice[1]);
+      api.spawn(view.combat,view.state,view.asteroid.radius);
+      // Spawning uses the stored selections before any presentation frame runs.
+      view.combat.enemies.forEach(function(craft){assert(craft.collision.modelId===models.craftModel(craft,craft.team==='ally'?choice[0]:choice[1],view.combat.wave).id);});
+      api.configureHulls(view.combat,choice[0],choice[1]);verify(view.combat,choice[0],choice[1]);
+    });
+    assert(DW.flightDuel.create({duration:1}).enemy.collision.kind==='model','Watch benchmarks share triangle collision rules');
+  });
   test('evaluation pilots reject illegal control records without silently repairing them', function () {
     var api=window.Driftworks.flightAI, valid={pitch:0,yaw:0,roll:0,side:0,vertical:0,throttle:1,fire:false,boost:false};
     [Object.assign({},valid,{pitch:1.01}),Object.assign({},valid,{yaw:NaN}),Object.assign({},valid,{throttle:-.1}),Object.assign({},valid,{boost:1}),Object.assign({},valid,{teleport:true})].forEach(function(input){
@@ -179,8 +209,10 @@
   });
 
   test('duels stop at destruction without respawning and equip retail defenses on both pilots', function () {
-    var api=window.Driftworks.flightDuel,duel=api.run({start:'headOn',category:'perfect',duration:10});
-    assert(duel.summary().outcome==='player-win');assert(duel.summary().playerShots>0 && duel.summary().metrics.playerDamageSteps>0);
+    var api=window.Driftworks.flightDuel,duel=api.create({start:'headOn',category:'perfect',duration:10});
+    duel.advance(.2);assert(duel.summary().playerShots>0);
+    window.Driftworks.training.damageCraft(duel.combat,duel.enemy,{damage:10000,armorFactor:1,shieldFactor:1},duel.combat.player);
+    duel.advance(api.dt);assert(duel.summary().outcome==='player-win');
     var before=JSON.stringify(duel.summary());duel.advance(30);assert(JSON.stringify(duel.summary())===before);
     assert(duel.combat.enemies.length===1 && duel.combat.wave===1);assert(duel.combat.maxHull===180 && duel.enemy.maxHp===180);
     assert(duel.combat.maxShield===380 && duel.enemy.maxShield===380);
@@ -216,6 +248,28 @@
     var record=JSON.parse(JSON.stringify(duel.replay));record.version=1;var rejected=false;try{api.replay(record);}catch(e){rejected=true;}assert(rejected);
   });
 
+  test('watch and headless duels retain exact triangle hulls in links and replay', function () {
+    var DW=window.Driftworks,api=DW.flightDuel,models=DW.shipPacks[0].models;
+    var options={allyHull:models[1].id,enemyHull:models[4].id,duration:.2,start:'tail'};
+    var duel=api.run(options);
+    assert(duel.combat.player.collision.modelId===options.allyHull&&duel.enemy.collision.modelId===options.enemyHull);
+    assert(duel.summary().allyHull===options.allyHull&&duel.summary().enemyHull===options.enemyHull);
+    [duel.combat.player,duel.enemy].forEach(function(craft){
+      var U=DW.sim.METERS_PER_UNIT,visible=DW.flightPresentation.model(craft,1,{allyArt:options.allyHull,enemyArt:options.enemyHull});
+      var start=craft.pose.eye.map(function(x,i){return x+craft.pose.up[i]*100/U;}),end=craft.pose.eye.map(function(x,i){return x-craft.pose.up[i]*100/U;});
+      var hit=DW.training.hullHit(craft,start,end),expected=DW.shipPackModels.hullHit(visible,craft.pose,start,end,U);
+      assert(hit&&expected&&hit.model.id===visible.id);assertClose(hit.fraction,expected.fraction);
+    });
+    var record=JSON.parse(JSON.stringify(duel.replay));assert(record.version===3);
+    assert(JSON.stringify(api.replay(record).summary())===JSON.stringify(duel.summary()));
+    var imported=api.readWatchSearch(DW.flightStudy.watchUrl(duel.replay.options).split('?')[1]);
+    assert(imported.allyHull===options.allyHull&&imported.enemyHull===options.enemyHull);
+    var defaults=api.create({duration:.1});assert(defaults.replay.options.allyHull!=='mixed'&&defaults.replay.options.enemyHull!=='mixed');
+    record.version=2;var rejected=false;try{api.replay(record);}catch(error){rejected=true;}assert(rejected);
+    rejected=false;try{api.create({allyHull:'missing-mesh'});}catch(error){rejected=true;}assert(rejected);
+    var session=DW.flightSession.create({}),watch=DW.flightWatch.create(session.snapshot,options);
+    assert(watch.snapshot(true).observerCraft.collision.modelId===options.allyHull);
+  });
   test('all duel geometries and human flavors stay finite, deterministic and input bounded', function () {
     var DW=window.Driftworks,api=DW.flightDuel;
     api.starts.forEach(function(start){['novice','practiced','expert'].forEach(function(flavor){

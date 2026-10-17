@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),cryp
 const root=path.resolve(__dirname,'..');
 global.window=global;global.DRIFTWORKS_TEST_MODE=true;
 const sources={};
-for(const file of ['src/propulsion.js','src/combat.js','src/logistics.js','src/formations.js','src/sim.js','experiments/retail-profiles.js','experiments/retail-weapons.js','experiments/guns.js','experiments/training.js','experiments/flight-model.js','experiments/flight-ai.js','experiments/flight-duel.js']) {
+for(const file of ['src/propulsion.js','src/combat.js','src/logistics.js','src/formations.js','src/sim.js','experiments/retail-profiles.js','experiments/retail-weapons.js','experiments/guns.js','experiments/training.js','experiments/flight-model.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js','experiments/flight-ai.js','experiments/flight-duel.js']) {
     const bytes=fs.readFileSync(path.join(root,file));
     sources[file]=crypto.createHash('sha256').update(bytes.toString('utf8').replace(/\r\n/g,'\n')).digest('hex');
     vm.runInThisContext(bytes.toString('utf8'),{filename:file});
@@ -27,7 +27,7 @@ if(replayPath) {
     const skills=value('--skill','all')==='all'?[0,1,2]:[Number(value('--skill','all'))];
     const rows=[];let last;
     for(const start of starts)for(const category of categories)for(const flavor of category==='perfect'?['practiced']:flavors)for(const skill of skills) {
-        last=api.run({opponentStyle:value('--style','baseline'),start,category,flavor,skill,duration,seed,profile:Number(value('--ship','0')),opponentProfile:Number(value('--opponent-ship','-1')),weapon:Number(value('--weapon','-1')),opponentWeapon:Number(value('--opponent-weapon','-2')),unshielded:args.includes('--unshielded')});rows.push(last.summary());
+        last=api.run({allyHull:value('--hull','mixed'),enemyHull:value('--opponent-hull','mixed'),opponentStyle:value('--style','baseline'),start,category,flavor,skill,duration,seed,profile:Number(value('--ship','0')),opponentProfile:Number(value('--opponent-ship','-1')),weapon:Number(value('--weapon','-1')),opponentWeapon:Number(value('--opponent-weapon','-2')),unshielded:args.includes('--unshielded')});rows.push(last.summary());
     }
     const recordPath=value('--record','');
     if(recordPath) {

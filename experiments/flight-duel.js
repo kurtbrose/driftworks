@@ -22,7 +22,7 @@
     }
     /** @param {Options} [configuration] */
     function create(configuration) {
-        var options=Object.assign(/** @type {Required<Options>} */ ({opponentStyle:'baseline',start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0,opponentProfile:-1,weapon:-1,opponentWeapon:-2,unshielded:false}),configuration);
+        var options=Object.assign(/** @type {Required<Options>} */ ({allyHull:'mixed',enemyHull:'mixed',opponentStyle:'baseline',start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0,opponentProfile:-1,weapon:-1,opponentWeapon:-2,unshielded:false}),configuration);
         if(!styles.includes(options.opponentStyle) || !Object.prototype.hasOwnProperty.call(starts,options.start) || !Number.isFinite(options.duration) || options.duration<=0 || ![0,1,2].includes(options.skill) || !DW.arcade.profiles[options.profile] || !Number.isInteger(options.seed) || options.seed<0 || options.seed>4294967295) throw new Error('Invalid duel options');
         var profile=DW.arcade.profiles[options.profile], enemyProfile=options.opponentProfile === -1 ? profile : DW.arcade.profiles[options.opponentProfile];
         var weaponIndex=options.weapon === -1 ? DW.training.defaultWeapon(profile) : options.weapon;
@@ -41,9 +41,17 @@
         var pilot=DW.flightAI.create(options.category,options.flavor,options.seed), guns=DW.flightGuns.create();
         DW.training.bindPlayer(combat, player).guns = guns;
         combat.player.weaponIndex = weaponIndex;
+        [options.allyHull,options.enemyHull].forEach(function(id){
+            if(typeof id!=='string'||(id!==''&&id!=='blockout'&&id!=='mixed'&&!DW.shipPackModels.find(id)))throw new Error('Invalid duel hull model');
+        });
+        DW.training.configureHulls(combat,options.allyHull,options.enemyHull);
+        if(combat.player.collision.kind!=='model'||enemy.collision.kind!=='model')throw new Error('Duel requires triangle hulls');
+        // Canonical model IDs make mixed defaults reproducible in replays and study links.
+        options.allyHull = combat.player.collision.modelId || 'blockout';
+        options.enemyHull = enemy.collision.modelId || 'blockout';
         var tick=0, remainder=0, done=false, lastMode=enemy.mode, longestDry=0, dry=0;
         var metrics={playerOpportunities:0,opponentOpportunities:0,playerDamageSteps:0,opponentDamageSteps:0,modeChanges:0,minRange:Infinity,maxRange:0,rangeIntegral:0,attackSeconds:0,extendSeconds:0,rearThreatSeconds:0,separations:0,progressEscapes:0};
-        var replay=/** @type {Replay} */ ({version:2,policy:pilot.version,observation:pilot.observation,cadence:DT,options:Object.assign({},options),inputs:[]});
+        var replay=/** @type {Replay} */ ({version:3,policy:pilot.version,observation:pilot.observation,cadence:DT,options:Object.assign({},options),inputs:[]});
         /** @param {number} elapsed @param {import('./types').PilotInput[]} [inputStream] */
         function advance(elapsed, inputStream) {
             if(!Number.isFinite(elapsed)||elapsed<0) throw new Error('Invalid elapsed time');
@@ -82,7 +90,7 @@
         function summary() {
             return {ticks:tick,seconds:tick*DT,done:done,outcome:combat.dead?'opponent-win':enemy.hp<=0?'player-win':done?'timeout':'running',
                 category:pilot.category,flavor:pilot.flavor,skill:options.skill,start:options.start,seed:options.seed,profile:profile.name,weapon:weapon.name,
-                playerHull:combat.hull,playerShield:combat.shield,opponentHull:enemy.hp,playerShots:guns.fired,opponentShots:enemy.guns.fired,
+                playerHull:combat.hull,playerShield:combat.shield,opponentHull:enemy.hp,allyHull:options.allyHull,enemyHull:options.enemyHull,playerShots:guns.fired,opponentShots:enemy.guns.fired,
                 opponentShield:enemy.shield || 0,playerMaxHull:combat.maxHull || 0,playerMaxShield:combat.maxShield || 0,opponentMaxHull:enemy.maxHp,opponentMaxShield:enemy.maxShield || 0,
                 opponentStyle:options.opponentStyle,opponentProfile:enemyProfile.name,opponentWeapon:DW.retailWeapons[enemyWeaponIndex].name,unshielded:options.unshielded,
                 longestDry:longestDry,metrics:Object.assign({},metrics,{progressEscapes:enemy.progressEscapes||0})};
@@ -93,7 +101,7 @@
     function run(options) { var duel=create(options);duel.advance(duel.replay.options.duration);return duel; }
     /** @param {Replay} record */
     function replay(record) {
-        if(record.version!==2 || record.cadence!==DT || !Array.isArray(record.inputs)) throw new Error('Unsupported duel replay; version 1 uses legacy training defenses');
+        if(record.version!==3 || record.cadence!==DT || !Array.isArray(record.inputs)) throw new Error('Unsupported duel replay; versions 1 and 2 use legacy collision rules');
         record.inputs.forEach(DW.flightAI.validate);
         var duel=create(record.options);
         if(record.inputs.length>Math.ceil(record.options.duration/DT)) throw new Error('Replay exceeds duration');
@@ -110,6 +118,8 @@
         /** @type {('profile'|'opponentProfile'|'weapon'|'opponentWeapon'|'skill'|'seed'|'duration')[]} */
         var numeric=['profile','opponentProfile','weapon','opponentWeapon','skill','seed','duration'];
         numeric.forEach(function(key){if(params.has(key))options[key]=Number(params.get(key));});
+        if(params.has('allyHull'))options.allyHull=params.get('allyHull')||'';
+        if(params.has('enemyHull'))options.enemyHull=params.get('enemyHull')||'';
         if(params.has('opponentStyle'))options.opponentStyle=/** @type {Options['opponentStyle']} */(params.get('opponentStyle'));
         if(params.has('category'))options.category=/** @type {Options['category']} */(params.get('category'));
         if(params.has('flavor'))options.flavor=/** @type {Options['flavor']} */(params.get('flavor'));
