@@ -24,7 +24,8 @@ exports `paintRecovery` alongside its other rendering helpers for regression che
 with the same scene controller interface as the Pixi scene. `game.createScene`
 selects it only with `?renderer=3d`; the default and `?renderer=2d` use the existing
 Pixi implementation with its detailed artwork.
-Load `scene3d.js` after simulation/camera/audio and before game. The backend uses
+Load `mesh-builder.js` and `mining-rig.js` before `scene3d.js`, after
+simulation/camera/audio and before game. The backend uses
 browser WebGL directly, ordinary scripts and relative assets, with no new
 runtime dependency or build step. Game timing, session ownership and the DOM HUD
 remain in the existing modules.
@@ -982,3 +983,44 @@ Use miningLights.visual(groups, optionalPose, scale) to construct a complete rig
 Flight terrain impacts retain up to 96 asteroid-local burn positions per sortie.
 The presentation caches layered surface-projected burn meshes and rotates them
 with the asteroid; only the nearest confirmed projectile collision creates a mark.
+
+## Procedural assets
+
+`src/mesh-builder.js` exposes `Driftworks.meshBuilder.create(groups)`. The caller
+supplies material-name arrays; `block`, `link`, `plate`, and `barrel` append
+interleaved xyz positions and xyz normals, six numbers per vertex, in local
+coordinates. Blocks take half-extents and an optional orthonormal basis; links
+use half-width/depth, and barrels are capped eight-sided cylinders. Plates use
+fan triangulation and one face normal, so supply planar convex polygons with
+consistent winding. Links/cylinders require distinct endpoints and plates require
+non-collinear first three points. The private unit cube is generated once.
+These are ordinary geometry operations, independent of rendering or gameplay.
+
+`src/mining-rig.js` owns the reference asset. `buildBay` contains the folding
+leaves, hinges, actuators, infill and frame; `buildLeg` contains the mount, joints,
+actuator and terrain-aligned gripper; `cabinGeometry` contains the pressure cabin,
+roof docking interface and interior. `miningPlatformLights` constructs fixtures
+from the mount definitions in `mining-lights.js`. Edit these functions to iterate
+on the corresponding subassembly. No renderer edits are needed to change a model.
+The asset accepts deployment, ramp opening, cutaway, contact poses and ramp limits;
+it does not sample terrain, advance animation, or allocate GPU resources.
+
+Cabin meshes are private and cached for the four distinct cutaway variants;
+assembly copies their numbers into caller-owned arrays. Legs and bays rebuild
+for their supplied pose. Leg-only requests skip unrelated construction. Fixture
+geometry retains its existing shared read-only cache contract. Terrain sampling,
+contact fitting and fitted-pose caching remain in `scene3d.js`/`mining-terrain.js`;
+animation timing stays with existing callers. `scene3d` retains its geometry
+entry points as compatibility aliases. Custom WebGL and Three.js consumers use
+the same asset output and keep their existing lighting/rendering behavior.
+
+For the next asset, load an ordinary script after `mesh-builder.js`, define its
+material groups, and use a builder to append its named subassemblies. Pass the
+result to the existing study/batch rendering path. Introduce a new shared
+operation only when another model needs the same construction pattern.
+
+`tests/mining-geometry.cjs` checks per-material lengths and SHA-256 fingerprints
+of the original numeric arrays for 49 deployment/ramp/cutaway/contact/component
+cases. The checked-in fixture was captured before extraction; do not regenerate
+it to make a refactor pass. Existing clearance, landing, terrain and lighting
+tests cover interactions. The browser studies remain the visual review tools.

@@ -543,7 +543,7 @@
    * @param {number} deployment @param {number} time @param {boolean} working @param {string} [variant] @param {number} [panelOpen] @param {string} [interiorCut]
    */
   // The archived terrain renderer shares the current mining rig; no archived ship variants.
-  var miningPlatformGeometry=DW.scene3d.miningPlatformGeometry;
+  var miningPlatformGeometry=DW.miningRig.geometry;
 
   /** Translate the existing rounded 72 x 34 habitat silhouette into a drum. */
   /** @param {number} [segments] */
