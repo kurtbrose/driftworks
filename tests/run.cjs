@@ -29,3 +29,9 @@ require('node:child_process').execFileSync(process.execPath, [require('node:path
 require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'character-bodies.cjs')], {stdio: 'inherit'});
 
 require('./mining-study-navigation.cjs');
+
+require('./mining-ramp-clearance.cjs');
+
+require('./mining-leg-clearance.cjs');
+
+require('./mining-roof-clearance.cjs');

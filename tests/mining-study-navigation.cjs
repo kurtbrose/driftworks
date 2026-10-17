@@ -17,5 +17,18 @@ const assert=require('node:assert/strict');
   assert.ok(removed===24,'Both static airlock leaves are removed before adding moving panels');
   assert.equal(isStaticAirlock([[.9,3.75,5],[1,3.75,5],[1,3.75,6]]),false,'Door jamb remains solid');
   assert.equal(isStaticAirlock([[0,1.1,5],[.5,1.1,5],[0,1.1,6]]),false,'Inner partition is preserved');
+  require('./mining-study-cargo.js');
+  const cargo=global.Driftworks.miningStudyCargo;
+  assert.equal(cargo.selected(0).length,0,'Empty setting has no cargo');
+  assert.ok(cargo.selected(1).length>=8,'Full setting densely fills the deck');
+  assert.equal(cargo.selected(1).filter(s=>s.machine).length,3,'Zero-G blockouts mix a processor, folded manipulator and deployment cradle');
+  assert.ok(cargo.selected(1).reduce((sum,s)=>sum+s.width*s.depth*s.height,0)>400,'Full cargo has substantially more occupied volume');
+  assert.deepEqual(cargo.selected(1).filter(s=>s.machine).map(s=>s.kind),['processor','manipulator','deployment']);
+  for(const s of cargo.selected(1)){
+    if(Math.abs(s.x)-s.width/2<4.65 && Math.abs(s.y)-s.depth/2<3.65)assert.ok(4.5+s.height<7.13,'Loads clear the suspended pod underside');
+    assert.ok(Math.abs(s.y)-s.depth/2>=1.4,'Continuous longitudinal aisle remains clear');
+    assert.ok(Math.abs(s.y)-s.depth/2>=2.5||s.x+s.width/2<=1.25||s.x-s.width/2>=4.25,'Airlock approach remains clear beneath the pod');
+  }
+  for(const batch of cargo.geometry(1)){assert.equal(batch.vertices.length%18,0);assert.ok(batch.vertices.every(Number.isFinite));for(let i=3;i<batch.vertices.length;i+=6)assert.ok(Math.abs(Math.hypot(...batch.vertices.slice(i,i+3))-1)<1e-5);}
   console.log('PASS mining study: swept movement, wall sliding, vertical flight and static-door replacement');
 })().catch(error=>{console.error(error);process.exitCode=1;});

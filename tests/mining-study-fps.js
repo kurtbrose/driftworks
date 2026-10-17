@@ -5,7 +5,7 @@ import {isStaticAirlock,sweepAxes,viewDirections} from './mining-study-navigatio
 const button=document.getElementById('explore');
 const panel=document.createElement('section');
 panel.style.cssText='position:fixed;inset:0;z-index:20;background:#101820;display:none';
-panel.innerHTML='<div style="position:absolute;z-index:2;top:12px;left:16px;background:#101c24dd;padding:12px;max-width:720px"><button id="fps-back">Back to orbit</button> <button id="fps-entry">Cargo deck</button> <button id="fps-middle">Pod entry</button> <button id="fps-bridge">Bridge</button> <button id="fps-roof">Roof</button><p>Click view for mouse look · WASD move · Shift faster · F deck / free flight · Space / Ctrl up / down · E operate nearby door · R reset · Esc release mouse</p><p id="fps-status" role="status"></p></div><div style="position:absolute;left:50%;top:50%;pointer-events:none;color:white">+</div>';
+panel.innerHTML='<div style="position:absolute;z-index:2;top:12px;left:16px;background:#101c24dd;padding:12px;max-width:720px"><button id="fps-back">Back to orbit</button> <button id="fps-entry">Cargo deck</button> <button id="fps-middle">Pod entry</button> <button id="fps-bridge">Bridge</button> <button id="fps-roof">Roof</button> <label style="display:inline-flex">Cargo <input id="fps-cargo" type="range" min="0" max="1" step=".01" value="0"></label><p>Click view for mouse look · WASD move · Shift faster · F deck / free flight · Space / Ctrl up / down · E operate nearby door · R reset · Esc release mouse</p><p id="fps-status" role="status"></p></div><div style="position:absolute;left:50%;top:50%;pointer-events:none;color:white">+</div>';
 document.body.append(panel);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x101820);
@@ -14,12 +14,25 @@ const scene=new THREE.Scene();scene.add(new THREE.HemisphereLight(0xdbefff,0x637
 const sun=new THREE.DirectionalLight(0xffecd2,2);sun.position.set(12,-15,30);scene.add(sun);
 const camera=new THREE.PerspectiveCamera(75,1,.04,250);camera.up.set(0,0,1);
 const rig=new THREE.Group();scene.add(rig);
+const cargo=new THREE.Group();scene.add(cargo);
+let cargoKey=-1;
+function updateCargo(){
+  const fill=Number(document.getElementById('cargo').value);if(fill===cargoKey)return;cargoKey=fill;
+  panel.querySelector('#fps-cargo').value=String(fill);
+  while(cargo.children.length){const m=cargo.children[0];cargo.remove(m);m.geometry.dispose();m.material.dispose();}
+  for(const batch of window.Driftworks.miningStudyCargo.geometry(fill)){
+    const positions=[],normals=[];for(let i=0;i<batch.vertices.length;i+=6){positions.push(...batch.vertices.slice(i,i+3));normals.push(...batch.vertices.slice(i+3,i+6));}
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+    cargo.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:new THREE.Color(...batch.color),side:THREE.DoubleSide})));
+  }cargo.updateMatrixWorld(true);
+}
+panel.querySelector('#fps-cargo').oninput=function(){document.getElementById('cargo').value=this.value;};
 const people=new THREE.Group();scene.add(people);
 let crewReady=false;
 function addCrew(){
   const poses=window.Driftworks.miningStudyCrew?.poses;if(!poses||crewReady)return;
   crewReady=true;
-  const placements=[[-2,0,7.35],[1.9,-2.2,7.35],[-2,-1.8,10],[.2,2.5,10],[-4,5,4.5],[4,5,4.5],[-2,1,13.74],[2,-1,13.74]];
+  const placements=[[-2,0,7.35],[1.9,-2.2,7.35],[-2,-1.8,10],[.2,2.5,10],[-4,0,4.5],[4,0,4.5],[-2,1,13.74],[2,-1,13.74]];
   for(const [x,y,z] of placements)for(const batch of poses.standing){
     const positions=[],normals=[];
     for(let i=0;i<batch.vertices.length;i+=6){positions.push(x+batch.vertices[i]*1.6,y+batch.vertices[i+1]*1.6,z+batch.vertices[i+2]*1.6);normals.push(...batch.vertices.slice(i+3,i+6));}
@@ -94,7 +107,7 @@ button.onclick=()=>{
 panel.querySelector('#fps-back').onclick=()=>{active=false;window.miningFPSActive=false;panel.style.display='none';keys.clear();document.exitPointerLock();};
 for(const where of ['entry','middle','bridge','roof'])panel.querySelector('#fps-'+where).onclick=()=>spawn(where);
 window.addEventListener('resize',resize);
-function hit(origin,direction,distance){ray.set(origin,direction);ray.far=distance;return ray.intersectObjects(rig.children,false)[0];}
+function hit(origin,direction,distance){ray.set(origin,direction);ray.far=distance;return ray.intersectObjects(rig.children.concat(cargo.children),false)[0];}
 function move(delta){
   // Axis-separated sweep at feet, torso and head: slide along walls, never tunnel.
   sweepAxes(camera.position,delta,(axis,sign,distance)=>{
@@ -110,7 +123,7 @@ function tick(now){
   requestAnimationFrame(tick);const dt=Math.min(.035,(now-last)/1000||0);last=now;if(!active)return;
   for(const d of doors){const target=d.open?d.travel:0;d.offset+=(target-d.offset)*Math.min(1,dt*7);d.mesh.position.y=d.position[1]+d.offset;}
   rig.updateMatrixWorld(true);
-  addCrew();
+  addCrew();updateCargo();
   const directions=viewDirections(yaw,pitch);
   const forward=new THREE.Vector3(...directions.forward);
   const right=new THREE.Vector3(...directions.right);

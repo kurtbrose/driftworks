@@ -605,6 +605,10 @@ export type ExperimentModules = {
             setWorld: (world: World) => void;
         };
     };
+    miningStudyCrew?: {
+        poses: Record<'standing' | 'servicing', {vertices: number[]; color: [number,number,number]}[]> | null;
+        error: string | null;
+    };
     flightPresentation: {
         model: (craft: ArtCraft, wave: number, appearance: Pick<Appearance, 'allyArt' | 'enemyArt'>) => Model;
         mount: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, environment?: {

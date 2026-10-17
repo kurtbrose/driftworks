@@ -12,6 +12,61 @@
     /** @typedef {import('./types').Comparison} Comparison */
     /** @typedef {import('./types').Batch} Batch */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks);
+    /** Existing design 07 and source astronauts, in world units; no saved entities.
+     * @param {World} world @returns {Batch[]}
+     */
+    function surfaceCrews(world) {
+        var closedRig = DW.scene3d.miningPlatformGeometry(1, 0, false, 'rampdock', 0, '');
+        var openRig = DW.scene3d.miningPlatformGeometry(1, 0, false, 'rampdock', 1, '');
+        /** @type {Record<string, [number,number,number]>} */
+        var colors = {ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49]};
+        var units = DW.sim.METERS_PER_UNIT, rigScale = 36 / 32;
+        const poses = DW.miningStudyCrew && DW.miningStudyCrew.poses;
+        /** @type {{vertices:number[],color:[number,number,number]}[]} */
+        var groups = [];
+        /** @type {{position:number[],yaw:number,pose:'standing'|'servicing'}[]} */
+        var placements = [
+            {position:[-9,19,0],yaw:0,pose:'standing'},
+            {position:[21,5,0],yaw:Math.PI/2,pose:'standing'},
+            {position:[-3,0,4.5],yaw:Math.PI,pose:'standing'},
+            {position:[2.75,0,4.5],yaw:0,pose:'servicing'},
+            {position:[3,0,13.74],yaw:Math.PI/2,pose:'standing'}
+        ];
+        world.asteroids.forEach(function (asteroid) {
+            [[-.32,-.85,.65],[.42,-.65,.72],[-.6,.25,.8]].forEach(function (direction, siteIndex) {
+                var rig = siteIndex === 1 ? closedRig : openRig;
+                var frame = DW.scene3d.surfaceFrame(asteroid, /** @type {[number,number,number]} */ (direction));
+                var z = frame.normal, h = Math.hypot(z[0],z[1]) || 1;
+                var x = [-z[1]/h,z[0]/h,0], y = [z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];
+                var c = Math.cos(asteroid.rotation), s = Math.sin(asteroid.rotation);
+                /** @param {number[]} p @param {number[]} n @param {number} group @param {[number,number,number]} color */
+                function vertex(p, n, group, color) {
+                    var out = groups[group] || (groups[group] = {vertices:[],color:color});
+                    var local=p.map(function(_,k){return frame.point[k]*asteroid.radius+(x[k]*p[0]+y[k]*p[1]+z[k]*p[2])/units;});
+                    var normal=n.map(function(_,k){return x[k]*n[0]+y[k]*n[1]+z[k]*n[2];});
+                    out.vertices.push(asteroid.position.x+local[0]*c-local[1]*s,asteroid.position.y+local[0]*s+local[1]*c,local[2],normal[0]*c-normal[1]*s,normal[0]*s+normal[1]*c,normal[2]);
+                }
+                Object.keys(rig).forEach(function (material,index) {
+                    var v=rig[material];
+                    for(var i=0;i<v.length;i+=6) vertex([v[i]*rigScale,v[i+1]*rigScale,v[i+2]*rigScale],[v[i+3],v[i+4],v[i+5]],index,colors[material]);
+                });
+                if (poses) placements.forEach(function (placement) {
+                    var pc=Math.cos(placement.yaw),ps=Math.sin(placement.yaw),offset=placement.position.map(function(v){return v*rigScale;});
+                    // Ground crew stand on the sampled terrain, deck crew retain the study's hardpoints.
+                    if (placement.position[2] === 0) {
+                        var probe=frame.point.map(function(v,k){return v+(x[k]*offset[0]+y[k]*offset[1])/(units*asteroid.radius);});
+                        var ground=DW.scene3d.surfaceFrame(asteroid,/** @type {[number,number,number]} */ (probe)).point;
+                        offset=[x,y,z].map(function(axis){return ground.reduce(function(sum,v,k){return sum+(v-frame.point[k])*asteroid.radius*units*axis[k];},0);});
+                    }
+                    poses[placement.pose].forEach(function (batch,index) {
+                        var v=batch.vertices;
+                        for(var i=0;i<v.length;i+=6) vertex([offset[0]+(v[i]*pc-v[i+1]*ps)*1.8,offset[1]+(v[i]*ps+v[i+1]*pc)*1.8,offset[2]+v[i+2]*1.8],[v[i+3]*pc-v[i+4]*ps,v[i+3]*ps+v[i+4]*pc,v[i+5]],4+index,batch.color);
+                    });
+                });
+            });
+        });
+        return groups.map(function (batch) { return {vertices:new Float32Array(batch.vertices),color:batch.color}; });
+    }
     /** @param {ArtCraft} craft @param {number} wave @param {Pick<Appearance, 'allyArt' | 'enemyArt'>} appearance */
     function model(craft, wave, appearance) {
         return DW.shipPackModels.craftModel(craft, craft.team === 'ally' ? appearance.allyArt : appearance.enemyArt, wave);
@@ -23,6 +78,7 @@
         var scene = DW.scene3d.create(host, getWorld, setWorld, { study: true });
         /** @type {import('./types').Images} */
         var shipImages = new Map();
+        var crewKey = '', crewPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses, crews = /** @type {Batch[]} */ ([]);
         DW.shipPackModels.loadTextures().then(function (images) {
             shipImages = images;
         }).catch(/** @param {unknown} error */ function (error) {
@@ -96,7 +152,10 @@
                     actorBatches.push(batch);
                 });
             });
-            scene.setStudyActors(actorBatches);
+            var nextCrewKey = JSON.stringify(world.asteroids.map(function (a) { return [a.id,a.radius,a.rotation,a.position]; }));
+            var nextPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses;
+            if (nextCrewKey !== crewKey || nextPoses !== crewPoses) { crews = surfaceCrews(world); crewKey = nextCrewKey; crewPoses = nextPoses; }
+            scene.setStudyActors(actorBatches.concat(crews));
             var effectBatches = DW.flightGuns.geometry(DW.training.allGuns(combat, guns), state), engineParts = /** @type {Float32Array[]} */ ([]);
             ['ally', 'enemy'].forEach(function (team) {
                 var craft = DW.training.alive(combat).filter(function (e) {

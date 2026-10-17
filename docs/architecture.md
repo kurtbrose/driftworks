@@ -778,9 +778,13 @@ loading, artwork controls/credits, faction paint and fleet/effect submission.
 and the HUD. `model(craft,wave,appearance)` is their shared team-aware model
 resolver; `hullHit` uses current artwork with the supplied combat wave. Wrecks
 join hull/scorch batches, while only living craft emit engine effects. Submission
-remains hulls, scorches, gun effects, engines, diagnostic settings, sky, scene
+remains hulls, scorches, surface scenery, gun effects, engines, diagnostic settings, sky, scene
 sync, scene render. `pose` forwards the player camera; `renderStats` supplies
 scene and sky counters. It does not advance the session or own its world.
+Three design 07 (`rampdock`) mining rigs and their source Quaternius EVA crew use geometry anchored
+with `scene3d.surfaceFrame`, at 36 m hull length and 1.8 m suit height. The flight and study share
+`assets/characters/quaternius-astronaut/poses.js`. Material batches are cached by asteroid
+identity, radius, pose and loaded crew poses; they introduce no simulation entities or saved state.
 
 `experiments/flight-diagnostics.js` mounts render/performance controls and owns
 frame pacing, elapsed timestamps and rolling measurements via `flightPerformance`.
@@ -882,3 +886,21 @@ First-person mining inspection includes two frozen 1.8 m astronaut references on
 The tower now has two occupied decks in its body (z=4.7 and z=7.35), with the glazed bridge at z=10: about 3 m between floors. The former supporting slab at z=9 is removed. The middle deck follows the rectangular tower body, shares the translation well, and has two astronaut references and a first-person starting point. Lower vestibule partitions terminate below its ceiling. This supersedes the previous two-level spacing study.
 
 The current rampdock layout is a suspended two-level pod: entry/work floor z=7.35, bridge z=10, uninterrupted cargo floor z=4.5 beneath. The former z=4.7 crew floor, pedestal walls, side entry and mock cargo blocks are removed. Eight cage ribs meet a structural belt at z=8.8. The entry well contains a downward-facing sliding hatch at z=7.24 and a side pressure door, both operable in first person. Handhold guides continue to the cargo deck; no stairs or support columns cross that space. Interior lower cutaway now inspects the suspended entry level. This supersedes the earlier three-level body study.
+
+Rampdock anchor/frame interfaces share chamfered tapered chassis pedestals, narrower steel adapters and split dark frame sockets. The post starts in the socket at z=5.35 instead of passing through a yellow cube. Leg roots use paired clevis plates and tangent-axis pivot barrels, boxed struts and a sleeve/rod actuator. Separate ankle pivots and jaw pins carry the two-prong gripper; contact positions and eight-leg distribution are retained. Other study variants keep their prior mounts.
+
+Mining inspection cargo is study-only, shared by the orbit and first-person views through `tests/mining-study-cargo.js`. The Cargo slider fills 18 deterministic box/cylinder bays, reserving a longitudinal aisle and a crossing airlock approach lane. Cargo sits at z=4.5, contributes first-person collision, and does not change simulation state or the rig mesh. Empty remains the default.
+
+The full cargo preset now packs larger stacked freight into the available bays and includes two roughly 9 m equipment placeholders (blocky chassis, tracks, cabin and blade). Packing respects the faceted deck boundary, frame hardpoints, center aisle, crossing airlock lane and pod underside clearance. This replaces the sparse 18-load preset.
+
+Cargo blockout now mixes an approximately 20 m articulated truck, a 10 m folded mobile crane, a smaller dump truck and remaining freight. The two largest loads span substantial frame bays; simple wheels, separated cabs, chassis and boom/bed masses establish vehicle silhouettes. The longitudinal passage and immediate airlock approach remain clear; the former full-width crossing lane is no longer reserved through parked oversized vehicles.
+
+Oversized cargo uses zero-G industrial masses, not road vehicles: a long three-vessel process assembly on transport rails, a folded twin-arm uncrewed manipulator sled and a stowed deployment cradle. Their earlier truck-scale envelopes and mixed freight layout remain, but wheels, cabs, trailers and dump bodies are removed. The forms remain coarse scale/clearance placeholders.
+
+Rampdock door clearance uses a mitered hinge polygon offset 0.72 units outboard of the fixed frame. Thick wall leaves have relieved lower corners for the hardpoints; upper closures seat at z=9.45 (underside z=9.23), above the raised pod ribs and closure receivers. Fold pivots and receiver stand-offs follow this height, and the open-tip ground solution uses the new wall length. A triangle/OBB regression sweeps both faces and edges of all door leaves against the primary fixed frame at 41 opening positions.
+
+Ramp/leg clearance is checked before fixed corner infill is designed. The rigid leaves now reserve 2.1 units at their roots and 2.9 units at the fold and roof edges, clearing upper struts, knees and grippers throughout the sampled leg envelope. `miningPlatformLegGeometry(deployment)` exposes the actual anchor-only mesh for diagnostics. `tests/mining-leg-clearance.cjs` uses a triangle BVH and separating-axis surface intersection checks at 401 door positions for 11 leg deployments; this sampled regression complements the primary-frame sweep and is not a formal continuous-collision proof. Fixed infill remains deferred.
+
+The broad-ramp correction supersedes the temporary 2.9-unit relief: rampdock anchors and grippers now extend along each perimeter corner bisector, keeping their sweep out of adjacent bays. Door relief returns to 0.8 units at the fold/roof edges and 1.75 at the roots. The 401-by-11 leg sweep regression passes with these broad panels; no infill has been added.
+
+The roof and side gaps now use stationary black infill attached to the cage, recessed behind the yellow closures. This supersedes the deferred-infill note: there are no auxiliary folding wings or extra moving hinges. Lower ramp cutouts remain. miningPlatformInfillGeometry() exposes these fixed panels for regression checks; the 401-pose mesh sweep checks the yellow leaves against infill, the tower and neighboring bays in addition to the frame and leg tests.

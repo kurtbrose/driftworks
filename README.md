@@ -228,7 +228,7 @@ Retail lateral and reverse speeds are zero, so there is no strafe thrust. Captur
 Keys 1–4 select profiles and reset the starting pose; changing the dropdown also
 resets it. After using a form control, click Fly to return to flight input.
 Reset stops the craft facing the asteroid. The diameter control (200–4,000 m)
-resets the range to compare scale; it defaults to 600 m. Surface contact stops
+resets the range to compare scale; it defaults to 2,500 m. Surface contact stops
 the craft with a 5 m clearance. Asteroid impacts provide visual feedback without terrain damage or excavation.
 
 `experiments/retail-profiles.js` preserves max velocity vectors, rear velocity,

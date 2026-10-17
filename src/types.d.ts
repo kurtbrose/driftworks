@@ -273,6 +273,8 @@ export interface DriftworksNamespace {
     craterDistance: (impact: {center: [number, number, number]; normal: [number, number, number]; radius: number}, point: [number, number, number]) => number;
     impactBytes: (asteroid: Asteroid) => Uint8Array;
     globeRelief: (asteroid: Asteroid, direction: [number, number, number]) => number;
+    miningPlatformInfillGeometry: () => Record<string, number[]>;
+    miningPlatformLegGeometry: (deployment: number) => Record<string, number[]>;
     miningPlatformGeometry: (deployment: number, time: number, working: boolean, variant?: string, panelOpen?: number, interiorCut?: string) => Record<string, number[]>;
     mothershipHardware: (detail?: number) => Record<string, number[]>;
     pickStudySurface: (eye: [number,number,number], direction: [number,number,number], meshes: ArrayLike<number>[]) => [number,number,number] | null;

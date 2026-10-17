@@ -96,7 +96,7 @@
     var ally=craft('ally','ally',90),enemy=craft('enemy','enemy',90),dead=craft('dead','enemy',0),wreck=craft('wreck','ally',0),combat=DW.training.create();
     combat.enemies=[ally,enemy,dead];combat.wrecks=[wreck];combat.wave=3;world.elapsedSeconds=7;
     try{
-      DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&getWorld()===sourceWorld);setWorld({elapsedSeconds:7});assert(getWorld()===world);return scene;};
+      DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&getWorld()===sourceWorld);setWorld({elapsedSeconds:7,asteroids:[]});assert(getWorld()===world);return scene;};
       DW.flightSkybox.create=function(){return {render:function(state,scale,empty){events.push('sky');assert(state===player&&scale===.5&&empty);},getRenderStats:function(){return skyStats;}};};
       DW.shipPackModels=Object.assign({},saved.packs,{
         populate:function(){},loadTextures:function(){return {then:function(fn){fn(textureImages);return {catch:function(){}};}};},
@@ -125,6 +125,31 @@
       assert(scorches[0].craft[1]===wreck&&engines[0].length===1&&engines[1].length===1);
       assert(effects[0].kind==='guns'&&Array.from(effects[1].vertices).join(',')==='1,2');
       assert(presentation.renderStats().scene===sceneStats&&presentation.renderStats().sky===skyStats);
+      world.asteroids=[sim.createInitialWorld().asteroids[0]];
+      var beforeCrews=JSON.stringify(world);
+      var rigGeometry=DW.scene3d.miningPlatformGeometry, rampStates=[];
+      try {
+        DW.scene3d.miningPlatformGeometry=function(deployment,time,working,variant,open,cut){rampStates.push(open);return rigGeometry(deployment,time,working,variant,open,cut);};
+        presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
+      } finally { DW.scene3d.miningPlatformGeometry=rigGeometry; }
+      assert(rampStates.join(',')==='0,1','Flight scenery includes both closed and fully open source rigs');
+      var crewBatches=actors.slice(-4);
+      assert(crewBatches.length===4&&crewBatches.every(function(b){return b.vertices.length>0&&b.vertices.length%18===0&&Array.from(b.vertices).every(Number.isFinite);}));
+      var sourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,'rampdock',0,'');
+      var openSourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,'rampdock',1,'');
+      Object.keys(sourceRig).forEach(function(material,index){assert(crewBatches[index].vertices.length===sourceRig[material].length+openSourceRig[material].length*2,'Three complete design 07 rigs: two open, one closed');});
+      assert(JSON.stringify(world)===beforeCrews,'Surface scenery must not change persistent world state');
+      presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
+      assert(actors[actors.length-1]===crewBatches[3],'Static crew geometry is reused across frames');
+      var savedCrew=DW.miningStudyCrew;
+      try {
+        var pose=[{vertices:[0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,1],color:[.8,.8,.8]}];
+        DW.miningStudyCrew={poses:{standing:pose,servicing:pose},error:null};
+        presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
+        assert(actors.length===9&&actors[8].vertices.length===18*5*3,'Loaded source poses add five astronauts per rig');
+        assert(actors[4]!==crewBatches[0],'Asynchronous pose loading invalidates the scenery cache');
+      } finally { DW.miningStudyCrew=savedCrew; }
+      world.asteroids=[];
       doc.getElementById('faction-paint').checked=false;doc.getElementById('ally-art').value='';doc.getElementById('enemy-art').value='';
       var plain=presentation.appearance();assert(plain.paint.ally===undefined&&plain.paint.enemy===undefined);
       var blockouts=[];DW.training.geometry=function(value){blockouts.push(value.enemies);return [{kind:'blockout'}];};
@@ -200,7 +225,7 @@
   test('flight session reset replaces sortie state and preserves the environment', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0]};
     var first=session.reset(config),world=first.world;
-    assertClose(first.asteroid.radius*sim.METERS_PER_UNIT,300);
+    assertClose(first.asteroid.radius*sim.METERS_PER_UNIT,1250);
     assertClose(first.mothership.position.x*sim.METERS_PER_UNIT,900);
     first.state.throttle=0;first.guns.fired=12;first.combat.dead=true;first.combat.wrecks.push({});
     first.asteroid.radius=20;world.elapsedSeconds=42;

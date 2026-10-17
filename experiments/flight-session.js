@@ -14,7 +14,7 @@
         var world = DW.sim.createInitialWorld(), asteroid = world.asteroids[0], units = DW.sim.METERS_PER_UNIT;
         asteroid.position = { x: 0, y: 0 };
         asteroid.rotation = 0;
-        asteroid.radius = 300 / units;
+        asteroid.radius = 1250 / units;
         var home = world.ships.find(function (ship) {
             return ship.type === 'mothership';
         });
