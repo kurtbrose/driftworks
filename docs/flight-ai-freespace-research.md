@@ -12,6 +12,49 @@ The first implementation milestone should change only the one-on-one pursuit/bre
 
 Explicitly reject FreeSpace's near-aim orientation snapping, glide attacks, circle-strafing, and AI-specific physical advantages. Flying the ship must remain the way both humans and AI aim.
 
+These recommendations concern **opponent AI**, one of three AI categories Driftworks must maintain. **Perfect AI** searches for the strongest legal input behavior to stress systems. **Human simulator AI** stands in for a player, trying to succeed but making accidental errors through human-like limitations. These categories have different objectives and acceptance criteria; an ace opponent is not a substitute for either testing category.
+
+## Three maintained AI categories
+
+This distinction governs future implementation and testing. All three categories use the same craft physics, weapon rules, control limits and simulation clock. They differ in policy, observation/decision limitations and success criteria, not physical privileges.
+
+| Category | Purpose | Mistakes and limitations | Success criterion |
+| --- | --- | --- | --- |
+| **Opponent AI** | Exists to lose to the player and make that experience enjoyable: satisfying pursuit, readable danger, earned victories and different pilot flavors. Losing is the design objective across the intended player experience, not a requirement to throw every engagement. | Can deliberately offer openings, defer a shot, overcommit, or use less effective tactics to shape the experience. Flavor and difficulty control these choices. | Human players enjoy flying against it, can learn and exploit its behavior, and can win at the intended challenge level. Maximum win rate is not the objective. |
+| **Perfect AI** | An unattainable ideal approximated by increasingly capable adversarial controllers. Stress-test mechanics and find loopholes using any legal input sequence. | No deliberate concessions or human-like error budget. Computational approximations and policy weaknesses still exist; the label does not establish optimality. | Find stronger strategies, expose dominant inputs and failure cases, and preserve each discovery as a reproducible control replay. Losing to it does not by itself imply opponent AI needs a buff. |
+| **Human simulator AI** | Stand in for the player in automated tests, with distinct skill levels, styles and limitations. Always attempts to achieve its stated player objective. | Never deliberately makes mistakes. Mistakes emerge accidentally from delayed/noisy observation, limited attention, imperfect prediction, bounded planning and control execution. | Produces plausible player behavior and error distributions, calibrated against human sessions; helps predict the human experience without replacing playtesting. |
+
+For this research, FreeSpace is an **opponent-AI reference**, not evidence of a perfect controller or a validated human simulator. Its entertaining compromises belong in the opponent category. This classification does not assert that every FreeSpace routine intentionally loses; many routines pursue local combat success, and mission/support AI also exists.
+
+### Legal inputs and the stress-test boundary
+
+Perfect AI may exploit anything a human could physically do through the supported controls, including tactics that violate our preferred dogfighting style. If legal side thrust, rapid control combinations, stop-and-turn behavior or another loophole dominates, the stress tester should find and report it. The opponent repertoire restrictions later in this report must not conceal such discoveries. Finding an exploit does not authorize a physics or balance change in this research task.
+
+All categories must emit the same bounded input/throttle requests available to a player. No direct pose, velocity, angular-rate, health, hitbox, weapon-cooldown or clock edits; no extra simulation steps for one pilot; no impossible input rates or combinations. Evaluate controls at the player input/simulation cadence and record the applicable control interface. Search can use substantial offline computation, but an accepted exploit must replay through the ordinary controls without external state intervention.
+
+Information access must also be explicit. A controller cannot inspect future random outcomes or hidden opponent intentions during a measured run. If a diagnostic perfect-AI experiment uses exact internal state beyond player-observable information, label it a privileged-information bound and separately validate the strategy with a player-available observation contract. Legal actuation alone does not establish that the full policy is human-achievable. Any omniscient harness may observe for scoring; that does not grant its observations to the pilot.
+
+### Accidental error versus deliberate concession
+
+A human simulator can misjudge a crossing target because its last observation is old, its velocity estimate is wrong, or its practiced control policy overshoots. It must choose what it believes is the best action for its objective given those limitations. It must not see a good shot and randomly refuse it to give the opponent a chance, select a known-worse maneuver to meet a loss quota, or inject a scheduled tactical blunder. Randomness may model uncertain perception or motor execution; it must not become an arbitrary chance to choose failure.
+
+For example, a novice simulator may consistently underestimate closure because of a limited estimator, then attempt to recover after noticing an overshoot. An opponent novice may intentionally remain overcommitted for a readable player opening. Similar trajectories can have different causes; keep these policies and their tests separate. Human simulator flavors can differ in reaction, attention, prediction, learned tactics, risk preference and control proficiency, without assuming that a human optimizes a perfect combat model.
+
+### Maintenance without an AI framework
+
+Share geometry math, intercept math, maneuver execution where appropriate, observation data formats, input validation, replay and physical integration. Keep category objectives and policy settings explicit and independently testable. Do not create one difficulty slider that silently turns opponent concessions into simulated human limitations, or call an opponent preset with zero aim error “perfect.” A simple category selector plus small policy functions is enough initially; separate modules only when actual implementation size warrants them.
+
+The current `training.js` enemies are opponent AI. The scripted player controller in the wave-clearance test is a functional test driver, not an established human simulator or perfect AI. Straight-flight and fixed-turn scripts remain useful diagnostic fixtures, but must not be presented as representative human players. Both additional categories require their own maintained implementations and validation; naming them does not make them available yet.
+
+The testing roles are complementary:
+
+- **Opponent vs human simulator:** primary automated approximation of the intended experience, across player flavors. Real human playtesting remains the quality gate.
+- **Perfect vs opponent:** exposes exploitable opponent behavior and measures robustness, without requiring entertaining opponents to match perfect play.
+- **Perfect vs perfect / scripted fixtures:** stresses mechanics, stability and dominant strategies. A stalemate here may reveal a system issue rather than an opponent-policy problem.
+- **Human simulator vs human simulator or recorded human sessions:** checks behavioral plausibility and calibration. No forced win/loss targets.
+
+Record category, policy version, flavor, observation contract, seed, craft profile and control cadence with every evaluation. Freeze simulator/perfect baselines when comparing opponent revisions so changing both sides cannot manufacture an improvement. Keep exploit discovery and entertainment scoring separate.
+
 ## Evidence and provenance
 
 FreeSpace Open source was inspected at commit [`c28032a2afa99b508aaafe96ec075b4ec4a54b1c`](https://github.com/scp-fs2open/fs2open.github.com/commit/c28032a2afa99b508aaafe96ec075b4ec4a54b1c). All FSO references below are pinned to that revision:
@@ -115,6 +158,8 @@ Ranking is expected gameplay benefit relative to implementation and tuning cost,
 
 **Proposed fit:** retain three presets. Use delayed samples of observed position/velocity, bounded extrapolation between samples, slowly changing seeded bias, acquisition settling time, and occasional overcommitted maneuvers. Rookie reacts later and recovers later; ace judges earlier and wastes less motion. Separate tactical reevaluation timing from continuously executing the current maneuver. Reuse the existing decision timer before adding another clock; introduce separate observation state only if testing shows its value.
 
+These are opponent presets. Any deliberately chosen overcommitment or offered opening must stay in the opponent policy. A human simulator may reuse delayed observation and limited prediction, but its overcommitment must follow from its estimates and decision limitations, not an instruction to make a mistake. Perfect AI has no obligation to retain either preset's concessions.
+
 **Why it may help:** the player can exploit visible errors, while a novice still sometimes earns a good shot. Pilot identity comes from choices, not changed ship capability.
 
 **Risks:** stacked delays and errors can make novices helpless; perfect aces can become exhausting. Change one dimension at a time. Keep minimum reaction time and finite mistakes for all levels. Do not change turn rate, damping, acceleration, weapons or hitboxes by skill.
@@ -192,7 +237,7 @@ For initial tuning, investigate a no-progress interval around 6–10 seconds and
 
 ## Incremental implementation stages
 
-1. **Establish a duel baseline.** Add a deterministic one-opponent fixture in the existing dependency-free harness; prevent wave respawn during evaluation. Fix profile, skill and weapon; cover head-on, crossing, tail, mutual turn and unequal-speed starts in open space. Record controls, transitions, range/closure, opportunities, hits and timeouts. No tuning or physics changes. Keep browser comparison at `experiments/flight.html` for the eventual implementation.
+1. **Establish a duel baseline and category contracts.** Add a deterministic one-opponent fixture in the existing dependency-free harness; prevent wave respawn during evaluation. Define category, observation and legal-input contracts, and a shared control replay/validator. Fix profile, skill and weapon; cover head-on, crossing, tail, mutual turn and unequal-speed starts in open space. Record controls, transitions, range/closure, opportunities, hits and timeouts. Start with clearly labeled scripted player drivers; implement an initial human simulator with limited observation/control and a separate best-effort perfect stress controller incrementally. Neither needs to be comprehensive before the first duel milestone, but neither may be replaced by an opponent difficulty preset. No tuning or physics changes. Keep browser comparison at `experiments/flight.html` for the eventual implementation.
 2. **First gameplay milestone: one satisfying duel loop.** Implement recommendation 1 only, with small engagement measurements and latched break parameters. Preserve existing gun gating and skill presets. Limit state additions to progress/commitment/cooldown and held direction. Compare baseline and candidate on identical starts. Reject the change if it merely extends retreat time or increases lethality without making chase and re-entry readable. Stop here for human evaluation before expanding.
 3. **Improve the firing pass.** Separate aim/navigation and add bounded pursuit/lag blending from recommendation 2. Add simple rate-aware steering damping only if logs show control overshoot: use existing `pose.rates` to moderate control demand, never edit rates directly. Evaluate independently from firing changes.
 4. **Add defensive variety and skill.** One threat-conditioned break, then an optional reversal, then observation/error presets, one at a time. No acrobatics inventory. An unhelpful maneuver should be removed rather than justified by variety.
@@ -220,7 +265,9 @@ Add focused tests with each implemented behavior:
 - Same seed and timestep reproduce choices. Run real simulated time through 1/120-second substeps, as `flightSession.advance` does; also compare display-frame batching and shorter substeps with tolerances. A direct .1-second `arcade.step` call clamps to .05 and is not a valid .1-second benchmark.
 - Later stages: delayed observation, bounded correlated bias, burst/rest limits, attack-slot ownership and simultaneous-pressure limits.
 
-Run a fixed evaluation matrix, for example five starting geometries × three skills × ten deterministic seed/phase variants × 120 simulated seconds. Use identical profiles first, then mixed profiles; compare both mirrored starts and a few scripted human-like opponents (steady turn, straight flight, delayed break, throttle change). AI self-play alone rewards shared weaknesses. Freeze weapons, health, collision queries and start spacing across variants.
+Run a fixed evaluation matrix, for example five starting geometries × three opponent skills × ten deterministic seed/phase variants × 120 simulated seconds, repeated for each maintained human simulator flavor. Until simulators exist, report scripted drivers as diagnostic coverage only. Use identical profiles first, then mixed profiles; compare both mirrored starts and diagnostic scripts (steady turn, straight flight, delayed break, throttle change). Run perfect-AI stress cases as a separate suite, including discovered exploit replays. AI self-play alone rewards shared weaknesses. Freeze weapons, health, collision queries, player-policy versions and start spacing across opponent variants.
+
+Category-specific regression coverage must include legal input replay for all three; proof that opponent-only concessions cannot leak into perfect or human-simulator policies; simulator responses to stale/noisy observations without consulting hidden ground truth; and reproducible stress strategies through the player control path. For a simulator, inspect the cause of a mistake as well as its visible trajectory. An intentionally missed shot does not become human-like merely because its frequency matches a recording. Calibrate reaction times, aim correction, overshoots and recovery against human traces, and report uncertainty until those traces exist.
 
 | Indicator | Measurement and interpretation |
 | --- | --- |
@@ -246,6 +293,8 @@ For every implementation stage run `npm run check`. Browser verification is addi
 - When a turning contest ends, does the change feel like a pilot decision rather than an arbitrary reset? Are mirrored opponents synchronizing retreats?
 - Are defensive turns readable and punishable? Does a reversal create a new positional decision, or simply deny the shot the player earned?
 - Can people distinguish rookie/veteran/ace from timing and mistakes on identical craft? Does the ace still offer openings?
+- Do human simulator flavors reproduce actual player reaction, attention and recovery patterns without scheduled blunders? Which observations and control limitations need calibration from human recordings?
+- Which perfect-AI discoveries expose legal mechanics that undermine the desired flight style, and which merely exploit intentional opponent openings? Keep those decisions separate from tuning the opponent to beat the stress tester.
 - Does burst timing communicate danger without making every acquisition immediately damaging? How long should a human be allowed to maintain an earned solution?
 - Once duels pass, does slot handoff create breathing room or a relentless conveyor of attackers? Are waiting pilots visibly flying plausible paths?
 - How much of near-terrain difficulty comes from AI decisions versus the existing asymmetric safety handling? Keep this separate from the open-space verdict.
