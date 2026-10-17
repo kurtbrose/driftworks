@@ -67,101 +67,11 @@ The 88-cell marching-tetrahedra mesh stores broad surface normals on exterior
 vertices and real geometric normals on exposed interior faces. The shader adds
 crater gradients once, preserving fine impacts below mesh resolution without
 doubling slopes already represented in the mesh. The original composition
-palette uses smooth three-axis blending. Fine surface bumps use a seeded,
-filtered fourteen-octave solid 3D noise field evaluated directly at the deformed
-physical body position. Orthogonal octave rotations avoid repeated lattice-axis
-patterns. There is no normalized-sphere or planar texture domain to stretch
-under broad deformation; analytic trilinear-noise derivatives in those same physical coordinates
-produce a world-metric gradient projected onto the actual surface tangent plane.
-Per-fragment depth sets the pixel footprint; unresolved layers fade out and
-terminate the loop before doing further noise work. One analytic evaluation per
-layer replaces six finite-difference evaluations. Viewer wheel zoom focuses on
-the picked surface and pauses orbit, allowing close inspection without entering
-the body. Exterior and cut surfaces share this noise field, with no UV seam or pole mapping. Lighting is world-fixed diffuse plus a
-small ambient fill, with crater occlusion reducing that fill. A broad-normal
-terminator gate prevents normal-map bumps on the unlit hemisphere from receiving
-sunlight. There is no camera-facing limb multiplier or additive grazing noise
-that can make dark-side pixels glow while orbiting.
-Real cut faces use their own mesh normals and shared material. The standalone `tests/asteroid-orbit.html` viewer uses `scene3d.create` with
-`study: true` to disable the tactical grid, center the inspection camera on the
-body, and use ordinary left-drag for orbiting. `getOrbit`/`setOrbit` expose only
-renderer-owned camera angles to its animation loop. Its seed input changes only
-the isolated specimen ID. `setStudyParameters` regenerates the seeded artwork
-with an optional normalized bulk mix, then applies bounded roughness, crater-depth
-and heterogeneity controls outside world state. Composition overrides participate
-in the material-dependent surface profile, rather than merely tinting an existing
-specimen. Reapplying parameters starts from authored defaults, never multiplying
-previous edits. Replaced visual objects invalidate CPU geology and GPU mesh/impact
-texture caches. The main game omits all study parameters. Surface walk keeps a viewer-local
-radial position and transports its heading onto the terrain tangent plane.
-`surfaceFrame` intersects the closed solid field and derives its outward normal;
-the eye stays above that surface, and the camera up axis follows local terrain.
-WASD/arrows and the on-screen step controls move tangentially; drag adjusts yaw
-and pitch. The wheel raises/lowers normal-relative altitude exponentially between
-0.004 and 0.3 body radii, with a physical-meter readout. Wheel input over the
-parameter panel scrolls that panel instead. `setSurfaceCamera` supplies an orthonormal camera basis to the shared
-projection path without changing simulation camera rules. Leaving walk restores
-the previous orbit position, angles and inspection height. Cutaway and reseeding
-exit walking; changing material parameters resamples the walking surface.
-Pixel footprint is derived from focal length, viewport size and fragment depth
-for both perspective camera modes. Alt-drag spans
-both hemispheres; Underside provides a direct inspection view. The lattice plane
-moves behind the body when viewing from below.
-When excavation is active, the field
-subtracts a sphere at `pocketOffset` and a bent capsule tunnel following
-`tunnelAngle`/`tunnelTurn`, using `depthM / METERS_PER_UNIT` explicitly.
-A horizontal cut through the chamber center removes the upper shell. The cut
-face, inner walls, floor and outer shell belong to the same mesh, so depth testing
-and orbiting provide real interior occlusion/parallax. Excavation parameters and
-radius invalidate the mesh cache; camera motion and body spin do not.
-Rendering never adds durable fields or mutates the world. Platform height and
-inspection camera elevation derive from that same relief-bearing surface (or
-exposed cut height). All geology and GPU caches remain renderer-owned.
-
-This is a rendering/input prototype, with blockout craft, directional shading,
-fixed mesh resolution and basic combat effects. The detailed Pixi artwork below
-remains available through the previous renderer and study pages. The shared
-headless suite checks camera inverse projection, depth parallax, full-shell continuity and body scale, excavation geometry and surface picking; browser verification is needed
-for WebGL, native input and audio.
-
-Small-craft artwork uses world-light shading and continuous detail fades at
-8–32× and 32–96× zoom. Presentation geometry does not change physical dimensions
-or simulation attachment points. Platform anchors derive their extension from
-existing lifecycle timers using `logistics.setupSeconds` and `packSeconds`;
-excavation effects require the same deployed, staffed, ore-available conditions
-as extraction. Selection brackets use screen-scaled strokes independently of hull shading.
-Attached platforms use a cached asteroid-local terrain normal (the shader's
-broad dome plus shared relief, excluding microtexture). Rotate that normal into
-world space and compose slope-aligned tangent projection after the platform
-heading, with compression clamped to 0.2. Project individual footpads onto this
-plane; chassis and machinery vertices additionally move by their height times
-the surface normal's screen components. Shaded side walls and articulated legs
-connect the elevated body to its ground contacts, with rear legs drawn first.
-Workers use projected positions with a small height offset; selection brackets
-stay uncompressed. Simulation positions and carried geometry remain unchanged.
-
-The site loads ordinary scripts into `window.Driftworks`; there are no ES module
-imports or build artifacts. `index.html` loads Pixi, propulsion, combat,
-simulation, audio, HUD, then game. The test entry points load the same application scripts without
-Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
-
-| Module | Responsibility and interface |
-| --- | --- |
-| `src/propulsion.js` | `Driftworks.propulsion`: tank initialization, rocket-equation burns/remaining delta-v, catcher envelope. Uses kg and m/s; `burn` mutates the supplied ship's fuel and returns the achievable burn fraction. |
-| `src/combat.js` | `Driftworks.combat`: deterministic combat state, threat director, hostile movement, weapon selection, damage resolution, and combat events. |
-| `src/sim.js` | `Driftworks.sim`: constructors, commands, fixed-step movement/industry/recovery, combat update orchestration, physical conversions, and save migration. Public commands and `stepWorld(world, dt)` return replacement worlds. Internal helpers mutate those working copies. |
-| `src/game.js` | `Driftworks.game` exposes testable UI/geometry helpers; `createApp` owns the current world, timing, scene and HUD. `createScene` owns Pixi objects, input, camera focus and effects, communicating through `getWorld`/`setWorld` and observing combat events. |
-| `src/audio.js` | `Driftworks.audio`: lazily unlocked Web Audio resources, sound events, engine telemetry and separately persisted volume settings. No simulation ownership. |
-| `src/hud.js` | `Driftworks.hud`: DOM panels, fleet/readouts, control availability and event binding. Reads simulation queries and audio status; delegates actions to the app. No Pixi or scene dependency. |
-| `styles.css`, `index.html` | DOM layout and static entry point. |
-| `tests/tests.js` | Shared browser/headless regression suite for simulation and exposed game helpers. |
-| `tests/scenario.js`, `tests/scenarios.cjs` | Shared deterministic replay/assertion helpers and Node JSON fixture entry point; see [scenario replay](scenarios.md). |
-
-New durable gameplay rules belong in simulation transitions. Rendering should
-consume world snapshots, and input should translate gestures into commands.
-Browser objects, audio nodes and functions must never enter the world. See
-[world-state](world-state.md) for the data contract and
-[physical units](../PHYSICAL_UNITS.md) for conversions and tuning.
+palette uses smooth three-axis blending. Fine detail uses the cached cellular field described under Viewer asteroid
+surface below. Rotated octave frames and non-integer frequency steps break
+lattice alignment. A slow seeded sinusoidal domain warp bends repeating tiles;
+its analytic Jacobian transforms shading gradients, and a conservative footprint
+expansion filters the added stretch. This uses the same number of volume reads.
 
 ### HUD interface
 
@@ -358,9 +268,14 @@ See [population](population.md) for clock, event, transport, and save contracts.
 ### Viewer asteroid surface
 
 Study views draw the base asteroid terrain and its procedural surface shading.
-Five fixed, seeded body-space ridged value-noise octaves (starting at 2.5 cycles per
-normalized body unit, with amplitudes decreasing by 0.62 per octave) sample radial direction (not radius) and displace the shared closed terrain
-field after crater relief. Meshing, picking, and attachments sample this same
+Three body-space cellular octaves (4, 16, and 64 cells per normalized body unit,
+with quartering amplitudes) displace the shared closed terrain field after crater
+relief. They sample radial direction rather than radius to keep a stable shell.
+The CPU interpolates a cached 32-cubed height field; `rockVolume()` packs the same
+periodic four-cell field into 32 padded RGBA slices for WebGL 1 (272 by 136).
+RGB stores the derivative of the gap between the nearest two squared cellular
+distances; alpha stores the bounded gap. This produces angular faces and seams
+rather than differentiated value-noise ridges. Meshing and picking share this
 field. Exterior mesh normals describe only the broad shell; a cached, padded six-face
 RGBA8 atlas supplies full exterior normals per fragment, including crater and coarse terrain relief. This avoids
 interpolating unresolved roughness across large triangles. `surfaceAtlas(a, n?)`
@@ -369,7 +284,7 @@ interior samples), encoding unit normals as RGB (128 + component * 127) and occl
 views, nearby cached triangles receive three subdivision levels projected onto
 the same field, fading to the cached mesh at the patch edge. The patch is cached
 in body-space camera bins; ordinary orbit views keep the base mesh. Fragment normal detail
-starts at frequency 80 with at most eight octaves and fades each octave by its projected footprint, including
+starts at frequency 80 with five cellular octaves (3.73-fold frequency steps) and fades each octave by its projected footprint, including
 grazing incidence; unresolved octaves stop evaluation. Crater and roughness
 budgets remain independent. The surface patch has a bounded refinement budget.
 The orbit viewer provides whole-body, 8 m slope, 2 m horizon, and 12 m downward
@@ -378,7 +293,7 @@ Separate surface boulder meshes are omitted to keep close flight and walking
 views free of tile generation, uploads, and additional rock draw calls.
 
 The asteroid viewer reuses `flightPerformance` for frame/p95/CPU timings and the
-existing flat/boxes/empty/resolution diagnostics. It caps active rendering at 30 FPS,
+existing flat/boxes/empty/resolution diagnostics. It defaults to a selectable 60 FPS cap (30 or uncapped also available),
 redraws static views only on input, and suspends rendering in hidden tabs. Continuous
 measurement opts into repeated draws. CPU submission time is not a GPU timer.
 
@@ -830,3 +745,5 @@ The `drydock` study treats the body as one cargo hold around a central eight-sid
 The `rampdock` study aligns eight doors and eight anchor roots to shared perimeter hardpoints. Door rotation is solved to lower their lips to local z=0 at full deployment. Dark stanchions, upper/lower perimeter rings and radial braces remain fixed as a protective cage; this is an artwork datum, not terrain-aware contact solving.
 
 Rampdock doors use two rigid leaves: a vertical wall that seats against the fixed cage, plus an upper roof leaf covering the hold. Opening first unfolds the roof leaf, then lowers the wall to a 25-degree descending ramp; the outer leaf reaches the local ground datum at a steeper angle. Closing reverses that sequence. Plate thickness follows each moving face normal.
+
+Rampdock tower roof hardware is a static shuttle docking blockout: a marked rectangular pad, octagonal airlock collar with recessed split hatch, and four raised alignment/clamp hardpoints. It remains attached to the tower independently of cargo-door deployment; no docking gameplay is implied.

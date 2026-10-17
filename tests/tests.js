@@ -1505,6 +1505,13 @@
     [0,.2,.4,.7,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(k){assert(groups[k].every(Number.isFinite));for(var i=3;i<groups[k].length;i+=6)assertClose(Math.hypot(groups[k][i],groups[k][i+1],groups[k][i+2]),1,.00001);});});
   });
 
+  test('roof shuttle docking collar and four hardpoints stay above the tower', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
+    function roof(groups){var result=[];Object.keys(groups).forEach(function(k){for(var i=0;i<groups[k].length;i+=18){if(groups[k][i+2]>13.5 && groups[k][i+8]>13.5 && groups[k][i+14]>13.5)result.push(k+':'+groups[k].slice(i,i+18).join(','));}});return result.join(';');}
+    assert(roof(closed)===roof(open),'Docking hardware stays fixed while cargo doors unfold');
+    [-1,1].forEach(function(x){[-1,1].forEach(function(y){var found=false,v=closed.ochre;for(var i=0;i<v.length;i+=6)if(Math.sign(v[i])===x && Math.sign(v[i+1])===y && v[i+2]>14.8)found=true;assert(found,'A raised hardpoint in each roof corner');});});
+  });
+
   test('mining platform geometry folds legs without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var open=model(1,0,false),folded=model(0,0,false);
@@ -1667,6 +1674,18 @@
     });
     scene.setStudyParameters(a,{});
     assert(JSON.stringify(a)===before,'Artwork does not change saves');
+  });
+  test('Cellular rock volume is cached and its slice gutters wrap without seams', function () {
+    var volume=window.Driftworks.scene3d.rockVolume(),data=volume.bytes;
+    assert(volume.width===272&&volume.height===136&&data.length===272*136*4);
+    assert(window.Driftworks.scene3d.rockVolume()===volume,'One shared volume, not regenerated per asteroid or frame');
+    for(var z=0;z<32;z++)for(var y=0;y<34;y++)for(var channel=0;channel<4;channel++){
+      var row=((z%8)*34+(Math.floor(z/8)*34+y)*volume.width)*4;
+      assert(data[row+channel]===data[row+32*4+channel],'Left gutter wraps the last interior sample');
+      assert(data[row+33*4+channel]===data[row+4+channel],'Right gutter wraps the first interior sample');
+    }
+    assert(data.some(function(value,index){return index%4===3&&value<16;}),'Fracture field has deep seams');
+    assert(data.some(function(value,index){return index%4===3&&value>240;}),'Fracture field has rock interiors');
   });
   test('Cached asteroid surface shading has six padded deterministic cube faces', function () {
     var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);

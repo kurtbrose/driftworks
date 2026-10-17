@@ -176,21 +176,28 @@
     var visual = visualFor(asteroid), seed = visual.seed;
     var radial=Math.hypot.apply(null,point)||1;
     point=/** @type {V3} */(point.map(function(v){return v/radial;}));
-    var height = 0, amplitude = .026, frequency = 2.5;
-    for (var octave = 0; octave < (octaves || 5); octave++) {
-      var x = point[0]*frequency, y = point[1]*frequency, z = point[2]*frequency;
-      var ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
-      var tx = x-ix, ty = y-iy, tz = z-iz;
-      if(octave<3){tx *= tx*(3-2*tx); ty *= ty*(3-2*ty); tz *= tz*(3-2*tz);}
-      var value = 0;
-      for (var dz = 0; dz < 2; dz++) for (var dy = 0; dy < 2; dy++) for (var dx = 0; dx < 2; dx++) {
-        var hash = Math.imul(ix+dx, 374761393) ^ Math.imul(iy+dy, 668265263) ^ Math.imul(iz+dz, 1274126177) ^ seed;
-        hash = Math.imul(hash ^ (hash >>> 13), 1274126177);
-        var noise = ((hash ^ (hash >>> 16)) >>> 0) / 4294967295 * 2 - 1;
-        value += noise * (dx ? tx : 1-tx) * (dy ? ty : 1-ty) * (dz ? tz : 1-tz);
-      }
-      height += (.5-Math.abs(value))*amplitude*2;
-      frequency *= 2; amplitude *= .62;
+    // A slow, seeded domain warp bends the repeated cellular tile without
+    // adding any volume lookups. Octaves then rotate in unrelated frames.
+    var px=point[0],py=point[1],pz=point[2],phase0=seed*.17;
+    px+=.018*Math.sin(point[1]*7.13+point[2]*3.17+phase0);
+    py+=.018*Math.sin(point[2]*6.41+point[0]*2.73+phase0*1.37);
+    pz+=.018*Math.sin(point[0]*7.97+point[1]*2.19+phase0*.71);
+    point=[.36*px-.8*py+.48*pz,.48*px+.6*py+.64*pz,-.8*px+.6*pz];
+    rockVolume();
+    var height=0,amplitude=.026,frequency=4;
+    for(var octave=0;octave<(octaves || 3);octave++){
+      var phase=seed*.17+octave*.73;
+      var x=((point[0]*frequency+phase)%4+4)%4*8-.5,y=((point[1]*frequency+phase*1.37+11.8)%4+4)%4*8-.5,z=((point[2]*frequency+phase*.71+23.4)%4+4)%4*8-.5;
+      var ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z),tx=x-ix,ty=y-iy,tz=z-iz;
+      ix=(ix+32)%32;iy=(iy+32)%32;iz=(iz+32)%32;
+      var nx=(ix+1)%32,ny=(iy+1)%32,nz=(iz+1)%32;
+      var a=iy*32+iz*1024,b=ny*32+iz*1024,c=iy*32+nz*1024,d=ny*32+nz*1024,h=fractureHeights;
+      var lo=(h[ix+a]*(1-tx)+h[nx+a]*tx)*(1-ty)+(h[ix+b]*(1-tx)+h[nx+b]*tx)*ty;
+      var hi=(h[ix+c]*(1-tx)+h[nx+c]*tx)*(1-ty)+(h[ix+d]*(1-tx)+h[nx+d]*tx)*ty;
+      height+=(lo*(1-tz)+hi*tz-.5)*amplitude;
+      frequency*=3.73;amplitude/=3.73;
+      var rx=point[0],ry=point[1],rz=point[2];
+      point=[.36*rx-.8*ry+.48*rz,.48*rx+.6*ry+.64*rz,-.8*rx+.6*rz];
     }
     return height*visual.surfaceProfile.roughnessAmp;
   }
@@ -392,6 +399,35 @@
     return new Float32Array(output);
   }
 
+  /** Periodic cellular fracture field, packed as 32 padded volume slices.
+   * Gradients of the nearest two squared distances form planar rock faces,
+   * rather than the rounded ridges of differentiated value noise. */
+  /** @type {{width:number,height:number,bytes:Uint8Array} | null} */
+  var fractureCache=null;
+  var fractureHeights=new Float32Array(32*32*32);
+  function rockVolume() {
+    if(fractureCache)return fractureCache;
+    var width=272,height=136,bytes=new Uint8Array(width*height*4);
+    /** @param {number} x @param {number} y @param {number} z @param {number} salt */
+    function jitter(x,y,z,salt){var h=Math.imul((x%4+4)%4,374761393)^Math.imul((y%4+4)%4,668265263)^Math.imul((z%4+4)%4,1274126177)^salt;h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967295;}
+    for(var z=0;z<32;z++)for(var y=-1;y<=32;y++)for(var x=-1;x<=32;x++){
+      var px=(x+.5)/8,py=(y+.5)/8,pz=(z+.5)/8,ix=Math.floor(px),iy=Math.floor(py),iz=Math.floor(pz);
+      var first=Infinity,second=Infinity;
+      var a=[0,0,0],b=[0,0,0];
+      for(var dz=-1;dz<=1;dz++)for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){
+        var cx=ix+dx,cy=iy+dy,cz=iz+dz;
+        var d=[px-cx-.1-jitter(cx,cy,cz,97)*.8,py-cy-.1-jitter(cx,cy,cz,193)*.8,pz-cz-.1-jitter(cx,cy,cz,389)*.8];
+        var q=d[0]*d[0]+d[1]*d[1]+d[2]*d[2];
+        if(q<first){second=first;b=a;first=q;a=d;}else if(q<second){second=q;b=d;}
+      }
+      var offset=(((z%8)*34+x+1)+(Math.floor(z/8)*34+y+1)*width)*4;
+      for(var axis=0;axis<3;axis++)bytes[offset+axis]=Math.round(Math.max(0,Math.min(255,128+2*(b[axis]-a[axis])*31.75)));
+      bytes[offset+3]=Math.round(Math.min(1,(second-first)/.6)*255);
+    }
+    for(var iz=0;iz<32;iz++)for(var iy=0;iy<32;iy++)for(var ix=0;ix<32;ix++)fractureHeights[ix+iy*32+iz*1024]=bytes[(((iz%8)*34+ix+1)+(Math.floor(iz/8)*34+iy+1)*width)*4+3]/255;
+    return fractureCache={width:width,height:height,bytes:bytes};
+  }
+
   /** Cached body-space crater/coarse-relief shading, six padded cube faces.
    * @param {Asteroid} asteroid @param {number} [resolution] */
   function surfaceAtlas(asteroid,resolution) {
@@ -572,6 +608,33 @@
           plate('ochre',[cabinWall[i],cabinWall[j],cabinRoof[j],cabinRoof[i]]);
         });
         plate('ochre',cabinRoof);
+        if(rampdock) {
+          // Shuttle roof interface: a broad marked pad around a sealed octagonal airlock.
+          block('dark',[0,0,13.62],[4.45,3.15,.12]);
+          [-1,1].forEach(function(side){
+            block('light',[0,side*2.85,13.77],[3.65,.13,.03]);
+            block('light',[side*4.05,0,13.77],[.13,2.45,.03]);
+            // Alignment chevrons remain large enough to read at gameplay-ish zoom.
+            plate('light',[[side*3.7,-.65,13.79],[side*3.7,.65,13.79],[side*2.9,0,13.79]]);
+            plate('light',[[-.65,side*2.5,13.79],[.65,side*2.5,13.79],[0,side*1.95,13.79]]);
+          });
+          var collar=[[-2.3,-1],[-1.5,-1.8],[1.5,-1.8],[2.3,-1],[2.3,1],[1.5,1.8],[-1.5,1.8],[-2.3,1]];
+          collar.forEach(function(p,i){var q=collar[(i+1)%8];
+            var outerA=/** @type {V3} */ ([p[0],p[1],14.14]),outerB=/** @type {V3} */ ([q[0],q[1],14.14]);
+            plate('steel',[outerA,outerB,[q[0]*.72,q[1]*.72,14.14],[p[0]*.72,p[1]*.72,14.14]]);
+            plate('steel',[[p[0],p[1],13.75],[q[0],q[1],13.75],outerB,outerA]);
+            plate('dark',[[p[0]*.72,p[1]*.72,13.82],[q[0]*.72,q[1]*.72,13.82],[q[0]*.72,q[1]*.72,14.14],[p[0]*.72,p[1]*.72,14.14]]);
+          });
+          plate('dark',collar.map(function(p){return /** @type {V3} */ ([p[0]*.72,p[1]*.72,13.83]);}));
+          block('steel',[-.64,0,13.88],[.6,1.02,.05]);
+          block('steel',[.64,0,13.88],[.6,1.02,.05]);
+          // Four hardpoints provide alignment bumpers and obvious docking clamp sockets.
+          [-1,1].forEach(function(x){[-1,1].forEach(function(y){
+            block('steel',[x*3.65,y*2.4,13.98],[.64,.53,.23]);
+            block('dark',[x*3.98,y*2.4,14.42],[.23,.53,.34]);
+            block('ochre',[x*3.71,y*2.4,14.78],[.5,.55,.12]);
+          });});
+        }
         if(drydock) {
           block('dark',[0,0,6.6],[4.6,3.6,2.1]);
           block('steel',[0,0,8.7],[6.3,4.8,.3]);
@@ -989,7 +1052,10 @@
       'float noise3(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash31(i),hash31(i+vec3(1,0,0)),f.x),mix(hash31(i+vec3(0,1,0)),hash31(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash31(i+vec3(0,0,1)),hash31(i+vec3(1,0,1)),f.x),mix(hash31(i+vec3(0,1,1)),hash31(i+vec3(1,1,1)),f.x),f.y),f.z);}\n'+
       // Analytic value-noise derivatives: eight hashes per layer, not six noise evaluations.
       'vec4 noiseGradient3(vec3 p){vec3 i=mod(floor(p),256.),t=fract(p),f=t*t*(3.-2.*t),df=6.*t*(1.-t);float a=hash31(i),b=hash31(i+vec3(1,0,0)),c=hash31(i+vec3(0,1,0)),d=hash31(i+vec3(1,1,0)),e=hash31(i+vec3(0,0,1)),g=hash31(i+vec3(1,0,1)),h=hash31(i+vec3(0,1,1)),j=hash31(i+vec3(1,1,1));float lo=mix(mix(a,b,f.x),mix(c,d,f.x),f.y),hi=mix(mix(e,g,f.x),mix(h,j,f.x),f.y);return vec4(mix(lo,hi,f.z),mix(mix(b-a,d-c,f.y),mix(g-e,j-h,f.y),f.z)*df.x,mix(mix(c-a,d-b,f.x),mix(h-e,j-g,f.x),f.z)*df.y,(hi-lo)*df.z);}\n'+
-      'vec3 rockBump(vec3 p,float fp){vec3 gradient=vec3(0.);float amplitude=1.,frequency=80.;mat3 basis=mat3(1.);for(int octave=0;octave<8;octave++){float visibility=1.-smoothstep(.35,.75,frequency*fp);if(visibility<.001)break;vec4 sampleValue=noiseGradient3(basis*p*frequency+vec3(uSeed*1.73+float(octave)*17.13));vec3 derivative=vec3(dot(basis[0],sampleValue.yzw),dot(basis[1],sampleValue.yzw),dot(basis[2],sampleValue.yzw));float ridge=sign(sampleValue.x-.5);gradient+=derivative*ridge*frequency*amplitude*visibility*4.;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;frequency*=2.03;amplitude*=.45;}return gradient*uProfile.x*.0025;}\n'+
+      'uniform sampler2D uRockVolume;\n'+
+      'vec4 rockSlice(vec2 p,float layer){vec2 tile=vec2(mod(layer,8.),floor(layer/8.))*34.;return texture2D(uRockVolume,(tile+vec2(1.5)+p)/vec2(272.,136.));}\n'+
+      'vec4 fractureVolume(vec3 p){vec3 q=mod(p,4.)*8.-.5;float layer=floor(q.z);vec4 a=rockSlice(mod(q.xy,32.),mod(layer,32.));vec4 b=rockSlice(mod(q.xy,32.),mod(layer+1.,32.));vec4 v=mix(a,b,fract(q.z));return vec4((v.rgb-vec3(128./255.))*(255./31.75),v.a);}\n'+
+      'vec4 rockBump(vec3 p,float fp){vec3 phase=vec3(p.y*7.13+p.z*3.17+uSeed*.17,p.z*6.41+p.x*2.73+uSeed*.17*1.37,p.x*7.97+p.y*2.19+uSeed*.17*.71);p+=.018*sin(phase);fp*=1.3;vec3 gradient=vec3(0.);float crevice=0.,frequency=80.,amplitude=.95;mat3 basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60);for(int octave=0;octave<5;octave++){float visible=1.-smoothstep(.25,.65,frequency*fp);if(visible<.001)break;float offset=uSeed*.17+float(octave)*.73;vec4 sampleValue=fractureVolume(basis*p*frequency+vec3(offset,offset*1.37+11.8,offset*.71+23.4));vec3 g=vec3(dot(basis[0],sampleValue.xyz),dot(basis[1],sampleValue.xyz),dot(basis[2],sampleValue.xyz));gradient+=g*amplitude*visible;crevice=max(crevice,(1.-smoothstep(.02,.18,sampleValue.a))*visible*amplitude);frequency*=3.73;amplitude*=.65;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;}vec3 c=cos(phase);gradient+=.018*vec3(2.73*c.y*gradient.y+7.97*c.z*gradient.z,7.13*c.x*gradient.x+2.19*c.z*gradient.z,3.17*c.x*gradient.x+6.41*c.y*gradient.y);return vec4(gradient*uProfile.x,crevice);}\n'+
       'vec3 globeColor(vec3 p){vec3 w=globeWeights(p);return materialColor(composition(p.yz))*w.x+materialColor(composition(p.zx))*w.y+materialColor(composition(p.xy))*w.z;}\n'+
       // Filtered object-space height field: welds and fasteners resolve only nearby.
       'float shipLine(float d,float width,float fp){return (1.-smoothstep(width,width+fp,abs(d)))*(1.-smoothstep(width*2.,width*7.,fp));}'+
@@ -1008,11 +1074,11 @@
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(sphere);float occ=crater.w*exterior;if(exterior>.5){bodyNormal=rotateNormal(normalize(crater.xyz));n=bodyNormal;}'+
-      'vec3 fineGradient=rockBump(vLocal,footprint/max(.12,abs(dot(bodyNormal,uBack))));if(exterior>.5){vec3 bump=rotateNormal(fineGradient);bump-=bodyNormal*dot(bump,bodyNormal);n=normalize(bodyNormal-bump);}'+
+      'vec4 rockDetail=rockBump(vLocal,footprint/max(.12,abs(dot(bodyNormal,uBack))));vec3 fineGradient=rockDetail.xyz;if(exterior>.5){vec3 bump=rotateNormal(fineGradient);bump-=bodyNormal*dot(bump,bodyNormal);n=normalize(bodyNormal-bump);}'+
       'else{vec3 bump=rotateNormal(fineGradient);n=normalize(n-(bump-n*dot(bump,n))*.6);occ=clamp((uCutHeight-vLocal.z)*1.1,0.,.22);}'+
       'float ndl=max(0.,dot(n,light));float sunlight=exterior>.5?smoothstep(-.03,.10,dot(bodyNormal,light)):1.;float lit=pow(ndl,.82)*sunlight;'+
       'float ambient=.17*(1.-occ*.7);float brightness=ambient+lit*.98;'+
-      'float crack=abs(noise3(vLocal*640.+vec3(uSeed*1.73))-.5);float crackMask=(1.-smoothstep(.015,.065,crack))*(1.-smoothstep(.2,.65,640.*footprint));col=globeColor(sphere)*brightness*(1.-crackMask*.25);col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
+      'float crackMask=rockDetail.w;col=globeColor(sphere)*brightness*(1.-crackMask*.25);col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
       '}else if(uHabitat>.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float angle=atan(vLocal.y,vLocal.z);vec2 p=vec2(vLocal.x,(angle-uSpin)*17.);float shell=1.-smoothstep(30.,35.5,abs(vLocal.x));vec3 masks=hullMasks(p,fp);n=mix(n,hullSurface(p,n,angle,fp),shell);float diffuse=max(0.,dot(n,light));'+
       'vec2 plate=floor((p+vec2(5.,4.45))/vec2(10.,8.9));float tone=hash31(vec3(plate,2.));vec3 base=vec3(.82,.79,.70)*(.94+.09*tone);float seam=min(abs(shipCell(p,vec2(10.,8.9)).x),abs(shipCell(p,vec2(10.,8.9)).y));float cavity=1.-smoothstep(.06,.06+fp,seam);base*=1.-cavity*.22;'+
       'float close=1.-smoothstep(.018,.08,fp);float grain=noise3(vec3(p*70.,4.));base*=1.+(grain-.5)*.055*close;float grime=noise3(vec3(p*.45,3.))*exp(-seam*7.);base*=1.-grime*.14;col=base*(.26+diffuse*.88);'+
@@ -1030,6 +1096,14 @@
     uniforms.Textured=gl.getUniformLocation(program,'uTextured');uniforms.ShipTexture=gl.getUniformLocation(program,'uShipTexture');
     uniforms.Paint=gl.getUniformLocation(program,'uPaint');uniforms.PaintEnabled=gl.getUniformLocation(program,'uPaintEnabled');
     gl.uniform1i(uniforms.ShipTexture,1);
+    var volume=rockVolume(),volumeTexture=gl.createTexture();
+    if(!volumeTexture)throw new Error('Rock volume texture allocation failed');
+    gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,volumeTexture);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,volume.width,volume.height,0,gl.RGBA,gl.UNSIGNED_BYTE,volume.bytes);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.uniform1i(gl.getUniformLocation(program,'uRockVolume'),2);gl.activeTexture(gl.TEXTURE0);
+
 
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
     /** @param {Asteroid} asteroid */
@@ -1522,6 +1596,6 @@
     };
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
-    surfaceAtlas: surfaceAtlas, miningPlatformGeometry: miningPlatformGeometry, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
+    rockVolume: rockVolume, surfaceAtlas: surfaceAtlas, miningPlatformGeometry: miningPlatformGeometry, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
     surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, pickStudySurface: pickStudySurface, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);
