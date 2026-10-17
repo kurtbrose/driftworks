@@ -21,6 +21,69 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  // A small event/DOM fixture exercises the browser adapter without real devices.
+  function flightControlsFixture(){
+    function target(){return {listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},emit:function(name,event){if(this.listeners[name])this.listeners[name](event||{});},appendChild:function(child){this.children.push(child);if(this.value===''&&child.value!==undefined)this.value=child.value;},children:[],value:'',textContent:'',setAttribute:function(){}};}
+    var elements={},doc=target(),win=target(),host=target(),pads=[],counts={pause:0,weapon:0,target:0,radar:0,diagnostics:0,performance:0,resume:0,failure:0},paused=false,dead=false,controls;
+    doc.getElementById=function(id){return elements[id]||(elements[id]=target());};
+    doc.createElement=target;doc.createTextNode=function(text){return {textContent:text};};
+    doc.body={classList:{add:function(){}}};doc.exitPointerLock=function(){doc.pointerLockElement=null;};
+    host.clientWidth=1000;host.clientHeight=800;
+    doc.getElementById('input-mode').value='mouse';doc.getElementById('sensitivity').value='1';
+    controls=window.Driftworks.flightControls.mount(host,{
+      isPaused:function(){return paused;},isDead:function(){return dead;},
+      pause:function(){counts.pause++;paused=true;controls.clear();controls.release();},
+      resume:function(){counts.resume++;paused=false;controls.clear();controls.resetButtons();},
+      captureFailure:function(){counts.failure++;paused=true;controls.clear();},
+      nextWeapon:function(){counts.weapon++;},nextTarget:function(){counts.target++;},nextRadarRange:function(){counts.radar++;},
+      toggleDiagnostics:function(){counts.diagnostics++;},togglePerformance:function(){counts.performance++;},selectProfile:function(index){counts.profile=index;}
+    },{document:doc,window:win,navigator:{getGamepads:function(){return pads;}}});
+    function key(code,tag,repeat){var event={code:code,target:{tagName:tag||'BODY'},repeat:!!repeat,preventDefault:function(){this.prevented=true;}};win.emit('keydown',event);return event;}
+    return {controls:controls,doc:doc,win:win,host:host,counts:counts,key:key,elements:elements,setPads:function(value){pads=value;},setPaused:function(value){paused=value;},setDead:function(value){dead=value;}};
+  }
+
+  test('flight controls retain keyboard focus guards, shortcuts and pause clearing',function(){
+    var f=flightControlsFixture(),c=f.controls;
+    assert(f.key('KeyW').prevented);assert(c.sample().throttleRate===1);
+    f.win.emit('keyup',{code:'KeyW'});assert(c.sample().throttleRate===0);
+    f.key('ArrowUp','INPUT');assert(c.sample().pitch===0);
+    f.key('KeyG');f.key('KeyG',null,true);f.key('KeyG','SELECT');assert(f.counts.weapon===1);
+    f.key('KeyV');f.key('Tab');f.key('Digit3');assert(f.counts.radar===1&&f.counts.target===1&&f.counts.profile===2);
+    f.key('F3','INPUT');f.key('KeyP');assert(f.counts.diagnostics===1&&f.counts.performance===1);
+    f.key('Space');f.key('Escape','INPUT');assert(f.counts.pause===1&&!c.sample().fire);
+    f.key('KeyW');f.key('Tab');assert(c.sample().throttleRate===0&&f.counts.target===1);
+    f.setPaused(false);f.key('KeyW');f.win.emit('blur');assert(c.sample().throttleRate===0);
+    f.setPaused(false);f.doc.hidden=true;f.doc.emit('visibilitychange');assert(f.counts.pause===3);
+  });
+
+  test('flight controls preserve pointer capture, virtual stick and capture failures',function(){
+    var f=flightControlsFixture(),c=f.controls;
+    c.capture();assert(f.counts.failure===1);
+    f.host.requestPointerLock=function(){throw new Error('denied');};c.capture();assert(f.counts.failure===2);
+    f.host.requestPointerLock=function(){return {catch:function(fn){fn(new Error('rejected'));}};};c.capture();assert(f.counts.failure===3);
+    f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===1);
+    f.doc.emit('mousemove',{movementX:80,movementY:-40});
+    var demand=c.sample();assert(demand.pitch>0&&demand.yaw<0);assertClose(c.view().stickRange,160);
+    f.doc.emit('mousedown',{button:2});assert(c.sample().fire);
+    f.doc.emit('mouseup',{button:2});assert(!c.sample().fire);
+    f.key('KeyC');assert(c.sample().pitch===0&&c.view().mouse[0]===0);
+    f.doc.getElementById('input-mode').value='controller';f.doc.emit('mousemove',{movementX:80,movementY:40});assert(c.sample().yaw===0);
+    c.release();assert(f.doc.pointerLockElement===null);f.doc.emit('pointerlockchange');assert(f.counts.pause===1);
+    f.setDead(true);f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===1&&f.counts.pause===2);
+  });
+
+  test('flight controls retain controller edges, editable bindings and disconnect pause',function(){
+    var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Test controller',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
+    f.setPads([pad]);c.sample();assert(f.elements.bindings.children.length===10);
+    pad.buttons[3].pressed=true;c.sample();c.sample();assert(f.counts.weapon===1);
+    pad.buttons[3].pressed=false;c.sample();pad.buttons[3].pressed=true;c.sample();assert(f.counts.weapon===2);
+    var pitchSelect=f.elements.bindings.children[0].children[0];pitchSelect.value='0';pitchSelect.onchange();pad.axes[0]=1;assertClose(c.sample().pitch,-1);
+    f.elements.deadzone.value='.8';f.elements.deadzone.onchange({target:f.elements.deadzone});assert(f.elements.deadzone.value==='0.5');
+    pad.buttons[9].pressed=true;c.sample();c.sample();assert(f.counts.pause===1&&f.counts.weapon===2);
+    f.setPaused(false);c.resetButtons();c.sample();assert(f.counts.pause===2);
+    f.setPaused(false);f.key('KeyW');f.setPads([]);c.sample();assert(f.counts.pause===3&&c.sample().throttleRate===0);
+  });
+
   test('flight session reset replaces sortie state and preserves the environment', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0]};
     var first=session.reset(config),world=first.world;

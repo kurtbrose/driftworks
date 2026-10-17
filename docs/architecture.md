@@ -730,3 +730,15 @@ radar range, telemetry, instruments and contact/lead markers. `render(view)` tak
 fresh session references and presentation/input values each frame; it does not
 retain sortie references or control simulation. Both ordinary scripts load before
 `flight.js`; the existing radar and target-camera modules remain subordinate.
+
+`experiments/flight-controls.js` mounts keyboard, pointer-lock, mouse and gamepad
+input. It owns held keys, the virtual stick, device discovery, editable bindings
+and controller button edges, using `flightInput` for mapping math. `sample()`
+polls devices, dispatches pause/bank actions, then returns merged flight demand;
+the browser loop checks pause after sampling. `view()` exposes only mouse/mode/
+stick-range data for HUD rendering. `clear()` resets held input; `resetButtons()`
+is separately called on resume to preserve existing controller edge semantics.
+`capture()`/`release()` own browser pointer-lock requests. Gameplay and diagnostic
+shortcuts call injected actions; the adapter does not access session, HUD, comms
+or weapon selectors. The optional environment argument supplies document/window/
+navigator for adapter regressions. Load it after `input.js` and before `flight.js`.
