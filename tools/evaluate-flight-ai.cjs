@@ -27,7 +27,7 @@ if(replayPath) {
     const skills=value('--skill','all')==='all'?[0,1,2]:[Number(value('--skill','all'))];
     const rows=[];let last;
     for(const start of starts)for(const category of categories)for(const flavor of category==='perfect'?['practiced']:flavors)for(const skill of skills) {
-        last=api.run({start,category,flavor,skill,duration,seed});rows.push(last.summary());
+        last=api.run({start,category,flavor,skill,duration,seed,profile:Number(value('--ship','0')),opponentProfile:Number(value('--opponent-ship','-1')),weapon:Number(value('--weapon','-1')),opponentWeapon:Number(value('--opponent-weapon','-2')),unshielded:args.includes('--unshielded')});rows.push(last.summary());
     }
     const recordPath=value('--record','');
     if(recordPath) {
@@ -35,6 +35,6 @@ if(replayPath) {
         fs.writeFileSync(recordPath,JSON.stringify(Object.assign({},last.replay,{sources}))+'\n');
     }
     output={schema:1,policy:global.Driftworks.flightAI.version,opponentPolicy:'experiments/training.js',sources,observation:'visible-position-velocity-v1',cadence:api.dt,
-        note:'Open-space training rules: shielded player vs unshielded opponent; initial human presets are uncalibrated; perfect is bounded search, not optimal.',rows};
+        note:'Retail hull/shield capacities for each ship; pooled shields and symmetric Driftworks recharge, fixed twin guns and unlimited fuel/energy. Human presets uncalibrated; perfect is bounded search.',rows};
 }
 process.stdout.write(JSON.stringify(output,null,2)+'\n');

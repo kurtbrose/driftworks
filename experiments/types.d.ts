@@ -28,6 +28,15 @@ export type Profile = {
     overclockSpeed: number;
     afterburnerVelocity: Vector;
     afterburnerAccel: number;
+    species?: string;
+    hull?: number;
+    shield?: number;
+    powerOutput?: number;
+    defaultWeapons?: string[];
+    afterburnerFuel?: number;
+    afterburnerBurnRate?: number;
+    afterburnerRecoveryRate?: number;
+    gunMounts?: number;
 };
 export type FlightInput = {
     side?: number;
@@ -53,6 +62,10 @@ export type DuelOptions = {
     skill?: number;
     duration?: number;
     profile?: number;
+    opponentProfile?: number;
+    weapon?: number;
+    opponentWeapon?: number;
+    unshielded?: boolean;
 };
 export type DuelReplay = {
     version:number; policy:string; observation:string; cadence:number;
@@ -66,10 +79,14 @@ export type Duel = {
 export type DuelSummary = {
     ticks:number; seconds:number; done:boolean; outcome:string;
     category:string; flavor:string; skill:number; start:string; seed:number; profile:string; weapon:string;
-    playerHull:number; playerShield:number; opponentHull:number; playerShots:number; opponentShots:number; longestDry:number;
+    playerHull:number; playerShield:number; opponentHull:number; opponentShield:number;
+    playerMaxHull:number; playerMaxShield:number; opponentMaxHull:number; opponentMaxShield:number;
+    opponentProfile:string; opponentWeapon:string; unshielded:boolean;
+    playerShots:number; opponentShots:number; longestDry:number;
     metrics:{playerOpportunities:number;opponentOpportunities:number;playerDamageSteps:number;opponentDamageSteps:number;modeChanges:number;minRange:number;maxRange:number};
 };
 export type Weapon = {
+    flags?: string[];
     name: string;
     speed: number;
     fireWait: number;
@@ -139,6 +156,9 @@ export type Craft = ArtCraft & {
     profile: Profile;
     hp: number;
     maxHp: number;
+    shield?: number;
+    maxShield?: number;
+    weaponIndex?: number;
     pilot: string;
     skill: number;
     mode: string;
@@ -180,6 +200,8 @@ export type Combat = {
     kills: number;
     shield: number;
     hull: number;
+    maxHull?: number;
+    maxShield?: number;
     lastHit: number;
     hitFlash: number;
     dead: boolean;
@@ -504,7 +526,7 @@ export type Line = {
     emotion?: Feeling;
 };
 export type ExperimentModules = {
-    flightWatch:{create:(scenery:Snapshot, options:DuelOptions)=>{
+    flightWatch:{create:(getScenery:()=>Snapshot, options:DuelOptions)=>{
         advance:(elapsed:number,speed:number)=>DuelSummary;
         snapshot:(chase:boolean)=>Snapshot;
         summary:()=>DuelSummary;replay:DuelReplay;
@@ -548,6 +570,9 @@ export type ExperimentModules = {
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
     };
     training: {
+        defaultWeapon:(profile:Profile)=>number;
+        configure:(combat:Combat,profile:Profile,unshielded?:boolean)=>void;
+        equip:(craft:Craft,profile:Profile,weaponIndex:number,unshielded?:boolean)=>void;
         callsign: (craft?: Identity | null) => string;
         create: (mode: string) => Combat;
         alive: (combat: Pick<Combat, 'enemies'>) => Craft[];
@@ -742,6 +767,12 @@ export type ExperimentModules = {
     };
 };
 export type Elements = {
+    'watch-profile':HTMLSelectElement;
+    'watch-opponent-profile':HTMLSelectElement;
+    'watch-weapon':HTMLSelectElement;
+    'watch-defense':HTMLSelectElement;
+    'watch-art':HTMLSelectElement;
+    'watch-enemy-art':HTMLSelectElement;
     'watch-pilot': HTMLSelectElement;
     'watch-start': HTMLSelectElement;
     'watch-skill': HTMLSelectElement;

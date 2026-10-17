@@ -4,7 +4,7 @@ const hash=g=>Object.fromEntries(Object.entries(g).map(([k,v])=>[k,{length:v.len
 for(const fixture of require('./fixtures/mining-geometry.json')) {
   assert.deepEqual(hash(global.Driftworks.miningRig.geometry(...fixture.args)),fixture.groups,JSON.stringify(fixture.args));
 }
-console.log('PASS mining rig: exact pre-refactor geometry across 49 poses and component modes');
+console.log('PASS mining rig: reference geometry across 49 poses and component modes');
 // Caller edits cannot poison the private static cabin cache or later poses.
 const model=global.Driftworks.miningRig.geometry;
 const baseline=hash(model(1,0,false,0,''));
@@ -54,6 +54,20 @@ const distance=(a,b)=>Math.hypot(...a.map((v,k)=>v-b[k]));
 const vertex=(data,offset)=>data.slice(offset,offset+3);
 function hasVertex(data,point){for(let i=0;i<data.length;i+=6)if(distance(vertex(data,i),point)<1e-9)return true;return false;}
 const outline=[[15,-6],[15,6],[5,10.5],[-5,10.5],[-17,4.5],[-17,-4.5],[-5,-10.5],[5,-10.5]];
+// The fitted belly stays inside every door hinge plane, including diagonal bays.
+const base=api.geometry(1,0,false,0).dark;
+let baseVertices=0;
+for(let i=0;i<base.length;i+=6){
+  if(Math.abs(base[i+2]-3.35)>1e-9 && Math.abs(base[i+2]-4.10)>1e-9)continue;
+  baseVertices++;
+  outline.forEach((a,k)=>{const b=outline[(k+1)%8],dx=b[0]-a[0],dy=b[1]-a[1];
+    assert.ok((dy*(base[i]-a[0])-dx*(base[i+1]-a[1]))/Math.hypot(dx,dy)<=-.449999,'Belly clears each bay by at least 45 cm');
+  });
+}
+assert.ok(baseVertices>=48,'Fitted upper and lower belly rings are present');
+const steel=api.geometry(1,0,false,0).steel;
+for(let i=0;i<steel.length;i+=6)if(Math.abs(steel[i+1])<3 && steel[i+2]>4.3 && steel[i+2]<5.1)
+  assert.ok(steel[i]<18,'No placeholder equipment poles project out through the end door');
 function hinge(i){
   const p=outline[i],a=outline[(i+7)%8],b=outline[(i+1)%8];
   const edgeNormal=(p,q)=>{const dx=q[0]-p[0],dy=q[1]-p[1],length=Math.hypot(dx,dy);return [dy/length,-dx/length];};
@@ -61,11 +75,25 @@ function hinge(i){
   return [p[0]+(n[0]+m[0])*scale,p[1]+(n[1]+m[1])*scale,4.5];
 }
 const shut=api.ramps(0);
+// First bay wall faces +X; caution paint stays exclusively on the inner face.
+const wallX=shut.ochre[0];
+near(shut.dark[0],wallX-.238,'Inner caution backing depth');
+near(shut.light[0],wallX-.256,'Inner caution stripe clears backing');
+assert.equal(shut.dark.length,16*36,'Only one caution backing per leaf');
+assert.ok(shut.light.length>0,'Caution stripe count follows physical panel width');
+const diagonalEdges=[];
+for(let i=0;i<shut.light.length;i+=18){const tri=shut.light.slice(i,i+18);if(![0,6,12].every(k=>Math.abs(tri[k]-(wallX-.256))<1e-9))continue;
+  for(let j=0;j<3;j++){const a=j*6,b=((j+1)%3)*6,dy=tri[b+1]-tri[a+1],dz=tri[b+2]-tri[a+2];if(Math.abs(dy)>1e-8 && Math.abs(Math.abs(dy)-Math.abs(dz))<1e-8)diagonalEdges.push(tri[a+1]-tri[a+2]);}
+}
+const lines=[...new Set(diagonalEdges.map(v=>v.toFixed(7)))].map(Number).sort((a,b)=>a-b);
+assert.ok(lines.length>8,'Multiple diagonal stripe boundaries');
+for(let i=1;i<lines.length;i++)assert.ok(Math.abs(lines[i]-lines[i-1]-.14*Math.SQRT2)<1e-6,'Constant 14 cm stripe and gap widths at 45 degrees');
+assert.equal(shut.marker.length,0,'No service identification decals');
 for(const opening of [0,.2,.4,.40001,.7,1]){
   const ramp=api.ramps(opening),full=api.geometry(1,0,false,opening);
   structure(ramp,'ramps '+opening);
   assert.equal(ramp.ochre.length,8*20*18,'Eight bays, two thick leaves per bay');
-  assert.equal(ramp.steel.length,8*4*18,'Two steel back faces per bay');
+  assert.equal(ramp.steel.length,8*4*18,'Plain steel inner faces without access panels or traction artwork');
   assert.deepEqual(ramp.ochre,full.ochre.slice(0,ramp.ochre.length),'Ramp-only and full composition use the same leaves');
   for(let bay=0;bay<8;bay++){
     const start=bay*20*18,roof=start+10*18;
@@ -114,8 +142,7 @@ checkLegs(1,require('./fixtures/mining-geometry.json').at(-1).args[7]);
 for(const cut of ['', 'lower','upper']){
   const full=api.geometry(1,0,false,1,cut),legs=api.legs(1);
   for(const [material,data] of Object.entries(legs)){
-    const equipment=material==='dark'?216:material==='steel'?432:0;
-    const fixtures=api.lights()[material]?.length||0,end=full[material].length-equipment-fixtures;
+    const fixtures=api.lights()[material]?.length||0,end=full[material].length-fixtures;
     assert.deepEqual(full[material].slice(end-data.length,end),data,'Cutaway preserves '+material+' leg assembly');
   }
   const maxZ=Math.max(...full.ochre.filter((v,i)=>i%6===2));

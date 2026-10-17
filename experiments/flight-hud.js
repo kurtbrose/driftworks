@@ -56,7 +56,9 @@
             }).length + ' HOSTILES / ' + living.filter(function (e) {
                 return e.team === 'ally';
             }).length + ' WINGMEN / ' + combat.kills + ' KILLS' + (!living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
+            get('shield-meter').max = Math.max(1, combat.maxShield === undefined ? 120 : combat.maxShield);
             get('shield-meter').value = combat.shield;
+            get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
             get('hull-meter').value = combat.hull;
             get('speed-value').textContent = String(Math.round(Math.hypot.apply(null, state.velocity)));
             get('thrust-value').textContent = 'THRUST ' + Math.round(state.throttle * 100) + '%';
@@ -69,7 +71,8 @@
                 get('target-label').textContent = (selected.team === 'ally' ? 'WING / ' : 'TARGET / ') + DW.training.callsign(selected);
                 get('target-detail').textContent = (art.name || 'Training fighter') + ' / ' + Math.round(Math.hypot.apply(null, selected.pose.eye.map(function (v, i) {
                     return v - state.eye[i];
-                })) * units) + ' m / ' + Math.ceil(selected.hp) + '% HULL';
+                })) * units) + ' m / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
+                get('target-hull').max = selected.maxHp;
                 get('target-hull').value = selected.hp;
                 targetCamera.update(selected, selection, combat.wave, units, shipImages, view.paint[selected.team === 'ally' ? 'ally' : 'enemy'], state, performance.now() / 1000);
             }

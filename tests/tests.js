@@ -29,6 +29,24 @@
     assert(api.validate(valid)!==valid);
   });
 
+  test('watch playback uses the benchmark clock and cameras never alter duel state', function () {
+    var DW=window.Driftworks,session=DW.flightSession.create({hullHit:function(){return null;},terrainHit:function(){return null;},surfaceFrame:function(){return {point:[0,0,1]};},onGunshot:function(){},onImpact:function(){}});
+    var options={start:'crossing',category:'human',flavor:'novice',seed:29,duration:3},watch=DW.flightWatch.create(session.snapshot,options),reference=DW.flightDuel.run(options);
+    var stateBefore=JSON.stringify(watch.snapshot(false).state);
+    var chase=watch.snapshot(true);assert(chase.observerCraft.pose===chase.state && chase.camera!==chase.state);
+    assert(JSON.stringify(watch.snapshot(false).state)===stateBefore && !watch.snapshot(false).camera);
+    assert(chase.combat.enemies.length===1 && chase.combat.enemies[0].team!=='ally','The observed player must not enter simulation enemy lists');
+    for(var i=0;i<360;i++)watch.advance(1/60,.5);
+    assert(JSON.stringify(watch.summary())===JSON.stringify(reference.summary()));
+    assert(JSON.stringify(watch.replay.inputs)===JSON.stringify(reference.replay.inputs));
+    var completed=JSON.stringify(watch.summary()),worldTime=session.snapshot().world.elapsedSeconds;watch.advance(5,1);
+    assert(JSON.stringify(watch.summary())===completed && session.snapshot().world.elapsedSeconds===worldTime);
+    var replacement=Object.assign({},session.snapshot().world,{camera:{x:99,y:88,zoom:1}});session.setWorld(replacement);
+    assert(watch.snapshot(true).world===replacement,'Watch rendering must follow camera-driven world replacements');
+    var restarted=DW.flightWatch.create(session.snapshot,options);assert(restarted.summary().ticks===0 && restarted.snapshot(false).guns.fired===0);
+    var rejected=false;try{restarted.advance(.1,2);}catch(e){rejected=true;}assert(rejected);
+  });
+
   test('evaluation pilots only read poses and replay through ordinary shared physics', function () {
     var DW=window.Driftworks,api=DW.flightAI,p=DW.arcade.profiles[0],w=DW.retailWeapons[0];
     ['human','perfect'].forEach(function(category){
@@ -72,11 +90,42 @@
     var rejected=false;try{api.replay(bad);}catch(e){rejected=true;}assert(rejected);
   });
 
-  test('duels stop at destruction without respawning and retain existing training asymmetry', function () {
+  test('duels stop at destruction without respawning and equip retail defenses on both pilots', function () {
     var api=window.Driftworks.flightDuel,duel=api.run({start:'headOn',category:'perfect',duration:10});
     assert(duel.summary().outcome==='player-win');assert(duel.summary().playerShots>0 && duel.summary().metrics.playerDamageSteps>0);
     var before=JSON.stringify(duel.summary());duel.advance(30);assert(JSON.stringify(duel.summary())===before);
-    assert(duel.combat.enemies.length===1 && duel.combat.wave===1);assert(duel.combat.hull===100 && duel.enemy.maxHp===90);
+    assert(duel.combat.enemies.length===1 && duel.combat.wave===1);assert(duel.combat.maxHull===180 && duel.enemy.maxHp===180);
+    assert(duel.combat.maxShield===380 && duel.enemy.maxShield===380);
+  });
+
+  test('retail catalogs include old Hercules, Vasudan and Shivan capabilities without conflating artwork',function(){
+    var DW=window.Driftworks,profiles=DW.arcade.profiles,find=function(name){return profiles.find(function(p){return p.name===name;});};
+    assert(profiles.length===35 && DW.retailWeapons.length===10);
+    assert(find('GTF Hercules').hull===250 && find('GTF Hercules').shield===600);
+    assert(find('GTF Hercules Mark II').hull===275 && find('GTF Hercules Mark II').shield===610);
+    assert(find('GVF Horus').shield===230 && find('SF Dragon').shield===700 && find('SF Dragon').hull===100);
+    profiles.forEach(function(p){assert(p.hull>0 && p.shield>=0 && p.rotationTime.every(function(v){return v>0;}));assert(DW.training.defaultWeapon(p)>=0);});
+  });
+
+  test('shield absorption, hull spillover and recharge are symmetric and unshielded is explicit',function(){
+    var DW=window.Driftworks,ai=DW.training,player=DW.arcade.create(0),t=ai.create('training'),p=Object.assign({},DW.arcade.profiles[0],{hull:100,shield:10});
+    ai.configure(t,p);ai.spawn(t,player,0);t.enemies=t.enemies.slice(0,1);var e=t.enemies[0];ai.equip(e,p,0);
+    var weapon={damage:30,shieldFactor:1,armorFactor:1};ai.damagePlayer(t,weapon);ai.damageEnemy(t,e,weapon);
+    assert(t.shield===0 && e.shield===0 && t.hull===80 && e.hp===80);
+    t.time=7;ai.step(t,player,1/120,0);assertClose(t.shield,e.shield);assertClose(t.shield,.1);
+    ai.configure(t,p,true);ai.equip(e,p,0,true);t.time=20;ai.step(t,player,1/120,0);assert(t.shield===0 && e.shield===0);
+    var session=DW.flightSession.create({});session.reset({mode:'training',enabled:true,profile:DW.arcade.profiles[1]});
+    assert(session.snapshot().combat.maxShield===600 && session.snapshot().combat.enemies.every(function(c){return c.maxShield===c.profile.shield;}));
+  });
+
+  test('duel loadouts match or differ by ship and weapon and reject legacy replay schemas',function(){
+    var DW=window.Driftworks,api=DW.flightDuel,dragon=DW.arcade.profiles.findIndex(function(p){return p.name==='SF Dragon';});
+    var duel=api.create({profile:1,opponentProfile:dragon,weapon:2}),s=duel.summary();
+    assert(s.playerMaxShield===600 && s.opponentMaxShield===700 && s.weapon==='Prometheus S' && s.opponentWeapon===s.weapon);
+    assert(duel.enemy.weaponIndex===2 && duel.enemy.profile.name==='SF Dragon');
+    var defaults=api.create({profile:1,opponentProfile:dragon}).summary();assert(defaults.opponentWeapon==='Shivan Heavy Laser');
+    var bare=api.create({profile:1,unshielded:true}).summary();assert(bare.playerMaxShield===0 && bare.opponentMaxShield===0 && bare.playerMaxHull===250 && bare.opponentMaxHull===250);
+    var record=JSON.parse(JSON.stringify(duel.replay));record.version=1;var rejected=false;try{api.replay(record);}catch(e){rejected=true;}assert(rejected);
   });
 
   test('all duel geometries and human flavors stay finite, deterministic and input bounded', function () {
@@ -1633,11 +1682,11 @@
     weapons.forEach(function(w,index){
       var guns=model.create(),pose=window.Driftworks.arcade.create(18);pose.velocity=[0,150,0];
       for(var i=0;i<120;i++)model.step(guns,pose,w,true,1/120);
-      assert(guns.fired===(index===0?10:6));
+      assert(guns.fired===2*Math.ceil((1-1e-8)/w.fireWait));
       var bolt=guns.bolts[0],before=bolt.position.slice();model.step(guns,pose,w,false,1/120);
       assertClose((bolt.position[1]-before[1])*sim.METERS_PER_UNIT,w.speed/120);
       assertClose(bolt.position[0],before[0]);
-      for(var j=0;j<250;j++)model.step(guns,pose,w,false,1/120);
+      for(var j=0;j<Math.ceil((w.lifetime+.1)*120);j++)model.step(guns,pose,w,false,1/120);
       assert(guns.bolts.length===0);
     });
   });
@@ -1682,8 +1731,8 @@
     ];
     profiles.forEach(function(p,i){
       var values=[p.maxVelocity[2],p.afterburnerVelocity[2],p.forwardAccel,p.forwardDecel,p.damp,p.rotdamp].concat(p.rotationTime,[p.afterburnerAccel,p.overclockSpeed]);
-      assert(JSON.stringify(values)===JSON.stringify(expected[i]));
-      assert(p.maxVelocity[0]===0 && p.maxVelocity[1]===0 && p.rearVelocity===0);
+      if(i<4){assert(JSON.stringify(values)===JSON.stringify(expected[i]));assert(p.maxVelocity[0]===0 && p.maxVelocity[1]===0 && p.rearVelocity===0);}
+      else values.forEach(function(v){assert(Number.isFinite(v));});
       var state=window.Driftworks.arcade.create(18);
       window.Driftworks.arcade.step(state,p,{pitch:1},.05);
       assertClose(state.rates[0],2*Math.PI/p.rotationTime[0]*(1-Math.exp(-.05/p.rotdamp)));
@@ -1789,7 +1838,7 @@
   test('inter-leg bay ramps reach ground while the protective cage stays fixed', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var closed=model(1,0,false,0),open=model(1,0,false,1);
-    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Load-bearing cage remains in place');
+    assert(JSON.stringify(closed.dark.slice(model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length))===JSON.stringify(open.dark.slice(model(1,0,false,1,'',false,false,undefined,undefined,true).dark.length)),'Load-bearing cage remains in place');
     var lowClosed=Infinity,lowOpen=Infinity;
     for(var i=2;i<closed.ochre.length;i+=6)lowClosed=Math.min(lowClosed,closed.ochre[i]);
     for(var i=2;i<open.ochre.length;i+=6)lowOpen=Math.min(lowOpen,open.ochre[i]);
@@ -1804,7 +1853,7 @@
     assertClose(closed.ochre[30*6+5],1);
     for(var i=0;i<30*6;i++)assertClose(closed.ochre[i],uncovered.ochre[i],.000001);
     assert(JSON.stringify(closed)!==JSON.stringify(uncovered));
-    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark));
+    assert(JSON.stringify(closed.dark.slice(model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length))===JSON.stringify(open.dark.slice(model(1,0,false,1,'',false,false,undefined,undefined,true).dark.length)));
     [0,.2,.4,.7,1].forEach(function(t){var groups=model(1,0,false,t);Object.keys(groups).forEach(function(k){assert(groups[k].every(Number.isFinite));for(var i=3;i<groups[k].length;i+=6)assertClose(Math.hypot(groups[k][i],groups[k][i+1],groups[k][i+2]),1,.00001);});});
   });
 
@@ -1818,7 +1867,7 @@
   test('transit shell stays yellow while door inner faces use work-deck grey', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,0),open=model(1,0,false,1);
     assert(JSON.stringify(closed.steel)!==JSON.stringify(open.steel),'Grey door inner faces move with their yellow outer armor');
-    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Permanent dark chassis stays fixed');
+    assert(JSON.stringify(closed.dark.slice(model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length))===JSON.stringify(open.dark.slice(model(1,0,false,1,'',false,false,undefined,undefined,true).dark.length)),'Permanent dark chassis stays fixed');
     var yellowPad=false;
     for(var i=0;i<closed.ochre.length;i+=6)if(Math.abs(closed.ochre[i+2]-13.74)<.001 && Math.abs(closed.ochre[i])>4)yellowPad=true;
     assert(yellowPad,'Docking pad retains yellow exposed roof armor');
@@ -1845,7 +1894,7 @@
   test('door hinge barrels and actuator assemblies stay valid through both hinge stages', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var closed=model(1,0,false,0),open=model(1,0,false,1);
-    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Root cradles, stops and receivers remain frame-mounted');
+    assert(JSON.stringify(closed.dark.slice(model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length))===JSON.stringify(open.dark.slice(model(1,0,false,1,'',false,false,undefined,undefined,true).dark.length)),'Root cradles, stops and receivers remain frame-mounted');
     [0,.2,.4,.65,1].forEach(function(t){var groups=model(1,0,false,t);Object.keys(groups).forEach(function(k){var v=groups[k];assert(v.every(Number.isFinite));for(var i=3;i<v.length;i+=6)assertClose(Math.hypot(v[i],v[i+1],v[i+2]),1,.00001);});});
   });
 

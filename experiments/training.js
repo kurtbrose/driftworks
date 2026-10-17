@@ -68,6 +68,23 @@
     function create(mode) {
         return { mode: mode || 'training', roundOver: false, enabled: true, time: 0, wave: 0, countdown: 3, enemies: [], wrecks: [], kills: 0, shield: 120, hull: 100, lastHit: -100, hitFlash: 0, dead: false, targetId: null, slots: [], slotTimer: 0, flashes: [], radioEvents: [], radioSerial: 0, playerKills: 0 };
     }
+    /** First supported default primary; unsupported subsystem weapons are not approximated.
+     * @param {import('./types').Profile} profile */
+    function defaultWeapon(profile) {
+        var found = (profile.defaultWeapons || []).map(function (name) { return DW.retailWeapons.findIndex(function (w) { return w.name === name; }); }).find(function (i) { return i >= 0; });
+        return found === undefined ? 0 : found;
+    }
+    /** @param {Combat} t @param {import('./types').Profile} profile @param {boolean} [unshielded] */
+    function configure(t, profile, unshielded) {
+        t.maxHull = profile.hull === undefined ? 100 : profile.hull;
+        t.maxShield = unshielded ? 0 : profile.shield === undefined ? 120 : profile.shield;
+        t.hull = t.maxHull; t.shield = t.maxShield;
+    }
+    /** @param {Craft} e @param {import('./types').Profile} profile @param {number} weaponIndex @param {boolean} [unshielded] */
+    function equip(e, profile, weaponIndex, unshielded) {
+        e.profile = profile; e.maxHp = profile.hull === undefined ? 90 : profile.hull; e.hp = e.maxHp;
+        e.maxShield = unshielded ? 0 : profile.shield || 0; e.shield = e.maxShield; e.weaponIndex = weaponIndex;
+    }
     /** @param {Combat} t @param {Omit<RadioEvent, 'serial' | 'time' | 'wave'>} event */
     function radioEvent(t, event) {
         t.radioEvents = t.radioEvents || [];
@@ -128,6 +145,10 @@
             pose.throttle = .6;
             var skill = Math.min(2, Math.floor((t.wave - 1 + i) / 3));
             t.enemies.push({ id: 'wave-' + t.wave + '-' + i, index: i, callsign: callsign({ index: i }), pose: pose, profile: DW.arcade.profiles[i % 3 === 1 ? 1 : 0], hp: 90, maxHp: 90, pilot: ['Rookie', 'Veteran', 'Ace'][skill], skill: skill, mode: 'approach', decision: i * .13, until: 0, goal: player.eye.slice(), guns: DW.flightGuns.create(), damagedAt: -100, fire: false, targetId: null, retarget: 0 });
+            if (t.maxHull !== undefined) {
+                var craft = t.enemies[t.enemies.length - 1];
+                equip(craft, craft.profile, defaultWeapon(craft.profile));
+            }
         }
         if (t.mode === 'furball') {
             // Two opposing wings meet above the near side of the asteroid.
@@ -164,7 +185,7 @@
                 e.mode = 'break';
                 e.until = t.time + 2.5 + (2 - e.skill) * .6;
             }
-            else if (e.hp < 45 && t.time - e.damagedAt < 3) {
+            else if (e.hp < e.maxHp * .5 && t.time - e.damagedAt < 3) {
                 e.mode = 'evade';
                 e.until = t.time + 2.5;
             }
@@ -177,7 +198,7 @@
                 e.until = t.time + .8;
             }
         }
-        var lead = intercept(e.pose.eye, player.eye, scale(player.velocity, 1 / U), DW.retailWeapons[0].speed / U);
+        var lead = intercept(e.pose.eye, player.eye, scale(player.velocity, 1 / U), DW.retailWeapons[e.weaponIndex || 0].speed / U);
         var goal = add(player.eye, scale(sub(lead.point, player.eye), [.25, .7, 1][e.skill]));
         if (e.mode === 'break' || e.mode === 'evade') {
             var away = unit(sub(e.pose.eye, player.eye)), side = scale(e.pose.right, (e.index % 2 ? 1 : -1) * 220 / U);
@@ -230,7 +251,10 @@
     function damageEnemy(t, e, weapon, shooter) {
         if (e.hp <= 0)
             return;
-        e.hp = Math.max(0, e.hp - weapon.damage * weapon.armorFactor);
+        var shieldBefore = e.shield || 0, shieldDamage = weapon.damage * weapon.shieldFactor, absorbed = Math.min(shieldBefore, shieldDamage);
+        if (e.shield !== undefined) e.shield = shieldBefore - absorbed;
+        e.hp = Math.max(0, e.hp - weapon.damage * weapon.armorFactor * (1 - (shieldDamage > 0 ? absorbed / shieldDamage : 0)));
+        if (shieldBefore > 0 && !e.shield) radioEvent(t, { kind:'shield', victim:e.id, team:e.team || 'enemy', index:e.index });
         e.damagedAt = t.time;
         if (e.hp <= 0) {
             if (shooter === 'player')
@@ -361,7 +385,7 @@
             return f.age < .22;
         });
         if (t.time - t.lastHit > 7)
-            t.shield = Math.min(120, t.shield + 12 * dt);
+            t.shield = Math.min(t.maxShield === undefined ? 120 : t.maxShield, t.shield + 12 * dt);
         var living = alive(t);
         if (!living.length || t.roundOver) {
             t.countdown -= dt;
@@ -382,6 +406,7 @@
         t.enemies.forEach(function (e) {
             e.fire = false;
             if (e.hp > 0) {
+                if (e.maxShield !== undefined && t.time - e.damagedAt > 7) e.shield = Math.min(e.maxShield, (e.shield || 0) + 12 * dt);
                 var opponent = /** @type {FlightState | null} */ (player);
                 if (t.mode === 'furball') {
                     e.retarget -= dt;
@@ -429,9 +454,10 @@
                     e.until = t.time + 2;
                 }
                 var aim = unit(sub(e.goal, e.pose.eye)), aligned = dot(aim, scale(e.pose.back, -1));
-                e.fire = !!opponent && (t.mode === 'furball' || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < 760 && aligned > .996 && ((t.time + e.index * .77) % 3) < .8;
+                var primary = DW.retailWeapons[e.weaponIndex || 0];
+                e.fire = !!opponent && (t.mode === 'furball' || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && aligned > .996 && ((t.time + e.index * .77) % 3) < .8;
             }
-            DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[0], e.fire, dt, function (start, end, bolt) {
+            DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
                 return trace(t, start, end, bolt, t.mode === 'furball' ? e : 'enemy', terrainHit, player);
             });
         });
@@ -492,5 +518,5 @@
         });
         return result;
     }
-    DW.training = { callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageEnemy: damageEnemy, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
+    DW.training = { defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageEnemy: damageEnemy, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
 }());

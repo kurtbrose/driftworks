@@ -208,10 +208,10 @@
             })));
             var effectBatches = DW.flightGuns.geometry(DW.training.allGuns(combat, guns), state), engineParts = /** @type {Float32Array[]} */ ([]);
             ['ally', 'enemy'].forEach(function (team) {
-                var craft = DW.training.alive(combat).filter(function (e) {
+                var craft = /** @type {ArtCraft[]} */ (DW.training.alive(combat).filter(function (e) {
                     return (e.team || 'enemy') === team;
-                });
-                if (view.observerCraft && view.observerCraft.team === team && view.observerCraft.hp) craft = craft.concat(/** @type {Craft} */ (view.observerCraft));
+                }));
+                if (view.observerCraft && view.observerCraft.team === team && view.observerCraft.hp) craft = craft.concat(view.observerCraft);
                 engineParts.push(DW.shipPackModels.engineGeometry(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units, state, world.elapsedSeconds).vertices);
             });
             var engines = new Float32Array(engineParts.reduce(function (n, p) {

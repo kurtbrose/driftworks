@@ -217,14 +217,14 @@ Open [the flight lab](experiments/flight.html) from the same static server.
 
 The flight HUD groups objectives, shield/hull bars, speed/thrust, and weapon status around an open center. Comms subtitles sit above the radar. The selected target has gold corner brackets and an upper-right live model monitor with range and hull; Tab cycles targets. The monitor tracks target aspect at 15 FPS. Pilots have recurring callsigns (Rook, Jinx, Viper, and others), shared by comms, spoken references, and target labels; each keeps the same voice across waves. Press **F3** to toggle lab controls and diagnostics; the comms history and independent dialogue-size slider are in that panel. History keeps the latest 12 transmissions for the current page session.
 This separate cockpit experiment reuses the production 3D asteroid and background.
-Choose Ulysses (baseline), Hercules (heavy), Myrmidon (fast), or Medusa (bomber).
+Choose from 35 Terran, Vasudan and Shivan fighter/bomber stat profiles, including the original Hercules and Mk II, Horus, Thoth, Mara, Dragon and Basilisk.
 The maneuver values are extracted exactly from the installed retail FreeSpace 2
 `Root_fs2.vp` / `ships.tbl`; `experiments/retail-profiles.js` records those numeric
 fields and the source table hash. Hercules means the original Hercules, not Mk II.
 
 Click **Fly / resume**. W/S raises/lowers throttle, X cuts throttle and brakes,
 Shift holds afterburner, arrows pitch/yaw, Q/E roll.
-Retail lateral and reverse speeds are zero, so there is no strafe thrust. Captured mouse movement steers. Escape, losing focus, or hiding the tab pauses flight.
+The original four profiles have zero lateral/reverse speeds. Alien profiles preserve their table capabilities, but current pilots and normal controls continue to use forward dogfighting rather than lateral aiming. Captured mouse movement steers. Escape, losing focus, or hiding the tab pauses flight.
 Keys 1–4 select profiles and reset the starting pose; changing the dropdown also
 resets it. After using a form control, click Fly to return to flight input.
 Reset stops the craft facing the asteroid. The diameter control (200–4,000 m)
@@ -262,7 +262,7 @@ and Medusa uses Prometheus R. Both weapons travel at 450 m/s for 2 seconds
 (900 m); fire intervals are 0.20 s and 0.45 s. Numeric weapon fields, including
 bolt length/radii, damage factors and energy cost, are extracted directly into
 `experiments/retail-weapons.js` with the retail table hash. Damage factors are used by training combat;
-weapon energy remains unlimited. Training combat uses its own hull/shield tuning.
+weapon energy remains unlimited. The expanded catalog has ten bolt weapons; the selector starts with the ship's first supported retail primary, then offers sandbox overrides. Both sides now receive their own class hull/shield capacity, with symmetric pooled shields and Driftworks recharge rules. See [retail loadouts](docs/retail-flight-loadouts.md) for exact provenance and adaptation limits.
 Generic twin parallel barrels replace model-specific mounts.
 Bolts use fixed world speed (retail non-additive velocity), never hitscan, and
 swept terrain contact. Sounds reuse Driftworks' synthesized gun/impact effects.
@@ -373,6 +373,8 @@ The [ship pack inspection](experiments/ship-packs.html) shows the Quaternius shi
 The [character and animation viewer](experiments/characters.html) inspects the Quaternius Astronaut and Standard Universal Animation Libraries 1 and 2. Choose a model and animation, pause or scrub playback, adjust speed, and toggle its skeleton. All six glTF/GLB exports load locally with original materials and rigs. Authoring formats, license evidence, and SHA-256 provenance are under `assets/characters/`; see its README for rebuilding the catalog. The astronaut includes 24 animations and reversible suit/trim color swaps with four crew palettes plus custom colors. The body selector offers balanced and short feminine silhouettes, short/sturdy, tall, slight and broad builds, combinable with every palette. Continuous sliders control height, hips, waist/belly width, shoulders, torso depth and chest volume. Stress presets push pronounced feminine, short (60%), tall (145%) and heavy silhouettes beyond typical proportions. Crew mode defaults to conservative limits on each control plus coupled waist/hip, shoulder/hip and combined chest/depth changes. Its height range is 70–130% of the source; this scales the whole person and suit, rather than changing limb ratios. A pronounced feminine and a fuller build are included for visual review. Stress mode retains the wide ranges and extreme presets separately. Random crew samples correlated continuous values within the crew guardrails; Random extremes samples the full slider ranges. These are artistic ranges, not anthropometric percentiles. Reset view refits the current shape; the camera stays fixed during edits for size comparison. These are reversible rest-mesh edits with unchanged skin weights, joint positions and source clips; height uniformly scales an outer group containing both mesh and rig. Helmet, boots and wrists keep their source shape. Inspect motion with the skeleton toggle and clip scrubber before adopting a variant; these are viewer prototypes, not exported GLBs. Library root-motion variants are preserved; applying library clips to other rigs requires retargeting. These assets are available for inspection and future use, with no gameplay changes.
 
 Flight lab starts paused with a centered Start flight button; Esc brings back Resume flight. You begin at full cruise above the asteroid, facing the already assembled combat wings. W/S adjusts throttle and X stops. Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Select each wing's imported artwork while paused. Pilots dogfight each other; your shots spare allies, and Tab targets enemies. A defeated wing starts a new round after five seconds. Use Combat scenario to return to solo training.
+
+To watch the testing AIs, use **AI DUEL / WATCH PILOT** in the flight lab. Select Perfect AI or a human simulator flavor, choose a starting geometry, opponent skill and seed, and press Play. Chase/cockpit cameras, half/quarter-speed playback, pause and deterministic restart let you inspect the actual control inputs without steering the ship yourself. These are one-on-one open-space benchmark duels with selectable retail ship/weapon stats, class shields for both pilots, and separate cosmetic artwork. The existing opponent maneuver policy is retained. Select Fly manually to return to ordinary flight. See [flight AI validation](docs/flight-ai-validation.md) for the testing policies and limitations.
 
 ### Mumble voice lab
 

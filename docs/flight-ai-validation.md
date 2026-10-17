@@ -1,6 +1,14 @@
 # Flight AI validation
 
-The flight lab has three AI roles. Existing `experiments/training.js` remains the **opponent AI**, unchanged. `experiments/flight-ai.js` adds initial **perfect** and **human simulator** policies. `tests/flight-duel.js` evaluates either testing policy in the player seat against one existing opponent in open space. These tools do not alter normal flight-lab gameplay or add runtime dependencies.
+The flight lab has three AI roles. Existing `experiments/training.js` remains the **opponent AI**, unchanged. `experiments/flight-ai.js` adds initial **perfect** and **human simulator** policies. `experiments/flight-duel.js` evaluates either testing policy in the player seat against one existing opponent in open space. The same simulation powers the lab's watch mode and the command-line evaluator, with no runtime network dependencies.
+
+## Watch a duel
+
+Open `experiments/flight.html` from the local server. In **AI DUEL / WATCH PILOT**, change **Player seat** from manual to Perfect AI or a human simulator flavor. Choose the starting geometry, opponent skill and seed, then press **Play**. Use **Pause**, **Restart duel** or Esc to stop and inspect. **Replay duel** restarts the same deterministic setup after the duel ends. Changing pilot, geometry, opponent skill or seed resets and pauses; camera and playback-speed changes preserve the current duel.
+
+The chase camera displays the testing pilot's ship; cockpit view shows the pilot's sightline and the normal targeting HUD. Slow playback to half or quarter speed to inspect decisions. The live readout shows actual last-tick pitch/yaw, throttle, boost and trigger inputs, plus opponent mode and hull. Normal flight controls cannot steer or fire for the testing pilot, and watch mode never requests pointer lock or sends controller rumble. Select **Fly manually · normal lab** to return to ordinary flight.
+
+Watch bouts run for up to 120 simulated seconds and stop at the first destruction, without another wave. They use the benchmark's open-space fixture and selected retail ship/weapon stats, with class hull and shields for both sides. Defaults match Ulysses against Ulysses; 35 Terran/Vasudan/Shivan profiles and ten bolt weapons are available. See [retail loadouts](retail-flight-loadouts.md) for provenance and adaptation limits. Scenery and imported ship models are presentation only; watch mode does not substitute detailed mesh collisions or terrain avoidance. Use the watch panel's ship, cannon and defense choices; loadout changes reset and pause. Artwork can be changed independently without restarting. Ordinary handling, bank and combat-scenario controls remain disabled while watching. `experiments/flight-watch.js` adapts this shared simulation to lab snapshots and a presentation-only chase camera; camera changes never alter flight state.
 
 ## Run a baseline
 
@@ -10,7 +18,7 @@ From the repository root:
 node tools/evaluate-flight-ai.cjs --seconds 30
 ```
 
-This emits JSON for five geometries × three opponent skill levels × four player policies (perfect, novice, practiced, expert): 60 duels. Starts are `headOn`, `crossing`, `tail`, `turning` and `opening`. `turning` is an offset parallel start that lets turning develop; it does not inject an initial turn command. Both ships use the baseline Ulysses profile and Subach weapon. The opponent uses its existing attack decisions, fire windows, HP and damage rules. No terrain query is installed; fixtures start far from the spherical safety shell.
+This emits JSON for five geometries × three opponent skill levels × four player policies (perfect, novice, practiced, expert): 60 duels. Starts are `headOn`, `crossing`, `tail`, `turning` and `opening`. `turning` is an offset parallel start that lets turning develop; it does not inject an initial turn command. Both ships use the baseline Ulysses profile and Subach weapon. Both receive their selected class hull/shields with symmetric absorption and recharge. The opponent retains its attack decisions and fire windows; aiming uses the selected cannon. CLI options --ship, --opponent-ship, --weapon, --opponent-weapon and --unshielded match the watch settings. No terrain query is installed; fixtures start far from the spherical safety shell.
 
 Select a case and capture its actual player controls:
 
@@ -21,7 +29,7 @@ node tools/evaluate-flight-ai.cjs --replay duel.json
 
 Use `--category perfect` for the stress pilot; flavor is irrelevant for it. `--record` requires one selected case, including a single human flavor if applicable. Output JSON may be redirected to a file. Recording a duel saves metadata and complete player inputs, not screenshots or an executable script. CLI records include normalized source hashes and reject replay on different source content, so an old policy revision cannot silently produce a different result. Retrieve the matching source revision before replaying it. Browser-created records omit those CLI-added hashes and are local diagnostic replays.
 
-The shared browser-native regression suite loads both new scripts in `tests/index.html`. Run `npm run check` for types, assets and the full dependency-free suite. There is no new UI, gun behavior, ship tuning or opponent behavior in this milestone.
+The shared browser-native regression suite loads the controller, duel and watch-adapter scripts in `tests/index.html`. Run `npm run check` for types, assets and the full dependency-free suite. Gun behavior, ship tuning and opponent behavior remain unchanged.
 
 ## Controller contracts
 
@@ -47,9 +55,9 @@ Every tick, the pilot aims from its current belief, manages throttle by estimate
 
 ## Duel and replay semantics
 
-`flightDuel.create(options)` builds one player and one opponent; `advance(seconds)` accumulates elapsed time and executes complete 1/120-second steps. Display-frame batching does not change the trajectory. Each step matches the session's movement → opponent/training update → player gun order. Fixtures retain the existing training asymmetries: the player starts with 120 shields and 100 hull, the opponent has 90 unshielded HP and a slightly different hit sphere; player shields can recharge. Use these results to compare revisions of the same setup, not as equal-craft win probabilities.
+`flightDuel.create(options)` builds one player and one opponent; `advance(seconds)` accumulates elapsed time and executes complete 1/120-second steps. Display-frame batching does not change the trajectory. Each step matches the session's movement → opponent/training update → player gun order. Both sides now receive selected class hull/shields with symmetric absorption and recharge. Existing player/opponent hit spheres still differ, and the two policies have different goals; outcomes are not symmetric win probabilities. The old 100-hull/120-shield player versus 90-unshielded-hull opponent setup applies only to the historical baseline below.
 
-The duel stops at the first destruction or configured duration; it never starts another wave. Options, category/flavor, seed, policy version, observation contract and cadence accompany the input replay. The opponent is reproduced by rerunning unchanged deterministic `training.step`; opponent controls are not independently recorded. Replays therefore need the matching opponent source as well as the testing pilot and physics source. Player controls may be replayed without rerunning the testing pilot's decision logic.
+The duel stops at the first destruction or configured duration; it never starts another wave. Replay schema 2 stores both ship/weapon choices and the unshielded override alongside category/flavor, seed, policy version, observation contract and cadence. Schema 1 requires its historical source revision and is rejected by the current runtime. The opponent is reproduced by rerunning unchanged deterministic `training.step`; opponent controls are not independently recorded. Replays therefore need the matching opponent source as well as the testing pilot and physics source. Player controls may be replayed without rerunning the testing pilot's decision logic.
 
 The harness exposes state for test assertions, but controllers only receive the documented observation. Tests or analysis must not mutate that state during a measured duel. The harness is currently specific to player-testing-policy versus existing opponent; symmetric perfect-vs-perfect and simulator-vs-simulator bouts require a later adapter and a separately labeled damage model.
 
@@ -60,6 +68,8 @@ The result includes outcome, simulated duration, remaining health, emitted bolts
 `playerDamageSteps` and `opponentDamageSteps` count fixed steps with damage, not individual bolt hits; two same-step hits count once. Shots are emitted bolts, two per volley. Opportunity totals include the terminal step. No graphics, sound or performance claim is derived from this harness.
 
 [Initial 30-second baseline](../tests/benchmarks/flight-ai-baseline-2026-10-17.json), seed 1, policy `flight-ai-1`:
+
+This historical baseline predates promotion of `tests/flight-duel.js` to the shared runtime module `experiments/flight-duel.js`. All 60 result rows were compared and remained identical after that promotion; the original source-hash metadata is retained as evidence of the original capture.
 
 | Player policy | Duels | Wins | Losses | Timeouts | Longest dry interval |
 | --- | ---: | ---: | ---: | ---: | ---: |

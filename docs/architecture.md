@@ -771,12 +771,30 @@ opponents shape the player experience; `experiments/flight-ai.js` provides a
 best-effort perfect stress pilot and delayed-observation human simulators.
 Testing pilots return complete validated controls and never mutate live flight
 state. They share `arcade.step` and fixed-forward gun physics. The optional
-`tests/flight-duel.js` harness runs one testing pilot in the player seat against
-an unchanged opponent, with fixed 1/120-second steps, no terrain and no respawn.
-It is loaded by both test entry points, not by normal gameplay. The dependency-free
+`experiments/flight-duel.js` runs one testing pilot in the player seat against
+the existing opponent policy, with fixed 1/120-second steps, no terrain and no respawn.
+It is shared by both test entry points, the evaluator and the flight lab's optional
+watch mode. `experiments/flight-watch.js` adapts it to fresh lab snapshots, tracks
+simulated presentation time and adds a chase camera and player artwork only to
+the rendered view. It rereads scenery after camera-driven world replacements;
+no observer craft or camera pose enters the simulation. The lab composition root
+owns watch controls, pause/reset, speed and cockpit/chase selection. Flight input
+is ignored while watching, pointer lock is not requested, and the duel stops on
+its terminal result. The dependency-free
 `tools/evaluate-flight-ai.cjs` emits measurements and source-pinned input replays.
 See [flight AI validation](flight-ai-validation.md) for contracts, baseline,
-existing training damage asymmetries and limits to human/optimal-play claims.
+historical baselines and limits to human/optimal-play claims.
+
+`tools/import-retail-flight.cjs` reads numeric retail VP tables offline into 35
+small-craft profiles and ten bolt weapons. `training.configure` assigns player
+class hull/shield maxima; `training.equip` assigns craft class defenses and primary
+weapon. Configured spawns use those defenses, and both sides share shield
+absorption/spillover, seven-second delay and 12-points/s recovery. Unconfigured
+test fixtures retain legacy defaults. `DuelOptions` records both profile/weapon
+choices and a symmetric unshielded override; replay schema 2 rejects legacy
+defense semantics. Watch controls choose gameplay stats independently from
+cosmetic models. See [retail loadouts](retail-flight-loadouts.md) for unsupported
+ETS, quadrant, energy, hardpoint and special-ability behavior.
 
 `experiments/flight-hud.js` mounts the overlay canvas and target camera and owns
 radar range, telemetry, instruments and contact/lead markers. `render(view)` takes

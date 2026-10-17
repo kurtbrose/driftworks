@@ -2,7 +2,8 @@ const assert=require('node:assert/strict');
 const {poses,tree,query,bounds}=require('./mining-leg-clearance.cjs');
 const model=global.Driftworks.scene3d.miningPlatformGeometry;
 const closed=model(1,0,false,0),movingA=model(1,0,false,.257),movingB=model(1,0,false,.733);
-assert.deepEqual(closed.dark,movingB.dark,'Black frame and infill remain stationary while yellow leaves fold');
+const leafDarkLength=model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length;
+assert.deepEqual(closed.dark.slice(leafDarkLength),movingB.dark.slice(leafDarkLength),'Black frame and infill remain stationary while decorated leaves fold');
 // The front and side leaves must reach the local tower envelope, not the former .65 hull scale.
 const frontRoof=closed.ochre.slice(10*18,12*18),sideRoof=closed.ochre.slice((2*20+10)*18,(2*20+12)*18);
 assert.ok(Math.min(...[0,6,12,18,24,30].map(k=>frontRoof[k]))<7.5,'Front roof retains its useful reach toward the tower');
@@ -19,9 +20,17 @@ for(const [material,data] of Object.entries(closed))for(let i=0;i<data.length;i+
  stationary.push({points,box:bounds(points),material,index:i/18});
 }
 const body=tree(stationary);
+const belly=[];
+for(let i=0;i<closed.dark.length;i+=18){
+ const points=[0,6,12].map(k=>closed.dark.slice(i+k,i+k+3));
+ if(points.every(p=>p[2]>=3.35-1e-9 && p[2]<=4.10+1e-9))belly.push({points,box:bounds(points)});
+}
+assert.ok(belly.length>=28,'Fitted belly includes caps and bevels');
+const bellyTree=tree(belly);
 for(let step=0;step<poses.length;step++){
  const pose=poses[step],meshes=Array.from({length:8},(_,bay)=>pose.slice(bay*24,(bay+1)*24).map(points=>({points,box:bounds(points)}))),trees=meshes.map(tree);
  for(let bay=0;bay<8;bay++)for(const tri of meshes[bay]){
+  assert.ok(!query(bellyTree,tri.points,tri.box),'Folding door clears fitted belly at opening '+step/400+', bay '+bay);
   const fillHit=query(infillTree,tri.points,tri.box);assert.ok(!fillHit,`Moving leaf hits fixed infill at opening ${step/400}, bay ${bay}: ${JSON.stringify({tri:tri.points,hit:fillHit})}`);
   const towerHit=query(body,tri.points,tri.box);assert.ok(!towerHit,`Moving leaf hits tower at opening ${step/400}, bay ${bay}: ${JSON.stringify(towerHit)}`);
   for(let other=bay+1;other<8;other++)assert.ok(!query(trees[other],tri.points,tri.box),`Bay ${bay} intersects bay ${other} at opening ${step/400}`);

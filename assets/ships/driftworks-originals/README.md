@@ -11,3 +11,5 @@ The canonical geometry is `src/scene3d.js` (`miningPlatformGeometry`). Catalog m
 The current rig has a 36 m main hull, eight independent anchoring legs, a suspended two-level control pod, fixed black infill and yellow two-stage bay doors. Earlier blockouts have been retired. Use `tests/mining-platform-orbit.html` for interior, terrain-fitting and ramp-deployment inspection. The catalog normalizes it to the shared 17 m comparison sphere; that display scale does not redefine the rig's physical dimensions.
 
 This entry inherits the repository's licensing; it does not claim the imported packs' CC0 provenance.
+
+The underfloor chassis follows the eight-sided deck perimeter, recessed inside the bay hinge planes with a tapered belly. It has no projecting rectangular rails or placeholder equipment poles; the folding doors must clear it throughout their travel.

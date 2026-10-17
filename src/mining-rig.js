@@ -45,22 +45,17 @@
   function fullGeometry(deployment,panelOpen,interiorCut,contactPoses,rampLimits){
     var groups=emptyGroups(),mesh=DW.meshBuilder.create(groups),d=Math.max(0,Math.min(1,deployment));
     var bays=perimeter.map(function(p,i){return bayAssembly(mesh,i,panelOpen,rampLimits);});
-    bays.forEach(function(bay){bay.leaves();bay.mechanisms();});
+    // Keep moving leaf artwork contiguous so fixed-frame geometry can be inspected separately.
+    bays.forEach(function(bay){bay.leaves();});
+    bays.forEach(function(bay){bay.mechanisms();});
     bays.forEach(function(bay){bay.infill();});
     buildDeck(mesh);
     append(groups,cabinGeometry(interiorCut));
     buildChassis(mesh);
     perimeter.forEach(function(p,i){buildLeg(groups,mesh,d,contactPoses,p[0],i,p[1]);});
-    buildEquipment(mesh);
     append(groups,miningPlatformLights());
     return groups;
   }
-  /** @param {MeshBuilder} mesh */
-  function buildEquipment(mesh){
-    mesh.block('dark',[14,0,3.8],[3,3.8,.5]);
-    [-1,1].forEach(function(side){mesh.block('steel',[16,side*2.2,4.7],[4,.35,.35]);});
-  }
-
   var perimeter=[[15,-6],[15,6],[5,10.5],[-5,10.5],[-17,4.5],[-17,-4.5],[-5,-10.5],[5,-10.5]];
   /** Miter the outboard hinge polygon so adjacent closed bays share a corner.
    * @param {number} index @param {number} [clearance] @returns {V3}
@@ -78,6 +73,29 @@
     var back=points.map(function(p){return /** @type {V3} */ ([p[0]-n[0]/length*.22,p[1]-n[1]/length*.22,p[2]-n[2]/length*.22]);});
     plate('ochre',points);plate('steel',back.slice().reverse());
     for(var k=0;k<4;k++){var j=(k+1)%4;plate('ochre',[points[k],back[k],back[j],points[j]]);}
+    // Paint in an orthonormal leaf frame: fixed physical widths and 45-degree
+    // stripes, clipped to an inset panel rather than stretched over its trapezoid.
+    var span=Math.hypot.apply(null,u),axis=u.map(function(value){return value/span;}),normal=n.map(function(value){return value/length;});
+    var across=[normal[1]*axis[2]-normal[2]*axis[1],normal[2]*axis[0]-normal[0]*axis[2],normal[0]*axis[1]-normal[1]*axis[0]];
+    var outline=points.map(function(p){var delta=p.map(function(value,k){return value-points[0][k];});return [delta.reduce(function(sum,value,k){return sum+value*axis[k];},0),delta.reduce(function(sum,value,k){return sum+value*across[k];},0)];});
+    /** @param {number[][]} polygon @param {number} a @param {number} b @param {number} limit */
+    function clip(polygon,a,b,limit){
+      /** @type {number[][]} */ var result=[];
+      polygon.forEach(function(p,i){var q=polygon[(i+1)%polygon.length],dp=a*p[0]+b*p[1]-limit,dq=a*q[0]+b*q[1]-limit;
+        if(dp<=0)result.push(p);
+        if((dp<0 && dq>0)||(dp>0 && dq<0)){var t=dp/(dp-dq);result.push([p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t]);}
+      });return result;
+    }
+    var band=outline.slice();
+    outline.forEach(function(p,i){var q=outline[(i+1)%4],dx=q[0]-p[0],dy=q[1]-p[1];band=clip(band,dy,-dx,dy*p[0]-dx*p[1]-.35*Math.hypot(dx,dy));});
+    var top=Math.max.apply(null,outline.map(function(p){return p[1];}))-.35;
+    band=clip(band,0,1,top);band=clip(band,0,-1,-(top-.28));
+    /** @param {string} material @param {number[][]} polygon @param {number} lift */
+    function paint(material,polygon,lift){if(polygon.length<3)return;plate(material,polygon.map(function(p){return /** @type {V3} */ (points[0].map(function(value,k){return value+axis[k]*p[0]+across[k]*p[1]-normal[k]*(.22+lift);}));}).reverse());}
+    paint('dark',band,.018);
+    var width=.14*Math.SQRT2,pitch=width*2,values=band.map(function(p){return p[0]-p[1];});
+    var start=Math.floor(Math.min.apply(null,values)/pitch),end=Math.ceil(Math.max.apply(null,values)/pitch);
+    for(var stripe=start;stripe<=end;stripe++)paint('light',clip(clip(band,1,-1,stripe*pitch+width),-1,1,-stripe*pitch),.036);
   }
   /** Chamfered hardpoint shared by the frame socket and leg shoulder.
    * @param {MeshBuilder} mesh @param {string} material @param {number} x @param {number} y @param {number} bottom @param {number} top @param {number} halfX @param {number} halfY @param {number} taper
@@ -134,11 +152,6 @@
       doorLeaf(plate,[mix(wallTopA,wallTopB,edgeGap),mix(wallTopA,wallTopB,1-edgeGap),mix(roofTipA,roofTipB,1-edgeGap),mix(roofTipA,roofTipB,edgeGap)]);
     }
     function buildMechanisms(){
-      [.18,.82].forEach(function(edge){
-        var end=mix(roofTipA,roofTipB,edge),start=mix(wallTopA,wallTopB,edge);
-        var near=/** @type {V3} */ (end.map(function(v,k){return v+(start[k]-v)*.16;}));
-        link('marker',near,end,.055,.04);
-      });
       var barrel=mesh.barrel;
       /** Position relative to the root axis, positive outward and upward.
        * @param {number} along @param {number} outward @param {number} z @returns {V3}
@@ -233,10 +246,13 @@
   }
   /** @param {MeshBuilder} mesh */
   function buildChassis(mesh){
-    var block=mesh.block;
-    block('dark',[-1,0,3.05],[14,8.4,1.2]);
-    // Exposed chassis rails carry the mining head and each rectangular root mount.
-    [-1,1].forEach(function(side){block('steel',[-1,side*8,3.6],[14.5,.7,.9]);});
+    // Follow the deck's hinge polygon with a recessed, bevelled belly. The old
+    // rectangular block and longitudinal rails protruded through diagonal bays.
+    var upper=perimeter.map(function(p,i){var v=outerHinge(i,-.45);v[2]=4.10;return v;});
+    var lower=perimeter.map(function(p,i){var v=outerHinge(i,-.95);v[2]=3.35;return v;});
+    mesh.plate('dark',upper);
+    mesh.plate('dark',lower.slice().reverse());
+    upper.forEach(function(p,i){var j=(i+1)%upper.length;mesh.plate('dark',[p,lower[i],lower[j],upper[j]]);});
   }
 
   /** @param {Groups} groups @param {MeshBuilder} mesh @param {number} d @param {ContactPose[] | undefined} contactPoses

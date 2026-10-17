@@ -42,6 +42,7 @@
         world.selectedShipIds = [];
         world.combat.drones = [];
         var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.training.create('training'), contact = false, grounded = false;
+        var activeProfile = model.profiles[0];
         // A short-lived view of session-owned objects, not a detached copy.
         // Read again after transitions that may replace state, combat, guns or world.
         /** @returns {Snapshot} */
@@ -51,6 +52,7 @@
         /** @param {string} mode @param {boolean} enabled */
         function setCombat(mode, enabled) {
             combat = DW.training.create(mode);
+            DW.training.configure(combat, activeProfile);
             combat.enabled = enabled;
             if (!enabled) {
                 combat.enemies = [];
@@ -61,6 +63,8 @@
         /** @param {{mode: string; enabled: boolean; profile: Profile}} config */
         function reset(config) {
             combat = DW.training.create(config.mode);
+            activeProfile = config.profile;
+            DW.training.configure(combat, activeProfile);
             combat.enabled = config.enabled;
             guns = DW.flightGuns.create();
             state = model.createSortie(asteroid.radius, config.profile);

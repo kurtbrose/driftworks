@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "policy": "flight-ai-1",
+  "opponentPolicy": "experiments/training.js",
+  "sources": {
+    "src/propulsion.js": "fc0b16cad22a04897df668b7deff4cbe188088f421f2767956fee72c1c6f9c19",
+    "src/combat.js": "ce0e0e6eb149a553f5431c13de27d9bae0e7ccf829a3fb1c074c387a46f013ac",
+    "src/logistics.js": "00dca24b86c3dcbbe495e95817a118139d725b6e949dac774346ee0588a70fbe",
+    "src/formations.js": "869c0c1617dc7585ba0633b15563ae9dc4877c0f0f1086c42aa42b89f71d932c",
+    "src/sim.js": "81964cb1d23d3a69cba40bc5e9db83afec6f82c9c3ab05f742083e6d47f9d968",
+    "experiments/retail-profiles.js": "ff0cae63892e82b0b38a9097b5c2119442e448c4ea6c39fd50a0ecde3a466854",
+    "experiments/retail-weapons.js": "642a0025bb1b2d4502aada78157fc5a3b7f44ecca0b44f71d7f8739efca80450",
+    "experiments/guns.js": "b10829b80e6e99bcdb05632e55a61958f151bd72fcfbbc456623b7a232b85ed6",
+    "experiments/training.js": "86c7677ca44cf6885a956b435a673c90241fa806b95731aca4ef5da671c9b340",
+    "experiments/flight-model.js": "f6471383e49a817264bb55d34a38ccbd9aa3edb72915a367554a5dcf048f9b89",
+    "experiments/flight-ai.js": "6aafa3682577c7ef7c50ffa9bb4303867b337cbba512a3c54a5cf1292f31165c",
+    "experiments/flight-duel.js": "78fbf90d0926f7bb8557a4d7c583810ab2c32f3be158354b16ac6510abd6c82f"
+  },
+  "observation": "visible-position-velocity-v1",
+  "cadence": 0.008333333333333333,
+  "note": "Retail hull/shield capacities for each ship; pooled shields and symmetric Driftworks recharge, fixed twin guns and unlimited fuel/energy. Human presets uncalibrated; perfect is bounded search.",
+  "rows": [
+    {
+      "ticks": 192,
+      "seconds": 1.6,
+      "done": true,
+      "outcome": "player-win",
+      "category": "perfect",
+      "flavor": "search",
+      "skill": 1,
+      "start": "headOn",
+      "seed": 1,
+      "profile": "GTF Hercules",
+      "weapon": "Subach HL-7",
+      "playerHull": 190,
+      "playerShield": 0,
+      "opponentHull": 0,
+      "playerShots": 16,
+      "opponentShots": 4,
+      "opponentShield": 0,
+      "playerMaxHull": 250,
+      "playerMaxShield": 0,
+      "opponentMaxHull": 100,
+      "opponentMaxShield": 0,
+      "opponentProfile": "SF Dragon",
+      "opponentWeapon": "Shivan Heavy Laser",
+      "unshielded": true,
+      "longestDry": 0,
+      "metrics": {
+        "playerOpportunities": 1.5999999999999968,
+        "opponentOpportunities": 1.5999999999999968,
+        "playerDamageSteps": 4,
+        "opponentDamageSteps": 2,
+        "modeChanges": 1,
+        "minRange": 355.529874371959,
+        "maxRange": 599.1582574631714
+      }
+    }
+  ]
+}
