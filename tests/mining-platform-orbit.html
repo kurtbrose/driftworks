@@ -11,7 +11,7 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
 .view .hint{position:absolute;bottom:10px;left:18px;color:#8198a5;font-size:11px;pointer-events:none}.scene3d-controls{display:none}canvas{display:block}
 @media(max-width:600px){header{padding:12px}h1{font-size:17px}.study-controls{gap:10px;font-size:12px}input[type=range]{width:85px}.view h2{left:10px;top:10px;font-size:12px}.view .hint{left:10px;font-size:10px}header p{display:none}}
 </style>
-<header><h1>Mining pod - four-view study</h1><div class="study-controls"><label for="design">Design <select id="design"><option value="fabricated" selected>04 - Fabricated plate hull</option><option value="pod">01 - Bean / equal clamps</option><option value="anchors">02 - Four anchors / four braces</option><option value="recessed">03 - Recessed / heavy crusher</option><option value="original">Original 3D interpretation</option></select></label><label for="deployment">Deployment <input id="deployment" type="range" min="0" max="1" step=".01" value="1"></label><label><input id="working" type="checkbox" checked> Run machinery</label><label><input id="grey" type="checkbox" checked> Grey silhouette</label><button id="reset">Reset orbit view</button><a href="../?renderer=3d">Back to game</a></div><p>Side, front and top stay fixed. Drag the raised view to swing around the pod; wheel to zoom, middle or Space + drag to pan.</p></header>
+<header><h1>Mining pod - four-view study</h1><div class="study-controls"><label for="design">Design <select id="design"><option value="fabricated" selected>04 - Fabricated plate hull</option><option value="pod">01 - Bean / equal clamps</option><option value="anchors">02 - Four anchors / four braces</option><option value="recessed">03 - Recessed / heavy crusher</option><option value="original">Original 3D interpretation</option></select></label><label for="deployment">Deployment <input id="deployment" type="range" min="0" max="1" step=".01" value="1"></label><label><input id="grey" type="checkbox" checked> Grey silhouette</label><button id="reset">Reset orbit view</button><a href="../?renderer=3d">Back to game</a></div><p>Side, front and top stay fixed. Drag the raised view to swing around the pod; wheel to zoom, middle or Space + drag to pan.</p></header>
 <main class="views">
 <section class="view fixed"><h2>Side</h2><div id="side" class="viewport scene"></div></section>
 <section class="view fixed"><h2>Front - mining head</h2><div id="front" class="viewport scene"></div></section>
@@ -52,7 +52,7 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
     requestAnimationFrame(frame);
     if(previous && now-previous<1000/30)return;
     elapsed+=previous?Math.min(.1,(now-previous)/1000):0;previous=now;
-    var groups=Driftworks.scene3d.miningPlatformGeometry(Number(document.getElementById('deployment').value),elapsed,document.getElementById('working').checked,document.getElementById('design').value);
+    var groups=Driftworks.scene3d.miningPlatformGeometry(Number(document.getElementById('deployment').value),elapsed,false,document.getElementById('design').value);
     var actors=Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key]),color:document.getElementById('grey').checked?[.54,.56,.57]:colors[key]};});
     views.forEach(function(view){
       var world=view.world();world.elapsedSeconds=elapsed;

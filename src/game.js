@@ -1389,13 +1389,6 @@
     if (detail.machinery>0) {
       [-1,1].forEach(function (side) { box(-9,side*5,4,1,8,8.5,0xe3bd68); });
     }
-    if (working) {
-      for (var i=0;i<4;i+=1) {
-        var phase=(time*1.8+i/4)%1;
-        box(-4+phase*8,-2,1.1,2,8.05,8.5,0xaa9a71);
-      }
-      box(13,-1+Math.sin(time*8)*1.2,2,2,9.8,10.3,0x8c9999);
-    }
     legs.filter(function (leg) { return leg.depth>0; }).forEach(drawLeg);
   }
 
@@ -1430,14 +1423,7 @@
       mechanicalBlock(g, 0xe3bd68, -9, side * 5, 4, 1, detail.machinery);
       mechanicalBlock(g, 0x514532, -10, side * 6, 18, 0.35, detail.fine);
     });
-    if (working) {
-      for (var i = 0; i < 4; i += 1) {
-        var phase = (time * 1.8 + i / 4) % 1;
-        mechanicalBlock(g, 0xaa9a71, -4 + phase * 8, -2, 1.1, 2, 0.6);
-        mechanicalBlock(g, 0xa89572, 16 + phase * 4, (i - 1.5) * 1.4, 0.6, 0.6, 1 - phase);
-      }
-      mechanicalBlock(g, 0x8c9999, 13, Math.sin(time * 8) * 1.2 - 1, 2, 2);
-    }
+
   }
 
   /** @param {PIXI.Graphics} graphics @param {string} kind @param {Ship | Wreck | undefined} entity @param {ShipStyle} tugStyle @param {number} hullScale @param {number} zoom @param {number} rotation */

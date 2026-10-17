@@ -1433,13 +1433,13 @@
       }
     });
   });
-  test('mining pod studies keep finite unit normals, fold anchors and gate cutter motion', function () {
+  test('mining pod studies keep finite unit normals, fold anchors without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     ['pod','anchors','recessed','fabricated'].forEach(function(variant){
       var deployed=model(1,0,false,variant),folded=model(0,0,false,variant);
       assert(JSON.stringify(deployed)!==JSON.stringify(folded));
       assert(JSON.stringify(deployed)===JSON.stringify(model(1,5,false,variant)));
-      assert(JSON.stringify(deployed)!==JSON.stringify(model(1,.2,true,variant)));
+      assert(JSON.stringify(deployed)===JSON.stringify(model(1,.2,true,variant)));
       Object.keys(deployed).forEach(function(key){var data=deployed[key];assert(data.length%18===0);assert(data.every(Number.isFinite));for(var i=3;i<data.length;i+=6)assertClose(Math.hypot(data[i],data[i+1],data[i+2]),1,.00001);});
     });
   });
@@ -1459,13 +1459,13 @@
     for(var i=24*36;i<24*36+10*18;i+=6){assertClose(data[i+2],12.5);assertClose(data[i+5],1);}
   });
 
-  test('mining platform geometry folds legs and animates only active machinery', function () {
+  test('mining platform geometry folds legs without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var open=model(1,0,false),folded=model(0,0,false);
     function width(groups){var ys=[];Object.keys(groups).forEach(function(k){for(var i=1;i<groups[k].length;i+=6)ys.push(Math.abs(groups[k][i]));});return Math.max.apply(null,ys);}
     assert(width(open)>width(folded));
     assert(JSON.stringify(open)===JSON.stringify(model(1,12,false)));
-    assert(JSON.stringify(open)!==JSON.stringify(model(1,.2,true)));
+    assert(JSON.stringify(open)===JSON.stringify(model(1,.2,true)));
     Object.keys(open).forEach(function(k){assert(open[k].length%18===0);assert(open[k].every(Number.isFinite));for(var i=3;i<open[k].length;i+=6)assert(Math.abs(Math.hypot(open[k][i],open[k][i+1],open[k][i+2])-1)<.00001);});
   });
 

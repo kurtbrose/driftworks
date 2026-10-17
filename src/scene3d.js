@@ -388,6 +388,7 @@
    * @param {number} deployment @param {number} time @param {boolean} working @param {string} [variant]
    */
   function miningPlatformGeometry(deployment, time, working, variant) {
+    // time/working remain accepted for existing callers; artwork has no idle machinery animation.
     var d = Math.max(0, Math.min(1, deployment));
     /** @type {Record<string, number[]>} */ var groups = {ochre:[], steel:[], dark:[], light:[]};
     var cube = boxMesh();
@@ -469,7 +470,7 @@
         block('ochre',[14.5,side*6.4,3.7],[2.5,.6,1.7]);
       });
       block('dark',[17.1,0,3.5],[.35,5,1.6]);
-      for(var tooth=-2;tooth<=2;tooth++)block('steel',[17.5+(working?Math.sin(time*7+tooth)*.25:0),tooth*1.8,2.7],[.65,.65,.8]);
+      for(var tooth=-2;tooth<=2;tooth++)block('steel',[17.5,tooth*1.8,2.7],[.65,.65,.8]);
       return groups;
     }
     // Study variants deliberately stop at silhouette and functional masses.
@@ -527,7 +528,7 @@
       block('ochre',[14+d*2,0,5.5],[3,5.5*head,1]);
       block('dark',[17+d*2,0,3.3],[1,4.5*head,1.6]);
       for(var tooth=-2;tooth<=2;tooth++){
-        var pulse=working?Math.sin(time*7+tooth)*.3:0;
+        var pulse=0;
         block('steel',[18+d*2+pulse,tooth*1.7*head,3],[.8,.6*head,1.2]);
       }
       // Rear utility coupling and a human-sized side airlock, kept as simple masses.
@@ -557,10 +558,9 @@
     });
     block('ochre',[-9,0,7],[3,4,3]);
     block('dark',[0,0,6],[6,3.8,1]);
-    for(var i=0;i<6;i++)block('steel',[-5+((i*2+(working?time*3:0))%12),0,7.2],[.35,3,.3]);
     block('steel',[7+d*3,0,6],[4+d*3,1.5,1]);
     block('dark',[11+d*6,0,5],[1.5,4,2]);
-    for(var i=-2;i<=2;i++)block('steel',[13+d*6, i*1.4,4+(working?Math.sin(time*9+i)*.4:0)],[.6,.5,1.5]);
+    for(var i=-2;i<=2;i++)block('steel',[13+d*6, i*1.4,4],[.6,.5,1.5]);
     block('steel',[-8,0,11],[2,2,1]);
     block('light',[-8,-2.1,11],[1.4,.15,.5]);
     return groups;
