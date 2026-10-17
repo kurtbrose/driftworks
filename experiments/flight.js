@@ -189,7 +189,10 @@
         var elapsed = timing.elapsed;
         var demand = controls.sample();
         if (!paused) {
+            var before = session.snapshot(), lastHit = before.combat.lastHit, shield = before.combat.shield, fired = before.guns.fired, contact = before.contact;
             session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
+            var after = session.snapshot();
+            controls.haptics(elapsed, {boost: !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
             if (session.snapshot().combat.dead) {
                 pause();
                 status.textContent = 'Training over · Restart training to try again';

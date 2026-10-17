@@ -45,6 +45,30 @@ export type Demand = FlightInput & {
 };
 /** Complete legal control request shared by evaluation pilots and replay. */
 export type PilotInput = Required<FlightInput> & { throttle: number; fire: boolean };
+export type DuelOptions = {
+    start?: 'headOn'|'crossing'|'tail'|'turning'|'opening';
+    category?: 'perfect'|'human';
+    flavor?: 'novice'|'practiced'|'expert';
+    seed?: number;
+    skill?: number;
+    duration?: number;
+    profile?: number;
+};
+export type DuelReplay = {
+    version:number; policy:string; observation:string; cadence:number;
+    options:Required<DuelOptions>; inputs:PilotInput[];
+};
+export type Duel = {
+    advance:(elapsed:number, inputStream?:PilotInput[])=>DuelSummary;
+    summary:()=>DuelSummary;
+    replay:DuelReplay; player:FlightState; enemy:Craft; combat:Combat; guns:Guns;
+};
+export type DuelSummary = {
+    ticks:number; seconds:number; done:boolean; outcome:string;
+    category:string; flavor:string; skill:number; start:string; seed:number; profile:string; weapon:string;
+    playerHull:number; playerShield:number; opponentHull:number; playerShots:number; opponentShots:number; longestDry:number;
+    metrics:{playerOpportunities:number;opponentOpportunities:number;playerDamageSteps:number;opponentDamageSteps:number;modeChanges:number;minRange:number;maxRange:number};
+};
 export type Weapon = {
     name: string;
     speed: number;
@@ -237,6 +261,9 @@ export type FlightView = {
     state: FlightState;
     combat: Combat;
     guns: Guns;
+    /** Presentation-only observer camera and own craft; never passed to combat. */
+    camera?: Pose;
+    observerCraft?: ArtCraft;
 };
 export type HudView = FlightView & Appearance & {
     asteroid: Asteroid;
@@ -477,6 +504,12 @@ export type Line = {
     emotion?: Feeling;
 };
 export type ExperimentModules = {
+    flightWatch:{create:(scenery:Snapshot, options:DuelOptions)=>{
+        advance:(elapsed:number,speed:number)=>DuelSummary;
+        snapshot:(chase:boolean)=>Snapshot;
+        summary:()=>DuelSummary;replay:DuelReplay;
+    }};
+    flightDuel: {create:(options?:DuelOptions)=>Duel;run:(options?:DuelOptions)=>Duel;replay:(record:DuelReplay)=>Duel;starts:string[];dt:number};
     flightAI: {
         version: string;
         flavors: Record<'novice'|'practiced'|'expert', {reaction:number;sample:number;noise:number;gain:number;damping:number;lead:number}>;
@@ -603,6 +636,7 @@ export type ExperimentModules = {
     };
     flightControls: {
         mount: (host: HTMLElement, actions: ControlActions, environment?: ControlEnvironment) => {
+            haptics: (dt: number, feedback: {boost?: boolean; hit?: boolean; shieldBreak?: boolean; fire?: boolean; contact?: boolean}) => void;
             sample: () => Demand;
             view: () => {
                 mouse: number[];
@@ -708,6 +742,16 @@ export type ExperimentModules = {
     };
 };
 export type Elements = {
+    'watch-pilot': HTMLSelectElement;
+    'watch-start': HTMLSelectElement;
+    'watch-skill': HTMLSelectElement;
+    'watch-seed': HTMLInputElement;
+    'watch-speed': HTMLSelectElement;
+    'watch-camera': HTMLSelectElement;
+    'watch-panel': HTMLElement;
+    'watch-play': HTMLButtonElement;
+    'watch-restart': HTMLButtonElement;
+    'watch-readout': HTMLElement;
     'controller-layout': HTMLElement;
     'steering-preset': HTMLSelectElement;
     'volume': HTMLInputElement;
@@ -741,6 +785,7 @@ export type Elements = {
     'comms-voice': HTMLButtonElement;
     'controls': HTMLElement;
     'deadzone': HTMLInputElement;
+    'rumble': HTMLInputElement;
     'device': HTMLSelectElement;
     'device-live': HTMLElement;
     'device-status': HTMLElement;

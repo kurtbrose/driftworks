@@ -391,6 +391,31 @@
     f.setPaused(false);f.key('KeyW');f.setPads([]);c.sample();assert(f.counts.pause===3&&c.sample().throttleRate===0);
   });
 
+  test('gamepad rumble mixes boost and priority jolts, stops and tolerates unsupported hardware', function () {
+    var f=flightControlsFixture(),calls=[],resets=0;
+    var actuator={playEffect:function(type,effect){calls.push(effect);assert(type==='dual-rumble');return Promise.resolve('complete');},reset:function(){resets++;return Promise.resolve('complete');}};
+    var pad={index:0,id:'Rumble pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[],vibrationActuator:actuator};
+    f.setPads([pad]);f.controls.sample();
+    f.controls.haptics(.016,{boost:true});assert(calls.length===1 && calls[0].strongMagnitude<.15 && calls[0].weakMagnitude<.15);
+    f.controls.haptics(.016,{boost:true});assert(calls.length===1,'Sustained rumble is rate limited');
+    f.controls.haptics(.016,{hit:true,boost:true});assert(calls[1].strongMagnitude===.55);
+    f.controls.haptics(.016,{shieldBreak:true});assert(calls[2].strongMagnitude===.8);
+    f.controls.haptics(.016,{fire:true});assert(calls.length===3,'Recoil cannot replace shield-break feedback');
+    f.controls.clear();assert(resets===1);f.controls.haptics(.016,{fire:true});assert(calls[3].weakMagnitude===.2);
+    f.controls.haptics(.2,{});assert(resets===2);
+    f.controls.haptics(.016,{contact:true});assert(calls[4].strongMagnitude===.65);
+    f.elements.rumble.checked=false;f.elements.rumble.onchange();assert(resets===3);
+    f.controls.haptics(.1,{boost:true,hit:true});assert(calls.length===5);
+    f.elements.rumble.checked=true;f.setPaused(true);f.controls.haptics(.1,{hit:true});assert(calls.length===5);
+    f.setPaused(false);f.controls.haptics(.1,{boost:true});f.setPads([]);f.controls.sample();assert(resets===4);
+    f.controls.haptics(.1,{hit:true});assert(calls.length===6);
+    delete pad.vibrationActuator;f.setPads([pad]);f.controls.sample();f.setPaused(false);f.controls.haptics(.1,{hit:true});
+    pad.vibrationActuator={playEffect:function(){throw Error('Not supported');},reset:function(){throw Error('Disconnected');}};
+    f.controls.haptics(.1,{hit:true});f.controls.clear();
+    pad.vibrationActuator={playEffect:function(){return Promise.reject(Error('Denied'));},reset:function(){return Promise.reject(Error('Gone'));}};
+    f.controls.haptics(.1,{hit:true});f.controls.clear();
+  });
+
   test('flight session reset replaces sortie state and preserves the environment', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0]};
     var first=session.reset(config),world=first.world;

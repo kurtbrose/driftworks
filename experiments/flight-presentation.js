@@ -167,8 +167,9 @@
         }
         /** @param {FlightView} view @param {Appearance} appearance @param {Comparison} comparison @param {number} elapsed */
         function render(view, appearance, comparison, elapsed) {
-            var state = view.state, combat = view.combat, guns = view.guns, world = view.world;
+            var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
             var livingArt = /** @type {ArtCraft[]} */ (DW.training.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
+            if (view.observerCraft) livingArt.push(view.observerCraft);
             ['ally', 'enemy'].forEach(function (team) {
                 var craft = livingArt.filter(function (e) {
                     return (e.team || 'enemy') === team;
@@ -210,6 +211,7 @@
                 var craft = DW.training.alive(combat).filter(function (e) {
                     return (e.team || 'enemy') === team;
                 });
+                if (view.observerCraft && view.observerCraft.team === team && view.observerCraft.hp) craft = craft.concat(/** @type {Craft} */ (view.observerCraft));
                 engineParts.push(DW.shipPackModels.engineGeometry(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units, state, world.elapsedSeconds).vertices);
             });
             var engines = new Float32Array(engineParts.reduce(function (n, p) {

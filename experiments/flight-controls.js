@@ -13,6 +13,49 @@
         var get = DW.experimentDom(document);
         var inputMode = get('input-mode'), device = get('device'), bindingHost = get('bindings'), input = DW.flightInput;
         var keys = /** @type {Record<string, boolean>} */ ({}), mouse = [0, 0], mapping = input.defaults(true), padSignature = '', lastPad = /** @type {number | null} */ (null), previousButtons = { bank: false, pause: false };
+        var rumble = get('rumble');
+        rumble.checked = true;
+        try { rumble.checked = window.localStorage.getItem('driftworks.flight.rumble') !== 'off'; } catch (error) { /* Optional preference. */ }
+        /** @type {GamepadHapticActuator | null} */
+        var actuator = null;
+        var pulseTime = 0, pulseStrong = 0, pulseWeak = 0, refresh = 0, vibrating = false;
+        function stopRumble() {
+            if (actuator && vibrating) {
+                try { actuator.reset().catch(function () {}); } catch (error) { /* Unsupported or disconnected device. */ }
+            }
+            vibrating = false;
+            pulseTime = 0;
+            refresh = 0;
+        }
+        rumble.onchange = function () {
+            stopRumble();
+            try { window.localStorage.setItem('driftworks.flight.rumble', rumble.checked ? 'on' : 'off'); } catch (error) { /* Optional preference. */ }
+        };
+        /** @param {number} dt @param {{boost?: boolean; hit?: boolean; shieldBreak?: boolean; fire?: boolean; contact?: boolean}} feedback */
+        function haptics(dt, feedback) {
+            var pad = pads().find(function (p) { return String(p.index) === device.value; });
+            var next = pad && pad.vibrationActuator;
+            if (next !== actuator) { stopRumble(); actuator = next || null; }
+            if (!actuator || typeof actuator.playEffect !== 'function' || actions.isPaused() || !rumble.checked) { stopRumble(); return; }
+            pulseTime = Math.max(0, pulseTime - dt);
+            refresh -= dt;
+            var strong = feedback.shieldBreak ? .8 : feedback.hit ? .55 : feedback.contact ? .65 : 0;
+            var weak = strong ? .35 : feedback.fire ? .2 : 0;
+            if ((strong || weak) && (pulseTime <= 0 || strong >= pulseStrong)) {
+                pulseStrong = strong; pulseWeak = weak;
+                pulseTime = feedback.shieldBreak ? .25 : strong ? .14 : .055;
+                refresh = 0;
+            }
+            strong = Math.max(feedback.boost ? .07 : 0, pulseTime > 0 ? pulseStrong : 0);
+            weak = Math.max(feedback.boost ? .12 : 0, pulseTime > 0 ? pulseWeak : 0);
+            if (!strong && !weak) { stopRumble(); return; }
+            if (refresh > 0) return;
+            refresh = .075;
+            vibrating = true;
+            try {
+                actuator.playEffect('dual-rumble', {duration: 110, startDelay: 0, strongMagnitude: strong, weakMagnitude: weak}).catch(function () {});
+            } catch (error) { /* Haptics must never interrupt flight. */ }
+        }
         var steeringPreset = get('steering-preset');
         var mouseActive = true, lastAxes = /** @type {number[]} */ ([]);
         steeringPreset.value = 'medium-soft';
@@ -27,6 +70,7 @@
             try { window.localStorage.setItem('driftworks.flight.steering', steeringPreset.value); } catch (error) { /* Session controls still work. */ }
         };
         function clear() {
+            stopRumble();
             keys = /** @type {Record<string, boolean>} */ ({});
             mouse = [0, 0];
         }
@@ -65,6 +109,7 @@
         }
         /** @param {Gamepad} pad */
         function configure(pad) {
+            stopRumble();
             lastAxes = [];
             mapping = input.defaults(pad.mapping === 'standard', pad.id);
             try {
@@ -310,7 +355,7 @@
         function view() {
             return { mouse: mouse, inputMode: inputMode.value, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };
         }
-        return { sample: sample, view: view, clear: clear, resetButtons: resetButtons, capture: capture, release: release };
+        return { haptics: haptics, sample: sample, view: view, clear: clear, resetButtons: resetButtons, capture: capture, release: release };
     }
     DW.flightControls = { mount: mount };
 }());

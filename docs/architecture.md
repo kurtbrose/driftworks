@@ -791,6 +791,14 @@ polls devices, dispatches pause/bank actions, then returns merged flight demand;
 the browser loop checks pause after sampling. `view()` exposes only mouse/mode/
 stick-range data and `showMouseStick` for HUD rendering. Above-deadzone mapped stick changes hide the guide and clear mouse displacement; captured mouse movement restores it. Unchanged held axes and small axis noise do not reclaim the guide. Pause Settings shows a fixed reference for standard gamepads: right-stick Y changes throttle at up to 0.5/s, with neutral holding the current throttle. Nonstandard joysticks retain device bindings. `clear()` resets held input; `resetButtons()`
 is separately called on resume to preserve existing controller edge semantics.
+`haptics(dt, feedback)` owns the selected device's dual-rumble actuator. The
+composition root derives boost, player-hit, shield-break, fired-volley, and first
+surface-contact feedback around each session advance. The adapter mixes short
+priority pulses over light sustained boost, refreshes sustained effects at most
+every 75 ms, and issues only bounded 110 ms effects. `clear()` also stops rumble;
+pause, reset, focus loss, disconnect and device changes therefore cancel effects.
+The saved rumble toggle defaults on; missing APIs, thrown errors and rejected
+promises do not interrupt flight. Haptics remain browser state, outside saves.
 `capture()`/`release()` own browser pointer-lock requests. Gameplay and diagnostic
 shortcuts call injected actions; the adapter does not access session, HUD, comms
 or weapon selectors. The optional environment argument supplies document/window/
