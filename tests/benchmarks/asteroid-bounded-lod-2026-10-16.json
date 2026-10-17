@@ -1,0 +1,216 @@
+{
+  "version": 1,
+  "label": "Asteroid renderer fixed-scene benchmark",
+  "recordedAt": "2026-10-17T04:59:48.055Z",
+  "timing": "requestAnimationFrame intervals and CPU submission; not direct GPU timing",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "scripts": [
+    "../vendor/pixi/pixi.min.js?v=20260912-launch1",
+    "../src/propulsion.js?v=20260920-population1",
+    "../src/combat.js?v=20260921-sensor-track1",
+    "../src/logistics.js?v=20260921-craft1",
+    "../src/formations.js?v=20260920-population1",
+    "../src/sim.js?v=20260922-cavern10",
+    "../src/population.js",
+    "../src/session.js",
+    "../src/tactical/camera.js?v=20260920-population1",
+    "../src/audio.js?v=20260920-population1",
+    "../src/hud.js?v=20260922-cavern1",
+    "../src/scene3d.js?v=20261016-bounded-lod2",
+    "../src/game.js?v=20261007-3d-geology2",
+    "../experiments/performance.js"
+  ],
+  "results": [
+    {
+      "name": "overview_shadows",
+      "seed": "ast-ceres-01",
+      "parameters": {
+        "roughness": 1,
+        "craterDepth": 1,
+        "patchiness": 0.6
+      },
+      "lighting": [
+        -0.813733,
+        -0.581238,
+        0.68
+      ],
+      "camera": {
+        "x": 0,
+        "y": 0,
+        "zoom": 0.768
+      },
+      "orbit": {
+        "yaw": 0,
+        "tilt": 0.9,
+        "height": 0
+      },
+      "surface": null,
+      "shadows": true,
+      "width": 1455,
+      "height": 1080,
+      "pixelRatio": 1.5,
+      "frames": 90,
+      "frameMs": 13.316666666666666,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.599999999998545,
+      "cpuSubmissionMs": 0.28777777817514205,
+      "setupActionMs": 0.8999999761581421,
+      "maxTransitionMs": 1.699999988079071,
+      "triangles": 125880,
+      "drawCalls": 1
+    },
+    {
+      "name": "horizon_2m_shadows",
+      "seed": "ast-ceres-01",
+      "parameters": {
+        "roughness": 1,
+        "craterDepth": 1,
+        "patchiness": 0.6
+      },
+      "lighting": [
+        -0.813733,
+        -0.581238,
+        0.68
+      ],
+      "camera": {
+        "x": -104.45889208535654,
+        "y": -129.49896161084934,
+        "zoom": 0.768
+      },
+      "orbit": {
+        "yaw": 0,
+        "tilt": 0.9,
+        "height": 195.97061333128633
+      },
+      "surface": {
+        "direction": [
+          -0.40561610125071507,
+          -0.5070201265633938,
+          0.7605301898450908
+        ],
+        "heading": [
+          -0.08207723242150407,
+          0.966308355250365,
+          0.2439497704269483
+        ],
+        "pitch": -0.06,
+        "altitudeMeters": 2.0000000000000004
+      },
+      "shadows": true,
+      "width": 1455,
+      "height": 1080,
+      "pixelRatio": 1.5,
+      "frames": 90,
+      "frameMs": 13.316666666666666,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.599999999998545,
+      "cpuSubmissionMs": 0.6633333328697416,
+      "setupActionMs": 1.2000000178813934,
+      "maxTransitionMs": 81.09999999403954,
+      "triangles": 127416,
+      "drawCalls": 1
+    },
+    {
+      "name": "horizon_2m_no_shadows",
+      "seed": "ast-ceres-01",
+      "parameters": {
+        "roughness": 1,
+        "craterDepth": 1,
+        "patchiness": 0.6
+      },
+      "lighting": [
+        -0.813733,
+        -0.581238,
+        0.68
+      ],
+      "camera": {
+        "x": -104.45889208535654,
+        "y": -129.49896161084934,
+        "zoom": 0.768
+      },
+      "orbit": {
+        "yaw": 0,
+        "tilt": 0.9,
+        "height": 195.97061333128633
+      },
+      "surface": {
+        "direction": [
+          -0.40561610125071507,
+          -0.5070201265633938,
+          0.7605301898450908
+        ],
+        "heading": [
+          -0.08207723242150407,
+          0.966308355250365,
+          0.2439497704269483
+        ],
+        "pitch": -0.06,
+        "altitudeMeters": 2.0000000000000004
+      },
+      "shadows": false,
+      "width": 1455,
+      "height": 1080,
+      "pixelRatio": 1.5,
+      "frames": 90,
+      "frameMs": 13.317777777777762,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.599999999998545,
+      "cpuSubmissionMs": 0.6177777800295088,
+      "setupActionMs": 0.30000001192092896,
+      "maxTransitionMs": 1,
+      "triangles": 127416,
+      "drawCalls": 1
+    },
+    {
+      "name": "down_12m_shadows",
+      "seed": "ast-ceres-01",
+      "parameters": {
+        "roughness": 1,
+        "craterDepth": 1,
+        "patchiness": 0.6
+      },
+      "lighting": [
+        -0.813733,
+        -0.581238,
+        0.68
+      ],
+      "camera": {
+        "x": -104.28089438884916,
+        "y": -130.28945369543814,
+        "zoom": 0.768
+      },
+      "orbit": {
+        "yaw": 0,
+        "tilt": 0.9,
+        "height": 195.44156896760092
+      },
+      "surface": {
+        "direction": [
+          -0.40561610125071507,
+          -0.5070201265633938,
+          0.7605301898450908
+        ],
+        "heading": [
+          -0.08207723242150407,
+          0.966308355250365,
+          0.2439497704269483
+        ],
+        "pitch": -1.48,
+        "altitudeMeters": 12
+      },
+      "shadows": true,
+      "width": 1455,
+      "height": 1080,
+      "pixelRatio": 1.5,
+      "frames": 90,
+      "frameMs": 13.318888888888857,
+      "p95Ms": 13.5,
+      "worstMs": 13.700000000004366,
+      "cpuSubmissionMs": 0.6122222228182687,
+      "setupActionMs": 0.30000001192092896,
+      "maxTransitionMs": 1,
+      "triangles": 127416,
+      "drawCalls": 1
+    }
+  ]
+}

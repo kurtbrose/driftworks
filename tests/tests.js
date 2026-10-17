@@ -1530,10 +1530,12 @@
     assert(Object.keys(faces).length===8,'Every tower face has a lower downward-looking pane');
   });
 
-  test('tower main egress threshold sits at the cargo deck rather than the lookout', function () {
-    var groups=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',0),v=groups.steel,threshold=false;
-    for(var i=0;i<v.length;i+=6)if(Math.abs(v[i])<1.1 && v[i+1]>3.5 && v[i+1]<4.9 && Math.abs(v[i+2]-4.8)<.001)threshold=true;
-    assert(threshold,'Main hatch threshold meets the 4.5-unit cargo deck with a shallow step');
+  test('suspended tower egress is a downward hatch above the cargo deck', function () {
+    var v=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',0).light,faces=0;
+    for(var i=0;i<v.length;i+=18){
+      if([0,6,12].every(function(k){return v[i+k]>=1.31 && v[i+k]<=4.19 && Math.abs(v[i+k+1])<=1.39 && Math.abs(v[i+k+2]-7.18)<.001;}) && v[i+5]<-.99)faces++;
+    }
+    assert(faces===2,'Downward outer airlock leaf occupies the suspended pod floor, not cargo-floor height');
   });
 
   test('door hinge barrels and actuator assemblies stay valid through both hinge stages', function () {
@@ -1558,14 +1560,31 @@
     });
   });
 
+  test('tower ceiling has one roof plane without a coplanar docking pad underside', function () {
+    var v=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',1,'').ochre,count=0;
+    for(var i=0;i<v.length;i+=18){if([2,8,14].every(function(offset){return Math.abs(v[i+offset]-13.5)<.00001;}))count++;}
+    assert(count===6,'Only the six triangles of the octagonal roof occupy z=13.5');
+    var panes=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',1,'').dark,upward=0;
+    for(var j=0;j<panes.length;j+=18)if([2,8,14].every(function(offset){return panes[j+offset]>12.5 && panes[j+offset]<13.5;}) && panes[j+5]>.5)upward++;
+    assert(upward===16,'Eight upper shoulder windows face upward for overhead visibility');
+  });
+
   test('crew interior has separate entry/control decks and an unobstructed microgravity translation opening', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     function floorAt(groups,x,y,z){var v=groups.steel;for(var i=0;i<v.length;i+=18){if(Math.abs(v[i+2]-z)>.001 || Math.abs(v[i+8]-z)>.001 || Math.abs(v[i+14]-z)>.001 || v[i+5]<.99)continue;var ax=v[i],ay=v[i+1],bx=v[i+6],by=v[i+7],cx=v[i+12],cy=v[i+13],d=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy);if(Math.abs(d)<1e-8)continue;var u=((by-cy)*(x-cx)+(cx-bx)*(y-cy))/d,w=((cy-ay)*(x-cx)+(ax-cx)*(y-cy))/d;if(u>=-.00001 && w>=-.00001 && u+w<=1.00001)return true;}return false;}
     var lower=model(1,0,false,'rampdock',1,'lower'),upper=model(1,0,false,'rampdock',1,'upper');
-    assert(floorAt(lower,0,2,4.7),'Entry vestibule has a walkable floor');
+    assert(floorAt(lower,0,2,7.35),'Suspended pod entry floor is above the cargo deck');
+    assert(floorAt(lower,0,0,4.5) && floorAt(lower,3,0,4.5),'Cargo floor continues unbroken beneath the pod');
+    assert(!floorAt(lower,0,2,4.7),'Old bottom interior floor is removed');
+    var dark=upper.dark;
+    for(var n=0;n<dark.length;n+=18){var centroid=[0,1,2].map(function(k){return (dark[n+k]+dark[n+6+k]+dark[n+12+k])/3;});assert(!(Math.abs(centroid[0])<4.2 && Math.abs(centroid[1])<3.2 && centroid[2]>4.8 && centroid[2]<7),'No pedestal walls obstruct the central cargo space');}
     assert(!floorAt(lower,0,2,10),'Lower inspection removes the upper floor');
     assert(floorAt(upper,-2,2,10),'Control room has an upper floor');
-    assert(!floorAt(upper,2.8,0,10) && !floorAt(upper,2.8,0,9),'Both upper slabs leave the stairwell clear');
+    assert(floorAt(upper,5.6,0,10) && floorAt(upper,0,4.2,10),'Bridge floor reaches the hull sill at the correct elevation');
+    assert(!floorAt(upper,5.6,4.2,10),'Faceted corner stays inside the hull');
+    assert(!floorAt(upper,2.8,0,10) && !floorAt(upper,2.8,0,7.35),'Both upper floors leave the translation well clear');
+    assert(floorAt(upper,-2,0,7.35),'Tower body has a usable middle deck');
+    assert(!floorAt(upper,-2,0,9),'Redundant shelf below the bridge is removed');
     ['','lower','upper'].forEach(function(cut){var g=model(1,0,false,'rampdock',1,cut);Object.keys(g).forEach(function(k){assert(g[k].every(Number.isFinite));});});
   });
 
@@ -1717,8 +1736,15 @@
     var reseeded=art.describe(Object.assign({},a,{id:'another-parameter-seed'}));
     assert(JSON.stringify(reseeded.craters)!==JSON.stringify(original.craters),'Changing the seed changes the impact population');
   });
+  test('Archived terrain experiments do not replace the production renderer', function () {
+    var active=window.Driftworks.scene3d,experimental=window.Driftworks.terrainExperiment;
+    assert(active!==experimental,'Loading the archive preserves the active renderer');
+    assert(typeof active.asteroidMesh==='function'&&typeof active.miningPlatformGeometry==='function');
+    assert(!active.refineSurface&&!active.rockVolume&&!active.surfaceAtlas,'Experimental terrain stays outside the production API');
+    assert(typeof experimental.refineSurface==='function','The archived study remains available');
+  });
   test('Continuous asteroid roughness is deterministic and shared with the closed field', function () {
-    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
+    var scene=window.Driftworks.terrainExperiment,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
     var points=[[.4,.2,.68],[-.6,.3,.45],[.8,-.2,.1]];
     scene.setStudyParameters(a,{roughness:0});
     var smooth=points.map(function(p){return scene.rockField(a,p);});
@@ -1731,6 +1757,17 @@
     });
     scene.setStudyParameters(a,{});
     assert(JSON.stringify(a)===before,'Artwork does not change saves');
+  });
+  test('Close terrain refinement has a fixed additive budget', function () {
+    var scene=window.Driftworks.terrainExperiment,a=createFreshWorld().asteroids[0];
+    var base=scene.asteroidMesh(a),center=Array.from(base.slice(0,3));
+    var refined=scene.refineSurface(base,a,center);
+    assert(refined.length>=base.length);
+    assert(refined.length/18<=base.length/18+1536,'At most 512 splits add three triangles each');
+    assert(refined.every(Number.isFinite));
+    var remote=scene.refineSurface(base,a,[10,10,10]);
+    assert(remote.length===base.length,'Remote triangles are copied without subdivision');
+    assert(remote.every(function(v,i){return v===base[i];}),'Remote geometry is unchanged');
   });
   test('Isolated rock patch is deterministic, bounded, and has real finite faces', function () {
     var build=window.Driftworks.terrainLab.createModel,a=build('rocks',1729,32),b=build('rocks',1729,32),other=build('rocks',1730,32);
@@ -1745,7 +1782,7 @@
     assert(build('block',1729,16).triangles===16*16*2+10,'Control fixture is a plane and five real block faces');
   });
   test('Terrain shadow coordinates preserve light-ray occlusion across camera LODs', function () {
-    var frame=window.Driftworks.scene3d.terrainShadowFrame;
+    var frame=window.Driftworks.terrainExperiment.terrainShadowFrame;
     function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
     [0,.7,2.9].forEach(function(angle){
       var center=[.2,-.4,.7],f=frame(angle,center);
@@ -1759,7 +1796,7 @@
     });
   });
   test('Crater floors suppress rocky relief without affecting remote terrain', function () {
-    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
+    var scene=window.Driftworks.terrainExperiment,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
     var impacts=scene.impactsFor(a);
     assert(impacts.length>0);
     impacts.slice(0,12).forEach(function(impact){
@@ -1778,9 +1815,9 @@
     assert(atlas.bytes.some(function(v,i){return i%4===3&&v===0;}),'Exterior stays fully rocky');
   });
   test('Cellular rock volume is cached and its slice gutters wrap without seams', function () {
-    var volume=window.Driftworks.scene3d.rockVolume(),data=volume.bytes;
+    var volume=window.Driftworks.terrainExperiment.rockVolume(),data=volume.bytes;
     assert(volume.width===272&&volume.height===136&&data.length===272*136*4);
-    assert(window.Driftworks.scene3d.rockVolume()===volume,'One shared volume, not regenerated per asteroid or frame');
+    assert(window.Driftworks.terrainExperiment.rockVolume()===volume,'One shared volume, not regenerated per asteroid or frame');
     for(var z=0;z<32;z++)for(var y=0;y<34;y++)for(var channel=0;channel<4;channel++){
       var row=((z%8)*34+(Math.floor(z/8)*34+y)*volume.width)*4;
       assert(data[row+channel]===data[row+32*4+channel],'Left gutter wraps the last interior sample');
@@ -1792,7 +1829,7 @@
     assert(data.some(function(value,index){return index%4===3&&value>240;}),'Fracture field has rock interiors');
   });
   test('Cached asteroid surface shading has six padded deterministic cube faces', function () {
-    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
+    var scene=window.Driftworks.terrainExperiment,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
     var atlas=scene.surfaceAtlas(a,8),again=scene.surfaceAtlas(a,8);
     assert(atlas.width===60&&atlas.height===10&&atlas.bytes.length===60*10*4);
     assert(atlas.bytes.every(function(v,i){return v===again.bytes[i];}),'Rebuilding preserves the shading field');
@@ -1802,7 +1839,7 @@
     assert(JSON.stringify(a)===before,'Baking does not modify world data');
   });
   test('Displaced asteroid meshes preserve finite unit normals', function () {
-    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0];
+    var scene=window.Driftworks.terrainExperiment,a=createFreshWorld().asteroids[0];
     scene.setStudyParameters(a,{roughness:0});var smooth=scene.asteroidMesh(a,12);
     scene.setStudyParameters(a,{roughness:1});var rocky=scene.asteroidMesh(a,12);
     assert(rocky.length>0&&smooth.length>0);

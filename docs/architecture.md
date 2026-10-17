@@ -67,12 +67,15 @@ The 88-cell marching-tetrahedra mesh stores broad surface normals on exterior
 vertices and real geometric normals on exposed interior faces. The shader adds
 crater gradients once, preserving fine impacts below mesh resolution without
 doubling slopes already represented in the mesh. The original composition
-palette uses smooth three-axis blending. Fine detail uses the cached cellular field described under Viewer asteroid
-surface below. Rotated octave frames and non-integer frequency steps break
-lattice alignment. A slow seeded sinusoidal domain warp bends repeating tiles;
-its analytic Jacobian transforms shading gradients, and a conservative footprint
-expansion filters the added stretch. This uses the same number of volume reads.
-Viewer wheel zoom focuses on
+palette uses smooth three-axis blending. Fine surface bumps use a seeded,
+filtered fourteen-octave solid 3D noise field evaluated directly at the deformed
+physical body position. Orthogonal octave rotations avoid repeated lattice-axis
+patterns. There is no normalized-sphere or planar texture domain to stretch
+under broad deformation; analytic trilinear-noise derivatives in those same physical coordinates
+produce a world-metric gradient projected onto the actual surface tangent plane.
+Per-fragment depth sets the pixel footprint; unresolved layers fade out and
+terminate the loop before doing further noise work. One analytic evaluation per
+layer replaces six finite-difference evaluations. Viewer wheel zoom focuses on
 the picked surface and pauses orbit, allowing close inspection without entering
 the body. Exterior and cut surfaces share this noise field, with no UV seam or pole mapping. Lighting is world-fixed diffuse plus a
 small ambient fill, with crater occlusion reducing that fill. A broad-normal
@@ -355,60 +358,11 @@ See [population](population.md) for clock, event, transport, and save contracts.
 ### Viewer asteroid surface
 
 Study views draw the base asteroid terrain and its procedural surface shading.
-Four body-space cellular octaves (starting at 4 cells per normalized body unit,
-with frequency multiplied by 3.73 and amplitude multiplied by 0.45) displace the shared closed terrain field after crater
-relief. They sample radial direction rather than radius to keep a stable shell.
-The CPU interpolates a cached 32-cubed height field; `rockVolume()` packs the same
-periodic four-cell field into 32 padded RGBA slices for WebGL 1 (272 by 136).
-RGB stores the derivative of the gap between the nearest two squared cellular
-distances; alpha stores the bounded gap. This produces angular faces and seams
-rather than differentiated value-noise ridges. Cellular peaks are capped into
-seed-varied slab heights; cached gradients include the cap derivative (zero on
-flat faces), encoded at 15.875 byte steps per slope unit. Fine octave strength
-decays by 0.45, reducing the uniform tiny-bump covering while retaining fissures. Meshing and picking share this
-field. Exterior mesh normals describe only the broad shell; a cached, padded six-face
-RGBA8 atlas supplies full exterior normals per fragment, including crater and coarse terrain relief. This avoids
-interpolating unresolved roughness across large triangles. `surfaceAtlas(a, n?)`
-returns JSON-independent render bytes with six `(n+2)`-square faces (default 256
-interior samples), encoding unit normals as RGB (128 + component * 127) and crater-floor suppression
-in alpha. `craterRoughnessAt` returns 0.06 through 110% of a crater radius, fading
-to 1 at 145%. Geometry and baked normals multiply cellular relief by this mask;
-the fragment shader attenuates fine normals and crevice shading from the cached
-alpha with no added texture reads or per-pixel impact loop. Alpha also supplies
-a modest bowl ambient-occlusion term. In study surface-camera
-views, nearby cached triangles receive five subdivision levels projected onto
-the same field, fading to the cached mesh at the patch edge. The patch is cached
-in body-space camera bins; ordinary orbit views keep the base mesh. Fragment normal detail
-starts at frequency 80 with five cellular octaves (3.73-fold frequency steps) and fades each octave by its projected footprint, including
-grazing incidence; unresolved octaves stop evaluation. Crater and roughness
-budgets remain independent. The surface patch has a bounded refinement budget.
-The orbit viewer provides whole-body, 8 m slope, 2 m horizon, and 12 m downward
-presets over one surface location; heights use physical meters.
 Separate surface boulder meshes are omitted to keep close flight and walking
 views free of tile generation, uploads, and additional rock draw calls.
 
-The asteroid viewer reuses `flightPerformance` for frame/p95/CPU timings and the
-existing flat/boxes/empty/resolution diagnostics. It defaults to a selectable 60 FPS cap (30 or uncapped also available),
-redraws static views only on input, and suspends rendering in hidden tabs. Continuous
-measurement opts into repeated draws. CPU submission time is not a GPU timer.
-
-Close study views (orbit or surface camera) refine the shared terrain field into
-real geometry, with memoized edge projection and full-field vertex normals. Fine
-fragment detail is restrained grain; there is no painted cellular crack tint.
-The renderer keeps the base GPU mesh and a bounded refined mesh separately.
-Two lazy 1024-square RGBA8 depth maps cache world-fixed directional cast shadows:
-a whole-body map from the base mesh and a cropped map from the detailed mesh.
-Packed depth uses dithering disabled and a depth renderbuffer; four comparisons
-filter shadows. Where supported, receiver-plane derivatives correct each sample
-for surface slope; a conservative bias is used without derivative support.
-Only direct illumination and material highlights are shadowed, leaving ambient
-fill. The cropped map survives switching to coarse visible geometry, keeping its
-shadow positions anchored in asteroid coordinates. Maps rebuild on mesh/visual
-changes or a light-frame rotation of more than 0.01 radians, not camera motion
-within a cached detail bin. Diagnostic draw/triangle counters include rebuild
-passes; steady frames reuse the maps. The viewer's Mesh cast shadows checkbox
-isolates shadow contribution. Existing composition colors supply the material
-variation and highlight strength; dark crack bands do not substitute for occlusion.
+The later surface-detail and shadow experiments are retained separately; see
+[Archived asteroid surface experiments](#archived-asteroid-surface-experiments).
 
 ### Mothership 3D artwork
 
@@ -877,29 +831,54 @@ Cargo deck top (z=4.5) and belly (z=4.15) are separate surfaces with closed rim 
 
 The sorting/transfer tray top is below deck at z=4.3; the tower core and cargo-load undersides penetrate their support surfaces slightly instead of ending exactly on them. The depth regression checks smaller overlapping faces too, not just full-width floor/chassis faces.
 
-### Isolated terrain study
+### Archived asteroid surface experiments
 
-`tests/terrain-lab.html` keeps the rock-shape experiment outside the asteroid generator.
-Seed 1729, meter coordinates, fixed sun elevation 25 degrees, and fixed cameras
-(including 2 m altitude and 20/200 m viewing distances) make comparisons repeatable.
-Block-on-plane, cellular-height-field, and structured-rock fixtures can be inspected
-with plain geometric lighting, face normals, stored normals, wireframe, or materials
-and actual cast shadows. Freeze disables seed, resolution, and lighting changes;
-camera motion never regenerates the patch. Rock base/top boundaries, cap centers,
-and materials are retained as formation data alongside the derived triangle mesh.
-Future simplified geometry and relief approximations should derive from this same
-source; this prototype does not yet implement representation transitions or asteroid LOD.
+The production asteroid renderer and `tests/asteroid-orbit.html` use the terrain
+from commit `b251793` ("breaking up bottleneck and remove boulders"). Later mining
+platform artwork and inspection features are preserved. The active surface uses
+fixed-resolution crater geometry and the earlier material shader: no separate
+boulders, close-camera terrain refinement, cellular rock volume, or cast-shadow
+passes from the abandoned experiment.
 
-The original asteroid viewer also exposes geometry/normal/wireframe diagnostics
-and a mesh-freeze switch. Its fixed benchmark records the seed, light, camera,
-viewport, frame times, CPU submission cost, triangle counts, and transition stalls.
-`tests/benchmarks/asteroid-baseline-2026-10-16.json` was captured before adding
-these diagnostics: approximately 13.3 ms steady frames, but a 7863 ms cold
-transition to the 2 m view and 496416 triangles. These are session observations,
-not portable performance thresholds or GPU timings. The isolated laboratory
-also records GPU time when EXT_disjoint_timer_query is available, rejecting
-disjoint samples. Benchmarks warm up 30 frames and sample 90 per fixed case.
-Use JSON exports and visual inspection together; the headless suite checks
-determinism, finite normals and bounded geometry, not browser rendering quality.
+The experiment remains available independently:
+
+- [Archived asteroid surface viewer](../tests/asteroid-surface-experiment.html):
+  procedural relief, close refinement, shadows, fixed camera poses, diagnostic
+  normals/wireframe, mesh freeze, and the repeatable benchmark.
+- [Isolated rock laboratory](../tests/terrain-lab.html): block/plane shadow control,
+  cellular comparison, and a deterministic structured rock patch; seed 1729,
+  fixed 25-degree sun, and 2 m altitude plus 20/200 m distance cameras.
+- `tests/fixtures/asteroid-surface-scene3d.js`: frozen experimental renderer.
+  It exports `Driftworks.terrainExperiment`; ordinary application pages never
+  load it. The archived viewer explicitly selects that renderer. Experimental
+  regression cases run against its separate API, not the production renderer.
+- [Original baseline](../tests/benchmarks/asteroid-baseline-2026-10-16.json),
+  [bounded refinement run](../tests/benchmarks/asteroid-bounded-lod-2026-10-16.json),
+  and [patch measurements](../tests/benchmarks/terrain-lab-2026-10-16.json).
+
+The close surface was rejected for its regular leather-like appearance, weak
+geometric correspondence to shading, shadow artifacts, and excessive generation
+and rendering costs. The recorded 2 m entry stall improved from 7863 ms to 81 ms
+with a 1536-added-triangle cap; the capped case had 127416 visible triangles.
+These are session measurements, not portable GPU performance guarantees.
+
+If revisited, start with the isolated patch and real geometric occlusion. Keep
+one deterministic formation definition for geometry, normals, materials, and
+future distant approximations. Prove shapes and budgets before integration;
+parallax relief and representation transitions remain unimplemented candidates.
 
 Rampdock crew interiors are architectural blockouts only: lower entry floor z=4.7 with vestibule, inner doorway, staging and utility niche; upper control floor z=10 with a shared opening through both supporting slabs. The microgravity circulation well stays open: slender guide rails, staggered individual grab handles, entry/staging grips and bridge arrival grips provide places to stop and redirect. A separate handhold route reaches the roof hatch; there are no stairs or ladder rungs. Optional sixth geometry argument `interiorCut` (`lower`/`upper`) removes the cabin shell/roof for inspection; lower mode sections wall height and removes upper slabs and sections the guide rails. No furniture, life-support systems, navigation or interior gameplay is added.
+
+The mining study has a study-only first-person mode in `tests/mining-study-fps.js`, using vendored Three.js and the same rig triangles. It hides the asteroid and pauses the four-view renderer while active. WASD deck movement and toggleable direct microgravity flight use axis-separated swept rays at three body heights; this is inspection collision, not a simulation character controller. E operates two nearby sliding airlock panels. Entry/bridge/roof starting points support quick scale inspection. Escape releases pointer lock and Back to orbit restores the study. No persistent world state is added.
+
+The tower docking pad has a top and four side faces, sharing the cabin roof as its underside. Do not add a box bottom coplanar with the roof at z=13.5: it causes ceiling depth fighting in first person.
+
+The bridge floor at z=10 follows the faceted window waist (0.96 times cabinOutline), including its chamfered corners; both supporting slabs retain the translation opening. The upper sloped shoulder carries a third viewport band for overhead visibility, with transparent panes and mullions in first-person inspection.
+
+
+
+First-person mining inspection includes two frozen 1.8 m astronaut references on each occupied interior floor, plus the cargo deck and roof. At the locked 36 m hull calibration (1 model unit = 1.125 m), the interior floors at z=4.7 and z=10 are 5.96 m apart; the z=9 slab is a supporting layer, not a third occupied deck.
+
+The tower now has two occupied decks in its body (z=4.7 and z=7.35), with the glazed bridge at z=10: about 3 m between floors. The former supporting slab at z=9 is removed. The middle deck follows the rectangular tower body, shares the translation well, and has two astronaut references and a first-person starting point. Lower vestibule partitions terminate below its ceiling. This supersedes the previous two-level spacing study.
+
+The current rampdock layout is a suspended two-level pod: entry/work floor z=7.35, bridge z=10, uninterrupted cargo floor z=4.5 beneath. The former z=4.7 crew floor, pedestal walls, side entry and mock cargo blocks are removed. Eight cage ribs meet a structural belt at z=8.8. The entry well contains a downward-facing sliding hatch at z=7.24 and a side pressure door, both operable in first person. Handhold guides continue to the cargo deck; no stairs or support columns cross that space. Interior lower cutaway now inspects the suspended entry level. This supersedes the earlier three-level body study.

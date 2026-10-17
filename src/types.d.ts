@@ -285,16 +285,12 @@ export interface DriftworksNamespace {
     unproject: (point: Vec2, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }, z?: number) => Vec2 | null;
     view: (camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number }) => { right: [number, number, number]; up: [number, number, number]; back: [number, number, number]; distance: number; focal: number };
     rockField: (asteroid: Asteroid, point: [number, number, number]) => number;
-    terrainShadowFrame: (rotation: number, center: [number, number, number]) => {center:number[];right:[number,number,number];up:[number,number,number];light:[number,number,number];span:number;depthSpan:number};
-    craterRoughnessAt: (asteroid: Asteroid, point: [number, number, number]) => number;
-    rockVolume: () => {width: number; height: number; bytes: Uint8Array};
-    surfaceAtlas: (asteroid: Asteroid, resolution?: number) => {width: number; height: number; bytes: Uint8Array};
     asteroidMesh: (asteroid: Asteroid, resolution?: number) => Float32Array;
     pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
     inspectionHeight: (world: World) => number;
     create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean}) => {
-      setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean; shadows?: boolean; view?:string; freezeGeometry?:boolean}) => void;
+      setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean}) => void;
       getRenderStats: () => {drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyActors: (batches: {vertices: Float32Array; color: [number,number,number]; opacity?: number}[]) => void;
       setStudyEffects: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;

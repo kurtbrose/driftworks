@@ -124,21 +124,6 @@
     });
     return h;
   }
-  /** Crater floors suppress rock relief, fading continuously through the rim.
-   * Uses the existing impact bins during geometry/bake work, never per pixel.
-   * @param {Asteroid} asteroid @param {V3} point */
-  function craterRoughnessAt(asteroid,point) {
-    impactsFor(asteroid);
-    var key=Math.floor(point[0]/.15)+','+Math.floor(point[1]/.15)+','+Math.floor(point[2]/.15);
-    var candidates=impacts[asteroid.id].buckets[key] || [],suppression=0;
-    for(var i=0;i<candidates.length;i++){
-      var impact=candidates[i];
-      if(Math.hypot(point[0]-impact.center[0],point[1]-impact.center[1],point[2]-impact.center[2])>impact.radius*1.6)continue;
-      var q=craterDistance(impact,point),t=Math.max(0,Math.min(1,(q-1.1)/.35));
-      suppression=Math.max(suppression,1-t*t*(3-2*t));
-    }
-    return 1-.94*suppression;
-  }
   /** RGBA8, five texels per impact: center, local normal, radius, depth, rim. */
   /** @param {Asteroid} asteroid */
   function impactBytes(asteroid) {
@@ -182,39 +167,7 @@
     var gx = p[0]/(r*r*length)+dr*p[1]/(r*r*r*length);
     var gy = p[1]/(r*r*length)-dr*p[0]/(r*r*r*length);
     var gz = p[2]/(.78*.78*length);
-    return base - (physicalRelief(asteroid,p)+terrainRelief(asteroid,p)*craterRoughnessAt(asteroid,p))*Math.hypot(gx,gy,gz);
-  }
-  /** Continuous body-space terrain. Coarse octaves fit the cached mesh;
-   * nearby triangles resolve additional octaves; the finest detail uses filtered normals.
-   * @param {Asteroid} asteroid @param {V3} point @param {number} [octaves] */
-  function terrainRelief(asteroid, point, octaves) {
-    var visual = visualFor(asteroid), seed = visual.seed;
-    var radial=Math.hypot.apply(null,point)||1;
-    point=/** @type {V3} */(point.map(function(v){return v/radial;}));
-    // A slow, seeded domain warp bends the repeated cellular tile without
-    // adding any volume lookups. Octaves then rotate in unrelated frames.
-    var px=point[0],py=point[1],pz=point[2],phase0=seed*.17;
-    px+=.018*Math.sin(point[1]*7.13+point[2]*3.17+phase0);
-    py+=.018*Math.sin(point[2]*6.41+point[0]*2.73+phase0*1.37);
-    pz+=.018*Math.sin(point[0]*7.97+point[1]*2.19+phase0*.71);
-    point=[.36*px-.8*py+.48*pz,.48*px+.6*py+.64*pz,-.8*px+.6*pz];
-    rockVolume();
-    var height=0,amplitude=.026,frequency=4;
-    for(var octave=0;octave<(octaves || 4);octave++){
-      var phase=seed*.17+octave*.73;
-      var x=((point[0]*frequency+phase)%4+4)%4*8-.5,y=((point[1]*frequency+phase*1.37+11.8)%4+4)%4*8-.5,z=((point[2]*frequency+phase*.71+23.4)%4+4)%4*8-.5;
-      var ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z),tx=x-ix,ty=y-iy,tz=z-iz;
-      ix=(ix+32)%32;iy=(iy+32)%32;iz=(iz+32)%32;
-      var nx=(ix+1)%32,ny=(iy+1)%32,nz=(iz+1)%32;
-      var a=iy*32+iz*1024,b=ny*32+iz*1024,c=iy*32+nz*1024,d=ny*32+nz*1024,h=fractureHeights;
-      var lo=(h[ix+a]*(1-tx)+h[nx+a]*tx)*(1-ty)+(h[ix+b]*(1-tx)+h[nx+b]*tx)*ty;
-      var hi=(h[ix+c]*(1-tx)+h[nx+c]*tx)*(1-ty)+(h[ix+d]*(1-tx)+h[nx+d]*tx)*ty;
-      height+=(lo*(1-tz)+hi*tz-.5)*amplitude;
-      frequency*=3.73;amplitude*=.45;
-      var rx=point[0],ry=point[1],rz=point[2];
-      point=[.36*rx-.8*ry+.48*rz,.48*rx+.6*ry+.64*rz,-.8*rx+.6*rz];
-    }
-    return height*visual.surfaceProfile.roughnessAmp;
+    return base - physicalRelief(asteroid,p)*Math.hypot(gx,gy,gz);
   }
   /** Surface attachments intersect the complete closed shell. */
   /** @param {Asteroid} asteroid @param {number} x @param {number} y @param {boolean} [lower] */
@@ -414,111 +367,6 @@
     return new Float32Array(output);
   }
 
-  /** Object-space light camera for cached cast shadows from the actual mesh.
-   * @param {number} rotation @param {V3} center */
-  function terrainShadowFrame(rotation,center){
-    var c=Math.cos(rotation),s=Math.sin(rotation);
-    /** @type {V3} */ var light=[c*-.813733+s*-.581238,-s*-.813733+c*-.581238,.68];
-    var length=Math.hypot.apply(null,light);light=/** @type {V3} */(light.map(function(v){return v/length;}));
-    var r=Math.hypot(light[0],light[1]);
-    /** @type {V3} */ var right=[-light[1]/r,light[0]/r,0];
-    /** @type {V3} */ var up=[-light[2]*right[1],light[2]*right[0],light[0]*right[1]-light[1]*right[0]];
-    return {center:center.slice(),right:right,up:up,light:light,span:.15,depthSpan:.25};
-  }
-
-  /** Periodic cellular fracture field, packed as 32 padded volume slices.
-   * Gradients of the nearest two squared distances form planar rock faces,
-   * rather than the rounded ridges of differentiated value noise. */
-  /** @type {{width:number,height:number,bytes:Uint8Array} | null} */
-  var fractureCache=null;
-  var fractureHeights=new Float32Array(32*32*32);
-  function rockVolume() {
-    if(fractureCache)return fractureCache;
-    var width=272,height=136,bytes=new Uint8Array(width*height*4);
-    /** @param {number} x @param {number} y @param {number} z @param {number} salt */
-    function jitter(x,y,z,salt){var h=Math.imul((x%4+4)%4,374761393)^Math.imul((y%4+4)%4,668265263)^Math.imul((z%4+4)%4,1274126177)^salt;h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967295;}
-    for(var z=0;z<32;z++)for(var y=-1;y<=32;y++)for(var x=-1;x<=32;x++){
-      var px=(x+.5)/8,py=(y+.5)/8,pz=(z+.5)/8,ix=Math.floor(px),iy=Math.floor(py),iz=Math.floor(pz);
-      var first=Infinity,second=Infinity;
-      var a=[0,0,0],b=[0,0,0];
-      for(var dz=-1;dz<=1;dz++)for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){
-        var cx=ix+dx,cy=iy+dy,cz=iz+dz;
-        var d=[px-cx-.1-jitter(cx,cy,cz,97)*.8,py-cy-.1-jitter(cx,cy,cz,193)*.8,pz-cz-.1-jitter(cx,cy,cz,389)*.8];
-        var q=d[0]*d[0]+d[1]*d[1]+d[2]*d[2];
-        if(q<first){second=first;b=a;first=q;a=d;}else if(q<second){second=q;b=d;}
-      }
-      var offset=(((z%8)*34+x+1)+(Math.floor(z/8)*34+y+1)*width)*4;
-      // Truncate the cellular peaks into uneven broken slabs. The normal must
-      // be the derivative of this SAME capped height, including its flat tops.
-      var gap=second-first,cap=.45;
-      var slab=.65+.35*jitter(Math.floor(px-a[0]),Math.floor(py-a[1]),Math.floor(pz-a[2]),811);
-      var slope=gap<cap?slab/cap:0;
-      for(var axis=0;axis<3;axis++)bytes[offset+axis]=Math.round(Math.max(0,Math.min(255,128+2*(b[axis]-a[axis])*slope*15.875)));
-      bytes[offset+3]=Math.round(Math.min(1,gap/cap)*slab*255);
-    }
-    for(var iz=0;iz<32;iz++)for(var iy=0;iy<32;iy++)for(var ix=0;ix<32;ix++)fractureHeights[ix+iy*32+iz*1024]=bytes[(((iz%8)*34+ix+1)+(Math.floor(iz/8)*34+iy+1)*width)*4+3]/255;
-    return fractureCache={width:width,height:height,bytes:bytes};
-  }
-
-  /** Cached body-space crater/coarse-relief shading, six padded cube faces.
-   * @param {Asteroid} asteroid @param {number} [resolution] */
-  function surfaceAtlas(asteroid,resolution) {
-    resolution=resolution || 256;
-      var size=resolution+2,width=size*6,bytes=new Uint8Array(width*size*4),e=.001;
-      /** @param {V3} p */
-      function height(p){return outerField(asteroid,p,true)-physicalRelief(asteroid,p)-terrainRelief(asteroid,p,3)*craterRoughnessAt(asteroid,p);}
-      for(var face=0;face<6;face++)for(var y=0;y<size;y++)for(var x=0;x<size;x++){
-        var u=(x-1)/(resolution-1)*2-1,v=(y-1)/(resolution-1)*2-1;
-        /** @type {V3} */ var d=face<2?[face===0?1:-1,u,v]:face<4?[u,face===2?1:-1,v]:[u,v,face===4?1:-1];
-        var length=Math.hypot.apply(null,d);d=/** @type {V3} */(d.map(function(value){return value/length;}));
-        var point=broadPoint(asteroid,d),offset=((face*size+x)+y*width)*4;
-        /** @type {number[]} */ var gradient=[];
-        for(var axis=0;axis<3;axis++){
-          var a=/** @type {V3} */(point.slice()),b=/** @type {V3} */(point.slice());a[axis]+=e;b[axis]-=e;
-          gradient.push((height(a)-height(b))/(2*e));
-        }
-        var magnitude=Math.hypot.apply(null,gradient)||1;
-        for(var channel=0;channel<3;channel++)bytes[offset+channel]=Math.round(128+gradient[channel]/magnitude*127);
-        bytes[offset+3]=Math.round((1-craterRoughnessAt(asteroid,point))/.94*255);
-      }
-    return {width:width,height:size,bytes:bytes};
-  }
-
-  /** Bounded close-camera tessellation of the existing continuous terrain.
-   * The outer edge remains on the cached triangles; only the interior projects
-   * onto the complete field. No separate rock entities or random LOD seeds.
-   * @param {Float32Array} base @param {Asteroid} asteroid @param {V3} center */
-  function refineSurface(base, asteroid, center) {
-    /** @type {number[]} */ var output=[];
-    /** @type {Map<string,number[]>} */ var projected=new Map();
-    /** @param {number[]} a @param {number[]} b */
-    function midpoint(a,b) {
-      var p=a.map(function(v,i){return (v+b[i])*.5;});
-      var key=p.slice(0,3).map(function(v){return v.toFixed(8);}).join(","),cached=projected.get(key);if(cached)return cached;
-      var distance=Math.hypot(p[0]-center[0],p[1]-center[1],p[2]-center[2]);
-      var weight=Math.max(0,Math.min(1,(.08-distance)/.025));weight*=weight*(3-2*weight);
-      if(weight>0){
-        var frame=surfaceFrame(asteroid,/** @type {V3} */ (p.slice(0,3)));
-        for(var i=0;i<3;i++)p[i]+=(frame.point[i]-p[i])*weight;
-        var e=.00008;
-        /** @param {number} axis */
-        function fieldDifference(axis){var a=/** @type {V3} */(p.slice(0,3)),b=/** @type {V3} */(p.slice(0,3));a[axis]+=e;b[axis]-=e;return rockField(asteroid,a)-rockField(asteroid,b);}
-        var n=[fieldDifference(0),fieldDifference(1),fieldDifference(2)],length=Math.hypot.apply(null,n)||1;
-        for(var j=0;j<3;j++)p[j+3]=n[j]/length;
-      }
-      projected.set(key,p);return p;
-    }
-    /** @param {number[]} a @param {number[]} b @param {number[]} c @param {number} depth */
-    function triangle(a,b,c,depth){
-      var distance=Math.min(Math.hypot(a[0]-center[0],a[1]-center[1],a[2]-center[2]),Math.hypot(b[0]-center[0],b[1]-center[1],b[2]-center[2]),Math.hypot(c[0]-center[0],c[1]-center[1],c[2]-center[2]));
-      if(depth===0||distance>.10){output.push.apply(output,a.concat(b,c));return;}
-      var ab=midpoint(a,b),bc=midpoint(b,c),ca=midpoint(c,a);
-      triangle(a,ab,ca,depth-1);triangle(ab,b,bc,depth-1);triangle(ca,bc,c,depth-1);triangle(ab,bc,ca,depth-1);
-    }
-    for(var i=0;i<base.length;i+=18){var a=Array.from(base.subarray(i,i+6)),b=Array.from(base.subarray(i+6,i+12)),c=Array.from(base.subarray(i+12,i+18));triangle(midpoint(a,a),midpoint(b,b),midpoint(c,c),5);}
-    return new Float32Array(output);
-  }
-
   /** @returns {Float32Array} */
   function boxMesh() {
     /** @type {number[]} */ var data = [];
@@ -668,7 +516,11 @@
           link('dark',[a[0],a[1],3.7],[a[0],a[1],8.4],.31,.35);
           link('dark',[a[0],a[1],8.4],[b[0],b[1],8.4],.245,.285);
           link('dark',[a[0],a[1],4.5],[b[0],b[1],4.5],.31,.38);
-          link('dark',[a[0],a[1],8.4],[innerA[0],innerA[1],8.4],.19,.23);
+          // Each leg-root rib terminates at the suspended pod's structural belt.
+          var seatScale=Math.min(4.45/Math.max(.001,Math.abs(a[0])),3.45/Math.max(.001,Math.abs(a[1])));
+          var seat=/** @type {V3} */ ([a[0]*seatScale,a[1]*seatScale,8.8]);
+          link('dark',[a[0],a[1],8.4],seat,.23,.30);
+          block('dark',seat,[.38,.38,.30]);
         } else {
           var innerI=/** @type {V3} */ ([-1+(p[0]+1)*.48,p[1]*.48,8]);
           var q=perimeter[j],innerJ=/** @type {V3} */ ([-1+(q[0]+1)*.48,q[1]*.48,8]);
@@ -716,6 +568,7 @@
             }
             viewport(waistA,waistB,sillB,sillA);
             viewport(sillA,sillB,browB,browA);
+            viewport(browA,browB,cabinRoof[j],cabinRoof[i]);
           }else{
             plate('ochre',[cabinBase[i],cabinBase[j],cabinWall[j],cabinWall[i]]);
             plate('ochre',[cabinWall[i],cabinWall[j],cabinRoof[j],cabinRoof[i]]);
@@ -724,7 +577,10 @@
         if(!rampdock || !interiorCut)plate('ochre',cabinRoof);
         if(rampdock && !interiorCut) {
           // Shuttle roof interface: a broad marked pad around a sealed octagonal airlock.
-          block('ochre',[0,0,13.62],[4.45,3.15,.12]);
+          // The cabin roof is the pad's underside: do not duplicate that plane.
+          var padCorners=/** @type {V3[]} */ ([[-4.45,-3.15,13.74],[4.45,-3.15,13.74],[4.45,3.15,13.74],[-4.45,3.15,13.74]]);
+          plate('ochre',padCorners);
+          padCorners.forEach(function(p,i){var q=padCorners[(i+1)%4];plate('ochre',[[p[0],p[1],13.5],[q[0],q[1],13.5],q,p]);});
           [-1,1].forEach(function(side){
             block('light',[0,side*2.85,13.77],[3.65,.13,.03]);
             block('light',[side*4.05,0,13.77],[.13,2.45,.03]);
@@ -754,39 +610,56 @@
             block('dark',[0,0,6.525],[4.6,3.6,2.175]);
             block('steel',[0,0,8.7],[6.3,4.8,.3]);
           }else{
-            // Hollow lower crew core, with a real doorway from the cargo deck.
-            var plan=interiorCut==='lower',wallTop=plan?5.9:8.7;
-            block('steel',[0,0,4.61],[4.3,3.3,.09]);
+            // Two-level pod hangs above an uninterrupted cargo deck.
+            var plan=interiorCut==='lower',wallTop=plan?8.55:9.78,wallBottom=7.13;
             [-1,1].forEach(function(side){
-              block('dark',[side*4.45,0,(4.5+wallTop)/2],[.15,3.6,(wallTop-4.5)/2]);
-              block('dark',[side*2.75,3.45,(4.5+wallTop)/2],[1.85,.15,(wallTop-4.5)/2]);
+              block('dark',[side*4.45,0,(wallBottom+wallTop)/2],[.15,3.6,(wallTop-wallBottom)/2]);
+              block('dark',[0,side*3.45,(wallBottom+wallTop)/2],[4.3,.15,(wallTop-wallBottom)/2]);
+              link('dark',[-4.45,side*3.45,8.8],[4.45,side*3.45,8.8],.16,.24);
+              link('dark',[side*4.45,-3.45,8.8],[side*4.45,3.45,8.8],.16,.24);
             });
-            block('dark',[0,-3.45,(4.5+wallTop)/2],[4.3,.15,(wallTop-4.5)/2]);
-            if(!plan)block('dark',[0,3.45,7.7],[.9,.15,1]);
-            // Vestibule: outer door -> enclosed staging pocket -> inner pressure opening.
-            var partitionTop=plan?5.9:7.5;
+            // Downward airlock in the translation well, with a side pressure door.
+            var lockTop=plan?8.55:9.78;
             [-1,1].forEach(function(side){
-              block('dark',[side*1.25,2.3,(4.7+partitionTop)/2],[.10,1.1,(partitionTop-4.7)/2]);
-              block('dark',[side*.975,1.1,(4.7+partitionTop)/2],[.275,.10,(partitionTop-4.7)/2]);
+              block('steel',[2.75,side*1.5,(7.35+lockTop)/2],[1.45,.10,(lockTop-7.35)/2]);
+              block('steel',[1.2,side*1.05,(7.35+lockTop)/2],[.10,.35,(lockTop-7.35)/2]);
             });
-            if(!plan)block('dark',[0,1.1,7.3],[.7,.10,.2]);
-            // A simple utility niche beside the open preparation area.
-            block('dark',[-2.3,-2.35,(4.7+partitionTop)/2],[.10,.95,(partitionTop-4.7)/2]);
-            block('dark',[-3.25,-1.4,(4.7+partitionTop)/2],[1.05,.10,(partitionTop-4.7)/2]);
+            block('steel',[4.25,0,(7.35+lockTop)/2],[.05,1.4,(lockTop-7.35)/2]);
+            if(!plan)block('steel',[1.2,0,9.64],[.10,.7,.14]);
+            // Static hatch and inner door are replaced by operable leaves in first person.
+            block('light',[2.75,0,7.24],[1.43,1.38,.06]);
+            if(!plan)block('light',[1.2,0,8.43],[.06,.68,1.05]);
             /** Floor/ceiling slabs share a clear microgravity translation opening.
-             * @param {number} z @param {number} halfX @param {number} halfY @param {number} thickness
+             * @param {number} z @param {number} scale @param {number} thickness
              */
-            function ringDeck(z,halfX,halfY,thickness){
-              block('steel',[(-halfX+1.3)/2,0,z-thickness/2],[(halfX+1.3)/2,halfY,thickness/2]);
-              block('steel',[(4.2+halfX)/2,0,z-thickness/2],[(halfX-4.2)/2,halfY,thickness/2]);
-              [-1,1].forEach(function(side){block('steel',[2.75,side*(1.4+halfY)/2,z-thickness/2],[1.45,(halfY-1.4)/2,thickness/2]);});
+            function ringDeck(z,scale,thickness){
+              // Clip four nonoverlapping floor regions to the actual faceted hull.
+              var footprint=z<9?[[-4.3,-3.3],[4.3,-3.3],[4.3,3.3],[-4.3,3.3]]:cabinOutline;
+              var boundary=footprint.map(function(p){return [p[0]*scale,p[1]*scale];});
+              [[0,1.3,false],[0,4.2,true],[1,-1.4,false],[1,1.4,true]].forEach(function(region,index){
+                var poly=boundary.map(function(p){return p.slice();});
+                /** @param {number} axis @param {number} limit @param {boolean} greater */
+                function clip(axis,limit,greater){
+                  var out=/** @type {number[][]} */ ([]);
+                  poly.forEach(function(p,i){var q=poly[(i+1)%poly.length],inside=greater?p[axis]>=limit:p[axis]<=limit,next=greater?q[axis]>=limit:q[axis]<=limit;
+                    if(inside)out.push(p);
+                    if(inside!==next){var t=(limit-p[axis])/(q[axis]-p[axis]);out.push([p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t]);}
+                  });poly=out;
+                }
+                if(index>=2){clip(0,1.3,true);clip(0,4.2,false);}
+                clip(Number(region[0]),Number(region[1]),Boolean(region[2]));
+                var top=poly.map(function(p){return /** @type {V3} */ ([p[0],p[1],z]);});
+                plate('steel',top);plate('steel',top.map(function(p){return /** @type {V3} */ ([p[0],p[1],z-thickness]);}).reverse());
+                top.forEach(function(p,i){var q=top[(i+1)%top.length];plate('steel',[p,[p[0],p[1],z-thickness],[q[0],q[1],z-thickness],q]);});
+              });
             }
+            ringDeck(7.35,1,.22);
             if(!plan){
-              ringDeck(9,6.3,4.8,.3);ringDeck(10,5,3.7,.18);
+              ringDeck(10,.96,.22);
               if(interiorCut==='upper')cabinOutline.forEach(function(p,i){var q=cabinOutline[(i+1)%8];link('dark',[p[0]*1.01,p[1]*1.01,10.18],[q[0]*1.01,q[1]*1.01,10.18],.08,.18);});
             }
             // Microgravity circulation: clear drift space with staggered stopping grips.
-            var guideTop=plan?6.1:10.45;
+            var guideTop=plan?8.55:10.45;
             [-1,1].forEach(function(side){
               link('steel',[3.95,side*1.08,4.9],[3.95,side*1.08,guideTop],.035);
             });
@@ -802,8 +675,7 @@
               if(gripZ+.2<guideTop)grab(3.95,grip%2?1.08:-1.08,gripZ,1);
             }
             // Entry and staging grips give crew places to arrest motion and redirect.
-            grab(1.12,2.6,5.5,1);grab(-1.12,1.55,5.5,-1);
-            grab(4.28,.35,5.5,1);grab(-2.16,-1.9,5.5,-1);
+            grab(-4.28,.35,8.15,-1);grab(-2.16,-2.9,8.15,-1);
             if(!plan){
               // Short rim grips mark the bridge arrival without fencing off the opening.
               link('light',[1.5,-1.62,10.3],[2.15,-1.62,10.3],.04);
@@ -817,17 +689,16 @@
           if(!rampdock)cabinOutline.forEach(function(p,i){var q=cabinOutline[(i+1)%8],dx=q[0]-p[0],dy=q[1]-p[1],length=Math.hypot(dx,dy),nx=dy/length,ny=-dx/length;
             plate('dark',[[p[0]+dx*.12+nx*.04,p[1]+dy*.12+ny*.04,10.6],[p[0]+dx*.88+nx*.04,p[1]+dy*.88+ny*.04,10.6],[p[0]+dx*.88+nx*.04,p[1]+dy*.88+ny*.04,11.9],[p[0]+dx*.12+nx*.04,p[1]+dy*.12+ny*.04,11.9]]);
           });
-          // One cargo hold surrounds the tower: coarse packed loads, not a rear bin.
-          [-11,10].forEach(function(x){block('dark',[x,0,4.85],[2.8,4.2,.3]);block('steel',[x,0,5.95],[2.4,3.8,.90]);});
-          [-1,1].forEach(function(side){block('dark',[-1,side*7,4.85],[6,1.3,.3]);block('steel',[-1,side*7,5.75],[5.4,1,.70]);});
-          // Main crew egress is in the tower's lower core, opening onto the cargo deck.
-          if(interiorCut!=='lower'){
-          block('steel',[0,3.67,5.55],[.68,.07,.95]);
-          [-1,1].forEach(function(side){block('steel',[side*.9,3.75,5.6],[.13,.16,1.1]);});
-          block('steel',[0,3.75,6.7],[1.03,.16,.13]);
-          block('dark',[0,3.76,5.55],[.035,.025,.95]);
+          // Leave the cargo work floor clear under and around the suspended pod.
+          if(!rampdock){
+            [-11,10].forEach(function(x){block('dark',[x,0,4.85],[2.8,4.2,.3]);block('steel',[x,0,5.95],[2.4,3.8,.90]);});
+            [-1,1].forEach(function(side){block('dark',[-1,side*7,4.85],[6,1.3,.3]);block('steel',[-1,side*7,5.75],[5.4,1,.70]);});
+            block('steel',[0,3.67,5.55],[.68,.07,.95]);
+            [-1,1].forEach(function(side){block('steel',[side*.9,3.75,5.6],[.13,.16,1.1]);});
+            block('steel',[0,3.75,6.7],[1.03,.16,.13]);
+            block('dark',[0,3.76,5.55],[.035,.025,.95]);
+            block('steel',[0,4.15,4.65],[1.05,.65,.15]);
           }
-          block('steel',[0,4.15,4.65],[1.05,.65,.15]);
         } else {
         block('dark',[2,0,8.05],[7.3,5.7,.25]);
         // Forward visibility, protected by a thick brow and side jambs.
@@ -1200,7 +1071,7 @@
     host.appendChild(toolbar);
     /** @type {Orbit} */ var orbit = { yaw: 0, tilt: 0.48 };
     var studyHeight = 0;
-    var diagnostics={mode:'normal',flat:false,scale:1,mothership:true,actors:true,shadows:true,view:"material",freezeGeometry:false};
+    var diagnostics={mode:'normal',flat:false,scale:1,mothership:true,actors:true};
     var renderStats={drawCalls:0,triangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
     /** @type {Set<WebGLBuffer>} */ var frameMeshes=new Set();
     /** @type {Set<string>} */ var frameMaterials=new Set();
@@ -1208,7 +1079,7 @@
     var focus = false, space = false, stress = false, fps = 0;
     /** @type {{ start: Vec2, last: Vec2, mode: string } | null} */ var drag = null;
     /** @type {{ event: import('./types').CombatEvent, age: number }[]} */ var effects = [];
-    /** @type {Record<string, { key: string, mesh: Mesh, baseMesh: Mesh, base: Float32Array, detail: string, detailCenter?:V3|null, data?:Float32Array, wire?:Mesh|null, texture: WebGLTexture, visual: import('./types').AsteroidVisual }>} */ var rocks = {};
+    /** @type {Record<string, { key: string, mesh: Mesh, texture: WebGLTexture, visual: import('./types').AsteroidVisual }>} */ var rocks = {};
     /** @param {number} type @param {string} source */
     function shader(type, source) {
       var s = gl.createShader(type); if (!s) throw new Error('Shader allocation failed');
@@ -1218,16 +1089,16 @@
     }
     var program = gl.createProgram(); if (!program) throw new Error('Program allocation failed');
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
-      'attribute vec3 aBary; varying vec3 vBary; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; void main(){vBary=aBary;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=local*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
-    var terrainDerivatives=!!gl.getExtension('OES_standard_derivatives');
-    gl.attachShader(program, shader(gl.FRAGMENT_SHADER, (terrainDerivatives?'#extension GL_OES_standard_derivatives : enable\n':'')+art.shaderSource +
-      '\nvarying vec3 vBary;uniform float uDiagnosticView;varying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; uniform vec3 uColor,uBack; uniform float uTerrainDetail,uTerrainShadowEnabled,uGlobalShadowEnabled; uniform sampler2D uGlobalTerrainShadow; uniform vec3 uGlobalShadowRight,uGlobalShadowUp,uGlobalShadowLight; uniform sampler2D uTerrainShadow; uniform vec3 uShadowRight,uShadowUp,uShadowLight,uShadowCenter; uniform float uShadowSpan,uShadowDepthSpan; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
+      'attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; void main(){vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=local*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
+    gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
+      '\nvarying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
       'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
-      // Six padded cube faces cache crater/coarse terrain gradients once per specimen.
-      'vec4 globeCraters(vec3 p){vec3 a=abs(p);float face;vec2 uv;if(a.x>=a.y&&a.x>=a.z){face=p.x>0.?0.:1.;uv=p.yz/a.x;}else if(a.y>=a.z){face=p.y>0.?2.:3.;uv=p.xz/a.y;}else{face=p.z>0.?4.:5.;uv=p.xy/a.z;}vec4 sampleValue=texture2D(uCraterData,vec2((face*258.+1.+(uv.x*.5+.5)*255.+.5)/1548.,(1.+(uv.y*.5+.5)*255.+.5)/258.));return vec4((sampleValue.rgb-vec3(128./255.))*(255./127.),sampleValue.a); }\n'+
-      'float terrainVisibility(vec3 p,float ndl){if(uTerrainShadowEnabled<.5&&uGlobalShadowEnabled<.5)return 1.;vec3 d=p-uShadowCenter;vec2 uv=vec2(dot(d,uShadowRight),dot(d,uShadowUp))/(2.*uShadowSpan)+.5;bool local=uTerrainShadowEnabled>.5&&min(uv.x,uv.y)>.002&&max(uv.x,uv.y)<.998;vec3 shadowLight=uShadowLight;if(!local){if(uGlobalShadowEnabled<.5)return 1.;d=p;uv=vec2(dot(p,uGlobalShadowRight),dot(p,uGlobalShadowUp))/2.7+.5;shadowLight=uGlobalShadowLight;}float depth=.5-dot(d,shadowLight)/(local?2.*uShadowDepthSpan:3.);vec2 slope=vec2(0.);' + (terrainDerivatives?'vec2 dx=dFdx(uv),dy=dFdy(uv);float zx=dFdx(depth),zy=dFdy(depth),det=dx.x*dy.y-dx.y*dy.x;if(abs(det)>1.e-16)slope=vec2(zx*dy.y-zy*dx.y,zy*dx.x-zx*dy.x)/det;':'') + 'float bias='+(terrainDerivatives?'(local?.0005:.002)':'(local?.0007:.003)')+';float visible=0.;for(int y=0;y<2;y++)for(int x=0;x<2;x++){vec2 tap=(floor(uv*1024.)+vec2(float(x),float(y))+.5)/1024.;float receiver=depth+dot(slope,tap-uv)-bias;vec2 depthBytes=local?texture2D(uTerrainShadow,tap).rg:texture2D(uGlobalTerrainShadow,tap).rg;float blocker=depthBytes.r+depthBytes.g/255.;visible+=step(receiver,blocker);}return visible*.25;}\n'+
+      // Packed physical centers and normals define circular local tangent disks.
+      'vec4 impactTexel(float impact,float offset){return texture2D(uCraterData,vec2((impact*5.+offset+.5)/uCraterTextureWidth,.5));}\n'+
+      'vec4 globeCraters(vec3 p){float h=0.;vec3 grad=vec3(0.);float occ=0.;'+
+      'for(int i=0;i<288;i++){if(float(i)<uCraterCount){float fi=float(i);vec4 t0=impactTexel(fi,0.);vec4 t1=impactTexel(fi,1.);vec4 t2=impactTexel(fi,2.);vec4 t3=impactTexel(fi,3.);vec4 t4=impactTexel(fi,4.);vec3 center=vec3(unpack16(t0.rg),unpack16(t0.ba),unpack16(t1.rg))*2.4-1.2;vec3 axis=normalize(vec3(unpack16(t1.ba),unpack16(t2.rg),unpack16(t2.ba))*2.-1.);float size=unpack16(t3.rg)*.4;vec3 d=p-center;if(length(d)<size*1.6){vec3 tangent=d-axis*dot(d,axis);float distance=length(tangent);float q=distance/max(.001,size);if(q<1.35){float depth=unpack16(t3.ba)*.12;float rimScale=unpack16(t4.rg);vec3 dq=distance>.00001?tangent/(distance*size):vec3(0.);float t=clamp((q-.7)/.48,0.,1.);float mask=t*t*(3.-2.*t);float dm=(q>.7&&q<1.18)?6.*t*(1.-t)/.48:0.;grad=grad*mask+h*dm*dq;h*=mask;if(q<1.){h-=(1.-q*q)*depth;grad+=2.*depth*q*dq;occ=max(occ,(1.-q)*.42);}float rd=(q-1.)/.16;float rim=exp(-rd*rd)*depth*.34*rimScale;h+=rim;grad+=rim*(-2.*(q-1.)/(.16*.16))*dq;}}}}return vec4(grad,min(.58,occ));}\n'+
       'vec3 globeWeights(vec3 p){vec3 w=pow(abs(p),vec3(8.));return w/(w.x+w.y+w.z);}\n'+
       // Solid 3D noise is sampled after deformation, in physical body space.
       // No sphere normalization, ellipsoid rescaling or planar projection.
@@ -1235,10 +1106,7 @@
       'float noise3(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash31(i),hash31(i+vec3(1,0,0)),f.x),mix(hash31(i+vec3(0,1,0)),hash31(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash31(i+vec3(0,0,1)),hash31(i+vec3(1,0,1)),f.x),mix(hash31(i+vec3(0,1,1)),hash31(i+vec3(1,1,1)),f.x),f.y),f.z);}\n'+
       // Analytic value-noise derivatives: eight hashes per layer, not six noise evaluations.
       'vec4 noiseGradient3(vec3 p){vec3 i=mod(floor(p),256.),t=fract(p),f=t*t*(3.-2.*t),df=6.*t*(1.-t);float a=hash31(i),b=hash31(i+vec3(1,0,0)),c=hash31(i+vec3(0,1,0)),d=hash31(i+vec3(1,1,0)),e=hash31(i+vec3(0,0,1)),g=hash31(i+vec3(1,0,1)),h=hash31(i+vec3(0,1,1)),j=hash31(i+vec3(1,1,1));float lo=mix(mix(a,b,f.x),mix(c,d,f.x),f.y),hi=mix(mix(e,g,f.x),mix(h,j,f.x),f.y);return vec4(mix(lo,hi,f.z),mix(mix(b-a,d-c,f.y),mix(g-e,j-h,f.y),f.z)*df.x,mix(mix(c-a,d-b,f.x),mix(h-e,j-g,f.x),f.z)*df.y,(hi-lo)*df.z);}\n'+
-      'uniform sampler2D uRockVolume;\n'+
-      'vec4 rockSlice(vec2 p,float layer){vec2 tile=vec2(mod(layer,8.),floor(layer/8.))*34.;return texture2D(uRockVolume,(tile+vec2(1.5)+p)/vec2(272.,136.));}\n'+
-      'vec4 fractureVolume(vec3 p){vec3 q=mod(p,4.)*8.-.5;float layer=floor(q.z);vec4 a=rockSlice(mod(q.xy,32.),mod(layer,32.));vec4 b=rockSlice(mod(q.xy,32.),mod(layer+1.,32.));vec4 v=mix(a,b,fract(q.z));return vec4((v.rgb-vec3(128./255.))*(255./15.875),v.a);}\n'+
-      'vec4 rockBump(vec3 p,float fp){vec3 phase=vec3(p.y*7.13+p.z*3.17+uSeed*.17,p.z*6.41+p.x*2.73+uSeed*.17*1.37,p.x*7.97+p.y*2.19+uSeed*.17*.71);p+=.018*sin(phase);fp*=1.3;vec3 gradient=vec3(0.);float crevice=0.,frequency=3000.,amplitude=.055;mat3 basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60);for(int octave=0;octave<2;octave++){float visible=1.-smoothstep(.25,.65,frequency*fp);if(visible<.001)break;float offset=uSeed*.17+float(octave)*.73;vec4 sampleValue=fractureVolume(basis*p*frequency+vec3(offset,offset*1.37+11.8,offset*.71+23.4));vec3 g=vec3(dot(basis[0],sampleValue.xyz),dot(basis[1],sampleValue.xyz),dot(basis[2],sampleValue.xyz));gradient+=g*amplitude*visible;crevice=max(crevice,(1.-smoothstep(.02,.18,sampleValue.a))*visible*amplitude);frequency*=3.73;amplitude*=.45;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;}vec3 c=cos(phase);gradient+=.018*vec3(2.73*c.y*gradient.y+7.97*c.z*gradient.z,7.13*c.x*gradient.x+2.19*c.z*gradient.z,3.17*c.x*gradient.x+6.41*c.y*gradient.y);return vec4(gradient*uProfile.x,crevice);}\n'+
+      'vec3 rockBump(vec3 p,float fp){vec3 gradient=vec3(0.);float amplitude=1.,frequency=13.+uProfile.y*27.;mat3 basis=mat3(1.);for(int octave=0;octave<14;octave++){float visibility=1.-smoothstep(.28,.72,frequency*fp);if(visibility<.001)break;vec4 sampleValue=noiseGradient3(basis*p*frequency+vec3(uSeed*1.73+float(octave)*17.13));vec3 derivative=vec3(dot(basis[0],sampleValue.yzw),dot(basis[1],sampleValue.yzw),dot(basis[2],sampleValue.yzw));gradient+=derivative*frequency*amplitude*visibility*2.;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;frequency*=2.03;amplitude*=.49;}return gradient*uProfile.x*.0055;}\n'+
       'vec3 globeColor(vec3 p){vec3 w=globeWeights(p);return materialColor(composition(p.yz))*w.x+materialColor(composition(p.zx))*w.y+materialColor(composition(p.xy))*w.z;}\n'+
       // Filtered object-space height field: welds and fasteners resolve only nearby.
       'float shipLine(float d,float width,float fp){return (1.-smoothstep(width,width+fp,abs(d)))*(1.-smoothstep(width*2.,width*7.,fp));}'+
@@ -1253,15 +1121,15 @@
       'else if(uFinish<5.5){float edge=min(abs(x-44.3),abs(x-61.7));float panelEdge=abs(mod(abs(p.y)-12.+4.,8.)-4.);bolt=shipLine(length(vec2(edge,abs(panelEdge-3.1))),.055,fp);channel=shipLine(mod(p.y+.15,.3)-.15,.018,fp);weld=shipLine(edge,.035,fp);}'+
       'else{mark=(.5+.5*cos((p.x+p.y+p.z)*12.))*close;}return vec4(bolt,weld,channel,mark); }'+
       // Feather orange paint; preserve texture variation while respecting target paint brightness.
-      'void main(){if(uDiagnosticView>.5){vec3 n=normalize(vNormal);vec3 face=' + (terrainDerivatives?'rotateNormal(normalize(cross(dFdx(vLocal),dFdy(vLocal))))':'n') + ';if(dot(face,n)<0.)face=-face;if(uDiagnosticView<1.5){gl_FragColor=vec4(vec3(.16+.7*max(0.,dot(face,normalize(uLight)))),1.);return;}if(uDiagnosticView<2.5){gl_FragColor=vec4(face*.5+.5,1.);return;}if(uDiagnosticView<3.5){gl_FragColor=vec4(n*.5+.5,1.);return;}vec3 edge=smoothstep(vec3(0.),' + (terrainDerivatives?'fwidth(vBary)*1.25':'vec3(.025)') + ',vBary);float fill=min(edge.x,min(edge.y,edge.z));gl_FragColor=vec4(mix(vec3(.025,.09,.13),vec3(.7),fill),1.);return;}if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);}'+
+      'void main(){if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);}'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
-      'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(sphere);float occ=crater.w*.25*exterior;if(exterior>.5){bodyNormal=uTerrainDetail>.5?n:rotateNormal(normalize(crater.xyz));n=bodyNormal;}'+
-      'vec4 rockDetail=rockBump(vLocal,footprint/max(.12,abs(dot(bodyNormal,uBack))));rockDetail*=mix(1.,.06,crater.w*exterior);vec3 fineGradient=rockDetail.xyz;if(exterior>.5){vec3 bump=rotateNormal(fineGradient);bump-=bodyNormal*dot(bump,bodyNormal);n=normalize(bodyNormal-bump);}'+
+      'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
+      'vec3 fineGradient=rockBump(vLocal,footprint);if(exterior>.5){vec3 bump=rotateNormal(fineGradient+crater.xyz);bump-=bodyNormal*dot(bump,bodyNormal);n=normalize(bodyNormal-bump);}'+
       'else{vec3 bump=rotateNormal(fineGradient);n=normalize(n-(bump-n*dot(bump,n))*.6);occ=clamp((uCutHeight-vLocal.z)*1.1,0.,.22);}'+
-      'float ndl=max(0.,dot(n,light));float sunlight=exterior>.5?smoothstep(-.03,.10,dot(bodyNormal,light)):1.;float visibility=terrainVisibility(vLocal,ndl);float lit=pow(ndl,.82)*sunlight*visibility;'+
-      'float ambient=.10*(1.-occ*.7);float brightness=ambient+lit*.98;'+
-      'vec3 stone=globeColor(sphere);col=stone*brightness;float shine=smoothstep(.32,.68,max(stone.r,max(stone.g,stone.b)));vec3 halfLight=normalize(light+uBack);col+=vec3(.92,.94,1.)*pow(max(0.,dot(n,halfLight)),32.)*.12*shine*sunlight*visibility;'+
+      'float ndl=max(0.,dot(n,light));float sunlight=exterior>.5?smoothstep(-.03,.10,dot(bodyNormal,light)):1.;float lit=pow(ndl,.82)*sunlight;'+
+      'float ambient=.17*(1.-occ*.7);float brightness=ambient+lit*.98;'+
+      'col=globeColor(sphere)*brightness;col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
       '}else if(uHabitat>.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float angle=atan(vLocal.y,vLocal.z);vec2 p=vec2(vLocal.x,(angle-uSpin)*17.);float shell=1.-smoothstep(30.,35.5,abs(vLocal.x));vec3 masks=hullMasks(p,fp);n=mix(n,hullSurface(p,n,angle,fp),shell);float diffuse=max(0.,dot(n,light));'+
       'vec2 plate=floor((p+vec2(5.,4.45))/vec2(10.,8.9));float tone=hash31(vec3(plate,2.));vec3 base=vec3(.82,.79,.70)*(.94+.09*tone);float seam=min(abs(shipCell(p,vec2(10.,8.9)).x),abs(shipCell(p,vec2(10.,8.9)).y));float cavity=1.-smoothstep(.06,.06+fp,seam);base*=1.-cavity*.22;'+
       'float close=1.-smoothstep(.018,.08,fp);float grain=noise3(vec3(p*70.,4.));base*=1.+(grain-.5)*.055*close;float grime=noise3(vec3(p*.45,3.))*exp(-seam*7.);base*=1.-grime*.14;col=base*(.26+diffuse*.88);'+
@@ -1273,75 +1141,22 @@
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Shader linking failed');
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     var uv = gl.getAttribLocation(program,'aUV');
-    var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal'),bary=gl.getAttribLocation(program,'aBary');
-    var diagnosticView=gl.getUniformLocation(program,'uDiagnosticView');
+    var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
     ['Opacity', 'CraftFill', 'HullDepth', 'Flat', 'Finish', 'AxialSpin', 'Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
     uniforms.Textured=gl.getUniformLocation(program,'uTextured');uniforms.ShipTexture=gl.getUniformLocation(program,'uShipTexture');
     uniforms.Paint=gl.getUniformLocation(program,'uPaint');uniforms.PaintEnabled=gl.getUniformLocation(program,'uPaintEnabled');
     gl.uniform1i(uniforms.ShipTexture,1);
-    var volume=rockVolume(),volumeTexture=gl.createTexture();
-    if(!volumeTexture)throw new Error('Rock volume texture allocation failed');
-    gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,volumeTexture);
-    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,volume.width,volume.height,0,gl.RGBA,gl.UNSIGNED_BYTE,volume.bytes);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    gl.uniform1i(gl.getUniformLocation(program,'uRockVolume'),2);gl.activeTexture(gl.TEXTURE0);
-
 
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
-    var shadowProgram=gl.createProgram();if(!shadowProgram)throw new Error('Terrain shadow program allocation failed');
-    gl.attachShader(shadowProgram,shader(gl.VERTEX_SHADER,'attribute vec3 aPosition;uniform vec3 uCenter,uRight,uUp,uLight;uniform float uSpan,uDepthSpan;void main(){vec3 p=aPosition-uCenter;gl_Position=vec4(dot(p,uRight)/uSpan,dot(p,uUp)/uSpan,-dot(p,uLight)/uDepthSpan,1.);}'));
-    gl.attachShader(shadowProgram,shader(gl.FRAGMENT_SHADER,'precision highp float;void main(){vec2 depthBytes=fract(vec2(1.,255.)*gl_FragCoord.z);depthBytes.x-=depthBytes.y/255.;gl_FragColor=vec4(depthBytes,0.,1.);}'));
-    gl.linkProgram(shadowProgram);if(!gl.getProgramParameter(shadowProgram,gl.LINK_STATUS))throw new Error('Terrain shadow program linking failed');
-    var shadowPos=gl.getAttribLocation(shadowProgram,'aPosition');
-    var shadowUniforms={center:gl.getUniformLocation(shadowProgram,'uCenter'),right:gl.getUniformLocation(shadowProgram,'uRight'),up:gl.getUniformLocation(shadowProgram,'uUp'),light:gl.getUniformLocation(shadowProgram,'uLight'),span:gl.getUniformLocation(shadowProgram,'uSpan'),depthSpan:gl.getUniformLocation(shadowProgram,'uDepthSpan')};
-    var terrainDetail=gl.getUniformLocation(program,'uTerrainDetail'),terrainSampler=gl.getUniformLocation(program,'uTerrainShadow');
-    var terrainUniforms={center:gl.getUniformLocation(program,'uShadowCenter'),right:gl.getUniformLocation(program,'uShadowRight'),up:gl.getUniformLocation(program,'uShadowUp'),light:gl.getUniformLocation(program,'uShadowLight'),span:gl.getUniformLocation(program,'uShadowSpan'),depthSpan:gl.getUniformLocation(program,'uShadowDepthSpan')};
-    /** @type {{texture:WebGLTexture, framebuffer:WebGLFramebuffer, depth:WebGLRenderbuffer, mesh:Mesh|null, owner:string, angle:number, frame:ReturnType<typeof terrainShadowFrame>} | null} */ var terrainShadow=null;
-    /** @type {{texture:WebGLTexture, framebuffer:WebGLFramebuffer, depth:WebGLRenderbuffer, mesh:Mesh|null, owner:string, angle:number, frame:ReturnType<typeof terrainShadowFrame>} | null} */ var distantShadow=null;
-    /** @param {Mesh} mesh @param {number} rotation @param {V3} center @param {number} width @param {number} height @param {string} owner @param {boolean} global */
-    function bindTerrainShadow(mesh,rotation,center,width,height,owner,global){
-      var cache=global?distantShadow:terrainShadow;
-      if(!cache){
-        var texture=gl.createTexture(),framebuffer=gl.createFramebuffer(),depth=gl.createRenderbuffer();
-        if(!texture||!framebuffer||!depth)throw new Error('Terrain shadow buffer allocation failed');
-        gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,texture);
-        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1024,1024,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
-        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-        gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);
-        gl.bindRenderbuffer(gl.RENDERBUFFER,depth);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,1024,1024);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth);
-        if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('Terrain shadow framebuffer incomplete');
-        cache={texture:texture,framebuffer:framebuffer,depth:depth,mesh:null,owner:owner,angle:rotation,frame:terrainShadowFrame(rotation,center)};
-        if(global)distantShadow=cache;else terrainShadow=cache;
-      }
-      if(cache.mesh!==mesh||cache.owner!==owner||Math.abs(rotation-cache.angle)>.01){
-        cache.frame=terrainShadowFrame(rotation,center);if(global){cache.frame.span=1.35;cache.frame.depthSpan=1.5;}cache.angle=rotation;cache.mesh=mesh;cache.owner=owner;
-        gl.disable(gl.DITHER);gl.bindFramebuffer(gl.FRAMEBUFFER,cache.framebuffer);gl.viewport(0,0,1024,1024);gl.clearColor(1,1,1,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(shadowProgram);
-        gl.uniform3fv(shadowUniforms.center,cache.frame.center);gl.uniform3fv(shadowUniforms.right,cache.frame.right);gl.uniform3fv(shadowUniforms.up,cache.frame.up);gl.uniform3fv(shadowUniforms.light,cache.frame.light);gl.uniform1f(shadowUniforms.span,cache.frame.span);gl.uniform1f(shadowUniforms.depthSpan,cache.frame.depthSpan);
-        gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.enableVertexAttribArray(shadowPos);gl.vertexAttribPointer(shadowPos,3,gl.FLOAT,false,24,0);gl.drawArrays(gl.TRIANGLES,0,mesh.count);
-        renderStats.drawCalls++;renderStats.triangles+=mesh.count/3;
-        gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,width,height);gl.clearColor(0,0,0,0);gl.enable(gl.DITHER);gl.useProgram(program);
-      }
-      bindShadowParameters(cache,global);
-
-    }
-    /** @param {NonNullable<typeof terrainShadow>} cache @param {boolean} global */
-    function bindShadowParameters(cache,global){
-      var f=cache.frame;
-      if(global){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,cache.texture);gl.uniform1i(gl.getUniformLocation(program,'uGlobalTerrainShadow'),4);gl.uniform3fv(gl.getUniformLocation(program,'uGlobalShadowRight'),f.right);gl.uniform3fv(gl.getUniformLocation(program,'uGlobalShadowUp'),f.up);gl.uniform3fv(gl.getUniformLocation(program,'uGlobalShadowLight'),f.light);gl.uniform1f(gl.getUniformLocation(program,'uGlobalShadowEnabled'),1);}
-      else {gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,cache.texture);gl.uniform1i(terrainSampler,3);gl.uniform3fv(terrainUniforms.center,f.center);gl.uniform3fv(terrainUniforms.right,f.right);gl.uniform3fv(terrainUniforms.up,f.up);gl.uniform3fv(terrainUniforms.light,f.light);gl.uniform1f(terrainUniforms.span,f.span);gl.uniform1f(terrainUniforms.depthSpan,f.depthSpan);gl.uniform1f(gl.getUniformLocation(program,'uTerrainShadowEnabled'),1);}
-      gl.activeTexture(gl.TEXTURE0);
-    }
     /** @param {Asteroid} asteroid */
     function craterTexture(asteroid) {
-      var atlas=surfaceAtlas(asteroid),width=atlas.width,size=atlas.height,bytes=atlas.bytes;
       var texture = gl.createTexture(); if (!texture) throw new Error('Crater texture allocation failed');
-      gl.bindTexture(gl.TEXTURE_2D, texture);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
-      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,width,size,0,gl.RGBA,gl.UNSIGNED_BYTE,bytes);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1440, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, impactBytes(asteroid));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       return texture;
     }
     /** @param {Float32Array} data @param {number} [stride] @returns {Mesh} */
@@ -1397,7 +1212,6 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
       gl.enableVertexAttribArray(pos); gl.enableVertexAttribArray(normal);
       var stride=(mesh.stride||6)*4;
-      if(stride===36){gl.enableVertexAttribArray(bary);gl.vertexAttribPointer(bary,3,gl.FLOAT,false,stride,24);}else{gl.disableVertexAttribArray(bary);gl.vertexAttrib3f(bary,0,0,0);}
       if(stride===32){gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,stride,24);}else{gl.disableVertexAttribArray(uv);gl.vertexAttrib2f(uv,0,0);}
       gl.vertexAttribPointer(pos,3,gl.FLOAT,false,stride,0);gl.vertexAttribPointer(normal,3,gl.FLOAT,false,stride,12);
       gl.uniform3fv(uniforms.Origin, origin); gl.uniform3fv(uniforms.Scale, scale); gl.uniform3fv(uniforms.Color, color);
@@ -1582,21 +1396,18 @@
     function sync(w) {
       if(study&&diagnostics.mode!=='normal')return;
       orbit.height = study ? studyHeight : inspectionHeight(w) * (orbit.tilt > Math.PI / 2 ? -1 : 1);
-      if(study&&diagnostics.freezeGeometry&&Object.keys(rocks).length)return;
       Object.keys(rocks).forEach(function (id) {
         if (!w.asteroids.some(function (a) { return a.id === id; })) {
-          gl.deleteBuffer(rocks[id].mesh.buffer);if(rocks[id].mesh!==rocks[id].baseMesh)gl.deleteBuffer(rocks[id].baseMesh.buffer); gl.deleteTexture(rocks[id].texture);if(rocks[id].wire)gl.deleteBuffer(rocks[id].wire.buffer);
+          gl.deleteBuffer(rocks[id].mesh.buffer); gl.deleteTexture(rocks[id].texture);
           delete rocks[id]; delete geology[id]; delete shells[id]; delete impacts[id];
         }
       });
       w.asteroids.forEach(function (a) {
         var key = a.radius + ':' + JSON.stringify(a.excavation || null);
         if (!rocks[a.id] || rocks[a.id].key !== key || rocks[a.id].visual !== visualFor(a)) {
-          if(terrainShadow&&terrainShadow.owner===a.id){terrainShadow.owner="";terrainShadow.mesh=null;}
-          if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer);if(rocks[a.id].mesh!==rocks[a.id].baseMesh)gl.deleteBuffer(rocks[a.id].baseMesh.buffer); gl.deleteTexture(rocks[a.id].texture);var staleWire=rocks[a.id].wire;if(staleWire)gl.deleteBuffer(staleWire.buffer); }
+          if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer); gl.deleteTexture(rocks[a.id].texture); }
           var visual = visualFor(a);
-          var base=asteroidMesh(a),baseMesh=upload(base);
-          rocks[a.id] = { key: key, mesh: baseMesh, baseMesh:baseMesh, base:base, detail:"", texture: craterTexture(a), visual: visual };
+          rocks[a.id] = { key: key, mesh: upload(asteroidMesh(a)), texture: craterTexture(a), visual: visual };
         }
       });
       var button = /** @type {HTMLButtonElement} */ (toolbar.querySelector('[data-cut]'));
@@ -1644,37 +1455,8 @@
         gl.uniform1f(uniforms.Cut, a.excavation && a.excavation.level > 0 ? 1 : 0);
         gl.uniform1f(uniforms.CutHeight, a.excavation ? -Math.min(.42, Math.max(.03, a.excavation.depthM / sim.METERS_PER_UNIT / a.radius)) : 0);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, rock.texture); gl.uniform1i(uniforms.CraterData, 0);
-        /** @type {V3|null} */ var detailCenter=null;
-        if(study){
-          var ex=(w.camera.x+v.back[0]*v.distance-a.position.x)/a.radius,ey=(w.camera.y+v.back[1]*v.distance-a.position.y)/a.radius,ez=((orbit.height||0)+v.back[2]*v.distance)/a.radius;
-          var ac=Math.cos(a.rotation),as=Math.sin(a.rotation);
-          /** @type {V3} */ var eye=[ex*ac+ey*as,-ex*as+ey*ac,ez];
-          if(Math.hypot.apply(null,eye)<1.5)detailCenter=surfaceFrame(a,eye).point;
-          if(diagnostics.freezeGeometry)detailCenter=rock.detailCenter||null;
-          var detailKey=detailCenter?detailCenter.map(function(v){return Math.round(v/.04);}).join(','):'';
-          if(!diagnostics.freezeGeometry&&detailKey!==rock.detail){
-            if(rock.mesh!==rock.baseMesh)gl.deleteBuffer(rock.mesh.buffer);
-            if(rock.wire){gl.deleteBuffer(rock.wire.buffer);rock.wire=null;}
-            rock.data=detailCenter?refineSurface(rock.base,a,detailCenter):rock.base;rock.mesh=detailCenter?upload(rock.data):rock.baseMesh;rock.detail=detailKey;rock.detailCenter=detailCenter;
-          }
-        }
-        gl.uniform1f(terrainDetail,detailCenter?1:0);
-        gl.uniform1f(gl.getUniformLocation(program,'uTerrainShadowEnabled'),0);gl.uniform1f(gl.getUniformLocation(program,'uGlobalShadowEnabled'),0);
-        if(study&&diagnostics.mode==='normal'&&!diagnostics.flat&&diagnostics.shadows&&diagnostics.view==='material'){
-          bindTerrainShadow(rock.baseMesh,a.rotation,[0,0,0],width,height,a.id,true);
-          if(detailCenter)bindTerrainShadow(rock.mesh,a.rotation,detailCenter,width,height,a.id,false);
-          else if(terrainShadow&&terrainShadow.owner===a.id&&Math.abs(a.rotation-terrainShadow.angle)<.01)bindShadowParameters(terrainShadow,false);
-        }
-        var debugMode=study?['material','plain','faces','vertices','wire'].indexOf(diagnostics.view):0;
-        gl.uniform1f(diagnosticView,Math.max(0,debugMode));
-        var visible=rock.mesh;
-        if(debugMode===4){
-          if(!rock.wire){var source=rock.data||rock.base,wireData=new Float32Array(source.length/6*9);for(var wi=0;wi<source.length/6;wi++){wireData.set(source.subarray(wi*6,wi*6+6),wi*9);wireData[wi*9+6+wi%3]=1;}rock.wire=upload(wireData,9);}
-          visible=rock.wire;
-        }
-        draw(visible, [a.position.x, a.position.y, 0], [a.radius, a.radius, a.radius], a.rotation, [0.45, 0.43, 0.4], true);
+        draw(rock.mesh, [a.position.x, a.position.y, 0], [a.radius, a.radius, a.radius], a.rotation, [0.45, 0.43, 0.4], true);
       });
-      gl.uniform1f(terrainDetail,0);gl.uniform1f(diagnosticView,0);
       hud.setTransform(dpr, 0, 0, dpr, 0, 0); hud.clearRect(0, 0, vp.width, vp.height);
       hud.font = '11px system-ui'; hud.textAlign = 'center';
       /** @param {V3} a @param {V3} b @param {string} color */
@@ -1836,8 +1618,8 @@
         background.style.backgroundImage = option && option.url ? 'url("' + option.url + '")' : 'none';
         background.style.filter = 'brightness(' + settings.brightness + ')';
       },
-      /** @param {{mode:string,flat:boolean,scale:number,mothership:boolean,actors:boolean,shadows?:boolean,view?:string,freezeGeometry?:boolean}} value */
-      setStudyDiagnostics: function(value){if(study)diagnostics={mode:value.mode==='empty'||value.mode==='boxes'?value.mode:'normal',flat:!!value.flat,scale:Math.max(.25,Math.min(1,value.scale)),mothership:!!value.mothership,actors:!!value.actors,shadows:value.shadows!==false,view:value.view||"material",freezeGeometry:!!value.freezeGeometry};},
+      /** @param {{mode:string,flat:boolean,scale:number,mothership:boolean,actors:boolean}} value */
+      setStudyDiagnostics: function(value){if(study)diagnostics={mode:value.mode==='empty'||value.mode==='boxes'?value.mode:'normal',flat:!!value.flat,scale:Math.max(.25,Math.min(1,value.scale)),mothership:!!value.mothership,actors:!!value.actors};},
       getRenderStats: function(){return Object.assign({},renderStats);},
       getStats: function () {
         var w = getWorld(); return { fps: Math.round(fps), stressEnabled: stress,
@@ -1847,6 +1629,6 @@
     };
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
-    terrainShadowFrame: terrainShadowFrame, craterRoughnessAt: craterRoughnessAt, rockVolume: rockVolume, surfaceAtlas: surfaceAtlas, miningPlatformGeometry: miningPlatformGeometry, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
+    miningPlatformGeometry: miningPlatformGeometry, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
     surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, pickStudySurface: pickStudySurface, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

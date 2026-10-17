@@ -17,7 +17,7 @@
     }
     function floor(x,y){return kind==='block'?0:.018*Math.sin(x*.61+y*.23)+.012*Math.cos(y*.83-x*.31);}
     function cellular(x,y){
-      var volume=DW.scene3d.rockVolume(),q=[x*.8,y*.8,.71].map(function(v){return ((v%4+4)%4)*8-.5;});
+      var volume=DW.terrainExperiment.rockVolume(),q=[x*.8,y*.8,.71].map(function(v){return ((v%4+4)%4)*8-.5;});
       var cell=q.map(Math.floor),t=q.map(function(v,i){return v-cell[i];}),h=0;
       for(var z=0;z<2;z++)for(var b=0;b<2;b++)for(var a=0;a<2;a++){
         var ix=((cell[0]+a)%32+32)%32,iy=((cell[1]+b)%32+32)%32,iz=((cell[2]+z)%32+32)%32;
