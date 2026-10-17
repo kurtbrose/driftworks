@@ -773,10 +773,10 @@ retain sortie references or control simulation. Both ordinary scripts load befor
 
 `experiments/flight-controls.js` mounts keyboard, pointer-lock, mouse and gamepad
 input. It owns held keys, the virtual stick, device discovery, editable bindings
-and controller button edges, using `flightInput` for mapping math. `sample()`
+and controller button edges, using `flightInput` for mapping math. The pause-screen Settings panel selects original, medium-soft, or wide-linear steering; the adapter stores only the preset ID in localStorage, tolerates unavailable storage, and centers input while keeping flight paused on changes. `flightInput.stickDemand` accepts an optional response exponent (default 1; softened presets use 1.6). `sample()`
 polls devices, dispatches pause/bank actions, then returns merged flight demand;
 the browser loop checks pause after sampling. `view()` exposes only mouse/mode/
-stick-range data for HUD rendering. `clear()` resets held input; `resetButtons()`
+stick-range data and `showMouseStick` for HUD rendering. Above-deadzone mapped stick changes hide the guide and clear mouse displacement; captured mouse movement restores it. Unchanged held axes and small axis noise do not reclaim the guide. Pause Settings shows a fixed reference for standard gamepads: right-stick Y changes throttle at up to 0.5/s, with neutral holding the current throttle. Nonstandard joysticks retain device bindings. `clear()` resets held input; `resetButtons()`
 is separately called on resume to preserve existing controller edge semantics.
 `capture()`/`release()` own browser pointer-lock requests. Gameplay and diagnostic
 shortcuts call injected actions; the adapter does not access session, HUD, comms
@@ -976,3 +976,9 @@ lab's F3 diagnostics to check real browser frame pacing and submission cost.
 Mining rig fixtures live in scene3d's cached miningPlatformLights geometry. The shared mining-lights module separates 51 visible fixtures from three broad cargo, apron and docking illumination fields. Both renderers use the same rig-local fields; roof grazing heads illuminate the docking coaming even without sunlight. Coarse deck/pod occlusion preserves structural depth without per-fixture shadow maps or additional shadow passes. Lighting frames follow the fitted landing pose and remain derived renderer data.
 
 The fixed upper pod uses miningLights.bakeDocking to cache a separate RGB vertex lighting attribute in model coordinates. Production and study renderers upload that attribute alongside geometry and add it after sun shading; toggling rig lights disables the contribution. Landing transformations carry the attribute unchanged. Meshes with the bake skip the docking field in the fragment shader, while cargo/apron fields and asteroid illumination remain dynamic. Custom consumers must carry bakedDocking alongside vertex positions and normals; raw triangles alone do not include illumination. The bake approximates broad illumination at existing vertices, not fine normal-map detail.
+
+Use miningLights.visual(groups, optionalPose, scale) to construct a complete rig visual: material finishes, bakedDocking and rigLights metadata travel with the batches. scene3d automatically resolves attached light frames through each batch origin, rotation, basis and scale; study consumers do not need a separate setStudyLightRigs call for these batches. Dynamic illumination uses the nearest two rigs to bound fragment cost, while every fixture and baked docking wash remains visible. Flight scenery merges batches by material but preserves per-vertex bake arrays and all rig frames, cached in asteroid-local coordinates so asteroid spin and translation require no terrain queries or geometry rebuilds.
+
+Flight terrain impacts retain up to 96 asteroid-local burn positions per sortie.
+The presentation caches layered surface-projected burn meshes and rotates them
+with the asteroid; only the nearest confirmed projectile collision creates a mark.

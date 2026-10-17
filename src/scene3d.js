@@ -1304,7 +1304,7 @@
     }
     /** @type {{vertices:Float32Array,color:V3,origin?:V3,rotation?:number}[]} */ var studyEffects=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{vertices:Float32Array,bakedDocking?:Float32Array,color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,basis?:Float32Array,scale?:number}[]} */ var studyActors=[];
+    /** @type {{vertices:Float32Array,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,basis?:Float32Array,scale?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {WeakMap<HTMLImageElement,WebGLTexture>} */ var shipTextures=new WeakMap();
@@ -1612,7 +1612,10 @@
       gl.bindTexture(gl.TEXTURE_2D,!shadowPass && workShadow?workShadow.texture:null);gl.activeTexture(gl.TEXTURE0);
       /** @type {import('./types').RigLighting[]} */ var lightRigs=[];
       if(rigLightsEnabled && DW.miningLights){
-        lightRigs=study?studyLightRigs:[];
+        lightRigs=study?DW.miningLights.placedLights(studyActors):[];
+        if(study&&!lightRigs.length)lightRigs=studyLightRigs.slice();
+        // All fixtures stay visible; bound dynamic illumination to the nearest two rigs.
+        lightRigs.sort(function(a,b){return Math.hypot(a.origin[0]-w.camera.x,a.origin[1]-w.camera.y,a.origin[2]-(orbit.height||0))-Math.hypot(b.origin[0]-w.camera.x,b.origin[1]-w.camera.y,b.origin[2]-(orbit.height||0));});lightRigs=lightRigs.slice(0,2);
         if(!study)w.platforms.forEach(function(p){
           if(lightRigs.length>=2 || (p.state!=='deployed' && p.state!=='setting-up' && p.state!=='packing-up'))return;
           var a=w.asteroids.find(function(a){return a.id===p.asteroidId;});if(!a)return;
@@ -1726,9 +1729,10 @@
         var magnitude=Math.hypot.apply(null,tangent);tangent=/** @type {V3} */ (tangent.map(function(v){return v/magnitude;}));
         var across=/** @type {V3} */ ([n[1]*tangent[2]-n[2]*tangent[1],n[2]*tangent[0]-n[0]*tangent[2],n[0]*tangent[1]-n[1]*tangent[0]]);
         var colors=/** @type {Record<string,V3>} */ ({ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49],lamp:[1,.94,.78],marker:[.35,.95,.85]});
-        Object.keys(geometry).forEach(function(material){
+        var visualBatches=DW.miningLights?DW.miningLights.visual(geometry):null;
+        Object.keys(geometry).forEach(function(material,index){
           /** @type {number[]|Float32Array} */ var data=geometry[material];
-          var baked=DW.miningLights?DW.miningLights.bakeDocking(data):undefined;
+          var baked=visualBatches?visualBatches[index].bakedDocking:undefined;
           if(fittedPose && DW.miningTerrain){
             data=DW.miningTerrain.transform({vertices:new Float32Array(data)},fittedPose).vertices;
           }else for(var i=0;i<data.length;i+=6)for(var offset=0;offset<=3;offset+=3){
@@ -1826,7 +1830,7 @@
       setOrbit: function (value) { if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       /** @param {{vertices:Float32Array,color:V3}[]} batches */
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice(0,5);},
-      /** @param {{vertices:Float32Array,bakedDocking?:Float32Array,color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
+      /** @param {{vertices:Float32Array,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
       /** @param {import('./types').RigLighting[]} rigs */
       setStudyLightRigs:function(rigs){studyLightRigs=rigs.slice(0,2);},
       /** @param {boolean} enabled */

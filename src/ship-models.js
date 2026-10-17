@@ -14,9 +14,11 @@
         /** @type {Record<string,[number,number,number]>} */
         var colors={ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49],lamp:[1,.94,.78],marker:[.35,.95,.85]};
         Object.keys(groups).forEach(function(key){var v=groups[key];for(var i=0;i<v.length;i+=6)radius=Math.max(radius,Math.hypot(v[i]+1,v[i+1],v[i+2]-7));});
-        cached=Object.keys(groups).map(function(key){var vertices=new Float32Array(groups[key]);for(var i=0;i<vertices.length;i+=6){vertices[i]=(vertices[i]+1)*8.5/radius;vertices[i+1]*=8.5/radius;vertices[i+2]=(vertices[i+2]-7)*8.5/radius;}return {vertices:vertices,bakedDocking:DW.miningLights.bakeDocking(groups[key]),color:colors[key],finish:key==='lamp'||key==='marker'?7:8};});
+        var scale=8.5/radius;
+        cached=DW.miningLights.visual(groups,{world:function(p){return [(p[0]+1)*scale,p[1]*scale,(p[2]-7)*scale];},rotate:function(p){return p.slice();}},scale);
+
       }
-      return cached.map(function(batch){var vertices=new Float32Array(batch.vertices);for(var i=0;i<vertices.length;i+=6)for(var k=0;k<3;k++)vertices[i+k]/=units;return {vertices:vertices,bakedDocking:batch.bakedDocking,color:batch.color,finish:batch.finish};});
+      return cached.map(function(batch){var vertices=new Float32Array(batch.vertices);for(var i=0;i<vertices.length;i+=6)for(var k=0;k<3;k++)vertices[i+k]/=units;return {vertices:vertices,bakedDocking:batch.bakedDocking,rigLights:batch.rigLights?DW.miningLights.placedLights([Object.assign({},batch,{scale:1/units})]):undefined,color:batch.color,finish:batch.finish};});
     }
   }];
 })(window);

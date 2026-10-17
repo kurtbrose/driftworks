@@ -33,7 +33,7 @@
             {position:[3,0,13.74],yaw:Math.PI/2,pose:'standing'}
         ];
         world.asteroids.forEach(function (asteroid) {
-            /** @type {{vertices:number[],color:[number,number,number]}[]} */
+            /** @type {{vertices:number[],baked:number[],finish?:number,rigLights:import('../src/types').RigLighting[],color:[number,number,number]}[]} */
             var groups = [];
             [[-.32,-.85,.65],[.42,-.65,.72],[-.6,.25,.8]].forEach(function (direction, siteIndex) {
                 var rig = siteIndex === 1 ? closedRig : openRig;
@@ -42,14 +42,20 @@
                 var x = [-z[1]/h,z[0]/h,0], y = [z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];
                 /** @param {number[]} p @param {number[]} n @param {number} group @param {[number,number,number]} color */
                 function vertex(p, n, group, color) {
-                    var out = groups[group] || (groups[group] = {vertices:[],color:color});
+                    var out = groups[group] || (groups[group] = {vertices:[],baked:[],rigLights:[],color:color});
                     var local=p.map(function(_,k){return frame.point[k]*asteroid.radius+(x[k]*p[0]+y[k]*p[1]+z[k]*p[2])/units;});
                     var normal=n.map(function(_,k){return x[k]*n[0]+y[k]*n[1]+z[k]*n[2];});
                     out.vertices.push(local[0],local[1],local[2],normal[0],normal[1],normal[2]);
                 }
-                Object.keys(rig).forEach(function (material,index) {
-                    var v=rig[material];
-                    for(var i=0;i<v.length;i+=6) vertex([v[i]*rigScale,v[i+1]*rigScale,v[i+2]*rigScale],[v[i+3],v[i+4],v[i+5]],index,colors[material]);
+                var scale=rigScale/units;
+                /** @type {{world:(p:number[])=>number[];rotate:(p:number[])=>number[]}} */
+                var pose={world:function(p){return p.map(function(_,k){return frame.point[k]*asteroid.radius+(x[k]*p[0]+y[k]*p[1]+z[k]*p[2])*scale;});},rotate:function(p){return p.map(function(_,k){return x[k]*p[0]+y[k]*p[1]+z[k]*p[2];});}};
+                DW.miningLights.visual(rig,pose,scale).forEach(function(batch,index){
+                    var out=groups[index] || (groups[index]={vertices:[],baked:[],rigLights:[],color:batch.color});
+                    out.finish=batch.finish;
+                    for(var i=0;i<batch.vertices.length;i++)out.vertices.push(batch.vertices[i]);
+                    if(batch.bakedDocking)for(var i=0;i<batch.bakedDocking.length;i++)out.baked.push(batch.bakedDocking[i]);
+                    out.rigLights.push.apply(out.rigLights,batch.rigLights||[]);
                 });
                 if (poses) placements.forEach(function (placement) {
                     var pc=Math.cos(placement.yaw),ps=Math.sin(placement.yaw),offset=placement.position.map(function(v){return v*rigScale;});
@@ -66,10 +72,37 @@
                 });
             });
             groups.forEach(function (batch) {
-                batches.push({vertices:new Float32Array(batch.vertices),color:batch.color,asteroidId:asteroid.id,staticGeometry:true});
+                batches.push({vertices:new Float32Array(batch.vertices),color:batch.color,asteroidId:asteroid.id,staticGeometry:true,finish:batch.finish,bakedDocking:batch.baked.length?new Float32Array(batch.baked):undefined,rigLights:batch.rigLights});
             });
         });
         return batches;
+    }
+    /** Project layered burns onto the terrain once per impact, in asteroid-local units.
+     * @param {import('../src/types').Asteroid} asteroid @param {Vector} point @returns {Batch[]}
+     */
+    function terrainScorch(asteroid, point) {
+        var frame = DW.scene3d.surfaceFrame(asteroid, /** @type {[number,number,number]} */ (point));
+        var n = frame.normal, h = Math.hypot(n[0], n[1]);
+        var x = h > .001 ? [-n[1]/h,n[0]/h,0] : [1,0,0];
+        var y = [n[1]*x[2]-n[2]*x[1],n[2]*x[0]-n[0]*x[2],n[0]*x[1]-n[1]*x[0]];
+        return [1,.78,.55,.32].map(function (size, layer) {
+            var vertices = /** @type {number[]} */ ([]), rings = 3, edges = 16;
+            /** @param {number} ring @param {number} edge */
+            function vertex(ring, edge) {
+                edge %= edges;
+                var angle = edge * Math.PI * 2 / edges;
+                var radius = 2.4 * size * ring / rings * (1 + .12*Math.sin(edge*7.3+point[0]*11));
+                var probe = frame.point.map(function (v,k) { return v + (x[k]*Math.cos(angle)+y[k]*Math.sin(angle))*radius/(DW.sim.METERS_PER_UNIT*asteroid.radius); });
+                var surface = DW.scene3d.surfaceFrame(asteroid, /** @type {[number,number,number]} */ (probe));
+                surface.point.forEach(function (v,k) { vertices.push(v*asteroid.radius + surface.normal[k]*(.08+layer*.025)/DW.sim.METERS_PER_UNIT); });
+                vertices.push.apply(vertices,surface.normal);
+            }
+            for (var ring=0;ring<rings;ring++) for(var edge=0;edge<edges;edge++) {
+                vertex(ring,edge);vertex(ring+1,edge);vertex(ring+1,edge+1);
+                if(ring) { vertex(ring,edge);vertex(ring+1,edge+1);vertex(ring,edge+1); }
+            }
+            return {vertices:new Float32Array(vertices),staticGeometry:true,color:/** @type {[number,number,number]} */ ([.12,.10,.08]),opacity:[.18,.22,.25,.28][layer]};
+        });
     }
     /** @param {ArtCraft} craft @param {number} wave @param {Pick<Appearance, 'allyArt' | 'enemyArt'>} appearance */
     function model(craft, wave, appearance) {
@@ -82,6 +115,7 @@
         var scene = DW.scene3d.create(host, getWorld, setWorld, { study: true });
         /** @type {import('./types').Images} */
         var shipImages = new Map();
+        var burns = /** @type {WeakMap<Vector, Batch[]>} */ (new WeakMap());
         var crewKey = '', crewPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses, crews = /** @type {Batch[]} */ ([]);
         DW.shipPackModels.loadTextures().then(function (images) {
             shipImages = images;
@@ -154,6 +188,14 @@
                 });
                 DW.shipPackModels.scorchGeometry(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units).forEach(function (batch) {
                     actorBatches.push(batch);
+                });
+            });
+            var asteroid = world.asteroids[0];
+            if (asteroid) (combat.terrainScorches || []).forEach(function (point) {
+                var batches = burns.get(point);
+                if (!batches) { batches = terrainScorch(asteroid, point); burns.set(point, batches); }
+                batches.forEach(function (batch) {
+                    actorBatches.push(Object.assign({}, batch, {origin:[asteroid.position.x,asteroid.position.y,0],rotation:asteroid.rotation}));
                 });
             });
             var nextCrewKey = JSON.stringify(world.asteroids.map(function (a) { return [a.id,a.radius,a.excavation]; }));

@@ -165,6 +165,8 @@ export type Combat = {
     radioSerial: number;
     playerKills: number;
     nearMissAt?: number;
+    terrainScorches?: Vector[];
+    onTerrainImpact?: (point: Vector) => void;
     hullHit?: (craft: Craft, start: Vector, end: Vector) => Hit | null;
 };
 export type Model = {
@@ -191,6 +193,7 @@ export type Batch = {
     asteroidId?: string;
     vertices: Float32Array;
     bakedDocking?: Float32Array;
+    rigLights?: import('../src/types').RigLighting[];
     color: [
         number,
         number,
@@ -240,6 +243,7 @@ export type HudView = FlightView & Appearance & {
     paused: boolean;
     mouse: number[];
     inputMode: string;
+    showMouseStick: boolean;
     stickRange: number;
     speakerId: string | null;
     weapon: Weapon;
@@ -590,6 +594,7 @@ export type ExperimentModules = {
             view: () => {
                 mouse: number[];
                 inputMode: string;
+                showMouseStick: boolean;
                 stickRange: number;
             };
             clear: () => void;
@@ -690,6 +695,7 @@ export type ExperimentModules = {
     };
 };
 export type Elements = {
+    'controller-layout': HTMLElement;
     'steering-preset': HTMLSelectElement;
     'volume': HTMLInputElement;
     'breath': HTMLInputElement;

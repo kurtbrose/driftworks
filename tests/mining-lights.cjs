@@ -35,3 +35,11 @@ const catalog=global.Driftworks.originalShipModels.find(m=>m.id==='driftworks:mi
 const full=catalog.geometry(1),small=catalog.geometry(10);
 assert.ok(full.some(b=>b.bakedDocking&&b.bakedDocking.some(v=>v>0)),'Reusable model catalog carries baked lighting');
 full.forEach((b,i)=>assert.equal(b.bakedDocking,small[i].bakedDocking,'Catalog scaling preserves light contribution'));
+
+const reusable=L.visual(global.Driftworks.scene3d.miningPlatformGeometry(1,0,false,1,''));
+assert.equal(L.placedLights(reusable).length,1,'Reusable rig automatically includes one illumination frame');
+const placed=reusable.map(b=>({...b,origin:[10,20,30],rotation:Math.PI/2,scale:2}));
+const frame=L.placedLights(placed)[0];
+assert.deepEqual(frame.origin,[10,20,30]);assert.equal(frame.scale,2);
+assert.ok(Math.abs(frame.right[0])<1e-12&&Math.abs(frame.right[1]-1)<1e-12,'Light frame follows mesh rotation');
+assert.ok(reusable.filter(b=>b.finish===7).length===2,'Shared rig preserves lamp and marker emission');

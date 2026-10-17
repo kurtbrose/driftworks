@@ -95,6 +95,11 @@
                     state.throttle = 0;
                 model.step(state, config.profile, controls, dt);
                 combat.hullHit = environment.hullHit;
+                combat.onTerrainImpact = function (point) {
+                    var marks = combat.terrainScorches || (combat.terrainScorches = []);
+                    marks.push(rotateVector(point, -asteroid.rotation));
+                    if (marks.length > 96) marks.shift();
+                };
                 var playerHitBefore = combat.lastHit;
                 DW.training.step(combat, state, dt, asteroid.radius, environment.terrainHit);
                 var firedBefore = guns.fired, hitsBefore = guns.hits;

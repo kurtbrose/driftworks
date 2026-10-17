@@ -171,6 +171,10 @@
       var sourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,0,'');
       var openSourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,1,'');
       Object.keys(sourceRig).forEach(function(material,index){assert(crewBatches[index].vertices.length===sourceRig[material].length+openSourceRig[material].length*2,'Three complete current rigs: two open, one closed');});
+      assert(crewBatches.some(function(b){return b.finish===7;}),'Flight fixtures retain emissive materials');
+      assert(crewBatches.some(function(b){return b.bakedDocking&&Array.from(b.bakedDocking).some(function(v){return v>0;});}),'Flight retains baked docking wash');
+      assert(DW.miningLights.placedLights(crewBatches).length===3,'All three flight rigs carry their own lighting frames');
+      crewBatches.forEach(function(b){if(b.bakedDocking)assert(b.bakedDocking.length===b.vertices.length/2,'Merged lighting matches every vertex');});
       assert(JSON.stringify(world)===beforeCrews,'Surface scenery must not change persistent world state');
       presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
       assert(actors[actors.length-1].vertices===crewBatches[materialCount-1].vertices,'Static crew geometry is reused across frames');
@@ -248,6 +252,7 @@
 
   test('flight controls preserve pointer capture, virtual stick and capture failures',function(){
     var f=flightControlsFixture(),c=f.controls;
+    f.elements['steering-preset'].value='wide-linear';
     c.capture();assert(f.counts.failure===1);
     f.host.requestPointerLock=function(){throw new Error('denied');};c.capture();assert(f.counts.failure===2);
     f.host.requestPointerLock=function(){return {catch:function(fn){fn(new Error('rejected'));}};};c.capture();assert(f.counts.failure===3);
@@ -267,16 +272,43 @@
 
   test('paused steering presets preserve all three travel and response combinations',function(){
     var f=flightControlsFixture(),c=f.controls,preset=f.elements['steering-preset'];
-    assert(preset.value==='wide-linear');assertClose(c.view().stickRange,360);
+    assert(preset.value==='medium-soft');assertClose(c.view().stickRange,240);
     preset.value='medium-soft';preset.onchange();assert(f.counts.pause===1);assertClose(c.view().stickRange,240);
     f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');
     f.doc.emit('mousemove',{movementX:129.6,movementY:0});assertClose(c.sample().yaw,-Math.pow(.5,1.6));
-    preset.value='wide-soft';preset.onchange();assertClose(c.view().stickRange,360);assertClose(c.view().mouse[0],0);
+    preset.value='original';preset.onchange();assertClose(c.view().stickRange,160);assertClose(c.view().mouse[0],0);
     f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');
-    f.doc.emit('mousemove',{movementX:194.4,movementY:0});assertClose(c.sample().yaw,-Math.pow(.5,1.6));
+    f.doc.emit('mousemove',{movementX:86.4,movementY:0});assertClose(c.sample().yaw,-.5);
     preset.value='wide-linear';preset.onchange();
     f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');
     f.doc.emit('mousemove',{movementX:194.4,movementY:0});assertClose(c.sample().yaw,-.5);
+  });
+
+  test('mouse guide follows recent stick movement without noise or held input stealing it back',function(){
+    var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Guide pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
+    f.setPads([pad]);c.sample();assert(c.view().showMouseStick);
+    f.doc.pointerLockElement=f.host;f.doc.emit('mousemove',{movementX:60,movementY:0});
+    pad.axes[0]=.01;c.sample();assert(c.view().showMouseStick);
+    pad.axes[0]=.7;c.sample();assert(!c.view().showMouseStick);assertClose(c.view().mouse[0],0);
+    f.doc.emit('mousemove',{movementX:0,movementY:0});assert(!c.view().showMouseStick);
+    f.doc.emit('mousemove',{movementX:10,movementY:0});c.sample();assert(c.view().showMouseStick);
+    pad.axes[0]=.705;c.sample();assert(c.view().showMouseStick);
+    pad.axes[0]=.9;c.sample();assert(!c.view().showMouseStick);
+    pad.axes[0]=0;c.sample();assert(!c.view().showMouseStick);
+    f.doc.emit('mousemove',{movementX:1,movementY:0});assert(c.view().showMouseStick);
+  });
+
+  test('nonstandard joystick throttle axis and increase/decrease buttons can be remapped',function(){
+    var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Throttle pad',connected:true,mapping:'',axes:[0,0,0,-1],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
+    f.setPads([pad]);c.sample();var bindings=f.elements.bindings.children;
+    bindings[3].children[0].value='3';bindings[3].children[0].onchange();assertClose(c.sample().throttle,1);
+    pad.axes[3]=1;assertClose(c.sample().throttle,0);
+    bindings[3].children[1].checked=false;bindings[3].children[1].onchange();assertClose(c.sample().throttle,1);
+    bindings[3].children[0].value='-1';bindings[3].children[0].onchange();assert(c.sample().throttle===null);
+    bindings[8].children[0].value='4';bindings[8].children[0].onchange();
+    bindings[9].children[0].value='5';bindings[9].children[0].onchange();
+    pad.buttons[4].pressed=true;assertClose(c.sample().throttleRate,1);
+    pad.buttons[4].pressed=false;pad.buttons[5].pressed=true;assertClose(c.sample().throttleRate,-1);
   });
 
   test('flight controls retain controller edges, editable bindings and disconnect pause',function(){
@@ -1453,6 +1485,17 @@
     assert(c.throttle===null && c.throttleRate===1 && c.fire && c.boost);
     assert(!c.bank && !c.pause);
   });
+  test('standard right stick adjusts throttle proportionally and holds at neutral',function(){
+    var input=window.Driftworks.flightInput,map=input.defaults(true),pad={mapping:'standard',axes:[0,0,0,0],buttons:[]};
+    assertClose(input.read(pad,map).throttleRate,0);assert(input.read(pad,map).throttle===null);
+    pad.axes[3]=-1;assertClose(input.read(pad,map).throttleRate,1);
+    pad.axes[3]=1;assertClose(input.read(pad,map).throttleRate,-1);
+    pad.axes[3]=-.56;assertClose(input.read(pad,map).throttleRate,.5);
+    pad.axes[3]=.05;assertClose(input.read(pad,map).throttleRate,0);
+    pad.axes[3]=-1;pad.buttons[12]={pressed:true,value:1};assertClose(input.read(pad,map).throttleRate,1);
+    pad.axes=[];assertClose(input.read(pad,map).throttleRate,1);
+  });
+
   test('joystick permits inverted axes, absolute throttle and custom buttons', function () {
     var input=window.Driftworks.flightInput,map=input.defaults(false),pad={axes:[.12,1,-1,-1],buttons:[]};
     map.fire=5;map.pause=6;pad.buttons[5]={pressed:true,value:1};pad.buttons[6]={pressed:true,value:1};
@@ -3895,11 +3938,14 @@
     var t=ai.create(),pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,0,0]},e={id:'target',index:0,hp:10,pose:pose};
     t.enemies=[e];t.hullHit=function(craft,start,end){return models.hullHit(models.craftModel(craft,'',1),craft.pose,start,end,U);};
     var bolt={weapon:{damage:20,armorFactor:1}},start=[0,0,10/U],end=[0,0,-10/U];
+    var terrainMarks=[];t.onTerrainImpact=function(point){terrainMarks.push(point);};
     var obstruction=[0,0,8/U],player={eye:[20,20,20]};
     assert(ai.trace(t,start,end,bolt,'player',function(){return obstruction;},player)===obstruction);
     assert(e.hp===10&&!e.scorches, 'Terrain shields the hull from damage and marks');
+    assert(terrainMarks.length===1&&terrainMarks[0]===obstruction, 'Only a confirmed terrain impact leaves a rock burn');
     var impact=ai.trace(t,start,end,bolt,'player',null,player);
     assert(impact&&e.hp===0&&e.scorches.length===1);
+    assert(terrainMarks.length===1, 'Hull impacts do not burn the terrain behind them');
     assert(t.wrecks[0].scorches.length===1, 'The killing shot marks the wreck');
   });
 

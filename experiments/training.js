@@ -298,6 +298,8 @@
         var struck = /** @type {Craft | 'player' | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
         if (struck && struck !== 'player' && hull && hull.model && hull.local && hull.normal)
             DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });
+        if (!struck && hit && t.onTerrainImpact)
+            t.onTerrainImpact(hit);
         if (struck === 'player')
             damagePlayer(t, bolt.weapon);
         else if (struck)

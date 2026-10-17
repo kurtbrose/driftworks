@@ -282,7 +282,7 @@ export type LandingOptions = {unitsPerMetre?:number; spin?:number};
 export type LandingSample = {time:number; altitude:number; deployment:number; ramps:number; match:number; travel:number; offset:number[]; headingOffset:number; contact:boolean; done:boolean; phase:string};
 export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
-  miningLights?:{bakeDocking:(data:ArrayLike<number>)=>Float32Array;fields:{id:string;center:number[];radii:number[];power:number;color:number[]}[];fixtureCounts:Record<string,number>;model:RigLighting;irradiance:(rig:RigLighting,point:number[],normal:number[])=>number[];shaderSource:string;uniforms:(rigs:RigLighting[],origin:number[],angle:number,scale:number)=>RigLightUniforms;mounts:RigLightMount[];basis:(direction:number[])=>number[][];rig:(pose:{world:(p:number[])=>number[];rotate:(p:number[])=>number[]},scale:number,power?:number)=>RigLighting};
+  miningLights?:{visual:(groups:Record<string,number[]>,pose?:{world:(p:number[])=>number[];rotate:(p:number[])=>number[]},scale?:number)=>import('../experiments/types').Batch[];placedLights:(batches:import('../experiments/types').Batch[])=>RigLighting[];bakeDocking:(data:ArrayLike<number>)=>Float32Array;fields:{id:string;center:number[];radii:number[];power:number;color:number[]}[];fixtureCounts:Record<string,number>;model:RigLighting;irradiance:(rig:RigLighting,point:number[],normal:number[])=>number[];shaderSource:string;uniforms:(rigs:RigLighting[],origin:number[],angle:number,scale:number)=>RigLightUniforms;mounts:RigLightMount[];basis:(direction:number[])=>number[][];rig:(pose:{world:(p:number[])=>number[];rotate:(p:number[])=>number[]},scale:number,power?:number)=>RigLighting};
   miningTerrain?: MiningTerrain;
   miningLanding?: {duration:number; sample:(time:number)=>LandingSample; pose:(fit:LandingFit,time:number,options?:LandingOptions)=>LandingPose};
   asteroidArt?: {
@@ -331,7 +331,7 @@ export interface DriftworksNamespace {
       getRenderStats: () => {drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyLightRigs:(rigs:RigLighting[])=>void;
     setRigLightsEnabled:(enabled:boolean)=>void;
-    setStudyActors: (batches: {vertices: Float32Array; bakedDocking?:Float32Array; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
+    setStudyActors: (batches: {vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
       setStudyEffects: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;
       getOrbit: () => {yaw: number; tilt: number; height?: number};
       setSurfaceCamera: (pose: {eye: [number, number, number]; right: [number, number, number]; up: [number, number, number]; back: [number, number, number]} | null) => void;

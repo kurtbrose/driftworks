@@ -30,7 +30,7 @@
                 combatCanvas.height = h;
             }
             combatHud.clearRect(0, 0, w, h);
-            if (!paused && view.inputMode === 'mouse') {
+            if (!paused && view.showMouseStick) {
                 var range = view.stickRange, cx = w / 2, cy = h / 2, sx = cx + mouse[0] * range, sy = cy + mouse[1] * range;
                 combatHud.strokeStyle = 'rgba(166,239,222,.3)';
                 combatHud.beginPath();

@@ -53,6 +53,29 @@
       }out.set(value,i/2);
     }dockingBakes.set(data,out);return out;
   }
+  /** @type {WeakMap<object,import('../experiments/types').Batch[]>} */ var visualCache=new WeakMap();
+  /** Complete reusable rig visuals: materials, baked wash and local light frame.
+   * @param {Record<string,number[]>} groups @param {{world:(p:number[])=>number[];rotate:(p:number[])=>number[]}} [pose] @param {number} [scale]
+   * @returns {import('../experiments/types').Batch[]} */
+  function visual(groups,pose,scale){
+    var cached=!pose?visualCache.get(groups):undefined;if(cached)return cached;
+    var colors=/** @type {Record<string,[number,number,number]>} */ ({ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49],lamp:[1,.94,.78],marker:[.35,.95,.85]});
+    var batches=Object.keys(groups).map(function(key,index){
+      var batch={vertices:new Float32Array(groups[key]),color:colors[key],finish:key==='lamp'||key==='marker'?7:8,bakedDocking:bakeDocking(groups[key]),rigLights:index===0?[pose?rig(pose,scale===undefined?1:scale):model]:undefined};
+      return pose&&DW.miningTerrain?DW.miningTerrain.transform(batch,pose):batch;
+    });if(!pose)visualCache.set(groups,batches);return batches;
+  }
+  /** Resolve local light metadata through the same placement as its owning mesh.
+   * @param {import('../experiments/types').Batch[]} batches @returns {RigLighting[]} */
+  function placedLights(batches){
+    /** @type {RigLighting[]} */ var result=[];
+    batches.forEach(function(batch){(batch.rigLights||[]).forEach(function(light){
+      var c=Math.cos(batch.rotation||0),s=Math.sin(batch.rotation||0),b=batch.basis,scale=batch.scale===undefined?1:batch.scale;
+      /** @param {number[]} p */
+      function rotate(p){var v=b?[b[0]*p[0]+b[3]*p[1]+b[6]*p[2],b[1]*p[0]+b[4]*p[1]+b[7]*p[2],b[2]*p[0]+b[5]*p[1]+b[8]*p[2]]:p;return [c*v[0]-s*v[1],s*v[0]+c*v[1],v[2]];}
+      result.push({origin:rotate(light.origin).map(function(v,k){return v*scale+(batch.origin?batch.origin[k]:0);}),right:rotate(light.right),forward:rotate(light.forward),up:rotate(light.up),scale:light.scale*scale,power:light.power});
+    });});return result;
+  }
   var model=rig({world:function(p){return p.slice();},rotate:function(p){return p.slice();}},1);
   /** @param {RigLighting[]} rigs @param {number[]} origin @param {number} angle @param {number} scale */
   function uniforms(rigs,origin,angle,scale){
@@ -66,5 +89,5 @@
   }
   /** @type {import('./types').DriftworksNamespace} */
   var DW=global.Driftworks=global.Driftworks || {};
-  DW.miningLights={bakeDocking:bakeDocking,mounts:mounts,fields:fields,fixtureCounts:{main:6,cargo:12,anchors:8,ramps:16,docking:9},basis:basis,rig:rig,irradiance:irradiance,model:model,uniforms:uniforms,shaderSource:"uniform vec4 uRigOrigin[2];uniform vec3 uRigX[2],uRigY[2],uRigZ[2];uniform float uRigPower[2],uRigCount,uRigProjected,uRigBaked;\nfloat rigField(vec3 p,vec3 center,vec3 radii){return 1.-smoothstep(.5,1.15,length((p-center)/radii));}\nvec3 rigIllumination(vec3 point,vec3 n){vec3 sum=vec3(0.);for(int i=0;i<2;i++){if(float(i)>=uRigCount)break;vec3 x=uRigX[i],y=uRigY[i],z=uRigZ[i];vec4 origin=uRigOrigin[i];vec3 receiver=point;if(uRigProjected>.5)receiver.z=origin.z+1.4*origin.w-(z.x*(point.x-origin.x)+z.y*(point.y-origin.y))/max(.2,z.z);vec3 d=(receiver-origin.xyz)/origin.w;vec3 p=vec3(dot(d,x),dot(d,y),dot(d,z));float weight=.65+.35*max(0.,dot(n,z));float under=(1.-smoothstep(14.5,17.,abs(p.x)))*(1.-smoothstep(9.,11.,abs(p.y)))*(1.-smoothstep(4.25,4.55,p.z));float pod=(1.-smoothstep(4.4,5.1,abs(p.x)))*(1.-smoothstep(3.1,3.8,abs(p.y)))*smoothstep(7.25,7.55,p.z)*(1.-smoothstep(13.4,13.8,p.z));vec3 glow=vec3(0.);\nglow+=vec3(1.0,0.94,0.82)*rigField(p,vec3(0.0,0.0,6.2),vec3(20.0,14.0,5.0))*0.95*smoothstep(4.4,4.55,p.z)*(1.-pod*.94);\nglow+=vec3(1.0,0.9,0.72)*rigField(p,vec3(0.0,0.0,1.0),vec3(34.0,27.0,12.0))*0.85*(1.-under*.96);\nif(uRigBaked<.5)glow+=vec3(0.67,0.85,1.0)*rigField(p,vec3(0.0,0.0,13.4),vec3(8.0,7.0,4.0))*0.7*smoothstep(11.8,13.2,p.z);\nsum+=glow*weight*uRigPower[i];}return vec3(1.)-exp(-sum);}\n"};
+  DW.miningLights={visual:visual,placedLights:placedLights,bakeDocking:bakeDocking,mounts:mounts,fields:fields,fixtureCounts:{main:6,cargo:12,anchors:8,ramps:16,docking:9},basis:basis,rig:rig,irradiance:irradiance,model:model,uniforms:uniforms,shaderSource:"uniform vec4 uRigOrigin[2];uniform vec3 uRigX[2],uRigY[2],uRigZ[2];uniform float uRigPower[2],uRigCount,uRigProjected,uRigBaked;\nfloat rigField(vec3 p,vec3 center,vec3 radii){return 1.-smoothstep(.5,1.15,length((p-center)/radii));}\nvec3 rigIllumination(vec3 point,vec3 n){vec3 sum=vec3(0.);for(int i=0;i<2;i++){if(float(i)>=uRigCount)break;vec3 x=uRigX[i],y=uRigY[i],z=uRigZ[i];vec4 origin=uRigOrigin[i];vec3 receiver=point;if(uRigProjected>.5)receiver.z=origin.z+1.4*origin.w-(z.x*(point.x-origin.x)+z.y*(point.y-origin.y))/max(.2,z.z);vec3 d=(receiver-origin.xyz)/origin.w;vec3 p=vec3(dot(d,x),dot(d,y),dot(d,z));float weight=.65+.35*max(0.,dot(n,z));float under=(1.-smoothstep(14.5,17.,abs(p.x)))*(1.-smoothstep(9.,11.,abs(p.y)))*(1.-smoothstep(4.25,4.55,p.z));float pod=(1.-smoothstep(4.4,5.1,abs(p.x)))*(1.-smoothstep(3.1,3.8,abs(p.y)))*smoothstep(7.25,7.55,p.z)*(1.-smoothstep(13.4,13.8,p.z));vec3 glow=vec3(0.);\nglow+=vec3(1.0,0.94,0.82)*rigField(p,vec3(0.0,0.0,6.2),vec3(20.0,14.0,5.0))*0.95*smoothstep(4.4,4.55,p.z)*(1.-pod*.94);\nglow+=vec3(1.0,0.9,0.72)*rigField(p,vec3(0.0,0.0,1.0),vec3(34.0,27.0,12.0))*0.85*(1.-under*.96);\nif(uRigBaked<.5)glow+=vec3(0.67,0.85,1.0)*rigField(p,vec3(0.0,0.0,13.4),vec3(8.0,7.0,4.0))*0.7*smoothstep(11.8,13.2,p.z);\nsum+=glow*weight*uRigPower[i];}return vec3(1.)-exp(-sum);}\n"};
 })(window);
