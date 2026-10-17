@@ -1435,13 +1435,28 @@
   });
   test('mining pod studies keep finite unit normals, fold anchors and gate cutter motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
-    ['pod','anchors','recessed'].forEach(function(variant){
+    ['pod','anchors','recessed','fabricated'].forEach(function(variant){
       var deployed=model(1,0,false,variant),folded=model(0,0,false,variant);
       assert(JSON.stringify(deployed)!==JSON.stringify(folded));
       assert(JSON.stringify(deployed)===JSON.stringify(model(1,5,false,variant)));
       assert(JSON.stringify(deployed)!==JSON.stringify(model(1,.2,true,variant)));
       Object.keys(deployed).forEach(function(key){var data=deployed[key];assert(data.length%18===0);assert(data.every(Number.isFinite));for(var i=3;i<data.length;i+=6)assertClose(Math.hypot(data[i],data[i+1],data[i+2]),1,.00001);});
     });
+  });
+
+  test('fabricated mining hull has twelve planar walls, chamfers and a flat deck', function () {
+    var data=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'fabricated').ochre;
+    // First 24 quads are structural wall/shoulder plates, each with a single normal.
+    for(var face=0;face<24;face++){
+      var start=face*36;
+      for(var i=start;i<start+36;i+=6)for(var k=3;k<6;k++)assertClose(data[i+k],data[start+k],.000001);
+      if(face%2===0)assertClose(data[start+5],0,.000001);
+      var nx=data[start+3],ny=data[start+4],nz=data[start+5];
+      for(var i=start;i<start+36;i+=6)assertClose((data[i]-data[start])*nx+(data[i+1]-data[start+1])*ny+(data[i+2]-data[start+2])*nz,0,.000001);
+      if(face%2===1)assert(data[start+5]>.4 && data[start+5]<.9,'Broad angled shoulder plates');
+    }
+    // Ten triangles close the twelve-vertex roof, all at the same height.
+    for(var i=24*36;i<24*36+10*18;i+=6){assertClose(data[i+2],12.5);assertClose(data[i+5],1);}
   });
 
   test('mining platform geometry folds legs and animates only active machinery', function () {

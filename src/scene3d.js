@@ -408,6 +408,70 @@
       var z=/** @type {V3} */ ([-x[2]*y[1],x[2]*y[0],x[0]*y[1]-x[1]*y[0]]);
       block(material,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],[len/2,width,width],[x,y,z]);
     }
+    if (variant === 'fabricated') {
+      /** Flat-shaded polygon: every triangle in a plate shares one face normal.
+       * @param {string} material @param {V3[]} points
+       */
+      function plate(material,points) {
+        var a=points[0],b=points[1],c=points[2];
+        var u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],v=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];
+        var n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot.apply(null,n);
+        for(var i=1;i<points.length-1;i++)[a,points[i],points[i+1]].forEach(function(p){groups[material].push(p[0],p[1],p[2],n[0]/length,n[1]/length,n[2]/length);});
+      }
+      // Twelve straight perimeter edges; 12 vertical walls, 12 shoulders, deck and belly.
+      var perimeter=[[15,-6],[15,6],[10,9],[2,10.5],[-8,10],[-14,7],[-17,3],[-17,-3],[-14,-7],[-8,-10],[2,-10.5],[10,-9]];
+      var lower=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],4.5]);});
+      var shoulder=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],9.3]);});
+      var deck=perimeter.map(function(p){return /** @type {V3} */ ([-1+(p[0]+1)*.68,p[1]*.68,12.5]);});
+      perimeter.forEach(function(p,i){var j=(i+1)%perimeter.length;
+        plate('ochre',[lower[i],lower[j],shoulder[j],shoulder[i]]);
+        plate('ochre',[shoulder[i],shoulder[j],deck[j],deck[i]]);
+      });
+      plate('ochre',deck);plate('dark',lower.slice().reverse());
+      block('dark',[-1,0,3.3],[14,8.4,1.2]);
+      // Exposed chassis rails carry the mining head and each rectangular root mount.
+      [-1,1].forEach(function(side){block('steel',[-1,side*8,3.6],[14.5,.7,.9]);});
+      /** Cylindrical pin, aligned across the leg, with planar end caps.
+       * @param {V3} center @param {number} radius
+       */
+      function pin(center,radius) {
+        for(var i=0;i<10;i++){
+          var a=i*Math.PI/5,b=(i+1)*Math.PI/5;
+          var x=Math.cos(a)*radius,z=Math.sin(a)*radius,xx=Math.cos(b)*radius,zz=Math.sin(b)*radius;
+          plate('steel',[[center[0]+x,center[1]-.95,center[2]+z],[center[0]+xx,center[1]-.95,center[2]+zz],[center[0]+xx,center[1]+.95,center[2]+zz],[center[0]+x,center[1]+.95,center[2]+z]]);
+          [-1,1].forEach(function(side){plate('dark',[[center[0],center[1]+side*.96,center[2]],[center[0]+x,center[1]+side*.96,center[2]+z],[center[0]+xx,center[1]+side*.96,center[2]+zz]]);});
+        }
+      }
+      [-11,-5,5,9].forEach(function(root,index){[-1,1].forEach(function(side){
+        var sweep=index===0?-5:index===3?5:index===1?-1:1;
+        var rootY=side*(index===0?8:9),reach=6*d;
+        var mount=/** @type {V3} */ ([root,rootY,4]);
+        var knee=/** @type {V3} */ ([root+sweep*d*.6,rootY+side*(1.5+reach*.55),4]);
+        var tip=/** @type {V3} */ ([root+sweep*d,rootY+side*(2+reach),1.4+(1-d)*2]);
+        block('dark',mount,[2.2,1.8,1.5]);
+        block('ochre',[root,rootY,5.4],[2.3,1.9,.55]);
+        link('dark',mount,knee,1.05);link('steel',knee,tip,.7);
+        link('light',[root,rootY,3.1],[knee[0],knee[1],3.1],.25);
+        pin(knee,.95);block('dark',tip,[1.1,1,.7]);
+        [-1,1].forEach(function(jaw){
+          var spread=.8+d*.7;
+          var knuckle=/** @type {V3} */ ([tip[0]+jaw*spread,tip[1]+side*1.1,tip[2]-.2]);
+          var tooth=/** @type {V3} */ ([tip[0]+jaw*.45,tip[1]+side*1.8,tip[2]-1.4]);
+          link('steel',[tip[0]+jaw*.6,tip[1],tip[2]],knuckle,.45);link('dark',knuckle,tooth,.36);
+        });
+      });});
+      // Squared front brow, recessed feed opening and protective angular cheeks.
+      block('dark',[13.5,0,3.5],[3.5,5.6,1.6]);
+      block('ochre',[15,0,6],[3,6.3,.8]);
+      [-1,1].forEach(function(side){
+        var y=side*6;
+        plate('ochre',[[12,y,2],[18,y,2],[17,y,5.4],[12,y,5.4]]);
+        block('ochre',[14.5,side*6.4,3.7],[2.5,.6,1.7]);
+      });
+      block('dark',[17.1,0,3.5],[.35,5,1.6]);
+      for(var tooth=-2;tooth<=2;tooth++)block('steel',[17.5+(working?Math.sin(time*7+tooth)*.25:0),tooth*1.8,2.7],[.65,.65,.8]);
+      return groups;
+    }
     // Study variants deliberately stop at silhouette and functional masses.
     if (variant === 'pod' || variant === 'anchors' || variant === 'recessed') {
       var recessed=variant==='recessed', mixed=variant==='anchors';

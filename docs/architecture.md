@@ -793,3 +793,5 @@ support focused headless orchestration tests without WebGL.
 `scene3d.miningPlatformGeometry(deployment, time, working, variant?)` returns local triangle arrays grouped by paint, with unit normals and foot pads near z=0. Production rendering aligns this artwork to the asteroid slope and batches it into four reusable GPU buffers. Deployment and extraction animation derive from existing platform state; geometry never changes persistent world data. The mining platform study uses the same geometry.
 
 Mining pod silhouette studies use optional `pod`, `anchors`, or `recessed` variants in the comparison viewer. The omitted variant retains production artwork. These are presentation-only alternatives with no new saved state.
+
+The `fabricated` mining study uses a symmetric twelve-edge footprint, twelve vertical side plates, twelve shoulder plates and a flat deck/belly. Eight equal chassis-mounted grippers retain the pod arrangement. The viewer grey-material toggle changes batch color only, preserving lighting and geometry.
