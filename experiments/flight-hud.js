@@ -25,7 +25,7 @@
     document.getElementById('weapon-name').textContent=view.weapon.name;
     var targetPanel=document.getElementById('target-info');targetPanel.hidden=!selected;
     if(selected){
-      var selection=selected.team==='ally'?view.allyArt:view.enemyArt,art=DW.shipPackModels.craftModel(selected,selection,combat.wave);
+      var selection=selected.team==='ally'?view.allyArt:view.enemyArt,art=DW.flightPresentation.model(selected,combat.wave,view);
       document.getElementById('target-label').textContent=(selected.team==='ally'?'WING / ':'TARGET / ')+DW.training.callsign(selected);
       document.getElementById('target-detail').textContent=(art.name||'Training fighter')+' / '+Math.round(Math.hypot.apply(null,selected.pose.eye.map(function(v,i){return v-state.eye[i];}))*units)+' m / '+Math.ceil(selected.hp)+'% HULL';
       document.getElementById('target-hull').value=selected.hp;

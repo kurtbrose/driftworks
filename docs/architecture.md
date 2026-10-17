@@ -742,3 +742,24 @@ is separately called on resume to preserve existing controller edge semantics.
 shortcuts call injected actions; the adapter does not access session, HUD, comms
 or weapon selectors. The optional environment argument supplies document/window/
 navigator for adapter regressions. Load it after `input.js` and before `flight.js`.
+
+`experiments/flight-presentation.js` owns the main study scene, skybox, texture
+loading, artwork controls/credits, faction paint and fleet/effect submission.
+`appearance()` returns a fresh selection/paint/image snapshot for both `render`
+and the HUD. `model(craft,wave,appearance)` is their shared team-aware model
+resolver; `hullHit` uses current artwork with the supplied combat wave. Wrecks
+join hull/scorch batches, while only living craft emit engine effects. Submission
+remains hulls, scorches, gun effects, engines, diagnostic settings, sky, scene
+sync, scene render. `pose` forwards the player camera; `renderStats` supplies
+scene and sky counters. It does not advance the session or own its world.
+
+`experiments/flight-diagnostics.js` mounts render/performance controls and owns
+frame pacing, elapsed timestamps and rolling measurements via `flightPerformance`.
+`beginFrame(t,paused)` returns null for skipped frames, or elapsed/measurement
+context; elapsed is capped at .1 seconds while diagnostics retain actual time.
+`endFrame` records CPU time after scene and HUD work and reads renderer counters
+only when refreshing the overlay (over 250 ms). Control changes and reset clear
+pacing and elapsed timestamps as well as measurements. `settings` supplies study
+options; toggle actions preserve F3/P behavior. Both modules load before flight
+boot; the HUD uses the presentation resolver. Optional browser/clock environments
+support focused headless orchestration tests without WebGL.

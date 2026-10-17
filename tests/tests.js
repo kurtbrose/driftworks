@@ -21,6 +21,84 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  function flightDisplayDocument(){
+    var elements={},classes={};
+    function element(){return {value:'',checked:false,hidden:false,textContent:'',children:[],listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},appendChild:function(child){this.children.push(child);},insertBefore:function(child){this.children.unshift(child);}};}
+    return {getElementById:function(id){return elements[id]||(elements[id]=element());},createElement:element,body:{classList:{toggle:function(name){classes[name]=!classes[name];return classes[name];}}}};
+  }
+
+  test('flight diagnostics preserve frame pacing, elapsed clamps and measurement resets',function(){
+    var doc=flightDisplayDocument(),now=1000,reads=0;
+    doc.getElementById('fps-cap').value='60';doc.getElementById('render-mode').value='normal';doc.getElementById('render-scale').value='0.5';
+    doc.getElementById('draw-mothership').checked=true;doc.getElementById('draw-enemies').checked=true;
+    var diagnostics=window.Driftworks.flightDiagnostics.mount({document:doc,performance:{now:function(){return now;}}});
+    function stats(){reads++;return {scene:{cpuMs:1,drawCalls:3,triangles:100,meshes:2,materials:2,width:800,height:600,pixelRatio:1},sky:{drawCalls:1,triangles:20,meshes:1,materials:1,points:3200}};}
+    var comparison=diagnostics.settings(),frame=diagnostics.beginFrame(1000,false);
+    assert(comparison.scale===.5&&comparison.mothership&&comparison.actors&&!comparison.flat);
+    assert(frame.elapsed===0&&frame.actualElapsed===0);now+=2;diagnostics.endFrame(frame,false,comparison,stats);
+    var overlay=doc.getElementById('perf-overlay');assert(overlay.hidden&&reads===1);
+    assert(overlay.textContent.indexOf('Draw calls 4')>=0&&overlay.textContent.indexOf('triangles 120')>=0);
+    assert(diagnostics.beginFrame(1010,false)===null);
+    frame=diagnostics.beginFrame(1017,false);assertClose(frame.elapsed,.017);diagnostics.endFrame(frame,false,comparison,stats);assert(reads===1,'Overlay stats are throttled to 250 ms');
+    frame=diagnostics.beginFrame(1400,false);assertClose(frame.actualElapsed,.383);assertClose(frame.elapsed,.1);
+    diagnostics.endFrame(frame,false,comparison,stats);assert(overlay.textContent.indexOf('worst 383.0 ms')>=0);
+    doc.getElementById('render-scale').listeners.change();
+    frame=diagnostics.beginFrame(1410,false);assert(frame.actualElapsed===0);diagnostics.endFrame(frame,false,comparison,stats);assert(overlay.textContent.indexOf('worst 0.0 ms')>=0);
+    doc.getElementById('perf-reset').onclick();assert(diagnostics.beginFrame(1411,false).elapsed===0);
+    diagnostics.reset();assert(diagnostics.beginFrame(2000,true));assert(diagnostics.beginFrame(2030,true)===null);assert(diagnostics.beginFrame(2067,true));
+    doc.getElementById('fps-cap').value='0';doc.getElementById('fps-cap').listeners.change();assert(diagnostics.beginFrame(3000,false));assert(diagnostics.beginFrame(3001,false));
+    diagnostics.toggleDiagnostics();assert(doc.getElementById('perf-enabled').checked);diagnostics.togglePerformance();assert(!doc.getElementById('perf-enabled').checked);
+    diagnostics.toggleDiagnostics();assert(!doc.getElementById('perf-enabled').checked);diagnostics.togglePerformance();assert(doc.getElementById('perf-enabled').checked);
+    frame=diagnostics.beginFrame(3300,true);diagnostics.endFrame(frame,true,comparison,stats);assert(!overlay.hidden&&overlay.textContent.indexOf('PAUSED / 15 FPS CAP')===0);
+  });
+
+  test('flight presentation shares appearance and preserves fleet, wreck and effect submission order',function(){
+    var DW=window.Driftworks,doc=flightDisplayDocument(),saved={packs:DW.shipPackModels,scene:DW.scene3d.create,sky:DW.flightSkybox.create,gunGeometry:DW.flightGuns.geometry,blockout:DW.training.geometry};
+    var events=[],fleets=[],scorches=[],engines=[],actors,effects,hullQuery,textureImages=new Map(),sourceWorld={},world=sourceWorld,sceneStats={},skyStats={};
+    var scene={setSurfaceCamera:function(pose){events.push('pose');assert(pose.eye===player.eye);},setStudyActors:function(value){events.push('actors');actors=value;},setStudyEffects:function(value){events.push('effects');effects=value;},setStudyDiagnostics:function(value){events.push('diagnostics');assert(value===comparison);},sync:function(value){events.push('sync');assert(value===world);},render:function(value,a,b,dt){events.push('scene');assert(value===world&&a===1&&b===0&&dt===.05);},getRenderStats:function(){return sceneStats;}};
+    var player=DW.arcade.create(20),comparison={mode:'empty',scale:.5};
+    function craft(id,team,hp){return {id:id,team:team,hp:hp,pose:DW.arcade.create(20),guns:DW.flightGuns.create()};}
+    var ally=craft('ally','ally',90),enemy=craft('enemy','enemy',90),dead=craft('dead','enemy',0),wreck=craft('wreck','ally',0),combat=DW.training.create();
+    combat.enemies=[ally,enemy,dead];combat.wrecks=[wreck];combat.wave=3;world.elapsedSeconds=7;
+    try{
+      DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&getWorld()===sourceWorld);setWorld({elapsedSeconds:7});assert(getWorld()===world);return scene;};
+      DW.flightSkybox.create=function(){return {render:function(state,scale,empty){events.push('sky');assert(state===player&&scale===.5&&empty);},getRenderStats:function(){return skyStats;}};};
+      DW.shipPackModels=Object.assign({},saved.packs,{
+        populate:function(){},loadTextures:function(){return {then:function(fn){fn(textureImages);return {catch:function(){}};}};},
+        craftModel:function(craft,selection,wave){return {id:selection+':'+wave+':'+craft.id};},
+        hullHit:function(model,pose,start,end,units){hullQuery={model:model,pose:pose,start:start,end:end,units:units};return hullQuery;},
+        sourceFleetGeometry:function(craft,selection,wave,units,images,paint){var batch={kind:'hull',craft:craft,selection:selection,wave:wave,units:units,images:images,paint:paint};fleets.push(batch);return [batch];},
+        scorchGeometry:function(craft,selection){var batch={kind:'scorch',craft:craft,selection:selection};scorches.push(batch);return [batch];},
+        engineGeometry:function(craft,selection,wave,units,state,time){engines.push(craft);assert(time===7&&state===player);return {vertices:new Float32Array([craft[0].team==='ally'?1:2])};}
+      });
+      DW.flightGuns.geometry=function(){return [{kind:'guns'}];};
+      var presentation=DW.flightPresentation.mount({},function(){return world;},function(value){world=value;},{document:doc});
+      assert(doc.getElementById('enemy-art').value==='mixed'&&doc.getElementById('ally-art').value==='mixed');
+      assert(doc.getElementById('art-credit').textContent.indexOf('Mixed fleet')===0);
+      doc.getElementById('ally-art').value='friendly';doc.getElementById('enemy-art').value='hostile';
+      doc.getElementById('faction-paint').checked=true;doc.getElementById('ally-color').value='#607451';doc.getElementById('enemy-color').value='#bd713f';
+      var appearance=presentation.appearance();assert(appearance.shipImages===textureImages);
+      assert(DW.flightPresentation.model(ally,3,appearance).id==='friendly:3:ally');
+      var start=[0,0,0],end=[1,0,0];presentation.hullHit(ally,start,end,3);
+      assert(hullQuery.model.id===DW.flightPresentation.model(ally,3,appearance).id&&hullQuery.pose===ally.pose&&hullQuery.units===sim.METERS_PER_UNIT&&hullQuery.start===start&&hullQuery.end===end);
+      doc.getElementById('enemy-art').value='changed';presentation.hullHit(enemy,start,end,4);assert(hullQuery.model.id==='changed:4:enemy');
+      presentation.pose(player);presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
+      assert(events.join(',')==='pose,actors,effects,diagnostics,sky,sync,scene');
+      assert(actors.map(function(batch){return batch.kind;}).join(',')==='hull,hull,scorch,scorch');
+      assert(fleets[0].craft[0]===ally&&fleets[0].craft[1]===wreck&&fleets[1].craft.length===1&&fleets[1].craft[0]===enemy);
+      assert(fleets[0].paint===appearance.paint.ally&&fleets[1].paint===appearance.paint.enemy&&fleets[1].selection==='hostile');
+      assert(scorches[0].craft[1]===wreck&&engines[0].length===1&&engines[1].length===1);
+      assert(effects[0].kind==='guns'&&Array.from(effects[1].vertices).join(',')==='1,2');
+      assert(presentation.renderStats().scene===sceneStats&&presentation.renderStats().sky===skyStats);
+      doc.getElementById('faction-paint').checked=false;doc.getElementById('ally-art').value='';doc.getElementById('enemy-art').value='';
+      var plain=presentation.appearance();assert(plain.paint.ally===undefined&&plain.paint.enemy===undefined);
+      var blockouts=[];DW.training.geometry=function(value){blockouts.push(value.enemies);return [{kind:'blockout'}];};
+      presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},plain,comparison,.05);
+      assert(blockouts.length===2&&blockouts[0].length===2&&blockouts[0].every(function(craft){return craft.hp===1;}));
+      assert(wreck.hp===0&&ally.hp===90,'Blockout batching must not mutate combatants or wrecks');
+    }finally{DW.shipPackModels=saved.packs;DW.scene3d.create=saved.scene;DW.flightSkybox.create=saved.sky;DW.flightGuns.geometry=saved.gunGeometry;DW.training.geometry=saved.blockout;}
+  });
+
   // A small event/DOM fixture exercises the browser adapter without real devices.
   function flightControlsFixture(){
     function target(){return {listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},emit:function(name,event){if(this.listeners[name])this.listeners[name](event||{});},appendChild:function(child){this.children.push(child);if(this.value===''&&child.value!==undefined)this.value=child.value;},children:[],value:'',textContent:'',setAttribute:function(){}};}
