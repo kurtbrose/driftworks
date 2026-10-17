@@ -1,263 +1,307 @@
 (function(global){
   'use strict';
   /** @typedef {[number,number,number]} V3 */
+  /** @typedef {Record<string,number[]>} Groups */
+  /** @typedef {{knee:number[],tip:number[],normal:number[]}} ContactPose */
+  /** @typedef {ReturnType<NonNullable<import('./types').DriftworksNamespace['meshBuilder']>['create']>} MeshBuilder */
   var DW=/** @type {Required<import('./types').DriftworksNamespace>} */ (global.Driftworks);
-  /** Mining artwork in local coordinates: feet at z=0, eight folding legs.
-   * Geometry is grouped by paint so details do not add individual draw calls.
-   * @param {number} deployment @param {number} time @param {boolean} working @param {number} [panelOpen] @param {string} [interiorCut] @param {boolean} [legsOnly] @param {boolean} [infillOnly] @param {{knee:number[],tip:number[],normal:number[]}[]} [contactPoses] @param {number[]} [rampLimits] @param {boolean} [rampsOnly]
-   */
-  function miningPlatformGeometry(deployment, time, working, panelOpen, interiorCut, legsOnly, infillOnly, contactPoses, rampLimits, rampsOnly) {
-    // time/working remain accepted for existing callers; artwork has no idle machinery animation.
-    var d = Math.max(0, Math.min(1, deployment));
-    /** @type {Record<string, number[]>} */ var groups = {ochre:[], steel:[], dark:[], light:[],marker:[],lamp:[]};
-    var mesh=DW.meshBuilder.create(groups),block=mesh.block,link=mesh.link,plate=mesh.plate,jointBarrel=mesh.barrel;
-    {
-      /** Chamfered hardpoint shared by the frame socket and leg shoulder.
-       * @param {string} material @param {number} x @param {number} y @param {number} bottom @param {number} top @param {number} halfX @param {number} halfY @param {number} taper
-       */
-      function hardpoint(material,x,y,bottom,top,halfX,halfY,taper){
-        var c=.28,shape=[[-1,-1+c],[-1+c,-1],[1-c,-1],[1,-1+c],[1,1-c],[1-c,1],[-1+c,1],[-1,1-c]];
-        var base=shape.map(function(p){return /** @type {V3} */ ([x+p[0]*halfX,y+p[1]*halfY,bottom]);});
-        var cap=shape.map(function(p){return /** @type {V3} */ ([x+p[0]*halfX*taper,y+p[1]*halfY*taper,top]);});
-        plate(material,base.slice().reverse());plate(material,cap);
-        base.forEach(function(p,i){var j=(i+1)%8;plate(material,[p,base[j],cap[j],cap[i]]);});
-      }
-      var perimeter=[[15,-6],[15,6],[5,10.5],[-5,10.5],[-17,4.5],[-17,-4.5],[-5,-10.5],[5,-10.5]];
-      var lower=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],4.5]);});
-      var shoulder=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],6.2]);});
-      var deck=perimeter.map(function(p){return /** @type {V3} */ ([-1+(p[0]+1)*.68,p[1]*.68,8]);});
-      /** @param {V3[]} points */
-      function doorLeaf(points){
-        var u=points[1].map(function(v,i){return v-points[0][i];}),v=points[2].map(function(v,i){return v-points[0][i];});
-        var n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot.apply(null,n);
-        var back=points.map(function(p){return /** @type {V3} */ ([p[0]-n[0]/length*.22,p[1]-n[1]/length*.22,p[2]-n[2]/length*.22]);});
-        plate('ochre',points);plate('steel',back.slice().reverse());
-        for(var k=0;k<4;k++){var j=(k+1)%4;plate('ochre',[points[k],back[k],back[j],points[j]]);}
-      }
-      /** @type {V3[][]} */ var fixedInfill=[];
-      /** Miter the outboard hinge polygon so adjacent closed bays share a corner.
-       * @param {number} index @param {number} [clearance] @returns {V3}
-       */
-      function outerHinge(index,clearance){
-        var p=perimeter[index],previous=perimeter[(index+perimeter.length-1)%perimeter.length],next=perimeter[(index+1)%perimeter.length];
-        var before=[p[0]-previous[0],p[1]-previous[1]],after=[next[0]-p[0],next[1]-p[1]],beforeLength=Math.hypot.apply(null,before),afterLength=Math.hypot.apply(null,after);
-        var n=[before[1]/beforeLength,-before[0]/beforeLength],m=[after[1]/afterLength,-after[0]/afterLength],scale=(clearance===undefined?.72:clearance)/(1+n[0]*m[0]+n[1]*m[1]);
-        return [p[0]+(n[0]+m[0])*scale,p[1]+(n[1]+m[1])*scale,4.5];
-      }
-      if(legsOnly && !rampsOnly && !infillOnly){perimeter.forEach(function(p,i){buildLeg(p[0],i,p[1]);});return groups;}
-      perimeter.forEach(buildBay);
-      /** Moving leaves, hinge hardware, stationary infill and frame for one bay.
-       * @param {number[]} p @param {number} i */
-      function buildBay(p,i){var j=(i+1)%perimeter.length;
+  /** @returns {Groups} */
+  function emptyGroups(){return {ochre:[],steel:[],dark:[],light:[],marker:[],lamp:[]};}
+  /** Copy private component meshes into the caller's output, retaining material order.
+   * @param {Groups} groups @param {Groups} component */
+  function append(groups,component){Object.keys(component).forEach(function(key){groups[key]=groups[key].concat(component[key]);});}
 
-        {
-          var a=lower[i],b=lower[j],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy),ax=dx/len,ay=dy/len;
-          /** @param {V3} p @param {V3} q @param {number} t @returns {V3} */
-          function mix(p,q,t){return [p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t];}
-          var p=perimeter[i],q=perimeter[j];
-          // Each bay ends at its own tower clearance plane, rather than shrinking the whole roof.
-          var towerPlan=[[-6,-3],[-4,-4.5],[4,-4.5],[6,-3],[6,3],[4,4.5],[-4,4.5],[-6,3]];
-          var nx=ay,ny=-ax;
-          var clearance=Math.max.apply(null,towerPlan.map(function(v){return (v[0]*nx+v[1]*ny)*1.14;}))+.40;
-          /** Intersect adjacent clearance planes to retain non-overlapping, mitered bay edges.
-           * @param {number} index @returns {V3} */
-          function roofEnd(index){
-            var v=perimeter[index],other=perimeter[index===i?(index+7)%8:(index+1)%8];
-            var ex=index===i?v[0]-other[0]:other[0]-v[0],ey=index===i?v[1]-other[1]:other[1]-v[1],length=Math.hypot(ex,ey),mx=ey/length,my=-ex/length;
-            var limit=Math.max.apply(null,towerPlan.map(function(v){return (v[0]*mx+v[1]*my)*1.14;}))+.40,det=nx*my-ny*mx;
-            return [(clearance*my-ny*limit)/det,(nx*limit-clearance*mx)/det,9.45];
-          }
-          var innerA=roofEnd(i),innerB=roofEnd(j);
-          // Outboard hinge line clears the fixed rails and posts, including panel thickness.
-          var hingeA=outerHinge(i),hingeB=outerHinge(j);
-          // Roof underside at 9.23 clears the raised pod ribs and their sockets (top 9.18).
-          var topA=/** @type {V3} */ ([hingeA[0],hingeA[1],9.45]),topB=/** @type {V3} */ ([hingeB[0],hingeB[1],9.45]);
-          innerA[2]=9.45;innerB[2]=9.45;
-          var inward=-(innerA[0]-hingeA[0])*ay+(innerA[1]-hingeA[1])*ax;
-          var fullLower=Math.PI*115/180,elbowHeight=4.5+4.95*Math.cos(fullLower);
-          var fullUpper=Math.PI+Math.asin(elbowHeight/inward)-fullLower;
-          var t=Math.max(0,Math.min(1,panelOpen || 0,rampLimits?rampLimits[i]:1));
-          // Uncover the roof first; closing reverses this so the wall seats before the roof.
-          var lowerAngle=fullLower*Math.max(0,(t-.4)/.6),upperAngle=fullUpper*Math.min(1,t/.4);
-          /** @param {V3} v @param {V3} origin @param {number} angle @returns {V3} */
-          function rotate(v,origin,angle){var x=v[0]-origin[0],y=v[1]-origin[1],z=v[2]-origin[2],along=x*ax+y*ay,c=Math.cos(angle),sn=Math.sin(angle);return [origin[0]+x*c+ay*z*sn+ax*along*(1-c),origin[1]+y*c-ax*z*sn+ay*along*(1-c),origin[2]+z*c+(ax*y-ay*x)*sn];}
-          var wallTopA=rotate(topA,hingeA,lowerAngle),wallTopB=rotate(topB,hingeA,lowerAngle);
-          var roofTipA=rotate(rotate(innerA,topA,upperAngle),hingeA,lowerAngle),roofTipB=rotate(rotate(innerB,topA,upperAngle),hingeA,lowerAngle);
-          var edgeGap=.8/len,rootGap=1.75/len;
-          doorLeaf([mix(hingeA,hingeB,rootGap),mix(hingeA,hingeB,1-rootGap),mix(wallTopA,wallTopB,1-edgeGap),mix(wallTopA,wallTopB,edgeGap)]);
-          // Fixed corner infill sits behind the yellow moving leaves, on the black frame.
-          doorLeaf([mix(wallTopA,wallTopB,edgeGap),mix(wallTopA,wallTopB,1-edgeGap),mix(roofTipA,roofTipB,1-edgeGap),mix(roofTipA,roofTipB,edgeGap)]);
-          if(rampsOnly)return;
-          if(!groups.marker)groups.marker=[];
-          [.18,.82].forEach(function(edge){
-            var end=mix(roofTipA,roofTipB,edge),start=mix(wallTopA,wallTopB,edge);
-            var near=/** @type {V3} */ (end.map(function(v,k){return v+(start[k]-v)*.16;}));
-            link('marker',near,end,.055,.04);
-          });
-          var fixedA=outerHinge(i,.30),fixedB=outerHinge(j,.30);
-          var roofA=/** @type {V3} */ ([fixedA[0],fixedA[1],9.05]),roofB=/** @type {V3} */ ([fixedB[0],fixedB[1],9.05]);
-          var roofInnerA=/** @type {V3} */ ([innerA[0],innerA[1],9.05]),roofInnerB=/** @type {V3} */ ([innerB[0],innerB[1],9.05]);
-          // Recessed stationary collar closes the remaining opening up to the pressure cabin.
-          /** @param {V3} v @returns {V3} */
-          function cabinEdge(v){
-            var scale=Infinity;
-            towerPlan.forEach(function(a,k){var b=towerPlan[(k+1)%8],ex=b[0]-a[0],ey=b[1]-a[1],projection=ey*v[0]-ex*v[1];if(projection>0)scale=Math.min(scale,(ey*a[0]-ex*a[1])*.979/projection);});
-            return [v[0]*scale,v[1]*scale,9.05];
-          }
-          fixedInfill.push([roofInnerA,roofInnerB,cabinEdge(roofInnerB),cabinEdge(roofInnerA)]);
-          [-1,1].forEach(function(side){
-            var edge=side<0?edgeGap+.1/len:1-edgeGap-.1/len,outer=side<0?0:1;
-            var start=mix(roofA,roofB,edge),end=mix(roofInnerA,roofInnerB,edge),outerStart=mix(roofA,roofB,outer),outerEnd=mix(roofInnerA,roofInnerB,outer);
-            fixedInfill.push(side<0?[outerStart,start,end,outerEnd]:[start,outerStart,outerEnd,end]);
-            // Side cheek begins above the leg shoulder, preserving its mechanical opening.
-            var bottom=mix(fixedA,fixedB,outer),lowerEdge=mix(fixedA,fixedB,side<0?rootGap:1-rootGap),upperEdge=mix(roofA,roofB,edge);
-            bottom[2]=5.55;lowerEdge[2]=5.55;
-            fixedInfill.push(side<0?[bottom,lowerEdge,upperEdge,outerStart]:[lowerEdge,bottom,outerStart,upperEdge]);
-          });
-          var barrel=mesh.barrel;
-          /** Position relative to the root axis, positive outward and upward.
-           * @param {number} along @param {number} outward @param {number} z @returns {V3}
-           */
-          function rootPoint(along,outward,z){return [hingeA[0]+dx*along+ay*outward,hingeA[1]+dy*along-ax*outward,z];}
-          // Three short pin joints: fixed clevis ears straddle each moving panel lug.
-          [.20,.50,.80].forEach(function(along){
-            var half=.55/len,ear=.37/len;
-            [-1,1].forEach(function(side){
-              link('dark',rootPoint(along+side*ear,-.8,4.5),rootPoint(along+side*ear,.08,4.5),.17);
-              barrel('steel',rootPoint(along+side*(half-.08/len),0,4.5),rootPoint(along+side*(half+.08/len),0,4.5),.30);
-            });
-            barrel('steel',rootPoint(along-half,0,4.5),rootPoint(along+half,0,4.5),.23);
-            link('steel',rotate(rootPoint(along,0,4.5),hingeA,lowerAngle),rotate(rootPoint(along,.12,5.15),hingeA,lowerAngle),.21);
-            // Matching fold joint: lower-leaf brackets and an upper-leaf lug share a pin.
-            var jointA=rotate(rootPoint(along-half,0,9.45),hingeA,lowerAngle),jointB=rotate(rootPoint(along+half,0,9.45),hingeA,lowerAngle);
-            barrel('steel',jointA,jointB,.21);
-            [-1,1].forEach(function(side){
-              var mount=rootPoint(along+side*ear,0,9.45),tail=rootPoint(along+side*ear,-.12,8.85);
-              link('steel',rotate(tail,hingeA,lowerAngle),rotate(mount,hingeA,lowerAngle),.16);
-              barrel('light',rotate(rootPoint(along+side*(half-.07/len),0,9.45),hingeA,lowerAngle),rotate(rootPoint(along+side*(half+.07/len),0,9.45),hingeA,lowerAngle),.27);
-            });
-            var roofLug=mix(mix(topA,topB,along),mix(innerA,innerB,along),.13);
-            link('steel',mix(wallTopA,wallTopB,along),rotate(rotate(roofLug,topA,upperAngle),hingeA,lowerAngle),.18);
-          });
-          // One telescoping powered strut per door, partly sheltered alongside the root.
-          var jackBase=rootPoint(.32,1,4.75),jackEnd=rotate(rootPoint(.32,.45,7.1),hingeA,lowerAngle),sleeveEnd=mix(jackBase,jackEnd,.64);
-          barrel('steel',jackBase,sleeveEnd,.16);barrel('light',sleeveEnd,jackEnd,.075);
-          link('dark',rootPoint(.32,-.15,4.6),jackBase,.22);
-          barrel('steel',rootPoint(.29,1,4.75),rootPoint(.35,1,4.75),.21);
-          var movingPinA=rotate(rootPoint(.29,.45,7.1),hingeA,lowerAngle),movingPinB=rotate(rootPoint(.35,.45,7.1),hingeA,lowerAngle);
-          barrel('steel',movingPinA,movingPinB,.20);
-          // Fixed angle stops and closure receivers; panel tabs nest into the cage in transit.
-          [.12,.88].forEach(function(along){
-            link('dark',rootPoint(along,.35,3.9),rootPoint(along,1.05,3.9),.32);
-            link('dark',rootPoint(along,-.72,8.4),rootPoint(along,-.45,9.0),.14);
-            link('dark',rootPoint(along,-.45,9.0),rootPoint(along,.45,9.0),.18);
-            var tongueA=rotate(rootPoint(along,-.2,9.2),hingeA,lowerAngle),tongueB=rotate(rootPoint(along,.65,9.2),hingeA,lowerAngle);
-            link('steel',tongueA,tongueB,.18);
-          });
-          // Same cage topology and hardpoints; narrow box sections retain depth with less top-view mass.
-          link('dark',[a[0],a[1],5.35],[a[0],a[1],8.4],.31,.35);
-          link('dark',[a[0],a[1],8.4],[b[0],b[1],8.4],.245,.285);
-          link('dark',[a[0],a[1],4.5],[b[0],b[1],4.5],.31,.38);
-          // Each leg-root rib terminates at the suspended pod's structural belt.
-          var seatScale=Math.min(4.45/Math.max(.001,Math.abs(a[0])),3.45/Math.max(.001,Math.abs(a[1])));
-          var seat=/** @type {V3} */ ([a[0]*seatScale,a[1]*seatScale,8.8]);
-          link('dark',[a[0],a[1],8.4],seat,.23,.30);
-          block('dark',seat,[.38,.38,.30]);
-        }
+  /** Compatibility facade. Mode precedence is historical: ramps, infill, then legs.
+   * time/working remain accepted; the reference artwork has no idle deformation.
+   * @param {number} deployment @param {number} time @param {boolean} working
+   * @param {number} [panelOpen] @param {string} [interiorCut] @param {boolean} [legsOnly]
+   * @param {boolean} [infillOnly] @param {ContactPose[]} [contactPoses]
+   * @param {number[]} [rampLimits] @param {boolean} [rampsOnly] */
+  function miningPlatformGeometry(deployment,time,working,panelOpen,interiorCut,legsOnly,infillOnly,contactPoses,rampLimits,rampsOnly){
+    if(rampsOnly)return rampGeometry(panelOpen,rampLimits);
+    if(infillOnly)return infillGeometry();
+    if(legsOnly)return legGeometry(deployment,contactPoses);
+    return fullGeometry(deployment,panelOpen,interiorCut,contactPoses,rampLimits);
+  }
+  /** @param {number} [panelOpen] @param {number[]} [rampLimits] */
+  function rampGeometry(panelOpen,rampLimits){
+    var groups=emptyGroups(),mesh=DW.meshBuilder.create(groups);
+    perimeter.forEach(function(p,i){bayAssembly(mesh,i,panelOpen,rampLimits).leaves();});
+    return groups;
+  }
+  function infillGeometry(){
+    var groups=emptyGroups(),mesh=DW.meshBuilder.create(groups);
+    perimeter.forEach(function(p,i){bayAssembly(mesh,i).infill();});
+    return groups;
+  }
+  /** @param {number} deployment @param {ContactPose[]} [contactPoses] */
+  function legGeometry(deployment,contactPoses){
+    var groups=emptyGroups(),mesh=DW.meshBuilder.create(groups),d=Math.max(0,Math.min(1,deployment));
+    perimeter.forEach(function(p,i){buildLeg(groups,mesh,d,contactPoses,p[0],i,p[1]);});
+    return groups;
+  }
+  /** @param {number} deployment @param {number} [panelOpen] @param {string} [interiorCut]
+   * @param {ContactPose[]} [contactPoses] @param {number[]} [rampLimits] */
+  function fullGeometry(deployment,panelOpen,interiorCut,contactPoses,rampLimits){
+    var groups=emptyGroups(),mesh=DW.meshBuilder.create(groups),d=Math.max(0,Math.min(1,deployment));
+    var bays=perimeter.map(function(p,i){return bayAssembly(mesh,i,panelOpen,rampLimits);});
+    bays.forEach(function(bay){bay.leaves();bay.mechanisms();});
+    bays.forEach(function(bay){bay.infill();});
+    buildDeck(mesh);
+    append(groups,cabinGeometry(interiorCut));
+    buildChassis(mesh);
+    perimeter.forEach(function(p,i){buildLeg(groups,mesh,d,contactPoses,p[0],i,p[1]);});
+    buildEquipment(mesh);
+    append(groups,miningPlatformLights());
+    return groups;
+  }
+  /** @param {MeshBuilder} mesh */
+  function buildEquipment(mesh){
+    mesh.block('dark',[14,0,3.8],[3,3.8,.5]);
+    [-1,1].forEach(function(side){mesh.block('steel',[16,side*2.2,4.7],[4,.35,.35]);});
+  }
+
+  var perimeter=[[15,-6],[15,6],[5,10.5],[-5,10.5],[-17,4.5],[-17,-4.5],[-5,-10.5],[5,-10.5]];
+  /** Miter the outboard hinge polygon so adjacent closed bays share a corner.
+   * @param {number} index @param {number} [clearance] @returns {V3}
+   */
+  function outerHinge(index,clearance){
+    var p=perimeter[index],previous=perimeter[(index+perimeter.length-1)%perimeter.length],next=perimeter[(index+1)%perimeter.length];
+    var before=[p[0]-previous[0],p[1]-previous[1]],after=[next[0]-p[0],next[1]-p[1]],beforeLength=Math.hypot.apply(null,before),afterLength=Math.hypot.apply(null,after);
+    var n=[before[1]/beforeLength,-before[0]/beforeLength],m=[after[1]/afterLength,-after[0]/afterLength],scale=(clearance===undefined?.72:clearance)/(1+n[0]*m[0]+n[1]*m[1]);
+    return [p[0]+(n[0]+m[0])*scale,p[1]+(n[1]+m[1])*scale,4.5];
+  }
+  /** @param {MeshBuilder['plate']} plate @param {V3[]} points */
+  function doorLeaf(plate,points){
+    var u=points[1].map(function(v,i){return v-points[0][i];}),v=points[2].map(function(v,i){return v-points[0][i];});
+    var n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot.apply(null,n);
+    var back=points.map(function(p){return /** @type {V3} */ ([p[0]-n[0]/length*.22,p[1]-n[1]/length*.22,p[2]-n[2]/length*.22]);});
+    plate('ochre',points);plate('steel',back.slice().reverse());
+    for(var k=0;k<4;k++){var j=(k+1)%4;plate('ochre',[points[k],back[k],back[j],points[j]]);}
+  }
+  /** Chamfered hardpoint shared by the frame socket and leg shoulder.
+   * @param {MeshBuilder} mesh @param {string} material @param {number} x @param {number} y @param {number} bottom @param {number} top @param {number} halfX @param {number} halfY @param {number} taper
+   */
+  function hardpoint(mesh,material,x,y,bottom,top,halfX,halfY,taper){
+    var plate=mesh.plate;
+    var c=.28,shape=[[-1,-1+c],[-1+c,-1],[1-c,-1],[1,-1+c],[1,1-c],[1-c,1],[-1+c,1],[-1,1-c]];
+    var base=shape.map(function(p){return /** @type {V3} */ ([x+p[0]*halfX,y+p[1]*halfY,bottom]);});
+    var cap=shape.map(function(p){return /** @type {V3} */ ([x+p[0]*halfX*taper,y+p[1]*halfY*taper,top]);});
+    plate(material,base.slice().reverse());plate(material,cap);
+    base.forEach(function(p,i){var j=(i+1)%8;plate(material,[p,base[j],cap[j],cap[i]]);});
+  }
+
+  /** A bay shares its hinge calculations; each method emits only its own assembly.
+   * @param {MeshBuilder} mesh @param {number} i @param {number} [panelOpen] @param {number[]} [rampLimits] */
+  function bayAssembly(mesh,i,panelOpen,rampLimits){
+    var block=mesh.block,link=mesh.link,plate=mesh.plate,j=(i+1)%perimeter.length;
+    var a=/** @type {V3} */ ([perimeter[i][0],perimeter[i][1],4.5]),b=/** @type {V3} */ ([perimeter[j][0],perimeter[j][1],4.5]),dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy),ax=dx/len,ay=dy/len;
+    /** @param {V3} p @param {V3} q @param {number} t @returns {V3} */
+    function mix(p,q,t){return [p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t];}
+    // Each bay ends at its own tower clearance plane, rather than shrinking the whole roof.
+    var towerPlan=[[-6,-3],[-4,-4.5],[4,-4.5],[6,-3],[6,3],[4,4.5],[-4,4.5],[-6,3]];
+    var nx=ay,ny=-ax;
+    var clearance=Math.max.apply(null,towerPlan.map(function(v){return (v[0]*nx+v[1]*ny)*1.14;}))+.40;
+    /** Intersect adjacent clearance planes to retain non-overlapping, mitered bay edges.
+     * @param {number} index @returns {V3} */
+    function roofEnd(index){
+      var v=perimeter[index],other=perimeter[index===i?(index+7)%8:(index+1)%8];
+      var ex=index===i?v[0]-other[0]:other[0]-v[0],ey=index===i?v[1]-other[1]:other[1]-v[1],length=Math.hypot(ex,ey),mx=ey/length,my=-ex/length;
+      var limit=Math.max.apply(null,towerPlan.map(function(v){return (v[0]*mx+v[1]*my)*1.14;}))+.40,det=nx*my-ny*mx;
+      return [(clearance*my-ny*limit)/det,(nx*limit-clearance*mx)/det,9.45];
+    }
+    var innerA=roofEnd(i),innerB=roofEnd(j);
+    // Outboard hinge line clears the fixed rails and posts, including panel thickness.
+    var hingeA=outerHinge(i),hingeB=outerHinge(j);
+    // Roof underside at 9.23 clears the raised pod ribs and their sockets (top 9.18).
+    var topA=/** @type {V3} */ ([hingeA[0],hingeA[1],9.45]),topB=/** @type {V3} */ ([hingeB[0],hingeB[1],9.45]);
+    innerA[2]=9.45;innerB[2]=9.45;
+    var inward=-(innerA[0]-hingeA[0])*ay+(innerA[1]-hingeA[1])*ax;
+    var fullLower=Math.PI*115/180,elbowHeight=4.5+4.95*Math.cos(fullLower);
+    var fullUpper=Math.PI+Math.asin(elbowHeight/inward)-fullLower;
+    var t=Math.max(0,Math.min(1,panelOpen || 0,rampLimits?rampLimits[i]:1));
+    // Uncover the roof first; closing reverses this so the wall seats before the roof.
+    var lowerAngle=fullLower*Math.max(0,(t-.4)/.6),upperAngle=fullUpper*Math.min(1,t/.4);
+    /** @param {V3} v @param {V3} origin @param {number} angle @returns {V3} */
+    function rotate(v,origin,angle){var x=v[0]-origin[0],y=v[1]-origin[1],z=v[2]-origin[2],along=x*ax+y*ay,c=Math.cos(angle),sn=Math.sin(angle);return [origin[0]+x*c+ay*z*sn+ax*along*(1-c),origin[1]+y*c-ax*z*sn+ay*along*(1-c),origin[2]+z*c+(ax*y-ay*x)*sn];}
+    var wallTopA=rotate(topA,hingeA,lowerAngle),wallTopB=rotate(topB,hingeA,lowerAngle);
+    var roofTipA=rotate(rotate(innerA,topA,upperAngle),hingeA,lowerAngle),roofTipB=rotate(rotate(innerB,topA,upperAngle),hingeA,lowerAngle);
+    var edgeGap=.8/len,rootGap=1.75/len;
+    return {leaves:buildLeaves,mechanisms:buildMechanisms,infill:buildInfill};
+    function buildLeaves(){
+      doorLeaf(plate,[mix(hingeA,hingeB,rootGap),mix(hingeA,hingeB,1-rootGap),mix(wallTopA,wallTopB,1-edgeGap),mix(wallTopA,wallTopB,edgeGap)]);
+      // The roof leaf shares the wall top hinge.
+      doorLeaf(plate,[mix(wallTopA,wallTopB,edgeGap),mix(wallTopA,wallTopB,1-edgeGap),mix(roofTipA,roofTipB,1-edgeGap),mix(roofTipA,roofTipB,edgeGap)]);
+    }
+    function buildMechanisms(){
+      [.18,.82].forEach(function(edge){
+        var end=mix(roofTipA,roofTipB,edge),start=mix(wallTopA,wallTopB,edge);
+        var near=/** @type {V3} */ (end.map(function(v,k){return v+(start[k]-v)*.16;}));
+        link('marker',near,end,.055,.04);
+      });
+      var barrel=mesh.barrel;
+      /** Position relative to the root axis, positive outward and upward.
+       * @param {number} along @param {number} outward @param {number} z @returns {V3}
+       */
+      function rootPoint(along,outward,z){return [hingeA[0]+dx*along+ay*outward,hingeA[1]+dy*along-ax*outward,z];}
+      // Three short pin joints: fixed clevis ears straddle each moving panel lug.
+      [.20,.50,.80].forEach(function(along){
+        var half=.55/len,ear=.37/len;
+        [-1,1].forEach(function(side){
+          link('dark',rootPoint(along+side*ear,-.8,4.5),rootPoint(along+side*ear,.08,4.5),.17);
+          barrel('steel',rootPoint(along+side*(half-.08/len),0,4.5),rootPoint(along+side*(half+.08/len),0,4.5),.30);
+        });
+        barrel('steel',rootPoint(along-half,0,4.5),rootPoint(along+half,0,4.5),.23);
+        link('steel',rotate(rootPoint(along,0,4.5),hingeA,lowerAngle),rotate(rootPoint(along,.12,5.15),hingeA,lowerAngle),.21);
+        // Matching fold joint: lower-leaf brackets and an upper-leaf lug share a pin.
+        var jointA=rotate(rootPoint(along-half,0,9.45),hingeA,lowerAngle),jointB=rotate(rootPoint(along+half,0,9.45),hingeA,lowerAngle);
+        barrel('steel',jointA,jointB,.21);
+        [-1,1].forEach(function(side){
+          var mount=rootPoint(along+side*ear,0,9.45),tail=rootPoint(along+side*ear,-.12,8.85);
+          link('steel',rotate(tail,hingeA,lowerAngle),rotate(mount,hingeA,lowerAngle),.16);
+          barrel('light',rotate(rootPoint(along+side*(half-.07/len),0,9.45),hingeA,lowerAngle),rotate(rootPoint(along+side*(half+.07/len),0,9.45),hingeA,lowerAngle),.27);
+        });
+        var roofLug=mix(mix(topA,topB,along),mix(innerA,innerB,along),.13);
+        link('steel',mix(wallTopA,wallTopB,along),rotate(rotate(roofLug,topA,upperAngle),hingeA,lowerAngle),.18);
+      });
+      // One telescoping powered strut per door, partly sheltered alongside the root.
+      var jackBase=rootPoint(.32,1,4.75),jackEnd=rotate(rootPoint(.32,.45,7.1),hingeA,lowerAngle),sleeveEnd=mix(jackBase,jackEnd,.64);
+      barrel('steel',jackBase,sleeveEnd,.16);barrel('light',sleeveEnd,jackEnd,.075);
+      link('dark',rootPoint(.32,-.15,4.6),jackBase,.22);
+      barrel('steel',rootPoint(.29,1,4.75),rootPoint(.35,1,4.75),.21);
+      var movingPinA=rotate(rootPoint(.29,.45,7.1),hingeA,lowerAngle),movingPinB=rotate(rootPoint(.35,.45,7.1),hingeA,lowerAngle);
+      barrel('steel',movingPinA,movingPinB,.20);
+      // Fixed angle stops and closure receivers; panel tabs nest into the cage in transit.
+      [.12,.88].forEach(function(along){
+        link('dark',rootPoint(along,.35,3.9),rootPoint(along,1.05,3.9),.32);
+        link('dark',rootPoint(along,-.72,8.4),rootPoint(along,-.45,9.0),.14);
+        link('dark',rootPoint(along,-.45,9.0),rootPoint(along,.45,9.0),.18);
+        var tongueA=rotate(rootPoint(along,-.2,9.2),hingeA,lowerAngle),tongueB=rotate(rootPoint(along,.65,9.2),hingeA,lowerAngle);
+        link('steel',tongueA,tongueB,.18);
+      });
+      // Same cage topology and hardpoints; narrow box sections retain depth with less top-view mass.
+      link('dark',[a[0],a[1],5.35],[a[0],a[1],8.4],.31,.35);
+      link('dark',[a[0],a[1],8.4],[b[0],b[1],8.4],.245,.285);
+      link('dark',[a[0],a[1],4.5],[b[0],b[1],4.5],.31,.38);
+      // Each leg-root rib terminates at the suspended pod's structural belt.
+      var seatScale=Math.min(4.45/Math.max(.001,Math.abs(a[0])),3.45/Math.max(.001,Math.abs(a[1])));
+      var seat=/** @type {V3} */ ([a[0]*seatScale,a[1]*seatScale,8.8]);
+      link('dark',[a[0],a[1],8.4],seat,.23,.30);
+      block('dark',seat,[.38,.38,.30]);
+    }
+    function buildInfill(){
+      /** @type {V3[][]} */ var polygons=[];
+      var fixedA=outerHinge(i,.30),fixedB=outerHinge(j,.30);
+      var roofA=/** @type {V3} */ ([fixedA[0],fixedA[1],9.05]),roofB=/** @type {V3} */ ([fixedB[0],fixedB[1],9.05]);
+      var roofInnerA=/** @type {V3} */ ([innerA[0],innerA[1],9.05]),roofInnerB=/** @type {V3} */ ([innerB[0],innerB[1],9.05]);
+      // Recessed stationary collar closes the remaining opening up to the pressure cabin.
+      /** @param {V3} v @returns {V3} */
+      function cabinEdge(v){
+        var scale=Infinity;
+        towerPlan.forEach(function(a,k){var b=towerPlan[(k+1)%8],ex=b[0]-a[0],ey=b[1]-a[1],projection=ey*v[0]-ex*v[1];if(projection>0)scale=Math.min(scale,(ey*a[0]-ex*a[1])*.979/projection);});
+        return [v[0]*scale,v[1]*scale,9.05];
       }
-      if(rampsOnly)return groups;
-      if(infillOnly)Object.keys(groups).forEach(function(key){groups[key]=[];});
-      fixedInfill.forEach(function(points){
+      polygons.push([roofInnerA,roofInnerB,cabinEdge(roofInnerB),cabinEdge(roofInnerA)]);
+      [-1,1].forEach(function(side){
+        var edge=side<0?edgeGap+.1/len:1-edgeGap-.1/len,outer=side<0?0:1;
+        var start=mix(roofA,roofB,edge),end=mix(roofInnerA,roofInnerB,edge),outerStart=mix(roofA,roofB,outer),outerEnd=mix(roofInnerA,roofInnerB,outer);
+        polygons.push(side<0?[outerStart,start,end,outerEnd]:[start,outerStart,outerEnd,end]);
+        // Side cheek begins above the leg shoulder, preserving its mechanical opening.
+        var bottom=mix(fixedA,fixedB,outer),lowerEdge=mix(fixedA,fixedB,side<0?rootGap:1-rootGap),upperEdge=mix(roofA,roofB,edge);
+        bottom[2]=5.55;lowerEdge[2]=5.55;
+        polygons.push(side<0?[bottom,lowerEdge,upperEdge,outerStart]:[lowerEdge,bottom,outerStart,upperEdge]);
+      });
+      polygons.forEach(function(points){
         var u=points[1].map(function(v,k){return v-points[0][k];}),v=points[2].map(function(v,k){return v-points[0][k];});
         var n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot.apply(null,n);
         var back=points.map(function(p){return /** @type {V3} */ (p.map(function(v,k){return v-n[k]/length*.10;}));});
         plate('dark',points);plate('dark',back.slice().reverse());
         points.forEach(function(p,i){var j=(i+1)%points.length;plate('dark',[p,back[i],back[j],points[j]]);});
       });
-      if(infillOnly)return groups;
-      plate('steel',lower);
-      // Separate the belly from the deck: coincident opposite faces cause z-fighting.
-      var belly=lower.map(function(p){return /** @type {V3} */ ([p[0],p[1],p[2]-.35]);});
-      plate('dark',belly.slice().reverse());
-      lower.forEach(function(p,i){var j=(i+1)%lower.length;plate('dark',[p,belly[i],belly[j],lower[j]]);});
-      var cabin=cabinGeometry(interiorCut);
-      Object.keys(groups).forEach(function(key){groups[key]=groups[key].concat(cabin[key]);});
-      block('dark',[-1,0,3.05],[14,8.4,1.2]);
-      // Exposed chassis rails carry the mining head and each rectangular root mount.
-      [-1,1].forEach(function(side){block('steel',[-1,side*8,3.6],[14.5,.7,.9]);});
-      /** @param {number} root @param {number} index @param {number} rootY */
-      function buildLeg(root,index,rootY){
-        var reach=6*d;
-        var mount=/** @type {V3} */ ([root,rootY,4]);
-        {
-          // Each anchor reaches out through its corner gap, not sideways into a bay.
-          var bisector=outerHinge(index),outX=bisector[0]-root,outY=bisector[1]-rootY,outLength=Math.hypot(outX,outY);
-          outX/=outLength;outY/=outLength;
-          var knee=/** @type {V3} */ ([root+outX*(1.5+reach*.55),rootY+outY*(1.5+reach*.55),4]);
-          var tip=/** @type {V3} */ ([root+outX*(2+reach),rootY+outY*(2+reach),1.4+(1-d)*2]);
-          var contactPose=contactPoses && contactPoses[index];
-          if(contactPose){knee=/** @type {V3} */ (contactPose.knee);tip=/** @type {V3} */ (contactPose.tip);}
-          // One chassis node receives both the leg clevis and replaceable frame shoe.
-          hardpoint('dark',root,rootY,3.05,4.15,1.55,1.28,.86);
-          hardpoint('ochre',root,rootY,4.15,4.92,1.48,1.16,.62);
-          hardpoint('steel',root,rootY,4.94,5.22,.70,.62,.84);
-          // Split socket cheeks grip the post; the adapter remains a separate part.
-          [-1,1].forEach(function(s){block('dark',[root+s*.49,rootY,5.39],[.14,.52,.28]);});
-          link('steel',[root-.86,rootY-.55,4.45],[root-.5,rootY-.55,5.25],.10,.17);
-          link('steel',[root+.86,rootY+.55,4.45],[root+.5,rootY+.55,5.25],.10,.17);
-          var vx=knee[0]-root,vy=knee[1]-rootY,vlen=Math.hypot(vx,vy),tx=-vy/vlen,ty=vx/vlen;
-          /** @param {V3} center @param {number} along @param {number} z @returns {V3} */
-          function offset(center,along,z){return [center[0]+tx*along,center[1]+ty*along,center[2]+z];}
-          [-1,1].forEach(function(s){
-            link('steel',offset(mount,s*.78,-.65),offset(mount,s*.78,.62),.16,.42);
-            link('dark',offset(mount,s*.78,-.55),offset(knee,s*.55,-.18),.12,.30);
-          });
-          jointBarrel('steel',offset(mount,-.96,0),offset(mount,.96,0),.52);
-          jointBarrel('dark',offset(mount,-1.03,0),offset(mount,-.95,0),.34);
-          jointBarrel('dark',offset(mount,.95,0),offset(mount,1.03,0),.34);
-          link('dark',mount,knee,.56,.78);
-          link('steel',knee,tip,.43,.62);
-          jointBarrel('steel',offset(knee,-.73,0),offset(knee,.73,0),.62);
-          var actuatorA=offset(mount,.9,-.60),actuatorB=offset(knee,.65,-.4),actuatorMid=/** @type {V3} */ (actuatorA.map(function(v,k){return v+(actuatorB[k]-v)*.60;}));
-          jointBarrel('steel',actuatorA,actuatorMid,.17);jointBarrel('light',actuatorMid,actuatorB,.085);
-          var headStart=Object.keys(groups).map(function(key){return groups[key].length;});
-          // Distinct ankle pivot and compact gripper carrier, with separate jaw pins.
-          jointBarrel('steel',offset(tip,-.62,0),offset(tip,.62,0),.45);
-          hardpoint('dark',tip[0],tip[1],tip[2]-.52,tip[2]-.12,.85,.68,.85);
-          [-1,1].forEach(function(jaw){
-            var spread=.8+d*.7;
-            var knuckle=/** @type {V3} */ ([tip[0]+tx*jaw*spread+outX*1.1,tip[1]+ty*jaw*spread+outY*1.1,tip[2]-.2]);
-            var tooth=/** @type {V3} */ ([tip[0]+tx*jaw*.45+outX*1.8,tip[1]+ty*jaw*.45+outY*1.8,tip[2]-1.4]);
-            var jawRoot=/** @type {V3} */ ([tip[0]+tx*jaw*.55,tip[1]+ty*jaw*.55,tip[2]-.25]);
-            jointBarrel('steel',[jawRoot[0]-outX*.25,jawRoot[1]-outY*.25,jawRoot[2]],[jawRoot[0]+outX*.25,jawRoot[1]+outY*.25,jawRoot[2]],.22);
-            link('steel',jawRoot,knuckle,.28,.36);link('dark',knuckle,tooth,.23,.30);
-            block('steel',tooth,[.28,.30,.16]);
-          });
-          if(contactPose){
-            var normalLength=Math.hypot.apply(null,contactPose.normal),normal=contactPose.normal.map(function(v){return v/normalLength;}),forward=/** @type {V3} */ ([outX,outY,0]);
-            var projection=forward[0]*normal[0]+forward[1]*normal[1];
-            forward=/** @type {V3} */ (forward.map(function(v,k){return v-normal[k]*projection;}));
-            var fl=Math.hypot.apply(null,forward);forward=/** @type {V3} */ (forward.map(function(v){return v/fl;}));
-            var tangent=[normal[1]*forward[2]-normal[2]*forward[1],normal[2]*forward[0]-normal[0]*forward[2],normal[0]*forward[1]-normal[1]*forward[0]];
-            Object.keys(groups).forEach(function(key,k){var data=groups[key];for(var v=headStart[k];v<data.length;v+=6){
-              var x=data[v]-tip[0],y=data[v+1]-tip[1],z=data[v+2]-tip[2],along=x*outX+y*outY,across=x*tx+y*ty;
-              var nx=data[v+3],ny=data[v+4],nz=data[v+5],na=nx*outX+ny*outY,nt=nx*tx+ny*ty;
-              for(var axis=0;axis<3;axis++){data[v+axis]=tip[axis]+forward[axis]*along+tangent[axis]*across+normal[axis]*z;data[v+3+axis]=forward[axis]*na+tangent[axis]*nt+normal[axis]*nz;}
-            }});
-          }
-          block('dark',[knee[0],knee[1],knee[2]+.22],[.25,.18,.13]);
-          block('lamp',[knee[0],knee[1],knee[2]+.37],[.16,.09,.025]);
-          return;
-        }
-      }
-      perimeter.forEach(function(p,i){buildLeg(p[0],i,p[1]);});
-      {
-        block('dark',[14,0,3.8],[3,3.8,.5]);
-        [-1,1].forEach(function(side){block('steel',[16,side*2.2,4.7],[4,.35,.35]);});
-      }
-      var fixtures=miningPlatformLights();Object.keys(fixtures).forEach(function(key){groups[key]=(groups[key] || []).concat(fixtures[key]);});
-      return groups;
     }
+  }
+
+  /** @param {MeshBuilder} mesh */
+  function buildDeck(mesh){
+    var plate=mesh.plate;
+    var lower=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],4.5]);});
+    plate('steel',lower);
+    // Separate the belly from the deck: coincident opposite faces cause z-fighting.
+    var belly=lower.map(function(p){return /** @type {V3} */ ([p[0],p[1],p[2]-.35]);});
+    plate('dark',belly.slice().reverse());
+    lower.forEach(function(p,i){var j=(i+1)%lower.length;plate('dark',[p,belly[i],belly[j],lower[j]]);});
+  }
+  /** @param {MeshBuilder} mesh */
+  function buildChassis(mesh){
+    var block=mesh.block;
+    block('dark',[-1,0,3.05],[14,8.4,1.2]);
+    // Exposed chassis rails carry the mining head and each rectangular root mount.
+    [-1,1].forEach(function(side){block('steel',[-1,side*8,3.6],[14.5,.7,.9]);});
+  }
+
+  /** @param {Groups} groups @param {MeshBuilder} mesh @param {number} d @param {ContactPose[] | undefined} contactPoses
+   * @param {number} root @param {number} index @param {number} rootY */
+  function buildLeg(groups,mesh,d,contactPoses,root,index,rootY){
+    var block=mesh.block,link=mesh.link,jointBarrel=mesh.barrel;
+    var reach=6*d;
+    var mount=/** @type {V3} */ ([root,rootY,4]);
+    // Each anchor reaches out through its corner gap, not sideways into a bay.
+    var bisector=outerHinge(index),outX=bisector[0]-root,outY=bisector[1]-rootY,outLength=Math.hypot(outX,outY);
+    outX/=outLength;outY/=outLength;
+    var knee=/** @type {V3} */ ([root+outX*(1.5+reach*.55),rootY+outY*(1.5+reach*.55),4]);
+    var tip=/** @type {V3} */ ([root+outX*(2+reach),rootY+outY*(2+reach),1.4+(1-d)*2]);
+    var contactPose=contactPoses && contactPoses[index];
+    if(contactPose){knee=/** @type {V3} */ (contactPose.knee);tip=/** @type {V3} */ (contactPose.tip);}
+    // One chassis node receives both the leg clevis and replaceable frame shoe.
+    hardpoint(mesh,'dark',root,rootY,3.05,4.15,1.55,1.28,.86);
+    hardpoint(mesh,'ochre',root,rootY,4.15,4.92,1.48,1.16,.62);
+    hardpoint(mesh,'steel',root,rootY,4.94,5.22,.70,.62,.84);
+    // Split socket cheeks grip the post; the adapter remains a separate part.
+    [-1,1].forEach(function(s){block('dark',[root+s*.49,rootY,5.39],[.14,.52,.28]);});
+    link('steel',[root-.86,rootY-.55,4.45],[root-.5,rootY-.55,5.25],.10,.17);
+    link('steel',[root+.86,rootY+.55,4.45],[root+.5,rootY+.55,5.25],.10,.17);
+    var vx=knee[0]-root,vy=knee[1]-rootY,vlen=Math.hypot(vx,vy),tx=-vy/vlen,ty=vx/vlen;
+    /** @param {V3} center @param {number} along @param {number} z @returns {V3} */
+    function offset(center,along,z){return [center[0]+tx*along,center[1]+ty*along,center[2]+z];}
+    [-1,1].forEach(function(s){
+      link('steel',offset(mount,s*.78,-.65),offset(mount,s*.78,.62),.16,.42);
+      link('dark',offset(mount,s*.78,-.55),offset(knee,s*.55,-.18),.12,.30);
+    });
+    jointBarrel('steel',offset(mount,-.96,0),offset(mount,.96,0),.52);
+    jointBarrel('dark',offset(mount,-1.03,0),offset(mount,-.95,0),.34);
+    jointBarrel('dark',offset(mount,.95,0),offset(mount,1.03,0),.34);
+    link('dark',mount,knee,.56,.78);
+    link('steel',knee,tip,.43,.62);
+    jointBarrel('steel',offset(knee,-.73,0),offset(knee,.73,0),.62);
+    var actuatorA=offset(mount,.9,-.60),actuatorB=offset(knee,.65,-.4),actuatorMid=/** @type {V3} */ (actuatorA.map(function(v,k){return v+(actuatorB[k]-v)*.60;}));
+    jointBarrel('steel',actuatorA,actuatorMid,.17);jointBarrel('light',actuatorMid,actuatorB,.085);
+    var headStart=Object.keys(groups).map(function(key){return groups[key].length;});
+    // Distinct ankle pivot and compact gripper carrier, with separate jaw pins.
+    jointBarrel('steel',offset(tip,-.62,0),offset(tip,.62,0),.45);
+    hardpoint(mesh,'dark',tip[0],tip[1],tip[2]-.52,tip[2]-.12,.85,.68,.85);
+    [-1,1].forEach(function(jaw){
+      var spread=.8+d*.7;
+      var knuckle=/** @type {V3} */ ([tip[0]+tx*jaw*spread+outX*1.1,tip[1]+ty*jaw*spread+outY*1.1,tip[2]-.2]);
+      var tooth=/** @type {V3} */ ([tip[0]+tx*jaw*.45+outX*1.8,tip[1]+ty*jaw*.45+outY*1.8,tip[2]-1.4]);
+      var jawRoot=/** @type {V3} */ ([tip[0]+tx*jaw*.55,tip[1]+ty*jaw*.55,tip[2]-.25]);
+      jointBarrel('steel',[jawRoot[0]-outX*.25,jawRoot[1]-outY*.25,jawRoot[2]],[jawRoot[0]+outX*.25,jawRoot[1]+outY*.25,jawRoot[2]],.22);
+      link('steel',jawRoot,knuckle,.28,.36);link('dark',knuckle,tooth,.23,.30);
+      block('steel',tooth,[.28,.30,.16]);
+    });
+    if(contactPose){
+      var normalLength=Math.hypot.apply(null,contactPose.normal),normal=contactPose.normal.map(function(v){return v/normalLength;}),forward=/** @type {V3} */ ([outX,outY,0]);
+      var projection=forward[0]*normal[0]+forward[1]*normal[1];
+      forward=/** @type {V3} */ (forward.map(function(v,k){return v-normal[k]*projection;}));
+      var fl=Math.hypot.apply(null,forward);forward=/** @type {V3} */ (forward.map(function(v){return v/fl;}));
+      var tangent=[normal[1]*forward[2]-normal[2]*forward[1],normal[2]*forward[0]-normal[0]*forward[2],normal[0]*forward[1]-normal[1]*forward[0]];
+      Object.keys(groups).forEach(function(key,k){var data=groups[key];for(var v=headStart[k];v<data.length;v+=6){
+        var x=data[v]-tip[0],y=data[v+1]-tip[1],z=data[v+2]-tip[2],along=x*outX+y*outY,across=x*tx+y*ty;
+        var nx=data[v+3],ny=data[v+4],nz=data[v+5],na=nx*outX+ny*outY,nt=nx*tx+ny*ty;
+        for(var axis=0;axis<3;axis++){data[v+axis]=tip[axis]+forward[axis]*along+tangent[axis]*across+normal[axis]*z;data[v+3+axis]=forward[axis]*na+tangent[axis]*nt+normal[axis]*nz;}
+      }});
+    }
+    block('dark',[knee[0],knee[1],knee[2]+.22],[.25,.18,.13]);
+    block('lamp',[knee[0],knee[1],knee[2]+.37],[.16,.09,.025]);
   }
 
   // Only four distinct cabin variants exist; animation and terrain never change them.
@@ -456,5 +500,5 @@
     rigFixtureCache=groups;return groups;
   }
 
-  DW.miningRig={geometry:miningPlatformGeometry,lights:miningPlatformLights};
+  DW.miningRig={geometry:miningPlatformGeometry,ramps:rampGeometry,infill:infillGeometry,legs:legGeometry,lights:miningPlatformLights};
 })(window);

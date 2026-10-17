@@ -996,8 +996,9 @@ consistent winding. Links/cylinders require distinct endpoints and plates requir
 non-collinear first three points. The private unit cube is generated once.
 These are ordinary geometry operations, independent of rendering or gameplay.
 
-`src/mining-rig.js` owns the reference asset. `buildBay` contains the folding
-leaves, hinges, actuators, infill and frame; `buildLeg` contains the mount, joints,
+`src/mining-rig.js` owns the reference asset. `bayAssembly` shares bay hinge
+calculations and exposes separate leaf, mechanism/frame and infill emitters;
+`buildDeck`, `buildChassis` and `buildEquipment` build fixed structural assemblies; `buildLeg` contains the mount, joints,
 actuator and terrain-aligned gripper; `cabinGeometry` contains the pressure cabin,
 roof docking interface and interior. `miningPlatformLights` constructs fixtures
 from the mount definitions in `mining-lights.js`. Edit these functions to iterate
@@ -1007,7 +1008,13 @@ it does not sample terrain, advance animation, or allocate GPU resources.
 
 Cabin meshes are private and cached for the four distinct cutaway variants;
 assembly copies their numbers into caller-owned arrays. Legs and bays rebuild
-for their supplied pose. Leg-only requests skip unrelated construction. Fixture
+for their supplied pose. `fullGeometry` explicitly composes the bay leaves and
+mechanisms, infill, deck, cached cabin, chassis, legs, equipment and fixtures in
+the original material/vertex order. `miningRig.ramps(opening, limits)`,
+`miningRig.infill()` and `miningRig.legs(deployment, contacts)` emit only the
+requested components, without generating and discarding unrelated mesh data.
+The legacy `geometry` flags are interpreted only by a compatibility facade;
+combined flags retain their historical priority (ramps, then infill, then legs). Fixture
 geometry retains its existing shared read-only cache contract. Terrain sampling,
 contact fitting and fitted-pose caching remain in `scene3d.js`/`mining-terrain.js`;
 animation timing stays with existing callers. `scene3d` retains its geometry
@@ -1023,4 +1030,50 @@ operation only when another model needs the same construction pattern.
 of the original numeric arrays for 49 deployment/ramp/cutaway/contact/component
 cases. The checked-in fixture was captured before extraction; do not regenerate
 it to make a refactor pass. Existing clearance, landing, terrain and lighting
-tests cover interactions. The browser studies remain the visual review tools.
+tests cover interactions. Structural assertions also verify finite positions and
+nonzero normals, unit normals on non-contact meshes, complete triangles, material
+order, fixed door roots, rigid leaves and connected fold hinges, staged powered
+jacks, independent ramp stops, knee lamps, ankle pins, gripper pad corners and
+cutaway isolation. The artificial off-axis contact fixture has some existing
+non-unit normals; their original magnitudes remain fingerprinted rather than
+normalized in this behavior-preserving refactor. The browser studies remain the
+visual review tools.
+
+### Small performance review (2026-10-17)
+
+`node tools/measure-mining-geometry.cjs` compares the current asset to the version
+at `HEAD` in separate ordinary-script namespaces in the native JS realm. It reports emitted mesh numbers,
+returned numbers and indicative warm-cache timings (100 warm-up builds, then
+six samples of 20 builds with alternating before/after order).
+The recorded result is `tests/benchmarks/mining-composition-2026-10-17.json`;
+its `baselineCommit` identifies the version used before this composition change.
+To repeat that comparison after committing, run
+`node tools/measure-mining-geometry.cjs report.json <baselineCommit>`.
+Timings are machine-specific Node measurements, not browser frame-time claims.
+
+| Request | Previously emitted numbers | Now emitted numbers | Returned numbers |
+| --- | ---: | ---: | ---: |
+| Full rig, warm components | 262,728 | 262,728 | 313,020 |
+| Legs | 88,704 | 88,704 | 88,704 |
+| Ramp leaves | 3,456 | 3,456 | 3,456 |
+| Fixed infill | 172,224 | 8,640 | 8,640 |
+
+Only the infill path had discarded mesh construction to eliminate: about 95%
+of emitted data was thrown away. The full-rig counts exclude copying the already
+cached cabin/fixtures, which accounts for their larger returned size. Tests
+ensure component-only requests do not emit discarded mesh. No additional cache,
+shader, animation representation or GPU resource changes were introduced.
+
+The four-view study already gates idle rendering and rebuilds actors only when
+configuration changes. Camera edits reuse its cached actors. The comparison
+viewer builds fixtures when the fixture/view changes; Three.js retains their
+geometry, while custom WebGL study batches without `staticGeometry` are uploaded
+on redraw. Production terrain fitting already caches meshes, contact solves,
+ramp stops and local fitted geometry by deployment/opening; cabin, fixture and
+docking-light bake caches are also retained. Rigid asteroid rotation and landing
+poses still transform vertices and upload the resulting world coordinates for
+each rendering pass. Non-fitted production rigs also regenerate local meshes.
+These are remaining opportunities, but reducing those uploads safely needs
+explicit per-rig geometry/pose ownership across shadow and color passes. That
+renderer work is deferred; this change claims only the measured infill savings,
+not a general frame-rate improvement.

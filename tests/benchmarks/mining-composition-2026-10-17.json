@@ -1,0 +1,57 @@
+{
+  "baselineCommit": "8e28bf462e37e9e0f3f8df99b07ee92689110686",
+  "node": "v24.21.0",
+  "notes": "Native JS realm; 100 warm-up builds per case/version, then 6 alternating samples of 20 builds. Timings are machine-specific. Emission counts exclude cached component copies.",
+  "before": {
+    "full": {
+      "primitiveCalls": 1336,
+      "emittedNumbers": 262728,
+      "returnedNumbers": 313020,
+      "medianMsPerBuild": 8.597
+    },
+    "legs": {
+      "primitiveCalls": 536,
+      "emittedNumbers": 88704,
+      "returnedNumbers": 88704,
+      "medianMsPerBuild": 2.416
+    },
+    "infill": {
+      "primitiveCalls": 784,
+      "emittedNumbers": 172224,
+      "returnedNumbers": 8640,
+      "medianMsPerBuild": 5.007
+    },
+    "ramps": {
+      "primitiveCalls": 96,
+      "emittedNumbers": 3456,
+      "returnedNumbers": 3456,
+      "medianMsPerBuild": 0.082
+    }
+  },
+  "after": {
+    "full": {
+      "primitiveCalls": 1336,
+      "emittedNumbers": 262728,
+      "returnedNumbers": 313020,
+      "medianMsPerBuild": 8.342
+    },
+    "legs": {
+      "primitiveCalls": 536,
+      "emittedNumbers": 88704,
+      "returnedNumbers": 88704,
+      "medianMsPerBuild": 2.476
+    },
+    "infill": {
+      "primitiveCalls": 240,
+      "emittedNumbers": 8640,
+      "returnedNumbers": 8640,
+      "medianMsPerBuild": 0.161
+    },
+    "ramps": {
+      "primitiveCalls": 96,
+      "emittedNumbers": 3456,
+      "returnedNumbers": 3456,
+      "medianMsPerBuild": 0.072
+    }
+  }
+}

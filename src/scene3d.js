@@ -382,7 +382,7 @@
     }
     var surface=mesh.sites.get(key) || null;
     if(open && surface && surface.fit.valid && !surface.ramps){
-      surface.ramps=terrain.rampStops(surface.sample,surface.fit,function(t){return miningPlatformGeometry(1,0,false,t,'',false,false,undefined,undefined,true);});
+      surface.ramps=terrain.rampStops(surface.sample,surface.fit,function(t){return /** @type {Required<import('./types').DriftworksNamespace>} */ (DW).miningRig.ramps(t);});
     }
     return surface;
   }
@@ -1363,11 +1363,11 @@
     miningPlatformGeometry: miningPlatformGeometry,
     /** @param {number} deployment @param {number} panelOpen @param {string} interiorCut @param {{knee:number[],tip:number[],normal:number[]}[]} poses @param {number[]} [rampLimits] */
     /** @param {number} panelOpen */
-    miningPlatformRampGeometry:function(panelOpen){return miningPlatformGeometry(1,0,false,panelOpen,'',false,false,undefined,undefined,true);},
+    miningPlatformRampGeometry:function(panelOpen){return /** @type {Required<import('./types').DriftworksNamespace>} */ (DW).miningRig.ramps(panelOpen);},
     miningPlatformLights:miningPlatformLights,
     platformSurface:platformSurface,platformSurfacePose:platformSurfacePose,platformSurfaceGeometry:platformSurfaceGeometry,
     miningPlatformContactGeometry: function(deployment,panelOpen,interiorCut,poses,rampLimits){return miningPlatformGeometry(deployment,0,false,panelOpen,interiorCut,false,false,poses,rampLimits);},
-    miningPlatformInfillGeometry: function(){return miningPlatformGeometry(1,0,false,0,'',false,true);},
-    /** @param {number} deployment */ miningPlatformLegGeometry: function(deployment){return miningPlatformGeometry(deployment,0,false,0,'',true);}, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
+    miningPlatformInfillGeometry: function(){return /** @type {Required<import('./types').DriftworksNamespace>} */ (DW).miningRig.infill();},
+    /** @param {number} deployment */ miningPlatformLegGeometry: function(deployment){return /** @type {Required<import('./types').DriftworksNamespace>} */ (DW).miningRig.legs(deployment);}, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
     workLightFrame: workLightFrame, surfaceSpotlight: surfaceSpotlight, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, pickStudySurface: pickStudySurface, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);
