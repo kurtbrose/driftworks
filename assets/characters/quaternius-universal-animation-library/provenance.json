@@ -1,0 +1,70 @@
+{
+  "author": "Quaternius",
+  "pack": "quaternius-universal-animation-library",
+  "title": "Universal Animation Library - Standard",
+  "sourceURL": "https://quaternius.com/packs/universalanimationlibrary.html",
+  "license": "CC0-1.0",
+  "acquired": "2026-10-16",
+  "acquisition": "User supplied ZIP in assets/characters. Contents extracted without modification. ZIP removed after extraction; original filename, archive SHA-256 and per-file hashes retained as provenance.",
+  "archive": {
+    "path": "source/Universal Animation Library[Standard].zip",
+    "sha256": "cc73fc4e495b82958207316596317a3f40b9fa38065bde1027937452da537724",
+    "retained": false
+  },
+  "files": [
+    {
+      "path": "original/Godot_Setup.png",
+      "archivePath": "Universal Animation Library[Standard]/Godot_Setup.png",
+      "bytes": 499312,
+      "sha256": "8fde3e49385c3b3dc214bfe2bc61dde6f873a06f57cab9b245c8fc2543bc7496"
+    },
+    {
+      "path": "original/License.txt",
+      "archivePath": "Universal Animation Library[Standard]/License.txt",
+      "bytes": 332,
+      "sha256": "6d01f55c6e4c49a2c9963e147e561945ae2c83958c8ca667d90a6bffdbfac061"
+    },
+    {
+      "path": "original/README.txt",
+      "archivePath": "Universal Animation Library[Standard]/README.txt",
+      "bytes": 702,
+      "sha256": "ccd02718886b5a57f10f0a8911a38cfe10c36880e1d6dfa3445923fba32d2a72"
+    },
+    {
+      "path": "original/Unity/UAL1_Standard.fbx",
+      "archivePath": "Universal Animation Library[Standard]/Unity/UAL1_Standard.fbx",
+      "bytes": 23754684,
+      "sha256": "21b32d912da3cb93426d974fb945e86f5b2e86970acd2ce89905e0fbf9f1dcc2"
+    },
+    {
+      "path": "original/Unity/UAL1_Standard_RM.fbx",
+      "archivePath": "Universal Animation Library[Standard]/Unity/UAL1_Standard_RM.fbx",
+      "bytes": 23767852,
+      "sha256": "5a5f5de6f18e9c91cdbc40eb26319ec85cc45070bc00965bc2737beb4b2984ea"
+    },
+    {
+      "path": "original/Unity_Setup.png",
+      "archivePath": "Universal Animation Library[Standard]/Unity_Setup.png",
+      "bytes": 237945,
+      "sha256": "1f9ac00f442c4342fae060150a2cfb5a825f7e3b6e8ffd8ce01044e4fe31f7c9"
+    },
+    {
+      "path": "original/Unreal-Godot/UAL1_Standard.glb",
+      "archivePath": "Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb",
+      "bytes": 7618436,
+      "sha256": "69591853d817488edaa8fd9bf8fc1d821eaeaf789f8627b3cd23b41c4ed67997"
+    },
+    {
+      "path": "original/Unreal-Godot/UAL1_Standard_RM.glb",
+      "archivePath": "Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard_RM.glb",
+      "bytes": 7620504,
+      "sha256": "be684571ed655a1b892c2c07e6e2aeca053b606c442d34004adaf1d944090d01"
+    },
+    {
+      "path": "original/Unreal_Setup.png",
+      "archivePath": "Universal Animation Library[Standard]/Unreal_Setup.png",
+      "bytes": 148412,
+      "sha256": "c2c64e659943c634f538329ea0904f7902ab4194d0aaae77ac486d236171d00c"
+    }
+  ]
+}

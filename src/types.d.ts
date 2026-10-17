@@ -258,7 +258,7 @@ export type AsteroidVisual = {
   craters: { x: number; y: number; rx: number; ry: number; angle: number; depth: number; age: number; rimScale: number; sizeClass: string }[];
 };
 
-export type DriftworksNamespace = {
+export interface DriftworksNamespace {
   asteroidArt?: {
     describe: (asteroid: Asteroid, bulkOverride?: number[]) => AsteroidVisual;
     reliefAt: (visual: AsteroidVisual, x: number, y: number) => number;
@@ -317,7 +317,7 @@ export type DriftworksNamespace = {
   audio?: AudioApi;
   hud?: { create: (host: HTMLElement, actions: HudActions) => HudController; miningControlState: (world: World) => unknown };
   [key: string]: unknown;
-};
+}
 
 export type SimApi = {
   createShip: (id: string, name: string, type: string, x: number, y: number, speed: number) => Ship;

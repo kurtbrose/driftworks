@@ -21,6 +21,41 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('experiment controls report missing markup at the lookup boundary', function () {
+    var get = window.Driftworks.experimentDom({getElementById: function () { return null; }});
+    var message = '';
+    try { get('profile'); } catch (error) { message = error.message; }
+    assert(message === 'Missing experiment element #profile');
+  });
+
+  test('flight sessions expose complete state before the first reset', function () {
+    var session = window.Driftworks.flightSession.create({}), view = session.snapshot();
+    assert(view.state.eye.every(Number.isFinite));
+    assert(view.state.throttle === 0 && view.guns.fired === 0);
+    assert(view.combat.enemies.length === 0 && !view.contact);
+    assert(session.snapshot().state === view.state);
+  });
+
+  test('mixed ship artwork falls back to the collision blockout without a pack', function () {
+    var DW = window.Driftworks, packs = DW.shipPacks;
+    try {
+      DW.shipPacks = [];
+      var model = DW.shipPackModels.craftModel({index: 0}, 'mixed', 1);
+      assert(model.id === 'blockout' && model.vertices.length === 108);
+      assert(DW.shipPackModels.hullHit(model, DW.arcade.create(0), [0,-2,0], [0,2,0], 10));
+    } finally { DW.shipPacks = packs; }
+  });
+
+  test('training destruction accepts an explicitly unknown shooter', function () {
+    var DW = window.Driftworks, combat = DW.training.create('training'), pose = DW.arcade.create(20);
+    DW.training.spawn(combat, pose, 20);
+    var victim = combat.enemies[0];
+    victim.hp = 1;
+    DW.training.damageEnemy(combat, victim, DW.retailWeapons[0], null);
+    assert(victim.hp === 0 && combat.wrecks.length === 1);
+    assert(combat.radioEvents[0].killer === null);
+  });
+
   function flightDisplayDocument(){
     var elements={},classes={};
     function element(){return {value:'',checked:false,hidden:false,textContent:'',children:[],listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},appendChild:function(child){this.children.push(child);},insertBefore:function(child){this.children.unshift(child);}};}
@@ -152,7 +187,7 @@
 
   test('flight controls retain controller edges, editable bindings and disconnect pause',function(){
     var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Test controller',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
-    f.setPads([pad]);c.sample();assert(f.elements.bindings.children.length===10);
+    f.setPads([null,pad,null]);c.sample();assert(f.elements.bindings.children.length===10);
     pad.buttons[3].pressed=true;c.sample();c.sample();assert(f.counts.weapon===1);
     pad.buttons[3].pressed=false;c.sample();pad.buttons[3].pressed=true;c.sample();assert(f.counts.weapon===2);
     var pitchSelect=f.elements.bindings.children[0].children[0];pitchSelect.value='0';pitchSelect.onchange();pad.axes[0]=1;assertClose(c.sample().pitch,-1);

@@ -1870,6 +1870,7 @@
   /** @param {number} elapsedSeconds */
   function mothershipDrumMarkers(elapsedSeconds) {
     var spin = elapsedSeconds * Math.PI * 2 / 38;
+    /** @type {{y: number; halfWidth: number; width: number; alpha: number; visible: boolean}[]} */
     var markers = [];
     for (var i = 0; i < 6; i += 1) {
       var phase = spin + i * Math.PI / 3;
@@ -2321,6 +2322,7 @@
     var surfaceProfile = asteroidSurfaceProfile(bulk, surfaceRng);
     var heterogeneity = rng();
     var fields = ASTEROID_PALETTES.map(function () {
+      /** @type {{x: number; y: number; sigma: number; amp: number}[]} */
       var blobs = [];
       var blobCount = Math.floor(rng() * (1 + Math.round(heterogeneity * 3)));
       for (var b = 0; b < blobCount; b += 1) {
@@ -2491,6 +2493,7 @@
 
   /** @param {{ x: number, y: number, rx: number, ry: number, angle: number }} crater @param {number} scale @param {number} offsetX @param {number} offsetY @returns {number[]} */
   function asteroidCraterEllipse(crater, scale, offsetX, offsetY) {
+    /** @type {number[]} */
     var points = [];
     for (var i = 0; i < 28; i += 1) {
       var a = i / 28 * Math.PI * 2;
@@ -2700,6 +2703,7 @@
     var surfaceProfile = asteroidSurfaceProfile(bulk, surfaceRng);
     var heterogeneity = rng();
     var fields = ASTEROID_PALETTES.map(function () {
+      /** @type {{x: number; y: number; sigma: number; amp: number}[]} */
       var blobs = [];
       var count = Math.floor(rng() * (1 + Math.round(heterogeneity * 3)));
       for (var b = 0; b < count; b += 1) blobs.push({ x: rng() - 0.5, y: rng() - 0.5,
@@ -3290,6 +3294,7 @@
 
   /** @param {Rng} rng @param {number} width @param {number} height @param {number} count @param {number} parallax @param {number} alpha */
   function createStarLayer(rng, width, height, count, parallax, alpha) {
+    /** @type {{x: number; y: number; size: number}[]} */
     var stars = [];
     for (var i = 0; i < count; i += 1) {
       stars.push({

@@ -370,6 +370,8 @@ before deciding to simplify models or shaders.
 
 The [ship pack inspection](experiments/ship-packs.html) shows the Quaternius ship library; choose imported enemy artwork in the paused flight lab. The viewer and flight lab use original Quaternius textures, with original archives, licenses and provenance under `assets/ships/`.
 
+The [character and animation viewer](experiments/characters.html) inspects the Quaternius Astronaut and Standard Universal Animation Libraries 1 and 2. Choose a model and animation, pause or scrub playback, adjust speed, and toggle its skeleton. All six glTF/GLB exports load locally with original materials and rigs. Authoring formats, license evidence, and SHA-256 provenance are under `assets/characters/`; see its README for rebuilding the catalog. The astronaut includes 24 animations and reversible suit/trim color swaps with four crew palettes plus custom colors. Library root-motion variants are preserved; applying library clips to other rigs requires retargeting. These assets are available for inspection and future use, with no gameplay changes.
+
 Flight lab starts paused with a centered Start flight button; Esc brings back Resume flight. You begin at full cruise above the asteroid, facing the already assembled combat wings. W/S adjusts throttle and X stops. Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Select each wing's imported artwork while paused. Pilots dogfight each other; your shots spare allies, and Tab targets enemies. A defeated wing starts a new round after five seconds. Use Combat scenario to return to solo training.
 
 ### Mumble voice lab

@@ -1,0 +1,13 @@
+# Character source assets
+
+Quaternius Astronaut and Standard Universal Animation Libraries 1 and 2, supplied by the user on 2026-10-16. Every pack has unmodified files in `original/` and a `provenance.json` with acquisition details, creator URL, license evidence and SHA-256 for each source file. The animation-library ZIPs were removed after extraction; their original filenames and hashes remain in provenance. Character ZIPs are ignored by Git.
+
+Open [the character and animation viewer](../../experiments/characters.html) through the local HTTP server. The catalog includes six glTF/GLB exports. Select a model and clip; pause, scrub, adjust playback speed, or show the skeleton. Source materials, textures, rigs, original dimensions, and root motion are preserved. Nothing is wired into gameplay yet.
+
+The astronaut includes 24 embedded animations. Its [Poly Pizza listing](https://poly.pizza/m/3hC2i0CTuO) credits Quaternius and identifies the license as CC0. The original download filename and bytes are preserved in `quaternius-astronaut/original/`.
+
+The astronaut viewer offers separate suit and trim colors, four crew palettes, and an Original option. Swaps preserve the dark hardware and material finish, and leave the source GLB unchanged. Palette controls are disabled for the animation-library mannequins.
+
+Universal Animation Libraries 1 and 2 each contain 43 clips in both in-place and root-motion variants. The female mannequin is a separate static retargeting target. Applying library clips to the astronaut requires retargeting; use the included authoring files and creator setup guides.
+
+`python tools/organize-character-packs.py` verifies every extracted source against its recorded hash and rebuilds the catalog without needing ZIPs. No conversion or package manager is needed at runtime. The viewer uses the pinned MIT-licensed Three.js r180 subset in `vendor/three`, with its own source hashes and license; all runtime URLs are relative and local.

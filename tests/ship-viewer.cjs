@@ -18,7 +18,7 @@ const vm = require('node:vm');
     sourceGeometry: (m, poses, units, texture, color) => ({paint: color}),
     paintColor: color => color, engineAnchors: () => []
   }};
-  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../experiments/ship-pack-viewer.js'), 'utf8'), {
+  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../experiments/dom.js'), 'utf8') + '\n' + fs.readFileSync(require('node:path').join(__dirname, '../experiments/ship-pack-viewer.js'), 'utf8'), {
     window: {Driftworks: DW}, document: {getElementById: element}, requestAnimationFrame() {}
   });
   await new Promise(setImmediate);

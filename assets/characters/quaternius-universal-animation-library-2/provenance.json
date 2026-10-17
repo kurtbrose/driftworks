@@ -1,0 +1,94 @@
+{
+  "author": "Quaternius",
+  "pack": "quaternius-universal-animation-library-2",
+  "title": "Universal Animation Library 2 - Standard",
+  "sourceURL": "https://quaternius.com/packs/universalanimationlibrary2.html",
+  "license": "CC0-1.0",
+  "acquired": "2026-10-16",
+  "acquisition": "User supplied ZIP in assets/characters. Contents extracted without modification. ZIP removed after extraction; original filename, archive SHA-256 and per-file hashes retained as provenance.",
+  "archive": {
+    "path": "source/Universal Animation Library 2[Standard].zip",
+    "sha256": "4008ea208a604773a2b2177d965f0f5d3195498b5bf838c3f5785d68e95f2a68",
+    "retained": false
+  },
+  "files": [
+    {
+      "path": "original/Female Mannequin/Mannequin_F.blend",
+      "archivePath": "Universal Animation Library 2[Standard]/Female Mannequin/Mannequin_F.blend",
+      "bytes": 4130952,
+      "sha256": "980c6eee3a2fb2ee1028d8bdd5bb95f7df983bc9de45e974ee77646b1eafbc70"
+    },
+    {
+      "path": "original/Female Mannequin/README.txt",
+      "archivePath": "Universal Animation Library 2[Standard]/Female Mannequin/README.txt",
+      "bytes": 275,
+      "sha256": "3447416d55d5cf3a82311c4941578068d544cc4cfa1d49a6a26a28c98b96c393"
+    },
+    {
+      "path": "original/Female Mannequin/Unity/Mannequin_F.fbx",
+      "archivePath": "Universal Animation Library 2[Standard]/Female Mannequin/Unity/Mannequin_F.fbx",
+      "bytes": 575100,
+      "sha256": "1a7fb4bb8850860eff36aabd60d65d19273a4a072b3c638001fbb38e42add4de"
+    },
+    {
+      "path": "original/Female Mannequin/Unreal-Godot/Mannequin_F.glb",
+      "archivePath": "Universal Animation Library 2[Standard]/Female Mannequin/Unreal-Godot/Mannequin_F.glb",
+      "bytes": 1442824,
+      "sha256": "2ee6cc3fe888d9b144afa8cc4b2ab7bfc5d13a0d5b7548df777f61f64ad65fa6"
+    },
+    {
+      "path": "original/Godot_Setup.png",
+      "archivePath": "Universal Animation Library 2[Standard]/Godot_Setup.png",
+      "bytes": 499312,
+      "sha256": "8fde3e49385c3b3dc214bfe2bc61dde6f873a06f57cab9b245c8fc2543bc7496"
+    },
+    {
+      "path": "original/License.txt",
+      "archivePath": "Universal Animation Library 2[Standard]/License.txt",
+      "bytes": 332,
+      "sha256": "6d01f55c6e4c49a2c9963e147e561945ae2c83958c8ca667d90a6bffdbfac061"
+    },
+    {
+      "path": "original/README.txt",
+      "archivePath": "Universal Animation Library 2[Standard]/README.txt",
+      "bytes": 702,
+      "sha256": "ccd02718886b5a57f10f0a8911a38cfe10c36880e1d6dfa3445923fba32d2a72"
+    },
+    {
+      "path": "original/Unity/UAL2_Standard.fbx",
+      "archivePath": "Universal Animation Library 2[Standard]/Unity/UAL2_Standard.fbx",
+      "bytes": 24778332,
+      "sha256": "d26d0e9f4a202d473194c056045143095a605a53ba1d823ef24055be4b86851d"
+    },
+    {
+      "path": "original/Unity/UAL2_Standard_RM.fbx",
+      "archivePath": "Universal Animation Library 2[Standard]/Unity/UAL2_Standard_RM.fbx",
+      "bytes": 24805740,
+      "sha256": "9c249b127154b605b514315c5b055d2baab4e730cdae5ad352a9141a2f7bf960"
+    },
+    {
+      "path": "original/Unity_Setup.png",
+      "archivePath": "Universal Animation Library 2[Standard]/Unity_Setup.png",
+      "bytes": 237945,
+      "sha256": "1f9ac00f442c4342fae060150a2cfb5a825f7e3b6e8ffd8ce01044e4fe31f7c9"
+    },
+    {
+      "path": "original/Unreal-Godot/UAL2_Standard.glb",
+      "archivePath": "Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb",
+      "bytes": 8091444,
+      "sha256": "8cee20ab1bc55130092447e810e26df22dd2803eccc54f52137a7d54d7ab88a8"
+    },
+    {
+      "path": "original/Unreal-Godot/UAL2_Standard_RM.glb",
+      "archivePath": "Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard_RM.glb",
+      "bytes": 8095936,
+      "sha256": "814eee878f82934992d3ea746c539df25e981487109c591f5efbb8dd03286f99"
+    },
+    {
+      "path": "original/Unreal_Setup.png",
+      "archivePath": "Universal Animation Library 2[Standard]/Unreal_Setup.png",
+      "bytes": 148412,
+      "sha256": "c2c64e659943c634f538329ea0904f7902ab4194d0aaae77ac486d236171d00c"
+    }
+  ]
+}

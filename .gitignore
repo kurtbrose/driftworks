@@ -13,3 +13,6 @@ Thumbs.db
 
 # Local source archive (too large for GitHub)
 /assets/ships/quaternius-ultimate-spaceships/source/quaternius_pack.zip
+
+# Extracted character packs retain provenance instead of download archives
+/assets/characters/**/*.zip

@@ -388,7 +388,7 @@
   function habitatMesh(segments) {
     var count = segments || 96;
     /** @type {number[]} */ var data = [];
-    var capSteps=count/8, rings=[];
+    var capSteps=count/8, rings=/** @type {number[]} */ ([]);
     for(var cap=capSteps;cap>=0;cap--)rings.push(-31-5*Math.sin(cap*Math.PI/(2*capSteps)));
     for(var cap=0;cap<=capSteps;cap++)rings.push(31+5*Math.sin(cap*Math.PI/(2*capSteps)));
     /** @param {number} x */

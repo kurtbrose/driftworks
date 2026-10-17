@@ -715,11 +715,31 @@ use this to preserve the underlying texture instead of covering it in solid blac
 
 ### Flight lab orchestration
 
+All authored `src/**/*.js` and `experiments/**/*.js` scripts run through the
+same strict TypeScript/JSDoc check and unchecked-`any` audit. The checker also
+compares the configured files with both directories, and rejects scripts that
+disable checking, so experiments cannot silently drop out of coverage.
+`experiments/types.d.ts` owns lab contracts and augments the shared namespace;
+production simulation types do not import the experiment contracts. Its vectors
+use scene units for positions and SI metres/seconds for velocity and engine ramps.
+`dom.js` supplies typed control lookups for the experiment HTML entry points and
+reports missing IDs immediately. Load it before browser adapters, including the
+standalone voice and ship previews.
+
+Flight comms has three layers: `flight-dialogue.js` owns line templates, stable
+pilot voices, contact phrasing and line repetition scoring; `flight-comms.js`
+owns emotions, combat observations and airtime scheduling; `flight-radio.js`
+owns subtitles, channel playback and Web Audio lifecycle. Load them in that
+order after training and mumble, before flight boot. The existing
+`flightComms` API forwards dialogue helpers and `mount` for compatibility.
+
+
 `experiments/flight-session.js` owns the lab world fixture and mutable sortie,
 combat and gun state. `reset(config)` replaces those three states and optionally
 spawns combat; it retains the world, body size and elapsed clock. `setCombat`
 replaces only combat, preserving the toggle's existing delayed-spawn behavior.
-`snapshot()` returns current references, not a clone. `advance` executes at most
+`snapshot()` returns current references, not a clone; its sortie, guns and combat
+are initialized even before the first reset. `advance` executes at most
 1/120-second substeps in movement, training, player guns, audio notifications,
 and surface-contact order. Death finishes gun/audio processing and stops before
 contact. Terrain/hull/surface queries and audio notifications are injected.

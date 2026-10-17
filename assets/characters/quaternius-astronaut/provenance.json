@@ -1,0 +1,18 @@
+{
+  "author": "Quaternius",
+  "pack": "quaternius-astronaut",
+  "title": "Astronaut",
+  "sourceURL": "https://poly.pizza/m/3hC2i0CTuO",
+  "license": "CC0-1.0",
+  "licenseURL": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "licenseEvidence": "Poly Pizza model listing identifies Quaternius as author and Public Domain (CC0) as license; verified 2026-10-16.",
+  "acquired": "2026-10-16",
+  "acquisition": "User supplied the GLB in assets/characters. Original filename and bytes preserved; no conversion.",
+  "files": [
+    {
+      "path": "original/Astronaut by Quaternius - 3hC2i0CTuO.glb",
+      "bytes": 1944976,
+      "sha256": "c825fb5dc0f3c2875f8c298938c35df79e884c8117d9ff62a6b213d783957758"
+    }
+  ]
+}
