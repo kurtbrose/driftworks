@@ -510,4 +510,4 @@ radio seed from the stable voice seed. `transmit` remains deterministic for a
 fixed seed; `staticBursts: false` disables intermittent bursts for comparisons.
 Bookend timing and subtitle offsets remain fixed.
 
-- 3D mining platform study: http://localhost:8000/tests/mining-platform-orbit.html (orbit, zoom, fold legs and preview extraction machinery; shares production geometry).
+- 3D mining platform study: http://localhost:8000/tests/mining-platform-orbit.html (four simultaneous pod views: fixed side/front/top and interactive raised orbit; original geometry and three bean-pod variations with shared deployment and machinery controls).

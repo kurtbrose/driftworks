@@ -1433,6 +1433,17 @@
       }
     });
   });
+  test('mining pod studies keep finite unit normals, fold anchors and gate cutter motion', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry;
+    ['pod','anchors','recessed'].forEach(function(variant){
+      var deployed=model(1,0,false,variant),folded=model(0,0,false,variant);
+      assert(JSON.stringify(deployed)!==JSON.stringify(folded));
+      assert(JSON.stringify(deployed)===JSON.stringify(model(1,5,false,variant)));
+      assert(JSON.stringify(deployed)!==JSON.stringify(model(1,.2,true,variant)));
+      Object.keys(deployed).forEach(function(key){var data=deployed[key];assert(data.length%18===0);assert(data.every(Number.isFinite));for(var i=3;i<data.length;i+=6)assertClose(Math.hypot(data[i],data[i+1],data[i+2]),1,.00001);});
+    });
+  });
+
   test('mining platform geometry folds legs and animates only active machinery', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var open=model(1,0,false),folded=model(0,0,false);

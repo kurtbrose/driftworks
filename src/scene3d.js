@@ -385,9 +385,9 @@
 
   /** Mining artwork in local coordinates: feet at z=0, eight folding legs.
    * Geometry is grouped by paint so details do not add individual draw calls.
-   * @param {number} deployment @param {number} time @param {boolean} working
+   * @param {number} deployment @param {number} time @param {boolean} working @param {string} [variant]
    */
-  function miningPlatformGeometry(deployment, time, working) {
+  function miningPlatformGeometry(deployment, time, working, variant) {
     var d = Math.max(0, Math.min(1, deployment));
     /** @type {Record<string, number[]>} */ var groups = {ochre:[], steel:[], dark:[], light:[]};
     var cube = boxMesh();
@@ -407,6 +407,72 @@
       var y=/** @type {V3} */ ([-x[1]/h,x[0]/h,0]);
       var z=/** @type {V3} */ ([-x[2]*y[1],x[2]*y[0],x[0]*y[1]-x[1]*y[0]]);
       block(material,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],[len/2,width,width],[x,y,z]);
+    }
+    // Study variants deliberately stop at silhouette and functional masses.
+    if (variant === 'pod' || variant === 'anchors' || variant === 'recessed') {
+      var recessed=variant==='recessed', mixed=variant==='anchors';
+      /** Smooth rounded shell, slightly pinched at the work end and bowed like a bean.
+       * @param {string} material @param {V3} center @param {V3} radii @param {number} bow
+       */
+      function shell(material,center,radii,bow) {
+        var out=groups[material], rings=12, segments=32;
+        /** @param {number} latitude @param {number} angle */
+        function vertex(latitude,angle) {
+          var u=Math.cos(latitude)*Math.cos(angle),v=Math.cos(latitude)*Math.sin(angle),w=Math.sin(latitude);
+          var taper=1-.14*u, bend=bow*(1-u*u);
+          var ny=v/(radii[1]*taper),nx=(u-(-.14*radii[1]*v-2*bow*u)*ny)/radii[0],nz=w/radii[2], length=Math.hypot(nx,ny,nz);
+          out.push(center[0]+u*radii[0],center[1]+v*radii[1]*taper+bend,center[2]+w*radii[2],nx/length,ny/length,nz/length);
+        }
+        for(var r=0;r<rings;r++)for(var j=0;j<segments;j++){
+          var a=-Math.PI/2+r*Math.PI/rings,b=a+Math.PI/rings,c=j*Math.PI*2/segments,e=c+Math.PI*2/segments;
+          if(r>0){vertex(a,c);vertex(a,e);vertex(b,c);}
+          if(r<rings-1){vertex(a,e);vertex(b,e);vertex(b,c);}
+        }
+      }
+      shell('dark',[-1,0,5],[14.5,9.3,3],.8);
+      shell('ochre',[-1,0,8],[16,10.5,recessed?7.5:6.5],1.2);
+      shell('ochre',[-4,1,12],[8,6,4],.3);
+      // Lower root sockets, four pairs with crowded front mounts and swept corners.
+      [-11,-5,5,9].forEach(function(root,index){[-1,1].forEach(function(side){
+        var primary=!mixed || index===0 || index===3;
+        var weight=primary?1:.65, sweep=index===0?-5:index===3?5:index===1?-1:1;
+        var extension=d*(primary?1:.72), reach=(recessed?4:6)*extension;
+        var rootY=side*(index===0?6.5:8), asymmetry=((index*3+(side===1?1:0))%4)*.45;
+        var shoulder=/** @type {V3} */ ([root,rootY,4.5]);
+        var knee=/** @type {V3} */ ([root+sweep*extension*.6,rootY+side*(1.5+reach*.55),3.8+asymmetry]);
+        var tip=/** @type {V3} */ ([root+sweep*extension,rootY+side*(2+reach),1.4+(1-d)*2]);
+        shell('dark',shoulder,[2.6,2.2,1.9],0);
+        shell('ochre',[root,rootY,5.3],[2.6,2,1.6],0);
+        link('dark',shoulder,knee,1.25*weight);
+        link('steel',knee,tip,.7*weight);
+        link('light',[shoulder[0],shoulder[1],3.8],[knee[0],knee[1],knee[2]-.7],.25*weight);
+        shell('steel',knee,[1.15*weight,1.15*weight,1.15*weight],0);
+        shell('dark',tip,[1.1*weight,1.2*weight,.8],0);
+        // Split jaws curl down and inward: contact tools, rather than walking pads.
+        [-1,1].forEach(function(jaw){
+          var spread=(.8+d*.7)*weight;
+          var knuckle=/** @type {V3} */ ([tip[0]+jaw*spread,tip[1]+side*1.1,tip[2]-.2]);
+          var tooth=/** @type {V3} */ ([tip[0]+jaw*.45*weight,tip[1]+side*1.8,tip[2]-1.4]);
+          link('steel',[tip[0]+jaw*.6*weight,tip[1],tip[2]],knuckle,.45*weight);
+          link('dark',knuckle,tooth,.36*weight);
+        });
+      });});
+      // A broad underslung crusher makes the positive-X end unambiguous.
+      var head=recessed?1.4:1;
+      block('dark',[12+d*2,0,3.7],[4,4.8*head,2.1]);
+      block('ochre',[14+d*2,0,5.5],[3,5.5*head,1]);
+      block('dark',[17+d*2,0,3.3],[1,4.5*head,1.6]);
+      for(var tooth=-2;tooth<=2;tooth++){
+        var pulse=working?Math.sin(time*7+tooth)*.3:0;
+        block('steel',[18+d*2+pulse,tooth*1.7*head,3],[.8,.6*head,1.2]);
+      }
+      // Rear utility coupling and a human-sized side airlock, kept as simple masses.
+      shell('steel',[-16,0,7],[1.1,3.2,2.6],0);
+      shell('dark',[-17,0,7],[.5,2,1.8],0);
+      shell('ochre',[-4,10,7],[3.3,2.4,3.3],0);
+      block('dark',[-4,12.2,7],[1.7,.3,2.2]);
+      block('steel',[-4,12.6,4.3],[2,.7,.3]);
+      return groups;
     }
     [-9,-3,3,9].forEach(function(root){[-1,1].forEach(function(side){
       var knee=/** @type {V3} */ ([root*(1+d*.25),side*(7.5+d*5),7+d*2]);
