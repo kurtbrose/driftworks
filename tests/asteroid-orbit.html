@@ -21,6 +21,11 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 <div id="viewer" class="scene" aria-label="Orbiting 3D asteroid"></div>
 <header><div><h1>Asteroid orbit</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="cut" aria-pressed="false">Cutaway</button><button id="walk" aria-pressed="false">Surface walk</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
 <section class="parameters" aria-label="Asteroid parameters">
+<h2>Performance evaluation</h2>
+<label for="render-mode">Render mode</label><select id="render-mode"><option value="normal">Terrain + material</option><option value="flat">Flat material</option><option value="boxes">Box proxy</option><option value="empty">Empty scene</option></select>
+<label for="render-scale">Resolution</label><select id="render-scale"><option value="1">100%</option><option value="0.5">50%</option></select>
+<label><input id="benchmark" type="checkbox"> Continuous measurement</label>
+<pre id="performance" style="font-size:11px;white-space:pre-wrap">Measuring...</pre>
 <h2>Camera angles</h2>
 <div class="presets" role="group" aria-label="Camera angles"><button data-view="overview">Whole asteroid</button><button data-view="oblique">Rocky slope</button><button data-view="horizon">Low horizon</button><button data-view="down">Look down</button></div>
 <small id="camera-caption">Inspect the same sunlit patch. Drag to look, wheel to change height.</small>
@@ -47,8 +52,9 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     <script src="../src/tactical/camera.js?v=20260920-population1"></script>
     <script src="../src/audio.js?v=20260920-population1"></script>
     <script src="../src/hud.js?v=20260922-cavern1"></script>
-    <script src="../src/scene3d.js?v=20261016-angular2"></script>
+    <script src="../src/scene3d.js?v=20261016-perf8"></script>
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
+<script src="../experiments/performance.js"></script>
 <script>
 (function(){
   var world=Driftworks.sim.createInitialWorld(), host=document.getElementById('viewer');
@@ -122,7 +128,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   host.addEventListener('pointerdown',function(event){if(!walking)return;lookDrag={x:event.clientX,y:event.clientY};event.target.setPointerCapture(event.pointerId);});
   host.addEventListener('pointermove',function(event){if(!walking||!lookDrag)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),n=frame.normal,angle=-(event.clientX-lookDrag.x)*.004;walkHeading=tangent(walkHeading,n);var side=cross(n,walkHeading);walkHeading=normalize(walkHeading.map(function(v,i){return v*Math.cos(angle)+side[i]*Math.sin(angle);}));walkPitch=Math.max(-1.5,Math.min(1.5,walkPitch-(event.clientY-lookDrag.y)*.004));lookDrag={x:event.clientX,y:event.clientY};});
   host.addEventListener('pointerup',function(){lookDrag=null;});host.addEventListener('pointercancel',function(){lookDrag=null;});
-  var rotating=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=-.49, previous=0;
+  var rotating=false, phase=-.49, previous=0;
   var motion=document.getElementById('motion');
   function updateMotion(){motion.textContent=rotating?'Pause orbit':'Resume orbit';motion.setAttribute('aria-pressed',String(!rotating));}
   updateMotion();scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);
@@ -131,10 +137,26 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   host.addEventListener('wheel',function(event){rotating=false;updateMotion();if(walking){event.preventDefault();var delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?host.clientHeight:1);walkAltitude=Math.max(.5/(asteroid.radius*Driftworks.sim.METERS_PER_UNIT),Math.min(.3,walkAltitude*Math.exp(-Math.max(-300,Math.min(300,delta))*.002)));walkPose(0);}},{passive:false});
   document.getElementById('reset').onclick=function(){if(walking)leaveWalk();resetCamera();phase=-.49;scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);};
   document.getElementById('cut').onclick=function(){if(walking)leaveWalk();world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];var open=asteroid.excavation.level>0;this.textContent=open?'Close cutaway':'Cutaway';this.setAttribute('aria-pressed',String(open));scene.sync(world);};
-  function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;previous=now;
+  var dirty=true,pacer=Driftworks.flightPerformance.pacer();
+  ["pointermove","pointerdown","wheel","click","input","change","keydown","keyup"].forEach(function(type){document.addEventListener(type,function(){dirty=true;});});window.addEventListener("resize",function(){dirty=true;});
+  document.addEventListener("visibilitychange",function(){dirty=true;});
+  var measurements=Driftworks.flightPerformance.create(),perfTime=0,lastDraw=0;
+  var renderMode=document.getElementById('render-mode'),renderScale=document.getElementById('render-scale'),benchmark=document.getElementById('benchmark');
+  function diagnostics(){scene.setStudyDiagnostics({mode:renderMode.value==='flat'?'normal':renderMode.value,flat:renderMode.value==='flat',scale:Number(renderScale.value),mothership:false,actors:false});measurements=Driftworks.flightPerformance.create();}
+  renderMode.onchange=diagnostics;renderScale.onchange=diagnostics;
+  function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;
+    if(document.hidden||!Driftworks.flightPerformance.due(pacer,now,30)){requestAnimationFrame(frame);return;}
+    var moving=walking&&Object.keys(keys).length>0;
+    if(!benchmark.checked&&!rotating&&!dirty&&!moving){previous=now;lastDraw=0;var label=document.getElementById('performance');if(!label.textContent.startsWith('Idle'))label.textContent='Idle - redraw on input\n'+label.textContent;requestAnimationFrame(frame);return;}
+    previous=now;
+    dirty=false;
+    var started=performance.now();
     if(walking)walkPose(dt);
     if(rotating){phase+=dt*.16;var orbit=scene.getOrbit();scene.setOrbit({yaw:orbit.yaw+dt*.18,tilt:1.3+.85*Math.sin(phase)});}
-    scene.sync(world);scene.render(world,1,0,dt);requestAnimationFrame(frame);
+    scene.sync(world);scene.render(world,1,0,dt);
+    Driftworks.flightPerformance.record(measurements,lastDraw?now-lastDraw:0,performance.now()-started);lastDraw=now;
+    if(now-perfTime>1000||(!benchmark.checked&&!rotating&&!moving)){var stats=scene.getRenderStats(),m=Driftworks.flightPerformance.summary(measurements);document.getElementById('performance').textContent=m.fps.toFixed(1)+' FPS | p95 '+m.p95.toFixed(1)+' ms\nCPU '+m.cpu.toFixed(1)+' ms (not GPU time)\n'+stats.triangles.toLocaleString()+' triangles | '+stats.drawCalls+' draws\n'+stats.width+' x '+stats.height;perfTime=now;}
+    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 })();

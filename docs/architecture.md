@@ -358,15 +358,29 @@ See [population](population.md) for clock, event, transport, and save contracts.
 ### Viewer asteroid surface
 
 Study views draw the base asteroid terrain and its procedural surface shading.
-Three fixed, seeded body-space value-noise octaves (2.5, 5, and 10 cycles per
-normalized body unit, with halving amplitudes) displace the shared closed terrain
+Five fixed, seeded body-space ridged value-noise octaves (starting at 2.5 cycles per
+normalized body unit, with amplitudes decreasing by 0.62 per octave) sample radial direction (not radius) and displace the shared closed terrain
 field after crater relief. Meshing, picking, and attachments sample this same
-field. The cached mesh stays fixed across zoom levels. Fragment normal detail
-starts at frequency 20 and fades each octave by its projected footprint, including
+field. Exterior mesh normals describe only the broad shell; a cached, padded six-face
+RGBA8 atlas supplies full exterior normals per fragment, including crater and coarse terrain relief. This avoids
+interpolating unresolved roughness across large triangles. `surfaceAtlas(a, n?)`
+returns JSON-independent render bytes with six `(n+2)`-square faces (default 256
+interior samples), encoding unit normals as RGB (128 + component * 127) and occlusion alpha. In study surface-camera
+views, nearby cached triangles receive three subdivision levels projected onto
+the same field, fading to the cached mesh at the patch edge. The patch is cached
+in body-space camera bins; ordinary orbit views keep the base mesh. Fragment normal detail
+starts at frequency 80 with at most eight octaves and fades each octave by its projected footprint, including
 grazing incidence; unresolved octaves stop evaluation. Crater and roughness
-budgets remain independent. This is a fixed geometry budget, not adaptive subdivision.
+budgets remain independent. The surface patch has a bounded refinement budget.
+The orbit viewer provides whole-body, 8 m slope, 2 m horizon, and 12 m downward
+presets over one surface location; heights use physical meters.
 Separate surface boulder meshes are omitted to keep close flight and walking
 views free of tile generation, uploads, and additional rock draw calls.
+
+The asteroid viewer reuses `flightPerformance` for frame/p95/CPU timings and the
+existing flat/boxes/empty/resolution diagnostics. It caps active rendering at 30 FPS,
+redraws static views only on input, and suspends rendering in hidden tabs. Continuous
+measurement opts into repeated draws. CPU submission time is not a GPU timer.
 
 ### Mothership 3D artwork
 
@@ -812,3 +826,7 @@ The mining study loads local Quaternius astronauts through `tests/mining-study-c
 `tests/mining-study-context.js` mounts an existing world asteroid through the production mesh/geology renderer and uses its shared surface-height query to place the rig and ground crew. The existing Quaternius Spitfire is a frozen hovering reference. Its assumed 12 m nose-to-tail length shares the study metres/artwork mapping with crew. Both context layers are independently optional; they do not alter game state.
 
 The `drydock` study treats the body as one cargo hold around a central eight-sided lookout tower. Optional fifth `miningPlatformGeometry` argument `panelOpen` (0–1) rotates twelve yellow cover segments about their outer rim hinges; cargo and tower remain fixed. It removes the rear hopper and cutter, retains a short transfer/launch interface and locks study scale to 36 m. This is manual deployment geometry, with no idle animation or new simulation state.
+
+The `rampdock` study aligns eight doors and eight anchor roots to shared perimeter hardpoints. Door rotation is solved to lower their lips to local z=0 at full deployment. Dark stanchions, upper/lower perimeter rings and radial braces remain fixed as a protective cage; this is an artwork datum, not terrain-aware contact solving.
+
+Rampdock doors use two rigid leaves: a vertical wall that seats against the fixed cage, plus an upper roof leaf covering the hold. Opening first unfolds the roof leaf, then lowers the wall to a 25-degree descending ramp; the outer leaf reaches the local ground datum at a steeper angle. Closing reverses that sequence. Plate thickness follows each moving face normal.

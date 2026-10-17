@@ -1435,7 +1435,7 @@
   });
   test('mining pod studies keep finite unit normals, fold anchors without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
-    ['pod','anchors','recessed','fabricated','workboat','drydock'].forEach(function(variant){
+    ['pod','anchors','recessed','fabricated','workboat','drydock','rampdock'].forEach(function(variant){
       var deployed=model(1,0,false,variant),folded=model(0,0,false,variant);
       assert(JSON.stringify(deployed)!==JSON.stringify(folded));
       assert(JSON.stringify(deployed)===JSON.stringify(model(1,5,false,variant)));
@@ -1480,6 +1480,29 @@
     assert(JSON.stringify(closed.steel)===JSON.stringify(open.steel),'Hold loads and tower platform remain fixed');
     assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Tower windows and chassis remain fixed');
     [0,.5,1].forEach(function(value){var groups=model(1,0,false,'drydock',value);Object.keys(groups).forEach(function(key){assert(groups[key].every(Number.isFinite));for(var i=3;i<groups[key].length;i+=6)assertClose(Math.hypot(groups[key][i],groups[key][i+1],groups[key][i+2]),1,.00001);});});
+  });
+
+  test('inter-leg bay ramps reach ground while the protective cage stays fixed', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry;
+    var closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
+    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Load-bearing cage remains in place');
+    assert(JSON.stringify(closed.steel)===JSON.stringify(open.steel),'Tower and hold loads remain fixed');
+    var lowClosed=Infinity,lowOpen=Infinity;
+    for(var i=2;i<closed.ochre.length;i+=6)lowClosed=Math.min(lowClosed,closed.ochre[i]);
+    for(var i=2;i<open.ochre.length;i+=6)lowOpen=Math.min(lowOpen,open.ochre[i]);
+    assert(lowClosed>4 && lowOpen<.01 && lowOpen>-.3,'Door lips reach the surface');
+    [0,.5,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(key){assert(groups[key].every(Number.isFinite));});});
+  });
+
+  test('bay hull closes with vertical walls and a roof before two-stage unfolding', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,'rampdock',0),uncovered=model(1,0,false,'rampdock',.4),open=model(1,0,false,'rampdock',1);
+    // The first leaf is a vertical wall; the second is the upper closure.
+    assertClose(closed.ochre[5],0);
+    assertClose(closed.ochre[36*6+5],1);
+    for(var i=0;i<36*6;i++)assertClose(closed.ochre[i],uncovered.ochre[i],.000001);
+    assert(JSON.stringify(closed)!==JSON.stringify(uncovered));
+    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark));
+    [0,.2,.4,.7,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(k){assert(groups[k].every(Number.isFinite));for(var i=3;i<groups[k].length;i+=6)assertClose(Math.hypot(groups[k][i],groups[k][i+1],groups[k][i+2]),1,.00001);});});
   });
 
   test('mining platform geometry folds legs without decorative machinery motion', function () {
@@ -1644,6 +1667,30 @@
     });
     scene.setStudyParameters(a,{});
     assert(JSON.stringify(a)===before,'Artwork does not change saves');
+  });
+  test('Cached asteroid surface shading has six padded deterministic cube faces', function () {
+    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
+    var atlas=scene.surfaceAtlas(a,8),again=scene.surfaceAtlas(a,8);
+    assert(atlas.width===60&&atlas.height===10&&atlas.bytes.length===60*10*4);
+    assert(atlas.bytes.every(function(v,i){return v===again.bytes[i];}),'Rebuilding preserves the shading field');
+    assert(atlas.bytes.some(function(v,i){return i%4!==3&&v!==128;}),'Atlas carries surface normals');
+    for(var i=0;i<atlas.bytes.length;i+=4)assertClose(Math.hypot((atlas.bytes[i]-128)/127,(atlas.bytes[i+1]-128)/127,(atlas.bytes[i+2]-128)/127),1,.015);
+    assert(atlas.bytes.every(function(v,i){return i%4!==3||v<=148;}),'Occlusion stays bounded');
+    assert(JSON.stringify(a)===before,'Baking does not modify world data');
+  });
+  test('Displaced asteroid meshes preserve finite unit normals', function () {
+    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0];
+    scene.setStudyParameters(a,{roughness:0});var smooth=scene.asteroidMesh(a,12);
+    scene.setStudyParameters(a,{roughness:1});var rocky=scene.asteroidMesh(a,12);
+    assert(rocky.length>0&&smooth.length>0);
+    var changed=false;
+    for(var i=0;i<rocky.length;i+=6){
+      for(var j=0;j<6;j++)assert(Number.isFinite(rocky[i+j]),'Finite displaced vertex and normal');
+      assertClose(Math.hypot(rocky[i+3],rocky[i+4],rocky[i+5]),1,.00001);
+      if(i<smooth.length&&Math.abs(rocky[i+3]-smooth[i+3])>.01)changed=true;
+    }
+    assert(changed,'Displaced positions change the broad surface frame');
+    scene.setStudyParameters(a,{});
   });
   test('Surface walking frames follow the closed terrain with outward unit normals', function () {
     var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);

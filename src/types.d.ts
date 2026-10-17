@@ -285,6 +285,7 @@ export interface DriftworksNamespace {
     unproject: (point: Vec2, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }, z?: number) => Vec2 | null;
     view: (camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number }) => { right: [number, number, number]; up: [number, number, number]; back: [number, number, number]; distance: number; focal: number };
     rockField: (asteroid: Asteroid, point: [number, number, number]) => number;
+    surfaceAtlas: (asteroid: Asteroid, resolution?: number) => {width: number; height: number; bytes: Uint8Array};
     asteroidMesh: (asteroid: Asteroid, resolution?: number) => Float32Array;
     pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
