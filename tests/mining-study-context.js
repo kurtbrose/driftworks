@@ -15,7 +15,7 @@
     return landingCache[offset];
   },ramps:function(offset){
     var landing=this.landing(offset);if(!landing)return null;
-    if(!Object.prototype.hasOwnProperty.call(rampCache,offset)){stats.rampSolves++;rampCache[offset]=DW.miningStudyTerrain.rampStops(landing.sample,landing,function(t){return DW.scene3d.miningPlatformGeometry(1,0,false,t);});}
+    if(!Object.prototype.hasOwnProperty.call(rampCache,offset)){stats.rampSolves++;rampCache[offset]=DW.miningStudyTerrain.rampStops(landing.sample,landing,function(t){return DW.scene3d.miningPlatformRampGeometry(t);});}
     return rampCache[offset];
   },performance:function(){return {meshBuilds:stats.meshBuilds,siteFits:stats.siteFits,cacheHits:stats.cacheHits,rampSolves:stats.rampSolves,rampQueries:Object.keys(samples).reduce(function(sum,key){return sum+samples[key].stats.rampQueries;},0),raycasts:Object.keys(samples).reduce(function(sum,key){return sum+samples[key].stats.raycasts;},0)};},geometry:function(rigLength,surface,fighter){
     var batches=[];

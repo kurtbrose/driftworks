@@ -111,7 +111,8 @@
           }).map(function (p) {
             var count = (p.workerIds || []).length;
             var remaining = 8 * 3600 - (world.elapsedSeconds * sim.PHYSICAL_SECONDS_PER_SECOND - (p.shiftStartedSeconds || 0));
-            var operation = p.state === 'setting-up' ? 'setting up · ' + formatMissionTime(p.setupRemainingSeconds || 0) :
+            var landing = p.state === 'setting-up' && p.landingElapsedSeconds !== undefined && Driftworks.miningLanding ? Driftworks.miningLanding.sample(p.landingElapsedSeconds) : null;
+            var operation = landing && !landing.done ? landing.phase + ' � ' + landing.altitude.toFixed(1) + ' m' : p.state === 'setting-up' ? 'setting up · ' + formatMissionTime(p.setupRemainingSeconds || 0) :
               p.state === 'packing-up' ? 'packing up · ' + formatMissionTime(p.packRemainingSeconds || 0) :
               p.evacuationRequested || world.miningMission !== 'active' ? 'awaiting recovery' :
               !count ? 'waiting for crew' : remaining > 0 ? 'shift ends in ' + formatMissionTime(remaining) : 'replacement overdue ' + formatMissionTime(-remaining);

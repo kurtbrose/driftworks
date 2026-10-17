@@ -2,6 +2,7 @@
   'use strict';
 
   /** @typedef {import('./types').DriftworksNamespace} DriftworksNamespace */
+  /** @type {DriftworksNamespace} */
   var Driftworks = (global.Driftworks = global.Driftworks || {});
   /** @typedef {import('./types').World} World */
   /** @typedef {import('./types').Ship} Ship */
@@ -33,6 +34,12 @@
     /** @param {World} world */
     function migrate(world) {
       world.platforms = world.platforms || [createPlatform('platform-01'), createPlatform('platform-02')];
+      world.platforms.forEach(function(p){
+        if(p.landingElapsedSeconds!==undefined){
+          if(!Number.isFinite(p.landingElapsedSeconds))delete p.landingElapsedSeconds;
+          else p.landingElapsedSeconds=Math.max(0,Math.min(Driftworks.miningLanding?Driftworks.miningLanding.duration:38,p.landingElapsedSeconds));
+        }
+      });
       if (!world.mothership) return;
       world.ships = world.ships.filter(function (ship) {
         if (ship.type !== 'miner' && ship.type !== 'cargo') return true;
@@ -146,6 +153,7 @@
       ship.position = api.clonePlain(site.position);
       ship.velocity = api.clonePlain(site.velocity);
       if (!deploying) {
+        if (platform.landingElapsedSeconds !== undefined && Driftworks.miningLanding && platform.landingElapsedSeconds < Driftworks.miningLanding.duration) return ship;
         if (platform.state !== 'packing-up') {
           platform.state = 'packing-up';
           platform.packRemainingSeconds = PLATFORM_PACK_SECONDS;
@@ -169,6 +177,8 @@
         platform.asteroidId = asteroid.id; platform.siteAngle = siteAngle; platform.siteDepth = siteDepth;
         platform.position = site.position;
         platform.setupRemainingSeconds = PLATFORM_SETUP_SECONDS;
+        platform.landingElapsedSeconds = 0; platform.landingReleaseRotation = asteroid.rotation || 0;
+        platform.landingSitePending = true;
         platform.packRemainingSeconds = undefined;
         platform.workerIds = ship.passengerIds || [];
         ship.passengerIds = [];
@@ -260,8 +270,37 @@
         var asteroid = api.findAsteroid(world, platform.asteroidId);
         if (!asteroid) return;
         platform.position = platformSite(platform, asteroid).position;
+        var runtime = Driftworks.miningLanding,setupDt=dt;
+        if (platform.state === 'setting-up' && platform.landingElapsedSeconds !== undefined && runtime) {
+          // The maneuver runs on simulation time, so pause and save/load preserve it.
+          // Old saves omit this field and retain their existing setup progress.
+          if (platform.landingSitePending) {
+            var desired=platform.siteAngle,asteroidId=asteroid.id;
+            var radius=Math.max(1,api.surfaceRadius(asteroid,desired)*platform.siteDepth);
+            var angleStep=8 / api.metersPerUnit / radius;
+            var found=false;
+            for(var candidate of [0,1,-1,2,-2,3,-3,4,-4,5,-5,6,-6]) {
+              var angle=desired+candidate*angleStep;
+              var target=platformSite(platform,asteroid,angle).position;
+              var occupied=world.platforms.some(function(other){return other.id!==platform.id && other.asteroidId===asteroidId && other.state!=='stored' && other.state!=='carried' && api.distance(other.position,target)<48/api.metersPerUnit;});
+              if(!occupied){platform.siteAngle=angle;found=true;break;}
+            }
+            // Hold above the release area and retry if every nearby footprint is occupied.
+            if(!found)return;
+            platform.landingSitePending=false;
+          }
+          var before=platform.landingElapsedSeconds;
+          platform.landingElapsedSeconds=Math.min(runtime.duration,before+dt);
+          var landing=runtime.sample(platform.landingElapsedSeconds);
+          var site=platformSite(platform,asteroid).position,theta=platform.siteAngle+(asteroid.rotation || 0);
+          var x=landing.offset[0]/api.metersPerUnit,y=landing.offset[1]/api.metersPerUnit;
+          platform.position={x:site.x+Math.cos(theta)*x-Math.sin(theta)*y,y:site.y+Math.sin(theta)*x+Math.cos(theta)*y};
+          if(!landing.done)return;
+          // Only the remainder of a large tick may count toward setup.
+          if(before<runtime.duration)setupDt=Math.max(0,dt-(runtime.duration-before));
+        }
         if (platform.state === 'setting-up') {
-          platform.setupRemainingSeconds = Math.max(0, (platform.setupRemainingSeconds || 0) - dt * api.physicalSecondsPerSecond);
+          platform.setupRemainingSeconds = Math.max(0, (platform.setupRemainingSeconds || 0) - setupDt * api.physicalSecondsPerSecond);
           if (platform.setupRemainingSeconds <= 0) {
             platform.setupRemainingSeconds = 0;
             platform.state = 'deployed';

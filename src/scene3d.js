@@ -305,6 +305,8 @@
   /** @param {import('./types').Platform} platform @param {Asteroid | undefined} asteroid */
   function platformHeight(platform, asteroid) {
     if (!asteroid) return 0;
+    var fitted=platformSurface(platform,asteroid);
+    if(fitted && fitted.fit.valid)return platformSurfacePose(fitted,platform,asteroid).world([0,0,0])[2];
     var e = asteroid.excavation;
     if (e && e.level > 0) return -Math.min(0.42 * asteroid.radius, Math.max(0.03 * asteroid.radius, e.depthM / sim.METERS_PER_UNIT));
     var x = platform.position.x - asteroid.position.x, y = platform.position.y - asteroid.position.y;
@@ -322,6 +324,9 @@
       var home = world.ships.find(function (ship) { return ship.type === 'mothership' && Math.hypot(camera.x - ship.position.x, camera.y - ship.position.y) < 40 * scale; });
       return home ? (30 * scale + 2) * Math.max(0, Math.min(1, (camera.zoom - 4) / 8)) : 0;
     }
+    var asteroidId=a.id;
+    var nearby=world.platforms.find(function(p){return p.asteroidId===asteroidId && (p.state==='deployed' || p.state==='setting-up' || p.state==='packing-up') && Math.hypot(p.position.x-camera.x,p.position.y-camera.y)<4;});
+    if(nearby){var fitted=platformSurface(nearby,a);if(fitted && fitted.fit.valid)return platformHeight(nearby,a)+8*fitted.scale;}
     var e = a.excavation;
     var x = camera.x - a.position.x, y = camera.y - a.position.y;
     var c = Math.cos(a.rotation), s = Math.sin(a.rotation);
@@ -353,6 +358,62 @@
     var tunnel = Math.min(segmentDistance(p, entrance, bend), segmentDistance(p, bend, center)) - 0.062;
     // Remove upper rock through the chamber center. All exposed faces are meshed.
     return Math.max(outer, p[2] + depth, -Math.min(cavity, tunnel));
+  }
+
+  /** CPU terrain is shared with rendering; contact solutions never live in saves.
+   * @type {Map<string,{key:string;visual:import('./types').AsteroidVisual;data:Float32Array;sites:Map<string,import('./types').PlatformSurface|null>}>} */
+  var contactTerrain=new Map();
+  /** @param {Asteroid} asteroid */
+  function contactMesh(asteroid){
+    var key=asteroid.radius+':'+JSON.stringify(asteroid.excavation || null),visual=visualFor(asteroid),cached=contactTerrain.get(asteroid.id);
+    if(!cached || cached.key!==key || cached.visual!==visual){cached={key:key,visual:visual,data:asteroidMesh(asteroid),sites:/** @type {Map<string,import('./types').PlatformSurface|null>} */ (new Map())};contactTerrain.set(asteroid.id,cached);}
+    return cached;
+  }
+  /** Fixed physical scale keeps contacts independent of camera magnification.
+   * @param {import('./types').Platform} platform @param {Asteroid} asteroid @param {boolean} [open] */
+  function platformSurface(platform,asteroid,open){
+    var terrain=DW.miningTerrain;if(!terrain)return null;
+    var mesh=contactMesh(asteroid),key=platform.siteAngle+':'+platform.siteDepth;
+    if(!mesh.sites.has(key)){
+      var scale=terrain.metresPerModelUnit/sim.METERS_PER_UNIT,heading=platform.siteAngle;
+      var radius=sim.surfaceRadius(asteroid,heading)*(platform.siteDepth || .5),site=[Math.cos(heading)*radius,Math.sin(heading)*radius];
+      var sample=terrain.surfaceSampler(mesh.data,asteroid.radius,site,heading,scale),fit=terrain.fit(sample,[0,0]);
+      mesh.sites.set(key,fit?{fit:fit,sample:sample,scale:scale,site:site,heading:heading,ramps:null}:null);
+    }
+    var surface=mesh.sites.get(key) || null;
+    if(open && surface && surface.fit.valid && !surface.ramps){
+      surface.ramps=terrain.rampStops(surface.sample,surface.fit,function(t){return miningPlatformGeometry(1,0,false,t,'',false,false,undefined,undefined,true);});
+    }
+    return surface;
+  }
+  /** @type {WeakMap<import('./types').PlatformSurface,{key:string;groups:Record<string,number[]>}>} */
+  var contactGeometry=new WeakMap();
+  /** @param {import('./types').PlatformSurface} surface @param {number} deployment @param {number} ramps */
+  function platformSurfaceGeometry(surface,deployment,ramps){
+    var terrain=DW.miningTerrain,key=deployment+':'+ramps,cached=contactGeometry.get(surface);
+    if(cached && cached.key===key)return cached.groups;
+    var contacts=terrain?terrain.contactPoses(surface.fit,deployment):undefined;
+    var limits=surface.ramps?surface.ramps.map(function(limit){return limit*ramps;}):undefined;
+    var groups=miningPlatformGeometry(deployment,0,false,ramps,'',false,false,contacts,limits);
+    contactGeometry.set(surface,{key:key,groups:groups});return groups;
+  }
+  /** Renderer-owned pose from persistent simulation state; no DOM or camera inputs.
+   * @param {import('./types').PlatformSurface} surface @param {import('./types').Platform} platform @param {Asteroid} asteroid */
+  function platformSurfacePose(surface,platform,asteroid){
+    var landing=platform.state==='setting-up' && platform.landingElapsedSeconds!==undefined && DW.miningLanding?DW.miningLanding.sample(platform.landingElapsedSeconds):null;
+    var spin=asteroid.rotation || 0,heading=surface.heading+spin,cs=Math.cos(heading),sn=Math.sin(heading);
+    var yaw=landing?landing.headingOffset-(spin-(platform.landingReleaseRotation || 0))*(1-landing.match):0,c=Math.cos(yaw),s=Math.sin(yaw);
+    var altitude=landing?landing.altitude/sim.METERS_PER_UNIT:0,scale=surface.scale;
+    // Horizontal approach is owned by logistics; fitting only determines the contact height/tilt.
+    var ox=surface.fit.origin[0]*scale,oy=surface.fit.origin[1]*scale;
+    var origin=[platform.position.x+cs*ox-sn*oy,platform.position.y+sn*ox+cs*oy,surface.fit.origin[2]*scale+altitude];
+    /** @param {number[]} p */
+    function rotate(p){var local=[c*p[0]-s*p[1],s*p[0]+c*p[1],p[2]],b=surface.fit.basis;
+      var x=b[0][0]*local[0]+b[1][0]*local[1]+b[2][0]*local[2],y=b[0][1]*local[0]+b[1][1]*local[1]+b[2][1]*local[2];
+      return [cs*x-sn*y,sn*x+cs*y,b[0][2]*local[0]+b[1][2]*local[1]+b[2][2]*local[2]];}
+    /** @param {number[]} p */
+    function world(p){var r=rotate(p);return r.map(function(v,k){return origin[k]+v*scale;});}
+    return {world:world,rotate:rotate};
   }
 
   /** Marching tetrahedra: cached closed solid including cut face and cavity walls. */
@@ -428,9 +489,9 @@
 
   /** Mining artwork in local coordinates: feet at z=0, eight folding legs.
    * Geometry is grouped by paint so details do not add individual draw calls.
-   * @param {number} deployment @param {number} time @param {boolean} working @param {number} [panelOpen] @param {string} [interiorCut] @param {boolean} [legsOnly] @param {boolean} [infillOnly] @param {{knee:V3,tip:V3,normal:V3}[]} [contactPoses] @param {number[]} [rampLimits]
+   * @param {number} deployment @param {number} time @param {boolean} working @param {number} [panelOpen] @param {string} [interiorCut] @param {boolean} [legsOnly] @param {boolean} [infillOnly] @param {{knee:number[],tip:number[],normal:number[]}[]} [contactPoses] @param {number[]} [rampLimits] @param {boolean} [rampsOnly]
    */
-  function miningPlatformGeometry(deployment, time, working, panelOpen, interiorCut, legsOnly, infillOnly, contactPoses, rampLimits) {
+  function miningPlatformGeometry(deployment, time, working, panelOpen, interiorCut, legsOnly, infillOnly, contactPoses, rampLimits, rampsOnly) {
     // time/working remain accepted for existing callers; artwork has no idle machinery animation.
     var d = Math.max(0, Math.min(1, deployment));
     /** @type {Record<string, number[]>} */ var groups = {ochre:[], steel:[], dark:[], light:[]};
@@ -547,6 +608,7 @@
           doorLeaf([mix(hingeA,hingeB,rootGap),mix(hingeA,hingeB,1-rootGap),mix(wallTopA,wallTopB,1-edgeGap),mix(wallTopA,wallTopB,edgeGap)]);
           // Fixed corner infill sits behind the yellow moving leaves, on the black frame.
           doorLeaf([mix(wallTopA,wallTopB,edgeGap),mix(wallTopA,wallTopB,1-edgeGap),mix(roofTipA,roofTipB,1-edgeGap),mix(roofTipA,roofTipB,edgeGap)]);
+          if(rampsOnly)return;
           var fixedA=outerHinge(i,.30),fixedB=outerHinge(j,.30);
           var roofA=/** @type {V3} */ ([fixedA[0],fixedA[1],9.05]),roofB=/** @type {V3} */ ([fixedB[0],fixedB[1],9.05]);
           var roofInnerA=/** @type {V3} */ ([innerA[0],innerA[1],9.05]),roofInnerB=/** @type {V3} */ ([innerB[0],innerB[1],9.05]);
@@ -633,6 +695,7 @@
           block('dark',seat,[.38,.38,.30]);
         }
       });
+      if(rampsOnly)return groups;
       if(infillOnly)Object.keys(groups).forEach(function(key){groups[key]=[];});
       fixedInfill.forEach(function(points){
         var u=points[1].map(function(v,k){return v-points[0][k];}),v=points[2].map(function(v,k){return v-points[0][k];});
@@ -807,7 +870,7 @@
           var knee=/** @type {V3} */ ([root+outX*(1.5+reach*.55),rootY+outY*(1.5+reach*.55),4]);
           var tip=/** @type {V3} */ ([root+outX*(2+reach),rootY+outY*(2+reach),1.4+(1-d)*2]);
           var contactPose=contactPoses && contactPoses[index];
-          if(contactPose){knee=contactPose.knee;tip=contactPose.tip;}
+          if(contactPose){knee=/** @type {V3} */ (contactPose.knee);tip=/** @type {V3} */ (contactPose.tip);}
           // One chassis node receives both the leg clevis and replaceable frame shoe.
           hardpoint('dark',root,rootY,3.05,4.15,1.55,1.28,.86);
           hardpoint('ochre',root,rootY,4.15,4.92,1.48,1.16,.62);
@@ -1416,7 +1479,7 @@
       Object.keys(rocks).forEach(function (id) {
         if (!w.asteroids.some(function (a) { return a.id === id; })) {
           gl.deleteBuffer(rocks[id].mesh.buffer); gl.deleteTexture(rocks[id].texture);
-          delete surfaceLamps[id]; delete rocks[id]; delete geology[id]; delete shells[id]; delete impacts[id];
+          contactTerrain.delete(id); delete surfaceLamps[id]; delete rocks[id]; delete geology[id]; delete shells[id]; delete impacts[id];
         }
       });
       w.asteroids.forEach(function (a) {
@@ -1424,7 +1487,7 @@
         if (!rocks[a.id] || rocks[a.id].key !== key || rocks[a.id].visual !== visualFor(a)) {
           if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer); gl.deleteTexture(rocks[a.id].texture); }
           var visual = visualFor(a);
-          rocks[a.id] = { key: key, mesh: upload(asteroidMesh(a)), texture: craterTexture(a), visual: visual };
+          rocks[a.id] = { key: key, mesh: upload(contactMesh(a).data), texture: craterTexture(a), visual: visual };
         }
       });
       var button = /** @type {HTMLButtonElement} */ (toolbar.querySelector('[data-cut]'));
@@ -1550,13 +1613,20 @@
         var a = w.asteroids.find(function (a) { return a.id === p.asteroidId; });
         var z = platformHeight(p, a);
         var scale = semanticScale('platform', w.camera.zoom);
+        var surface=a?platformSurface(p,a,true):null;
+        var fitted=surface && surface.fit.valid && DW.miningTerrain?surface:null;
         var deployment = p.state === 'deployed' ? 1 : p.state === 'setting-up'
           ? 1-(p.setupRemainingSeconds || 0)/(DW.logistics ? DW.logistics.setupSeconds : 1)
           : (p.packRemainingSeconds || 0)/(DW.logistics ? DW.logistics.packSeconds : 1);
         var working = p.state === 'deployed' && w.miningMission === 'active' && !!a && a.ore > 0 &&
           (!w.staffingEnabled || (p.workerIds || []).length >= 5);
-        var geometry = miningPlatformGeometry(deployment,w.elapsedSeconds,working);
-        var angle=p.siteAngle+(a?a.rotation:0), c=Math.cos(angle), s=Math.sin(angle);
+        var landing = p.state === 'setting-up' && p.landingElapsedSeconds !== undefined && DW.miningLanding ? DW.miningLanding.sample(p.landingElapsedSeconds) : null;
+        if(landing){deployment=landing.deployment;z+=landing.altitude/(DW.sim ? DW.sim.METERS_PER_UNIT : 10000/600);}
+        var rampOpen=landing?landing.ramps:p.state==='deployed'?1:p.state==='packing-up'?deployment:0;
+        var geometry=fitted?platformSurfaceGeometry(fitted,deployment,rampOpen):miningPlatformGeometry(deployment,w.elapsedSeconds,working,rampOpen);
+        var fittedPose=fitted && a?platformSurfacePose(fitted,p,a):null;
+        var landingHeading=landing?landing.headingOffset-((a?a.rotation:0)-(p.landingReleaseRotation || 0))*(1-landing.match):0;
+        var angle=landingHeading+p.siteAngle+(a?a.rotation:0), c=Math.cos(angle), s=Math.sin(angle);
         // Match the local surface slope while preserving the simulation anchor.
         var e=.15, n=/** @type {V3} */ ([0,0,1]);
         if(a && !(a.excavation && a.excavation.level>0)) {
@@ -1570,15 +1640,21 @@
         var across=/** @type {V3} */ ([n[1]*tangent[2]-n[2]*tangent[1],n[2]*tangent[0]-n[0]*tangent[2],n[0]*tangent[1]-n[1]*tangent[0]]);
         var colors=/** @type {Record<string,V3>} */ ({ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49]});
         Object.keys(geometry).forEach(function(material){
-          var data=geometry[material];
-          for(var i=0;i<data.length;i+=6)for(var offset=0;offset<=3;offset+=3){
+          /** @type {number[]|Float32Array} */ var data=geometry[material];
+          if(fittedPose && DW.miningTerrain){
+            data=DW.miningTerrain.transform({vertices:new Float32Array(data)},fittedPose).vertices;
+          }else for(var i=0;i<data.length;i+=6)for(var offset=0;offset<=3;offset+=3){
             var lx=data[i+offset],ly=data[i+offset+1],lz=data[i+offset+2];
             for(var k=0;k<3;k++)data[i+offset+k]=tangent[k]*lx+across[k]*ly+n[k]*lz;
           }
           var mesh=miningMeshes[material] || (miningMeshes[material]=upload(new Float32Array(0)));
           gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.DYNAMIC_DRAW);mesh.count=data.length/6;
-          draw(mesh,[p.position.x,p.position.y,z],[scale,scale,scale],0,colors[material]);
+          draw(mesh,fittedPose?[0,0,0]:[p.position.x,p.position.y,z],fittedPose?[1,1,1]:[scale,scale,scale],0,colors[material]);
         });
+        if(!shadowPass && fitted && fittedPose && w.camera.zoom*fitted.scale*32<8){
+          var marker=project(/** @type {V3} */ (fittedPose.world([0,0,8])),w.camera,vp,orbit);
+          hud.fillStyle='#d4a34a';hud.fillRect(marker.x-2,marker.y-2,4,4);
+        }
       });
       w.wrecks.forEach(function (s) { draw(box, [s.position.x, s.position.y, 0], [10, 4, 3], s.rotation || 0, [0.3, 0.27, 0.24]); });
       w.combat.drones.forEach(function (d) {
@@ -1638,7 +1714,7 @@
       /** @param {{eye: V3, right: V3, up: V3, back: V3} | null} pose */
       setSurfaceCamera: function(pose) {
         if(!study)return;
-        if(!pose){delete orbit.surface;studyHeight=0;return;}
+        if(!pose){delete orbit.surface;studyHeight=0;orbit.height=0;return;}
         orbit.surface={right:pose.right,up:pose.up,back:pose.back,distance:1,focal:FOCAL};
         studyHeight=pose.eye[2]-pose.back[2];orbit.height=studyHeight;
         var w=getWorld();setWorld(Object.assign({},w,{camera:{x:pose.eye[0]-pose.back[0],y:pose.eye[1]-pose.back[1],zoom:w.camera.zoom}}));
@@ -1677,7 +1753,10 @@
   }
   DW.scene3d = { rockSurfaceShader: function(){if(!DW.asteroidArt)throw new Error('Missing asteroid artwork');return DW.asteroidArt.shaderSource+ROCK_SURFACE_SHADER;}, create: create, project: project, unproject: unproject, view: view,
     miningPlatformGeometry: miningPlatformGeometry,
-    /** @param {number} deployment @param {number} panelOpen @param {string} interiorCut @param {{knee:V3,tip:V3,normal:V3}[]} poses @param {number[]} [rampLimits] */
+    /** @param {number} deployment @param {number} panelOpen @param {string} interiorCut @param {{knee:number[],tip:number[],normal:number[]}[]} poses @param {number[]} [rampLimits] */
+    /** @param {number} panelOpen */
+    miningPlatformRampGeometry:function(panelOpen){return miningPlatformGeometry(1,0,false,panelOpen,'',false,false,undefined,undefined,true);},
+    platformSurface:platformSurface,platformSurfacePose:platformSurfacePose,platformSurfaceGeometry:platformSurfaceGeometry,
     miningPlatformContactGeometry: function(deployment,panelOpen,interiorCut,poses,rampLimits){return miningPlatformGeometry(deployment,0,false,panelOpen,interiorCut,false,false,poses,rampLimits);},
     miningPlatformInfillGeometry: function(){return miningPlatformGeometry(1,0,false,0,'',false,true);},
     /** @param {number} deployment */ miningPlatformLegGeometry: function(deployment){return miningPlatformGeometry(deployment,0,false,0,'',true);}, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,

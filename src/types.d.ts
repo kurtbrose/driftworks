@@ -127,7 +127,7 @@ export type WorldLike = { ships: Ship[]; wrecks: Wreck[]; platforms?: Platform[]
 
 export type AsteroidExcavation = { pocketOffset: Vec2; pocketRadius: number; tunnelAngle: number; tunnelTurn: number; depthM: number; level: number };
 export type Asteroid = { id: string; name?: string; position: Vec2; radius: number; angularVelocity: number; ore: number; oreInitial: number; rotation: number; excavation?: AsteroidExcavation };
-export type Platform = { workerIds?: string[]; shiftStartedSeconds?: number; evacuationRequested?: boolean; setupRemainingSeconds?: number; packRemainingSeconds?: number; id: string; state: string; position: Vec2; carrierId: string | null; asteroidId: string | null; siteAngle: number; siteDepth: number; ore: number; packetTimer: number };
+export type Platform = { landingElapsedSeconds?: number; landingReleaseRotation?: number; landingSitePending?: boolean; workerIds?: string[]; shiftStartedSeconds?: number; evacuationRequested?: boolean; setupRemainingSeconds?: number; packRemainingSeconds?: number; id: string; state: string; position: Vec2; carrierId: string | null; asteroidId: string | null; siteAngle: number; siteDepth: number; ore: number; packetTimer: number };
 export type Wreck = { id: string; position: Vec2; velocity?: Vec2; type?: string; rotation?: number; salvageOre?: number; towedBy?: string | null; disabled?: boolean; repairRemaining?: number; launchElapsed?: number | null; previousPosition?: Vec2; physical?: { dryMassKg: number }; massKg?: number; propulsion?: Propulsion; cargo?: number };
 export type Depot = { name: string; position: Vec2; builtStages: number; totalStages: number };
 export type Packet = { id: number; position: Vec2; velocity: Vec2; ore: number };
@@ -202,6 +202,7 @@ export type LogisticsModule = {
     dockDistance: number;
     arrivalDistance: number;
     physicalSecondsPerSecond: number;
+    metersPerUnit: number;
     dockServiceSeconds: number;
   }) => {
     createPlatform: (id: string) => Platform;
@@ -258,7 +259,28 @@ export type AsteroidVisual = {
   craters: { x: number; y: number; rx: number; ry: number; angle: number; depth: number; age: number; rimScale: number; sizeClass: string }[];
 };
 
+export type PlatformSurface = {fit:TerrainFit;sample:TerrainSampler;scale:number;site:number[];heading:number;ramps:number[]|null};
+export type TerrainHit = {point:number[];normal:number[];distance:number};
+export type TerrainSampler = {stats:{raycasts:number;rampQueries:number};ray:(origin:number[],direction:number[])=>TerrainHit|null;at:(x:number,y:number)=>TerrainHit|null;collides:(points:number[][])=>boolean;triangleCount:number};
+export type TerrainContact = {knee:number[];tip:number[];normal:number[];point:number[];worldPoint:number[];reachable:boolean;score:number;out:number[];mount:number[];distance?:number};
+export type TerrainFit = LandingFit & {contacts:TerrainContact[];clearance:number;valid:boolean;world:(p:number[])=>number[];local:(p:number[])=>number[];rotate:(p:number[])=>number[]};
+export type MiningTerrain = {
+  metresPerModelUnit:number;
+  surfaceSampler:(data:Float32Array,radius:number,site:number[],heading:number,scale:number)=>TerrainSampler;
+  contactPoses:(fit:TerrainFit,deployment:number)=>{knee:number[];tip:number[];normal:number[]}[];
+  meshSampler:(data:Float32Array,radius:number,site:number[])=>TerrainSampler;
+  solveKnee:(mount:number[],tip:number[])=>{knee:number[];reachable:boolean;distance:number};
+  fit:(sample:Pick<TerrainSampler,'at'>,site:number[])=>TerrainFit|null;
+  transform:<T extends {vertices:Float32Array}>(batch:T,fit:{world:(p:number[])=>number[];rotate:(p:number[])=>number[]})=>T;
+  rampStops:(sample:Pick<TerrainSampler,'collides'>,fit:Pick<TerrainFit,'world'>,geometry:(t:number)=>Record<string,number[]>)=>number[];
+};
+export type LandingFit = {origin:number[]; basis:number[][]};
+export type LandingOptions = {unitsPerMetre?:number; spin?:number};
+export type LandingSample = {time:number; altitude:number; deployment:number; ramps:number; match:number; travel:number; offset:number[]; headingOffset:number; contact:boolean; done:boolean; phase:string};
+export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
+  miningTerrain?: MiningTerrain;
+  miningLanding?: {duration:number; sample:(time:number)=>LandingSample; pose:(fit:LandingFit,time:number,options?:LandingOptions)=>LandingPose};
   asteroidArt?: {
     describe: (asteroid: Asteroid, bulkOverride?: number[]) => AsteroidVisual;
     reliefAt: (visual: AsteroidVisual, x: number, y: number) => number;
@@ -276,8 +298,12 @@ export interface DriftworksNamespace {
     craterDistance: (impact: {center: [number, number, number]; normal: [number, number, number]; radius: number}, point: [number, number, number]) => number;
     impactBytes: (asteroid: Asteroid) => Uint8Array;
     globeRelief: (asteroid: Asteroid, direction: [number, number, number]) => number;
+    miningPlatformRampGeometry:(panelOpen:number)=>Record<string,number[]>;
+    platformSurface:(platform:Platform,asteroid:Asteroid,open?:boolean)=>PlatformSurface|null;
+    platformSurfaceGeometry:(surface:PlatformSurface,deployment:number,ramps:number)=>Record<string,number[]>;
+    platformSurfacePose:(surface:PlatformSurface,platform:Platform,asteroid:Asteroid)=>{world:(p:number[])=>number[];rotate:(p:number[])=>number[]};
     miningPlatformInfillGeometry: () => Record<string, number[]>;
-    miningPlatformContactGeometry: (deployment:number, panelOpen:number, interiorCut:string, poses:{knee:[number,number,number],tip:[number,number,number],normal:[number,number,number]}[], rampLimits?:number[]) => Record<string,number[]>;
+    miningPlatformContactGeometry: (deployment:number, panelOpen:number, interiorCut:string, poses:{knee:number[],tip:number[],normal:number[]}[], rampLimits?:number[]) => Record<string,number[]>;
     miningPlatformLegGeometry: (deployment: number) => Record<string, number[]>;
     miningPlatformGeometry: (deployment: number, time: number, working: boolean, panelOpen?: number, interiorCut?: string) => Record<string, number[]>;
     mothershipHardware: (detail?: number) => Record<string, number[]>;

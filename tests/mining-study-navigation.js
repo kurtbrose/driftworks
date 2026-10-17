@@ -13,3 +13,9 @@ export function sweepAxes(position,delta,blocked){
 export function viewDirections(yaw,pitch){
   return {forward:[Math.sin(yaw)*Math.cos(pitch),-Math.cos(yaw)*Math.cos(pitch),-Math.sin(pitch)],right:[-Math.cos(yaw),-Math.sin(yaw),0]};
 }
+
+// Explicit vertical input leaves deck-follow mode so floor snapping cannot undo it.
+export function flightModeForKey(flight,code){
+  if(code==='KeyF')return !flight;
+  return flight||code==='Space'||code==='KeyC';
+}

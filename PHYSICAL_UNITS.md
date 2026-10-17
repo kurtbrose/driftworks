@@ -8,7 +8,7 @@ catalogue and conversions; each ship saves its own `physical` hull values.
 | --- | ---: | ---: | ---: | ---: |
 | Shuttle | 12 m | 18 t | 22.065 kN | 1.226 m/s² |
 | Escort | 20 m | 75 t | 73.55 kN | 0.981 m/s² (0.10 g) |
-| Mining platform | 40 m | 100 t | None | None |
+| Mining platform | 36 m | 100 t | None | None |
 | Cargo ship (internal type: tug) | 80 m | 3,000 t | 588.40 kN | 0.196 m/s² (0.02 g) |
 | Mothership | 1,000 m | 3,000,000 t | 2.94 MN | 0.000981 m/s² (0.0001 g) |
 
@@ -27,7 +27,9 @@ feedstock, and ready sections count toward its reported mass.
 - Existing ship `speed` values are work-zone guidance limits, not engine maximum
   speeds. Loading changes acceleration and braking, not that limit. A loaded
   ship can eventually reach the same cruise speed if it has enough room.
-- Artwork remains schematic and uses semantic zoom. Hull length is canonical
+- Most artwork remains schematic and uses semantic zoom. Deployed mining rigs
+  use the shared 36 m hull calibration so terrain contacts stay fixed when
+  zooming; small tactical markers keep distant rigs visible. Hull length is canonical
   metadata, not a measurement of its current screen silhouette. Interaction
   radii and docking/repair animations remain gameplay abstractions.
 

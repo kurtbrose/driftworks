@@ -361,6 +361,8 @@
     var platformGraphics = {};
     /** @type {Record<string, { key: string, normal: AsteroidNormal }>} */
     var platformNormals = {};
+    /** @type {Record<string,{surface:import('./types').PlatformSurface;key:string}>} */
+    var platformContactPaint={};
     /** @type {Record<string, AsteroidGraphic>} */
     var asteroidGraphics = {};
     /** @type {Record<string, PIXI.Graphics>} */
@@ -495,9 +497,14 @@
           worldLayer.addChild(graphic);
         }
         var asteroid = world.asteroids.filter(function (a) { return a.id === p.asteroidId; })[0];
-        graphic.clear(); graphic.visible = true;
-        var heading = p.siteAngle + (asteroid ? asteroid.rotation : 0) + Math.PI;
-        var artworkScale = semanticScale('platform', world.camera.zoom);
+        var surface=asteroid && Driftworks.scene3d?Driftworks.scene3d.platformSurface(p,asteroid,true):null;
+        var fitted=surface && surface.fit.valid?surface:null;
+        if(!fitted)graphic.clear();graphic.visible = true;
+        var landing = p.state === 'setting-up' && p.landingElapsedSeconds !== undefined && Driftworks.miningLanding ? Driftworks.miningLanding.sample(p.landingElapsedSeconds) : null;
+        var landingHeading=landing?landing.headingOffset-((asteroid?asteroid.rotation:0)-(p.landingReleaseRotation || 0))*(1-landing.match):0;
+        var heading = landingHeading + p.siteAngle + (asteroid ? asteroid.rotation : 0) + Math.PI;
+        var artworkScale = fitted?fitted.scale:semanticScale('platform', world.camera.zoom);
+        if(fitted)heading=p.siteAngle+(asteroid?asteroid.rotation:0);
         var normal = { x: 0, y: 0, z: 1 };
         if (asteroid) {
           var rock = asteroidGraphics[asteroid.id];
@@ -523,13 +530,24 @@
         var localNormal = { x: localNormalXY.x, y: localNormalXY.y, z: normal.z };
         graphic.transform.setFromMatrix(new PIXI.Matrix(Math.cos(heading) * artworkScale,
           Math.sin(heading) * artworkScale, -Math.sin(heading) * artworkScale,
-          Math.cos(heading) * artworkScale, p.position.x, p.position.y));
+          Math.cos(heading) * artworkScale, p.position.x, p.position.y - (landing ? landing.altitude / sim.METERS_PER_UNIT : 0)));
         graphic.hitArea = new PIXI.Circle(0, 0, Math.max(28, 12 / (world.camera.zoom * artworkScale)));
         var working = platformIsWorking(p, world, asteroid);
-        paintRaisedPlatform(graphic, platformDeployment(p), working, world.elapsedSeconds,
+        if(fitted){
+          var rampOpen=landing?landing.ramps:p.state==='deployed'?1:p.state==='packing-up'?platformDeployment(p):0;
+          var key=platformDeployment(p)+':'+rampOpen+':'+landingHeading+':'+Math.floor(heading*20)+':'+(world.selectedPlatformId===p.id)+':'+world.camera.zoom;
+          var painted=platformContactPaint[p.id];
+          if(!painted || painted.surface!==fitted || painted.key!==key){
+            graphic.clear();paintTerrainPlatform(graphic,fitted,platformDeployment(p),rampOpen,landingHeading,heading);
+            if(world.camera.zoom*artworkScale*32<8){graphic.beginFill(0xd4a34a,1);graphic.drawCircle(0,0,3/(world.camera.zoom*artworkScale));graphic.endFill();}
+            if((!landing || landing.contact) && (p.state==='setting-up' || p.state==='packing-up'))drawPlatformWorkers(graphic,(p.workerIds || []).slice(0,5),world.elapsedSeconds,p.state==='packing-up',localNormal);
+            if(world.selectedPlatformId===p.id)drawCraftBrackets(graphic,28,28,world.camera.zoom*artworkScale);
+            platformContactPaint[p.id]={surface:fitted,key:key};
+          }
+        }else paintRaisedPlatform(graphic, platformDeployment(p), working, world.elapsedSeconds,
           world.camera.zoom, heading, localNormal);
-        if (world.selectedPlatformId === p.id) drawCraftBrackets(graphic, 28, 28, world.camera.zoom * artworkScale);
-        if (p.state === 'setting-up' || p.state === 'packing-up') {
+        if (!fitted && world.selectedPlatformId === p.id) drawCraftBrackets(graphic, 28, 28, world.camera.zoom * artworkScale);
+        if (!fitted && (!landing || landing.contact) && (p.state === 'setting-up' || p.state === 'packing-up')) {
           drawPlatformWorkers(graphic, (p.workerIds || []).slice(0, 5), world.elapsedSeconds, p.state === 'packing-up', localNormal);
         }
       });
@@ -1193,6 +1211,7 @@
   function platformDeployment(platform) {
     var logistics = Driftworks.logistics;
     if (!logistics) return 0;
+    if (platform.state === 'setting-up' && platform.landingElapsedSeconds !== undefined && Driftworks.miningLanding) return Driftworks.miningLanding.sample(platform.landingElapsedSeconds).deployment;
     var value = platform.state === 'deployed' ? 1 : platform.state === 'setting-up'
       ? 1 - (platform.setupRemainingSeconds || 0) / logistics.setupSeconds
       : platform.state === 'packing-up' ? (platform.packRemainingSeconds || 0) / logistics.packSeconds : 0;
@@ -1321,6 +1340,25 @@
     var p = platformProjection(normal, 0, 1);
     return { x: p.a * x + p.c * y + normal.x * height,
       y: p.b * x + p.d * y + normal.y * height };
+  }
+
+  /** Project the same fitted rig mesh for the tactical 2D view; static poses are cached by the scene.
+   * @param {PIXI.Graphics} g @param {import('./types').PlatformSurface} surface @param {number} deployment @param {number} ramps @param {number} yaw @param {number} heading */
+  function paintTerrainPlatform(g,surface,deployment,ramps,yaw,heading){
+    var scene=Driftworks.scene3d;if(!scene)return;
+    var groups=scene.platformSurfaceGeometry(surface,deployment,ramps),c=Math.cos(yaw),s=Math.sin(yaw);
+    /** @type {Record<string,number>} */ var colors={ochre:0xd4a34a,steel:0x758784,dark:0x1a2630,light:0xe3ca7d};
+    /** @type {{points:number[];depth:number;color:number}[]} */ var faces=[];
+    Object.keys(groups).forEach(function(material){var data=groups[material];
+      for(var i=0;i<data.length;i+=18){
+        var nx=data[i+3]*c-data[i+4]*s,ny=data[i+3]*s+data[i+4]*c,n=surface.fit.rotate([nx,ny,data[i+5]]);if(n[2]<=0)continue;
+        /** @type {number[]} */ var points=[];var depth=0;
+        for(var j=0;j<18;j+=6){var x=data[i+j]*c-data[i+j+1]*s,y=data[i+j]*s+data[i+j+1]*c,v=surface.fit.world([x,y,data[i+j+2]]);points.push(v[0],v[1]);depth+=v[2];}
+        faces.push({points:points,depth:depth,color:shadeMechanicalColor(colors[material],.45+.55*Math.max(0,n[2]*.8+n[0]*Math.cos(heading)*.4-n[1]*Math.sin(heading)*.4))});
+      }
+    });
+    faces.sort(function(a,b){return a.depth-b.depth;});g.lineStyle(0);
+    faces.forEach(function(face){g.beginFill(face.color,1);g.drawPolygon(face.points);g.endFill();});
   }
 
   /** @param {PIXI.Graphics} g @param {number} deployment @param {boolean} working @param {number} time @param {number} zoom @param {number} rotation @param {AsteroidNormal} normal */
@@ -3465,6 +3503,7 @@
 
   Driftworks.game = {
     boot: boot,
+    createScene: createScene,
     asteroidVisualDescription: asteroidVisualDescription,
     asteroidSurfaceSample: asteroidSurfaceSample,
     createAsteroidGraphic: createAsteroidGraphic,

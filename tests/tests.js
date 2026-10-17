@@ -2467,7 +2467,7 @@
     for (var i = 0; i < 1500; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'setting-up');
     assert(world.asteroids[0].ore === world.asteroids[0].oreInitial, 'No ore is mined during setup');
-    for (i = 0; i < 5500; i++) world = sim.stepWorld(world, 1 / 30);
+    for (i = 0; i < 6700; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'deployed');
     assert(world.asteroids[0].ore < world.asteroids[0].oreInitial);
     assert(findShip(world, 'tug-01').cargo === 0);
@@ -2949,6 +2949,33 @@
     assertClose(limb.x,8.8); assertClose(limb.y,7);
   });
 
+  test('gameplay landing persists, attaches to the rotating site and gates setup', function () {
+    var world=sim.createInitialWorld(),p=world.platforms[0],a=world.asteroids[0];
+    p.state='setting-up';p.asteroidId=a.id;p.siteAngle=0;p.siteDepth=.5;
+    p.setupRemainingSeconds=10800;p.landingElapsedSeconds=0;p.landingReleaseRotation=a.rotation;p.landingSitePending=true;
+    var start=JSON.stringify(world),next=sim.stepWorld(world,1);
+    assert(JSON.stringify(world)===start,'Public stepping must replace the world');
+    assertClose(next.platforms[0].landingElapsedSeconds,1);
+    assertClose(next.platforms[0].setupRemainingSeconds,10800);
+    assert(!next.platforms[0].landingSitePending,'The game chooses a free nearby footprint');
+    var loaded=sim.deserializeWorld(sim.serializeWorld(next));
+    loaded=sim.deserializeWorld(sim.serializeWorld(loaded));
+    assertClose(loaded.platforms[0].landingElapsedSeconds,1);
+    next=sim.stepWorld(loaded,20);assertClose(next.platforms[0].landingElapsedSeconds,21);
+    assertClose(game.platformDeployment(next.platforms[0]),1);
+    assertClose(next.platforms[0].setupRemainingSeconds,10800);
+    next=sim.stepWorld(next,17);assertClose(next.platforms[0].landingElapsedSeconds,38);
+    assertClose(next.platforms[0].setupRemainingSeconds,10800);
+    next=sim.stepWorld(next,1);assertClose(next.platforms[0].setupRemainingSeconds,10740);
+    var runtime=window.Driftworks.miningLanding;
+    assert(runtime.sample(32).contact && runtime.sample(32).ramps===0);
+    assert(runtime.sample(38).done && runtime.sample(38).ramps===1);
+    delete next.platforms[0].landingElapsedSeconds;
+    loaded=sim.deserializeWorld(sim.serializeWorld(next));
+    assert(loaded.platforms[0].landingElapsedSeconds===undefined,'Old saves retain setup instead of replaying a landing');
+    assertClose(loaded.platforms[0].setupRemainingSeconds,10740);
+  });
+
   test('platform presentation follows lifecycle without mutating state', function () {
     var world = sim.createInitialWorld();
     var platform = world.platforms[0];
@@ -3145,8 +3172,10 @@
       world = sim.deserializeWorld(sim.serializeWorld(world));
       world = sim.stepWorld(world, 1);
       var p = world.platforms[0], a = world.asteroids[0], angle = p.siteAngle + a.rotation;
-      assertClose(p.position.x, a.position.x + Math.cos(angle) * sim.surfaceRadius(a, p.siteAngle) * p.siteDepth);
-      assertClose(p.position.y, a.position.y + Math.sin(angle) * sim.surfaceRadius(a, p.siteAngle) * p.siteDepth);
+      var landing=window.Driftworks.miningLanding.sample(p.landingElapsedSeconds);
+      var dx=landing.offset[0]/sim.METERS_PER_UNIT,dy=landing.offset[1]/sim.METERS_PER_UNIT;
+      assertClose(p.position.x, a.position.x + Math.cos(angle) * (sim.surfaceRadius(a, p.siteAngle) * p.siteDepth+dx)-Math.sin(angle)*dy);
+      assertClose(p.position.y, a.position.y + Math.sin(angle) * (sim.surfaceRadius(a, p.siteAngle) * p.siteDepth+dx)+Math.cos(angle)*dy);
       assertClose(a.radius, 300);
     });
   });

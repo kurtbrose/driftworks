@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mining contacts - production renderer regression</title>
+<style>body{margin:0;background:#101c24;color:#e3d7b5;font:14px system-ui}header{padding:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}#scene{position:relative;height:calc(100vh - 70px);overflow:hidden}#scene canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.scene3d-overlay{pointer-events:none}.scene3d-controls{position:absolute;bottom:8px;left:8px;z-index:2;background:#101c24cc;padding:8px;display:flex;gap:8px;align-items:center}body{overflow:hidden}label{display:flex;gap:8px;align-items:center}a{color:#b9e4eb}</style>
+<header><strong>Production mining contacts</strong><label>Landing time <input id="time" type="range" min="0" max="38" step=".01" value="38"></label><button id="play">Replay landing</button><label><input id="rotate" type="checkbox" checked> Rotate asteroid</label><label>Starting angle <input id="spin" type="range" min="-1" max="1" step=".01" value="0"></label><output id="status"></output><a href="../?renderer=3d">Game</a></header>
+<div id="scene"></div>
+<script src="../vendor/pixi/pixi.min.js"></script>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+<script src="../src/propulsion.js"></script><script src="../src/combat.js"></script><script src="../src/mining-terrain.js"></script><script src="../src/mining-landing.js"></script><script src="../src/logistics.js"></script><script src="../src/formations.js"></script><script src="../src/sim.js"></script><script src="../src/tactical/camera.js"></script><script src="../src/scene3d.js"></script><script src="../src/game.js"></script>
+<script>
+const DW=window.Driftworks;let world=DW.sim.createInitialWorld();
+world.ships=[];world.wrecks=[];world.packets=[];world.combat.drones=[];world.selectedShipIds=[];
+world.platforms=world.platforms.slice(0,1);const p=world.platforms[0],a=world.asteroids[0];
+p.state='setting-up';p.asteroidId=a.id;p.siteAngle=.7;p.siteDepth=.5;p.setupRemainingSeconds=10800;p.landingElapsedSeconds=38;p.landingReleaseRotation=0;
+a.rotation=0;world.depot.builtStages=0;
+const use2d=new URLSearchParams(location.search).get('renderer')==='2d';
+const scene=use2d?DW.game.createScene(document.getElementById('scene'),()=>world,w=>world=w):DW.scene3d.create(document.getElementById('scene'),()=>world,w=>world=w);
+if(scene.setOrbit)scene.setOrbit({yaw:-.7,tilt:1.1});let playing=false,last=0,time=38,lastCameraKey="",lastAltitude=-1,rotationElapsed=0;
+document.getElementById('play').onclick=()=>{time=0;rotationElapsed=0;document.getElementById('time').value='0';playing=true;};
+document.getElementById('time').oninput=()=>{playing=false;time=Number(document.getElementById('time').value);};
+function frame(now){requestAnimationFrame(frame);const dt=last?Math.min(.1,(now-last)/1000):0;last=now;
+ if(playing){time=Math.min(38,time+dt);document.getElementById('time').value=String(time);if(time>=38)playing=false;}
+ if(document.getElementById('rotate').checked)rotationElapsed+=dt;
+ p.landingElapsedSeconds=time;p.landingReleaseRotation=Number(document.getElementById('spin').value);
+ a.rotation=p.landingReleaseRotation+rotationElapsed*a.angularVelocity;
+ const landing=DW.miningLanding.sample(p.landingElapsedSeconds),theta=p.siteAngle+a.rotation,r=DW.sim.surfaceRadius(a,p.siteAngle)*p.siteDepth,x=landing.offset[0]/DW.sim.METERS_PER_UNIT,y=landing.offset[1]/DW.sim.METERS_PER_UNIT;
+ p.position={x:a.position.x+Math.cos(theta)*(r+x)-Math.sin(theta)*y,y:a.position.y+Math.sin(theta)*(r+x)+Math.cos(theta)*y};
+ const cameraKey=time+':'+a.rotation;
+ if(cameraKey!==lastCameraKey){world.camera.x=p.position.x;world.camera.y=p.position.y;lastCameraKey=cameraKey;}
+ if(landing.altitude!==lastAltitude){world.camera.zoom=Math.min(innerWidth,innerHeight)/(8+landing.altitude/DW.sim.METERS_PER_UNIT*3);lastAltitude=landing.altitude;}
+ const surface=DW.scene3d.platformSurface(p,a,true);document.getElementById('status').textContent=landing.phase+' / '+surface.fit.contacts.filter(c=>c.reachable).length+'/8 anchors / '+surface.ramps.filter(t=>t<1).length+' ground-limited ramps / rotation '+(a.rotation*180/Math.PI).toFixed(1)+' deg / fixed sun';
+ scene.sync(world);scene.render(world,1,dt,0);
+}
+requestAnimationFrame(frame);
+</script></html>

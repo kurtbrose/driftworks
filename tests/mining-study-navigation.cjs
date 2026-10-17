@@ -1,6 +1,13 @@
 const assert=require('node:assert/strict');
 (async()=>{
-  const {sweepAxes,isStaticAirlock,viewDirections}=await import('data:text/javascript;base64,'+require('node:fs').readFileSync(require('node:path').join(__dirname,'mining-study-navigation.js')).toString('base64'));
+  const {sweepAxes,isStaticAirlock,viewDirections,flightModeForKey}=await import('data:text/javascript;base64,'+require('node:fs').readFileSync(require('node:path').join(__dirname,'mining-study-navigation.js')).toString('base64'));
+  assert.equal(flightModeForKey(false,'Space'),true,'Space from the default deck spawn enables ascent');
+  assert.equal(flightModeForKey(false,'KeyC'),true,'C from deck mode enables descent');
+  for(const code of ['ControlLeft','ControlRight'])assert.equal(flightModeForKey(false,code),false,'Ctrl no longer enters free flight');
+  assert.equal(flightModeForKey(true,'KeyF'),false,'F returns to deck movement');
+  assert.equal(flightModeForKey(false,'KeyF'),true,'F still enables free flight');
+  assert.equal(flightModeForKey(false,'KeyW'),false,'Horizontal movement preserves deck following');
+  assert.equal(flightModeForKey(true,'KeyW'),true,'Horizontal movement preserves free flight');
   for(const yaw of [0,.7,1.5,Math.PI]){
     const {forward:f,right:r}=viewDirections(yaw,0);
     assert.ok(Math.abs(r[0]-f[1])<1e-10 && Math.abs(r[1]+f[0])<1e-10,'Strafe right matches camera forward cross Z-up');

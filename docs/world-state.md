@@ -265,3 +265,7 @@ and `evacuationRequested`. `shuttle` orders carry platform ID, target, and an
 evacuation flag for compatibility with existing saves. `stepWorld` preserves the
 staffing marker. See [population](population.md)
 for ownership, migration, exchange, completion, and transient arrival records.
+
+Mining platform landing is persisted inside each platform, without a new top-level world field. New cargo releases set `landingElapsedSeconds: 0`, `landingReleaseRotation` and `landingSitePending: true` while entering `setting-up`. Logistics chooses an unoccupied nearby asteroid-relative footprint, then advances the shared `Driftworks.miningLanding` behavior on simulation seconds. Its distances are metres, explicitly converted through `METERS_PER_UNIT`; the 38-second maneuver takes 38 simulation minutes at the existing 60:1 physical clock. Setup time, extraction and recovery pickup wait for landing completion. A missing landing clock means an existing save already in its original lifecycle; normalization never invents a new landing for it. The stored site angle/depth and asteroid ID remain the attachment authority. Rendering samples the clock without mutating it.
+
+Terrain-fitted leg poses, ray samplers, rig meshes and individual ramp stops are derived renderer caches, never serialized world fields. The saved asteroid ID/site angle/site depth remain authoritative. On load, both renderers rebuild the same contacts from current terrain and sample the saved landing clock. Camera zoom and body rotation do not change the solution or trigger resampling.

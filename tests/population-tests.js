@@ -115,8 +115,9 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     for (var handlingTick = 0; handlingTick < 450; handlingTick += 1) sessions.step(s, 1 / 30);
     platform = s.world.platforms[0]; tug = s.world.ships.find(function (ship) { return ship.type === 'tug'; });
     assert(platform.state === 'setting-up' && platform.workerIds.length === 5);
-    assert(tug.passengerIds.length === 0 && platform.setupRemainingSeconds <= 3 * 3600 - 2 &&
-      platform.setupRemainingSeconds >= 3 * 3600 - 4);
+    assert(tug.passengerIds.length === 0 && platform.setupRemainingSeconds === 3 * 3600);
+    assert(platform.landingElapsedSeconds > 0 && platform.landingElapsedSeconds < 1);
+    sessions.step(s,38-platform.landingElapsedSeconds);
     var ore = s.world.asteroids[0].ore;
     sessions.step(s, 179);
     assert(s.world.platforms[0].state === 'setting-up' && s.world.asteroids[0].ore === ore, 'Setup must last the full three physical hours');

@@ -57,7 +57,7 @@
     stepTowardOrderTarget: stepTowardOrderTarget, launchShip: launchShip, dockShip: dockShip, canCatch: canCatch,
     canCatchPacket: /** @param {Vec2} position @param {Vec2} velocity @param {Ship} home */ function (position, velocity, home) { return propulsion.canCatch(position, velocity, home, DOCK_DISTANCE, VELOCITY_TO_MPS); },
     exchangeMps: propulsion.exchangeMps, velocityToMps: VELOCITY_TO_MPS,
-    dockDistance: DOCK_DISTANCE, arrivalDistance: ARRIVAL_DISTANCE, physicalSecondsPerSecond: PHYSICAL_SECONDS_PER_SECOND,
+    dockDistance: DOCK_DISTANCE, arrivalDistance: ARRIVAL_DISTANCE, physicalSecondsPerSecond: PHYSICAL_SECONDS_PER_SECOND, metersPerUnit: METERS_PER_UNIT,
     dockServiceSeconds: DOCK_SERVICE_SECONDS
   });
   /** @type {Record<string, { lengthM: number, dryMassKg: number, thrustN: number }>} */

@@ -1,11 +1,11 @@
 import * as THREE from '../vendor/three/build/three.module.js';
-import {isStaticAirlock,sweepAxes,viewDirections} from './mining-study-navigation.js';
+import {isStaticAirlock,sweepAxes,viewDirections,flightModeForKey} from './mining-study-navigation.js';
 
 // Study-only first-person viewer. Coordinates remain the model's Z-up units.
 const button=document.getElementById('explore');
 const panel=document.createElement('section');
 panel.style.cssText='position:fixed;inset:0;z-index:20;background:#101820;display:none';
-panel.innerHTML='<div style="position:absolute;z-index:2;top:12px;left:16px;background:#101c24dd;padding:12px;max-width:720px"><button id="fps-back">Back to orbit</button> <button id="fps-entry">Cargo deck</button> <button id="fps-middle">Pod entry</button> <button id="fps-bridge">Bridge</button> <button id="fps-roof">Roof</button> <label style="display:inline-flex">Cargo <input id="fps-cargo" type="range" min="0" max="1" step=".01" value="0"></label><p>Click view for mouse look · WASD move · Shift faster · F deck / free flight · Space / Ctrl up / down · E operate nearby door · R reset · Esc release mouse</p><p id="fps-status" role="status"></p></div><div style="position:absolute;left:50%;top:50%;pointer-events:none;color:white">+</div>';
+panel.innerHTML='<div style="position:absolute;z-index:2;top:12px;left:16px;background:#101c24dd;padding:12px;max-width:720px"><button id="fps-back">Back to orbit</button> <button id="fps-entry">Cargo deck</button> <button id="fps-middle">Pod entry</button> <button id="fps-bridge">Bridge</button> <button id="fps-roof">Roof</button> <label style="display:inline-flex">Cargo <input id="fps-cargo" type="range" min="0" max="1" step=".01" value="0"></label><p>Click view for mouse look · WASD move · Shift faster · F deck / free flight · Space / C up / down (enters free flight) · E operate nearby door · R reset · Esc release mouse</p><p id="fps-status" role="status"></p></div><div style="position:absolute;left:50%;top:50%;pointer-events:none;color:white">+</div>';
 document.body.append(panel);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x101820);
@@ -91,9 +91,9 @@ window.addEventListener('mousemove',e=>{if(active&&(locked()||dragging)){yaw-=e.
 window.addEventListener('blur',()=>keys.clear());
 window.addEventListener('keydown',e=>{
   if(!active)return;
-  if(['Space','ControlLeft','ControlRight','KeyW','KeyA','KeyS','KeyD'].includes(e.code))e.preventDefault();
+  if(['Space','KeyC','KeyW','KeyA','KeyS','KeyD'].includes(e.code))e.preventDefault();
   keys.add(e.code);if(e.repeat)return;
-  if(e.code==='KeyF')flight=!flight;
+  flight=flightModeForKey(flight,e.code);
   if(e.code==='KeyR')spawn();
   if(e.code==='KeyE'){const n=nearby();if(n.distance<2.7){const d=n.door;
     const occupied=Math.abs(camera.position.x-d.position[0])<d.size[0]/2+.25&&Math.abs(camera.position.y-d.position[1])<d.size[1]/2+.25&&camera.position.z>d.position[2]-d.size[2]/2-.15&&camera.position.z-1.45<d.position[2]+d.size[2]/2+.15;
@@ -131,12 +131,12 @@ function tick(now){
   const look=forward.clone();
   if(!flight){forward.z=0;forward.normalize();}
   delta.addScaledVector(forward,f).addScaledVector(right,r);
-  if(flight)delta.z+=Number(keys.has('Space'))-Number(keys.has('ControlLeft')||keys.has('ControlRight'));
+  if(flight)delta.z+=Number(keys.has('Space'))-Number(keys.has('KeyC'));
   if(delta.lengthSq()>0)delta.normalize().multiplyScalar(dt*(keys.has('ShiftLeft')?5:2));
   move(delta);
   if(!flight){const origin=camera.position.clone();origin.z+=.2;const floor=hit(origin,new THREE.Vector3(0,0,-1),1.95);if(floor&&floor.face.normal.z>.35)camera.position.z=floor.point.z+1.45;}
   camera.lookAt(camera.position.clone().add(look));
-  const n=nearby();status.textContent=(flight?'Free flight':'Deck movement')+' / '+(n.distance<2.7?'E: '+(n.door.open?'close ':'open ')+n.door.name:'Approach an airlock door to operate it')+' / 1.8 m astronauts / 2 occupied pod levels / open cargo deck below / asteroid hidden';
+  const n=nearby();status.textContent=(flight?'Free flight':'Deck movement')+' / '+(n.distance<2.7?'E: '+(n.door.open?'close ':'open ')+n.door.name:'Approach an airlock door to operate it')+' / eye height '+camera.position.z.toFixed(2)+' / 1.8 m astronauts / 2 occupied pod levels / open cargo deck below / asteroid hidden';
   renderer.render(scene,camera);
 }
 requestAnimationFrame(tick);

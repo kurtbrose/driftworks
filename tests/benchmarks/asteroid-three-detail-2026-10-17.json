@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-17",
+  "scope": "Local in-app browser, one final run per pose after npm check finished; earlier exploratory samples varied. Not a portable GPU benchmark.",
+  "seed": "ast-ceres-01",
+  "meshTriangles": 125668,
+  "viewportCssPx": [
+    504,
+    567
+  ],
+  "pixelRatio": 1.5,
+  "warmupDrawsPerConfiguration": 8,
+  "measuredDrawsPerConfiguration": 24,
+  "statistic": "median",
+  "timing": "Draw submission through synchronous one-pixel readback; includes driver/browser/readback overhead, not pure GPU time or FPS",
+  "configurationCaveat": "Lighting/material implementations differ. Three.js static sun/spot shadow maps cached. Legacy work-light shadow pass redraws when enabled.",
+  "runs": [
+    {
+      "pose": "orbit",
+      "workLight": false,
+      "shadows": true,
+      "results": [
+        {
+          "renderer": "WebGL legacy",
+          "cpuMs": 0.2,
+          "completedMs": 6.4
+        },
+        {
+          "renderer": "Three geometry",
+          "cpuMs": 0.3,
+          "completedMs": 2.5
+        },
+        {
+          "renderer": "Three fine texture",
+          "cpuMs": 0.2,
+          "completedMs": 2.1
+        },
+        {
+          "renderer": "Three legacy normals",
+          "cpuMs": 0.2,
+          "completedMs": 7.9
+        },
+        {
+          "renderer": "Three legacy darkening",
+          "cpuMs": 0.2,
+          "completedMs": 5.4
+        }
+      ]
+    },
+    {
+      "pose": "surface",
+      "workLight": true,
+      "shadows": true,
+      "fixture": "posts",
+      "results": [
+        {
+          "renderer": "WebGL legacy",
+          "cpuMs": 0.3,
+          "completedMs": 7.2
+        },
+        {
+          "renderer": "Three geometry",
+          "cpuMs": 0.2,
+          "completedMs": 3.3
+        },
+        {
+          "renderer": "Three fine texture",
+          "cpuMs": 0.2,
+          "completedMs": 2.9
+        },
+        {
+          "renderer": "Three legacy normals",
+          "cpuMs": 0.2,
+          "completedMs": 4.7
+        },
+        {
+          "renderer": "Three legacy darkening",
+          "cpuMs": 0.2,
+          "completedMs": 4.5
+        }
+      ]
+    }
+  ],
+  "layers": {
+    "geometry": "Actual triangle face normals and procedural albedo",
+    "micro": "Actual face normals plus procedural microrelief only",
+    "normals": "Legacy broad-body normals plus analytic crater and microrelief gradients",
+    "legacy": "Legacy normals plus cavity color darkening"
+  },
+  "interpretation": "Legacy crater-normal reconstruction was slower than the actual-geometry-plus-microrelief path in these samples. Small differences between geometry/microrelief or normal/darkening variants should not be treated as causal feature costs; run-to-run timing varies. This does not establish an engine-wide speed ranking.",
+  "appearanceCalibration": "Historical measurements before light-isolation presets: all Three.js lights enabled, standard reflections. Current work-light preset disables Three.js sun and uses dimmer ambient fill; remeasure for current settings."
+}
