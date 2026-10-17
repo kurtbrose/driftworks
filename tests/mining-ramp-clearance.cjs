@@ -17,13 +17,13 @@ function intersects(triangle,box){
  return true;
 }
 for(let step=0;step<=40;step++){
- const t=step/40,data=global.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',t).ochre;
+ const t=step/40,data=global.Driftworks.scene3d.miningPlatformGeometry(1,0,false,t).ochre;
  // Ten ochre triangles per leaf (front and edges); reconstruct the steel back faces too.
  for(let i=0;i<8*20*18;i+=18){const tri=[0,6,12].map(k=>data.slice(i+k,i+k+3));const triangles=[tri];if((i/18)%10<2)triangles.push(tri.map(p=>p.map((v,k)=>v-data[i+3+k]*.22)));for(const face of triangles)for(let n=0;n<frame.length;n++)assert.ok(!intersects(face,frame[n]),`Door triangle ${i/18} intersects frame member ${n} at opening ${t}`);}
 }
 console.log('PASS bay ramps: thick panel sweep clears posts, perimeter rails, pod ribs and sockets at 41 positions');
 function doorTriangles(t){
- const data=global.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',t).ochre,out=[];
+ const data=global.Driftworks.scene3d.miningPlatformGeometry(1,0,false,t).ochre,out=[];
  for(let i=0;i<8*20*18;i+=18){const tri=[0,6,12].map(k=>data.slice(i+k,i+k+3));out.push(tri);if((i/18)%10<2)out.push(tri.map(p=>p.map((v,k)=>v-data[i+3+k]*.22)));}
  return out;
 }

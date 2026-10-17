@@ -791,5 +791,6 @@ declare module '../src/types' {
         retailFlightProfiles?: Profile[];
         retailWeapons?: Weapon[];
         shipPacks?: Pack[];
+        originalShipModels?: {id:string;name:string;author:string;provenance:string;study:string;geometry:(units:number)=>Batch[]}[];
     }
 }

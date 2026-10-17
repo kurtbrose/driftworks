@@ -17,6 +17,13 @@
     }, { study: true });
     var select = get('ship-model'), units = DW.sim.METERS_PER_UNIT;
     DW.shipPackModels.populate(select, false);
+    if(DW.originalShipModels && DW.originalShipModels.length){
+        var originals=document.createElement('optgroup');originals.label='Driftworks originals / procedural';
+        DW.originalShipModels.forEach(function(model){var option=document.createElement('option');option.value=model.id;option.textContent=model.name;originals.appendChild(option);});
+        select.appendChild(originals);
+    }
+    function original(){return (DW.originalShipModels || []).find(function(model){return model.id===select.value;});}
+
     var pose = { eye: [0, 0, 0], right: [1, 0, 0], back: [0, -1, 0], up: [0, 0, 1], velocity: [0, 0, 0], throttle: 1 }, rotating = true, last = 0;
     function reset() {
         world.camera = { x: 0, y: 0, zoom: Math.min(host.clientWidth, host.clientHeight) * .27 / (8.5 / units) };
@@ -25,6 +32,15 @@
     var revision = 0, images = DW.shipPackModels.loadTextures();
     /** @param {boolean} [resetView] */
     async function update(resetView) {
+        var native=original();
+        get('paint-enabled').disabled=!!native;get('paint-color').disabled=!!native;get('show-engines').disabled=!!native;
+        if(native){
+            revision++;var batches=native.geometry(units);scene.setStudyActors(batches);scene.setStudyEffects([]);
+            get('metadata').textContent=native.author+' original / '+native.name+'\nProcedural project model - 36 m main hull\n'+batches.reduce(function(sum,batch){return sum+batch.vertices.length/18;},0).toLocaleString()+' triangles\nOriginal yellow / charcoal materials';
+            get('source').textContent='Rig design study';get('source').href=native.study;get('provenance').href=native.provenance;
+            if(resetView===true)reset();return;
+        }
+        get('source').textContent="Creator's pack page";
         var ticket = ++revision, entry = DW.shipPackModels.find(select.value);
         if (!entry)
             return;
@@ -48,7 +64,8 @@
                 metadata.textContent = String(error);
         }
     }
-    select.value = 'quaternius-ultimate-spaceships:Striker';
+    var requested=window.location?new URLSearchParams(window.location.search).get('model'):null;
+    select.value=requested && ((DW.originalShipModels || []).some(function(model){return model.id===requested;}) || DW.shipPackModels.find(requested))?requested:'quaternius-ultimate-spaceships:Striker';
     function changePaint() {
         get('paint-enabled').checked = true;
         update();
@@ -96,7 +113,7 @@
         }
         scene.sync(world);
         var selected = DW.shipPackModels.find(select.value);
-        scene.setStudyEffects(get('show-engines').checked ? [DW.shipPackModels.engineGeometry([{ index: 0, hp: 1, pose: pose }], select.value, 1, units, engineView(), now / 1000)] : []);
+        scene.setStudyEffects(!original() && get('show-engines').checked ? [DW.shipPackModels.engineGeometry([{ index: 0, hp: 1, pose: pose }], select.value, 1, units, engineView(), now / 1000)] : []);
         scene.render(world, 1, 0, dt);
     }
     requestAnimationFrame(frame);

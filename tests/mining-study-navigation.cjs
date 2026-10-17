@@ -12,7 +12,7 @@ const assert=require('node:assert/strict');
   assert.deepEqual(position,{x:1,y:0,z:6},'Blocked forward motion slides along the wall');
   assert.deepEqual(probes,[['x',1,1.22],['y',1,2.22]],'Sweeps include the full displacement and body clearance');
   sweepAxes(position,{x:0,y:0,z:3},()=>false);assert.equal(position.z,9,'Free-flight can traverse the well vertically');
-  const model=global.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',1,'');let removed=0;
+  const model=global.Driftworks.scene3d.miningPlatformGeometry(1,0,false,1,'');let removed=0;
   for(const data of [model.light])for(let i=0;i<data.length;i+=18){const points=[0,6,12].map(j=>data.slice(i+j,i+j+3));if(isStaticAirlock(points))removed++;}
   assert.ok(removed===24,'Both static airlock leaves are removed before adding moving panels');
   assert.equal(isStaticAirlock([[.9,3.75,5],[1,3.75,5],[1,3.75,6]]),false,'Door jamb remains solid');

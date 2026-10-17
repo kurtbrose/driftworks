@@ -20,9 +20,9 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 </head>
 <body>
 <div id="viewer" class="scene" aria-label="Orbiting 3D asteroid"></div>
-<header><div><h1>Asteroid orbit</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="cut" aria-pressed="false">Cutaway</button><button id="walk" aria-pressed="false">Surface walk</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
+<header><div><h1>Asteroid orbit</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="spotlight" aria-pressed="false">Work light</button><button id="work-shadows" aria-pressed="true">Shadows</button><button id="shadow-posts" aria-pressed="true">Test posts</button><button id="cut" aria-pressed="false">Cutaway</button><button id="walk" aria-pressed="false">Surface walk</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
 <section class="parameters" aria-label="Asteroid parameters">
-<p>Surface restored to the remove-boulders checkpoint. <a href="asteroid-surface-experiment.html">Archived surface experiment</a> · <a href="terrain-lab.html">Rock laboratory</a></p><h2>Geology controls</h2>
+<p>Surface restored to the remove-boulders checkpoint. <a href="asteroid-surface-experiment.html">Archived surface experiment</a> · <a href="terrain-lab.html">Rock laboratory</a> · <a href="asteroid-three-comparison.html">Three.js comparison</a></p><h2>Geology controls</h2>
 <label for="seed">Seed</label><input id="seed" type="text" maxlength="64" autocomplete="off" spellcheck="false">
 <div class="seed-row"><button id="reseed">Re-seed</button><button id="apply-seed">Apply seed</button></div>
 <label>Composition</label><div class="presets" role="group" aria-label="Composition presets"><button data-material="mixed" aria-pressed="true">Mixed</button><button data-material="0" aria-pressed="false">Ice</button><button data-material="1" aria-pressed="false">Volatiles</button><button data-material="2" aria-pressed="false">Metals</button><button data-material="3" aria-pressed="false">Silicates</button></div>
@@ -47,6 +47,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     <script src="../src/hud.js?v=20260922-cavern1"></script>
     <script src="../src/scene3d.js?v=20261016-remove-boulders"></script>
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
+<script src="mining-study-terrain.js"></script>
 <script>
 (function(){
   var world=Driftworks.sim.createInitialWorld(), host=document.getElementById('viewer');
@@ -58,6 +59,35 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   function resetCamera(){world.camera={x:0,y:0,zoom:Math.min(host.clientWidth,host.clientHeight)*.32/asteroid.radius};}
   resetCamera();
   var scene=Driftworks.scene3d.create(host,function(){return world;},function(value){world=value;},{study:true});
+  document.getElementById("spotlight").onclick=function(){var button=host.querySelector("[data-spotlight]");button.click();if(button.getAttribute("aria-pressed")==="true"&&!walking)walkButton.click();this.setAttribute("aria-pressed",button.getAttribute("aria-pressed"));updateShadowPosts();};
+  var postsEnabled=true;
+  document.getElementById('work-shadows').onclick=function(){var button=host.querySelector('[data-work-shadows]');button.click();this.setAttribute('aria-pressed',button.getAttribute('aria-pressed'));};
+  document.getElementById('shadow-posts').onclick=function(){postsEnabled=!postsEnabled;this.setAttribute('aria-pressed',String(postsEnabled));updateShadowPosts();};
+  var postCache=null;
+  function updateShadowPosts(){
+    if(!postsEnabled||document.getElementById('spotlight').getAttribute('aria-pressed')!=='true'){scene.setStudyActors([]);return;}
+    var visual=Driftworks.scene3d.visualFor(asteroid);
+    if(!postCache||postCache.visual!==visual){
+      var f=Driftworks.scene3d.surfaceFrame(asteroid,[.4,.5,.75]),n=f.normal,u=1/Driftworks.sim.METERS_PER_UNIT;
+      var forward=tangent([0,1,0],n),right=normalize(cross(forward,n)),base=f.point.map(function(p){return p*asteroid.radius;});
+      var sample=Driftworks.miningStudyTerrain.meshSampler(Driftworks.scene3d.asteroidMesh(asteroid),asteroid.radius,base),vertices=[];
+      [[4,-.8,1.2],[6,1,1.6]].forEach(function(post){
+        var foot=base.map(function(p,i){return p+(forward[i]*post[0]+right[i]*post[1])*u;});
+        var hit=sample.ray(foot.map(function(p,i){return p+n[i]*10*u;}),n.map(function(p){return -p;}));
+        if(!hit)return;foot=hit.point;
+        var basis=[right,forward,n],half=[.18*u,.18*u,post[2]*u/2];
+        for(var axis=0;axis<3;axis++)for(var sign=-1;sign<=1;sign+=2){
+          var a=(axis+1)%3,b=(axis+2)%3,corners=[[-1,-1],[1,-1],[1,1],[-1,1]];
+          [0,1,2,0,2,3].forEach(function(corner){var local=[0,0,0];local[axis]=sign;local[a]=corners[corner][0];local[b]=corners[corner][1];
+            for(var k=0;k<3;k++)vertices.push(foot[k]+n[k]*half[2]+basis[0][k]*local[0]*half[0]+basis[1][k]*local[1]*half[1]+basis[2][k]*local[2]*half[2]);
+            for(var k=0;k<3;k++)vertices.push(basis[axis][k]*sign);
+          });
+        }
+      });
+      postCache={visual:visual,vertices:new Float32Array(vertices)};
+    }
+    scene.setStudyActors([{vertices:postCache.vertices,color:[.85,.55,.12]}]);
+  }
   host.querySelector('.night-sky-background').style.backgroundImage='url("../assets/backgrounds/coalsack-wide-field.jpg")';
   host.querySelector('.night-sky-background').style.filter='brightness(.28)';
 
@@ -71,7 +101,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     var visual=Driftworks.scene3d.setStudyParameters(asteroid,{bulk:bulk,roughness:Number(roughness.value),craterDepth:Number(depth.value),heterogeneity:Number(patchiness.value)});
     document.getElementById('mix').textContent=names.map(function(name,i){return name+' '+Math.round(visual.bulk[i]*100)+'%';}).join(' · ')+' | '+visual.surfaceProfile.state;
     document.querySelectorAll('[data-material]').forEach(function(button){button.setAttribute('aria-pressed',String(button.dataset.material===material));});
-    labels();scene.sync(world);
+    labels();scene.sync(world);updateShadowPosts();
   }
   document.querySelectorAll('[data-material]').forEach(function(button){button.onclick=function(){material=button.dataset.material;applyParameters();};});
   [roughness,depth,patchiness].forEach(function(input){input.oninput=labels;input.onchange=applyParameters;});
@@ -81,7 +111,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   seedInput.onkeydown=function(event){if(event.key==='Enter')applySeed();};
   document.getElementById('defaults').onclick=function(){material='mixed';roughness.value=1;depth.value=1;patchiness.value=Driftworks.asteroidArt.describe(asteroid).heterogeneity.toFixed(2);applyParameters();};
   applyParameters();
-  var walking=false, savedView=null, walkDirection=[-.4,-.5,.75], walkHeading=[0,1,0], walkPitch=-.12, walkAltitude=.012, keys={}, lookDrag=null;
+  var walking=false, savedView=null, walkDirection=[.4,.5,.75], walkHeading=[0,1,0], walkPitch=-.12, walkAltitude=2/(asteroid.radius*Driftworks.sim.METERS_PER_UNIT), keys={}, lookDrag=null;
   var walkButton=document.getElementById('walk'), help=document.getElementById('viewer-help');
   function normalize(v){var length=Math.hypot.apply(null,v)||1;return v.map(function(x){return x/length;});}
   function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
@@ -91,7 +121,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection), n=frame.normal;
     walkHeading=tangent(walkHeading,n);var right=normalize(cross(walkHeading,n));
     var forward=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0), sideways=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
-    if(forward||sideways){var speed=.006*dt*(keys.ShiftLeft||keys.ShiftRight?4:1)/Math.max(1,Math.hypot(forward,sideways));walkDirection=normalize(frame.point.map(function(v,i){return v+speed*(walkHeading[i]*forward+right[i]*sideways);}));frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection);n=frame.normal;walkHeading=tangent(walkHeading,n);right=normalize(cross(walkHeading,n));}
+    if(forward||sideways){var speed=1.5/(asteroid.radius*Driftworks.sim.METERS_PER_UNIT)*dt*(keys.ShiftLeft||keys.ShiftRight?4:1)/Math.max(1,Math.hypot(forward,sideways));walkDirection=normalize(frame.point.map(function(v,i){return v+speed*(walkHeading[i]*forward+right[i]*sideways);}));frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection);n=frame.normal;walkHeading=tangent(walkHeading,n);right=normalize(cross(walkHeading,n));}
     var forwardView=normalize(walkHeading.map(function(v,i){return v*Math.cos(walkPitch)+n[i]*Math.sin(walkPitch);}));
     var up=normalize(cross(right,forwardView)), back=forwardView.map(function(v){return -v;});
     var eye=frame.point.map(function(v,i){return (v+n[i]*walkAltitude)*asteroid.radius;});
@@ -99,8 +129,8 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     var altitudeLabel=document.getElementById('walk-altitude'), altitudeText='Altitude '+Math.round(walkAltitude*asteroid.radius*Driftworks.sim.METERS_PER_UNIT).toLocaleString()+' m';if(altitudeLabel.textContent!==altitudeText)altitudeLabel.textContent=altitudeText;
   }
   function leaveWalk(){walking=false;keys={};lookDrag=null;scene.setSurfaceCamera(null);if(savedView){world.camera=savedView.camera;scene.setOrbit(savedView.orbit);}document.getElementById('walk-controls').hidden=true;walkButton.textContent='Surface walk';walkButton.setAttribute('aria-pressed','false');help.innerHTML='Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan';motion.disabled=false;}
-  walkButton.onclick=function(){if(walking){leaveWalk();return;}if(asteroid.excavation.level>0){world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];document.getElementById('cut').textContent='Cutaway';document.getElementById('cut').setAttribute('aria-pressed','false');}savedView={camera:Object.assign({},world.camera),orbit:scene.getOrbit()};walking=true;rotating=false;updateMotion();motion.disabled=true;walkDirection=normalize([-.4,-.5,.75]);walkHeading=[0,1,0];walkPitch=-.12;document.getElementById('walk-controls').hidden=false;walkButton.textContent='Return to orbit';walkButton.setAttribute('aria-pressed','true');help.innerHTML='WASD / arrows: walk · Shift: faster<br>Drag: look · Wheel: altitude<br>Esc: return to orbit';walkPose(0);};
-  document.querySelectorAll('[data-step]').forEach(function(button){button.onclick=function(){if(!walking)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),forward=tangent(walkHeading,frame.normal),right=cross(forward,frame.normal),kind=button.dataset.step,axis=kind==='left'||kind==='right'?right:forward,sign=kind==='left'||kind==='back'?-1:1;walkDirection=normalize(frame.point.map(function(v,i){return v+axis[i]*sign*.006;}));walkPose(0);};});
+  walkButton.onclick=function(){if(walking){leaveWalk();return;}if(asteroid.excavation.level>0){world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];document.getElementById('cut').textContent='Cutaway';document.getElementById('cut').setAttribute('aria-pressed','false');}savedView={camera:Object.assign({},world.camera),orbit:scene.getOrbit()};walking=true;rotating=false;updateMotion();motion.disabled=true;walkDirection=normalize([.4,.5,.75]);walkHeading=[0,1,0];walkPitch=-.12;document.getElementById('walk-controls').hidden=false;walkButton.textContent='Return to orbit';walkButton.setAttribute('aria-pressed','true');help.innerHTML='WASD / arrows: walk · Shift: faster<br>Drag: look · Wheel: altitude<br>Esc: return to orbit';walkPose(0);};
+  document.querySelectorAll('[data-step]').forEach(function(button){button.onclick=function(){if(!walking)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),forward=tangent(walkHeading,frame.normal),right=cross(forward,frame.normal),kind=button.dataset.step,axis=kind==='left'||kind==='right'?right:forward,sign=kind==='left'||kind==='back'?-1:1;walkDirection=normalize(frame.point.map(function(v,i){return v+axis[i]*sign/(asteroid.radius*Driftworks.sim.METERS_PER_UNIT);}));walkPose(0);};});
   window.addEventListener('keydown',function(event){if(!walking||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if(event.code==='Escape'){leaveWalk();return;}if(/^(Key[WASD]|Arrow(Up|Down|Left|Right)|Shift(Left|Right))$/.test(event.code)){keys[event.code]=true;event.preventDefault();}});
   window.addEventListener('keyup',function(event){delete keys[event.code];});window.addEventListener('blur',function(){keys={};lookDrag=null;});
   host.addEventListener('pointerdown',function(event){if(!walking)return;lookDrag={x:event.clientX,y:event.clientY};event.target.setPointerCapture(event.pointerId);});
@@ -112,14 +142,34 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   updateMotion();scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);
   motion.onclick=function(){rotating=!rotating;updateMotion();};
   host.addEventListener('pointerdown',function(){rotating=false;updateMotion();});
-  host.addEventListener('wheel',function(event){rotating=false;updateMotion();if(walking){event.preventDefault();var delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?host.clientHeight:1);walkAltitude=Math.max(.004,Math.min(.3,walkAltitude*Math.exp(-Math.max(-300,Math.min(300,delta))*.002)));walkPose(0);}},{passive:false});
+  host.addEventListener('wheel',function(event){rotating=false;updateMotion();if(walking){event.preventDefault();var delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?host.clientHeight:1);walkAltitude=Math.max(.5/(asteroid.radius*Driftworks.sim.METERS_PER_UNIT),Math.min(.3,walkAltitude*Math.exp(-Math.max(-300,Math.min(300,delta))*.002)));walkPose(0);}},{passive:false});
   document.getElementById('reset').onclick=function(){if(walking)leaveWalk();resetCamera();phase=-.49;scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);};
-  document.getElementById('cut').onclick=function(){if(walking)leaveWalk();world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];var open=asteroid.excavation.level>0;this.textContent=open?'Close cutaway':'Cutaway';this.setAttribute('aria-pressed',String(open));scene.sync(world);};
+  document.getElementById('cut').onclick=function(){if(walking)leaveWalk();world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];var open=asteroid.excavation.level>0;this.textContent=open?'Close cutaway':'Cutaway';this.setAttribute('aria-pressed',String(open));scene.sync(world);updateShadowPosts();};
   function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;previous=now;
     if(walking)walkPose(dt);
     if(rotating){phase+=dt*.16;var orbit=scene.getOrbit();scene.setOrbit({yaw:orbit.yaw+dt*.18,tilt:1.3+.85*Math.sin(phase)});}
     scene.sync(world);scene.render(world,1,0,dt);requestAnimationFrame(frame);
   }
+  // Opt-in GPU regression: compares identical ground pixels with/without real blockers.
+  if(new URLSearchParams(location.search).has('shadow-test'))requestAnimationFrame(function(){
+    var result=document.createElement('output');result.id='shadow-test-result';result.style.cssText='position:fixed;z-index:10;bottom:60px;right:20px;max-width:500px;padding:12px;background:#15232c;color:white';document.body.appendChild(result);
+    try{
+      document.getElementById('spotlight').click();
+      var shadowButton=document.getElementById('work-shadows'),postButton=document.getElementById('shadow-posts');
+      function capture(){scene.render(world,1,0,0);var canvas=host.querySelector('canvas'),gl=canvas.getContext('webgl'),pixels=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);if(gl.getError()!==gl.NO_ERROR)throw new Error('WebGL error during shadow capture');return pixels;}
+      shadowButton.click();var offPosts=capture();shadowButton.click();var onPosts=capture();
+      postButton.click();var onBare=capture();shadowButton.click();var offBare=capture();
+      var changed=0,brighter=0,postShadow=0;
+      for(var i=0;i<offPosts.length;i+=4){
+        var decrease=offPosts[i]+offPosts[i+1]+offPosts[i+2]-onPosts[i]-onPosts[i+1]-onPosts[i+2];
+        if(decrease>8)changed++;if(decrease < -3)brighter++;
+        if(offPosts[i]===offBare[i]&&offPosts[i+1]===offBare[i+1]&&offPosts[i+2]===offBare[i+2]&&offPosts[i+3]===255&&onBare[i]+onBare[i+1]+onBare[i+2]-onPosts[i]-onPosts[i+1]-onPosts[i+2]>8)postShadow++;
+      }
+      postButton.click();shadowButton.click();
+      if(changed<100||brighter>10||postShadow<50)throw new Error('Shadow comparison failed: '+JSON.stringify({changed:changed,brighter:brighter,postShadow:postShadow}));
+      result.textContent='PASS: '+postShadow+' ground pixels shadowed by posts; '+changed+' pixels darkened; '+brighter+' brightened.';result.dataset.status='pass';
+    }catch(error){result.textContent='FAIL: '+error.message;result.dataset.status='fail';}
+  });
   requestAnimationFrame(frame);
 })();
 </script>

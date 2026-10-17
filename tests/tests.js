@@ -21,6 +21,38 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('surface work light retains metre scale across asteroid sizes', function () {
+    var scene=window.Driftworks.scene3d;
+    [1,2].forEach(function(scale){
+      var a=createFreshWorld().asteroids[0];a.radius*=scale;
+      var frame=scene.surfaceFrame(a,[.4,.5,.75]),lamp=scene.surfaceSpotlight(a);
+      var offset=lamp.position.map(function(p,i){return (p-frame.point[i]*a.radius)*sim.METERS_PER_UNIT;});
+      assertClose(Math.hypot.apply(null,offset),Math.hypot(2,2));
+      assertClose(offset.reduce(function(sum,p,i){return sum+p*frame.normal[i];},0),2);
+      assertClose(lamp.range*sim.METERS_PER_UNIT,30);
+      assertClose(Math.hypot.apply(null,lamp.direction),1);
+      assertClose(lamp.direction.reduce(function(sum,p,i){return sum+p*frame.normal[i];},0),-2/Math.hypot(12,2,2));
+    });
+  });
+
+  test('work-light shadow frame preserves its beam under rotation and camera translation', function () {
+    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],lamp=scene.surfaceSpotlight(a),camera={x:17,y:-23,zoom:1};
+    a.rotation=1.2;
+    var f=scene.workLightFrame(a,lamp,camera,4);
+    function dot(a,b){return a.reduce(function(sum,p,i){return sum+p*b[i];},0);}
+    [f.right,f.up,f.direction].forEach(function(axis){assertClose(Math.hypot.apply(null,axis),1);});
+    assertClose(dot(f.right,f.up),0);assertClose(dot(f.right,f.direction),0);assertClose(dot(f.up,f.direction),0);
+    assertClose(f.near*sim.METERS_PER_UNIT,.05);assertClose(f.focal,1/Math.tan(Math.acos(.8)));
+    a.position={x:a.position.x+123,y:a.position.y-456};camera={x:camera.x+123,y:camera.y-456,zoom:64};
+    var moved=scene.workLightFrame(a,lamp,camera,4);
+    f.position.forEach(function(p,i){assertClose(p,moved.position[i]);});
+    // A target on the beam remains at the center of the shadow image after body rotation.
+    var local=lamp.position.map(function(p,i){return p+lamp.direction[i]*lamp.range*.4;}),c=Math.cos(a.rotation),s=Math.sin(a.rotation);
+    var target=[a.position.x+c*local[0]-s*local[1]-camera.x,a.position.y+s*local[0]+c*local[1]-camera.y,local[2]-4];
+    var delta=target.map(function(p,i){return p-moved.position[i];});
+    assertClose(dot(delta,moved.right),0);assertClose(dot(delta,moved.up),0);assertClose(dot(delta,moved.direction),lamp.range*.4);
+  });
+
   test('experiment controls report missing markup at the lookup boundary', function () {
     var get = window.Driftworks.experimentDom({getElementById: function () { return null; }});
     var message = '';
@@ -129,15 +161,15 @@
       var beforeCrews=JSON.stringify(world);
       var rigGeometry=DW.scene3d.miningPlatformGeometry, rampStates=[];
       try {
-        DW.scene3d.miningPlatformGeometry=function(deployment,time,working,variant,open,cut){rampStates.push(open);return rigGeometry(deployment,time,working,variant,open,cut);};
+        DW.scene3d.miningPlatformGeometry=function(deployment,time,working,open,cut){rampStates.push(open);return rigGeometry(deployment,time,working,open,cut);};
         presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
       } finally { DW.scene3d.miningPlatformGeometry=rigGeometry; }
       assert(rampStates.join(',')==='0,1','Flight scenery includes both closed and fully open source rigs');
       var crewBatches=actors.slice(-4);
       assert(crewBatches.length===4&&crewBatches.every(function(b){return b.vertices.length>0&&b.vertices.length%18===0&&Array.from(b.vertices).every(Number.isFinite);}));
-      var sourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,'rampdock',0,'');
-      var openSourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,'rampdock',1,'');
-      Object.keys(sourceRig).forEach(function(material,index){assert(crewBatches[index].vertices.length===sourceRig[material].length+openSourceRig[material].length*2,'Three complete design 07 rigs: two open, one closed');});
+      var sourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,0,'');
+      var openSourceRig=DW.scene3d.miningPlatformGeometry(1,0,false,1,'');
+      Object.keys(sourceRig).forEach(function(material,index){assert(crewBatches[index].vertices.length===sourceRig[material].length+openSourceRig[material].length*2,'Three complete current rigs: two open, one closed');});
       assert(JSON.stringify(world)===beforeCrews,'Surface scenery must not change persistent world state');
       presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
       assert(actors[actors.length-1]===crewBatches[3],'Static crew geometry is reused across frames');
@@ -1458,86 +1490,57 @@
       }
     });
   });
-  test('mining pod studies keep finite unit normals, fold anchors without decorative machinery motion', function () {
+  test('mining rig keeps finite unit normals and folds anchors without idle machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
-    ['pod','anchors','recessed','fabricated','workboat','drydock','rampdock'].forEach(function(variant){
-      var deployed=model(1,0,false,variant),folded=model(0,0,false,variant);
+    ['current'].forEach(function(variant){
+      var deployed=model(1,0,false),folded=model(0,0,false);
       assert(JSON.stringify(deployed)!==JSON.stringify(folded));
-      assert(JSON.stringify(deployed)===JSON.stringify(model(1,5,false,variant)));
-      assert(JSON.stringify(deployed)===JSON.stringify(model(1,.2,true,variant)));
+      assert(JSON.stringify(deployed)===JSON.stringify(model(1,5,false)));
+      assert(JSON.stringify(deployed)===JSON.stringify(model(1,.2,true)));
       Object.keys(deployed).forEach(function(key){var data=deployed[key];assert(data.length%18===0);assert(data.every(Number.isFinite));for(var i=3;i<data.length;i+=6)assertClose(Math.hypot(data[i],data[i+1],data[i+2]),1,.00001);});
     });
   });
 
-  test('fabricated mining hull has twelve planar walls, chamfers and a flat deck', function () {
-    var data=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'fabricated').ochre;
-    // First 24 quads are structural wall/shoulder plates, each with a single normal.
-    for(var face=0;face<24;face++){
-      var start=face*36;
-      for(var i=start;i<start+36;i+=6)for(var k=3;k<6;k++)assertClose(data[i+k],data[start+k],.000001);
-      if(face%2===0)assertClose(data[start+5],0,.000001);
-      var nx=data[start+3],ny=data[start+4],nz=data[start+5];
-      for(var i=start;i<start+36;i+=6)assertClose((data[i]-data[start])*nx+(data[i+1]-data[start+1])*ny+(data[i+2]-data[start+2])*nz,0,.000001);
-      if(face%2===1)assert(data[start+5]>.4 && data[start+5]<.9,'Broad angled shoulder plates');
-    }
-    // Ten triangles close the twelve-vertex roof, all at the same height.
-    for(var i=24*36;i<24*36+10*18;i+=6){assertClose(data[i+2],12.5);assertClose(data[i+5],1);}
-  });
-
-  test('workboat mining study separates a raised cabin from a low deck and open cargo', function () {
-    var model=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'workboat');
-    var ochre=model.ochre,steel=model.steel,roof=false,deck=false,binFloor=false;
-    for(var i=0;i<ochre.length;i+=6){
-      if(ochre[i+5]>.99 && Math.abs(ochre[i+2]-12.2)<.001)roof=true;
-      if(ochre[i+5]>.99 && Math.abs(ochre[i+2]-8)<.001)deck=true;
-    }
-    for(var i=0;i<steel.length;i+=6){
-      if(steel[i]<-7 && steel[i+5]>.99 && Math.abs(steel[i+2]-8.6)<.001)binFloor=true;
-      assert(!(steel[i]>-12 && steel[i]<-10 && Math.abs(steel[i+1])<3 && steel[i+2]>8.7),'No lid covers the hopper');
-    }
-    assert(roof && deck && binFloor,'Cabin roof, work deck and hopper interior are distinct');
-  });
-
-  test('surface drydock covers open around a static central tower', function () {
-    var model=window.Driftworks.scene3d.miningPlatformGeometry;
-    var closed=model(1,0,false,'drydock',0),open=model(1,0,false,'drydock',1);
-    assert(JSON.stringify(closed)!==JSON.stringify(open));
-    assert(JSON.stringify(closed.steel)===JSON.stringify(open.steel),'Hold loads and tower platform remain fixed');
-    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Tower windows and chassis remain fixed');
-    [0,.5,1].forEach(function(value){var groups=model(1,0,false,'drydock',value);Object.keys(groups).forEach(function(key){assert(groups[key].every(Number.isFinite));for(var i=3;i<groups[key].length;i+=6)assertClose(Math.hypot(groups[key][i],groups[key][i+1],groups[key][i+2]),1,.00001);});});
+  test('original mining rig catalog uses canonical geometry and separate provenance', function () {
+    var DW=window.Driftworks,entry=DW.originalShipModels[0];assert(entry.id==='driftworks:mining-rig');assert(entry.author==='Driftworks');
+    assert(entry.provenance.indexOf('driftworks-originals')>=0);
+    var batches=entry.geometry(1),source=DW.scene3d.miningPlatformGeometry(1,0,false,0,'');
+    assert(batches.reduce(function(n,b){return n+b.vertices.length;},0)===Object.keys(source).reduce(function(n,k){return n+source[k].length;},0));
+    batches.forEach(function(batch){for(var i=0;i<batch.vertices.length;i+=6)assert(Math.hypot(batch.vertices[i],batch.vertices[i+1],batch.vertices[i+2])<=8.50001);});
+    assert(!DW.shipPackModels.find(entry.id),'Originals are kept out of imported fighter packs');
   });
 
   test('inter-leg bay ramps reach ground while the protective cage stays fixed', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
-    var closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
+    var closed=model(1,0,false,0),open=model(1,0,false,1);
     assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Load-bearing cage remains in place');
     var lowClosed=Infinity,lowOpen=Infinity;
     for(var i=2;i<closed.ochre.length;i+=6)lowClosed=Math.min(lowClosed,closed.ochre[i]);
     for(var i=2;i<open.ochre.length;i+=6)lowOpen=Math.min(lowOpen,open.ochre[i]);
     assert(lowClosed>4 && lowOpen<.01 && lowOpen>-.3,'Door lips reach the surface');
-    [0,.5,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(key){assert(groups[key].every(Number.isFinite));});});
+    [0,.5,1].forEach(function(t){var groups=model(1,0,false,t);Object.keys(groups).forEach(function(key){assert(groups[key].every(Number.isFinite));});});
   });
 
   test('bay hull closes with vertical walls and a roof before two-stage unfolding', function () {
-    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,'rampdock',0),uncovered=model(1,0,false,'rampdock',.4),open=model(1,0,false,'rampdock',1);
+    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,0),uncovered=model(1,0,false,.4),open=model(1,0,false,1);
     // The first leaf is a vertical wall; the second is the upper closure.
     assertClose(closed.ochre[5],0);
     assertClose(closed.ochre[30*6+5],1);
     for(var i=0;i<30*6;i++)assertClose(closed.ochre[i],uncovered.ochre[i],.000001);
     assert(JSON.stringify(closed)!==JSON.stringify(uncovered));
     assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark));
-    [0,.2,.4,.7,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(k){assert(groups[k].every(Number.isFinite));for(var i=3;i<groups[k].length;i+=6)assertClose(Math.hypot(groups[k][i],groups[k][i+1],groups[k][i+2]),1,.00001);});});
+    [0,.2,.4,.7,1].forEach(function(t){var groups=model(1,0,false,t);Object.keys(groups).forEach(function(k){assert(groups[k].every(Number.isFinite));for(var i=3;i<groups[k].length;i+=6)assertClose(Math.hypot(groups[k][i],groups[k][i+1],groups[k][i+2]),1,.00001);});});
   });
 
   test('roof shuttle docking collar and four hardpoints stay above the tower', function () {
-    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
+    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,0),open=model(1,0,false,1);
     function roof(groups){var result=[];Object.keys(groups).forEach(function(k){for(var i=0;i<groups[k].length;i+=18){if(groups[k][i+2]>13.5 && groups[k][i+8]>13.5 && groups[k][i+14]>13.5)result.push(k+':'+groups[k].slice(i,i+18).join(','));}});return result.join(';');}
     assert(roof(closed)===roof(open),'Docking hardware stays fixed while cargo doors unfold');
     [-1,1].forEach(function(x){[-1,1].forEach(function(y){var found=false,v=closed.ochre;for(var i=0;i<v.length;i+=6)if(Math.sign(v[i])===x && Math.sign(v[i+1])===y && v[i+2]>14.8)found=true;assert(found,'A raised hardpoint in each roof corner');});});
   });
 
   test('transit shell stays yellow while door inner faces use work-deck grey', function () {
-    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
+    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,0),open=model(1,0,false,1);
     assert(JSON.stringify(closed.steel)!==JSON.stringify(open.steel),'Grey door inner faces move with their yellow outer armor');
     assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Permanent dark chassis stays fixed');
     var yellowPad=false;
@@ -1546,7 +1549,7 @@
   });
 
   test('control tower has outward-downward glazing around all eight sides', function () {
-    var data=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',0).dark,faces={};
+    var data=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,0).dark,faces={};
     for(var i=0;i<data.length;i+=18){
       if(data[i+2]>10 && data[i+2]<11.15 && data[i+5]<-.25){
         var direction=Math.round(Math.atan2(data[i+4],data[i+3])*100);faces[direction]=true;
@@ -1556,7 +1559,7 @@
   });
 
   test('suspended tower egress is a downward hatch above the cargo deck', function () {
-    var v=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',0).light,faces=0;
+    var v=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,0).light,faces=0;
     for(var i=0;i<v.length;i+=18){
       if([0,6,12].every(function(k){return v[i+k]>=1.31 && v[i+k]<=4.19 && Math.abs(v[i+k+1])<=1.39 && Math.abs(v[i+k+2]-7.18)<.001;}) && v[i+5]<-.99)faces++;
     }
@@ -1565,14 +1568,14 @@
 
   test('door hinge barrels and actuator assemblies stay valid through both hinge stages', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
-    var closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
+    var closed=model(1,0,false,0),open=model(1,0,false,1);
     assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Root cradles, stops and receivers remain frame-mounted');
-    [0,.2,.4,.65,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(k){var v=groups[k];assert(v.every(Number.isFinite));for(var i=3;i<v.length;i+=6)assertClose(Math.hypot(v[i],v[i+1],v[i+2]),1,.00001);});});
+    [0,.2,.4,.65,1].forEach(function(t){var groups=model(1,0,false,t);Object.keys(groups).forEach(function(k){var v=groups[k];assert(v.every(Number.isFinite));for(var i=3;i<v.length;i+=6)assertClose(Math.hypot(v[i],v[i+1],v[i+2]),1,.00001);});});
   });
 
   test('cargo deck has no coplanar black belly or broad chassis top', function () {
-    ['drydock','rampdock'].forEach(function(variant){
-      var groups=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,variant,1),data=groups.dark,belly=false;
+    ['current'].forEach(function(variant){
+      var groups=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,1),data=groups.dark,belly=false;
       for(var i=0;i<data.length;i+=18){
         var flat=Math.abs(data[i+2]-data[i+8])<.000001 && Math.abs(data[i+2]-data[i+14])<.000001;
         var broad=Math.max(data[i],data[i+6],data[i+12])-Math.min(data[i],data[i+6],data[i+12])>2 && Math.max(data[i+1],data[i+7],data[i+13])-Math.min(data[i+1],data[i+7],data[i+13])>2;
@@ -1586,10 +1589,10 @@
   });
 
   test('tower ceiling has one roof plane without a coplanar docking pad underside', function () {
-    var v=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',1,'').ochre,count=0;
+    var v=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,1,'').ochre,count=0;
     for(var i=0;i<v.length;i+=18){if([2,8,14].every(function(offset){return Math.abs(v[i+offset]-13.5)<.00001;}))count++;}
     assert(count===6,'Only the six triangles of the octagonal roof occupy z=13.5');
-    var panes=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',1,'').dark,upward=0;
+    var panes=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,1,'').dark,upward=0;
     for(var j=0;j<panes.length;j+=18)if([2,8,14].every(function(offset){return panes[j+offset]>12.5 && panes[j+offset]<13.5;}) && panes[j+5]>.5)upward++;
     assert(upward===16,'Eight upper shoulder windows face upward for overhead visibility');
   });
@@ -1597,7 +1600,7 @@
   test('crew interior has separate entry/control decks and an unobstructed microgravity translation opening', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     function floorAt(groups,x,y,z){var v=groups.steel;for(var i=0;i<v.length;i+=18){if(Math.abs(v[i+2]-z)>.001 || Math.abs(v[i+8]-z)>.001 || Math.abs(v[i+14]-z)>.001 || v[i+5]<.99)continue;var ax=v[i],ay=v[i+1],bx=v[i+6],by=v[i+7],cx=v[i+12],cy=v[i+13],d=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy);if(Math.abs(d)<1e-8)continue;var u=((by-cy)*(x-cx)+(cx-bx)*(y-cy))/d,w=((cy-ay)*(x-cx)+(ax-cx)*(y-cy))/d;if(u>=-.00001 && w>=-.00001 && u+w<=1.00001)return true;}return false;}
-    var lower=model(1,0,false,'rampdock',1,'lower'),upper=model(1,0,false,'rampdock',1,'upper');
+    var lower=model(1,0,false,1,'lower'),upper=model(1,0,false,1,'upper');
     assert(floorAt(lower,0,2,7.35),'Suspended pod entry floor is above the cargo deck');
     assert(floorAt(lower,0,0,4.5) && floorAt(lower,3,0,4.5),'Cargo floor continues unbroken beneath the pod');
     assert(!floorAt(lower,0,2,4.7),'Old bottom interior floor is removed');
@@ -1610,7 +1613,7 @@
     assert(!floorAt(upper,2.8,0,10) && !floorAt(upper,2.8,0,7.35),'Both upper floors leave the translation well clear');
     assert(floorAt(upper,-2,0,7.35),'Tower body has a usable middle deck');
     assert(!floorAt(upper,-2,0,9),'Redundant shelf below the bridge is removed');
-    ['','lower','upper'].forEach(function(cut){var g=model(1,0,false,'rampdock',1,cut);Object.keys(g).forEach(function(k){assert(g[k].every(Number.isFinite));});});
+    ['','lower','upper'].forEach(function(cut){var g=model(1,0,false,1,cut);Object.keys(g).forEach(function(k){assert(g[k].every(Number.isFinite));});});
   });
 
   test('mining platform geometry folds legs without decorative machinery motion', function () {

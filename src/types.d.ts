@@ -267,6 +267,9 @@ export interface DriftworksNamespace {
     shaderSource: string;
   };
   scene3d?: {
+    rockSurfaceShader: () => string;
+    workLightFrame: (asteroid: Asteroid, lamp: {position:number[]; direction:number[]; range:number}, camera: Camera, height:number) => {position:number[]; direction:number[]; right:number[]; up:number[]; focal:number; near:number};
+    surfaceSpotlight: (asteroid: Asteroid) => {position:number[]; direction:number[]; range:number};
     surfaceFrame: (asteroid: Asteroid, direction: [number, number, number]) => {point: [number, number, number]; normal: [number, number, number]};
     setStudyParameters: (asteroid: Asteroid, parameters: {bulk?: number[]; roughness?: number; craterDepth?: number; heterogeneity?: number}) => AsteroidVisual;
     impactsFor: (asteroid: Asteroid) => {center: [number, number, number]; normal: [number, number, number]; radius: number; depth: number; rim: number}[];
@@ -274,8 +277,9 @@ export interface DriftworksNamespace {
     impactBytes: (asteroid: Asteroid) => Uint8Array;
     globeRelief: (asteroid: Asteroid, direction: [number, number, number]) => number;
     miningPlatformInfillGeometry: () => Record<string, number[]>;
+    miningPlatformContactGeometry: (deployment:number, panelOpen:number, interiorCut:string, poses:{knee:[number,number,number],tip:[number,number,number],normal:[number,number,number]}[], rampLimits?:number[]) => Record<string,number[]>;
     miningPlatformLegGeometry: (deployment: number) => Record<string, number[]>;
-    miningPlatformGeometry: (deployment: number, time: number, working: boolean, variant?: string, panelOpen?: number, interiorCut?: string) => Record<string, number[]>;
+    miningPlatformGeometry: (deployment: number, time: number, working: boolean, panelOpen?: number, interiorCut?: string) => Record<string, number[]>;
     mothershipHardware: (detail?: number) => Record<string, number[]>;
     pickStudySurface: (eye: [number,number,number], direction: [number,number,number], meshes: ArrayLike<number>[]) => [number,number,number] | null;
     habitatLod: (radiusPixels: number) => number;

@@ -15,6 +15,24 @@
   var FOCAL = 1 / Math.tan(Math.PI / 8);
   /** @type {Record<string, { radius: number, visual: import('./types').AsteroidVisual }>} */
   var geology = {};
+  // Geology shared with the Three.js comparison; lighting remains backend-owned.
+  var ROCK_SURFACE_SHADER =
+      'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
+      'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
+      'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
+      // Packed physical centers and normals define circular local tangent disks.
+      'vec4 impactTexel(float impact,float offset){return texture2D(uCraterData,vec2((impact*5.+offset+.5)/uCraterTextureWidth,.5));}\n'+
+      'vec4 globeCraters(vec3 p){float h=0.;vec3 grad=vec3(0.);float occ=0.;'+
+      'for(int i=0;i<288;i++){if(float(i)<uCraterCount){float fi=float(i);vec4 t0=impactTexel(fi,0.);vec4 t1=impactTexel(fi,1.);vec4 t2=impactTexel(fi,2.);vec4 t3=impactTexel(fi,3.);vec4 t4=impactTexel(fi,4.);vec3 center=vec3(unpack16(t0.rg),unpack16(t0.ba),unpack16(t1.rg))*2.4-1.2;vec3 axis=normalize(vec3(unpack16(t1.ba),unpack16(t2.rg),unpack16(t2.ba))*2.-1.);float size=unpack16(t3.rg)*.4;vec3 d=p-center;if(length(d)<size*1.6){vec3 tangent=d-axis*dot(d,axis);float distance=length(tangent);float q=distance/max(.001,size);if(q<1.35){float depth=unpack16(t3.ba)*.12;float rimScale=unpack16(t4.rg);vec3 dq=distance>.00001?tangent/(distance*size):vec3(0.);float t=clamp((q-.7)/.48,0.,1.);float mask=t*t*(3.-2.*t);float dm=(q>.7&&q<1.18)?6.*t*(1.-t)/.48:0.;grad=grad*mask+h*dm*dq;h*=mask;if(q<1.){h-=(1.-q*q)*depth;grad+=2.*depth*q*dq;occ=max(occ,(1.-q)*.42);}float rd=(q-1.)/.16;float rim=exp(-rd*rd)*depth*.34*rimScale;h+=rim;grad+=rim*(-2.*(q-1.)/(.16*.16))*dq;}}}}return vec4(grad,min(.58,occ));}\n'+
+      'vec3 globeWeights(vec3 p){vec3 w=pow(abs(p),vec3(8.));return w/(w.x+w.y+w.z);}\n'+
+      // Solid 3D noise is sampled after deformation, in physical body space.
+      // No sphere normalization, ellipsoid rescaling or planar projection.
+      'float hash31(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453123);}\n'+
+      'float noise3(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash31(i),hash31(i+vec3(1,0,0)),f.x),mix(hash31(i+vec3(0,1,0)),hash31(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash31(i+vec3(0,0,1)),hash31(i+vec3(1,0,1)),f.x),mix(hash31(i+vec3(0,1,1)),hash31(i+vec3(1,1,1)),f.x),f.y),f.z);}\n'+
+      // Analytic value-noise derivatives: eight hashes per layer, not six noise evaluations.
+      'vec4 noiseGradient3(vec3 p){vec3 i=mod(floor(p),256.),t=fract(p),f=t*t*(3.-2.*t),df=6.*t*(1.-t);float a=hash31(i),b=hash31(i+vec3(1,0,0)),c=hash31(i+vec3(0,1,0)),d=hash31(i+vec3(1,1,0)),e=hash31(i+vec3(0,0,1)),g=hash31(i+vec3(1,0,1)),h=hash31(i+vec3(0,1,1)),j=hash31(i+vec3(1,1,1));float lo=mix(mix(a,b,f.x),mix(c,d,f.x),f.y),hi=mix(mix(e,g,f.x),mix(h,j,f.x),f.y);return vec4(mix(lo,hi,f.z),mix(mix(b-a,d-c,f.y),mix(g-e,j-h,f.y),f.z)*df.x,mix(mix(c-a,d-b,f.x),mix(h-e,j-g,f.x),f.z)*df.y,(hi-lo)*df.z);}\n'+
+      'vec3 rockBump(vec3 p,float fp){vec3 gradient=vec3(0.);float amplitude=1.,frequency=13.+uProfile.y*27.;mat3 basis=mat3(1.);for(int octave=0;octave<14;octave++){float visibility=1.-smoothstep(.28,.72,frequency*fp);if(visibility<.001)break;vec4 sampleValue=noiseGradient3(basis*p*frequency+vec3(uSeed*1.73+float(octave)*17.13));vec3 derivative=vec3(dot(basis[0],sampleValue.yzw),dot(basis[1],sampleValue.yzw),dot(basis[2],sampleValue.yzw));gradient+=derivative*frequency*amplitude*visibility*2.;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;frequency*=2.03;amplitude*=.49;}return gradient*uProfile.x*.0055;}\n'+
+      'vec3 globeColor(vec3 p){vec3 w=globeWeights(p);return materialColor(composition(p.yz))*w.x+materialColor(composition(p.zx))*w.y+materialColor(composition(p.xy))*w.z;}\n';
   /** @param {Asteroid} asteroid */
   function visualFor(asteroid) {
     if (!DW.asteroidArt) throw new Error('Shared asteroid artwork did not load');
@@ -192,6 +210,31 @@
     /** @type {V3} */ var normal=[rockField(asteroid,[point[0]+e,point[1],point[2]])-rockField(asteroid,[point[0]-e,point[1],point[2]]),rockField(asteroid,[point[0],point[1]+e,point[2]])-rockField(asteroid,[point[0],point[1]-e,point[2]]),rockField(asteroid,[point[0],point[1],point[2]+e])-rockField(asteroid,[point[0],point[1],point[2]-e])];
     var magnitude=Math.hypot.apply(null,normal)||1;
     return {point:point,normal:/** @type {V3} */ ([normal[0]/magnitude,normal[1]/magnitude,normal[2]/magnitude])};
+  }
+  /** Fixed work light: 2 m above rock, aimed 12 m along its tangent plane.
+   * Positions are asteroid-local world units; dimensions never follow camera zoom.
+   * @param {Asteroid} asteroid */
+  function surfaceSpotlight(asteroid) {
+    var frame=surfaceFrame(asteroid,[.4,.5,.75]), n=frame.normal;
+    var tangent=[-n[0]*n[1],1-n[1]*n[1],-n[2]*n[1]];
+    var length=Math.hypot.apply(null,tangent)||1, unit=1/sim.METERS_PER_UNIT;
+    var forward=tangent.map(function(p){return p/length;});
+    var right=[forward[1]*n[2]-forward[2]*n[1],forward[2]*n[0]-forward[0]*n[2],forward[0]*n[1]-forward[1]*n[0]];
+    var position=frame.point.map(function(p,i){return p*asteroid.radius+(n[i]*2-right[i]*2)*unit;});
+    var direction=forward.map(function(p,i){return p*12+right[i]*2-n[i]*2;});
+    var magnitude=Math.hypot.apply(null,direction);
+    return {position:position,direction:direction.map(function(p){return p/magnitude;}),range:30*unit};
+  }
+  /** Shared light-camera frame for both shadow depth and visible surface passes.
+   * @param {Asteroid} asteroid @param {ReturnType<typeof surfaceSpotlight>} lamp @param {Camera} camera @param {number} height */
+  function workLightFrame(asteroid,lamp,camera,height) {
+    var c=Math.cos(asteroid.rotation),s=Math.sin(asteroid.rotation);
+    var direction=[c*lamp.direction[0]-s*lamp.direction[1],s*lamp.direction[0]+c*lamp.direction[1],lamp.direction[2]];
+    var reference=Math.abs(direction[2])<.95?[0,0,1]:[0,1,0];
+    var right=[direction[1]*reference[2]-direction[2]*reference[1],direction[2]*reference[0]-direction[0]*reference[2],direction[0]*reference[1]-direction[1]*reference[0]];
+    var length=Math.hypot.apply(null,right);right=right.map(function(p){return p/length;});
+    var up=[right[1]*direction[2]-right[2]*direction[1],right[2]*direction[0]-right[0]*direction[2],right[0]*direction[1]-right[1]*direction[0]];
+    return {position:[asteroid.position.x+c*lamp.position[0]-s*lamp.position[1]-camera.x,asteroid.position.y+s*lamp.position[0]+c*lamp.position[1]-camera.y,lamp.position[2]-height],direction:direction,right:right,up:up,focal:4/3,near:lamp.range/600};
   }
   /** @param {V3} a @param {V3} b */
   function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
@@ -385,9 +428,9 @@
 
   /** Mining artwork in local coordinates: feet at z=0, eight folding legs.
    * Geometry is grouped by paint so details do not add individual draw calls.
-   * @param {number} deployment @param {number} time @param {boolean} working @param {string} [variant] @param {number} [panelOpen] @param {string} [interiorCut] @param {boolean} [legsOnly] @param {boolean} [infillOnly]
+   * @param {number} deployment @param {number} time @param {boolean} working @param {number} [panelOpen] @param {string} [interiorCut] @param {boolean} [legsOnly] @param {boolean} [infillOnly] @param {{knee:V3,tip:V3,normal:V3}[]} [contactPoses] @param {number[]} [rampLimits]
    */
-  function miningPlatformGeometry(deployment, time, working, variant, panelOpen, interiorCut, legsOnly, infillOnly) {
+  function miningPlatformGeometry(deployment, time, working, panelOpen, interiorCut, legsOnly, infillOnly, contactPoses, rampLimits) {
     // time/working remain accepted for existing callers; artwork has no idle machinery animation.
     var d = Math.max(0, Math.min(1, deployment));
     /** @type {Record<string, number[]>} */ var groups = {ochre:[], steel:[], dark:[], light:[]};
@@ -409,8 +452,8 @@
       var z=/** @type {V3} */ ([-x[2]*y[1],x[2]*y[0],x[0]*y[1]-x[1]*y[0]]);
       block(material,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],[len/2,width,depth===undefined?width:depth],[x,y,z]);
     }
-    if (variant === 'fabricated' || variant === 'workboat' || variant === 'drydock' || variant === 'rampdock') {
-      var rampdock=variant==='rampdock',drydock=variant==='drydock' || rampdock,workboat=variant==='workboat' || drydock;
+    {
+
       /** Flat-shaded polygon: every triangle in a plate shares one face normal.
        * @param {string} material @param {V3[]} points
        */
@@ -443,10 +486,10 @@
         for(var n=0;n<8;n++){var angle=n*Math.PI/4,next=angle+Math.PI/4;plate(material,[rim(a,angle),rim(a,next),rim(b,next),rim(b,angle)]);plate(material,[a,rim(a,next),rim(a,angle)]);plate(material,[b,rim(b,angle),rim(b,next)]);}
       }
       var perimeter=[[15,-6],[15,6],[10,9],[2,10.5],[-8,10],[-14,7],[-17,3],[-17,-3],[-14,-7],[-8,-10],[2,-10.5],[10,-9]];
-      if(rampdock)perimeter=[[15,-6],[15,6],[5,10.5],[-5,10.5],[-17,4.5],[-17,-4.5],[-5,-10.5],[5,-10.5]];
+      perimeter=[[15,-6],[15,6],[5,10.5],[-5,10.5],[-17,4.5],[-17,-4.5],[-5,-10.5],[5,-10.5]];
       var lower=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],4.5]);});
-      var shoulder=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],workboat?6.2:9.3]);});
-      var deck=perimeter.map(function(p){return /** @type {V3} */ ([-1+(p[0]+1)*.68,p[1]*.68,workboat?8:12.5]);});
+      var shoulder=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],6.2]);});
+      var deck=perimeter.map(function(p){return /** @type {V3} */ ([-1+(p[0]+1)*.68,p[1]*.68,8]);});
       /** @param {V3[]} points */
       function doorLeaf(points){
         var u=points[1].map(function(v,i){return v-points[0][i];}),v=points[2].map(function(v,i){return v-points[0][i];});
@@ -466,14 +509,25 @@
         return [p[0]+(n[0]+m[0])*scale,p[1]+(n[1]+m[1])*scale,4.5];
       }
       perimeter.forEach(function(p,i){var j=(i+1)%perimeter.length;
-        if(!rampdock)plate('ochre',[lower[i],lower[j],shoulder[j],shoulder[i]]);
-        if(!drydock)plate('ochre',[shoulder[i],shoulder[j],deck[j],deck[i]]);
-        else if(rampdock){
+
+        {
           var a=lower[i],b=lower[j],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy),ax=dx/len,ay=dy/len;
           /** @param {V3} p @param {V3} q @param {number} t @returns {V3} */
           function mix(p,q,t){return [p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t];}
           var p=perimeter[i],q=perimeter[j];
-          var innerA=/** @type {V3} */ ([-1+(p[0]+1)*.65,p[1]*.65,8]),innerB=/** @type {V3} */ ([-1+(q[0]+1)*.65,q[1]*.65,8]);
+          // Each bay ends at its own tower clearance plane, rather than shrinking the whole roof.
+          var towerPlan=[[-6,-3],[-4,-4.5],[4,-4.5],[6,-3],[6,3],[4,4.5],[-4,4.5],[-6,3]];
+          var nx=ay,ny=-ax;
+          var clearance=Math.max.apply(null,towerPlan.map(function(v){return (v[0]*nx+v[1]*ny)*1.14;}))+.40;
+          /** Intersect adjacent clearance planes to retain non-overlapping, mitered bay edges.
+           * @param {number} index @returns {V3} */
+          function roofEnd(index){
+            var v=perimeter[index],other=perimeter[index===i?(index+7)%8:(index+1)%8];
+            var ex=index===i?v[0]-other[0]:other[0]-v[0],ey=index===i?v[1]-other[1]:other[1]-v[1],length=Math.hypot(ex,ey),mx=ey/length,my=-ex/length;
+            var limit=Math.max.apply(null,towerPlan.map(function(v){return (v[0]*mx+v[1]*my)*1.14;}))+.40,det=nx*my-ny*mx;
+            return [(clearance*my-ny*limit)/det,(nx*limit-clearance*mx)/det,9.45];
+          }
+          var innerA=roofEnd(i),innerB=roofEnd(j);
           // Outboard hinge line clears the fixed rails and posts, including panel thickness.
           var hingeA=outerHinge(i),hingeB=outerHinge(j);
           // Roof underside at 9.23 clears the raised pod ribs and their sockets (top 9.18).
@@ -482,7 +536,7 @@
           var inward=-(innerA[0]-hingeA[0])*ay+(innerA[1]-hingeA[1])*ax;
           var fullLower=Math.PI*115/180,elbowHeight=4.5+4.95*Math.cos(fullLower);
           var fullUpper=Math.PI+Math.asin(elbowHeight/inward)-fullLower;
-          var t=Math.max(0,Math.min(1,panelOpen || 0));
+          var t=Math.max(0,Math.min(1,panelOpen || 0,rampLimits?rampLimits[i]:1));
           // Uncover the roof first; closing reverses this so the wall seats before the roof.
           var lowerAngle=fullLower*Math.max(0,(t-.4)/.6),upperAngle=fullUpper*Math.min(1,t/.4);
           /** @param {V3} v @param {V3} origin @param {number} angle @returns {V3} */
@@ -496,6 +550,14 @@
           var fixedA=outerHinge(i,.30),fixedB=outerHinge(j,.30);
           var roofA=/** @type {V3} */ ([fixedA[0],fixedA[1],9.05]),roofB=/** @type {V3} */ ([fixedB[0],fixedB[1],9.05]);
           var roofInnerA=/** @type {V3} */ ([innerA[0],innerA[1],9.05]),roofInnerB=/** @type {V3} */ ([innerB[0],innerB[1],9.05]);
+          // Recessed stationary collar closes the remaining opening up to the pressure cabin.
+          /** @param {V3} v @returns {V3} */
+          function cabinEdge(v){
+            var scale=Infinity;
+            towerPlan.forEach(function(a,k){var b=towerPlan[(k+1)%8],ex=b[0]-a[0],ey=b[1]-a[1],projection=ey*v[0]-ex*v[1];if(projection>0)scale=Math.min(scale,(ey*a[0]-ex*a[1])*.979/projection);});
+            return [v[0]*scale,v[1]*scale,9.05];
+          }
+          fixedInfill.push([roofInnerA,roofInnerB,cabinEdge(roofInnerB),cabinEdge(roofInnerA)]);
           [-1,1].forEach(function(side){
             var edge=side<0?edgeGap+.1/len:1-edgeGap-.1/len,outer=side<0?0:1;
             var start=mix(roofA,roofB,edge),end=mix(roofInnerA,roofInnerB,edge),outerStart=mix(roofA,roofB,outer),outerEnd=mix(roofInnerA,roofInnerB,outer);
@@ -569,16 +631,6 @@
           var seat=/** @type {V3} */ ([a[0]*seatScale,a[1]*seatScale,8.8]);
           link('dark',[a[0],a[1],8.4],seat,.23,.30);
           block('dark',seat,[.38,.38,.30]);
-        } else {
-          var innerI=/** @type {V3} */ ([-1+(p[0]+1)*.48,p[1]*.48,8]);
-          var q=perimeter[j],innerJ=/** @type {V3} */ ([-1+(q[0]+1)*.48,q[1]*.48,8]);
-          var origin=shoulder[i],axis=[shoulder[j][0]-origin[0],shoulder[j][1]-origin[1],0],length=Math.hypot.apply(null,axis);
-          axis=axis.map(function(v){return v/length;});
-          var angle=Math.max(0,Math.min(1,panelOpen || 0))*Math.PI*.90,c=Math.cos(angle),sn=Math.sin(angle);
-          /** @param {V3} v @returns {V3} */
-          function hinge(v){var r=[v[0]-origin[0],v[1]-origin[1],v[2]-origin[2]],dot=r[0]*axis[0]+r[1]*axis[1];return [origin[0]+r[0]*c+axis[1]*r[2]*sn+axis[0]*dot*(1-c),origin[1]+r[1]*c-axis[0]*r[2]*sn+axis[1]*dot*(1-c),origin[2]+r[2]*c+(axis[0]*r[1]-axis[1]*r[0])*sn];}
-          plate('ochre',[shoulder[i],shoulder[j],hinge(deck[j]),hinge(deck[i])]);
-          plate('ochre',[hinge(deck[i]),hinge(deck[j]),hinge(innerJ),hinge(innerI)]);
         }
       });
       if(infillOnly)Object.keys(groups).forEach(function(key){groups[key]=[];});
@@ -590,21 +642,20 @@
         points.forEach(function(p,i){var j=(i+1)%points.length;plate('dark',[p,back[i],back[j],points[j]]);});
       });
       if(infillOnly)return groups;
-      if(!drydock)plate('ochre',deck);
-      else plate('steel',lower);
+      plate('steel',lower);
       // Separate the belly from the deck: coincident opposite faces cause z-fighting.
       var belly=lower.map(function(p){return /** @type {V3} */ ([p[0],p[1],p[2]-.35]);});
       plate('dark',belly.slice().reverse());
-      if(drydock)lower.forEach(function(p,i){var j=(i+1)%lower.length;plate('dark',[p,belly[i],belly[j],lower[j]]);});
-      if(workboat) {
+      lower.forEach(function(p,i){var j=(i+1)%lower.length;plate('dark',[p,belly[i],belly[j],lower[j]]);});
+      {
         // A sealed, compact control house seats on the deck, forward of the cargo.
         var cabinOutline=[[-5,-3.5],[-3,-5.5],[7,-5.5],[9,-3.5],[9,3.5],[7,5.5],[-3,5.5],[-5,3.5]];
-        if(drydock)cabinOutline=[[-6,-3],[-4,-4.5],[4,-4.5],[6,-3],[6,3],[4,4.5],[-4,4.5],[-6,3]];
-        var cabinBase=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0],p[1],drydock?9:8]);});
-        var cabinWall=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0],p[1],drydock?12.5:11.2]);});
-        var cabinRoof=cabinOutline.map(function(p){return /** @type {V3} */ ([drydock?p[0]*.86:2+(p[0]-2)*.86,p[1]*.86,drydock?13.5:12.2]);});
-        if(!rampdock || !interiorCut)cabinOutline.forEach(function(p,i){var j=(i+1)%8;
-          if(rampdock){
+        cabinOutline=[[-6,-3],[-4,-4.5],[4,-4.5],[6,-3],[6,3],[4,4.5],[-4,4.5],[-6,3]];
+        var cabinBase=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0],p[1],9]);});
+        var cabinWall=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0],p[1],12.5]);});
+        var cabinRoof=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0]*.86,p[1]*.86,13.5]);});
+        if(!interiorCut)cabinOutline.forEach(function(p,i){var j=(i+1)%8;
+          {
             var p=cabinOutline[i],q=cabinOutline[j];
             var waistA=/** @type {V3} */ ([p[0]*.96,p[1]*.96,10]),waistB=/** @type {V3} */ ([q[0]*.96,q[1]*.96,10]);
             var sillA=/** @type {V3} */ ([p[0]*1.14,p[1]*1.14,11.15]),sillB=/** @type {V3} */ ([q[0]*1.14,q[1]*1.14,11.15]);
@@ -626,13 +677,10 @@
             viewport(waistA,waistB,sillB,sillA);
             viewport(sillA,sillB,browB,browA);
             viewport(browA,browB,cabinRoof[j],cabinRoof[i]);
-          }else{
-            plate('ochre',[cabinBase[i],cabinBase[j],cabinWall[j],cabinWall[i]]);
-            plate('ochre',[cabinWall[i],cabinWall[j],cabinRoof[j],cabinRoof[i]]);
           }
         });
-        if(!rampdock || !interiorCut)plate('ochre',cabinRoof);
-        if(rampdock && !interiorCut) {
+        if(!interiorCut)plate('ochre',cabinRoof);
+        if(!interiorCut) {
           // Shuttle roof interface: a broad marked pad around a sealed octagonal airlock.
           // The cabin roof is the pad's underside: do not duplicate that plane.
           var padCorners=/** @type {V3[]} */ ([[-4.45,-3.15,13.74],[4.45,-3.15,13.74],[4.45,3.15,13.74],[-4.45,3.15,13.74]]);
@@ -662,11 +710,8 @@
             block('ochre',[x*3.71,y*2.4,14.78],[.5,.55,.12]);
           });});
         }
-        if(drydock) {
-          if(!rampdock){
-            block('dark',[0,0,6.525],[4.6,3.6,2.175]);
-            block('steel',[0,0,8.7],[6.3,4.8,.3]);
-          }else{
+        {
+          {
             // Two-level pod hangs above an uninterrupted cargo deck.
             var plan=interiorCut==='lower',wallTop=plan?8.55:9.78,wallBottom=7.13;
             [-1,1].forEach(function(side){
@@ -743,71 +788,26 @@
             }
           }
           // Continuous lookout glazing on all eight faces, interrupted by structural posts.
-          if(!rampdock)cabinOutline.forEach(function(p,i){var q=cabinOutline[(i+1)%8],dx=q[0]-p[0],dy=q[1]-p[1],length=Math.hypot(dx,dy),nx=dy/length,ny=-dx/length;
-            plate('dark',[[p[0]+dx*.12+nx*.04,p[1]+dy*.12+ny*.04,10.6],[p[0]+dx*.88+nx*.04,p[1]+dy*.88+ny*.04,10.6],[p[0]+dx*.88+nx*.04,p[1]+dy*.88+ny*.04,11.9],[p[0]+dx*.12+nx*.04,p[1]+dy*.12+ny*.04,11.9]]);
-          });
+
           // Leave the cargo work floor clear under and around the suspended pod.
-          if(!rampdock){
-            [-11,10].forEach(function(x){block('dark',[x,0,4.85],[2.8,4.2,.3]);block('steel',[x,0,5.95],[2.4,3.8,.90]);});
-            [-1,1].forEach(function(side){block('dark',[-1,side*7,4.85],[6,1.3,.3]);block('steel',[-1,side*7,5.75],[5.4,1,.70]);});
-            block('steel',[0,3.67,5.55],[.68,.07,.95]);
-            [-1,1].forEach(function(side){block('steel',[side*.9,3.75,5.6],[.13,.16,1.1]);});
-            block('steel',[0,3.75,6.7],[1.03,.16,.13]);
-            block('dark',[0,3.76,5.55],[.035,.025,.95]);
-            block('steel',[0,4.15,4.65],[1.05,.65,.15]);
-          }
-        } else {
-        block('dark',[2,0,8.05],[7.3,5.7,.25]);
-        // Forward visibility, protected by a thick brow and side jambs.
-        block('dark',[9.04,0,10.3],[.06,2.9,.55]);
-        block('steel',[9.18,0,10.95],[.23,3.2,.13]);
-        [-1,1].forEach(function(side){block('ochre',[9.17,side*3.1,10.3],[.22,.2,.7]);});
-        // Recessed side access within a shallow armored collar.
-        block('dark',[0,5.54,9.65],[1.15,.08,1.2]);
-        [-1,1].forEach(function(side){block('steel',[side*1.4,5.75,9.65],[.2,.25,1.4]);});
-        block('steel',[0,5.75,11.05],[1.6,.25,.2]);
-        block('steel',[0,6,8.3],[1.6,.65,.2]);
-        // Rear hopper is an open rack load, with daylight between it and the cabin.
-        block('steel',[-11,0,8.35],[3.5,4.2,.25]);
-        [-1,1].forEach(function(side){
-          block('dark',[-11,side*3.7,6.65],[4.1,.35,.45]);
-          block('steel',[-11,side*4.2,9.6],[3.5,.3,1]);
-          block('steel',[-11+side*3.5,0,9.6],[.3,4.2,1]);
-          block('dark',[-11+side*2.8,0,7.9],[.2,4.5,.2]);
-        });
-        // A separate service pack sits in an exposed cradle on the opposite flank.
-        block('dark',[0,-8.2,6.7],[5.3,1.8,.35]);
-        block('steel',[0,-8.2,7.7],[4.4,1.2,.7]);
-        [-1,1].forEach(function(side){block('dark',[side*3.4,-8.2,8],[.3,1.8,1]);});
+
         }
       }
       block('dark',[-1,0,3.05],[14,8.4,1.2]);
       // Exposed chassis rails carry the mining head and each rectangular root mount.
       [-1,1].forEach(function(side){block('steel',[-1,side*8,3.6],[14.5,.7,.9]);});
-      /** Cylindrical pin, aligned across the leg, with planar end caps.
-       * @param {V3} center @param {number} radius
-       */
-      function pin(center,radius) {
-        for(var i=0;i<10;i++){
-          var a=i*Math.PI/5,b=(i+1)*Math.PI/5;
-          var x=Math.cos(a)*radius,z=Math.sin(a)*radius,xx=Math.cos(b)*radius,zz=Math.sin(b)*radius;
-          plate('steel',[[center[0]+x,center[1]-.95,center[2]+z],[center[0]+xx,center[1]-.95,center[2]+zz],[center[0]+xx,center[1]+.95,center[2]+zz],[center[0]+x,center[1]+.95,center[2]+z]]);
-          [-1,1].forEach(function(side){plate('dark',[[center[0],center[1]+side*.96,center[2]],[center[0]+x,center[1]+side*.96,center[2]+z],[center[0]+xx,center[1]+side*.96,center[2]+zz]]);});
-        }
-      }
-      /** @param {number} root @param {number} index @param {number} side @param {number} [mountY] */
-      function anchor(root,index,side,mountY){
-        var sweep=rampdock?root*.25:index===0?-5:index===3?5:index===1?-1:1;
-        var rootY=mountY===undefined?side*(index===0?8:9):mountY,reach=6*d;
+      /** @param {number} root @param {number} index @param {number} rootY */
+      function anchor(root,index,rootY){
+        var reach=6*d;
         var mount=/** @type {V3} */ ([root,rootY,4]);
-        var knee=/** @type {V3} */ ([root+sweep*d*.6,rootY+side*(1.5+reach*.55),4]);
-        var tip=/** @type {V3} */ ([root+sweep*d,rootY+side*(2+reach),1.4+(1-d)*2]);
-        if(rampdock){
+        {
           // Each anchor reaches out through its corner gap, not sideways into a bay.
           var bisector=outerHinge(index),outX=bisector[0]-root,outY=bisector[1]-rootY,outLength=Math.hypot(outX,outY);
           outX/=outLength;outY/=outLength;
-          knee=[root+outX*(1.5+reach*.55),rootY+outY*(1.5+reach*.55),4];
-          tip=[root+outX*(2+reach),rootY+outY*(2+reach),1.4+(1-d)*2];
+          var knee=/** @type {V3} */ ([root+outX*(1.5+reach*.55),rootY+outY*(1.5+reach*.55),4]);
+          var tip=/** @type {V3} */ ([root+outX*(2+reach),rootY+outY*(2+reach),1.4+(1-d)*2]);
+          var contactPose=contactPoses && contactPoses[index];
+          if(contactPose){knee=contactPose.knee;tip=contactPose.tip;}
           // One chassis node receives both the leg clevis and replaceable frame shoe.
           hardpoint('dark',root,rootY,3.05,4.15,1.55,1.28,.86);
           hardpoint('ochre',root,rootY,4.15,4.92,1.48,1.16,.62);
@@ -831,6 +831,7 @@
           jointBarrel('steel',offset(knee,-.73,0),offset(knee,.73,0),.62);
           var actuatorA=offset(mount,.9,-.60),actuatorB=offset(knee,.65,-.4),actuatorMid=/** @type {V3} */ (actuatorA.map(function(v,k){return v+(actuatorB[k]-v)*.60;}));
           jointBarrel('steel',actuatorA,actuatorMid,.17);jointBarrel('light',actuatorMid,actuatorB,.085);
+          var headStart=Object.keys(groups).map(function(key){return groups[key].length;});
           // Distinct ankle pivot and compact gripper carrier, with separate jaw pins.
           jointBarrel('steel',offset(tip,-.62,0),offset(tip,.62,0),.45);
           hardpoint('dark',tip[0],tip[1],tip[2]-.52,tip[2]-.12,.85,.68,.85);
@@ -843,132 +844,30 @@
             link('steel',jawRoot,knuckle,.28,.36);link('dark',knuckle,tooth,.23,.30);
             block('steel',tooth,[.28,.30,.16]);
           });
+          if(contactPose){
+            var normalLength=Math.hypot.apply(null,contactPose.normal),normal=contactPose.normal.map(function(v){return v/normalLength;}),forward=/** @type {V3} */ ([outX,outY,0]);
+            var projection=forward[0]*normal[0]+forward[1]*normal[1];
+            forward=/** @type {V3} */ (forward.map(function(v,k){return v-normal[k]*projection;}));
+            var fl=Math.hypot.apply(null,forward);forward=/** @type {V3} */ (forward.map(function(v){return v/fl;}));
+            var tangent=[normal[1]*forward[2]-normal[2]*forward[1],normal[2]*forward[0]-normal[0]*forward[2],normal[0]*forward[1]-normal[1]*forward[0]];
+            Object.keys(groups).forEach(function(key,k){var data=groups[key];for(var v=headStart[k];v<data.length;v+=6){
+              var x=data[v]-tip[0],y=data[v+1]-tip[1],z=data[v+2]-tip[2],along=x*outX+y*outY,across=x*tx+y*ty;
+              var nx=data[v+3],ny=data[v+4],nz=data[v+5],na=nx*outX+ny*outY,nt=nx*tx+ny*ty;
+              for(var axis=0;axis<3;axis++){data[v+axis]=tip[axis]+forward[axis]*along+tangent[axis]*across+normal[axis]*z;data[v+3+axis]=forward[axis]*na+tangent[axis]*nt+normal[axis]*nz;}
+            }});
+          }
           return;
         }
-        block('dark',mount,[2.2,1.8,1.5]);
-        block('ochre',[root,rootY,5.4],[2.3,1.9,.55]);
-        link('dark',mount,knee,1.05);link('steel',knee,tip,.7);
-        link('light',[root,rootY,3.1],[knee[0],knee[1],3.1],.25);
-        pin(knee,.95);block('dark',tip,[1.1,1,.7]);
-        [-1,1].forEach(function(jaw){
-          var spread=.8+d*.7;
-          var knuckle=/** @type {V3} */ ([tip[0]+jaw*spread,tip[1]+side*1.1,tip[2]-.2]);
-          var tooth=/** @type {V3} */ ([tip[0]+jaw*.45,tip[1]+side*1.8,tip[2]-1.4]);
-          link('steel',[tip[0]+jaw*.6,tip[1],tip[2]],knuckle,.45);link('dark',knuckle,tooth,.36);
-        });
       }
       if(legsOnly)Object.keys(groups).forEach(function(key){groups[key]=[];});
-      if(rampdock)perimeter.forEach(function(p,i){anchor(p[0],i,Math.sign(p[1]),p[1]);});
-      else [-11,-5,5,9].forEach(function(root,index){[-1,1].forEach(function(side){anchor(root,index,side);});});
+      perimeter.forEach(function(p,i){anchor(p[0],i,p[1]);});
       if(legsOnly)return groups;
-      if(drydock){
+      {
         block('dark',[14,0,3.8],[3,3.8,.5]);
         [-1,1].forEach(function(side){block('steel',[16,side*2.2,4.7],[4,.35,.35]);});
-      } else {
-      // Squared front brow, recessed feed opening and protective angular cheeks.
-      block('dark',[13.5,0,3.5],[3.5,5.6,1.6]);
-      block('ochre',[15,0,6],[3,6.3,.8]);
-      [-1,1].forEach(function(side){
-        var y=side*6;
-        plate('ochre',[[12,y,2],[18,y,2],[17,y,5.4],[12,y,5.4]]);
-        block('ochre',[14.5,side*6.4,3.7],[2.5,.6,1.7]);
-      });
-      block('dark',[17.1,0,3.5],[.35,5,1.6]);
-      for(var tooth=-2;tooth<=2;tooth++)block('steel',[17.5,tooth*1.8,2.7],[.65,.65,.8]);
       }
       return groups;
     }
-    // Study variants deliberately stop at silhouette and functional masses.
-    if (variant === 'pod' || variant === 'anchors' || variant === 'recessed') {
-      var recessed=variant==='recessed', mixed=variant==='anchors';
-      /** Smooth rounded shell, slightly pinched at the work end and bowed like a bean.
-       * @param {string} material @param {V3} center @param {V3} radii @param {number} bow
-       */
-      function shell(material,center,radii,bow) {
-        var out=groups[material], rings=12, segments=32;
-        /** @param {number} latitude @param {number} angle */
-        function vertex(latitude,angle) {
-          var u=Math.cos(latitude)*Math.cos(angle),v=Math.cos(latitude)*Math.sin(angle),w=Math.sin(latitude);
-          var taper=1-.14*u, bend=bow*(1-u*u);
-          var ny=v/(radii[1]*taper),nx=(u-(-.14*radii[1]*v-2*bow*u)*ny)/radii[0],nz=w/radii[2], length=Math.hypot(nx,ny,nz);
-          out.push(center[0]+u*radii[0],center[1]+v*radii[1]*taper+bend,center[2]+w*radii[2],nx/length,ny/length,nz/length);
-        }
-        for(var r=0;r<rings;r++)for(var j=0;j<segments;j++){
-          var a=-Math.PI/2+r*Math.PI/rings,b=a+Math.PI/rings,c=j*Math.PI*2/segments,e=c+Math.PI*2/segments;
-          if(r>0){vertex(a,c);vertex(a,e);vertex(b,c);}
-          if(r<rings-1){vertex(a,e);vertex(b,e);vertex(b,c);}
-        }
-      }
-      shell('dark',[-1,0,5],[14.5,9.3,3],.8);
-      shell('ochre',[-1,0,8],[16,10.5,recessed?7.5:6.5],1.2);
-      shell('ochre',[-4,1,12],[8,6,4],.3);
-      // Lower root sockets, four pairs with crowded front mounts and swept corners.
-      [-11,-5,5,9].forEach(function(root,index){[-1,1].forEach(function(side){
-        var primary=!mixed || index===0 || index===3;
-        var weight=primary?1:.65, sweep=index===0?-5:index===3?5:index===1?-1:1;
-        var extension=d*(primary?1:.72), reach=(recessed?4:6)*extension;
-        var rootY=side*(index===0?6.5:8), asymmetry=((index*3+(side===1?1:0))%4)*.45;
-        var shoulder=/** @type {V3} */ ([root,rootY,4.5]);
-        var knee=/** @type {V3} */ ([root+sweep*extension*.6,rootY+side*(1.5+reach*.55),3.8+asymmetry]);
-        var tip=/** @type {V3} */ ([root+sweep*extension,rootY+side*(2+reach),1.4+(1-d)*2]);
-        shell('dark',shoulder,[2.6,2.2,1.9],0);
-        shell('ochre',[root,rootY,5.3],[2.6,2,1.6],0);
-        link('dark',shoulder,knee,1.25*weight);
-        link('steel',knee,tip,.7*weight);
-        link('light',[shoulder[0],shoulder[1],3.8],[knee[0],knee[1],knee[2]-.7],.25*weight);
-        shell('steel',knee,[1.15*weight,1.15*weight,1.15*weight],0);
-        shell('dark',tip,[1.1*weight,1.2*weight,.8],0);
-        // Split jaws curl down and inward: contact tools, rather than walking pads.
-        [-1,1].forEach(function(jaw){
-          var spread=(.8+d*.7)*weight;
-          var knuckle=/** @type {V3} */ ([tip[0]+jaw*spread,tip[1]+side*1.1,tip[2]-.2]);
-          var tooth=/** @type {V3} */ ([tip[0]+jaw*.45*weight,tip[1]+side*1.8,tip[2]-1.4]);
-          link('steel',[tip[0]+jaw*.6*weight,tip[1],tip[2]],knuckle,.45*weight);
-          link('dark',knuckle,tooth,.36*weight);
-        });
-      });});
-      // A broad underslung crusher makes the positive-X end unambiguous.
-      var head=recessed?1.4:1;
-      block('dark',[12+d*2,0,3.7],[4,4.8*head,2.1]);
-      block('ochre',[14+d*2,0,5.5],[3,5.5*head,1]);
-      block('dark',[17+d*2,0,3.3],[1,4.5*head,1.6]);
-      for(var tooth=-2;tooth<=2;tooth++){
-        var pulse=0;
-        block('steel',[18+d*2+pulse,tooth*1.7*head,3],[.8,.6*head,1.2]);
-      }
-      // Rear utility coupling and a human-sized side airlock, kept as simple masses.
-      shell('steel',[-16,0,7],[1.1,3.2,2.6],0);
-      shell('dark',[-17,0,7],[.5,2,1.8],0);
-      shell('ochre',[-4,10,7],[3.3,2.4,3.3],0);
-      block('dark',[-4,12.2,7],[1.7,.3,2.2]);
-      block('steel',[-4,12.6,4.3],[2,.7,.3]);
-      return groups;
-    }
-    [-9,-3,3,9].forEach(function(root){[-1,1].forEach(function(side){
-      var knee=/** @type {V3} */ ([root*(1+d*.25),side*(7.5+d*5),7+d*2]);
-      var foot=/** @type {V3} */ ([root*(1+d*.7),side*(9+d*10),1+(1-d)*4]);
-      link('ochre',[root,side*5,6],knee,1.6);
-      link('steel',knee,foot,.9);
-      link('light',[root,side*6,5],[foot[0],foot[1],foot[2]+1],.3);
-      block('dark',knee,[2,1.8,1.5]);
-      block('ochre',[knee[0],knee[1],knee[2]+1.5],[1.4,1.2,.35]);
-      block('dark',foot,[2.2,1.7,.8]);
-      block('steel',[foot[0],foot[1],foot[2]+.85],[1.9,1.4,.2]);
-    });});
-    block('dark',[0,0,4],[10,6,2]);
-    [-1,1].forEach(function(side){
-      block('ochre',[0,side*6,7],[12,2,3]);
-      block('light',[-7,side*6,10.1],[3,.4,.15]);
-      for(var i=0;i<5;i++)block('dark',[-4+i*2,side*6,10.1],[.45,1.3,.15]);
-    });
-    block('ochre',[-9,0,7],[3,4,3]);
-    block('dark',[0,0,6],[6,3.8,1]);
-    block('steel',[7+d*3,0,6],[4+d*3,1.5,1]);
-    block('dark',[11+d*6,0,5],[1.5,4,2]);
-    for(var i=-2;i<=2;i++)block('steel',[13+d*6, i*1.4,4],[.6,.5,1.5]);
-    block('steel',[-8,0,11],[2,2,1]);
-    block('light',[-8,-2.1,11],[1.4,.15,.5]);
-    return groups;
   }
 
   /** Translate the existing rounded 72 x 34 habitat silhouette into a drum. */
@@ -1169,16 +1068,19 @@
     if (!overlayContext) throw new Error('Missing tactical overlay context');
     var hud = overlayContext;
     var toolbar = document.createElement('div'); toolbar.className = 'scene3d-controls';
-    toolbar.innerHTML = '<strong>3D RTS prototype</strong><span>Alt + drag: orbit · Middle / Space + drag: pan · Wheel: zoom</span><button type="button" data-cut>Cutaway</button><button type="button" data-orbit aria-label="Orbit camera">Orbit ↻</button><button type="button" data-overview>Overview</button><button type="button" data-top>Top view</button><button type="button" data-under>Underside</button><a href="?renderer=2d">2D renderer</a>';
+    toolbar.innerHTML = '<strong>3D RTS prototype</strong><span>Alt + drag: orbit · Middle / Space + drag: pan · Wheel: zoom</span><button type="button" data-spotlight aria-pressed="false">Work light</button><button type="button" data-work-shadows aria-pressed="true">Shadows</button><button type="button" data-cut>Cutaway</button><button type="button" data-orbit aria-label="Orbit camera">Orbit ↻</button><button type="button" data-overview>Overview</button><button type="button" data-top>Top view</button><button type="button" data-under>Underside</button><a href="?renderer=2d">2D renderer</a>';
     host.appendChild(toolbar);
     /** @type {Orbit} */ var orbit = { yaw: 0, tilt: 0.48 };
     var studyHeight = 0;
     var diagnostics={mode:'normal',flat:false,scale:1,mothership:true,actors:true};
-    var renderStats={drawCalls:0,triangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
+    var renderStats={drawCalls:0,triangles:0,shadowDrawCalls:0,shadowTriangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
     /** @type {Set<WebGLBuffer>} */ var frameMeshes=new Set();
     /** @type {Set<string>} */ var frameMaterials=new Set();
     var materialFinish=0;
     var focus = false, space = false, stress = false, fps = 0;
+    var spotlightEnabled = false, workShadowsEnabled = true, shadowPass = false;
+    /** @type {Record<string,{visual:import('./types').AsteroidVisual,lamp:ReturnType<typeof surfaceSpotlight>}>} */
+    var surfaceLamps = {};
     /** @type {{ start: Vec2, last: Vec2, mode: string } | null} */ var drag = null;
     /** @type {{ event: import('./types').CombatEvent, age: number }[]} */ var effects = [];
     /** @type {Record<string, { key: string, mesh: Mesh, texture: WebGLTexture, visual: import('./types').AsteroidVisual }>} */ var rocks = {};
@@ -1191,25 +1093,12 @@
     }
     var program = gl.createProgram(); if (!program) throw new Error('Program allocation failed');
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
-      'attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; void main(){vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=local*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
+      'attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=local*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
-      '\nvarying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
-      'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
-      'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
-      'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
-      // Packed physical centers and normals define circular local tangent disks.
-      'vec4 impactTexel(float impact,float offset){return texture2D(uCraterData,vec2((impact*5.+offset+.5)/uCraterTextureWidth,.5));}\n'+
-      'vec4 globeCraters(vec3 p){float h=0.;vec3 grad=vec3(0.);float occ=0.;'+
-      'for(int i=0;i<288;i++){if(float(i)<uCraterCount){float fi=float(i);vec4 t0=impactTexel(fi,0.);vec4 t1=impactTexel(fi,1.);vec4 t2=impactTexel(fi,2.);vec4 t3=impactTexel(fi,3.);vec4 t4=impactTexel(fi,4.);vec3 center=vec3(unpack16(t0.rg),unpack16(t0.ba),unpack16(t1.rg))*2.4-1.2;vec3 axis=normalize(vec3(unpack16(t1.ba),unpack16(t2.rg),unpack16(t2.ba))*2.-1.);float size=unpack16(t3.rg)*.4;vec3 d=p-center;if(length(d)<size*1.6){vec3 tangent=d-axis*dot(d,axis);float distance=length(tangent);float q=distance/max(.001,size);if(q<1.35){float depth=unpack16(t3.ba)*.12;float rimScale=unpack16(t4.rg);vec3 dq=distance>.00001?tangent/(distance*size):vec3(0.);float t=clamp((q-.7)/.48,0.,1.);float mask=t*t*(3.-2.*t);float dm=(q>.7&&q<1.18)?6.*t*(1.-t)/.48:0.;grad=grad*mask+h*dm*dq;h*=mask;if(q<1.){h-=(1.-q*q)*depth;grad+=2.*depth*q*dq;occ=max(occ,(1.-q)*.42);}float rd=(q-1.)/.16;float rim=exp(-rd*rd)*depth*.34*rimScale;h+=rim;grad+=rim*(-2.*(q-1.)/(.16*.16))*dq;}}}}return vec4(grad,min(.58,occ));}\n'+
-      'vec3 globeWeights(vec3 p){vec3 w=pow(abs(p),vec3(8.));return w/(w.x+w.y+w.z);}\n'+
-      // Solid 3D noise is sampled after deformation, in physical body space.
-      // No sphere normalization, ellipsoid rescaling or planar projection.
-      'float hash31(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453123);}\n'+
-      'float noise3(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash31(i),hash31(i+vec3(1,0,0)),f.x),mix(hash31(i+vec3(0,1,0)),hash31(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash31(i+vec3(0,0,1)),hash31(i+vec3(1,0,1)),f.x),mix(hash31(i+vec3(0,1,1)),hash31(i+vec3(1,1,1)),f.x),f.y),f.z);}\n'+
-      // Analytic value-noise derivatives: eight hashes per layer, not six noise evaluations.
-      'vec4 noiseGradient3(vec3 p){vec3 i=mod(floor(p),256.),t=fract(p),f=t*t*(3.-2.*t),df=6.*t*(1.-t);float a=hash31(i),b=hash31(i+vec3(1,0,0)),c=hash31(i+vec3(0,1,0)),d=hash31(i+vec3(1,1,0)),e=hash31(i+vec3(0,0,1)),g=hash31(i+vec3(1,0,1)),h=hash31(i+vec3(0,1,1)),j=hash31(i+vec3(1,1,1));float lo=mix(mix(a,b,f.x),mix(c,d,f.x),f.y),hi=mix(mix(e,g,f.x),mix(h,j,f.x),f.y);return vec4(mix(lo,hi,f.z),mix(mix(b-a,d-c,f.y),mix(g-e,j-h,f.y),f.z)*df.x,mix(mix(c-a,d-b,f.x),mix(h-e,j-g,f.x),f.z)*df.y,(hi-lo)*df.z);}\n'+
-      'vec3 rockBump(vec3 p,float fp){vec3 gradient=vec3(0.);float amplitude=1.,frequency=13.+uProfile.y*27.;mat3 basis=mat3(1.);for(int octave=0;octave<14;octave++){float visibility=1.-smoothstep(.28,.72,frequency*fp);if(visibility<.001)break;vec4 sampleValue=noiseGradient3(basis*p*frequency+vec3(uSeed*1.73+float(octave)*17.13));vec3 derivative=vec3(dot(basis[0],sampleValue.yzw),dot(basis[1],sampleValue.yzw),dot(basis[2],sampleValue.yzw));gradient+=derivative*frequency*amplitude*visibility*2.;basis=mat3(.36,.48,-.8,-.8,.60,0.,.48,.64,.60)*basis;frequency*=2.03;amplitude*=.49;}return gradient*uProfile.x*.0055;}\n'+
-      'vec3 globeColor(vec3 p){vec3 w=globeWeights(p);return materialColor(composition(p.yz))*w.x+materialColor(composition(p.zx))*w.y+materialColor(composition(p.xy))*w.z;}\n'+
+      '\nvarying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform float uShadowPass,uWorkShadowEnabled; uniform sampler2D uWorkShadow; uniform vec2 uSpotPower,uSpotFrustum; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
+      // Linear beam-depth, packed into RG for baseline WebGL without depth-texture extensions.
+      'float workVisibility(vec3 p){if(uWorkShadowEnabled<.5)return 1.;vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection);if(z<=uSpotPower.y*uSpotFrustum.y||z>=uSpotPower.y)return 1.;vec2 uv=vec2(dot(beam,uSpotRight),dot(beam,uSpotUp))*uSpotFrustum.x/z*.5+.5;if(min(uv.x,uv.y)<.001||max(uv.x,uv.y)>.999)return 1.;float receiver=z/uSpotPower.y-.001;float visibility=0.;for(int y=0;y<2;y++)for(int x=0;x<2;x++){vec2 tap=(floor(uv*1024.)+vec2(float(x),float(y))+.5)/1024.;vec2 depthBytes=texture2D(uWorkShadow,tap).rg;visibility+=step(receiver,depthBytes.x+depthBytes.y/255.);}return visibility*.25;}\n'+
+      ROCK_SURFACE_SHADER +
       // Filtered object-space height field: welds and fasteners resolve only nearby.
       'float shipLine(float d,float width,float fp){return (1.-smoothstep(width,width+fp,abs(d)))*(1.-smoothstep(width*2.,width*7.,fp));}'+
       'vec2 shipCell(vec2 p,vec2 period){return mod(p+period*.5,period)-period*.5;}'+
@@ -1223,15 +1112,16 @@
       'else if(uFinish<5.5){float edge=min(abs(x-44.3),abs(x-61.7));float panelEdge=abs(mod(abs(p.y)-12.+4.,8.)-4.);bolt=shipLine(length(vec2(edge,abs(panelEdge-3.1))),.055,fp);channel=shipLine(mod(p.y+.15,.3)-.15,.018,fp);weld=shipLine(edge,.035,fp);}'+
       'else{mark=(.5+.5*cos((p.x+p.y+p.z)*12.))*close;}return vec4(bolt,weld,channel,mark); }'+
       // Feather orange paint; preserve texture variation while respecting target paint brightness.
-      'void main(){if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);}'+
+      'void main(){if(uShadowPass>.5){if(uOpacity<.99)discard;if(uTextured>.5&&texture2D(uShipTexture,vUV).a<.5)discard;float depth=clamp(dot(vRelative-uSpotPosition,uSpotDirection)/uSpotPower.y,0.,.99999);vec2 depthBytes=fract(vec2(1.,255.)*depth);depthBytes.x-=depthBytes.y/255.;gl_FragColor=vec4(depthBytes,0.,1.);return;}if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);}'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
       'vec3 fineGradient=rockBump(vLocal,footprint);if(exterior>.5){vec3 bump=rotateNormal(fineGradient+crater.xyz);bump-=bodyNormal*dot(bump,bodyNormal);n=normalize(bodyNormal-bump);}'+
       'else{vec3 bump=rotateNormal(fineGradient);n=normalize(n-(bump-n*dot(bump,n))*.6);occ=clamp((uCutHeight-vLocal.z)*1.1,0.,.22);}'+
       'float ndl=max(0.,dot(n,light));float sunlight=exterior>.5?smoothstep(-.03,.10,dot(bodyNormal,light)):1.;float lit=pow(ndl,.82)*sunlight;'+
+      'vec3 toLamp=uSpotPosition-vRelative;float lampDistance=max(.0001,length(toLamp));vec3 lampDirection=toLamp/lampDistance;float cone=smoothstep(.80,.94,dot(-lampDirection,uSpotDirection));float reach=lampDistance/max(.0001,uSpotPower.y);float fade=1.-smoothstep(.7,1.,reach);float localLight=uSpotPower.x*cone*fade*fade/(1.+16.*reach*reach)*max(0.,dot(n,lampDirection))*workVisibility(vRelative);'+
       'float ambient=.17*(1.-occ*.7);float brightness=ambient+lit*.98;'+
-      'col=globeColor(sphere)*brightness;col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
+      'col=globeColor(sphere)*(vec3(brightness)+vec3(.88,.94,1.)*localLight*(1.-occ*.5));col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
       '}else if(uHabitat>.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float angle=atan(vLocal.y,vLocal.z);vec2 p=vec2(vLocal.x,(angle-uSpin)*17.);float shell=1.-smoothstep(30.,35.5,abs(vLocal.x));vec3 masks=hullMasks(p,fp);n=mix(n,hullSurface(p,n,angle,fp),shell);float diffuse=max(0.,dot(n,light));'+
       'vec2 plate=floor((p+vec2(5.,4.45))/vec2(10.,8.9));float tone=hash31(vec3(plate,2.));vec3 base=vec3(.82,.79,.70)*(.94+.09*tone);float seam=min(abs(shipCell(p,vec2(10.,8.9)).x),abs(shipCell(p,vec2(10.,8.9)).y));float cavity=1.-smoothstep(.06,.06+fp,seam);base*=1.-cavity*.22;'+
       'float close=1.-smoothstep(.018,.08,fp);float grain=noise3(vec3(p*70.,4.));base*=1.+(grain-.5)*.055*close;float grime=noise3(vec3(p*.45,3.))*exp(-seam*7.);base*=1.-grime*.14;col=base*(.26+diffuse*.88);'+
@@ -1245,12 +1135,29 @@
     var uv = gl.getAttribLocation(program,'aUV');
     var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
-    ['Opacity', 'CraftFill', 'HullDepth', 'Flat', 'Finish', 'AxialSpin', 'Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
+    ['SpotFrustum', 'SpotRight', 'SpotUp', 'ShadowPass', 'WorkShadowEnabled', 'WorkShadow', 'SpotPosition', 'SpotDirection', 'SpotPower', 'Opacity', 'CraftFill', 'HullDepth', 'Flat', 'Finish', 'AxialSpin', 'Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
     uniforms.Textured=gl.getUniformLocation(program,'uTextured');uniforms.ShipTexture=gl.getUniformLocation(program,'uShipTexture');
     uniforms.Paint=gl.getUniformLocation(program,'uPaint');uniforms.PaintEnabled=gl.getUniformLocation(program,'uPaintEnabled');
     gl.uniform1i(uniforms.ShipTexture,1);
 
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
+    /** @type {{texture:WebGLTexture,framebuffer:WebGLFramebuffer,depth:WebGLRenderbuffer}|null} */
+    var workShadow = null;
+    function allocateWorkShadow() {
+      if (workShadow) return workShadow;
+      var texture=gl.createTexture(), framebuffer=gl.createFramebuffer(), depth=gl.createRenderbuffer();
+      if (!texture || !framebuffer || !depth) throw new Error('Work-light shadow allocation failed');
+      gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,texture);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1024,1024,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);
+      gl.bindRenderbuffer(gl.RENDERBUFFER,depth);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,1024,1024);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE) throw new Error('Work-light shadow framebuffer incomplete');
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.bindRenderbuffer(gl.RENDERBUFFER,null);gl.activeTexture(gl.TEXTURE0);
+      workShadow={texture:texture,framebuffer:framebuffer,depth:depth};return workShadow;
+    }
     /** @param {Asteroid} asteroid */
     function craterTexture(asteroid) {
       var texture = gl.createTexture(); if (!texture) throw new Error('Crater texture allocation failed');
@@ -1311,6 +1218,7 @@
     function setFinish(finish){materialFinish=finish;gl.uniform1f(uniforms.Finish,finish);}
     /** @param {Mesh} mesh @param {V3} origin @param {V3} scale @param {number} rotation @param {V3} color @param {boolean} [rock] @param {boolean} [lines] */
     function draw(mesh, origin, scale, rotation, color, rock, lines) {
+      if (shadowPass && lines) return;
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
       gl.enableVertexAttribArray(pos); gl.enableVertexAttribArray(normal);
       var stride=(mesh.stride||6)*4;
@@ -1469,6 +1377,13 @@
     });
     window.addEventListener('keyup', function (e) { if (e.code === 'Space') space = false; });
     window.addEventListener('blur', function () { space = false; drag = null; });
+    var spotlightButton = toolbar.querySelector('[data-spotlight]');
+    if (spotlightButton) spotlightButton.addEventListener('click', function () {
+      spotlightEnabled = !spotlightEnabled;
+      if (spotlightButton) spotlightButton.setAttribute('aria-pressed', String(spotlightEnabled));
+    });
+    var workShadowButton=toolbar.querySelector('[data-work-shadows]');
+    if(workShadowButton)workShadowButton.addEventListener('click',function(){workShadowsEnabled=!workShadowsEnabled;if(workShadowButton)workShadowButton.setAttribute('aria-pressed',String(workShadowsEnabled));});
     var cutButton = toolbar.querySelector('[data-cut]');
     var overviewButton = toolbar.querySelector('[data-overview]');
     var topButton = toolbar.querySelector('[data-top]');
@@ -1501,7 +1416,7 @@
       Object.keys(rocks).forEach(function (id) {
         if (!w.asteroids.some(function (a) { return a.id === id; })) {
           gl.deleteBuffer(rocks[id].mesh.buffer); gl.deleteTexture(rocks[id].texture);
-          delete rocks[id]; delete geology[id]; delete shells[id]; delete impacts[id];
+          delete surfaceLamps[id]; delete rocks[id]; delete geology[id]; delete shells[id]; delete impacts[id];
         }
       });
       w.asteroids.forEach(function (a) {
@@ -1528,18 +1443,47 @@
     }
     /** @param {World} w @param {number} alpha @param {number} dt @param {number} wallDt */
     function render(w, alpha, dt, wallDt) {
+      var started=performance.now(), shadowCalls=0, shadowTriangles=0;
+      if(spotlightEnabled && workShadowsEnabled && w.asteroids.length && diagnostics.mode==='normal'){
+        allocateWorkShadow();shadowPass=true;
+        try {renderFrame(w,alpha,0,0);shadowCalls=renderStats.drawCalls;shadowTriangles=renderStats.triangles;}
+        finally {shadowPass=false;gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.enable(gl.DITHER);}
+      }
+      renderFrame(w,alpha,dt,wallDt);
+      renderStats.shadowDrawCalls=shadowCalls;renderStats.shadowTriangles=shadowTriangles;
+      renderStats.drawCalls+=shadowCalls;renderStats.triangles+=shadowTriangles;renderStats.cpuMs=performance.now()-started;
+    }
+    /** @param {World} w @param {number} alpha @param {number} dt @param {number} wallDt */
+    function renderFrame(w, alpha, dt, wallDt) {
       var renderStart=performance.now();renderStats.drawCalls=0;renderStats.triangles=0;renderStats.lines=0;frameMeshes.clear();frameMaterials.clear();
       var vp = viewport(); if (vp.width < 1 || vp.height < 1) return;
       var dpr = Math.min(2, window.devicePixelRatio || 1)*(study?diagnostics.scale:1);
       var width = Math.round(vp.width * dpr), height = Math.round(vp.height * dpr);
       if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; overlay.width = width; overlay.height = height; }
-      gl.viewport(0, 0, width, height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,shadowPass && workShadow ? workShadow.framebuffer : null);
+      gl.viewport(0,0,shadowPass?1024:width,shadowPass?1024:height);
+      gl.disable(gl.BLEND);gl.depthMask(true);if(shadowPass)gl.disable(gl.DITHER);
+      gl.clearColor(shadowPass?1:0,shadowPass?1:0,shadowPass?1:0,shadowPass?1:0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       renderStats.width=width;renderStats.height=height;renderStats.pixelRatio=dpr;
       if(study&&diagnostics.mode==='empty'){hud.clearRect(0,0,overlay.width,overlay.height);renderStats.meshes=0;renderStats.materials=0;renderStats.cpuMs=performance.now()-renderStart;return;}
       gl.useProgram(program);gl.uniform1f(uniforms.Opacity,1);gl.uniform1f(uniforms.Flat,study&&diagnostics.flat?1:0);var v = view(w.camera, vp, orbit);
       gl.uniform3fv(uniforms.Target, [w.camera.x, w.camera.y, orbit.height || 0]); gl.uniform3fv(uniforms.Right, v.right);
       gl.uniform3fv(uniforms.Up, v.up); gl.uniform3fv(uniforms.Back, v.back);
       gl.uniform4fv(uniforms.View, [v.distance, v.focal, vp.width / vp.height, 0]);
+      gl.uniform1f(uniforms.ShadowPass,shadowPass?1:0);
+      gl.uniform1f(uniforms.WorkShadowEnabled,!shadowPass && spotlightEnabled && workShadowsEnabled && workShadow?1:0);
+      gl.uniform1i(uniforms.WorkShadow,2);gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D,!shadowPass && workShadow?workShadow.texture:null);gl.activeTexture(gl.TEXTURE0);
+      var owner=w.asteroids[0];
+      if(spotlightEnabled && owner){
+        var visual=visualFor(owner), cachedLamp=surfaceLamps[owner.id];
+        if(!cachedLamp || cachedLamp.visual!==visual)cachedLamp=surfaceLamps[owner.id]={visual:visual,lamp:surfaceSpotlight(owner)};
+        var lamp=cachedLamp.lamp, lampFrame=workLightFrame(owner,lamp,w.camera,orbit.height||0);
+        gl.uniform3fv(uniforms.SpotPosition,lampFrame.position);gl.uniform3fv(uniforms.SpotDirection,lampFrame.direction);
+        gl.uniform3fv(uniforms.SpotRight,lampFrame.right);gl.uniform3fv(uniforms.SpotUp,lampFrame.up);
+        gl.uniform2f(uniforms.SpotFrustum,lampFrame.focal,lampFrame.near/lamp.range);
+        gl.uniform2f(uniforms.SpotPower,2,lamp.range);
+      }else gl.uniform2f(uniforms.SpotPower,0,1);
       w.asteroids.forEach(function (a) {
         if(study&&diagnostics.mode==='boxes'){draw(box,[a.position.x,a.position.y,0],[a.radius,a.radius,a.radius*.78],a.rotation,[.45,.43,.4]);return;}
         var rock = rocks[a.id]; if (!rock) return;
@@ -1648,7 +1592,7 @@
       w.packets.forEach(function (p) { draw(box, [p.position.x, p.position.y, 0], [2 / w.camera.zoom, 2 / w.camera.zoom, 2 / w.camera.zoom], 0, [0.9, 0.75, 0.3]); });
       if (stress) for (var j = 0; j < 1000; j++) draw(box, [Math.sin(j * 12.3 + w.elapsedSeconds * 0.01) * 1600,
         Math.cos(j * 7.1) * 1200, 0], [3, 1, 1], j, [0.3, 0.5, 0.6]);
-      effects.forEach(function (fx) {
+      if (!shadowPass) effects.forEach(function (fx) {
         fx.age += dt;
         if (fx.event.kind === 'weapon-fired' && fx.event.source) line([fx.event.source.x, fx.event.source.y, 0], [fx.event.position.x, fx.event.position.y, 0], 'rgba(255,160,100,' + Math.max(0, 1 - fx.age / 0.2) + ')');
       });
@@ -1674,6 +1618,7 @@
       gl.uniform1f(uniforms.Opacity,1);
       bindShipTexture(undefined);
       gl.uniform1f(uniforms.CraftFill,0);
+      if(shadowPass)return;
       if(study && studyEffects.length){
         gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.depthMask(false);
         setFinish(9);gl.uniform1f(uniforms.Habitat,0);gl.uniform1f(uniforms.AxialSpin,0);
@@ -1730,9 +1675,11 @@
       }
     };
   }
-  DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
+  DW.scene3d = { rockSurfaceShader: function(){if(!DW.asteroidArt)throw new Error('Missing asteroid artwork');return DW.asteroidArt.shaderSource+ROCK_SURFACE_SHADER;}, create: create, project: project, unproject: unproject, view: view,
     miningPlatformGeometry: miningPlatformGeometry,
-    miningPlatformInfillGeometry: function(){return miningPlatformGeometry(1,0,false,'rampdock',0,'',false,true);},
-    /** @param {number} deployment */ miningPlatformLegGeometry: function(deployment){return miningPlatformGeometry(deployment,0,false,'rampdock',0,'',true);}, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, pickStudySurface: pickStudySurface, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
+    /** @param {number} deployment @param {number} panelOpen @param {string} interiorCut @param {{knee:V3,tip:V3,normal:V3}[]} poses @param {number[]} [rampLimits] */
+    miningPlatformContactGeometry: function(deployment,panelOpen,interiorCut,poses,rampLimits){return miningPlatformGeometry(deployment,0,false,panelOpen,interiorCut,false,false,poses,rampLimits);},
+    miningPlatformInfillGeometry: function(){return miningPlatformGeometry(1,0,false,0,'',false,true);},
+    /** @param {number} deployment */ miningPlatformLegGeometry: function(deployment){return miningPlatformGeometry(deployment,0,false,0,'',true);}, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
+    workLightFrame: workLightFrame, surfaceSpotlight: surfaceSpotlight, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, pickStudySurface: pickStudySurface, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

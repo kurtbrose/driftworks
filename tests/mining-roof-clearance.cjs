@@ -1,8 +1,12 @@
 const assert=require('node:assert/strict');
 const {poses,tree,query,bounds}=require('./mining-leg-clearance.cjs');
 const model=global.Driftworks.scene3d.miningPlatformGeometry;
-const closed=model(1,0,false,'rampdock',0),movingA=model(1,0,false,'rampdock',.257),movingB=model(1,0,false,'rampdock',.733);
+const closed=model(1,0,false,0),movingA=model(1,0,false,.257),movingB=model(1,0,false,.733);
 assert.deepEqual(closed.dark,movingB.dark,'Black frame and infill remain stationary while yellow leaves fold');
+// The front and side leaves must reach the local tower envelope, not the former .65 hull scale.
+const frontRoof=closed.ochre.slice(10*18,12*18),sideRoof=closed.ochre.slice((2*20+10)*18,(2*20+12)*18);
+assert.ok(Math.min(...[0,6,12,18,24,30].map(k=>frontRoof[k]))<7.5,'Front roof retains its useful reach toward the tower');
+assert.ok(Math.min(...[0,6,12,18,24,30].map(k=>sideRoof[k+1]))<5.8,'Side roof uses local tower clearance rather than global shortening');
 const infill=global.Driftworks.scene3d.miningPlatformInfillGeometry();
 assert.ok(infill.dark.length>0 && !infill.ochre.length,'Fixed infill uses black rather than moving yellow material');
 const fixed=[];

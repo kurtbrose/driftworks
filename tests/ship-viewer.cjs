@@ -38,6 +38,16 @@ const vm = require('node:vm');
   await new Promise(setImmediate);
   assert.equal(paint, '#8040ff');
   assert.equal(element('paint-enabled').checked, true);
-  console.log('PASS inspector paint controls');
+  DW.originalShipModels=[{id:'driftworks:mining-rig',name:'Asteroid mining rig',author:'Driftworks',study:'../tests/mining-platform-orbit.html',provenance:'../assets/ships/driftworks-originals/README.md',geometry:()=>[{vertices:new Float32Array(18),color:[.8,.6,.3]}]}];
+  scene.setStudyEffects=()=>{};
+  element('ship-model').value='driftworks:mining-rig';element('ship-model').onchange();
+  await new Promise(setImmediate);
+  assert.equal(element('paint-enabled').disabled,true);assert.equal(element('show-engines').disabled,true);
+  assert.ok(element('metadata').textContent.includes('Driftworks original'));
+  assert.equal(element('source').href,'../tests/mining-platform-orbit.html');
+  assert.ok(element('provenance').href.includes('driftworks-originals'));
+  element('ship-model').value='ship';element('ship-model').onchange();await new Promise(setImmediate);
+  assert.equal(element('paint-enabled').disabled,false);assert.equal(element('show-engines').disabled,false);
+  console.log('PASS inspector paint controls and distinct original model catalog entry');
 })().catch(error => {console.error(error); process.exitCode = 1;});
 

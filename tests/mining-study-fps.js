@@ -48,7 +48,7 @@ const status=panel.querySelector('#fps-status');
 function box(x,y,z,w,d,h,color){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,d,h),new THREE.MeshStandardMaterial({color,side:THREE.DoubleSide}));mesh.position.set(x,y,z);rig.add(mesh);return mesh;}
 function build(){
   while(rig.children.length){const m=rig.children[0];rig.remove(m);m.geometry.dispose();m.material.dispose();}
-  const batches=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',1,'');
+  const batches=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,1,'');
   for(const [key,data] of Object.entries(batches)){
     const positions=[],normals=[],glass=[];
     for(let i=0;i<data.length;i+=18){

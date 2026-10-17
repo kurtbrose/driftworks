@@ -12,12 +12,12 @@
     /** @typedef {import('./types').Comparison} Comparison */
     /** @typedef {import('./types').Batch} Batch */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks);
-    /** Existing design 07 and source astronauts, in world units; no saved entities.
+    /** Current mining rig and source astronauts, in world units; no saved entities.
      * @param {World} world @returns {Batch[]}
      */
     function surfaceCrews(world) {
-        var closedRig = DW.scene3d.miningPlatformGeometry(1, 0, false, 'rampdock', 0, '');
-        var openRig = DW.scene3d.miningPlatformGeometry(1, 0, false, 'rampdock', 1, '');
+        var closedRig = DW.scene3d.miningPlatformGeometry(1, 0, false, 0, '');
+        var openRig = DW.scene3d.miningPlatformGeometry(1, 0, false, 1, '');
         /** @type {Record<string, [number,number,number]>} */
         var colors = {ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49]};
         var units = DW.sim.METERS_PER_UNIT, rigScale = 36 / 32;

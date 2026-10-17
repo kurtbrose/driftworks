@@ -11,7 +11,7 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
 .view .hint{position:absolute;bottom:10px;left:18px;color:#8198a5;font-size:11px;pointer-events:none}.scene3d-controls{display:none}canvas{display:block}
 @media(max-width:600px){header{padding:12px}h1{font-size:17px}.study-controls{gap:10px;font-size:12px}input[type=range]{width:85px}.view h2{left:10px;top:10px;font-size:12px}.view .hint{left:10px;font-size:10px}header p{display:none}}
 </style>
-<header><h1>Mining pod - four-view study</h1><div class="study-controls"><label for="design">Design <select id="design"><option value="rampdock" selected>07 - Inter-leg ramps / cage</option><option value="drydock">06 - Surface drydock / full hold</option><option value="workboat">05 - Crew cabin / cargo deck</option><option value="fabricated">04 - Fabricated plate hull</option><option value="pod">01 - Bean / equal clamps</option><option value="anchors">02 - Four anchors / four braces</option><option value="recessed">03 - Recessed / heavy crusher</option><option value="original">Original 3D interpretation</option></select></label><label>Interior <select id="interior"><option value="">Exterior</option><option value="lower">Pod entry plan</option><option value="upper">Upper control cutaway</option></select></label><label for="deployment">Deployment <input id="deployment" type="range" min="0" max="1" step=".01" value="1"></label><label>Bay ramps <input id="covers" type="range" min="0" max="1" step=".01" value="0"></label><label>Cargo <input id="cargo" type="range" min="0" max="1" step=".01" value="0"><output id="cargo-count">Empty</output></label><label><input id="grey" type="checkbox"> Grey silhouette</label><label><input id="crew" type="checkbox" checked> Astronauts</label><label>Rig length <input id="rig-length" type="hidden" value="36"><output id="scale-value">36 m (locked)</output></label><label><input id="surface" type="checkbox"> Asteroid surface</label><label><input id="fighter" type="checkbox" checked> Fighter (12 m)</label><button id="explore">First person</button><button id="reset">Reset orbit view</button><a href="../?renderer=3d">Back to game</a></div><p>Side, front and top stay fixed. Drag the raised view to swing around the pod; wheel to zoom, middle or Space + drag to pan.</p><p id="crew-status" role="status">Loading local Quaternius astronauts...</p></header>
+<header><h1>Mining pod - four-view study</h1><div class="study-controls"><label>Interior <select id="interior"><option value="">Exterior</option><option value="lower">Pod entry plan</option><option value="upper">Upper control cutaway</option></select></label><label for="deployment">Deployment <input id="deployment" type="range" min="0" max="1" step=".01" value="1"></label><label>Bay ramps <input id="covers" type="range" min="0" max="1" step=".01" value="0"></label><label>Cargo <input id="cargo" type="range" min="0" max="1" step=".01" value="0"><output id="cargo-count">Empty</output></label><label><input id="grey" type="checkbox"> Grey silhouette</label><label><input id="crew" type="checkbox" checked> Astronauts</label><label>Rig length <input id="rig-length" type="hidden" value="36"><output id="scale-value">36 m (locked)</output></label><label><input id="surface" type="checkbox"> Asteroid surface</label><label><input id="terrain-fit" type="checkbox" checked> Fit anchors</label><label><input id="contact-debug" type="checkbox" checked> Contact targets</label><label>Landing site <input id="landing-site" type="range" min="-48" max="48" step="8" value="0"></label><output id="landing-status" role="status"></output><label><input id="fighter" type="checkbox" checked> Fighter (12 m)</label><button id="explore">First person</button><button id="reset">Reset orbit view</button><a href="../experiments/ship-packs.html?model=driftworks%3Amining-rig">Ship model catalog</a><a href="../?renderer=3d">Back to game</a></div><p>Anchor fitting uses the rendered rock mesh; ramps stop independently at first ground contact. Side, front and top stay fixed. Drag the raised view to swing around the pod; wheel to zoom, middle or Space + drag to pan.</p><p id="crew-status" role="status">Loading local Quaternius astronauts...</p></header>
 <main class="views">
 <section class="view fixed"><h2>Side</h2><div id="side" class="viewport scene"></div></section>
 <section class="view fixed"><h2>Front - transfer / launch</h2><div id="front" class="viewport scene"></div></section>
@@ -35,6 +35,7 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
 <script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js"></script>
 <script src="../experiments/ship-packs.js"></script>
+<script src="./mining-study-terrain.js"></script>
 <script src="./mining-study-context.js"></script>
 <script src="./mining-study-cargo.js"></script>
 <script type="module" src="./mining-study-crew.js"></script>
@@ -55,7 +56,7 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
   });
   document.getElementById('reset').onclick=function(){var view=views[3];view.fit();view.scene.setOrbit(Object.assign({},poses.orbit,{height:(document.getElementById('surface').checked?Driftworks.miningStudyContext.base:0)+(document.getElementById('surface').checked || document.getElementById('fighter').checked?12:7)}));};
   ['surface','fighter'].forEach(function(id){document.getElementById(id).onchange=function(){crewCache.key='';views.forEach(function(view){view.fit();});};});
-  document.getElementById('interior').onchange=function(){if(this.value){document.getElementById('design').value='rampdock';document.getElementById('covers').value='1';}crewCache.key='';};
+  document.getElementById('interior').onchange=function(){if(this.value){document.getElementById('covers').value='1';}crewCache.key='';};
   var placements=[
     {position:[-9,19,0],yaw:0,pose:'standing'},
     {position:[21,5,0],yaw:Math.PI/2,pose:'standing'},
@@ -65,42 +66,78 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
   ];
   var crewCache={key:'',batches:[]};
   function crewActors(){
+    var landingKey=document.getElementById('terrain-fit').checked&&document.getElementById('surface').checked?document.getElementById('landing-site').value:'off';
+    var groundFit=landingKey==='off'?null:Driftworks.miningStudyContext.landing(Number(landingKey));
     var state=Driftworks.miningStudyCrew,length=Number(document.getElementById('rig-length').value);
     document.getElementById('scale-value').textContent=length+' m (locked)';
-    document.getElementById('crew-status').textContent=state && state.error?'Astronaut load failed: '+state.error:state && state.poses?'1.8 m suits / '+length+' m main hull. Frozen poses: beside gripper, near transfer interface, on deck, beneath the downward airlock, on roof landing pad (design 07). Quaternius / CC0.':'Loading local Quaternius astronauts...';
+    document.getElementById('crew-status').textContent=state && state.error?'Astronaut load failed: '+state.error:state && state.poses?'1.8 m suits / '+length+' m main hull. Frozen poses: beside gripper, near transfer interface, on deck, beneath the downward airlock, on roof landing pad. Quaternius / CC0.':'Loading local Quaternius astronauts...';
     if(document.getElementById('interior').value)document.getElementById('crew-status').textContent=document.getElementById('interior').value==='lower'?'Pod entry plan: downward airlock / side pressure door / handholds to the clear cargo deck. 1.8 m scale figures.':'Control cutaway: open bridge floor / clear translation well / sectioned perimeter walls / roof-hatch handholds. 1.8 m scale figure.';
     if(!document.getElementById('crew').checked || !state || !state.poses)return [];
-    if(crewCache.key===length+':'+document.getElementById('surface').checked+':'+document.getElementById('interior').value)return crewCache.batches;
+    if(crewCache.key===length+':'+document.getElementById('surface').checked+':'+document.getElementById('interior').value+':'+landingKey)return crewCache.batches;
     var height=1.8*32/length,groups={};
     var people=document.getElementById('interior').value==='lower'?[{position:[-2,0,7.35],yaw:Math.PI,pose:'standing'},{position:[0,-2,7.35],yaw:0,pose:'standing'}]:document.getElementById('interior').value==='upper'?[{position:[-2,-1.8,10],yaw:0,pose:'standing'},{position:[.2,2.5,10],yaw:Math.PI,pose:'standing'}]:placements;
     people.forEach(function(placement){
+      var position=placement.position;
+      if(groundFit&&position[2]===0){var target=groundFit.world(position),hit=groundFit.sample.at(target[0],target[1]);if(hit)position=groundFit.local(hit.point);}
+
       state.poses[placement.pose].forEach(function(batch,index){
         var target=groups[index] || (groups[index]={vertices:[],color:batch.color}),c=Math.cos(placement.yaw),s=Math.sin(placement.yaw);
         for(var i=0;i<batch.vertices.length;i+=6){
           var v=batch.vertices,x=v[i],y=v[i+1],z=v[i+2],nx=v[i+3],ny=v[i+4];
-          target.vertices.push(placement.position[0]+(x*c-y*s)*height,placement.position[1]+(x*s+y*c)*height,placement.position[2]+(placement.position[2]===0 && document.getElementById('surface').checked?Driftworks.miningStudyContext.height(placement.position[0],placement.position[1])-Driftworks.miningStudyContext.base:0)+z*height,nx*c-ny*s,nx*s+ny*c,v[i+5]);
+          target.vertices.push(position[0]+(x*c-y*s)*height,position[1]+(x*s+y*c)*height,position[2]+(!groundFit && placement.position[2]===0 && document.getElementById('surface').checked?Driftworks.miningStudyContext.height(placement.position[0],placement.position[1])-Driftworks.miningStudyContext.base:0)+z*height,nx*c-ny*s,nx*s+ny*c,v[i+5]);
         }
       });
     });
-    crewCache={key:length+':'+document.getElementById('surface').checked+':'+document.getElementById('interior').value,batches:Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key].vertices),color:groups[key].color};})};
+    crewCache={key:length+':'+document.getElementById('surface').checked+':'+document.getElementById('interior').value+':'+landingKey,batches:Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key].vertices),color:groups[key].color};})};
     return crewCache.batches;
   }
-  var previous=0,elapsed=0;
+  var previous=0,elapsed=0,lastSceneKey="",lastActorKey="",cachedActors=[],lastStatsTime=0;
+  var performanceStats={stateChecks:0,actorBuilds:0,viewRenders:0};
+  window.miningStudyPerformance={snapshot:function(){return Object.assign({},performanceStats,Driftworks.miningStudyContext.performance());}};
   function frame(now){
     requestAnimationFrame(frame);
     if(window.miningFPSActive)return;
     if(previous && now-previous<1000/30)return;
     elapsed+=previous?Math.min(.1,(now-previous)/1000):0;previous=now;
-    var groups=Driftworks.scene3d.miningPlatformGeometry(Number(document.getElementById('deployment').value),elapsed,false,document.getElementById('design').value,Number(document.getElementById('covers').value),document.getElementById('interior').value);
+    // This is a static geometry study: redraw on edits, camera input, resize or crew loading.
+    // Avoid continuously shading four large asteroid views while the user is idle.
+    performanceStats.stateChecks++;
+    if(now-lastStatsTime>1000){lastStatsTime=now;document.documentElement.dataset.miningPerformance=JSON.stringify(window.miningStudyPerformance.snapshot());}
+    var actorKey=['deployment','covers','interior','cargo','grey','crew','surface','fighter','terrain-fit','contact-debug','landing-site'].map(function(id){var control=document.getElementById(id);return control.type==='checkbox'?control.checked:control.value;}).join(':')+':'+!!(Driftworks.miningStudyCrew&&Driftworks.miningStudyCrew.poses);
+    var sceneKey=actorKey+':'+innerWidth+':'+innerHeight+':'+JSON.stringify(views[3].scene.getOrbit())+':'+JSON.stringify(views[3].world().camera);
+    if(sceneKey===lastSceneKey)return;lastSceneKey=sceneKey;
+    var context=Driftworks.miningStudyContext,surface=document.getElementById('surface').checked;
+    var landing=surface&&document.getElementById('terrain-fit').checked?context.landing(Number(document.getElementById('landing-site').value)):null;
+    var rampLimits=landing&&Number(document.getElementById('covers').value)>0?context.ramps(Number(document.getElementById('landing-site').value)):null;
+    var deployment=Number(document.getElementById('deployment').value);
+    var contactPoses=landing?landing.contacts.map(function(c){var reach=1.5+6*deployment*.55,tipReach=2+6*deployment;
+      var oldKnee=[c.mount[0]+c.out[0]*reach,c.mount[1]+c.out[1]*reach,4],oldTip=[c.mount[0]+c.out[0]*tipReach,c.mount[1]+c.out[1]*tipReach,1.4+(1-deployment)*2];
+      return {knee:oldKnee.map(function(v,k){return v+(c.knee[k]-v)*deployment;}),tip:oldTip.map(function(v,k){return v+(c.tip[k]-v)*deployment;}),normal:c.normal.map(function(v,k){return (k===2?1:0)*(1-deployment)+v*deployment;})};}):null;
+    document.getElementById('landing-status').textContent=landing?(landing.valid?'Site fits':'Unsuitable site')+' / '+landing.contacts.filter(function(c){return c.reachable;}).length+'/8 reachable / chassis clearance '+(landing.clearance*1.125).toFixed(1)+' m'+(rampLimits?' / '+rampLimits.filter(function(t){return t<1;}).length+' ground-limited ramps':''):surface?'Anchor fit off':'';
+    var actors=cachedActors;
+    if(actorKey!==lastActorKey){lastActorKey=actorKey;performanceStats.actorBuilds++;
+    var groups=contactPoses?Driftworks.scene3d.miningPlatformContactGeometry(deployment,Number(document.getElementById('covers').value),document.getElementById('interior').value,contactPoses,rampLimits):Driftworks.scene3d.miningPlatformGeometry(Number(document.getElementById('deployment').value),elapsed,false,Number(document.getElementById('covers').value),document.getElementById('interior').value);
     var fill=Number(document.getElementById('cargo').value);document.getElementById('cargo-count').textContent=fill===0?'Empty':Math.round(fill*100)+'%';
-    var actors=Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key]),color:document.getElementById('grey').checked?[.54,.56,.57]:colors[key]};}).concat(Driftworks.miningStudyCargo.geometry(fill),crewActors(),Driftworks.miningStudyContext.geometry(Number(document.getElementById('rig-length').value),document.getElementById('surface').checked,document.getElementById('fighter').checked));
-    var surface=document.getElementById('surface').checked,context=Driftworks.miningStudyContext;
-    if(surface)actors=actors.map(function(batch){var data=new Float32Array(batch.vertices);for(var i=2;i<data.length;i+=6)data[i]+=context.base;return Object.assign({},batch,{vertices:data});});
+    actors=Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key]),color:document.getElementById('grey').checked?[.54,.56,.57]:colors[key]};}).concat(Driftworks.miningStudyCargo.geometry(fill),crewActors(),Driftworks.miningStudyContext.geometry(Number(document.getElementById('rig-length').value),document.getElementById('surface').checked,document.getElementById('fighter').checked));
+    if(landing){
+      // Hull, deck cargo and onboard crew share the same rigid fitted chassis transform.
+      actors=actors.map(function(batch){return Driftworks.miningStudyTerrain.transform(batch,landing);});
+      if(document.getElementById('contact-debug').checked)landing.contacts.forEach(function(c){var p=c.worldPoint,z=p[2]+.06,r=.45,vertices=[];
+        [[[-r,0,0],[r,0,0],[0,0,1.2]],[[0,-r,0],[0,r,0],[0,0,1.2]]].forEach(function(tri){tri.forEach(function(v){vertices.push(p[0]+v[0],p[1]+v[1],z+v[2],0,0,1);});});
+        actors.push({vertices:new Float32Array(vertices),color:c.reachable?[.2,1,.55]:[1,.15,.1]});
+      });
+    }
+    else if(surface)actors=actors.map(function(batch){var data=new Float32Array(batch.vertices);for(var i=2;i<data.length;i+=6)data[i]+=context.base;return Object.assign({},batch,{vertices:data});});
+    cachedActors=actors;
+    }
+    var fixedKey=['deployment','covers','interior','cargo','grey','crew','surface','fighter','terrain-fit','contact-debug','landing-site'].map(function(id){var control=document.getElementById(id);return control.type==='checkbox'?control.checked:control.value;}).join(':')+':'+crewCache.key;
     views.forEach(function(view){
-      var world=view.world();world.elapsedSeconds=elapsed;world.asteroids=surface?[context.asteroid]:[];
+      if(view.id!=='orbit'){var viewKey=fixedKey+':'+view.host.clientWidth+':'+view.host.clientHeight;if(view.fixedKey===viewKey)return;view.fixedKey=viewKey;}
+      var world=view.world();if(landing){world.camera.x=landing.origin[0];world.camera.y=landing.origin[1];}else {world.camera.x=0;world.camera.y=0;}world.elapsedSeconds=elapsed;world.asteroids=surface?[context.asteroid]:[];
       if(view.id==='orbit'){var orbit=view.scene.getOrbit();if(Math.abs((orbit.height || 0)-(surface?context.base+12:12))>context.base/2)view.scene.setOrbit(Object.assign({},orbit,{height:surface?context.base+12:12}));}
       if(view.id!=='orbit'){view.fit();view.scene.setOrbit(Object.assign({},poses[view.id],{height:(document.getElementById('surface').checked?Driftworks.miningStudyContext.base:0)+(document.getElementById('surface').checked || document.getElementById('fighter').checked?12:7)}));}
-      view.scene.setStudyActors(actors);view.scene.sync(world);view.scene.render(world,1,0,0);
+      if(landing){if(view.id!=='orbit') {world.camera.x=landing.origin[0];world.camera.y=landing.origin[1];}var pose=view.scene.getOrbit();view.scene.setOrbit(Object.assign({},pose,{height:landing.origin[2]+8}));}
+      performanceStats.viewRenders++;view.scene.setStudyActors(actors);view.scene.sync(world);view.scene.render(world,1,0,0);
     });
   }
   requestAnimationFrame(frame);
