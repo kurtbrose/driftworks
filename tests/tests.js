@@ -1558,6 +1558,17 @@
     });
   });
 
+  test('crew interior has separate entry/control decks and an unobstructed microgravity translation opening', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry;
+    function floorAt(groups,x,y,z){var v=groups.steel;for(var i=0;i<v.length;i+=18){if(Math.abs(v[i+2]-z)>.001 || Math.abs(v[i+8]-z)>.001 || Math.abs(v[i+14]-z)>.001 || v[i+5]<.99)continue;var ax=v[i],ay=v[i+1],bx=v[i+6],by=v[i+7],cx=v[i+12],cy=v[i+13],d=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy);if(Math.abs(d)<1e-8)continue;var u=((by-cy)*(x-cx)+(cx-bx)*(y-cy))/d,w=((cy-ay)*(x-cx)+(ax-cx)*(y-cy))/d;if(u>=-.00001 && w>=-.00001 && u+w<=1.00001)return true;}return false;}
+    var lower=model(1,0,false,'rampdock',1,'lower'),upper=model(1,0,false,'rampdock',1,'upper');
+    assert(floorAt(lower,0,2,4.7),'Entry vestibule has a walkable floor');
+    assert(!floorAt(lower,0,2,10),'Lower inspection removes the upper floor');
+    assert(floorAt(upper,-2,2,10),'Control room has an upper floor');
+    assert(!floorAt(upper,2.8,0,10) && !floorAt(upper,2.8,0,9),'Both upper slabs leave the stairwell clear');
+    ['','lower','upper'].forEach(function(cut){var g=model(1,0,false,'rampdock',1,cut);Object.keys(g).forEach(function(k){assert(g[k].every(Number.isFinite));});});
+  });
+
   test('mining platform geometry folds legs without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var open=model(1,0,false),folded=model(0,0,false);
@@ -1726,6 +1737,8 @@
     assert(a.hash===b.hash&&a.hash!==other.hash);
     assert(a.triangles<6000&&a.rocks.length>=10&&a.rocks.length<60,'Fixed patch budget is independent of camera distance');
     assert(a.vertices.length===a.triangles*39);
+    assert(a.formations.length===a.rocks.length);
+    assert(JSON.stringify(a.formations)===JSON.stringify(build('rocks',1729,16).formations),'Formation boundaries and materials survive ground resolution changes');
     for(var i=0;i<a.vertices.length;i+=13){assert(a.vertices.slice(i,i+13).every(Number.isFinite));assertClose(Math.hypot(a.vertices[i+3],a.vertices[i+4],a.vertices[i+5]),1,.00001);}
     assert(a.rocks.some(function(r){return r.height>1;}),'Meter-scale masses are geometry');
     assert(new Set(a.rocks.map(function(r){return r.height.toFixed(2);})).size>8,'Coherent masses have different sizes');

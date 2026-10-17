@@ -1,0 +1,297 @@
+{
+  "version": 1,
+  "recordedAt": "2026-10-17T04:37:52.253Z",
+  "description": "Isolated fixed-patch benchmark, no main terrain changes",
+  "gpuTiming": "EXT_disjoint_timer_query; disjoint samples rejected",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "results": [
+    {
+      "scene": "block",
+      "view": "plain",
+      "camera": "oblique",
+      "eye": [
+        8,
+        -12,
+        8
+      ],
+      "target": [
+        0,
+        0,
+        0.3
+      ],
+      "seed": 1729,
+      "light": [
+        -0.654020602254296,
+        -0.6267697438270338,
+        0.4235761325310036
+      ],
+      "sunElevation": 25,
+      "resolution": 32,
+      "meshHash": "4ae2045d",
+      "triangles": 2058,
+      "width": 1470,
+      "height": 1080,
+      "frames": 90,
+      "frameMs": 26.93111111111112,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 1225.2999999999993,
+      "cpuMs": 0.10333333313465118,
+      "gpuMs": 0.04304213333333335,
+      "buildMs": 8.599999994039536,
+      "maxTransitionMs": 8.599999994039536,
+      "drawCalls": 1
+    },
+    {
+      "scene": "block",
+      "view": "material",
+      "camera": "oblique",
+      "eye": [
+        8,
+        -12,
+        8
+      ],
+      "target": [
+        0,
+        0,
+        0.3
+      ],
+      "seed": 1729,
+      "light": [
+        -0.654020602254296,
+        -0.6267697438270338,
+        0.4235761325310036
+      ],
+      "sunElevation": 25,
+      "resolution": 32,
+      "meshHash": "4ae2045d",
+      "triangles": 2058,
+      "width": 1470,
+      "height": 1080,
+      "frames": 90,
+      "frameMs": 13.317777777777781,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.5,
+      "cpuMs": 0.11333333386315239,
+      "gpuMs": 0.08316017777777777,
+      "buildMs": 25.100000023841858,
+      "maxTransitionMs": 25.100000023841858,
+      "drawCalls": 1
+    },
+    {
+      "scene": "cellular",
+      "view": "material",
+      "camera": "horizon",
+      "eye": [
+        0,
+        -8,
+        2
+      ],
+      "target": [
+        0,
+        0,
+        0.3
+      ],
+      "seed": 1729,
+      "light": [
+        -0.654020602254296,
+        -0.6267697438270338,
+        0.4235761325310036
+      ],
+      "sunElevation": 25,
+      "resolution": 32,
+      "meshHash": "40d4b93d",
+      "triangles": 2048,
+      "width": 1470,
+      "height": 1080,
+      "frames": 90,
+      "frameMs": 13.316666666666666,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.5,
+      "cpuMs": 0.1111111111111111,
+      "gpuMs": 0.0902826666666667,
+      "buildMs": 61.400000005960464,
+      "maxTransitionMs": 61.400000005960464,
+      "drawCalls": 1
+    },
+    {
+      "scene": "rocks",
+      "view": "plain",
+      "camera": "horizon",
+      "eye": [
+        0,
+        -8,
+        2
+      ],
+      "target": [
+        0,
+        0,
+        0.3
+      ],
+      "seed": 1729,
+      "light": [
+        -0.654020602254296,
+        -0.6267697438270338,
+        0.4235761325310036
+      ],
+      "sunElevation": 25,
+      "resolution": 32,
+      "meshHash": "d4617876",
+      "triangles": 2696,
+      "width": 1470,
+      "height": 1080,
+      "frames": 90,
+      "frameMs": 13.317777777777781,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.5,
+      "cpuMs": 0.10111110905806224,
+      "gpuMs": 0.12918328888888886,
+      "buildMs": 28.400000005960464,
+      "maxTransitionMs": 28.400000005960464,
+      "drawCalls": 1
+    },
+    {
+      "scene": "rocks",
+      "view": "material",
+      "camera": "horizon",
+      "eye": [
+        0,
+        -8,
+        2
+      ],
+      "target": [
+        0,
+        0,
+        0.3
+      ],
+      "seed": 1729,
+      "light": [
+        -0.654020602254296,
+        -0.6267697438270338,
+        0.4235761325310036
+      ],
+      "sunElevation": 25,
+      "resolution": 32,
+      "meshHash": "d4617876",
+      "triangles": 2696,
+      "width": 1470,
+      "height": 1080,
+      "frames": 90,
+      "frameMs": 13.318888888888896,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.400000000001455,
+      "cpuMs": 0.09111111130979326,
+      "gpuMs": 0.09109048888888892,
+      "buildMs": 7.300000011920929,
+      "maxTransitionMs": 7.300000011920929,
+      "drawCalls": 1
+    },
+    {
+      "scene": "rocks",
+      "view": "wire",
+      "camera": "down",
+      "eye": [
+        0,
+        -0.1,
+        24
+      ],
+      "target": [
+        0,
+        0,
+        0.3
+      ],
+      "seed": 1729,
+      "light": [
+        -0.654020602254296,
+        -0.6267697438270338,
+        0.4235761325310036
+      ],
+      "sunElevation": 25,
+      "resolution": 32,
+      "meshHash": "d4617876",
+      "triangles": 2696,
+      "width": 1470,
+      "height": 1080,
+      "frames": 90,
+      "frameMs": 13.319999999999991,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.5,
+      "cpuMs": 0.10777778029441834,
+      "gpuMs": 0.13858133333333328,
+      "buildMs": 7.600000023841858,
+      "maxTransitionMs": 7.600000023841858,
+      "drawCalls": 1
+    },
+    {
+      "scene": "rocks",
+      "view": "material",
+      "camera": "middle",
+      "eye": [
+        0,
+        -19,
+        6.5
+      ],
+      "target": [
+        0,
+        0,
+        0.3
+      ],
+      "seed": 1729,
+      "light": [
+        -0.654020602254296,
+        -0.6267697438270338,
+        0.4235761325310036
+      ],
+      "sunElevation": 25,
+      "resolution": 32,
+      "meshHash": "d4617876",
+      "triangles": 2696,
+      "width": 1470,
+      "height": 1080,
+      "frames": 90,
+      "frameMs": 13.317777777777803,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.700000000000728,
+      "cpuMs": 0.08999999894036187,
+      "gpuMs": 0.05768533333333335,
+      "buildMs": 7.200000017881393,
+      "maxTransitionMs": 7.200000017881393,
+      "drawCalls": 1
+    },
+    {
+      "scene": "rocks",
+      "view": "material",
+      "camera": "far",
+      "eye": [
+        0,
+        -199,
+        20
+      ],
+      "target": [
+        0,
+        0,
+        0.3
+      ],
+      "seed": 1729,
+      "light": [
+        -0.654020602254296,
+        -0.6267697438270338,
+        0.4235761325310036
+      ],
+      "sunElevation": 25,
+      "resolution": 32,
+      "meshHash": "d4617876",
+      "triangles": 2696,
+      "width": 1470,
+      "height": 1080,
+      "frames": 90,
+      "frameMs": 13.318888888888896,
+      "p95Ms": 13.400000000001455,
+      "worstMs": 13.5,
+      "cpuMs": 0.08444444371594323,
+      "gpuMs": 0.023415466666666686,
+      "buildMs": 6.4000000059604645,
+      "maxTransitionMs": 6.4000000059604645,
+      "drawCalls": 1
+    }
+  ]
+}

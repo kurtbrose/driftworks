@@ -901,3 +901,5 @@ also records GPU time when EXT_disjoint_timer_query is available, rejecting
 disjoint samples. Benchmarks warm up 30 frames and sample 90 per fixed case.
 Use JSON exports and visual inspection together; the headless suite checks
 determinism, finite normals and bounded geometry, not browser rendering quality.
+
+Rampdock crew interiors are architectural blockouts only: lower entry floor z=4.7 with vestibule, inner doorway, staging and utility niche; upper control floor z=10 with a shared opening through both supporting slabs. The microgravity circulation well stays open: slender guide rails, staggered individual grab handles, entry/staging grips and bridge arrival grips provide places to stop and redirect. A separate handhold route reaches the roof hatch; there are no stairs or ladder rungs. Optional sixth geometry argument `interiorCut` (`lower`/`upper`) removes the cabin shell/roof for inspection; lower mode sections wall height and removes upper slabs and sections the guide rails. No furniture, life-support systems, navigation or interior gameplay is added.

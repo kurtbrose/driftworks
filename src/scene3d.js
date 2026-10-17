@@ -537,9 +537,9 @@
 
   /** Mining artwork in local coordinates: feet at z=0, eight folding legs.
    * Geometry is grouped by paint so details do not add individual draw calls.
-   * @param {number} deployment @param {number} time @param {boolean} working @param {string} [variant] @param {number} [panelOpen]
+   * @param {number} deployment @param {number} time @param {boolean} working @param {string} [variant] @param {number} [panelOpen] @param {string} [interiorCut]
    */
-  function miningPlatformGeometry(deployment, time, working, variant, panelOpen) {
+  function miningPlatformGeometry(deployment, time, working, variant, panelOpen, interiorCut) {
     // time/working remain accepted for existing callers; artwork has no idle machinery animation.
     var d = Math.max(0, Math.min(1, deployment));
     /** @type {Record<string, number[]>} */ var groups = {ochre:[], steel:[], dark:[], light:[]};
@@ -694,7 +694,7 @@
         var cabinBase=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0],p[1],drydock?9:8]);});
         var cabinWall=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0],p[1],drydock?12.5:11.2]);});
         var cabinRoof=cabinOutline.map(function(p){return /** @type {V3} */ ([drydock?p[0]*.86:2+(p[0]-2)*.86,p[1]*.86,drydock?13.5:12.2]);});
-        cabinOutline.forEach(function(p,i){var j=(i+1)%8;
+        if(!rampdock || !interiorCut)cabinOutline.forEach(function(p,i){var j=(i+1)%8;
           if(rampdock){
             var p=cabinOutline[i],q=cabinOutline[j];
             var waistA=/** @type {V3} */ ([p[0]*.96,p[1]*.96,10]),waistB=/** @type {V3} */ ([q[0]*.96,q[1]*.96,10]);
@@ -721,8 +721,8 @@
             plate('ochre',[cabinWall[i],cabinWall[j],cabinRoof[j],cabinRoof[i]]);
           }
         });
-        plate('ochre',cabinRoof);
-        if(rampdock) {
+        if(!rampdock || !interiorCut)plate('ochre',cabinRoof);
+        if(rampdock && !interiorCut) {
           // Shuttle roof interface: a broad marked pad around a sealed octagonal airlock.
           block('ochre',[0,0,13.62],[4.45,3.15,.12]);
           [-1,1].forEach(function(side){
@@ -750,8 +750,69 @@
           });});
         }
         if(drydock) {
-          block('dark',[0,0,6.525],[4.6,3.6,2.175]);
-          block('steel',[0,0,8.7],[6.3,4.8,.3]);
+          if(!rampdock){
+            block('dark',[0,0,6.525],[4.6,3.6,2.175]);
+            block('steel',[0,0,8.7],[6.3,4.8,.3]);
+          }else{
+            // Hollow lower crew core, with a real doorway from the cargo deck.
+            var plan=interiorCut==='lower',wallTop=plan?5.9:8.7;
+            block('steel',[0,0,4.61],[4.3,3.3,.09]);
+            [-1,1].forEach(function(side){
+              block('dark',[side*4.45,0,(4.5+wallTop)/2],[.15,3.6,(wallTop-4.5)/2]);
+              block('dark',[side*2.75,3.45,(4.5+wallTop)/2],[1.85,.15,(wallTop-4.5)/2]);
+            });
+            block('dark',[0,-3.45,(4.5+wallTop)/2],[4.3,.15,(wallTop-4.5)/2]);
+            if(!plan)block('dark',[0,3.45,7.7],[.9,.15,1]);
+            // Vestibule: outer door -> enclosed staging pocket -> inner pressure opening.
+            var partitionTop=plan?5.9:7.5;
+            [-1,1].forEach(function(side){
+              block('dark',[side*1.25,2.3,(4.7+partitionTop)/2],[.10,1.1,(partitionTop-4.7)/2]);
+              block('dark',[side*.975,1.1,(4.7+partitionTop)/2],[.275,.10,(partitionTop-4.7)/2]);
+            });
+            if(!plan)block('dark',[0,1.1,7.3],[.7,.10,.2]);
+            // A simple utility niche beside the open preparation area.
+            block('dark',[-2.3,-2.35,(4.7+partitionTop)/2],[.10,.95,(partitionTop-4.7)/2]);
+            block('dark',[-3.25,-1.4,(4.7+partitionTop)/2],[1.05,.10,(partitionTop-4.7)/2]);
+            /** Floor/ceiling slabs share a clear microgravity translation opening.
+             * @param {number} z @param {number} halfX @param {number} halfY @param {number} thickness
+             */
+            function ringDeck(z,halfX,halfY,thickness){
+              block('steel',[(-halfX+1.3)/2,0,z-thickness/2],[(halfX+1.3)/2,halfY,thickness/2]);
+              block('steel',[(4.2+halfX)/2,0,z-thickness/2],[(halfX-4.2)/2,halfY,thickness/2]);
+              [-1,1].forEach(function(side){block('steel',[2.75,side*(1.4+halfY)/2,z-thickness/2],[1.45,(halfY-1.4)/2,thickness/2]);});
+            }
+            if(!plan){
+              ringDeck(9,6.3,4.8,.3);ringDeck(10,5,3.7,.18);
+              if(interiorCut==='upper')cabinOutline.forEach(function(p,i){var q=cabinOutline[(i+1)%8];link('dark',[p[0]*1.01,p[1]*1.01,10.18],[q[0]*1.01,q[1]*1.01,10.18],.08,.18);});
+            }
+            // Microgravity circulation: clear drift space with staggered stopping grips.
+            var guideTop=plan?6.1:10.45;
+            [-1,1].forEach(function(side){
+              link('steel',[3.95,side*1.08,4.9],[3.95,side*1.08,guideTop],.035);
+            });
+            // Individual U-shaped handles, offset between sides rather than ladder rungs.
+            /** @param {number} x @param {number} y @param {number} z @param {number} side */
+            function grab(x,y,z,side){
+              link('light',[x,y,z-.20],[x-side*.22,y,z-.20],.035);
+              link('light',[x-side*.22,y,z-.20],[x-side*.22,y,z+.20],.035);
+              link('light',[x-side*.22,y,z+.20],[x,y,z+.20],.035);
+            }
+            for(var grip=0;grip<7;grip++){
+              var gripZ=5.25+grip*.8;
+              if(gripZ+.2<guideTop)grab(3.95,grip%2?1.08:-1.08,gripZ,1);
+            }
+            // Entry and staging grips give crew places to arrest motion and redirect.
+            grab(1.12,2.6,5.5,1);grab(-1.12,1.55,5.5,-1);
+            grab(4.28,.35,5.5,1);grab(-2.16,-1.9,5.5,-1);
+            if(!plan){
+              // Short rim grips mark the bridge arrival without fencing off the opening.
+              link('light',[1.5,-1.62,10.3],[2.15,-1.62,10.3],.04);
+              link('light',[3.2,1.62,10.3],[3.85,1.62,10.3],.04);
+              // Free-floating roof transfer: staggered grabs beneath the docking hatch.
+              link('steel',[-.85,0,10.35],[-.85,0,13.45],.035);
+              for(var roofGrip=0;roofGrip<4;roofGrip++)grab(-.85,roofGrip%2?.24:-.24,10.65+roofGrip*.8,-1);
+            }
+          }
           // Continuous lookout glazing on all eight faces, interrupted by structural posts.
           if(!rampdock)cabinOutline.forEach(function(p,i){var q=cabinOutline[(i+1)%8],dx=q[0]-p[0],dy=q[1]-p[1],length=Math.hypot(dx,dy),nx=dy/length,ny=-dx/length;
             plate('dark',[[p[0]+dx*.12+nx*.04,p[1]+dy*.12+ny*.04,10.6],[p[0]+dx*.88+nx*.04,p[1]+dy*.88+ny*.04,10.6],[p[0]+dx*.88+nx*.04,p[1]+dy*.88+ny*.04,11.9],[p[0]+dx*.12+nx*.04,p[1]+dy*.12+ny*.04,11.9]]);
@@ -760,10 +821,12 @@
           [-11,10].forEach(function(x){block('dark',[x,0,4.85],[2.8,4.2,.3]);block('steel',[x,0,5.95],[2.4,3.8,.90]);});
           [-1,1].forEach(function(side){block('dark',[-1,side*7,4.85],[6,1.3,.3]);block('steel',[-1,side*7,5.75],[5.4,1,.70]);});
           // Main crew egress is in the tower's lower core, opening onto the cargo deck.
+          if(interiorCut!=='lower'){
           block('steel',[0,3.67,5.55],[.68,.07,.95]);
           [-1,1].forEach(function(side){block('steel',[side*.9,3.75,5.6],[.13,.16,1.1]);});
           block('steel',[0,3.75,6.7],[1.03,.16,.13]);
           block('dark',[0,3.76,5.55],[.035,.025,.95]);
+          }
           block('steel',[0,4.15,4.65],[1.05,.65,.15]);
         } else {
         block('dark',[2,0,8.05],[7.3,5.7,.25]);
