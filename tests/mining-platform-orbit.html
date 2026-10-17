@@ -56,14 +56,15 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
   var placements=[
     {position:[-9,19,0],yaw:0,pose:'standing'},
     {position:[21,5,0],yaw:Math.PI/2,pose:'standing'},
-    {position:[3,5,8.7],yaw:Math.PI,pose:'standing'},
-    {position:[0,5.1,8.9],yaw:0,pose:'servicing'}
+    {position:[3,5,4.5],yaw:Math.PI,pose:'standing'},
+    {position:[0,4.7,4.8],yaw:0,pose:'servicing'},
+    {position:[3,0,13.74],yaw:Math.PI/2,pose:'standing'}
   ];
   var crewCache={key:'',batches:[]};
   function crewActors(){
     var state=Driftworks.miningStudyCrew,length=Number(document.getElementById('rig-length').value);
     document.getElementById('scale-value').textContent=length+' m (locked)';
-    document.getElementById('crew-status').textContent=state && state.error?'Astronaut load failed: '+state.error:state && state.poses?'1.8 m suits / '+length+' m main hull. Frozen poses: beside gripper, near transfer interface, on deck, at tower access (design 07). Quaternius / CC0.':'Loading local Quaternius astronauts...';
+    document.getElementById('crew-status').textContent=state && state.error?'Astronaut load failed: '+state.error:state && state.poses?'1.8 m suits / '+length+' m main hull. Frozen poses: beside gripper, near transfer interface, on deck, at deck-level tower access, on roof landing pad (design 07). Quaternius / CC0.':'Loading local Quaternius astronauts...';
     if(!document.getElementById('crew').checked || !state || !state.poses)return [];
     if(crewCache.key===length+':'+document.getElementById('surface').checked)return crewCache.batches;
     var height=1.8*32/length,groups={};

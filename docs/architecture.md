@@ -355,25 +355,28 @@ See [population](population.md) for clock, event, transport, and save contracts.
 ### Viewer asteroid surface
 
 Study views draw the base asteroid terrain and its procedural surface shading.
-Three body-space cellular octaves (starting at 4 cells per normalized body unit,
-with frequency multiplied by 3.73 and amplitude divided by 3.73) displace the shared closed terrain field after crater
+Four body-space cellular octaves (starting at 4 cells per normalized body unit,
+with frequency multiplied by 3.73 and amplitude multiplied by 0.45) displace the shared closed terrain field after crater
 relief. They sample radial direction rather than radius to keep a stable shell.
 The CPU interpolates a cached 32-cubed height field; `rockVolume()` packs the same
 periodic four-cell field into 32 padded RGBA slices for WebGL 1 (272 by 136).
 RGB stores the derivative of the gap between the nearest two squared cellular
 distances; alpha stores the bounded gap. This produces angular faces and seams
-rather than differentiated value-noise ridges. Meshing and picking share this
+rather than differentiated value-noise ridges. Cellular peaks are capped into
+seed-varied slab heights; cached gradients include the cap derivative (zero on
+flat faces), encoded at 15.875 byte steps per slope unit. Fine octave strength
+decays by 0.45, reducing the uniform tiny-bump covering while retaining fissures. Meshing and picking share this
 field. Exterior mesh normals describe only the broad shell; a cached, padded six-face
 RGBA8 atlas supplies full exterior normals per fragment, including crater and coarse terrain relief. This avoids
 interpolating unresolved roughness across large triangles. `surfaceAtlas(a, n?)`
 returns JSON-independent render bytes with six `(n+2)`-square faces (default 256
 interior samples), encoding unit normals as RGB (128 + component * 127) and crater-floor suppression
-in alpha. `craterRoughnessAt` returns 0.06 inside 65% of a crater radius, fading
-to 1 at 105%. Geometry and baked normals multiply cellular relief by this mask;
+in alpha. `craterRoughnessAt` returns 0.06 through 110% of a crater radius, fading
+to 1 at 145%. Geometry and baked normals multiply cellular relief by this mask;
 the fragment shader attenuates fine normals and crevice shading from the cached
 alpha with no added texture reads or per-pixel impact loop. Alpha also supplies
 a modest bowl ambient-occlusion term. In study surface-camera
-views, nearby cached triangles receive three subdivision levels projected onto
+views, nearby cached triangles receive five subdivision levels projected onto
 the same field, fading to the cached mesh at the patch edge. The patch is cached
 in body-space camera bins; ordinary orbit views keep the base mesh. Fragment normal detail
 starts at frequency 80 with five cellular octaves (3.73-fold frequency steps) and fades each octave by its projected footprint, including
@@ -388,6 +391,24 @@ The asteroid viewer reuses `flightPerformance` for frame/p95/CPU timings and the
 existing flat/boxes/empty/resolution diagnostics. It defaults to a selectable 60 FPS cap (30 or uncapped also available),
 redraws static views only on input, and suspends rendering in hidden tabs. Continuous
 measurement opts into repeated draws. CPU submission time is not a GPU timer.
+
+Close study views (orbit or surface camera) refine the shared terrain field into
+real geometry, with memoized edge projection and full-field vertex normals. Fine
+fragment detail is restrained grain; there is no painted cellular crack tint.
+The renderer keeps the base GPU mesh and a bounded refined mesh separately.
+Two lazy 1024-square RGBA8 depth maps cache world-fixed directional cast shadows:
+a whole-body map from the base mesh and a cropped map from the detailed mesh.
+Packed depth uses dithering disabled and a depth renderbuffer; four comparisons
+filter shadows. Where supported, receiver-plane derivatives correct each sample
+for surface slope; a conservative bias is used without derivative support.
+Only direct illumination and material highlights are shadowed, leaving ambient
+fill. The cropped map survives switching to coarse visible geometry, keeping its
+shadow positions anchored in asteroid coordinates. Maps rebuild on mesh/visual
+changes or a light-frame rotation of more than 0.01 radians, not camera motion
+within a cached detail bin. Diagnostic draw/triangle counters include rebuild
+passes; steady frames reuse the maps. The viewer's Mesh cast shadows checkbox
+isolates shadow contribution. Existing composition colors supply the material
+variation and highlight strength; dark crack bands do not substitute for occlusion.
 
 ### Mothership 3D artwork
 
@@ -841,3 +862,11 @@ Rampdock doors use two rigid leaves: a vertical wall that seats against the fixe
 Rampdock tower roof hardware is a static shuttle docking blockout: a marked rectangular pad, octagonal airlock collar with recessed split hatch, and four raised alignment/clamp hardpoints. It remains attached to the tower independently of cargo-door deployment; no docking gameplay is implied.
 
 Rampdock material grammar: yellow is outward-facing transit armor (including the tower docking roof); grey is the hold/work deck and the inward-facing door skins that become deployed ramp surfaces. Dark material identifies fixed cage/chassis and recesses. Door edges remain yellow so their motion stays readable. Docking collar/hatch hardware stays metallic within the yellow roof.
+
+Rampdock lookout glazing uses a flared two-band cab profile: the lower faceted window cheeks face outward/down toward the worksite, while the upper horizontal band provides forward/side visibility. Yellow sills, corner posts and a roof brow frame both bands. The cabin remains sealed; there is no glass floor or underside blister, and docking-roof geometry is retained.
+
+The drydock tower main egress is in its lower core at cargo-deck level (deck z=4.5, shallow threshold top z=4.8), with the access-study astronaut on that threshold. The lookout glazing and roof shuttle hatch are separate upper-level interfaces.
+
+Rampdock medium door hardware shares the existing two-stage transforms: root knuckles and clevis cradles sit on the lower cage ring; fold-axis barrels move with the lower leaf; a telescoping jack spans a fixed frame pivot and moving panel pivot. Fixed stop blocks/closure receivers and moving registration tabs suggest load stops and captured closure. This remains visual articulation, with no actuator dynamics or independent latch simulation.
+
+Door hinge refinement uses three discrete short pins per axis, with frame clevis ears, visible retaining caps and articulated panel lugs. Compact jack barrels/rods suggest controlled low-gravity deployment rather than Earth-weight lifting; fixed cage stops and receivers remain the securing structure. Geometry proportions are visual, not load-rated engineering dimensions.

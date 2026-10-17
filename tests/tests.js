@@ -1520,6 +1520,29 @@
     assert(yellowPad,'Docking pad retains yellow exposed roof armor');
   });
 
+  test('control tower has outward-downward glazing around all eight sides', function () {
+    var data=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',0).dark,faces={};
+    for(var i=0;i<data.length;i+=18){
+      if(data[i+2]>10 && data[i+2]<11.15 && data[i+5]<-.25){
+        var direction=Math.round(Math.atan2(data[i+4],data[i+3])*100);faces[direction]=true;
+      }
+    }
+    assert(Object.keys(faces).length===8,'Every tower face has a lower downward-looking pane');
+  });
+
+  test('tower main egress threshold sits at the cargo deck rather than the lookout', function () {
+    var groups=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'rampdock',0),v=groups.steel,threshold=false;
+    for(var i=0;i<v.length;i+=6)if(Math.abs(v[i])<1.1 && v[i+1]>3.5 && v[i+1]<4.9 && Math.abs(v[i+2]-4.8)<.001)threshold=true;
+    assert(threshold,'Main hatch threshold meets the 4.5-unit cargo deck with a shallow step');
+  });
+
+  test('door hinge barrels and actuator assemblies stay valid through both hinge stages', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry;
+    var closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
+    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Root cradles, stops and receivers remain frame-mounted');
+    [0,.2,.4,.65,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(k){var v=groups[k];assert(v.every(Number.isFinite));for(var i=3;i<v.length;i+=6)assertClose(Math.hypot(v[i],v[i+1],v[i+2]),1,.00001);});});
+  });
+
   test('mining platform geometry folds legs without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var open=model(1,0,false),folded=model(0,0,false);
@@ -1683,12 +1706,30 @@
     scene.setStudyParameters(a,{});
     assert(JSON.stringify(a)===before,'Artwork does not change saves');
   });
+  test('Terrain shadow coordinates preserve light-ray occlusion across camera LODs', function () {
+    var frame=window.Driftworks.scene3d.terrainShadowFrame;
+    function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+    [0,.7,2.9].forEach(function(angle){
+      var center=[.2,-.4,.7],f=frame(angle,center);
+      [f.right,f.up,f.light].forEach(function(v){assertClose(Math.hypot.apply(null,v),1,1e-10);});
+      assertClose(dot(f.right,f.up),0,1e-10);assertClose(dot(f.light,f.right),0,1e-10);assertClose(dot(f.light,f.up),0,1e-10);
+      var receiver=[.01,-.02,.03],blocker=receiver.map(function(v,i){return v+f.light[i]*.1;});
+      assertClose(dot(receiver,f.right),dot(blocker,f.right),1e-10);
+      assertClose(dot(receiver,f.up),dot(blocker,f.up),1e-10);
+      assert(.5-dot(blocker,f.light)/3<.5-dot(receiver,f.light)/3,'A rock toward the sun has a nearer depth in the same shadow texel');
+      center[0]=99;assert(f.center[0]!==99,'A cached light camera owns its center');
+    });
+  });
   test('Crater floors suppress rocky relief without affecting remote terrain', function () {
     var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
     var impacts=scene.impactsFor(a);
     assert(impacts.length>0);
     impacts.slice(0,12).forEach(function(impact){
       assertClose(scene.craterRoughnessAt(a,impact.center),.06,1e-8);
+      var n=impact.normal,axis=Math.abs(n[2])<.9?[0,0,1]:[0,1,0];
+      var tangent=[n[1]*axis[2]-n[2]*axis[1],n[2]*axis[0]-n[0]*axis[2],n[0]*axis[1]-n[1]*axis[0]],length=Math.hypot.apply(null,tangent);
+      var rim=impact.center.map(function(v,i){return v+tangent[i]/length*impact.radius;});
+      assertClose(scene.craterRoughnessAt(a,rim),.06,1e-8,'Raised rim is as smooth as the floor');
       var p=impact.center.slice();p[0]+=.000001;
       assert(Math.abs(scene.craterRoughnessAt(a,p)-.06)<.0001,'Floor mask is continuous');
     });
@@ -1707,6 +1748,8 @@
       assert(data[row+channel]===data[row+32*4+channel],'Left gutter wraps the last interior sample');
       assert(data[row+33*4+channel]===data[row+4+channel],'Right gutter wraps the first interior sample');
     }
+    var flatFaces=0;for(var i=0;i<data.length;i+=4)if(data[i]===128&&data[i+1]===128&&data[i+2]===128&&data[i+3]>160)flatFaces++;
+    assert(flatFaces>100,'Rock interiors include flat slab faces instead of universal cellular peaks');
     assert(data.some(function(value,index){return index%4===3&&value<16;}),'Fracture field has deep seams');
     assert(data.some(function(value,index){return index%4===3&&value>240;}),'Fracture field has rock interiors');
   });

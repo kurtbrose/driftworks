@@ -25,6 +25,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 <label for="render-mode">Render mode</label><select id="render-mode"><option value="normal">Terrain + material</option><option value="flat">Flat material</option><option value="boxes">Box proxy</option><option value="empty">Empty scene</option></select>
 <label for="render-scale">Resolution</label><select id="render-scale"><option value="1">100%</option><option value="0.5">50%</option></select>
 <label for="frame-cap">Frame cap</label><select id="frame-cap"><option value="60">60 FPS</option><option value="30">30 FPS</option><option value="0">Uncapped (measure headroom)</option></select>
+<label><input id="cast-shadows" type="checkbox" checked> Mesh cast shadows</label>
 <label><input id="benchmark" type="checkbox"> Continuous measurement</label>
 <pre id="performance" style="font-size:11px;white-space:pre-wrap">Measuring...</pre>
 <h2>Camera angles</h2>
@@ -53,7 +54,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     <script src="../src/tactical/camera.js?v=20260920-population1"></script>
     <script src="../src/audio.js?v=20260920-population1"></script>
     <script src="../src/hud.js?v=20260922-cavern1"></script>
-    <script src="../src/scene3d.js?v=20261016-craterfloors1"></script>
+    <script src="../src/scene3d.js?v=20261016-castshadows8"></script>
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
 <script src="../experiments/performance.js"></script>
 <script>
@@ -143,8 +144,8 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   document.addEventListener("visibilitychange",function(){dirty=true;});
   var measurements=Driftworks.flightPerformance.create(),perfTime=0,lastDraw=0;
   var renderMode=document.getElementById('render-mode'),renderScale=document.getElementById('render-scale'),benchmark=document.getElementById('benchmark'),frameCap=document.getElementById('frame-cap');
-  function diagnostics(){scene.setStudyDiagnostics({mode:renderMode.value==='flat'?'normal':renderMode.value,flat:renderMode.value==='flat',scale:Number(renderScale.value),mothership:false,actors:false});measurements=Driftworks.flightPerformance.create();}
-  renderMode.onchange=diagnostics;renderScale.onchange=diagnostics;frameCap.onchange=function(){measurements=Driftworks.flightPerformance.create();lastDraw=0;pacer=Driftworks.flightPerformance.pacer();};
+  function diagnostics(){scene.setStudyDiagnostics({mode:renderMode.value==='flat'?'normal':renderMode.value,flat:renderMode.value==='flat',scale:Number(renderScale.value),mothership:false,actors:false,shadows:document.getElementById('cast-shadows').checked});measurements=Driftworks.flightPerformance.create();}
+  document.getElementById('cast-shadows').onchange=diagnostics;renderMode.onchange=diagnostics;renderScale.onchange=diagnostics;frameCap.onchange=function(){measurements=Driftworks.flightPerformance.create();lastDraw=0;pacer=Driftworks.flightPerformance.pacer();};
   function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;
     if(document.hidden||!Driftworks.flightPerformance.due(pacer,now,Number(frameCap.value))){requestAnimationFrame(frame);return;}
     var moving=walking&&Object.keys(keys).length>0;
