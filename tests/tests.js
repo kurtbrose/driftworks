@@ -1435,7 +1435,7 @@
   });
   test('mining pod studies keep finite unit normals, fold anchors without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
-    ['pod','anchors','recessed','fabricated'].forEach(function(variant){
+    ['pod','anchors','recessed','fabricated','workboat'].forEach(function(variant){
       var deployed=model(1,0,false,variant),folded=model(0,0,false,variant);
       assert(JSON.stringify(deployed)!==JSON.stringify(folded));
       assert(JSON.stringify(deployed)===JSON.stringify(model(1,5,false,variant)));
@@ -1457,6 +1457,20 @@
     }
     // Ten triangles close the twelve-vertex roof, all at the same height.
     for(var i=24*36;i<24*36+10*18;i+=6){assertClose(data[i+2],12.5);assertClose(data[i+5],1);}
+  });
+
+  test('workboat mining study separates a raised cabin from a low deck and open cargo', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,'workboat');
+    var ochre=model.ochre,steel=model.steel,roof=false,deck=false,binFloor=false;
+    for(var i=0;i<ochre.length;i+=6){
+      if(ochre[i+5]>.99 && Math.abs(ochre[i+2]-12.2)<.001)roof=true;
+      if(ochre[i+5]>.99 && Math.abs(ochre[i+2]-8)<.001)deck=true;
+    }
+    for(var i=0;i<steel.length;i+=6){
+      if(steel[i]<-7 && steel[i+5]>.99 && Math.abs(steel[i+2]-8.6)<.001)binFloor=true;
+      assert(!(steel[i]>-12 && steel[i]<-10 && Math.abs(steel[i+1])<3 && steel[i+2]>8.7),'No lid covers the hopper');
+    }
+    assert(roof && deck && binFloor,'Cabin roof, work deck and hopper interior are distinct');
   });
 
   test('mining platform geometry folds legs without decorative machinery motion', function () {

@@ -797,3 +797,5 @@ Mining pod silhouette studies use optional `pod`, `anchors`, or `recessed` varia
 The `fabricated` mining study uses a symmetric twelve-edge footprint, twelve vertical side plates, twelve shoulder plates and a flat deck/belly. Eight equal chassis-mounted grippers retain the pod arrangement. The viewer grey-material toggle changes batch color only, preserving lighting and geometry.
 
 Mining platform artwork has no decorative idle machinery animation in either renderer. Cutting teeth remain static structural geometry; only deployment changes the rig pose. Geometry and paint functions retain their legacy time/working arguments for caller compatibility.
+
+The `workboat` study retains the fabricated chassis and grippers, lowers the main deck, and separates a forward-central sealed crew cabin from an open rear hopper and side-mounted service cradle. These functional zones are presentation geometry only; they do not add crew capacity or cargo simulation.

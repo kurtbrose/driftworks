@@ -409,7 +409,8 @@
       var z=/** @type {V3} */ ([-x[2]*y[1],x[2]*y[0],x[0]*y[1]-x[1]*y[0]]);
       block(material,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],[len/2,width,width],[x,y,z]);
     }
-    if (variant === 'fabricated') {
+    if (variant === 'fabricated' || variant === 'workboat') {
+      var workboat=variant==='workboat';
       /** Flat-shaded polygon: every triangle in a plate shares one face normal.
        * @param {string} material @param {V3[]} points
        */
@@ -422,13 +423,47 @@
       // Twelve straight perimeter edges; 12 vertical walls, 12 shoulders, deck and belly.
       var perimeter=[[15,-6],[15,6],[10,9],[2,10.5],[-8,10],[-14,7],[-17,3],[-17,-3],[-14,-7],[-8,-10],[2,-10.5],[10,-9]];
       var lower=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],4.5]);});
-      var shoulder=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],9.3]);});
-      var deck=perimeter.map(function(p){return /** @type {V3} */ ([-1+(p[0]+1)*.68,p[1]*.68,12.5]);});
+      var shoulder=perimeter.map(function(p){return /** @type {V3} */ ([p[0],p[1],workboat?6.2:9.3]);});
+      var deck=perimeter.map(function(p){return /** @type {V3} */ ([-1+(p[0]+1)*.68,p[1]*.68,workboat?8:12.5]);});
       perimeter.forEach(function(p,i){var j=(i+1)%perimeter.length;
         plate('ochre',[lower[i],lower[j],shoulder[j],shoulder[i]]);
         plate('ochre',[shoulder[i],shoulder[j],deck[j],deck[i]]);
       });
       plate('ochre',deck);plate('dark',lower.slice().reverse());
+      if(workboat) {
+        // A sealed, compact control house seats on the deck, forward of the cargo.
+        var cabinOutline=[[-5,-3.5],[-3,-5.5],[7,-5.5],[9,-3.5],[9,3.5],[7,5.5],[-3,5.5],[-5,3.5]];
+        var cabinBase=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0],p[1],8]);});
+        var cabinWall=cabinOutline.map(function(p){return /** @type {V3} */ ([p[0],p[1],11.2]);});
+        var cabinRoof=cabinOutline.map(function(p){return /** @type {V3} */ ([2+(p[0]-2)*.86,p[1]*.86,12.2]);});
+        cabinOutline.forEach(function(p,i){var j=(i+1)%8;
+          plate('ochre',[cabinBase[i],cabinBase[j],cabinWall[j],cabinWall[i]]);
+          plate('ochre',[cabinWall[i],cabinWall[j],cabinRoof[j],cabinRoof[i]]);
+        });
+        plate('ochre',cabinRoof);
+        block('dark',[2,0,8.05],[7.3,5.7,.25]);
+        // Forward visibility, protected by a thick brow and side jambs.
+        block('dark',[9.04,0,10.3],[.06,2.9,.55]);
+        block('steel',[9.18,0,10.95],[.23,3.2,.13]);
+        [-1,1].forEach(function(side){block('ochre',[9.17,side*3.1,10.3],[.22,.2,.7]);});
+        // Recessed side access within a shallow armored collar.
+        block('dark',[0,5.54,9.65],[1.15,.08,1.2]);
+        [-1,1].forEach(function(side){block('steel',[side*1.4,5.75,9.65],[.2,.25,1.4]);});
+        block('steel',[0,5.75,11.05],[1.6,.25,.2]);
+        block('steel',[0,6,8.3],[1.6,.65,.2]);
+        // Rear hopper is an open rack load, with daylight between it and the cabin.
+        block('steel',[-11,0,8.35],[3.5,4.2,.25]);
+        [-1,1].forEach(function(side){
+          block('dark',[-11,side*3.7,6.65],[4.1,.35,.45]);
+          block('steel',[-11,side*4.2,9.6],[3.5,.3,1]);
+          block('steel',[-11+side*3.5,0,9.6],[.3,4.2,1]);
+          block('dark',[-11+side*2.8,0,7.9],[.2,4.5,.2]);
+        });
+        // A separate service pack sits in an exposed cradle on the opposite flank.
+        block('dark',[0,-8.2,6.7],[5.3,1.8,.35]);
+        block('steel',[0,-8.2,7.7],[4.4,1.2,.7]);
+        [-1,1].forEach(function(side){block('dark',[side*3.4,-8.2,8],[.3,1.8,1]);});
+      }
       block('dark',[-1,0,3.3],[14,8.4,1.2]);
       // Exposed chassis rails carry the mining head and each rectangular root mount.
       [-1,1].forEach(function(side){block('steel',[-1,side*8,3.6],[14.5,.7,.9]);});
