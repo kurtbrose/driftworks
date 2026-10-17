@@ -11,13 +11,14 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
 .view .hint{position:absolute;bottom:10px;left:18px;color:#8198a5;font-size:11px;pointer-events:none}.scene3d-controls{display:none}canvas{display:block}
 @media(max-width:600px){header{padding:12px}h1{font-size:17px}.study-controls{gap:10px;font-size:12px}input[type=range]{width:85px}.view h2{left:10px;top:10px;font-size:12px}.view .hint{left:10px;font-size:10px}header p{display:none}}
 </style>
-<header><h1>Mining pod - four-view study</h1><div class="study-controls"><label for="design">Design <select id="design"><option value="workboat" selected>05 - Crew cabin / cargo deck</option><option value="fabricated">04 - Fabricated plate hull</option><option value="pod">01 - Bean / equal clamps</option><option value="anchors">02 - Four anchors / four braces</option><option value="recessed">03 - Recessed / heavy crusher</option><option value="original">Original 3D interpretation</option></select></label><label for="deployment">Deployment <input id="deployment" type="range" min="0" max="1" step=".01" value="1"></label><label><input id="grey" type="checkbox" checked> Grey silhouette</label><button id="reset">Reset orbit view</button><a href="../?renderer=3d">Back to game</a></div><p>Side, front and top stay fixed. Drag the raised view to swing around the pod; wheel to zoom, middle or Space + drag to pan.</p></header>
+<header><h1>Mining pod - four-view study</h1><div class="study-controls"><label for="design">Design <select id="design"><option value="drydock" selected>06 - Surface drydock / full hold</option><option value="workboat">05 - Crew cabin / cargo deck</option><option value="fabricated">04 - Fabricated plate hull</option><option value="pod">01 - Bean / equal clamps</option><option value="anchors">02 - Four anchors / four braces</option><option value="recessed">03 - Recessed / heavy crusher</option><option value="original">Original 3D interpretation</option></select></label><label for="deployment">Deployment <input id="deployment" type="range" min="0" max="1" step=".01" value="1"></label><label>Hold covers <input id="covers" type="range" min="0" max="1" step=".01" value="0"></label><label><input id="grey" type="checkbox"> Grey silhouette</label><label><input id="crew" type="checkbox" checked> Astronauts</label><label>Rig length <input id="rig-length" type="hidden" value="36"><output id="scale-value">36 m (locked)</output></label><label><input id="surface" type="checkbox" checked> Asteroid surface</label><label><input id="fighter" type="checkbox" checked> Fighter (12 m)</label><button id="reset">Reset orbit view</button><a href="../?renderer=3d">Back to game</a></div><p>Side, front and top stay fixed. Drag the raised view to swing around the pod; wheel to zoom, middle or Space + drag to pan.</p><p id="crew-status" role="status">Loading local Quaternius astronauts...</p></header>
 <main class="views">
 <section class="view fixed"><h2>Side</h2><div id="side" class="viewport scene"></div></section>
-<section class="view fixed"><h2>Front - mining head</h2><div id="front" class="viewport scene"></div></section>
+<section class="view fixed"><h2>Front - transfer / launch</h2><div id="front" class="viewport scene"></div></section>
 <section class="view fixed"><h2>Top</h2><div id="top" class="viewport scene"></div></section>
 <section class="view"><h2>Raised / orbit</h2><div id="orbit" class="viewport scene" aria-label="Interactive mining pod orbit view"></div><span class="hint">Drag to orbit / wheel to zoom</span></section>
 </main>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js"}}</script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
     <script src="../src/propulsion.js?v=20260920-population1"></script>
@@ -32,31 +33,65 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
     <script src="../src/hud.js?v=20260922-cavern1"></script>
     <script src="../src/scene3d.js?v=20261010-navigation5"></script>
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
+<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js"></script>
+<script src="../experiments/ship-packs.js"></script>
+<script src="./mining-study-context.js"></script>
+<script type="module" src="./mining-study-crew.js"></script>
 <script>
 (function(){
   var colors={ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49]};
   var poses={side:{yaw:0,tilt:Math.PI/2,height:7},front:{yaw:-Math.PI/2,tilt:Math.PI/2,height:7},top:{yaw:0,tilt:.001,height:7},orbit:{yaw:-.6,tilt:1,height:7}};
   var views=Object.keys(poses).map(function(id){
     var host=document.getElementById(id),world=Driftworks.sim.createInitialWorld();
-    world.ships=[];world.asteroids=[];world.platforms=[];world.wrecks=[];world.packets=[];world.combat.drones=[];world.selectedShipIds=[];
+    world.ships=[];world.asteroids=[Driftworks.miningStudyContext.asteroid];world.platforms=[];world.wrecks=[];world.packets=[];world.combat.drones=[];world.selectedShipIds=[];
     world.camera={x:0,y:0,zoom:1};
     var scene=Driftworks.scene3d.create(host,function(){return world;},function(w){world=w;},{study:true});
-    scene.setOrbit(poses[id]);
-    function fit(){world.camera={x:0,y:0,zoom:Math.max(.1,Math.min(host.clientWidth/(id==='orbit'?64:58),host.clientHeight/(id==='orbit'?58:46)))};}
+    scene.setOrbit(Object.assign({},poses[id],{height:Driftworks.miningStudyContext.base+12}));
+    function fit(){var context=document.getElementById('surface').checked || document.getElementById('fighter').checked;world.camera={x:0,y:0,zoom:Math.max(.1,Math.min(host.clientWidth/(context?96:id==='orbit'?64:58),host.clientHeight/(context?88:id==='orbit'?58:46)))};}
     fit();new ResizeObserver(fit).observe(host);
     return {id:id,host:host,scene:scene,world:function(){return world;},fit:fit};
   });
-  document.getElementById('reset').onclick=function(){var view=views[3];view.fit();view.scene.setOrbit(poses.orbit);};
+  document.getElementById('reset').onclick=function(){var view=views[3];view.fit();view.scene.setOrbit(Object.assign({},poses.orbit,{height:(document.getElementById('surface').checked?Driftworks.miningStudyContext.base:0)+(document.getElementById('surface').checked || document.getElementById('fighter').checked?12:7)}));};
+  ['surface','fighter'].forEach(function(id){document.getElementById(id).onchange=function(){crewCache.key='';views.forEach(function(view){view.fit();});};});
+  var placements=[
+    {position:[-9,19,0],yaw:0,pose:'standing'},
+    {position:[21,5,0],yaw:Math.PI/2,pose:'standing'},
+    {position:[3,5,8.7],yaw:Math.PI,pose:'standing'},
+    {position:[0,5.1,8.9],yaw:0,pose:'servicing'}
+  ];
+  var crewCache={key:'',batches:[]};
+  function crewActors(){
+    var state=Driftworks.miningStudyCrew,length=Number(document.getElementById('rig-length').value);
+    document.getElementById('scale-value').textContent=length+' m (locked)';
+    document.getElementById('crew-status').textContent=state && state.error?'Astronaut load failed: '+state.error:state && state.poses?'1.8 m suits / '+length+' m main hull. Frozen poses: beside gripper, near transfer interface, on deck, at tower access (design 06). Quaternius / CC0.':'Loading local Quaternius astronauts...';
+    if(!document.getElementById('crew').checked || !state || !state.poses)return [];
+    if(crewCache.key===length+':'+document.getElementById('surface').checked)return crewCache.batches;
+    var height=1.8*32/length,groups={};
+    placements.forEach(function(placement){
+      state.poses[placement.pose].forEach(function(batch,index){
+        var target=groups[index] || (groups[index]={vertices:[],color:batch.color}),c=Math.cos(placement.yaw),s=Math.sin(placement.yaw);
+        for(var i=0;i<batch.vertices.length;i+=6){
+          var v=batch.vertices,x=v[i],y=v[i+1],z=v[i+2],nx=v[i+3],ny=v[i+4];
+          target.vertices.push(placement.position[0]+(x*c-y*s)*height,placement.position[1]+(x*s+y*c)*height,placement.position[2]+(placement.position[2]===0 && document.getElementById('surface').checked?Driftworks.miningStudyContext.height(placement.position[0],placement.position[1])-Driftworks.miningStudyContext.base:0)+z*height,nx*c-ny*s,nx*s+ny*c,v[i+5]);
+        }
+      });
+    });
+    crewCache={key:length+':'+document.getElementById('surface').checked,batches:Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key].vertices),color:groups[key].color};})};
+    return crewCache.batches;
+  }
   var previous=0,elapsed=0;
   function frame(now){
     requestAnimationFrame(frame);
     if(previous && now-previous<1000/30)return;
     elapsed+=previous?Math.min(.1,(now-previous)/1000):0;previous=now;
-    var groups=Driftworks.scene3d.miningPlatformGeometry(Number(document.getElementById('deployment').value),elapsed,false,document.getElementById('design').value);
-    var actors=Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key]),color:document.getElementById('grey').checked?[.54,.56,.57]:colors[key]};});
+    var groups=Driftworks.scene3d.miningPlatformGeometry(Number(document.getElementById('deployment').value),elapsed,false,document.getElementById('design').value,Number(document.getElementById('covers').value));
+    var actors=Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key]),color:document.getElementById('grey').checked?[.54,.56,.57]:colors[key]};}).concat(crewActors(),Driftworks.miningStudyContext.geometry(Number(document.getElementById('rig-length').value),document.getElementById('surface').checked,document.getElementById('fighter').checked));
+    var surface=document.getElementById('surface').checked,context=Driftworks.miningStudyContext;
+    if(surface)actors=actors.map(function(batch){var data=new Float32Array(batch.vertices);for(var i=2;i<data.length;i+=6)data[i]+=context.base;return Object.assign({},batch,{vertices:data});});
     views.forEach(function(view){
-      var world=view.world();world.elapsedSeconds=elapsed;
-      if(view.id!=='orbit'){view.fit();view.scene.setOrbit(poses[view.id]);}
+      var world=view.world();world.elapsedSeconds=elapsed;world.asteroids=surface?[context.asteroid]:[];
+      if(view.id==='orbit'){var orbit=view.scene.getOrbit();if(Math.abs((orbit.height || 0)-(surface?context.base+12:12))>context.base/2)view.scene.setOrbit(Object.assign({},orbit,{height:surface?context.base+12:12}));}
+      if(view.id!=='orbit'){view.fit();view.scene.setOrbit(Object.assign({},poses[view.id],{height:(document.getElementById('surface').checked?Driftworks.miningStudyContext.base:0)+(document.getElementById('surface').checked || document.getElementById('fighter').checked?12:7)}));}
       view.scene.setStudyActors(actors);view.scene.sync(world);view.scene.render(world,1,0,0);
     });
   }

@@ -21,7 +21,10 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 <div id="viewer" class="scene" aria-label="Orbiting 3D asteroid"></div>
 <header><div><h1>Asteroid orbit</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="cut" aria-pressed="false">Cutaway</button><button id="walk" aria-pressed="false">Surface walk</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
 <section class="parameters" aria-label="Asteroid parameters">
-<h2>Geology controls</h2>
+<h2>Camera angles</h2>
+<div class="presets" role="group" aria-label="Camera angles"><button data-view="overview">Whole asteroid</button><button data-view="oblique">Rocky slope</button><button data-view="horizon">Low horizon</button><button data-view="down">Look down</button></div>
+<small id="camera-caption">Inspect the same sunlit patch. Drag to look, wheel to change height.</small>
+<h2 style="margin-top:18px">Geology controls</h2>
 <label for="seed">Seed</label><input id="seed" type="text" maxlength="64" autocomplete="off" spellcheck="false">
 <div class="seed-row"><button id="reseed">Re-seed</button><button id="apply-seed">Apply seed</button></div>
 <label>Composition</label><div class="presets" role="group" aria-label="Composition presets"><button data-material="mixed" aria-pressed="true">Mixed</button><button data-material="0" aria-pressed="false">Ice</button><button data-material="1" aria-pressed="false">Volatiles</button><button data-material="2" aria-pressed="false">Metals</button><button data-material="3" aria-pressed="false">Silicates</button></div>
@@ -44,7 +47,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     <script src="../src/tactical/camera.js?v=20260920-population1"></script>
     <script src="../src/audio.js?v=20260920-population1"></script>
     <script src="../src/hud.js?v=20260922-cavern1"></script>
-    <script src="../src/scene3d.js?v=20261010-navigation5"></script>
+    <script src="../src/scene3d.js?v=20261016-angular2"></script>
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
 <script>
 (function(){
@@ -99,11 +102,25 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   }
   function leaveWalk(){walking=false;keys={};lookDrag=null;scene.setSurfaceCamera(null);if(savedView){world.camera=savedView.camera;scene.setOrbit(savedView.orbit);}document.getElementById('walk-controls').hidden=true;walkButton.textContent='Surface walk';walkButton.setAttribute('aria-pressed','false');help.innerHTML='Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan';motion.disabled=false;}
   walkButton.onclick=function(){if(walking){leaveWalk();return;}if(asteroid.excavation.level>0){world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];document.getElementById('cut').textContent='Cutaway';document.getElementById('cut').setAttribute('aria-pressed','false');}savedView={camera:Object.assign({},world.camera),orbit:scene.getOrbit()};walking=true;rotating=false;updateMotion();motion.disabled=true;walkDirection=normalize([-.4,-.5,.75]);walkHeading=[0,1,0];walkPitch=-.12;document.getElementById('walk-controls').hidden=false;walkButton.textContent='Return to orbit';walkButton.setAttribute('aria-pressed','true');help.innerHTML='WASD / arrows: walk · Shift: faster<br>Drag: look · Wheel: altitude<br>Esc: return to orbit';walkPose(0);};
+  document.querySelectorAll('[data-view]').forEach(function(button){button.onclick=function(){
+    var kind=button.dataset.view;
+    if(kind==='overview'){if(walking)leaveWalk();resetCamera();scene.setOrbit({yaw:0,tilt:.9});rotating=false;updateMotion();}
+    else {
+      if(!walking)walkButton.onclick();
+      walkDirection=normalize([-.4,-.5,.75]);walkHeading=[0,1,0];
+      walkPitch=kind==='down'?-1.48:kind==='horizon'?-.06:-.55;
+      var meters=kind==='down'?12:kind==='horizon'?2:8;
+      walkAltitude=meters/(asteroid.radius*Driftworks.sim.METERS_PER_UNIT);
+      walkPose(0);
+    }
+    document.querySelectorAll('[data-view]').forEach(function(b){b.setAttribute('aria-pressed',String(b===button));});
+    document.getElementById('camera-caption').textContent=kind==='overview'?'Whole asteroid':(kind==='down'?'12 m, looking down':kind==='horizon'?'2 m, grazing horizon':'8 m, oblique slope')+' - same surface patch';
+  };});
   document.querySelectorAll('[data-step]').forEach(function(button){button.onclick=function(){if(!walking)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),forward=tangent(walkHeading,frame.normal),right=cross(forward,frame.normal),kind=button.dataset.step,axis=kind==='left'||kind==='right'?right:forward,sign=kind==='left'||kind==='back'?-1:1;walkDirection=normalize(frame.point.map(function(v,i){return v+axis[i]*sign*.006;}));walkPose(0);};});
   window.addEventListener('keydown',function(event){if(!walking||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if(event.code==='Escape'){leaveWalk();return;}if(/^(Key[WASD]|Arrow(Up|Down|Left|Right)|Shift(Left|Right))$/.test(event.code)){keys[event.code]=true;event.preventDefault();}});
   window.addEventListener('keyup',function(event){delete keys[event.code];});window.addEventListener('blur',function(){keys={};lookDrag=null;});
   host.addEventListener('pointerdown',function(event){if(!walking)return;lookDrag={x:event.clientX,y:event.clientY};event.target.setPointerCapture(event.pointerId);});
-  host.addEventListener('pointermove',function(event){if(!walking||!lookDrag)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),n=frame.normal,angle=-(event.clientX-lookDrag.x)*.004;walkHeading=tangent(walkHeading,n);var side=cross(n,walkHeading);walkHeading=normalize(walkHeading.map(function(v,i){return v*Math.cos(angle)+side[i]*Math.sin(angle);}));walkPitch=Math.max(-1.3,Math.min(1.3,walkPitch-(event.clientY-lookDrag.y)*.004));lookDrag={x:event.clientX,y:event.clientY};});
+  host.addEventListener('pointermove',function(event){if(!walking||!lookDrag)return;var frame=Driftworks.scene3d.surfaceFrame(asteroid,walkDirection),n=frame.normal,angle=-(event.clientX-lookDrag.x)*.004;walkHeading=tangent(walkHeading,n);var side=cross(n,walkHeading);walkHeading=normalize(walkHeading.map(function(v,i){return v*Math.cos(angle)+side[i]*Math.sin(angle);}));walkPitch=Math.max(-1.5,Math.min(1.5,walkPitch-(event.clientY-lookDrag.y)*.004));lookDrag={x:event.clientX,y:event.clientY};});
   host.addEventListener('pointerup',function(){lookDrag=null;});host.addEventListener('pointercancel',function(){lookDrag=null;});
   var rotating=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=-.49, previous=0;
   var motion=document.getElementById('motion');
@@ -111,7 +128,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
   updateMotion();scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);
   motion.onclick=function(){rotating=!rotating;updateMotion();};
   host.addEventListener('pointerdown',function(){rotating=false;updateMotion();});
-  host.addEventListener('wheel',function(event){rotating=false;updateMotion();if(walking){event.preventDefault();var delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?host.clientHeight:1);walkAltitude=Math.max(.004,Math.min(.3,walkAltitude*Math.exp(-Math.max(-300,Math.min(300,delta))*.002)));walkPose(0);}},{passive:false});
+  host.addEventListener('wheel',function(event){rotating=false;updateMotion();if(walking){event.preventDefault();var delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?host.clientHeight:1);walkAltitude=Math.max(.5/(asteroid.radius*Driftworks.sim.METERS_PER_UNIT),Math.min(.3,walkAltitude*Math.exp(-Math.max(-300,Math.min(300,delta))*.002)));walkPose(0);}},{passive:false});
   document.getElementById('reset').onclick=function(){if(walking)leaveWalk();resetCamera();phase=-.49;scene.setOrbit({yaw:0,tilt:.9});scene.sync(world);};
   document.getElementById('cut').onclick=function(){if(walking)leaveWalk();world=Driftworks.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];var open=asteroid.excavation.level>0;this.textContent=open?'Close cutaway':'Cutaway';this.setAttribute('aria-pressed',String(open));scene.sync(world);};
   function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;previous=now;

@@ -358,6 +358,13 @@ See [population](population.md) for clock, event, transport, and save contracts.
 ### Viewer asteroid surface
 
 Study views draw the base asteroid terrain and its procedural surface shading.
+Three fixed, seeded body-space value-noise octaves (2.5, 5, and 10 cycles per
+normalized body unit, with halving amplitudes) displace the shared closed terrain
+field after crater relief. Meshing, picking, and attachments sample this same
+field. The cached mesh stays fixed across zoom levels. Fragment normal detail
+starts at frequency 20 and fades each octave by its projected footprint, including
+grazing incidence; unresolved octaves stop evaluation. Crater and roughness
+budgets remain independent. This is a fixed geometry budget, not adaptive subdivision.
 Separate surface boulder meshes are omitted to keep close flight and walking
 views free of tile generation, uploads, and additional rock draw calls.
 
@@ -799,3 +806,9 @@ The `fabricated` mining study uses a symmetric twelve-edge footprint, twelve ver
 Mining platform artwork has no decorative idle machinery animation in either renderer. Cutting teeth remain static structural geometry; only deployment changes the rig pose. Geometry and paint functions retain their legacy time/working arguments for caller compatibility.
 
 The `workboat` study retains the fabricated chassis and grippers, lowers the main deck, and separates a forward-central sealed crew cabin from an open rear hopper and side-mounted service cradle. These functional zones are presentation geometry only; they do not add crew capacity or cargo simulation.
+
+The mining study loads local Quaternius astronauts through `tests/mining-study-crew.js`, samples frozen neutral/interact poses and submits material batches through study actors. Suit height is 1.8 m; the adjustable main-hull length maps its 32 artwork units to 12–36 m, independent of simulation units. Four fixed placements target the workboat study: ground/gripper, mining head, deck and hatch. This does not add population behavior.
+
+`tests/mining-study-context.js` mounts an existing world asteroid through the production mesh/geology renderer and uses its shared surface-height query to place the rig and ground crew. The existing Quaternius Spitfire is a frozen hovering reference. Its assumed 12 m nose-to-tail length shares the study metres/artwork mapping with crew. Both context layers are independently optional; they do not alter game state.
+
+The `drydock` study treats the body as one cargo hold around a central eight-sided lookout tower. Optional fifth `miningPlatformGeometry` argument `panelOpen` (0–1) rotates twelve yellow cover segments about their outer rim hinges; cargo and tower remain fixed. It removes the rear hopper and cutter, retains a short transfer/launch interface and locks study scale to 36 m. This is manual deployment geometry, with no idle animation or new simulation state.

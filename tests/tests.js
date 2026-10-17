@@ -1435,7 +1435,7 @@
   });
   test('mining pod studies keep finite unit normals, fold anchors without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
-    ['pod','anchors','recessed','fabricated','workboat'].forEach(function(variant){
+    ['pod','anchors','recessed','fabricated','workboat','drydock'].forEach(function(variant){
       var deployed=model(1,0,false,variant),folded=model(0,0,false,variant);
       assert(JSON.stringify(deployed)!==JSON.stringify(folded));
       assert(JSON.stringify(deployed)===JSON.stringify(model(1,5,false,variant)));
@@ -1471,6 +1471,15 @@
       assert(!(steel[i]>-12 && steel[i]<-10 && Math.abs(steel[i+1])<3 && steel[i+2]>8.7),'No lid covers the hopper');
     }
     assert(roof && deck && binFloor,'Cabin roof, work deck and hopper interior are distinct');
+  });
+
+  test('surface drydock covers open around a static central tower', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry;
+    var closed=model(1,0,false,'drydock',0),open=model(1,0,false,'drydock',1);
+    assert(JSON.stringify(closed)!==JSON.stringify(open));
+    assert(JSON.stringify(closed.steel)===JSON.stringify(open.steel),'Hold loads and tower platform remain fixed');
+    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Tower windows and chassis remain fixed');
+    [0,.5,1].forEach(function(value){var groups=model(1,0,false,'drydock',value);Object.keys(groups).forEach(function(key){assert(groups[key].every(Number.isFinite));for(var i=3;i<groups[key].length;i+=6)assertClose(Math.hypot(groups[key][i],groups[key][i+1],groups[key][i+2]),1,.00001);});});
   });
 
   test('mining platform geometry folds legs without decorative machinery motion', function () {
@@ -1620,6 +1629,21 @@
     assert(JSON.stringify(art.describe(a,[0,0,0,0]))===JSON.stringify(original),'Empty composition falls back safely');
     var reseeded=art.describe(Object.assign({},a,{id:'another-parameter-seed'}));
     assert(JSON.stringify(reseeded.craters)!==JSON.stringify(original.craters),'Changing the seed changes the impact population');
+  });
+  test('Continuous asteroid roughness is deterministic and shared with the closed field', function () {
+    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
+    var points=[[.4,.2,.68],[-.6,.3,.45],[.8,-.2,.1]];
+    scene.setStudyParameters(a,{roughness:0});
+    var smooth=points.map(function(p){return scene.rockField(a,p);});
+    scene.setStudyParameters(a,{roughness:1});
+    var rough=points.map(function(p){return scene.rockField(a,p);});
+    assert(rough.some(function(v,i){return Math.abs(v-smooth[i])>.00001;}),'Roughness displaces terrain, not just shading');
+    points.forEach(function(p,i){
+      assertClose(scene.rockField(a,p),rough[i],1e-12);
+      assert(Math.abs(scene.rockField(a,[p[0]+1e-6,p[1],p[2]])-rough[i])<.0001,'Terrain remains continuous');
+    });
+    scene.setStudyParameters(a,{});
+    assert(JSON.stringify(a)===before,'Artwork does not change saves');
   });
   test('Surface walking frames follow the closed terrain with outward unit normals', function () {
     var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
