@@ -355,28 +355,11 @@ Operational transitions pass through the coordinator; rendering only reads it.
 Population is never included in tactical cloning or fixed-step normalization.
 See [population](population.md) for clock, event, transport, and save contracts.
 
-### Viewer surface rubble
+### Viewer asteroid surface
 
-Surface walking adds deterministic rubble tiles on a fixed 128-by-64 angular
-partition. Tile RNG uses the asteroid ID and wrapped tile coordinates. Each
-rock samples one continuous seeded shape at subdivision levels 0�4 (20 to
-5,120 triangles). Refinement preserves existing vertices. Smooth vertex normals
-and physical-space shader texture retain the surface palette.
-
-Visible tile bounds select detail from projected pixel diameter. Tiles are
-prioritized by apparent size and reserve their worst-case 18-rock triangle
-cost before drawing; total submitted rubble cannot exceed 160,000 triangles.
-New vertices and normals morph from the preceding topology in the vertex
-shader, avoiding silhouette jumps at subdivision boundaries. Conservative tile
-bounds cull off-screen tiles; partly visible tiles retain all their rocks.
-An LRU cache retains 64 tile/level buffers, invalidated by geology changes.
-Between 0.025 and 0.085 body radii, whole rocks smoothly sink along their
-terrain normal until buried. Rocks stay opaque and depth-writing; per-rock
-centers keep every vertex on the same transition, without transparency or
-pixel stippling.
-This budget covers rubble, not the base asteroid mesh, shader work, or total
-frame time. Asteroid terrain still uses its existing fixed mesh; excavated
-cutaways and orbit mode omit rubble. Cast shadows are not yet implemented.
+Study views draw the base asteroid terrain and its procedural surface shading.
+Separate surface boulder meshes are omitted to keep close flight and walking
+views free of tile generation, uploads, and additional rock draw calls.
 
 ### Mothership 3D artwork
 
@@ -462,13 +445,6 @@ ramping and lateral slip damping are separate; rotational damping and yaw bankin
 are also applied. See README for engine-power and afterburner assumptions.
 
 
-Flight lab rubble caps subdivision at level 2 and submitted geometry at 40,000
-triangles. Other study views retain level 4 and the 160,000 triangle ceiling.
-`scene3d.create` accepts optional `rubbleMaxDetail` and `rubbleTriangleBudget`.
-All study views build/upload at most one new rubble tile per rendered frame,
-retaining a cached coarser mesh while waiting. Tile-center surface samples are
-cached and cleared with geology changes. Overlay canvas data attributes
-`rubbleTriangles` and `rubbleBuilds` expose the work submitted in the last frame.
 Flight collision queries skip detailed terrain outside its enclosing 1.12-radius
 sphere; the original per-substep contact sampling remains active near terrain.
 
@@ -564,12 +540,6 @@ frames do not simulate or draw. Accepted frames retain real elapsed time for the
 existing simulation substeps and record unclamped display intervals for spikes.
 The default cap is 60 FPS active and 15 paused. The full CPU number includes
 input, simulation, geometry preparation, HUD and submission; it is not GPU time.
-
-Rubble tiles whose center-distance bounds cannot intersect the shader's .085
-normalized emergence range are culled before draw and mesh requests. The .04
-tile bound matches the existing conservative visibility sphere; tiles near the
-fade boundary remain eligible. This avoids invisible, fully buried boulder draws
-at distant cockpit positions without removing close-up surface rocks.
 
 ## Imported flight artwork experiment
 
@@ -742,3 +712,21 @@ different model. These experimental cosmetic fields are not production saves.
 Study actor batches may specify `opacity`; translucent batches blend over the
 opaque hull with depth testing retained and depth writes disabled. Scorch layers
 use this to preserve the underlying texture instead of covering it in solid black.
+
+### Flight lab orchestration
+
+`experiments/flight-session.js` owns the lab world fixture and mutable sortie,
+combat and gun state. `reset(config)` replaces those three states and optionally
+spawns combat; it retains the world, body size and elapsed clock. `setCombat`
+replaces only combat, preserving the toggle's existing delayed-spawn behavior.
+`snapshot()` returns current references, not a clone. `advance` executes at most
+1/120-second substeps in movement, training, player guns, audio notifications,
+and surface-contact order. Death finishes gun/audio processing and stops before
+contact. Terrain/hull/surface queries and audio notifications are injected.
+The browser loop owns pause, input, elapsed-world time and comms scheduling.
+
+`experiments/flight-hud.js` mounts the overlay canvas and target camera and owns
+radar range, telemetry, instruments and contact/lead markers. `render(view)` takes
+fresh session references and presentation/input values each frame; it does not
+retain sortie references or control simulation. Both ordinary scripts load before
+`flight.js`; the existing radar and target-camera modules remain subordinate.

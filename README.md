@@ -355,7 +355,7 @@ and use Reset measurements after warm-up. Compare Production artwork against:
 Empty space (scene and sky draws disabled), Simple boxes (asteroid/mothership
 geometry), Flat unlit materials (procedural fragment shading bypassed), 50%
 resolution (half width/height, approximately one quarter of the pixels), and the
-boulder/mothership/enemy-model visibility switches. These switches change drawing,
+mothership/enemy-model visibility switches. These switches change drawing,
 not gameplay or collision. Sky and scene use the same resolution multiplier.
 There are no dynamic shadow passes in this renderer.
 

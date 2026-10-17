@@ -21,6 +21,45 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('flight session reset replaces sortie state and preserves the environment', function () {
+    var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0]};
+    var first=session.reset(config),world=first.world;
+    assertClose(first.asteroid.radius*sim.METERS_PER_UNIT,300);
+    assertClose(first.mothership.position.x*sim.METERS_PER_UNIT,900);
+    first.state.throttle=0;first.guns.fired=12;first.combat.dead=true;first.combat.wrecks.push({});
+    first.asteroid.radius=20;world.elapsedSeconds=42;
+    var next=session.reset({mode:'training',enabled:false,profile:DW.arcade.profiles[1]});
+    assert(next.world===world && next.asteroid===first.asteroid);
+    assert(next.state!==first.state && next.guns!==first.guns && next.combat!==first.combat);
+    assert(next.state.throttle===1 && next.guns.fired===0 && !next.combat.dead && !next.contact);
+    assert(next.combat.enemies.length===0 && next.combat.wrecks.length===0 && !next.combat.enabled);
+    assert(next.world.elapsedSeconds===42 && next.asteroid.radius===20);
+    var again=session.reset(config);assert(again.combat.enemies.length>0 && again.combat.mode==='furball');
+    var player=again.state,guns=again.guns;
+    var toggled=session.setCombat('training',false);assert(toggled.state===player && toggled.guns===guns && toggled.combat.countdown===0);
+  });
+
+  test('flight session substeps preserve movement, training, guns, audio and contact order', function () {
+    var DW=window.Driftworks,model=DW.arcade,training=DW.training,guns=DW.flightGuns;
+    var saved=[model.step,training.step,guns.step,training.trace,model.contact],events=[],dead=false;
+    var terrain=function(){},hull=function(){},session=DW.flightSession.create({terrainHit:terrain,hullHit:hull,surfaceFrame:function(){events.push('surface');return {point:[1,0,0]};},onGunshot:function(){events.push('shot');},onImpact:function(){events.push('impact');}});
+    var config={mode:'training',enabled:false,profile:model.profiles[0],weapon:DW.retailWeapons[0]},view=session.reset(config);
+    view.state.eye=[0,0,0];
+    var controls={throttle:.4,throttleRate:0,stop:false,fire:true};
+    try{
+      model.step=function(state,profile,input,dt){events.push('move');assertClose(dt,1/120);assertClose(state.throttle,.4);assert(profile===config.profile && input===controls);};
+      training.step=function(combat,state,dt,radius,query){events.push('training');assert(combat.hullHit===hull && query===terrain);combat.lastHit++;combat.dead=dead;};
+      guns.step=function(g,state,weapon,fire,dt,trace){events.push('guns');assert(fire===!dead && weapon===config.weapon);g.fired++;trace([0,0,0],[1,0,0],{});};
+      training.trace=function(combat,start,end,bolt,team,query,player){events.push('trace');assert(team==='player' && query===terrain && player===view.state);};
+      model.contact=function(){events.push('contact');return true;};
+      var result=session.advance(1/60,controls,config);
+      var sequence='move,training,guns,trace,shot,impact,surface,contact';
+      assert(events.join(',')===sequence+','+sequence);assert(result.contact);
+      events=[];dead=true;session.advance(1/60,controls,config);
+      assert(events.join(',')==='move,training,guns,trace,shot,impact','Death must finish gun/audio work, skip contact, and stop remaining substeps');
+    }finally{model.step=saved[0];training.step=saved[1];guns.step=saved[2];training.trace=saved[3];model.contact=saved[4];}
+  });
+
   test('furball pilots keep a varied adult cast across lines and rounds', function () {
     var api=window.Driftworks.flightComms,seen={};
     for(var i=0;i<16;i++) {
@@ -897,11 +936,6 @@
     });});
   });
 
-  test('rubble culling keeps tiles intersecting the emergence range and skips fully buried tiles', function () {
-    var visible=window.Driftworks.scene3d.rubbleTileVisible;
-    assert(visible(.02));assert(visible(.12));assert(!visible(.13));
-    assert(visible(.15,.08));assert(!visible(.2,.08));
-  });
 
   test('flight frame cap follows 60 Hz on high-refresh screens without accumulating stalls', function () {
     var perf=window.Driftworks.flightPerformance,clock=perf.pacer(),frames=0;
@@ -1094,14 +1128,6 @@
     assert(hemispheres[0]>1000 && hemispheres[1]>1000);
   });
 
-  test('flight rubble caps detail while respecting the remaining triangle budget', function () {
-    var lod=window.Driftworks.scene3d.rubbleLod;
-    assert(lod(10000,40000,2).level===2);
-    assert(lod(10000,40000).level===3);
-    assert(lod(10000,1000,2).level===0);
-    assert(lod(10000,359,2).level===-1);
-    assert(lod(24,40000,2).level===1);
-  });
 
   test('retail maneuver tables preserve original values and axis order', function () {
     var profiles=window.Driftworks.arcade.profiles;
@@ -1346,31 +1372,6 @@
       assert(frame.point.every(Number.isFinite)&&frame.normal.every(Number.isFinite));
     });
     assert(JSON.stringify(a)===before,'Walking has no durable world state');
-  });
-  test('Rubble patches are deterministic, bounded and wrap the longitude seam', function () {
-    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
-    var first=scene.rubblePatch(a,20,25),again=scene.rubblePatch(a,148,25);
-    assert(first.length>0&&first.length<=18*1280*3*6,'Patch geometry has a fixed rock budget');
-    assert(first.length===again.length&&first.every(function(v,i){return v===again[i];}),'The same tile has identical rocks across the longitude seam');
-    assert(first.every(Number.isFinite),'Boulder coordinates and normals stay finite');
-    var shared=Object.create(null);
-    for(var i=0;i<first.length;i+=6){var key=first[i]+':'+first[i+1]+':'+first[i+2],normal=[first[i+3],first[i+4],first[i+5]];if(shared[key])assert(normal.every(function(v,j){return v===shared[key][j];}),'Shared vertices have continuous shading normals');else shared[key]=normal;assert(Math.abs(Math.hypot.apply(null,normal)-1)<.00001,'Shading normals have unit length');}
-    var other=scene.rubblePatch(Object.assign({},a,{id:'other-rubble-seed'}),20,25);
-    assert(first.length!==other.length||first.some(function(v,i){return v!==other[i];}),'Re-seeding changes rubble');
-    assert(JSON.stringify(a)===before,'Rubble is renderer-owned');
-  });
-  test('Rubble LOD spends a bounded screen-space budget and preserves seeded samples', function () {
-    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],remaining=160000;
-    [2000,800,400,100,40,20,10,2].forEach(function(pixels){var request=scene.rubbleLod(pixels,remaining);assert(request.morph>=0&&request.morph<=1,'Morph stays bounded');if(request.level>=0){var cost=18*20*Math.pow(4,request.level);assert(cost<=remaining,'Worst-case tile fits the remaining budget');remaining-=cost;}});
-    assert(scene.rubbleLod(1000,359).level===-1,'Insufficient budget skips a tile');
-    assert(scene.rubbleLod(500,160000).level>scene.rubbleLod(10,160000).level,'Larger projected rocks receive more detail');
-    var low=scene.rubblePatch(a,20,25,1),high=scene.rubblePatch(a,20,25,2),samples=new Set();
-    for(var i=0;i<high.length;i+=6)samples.add(high[i]+':'+high[i+1]+':'+high[i+2]);
-    for(var j=0;j<low.length;j+=6)assert(samples.has(low[j]+':'+low[j+1]+':'+low[j+2]),'Refinement preserves all existing seeded vertices');
-    var morph=scene.rubblePatch(a,20,25,2,true);
-    assert(morph.length===high.length*3&&morph.every(Number.isFinite),'Coarse and detailed morph endpoints stay finite');
-    var below=scene.rubbleLod(48-.00001,160000),above=scene.rubbleLod(48+.00001,160000);
-    assert(below.morph>.999&&above.morph<.001,'Adjacent LODs meet at the same coarse surface');
   });
   test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
