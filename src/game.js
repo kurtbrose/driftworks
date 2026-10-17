@@ -176,12 +176,12 @@
         hud.update(world, scene.getStats());
       },
       onSalvageAll: function () {
-        setWorld(sim.issueSalvageAllOrder(world));
+        setWorld(sim.issueSalvageAllOrder(world, world.selectedShipIds));
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
       onReturnHome: function () {
-        setWorld(sim.issueReturnOrder(world));
+        setWorld(sim.issueReturnOrder(world, world.selectedShipIds));
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
@@ -192,7 +192,7 @@
       },
       onDeployPlatform: function () {
         var asteroid = world.asteroids.filter(function (a) { return a.ore > 0; })[0];
-        if (asteroid) setWorld(sim.issueMineOrder(world, asteroid.id));
+        if (asteroid) setWorld(sim.issueMineOrder(world, asteroid.id, world.selectedShipIds));
         scene.sync(world);
         hud.update(world, scene.getStats());
       },
@@ -826,7 +826,8 @@
         var beforeOrder = getWorld();
         var target = screenToWorld(point, getWorld().camera, viewport());
         pushMoveReticle(effects, target);
-        setWorld(issueVisualContextOrder(getWorld(), target));
+        var orderWorld = getWorld();
+        setWorld(issueVisualContextOrder(orderWorld, target, orderWorld.selectedShipIds));
         if (audio) {
           if (beforeOrder.selectedShipIds.length) audio.playMove();
           else audio.playInvalid();
@@ -1008,8 +1009,9 @@
     };
   }
 
-  /** @param {World} world @param {Vec2} target @returns {World} */
-  function issueVisualContextOrder(world, target) {
+  /** @param {World} world @param {Vec2} target @returns {World} @param {string[]} [shipIds] */
+  function issueVisualContextOrder(world, target, shipIds) {
+    var ids = shipIds === undefined ? world.selectedShipIds : shipIds;
     var zoom = world.camera.zoom;
     /** @param {{ position: Vec2 }} entity @param {string} type @param {number} radius */
     function hits(entity, type, radius) {
@@ -1017,26 +1019,25 @@
         Math.max(12 / zoom, radius * semanticScale(type, zoom));
     }
     var homeHit = world.ships.filter(function (s) { return s.type === 'mothership' && hits(s, s.type, 38); })[0];
-    if (homeHit) return sim.issueReturnOrder(world);
+    if (homeHit) return sim.issueReturnOrder(world, ids);
     var platformHit = (world.platforms || []).filter(function (p) {
       return (p.state === 'deployed' || p.state === 'setting-up') && hits(p, 'platform', 22);
     })[0];
-    if (platformHit) return sim.issuePlatformRecovery(world, platformHit.id);
-    var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
+    if (platformHit) return sim.issuePlatformRecovery(world, platformHit.id, ids);
+    var fighters = world.ships.filter(function (s) { return s.type === 'escort' && ids.indexOf(s.id) !== -1; });
     if (fighters.length) {
       var guarded = world.ships.filter(function (s) {
-        return world.selectedShipIds.indexOf(s.id) === -1 && hits(s, s.type, s.type === 'mothership' ? 38 : 16);
+        return ids.indexOf(s.id) === -1 && hits(s, s.type, s.type === 'mothership' ? 38 : 16);
       }).sort(function (a, b) {
         return Math.hypot(a.position.x - target.x, a.position.y - target.y) - Math.hypot(b.position.x - target.x, b.position.y - target.y);
       })[0];
-      var selectedIds = world.selectedShipIds.slice();
+      var selectedIds = ids.slice();
       var rest = selectedIds.filter(function (id) { return !fighters.some(function (s) { return s.id === id; }); });
-      var next = rest.length ? issueVisualContextOrder(sim.selectShips(world, rest), target) : sim.cloneWorld(world);
-      next = sim.selectShips(next, selectedIds);
-      return sim.issueDefendOrder(next, guarded ? guarded.position : target, guarded && guarded.id);
+      var next = rest.length ? issueVisualContextOrder(world, target, rest) : sim.cloneWorld(world);
+      return sim.issueDefendOrder(next, guarded ? guarded.position : target, guarded && guarded.id, ids);
     }
     var hasTug = world.ships.some(function (ship) {
-      return ship.type === 'tug' && world.selectedShipIds.indexOf(ship.id) !== -1;
+      return ship.type === 'tug' && ids.indexOf(ship.id) !== -1;
     });
     if (hasTug) {
       var recoverables = (world.wrecks || []).map(/** @returns {{ entity: import('./types').Wreck | Ship, kind: 'ship' | 'wreck' }} */ function (wreck) {
@@ -1050,16 +1051,16 @@
         return Math.hypot(target.x - a.entity.position.x, target.y - a.entity.position.y) -
           Math.hypot(target.x - b.entity.position.x, target.y - b.entity.position.y);
       })[0];
-      if (recovery) return sim.issueRecoveryOrder(world, { kind: recovery.kind, id: recovery.entity.id });
+      if (recovery) return sim.issueRecoveryOrder(world, { kind: recovery.kind, id: recovery.entity.id }, ids);
     }
     var asteroid = world.asteroids.filter(function (item) {
       return hits(item, 'asteroid', sim.surfaceRadius(item, Math.atan2(target.y - item.position.y, target.x - item.position.x) - item.rotation));
     })[0];
-    if (asteroid) return sim.issueMineOrder(world, asteroid.id);
-    if (hasTug && world.depot && hits(world.depot, 'depot', 44)) return sim.issueBuildOrder(world);
+    if (asteroid) return sim.issueMineOrder(world, asteroid.id, ids);
+    if (hasTug && world.depot && hits(world.depot, 'depot', 44)) return sim.issueBuildOrder(world, ids);
     var home = world.ships.filter(function (ship) { return ship.type === 'mothership'; })[0];
-    if (home && hits(home, 'mothership', 38)) return sim.issueReturnOrder(world);
-    return sim.issueMoveOrder(world, target);
+    if (home && hits(home, 'mothership', 38)) return sim.issueReturnOrder(world, ids);
+    return sim.issueMoveOrder(world, target, ids);
   }
 
   /** @param {PIXI.Graphics} graphics @param {number} [zoom] */

@@ -42,6 +42,8 @@
         world.selectedShipIds = [];
         world.combat.drones = [];
         var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.training.create('training'), contact = false, grounded = false;
+        combat.useHullModels = true;
+        DW.training.bindPlayer(combat, state).guns = guns;
         var activeProfile = model.profiles[0];
         // A short-lived view of session-owned objects, not a detached copy.
         // Read again after transitions that may replace state, combat, guns or world.
@@ -52,6 +54,8 @@
         /** @param {string} mode @param {boolean} enabled */
         function setCombat(mode, enabled) {
             combat = DW.training.create(mode);
+            combat.useHullModels = true;
+            DW.training.bindPlayer(combat, state).guns = guns;
             DW.training.configure(combat, activeProfile);
             combat.enabled = enabled;
             if (!enabled) {
@@ -68,6 +72,8 @@
             combat.enabled = config.enabled;
             guns = DW.flightGuns.create();
             state = model.createSortie(asteroid.radius, config.profile);
+            combat.useHullModels = true;
+            DW.training.bindPlayer(combat, state).guns = guns;
             contact = false;
             grounded = false;
             if (combat.enabled)
@@ -92,13 +98,9 @@
                     state.back = rotateVector(state.back, angle);
                 }
                 grounded = false;
-                if (controls.throttle !== null)
-                    state.throttle = controls.throttle;
-                state.throttle = Math.max(0, Math.min(1, state.throttle + (controls.throttleRate) * dt * .5));
-                if (controls.stop)
-                    state.throttle = 0;
-                model.step(state, config.profile, controls, dt);
-                combat.hullHit = environment.hullHit;
+                combat.player.profile = config.profile;
+                combat.player.weaponIndex = DW.retailWeapons.indexOf(config.weapon);
+                DW.training.stepInput(combat.player, controls, dt);
                 combat.onTerrainImpact = function (point) {
                     var marks = combat.terrainScorches || (combat.terrainScorches = []);
                     marks.push(rotateVector(point, -asteroid.rotation));

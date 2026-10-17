@@ -82,9 +82,9 @@
           y: Math.cos(angle) * radius * angularVelocity } };
     }
 
-    /** @param {World} world @param {string} id @returns {World} */
-    function issuePlatformRecovery(world, id) {
-      var next = api.cloneWorld(world), selected = api.selectedLookup(next);
+    /** @param {World} world @param {string} id @param {string[]} [shipIds] @returns {World} */
+    function issuePlatformRecovery(world, id, shipIds) {
+      var next = api.cloneWorld(world), selected = api.selectedLookup(next, shipIds);
       var platform = (next.platforms || []).filter(function (p) {
         return p.id === id && (p.state === 'deployed' || p.state === 'setting-up');
       })[0];

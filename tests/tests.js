@@ -21,6 +21,94 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('explicit order recipients are independent of selection and preserve legacy commands', function () {
+    var base=sim.createInitialWorld();
+    base.ships.forEach(function(ship){ship.docked=false;ship.order={kind:'move',target:{x:100,y:100}};});
+    base.selectedShipIds=['escort-02'];base.selectedPlatformId='platform-02';
+    base.platforms[0].state='deployed';base.platforms[0].asteroidId=base.asteroids[0].id;
+    base.wrecks=[{id:'test-wreck',position:{x:500,y:500},velocity:{x:0,y:0},ore:10,towedBy:null}];
+    var cases=[
+      ['issueMoveOrder',[{x:800,y:800}],['tug-01','missing','tug-01']],
+      ['issueContextOrder',[{x:800,y:800}],['tug-01','escort-01']],
+      ['issueMineOrder',[base.asteroids[0].id],['msv-hardshell']],
+      ['issueBuildOrder',[],['tug-01']],['issueReturnOrder',[],['tug-01']],
+      ['issueDefendOrder',[{x:900,y:900},null],['escort-01']],
+      ['issueRecoveryOrder',[{kind:'wreck',id:'test-wreck'}],['tug-01']],
+      ['issuePlatformRecovery',['platform-01'],['tug-01']]
+    ];
+    cases.forEach(function(c){
+      var before=JSON.stringify(base),ids=c[2],expected=sim[c[0]].apply(null,[sim.selectShips(base,ids)].concat(c[1]));
+      expected.selectedShipIds=base.selectedShipIds.slice();expected.selectedPlatformId=base.selectedPlatformId;
+      var actual=sim[c[0]].apply(null,[base].concat(c[1],[ids]));
+      assert(JSON.stringify(actual)===JSON.stringify(expected),c[0]+' must use explicit recipients');
+      assert(JSON.stringify(base)===before,c[0]+' mutated the source');
+    });
+    base.ships[1].order={kind:'idle'};
+    var next=sim.issueSalvageAllOrder(base,['tug-01']);
+    assert(next.ships[1].order.kind==='recover'&&next.selectedShipIds[0]==='escort-02');
+    next=sim.issueMoveOrder(base,{x:1,y:2},[]);
+    assert(next.ships[1].order.kind==='idle'&&next.ships[3].order.kind==='move','Empty recipients must not fall back to selection');
+    var visual=game.issueVisualContextOrder(base,{x:800,y:800},['tug-01','escort-01']);
+    assert(visual.ships[1].order.kind==='move'&&visual.ships[2].order.kind==='defend');
+    assert(JSON.stringify(visual.selectedShipIds)===JSON.stringify(base.selectedShipIds)&&visual.selectedPlatformId===base.selectedPlatformId);
+  });
+
+  test('automatic defense leaves both ship and platform selection untouched', function () {
+    var world=sim.createInitialWorld();world.selectedShipIds=['tug-01'];world.selectedPlatformId='platform-01';
+    world=sim.spawnHostileWave(world);var next=sim.stepWorld(world,1/30);
+    assert(next.ships.some(function(ship){return ship.order.kind==='defend'&&ship.order.automatic;}));
+    assert(next.selectedShipIds.join(',')==='tug-01'&&next.selectedPlatformId==='platform-01');
+  });
+
+  test('controlled craft owns defenses, weapons and legal input just like AI craft', function () {
+    var DW=window.Driftworks,api=DW.training,t=api.create(),pose=DW.arcade.create(0);
+    var own=api.bindPlayer(t,pose),other=api.createCraft('wingman',DW.arcade.create(0),'ally');
+    t.enemies=[other];other.pose.eye=[30,30,30];
+    assert(api.participants(t)[0]===own&&api.participants(t)[1]===other);
+    var weapon={damage:30,shieldFactor:1,armorFactor:1};
+    api.damageCraft(t,own,weapon);api.damageCraft(t,other,weapon);
+    assert(own.hp===other.hp&&own.shield===other.shield&&t.shield===own.shield);
+    var input={throttle:.7,throttleRate:0,fire:true,pitch:.2,yaw:0,roll:0};
+    api.stepInput(own,input,1/120);api.stepInput(other,input,1/120);
+    assertClose(own.pose.throttle,other.pose.throttle);assert(own.fire&&other.fire);
+    var heading=other.pose.back.slice();api.step(t,pose,1/120,0);
+    assert(JSON.stringify(other.pose.back)===JSON.stringify(heading),'AI must not take over an input-controlled wingman');
+    var checkpoint=JSON.parse(JSON.stringify(t));
+    assert(checkpoint.player.hp===own.hp&&checkpoint.player.collision.kind==='sphere'&&!('hull' in checkpoint)&&!('dead' in checkpoint));
+  });
+
+  test('all craft use team-aware nearest-hit damage and local death does not stop combat', function () {
+    var DW=window.Driftworks,api=DW.training,t=api.create('furball'),pose=DW.arcade.create(0),U=sim.METERS_PER_UNIT;
+    api.bindPlayer(t,pose);pose.eye=[50,50,50];
+    var ally=api.createCraft('wingman',DW.arcade.create(0),'ally'),enemy=api.createCraft('raider',DW.arcade.create(0),'enemy');
+    ally.pose.eye=[0,20/U,0];enemy.pose.eye=[0,40/U,0];t.enemies=[ally,enemy];
+    var bolt={weapon:{damage:30,shieldFactor:1,armorFactor:1}},before=enemy.shield;
+    api.trace(t,[0,0,0],[0,60/U,0],bolt,ally,null,pose);
+    assert(ally.shield===120&&enemy.shield<before);
+    api.trace(t,[0,60/U,0],[0,0,0],bolt,enemy,null,pose);
+    assert(ally.shield<120,'An input-controlled ally is a normal damage target');
+    api.damageCraft(t,t.player,{damage:10000,shieldFactor:1,armorFactor:1},enemy);
+    assert(t.dead&&t.wrecks.length===1);var time=t.time,hp=t.player.hp;
+    api.step(t,pose,1/120,0);assert(t.time>time&&t.player.hp===hp);
+    api.damagePlayer(t,bolt.weapon);assert(t.wrecks.length===1,'Death resolves once');
+  });
+
+  test('simulation collision models survive cosmetic changes and JSON round trips', function () {
+    var DW=window.Driftworks,api=DW.training,session=DW.flightSession.create({});
+    var view=session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]}),craft=view.combat.enemies[0];
+    assert(craft.collision.kind==='model');
+    var clone=JSON.parse(JSON.stringify(craft)),U=sim.METERS_PER_UNIT;
+    clone.pose=DW.arcade.create(0);clone.pose.eye=[0,0,0];
+    var shape=JSON.stringify(clone.collision),start=[0,0,100/U],end=[0,0,-100/U];
+    var first=api.hullHit(clone,start,end);assert(first&&first.model.id===clone.collision.modelId);
+    clone.index=100;clone.team='enemy';clone.artWave=30;
+    var second=api.hullHit(clone,start,end);
+    assert(JSON.stringify(second)===JSON.stringify(first)&&JSON.stringify(clone.collision)===shape);
+    var sphere=api.createCraft('sphere',DW.arcade.create(0),'enemy');sphere.pose.eye=[0,0,0];sphere.collision.radiusM=2;
+    assert(!api.hullHit(sphere,[3/U,-10/U,0],[3/U,10/U,0]));
+    sphere.collision.radiusM=4;assert(api.hullHit(sphere,[3/U,-10/U,0],[3/U,10/U,0]));
+  });
+
   test('evaluation pilots reject illegal control records without silently repairing them', function () {
     var api=window.Driftworks.flightAI, valid={pitch:0,yaw:0,roll:0,side:0,vertical:0,throttle:1,fire:false,boost:false};
     [Object.assign({},valid,{pitch:1.01}),Object.assign({},valid,{yaw:NaN}),Object.assign({},valid,{throttle:-.1}),Object.assign({},valid,{boost:1}),Object.assign({},valid,{teleport:true})].forEach(function(input){
@@ -30,7 +118,7 @@
   });
 
   test('watch playback uses the benchmark clock and cameras never alter duel state', function () {
-    var DW=window.Driftworks,session=DW.flightSession.create({hullHit:function(){return null;},terrainHit:function(){return null;},surfaceFrame:function(){return {point:[0,0,1]};},onGunshot:function(){},onImpact:function(){}});
+    var DW=window.Driftworks,session=DW.flightSession.create({terrainHit:function(){return null;},surfaceFrame:function(){return {point:[0,0,1]};},onGunshot:function(){},onImpact:function(){}});
     var options={start:'crossing',category:'human',flavor:'novice',seed:29,duration:3},watch=DW.flightWatch.create(session.snapshot,options),reference=DW.flightDuel.run(options);
     var stateBefore=JSON.stringify(watch.snapshot(false).state);
     var chase=watch.snapshot(true);assert(chase.observerCraft.pose===chase.state && chase.camera!==chase.state);
@@ -263,9 +351,7 @@
       doc.getElementById('faction-paint').checked=true;doc.getElementById('ally-color').value='#607451';doc.getElementById('enemy-color').value='#bd713f';
       var appearance=presentation.appearance();assert(appearance.shipImages===textureImages);
       assert(DW.flightPresentation.model(ally,3,appearance).id==='friendly:3:ally');
-      var start=[0,0,0],end=[1,0,0];presentation.hullHit(ally,start,end,3);
-      assert(hullQuery.model.id===DW.flightPresentation.model(ally,3,appearance).id&&hullQuery.pose===ally.pose&&hullQuery.units===sim.METERS_PER_UNIT&&hullQuery.start===start&&hullQuery.end===end);
-      doc.getElementById('enemy-art').value='changed';presentation.hullHit(enemy,start,end,4);assert(hullQuery.model.id==='changed:4:enemy');
+      assert(!presentation.hullHit, 'Presentation does not supply authoritative collision');
       presentation.pose(player);presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
       assert(events.join(',')==='pose,actors,effects,diagnostics,sky,sync,scene');
       assert(actors.map(function(batch){return batch.kind;}).join(',')==='hull,hull,scorch,scorch');
@@ -532,13 +618,13 @@
   test('flight session substeps preserve movement, training, guns, audio and contact order', function () {
     var DW=window.Driftworks,model=DW.arcade,training=DW.training,guns=DW.flightGuns;
     var saved=[model.step,training.step,guns.step,training.trace,model.contact],events=[],dead=false;
-    var terrain=function(){},hull=function(){},session=DW.flightSession.create({terrainHit:terrain,hullHit:hull,surfaceFrame:function(){events.push('surface');return {point:[1,0,0]};},onGunshot:function(){events.push('shot');},onImpact:function(){events.push('impact');}});
+    var terrain=function(){},session=DW.flightSession.create({terrainHit:terrain,surfaceFrame:function(){events.push('surface');return {point:[1,0,0]};},onGunshot:function(){events.push('shot');},onImpact:function(){events.push('impact');}});
     var config={mode:'training',enabled:false,profile:model.profiles[0],weapon:DW.retailWeapons[0]},view=session.reset(config);
     view.state.eye=[0,0,0];
     var controls={throttle:.4,throttleRate:0,stop:false,fire:true};
     try{
       model.step=function(state,profile,input,dt){events.push('move');assertClose(dt,1/120);assertClose(state.throttle,.4);assert(profile===config.profile && input===controls);};
-      training.step=function(combat,state,dt,radius,query){events.push('training');assert(combat.hullHit===hull && query===terrain);combat.lastHit++;combat.dead=dead;};
+      training.step=function(combat,state,dt,radius,query){events.push('training');assert(!combat.hullHit && combat.player.pose===state && query===terrain);combat.lastHit++;combat.dead=dead;};
       guns.step=function(g,state,weapon,fire,dt,trace){events.push('guns');assert(fire===!dead && weapon===config.weapon);g.fired++;trace([0,0,0],[1,0,0],{});};
       training.trace=function(combat,start,end,bolt,team,query,player){events.push('trace');assert(team==='player' && query===terrain && player===view.state);};
       model.contact=function(){events.push('contact');return true;};
@@ -1603,7 +1689,7 @@
     t.shield=1;ai.damagePlayer(t,weapon);assert(t.shield===0 && t.hull<100);
     t.time=20;t.lastHit=0;ai.step(t,player,.1,18);assert(t.shield>0);
     t.shield=0;t.hull=1;ai.damagePlayer(t,weapon);assert(t.dead && t.hull===0);
-    var before=t.time;ai.step(t,player,1,18);assert(t.time===before);
+    var before=t.time;ai.step(t,player,1,18);assert(t.time>before && t.dead, 'The observing craft death must not freeze the shared simulation');
     var fresh=ai.create();assert(!fresh.dead && fresh.shield===120 && fresh.kills===0);
   });
   test('training intercept leads moving targets and models are simple bounded triangles', function () {
@@ -4106,7 +4192,7 @@
   test('Flight traces burn only the first unobstructed hull and preserve lethal impacts', function () {
     var models=window.Driftworks.shipPackModels,ai=window.Driftworks.training,U=sim.METERS_PER_UNIT;
     var t=ai.create(),pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,0,0]},e={id:'target',index:0,hp:10,pose:pose};
-    t.enemies=[e];t.hullHit=function(craft,start,end){return models.hullHit(models.craftModel(craft,'',1),craft.pose,start,end,U);};
+    e.collision={kind:'model',modelId:models.craftModel(e,'',1).id};t.enemies=[e];
     var bolt={weapon:{damage:20,armorFactor:1}},start=[0,0,10/U],end=[0,0,-10/U];
     var terrainMarks=[];t.onTerrainImpact=function(point){terrainMarks.push(point);};
     var obstruction=[0,0,8/U],player={eye:[20,20,20]};
@@ -4129,6 +4215,31 @@
     var after=models.scorchGeometry([e],'',1,U)[0].vertices;
     assert(before.length>0&&before.length===after.length);
     for(var i=0;i<before.length;i+=6){assertClose(after[i],10-before[i+1],.00001);assertClose(after[i+1],20+before[i],.00001);assertClose(after[i+2],30+before[i+2],.00001);}
+  });
+
+  test('Combat study deduplicates deterministic pilots and equivalent weapons', function () {
+    var study=window.Driftworks.flightStudy, DW=window.Driftworks;
+    var config={ships:[0],weapons:[-1],starts:['headOn'],pilots:['perfect','practiced'],skills:[1],seeds:3,seed:1,duration:10,pairing:'mirror',defenses:'paired'};
+    assert(study.plan(config).length===8);
+    config.weapons.push(DW.training.defaultWeapon(DW.arcade.profiles[0]));
+    assert(study.plan(config).length===8, 'Equivalent native weapons are not independent trials');
+    config.seeds=11;var rejected=false;try{study.plan(config);}catch(e){rejected=true;}assert(rejected);
+  });
+
+  test('Combat study keeps timeouts censored and pairs shield observations', function () {
+    var DW=window.Driftworks,duel=DW.flightDuel.run({duration:1,seed:7}),options=duel.replay.options;
+    var shield={id:'shield',options:Object.assign({},options,{unshielded:false}),summary:Object.assign({},duel.summary(),{outcome:'timeout',seconds:10,unshielded:false})};
+    var bare={id:'bare',options:Object.assign({},options,{unshielded:true}),summary:Object.assign({},duel.summary(),{outcome:'player-win',seconds:2,unshielded:true})};
+    var a=DW.flightStudy.analyze([shield,bare]);assert(a.timeouts===1&&a.medianKill===2);assert(a.shieldPairs===1&&a.pairsCensored===1&&a.observedShieldDelta===8);
+    assert(DW.flightStudy.analyze([shield]).medianKill===null);
+  });
+
+  test('Combat study watch links reproduce the complete duel configuration', function () {
+    var DW=window.Driftworks,options=DW.flightDuel.create({duration:1,seed:17,profile:1,opponentProfile:31,category:'human',flavor:'expert',start:'crossing',unshielded:true}).replay.options;
+    var url=DW.flightStudy.watchUrl(options),parsed=DW.flightDuel.readWatchSearch(url.slice(url.indexOf('?')));
+    assert(JSON.stringify(parsed)===JSON.stringify(options));
+    assert(DW.flightDuel.readWatchSearch('?unrelated=1')===null);
+    var rejected=false;try{DW.flightDuel.readWatchSearch('?duel=1&seed=-1');}catch(e){rejected=true;}assert(rejected);
   });
 
   window.registerPopulationTests(test, assert, assertClose);

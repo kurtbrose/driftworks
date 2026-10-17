@@ -22,7 +22,7 @@
     /** @param {Options} [configuration] */
     function create(configuration) {
         var options=Object.assign(/** @type {Required<Options>} */ ({start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0,opponentProfile:-1,weapon:-1,opponentWeapon:-2,unshielded:false}),configuration);
-        if(!starts[options.start] || !Number.isFinite(options.duration) || options.duration<=0 || ![0,1,2].includes(options.skill) || !DW.arcade.profiles[options.profile]) throw new Error('Invalid duel options');
+        if(!Object.prototype.hasOwnProperty.call(starts,options.start) || !Number.isFinite(options.duration) || options.duration<=0 || ![0,1,2].includes(options.skill) || !DW.arcade.profiles[options.profile] || !Number.isInteger(options.seed) || options.seed<0 || options.seed>4294967295) throw new Error('Invalid duel options');
         var profile=DW.arcade.profiles[options.profile], enemyProfile=options.opponentProfile === -1 ? profile : DW.arcade.profiles[options.opponentProfile];
         var weaponIndex=options.weapon === -1 ? DW.training.defaultWeapon(profile) : options.weapon;
         var requestedEnemyWeapon=options.opponentWeapon === -2 ? options.weapon : options.opponentWeapon;
@@ -38,6 +38,8 @@
         setup(enemy.pose,initial.position,initial.forward,enemyProfile);
         combat.slots=[enemy.id];
         var pilot=DW.flightAI.create(options.category,options.flavor,options.seed), guns=DW.flightGuns.create();
+        DW.training.bindPlayer(combat, player).guns = guns;
+        combat.player.weaponIndex = weaponIndex;
         var tick=0, remainder=0, done=false, lastMode=enemy.mode, longestDry=0, dry=0;
         var metrics={playerOpportunities:0,opponentOpportunities:0,playerDamageSteps:0,opponentDamageSteps:0,modeChanges:0,minRange:Infinity,maxRange:0};
         var replay=/** @type {Replay} */ ({version:2,policy:pilot.version,observation:pilot.observation,cadence:DT,options:Object.assign({},options),inputs:[]});
@@ -51,7 +53,7 @@
                 var input=inputStream ? DW.flightAI.validate(inputStream[tick]) : pilot.step(time,player,enemy.pose,profile,weapon);
                 replay.inputs.push(input);
                 // Match flightSession order; never move a real craft inside a controller.
-                player.throttle=input.throttle; DW.arcade.step(player,profile,input,DT);
+                DW.training.stepInput(combat.player,Object.assign({throttleRate:0},input),DT);
                 var hullBefore=combat.hull, shieldBefore=combat.shield;
                 DW.training.step(combat,player,DT,0);
                 if(combat.hull<hullBefore || combat.shield<shieldBefore) metrics.opponentDamageSteps++;
@@ -93,5 +95,21 @@
         if(duel.summary().ticks!==record.inputs.length) throw new Error('Inputs after terminal duel state');
         return duel;
     }
-    DW.flightDuel={create:create,run:run,replay:replay,starts:Object.keys(starts),dt:DT};
+    /** A study link configures a fresh paused duel, not an archived control replay.
+     * @param {string} search @returns {Required<Options>|null} */
+    function readWatchSearch(search) {
+        var params=new URLSearchParams(search);
+        if(params.get('duel')!=='1')return null;
+        var options=/** @type {Options} */ ({});
+        /** @type {('profile'|'opponentProfile'|'weapon'|'opponentWeapon'|'skill'|'seed'|'duration')[]} */
+        var numeric=['profile','opponentProfile','weapon','opponentWeapon','skill','seed','duration'];
+        numeric.forEach(function(key){if(params.has(key))options[key]=Number(params.get(key));});
+        if(params.has('category'))options.category=/** @type {Options['category']} */(params.get('category'));
+        if(params.has('flavor'))options.flavor=/** @type {Options['flavor']} */(params.get('flavor'));
+        if(params.has('start'))options.start=/** @type {Options['start']} */(params.get('start'));
+        if(params.has('unshielded')){if(!['true','false'].includes(params.get('unshielded')||''))throw new Error('Invalid defense flag');options.unshielded=params.get('unshielded')==='true';}
+        if(options.duration!==undefined&&options.duration>120)throw new Error('Watch links support at most 120 seconds');
+        return create(options).replay.options;
+    }
+    DW.flightDuel={create:create,run:run,replay:replay,readWatchSearch:readWatchSearch,starts:Object.keys(starts),dt:DT};
 }());

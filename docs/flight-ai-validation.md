@@ -81,3 +81,8 @@ This historical baseline predates promotion of `tests/flight-duel.js` to the sha
 These numbers expose room for improvement in the evaluation setup as well as opponent behavior. The shielded player seat and generous continuous target telemetry matter. A high player win rate fits the opponent's broad purpose, but does not establish satisfying pursuit, credible human behavior or a useful difficulty curve. Add more seeds, real-player calibration and a wider geometry/speed matrix before setting acceptance thresholds. Preserve this baseline when implementing opponent changes.
 
 Regression coverage checks legal input rejection, frozen observations, deterministic human sampling and reaction latency, immediate stress-pilot fire without opponent concessions, shared-physics input replay, frame-batching invariance, no respawn after destruction, and finite bounded behavior across all starts/flavors. Future stages should add captured human trajectories, independent-axis stress candidates, symmetric duels, target changes and richer opportunity/overshoot metrics. The [research plan](flight-ai-freespace-research.md) remains the design reference for later opponent improvements.
+
+## Batch research page
+
+Use [Combat research](../experiments/flight-study.html) to screen loadouts without rendering, export reports, and open individual configurations paused in the flight lab. See [study design and interpretation](combat-research.md) for matched comparisons, timeout censoring and human playtesting stages. Watch links rerun the current code; preserve the report source revision for reproducibility.
+

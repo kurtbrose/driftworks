@@ -117,9 +117,9 @@
     return next;
   }
 
-  /** @param {World} world @param {Vec2} target @param {string | null | undefined} shipId @returns {World} */
-  function issueDefendOrder(world, target, shipId) {
-    return formations.issueDefendOrder(world, target, shipId);
+  /** @param {World} world @param {Vec2} target @param {string | null | undefined} shipId @returns {World} @param {string[]} [shipIds] */
+  function issueDefendOrder(world, target, shipId, shipIds) {
+    return formations.issueDefendOrder(world, target, shipId, shipIds);
   }
 
   /** @param {number} [seed] */
@@ -333,12 +333,12 @@
     return next;
   }
 
-  /** @param {World} world @param {Vec2} target @returns {World} */
-  function issueMoveOrder(world, target) {
+  /** @param {World} world @param {Vec2} target @returns {World} @param {string[]} [shipIds] */
+  function issueMoveOrder(world, target, shipIds) {
     var next = cloneWorld(world);
     /** @type {Record<string, boolean>} */
     var selected = {};
-    next.selectedShipIds.forEach(function (id) {
+    (shipIds === undefined ? next.selectedShipIds : shipIds).forEach(function (id) {
       selected[id] = true;
     });
     next.ships.forEach(function (ship) {
@@ -352,50 +352,51 @@
     return next;
   }
 
-  /** @param {World} world @param {Vec2} target @returns {World} */
-  function issueContextOrder(world, target) {
+  /** @param {World} world @param {Vec2} target @returns {World} @param {string[]} [shipIds] */
+  function issueContextOrder(world, target, shipIds) {
+    var ids = shipIds === undefined ? world.selectedShipIds : shipIds;
     var home = findMothership(world);
-    if (home && distance(target, home.position) <= DOCK_DISTANCE + 18) return issueReturnOrder(world);
+    if (home && distance(target, home.position) <= DOCK_DISTANCE + 18) return issueReturnOrder(world, ids);
     var platform = (world.platforms || []).filter(function (p) {
       return (p.state === 'deployed' || p.state === 'setting-up') && distance(target, p.position) < 22;
     })[0];
-    if (platform) return issuePlatformRecovery(world, platform.id);
-    var fighters = world.ships.filter(function (s) { return s.type === 'escort' && world.selectedShipIds.indexOf(s.id) !== -1; });
+    if (platform) return issuePlatformRecovery(world, platform.id, ids);
+    var fighters = world.ships.filter(function (s) { return s.type === 'escort' && ids.indexOf(s.id) !== -1; });
     if (fighters.length) {
-      var guarded = world.ships.filter(function (s) { return world.selectedShipIds.indexOf(s.id) === -1 && distance(s.position, target) <= (s.type === 'mothership' ? 38 : 16); })
+      var guarded = world.ships.filter(function (s) { return ids.indexOf(s.id) === -1 && distance(s.position, target) <= (s.type === 'mothership' ? 38 : 16); })
         .sort(function (a, b) { return distance(a.position, target) - distance(b.position, target); })[0];
-      var rest = world.selectedShipIds.filter(function (id) { return !fighters.some(function (s) { return s.id === id; }); });
-      var next = rest.length ? issueContextOrder(selectShips(world, rest), target) : cloneWorld(world);
-      return issueDefendOrder(selectShips(next, world.selectedShipIds), guarded ? guarded.position : target, guarded && guarded.id);
+      var rest = ids.filter(function (id) { return !fighters.some(function (s) { return s.id === id; }); });
+      var next = rest.length ? issueContextOrder(world, target, rest) : cloneWorld(world);
+      return issueDefendOrder(next, guarded ? guarded.position : target, guarded && guarded.id, ids);
     }
     var recoverable = nearestRecoverable(world, target, 26);
-    if (recoverable && selectedType(world, 'tug')) {
-      return issueRecoveryOrder(world, recoverable);
+    if (recoverable && selectedType(world, 'tug', ids)) {
+      return issueRecoveryOrder(world, recoverable, ids);
     }
     var asteroid = findNearestAsteroid(world, target, 38);
     var mothership = findMothership(world);
     var depot = world.depot;
 
     if (asteroid) {
-      return issueMineOrder(world, asteroid.id);
+      return issueMineOrder(world, asteroid.id, ids);
     }
 
-    if (depot && distance(target, depot.position) <= 48 && selectedType(world, 'tug')) {
-      return issueBuildOrder(world);
+    if (depot && distance(target, depot.position) <= 48 && selectedType(world, 'tug', ids)) {
+      return issueBuildOrder(world, ids);
     }
 
     if (mothership && distance(target, mothership.position) <= DOCK_DISTANCE + 18) {
-      return issueReturnOrder(world);
+      return issueReturnOrder(world, ids);
     }
 
-    return issueMoveOrder(world, target);
+    return issueMoveOrder(world, target, ids);
   }
 
-  /** @param {World} world @param {string} asteroidId @returns {World} */
-  function issueMineOrder(world, asteroidId) {
+  /** @param {World} world @param {string} asteroidId @returns {World} @param {string[]} [shipIds] */
+  function issueMineOrder(world, asteroidId, shipIds) {
     var next = cloneWorld(world);
     var asteroid = findAsteroid(next, asteroidId);
-    var selected = selectedLookup(next);
+    var selected = selectedLookup(next, shipIds);
     if (!asteroid || asteroid.ore <= 0) {
       return next;
     }
@@ -414,10 +415,10 @@
     return next;
   }
 
-  /** @param {World} world @returns {World} */
-  function issueBuildOrder(world) {
+  /** @param {World} world @returns {World} @param {string[]} [shipIds] */
+  function issueBuildOrder(world, shipIds) {
     var next = cloneWorld(world);
-    var selected = selectedLookup(next);
+    var selected = selectedLookup(next, shipIds);
     var mothership = findMothership(next);
     if (!mothership || !next.depot || next.depot.builtStages >= next.depot.totalStages) {
       return next;
@@ -435,11 +436,11 @@
     return next;
   }
 
-  /** @param {World} world @returns {World} */
-  function issueReturnOrder(world) {
+  /** @param {World} world @returns {World} @param {string[]} [shipIds] */
+  function issueReturnOrder(world, shipIds) {
     var next = cloneWorld(world);
     var mothership = findMothership(next);
-    var selected = selectedLookup(next);
+    var selected = selectedLookup(next, shipIds);
     if (!mothership) {
       return next;
     }
@@ -469,12 +470,10 @@
         return ship.type === 'escort' && !ship.disabled && ship.docked && ship.order.kind === 'idle' && !ship.repairRemaining;
       }).map(function (ship) { return ship.id; });
       if (homeForDefense && scrambleIds.length) {
-        var priorSelection = next.selectedShipIds.slice();
-        next = issueDefendOrder(selectShips(next, scrambleIds), homeForDefense.position, homeForDefense.id);
+        next = issueDefendOrder(next, homeForDefense.position, homeForDefense.id, scrambleIds);
         next.ships.forEach(function (ship) {
           if (scrambleIds.indexOf(ship.id) !== -1 && ship.order.kind === 'defend') ship.order.automatic = true;
         });
-        next.selectedShipIds = priorSelection;
       }
     } else {
       next.ships.forEach(function (ship) {
@@ -690,9 +689,9 @@
     return logistics.canDeployPlatform(world);
   }
 
-  /** @param {World} world @param {string} id @returns {World} */
-  function issuePlatformRecovery(world, id) {
-    return logistics.issuePlatformRecovery(world, id);
+  /** @param {World} world @param {string} id @returns {World} @param {string[]} [shipIds] */
+  function issuePlatformRecovery(world, id, shipIds) {
+    return logistics.issuePlatformRecovery(world, id, shipIds);
   }
 
   /** @param {World} world @returns {World} */
@@ -984,28 +983,28 @@
     return best;
   }
 
-  /** @param {World} world @param {RecoveryRef} reference @returns {World} */
-  function issueRecoveryOrder(world, reference) {
+  /** @param {World} world @param {RecoveryRef} reference @returns {World} @param {string[]} [shipIds] */
+  function issueRecoveryOrder(world, reference, shipIds) {
     var next = normalizeWorld(world);
     var target = recoveryTarget(next, reference);
     if (!target || target.towedBy) return next;
     var targetPosition = clonePlain(target.position);
     next.ships.forEach(function (ship) {
-      if (next.selectedShipIds.indexOf(ship.id) < 0 || ship.type !== 'tug' ||
+      if ((shipIds === undefined ? next.selectedShipIds : shipIds).indexOf(ship.id) < 0 || ship.type !== 'tug' ||
         ship.disabled || ship.carryingSection || ship.platformId || ship.towTarget) return;
       ship.order = { kind: 'recover', recoveryTarget: clonePlain(reference), target: targetPosition };
     });
     return next;
   }
 
-  /** @param {World} world @returns {World} */
-  function issueSalvageAllOrder(world) {
+  /** @param {World} world @returns {World} @param {string[]} [shipIds] */
+  function issueSalvageAllOrder(world, shipIds) {
     var next = normalizeWorld(world);
     var target = findMothership(next);
     if (!target) return next;
     var assigned = false;
     next.ships.forEach(function (ship) {
-      if (next.selectedShipIds.indexOf(ship.id) < 0 || ship.type !== 'tug' || ship.disabled || ship.carryingSection ||
+      if ((shipIds === undefined ? next.selectedShipIds : shipIds).indexOf(ship.id) < 0 || ship.type !== 'tug' || ship.disabled || ship.carryingSection ||
         ship.platformId || ship.towTarget || (ship.order.kind !== 'idle' && ship.order.kind !== 'return')) return;
       var reference = nearestRecoverable(next, ship.position, Infinity);
       if (!reference) return;
@@ -1151,19 +1150,19 @@
     });
   }
 
-  /** @param {World} world @returns {Record<string, boolean>} */
-  function selectedLookup(world) {
+  /** @param {World} world @returns {Record<string, boolean>} @param {string[]} [shipIds] */
+  function selectedLookup(world, shipIds) {
     /** @type {Record<string, boolean>} */
     var selected = {};
-    world.selectedShipIds.forEach(function (id) {
+    (shipIds === undefined ? world.selectedShipIds : shipIds).forEach(function (id) {
       selected[id] = true;
     });
     return selected;
   }
 
-  /** @param {World} world @param {string} type @returns {boolean} */
-  function selectedType(world, type) {
-    var selected = selectedLookup(world);
+  /** @param {World} world @param {string} type @returns {boolean} @param {string[]} [shipIds] */
+  function selectedType(world, type, shipIds) {
+    var selected = selectedLookup(world, shipIds);
     return world.ships.some(function (ship) {
       return selected[ship.id] && ship.type === type;
     });

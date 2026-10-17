@@ -157,10 +157,6 @@
         function paint(team) {
             return get('faction-paint').checked ? DW.shipPackModels.paintColor(get(team === 'ally' ? 'ally-color' : 'enemy-color').value) : undefined;
         }
-        /** @param {Craft} craft @param {Vector} start @param {Vector} end @param {number} wave */
-        function hullHit(craft, start, end, wave) {
-            return DW.shipPackModels.hullHit(model(craft, wave, { allyArt: allyArt.value, enemyArt: artSelect.value }), craft.pose, start, end, units);
-        }
         /** @param {Pose} state */
         function pose(state) {
             scene.setSurfaceCamera(/** @type {Parameters<Scene['setSurfaceCamera']>[0]} */ ({ eye: state.eye, right: state.right, up: state.up, back: state.back }));
@@ -231,7 +227,7 @@
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };
         }
-        return { appearance: appearance, hullHit: hullHit, pose: pose, render: render, renderStats: renderStats };
+        return { appearance: appearance, pose: pose, render: render, renderStats: renderStats };
     }
     DW.flightPresentation = { mount: mount, model: model };
 }());

@@ -14,7 +14,7 @@ aside select{max-width:100%}
 #watch-panel{position:fixed;z-index:7;left:20px;top:200px;width:280px;box-sizing:border-box;padding:12px;background:#07151df2;border:1px solid #578178;border-radius:6px;max-height:calc(100vh - 230px);overflow:auto}#watch-panel details{margin:6px 0}#watch-panel select{padding:5px;font-size:12px}#watch-panel label{font-size:11px}#watch-panel #watch-readout{font-size:11px;line-height:1.4}#watch-panel h2{font:600 15px system-ui;margin:0 0 8px}#watch-panel label{margin:8px 0 4px}#watch-panel select{width:100%}#watch-panel .watch-options{display:none}#watch-panel.watch-running .watch-options{display:block}#watch-readout{white-space:pre-line;line-height:1.6;color:#f4cc8e;margin:10px 0 0}#watch-panel button{margin:8px 4px 0 0}body.watching-ai #watch-panel{left:auto;right:20px;top:20px;max-height:calc(100vh - 40px)}body.watching-ai aside,body.watching-ai footer,body.watching-ai #launch{display:none}body.flight-active:not(.watching-ai) #watch-panel{display:none}body.watch-chase .combat-overlay,body.watch-chase #reticle{display:none}body.watching-ai #hud-help{display:none}body.watching-ai #target-info{right:320px;top:20px}body.watching-ai #integrity{right:auto;left:20px;top:145px;width:210px}body.watching-ai #comms{left:20px;bottom:155px;transform:none;width:280px;padding:12px;min-height:0}body.watching-ai #comms:before{display:none}body.watching-ai #comms p{font:13px/1.4 system-ui}@media(max-width:700px){#watch-panel{left:10px;top:140px;width:220px}body.watching-ai #watch-panel{right:10px;top:140px;max-height:calc(100vh - 160px)}}
 </style>
 <div id="viewer" class="scene" aria-label="Arcade flight around a Driftworks asteroid"></div>
-<section id="watch-panel" aria-label="AI duel watch controls"><h2>AI DUEL / WATCH PILOT</h2>
+<section id="watch-panel" aria-label="AI duel watch controls"><h2>AI DUEL / WATCH PILOT</h2><small><a href="flight-study.html">Run a headless combat study →</a></small>
 <label for="watch-pilot">Player seat</label><select id="watch-pilot"><option value="manual">Fly manually · normal lab</option><option value="perfect">Perfect AI · stress pilot</option><option value="human-novice">Human simulator · novice</option><option value="human-practiced">Human simulator · practiced</option><option value="human-expert">Human simulator · expert</option></select>
 <div class="watch-options">
 <label for="watch-profile">Test pilot ship stats</label><select id="watch-profile"></select>
@@ -49,21 +49,21 @@ aside select{max-width:100%}
 <script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
 <script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
 <script src="../src/mining-landing.js?v=f00997919474"></script>
-<script src="../src/logistics.js?v=00dca24b86c3"></script>
-<script src="../src/formations.js?v=869c0c1617dc"></script>
-<script src="../src/sim.js?v=81964cb1d23d"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=9a868143dfe8"></script>
 <script src="../src/population.js?v=7a772b14be47"></script>
 <script src="../src/session.js?v=6d1be0457a7b"></script>
 <script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
 <script src="../src/audio.js?v=6e0151663084"></script>
 <script src="../src/hud.js?v=b41c310fa59d"></script>
-<script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/scene3d.js?v=8f4f287e22d7"></script>
-<script src="../src/game.js?v=2b4281ce2781"></script>
+<script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/scene3d.js?v=99e846557f8f"></script>
+<script src="../src/game.js?v=28388fb25a28"></script>
 <script src="dom.js?v=c1d4287e76cd"></script>
-<script src="retail-profiles.js?v=ff0cae63892e"></script><script src="flight-model.js?v=f6471383e49a"></script><script src="radar.js?v=5b94bf01c95c"></script><script src="skybox.js?v=024820197f3f"></script><script src="retail-weapons.js?v=642a0025bb1b"></script><script src="guns.js?v=b10829b80e6e"></script><script src="input.js?v=c8646362ecc7"></script><script src="training.js?v=86c7677ca44c"></script><script src="performance.js?v=ba17efe880d9"></script><script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=0fc9a4cc50fb"></script><script src="ship-packs.js?v=f942d13439f5"></script><script src="mumble.js?v=360b3c36d97c"></script><script src="flight-dialogue.js?v=fec783fbcf5d"></script>
+<script src="retail-profiles.js?v=ff0cae63892e"></script><script src="flight-model.js?v=f6471383e49a"></script><script src="radar.js?v=5b94bf01c95c"></script><script src="skybox.js?v=024820197f3f"></script><script src="retail-weapons.js?v=642a0025bb1b"></script><script src="guns.js?v=b10829b80e6e"></script><script src="input.js?v=c8646362ecc7"></script><script src="training.js?v=a64c39b825c7"></script><script src="performance.js?v=ba17efe880d9"></script><script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=0fc9a4cc50fb"></script><script src="ship-packs.js?v=f942d13439f5"></script><script src="mumble.js?v=360b3c36d97c"></script><script src="flight-dialogue.js?v=fec783fbcf5d"></script>
 <script src="flight-comms.js?v=caf6461d1fd5"></script>
-<script src="flight-radio.js?v=3588a7cfe6a4"></script><script src="target-camera.js?v=4eaf88c0470f"></script><script src="flight-presentation.js?v=fc1175588ee0"></script><script src="flight-diagnostics.js?v=37cdbc19585f"></script><script src="flight-controls.js?v=ea2a580494e3"></script><script src="flight-session.js?v=e4b14128926b"></script><script src="flight-hud.js?v=a656aef129a6"></script>
+<script src="flight-radio.js?v=3588a7cfe6a4"></script><script src="target-camera.js?v=4eaf88c0470f"></script><script src="flight-presentation.js?v=1e53205c4f2b"></script><script src="flight-diagnostics.js?v=37cdbc19585f"></script><script src="flight-controls.js?v=ea2a580494e3"></script><script src="flight-session.js?v=c0575eaad90d"></script><script src="flight-hud.js?v=a656aef129a6"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js"}}</script>
 <script type="module" src="../assets/characters/quaternius-astronaut/poses.js?v=5b153d4d6b3a"></script>
-<script src="flight-ai.js?v=6aafa3682577"></script><script src="flight-duel.js?v=78fbf90d0926"></script><script src="flight-watch.js?v=88771be8f480"></script>
-<script src="flight.js?v=437c2f66d689"></script></body></html>
+<script src="flight-ai.js?v=6aafa3682577"></script><script src="flight-duel.js?v=3749051b2b4d"></script><script src="flight-watch.js?v=88771be8f480"></script>
+<script src="flight.js?v=49de8247f575"></script></body></html>

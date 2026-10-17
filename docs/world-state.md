@@ -19,7 +19,7 @@ tonnes; `physical` and `propulsion` use SI units. See
 | --- | --- |
 | `version: 1`, `physicalUnitsVersion: 1`, `logisticsVersion: 2` | Independent world and migration markers. |
 | `seed`, `elapsedSeconds`, `campaign` | Seeded initialization, tactical mission time, and `{ timeDays, money, location }`. Campaign time is not advanced by tactical ticks. The same seed reproduces initial asteroid spin and combat decisions. |
-| `camera: { x, y, zoom }`, `selectedShipIds: string[]` | Saved presentation state; selection drives most command issuers. |
+| `camera: { x, y, zoom }`, `selectedShipIds: string[]` | Saved presentation state; UI supplies selection as explicit order recipients. Legacy callers may omit recipients to use this selection. |
 | `ships`, `asteroids`, `platforms`, `packets`, `wrecks` | Entity collections described below. |
 | `formations`, `nextFormationId` | Object keyed by numeric group ID (JSON keys are strings), plus allocation counter. |
 | `nextPacketId`, `nextWreckId` | Counters for numeric packet IDs and `wreck-N` string IDs. Preserve counters across loads. |

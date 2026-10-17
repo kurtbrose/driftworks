@@ -125,11 +125,11 @@
       formation.memberIds = members.map(function (s) { return s.id; });
     }
 
-    /** @param {World} world @param {Vec2} target @param {string | null | undefined} shipId @returns {World} */
-    function issueDefendOrder(world, target, shipId) {
+    /** @param {World} world @param {Vec2} target @param {string | null | undefined} shipId @param {string[]} [shipIds] @returns {World} */
+    function issueDefendOrder(world, target, shipId, shipIds) {
       var next = api.cloneWorld(world);
       var members = next.ships.filter(function (s) {
-        return s.type === 'escort' && !s.disabled && s.id !== shipId && next.selectedShipIds.indexOf(s.id) !== -1;
+        return s.type === 'escort' && !s.disabled && s.id !== shipId && (shipIds === undefined ? next.selectedShipIds : shipIds).indexOf(s.id) !== -1;
       });
       var center = members.reduce(function (p, s) { p.x += s.position.x / members.length; p.y += s.position.y / members.length; return p; }, { x: 0, y: 0 });
       var angle = Math.atan2(target.y - center.y, target.x - center.x);

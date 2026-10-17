@@ -718,11 +718,14 @@ The inspection viewer enables faction paint by default. Picking a primary color 
 Paint brightness follows the chosen RGB color rather than being normalized to the original orange luminance, so dark liveries remain dark. Default flight liveries are forest green (#607451) and burnt orange (#bd713f); color inputs also suggest dark navy (#415d7d).
 
 Flight lab hull contacts use `shipPackModels.hullHit`: a cached sphere bounds
-check followed by a swept triangle query against the selected artwork (including
-the training blockout). `training.trace` resolves the nearest terrain or hull
-contact and uses that point for impact flashes and damage. The optional hull
-query is installed by `flight.js`; standalone training callers retain sphere
-queries. Scorches are clipped surface geometry baked once per hit in local ship
+check followed by a swept triangle query against a simulation-owned model ID
+(including the training blockout). `training.trace` resolves the nearest terrain or hull
+contact and uses that point for impact flashes and damage. Flight sessions assign
+fixed mixed-fleet collision model IDs when spawning craft. Appearance controls
+never select collision geometry. Standalone training/duel callers retain explicit
+7 m controlled-craft and 9 m AI sphere shapes for existing benchmark calibration.
+`training.hullHit` resolves a craft's JSON-safe `collision` descriptor using shared
+mesh geometry, without a presentation callback; unknown model IDs fail explicitly. Scorches are clipped surface geometry baked once per hit in local ship
 metres, rendered in five translucent soot layers, and transformed with the hull each frame.
 Each craft retains at most 24 burns. Wrecks inherit them; round/restart lifecycle
 and the existing wreck cap bound retention. Changing artwork hides marks from a
@@ -1115,3 +1118,38 @@ These are remaining opportunities, but reducing those uploads safely needs
 explicit per-rig geometry/pose ownership across shadow and color passes. That
 renderer work is deferred; this change claims only the measured infill savings,
 not a general frame-rate improvement.
+
+The experimental [combat research page](../experiments/flight-study.html) runs shared fixed-step duels in a local Web Worker. Planning and aggregation live in `flight-study.js`, simulation dispatch in `flight-study-worker.js`, and DOM/download ownership in `flight-study-page.js`. It imports no renderer and does not introduce a second physics model. [Study design](combat-research.md) documents censoring, reproducibility and Watch links.
+
+
+## Single-player boundaries that preserve future multiplayer options
+
+Tactical orders accept an optional final `shipIds` argument, including movement,
+context, mining/deployment, construction, return, defense, recovery and salvage.
+An explicit empty array commands nobody. Omitted IDs retain the old selection-based
+API for existing callers and scenario captures. UI dispatch supplies its selected
+IDs explicitly; simulation automation supplies entity IDs directly. Neither path
+changes ship/platform selection. Defense's existing third `shipId` argument remains
+the guarded anchor; recipients are the fourth argument. Context hit testing stays
+local to presentation and dispatches the resolved orders to explicit recipients.
+This changes no tactical save fields or version markers.
+
+In flight experiments, `training.createCraft` constructs the same craft shape for
+controlled and AI participants: stable ID, team, controller kind, pose, profile,
+defenses, guns, lifecycle/feedback and collision descriptor. `combat.player` owns
+the controlled craft; the historical `combat.enemies` collection owns the other
+participants (including allied wingmen). `training.participants` reads both.
+`training.stepInput` applies controller demand through the shared flight model;
+input-controlled wingmen are not steered by AI. Session/duel gun state is the
+controlled craft's gun state, rather than an independent combat copy.
+
+All participants use `training.damageCraft` and the same team-aware nearest-hit
+trace, shield recovery and destruction/wreck rules. Legacy `damagePlayer` and
+`damageEnemy` calls delegate to that resolver. HUD properties such as `combat.hull`,
+`shield`, `lastHit` and `dead` are non-serialized compatibility views of the
+controlled craft, not separate authoritative health. Controlled-craft death does
+not stop the combat clock, other craft or debris; the single-player session/UI
+still decides when to pause/end a sortie. Flight experiments have no persistent
+save format; these changes do not migrate tactical ships into flight craft.
+
+No transport, network authority, prediction or lockstep requirement is introduced.

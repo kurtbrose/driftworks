@@ -85,6 +85,15 @@ export type DuelSummary = {
     playerShots:number; opponentShots:number; longestDry:number;
     metrics:{playerOpportunities:number;opponentOpportunities:number;playerDamageSteps:number;opponentDamageSteps:number;modeChanges:number;minRange:number;maxRange:number};
 };
+export type StudyConfig = {
+    ships:number[];weapons:number[];starts:NonNullable<DuelOptions['start']>[];pilots:('perfect'|'novice'|'practiced'|'expert')[];skills:number[];
+    seeds:number;seed:number;duration:number;pairing:'mirror'|'all'|'anchor';defenses:'retail'|'unshielded'|'paired';
+};
+export type StudyCase = {id:string;options:DuelOptions};
+export type StudyRow = {id:string;options:Required<DuelOptions>;summary:DuelSummary};
+export type StudyManifest = {policy:string;cadence:number;replaySchema:number;hashes:Record<string,string>};
+export type StudyMessage = {kind:'ready';total:number;manifest:StudyManifest}|{kind:'rows';rows:StudyRow[]}|{kind:'done'}|{kind:'error';message:string};
+export type StudyWorkerScope = {window:unknown;DRIFTWORKS_TEST_MODE:boolean;importScripts:(...files:string[])=>void;onmessage:((event:MessageEvent<StudyConfig>)=>void)|null;postMessage:(message:StudyMessage)=>void};
 export type Weapon = {
     flags?: string[];
     name: string;
@@ -149,7 +158,11 @@ export type ArtCraft = {
     hp?: number;
     age?: number;
 };
+export type CollisionShape = { kind: 'sphere'; radiusM: number } | { kind: 'model'; modelId: string };
 export type Craft = ArtCraft & {
+    controller: 'input' | 'ai';
+    collision: CollisionShape;
+    hitFlash?: number;
     id: string;
     callsign: string;
     pose: FlightState;
@@ -189,6 +202,9 @@ export type RadioEvent = {
     wave: number;
 };
 export type Combat = {
+    player: Craft;
+    configured: boolean;
+    useHullModels?: boolean;
     mode: string;
     roundOver: boolean;
     enabled: boolean;
@@ -215,7 +231,6 @@ export type Combat = {
     nearMissAt?: number;
     terrainScorches?: Vector[];
     onTerrainImpact?: (point: Vector) => void;
-    hullHit?: (craft: Craft, start: Vector, end: Vector) => Hit | null;
 };
 export type Model = {
     id: string;
@@ -345,7 +360,6 @@ export type ControlEnvironment = {
     navigator: Navigator;
 };
 export type SessionEnvironment = {
-    hullHit: NonNullable<Combat['hullHit']>;
     terrainHit: TerrainHit;
     /** Direction and returned normalized point are in the asteroid body frame. */
     surfaceFrame: (asteroid: Asteroid, direction: Vector) => {
@@ -526,12 +540,17 @@ export type Line = {
     emotion?: Feeling;
 };
 export type ExperimentModules = {
+    flightStudy:{plan:(config:StudyConfig)=>StudyCase[];analyze:(rows:StudyRow[])=>{
+        total:number;wins:number;losses:number;timeouts:number;medianKill:number|null;flagged:StudyRow[];
+        groups:{label:string;pilot:string;skill:number;weapons:string;unshielded:boolean;n:number;wins:number;losses:number;timeouts:number;medianKill:number|null;observedMean:number;longestDry:number}[];
+        shieldPairs:number;pairsCensored:number;observedShieldDelta:number|null;
+    };watchUrl:(options:DuelOptions)=>string};
     flightWatch:{create:(getScenery:()=>Snapshot, options:DuelOptions)=>{
         advance:(elapsed:number,speed:number)=>DuelSummary;
         snapshot:(chase:boolean)=>Snapshot;
         summary:()=>DuelSummary;replay:DuelReplay;
     }};
-    flightDuel: {create:(options?:DuelOptions)=>Duel;run:(options?:DuelOptions)=>Duel;replay:(record:DuelReplay)=>Duel;starts:string[];dt:number};
+    flightDuel: {create:(options?:DuelOptions)=>Duel;run:(options?:DuelOptions)=>Duel;replay:(record:DuelReplay)=>Duel;readWatchSearch:(search:string)=>Required<DuelOptions>|null;starts:string[];dt:number};
     flightAI: {
         version: string;
         flavors: Record<'novice'|'practiced'|'expert', {reaction:number;sample:number;noise:number;gain:number;damping:number;lead:number}>;
@@ -570,6 +589,12 @@ export type ExperimentModules = {
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
     };
     training: {
+        stepInput: (craft: Craft, controls: Demand, dt: number) => void;
+        damageCraft: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
+        createCraft: (id: string, pose: FlightState, team: string) => Craft;
+        participants: (combat: Combat) => Craft[];
+        bindPlayer: (combat: Combat, pose: FlightState) => Craft;
+        hullHit: (craft: Craft, start: Vector, end: Vector) => Hit | null;
         defaultWeapon:(profile:Profile)=>number;
         configure:(combat:Combat,profile:Profile,unshielded?:boolean)=>void;
         equip:(craft:Craft,profile:Profile,weaponIndex:number,unshielded?:boolean)=>void;
@@ -702,7 +727,6 @@ export type ExperimentModules = {
             document: Document;
         }) => {
             appearance: () => Appearance;
-            hullHit: (craft: Craft, start: Vector, end: Vector, wave: number) => HullHit | null;
             pose: (state: Pose) => void;
             render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number) => void;
             renderStats: () => RenderStats;

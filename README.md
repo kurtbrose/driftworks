@@ -521,3 +521,6 @@ Bookend timing and subtitle offsets remain fixed.
 In `experiments/flight.html`, open **Settings > Joystick / controller** and select your device. Choose **Joystick / controller / keyboard** for stick steering. Thrustmaster and generic USB sticks default to pull-back pitch, lateral roll, twist yaw, and absolute throttle. Trigger fires; zero-based buttons 1, 2, and 7 boost, change weapon bank, and pause. Remap axes and buttons using the live readout to identify twist and throttle on your hardware; inversion and deadzone are adjustable. Bindings are saved per device in localStorage. Standard gamepads retain their existing layout. Press a device button to expose it to the browser; disconnection pauses flight.
 
 Controller rumble can be toggled in the same settings panel (remembered locally). Supported gamepads provide light afterburner vibration, brief weapon recoil, incoming-hit jolts, stronger shield-break pulses, and surface-contact bumps. Effects stop on pause, focus loss, reset, device changes, or disconnect; unsupported haptics are ignored.
+
+The [combat research page](experiments/flight-study.html) runs batches of headless fighter duels and generates downloadable reports. See [combat study design](docs/combat-research.md) for interpretation and limits.
+

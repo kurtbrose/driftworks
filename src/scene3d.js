@@ -926,8 +926,8 @@
         });
         if (platform) target = platform.position;
         if (!target) return;
-        var game = /** @type {{ issueVisualContextOrder: (world: World, target: Vec2) => World }} */ (DW.game);
-        setWorld(game.issueVisualContextOrder(w, target)); if (DW.audio) DW.audio.playMove(); return;
+        var game = /** @type {{ issueVisualContextOrder: (world: World, target: Vec2, shipIds?: string[]) => World }} */ (DW.game);
+        setWorld(game.issueVisualContextOrder(w, target, w.selectedShipIds)); if (DW.audio) DW.audio.playMove(); return;
       }
       drag = { start: p, last: p, mode: e.altKey || (study && e.button === 0 && !space) ? 'orbit' : e.button === 1 || space ? 'pan' : 'select' };
       canvas.setPointerCapture(e.pointerId); e.preventDefault();

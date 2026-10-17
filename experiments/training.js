@@ -64,9 +64,46 @@
             return craft.callsign;
         return typeof craft.index === 'number' && Number.isFinite(craft.index) ? pilotCallsigns[Math.abs(Math.floor(craft.index)) % pilotCallsigns.length] : 'Unknown';
     }
+    /** Every participant owns its pose, defenses, weapons and collision shape.
+     * @param {string} id @param {FlightState} pose @param {string} team @returns {Craft} */
+    function createCraft(id, pose, team) {
+        return { id: id, index: 0, callsign: id, team: team, controller: 'input', pose: pose,
+            profile: DW.arcade.profiles[0], hp: 100, maxHp: 100, shield: 120, maxShield: 120,
+            collision: { kind: 'sphere', radiusM: 7 }, weaponIndex: 0, pilot: '', skill: 0, mode: 'idle', decision: 0,
+            until: 0, goal: pose.eye.slice(), guns: DW.flightGuns.create(), damagedAt: -100,
+            hitFlash: 0, fire: false, targetId: null, retarget: 0 };
+    }
+    /** @param {Craft} craft @param {import('./types').Demand} controls @param {number} dt */
+    function stepInput(craft, controls, dt) {
+        if (craft.hp <= 0) { craft.fire = false; return; }
+        var state = craft.pose;
+        if (controls.throttle !== null) state.throttle = controls.throttle;
+        state.throttle = Math.max(0, Math.min(1, state.throttle + controls.throttleRate * dt * .5));
+        if (controls.stop) state.throttle = 0;
+        craft.fire = controls.fire;
+        DW.arcade.step(state, craft.profile, controls, dt);
+    }
+    /** @param {Combat} t @returns {Craft[]} */
+    function participants(t) { return [t.player].concat(t.enemies); }
+    /** @param {Combat} t @param {FlightState} pose */
+    function bindPlayer(t, pose) { t.player.pose = pose; return t.player; }
     /** @param {string} mode @returns {Combat} */
     function create(mode) {
-        return { mode: mode || 'training', roundOver: false, enabled: true, time: 0, wave: 0, countdown: 3, enemies: [], wrecks: [], kills: 0, shield: 120, hull: 100, lastHit: -100, hitFlash: 0, dead: false, targetId: null, slots: [], slotTimer: 0, flashes: [], radioEvents: [], radioSerial: 0, playerKills: 0 };
+        var player = createCraft('player', DW.arcade.create(0), 'ally');
+        var t = /** @type {Combat} */ ({ mode: mode || 'training', roundOver: false, enabled: true, time: 0, wave: 0, countdown: 3,
+            player: player, enemies: [], wrecks: [], kills: 0, targetId: null, slots: [], slotTimer: 0,
+            flashes: [], radioEvents: [], radioSerial: 0, playerKills: 0, configured: false, hull: 100, shield: 120, lastHit: -100, hitFlash: 0, dead: false });
+        // Compatibility views for the HUD and older local callers; craft state is canonical.
+        Object.defineProperties(t, {
+            hull: { enumerable: false, get: function () { return t.player.hp; }, set: function (/** @type {number} */ v) { t.player.hp = v; } },
+            shield: { enumerable: false, get: function () { return t.player.shield || 0; }, set: function (/** @type {number} */ v) { t.player.shield = v; } },
+            maxHull: { enumerable: false, get: function () { return t.player.maxHp; }, set: function (/** @type {number} */ v) { t.player.maxHp = v; } },
+            maxShield: { enumerable: false, get: function () { return t.player.maxShield; }, set: function (/** @type {number} */ v) { t.player.maxShield = v; } },
+            lastHit: { enumerable: false, get: function () { return t.player.damagedAt; }, set: function (/** @type {number} */ v) { t.player.damagedAt = v; } },
+            hitFlash: { enumerable: false, get: function () { return t.player.hitFlash || 0; }, set: function (/** @type {number} */ v) { t.player.hitFlash = v; } },
+            dead: { enumerable: false, get: function () { return t.player.hp <= 0; }, set: function (/** @type {boolean} */ v) { t.player.hp = v ? 0 : t.player.hp || t.player.maxHp; } }
+        });
+        return t;
     }
     /** First supported default primary; unsupported subsystem weapons are not approximated.
      * @param {import('./types').Profile} profile */
@@ -76,6 +113,9 @@
     }
     /** @param {Combat} t @param {import('./types').Profile} profile @param {boolean} [unshielded] */
     function configure(t, profile, unshielded) {
+        t.configured = true;
+        t.player.profile = profile;
+        t.player.weaponIndex = defaultWeapon(profile);
         t.maxHull = profile.hull === undefined ? 100 : profile.hull;
         t.maxShield = unshielded ? 0 : profile.shield === undefined ? 120 : profile.shield;
         t.hull = t.maxHull; t.shield = t.maxShield;
@@ -128,6 +168,7 @@
     }
     /** @param {Combat} t @param {FlightState} player @param {number} radius */
     function spawn(t, player, radius) {
+        bindPlayer(t, player);
         t.wave++;
         t.countdown = 0;
         t.slotTimer = 0;
@@ -144,8 +185,13 @@
             face(pose, sub(player.eye, pose.eye));
             pose.throttle = .6;
             var skill = Math.min(2, Math.floor((t.wave - 1 + i) / 3));
-            t.enemies.push({ id: 'wave-' + t.wave + '-' + i, index: i, callsign: callsign({ index: i }), pose: pose, profile: DW.arcade.profiles[i % 3 === 1 ? 1 : 0], hp: 90, maxHp: 90, pilot: ['Rookie', 'Veteran', 'Ace'][skill], skill: skill, mode: 'approach', decision: i * .13, until: 0, goal: player.eye.slice(), guns: DW.flightGuns.create(), damagedAt: -100, fire: false, targetId: null, retarget: 0 });
-            if (t.maxHull !== undefined) {
+            t.enemies.push(Object.assign(createCraft('wave-' + t.wave + '-' + i, pose, 'enemy'), {
+                controller: 'ai', collision: { kind: 'sphere', radiusM: 9 }, shield: 0, maxShield: 0,
+                index: i, callsign: callsign({ index: i }), profile: DW.arcade.profiles[i % 3 === 1 ? 1 : 0],
+                hp: 90, maxHp: 90, pilot: ['Rookie', 'Veteran', 'Ace'][skill], skill: skill,
+                mode: 'approach', decision: i * .13, goal: player.eye.slice()
+            }));
+            if (t.configured) {
                 var craft = t.enemies[t.enemies.length - 1];
                 equip(craft, craft.profile, defaultWeapon(craft.profile));
             }
@@ -167,6 +213,9 @@
                 e.retarget = 0;
             });
         }
+        if (t.useHullModels) t.enemies.forEach(function (e) {
+            e.collision = { kind: 'model', modelId: DW.shipPackModels.craftModel(e, 'mixed', t.wave).id };
+        });
         var target = t.enemies.find(function (e) {
             return e.team !== 'ally';
         });
@@ -232,23 +281,11 @@
         var f = (-b - Math.sqrt(disc)) / (2 * a);
         return f >= 0 && f <= 1 ? { fraction: f, point: add(start, scale(delta, f)) } : null;
     }
-    /** @param {Combat} t @param {Weapon} weapon */
-    function damagePlayer(t, weapon) {
-        if (t.dead)
-            return;
-        var shieldDamage = weapon.damage * weapon.shieldFactor, absorbed = Math.min(t.shield, shieldDamage);
-        var shieldBefore = t.shield;
-        t.shield -= absorbed;
-        t.hull = Math.max(0, t.hull + (-weapon.damage * weapon.armorFactor) * (1 - (shieldDamage > 0 ? absorbed / shieldDamage : 0)));
-        if (shieldBefore > 0 && t.shield <= 0)
-            radioEvent(t, { kind: 'shield', victim: 'player', team: 'ally' });
-        t.lastHit = t.time;
-        t.hitFlash = .35;
-        if (t.hull <= 0)
-            t.dead = true;
-    }
+    /** Compatibility entry point; all participants use the same damage resolver.
+     * @param {Combat} t @param {Weapon} weapon */
+    function damagePlayer(t, weapon) { damageCraft(t, t.player, weapon); }
     /** @param {Combat} t @param {Craft} e @param {Weapon} weapon @param {Craft | string | null} [shooter] */
-    function damageEnemy(t, e, weapon, shooter) {
+    function damageCraft(t, e, weapon, shooter) {
         if (e.hp <= 0)
             return;
         var shieldBefore = e.shield || 0, shieldDamage = weapon.damage * weapon.shieldFactor, absorbed = Math.min(shieldBefore, shieldDamage);
@@ -256,8 +293,9 @@
         e.hp = Math.max(0, e.hp - weapon.damage * weapon.armorFactor * (1 - (shieldDamage > 0 ? absorbed / shieldDamage : 0)));
         if (shieldBefore > 0 && !e.shield) radioEvent(t, { kind:'shield', victim:e.id, team:e.team || 'enemy', index:e.index });
         e.damagedAt = t.time;
+        e.hitFlash = .35;
         if (e.hp <= 0) {
-            if (shooter === 'player')
+            if (shooter === t.player || shooter === t.player.id)
                 t.playerKills = (t.playerKills || 0) + 1;
             radioEvent(t, { kind: 'destroyed', victim: e.id, team: e.team || 'enemy', index: e.index, killer: shooter && typeof shooter === 'object' ? shooter.id : shooter || null });
             var pose = { eye: e.pose.eye.slice(), right: e.pose.right.slice(), up: e.pose.up.slice(), back: e.pose.back.slice(), velocity: e.pose.velocity.slice(), throttle: 0 };
@@ -268,66 +306,44 @@
                 t.wrecks.shift();
             e.fire = false;
             e.pose.throttle = 0;
-            if (e.team !== 'ally')
+            if ((e.team || 'enemy') !== 'ally')
                 t.kills++;
             if (!alive(t).length)
                 t.countdown = 5;
             t.flashes.push({ position: e.pose.eye.slice(), age: 0, scale: 14 });
         }
     }
+    /** Geometry is selected by serializable simulation state, never by appearance controls.
+     * @param {Craft} craft @param {Vector} start @param {Vector} end */
+    function hullHit(craft, start, end) {
+        var shape = craft.collision || { kind: 'sphere', radiusM: 9 };
+        if (shape.kind === 'sphere') return sphereHit(start, end, craft.pose.eye, shape.radiusM / U);
+        var model = DW.shipPackModels.find(shape.modelId);
+        // The built-in training hull is not part of an asset pack.
+        var geometry = model ? model.model : DW.shipPackModels.craftModel(craft, '', 1);
+        if (geometry.id !== shape.modelId) throw new Error('Unknown collision model ' + shape.modelId);
+        return DW.shipPackModels.hullHit(geometry, craft.pose, start, end, U);
+    }
     /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player */
     function trace(t, start, end, bolt, team, terrainHit, player) {
-        var hit = terrainHit ? terrainHit(start, end) : null, best = hit ? length(sub(hit, start)) : Infinity, victim = /** @type {Craft | 'player' | null} */ (null), surface = /** @type {Hit | null} */ (null);
-        var shooter = typeof team === 'object' ? team : null, faction = shooter ? shooter.team : team === 'player' ? 'ally' : 'enemy';
-        if (t.mode === 'furball') {
-            alive(t).forEach(function (e) {
-                if (e.team === faction)
-                    return;
-                var candidate = t.hullHit ? t.hullHit(e, start, end) : sphereHit(start, end, e.pose.eye, 9 / U);
-                if (candidate) {
-                    var d = length(sub(candidate.point, start));
-                    if (d < best) {
-                        best = d;
-                        hit = candidate.point;
-                        victim = e;
-                        surface = candidate;
-                    }
-                }
-            });
-        }
-        else if (team === 'player')
-            alive(t).forEach(function (e) {
-                var candidate = t.hullHit ? t.hullHit(e, start, end) : sphereHit(start, end, e.pose.eye, 9 / U);
-                if (candidate) {
-                    var d = length(sub(candidate.point, start));
-                    if (d < best) {
-                        best = d;
-                        hit = candidate.point;
-                        victim = e;
-                        surface = candidate;
-                    }
-                }
-            });
-        if (faction === 'enemy' && !t.dead) {
-            var candidate = sphereHit(start, end, player.eye, 7 / U);
+        bindPlayer(t, player);
+        var hit = terrainHit ? terrainHit(start, end) : null, best = hit ? length(sub(hit, start)) : Infinity;
+        var victim = /** @type {Craft | null} */ (null), surface = /** @type {Hit | null} */ (null);
+        var shooter = typeof team === 'object' ? team : participants(t).find(function (e) { return e.id === team; });
+        var faction = shooter ? shooter.team || 'enemy' : team === 'player' ? 'ally' : 'enemy';
+        participants(t).forEach(function (e) {
+            if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction) return;
+            var candidate = hullHit(e, start, end);
             if (candidate) {
                 var d = length(sub(candidate.point, start));
-                if (d < best) {
-                    best = d;
-                    hit = candidate.point;
-                    victim = 'player';
-                }
+                if (d < best) { best = d; hit = candidate.point; victim = e; surface = candidate; }
             }
-        }
-        var struck = /** @type {Craft | 'player' | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
-        if (struck && struck !== 'player' && hull && hull.model && hull.local && hull.normal)
+        });
+        var struck = /** @type {Craft | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
+        if (struck && hull && hull.model && hull.local && hull.normal)
             DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });
-        if (!struck && hit && t.onTerrainImpact)
-            t.onTerrainImpact(hit);
-        if (struck === 'player')
-            damagePlayer(t, bolt.weapon);
-        else if (struck)
-            damageEnemy(t, struck, bolt.weapon, shooter || team);
+        if (!struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
+        if (struck) damageCraft(t, struck, bolt.weapon, shooter || team);
         // Report close projectile passes, clipped at the first collision so occluded bolts cannot speak.
         var endPoint = hit || end, delta = sub(endPoint, start), span = dot(delta, delta);
         /** @param {Pose} pose @param {{nearMissAt?: number}} entity @param {string} id @param {string} factionName */
@@ -341,12 +357,10 @@
                 radioEvent(t, { kind: 'near', victim: id, team: factionName });
             }
         }
-        alive(t).forEach(function (e) {
-            if ((e.team || 'enemy') !== faction && victim !== e)
+        participants(t).forEach(function (e) {
+            if (e.hp > 0 && (e.team || 'enemy') !== faction && victim !== e)
                 near(e.pose, e, e.id, e.team || 'enemy');
         });
-        if (faction === 'enemy' && victim !== 'player' && !t.dead)
-            near(player, t, 'player', 'ally');
         return hit;
     }
     /** @param {Combat} t @param {number} dt @param {TerrainHit} [terrainHit] */
@@ -375,19 +389,22 @@
     }
     /** @param {Combat} t @param {FlightState} player @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit] */
     function step(t, player, dt, radius, terrainHit) {
-        if (!t.enabled || t.dead)
+        if (!t.enabled)
             return;
+        bindPlayer(t, player);
         stepWrecks(t, dt, terrainHit);
         t.time += dt;
-        t.hitFlash = Math.max(0, t.hitFlash - dt);
+        participants(t).forEach(function (e) {
+            e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);
+            if (e.hp > 0 && e.maxShield !== undefined && t.time - e.damagedAt > 7)
+                e.shield = Math.min(e.maxShield, (e.shield || 0) + 12 * dt);
+        });
         t.flashes = t.flashes.filter(function (f) {
             f.age += dt;
             return f.age < .22;
         });
-        if (t.time - t.lastHit > 7)
-            t.shield = Math.min(t.maxShield === undefined ? 120 : t.maxShield, t.shield + 12 * dt);
         var living = alive(t);
-        if (!living.length || t.roundOver) {
+        if (!t.dead && (!living.length || t.roundOver)) {
             t.countdown -= dt;
             if (t.countdown <= 0) {
                 spawn(t, player, radius);
@@ -404,10 +421,10 @@
             t.slotTimer = 3;
         }
         t.enemies.forEach(function (e) {
-            e.fire = false;
-            if (e.hp > 0) {
-                if (e.maxShield !== undefined && t.time - e.damagedAt > 7) e.shield = Math.min(e.maxShield, (e.shield || 0) + 12 * dt);
-                var opponent = /** @type {FlightState | null} */ (player);
+            if (e.controller !== 'input') e.fire = false;
+            if (e.hp > 0 && e.controller !== 'input') {
+                var candidates = participants(t).filter(function (other) { return other.hp > 0 && (other.team || 'enemy') !== (e.team || 'enemy'); });
+                var opponent = candidates.length ? candidates[0].pose : null;
                 if (t.mode === 'furball') {
                     e.retarget -= dt;
                     var target = living.find(function (other) {
@@ -425,7 +442,7 @@
                         e.targetId = target ? target.id : null;
                         e.retarget = 2.5 + (e.index % 3) * .7;
                     }
-                    opponent = target ? target.pose : e.team === 'enemy' ? player : null;
+                    opponent = target ? target.pose : opponent;
                 }
                 e.decision -= dt;
                 if (e.decision <= 0 && opponent)
@@ -445,7 +462,7 @@
                 var control = steer(e.pose, goal), distance = opponent ? length(sub(opponent.eye, e.pose.eye)) * U : Infinity;
                 control.roll = e.mode === 'evade' ? Math.sin(t.time * 1.8 + e.index) * .65 : 0;
                 control.boost = distance > 1200 && dot(unit(sub(goal, e.pose.eye)), scale(e.pose.back, -1)) > .95;
-                DW.arcade.step(e.pose, e.profile, control, dt);
+                stepInput(e, Object.assign({ throttle: e.pose.throttle, throttleRate: 0, fire: false }, control), dt);
                 // Conservative safety shell keeps AI craft clear of the asteroid.
                 var safe = radius + 20 / U;
                 if (length(e.pose.eye) < safe) {
@@ -458,7 +475,7 @@
                 e.fire = !!opponent && (t.mode === 'furball' || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && aligned > .996 && ((t.time + e.index * .77) % 3) < .8;
             }
             DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
-                return trace(t, start, end, bolt, t.mode === 'furball' ? e : 'enemy', terrainHit, player);
+                return trace(t, start, end, bolt, e, terrainHit, player);
             });
         });
         var nowAlive = alive(t);
@@ -518,5 +535,5 @@
         });
         return result;
     }
-    DW.training = { defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageEnemy: damageEnemy, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
+    DW.training = { stepInput: stepInput, createCraft: createCraft, participants: participants, bindPlayer: bindPlayer, hullHit: hullHit, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
 }());
