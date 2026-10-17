@@ -26,3 +26,4 @@ process.exitCode = failures ? 1 : 0;
 require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'ship-viewer.cjs')], {stdio: 'inherit'});
 require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'character-assets.cjs')], {stdio: 'inherit'});
 require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'character-paints.cjs')], {stdio: 'inherit'});
+require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'character-bodies.cjs')], {stdio: 'inherit'});

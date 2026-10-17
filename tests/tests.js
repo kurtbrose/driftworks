@@ -404,7 +404,7 @@
     var bandit={id:'red',team:'enemy',hp:90,mode:'attack'};combat.enemies.push(bandit);
     api.step(clock,1,combat,false,rng);bandit.mode='break';
     assert(api.step(clock,0.9,combat,false,rng)===null);
-    bandit.mode='recover';assert(api.step(clock,0.1,combat,false,rng).craftId==='red');
+    bandit.mode='recover';assert(api.step(clock,0.1,combat,false,rng)===null);
     combat.enemies=[];api.step(clock,0,combat,false,rng);
     assert(Object.keys(clock.modes).length===0 && Object.keys(clock.spoken).length===0);
   });
@@ -426,7 +426,7 @@
 
   test('flight comms varies gaps and describes firing and target changes', function () {
     var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0.8;};
-    var red={id:'red',hp:90,team:'enemy',mode:'attack',targetId:'one',fire:false};
+    var red={id:'red',hp:90,team:'ally',mode:'attack',targetId:'one',fire:false};
     var combat={enabled:true,dead:false,hull:100,enemies:[red]};
     api.step(clock,0,combat,false,rng);red.fire=true;
     assert(api.step(clock,0,combat,false,rng).event==='firing');
@@ -437,6 +437,25 @@
     assert(api.step(clock,0,combat,false,function(){return 0;}).event==='target');
     assertClose(clock.quietGap,0.9);
     assert(api.step(clock,5,combat,false,rng)===null); // No replay when the action stays unchanged.
+  });
+
+  test('enemy comms only broadcasts taunts despite maneuvers, damage and emotions', function () {
+    var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0;};
+    var red={id:'red',hp:90,team:'enemy',mode:'approach',targetId:'player',fire:false};
+    var combat={enabled:true,wave:1,time:0,hull:100,enemies:[red],radioEvents:[]};
+    api.step(clock,0,combat,false,rng);
+    ['attack','evade','break','recover','reposition'].forEach(function(mode){
+      red.mode=mode;red.fire=true;red.targetId='other';red.hp=20;
+      clock.wait=100;clock.quiet=10;
+      assert(api.step(clock,0,combat,false,rng)===null,mode);
+    });
+    assert(!clock.conversation && !clock.emotionalConversation);
+    var taunts=window.Driftworks.flightDialogue.lines.enemy;
+    for(var i=0;i<6;i++){
+      clock.wait=0;clock.quiet=10;
+      var line=api.step(clock,0,combat,false,rng);
+      assert(line.hostile && taunts.indexOf(line.text)>=0 && !line.replyTo);
+    }
   });
 
   test('flight comms balances activities instead of counting pilots', function () {

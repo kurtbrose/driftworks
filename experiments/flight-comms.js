@@ -266,7 +266,7 @@
         const threat = living.find(function (e) {
             return e.id === request.threat;
         });
-        if (state.time > request.expires || !caller || !threat || caller.team === threat.team ||
+        if (state.time > request.expires || !caller || caller.team !== 'ally' || !threat || caller.team === threat.team ||
             threat.targetId !== caller.id || (threat.mode !== 'attack' && threat.mode !== 'evade')) {
             state.conversation = null;
             return null;
@@ -332,7 +332,7 @@
             const caller = living.find(function (c) {
                 return c.id === exchange.caller;
             });
-            if (!caller || state.time > exchange.expires)
+            if (!caller || caller.team !== 'ally' || state.time > exchange.expires)
                 state.emotionalConversation = null;
             else {
                 var listener = living.find(function (c) {
@@ -359,6 +359,9 @@
             counts[kind] = (counts[kind] || 0) + 1;
         });
         candidates = candidates.filter(function (entry) {
+            // Enemy broadcasts use only the ambient taunt pool, never flight coordination.
+            if (entry.craft.team !== 'ally')
+                return false;
             if (state.time - (state.spoken[entry.craft.id] === undefined ? -Infinity : state.spoken[entry.craft.id]) < 10)
                 return false;
             var category = activityKind(entry.event), last = state.activitySpoken[category];
