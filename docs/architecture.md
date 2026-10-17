@@ -766,6 +766,18 @@ and surface-contact order. Death finishes gun/audio processing and stops before
 contact. Terrain/hull/surface queries and audio notifications are injected.
 The browser loop owns pause, input, elapsed-world time and comms scheduling.
 
+Flight-AI validation keeps three policies distinct: existing `training.js`
+opponents shape the player experience; `experiments/flight-ai.js` provides a
+best-effort perfect stress pilot and delayed-observation human simulators.
+Testing pilots return complete validated controls and never mutate live flight
+state. They share `arcade.step` and fixed-forward gun physics. The optional
+`tests/flight-duel.js` harness runs one testing pilot in the player seat against
+an unchanged opponent, with fixed 1/120-second steps, no terrain and no respawn.
+It is loaded by both test entry points, not by normal gameplay. The dependency-free
+`tools/evaluate-flight-ai.cjs` emits measurements and source-pinned input replays.
+See [flight AI validation](flight-ai-validation.md) for contracts, baseline,
+existing training damage asymmetries and limits to human/optimal-play claims.
+
 `experiments/flight-hud.js` mounts the overlay canvas and target camera and owns
 radar range, telemetry, instruments and contact/lead markers. `render(view)` takes
 fresh session references and presentation/input values each frame; it does not

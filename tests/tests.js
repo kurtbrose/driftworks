@@ -21,6 +21,74 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('evaluation pilots reject illegal control records without silently repairing them', function () {
+    var api=window.Driftworks.flightAI, valid={pitch:0,yaw:0,roll:0,side:0,vertical:0,throttle:1,fire:false,boost:false};
+    [Object.assign({},valid,{pitch:1.01}),Object.assign({},valid,{yaw:NaN}),Object.assign({},valid,{throttle:-.1}),Object.assign({},valid,{boost:1}),Object.assign({},valid,{teleport:true})].forEach(function(input){
+      var rejected=false;try{api.validate(input);}catch(e){rejected=true;}assert(rejected);
+    });
+    assert(api.validate(valid)!==valid);
+  });
+
+  test('evaluation pilots only read poses and replay through ordinary shared physics', function () {
+    var DW=window.Driftworks,api=DW.flightAI,p=DW.arcade.profiles[0],w=DW.retailWeapons[0];
+    ['human','perfect'].forEach(function(category){
+      var own=DW.arcade.createSortie(0,p),target=DW.arcade.createSortie(0,p);target.eye=[4,10,0];
+      [own,target].forEach(function(state){Object.keys(state).forEach(function(k){if(Array.isArray(state[k]))Object.freeze(state[k]);});Object.freeze(state);});
+      var pilot=api.create(category,'practiced',31),before=JSON.stringify([own,target]);
+      for(var i=0;i<80;i++){
+        api.validate(pilot.step(i/120,own,target,p,w));
+      }
+      assert(JSON.stringify([own,target])===before);
+    });
+  });
+
+  test('human simulator reacts to delayed observations and cannot use current hidden truth', function () {
+    var DW=window.Driftworks,api=DW.flightAI,p=DW.arcade.profiles[0],w=DW.retailWeapons[0],own=DW.arcade.create(0);
+    var a=api.create('human','novice',17),b=api.create('human','novice',17),target={eye:[0,10,0],velocity:[0,0,0]};
+    assert(!a.step(0,own,target,p,w).fire);b.step(0,own,target,p,w);
+    a.step(.22,own,target,p,w);b.step(.22,own,{eye:[10,0,0],velocity:[50,0,0]},p,w);
+    assert(JSON.stringify(a.step(.35,own,target,p,w))===JSON.stringify(b.step(.35,own,{eye:[-10,0,0],velocity:[-50,0,0]},p,w)),'Only the identical first sample has arrived');
+    assert(JSON.stringify(a.step(.57,own,target,p,w))!==JSON.stringify(b.step(.57,own,target,p,w)),'The changed observation must eventually affect controls');
+  });
+
+  test('perfect pilot takes a valid shot immediately without opponent burst concessions', function () {
+    var DW=window.Driftworks,p=DW.arcade.profiles[0],own=DW.arcade.create(0),target={eye:[0,300/sim.METERS_PER_UNIT,0],velocity:[0,0,0]};
+    assert(DW.flightAI.create('perfect').step(0,own,target,p,DW.retailWeapons[0]).fire);
+    var invalid=DW.flightAI.solution(own,[0,2000/sim.METERS_PER_UNIT,0],[0,0,0],DW.retailWeapons[0]);
+    assert(!invalid.valid && invalid.time>DW.retailWeapons[0].lifetime);
+  });
+
+  test('duel input replays reproduce combat and frame batching preserves the fixed clock', function () {
+    var api=window.Driftworks.flightDuel,options={start:'crossing',category:'human',flavor:'expert',seed:29,duration:3};
+    var a=api.run(options),b=api.create(options),physical=window.Driftworks.flightAI.copy(b.player);
+    for(var i=0;i<180;i++)b.advance(1/60);
+    var c=api.replay(JSON.parse(JSON.stringify(a.replay)));
+    assert(JSON.stringify(a.summary())===JSON.stringify(b.summary()));
+    assert(JSON.stringify(a.summary())===JSON.stringify(c.summary()));
+    assert(JSON.stringify(a.player)===JSON.stringify(c.player));assert(JSON.stringify(a.enemy)===JSON.stringify(c.enemy));
+    a.replay.inputs.forEach(function(input){physical.throttle=input.throttle;window.Driftworks.arcade.step(physical,b.enemy.profile,input,api.dt);});
+    assert(JSON.stringify(physical)===JSON.stringify(a.player),'Real player movement must equal the recorded legal controls integrated once per tick');
+    var bad=JSON.parse(JSON.stringify(a.replay));bad.inputs[0].throttle=2;
+    var rejected=false;try{api.replay(bad);}catch(e){rejected=true;}assert(rejected);
+  });
+
+  test('duels stop at destruction without respawning and retain existing training asymmetry', function () {
+    var api=window.Driftworks.flightDuel,duel=api.run({start:'headOn',category:'perfect',duration:10});
+    assert(duel.summary().outcome==='player-win');assert(duel.summary().playerShots>0 && duel.summary().metrics.playerDamageSteps>0);
+    var before=JSON.stringify(duel.summary());duel.advance(30);assert(JSON.stringify(duel.summary())===before);
+    assert(duel.combat.enemies.length===1 && duel.combat.wave===1);assert(duel.combat.hull===100 && duel.enemy.maxHp===90);
+  });
+
+  test('all duel geometries and human flavors stay finite, deterministic and input bounded', function () {
+    var DW=window.Driftworks,api=DW.flightDuel;
+    api.starts.forEach(function(start){['novice','practiced','expert'].forEach(function(flavor){
+      var options={start:start,category:'human',flavor:flavor,seed:8,duration:.6},a=api.run(options),b=api.run(options);
+      assert(JSON.stringify(a.summary())===JSON.stringify(b.summary()));
+      a.replay.inputs.forEach(function(input){DW.flightAI.validate(input);});
+      [a.player,a.enemy.pose].forEach(function(p){p.eye.concat(p.velocity,p.rates).forEach(function(v){assert(Number.isFinite(v));});assertClose(Math.hypot.apply(null,p.back),1);});
+    });});
+  });
+
   test('surface work light retains metre scale across asteroid sizes', function () {
     var scene=window.Driftworks.scene3d;
     [1,2].forEach(function(scale){
@@ -1494,6 +1562,34 @@
     pad.axes[3]=.05;assertClose(input.read(pad,map).throttleRate,0);
     pad.axes[3]=-1;pad.buttons[12]={pressed:true,value:1};assertClose(input.read(pad,map).throttleRate,1);
     pad.axes=[];assertClose(input.read(pad,map).throttleRate,1);
+  });
+
+  test('joystick bindings survive reconnection with per-device storage', function () {
+    var f=flightControlsFixture(),stored={};
+    f.win.localStorage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};
+    var pad={index:0,id:'Thrustmaster T.16000M',connected:true,mapping:'',axes:[0,0,0,1,0,1],buttons:[]};
+    f.setPads([pad]);f.controls.sample();
+    var yaw=f.elements.bindings.children[1].children[0];yaw.value='5';yaw.onchange();
+    assert(f.controls.sample().yaw===-1);
+    f.setPads([]);f.controls.sample();f.setPads([pad]);f.controls.sample();
+    pad.axes[2]=-1;assert(f.controls.sample().yaw===-1,'Saved twist axis replaces default');
+    assert(Object.keys(stored).length===1);
+  });
+
+  test('flight sticks map twist to yaw and lateral travel to roll', function () {
+    var input=window.Driftworks.flightInput;
+    ['Thrustmaster T.16000M (Vendor: 044f Product: b10a)', 'Generic USB joystick'].forEach(function(id){
+      var map=input.defaults(false,id),pad={axes:[1,-1,0,1],buttons:[]};
+      var demand=input.read(pad,map);
+      assert(demand.pitch===1 && demand.roll===-1 && demand.yaw===0 && demand.throttle===0);
+      pad.axes=[0,0,1,-1];demand=input.read(pad,map);
+      assert(demand.yaw===-1 && demand.roll===0 && demand.throttle===1);
+      pad.axes=[0,0,.04,0];assert(input.read(pad,map).yaw===0);
+      map.yaw=5;map.yawInvert=true;pad.axes=[0,0,0,0,0,-1];
+      assert(input.read(pad,map).yaw===-1);
+      pad.axes=[];assert(input.read(pad,map).yaw===0 && input.read(pad,map).throttle===null);
+      assert(map.up===-1 && map.down===-1);
+    });
   });
 
   test('joystick permits inverted axes, absolute throttle and custom buttons', function () {

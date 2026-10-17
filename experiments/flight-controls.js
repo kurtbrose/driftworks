@@ -65,14 +65,29 @@
         }
         /** @param {Gamepad} pad */
         function configure(pad) {
-            mapping = input.defaults(pad.mapping === 'standard');
+            lastAxes = [];
+            mapping = input.defaults(pad.mapping === 'standard', pad.id);
+            try {
+                /** @type {unknown} */
+                var saved = JSON.parse(window.localStorage.getItem('driftworks.flight.bindings.' + pad.id) || 'null');
+                if (saved && typeof saved === 'object') {
+                    Object.keys(mapping).forEach(function (key) {
+                        var name = /** @type {keyof Mapping} */ (key);
+                        var value = /** @type {Record<string, unknown>} */ (saved)[key];
+                        if (typeof mapping[name] === 'boolean' && typeof value === 'boolean')
+                            mapping[/** @type {'pitchInvert'} */ (name)] = value;
+                        else if (typeof mapping[name] === 'number' && typeof value === 'number' && Number.isFinite(value))
+                            mapping[/** @type {'pitch'} */ (name)] = name === 'deadzone' ? Math.max(0, Math.min(.5, value)) : Math.max(-1, Math.floor(value));
+                    });
+                }
+            } catch (error) { /* Defaults work when storage is unavailable. */ }
             bindingHost.textContent = '';
             bindingHost.hidden = pad.mapping === 'standard';
             get('controller-layout').hidden = pad.mapping !== 'standard';
             get('deadzone').value = String(mapping.deadzone);
             /** @type {(Exclude<keyof Mapping, 'deadzone' | `${string}Invert`>)[]} */ (['pitch', 'yaw', 'roll', 'throttle', 'fire', 'boost', 'bank', 'pause', 'up', 'down']).forEach(function (name) {
                 var label = document.createElement('label');
-                label.textContent = (name === 'throttle' ? 'Throttle axis (absolute)' : name === 'up' ? 'Throttle increase button' : name === 'down' ? 'Throttle decrease button' : name) + ' ';
+                label.textContent = (name === 'yaw' && pad.mapping !== 'standard' ? 'Yaw / twist axis' : name === 'roll' && pad.mapping !== 'standard' ? 'Roll / stick X axis' : name === 'throttle' ? 'Throttle axis (absolute)' : name === 'up' ? 'Throttle increase button' : name === 'down' ? 'Throttle decrease button' : name) + ' ';
                 var selectBinding = document.createElement('select');
                 selectBinding.setAttribute('aria-label', name + ' binding');
                 var isAxis = ['pitch', 'yaw', 'roll', 'throttle'].indexOf(name) >= 0, count = isAxis ? pad.axes.length : pad.buttons.length;
@@ -86,6 +101,7 @@
                 mapping[name] = Number(selectBinding.value);
                 selectBinding.onchange = function () {
                     mapping[name] = Number(selectBinding.value);
+                    saveBindings();
                 };
                 label.appendChild(selectBinding);
                 if (isAxis) {
@@ -95,6 +111,7 @@
                     invert.setAttribute('aria-label', 'Invert ' + name);
                     invert.onchange = function () {
                         mapping[ /** @type {'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert'} */(name + 'Invert')] = invert.checked;
+                        saveBindings();
                     };
                     label.appendChild(invert);
                     label.appendChild(document.createTextNode(' invert'));
@@ -102,6 +119,12 @@
                 bindingHost.appendChild(label);
             });
             previousButtons = { bank: false, pause: false };
+        }
+        function saveBindings() {
+            var pad = pads().find(function (p) { return String(p.index) === device.value; });
+            if (!pad) return;
+            try { window.localStorage.setItem('driftworks.flight.bindings.' + pad.id, JSON.stringify(mapping)); }
+            catch (error) { /* Bindings remain usable for this session. */ }
         }
         device.onchange = function () {
             actions.pause();
@@ -117,6 +140,7 @@
         get('deadzone').onchange = function (e) {
             mapping.deadzone = Math.max(0, Math.min(.5, Number(get('deadzone').value) || 0));
             get('deadzone').value = String(mapping.deadzone);
+            saveBindings();
         };
         inputMode.onchange = actions.pause;
         document.addEventListener('pointerlockchange', function () {
@@ -252,7 +276,7 @@
                 lastPad = pad.index;
                 configure(pad);
             }
-            get('device-status').textContent = pad ? pad.id : 'Connect a controller and press a button to detect it.';
+            get('device-status').textContent = pad ? (/thrustmaster|044f|t[ .-]?16000|t[ .-]?flight/i.test(pad.id) ? 'Thrustmaster joystick - ' : pad.mapping !== 'standard' ? 'Generic joystick - ' : '') + pad.id : 'Connect a controller and press a button to detect it.';
             get('device-live').textContent = pad ? 'Axes: ' + pad.axes.map(function (v, i) {
                 return i + ':' + v.toFixed(2);
             }).join(' ') + ' | Buttons: ' + pad.buttons.map(function (b, i) {

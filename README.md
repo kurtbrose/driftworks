@@ -513,3 +513,7 @@ Bookend timing and subtitle offsets remain fixed.
 - 3D mining platform study: http://localhost:8000/tests/mining-platform-orbit.html (four simultaneous pod views: fixed side/front/top and interactive raised orbit; terrain-fitted anchors and ramps; **Play landing - 50 m** finds a safe nearby site, matches slow asteroid rotation, translates, unfolds legs, descends to contact, then opens ground-limited ramps. Gameplay uses the same terrain solver and fitted rig geometry in both renderers. Pause/resume, replay, or return to Manual study).
 
 - Production mining contact regression: http://localhost:8000/tests/mining-platform-gameplay.html (actual world platforms; scrub landing time, rotate the asteroid, orbit and zoom; append `?renderer=2d` to check the Pixi projection).
+
+### Flight joystick controls
+
+In `experiments/flight.html`, open **Settings > Joystick / controller** and select your device. Choose **Joystick / controller / keyboard** for stick steering. Thrustmaster and generic USB sticks default to pull-back pitch, lateral roll, twist yaw, and absolute throttle. Trigger fires; zero-based buttons 1, 2, and 7 boost, change weapon bank, and pause. Remap axes and buttons using the live readout to identify twist and throttle on your hardware; inversion and deadzone are adjustable. Bindings are saved per device in localStorage. Standard gamepads retain their existing layout. Press a device button to expose it to the browser; disconnection pauses flight.

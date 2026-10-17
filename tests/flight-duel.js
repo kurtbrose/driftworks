@@ -1,0 +1,81 @@
+(function () {
+    'use strict';
+    var DW = window.Driftworks, U = DW.sim.METERS_PER_UNIT, DT = 1 / 120;
+    var starts = {
+        headOn: {position:[0,600,0], forward:[0,-1,0]},
+        crossing: {position:[350,350,0], forward:[-1,0,0]},
+        tail: {position:[0,300,0], forward:[0,1,0]},
+        turning: {position:[250,100,0], forward:[0,1,0]},
+        opening: {position:[0,700,0], forward:[0,1,0]}
+    };
+    function setup(pose, meters, forward, profile) {
+        pose.eye = meters.map(function(v,i){return (v+(i===2?10000:0))/U;});
+        pose.back=forward.map(function(v){return -v;});
+        pose.right=[forward[1],-forward[0],0]; pose.up=[0,0,1];
+        pose.throttle=.8;
+        pose.velocity=forward.map(function(v){return v*profile.maxVelocity[2]*.8;});
+        pose.ramp=[0,0,profile.maxVelocity[2]*.8];
+    }
+    function create(options) {
+        options=Object.assign({start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0},options);
+        if(!starts[options.start] || !Number.isFinite(options.duration) || options.duration<=0 || ![0,1,2].includes(options.skill) || !DW.arcade.profiles[options.profile]) throw new Error('Invalid duel options');
+        var profile=DW.arcade.profiles[options.profile], weapon=DW.retailWeapons[0], player=DW.arcade.create(0), combat=DW.training.create('training');
+        setup(player,[0,0,0],[0,1,0],profile);
+        DW.training.spawn(combat,player,0); combat.enemies=combat.enemies.slice(0,1);
+        var enemy=combat.enemies[0], initial=starts[options.start];
+        enemy.profile=profile; enemy.skill=options.skill; enemy.pilot=['Rookie','Veteran','Ace'][options.skill]; enemy.decision=0;
+        setup(enemy.pose,initial.position,initial.forward,profile);
+        combat.slots=[enemy.id];
+        var pilot=DW.flightAI.create(options.category,options.flavor,options.seed), guns=DW.flightGuns.create();
+        var tick=0, remainder=0, done=false, lastMode=enemy.mode, longestDry=0, dry=0;
+        var metrics={playerOpportunities:0,opponentOpportunities:0,playerDamageSteps:0,opponentDamageSteps:0,modeChanges:0,minRange:Infinity,maxRange:0};
+        var replay={version:1,policy:pilot.version,observation:pilot.observation,cadence:DT,options:Object.assign({},options),inputs:[]};
+        function advance(elapsed, inputStream) {
+            if(!Number.isFinite(elapsed)||elapsed<0) throw new Error('Invalid elapsed time');
+            remainder+=elapsed;
+            while(!done && remainder+1e-10>=DT) {
+                remainder=Math.max(0,remainder-DT);
+                var time=tick*DT;
+                var input=inputStream ? DW.flightAI.validate(inputStream[tick]) : pilot.step(time,player,enemy.pose,profile,weapon);
+                replay.inputs.push(input);
+                // Match flightSession order; never move a real craft inside a controller.
+                player.throttle=input.throttle; DW.arcade.step(player,profile,input,DT);
+                var hullBefore=combat.hull, shieldBefore=combat.shield;
+                DW.training.step(combat,player,DT,0);
+                if(combat.hull<hullBefore || combat.shield<shieldBefore) metrics.opponentDamageSteps++;
+                var hpBefore=enemy.hp;
+                DW.flightGuns.step(guns,player,weapon,!combat.dead && input.fire,DT,function(a,b,bolt){return DW.training.trace(combat,a,b,bolt,'player',undefined,player);});
+                if(enemy.hp<hpBefore) metrics.playerDamageSteps++;
+                var own=DW.flightAI.solution(player,enemy.pose.eye,enemy.pose.velocity,weapon), other=DW.flightAI.solution(enemy.pose,player.eye,player.velocity,weapon);
+                var a=own.valid&&own.dot>.996, b=other.valid&&other.dot>.996;
+                if(a) metrics.playerOpportunities+=DT;
+                if(b) metrics.opponentOpportunities+=DT;
+                dry=own.range<800 && !a && !b && enemy.hp===hpBefore && combat.lastHit<combat.time-DT/2 ? dry+DT : 0;
+                longestDry=Math.max(longestDry,dry);
+                metrics.minRange=Math.min(metrics.minRange,own.range); metrics.maxRange=Math.max(metrics.maxRange,own.range);
+                if(lastMode!==enemy.mode) {metrics.modeChanges++;lastMode=enemy.mode;}
+                tick++;
+                done=combat.dead || enemy.hp<=0 || tick>=Math.ceil(options.duration/DT);
+            }
+            return summary();
+        }
+        function summary() {
+            return {ticks:tick,seconds:tick*DT,done:done,outcome:combat.dead?'opponent-win':enemy.hp<=0?'player-win':done?'timeout':'running',
+                category:pilot.category,flavor:pilot.flavor,skill:options.skill,start:options.start,seed:options.seed,profile:profile.name,weapon:weapon.name,
+                playerHull:combat.hull,playerShield:combat.shield,opponentHull:enemy.hp,playerShots:guns.fired,opponentShots:enemy.guns.fired,
+                longestDry:longestDry,metrics:Object.assign({},metrics)};
+        }
+        return {advance:advance,summary:summary,replay:replay,player:player,enemy:enemy,combat:combat};
+    }
+    function run(options) { var duel=create(options);duel.advance(duel.replay.options.duration);return duel; }
+    function replay(record) {
+        if(record.version!==1 || record.cadence!==DT || !Array.isArray(record.inputs)) throw new Error('Unsupported duel replay');
+        record.inputs.forEach(DW.flightAI.validate);
+        var duel=create(record.options);
+        if(record.inputs.length>Math.ceil(record.options.duration/DT)) throw new Error('Replay exceeds duration');
+        duel.advance(record.inputs.length*DT,record.inputs);
+        if(duel.summary().ticks!==record.inputs.length) throw new Error('Inputs after terminal duel state');
+        return duel;
+    }
+    DW.flightDuel={create:create,run:run,replay:replay,starts:Object.keys(starts),dt:DT};
+}());

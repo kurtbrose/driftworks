@@ -20,9 +20,12 @@
         var length = Math.hypot(position[0], position[1]), demand = Math.pow(deadzone(Math.min(1, length), zone), exponent || 1);
         return length > 0 ? [-position[1] * demand / length, -position[0] * demand / length] : [0, 0];
     }
-    /** @param {boolean} standard */
-    function defaults(standard) {
-        return { pitch: 1, yaw: 0, roll: 2, throttle: standard ? -1 : 3, pitchInvert: standard, yawInvert: false, rollInvert: false, throttleInvert: true, fire: standard ? 7 : 0, boost: standard ? 0 : 1, bank: standard ? 3 : 2, pause: standard ? 9 : 7, up: 12, down: 13, deadzone: .12 };
+    /** @param {boolean} standard @param {string} [deviceId] */
+    function defaults(standard, deviceId) {
+        // Flight sticks use X for bank and twist for yaw. Browser axis layouts
+        // vary; every binding remains editable in the controller settings.
+        var joystick = !standard && deviceId !== undefined;
+        return { pitch: 1, yaw: joystick ? 2 : 0, roll: joystick ? 0 : 2, throttle: standard ? -1 : 3, pitchInvert: standard || joystick, yawInvert: false, rollInvert: false, throttleInvert: true, fire: standard ? 7 : 0, boost: standard ? 0 : 1, bank: standard ? 3 : 2, pause: standard ? 9 : 7, up: joystick ? -1 : 12, down: joystick ? -1 : 13, deadzone: .12 };
     }
     /** @param {Gamepad} pad @param {Mapping} map */
     function read(pad, map) {

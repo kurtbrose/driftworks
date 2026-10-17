@@ -2,6 +2,8 @@
 
 Research date: 2026-10-17. Scope: the experimental flight lab, not the strategic combat in `src/combat.js`. This report proposes changes; it does not change gameplay, physics, weapons, balance, or visuals. Expected benefits below are hypotheses from source inspection, not measured playtest results.
 
+Implementation status: the initial validation harness and testing pilots are now available; see [flight AI validation](flight-ai-validation.md) for commands, contracts, baseline results and limitations. Opponent improvements proposed here remain unimplemented.
+
 ## Executive summary
 
 Improve one opponent before improving a squadron. Driftworks already has most of the machinery needed: a shared arcade flight integrator, fixed forward guns, a projectile intercept solver, discrete pilot decisions, committed maneuver timers, and limited attack slots. An elaborate AI framework is unnecessary.
@@ -44,7 +46,7 @@ For example, a novice simulator may consistently underestimate closure because o
 
 Share geometry math, intercept math, maneuver execution where appropriate, observation data formats, input validation, replay and physical integration. Keep category objectives and policy settings explicit and independently testable. Do not create one difficulty slider that silently turns opponent concessions into simulated human limitations, or call an opponent preset with zero aim error “perfect.” A simple category selector plus small policy functions is enough initially; separate modules only when actual implementation size warrants them.
 
-The current `training.js` enemies are opponent AI. The scripted player controller in the wave-clearance test is a functional test driver, not an established human simulator or perfect AI. Straight-flight and fixed-turn scripts remain useful diagnostic fixtures, but must not be presented as representative human players. Both additional categories require their own maintained implementations and validation; naming them does not make them available yet.
+The current `training.js` enemies are opponent AI. The scripted player controller in the wave-clearance test is a functional test driver, not an established human simulator or perfect AI. Straight-flight and fixed-turn scripts remain useful diagnostic fixtures, but must not be presented as representative human players. Both additional categories have initial separate implementations in `flight-ai.js`; their limitations and remaining calibration work are documented in the validation guide.
 
 The testing roles are complementary:
 

@@ -43,6 +43,8 @@ export type Demand = FlightInput & {
     stop?: boolean;
     fire: boolean;
 };
+/** Complete legal control request shared by evaluation pilots and replay. */
+export type PilotInput = Required<FlightInput> & { throttle: number; fire: boolean };
 export type Weapon = {
     name: string;
     speed: number;
@@ -475,6 +477,17 @@ export type Line = {
     emotion?: Feeling;
 };
 export type ExperimentModules = {
+    flightAI: {
+        version: string;
+        flavors: Record<'novice'|'practiced'|'expert', {reaction:number;sample:number;noise:number;gain:number;damping:number;lead:number}>;
+        create: (category:'perfect'|'human', flavor?:'novice'|'practiced'|'expert', seed?:number) => {
+            category:'perfect'|'human'; flavor:string; version:string; observation:string;
+            step:(time:number, own:FlightState, target:Pick<FlightState,'eye'|'velocity'>, profile:Profile, weapon:Weapon)=>PilotInput;
+        };
+        validate:(input:PilotInput)=>PilotInput;
+        solution:(own:FlightState, position:Vector, velocity:Vector, weapon:Weapon)=>{point:Vector;range:number;dot:number;time:number;valid:boolean};
+        copy:(state:FlightState)=>FlightState;
+    };
     flightDialogue: Pick<ExperimentModules['flightComms'], 'compose' | 'numberWords' | 'contactData' | 'pickLine' | 'voiceOptions' | 'pilotVoice'> & {
         lines: Record<string, string[]>;
         calls: Record<string, string[]>;
@@ -551,7 +564,7 @@ export type ExperimentModules = {
         deadzone: (value: number, zone: number) => number;
         moveStick: (position: number[], dx: number, dy: number, range: number, sensitivity: number) => number[];
         stickDemand: (position: number[], zone: number, exponent?: number) => number[];
-        defaults: (standard: boolean) => Mapping;
+        defaults: (standard: boolean, deviceId?: string) => Mapping;
         read: (pad: Gamepad, map: Mapping) => PadDemand;
     };
     flightPerformance: {
