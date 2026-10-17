@@ -383,6 +383,59 @@
     return new Float32Array(data);
   }
 
+  /** Mining artwork in local coordinates: feet at z=0, eight folding legs.
+   * Geometry is grouped by paint so details do not add individual draw calls.
+   * @param {number} deployment @param {number} time @param {boolean} working
+   */
+  function miningPlatformGeometry(deployment, time, working) {
+    var d = Math.max(0, Math.min(1, deployment));
+    /** @type {Record<string, number[]>} */ var groups = {ochre:[], steel:[], dark:[], light:[]};
+    var cube = boxMesh();
+    /** @param {string} material @param {V3} center @param {V3} size @param {V3[]} [basis] */
+    function block(material, center, size, basis) {
+      var axes = basis || [[1,0,0],[0,1,0],[0,0,1]], out = groups[material];
+      for (var i=0;i<cube.length;i+=6) {
+        for (var k=0;k<3;k++) out.push(center[k]+axes[0][k]*cube[i]*size[0]+axes[1][k]*cube[i+1]*size[1]+axes[2][k]*cube[i+2]*size[2]);
+        for (var k=0;k<3;k++) out.push(axes[0][k]*cube[i+3]+axes[1][k]*cube[i+4]+axes[2][k]*cube[i+5]);
+      }
+    }
+    /** @param {string} material @param {V3} a @param {V3} b @param {number} width */
+    function link(material,a,b,width) {
+      var delta=/** @type {V3} */ ([b[0]-a[0],b[1]-a[1],b[2]-a[2]]), len=Math.hypot.apply(null,delta);
+      var x=/** @type {V3} */ (delta.map(function(v){return v/len;}));
+      var h=Math.hypot(x[0],x[1])||1;
+      var y=/** @type {V3} */ ([-x[1]/h,x[0]/h,0]);
+      var z=/** @type {V3} */ ([-x[2]*y[1],x[2]*y[0],x[0]*y[1]-x[1]*y[0]]);
+      block(material,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],[len/2,width,width],[x,y,z]);
+    }
+    [-9,-3,3,9].forEach(function(root){[-1,1].forEach(function(side){
+      var knee=/** @type {V3} */ ([root*(1+d*.25),side*(7.5+d*5),7+d*2]);
+      var foot=/** @type {V3} */ ([root*(1+d*.7),side*(9+d*10),1+(1-d)*4]);
+      link('ochre',[root,side*5,6],knee,1.6);
+      link('steel',knee,foot,.9);
+      link('light',[root,side*6,5],[foot[0],foot[1],foot[2]+1],.3);
+      block('dark',knee,[2,1.8,1.5]);
+      block('ochre',[knee[0],knee[1],knee[2]+1.5],[1.4,1.2,.35]);
+      block('dark',foot,[2.2,1.7,.8]);
+      block('steel',[foot[0],foot[1],foot[2]+.85],[1.9,1.4,.2]);
+    });});
+    block('dark',[0,0,4],[10,6,2]);
+    [-1,1].forEach(function(side){
+      block('ochre',[0,side*6,7],[12,2,3]);
+      block('light',[-7,side*6,10.1],[3,.4,.15]);
+      for(var i=0;i<5;i++)block('dark',[-4+i*2,side*6,10.1],[.45,1.3,.15]);
+    });
+    block('ochre',[-9,0,7],[3,4,3]);
+    block('dark',[0,0,6],[6,3.8,1]);
+    for(var i=0;i<6;i++)block('steel',[-5+((i*2+(working?time*3:0))%12),0,7.2],[.35,3,.3]);
+    block('steel',[7+d*3,0,6],[4+d*3,1.5,1]);
+    block('dark',[11+d*6,0,5],[1.5,4,2]);
+    for(var i=-2;i<=2;i++)block('steel',[13+d*6, i*1.4,4+(working?Math.sin(time*9+i)*.4:0)],[.6,.5,1.5]);
+    block('steel',[-8,0,11],[2,2,1]);
+    block('light',[-8,-2.1,11],[1.4,.15,.5]);
+    return groups;
+  }
+
   /** Translate the existing rounded 72 x 34 habitat silhouette into a drum. */
   /** @param {number} [segments] */
   function habitatMesh(segments) {
@@ -704,6 +757,7 @@
       gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,texture);gl.activeTexture(gl.TEXTURE0);
     }
     var box = upload(boxMesh());
+    /** @type {Record<string, Mesh>} */ var miningMeshes = {};
     var grid = upload(new Float32Array(600));
     var habitatLevels = [96,192,384].map(function(segments){return {segments:segments,mesh:upload(habitatMesh(segments))};});
     /** @type {Record<number, {mesh: Mesh, color: V3, rotor: boolean, finish: number}[]>} */
@@ -1013,11 +1067,39 @@
         }
       });
       w.platforms.forEach(function (p) {
-        if (p.state !== 'deployed' && p.state !== 'setting-up' && p.state !== 'packing') return;
+        if (p.state !== 'deployed' && p.state !== 'setting-up' && p.state !== 'packing-up') return;
         var a = w.asteroids.find(function (a) { return a.id === p.asteroidId; });
         var z = platformHeight(p, a);
         var scale = semanticScale('platform', w.camera.zoom);
-        draw(box, [p.position.x, p.position.y, z + 5 * scale], [12 * scale, 9 * scale, 5 * scale], p.siteAngle + (a ? a.rotation : 0), [0.83, 0.61, 0.24]);
+        var deployment = p.state === 'deployed' ? 1 : p.state === 'setting-up'
+          ? 1-(p.setupRemainingSeconds || 0)/(DW.logistics ? DW.logistics.setupSeconds : 1)
+          : (p.packRemainingSeconds || 0)/(DW.logistics ? DW.logistics.packSeconds : 1);
+        var working = p.state === 'deployed' && w.miningMission === 'active' && !!a && a.ore > 0 &&
+          (!w.staffingEnabled || (p.workerIds || []).length >= 5);
+        var geometry = miningPlatformGeometry(deployment,w.elapsedSeconds,working);
+        var angle=p.siteAngle+(a?a.rotation:0), c=Math.cos(angle), s=Math.sin(angle);
+        // Match the local surface slope while preserving the simulation anchor.
+        var e=.15, n=/** @type {V3} */ ([0,0,1]);
+        if(a && !(a.excavation && a.excavation.level>0)) {
+          /** @param {number} dx @param {number} dy */
+          var sample=function(dx,dy){return platformHeight(Object.assign({},p,{position:{x:p.position.x+dx,y:p.position.y+dy}}),a);};
+          n=[-(sample(e,0)-sample(-e,0))/(2*e),-(sample(0,e)-sample(0,-e))/(2*e),1];
+          var magnitude=Math.hypot.apply(null,n);n=/** @type {V3} */ (n.map(function(v){return v/magnitude;}));
+        }
+        var tangent=/** @type {V3} */ ([c,s,-(n[0]*c+n[1]*s)/n[2]]);
+        var magnitude=Math.hypot.apply(null,tangent);tangent=/** @type {V3} */ (tangent.map(function(v){return v/magnitude;}));
+        var across=/** @type {V3} */ ([n[1]*tangent[2]-n[2]*tangent[1],n[2]*tangent[0]-n[0]*tangent[2],n[0]*tangent[1]-n[1]*tangent[0]]);
+        var colors=/** @type {Record<string,V3>} */ ({ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49]});
+        Object.keys(geometry).forEach(function(material){
+          var data=geometry[material];
+          for(var i=0;i<data.length;i+=6)for(var offset=0;offset<=3;offset+=3){
+            var lx=data[i+offset],ly=data[i+offset+1],lz=data[i+offset+2];
+            for(var k=0;k<3;k++)data[i+offset+k]=tangent[k]*lx+across[k]*ly+n[k]*lz;
+          }
+          var mesh=miningMeshes[material] || (miningMeshes[material]=upload(new Float32Array(0)));
+          gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.DYNAMIC_DRAW);mesh.count=data.length/6;
+          draw(mesh,[p.position.x,p.position.y,z],[scale,scale,scale],0,colors[material]);
+        });
       });
       w.wrecks.forEach(function (s) { draw(box, [s.position.x, s.position.y, 0], [10, 4, 3], s.rotation || 0, [0.3, 0.27, 0.24]); });
       w.combat.drones.forEach(function (d) {
@@ -1114,6 +1196,6 @@
     };
   }
   DW.scene3d = { create: create, project: project, unproject: unproject, view: view,
-    rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
+    miningPlatformGeometry: miningPlatformGeometry, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
     surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, pickStudySurface: pickStudySurface, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

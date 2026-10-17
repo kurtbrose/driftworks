@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mining platform comparison - Driftworks</title><link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;background:#080d11;color:#e2d7b4;font:14px system-ui;overflow:hidden}
+header{height:160px;box-sizing:border-box;padding:20px 28px;background:#101c24;border-bottom:1px solid #635733}
+h1{font-size:20px;margin:0 0 10px}.comparison-controls{display:flex;align-items:center;gap:24px;flex-wrap:wrap}label{display:flex;gap:10px;align-items:center}a{color:#b9e4eb}p{color:#9cafb8;margin:12px 0}
+.views{position:fixed;inset:160px 0 0;display:grid;grid-template-columns:1fr 1fr}
+.view{position:relative;min-width:0;overflow:hidden}.view:first-child{border-right:1px solid #344853}
+#viewer,#flat{position:absolute;inset:0;width:100%;height:100%}.view h2{position:absolute;z-index:3;top:16px;left:24px;font-size:15px;font-weight:500;margin:0;pointer-events:none}
+.scene3d-controls{display:none}canvas{display:block}
+@media(max-width:600px){header{height:205px;padding:16px}.views{top:205px}.comparison-controls{gap:10px}input[type=range]{width:100px}.view h2{left:12px;font-size:13px}}
+</style>
+<header><h1>Mining platform - 2D / 3D</h1><div class="comparison-controls"><label>Leg deployment <input id="deployment" type="range" min="0" max="1" step=".01" value="1"></label><label><input id="working" type="checkbox" checked> Run machinery</label><button id="top">3D top view</button><button id="perspective">3D perspective</button><a href="../?renderer=3d">Back to game</a></div><p>Original 2D artwork on the left. Drag the 3D view to orbit; wheel to zoom. Both share the same deployment and animation time.</p></header>
+<main class="views"><section class="view"><h2>2D - original artwork</h2><div id="flat"></div></section><section class="view"><h2>3D - extrapolated model</h2><div id="viewer" class="scene"></div></section></main>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+    <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
+    <script src="../src/propulsion.js?v=20260920-population1"></script>
+    <script src="../src/combat.js?v=20260921-sensor-track1"></script>
+    <script src="../src/logistics.js?v=20260921-craft1"></script>
+    <script src="../src/formations.js?v=20260920-population1"></script>
+    <script src="../src/sim.js?v=20260922-cavern10"></script>
+    <script src="../src/population.js"></script>
+    <script src="../src/session.js"></script>
+    <script src="../src/tactical/camera.js?v=20260920-population1"></script>
+    <script src="../src/audio.js?v=20260920-population1"></script>
+    <script src="../src/hud.js?v=20260922-cavern1"></script>
+    <script src="../src/scene3d.js?v=20261010-navigation5"></script>
+    <script src="../src/game.js?v=20261007-3d-geology2"></script>
+<script>
+var world=Driftworks.sim.createInitialWorld(),host=document.getElementById('viewer');
+world.ships=[];world.asteroids=[];world.wrecks=[];world.packets=[];world.combat.drones=[];world.selectedShipIds=[];
+world.camera={x:0,y:0,zoom:Math.min(host.clientWidth,host.clientHeight)/58};
+var flatHost=document.getElementById('flat');
+var flatApp=new PIXI.Application({resizeTo:flatHost,backgroundAlpha:0,antialias:true,resolution:Math.min(2,devicePixelRatio||1),autoDensity:true});
+flatHost.appendChild(flatApp.view);
+var flatGraphic=new PIXI.Graphics();flatApp.stage.addChild(flatGraphic);
+document.getElementById('top').onclick=function(){scene.setOrbit({yaw:0,tilt:0.001,height:4});};
+document.getElementById('perspective').onclick=function(){scene.setOrbit({yaw:-.6,tilt:1.0,height:4});};
+world.platforms=[{id:'study-platform',position:{x:0,y:0},state:'deployed',siteAngle:0,workerIds:[]}];
+var scene=Driftworks.scene3d.create(host,function(){return world;},function(w){world=w;},{study:true});
+scene.setOrbit({yaw:-.6,tilt:1.0,height:4});
+var previous=0;
+function frame(now){world.elapsedSeconds+=previous?Math.min(.1,(now-previous)/1000):0;previous=now;
+ var p=world.platforms[0],d=Number(document.getElementById('deployment').value);
+ p.state=d===1?'deployed':'setting-up';p.setupRemainingSeconds=(1-d)*Driftworks.logistics.setupSeconds;
+ // The isolated viewer has no asteroid: submit the same production geometry as actors.
+ var groups=Driftworks.scene3d.miningPlatformGeometry(d,world.elapsedSeconds,document.getElementById('working').checked);
+ flatGraphic.clear();
+ Driftworks.game.paintIndustrialPlatform(flatGraphic,d,document.getElementById('working').checked,world.elapsedSeconds,48,0);
+ flatGraphic.position.set(flatHost.clientWidth/2,flatHost.clientHeight/2);
+ flatGraphic.scale.set(Math.min(flatHost.clientWidth,flatHost.clientHeight)/58);
+ var colors={ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49]};
+ world.platforms=[];scene.setStudyActors(Object.keys(groups).map(function(key){return {vertices:new Float32Array(groups[key]),color:colors[key]};}));
+ scene.sync(world);scene.render(world,1,0,0);world.platforms=[p];requestAnimationFrame(frame);
+}requestAnimationFrame(frame);
+</script></html>

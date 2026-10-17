@@ -215,6 +215,21 @@
     var toggled=session.setCombat('training',false);assert(toggled.state===player && toggled.guns===guns && toggled.combat.countdown===0);
   });
 
+  test('fresh flight views follow replacements without caller synchronization', function () {
+    var DW=window.Driftworks,session=DW.flightSession.create({}),initial=session.snapshot();
+    session.reset({mode:'training',enabled:false,profile:DW.arcade.profiles[0]});
+    var sortie=session.snapshot();
+    assert(sortie.state!==initial.state && sortie.guns!==initial.guns && sortie.combat!==initial.combat);
+    session.setCombat('furball',true);
+    var toggled=session.snapshot();
+    assert(toggled.combat!==sortie.combat && toggled.combat.mode==='furball');
+    assert(toggled.state===sortie.state && toggled.guns===sortie.guns);
+    var replacement=sim.createInitialWorld();
+    session.setWorld(replacement);
+    assert(session.snapshot().world===replacement && session.snapshot().world!==initial.world);
+    assert(session.snapshot().combat===toggled.combat);
+  });
+
   test('flight session substeps preserve movement, training, guns, audio and contact order', function () {
     var DW=window.Driftworks,model=DW.arcade,training=DW.training,guns=DW.flightGuns;
     var saved=[model.step,training.step,guns.step,training.trace,model.contact],events=[],dead=false;
@@ -1418,6 +1433,16 @@
       }
     });
   });
+  test('mining platform geometry folds legs and animates only active machinery', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry;
+    var open=model(1,0,false),folded=model(0,0,false);
+    function width(groups){var ys=[];Object.keys(groups).forEach(function(k){for(var i=1;i<groups[k].length;i+=6)ys.push(Math.abs(groups[k][i]));});return Math.max.apply(null,ys);}
+    assert(width(open)>width(folded));
+    assert(JSON.stringify(open)===JSON.stringify(model(1,12,false)));
+    assert(JSON.stringify(open)!==JSON.stringify(model(1,.2,true)));
+    Object.keys(open).forEach(function(k){assert(open[k].length%18===0);assert(open[k].every(Number.isFinite));for(var i=3;i<open[k].length;i+=6)assert(Math.abs(Math.hypot(open[k][i],open[k][i+1],open[k][i+2])-1)<.00001);});
+  });
+
   test('3D station hardware has finite unit normals and a bounded geometry budget', function () {
     var groups = window.Driftworks.scene3d.mothershipHardware(), triangles = 0;
     assert(Object.keys(groups).length <= 8, 'Hardware stays within eight material batches');

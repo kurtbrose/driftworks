@@ -11,3 +11,35 @@ The astronaut viewer offers separate suit and trim colors, four crew palettes, a
 Universal Animation Libraries 1 and 2 each contain 43 clips in both in-place and root-motion variants. The female mannequin is a separate static retargeting target. Applying library clips to the astronaut requires retargeting; use the included authoring files and creator setup guides.
 
 `python tools/organize-character-packs.py` verifies every extracted source against its recorded hash and rebuilds the catalog without needing ZIPs. No conversion or package manager is needed at runtime. The viewer uses the pinned MIT-licensed Three.js r180 subset in `vendor/three`, with its own source hashes and license; all runtime URLs are relative and local.
+
+## Reusing astronaut deformation
+
+`createBodyModel(root)` in `experiments/character-bodies.js` manages one astronaut
+instance. Pass a dedicated, unanimated wrapper containing its meshes and skeleton;
+keep placement and animation ownership with the scene. Each worker must already
+have its own skeleton. The controller clones geometry, not the rig or materials.
+Its coordinates are specific to the supplied astronaut's Z-up source meshes.
+
+```js
+const body = createBodyModel(workerRoot);
+body.apply(guardBody(randomBody()));
+// Change shape later using the same saved source baseline.
+body.apply(guardBody(nextShape));
+body.reset();   // Restore positions, normals, initial scale and culling flags.
+body.dispose(); // Restore source geometry and release only owned geometry clones.
+```
+
+The controller captures rest positions and normals, updates vertices and GPU
+attributes, recomputes normals and geometry/mesh bounds, and scales the complete
+mesh-and-rig wrapper relative to its initial scale. Shaped meshes disable frustum
+culling because cached pose bounds become stale during animation. Shapes with no
+local deformation restore the original normals and culling flags. Shape changes
+always start from the captured baseline, so they do not accumulate distortion.
+Shared source geometry and other model instances remain unchanged.
+
+Call `dispose()` before the scene disposes its model resources. It is idempotent;
+applying a shape after disposal throws. The caller still owns the animation mixer,
+source geometry, materials, textures and skeleton. Crew guardrails are explicit:
+`apply()` accepts the provided shape unchanged, so use `guardBody()` for crew mode
+and omit it for stress tests. The viewer uses this same API and releases its
+controller when switching models.

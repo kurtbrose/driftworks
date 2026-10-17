@@ -509,3 +509,5 @@ playback is unaffected. Each preview take and furball transmission uses a separa
 radio seed from the stable voice seed. `transmit` remains deterministic for a
 fixed seed; `staticBursts: false` disables intermittent bursts for comparisons.
 Bookend timing and subtitle offsets remain fixed.
+
+- 3D mining platform study: http://localhost:8000/tests/mining-platform-orbit.html (orbit, zoom, fold legs and preview extraction machinery; shares production geometry).

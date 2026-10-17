@@ -35,6 +35,8 @@
         world.selectedShipIds = [];
         world.combat.drones = [];
         var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.training.create('training'), contact = false;
+        // A short-lived view of session-owned objects, not a detached copy.
+        // Read again after transitions that may replace state, combat, guns or world.
         /** @returns {Snapshot} */
         function snapshot() {
             return { world: world, asteroid: asteroid, mothership: mothership, state: state, guns: guns, combat: combat, contact: contact };

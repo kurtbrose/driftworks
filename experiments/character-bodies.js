@@ -70,3 +70,69 @@ export function shapePoint(x,y,z,preset){
   const depth=preset.depth*bell(z,.0105,.004)+preset.chest*bell(z,.0132,.0018);
   return [x*(1+width*center),y*(1+depth*center),z];
 }
+
+/** Minimal structural Three.js interfaces keep the pipeline renderer-independent.
+ * @typedef {{count:number, getX(i:number):number, getY(i:number):number, getZ(i:number):number, setXYZ(i:number,x:number,y:number,z:number):unknown, needsUpdate:boolean}} BodyAttribute
+ * @typedef {{attributes:{position:BodyAttribute,normal:BodyAttribute}, clone():BodyGeometry, computeVertexNormals():void, computeBoundingBox():void, computeBoundingSphere():void, dispose():void}} BodyGeometry
+ * @typedef {{isSkinnedMesh?:boolean,geometry?:BodyGeometry,frustumCulled?:boolean,computeBoundingBox?:()=>void,computeBoundingSphere?:()=>void}} BodyNode
+ * @typedef {{scale:{x:number,y:number,z:number,set(x:number,y:number,z:number):unknown},traverse(visit:(node:BodyNode)=>void):void,updateMatrixWorld(force:boolean):void}} BodyRoot
+ */
+/** Create one deformation controller per astronaut instance, before changing its shape.
+ * Pass a dedicated, unanimated wrapper containing BOTH the mesh and its skeleton.
+ * The caller owns the wrapper, animation mixer, source geometry and all other resources.
+ * This controller owns geometry clones only; shared source assets remain untouched.
+ * Input coordinates must match this astronaut's source Z-up mesh coordinates.
+ * Crew/stress policy stays with the caller: pass guardBody(shape) for crew limits.
+ * @param {BodyRoot} root
+ */
+export function createBodyModel(root){
+ const scale={x:root.scale.x,y:root.scale.y,z:root.scale.z};
+ /** @type {Map<BodyGeometry,{geometry:BodyGeometry,positions:Float32Array,normals:Float32Array}>} */
+ const geometries=new Map();
+ /** @type {{node:BodyNode,source:BodyGeometry,culled:boolean|undefined}[]} */
+ const meshes=[];
+ /** @param {BodyAttribute} attribute */
+ function capture(attribute){const data=new Float32Array(attribute.count*3);for(let i=0;i<attribute.count;i++)data.set([attribute.getX(i),attribute.getY(i),attribute.getZ(i)],i*3);return data;}
+ root.traverse(node=>{
+  if(!node.isSkinnedMesh||!node.geometry)return;
+  const source=node.geometry;
+  let entry=geometries.get(source);
+  if(!entry){const geometry=source.clone();entry={geometry,positions:capture(geometry.attributes.position),normals:capture(geometry.attributes.normal)};geometries.set(source,entry);}
+  meshes.push({node,source,culled:node.frustumCulled});node.geometry=entry.geometry;
+ });
+ let disposed=false;
+ /** @param {typeof bodyPresets[number]} shape */
+ function apply(shape){
+  if(disposed)throw Error('Body model has been disposed');
+  const unshaped=shape.hips===0&&shape.waist===0&&shape.shoulders===0&&shape.depth===0&&shape.chest===0;
+  root.scale.set(scale.x*shape.height,scale.y*shape.height,scale.z*shape.height);
+  for(const {geometry,positions,normals} of geometries.values()){
+   const position=geometry.attributes.position,normal=geometry.attributes.normal;
+   for(let i=0;i<position.count;i++){
+    const offset=i*3;
+    const point=shapePoint(positions[offset],positions[offset+1],positions[offset+2],shape);
+    position.setXYZ(i,point[0],point[1],point[2]);
+   }
+   position.needsUpdate=true;
+   if(unshaped){for(let i=0;i<normal.count;i++)normal.setXYZ(i,normals[i*3],normals[i*3+1],normals[i*3+2]);normal.needsUpdate=true;}
+   else geometry.computeVertexNormals();
+   geometry.computeBoundingBox();geometry.computeBoundingSphere();
+  }
+  root.updateMatrixWorld(true);
+  for(const {node,culled} of meshes){
+   // Pose bounds become stale as animation advances; disable culling for shaped instances.
+   node.frustumCulled=unshaped?culled:false;
+   node.computeBoundingBox?.();node.computeBoundingSphere?.();
+  }
+ }
+ function reset(){apply(bodyPresets[0]);}
+ function dispose(){
+  if(disposed)return;
+  for(const {node,source,culled} of meshes){node.geometry=source;node.frustumCulled=culled;}
+  root.scale.set(scale.x,scale.y,scale.z);root.updateMatrixWorld(true);
+  for(const {node} of meshes){node.computeBoundingBox?.();node.computeBoundingSphere?.();}
+  for(const {geometry} of geometries.values())geometry.dispose();
+  geometries.clear();meshes.length=0;disposed=true;
+ }
+ return {apply,reset,dispose,meshCount:meshes.length};
+}

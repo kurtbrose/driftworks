@@ -14,7 +14,7 @@
 <script type="module">
 import * as THREE from 'three';
 import {presets,createPalette} from './character-paints.js';
-import {bodyPresets,bodyControls,randomBody,shapePoint,guardBody,controlsForMode} from './character-bodies.js';
+import {bodyPresets,bodyControls,randomBody,createBodyModel,guardBody,controlsForMode} from './character-bodies.js';
 import {GLTFLoader} from '../vendor/three/examples/jsm/loaders/GLTFLoader.js';
 import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js';
 const $=id=>document.getElementById(id), stage=$('stage'), status=$('status');
@@ -25,7 +25,7 @@ scene.add(new THREE.HemisphereLight(0xdbefff,0x6a5848,2));const sun=new THREE.Di
 const grid=new THREE.GridHelper(20,20,0x527379,0x2a3c46);scene.add(grid);
 let current,mixer,action,helper,clips=[],paused=false,revision=0,pack,model,bounds;
 const loader=new GLTFLoader();
-let palette=null, bodyMeshes=[], bodyRoot=null;
+let palette=null, bodyModel=null;
 let bodyShape={...bodyPresets[0]};
 function setBodyMode(stress){
  $('body-mode').value=stress?'stress':'crew';
@@ -47,17 +47,10 @@ function enableBodies(enabled){for(const id of ['body-mode','body','random-body'
 for(const [id,stress] of [['random-body',false],['stress-body',true]])$(id).onclick=()=>{setBodyMode(stress);bodyShape=randomBody(Math.random,stress);$('body').value='custom';applyBody();};
 setBodyMode(false);syncBody();
 function applyBody(){
- if(!bodyRoot)return;
+ if(!bodyModel)return;
  if($('body-mode').value==='crew')bodyShape=guardBody(bodyShape);
  const preset=bodyShape;syncBody();
- bodyRoot.scale.setScalar(preset.height);
- for(const {mesh,original,normals} of bodyMeshes){const position=mesh.geometry.attributes.position;
- for(let i=0;i<position.count;i++)position.setXYZ(i,...shapePoint(original[i*3],original[i*3+1],original[i*3+2],preset));
- position.needsUpdate=true;if(preset.id==='original'){mesh.geometry.attributes.normal.array.set(normals);mesh.geometry.attributes.normal.needsUpdate=true;}else mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingBox();mesh.geometry.computeBoundingSphere();
- // Animated bounds vary per frame; these small preview meshes should never be culled by stale rest bounds.
- mesh.frustumCulled=false;
- }
- current.updateMatrixWorld(true);
+ bodyModel.apply(preset);
  $('body-note').textContent='Same skin weights, joints and 24 source clips. Height '+Math.round(preset.height*100)+'%. '+($('body-mode').value==='crew'?'Crew limits active.':'Stress test: clipping and distorted silhouettes are expected.');
 }
 $('body').onchange=()=>{const preset=bodyPresets.find(p=>p.id===$('body').value);if(preset)bodyShape={...preset};applyBody();};
@@ -70,12 +63,11 @@ function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSiz
 function reset(){if(!current)return;current.updateMatrixWorld(true);current.traverse(n=>{if(n.isSkinnedMesh)n.computeBoundingBox();});bounds=new THREE.Box3().setFromObject(current);const size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),radius=Math.max(size.x,size.y,size.z,.1);controls.target.copy(center);camera.position.copy(center).add(new THREE.Vector3(radius*1.4,radius*.7,radius*2));camera.near=radius/1000;camera.far=radius*100;camera.updateProjectionMatrix();controls.update();grid.position.y=bounds.min.y;grid.scale.setScalar(radius/5);}
 function dispose(object){const geometries=new Set(),materials=new Set(),textures=new Set();object.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of (Array.isArray(n.material)?n.material:[n.material]))if(m){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}
 function play(){if(!mixer)return;mixer.stopAllAction();const clip=clips[Number($('clip').value)];action=clip?mixer.clipAction(clip):null;if(action){action.reset().play();mixer.update(0);}$('time').value='0';$('time').disabled=!action;$('pause').disabled=!action;}
-async function load(){palette=null;bodyMeshes=[];bodyRoot=null;enableBodies(false);for(const id of ['palette','suit-color','trim-color'])$(id).disabled=true;const ticket=++revision;status.textContent='Loading '+model.name+'…';if(helper){scene.remove(helper);helper.dispose();helper=null;}if(current){scene.remove(current);mixer.stopAllAction();mixer.uncacheRoot(current);dispose(current);current=null;mixer=null;action=null;}options($('clip'),[]);$('clip').disabled=true;$('pause').disabled=true;$('time').disabled=true;$('metadata').textContent='';bounds=null;
+async function load(){palette=null;bodyModel?.dispose();bodyModel=null;enableBodies(false);for(const id of ['palette','suit-color','trim-color'])$(id).disabled=true;const ticket=++revision;status.textContent='Loading '+model.name+'…';if(helper){scene.remove(helper);helper.dispose();helper=null;}if(current){scene.remove(current);mixer.stopAllAction();mixer.uncacheRoot(current);dispose(current);current=null;mixer=null;action=null;}options($('clip'),[]);$('clip').disabled=true;$('pause').disabled=true;$('time').disabled=true;$('metadata').textContent='';bounds=null;
  $('source').href=pack.sourceURL;$('provenance').href='../assets/characters/'+pack.id+'/provenance.json';
  try{const url='../assets/characters/'+pack.id+'/'+model.path;const gltf=await loader.loadAsync(url);if(ticket!==revision){dispose(gltf.scene);return;}current=new THREE.Group();current.add(gltf.scene);
  if(pack.id==='quaternius-astronaut'){
- bodyRoot=current;
- gltf.scene.traverse(mesh=>{if(mesh.isSkinnedMesh){const original=mesh.geometry.attributes.position.array.slice();const normals=mesh.geometry.attributes.normal.array.slice();bodyMeshes.push({mesh,original,normals});}});
+ bodyModel=createBodyModel(current);
  enableBodies(true);applyBody();
  }else{$('body-note').textContent='Body variants are available for the astronaut.';}
  const paintMaterials=[];current.traverse(node=>{if(node.material)paintMaterials.push(...(Array.isArray(node.material)?node.material:[node.material]));});palette=createPalette(paintMaterials);for(const id of ['palette','suit-color','trim-color'])$(id).disabled=!palette.supported;$('paint-note').textContent=palette.supported?'Swap suit and trim; Original restores source colors.':'Palette swaps are available for the astronaut.';applyPaint();scene.add(current);current.updateMatrixWorld(true);bounds=new THREE.Box3().setFromObject(current);mixer=new THREE.AnimationMixer(current);clips=gltf.animations;helper=new THREE.SkeletonHelper(current);helper.visible=$('skeleton').checked;scene.add(helper);options($('clip'),clips.length?clips.map((c,i)=>[String(i),c.name+' ('+c.duration.toFixed(2)+'s)']):[['','Static model']]);$('clip').disabled=!clips.length;const idle=clips.findIndex(c=>c.name==='Idle'||c.name.endsWith('|Idle'));if(idle>=0)$('clip').value=String(idle);play();reset();$('metadata').textContent=pack.title+'\n'+model.name+'\n'+pack.license+' · '+clips.length+' clips\n'+model.meshes+' meshes · '+model.skins+' skins\nSource: '+model.path;status.textContent='Ready · '+model.name;

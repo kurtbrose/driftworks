@@ -743,7 +743,9 @@ combat and gun state. `reset(config)` replaces those three states and optionally
 spawns combat; it retains the world, body size and elapsed clock. `setCombat`
 replaces only combat, preserving the toggle's existing delayed-spawn behavior.
 `snapshot()` returns current references, not a clone; its sortie, guns and combat
-are initialized even before the first reset. `advance` executes at most
+are initialized even before the first reset. The browser composition root reads
+fresh views per callback or frame, without retaining replaceable session objects;
+reset and combat-toggle callers do not synchronize local copies. `advance` executes at most
 1/120-second substeps in movement, training, player guns, audio notifications,
 and surface-contact order. Death finishes gun/audio processing and stops before
 contact. Terrain/hull/surface queries and audio notifications are injected.
@@ -787,3 +789,5 @@ pacing and elapsed timestamps as well as measurements. `settings` supplies study
 options; toggle actions preserve F3/P behavior. Both modules load before flight
 boot; the HUD uses the presentation resolver. Optional browser/clock environments
 support focused headless orchestration tests without WebGL.
+
+`scene3d.miningPlatformGeometry(deployment, time, working)` returns local triangle arrays grouped by paint, with unit normals and foot pads near z=0. Production rendering aligns this artwork to the asteroid slope and batches it into four reusable GPU buffers. Deployment and extraction animation derive from existing platform state; geometry never changes persistent world data. The mining platform study uses the same geometry.

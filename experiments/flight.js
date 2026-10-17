@@ -4,8 +4,9 @@
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
     var session = DW.flightSession.create({ hullHit: function (craft, start, end) {
-            return presentation.hullHit(craft, start, end, combat.wave);
+            return presentation.hullHit(craft, start, end, session.snapshot().combat.wave);
         }, terrainHit: function (start, end) {
+            var asteroid = session.snapshot().asteroid;
             return DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
                 return DW.scene3d.rockField(asteroid, /** @type {[number, number, number]} */ (point));
             });
@@ -16,16 +17,15 @@
         }, onImpact: function () {
             DW.audio.playImpact(1);
         } });
-    var initial = session.snapshot(), world = initial.world, asteroid = initial.asteroid, mothership = initial.mothership, units = DW.sim.METERS_PER_UNIT;
+    var units = DW.sim.METERS_PER_UNIT;
     var presentation = DW.flightPresentation.mount(host, function () {
-        return world;
+        return session.snapshot().world;
     }, function (w) {
-        world = w;
         session.setWorld(w);
     });
     var select = get('profile'), stats = get('stats'), status = get('status');
     // The initial reset below creates the sortie before any frame or input runs.
-    var state = initial.state, guns = initial.guns, combat = initial.combat, paused = true, contact = false;
+    var paused = true;
     model.profiles.forEach(function (p, i) {
         var option = document.createElement('option');
         option.value = String(i);
@@ -65,7 +65,7 @@
     };
     get('combat-toggle').onchange = function (e) {
         comms.reset();
-        combat = session.setCombat(get('combat-mode').value, get('combat-toggle').checked).combat;
+        session.setCombat(get('combat-mode').value, get('combat-toggle').checked);
     };
     function profile() {
         return model.profiles[Number(select.value)];
@@ -84,20 +84,16 @@
         clear();
         controls.release();
         document.body.classList.remove('mouse-captured');
-        get('fly').textContent = combat.dead ? 'Restart flight' : 'Resume flight';
+        get('fly').textContent = session.snapshot().combat.dead ? 'Restart flight' : 'Resume flight';
         status.textContent = 'Paused - Resume flight when ready';
     }
     function pose() {
-        presentation.pose(state);
+        presentation.pose(session.snapshot().state);
     }
     function reset() {
         clear();
         comms.reset();
-        var fresh = session.reset({ mode: get('combat-mode').value, enabled: get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
-        state = fresh.state;
-        combat = fresh.combat;
-        guns = fresh.guns;
-        contact = fresh.contact;
+        session.reset({ mode: get('combat-mode').value, enabled: get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
         get('fly').textContent = 'Start flight';
         pose();
     }
@@ -111,7 +107,7 @@
         banks();
     };
     get('diameter').onchange = function (e) {
-        var d = Number(get('diameter').value);
+        var asteroid = session.snapshot().asteroid, d = Number(get('diameter').value);
         if (!Number.isFinite(d) || d < 200 || d > 4000) {
             get('diameter').value = String(asteroid.radius * units * 2);
             return;
@@ -129,7 +125,7 @@
             active.blur();
     }
     function resume() {
-        if (combat.dead) {
+        if (session.snapshot().combat.dead) {
             status.textContent = 'Training over · Restart training to fly again';
             return;
         }
@@ -152,7 +148,7 @@
         status.textContent = 'Mouse capture unavailable. Retry Fly or select Controller / keyboard.';
     }
     get('fly').onclick = function () {
-        if (combat.dead)
+        if (session.snapshot().combat.dead)
             reset();
         if (controls.view().inputMode !== 'mouse') {
             resume();
@@ -169,10 +165,10 @@
         isPaused: function () {
             return paused;
         }, isDead: function () {
-            return combat.dead;
+            return session.snapshot().combat.dead;
         },
         nextWeapon: nextWeapon, nextTarget: function () {
-            DW.training.cycle(combat);
+            DW.training.cycle(session.snapshot().combat);
         },
         nextRadarRange: function () {
             flightHud.cycleRadarRange();
@@ -193,23 +189,23 @@
         var elapsed = timing.elapsed;
         var demand = controls.sample();
         if (!paused) {
-            var result = session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
-            contact = result.contact;
-            if (combat.dead) {
+            session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
+            if (session.snapshot().combat.dead) {
                 pause();
                 status.textContent = 'Training over · Restart training to try again';
             }
             pose();
-            status.textContent = contact ? 'Surface contact · throttle cut' : document.pointerLockElement === host ? 'Mouse captured · Esc pauses & releases' : 'Flight controls active';
+            status.textContent = session.snapshot().contact ? 'Surface contact · throttle cut' : document.pointerLockElement === host ? 'Mouse captured · Esc pauses & releases' : 'Flight controls active';
         }
+        var view = session.snapshot();
         if (!paused) {
-            world.elapsedSeconds += elapsed;
-            comms.update(elapsed, combat, state);
+            view.world.elapsedSeconds += elapsed;
+            comms.update(elapsed, view.combat, view.state);
         }
         var appearance = presentation.appearance(), comparison = diagnostics.settings();
-        presentation.render({ world: world, state: state, combat: combat, guns: guns }, appearance, comparison, elapsed);
+        presentation.render(view, appearance, comparison, elapsed);
         var inputView = controls.view();
-        flightHud.render(Object.assign({ world: world, state: state, combat: combat, guns: guns, asteroid: asteroid, mothership: mothership, units: units, paused: paused, speakerId: comms.speakerId(), weapon: weapon() }, inputView, appearance));
+        flightHud.render(Object.assign({}, view, { units: units, paused: paused, speakerId: comms.speakerId(), weapon: weapon() }, inputView, appearance));
         diagnostics.endFrame(timing, paused, comparison, presentation.renderStats);
         requestAnimationFrame(frame);
     }
