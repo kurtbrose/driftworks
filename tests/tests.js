@@ -1543,6 +1543,21 @@
     [0,.2,.4,.65,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(k){var v=groups[k];assert(v.every(Number.isFinite));for(var i=3;i<v.length;i+=6)assertClose(Math.hypot(v[i],v[i+1],v[i+2]),1,.00001);});});
   });
 
+  test('cargo deck has no coplanar black belly or broad chassis top', function () {
+    ['drydock','rampdock'].forEach(function(variant){
+      var groups=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,variant,1),data=groups.dark,belly=false;
+      for(var i=0;i<data.length;i+=18){
+        var flat=Math.abs(data[i+2]-data[i+8])<.000001 && Math.abs(data[i+2]-data[i+14])<.000001;
+        var broad=Math.max(data[i],data[i+6],data[i+12])-Math.min(data[i],data[i+6],data[i+12])>2 && Math.max(data[i+1],data[i+7],data[i+13])-Math.min(data[i+1],data[i+7],data[i+13])>2;
+        if(flat && broad){
+          assert(Math.abs(data[i+2]-4.5)>.01,'Grey deck cannot share its plane with broad dark faces');
+          if(data[i+5]<-.99 && Math.abs(data[i+2]-4.15)<.001)belly=true;
+        }
+      }
+      assert(belly,'Deck underside has physical separation from the walk surface');
+    });
+  });
+
   test('mining platform geometry folds legs without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var open=model(1,0,false),folded=model(0,0,false);
@@ -1705,6 +1720,16 @@
     });
     scene.setStudyParameters(a,{});
     assert(JSON.stringify(a)===before,'Artwork does not change saves');
+  });
+  test('Isolated rock patch is deterministic, bounded, and has real finite faces', function () {
+    var build=window.Driftworks.terrainLab.createModel,a=build('rocks',1729,32),b=build('rocks',1729,32),other=build('rocks',1730,32);
+    assert(a.hash===b.hash&&a.hash!==other.hash);
+    assert(a.triangles<6000&&a.rocks.length>=10&&a.rocks.length<60,'Fixed patch budget is independent of camera distance');
+    assert(a.vertices.length===a.triangles*39);
+    for(var i=0;i<a.vertices.length;i+=13){assert(a.vertices.slice(i,i+13).every(Number.isFinite));assertClose(Math.hypot(a.vertices[i+3],a.vertices[i+4],a.vertices[i+5]),1,.00001);}
+    assert(a.rocks.some(function(r){return r.height>1;}),'Meter-scale masses are geometry');
+    assert(new Set(a.rocks.map(function(r){return r.height.toFixed(2);})).size>8,'Coherent masses have different sizes');
+    assert(build('block',1729,16).triangles===16*16*2+10,'Control fixture is a plane and five real block faces');
   });
   test('Terrain shadow coordinates preserve light-ray occlusion across camera LODs', function () {
     var frame=window.Driftworks.scene3d.terrainShadowFrame;

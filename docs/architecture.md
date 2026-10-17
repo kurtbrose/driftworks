@@ -870,3 +870,34 @@ The drydock tower main egress is in its lower core at cargo-deck level (deck z=4
 Rampdock medium door hardware shares the existing two-stage transforms: root knuckles and clevis cradles sit on the lower cage ring; fold-axis barrels move with the lower leaf; a telescoping jack spans a fixed frame pivot and moving panel pivot. Fixed stop blocks/closure receivers and moving registration tabs suggest load stops and captured closure. This remains visual articulation, with no actuator dynamics or independent latch simulation.
 
 Door hinge refinement uses three discrete short pins per axis, with frame clevis ears, visible retaining caps and articulated panel lugs. Compact jack barrels/rods suggest controlled low-gravity deployment rather than Earth-weight lifting; fixed cage stops and receivers remain the securing structure. Geometry proportions are visual, not load-rated engineering dimensions.
+
+The rampdock cage retains its original member centerlines and hardpoints, using rectangular box sections about 30–32% narrower in plan than the first square-bar pass. Lower perimeter members retain more depth, while radial cargo braces are lighter. Hinge hardware, leg geometry and panel motion are unchanged by this section-only study.
+
+Cargo deck top (z=4.5) and belly (z=4.15) are separate surfaces with closed rim faces. The broad chassis top sits inside that slab at z=4.25. Do not put dark opposite faces or chassis caps directly on the grey deck plane: this causes angle-dependent depth flicker.
+
+The sorting/transfer tray top is below deck at z=4.3; the tower core and cargo-load undersides penetrate their support surfaces slightly instead of ending exactly on them. The depth regression checks smaller overlapping faces too, not just full-width floor/chassis faces.
+
+### Isolated terrain study
+
+`tests/terrain-lab.html` keeps the rock-shape experiment outside the asteroid generator.
+Seed 1729, meter coordinates, fixed sun elevation 25 degrees, and fixed cameras
+(including 2 m altitude and 20/200 m viewing distances) make comparisons repeatable.
+Block-on-plane, cellular-height-field, and structured-rock fixtures can be inspected
+with plain geometric lighting, face normals, stored normals, wireframe, or materials
+and actual cast shadows. Freeze disables seed, resolution, and lighting changes;
+camera motion never regenerates the patch. Rock base/top boundaries, cap centers,
+and materials are retained as formation data alongside the derived triangle mesh.
+Future simplified geometry and relief approximations should derive from this same
+source; this prototype does not yet implement representation transitions or asteroid LOD.
+
+The original asteroid viewer also exposes geometry/normal/wireframe diagnostics
+and a mesh-freeze switch. Its fixed benchmark records the seed, light, camera,
+viewport, frame times, CPU submission cost, triangle counts, and transition stalls.
+`tests/benchmarks/asteroid-baseline-2026-10-16.json` was captured before adding
+these diagnostics: approximately 13.3 ms steady frames, but a 7863 ms cold
+transition to the 2 m view and 496416 triangles. These are session observations,
+not portable performance thresholds or GPU timings. The isolated laboratory
+also records GPU time when EXT_disjoint_timer_query is available, rejecting
+disjoint samples. Benchmarks warm up 30 frames and sample 90 per fixed case.
+Use JSON exports and visual inspection together; the headless suite checks
+determinism, finite normals and bounded geometry, not browser rendering quality.

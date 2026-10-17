@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "label": "Workspace asteroid renderer before isolated terrain study",
+  "recordedAt": "2026-10-17T04:27:00.092Z",
+  "rendererSHA256": "33c0b24a56cfc48525ae62eea5887e4137d6cffd500940830c5a1155964d5402",
+  "seed": "ast-ceres-01",
+  "parameters": {
+    "roughness": 1,
+    "craterDepth": 1,
+    "patchiness": 0.6
+  },
+  "light": [
+    -0.813733,
+    -0.581238,
+    0.68
+  ],
+  "width": 1455,
+  "height": 1080,
+  "pixelRatio": 1.5,
+  "warmupFrames": 30,
+  "sampleFrames": 90,
+  "overview": {
+    "camera": {
+      "x": 0,
+      "y": 0,
+      "zoom": 0.768
+    },
+    "yaw": 0,
+    "tilt": 0.9
+  },
+  "surfaceDirection": [
+    -0.40561610125071507,
+    -0.5070201265633938,
+    0.7605301898450908
+  ],
+  "surfaceHeading": [
+    -0.08207723242150407,
+    0.966308355250365,
+    0.2439497704269483
+  ],
+  "timing": "rAF frame intervals and CPU submission, not GPU timing; likely refresh-limited at 75 Hz; generation stalls recorded separately; no hardware-independent timing assertions",
+  "results": [
+    {
+      "name": "overview_shadows",
+      "frameMs": 13.314444444444437,
+      "p95Ms": 13.400000000001455,
+      "cpuSubmissionMs": 0.28888888822661507,
+      "maxTransitionMs": 1.4000000059604645,
+      "triangles": 125880,
+      "drawCalls": 1,
+      "shadows": true,
+      "pitch": null,
+      "altitudeMeters": null
+    },
+    {
+      "name": "horizon_2m_shadows",
+      "frameMs": 13.317777777777762,
+      "p95Ms": 13.400000000001455,
+      "cpuSubmissionMs": 0.5488888879617055,
+      "maxTransitionMs": 7863.200000017881,
+      "triangles": 496416,
+      "drawCalls": 1,
+      "shadows": true,
+      "pitch": -0.06,
+      "altitudeMeters": 2
+    },
+    {
+      "name": "horizon_2m_no_shadows",
+      "frameMs": 13.316666666666707,
+      "p95Ms": 13.400000000001455,
+      "cpuSubmissionMs": 0.5188888894187079,
+      "maxTransitionMs": 0.5999999940395355,
+      "triangles": 496416,
+      "drawCalls": 1,
+      "shadows": false,
+      "pitch": -0.06,
+      "altitudeMeters": 2
+    },
+    {
+      "name": "down_12m_shadows",
+      "frameMs": 13.318888888888857,
+      "p95Ms": 13.400000000001455,
+      "cpuSubmissionMs": 0.4855555537674162,
+      "maxTransitionMs": 0.8999999761581421,
+      "triangles": 496416,
+      "drawCalls": 1,
+      "shadows": true,
+      "pitch": -1.48,
+      "altitudeMeters": 12
+    }
+  ]
+}

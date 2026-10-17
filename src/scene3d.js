@@ -552,14 +552,14 @@
         for (var k=0;k<3;k++) out.push(axes[0][k]*cube[i+3]+axes[1][k]*cube[i+4]+axes[2][k]*cube[i+5]);
       }
     }
-    /** @param {string} material @param {V3} a @param {V3} b @param {number} width */
-    function link(material,a,b,width) {
+    /** @param {string} material @param {V3} a @param {V3} b @param {number} width @param {number} [depth] */
+    function link(material,a,b,width,depth) {
       var delta=/** @type {V3} */ ([b[0]-a[0],b[1]-a[1],b[2]-a[2]]), len=Math.hypot.apply(null,delta);
       var x=/** @type {V3} */ (delta.map(function(v){return v/len;}));
       var h=Math.hypot(x[0],x[1]);
       var y=/** @type {V3} */ (h>1e-8?[-x[1]/h,x[0]/h,0]:[0,1,0]);
       var z=/** @type {V3} */ ([-x[2]*y[1],x[2]*y[0],x[0]*y[1]-x[1]*y[0]]);
-      block(material,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],[len/2,width,width],[x,y,z]);
+      block(material,[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],[len/2,width,depth===undefined?width:depth],[x,y,z]);
     }
     if (variant === 'fabricated' || variant === 'workboat' || variant === 'drydock' || variant === 'rampdock') {
       var rampdock=variant==='rampdock',drydock=variant==='drydock' || rampdock,workboat=variant==='workboat' || drydock;
@@ -664,11 +664,11 @@
             var tongueA=rotate(rootPoint(along,-.2,8.15),a,lowerAngle),tongueB=rotate(rootPoint(along,.65,8.15),a,lowerAngle);
             link('steel',tongueA,tongueB,.18);
           });
-          // Fixed hardpoints and continuous upper/lower cage rings survive door deployment.
-          link('dark',[a[0],a[1],3.7],[a[0],a[1],8.4],.45);
-          link('dark',[a[0],a[1],8.4],[b[0],b[1],8.4],.36);
-          link('dark',[a[0],a[1],4.5],[b[0],b[1],4.5],.45);
-          link('dark',[a[0],a[1],8.4],[innerA[0],innerA[1],8.4],.28);
+          // Same cage topology and hardpoints; narrow box sections retain depth with less top-view mass.
+          link('dark',[a[0],a[1],3.7],[a[0],a[1],8.4],.31,.35);
+          link('dark',[a[0],a[1],8.4],[b[0],b[1],8.4],.245,.285);
+          link('dark',[a[0],a[1],4.5],[b[0],b[1],4.5],.31,.38);
+          link('dark',[a[0],a[1],8.4],[innerA[0],innerA[1],8.4],.19,.23);
         } else {
           var innerI=/** @type {V3} */ ([-1+(p[0]+1)*.48,p[1]*.48,8]);
           var q=perimeter[j],innerJ=/** @type {V3} */ ([-1+(q[0]+1)*.48,q[1]*.48,8]);
@@ -683,7 +683,10 @@
       });
       if(!drydock)plate('ochre',deck);
       else plate('steel',lower);
-      plate('dark',lower.slice().reverse());
+      // Separate the belly from the deck: coincident opposite faces cause z-fighting.
+      var belly=lower.map(function(p){return /** @type {V3} */ ([p[0],p[1],p[2]-.35]);});
+      plate('dark',belly.slice().reverse());
+      if(drydock)lower.forEach(function(p,i){var j=(i+1)%lower.length;plate('dark',[p,belly[i],belly[j],lower[j]]);});
       if(workboat) {
         // A sealed, compact control house seats on the deck, forward of the cargo.
         var cabinOutline=[[-5,-3.5],[-3,-5.5],[7,-5.5],[9,-3.5],[9,3.5],[7,5.5],[-3,5.5],[-5,3.5]];
@@ -747,15 +750,15 @@
           });});
         }
         if(drydock) {
-          block('dark',[0,0,6.6],[4.6,3.6,2.1]);
+          block('dark',[0,0,6.525],[4.6,3.6,2.175]);
           block('steel',[0,0,8.7],[6.3,4.8,.3]);
           // Continuous lookout glazing on all eight faces, interrupted by structural posts.
           if(!rampdock)cabinOutline.forEach(function(p,i){var q=cabinOutline[(i+1)%8],dx=q[0]-p[0],dy=q[1]-p[1],length=Math.hypot(dx,dy),nx=dy/length,ny=-dx/length;
             plate('dark',[[p[0]+dx*.12+nx*.04,p[1]+dy*.12+ny*.04,10.6],[p[0]+dx*.88+nx*.04,p[1]+dy*.88+ny*.04,10.6],[p[0]+dx*.88+nx*.04,p[1]+dy*.88+ny*.04,11.9],[p[0]+dx*.12+nx*.04,p[1]+dy*.12+ny*.04,11.9]]);
           });
           // One cargo hold surrounds the tower: coarse packed loads, not a rear bin.
-          [-11,10].forEach(function(x){block('dark',[x,0,4.85],[2.8,4.2,.3]);block('steel',[x,0,6],[2.4,3.8,.85]);});
-          [-1,1].forEach(function(side){block('dark',[-1,side*7,4.85],[6,1.3,.3]);block('steel',[-1,side*7,5.8],[5.4,1, .65]);});
+          [-11,10].forEach(function(x){block('dark',[x,0,4.85],[2.8,4.2,.3]);block('steel',[x,0,5.95],[2.4,3.8,.90]);});
+          [-1,1].forEach(function(side){block('dark',[-1,side*7,4.85],[6,1.3,.3]);block('steel',[-1,side*7,5.75],[5.4,1,.70]);});
           // Main crew egress is in the tower's lower core, opening onto the cargo deck.
           block('steel',[0,3.67,5.55],[.68,.07,.95]);
           [-1,1].forEach(function(side){block('steel',[side*.9,3.75,5.6],[.13,.16,1.1]);});
@@ -787,7 +790,7 @@
         [-1,1].forEach(function(side){block('dark',[side*3.4,-8.2,8],[.3,1.8,1]);});
         }
       }
-      block('dark',[-1,0,3.3],[14,8.4,1.2]);
+      block('dark',[-1,0,3.05],[14,8.4,1.2]);
       // Exposed chassis rails carry the mining head and each rectangular root mount.
       [-1,1].forEach(function(side){block('steel',[-1,side*8,3.6],[14.5,.7,.9]);});
       /** Cylindrical pin, aligned across the leg, with planar end caps.
@@ -823,7 +826,7 @@
       if(rampdock)perimeter.forEach(function(p,i){anchor(p[0],i,Math.sign(p[1]),p[1]);});
       else [-11,-5,5,9].forEach(function(root,index){[-1,1].forEach(function(side){anchor(root,index,side);});});
       if(drydock){
-        block('dark',[14,0,4],[3,3.8,.5]);
+        block('dark',[14,0,3.8],[3,3.8,.5]);
         [-1,1].forEach(function(side){block('steel',[16,side*2.2,4.7],[4,.35,.35]);});
       } else {
       // Squared front brow, recessed feed opening and protective angular cheeks.
@@ -1134,7 +1137,7 @@
     host.appendChild(toolbar);
     /** @type {Orbit} */ var orbit = { yaw: 0, tilt: 0.48 };
     var studyHeight = 0;
-    var diagnostics={mode:'normal',flat:false,scale:1,mothership:true,actors:true,shadows:true};
+    var diagnostics={mode:'normal',flat:false,scale:1,mothership:true,actors:true,shadows:true,view:"material",freezeGeometry:false};
     var renderStats={drawCalls:0,triangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
     /** @type {Set<WebGLBuffer>} */ var frameMeshes=new Set();
     /** @type {Set<string>} */ var frameMaterials=new Set();
@@ -1142,7 +1145,7 @@
     var focus = false, space = false, stress = false, fps = 0;
     /** @type {{ start: Vec2, last: Vec2, mode: string } | null} */ var drag = null;
     /** @type {{ event: import('./types').CombatEvent, age: number }[]} */ var effects = [];
-    /** @type {Record<string, { key: string, mesh: Mesh, baseMesh: Mesh, base: Float32Array, detail: string, texture: WebGLTexture, visual: import('./types').AsteroidVisual }>} */ var rocks = {};
+    /** @type {Record<string, { key: string, mesh: Mesh, baseMesh: Mesh, base: Float32Array, detail: string, detailCenter?:V3|null, data?:Float32Array, wire?:Mesh|null, texture: WebGLTexture, visual: import('./types').AsteroidVisual }>} */ var rocks = {};
     /** @param {number} type @param {string} source */
     function shader(type, source) {
       var s = gl.createShader(type); if (!s) throw new Error('Shader allocation failed');
@@ -1152,10 +1155,10 @@
     }
     var program = gl.createProgram(); if (!program) throw new Error('Program allocation failed');
     gl.attachShader(program, shader(gl.VERTEX_SHADER,
-      'attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; void main(){vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=local*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
+      'attribute vec3 aBary; varying vec3 vBary; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec4 uView; uniform float uRotation,uAxialSpin; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; void main(){vBary=aBary;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=local*uScale; p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     var terrainDerivatives=!!gl.getExtension('OES_standard_derivatives');
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, (terrainDerivatives?'#extension GL_OES_standard_derivatives : enable\n':'')+art.shaderSource +
-      '\nvarying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; uniform vec3 uColor,uBack; uniform float uTerrainDetail,uTerrainShadowEnabled,uGlobalShadowEnabled; uniform sampler2D uGlobalTerrainShadow; uniform vec3 uGlobalShadowRight,uGlobalShadowUp,uGlobalShadowLight; uniform sampler2D uTerrainShadow; uniform vec3 uShadowRight,uShadowUp,uShadowLight,uShadowCenter; uniform float uShadowSpan,uShadowDepthSpan; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
+      '\nvarying vec3 vBary;uniform float uDiagnosticView;varying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal; varying float vDepth; varying vec3 vEffect; uniform vec3 uColor,uBack; uniform float uTerrainDetail,uTerrainShadowEnabled,uGlobalShadowEnabled; uniform sampler2D uGlobalTerrainShadow; uniform vec3 uGlobalShadowRight,uGlobalShadowUp,uGlobalShadowLight; uniform sampler2D uTerrainShadow; uniform vec3 uShadowRight,uShadowUp,uShadowLight,uShadowCenter; uniform float uShadowSpan,uShadowDepthSpan; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
       'float angularDistance(float a,float b){return abs(mod(a-b+PI,2.*PI)-PI);}\n'+
@@ -1187,7 +1190,7 @@
       'else if(uFinish<5.5){float edge=min(abs(x-44.3),abs(x-61.7));float panelEdge=abs(mod(abs(p.y)-12.+4.,8.)-4.);bolt=shipLine(length(vec2(edge,abs(panelEdge-3.1))),.055,fp);channel=shipLine(mod(p.y+.15,.3)-.15,.018,fp);weld=shipLine(edge,.035,fp);}'+
       'else{mark=(.5+.5*cos((p.x+p.y+p.z)*12.))*close;}return vec4(bolt,weld,channel,mark); }'+
       // Feather orange paint; preserve texture variation while respecting target paint brightness.
-      'void main(){if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);}'+
+      'void main(){if(uDiagnosticView>.5){vec3 n=normalize(vNormal);vec3 face=' + (terrainDerivatives?'rotateNormal(normalize(cross(dFdx(vLocal),dFdy(vLocal))))':'n') + ';if(dot(face,n)<0.)face=-face;if(uDiagnosticView<1.5){gl_FragColor=vec4(vec3(.16+.7*max(0.,dot(face,normalize(uLight)))),1.);return;}if(uDiagnosticView<2.5){gl_FragColor=vec4(face*.5+.5,1.);return;}if(uDiagnosticView<3.5){gl_FragColor=vec4(n*.5+.5,1.);return;}vec3 edge=smoothstep(vec3(0.),' + (terrainDerivatives?'fwidth(vBary)*1.25':'vec3(.025)') + ',vBary);float fill=min(edge.x,min(edge.y,edge.z));gl_FragColor=vec4(mix(vec3(.025,.09,.13),vec3(.7),fill),1.);return;}if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);}'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(sphere);float occ=crater.w*.25*exterior;if(exterior>.5){bodyNormal=uTerrainDetail>.5?n:rotateNormal(normalize(crater.xyz));n=bodyNormal;}'+
@@ -1207,7 +1210,8 @@
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Shader linking failed');
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     var uv = gl.getAttribLocation(program,'aUV');
-    var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal');
+    var pos = gl.getAttribLocation(program, 'aPosition'), normal = gl.getAttribLocation(program, 'aNormal'),bary=gl.getAttribLocation(program,'aBary');
+    var diagnosticView=gl.getUniformLocation(program,'uDiagnosticView');
     /** @type {Record<string, WebGLUniformLocation | null>} */ var uniforms = {};
     ['Opacity', 'CraftFill', 'HullDepth', 'Flat', 'Finish', 'AxialSpin', 'Origin', 'Scale', 'Target', 'Right', 'Up', 'Back', 'View', 'Rotation', 'Color', 'Rock', 'RockDistance', 'Light', 'Bulk', 'FieldLow', 'FieldMed', 'Profile', 'Relief', 'FieldBlobs', 'BlobMaterial', 'CraterData', 'CraterTextureWidth', 'CraterCount', 'Heterogeneity', 'Seed', 'PixelFootprint', 'Cut', 'CutHeight', 'Habitat', 'Spin', 'HullFootprint'].forEach(function (name) { uniforms[name] = gl.getUniformLocation(program, 'u' + name); });
     uniforms.Textured=gl.getUniformLocation(program,'uTextured');uniforms.ShipTexture=gl.getUniformLocation(program,'uShipTexture');
@@ -1330,6 +1334,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
       gl.enableVertexAttribArray(pos); gl.enableVertexAttribArray(normal);
       var stride=(mesh.stride||6)*4;
+      if(stride===36){gl.enableVertexAttribArray(bary);gl.vertexAttribPointer(bary,3,gl.FLOAT,false,stride,24);}else{gl.disableVertexAttribArray(bary);gl.vertexAttrib3f(bary,0,0,0);}
       if(stride===32){gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,stride,24);}else{gl.disableVertexAttribArray(uv);gl.vertexAttrib2f(uv,0,0);}
       gl.vertexAttribPointer(pos,3,gl.FLOAT,false,stride,0);gl.vertexAttribPointer(normal,3,gl.FLOAT,false,stride,12);
       gl.uniform3fv(uniforms.Origin, origin); gl.uniform3fv(uniforms.Scale, scale); gl.uniform3fv(uniforms.Color, color);
@@ -1514,9 +1519,10 @@
     function sync(w) {
       if(study&&diagnostics.mode!=='normal')return;
       orbit.height = study ? studyHeight : inspectionHeight(w) * (orbit.tilt > Math.PI / 2 ? -1 : 1);
+      if(study&&diagnostics.freezeGeometry&&Object.keys(rocks).length)return;
       Object.keys(rocks).forEach(function (id) {
         if (!w.asteroids.some(function (a) { return a.id === id; })) {
-          gl.deleteBuffer(rocks[id].mesh.buffer);if(rocks[id].mesh!==rocks[id].baseMesh)gl.deleteBuffer(rocks[id].baseMesh.buffer); gl.deleteTexture(rocks[id].texture);
+          gl.deleteBuffer(rocks[id].mesh.buffer);if(rocks[id].mesh!==rocks[id].baseMesh)gl.deleteBuffer(rocks[id].baseMesh.buffer); gl.deleteTexture(rocks[id].texture);if(rocks[id].wire)gl.deleteBuffer(rocks[id].wire.buffer);
           delete rocks[id]; delete geology[id]; delete shells[id]; delete impacts[id];
         }
       });
@@ -1524,7 +1530,7 @@
         var key = a.radius + ':' + JSON.stringify(a.excavation || null);
         if (!rocks[a.id] || rocks[a.id].key !== key || rocks[a.id].visual !== visualFor(a)) {
           if(terrainShadow&&terrainShadow.owner===a.id){terrainShadow.owner="";terrainShadow.mesh=null;}
-          if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer);if(rocks[a.id].mesh!==rocks[a.id].baseMesh)gl.deleteBuffer(rocks[a.id].baseMesh.buffer); gl.deleteTexture(rocks[a.id].texture); }
+          if (rocks[a.id]) { gl.deleteBuffer(rocks[a.id].mesh.buffer);if(rocks[a.id].mesh!==rocks[a.id].baseMesh)gl.deleteBuffer(rocks[a.id].baseMesh.buffer); gl.deleteTexture(rocks[a.id].texture);var staleWire=rocks[a.id].wire;if(staleWire)gl.deleteBuffer(staleWire.buffer); }
           var visual = visualFor(a);
           var base=asteroidMesh(a),baseMesh=upload(base);
           rocks[a.id] = { key: key, mesh: baseMesh, baseMesh:baseMesh, base:base, detail:"", texture: craterTexture(a), visual: visual };
@@ -1581,22 +1587,31 @@
           var ac=Math.cos(a.rotation),as=Math.sin(a.rotation);
           /** @type {V3} */ var eye=[ex*ac+ey*as,-ex*as+ey*ac,ez];
           if(Math.hypot.apply(null,eye)<1.5)detailCenter=surfaceFrame(a,eye).point;
+          if(diagnostics.freezeGeometry)detailCenter=rock.detailCenter||null;
           var detailKey=detailCenter?detailCenter.map(function(v){return Math.round(v/.04);}).join(','):'';
-          if(detailKey!==rock.detail){
+          if(!diagnostics.freezeGeometry&&detailKey!==rock.detail){
             if(rock.mesh!==rock.baseMesh)gl.deleteBuffer(rock.mesh.buffer);
-            rock.mesh=detailCenter?upload(refineSurface(rock.base,a,detailCenter)):rock.baseMesh;rock.detail=detailKey;
+            if(rock.wire){gl.deleteBuffer(rock.wire.buffer);rock.wire=null;}
+            rock.data=detailCenter?refineSurface(rock.base,a,detailCenter):rock.base;rock.mesh=detailCenter?upload(rock.data):rock.baseMesh;rock.detail=detailKey;rock.detailCenter=detailCenter;
           }
         }
         gl.uniform1f(terrainDetail,detailCenter?1:0);
         gl.uniform1f(gl.getUniformLocation(program,'uTerrainShadowEnabled'),0);gl.uniform1f(gl.getUniformLocation(program,'uGlobalShadowEnabled'),0);
-        if(study&&diagnostics.mode==='normal'&&!diagnostics.flat&&diagnostics.shadows){
+        if(study&&diagnostics.mode==='normal'&&!diagnostics.flat&&diagnostics.shadows&&diagnostics.view==='material'){
           bindTerrainShadow(rock.baseMesh,a.rotation,[0,0,0],width,height,a.id,true);
           if(detailCenter)bindTerrainShadow(rock.mesh,a.rotation,detailCenter,width,height,a.id,false);
           else if(terrainShadow&&terrainShadow.owner===a.id&&Math.abs(a.rotation-terrainShadow.angle)<.01)bindShadowParameters(terrainShadow,false);
         }
-        draw(rock.mesh, [a.position.x, a.position.y, 0], [a.radius, a.radius, a.radius], a.rotation, [0.45, 0.43, 0.4], true);
+        var debugMode=study?['material','plain','faces','vertices','wire'].indexOf(diagnostics.view):0;
+        gl.uniform1f(diagnosticView,Math.max(0,debugMode));
+        var visible=rock.mesh;
+        if(debugMode===4){
+          if(!rock.wire){var source=rock.data||rock.base,wireData=new Float32Array(source.length/6*9);for(var wi=0;wi<source.length/6;wi++){wireData.set(source.subarray(wi*6,wi*6+6),wi*9);wireData[wi*9+6+wi%3]=1;}rock.wire=upload(wireData,9);}
+          visible=rock.wire;
+        }
+        draw(visible, [a.position.x, a.position.y, 0], [a.radius, a.radius, a.radius], a.rotation, [0.45, 0.43, 0.4], true);
       });
-      gl.uniform1f(terrainDetail,0);
+      gl.uniform1f(terrainDetail,0);gl.uniform1f(diagnosticView,0);
       hud.setTransform(dpr, 0, 0, dpr, 0, 0); hud.clearRect(0, 0, vp.width, vp.height);
       hud.font = '11px system-ui'; hud.textAlign = 'center';
       /** @param {V3} a @param {V3} b @param {string} color */
@@ -1758,8 +1773,8 @@
         background.style.backgroundImage = option && option.url ? 'url("' + option.url + '")' : 'none';
         background.style.filter = 'brightness(' + settings.brightness + ')';
       },
-      /** @param {{mode:string,flat:boolean,scale:number,mothership:boolean,actors:boolean,shadows?:boolean}} value */
-      setStudyDiagnostics: function(value){if(study)diagnostics={mode:value.mode==='empty'||value.mode==='boxes'?value.mode:'normal',flat:!!value.flat,scale:Math.max(.25,Math.min(1,value.scale)),mothership:!!value.mothership,actors:!!value.actors,shadows:value.shadows!==false};},
+      /** @param {{mode:string,flat:boolean,scale:number,mothership:boolean,actors:boolean,shadows?:boolean,view?:string,freezeGeometry?:boolean}} value */
+      setStudyDiagnostics: function(value){if(study)diagnostics={mode:value.mode==='empty'||value.mode==='boxes'?value.mode:'normal',flat:!!value.flat,scale:Math.max(.25,Math.min(1,value.scale)),mothership:!!value.mothership,actors:!!value.actors,shadows:value.shadows!==false,view:value.view||"material",freezeGeometry:!!value.freezeGeometry};},
       getRenderStats: function(){return Object.assign({},renderStats);},
       getStats: function () {
         var w = getWorld(); return { fps: Math.round(fps), stressEnabled: stress,

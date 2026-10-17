@@ -294,7 +294,7 @@ export interface DriftworksNamespace {
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
     inspectionHeight: (world: World) => number;
     create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean}) => {
-      setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean; shadows?: boolean}) => void;
+      setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean; shadows?: boolean; view?:string; freezeGeometry?:boolean}) => void;
       getRenderStats: () => {drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyActors: (batches: {vertices: Float32Array; color: [number,number,number]; opacity?: number}[]) => void;
       setStudyEffects: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;
