@@ -5,14 +5,14 @@
   var initial=session.snapshot(),world=initial.world,asteroid=initial.asteroid,mothership=initial.mothership,units=DW.sim.METERS_PER_UNIT;
   var presentation=DW.flightPresentation.mount(host,function(){return world;},function(w){world=w;session.setWorld(w);});
   var select=document.getElementById('profile'),stats=document.getElementById('stats'),status=document.getElementById('status');
-  var state=model.createSortie(asteroid.radius,model.profiles[Number(select.value)||0]),paused=true,contact=false;
+  // The initial reset below creates the sortie before any frame or input runs.
+  var state,guns,combat,paused=true,contact=false;
   model.profiles.forEach(function(p,i){var option=document.createElement('option');option.value=String(i);option.textContent=p.name;select.appendChild(option);});
-  var guns=DW.flightGuns.create(),gunSelect=document.getElementById('gun');
+  var gunSelect=document.getElementById('gun');
   var diagnostics=DW.flightDiagnostics.mount();
   document.getElementById('dialogue-size').oninput=function(e){document.documentElement.style.setProperty('--dialogue-size',e.target.value+'px');};
   var flightHud=DW.flightHud.mount(host);
   var comms=DW.flightComms.mount(document.getElementById('comms'),document.getElementById('comms-voice'));
-  var combat=DW.training.create(document.getElementById('combat-mode').value);
   function weapon(){return DW.retailWeapons[Number(gunSelect.value)];}
   function gunLabels(){var w=weapon();document.getElementById('gun-stats').textContent=w.speed+' m/s · '+w.fireWait+' s / volley · '+(w.speed*w.lifetime)+' m range';}
   function banks(){
