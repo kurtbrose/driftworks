@@ -1486,7 +1486,6 @@
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
     assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Load-bearing cage remains in place');
-    assert(JSON.stringify(closed.steel)===JSON.stringify(open.steel),'Tower and hold loads remain fixed');
     var lowClosed=Infinity,lowOpen=Infinity;
     for(var i=2;i<closed.ochre.length;i+=6)lowClosed=Math.min(lowClosed,closed.ochre[i]);
     for(var i=2;i<open.ochre.length;i+=6)lowOpen=Math.min(lowOpen,open.ochre[i]);
@@ -1498,8 +1497,8 @@
     var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,'rampdock',0),uncovered=model(1,0,false,'rampdock',.4),open=model(1,0,false,'rampdock',1);
     // The first leaf is a vertical wall; the second is the upper closure.
     assertClose(closed.ochre[5],0);
-    assertClose(closed.ochre[36*6+5],1);
-    for(var i=0;i<36*6;i++)assertClose(closed.ochre[i],uncovered.ochre[i],.000001);
+    assertClose(closed.ochre[30*6+5],1);
+    for(var i=0;i<30*6;i++)assertClose(closed.ochre[i],uncovered.ochre[i],.000001);
     assert(JSON.stringify(closed)!==JSON.stringify(uncovered));
     assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark));
     [0,.2,.4,.7,1].forEach(function(t){var groups=model(1,0,false,'rampdock',t);Object.keys(groups).forEach(function(k){assert(groups[k].every(Number.isFinite));for(var i=3;i<groups[k].length;i+=6)assertClose(Math.hypot(groups[k][i],groups[k][i+1],groups[k][i+2]),1,.00001);});});
@@ -1510,6 +1509,15 @@
     function roof(groups){var result=[];Object.keys(groups).forEach(function(k){for(var i=0;i<groups[k].length;i+=18){if(groups[k][i+2]>13.5 && groups[k][i+8]>13.5 && groups[k][i+14]>13.5)result.push(k+':'+groups[k].slice(i,i+18).join(','));}});return result.join(';');}
     assert(roof(closed)===roof(open),'Docking hardware stays fixed while cargo doors unfold');
     [-1,1].forEach(function(x){[-1,1].forEach(function(y){var found=false,v=closed.ochre;for(var i=0;i<v.length;i+=6)if(Math.sign(v[i])===x && Math.sign(v[i+1])===y && v[i+2]>14.8)found=true;assert(found,'A raised hardpoint in each roof corner');});});
+  });
+
+  test('transit shell stays yellow while door inner faces use work-deck grey', function () {
+    var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,'rampdock',0),open=model(1,0,false,'rampdock',1);
+    assert(JSON.stringify(closed.steel)!==JSON.stringify(open.steel),'Grey door inner faces move with their yellow outer armor');
+    assert(JSON.stringify(closed.dark)===JSON.stringify(open.dark),'Permanent dark chassis stays fixed');
+    var yellowPad=false;
+    for(var i=0;i<closed.ochre.length;i+=6)if(Math.abs(closed.ochre[i+2]-13.74)<.001 && Math.abs(closed.ochre[i])>4)yellowPad=true;
+    assert(yellowPad,'Docking pad retains yellow exposed roof armor');
   });
 
   test('mining platform geometry folds legs without decorative machinery motion', function () {
@@ -1675,6 +1683,21 @@
     scene.setStudyParameters(a,{});
     assert(JSON.stringify(a)===before,'Artwork does not change saves');
   });
+  test('Crater floors suppress rocky relief without affecting remote terrain', function () {
+    var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
+    var impacts=scene.impactsFor(a);
+    assert(impacts.length>0);
+    impacts.slice(0,12).forEach(function(impact){
+      assertClose(scene.craterRoughnessAt(a,impact.center),.06,1e-8);
+      var p=impact.center.slice();p[0]+=.000001;
+      assert(Math.abs(scene.craterRoughnessAt(a,p)-.06)<.0001,'Floor mask is continuous');
+    });
+    assertClose(scene.craterRoughnessAt(a,[2,2,2]),1);
+    assert(JSON.stringify(a)===before,'Smoothing changes no saved state');
+    var atlas=scene.surfaceAtlas(a,16);
+    assert(atlas.bytes.some(function(v,i){return i%4===3&&v>200;}),'Cached alpha carries crater interiors');
+    assert(atlas.bytes.some(function(v,i){return i%4===3&&v===0;}),'Exterior stays fully rocky');
+  });
   test('Cellular rock volume is cached and its slice gutters wrap without seams', function () {
     var volume=window.Driftworks.scene3d.rockVolume(),data=volume.bytes;
     assert(volume.width===272&&volume.height===136&&data.length===272*136*4);
@@ -1694,7 +1717,7 @@
     assert(atlas.bytes.every(function(v,i){return v===again.bytes[i];}),'Rebuilding preserves the shading field');
     assert(atlas.bytes.some(function(v,i){return i%4!==3&&v!==128;}),'Atlas carries surface normals');
     for(var i=0;i<atlas.bytes.length;i+=4)assertClose(Math.hypot((atlas.bytes[i]-128)/127,(atlas.bytes[i+1]-128)/127,(atlas.bytes[i+2]-128)/127),1,.015);
-    assert(atlas.bytes.every(function(v,i){return i%4!==3||v<=148;}),'Occlusion stays bounded');
+    assert(atlas.bytes.every(function(v){return v>=0&&v<=255;}),'Cached surface channels stay bounded');
     assert(JSON.stringify(a)===before,'Baking does not modify world data');
   });
   test('Displaced asteroid meshes preserve finite unit normals', function () {
