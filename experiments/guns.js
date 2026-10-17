@@ -44,9 +44,13 @@
         }
         if (ready) {
             var target = aimPoint && aimPoint();
+            // Keep the launch plane behind a close crosshair surface, never fire backward.
+            var forward = target ? Math.min(4, Math.max(0, target.reduce(function (sum, x, i) {
+                return sum - (x - pose.eye[i]) * pose.back[i] * units;
+            }, 0) * .5)) : 4;
             [-1, 1].forEach(function (side) {
                 var position = pose.eye.map(function (x, i) {
-                    return x + (pose.right[i] * side * 3 - pose.up[i] * 1.3 - pose.back[i] * 4) / units;
+                    return x + (pose.right[i] * side * 3 - pose.up[i] * 1.3 - pose.back[i] * forward) / units;
                 });
                 var aim = pose.back.map(function (x, i) {
                     return target ? (target[i] - position[i]) * units :

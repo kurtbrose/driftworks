@@ -263,7 +263,7 @@ and Medusa uses Prometheus R. Both weapons travel at 450 m/s for 2 seconds
 bolt length/radii, damage factors and energy cost, are extracted directly into
 `experiments/retail-weapons.js` with the retail table hash. Damage factors are used by training combat;
 weapon energy remains unlimited. The expanded catalog has ten bolt weapons; the selector starts with the ship's first supported retail primary, then offers sandbox overrides. Both sides now receive their own class hull/shield capacity, with symmetric pooled shields and Driftworks recharge rules. See [retail loadouts](docs/retail-flight-loadouts.md) for exact provenance and adaptation limits.
-Generic twin barrels, 6 m apart, converge on the nearest hostile hull under the crosshair within weapon range, falling back to 300 m ahead of the camera when aiming into empty space. This also applies to AI craft; it does not lead moving targets.
+Generic twin barrels, 6 m apart, converge on the nearest hostile hull under the crosshair within weapon range, falling back to 300 m ahead of the camera when aiming into empty space. At point-blank range the launch positions retract behind the aimed surface so shots do not start past it. This also applies to AI craft; it does not lead moving targets.
 Bolts use fixed world speed (retail non-additive velocity), never hitscan, and
 swept terrain contact. Sounds reuse Driftworks' synthesized gun/impact effects.
 

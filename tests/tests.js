@@ -1820,6 +1820,25 @@
     far.team='enemy';far.pose.eye[1]=pose.eye[1]+(weapon.speed*weapon.lifetime+20)/U;
     assert(ai.convergencePoint(combat,player,weapon)===null,'Ignore hulls beyond weapon range');
   });
+  test('point-blank surfaces before the normal muzzle plane receive both forward shots', function () {
+    var DW=window.Driftworks,U=sim.METERS_PER_UNIT,ai=DW.training,w=DW.retailWeapons[0];
+    [.5,2,3.9,4,6,10].forEach(function(distance){
+      var pose=DW.arcade.create(18),combat=ai.create('training'),player=ai.bindPlayer(combat,pose);
+      var targetPose=DW.arcade.create(18);targetPose.eye=pose.eye.map(function(x,i){return x-pose.back[i]*(distance+.25)/U;});
+      var target=ai.createCraft('point-blank',targetPose,'enemy');target.collision={kind:'sphere',radiusM:.25};target.shield=0;combat.enemies=[target];
+      var point=ai.convergencePoint(combat,player,w);assert(point,'A close hull must not fall back to distant convergence');
+      var guns=DW.flightGuns.create();
+      DW.flightGuns.step(guns,pose,w,true,1/120,undefined,function(){return point;});
+      guns.bolts.forEach(function(bolt){
+        var forward=bolt.position.reduce(function(sum,x,i){return sum-(x-pose.eye[i])*pose.back[i]*U;},0);
+        assertClose(forward,Math.min(4,distance*.5));
+        assert(bolt.direction.reduce(function(sum,x,i){return sum-x*pose.back[i];},0)>0,'Never shoot backward');
+      });
+      for(var i=0;i<12;i++)DW.flightGuns.step(guns,pose,w,false,1/120,function(a,b,bolt){return ai.trace(combat,a,b,bolt,'player',undefined,pose);});
+      assert(guns.hits===2,'Both shots must hit at surface distance '+distance+' m');
+      assert(target.hp<100,'Hidden bolt visuals must not suppress damage');
+    });
+  });
   test('gun sweeps hit terrain between endpoints and remove bolts at impact', function () {
     var model=window.Driftworks.flightGuns,field=function(p){return Math.hypot.apply(null,p)-1;};
     var hit=model.intersect([0,-2,0],[0,2,0],1,field);assert(hit);assertClose(hit[1],-1,.001);

@@ -495,7 +495,9 @@ Their mounts are 3 m left/right, 1.3 m down and 4 m forward of the eye;
 normalized firing directions converge at a shared point on the crosshair ray,
 retaining the weapon speed. At volley emission, `training.convergencePoint`
 selects the nearest living hostile hull surface within weapon range, excluding
-surfaces behind the muzzles and terrain-occluded hulls. The gun controller
+surfaces within 1 cm of the eye and terrain-occluded hulls. For a surface less
+than 8 m ahead, launch points retract to half its forward distance (normally
+4 m) so both shots approach it from behind without backward fire. The gun controller
 accepts an optional lazy aim-point callback, called once per volley; a null point
 falls back to 300 m forward of the eye. Player sessions, duels and AI craft use
 the same query. This does not snap to off-axis targets or predict their motion;
@@ -1169,3 +1171,16 @@ still decides when to pause/end a sortie. Flight experiments have no persistent
 save format; these changes do not migrate tactical ships into flight craft.
 
 No transport, network authority, prediction or lockstep requirement is introduced.
+
+### Flight point-blank firing reference
+
+The generic mount correction is a Driftworks playability rule, not an imported
+FreeSpace rule. The older Icculus-derived [FreeSpace 2 firing source](https://github.com/ptitSeb/freespace2/blob/master/src/ship/ship.cpp#L4915-L4925)
+transforms each model gunpoint into world space and creates the weapon with the
+ship orientation. This is a port, not proof of every untouched retail behavior.
+Modern [FreeSpace Open firing code](https://github.com/scp-fs2open/fs2open.github.com/blob/master/code/ship/ship.cpp#L12574-L12645)
+uses model gunpoints and supports optional fixed, automatic and model-normal
+convergence. Its automatic convergence has configurable minimum distances.
+These paths do not establish a universal 4 m muzzle offset or the point-blank
+retraction rule used here. Projectile billboard visibility is presentation only;
+damage is determined by swept collision segments.

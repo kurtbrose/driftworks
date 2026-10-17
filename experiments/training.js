@@ -437,8 +437,8 @@
             var hit = hullHit(craft, start, end);
             if (!hit) return;
             var distance = length(sub(hit.point, start));
-            // Targets behind the muzzles cannot be aimed at with forward fire.
-            if (distance * U > 4 && distance < best) { best = distance; point = hit.point; }
+            // The gun controller retracts its launch points for point-blank surfaces.
+            if (distance * U > .01 && distance < best) { best = distance; point = hit.point; }
         });
         return point;
     }
