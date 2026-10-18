@@ -2,7 +2,7 @@
 
 ## Team furball benchmark
 
-The diagnostic and target-lock snapshots below predate model-derived gun counts
+The initial diagnostic and target-lock snapshots below predate model-derived gun counts
 and used two muzzles per ship. They remain historical evidence; rerun the same
 commands to measure current firepower rather than treating those results as a
 current baseline.
@@ -125,6 +125,44 @@ Hits from projectiles still in flight after their shooter dies count toward
 accuracy; dead pilots accrue no further opportunity or trigger time. The runner
 checks telemetry totals against the actual gun counters as well as replay and
 initial-state matching.
+
+### Corrected primary gun-count rerun
+
+The [native-count report](../tests/benchmarks/flight-furball-native-guns.json)
+reruns all 60 cases from the target-lock experiment with four Ulysses mounts and
+six Hercules mounts, replacing two on both ships. Reproduce with
+`node tools/evaluate-flight-furballs.cjs --target-lock --seconds 120 --seeds 5 --output tests/benchmarks/flight-furball-native-guns.json`.
+The design, five seeds, opening geometry, weapon types, veteran aim/flight AI,
+defenses and target policies match the earlier report. The changed simulation
+source hashes are only `retail-profiles.js`, `guns.js`, and `training.js`: numeric
+mount import, variable-count muzzle emission and passing each NPC's count.
+Extra muzzles use the temporary six-metre rack; this is not a complete retail
+bank, missile or energy model.
+
+Kills rose from 1 to 14 across 60 fights. All 30 shielded fights still had zero
+kills at the 120-second cutoff. Unshielded results, with five fights per cell:
+
+| Teams | Normal targeting kills: old → new | Normal fights with a kill | Normal first kill, median among killing fights | Target-lock kills: old → new | Locked fights with a kill | Locked first kill, median among killing fights |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2v2 | 0 → 1 | 1/5 | 109.4 s | 0 → 0 | 0/5 | Not reached |
+| 3v3 | 0 → 2 | 2/5 | 73.4 s | 1 → 7 | 4/5 | 53.8 s |
+| 4v4 | 0 → 2 | 2/5 | 68.9 s | 0 → 2 | 2/5 | 78.8 s |
+
+These are first-kill times since the opening, not per-target damage-to-death
+durations or unconditional TTK medians. Zero-kill fights are censored at 120 s
+and excluded from the conditional medians, so read them with the event counts.
+Only locked unshielded 3v3 has a majority of cases producing a kill; its
+censor-aware median first-kill time across all five openings is 64.1 s.
+The previous two-gun locked 3v3 cohort had just one kill, at 91.6 s.
+
+Unshielded pooled hit rates changed from 3.49% to 2.78% (normal 2v2), 2.60% to
+2.50% (normal 3v3), and 1.50% to 1.52% (normal 4v4). Locked rates changed from
+4.08% to 4.00%, 4.56% to 3.90%, and 1.42% to 1.53%, respectively. More mounts
+increased delivered hits and kills without a general improvement in accuracy.
+Eleven of 30 unshielded fights had at least one kill; just one fight eliminated
+an entire wing (locked 3v3 seed 5). Correcting firepower helps, particularly with
+sustained target commitment in 3v3, but does not resolve shielded lethality in
+this guns-only NPC setup. Missiles, aim and balance remain unchanged.
 
 Open [the combat study page](../experiments/flight-study.html) through the local static server. It runs the existing fixed-step duel in a Web Worker without graphics, audio, or real-time pacing. No simulation data leaves the browser. The flight lab and headless runner share ship physics, guns, damage and AI policies.
 
