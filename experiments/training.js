@@ -187,7 +187,7 @@
         t.countdown = 0;
         t.slotTimer = 0;
         t.slots = [];
-        var count = t.mode === 'furball' ? 16 : Math.min(6, t.wave + 2);
+        var count = t.mode === 'asteroid-patrol' ? 2 : t.mode === 'furball' ? 16 : Math.min(6, t.wave + 2);
         t.roundOver = false;
         t.enemies = [];
         for (var i = 0; i < count; i++) {
@@ -537,7 +537,7 @@
             return f.age < .22;
         });
         var living = alive(t);
-        if (!t.dead && (!living.length || t.roundOver)) {
+        if (!t.dead && t.mode !== 'asteroid-patrol' && (!living.length || t.roundOver)) {
             t.countdown -= dt;
             if (t.countdown <= 0) {
                 spawn(t, player, radius);

@@ -4,7 +4,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const page = path.resolve(__dirname, '../experiments/flight.html');
+for (const name of ['flight.html', 'mission-asteroid-patrol.html']) {
+const page = path.resolve(__dirname, '../experiments/', name);
 const before = fs.readFileSync(page, 'utf8');
 const after = before.replace(/(<(?:script|link)\b[^>]*\b(?:src|href)=")([^"?#]+)(?:\?([^"#]*))?("[^>]*>)/g,
   (match, prefix, asset, query, suffix) => {
@@ -27,3 +28,5 @@ if (process.argv.includes('--check')) {
   fs.writeFileSync(page, after);
   console.log('Updated flight asset versions. Deploy flight.html together with its assets.');
 } else console.log('Flight asset versions already match.');
+
+}

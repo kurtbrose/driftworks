@@ -18,7 +18,9 @@
     // Browser resources and artwork queries are supplied by the flight composition root.
     /** @param {SessionEnvironment} environment */
     function create(environment) {
-        var world = DW.sim.createInitialWorld(), asteroid = world.asteroids[0], units = DW.sim.METERS_PER_UNIT;
+        var world = DW.sim.createInitialWorld(environment.seed), asteroid = world.asteroids[0], units = DW.sim.METERS_PER_UNIT;
+        // Geology is keyed by asteroid ID, independently of the world's spin RNG.
+        if (environment.seed !== undefined) asteroid.id = 'patrol-rock-' + (environment.seed >>> 0);
         asteroid.position = { x: 0, y: 0 };
         asteroid.rotation = 0;
         asteroid.radius = 1250 / units;
@@ -61,6 +63,8 @@
             if (!enabled) {
                 combat.enemies = [];
                 combat.countdown = 0;
+            } else if (mode === 'asteroid-patrol') {
+                DW.training.spawn(combat, state, asteroid.radius);
             }
             return snapshot();
         }

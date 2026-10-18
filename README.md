@@ -214,6 +214,10 @@ also links back to it.
 ### Arcade flight experiment
 
 Open [the flight lab](experiments/flight.html) from the same static server.
+The [mission selector](experiments/missions.html) links to separate flight sorties.
+Asteroid patrol places exactly two hostiles near a randomized asteroid; clearing
+both completes the mission without spawning another wave. Restart keeps the same
+asteroid, while reloading the page generates another.
 
 The flight HUD groups objectives, shield/hull bars, speed/thrust, and weapon status around an open center. Comms subtitles sit above the radar. The selected target has gold corner brackets and an upper-right live model monitor with range and hull; Tab cycles targets. The monitor tracks target aspect at 15 FPS. Pilots have recurring callsigns (Rook, Jinx, Viper, and others), shared by comms, spoken references, and target labels; each keeps the same voice across waves. Press **F3** to toggle lab controls and diagnostics; the comms history and independent dialogue-size slider are in that panel. History keeps the latest 12 transmissions for the current page session.
 This separate cockpit experiment reuses the production 3D asteroid and background.

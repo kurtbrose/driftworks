@@ -605,6 +605,25 @@
     f.controls.haptics(.1,{hit:true});f.controls.clear();
   });
 
+  test('asteroid patrol has two hostiles, seeded terrain and no reinforcements', function () {
+    var DW=window.Driftworks,session=DW.flightSession.create({seed:123}),config={mode:'asteroid-patrol',enabled:true,profile:DW.arcade.profiles[0]};
+    var view=session.reset(config),rock=JSON.stringify(view.asteroid);
+    assert(view.combat.enemies.length===2);
+    assert(view.asteroid.id==='patrol-rock-123','Seed controls visible geology');
+    view.combat.enemies.forEach(function(e){
+      assert(e.team==='enemy');
+      assert(Math.hypot.apply(null,e.pose.eye)>view.asteroid.radius);
+      assert(Math.hypot.apply(null,e.pose.eye.map(function(v,i){return v-view.state.eye[i];}))*sim.METERS_PER_UNIT<1000);
+      e.hp=0;
+    });
+    DW.training.step(view.combat,view.state,10,view.asteroid.radius,function(){return null;});
+    assert(view.combat.wave===1 && DW.training.alive(view.combat).length===0,'Cleared patrol never respawns');
+    assert(session.reset(config).combat.enemies.length===2);
+    assert(JSON.stringify(session.snapshot().asteroid)===rock,'Restart preserves terrain');
+    assert(JSON.stringify(DW.flightSession.create({seed:123}).snapshot().asteroid)===rock);
+    assert(JSON.stringify(DW.flightSession.create({seed:124}).snapshot().asteroid)!==rock,'Seed changes asteroid');
+  });
+
   test('flight session reset replaces sortie state and preserves the environment', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0]};
     var first=session.reset(config),world=first.world;

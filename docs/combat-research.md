@@ -29,6 +29,98 @@ sustained lethal damage in the baseline NPC policy; shields also prevented all
 hull progress. They do not isolate recharge from capacity or establish results
 for other policies/loadouts.
 
+### Firing diagnostics
+
+Reproduce the instrumented batch with
+`node tools/evaluate-flight-furballs.cjs --seconds 120 --seeds 5 --output tests/benchmarks/flight-furball-diagnostics.json`.
+The [captured report](../tests/benchmarks/flight-furball-diagnostics.json) retains
+per-pilot times, modes, target occupancy, actual target changes, opportunities,
+ordered firing-gate samples, emitted bolts and collided bolts. Tests for the
+observer run with `node tests/flight-furball-telemetry.cjs`. Each batch also checks
+deterministic replay, gate-time conservation, and unchanged outcomes against the
+original baseline when simulation source hashes and case durations match.
+
+Unshielded results across five openings, 120 seconds each:
+
+| Teams | Hits / bolts | Hit rate | In firing range | Controller opportunity | Trigger held | Target switches / pilot-minute | Mean opportunity window |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2v2 | 68 / 1950 | 3.49% | 83.0% | 26.2% | 7.14% | 6.08 | 1.01 s |
+| 3v3 | 71 / 2734 | 2.60% | 85.8% | 24.4% | 6.38% | 9.48 | 0.68 s |
+| 4v4 | 59 / 3926 | 1.50% | 85.8% | 25.3% | 6.82% | 9.45 | 0.67 s |
+
+Times use living pilot-seconds, not elapsed fight time. A controller opportunity
+requires attack mode, permitted range, valid gun solution and alignment with the
+controller's actual goal, before the burst-duty gate. Opportunity windows are
+contiguous sampled intervals, including any opening/final partial interval.
+The observer samples at the gun-step boundary after steering. Range in the live
+trigger uses the slightly earlier pose, so reconstructed gates are approximate
+near thresholds; actual trigger time and shot/hit counters are authoritative.
+Ordered gates report only the first failure, not independent causal effects.
+Hits include any opposing hull; bolts still flying at the cutoff remain in the
+shot denominator. Target switches exclude initial acquisition and repeated
+selection of the same opponent. Most switches occur between tactical decisions
+(238/243, 556/569, 743/756), leaving the old goal until the next decision.
+
+About 38–42% of pilot time is outside attack mode. Misalignment accounts for a
+further 29–35% as the first failing gate. The 0.8-of-3-second burst duty closes
+roughly 73% of otherwise eligible opportunity time. Independently checking the
+shared intercept rather than the navigation goal finds in-range alignment for
+only 19.0%, 15.8%, and 15.3% of pilot time. Baseline steering blends only 70% of
+the lead displacement at veteran skill and adds a sinusoidal lateral goal error
+of up to 16 m; that navigation goal also controls the firing alignment check.
+This explains why passing the controller's aim gate need not aim at an intercept.
+These observations implicate sparse trigger use and poor shot placement; shorter
+windows and more switching correlate with the decline in larger fights. A
+matched target-lock or aim-policy ablation is needed to assign causality. No
+weapon, shield, flight, or controller tuning was changed for these measurements.
+
+### Matched target-lock experiment
+
+Run `node tools/evaluate-flight-furballs.cjs --target-lock --seconds 120 --seeds 5 --output tests/benchmarks/flight-furball-target-lock.json`.
+This runs the same five openings at each team size with both defense settings,
+pairing the normal timer policy with an experiment-only until-death lock on both
+teams. Only the target reconsideration timer is held while the selected opponent
+remains alive. Initial selection, selection after a target dies, tactical
+decision cadence, aim, flight, fire gates, weapons and defenses use unchanged
+live code. This tests sustained commitment, not focus-fire coordination or
+immediate re-aiming after a kill.
+
+Initial world hashes must match within each pair, both policies must replay
+deterministically, and normal-policy outcomes must match the original baseline
+when its simulation source hashes match. The report includes per-case deltas
+and pooled hit rates (total collided bolts / total emitted bolts). Tests verify
+that locking changes only the valid target's timer and leaves dead, absent or
+friendly targets available for replacement by the live selector. The helper
+lives only in the Node benchmark; ordinary gameplay targeting is unchanged.
+
+The [matched report](../tests/benchmarks/flight-furball-target-lock.json) contains
+60 fights (30 pairs), each capped at 120 seconds:
+
+| Teams | Defenses | Normal hit rate | Locked hit rate | Normal / locked kills, across five fights |
+| --- | --- | ---: | ---: | ---: |
+| 2v2 | Shields | 3.49% | 4.08% | 0 / 0 |
+| 2v2 | Unshielded | 3.49% | 4.08% | 0 / 0 |
+| 3v3 | Shields | 2.60% | 4.52% | 0 / 0 |
+| 3v3 | Unshielded | 2.60% | 4.56% | 0 / 1 |
+| 4v4 | Shields | 1.66% | 1.28% | 0 / 0 |
+| 4v4 | Unshielded | 1.50% | 1.42% | 0 / 0 |
+
+All five 3v3 openings improved accuracy with either defense setting. Only two
+2v2 openings improved despite the higher pooled hit rate. In 4v4, one shielded
+and two unshielded openings improved. The single kill occurred at 91.575 seconds
+in unshielded 3v3 seed 5; no wing was eliminated in any run. Locked runs had no
+target switches except the replacement after that kill. Opportunity windows
+grew in 2v2 (1.01 to 1.77 seconds) and 3v3 (about .68 to .98–.99 seconds), but
+not in 4v4. Holding a target helps some setups, particularly 3v3, but is not a
+general cure for low lethality. Five seeds are descriptive evidence, not a
+statistical guarantee. Further aim or burst-duty experiments should remain
+separate matched interventions.
+
+Hits from projectiles still in flight after their shooter dies count toward
+accuracy; dead pilots accrue no further opportunity or trigger time. The runner
+checks telemetry totals against the actual gun counters as well as replay and
+initial-state matching.
+
 Open [the combat study page](../experiments/flight-study.html) through the local static server. It runs the existing fixed-step duel in a Web Worker without graphics, audio, or real-time pacing. No simulation data leaves the browser. The flight lab and headless runner share ship physics, guns, damage and AI policies.
 
 ## Research questions and stages

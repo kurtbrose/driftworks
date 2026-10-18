@@ -55,7 +55,7 @@
                 return e.team === 'enemy';
             }).length + ' HOSTILES / ' + living.filter(function (e) {
                 return e.team === 'ally';
-            }).length + ' WINGMEN / ' + combat.kills + ' KILLS' + (!living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
+            }).length + ' WINGMEN / ' + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
             get('shield-meter').max = Math.max(1, combat.maxShield === undefined ? 120 : combat.maxShield);
             get('shield-meter').value = combat.shield;
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;

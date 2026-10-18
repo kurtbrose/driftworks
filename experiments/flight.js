@@ -3,7 +3,7 @@
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
-    var session = DW.flightSession.create({ terrainHit: function (start, end) {
+    var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: function (start, end) {
             var asteroid = session.snapshot().asteroid;
             return DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
                 return DW.scene3d.rockField(asteroid, /** @type {[number, number, number]} */ (DW.flightSession.rotateVector(point, -asteroid.rotation)));

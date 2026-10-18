@@ -1,4 +1,6 @@
 // Run the ordinary-script suite without adding a build or dependency pipeline.
+require('./flight-furball-target-lock.cjs');
+require('./flight-furball-telemetry.cjs');
 const fs = require('fs');
 const vm = require('vm');
 global.window = global;

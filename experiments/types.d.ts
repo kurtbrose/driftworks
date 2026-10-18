@@ -378,6 +378,8 @@ export type ControlEnvironment = {
     navigator: Navigator;
 };
 export type SessionEnvironment = {
+    /** Optional seed for a reproducible mission asteroid. */
+    seed?: number;
     terrainHit: TerrainHit;
     /** Direction and returned normalized point are in the asteroid body frame. */
     surfaceFrame: (asteroid: Asteroid, direction: Vector) => {
