@@ -260,12 +260,12 @@
       var hit=DW.training.hullHit(craft,start,end),expected=DW.shipPackModels.hullHit(visible,craft.pose,start,end,U);
       assert(hit&&expected&&hit.model.id===visible.id);assertClose(hit.fraction,expected.fraction);
     });
-    var record=JSON.parse(JSON.stringify(duel.replay));assert(record.version===3);
+    var record=JSON.parse(JSON.stringify(duel.replay));assert(record.version===4);
     assert(JSON.stringify(api.replay(record).summary())===JSON.stringify(duel.summary()));
     var imported=api.readWatchSearch(DW.flightStudy.watchUrl(duel.replay.options).split('?')[1]);
     assert(imported.allyHull===options.allyHull&&imported.enemyHull===options.enemyHull);
     var defaults=api.create({duration:.1});assert(defaults.replay.options.allyHull!=='mixed'&&defaults.replay.options.enemyHull!=='mixed');
-    record.version=2;var rejected=false;try{api.replay(record);}catch(error){rejected=true;}assert(rejected);
+    record.version=3;var rejected=false;try{api.replay(record);}catch(error){rejected=true;}assert(rejected);
     rejected=false;try{api.create({allyHull:'missing-mesh'});}catch(error){rejected=true;}assert(rejected);
     var session=DW.flightSession.create({}),watch=DW.flightWatch.create(session.snapshot,options);
     assert(watch.snapshot(true).observerCraft.collision.modelId===options.allyHull);
@@ -1701,11 +1701,13 @@
   test('training combat can clear a wave using the same player flight and gun models', function () {
     var ai=window.Driftworks.training,flight=window.Driftworks.arcade,gun=window.Driftworks.flightGuns;
     var player=flight.create(18),t=ai.create(),guns=gun.create(),weapon=window.Driftworks.retailWeapons[0];t.countdown=.01;
+    // This checks wave progression, not pilot balance against native multi-gun NPCs.
+    t.player.hp=t.player.maxHp=10000;
     for(var i=0;i<120*45&&!t.dead&&t.wave<2;i++){
       var target=ai.alive(t).find(function(e){return e.id===t.targetId;}),control={},fire=false;
       if(target){var lead=ai.intercept(player.eye,target.pose.eye,target.pose.velocity.map(function(v){return v/sim.METERS_PER_UNIT;}),weapon.speed/sim.METERS_PER_UNIT);control=ai.steer(player,lead.point);player.throttle=.5;fire=Math.abs(control.pitch)<.15&&Math.abs(control.yaw)<.15;}
       flight.step(player,flight.profiles[0],control,1/120);ai.step(t,player,1/120,18);
-      gun.step(guns,player,weapon,fire,1/120,function(a,b,bolt){return ai.trace(t,a,b,bolt,'player',null,player);});
+      gun.step(guns,player,weapon,fire,1/120,function(a,b,bolt){return ai.trace(t,a,b,bolt,'player',null,player);},undefined,flight.profiles[0].gunMounts);
     }
     assert(t.kills>=3 && t.wave===2 && !t.dead);
   });
@@ -1847,6 +1849,44 @@
       for(var j=0;j<Math.ceil((w.lifetime+.1)*120);j++)model.step(guns,pose,w,false,1/120);
       assert(guns.bolts.length===0);
     });
+  });
+  test('all retail profiles fire their model-derived primary counts at the same cadence', function () {
+    var DW=window.Driftworks,gun=DW.flightGuns,weapon=DW.retailWeapons[0],pose=DW.arcade.create(0),U=sim.METERS_PER_UNIT;
+    var find=function(name){return DW.arcade.profiles.find(function(p){return p.name===name;});};
+    assert(find('GTF Ulysses').gunMounts===4 && find('GTF Hercules').gunMounts===6);
+    assert(find('SF Dragon').gunMounts===5 && find('SB Seraphim').gunMounts===11);
+    assert(find('GTF Perseus').gunMounts===4 && find('GTB Boanerges').gunMounts===2);
+    DW.arcade.profiles.forEach(function(profile){
+      var count=profile.gunMounts,guns=gun.create(),source=profile.gunMountSource;
+      assert(Number.isInteger(count)&&count>0&&profile.primaryBankMounts.reduce(function(n,b){return n+b;},0)===count);
+      assert(source.model.endsWith('.pof')&&/^[0-9a-f]{64}$/.test(source.sha256));
+      gun.step(guns,pose,weapon,true,1/120,undefined,undefined,count);
+      assert(guns.fired===count&&guns.bolts.length===count);
+      var positions={};
+      guns.bolts.forEach(function(bolt){
+        positions[JSON.stringify(bolt.position)]=true;
+        var target=pose.eye.map(function(x,i){return x-pose.back[i]*300/U;}),distance=Math.hypot.apply(null,target.map(function(x,i){return x-bolt.position[i];}));
+        target.forEach(function(x,i){assertClose(bolt.position[i]+bolt.direction[i]*distance,x);});
+      });
+      assert(Object.keys(positions).length===count);
+      for(var i=1;i<120;i++)gun.step(guns,pose,weapon,true,1/120,undefined,undefined,count);
+      assert(guns.fired===count*Math.ceil((1-1e-8)/weapon.fireWait));
+    });
+  });
+  test('manual, duel and NPC gun steps receive their own profile mount counts', function () {
+    var DW=window.Driftworks,original=DW.flightGuns.step,seen=[];
+    try{
+      DW.flightGuns.step=function(guns,pose,weapon,fire,dt,trace,aim,count){seen.push({pose:pose,count:count});return original(guns,pose,weapon,fire,dt,trace,aim,count);};
+      var config={mode:'training',enabled:false,profile:DW.arcade.profiles[1],weapon:DW.retailWeapons[0]},session=DW.flightSession.create({onGunshot:function(){},onImpact:function(){}});
+      var view=session.reset(config);view.state.eye=[0,0,100];
+      session.advance(1/120,{throttle:.8,throttleRate:0,stop:false,fire:true},config);
+      assert(seen.some(function(call){return call.pose===view.state&&call.count===6;}));assert(view.guns.fired===6);
+      seen=[];
+      var dragon=DW.arcade.profiles.findIndex(function(p){return p.name==='SF Dragon';});
+      var duel=DW.flightDuel.run({profile:0,opponentProfile:dragon,duration:.01,category:'perfect'});
+      assert(seen.some(function(call){return call.pose===duel.player&&call.count===4;}));
+      assert(seen.some(function(call){return call.pose===duel.enemy.pose&&call.count===5;}));
+    }finally{DW.flightGuns.step=original;}
   });
   test('twin guns converge on the crosshair at 300 metres in any pose', function () {
     var DW=window.Driftworks,U=sim.METERS_PER_UNIT;

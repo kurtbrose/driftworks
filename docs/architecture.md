@@ -759,7 +759,7 @@ by presentation to both teams and the player. Team selections are stored in
 clears old surface marks; unchanged IDs preserve marks and descriptors. Standalone training callers retain explicit sphere shapes. Watch and headless
 duels call the same `configureHulls` API as normal flight for both participants.
 Duel options `allyHull` and `enemyHull` resolve to canonical model IDs, included
-in summaries, study links and version-3 replays. Hull changes restart watch
+in summaries, study links and version-4 replays. Hull changes restart watch
 duels; the chase camera uses the actual player craft model. Versions 1 and 2
 of duel replays are rejected because their collision rules differ. The worker
 and CLI load and fingerprint the same vendored meshes and ship-pack code.
@@ -1205,3 +1205,5 @@ convergence. Its automatic convergence has configurable minimum distances.
 These paths do not establish a universal 4 m muzzle offset or the point-blank
 retraction rule used here. Projectile billboard visibility is presentation only;
 damage is determined by swept collision segments.
+
+Primary gun counts in the flight lab come from retail POF GPNT bank records, imported offline by `tools/import-retail-flight.cjs` with `tools/retail-gun-mounts.cjs`. Profiles retain the bank counts, their total and model hashes; no retail geometry is shipped. Manual, NPC and duel callers pass the profile count to `flightGuns.step`. Its optional final count defaults to two for legacy fixtures; retail profiles all supply a verified positive count. Each slot emits one bolt at the existing weapon cadence from a temporary six-metre muzzle rack. All slots currently share the selected primary, convergence and trigger; native bank timing, energy and hardpoint placement remain unmodeled. Replay schema 4 rejects earlier two-gun recordings.

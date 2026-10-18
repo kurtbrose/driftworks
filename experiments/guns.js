@@ -14,8 +14,10 @@
     function create() {
         return { bolts: [], impacts: [], cooldown: 0, fired: 0, hits: 0 };
     }
-    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] */
-    function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint) {
+    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] */
+    function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount) {
+        var count = mountCount === undefined ? 2 : mountCount;
+        if (!Number.isInteger(count) || count < 1 || count > 128) throw new Error('Invalid gun mount count');
         var ready = guns.cooldown <= 1e-9;
         guns.cooldown -= dt;
         guns.impacts = guns.impacts.filter(function (hit) {
@@ -48,7 +50,10 @@
             var forward = target ? Math.min(4, Math.max(0, target.reduce(function (sum, x, i) {
                 return sum - (x - pose.eye[i]) * pose.back[i] * units;
             }, 0) * .5)) : 4;
-            [-1, 1].forEach(function (side) {
+            // Placeholder rack spans six metres; one mount is centered. All use
+            // the selected primary and shared convergence until model hardpoints exist.
+            for (var mount = 0; mount < count; mount++) {
+                var side = count === 1 ? 0 : -1 + 2 * mount / (count - 1);
                 var position = pose.eye.map(function (x, i) {
                     return x + (pose.right[i] * side * 3 - pose.up[i] * 1.3 - pose.back[i] * forward) / units;
                 });
@@ -60,8 +65,8 @@
                 guns.bolts.push({ position: position, direction: aim.map(function (x) {
                         return x / distance;
                     }), weapon: weapon, age: 0 });
-            });
-            guns.fired += 2;
+            }
+            guns.fired += count;
             guns.cooldown += weapon.fireWait;
         }
     }

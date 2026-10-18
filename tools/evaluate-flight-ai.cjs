@@ -35,6 +35,6 @@ if(replayPath) {
         fs.writeFileSync(recordPath,JSON.stringify(Object.assign({},last.replay,{sources}))+'\n');
     }
     output={schema:1,policy:global.Driftworks.flightAI.version,opponentPolicy:'experiments/training.js',sources,observation:'visible-position-velocity-v1',cadence:api.dt,
-        note:'Retail hull/shield capacities for each ship; pooled shields and symmetric Driftworks recharge, fixed twin guns and unlimited fuel/energy. Human presets uncalibrated; perfect is bounded search.',rows};
+        note:'Retail hull/shield capacities for each ship; pooled shields and symmetric Driftworks recharge, profile-derived primary gun counts and unlimited fuel/energy. Human presets uncalibrated; perfect is bounded search.',rows};
 }
 process.stdout.write(JSON.stringify(output,null,2)+'\n');

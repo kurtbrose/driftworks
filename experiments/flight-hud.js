@@ -63,7 +63,7 @@
             get('speed-value').textContent = String(Math.round(Math.hypot.apply(null, state.velocity)));
             get('thrust-value').textContent = 'THRUST ' + Math.round(state.throttle * 100) + '%';
             get('thrust-meter').value = state.throttle;
-            get('weapon-name').textContent = view.weapon.name;
+            get('weapon-name').textContent = view.weapon.name + ' · ' + (combat.player.profile.gunMounts || 2) + ' guns';
             var targetPanel = get('target-info');
             targetPanel.hidden = !selected;
             if (selected) {

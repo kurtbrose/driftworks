@@ -269,7 +269,7 @@ bolt length/radii, damage factors and energy cost, are extracted directly into
 weapon energy remains unlimited. The expanded catalog has ten bolt weapons; the selector starts with the ship's first supported retail primary, then offers sandbox overrides. Both sides now receive their own class hull/shield capacity, with symmetric pooled shields and Driftworks recharge rules. See [retail loadouts](docs/retail-flight-loadouts.md) for exact provenance and adaptation limits.
 In normal flight, the allied/enemy hull selectors change both the displayed model and its triangle collision hull, including new waves. AI watch and headless tests use the same triangle collision rules. Watch hull changes restart the duel; replays and study links record the model IDs.
 
-Generic twin barrels, 6 m apart, converge on the nearest hostile hull under the crosshair within weapon range, falling back to 300 m ahead of the camera when aiming into empty space. At point-blank range the launch positions retract behind the aimed surface so shots do not start past it. This also applies to AI craft; it does not lead moving targets.
+Each ship fires its imported primary gun count (for example Ulysses 4, Hercules 6). Temporary barrels are spaced evenly across a 6 m rack and converge on the nearest hostile hull under the crosshair within weapon range, falling back to 300 m ahead of the camera when aiming into empty space. At point-blank range the launch positions retract behind the aimed surface so shots do not start past it. This also applies to AI craft; it does not lead moving targets.
 Bolts use fixed world speed (retail non-additive velocity), never hitscan, and
 swept terrain contact. Sounds reuse Driftworks' synthesized gun/impact effects.
 

@@ -37,6 +37,8 @@ export type Profile = {
     afterburnerBurnRate?: number;
     afterburnerRecoveryRate?: number;
     gunMounts?: number;
+    primaryBankMounts?: number[];
+    gunMountSource?: {model: string; sha256: string};
 };
 export type FlightInput = {
     side?: number;
@@ -604,7 +606,7 @@ export type ExperimentModules = {
     };
     flightGuns: {
         create: () => Guns;
-        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null) => void;
+        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number) => void;
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
     };

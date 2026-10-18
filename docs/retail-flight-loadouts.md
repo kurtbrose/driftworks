@@ -14,17 +14,18 @@ Normal manual flight also gets the selected class's hull/shields and the expande
 
 ## What is imported versus adapted
 
-Imported numeric fields include each ship's damping, rotational damping, three-axis velocity and turn times, acceleration/deceleration, reverse speed, overclock speed, boost velocity/acceleration, total shield strength, hull hitpoints, power output, boost fuel/burn/recovery, and gun-mount count where present. Default primary names and species identify the presets. Weapons carry projectile speed/lifetime, refire interval, damage, shield/armor factors, energy use and bolt dimensions/colors.
+Imported numeric fields include each ship's damping, rotational damping, three-axis velocity and turn times, acceleration/deceleration, reverse speed, overclock speed, boost velocity/acceleration, total shield strength, hull hitpoints, power output, boost fuel/burn/recovery, and primary gun-bank slot counts from the retail POF `GPNT` records. Each profile records its source model filename and SHA-256; no model geometry or hardpoint coordinates are copied. Default primary names and species identify the presets. Weapons carry projectile speed/lifetime, refire interval, damage, shield/armor factors, energy use and bolt dimensions/colors.
 
 Runtime adaptations are explicit:
 
 - Shields are **one pooled total**, not FreeSpace's four directional quadrants. Both sides use the same absorption/spillover formula, seven-second post-hit delay and 12 shield points/second recovery, capped at their class capacity. Those recharge rules are Driftworks rules, not extracted FreeSpace ETS behavior. Shield hits delay recovery just like hull hits.
-- Guns retain the lab's two fixed forward muzzles and generic mount positions. Imported total gun mounts are reference data; multiple banks, linked fire and native POF hardpoints are not reproduced. Thus an Erinyes's eight advertised mounts do not currently mean eight bolts per shot.
+- Guns fire one bolt per imported primary mount: Ulysses 4, Hercules 6, Erinyes 8, Dragon 5, and Seraphim 11. Every primary bank fires the selected cannon together at its existing refire interval. Mixed bank weapons, retail linked-bank timing, and energy costs are not reproduced. Temporary muzzles sit evenly across the existing six-metre rack, centered for a single mount, with the same adaptive convergence and close-surface retraction. Native hardpoint placement and model artwork do not affect the count.
+- Counts come from model `GPNT` bank records rather than the optional briefing-display `+Gun Mounts` field. That field omits the Shivan counts and disagrees with several models (for example Perseus advertises 2 but has 4 gun points). `primaryBankMounts` retains the bank breakdown; `gunMounts` is its sum. The model geometry stays in the installed VP archive.
 - Energy and afterburner fuel remain unlimited. Imported power/fuel figures are reference data for future resource modeling, not an implemented ETS system.
 - Shivan lateral/reverse capabilities are retained in the raw profile, but existing testing pilots use forward flight and no lateral aiming. No glide, stealth, subsystem damage, missiles, EMP, capital-ship weapons or alien special ability is introduced. The arcade integrator is unchanged.
 - Primary-bank overrides intentionally allow sandbox combinations beyond retail loadout restrictions. Subsystem/puncture weapons such as Akheton, flak-like effects and beams are excluded rather than approximated as ordinary damage bolts. All 35 selected ships have a supported first default primary.
 
-These presets are sourced starting points, not a claim of exact retail combat balance. Shield pooling, fixed twin mounts, unlimited energy, existing hit spheres and opponent timing all affect TTK. Compare one setting at a time before tuning AI behavior.
+These presets are sourced starting points, not a claim of exact retail combat balance. Shield pooling, simultaneous primary banks, unlimited energy, triangle collision hulls and opponent timing all affect TTK. Compare one setting at a time before tuning AI behavior.
 
 ## Representative choices
 
@@ -52,7 +53,7 @@ Source table SHA-256, over original unmodified bytes:
 - `ships.tbl`: `60266906ff4bc25932ecda1aa8070c92de0e7ab6cde42c2d5a02169c7e6315ca`
 - `weapons.tbl`: `9e94ba10b7cd5acafefb22dcaada2545ca40d713fae112597a4dca1f63db6f9a`
 
-These match the earlier four-ship/two-weapon import. The offline importer reads VP v2 directory entries, strips table comments, selects small-craft classes and the supported bolt weapons, validates required numeric fields, and writes ordinary checked-in JavaScript. Retail data is never fetched at runtime.
+These match the earlier four-ship/two-weapon import. The offline importer reads VP v2 directory entries, strips table comments, selects small-craft classes and the supported bolt weapons, validates required numeric fields, and writes ordinary checked-in JavaScript. The importer reads primary-bank counts from sibling `sparky_fs2.vp` by default; use `--models <path>` for another location. `--check` verifies both the table fields and all 35 model-derived counts and hashes. Retail data is never fetched at runtime.
 
 ```powershell
 node tools/import-retail-flight.cjs "E:/GOG Galaxy/Games/Freespace 2/Root_fs2.vp"
@@ -70,6 +71,6 @@ node tools/evaluate-flight-ai.cjs --start headOn --category perfect --skill 1 --
 node tools/evaluate-flight-ai.cjs --start crossing --category human --flavor practiced --skill 1 --ship 1 --weapon 2 --seconds 30
 ```
 
-Duel replay schema is now version 2: options include both ship/weapon choices and the defense override; results include both shield pools and maximum defenses. Version 1 records require the old source revision and are rejected instead of being silently reinterpreted. Historical baselines remain unchanged.
+Duel replay schema is now version 4: options include both ship/weapon choices, resolved collision models and the defense override; results include both shield pools and maximum defenses. Versions 1–3 require their original source revision and are rejected instead of being silently reinterpreted with the new gun counts. Historical baselines remain unchanged.
 
 The recorded seed-1 perfect-pilot head-on Hercules-versus-Dragon example lasted **12.16 seconds with retail shields**, versus **1.60 seconds with shields removed**. These are single deterministic diagnostic bouts, not estimates of player TTK or evidence that the matchup is balanced. See the paired JSON captures under `tests/benchmarks/flight-retail-*.json` for full source fingerprints and health/outcome metrics.
