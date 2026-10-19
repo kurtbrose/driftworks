@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  var tools = /** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).audio.engine;
+  var tools = /** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).engineAudio;
   /** @typedef {import('../src/engine-types').EngineTuning} Tuning */
   /** @typedef {keyof Omit<Tuning,'perspective'>} Knob */
   /** @param {string} id */ function get(id) { var el=document.getElementById(id); if(!el)throw new Error(id); return el; }

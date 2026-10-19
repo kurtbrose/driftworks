@@ -171,6 +171,8 @@ Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 | `src/combat.js` | `Driftworks.combat`: deterministic combat state, threat director, hostile movement, weapon selection, damage resolution, and combat events. |
 | `src/sim.js` | `Driftworks.sim`: constructors, commands, fixed-step movement/industry/recovery, combat update orchestration, physical conversions, and save migration. Public commands and `stepWorld(world, dt)` return replacement worlds. Internal helpers mutate those working copies. |
 | `src/game.js` | `Driftworks.game` exposes testable UI/geometry helpers; `createApp` owns the current world, timing, scene and HUD. `createScene` owns Pixi objects, input, camera focus and effects, communicating through `getWorld`/`setWorld` and observing combat events. |
+| `src/engine-audio.js` | Shared procedural engine synth, presets, tuning persistence and spool response; caller owns its context. |
+| `src/audio-mixer.js` | Flight channel balance, ducking, headroom and settings UI; receives context and master callbacks. |
 | `src/audio.js` | `Driftworks.audio`: lazily unlocked Web Audio resources, sound events, engine telemetry and separately persisted volume settings. No simulation ownership. |
 | `src/hud.js` | `Driftworks.hud`: DOM panels, fleet/readouts, control availability and event binding. Reads simulation queries and audio status; delegates actions to the app. No Pixi or scene dependency. |
 | `styles.css`, `index.html` | DOM layout and static entry point. |
@@ -1311,3 +1313,19 @@ remnants. The growl uses a filtered sawtooth for harmonic grit, with slow
 noise-driven pitch and amplitude variation on both low layers. Regular flutter
 is restrained; the low noise loop spans 7.3 seconds to reduce obvious repetition.
 Bass and roar controls also silence their associated roughness and modulation.
+
+Audio modules remain ordinary scripts loaded in this order:
+`src/engine-audio.js`, `src/audio-mixer.js`, then `src/audio.js`.
+The synth publishes `Driftworks.engineAudio` (presets, tuning persistence,
+spool math, graph factory). The mixer publishes `Driftworks.audioMixer.create`
+(channel graph, balance persistence, ducking, limiter and settings UI).
+`src/audio.js` owns the shared AudioContext, SFX/music, tactical engine bed
+and compatibility facade. `audio.engine` is the exact shared synth object;
+other public audio methods delegate to the mixer instance as appropriate.
+The mixer receives master-volume callbacks and attaches to the context/buses
+owned by the facade; it does not create or close a context.
+The engine lab loads only the synth and owns its audition context. No game
+mixer or SFX module is required there. Both Node and browser test harnesses
+load helper modules before the facade. Tuning keys and acoustic parameters
+are unchanged by this extraction. Definitions live in `engine-types.d.ts`
+and `audio-types.d.ts`.

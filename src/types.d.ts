@@ -376,6 +376,8 @@ export interface DriftworksNamespace {
   formations?: FormationModule;
   sim?: SimApi;
   camera?: CameraApi;
+  engineAudio?: import('./engine-types').EngineTools;
+  audioMixer?: import('./audio-types').MixerTools;
   audio?: AudioApi;
   hud?: { create: (host: HTMLElement, actions: HudActions) => HudController; miningControlState: (world: World) => unknown };
   [key: string]: unknown;

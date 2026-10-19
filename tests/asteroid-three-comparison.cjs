@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 global.window=global;global.DRIFTWORKS_TEST_MODE=true;global.addEventListener=()=>{};global.document={};
-for(const name of ['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','population','session','tactical/camera','audio','hud','mesh-builder','mining-rig','scene3d','game']){
+for(const name of ['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','population','session','tactical/camera','engine-audio','audio-mixer','audio','hud','mesh-builder','mining-rig','scene3d','game']){
   vm.runInThisContext(fs.readFileSync(require('node:path').join(__dirname,'../src',name+'.js'),'utf8'),{filename:name});
 }
 (async()=>{
