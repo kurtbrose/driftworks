@@ -15,7 +15,7 @@ const gl=new Proxy({
  bufferData:(target,data)=>{uploaded=data;uploads++;}
 },{get:(target,key)=>key in target?target[key]:()=>{}});
 const canvas={getContext:()=>gl,addEventListener:()=>{},clientWidth:900,clientHeight:700};
-for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
+for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome','directions','art-style','palette-mode','fields','zones','finish','graphics'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
 DW.flightSkybox={create:()=>({render:()=>{}})};
 const sandbox={devicePixelRatio:1,window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
 vm.createContext(sandbox);
@@ -29,8 +29,9 @@ DW.scene3d={mothershipHardware:()=>({dark:[0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,0,0,1]}
 const fixture=read('experiments/livery-fixtures.js').replaceAll('export function','function');
 vm.runInContext('(function(){'+fixture+';window.fighterHull=fighterHull;window.fleetHull=fleetHull;})();',sandbox);
 sandbox.fighterHull=sandbox.window.fighterHull;sandbox.fleetHull=sandbox.window.fleetHull;
-vm.runInContext('(function(){'+read('experiments/hull-panels.js').replaceAll('export function','function')+';window.analyzeHull=analyzeHull;window.buildHullPanels=buildHullPanels;})();',sandbox);
-sandbox.analyzeHull=sandbox.window.analyzeHull;sandbox.buildHullPanels=sandbox.window.buildHullPanels;
+vm.runInContext('(function(){'+read('experiments/hull-panels.js').replaceAll('export function','function')+';window.analyzeHull=analyzeHull;window.buildHullPanels=buildHullPanels;window.buildGraphicMarks=buildGraphicMarks;})();',sandbox);
+sandbox.analyzeHull=sandbox.window.analyzeHull;sandbox.buildHullPanels=sandbox.window.buildHullPanels;sandbox.buildGraphicMarks=sandbox.window.buildGraphicMarks;
+vm.runInContext(read('experiments/livery-art.js').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
 vm.runInContext(read('experiments/livery-depth.js').replaceAll('export function','function'),sandbox);
 const lab=read('experiments/livery-lab.js').replace(/^import .*;\r?\n/gm,'');
 vm.runInContext(lab,sandbox);
@@ -62,4 +63,10 @@ controls.get('layout').value='solo';controls.get('layout').onchange();controls.g
 assert(frontFaces.length>=2&&frontFaces.every(value=>value===2304),'Decal culling matches the viewer clockwise projection');
 assert.deepEqual(depthBiases,[[-1,-2],[-2,-4]],'Base paint and markings receive distinct ordered decal passes');
 assert.equal(depthCoefficients.length,1,'Camera depth range initialized explicitly');const [depthA,depthB]=depthCoefficients[0];assert(Math.abs((depthA*.2-depthB)/.2+1)<1e-10,'Near plane maps to near clip');assert(Math.abs((depthA*100-depthB)/100-1)<1e-10,'Far plane maps to far clip');assert(depthB>.02*19,'Hangar depth precision improves by at least 19x over the tiny-near-plane projection');
+controls.get('subject').value='cube';controls.get('subject').onchange();controls.get('directions').value='art';controls.get('directions').oninput();controls.get('layout').value='matrix';controls.get('layout').onchange();
+assert.equal(vm.runInContext('actors.length',sandbox),7,'Four art recipes plus original, region preview and deck');
+assert.deepEqual(Array.from(vm.runInContext('actors.slice(0,6).map(a=>a.recipe?.id||0)',sandbox)),[0,1,2,3,4,0],'Each art copy owns a distinct recipe');
+assert.equal(controls.get('primary').disabled,true,'Recipe palettes are explicit');controls.get('palette-mode').value='shared';controls.get('palette-mode').oninput();assert.equal(controls.get('primary').disabled,false,'Shared custom colors remain editable');
+const unmarked=uploaded.length;controls.get('graphics').checked=true;controls.get('graphics').oninput();assert(uploaded.length>unmarked,'Sparse graphics can be enabled independently');assert(vm.runInContext('actors.some(a=>a.recipe?.id===4&&a.passes.some(p=>p.bias===3))',sandbox),'Retro stencil uses its own ordered decal pass');
+const beforeFields=uploads;controls.get('fields').oninput();controls.get('zones').oninput();controls.get('finish').oninput();assert.equal(uploads,beforeFields,'Material layers do not rebuild hull geometry');
 console.log('PASS livery lab: all subjects, finite fitted geometry, independent treatments and deterministic assemblies');

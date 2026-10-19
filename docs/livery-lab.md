@@ -10,6 +10,40 @@ the many-hull collection is a secondary generalization check. One orbit camera a
 whole scene. There are no independent viewports. `Uniform grey` removes material
 variation from source and treated hulls while keeping diagnostic colors visible.
 
+## Art directions and construction are separate comparisons
+
+`Art directions` is the default bank: original, four art recipes and the region
+preview share the deck. `Construction grammars` retains the existing six geometry
+experiments. The four recipes use existing geometry operations; this pass does
+not expand equipment detection or the cutter.
+
+| Recipe | Geometry layer | Color, material and graphic layers |
+| --- | --- | --- |
+| Clean aerospace | Broad shell caps | Continuous ivory longitudinal fade, dark ceramic directional zones, satin response and sparse registration bars. |
+| Industrial workhorse | Flush painted skin | Orange/dark color blocks, yellow zones, rough mottling, curvature-proxy wear and surface-supported warning bars. |
+| Armored military | Planar faceted armor | Desaturated green/composite zoning, subdued rough-metal response, broad low-frequency variation, minimal markings. |
+| Retro alloy | Original hull | Silver material response, bold longitudinal red stripes, a gentle axial fade, fine brushed variation and a small 07 stencil. |
+
+Recipes are declared in `livery-art.js`. Their palettes, geometry references,
+roughness, metalness and graphic vocabularies are independent recipe data.
+`Continuous color fields`, `Geometry-based material zones`, `Surface finish` and
+`Sparse graphic marks` can be switched independently. Palette mode either keeps
+each recipe's identity or applies the shared editable colors. Uniform grey hides
+the art color/finish/marking layers while retaining the geometry comparison.
+
+Color fields use one whole-hull principal axis and range across all components;
+they do not restart at panel boundaries. Zoning uses surface orientation, axial
+position and a camera-independent welded normal-variation proxy. This proxy is
+not a precise edge-distance, concavity, or ambient-occlusion field, especially on
+coarse meshes. Surface response is an inexpensive artistic lighting preview,
+not a full PBR or environment-reflection renderer.
+
+Graphic marks use only large supported planar regions. Their corners are sampled
+on the existing surface, they scale with the display hull, and they render in a
+third depth-biased decal coat. They do not require source UVs or font downloads.
+Unsuitable surfaces get no marks. No exhaust, gun, cockpit or functional-equipment
+classifier is added. The original source mesh remains unchanged.
+
 ## Evaluation contract
 
 The objective is a general procedural algorithm, not a curated set of attractive
@@ -107,7 +141,7 @@ production topology reconstruction.
 `tests/hull-panels.cjs` checks adjacency, coplanar tessellation independence,
 determinism, explicit exclusions, concave boundaries, openings and finite cap,
 bevel and wall normals. `tests/livery-lab.cjs` exercises all subjects and the
-original artist payload, shared source geometry across comparison copies, and
+original artist payload, art recipe/layer controls, shared source geometry across comparison copies, and
 comparison mode persistence. Six distinct operation identifiers and flush-paint
 geometry are also checked. Browser inspection covers curved plates, diagnostic
 colors, source/treated comparison and controls. Run `npm run check`.
@@ -120,3 +154,6 @@ for base paint and markings. These decal passes cull backfaces and retain depth
 testing against the scene. Raised armor uses unbiased depth testing. This avoids
 normal-offset seams and competing near-coplanar shells, while preserving real
 occlusion. The depth coefficients and ordered paint passes have regressions.
+
+`tests/livery-art.cjs` covers recipe metadata, immutable geometric curvature
+analysis and sparse surface-supported decal graphics.

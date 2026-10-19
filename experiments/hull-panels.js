@@ -3,7 +3,7 @@
 /** @typedef {{vertices:Float32Array,stride?:number,color?:number[],opacity?:number,texture?:HTMLImageElement,role?:string,eligible?:(uv:number[])=>boolean}} HullBatch */
 /** @typedef {{v:V[],normal:V,area:number,neighbors:number[]}} Face */
 /** @typedef {{faces:Face[],normal:V,u:V,v:V,area:number,id:number}} Region */
-/** @typedef {{vertices:Float32Array,paint:V,diagnostic?:boolean,decalLayer?:number}} PanelBatch */
+/** @typedef {{vertices:Float32Array,paint:V,diagnostic?:boolean,graphic?:boolean,decalLayer?:number}} PanelBatch */
 /** @param {V} a @param {V} b */
 function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
 /** @param {V} a @param {V} b */
@@ -255,4 +255,34 @@ export function buildHullPanels(batches,settings){
   panels.push(...out.batches.filter(b=>b.vertices.length));plateCount+=out.batches.filter(b=>b.vertices.length).length;detailCount+=out.pieces;operation=out.operation;
  });
  return {panels,diagnostics,regions:regions.length,eligible:eligible.size,skipped:regions.length-eligible.size,plates:plateCount,details:detailCount,operation,axis};
+}
+
+/** Sparse surface-supported graphic marks, separate from construction layout.
+ * No semantic equipment detection; unsuitable or curved sites simply get no mark.
+ * @param {Region[]} regions @param {number} kind @param {number} height @returns {PanelBatch[]} */
+export function buildGraphicMarks(regions,kind,height){
+ if(!kind)return [];
+ /** @type {PanelBatch[]} */const marks=[];
+ const candidates=regions.filter(r=>r.area>.035&&r.normal[2]>.25&&r.faces.every(f=>dot(f.normal,r.normal)>.985)).sort((a,b)=>b.area-a.area).slice(0,2);
+ candidates.forEach(region=>{
+  const polygons=region.faces.map(f=>f.v),edges=boundaryEdges(polygons);
+  /** @type {{x:number,y:number,r:number}|null} */let best=null;
+  for(let i=0;i<polygons.length;i+=Math.max(1,Math.floor(polygons.length/24))){const p=[0,1,2].map(k=>polygons[i].reduce((sum,v)=>sum+v[k],0)/polygons[i].length),x=dot(p,region.u),y=dot(p,region.v);let r=Infinity;
+   edges.forEach(e=>{const ax=dot(e.a,region.u),ay=dot(e.a,region.v),dx=dot(e.b,region.u)-ax,dy=dot(e.b,region.v)-ay,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1)));r=Math.min(r,Math.hypot(x-ax-dx*t,y-ay-dy*t));});if(!best||r>best.r)best={x,y,r};
+  }
+  if(!best||best.r<.045)return;
+  const chosen=/** @type {{x:number,y:number,r:number}} */(best),radius=Math.min(.18,chosen.r*.6),cx=chosen.x,cy=chosen.y;
+  /** @param {number} x @param {number} y @param {number} w @param {number} h @param {number} angle @param {V} paint */
+  function rectangle(x,y,w,h,angle,paint){const c=Math.cos(angle),s=Math.sin(angle),corners=[[-w,-h],[w,-h],[w,h],[-w,h]],points=corners.map(p=>surfacePoint(polygons,region,x+p[0]*c-p[1]*s,y+p[0]*s+p[1]*c));if(points.some(p=>!p))return;
+   const vertices=/** @type {V[]} */(points).map(p=>raised(p,unit(p.slice(3,6)),height)),data=/** @type {number[]} */([]);triangle(data,vertices[0],vertices[1],vertices[2]);triangle(data,vertices[0],vertices[2],vertices[3]);marks.push({vertices:new Float32Array(data),paint,graphic:true,decalLayer:3});
+  }
+  if(kind===1){rectangle(cx,cy,radius*.8,radius*.09,0,[0,0,1]);rectangle(cx,cy+radius*.35,radius*.4,radius*.055,0,[0,1,0]);}
+  else if(kind===2){rectangle(cx,cy,radius,radius*.45,0,[0,0,1]);for(let i=-2;i<=2;i++)rectangle(cx+i*radius*.34,cy,radius*.055,radius*.35,-.4,[0,1,0]);}
+  else{
+   // A small 07 stencil, assembled from bars rather than a remote/font texture.
+   const segments=[[-.0,.45,.23,.04],[.23,.23,.04,.20],[.23,-.23,.04,.20],[0,-.45,.23,.04],[-.23,-.23,.04,.20],[-.23,.23,.04,.20],[0,0,.23,.04]];
+   [[0,1,2,3,4,5],[0,1,2]].forEach((digit,index)=>digit.forEach(part=>{const [x,y,w,h]=segments[part];rectangle(cx+(index-.5)*radius*.65+x*radius,cy+y*radius,w*radius,h*radius,0,[0,0,1]);}));
+  }
+ });
+ return marks;
 }

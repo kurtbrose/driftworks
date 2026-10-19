@@ -1,5 +1,6 @@
+import {ART_DIRECTIONS,ART_SHADER,artVertexKey,curvatureField} from './livery-art.js';
 import {perspectiveDepth} from './livery-depth.js';
-import {analyzeHull,buildHullPanels} from './hull-panels.js';
+import {analyzeHull,buildHullPanels,buildGraphicMarks} from './hull-panels.js';
 import {fighterHull, fleetHull} from './livery-fixtures.js';
 const DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
 /** @param {string} id */
@@ -14,19 +15,26 @@ void main(){sourceUV=texcoord;protection=protectedColor;p=position;n=normal;vec3
 const fragment=`precision highp float;
 uniform sampler2D sourceTexture;uniform float hasTexture,sourceBlend,grammar,wear,split,useMasks,monochrome;uniform vec3 primary,secondary,accent,eye;
 varying vec2 sourceUV;varying vec4 protection;varying vec3 p,n;
+${ART_SHADER}
 void main(){
  float g=grammar;if(split>0.&&gl_FragCoord.x<split)g=0.;
- float kind=protection.a;if(kind>1.5&&g==0.)discard;
+ float kind=floor(protection.a+.001),edge=fract(protection.a)*5.;if(kind>1.5&&g==0.&&artStyle<.5)discard;
  vec3 N=normalize(n),color=g==0.?vec3(.48,.51,.53):secondary*.72;
  if(kind>.5&&kind<1.5&&(useMasks>.5||g==0.))color=protection.rgb;
  if(kind>1.5&&kind<2.5){color=primary*protection.r+secondary*protection.g+accent*protection.b;
   float facing=max(0.,dot(N,normalize(vec3(-.6,-.4,1.))));color=mix(color,secondary*.8,wear*.12*(1.-facing));
  }
  if(hasTexture>.5&&kind<2.5){vec3 source=texture2D(sourceTexture,sourceUV).rgb;float dark=1.-smoothstep(.12,.3,max(source.r,max(source.g,source.b)));color=g==0.?source:mix(color,source,max(sourceBlend,dark*useMasks));}
- if(kind>2.5)color=protection.rgb;
+ if(kind>2.5&&kind<3.5)color=protection.rgb;
+ bool art=artStyle>.5&&(kind<2.5||kind>3.5);
+ if(art){color=artDirection(p,N,edge,kind);if(hasTexture>.5){vec3 source=texture2D(sourceTexture,sourceUV).rgb;float dark=1.-smoothstep(.12,.3,max(source.r,max(source.g,source.b)));color=mix(color,source,max(sourceBlend,dark*useMasks));}}
+ if(monochrome>.5&&kind>3.5)discard;
  if(monochrome>.5&&kind<2.5)color=vec3(.62);
  float light=max(0.,dot(N,normalize(vec3(-.6,-.4,1.)))),rim=pow(1.-abs(dot(N,normalize(eye-p))),3.);
  color=color*(.3+light*.82)+vec3(.1,.16,.2)*rim;
+ if(art&&monochrome<.5&&artFinish>.5){vec3 V=normalize(eye-p),L=normalize(vec3(-.6,-.4,1.)),H=normalize(V+L);float power=mix(100.,8.,artRoughness),spec=pow(max(0.,dot(N,H)),power)*(.07+artMetalness*.65);
+  vec3 environment=mix(vec3(.09,.13,.18),vec3(.7,.75,.72),smoothstep(-.2,.8,N.z));color+=mix(vec3(1.),primary,artMetalness)*spec+environment*artMetalness*.19;
+ }
  gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(.85)),1.);
 }`;
 /** @param {number} type @param {string} source */
@@ -46,7 +54,7 @@ function scalar(name,value){gl.uniform1f(uniform(name),value);}
 /** @param {string} name @param {number[]} value */
 function vector(name,value){gl.uniform3fv(uniform(name),value);}
 const sky=DW.flightSkybox.create(control('viewer'));
-/** @type {{start:number,count:number,origin:number[],label:HTMLDivElement|null,texture:WebGLTexture|null,style:number|null,passes:{start:number,count:number,bias:number}[]}[]} */
+/** @type {{start:number,count:number,origin:number[],label:HTMLDivElement|null,texture:WebGLTexture|null,style:number|null,recipe:import('./livery-art').ArtRecipe|null,axis:number[],range:number[],passes:{start:number,count:number,bias:number}[]}[]} */
 let actors=[];
 let count=0,yaw=.22,tilt=.75,distance=28,assemblySeed=1;
 const artistModels=(DW.shipPacks||[]).flatMap(pack=>pack.models).filter(model=>model.texturedVertices);
@@ -58,7 +66,7 @@ artistModels.forEach(model=>{const option=document.createElement('option');optio
 /** @param {HTMLImageElement|undefined} image */
 function textureFor(image){if(!image)return null;const cached=textures.get(image);if(cached)return cached;const texture=gl.createTexture();if(!texture)throw Error('Texture allocation');gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,0);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);textures.set(image,texture);return texture;}
 function hangarSubjects(){const studies=['cube','sphere','cylinder','random','escort','A','B','C','D','E','fighter','carrier','patrol','tug','mothership'];return control('collection').value==='artists'?artistIds:control('collection').value==='studies'?studies:studies.concat(artistIds);}
-function home(){if(control('layout').value==='matrix'){distance=Math.max(19,20*canvas.clientHeight/canvas.clientWidth);return;}const rows=Math.ceil(hangarSubjects().length/5);distance=control('layout').value==='hangar'?Math.max(23,rows*6,24*canvas.clientHeight/canvas.clientWidth):3.7;}
+function home(){if(control('layout').value==='matrix'){const size=control('directions').value==='art'?16:20;distance=Math.max(size-1,size*canvas.clientHeight/canvas.clientWidth);return;}const rows=Math.ceil(hangarSubjects().length/5);distance=control('layout').value==='hangar'?Math.max(23,rows*6,24*canvas.clientHeight/canvas.clientWidth):3.7;}
 
 
 /** Geometry fixtures use meters; only this display copy is normalized. @param {string} subject */
@@ -87,7 +95,7 @@ function geometry(subject){
  else mesh.block('hull',[0,0,0],[5,5,5]);
  return [{vertices:new Float32Array(groups.hull)}];
 }
-/** @type {Map<string,{batches:import('./hull-panels').HullBatch[],extent:number,regions:ReturnType<typeof analyzeHull>}>} */
+/** @type {Map<string,{batches:import('./hull-panels').HullBatch[],extent:number,regions:ReturnType<typeof analyzeHull>,curvature:ReturnType<typeof curvatureField>}>} */
 const hullCache=new Map();
 /** @type {WeakMap<HTMLImageElement,ImageData>} */const pixels=new WeakMap();
 /** @param {HTMLImageElement} image */
@@ -104,35 +112,37 @@ function fittedHull(subject){
  const extent=Math.max(...hi.map((v,k)=>v-lo[k]));
  const normalized=batches.map(b=>{const vertices=new Float32Array(b.vertices),stride=b.stride||6;for(let i=0;i<vertices.length;i+=stride)for(let k=0;k<3;k++)vertices[i+k]=(vertices[i+k]-(lo[k]+hi[k])/2)*2/extent;return {...b,vertices,eligible:control('masks').checked&&b.texture?eligibility(b.texture):undefined};});
  const inference=control('masks').checked?normalized:[{vertices:new Float32Array(normalized.flatMap(b=>{const data=/** @type {number[]} */([]);for(let i=0;i<b.vertices.length;i+=(b.stride||6))data.push(...b.vertices.slice(i,i+6),b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);return data;})),stride:8}];
- const result={batches:normalized,extent,regions:analyzeHull(inference,control('masks').checked)};hullCache.set(cacheKey,result);return result;
+ const result={batches:normalized,extent,regions:analyzeHull(inference,control('masks').checked),curvature:curvatureField(normalized)};hullCache.set(cacheKey,result);return result;
 }
 /** @type {Map<string,{signature:string,result:ReturnType<typeof buildHullPanels>}>} */const panelCache=new Map();
 function rebuild(){
- const matrix=control('layout').value==='matrix',hangar=control('layout').value==='hangar';
- const subjects=hangar?hangarSubjects():matrix?Array.from({length:8},()=>control('subject').value):[control('subject').value],columns=matrix?4:5,rows=Math.ceil(subjects.length/columns),halfY=rows*1.8+.9,halfX=columns*1.55+.85;
+ const matrix=control('layout').value==='matrix',hangar=control('layout').value==='hangar',artMode=control('directions').value==='art',copies=artMode?6:8,diagnosticIndex=copies-1;
+ const subjects=hangar?hangarSubjects():matrix?Array.from({length:copies},()=>control('subject').value):[control('subject').value],columns=matrix?(artMode?3:4):5,rows=Math.ceil(subjects.length/columns),halfY=rows*1.8+.9,halfX=columns*1.55+.85;
  let totalRegions=0,totalPlates=0,totalDetails=0,totalSkipped=0;const data=/** @type {number[]} */([]);actors=[];control('labels').replaceChildren();
  /** @type {string[]} */const treatmentNames=['Original','Clean armored','Layered armor','Structural bays','Thermal blankets','Flush paint','Faceted military','Detected regions'];
  subjects.forEach((subject,index)=>{
-  const style=matrix?(index===7?1:index):Number(control('grammar').value),cacheId=subject+':'+style;
+  const recipe=artMode?(matrix?(index>0&&index<diagnosticIndex?ART_DIRECTIONS[index-1]:null):ART_DIRECTIONS.find(r=>r.id===Number(control('art-style').value))||ART_DIRECTIONS[0]):null;
+  const style=recipe?recipe.geometry:matrix?(index===diagnosticIndex?1:index===0?0:index):Number(control('grammar').value),cacheId=subject+':'+style;
   const fitted=fittedHull(subject),batches=fitted.batches,extent=fitted.extent,start=data.length/12;
   const signature=[subject==='random'?assemblySeed:0,control('masks').checked,style,control('scale').value,control('relief').value,control('seed').value,fitted.regions.length].join('|'),previous=panelCache.get(cacheId);
   const structure=previous?.signature===signature?previous.result:buildHullPanels(batches,{style,divisions:Number(control('scale').value),relief:Number(control('relief').value)/100,seed:Number(control('seed').value)||0,regions:fitted.regions});panelCache.set(cacheId,{signature,result:structure});if(panelCache.size>64)panelCache.delete(panelCache.keys().next().value||'');
   totalSkipped+=structure.skipped;
   totalRegions+=structure.regions;totalPlates+=structure.plates;totalDetails+=structure.details;
-  batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){data.push(...b.vertices.slice(i,i+6));const color=b.color||[.5,.5,.5],protect=b.opacity!==undefined||['mechanical','structural','marking','cockpit'].includes(b.role||'')||Math.max(...color)<.31;data.push(...color,protect?1:0,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
+  batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){data.push(...b.vertices.slice(i,i+6));const color=b.color||[.5,.5,.5],protect=b.opacity!==undefined||['mechanical','structural','marking','cockpit'].includes(b.role||'')||Math.max(...color)<.31;data.push(...color,(protect?1:0)+(fitted.curvature.get(artVertexKey(b.vertices,i))||0)*.2,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
   const passes=[{start,count:data.length/12-start,bias:0}];
-  const generated=matrix?(index===7?structure.diagnostics:index===0?[]:structure.panels):control('regions').checked?structure.diagnostics:structure.panels;
+  const generated=(matrix?(index===diagnosticIndex?structure.diagnostics:index===0?[]:recipe?.geometry===0?[]:structure.panels):control('regions').checked?structure.diagnostics:recipe?.geometry===0?[]:structure.panels).slice();
+  if(recipe&&recipe.markings&&control('graphics').checked){const height=recipe.geometry===1?.003+Number(control('relief').value)/100*.006:0;generated.push(...buildGraphicMarks(fitted.regions,recipe.markings,height));}
   // Group decals by coat so paint and markings have stable, separate depth
   // layers. Real armor geometry keeps ordinary depth testing and occlusion.
-  for(const bias of [0,1,2]){
+  for(const bias of [0,1,2,3]){
    const layerStart=data.length/12;
-   generated.filter(batch=>(batch.decalLayer||0)===bias).forEach(batch=>{for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...batch.paint,batch.diagnostic?3:2,batch.vertices[i+6],batch.vertices[i+7]);});
+   generated.filter(batch=>(batch.decalLayer||0)===bias).forEach(batch=>{for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...batch.paint,(batch.diagnostic?3:batch.graphic?4:2)+(fitted.curvature.get(artVertexKey(batch.vertices,i))||0)*.2,batch.vertices[i+6],batch.vertices[i+7]);});
    const count=data.length/12-layerStart;if(count)passes.push({start:layerStart,count,bias});
   }
   const origin=hangar||matrix?[(index%columns-(columns-1)/2)*3.1,(Math.floor(index/columns)-(rows-1)/2)*3.6,1.15]:[0,0,0];
   const label=hangar||matrix?document.createElement('div'):null;
-  if(label){label.className='hull-label';label.textContent=matrix?treatmentNames[index]+(index===0?' / source':index===7?' / '+structure.regions+' charts':' / '+structure.plates+' pieces'):(/^[A-E]$/.test(subject)?'Barracuda '+subject:artistModels.find(model=>model.id===subject)?.name||subject)+' / '+extent.toFixed(1)+' m';control('labels').append(label);}
-  actors.push({start,count:data.length/12-start,origin,label,texture:textureFor(batches[0].texture),style:matrix?style:null,passes});
+  if(label){label.className='hull-label';label.textContent=matrix?(recipe?recipe.name:(index===0?'Original / source':index===diagnosticIndex?'Detected regions / '+structure.regions+' charts':treatmentNames[index])):(/^[A-E]$/.test(subject)?'Barracuda '+subject:artistModels.find(model=>model.id===subject)?.name||subject)+' / '+extent.toFixed(1)+' m';control('labels').append(label);}
+  actors.push({start,count:data.length/12-start,origin,label,texture:textureFor(batches[0].texture),style:recipe||matrix?style:null,recipe,axis:structure.axis,range:(()=>{let lo=Infinity,hi=-Infinity;batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){const t=structure.axis.reduce((sum,v,k)=>sum+v*b.vertices[i+k],0);lo=Math.min(lo,t);hi=Math.max(hi,t);}});return [lo,hi];})(),passes});
   if(!hangar&&!matrix){const select=/** @type {HTMLSelectElement} */(document.getElementById('subject'));control('caption').textContent=select.selectedOptions[0].textContent+' / '+extent.toFixed(1)+' m / '+((data.length/12-start)/3).toLocaleString()+' triangles';}
  });
  if(hangar||matrix){
@@ -143,24 +153,25 @@ function rebuild(){
   [-1,1].forEach(sign=>{mesh.block('rail',[sign*(halfX-.1),0,0],[.06,halfY,.08]);[-halfY,halfY].forEach(y=>{mesh.block('deck',[sign*(halfX-.1),y,2],[.16,.16,2.2]);});});
   const start=data.length/12;
   Object.entries(groups).forEach(([key,vertices])=>{for(let i=0;i<vertices.length;i+=6){data.push(...vertices.slice(i,i+6),...(key==='deck'?[.08,.12,.15]:[.21,.27,.29]),1,0,0);}});
-  actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null,style:null,passes:[{start,count:data.length/12-start,bias:0}]});
+  actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null,style:null,recipe:null,axis:[0,1,0],range:[-1,1],passes:[{start,count:data.length/12-start,bias:0}]});
   control('caption').textContent=subjects.length+' HULLS / SHARED TREATMENT / DISPLAY SIZES NORMALIZED';
  }
- if(matrix)control('caption').textContent=(artistModels.find(m=>m.id===control('subject').value)?.name||control('subject').value)+' / ONE HULL, SIX CONSTRUCTION RULES';
+ if(matrix)control('caption').textContent=(artistModels.find(m=>m.id===control('subject').value)?.name||control('subject').value)+(artMode?' / ONE HULL, FOUR ART DIRECTIONS':' / ONE HULL, SIX CONSTRUCTION RULES');
  control('analysis').textContent=(control('masks').checked?'Material-assisted: ':'Geometry only: ')+totalRegions+' regions ('+totalSkipped+' below budget/size threshold) / '+totalPlates+' generated pieces / '+totalDetails+' structural parts';
  if(matrix)control('analysis').textContent=(control('masks').checked?'Material-assisted: ':'Geometry only: ')+fittedHull(control('subject').value).regions.length+' source regions, shared by every copy.';
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);count=data.length/12;
 }
 const descriptions=['Original artist textures, or neutral greybox shading.','A few broad conforming shell plates.','Actual overlapping armor courses over an exposed lower layer.','Shared longitudinal bays, raised transverse frames, stringers and braces.','Large soft pads with boundary-bound inflation, without hard armor edges.','Flush paint zones following existing surfaces, without armor extrusion.','Angular cuts and projected planar caps that change the apparent hull facets.'];
-function settings(){const matrix=control('layout').value==='matrix';control('collection').disabled=control('layout').value!=='hangar';['grammar','regions','compare'].forEach(id=>control(id).disabled=matrix);control('description').textContent=matrix?'Each copy uses a different construction rule. Colors, seed, shape and input mode stay shared.':descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=matrix||!control('compare').checked;}
+function settings(){const art=control('directions').value==='art';['fields','zones','finish','graphics','palette-mode'].forEach(id=>{const group=control(id).parentElement;if(group)group.hidden=!art;});const grammarGroup=control('grammar').parentElement,recipeGroup=control('art-style').parentElement;if(grammarGroup)grammarGroup.hidden=art;if(recipeGroup)recipeGroup.hidden=!art;const custom=art&&control('palette-mode').value!=='shared';['primary','secondary','accent'].forEach(id=>control(id).disabled=custom);const matrix=control('layout').value==='matrix';control('collection').disabled=control('layout').value!=='hangar';['grammar','art-style','regions','compare'].forEach(id=>control(id).disabled=matrix);control('description').textContent=matrix?(art?'Each copy combines its own color field, material zoning, finish and sparse markings. Shape and seed stay shared.':'Each copy uses a different construction rule. Colors, seed, shape and input mode stay shared.'):art?'Art recipes combine continuous hull-space color fields with material and marking layers.':descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=matrix||!control('compare').checked;}
+control('directions').onchange=home;
 control('collection').onchange=()=>{control('layout').value='hangar';settings();rebuild();home();};
 control('layout').onchange=()=>{settings();rebuild();home();};
 control('subject').onchange=()=>{if(control('layout').value!=='matrix')control('layout').value='solo';settings();rebuild();home();};
-['grammar','scale','relief','seed','regions','masks'].forEach(id=>control(id).oninput=()=>{settings();rebuild();});
-['wear','compare'].forEach(id=>control(id).oninput=settings);
+['directions','art-style','grammar','scale','relief','seed','regions','masks','graphics'].forEach(id=>control(id).oninput=()=>{settings();rebuild();});
+['wear','compare','palette-mode','fields','zones','finish'].forEach(id=>control(id).oninput=settings);
 control('shuffle').onclick=()=>{assemblySeed++;control('subject').value='random';rebuild();};
 let palette=0;const palettes=[['#c5cec9','#38474d','#ee912e'],['#d7dfdd','#253641','#bc3e38'],['#d18b31','#26343b','#f2d99b'],['#657264','#242e2d','#c2bc85']];
-control('palette').onclick=()=>{palette=(palette+1)%palettes.length;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[palette][i]);};
+control('palette').onclick=()=>{control('palette-mode').value='shared';settings();palette=(palette+1)%palettes.length;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[palette][i]);};
 control('quarter').onclick=()=>{yaw=.22;tilt=.75;home();};control('top').onclick=()=>{yaw=0;tilt=.02;};control('side').onclick=()=>{yaw=Math.PI/2;tilt=Math.PI/2;};
 control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='2';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('regions').checked=false;control('monochrome').checked=false;control('masks').checked=false;control('compare').checked=false;control('spin').checked=false;palette=0;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();rebuild();};
 let dragging=false,lastX=0,lastY=0;
@@ -179,6 +190,8 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  ['primary','secondary','accent'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
  scalar('monochrome',control('monochrome').checked?1:0);scalar('useMasks',control('masks').checked?1:0);scalar('grammar',Number(control('grammar').value));scalar('wear',Number(control('wear').value)/100);scalar('split',control('layout').value!=='matrix'&&control('compare').checked?w/2:0);scalar('sourceBlend',Number(control('source-blend').value)/100);gl.uniform1i(uniform('sourceTexture'),0);actors.forEach(actor=>{
   scalar('grammar',actor.style===null?Number(control('grammar').value):actor.style);gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);
+  const recipe=actor.recipe;scalar('artStyle',recipe?.id||0);scalar('artRoughness',recipe?.roughness||.8);scalar('artMetalness',recipe?.metalness||0);scalar('artLow',actor.range[0]);scalar('artHigh',actor.range[1]);scalar('artSeed',Number(control('seed').value)||0);scalar('artFields',control('fields').checked?1:0);scalar('artZones',control('zones').checked?1:0);scalar('artFinish',control('finish').checked?1:0);vector('artAxis',actor.axis);
+  if(recipe&&control('palette-mode').value!=='shared')['primary','secondary','accent'].forEach((id,i)=>vector(id,recipe.palette[i]));else ['primary','secondary','accent'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
   actor.passes.forEach(pass=>{
    if(pass.bias){// This viewer's right/up/back basis projects outward faces clockwise.
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.frontFace(gl.CW);gl.enable(gl.CULL_FACE);gl.polygonOffset(-pass.bias,-2*pass.bias);}
