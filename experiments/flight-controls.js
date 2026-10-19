@@ -12,7 +12,7 @@
         var document = environment.document, window = environment.window, navigator = environment.navigator;
         var get = DW.experimentDom(document);
         var inputMode = get('input-mode'), device = get('device'), bindingHost = get('bindings'), input = DW.flightInput;
-        var keys = /** @type {Record<string, boolean>} */ ({}), mouse = [0, 0], mapping = input.defaults(true), padSignature = '', lastPad = /** @type {number | null} */ (null), previousButtons = { bank: false, pause: false };
+        var keys = /** @type {Record<string, boolean>} */ ({}), mouse = [0, 0], mapping = input.defaults(true), padSignature = '', lastPad = /** @type {number | null} */ (null), previousButtons = { bank: false, lock: false, pause: false };
         var rumble = get('rumble');
         rumble.checked = true;
         try { rumble.checked = window.localStorage.getItem('driftworks.flight.rumble') !== 'off'; } catch (error) { /* Optional preference. */ }
@@ -75,7 +75,7 @@
             mouse = [0, 0];
         }
         function resetButtons() {
-            previousButtons = { bank: false, pause: false };
+            previousButtons = { bank: false, lock: false, pause: false };
         }
         function release() {
             if (document.pointerLockElement === host)
@@ -130,7 +130,7 @@
             bindingHost.hidden = pad.mapping === 'standard';
             get('controller-layout').hidden = pad.mapping !== 'standard';
             get('deadzone').value = String(mapping.deadzone);
-            /** @type {(Exclude<keyof Mapping, 'deadzone' | `${string}Invert`>)[]} */ (['pitch', 'yaw', 'roll', 'throttle', 'fire', 'boost', 'bank', 'pause', 'up', 'down']).forEach(function (name) {
+            /** @type {(Exclude<keyof Mapping, 'deadzone' | `${string}Invert`>)[]} */ (['pitch', 'yaw', 'roll', 'throttle', 'fire', 'boost', 'bank', 'pause', 'up', 'down', 'lock']).forEach(function (name) {
                 var label = document.createElement('label');
                 label.textContent = (name === 'yaw' && pad.mapping !== 'standard' ? 'Yaw / twist axis' : name === 'roll' && pad.mapping !== 'standard' ? 'Roll / stick X axis' : name === 'throttle' ? 'Throttle axis (absolute)' : name === 'up' ? 'Throttle increase button' : name === 'down' ? 'Throttle decrease button' : name) + ' ';
                 var selectBinding = document.createElement('select');
@@ -163,7 +163,7 @@
                 }
                 bindingHost.appendChild(label);
             });
-            previousButtons = { bank: false, pause: false };
+            previousButtons = { bank: false, lock: false, pause: false };
         }
         function saveBindings() {
             var pad = pads().find(function (p) { return String(p.index) === device.value; });
@@ -225,6 +225,11 @@
             }
             if (e.code === 'KeyP' && !e.repeat) {
                 actions.togglePerformance();
+                return;
+            }
+            if (e.code === 'KeyL' && !e.repeat && !actions.isPaused()) {
+                e.preventDefault();
+                actions.toggleTargetLock();
                 return;
             }
             if (e.code === 'Tab' && !actions.isPaused()) {
@@ -329,7 +334,7 @@
             }).filter(function (v) {
                 return v !== null;
             }).join(', ') : '';
-            var controls = pad ? input.read(pad, mapping) : { pitch: 0, yaw: 0, roll: 0, throttle: null, throttleRate: 0, fire: false, boost: false, bank: false, pause: false };
+            var controls = pad ? input.read(pad, mapping) : { pitch: 0, yaw: 0, roll: 0, throttle: null, throttleRate: 0, fire: false, boost: false, bank: false, lock: false, pause: false };
             // A held stick or tiny hardware noise must not reclaim input after mouse movement.
             if (pad) {
                 var padAxes = pad.axes;
@@ -348,7 +353,8 @@
             if (!actions.isPaused() && controls.bank && !previousButtons.bank) {
                 actions.nextWeapon();
             }
-            previousButtons = { bank: controls.bank, pause: controls.pause };
+            if (!actions.isPaused() && controls.lock && !previousButtons.lock) actions.toggleTargetLock();
+            previousButtons = { bank: controls.bank, lock: controls.lock, pause: controls.pause };
             var look = inputMode.value === 'mouse' && mouseActive ? input.stickDemand(mouse, .08, steeringPreset.value === 'medium-soft' ? 1.6 : 1) : [0, 0];
             return { throttle: controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA'), vertical: axis('KeyR', 'KeyF'), boost: keys.ShiftLeft || keys.ShiftRight || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
         }

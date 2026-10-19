@@ -14,10 +14,16 @@
     function create() {
         return { bolts: [], impacts: [], cooldown: 0, fired: 0, hits: 0 };
     }
-    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] */
-    function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount) {
+    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] */
+    function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount, anchors) {
         var count = mountCount === undefined ? 2 : mountCount;
         if (!Number.isInteger(count) || count < 1 || count > 128) throw new Error('Invalid gun mount count');
+        var muzzles = anchors || Array.from({length:count}, function (/** @type {unknown} */ _, mount) {
+            return [count === 1 ? 0 : (-1 + 2 * mount / (count - 1)) * 3, 4, -1.3];
+        });
+        if (!muzzles.length) throw new Error('Gun anchors must not be empty');
+        // Preserve bolts/second and per-bolt damage while changing volley size.
+        var interval = weapon.fireWait * muzzles.length / count;
         var ready = guns.cooldown <= 1e-9;
         guns.cooldown -= dt;
         guns.impacts = guns.impacts.filter(function (hit) {
@@ -47,27 +53,26 @@
         if (ready) {
             var target = aimPoint && aimPoint();
             // Keep the launch plane behind a close crosshair surface, never fire backward.
-            var forward = target ? Math.min(4, Math.max(0, target.reduce(function (sum, x, i) {
+            var forward = target ? Math.max(0, target.reduce(function (sum, x, i) {
                 return sum - (x - pose.eye[i]) * pose.back[i] * units;
-            }, 0) * .5)) : 4;
-            // Placeholder rack spans six metres; one mount is centered. All use
-            // the selected primary and shared convergence until model hardpoints exist.
-            for (var mount = 0; mount < count; mount++) {
-                var side = count === 1 ? 0 : -1 + 2 * mount / (count - 1);
+            }, 0) * .5) : 4;
+            for (var mount = 0; mount < muzzles.length; mount++) {
+                var muzzle = muzzles[mount];
+                var launchForward = target ? Math.min(muzzle[1], forward) : muzzle[1];
                 var position = pose.eye.map(function (x, i) {
-                    return x + (pose.right[i] * side * 3 - pose.up[i] * 1.3 - pose.back[i] * forward) / units;
+                    return x + (pose.right[i] * muzzle[0] + pose.up[i] * muzzle[2] - pose.back[i] * launchForward) / units;
                 });
                 var aim = pose.back.map(function (x, i) {
                     return target ? (target[i] - position[i]) * units :
-                        -x * (convergenceM - 4) - pose.right[i] * side * 3 + pose.up[i] * 1.3;
+                        -x * (convergenceM - launchForward) - pose.right[i] * muzzle[0] - pose.up[i] * muzzle[2];
                 });
                 var distance = Math.hypot.apply(null, aim);
                 guns.bolts.push({ position: position, direction: aim.map(function (x) {
                         return x / distance;
                     }), weapon: weapon, age: 0 });
             }
-            guns.fired += count;
-            guns.cooldown += weapon.fireWait;
+            guns.fired += muzzles.length;
+            guns.cooldown += interval;
         }
     }
     // Broad-phase sphere plus a swept, refined terrain query prevents tunneling.

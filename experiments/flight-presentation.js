@@ -145,7 +145,7 @@
     function mount(host, getWorld, setWorld, environment) {
         var document = (environment || globalThis).document, units = DW.sim.METERS_PER_UNIT;
         var get = DW.experimentDom(document);
-        var scene = DW.scene3d.create(host, getWorld, setWorld, { study: true });
+        var scene = DW.scene3d.create(host, getWorld, setWorld, { study: true, viewer: false });
         /** @type {import('./types').Images} */
         var shipImages = new Map();
         var burns = /** @type {WeakMap<Vector, Batch[]>} */ (new WeakMap());

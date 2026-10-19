@@ -25,7 +25,7 @@
             });
             var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
             var cases=DW.flightStudy.plan(event.data);
-            scope.postMessage({kind:'ready',total:cases.length,manifest:{policy:DW.flightAI.version,cadence:DW.flightDuel.dt,replaySchema:4,hashes:hashes}});
+            scope.postMessage({kind:'ready',total:cases.length,manifest:{policy:DW.flightAI.version,cadence:DW.flightDuel.dt,replaySchema:5,hashes:hashes}});
             var batch=/** @type {import('./types').StudyRow[]} */ ([]);
             for(var i=0;i<cases.length;i++){
                 var duel=DW.flightDuel.run(cases[i].options);

@@ -14,7 +14,7 @@
         return world;
     }, function (value) {
         world = value;
-    }, { study: true });
+    }, { study: true, viewer: true });
     var select = get('ship-model'), units = DW.sim.METERS_PER_UNIT;
     DW.shipPackModels.populate(select, false);
     if(DW.originalShipModels && DW.originalShipModels.length){
@@ -88,6 +88,9 @@
         get('spin').textContent = 'Resume rotation';
         scene.setOrbit({ yaw: Math.PI, tilt: Math.PI / 2, height: 0 });
     };
+    host.addEventListener('viewer-interaction', function () {
+        rotating = false; get('spin').textContent = 'Resume rotation';
+    });
     host.addEventListener('pointerdown', function () {
         rotating = false;
         get('spin').textContent = 'Resume rotation';

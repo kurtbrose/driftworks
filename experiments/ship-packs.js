@@ -260,6 +260,29 @@
         Striker: [[-2.176, -6.09, -.273, .38], [2.176, -6.09, -.273, .38], [0, -8.05, .632, .27]],
         Zenith: [[-1.47, -7.68, -.088, .6], [1.47, -7.68, -.088, .6]]
     };
+    // Muzzle centers inspected on the shipped mesh, in the same local metres as
+    // sourceDraw: right X, forward Y, up Z. Keep asymmetric barrels asymmetric.
+    /** @type {Record<string, number[][]>} */
+    var gunMounts = {
+        Bob: [[0, 4.402, -.389]],
+        Challenger: [[0, 2.822, -.76]],
+        Dispatcher: [[-1.278, 7.962, -2.308], [1.278, 7.962, -2.308]],
+        Executioner: [[-1.19, 5.429, -.321], [1.19, 5.429, -.321]],
+        Imperial: [[-1.55, 4.95, -.46], [1.55, 4.95, -.46]],
+        Insurgent: [[-1.969, 3.1, -1.276], [1.969, 3.1, -1.276]],
+        Omen: [[0, 6.898, -.45]],
+        Pancake: [[-2.904, 5.455, -1.839], [2.904, 5.455, -1.839]],
+        Spitfire: [[-.986, 1.575, .429], [.986, 1.575, .429]],
+        Striker: [[-1.763, 5.314, -.668], [1.764, 4.041, .079]],
+        Zenith: [[0, 3.323, -.34]]
+    };
+    /** @param {Model} model @returns {Vector[]} */
+    function gunAnchors(model) {
+        if (model.id === 'blockout') return [[-3, 4, -1.3], [3, 4, -1.3]];
+        var anchors = gunMounts[model.name];
+        if (!anchors) throw new Error('No reviewed gun anchors for ' + model.id);
+        return anchors;
+    }
     /** @param {Model} model */
     function engineAnchors(model) {
         return engineMounts[model.name] || [];
@@ -351,10 +374,55 @@
         var d = minus(world, p.eye);
         return [dot3(d, p.right) * units, -dot3(d, p.back) * units, dot3(d, p.up) * units];
     }
+    /** Sweep a spherical bolt head against a triangle's face, edge capsules and vertices.
+     * All inputs are model-local metres; returns the first surface contact.
+     * @param {Vector} a @param {Vector} d @param {Vector[]} tri @param {number} r
+     * @returns {{fraction:number; local:Vector; normal:Vector} | null} */
+    function boltTriangle(a, d, tri, r) {
+        var n = normal(tri[0],tri[1],tri[2]);
+        var best = /** @type {{fraction:number; local:Vector; normal:Vector} | null} */ (null);
+        /** @param {number} t @param {Vector} contact */
+        function accept(t, contact) {
+            if (t >= 0 && t <= 1 && (!best || t < best.fraction)) best = {fraction:t,local:contact,normal:n};
+        }
+        /** First entry into a sphere/cylinder in a projected coordinate frame.
+         * @param {Vector} offset @param {Vector} motion @returns {number | null} */
+        function entry(offset, motion) {
+            var c=dot3(offset,offset)-r*r;
+            if(c<=0) return 0;
+            var aa=dot3(motion,motion), b=dot3(offset,motion), disc=b*b-aa*c;
+            if(aa<1e-15 || disc<0) return null;
+            var t=(-b-Math.sqrt(disc))/aa;
+            return t>=0 && t<=1 ? t : null;
+        }
+        var e=minus(tri[1],tri[0]), f=minus(tri[2],tri[0]);
+        var ee=dot3(e,e), ef=dot3(e,f), ff=dot3(f,f), denom=ee*ff-ef*ef;
+        var offset=minus(a,tri[0]), height=dot3(offset,n), speed=dot3(d,n);
+        if(denom>1e-15) [-r,r].forEach(function(side){
+            var t=Math.abs(height)<=r ? 0 : Math.abs(speed)>1e-15 ? (side-height)/speed : -1;
+            if(t<0 || t>1) return;
+            var center=a.map(function(x,j){return x+d[j]*t;}), h=dot3(minus(center,tri[0]),n);
+            var contact=center.map(function(x,j){return x-n[j]*h;}), v=minus(contact,tri[0]);
+            var ve=dot3(v,e), vf=dot3(v,f), u=(ve*ff-vf*ef)/denom, w=(vf*ee-ve*ef)/denom;
+            if(u>=-1e-9 && w>=-1e-9 && u+w<=1+1e-9) accept(t,contact);
+        });
+        tri.forEach(function(p,index){
+            var vertex=entry(minus(a,p),d);
+            if(vertex!==null) accept(vertex,p);
+            var edge=minus(tri[(index+1)%3],p), length=dot3(edge,edge);
+            if(length<1e-15) return;
+            var v=minus(a,p), along=dot3(v,edge)/length, rate=dot3(d,edge)/length;
+            var t=entry(v.map(function(x,j){return x-edge[j]*along;}),d.map(function(x,j){return x-edge[j]*rate;}));
+            if(t===null) return;
+            var u=along+rate*t;
+            if(u>=0 && u<=1) accept(t,p.map(function(x,j){return x+edge[j]*u;}));
+        });
+        return best;
+    }
     /** @type {WeakMap<Model, number>} */
     var hullBounds = new WeakMap();
-    /** @param {Model} model @param {Pose} pose @param {Vector} start @param {Vector} end @param {number} units */
-    function hullHit(model, pose, start, end, units) {
+    /** @param {Model} model @param {Pose} pose @param {Vector} start @param {Vector} end @param {number} units @param {number} [boltRadius] */
+    function hullHit(model, pose, start, end, units, boltRadius) {
         var a = localPoint(pose, start, units), d = minus(localPoint(pose, end, units), a), v = model.vertices, best = /** @type {HullHit | null} */ (null);
         var radius = hullBounds.get(model);
         if (radius === undefined) {
@@ -363,12 +431,30 @@
                 radius = Math.max(radius, Math.hypot(v[b], v[b + 1], v[b + 2]));
             hullBounds.set(model, radius);
         }
+        var padding = boltRadius || 0;
         var span = dot3(d, d), fraction = span ? Math.max(0, Math.min(1, -dot3(a, d) / span)) : 0;
         if (Math.hypot.apply(null, a.map(function (x, j) {
             return x + d[j] * fraction;
-        })) > radius)
+        })) > radius + padding)
             return null;
         for (var i = 0; i < v.length; i += 18) {
+            if (padding > 0) {
+                // Reject triangles outside the short swept bolt bounds before
+                // constructing face/edge tests on detailed meshes.
+                var outside = false;
+                for (var axis = 0; axis < 3; axis++) {
+                    var lo = Math.min(a[axis],a[axis]+d[axis])-padding, hi = Math.max(a[axis],a[axis]+d[axis])+padding;
+                    if (Math.min(v[i+axis],v[i+6+axis],v[i+12+axis])>hi || Math.max(v[i+axis],v[i+6+axis],v[i+12+axis])<lo) { outside=true; break; }
+                }
+                if(outside) continue;
+                var contact = boltTriangle(a,d,[v.slice(i,i+3),v.slice(i+6,i+9),v.slice(i+12,i+15)],padding);
+                if(contact && (!best || contact.fraction < best.fraction)) {
+                    var local=contact.local;
+                    best={fraction:contact.fraction,local:local,normal:contact.normal,model:model,
+                        point:pose.eye.map(function(x,j){return x+(pose.right[j]*local[0]-pose.back[j]*local[1]+pose.up[j]*local[2])/units;})};
+                }
+                continue;
+            }
             var p = v.slice(i, i + 3), e = minus(v.slice(i + 6, i + 9), p), f = minus(v.slice(i + 12, i + 15), p);
             var h = cross3(d, f), det = dot3(e, h);
             if (Math.abs(det) < 1e-10)
@@ -489,5 +575,5 @@
     function paintColor(hex) {
         return /^#[0-9a-f]{6}$/i.test(hex) ? [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255] : undefined;
     }
-    DW.shipPackModels = { craftModel: craftModel, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
+    DW.shipPackModels = { gunAnchors: gunAnchors, craftModel: craftModel, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
 }());

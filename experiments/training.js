@@ -99,13 +99,19 @@
             craft.scorches = [];
         });
     }
+    /** @param {Craft} craft @returns {Vector[] | undefined} */
+    function gunAnchors(craft) {
+        if (craft.collision.kind !== 'model') return undefined;
+        var entry = DW.shipPackModels.find(craft.collision.modelId);
+        return DW.shipPackModels.gunAnchors(entry ? entry.model : DW.shipPackModels.craftModel(craft, '', 1));
+    }
     /** @param {Combat} t @param {FlightState} pose */
     function bindPlayer(t, pose) { t.player.pose = pose; return t.player; }
     /** @param {string} mode @returns {Combat} */
     function create(mode) {
         var player = createCraft('player', DW.arcade.create(0), 'ally');
         var t = /** @type {Combat} */ ({ mode: mode || 'training', roundOver: false, enabled: true, time: 0, wave: 0, countdown: 3,
-            player: player, enemies: [], wrecks: [], kills: 0, targetId: null, slots: [], slotTimer: 0,
+            player: player, enemies: [], wrecks: [], kills: 0, targetId: null, targetLocked: false, slots: [], slotTimer: 0,
             flashes: [], radioEvents: [], radioSerial: 0, playerKills: 0, configured: false, hull: 100, shield: 120, lastHit: -100, hitFlash: 0, dead: false });
         // Compatibility views for the HUD and older local callers; craft state is canonical.
         Object.defineProperties(t, {
@@ -235,6 +241,7 @@
             return e.team !== 'ally';
         });
         t.targetId = target ? target.id : null;
+        t.targetLocked = false;
     }
     /** @param {Pose} pose @param {Vector} goal @returns {FlightInput} */
     function steer(pose, goal) {
@@ -429,15 +436,15 @@
         }
     }
     /** Geometry is selected by serializable simulation state, never by appearance controls.
-     * @param {Craft} craft @param {Vector} start @param {Vector} end */
-    function hullHit(craft, start, end) {
+     * @param {Craft} craft @param {Vector} start @param {Vector} end @param {number} [boltRadius] */
+    function hullHit(craft, start, end, boltRadius) {
         var shape = craft.collision || { kind: 'sphere', radiusM: 9 };
-        if (shape.kind === 'sphere') return sphereHit(start, end, craft.pose.eye, shape.radiusM / U);
+        if (shape.kind === 'sphere') return sphereHit(start, end, craft.pose.eye, (shape.radiusM + (boltRadius || 0)) / U);
         var model = DW.shipPackModels.find(shape.modelId);
         // The built-in training hull is not part of an asset pack.
         var geometry = model ? model.model : DW.shipPackModels.craftModel(craft, '', 1);
         if (geometry.id !== shape.modelId) throw new Error('Unknown collision model ' + shape.modelId);
-        return DW.shipPackModels.hullHit(geometry, craft.pose, start, end, U);
+        return DW.shipPackModels.hullHit(geometry, craft.pose, start, end, U, boltRadius);
     }
     /** Resolve a shared muzzle aim point only along the crosshair ray; no target snapping or lead.
      * @param {Combat} t @param {Craft} shooter @param {Weapon} weapon @param {TerrainHit} [terrainHit]
@@ -460,16 +467,16 @@
     /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player */
     function trace(t, start, end, bolt, team, terrainHit, player) {
         bindPlayer(t, player);
-        var hit = terrainHit ? terrainHit(start, end) : null, best = hit ? length(sub(hit, start)) : Infinity;
+        var hit = terrainHit ? terrainHit(start, end) : null, travel = length(sub(end,start));
+        var best = hit && travel > 0 ? length(sub(hit,start)) / travel : Infinity;
         var victim = /** @type {Craft | null} */ (null), surface = /** @type {Hit | null} */ (null);
         var shooter = typeof team === 'object' ? team : participants(t).find(function (e) { return e.id === team; });
         var faction = shooter ? shooter.team || 'enemy' : team === 'player' ? 'ally' : 'enemy';
         participants(t).forEach(function (e) {
             if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction) return;
-            var candidate = hullHit(e, start, end);
+            var candidate = hullHit(e, start, end, bolt.weapon.headRadius || 0);
             if (candidate) {
-                var d = length(sub(candidate.point, start));
-                if (d < best) { best = d; hit = candidate.point; victim = e; surface = candidate; }
+                if (candidate.fraction < best) { best = candidate.fraction; hit = candidate.point; victim = e; surface = candidate; }
             }
         });
         var struck = /** @type {Craft | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
@@ -610,7 +617,7 @@
             }
             DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
                 return trace(t, start, end, bolt, e, terrainHit, player);
-            }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts);
+            }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e));
         });
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)
@@ -626,13 +633,35 @@
         var targets = nowAlive.filter(function (e) {
             return e.team !== 'ally';
         });
-        if (t.targetId && !targets.some(function (e) {
+        if (t.targetId && !nowAlive.some(function (e) {
             return e.id === t.targetId;
         }))
-            t.targetId = targets.length ? targets[0].id : null;
+            { t.targetId = targets.length ? targets[0].id : null; t.targetLocked = false; }
+    }
+    /** Acquire the nearest hull crossed by the forward sight line; retain the last contact in empty space.
+     * @param {Combat} t @param {FlightState} state */
+    function acquireTarget(t, state) {
+        var living = alive(t);
+        if (!living.some(function (e) { return e.id === t.targetId; })) {
+            t.targetId = null;
+            t.targetLocked = false;
+        }
+        if (t.targetLocked) return;
+        var start = state.eye, end = add(start, scale(state.back, -1000000)), best = Infinity;
+        living.forEach(function (craft) {
+            var hit = hullHit(craft, start, end);
+            if (!hit) return;
+            var distance = length(sub(hit.point, start));
+            if (distance < best) { best = distance; t.targetId = craft.id; }
+        });
+    }
+    /** @param {Combat} t */
+    function toggleTargetLock(t) {
+        t.targetLocked = !t.targetLocked && alive(t).some(function (e) { return e.id === t.targetId; });
     }
     /** @param {Combat} t */
     function cycle(t) {
+        t.targetLocked = false;
         var list = alive(t).filter(function (e) {
             return e.team !== 'ally';
         }), index = list.findIndex(function (e) {
@@ -669,5 +698,5 @@
         });
         return result;
     }
-    DW.training = { stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
+    DW.training = { acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
 }());

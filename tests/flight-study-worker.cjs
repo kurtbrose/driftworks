@@ -14,7 +14,7 @@ context=vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../experiments/flight-study-worker.js'),'utf8'),context);
 sandbox.onmessage({data:{ships:[1],styles:['baseline','fso-pursuit','fso-breaker'],weapons:[-1],starts:['headOn'],pilots:['perfect'],skills:[1],seeds:1,seed:1,duration:1,pairing:'mirror',defenses:'retail'}}).then(()=>{
   assert.equal(messages.at(-1).kind,'done',JSON.stringify(messages.at(-1)));
-  const ready=messages.find(m=>m.kind==='ready');assert.equal(ready.total,3);assert.equal(ready.manifest.replaySchema,4);
+  const ready=messages.find(m=>m.kind==='ready');assert.equal(ready.total,3);assert.equal(ready.manifest.replaySchema,5);
   assert.ok(ready.manifest.hashes['ship-packs.js']&&ready.manifest.hashes['../assets/ships/quaternius-ultimate-spaceships/meshes.js']);
   assert.equal(executed.length,fetched.size);assert.equal(blobs.size,0);
   assert.deepEqual(executed,[...fetched.keys()].map(file=>ready.manifest.hashes[file]));

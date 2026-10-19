@@ -291,12 +291,12 @@
       var hit=DW.training.hullHit(craft,start,end),expected=DW.shipPackModels.hullHit(visible,craft.pose,start,end,U);
       assert(hit&&expected&&hit.model.id===visible.id);assertClose(hit.fraction,expected.fraction);
     });
-    var record=JSON.parse(JSON.stringify(duel.replay));assert(record.version===4);
+    var record=JSON.parse(JSON.stringify(duel.replay));assert(record.version===5);
     assert(JSON.stringify(api.replay(record).summary())===JSON.stringify(duel.summary()));
     var imported=api.readWatchSearch(DW.flightStudy.watchUrl(duel.replay.options).split('?')[1]);
     assert(imported.allyHull===options.allyHull&&imported.enemyHull===options.enemyHull);
     var defaults=api.create({duration:.1});assert(defaults.replay.options.allyHull!=='mixed'&&defaults.replay.options.enemyHull!=='mixed');
-    record.version=3;var rejected=false;try{api.replay(record);}catch(error){rejected=true;}assert(rejected);
+    record.version=4;var rejected=false;try{api.replay(record);}catch(error){rejected=true;}assert(rejected);
     rejected=false;try{api.create({allyHull:'missing-mesh'});}catch(error){rejected=true;}assert(rejected);
     var session=DW.flightSession.create({}),watch=DW.flightWatch.create(session.snapshot,options);
     assert(watch.snapshot(true).observerCraft.collision.modelId===options.allyHull);
@@ -418,7 +418,7 @@
     var ally=craft('ally','ally',90),enemy=craft('enemy','enemy',90),dead=craft('dead','enemy',0),wreck=craft('wreck','ally',0),combat=DW.training.create();
     combat.enemies=[ally,enemy,dead];combat.wrecks=[wreck];combat.wave=3;world.elapsedSeconds=7;
     try{
-      DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&getWorld()===sourceWorld);setWorld({elapsedSeconds:7,asteroids:[]});assert(getWorld()===world);return scene;};
+      DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&options.viewer===false&&getWorld()===sourceWorld);setWorld({elapsedSeconds:7,asteroids:[]});assert(getWorld()===world);return scene;};
       DW.flightSkybox.create=function(){return {render:function(state,scale,empty){events.push('sky');assert(state===player&&scale===.5&&empty);},getRenderStats:function(){return skyStats;}};};
       DW.shipPackModels=Object.assign({},saved.packs,{
         populate:function(){},loadTextures:function(){return {then:function(fn){fn(textureImages);return {catch:function(){}};}};},
@@ -506,7 +506,7 @@
   // A small event/DOM fixture exercises the browser adapter without real devices.
   function flightControlsFixture(){
     function target(){return {listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},emit:function(name,event){if(this.listeners[name])this.listeners[name](event||{});},appendChild:function(child){this.children.push(child);if(this.value===''&&child.value!==undefined)this.value=child.value;},children:[],value:'',textContent:'',setAttribute:function(){}};}
-    var elements={},doc=target(),win=target(),host=target(),pads=[],counts={pause:0,weapon:0,target:0,radar:0,diagnostics:0,performance:0,resume:0,failure:0},paused=false,dead=false,controls;
+    var elements={},doc=target(),win=target(),host=target(),pads=[],counts={pause:0,weapon:0,target:0,lock:0,radar:0,diagnostics:0,performance:0,resume:0,failure:0},paused=false,dead=false,controls;
     doc.getElementById=function(id){return elements[id]||(elements[id]=target());};
     doc.createElement=target;doc.createTextNode=function(text){return {textContent:text};};
     doc.body={classList:{add:function(){}}};doc.exitPointerLock=function(){doc.pointerLockElement=null;};
@@ -517,7 +517,7 @@
       pause:function(){counts.pause++;paused=true;controls.clear();controls.release();},
       resume:function(){counts.resume++;paused=false;controls.clear();controls.resetButtons();},
       captureFailure:function(){counts.failure++;paused=true;controls.clear();},
-      nextWeapon:function(){counts.weapon++;},nextTarget:function(){counts.target++;},nextRadarRange:function(){counts.radar++;},
+      toggleTargetLock:function(){counts.lock++;},nextWeapon:function(){counts.weapon++;},nextTarget:function(){counts.target++;},nextRadarRange:function(){counts.radar++;},
       toggleDiagnostics:function(){counts.diagnostics++;},togglePerformance:function(){counts.performance++;},selectProfile:function(index){counts.profile=index;}
     },{document:doc,window:win,navigator:{getGamepads:function(){return pads;}}});
     function key(code,tag,repeat){var event={code:code,target:{tagName:tag||'BODY'},repeat:!!repeat,preventDefault:function(){this.prevented=true;}};win.emit('keydown',event);return event;}
@@ -601,7 +601,7 @@
 
   test('flight controls retain controller edges, editable bindings and disconnect pause',function(){
     var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Test controller',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
-    f.setPads([null,pad,null]);c.sample();assert(f.elements.bindings.children.length===10);
+    f.setPads([null,pad,null]);c.sample();assert(f.elements.bindings.children.length===11);
     pad.buttons[3].pressed=true;c.sample();c.sample();assert(f.counts.weapon===1);
     pad.buttons[3].pressed=false;c.sample();pad.buttons[3].pressed=true;c.sample();assert(f.counts.weapon===2);
     var pitchSelect=f.elements.bindings.children[0].children[0];pitchSelect.value='0';pitchSelect.onchange();pad.axes[0]=1;assertClose(c.sample().pitch,-1);
@@ -1193,7 +1193,7 @@
 
   test('target camera centers a copy, fits hull bounds and caps redraws', function () {
     var api=window.Driftworks.flightTargetCamera,DW=window.Driftworks,original=DW.scene3d.create,draws=0,batches;
-    DW.scene3d.create=function(){return {setStudyDiagnostics:function(){},setOrbit:function(){},setStudyActors:function(value){batches=value;},setStudyEffects:function(){},sync:function(){},render:function(){draws++;}};};
+    DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&options.viewer===false,'Embedded combat camera must not mount model viewer controls');return {setStudyDiagnostics:function(){},setOrbit:function(){},setStudyActors:function(value){batches=value;},setStudyEffects:function(){},sync:function(){},render:function(){draws++;}};};
     try{
       var radio=api.mount({clientWidth:210,clientHeight:125}),pose={eye:[50,60,70],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},target={id:'test',index:0,hp:90,pose:pose};
       radio.update(null,'',1,1,new Map(),undefined,pose,0);assert(draws===0);
@@ -1705,6 +1705,8 @@
 
   test('autonomous furball produces shots and casualties without player fire',function(){
     var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18),shots=0;
+    // This fixture measures autonomous wing combat, not an idle player's survivability.
+    t.player.hp=t.player.maxHp=10000;
     for(var i=0;i<14400;i++){ai.step(t,player,1/120,18);if(i%120===0)shots=Math.max(shots,t.enemies.reduce(function(n,e){return n+e.guns.fired;},0));}
     assert(shots>30);assert(t.kills>0);assert(t.enemies.length===16);assert(!t.dead);
   });
@@ -1806,6 +1808,31 @@
     var guns=window.Driftworks.flightGuns.create();assert(ai.allGuns(t,guns).bolts.length===0);
   });
 
+  test('crosshair selects the nearest living hull and lock holds until released or destroyed', function () {
+    var DW=window.Driftworks,ai=DW.training,t=ai.create(),state=DW.arcade.create(0);
+    function craft(id,distance,side){
+      var pose=DW.arcade.create(0);pose.eye=state.eye.map(function(v,i){return v-state.back[i]*distance+state.right[i]*(side||0);});
+      var c=ai.createCraft(id,pose,'enemy');c.collision={kind:'sphere',radiusM:10};return c;
+    }
+    var far=craft('far',100),near=craft('near',50),off=craft('off',50,100);
+    t.enemies=[far,near,off];ai.acquireTarget(t,state);assert(t.targetId==='near');
+    ai.toggleTargetLock(t);near.pose.eye=off.pose.eye.slice();ai.acquireTarget(t,state);
+    assert(t.targetLocked&&t.targetId==='near');
+    ai.toggleTargetLock(t);ai.acquireTarget(t,state);assert(!t.targetLocked&&t.targetId==='far');
+    far.pose.eye=off.pose.eye.slice();ai.acquireTarget(t,state);assert(t.targetId==='far','Empty space retains selection');
+    ai.toggleTargetLock(t);far.hp=0;ai.acquireTarget(t,state);assert(!t.targetLocked&&t.targetId===null);
+    ai.toggleTargetLock(t);assert(!t.targetLocked,'Cannot lock without a target');
+    ai.cycle(t);assert(t.targetId==='near'&&!t.targetLocked);
+  });
+  test('L and standard X/Square toggle lock once per press and ignore paused input', function(){
+    var f=flightControlsFixture();f.key('KeyL');f.key('KeyL','BODY',true);assert(f.counts.lock===1);
+    f.setPaused(true);f.key('KeyL');assert(f.counts.lock===1);f.setPaused(false);
+    var pad={index:0,id:'Lock pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
+    f.setPads([pad]);f.controls.sample();pad.buttons[2]={pressed:true,value:1};
+    f.controls.sample();f.controls.sample();assert(f.counts.lock===2);
+    pad.buttons[2]={pressed:false,value:0};f.controls.sample();pad.buttons[2]={pressed:true,value:1};f.controls.sample();assert(f.counts.lock===3);
+  });
+
   test('controller deadzones rescale travel and reject noisy or missing values', function () {
     var input=window.Driftworks.flightInput;
     assertClose(input.deadzone(.1,.12),0);assertClose(input.deadzone(-.1,.12),0);
@@ -1881,7 +1908,7 @@
       assert(guns.bolts.length===0);
     });
   });
-  test('all retail profiles fire their model-derived primary counts at the same cadence', function () {
+  test('legacy count-only gun calls retain imported counts and cadence', function () {
     var DW=window.Driftworks,gun=DW.flightGuns,weapon=DW.retailWeapons[0],pose=DW.arcade.create(0),U=sim.METERS_PER_UNIT;
     var find=function(name){return DW.arcade.profiles.find(function(p){return p.name===name;});};
     assert(find('GTF Ulysses').gunMounts===4 && find('GTF Hercules').gunMounts===6);
@@ -1918,6 +1945,26 @@
       assert(seen.some(function(call){return call.pose===duel.player&&call.count===4;}));
       assert(seen.some(function(call){return call.pose===duel.enemy.pose&&call.count===5;}));
     }finally{DW.flightGuns.step=original;}
+  });
+  test('visible model muzzles transform with the hull and preserve sustained DPS', function () {
+    var DW=window.Driftworks,gun=DW.flightGuns,U=sim.METERS_PER_UNIT;
+    DW.shipPacks[0].models.forEach(function(model){
+      var anchors=DW.shipPackModels.gunAnchors(model),pose=DW.arcade.create(0);
+      pose.eye=[4,8,12];pose.right=[0,0,1];pose.up=[1,0,0];pose.back=[0,1,0];
+      var guns=gun.create(),weapon=DW.retailWeapons[0],count=6;
+      gun.step(guns,pose,weapon,true,1/120,undefined,undefined,count,anchors);
+      assert(guns.fired===anchors.length);
+      anchors.forEach(function(a,i){
+        a.forEach(function(_,axis){assertClose(guns.bolts[i].position[axis],pose.eye[axis]+(pose.right[axis]*a[0]-pose.back[axis]*a[1]+pose.up[axis]*a[2])/U);});
+      });
+      for(var tick=1;tick<1200;tick++)gun.step(guns,pose,weapon,true,1/120,undefined,undefined,count,anchors);
+      assert(guns.fired===300,'Six retail mounts at five volleys/s retain 30 bolts/s for '+model.name);
+      var combat=DW.training.create('training');DW.training.configureHulls(combat,model.id,model.id);
+      assert(DW.training.gunAnchors(combat.player)===anchors,'Same mesh owns collision and muzzles');
+    });
+    var striker=DW.shipPacks[0].models.find(function(m){return m.name==='Striker';});
+    var pair=DW.shipPackModels.gunAnchors(striker);
+    assert(pair.length===2&&pair[0][1]!==pair[1][1]&&pair[0][2]!==pair[1][2],'Preserve asymmetric source barrels');
   });
   test('twin guns converge on the crosshair at 300 metres in any pose', function () {
     var DW=window.Driftworks,U=sim.METERS_PER_UNIT;
@@ -4427,6 +4474,44 @@
     assert(t.wrecks[0].scorches===e.scorches, 'The wreck retains its hull burns');
   });
 
+  test('visible bolt width registers shield and hull damage at triangle edges', function () {
+    var DW=window.Driftworks,models=DW.shipPackModels,ai=DW.training,U=sim.METERS_PER_UNIT;
+    var model={id:'test-bolt-plate',name:'Bolt test plate',triangles:1,vertices:[-2,-2,0,0,0,1, 2,-2,0,0,0,1, 0,2,0,0,0,1]};
+    var packs=DW.shipPacks;
+    try {
+      DW.shipPacks=packs.concat([{id:'bolt-tests',models:[model]}]);
+      var combat=ai.create('training'),pose=DW.arcade.create(0),target=ai.createCraft('bolt-target',pose,'enemy');
+      pose.eye=[0,0,0];pose.right=[1,0,0];pose.back=[0,-1,0];pose.up=[0,0,1];
+      target.collision={kind:'model',modelId:model.id};target.hp=target.maxHp=100;target.shield=target.maxShield=21;combat.enemies=[target];
+      var weapon=DW.retailWeapons[0],start=[2.5/U,-2/U,2/U],end=[2.5/U,-2/U,-2/U];
+      assert(!models.hullHit(model,pose,start,end,U),'Bolt centre line misses the plate');
+      var contact=models.hullHit(model,pose,start,end,U,weapon.headRadius);
+      assert(contact&&contact.fraction<.5,'The visible head radius reaches the triangle vertex first');
+      assertClose(contact.local[0],2);assertClose(contact.local[1],-2);assertClose(contact.local[2],0);
+      for(var shot=0;shot<3;shot++) {
+        var guns=DW.flightGuns.create();
+        guns.bolts=[{position:start.slice(),direction:[0,0,-1],weapon:weapon,age:0}];
+        DW.flightGuns.step(guns,combat.player.pose,weapon,false,4/weapon.speed,function(a,b,bolt){return ai.trace(combat,a,b,bolt,'player',undefined,combat.player.pose);});
+        assert(guns.hits===1&&guns.bolts.length===0,'A visible edge contact registers one impact and removes its bolt');
+        if(shot===0) { assertClose(target.shield,10.5);assertClose(target.hp,100); }
+        if(shot===1) { assertClose(target.shield,0);assertClose(target.hp,100); }
+      }
+      assertClose(target.hp,86.5);assert(target.hitFlash>0&&target.scorches.length===3);
+      assert(!models.hullHit(model,pose,[3/U,-2/U,2/U],[3/U,-2/U,-2/U],U,weapon.headRadius),'A near miss outside the visible radius stays a miss');
+      var face=models.hullHit(model,pose,[0,0,2/U],[0,0,-2/U],U,weapon.headRadius);
+      assertClose(face.fraction,(2-weapon.headRadius)/4);
+      var edge=models.hullHit(model,pose,[0,-2.5/U,2/U],[0,-2.5/U,-2/U],U,weapon.headRadius);
+      assert(edge&&edge.fraction<.5,'The interior of a triangle edge is swept too');
+      packs[0].models.forEach(function(ship){
+        var vertex=ship.vertices.slice(0,3);
+        for(var i=6;i<ship.vertices.length;i+=6) if(ship.vertices[i]>vertex[0]) vertex=ship.vertices.slice(i,i+3);
+        var a=[(vertex[0]+.45)/U,vertex[1]/U,(vertex[2]+2)/U],b=[a[0],a[1],(vertex[2]-2)/U];
+        assert(!models.hullHit(ship,pose,a,b,U),'Centre line is outside '+ship.name);
+        assert(models.hullHit(ship,pose,a,b,U,weapon.headRadius),'Visible bolt edge contacts actual '+ship.name+' mesh');
+      });
+    } finally { DW.shipPacks=packs; }
+  });
+
   test('Flight traces burn only the first unobstructed hull and preserve lethal impacts', function () {
     var models=window.Driftworks.shipPackModels,ai=window.Driftworks.training,U=sim.METERS_PER_UNIT;
     var t=ai.create(),pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,0,0]},e={id:'target',index:0,hp:10,pose:pose};
@@ -4565,6 +4650,20 @@
       return plume.id === id;
     })[0];
   }
+
+  test('viewer picks nearest rendered triangles with texture stride and model transforms', function () {
+    var picker=window.Driftworks.scene3d.pickStudyBatches;
+    // Local XY triangle, UV-interleaved. Basis swaps Y/Z, scale doubles it,
+    // then a quarter turn around Z and a translation produce a vertical wall.
+    var data=new Float32Array([-1,-1,0,0,0,1,0,0, 1,-1,0,0,0,1,1,0, 0,1,0,0,0,1,.5,1]);
+    var batch={data:data,stride:8,origin:[3,4,5],scale:[2,2,2],rotation:Math.PI/2,basis:new Float32Array([1,0,0,0,0,1,0,-1,0]),spin:0};
+    var hit=picker([10,4,5],[-1,0,0],[batch]);
+    assert(hit,'Transformed textured triangle should be pickable'); assertClose(hit[0],3);assertClose(hit[1],4);assertClose(hit[2],5);
+    var nearer=Object.assign({},batch,{origin:[6,4,5]});hit=picker([10,4,5],[-1,0,0],[batch,nearer]);assertClose(hit[0],6);
+    assert(picker([10,20,5],[-1,0,0],[batch])===null,'Miss must not invent a focus');
+    var spun=Object.assign({},batch,{basis:undefined,rotation:0,spin:Math.PI/2,origin:[0,0,0]});
+    hit=picker([0,10,0],[0,-1,0],[spun]);assert(hit,'Axial rotor spin uses the rendered triangle');assertClose(hit[1],0);
+  });
 
   function run() {
     var summary = document.querySelector('#summary');

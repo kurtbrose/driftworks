@@ -497,7 +497,7 @@ saves. The controller advances cadence, projectiles and short-lived impacts on
 the same substeps as flight; pausing freezes them and reset clears them. Bolts
 retain their weapon reference across bank changes. Collision uses an enclosing
 sphere followed by swept samples at no more than 1 m spacing and bisection
-against `scene3d.rockField`. Impacts do not excavate or damage the asteroid.
+against `scene3d.rockField`. Impacts do not excavate or damage the asteroid. Ship contacts use `shipPackModels.hullHit` with the weapon's head radius in metres: an expanded bounding sphere and triangle bounds reject misses, then a continuous sphere sweep checks faces, edge capsules and vertices. Contact fractions order the nearest impact; decals use the actual hull surface point. Zero-radius ray queries retain exact triangle picking for convergence and inspection. This prevents visible bolt edges overlapping a hull without damage.
 `scene3d.setStudyEffects` accepts up to four position/normal triangle batches
 and colors; only study scenes draw them. Reused dynamic GPU buffers render
 soft additive bolt billboards and flashes through the same camera/depth buffer as terrain.
@@ -1206,7 +1206,7 @@ These paths do not establish a universal 4 m muzzle offset or the point-blank
 retraction rule used here. Projectile billboard visibility is presentation only;
 damage is determined by swept collision segments.
 
-Primary gun counts in the flight lab come from retail POF GPNT bank records, imported offline by `tools/import-retail-flight.cjs` with `tools/retail-gun-mounts.cjs`. Profiles retain the bank counts, their total and model hashes; no retail geometry is shipped. Manual, NPC and duel callers pass the profile count to `flightGuns.step`. Its optional final count defaults to two for legacy fixtures; retail profiles all supply a verified positive count. Each slot emits one bolt at the existing weapon cadence from a temporary six-metre muzzle rack. All slots currently share the selected primary, convergence and trigger; native bank timing, energy and hardpoint placement remain unmodeled. Replay schema 4 rejects earlier two-gun recordings.
+Primary gun counts in the flight lab come from retail POF GPNT bank records, imported offline by `tools/import-retail-flight.cjs` with `tools/retail-gun-mounts.cjs`. Profiles retain bank counts, totals and model hashes; no retail geometry is shipped. Manual, NPC and duel callers pass that count and `training.gunAnchors(craft)` to `flightGuns.step`. The latter resolves the same collision model used for visible artwork. `shipPackModels.gunAnchors` stores reviewed mesh-local muzzle centers (right X, forward Y, up Z), including asymmetric barrels. Because the assets lack named sockets, these attachments are authored from visible geometry. Each muzzle emits one unchanged bolt per volley; the interval is `weapon.fireWait * anchors.length / importedCount`, preserving nominal sustained DPS with smaller, faster volleys. Close-surface retraction and adaptive convergence apply to each muzzle. Legacy calls without anchors retain the old count/rack behavior; blockouts explicitly use two anchors. Energy and retail linked-bank behavior remain unmodeled. Replay schema 5 rejects earlier firing-rule recordings.
 
 ### Tether scale greyboxes
 
@@ -1218,11 +1218,35 @@ Operational spin assumes a symmetric hub at midspan: radius = span / 2, tip spee
 ### Shared model viewer navigation
 
 Load `src/model-viewer.js` before `src/scene3d.js` on inspection pages.
-`scene3d.create(..., {study:true})` mounts the shared navigation toolbar;
-ordinary gameplay retains its tactical controls. `Driftworks.modelViewer.create(host)`
-returns `gesture(event, space)` and `dispose()`. Each viewport owns its drag mode.
-Click the toolbar button to switch between slide and orbit. Right/middle drag or
-Space slides; holding both left and right buttons or Alt orbits, including during
-an active drag. The renderer owns projection, pan distance and zoom; pages own
-models, animation, presets, and optional surface picking/free flight. This keeps
-navigation independent of model geometry and preserves the static script model.
+`scene3d.create(..., {study:true, viewer:true})` opts into the shared toolbar;
+ordinary gameplay retains its tactical controls. Embedded combat views pass
+`{study:true, viewer:false}` so target cameras and flight presentation never mount
+inspection UI or collect picking geometry. `Driftworks.modelViewer.create(host, adapter)`
+returns `gesture(event, space)`, `isFlying()`, `isPicking()`, `reset()` and `dispose()`.
+The optional adapter supplies `pose()`, `fly(pose)`, `orbit(pose, target)`,
+`pick(eye, direction)` and `worldUp`. Camera poses contain eye, right/up/back
+basis vectors, focus distance and perspective focal length, in scene units.
+This also supports Three.js character inspection without a renderer dependency.
+
+Each viewport owns its drag mode and flight state; only the last interacted
+viewport receives flight keys. Click to switch Slide/Orbit; right/middle drag or
+Space slides, both left and right buttons or Alt orbits. Free flight uses WASD,
+Q/E vertical movement, Shift for speed, wheel forward/back, and Escape to return
+to orbit with the same eye position. Flight speed defaults from the current
+framing distance and is editable in scene units per second. Blur, pointer loss
+and hidden tabs clear held inputs. `reset()` releases flight before a model or
+preset change; `dispose()` also removes listeners and cancels its animation frame.
+
+Pick focus followed by a surface click, or a double-click, moves the orbit target
+to the nearest visible mesh hit while preserving the eye. A miss leaves the
+camera unchanged. Scene3d captures lightweight references to the last rendered
+triangle batches (excluding lines and effects); picking applies texture strides,
+scale, basis, axial spin, rotation and translation from the actual draw calls.
+These references are replaced each frame, and triangle conversion happens only
+on an explicit pick. Three.js uses its mesh raycaster, including skinned geometry.
+
+`viewer-interaction` lets pages pause automatic orbit without pausing model
+animation. `viewer-navigation-start` lets optional page cameras (such as surface
+walk) relinquish ownership before focus picking or flight. Pages retain models,
+lighting, animation and presets; shared navigation owns focus/flight controls.
+The archived surface experiment keeps its frozen renderer fixture.

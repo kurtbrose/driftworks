@@ -10,7 +10,7 @@ window.addEventListener('error',event=>{status.textContent='Renderer error: '+ev
 let world=DW.sim.createInitialWorld(), asteroid=world.asteroids[0];
 asteroid.position={x:0,y:0};asteroid.previousPosition={x:0,y:0};asteroid.rotation=0;
 world.asteroids=[asteroid];world.ships=[];world.platforms=[];world.wrecks=[];world.packets=[];world.selectedShipIds=[];world.combat.drones=[];
-const raw=api.create(rawHost,()=>world,value=>{world=value;},{study:true});
+const raw=api.create(rawHost,()=>world,value=>{world=value;},{study:true,viewer:false});
 rawHost.querySelector('.night-sky-background').style.background='none';
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x080d11);
@@ -28,6 +28,8 @@ lamp.shadow.camera.far=30/units;lamp.shadow.bias=-.0001;lamp.shadow.normalBias=.
 lamp.castShadow=true;scene.add(lamp,lamp.target);
 const fixtureGroup=new THREE.Group();scene.add(fixtureGroup);
 let rock=null, craterTexture=null, uniforms=null, meshData=null, fixtureBatches=[];
+let inspectionPose=null,focusHeight=0;
+const navigations=[];
 let mode='orbit', yaw=0,tilt=.9,lightOn=false,shadows=true,dirty=true;
 let walkX=0,walkY=0,lookYaw=0,lookPitch=-.12,frame=null,forward=null,right=null,base=null;
 const keys=new Set();
@@ -100,6 +102,7 @@ function resetWorksiteCamera(){
   walkX=rig?-22:0;walkY=rig?-14:0;lookYaw=rig?.7:0;lookPitch=rig?-.08:-.12;
 }
 function setPose(value){
+  navigations.forEach(n=>n.reset());inspectionPose=null;focusHeight=0;
   if(value==='surface'&&asteroid.excavation.level>0){world=DW.sim.toggleAsteroidExcavation(world,asteroid.id);asteroid=world.asteroids[0];document.getElementById('cut').setAttribute('aria-pressed','false');rebuild();}
   mode=value;resetWorksiteCamera();
   raw.setSurfaceCamera(null);yaw=0;tilt=value==='underside'?Math.PI-.75:.9;
@@ -126,14 +129,24 @@ document.getElementById('light-source').onchange=updateLightSources;
 document.getElementById('specular').onchange=()=>{if(document.getElementById('surface').value!=='clay'){rock.material.dispose();rock.material=makeRockMaterial();}dirty=true;};
 let drag=null;
 for(const host of [rawHost,threeHost]){
-  host.addEventListener('pointerdown',e=>{if(benchmarking)return;drag={x:e.clientX,y:e.clientY,pan:e.shiftKey};host.setPointerCapture(e.pointerId);e.preventDefault();},true);
+  const navigation=DW.modelViewer.create(host,{
+    worldUp:[0,0,1],
+    pose(){camera.updateMatrixWorld();const e=camera.matrixWorld.elements;return {eye:camera.position.toArray(),right:[e[0],e[1],e[2]],up:[e[4],e[5],e[6]],back:[e[8],e[9],e[10]],distance:Math.max(.001,camera.position.distanceTo(new THREE.Vector3(world.camera.x,world.camera.y,focusHeight))),focal:1/Math.tan(camera.fov*Math.PI/360)};},
+    fly(pose){inspectionPose=pose;mode='inspection';dirty=true;},
+    orbit(pose,target){inspectionPose=null;mode='orbit';raw.setSurfaceCamera(null);const back=pose.eye.map((x,i)=>x-target[i]),distance=Math.max(.001,Math.hypot(...back));yaw=Math.atan2(-back[0],back[1]);tilt=Math.acos(Math.max(-1,Math.min(1,back[2]/distance)));focusHeight=target[2];world.camera={x:target[0],y:target[1],zoom:rawHost.clientHeight*pose.focal/(2*distance)};dirty=true;},
+    pick(eye,direction){scene.updateMatrixWorld(true);const ray=new THREE.Raycaster(vec(eye),vec(direction));return ray.intersectObjects([rock,fixtureGroup].filter(Boolean),true)[0]?.point.toArray()||null;}
+  });navigations.push(navigation);
+  host.addEventListener('viewer-interaction',()=>{for(const other of navigations)if(other!==navigation&&other.isFlying())other.reset();});
+
+  host.addEventListener('contextmenu',e=>e.preventDefault());
+  host.addEventListener('pointerdown',e=>{if(benchmarking||e.target.closest('.model-viewer-navigation'))return;drag={x:e.clientX,y:e.clientY,pan:e.shiftKey||navigation.gesture(e,false)==='pan'};host.setPointerCapture(e.pointerId);e.preventDefault();},true);
   host.addEventListener('pointermove',e=>{if(benchmarking||!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;
     if(mode==='surface'){lookYaw-=dx*.005;lookPitch=Math.max(-1.3,Math.min(1.3,lookPitch-dy*.005));}
     else if(drag.pan){world.camera.x-=dx/world.camera.zoom;world.camera.y-=dy/world.camera.zoom;}
     else{yaw-=dx*.005;tilt=Math.max(.06,Math.min(Math.PI-.06,tilt+dy*.005));}dirty=true;
   },true);
   host.addEventListener('pointerup',()=>{drag=null;},true);host.addEventListener('pointercancel',()=>{drag=null;},true);
-  host.addEventListener('wheel',e=>{e.preventDefault();if(benchmarking)return;if(mode==='surface')lookPitch=Math.max(-1.3,Math.min(1.3,lookPitch+e.deltaY*.001));else world.camera.zoom=Math.max(.02,Math.min(512,world.camera.zoom*Math.exp(-e.deltaY*.0015)));dirty=true;},{passive:false,capture:true});
+  host.addEventListener('wheel',e=>{if(e.target.closest('.model-viewer-navigation'))return;e.preventDefault();if(benchmarking)return;if(mode==='surface')lookPitch=Math.max(-1.3,Math.min(1.3,lookPitch+e.deltaY*.001));else world.camera.zoom=Math.max(.02,Math.min(512,world.camera.zoom*Math.exp(-e.deltaY*.0015)));dirty=true;},{passive:false,capture:true});
 }
 window.addEventListener('keydown',e=>{if(benchmarking)return;if(e.target instanceof HTMLInputElement||e.target instanceof HTMLSelectElement)return;keys.add(e.code);if(['KeyW','KeyA','KeyS','KeyD'].includes(e.code))e.preventDefault();});
 window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();drag=null;});
@@ -143,7 +156,9 @@ function draw(only='both',complete=false){
   const pixelRatio=renderer.getPixelRatio();
   renderer.setSize(Math.round(width*pixelRatio)/pixelRatio,Math.round(height*pixelRatio)/pixelRatio,false);
   let eye,basis;
-  if(mode==='surface'){
+  if(mode==='inspection'&&inspectionPose){
+    eye=inspectionPose.eye;basis={...inspectionPose,distance:1};world.camera.zoom=rawHost.clientHeight*basis.focal/2;raw.setSurfaceCamera(inspectionPose);
+  }else if(mode==='surface'){
     const heading=normalize(forward.map((v,i)=>v*Math.cos(lookYaw)+right[i]*Math.sin(lookYaw)));
     const side=normalize(cross(heading,frame.normal));
     const direction=normalize(heading.map((v,i)=>v*Math.cos(lookPitch)+frame.normal[i]*Math.sin(lookPitch)));
@@ -151,8 +166,8 @@ function draw(only='both',complete=false){
     eye=base.map((v,i)=>v+(frame.normal[i]*2+right[i]*walkX+forward[i]*walkY)/units);
     raw.setSurfaceCamera({eye,right:side,up,back});basis={right:side,up,back,distance:1,focal:1/Math.tan(Math.PI/8)};
   }else{
-    raw.setOrbit({yaw,tilt});basis=api.view(world.camera,{width:rawHost.clientWidth,height:rawHost.clientHeight},{yaw,tilt});
-    eye=[world.camera.x+basis.back[0]*basis.distance,world.camera.y+basis.back[1]*basis.distance,basis.back[2]*basis.distance];
+    raw.setOrbit({yaw,tilt,height:focusHeight});basis=api.view(world.camera,{width:rawHost.clientWidth,height:rawHost.clientHeight},{yaw,tilt,height:focusHeight});
+    eye=[world.camera.x+basis.back[0]*basis.distance,world.camera.y+basis.back[1]*basis.distance,focusHeight+basis.back[2]*basis.distance];
   }
   applyCameraFrame(camera,eye,basis,width/height);
   uniforms.uPixelFootprint.value=2/(height*basis.focal*asteroid.radius*renderer.getPixelRatio());
@@ -166,7 +181,7 @@ function draw(only='both',complete=false){
   status.dataset.ready='true';status.dataset.seed=asteroid.id;status.dataset.triangles=String(meshData.length/18);
   // DOM diagnostics let the browser regression inspect camera agreement without private app-state access.
   let projectionError=0;
-  const orbit=mode==='surface'?{height:eye[2]-basis.back[2],surface:basis}:{yaw,tilt};
+  const orbit=mode==='surface'||mode==='inspection'?{height:eye[2]-basis.back[2],surface:basis}:{yaw,tilt,height:focusHeight};
   const probes=mode==='surface'?[base.map((v,i)=>v+forward[i]*10/units),base.map((v,i)=>v+(forward[i]*6+right[i]*2)/units)]:[[0,0,0],[asteroid.radius*.4,0,0],[0,asteroid.radius*.4,0],[0,0,asteroid.radius*.4]];
   for(const point of probes){
     const p=api.project(point,world.camera,{width:rawHost.clientWidth,height:rawHost.clientHeight},orbit);

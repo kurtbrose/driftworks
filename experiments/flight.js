@@ -256,6 +256,12 @@
         }, isDead: function () {
             return view().combat.dead;
         },
+        toggleTargetLock: function () {
+            if (watch) return;
+            var current = view();
+            DW.training.acquireTarget(current.combat, current.state);
+            DW.training.toggleTargetLock(current.combat);
+        },
         nextWeapon: nextWeapon, nextTarget: function () {
             DW.training.cycle(session.snapshot().combat);
         },
@@ -301,6 +307,7 @@
             status.textContent = watch ? (watch.summary().done ? 'Duel complete · Replay duel or choose another pilot' : 'Watching test pilot · Esc pauses') : after.contact ? 'Surface contact · throttle cut' : document.pointerLockElement === host ? 'Mouse captured · Esc pauses & releases' : 'Flight controls active';
         }
         var currentView = view();
+        if (!paused && !watch) DW.training.acquireTarget(currentView.combat, currentView.state);
         if (!paused) {
             if (!watch) currentView.world.elapsedSeconds += elapsed;
             comms.update(elapsed, currentView.combat, currentView.state);

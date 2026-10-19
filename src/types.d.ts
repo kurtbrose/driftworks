@@ -4,6 +4,24 @@ export type Vec2 = { x: number; y: number };
 export type Camera = Vec2 & { zoom: number };
 export type Viewport = { width: number; height: number };
 
+export type ViewerVector = [number, number, number];
+export type ViewerPose = {eye: ViewerVector; right: ViewerVector; up: ViewerVector; back: ViewerVector; distance: number; focal: number};
+export type ViewerPickBatch = {data:Float32Array;stride:number;origin:ViewerVector;scale:ViewerVector;rotation:number;basis?:Float32Array;spin:number};
+export interface ViewerAdapter {
+  pose: () => ViewerPose;
+  fly: (pose: ViewerPose) => void;
+  orbit: (pose: ViewerPose, target: ViewerVector) => void;
+  pick: (eye: ViewerVector, direction: ViewerVector) => ViewerVector | null;
+  worldUp: ViewerVector;
+}
+export interface ModelViewer {
+  gesture: (event: {buttons:number; button:number; altKey:boolean}, space:boolean) => 'orbit' | 'pan';
+  isFlying: () => boolean;
+  isPicking: () => boolean;
+  reset: () => void;
+  dispose: () => void;
+}
+
 export type EntityRef =
   | { kind: 'ship'; id: string }
   | { kind: 'wreck'; id: string }
@@ -294,7 +312,7 @@ export interface DriftworksNamespace {
     craterBytes: (visual: AsteroidVisual) => Uint8Array;
     shaderSource: string;
   };
-  modelViewer?: {create: (host: HTMLElement) => {gesture: (event: {buttons:number; button:number; altKey:boolean}, space:boolean) => 'orbit' | 'pan'; dispose: () => void}};
+  modelViewer?: {create: (host: HTMLElement, adapter?: ViewerAdapter) => ModelViewer};
   scene3d?: {
     rockSurfaceShader: () => string;
     workLightFrame: (asteroid: Asteroid, lamp: {position:number[]; direction:number[]; range:number}, camera: Camera, height:number) => {position:number[]; direction:number[]; right:number[]; up:number[]; focal:number; near:number};
@@ -315,6 +333,7 @@ export interface DriftworksNamespace {
     miningPlatformLegGeometry: (deployment: number) => Record<string, number[]>;
     miningPlatformGeometry: (deployment: number, time: number, working: boolean, panelOpen?: number, interiorCut?: string) => Record<string, number[]>;
     mothershipHardware: (detail?: number) => Record<string, number[]>;
+    pickStudyBatches: (eye:ViewerVector, direction:ViewerVector, batches:ViewerPickBatch[]) => ViewerVector | null;
     pickStudySurface: (eye: [number,number,number], direction: [number,number,number], meshes: ArrayLike<number>[]) => [number,number,number] | null;
     habitatLod: (radiusPixels: number) => number;
     habitatMesh: (segments?: number) => Float32Array;
@@ -329,7 +348,7 @@ export interface DriftworksNamespace {
     pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
     inspectionHeight: (world: World) => number;
-    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean}) => {
+    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; viewer?: boolean}) => {
       setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean}) => void;
       getRenderStats: () => {drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyLightRigs:(rigs:RigLighting[])=>void;

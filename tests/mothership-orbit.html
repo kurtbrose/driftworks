@@ -19,7 +19,7 @@ button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#
 <body>
 <div id="viewer" class="scene" aria-label="Interactive 3D mothership"></div>
 <header><div><h1>Mothership study</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="orbit" aria-pressed="false">Pause orbit</button><button id="animation" aria-pressed="false">Pause machinery</button><button id="reset">Reset view</button><a href="./asteroid-orbit.html">Asteroid study</a><a href="../?renderer=3d">Back to game</a></nav></header>
-<section class="panel" aria-label="Mothership inspection controls"><h2>Camera navigation</h2><div class="views"><button id="orbit-mode" aria-pressed="true">Orbit focus</button><button id="fly-mode" aria-pressed="false">Free flight</button><button id="focus-point" aria-pressed="false">Pick focus</button></div><label for="flight-speed">Flight speed <output id="speed-value">8</output></label><input id="flight-speed" type="range" min="0.25" max="40" step="0.25" value="8"><p id="camera-status" aria-live="polite">Double-click a surface to orbit that part.</p><h2 style="margin-top:16px">Inspect the ship</h2><div class="views"><button data-yaw="0" data-tilt="0.06">Top</button><button data-yaw="0" data-tilt="1.57">Side</button><button data-yaw="1.57" data-tilt="1.57">End</button><button data-yaw="0" data-tilt="3.08">Under</button><button data-yaw="-0.5" data-tilt="0.9">Three-quarter</button><button id="detail">Hull detail</button><button id="hardware-detail">Hardware detail</button></div><label for="time">Animation time <output id="time-value">0.0 s</output></label><input id="time" type="range" min="0" max="120" step="0.1" value="0"><p>1,000 m mothership · rotating habitat, fixed bearings, industrial truss, radiators and docking complex. Zoom in for procedural bolts, welds and surface grain. Scrub time to hold a machinery pose.</p></section>
+<section class="panel" aria-label="Mothership inspection controls"><h2>Inspect the ship</h2><div class="views"><button data-yaw="0" data-tilt="0.06">Top</button><button data-yaw="0" data-tilt="1.57">Side</button><button data-yaw="1.57" data-tilt="1.57">End</button><button data-yaw="0" data-tilt="3.08">Under</button><button data-yaw="-0.5" data-tilt="0.9">Three-quarter</button><button id="detail">Hull detail</button><button id="hardware-detail">Hardware detail</button></div><label for="time">Animation time <output id="time-value">0.0 s</output></label><input id="time" type="range" min="0" max="120" step="0.1" value="0"><p>1,000 m mothership · rotating habitat, fixed bearings, industrial truss, radiators and docking complex. Zoom in for procedural bolts, welds and surface grain. Scrub time to hold a machinery pose.</p></section>
 <footer>Driftworks · production 3D mothership artwork</footer>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
@@ -36,7 +36,7 @@ button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#
     <script src="../src/tactical/camera.js?v=20260920-population1"></script>
     <script src="../src/audio.js?v=20260920-population1"></script>
     <script src="../src/hud.js?v=20260922-cavern1"></script>
-    <script src="../src/mesh-builder.js"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js"></script><script src="../src/scene3d.js?v=20261018-shared-viewer1"></script>
+    <script src="../src/mesh-builder.js"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=20261018-focus-flight3"></script><script src="../src/scene3d.js?v=20261018-focus-flight3"></script>
     <script src="../src/game.js?v=20261007-3d-geology2"></script>
 <script>
 (function(){
@@ -44,83 +44,27 @@ button,a{background:#15232cdc;border:1px solid #40505b;border-radius:6px;color:#
   var ship=world.ships.find(function(s){return s.type==='mothership';});
   ship.position={x:0,y:0};ship.previousPosition={x:0,y:0};ship.rotation=0;
   world.ships=[ship];world.asteroids=[];world.platforms=[];world.wrecks=[];world.packets=[];world.selectedShipIds=[];world.combat.drones=[];
-  var flying=false,flyEye=[0,0,0],flyAngles={yaw:0,tilt:1},keys={},lookDrag=null,picking=false,focusMeshes=null;
+
   var scene,rotating=!matchMedia('(prefers-reduced-motion: reduce)').matches,animating=rotating,previous=0;
   var orbitButton=document.getElementById('orbit'),animationButton=document.getElementById('animation'),time=document.getElementById('time');
   function labels(){orbitButton.textContent=rotating?'Pause orbit':'Resume orbit';orbitButton.setAttribute('aria-pressed',String(!rotating));animationButton.textContent=animating?'Pause machinery':'Resume machinery';animationButton.setAttribute('aria-pressed',String(!animating));}
-  function resetCamera(){leaveFlight(false);picking=false;document.getElementById('focus-point').setAttribute('aria-pressed','false');if(status)status.textContent='Double-click a surface to orbit that part.';world.camera={x:0,y:0,zoom:Math.min(host.clientWidth,host.clientHeight)*.006};if(scene)scene.setOrbit({yaw:-.5,tilt:.9,height:15});}
+  function resetCamera(){world.camera={x:0,y:0,zoom:Math.min(host.clientWidth,host.clientHeight)*.006};if(scene)scene.setOrbit({yaw:-.5,tilt:.9,height:15});}
   resetCamera();
-  scene=Driftworks.scene3d.create(host,function(){return world;},function(value){world=value;},{study:true});
+  scene=Driftworks.scene3d.create(host,function(){return world;},function(value){world=value;},{study:true,viewer:true});
   host.querySelector('.night-sky-background').style.backgroundImage='url("../assets/backgrounds/coalsack-wide-field.jpg")';
   host.querySelector('.night-sky-background').style.filter='brightness(.28)';
   resetCamera();labels();
-  orbitButton.onclick=function(){if(flying)return;rotating=!rotating;labels();};
+  orbitButton.onclick=function(){rotating=!rotating;labels();};
   animationButton.onclick=function(){animating=!animating;labels();};
   function manual(){rotating=false;labels();}
-  host.addEventListener('pointerdown',manual);host.addEventListener('wheel',manual,{passive:true});
+  host.addEventListener('viewer-interaction',manual);host.addEventListener('pointerdown',manual);host.addEventListener('wheel',manual,{passive:true});
   document.querySelectorAll('[data-yaw]').forEach(function(button){button.onclick=function(){manual();resetCamera();scene.setOrbit({yaw:Number(button.dataset.yaw),tilt:Number(button.dataset.tilt),height:15});};});
-  document.getElementById('detail').onclick=function(){leaveFlight(false);manual();world.camera={x:2,y:0,zoom:96};scene.setOrbit({yaw:0,tilt:.12,height:16});};
-  document.getElementById('hardware-detail').onclick=function(){leaveFlight(false);manual();world.camera={x:53,y:10,zoom:34};scene.setOrbit({yaw:0,tilt:.4,height:0});};
+  document.getElementById('detail').onclick=function(){manual();world.camera={x:2,y:0,zoom:96};scene.setOrbit({yaw:0,tilt:.12,height:16});};
+  document.getElementById('hardware-detail').onclick=function(){manual();world.camera={x:53,y:10,zoom:34};scene.setOrbit({yaw:0,tilt:.4,height:0});};
   time.oninput=function(){animating=false;world.elapsedSeconds=Number(time.value);labels();};
   document.getElementById('reset').onclick=resetCamera;
-  var help=document.getElementById('viewer-help'),status=document.getElementById('camera-status'),speed=document.getElementById('flight-speed');
-  speed.oninput=function(){document.getElementById('speed-value').textContent=Number(speed.value).toFixed(2);};
-  function basis(){return Driftworks.scene3d.view(world.camera,{width:host.clientWidth,height:host.clientHeight},flyAngles);}
-  function currentPose(){
-    var orbit=scene.getOrbit(),view=Driftworks.scene3d.view(world.camera,{width:host.clientWidth,height:host.clientHeight},orbit);
-    return {eye:flying?flyEye.slice():[world.camera.x+view.back[0]*view.distance,world.camera.y+view.back[1]*view.distance,(orbit.height||0)+view.back[2]*view.distance],view:flying?basis():view};
-  }
-  function cameraLabels(){
-    document.getElementById('orbit-mode').setAttribute('aria-pressed',String(!flying));document.getElementById('fly-mode').setAttribute('aria-pressed',String(flying));
-    orbitButton.disabled=flying;
-    if(status)status.textContent=flying?'Free flight. Esc returns to orbit from this viewpoint.':'Double-click a surface to orbit that part.';
-    if(help)help.innerHTML=flying?'Drag to aim · WASD to fly · Q/E down/up<br>Shift: faster · Wheel: move forward/back<br>Middle or Space + drag: slide · Esc: orbit':'Drag to orbit focus · Wheel to zoom<br>Middle or Space + drag to pan<br>Double-click a surface to set orbit focus';
-  }
-  function applyFlight(){var v=basis();world.camera.zoom=host.clientHeight*v.focal/2;scene.setSurfaceCamera({eye:flyEye,right:v.right,up:v.up,back:v.back});}
-  function leaveFlight(preserve){
-    if(!flying)return;
-    var pose=currentPose();flying=false;keys={};lookDrag=null;scene.setSurfaceCamera(null);
-    if(preserve){var distance=Math.max(3,Number(speed?speed.value:8)*2),v=pose.view;world.camera={x:pose.eye[0]-v.back[0]*distance,y:pose.eye[1]-v.back[1]*distance,zoom:host.clientHeight*v.focal/(2*distance)};scene.setOrbit({yaw:flyAngles.yaw,tilt:flyAngles.tilt,height:pose.eye[2]-v.back[2]*distance});}
-    cameraLabels();
-  }
-  document.getElementById('fly-mode').onclick=function(){if(flying)return;manual();var pose=currentPose(),orbit=scene.getOrbit();flyEye=pose.eye;flyAngles={yaw:orbit.yaw,tilt:orbit.tilt};flying=true;keys={};applyFlight();cameraLabels();status.textContent='Free flight. Esc returns to orbit from this viewpoint.';};
-  document.getElementById('orbit-mode').onclick=function(){leaveFlight(true);cameraLabels();status.textContent='Orbiting a point ahead of the camera. Double-click a surface to refocus.';};
-  function advanceFlight(dt){
-    var v=basis(),forward=(keys.KeyW?1:0)-(keys.KeyS?1:0),side=(keys.KeyD?1:0)-(keys.KeyA?1:0),vertical=(keys.KeyE?1:0)-(keys.KeyQ?1:0);
-    var length=Math.max(1,Math.hypot(forward,side,vertical)),step=Number(speed.value)*dt*(keys.ShiftLeft||keys.ShiftRight?4:1)/length;
-    flyEye=flyEye.map(function(p,i){return p+step*(-v.back[i]*forward+v.right[i]*side+(i===2?vertical:0));});applyFlight();
-  }
-  function chooseFocus(event){
-    manual();var pose=currentPose(),rect=host.getBoundingClientRect(),v=pose.view;
-    var sx=(event.clientX-rect.left-rect.width/2)*2/(rect.height*v.focal),sy=-(event.clientY-rect.top-rect.height/2)*2/(rect.height*v.focal);
-    var ray=v.back.map(function(b,i){return -b+v.right[i]*sx+v.up[i]*sy;}),length=Math.hypot.apply(null,ray);ray=ray.map(function(x){return x/length;});
-    if(!focusMeshes){var hardware=Driftworks.scene3d.mothershipHardware();focusMeshes=[Driftworks.scene3d.habitatMesh(192)].concat(Object.keys(hardware).filter(function(key){return key!=='rotor';}).map(function(key){return hardware[key];}));}
-    var scale=1,hit=Driftworks.scene3d.pickStudySurface(pose.eye.map(function(x){return x/scale;}),ray,focusMeshes);
-    picking=false;document.getElementById('focus-point').setAttribute('aria-pressed','false');
-    if(!hit){status.textContent='No ship surface there. Choose a visible part of the ship.';return;}
-    hit=hit.map(function(x){return x*scale;});var back=pose.eye.map(function(x,i){return x-hit[i];}),distance=Math.hypot.apply(null,back);back=back.map(function(x){return x/distance;});
-    leaveFlight(false);world.camera={x:hit[0],y:hit[1],zoom:host.clientHeight*v.focal/(2*distance)};scene.setOrbit({yaw:Math.atan2(-back[0],back[1]),tilt:Math.acos(Math.max(-1,Math.min(1,back[2]))),height:hit[2]});cameraLabels();status.textContent='Orbit focus set on the ship. Drag to inspect this part.';
-  }
-  document.getElementById('focus-point').onclick=function(){picking=!picking;this.setAttribute('aria-pressed',String(picking));status.textContent=picking?'Click a ship surface to orbit it.':'Double-click a surface to orbit that part.';};
-  host.addEventListener('dblclick',chooseFocus);
-  host.addEventListener('pointerdown',function(event){
-    if(event.target.closest('.model-viewer-navigation'))return;
-    if(picking){event.preventDefault();event.stopImmediatePropagation();chooseFocus(event);return;}
-    if(!flying)return;event.preventDefault();event.stopImmediatePropagation();lookDrag={x:event.clientX,y:event.clientY,slide:event.button===1||keys.Space};host.setPointerCapture(event.pointerId);
-  },true);
-  host.addEventListener('pointermove',function(event){if(!flying||!lookDrag)return;var dx=event.clientX-lookDrag.x,dy=event.clientY-lookDrag.y;
-    if(lookDrag.slide){var v=basis(),amount=Number(speed.value)*.012;flyEye=flyEye.map(function(x,i){return x+amount*(-v.right[i]*dx+v.up[i]*dy);});}
-    else{flyAngles.yaw+=dx*.005;flyAngles.tilt=Math.max(.06,Math.min(Math.PI-.06,flyAngles.tilt-dy*.005));}
-    lookDrag.x=event.clientX;lookDrag.y=event.clientY;applyFlight();
-  });
-  function releaseLook(){lookDrag=null;}host.addEventListener('pointerup',releaseLook);host.addEventListener('pointercancel',releaseLook);
-  host.addEventListener('wheel',function(event){if(!flying)return;event.preventDefault();event.stopImmediatePropagation();var v=basis(),amount=Math.max(-300,Math.min(300,event.deltaY))*Number(speed.value)*.002;flyEye=flyEye.map(function(x,i){return x+v.back[i]*amount;});applyFlight();},{capture:true,passive:false});
-  window.addEventListener('keydown',function(event){if(/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;if(event.code==='Escape'){leaveFlight(true);picking=false;document.getElementById('focus-point').setAttribute('aria-pressed','false');return;}if(!flying)return;if(/^(Key[WASDQE]|Space|ShiftLeft|ShiftRight)$/.test(event.code)){keys[event.code]=true;event.preventDefault();}},true);
-  window.addEventListener('keyup',function(event){delete keys[event.code];});window.addEventListener('blur',function(){keys={};lookDrag=null;});
-  cameraLabels();
   function frame(now){var dt=previous?Math.min(.05,(now-previous)/1000):0;previous=now;
     if(rotating){var orbit=scene.getOrbit();scene.setOrbit({yaw:orbit.yaw+dt*.18,tilt:orbit.tilt,height:orbit.height});}
-    if(flying)advanceFlight(dt);
     if(animating)world.elapsedSeconds=(world.elapsedSeconds+dt)%120;
     time.value=world.elapsedSeconds;document.getElementById('time-value').textContent=world.elapsedSeconds.toFixed(1)+' s';
     scene.sync(world);scene.render(world,1,0,dt);requestAnimationFrame(frame);

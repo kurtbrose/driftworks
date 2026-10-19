@@ -51,7 +51,7 @@
         options.enemyHull = enemy.collision.modelId || 'blockout';
         var tick=0, remainder=0, done=false, lastMode=enemy.mode, longestDry=0, dry=0;
         var metrics={playerOpportunities:0,opponentOpportunities:0,playerDamageSteps:0,opponentDamageSteps:0,modeChanges:0,minRange:Infinity,maxRange:0,rangeIntegral:0,attackSeconds:0,extendSeconds:0,rearThreatSeconds:0,separations:0,progressEscapes:0};
-        var replay=/** @type {Replay} */ ({version:4,policy:pilot.version,observation:pilot.observation,cadence:DT,options:Object.assign({},options),inputs:[]});
+        var replay=/** @type {Replay} */ ({version:5,policy:pilot.version,observation:pilot.observation,cadence:DT,options:Object.assign({},options),inputs:[]});
         /** @param {number} elapsed @param {import('./types').PilotInput[]} [inputStream] */
         function advance(elapsed, inputStream) {
             if(!Number.isFinite(elapsed)||elapsed<0) throw new Error('Invalid elapsed time');
@@ -67,7 +67,7 @@
                 DW.training.step(combat,player,DT,0);
                 if(combat.hull<hullBefore || combat.shield<shieldBefore) metrics.opponentDamageSteps++;
                 var hpBefore=enemy.hp, enemyShieldBefore=enemy.shield;
-                DW.flightGuns.step(guns,player,weapon,!combat.dead && input.fire,DT,function(a,b,bolt){return DW.training.trace(combat,a,b,bolt,'player',undefined,player);},function(){return DW.training.convergencePoint(combat,combat.player,weapon);},profile.gunMounts);
+                DW.flightGuns.step(guns,player,weapon,!combat.dead && input.fire,DT,function(a,b,bolt){return DW.training.trace(combat,a,b,bolt,'player',undefined,player);},function(){return DW.training.convergencePoint(combat,combat.player,weapon);},profile.gunMounts,DW.training.gunAnchors(combat.player));
                 if(enemy.hp<hpBefore || (enemy.shield || 0)<(enemyShieldBefore || 0)) metrics.playerDamageSteps++;
                 var own=DW.flightAI.solution(player,enemy.pose.eye,enemy.pose.velocity,weapon), other=DW.flightAI.solution(enemy.pose,player.eye,player.velocity,DW.retailWeapons[enemyWeaponIndex]);
                 var a=own.valid&&own.dot>.996, b=other.valid&&other.dot>.996;
@@ -101,7 +101,7 @@
     function run(options) { var duel=create(options);duel.advance(duel.replay.options.duration);return duel; }
     /** @param {Replay} record */
     function replay(record) {
-        if(record.version!==4 || record.cadence!==DT || !Array.isArray(record.inputs)) throw new Error('Unsupported duel replay; versions 1–3 predate profile gun counts');
+        if(record.version!==5 || record.cadence!==DT || !Array.isArray(record.inputs)) throw new Error('Unsupported duel replay; versions 1-4 predate visible-model muzzle cadence');
         record.inputs.forEach(DW.flightAI.validate);
         var duel=create(record.options);
         if(record.inputs.length>Math.ceil(record.options.duration/DT)) throw new Error('Replay exceeds duration');

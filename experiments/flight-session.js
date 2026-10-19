@@ -115,7 +115,7 @@
                 var firedBefore = guns.fired, hitsBefore = guns.hits;
                 DW.flightGuns.step(guns, state, config.weapon, !combat.dead && controls.fire, dt, function (start, end, bolt) {
                     return DW.training.trace(combat, start, end, bolt, 'player', environment.terrainHit, state);
-                }, function () { return DW.training.convergencePoint(combat, combat.player, config.weapon, environment.terrainHit); }, config.profile.gunMounts);
+                }, function () { return DW.training.convergencePoint(combat, combat.player, config.weapon, environment.terrainHit); }, config.profile.gunMounts, DW.training.gunAnchors(combat.player));
                 if (guns.fired > firedBefore)
                     environment.onGunshot();
                 if (guns.hits > hitsBefore || combat.lastHit > playerHitBefore)

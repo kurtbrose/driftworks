@@ -242,6 +242,7 @@ export type Combat = {
     hitFlash: number;
     dead: boolean;
     targetId: string | null;
+    targetLocked?: boolean;
     slots: string[];
     slotTimer: number;
     flashes: Impact[];
@@ -349,7 +350,7 @@ export type Measurements = {
 export type Pacer = {
     next: number | null;
 };
-export type Mapping = Record<'pitch' | 'yaw' | 'roll' | 'throttle' | 'fire' | 'boost' | 'bank' | 'pause' | 'up' | 'down' | 'deadzone', number> & Record<'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert', boolean>;
+export type Mapping = Record<'pitch' | 'yaw' | 'roll' | 'throttle' | 'fire' | 'boost' | 'bank' | 'lock' | 'pause' | 'up' | 'down' | 'deadzone', number> & Record<'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert', boolean>;
 export type PadDemand = {
     pitch: number;
     yaw: number;
@@ -359,6 +360,7 @@ export type PadDemand = {
     fire: boolean;
     boost: boolean;
     bank: boolean;
+    lock: boolean;
     pause: boolean;
 };
 export type ControlActions = {
@@ -369,6 +371,7 @@ export type ControlActions = {
     isDead: () => boolean;
     nextWeapon: () => void;
     nextTarget: () => void;
+    toggleTargetLock: () => void;
     nextRadarRange: () => void;
     selectProfile: (index: number) => void;
     toggleDiagnostics: () => void;
@@ -606,7 +609,7 @@ export type ExperimentModules = {
     };
     flightGuns: {
         create: () => Guns;
-        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number) => void;
+        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[]) => void;
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
     };
@@ -615,9 +618,10 @@ export type ExperimentModules = {
         damageCraft: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
         createCraft: (id: string, pose: FlightState, team: string) => Craft;
         participants: (combat: Combat) => Craft[];
+        gunAnchors: (craft: Craft) => Vector[] | undefined;
         configureHulls: (combat: Combat, ally: string, enemy: string) => void;
         bindPlayer: (combat: Combat, pose: FlightState) => Craft;
-        hullHit: (craft: Craft, start: Vector, end: Vector) => Hit | null;
+        hullHit: (craft: Craft, start: Vector, end: Vector, boltRadius?: number) => Hit | null;
         convergencePoint: (combat: Combat, shooter: Craft, weapon: Weapon, terrainHit?: TerrainHit) => Vector | null;
         defaultWeapon:(profile:Profile)=>number;
         configure:(combat:Combat,profile:Profile,unshielded?:boolean)=>void;
@@ -638,6 +642,8 @@ export type ExperimentModules = {
         trace: (combat: Combat, start: Vector, end: Vector, bolt: Bolt, team: Craft | string, terrainHit: TerrainHit | undefined, player: FlightState) => Vector | null;
         step: (combat: Combat, player: FlightState, dt: number, radius: number, terrainHit?: TerrainHit) => void;
         cycle: (combat: Combat) => void;
+        acquireTarget: (combat: Combat, state: FlightState) => void;
+        toggleTargetLock: (combat: Combat) => void;
         geometry: (combat: {
             enemies: (ArtCraft & {
                 hp: number;
@@ -658,10 +664,11 @@ export type ExperimentModules = {
         sourceGeometry: (model: Model, poses: Pose[], units: number, texture?: HTMLImageElement, paint?: Vector) => Batch;
         sourceFleetGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, images: Images, paint?: Vector, transforms?: boolean) => Batch[];
         loadTextures: () => Promise<Images>;
+        gunAnchors: (model: Model) => Vector[];
         engineAnchors: (model: Model) => number[][];
         engineGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, view: Pose, time: number) => Batch;
         craftModel: (craft: ArtCraft, selection: string, wave: number) => Model;
-        hullHit: (model: Model, pose: Pose, start: Vector, end: Vector, units: number) => HullHit | null;
+        hullHit: (model: Model, pose: Pose, start: Vector, end: Vector, units: number, boltRadius?: number) => HullHit | null;
         addScorch: (craft: ArtCraft, hit: HullHit) => void;
         scorchGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number) => Batch[];
         populate: (select: HTMLSelectElement, blockout?: boolean) => void;

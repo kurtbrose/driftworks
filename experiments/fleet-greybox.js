@@ -6,7 +6,7 @@
     var host = get('viewer'), units = DW.sim.METERS_PER_UNIT;
     var world = DW.sim.createInitialWorld();
     world.asteroids = []; world.ships = []; world.platforms = []; world.wrecks = []; world.packets = []; world.combat.drones = []; world.selectedShipIds = [];
-    var scene = DW.scene3d.create(host, function () { return world; }, function (value) { world = value; }, {study:true});
+    var scene = DW.scene3d.create(host, function () { return world; }, function (value) { world = value; }, {study:true,viewer:true});
     /** @param {string} id */
     function number(id) { return Number(get(id).value); }
     /** @param {string} kind @param {number} x @param {number} y @param {number} scale */

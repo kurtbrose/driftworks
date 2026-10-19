@@ -42,7 +42,7 @@
                         return world;
                     }, function (w) {
                         world = w;
-                    }, { study: true });
+                    }, { study: true, viewer: false });
                     scene.setStudyDiagnostics({ mode: 'normal', scale: 1, flat: false, mothership: false, actors: true });
                 }
                 var model = DW.shipPackModels.craftModel(target, selection, wave), pose = Object.assign({}, target.pose, { eye: [0, 0, 0] });
