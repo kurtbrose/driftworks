@@ -100,7 +100,7 @@ function fittedHull(subject){
  const extent=Math.max(...hi.map((v,k)=>v-lo[k]));
  const normalized=batches.map(b=>{const vertices=new Float32Array(b.vertices),stride=b.stride||6;for(let i=0;i<vertices.length;i+=stride)for(let k=0;k<3;k++)vertices[i+k]=(vertices[i+k]-(lo[k]+hi[k])/2)*2/extent;return {...b,vertices,eligible:control('masks').checked&&b.texture?eligibility(b.texture):undefined};});
  const inference=control('masks').checked?normalized:[{vertices:new Float32Array(normalized.flatMap(b=>{const data=/** @type {number[]} */([]);for(let i=0;i<b.vertices.length;i+=(b.stride||6))data.push(...b.vertices.slice(i,i+6),b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);return data;})),stride:8}];
- const result={batches:normalized,extent,regions:analyzeHull(inference)};hullCache.set(cacheKey,result);return result;
+ const result={batches:normalized,extent,regions:analyzeHull(inference,control('masks').checked)};hullCache.set(cacheKey,result);return result;
 }
 /** @type {Map<string,{signature:string,result:ReturnType<typeof buildHullPanels>}>} */const panelCache=new Map();
 function rebuild(){

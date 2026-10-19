@@ -23,11 +23,11 @@ function protectedBatch(batch){return batch.role==='cockpit'||batch.role==='mech
 
 /** Split at actual mesh discontinuities. Smoothing normals are not adjacency.
  * Smooth curved components are cut by a shared normal-space atlas; no shape IDs.
- * @param {HullBatch[]} batches @returns {Region[]} */
-export function analyzeHull(batches){
+ * @param {HullBatch[]} batches @param {boolean} [assisted] @returns {Region[]} */
+export function analyzeHull(batches,assisted=false){
  /** @type {Region[]} */const regions=[];
  batches.forEach(batch=>{
-  if(protectedBatch(batch))return;
+  if(assisted&&protectedBatch(batch))return;
   /** @type {Face[]} */const faces=[];
   /** @type {Map<string,number[]>} */const edges=new Map();
   const stride=batch.stride||6;
@@ -35,7 +35,7 @@ export function analyzeHull(batches){
    const vertices=[0,1,2].map(j=>{const v=Array.from(batch.vertices.slice(i+j*stride,i+j*stride+stride));if(stride===6)v.push(0,0);return v;});
    const raw=cross(sub(vertices[1],vertices[0]),sub(vertices[2],vertices[0])),area=Math.hypot(...raw)*.5;
    if(area<1e-10)continue;
-   if(batch.eligible&&!batch.eligible([0,1].map(k=>vertices.reduce((sum,v)=>sum+v[6+k],0)/3)))continue;
+   if(assisted&&batch.eligible&&!batch.eligible([0,1].map(k=>vertices.reduce((sum,v)=>sum+v[6+k],0)/3)))continue;
    let normal=unit(raw);if(dot(normal,vertices[0].slice(3,6))<0){vertices.reverse();normal=normal.map(x=>-x);}
    const index=faces.length;faces.push({v:vertices,normal,area,neighbors:[]});
    for(let e=0;e<3;e++){const k=edgeKey(vertices[e],vertices[(e+1)%3]),list=edges.get(k)||[];list.push(index);edges.set(k,list);}
@@ -173,9 +173,9 @@ function detail(polygons,region,boundary,height,style,seed){
  return out;
 }
 
-/** @param {HullBatch[]} batches @param {{style:number,divisions:number,relief:number,seed:number,regions?:Region[]}} settings */
+/** @param {HullBatch[]} batches @param {{style:number,divisions:number,relief:number,seed:number,assisted?:boolean,regions?:Region[]}} settings */
 export function buildHullPanels(batches,settings){
- const regions=settings.regions||analyzeHull(batches),style=settings.style||1;
+ const regions=settings.regions||analyzeHull(batches,!!settings.assisted),style=settings.style||1;
  /** @type {PanelBatch[]} */const panels=[];
  /** @type {PanelBatch[]} */const diagnostics=[];
  let plateCount=0,detailCount=0;
