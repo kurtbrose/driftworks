@@ -6,7 +6,7 @@ const path=require('node:path');
 const read=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const DW={};
 const controls=new Map();
-const defaults={layout:'solo',subject:'A',grammar:'1',scale:'2',relief:'55',wear:'20',seed:'17',primary:'#c5cec9',secondary:'#38474d',accent:'#ee912e'};
+const defaults={layout:'solo',subject:'A',grammar:'1',scale:'2',relief:'55',wear:'20',seed:'17',primary:'#c5cec9',secondary:'#38474d',accent:'#ee912e',detail:'#12191d'};
 let uploaded=new Float32Array(),uploads=0;const depthBiases=[],depthCoefficients=[],frontFaces=[];
 const gl=new Proxy({
  createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:()=>({}),getExtension:()=>({}),
@@ -15,9 +15,9 @@ const gl=new Proxy({
  bufferData:(target,data)=>{uploaded=data;uploads++;}
 },{get:(target,key)=>key in target?target[key]:()=>{}});
 const canvas={getContext:()=>gl,addEventListener:()=>{},clientWidth:900,clientHeight:700};
-for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome','directions','art-style','palette-mode','fields','zones','finish','graphics'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
+for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','detail','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome','directions','art-style','palette-mode','fields','zones','finish','graphics'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
 DW.flightSkybox={create:()=>({render:()=>{}})};
-const sandbox={devicePixelRatio:1,window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
+const sandbox={setTimeout:callback=>callback(),devicePixelRatio:1,window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
 vm.createContext(sandbox);
 vm.runInContext(read('src/mesh-builder.js'),sandbox);
 vm.runInContext(read('assets/ships/quaternius-ultimate-spaceships/meshes.js'),sandbox);
@@ -66,7 +66,9 @@ assert.equal(depthCoefficients.length,1,'Camera depth range initialized explicit
 controls.get('subject').value='cube';controls.get('subject').onchange();controls.get('directions').value='art';controls.get('directions').oninput();controls.get('layout').value='matrix';controls.get('layout').onchange();
 assert.equal(vm.runInContext('actors.length',sandbox),7,'Four art recipes plus original, region preview and deck');
 assert.deepEqual(Array.from(vm.runInContext('actors.slice(0,6).map(a=>a.recipe?.id||0)',sandbox)),[0,1,2,3,4,0],'Each art copy owns a distinct recipe');
-assert.equal(controls.get('primary').disabled,true,'Recipe palettes are explicit');controls.get('palette-mode').value='shared';controls.get('palette-mode').oninput();assert.equal(controls.get('primary').disabled,false,'Shared custom colors remain editable');
-const unmarked=uploaded.length;controls.get('graphics').checked=true;controls.get('graphics').oninput();assert(uploaded.length>unmarked,'Sparse graphics can be enabled independently');assert(vm.runInContext('actors.some(a=>a.recipe?.id===4&&a.passes.some(p=>p.bias===3))',sandbox),'Retro stencil uses its own ordered decal pass');
+assert.equal(controls.get('primary').disabled,false,'Four-color palette is freely editable');controls.get('palette-mode').value='shared';controls.get('palette-mode').oninput();assert.equal(controls.get('primary').disabled,false,'Shared custom colors remain editable');
+assert.equal(controls.get('grammar').disabled,false,'Geometry remains independent in coloration comparison');
+controls.get('grammar').value='2';controls.get('grammar').oninput();
+assert.deepEqual(Array.from(vm.runInContext('actors.slice(1,5).map(a=>a.style)',sandbox)),[2,2,2,2],'All coloration algorithms use selected geometry');
 const beforeFields=uploads;controls.get('fields').oninput();controls.get('zones').oninput();controls.get('finish').oninput();assert.equal(uploads,beforeFields,'Material layers do not rebuild hull geometry');
 console.log('PASS livery lab: all subjects, finite fitted geometry, independent treatments and deterministic assemblies');

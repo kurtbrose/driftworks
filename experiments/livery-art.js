@@ -1,12 +1,11 @@
-/** Art recipes combine independent color-field, surface-finish and marking layers.
- * Geometry references existing construction grammars; no hull-specific settings.
- * @typedef {{id:number,name:string,geometry:number,palette:number[][],roughness:number,metalness:number,markings:number}} ArtRecipe */
+/** Chunk coloration operations; geometry and palette are selected independently.
+ * @typedef {{id:number,name:string,roughness:number,metalness:number}} ArtRecipe */
 /** @type {ArtRecipe[]} */
 export const ART_DIRECTIONS=[
- {id:1,name:'Clean aerospace',geometry:1,palette:[[.88,.86,.78],[.12,.19,.23],[.23,.57,.65]],roughness:.42,metalness:.12,markings:1},
- {id:2,name:'Industrial workhorse',geometry:5,palette:[[.83,.40,.08],[.08,.12,.13],[.98,.77,.25]],roughness:.83,metalness:.22,markings:2},
- {id:3,name:'Armored military',geometry:6,palette:[[.27,.34,.27],[.045,.065,.075],[.78,.29,.12]],roughness:.65,metalness:.34,markings:0},
- {id:4,name:'Retro alloy',geometry:0,palette:[[.69,.74,.77],[.18,.23,.28],[.79,.12,.08]],roughness:.19,metalness:.92,markings:3}
+ {id:1,name:'Connected region materials',roughness:.7,metalness:.12},
+ {id:2,name:'Boundary-distance enamel',roughness:.65,metalness:.18},
+ {id:3,name:'Irregular material islands',roughness:.8,metalness:.08},
+ {id:4,name:'Layer edges / dark boundaries',roughness:.6,metalness:.3}
 ];
 /** @param {ArrayLike<number>} p @param {number} [offset] */
 export function artVertexKey(p,offset=0){return [0,1,2].map(k=>Math.round(p[offset+k]*100000)).join(',');}
@@ -22,39 +21,76 @@ export function curvatureField(batches){
  /** @type {Map<string,number>} */const field=new Map();accum.forEach((entry,key)=>field.set(key,Math.min(1,Math.max(0,(1-Math.hypot(...entry.sum)/entry.weight)*8))));return field;
 }
 
-// Continuous hull-space fields, never a repeating panel grid. The material model
-// is a lightweight preview response rather than a full PBR/environment renderer.
+/** Add sampling vertices without moving the surface or altering source buffers.
+ * @param {Float32Array} vertices @param {number} stride */
+export function treatmentSamples(vertices,stride){
+ const out=/** @type {number[]} */([]);
+ /** @param {number[][]} tri @param {number} depth */
+ function split(tri,depth){
+  const span=Math.max(...tri.map((a,i)=>Math.hypot(...a.slice(0,3).map((x,k)=>x-tri[(i+1)%3][k]))));
+  if(depth===0||span<.055){tri.forEach(p=>out.push(...p));return;}
+  const mids=tri.map((a,i)=>a.map((x,k)=>(x+tri[(i+1)%3][k])/2));
+  for(const p of mids){const l=Math.hypot(...p.slice(3,6))||1;for(let k=3;k<6;k++)p[k]/=l;}
+  split([tri[0],mids[0],mids[2]],depth-1);split([mids[0],tri[1],mids[1]],depth-1);split([mids[2],mids[1],tri[2]],depth-1);split(mids,depth-1);
+ }
+ for(let i=0;i<vertices.length;i+=stride*3)split([0,1,2].map(j=>Array.from(vertices.slice(i+j*stride,i+(j+1)*stride))),2);
+ return new Float32Array(out);
+}
+
+/** Region-local treatment analysis. No equipment semantics or source paint.
+ * @param {import('./hull-panels').Region[]} regions @param {number} seed */
+export function chunkTreatment(regions,seed){
+ const hash=/** @param {number} n */n=>{const x=Math.sin(n*127.1+seed*31.7)*43758.5453;return x-Math.floor(x);};
+ const dot=/** @param {number[]} a @param {number[]} b */(a,b)=>a.slice(0,3).reduce((sum,x,k)=>sum+x*b[k],0);
+ const charts=regions.map(r=>{
+  const points=r.faces.flatMap(f=>f.v),center=[0,1,2].map(k=>points.reduce((sum,p)=>sum+p[k],0)/points.length);
+  const edges=new Map(/** @type {[string,{a:number[],b:number[],count:number}][]} */([]));
+  r.faces.forEach(f=>f.v.forEach((a,i)=>{const b=f.v[(i+1)%3],ka=artVertexKey(a),kb=artVertexKey(b),key=ka<kb?ka+'|'+kb:kb+'|'+ka;const e=edges.get(key);if(e)e.count++;else edges.set(key,{a,b,count:1});}));
+  const bounds=edges.size?Array.from(edges.values()).filter(e=>e.count===1):[];
+  const uv=points.map(p=>[dot(p,r.u),dot(p,r.v)]),lo=[0,1].map(k=>Math.min(...uv.map(p=>p[k]))),hi=[0,1].map(k=>Math.max(...uv.map(p=>p[k])));
+  return {r,center,bounds,lo,hi,scale:Math.sqrt(r.area),slot:hash(r.id+1)<.45?0:hash(r.id+7)<.6?1:2};
+ });
+ // KD tree over face centroids; query several candidates to disambiguate nearby surfaces by normal.
+ const faceBuckets=new Map(/** @type {[string,{chart:typeof charts[number],normal:number[],p:number[],count:number}][]} */([]));
+ charts.forEach(chart=>chart.r.faces.forEach(f=>{const p=[0,1,2].map(k=>f.v.reduce((sum,v)=>sum+v[k],0)/3),key=chart.r.id+':'+p.map(x=>Math.floor(x/.08)).join(',');const old=faceBuckets.get(key);if(old){for(let k=0;k<3;k++)old.p[k]+=p[k];old.count++;}else faceBuckets.set(key,{chart,normal:chart.r.normal,p,count:1});}));
+ const faces=Array.from(faceBuckets.values()).map(f=>({...f,p:f.p.map(x=>x/f.count)}));
+ /** @typedef {{item:typeof faces[number],axis:number,left:Tree|null,right:Tree|null}} Tree */
+ /** @param {typeof faces} items @param {number} depth @returns {Tree|null} */
+ function tree(items,depth){if(!items.length)return null;const axis=depth%3;items.sort((a,b)=>a.p[axis]-b.p[axis]);const mid=items.length>>1;return {item:items[mid],axis,left:tree(items.slice(0,mid),depth+1),right:tree(items.slice(mid+1),depth+1)};}
+ const direction=/** @param {number[]} n */n=>{let k=0;for(let j=1;j<3;j++)if(Math.abs(n[j])>Math.abs(n[k]))k=j;return k*2+(n[k]<0?1:0);};
+ const roots=[0,1,2,3,4,5].map(i=>tree(faces.filter(f=>direction(f.normal)===i),0));
+ const lookup=new Map(/** @type {[string,typeof faces[number]][]} */([]));
+ const root=tree(faces,0),cache=new Map(/** @type {[string,number[]][]} */([]));
+ /** @param {number[]} p @param {number[]} n @param {number} style @param {number[]} [anchor] @returns {number[]} */
+ return function sample(p,n,style,anchor=p){
+  const key=artVertexKey(p)+':'+n.map(x=>Math.round(x*100)).join(',')+':'+style+':'+artVertexKey(anchor);const old=cache.get(key);if(old)return old;
+  let best=Infinity;let found=faces[0];
+  /** @param {Tree|null} node */function visit(node){if(!node)return;const d=node.item.p.reduce((sum,x,k)=>sum+(x-anchor[k])**2,0),score=d*.1+dot(anchor.map((x,k)=>x-node.item.p[k]),node.item.normal)**2+(1-Math.max(-1,Math.min(1,dot(n,node.item.normal))))*.4;if(score<best){best=score;found=node.item;}const delta=anchor[node.axis]-node.item.p[node.axis];visit(delta<0?node.left:node.right);if(delta*delta*.1<best)visit(delta<0?node.right:node.left);}
+  const lookupKey=artVertexKey(anchor)+':'+n.map(x=>Math.round(x*100)).join(',');const known=lookup.get(lookupKey);if(known)found=known;else{visit(roots[direction(n)]||root);if(found)lookup.set(lookupKey,found);}if(!found)return [1,0,0];
+  const face=found,c=face.chart;
+  let distance=Infinity;if(style===2||style===4)c.bounds.forEach(e=>{const ab=e.b.map((x,k)=>x-e.a[k]),ap=p.map((x,k)=>x-e.a[k]),t=Math.max(0,Math.min(1,dot(ap,ab)/(dot(ab,ab)||1)));distance=Math.min(distance,Math.hypot(...ap.map((x,k)=>x-ab[k]*t)));});
+  const edge=1-Math.min(1,distance/Math.max(.008,c.scale*.16));
+  const w=[0,0,0,0];
+  if(style===1){w[c.slot]=1;} // Whole connected charts, no global bands.
+  else if(style===2){w[0]=1-edge;w[1]=edge*.72;w[2]=edge*.28;} // True chart boundary distance.
+  else if(style===3){ // Unequal material islands in each chart's own tangent frame.
+   const uv=[dot(p,c.r.u),dot(p,c.r.v)];let nearest=Infinity,slot=0;
+   for(let j=0;j<4;j++){const site=[0,1].map(k=>c.lo[k]+hash(c.r.id*19+j*3+k)*(c.hi[k]-c.lo[k]));const d=uv.reduce((sum,x,k)=>sum+(x-site[k])**2,0)/(j===0?1.6:1);if(d<nearest){nearest=d;slot=j;}}
+   w[slot]=1;
+  }else{const slope=1-Math.max(0,dot(n,c.r.normal));w[c.slot]=1;const dark=Math.min(.85,edge*.4+slope*1.7);w[c.slot]*=1-dark;w[3]+=dark;}
+  // Newly exposed plate sidewalls use the detail material.
+  const side=1-Math.max(0,dot(n,c.r.normal));if(side>.45){for(let k=0;k<3;k++)w[k]*=.25;}
+  const result=w.slice(0,3);cache.set(key,result);return result;
+ };
+}
+
+// Color weights are generated from analyzed chunks on the CPU. The shader only
+// interpolates those assignments and shades the selected materials.
 export const ART_SHADER=`
 uniform float artStyle,artRoughness,artMetalness,artLow,artHigh,artSeed,artFields,artZones,artFinish;
-uniform vec3 artAxis;
-float artHash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7))+artSeed)*43758.5453);}
-float artNoise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(artHash(i),artHash(i+vec3(1,0,0)),f.x),mix(artHash(i+vec3(0,1,0)),artHash(i+vec3(1,1,0)),f.x),f.y),mix(mix(artHash(i+vec3(0,0,1)),artHash(i+vec3(1,0,1)),f.x),mix(artHash(i+vec3(0,1,1)),artHash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+uniform vec3 artAxis,detail;
 vec3 artDirection(vec3 point,vec3 N,float edge,float kind){
- float t=clamp((dot(point,artAxis)-artLow)/max(.001,artHigh-artLow),0.,1.);
- t=mix(.5,t,artFields);float upper=mix(1.,smoothstep(-.45,.65,N.z),artZones),end=abs(dot(N,artAxis))*artZones;edge*=artZones;
- vec3 transverse=cross(artAxis,vec3(0,0,1));if(length(transverse)<.1)transverse=cross(artAxis,vec3(0,1,0));transverse=normalize(transverse);
- float side=dot(point,transverse),mottle=artNoise(point*18.)*.65+artNoise(point*69.)*.35;
- mottle=mix(.5,mottle,artFinish);vec3 c=primary;
- if(artStyle<1.5){
-  c=mix(primary*.62,primary,smoothstep(.05,.86,t));
-  float ceramic=(1.-upper)*.8+smoothstep(.7,.95,end)*.55;c=mix(c,secondary,clamp(ceramic,0.,.9));
-  c=mix(c,accent,smoothstep(.82,.84,t)*(1.-smoothstep(.89,.91,t))*.8);c*=.985+mottle*.03;
- }else if(artStyle<2.5){
-  float zone=smoothstep(.22,.24,t)*(1.-smoothstep(.7,.72,t));c=mix(secondary,primary,zone*.9+upper*.1);
-  c=mix(c,accent,smoothstep(.72,.74,t)*(1.-smoothstep(.84,.86,t)));
-  c*=.84+mottle*.23;float chips=edge*wear*smoothstep(.55,.82,mottle);c=mix(c,vec3(.55,.59,.58),chips*.75);
- }else if(artStyle<3.5){
-  float composite=smoothstep(.55,.78,end)*.7+(1.-upper)*.5;
-  c=mix(primary,secondary,clamp(composite,0.,.95));c*=.85+artNoise(point*3.)*.25;
-  c=mix(c,accent,smoothstep(.90,.92,t)*(1.-smoothstep(.93,.95,t))*.6);
-  c=mix(c,vec3(.44,.48,.45),edge*wear*.5);
- }else{
-  float brush=sin(dot(point,artAxis)*90.)*.006*artFinish;c=mix(secondary,primary,.55+upper*.45)+brush;
-  float stripe=1.-smoothstep(.095,.11,abs(side));float pin=1.-smoothstep(.025,.035,abs(abs(side)-.30));
-  c=mix(c,accent,max(stripe,pin*.8)*artFields*(1.-smoothstep(.6,.85,end)));c*=.92+t*.14;
- }
- // Generated graphic marks carry paint weights, with no source-texture dependency.
- if(kind>3.5)c=primary*protection.r+secondary*protection.g+accent*protection.b;
- return c;
+ vec3 weights=max(vec3(0.),protection.rgb);
+ return primary*weights.r+secondary*weights.g+accent*weights.b+detail*max(0.,1.-weights.r-weights.g-weights.b);
 }
 `;

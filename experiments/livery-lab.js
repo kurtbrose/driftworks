@@ -1,6 +1,6 @@
-import {ART_DIRECTIONS,ART_SHADER,artVertexKey,curvatureField} from './livery-art.js';
+import {ART_DIRECTIONS,ART_SHADER,artVertexKey,curvatureField,chunkTreatment,treatmentSamples} from './livery-art.js';
 import {perspectiveDepth} from './livery-depth.js';
-import {analyzeHull,buildHullPanels,buildGraphicMarks} from './hull-panels.js';
+import {analyzeHull,buildHullPanels} from './hull-panels.js';
 import {fighterHull, fleetHull} from './livery-fixtures.js';
 const DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
 /** @param {string} id */
@@ -115,6 +115,8 @@ function fittedHull(subject){
  const result={batches:normalized,extent,regions:analyzeHull(inference,control('masks').checked),curvature:curvatureField(normalized)};hullCache.set(cacheKey,result);return result;
 }
 /** @type {Map<string,{signature:string,result:ReturnType<typeof buildHullPanels>}>} */const panelCache=new Map();
+/** @type {WeakMap<import('./hull-panels').Region[],{seed:number,sample:ReturnType<typeof chunkTreatment>}>} */
+const colorCache=new WeakMap();
 function rebuild(){
  const matrix=control('layout').value==='matrix',hangar=control('layout').value==='hangar',artMode=control('directions').value==='art',copies=artMode?6:8,diagnosticIndex=copies-1;
  const subjects=hangar?hangarSubjects():matrix?Array.from({length:copies},()=>control('subject').value):[control('subject').value],columns=matrix?(artMode?3:4):5,rows=Math.ceil(subjects.length/columns),halfY=rows*1.8+.9,halfX=columns*1.55+.85;
@@ -122,21 +124,22 @@ function rebuild(){
  /** @type {string[]} */const treatmentNames=['Original','Clean armored','Layered armor','Structural bays','Thermal blankets','Flush paint','Faceted military','Detected regions'];
  subjects.forEach((subject,index)=>{
   const recipe=artMode?(matrix?(index>0&&index<diagnosticIndex?ART_DIRECTIONS[index-1]:null):ART_DIRECTIONS.find(r=>r.id===Number(control('art-style').value))||ART_DIRECTIONS[0]):null;
-  const style=recipe?recipe.geometry:matrix?(index===diagnosticIndex?1:index===0?0:index):Number(control('grammar').value),cacheId=subject+':'+style;
+  const style=recipe?Number(control('grammar').value):matrix?(index===diagnosticIndex?1:index===0?0:index):Number(control('grammar').value),cacheId=subject+':'+style;
   const fitted=fittedHull(subject),batches=fitted.batches,extent=fitted.extent,start=data.length/12;
   const signature=[subject==='random'?assemblySeed:0,control('masks').checked,style,control('scale').value,control('relief').value,control('seed').value,fitted.regions.length].join('|'),previous=panelCache.get(cacheId);
   const structure=previous?.signature===signature?previous.result:buildHullPanels(batches,{style,divisions:Number(control('scale').value),relief:Number(control('relief').value)/100,seed:Number(control('seed').value)||0,regions:fitted.regions});panelCache.set(cacheId,{signature,result:structure});if(panelCache.size>64)panelCache.delete(panelCache.keys().next().value||'');
   totalSkipped+=structure.skipped;
   totalRegions+=structure.regions;totalPlates+=structure.plates;totalDetails+=structure.details;
-  batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){data.push(...b.vertices.slice(i,i+6));const color=b.color||[.5,.5,.5],protect=b.opacity!==undefined||['mechanical','structural','marking','cockpit'].includes(b.role||'')||Math.max(...color)<.31;data.push(...color,(protect?1:0)+(fitted.curvature.get(artVertexKey(b.vertices,i))||0)*.2,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
+  batches.forEach(source=>{const b=recipe&&recipe.id!==1?{...source,vertices:treatmentSamples(source.vertices,source.stride||6)}:source;for(let i=0;i<b.vertices.length;i+=(b.stride||6)){data.push(...b.vertices.slice(i,i+6));const color=b.color||[.5,.5,.5],protect=b.opacity!==undefined||['mechanical','structural','marking','cockpit'].includes(b.role||'')||Math.max(...color)<.31;data.push(...color,(protect?1:0)+(fitted.curvature.get(artVertexKey(b.vertices,i))||0)*.2,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
+  const colorSeed=Number(control('seed').value)||0;let coloring=colorCache.get(fitted.regions);if(recipe&&(!coloring||coloring.seed!==colorSeed)){coloring={seed:colorSeed,sample:chunkTreatment(fitted.regions,colorSeed)};colorCache.set(fitted.regions,coloring);}const sampler=recipe?coloring?.sample:null;
+  if(sampler)for(let i=start*12;i<data.length;i+=12){const weights=sampler(data.slice(i,i+3),data.slice(i+3,i+6),(recipe?.id||0),[0,1,2].map(k=>{const t=start*12+Math.floor((i-start*12)/36)*36;return (data[t+k]+data[t+12+k]+data[t+24+k])/3;}));for(let k=0;k<3;k++)data[i+6+k]=weights[k];}
   const passes=[{start,count:data.length/12-start,bias:0}];
-  const generated=(matrix?(index===diagnosticIndex?structure.diagnostics:index===0?[]:recipe?.geometry===0?[]:structure.panels):control('regions').checked?structure.diagnostics:recipe?.geometry===0?[]:structure.panels).slice();
-  if(recipe&&recipe.markings&&control('graphics').checked){const height=recipe.geometry===1?.003+Number(control('relief').value)/100*.006:0;generated.push(...buildGraphicMarks(fitted.regions,recipe.markings,height));}
+  const generated=(matrix?(index===diagnosticIndex?structure.diagnostics:index===0?[]:style===0?[]:structure.panels):control('regions').checked?structure.diagnostics:style===0?[]:structure.panels).slice();
   // Group decals by coat so paint and markings have stable, separate depth
   // layers. Real armor geometry keeps ordinary depth testing and occlusion.
   for(const bias of [0,1,2,3]){
    const layerStart=data.length/12;
-   generated.filter(batch=>(batch.decalLayer||0)===bias).forEach(batch=>{for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...batch.paint,(batch.diagnostic?3:batch.graphic?4:2)+(fitted.curvature.get(artVertexKey(batch.vertices,i))||0)*.2,batch.vertices[i+6],batch.vertices[i+7]);});
+   generated.filter(batch=>(batch.decalLayer||0)===bias).forEach(source=>{const batch=recipe&&recipe.id!==1&&!source.diagnostic?{...source,vertices:treatmentSamples(source.vertices,8)}:source;for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...(sampler&&!batch.diagnostic?sampler(Array.from(batch.vertices.slice(i,i+3)),Array.from(batch.vertices.slice(i+3,i+6)),recipe?.id||0,[0,1,2].map(k=>{const t=Math.floor(i/24)*24;return (batch.vertices[t+k]+batch.vertices[t+8+k]+batch.vertices[t+16+k])/3;})):batch.paint),(batch.diagnostic?3:batch.graphic?4:2)+(fitted.curvature.get(artVertexKey(batch.vertices,i))||0)*.2,batch.vertices[i+6],batch.vertices[i+7]);});
    const count=data.length/12-layerStart;if(count)passes.push({start:layerStart,count,bias});
   }
   const origin=hangar||matrix?[(index%columns-(columns-1)/2)*3.1,(Math.floor(index/columns)-(rows-1)/2)*3.6,1.15]:[0,0,0];
@@ -156,24 +159,24 @@ function rebuild(){
   actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null,style:null,recipe:null,axis:[0,1,0],range:[-1,1],passes:[{start,count:data.length/12-start,bias:0}]});
   control('caption').textContent=subjects.length+' HULLS / SHARED TREATMENT / DISPLAY SIZES NORMALIZED';
  }
- if(matrix)control('caption').textContent=(artistModels.find(m=>m.id===control('subject').value)?.name||control('subject').value)+(artMode?' / ONE HULL, FOUR ART DIRECTIONS':' / ONE HULL, SIX CONSTRUCTION RULES');
+ if(matrix)control('caption').textContent=(artistModels.find(m=>m.id===control('subject').value)?.name||control('subject').value)+(artMode?' / ONE GEOMETRY, FOUR CHUNK TREATMENTS':' / ONE HULL, SIX CONSTRUCTION RULES');
  control('analysis').textContent=(control('masks').checked?'Material-assisted: ':'Geometry only: ')+totalRegions+' regions ('+totalSkipped+' below budget/size threshold) / '+totalPlates+' generated pieces / '+totalDetails+' structural parts';
  if(matrix)control('analysis').textContent=(control('masks').checked?'Material-assisted: ':'Geometry only: ')+fittedHull(control('subject').value).regions.length+' source regions, shared by every copy.';
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);count=data.length/12;
 }
 const descriptions=['Original artist textures, or neutral greybox shading.','A few broad conforming shell plates.','Actual overlapping armor courses over an exposed lower layer.','Shared longitudinal bays, raised transverse frames, stringers and braces.','Large soft pads with boundary-bound inflation, without hard armor edges.','Flush paint zones following existing surfaces, without armor extrusion.','Angular cuts and projected planar caps that change the apparent hull facets.'];
-function settings(){const art=control('directions').value==='art';['fields','zones','finish','graphics','palette-mode'].forEach(id=>{const group=control(id).parentElement;if(group)group.hidden=!art;});const grammarGroup=control('grammar').parentElement,recipeGroup=control('art-style').parentElement;if(grammarGroup)grammarGroup.hidden=art;if(recipeGroup)recipeGroup.hidden=!art;const custom=art&&control('palette-mode').value!=='shared';['primary','secondary','accent'].forEach(id=>control(id).disabled=custom);const matrix=control('layout').value==='matrix';control('collection').disabled=control('layout').value!=='hangar';['grammar','art-style','regions','compare'].forEach(id=>control(id).disabled=matrix);control('description').textContent=matrix?(art?'Each copy combines its own color field, material zoning, finish and sparse markings. Shape and seed stay shared.':'Each copy uses a different construction rule. Colors, seed, shape and input mode stay shared.'):art?'Art recipes combine continuous hull-space color fields with material and marking layers.':descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=matrix||!control('compare').checked;}
+function settings(){const art=control('directions').value==='art';['fields','zones','finish','graphics','palette-mode'].forEach(id=>{const group=control(id).parentElement;if(group)group.hidden=id!=='finish'||!art;});const grammarGroup=control('grammar').parentElement,recipeGroup=control('art-style').parentElement;if(grammarGroup)grammarGroup.hidden=false;if(recipeGroup)recipeGroup.hidden=!art;const custom=false;['primary','secondary','accent'].forEach(id=>control(id).disabled=custom);const matrix=control('layout').value==='matrix';control('collection').disabled=control('layout').value!=='hangar';['grammar','art-style','regions','compare'].forEach(id=>control(id).disabled=matrix&&(id!=='grammar'||!art));control('description').textContent=matrix?(art?'Same geometry treatment and four-color palette. Each copy assigns materials using a different region-local operation.':'Each copy uses a different construction rule. Colors, seed, shape and input mode stay shared.'):art?'Coloration operates on analyzed surface chunks independently of the selected geometry treatment.':descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=matrix||!control('compare').checked;}
 control('directions').onchange=home;
 control('collection').onchange=()=>{control('layout').value='hangar';settings();rebuild();home();};
 control('layout').onchange=()=>{settings();rebuild();home();};
-control('subject').onchange=()=>{if(control('layout').value!=='matrix')control('layout').value='solo';settings();rebuild();home();};
-['directions','art-style','grammar','scale','relief','seed','regions','masks','graphics'].forEach(id=>control(id).oninput=()=>{settings();rebuild();});
+control('subject').onchange=()=>{if(control('layout').value!=='matrix')control('layout').value='solo';settings();setTimeout(()=>{rebuild();home();},0);};
+['directions','art-style','grammar','scale','relief','seed','regions','masks','graphics'].forEach(id=>control(id).oninput=()=>{settings();setTimeout(rebuild,0);});
 ['wear','compare','palette-mode','fields','zones','finish'].forEach(id=>control(id).oninput=settings);
 control('shuffle').onclick=()=>{assemblySeed++;control('subject').value='random';rebuild();};
-let palette=0;const palettes=[['#c5cec9','#38474d','#ee912e'],['#d7dfdd','#253641','#bc3e38'],['#d18b31','#26343b','#f2d99b'],['#657264','#242e2d','#c2bc85']];
-control('palette').onclick=()=>{control('palette-mode').value='shared';settings();palette=(palette+1)%palettes.length;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[palette][i]);};
+let palette=0;const palettes=[['#c5cec9','#38474d','#ee912e','#12191d'],['#d7dfdd','#253641','#bc3e38','#10151c'],['#d18b31','#26343b','#f2d99b','#151918'],['#657264','#242e2d','#c2bc85','#111612']];
+control('palette').onclick=()=>{control('palette-mode').value='shared';settings();palette=(palette+1)%palettes.length;['primary','secondary','accent','detail'].forEach((id,i)=>control(id).value=palettes[palette][i]);};
 control('quarter').onclick=()=>{yaw=.22;tilt=.75;home();};control('top').onclick=()=>{yaw=0;tilt=.02;};control('side').onclick=()=>{yaw=Math.PI/2;tilt=Math.PI/2;};
-control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='2';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('regions').checked=false;control('monochrome').checked=false;control('masks').checked=false;control('compare').checked=false;control('spin').checked=false;palette=0;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();rebuild();};
+control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='2';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('regions').checked=false;control('monochrome').checked=false;control('masks').checked=false;control('compare').checked=false;control('spin').checked=false;palette=0;['primary','secondary','accent','detail'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();rebuild();};
 let dragging=false,lastX=0,lastY=0;
 canvas.onpointerdown=/** @param {PointerEvent} e */(e)=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};
 canvas.onpointermove=/** @param {PointerEvent} e */(e)=>{if(!dragging)return;yaw-=(e.clientX-lastX)*.008;tilt=Math.max(.02,Math.min(Math.PI-.02,tilt+(e.clientY-lastY)*.008));lastX=e.clientX;lastY=e.clientY;};
@@ -187,11 +190,11 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  const ratio=Math.min(devicePixelRatio,2),w=Math.round(canvas.clientWidth*ratio),h=Math.round(canvas.clientHeight*ratio);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const s=Math.sin(yaw),c=Math.cos(yaw),st=Math.sin(tilt),ct=Math.cos(tilt),back=[-s*st,c*st,ct];
  sky.render({eye:[0,0,0],right:[c,s,0],up:[s*ct,-c*ct,st],back},1,!control('sky').checked);vector('right',[c,s,0]);vector('up',[s*ct,-c*ct,st]);vector('back',back);vector('eye',back.map(v=>v*distance));scalar('aspect',w/h);scalar('distance',distance);
- ['primary','secondary','accent'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
+ ['primary','secondary','accent','detail'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
  scalar('monochrome',control('monochrome').checked?1:0);scalar('useMasks',control('masks').checked?1:0);scalar('grammar',Number(control('grammar').value));scalar('wear',Number(control('wear').value)/100);scalar('split',control('layout').value!=='matrix'&&control('compare').checked?w/2:0);scalar('sourceBlend',Number(control('source-blend').value)/100);gl.uniform1i(uniform('sourceTexture'),0);actors.forEach(actor=>{
   scalar('grammar',actor.style===null?Number(control('grammar').value):actor.style);gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);
   const recipe=actor.recipe;scalar('artStyle',recipe?.id||0);scalar('artRoughness',recipe?.roughness||.8);scalar('artMetalness',recipe?.metalness||0);scalar('artLow',actor.range[0]);scalar('artHigh',actor.range[1]);scalar('artSeed',Number(control('seed').value)||0);scalar('artFields',control('fields').checked?1:0);scalar('artZones',control('zones').checked?1:0);scalar('artFinish',control('finish').checked?1:0);vector('artAxis',actor.axis);
-  if(recipe&&control('palette-mode').value!=='shared')['primary','secondary','accent'].forEach((id,i)=>vector(id,recipe.palette[i]));else ['primary','secondary','accent'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
+  ['primary','secondary','accent','detail'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
   actor.passes.forEach(pass=>{
    if(pass.bias){// This viewer's right/up/back basis projects outward faces clockwise.
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.frontFace(gl.CW);gl.enable(gl.CULL_FACE);gl.polygonOffset(-pass.bias,-2*pass.bias);}
