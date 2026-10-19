@@ -1,3 +1,4 @@
+import {reflectHullPoint} from './livery-symmetry.js';
 /** Chunk coloration operations; geometry and palette are selected independently.
  * @typedef {{id:number,name:string,roughness:number,metalness:number}} ArtRecipe */
 /** @type {ArtRecipe[]} */
@@ -38,8 +39,8 @@ export function treatmentSamples(vertices,stride){
 }
 
 /** Region-local treatment analysis. No equipment semantics or source paint.
- * @param {import('./hull-panels').Region[]} regions @param {number} seed */
-export function chunkTreatment(regions,seed){
+ * @param {import('./hull-panels').Region[]} regions @param {number} seed @param {import('./livery-symmetry').MirrorPlane|null} [symmetry] */
+export function chunkTreatment(regions,seed,symmetry=null){
  const hash=/** @param {number} n */n=>{const x=Math.sin(n*127.1+seed*31.7)*43758.5453;return x-Math.floor(x);};
  const dot=/** @param {number[]} a @param {number[]} b */(a,b)=>a.slice(0,3).reduce((sum,x,k)=>sum+x*b[k],0);
  const charts=regions.map(r=>{
@@ -63,6 +64,7 @@ export function chunkTreatment(regions,seed){
  const root=tree(faces,0),cache=new Map(/** @type {[string,number[]][]} */([]));
  /** @param {number[]} p @param {number[]} n @param {number} style @param {number[]} [anchor] @returns {number[]} */
  return function sample(p,n,style,anchor=p){
+  if(symmetry){if(dot(p,symmetry.normal)<symmetry.offset-1e-8){p=reflectHullPoint(p,symmetry);n=reflectHullPoint(n,symmetry,true);}anchor=p;}
   const key=artVertexKey(p)+':'+n.map(x=>Math.round(x*100)).join(',')+':'+style+':'+artVertexKey(anchor);const old=cache.get(key);if(old)return old;
   let best=Infinity;let found=faces[0];
   /** @param {Tree|null} node */function visit(node){if(!node)return;const d=node.item.p.reduce((sum,x,k)=>sum+(x-anchor[k])**2,0),score=d*.1+dot(anchor.map((x,k)=>x-node.item.p[k]),node.item.normal)**2+(1-Math.max(-1,Math.min(1,dot(n,node.item.normal))))*.4;if(score<best){best=score;found=node.item;}const delta=anchor[node.axis]-node.item.p[node.axis];visit(delta<0?node.left:node.right);if(delta*delta*.1<best)visit(delta<0?node.right:node.left);}

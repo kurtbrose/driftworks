@@ -1,3 +1,4 @@
+import {detectHullSymmetry,mirrorTreatmentMesh} from './livery-symmetry.js';
 import {ART_DIRECTIONS,ART_SHADER,artVertexKey,curvatureField,chunkTreatment,treatmentSamples} from './livery-art.js';
 import {perspectiveDepth} from './livery-depth.js';
 import {analyzeHull,buildHullPanels} from './hull-panels.js';
@@ -95,7 +96,7 @@ function geometry(subject){
  else mesh.block('hull',[0,0,0],[5,5,5]);
  return [{vertices:new Float32Array(groups.hull)}];
 }
-/** @type {Map<string,{batches:import('./hull-panels').HullBatch[],extent:number,regions:ReturnType<typeof analyzeHull>,curvature:ReturnType<typeof curvatureField>}>} */
+/** @type {Map<string,{batches:import('./hull-panels').HullBatch[],extent:number,regions:ReturnType<typeof analyzeHull>,curvature:ReturnType<typeof curvatureField>,symmetry:ReturnType<typeof detectHullSymmetry>}>} */
 const hullCache=new Map();
 /** @type {WeakMap<HTMLImageElement,ImageData>} */const pixels=new WeakMap();
 /** @param {HTMLImageElement} image */
@@ -112,10 +113,10 @@ function fittedHull(subject){
  const extent=Math.max(...hi.map((v,k)=>v-lo[k]));
  const normalized=batches.map(b=>{const vertices=new Float32Array(b.vertices),stride=b.stride||6;for(let i=0;i<vertices.length;i+=stride)for(let k=0;k<3;k++)vertices[i+k]=(vertices[i+k]-(lo[k]+hi[k])/2)*2/extent;return {...b,vertices,eligible:control('masks').checked&&b.texture?eligibility(b.texture):undefined};});
  const inference=control('masks').checked?normalized:[{vertices:new Float32Array(normalized.flatMap(b=>{const data=/** @type {number[]} */([]);for(let i=0;i<b.vertices.length;i+=(b.stride||6))data.push(...b.vertices.slice(i,i+6),b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);return data;})),stride:8}];
- const result={batches:normalized,extent,regions:analyzeHull(inference,control('masks').checked),curvature:curvatureField(normalized)};hullCache.set(cacheKey,result);return result;
+ const result={batches:normalized,extent,regions:analyzeHull(inference,control('masks').checked),curvature:curvatureField(normalized),symmetry:detectHullSymmetry(normalized)};hullCache.set(cacheKey,result);return result;
 }
 /** @type {Map<string,{signature:string,result:ReturnType<typeof buildHullPanels>}>} */const panelCache=new Map();
-/** @type {WeakMap<import('./hull-panels').Region[],{seed:number,sample:ReturnType<typeof chunkTreatment>}>} */
+/** @type {WeakMap<import('./hull-panels').Region[],{seed:number,sample:ReturnType<typeof chunkTreatment>,symmetric:boolean}>} */
 const colorCache=new WeakMap();
 function rebuild(){
  const matrix=control('layout').value==='matrix',hangar=control('layout').value==='hangar',artMode=control('directions').value==='art',copies=artMode?6:8,diagnosticIndex=copies-1;
@@ -131,7 +132,7 @@ function rebuild(){
   totalSkipped+=structure.skipped;
   totalRegions+=structure.regions;totalPlates+=structure.plates;totalDetails+=structure.details;
   batches.forEach(source=>{const b=recipe&&recipe.id!==1?{...source,vertices:treatmentSamples(source.vertices,source.stride||6)}:source;for(let i=0;i<b.vertices.length;i+=(b.stride||6)){data.push(...b.vertices.slice(i,i+6));const color=b.color||[.5,.5,.5],protect=b.opacity!==undefined||['mechanical','structural','marking','cockpit'].includes(b.role||'')||Math.max(...color)<.31;data.push(...color,(protect?1:0)+(fitted.curvature.get(artVertexKey(b.vertices,i))||0)*.2,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
-  const colorSeed=Number(control('seed').value)||0;let coloring=colorCache.get(fitted.regions);if(recipe&&(!coloring||coloring.seed!==colorSeed)){coloring={seed:colorSeed,sample:chunkTreatment(fitted.regions,colorSeed)};colorCache.set(fitted.regions,coloring);}const sampler=recipe?coloring?.sample:null;
+  const colorSeed=Number(control('seed').value)||0;let coloring=colorCache.get(fitted.regions);if(recipe&&(!coloring||coloring.seed!==colorSeed||coloring.symmetric!==control('symmetry').checked)){coloring={seed:colorSeed,symmetric:control('symmetry').checked,sample:chunkTreatment(fitted.regions,colorSeed,control('symmetry').checked?fitted.symmetry:null)};colorCache.set(fitted.regions,coloring);}const sampler=recipe?coloring?.sample:null;
   if(sampler)for(let i=start*12;i<data.length;i+=12){const weights=sampler(data.slice(i,i+3),data.slice(i+3,i+6),(recipe?.id||0),[0,1,2].map(k=>{const t=start*12+Math.floor((i-start*12)/36)*36;return (data[t+k]+data[t+12+k]+data[t+24+k])/3;}));for(let k=0;k<3;k++)data[i+6+k]=weights[k];}
   const passes=[{start,count:data.length/12-start,bias:0}];
   const generated=(matrix?(index===diagnosticIndex?structure.diagnostics:index===0?[]:style===0?[]:structure.panels):control('regions').checked?structure.diagnostics:style===0?[]:structure.panels).slice();
@@ -139,7 +140,7 @@ function rebuild(){
   // layers. Real armor geometry keeps ordinary depth testing and occlusion.
   for(const bias of [0,1,2,3]){
    const layerStart=data.length/12;
-   generated.filter(batch=>(batch.decalLayer||0)===bias).forEach(source=>{const batch=recipe&&recipe.id!==1&&!source.diagnostic?{...source,vertices:treatmentSamples(source.vertices,8)}:source;for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...(sampler&&!batch.diagnostic?sampler(Array.from(batch.vertices.slice(i,i+3)),Array.from(batch.vertices.slice(i+3,i+6)),recipe?.id||0,[0,1,2].map(k=>{const t=Math.floor(i/24)*24;return (batch.vertices[t+k]+batch.vertices[t+8+k]+batch.vertices[t+16+k])/3;})):batch.paint),(batch.diagnostic?3:batch.graphic?4:2)+(fitted.curvature.get(artVertexKey(batch.vertices,i))||0)*.2,batch.vertices[i+6],batch.vertices[i+7]);});
+   generated.filter(batch=>(batch.decalLayer||0)===bias).forEach(source=>{const mirrored=control('symmetry').checked&&fitted.symmetry&&!source.diagnostic?{...source,vertices:mirrorTreatmentMesh(source.vertices,fitted.symmetry)}:source;const batch=recipe&&recipe.id!==1&&!source.diagnostic?{...source,vertices:treatmentSamples(mirrored.vertices,8)}:mirrored;for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...(sampler&&!batch.diagnostic?sampler(Array.from(batch.vertices.slice(i,i+3)),Array.from(batch.vertices.slice(i+3,i+6)),recipe?.id||0,[0,1,2].map(k=>{const t=Math.floor(i/24)*24;return (batch.vertices[t+k]+batch.vertices[t+8+k]+batch.vertices[t+16+k])/3;})):batch.paint),(batch.diagnostic?3:batch.graphic?4:2)+(fitted.curvature.get(artVertexKey(batch.vertices,i))||0)*.2,batch.vertices[i+6],batch.vertices[i+7]);});
    const count=data.length/12-layerStart;if(count)passes.push({start:layerStart,count,bias});
   }
   const origin=hangar||matrix?[(index%columns-(columns-1)/2)*3.1,(Math.floor(index/columns)-(rows-1)/2)*3.6,1.15]:[0,0,0];
@@ -162,6 +163,7 @@ function rebuild(){
  if(matrix)control('caption').textContent=(artistModels.find(m=>m.id===control('subject').value)?.name||control('subject').value)+(artMode?' / ONE GEOMETRY, FOUR CHUNK TREATMENTS':' / ONE HULL, SIX CONSTRUCTION RULES');
  control('analysis').textContent=(control('masks').checked?'Material-assisted: ':'Geometry only: ')+totalRegions+' regions ('+totalSkipped+' below budget/size threshold) / '+totalPlates+' generated pieces / '+totalDetails+' structural parts';
  if(matrix)control('analysis').textContent=(control('masks').checked?'Material-assisted: ':'Geometry only: ')+fittedHull(control('subject').value).regions.length+' source regions, shared by every copy.';
+ if(!hangar){const plane=fittedHull(control('subject').value).symmetry;control('analysis').textContent+=' Symmetry: '+(!control('symmetry').checked?'off.':plane?'normal ['+plane.normal.map(v=>v.toFixed(2)).join(', ')+'], '+Math.round(plane.coverage*100)+'% matched.':'no reliable mirror plane.');}
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);count=data.length/12;
 }
 const descriptions=['Original artist textures, or neutral greybox shading.','A few broad conforming shell plates.','Actual overlapping armor courses over an exposed lower layer.','Shared longitudinal bays, raised transverse frames, stringers and braces.','Large soft pads with boundary-bound inflation, without hard armor edges.','Flush paint zones following existing surfaces, without armor extrusion.','Angular cuts and projected planar caps that change the apparent hull facets.'];
@@ -170,7 +172,7 @@ control('directions').onchange=home;
 control('collection').onchange=()=>{control('layout').value='hangar';settings();rebuild();home();};
 control('layout').onchange=()=>{settings();rebuild();home();};
 control('subject').onchange=()=>{if(control('layout').value!=='matrix')control('layout').value='solo';settings();setTimeout(()=>{rebuild();home();},0);};
-['directions','art-style','grammar','scale','relief','seed','regions','masks','graphics'].forEach(id=>control(id).oninput=()=>{settings();setTimeout(rebuild,0);});
+['directions','art-style','grammar','scale','relief','seed','regions','masks','graphics','symmetry'].forEach(id=>control(id).oninput=()=>{settings();setTimeout(rebuild,0);});
 ['wear','compare','palette-mode','fields','zones','finish'].forEach(id=>control(id).oninput=settings);
 control('shuffle').onclick=()=>{assemblySeed++;control('subject').value='random';rebuild();};
 let palette=0;const palettes=[['#c5cec9','#38474d','#ee912e','#12191d'],['#d7dfdd','#253641','#bc3e38','#10151c'],['#d18b31','#26343b','#f2d99b','#151918'],['#657264','#242e2d','#c2bc85','#111612']];

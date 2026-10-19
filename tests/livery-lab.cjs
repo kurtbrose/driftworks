@@ -15,7 +15,7 @@ const gl=new Proxy({
  bufferData:(target,data)=>{uploaded=data;uploads++;}
 },{get:(target,key)=>key in target?target[key]:()=>{}});
 const canvas={getContext:()=>gl,addEventListener:()=>{},clientWidth:900,clientHeight:700};
-for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','detail','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome','directions','art-style','palette-mode','fields','zones','finish','graphics'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
+for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','detail','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome','symmetry','directions','art-style','palette-mode','fields','zones','finish','graphics'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
 DW.flightSkybox={create:()=>({render:()=>{}})};
 const sandbox={setTimeout:callback=>callback(),devicePixelRatio:1,window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
 vm.createContext(sandbox);
@@ -31,7 +31,8 @@ vm.runInContext('(function(){'+fixture+';window.fighterHull=fighterHull;window.f
 sandbox.fighterHull=sandbox.window.fighterHull;sandbox.fleetHull=sandbox.window.fleetHull;
 vm.runInContext('(function(){'+read('experiments/hull-panels.js').replaceAll('export function','function')+';window.analyzeHull=analyzeHull;window.buildHullPanels=buildHullPanels;window.buildGraphicMarks=buildGraphicMarks;})();',sandbox);
 sandbox.analyzeHull=sandbox.window.analyzeHull;sandbox.buildHullPanels=sandbox.window.buildHullPanels;sandbox.buildGraphicMarks=sandbox.window.buildGraphicMarks;
-vm.runInContext(read('experiments/livery-art.js').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
+vm.runInContext(read('experiments/livery-symmetry.js').replaceAll('export function','function'),sandbox);
+vm.runInContext(read('experiments/livery-art.js').replace(/^import .*;\r?\n/gm,'').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
 vm.runInContext(read('experiments/livery-depth.js').replaceAll('export function','function'),sandbox);
 const lab=read('experiments/livery-lab.js').replace(/^import .*;\r?\n/gm,'');
 vm.runInContext(lab,sandbox);
@@ -72,3 +73,9 @@ controls.get('grammar').value='2';controls.get('grammar').oninput();
 assert.deepEqual(Array.from(vm.runInContext('actors.slice(1,5).map(a=>a.style)',sandbox)),[2,2,2,2],'All coloration algorithms use selected geometry');
 const beforeFields=uploads;controls.get('fields').oninput();controls.get('zones').oninput();controls.get('finish').oninput();assert.equal(uploads,beforeFields,'Material layers do not rebuild hull geometry');
 console.log('PASS livery lab: all subjects, finite fitted geometry, independent treatments and deterministic assemblies');
+
+controls.get('symmetry').checked=true;controls.get('symmetry').oninput();assert(controls.get('analysis').textContent.includes('100% matched'),'Symmetry confidence is visible');
+const symmetrySource=vm.runInContext('fittedHull("cube").batches[0].vertices.slice()',sandbox);
+controls.get('symmetry').checked=false;controls.get('symmetry').oninput();assert(controls.get('analysis').textContent.includes('Symmetry: off'),'Symmetry can be disabled');
+assert.deepEqual(vm.runInContext('fittedHull("cube").batches[0].vertices',sandbox),symmetrySource,'Mirror toggle leaves source hull unchanged');
+console.log('PASS livery symmetry toggle, confidence readout and source preservation');

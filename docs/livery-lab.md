@@ -8,6 +8,12 @@ These replace the previous hull-space stripe recipes. The shader renders precomp
 
 Surface finish remains independently switchable. Construction grammars still compare the original six geometry algorithms. The unused earlier color-field/marking controls are hidden. No automatic gun/exhaust recognition has been introduced.
 
+## Automatic bilateral symmetry
+
+Auto mirror symmetry is enabled by default. The detector tests coordinate axes and covariance-derived axes, including rotated models, against reflected source vertex positions. It accepts a plane only when at least 90% of sampled vertices match within 1.2% of hull extent and normalized error remains below 2.5%. The analysis readout reports the chosen plane normal and match percentage; ambiguous multiple-plane shapes use deterministic candidate order. Asymmetric hulls without a confident match keep their original treatment.
+
+Generated treatment triangles are clipped to the positive half-space and reflected with corrected winding. Coloration queries fold position and normal into that same half, so region selection, island seeds and boundary gradients agree across the mirror plane. Original artist geometry, diagnostic region colors, source textures and lighting remain unchanged. This is a bilateral reflection plane, not rotational symmetry detection. Vertex-based confidence can miss models with very different triangulation on each side; approximate detections can also overrun small asymmetric details. The checkbox provides an explicit opt-out for evaluation.
+
 # Procedural hull construction bench
 
 Open `experiments/livery-lab.html` through the local static server. The scene holds
