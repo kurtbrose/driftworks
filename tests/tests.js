@@ -211,10 +211,10 @@
     choices.forEach(function(choice){
       var previousId=view.combat.enemies[0].collision.modelId;
       view.combat.enemies[0].scorches=[{modelId:'old-mesh'}];
-      api.configureHulls(view.combat,choice[0],choice[1]);verify(view.combat,choice[0],choice[1]);
+      session.configureHulls(choice[0],choice[1]);verify(view.combat,choice[0],choice[1]);
       if(previousId!==view.combat.enemies[0].collision.modelId)assert(view.combat.enemies[0].scorches.length===0,'Changing hull clears marks belonging to the old mesh');
       var shape=view.combat.enemies[0].collision,marks=view.combat.enemies[0].scorches;
-      api.configureHulls(view.combat,choice[0],choice[1]);
+      session.configureHulls(choice[0],choice[1]);
       assert(view.combat.enemies[0].collision===shape&&view.combat.enemies[0].scorches===marks,'Unchanged selections preserve hull and marks');
       var clone=JSON.parse(JSON.stringify(view.combat));verify(clone,choice[0],choice[1]);
       api.spawn(view.combat,view.state,view.asteroid.radius);
@@ -234,7 +234,7 @@
 
   test('watch playback uses the benchmark clock and cameras never alter duel state', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({terrainHit:function(){return null;},surfaceFrame:function(){return {point:[0,0,1]};},onGunshot:function(){},onImpact:function(){}});
-    var options={start:'crossing',category:'human',flavor:'novice',seed:29,duration:3},watch=DW.flightWatch.create(session.snapshot,options),reference=DW.flightDuel.run(options);
+    var options={start:'crossing',category:'human',flavor:'novice',seed:29,duration:3},watch=DW.flightWatch.create(session,options),reference=DW.flightDuel.run(options);
     var stateBefore=JSON.stringify(watch.snapshot(false).state);
     var chase=watch.snapshot(true);assert(chase.observerCraft.pose===chase.state && chase.camera!==chase.state);
     assert(JSON.stringify(watch.snapshot(false).state)===stateBefore && !watch.snapshot(false).camera);
@@ -246,7 +246,7 @@
     assert(JSON.stringify(watch.summary())===completed && session.snapshot().world.elapsedSeconds===worldTime);
     var replacement=Object.assign({},session.snapshot().world,{camera:{x:99,y:88,zoom:1}});session.setWorld(replacement);
     assert(watch.snapshot(true).world===replacement,'Watch rendering must follow camera-driven world replacements');
-    var restarted=DW.flightWatch.create(session.snapshot,options);assert(restarted.summary().ticks===0 && restarted.snapshot(false).guns.fired===0);
+    var restarted=DW.flightWatch.create(session,options);assert(restarted.summary().ticks===0 && restarted.snapshot(false).guns.fired===0);
     var rejected=false;try{restarted.advance(.1,2);}catch(e){rejected=true;}assert(rejected);
   });
 
@@ -352,7 +352,7 @@
     var defaults=api.create({duration:.1});assert(defaults.replay.options.allyHull!=='mixed'&&defaults.replay.options.enemyHull!=='mixed');
     record.version=4;var rejected=false;try{api.replay(record);}catch(error){rejected=true;}assert(rejected);
     rejected=false;try{api.create({allyHull:'missing-mesh'});}catch(error){rejected=true;}assert(rejected);
-    var session=DW.flightSession.create({}),watch=DW.flightWatch.create(session.snapshot,options);
+    var session=DW.flightSession.create({}),watch=DW.flightWatch.create(session,options);
     assert(watch.snapshot(true).observerCraft.collision.modelId===options.allyHull);
   });
   test('all duel geometries and human flavors stay finite, deterministic and input bounded', function () {
@@ -828,6 +828,45 @@
     var toggled=session.setCombat('training',false);assert(toggled.state===player && toggled.guns===guns && toggled.combat.countdown===0);
   });
 
+  test('flight session operations own size, study starts and the current scenery clock', function () {
+    var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'training',enabled:false,profile:DW.arcade.profiles[0]};
+    var view=session.reset(config),radius=view.asteroid.radius;
+    [NaN,Infinity,199,4001].forEach(function(d){assert(!session.setAsteroidDiameter(d) && view.asteroid.radius===radius);});
+    assert(session.setAsteroidDiameter(200));assertClose(view.asteroid.radius*sim.METERS_PER_UNIT,100);
+    assert(session.setAsteroidDiameter(4000));assertClose(view.asteroid.radius*sim.METERS_PER_UNIT,2000);
+    var replacement=Object.assign({},view.world,{elapsedSeconds:17});session.setWorld(replacement);
+    session.advanceScenery(.5);assert(replacement.elapsedSeconds===17.5 && view.world.elapsedSeconds===0);
+    [-1,NaN,Infinity].forEach(function(dt){var rejected=false;try{session.advanceScenery(dt);}catch(e){rejected=true;}assert(rejected && replacement.elapsedSeconds===17.5);});
+    var eye=[1,2,100],state=view.state;
+    session.setStartPosition(eye);eye[0]=99;
+    assert(view.state===state && state.eye[0]===1 && state.velocity.every(function(v){return v===0;}));
+    assert(replacement.elapsedSeconds===0 && !session.snapshot().contact);
+    var before=JSON.stringify(state),rejected=false;
+    try{session.setStartPosition([1,NaN,3]);}catch(e){rejected=true;}
+    assert(rejected && JSON.stringify(state)===before);
+    var next=session.reset(config);session.setStartPosition([0,0,101]);
+    assert(next.state.eye[2]===101 && state.eye[2]===100,'Operations follow replaced sortie state');
+  });
+
+  test('session target and opponent operations use the current combat after transitions', function () {
+    var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0]};
+    var old=session.reset(config).combat,view=session.reset(config),combat=view.combat;
+    session.setOpponentStyle('passer');
+    assert(combat.opponentStyle==='passer' && combat.enemies.every(function(e){return e.opponentStyle==='passer';}));
+    assert(old.opponentStyle!=='passer');
+    DW.training.spawn(combat,view.state,view.asteroid.radius);
+    assert(combat.enemies.every(function(e){return e.opponentStyle==='passer';}),'Future waves inherit style');
+    combat.enemies.forEach(function(e,i){e.pose.eye=[100+i*10,100,100];e.collision={kind:'sphere',radiusM:2};});
+    view.state.eye=[0,0,100];view.state.back=[0,-1,0];
+    combat.enemies[0].pose.eye=[0,100,100];combat.targetId=null;
+    session.acquireTarget();assert(combat.targetId===combat.enemies[0].id);
+    session.toggleTargetLock();assert(combat.targetLocked);
+    session.toggleTargetLock();assert(!combat.targetLocked);
+    session.nextTarget();assert(combat.targetId!==combat.enemies[0].id && !combat.targetLocked);
+    session.setCombat('training',false);session.nextTarget();session.toggleTargetLock();
+    assert(session.snapshot().combat.targetId===null && !session.snapshot().combat.targetLocked);
+  });
+
   test('fresh flight views follow replacements without caller synchronization', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),initial=session.snapshot();
     session.reset({mode:'training',enabled:false,profile:DW.arcade.profiles[0]});
@@ -874,6 +913,49 @@
     p.forEach(function(v,i){assertClose(roundtrip[i],v);});
   });
 
+  test('manual flight fixed ticks reproduce combat, guns and spin across frame batching', function () {
+    var DW=window.Driftworks,dt=1/120;
+    var config={mode:'training',enabled:true,profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]};
+    var controls={throttle:.8,throttleRate:0,stop:false,fire:true,pitch:.5,yaw:.2,roll:0,boost:false};
+    function run(parts) {
+      var shots=0,impacts=0,session=DW.flightSession.create({seed:29,onGunshot:function(){shots++;},onImpact:function(){impacts++;}});
+      session.reset(config).state.eye=[0,0,100];
+      parts.forEach(function(elapsed){session.advance(elapsed,controls,config);});
+      var view=session.snapshot();
+      assert(view.guns.fired>0 && view.combat.time>0,'Exercise actual weapons and combat');
+      return JSON.stringify({state:view.state,combat:view.combat,guns:view.guns,rotation:view.asteroid.rotation,contact:view.contact,shots:shots,impacts:impacts});
+    }
+    var reference=run(Array(120).fill(dt));
+    assert(run(Array(60).fill(1/60))===reference);
+    assert(run(Array(144).fill(1/144))===reference);
+    var irregular=[];
+    for(var i=0;i<60;i++)irregular.push(1/144,1/144,1/360);
+    assert(run(irregular)===reference);
+  });
+
+  test('manual flight retains fractional ticks, samples current demand and clears reset time', function () {
+    var DW=window.Driftworks,dt=1/120,session=DW.flightSession.create({onGunshot:function(){},onImpact:function(){}});
+    var config={mode:'training',enabled:false,profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]};
+    var view=session.reset(config),controls={throttle:0,throttleRate:0,stop:false,fire:false};
+    view.state.eye=[0,0,100];
+    var before=JSON.stringify(view.state),phase=view.asteroid.rotation;
+    session.advance(dt/2,controls,config);
+    assert(JSON.stringify(view.state)===before && view.asteroid.rotation===phase);
+    controls.throttle=.7;
+    session.advance(dt/2,controls,config);
+    assert(view.state.throttle===.7 && view.asteroid.rotation>phase);
+    session.advance(dt/2,controls,config);
+    view=session.reset(config);view.state.eye=[0,0,100];before=JSON.stringify(view.state);
+    session.advance(dt/2,controls,config);
+    assert(JSON.stringify(view.state)===before,'Reset must discard fractional time');
+    [-1,NaN,Infinity,-Infinity].forEach(function(elapsed){
+      var rejected=false;try{session.advance(elapsed,controls,config);}catch(e){rejected=true;}
+      assert(rejected && JSON.stringify(view.state)===before);
+    });
+    session.advance(dt/2,controls,config);
+    assert(view.state.throttle===.7,'Rejected calls must preserve valid accumulated time');
+  });
+
   test('flight session substeps preserve movement, training, guns, audio and contact order', function () {
     var DW=window.Driftworks,model=DW.arcade,training=DW.training,guns=DW.flightGuns;
     var saved=[model.step,training.step,guns.step,training.trace,model.contact],events=[],dead=false;
@@ -890,8 +972,13 @@
       var result=session.advance(1/60,controls,config);
       var sequence='move,training,guns,trace,shot,impact,surface,contact';
       assert(events.join(',')===sequence+','+sequence);assert(result.contact);
+      events=[];session.advance(0,controls,config);session.advance(1/240,controls,config);
+      assert(events.length===0 && session.snapshot().contact,'Frames without ticks retain contact');
+      session.advance(1/240,controls,config);
       events=[];dead=true;session.advance(1/60,controls,config);
       assert(events.join(',')==='move,training,guns,trace,shot,impact','Death must finish gun/audio work, skip contact, and stop remaining substeps');
+      events=[];session.advance(1/240,controls,config);
+      assert(events.length===0,'Death must discard unconsumed time');
     }finally{model.step=saved[0];training.step=saved[1];guns.step=saved[2];training.trace=saved[3];model.contact=saved[4];}
   });
 

@@ -130,17 +130,14 @@
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
         if(tetherStudy) {
-            session.snapshot().world.elapsedSeconds=0;
-            var state=session.snapshot().state, start=tetherParams.get('start');
-            state.eye=[start==='tip'?(tetherKm*500-20)/units:0,-(start==='overview'?tetherKm*800:300)/units,1200];
-            state.velocity=[0,0,0];
+            var start=tetherParams.get('start');
+            session.setStartPosition([start==='tip'?(tetherKm*500-20)/units:0,-(start==='overview'?tetherKm*800:300)/units,1200]);
         }
-        session.snapshot().combat.opponentStyle=/** @type {import('./types').OpponentStyle} */(get('watch-style').value);
-        session.snapshot().combat.enemies.forEach(function(enemy){enemy.opponentStyle=session.snapshot().combat.opponentStyle;});
+        session.setOpponentStyle(/** @type {import('./types').OpponentStyle} */(get('watch-style').value));
         var seed = Number(get('watch-seed').value);
         if (!Number.isSafeInteger(seed) || seed < 0 || seed > 4294967295) seed = 1;
         get('watch-seed').value = String(seed);
-        watch = observing ? DW.flightWatch.create(session.snapshot, {category:pilot === 'perfect' ? 'perfect' : 'human',
+        watch = observing ? DW.flightWatch.create(session, {category:pilot === 'perfect' ? 'perfect' : 'human',
             allyHull:get('watch-art').value,enemyHull:get('watch-enemy-art').value,
             flavor:/** @type {'novice'|'practiced'|'expert'} */ (pilot === 'perfect' ? 'practiced' : pilot.replace('human-', '')), seed:seed,
             start:/** @type {import('./types').DuelOptions['start']} */ (get('watch-start').value), opponentStyle:/** @type {import('./types').OpponentStyle} */(get('watch-style').value), skill:Number(get('watch-skill').value), duration:watchDuration,
@@ -197,11 +194,10 @@
     };
     get('diameter').onchange = function (e) {
         var asteroid = session.snapshot().asteroid, d = Number(get('diameter').value);
-        if (!Number.isFinite(d) || d < 200 || d > 4000) {
+        if (!session.setAsteroidDiameter(d)) {
             get('diameter').value = String(asteroid.radius * units * 2);
             return;
         }
-        asteroid.radius = d / 2 / units;
         reset();
     };
     get('reset').onclick = function () {
@@ -261,12 +257,10 @@
         },
         toggleTargetLock: function () {
             if (watch) return;
-            var current = view();
-            DW.training.acquireTarget(current.combat, current.state);
-            DW.training.toggleTargetLock(current.combat);
+            session.toggleTargetLock();
         },
         nextWeapon: nextWeapon, nextTarget: function () {
-            DW.training.cycle(session.snapshot().combat);
+            if (!watch) session.nextTarget();
         },
         nextRadarRange: function () {
             flightHud.cycleRadarRange();
@@ -288,7 +282,7 @@
         var elapsed = timing.elapsed;
         var appearance = presentation.appearance();
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
-        if (!watch) DW.training.configureHulls(session.snapshot().combat, appearance.allyArt, appearance.enemyArt);
+        if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
         var demand = controls.sample();
         if (!paused) {
             var before = view(), beforeSpeed = Math.hypot.apply(null, view().state.velocity), lastHit = before.combat.lastHit, shield = before.combat.shield, fired = before.guns.fired, contact = before.contact;
@@ -312,9 +306,9 @@
             status.textContent = watch ? (watch.summary().done ? 'Duel complete · Replay duel or choose another pilot' : 'Watching test pilot · Esc pauses') : after.contact ? 'Surface contact · throttle cut' : document.pointerLockElement === host ? 'Mouse captured · Esc pauses & releases' : 'Flight controls active';
         }
         var currentView = view();
-        if (!paused && !watch) DW.training.acquireTarget(currentView.combat, currentView.state);
+        if (!paused && !watch) session.acquireTarget();
         if (!paused) {
-            if (!watch) currentView.world.elapsedSeconds += elapsed;
+            if (!watch) session.advanceScenery(elapsed);
             comms.update(elapsed, currentView.combat, currentView.state);
         }
         var comparison = diagnostics.settings();

@@ -9,7 +9,7 @@
     /** @typedef {import('../src/types').World} World */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade;
     // Six-hour principal-axis spin; vectors use the renderer's +Z axis.
-    var spinRate = 2 * Math.PI / (6 * 60 * 60);
+    var spinRate = 2 * Math.PI / (6 * 60 * 60), fixedStep = 1 / 120;
     /** @param {number[]} vector @param {number} angle */
     function rotateVector(vector, angle) {
         var c = Math.cos(angle), s = Math.sin(angle);
@@ -46,12 +46,47 @@
         var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.training.create('training'), contact = false, grounded = false;
         combat.useHullModels = true;
         DW.training.bindPlayer(combat, state).guns = guns;
-        var activeProfile = model.profiles[0];
+        var activeProfile = model.profiles[0], remainder = 0;
         // A short-lived view of session-owned objects, not a detached copy.
         // Read again after transitions that may replace state, combat, guns or world.
         /** @returns {Snapshot} */
         function snapshot() {
             return { world: world, asteroid: asteroid, mothership: mothership, state: state, guns: guns, combat: combat, contact: contact };
+        }
+        /** Set physical size; the caller resets the sortie after a successful edit.
+         * @param {number} meters @returns {boolean} */
+        function setAsteroidDiameter(meters) {
+            if (!Number.isFinite(meters) || meters < 200 || meters > 4000) return false;
+            asteroid.radius = meters / 2 / units;
+            return true;
+        }
+        /** Place a stationary study start in scene units and restart its scenery clock.
+         * @param {number[]} eye */
+        function setStartPosition(eye) {
+            if (eye.length !== 3 || !eye.every(Number.isFinite)) throw new Error('Invalid start position');
+            state.eye = eye.slice();
+            state.velocity = [0, 0, 0];
+            world.elapsedSeconds = 0;
+            contact = false;
+            grounded = false;
+            remainder = 0;
+        }
+        /** @param {import('./types').OpponentStyle} style */
+        function setOpponentStyle(style) {
+            combat.opponentStyle = style;
+            combat.enemies.forEach(function (enemy) { enemy.opponentStyle = style; });
+        }
+        /** Collision and muzzle selection are gameplay configuration, even when paused.
+         * @param {string} ally @param {string} enemy */
+        function configureHulls(ally, enemy) { DW.training.configureHulls(combat, ally, enemy); }
+        function acquireTarget() { DW.training.acquireTarget(combat, state); }
+        function toggleTargetLock() { acquireTarget(); DW.training.toggleTargetLock(combat); }
+        function nextTarget() { DW.training.cycle(combat); }
+        /** Presentation clock: manual frames or completed watch ticks, not physics time.
+         * @param {number} elapsed */
+        function advanceScenery(elapsed) {
+            if (!Number.isFinite(elapsed) || elapsed < 0) throw new Error('Invalid elapsed time');
+            world.elapsedSeconds += elapsed;
         }
         /** @param {string} mode @param {boolean} enabled */
         function setCombat(mode, enabled) {
@@ -80,18 +115,21 @@
             DW.training.bindPlayer(combat, state).guns = guns;
             contact = false;
             grounded = false;
+            remainder = 0;
             if (combat.enabled)
                 DW.training.spawn(combat, state, asteroid.radius);
             return snapshot();
         }
         /** @param {number} elapsed @param {Demand} controls @param {{profile: Profile; weapon: Weapon}} config */
         function advance(elapsed, controls, config) {
-            // Fixed small substeps keep response independent of display refresh rate.
-            var remaining = elapsed;
-            contact = false;
-            while (remaining > 0) {
-                var dt = Math.min(1 / 120, remaining);
-                remaining -= dt;
+            if (!Number.isFinite(elapsed) || elapsed < 0) throw new Error('Invalid elapsed time');
+            // Like duels, retain fractional time and execute only complete ticks.
+            // Every tick completed by this call uses this call's sampled demand.
+            remainder += elapsed;
+            if (remainder + 1e-10 >= fixedStep) contact = false;
+            while (remainder + 1e-10 >= fixedStep) {
+                var dt = fixedStep;
+                remainder = Math.max(0, remainder - dt);
                 var wasGrounded = grounded, angle = spinRate * dt;
                 asteroid.rotation = (asteroid.rotation + angle) % (2 * Math.PI);
                 // Contact is an arcade stop relative to the moving terrain.
@@ -120,8 +158,10 @@
                     environment.onGunshot();
                 if (guns.hits > hitsBefore || combat.lastHit > playerHitBefore)
                     environment.onImpact();
-                if (combat.dead)
+                if (combat.dead) {
+                    remainder = 0;
                     break;
+                }
                 var length = Math.hypot.apply(null, state.eye), direction = state.eye.map(function (x) {
                     return x / (length || 1);
                 });
@@ -137,7 +177,11 @@
             }
             return snapshot();
         }
-        return { snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance, setWorld: /** @param {World} value */ function (value) {
+        return { snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance,
+            setAsteroidDiameter: setAsteroidDiameter, setStartPosition: setStartPosition,
+            setOpponentStyle: setOpponentStyle, configureHulls: configureHulls,
+            acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, nextTarget: nextTarget,
+            advanceScenery: advanceScenery, setWorld: /** @param {World} value */ function (value) {
                 world = value;
             } };
     }

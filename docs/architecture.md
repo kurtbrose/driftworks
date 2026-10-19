@@ -453,6 +453,26 @@ These controls do not modify the game camera or simulation rules.
 
 ### Isolated arcade flight lab
 
+`flightSession` owns manual-flight state. Its `snapshot()` is a borrowed live
+view for observers, not a copy or a mutation interface; reacquire it after
+reset/combat/world replacement. Browser controls use `setAsteroidDiameter`
+(physical metres, 200–4000; false rejects the edit), `setStartPosition` (scene
+units; copies the eye, stops velocity, clears contact/fractional time and zeros
+the scenery clock), `setOpponentStyle`, `configureHulls`, `acquireTarget`,
+`toggleTargetLock` and `nextTarget`. Diameter edits are followed by sortie reset;
+style/hull selections apply to the current combat and its subsequent waves.
+Reset and combat replacement retain their existing defaults; the composition
+root reapplies UI selections. Hull configuration is allowed while paused and
+shares the training collision/muzzle rules. Renderers and HUDs observe these
+choices rather than selecting simulation geometry.
+
+`advanceScenery` owns writes to the current world's elapsed-seconds field.
+Manual frames supply elapsed time; `flightWatch.create` receives a session
+adapter with `snapshot` and `advanceScenery`, and advances scenery only by
+completed duel ticks. This clock remains separate from manual physics ticks.
+`setWorld` is the explicit renderer camera/world replacement boundary. Tests
+may still mutate borrowed views to construct simulation fixtures.
+
 `experiments/flight.html` loads the ordinary production script stack with boot
 disabled, then a separate flight model and page controller. The model exposes
 `Driftworks.arcade` (profiles, create, step, contact); it owns 3D cockpit position,
@@ -460,8 +480,16 @@ velocity and an orthonormal attitude basis. SI speeds convert through
 `sim.METERS_PER_UNIT`, without tactical time acceleration. Its page controller
 uses `scene3d.create(..., {study:true})` and `setSurfaceCamera` to reuse production
 geology, with no changes to persistent simulation state or save rules. The
-controller substeps at no more than 1/120 second, caps stalls at 0.1 second,
-and clears input on pause/blur/visibility changes. Radial surface sampling stops
+controller caps stalls at 0.1 second and clears input on pause/blur/visibility
+changes. The session accumulates elapsed time and executes exact 1/120-second
+ticks, matching the duel clock's cadence and rounding tolerance. Fractional time
+survives between calls (including pauses and combat toggles); sortie reset and
+death discard it. Each completed tick uses the controls and loadout supplied to
+the call completing it; input changes are not timestamped or queued. Identical
+per-tick inputs reproduce simulation state independently of frame batching;
+sampling live input at different frame rates need not produce identical inputs.
+Calls completing no ticks preserve the previous contact indication. Browser
+presentation/audio clocks still use frame elapsed time. Radial surface sampling stops
 contact with 5 m clearance; this is an arcade stop, not a rigid-body collision.
 The flight session advances a six-hour +Z asteroid spin in simulation time (pause
 freezes it; sortie resets preserve its phase). Rendering, surface crews and the

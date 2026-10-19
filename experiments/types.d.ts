@@ -571,7 +571,7 @@ export type ExperimentModules = {
         groups:{separations:number;progressEscapes:number;style:OpponentStyle;meanRange:number;attackFraction:number;extendFraction:number;rearThreatFraction:number;opportunityFraction:number;label:string;pilot:string;skill:number;weapons:string;unshielded:boolean;n:number;wins:number;losses:number;timeouts:number;medianKill:number|null;observedMean:number;longestDry:number}[];
         shieldPairs:number;pairsCensored:number;observedShieldDelta:number|null;
     };watchUrl:(options:DuelOptions)=>string};
-    flightWatch:{create:(getScenery:()=>Snapshot, options:DuelOptions)=>{
+    flightWatch:{create:(scenery:Pick<ReturnType<ExperimentModules['flightSession']['create']>, 'snapshot' | 'advanceScenery'>, options:DuelOptions)=>{
         advance:(elapsed:number,speed:number)=>DuelSummary;
         snapshot:(chase:boolean)=>Snapshot;
         summary:()=>DuelSummary;replay:DuelReplay;
@@ -742,6 +742,14 @@ export type ExperimentModules = {
                 profile: Profile;
             }) => Snapshot;
             setCombat: (mode: string, enabled: boolean) => Snapshot;
+            setAsteroidDiameter: (meters: number) => boolean;
+            setStartPosition: (eye: number[]) => void;
+            setOpponentStyle: (style: OpponentStyle) => void;
+            configureHulls: (ally: string, enemy: string) => void;
+            acquireTarget: () => void;
+            toggleTargetLock: () => void;
+            nextTarget: () => void;
+            advanceScenery: (elapsed: number) => void;
             advance: (elapsed: number, controls: Demand, config: {
                 profile: Profile;
                 weapon: Weapon;
