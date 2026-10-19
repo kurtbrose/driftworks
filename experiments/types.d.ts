@@ -967,6 +967,7 @@ export type ElementsGetter = <K extends keyof Elements>(id: K) => Elements[K];
 export type VoiceNumberKey = Exclude<keyof Voice, "compactWords" | "emotion">;
 declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
+        fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];
         retailWeapons?: Weapon[];
         shipPacks?: Pack[];

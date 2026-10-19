@@ -549,3 +549,7 @@ Engine sound tuning: open [Engine sound lab](experiments/engine-lab.html) for ei
 Flight **Settings / Sound balance** offers engine, weapons, impacts, comms and overall effects levels. Comms briefly lower engine/guns; hits briefly lower the engine. Disable **Prioritize comms and impacts** for a fixed mix. Levels are remembered locally.
 
 The separate `experiments/fighter-greybox.html` explores a dragonfly / helicopter fighter: a broad side-by-side crew pod, tapering tail, four short outriggers and a single ventral centerline gun. The earlier fleet bench remains an independent idea study.
+
+The fighter study includes clear cockpit glazing, two seated astronauts in placeholder armrest chairs, and a Crew close-up view. Crew and chairs keep their physical size as hull proportions change.
+
+The cockpit fits the two crew with 1.1 m seat spacing and a roughly 2.1 by 2 m canopy at default proportions. Cockpit breadth has a minimum clearance to keep the full-size chairs apart when narrowing the hull.

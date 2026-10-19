@@ -14,3 +14,5 @@ plus textures and previews. These are available as placeholder environment
 assets; models remain in the archive and are not integrated into the game.
 Any future runtime assets should be extracted locally and referenced with
 relative URLs.
+
+The fighter cockpit study uses the unmodified `models/chair-armrest-headrest.glb`, extracted from `Models/GLB format/chair-armrest-headrest.glb` in the source archive. `tools/bake-fighter-cockpit.mjs` converts this chair to local vertex batches with neutral grey placeholder materials; the study places it at 1.6 times its source scale.
