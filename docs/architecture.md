@@ -520,7 +520,9 @@ attributes, carried separately into the effect shader. Camera-facing ellipses
 project the bolt length onto the view plane and retain a round end-on footprint.
 A narrow bright core and fading glow replace crossed opaque rectangles. Depth
 testing remains enabled while additive effects disable depth writes; impact
-opacity fades with age. Weapon dimensions and ballistics are unchanged.
+opacity fades with age. Visible bolt length and width scale linearly with distance
+from the camera, reaching full size at 20 metres to keep nearby fire from covering
+targets. Weapon dimensions and ballistics are unchanged.
 
 
 `experiments/input.js` provides pure controller mapping and deadzone helpers.
@@ -1250,3 +1252,28 @@ animation. `viewer-navigation-start` lets optional page cameras (such as surface
 walk) relinquish ownership before focus picking or flight. Pages retain models,
 lighting, animation and presets; shared navigation owns focus/flight controls.
 The archived surface experiment keeps its frozen renderer fixture.
+
+Flight engine sound uses `audio.setFlightEngine(dt, throttle, boost, active, detail)`
+once per rendered manual-flight frame. Optional detail supplies normalized damage,
+maneuver and thrust. The reusable `audio.engine.create(context, destination, tuning)`
+owns oscillators, turbulence, filters, a compressor and modulation; it exposes
+update/tune/stop/dispose. The caller owns the context. No graph enters world state.
+The independent tactical `setEngineThrust` noise bed remains available.
+
+`audio.engine.step` applies nonlinear power response and frame-independent spool
+inertia; boost has a separate fast envelope and an edge-triggered ignition.
+Sine bass, structural harmonics, an air-led turbine with quiet detuned partials
+and noise-driven pitch drift, colored exhaust, modulation and
+a 32 Hz afterburner layer share one synth in both flight and
+`experiments/engine-lab.html`. Cockpit filters the exhaust; exterior opens it up.
+Damage increases irregular modulation; maneuvering raises turbine/exhaust load.
+Impact sounds also include a 36 Hz thump.
+
+The lab offers eight presets, layer mutes, tuning, A/B capture, a scripted
+audition and JSON recipes. Only the explicit Use this mix in flight action saves
+`driftworks-engine-tuning-v1`; the flight voice loads it on first activation.
+Reload flight to apply later changes. Normalize tuning on import/load; storage
+failures fall back to defaults. Lab mutes are audition-only. Stop/blur/visibility
+loss silence the lab; pagehide disposes the graph and closes its context.
+Pause/reset/focus loss clear flight sound. Contact/death disable it.
+Audio does not add controller vibration; existing haptics stay independent.

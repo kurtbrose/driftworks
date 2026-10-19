@@ -665,6 +665,69 @@
     f.setPaused(false);f.key('KeyW');f.setPads([]);c.sample();assert(f.counts.pause===3&&c.sample().throttleRate===0);
   });
 
+  test('engine presets repair invalid values and spool independently of frame rate', function () {
+    var engine = window.Driftworks.audio.engine;
+    assert(engine.presets.length === 8);
+    var repaired = engine.normalize({bass: NaN, pitch: 99, spool: -4, flutter: Infinity});
+    assert(repaired.bass === .7 && repaired.pitch === 2 && repaired.spool === .08 && repaired.flutter === 23);
+    engine.presets.forEach(function(preset) {
+      var tune = engine.normalize(preset.tuning);
+      var a = {spool:0, boost:0, ignition:false, active:false};
+      var b = {spool:0, boost:0, ignition:false, active:false};
+      for(var i=0;i<60;i++) a=engine.step(a,1/60,{throttle:.7},tune);
+      for(var j=0;j<30;j++) b=engine.step(b,1/30,{throttle:.7},tune);
+      assertClose(a.spool,b.spool);
+      assert(a.spool>0 && a.spool<1 && a.boost===0);
+      a=engine.step(a,.016,{throttle:1,afterburner:true},tune);assert(a.ignition);
+      a=engine.step(a,.016,{throttle:1,afterburner:true},tune);assert(!a.ignition,'Held boost must not retrigger ignition');
+      a=engine.step(a,.016,{throttle:0,afterburner:false},tune);
+      a=engine.step(a,.016,{throttle:0,afterburner:true},tune);assert(a.ignition);
+      a=engine.step(a,0,{throttle:1,active:false},tune);assert(a.spool===0 && a.boost===0 && !a.active);
+      var bad=engine.step(a,NaN,{throttle:Infinity},tune);assert(Number.isFinite(bad.spool));
+    });
+  });
+
+  test('layered engine graph starts once, accepts tuning, and stops every source on disposal', function () {
+    var params=[], sources=[], gains=[];
+    function param() {var p={value:0,setTargetAtTime:function(value){assert(Number.isFinite(value));p.value=value;},setValueAtTime:function(value){assert(Number.isFinite(value));p.value=value;},cancelScheduledValues:function(){},exponentialRampToValueAtTime:function(value){assert(value>0);p.value=value;}};params.push(p);return p;}
+    function node() {return {connect:function(next){return next;},disconnect:function(){}};}
+    function gain() {var n=node();n.gain=param();gains.push(n);return n;}
+    function source() {var n=node();n.frequency=param();n.start=function(){n.started=(n.started||0)+1;};n.stop=function(){n.stopped=(n.stopped||0)+1;};sources.push(n);return n;}
+    var ctx={currentTime:0,sampleRate:8000,createGain:gain,createOscillator:source,createBufferSource:source,
+      createBiquadFilter:function(){var n=node();n.frequency=param();n.Q=param();return n;},
+      createDynamicsCompressor:function(){var n=node();['threshold','knee','ratio','attack','release'].forEach(function(k){n[k]=param();});return n;},
+      createBuffer:function(ch,length){return {getChannelData:function(){return new Float32Array(length);}};}};
+    var voice=window.Driftworks.audio.engine.create(ctx,node());
+    assert(sources.length===11 && sources.every(function(s){return s.started===1;}));
+    voice.update(.1,{throttle:1,afterburner:true,damage:.8,maneuver:1});
+    assert(gains[0].gain.value>0);
+    assert(sources[2].frequency.value > 330 && sources[3].frequency.value > sources[2].frequency.value*2);
+    assert(sources[4].frequency.value > sources[3].frequency.value, 'Turbine partials should be slightly detuned');
+    assert(gains[3].gain.value < .01 && gains[10].gain.value > gains[3].gain.value, 'Air should carry the turbine; the pure tone stays subtle');
+    voice.tune({whine:0});
+    voice.update(.1,{throttle:1});
+    [3,4,5,10,11].forEach(function(index){assert(gains[index].gain.value===0,'Whine mute must silence tones, air and drift');});
+    voice.tune({bass:0,whine:0,roar:0,texture:0,burner:0,volume:0,perspective:'exterior'});
+    voice.update(.1,{throttle:1,afterburner:true});assert(gains[0].gain.value===0);
+    voice.stop();assert(gains[0].gain.value===0);
+    voice.dispose();voice.dispose();
+    assert(sources.every(function(s){return s.stopped===1;}),'Disposal must be idempotent');
+    voice.update(.1,{throttle:1});assert(gains[0].gain.value===0);
+  });
+
+  test('flight engine bass spools up, releases and cuts on pause', function () {
+    var audio = Driftworks.audio;
+    audio.flightFeedback(0, 0, false, false);
+    var cruise = audio.flightFeedback(.016, 1, false, true);
+    assert(cruise.load > 0 && cruise.load < 1 && cruise.boost === 0);
+    var boost = audio.flightFeedback(.1, 1, true, true);
+    assert(boost.load > cruise.load && boost.boost > 0);
+    var release = audio.flightFeedback(.016, 0, false, true);
+    assert(release.boost < boost.boost && release.boost > 0);
+    var stopped = audio.flightFeedback(0, 1, true, false);
+    assert(stopped.load === 0 && stopped.boost === 0);
+  });
+
   test('gamepad rumble mixes boost and priority jolts, stops and tolerates unsupported hardware', function () {
     var f=flightControlsFixture(),calls=[],resets=0;
     var actuator={playEffect:function(type,effect){calls.push(effect);assert(type==='dual-rumble');return Promise.resolve('complete');},reset:function(){resets++;return Promise.resolve('complete');}};
@@ -2099,6 +2162,25 @@
     model.step(guns,pose,window.Driftworks.retailWeapons[0],true,1/120);
     var batches=model.geometry(guns,pose);assert(batches.length===4);assert(batches[2].vertices.length===72);
     assert(batches[1].vertices.length===0);batches[2].vertices.forEach(function(x){assert(Number.isFinite(x));});
+  });
+
+  test('bolt artwork grows with camera distance to full size at twenty metres', function () {
+    var DW=window.Driftworks,U=DW.sim.METERS_PER_UNIT,weapon=DW.retailWeapons[0];
+    var pose={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+    function widthAt(m) {
+      var bolt={position:[10,20+m/U,30],direction:[1,0,0],weapon:weapon,age:0};
+      var before=JSON.stringify(bolt);
+      var vertices=DW.flightGuns.geometry({bolts:[bolt],impacts:[]},pose)[2].vertices;
+      assert(JSON.stringify(bolt)===before,'Rendering leaves ballistic state intact');
+      var xs=[],zs=[];
+      for(var i=0;i<vertices.length;i+=6){xs.push(vertices[i]);zs.push(vertices[i+2]);}
+      return [Math.max.apply(null,xs)-Math.min.apply(null,xs),Math.max.apply(null,zs)-Math.min.apply(null,zs)];
+    }
+    var full=widthAt(20),far=widthAt(40),half=widthAt(10),near=widthAt(2),zero=widthAt(0);
+    full.forEach(function(size,i){
+      assert(size>0);assertClose(far[i],size,.00001);assertClose(half[i],size*.5,.00001);
+      assertClose(near[i],size*.1,.00001);assertClose(zero[i],0,.00001);
+    });
   });
 
   test('flight sky directions rotate with the cockpit, ignore translation, and cover the sphere', function () {

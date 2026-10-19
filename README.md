@@ -543,3 +543,5 @@ Operational spin assumes a symmetric hub at midspan: radius = span / 2, tip spee
 Open `experiments/fleet-greybox.html` to develop the fighter, six-fighter pocket carrier, and patrol ship together. Inspect the fleet at relative scale or focus on one hull; breadth, armor depth, engine spread and identification stripes apply across the family. The carrier shows full-size embarked fighters in an open bay. These are provisional visual studies, separate from gameplay ship definitions; dimensions and bay layout do not establish docking or combat rules.
 
 Preview target shield/hull bars without flying at [target status preview](experiments/target-status.html), with actual-size and enlarged views, backdrop controls, and damage/collapse buttons.
+
+Engine sound tuning: open [Engine sound lab](experiments/engine-lab.html) for eight procedural voices, cockpit/exterior listening, layer controls, A/B mixes, JSON recipes, and a repeatable flight audition. Use **Use this mix in flight**, then reload flight to apply the locally saved mix. Audio tuning adds no controller vibration.

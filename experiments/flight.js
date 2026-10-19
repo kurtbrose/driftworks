@@ -105,6 +105,7 @@
         stats.textContent = (p.species || '') + ' · ' + p.role + '\nHull / shields ' + p.hull + ' / ' + p.shield + '\nCruise / boost ' + p.maxVelocity[2] + ' / ' + p.afterburnerVelocity[2] + ' m/s\nAccel / decel ' + p.forwardAccel + ' / ' + p.forwardDecel + ' s\nPitch / yaw / roll (s/360°)\n' + p.rotationTime.join(' / ') + '\nDamp / rotdamp ' + p.damp + ' / ' + p.rotdamp;
     }
     function clear() {
+        DW.audio.setFlightEngine(0, 0, false, false);
         controls.clear();
     }
     function pause() {
@@ -298,7 +299,9 @@
                 if (watch.summary().done) pause();
             } else session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
             var after = view();
-            if (!watch) controls.haptics(elapsed, {boost: !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
+            if (!watch && after.contact && !contact) DW.audio.playImpact(2);
+            DW.audio.setFlightEngine(elapsed, after.state.throttle, !!demand.boost, !paused && !watch && !after.contact && !after.combat.dead, {damage: 1 - after.combat.hull / (after.combat.maxHull || after.combat.hull || 1), maneuver: Math.min(1, Math.abs(demand.pitch || 0) + Math.abs(demand.yaw || 0) + Math.abs(demand.roll || 0))});
+            if (!watch) controls.haptics(elapsed, {boost: !after.contact && !after.combat.dead && !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
             if (!watch && after.combat.dead) {
                 pause();
                 status.textContent = 'Training over · Restart training to try again';

@@ -148,8 +148,15 @@
             });
             if (!group)
                 return;
+            // Camera-distance taper keeps nearby fire from obscuring the target.
+            // Only artwork shrinks: swept collision still uses the weapon's radius.
+            var distanceM = Math.hypot.apply(null, bolt.position.map(function (x, i) {
+                return x - pose.eye[i];
+            })) * units;
+            var visualScale = Math.min(1, distanceM / 20);
+            var halfLength = bolt.weapon.length * .5 / units * visualScale;
             var center = bolt.position.map(function (x, i) {
-                return x - bolt.direction[i] * bolt.weapon.length * .5 / units;
+                return x - bolt.direction[i] * halfLength;
             });
             var along = bolt.direction.map(function (x, i) {
                 return x - pose.back[i] * dot(bolt.direction, pose.back);
@@ -159,8 +166,8 @@
                 return x / projected;
             }) : pose.up;
             var side = [pose.back[1] * along[2] - pose.back[2] * along[1], pose.back[2] * along[0] - pose.back[0] * along[2], pose.back[0] * along[1] - pose.back[1] * along[0]];
-            var width = bolt.weapon.headRadius / units;
-            quad(group.data, center, along, side, Math.max(width, bolt.weapon.length * .5 / units * projected + width), width, 1);
+            var width = bolt.weapon.headRadius / units * visualScale;
+            quad(group.data, center, along, side, Math.max(width, halfLength * projected + width), width, 1);
         });
         var batches = groups.map(function (g) {
             return { vertices: new Float32Array(g.data), color: g.color };
