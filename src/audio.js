@@ -31,6 +31,77 @@
   /** @type {{ sfx: boolean, music: boolean, sfxVolume: number, musicVolume: number }} */
   var settings = loadSettings();
   var lastEngineLevel = 0;
+  /** @typedef {import('./engine-types').FlightMix} FlightMix */
+  /** @type {GainNode | null} */ var flightBus = null;
+  /** @type {GainNode | null} */ var weaponsBus = null;
+  /** @type {GainNode | null} */ var impactsBus = null;
+  /** @type {GainNode | null} */ var commsBus = null;
+  var commsActive = false, impactUntil = 0, lastGunshot = -Infinity;
+  var mix = loadMix();
+  /** @param {Partial<FlightMix>} value @returns {FlightMix} */
+  function normalizeMix(value) {
+    return {engine:volumeValue(value.engine,.55), weapons:volumeValue(value.weapons,.55),
+      impacts:volumeValue(value.impacts,.85), comms:volumeValue(value.comms,.85), ducking:value.ducking !== false};
+  }
+  function loadMix() {
+    try {
+      /** @type {unknown} */ var value = JSON.parse(global.localStorage.getItem('driftworks-flight-mix-v1') || 'null');
+      if(value && typeof value==='object') return normalizeMix(/** @type {Partial<FlightMix>} */(value));
+    } catch(error) { /* Optional preferences. */ }
+    return normalizeMix({});
+  }
+  /** @param {FlightMix} value @param {boolean} speech @param {boolean} hit */
+  function mixLevels(value, speech, hit) {
+    var talking = value.ducking && speech && value.comms > 0;
+    return {engine:value.engine * Math.min(talking?.38:1, value.ducking && hit?.3:1),
+      weapons:value.weapons * (talking?.6:1), impacts:value.impacts, comms:value.comms*.5};
+  }
+  function applyMix() {
+    if(!context || !flightBus || !weaponsBus || !impactsBus || !commsBus)return;
+    var now=context.currentTime, hit=now<impactUntil, levels=mixLevels(mix,commsActive,hit);
+    [[flightBus,levels.engine],[weaponsBus,levels.weapons],[impactsBus,levels.impacts],[commsBus,levels.comms]].forEach(function(pair){
+      var bus=/** @type {GainNode} */(pair[0]), level=/** @type {number} */(pair[1]);
+      bus.gain.cancelScheduledValues(now);
+      bus.gain.setTargetAtTime(level,now,level < bus.gain.value ? .035 : .22);
+    });
+    if(hit)flightBus.gain.setTargetAtTime(mixLevels(mix,commsActive,false).engine,impactUntil,.22);
+  }
+  /** @param {Partial<FlightMix>} value */
+  function setMix(value) {
+    mix=normalizeMix(Object.assign({},mix,value));
+    try{global.localStorage.setItem('driftworks-flight-mix-v1',JSON.stringify(mix));}catch(error){/* Optional. */}
+    applyMix();
+  }
+  /** @param {boolean} active */
+  function setCommsActive(active) { commsActive=active;applyMix(); }
+  function commsChannel() {
+    if(!unlock() || !context || !commsBus)return null;
+    return {context:context,output:commsBus};
+  }
+  /** @param {HTMLElement} host */
+  function mountMixer(host) {
+    var details=global.document.createElement('details'), summary=global.document.createElement('summary');
+    summary.textContent='Sound balance'; details.appendChild(summary);
+    var description=global.document.createElement('p');description.textContent='Engine stays behind comms and impacts. Levels are remembered in this browser.';details.appendChild(description);
+    /** @type {('master'|'engine'|'weapons'|'impacts'|'comms')[]} */ var channels=['master','engine','weapons','impacts','comms'];
+    /** @type {HTMLInputElement[]} */ var sliders=[];
+    channels.forEach(function(channel){
+      var label=global.document.createElement('label'), slider=global.document.createElement('input'), readout=global.document.createElement('output');
+      label.textContent=channel==='master'?'All sound effects':channel.charAt(0).toUpperCase()+channel.slice(1);
+      slider.type='range';slider.min='0';slider.max='1';slider.step='.01';
+      slider.value=String(channel==='master'?settings.sfxVolume:mix[channel]);
+      slider.setAttribute('aria-label',channel==='master'?'All sound effects volume':channel+' volume');
+      function change(){readout.textContent=' '+Math.round(Number(slider.value)*100)+'%';}
+      slider.oninput=function(){if(channel==='master')setSfxVolume(Number(slider.value));else setMix({[channel]:Number(slider.value)});change();};
+      change();label.append(readout,slider);details.appendChild(label);sliders.push(slider);
+    });
+    var duckLabel=global.document.createElement('label'), duck=global.document.createElement('input');
+    duck.type='checkbox';duck.checked=mix.ducking;duck.style.width='auto';
+    duck.onchange=function(){setMix({ducking:duck.checked});};duckLabel.append(duck,' Prioritize comms and impacts');details.appendChild(duckLabel);
+    var reset=global.document.createElement('button');reset.type='button';reset.textContent='Reset sound balance';
+    reset.onclick=function(){setMix(normalizeMix({}));setSfxVolume(1);sliders.forEach(function(slider,index){var channel=channels[index];slider.value=String(channel==='master'?1:mix[channel]);if(slider.oninput)slider.dispatchEvent(new Event('input'));});duck.checked=mix.ducking;};
+    details.appendChild(reset);host.appendChild(details);
+  }
 
   function loadSettings() {
     try {
@@ -76,7 +147,12 @@
       sfxBus.connect(master);
       musicBus.connect(master);
       engineBus.connect(sfxBus);
-      master.connect(context.destination);
+      flightBus=context.createGain(); weaponsBus=context.createGain(); impactsBus=context.createGain(); commsBus=context.createGain();
+      [flightBus,weaponsBus,impactsBus,commsBus].forEach(function(bus){bus.gain.value=0;bus.connect(/** @type {GainNode} */(sfxBus));});
+      var limiter=context.createDynamicsCompressor();
+      limiter.threshold.value=-8;limiter.knee.value=12;limiter.ratio.value=4;limiter.attack.value=.003;limiter.release.value=.18;
+      master.connect(limiter).connect(context.destination);
+      applyMix();
       startEngineNoise();
       startMusicBed();
     }
@@ -134,8 +210,8 @@
     }
   }
 
-  /** @param {number} frequency @param {number} duration @param {number} gain @param {OscillatorType} type @param {number} [delay] */
-  function beep(frequency, duration, gain, type, delay) {
+  /** @param {number} frequency @param {number} duration @param {number} gain @param {OscillatorType} type @param {number} [delay] @param {'weapons'|'impacts'} [channel] */
+  function beep(frequency, duration, gain, type, delay, channel) {
     if (!settings.sfx || !unlock() || !context || !sfxBus) return;
     var start = context.currentTime + (delay || 0);
     var oscillator = context.createOscillator();
@@ -145,13 +221,13 @@
     envelope.gain.setValueAtTime(0.0001, start);
     envelope.gain.exponentialRampToValueAtTime(gain || 0.07, start + 0.006);
     envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    oscillator.connect(envelope).connect(sfxBus);
+    oscillator.connect(envelope).connect(channel === 'weapons' && weaponsBus || channel === 'impacts' && impactsBus || sfxBus);
     oscillator.start(start);
     oscillator.stop(start + duration + 0.02);
   }
 
-  /** @param {number} duration @param {number} gain @param {BiquadFilterType} filterType @param {number} filterFrequency @param {number} [delay] */
-  function noiseBurst(duration, gain, filterType, filterFrequency, delay) {
+  /** @param {number} duration @param {number} gain @param {BiquadFilterType} filterType @param {number} filterFrequency @param {number} [delay] @param {'weapons'|'impacts'} [channel] */
+  function noiseBurst(duration, gain, filterType, filterFrequency, delay, channel) {
     if (!settings.sfx || !unlock() || !context || !sfxBus) return;
     var start = context.currentTime + (delay || 0);
     var source = context.createBufferSource();
@@ -164,7 +240,7 @@
     envelope.gain.setValueAtTime(0.0001, start);
     envelope.gain.exponentialRampToValueAtTime(gain || 0.08, start + 0.004);
     envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    source.connect(filter).connect(envelope).connect(sfxBus);
+    source.connect(filter).connect(envelope).connect(channel === 'weapons' && weaponsBus || channel === 'impacts' && impactsBus || sfxBus);
     source.start(start);
   }
 
@@ -234,14 +310,18 @@
   }
 
   function playGunshot() {
-    noiseBurst(0.11, 0.08, 'highpass', 1200 + Math.random() * 300);
-    beep(86, 0.09, 0.04, 'sine');
+    if(!settings.sfx || !unlock() || !context || context.currentTime-lastGunshot<.045)return;
+    lastGunshot=context.currentTime;
+    noiseBurst(0.09, 0.08, 'highpass', 1200 + Math.random() * 300, 0, 'weapons');
+    beep(86, 0.07, 0.04, 'sine', 0, 'weapons');
   }
 
   /** @param {number} strength */
   function playImpact(strength) {
-    beep(36, 0.18, 0.035 + Math.min(0.035, Math.max(0, strength || 0) * 0.01), 'sine');
-    noiseBurst(0.16, 0.055 + Math.min(0.04, (strength || 0) * 0.01), 'lowpass', 520 + Math.random() * 200);
+    if(!settings.sfx || !unlock() || !context)return;
+    impactUntil=context.currentTime+.22;applyMix();
+    beep(36, 0.18, 0.035 + Math.min(0.035, Math.max(0, strength || 0) * 0.01), 'sine', 0, 'impacts');
+    noiseBurst(0.16, 0.055 + Math.min(0.04, (strength || 0) * 0.01), 'lowpass', 520 + Math.random() * 200, 0, 'impacts');
   }
 
   function playDock() {
@@ -298,7 +378,7 @@
   function setFlightEngine(dt, throttle, boost, active, detail) {
     var feedback = flightFeedback(dt, throttle, boost, active);
     if (!context || !sfxBus) return feedback;
-    if (!flightVoice && active) flightVoice = createEngine(context, sfxBus, loadEngineTuning());
+    if (!flightVoice && active) flightVoice = createEngine(context, flightBus || sfxBus, loadEngineTuning());
     if (flightVoice) flightVoice.update(dt, Object.assign({}, detail, {throttle: throttle, afterburner: boost, active: active}));
     return feedback;
   }
@@ -497,6 +577,7 @@
   }
 
   Driftworks.audio = {
+    getMix:function(){return Object.assign({},mix);}, setMix:setMix, setCommsActive:setCommsActive, commsChannel:commsChannel, mountMixer:mountMixer,
     engine: {presets: enginePresets, normalize: normalizeEngine, step: stepEngine, create: createEngine, load: loadEngineTuning, save: saveEngineTuning},
     unlock: unlock,
     flightFeedback: flightFeedback,
@@ -517,7 +598,7 @@
     playWarning: playWarning,
     setEngineThrust: setEngineThrust,
     _test: {
-      loadSettings: loadSettings,
+      loadSettings: loadSettings, normalizeMix:normalizeMix, mixLevels:mixLevels,
       getLastEngineLevel: function () {
         return lastEngineLevel;
       }

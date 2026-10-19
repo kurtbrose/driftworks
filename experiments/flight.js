@@ -15,6 +15,8 @@
         }, onImpact: function () {
             DW.audio.playImpact(1);
         } });
+    var mixerHost=document.getElementById('flight-settings');
+    if(mixerHost)DW.audio.mountMixer(mixerHost);
     var units = DW.sim.METERS_PER_UNIT;
     var tetherParams = new URLSearchParams(location.search), tetherKm = Number(tetherParams.get('tether'));
     var tetherStudy = [100,50,20,10,2].includes(tetherKm);

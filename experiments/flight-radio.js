@@ -15,6 +15,7 @@
             throw new Error('Comms requires speaker and subtitle elements');
         const speaker = speakerElement, subtitle = subtitleElement;
         function stop() {
+            DW.audio.setCommsActive(false);
             generation++;
             channelRemaining = 0;
             currentSpeaker = /** @type {string | null} */ (null);
@@ -26,17 +27,12 @@
             }
             panel.classList.remove('transmitting');
         }
+        /** @type {GainNode | null} */ var output = null;
         function unlock() {
-            var Audio = window.AudioContext || window.webkitAudioContext;
-            if (!Audio)
-                return;
             try {
-                context = context || new Audio();
-                context.resume().catch(function () {
-                });
-            }
-            catch (_) { /* Subtitles remain available. */
-            }
+                var channel = DW.audio.commsChannel();
+                if(channel) { context=channel.context;output=channel.output; }
+            } catch (_) { /* Subtitles remain available. */ }
         }
         /** @param {Line} line */
         function speak(line) {
@@ -61,18 +57,19 @@
                 var api = DW.mumble, rate = 22050;
                 var plan = api.analyze(line.text, Object.assign(voiceOptions(line.voiceSettings || api.presets[line.voice], line.emotion), { seed: line.seed, volume: 0.42 }));
                 channelRemaining = plan.duration + 0.5;
-                if (muted || !context || context.state !== 'running')
+                if (muted || !context || !output || context.state !== 'running')
                     return;
                 var transmission = api.transmit(api.render(plan, rate), rate, { mode: 'radio', effects: 0.45, seed: line.radioSeed });
                 var buffer = context.createBuffer(1, transmission.samples.length, rate);
                 buffer.copyToChannel(new Float32Array(transmission.samples), 0);
                 source = context.createBufferSource();
                 source.buffer = buffer;
-                source.connect(context.destination);
+                source.connect(output);
                 var ticket = generation, playing = source;
                 source.onended = function () {
                     playing.disconnect();
                     if (ticket === generation) {
+                        DW.audio.setCommsActive(false);
                         source = null;
                         channelRemaining = 0;
                         currentSpeaker = /** @type {string | null} */ (null);
@@ -80,6 +77,7 @@
                     }
                 };
                 source.start();
+                DW.audio.setCommsActive(true);
                 channelRemaining = transmission.duration;
                 remaining = Math.max(9, transmission.duration + 2);
             }
@@ -96,8 +94,7 @@
         };
         window.addEventListener('pagehide', function () {
             stop();
-            if (context)
-                context.close();
+            // The shared game mixer owns the audio context.
         });
         return {
             speakerId: function () {

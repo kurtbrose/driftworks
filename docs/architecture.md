@@ -1277,3 +1277,16 @@ failures fall back to defaults. Lab mutes are audition-only. Stop/blur/visibilit
 loss silence the lab; pagehide disposes the graph and closes its context.
 Pause/reset/focus loss clear flight sound. Contact/death disable it.
 Audio does not add controller vibration; existing haptics stay independent.
+
+Flight sound balance is stored separately as `driftworks-flight-mix-v1`.
+The engine, weapons, impacts and comms have separate buses under the SFX master.
+Flight radio uses `audio.commsChannel()` and shares the game AudioContext;
+radio pause/mute/end clear `setCommsActive` without closing that context.
+Audible radio ducks engine to 38% and guns to 60% of their selected levels.
+Hits duck engine to 30% for 220 ms with a smooth release; impacts/comms retain
+priority. Muted radio does not duck. The mix preference can disable ducking.
+Gunshot starts are bounded to one per 45 ms to contain stacked volleys.
+A final compressor provides shared headroom. Settings / Sound balance provides
+persistent per-channel sliders plus an overall SFX control and reset.
+The isolated engine lab bypasses flight channel balance for sound design;
+its listening level describes the raw synth, before the flight engine trim.

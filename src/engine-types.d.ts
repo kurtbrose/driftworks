@@ -12,3 +12,5 @@ export type EngineTools = {
   load: () => EngineTuning;
   save: (tuning: EngineTuning) => boolean;
 };
+
+export type FlightMix = { engine: number; weapons: number; impacts: number; comms: number; ducking: boolean };

@@ -545,3 +545,5 @@ Open `experiments/fleet-greybox.html` to develop the fighter, six-fighter pocket
 Preview target shield/hull bars without flying at [target status preview](experiments/target-status.html), with actual-size and enlarged views, backdrop controls, and damage/collapse buttons.
 
 Engine sound tuning: open [Engine sound lab](experiments/engine-lab.html) for eight procedural voices, cockpit/exterior listening, layer controls, A/B mixes, JSON recipes, and a repeatable flight audition. Use **Use this mix in flight**, then reload flight to apply the locally saved mix. Audio tuning adds no controller vibration.
+
+Flight **Settings / Sound balance** offers engine, weapons, impacts, comms and overall effects levels. Comms briefly lower engine/guns; hits briefly lower the engine. Disable **Prioritize comms and impacts** for a fixed mix. Levels are remembered locally.

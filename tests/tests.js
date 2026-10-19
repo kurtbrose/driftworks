@@ -665,6 +665,20 @@
     f.setPaused(false);f.key('KeyW');f.setPads([]);c.sample();assert(f.counts.pause===3&&c.sample().throttleRate===0);
   });
 
+  test('flight mixer preserves urgent impacts and ducks only audible comms', function () {
+    var api=window.Driftworks.audio._test, mix=api.normalizeMix({});
+    assert(mix.engine<mix.impacts && mix.weapons<mix.comms);
+    var idle=api.mixLevels(mix,false,false),speech=api.mixLevels(mix,true,false),hit=api.mixLevels(mix,true,true);
+    assert(speech.engine<idle.engine && speech.weapons<idle.weapons);
+    assert(hit.engine<speech.engine && hit.impacts===idle.impacts && hit.comms===idle.comms);
+    var muted=api.mixLevels(Object.assign({},mix,{comms:0}),true,false);
+    assert(muted.engine===idle.engine && muted.weapons===idle.weapons);
+    var off=api.mixLevels(Object.assign({},mix,{ducking:false}),true,true);
+    assert(off.engine===idle.engine && off.weapons===idle.weapons);
+    var repaired=api.normalizeMix({engine:NaN,weapons:4,impacts:-1,comms:Infinity});
+    assert(repaired.engine===.55 && repaired.weapons===1 && repaired.impacts===0 && repaired.comms===.85);
+  });
+
   test('engine presets repair invalid values and spool independently of frame rate', function () {
     var engine = window.Driftworks.audio.engine;
     assert(engine.presets.length === 8);
@@ -1285,6 +1299,30 @@
     assert(radio.speakerId()==='wing'); // Muted subtitles still identify the transmitting pilot.
     radio.update(15,combat);assert(radio.speakerId()===null);
     radio.reset();assert(radio.speakerId()===null);
+  });
+
+  test('radio routes into the shared mixer and clears ducking on end, mute and pause', function () {
+    var DW=window.Driftworks, oldChannel=DW.audio.commsChannel, oldActive=DW.audio.setCommsActive;
+    var oldRender=DW.mumble.render, oldTransmit=DW.mumble.transmit, sources=[], activity=[], output={};
+    var context={state:'running',createBuffer:function(){return {copyToChannel:function(){}};},
+      createBufferSource:function(){var source={connect:function(dest){assert(dest===output);},disconnect:function(){},start:function(){},stop:function(){},onended:null};sources.push(source);return source;}};
+    DW.audio.commsChannel=function(){return {context:context,output:output};};
+    DW.audio.setCommsActive=function(active){activity.push(active);};
+    DW.mumble.render=function(){return new Float32Array(16);};
+    DW.mumble.transmit=function(){return {samples:new Float32Array(16),duration:.1};};
+    try {
+      var fields=[{textContent:''},{textContent:''}],toggle={setAttribute:function(){}};
+      var panel={querySelector:function(s){return s==='[data-speaker]'?fields[0]:fields[1];},classList:{add:function(){},remove:function(){},toggle:function(){}}};
+      var radio=DW.flightComms.mount(panel,toggle),pilot={id:'wing',index:0,team:'ally',mode:'approach',hp:90};
+      var combat={enabled:true,dead:false,hull:100,enemies:[pilot]};
+      radio.unlock();radio.update(0,combat);pilot.mode='evade';radio.update(0,combat);
+      assert(sources.length===1 && activity[activity.length-1]===true);
+      sources[0].onended();assert(activity[activity.length-1]===false);
+      radio.reset();pilot.mode='approach';radio.update(0,combat);pilot.mode='evade';radio.update(0,combat);
+      assert(activity[activity.length-1]===true);
+      toggle.onclick();assert(activity[activity.length-1]===false);
+      radio.pause();assert(activity[activity.length-1]===false);
+    } finally {DW.audio.commsChannel=oldChannel;DW.audio.setCommsActive=oldActive;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
   });
 
   test('flight comms retains a bounded newest-first subtitle history', function () {
