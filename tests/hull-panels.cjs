@@ -52,4 +52,11 @@ const coarse=buildHullPanels([sphere(12)],options),dense=buildHullPanels([sphere
 assert.equal(coarse.regions,6,'Same normal-field detector finds coherent curved charts without a sphere hint');
 assert.equal(dense.regions,coarse.regions,'Curved chart count survives increased tessellation');
 assert.equal(dense.plates,coarse.plates,'More sphere triangles do not create more plates');
+const variants=[1,2,3,4,5,6].map(style=>buildHullPanels([cube],{...options,style}));
+assert.equal(new Set(variants.map(v=>v.operation)).size,6,'Six distinct construction operations, not six panel parameter sets');
+assert(variants[1].panels.length>variants[0].panels.length,'Layered grammar retains lower shell plus upper courses');
+assert(variants[2].details>0,'Industrial grammar emits structural pieces');
+assert(variants[3].panels[0].vertices.length>variants[0].panels[0].vertices.length,'Blankets carry actual subdivided padding geometry');
+for(const batch of variants[4].panels)for(let i=0;i<batch.vertices.length;i+=8)assert(Math.max(...batch.vertices.slice(i,i+3).map(Math.abs))<1.002,'Paint grammar stays flush');
+assert.equal(variants[5].operation,'planar-chine-reconstruction');
 console.log('PASS geometry-aware plates: adjacency, semantic exclusions, tessellation independence, concavity, holes, deterministic real geometry');

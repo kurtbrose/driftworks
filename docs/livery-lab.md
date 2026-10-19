@@ -3,6 +3,12 @@
 Open `experiments/livery-lab.html` through the local static server. The scene holds
 26 hulls, including all 11 locally vendored Quaternius ships used in flight.
 The collection filter and solo inspection share the same geometry pipeline.
+The default workflow, `One hull / all treatments`, places eight copies together on the same deck:
+original, six grammars and detected regions. Change the subject to compare another
+hull without leaving this mode. This is the primary reusable greyboxing workflow;
+the many-hull collection is a secondary generalization check. One orbit camera and common controls apply to the
+whole scene. There are no independent viewports. `Uniform grey` removes material
+variation from source and treated hulls while keeping diagnostic colors visible.
 
 ## Evaluation contract
 
@@ -38,19 +44,27 @@ names. Its inputs use the normalized display hull coordinates (longest extent 2)
 4. Keep at most the 24 largest eligible regions. The area floor is the greater of
    0.018 display units squared and 0.75% of total analyzed area. Narrow cells are
    also rejected. These shared budgets intentionally leave small parts quiet.
-5. Partition eligible regions along their own dominant axis, clipping their
-   actual source triangles. Inset only welded exterior and hole boundaries;
-   triangle edges inside a plate never become seams. Emit conforming caps,
-   beveled borders and thickness walls above the source shell. Neither concave
-   outlines nor openings are replaced by a convex hull or bounding rectangle.
-6. Some treatments add limited service housings or vent assemblies. Candidate
-   sites maximize clearance from the actual cell boundary, and every housing
-   corner must be supported by the local surface with compatible normals.
-   Fasteners belong to selected housings rather than every triangle.
+5. Pass the same region analysis into one of six independent construction rules.
+   They share clipping, boundary extraction and mesh primitives, but do not all
+   subdivide into raised strips. No port, weapon or equipment identification is
+   attempted; the target is quick visual exploration of greyboxes.
+
+| Grammar | Construction operation |
+| --- | --- |
+| Clean armor | One or two broad conforming shell caps per region, with quiet seams. |
+| Layered armor | A retained lower shell plus overlapping upper courses at stepped heights; underlying margins remain exposed. |
+| Structural bays | Infer a whole-hull principal axis, schedule common transverse frames, and fit narrow stringers and diagonal braces over the existing shell. There are no bay-sized armor caps. |
+| Thermal blankets | Subdivide the original surface and inflate interiors according to distance from actual boundaries, with smooth generated normals. Edges stay nearly flush. |
+| Industrial paint | Flush source-surface recoloring and a broad identification band. No armor extrusion; matching the original in uniform grey is expected. |
+| Faceted armor | Clip on an oblique axis, project broad caps onto tilted planes and stitch skirts toward the source boundary. This changes the facets rather than simply their colors. |
+
+The global axis used by the bay grammar comes from surface-area-weighted hull
+covariance, without a provided forward direction. Structural pieces are only an
+approximation of a construction language, not an inferred working ship design.
 
 `Show detected surface regions` displays chart colors independently of the finish.
 The readout includes total regions, regions omitted by the common size/budget
-rules, actual plate count and functional detail sites. Split view shows source
+rules, generated mesh piece count and structural part count. Split view shows source
 geometry/paint on the left and generated geometry on the right. Plate divisions,
 thickness, seed and all six treatments are shared settings. Colors, source-paint
 blend and restrained wear affect shading without changing the source hull.
@@ -86,12 +100,14 @@ boolean-unioned, and internal faces are not removed. Geometry-only cannot know
 that a surface is a cockpit or exhaust; incorrect plating there is a visible
 failure to evaluate, not a reason to add a hidden hull exception. Outward source
 normals are expected. Very narrow/irregular boundary insets can still distort.
-Service placement checks surface support, not actual ship function or interior
-access. Source buffers are retained, so this is additive dressing rather than
+Planar reconstruction and added frames can extend beyond the original silhouette;
+there is no boolean union or collision reconstruction. Source buffers are retained, so this is additive dressing rather than
 production topology reconstruction.
 
 `tests/hull-panels.cjs` checks adjacency, coplanar tessellation independence,
 determinism, explicit exclusions, concave boundaries, openings and finite cap,
 bevel and wall normals. `tests/livery-lab.cjs` exercises all subjects and the
-original artist payload. Browser inspection covers curved plates, diagnostic
+original artist payload, shared source geometry across comparison copies, and
+comparison mode persistence. Six distinct operation identifiers and flush-paint
+geometry are also checked. Browser inspection covers curved plates, diagnostic
 colors, source/treated comparison and controls. Run `npm run check`.

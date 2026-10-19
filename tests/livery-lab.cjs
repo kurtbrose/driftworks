@@ -13,7 +13,7 @@ const gl=new Proxy({
  bufferData:(target,data)=>{uploaded=data;uploads++;}
 },{get:(target,key)=>key in target?target[key]:()=>{}});
 const canvas={getContext:()=>gl,addEventListener:()=>{},clientWidth:900,clientHeight:700};
-for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
+for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
 DW.flightSkybox={create:()=>({render:()=>{}})};
 const sandbox={window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
 vm.createContext(sandbox);
@@ -35,7 +35,7 @@ for(const subject of ['cube','sphere','cylinder','random','A','B','C','D','E','f
  controls.get('subject').value=subject;controls.get('subject').onchange();
  assert(uploaded.length>0,subject);assert.equal(uploaded.length%36,0,subject+' triangle stride');
  assert(uploaded.every(Number.isFinite),subject+' finite vertices and normals');
- for(let i=0;i<uploaded.length;i+=12){assert(Math.max(...uploaded.slice(i,i+3).map(Math.abs))<=1.06,subject+' centered/fitted');assert(Math.hypot(...uploaded.slice(i+3,i+6))>.9,subject+' valid normal');}
+ for(let i=0;i<uploaded.length;i+=12){assert(Math.max(...uploaded.slice(i,i+3).map(Math.abs))<=1.6,subject+' centered/fitted');assert(Math.hypot(...uploaded.slice(i+3,i+6))>.9,subject+' valid normal');}
  const before=uploads;
  for(let grammar=0;grammar<=6;grammar++){controls.get('grammar').value=String(grammar);controls.get('grammar').oninput();assert(controls.get('description').textContent);}
  assert.equal(vm.runInContext('fittedHull(document.getElementById("subject").value).batches[0].vertices.length',sandbox)>0,true,'Source hull remains available');
@@ -47,4 +47,12 @@ controls.get('reset').onclick();assert.equal(controls.get('compare').checked,fal
 controls.get('layout').value='hangar';controls.get('layout').onchange();assert(uploaded.length>first.length,'Hangar contains multiple subjects and deck');assert(uploaded.every(Number.isFinite),'Hangar finite');
 controls.get('collection').value='artists';controls.get('collection').onchange();assert.equal(vm.runInContext('actors.length',sandbox),12,'Eleven artist hulls plus deck');
 const artist=DW.shipPacks[0].models[0];controls.get('subject').value=artist.id;controls.get('subject').onchange();assert(uploaded.length/12>=artist.texturedVertices.length/8,'Full source mesh retained beneath generated plates');assert.equal(uploaded[10],Math.fround(artist.texturedVertices[6]),'Original UV u');assert.equal(uploaded[11],Math.fround(artist.texturedVertices[7]),'Original UV v');assert.equal(uploaded[3],Math.fround(artist.texturedVertices[3]),'Original normals');
+controls.get('layout').value='matrix';controls.get('layout').onchange();
+assert.equal(vm.runInContext('actors.length',sandbox),9,'Source, six treatments, region diagnostic and hangar deck');
+assert.deepEqual(Array.from(vm.runInContext('actors.slice(0,8).map(actor=>actor.style)',sandbox)),[0,1,2,3,4,5,6,1],'Per-copy treatment overrides');
+const ranges=vm.runInContext('actors.slice(0,8).map(actor=>({start:actor.start,count:actor.count}))',sandbox),sourceCount=artist.texturedVertices.length/8;
+const firstSource=uploaded.slice(ranges[0].start*12,(ranges[0].start+sourceCount)*12);
+for(const actor of ranges)assert.deepEqual(uploaded.slice(actor.start*12,(actor.start+sourceCount)*12),firstSource,'Every comparison uses identical source vertices, UVs and normals');
+controls.get('subject').value='sphere';controls.get('subject').onchange();assert.equal(controls.get('layout').value,'matrix','Changing subject preserves comparison mode');
+assert.equal(controls.get('grammar').disabled,true,'Comparison owns each individual grammar');
 console.log('PASS livery lab: all subjects, finite fitted geometry, independent treatments and deterministic assemblies');

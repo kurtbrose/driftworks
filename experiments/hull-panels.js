@@ -142,64 +142,113 @@ function surfacePoint(polygons,region,x,y){
  return null;
 }
 
-/** Only place small functional housings where all corners have mesh support.
- * @param {V[][]} polygons @param {Region} region @param {{a:V,b:V}[]} boundary @param {number} height @param {number} style @param {number} seed */
-function detail(polygons,region,boundary,height,style,seed){
- /** @type {{p:V,r:number}|null} */let best=null;
- // Bound the search cost for densely tessellated curved patches.
- const step=Math.max(1,Math.floor(polygons.length/36));
- for(let i=0;i<polygons.length;i+=step){const poly=polygons[i],p=[0,1,2,3,4,5,6,7].map(k=>poly.reduce((sum,v)=>sum+v[k],0)/poly.length),x=dot(p,region.u),y=dot(p,region.v);let r=Infinity;
-  boundary.forEach(e=>{const ax=dot(e.a,region.u),ay=dot(e.a,region.v),dx=dot(e.b,region.u)-ax,dy=dot(e.b,region.v)-ay,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1)));r=Math.min(r,Math.hypot(x-ax-dx*t,y-ay-dy*t));});
-  if(!best||r>best.r)best={p,r};
+/** @param {V[][]} polygons */
+function boundaryEdges(polygons){
+ /** @type {Map<string,{a:V,b:V,count:number}>} */const edges=new Map();
+ polygons.forEach(poly=>poly.forEach((a,i)=>{const b=poly[(i+1)%poly.length],k=edgeKey(a,b),edge=edges.get(k);if(edge)edge.count++;else edges.set(k,{a,b,count:1});}));
+ return Array.from(edges.values()).filter(edge=>edge.count===1);
+}
+/** @param {V[][]} polygons @param {V} axis @param {number} low @param {number} high */
+function band(polygons,axis,low,high){return polygons.map(poly=>clip(clip(poly,axis,low,1),axis,high,-1)).filter(poly=>poly.length>=3);}
+/** @param {V[][]} polygons */
+function polygonArea(polygons){return polygons.reduce((sum,p)=>{for(let i=1;i<p.length-1;i++)sum+=Math.hypot(...cross(sub(p[i],p[0]),sub(p[i+1],p[0])))*.5;return sum;},0);}
+/** @param {V[][]} polygons @param {V} axis */
+function limits(polygons,axis){let low=Infinity,high=-Infinity;polygons.forEach(poly=>poly.forEach(p=>{const x=dot(p,axis);low=Math.min(low,x);high=Math.max(high,x);}));return [low,high];}
+/** @param {V[][]} polygons @param {number} height */
+function flush(polygons,height){const data=/** @type {number[]} */([]);polygons.forEach(poly=>{const cap=poly.map(p=>raised(p,unit(p.slice(3,6)),height));for(let i=1;i<cap.length-1;i++)triangle(data,cap[0],cap[i],cap[i+1]);});return new Float32Array(data);}
+
+/** Fit the hull's major axis from all surface areas, without a ship-direction hint.
+ * @param {Region[]} regions */
+function hullAxis(regions){
+ const total=regions.reduce((sum,r)=>sum+r.area,0)||1,center=[0,1,2].map(k=>regions.reduce((sum,r)=>sum+r.faces.reduce((s,f)=>s+f.v.reduce((a,p)=>a+p[k],0)*f.area/3,0),0)/total),matrix=Array.from({length:3},()=>[0,0,0]);
+ regions.forEach(r=>r.faces.forEach(f=>{const p=f.v.map(v=>sub(v,center));for(let i=0;i<3;i++)for(let j=0;j<3;j++){const a=p.reduce((s,v)=>s+v[i],0),b=p.reduce((s,v)=>s+v[j],0);matrix[i][j]+=f.area*(a*b+p.reduce((s,v)=>s+v[i]*v[j],0))/12;}}));
+ let best=[1,0,0],value=-Infinity;
+ for(const start of [[1,.13,.07],[.09,1,.11],[.07,.13,1]]){let v=start;for(let i=0;i<24;i++)v=unit(matrix.map(row=>dot(row,v)));const eigen=dot(v,matrix.map(row=>dot(row,v)));if(eigen>value){best=v;value=eigen;}}
+ const component=best.find(x=>Math.abs(x)>.001)||1;return component<0?best.map(x=>-x):best;
+}
+
+/** Six construction rules share clipping and mesh primitives, not a strip layout.
+ * @typedef {{polygons:V[][],region:Region,divisions:number,relief:number,seed:number,axis:V,extent:V}} GrammarContext
+ * @typedef {{batches:PanelBatch[],pieces:number,operation:string}} GrammarOutput */
+/** @param {GrammarContext} ctx @returns {GrammarOutput} */
+function cleanGrammar(ctx){
+ const {polygons,region}=ctx,[a,b]=limits(polygons,region.u),count=Math.max(1,Math.min(2,Math.round((b-a)*ctx.divisions/2)));
+ /** @type {PanelBatch[]} */const batches=[];
+ const cuts=count===1?[a,b]:[a,a+(b-a)*(.45+random(region.id,ctx.seed)*.1),b];
+ for(let i=0;i<count;i++){const cell=band(polygons,region.u,cuts[i]-1e-6,cuts[i+1]+1e-6);if(polygonArea(cell)<.009)continue;batches.push({vertices:plate(cell,region,.004,.003,.003+ctx.relief*.006).vertices,paint:[1,0,0]});}
+ return {batches,pieces:0,operation:'broad-shell'};
+}
+/** @param {GrammarContext} ctx @returns {GrammarOutput} */
+function layeredGrammar(ctx){
+ const {polygons,region}=ctx,[a,b]=limits(polygons,region.u),count=Math.max(2,Math.min(5,ctx.divisions+1)),span=(b-a)/count;
+ /** @type {PanelBatch[]} */const batches=[{vertices:plate(polygons,region,.004,.003,.006).vertices,paint:[.18,.82,0]}];
+ // Lower courses remain visible. Upper courses overlap their neighbors by 22%.
+ for(let i=0;i<count;i++){const cell=band(polygons,region.u,a+span*i-span*.13,a+span*(i+1)+span*.13);if(polygonArea(cell)<.009)continue;const height=.012+ctx.relief*.018+i*.004;batches.push({vertices:plate(cell,region,.009,.006,height).vertices,paint:i%3===0?[.88,0,.12]:[1,0,0]});}
+ return {batches,pieces:count,operation:'overlapping-courses'};
+}
+/** @param {GrammarContext} ctx @returns {GrammarOutput} */
+function industrialGrammar(ctx){
+ const {polygons,region,axis}=ctx,[a,b]=ctx.extent,count=ctx.divisions+3,width=.014+ctx.relief*.016,height=.022+ctx.relief*.028;
+ /** @type {PanelBatch[]} */const batches=[];
+ /** @param {V[][]} cell @param {V} paint */
+ function beam(cell,paint){if(polygonArea(cell)>.001)batches.push({vertices:plate(cell,region,.001,.002,height).vertices,paint});}
+ // All hull regions use the same major-axis station schedule. These are frames,
+ // stringers and braces over the original shell, not raised bay-sized plates.
+ for(let i=1;i<count;i++){const station=a+(b-a)*i/count;beam(band(polygons,axis,station-width,station+width),[.7,.3,0]);}
+ let tangent=region.u;if(Math.abs(dot(tangent,axis))>.8)tangent=region.v;
+ const [left,right]=limits(polygons,tangent);for(const sign of [-1,1]){const line=(left+right)/2+sign*(right-left)*.37;beam(band(polygons,tangent,line-width*.6,line+width*.6),[.85,.15,0]);}
+ const diagonal=unit(axis.map((x,k)=>x+tangent[k]*.65));
+ for(let i=0;i<count;i++){const cell=band(polygons,axis,a+(b-a)*i/count,a+(b-a)*(i+1)/count),range=limits(cell,diagonal),middle=(range[0]+range[1])/2;beam(band(cell,diagonal,middle-width*.45,middle+width*.45),[.4,.6,0]);}
+ return {batches,pieces:batches.length,operation:'station-frames-and-braces'};
+}
+/** @param {GrammarContext} ctx @returns {GrammarOutput} */
+function thermalGrammar(ctx){
+ const {region,polygons}=ctx,edges=boundaryEdges(polygons),refine=polygons.length<30?3:polygons.length<250?1:0;
+ /** @type {V[][]} */let triangles=[];polygons.forEach(p=>{for(let i=1;i<p.length-1;i++)triangles.push([p[0],p[i],p[i+1]]);});
+ for(let pass=0;pass<refine;pass++){const next=/** @type {V[][]} */([]);triangles.forEach(([a,b,c])=>{const ab=a.map((x,k)=>(x+b[k])/2),bc=b.map((x,k)=>(x+c[k])/2),ca=c.map((x,k)=>(x+a[k])/2);next.push([a,ab,ca],[ab,b,bc],[ca,bc,c],[ab,bc,ca]);});triangles=next;}
+ /** @param {V} p */
+ function puff(p){const x=dot(p,region.u),y=dot(p,region.v);let distance=Infinity;edges.forEach(e=>{const ax=dot(e.a,region.u),ay=dot(e.a,region.v),dx=dot(e.b,region.u)-ax,dy=dot(e.b,region.v)-ay,t=Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1)));distance=Math.min(distance,Math.hypot(x-ax-dx*t,y-ay-dy*t));});const blend=Math.min(1,distance/.14),h=.0015+ctx.relief*.022*blend*blend*(3-2*blend);return raised(p,unit(p.slice(3,6)),h);}
+ const data=/** @type {number[]} */([]);triangles.forEach(tri=>triangle(data,puff(tri[0]),puff(tri[1]),puff(tri[2]),true));
+ /** @type {Map<string,V>} */const normals=new Map();
+ for(let i=0;i<data.length;i+=24){const a=data.slice(i,i+3),b=data.slice(i+8,i+11),c=data.slice(i+16,i+19),n=cross(sub(b,a),sub(c,a));for(let j=0;j<3;j++){const k=key(data.slice(i+j*8,i+j*8+3)),sum=normals.get(k)||[0,0,0];normals.set(k,sum.map((x,k)=>x+n[k]));}}
+ for(let i=0;i<data.length;i+=8){const n=unit(normals.get(key(data.slice(i,i+3)))||[0,0,1]);for(let k=0;k<3;k++)data[i+3+k]=n[k];}
+ return {batches:[{vertices:new Float32Array(data),paint:[.96,.04,0]}],pieces:0,operation:'edge-bound-padded-blanket'};
+}
+/** @param {GrammarContext} ctx @returns {GrammarOutput} */
+function paintedGrammar(ctx){
+ const {polygons,region}=ctx,[a,b]=limits(polygons,region.u),offset=.18+random(region.id,ctx.seed)*.35;
+ return {batches:[{vertices:flush(polygons,.0008),paint:[1,0,0]},{vertices:flush(band(polygons,region.u,a+(b-a)*offset,a+(b-a)*(offset+.16)),.0011),paint:[0,0,1]}],pieces:0,operation:'flush-paint-zones'};
+}
+/** @param {GrammarContext} ctx @returns {GrammarOutput} */
+function facetedGrammar(ctx){
+ const {polygons,region}=ctx,cutAxis=unit(region.u.map((x,k)=>x*.85+region.v[k]*.5)),[a,b]=limits(polygons,cutAxis),count=ctx.divisions>1?2:1;
+ /** @type {PanelBatch[]} */const batches=[];
+ for(let i=0;i<count;i++){
+  const cell=band(polygons,cutAxis,a+(b-a)*i/count-1e-6,a+(b-a)*(i+1)/count+1e-6);if(polygonArea(cell)<.009)continue;
+  const normal=unit(region.normal.map((x,k)=>x+region.v[k]*(i===0?-.12:.12))),level=limits(cell,normal)[1]+.004+ctx.relief*.012;
+  /** @param {V} p */const project=p=>p.map((x,k)=>k<3?x+normal[k]*(level-dot(p,normal)):k<6?normal[k-3]:x);
+  const planar=cell.map(poly=>poly.map(project)),frame={...region,normal};const top=plate(planar,frame,.006,.004,.003);
+  const walls=/** @type {number[]} */([]);boundaryEdges(cell).forEach(e=>{const c=project(e.b),d=project(e.a);triangle(walls,e.a,e.b,c,true);triangle(walls,e.a,c,d,true);});
+  batches.push({vertices:top.vertices,paint:[.8,.2,0]},{vertices:new Float32Array(walls),paint:[.3,.7,0]});
  }
- if(!best||best.r<.055)return [];
- const chosen=/** @type {{p:V,r:number}} */(best),r=Math.min(.18,chosen.r*.6),cx=dot(chosen.p,region.u),cy=dot(chosen.p,region.v);
- /** @param {number} x @param {number} y @param {number} w @param {number} h @param {number} z @param {number} thickness */
- function box(x,y,w,h,z,thickness){const corners=[[-w,-h],[w,-h],[w,h],[-w,h]].map(c=>surfacePoint(polygons,region,x+c[0],y+c[1]));if(corners.some(p=>!p))return new Float32Array();const points=/** @type {V[]} */(corners);
-  if(points.some(p=>dot(unit(p.slice(3,6)),unit(chosen.p.slice(3,6)))<.97))return new Float32Array();
-  /** @type {number[]} */const out=[];const top=points.map(p=>raised(p,unit(p.slice(3,6)),z+thickness));triangle(out,top[0],top[1],top[2]);triangle(out,top[0],top[2],top[3]);
-  for(let i=0;i<4;i++){const j=(i+1)%4,a=raised(points[i],unit(points[i].slice(3,6)),z),b=raised(points[j],unit(points[j].slice(3,6)),z);triangle(out,a,b,top[j],true);triangle(out,a,top[j],top[i],true);}
-  return new Float32Array(out);
- }
- /** @type {PanelBatch[]} */const out=[];
- if(style===3||style===5){
-  const frame=box(cx,cy,r,r*.55,height+.003,.004);if(!frame.length)return out;out.push({vertices:frame,paint:[0,1,0]});
-  for(let i=0;i<5;i++){const v=box(cx+(i-2)*r*.32,cy,r*.055,r*.41,height+.008,.005);if(v.length)out.push({vertices:v,paint:[.55,.45,0]});}
- }else{
-  const housing=box(cx,cy,r,r*.55,height+.002,.007);if(housing.length)out.push({vertices:housing,paint:style===4?[.8,0,.2]:[.18,.82,0]});
- }
- // Four deliberately placed flush fasteners, only on supported corners.
- if(style===5||style===2)for(const sign of [-1,1])for(const side of [-1,1]){const v=box(cx+sign*r*.8,cy+side*r*.38,.008,.008,height+.012,.002);if(v.length)out.push({vertices:v,paint:[.6,.4,0]});}
- return out;
+ return {batches,pieces:0,operation:'planar-chine-reconstruction'};
 }
 
 /** @param {HullBatch[]} batches @param {{style:number,divisions:number,relief:number,seed:number,assisted?:boolean,regions?:Region[]}} settings */
 export function buildHullPanels(batches,settings){
- const regions=settings.regions||analyzeHull(batches,!!settings.assisted),style=settings.style||1;
- /** @type {PanelBatch[]} */const panels=[];
- /** @type {PanelBatch[]} */const diagnostics=[];
+ const regions=settings.regions||analyzeHull(batches,!!settings.assisted),style=Math.max(1,Math.min(6,settings.style||1));
+ /** @type {PanelBatch[]} */const panels=[],diagnostics=/** @type {PanelBatch[]} */([]);
  let plateCount=0,detailCount=0;
- const totalArea=regions.reduce((sum,r)=>sum+r.area,0),areaFloor=Math.max(.018,totalArea*.0075);
- const candidates=regions.filter(region=>region.area>=areaFloor).sort((a,b)=>b.area-a.area).slice(0,24),eligible=new Set(candidates.map(r=>r.id));
+ const totalArea=regions.reduce((sum,r)=>sum+r.area,0),areaFloor=Math.max(.018,totalArea*.0075),candidates=regions.filter(region=>region.area>=areaFloor).sort((a,b)=>b.area-a.area).slice(0,24),eligible=new Set(candidates.map(r=>r.id));
+ const axis=hullAxis(regions),all=regions.flatMap(r=>r.faces.map(f=>f.v)),extent=limits(all,axis);
+ const grammars=[cleanGrammar,layeredGrammar,industrialGrammar,thermalGrammar,paintedGrammar,facetedGrammar];
+ let operation='none';
  regions.forEach(region=>{
   const diagnostic=/** @type {number[]} */([]);region.faces.forEach(f=>triangle(diagnostic,.../** @type {[V,V,V]} */(f.v.map(p=>raised(p,unit(p.slice(3,6)),.001)))));
   diagnostics.push({vertices:new Float32Array(diagnostic),paint:[.3+random(region.id,3)*.65,.3+random(region.id,5)*.65,.3+random(region.id,7)*.65],diagnostic:true});
   if(!eligible.has(region.id))return;
-  const coords=region.faces.flatMap(f=>f.v.map(p=>dot(p,region.u))),min=Math.min(...coords),max=Math.max(...coords),span=max-min;
-  if(span<.065)return;
-  const count=Math.max(1,Math.min(4,Math.round(span/(2/Math.max(1,settings.divisions)))*(style===3?2:1)));
-  const cuts=[min-1e-6];for(let i=1;i<count;i++)cuts.push(min+span*(i/count+(random(region.id*17+i,settings.seed)-.5)*.16/count));cuts.push(max+1e-6);
-  for(let cell=0;cell<count;cell++){
-   const polygons=region.faces.map(f=>clip(clip(f.v,region.u,cuts[cell],1),region.u,cuts[cell+1],-1)).filter(p=>p.length>=3);
-   let area=0;polygons.forEach(p=>{for(let i=1;i<p.length-1;i++)area+=Math.hypot(...cross(sub(p[i],p[0]),sub(p[i+1],p[0])))*.5;});
-   if(area<.009||area/(cuts[cell+1]-cuts[cell])<.035)continue;
-   const variation=random(region.id*23+cell,settings.seed),gap=Math.min(.007,(cuts[cell+1]-cuts[cell])*.025),height=style===2?.009+settings.relief*(.015+variation*.014):style===4?.009+settings.relief*.009:.003+settings.relief*.009;
-   const bevel=style===4?.009:style===6?.006:.0035;
-   const result=plate(polygons,region,gap,bevel,height);if(!result.vertices.length)continue;
-   const accent=style===5&&variation>.88?.65:style===3&&cell%3===0?.18:0,secondary=style===6?.25+variation*.2:variation>.85?.15:0;
-   panels.push({vertices:result.vertices,paint:[1-accent-secondary,secondary,accent]});plateCount++;
-   if(cell===0&&region.area>.04&&style!==1&&style!==6&&region.id%3===0){const pieces=detail(polygons,region,result.boundary,height,style,settings.seed);panels.push(...pieces);if(pieces.length)detailCount++;}
-  }
+  const polygons=region.faces.map(f=>f.v),out=grammars[style-1]({polygons,region,divisions:Math.max(1,Math.min(4,settings.divisions)),relief:Math.max(0,Math.min(1,settings.relief)),seed:settings.seed,axis,extent});
+  panels.push(...out.batches.filter(b=>b.vertices.length));plateCount+=out.batches.filter(b=>b.vertices.length).length;detailCount+=out.pieces;operation=out.operation;
  });
- return {panels,diagnostics,regions:regions.length,eligible:eligible.size,skipped:regions.length-eligible.size,plates:plateCount,details:detailCount};
+ return {panels,diagnostics,regions:regions.length,eligible:eligible.size,skipped:regions.length-eligible.size,plates:plateCount,details:detailCount,operation,axis};
 }
