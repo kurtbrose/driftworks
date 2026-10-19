@@ -1,0 +1,14 @@
+Ultimate Modular Sci-Fi Pack by Quaternius
+SPDX-License-Identifier: CC0-1.0
+License: CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+Legal code: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+Source: https://quaternius.com/packs/ultimatemodularscifi.html
+The official source page links CC0 1.0 Universal (verified 2026-10-18).
+This repository-authored notice records that declaration. It is not an
+original license file from the downloaded pack or the full legal code.
+
+Suggested credit: "Ultimate Modular Sci-Fi Pack by Quaternius (CC0 1.0)".
+Attribution is retained voluntarily; CC0 does not require attribution.
+The original FBX models and the converted GLB derivatives share this license.

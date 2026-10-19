@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const controls = new Map();
-for(const id of ['sky','asteroid','view-side','view-front','view-top','reference','reset-views','viewer','cockpit','breadth','depth','spread','markings','readout','quarter','top','side','reset']) controls.set(id,{value:'100',checked:true,clientWidth:900,clientHeight:700,querySelector(){return null;},addEventListener(){},removeEventListener(){}});
+for(const id of ['sky','asteroid','view-side','view-front','view-top','reference','reset-views','viewer','rear','cockpit','breadth','depth','spread','markings','readout','quarter','top','side','reset']) controls.set(id,{value:'100',checked:true,clientWidth:900,clientHeight:700,querySelector(){return null;},addEventListener(){},removeEventListener(){}});
 let batches,frame;
 const scenes=[],skies=[];
 function createScene(host,getWorld,setWorld,options){const scene={options,renders:0,pose:{},setStudyActors(value){batches=value;},setStudyEffects(){},setOrbit(pose){this.pose=pose;},getOrbit(){return this.pose;},sync(world){this.world=world;},render(){this.renders++;}};scenes.push(scene);return scene;}
@@ -12,9 +12,10 @@ for(const file of ['src/study-viewer.js','src/mesh-builder.js','assets/character
 assert.ok(batches.every(b=>Array.from(b.vertices).every(Number.isFinite)));
 const armor=Array.from(batches[0].vertices);
 function widthAt(y){const xs=[];for(let i=0;i<armor.length;i+=6) if(Math.abs(armor[i+1]*10-y)<.01) xs.push(Math.abs(armor[i]*10));return Math.max(...xs);}
-assert.ok(widthAt(2)>widthAt(-5)*1.3,'crew pod is broad and tail tapers');
+assert.ok(widthAt(-5)>widthAt(2)*.9 && widthAt(-5)<widthAt(2),'aft body keeps nearly the crew pod breadth');
+assert.ok(widthAt(-8.98)>1,'full aft shoulders reach just behind the upper nozzle lips');
 const dark=Array.from(batches[1].vertices);let lowGun=false;
-for(let i=0;i<dark.length;i+=6) if(dark[i+1]>.64 && dark[i+2]<-.09 && Math.abs(dark[i])<.03) lowGun=true;
+for(let i=0;i<dark.length;i+=6) if(dark[i+1]>.64 && dark[i+2]<-.065 && dark[i+2]>-.09 && Math.abs(dark[i])<.03) lowGun=true;
 assert.ok(lowGun,'single centerline barrel projects forward below crew');
 controls.get('breadth').value='140';controls.get('breadth').oninput();
 assert.notDeepEqual(Array.from(batches[0].vertices),armor);
@@ -51,7 +52,7 @@ for(const batch of batches.slice(0,4))for(let i=0;i<batch.vertices.length;i+=6)h
 assert.ok(hullWidth<3.3,'integrated engine shoulders replace the broad outriggers');
 controls.get('spread').value='140';controls.get('spread').oninput();
 let wide=0;for(const batch of batches.slice(0,4))for(let i=0;i<batch.vertices.length;i+=6)wide=Math.max(wide,Math.abs(batch.vertices[i]*10)*2);
-assert.ok(wide<3.7 && wide>hullWidth,'engine width control keeps shoulders close to the spine');
+assert.ok(wide<=3.2,'triangle spacing stays inside the original hatch width');
 controls.get('reset').onclick();
 
 const wrap=batches[batches.length-1].vertices;
@@ -79,13 +80,13 @@ let minCabin=Infinity,maxCabin=-Infinity;
 for(let i=2;i<wrap.length;i+=6){minCabin=Math.min(minCabin,wrap[i]*10);maxCabin=Math.max(maxCabin,wrap[i]*10);}
 assert.ok(Math.abs((minCabin+maxCabin)/2)<.1,'cockpit envelope sits on the fuselage axis');
 let edgeLow=Infinity;for(let i=2;i<batches[2].vertices.length;i+=6)edgeLow=Math.min(edgeLow,batches[2].vertices[i]*10);
-assert.ok(edgeLow>-1.2,'no deep hanging gun box or external tail fin');
+assert.ok(edgeLow>-1.25,'no deep hanging gun box or external tail fin');
 
 assert.ok(controls.get('readout').textContent.includes('2.2 m high'),'readout reports the complete hatch clearance envelope');
 
 assert.ok(hullBlocks([0,3.34,.6],[0,-1,0]),'full-height fuselage reaches the rear of the seated cabin');
 
-let gunTip=-Infinity;for(let i=0;i<dark.length;i+=6)if(Math.abs(dark[i])<.03 && dark[i+2]<-.09)gunTip=Math.max(gunTip,dark[i+1]*10);
+let gunTip=-Infinity;for(let i=0;i<dark.length;i+=6)if(Math.abs(dark[i])<.03 && dark[i+2]<-.065 && dark[i+2]>-.09)gunTip=Math.max(gunTip,dark[i+1]*10);
 assert.ok(Math.abs(gunTip-6.5)<1e-5,'only a short barrel projects beyond the 5.8 m nose');
 
 assert.ok(scenes.every(scene=>scene.world.asteroids.length===1),'asteroid environment shared across all four views');
@@ -111,3 +112,27 @@ assert.ok(highBackCount>0 && highBackY/highBackCount<-.05,'chair back and headre
 let helmetTop=-Infinity;
 for(const batch of cockpit.crew)for(let i=2;i<batch.vertices.length;i+=6)helmetTop=Math.max(helmetTop,batch.vertices[i]-.28);
 assert.ok(maxCabin-helmetTop>.12 && maxCabin-helmetTop<.22,'snug roof retains useful helmet clearance');
+
+// Disk centers come from the rendered recessed nozzle geometry, not configuration.
+const nozzlePoints=[[],[],[]];
+for(let i=0;i<dark.length;i+=6){const y=dark[i+1]*10,x=dark[i]*10,z=dark[i+2]*10;if(Math.abs(y+7.04)<1e-4 && z<-.2)nozzlePoints[2].push([x,z]);else if(Math.abs(y+9.04)<1e-4)nozzlePoints[x<0?0:1].push([x,z]);}
+const centers=nozzlePoints.map(points=>{assert.ok(points.length>0);return [0,1].map(axis=>(Math.min(...points.map(p=>p[axis]))+Math.max(...points.map(p=>p[axis])))/2);});
+const distances=[[0,1],[0,2],[1,2]].map(([a,b])=>Math.hypot(centers[a][0]-centers[b][0],centers[a][1]-centers[b][1]));
+assert.ok(Math.max(...distances)-Math.min(...distances)<1e-5,'three nozzle centers form an equilateral triangle');
+assert.ok(centers[0][1]>centers[2][1] && centers[1][1]>centers[2][1],'two nozzles above, one below');
+
+const nozzleRadius=(Math.max(...nozzlePoints[0].map(p=>p[0]))-Math.min(...nozzlePoints[0].map(p=>p[0])))/2/.7;
+assert.ok(Math.abs(distances[0]-2*nozzleRadius-.04)<1e-5,'enlarged housings retain just a 4 cm gap');
+
+assert.ok(scenes.every(scene=>scene.world.camera.x===0 && scene.world.camera.y===-.13),'default framing stays centered on Barracuda with reference enabled');
+
+controls.get('reset-views').onclick();
+const subjectZooms=scenes.map(scene=>scene.world.camera.zoom);
+controls.get('reference').checked=!controls.get('reference').checked;controls.get('reference').onchange();
+assert.deepEqual(scenes.map(scene=>scene.world.camera.zoom),subjectZooms,'scale reference visibility does not zoom the subject away');
+assert.ok(subjectZooms[1]>subjectZooms[0],'front view frames the narrow cross section more closely than side view');
+
+let muzzleLow=Infinity,muzzleHigh=-Infinity;
+for(let i=0;i<dark.length;i+=6)if(dark[i+1]>.64){muzzleLow=Math.min(muzzleLow,dark[i+2]*10);muzzleHigh=Math.max(muzzleHigh,dark[i+2]*10);}
+assert.ok(Math.abs((muzzleLow+muzzleHigh)/2+.76)<1e-5,'cannon raised 27 cm toward lower engine axis');
+assert.ok(armor.some((v,i)=>i%6===2 && Math.abs(v*10+.34)<1e-5),'cannon housing rises into a low center console');

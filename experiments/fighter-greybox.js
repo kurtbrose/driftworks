@@ -13,12 +13,21 @@
     function environmentHeight(){return get('asteroid').checked?clearance:0;}
 
     var presets=[{id:'view-side',yaw:Math.PI/2,tilt:Math.PI/2,height:environmentHeight()},{id:'view-front',yaw:0,tilt:Math.PI/2,height:environmentHeight()},{id:'view-top',yaw:0,tilt:.06,height:environmentHeight()},{id:'viewer',yaw:.25,tilt:.65,height:environmentHeight()}];
+    /** @type {number[]} */ var framingPoints=[];
     var views=presets.map(function(preset){
         var world=DW.sim.createInitialWorld();
         world.asteroids=[];world.ships=[];world.platforms=[];world.wrecks=[];world.packets=[];world.combat.drones=[];world.selectedShipIds=[];
         return DW.studyViewer.createView({id:preset.id,host:get(preset.id),world:world,zoomToTerrain:false,pose:preset,fit:function(view){
-            var reference=get('reference').checked;
-            view.world().camera={x:(reference?7:0)/units,y:(reference?-7:0)/units,zoom:Math.min(view.host.clientWidth,view.host.clientHeight)*units/(reference?52:28)};
+            // Frame the subject, independently of the off-to-the-side scale reference.
+            var width=view.host.clientWidth,height=view.host.clientHeight,focal=1/Math.tan(Math.PI/8);
+            var sy=Math.sin(preset.yaw),cy=Math.cos(preset.yaw),st=Math.sin(preset.tilt),ct=Math.cos(preset.tilt),distance=0;
+            for(var point=0;point<framingPoints.length;point+=3){
+                var x=framingPoints[point],y=framingPoints[point+1]+1.3,z=framingPoints[point+2];
+                var right=x*cy+y*sy,up=x*sy*ct-y*cy*ct+z*st,back=-x*sy*st+y*cy*st+z*ct;
+                distance=Math.max(distance,back+Math.max(Math.abs(right)*focal*height/(.75*width),Math.abs(up)*focal/.75));
+            }
+            distance=Math.max(1,distance);
+            view.world().camera={x:0,y:-1.3/units,zoom:height*focal*units/(2*distance)};
         }});
     });
     var skies=views.map(function(view){return DW.flightSkybox.create(view.host);});
@@ -38,7 +47,7 @@
         var cockpitBreadth = Math.max(1,breadth), cabinZ=-.65;
         /** @param {string} material @param {number[]} center @param {number[]} size */
         function box(material, center, size) { mesh.block(material, [x + center[0]*scale*breadth, y + center[1]*scale, center[2]*scale*depth], [size[0]*scale*breadth,size[1]*scale,size[2]*scale*depth]); }
-        // Octagonal cross sections: broad crew pod forward, slim tail aft.
+        // Full aft shoulders wrap the engine pack, with only a gentle taper.
         /** @param {string} material @param {number[][]} stations @param {number} [offset] */
         function loft(material, stations, offset) {
             var rings = stations.map(function (station) {
@@ -50,7 +59,7 @@
             for(var r=1;r<rings.length;r++) for(var n=0;n<8;n++) mesh.plate(material,[rings[r-1][n],rings[r-1][(n+1)%8],rings[r][(n+1)%8],rings[r][n]]);
             mesh.plate(material,rings[rings.length-1]);
         }
-        loft('armor',[[-9,.4,.45,.1],[-5,.8,.65,.2],[-1,.95,.75,.15],[2,1.15,.9,-.05],[3.6,.96,.865,-.085]]);
+        loft('armor',[[-8.98,1.04,.43,.36],[-7.2,1.06,.43,.36],[-5,1.08,.75,.05],[-1,1.1,.8,.1],[2,1.15,.9,-.05],[3.6,.96,.865,-.085]]);
         // Continuous shallow tub overlaps the aft spine and supports the canopy sill.
         // Its upper edge stays below the crew's forward/downward sightlines.
         loft('armor',[[2.6,1.04,.28,-1.01],[3.6,1.0,.24,-1.07],[4.45,1.03,.22,-1.07],[5.05,1.0,.2,-1.12],[5.8,.68,.16,-1.13]]);
@@ -81,15 +90,33 @@
         [2,3,6,7].forEach(function(side){for(var c=1;c<canopy.length;c++)frame(canopy[c-1][side],canopy[c][side]);});
         [-1,1].forEach(function (sign) {
             cockpitBox('dark',[sign*.55,4.45,-.25],[.44,.75,.1]);
-            // Long engine shoulders intersect the spine; no exposed spars or lateral pods.
-            var engineX=sign*(1.05+(spread-1)*.5);
-            loft('armor',[[-7.2,.46,.4,.02],[-5.8,.55,.52,.06],[-1.6,.5,.5,.08],[1.2,.18,.2,.05]],engineX);
-            box('dark',[engineX,-7.24,.02],[.35,.06,.3]);
-            box('edge',[engineX,-6.9,.02],[.45,.18,.39]);
             if(get('markings').checked) cockpitBox('stripe',[sign*.96,3.7,.15],[.045,.22,.06]);
         });
-        // The machinery stays inside the nose; only 0.7 m of barrel projects past it.
-        mesh.barrel('dark',[0,4.95,-1.03],[0,6.5,-1.03],.1);
+        // Equal spacing in the actual X/Z section, independent of hull breadth/depth.
+        // Near-touching housings; the lower nacelle is staggered 2 m toward the nose.
+        var engineSide=1.1+(spread-1)*.5,triangleHeight=engineSide*Math.sqrt(3)/2;
+        var engines=[[-engineSide/2,-.05+triangleHeight/3],[engineSide/2,-.05+triangleHeight/3],[0,-.05-2*triangleHeight/3]];
+        /** @param {number[]} center @param {number} yy @param {number} radius */
+        function engineRing(center,yy,radius){
+            /** @type {number[][]} */ var points=[];for(var index=0;index<8;index++){var angle=index*Math.PI/4;points.push([center[0]+radius*Math.cos(angle),yy,center[1]+radius*Math.sin(angle)]);}return points;
+        }
+        engines.forEach(function(center,index){
+            var forward=index===2?2:0,radius=(engineSide-.04)/2;
+            var rings=[engineRing(center,-9.1+forward,radius),engineRing(center,-8.6+forward,radius),engineRing(center,-4+forward,radius*.86),engineRing(center,-1.6+forward,.14)];
+            for(var r=1;r<rings.length;r++)for(var n=0;n<8;n++)mesh.plate('armor',[rings[r-1][n],rings[r-1][(n+1)%8],rings[r][(n+1)%8],rings[r][n]]);
+            mesh.plate('armor',rings[rings.length-1]);
+            var outer=engineRing(center,-9.12+forward,radius),inner=engineRing(center,-9.12+forward,radius*.7),recess=engineRing(center,-9.04+forward,radius*.7);
+            for(var n=0;n<8;n++){
+                mesh.plate('edge',[outer[n],outer[(n+1)%8],inner[(n+1)%8],inner[n]]);
+                mesh.plate('dark',[inner[n],inner[(n+1)%8],recess[(n+1)%8],recess[n]]);
+            }
+            mesh.plate('dark',recess.slice().reverse());
+        });
+        // Raised cannon runs through a narrow console between the crew, near the lower engine axis.
+        loft('armor',[[3.35,.18,.28,-.76],[4.65,.18,.38,-.72],[5.3,.16,.25,-.76],[5.8,.12,.15,-.76]]);
+        mesh.block('dark',[0,4.25,-.325],[.23,.7,.04]);
+        // Only the short muzzle projects beyond the nose; the breech stays in the console.
+        mesh.barrel('dark',[0,4.95,-.76],[0,6.5,-.76],.1);
         /** @type {Record<string,[number,number,number]>} */
         var colors = {armor:[.95,.43,.1],edge:[.65,.68,.69],dark:[.12,.16,.18],stripe:[1,.94,.78],glass:[.55,.8,.88]};
         /** @type {import('./types').Batch[]} */
@@ -115,6 +142,8 @@
         batches.forEach(function(batch){for(var i=0;i<batch.vertices.length;i+=6)for(var axis=0;axis<3;axis++){
             low[axis]=Math.min(low[axis],batch.vertices[i+axis]*units);high[axis]=Math.max(high[axis],batch.vertices[i+axis]*units);
         }});
+        framingPoints=[];
+        batches.forEach(function(batch){for(var i=0;i<batch.vertices.length;i+=6)framingPoints.push(batch.vertices[i]*units,batch.vertices[i+1]*units,batch.vertices[i+2]*units);});
         if(get('reference').checked)batches=batches.slice(0,-1).concat(reference,batches.slice(-1));
         batches=batches.map(function(batch){return Object.assign({},batch,{staticGeometry:true,origin:/** @type {[number,number,number]} */ ([0,0,environmentHeight()])});});
         views.forEach(function(view){view.world().asteroids=get('asteroid').checked?[asteroid]:[];});
@@ -125,6 +154,7 @@
     function resetView() {views.forEach(function(view,index){presets[index].height=environmentHeight();view.reset();});frameKeys=[];}
     ['breadth','depth','spread','markings'].forEach(function (id) {get(id).oninput=update;});
     get('cockpit').onclick=function () {orbitView.manual=true;orbitView.world().camera={x:0,y:4.55/units,zoom:Math.min(orbitView.host.clientWidth,orbitView.host.clientHeight)*units/3.6};scene.setOrbit({yaw:.2,tilt:.65,height:environmentHeight()});};
+    get('rear').onclick=function(){orbitView.manual=true;orbitView.world().camera={x:0,y:-6.8/units,zoom:Math.min(orbitView.host.clientWidth,orbitView.host.clientHeight)*units/4.4};scene.setOrbit({yaw:Math.PI,tilt:Math.PI/2,height:environmentHeight()-.05/units});};
     get('quarter').onclick=function () {orbitView.reset();};
     get('reset-views').onclick=resetView;
     get('asteroid').onchange=function(){update();resetView();};
