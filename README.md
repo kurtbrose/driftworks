@@ -553,3 +553,7 @@ The separate `experiments/fighter-greybox.html` explores a dragonfly / helicopte
 The fighter study includes clear cockpit glazing, two seated astronauts in placeholder armrest chairs, and a Crew close-up view. Crew and chairs keep their physical size as hull proportions change.
 
 The cockpit fits the two crew with 1.1 m seat spacing and a roughly 2.1 by 2 m canopy at default proportions. Cockpit breadth has a minimum clearance to keep the full-size chairs apart when narrowing the hull.
+
+The fighter study offers side, front, top and orbit panels with independent cameras, Reset views, and a toggleable 12 m Spitfire reference shared with the mining rig study. Crew close-up targets the orbit panel; shape controls update all four.
+
+The current fighter greybox is the provisional Barracuda: close-coupled twin engine shoulders replace the earlier dragonfly outriggers. The engine width control explores compact shoulder spacing; the snug cockpit and four-view scale comparison remain available.

@@ -1384,3 +1384,9 @@ mixer or SFX module is required there. Both Node and browser test harnesses
 load helper modules before the facade. Tuning keys and acoustic parameters
 are unchanged by this extraction. Definitions live in `engine-types.d.ts`
 and `audio-types.d.ts`.
+
+### Shared study panels
+
+`src/study-viewer.js` provides `Driftworks.studyViewer.createView` for independent study panels: each owns its replacement-world closure, scene, interaction flag and resize fitting. Callers supply the host, world, axis/orbit preset and framing callback, and retain content and render scheduling. Manual interaction suspends automatic fitting until reset. The mining rig and fighter studies share this setup. `referenceFighter(lengthMeters, metersPerRendererUnit, origin, yaw)` reuses the local Spitfire geometry with an explicit physical length; origin is in renderer units. The mining study keeps its existing placement and scale conversion.
+
+The fighter's four panels share immutable static vertex batches; a revision/camera/viewport key redraws only changed panels. Shape edits update all four; crew close-up changes the orbit panel alone. The reference toggle changes geometry and fits untouched views without resetting manually positioned cameras.

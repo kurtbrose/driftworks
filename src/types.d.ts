@@ -4,6 +4,16 @@ export type Vec2 = { x: number; y: number };
 export type Camera = Vec2 & { zoom: number };
 export type Viewport = { width: number; height: number };
 
+export type StudyViewConfig = {
+  id:string; host:HTMLElement; world:World; pose:{yaw:number;tilt:number;height?:number};
+  fit:(view:StudyView)=>void;
+};
+export type StudyView = {
+  id:string;host:HTMLElement;scene:ReturnType<NonNullable<DriftworksNamespace['scene3d']>['create']>;
+  world:()=>World;manual:boolean;fit:()=>void;reset:(pose?:{yaw:number;tilt:number;height?:number})=>void;
+  fixedKey?:string;dispose:()=>void;
+};
+
 export type ViewerVector = [number, number, number];
 export type ViewerPose = {eye: ViewerVector; right: ViewerVector; up: ViewerVector; back: ViewerVector; distance: number; focal: number};
 export type ViewerPickBatch = {data:Float32Array;stride:number;origin:ViewerVector;scale:ViewerVector;rotation:number;basis?:Float32Array;spin:number};
@@ -311,6 +321,10 @@ export interface DriftworksNamespace {
     uniforms: (visual: AsteroidVisual) => { uLight: Float32Array; uBulk: Float32Array; uFieldLow: Float32Array; uFieldMed: Float32Array; uProfile: Float32Array; uRelief: Float32Array; uFieldBlobs: Float32Array; uBlobMaterial: Float32Array; uCraterCount: number; uHeterogeneity: number; uSeed: number; uPixelFootprint: number };
     craterBytes: (visual: AsteroidVisual) => Uint8Array;
     shaderSource: string;
+  };
+  studyViewer?: {
+    createView:(config:StudyViewConfig)=>StudyView;
+    referenceFighter:(length:number,units:number,origin:ViewerVector,yaw?:number)=>import('../experiments/types').Batch[];
   };
   modelViewer?: {create: (host: HTMLElement, adapter?: ViewerAdapter) => ModelViewer};
   scene3d?: {

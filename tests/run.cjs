@@ -60,3 +60,5 @@ require('./fleet-greybox.cjs');
 require('./model-viewer.cjs');
 
 require('./fighter-greybox.cjs');
+
+require('./study-viewer.cjs');

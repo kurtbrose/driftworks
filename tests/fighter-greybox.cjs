@@ -2,13 +2,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const controls = new Map();
-for(const id of ['viewer','cockpit','breadth','depth','spread','markings','readout','quarter','top','side','reset']) controls.set(id,{value:'100',checked:true,clientWidth:900,clientHeight:700});
-let batches;
-const world={combat:{}};
-const scene={setStudyActors(value){batches=value;},setStudyEffects(){},setOrbit(){}};
-const context={window:{Driftworks:{sim:{createInitialWorld:()=>world,METERS_PER_UNIT:10},scene3d:{create:()=>scene}}},document:{getElementById:id=>controls.get(id)},requestAnimationFrame(){},Float32Array};
+for(const id of ['view-side','view-front','view-top','reference','reset-views','viewer','cockpit','breadth','depth','spread','markings','readout','quarter','top','side','reset']) controls.set(id,{value:'100',checked:true,clientWidth:900,clientHeight:700,addEventListener(){},removeEventListener(){}});
+let batches,frame;
+const scenes=[];
+function createScene(){const scene={renders:0,pose:{},setStudyActors(value){batches=value;},setStudyEffects(){},setOrbit(pose){this.pose=pose;},getOrbit(){return this.pose;},sync(){},render(){this.renders++;}};scenes.push(scene);return scene;}
+const context={window:{Driftworks:{sim:{createInitialWorld:()=>({combat:{}}),METERS_PER_UNIT:10},scene3d:{create:createScene},shipPackModels:{find:()=>({model:{vertices:[0,-1,0,0,0,1,0,1,0,0,0,1]}}),detailedGeometry:()=>[]}}},document:{getElementById:id=>controls.get(id)},requestAnimationFrame(fn){frame=fn;},Float32Array};
 vm.createContext(context);
-for(const file of ['src/mesh-builder.js','assets/characters/fighter-cockpit.js','experiments/fighter-greybox.js']) vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),context);
+for(const file of ['src/study-viewer.js','src/mesh-builder.js','assets/characters/fighter-cockpit.js','experiments/fighter-greybox.js']) vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),context);
 assert.ok(batches.every(b=>Array.from(b.vertices).every(Number.isFinite)));
 const armor=Array.from(batches[0].vertices);
 function widthAt(y){const xs=[];for(let i=0;i<armor.length;i+=6) if(Math.abs(armor[i+1]*10-y)<.01) xs.push(Math.abs(armor[i]*10));return Math.max(...xs);}
@@ -37,4 +37,19 @@ controls.get('breadth').value='70';controls.get('breadth').oninput();
 const narrowLeft=xBounds(batches[4]),narrowRight=xBounds(batches[rightChair]);
 assert.ok(Math.abs(narrowLeft.width-left.width)<1e-5,'chairs retain human scale');
 assert.ok(narrowRight.center-narrowLeft.center>left.width,'minimum breadth preserves chair clearance');
+controls.get('reset').onclick();
+
+assert.equal(scenes.length,4,'four independent panel scenes');
+frame(1000);assert.ok(scenes.every(scene=>scene.renders===1));
+frame(1100);assert.ok(scenes.every(scene=>scene.renders===1),'idle panels do not redraw');
+scenes[3].setOrbit({yaw:.8,tilt:1});frame(1200);
+assert.deepEqual(scenes.map(scene=>scene.renders),[1,1,1,2],'orbit interaction redraws only its panel');
+
+controls.get('reference').checked=false;controls.get('reference').onchange();
+let hullWidth=0;
+for(const batch of batches.slice(0,4))for(let i=0;i<batch.vertices.length;i+=6)hullWidth=Math.max(hullWidth,Math.abs(batch.vertices[i]*10)*2);
+assert.ok(hullWidth<3.3,'integrated engine shoulders replace the broad outriggers');
+controls.get('spread').value='140';controls.get('spread').oninput();
+let wide=0;for(const batch of batches.slice(0,4))for(let i=0;i<batch.vertices.length;i+=6)wide=Math.max(wide,Math.abs(batch.vertices[i]*10)*2);
+assert.ok(wide<3.7 && wide>hullWidth,'engine width control keeps shoulders close to the spine');
 controls.get('reset').onclick();

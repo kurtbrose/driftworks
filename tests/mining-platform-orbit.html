@@ -41,7 +41,7 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
 <script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js"></script>
 <script src="../experiments/ship-packs.js"></script>
 <script src="./mining-study-terrain.js"></script>
-<script src="./mining-study-context.js"></script>
+<script src="../src/study-viewer.js"></script><script src="./mining-study-context.js"></script>
 <script src="./mining-study-landing.js"></script>
 <script src="./mining-study-cargo.js"></script>
 <script type="module" src="./mining-study-crew.js"></script>
@@ -54,12 +54,10 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
     var host=document.getElementById(id),world=Driftworks.sim.createInitialWorld();
     world.ships=[];world.asteroids=[Driftworks.miningStudyContext.asteroid];world.platforms=[];world.wrecks=[];world.packets=[];world.combat.drones=[];world.selectedShipIds=[];
     world.camera={x:0,y:0,zoom:1};
-    var scene=Driftworks.scene3d.create(host,function(){return world;},function(w){world=w;},{study:true,viewer:true});
-    scene.setOrbit(Object.assign({},poses[id],{height:Driftworks.miningStudyContext.base+12}));
-    var view={id:id,host:host,scene:scene,world:function(){return world;},fit:fit,manual:false};
-    host.addEventListener('viewer-interaction',function(){view.manual=true;});
-    function fit(){if(view.manual)return;var context=document.getElementById('surface').checked || document.getElementById('fighter').checked;world.camera={x:0,y:0,zoom:Math.max(.1,Math.min(host.clientWidth/(context?96:id==='orbit'?64:58),host.clientHeight/(context?88:id==='orbit'?58:46)))};}
-    fit();new ResizeObserver(fit).observe(host);
+    var view=Driftworks.studyViewer.createView({id:id,host:host,world:world,pose:Object.assign({},poses[id],{height:Driftworks.miningStudyContext.base+12}),fit:function(view){
+      var context=document.getElementById('surface').checked || document.getElementById('fighter').checked;
+      view.world().camera={x:0,y:0,zoom:Math.max(.1,Math.min(host.clientWidth/(context?96:id==='orbit'?64:58),host.clientHeight/(context?88:id==='orbit'?58:46)))};
+    }});
     return view;
   });
   document.getElementById('reset').onclick=function(){views.forEach(function(view){view.manual=false;view.scene.setOrbit(Object.assign({},poses[view.id],{height:(document.getElementById('surface').checked?Driftworks.miningStudyContext.base:0)+(document.getElementById('surface').checked || document.getElementById('fighter').checked?12:7)}));view.fit();delete view.fixedKey;});lastSceneKey='';};
