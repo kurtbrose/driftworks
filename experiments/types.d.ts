@@ -615,6 +615,7 @@ export type ExperimentModules = {
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
     };
     training: {
+        stepControlled: (combat: Combat, controls: Demand, weapon: Weapon, dt: number, radius: number, terrainHit?: TerrainHit, afterCombat?: () => void) => {playerDamaged: boolean; fired: boolean; impact: boolean};
         stepInput: (craft: Craft, controls: Demand, dt: number) => void;
         damageCraft: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
         createCraft: (id: string, pose: FlightState, team: string) => Craft;

@@ -83,6 +83,27 @@
         craft.fire = controls.fire;
         DW.arcade.step(state, craft.profile, controls, dt);
     }
+    /** Shared manual/duel tick: controlled movement, combat/NPCs, then controlled guns.
+     * The optional observer samples metrics after combat and before controlled gun damage.
+     * Scenery rotation, contact, audio, clocks and termination belong to the caller.
+     * @param {Combat} t @param {import('./types').Demand} controls @param {Weapon} weapon
+     * @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit]
+     * @param {() => void} [afterCombat] */
+    function stepControlled(t, controls, weapon, dt, radius, terrainHit, afterCombat) {
+        var craft = t.player, pose = craft.pose, guns = craft.guns;
+        DW.training.stepInput(craft, controls, dt);
+        var hullBefore = t.hull, shieldBefore = t.shield, hitBefore = t.lastHit;
+        DW.training.step(t, pose, dt, radius, terrainHit);
+        var playerDamaged = t.hull < hullBefore || t.shield < shieldBefore;
+        if (afterCombat) afterCombat();
+        var firedBefore = guns.fired, hitsBefore = guns.hits;
+        // Finish the gun tick after death to age existing bolts; suppress new fire.
+        DW.flightGuns.step(guns, pose, weapon, !t.dead && controls.fire, dt, function (start, end, bolt) {
+            return DW.training.trace(t, start, end, bolt, 'player', terrainHit, pose);
+        }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft));
+        return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore,
+            impact: guns.hits > hitsBefore || t.lastHit > hitBefore };
+    }
     /** @param {Combat} t @returns {Craft[]} */
     function participants(t) { return [t.player].concat(t.enemies); }
     /** Apply shared flight/duel model choices before stepping or rendering.
@@ -698,5 +719,5 @@
         });
         return result;
     }
-    DW.training = { acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
+    DW.training = { stepControlled: stepControlled, acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
 }());

@@ -982,6 +982,37 @@
     }finally{model.step=saved[0];training.step=saved[1];guns.step=saved[2];training.trace=saved[3];model.contact=saved[4];}
   });
 
+  test('shared duel ticks preserve damage sampling, no-terrain stepping and terminal gun work', function () {
+    var DW=window.Driftworks,training=DW.training,guns=DW.flightGuns;
+    var savedStep=training.step,savedGuns=guns.step,savedTrace=training.trace,savedAim=training.convergencePoint;
+    try {
+      ['timeout','player-win','opponent-win'].forEach(function(outcome){
+        var duel=DW.flightDuel.create({duration:1/120,category:'human',seed:29}),events=[];
+        training.step=function(combat,pose,dt,radius,terrain){
+          events.push('combat');assert(pose===duel.player && radius===0 && terrain===undefined);assertClose(dt,1/120);
+          combat.shield--;duel.enemy.hp--; // NPC-stage damage must not count as controlled gun damage.
+          if(outcome==='opponent-win')combat.dead=true;
+        };
+        training.trace=function(combat,start,end,bolt,team,terrain,pose){events.push('trace');assert(combat===duel.combat && team==='player' && terrain===undefined && pose===duel.player);return null;};
+        training.convergencePoint=function(combat,craft,weapon,terrain){events.push('aim');assert(craft===duel.combat.player && terrain===undefined);return null;};
+        guns.step=function(g,pose,weapon,fire,dt,trace,aim,mounts,anchors){
+          events.push('guns');assert(g===duel.guns && pose===duel.player);
+          assert(mounts===duel.combat.player.profile.gunMounts && anchors.length>0);
+          if(outcome==='opponent-win')assert(!fire,'Death suppresses new fire but finishes gun work');
+          trace([0,0,0],[1,0,0],{});aim();
+          if(outcome==='player-win')duel.enemy.hp=0;
+        };
+        duel.advance(1);
+        var summary=duel.summary();
+        assert(events.join(',')==='combat,guns,trace,aim');
+        assert(summary.ticks===1 && summary.done && summary.outcome===outcome);
+        assert(summary.metrics.opponentDamageSteps===1);
+        assert(summary.metrics.playerDamageSteps===(outcome==='player-win'?1:0),'Sample enemy defenses after NPC combat, before controlled guns');
+        duel.advance(1);assert(events.length===4 && duel.replay.inputs.length===1,'Terminal duels never execute another tick');
+      });
+    } finally {training.step=savedStep;guns.step=savedGuns;training.trace=savedTrace;training.convergencePoint=savedAim;}
+  });
+
   test('furball pilots keep a varied adult cast across lines and rounds', function () {
     var api=window.Driftworks.flightComms,seen={};
     for(var i=0;i<16;i++) {
@@ -1116,6 +1147,67 @@
       var plan=mumble.analyze('Stay with me.',v),pcm=mumble.render(plan,8000);
       assert(plan.duration>0&&pcm.length>0&&pcm.every(Number.isFinite));
     });
+  });
+
+  test('comms observes frozen gameplay through contacts, damage, losses and lifecycle changes', function () {
+    var DW=window.Driftworks,api=DW.flightComms,clock=api.create(),session=DW.flightSession.create({seed:29});
+    var view=session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]});
+    var ally=view.combat.enemies.find(function(c){return c.team==='ally';});
+    var enemy=view.combat.enemies.find(function(c){return c.team==='enemy';});
+    view.combat.enemies=[ally,enemy];
+    view.state.eye=[0,0,100];view.state.velocity=[0,0,0];
+    enemy.pose.eye=[0,500/sim.METERS_PER_UNIT,100];enemy.pose.velocity=[0,0,0];
+    function freeze(value) {
+      if(value && typeof value==='object') {Object.keys(value).forEach(function(key){freeze(value[key]);});Object.freeze(value);}
+      return value;
+    }
+    function observe(dt,busy) {
+      // Clone before freezing: retail profiles are shared with other tests.
+      var live=session.snapshot(),frozen=JSON.parse(JSON.stringify(live));
+      // Combat exposes health/death through non-enumerable compatibility getters.
+      Object.getOwnPropertyNames(live.combat).forEach(function(key){
+        var descriptor=Object.getOwnPropertyDescriptor(live.combat,key);
+        if(descriptor.get)frozen.combat[key]=live.combat[key];
+      });
+      freeze(frozen);var before=JSON.stringify(frozen);
+      var line=api.step(clock,dt,frozen.combat,busy,function(){return 0;},frozen.state);
+      assert(JSON.stringify(frozen)===before,'Comms must not change any supplied gameplay field');
+      return line;
+    }
+    var contact=observe(0,false);assert(contact && contact.event==='contact','Exercise actual contact speech');
+    enemy.mode='attack';enemy.targetId=ally.id;ally.mode='evade';ally.hp=20;
+    assert(observe(10,true)===null,'Busy channel still observes damage and threats');
+    assert(clock.emotions[ally.id].current==='panicked');
+    assert(clock.facts.some(function(f){return f.event==='damaged';}));
+    view.combat.radioEvents=[{serial:1,wave:view.combat.wave,time:view.combat.time,kind:'destroyed',victim:ally.id,team:'ally',killer:enemy.id,index:ally.index}];
+    view.combat.radioSerial=1;ally.hp=0;
+    observe(0,true);
+    assert(clock.radioSerial===1 && clock.facts.some(function(f){return f.event==='loss';}),'Consume combat events without altering their log');
+    session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]});
+    var fresh=session.snapshot();DW.training.spawn(fresh.combat,fresh.state,fresh.asteroid.radius);
+    observe(1,true);assert(clock.emotionWave===session.snapshot().combat.wave);
+    session.snapshot().combat.dead=true;assert(observe(20,false)===null);
+    session.setCombat('training',false);observe(1,true);
+    assert(clock.facts.length===0 && clock.situation===null && Object.keys(clock.emotions).length===0);
+  });
+
+  test('enabling comms leaves live simulation state and subsequent ticks identical', function () {
+    var DW=window.Driftworks,api=DW.flightComms,clock=api.create(),lines=0;
+    var environment={seed:29,onGunshot:function(){},onImpact:function(){}};
+    var observed=DW.flightSession.create(environment),silent=DW.flightSession.create(environment);
+    var config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]};
+    observed.reset(config);silent.reset(config);
+    var controls={throttle:.8,throttleRate:0,stop:false,fire:true,pitch:.2,yaw:.1,roll:0,boost:false};
+    for(var tick=0;tick<240;tick++) {
+      if(tick===120) {observed.reset(config);silent.reset(config);}
+      observed.advance(1/120,controls,config);silent.advance(1/120,controls,config);
+      var view=observed.snapshot(),before=JSON.stringify(view);
+      if(api.step(clock,1/120,view.combat,tick>=180,function(){return .25;},view.state))lines++;
+      assert(JSON.stringify(view)===before,'Comms changed live gameplay on tick '+tick);
+      assert(JSON.stringify(observed.snapshot())===JSON.stringify(silent.snapshot()),'Comms affected later simulation on tick '+tick);
+    }
+    assert(lines>0 && clock.serial>0 && clock.time>1,'The observer must actually advance and speak');
+    assert(observed.snapshot().guns.fired>0 && observed.snapshot().combat.time>0,'Exercise real weapons and combat');
   });
 
   test('flight comms spaces lines and uses living combatants', function () {

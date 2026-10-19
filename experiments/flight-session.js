@@ -142,21 +142,15 @@
                 grounded = false;
                 combat.player.profile = config.profile;
                 combat.player.weaponIndex = DW.retailWeapons.indexOf(config.weapon);
-                DW.training.stepInput(combat.player, controls, dt);
                 combat.onTerrainImpact = function (point) {
                     var marks = combat.terrainScorches || (combat.terrainScorches = []);
                     marks.push(rotateVector(point, -asteroid.rotation));
                     if (marks.length > 96) marks.shift();
                 };
-                var playerHitBefore = combat.lastHit;
-                DW.training.step(combat, state, dt, asteroid.radius, environment.terrainHit);
-                var firedBefore = guns.fired, hitsBefore = guns.hits;
-                DW.flightGuns.step(guns, state, config.weapon, !combat.dead && controls.fire, dt, function (start, end, bolt) {
-                    return DW.training.trace(combat, start, end, bolt, 'player', environment.terrainHit, state);
-                }, function () { return DW.training.convergencePoint(combat, combat.player, config.weapon, environment.terrainHit); }, config.profile.gunMounts, DW.training.gunAnchors(combat.player));
-                if (guns.fired > firedBefore)
+                var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, environment.terrainHit);
+                if (feedback.fired)
                     environment.onGunshot();
-                if (guns.hits > hitsBefore || combat.lastHit > playerHitBefore)
+                if (feedback.impact)
                     environment.onImpact();
                 if (combat.dead) {
                     remainder = 0;

@@ -61,13 +61,11 @@
                 var time=tick*DT;
                 var input=inputStream ? DW.flightAI.validate(inputStream[tick]) : pilot.step(time,player,enemy.pose,profile,weapon);
                 replay.inputs.push(input);
-                // Match flightSession order; never move a real craft inside a controller.
-                DW.training.stepInput(combat.player,Object.assign({throttleRate:0},input),DT);
-                var hullBefore=combat.hull, shieldBefore=combat.shield;
-                DW.training.step(combat,player,DT,0);
-                if(combat.hull<hullBefore || combat.shield<shieldBefore) metrics.opponentDamageSteps++;
-                var hpBefore=enemy.hp, enemyShieldBefore=enemy.shield;
-                DW.flightGuns.step(guns,player,weapon,!combat.dead && input.fire,DT,function(a,b,bolt){return DW.training.trace(combat,a,b,bolt,'player',undefined,player);},function(){return DW.training.convergencePoint(combat,combat.player,weapon);},profile.gunMounts,DW.training.gunAnchors(combat.player));
+                var hpBefore=0, enemyShieldBefore=0;
+                var feedback=DW.training.stepControlled(combat,Object.assign({throttleRate:0},input),weapon,DT,0,undefined,function(){
+                    hpBefore=enemy.hp;enemyShieldBefore=enemy.shield || 0;
+                });
+                if(feedback.playerDamaged) metrics.opponentDamageSteps++;
                 if(enemy.hp<hpBefore || (enemy.shield || 0)<(enemyShieldBefore || 0)) metrics.playerDamageSteps++;
                 var own=DW.flightAI.solution(player,enemy.pose.eye,enemy.pose.velocity,weapon), other=DW.flightAI.solution(enemy.pose,player.eye,player.velocity,DW.retailWeapons[enemyWeaponIndex]);
                 var a=own.valid&&own.dot>.996, b=other.valid&&other.dot>.996;

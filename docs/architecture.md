@@ -572,6 +572,19 @@ physical flight/weapon model.
 
 ### Flight training combat
 
+`training.stepControlled` owns the common tick sequence used by manual sessions
+and evaluation duels: `stepInput` for the controlled craft, `training.step` for
+combat/NPCs, then the controlled craft's `flightGuns.step` using shared traces,
+terrain queries, convergence and muzzle anchors. It reports shot/impact feedback
+and whether combat damaged the controlled craft. An optional read-only observer
+runs after combat and before controlled gun damage so duel damage/dry-spell
+metrics retain their original sampling boundary. It always finishes the gun
+tick after controlled-craft death, suppressing new fire but aging existing bolts.
+The helper does not advance clocks or decide termination. Manual sessions retain
+asteroid spin, body-frame terrain marks, audio callbacks and post-gun contact;
+death skips contact and discards pending time. Duels pass radius zero without
+terrain and retain metrics, replay inputs and death/opponent-death/duration stops.
+
 `experiments/training.js` owns the isolated wave director, pilot decisions,
 steering primitives, training health, target IDs, and simple enemy geometry.
 The page calls its simulation on the same 1/120 s substeps as player flight.
@@ -827,6 +840,10 @@ owns emotions, combat observations and airtime scheduling; `flight-radio.js`
 owns subtitles, channel playback and Web Audio lifecycle. Load them in that
 order after training and mumble, before flight boot. The existing
 `flightComms` API forwards dialogue helpers and `mount` for compatibility.
+Comms may change its own clock, facts, conversations and emotions, but observes
+gameplay without writing it. Regression tests pass deeply frozen gameplay views
+through contacts, distress, combat events and lifecycle changes, and compare
+seeded live sessions with and without comms after every tick, including resets.
 
 
 `experiments/flight-session.js` owns the lab world fixture and mutable sortie,
