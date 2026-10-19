@@ -548,12 +548,14 @@ Engine sound tuning: open [Engine sound lab](experiments/engine-lab.html) for ei
 
 Flight **Settings / Sound balance** offers engine, weapons, impacts, comms and overall effects levels. Comms briefly lower engine/guns; hits briefly lower the engine. Disable **Prioritize comms and impacts** for a fixed mix. Levels are remembered locally.
 
-The separate `experiments/fighter-greybox.html` explores a dragonfly / helicopter fighter: a broad side-by-side crew pod, tapering tail, four short outriggers and a single ventral centerline gun. The earlier fleet bench remains an independent idea study.
+### Barracuda fighter greybox
 
-The fighter study includes clear cockpit glazing, two seated astronauts in placeholder armrest chairs, and a Crew close-up view. Crew and chairs keep their physical size as hull proportions change.
+Open `experiments/fighter-greybox.html` for the provisional Barracuda: a snug side-by-side cockpit on the fuselage centerline, tapered body and integrated twin engine shoulders. Its full-height rear connection, recessed centerline barrel and smooth exterior keep the profile compact for narrow hatches. The readout reports the actual complete length, beam and height (15.5 by 3.2 by 2.2 m at defaults); a particular hatch fit is not simulated. The earlier fleet bench remains an independent idea study.
 
-The cockpit fits the two crew with 1.1 m seat spacing and a roughly 2.1 by 2 m canopy at default proportions. Cockpit breadth has a minimum clearance to keep the full-size chairs apart when narrowing the hull.
+The faceted wraparound canopy has roof and rear-quarter glazing, thin bows, a sloped windscreen and low nose windows. Two seated astronauts in local placeholder chairs retain their physical size as the hull changes. Seat spacing is 1.1 m and the default canopy is roughly 2.0 by 2.2 m. Minimum cockpit breadth preserves chair clearance.
 
-The fighter study offers side, front, top and orbit panels with independent cameras, Reset views, and a toggleable 12 m Spitfire reference shared with the mining rig study. Crew close-up targets the orbit panel; shape controls update all four.
+Side, front, top and orbit panels have independent cameras, Reset views and a toggleable 12 m Spitfire reference shared with the mining rig study. Crew close-up targets the orbit panel; shape controls update all four.
 
-The current fighter greybox is the provisional Barracuda: close-coupled twin engine shoulders replace the earlier dragonfly outriggers. The engine width control explores compact shoulder spacing; the snug cockpit and four-view scale comparison remain available.
+The Barracuda study also offers independently toggleable starfield skybox and asteroid surface context. Each skybox follows its panel camera; both comparison hull centerlines are placed 5 m above the asteroid's highest terrain point, preserving their physical scale. Turning the asteroid on or off resets views to the new reference height.
+
+Fighter-study wheel zoom preserves the current subject plane even with the asteroid enabled. Use Pick focus or double-click a surface to deliberately change the focus target. Reset views restores the hull comparison.

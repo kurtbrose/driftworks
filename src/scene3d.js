@@ -707,10 +707,11 @@
     return groups;
   }
 
-  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{study?: boolean, viewer?: boolean}} [options] */
+  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{study?: boolean, viewer?: boolean, zoomToTerrain?: boolean}} [options] */
   function create(host, getWorld, setWorld, options) {
     var study = !!(options && options.study);
     var viewerEnabled = study && !!(options && options.viewer);
+    var terrainZoom = !options || options.zoomToTerrain !== false;
     var canvas = document.createElement('canvas');
     canvas.setAttribute('aria-label', '3D tactical scene');
     var context = canvas.getContext('webgl', { antialias: true, alpha: true });
@@ -1053,7 +1054,7 @@
     canvas.addEventListener('wheel', function (e) {
       if(orbit.surface){e.preventDefault();return;}
       e.preventDefault(); focus = false; var w = getWorld(), p = pointer(e), vp = viewport();
-      if(study && e.deltaY<0 && w.asteroids[0]) {
+      if(study && terrainZoom && e.deltaY<0 && w.asteroids[0]) {
         var hit=pickAsteroid(p,w.asteroids[0],w.camera,vp,orbit);
         if(hit){studyHeight=hit.position[2];orbit.height=studyHeight;w=Object.assign({},w,{camera:{x:hit.position[0],y:hit.position[1],zoom:w.camera.zoom}});}
       }

@@ -2,19 +2,19 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const controls = new Map();
-for(const id of ['view-side','view-front','view-top','reference','reset-views','viewer','cockpit','breadth','depth','spread','markings','readout','quarter','top','side','reset']) controls.set(id,{value:'100',checked:true,clientWidth:900,clientHeight:700,addEventListener(){},removeEventListener(){}});
+for(const id of ['sky','asteroid','view-side','view-front','view-top','reference','reset-views','viewer','cockpit','breadth','depth','spread','markings','readout','quarter','top','side','reset']) controls.set(id,{value:'100',checked:true,clientWidth:900,clientHeight:700,querySelector(){return null;},addEventListener(){},removeEventListener(){}});
 let batches,frame;
-const scenes=[];
-function createScene(){const scene={renders:0,pose:{},setStudyActors(value){batches=value;},setStudyEffects(){},setOrbit(pose){this.pose=pose;},getOrbit(){return this.pose;},sync(){},render(){this.renders++;}};scenes.push(scene);return scene;}
-const context={window:{Driftworks:{sim:{createInitialWorld:()=>({combat:{}}),METERS_PER_UNIT:10},scene3d:{create:createScene},shipPackModels:{find:()=>({model:{vertices:[0,-1,0,0,0,1,0,1,0,0,0,1]}}),detailedGeometry:()=>[]}}},document:{getElementById:id=>controls.get(id)},requestAnimationFrame(fn){frame=fn;},Float32Array};
+const scenes=[],skies=[];
+function createScene(host,getWorld,setWorld,options){const scene={options,renders:0,pose:{},setStudyActors(value){batches=value;},setStudyEffects(){},setOrbit(pose){this.pose=pose;},getOrbit(){return this.pose;},sync(world){this.world=world;},render(){this.renders++;}};scenes.push(scene);return scene;}
+const context={window:{Driftworks:{sim:{createInitialWorld:()=>({combat:{},asteroids:[{position:{x:0,y:0},radius:1}]}),METERS_PER_UNIT:10},flightSkybox:{create:()=>{const sky={render(pose,scale,empty){this.empty=empty;this.pose=pose;}};skies.push(sky);return sky;}},scene3d:{create:createScene,asteroidMesh:()=>new Float32Array([0,0,1,0,0,1]),view:()=>({right:[1,0,0],up:[0,0,1],back:[0,1,0]})},shipPackModels:{find:()=>({model:{vertices:[0,-1,0,0,0,1,0,1,0,0,0,1]}}),detailedGeometry:()=>[]}}},document:{getElementById:id=>controls.get(id)},requestAnimationFrame(fn){frame=fn;},Float32Array};
 vm.createContext(context);
 for(const file of ['src/study-viewer.js','src/mesh-builder.js','assets/characters/fighter-cockpit.js','experiments/fighter-greybox.js']) vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),context);
 assert.ok(batches.every(b=>Array.from(b.vertices).every(Number.isFinite)));
 const armor=Array.from(batches[0].vertices);
 function widthAt(y){const xs=[];for(let i=0;i<armor.length;i+=6) if(Math.abs(armor[i+1]*10-y)<.01) xs.push(Math.abs(armor[i]*10));return Math.max(...xs);}
-assert.ok(widthAt(5.5)>widthAt(-5)*1.5,'crew pod is broad and tail tapers');
+assert.ok(widthAt(2)>widthAt(-5)*1.3,'crew pod is broad and tail tapers');
 const dark=Array.from(batches[1].vertices);let lowGun=false;
-for(let i=0;i<dark.length;i+=6) if(dark[i+1]>.85 && dark[i+2]<-.17 && Math.abs(dark[i])<.03) lowGun=true;
+for(let i=0;i<dark.length;i+=6) if(dark[i+1]>.64 && dark[i+2]<-.09 && Math.abs(dark[i])<.03) lowGun=true;
 assert.ok(lowGun,'single centerline barrel projects forward below crew');
 controls.get('breadth').value='140';controls.get('breadth').oninput();
 assert.notDeepEqual(Array.from(batches[0].vertices),armor);
@@ -27,7 +27,7 @@ assert.ok(batches.length>10,'both imported crews and chairs are present');
 const glass=batches[batches.length-1].vertices;
 let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
 for(let i=0;i<glass.length;i+=6){minX=Math.min(minX,glass[i]*10);maxX=Math.max(maxX,glass[i]*10);minY=Math.min(minY,glass[i+1]*10);maxY=Math.max(maxY,glass[i+1]*10);}
-assert.ok(maxX-minX<2.2 && maxY-minY<2.1,'canopy is fitted to a snug two-seat crew envelope');
+assert.ok(maxX-minX<2.05 && maxY-minY<2.25,'canopy is fitted to a snug two-seat crew envelope');
 
 function xBounds(batch){let low=Infinity,high=-Infinity;for(let i=0;i<batch.vertices.length;i+=6){low=Math.min(low,batch.vertices[i]*10);high=Math.max(high,batch.vertices[i]*10);}return {center:(low+high)/2,width:high-low};}
 const cockpit=context.window.Driftworks.fighterCockpit, rightChair=4+cockpit.chair.length+cockpit.crew.length;
@@ -53,3 +53,61 @@ controls.get('spread').value='140';controls.get('spread').oninput();
 let wide=0;for(const batch of batches.slice(0,4))for(let i=0;i<batch.vertices.length;i+=6)wide=Math.max(wide,Math.abs(batch.vertices[i]*10)*2);
 assert.ok(wide<3.7 && wide>hullWidth,'engine width control keeps shoulders close to the spine');
 controls.get('reset').onclick();
+
+const wrap=batches[batches.length-1].vertices;
+let lowSide=false,lowNose=false,rearQuarter=false;
+for(let i=0;i<wrap.length;i+=6){const x=wrap[i]*10,y=wrap[i+1]*10,z=wrap[i+2]*10;if(Math.abs(x)>.9 && z<0)lowSide=true;if(y>5.75 && z<-.35)lowNose=true;if(y<3.65 && z>.65)rearQuarter=true;}
+assert.ok(lowSide && lowNose && rearQuarter,'glazing reaches low side, nose and rear-quarter sightlines');
+
+// Hull sightline regressions: the armored hood must not return in front of the eyes.
+function hullBlocks(origin,direction){
+ const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],dot=(a,b)=>a.reduce((sum,v,k)=>sum+v*b[k],0),sub=(a,b)=>a.map((v,k)=>v-b[k]);
+ const data=batches[0].vertices;
+ for(let i=0;i<data.length;i+=18){
+  const a=Array.from(data.slice(i,i+3),v=>v*10),b=Array.from(data.slice(i+6,i+9),v=>v*10),c=Array.from(data.slice(i+12,i+15),v=>v*10);
+  const e1=sub(b,a),e2=sub(c,a),p=cross(direction,e2),det=dot(e1,p);if(Math.abs(det)<1e-8)continue;
+  const t=sub(origin,a),u=dot(t,p)/det,q=cross(t,e1),v=dot(direction,q)/det,d=dot(e2,q)/det;
+  if(u>=0 && v>=0 && u+v<=1 && d>.01)return true;
+ }return false;
+}
+for(const sign of [-1,1])for(const direction of [[0,1,0],[sign,0,0],[0,1,-.5],[sign,-1,.1]])assert.equal(hullBlocks([sign*.55,4.2,.6],direction),false,'clear forward, lateral, downward and rear-quarter hull sightlines');
+
+for(const y of [3.3,4.2,5.3,5.7])assert.ok(hullBlocks([0,y,0],[0,0,-1]),'continuous armored cockpit floor supports the canopy');
+assert.ok(hullBlocks([0,3.3,-1.05],[0,-1,0]),'cockpit tub overlaps the aft spine');
+
+let minCabin=Infinity,maxCabin=-Infinity;
+for(let i=2;i<wrap.length;i+=6){minCabin=Math.min(minCabin,wrap[i]*10);maxCabin=Math.max(maxCabin,wrap[i]*10);}
+assert.ok(Math.abs((minCabin+maxCabin)/2)<.1,'cockpit envelope sits on the fuselage axis');
+let edgeLow=Infinity;for(let i=2;i<batches[2].vertices.length;i+=6)edgeLow=Math.min(edgeLow,batches[2].vertices[i]*10);
+assert.ok(edgeLow>-1.2,'no deep hanging gun box or external tail fin');
+
+assert.ok(controls.get('readout').textContent.includes('2.2 m high'),'readout reports the complete hatch clearance envelope');
+
+assert.ok(hullBlocks([0,3.34,.6],[0,-1,0]),'full-height fuselage reaches the rear of the seated cabin');
+
+let gunTip=-Infinity;for(let i=0;i<dark.length;i+=6)if(Math.abs(dark[i])<.03 && dark[i+2]<-.09)gunTip=Math.max(gunTip,dark[i+1]*10);
+assert.ok(Math.abs(gunTip-6.5)<1e-5,'only a short barrel projects beyond the 5.8 m nose');
+
+assert.ok(scenes.every(scene=>scene.world.asteroids.length===1),'asteroid environment shared across all four views');
+assert.ok(batches.every(batch=>batch.origin[2]===12.5),'hulls stay above the highest terrain');
+controls.get('asteroid').checked=false;controls.get('asteroid').onchange();frame(1300);
+assert.ok(scenes.every(scene=>scene.world.asteroids.length===0),'asteroid toggle clears every panel');
+assert.ok(batches.every(batch=>batch.origin[2]===0),'plain study restores original hull coordinates');
+
+assert.equal(skies.length,4,'each viewport has a camera-aligned skybox');
+controls.get('sky').checked=false;controls.get('sky').onchange();frame(1400);
+assert.ok(skies.every(sky=>sky.empty),'sky toggle clears every skybox');
+controls.get('sky').checked=true;controls.get('sky').onchange();frame(1500);
+assert.ok(skies.every(sky=>!sky.empty),'sky can be restored independently of asteroid');
+
+assert.ok(scenes.every(scene=>scene.options.zoomToTerrain===false),'fighter panels disable automatic asteroid targeting on wheel zoom');
+
+let shinBottom=Infinity,highBackY=0,highBackCount=0;
+for(const batch of cockpit.crew)for(let i=2;i<batch.vertices.length;i+=6)shinBottom=Math.min(shinBottom,batch.vertices[i]);
+assert.ok(shinBottom>-.6,'seated feet follow the ankles instead of stretching shins toward the standing foot controls');
+for(const batch of cockpit.chair)for(let i=0;i<batch.vertices.length;i+=6)if(batch.vertices[i+2]>.5){highBackY+=batch.vertices[i+1];highBackCount++;}
+assert.ok(highBackCount>0 && highBackY/highBackCount<-.05,'chair back and headrest sit behind the forward-facing crew');
+
+let helmetTop=-Infinity;
+for(const batch of cockpit.crew)for(let i=2;i<batch.vertices.length;i+=6)helmetTop=Math.max(helmetTop,batch.vertices[i]-.28);
+assert.ok(maxCabin-helmetTop>.12 && maxCabin-helmetTop<.22,'snug roof retains useful helmet clearance');

@@ -5,7 +5,7 @@ export type Camera = Vec2 & { zoom: number };
 export type Viewport = { width: number; height: number };
 
 export type StudyViewConfig = {
-  id:string; host:HTMLElement; world:World; pose:{yaw:number;tilt:number;height?:number};
+  id:string; host:HTMLElement; world:World; zoomToTerrain?:boolean; pose:{yaw:number;tilt:number;height?:number};
   fit:(view:StudyView)=>void;
 };
 export type StudyView = {
@@ -362,7 +362,7 @@ export interface DriftworksNamespace {
     pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
     inspectionHeight: (world: World) => number;
-    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; viewer?: boolean}) => {
+    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; viewer?: boolean; zoomToTerrain?:boolean}) => {
       setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean}) => void;
       getRenderStats: () => {drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyLightRigs:(rigs:RigLighting[])=>void;

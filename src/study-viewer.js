@@ -6,7 +6,7 @@
      * @returns {import('./types').StudyView} */
     function createView(config){
         var world=config.world, host=config.host;
-        var scene=DW.scene3d.create(host,function(){return world;},function(next){world=next;},{study:true,viewer:true});
+        var scene=DW.scene3d.create(host,function(){return world;},function(next){world=next;},{study:true,viewer:true,zoomToTerrain:config.zoomToTerrain});
         /** @type {import('./types').StudyView} */
         var view={id:config.id,host:host,scene:scene,world:function(){return world;},manual:false,
             fit:function(){if(!view.manual)config.fit(view);},

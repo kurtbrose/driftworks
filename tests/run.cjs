@@ -62,3 +62,5 @@ require('./model-viewer.cjs');
 require('./fighter-greybox.cjs');
 
 require('./study-viewer.cjs');
+
+require('./study-zoom.cjs');
