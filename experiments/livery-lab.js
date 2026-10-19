@@ -42,7 +42,7 @@ function scalar(name,value){gl.uniform1f(uniform(name),value);}
 /** @param {string} name @param {number[]} value */
 function vector(name,value){gl.uniform3fv(uniform(name),value);}
 const sky=DW.flightSkybox.create(control('viewer'));
-/** @type {{start:number,count:number,origin:number[],label:HTMLDivElement|null,texture:WebGLTexture|null}[]} */
+/** @type {{start:number,count:number,origin:number[],label:HTMLDivElement|null,texture:WebGLTexture|null,style:number|null}[]} */
 let actors=[];
 let count=0,yaw=.22,tilt=.75,distance=28,assemblySeed=1;
 const artistModels=(DW.shipPacks||[]).flatMap(pack=>pack.models).filter(model=>model.texturedVertices);
@@ -54,7 +54,7 @@ artistModels.forEach(model=>{const option=document.createElement('option');optio
 /** @param {HTMLImageElement|undefined} image */
 function textureFor(image){if(!image)return null;const cached=textures.get(image);if(cached)return cached;const texture=gl.createTexture();if(!texture)throw Error('Texture allocation');gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,0);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);textures.set(image,texture);return texture;}
 function hangarSubjects(){const studies=['cube','sphere','cylinder','random','escort','A','B','C','D','E','fighter','carrier','patrol','tug','mothership'];return control('collection').value==='artists'?artistIds:control('collection').value==='studies'?studies:studies.concat(artistIds);}
-function home(){const rows=Math.ceil(hangarSubjects().length/5);distance=control('layout').value==='hangar'?Math.max(23,rows*6,24*canvas.clientHeight/canvas.clientWidth):3.7;}
+function home(){if(control('layout').value==='matrix'){distance=3.7;return;}const rows=Math.ceil(hangarSubjects().length/5);distance=control('layout').value==='hangar'?Math.max(23,rows*6,24*canvas.clientHeight/canvas.clientWidth):3.7;}
 
 
 /** Geometry fixtures use meters; only this display copy is normalized. @param {string} subject */
@@ -104,23 +104,25 @@ function fittedHull(subject){
 }
 /** @type {Map<string,{signature:string,result:ReturnType<typeof buildHullPanels>}>} */const panelCache=new Map();
 function rebuild(){
- const hangar=control('layout').value==='hangar';
- const subjects=hangar?hangarSubjects():[control('subject').value],rows=Math.ceil(subjects.length/5),halfY=rows*1.8+.9;
+ const matrix=control('layout').value==='matrix',hangar=control('layout').value==='hangar';
+ const subjects=hangar?hangarSubjects():matrix?Array(8).fill(control('subject').value):[control('subject').value],rows=Math.ceil(subjects.length/5),halfY=rows*1.8+.9;
  let totalRegions=0,totalPlates=0,totalDetails=0,totalSkipped=0;const data=/** @type {number[]} */([]);actors=[];control('labels').replaceChildren();
+ /** @type {string[]} */const treatmentNames=['Original','Clean armored','Layered armor','Segmented industrial','Aerospace thermal','Painted industrial','Faceted military','Detected regions'];
  subjects.forEach((subject,index)=>{
+  const style=matrix?(index===7?1:index):Number(control('grammar').value),cacheId=subject+':'+style;
   const fitted=fittedHull(subject),batches=fitted.batches,extent=fitted.extent,start=data.length/12;
-  const signature=[subject==='random'?assemblySeed:0,control('masks').checked,control('grammar').value,control('scale').value,control('relief').value,control('seed').value,fitted.regions.length].join('|'),previous=panelCache.get(subject);
-  const structure=previous?.signature===signature?previous.result:buildHullPanels(batches,{style:Number(control('grammar').value),divisions:Number(control('scale').value),relief:Number(control('relief').value)/100,seed:Number(control('seed').value)||0,regions:fitted.regions});panelCache.set(subject,{signature,result:structure});
+  const signature=[subject==='random'?assemblySeed:0,control('masks').checked,style,control('scale').value,control('relief').value,control('seed').value,fitted.regions.length].join('|'),previous=panelCache.get(cacheId);
+  const structure=previous?.signature===signature?previous.result:buildHullPanels(batches,{style,divisions:Number(control('scale').value),relief:Number(control('relief').value)/100,seed:Number(control('seed').value)||0,regions:fitted.regions});panelCache.set(cacheId,{signature,result:structure});if(panelCache.size>64)panelCache.delete(panelCache.keys().next().value||'');
   totalSkipped+=structure.skipped;
   totalRegions+=structure.regions;totalPlates+=structure.plates;totalDetails+=structure.details;
   batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){data.push(...b.vertices.slice(i,i+6));const color=b.color||[.5,.5,.5],protect=b.opacity!==undefined||['mechanical','structural','marking','cockpit'].includes(b.role||'')||Math.max(...color)<.31;data.push(...color,protect?1:0,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
-  const generated=control('regions').checked?structure.diagnostics:structure.panels;
+  const generated=matrix?(index===7?structure.diagnostics:index===0?[]:structure.panels):control('regions').checked?structure.diagnostics:structure.panels;
   generated.forEach(batch=>{for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...batch.paint,batch.diagnostic?3:2,batch.vertices[i+6],batch.vertices[i+7]);});
   const origin=hangar?[(index%5-2)*3.1,(Math.floor(index/5)-(rows-1)/2)*3.6,1.15]:[0,0,0];
-  const label=hangar?document.createElement('div'):null;
-  if(label){label.className='hull-label';label.textContent=(/^[A-E]$/.test(subject)?'Barracuda '+subject:artistModels.find(model=>model.id===subject)?.name||subject)+' / '+extent.toFixed(1)+' m';control('labels').append(label);}
-  actors.push({start,count:data.length/12-start,origin,label,texture:textureFor(batches[0].texture)});
-  if(!hangar){const select=/** @type {HTMLSelectElement} */(document.getElementById('subject'));control('caption').textContent=select.selectedOptions[0].textContent+' / '+extent.toFixed(1)+' m / '+((data.length/12-start)/3).toLocaleString()+' triangles';}
+  const label=hangar||matrix?document.createElement('div'):null;
+  if(label){label.className=matrix?'comparison-label':'hull-label';label.textContent=matrix?treatmentNames[index]+(index===0?' / source':index===7?' / '+structure.regions+' charts':' / '+structure.plates+' plates, '+structure.details+' detail sites'):(/^[A-E]$/.test(subject)?'Barracuda '+subject:artistModels.find(model=>model.id===subject)?.name||subject)+' / '+extent.toFixed(1)+' m';control('labels').append(label);}
+  actors.push({start,count:data.length/12-start,origin,label,texture:textureFor(batches[0].texture),style:matrix?style:null});
+  if(!hangar&&!matrix){const select=/** @type {HTMLSelectElement} */(document.getElementById('subject'));control('caption').textContent=select.selectedOptions[0].textContent+' / '+extent.toFixed(1)+' m / '+((data.length/12-start)/3).toLocaleString()+' triangles';}
  });
  if(hangar){
   const groups={deck:/** @type {number[]} */([]),rail:/** @type {number[]} */([])},mesh=DW.meshBuilder.create(groups);
@@ -130,24 +132,25 @@ function rebuild(){
   [-1,1].forEach(sign=>{mesh.block('rail',[sign*8.5,0,0],[.06,halfY,.08]);[-halfY,halfY].forEach(y=>{mesh.block('deck',[sign*8.5,y,2],[.16,.16,2.2]);});});
   const start=data.length/12;
   Object.entries(groups).forEach(([key,vertices])=>{for(let i=0;i<vertices.length;i+=6){data.push(...vertices.slice(i,i+6),...(key==='deck'?[.08,.12,.15]:[.21,.27,.29]),1,0,0);}});
-  actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null});
+  actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null,style:null});
   control('caption').textContent=subjects.length+' HULLS / SHARED TREATMENT / DISPLAY SIZES NORMALIZED';
  }
+ if(matrix)control('caption').textContent=(artistModels.find(m=>m.id===control('subject').value)?.name||control('subject').value)+' / SAME MESH, CAMERA, PALETTE & SEED';
  control('analysis').textContent=(control('masks').checked?'Material-assisted: ':'Geometry only: ')+totalRegions+' regions ('+totalSkipped+' below budget/size threshold) / '+totalPlates+' fitted plates / '+totalDetails+' detail sites';
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);count=data.length/12;
 }
 const descriptions=['Original artist textures, or neutral greybox shading.','Few broad fitted plates; quiet surfaces and narrow real seams.','Thicker beveled plates over a dark structural shell.','Hull-aligned structural bays with sparse fitted vent housings.','Large conforming insulation panels, protected seams and service covers.','Painted fitted plates with selected hatches, vents and corner fasteners.','Broad chined armor, restrained material variation and sparse seams.'];
-function settings(){control('description').textContent=descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=!control('compare').checked;}
+function settings(){const matrix=control('layout').value==='matrix';['grammar','regions','compare'].forEach(id=>control(id).disabled=matrix);control('description').textContent=descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=matrix||!control('compare').checked;}
 control('collection').onchange=()=>{control('layout').value='hangar';rebuild();home();};
-control('layout').onchange=()=>{rebuild();home();};
-control('subject').onchange=()=>{control('layout').value='solo';rebuild();home();};
+control('layout').onchange=()=>{settings();rebuild();home();};
+control('subject').onchange=()=>{if(control('layout').value!=='matrix')control('layout').value='solo';settings();rebuild();home();};
 ['grammar','scale','relief','seed','regions','masks'].forEach(id=>control(id).oninput=()=>{settings();rebuild();});
 ['wear','compare'].forEach(id=>control(id).oninput=settings);
 control('shuffle').onclick=()=>{assemblySeed++;control('subject').value='random';rebuild();};
 let palette=0;const palettes=[['#c5cec9','#38474d','#ee912e'],['#d7dfdd','#253641','#bc3e38'],['#d18b31','#26343b','#f2d99b'],['#657264','#242e2d','#c2bc85']];
 control('palette').onclick=()=>{palette=(palette+1)%palettes.length;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[palette][i]);};
 control('quarter').onclick=()=>{yaw=.22;tilt=.75;home();};control('top').onclick=()=>{yaw=0;tilt=.02;};control('side').onclick=()=>{yaw=Math.PI/2;tilt=Math.PI/2;};
-control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='2';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('regions').checked=false;control('compare').checked=false;control('spin').checked=false;palette=0;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();rebuild();};
+control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='2';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('regions').checked=false;control('masks').checked=false;control('compare').checked=false;control('spin').checked=false;palette=0;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();rebuild();};
 let dragging=false,lastX=0,lastY=0;
 canvas.onpointerdown=/** @param {PointerEvent} e */(e)=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};
 canvas.onpointermove=/** @param {PointerEvent} e */(e)=>{if(!dragging)return;yaw-=(e.clientX-lastX)*.008;tilt=Math.max(.02,Math.min(Math.PI-.02,tilt+(e.clientY-lastY)*.008));lastX=e.clientX;lastY=e.clientY;};
@@ -158,12 +161,16 @@ rebuild();home();settings();gl.enable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);
 let last=0;
 /** @param {number} now */
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;if(document.hidden)return;if(control('spin').checked)yaw+=dt*.22;
- const ratio=Math.min(devicePixelRatio,2),w=Math.round(canvas.clientWidth*ratio),h=Math.round(canvas.clientHeight*ratio);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ const ratio=Math.min(devicePixelRatio,2),w=Math.round(canvas.clientWidth*ratio),h=Math.round(canvas.clientHeight*ratio);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}gl.disable(gl.SCISSOR_TEST);gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const s=Math.sin(yaw),c=Math.cos(yaw),st=Math.sin(tilt),ct=Math.cos(tilt),back=[-s*st,c*st,ct];
  sky.render({eye:[0,0,0],right:[c,s,0],up:[s*ct,-c*ct,st],back},1,!control('sky').checked);vector('right',[c,s,0]);vector('up',[s*ct,-c*ct,st]);vector('back',back);vector('eye',back.map(v=>v*distance));scalar('aspect',w/h);scalar('distance',distance);
  ['primary','secondary','accent'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
- scalar('useMasks',control('masks').checked?1:0);scalar('grammar',Number(control('grammar').value));scalar('density',Number(control('scale').value));scalar('relief',Number(control('relief').value)/100);scalar('wear',Number(control('wear').value)/100);scalar('seed',Number(control('seed').value)||0);scalar('split',control('compare').checked?w/2:0);scalar('sourceBlend',Number(control('source-blend').value)/100);gl.uniform1i(uniform('sourceTexture'),0);actors.forEach(actor=>{gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);gl.drawArrays(gl.TRIANGLES,actor.start,actor.count);
-  if(actor.label){const o=actor.origin,x=o[0]*c+o[1]*s,y=o[0]*s*ct-o[1]*c*ct+(o[2]-1.25)*st,z=distance-(o[0]*back[0]+o[1]*back[1]+(o[2]-1.25)*back[2]);actor.label.style.left=(.5+x*2.414/(w/h)/z*.5)*100+'%';actor.label.style.top=(.5-y*2.414/z*.5)*100+'%';actor.label.hidden=z<=0;}
+ scalar('useMasks',control('masks').checked?1:0);scalar('grammar',Number(control('grammar').value));scalar('wear',Number(control('wear').value)/100);scalar('split',control('layout').value!=='matrix'&&control('compare').checked?w/2:0);scalar('sourceBlend',Number(control('source-blend').value)/100);gl.uniform1i(uniform('sourceTexture'),0);const matrix=control('layout').value==='matrix',columns=w/h>1.25?4:3,rows=Math.ceil(8/columns);
+ actors.forEach((actor,index)=>{
+  if(matrix){const col=index%columns,row=Math.floor(index/columns),cw=Math.floor(w/columns),ch=Math.floor(h/rows);gl.enable(gl.SCISSOR_TEST);gl.viewport(col*cw,h-(row+1)*ch,cw,ch);gl.scissor(col*cw,h-(row+1)*ch,cw,ch);scalar('aspect',cw/ch);scalar('distance',distance*Math.max(1,ch/cw));}
+  scalar('grammar',actor.style===null?Number(control('grammar').value):actor.style);gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);gl.drawArrays(gl.TRIANGLES,actor.start,actor.count);
+  if(actor.label&&matrix){const col=index%columns,row=Math.floor(index/columns);actor.label.style.left='calc('+col/columns*100+'% + 4px)';actor.label.style.top='calc('+row/rows*100+'% + 4px)';actor.label.style.width='calc('+100/columns+'% - 8px)';actor.label.style.height='calc('+100/rows+'% - 8px)';actor.label.hidden=false;}
+  else if(actor.label){const o=actor.origin,x=o[0]*c+o[1]*s,y=o[0]*s*ct-o[1]*c*ct+(o[2]-1.25)*st,z=distance-(o[0]*back[0]+o[1]*back[1]+(o[2]-1.25)*back[2]);actor.label.style.left=(.5+x*2.414/(w/h)/z*.5)*100+'%';actor.label.style.top=(.5-y*2.414/z*.5)*100+'%';actor.label.hidden=z<=0;}
  });
 }
 requestAnimationFrame(frame);
