@@ -9,15 +9,14 @@
     var scene = DW.scene3d.create(host, function () { return world; }, function (value) { world = value; }, {study:true,viewer:true});
     /** @param {string} id */
     function number(id) { return Number(get(id).value); }
-    /** @param {string} kind @param {number} x @param {number} y @param {number} scale */
-    function hull(kind, x, y, scale) {
+    /** Build the fighter in meters before conversion to renderer units. */
+    function hull() {
+        var x=0,y=0,scale=1;
         /** @type {Record<string,number[]>} */
         var groups = {armor:[], dark:[], edge:[], stripe:[]}, mesh = DW.meshBuilder.create(groups);
         var breadth = number('breadth') / 100, depth = number('depth') / 100, spread = number('spread') / 100;
         /** @param {string} material @param {number[]} center @param {number[]} size */
         function box(material, center, size) { mesh.block(material, [x + center[0]*scale*breadth, y + center[1]*scale, center[2]*scale*depth], [size[0]*scale*breadth,size[1]*scale,size[2]*scale*depth]); }
-        var length = kind === 'fighter' ? 18 : kind === 'carrier' ? 72 : 48;
-        var width = kind === 'fighter' ? 2 : kind === 'carrier' ? 5 : 4;
         // Octagonal cross sections: broad crew pod forward, slim tail aft.
         /** @param {string} material @param {number[][]} stations */
         function loft(material, stations) {
@@ -50,22 +49,16 @@
         return Object.keys(groups).map(function (key) { return {vertices:new Float32Array(groups[key].map(function (v,i) { return i%6<3?v/units:v; })),color:colors[key]}; });
     }
     function update() {
-        var focus = 'fighter', all = false;
-        var batches = hull(all ? 'carrier' : focus,all ? -28 : 0,0,1);
-        if(all) batches = batches.concat(hull('patrol',30,0,1),hull('fighter',55,10,1));
-        if((all || focus === 'carrier') && get('embarked').checked) {
-            for(var i=0;i<number('wing');i++) batches = batches.concat(hull('fighter',(all?-28:0)+(i%2 ? 5.5 : -5.5),-20+Math.floor(i/2)*20, 1));
-        }
+        var batches = hull();
         scene.setStudyActors(batches); scene.setStudyEffects([]);
-        get('readout').textContent = (all?'FIGHTER 18 m / CARRIER 72 m / PATROL 48 m':focus.toUpperCase())+'\nWing: '+number('wing')+' Ã— 18 m fighters at full scale';
+        get('readout').textContent = '18 m long / '+(11.7*number('spread')/100*number('breadth')/100).toFixed(1)+' m span\nTwo crew / one ventral centerline gun';
     }
     function resetView() {
-        var extent = get('focus').value === 'fighter' ? 26 : get('focus').value === 'all' ? 125 : 95;
+        var extent = 26;
         world.camera = {x:0,y:0,zoom:Math.min(host.clientWidth,host.clientHeight)*units/extent};
         scene.setOrbit({yaw:.25,tilt:.65,height:0});
     }
-    ['breadth','depth','spread','wing','embarked','markings'].forEach(function (id) {get(id).oninput=update;});
-    get('focus').onchange=function () {update();resetView();};
+    ['breadth','depth','spread','markings'].forEach(function (id) {get(id).oninput=update;});
     get('quarter').onclick=function () {scene.setOrbit({yaw:.25,tilt:.65,height:0});};
     get('top').onclick=function () {scene.setOrbit({yaw:0,tilt:.06,height:0});};
     get('side').onclick=function () {scene.setOrbit({yaw:Math.PI/2,tilt:Math.PI/2,height:0});};

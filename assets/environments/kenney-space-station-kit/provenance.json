@@ -1,0 +1,19 @@
+{
+  "author": "Kenney",
+  "pack": "kenney-space-station-kit",
+  "title": "Space Station Kit",
+  "version": "1.0",
+  "sourceURL": "https://kenney.nl/assets/space-station-kit",
+  "downloadURL": "https://kenney.nl/media/pages/assets/space-station-kit/6475288f2e-1712749919/kenney_space-station-kit.zip",
+  "license": "CC0-1.0",
+  "licenseURL": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "licenseEvidence": "Creator listing and License.txt inside the original archive identify Creative Commons Zero (CC0). License.txt is also extracted unchanged beside this file.",
+  "acquired": "2026-10-18",
+  "acquisition": "Downloaded directly from the creator's official free download link. Archive preserved unchanged; no models converted or integrated.",
+  "intendedUse": "Placeholder space-station environment assets.",
+  "archive": {
+    "path": "source/kenney_space-station-kit.zip",
+    "bytes": 1835875,
+    "sha256": "215e79bd5415cff93665183390f0343ed9acf87780306331013b78520170c6d8"
+  }
+}

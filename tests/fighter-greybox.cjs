@@ -1,0 +1,22 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const controls = new Map();
+for(const id of ['viewer','breadth','depth','spread','markings','readout','quarter','top','side','reset']) controls.set(id,{value:'100',checked:true,clientWidth:900,clientHeight:700});
+let batches;
+const world={combat:{}};
+const scene={setStudyActors(value){batches=value;},setStudyEffects(){},setOrbit(){}};
+const context={window:{Driftworks:{sim:{createInitialWorld:()=>world,METERS_PER_UNIT:10},scene3d:{create:()=>scene}}},document:{getElementById:id=>controls.get(id)},requestAnimationFrame(){},Float32Array};
+vm.createContext(context);
+for(const file of ['src/mesh-builder.js','experiments/fighter-greybox.js']) vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),context);
+assert.ok(batches.every(b=>Array.from(b.vertices).every(Number.isFinite)));
+const armor=Array.from(batches[0].vertices);
+function widthAt(y){const xs=[];for(let i=0;i<armor.length;i+=6) if(Math.abs(armor[i+1]*10-y)<.01) xs.push(Math.abs(armor[i]*10));return Math.max(...xs);}
+assert.ok(widthAt(5.5)>widthAt(-5)*3,'crew pod is broad and tail tapers');
+const dark=Array.from(batches[1].vertices);let lowGun=false;
+for(let i=0;i<dark.length;i+=6) if(dark[i+1]>.85 && dark[i+2]<-.17 && Math.abs(dark[i])<.03) lowGun=true;
+assert.ok(lowGun,'single centerline barrel projects forward below crew');
+controls.get('breadth').value='140';controls.get('breadth').oninput();
+assert.notDeepEqual(Array.from(batches[0].vertices),armor);
+controls.get('reset').onclick();assert.deepEqual(Array.from(batches[0].vertices),armor);
+console.log('PASS fighter greybox: finite loft, broad crew pod, tapering tail, low centerline gun and reset');

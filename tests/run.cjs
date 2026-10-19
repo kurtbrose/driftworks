@@ -58,3 +58,5 @@ require('node:child_process').execFileSync(process.execPath, [require('node:path
 require('./fleet-greybox.cjs');
 
 require('./model-viewer.cjs');
+
+require('./fighter-greybox.cjs');

@@ -547,3 +547,5 @@ Preview target shield/hull bars without flying at [target status preview](experi
 Engine sound tuning: open [Engine sound lab](experiments/engine-lab.html) for eight procedural voices, cockpit/exterior listening, layer controls, A/B mixes, JSON recipes, and a repeatable flight audition. Use **Use this mix in flight**, then reload flight to apply the locally saved mix. Audio tuning adds no controller vibration.
 
 Flight **Settings / Sound balance** offers engine, weapons, impacts, comms and overall effects levels. Comms briefly lower engine/guns; hits briefly lower the engine. Disable **Prioritize comms and impacts** for a fixed mix. Levels are remembered locally.
+
+The separate `experiments/fighter-greybox.html` explores a dragonfly / helicopter fighter: a broad side-by-side crew pod, tapering tail, four short outriggers and a single ventral centerline gun. The earlier fleet bench remains an independent idea study.
