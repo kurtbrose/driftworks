@@ -1,3 +1,4 @@
+import {SURFACE_MATERIALS,MATERIAL_SHADER} from './livery-materials.js';
 import {detectHullSymmetry,mirrorTreatmentMesh} from './livery-symmetry.js';
 import {ART_DIRECTIONS,ART_SHADER,artVertexKey,curvatureField,chunkTreatment,treatmentSamples} from './livery-art.js';
 import {perspectiveDepth} from './livery-depth.js';
@@ -17,6 +18,7 @@ const fragment=`precision highp float;
 uniform sampler2D sourceTexture;uniform float hasTexture,sourceBlend,grammar,wear,split,useMasks,monochrome;uniform vec3 primary,secondary,accent,eye;
 varying vec2 sourceUV;varying vec4 protection;varying vec3 p,n;
 ${ART_SHADER}
+${MATERIAL_SHADER}
 void main(){
  float g=grammar;if(split>0.&&gl_FragCoord.x<split)g=0.;
  float kind=floor(protection.a+.001),edge=fract(protection.a)*5.;if(kind>1.5&&g==0.&&artStyle<.5)discard;
@@ -31,11 +33,9 @@ void main(){
  if(art){color=artDirection(p,N,edge,kind);if(hasTexture>.5){vec3 source=texture2D(sourceTexture,sourceUV).rgb;float dark=1.-smoothstep(.12,.3,max(source.r,max(source.g,source.b)));color=mix(color,source,max(sourceBlend,dark*useMasks));}}
  if(monochrome>.5&&kind>3.5)discard;
  if(monochrome>.5&&kind<2.5)color=vec3(.62);
- float light=max(0.,dot(N,normalize(vec3(-.6,-.4,1.)))),rim=pow(1.-abs(dot(N,normalize(eye-p))),3.);
- color=color*(.3+light*.82)+vec3(.1,.16,.2)*rim;
- if(art&&monochrome<.5&&artFinish>.5){vec3 V=normalize(eye-p),L=normalize(vec3(-.6,-.4,1.)),H=normalize(V+L);float power=mix(100.,8.,artRoughness),spec=pow(max(0.,dot(N,H)),power)*(.07+artMetalness*.65);
-  vec3 environment=mix(vec3(.09,.13,.18),vec3(.7,.75,.72),smoothstep(-.2,.8,N.z));color+=mix(vec3(1.),primary,artMetalness)*spec+environment*artMetalness*.19;
- }
+ bool materials=artFinish>.5&&monochrome<.5&&(art||(g>.5&&kind<2.5));
+ if(materials){vec4 weights=art||kind>1.5?surfaceWeights(protection.rgb):vec4(0.,0.,0.,1.);color=shadeSurfaces(color,p,N,weights,edge);}
+ else{float light=max(0.,dot(N,normalize(vec3(-.6,-.4,1.)))),rim=pow(1.-abs(dot(N,normalize(eye-p))),3.);color=color*(.3+light*.82)+vec3(.1,.16,.2)*rim;}
  gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(.85)),1.);
 }`;
 /** @param {number} type @param {string} source */
@@ -55,7 +55,7 @@ function scalar(name,value){gl.uniform1f(uniform(name),value);}
 /** @param {string} name @param {number[]} value */
 function vector(name,value){gl.uniform3fv(uniform(name),value);}
 const sky=DW.flightSkybox.create(control('viewer'));
-/** @type {{start:number,count:number,origin:number[],label:HTMLDivElement|null,texture:WebGLTexture|null,style:number|null,recipe:import('./livery-art').ArtRecipe|null,axis:number[],range:number[],passes:{start:number,count:number,bias:number}[]}[]} */
+/** @type {{start:number,count:number,origin:number[],surface:boolean,label:HTMLDivElement|null,texture:WebGLTexture|null,style:number|null,recipe:import('./livery-art').ArtRecipe|null,mirror:import('./livery-symmetry').MirrorPlane|null,axis:number[],range:number[],passes:{start:number,count:number,bias:number}[]}[]} */
 let actors=[];
 let count=0,yaw=.22,tilt=.75,distance=28,assemblySeed=1;
 const artistModels=(DW.shipPacks||[]).flatMap(pack=>pack.models).filter(model=>model.texturedVertices);
@@ -146,7 +146,7 @@ function rebuild(){
   const origin=hangar||matrix?[(index%columns-(columns-1)/2)*3.1,(Math.floor(index/columns)-(rows-1)/2)*3.6,1.15]:[0,0,0];
   const label=hangar||matrix?document.createElement('div'):null;
   if(label){label.className='hull-label';label.textContent=matrix?(recipe?recipe.name:(index===0?'Original / source':index===diagnosticIndex?'Detected regions / '+structure.regions+' charts':treatmentNames[index])):(/^[A-E]$/.test(subject)?'Barracuda '+subject:artistModels.find(model=>model.id===subject)?.name||subject)+' / '+extent.toFixed(1)+' m';control('labels').append(label);}
-  actors.push({start,count:data.length/12-start,origin,label,texture:textureFor(batches[0].texture),style:recipe||matrix?style:null,recipe,axis:structure.axis,range:(()=>{let lo=Infinity,hi=-Infinity;batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){const t=structure.axis.reduce((sum,v,k)=>sum+v*b.vertices[i+k],0);lo=Math.min(lo,t);hi=Math.max(hi,t);}});return [lo,hi];})(),passes});
+  actors.push({start,count:data.length/12-start,origin,surface:true,label,texture:textureFor(batches[0].texture),style:recipe||matrix?style:null,recipe,mirror:fitted.symmetry,axis:structure.axis,range:(()=>{let lo=Infinity,hi=-Infinity;batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){const t=structure.axis.reduce((sum,v,k)=>sum+v*b.vertices[i+k],0);lo=Math.min(lo,t);hi=Math.max(hi,t);}});return [lo,hi];})(),passes});
   if(!hangar&&!matrix){const select=/** @type {HTMLSelectElement} */(document.getElementById('subject'));control('caption').textContent=select.selectedOptions[0].textContent+' / '+extent.toFixed(1)+' m / '+((data.length/12-start)/3).toLocaleString()+' triangles';}
  });
  if(hangar||matrix){
@@ -157,7 +157,7 @@ function rebuild(){
   [-1,1].forEach(sign=>{mesh.block('rail',[sign*(halfX-.1),0,0],[.06,halfY,.08]);[-halfY,halfY].forEach(y=>{mesh.block('deck',[sign*(halfX-.1),y,2],[.16,.16,2.2]);});});
   const start=data.length/12;
   Object.entries(groups).forEach(([key,vertices])=>{for(let i=0;i<vertices.length;i+=6){data.push(...vertices.slice(i,i+6),...(key==='deck'?[.08,.12,.15]:[.21,.27,.29]),1,0,0);}});
-  actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null,style:null,recipe:null,axis:[0,1,0],range:[-1,1],passes:[{start,count:data.length/12-start,bias:0}]});
+  actors.push({start,count:data.length/12-start,origin:[0,0,0],surface:false,label:null,texture:null,style:null,recipe:null,mirror:null,axis:[0,1,0],range:[-1,1],passes:[{start,count:data.length/12-start,bias:0}]});
   control('caption').textContent=subjects.length+' HULLS / SHARED TREATMENT / DISPLAY SIZES NORMALIZED';
  }
  if(matrix)control('caption').textContent=(artistModels.find(m=>m.id===control('subject').value)?.name||control('subject').value)+(artMode?' / ONE GEOMETRY, FOUR CHUNK TREATMENTS':' / ONE HULL, SIX CONSTRUCTION RULES');
@@ -167,7 +167,7 @@ function rebuild(){
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);count=data.length/12;
 }
 const descriptions=['Original artist textures, or neutral greybox shading.','A few broad conforming shell plates.','Actual overlapping armor courses over an exposed lower layer.','Shared longitudinal bays, raised transverse frames, stringers and braces.','Large soft pads with boundary-bound inflation, without hard armor edges.','Flush paint zones following existing surfaces, without armor extrusion.','Angular cuts and projected planar caps that change the apparent hull facets.'];
-function settings(){const art=control('directions').value==='art';['fields','zones','finish','graphics','palette-mode'].forEach(id=>{const group=control(id).parentElement;if(group)group.hidden=id!=='finish'||!art;});const grammarGroup=control('grammar').parentElement,recipeGroup=control('art-style').parentElement;if(grammarGroup)grammarGroup.hidden=false;if(recipeGroup)recipeGroup.hidden=!art;const custom=false;['primary','secondary','accent'].forEach(id=>control(id).disabled=custom);const matrix=control('layout').value==='matrix';control('collection').disabled=control('layout').value!=='hangar';['grammar','art-style','regions','compare'].forEach(id=>control(id).disabled=matrix&&(id!=='grammar'||!art));control('description').textContent=matrix?(art?'Same geometry treatment and four-color palette. Each copy assigns materials using a different region-local operation.':'Each copy uses a different construction rule. Colors, seed, shape and input mode stay shared.'):art?'Coloration operates on analyzed surface chunks independently of the selected geometry treatment.':descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=matrix||!control('compare').checked;}
+function settings(){const art=control('directions').value==='art';['fields','zones','finish','graphics','palette-mode'].forEach(id=>{const group=control(id).parentElement;if(group)group.hidden=id!=='finish';});const grammarGroup=control('grammar').parentElement,recipeGroup=control('art-style').parentElement;if(grammarGroup)grammarGroup.hidden=false;if(recipeGroup)recipeGroup.hidden=!art;const custom=false;['primary','secondary','accent'].forEach(id=>control(id).disabled=custom);const matrix=control('layout').value==='matrix';control('collection').disabled=control('layout').value!=='hangar';['grammar','art-style','regions','compare'].forEach(id=>control(id).disabled=matrix&&(id!=='grammar'||!art));control('description').textContent=matrix?(art?'Same geometry treatment and four material slots. Each copy assigns materials using a different region-local operation.':'Each copy uses a different construction rule. Colors, seed, shape and input mode stay shared.'):art?'Coloration operates on analyzed surface chunks independently of the selected geometry treatment.':descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=matrix||!control('compare').checked;}
 control('directions').onchange=home;
 control('collection').onchange=()=>{control('layout').value='hangar';settings();rebuild();home();};
 control('layout').onchange=()=>{settings();rebuild();home();};
@@ -175,10 +175,16 @@ control('subject').onchange=()=>{if(control('layout').value!=='matrix')control('
 ['directions','art-style','grammar','scale','relief','seed','regions','masks','graphics','symmetry'].forEach(id=>control(id).oninput=()=>{settings();setTimeout(rebuild,0);});
 ['wear','compare','palette-mode','fields','zones','finish'].forEach(id=>control(id).oninput=settings);
 control('shuffle').onclick=()=>{assemblySeed++;control('subject').value='random';rebuild();};
+const slotIds=['primary','secondary','accent','detail'];
+/** @param {string} id @param {string} name @param {boolean} [color] */
+function applySurface(id,name,color=true){const material=SURFACE_MATERIALS[name]||SURFACE_MATERIALS.paint;control(id+'-material').value=name;if(color)control(id).value=material.color;for(const [key,value] of Object.entries({roughness:material.roughness,metalness:material.metalness,texture:material.detail,wear:material.wear,emission:material.emission}))control(id+'-'+key).value=String(Math.round(value*100));}
+slotIds.forEach((id,i)=>{applySurface(id,['paint','brushed','ceramic','rubber'][i],false);control(id+'-material').oninput=()=>applySurface(id,control(id+'-material').value);});
+const surfaceSets={spacecraft:['paint','brushed','ceramic','rubber'],industrial:['paint','rubber','brushed','thermal'],alloy:['brushed','alloy','ceramic','rubber'],thermal:['thermal','rubber','alloy','emitter']};
+control('material-set').oninput=()=>{const names=surfaceSets[/** @type {keyof typeof surfaceSets} */(control('material-set').value)]||surfaceSets.spacecraft;slotIds.forEach((id,i)=>applySurface(id,names[i]));};
 let palette=0;const palettes=[['#c5cec9','#38474d','#ee912e','#12191d'],['#d7dfdd','#253641','#bc3e38','#10151c'],['#d18b31','#26343b','#f2d99b','#151918'],['#657264','#242e2d','#c2bc85','#111612']];
 control('palette').onclick=()=>{control('palette-mode').value='shared';settings();palette=(palette+1)%palettes.length;['primary','secondary','accent','detail'].forEach((id,i)=>control(id).value=palettes[palette][i]);};
 control('quarter').onclick=()=>{yaw=.22;tilt=.75;home();};control('top').onclick=()=>{yaw=0;tilt=.02;};control('side').onclick=()=>{yaw=Math.PI/2;tilt=Math.PI/2;};
-control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='2';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('regions').checked=false;control('monochrome').checked=false;control('masks').checked=false;control('compare').checked=false;control('spin').checked=false;palette=0;['primary','secondary','accent','detail'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();rebuild();};
+control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='2';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('regions').checked=false;control('monochrome').checked=false;control('masks').checked=false;control('compare').checked=false;control('spin').checked=false;slotIds.forEach((id,i)=>applySurface(id,['paint','brushed','ceramic','rubber'][i],false));control('material-set').value='spacecraft';control('material-grey').checked=false;palette=0;['primary','secondary','accent','detail'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();rebuild();};
 let dragging=false,lastX=0,lastY=0;
 canvas.onpointerdown=/** @param {PointerEvent} e */(e)=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};
 canvas.onpointermove=/** @param {PointerEvent} e */(e)=>{if(!dragging)return;yaw-=(e.clientX-lastX)*.008;tilt=Math.max(.02,Math.min(Math.PI-.02,tilt+(e.clientY-lastY)*.008));lastX=e.clientX;lastY=e.clientY;};
@@ -193,9 +199,12 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  const s=Math.sin(yaw),c=Math.cos(yaw),st=Math.sin(tilt),ct=Math.cos(tilt),back=[-s*st,c*st,ct];
  sky.render({eye:[0,0,0],right:[c,s,0],up:[s*ct,-c*ct,st],back},1,!control('sky').checked);vector('right',[c,s,0]);vector('up',[s*ct,-c*ct,st]);vector('back',back);vector('eye',back.map(v=>v*distance));scalar('aspect',w/h);scalar('distance',distance);
  ['primary','secondary','accent','detail'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
+ scalar('materialGrey',control('material-grey').checked?1:0);scalar('materialPixel',distance/h/2.414);
+ ['primary','secondary','accent','detail'].forEach((id,i)=>{const preset=SURFACE_MATERIALS[control(id+'-material').value]||SURFACE_MATERIALS.paint;vector('surface'+i,['roughness','metalness','texture'].map(key=>Number(control(id+'-'+key).value)/100));vector('effects'+i,[Number(control(id+'-wear').value)/100,Number(control(id+'-emission').value)/100,preset.pattern]);});
  scalar('monochrome',control('monochrome').checked?1:0);scalar('useMasks',control('masks').checked?1:0);scalar('grammar',Number(control('grammar').value));scalar('wear',Number(control('wear').value)/100);scalar('split',control('layout').value!=='matrix'&&control('compare').checked?w/2:0);scalar('sourceBlend',Number(control('source-blend').value)/100);gl.uniform1i(uniform('sourceTexture'),0);actors.forEach(actor=>{
-  scalar('grammar',actor.style===null?Number(control('grammar').value):actor.style);gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);
-  const recipe=actor.recipe;scalar('artStyle',recipe?.id||0);scalar('artRoughness',recipe?.roughness||.8);scalar('artMetalness',recipe?.metalness||0);scalar('artLow',actor.range[0]);scalar('artHigh',actor.range[1]);scalar('artSeed',Number(control('seed').value)||0);scalar('artFields',control('fields').checked?1:0);scalar('artZones',control('zones').checked?1:0);scalar('artFinish',control('finish').checked?1:0);vector('artAxis',actor.axis);
+  scalar('grammar',!actor.surface?0:actor.style===null?Number(control('grammar').value):actor.style);gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);
+  const plane=control('symmetry').checked?actor.mirror:null;scalar('mirrorMaterials',plane?1:0);scalar('mirrorOffset',plane?.offset||0);vector('mirrorNormal',plane?.normal||[1,0,0]);
+  const recipe=actor.recipe;scalar('artStyle',recipe?.id||0);scalar('artLow',actor.range[0]);scalar('artHigh',actor.range[1]);scalar('artSeed',Number(control('seed').value)||0);scalar('artFields',control('fields').checked?1:0);scalar('artZones',control('zones').checked?1:0);scalar('artFinish',actor.surface&&control('finish').checked?1:0);vector('artAxis',actor.axis);
   ['primary','secondary','accent','detail'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
   actor.passes.forEach(pass=>{
    if(pass.bias){// This viewer's right/up/back basis projects outward faces clockwise.

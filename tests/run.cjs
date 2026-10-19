@@ -68,5 +68,6 @@ require('./study-zoom.cjs');
 require('./livery-lab.cjs');
 
 require('./livery-art.cjs');
+require('./livery-materials.cjs');
 
 require('./hull-panels.cjs');

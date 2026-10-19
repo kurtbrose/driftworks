@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(__dirname,'../experiments/livery-materials.js'),'utf8').replaceAll('export const','var').replaceAll('export function','function'),ctx);
+const m=ctx.SURFACE_MATERIALS;
+for(const preset of Object.values(m))for(const key of ['roughness','metalness','detail','wear','emission'])assert(preset[key]>=0&&preset[key]<=1,key+' in material range');
+assert(m.rubber.roughness>m.ceramic.roughness+.6);assert(m.alloy.metalness>m.paint.metalness+.7);assert(m.thermal.pattern!==m.brushed.pattern,'Fabric and metal have different microstructure');
+assert.equal(ctx.blendSurfaceProperty([1,0,0],[.2,.4,.6,.8]),.2);assert.equal(ctx.blendSurfaceProperty([0,0,0],[.2,.4,.6,.8]),.8,'Unassigned mask weight selects detail surface');
+assert(Math.abs(ctx.blendSurfaceProperty([.25,.25,.25],[.2,.4,.6,.8])-.5)<1e-10,'Properties blend with the same region weights as color');
+assert.equal(ctx.blendSurfaceProperty([2,0,0],[.2,.4,.6,.8]),.2,'Overlapping weights normalize');
+console.log('PASS surface materials: finite properties, distinct finishes and microstructure, normalized shared-mask blending');

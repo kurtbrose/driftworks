@@ -1,12 +1,12 @@
 import {reflectHullPoint} from './livery-symmetry.js';
 /** Chunk coloration operations; geometry and palette are selected independently.
- * @typedef {{id:number,name:string,roughness:number,metalness:number}} ArtRecipe */
+ * @typedef {{id:number,name:string}} ArtRecipe */
 /** @type {ArtRecipe[]} */
 export const ART_DIRECTIONS=[
- {id:1,name:'Connected region materials',roughness:.7,metalness:.12},
- {id:2,name:'Boundary-distance enamel',roughness:.65,metalness:.18},
- {id:3,name:'Irregular material islands',roughness:.8,metalness:.08},
- {id:4,name:'Layer edges / dark boundaries',roughness:.6,metalness:.3}
+ {id:1,name:'Connected region materials'},
+ {id:2,name:'Boundary-distance enamel'},
+ {id:3,name:'Irregular material islands'},
+ {id:4,name:'Layer edges / dark boundaries'}
 ];
 /** @param {ArrayLike<number>} p @param {number} [offset] */
 export function artVertexKey(p,offset=0){return [0,1,2].map(k=>Math.round(p[offset+k]*100000)).join(',');}
@@ -89,7 +89,7 @@ export function chunkTreatment(regions,seed,symmetry=null){
 // Color weights are generated from analyzed chunks on the CPU. The shader only
 // interpolates those assignments and shades the selected materials.
 export const ART_SHADER=`
-uniform float artStyle,artRoughness,artMetalness,artLow,artHigh,artSeed,artFields,artZones,artFinish;
+uniform float artStyle,artLow,artHigh,artSeed,artFields,artZones,artFinish;
 uniform vec3 artAxis,detail;
 vec3 artDirection(vec3 point,vec3 N,float edge,float kind){
  vec3 weights=max(vec3(0.),protection.rgb);

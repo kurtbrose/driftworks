@@ -8,6 +8,14 @@ These replace the previous hull-space stripe recipes. The shader renders precomp
 
 Surface finish remains independently switchable. Construction grammars still compare the original six geometry algorithms. The unused earlier color-field/marking controls are hidden. No automatic gun/exhaust recognition has been introduced.
 
+## Four surface materials
+
+The four assignment slots now each define a surface material: editable base color, roughness, metalness, fine detail strength, wear and emission. The same normalized region weights blend all properties. Presets include satin paint, glazed ceramic, polished alloy, brushed titanium, matte rubber/composite, quilted thermal fabric and luminous ceramic. Material sets offer four starting combinations, without changing the assignment algorithm, geometry or seed.
+
+Neutral colors / inspect materials replaces albedo with neutral grey while retaining finish and fine structure. Uniform grey / compare geometry continues to disable material shading. Material finishes and fine detail can be disabled separately. Material edits update uniforms without rebuilding the mesh. Construction grammars also shade their generated paint-weight masks with these surfaces; exposed source hull defaults to Detail. Original/source and diagnostic copies keep their previous rendering.
+
+This remains a lightweight local preview renderer, not full PBR: analytic highlights, roughness-dependent environment response, emission without bloom, and shader relief without displacement. Fine material patterns use surface-oriented projections and fade at small screen scales. They do not select the coarse material regions; those remain CPU geometry assignments. Mirror folding applies to their coordinates and normals. Wear currently uses the existing geometric normal-variation proxy, not a measured recess or edge-distance field. No canopy or exhaust classifier or extra semantic slots are added.
+
 ## Automatic bilateral symmetry
 
 Auto mirror symmetry is enabled by default. The detector tests coordinate axes and covariance-derived axes, including rotated models, against reflected source vertex positions. It accepts a plane only when at least 90% of sampled vertices match within 1.2% of hull extent and normalized error remains below 2.5%. The analysis readout reports the chosen plane normal and match percentage; ambiguous multiple-plane shapes use deterministic candidate order. Asymmetric hulls without a confident match keep their original treatment.

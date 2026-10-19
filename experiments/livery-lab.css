@@ -3,3 +3,5 @@
 #viewer{background:#09131f}#canvas{position:absolute;inset:0;z-index:1}.flight-skybox{position:absolute;inset:0;width:100%;height:100%;z-index:0}#labels{position:absolute;inset:0;z-index:2;pointer-events:none}.hull-label{position:absolute;transform:translate(-50%,0);white-space:nowrap;font-size:9px;letter-spacing:.03em;text-transform:uppercase;color:#adc4ce;text-shadow:0 2px 3px #000}.caption,#split-label{z-index:3}
 
 [hidden]{display:none!important}
+
+.surface-slot{border:1px solid #344953;border-radius:4px;padding:10px;margin:9px 0}.surface-slot summary{cursor:pointer;font-size:12px;color:#c5d5d9}.surface-slot label{margin:9px 0}.surface-slot input[type=color]{width:100%;height:30px}

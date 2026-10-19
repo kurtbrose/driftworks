@@ -7,7 +7,7 @@ vm.runInContext(read('experiments/livery-symmetry.js').replaceAll('export functi
 vm.runInContext(read('experiments/livery-art.js').replace(/^import .*;\r?\n/gm,'').replaceAll('export const','var').replaceAll('export function','function'),context);
 vm.runInContext(read('experiments/hull-panels.js').replaceAll('export function','function'),context);
 const recipes=context.ART_DIRECTIONS;assert.equal(recipes.length,4);assert(recipes.every(r=>!('geometry' in r)&&!('palette' in r)),'Coloration does not prescribe geometry or palette');
-assert(new Set(recipes.map(r=>r.metalness)).size===4);assert(new Set(recipes.map(r=>r.roughness)).size===4);
+assert(recipes.every(r=>!('roughness' in r)&&!('metalness' in r)),'Assignment algorithms do not prescribe material properties');
 
 const flat={vertices:new Float32Array([0,0,0,0,0,1,2,0,0,0,0,1,0,2,0,0,0,1])};
 assert(Array.from(context.curvatureField([flat]).values()).every(v=>v===0),'Planar faces have no manufactured edge wear');

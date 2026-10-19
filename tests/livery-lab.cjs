@@ -7,15 +7,16 @@ const read=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const DW={};
 const controls=new Map();
 const defaults={layout:'solo',subject:'A',grammar:'1',scale:'2',relief:'55',wear:'20',seed:'17',primary:'#c5cec9',secondary:'#38474d',accent:'#ee912e',detail:'#12191d'};
-let uploaded=new Float32Array(),uploads=0;const depthBiases=[],depthCoefficients=[],frontFaces=[];
+let uploaded=new Float32Array(),uploads=0;const depthBiases=[],depthCoefficients=[],frontFaces=[],surfaceUniforms=new Map(),scalarUniforms=new Map();
 const gl=new Proxy({
- createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:()=>({}),getExtension:()=>({}),
- CW:2304,frontFace:value=>frontFaces.push(value),
+ createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:(program,name)=>name,getExtension:()=>({}),
+ uniform3fv:(location,values)=>surfaceUniforms.set(location,Array.from(values)),uniform1f:(location,value)=>scalarUniforms.set(location,value),CW:2304,frontFace:value=>frontFaces.push(value),
  polygonOffset:(factor,units)=>depthBiases.push([factor,units]),uniform2fv:(location,values)=>depthCoefficients.push(Array.from(values)),
  bufferData:(target,data)=>{uploaded=data;uploads++;}
 },{get:(target,key)=>key in target?target[key]:()=>{}});
 const canvas={getContext:()=>gl,addEventListener:()=>{},clientWidth:900,clientHeight:700};
 for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','detail','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome','symmetry','directions','art-style','palette-mode','fields','zones','finish','graphics'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
+for(const id of ['material-set','material-grey',...['primary','secondary','accent','detail'].flatMap(id=>['material','roughness','metalness','texture','wear','emission'].map(key=>id+'-'+key))])controls.set(id,{value:'0',checked:false});
 DW.flightSkybox={create:()=>({render:()=>{}})};
 const sandbox={setTimeout:callback=>callback(),devicePixelRatio:1,window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
 vm.createContext(sandbox);
@@ -33,6 +34,7 @@ vm.runInContext('(function(){'+read('experiments/hull-panels.js').replaceAll('ex
 sandbox.analyzeHull=sandbox.window.analyzeHull;sandbox.buildHullPanels=sandbox.window.buildHullPanels;sandbox.buildGraphicMarks=sandbox.window.buildGraphicMarks;
 vm.runInContext(read('experiments/livery-symmetry.js').replaceAll('export function','function'),sandbox);
 vm.runInContext(read('experiments/livery-art.js').replace(/^import .*;\r?\n/gm,'').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
+vm.runInContext(read('experiments/livery-materials.js').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
 vm.runInContext(read('experiments/livery-depth.js').replaceAll('export function','function'),sandbox);
 const lab=read('experiments/livery-lab.js').replace(/^import .*;\r?\n/gm,'');
 vm.runInContext(lab,sandbox);
@@ -79,3 +81,10 @@ const symmetrySource=vm.runInContext('fittedHull("cube").batches[0].vertices.sli
 controls.get('symmetry').checked=false;controls.get('symmetry').oninput();assert(controls.get('analysis').textContent.includes('Symmetry: off'),'Symmetry can be disabled');
 assert.deepEqual(vm.runInContext('fittedHull("cube").batches[0].vertices',sandbox),symmetrySource,'Mirror toggle leaves source hull unchanged');
 console.log('PASS livery symmetry toggle, confidence readout and source preservation');
+
+const beforeMaterials=uploads;controls.get('primary-material').value='rubber';controls.get('primary-material').oninput();assert.equal(controls.get('primary-roughness').value,'96');assert.equal(controls.get('primary-metalness').value,'0');
+controls.get('finish').checked=true;controls.get('material-grey').checked=true;vm.runInContext('frame(32)',sandbox);assert.equal(scalarUniforms.get('materialGrey'),1,'Neutral-color inspection preserves finish shading');assert.deepEqual(surfaceUniforms.get('surface0'),[.96,0,.45]);assert.equal(surfaceUniforms.get('effects0')[2],3,'Material preset sends its own texture vocabulary');
+controls.get('material-set').value='thermal';controls.get('material-set').oninput();assert.equal(controls.get('primary-material').value,'thermal');assert.equal(controls.get('detail-material').value,'emitter');assert.equal(uploads,beforeMaterials,'Material set and scalar edits do not regenerate geometry or assignments');
+console.log('PASS material preset controls, per-slot shader uniforms, neutral-color inspection and geometry-independent editing');
+
+assert.equal(scalarUniforms.get('grammar'),0,'Hangar deck keeps its own material when ship surface slots change');
