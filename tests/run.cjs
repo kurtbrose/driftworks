@@ -66,3 +66,5 @@ require('./study-viewer.cjs');
 require('./study-zoom.cjs');
 
 require('./livery-lab.cjs');
+
+require('./hull-panels.cjs');

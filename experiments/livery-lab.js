@@ -1,3 +1,4 @@
+import {analyzeHull,buildHullPanels} from './hull-panels.js';
 import {fighterHull, fleetHull} from './livery-fixtures.js';
 const DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
 /** @param {string} id */
@@ -9,44 +10,22 @@ const gl=context;
 gl.getExtension('OES_standard_derivatives');
 const vertex=`attribute vec3 position,normal;attribute vec2 texcoord;varying vec2 sourceUV;attribute vec4 protectedColor;varying vec4 protection;uniform vec3 right,up,back;uniform vec3 origin;uniform float aspect,distance;varying vec3 p,n;
 void main(){sourceUV=texcoord;protection=protectedColor;p=position;n=normal;vec3 q=vec3(dot(p+origin,right),dot(p+origin,up),distance-dot(p+origin,back));gl_Position=vec4(q.x*2.414/aspect,q.y*2.414,q.z*.999-.02,q.z);}`;
-const fragment=`#extension GL_OES_standard_derivatives : enable
-precision highp float;uniform sampler2D sourceTexture;uniform float hasTexture,sourceBlend;varying vec2 sourceUV;varying vec4 protection;varying vec3 p,n;uniform vec3 primary,secondary,accent;uniform float grammar,density,relief,wear,seed,split;uniform vec3 eye;
-float hash(vec2 a){return fract(sin(dot(a,vec2(127.1,311.7))+seed)*43758.5453);}
-float line(float x,float w){return 1.-smoothstep(w,w+fwidth(x),abs(x));}
-vec4 surface(vec2 uv,float g){
- vec2 q=uv*density;if(g==3.)q*=vec2(.45,1.8);if(g==4.)q*=2.6;if(g==1.)q*=.65;
- if(g==6.)q.x+=q.y*.35+floor(q.y)*.2;
- vec2 cell=floor(q),f=fract(q),edge=min(f,1.-f);float id=hash(cell);
- float gap=1.-smoothstep(.018,.035,min(edge.x,edge.y));
- float border=1.-smoothstep(.035,.10,min(edge.x,edge.y));
- float stripe=step(.74,fract(p.y*1.3+.07));
- vec3 color=mix(primary,secondary,step(.79,id)*.55);float h=0.;
- if(g==1.){color=mix(primary,secondary,step(.94,id)*.7);color=mix(color,secondary,gap*.65);color=mix(color,accent,stripe*.65*step(.72,p.x));h=border*.12;}
- if(g==2.){color*=.84+id*.22;color=mix(color,secondary,gap);h=(1.-border)*(.3+id*.6);color=mix(color,accent,step(.87,id)*(1.-gap));}
- if(g==3.){float ribs=line(f.y-.5,.065);color=mix(secondary,primary,(1.-gap)*.85);color=mix(color,accent,ribs*.65);h=ribs*.9+(1.-border)*.25;}
- if(g==4.){float ceramic=step(0.,p.z+.15);color=mix(secondary,primary,ceramic);color*=.82+id*.22;color=mix(color,secondary,gap*.8);float quilt=sin(f.x*3.14159)*sin(f.y*3.14159);h=quilt*.5; color=mix(color,accent,step(.93,id)*ceramic*.55);}
- if(g==5.){color=mix(color,secondary,gap);float hatch=step(.68,id)*step(.23,f.x)*step(f.x,.77)*step(.22,f.y)*step(f.y,.78);color=mix(color,secondary,hatch*.8);float hazard=step(.5,fract((q.x+q.y)*6.));color=mix(color,mix(secondary,accent,hazard),step(.94,id));h=border*.2+hatch*.3;}
- if(g==6.){color=mix(secondary,primary,.25+id*.45);color=mix(color,secondary,gap);color=mix(color,accent,step(.98,id)*step(.5,f.x));h=(1.-border)*(.2+abs(f.x-f.y)*.45);color*=.9+step(f.x,f.y)*.1;}
- float bolt=1.-smoothstep(.022,.04,length(f-vec2(.12)));if(g==5.||g==2.)color=mix(color,secondary,bolt);
- float scratches=step(.975,hash(floor(uv*800.)))*wear; color=mix(color,secondary,scratches*.6+border*wear*.18);
- return vec4(color,h);
-}
+const fragment=`precision highp float;
+uniform sampler2D sourceTexture;uniform float hasTexture,sourceBlend,grammar,wear,split,useMasks;uniform vec3 primary,secondary,accent,eye;
+varying vec2 sourceUV;varying vec4 protection;varying vec3 p,n;
 void main(){
- vec3 N=normalize(n),weights=pow(abs(N),vec3(8.));weights/=weights.x+weights.y+weights.z;
  float g=grammar;if(split>0.&&gl_FragCoord.x<split)g=0.;
- vec4 sampleColor=surface(p.yz,g)*weights.x+surface(p.xz,g)*weights.y+surface(p.xy,g)*weights.z;
- vec3 color=sampleColor.rgb;float h=sampleColor.a;
- vec3 dp1=dFdx(p),dp2=dFdy(p);vec3 R1=cross(dp2,N),R2=cross(N,dp1);float det=dot(dp1,R1);vec3 grad=(dFdx(h)*R1+dFdy(h)*R2)/(abs(det)+.000001)*sign(det);
- if(g==0.){color=vec3(.48,.51,.53);grad=vec3(0.);}
- if(hasTexture>.5){vec3 source=texture2D(sourceTexture,sourceUV).rgb;
-  float dark=1.-smoothstep(.12,.3,max(source.r,max(source.g,source.b)));
-  color=g==0.?source:mix(color,source,max(sourceBlend,dark));
-  if(g==0.)grad=vec3(0.);
+ float kind=protection.a;if(kind>1.5&&g==0.)discard;
+ vec3 N=normalize(n),color=g==0.?vec3(.48,.51,.53):secondary*.72;
+ if(kind>.5&&kind<1.5&&(useMasks>.5||g==0.))color=protection.rgb;
+ if(kind>1.5&&kind<2.5){color=primary*protection.r+secondary*protection.g+accent*protection.b;
+  float facing=max(0.,dot(N,normalize(vec3(-.6,-.4,1.))));color=mix(color,secondary*.8,wear*.12*(1.-facing));
  }
- if(protection.a>.5){color=protection.rgb;grad=vec3(0.);}
- N=normalize(N-grad*relief*.018);float light=max(0.,dot(N,normalize(vec3(-.6,-.4,1.))));float rim=pow(1.-abs(dot(N,normalize(eye-p))),3.);
- color=color*(.25+light*.9)+vec3(.12,.19,.23)*rim;
- gl_FragColor=vec4(pow(color,vec3(.85)),1.);
+ if(hasTexture>.5&&kind<2.5){vec3 source=texture2D(sourceTexture,sourceUV).rgb;float dark=1.-smoothstep(.12,.3,max(source.r,max(source.g,source.b)));color=g==0.?source:mix(color,source,max(sourceBlend,dark*useMasks));}
+ if(kind>2.5)color=protection.rgb;
+ float light=max(0.,dot(N,normalize(vec3(-.6,-.4,1.)))),rim=pow(1.-abs(dot(N,normalize(eye-p))),3.);
+ color=color*(.3+light*.82)+vec3(.1,.16,.2)*rim;
+ gl_FragColor=vec4(pow(max(color,vec3(0.)),vec3(.85)),1.);
 }`;
 /** @param {number} type @param {string} source */
 function shader(type,source){const s=gl.createShader(type);if(!s)throw Error('Shader allocation');gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s)||'Shader compilation');return s;}
@@ -79,7 +58,7 @@ function home(){const rows=Math.ceil(hangarSubjects().length/5);distance=control
 
 
 /** Geometry fixtures use meters; only this display copy is normalized. @param {string} subject */
-/** @param {string} subject @returns {{vertices:Float32Array,color?:number[],opacity?:number,stride?:number,texture?:HTMLImageElement}[]} */
+/** @param {string} subject @returns {{vertices:Float32Array,color?:number[],opacity?:number,stride?:number,texture?:HTMLImageElement,role?:string}[]} */
 function geometry(subject){
  if(artistIds.includes(subject)){const entry=DW.shipPackModels.find(subject);if(!entry)throw Error('Missing artist hull '+subject);return [DW.shipPackModels.sourceGeometry(entry.model,[{eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]}],1,sourceImages.get(subject))];}
 
@@ -95,6 +74,8 @@ function geometry(subject){
  }else if(subject==='cylinder'){
   // Dense barrel rather than the intentionally eight-sided mechanical joint helper.
   for(let i=0;i<96;i++){const a=i*Math.PI/48,b=(i+1)*Math.PI/48;const v=[[Math.cos(a)*4,-6,Math.sin(a)*4],[Math.cos(b)*4,-6,Math.sin(b)*4],[Math.cos(b)*4,6,Math.sin(b)*4],[Math.cos(a)*4,6,Math.sin(a)*4]];mesh.plate('hull',v);mesh.plate('hull',[[0,-6,0],v[1],v[0]]);mesh.plate('hull',[[0,6,0],v[3],v[2]]);}
+  // Correct the calibration barrel's outward winding and normals.
+  for(let i=0;i<groups.hull.length;i+=18){const b=groups.hull.slice(i+6,i+12),c=groups.hull.slice(i+12,i+18);groups.hull.splice(i+6,12,...c,...b);for(let j=0;j<3;j++)for(let k=3;k<6;k++)groups.hull[i+j*6+k]*=-1;}
  }else if(subject==='random'){
   let state=assemblySeed;function random(){state=(state*1664525+1013904223)>>>0;return state/4294967296;}
   mesh.block('hull',[0,0,0],[2,7,1]);for(let i=0;i<12;i++){const x=(random()-.5)*6,y=(random()-.5)*12,z=(random()-.5)*2;mesh.block('hull',[x,y,z],[.7+random()*2,1+random()*3,.4+random()]);}
@@ -102,15 +83,39 @@ function geometry(subject){
  else mesh.block('hull',[0,0,0],[5,5,5]);
  return [{vertices:new Float32Array(groups.hull)}];
 }
+/** @type {Map<string,{batches:import('./hull-panels').HullBatch[],extent:number,regions:ReturnType<typeof analyzeHull>}>} */
+const hullCache=new Map();
+/** @type {WeakMap<HTMLImageElement,ImageData>} */const pixels=new WeakMap();
+/** @param {HTMLImageElement} image */
+function eligibility(image){
+ let data=pixels.get(image);if(!data){const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const ctx=c.getContext('2d');if(!ctx)throw Error('Texture mask requires Canvas2D');ctx.drawImage(image,0,0);data=ctx.getImageData(0,0,c.width,c.height);pixels.set(image,data);}
+ const sample=data;
+ /** @param {number[]} uv */return uv=>{const x=Math.max(0,Math.min(sample.width-1,Math.floor(uv[0]*sample.width))),y=Math.max(0,Math.min(sample.height-1,Math.floor(uv[1]*sample.height))),i=(y*sample.width+x)*4,r=sample.data[i],g=sample.data[i+1],b=sample.data[i+2];return Math.max(r,g,b)>85&&!(b>r*1.3&&g>r*1.2);};
+}
+/** @param {string} subject */
+function fittedHull(subject){
+ const cacheKey=subject+(subject==='random'?':'+assemblySeed:'')+':'+(control('masks').checked&&sourceImages.has(subject)?'textured':'plain')+':masks='+control('masks').checked;const cached=hullCache.get(cacheKey);if(cached){const image=sourceImages.get(subject);if(image)cached.batches.forEach(batch=>batch.texture=image);return cached;}
+ const batches=geometry(subject),lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
+ batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6))for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],b.vertices[i+k]);hi[k]=Math.max(hi[k],b.vertices[i+k]);}});
+ const extent=Math.max(...hi.map((v,k)=>v-lo[k]));
+ const normalized=batches.map(b=>{const vertices=new Float32Array(b.vertices),stride=b.stride||6;for(let i=0;i<vertices.length;i+=stride)for(let k=0;k<3;k++)vertices[i+k]=(vertices[i+k]-(lo[k]+hi[k])/2)*2/extent;return {...b,vertices,eligible:control('masks').checked&&b.texture?eligibility(b.texture):undefined};});
+ const inference=control('masks').checked?normalized:[{vertices:new Float32Array(normalized.flatMap(b=>{const data=/** @type {number[]} */([]);for(let i=0;i<b.vertices.length;i+=(b.stride||6))data.push(...b.vertices.slice(i,i+6),b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);return data;})),stride:8}];
+ const result={batches:normalized,extent,regions:analyzeHull(inference)};hullCache.set(cacheKey,result);return result;
+}
+/** @type {Map<string,{signature:string,result:ReturnType<typeof buildHullPanels>}>} */const panelCache=new Map();
 function rebuild(){
  const hangar=control('layout').value==='hangar';
  const subjects=hangar?hangarSubjects():[control('subject').value],rows=Math.ceil(subjects.length/5),halfY=rows*1.8+.9;
- const data=/** @type {number[]} */([]);actors=[];control('labels').replaceChildren();
+ let totalRegions=0,totalPlates=0,totalDetails=0,totalSkipped=0;const data=/** @type {number[]} */([]);actors=[];control('labels').replaceChildren();
  subjects.forEach((subject,index)=>{
-  const batches=geometry(subject),lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
-  batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6))for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],b.vertices[i+k]);hi[k]=Math.max(hi[k],b.vertices[i+k]);}});
-  const extent=Math.max(...hi.map((v,k)=>v-lo[k])),start=data.length/12;
-  batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){for(let k=0;k<3;k++)data.push((b.vertices[i+k]-(lo[k]+hi[k])/2)*2/extent);data.push(...b.vertices.slice(i+3,i+6));const color='color' in b&&b.color?b.color:[.5,.5,.5];const protect=('opacity' in b)||Math.max(...color)<.31;data.push(...color,protect?1:0,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
+  const fitted=fittedHull(subject),batches=fitted.batches,extent=fitted.extent,start=data.length/12;
+  const signature=[subject==='random'?assemblySeed:0,control('masks').checked,control('grammar').value,control('scale').value,control('relief').value,control('seed').value,fitted.regions.length].join('|'),previous=panelCache.get(subject);
+  const structure=previous?.signature===signature?previous.result:buildHullPanels(batches,{style:Number(control('grammar').value),divisions:Number(control('scale').value),relief:Number(control('relief').value)/100,seed:Number(control('seed').value)||0,regions:fitted.regions});panelCache.set(subject,{signature,result:structure});
+  totalSkipped+=structure.skipped;
+  totalRegions+=structure.regions;totalPlates+=structure.plates;totalDetails+=structure.details;
+  batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){data.push(...b.vertices.slice(i,i+6));const color=b.color||[.5,.5,.5],protect=b.opacity!==undefined||['mechanical','structural','marking','cockpit'].includes(b.role||'')||Math.max(...color)<.31;data.push(...color,protect?1:0,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
+  const generated=control('regions').checked?structure.diagnostics:structure.panels;
+  generated.forEach(batch=>{for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...batch.paint,batch.diagnostic?3:2,batch.vertices[i+6],batch.vertices[i+7]);});
   const origin=hangar?[(index%5-2)*3.1,(Math.floor(index/5)-(rows-1)/2)*3.6,1.15]:[0,0,0];
   const label=hangar?document.createElement('div'):null;
   if(label){label.className='hull-label';label.textContent=(/^[A-E]$/.test(subject)?'Barracuda '+subject:artistModels.find(model=>model.id===subject)?.name||subject)+' / '+extent.toFixed(1)+' m';control('labels').append(label);}
@@ -128,19 +133,21 @@ function rebuild(){
   actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null});
   control('caption').textContent=subjects.length+' HULLS / SHARED TREATMENT / DISPLAY SIZES NORMALIZED';
  }
+ control('analysis').textContent=(control('masks').checked?'Material-assisted: ':'Geometry only: ')+totalRegions+' regions ('+totalSkipped+' below budget/size threshold) / '+totalPlates+' fitted plates / '+totalDetails+' detail sites';
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);count=data.length/12;
 }
-const descriptions=['Original artist textures, or neutral shading for greyboxes.','Broad plating, sparse seams and a restrained identification band.','Overlapping plate shading, dark joints and varied armor depth.','Elongated bays with repeated structural ribs.','Fine ceramic tiles and softly quilted insulation.','Service hatches, fasteners, hazard panels and edge wear.','Staggered angular panels and subdued alternating armor.'];
+const descriptions=['Original artist textures, or neutral greybox shading.','Few broad fitted plates; quiet surfaces and narrow real seams.','Thicker beveled plates over a dark structural shell.','Hull-aligned structural bays with sparse fitted vent housings.','Large conforming insulation panels, protected seams and service covers.','Painted fitted plates with selected hatches, vents and corner fasteners.','Broad chined armor, restrained material variation and sparse seams.'];
 function settings(){control('description').textContent=descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=!control('compare').checked;}
 control('collection').onchange=()=>{control('layout').value='hangar';rebuild();home();};
 control('layout').onchange=()=>{rebuild();home();};
 control('subject').onchange=()=>{control('layout').value='solo';rebuild();home();};
-['grammar','scale','relief','wear','compare'].forEach(id=>control(id).oninput=settings);
+['grammar','scale','relief','seed','regions','masks'].forEach(id=>control(id).oninput=()=>{settings();rebuild();});
+['wear','compare'].forEach(id=>control(id).oninput=settings);
 control('shuffle').onclick=()=>{assemblySeed++;control('subject').value='random';rebuild();};
 let palette=0;const palettes=[['#c5cec9','#38474d','#ee912e'],['#d7dfdd','#253641','#bc3e38'],['#d18b31','#26343b','#f2d99b'],['#657264','#242e2d','#c2bc85']];
 control('palette').onclick=()=>{palette=(palette+1)%palettes.length;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[palette][i]);};
 control('quarter').onclick=()=>{yaw=.22;tilt=.75;home();};control('top').onclick=()=>{yaw=0;tilt=.02;};control('side').onclick=()=>{yaw=Math.PI/2;tilt=Math.PI/2;};
-control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='8';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('compare').checked=false;control('spin').checked=false;palette=0;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();};
+control('reset').onclick=()=>{control('grammar').value='1';control('scale').value='2';control('relief').value='55';control('wear').value='20';control('seed').value='17';control('source-blend').value='0';control('regions').checked=false;control('compare').checked=false;control('spin').checked=false;palette=0;['primary','secondary','accent'].forEach((id,i)=>control(id).value=palettes[0][i]);yaw=.22;tilt=.75;home();settings();rebuild();};
 let dragging=false,lastX=0,lastY=0;
 canvas.onpointerdown=/** @param {PointerEvent} e */(e)=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};
 canvas.onpointermove=/** @param {PointerEvent} e */(e)=>{if(!dragging)return;yaw-=(e.clientX-lastX)*.008;tilt=Math.max(.02,Math.min(Math.PI-.02,tilt+(e.clientY-lastY)*.008));lastX=e.clientX;lastY=e.clientY;};
@@ -155,7 +162,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  const s=Math.sin(yaw),c=Math.cos(yaw),st=Math.sin(tilt),ct=Math.cos(tilt),back=[-s*st,c*st,ct];
  sky.render({eye:[0,0,0],right:[c,s,0],up:[s*ct,-c*ct,st],back},1,!control('sky').checked);vector('right',[c,s,0]);vector('up',[s*ct,-c*ct,st]);vector('back',back);vector('eye',back.map(v=>v*distance));scalar('aspect',w/h);scalar('distance',distance);
  ['primary','secondary','accent'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
- scalar('grammar',Number(control('grammar').value));scalar('density',Number(control('scale').value));scalar('relief',Number(control('relief').value)/100);scalar('wear',Number(control('wear').value)/100);scalar('seed',Number(control('seed').value)||0);scalar('split',control('compare').checked?w/2:0);scalar('sourceBlend',Number(control('source-blend').value)/100);gl.uniform1i(uniform('sourceTexture'),0);actors.forEach(actor=>{gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);gl.drawArrays(gl.TRIANGLES,actor.start,actor.count);
+ scalar('useMasks',control('masks').checked?1:0);scalar('grammar',Number(control('grammar').value));scalar('density',Number(control('scale').value));scalar('relief',Number(control('relief').value)/100);scalar('wear',Number(control('wear').value)/100);scalar('seed',Number(control('seed').value)||0);scalar('split',control('compare').checked?w/2:0);scalar('sourceBlend',Number(control('source-blend').value)/100);gl.uniform1i(uniform('sourceTexture'),0);actors.forEach(actor=>{gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);gl.drawArrays(gl.TRIANGLES,actor.start,actor.count);
   if(actor.label){const o=actor.origin,x=o[0]*c+o[1]*s,y=o[0]*s*ct-o[1]*c*ct+(o[2]-1.25)*st,z=distance-(o[0]*back[0]+o[1]*back[1]+(o[2]-1.25)*back[2]);actor.label.style.left=(.5+x*2.414/(w/h)/z*.5)*100+'%';actor.label.style.top=(.5-y*2.414/z*.5)*100+'%';actor.label.hidden=z<=0;}
  });
 }

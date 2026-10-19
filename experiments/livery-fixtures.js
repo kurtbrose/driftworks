@@ -98,8 +98,8 @@ const units=1;
         mesh.barrel('dark',[0,4.95,-.76],[0,variant==='A'?6.25:6.5,-.76],.1);
         /** @type {Record<string,[number,number,number]>} */
         var colors = {armor:[.95,.43,.1],edge:[.65,.68,.69],dark:[.12,.16,.18],stripe:[1,.94,.78],glass:[.55,.8,.88]};
-        /** @type {import('./types').Batch[]} */
-        var batches = Object.keys(groups).filter(function(key){return key!=='glass';}).map(function (key) { return {vertices:new Float32Array(groups[key].map(function (v,i) { return i%6<3?v/units:v; })),color:colors[key]}; });
+        /** @type {(import('./types').Batch & {role?:string})[]} */
+        var batches = Object.keys(groups).filter(function(key){return key!=='glass';}).map(function (key) { return {role:key==='armor'?'armor':key==='dark'?'mechanical':key==='stripe'?'marking':'structural',vertices:new Float32Array(groups[key].map(function (v,i) { return i%6<3?v/units:v; })),color:colors[key]}; });
         // Opaque crew and chair batches precede the transparent glazing pass.
         if(DW.fighterCockpit) [-1,1].forEach(function(sign){
             var cx=sign*.55*cockpitBreadth, cy=variant==='A'?3.9:4.2, floor=-.15+cabinZ;
@@ -112,7 +112,7 @@ const units=1;
                 batches.push({vertices:new Float32Array(batch.vertices.map(function(v,i){var k=i%6;return k<3?(v+[cx,cy,floor+.52][k])/units:v;})),color:/Accent/.test(batch.name)?(sign<0?[.85,.42,.12]:[.22,.6,.72]):batch.color});
             });
         });
-        batches.push({vertices:new Float32Array(groups.glass.map(function(v,i){return i%6<3?v/units:v;})),color:colors.glass,opacity:.12});
+        batches.push({vertices:new Float32Array(groups.glass.map(function(v,i){return i%6<3?v/units:v;})),color:colors.glass,opacity:.12,role:'cockpit'});
         return batches;
     }
     /** @param {string} kind @param {number} x @param {number} y @param {number} scale */
@@ -156,5 +156,5 @@ const units=1;
         });
         /** @type {Record<string,[number,number,number]>} */
         var colors = {armor:[.48,.51,.53],edge:[.65,.68,.69],dark:[.12,.16,.18],stripe:[.83,.75,.48]};
-        return Object.keys(groups).map(function (key) { return {vertices:new Float32Array(groups[key].map(function (v,i) { return i%6<3?v/units:v; })),color:colors[key]}; });
+        return Object.keys(groups).map(function (key) { return {role:key==='armor'?'armor':key==='dark'?'mechanical':key==='stripe'?'marking':'structural',vertices:new Float32Array(groups[key].map(function (v,i) { return i%6<3?v/units:v; })),color:colors[key]}; });
     }
