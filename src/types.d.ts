@@ -294,6 +294,7 @@ export interface DriftworksNamespace {
     craterBytes: (visual: AsteroidVisual) => Uint8Array;
     shaderSource: string;
   };
+  modelViewer?: {create: (host: HTMLElement) => {gesture: (event: {buttons:number; button:number; altKey:boolean}, space:boolean) => 'orbit' | 'pan'; dispose: () => void}};
   scene3d?: {
     rockSurfaceShader: () => string;
     workLightFrame: (asteroid: Asteroid, lamp: {position:number[]; direction:number[]; range:number}, camera: Camera, height:number) => {position:number[]; direction:number[]; right:number[]; up:number[]; focal:number; near:number};

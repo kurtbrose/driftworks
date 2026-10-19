@@ -16,6 +16,31 @@
             DW.audio.playImpact(1);
         } });
     var units = DW.sim.METERS_PER_UNIT;
+    var tetherParams = new URLSearchParams(location.search), tetherKm = Number(tetherParams.get('tether'));
+    var tetherStudy = [100,50,20,10,2].includes(tetherKm);
+    if(tetherStudy) {
+        get('combat-toggle').checked=false;
+        document.title='Tether greyboxes / Driftworks';
+        get('watch-panel').hidden=true;
+        var heading=document.querySelector('h1');
+        if(heading)heading.textContent='DRIFTWORKS / TETHER SCALE STUDY';
+        var launchHint=document.querySelector('#launch > p');
+        if(launchHint)launchHint.textContent='Free flight / W-S throttle / X stop / Esc pause';
+        var panel=document.createElement('section');
+        panel.id='tether-panel';
+        panel.style.cssText='position:fixed;z-index:8;top:12px;left:50%;transform:translateX(-50%);background:#182024ee;color:#ddd;padding:12px;font:12px/1.6 monospace;max-width:44vw';
+        panel.innerHTML='<b>TETHER GREYBOX / </b><select id="tether-size" aria-label="Tether span"></select> <select id="tether-start" aria-label="Starting position"><option value="hub">Hub  /  300 m away</option><option value="tip">Tip  /  300 m away</option><option value="overview">Overview</option></select><select id="tether-spin" aria-label="Operational spin"><option value="1g">1 g tip load</option><option value="2g">2 g tip load</option><option value="3g">3 g tip load</option></select><div id="tether-readout"></div><small>4 m cable  /  100 m hub  /  40 m tips. Symmetric spin / real seconds. Tip acceleration limited to 1-3 g. Scenery only: no collision / catches. Esc to change study.</small>';
+        document.body.appendChild(panel);
+        var size=/** @type {HTMLSelectElement} */ (document.getElementById('tether-size'));
+        [100,50,20,10,2].forEach(function(km){var option=document.createElement('option');option.value=String(km);option.textContent=km+' km';size.appendChild(option);});
+        size.value=String(tetherKm);
+        var start=/** @type {HTMLSelectElement} */ (document.getElementById('tether-start'));
+        start.value=tetherParams.get('start')||'hub';
+        var spin=/** @type {HTMLSelectElement} */ (document.getElementById('tether-spin'));
+        spin.value=['1g','2g','3g'].includes(tetherParams.get('spin') || '') ? (tetherParams.get('spin') || '1g') : '1g';
+        function changeTether(){tetherParams.set('spin',spin.value);tetherParams.set('tether',size.value);tetherParams.set('start',start.value);location.search=tetherParams.toString();}
+        size.onchange=changeTether;start.onchange=changeTether;spin.onchange=changeTether;
+    }
     var presentation = DW.flightPresentation.mount(host, function () {
         return session.snapshot().world;
     }, function (w) {
@@ -101,6 +126,12 @@
         comms.reset();
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
+        if(tetherStudy) {
+            session.snapshot().world.elapsedSeconds=0;
+            var state=session.snapshot().state, start=tetherParams.get('start');
+            state.eye=[start==='tip'?(tetherKm*500-20)/units:0,-(start==='overview'?tetherKm*800:300)/units,1200];
+            state.velocity=[0,0,0];
+        }
         session.snapshot().combat.opponentStyle=/** @type {import('./types').OpponentStyle} */(get('watch-style').value);
         session.snapshot().combat.enemies.forEach(function(enemy){enemy.opponentStyle=session.snapshot().combat.opponentStyle;});
         var seed = Number(get('watch-seed').value);

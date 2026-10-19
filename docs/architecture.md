@@ -1207,3 +1207,22 @@ retraction rule used here. Projectile billboard visibility is presentation only;
 damage is determined by swept collision segments.
 
 Primary gun counts in the flight lab come from retail POF GPNT bank records, imported offline by `tools/import-retail-flight.cjs` with `tools/retail-gun-mounts.cjs`. Profiles retain the bank counts, their total and model hashes; no retail geometry is shipped. Manual, NPC and duel callers pass the profile count to `flightGuns.step`. Its optional final count defaults to two for legacy fixtures; retail profiles all supply a verified positive count. Each slot emits one bolt at the existing weapon cadence from a temporary six-metre muzzle rack. All slots currently share the selected primary, convergence and trigger; native bank timing, energy and hardpoint placement remain unmodeled. Replay schema 4 rejects earlier two-gun recordings.
+
+### Tether scale greyboxes
+
+The flight lab accepts `?tether=100&start=hub` with spans 100, 50, 20, 10 or 2 km and hub/tip/overview starts. `flightPresentation.tetherGeometry(lengthKm)` emits cached static grey batches using mesh-builder, converted from metres to world units once. Presentation rotates them about a fixed hub 20 km above the asteroid origin using the flight elapsed-seconds clock (independent of combat) and `tetherSpin` angular speed. Flight composition owns the selector, reset pose and initial combat-off setting. These are unsaved visual scenery, with no collision or momentum exchange simulation; tactical worlds and propulsion rules are unchanged.
+
+Operational spin assumes a symmetric hub at midspan: radius = span / 2, tip speed = sqrt(loadG * 9.80665 * radius), angular speed = tip speed / radius, and period = 2 pi / angular speed. The study defaults to 1 g tip acceleration, with 2 g and 3 g options (`spin=1g`, `spin=2g`, `spin=3g`). Old or invalid spin parameters fall back to 1 g. No material, taper, payload mass or safety-factor feasibility is calculated. Tether resets zero the local flight clock so tip starts align at phase zero; pausing freezes rotation. Rotation uses the real flight elapsed clock even with combat disabled.
+
+
+### Shared model viewer navigation
+
+Load `src/model-viewer.js` before `src/scene3d.js` on inspection pages.
+`scene3d.create(..., {study:true})` mounts the shared navigation toolbar;
+ordinary gameplay retains its tactical controls. `Driftworks.modelViewer.create(host)`
+returns `gesture(event, space)` and `dispose()`. Each viewport owns its drag mode.
+Click the toolbar button to switch between slide and orbit. Right/middle drag or
+Space slides; holding both left and right buttons or Alt orbits, including during
+an active drag. The renderer owns projection, pan distance and zoom; pages own
+models, animation, presets, and optional surface picking/free flight. This keeps
+navigation independent of model geometry and preserves the static script model.

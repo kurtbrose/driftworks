@@ -12,6 +12,39 @@
     /** @typedef {import('./types').Comparison} Comparison */
     /** @typedef {import('./types').Batch} Batch */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks);
+    /** Symmetric rotating tether; real seconds, metres, m/s and m/s squared.
+     * Tip acceleration is limited to the selected 1, 2 or 3 g operating load.
+     * @param {number} lengthKm @param {string} mode
+     */
+    function tetherSpin(lengthKm, mode) {
+        var radiusM=lengthKm*500;
+        var loadG=mode==='3g'?3:mode==='2g'?2:1;
+        var tipSpeed=Math.sqrt(loadG*9.80665*radiusM);
+        var angularSpeed=tipSpeed/radiusM;
+        return {tipSpeed:tipSpeed,angularSpeed:angularSpeed,periodSeconds:2*Math.PI/angularSpeed,tipG:tipSpeed*tipSpeed/radiusM/9.80665};
+    }
+    /** Greybox dimensions are metres; span includes both tip blocks.
+     * @param {number} lengthKm @returns {Batch[]}
+     */
+    function tetherGeometry(lengthKm) {
+        var groups = { cable: /** @type {number[]} */ ([]), hub: /** @type {number[]} */ ([]), tips: /** @type {number[]} */ ([]) };
+        var builder = DW.meshBuilder.create(groups), half = lengthKm * 500;
+        builder.block('cable', [0,0,0], [half-20,2,2]);
+        builder.block('hub', [0,0,0], [50,30,30]);
+        [-1,1].forEach(function(sign) {
+            builder.block('tips', [sign*(half-20),0,0], [20,20,20]);
+            // Open catcher frame: a visible fly-through aperture, 60 m square.
+            builder.block('tips', [sign*(half-20),50,40], [20,40,10]);
+            builder.block('tips', [sign*(half-20),50,-40], [20,40,10]);
+            builder.block('tips', [sign*(half-20),90,0], [20,10,30]);
+        });
+        return Object.keys(groups).map(function(key,index) {
+            var vertices = groups[/** @type {keyof typeof groups} */ (key)].slice();
+            for(var i=0;i<vertices.length;i+=6) for(var k=0;k<3;k++) vertices[i+k]/=DW.sim.METERS_PER_UNIT;
+            var shade=[.48,.65,.78][index];
+            return {vertices:new Float32Array(vertices),color:/** @type {[number,number,number]} */ ([shade,shade,shade]),staticGeometry:true};
+        });
+    }
     /** Current mining rig and source astronauts, in world units; no saved entities.
      * @param {World} world @returns {Batch[]}
      */
@@ -123,6 +156,10 @@
             get('art-credit').textContent = String(error);
         });
         var skybox = DW.flightSkybox.create(host);
+        var tetherKm = Number(new URLSearchParams(typeof location === 'undefined' ? '' : location.search).get('tether'));
+        var tether = [100,50,20,10,2].includes(tetherKm) ? tetherGeometry(tetherKm) : [];
+        var spin=tetherSpin(tetherKm || 100,new URLSearchParams(typeof location === 'undefined' ? '' : location.search).get('spin') || '1g');
+        var tetherReadout = tether.length ? document.getElementById('tether-readout') : null;
         var artSelect = get('enemy-art'), allyArt = get('ally-art');
         DW.shipPackModels.populate(artSelect, true);
         DW.shipPackModels.populate(allyArt, true);
@@ -198,6 +235,15 @@
             var nextCrewKey = JSON.stringify(world.asteroids.map(function (a) { return [a.id,a.radius,a.excavation]; }));
             var nextPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses;
             if (nextCrewKey !== crewKey || nextPoses !== crewPoses) { crews = surfaceCrews(world); crewKey = nextCrewKey; crewPoses = nextPoses; }
+            if(tether.length) {
+                // Flight elapsed time advances with combat disabled and freezes on pause.
+                var angle = world.elapsedSeconds * spin.angularSpeed;
+                tether.forEach(function(batch) { actorBatches.push(Object.assign({},batch,{origin:/** @type {[number,number,number]} */ ([0,0,1200]),rotation:angle})); });
+                if(tetherReadout) {
+                    var speed=Math.hypot.apply(null,view.state.velocity), distance=Math.hypot(state.eye[0],state.eye[1],state.eye[2]-1200)*units;
+                    tetherReadout.textContent=tetherKm+' km tip-to-tip  /  hub '+(distance/1000).toFixed(2)+' km\nTip '+spin.tipSpeed.toFixed(0)+' m/s / '+spin.tipG.toFixed(2)+' g / period '+spin.periodSeconds.toFixed(1)+' s\nFull span at current '+speed.toFixed(0)+' m/s: '+(speed>1?(tetherKm*1000/speed/60).toFixed(1)+' min':'--');
+                }
+            }
             scene.setStudyActors(actorBatches.concat(crews.map(function (batch) {
                 var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });
                 return Object.assign({}, batch, {origin: /** @type {[number,number,number]} */ ([asteroid ? asteroid.position.x : 0, asteroid ? asteroid.position.y : 0, 0]), rotation: asteroid ? asteroid.rotation : 0});
@@ -229,5 +275,5 @@
         }
         return { appearance: appearance, pose: pose, render: render, renderStats: renderStats };
     }
-    DW.flightPresentation = { mount: mount, model: model };
+    DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin };
 }());

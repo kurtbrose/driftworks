@@ -746,6 +746,8 @@ export type ExperimentModules = {
         error: string | null;
     };
     flightPresentation: {
+        tetherSpin: (lengthKm: number, mode: string) => {tipSpeed: number; angularSpeed: number; periodSeconds: number; tipG: number};
+        tetherGeometry: (lengthKm: number) => Batch[];
         model: (craft: ArtCraft, wave: number, appearance: Pick<Appearance, 'allyArt' | 'enemyArt'>) => Model;
         mount: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, environment?: {
             document: Document;

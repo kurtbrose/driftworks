@@ -939,11 +939,12 @@
       var exponent = type === 'mothership' ? 0.95 : type === 'tug' || type === 'platform' || type === 'depot' ? 0.12 : 0.08;
       var z = Math.min(32, zoom); return Math.pow(Math.max(1, z), exponent) / z;
     }
+    var viewerControls = study && DW.modelViewer ? DW.modelViewer.create(host) : null;
     canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     canvas.addEventListener('pointerdown', function (e) {
       if(orbit.surface)return;
       unlock(); focus = false; var p = pointer(e), w = getWorld();
-      if (e.button === 2 && !e.altKey) {
+      if (!study && e.button === 2 && !e.altKey) {
         var target = unproject(p, w.camera, viewport(), orbit);
         var hit = hitShip(w, p); if (hit) target = hit.ship.position;
         // Surface hits must be mapped to the asteroid, not to the plane behind it.
@@ -962,12 +963,13 @@
         var game = /** @type {{ issueVisualContextOrder: (world: World, target: Vec2, shipIds?: string[]) => World }} */ (DW.game);
         setWorld(game.issueVisualContextOrder(w, target, w.selectedShipIds)); if (DW.audio) DW.audio.playMove(); return;
       }
-      drag = { start: p, last: p, mode: e.altKey || (study && e.button === 0 && !space) ? 'orbit' : e.button === 1 || space ? 'pan' : 'select' };
+      drag = { start: p, last: p, mode: viewerControls ? viewerControls.gesture(e, space) : e.altKey || (study && e.button === 0 && !space) ? 'orbit' : e.button === 1 || space ? 'pan' : 'select' };
       canvas.setPointerCapture(e.pointerId); e.preventDefault();
     });
     canvas.addEventListener('pointermove', function (e) {
       if (!drag) return;
       var p = pointer(e), w = getWorld();
+      if (viewerControls) drag.mode = viewerControls.gesture(e, space);
       if (drag.mode === 'orbit') {
         orbit.yaw -= (p.x - drag.last.x) * 0.006;
         orbit.tilt = Math.max(0.06, Math.min(Math.PI - 0.06, orbit.tilt + (p.y - drag.last.y) * 0.006));
@@ -979,6 +981,7 @@
     });
     canvas.addEventListener('pointerup', function (e) {
       if (!drag) return;
+      if (viewerControls && e.buttons) { drag.mode = viewerControls.gesture(e, space); drag.last = pointer(e); return; }
       if (drag.mode === 'select') {
         var p = pointer(e), w = getWorld(), start = drag.start;
         /** @type {string[]} */ var ids = [];

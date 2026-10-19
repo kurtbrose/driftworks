@@ -531,3 +531,13 @@ Controller rumble can be toggled in the same settings panel (remembered locally)
 
 The [combat research page](experiments/flight-study.html) runs batches of headless fighter duels and generates downloadable reports. See [combat study design](docs/combat-research.md) for interpretation and limits.
 
+
+### Tether greybox flight study
+
+Open `experiments/flight.html?tether=100&start=hub` (also linked from the experiments index). Choose 100, 50, 20, 10 or 2 km full tip-to-tip span and a hub, tip or overview start. Existing flight controls and real-second flight speeds apply. The greyboxes use a 4 m cable, 100 m hub and 40 m tip blocks with open catcher frames. They default to 1 g tip acceleration, selectable up to 2 g or 3 g; this is a visual scale study, without tether collisions, capture physics, orbital dynamics or engineering sizing. The readout shows hub distance, tip speed, tip acceleration, rotation period and a straight full-span transit estimate at current speed, excluding acceleration. Thin cables can disappear below a pixel at long distances.
+
+Operational spin assumes a symmetric hub at midspan: radius = span / 2, tip speed = sqrt(loadG * 9.80665 * radius), angular speed = tip speed / radius, and period = 2 pi / angular speed. The study defaults to 1 g tip acceleration, with 2 g and 3 g options (`spin=1g`, `spin=2g`, `spin=3g`). Old or invalid spin parameters fall back to 1 g. No material, taper, payload mass or safety-factor feasibility is calculated. Tether resets zero the local flight clock so tip starts align at phase zero; pausing freezes rotation. Rotation uses the real flight elapsed clock even with combat disabled.
+
+### Fleet greybox bench
+
+Open `experiments/fleet-greybox.html` to develop the fighter, six-fighter pocket carrier, and patrol ship together. Inspect the fleet at relative scale or focus on one hull; breadth, armor depth, engine spread and identification stripes apply across the family. The carrier shows full-size embarked fighters in an open bay. These are provisional visual studies, separate from gameplay ship definitions; dimensions and bay layout do not establish docking or combat rules.

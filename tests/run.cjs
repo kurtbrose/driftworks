@@ -52,3 +52,7 @@ require('./mining-lights.cjs');
 require('./mining-geometry.cjs');
 
 require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'flight-study-worker.cjs')], {stdio: 'inherit'});
+
+require('./fleet-greybox.cjs');
+
+require('./model-viewer.cjs');

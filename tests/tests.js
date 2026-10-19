@@ -21,6 +21,37 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('operational tether spin limits tip load to 1-3 g at every span', function () {
+    [100,50,20,10,2].forEach(function(km) {
+      ['1g','2g','3g'].forEach(function(mode,index) {
+        var spin=window.Driftworks.flightPresentation.tetherSpin(km,mode);
+        assertClose(spin.tipG,index+1);
+        assertClose(spin.angularSpeed*km*500,spin.tipSpeed);
+        assertClose(spin.periodSeconds*spin.angularSpeed,2*Math.PI);
+        assertClose(spin.tipSpeed*spin.tipSpeed,(index+1)*9.80665*km*500);
+      });
+      ['cargo','gentle','', 'invalid'].forEach(function(legacy) {
+        assertClose(window.Driftworks.flightPresentation.tetherSpin(km,legacy).tipG,1);
+      });
+    });
+  });
+
+  test('tether greyboxes preserve all five true metre spans and finite mesh normals', function () {
+    [100,50,20,10,2].forEach(function(km) {
+      var batches=window.Driftworks.flightPresentation.tetherGeometry(km), xs=[];
+      assert(batches.length===3);
+      batches.forEach(function(batch) {
+        assert(batch.vertices.length%18===0);
+        for(var i=0;i<batch.vertices.length;i+=6) {
+          xs.push(batch.vertices[i]*sim.METERS_PER_UNIT);
+          for(var k=0;k<6;k++) assert(Number.isFinite(batch.vertices[i+k]));
+          assertClose(Math.hypot(batch.vertices[i+3],batch.vertices[i+4],batch.vertices[i+5]),1);
+        }
+      });
+      assertClose(Math.max.apply(null,xs)-Math.min.apply(null,xs),km*1000,.01);
+    });
+  });
+
   test('explicit order recipients are independent of selection and preserve legacy commands', function () {
     var base=sim.createInitialWorld();
     base.ships.forEach(function(ship){ship.docked=false;ship.order={kind:'move',target:{x:100,y:100}};});
