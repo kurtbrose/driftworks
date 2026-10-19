@@ -130,7 +130,7 @@ function rebuild(){
  }
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);count=data.length/12;
 }
-const descriptions=['Untreated geometry for silhouette comparison.','Broad plating, sparse seams and a restrained identification band.','Overlapping plate shading, dark joints and varied armor depth.','Elongated bays with repeated structural ribs.','Fine ceramic tiles and softly quilted insulation.','Service hatches, fasteners, hazard panels and edge wear.','Staggered angular panels and subdued alternating armor.'];
+const descriptions=['Original artist textures, or neutral shading for greyboxes.','Broad plating, sparse seams and a restrained identification band.','Overlapping plate shading, dark joints and varied armor depth.','Elongated bays with repeated structural ribs.','Fine ceramic tiles and softly quilted insulation.','Service hatches, fasteners, hazard panels and edge wear.','Staggered angular panels and subdued alternating armor.'];
 function settings(){control('description').textContent=descriptions[Number(control('grammar').value)];control('scale-value').textContent=control('scale').value;control('split-label').hidden=!control('compare').checked;}
 control('collection').onchange=()=>{control('layout').value='hangar';rebuild();home();};
 control('layout').onchange=()=>{rebuild();home();};
