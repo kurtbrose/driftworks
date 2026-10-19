@@ -521,8 +521,10 @@ project the bolt length onto the view plane and retain a round end-on footprint.
 A narrow bright core and fading glow replace crossed opaque rectangles. Depth
 testing remains enabled while additive effects disable depth writes; impact
 opacity fades with age. Visible bolt length and width scale linearly with distance
-from the camera, reaching full size at 20 metres to keep nearby fire from covering
-targets. Weapon dimensions and ballistics are unchanged.
+from the camera, reaching full size at 30 metres to keep nearby fire from covering
+targets. This maintains roughly constant angular size within that range; beyond
+it, perspective shrinks the full-size artwork naturally. Weapon dimensions and
+ballistics are unchanged.
 
 
 `experiments/input.js` provides pure controller mapping and deadzone helpers.
@@ -1282,7 +1284,7 @@ Flight sound balance is stored separately as `driftworks-flight-mix-v1`.
 The engine, weapons, impacts and comms have separate buses under the SFX master.
 Flight radio uses `audio.commsChannel()` and shares the game AudioContext;
 radio pause/mute/end clear `setCommsActive` without closing that context.
-Audible radio ducks engine to 38% and guns to 60% of their selected levels.
+Audible radio ducks engine to 84% and guns to 60% of their selected levels.
 Hits duck engine to 30% for 220 ms with a smooth release; impacts/comms retain
 priority. Muted radio does not duck. The mix preference can disable ducking.
 Gunshot starts are bounded to one per 45 ms to contain stacked volleys.
@@ -1290,3 +1292,22 @@ A final compressor provides shared headroom. Settings / Sound balance provides
 persistent per-channel sliders plus an overall SFX control and reset.
 The isolated engine lab bypasses flight channel balance for sound design;
 its listening level describes the raw synth, before the flight engine trim.
+
+The exhaust roar emphasizes low turbulence: a moving 110-800 Hz band, a
+low-pass capped at 1600 Hz, and a broad 9 dB cut centered at 1700 Hz leave room
+for speech. Slow filtered-noise modulation adds irregular amplitude and filter
+motion independently of the mechanical texture layer; the roar control silences
+its modulation too. Radio lowers engine level only 16% to preserve continuity.
+
+Cruise exhaust is led by a filtered, rhythmically modulated low growl. Broadband
+roar and turbine air swell with a smoothed acceleration envelope and afterburner,
+then settle at steady throttle. Flight supplies normalized positive speed change
+per frame as `detail.acceleration`; the isolated lab infers acceleration from
+throttle/spool difference. Deceleration does not trigger the surge. This is
+audio telemetry only, with no new persistent world fields.
+
+Low engine weight now favors 24-180 Hz colored noise over quiet pitched
+remnants. The growl uses a filtered sawtooth for harmonic grit, with slow
+noise-driven pitch and amplitude variation on both low layers. Regular flutter
+is restrained; the low noise loop spans 7.3 seconds to reduce obvious repetition.
+Bass and roar controls also silence their associated roughness and modulation.

@@ -669,7 +669,8 @@
     var api=window.Driftworks.audio._test, mix=api.normalizeMix({});
     assert(mix.engine<mix.impacts && mix.weapons<mix.comms);
     var idle=api.mixLevels(mix,false,false),speech=api.mixLevels(mix,true,false),hit=api.mixLevels(mix,true,true);
-    assert(speech.engine<idle.engine && speech.weapons<idle.weapons);
+    assertClose(speech.engine/idle.engine,.84);
+    assert(speech.weapons<idle.weapons);
     assert(hit.engine<speech.engine && hit.impacts===idle.impacts && hit.comms===idle.comms);
     var muted=api.mixLevels(Object.assign({},mix,{comms:0}),true,false);
     assert(muted.engine===idle.engine && muted.weapons===idle.weapons);
@@ -704,19 +705,40 @@
   });
 
   test('layered engine graph starts once, accepts tuning, and stops every source on disposal', function () {
-    var params=[], sources=[], gains=[];
+    var params=[], sources=[], gains=[], filters=[];
     function param() {var p={value:0,setTargetAtTime:function(value){assert(Number.isFinite(value));p.value=value;},setValueAtTime:function(value){assert(Number.isFinite(value));p.value=value;},cancelScheduledValues:function(){},exponentialRampToValueAtTime:function(value){assert(value>0);p.value=value;}};params.push(p);return p;}
     function node() {return {connect:function(next){return next;},disconnect:function(){}};}
     function gain() {var n=node();n.gain=param();gains.push(n);return n;}
     function source() {var n=node();n.frequency=param();n.start=function(){n.started=(n.started||0)+1;};n.stop=function(){n.stopped=(n.stopped||0)+1;};sources.push(n);return n;}
     var ctx={currentTime:0,sampleRate:8000,createGain:gain,createOscillator:source,createBufferSource:source,
-      createBiquadFilter:function(){var n=node();n.frequency=param();n.Q=param();return n;},
+      createBiquadFilter:function(){var n=node();n.frequency=param();n.Q=param();n.gain=param();filters.push(n);return n;},
       createDynamicsCompressor:function(){var n=node();['threshold','knee','ratio','attack','release'].forEach(function(k){n[k]=param();});return n;},
       createBuffer:function(ch,length){return {getChannelData:function(){return new Float32Array(length);}};}};
     var voice=window.Driftworks.audio.engine.create(ctx,node());
-    assert(sources.length===11 && sources.every(function(s){return s.started===1;}));
+    assert(sources.length===12 && sources.every(function(s){return s.started===1;}));
     voice.update(.1,{throttle:1,afterburner:true,damage:.8,maneuver:1});
     assert(gains[0].gain.value>0);
+    assert(filters[1].frequency.value<800 && filters[2].frequency.value<=1600,'Roar should stay dark even during boost');
+    assert(filters[3].type==='peaking' && filters[3].frequency.value===1700 && filters[3].gain.value===-9,'Exhaust must leave space for speech');
+    assert(gains[14].gain.value>0 && gains[15].gain.value>0,'Roar should have irregular amplitude and filter motion');
+    voice.tune({roar:0});
+    voice.update(.1,{throttle:1});
+    assert(gains[8].gain.value===0 && gains[14].gain.value===0 && gains[15].gain.value===0,'Roar mute must also mute its modulation');
+    voice.tune({roar:.55});
+    for(var cruise=0;cruise<100;cruise++)voice.update(.1,{throttle:1,acceleration:0});
+    var cruiseNoise=gains[8].gain.value, cruiseAir=gains[10].gain.value;
+    assert(gains[16].gain.value>cruiseNoise,'Cruise should emphasize growl over broad noise');
+    assert(gains[18].gain.value>gains[1].gain.value*10 && gains[19].gain.value>gains[16].gain.value*8,'Low colored rumble should lead the pitched remnants');
+    assert(gains[20].gain.value>0 && gains[21].gain.value>0 && gains[22].gain.value>0 && gains[23].gain.value>0,'Low layers should drift and pulse irregularly');
+    voice.tune({bass:0,roar:0});voice.update(.1,{throttle:1,acceleration:0});
+    [18,19,20,21,22,23].forEach(function(i){assert(gains[i].gain.value===0,'Low layer mutes must include roughness and modulation');});
+    voice.tune({bass:.7,roar:.55});
+    for(var accelerating=0;accelerating<5;accelerating++)voice.update(.1,{throttle:1,acceleration:1});
+    assert(gains[8].gain.value>cruiseNoise*8 && gains[10].gain.value>cruiseAir*2,'Acceleration should swell roar and air');
+    for(var settle=0;settle<100;settle++)voice.update(.1,{throttle:1,acceleration:0});
+    assertClose(gains[8].gain.value,cruiseNoise);
+    for(var burning=0;burning<5;burning++)voice.update(.1,{throttle:1,acceleration:0,afterburner:true});
+    assert(gains[8].gain.value>cruiseNoise*8,'Afterburner should roar even at constant speed');
     assert(sources[2].frequency.value > 330 && sources[3].frequency.value > sources[2].frequency.value*2);
     assert(sources[4].frequency.value > sources[3].frequency.value, 'Turbine partials should be slightly detuned');
     assert(gains[3].gain.value < .01 && gains[10].gain.value > gains[3].gain.value, 'Air should carry the turbine; the pure tone stays subtle');
@@ -724,7 +746,7 @@
     voice.update(.1,{throttle:1});
     [3,4,5,10,11].forEach(function(index){assert(gains[index].gain.value===0,'Whine mute must silence tones, air and drift');});
     voice.tune({bass:0,whine:0,roar:0,texture:0,burner:0,volume:0,perspective:'exterior'});
-    voice.update(.1,{throttle:1,afterburner:true});assert(gains[0].gain.value===0);
+    voice.update(.1,{throttle:1,afterburner:true});assert(gains[0].gain.value===0 && gains[16].gain.value===0 && gains[17].gain.value===0);
     voice.stop();assert(gains[0].gain.value===0);
     voice.dispose();voice.dispose();
     assert(sources.every(function(s){return s.stopped===1;}),'Disposal must be idempotent');
@@ -2204,7 +2226,7 @@
     assert(batches[1].vertices.length===0);batches[2].vertices.forEach(function(x){assert(Number.isFinite(x));});
   });
 
-  test('bolt artwork grows with camera distance to full size at twenty metres', function () {
+  test('bolt artwork maintains angular size to thirty metres then shrinks in perspective', function () {
     var DW=window.Driftworks,U=DW.sim.METERS_PER_UNIT,weapon=DW.retailWeapons[0];
     var pose={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     function widthAt(m) {
@@ -2216,10 +2238,13 @@
       for(var i=0;i<vertices.length;i+=6){xs.push(vertices[i]);zs.push(vertices[i+2]);}
       return [Math.max.apply(null,xs)-Math.min.apply(null,xs),Math.max.apply(null,zs)-Math.min.apply(null,zs)];
     }
-    var full=widthAt(20),far=widthAt(40),half=widthAt(10),near=widthAt(2),zero=widthAt(0);
+    var full=widthAt(30),far=widthAt(60),half=widthAt(15),near=widthAt(3),zero=widthAt(0);
     full.forEach(function(size,i){
       assert(size>0);assertClose(far[i],size,.00001);assertClose(half[i],size*.5,.00001);
       assertClose(near[i],size*.1,.00001);assertClose(zero[i],0,.00001);
+      assertClose(near[i]/3,size/30,.00001);
+      assertClose(half[i]/15,size/30,.00001);
+      assertClose(far[i]/60,size/30*.5,.00001);
     });
   });
 

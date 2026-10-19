@@ -53,7 +53,7 @@
   /** @param {FlightMix} value @param {boolean} speech @param {boolean} hit */
   function mixLevels(value, speech, hit) {
     var talking = value.ducking && speech && value.comms > 0;
-    return {engine:value.engine * Math.min(talking?.38:1, value.ducking && hit && value.impacts > 0?.3:1),
+    return {engine:value.engine * Math.min(talking?.84:1, value.ducking && hit && value.impacts > 0?.3:1),
       weapons:value.weapons * (talking?.6:1), impacts:value.impacts, comms:value.comms*.5};
   }
   function applyMix() {
@@ -374,7 +374,7 @@
     return { load: flightLoad, boost: flightBoost };
   }
 
-  /** @param {number} dt @param {number} throttle @param {boolean} boost @param {boolean} active @param {{damage?: number; maneuver?: number; thrust?: number}} [detail] */
+  /** @param {number} dt @param {number} throttle @param {boolean} boost @param {boolean} active @param {{damage?: number; maneuver?: number; thrust?: number; acceleration?: number}} [detail] */
   function setFlightEngine(dt, throttle, boost, active, detail) {
     var feedback = flightFeedback(dt, throttle, boost, active);
     if (!context || !sfxBus) return feedback;
@@ -418,10 +418,12 @@
   /** @param {EngineState} state @param {number} dt @param {EngineDemand} demand @param {EngineTuning} tuning @returns {EngineState} */
   function stepEngine(state, dt, demand, tuning) {
     var active = demand.active !== false;
-    if (!active) return {spool:0, boost:0, ignition:false, active:false};
+    if (!active) return {spool:0, surge:0, boost:0, ignition:false, active:false};
     var seconds = typeof dt === 'number' && isFinite(dt) ? Math.max(0, Math.min(.25, dt)) : 0;
     var power = Math.pow(volumeValue(demand.throttle, 0), .65);
-    return {spool: state.spool + (power - state.spool) * (1 - Math.exp(-seconds / tuning.spool)),
+    var acceleration = volumeValue(demand.acceleration, Math.min(1, Math.max(0, power-state.spool)*2));
+    var surge = state.surge || 0;
+    return {surge: surge + (acceleration-surge)*(1-Math.exp(-seconds/(acceleration>surge?.08:.4))), spool: state.spool + (power - state.spool) * (1 - Math.exp(-seconds / tuning.spool)),
       boost: state.boost + ((demand.afterburner ? 1 : 0) - state.boost) * (1 - Math.exp(-seconds / .09)),
       ignition: !!demand.afterburner && !state.held, held: !!demand.afterburner, active:true};
   }
@@ -461,12 +463,17 @@
     var turbineBeat = tone(730, 'sine');
     var sub = tone(32, 'sine'), burnerWhine = tone(1000, 'triangle');
     // Looping colored turbulence and independent amplitude modulation add machinery texture.
-    var buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 3), ctx.sampleRate);
+    var buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 7.3), ctx.sampleRate);
     var samples = buffer.getChannelData(0), brown = 0;
     for (var i=0; i<samples.length; i++) { brown = (brown + (Math.random()*2-1)*.06)/1.03; samples[i] = brown*2; }
     var noise = ctx.createBufferSource(), exhaust = ctx.createBiquadFilter(), exhaustGain = ctx.createGain();
     noise.buffer = buffer; noise.loop = true; exhaust.type = 'bandpass'; exhaust.Q.value = .55; exhaustGain.gain.value = 0;
-    noise.connect(exhaust).connect(exhaustGain).connect(output);
+    var exhaustDark = ctx.createBiquadFilter(), speechSpace = ctx.createBiquadFilter();
+    exhaustDark.type = 'lowpass'; exhaustDark.Q.value = .65;
+    speechSpace.type = 'peaking'; speechSpace.frequency.value = 1700;
+    speechSpace.Q.value = .65; speechSpace.gain.value = -9;
+    noise.connect(exhaust).connect(exhaustDark).connect(speechSpace).connect(exhaustGain).connect(output);
+    nodes.push(exhaustDark, speechSpace);
     var crackle = ctx.createBiquadFilter(), crackleGain = ctx.createGain();
     crackle.type = 'highpass'; crackle.frequency.value = 1600; crackleGain.gain.value = 0;
     noise.connect(crackle).connect(crackleGain).connect(output);
@@ -491,6 +498,37 @@
     wobble.frequency.value = 7.3; wobbleGain.gain.value = 0;
     wobble.connect(wobbleGain).connect(exhaustGain.gain);
     flutter.start(); wobble.start(); sources.push(flutter,wobble); nodes.push(flutterGain,wobbleGain);
+    // Slow, irregular turbulence gives the roar movement even with texture muted.
+    var turbulence = ctx.createBiquadFilter(), turbulenceGain = ctx.createGain(), exhaustDrift = ctx.createGain();
+    turbulence.type = 'lowpass'; turbulence.frequency.value = 11; turbulence.Q.value = .5;
+    turbulenceGain.gain.value = 0; exhaustDrift.gain.value = 0;
+    noise.connect(turbulence);
+    turbulence.connect(turbulenceGain).connect(exhaustGain.gain);
+    turbulence.connect(exhaustDrift).connect(exhaust.frequency);
+    nodes.push(turbulence, turbulenceGain, exhaustDrift);
+    // A filtered, pulsing low harmonic carries cruise without a constant noise wash.
+    var growl = tone(78, 'sawtooth'), growlFilter = ctx.createBiquadFilter(), growlPulse = ctx.createGain();
+    growlFilter.type = 'lowpass'; growlFilter.frequency.value = 220; growlFilter.Q.value = .6;
+    growl.source.disconnect(); growl.source.connect(growlFilter).connect(growl.gain);
+    growlPulse.gain.value = 0; flutter.connect(growlPulse).connect(growl.gain.gain);
+    nodes.push(growlFilter, growlPulse);
+    // Low colored noise carries the weight; quiet pitched remnants add definition.
+    // Slow stochastic modulation avoids a held note or a regular tremolo pulse.
+    var roughHigh = ctx.createBiquadFilter(), roughLow = ctx.createBiquadFilter();
+    roughHigh.type = 'highpass'; roughHigh.frequency.value = 24; roughHigh.Q.value = .6;
+    roughLow.type = 'lowpass'; roughLow.frequency.value = 155; roughLow.Q.value = .7;
+    var roughBass = ctx.createGain(), roughGrowl = ctx.createGain();
+    roughBass.gain.value = 0; roughGrowl.gain.value = 0;
+    noise.connect(roughHigh).connect(roughLow);
+    roughLow.connect(roughBass).connect(output); roughLow.connect(roughGrowl).connect(output);
+    var slowMotion = ctx.createBiquadFilter();
+    slowMotion.type = 'lowpass'; slowMotion.frequency.value = 2.7; slowMotion.Q.value = .5;
+    noise.connect(slowMotion);
+    var bassDrift = ctx.createGain(), growlDrift = ctx.createGain(), bassPulse = ctx.createGain(), unevenGrowl = ctx.createGain();
+    [bassDrift,growlDrift,bassPulse,unevenGrowl].forEach(function(gain){gain.gain.value=0;slowMotion.connect(gain);});
+    bassDrift.connect(bass.source.frequency); bassDrift.connect(body.source.frequency); growlDrift.connect(growl.source.frequency);
+    bassPulse.connect(bass.gain.gain); unevenGrowl.connect(growl.gain.gain);
+    nodes.push(roughHigh,roughLow,roughBass,roughGrowl,slowMotion,bassDrift,growlDrift,bassPulse,unevenGrowl);
     /** @type {EngineState} */ var state = {spool:0, boost:0, ignition:false, active:false};
     var heldBoost = false, disposed = false;
     /** @param {AudioParam} param @param {number} value @param {number} [time] */
@@ -510,14 +548,25 @@
       state = stepEngine(state, dt, demand, tuning);
       heldBoost = !!demand.afterburner;
       var power = state.spool, boost = state.boost, damage = volumeValue(demand.damage,0), turn = volumeValue(demand.maneuver,0);
-      var thrust = volumeValue(demand.thrust, volumeValue(demand.throttle,0)), outside = tuning.perspective === 'exterior';
-      var energy = .08 + power*.92;
+      var outside = tuning.perspective === 'exterior';
+      var energy = .08 + power*.92, surge = state.surge || 0;
+      var roarActivity = .035 + surge*.7 + boost*.85 + turn*.06;
+      target(growl.source.frequency, (62 + power*33)*tuning.pitch);
+      target(growl.gain.gain, tuning.roar*energy*(.018+surge*.008+boost*.008));
+      target(growlPulse.gain, tuning.roar*energy*.002);
+      target(roughLow.frequency, 120 + power*35 + surge*25);
+      target(roughBass.gain, tuning.bass*energy*.26);
+      target(roughGrowl.gain, tuning.roar*energy*(.18+surge*.04+boost*.04));
+      target(bassDrift.gain, tuning.bass*(14+damage*8));
+      target(growlDrift.gain, tuning.roar*(32+damage*16));
+      target(bassPulse.gain, tuning.bass*energy*.018);
+      target(unevenGrowl.gain, tuning.roar*energy*.025);
       target(output.gain, tuning.volume * .65);
       target(cabin.frequency, outside ? 11000 : 2400);
       target(bass.source.frequency, (35 + power*19)*tuning.pitch);
-      target(bass.gain.gain, tuning.bass * energy * .11);
+      target(bass.gain.gain, tuning.bass * energy * .018);
       target(body.source.frequency, (70 + power*38)*tuning.pitch);
-      target(body.gain.gain, tuning.texture * energy * .028);
+      target(body.gain.gain, tuning.texture * energy * .012);
       var turbineHz = (330 + Math.pow(power,1.7)*1250 + turn*70)*tuning.pitch;
       var turbineLevel = tuning.whine * (outside ? .8 : 1);
       target(whine.source.frequency, turbineHz);
@@ -527,17 +576,20 @@
       target(harmonic.gain.gain, turbineLevel * power * .003);
       target(turbineBeat.gain.gain, turbineLevel * power * .0025);
       target(airFilter.frequency, turbineHz * 1.35);
-      target(airGain.gain, turbineLevel * (.012 + power*.065));
+      target(airGain.gain, turbineLevel * (.002 + power*.009 + surge*.028 + boost*.025));
       target(pitchDrift.gain, tuning.whine * (7 + power*9 + damage*12));
-      target(exhaust.frequency, 180 + power*1600 + boost*1600 + thrust*350);
-      target(exhaustGain.gain, tuning.roar*(.015+power*.28+thrust*.08+turn*.07)*(outside?1.4:.65));
+      target(exhaust.frequency, 110 + power*140 + surge*370 + boost*180);
+      target(exhaustDark.frequency, 550 + surge*650 + boost*400);
+      target(turbulenceGain.gain, tuning.roar*roarActivity*energy*(.045+damage*.025));
+      target(exhaustDrift.gain, tuning.roar*roarActivity*energy*(180+damage*90));
+      target(exhaustGain.gain, tuning.roar*roarActivity*(.04+power*.18)*(outside?1.15:.65));
       target(sub.gain.gain, tuning.burner*boost*.17);
       target(burnerWhine.source.frequency, (650+boost*1050)*tuning.pitch);
       target(burnerWhine.gain.gain, tuning.burner*boost*.012);
       target(crackleGain.gain, tuning.burner*boost*(.2+damage*.12)*(outside?1:.45));
       target(flutter.frequency, tuning.flutter + damage*3);
-      target(flutterGain.gain, tuning.texture * tuning.bass * energy * (.012+damage*.015));
-      target(wobbleGain.gain, tuning.texture*tuning.roar*(power+boost)*(.012+damage*.03));
+      target(flutterGain.gain, tuning.texture * tuning.bass * energy * (.002+damage*.003));
+      target(wobbleGain.gain, tuning.texture*tuning.roar*roarActivity*(power+boost)*(.012+damage*.03));
       if (ignition) {
         var now = ctx.currentTime;
         sub.gain.gain.cancelScheduledValues(now);

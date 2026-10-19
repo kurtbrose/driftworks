@@ -153,7 +153,7 @@
             var distanceM = Math.hypot.apply(null, bolt.position.map(function (x, i) {
                 return x - pose.eye[i];
             })) * units;
-            var visualScale = Math.min(1, distanceM / 20);
+            var visualScale = Math.min(1, distanceM / 30);
             var halfLength = bolt.weapon.length * .5 / units * visualScale;
             var center = bolt.position.map(function (x, i) {
                 return x - bolt.direction[i] * halfLength;

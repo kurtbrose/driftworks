@@ -291,7 +291,7 @@
         if (!watch) DW.training.configureHulls(session.snapshot().combat, appearance.allyArt, appearance.enemyArt);
         var demand = controls.sample();
         if (!paused) {
-            var before = view(), lastHit = before.combat.lastHit, shield = before.combat.shield, fired = before.guns.fired, contact = before.contact;
+            var before = view(), beforeSpeed = Math.hypot.apply(null, view().state.velocity), lastHit = before.combat.lastHit, shield = before.combat.shield, fired = before.guns.fired, contact = before.contact;
             if (watch) {
                 var previousTime = watch.summary().seconds;
                 watch.advance(elapsed, Number(get('watch-speed').value));
@@ -302,7 +302,7 @@
             } else session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
             var after = view();
             if (!watch && after.contact && !contact) DW.audio.playImpact(2);
-            DW.audio.setFlightEngine(elapsed, after.state.throttle, !!demand.boost, !paused && !watch && !after.contact && !after.combat.dead, {damage: 1 - after.combat.hull / (after.combat.maxHull || after.combat.hull || 1), maneuver: Math.min(1, Math.abs(demand.pitch || 0) + Math.abs(demand.yaw || 0) + Math.abs(demand.roll || 0))});
+            DW.audio.setFlightEngine(elapsed, after.state.throttle, !!demand.boost, !paused && !watch && !after.contact && !after.combat.dead, {acceleration: elapsed > 0 ? Math.max(0, Math.hypot.apply(null, after.state.velocity) - beforeSpeed) / elapsed / Math.max(1, profile().maxVelocity[2] / profile().forwardAccel) : 0, damage: 1 - after.combat.hull / (after.combat.maxHull || after.combat.hull || 1), maneuver: Math.min(1, Math.abs(demand.pitch || 0) + Math.abs(demand.yaw || 0) + Math.abs(demand.roll || 0))});
             if (!watch) controls.haptics(elapsed, {boost: !after.contact && !after.combat.dead && !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
             if (!watch && after.combat.dead) {
                 pause();

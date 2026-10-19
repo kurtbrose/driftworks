@@ -1,7 +1,7 @@
 
 export type EngineTuning = Record<'bass'|'whine'|'roar'|'texture'|'burner'|'pitch'|'spool'|'flutter'|'volume', number> & { perspective: 'cockpit'|'exterior' };
-export type EngineDemand = { throttle: number; thrust?: number; afterburner?: boolean; damage?: number; maneuver?: number; active?: boolean };
-export type EngineState = { spool: number; boost: number; ignition: boolean; held?: boolean; active: boolean };
+export type EngineDemand = { throttle: number; thrust?: number; acceleration?: number; afterburner?: boolean; damage?: number; maneuver?: number; active?: boolean };
+export type EngineState = { spool: number; surge?: number; boost: number; ignition: boolean; held?: boolean; active: boolean };
 export type EngineVoice = { update: (dt: number, demand: EngineDemand) => EngineState; tune: (tuning: Partial<EngineTuning>) => void; stop: () => void; dispose: () => void };
 export type EnginePreset = { name: string; description: string; tuning: EngineTuning };
 export type EngineTools = {
