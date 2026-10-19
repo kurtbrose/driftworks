@@ -550,7 +550,7 @@ Flight **Settings / Sound balance** offers engine, weapons, impacts, comms and o
 
 ### Barracuda fighter greybox
 
-Open `experiments/fighter-greybox.html` for the provisional Barracuda: a snug side-by-side cockpit on the fuselage centerline, gently tapered, full aft body and three integrated engines in an equilateral rear triangle. Its full-height rear connection, raised cannon within a low cockpit center console and smooth exterior keep the profile compact for narrow hatches. The readout reports the actual complete length, beam and height (15.6 by 2.3 by 2.2 m at defaults); a particular hatch fit is not simulated. The earlier fleet bench remains an independent idea study.
+Open `experiments/fighter-greybox.html` for the provisional Barracuda: a snug side-by-side cockpit on the fuselage centerline, gently tapered, full aft body and three integrated engines in an equilateral rear triangle. Its full-height rear connection, raised cannon within a low cockpit center console and smooth exterior keep the profile compact for narrow hatches. The readout reports the actual complete length, beam and height (11.7 by 2.3 by 2.2 m at defaults); a particular hatch fit is not simulated. The earlier fleet bench remains an independent idea study.
 
 The faceted wraparound canopy has roof and rear-quarter glazing, thin bows, a sloped windscreen and low nose windows. Two seated astronauts in local placeholder chairs retain their physical size as the hull changes. Seat spacing is 1.1 m and the default canopy is roughly 2.0 by 2.2 m. Minimum cockpit breadth preserves chair clearance.
 
@@ -560,4 +560,8 @@ The Barracuda study also offers independently toggleable starfield skybox and as
 
 Fighter-study wheel zoom preserves the current subject plane even with the asteroid enabled. Use Pick focus or double-click a surface to deliberately change the focus target. Reset views restores the hull comparison.
 
-Barracuda's rear engine pack has two nozzles above and one below. Engine triangle spacing varies the equilateral layout without stretching it with the hull sliders. The lower engine sits 2 m forward of the upper pair, with enlarged housings separated by a 4 cm nominal gap. The default pack keeps the compact study envelope; Rear / engines gives a direct inspection view. Carrier hatch dimensions remain provisional.
+Barracuda's rear engine pack has two nozzles above and one below. Engine triangle spacing varies the equilateral layout without stretching it with the hull sliders. The lower engine sits forward of the upper pair (about 1.4 m in shortened A), with enlarged housings separated by a 4 cm nominal gap. The default pack keeps the compact study envelope; Rear / engines gives a direct inspection view. Carrier hatch dimensions remain provisional.
+
+Open `experiments/fighter-variants.html` to compare Barracuda A-E at a shared camera scale: baseline, half-length wide body, oversized aft engine block, short four-engine body, and twin longitudinal hulls. All five ships occupy one shared scene with one renderer and camera. Top, front and three-quarter buttons frame the whole lineup without reloading; each variant also opens in the full four-view study.
+
+Variant A now shortens the original overall length by 25% through the aft hull, retains human-scale crew with seat backs 2 cm ahead of the rear cockpit bulkhead, and uses a wider, blunter glazed nose. B-E remain alternative studies of the original proportions.

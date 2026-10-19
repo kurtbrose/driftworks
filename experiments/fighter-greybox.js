@@ -3,6 +3,7 @@
     var DW = /** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
     /** @param {string} id @returns {HTMLInputElement} */
     function get(id) { var element = document.getElementById(id); if(!element) throw new Error('Missing control: '+id); return /** @type {HTMLInputElement} */ (element); }
+    var params=new URLSearchParams(window.location.search),variant=params.get('variant')||'A',comparison=params.has('compare'),lineup=params.has('lineup');
     var units = DW.sim.METERS_PER_UNIT;
     var asteroid=DW.sim.createInitialWorld().asteroids[0];
     asteroid.position={x:0,y:0};asteroid.radius=120/units;asteroid.rotation=0;
@@ -14,6 +15,7 @@
 
     var presets=[{id:'view-side',yaw:Math.PI/2,tilt:Math.PI/2,height:environmentHeight()},{id:'view-front',yaw:0,tilt:Math.PI/2,height:environmentHeight()},{id:'view-top',yaw:0,tilt:.06,height:environmentHeight()},{id:'viewer',yaw:.25,tilt:.65,height:environmentHeight()}];
     /** @type {number[]} */ var framingPoints=[];
+    if(comparison){presets=presets.slice(3);if(params.get('angle')==='top'){presets[0].yaw=0;presets[0].tilt=.06;}if(params.get('angle')==='side'){presets[0].yaw=Math.PI/2;presets[0].tilt=Math.PI/2;}}
     var views=presets.map(function(preset){
         var world=DW.sim.createInitialWorld();
         world.asteroids=[];world.ships=[];world.platforms=[];world.wrecks=[];world.packets=[];world.combat.drones=[];world.selectedShipIds=[];
@@ -21,24 +23,29 @@
             // Frame the subject, independently of the off-to-the-side scale reference.
             var width=view.host.clientWidth,height=view.host.clientHeight,focal=1/Math.tan(Math.PI/8);
             var sy=Math.sin(preset.yaw),cy=Math.cos(preset.yaw),st=Math.sin(preset.tilt),ct=Math.cos(preset.tilt),distance=0;
-            for(var point=0;point<framingPoints.length;point+=3){
-                var x=framingPoints[point],y=framingPoints[point+1]+1.3,z=framingPoints[point+2];
+            var focusY=!lineup&&variant==='A'?.4:-1.3;
+            var points=framingPoints;
+            if(comparison&&!lineup){points=[];[-2.5,2.5].forEach(function(x){[-7.82,7.82].forEach(function(y){[-1.6,1.6].forEach(function(z){points.push(x,y-1.3,z);});});});}
+            for(var point=0;point<points.length;point+=3){
+                var x=points[point],y=points[point+1]-focusY,z=points[point+2];
                 var right=x*cy+y*sy,up=x*sy*ct-y*cy*ct+z*st,back=-x*sy*st+y*cy*st+z*ct;
                 distance=Math.max(distance,back+Math.max(Math.abs(right)*focal*height/(.75*width),Math.abs(up)*focal/.75));
             }
             distance=Math.max(1,distance);
-            view.world().camera={x:0,y:-1.3/units,zoom:height*focal*units/(2*distance)};
+            view.world().camera={x:0,y:focusY/units,zoom:height*focal*units/(2*distance)};
         }});
     });
     var skies=views.map(function(view){return DW.flightSkybox.create(view.host);});
-    var orbitView=views[3], scene=orbitView.scene;
+    var orbitView=views[views.length-1], scene=orbitView.scene;
     var reference=DW.studyViewer.referenceFighter(12,units,[18/units,-16/units,0]);
     var revision=0;
     /** @type {string[]} */ var frameKeys=[];
     /** @param {string} id */
     function number(id) { return Number(get(id).value); }
     /** Build the fighter in meters before conversion to renderer units. */
-    function hull() {
+    /** @param {string} [variant] */
+    function hull(variant) {
+        variant=variant||params.get('variant')||'A';
         var x=0,y=0,scale=1;
         /** @type {Record<string,number[]>} */
         var groups = {armor:[], dark:[], edge:[], stripe:[],glass:[]}, mesh = DW.meshBuilder.create(groups);
@@ -47,6 +54,9 @@
         var cockpitBreadth = Math.max(1,breadth), cabinZ=-.65;
         /** @param {string} material @param {number[]} center @param {number[]} size */
         function box(material, center, size) { mesh.block(material, [x + center[0]*scale*breadth, y + center[1]*scale, center[2]*scale*depth], [size[0]*scale*breadth,size[1]*scale,size[2]*scale*depth]); }
+        var short=variant==='A'||variant==='B'||variant==='D',aftScale=variant==='A'?(15.62*.75-2.9)/12.47:variant==='B'?.36:variant==='D'?.45:1,aftWidth=variant==='B'?2:variant==='D'?1.6:1;
+        /** @param {number} yy */
+        function aftY(yy){return 3.35+(yy-3.35)*aftScale;}
         // Full aft shoulders wrap the engine pack, with only a gentle taper.
         /** @param {string} material @param {number[][]} stations @param {number} [offset] */
         function loft(material, stations, offset) {
@@ -59,10 +69,15 @@
             for(var r=1;r<rings.length;r++) for(var n=0;n<8;n++) mesh.plate(material,[rings[r-1][n],rings[r-1][(n+1)%8],rings[r][(n+1)%8],rings[r][n]]);
             mesh.plate(material,rings[rings.length-1]);
         }
-        loft('armor',[[-8.98,1.04,.43,.36],[-7.2,1.06,.43,.36],[-5,1.08,.75,.05],[-1,1.1,.8,.1],[2,1.15,.9,-.05],[3.6,.96,.865,-.085]]);
+        if(variant==='E'){
+            [-.88,.88].forEach(function(offset){loft('armor',[[-8.98,.48,.55,.1],[-4,.48,.65,.1],[1.8,.48,.7,.05],[3.35,.44,.65,0]],offset);});
+        }else{
+            loft('armor',[[-8.98,1.04,.43,.36],[-7.2,1.06,.43,.36],[-5,1.08,.75,.05],[-1,1.1,.8,.1],[2,1.15,.9,-.05],[3.6,.96,.865,-.085]].map(function(station){return station[0]<3.35?[aftY(station[0]),station[1]*aftWidth,station[2],station[3]]:station;}));
+        }
+        if(variant==='C')loft('armor',[[-9.0,1.85,1.25,-.15],[-7,1.9,1.35,-.15],[-3.5,1.65,1.2,-.1],[-2,1.1,.8,.1]]);
         // Continuous shallow tub overlaps the aft spine and supports the canopy sill.
         // Its upper edge stays below the crew's forward/downward sightlines.
-        loft('armor',[[2.6,1.04,.28,-1.01],[3.6,1.0,.24,-1.07],[4.45,1.03,.22,-1.07],[5.05,1.0,.2,-1.12],[5.8,.68,.16,-1.13]]);
+        loft('armor',[[2.6,1.04,.28,-1.01],[3.6,1.0,.24,-1.07],[4.45,1.03,.22,-1.07],[5.05,1.0,.2,-1.12],[variant==='A'?5.55:5.8,variant==='A'?.88:.68,.16,-1.13]]);
         /** Cockpit dimensions track crew clearance, independently of the outer hull sliders.
          * @param {string} material @param {number[]} center @param {number[]} size */
         function cockpitBox(material,center,size) {
@@ -72,6 +87,7 @@
         // Crew and glazing stay at human scale when the body-depth slider changes.
         // Cabin center is on the fuselage axis rather than perched above its nose.
         var canopyStations=[[3.6,.96,1.43,-.05],[4.45,1.0,1.5,-.15],[5.05,.97,1.23,-.23],[5.8,.65,.2,-.25]];
+        if(variant==='A')canopyStations[3]=[5.55,.85,.65,-.25];
         var canopy=canopyStations.map(function(station){
             var yy=station[0],w=station[1]*cockpitBreadth,top=station[2]+cabinZ,sill=station[3]+cabinZ;
             return [[-.7*w,yy,top],[.7*w,yy,top],[w,yy,top-.22],[w,yy,sill],[.65*w,yy,sill-.14],[-.65*w,yy,sill-.14],[-w,yy,sill],[-w,yy,top-.22]];
@@ -96,12 +112,16 @@
         // Near-touching housings; the lower nacelle is staggered 2 m toward the nose.
         var engineSide=1.1+(spread-1)*.5,triangleHeight=engineSide*Math.sqrt(3)/2;
         var engines=[[-engineSide/2,-.05+triangleHeight/3],[engineSide/2,-.05+triangleHeight/3],[0,-.05-2*triangleHeight/3]];
+        if(variant==='B')engines=engines.map(function(center){return [center[0]*2,center[1]];});
+        if(variant==='C')engines=[[-.92,.42],[.92,.42],[0,-1.08]];
+        if(variant==='D')engines=[[-1.22,.55],[1.22,.55],[-1.22,-.55],[1.22,-.55]];
+        if(variant==='E')engines=[[-.88,.1],[.88,.1]];
         /** @param {number[]} center @param {number} yy @param {number} radius */
         function engineRing(center,yy,radius){
-            /** @type {number[][]} */ var points=[];for(var index=0;index<8;index++){var angle=index*Math.PI/4;points.push([center[0]+radius*Math.cos(angle),yy,center[1]+radius*Math.sin(angle)]);}return points;
+            /** @type {number[][]} */ var points=[];for(var index=0;index<8;index++){var angle=index*Math.PI/4;points.push([center[0]+radius*Math.cos(angle),short?aftY(yy):yy,center[1]+radius*Math.sin(angle)]);}return points;
         }
         engines.forEach(function(center,index){
-            var forward=index===2?2:0,radius=(engineSide-.04)/2;
+            var forward=variant==='D'?-1.5:variant==='E'||variant==='C'?0:index===2?2:0,radius=variant==='C'?.86:variant==='D'?.5:(engineSide-.04)/2;
             var rings=[engineRing(center,-9.1+forward,radius),engineRing(center,-8.6+forward,radius),engineRing(center,-4+forward,radius*.86),engineRing(center,-1.6+forward,.14)];
             for(var r=1;r<rings.length;r++)for(var n=0;n<8;n++)mesh.plate('armor',[rings[r-1][n],rings[r-1][(n+1)%8],rings[r][(n+1)%8],rings[r][n]]);
             mesh.plate('armor',rings[rings.length-1]);
@@ -113,17 +133,17 @@
             mesh.plate('dark',recess.slice().reverse());
         });
         // Raised cannon runs through a narrow console between the crew, near the lower engine axis.
-        loft('armor',[[3.35,.18,.28,-.76],[4.65,.18,.38,-.72],[5.3,.16,.25,-.76],[5.8,.12,.15,-.76]]);
+        loft('armor',[[3.35,.18,.28,-.76],[4.65,.18,.38,-.72],[5.3,.16,.25,-.76],[variant==='A'?5.55:5.8,.12,.15,-.76]]);
         mesh.block('dark',[0,4.25,-.325],[.23,.7,.04]);
         // Only the short muzzle projects beyond the nose; the breech stays in the console.
-        mesh.barrel('dark',[0,4.95,-.76],[0,6.5,-.76],.1);
+        mesh.barrel('dark',[0,4.95,-.76],[0,variant==='A'?6.25:6.5,-.76],.1);
         /** @type {Record<string,[number,number,number]>} */
         var colors = {armor:[.95,.43,.1],edge:[.65,.68,.69],dark:[.12,.16,.18],stripe:[1,.94,.78],glass:[.55,.8,.88]};
         /** @type {import('./types').Batch[]} */
         var batches = Object.keys(groups).filter(function(key){return key!=='glass';}).map(function (key) { return {vertices:new Float32Array(groups[key].map(function (v,i) { return i%6<3?v/units:v; })),color:colors[key]}; });
         // Opaque crew and chair batches precede the transparent glazing pass.
         if(DW.fighterCockpit) [-1,1].forEach(function(sign){
-            var cx=sign*.55*cockpitBreadth, cy=4.2, floor=-.15+cabinZ;
+            var cx=sign*.55*cockpitBreadth, cy=variant==='A'?3.9:4.2, floor=-.15+cabinZ;
             var cockpit=DW.fighterCockpit;
             if(!cockpit)return;
             cockpit.chair.forEach(function(batch){
@@ -137,7 +157,14 @@
         return batches;
     }
     function update() {
-        var batches = hull();
+        var batches = lineup?[]:hull(variant);
+        if(lineup){
+            ['A','B','C','D','E'].forEach(function(name,index){
+                hull(name).forEach(function(batch){batches.push(Object.assign({},batch,{vertices:new Float32Array(batch.vertices.map(function(value,i){return i%6===0?value+(index-2)*6/units:value;}))}));});
+            });
+            // Draw all opaque hulls and crew before any canopy glass.
+            batches.sort(function(a,b){return (a.opacity===undefined?0:1)-(b.opacity===undefined?0:1);});
+        }
         var low=[Infinity,Infinity,Infinity],high=[-Infinity,-Infinity,-Infinity];
         batches.forEach(function(batch){for(var i=0;i<batch.vertices.length;i+=6)for(var axis=0;axis<3;axis++){
             low[axis]=Math.min(low[axis],batch.vertices[i+axis]*units);high[axis]=Math.max(high[axis],batch.vertices[i+axis]*units);
@@ -149,12 +176,13 @@
         views.forEach(function(view){view.world().asteroids=get('asteroid').checked?[asteroid]:[];});
         views.forEach(function(view){view.scene.setStudyActors(batches);view.scene.setStudyEffects([]);});
         revision++;
-        get('readout').textContent = 'BARRACUDA / '+(high[1]-low[1]).toFixed(1)+' m long / '+(high[0]-low[0]).toFixed(1)+' m beam / '+(high[2]-low[2]).toFixed(1)+' m high\nTwo crew / one recessed centerline gun';
+        get('readout').textContent = 'BARRACUDA '+variant+' / '+(high[1]-low[1]).toFixed(1)+' m long / '+(high[0]-low[0]).toFixed(1)+' m beam / '+(high[2]-low[2]).toFixed(1)+' m high\nTwo crew / one recessed centerline gun';
     }
     function resetView() {views.forEach(function(view,index){presets[index].height=environmentHeight();view.reset();});frameKeys=[];}
     ['breadth','depth','spread','markings'].forEach(function (id) {get(id).oninput=update;});
+    if(comparison){get('reference').checked=false;get('asteroid').checked=false;}
     get('cockpit').onclick=function () {orbitView.manual=true;orbitView.world().camera={x:0,y:4.55/units,zoom:Math.min(orbitView.host.clientWidth,orbitView.host.clientHeight)*units/3.6};scene.setOrbit({yaw:.2,tilt:.65,height:environmentHeight()});};
-    get('rear').onclick=function(){orbitView.manual=true;orbitView.world().camera={x:0,y:-6.8/units,zoom:Math.min(orbitView.host.clientWidth,orbitView.host.clientHeight)*units/4.4};scene.setOrbit({yaw:Math.PI,tilt:Math.PI/2,height:environmentHeight()-.05/units});};
+    get('rear').onclick=function(){orbitView.manual=true;orbitView.world().camera={x:0,y:(variant==='A'?-3:-6.8)/units,zoom:Math.min(orbitView.host.clientWidth,orbitView.host.clientHeight)*units/4.4};scene.setOrbit({yaw:Math.PI,tilt:Math.PI/2,height:environmentHeight()-.05/units});};
     get('quarter').onclick=function () {orbitView.reset();};
     get('reset-views').onclick=resetView;
     get('asteroid').onchange=function(){update();resetView();};
@@ -163,6 +191,13 @@
     get('top').onclick=function () {scene.setOrbit({yaw:0,tilt:.06,height:environmentHeight()});};
     get('side').onclick=function () {scene.setOrbit({yaw:Math.PI/2,tilt:Math.PI/2,height:environmentHeight()});};
     get('reset').onclick=function () {['breadth','depth','spread'].forEach(function (id) {get(id).value='100';});update();resetView();};
+    if(lineup)window.addEventListener('message',/** @param {MessageEvent<unknown>} event */ function(event){
+        if(event.origin!==window.location.origin || !event.data || typeof event.data!=='object' || !('barracudaAngle' in event.data) || typeof event.data.barracudaAngle!=='string')return;
+        var angle=event.data.barracudaAngle;
+        if(angle!=='top' && angle!=='orbit' && angle!=='front')return;
+        presets[0].yaw=angle==='orbit'?.25:0;presets[0].tilt=angle==='top'?.06:angle==='front'?Math.PI/2:.65;
+        resetView();
+    });
     update();resetView();
     var last=0;
     /** @param {number} now */
