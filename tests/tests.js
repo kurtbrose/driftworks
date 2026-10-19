@@ -455,9 +455,9 @@
     diagnostics.endFrame(frame,false,comparison,stats);assert(overlay.textContent.indexOf('worst 383.0 ms')>=0);
     doc.getElementById('render-scale').listeners.change();
     frame=diagnostics.beginFrame(1410,false);assert(frame.actualElapsed===0);diagnostics.endFrame(frame,false,comparison,stats);assert(overlay.textContent.indexOf('worst 0.0 ms')>=0);
-    doc.getElementById('perf-reset').onclick();assert(diagnostics.beginFrame(1411,false).elapsed===0);
+    doc.getElementById('perf-reset').onclick();assertClose(diagnostics.beginFrame(1411,false).elapsed,.001);
     diagnostics.reset();assert(diagnostics.beginFrame(2000,true));assert(diagnostics.beginFrame(2030,true)===null);assert(diagnostics.beginFrame(2067,true));
-    doc.getElementById('fps-cap').value='0';doc.getElementById('fps-cap').listeners.change();assert(diagnostics.beginFrame(3000,false));assert(diagnostics.beginFrame(3001,false));
+    doc.getElementById('fps-cap').value='0';doc.getElementById('fps-cap').listeners.change();assert(diagnostics.beginFrame(3000,false).elapsed===0);assertClose(diagnostics.beginFrame(3001,false).elapsed,.001);
     diagnostics.toggleDiagnostics();assert(doc.getElementById('perf-enabled').checked);diagnostics.togglePerformance();assert(!doc.getElementById('perf-enabled').checked);
     diagnostics.toggleDiagnostics();assert(!doc.getElementById('perf-enabled').checked);diagnostics.togglePerformance();assert(doc.getElementById('perf-enabled').checked);
     frame=diagnostics.beginFrame(3300,true);diagnostics.endFrame(frame,true,comparison,stats);assert(!overlay.hidden&&overlay.textContent.indexOf('PAUSED / 15 FPS CAP')===0);
@@ -865,6 +865,26 @@
     session.nextTarget();assert(combat.targetId!==combat.enemies[0].id && !combat.targetLocked);
     session.setCombat('training',false);session.nextTarget();session.toggleTargetLock();
     assert(session.snapshot().combat.targetId===null && !session.snapshot().combat.targetLocked);
+  });
+
+  test('session combat configuration survives reset and immediate or delayed combat spawning', function () {
+    var DW=window.Driftworks,session=DW.flightSession.create({});
+    var config={mode:'training',enabled:true,profile:DW.arcade.profiles[0]};
+    session.reset(config);session.setOpponentStyle('passer');session.configureHulls('','');
+    ['training','asteroid-patrol'].forEach(function(mode){
+      var player=session.snapshot().state,guns=session.snapshot().guns;
+      session.setCombat(mode,false);var view=session.setCombat(mode,true);
+      assert(view.state===player && view.guns===guns,'Combat toggle preserves the controlled sortie');
+      assert(view.combat.opponentStyle==='passer' && view.combat.hullModels.ally==='');
+      if(mode==='training')DW.training.spawn(view.combat,view.state,view.asteroid.radius);
+      assert(view.combat.enemies.length>0);
+      DW.training.participants(view.combat).forEach(function(craft){
+        assert(craft.collision.modelId==='blockout','Stored hull selection applies before spawn');
+        if(craft!==view.combat.player)assert(craft.opponentStyle==='passer');
+      });
+    });
+    var reset=session.reset(config);
+    assert(reset.combat.opponentStyle==='passer' && reset.combat.enemies.every(function(e){return e.opponentStyle==='passer' && e.collision.modelId==='blockout';}));
   });
 
   test('fresh flight views follow replacements without caller synchronization', function () {

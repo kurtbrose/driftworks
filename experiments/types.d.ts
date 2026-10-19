@@ -784,6 +784,7 @@ export type ExperimentModules = {
             endFrame: (frame: Frame, paused: boolean, comparison: Comparison, readStats: () => RenderStats) => void;
             settings: () => Comparison;
             reset: () => void;
+            resetSimulationClock: () => void;
             toggleDiagnostics: () => void;
             togglePerformance: () => void;
         };

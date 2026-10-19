@@ -110,15 +110,24 @@
         DW.audio.setFlightEngine(0, 0, false, false);
         controls.clear();
     }
+    function updateStatus() {
+        var current = view();
+        status.textContent = watch && watch.summary().done ? 'Duel complete · Replay duel or choose another pilot' :
+            !watch && current.combat.dead ? 'Training over · Restart training to try again' :
+            paused ? (watch ? 'AI duel paused · use the watch panel to resume' : 'Paused - Resume flight when ready') :
+            watch ? 'Watching test pilot · Esc pauses' : current.contact ? 'Surface contact · throttle cut' :
+            document.pointerLockElement === host ? 'Mouse captured · Esc pauses & releases' : 'Flight controls active';
+    }
     function pause() {
         paused = true;
+        diagnostics.resetSimulationClock();
         comms.pause();
         document.body.classList.remove('flight-active');
         clear();
         controls.release();
         document.body.classList.remove('mouse-captured');
         get('fly').textContent = watch ? (watch.summary().done ? 'Restart duel' : 'Watch duel') : session.snapshot().combat.dead ? 'Restart flight' : 'Resume flight';
-        status.textContent = watch ? 'AI duel paused · use the watch panel to resume' : 'Paused - Resume flight when ready';
+        updateStatus();
     }
     function pose() {
         var current = view();
@@ -126,6 +135,7 @@
     }
     function reset() {
         clear();
+        diagnostics.resetSimulationClock();
         comms.reset();
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
@@ -211,18 +221,19 @@
     }
     function resume() {
         if (!watch && session.snapshot().combat.dead) {
-            status.textContent = 'Training over · Restart training to fly again';
+            updateStatus();
             return;
         }
         DW.audio.unlock();
         comms.unlock();
         clear();
         controls.resetButtons();
+        diagnostics.resetSimulationClock();
         paused = false;
         document.body.classList.add('flight-active');
         blurActiveControl();
-        status.textContent = 'Flight controls active · Esc pauses';
-        if (watch) { status.textContent = 'Watching test pilot · Esc pauses'; updateWatch(); }
+        updateStatus();
+        if (watch) updateWatch();
     }
     /** @param {unknown} [error] */
     function captureFailure(error) {
@@ -300,10 +311,9 @@
             if (!watch) controls.haptics(elapsed, {boost: !after.contact && !after.combat.dead && !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
             if (!watch && after.combat.dead) {
                 pause();
-                status.textContent = 'Training over · Restart training to try again';
             }
             pose();
-            status.textContent = watch ? (watch.summary().done ? 'Duel complete · Replay duel or choose another pilot' : 'Watching test pilot · Esc pauses') : after.contact ? 'Surface contact · throttle cut' : document.pointerLockElement === host ? 'Mouse captured · Esc pauses & releases' : 'Flight controls active';
+            updateStatus();
         }
         var currentView = view();
         if (!paused && !watch) session.acquireTarget();

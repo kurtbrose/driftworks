@@ -461,8 +461,10 @@ units; copies the eye, stops velocity, clears contact/fractional time and zeros
 the scenery clock), `setOpponentStyle`, `configureHulls`, `acquireTarget`,
 `toggleTargetLock` and `nextTarget`. Diameter edits are followed by sortie reset;
 style/hull selections apply to the current combat and its subsequent waves.
-Reset and combat replacement retain their existing defaults; the composition
-root reapplies UI selections. Hull configuration is allowed while paused and
+Opponent style and hull selection belong to the session and survive sortie
+reset and combat replacement; replacement combat receives them before spawning.
+The composition root updates these settings when UI choices change.
+Hull configuration is allowed while paused and
 shares the training collision/muzzle rules. Renderers and HUDs observe these
 choices rather than selecting simulation geometry.
 
@@ -858,6 +860,14 @@ reset and combat-toggle callers do not synchronize local copies. `advance` execu
 and surface-contact order. Death finishes gun/audio processing and stops before
 contact. Terrain/hull/surface queries and audio notifications are injected.
 The browser loop owns pause, input, elapsed-world time and comms scheduling.
+Pause/resume and sortie reset clear the diagnostics adapter's simulation timing
+baseline; the first active frame advances zero seconds. Performance intervals
+and measurement resets are independent of this simulation baseline. Status text
+uses one resolver for death/completion, pause and active-flight/contact states,
+so later frame work cannot overwrite a terminal message. The Node suite also
+executes `flight.js` in an isolated browser-resource fixture, driving actual UI
+callbacks and queued animation frames with real session, diagnostics and duel
+implementations (`tests/flight-transitions.cjs`).
 
 Flight-AI validation keeps three policies distinct: existing `training.js`
 opponents shape the player experience; `experiments/flight-ai.js` provides a

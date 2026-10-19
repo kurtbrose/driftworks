@@ -21,6 +21,7 @@ for (const file of ['src/propulsion.js', 'src/combat.js', 'src/mining-lights.js'
   vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: file });
 }
 console.log(summary.textContent);
+require('./flight-transitions.cjs')(global.Driftworks);
 const path = require('node:path');
 const scenarioDir = path.join(__dirname, 'scenarios');
 failures += require('./scenarios.cjs').runFiles(fs.readdirSync(scenarioDir).filter(file => file.endsWith('.json')).sort().map(file => path.join(scenarioDir, file)));

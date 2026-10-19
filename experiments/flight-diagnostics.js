@@ -12,6 +12,8 @@
         var document = environment.document, clock = environment.performance;
         var get = DW.experimentDom(document);
         var performanceTools = DW.flightPerformance, pace = performanceTools.pacer(), measurements = performanceTools.create(), lastStatsUpdate = 0, previous = 0;
+        var simulationPrevious = /** @type {number | null} */ (null);
+        function resetSimulationClock() { simulationPrevious = null; }
         function settings() {
             return { mode: get('render-mode').value, flat: get('flat-materials').checked, scale: Number(get('render-scale').value), mothership: get('draw-mothership').checked, actors: get('draw-enemies').checked };
         }
@@ -31,7 +33,9 @@
             if (!performanceTools.due(pace, t, limit))
                 return null;
             var started = clock.now();
-            var actualElapsed = previous ? (t - previous) / 1000 : 0, elapsed = Math.min(.1, actualElapsed);
+            var actualElapsed = previous ? (t - previous) / 1000 : 0;
+            var elapsed = paused || simulationPrevious === null ? 0 : Math.min(.1, (t - simulationPrevious) / 1000);
+            simulationPrevious = paused ? null : t;
             previous = t;
             return { t: t, cap: cap, started: started, actualElapsed: actualElapsed, elapsed: elapsed };
         }
@@ -62,7 +66,7 @@
             var toggle = get('perf-enabled');
             toggle.checked = !toggle.checked;
         }
-        return { beginFrame: beginFrame, endFrame: endFrame, settings: settings, reset: resetMeasurements, toggleDiagnostics: toggleDiagnostics, togglePerformance: togglePerformance };
+        return { beginFrame: beginFrame, endFrame: endFrame, settings: settings, reset: resetMeasurements, resetSimulationClock: resetSimulationClock, toggleDiagnostics: toggleDiagnostics, togglePerformance: togglePerformance };
     }
     DW.flightDiagnostics = { mount: mount };
 }());

@@ -47,6 +47,12 @@
         combat.useHullModels = true;
         DW.training.bindPlayer(combat, state).guns = guns;
         var activeProfile = model.profiles[0], remainder = 0;
+        var opponentStyle = /** @type {import('./types').OpponentStyle} */ ('baseline');
+        var hulls = /** @type {{ally: string; enemy: string} | null} */ (null);
+        function configureCombat() {
+            combat.opponentStyle = opponentStyle;
+            if (hulls) DW.training.configureHulls(combat, hulls.ally, hulls.enemy);
+        }
         // A short-lived view of session-owned objects, not a detached copy.
         // Read again after transitions that may replace state, combat, guns or world.
         /** @returns {Snapshot} */
@@ -73,12 +79,16 @@
         }
         /** @param {import('./types').OpponentStyle} style */
         function setOpponentStyle(style) {
+            opponentStyle = style;
             combat.opponentStyle = style;
             combat.enemies.forEach(function (enemy) { enemy.opponentStyle = style; });
         }
         /** Collision and muzzle selection are gameplay configuration, even when paused.
          * @param {string} ally @param {string} enemy */
-        function configureHulls(ally, enemy) { DW.training.configureHulls(combat, ally, enemy); }
+        function configureHulls(ally, enemy) {
+            hulls = { ally: ally, enemy: enemy };
+            DW.training.configureHulls(combat, ally, enemy);
+        }
         function acquireTarget() { DW.training.acquireTarget(combat, state); }
         function toggleTargetLock() { acquireTarget(); DW.training.toggleTargetLock(combat); }
         function nextTarget() { DW.training.cycle(combat); }
@@ -94,6 +104,7 @@
             combat.useHullModels = true;
             DW.training.bindPlayer(combat, state).guns = guns;
             DW.training.configure(combat, activeProfile);
+            configureCombat();
             combat.enabled = enabled;
             if (!enabled) {
                 combat.enemies = [];
@@ -116,6 +127,7 @@
             contact = false;
             grounded = false;
             remainder = 0;
+            configureCombat();
             if (combat.enabled)
                 DW.training.spawn(combat, state, asteroid.radius);
             return snapshot();
