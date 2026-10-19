@@ -21,6 +21,60 @@
     assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
   }
 
+  test('Selected offscreen bearing has a large filled edge arrow and a fixed central double chevron', function () {
+    var translations=[],rotations=[],widths=[],points=[],fills=0,depth=0;
+    var ctx={save:function(){depth++;},restore:function(){depth--;},translate:function(x,y){translations.push([x,y]);},
+      rotate:function(a){rotations.push(a);},beginPath:function(){},closePath:function(){},
+      moveTo:function(x,y){points.push([x,y]);},lineTo:function(x,y){points.push([x,y]);},
+      stroke:function(){widths.push(this.lineWidth);},fill:function(){fills++;}};
+    var paint=window.Driftworks.flightHud.paintTargetBearing;
+    paint(ctx,1000,800,0);
+    assertClose(translations[0][0],940);assertClose(translations[0][1],400);
+    assertClose(translations[1][0],576);assertClose(translations[1][1],400);
+    assert(fills===1&&points.some(function(p){return p[0]===20;}),'Selected edge arrow is filled and larger than ordinary eight-pixel arrows');
+    assert(widths.join(',')==='4,7,3'&&depth===0,'Dark outlines improve contrast and canvas state is restored');
+    translations=[];paint(ctx,1000,800,Math.PI/2);
+    assertClose(translations[0][0],500);assertClose(translations[0][1],672);
+    assertClose(translations[1][0],500);assertClose(translations[1][1],476);
+    translations=[];paint(ctx,1000,800,Math.PI);
+    assertClose(translations[0][0],60);assertClose(translations[1][0],424);
+    assertClose(rotations[rotations.length-1],Math.PI);
+  });
+
+  test('Target status trails, collapse flash, switching and rewind', function () {
+    var update = window.Driftworks.flightHud.targetStatus;
+    var fills = [];
+    var context = {save: function () {}, restore: function () {},
+      fillRect: function (x, y, width, height) { fills.push({x:x,y:y,width:width,height:height}); }};
+    window.Driftworks.flightHud.paintTargetStatus(context, 50, 60, {
+      shield: .5, hull: .8, shieldTrail: 1, hullTrail: 1, shieldAge: .1, hullAge: .1, flash: 0
+    });
+    assert(fills.some(function (r) { return r.x === 25 && r.y === 99 && r.width === 25 && r.height === 4; }), 'Shield fill reflects half health');
+    assert(fills.some(function (r) { return r.x === 25 && r.y === 107 && r.width === 40 && r.height === 4; }), 'Hull fill reflects eighty percent health');
+    assert(fills.every(function (r) { return r.y >= 97; }), 'Meters stay below the target and range label');
+
+    var target = {id: 'a', shield: 100, maxShield: 100, hp: 100, maxHp: 100};
+    var state = update(null, target, 0);
+    target.shield = 0; target.hp = 60;
+    state = update(state, target, .1);
+    assertClose(state.shieldTrail, 1);
+    assertClose(state.hullTrail, 1);
+    assertClose(state.flash, .22);
+    state = update(state, target, .35);
+    assertClose(state.flash, 0);
+    state = update(state, target, .61);
+    assertClose(state.shieldTrail, 0);
+    assertClose(state.hullTrail, .6);
+    assertClose(state.flash, 0);
+    target.id = 'b';
+    state = update(state, target, .7);
+    assertClose(state.hullTrail, .6);
+    assertClose(state.flash, 0);
+    assert(update(state, undefined, .8) === null);
+    state = update(state, target, 0);
+    assertClose(state.time, 0);
+  });
+
   test('operational tether spin limits tip load to 1-3 g at every span', function () {
     [100,50,20,10,2].forEach(function(km) {
       ['1g','2g','3g'].forEach(function(mode,index) {
@@ -4693,4 +4747,3 @@
     summary.textContent = failed === 0 ? 'All ' + passed + ' browser-native tests passed.' : failed + ' of ' + tests.length + ' browser-native tests failed.';
   }
 })();
-

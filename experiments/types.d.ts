@@ -1,3 +1,4 @@
+export type TargetStatus = {id: string; shield: number; hull: number; shieldTrail: number; hullTrail: number; shieldAge: number; hullAge: number; flash: number; time: number};
 import type { Asteroid, Ship, World, DriftworksNamespace } from '../src/types';
 /** Scene-space positions; velocities and engine targets are metres per second. */
 export type Vector = number[];
@@ -785,6 +786,9 @@ export type ExperimentModules = {
         };
     };
     flightHud: {
+        paintTargetBearing: (ctx: CanvasRenderingContext2D, w: number, h: number, angle: number) => void;
+        targetStatus: (previous: TargetStatus | null, target: {id: string; shield?: number; maxShield?: number; hp: number; maxHp: number} | undefined, time: number) => TargetStatus | null;
+        paintTargetStatus: (ctx: CanvasRenderingContext2D, x: number, y: number, status: TargetStatus) => void;
         mount: (host: HTMLElement) => {
             render: (view: HudView) => void;
             cycleRadarRange: () => void;
@@ -936,6 +940,7 @@ export type Elements = {
     'target-camera': HTMLElement;
     'target-detail': HTMLElement;
     'target-hull': HTMLMeterElement;
+    'target-shield': HTMLMeterElement;
     'target-info': HTMLElement;
     'target-label': HTMLElement;
     'telemetry': HTMLElement;
