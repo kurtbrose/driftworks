@@ -111,3 +111,12 @@ original artist payload, shared source geometry across comparison copies, and
 comparison mode persistence. Six distinct operation identifiers and flush-paint
 geometry are also checked. Browser inspection covers curved plates, diagnostic
 colors, source/treated comparison and controls. Run `npm run check`.
+
+## Depth and decals
+
+The perspective depth range is 0.2 to 100 display units. Paint coats and chart
+colors keep the exact source surface, with separate polygon-offset render passes
+for base paint and markings. These decal passes cull backfaces and retain depth
+testing against the scene. Raised armor uses unbiased depth testing. This avoids
+normal-offset seams and competing near-coplanar shells, while preserving real
+occlusion. The depth coefficients and ordered paint passes have regressions.

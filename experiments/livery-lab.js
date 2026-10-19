@@ -1,3 +1,4 @@
+import {perspectiveDepth} from './livery-depth.js';
 import {analyzeHull,buildHullPanels} from './hull-panels.js';
 import {fighterHull, fleetHull} from './livery-fixtures.js';
 const DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
@@ -8,8 +9,8 @@ const context=canvas.getContext('webgl',{antialias:true});
 if(!context)throw Error('WebGL is required for the livery lab');
 const gl=context;
 gl.getExtension('OES_standard_derivatives');
-const vertex=`attribute vec3 position,normal;attribute vec2 texcoord;varying vec2 sourceUV;attribute vec4 protectedColor;varying vec4 protection;uniform vec3 right,up,back;uniform vec3 origin;uniform float aspect,distance;varying vec3 p,n;
-void main(){sourceUV=texcoord;protection=protectedColor;p=position;n=normal;vec3 q=vec3(dot(p+origin,right),dot(p+origin,up),distance-dot(p+origin,back));gl_Position=vec4(q.x*2.414/aspect,q.y*2.414,q.z*.999-.02,q.z);}`;
+const vertex=`attribute vec3 position,normal;attribute vec2 texcoord;varying vec2 sourceUV;attribute vec4 protectedColor;varying vec4 protection;uniform vec3 right,up,back;uniform vec3 origin;uniform float aspect,distance;uniform vec2 depthProjection;varying vec3 p,n;
+void main(){sourceUV=texcoord;protection=protectedColor;p=position;n=normal;vec3 q=vec3(dot(p+origin,right),dot(p+origin,up),distance-dot(p+origin,back));gl_Position=vec4(q.x*2.414/aspect,q.y*2.414,q.z*depthProjection.x-depthProjection.y,q.z);}`;
 const fragment=`precision highp float;
 uniform sampler2D sourceTexture;uniform float hasTexture,sourceBlend,grammar,wear,split,useMasks,monochrome;uniform vec3 primary,secondary,accent,eye;
 varying vec2 sourceUV;varying vec4 protection;varying vec3 p,n;
@@ -32,6 +33,8 @@ void main(){
 function shader(type,source){const s=gl.createShader(type);if(!s)throw Error('Shader allocation');gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s)||'Shader compilation');return s;}
 const program=gl.createProgram();if(!program)throw Error('Program allocation');
 gl.attachShader(program,shader(gl.VERTEX_SHADER,vertex));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program)||'Shader link');gl.useProgram(program);
+// All subjects fit inside 100 display units, including the maximum zoom-out.
+gl.uniform2fv(gl.getUniformLocation(program,'depthProjection'),perspectiveDepth(.2,100));
 const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
 ['position','normal'].forEach((name,i)=>{const loc=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,48,i*12);});
 const protectionLocation=gl.getAttribLocation(program,'protectedColor');gl.enableVertexAttribArray(protectionLocation);gl.vertexAttribPointer(protectionLocation,4,gl.FLOAT,false,48,24);
@@ -43,7 +46,7 @@ function scalar(name,value){gl.uniform1f(uniform(name),value);}
 /** @param {string} name @param {number[]} value */
 function vector(name,value){gl.uniform3fv(uniform(name),value);}
 const sky=DW.flightSkybox.create(control('viewer'));
-/** @type {{start:number,count:number,origin:number[],label:HTMLDivElement|null,texture:WebGLTexture|null,style:number|null}[]} */
+/** @type {{start:number,count:number,origin:number[],label:HTMLDivElement|null,texture:WebGLTexture|null,style:number|null,passes:{start:number,count:number,bias:number}[]}[]} */
 let actors=[];
 let count=0,yaw=.22,tilt=.75,distance=28,assemblySeed=1;
 const artistModels=(DW.shipPacks||[]).flatMap(pack=>pack.models).filter(model=>model.texturedVertices);
@@ -117,12 +120,19 @@ function rebuild(){
   totalSkipped+=structure.skipped;
   totalRegions+=structure.regions;totalPlates+=structure.plates;totalDetails+=structure.details;
   batches.forEach(b=>{for(let i=0;i<b.vertices.length;i+=(b.stride||6)){data.push(...b.vertices.slice(i,i+6));const color=b.color||[.5,.5,.5],protect=b.opacity!==undefined||['mechanical','structural','marking','cockpit'].includes(b.role||'')||Math.max(...color)<.31;data.push(...color,protect?1:0,b.stride===8?b.vertices[i+6]:0,b.stride===8?b.vertices[i+7]:0);}});
+  const passes=[{start,count:data.length/12-start,bias:0}];
   const generated=matrix?(index===7?structure.diagnostics:index===0?[]:structure.panels):control('regions').checked?structure.diagnostics:structure.panels;
-  generated.forEach(batch=>{for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...batch.paint,batch.diagnostic?3:2,batch.vertices[i+6],batch.vertices[i+7]);});
+  // Group decals by coat so paint and markings have stable, separate depth
+  // layers. Real armor geometry keeps ordinary depth testing and occlusion.
+  for(const bias of [0,1,2]){
+   const layerStart=data.length/12;
+   generated.filter(batch=>(batch.decalLayer||0)===bias).forEach(batch=>{for(let i=0;i<batch.vertices.length;i+=8)data.push(...batch.vertices.slice(i,i+6),...batch.paint,batch.diagnostic?3:2,batch.vertices[i+6],batch.vertices[i+7]);});
+   const count=data.length/12-layerStart;if(count)passes.push({start:layerStart,count,bias});
+  }
   const origin=hangar||matrix?[(index%columns-(columns-1)/2)*3.1,(Math.floor(index/columns)-(rows-1)/2)*3.6,1.15]:[0,0,0];
   const label=hangar||matrix?document.createElement('div'):null;
   if(label){label.className='hull-label';label.textContent=matrix?treatmentNames[index]+(index===0?' / source':index===7?' / '+structure.regions+' charts':' / '+structure.plates+' pieces'):(/^[A-E]$/.test(subject)?'Barracuda '+subject:artistModels.find(model=>model.id===subject)?.name||subject)+' / '+extent.toFixed(1)+' m';control('labels').append(label);}
-  actors.push({start,count:data.length/12-start,origin,label,texture:textureFor(batches[0].texture),style:matrix?style:null});
+  actors.push({start,count:data.length/12-start,origin,label,texture:textureFor(batches[0].texture),style:matrix?style:null,passes});
   if(!hangar&&!matrix){const select=/** @type {HTMLSelectElement} */(document.getElementById('subject'));control('caption').textContent=select.selectedOptions[0].textContent+' / '+extent.toFixed(1)+' m / '+((data.length/12-start)/3).toLocaleString()+' triangles';}
  });
  if(hangar||matrix){
@@ -133,7 +143,7 @@ function rebuild(){
   [-1,1].forEach(sign=>{mesh.block('rail',[sign*(halfX-.1),0,0],[.06,halfY,.08]);[-halfY,halfY].forEach(y=>{mesh.block('deck',[sign*(halfX-.1),y,2],[.16,.16,2.2]);});});
   const start=data.length/12;
   Object.entries(groups).forEach(([key,vertices])=>{for(let i=0;i<vertices.length;i+=6){data.push(...vertices.slice(i,i+6),...(key==='deck'?[.08,.12,.15]:[.21,.27,.29]),1,0,0);}});
-  actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null,style:null});
+  actors.push({start,count:data.length/12-start,origin:[0,0,0],label:null,texture:null,style:null,passes:[{start,count:data.length/12-start,bias:0}]});
   control('caption').textContent=subjects.length+' HULLS / SHARED TREATMENT / DISPLAY SIZES NORMALIZED';
  }
  if(matrix)control('caption').textContent=(artistModels.find(m=>m.id===control('subject').value)?.name||control('subject').value)+' / ONE HULL, SIX CONSTRUCTION RULES';
@@ -168,7 +178,14 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  sky.render({eye:[0,0,0],right:[c,s,0],up:[s*ct,-c*ct,st],back},1,!control('sky').checked);vector('right',[c,s,0]);vector('up',[s*ct,-c*ct,st]);vector('back',back);vector('eye',back.map(v=>v*distance));scalar('aspect',w/h);scalar('distance',distance);
  ['primary','secondary','accent'].forEach(id=>{const hex=control(id).value;vector(id,[1,3,5].map(k=>parseInt(hex.slice(k,k+2),16)/255));});
  scalar('monochrome',control('monochrome').checked?1:0);scalar('useMasks',control('masks').checked?1:0);scalar('grammar',Number(control('grammar').value));scalar('wear',Number(control('wear').value)/100);scalar('split',control('layout').value!=='matrix'&&control('compare').checked?w/2:0);scalar('sourceBlend',Number(control('source-blend').value)/100);gl.uniform1i(uniform('sourceTexture'),0);actors.forEach(actor=>{
-  scalar('grammar',actor.style===null?Number(control('grammar').value):actor.style);gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);gl.drawArrays(gl.TRIANGLES,actor.start,actor.count);
+  scalar('grammar',actor.style===null?Number(control('grammar').value):actor.style);gl.bindTexture(gl.TEXTURE_2D,actor.texture);scalar('hasTexture',actor.texture?1:0);vector('origin',actor.origin);
+  actor.passes.forEach(pass=>{
+   if(pass.bias){// This viewer's right/up/back basis projects outward faces clockwise.
+    gl.enable(gl.POLYGON_OFFSET_FILL);gl.frontFace(gl.CW);gl.enable(gl.CULL_FACE);gl.polygonOffset(-pass.bias,-2*pass.bias);}
+   else{gl.disable(gl.POLYGON_OFFSET_FILL);gl.disable(gl.CULL_FACE);}
+   gl.drawArrays(gl.TRIANGLES,pass.start,pass.count);
+  });
+  gl.disable(gl.POLYGON_OFFSET_FILL);gl.disable(gl.CULL_FACE);
   if(actor.label){const o=actor.origin,x=o[0]*c+o[1]*s,y=o[0]*s*ct-o[1]*c*ct+(o[2]-1.25)*st,z=distance-(o[0]*back[0]+o[1]*back[1]+(o[2]-1.25)*back[2]);actor.label.style.left=(.5+x*2.414/(w/h)/z*.5)*100+'%';actor.label.style.top=(.5-y*2.414/z*.5)*100+'%';actor.label.hidden=z<=0;}
  });
 }

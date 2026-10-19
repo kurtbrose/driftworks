@@ -7,15 +7,17 @@ const read=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const DW={};
 const controls=new Map();
 const defaults={layout:'solo',subject:'A',grammar:'1',scale:'2',relief:'55',wear:'20',seed:'17',primary:'#c5cec9',secondary:'#38474d',accent:'#ee912e'};
-let uploaded=new Float32Array(),uploads=0;
+let uploaded=new Float32Array(),uploads=0;const depthBiases=[],depthCoefficients=[],frontFaces=[];
 const gl=new Proxy({
  createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:()=>({}),getExtension:()=>({}),
+ CW:2304,frontFace:value=>frontFaces.push(value),
+ polygonOffset:(factor,units)=>depthBiases.push([factor,units]),uniform2fv:(location,values)=>depthCoefficients.push(Array.from(values)),
  bufferData:(target,data)=>{uploaded=data;uploads++;}
 },{get:(target,key)=>key in target?target[key]:()=>{}});
 const canvas={getContext:()=>gl,addEventListener:()=>{},clientWidth:900,clientHeight:700};
 for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
 DW.flightSkybox={create:()=>({render:()=>{}})};
-const sandbox={window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
+const sandbox={devicePixelRatio:1,window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
 vm.createContext(sandbox);
 vm.runInContext(read('src/mesh-builder.js'),sandbox);
 vm.runInContext(read('assets/ships/quaternius-ultimate-spaceships/meshes.js'),sandbox);
@@ -29,6 +31,7 @@ vm.runInContext('(function(){'+fixture+';window.fighterHull=fighterHull;window.f
 sandbox.fighterHull=sandbox.window.fighterHull;sandbox.fleetHull=sandbox.window.fleetHull;
 vm.runInContext('(function(){'+read('experiments/hull-panels.js').replaceAll('export function','function')+';window.analyzeHull=analyzeHull;window.buildHullPanels=buildHullPanels;})();',sandbox);
 sandbox.analyzeHull=sandbox.window.analyzeHull;sandbox.buildHullPanels=sandbox.window.buildHullPanels;
+vm.runInContext(read('experiments/livery-depth.js').replaceAll('export function','function'),sandbox);
 const lab=read('experiments/livery-lab.js').replace(/^import .*;\r?\n/gm,'');
 vm.runInContext(lab,sandbox);
 for(const subject of ['cube','sphere','cylinder','random','A','B','C','D','E','fighter','carrier','patrol','escort','tug','mothership',...DW.shipPacks.flatMap(pack=>pack.models.map(model=>model.id))]){
@@ -55,4 +58,8 @@ const firstSource=uploaded.slice(ranges[0].start*12,(ranges[0].start+sourceCount
 for(const actor of ranges)assert.deepEqual(uploaded.slice(actor.start*12,(actor.start+sourceCount)*12),firstSource,'Every comparison uses identical source vertices, UVs and normals');
 controls.get('subject').value='sphere';controls.get('subject').onchange();assert.equal(controls.get('layout').value,'matrix','Changing subject preserves comparison mode');
 assert.equal(controls.get('grammar').disabled,true,'Comparison owns each individual grammar');
+controls.get('layout').value='solo';controls.get('layout').onchange();controls.get('grammar').value='5';controls.get('grammar').oninput();vm.runInContext('frame(16)',sandbox);
+assert(frontFaces.length>=2&&frontFaces.every(value=>value===2304),'Decal culling matches the viewer clockwise projection');
+assert.deepEqual(depthBiases,[[-1,-2],[-2,-4]],'Base paint and markings receive distinct ordered decal passes');
+assert.equal(depthCoefficients.length,1,'Camera depth range initialized explicitly');const [depthA,depthB]=depthCoefficients[0];assert(Math.abs((depthA*.2-depthB)/.2+1)<1e-10,'Near plane maps to near clip');assert(Math.abs((depthA*100-depthB)/100-1)<1e-10,'Far plane maps to far clip');assert(depthB>.02*19,'Hangar depth precision improves by at least 19x over the tiny-near-plane projection');
 console.log('PASS livery lab: all subjects, finite fitted geometry, independent treatments and deterministic assemblies');

@@ -3,7 +3,7 @@
 /** @typedef {{vertices:Float32Array,stride?:number,color?:number[],opacity?:number,texture?:HTMLImageElement,role?:string,eligible?:(uv:number[])=>boolean}} HullBatch */
 /** @typedef {{v:V[],normal:V,area:number,neighbors:number[]}} Face */
 /** @typedef {{faces:Face[],normal:V,u:V,v:V,area:number,id:number}} Region */
-/** @typedef {{vertices:Float32Array,paint:V,diagnostic?:boolean}} PanelBatch */
+/** @typedef {{vertices:Float32Array,paint:V,diagnostic?:boolean,decalLayer?:number}} PanelBatch */
 /** @param {V} a @param {V} b */
 function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
 /** @param {V} a @param {V} b */
@@ -70,7 +70,7 @@ export function analyzeHull(batches,assisted=false){
     /** @type {Face[]} */const chart=[];
     component.forEach(face=>{
      let poly=face.v;
-     for(const other of directions){if(other===direction)continue;poly=clipNormal(poly,sub(direction,other));if(poly.length<3)break;}
+     for(const other of directions){if(other===direction)continue;poly=clipNormal(poly,sub(direction,other),directions.indexOf(direction)<directions.indexOf(other));if(poly.length<3)break;}
      for(let j=1;j<poly.length-1;j++){const v=[poly[0],poly[j],poly[j+1]],area=Math.hypot(...cross(sub(v[1],v[0]),sub(v[2],v[0])))*.5;if(area>1e-10)chart.push({v,normal:face.normal,area,neighbors:[]});}
     });
     connected(chart).forEach(region);
@@ -80,8 +80,10 @@ export function analyzeHull(batches,assisted=false){
  return regions;
 }
 
-/** @param {V[]} poly @param {V} axis */
-function clipNormal(poly,axis){
+/** @param {V[]} poly @param {V} axis @param {boolean} [keepTies] */
+function clipNormal(poly,axis,keepTies=true){
+ // A whole flat face on an atlas boundary belongs to one chart, not both.
+ if(!keepTies&&poly.every(p=>Math.abs(dot(p.slice(3,6),axis))<1e-8))return [];
  /** @type {V[]} */const out=[];
  for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=dot(a.slice(3,6),axis),db=dot(b.slice(3,6),axis);if(da>=-1e-8)out.push(a);if((da>1e-8&&db< -1e-8)||(da< -1e-8&&db>1e-8)){const t=da/(da-db);out.push(a.map((v,k)=>v+(b[k]-v)*t));}}
  return out;
@@ -217,7 +219,9 @@ function thermalGrammar(ctx){
 /** @param {GrammarContext} ctx @returns {GrammarOutput} */
 function paintedGrammar(ctx){
  const {polygons,region}=ctx,[a,b]=limits(polygons,region.u),offset=.18+random(region.id,ctx.seed)*.35;
- return {batches:[{vertices:flush(polygons,.0008),paint:[1,0,0]},{vertices:flush(band(polygons,region.u,a+(b-a)*offset,a+(b-a)*(offset+.16)),.0011),paint:[0,0,1]}],pieces:0,operation:'flush-paint-zones'};
+ // Paint is a decal, not a second shell displaced along smoothing normals.
+ // The renderer assigns independent depth biases to base paint and markings.
+ return {batches:[{vertices:flush(polygons,0),paint:[1,0,0],decalLayer:1},{vertices:flush(band(polygons,region.u,a+(b-a)*offset,a+(b-a)*(offset+.16)),0),paint:[0,0,1],decalLayer:2}],pieces:0,operation:'flush-paint-zones'};
 }
 /** @param {GrammarContext} ctx @returns {GrammarOutput} */
 function facetedGrammar(ctx){
@@ -244,8 +248,8 @@ export function buildHullPanels(batches,settings){
  const grammars=[cleanGrammar,layeredGrammar,industrialGrammar,thermalGrammar,paintedGrammar,facetedGrammar];
  let operation='none';
  regions.forEach(region=>{
-  const diagnostic=/** @type {number[]} */([]);region.faces.forEach(f=>triangle(diagnostic,.../** @type {[V,V,V]} */(f.v.map(p=>raised(p,unit(p.slice(3,6)),.001)))));
-  diagnostics.push({vertices:new Float32Array(diagnostic),paint:[.3+random(region.id,3)*.65,.3+random(region.id,5)*.65,.3+random(region.id,7)*.65],diagnostic:true});
+  const diagnostic=/** @type {number[]} */([]);region.faces.forEach(f=>triangle(diagnostic,.../** @type {[V,V,V]} */(f.v)));
+  diagnostics.push({vertices:new Float32Array(diagnostic),paint:[.3+random(region.id,3)*.65,.3+random(region.id,5)*.65,.3+random(region.id,7)*.65],diagnostic:true,decalLayer:1});
   if(!eligible.has(region.id))return;
   const polygons=region.faces.map(f=>f.v),out=grammars[style-1]({polygons,region,divisions:Math.max(1,Math.min(4,settings.divisions)),relief:Math.max(0,Math.min(1,settings.relief)),seed:settings.seed,axis,extent});
   panels.push(...out.batches.filter(b=>b.vertices.length));plateCount+=out.batches.filter(b=>b.vertices.length).length;detailCount+=out.pieces;operation=out.operation;

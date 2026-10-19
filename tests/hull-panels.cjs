@@ -58,5 +58,11 @@ assert(variants[1].panels.length>variants[0].panels.length,'Layered grammar reta
 assert(variants[2].details>0,'Industrial grammar emits structural pieces');
 assert(variants[3].panels[0].vertices.length>variants[0].panels[0].vertices.length,'Blankets carry actual subdivided padding geometry');
 for(const batch of variants[4].panels)for(let i=0;i<batch.vertices.length;i+=8)assert(Math.max(...batch.vertices.slice(i,i+3).map(Math.abs))<1.002,'Paint grammar stays flush');
+for(const batch of variants[4].panels){assert([1,2].includes(batch.decalLayer),'Paint has explicit coat ordering');for(let i=0;i<batch.vertices.length;i+=8)assert(Math.abs(Math.max(...batch.vertices.slice(i,i+3).map(Math.abs))-1)<1e-6,'Paint stays on the source cube face, without a normal offset');}
 assert.equal(variants[5].operation,'planar-chine-reconstruction');
+// Flat facets exactly halfway between atlas axes must not be emitted twice.
+const tube=[];const segments=36,radius=.6;
+for(let i=0;i<segments;i++){const a=i*Math.PI*2/segments,b=(i+1)*Math.PI*2/segments,n=[Math.cos((a+b)/2),0,Math.sin((a+b)/2)],p=[radius*Math.cos(a),-1,radius*Math.sin(a)],q=[radius*Math.cos(b),-1,radius*Math.sin(b)],r=[radius*Math.cos(b),1,radius*Math.sin(b)],s=[radius*Math.cos(a),1,radius*Math.sin(a)];for(const point of [p,q,r,p,r,s])tube.push(...point,...n);}
+const tubeRegions=analyzeHull([{vertices:new Float32Array(tube)}]),tubeArea=tubeRegions.reduce((sum,region)=>sum+region.area,0),expectedArea=segments*2*radius*Math.sin(Math.PI/segments)*2;
+assert(Math.abs(tubeArea-expectedArea)<1e-5,'Normal atlas charts partition surface area without duplicate coplanar facets');
 console.log('PASS geometry-aware plates: adjacency, semantic exclusions, tessellation independence, concavity, holes, deterministic real geometry');
