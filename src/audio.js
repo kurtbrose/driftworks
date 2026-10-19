@@ -53,7 +53,7 @@
   /** @param {FlightMix} value @param {boolean} speech @param {boolean} hit */
   function mixLevels(value, speech, hit) {
     var talking = value.ducking && speech && value.comms > 0;
-    return {engine:value.engine * Math.min(talking?.38:1, value.ducking && hit?.3:1),
+    return {engine:value.engine * Math.min(talking?.38:1, value.ducking && hit && value.impacts > 0?.3:1),
       weapons:value.weapons * (talking?.6:1), impacts:value.impacts, comms:value.comms*.5};
   }
   function applyMix() {

@@ -673,6 +673,8 @@
     assert(hit.engine<speech.engine && hit.impacts===idle.impacts && hit.comms===idle.comms);
     var muted=api.mixLevels(Object.assign({},mix,{comms:0}),true,false);
     assert(muted.engine===idle.engine && muted.weapons===idle.weapons);
+    var silentHit=api.mixLevels(Object.assign({},mix,{impacts:0}),false,true);
+    assert(silentHit.engine===idle.engine);
     var off=api.mixLevels(Object.assign({},mix,{ducking:false}),true,true);
     assert(off.engine===idle.engine && off.weapons===idle.weapons);
     var repaired=api.normalizeMix({engine:NaN,weapons:4,impacts:-1,comms:Infinity});
