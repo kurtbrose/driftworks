@@ -10,6 +10,7 @@ assert.ok([builder,Buffer.from(builder.toString().replace(/\r\n/g,'\n')),Buffer.
 let originalBytes=0,packedBytes=0;
 for(const [name,expected] of Object.entries(manifest.sources)){const bytes=fs.readFileSync(path.join(root,name));assert.equal(hash(bytes),expected,`${name} changed: regenerate runtime portraits`);originalBytes+=bytes.length;}
 assert.equal(Object.keys(manifest.outputs).length,17);
+assert.equal(new Set(Object.values(manifest.outputs)).size,17,'Every callsign and Control must have distinct artwork');
 for(let i=0;i<17;i++){
   const name=`portrait-${i}.png`,bytes=fs.readFileSync(path.join(runtime,name));
   assert.equal(hash(bytes),manifest.outputs[name],`${name} differs from prepared output`);

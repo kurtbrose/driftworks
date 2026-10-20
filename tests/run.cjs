@@ -86,3 +86,5 @@ require('./concept-ships.cjs');
 require('./dreadnaught-kit.cjs');
 
 require('./aegis-flight.cjs');
+
+require('./hull-sweep-index.cjs');

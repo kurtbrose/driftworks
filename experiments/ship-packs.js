@@ -379,45 +379,47 @@
      * @param {Vector} a @param {Vector} d @param {Vector[]} tri @param {number} r
      * @returns {{fraction:number; local:Vector; normal:Vector} | null} */
     function boltTriangle(a, d, tri, r) {
-        var n = normal(tri[0],tri[1],tri[2]);
-        var best = /** @type {{fraction:number; local:Vector; normal:Vector} | null} */ (null);
-        /** @param {number} t @param {Vector} contact */
-        function accept(t, contact) {
-            if (t >= 0 && t <= 1 && (!best || t < best.fraction)) best = {fraction:t,local:contact,normal:n};
+        var p=tri[0],q=tri[1],v=tri[2];
+        var ex=q[0]-p[0],ey=q[1]-p[1],ez=q[2]-p[2],fx=v[0]-p[0],fy=v[1]-p[1],fz=v[2]-p[2];
+        var nx=ey*fz-ez*fy,ny=ez*fx-ex*fz,nz=ex*fy-ey*fx,length=Math.hypot(nx,ny,nz)||1;
+        nx/=length;ny/=length;nz/=length;
+        var ee=ex*ex+ey*ey+ez*ez,ef=ex*fx+ey*fy+ez*fz,ff=fx*fx+fy*fy+fz*fz,denom=ee*ff-ef*ef;
+        var ox=a[0]-p[0],oy=a[1]-p[1],oz=a[2]-p[2],height=ox*nx+oy*ny+oz*nz,speed=d[0]*nx+d[1]*ny+d[2]*nz;
+        var best=Infinity,bx=0,by=0,bz=0;
+        if(denom>1e-15)for(var face=0;face<2;face++){
+            var side=face?r:-r,t=Math.abs(height)<=r?0:Math.abs(speed)>1e-15?(side-height)/speed:-1;
+            if(t<0||t>1)continue;
+            var cx=a[0]+d[0]*t,cy=a[1]+d[1]*t,cz=a[2]+d[2]*t;
+            var h=(cx-p[0])*nx+(cy-p[1])*ny+(cz-p[2])*nz;
+            cx-=nx*h;cy-=ny*h;cz-=nz*h;
+            var vx=cx-p[0],vy=cy-p[1],vz=cz-p[2],ve=vx*ex+vy*ey+vz*ez,vf=vx*fx+vy*fy+vz*fz;
+            var u=(ve*ff-vf*ef)/denom,w=(vf*ee-ve*ef)/denom;
+            if(u>=-1e-9&&w>=-1e-9&&u+w<=1+1e-9&&t<best){best=t;bx=cx;by=cy;bz=cz;}
         }
-        /** First entry into a sphere/cylinder in a projected coordinate frame.
-         * @param {Vector} offset @param {Vector} motion @returns {number | null} */
-        function entry(offset, motion) {
-            var c=dot3(offset,offset)-r*r;
-            if(c<=0) return 0;
-            var aa=dot3(motion,motion), b=dot3(offset,motion), disc=b*b-aa*c;
-            if(aa<1e-15 || disc<0) return null;
-            var t=(-b-Math.sqrt(disc))/aa;
-            return t>=0 && t<=1 ? t : null;
+        var planeEntry=Math.abs(height)<=r?0:Math.abs(speed)>1e-15?((height>0?r:-r)-height)/speed:-1;
+        if(best!==planeEntry)for(var corner=0;corner<3;corner++){
+            var point=tri[corner],next=tri[(corner+1)%3];
+            var vertex=boltEntry(a[0]-point[0],a[1]-point[1],a[2]-point[2],d[0],d[1],d[2],r);
+            if(vertex!==null&&vertex<best){best=vertex;bx=point[0];by=point[1];bz=point[2];}
+            var dx=next[0]-point[0],dy=next[1]-point[1],dz=next[2]-point[2],edgeLength=dx*dx+dy*dy+dz*dz;
+            if(edgeLength<1e-15)continue;
+            var ax=a[0]-point[0],ay=a[1]-point[1],az=a[2]-point[2];
+            var along=(ax*dx+ay*dy+az*dz)/edgeLength,rate=(d[0]*dx+d[1]*dy+d[2]*dz)/edgeLength;
+            var edge=boltEntry(ax-dx*along,ay-dy*along,az-dz*along,d[0]-dx*rate,d[1]-dy*rate,d[2]-dz*rate,r);
+            if(edge===null)continue;
+            var distance=along+rate*edge;
+            if(distance>=0&&distance<=1&&edge<best){best=edge;bx=point[0]+dx*distance;by=point[1]+dy*distance;bz=point[2]+dz*distance;}
         }
-        var e=minus(tri[1],tri[0]), f=minus(tri[2],tri[0]);
-        var ee=dot3(e,e), ef=dot3(e,f), ff=dot3(f,f), denom=ee*ff-ef*ef;
-        var offset=minus(a,tri[0]), height=dot3(offset,n), speed=dot3(d,n);
-        if(denom>1e-15) [-r,r].forEach(function(side){
-            var t=Math.abs(height)<=r ? 0 : Math.abs(speed)>1e-15 ? (side-height)/speed : -1;
-            if(t<0 || t>1) return;
-            var center=a.map(function(x,j){return x+d[j]*t;}), h=dot3(minus(center,tri[0]),n);
-            var contact=center.map(function(x,j){return x-n[j]*h;}), v=minus(contact,tri[0]);
-            var ve=dot3(v,e), vf=dot3(v,f), u=(ve*ff-vf*ef)/denom, w=(vf*ee-ve*ef)/denom;
-            if(u>=-1e-9 && w>=-1e-9 && u+w<=1+1e-9) accept(t,contact);
-        });
-        tri.forEach(function(p,index){
-            var vertex=entry(minus(a,p),d);
-            if(vertex!==null) accept(vertex,p);
-            var edge=minus(tri[(index+1)%3],p), length=dot3(edge,edge);
-            if(length<1e-15) return;
-            var v=minus(a,p), along=dot3(v,edge)/length, rate=dot3(d,edge)/length;
-            var t=entry(v.map(function(x,j){return x-edge[j]*along;}),d.map(function(x,j){return x-edge[j]*rate;}));
-            if(t===null) return;
-            var u=along+rate*t;
-            if(u>=0 && u<=1) accept(t,p.map(function(x,j){return x+edge[j]*u;}));
-        });
-        return best;
+        return best===Infinity?null:{fraction:best,local:[bx,by,bz],normal:[nx,ny,nz]};
+    }
+    /** Scalar sphere/cylinder entry; avoids temporary vectors per triangle edge.
+     * @param {number} x @param {number} y @param {number} z
+     * @param {number} dx @param {number} dy @param {number} dz @param {number} r */
+    function boltEntry(x,y,z,dx,dy,dz,r){
+        var c=x*x+y*y+z*z-r*r;if(c<=0)return 0;
+        var aa=dx*dx+dy*dy+dz*dz,b=x*dx+y*dy+z*dz,disc=b*b-aa*c;
+        if(aa<1e-15||disc<0)return null;
+        var t=(-b-Math.sqrt(disc))/aa;return t>=0&&t<=1?t:null;
     }
     /** @type {WeakMap<Model, number>} */
     var hullBounds = new WeakMap();
@@ -527,7 +529,9 @@
         // Clip a small polygonal burn to nearby hull triangles. No floating quads,
         // back-side bleed, textures, or per-frame mesh projection.
         var v = hit.model.vertices;
-        for (var i = 0; i < v.length; i += 18) {
+        var offsets=hullCandidates(hit.model,center,[0,0,0],1.4).flatMap(function(leaf){return leaf.offsets;}).sort(function(a,b){return a-b;});
+        for (var triangleIndex=0;triangleIndex<offsets.length;triangleIndex++) {
+            var i=offsets[triangleIndex];
             var tri = [v.slice(i, i + 3), v.slice(i + 6, i + 9), v.slice(i + 12, i + 15)], face = normal(tri[0], tri[1], tri[2]);
             if (dot3(face, n) < .35 || [0, 1, 2].some(function (k) {
                 return Math.min(tri[0][k], tri[1][k], tri[2][k]) > center[k] + 1.4 || Math.max(tri[0][k], tri[1][k], tri[2][k]) < center[k] - 1.4;
@@ -593,6 +597,24 @@
             return { vertices: new Float32Array(data), color: [.22, .20, .17], opacity: [.10, .13, .16, .18, .12][i] };
         });
     }
+    /** @type {WeakMap<ArtCraft,{modelId:string,marks:import('./types').Scorch[],layers:Float32Array[]}>} */
+    var scorchBuffers=new WeakMap();
+    /** Immutable local burn meshes plus GPU pose, including drifting wrecks.
+     * @param {ArtCraft[]} craft @param {string} selection @param {number} wave @param {number} units @returns {Batch[]} */
+    function sourceScorchGeometry(craft,selection,wave,units){
+        return craft.flatMap(function(e){
+            var model=craftModel(e,selection,wave),marks=(e.scorches||[]).filter(function(mark){return mark.modelId===model.id;});
+            if(!marks.length)return [];
+            var cached=scorchBuffers.get(e);
+            if(!cached||cached.modelId!==model.id||cached.marks.length!==marks.length||marks.some(function(mark,i){return !cached||cached.marks[i]!==mark;})){
+                var layers=/** @type {number[][]} */([[],[],[],[],[]]);
+                marks.forEach(function(mark){mark.layers.forEach(function(source,i){layers[i].push.apply(layers[i],source);});});
+                cached={modelId:model.id,marks:marks,layers:layers.map(function(layer){return new Float32Array(layer);})};scorchBuffers.set(e,cached);
+            }
+            var pose=e.pose,basis=new Float32Array([pose.right[0],pose.right[1],pose.right[2],-pose.back[0],-pose.back[1],-pose.back[2],pose.up[0],pose.up[1],pose.up[2]]);
+            return cached.layers.map(function(vertices,i){return {vertices:vertices,color:/** @type {[number,number,number]} */([.22,.20,.17]),opacity:[.10,.13,.16,.18,.12][i],staticGeometry:true,origin:/** @type {[number,number,number]} */(pose.eye),scale:1/units,basis:basis};});
+        });
+    }
     /** @param {HTMLSelectElement} select @param {boolean} [blockout] */
     function populate(select, blockout) {
         if (blockout) {
@@ -617,5 +639,5 @@
     function paintColor(hex) {
         return /^#[0-9a-f]{6}$/i.test(hex) ? [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255] : undefined;
     }
-    DW.shipPackModels = { gunAnchors: gunAnchors, craftModel: craftModel, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
+    DW.shipPackModels = { gunAnchors: gunAnchors, craftModel: craftModel, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, sourceScorchGeometry: sourceScorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
 }());

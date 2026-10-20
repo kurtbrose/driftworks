@@ -715,6 +715,7 @@ export type ExperimentModules = {
         hullHit: (model: Model, pose: Pose, start: Vector, end: Vector, units: number, boltRadius?: number) => HullHit | null;
         addScorch: (craft: ArtCraft, hit: HullHit) => void;
         scorchGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number) => Batch[];
+        sourceScorchGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number) => Batch[];
         populate: (select: HTMLSelectElement, blockout?: boolean) => void;
         paintColor: (hex: string) => Vector | undefined;
     };

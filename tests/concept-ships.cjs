@@ -60,14 +60,22 @@ for (const name of ['raptor', 'bulldog', 'halo']) {
       previous = z;
     }
     for (const [index,mount] of model.gunMounts.entries()) {
-      const x=mount.position[0], muzzle=mount.position[1]+mount.length/2;
-      assert(Math.abs(x)===1.5 && muzzle<3.35 && mount.length<.8, 'Raptor uses compact inset muzzles rather than long exposed barrels');
-      const ports=model.parts.filter(p=>p.component==='gun-port' && p.vertices[0]*x>0);
-      assert(ports.length>0 && ports.some(p=>p.material==='machinery') && ports.some(p=>p.material==='dark'), 'Rounded port has a modeled cavity and dark back wall');
-      const front=bounds(ports,1)[1], top=bounds(ports,2)[1];
+      const x=mount.position[0];
+      assert(Math.abs(x)===1.1 && mount.length<.8, 'Raptor uses compact inset muzzles rather than exposed barrels');
       const gun=model.parts.filter(p=>p.component==='gun-'+index);
-      assert(front-muzzle>.15 && bounds(gun,2)[1]<top-.05, 'Barrel sits behind the rounded lip and beneath its outer skin');
-      assert(roofHeight(x,3.46)<mount.position[2]-.12, 'Gun port faces forward above the hull without cutting a trench through the arrowhead');
+      const funnels=body.filter(p=>p.component==='gun-port-funnel' && p.vertices[0]*x>0);
+      assert(funnels.length>0, 'Gun port is carved into the primary shell with a modeled tapered cavity');
+      for(const part of [...gun,...funnels])for(let i=0;i<part.vertices.length;i+=8){
+        const [gx,gy,gz]=part.vertices.slice(i,i+3);
+        const width=25/7-gy*25/49;
+        assert(gz <= .09+.18*(width-Math.abs(gx))+1e-6, 'Gun and cavity remain beneath the existing delta skin; no raised housings');
+      }
+      const muzzle=mount.position.map((v,i)=>v+mount.axis[i]*mount.length/2);
+      const roofAtMuzzle=.09+.18*(25/7-muzzle[1]*25/49-Math.abs(x));
+      assert(roofAtMuzzle-muzzle[2]>.15, 'Muzzle is visibly inset below the surrounding skin');
+      const rise=mount.axis[2]/mount.axis[1];
+      const exitY=muzzle[1]+(roofAtMuzzle-muzzle[2])/(rise+.18*25/49);
+      assert(((exitY-2)/.58)**2<.95, 'Barrel points out through its rounded opening without intersecting the hull');
     }
   }
   if (name === 'halo') {

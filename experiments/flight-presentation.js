@@ -221,7 +221,8 @@
                 var craft = livingArt.filter(function (e) {
                     return (e.team || 'enemy') === team;
                 });
-                DW.shipPackModels.scorchGeometry(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units).forEach(function (batch) {
+                var scorchDraw=DW.shipPackModels.sourceScorchGeometry||DW.shipPackModels.scorchGeometry;
+                scorchDraw(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units).forEach(function (batch) {
                     actorBatches.push(batch);
                 });
             });

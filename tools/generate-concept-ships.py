@@ -163,6 +163,33 @@ class Mesh:
         self.wing(material,poly,z,depth,stage)
 
     def delta_body(self):
+        start=len(self.parts)
+        holes=[[[x+.32*math.cos(i*math.pi/12),2+.58*math.sin(i*math.pi/12)] for i in range(24)] for x in (-1.1,1.1)]
+        def clip(poly,a,b,inside):
+            def distance(p):return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])
+            out=[]
+            for p,q in zip(poly,poly[1:]+poly[:1]):
+                fp=distance(p)*(1 if inside else -1);fq=distance(q)*(1 if inside else -1)
+                if fp>=-1e-10:out.append(p)
+                if (fp>=-1e-10)!=(fq>=-1e-10):
+                    t=fp/(fp-fq);out.append([p[k]+t*(q[k]-p[k]) for k in range(2)])
+            return out
+        def roof(poly):
+            pieces=[poly]
+            for hole in holes:
+                result=[]
+                for piece in pieces:
+                    remainder=piece
+                    for a,b in zip(hole,hole[1:]+hole[:1]):
+                        if len(remainder)<3:break
+                        outside=clip(remainder,a,b,False)
+                        if len(outside)>=3:result.append(outside)
+                        remainder=clip(remainder,a,b,True)
+                pieces=result
+            for piece in pieces:
+                center=[sum(p[k] for p in piece)/len(piece) for k in range(2)]
+                for p,q in zip(piece,piece[1:]+piece[:1]):
+                    self.face('armor',[[*center,raptor_roof(*center)],[*p,raptor_roof(*p)],[*q,raptor_roof(*q)]])
         loops=[]
         for y,w in RAPTOR_SECTIONS:
             bottom=[[w*t,y,-.04-.135*w*(1-abs(t))] for t in (-1,-.5,0,.5,1)]
@@ -171,41 +198,69 @@ class Mesh:
         for a,b in zip(loops,loops[1:]):
             for j in range(len(a)):
                 k=(j+1)%len(a)
-                self.face('armor',[b[j],b[k],a[k],a[j]])
+                points=[b[j],b[k],a[k],a[j]]
+                if 5<=j<=8:roof([[p[0],p[1]] for p in points])
+                else:self.face('armor',points)
         for loop,reverse in ((loops[0],False),(loops[-1],True)):
             center=[sum(p[k] for p in loop)/len(loop) for k in range(3)]
             for j in range(len(loop)):
                 triangle=[center,loop[j],loop[(j+1)%len(loop)]]
                 self.face('armor',list(reversed(triangle)) if reverse else triangle)
+        for hole in holes:
+            x=sum(p[0] for p in hole)/len(hole)
+            outer=[[px,py,raptor_roof(px,py)] for px,py in hole]
+            inner=[[x+.14*math.cos(i*math.pi/12),1.92+.28*math.sin(i*math.pi/12),
+                    raptor_roof(x+.14*math.cos(i*math.pi/12),1.92+.28*math.sin(i*math.pi/12))-.30] for i in range(24)]
+            for j in range(24):
+                k=(j+1)%24;self.face('machinery',[outer[k],outer[j],inner[j],inner[k]])
+                self.parts[-1]['component']='gun-port-funnel'
+            center=[sum(p[k] for p in inner)/len(inner) for k in range(3)]
+            for j in range(24):
+                self.face('dark',[center,inner[j],inner[(j+1)%24]])
+                self.parts[-1]['component']='gun-port-floor'
+        # Conform clipped roof triangles and funnel edges to the same shared vertices.
+        # This keeps the skin closed even where a circular port crosses a roof facet.
+        original=self.parts[start:];self.parts=self.parts[:start]
+        vertices={tuple(round(v,9) for v in part['vertices'][i:i+3]) for part in original for i in range(0,len(part['vertices']),8)}
+        for part in original:
+            v=part['vertices']
+            for i in range(0,len(v),24):
+                tri=[v[i+k:i+k+3] for k in (0,8,16)];boundary=[]
+                for a,b in zip(tri,tri[1:]+tri[:1]):
+                    delta=[b[k]-a[k] for k in range(3)];den=sum(t*t for t in delta)
+                    if den<1e-16:continue
+                    splits=[]
+                    for p in vertices:
+                        t=sum((p[k]-a[k])*delta[k] for k in range(3))/den
+                        if 1e-7<t<1-1e-7 and sum((p[k]-a[k]-t*delta[k])**2 for k in range(3))<1e-15:splits.append((t,list(p)))
+                    boundary.append(a);boundary.extend(p for t,p in sorted(splits))
+                if len(boundary)<3:continue
+                center=[sum(p[k] for p in tri)/3 for k in range(3)]
+                for a,b in zip(boundary,boundary[1:]+boundary[:1]):
+                    before=len(self.parts);self.face(part['material'],[center,a,b],part['stage'])
+                    if len(self.parts)>before and 'component' in part:self.parts[-1]['component']=part['component']
 
     def recessed_gun_port(self,x):
-        segments=24
-        def ring(y,w,h,z):
-            return [[x+w*math.cos(i*2*math.pi/segments),y,z+h*math.sin(i*2*math.pi/segments)] for i in range(segments)]
-        # A long, low skin fairing grows out of the delta roof into a rounded lip.
-        shell=[ring(1.05,.025,.012,raptor_roof(x,1.05)),
-               ring(1.6,.27,.16,.40),ring(2.4,.36,.235,.40),
-               ring(3.15,.39,.28,.40),ring(3.43,.35,.265,.40)]
-        start=len(self.parts)
-        self.face('armor',shell[0],1)
-        for a,b in zip(shell,shell[1:]):
-            for j in range(segments):
-                k=(j+1)%segments
-                self.face('armor',[b[j],b[k],a[k],a[j]],1)
-        mouth=ring(3.46,.29,.21,.40)
-        throat=ring(2.98,.17,.15,.40)
-        # Rounded entry bevel and deep tapered cavity, with no exposed barrel trench.
+        # Short barrel pitched through a flush opening in the sloping delta roof.
+        pitch=math.atan(.6);c=math.cos(pitch);sn=math.sin(pitch)
+        center=[x,1.91,-.024];length=.60;radius=.068;segments=24
+        start=len(self.parts);index=len(self.guns)
+        self.guns.append({'position':center,'length':length,'axis':[0,c,sn]})
+        def ring(along,r):
+            return [[x+r*math.cos(i*2*math.pi/segments),center[1]+along*c-r*math.sin(i*2*math.pi/segments)*sn,
+                     center[2]+along*sn+r*math.sin(i*2*math.pi/segments)*c] for i in range(segments)]
+        rear=ring(-length/2,radius);front=ring(length/2,radius)
         for j in range(segments):
-            k=(j+1)%segments
-            self.face('armor',[shell[-1][k],shell[-1][j],mouth[j],mouth[k]],1)
-            self.face('machinery',[mouth[k],mouth[j],throat[j],throat[k]],1)
-        self.face('dark',list(reversed(throat)),1)
-        for part in self.parts[start:]:part['component']='gun-port'
-        self.gun(x,3.0,.40,.55)
-        outer=ring(3.294,.10,.10,.40);inner=ring(3.295,.075,.075,.40)
+            k=(j+1)%segments;self.face('dark',[front[j],front[k],rear[k],rear[j]],1)
+        self.face('dark',rear,1)
+        inner=ring(length/2+.002,radius*.72)
         for j in range(segments):
-            k=(j+1)%segments
-            self.face('edge',[outer[k],outer[j],inner[j],inner[k]],1)
+            k=(j+1)%segments;self.face('edge',[front[k],front[j],inner[j],inner[k]],1)
+        dark=ring(length/2-.08,radius*.72)
+        for j in range(segments):
+            k=(j+1)%segments;self.face('dark',[inner[k],inner[j],dark[j],dark[k]],1)
+        self.face('dark',list(reversed(dark)),1)
+        for part in self.parts[start:]:part['component']='gun-'+str(index)
 
     def delta_patch(self,material,outline,stage=1,offset=.006):
         if sum(outline[i][0]*outline[(i+1)%len(outline)][1]-outline[(i+1)%len(outline)][0]*outline[i][1] for i in range(len(outline)))<0:
@@ -271,7 +326,7 @@ def build(name):
             m.pod('trim',s*1.32,[(-4.68,.5,.45,.1),(-4.52,.5,.45,.1)])
             m.socket(s*1.32,-4.86,.1,.46,.42,.32,-1)
             m.socket(s*1.32,-.66,.27,.30,.23,.35)
-            m.recessed_gun_port(s*1.5)
+            m.recessed_gun_port(s*1.1)
             for y in (-3,-2.6,-2.2):m.box('dark',s*.73,y,1.19,.20,.20,.035)
             for x,y in ((2.0,-.25),(3.8,-2.7),(1.05,-2.8),(2.8,-2.8)):
                 m.fastener(s*x,y,raptor_roof(s*x,y)+.02)

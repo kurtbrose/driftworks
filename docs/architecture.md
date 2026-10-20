@@ -851,12 +851,13 @@ live in `assets/portraits/dogfight/` as preparation sources. Nine additional per
 4x2 expression sheets live under `cast/`, alongside their imagegen prompts. The optional Windows
 tool `tools/prepare-flight-portraits.ps1` applies the eye/mouth calibration offline
 and packs seven 256-square poses per character into the checked-in `runtime/`
-PNGs. Deploying still needs no build step. Source/builder/output hashes and PNG
+PNGs. `experiments/flight-cast.html` previews all seventeen identities with speech,
+blink and expression layers. Deploying still needs no build step. Source/builder/output hashes and PNG
 dimensions are checked by `tests/portrait-assets.cjs` to catch stale exports.
 
 Flight loads only the compact runtime images (about 12 MiB for all seventeen
 characters versus about 36 MiB for the preparation sources). Idle-time warm-up fetches and decodes one character at a
-time, beginning with Rook; a foreground transmission can start its own request
+time, beginning with Rook (Control loads on demand); a foreground transmission can start its own request
 immediately or share the pending request. Up to seventeen compact ImageBitmaps remain
 in a fixed cache of about 30 MiB decoded pixels, avoiding first-use popping once
 warm-up finishes. No seven-canvas cache is retained per character: the compositor
@@ -955,7 +956,7 @@ across all connected controllers and clear mouse steering without a mode change.
 A fresh non-pause button starts/resumes a living ship without pointer lock;
 held buttons, axis noise, hidden pages and dead ships do not auto-resume.
 the browser loop checks pause after sampling. `view()` exposes only mouse/mode/
-stick-range data and `showMouseStick` for HUD rendering. Above-deadzone mapped stick changes hide the guide and clear mouse displacement; captured mouse movement restores it. Unchanged held axes and small axis noise do not reclaim the guide. Pause Settings shows a fixed reference for standard gamepads: right-stick Y changes throttle at up to 0.5/s, with neutral holding the current throttle. Nonstandard joysticks retain device bindings. `clear()` resets held input; `resetButtons()`
+stick-range data and `showMouseStick` for HUD rendering. Above-deadzone mapped stick changes hide the guide and clear mouse displacement; captured mouse movement restores it. Unchanged held axes and small axis noise do not reclaim the guide. Pause Settings shows a fixed reference for standard gamepads: right-stick Y changes throttle at up to 0.5/s, with neutral holding the current throttle. Holding LB/L1 on standard pads routes right-stick X/Y to ship-relative side/vertical demand, suppressing right-stick roll and throttle adjustment while preserving left-stick steering and D-pad throttle. Keyboard A/D and R/F combine with that demand. `flight-model.js` normalizes translation demand to a 5 m/s target with a two-second ramp, independent of retail strafe limits; release targets zero. Manual throttle spans -1 to 1, with negative values targeting up to 5 m/s reverse. Absolute joystick throttle remains 0 to 1. Nonstandard joysticks retain device bindings. `clear()` resets held input; `resetButtons()`
 is separately called on resume to preserve existing controller edge semantics.
 `haptics(dt, feedback)` owns the selected device's dual-rumble actuator. The
 composition root derives boost, player-hit, shield-break, fired-volley, and first
@@ -983,10 +984,18 @@ angles, projectile banks and collision proxies; it uses `flightGuns.step` and
 composition root advances the rig only while unpaused and resets it with the
 sortie. Presentation receives the rig through `setCapital`, reuses static hull
 buffers for both hull and turrets, with shared GPU meshes and per-mount rotation
-bases rather than CPU vertex transforms or streaming uploads. PD passes a 0.25 s
+bases rather than CPU vertex transforms or streaming uploads. Model projectile
+queries use a weakly cached triangle hierarchy over immutable source geometry,
+with earliest-entry pruning and the existing nearest face/edge/vertex semantics.
+World-space poses remain query inputs; the cache contains no craft pointers.
+PD passes a 0.25 s
 cosmetic scorch interval to `training.trace`, rate-limiting surface projection
 through a weak per-craft cache while retaining every damage event. The optional
-interval defaults to existing behavior for all ordinary weapons. These
+interval defaults to existing behavior for all ordinary weapons.
+Cached `sourceScorchGeometry` batches also retain fighter/wreck surface marks in
+model-local space, invalidating on mark identity or hull changes and using GPU
+pose transforms each frame. The older `scorchGeometry` posed output remains
+available for callers that need world-space vertices. These
 experimental objects are outside the tactical world's save contract. See
 [the Aegis reference](dreadnaught-kit.md) for axes, units and prototype limits.
 

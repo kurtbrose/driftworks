@@ -108,6 +108,19 @@ locally. The original CPU transform path recreated 1,230,336 vertex bytes per
 frame and took about 2 ms in the development benchmark. The matrix path recreates
 zero vertex bytes and took roughly 0.02 ms on the same machine. These are CPU
 microbenchmarks, not end-to-end FPS measurements.
+Projectile collision also reuses a source-mesh triangle hierarchy, traversed in
+entry-distance order and pruned once a closer hit is known. Scalar face/edge/
+vertex sweeps retain the spherical bolt-head rules. Differential tests compare
+2,400 indexed sweeps with the original implementation, including stationary and
+degenerate cases. The performance overlay's optional Aegis stage timings separate
+simulation, PD, scene preparation and HUD work to identify future regressions.
+Scorch projection reuses that hierarchy to visit only triangles near the impact;
+80 additional comparisons check exact agreement with full-mesh clipping.
+Fighter and wreck scorch meshes likewise stay in model-local coordinates and
+use GPU poses. `sourceScorchGeometry` rebuilds cached layers only when mark
+identity or hull ownership changes; the legacy posed-vertex method remains
+available. This prevents accumulating burns and drifting wrecks from adding
+per-frame projection and vertex-upload work.
 
 Only Aegis mode loads `assets/ships/aegis-kit/flight-rig.js`. Normal flight and
 the asteroid mission retain their existing setup. Regenerate that asset with
