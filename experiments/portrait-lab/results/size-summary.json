@@ -1,0 +1,402 @@
+[
+  {
+    "algorithm": "baseline",
+    "size": 128,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 3301,
+    "median_bytes": 6607.5,
+    "max_bytes": 16145,
+    "total_bytes": 1441628
+  },
+  {
+    "algorithm": "baseline",
+    "size": 128,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1426,
+    "median_bytes": 3488.0,
+    "max_bytes": 6183,
+    "total_bytes": 693326
+  },
+  {
+    "algorithm": "baseline",
+    "size": 128,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 1192,
+    "median_bytes": 2809.0,
+    "max_bytes": 4932,
+    "total_bytes": 563018
+  },
+  {
+    "algorithm": "baseline",
+    "size": 128,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 1842,
+    "median_bytes": 4184.0,
+    "max_bytes": 5960,
+    "total_bytes": 796974
+  },
+  {
+    "algorithm": "baseline",
+    "size": 256,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 4266,
+    "median_bytes": 8024.0,
+    "max_bytes": 15646,
+    "total_bytes": 1661185
+  },
+  {
+    "algorithm": "baseline",
+    "size": 256,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1859,
+    "median_bytes": 4228.0,
+    "max_bytes": 7799,
+    "total_bytes": 889299
+  },
+  {
+    "algorithm": "baseline",
+    "size": 256,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 1494,
+    "median_bytes": 3483.0,
+    "max_bytes": 6512,
+    "total_bytes": 722536
+  },
+  {
+    "algorithm": "baseline",
+    "size": 256,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 2590,
+    "median_bytes": 5797.0,
+    "max_bytes": 15528,
+    "total_bytes": 1514864
+  },
+  {
+    "algorithm": "cluster",
+    "size": 128,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 2701,
+    "median_bytes": 5543.0,
+    "max_bytes": 13808,
+    "total_bytes": 1197879
+  },
+  {
+    "algorithm": "cluster",
+    "size": 128,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1197,
+    "median_bytes": 3079.0,
+    "max_bytes": 5766,
+    "total_bytes": 612080
+  },
+  {
+    "algorithm": "cluster",
+    "size": 128,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 1016,
+    "median_bytes": 2425.0,
+    "max_bytes": 4640,
+    "total_bytes": 480340
+  },
+  {
+    "algorithm": "cluster",
+    "size": 128,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 1806,
+    "median_bytes": 3855.0,
+    "max_bytes": 5670,
+    "total_bytes": 745858
+  },
+  {
+    "algorithm": "cluster",
+    "size": 256,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 3541,
+    "median_bytes": 6799.0,
+    "max_bytes": 13706,
+    "total_bytes": 1399308
+  },
+  {
+    "algorithm": "cluster",
+    "size": 256,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1540,
+    "median_bytes": 3805.5,
+    "max_bytes": 7267,
+    "total_bytes": 776296
+  },
+  {
+    "algorithm": "cluster",
+    "size": 256,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 1264,
+    "median_bytes": 3002.0,
+    "max_bytes": 6174,
+    "total_bytes": 606966
+  },
+  {
+    "algorithm": "cluster",
+    "size": 256,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 2438,
+    "median_bytes": 5677.0,
+    "max_bytes": 14014,
+    "total_bytes": 1401654
+  },
+  {
+    "algorithm": "contour",
+    "size": 128,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 2481,
+    "median_bytes": 5581.0,
+    "max_bytes": 13382,
+    "total_bytes": 1158949
+  },
+  {
+    "algorithm": "contour",
+    "size": 128,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1164,
+    "median_bytes": 3062.0,
+    "max_bytes": 5381,
+    "total_bytes": 595883
+  },
+  {
+    "algorithm": "contour",
+    "size": 128,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 956,
+    "median_bytes": 2364.0,
+    "max_bytes": 4598,
+    "total_bytes": 469950
+  },
+  {
+    "algorithm": "contour",
+    "size": 128,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 1962,
+    "median_bytes": 3878.0,
+    "max_bytes": 5350,
+    "total_bytes": 742956
+  },
+  {
+    "algorithm": "contour",
+    "size": 256,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 3309,
+    "median_bytes": 6804.0,
+    "max_bytes": 13460,
+    "total_bytes": 1377798
+  },
+  {
+    "algorithm": "contour",
+    "size": 256,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1549,
+    "median_bytes": 3787.5,
+    "max_bytes": 6727,
+    "total_bytes": 762845
+  },
+  {
+    "algorithm": "contour",
+    "size": 256,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 1192,
+    "median_bytes": 2983.0,
+    "max_bytes": 5464,
+    "total_bytes": 591396
+  },
+  {
+    "algorithm": "contour",
+    "size": 256,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 2712,
+    "median_bytes": 5773.0,
+    "max_bytes": 14958,
+    "total_bytes": 1397310
+  },
+  {
+    "algorithm": "feature",
+    "size": 128,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 2577,
+    "median_bytes": 5348.5,
+    "max_bytes": 13415,
+    "total_bytes": 1168147
+  },
+  {
+    "algorithm": "feature",
+    "size": 128,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1183,
+    "median_bytes": 3073.0,
+    "max_bytes": 5596,
+    "total_bytes": 611383
+  },
+  {
+    "algorithm": "feature",
+    "size": 128,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 942,
+    "median_bytes": 2411.0,
+    "max_bytes": 4314,
+    "total_bytes": 475344
+  },
+  {
+    "algorithm": "feature",
+    "size": 128,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 1550,
+    "median_bytes": 3482.0,
+    "max_bytes": 5124,
+    "total_bytes": 667200
+  },
+  {
+    "algorithm": "feature",
+    "size": 256,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 3374,
+    "median_bytes": 6648.0,
+    "max_bytes": 13592,
+    "total_bytes": 1369537
+  },
+  {
+    "algorithm": "feature",
+    "size": 256,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1570,
+    "median_bytes": 3766.0,
+    "max_bytes": 7012,
+    "total_bytes": 767800
+  },
+  {
+    "algorithm": "feature",
+    "size": 256,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 1174,
+    "median_bytes": 2991.0,
+    "max_bytes": 5754,
+    "total_bytes": 602532
+  },
+  {
+    "algorithm": "feature",
+    "size": 256,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 2266,
+    "median_bytes": 5142.0,
+    "max_bytes": 13406,
+    "total_bytes": 1291766
+  },
+  {
+    "algorithm": "structure",
+    "size": 128,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 3118,
+    "median_bytes": 5812.0,
+    "max_bytes": 11960,
+    "total_bytes": 1206714
+  },
+  {
+    "algorithm": "structure",
+    "size": 128,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1383,
+    "median_bytes": 3108.0,
+    "max_bytes": 5298,
+    "total_bytes": 603313
+  },
+  {
+    "algorithm": "structure",
+    "size": 128,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 1142,
+    "median_bytes": 2486.0,
+    "max_bytes": 4190,
+    "total_bytes": 490980
+  },
+  {
+    "algorithm": "structure",
+    "size": 128,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 1754,
+    "median_bytes": 3502.0,
+    "max_bytes": 4830,
+    "total_bytes": 663984
+  },
+  {
+    "algorithm": "structure",
+    "size": 256,
+    "format": "png",
+    "count": 192,
+    "min_bytes": 4089,
+    "median_bytes": 7095.5,
+    "max_bytes": 12826,
+    "total_bytes": 1447689
+  },
+  {
+    "algorithm": "structure",
+    "size": 256,
+    "format": "png-indexed",
+    "count": 192,
+    "min_bytes": 1768,
+    "median_bytes": 3902.0,
+    "max_bytes": 6593,
+    "total_bytes": 770724
+  },
+  {
+    "algorithm": "structure",
+    "size": 256,
+    "format": "webp",
+    "count": 192,
+    "min_bytes": 1442,
+    "median_bytes": 2989.0,
+    "max_bytes": 5278,
+    "total_bytes": 617740
+  },
+  {
+    "algorithm": "structure",
+    "size": 256,
+    "format": "webp-q85",
+    "count": 192,
+    "min_bytes": 2498,
+    "median_bytes": 4857.0,
+    "max_bytes": 11858,
+    "total_bytes": 1200196
+  }
+]

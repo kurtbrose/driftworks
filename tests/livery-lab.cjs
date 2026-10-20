@@ -7,9 +7,9 @@ const read=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const DW={};
 const controls=new Map();
 const defaults={layout:'solo',subject:'A',grammar:'1',scale:'2',relief:'55',wear:'20',seed:'17',primary:'#c5cec9',secondary:'#38474d',accent:'#ee912e',detail:'#12191d'};
-let uploaded=new Float32Array(),uploads=0;const depthBiases=[],depthCoefficients=[],frontFaces=[],surfaceUniforms=new Map(),scalarUniforms=new Map();
+let uploaded=new Float32Array(),uploads=0;const shaderTexts=[],depthBiases=[],depthCoefficients=[],frontFaces=[],surfaceUniforms=new Map(),scalarUniforms=new Map();
 const gl=new Proxy({
- createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:(program,name)=>name,getExtension:()=>({}),
+ shaderSource:(shader,text)=>shaderTexts.push(text),createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:(program,name)=>name,getExtension:()=>({}),
  uniform3fv:(location,values)=>surfaceUniforms.set(location,Array.from(values)),uniform1f:(location,value)=>scalarUniforms.set(location,value),CW:2304,frontFace:value=>frontFaces.push(value),
  polygonOffset:(factor,units)=>depthBiases.push([factor,units]),uniform2fv:(location,values)=>depthCoefficients.push(Array.from(values)),
  bufferData:(target,data)=>{uploaded=data;uploads++;}
@@ -88,3 +88,14 @@ controls.get('material-set').value='thermal';controls.get('material-set').oninpu
 console.log('PASS material preset controls, per-slot shader uniforms, neutral-color inspection and geometry-independent editing');
 
 assert.equal(scalarUniforms.get('grammar'),0,'Hangar deck keeps its own material when ship surface slots change');
+
+// Execute the actual scalar GLSL decode expression with interpolation-sized errors.
+const fragmentText=shaderTexts.find(text=>text.includes('float kind='));
+const decodeLine=fragmentText.match(/float kind=[^;]+;/)[0];
+const decode=new Function('alpha','floor','clamp',decodeLine.replace('float ','let ').replaceAll('protection.a','alpha')+'return {kind,edge};');
+const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+for(const role of [0,1,2,3,4])for(const error of [-.0000002,0,.0000002]){
+ const value=decode(role+error,Math.floor,clamp);assert.equal(value.kind,role);assert(value.edge<.000002,'Zero wear cannot wrap to full wear at a packed-role boundary');
+}
+assert(Math.abs(decode(2.1,Math.floor,clamp).edge-.5)<1e-6,'Fractional curvature remains available');
+console.log('PASS shader wear decoding: interpolation around integer roles stays continuous');

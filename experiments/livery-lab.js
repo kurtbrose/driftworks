@@ -11,17 +11,18 @@ const canvas=/** @type {HTMLCanvasElement} */(document.getElementById('canvas'))
 const context=canvas.getContext('webgl',{antialias:true});
 if(!context)throw Error('WebGL is required for the livery lab');
 const gl=context;
-gl.getExtension('OES_standard_derivatives');
+const materialDerivatives=!!gl.getExtension('OES_standard_derivatives');
 const vertex=`attribute vec3 position,normal;attribute vec2 texcoord;varying vec2 sourceUV;attribute vec4 protectedColor;varying vec4 protection;uniform vec3 right,up,back;uniform vec3 origin;uniform float aspect,distance;uniform vec2 depthProjection;varying vec3 p,n;
 void main(){sourceUV=texcoord;protection=protectedColor;p=position;n=normal;vec3 q=vec3(dot(p+origin,right),dot(p+origin,up),distance-dot(p+origin,back));gl_Position=vec4(q.x*2.414/aspect,q.y*2.414,q.z*depthProjection.x-depthProjection.y,q.z);}`;
-const fragment=`precision highp float;
+const fragment=(materialDerivatives?'#extension GL_OES_standard_derivatives : enable\n#define MATERIAL_DERIVATIVES\n':'')+`precision highp float;
 uniform sampler2D sourceTexture;uniform float hasTexture,sourceBlend,grammar,wear,split,useMasks,monochrome;uniform vec3 primary,secondary,accent,eye;
 varying vec2 sourceUV;varying vec4 protection;varying vec3 p,n;
 ${ART_SHADER}
 ${MATERIAL_SHADER}
 void main(){
  float g=grammar;if(split>0.&&gl_FragCoord.x<split)g=0.;
- float kind=floor(protection.a+.001),edge=fract(protection.a)*5.;if(kind>1.5&&g==0.&&artStyle<.5)discard;
+ // Decode relative to the stabilized role: fract(1.9999999) wraps to almost one.
+ float kind=floor(protection.a+.001),edge=clamp((protection.a-kind)*5.,0.,1.);if(kind>1.5&&g==0.&&artStyle<.5)discard;
  vec3 N=normalize(n),color=g==0.?vec3(.48,.51,.53):secondary*.72;
  if(kind>.5&&kind<1.5&&(useMasks>.5||g==0.))color=protection.rgb;
  if(kind>1.5&&kind<2.5){color=primary*protection.r+secondary*protection.g+accent*protection.b;

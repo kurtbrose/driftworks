@@ -146,3 +146,9 @@ occlusion. The depth coefficients and ordered paint passes have regressions.
 
 `tests/livery-art.cjs` covers recipe metadata, immutable geometric curvature
 analysis and sparse surface-supported decal graphics.
+
+### Fine-detail filtering
+
+Material harmonics use screen-space derivatives to fade before becoming subpixel, including at grazing angles. Quilted seams use a filtered harmonic profile instead of hard periodic borders. Smooth triplanar blending avoids dominant-axis texture switches on curved surfaces; normal variance broadens unresolved specular highlights. WebGL contexts without standard derivatives use a conservative distance-based footprint fallback. The region masks and generated geometry are unchanged.
+
+Packed wear/curvature data is decoded relative to the stabilized integer surface role, rather than with `fract`. Interpolation just below an integer must yield zero wear rather than wrapping to nearly full wear; that discontinuity previously produced camera-dependent fingerprint/diagonal artifacts even with microdetail disabled.

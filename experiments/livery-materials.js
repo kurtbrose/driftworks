@@ -19,17 +19,40 @@ uniform vec3 surface0,surface1,surface2,surface3,effects0,effects1,effects2,effe
 uniform float materialGrey,materialPixel,mirrorMaterials,mirrorOffset;
 uniform vec3 mirrorNormal;
 vec4 surfaceWeights(vec3 w){w=max(w,vec3(0.));vec4 a=vec4(w,max(0.,1.-w.r-w.g-w.b));return a/max(.001,dot(a,vec4(1.)));}
-// x: relief, y: albedo variation. Fine structure describes a material, not region placement.
-vec2 surfacePattern(vec3 p,vec3 N,float type){
- vec3 a=abs(N);vec2 uv=a.z>=a.x&&a.z>=a.y?p.xy:(a.x>=a.y?p.yz:p.xz);
- float fade=1.-smoothstep(.004,.018,materialPixel);
- float grain=sin(uv.x*157.)*sin(uv.y*193.);
+// Filter each harmonic against its actual projected pixel footprint. Distant
+// detail converges to its average instead of beating against the pixel grid.
+float materialWave(float phase,float frequency){
+ #ifdef MATERIAL_DERIVATIVES
+ float width=abs(dFdx(phase))+abs(dFdy(phase));
+ #else
+ float width=frequency*materialPixel*4.;
+ #endif
+ return sin(phase)*(1.-smoothstep(.6,2.6,width));
+}
+float materialNormalVariance(vec3 normal){
+ #ifdef MATERIAL_DERIVATIVES
+ vec3 dx=dFdx(normal),dy=dFdy(normal);return min(.35,(dot(dx,dx)+dot(dy,dy))*2.);
+ #else
+ return 0.;
+ #endif
+}
+vec2 surfacePlane(vec2 uv,float type){
+ float grain=materialWave(uv.x*157.,157.)*materialWave(uv.y*193.,193.);
  if(type<.5)return vec2(0.);
- if(type<1.5)return vec2(grain*.08,grain*.025)*fade;
- if(type<2.5)return vec2(sin(uv.x*120.)*.06,sin(uv.x*120.)*.018)*fade;
- if(type<3.5)return vec2(grain*.22,grain*.06)*fade;
- vec2 tile=fract(uv*7.);float seam=1.-smoothstep(.02,.10,min(min(tile.x,1.-tile.x),min(tile.y,1.-tile.y)));
- return vec2((cos(uv.x*43.98)+cos(uv.y*43.98))*.22-seam*.3,-seam*.23)*fade;
+ if(type<1.5)return vec2(grain*.08,grain*.025);
+ if(type<2.5){float brush=materialWave(uv.x*120.,120.);return vec2(brush*.06,brush*.018);}
+ if(type<3.5)return vec2(grain*.22,grain*.06);
+ vec2 phase=uv*43.98;
+ float u=materialWave(phase.x+1.5708,43.98),v=materialWave(phase.y+1.5708,43.98);
+ // Band-limited seam profile: no fract/smoothstep discontinuities at tile borders.
+ float seam=.25+.12*(u+v)+.06*(materialWave(phase.x*2.+1.5708,87.96)+materialWave(phase.y*2.+1.5708,87.96))+.02*(materialWave(phase.x*3.+1.5708,131.94)+materialWave(phase.y*3.+1.5708,131.94));
+ return vec2((u+v)*.22-seam*.3,-seam*.23);
+}
+// Blend three projections continuously; changing the dominant normal no longer
+// switches texture coordinates along a diagonal across a curved hull.
+vec2 surfacePattern(vec3 p,vec3 N,float type){
+ vec3 blend=pow(abs(N),vec3(4.));blend/=max(.0001,blend.x+blend.y+blend.z);
+ return surfacePlane(p.yz,type)*blend.x+surfacePlane(p.xz,type)*blend.y+surfacePlane(p.xy,type)*blend.z;
 }
 vec3 shadeSurfaces(vec3 base,vec3 point,vec3 N,vec4 w,float boundary){
  vec3 q=point,patternN=N;bool folded=mirrorMaterials>.5&&dot(q,mirrorNormal)<mirrorOffset;if(folded){q-=2.*(dot(q,mirrorNormal)-mirrorOffset)*mirrorNormal;patternN-=2.*dot(patternN,mirrorNormal)*mirrorNormal;}
@@ -39,8 +62,9 @@ vec3 shadeSurfaces(vec3 base,vec3 point,vec3 N,vec4 w,float boundary){
  float emission=dot(w,vec4(effects0.y,effects1.y,effects2.y,effects3.y));
  vec2 micro=surfacePattern(q,patternN,effects0.z)*surface0.z*w.x+surfacePattern(q,patternN,effects1.z)*surface1.z*w.y+surfacePattern(q,patternN,effects2.z)*surface2.z*w.z+surfacePattern(q,patternN,effects3.z)*surface3.z*w.w;
  // Orientation-varying fine relief; silhouette and coarse hull normals are preserved.
- vec3 tangent=normalize(abs(patternN.z)<.9?cross(patternN,vec3(0,0,1)):cross(patternN,vec3(0,1,0)));
+ float signZ=patternN.z>=0.?1.:-1.,basis=-1./(signZ+patternN.z);vec3 tangent=vec3(1.+signZ*patternN.x*patternN.x*basis,signZ*patternN.x*patternN.y*basis,-signZ*patternN.x);
  N=normalize(patternN+tangent*micro.x*.3);if(folded)N-=2.*dot(N,mirrorNormal)*mirrorNormal;
+ rough=sqrt(min(1.,rough*rough+materialNormalVariance(N)));
  base*=1.+micro.y;
  base=mix(base,vec3(.43,.46,.47),clamp(boundary*worn,0.,.65));
  if(materialGrey>.5)base=vec3(.52)*(1.+micro.y);
