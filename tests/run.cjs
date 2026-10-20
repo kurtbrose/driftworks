@@ -84,3 +84,5 @@ require('./comms-display.cjs');
 require('./concept-ships.cjs');
 
 require('./dreadnaught-kit.cjs');
+
+require('./aegis-flight.cjs');

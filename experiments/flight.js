@@ -1,13 +1,19 @@
-(function () {
+(async function () {
     'use strict';
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
+    var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
+    /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
+    if(aegisMode){try{await DW.aegisFlight.load();aegis=DW.aegisFlight.create();}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
     var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: function (start, end) {
             var asteroid = session.snapshot().asteroid;
-            return DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
+            var terrain=DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
                 return DW.scene3d.rockField(asteroid, /** @type {[number, number, number]} */ (DW.flightSession.rotateVector(point, -asteroid.rotation)));
             });
+            var capital=aegis&&aegis.hit(start,end);
+            if(capital&&(!terrain||Math.hypot.apply(null,capital.map(function(v,i){return v-start[i];}))<Math.hypot.apply(null,terrain.map(function(v,i){return v-start[i];}))))return capital;
+            return terrain;
         }, surfaceFrame: function (asteroid, direction) {
             return DW.scene3d.surfaceFrame(asteroid, /** @type {[number, number, number]} */ (direction));
         }, onGunshot: function () {
@@ -48,6 +54,15 @@
     }, function (w) {
         session.setWorld(w);
     });
+    if(aegis){
+        presentation.setCapital(aegis);
+        document.title='Aegis live turret flight / Driftworks';
+        var aegisPanel=document.createElement('div');aegisPanel.id='aegis-flight-readout';aegisPanel.style.cssText='position:fixed;z-index:5;left:20px;top:170px;max-width:330px;white-space:pre-line;font:11px/1.6 monospace;color:#b9d9db;background:#07151dc9;padding:9px;pointer-events:none';document.body.appendChild(aegisPanel);
+        get('watch-panel').hidden=true;get('draw-mothership').checked=false;
+        var aegisHeading=document.querySelector('header h1');if(aegisHeading)aegisHeading.textContent='DRIFTWORKS / AEGIS RANGE';
+        var aegisSubtitle=document.querySelector('header > span');if(aegisSubtitle)aegisSubtitle.textContent='ALLIED DREADNAUGHT / LIVE BATTERIES';
+        var aegisHint=document.querySelector('#launch > p');if(aegisHint)aegisHint.textContent='Fighter fly-around · engines stopped · allied automatic batteries. Capital hull is invulnerable in this prototype.';
+    }
     var select = get('profile'), stats = get('stats'), status = get('status');
     var watch = /** @type {ReturnType<Required<DriftworksNamespace>['flightWatch']['create']> | null} */ (null);
     var watchDuration=120,watchOpponentWeapon=-2;
@@ -116,7 +131,7 @@
             !watch && current.combat.dead ? 'Training over · Restart training to try again' :
             paused ? (watch ? 'AI duel paused · use the watch panel to resume' : 'Paused - Resume flight when ready') :
             watch ? 'Watching test pilot · Esc pauses' : current.contact ? 'Surface contact · throttle cut' :
-            document.pointerLockElement === host ? 'Mouse captured · Esc pauses & releases' : 'Flight controls active';
+            document.pointerLockElement === host ? 'Mouse captured · Esc pauses & releases' : controls.view().uncapturedMouse ? 'Cursor steering · center mouse to stop turning · Esc pauses' : 'Flight controls active';
     }
     function pause() {
         paused = true;
@@ -139,6 +154,14 @@
         comms.reset();
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
+        if(aegis){
+            aegis.reset();var snapshot=session.snapshot(),oldEye=snapshot.state.eye.slice(),aegisStart=[-200/units,-1100/units,1200+220/units];
+            DW.training.participants(snapshot.combat).filter(function(c){return c.controller!=='input';}).forEach(function(c){c.pose.eye=c.pose.eye.map(function(v,i){return v+aegisStart[i]-oldEye[i];});});
+            session.setStartPosition(aegisStart);snapshot.state.ramp=[0,0,0];snapshot.state.throttle=0;
+            var forward=[200,1100,-220],forwardLength=Math.hypot.apply(null,forward);forward=forward.map(function(v){return v/forwardLength;});
+            var rightLength=Math.hypot(forward[0],forward[1]),right=[forward[1]/rightLength,-forward[0]/rightLength,0];
+            snapshot.state.right=right;snapshot.state.back=forward.map(function(v){return -v;});snapshot.state.up=[right[1]*forward[2],-right[0]*forward[2],right[0]*forward[1]-right[1]*forward[0]];
+        }
         if(tetherStudy) {
             var start=tetherParams.get('start');
             session.setStartPosition([start==='tip'?(tetherKm*500-20)/units:0,-(start==='overview'?tetherKm*800:300)/units,1200]);
@@ -306,6 +329,7 @@
                 if (watch.summary().done) pause();
             } else session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
             var after = view();
+            if(aegis&&!watch)aegis.step(elapsed,after);
             if (!watch && after.contact && !contact) DW.audio.playImpact(2);
             DW.audio.setFlightEngine(elapsed, after.state.throttle, !!demand.boost, !paused && !watch && !after.contact && !after.combat.dead, {acceleration: elapsed > 0 ? Math.max(0, Math.hypot.apply(null, after.state.velocity) - beforeSpeed) / elapsed / Math.max(1, profile().maxVelocity[2] / profile().forwardAccel) : 0, damage: 1 - after.combat.hull / (after.combat.maxHull || after.combat.hull || 1), maneuver: Math.min(1, Math.abs(demand.pitch || 0) + Math.abs(demand.yaw || 0) + Math.abs(demand.roll || 0))});
             if (!watch) controls.haptics(elapsed, {boost: !after.contact && !after.combat.dead && !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
@@ -323,6 +347,7 @@
         }
         var comparison = diagnostics.settings();
         presentation.render(currentView, appearance, comparison, elapsed);
+        if(aegis){var readout=document.getElementById('aegis-flight-readout');if(readout)readout.textContent=aegis.readout();}
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
         flightHud.render(Object.assign({}, currentView, { units: units, paused: paused, speakerId: comms.speakerId(), weapon: weapon() }, inputView, appearance));

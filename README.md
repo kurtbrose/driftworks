@@ -214,6 +214,13 @@ also links back to it.
 ### Arcade flight experiment
 
 Open [the flight lab](experiments/flight.html) from the same static server.
+
+For the Aegis capital-ship sandbox, open [Aegis live batteries](experiments/flight.html?aegis=1).
+Fly a fighter alongside the stationary allied dreadnaught while its twelve
+articulated batteries track and engage hostile fighters. W/S adjusts throttle,
+Space fires, and Esc pauses. The capital hull is invulnerable; coarse collision
+proxies stop hull crossings. The [kit and rig reference](docs/dreadnaught-kit.md)
+describes this prototype's scope and asset generation.
 The [mission selector](experiments/missions.html) links to separate flight sorties.
 Asteroid patrol places exactly two hostiles near a randomized asteroid; clearing
 both completes the mission without spawning another wave. Restart keeps the same

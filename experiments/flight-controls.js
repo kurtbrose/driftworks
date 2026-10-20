@@ -69,7 +69,7 @@
             } catch (error) { /* Haptics must never interrupt flight. */ }
         }
         var steeringPreset = get('steering-preset');
-        var mouseActive = true, lastAxes = /** @type {number[]} */ ([]);
+        var mouseActive = true, uncapturedMouse=false, lastAxes = /** @type {number[]} */ ([]);
         var padActivity = /** @type {Record<string, {axes: number[]; buttons: boolean[]}>} */ ({});
         steeringPreset.value = 'medium-soft';
         try {
@@ -91,21 +91,28 @@
             previousButtons = { bank: false, lock: false, pause: false };
         }
         function release() {
+            uncapturedMouse=false;
             if (document.pointerLockElement === host)
                 document.exitPointerLock();
         }
+        /** @param {unknown} [error] */function captureFallback(error){
+            if(inputMode.value!=='mouse'||actions.isDead()){actions.captureFailure(error);return;}
+            if(uncapturedMouse&&!actions.isPaused())return;
+            uncapturedMouse=true;mouseActive=true;actions.resume();
+        }
         function capture() {
+            uncapturedMouse=false;
             if (!host.requestPointerLock) {
-                actions.captureFailure();
+                captureFallback();
                 return;
             }
             try {
                 var result = host.requestPointerLock();
                 if (result && result.catch)
-                    result.catch(actions.captureFailure);
+                    result.catch(captureFallback);
             }
             catch (error) {
-                actions.captureFailure(error);
+                captureFallback(error);
             }
         }
         function pads() {
@@ -208,6 +215,7 @@
         };
         document.addEventListener('pointerlockchange', function () {
             if (document.pointerLockElement === host) {
+                uncapturedMouse=false;
                 if (actions.isDead()) {
                     actions.pause();
                     return;
@@ -215,10 +223,10 @@
                 actions.resume();
                 document.body.classList.add('mouse-captured');
             }
-            else
+            else if(!uncapturedMouse)
                 actions.pause();
         });
-        document.addEventListener('pointerlockerror', actions.captureFailure);
+        document.addEventListener('pointerlockerror', captureFallback);
         window.addEventListener('blur', actions.pause);
         document.addEventListener('visibilitychange', function () {
             if (document.hidden)
@@ -281,19 +289,26 @@
             e.preventDefault();
         });
         document.addEventListener('mousedown', function (e) {
-            if (!actions.isPaused() && document.pointerLockElement === host && (e.button === 0 || e.button === 2))
+            if (!actions.isPaused() && (document.pointerLockElement === host || uncapturedMouse&&host.contains(/** @type {Node} */(e.target))) && (e.button === 0 || e.button === 2))
                 keys['mouse' + e.button] = true;
         });
         document.addEventListener('mouseup', function (e) {
             delete keys['mouse' + e.button];
         });
         document.addEventListener('mousemove', function (e) {
+            if(!actions.isPaused()&&uncapturedMouse&&inputMode.value==='mouse'){
+                var rect=host.getBoundingClientRect();
+                if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
+                mouseActive=true;stopRumble();
+                mouse=input.moveStick([0,0],e.clientX-rect.left-rect.width/2,e.clientY-rect.top-rect.height/2,stickRange(),Number(sensitivity.value));return;
+            }
             if (!actions.isPaused() && document.pointerLockElement === host && (e.movementX || e.movementY)) {
                 mouseActive = true;
                 if (inputMode.value === 'mouse') stopRumble();
                 mouse = DW.flightInput.moveStick(mouse, e.movementX, e.movementY, stickRange(), Number(get('sensitivity').value));
             }
         });
+        host.addEventListener('mouseleave',function(){if(uncapturedMouse&&!actions.isPaused())actions.pause();});
         function stickRange() {
             var shorter = Math.min(host.clientWidth, host.clientHeight);
             if (steeringPreset.value === 'original') return Math.min(160, shorter * .2);
@@ -407,7 +422,7 @@
             return { throttle: controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA'), vertical: axis('KeyR', 'KeyF'), boost: keys.ShiftLeft || keys.ShiftRight || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
         }
         function view() {
-            return { mouse: mouse, inputMode: inputMode.value, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };
+            return { mouse: mouse, inputMode: inputMode.value, uncapturedMouse:uncapturedMouse, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };
         }
         return { haptics: haptics, sample: sample, view: view, clear: clear, resetButtons: resetButtons, capture: capture, release: release };
     }

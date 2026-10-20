@@ -2,6 +2,20 @@ export type TargetStatus = {id: string; shield: number; hull: number; shieldTrai
 import type { Asteroid, Ship, World, DriftworksNamespace } from '../src/types';
 /** Scene-space positions; velocities and engine targets are metres per second. */
 export type Vector = number[];
+export type AegisFlightAsset = {
+    name:string; lengthMeters:number; source:string;
+    batches:{color:[number,number,number];vertices:number[]}[];
+    turrets:{id:string;kind:'heavy'|'point-defense';position:Vector;side:number;batches:{color:[number,number,number];vertices:number[]}[]}[];
+};
+export type AegisFlightRig = {
+    reset:()=>void;
+    step:(dt:number,view:FlightView)=>void;
+    geometry:()=>Batch[];
+    effects:(pose:Pose)=>Batch[];
+    readout:()=>string;
+    hit:(a:Vector,b:Vector)=>Vector|null;
+    telemetry:()=>{seconds:number;contacts:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string}[]};
+};
 export type Pose = {
     eye: Vector;
     right: Vector;
@@ -750,6 +764,7 @@ export type ExperimentModules = {
             view: () => {
                 mouse: number[];
                 inputMode: string;
+                uncapturedMouse: boolean;
                 showMouseStick: boolean;
                 stickRange: number;
             };
@@ -799,6 +814,7 @@ export type ExperimentModules = {
             pose: (state: Pose) => void;
             render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number) => void;
             renderStats: () => RenderStats;
+            setCapital: (rig:AegisFlightRig|null)=>void;
         };
     };
     flightDiagnostics: {
@@ -996,6 +1012,8 @@ export type ElementsGetter = <K extends keyof Elements>(id: K) => Elements[K];
 export type VoiceNumberKey = Exclude<keyof Voice, "compactWords" | "emotion">;
 declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
+        aegisFlightAsset?: AegisFlightAsset;
+        aegisFlight?: {create:()=>AegisFlightRig;load:()=>Promise<unknown>};
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];
         retailWeapons?: Weapon[];

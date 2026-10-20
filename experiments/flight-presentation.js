@@ -156,6 +156,7 @@
             get('art-credit').textContent = String(error);
         });
         var skybox = DW.flightSkybox.create(host);
+        /** @type {import('./types').AegisFlightRig|null} */var capital=null;
         var tetherKm = Number(new URLSearchParams(typeof location === 'undefined' ? '' : location.search).get('tether'));
         var tether = [100,50,20,10,2].includes(tetherKm) ? tetherGeometry(tetherKm) : [];
         var spin=tetherSpin(tetherKm || 100,new URLSearchParams(typeof location === 'undefined' ? '' : location.search).get('spin') || '1g');
@@ -244,6 +245,7 @@
                     tetherReadout.textContent=tetherKm+' km tip-to-tip  /  hub '+(distance/1000).toFixed(2)+' km\nTip '+spin.tipSpeed.toFixed(0)+' m/s / '+spin.tipG.toFixed(2)+' g / period '+spin.periodSeconds.toFixed(1)+' s\nFull span at current '+speed.toFixed(0)+' m/s: '+(speed>1?(tetherKm*1000/speed/60).toFixed(1)+' min':'--');
                 }
             }
+            if(capital)actorBatches=actorBatches.concat(capital.geometry());
             scene.setStudyActors(actorBatches.concat(crews.map(function (batch) {
                 var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });
                 return Object.assign({}, batch, {origin: /** @type {[number,number,number]} */ ([asteroid ? asteroid.position.x : 0, asteroid ? asteroid.position.y : 0, 0]), rotation: asteroid ? asteroid.rotation : 0});
@@ -264,6 +266,7 @@
                 engineOffset += p.length;
             });
             effectBatches.push({ vertices: engines, color: [.25, .65, 1] });
+            if(capital)effectBatches=effectBatches.concat(capital.effects(state));
             scene.setStudyEffects(effectBatches);
             scene.setStudyDiagnostics(comparison);
             skybox.render(state, comparison.scale, comparison.mode === 'empty');
@@ -273,7 +276,7 @@
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };
         }
-        return { appearance: appearance, pose: pose, render: render, renderStats: renderStats };
+        return { appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
     }
     DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin };
 }());

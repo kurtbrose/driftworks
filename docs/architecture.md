@@ -970,6 +970,16 @@ shortcuts call injected actions; the adapter does not access session, HUD, comms
 or weapon selectors. The optional environment argument supplies document/window/
 navigator for adapter regressions. Load it after `input.js` and before `flight.js`.
 
+The optional `?aegis=1` flight scenario loads a locally baked capital-ship rig
+before creating the sortie. `experiments/aegis-flight.js` owns ephemeral turret
+angles, projectile banks and collision proxies; it uses `flightGuns.step` and
+`training.trace` for the existing projectile and damage rules. The flight
+composition root advances the rig only while unpaused and resets it with the
+sortie. Presentation receives the rig through `setCapital`, reuses static hull
+buffers and transforms only the articulated gun geometry each frame. These
+experimental objects are outside the tactical world's save contract. See
+[the Aegis reference](dreadnaught-kit.md) for axes, units and prototype limits.
+
 `experiments/flight-presentation.js` owns the main study scene, skybox, texture
 loading, artwork controls/credits, faction paint and fleet/effect submission.
 `appearance()` returns a fresh selection/paint/image snapshot for both `render`

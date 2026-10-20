@@ -72,3 +72,30 @@ Run that script after changing the source fighter or shared finish generator.
 Escorts are separate scene objects: they neither explode with the kit nor appear
 in its OBJ export. Their small size alongside the capital hull is intentional.
 
+## Live flight scenario
+
+Open `experiments/flight.html?aegis=1` or choose Aegis from the mission list.
+This uses the ordinary flight simulator controls, physics, HUD, NPCs, projectile
+stepping and damage resolver. The player flies a fighter alongside a stationary
+allied 1,305 m battleship preset; customized bench configurations are not passed
+through. Capital hull damage and capital piloting are not modeled in this pass.
+
+Each battery has a fixed pedestal, yaw joint and pitch joint. The generated
+flight asset separates the immutable hull from the twelve gun assemblies, with
+meter-based pivots and Z-up geometry. `experiments/aegis-flight.js` limits yaw to
+0.45 rad/s and elevation to 0.30 rad/s, tracks hostile fighters within 2,400 m,
+leads their velocity and fires only after alignment. Upper and lower banks use
+their own outward hemispheres, with an elevation limit of 79.2 degrees.
+Conservative hull and bridge boxes block firing lines and projectiles. These
+same coarse boxes stop player hull crossings; they are not mesh-accurate
+collision shapes. Turrets use the existing projectile renderer and shared
+fighter damage resolver. Pausing freezes their clocks and projectiles; Reset
+clears tracking and shots. Static hull buffers are reused between frames.
+
+Only Aegis mode loads `assets/ships/aegis-kit/flight-rig.js`. Normal flight and
+the asteroid mission retain their existing setup. Regenerate that asset with
+`node tools/bake-aegis-flight.cjs` after changing ship geometry or pivots, then run
+`node tools/refresh-flight-assets.cjs` after changing simulator scripts.
+`node tests/aegis-flight.cjs` checks asset freshness, tracking limits, both firing
+hemispheres, shared damage, allied safety, collision, reset and buffer reuse.
+
