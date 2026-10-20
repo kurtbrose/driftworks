@@ -1,0 +1,59 @@
+{
+  "inputs": [
+    {
+      "id": "p001-005",
+      "input_sha256": "7671535f59600b5d3cfed79279e5da6769425cbd2170aa42b4391fd45858ceb0",
+      "aligned_sha256": "a35c00d473b77403d784d2700ce9b8d1f880632348809f6e339edf80c2b44bfd",
+      "negative_sha256": "a1080e582645391b9f0b8543caa47fb032aeae3d57158c994225fe8865aebca5"
+    },
+    {
+      "id": "p001-012",
+      "input_sha256": "ba441a7a2165d4141af3827e4161080e717d650aaccc8e067b3658615de02e7b",
+      "aligned_sha256": "337444c17cf02e6ca6d9be9b6e59be0321b8de172f23b39f5c13eeae47f1b2e2",
+      "negative_sha256": "f08a4c1f4ff0ccc41a1968e4170c55a6b7dc87b0fcbc3c8353b62258ae9e62de"
+    },
+    {
+      "id": "p001-079",
+      "input_sha256": "5d5f6498e5b9ad001d8190c602f13b6c0cd953db20f3c65788c945c79149ffae",
+      "aligned_sha256": "3c530551fa9870a0d9792d124ecc86453375a16ac11a2e3b5336b2d3742a05d1",
+      "negative_sha256": "5a093e3f8322462802988f15f24bbaf38ffb39f7d51663aa2b94c19017e5ec3d"
+    },
+    {
+      "id": "p006-005",
+      "input_sha256": "1f0c5e26a33aee37016d5ac4de4bcaa8862bd29ddad0eddd9b4a5d93a386a75e",
+      "aligned_sha256": "2844bebd43c49b706e89d5f7af53eaca88740716eca2c0023cc93334923ee585",
+      "negative_sha256": "4d8ce604d86dba9989de5606d2b359c8ee4cc80e674717e30d2651d5ba26dfad"
+    },
+    {
+      "id": "p006-018",
+      "input_sha256": "5eccef21afe7dac291a98e86f0bf34fc875cec3721259bdf75ad5c230e3453d4",
+      "aligned_sha256": "fd3d25235ea3b3f92b088487816e506622f2e632b408b90d773243b5fa95a3fd",
+      "negative_sha256": "96bde3e41e9b9491a39fa3751d28de744d21ef34847a745fd478121b1df34da2"
+    },
+    {
+      "id": "p006-047",
+      "input_sha256": "bc9323095bf90bb6f181d2cb7d1eddf92eed32faaaadc88cec4c525cd1f8dec9",
+      "aligned_sha256": "d16432a85347b2b8f55e8d9ae7cfb85c8e4e8610a36be9d3abfef3394e34688e",
+      "negative_sha256": "40ebbfc9866ef021ffb617f6bb6f5af033f7721c80880efcddb7d4f1bb030922"
+    }
+  ],
+  "models": {
+    "landmark": "f001b856447c413801ef5c42091ed0cd516fcd21f2d6b79635b1e733a7109dbf",
+    "illustration": "06b88a204eb230889444ad868ee5608f4fce5d4ff7b7738acaa4209c2b8fdca7"
+  },
+  "tool_sha256": "6d45221bdd319b0f5239fad4822a550d756610ceb93960e211ab2f9bd6a74085",
+  "architecture_sha256": "2047cdb37764e7fc3b8e2e4b1b93bced06ee86e705e34995ca5747cdf0d0bceb",
+  "opencv": "4.11.0",
+  "numpy": "2.3.5",
+  "torch": "2.6.0+cpu",
+  "settings": {
+    "skin_blur_sigma": 7,
+    "spatial_detail_sigma": 0.7,
+    "model_input": 512,
+    "model_cpu_threads": 1,
+    "model_deterministic": true,
+    "model_seed": 1979,
+    "palette_control": "unchanged painted-v2 67-color palette",
+    "no_posterization": true
+  }
+}

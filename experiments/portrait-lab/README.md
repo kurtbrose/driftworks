@@ -1,9 +1,53 @@
 # Procedural portrait laboratory
 
 Offline research spike, isolated from the game. No gameplay files, script loading,
-assets, or deployment dependencies change. Only Pillow and NumPy are required for
-this optional Python tool. No image generator, neural model, 3D geometry, or hand
-retouching is used. WC2 attachments inform visual goals only; they are not inputs.
+assets, or deployment dependencies change. The original converter requires Pillow
+and NumPy. The painted follow-up adds OpenCV and checksum-pinned **2D detection and
+segmentation** models. No generative image model, 3D geometry, or hand retouching
+is used. WC2 attachments inform visual goals only; they are not inputs.
+
+## Painted follow-up — latest results
+
+See [PAINTED_REPORT.md](PAINTED_REPORT.md) and `results/painted-v2/review.png`.
+The new pass standardizes eye-line/head scale, isolates the subject, uses a single
+shared palette and reduces skin to broad value planes with protected features.
+The original `initial/` and `revised/` outputs remain unchanged. `painted-v1/`
+preserves the intermediate attempt; `painted-preview*` records failed/partial
+cutout experiments, not recommended candidates.
+
+From this directory, use Python with these optional offline experiment dependencies:
+
+```
+python -m pip install -r requirements-painted.txt
+python setup_painted_models.py
+python -m unittest -v test_painted_lab.py test_portrait_lab.py
+python painted_lab.py --output results/my-painted-run
+```
+
+`setup_painted_models.py` explicitly downloads and verifies two pinned models.
+Conversion itself never accesses the network. Their provenance/licenses are in
+`models/MODELS.md`; weights and local `.deps/` are ignored. The head-size/eye-line
+normalization is a 2D similarity transform; it preserves each face's yaw rather
+than synthesizing a frontal view. Sources must already be frontal/slight three-quarter.
+Missing detections stop the run instead of silently accepting inconsistent framing.
+Use a fresh output directory: painted runs refuse to overwrite existing results.
+
+`run.json` records matrices, landmarks, source hashes, model hashes, library
+versions, palette and sweep settings. Aligned sources, mattes, smoothed images,
+value planes and feature masks are saved per face. PNG and lossless WebP use only
+shared-palette colors; quality-85 WebP is a separate lossy delivery experiment.
+
+To regenerate the **preserved final run's** matched controls and audit:
+
+```
+python compare_painted_controls.py
+python audit_painted.py
+```
+
+These two reporting scripts target `results/painted-v2/`; they do not regenerate
+portraits. Audit checks each measured file's size and palette and compares every
+lossless WebP to its PNG. The matched controls separate alignment, palette-only
+reduction and painted shading. The original report below describes the first spike.
 
 ## Status
 

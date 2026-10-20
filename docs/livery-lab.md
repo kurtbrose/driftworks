@@ -1,3 +1,23 @@
+## Authored / baseline / guided exercise
+
+The new default comparison puts three copies of the selected hull next to one another in the same hangar: original authored/source appearance, existing procedural baseline, and the same generator with design preferences. Both generated copies share geometry, source mesh, algorithm, material slots, seed and symmetry. Baseline algorithms remain available in Chunk coloration; this adds preferences rather than replacing them. Neutral colors provide a useful ablation.
+
+Visual inspection of the Quaternius Spitfire and Challenger suggested these hypotheses:
+
+| Authored cue observed | Procedural weakness | Implemented preference |
+| --- | --- | --- |
+| Spitfire's paired pod shells read as repeated whole forms around a contrasting central area. | Independent chart colors fragment repeated housings. | Merge adjacent nearly coplanar charts into coherent groups; use whole-group material targets and retain mirror folding. |
+| Challenger's dominant body field and darker central insert establish a large/medium hierarchy. | Small chart islands compete with broad surfaces. | Keep the largest groups quiet, budget secondary coverage, and suppress tiny bevel islands. |
+| Their strong material breaks tend to follow changes in form. | Boundary enamel outlines every chart, including artificial atlas cuts. | Distinguish actual signed creases from smooth chart boundaries: contrast convex ridges, blend concave joins toward Detail. |
+| Contrasting areas form bounded, readable groups rather than equal-strength scattered flecks. | Random eligible charts can consume accent material. | Rank small/medium crease-rich groups using geometric edge length rather than triangle count; allocate at most 3% of total source area before reflection (up to roughly 6% after reflection). |
+| Large surfaces provide quiet space around already complex geometry. | Dense material islands add competition to small parts. | Large-form coherence blends noisy baseline assignments toward coherent targets; Accent restraint removes unbudgeted accent islands. |
+
+These are visual observations from two models, not statistics learned from their textures. Gold can be a dominant body material rather than an accent; the rule concerns hierarchy, not a mandatory color ratio. The generator never samples source paint to make these decisions. Geometry-only operation still applies to arbitrary greyboxes and solids.
+
+The three adjustable preferences are Contour emphasis, Large-form coherence and Accent restraint. Setting all three to zero reproduces the selected baseline. Material slots remain independent and should offer useful contrast; the pass does not assume orange is always an edge highlight. Existing normal-map/detail controls remain independent. No cockpit, gun or engine recognizer is added.
+
+Signed convexity/concavity uses two-manifold shared mesh edges and adjacent face normals/centroids. Open and nonmanifold edges are left unclassified. This is not ambient occlusion: disconnected overlapping parts and T-junctions without shared edges do not produce reliable valley information. The readout exposes chart/group counts, accent candidate area and signed crease counts so these limitations remain visible.
+
 ## Chunk coloration (current)
 
 Choose Chunk coloration to compare four CPU-generated material assignments on the same selected Surface grammar. Geometry and coloration are independent; the four editable palette slots are Primary, Secondary, Accent and Detail. The original/source and region diagnostic remain beside the four treated copies in one hangar.

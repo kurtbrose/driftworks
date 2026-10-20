@@ -1,5 +1,9 @@
 # Procedural portrait research — 2026-10-19
 
+Follow-up: [PAINTED_REPORT.md](PAINTED_REPORT.md) documents the new shared-palette,
+aligned, painted-plane pass. This report and its outputs describe the preserved
+first comparison.
+
 The experiment has run on 24 curated synthetic adult portraits. **No candidate yet
 meets the intended WC2-inspired artwork standard.** Several retain recognizable
 identity, but textures and tonal boundaries still read as processed photographs.

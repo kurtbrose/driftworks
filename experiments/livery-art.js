@@ -1,3 +1,4 @@
+import {designPlan} from './livery-design.js';
 import {reflectHullPoint} from './livery-symmetry.js';
 /** Chunk coloration operations; geometry and palette are selected independently.
  * @typedef {{id:number,name:string}} ArtRecipe */
@@ -39,8 +40,9 @@ export function treatmentSamples(vertices,stride){
 }
 
 /** Region-local treatment analysis. No equipment semantics or source paint.
- * @param {import('./hull-panels').Region[]} regions @param {number} seed @param {import('./livery-symmetry').MirrorPlane|null} [symmetry] */
-export function chunkTreatment(regions,seed,symmetry=null){
+ * @param {import('./hull-panels').Region[]} regions @param {number} seed @param {import('./livery-symmetry').MirrorPlane|null} [symmetry] @param {import('./livery-design').DesignPreferences|null} [preferences] */
+export function chunkTreatment(regions,seed,symmetry=null,preferences=null){
+ const design=preferences?designPlan(regions,symmetry):null;
  const hash=/** @param {number} n */n=>{const x=Math.sin(n*127.1+seed*31.7)*43758.5453;return x-Math.floor(x);};
  const dot=/** @param {number[]} a @param {number[]} b */(a,b)=>a.slice(0,3).reduce((sum,x,k)=>sum+x*b[k],0);
  const charts=regions.map(r=>{
@@ -82,7 +84,7 @@ export function chunkTreatment(regions,seed,symmetry=null){
   }else{const slope=1-Math.max(0,dot(n,c.r.normal));w[c.slot]=1;const dark=Math.min(.85,edge*.4+slope*1.7);w[c.slot]*=1-dark;w[3]+=dark;}
   // Newly exposed plate sidewalls use the detail material.
   const side=1-Math.max(0,dot(n,c.r.normal));if(side>.45){for(let k=0;k<3;k++)w[k]*=.25;}
-  const result=w.slice(0,3);cache.set(key,result);return result;
+  const result=design&&preferences?design.apply(p,n,w.slice(0,3),c.r.id,preferences):w.slice(0,3);cache.set(key,result);return result;
  };
 }
 

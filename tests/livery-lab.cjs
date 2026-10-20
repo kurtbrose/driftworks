@@ -15,7 +15,7 @@ const gl=new Proxy({
  bufferData:(target,data)=>{uploaded=data;uploads++;}
 },{get:(target,key)=>key in target?target[key]:()=>{}});
 const canvas={getContext:()=>gl,addEventListener:()=>{},clientWidth:900,clientHeight:700};
-for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','detail','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome','symmetry','directions','art-style','palette-mode','fields','zones','finish','graphics'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
+for(const id of ['subject','grammar','scale','relief','wear','seed','primary','secondary','accent','detail','description','scale-value','compare','split-label','spin','shuffle','palette','reset','quarter','top','side','caption','layout','sky','viewer','labels','collection','source-blend','regions','analysis','masks','monochrome','symmetry','directions','cue-contours','cue-coherence','cue-accents','design-controls','design-readout','art-style','palette-mode','fields','zones','finish','graphics'])controls.set(id,{value:defaults[id]||'',checked:false,selectedOptions:[{textContent:id}],textContent:'',replaceChildren:()=>{},append:()=>{}});
 for(const id of ['material-set','material-grey',...['primary','secondary','accent','detail'].flatMap(id=>['material','roughness','metalness','texture','wear','emission'].map(key=>id+'-'+key))])controls.set(id,{value:'0',checked:false});
 DW.flightSkybox={create:()=>({render:()=>{}})};
 const sandbox={setTimeout:callback=>callback(),devicePixelRatio:1,window:{Driftworks:DW},document:{createElement:()=>({style:{},append:()=>{}}),getElementById:id=>id==='canvas'?canvas:controls.get(id)},Float32Array,requestAnimationFrame:()=>{}};
@@ -33,6 +33,7 @@ sandbox.fighterHull=sandbox.window.fighterHull;sandbox.fleetHull=sandbox.window.
 vm.runInContext('(function(){'+read('experiments/hull-panels.js').replaceAll('export function','function')+';window.analyzeHull=analyzeHull;window.buildHullPanels=buildHullPanels;window.buildGraphicMarks=buildGraphicMarks;})();',sandbox);
 sandbox.analyzeHull=sandbox.window.analyzeHull;sandbox.buildHullPanels=sandbox.window.buildHullPanels;sandbox.buildGraphicMarks=sandbox.window.buildGraphicMarks;
 vm.runInContext(read('experiments/livery-symmetry.js').replaceAll('export function','function'),sandbox);
+vm.runInContext(read('experiments/livery-design.js').replaceAll('export function','function'),sandbox);
 vm.runInContext(read('experiments/livery-art.js').replace(/^import .*;\r?\n/gm,'').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
 vm.runInContext(read('experiments/livery-materials.js').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
 vm.runInContext(read('experiments/livery-depth.js').replaceAll('export function','function'),sandbox);
@@ -99,3 +100,10 @@ for(const role of [0,1,2,3,4])for(const error of [-.0000002,0,.0000002]){
 }
 assert(Math.abs(decode(2.1,Math.floor,clamp).edge-.5)<1e-6,'Fractional curvature remains available');
 console.log('PASS shader wear decoding: interpolation around integer roles stays continuous');
+
+controls.get('directions').value='design';controls.get('layout').value='matrix';controls.get('art-style').value='1';controls.get('cue-contours').value='75';controls.get('cue-coherence').value='85';controls.get('cue-accents').value='95';controls.get('directions').oninput();
+assert.equal(vm.runInContext('actors.length',sandbox),4,'Design exercise: source, baseline, guided, one deck');assert.equal(controls.get('art-style').disabled,false,'Both comparison results share the selected assignment algorithm');
+const pair=vm.runInContext('actors.slice(1,3).map(a=>({start:a.start,count:a.count}))',sandbox);assert.equal(pair[0].count,pair[1].count);
+let changedWeights=0;for(let i=0;i<pair[0].count;i++){const a=(pair[0].start+i)*12,b=(pair[1].start+i)*12;for(const k of [0,1,2,3,4,5,9,10,11])assert.equal(uploaded[a+k],uploaded[b+k],'Baseline and guided comparison preserve geometry, normals, roles and UVs');for(const k of [6,7,8])if(uploaded[a+k]!==uploaded[b+k])changedWeights++;}
+assert(changedWeights>0,'Preferences change assignments rather than the test hull');
+console.log('PASS authored/baseline/guided comparison: identical geometry and independently controlled preferences');

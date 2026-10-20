@@ -4,6 +4,7 @@ const read=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const context={window:{Driftworks:{}},Float32Array};vm.createContext(context);
 vm.runInContext(read('src/mesh-builder.js'),context);
 vm.runInContext(read('experiments/livery-symmetry.js').replaceAll('export function','function'),context);
+vm.runInContext(read('experiments/livery-design.js').replaceAll('export function','function'),context);
 vm.runInContext(read('experiments/livery-art.js').replace(/^import .*;\r?\n/gm,'').replaceAll('export const','var').replaceAll('export function','function'),context);
 vm.runInContext(read('experiments/hull-panels.js').replaceAll('export function','function'),context);
 const recipes=context.ART_DIRECTIONS;assert.equal(recipes.length,4);assert(recipes.every(r=>!('geometry' in r)&&!('palette' in r)),'Coloration does not prescribe geometry or palette');
@@ -56,3 +57,13 @@ const mirrored=context.mirrorTreatmentMesh(crossing,{normal:[1,0,0],offset:0,cov
 const keys=new Set();for(let i=0;i<mirrored.length;i+=8)keys.add(context.artVertexKey(mirrored,i));for(let i=0;i<mirrored.length;i+=8)assert(keys.has(context.artVertexKey([-mirrored[i],mirrored[i+1],mirrored[i+2]])),'Every clipped treatment vertex has a reflected counterpart');
 for(let i=0;i<mirrored.length;i+=24){const ax=mirrored[i+8]-mirrored[i],ay=mirrored[i+9]-mirrored[i+1],bx=mirrored[i+16]-mirrored[i],by=mirrored[i+17]-mirrored[i+1];assert(ax*by-ay*bx>=0,'Reflection preserves outward triangle winding');}
 console.log('PASS symmetry: inferred and rotated planes, asymmetric rejection, canonical materials, clipped mirrored geometry and winding');
+
+const plan=context.designPlan(regions);assert(plan.stats.convex>0,'Cube ridges classify as convex');assert.equal(plan.stats.concave,0,'A convex box has no invented recesses');assert(plan.stats.accentFraction<=.030001,'Accent area is budgeted before mirroring');
+const unchanged=[.2,.3,.1];assert.deepEqual(Array.from(plan.apply([0,0,1],[0,0,1],unchanged,5,{contours:0,coherence:0,accents:0})),unchanged,'Zero preference strengths preserve the existing assignment');
+const quiet=plan.apply([0,0,1],[0,0,1],[0,0,1],5,{contours:0,coherence:1,accents:1});assert.equal(quiet[2],0,'A large surface cannot become a random accent island');
+const ridge=plan.apply([.999,0,1],[0,0,1],[1,0,0],5,{contours:1,coherence:1,accents:1});assert(ridge[1]>0,'Actual convex contours receive material separation');
+const guided=context.chunkTreatment(regions,17,null,{contours:0,coherence:0,accents:0});for(const style of [1,2,3,4])assert.deepEqual(guided([.2,.3,1],[0,0,1],style),sample([.2,.3,1],[0,0,1],style),'Disabling preferences restores the selected baseline algorithm');
+// A folded open trough has a signed concave join, unlike the convex box.
+const trough=[{id:0,area:1,normal:[0,0,1],u:[1,0,0],v:[0,1,0],faces:[{v:[[0,0,0],[1,0,0],[0,1,0]],normal:[0,0,1],area:.5,neighbors:[]}]},{id:1,area:1,normal:[1,0,0],u:[0,1,0],v:[0,0,1],faces:[{v:[[0,1,0],[0,0,0],[0,0,1]],normal:[1,0,0],area:.5,neighbors:[]}]}];
+const valleyPlan=context.designPlan(trough);assert(valleyPlan.stats.concave>0,'Signed geometry identifies an actual concave join');const valley=valleyPlan.apply([.001,.4,0],[0,0,1],[1,0,0],0,{contours:1,coherence:0,accents:0});assert(valley.reduce((a,b)=>a+b,0)<.7,'Concave join blends toward the detail surface');
+console.log('PASS design preferences: signed contours, sparse accents, quiet broad surfaces and baseline ablation');
