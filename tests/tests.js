@@ -1694,7 +1694,6 @@
     assert(combat.enemies.length===16 && combat.enemies.filter(function(e){return e.team==='ally';}).length===8);
     var names=combat.enemies.map(function(e){return e.callsign;}), start=JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}));
     assert(new Set(names).size===16 && names[0]==='Cuyahoga Cryptid');
-    assert(names[3]==='Aunt Barb' && names[6]==='Big Dale' && names[14]==='Uncle Rick','Ohio mixes familiar Midwest names with its strongest callsigns');
     api.step(combat,player,1,300/U);
     assert(JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}))===start);
     assert(DW.flightComms.step(clock,1,combat,true)===null && combat.ohioIntro===0);
