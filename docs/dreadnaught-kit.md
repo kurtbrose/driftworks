@@ -38,12 +38,16 @@ layouts are useful future passes after the kit's silhouettes are settled.
 - Mid-hull modules are 16 units long. Connectors belong to each module.
 - Dorsal attachment origins are local (0, 4.1, 0), shifted 3.5 units toward the bow on the final hull. The final hull also carries
   a fixed command tower aft of its attachment socket.
+- Each mid-hull also has an independently configured ventral socket. The same
+  attachment geometry rotates 180 degrees around X, preserving forward-pointing
+  weapons and outward normals. Explosion offsets move each bank away from its
+  own hull surface. The Underside camera preset exposes the lower bank.
 - One model unit represents 9 meters for the optional nominal length readout.
   This is an art study, independent of simulation calibration.
 - Major modules are named groups. Armor and details remain separate meshes
   within those groups. Explosion offsets are inspection transforms only.
 
-The OBJ button exports assembled positions with stable named spine and dorsal attachment objects,
+The OBJ button exports assembled positions with stable named spine, dorsal and ventral attachment objects,
 regardless of explosion or turntable settings. It exports geometry only, without
 materials, UVs, lights or socket metadata. These intersecting component meshes
 are intended for visual modeling, not watertight fabrication. The three saved
@@ -53,4 +57,18 @@ Run `node tests/dreadnaught-kit.cjs` for finite geometry and OBJ export checks.
 Use `node tests/dreadnaught-kit.cjs --export` to regenerate all three OBJ samples.
 The Node test executes the HTML module with the real vendored Three.js geometry
 and stubs browser rendering. Orbiting, lighting and controls need browser review.
+
+## Escort scale references
+
+Four 12 m Spitfire stand-ins accompany the hull at true scale (12/9 model units
+long), with an independent visibility toggle. Escort detail frames the formation
+next to the hull for a close scale comparison without enlarging the fighters.
+These reuse the Quaternius CC0
+Spitfire used by `studyViewer.referenceFighter` in the other model studies.
+`tools/bake-aegis-reference.cjs` extracts only that mesh and its existing surface
+finishes from the vendored ship pack into `assets/ships/aegis-kit/reference-fighter.js`.
+The generated asset includes source identity, license and source mesh hash.
+Run that script after changing the source fighter or shared finish generator.
+Escorts are separate scene objects: they neither explode with the kit nor appear
+in its OBJ export. Their small size alongside the capital hull is intentional.
 

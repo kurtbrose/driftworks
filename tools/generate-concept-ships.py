@@ -38,7 +38,9 @@ class Mesh:
     def tag(self,component,operation,*args,**kwargs):
         start=len(self.parts)
         operation(*args,**kwargs)
-        for part in self.parts[start:]:part['component']=component
+        for part in self.parts[start:]:
+            part.setdefault('component',component)
+            part['assembly']=component
 
     def face(self, material, points, stage=0):
         a,b,c = points[:3]
@@ -119,11 +121,16 @@ class Mesh:
         self.face('trim',[[x+.035*math.cos(i*math.pi/3),y+.035*math.sin(i*math.pi/3),z] for i in range(6)],1)
 
     def canopy(self,rings):
-        self.hull('dark',rings,1)
+        self.tag('canopy-shell',self.hull,'dark',rings,1)
         inner=[(y,w*.91,h*.94,z+.045) for y,w,h,z in rings]
-        self.hull('glass',inner,1)
+        self.tag('canopy-glass',self.hull,'glass',inner,1)
         for y,w,h,z in rings[1:-1]:
+            start=len(self.parts)
             self.hull('trim',[(y-.035,w*1.015,h*1.015,z+.045),(y+.035,w*1.015,h*1.015,z+.045)],1)
+            # Frame bands wrap the glazing; filled end caps would block the pilot.
+            del self.parts[-1]
+            del self.parts[start]
+            for part in self.parts[start:]:part['component']='canopy-frame'
 
     def fin(self,x):
         s=1 if x>0 else -1
@@ -214,6 +221,12 @@ def build(name):
             w=.85-(y-3)*.815/4
             z=.46-(y-3)*.40/4
             m.box('trim',0,y,z+.01,w*1.3,.022,.012,2)
+        for s in (-1,1):
+            # Reference's sloping cheek armor and side intake louvers, fitted to the chine.
+            m.face('plate',[[s*.94,-1.8,.925],[s*1.42,-1.8,.925],[s*1.20,.2,.79],[s*.87,.2,.79]],1)
+            for y in (-1.55,-1.25,-.95):
+                m.face('dark',[[s*1.56,y,.65],[s*1.80,y,.42],[s*1.78,y+.12,.42],[s*1.54,y+.12,.65]],1)
+            m.box('trim',s*.86,2.0,.65,.07,.8,.12)
     elif name=='bulldog':
         m.hull('armor',[(-4,1,.65,0),(-1,1.05,.8,0),(3,.65,.55,0),(5,.25,.25,-.1)])
         m.hull('plate',[(-3.7,.67,.2,.78),(-1.3,.7,.28,.85),(-.5,.61,.12,.88)],1)
@@ -258,6 +271,10 @@ def build(name):
             m.box('dark',s*.52,-1.90,1.10,.19,.55,.06)
             for y in (-3.3,-2.8,-2.3):m.box('trim',s*.84,y,.86,.10,.30,.25)
         m.box('dark',0,4.75,-.13,.38,.08,.25)
+        m.box('paint',0,-.2,1.35,.20,.90,.025,2)
+        for s in (-1,1):
+            m.pod('trim',s*1.85,[(-1.8,.06,.06,.29),(1.30,.06,.06,.29)])
+            m.box('dark',s*.50,3.05,.32,.13,.34,.09)
     else:
         m.tag('central-body',m.hull,'armor',[(-3.6,.8,.5,0),(-1,1.05,.67,0),(1.3,.72,.48,0),(3.3,.14,.19,0)])
         m.canopy([(-.7,.55,.15,.7),(.05,.61,.65,.60),(1.0,.5,.7,.5),(2.25,.1,.1,.4)])
@@ -269,7 +286,7 @@ def build(name):
                 a=math.radians(-75+j*150/16);b=math.radians(-75+(j+1)*150/16)
                 if s<0:a,b=math.pi-b,math.pi-a
                 width=.65+.55*math.sin((j+.5)*math.pi/16)
-                m.tag('horizontal-ring',m.arc_beam,a,b,5.25,width+.035,.96,-.26,False,'dark',0)
+                m.tag('horizontal-ring',m.arc_beam,a,b,5.25,width*.96,.86,-.24,False,'dark',0)
                 m.tag('horizontal-ring',m.arc_beam,a+.005,b-.005,5.25,width,.91,-.24,False,'armor',1)
                 m.ring_segment(a+.012,b-.012,5.25,width*.58,.231,.035,'plate',1)
                 if j in (10,11,12,13):
@@ -297,7 +314,7 @@ def build(name):
         for j in range(24):
             a=j*math.pi/24;b=(j+1)*math.pi/24
             # Dark continuous inner chassis, then independently fitted armor tiles.
-            m.tag('vertical-ring',m.arc_beam,a,b,5.25,1.04,.92,-3.28,True,'dark',0)
+            m.tag('vertical-ring',m.arc_beam,a,b,5.25,.96,.84,-3.26,True,'dark',0)
             m.tag('vertical-ring',m.arc_beam,a+.004,b-.004,5.25,1.0,.88,-3.26,True,'armor',1)
             m.tag('vertical-ring',m.arc_beam,a+.012,b-.012,5.25,.63,.035,-2.805,True,'plate',1)
             if j in (3,4,5,18,19,20):
@@ -307,13 +324,19 @@ def build(name):
         for s in (-1,1):
             m.box('paint',s*.6,-2.1,.958,.22,.75,.025,2)
         m.gun(0,4.25,-.16,3.5)
+        # Raised shoulders and small blue dorsal panels around the twin rear nacelles.
+        for s in (-1,1):
+            m.pod('armor',s*.92,[(-2.7,.28,.22,.49),(-1.2,.32,.23,.55),(-.6,.22,.12,.58)])
+            m.box('paint',s*.92,-1.7,.80,.22,.62,.022,2)
+            m.box('dark',s*1.01,-1.0,.70,.22,.32,.10)
+    m.seat={'raptor':[0,1.0,.30],'bulldog':[0,1.12,.08],'halo':[0,.35,.16]}[name]
     return m
 
 def export(name,m):
     colors=dict(COLORS)
     if name=='bulldog':colors['paint']=[.92,.58,.12];colors['light']=[1,.70,.22]
     if name=='halo':colors['paint']=[.18,.35,.58]
-    model={'name':name.title(),'parts':m.parts,'colors':colors,'gunMounts':m.guns}
+    model={'name':name.title(),'parts':m.parts,'colors':colors,'gunMounts':m.guns,'pilotSeat':m.seat}
     (ROOT/(name+'.json')).write_text(json.dumps(model,separators=(',',':')))
     blob=bytearray();views=[];accessors=[];primitives=[]
     def accessor(values,width,kind):

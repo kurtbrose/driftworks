@@ -9,11 +9,14 @@
 <label>Mission section<select id="mission"><option value="standard">Armored hull</option><option value="hangar">Open hangar</option><option value="utility">Reactor / utility</option></select></label>
 <label>Drive block<select id="drive"><option value="standard">Standard / three drives</option><option value="heavy">Heavy / five drives</option></select></label>
 <label>Dorsal sockets<select id="attachment"><option value="turret">Twin heavy batteries</option><option value="cargo">Cargo pods</option><option value="sensor">Sensor stations</option><option value="none">Empty hardpoints</option></select></label>
+<label>Ventral sockets<select id="ventral"><option value="turret">Twin heavy batteries</option><option value="cargo">Cargo pods</option><option value="sensor">Sensor stations</option><option value="none">Empty hardpoints</option></select></label>
+<label><input id="fighters" type="checkbox" checked> Escort fighters · true scale, 12 m</label>
 <label>Explode kit<input id="explode" type="range" min="0" max="100" value="0"></label>
 <label><input id="spin" type="checkbox"> Turntable</label>
-<button id="quarter">Perspective</button> <button id="top">Top</button> <button id="side">Side</button><br><button id="export">Export assembled OBJ</button>
+<button id="quarter">Perspective</button> <button id="top">Top</button> <button id="side">Side</button> <button id="bottom">Underside</button> <button id="escort-view">Escort detail</button><br><button id="export">Export assembled OBJ</button>
 <p id="stats"></p><p>Drag to orbit · Wheel to zoom.<br>Export includes separate named modules; materials and engine lighting remain a viewer study.</p><a href="./">Experiments</a></aside>
 <div id="viewport"><div id="caption">MODULAR CAPITAL PLATFORM / GEOMETRY PROTOTYPE</div><footer>ARMOR / STRUCTURE / SYSTEMS &nbsp; • &nbsp; COMMON 10 × 8 INTERFACE</footer></div>
+<script src="../assets/ships/aegis-kit/reference-fighter.js"></script>
 <script type="module">import * as THREE from 'three';
 import { OrbitControls } from '../vendor/three/examples/jsm/controls/OrbitControls.js';
 
@@ -219,7 +222,30 @@ function drive(g,heavy) {
     const rib=box(g,3.7,side*6,flank*5,4,.2,.3,trim);rib.rotation.z=side*.75;
   }
 }
-function config(){return Object.fromEntries(['prow','count','mission','drive','attachment','explode'].map(id=>[id,el(id).value]));}
+function config(){return Object.fromEntries(['prow','count','mission','drive','attachment','ventral','explode'].map(id=>[id,el(id).value]));}
+function attach(g,kind,side,gap,last) {
+  const mount=new THREE.Group();mount.name=side===1?'dorsal_socket':'ventral_socket';
+  mount.position.set(side===1&&last?-3.5:0,side*gap*.65,0);
+  if(side===-1)mount.rotation.x=Math.PI;
+  g.add(mount);box(mount,0,4.03,0,2,.16,2,trim);
+  if(kind==='turret')turret(mount,0,4.1,0);
+  if(kind==='sensor')sensor(mount,0,4.1,0);
+  if(kind==='cargo'){box(mount,0,5.4,0,8,2.6,5,armor);for(let x=-3;x<=3;x+=2)box(mount,x,5.4,0,.2,2.8,5.2,trim);}
+}
+// Shared Spitfire mesh from the other studies; one unit here is nine meters.
+const escorts=new THREE.Group();escorts.name='scale_reference_escorts';scene.add(escorts);
+const fighterSource=window.Driftworks.aegisReferenceFighter;
+for(let i=0;i<4;i++) {
+  const fighter=new THREE.Group();fighter.name='Spitfire_12m';
+  fighter.position.set(-21+i*5.5,0,12+(i%2)*3.5);escorts.add(fighter);
+  for(const batch of fighterSource.batches) {
+    const positions=[],normals=[];
+    for(let j=0;j<batch.vertices.length;j+=6){const v=batch.vertices;positions.push(-v[j],v[j+2],v[j+1]);normals.push(-v[j+3],v[j+5],v[j+4]);}
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+    mesh(fighter,geo,mat(new THREE.Color(...batch.color),.35,.65));
+  }
+}
+el('fighters').addEventListener('change',()=>{escorts.visible=el('fighters').checked;});
 function rebuild() {
   if(ship) {scene.remove(ship);ship.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
   ship=new THREE.Group();scene.add(ship);
@@ -237,33 +263,32 @@ function rebuild() {
     module(`M_${i+1}_${type}`,16,g=>{
       mid(g,type);
       if(i===count-1)bridge(g);
-      const mount=new THREE.Group();mount.name='dorsal_socket';mount.position.y=gap*.65;if(i===count-1)mount.position.x=-3.5;g.add(mount);box(mount,0,4.03,0,2,.16,2,trim);
-      if(c.attachment==='turret')turret(mount,0,4.1,0);
-      if(c.attachment==='sensor')sensor(mount,0,4.1,0);
-      if(c.attachment==='cargo'){box(mount,0,5.4,0,8,2.6,5,armor);for(let x=-3;x<=3;x+=2)box(mount,x,5.4,0,.2,2.8,5.2,trim);}
+      attach(g,c.attachment,1,gap,i===count-1);
+      attach(g,c.ventral,-1,gap,false);
     },i+1);
   }
   module('E_'+c.drive,12,g=>drive(g,c.drive==='heavy'),count+1);
-  el('stats').textContent=`${Math.round(total*9)} m nominal length · ${count+2} spine modules · ${count} dorsal sockets`;
+  el('stats').textContent=`${Math.round(total*9)} m nominal length · ${count+2} spine modules · ${count} dorsal + ${count} ventral sockets. Escorts: 12 m each, no scale exaggeration.`;
 }
 function view(which='quarter') {
   const span=37+Number(el('count').value)*16+12+Number(el('explode').value)*.65;
   const frame=Math.max(1,1.3/(host.clientWidth/host.clientHeight));
-  camera.position.set(...(which==='top'?[0,span*1.65*frame,.01]:which==='side'?[0,8,span*1.65*frame]:[-span*.65*frame,span*.65*frame,span*1.32*frame]));
+  camera.position.set(...(which==='top'?[0,span*1.65*frame,.01]:which==='bottom'?[-span*.5*frame,-span*.75*frame,span*1.32*frame]:which==='side'?[0,8,span*1.65*frame]:[-span*.65*frame,span*.65*frame,span*1.32*frame]));
   camera.up.set(0,1,0);controls.target.set(0,0,0);controls.update();
 }
-for(const id of ['prow','count','mission','drive','attachment','explode'])el(id).addEventListener('input',rebuild);
+for(const id of ['prow','count','mission','drive','attachment','ventral','explode'])el(id).addEventListener('input',rebuild);
 el('preset').addEventListener('change',()=>{
-  const presets={cruiser:['lance',4,'standard','standard','turret'],carrier:['command',5,'hangar','heavy','sensor'],battleship:['lance',6,'standard','heavy','turret']};
-  ['prow','count','mission','drive','attachment'].forEach((id,i)=>el(id).value=presets[el('preset').value][i]);rebuild();view();
+  const presets={cruiser:['lance',4,'standard','standard','turret','turret'],carrier:['command',5,'hangar','heavy','sensor','cargo'],battleship:['lance',6,'standard','heavy','turret','turret']};
+  ['prow','count','mission','drive','attachment','ventral'].forEach((id,i)=>el(id).value=presets[el('preset').value][i]);rebuild();view();
 });
-for(const id of ['quarter','top','side'])el(id).onclick=()=>view(id);
+for(const id of ['quarter','top','side','bottom'])el(id).onclick=()=>view(id);
+el('escort-view').onclick=()=>{el('fighters').checked=true;escorts.visible=true;const f=Math.max(1,1.3/(host.clientWidth/host.clientHeight));camera.position.set(-13-6*f,9*f,14+28*f);controls.target.set(-13,0,14);controls.update();};
 el('export').onclick=()=>{
   // Export in assembly coordinates, regardless of the inspection/explosion setting.
   const previous=el('explode').value;el('explode').value='0';rebuild();ship.updateMatrixWorld(true);
   let output='# Aegis modular kit / nominal units: 9 meters\n',offset=1,lastOwner='';
-  ship.traverse(o=>{if(!o.isMesh)return;let owner=o;while(owner.parent!==ship&&owner.parent)owner=owner.parent;
-    const name=owner.name+((o.parent.name==='dorsal_socket'||o.parent.parent?.name==='dorsal_socket')?'_attachment':'');if(name!==lastOwner){output+=`o ${name}\n`;lastOwner=name;}const p=o.geometry.attributes.position;
+  ship.traverse(o=>{if(!o.isMesh)return;let owner=o,socket='';while(owner.parent!==ship&&owner.parent){if(owner.name.endsWith('_socket'))socket=owner.name;owner=owner.parent;}
+    const name=owner.name+(socket==='ventral_socket'?'_ventral_attachment':socket==='dorsal_socket'?'_attachment':'');if(name!==lastOwner){output+=`o ${name}\n`;lastOwner=name;}const p=o.geometry.attributes.position;
     for(let i=0;i<p.count;i++){const v=new THREE.Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);output+=`v ${v.x} ${v.y} ${v.z}\n`;}
     const idx=o.geometry.index;const n=idx?idx.count:p.count;
     for(let i=0;i<n;i+=3)output+=`f ${[0,1,2].map(j=>offset+(idx?idx.getX(i+j):i+j)).join(' ')}\n`;

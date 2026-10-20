@@ -6,19 +6,27 @@ const vm = require('node:vm');
 const {pathToFileURL} = require('node:url');
 (async () => {
   const root=path.join(__dirname,'..');
+  require('node:child_process').execFileSync(process.execPath,[path.join(root,'tools/bake-aegis-reference.cjs'),'--check'],{stdio:'pipe'});
   const real=await import(pathToFileURL(path.join(root,'vendor/three/build/three.module.js')).href);
   const elements={};
-  const initial={prow:'lance',count:'4',mission:'standard',drive:'standard',attachment:'turret',explode:'0',preset:'cruiser'};
+  const initial={prow:'lance',count:'4',mission:'standard',drive:'standard',attachment:'turret',ventral:'turret',explode:'0',preset:'cruiser'};
   const element=id=>elements[id] ||= {value:initial[id]||'',checked:false,clientWidth:1000,clientHeight:700,addEventListener(type,fn){this[type]=fn;},prepend(){}};
   let exported;
   class Renderer {setPixelRatio(){}setClearColor(){}setSize(){}setAnimationLoop(){}}
   class Controls {constructor(){this.target=new real.Vector3();}update(){}}
-  const context=vm.createContext({THREE:{...real,WebGLRenderer:Renderer},OrbitControls:Controls,devicePixelRatio:1,
+  const context=vm.createContext({THREE:{...real,WebGLRenderer:Renderer},OrbitControls:Controls,devicePixelRatio:1,window:{},
     document:{getElementById:element,createElement:()=>({click(){}})},
     ResizeObserver:class{observe(){}},Blob,URL:{createObjectURL(blob){exported=blob;return 'blob:test';},revokeObjectURL(){}},setTimeout:fn=>fn()});
   const html=fs.readFileSync(path.join(root,'experiments/dreadnaught-kit.html'),'utf8');
+  vm.runInContext(fs.readFileSync(path.join(root,'assets/ships/aegis-kit/reference-fighter.js'),'utf8'),context);
   const source=html.match(/<script type="module">([\s\S]*?)<\/script>/)[1].replace(/^import .*;$/gm,'');
   vm.runInContext(source,context);
+  const escorts=vm.runInContext('escorts',context);
+  assert.equal(escorts.children.length,4);
+  for(const fighter of escorts.children){const bounds=new real.Box3().setFromObject(fighter);assert.ok(Math.abs((bounds.max.x-bounds.min.x)*9-12)<.1,'shared fighter remains twelve meters long');}
+  element('fighters').checked=false;element('fighters').change();assert.equal(escorts.visible,false);
+  element('escort-view').onclick();assert.equal(escorts.visible,true);assert.equal(element('fighters').checked,true);
+  assert.deepEqual(Array.from(vm.runInContext('controls.target.toArray()',context)),[-13,0,14]);
   // New hull primitives must face outward and keep the coupling aperture open.
   const shell=new real.Group();context.shell=shell;
   vm.runInContext('loft(shell,[[-2,10,8],[2,10,8]])',context);
@@ -38,7 +46,7 @@ const {pathToFileURL} = require('node:url');
   element('viewport').clientWidth=1200;element('viewport').clientHeight=700;vm.runInContext('view()',context);
   assert.ok(tallDistance>vm.runInContext('camera.position.length()',context),'tall viewports pull back to fit the ship');
   for(const mission of ['standard','hangar','utility'])for(const attachment of ['turret','cargo','sensor','none']) {
-    element('mission').value=mission;element('attachment').value=attachment;
+    element('mission').value=mission;element('attachment').value=attachment;element('ventral').value=attachment;
     vm.runInContext('rebuild()',context);
     vm.runInContext('ship',context).traverse(o=>{if(o.isMesh)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v));});
   }
@@ -46,20 +54,32 @@ const {pathToFileURL} = require('node:url');
     element('preset').value=preset;element('preset').change();
     const ship=vm.runInContext('ship',context),count=Number(element('count').value);
     assert.equal(ship.children.length,count+2);
+    for(const section of ship.children.filter(o=>o.name.startsWith('M_'))) {
+      const top=section.getObjectByName('dorsal_socket'),bottom=section.getObjectByName('ventral_socket');
+      assert.ok(new real.Box3().setFromObject(top).min.y>3.9);
+      assert.ok(new real.Box3().setFromObject(bottom).max.y< -3.9,'ventral geometry points outward below hull');
+      assert.ok(Math.abs(bottom.rotation.x-Math.PI)<1e-9,'rotation keeps forward direction and outward normals');
+    }
     let meshes=0;
     ship.traverse(o=>{if(o.isMesh){meshes++;for(const value of o.geometry.attributes.position.array)assert.ok(Number.isFinite(value));}});
     assert.ok(meshes>100);
     // Every section touches its successor in assembled coordinates.
     for(let i=1;i<ship.children.length;i++)assert.ok(ship.children[i].position.x>ship.children[i-1].position.x);
     element('explode').value='70';vm.runInContext('rebuild()',context);
+    for(const section of vm.runInContext('ship',context).children.filter(o=>o.name.startsWith('M_'))) {
+      assert.ok(section.getObjectByName('dorsal_socket').position.y>0);
+      assert.ok(section.getObjectByName('ventral_socket').position.y<0,'explosion moves ventral sockets down');
+    }
     element('export').onclick();
     assert.equal(element('explode').value,'70','export restores inspection state');
     const obj=await exported.text();
     const vertices=obj.split('\n').filter(l=>l.startsWith('v '));
     const faces=obj.split('\n').filter(l=>l.startsWith('f '));
     assert.ok(vertices.length>1000);assert.ok(faces.length>1000);
-    assert.equal(obj.split('\n').filter(l=>l.startsWith('o ')&&l.endsWith('_attachment')).length,count);
-    assert.equal(obj.split('\n').filter(l=>l.startsWith('o ')).length,count*2+2);
+    assert.equal(obj.split('\n').filter(l=>l.startsWith('o ')&&l.endsWith('_attachment')).length,count*2);
+    assert.equal(obj.split('\n').filter(l=>l.startsWith('o ')&&l.endsWith('_ventral_attachment')).length,count);
+    assert.equal(obj.split('\n').filter(l=>l.startsWith('o ')).length,count*3+2);
+    assert.ok(!obj.includes('Spitfire'),'scale references stay out of ship exports');
     for(const face of faces)for(const index of face.slice(2).split(' ').map(Number))assert.ok(index>=1&&index<=vertices.length);
     // Exported assembly is independent of explosion state.
     element('explode').value='0';element('export').onclick();assert.equal(await exported.text(),obj);
@@ -68,6 +88,6 @@ const {pathToFileURL} = require('node:url');
       fs.writeFileSync(path.join(dir,`aegis-${preset}.obj`),obj);
     }
   }
-  console.log('PASS Aegis kit: outward armor normals, open coupling rings, viewport framing, mission/attachment combinations, presets and stable assembled OBJ exports');
+  console.log('PASS Aegis kit: outward armor, open couplings, viewport framing, two attachment banks, shared true-scale fighters and stable ship-only OBJ exports');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
