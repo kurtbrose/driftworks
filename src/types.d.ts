@@ -581,6 +581,7 @@ declare global {
     }
   }
   interface Window {
+    THREE: import('./three-types').Three;
     DRIFTWORKS_TEST_MODE?: boolean;
     Driftworks: DriftworksNamespace;
     webkitAudioContext?: typeof AudioContext;

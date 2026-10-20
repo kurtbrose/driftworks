@@ -21,7 +21,7 @@ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../src/
 vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../experiments/skybox.js'), 'utf8'), context);
 const sky = context.window.Driftworks.flightSkybox.create({clientWidth: 800, clientHeight: 600, prepend() {}});
 const pose = {right: [1,0,0], up: [0,0,1], back: [0,-1,0]};
-assert.equal(selector.children.length, 10);
+assert.equal(selector.children.length, 11);
 assert.equal(selector.value, '3', 'restores the selected flight sky');
 sky.render(pose, 1, false);
 assert.equal(values.style, 3);
@@ -115,7 +115,7 @@ testHeroComposition().then(testOhioSky).catch(error=>{console.error(error);proce
 const pathLighting=require('node:path'),cryptoLighting=require('node:crypto');
 const layoutPath=pathLighting.join(__dirname,'../assets/backgrounds/hero-layout-v1.json');
 const layoutLighting=JSON.parse(fs.readFileSync(layoutPath,'utf8'));
-const sourceLighting=Buffer.concat([fs.readFileSync(layoutPath),...Object.values(layoutLighting.library).map(asset=>fs.readFileSync(pathLighting.join(pathLighting.dirname(layoutPath),asset.file)))]);
+const sourceLighting=Buffer.concat([fs.readFileSync(layoutPath),...Object.values(layoutLighting.library).map(asset=>fs.readFileSync(pathLighting.join(pathLighting.dirname(layoutPath),asset.file))),...Object.values(layoutLighting.extraImages || {}).map(file=>fs.readFileSync(pathLighting.join(pathLighting.dirname(layoutPath),file)))]);
 const bakedLighting=JSON.parse(fs.readFileSync(pathLighting.join(__dirname,'../assets/backgrounds/sky-lighting-v1.json'),'utf8'));
 assert.equal(cryptoLighting.createHash('sha256').update(sourceLighting).digest('hex'),bakedLighting.sourceHash,'rebake sky lighting after changing the layout or art');
 for(const [key,file] of [['processorHash','bake-sky-lighting.py'],['composerHash','compose-skybox.py']])assert.equal(cryptoLighting.createHash('sha256').update(fs.readFileSync(pathLighting.join(__dirname,'../tools',file))).digest('hex'),bakedLighting[key],'rebake lighting after changing its preprocessing');

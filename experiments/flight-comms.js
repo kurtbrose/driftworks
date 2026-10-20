@@ -247,6 +247,144 @@
         "I'm clear. Somebody owes me a pop."
     ]
 };
+    // Named variants are templates so a different addressee does not defeat
+    // shared repeat avoidance. Names are resolved from living contacts at delivery.
+    /** @type {Record<string, string[]>} */
+    var ohioNamedCalls = {
+    "ally": [
+        "Ope, sorry, {pilot}. Just gonna squeeze past ya.",
+        "{pilot}, you bringing that casserole to the fish fry again?",
+        "Tell your folks I says hi, {pilot}. After the shooting.",
+        "{pilot}, we still doing euchre after this?",
+        "Save me a seat at the diner, {pilot}.",
+        "{pilot}, your good gloves are still in my ship.",
+        "If we make it home, {pilot}, pie's on me.",
+        "{pilot}, that's my Tupperware you've got. Keep the leftovers.",
+        "You fly like you carry a crockpot with no lid, {pilot}.",
+        "{pilot}, remind me to give you your jumper cables back."
+    ],
+    "enemy": [
+        "{pilot}, I know your mother. Don't make me call her.",
+        "Ope, {pilot}. Didn't know we were doing THIS at the fish fry.",
+        "{pilot}, your aim's colder than a garage in Ashtabula.",
+        "I've seen you park better than this, {pilot}.",
+        "{pilot}, we're still on for euchre. After I shoot you down.",
+        "You can keep the casserole dish, {pilot}. I'm keeping this airspace.",
+        "{pilot}, quit hogging the passing lane.",
+        "You missed, {pilot}. Just like the turn for the church basement."
+    ],
+    "evade": [
+        "{pilot}, get this guy off me!",
+        "Ope, {pilot}, need a hand over here!",
+        "{pilot}, cover me! This fella won't take a hint.",
+        "{pilot}, he's on my tail like a trooper on the turnpike!",
+        "Little help, {pilot}! I still got your casserole dish!",
+        "{pilot}, get this fighter off me! I'll buy the perch dinner!",
+        "Cover me, {pilot}! This is worse than black ice!",
+        "{pilot}, need a hand! We carpooled here!"
+    ],
+    "damaged": [
+        "{pilot}, cover me! She's rattling like the old furnace!",
+        "Ope, {pilot}, need a hand! That one went clean through!",
+        "{pilot}, get this guy off me! I'm running outta duct tape!",
+        "{pilot}, cover me! My check-engine light means it this time!"
+    ],
+    "support": [
+        "I've got him, {pilot}. You just keep 'er moving.",
+        "Ope, hang tight, {pilot}. I'll get this fella off ya.",
+        "I'm on your attacker, {pilot}. You owe me a perch dinner.",
+        "Got your back, {pilot}. Like at the fish fry.",
+        "Break clear, {pilot}. I'll hold the door.",
+        "I'm on him, {pilot}. Nobody gets left at the rest stop.",
+        "{pilot}, I'm covering you. Don't spill that crockpot.",
+        "Got him, {pilot}. Save me some pierogies."
+    ],
+    "acknowledgment": [
+        "Thanks, {pilot}. Fish fry's on me.",
+        "Copy, {pilot}. Staying on the move.",
+        "You saved my bacon, {pilot}. The good thick-cut stuff.",
+        "Thanks, {pilot}. I'll bring your Tupperware back.",
+        "All right, {pilot}. Owe ya one.",
+        "Thanks, {pilot}. Your folks raised you right.",
+        "Copy that, {pilot}. Coffee's on me.",
+        "Much obliged, {pilot}. I'll get the door next time."
+    ],
+    "emotionalReply": [
+        "Breathe, {pilot}. Like we practiced before the euchre tournament.",
+        "Still here with ya, {pilot}. One fella at a time.",
+        "{pilot}, you got through that blizzard. You'll get through this.",
+        "Easy, {pilot}. We'll make it back for the fish fry.",
+        "You're all right, {pilot}. Follow my voice.",
+        "{pilot}, hang in there. Your folks are counting on us."
+    ],
+    "recover": [
+        "Back in it, {pilot}. Had to say goodbye to everybody first.",
+        "Still here, {pilot}. Like orange barrels.",
+        "Coming around, {pilot}. Save me a dance.",
+        "I'm clear, {pilot}. Put the kettle on.",
+        "Back on your wing, {pilot}. Little duct tape did the trick.",
+        "{pilot}, you ain't getting rid of me that easy."
+    ],
+    "reposition": [
+        "Ope, sorry, {pilot}. Just scooching around ya.",
+        "Taking the back roads, {pilot}. Meet ya by the water tower.",
+        "{pilot}, I'm going around where the old barn used to be.",
+        "Give me a smidge of room, {pilot}.",
+        "Coming around the outside, {pilot}. Used my blinker.",
+        "{pilot}, I'll meet ya past the grain elevator."
+    ],
+    "break": [
+        "Breaking off, {pilot}. This is my exit!",
+        "Welp, {pilot}, gonna head out. For real this time.",
+        "Cover me, {pilot}. Got a little squirrely there.",
+        "{pilot}, I'm taking the detour around the detour."
+    ],
+    "firing": [
+        "Watch your elbows, {pilot}. Sending a few rounds past ya.",
+        "{pilot}, putting a little stadium mustard on this one.",
+        "Taking the shot, {pilot}. Hold my pop.",
+        "Here comes the salt truck, {pilot}."
+    ],
+    "attack": [
+        "Keep him busy, {pilot}. I'm coming round.",
+        "{pilot}, time to show this fella how we merge.",
+        "Going in, {pilot}. Keep the coffee warm.",
+        "{pilot}, I didn't wear my good flannel to lose."
+    ],
+    "near": [
+        "{pilot}, that about took my earflaps off!",
+        "Ope, {pilot}. Little close for church clothes.",
+        "{pilot}, I felt that one in my good knee.",
+        "Almost needed clean long johns there, {pilot}."
+    ],
+    "missed": [
+        "Aw, beans, {pilot}. Had that lined up.",
+        "{pilot}, pretend ya didn't see that.",
+        "Missed by a country mile, {pilot}. The long kind.",
+        "{pilot}, that shot went clear to Youngstown."
+    ],
+    "afraid": [
+        "{pilot}, need a hand here, bud!",
+        "Don't leave me out here, {pilot}!",
+        "{pilot}, get this guy off me!"
+    ],
+    "panicked": [
+        "{pilot}, cover me! This is a whole thing now!",
+        "Ope, {pilot}! Need a hand! They're everywhere!",
+        "{pilot}, get this fighter off me! Please!"
+    ],
+    "confused": [
+        "{pilot}, which way's the lake?",
+        "{pilot}, are we past the barn or before the barn?",
+        "Hang on, {pilot}. Is that our Ohio or their Ohio?"
+    ],
+    "relieved": [
+        "Still here, {pilot}. Coulda been worse.",
+        "Welp, {pilot}. I need to sit on the porch a minute.",
+        "{pilot}, somebody owes us a pop.",
+        "Made it, {pilot}. Like the old snowblower. Stubborn."
+    ]
+};
     var lines = dialogue.lines, calls = dialogue.calls, emotionalLines = dialogue.emotionalLines, emotionalReplies = dialogue.emotionalReplies, emotionStrength = dialogue.emotionStrength, pilotVoice = dialogue.pilotVoice, voiceOptions = dialogue.voiceOptions, numberWords = dialogue.numberWords, compose = dialogue.compose, pickLine = dialogue.pickLine, contactData = dialogue.contactData;
     /** @param {HTMLElement} panel @param {HTMLElement} toggle */
     function mount(panel, toggle) {
@@ -708,13 +846,48 @@
         kind = kind || (danger && !state.danger ? 'danger' : enemies && random() < 0.5 ? 'enemy' : allies ? 'ally' : 'range');
         state.danger = danger;
         choices = choices || lines[kind];
+        var addressee = /** @type {Craft | null} */ (null), namedTexts = /** @type {string[]} */ ([]);
         if (combat.mode === 'ohio') {
+            // Ambient banter belongs to a real pilot too, with that pilot's
+            // stable portrait and voice rather than an anonymous channel voice.
+            if (!craft && (kind === 'ally' || kind === 'enemy')) {
+                var speakers = living.filter(function (c) { return c.team === kind && c.id !== state.lastCraft; });
+                if (!speakers.length) speakers = living.filter(function (c) { return c.team === kind; });
+                if (speakers.length) {
+                    craft = speakers[Math.min(speakers.length - 1, Math.floor(random() * speakers.length))];
+                    selected = { craft: craft, event: kind };
+                    state.spoken[craft.id] = state.time;
+                }
+            }
             var ohioEvent = selected ? selected.event : kind;
             if (ohioEvent === 'emotion' && craft && state.emotions[craft.id]) ohioEvent = state.emotions[craft.id].current;
             choices = ohioCalls[ohioEvent] || choices;
+            var addressedId = ohioEvent === 'support' && state.conversation ? state.conversation.caller :
+                ohioEvent === 'emotionalReply' && state.emotionalConversation ? state.emotionalConversation.caller :
+                ohioEvent === 'acknowledgment' && state.acknowledgment ? state.acknowledgment.responder : null;
+            if (addressedId) addressee = living.find(function (c) { return c.id === addressedId; }) || null;
+            else if (ohioNamedCalls[ohioEvent]) {
+                const speaker = craft;
+                var neighbors = living.filter(function (c) {
+                    return c.id !== (speaker && speaker.id) && (kind === 'enemy' ? c.team !== 'enemy' : c.team === 'ally');
+                });
+                if (speaker && /^(evade|damaged|afraid|panicked)$/.test(ohioEvent)) {
+                    const attacker = living.find(function (c) { return c.team !== speaker.team && c.targetId === speaker.id && c.mode === 'attack'; });
+                    var helping = attacker && neighbors.filter(function (c) { return c.mode === 'attack' && c.targetId === attacker.id; });
+                    if (helping && helping.length) neighbors = helping;
+                }
+                if (neighbors.length) addressee = neighbors[Math.min(neighbors.length - 1, Math.floor(random() * neighbors.length))];
+            }
+            var variants = addressee && ohioNamedCalls[ohioEvent];
+            if (variants) {
+                namedTexts = variants.map(function (template) { return template.replace(/\{pilot\}/g, callsign(addressee)); });
+                var namedChoices = /** @type {Choices} */ (namedTexts.concat(choices));
+                namedChoices.templateKeys = variants.concat(choices.templateKeys || choices);
+                choices = namedChoices;
+            }
         }
         var text = pickLine(state, choices, random);
-        var replyTo = /** @type {string | null} */ (null);
+        var replyTo = addressee && namedTexts.indexOf(text) >= 0 ? addressee.id : /** @type {string | null} */ (null);
         var feeling = craft && state.emotions[craft.id];
         if (craft && selected && selected.event === 'acknowledgment' && state.acknowledgment) {
             replyTo = state.acknowledgment.responder;
@@ -735,7 +908,7 @@
             state.acknowledgment = { caller: replyTo, responder: craft.id, kind: 'support', expires: state.time + 5, wave: combat.wave };
             state.conversation = null;
         }
-        else if (craft && !state.conversation && /cover me|need a hand|get this fighter|on my tail/i.test(text)) {
+        else if (craft && !state.conversation && /cover me|need a hand|little help|get this (?:fighter|guy)|on my tail/i.test(text)) {
             const requestingCraft = craft;
             var threats = living.filter(function (e) {
                 return e.team !== requestingCraft.team && e.targetId === requestingCraft.id && e.mode === 'attack';

@@ -4,7 +4,7 @@
     /** @typedef {import('./types').Vector} Vector */
     /** @typedef {import('./types').Pose} Pose */
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
-    var options = ['Milky Way  / original', 'A  / Open void', 'B  / Galactic horizon', 'C  / Dark dust', 'D  / Distant sun', 'E  / Cold veil', 'F  / Island universes', 'G / Hero galaxy', 'H / Hero nebula', 'I / Hero sun'];
+    var options = ['Milky Way  / original', 'A  / Open void', 'B  / Galactic horizon', 'C  / Dark dust', 'D  / Distant sun', 'E  / Cold veil', 'F  / Island universes', 'G / Hero galaxy', 'H / Hero nebula', 'I / Hero sun', 'J / River of stars'];
     /** @typedef {{asset:string,yaw:number,pitch:number,roll:number,widthDeg:number,gain:number}} HeroFeature */
     /** @param {HeroFeature} feature @param {number} aspect */
     function featureFrame(feature, aspect) {
@@ -136,6 +136,11 @@ vec3 galaxy(vec3 ray,vec3 center,vec3 axis){
     return vec3(.16,.22,.32)*disk*(.3+arms*2.)*(.45+knots)*(.4+.6*lane)+vec3(.9,.72,.46)*core;
 }
 void main(){
+    if(style>9.5 && style<10.5){
+        vec3 riverRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+        vec2 riverUV=vec2(atan(riverRay.y,riverRay.x)/6.28318530718+.5,acos(clamp(riverRay.z,-1.,1.))/3.14159265359);
+        gl_FragColor=vec4(texture2D(panorama,riverUV).rgb*exposure,1.);return;
+    }
     if(style>6.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}
     vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
     vec3 color=vec3(.00003,.00006,.00012);
@@ -220,7 +225,7 @@ void main(){
         }
         var lightingEnabled=true;
         /** @type {Record<string,import('../src/types').SkyEnvironmentLighting>} */ var skyLighting={};
-        function getLighting(){return lightingEnabled && style>=7 ? skyLighting[['galaxy','nebula','sun'][style-7]] || null : null;}
+        function getLighting(){return lightingEnabled && style>=7 ? skyLighting[['galaxy','nebula','sun','river'][style-7]] || null : null;}
         function loadHeroFeatures() {
             if(heroLoading || typeof window.fetch !== 'function') return;
             heroLoading=true;
@@ -320,6 +325,33 @@ void main(){
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        /** @type {WebGLTexture|null} */ var riverTexture=null;
+        var riverLoading=false;
+        function loadRiver(){
+            if(riverLoading)return;riverLoading=true;
+            var status=document.getElementById('skybox-status');if(status)status.textContent='Loading 8K stellar streams...';
+            riverTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,riverTexture);
+            gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+            if(typeof window.fetch==='function')loadSkyLighting().then(function(data){skyLighting=data;canvas.dataset.lighting='ready';}).catch(/** @param {unknown} error */ function(error){canvas.dataset.lighting=String(error);});
+            var image=new Image();
+            image.onload=function(){
+                var limit=Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) || 4096;
+                /** @type {HTMLImageElement|HTMLCanvasElement} */ var source=image;
+                if(image.width>limit){
+                    var resized=document.createElement('canvas');resized.width=limit;resized.height=limit/2;
+                    var context=resized.getContext('2d');if(!context)throw new Error('Sky texture resize unavailable');
+                    context.drawImage(image,0,0,resized.width,resized.height);source=resized;
+                }
+                gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,riverTexture);
+                gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,source);
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+                canvas.dataset.river='ready';canvas.dataset.riverWidth=String(source.width);
+                if(status)status.textContent='River of stars / fixed stellar streams, dark lanes and a separate point-star foreground.';
+            };
+            image.onerror=function(){canvas.dataset.river='error';if(status)status.textContent='Could not load the stellar streams texture.';};
+            image.src=assetUrl('../assets/backgrounds/star-river-v1-8k.jpg');
+        }
         var image = new Image();
         image.onload = function () {
             gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -361,11 +393,12 @@ void main(){
                     stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
                     return;
                 }
-                if(!ohioMission && style>=7) loadHeroFeatures();
+                if(!ohioMission && style>=7 && style<=9) loadHeroFeatures();
+                if(!ohioMission && style===10) loadRiver();
                 stats = { drawCalls: 2, triangles: 2, points: starData.length / 4, meshes: 2, materials: 2 };
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
-                gl.uniform1f(gl.getUniformLocation(sky, 'style'), ohioMission ? 10 : style);
+                gl.uniform1f(gl.getUniformLocation(sky, 'style'), ohioMission ? 11 : style);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), exposure);
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
                 gl.activeTexture(gl.TEXTURE0);
@@ -373,17 +406,17 @@ void main(){
                 var a = gl.getAttribLocation(sky, 'position');
                 gl.enableVertexAttribArray(a);
                 gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.bindTexture(gl.TEXTURE_2D,!ohioMission && style===10 ? riverTexture : texture);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disableVertexAttribArray(a);
-                if((ohioMission || style>=7) && heroFeatures.length) {
+                if((ohioMission || (style>=7 && style<=9)) && heroFeatures.length) {
                     uniforms(heroProgram,pose,width/height,dpr);
                     gl.uniform1f(gl.getUniformLocation(heroProgram,'exposure'),exposure);
                     gl.uniform1i(gl.getUniformLocation(heroProgram,'feature'),0);
                     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_COLOR);
                     var direction=gl.getAttribLocation(heroProgram,'direction'), texcoord=gl.getAttribLocation(heroProgram,'texcoord');
                     gl.enableVertexAttribArray(direction);gl.enableVertexAttribArray(texcoord);
-                    var family=ohioMission ? 'ohio' : ['galaxy','nebula','sun'][style-7];
+                    var family=ohioMission ? 'ohio' : ['galaxy','nebula','sun','river'][style-7];
                     var visibleFeatures=heroFeatures.filter(function (feature) {return feature.family===family;});
                     visibleFeatures.forEach(function (feature) {
                         gl.bindBuffer(gl.ARRAY_BUFFER,feature.buffer);

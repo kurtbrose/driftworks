@@ -849,6 +849,16 @@ owns emotions, combat observations and airtime scheduling; `flight-radio.js`
 owns subtitles, channel playback and Web Audio lifecycle. Load them in that
 order after training and mumble, before flight boot. The existing
 `flightComms` API forwards dialogue helpers and `mount` for compatibility.
+Ohio radio templates resolve named addressees from living contacts at delivery.
+Friendly banter and requests exclude the speaker and use their wing; enemy taunts
+may name a living opponent. Cover, reassurance, and acknowledgments address the
+actual caller/responder in the validated exchange. Named requests still require
+real movement or firing toward the threat before a helper can claim cover.
+`replyTo` also identifies an explicitly named addressee in Ohio banter or requests.
+Ambient Ohio lines use a living pilot's normal voice and portrait. Template keys
+retain `{pilot}` for repeat scoring, while history records the transmitted name.
+Without an eligible neighbor, the radio keeps its ordinary unnamed variants.
+
 Ohio wardrobe selection is presentation-only: `mission=ohio` chooses the seventeen
 local atlases in `assets/portraits/ohio/runtime/` when the portrait panel mounts.
 All other sorties use the standard cast. Slot order, voices, seven frame rectangles,

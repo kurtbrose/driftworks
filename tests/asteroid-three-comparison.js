@@ -10,7 +10,7 @@ window.addEventListener('error',event=>{status.textContent='Renderer error: '+ev
 let world=DW.sim.createInitialWorld(), asteroid=world.asteroids[0];
 asteroid.position={x:0,y:0};asteroid.previousPosition={x:0,y:0};asteroid.rotation=0;
 world.asteroids=[asteroid];world.ships=[];world.platforms=[];world.wrecks=[];world.packets=[];world.selectedShipIds=[];world.combat.drones=[];
-const raw=api.create(rawHost,()=>world,value=>{world=value;},{study:true,viewer:false});
+const raw=DW.webglReference.create(rawHost,()=>world,value=>{world=value;},{study:true,viewer:false});
 rawHost.querySelector('.night-sky-background').style.background='none';
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x080d11);

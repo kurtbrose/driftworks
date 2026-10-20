@@ -79,6 +79,10 @@ def main():
             layout['family'] = family
             images[family] = compose.bake(layout, args.layout.parent, 1024)
         source = args.layout.read_bytes()+b''.join((args.layout.parent/asset['file']).read_bytes() for asset in layout['library'].values())
+        for name, filename in layout.get('extraImages', {}).items():
+            image_path=args.layout.parent/filename
+            images[name]=Image.open(image_path).convert('RGB').resize((1024,512),Image.Resampling.LANCZOS)
+            source+=image_path.read_bytes()
     else:
         source_image = Image.open(args.image)
         if source_image.width != source_image.height*2:

@@ -1673,6 +1673,44 @@
     assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
   });
 
+  test('Ohio pilots address real neighbors and complete named cover exchanges', function () {
+    var api=window.Driftworks.flightComms, rng=function(){return 0;}, clock=api.create();
+    var caller={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'attack'};
+    var helper={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'attack',targetId:'other',pose:{eye:[0,0,0],velocity:[1,0,0]}};
+    var threat={id:'rick',callsign:'Uncle Rick',index:14,team:'enemy',hp:90,mode:'attack',targetId:'barb',pose:{eye:[10,0,0]}};
+    var combat={mode:'ohio',ohioIntro:3,enabled:true,dead:false,hull:100,enemies:[caller,threat,helper]};
+    api.step(clock,0,combat,false,rng);caller.mode='evade';
+    var request=api.step(clock,0,combat,false,rng);
+    assert(request.text==='Big Dale, get this guy off me!' && request.craftId==='barb' && request.replyTo==='dale');
+    assert(clock.conversation.threat==='rick');
+    api.step(clock,1,combat,true,rng);assert(api.step(clock,2,combat,false,rng)===null,'Names do not manufacture an offer of cover');
+    helper.targetId='rick';api.step(clock,0,combat,true,rng);
+    var reply=api.step(clock,2,combat,false,rng);
+    assert(reply.event==='support' && reply.craftId==='dale' && reply.replyTo==='barb');
+    assert(reply.text.indexOf('Aunt Barb')>=0 && reply.portraitIndex===6);
+    var thanks=api.step(clock,3,combat,false,rng);
+    assert(thanks.event==='acknowledgment' && thanks.craftId==='barb' && thanks.text.indexOf('Big Dale')>=0 && thanks.replyTo==='dale');
+    assert(clock.last===thanks.text && clock.recentLines[clock.recentLines.length-1].text===thanks.text);
+    assert(clock.recentLines.some(function(entry){return entry.key.indexOf('{pilot}')>=0;}),'Changing names retains shared template cooldowns');
+  });
+
+  test('Ohio social chatter never addresses self or a dead neighbor and uses real pilot voices', function () {
+    var DW=window.Driftworks, api=DW.flightComms, rng=function(){return 0;};
+    var barb={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'approach'};
+    var dale={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'approach'};
+    var dead={id:'dead',callsign:'Dead Doug',index:4,team:'ally',hp:0,mode:'approach'};
+    var combat={mode:'ohio',ohioIntro:3,enabled:true,hull:100,enemies:[barb,dale,dead]},clock=api.create();
+    api.step(clock,0,combat,true,rng);clock.wait=0;clock.quiet=10;
+    var line=api.step(clock,0,combat,false,rng);
+    assert(line.text==='Ope, sorry, Big Dale. Just gonna squeeze past ya.' && line.craftId==='barb' && line.replyTo==='dale');
+    assert(line.voiceSettings.seed===DW.flightDialogue.pilotVoice(barb).seed && line.portraitIndex===3);
+    dale.hp=0;clock=api.create();api.step(clock,0,combat,true,rng);clock.wait=0;clock.quiet=10;
+    line=api.step(clock,0,combat,false,rng);
+    assert(line.craftId==='barb' && !line.replyTo && !/Big Dale|Dead Doug|Aunt Barb|\{pilot\}/.test(line.text));
+    combat.enemies=[];clock=api.create();clock.wait=0;clock.quiet=10;
+    line=api.step(clock,0,combat,false,rng);assert(line&&!line.replyTo&&!/\{pilot\}/.test(line.text));
+  });
+
   test('Ohio chatter uses actual transmitted text for repeat avoidance', function () {
     var radio=window.Driftworks.flightComms, clock=radio.create();
     var combat={mode:'ohio',enabled:false,hull:100,enemies:[]}, heard=[];
@@ -2604,7 +2642,7 @@
 
   test('flight sky directions rotate with the cockpit, ignore translation, and cover the sphere', function () {
     var sky=window.Driftworks.flightSkybox,pose={right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
-    assert(sky.options.length===10 && sky.options[1].includes('Open void') && sky.options[6].includes('Island universes'));
+    assert(sky.options.length===11 && sky.options[1].includes('Open void') && sky.options[6].includes('Island universes'));
     var center=sky.project([0,1,0],pose,2);assert(center);assertClose(center.x,0);assertClose(center.y,0);
     assert(sky.project([0,-1,0],pose,2)===null);
     var star=[.2,1,.3],before=sky.project(star,pose,2);pose.eye=[10000,20000,-5000];
