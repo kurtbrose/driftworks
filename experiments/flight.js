@@ -3,6 +3,16 @@
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
+    if (new URLSearchParams(location.search).get('mission') === 'ohio') {
+        get('combat-mode').value = 'ohio';
+        document.title = 'Ohio / Always has been / Driftworks';
+        var ohioHeading = document.querySelector('header h1');
+        if (ohioHeading) ohioHeading.textContent = 'DRIFTWORKS / OHIO';
+        var ohioSubtitle = document.querySelector('header > span');
+        if (ohioSubtitle) ohioSubtitle.textContent = 'ALL ROADS LEAD TO OHIO';
+        var ohioHint = document.querySelector('#launch > p');
+        if (ohioHint) ohioHint.textContent = 'Wait for the radio reveal. Then welcome to Ohio. / 8 allies vs 8 enemies';
+    }
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
     if(aegisMode){try{await DW.aegisFlight.load();aegis=DW.aegisFlight.create();}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
@@ -217,6 +227,9 @@
     };
     get('watch-restart').onclick = function () { pause(); reset(); blurActiveControl(); };
     get('combat-mode').onchange = function () {
+        var missionParams = new URLSearchParams(location.search);
+        if (get('combat-mode').value === 'ohio') { missionParams.set('mission', 'ohio'); location.search = missionParams.toString(); return; }
+        if (missionParams.get('mission') === 'ohio') { missionParams.delete('mission'); location.search = missionParams.toString(); return; }
         pause();
         reset();
     };

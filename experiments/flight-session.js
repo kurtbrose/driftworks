@@ -109,7 +109,7 @@
             if (!enabled) {
                 combat.enemies = [];
                 combat.countdown = 0;
-            } else if (mode === 'asteroid-patrol') {
+            } else if (mode === 'asteroid-patrol' || mode === 'ohio') {
                 DW.training.spawn(combat, state, asteroid.radius);
             }
             return snapshot();

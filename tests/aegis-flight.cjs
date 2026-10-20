@@ -155,3 +155,33 @@ const afterTurn=burstRig.telemetry().mounts.filter(m=>m.kind==='point-defense'),
 let hardTurns=0;for(let i=0;i<afterTurn.length;i++)if(Math.hypot(afterTurn[i].yaw-priorTurn[i].yaw,afterTurn[i].elevation-priorTurn[i].elevation)*60>.8+1e-8){hardTurns++;assert.equal(turnChecks[i].trigger,false,'hard slewing suppresses burst fire');}
 assert.ok(hardTurns>0,'fixture actually induces hard slewing');
 console.log('PASS AA bursts: short aligned volleys, quiet gaps, independent timing, pause and hard-slew inhibition');
+
+// A rapidly jinking contact should get occasional imperfect barrel-directed shots,
+// not silence or a frame-by-frame stream aimed magically at the intercept.
+const showView=fixture(),showRig=DW.aegisFlight.create();showView.enemy.hp=showView.enemy.maxHp=1e9;
+const speculativeShots=new Map();let showTime=0;
+DW.flightGuns.step=function(guns,pose,weapon,trigger,dt,hitTest,aimPoint,...rest){
+ const before=guns.fired;const result=fireStep(guns,pose,weapon,trigger,dt,hitTest,aimPoint,...rest);
+ if(guns.fired>before&&!aimPoint){
+  assert.equal(guns.fired-before,2,'one twin volley per speculative opportunity');
+  if(!speculativeShots.has(guns))speculativeShots.set(guns,[]);speculativeShots.get(guns).push(showTime);
+  for(const bolt of guns.bolts.slice(-2))assert.ok(-bolt.direction.reduce((n,v,k)=>n+v*pose.back[k],0)>.9999,'imperfect round follows barrel heading, not a redirected aim point');
+ }
+ return result;
+};
+for(let i=0;i<1500;i++){
+ showTime=(i+1)/60;showView.combat.time=showTime;
+ showView.enemy.pose.eye=position(180*Math.cos(showTime*1.6),180*Math.sin(showTime*1.6),200);
+ showView.enemy.pose.velocity=[-288*Math.sin(showTime*1.6),288*Math.cos(showTime*1.6),0];
+ showRig.step(1/60,showView);
+}
+DW.flightGuns.step=fireStep;
+assert.ok(speculativeShots.size>0,'jinking target elicits occasional speculative shots');
+for(const times of speculativeShots.values()){
+ assert.ok(times.length<=9,'opportunistic fire stays sparse over 25 seconds');
+ for(let i=1;i<times.length;i++)assert.ok(times[i]-times[i-1]>=2.8-1/60-1e-8,'long gap separates speculative volleys');
+}
+const stoppedShow=showRig.telemetry();showRig.step(0,showView);assert.deepEqual(showRig.telemetry(),stoppedShow,'pause freezes speculative fire too');
+showView.combat.enabled=false;for(let i=0;i<360;i++)showRig.step(1/60,showView);assert.equal(showRig.telemetry().shots,stoppedShow.shots,'disabled combat suppresses speculative shots');
+showView.combat.enabled=true;showView.enemy.pose.eye=position(10000,0,200);const noContactShots=showRig.telemetry().shots;for(let i=0;i<600;i++)showRig.step(1/60,showView);assert.equal(showRig.telemetry().shots,noContactShots,'no speculative fire without an enemy in range');
+console.log('PASS speculative AA: sparse twin volleys against jinking targets, barrel-directed flight, long gaps, pause/disable/range guards');

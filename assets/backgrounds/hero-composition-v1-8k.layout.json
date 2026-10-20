@@ -16,6 +16,11 @@
       "file": "features/warm-sun-v1.png",
       "aspect": 1,
       "family": "sun"
+    },
+    "filament": {
+      "file": "features/blue-filament-v1.png",
+      "aspect": 1.5,
+      "family": "nebula"
     }
   },
   "features": [
@@ -29,11 +34,11 @@
     },
     {
       "asset": "nebula",
-      "yaw": 102,
+      "yaw": 90,
       "pitch": 0,
       "roll": 22,
-      "widthDeg": 26,
-      "gain": 0.85
+      "widthDeg": 66,
+      "gain": 0.65
     },
     {
       "asset": "sun",
@@ -42,6 +47,14 @@
       "roll": 0,
       "widthDeg": 7,
       "gain": 1
+    },
+    {
+      "asset": "filament",
+      "yaw": -65,
+      "pitch": 15,
+      "roll": -28,
+      "widthDeg": 16,
+      "gain": 0.8
     }
   ],
   "family": "galaxy",

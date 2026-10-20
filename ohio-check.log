@@ -1,0 +1,103 @@
+npm notice run check
+npm notice run npm run check:types && npm run check:assets && npm test
+npm notice run check:types
+npm notice run node tests/check-types.cjs
+All application scripts pass strict type checking and the any audit.
+npm notice run check:assets
+npm notice run node tools/refresh-flight-assets.cjs --check
+Flight asset versions match their file contents.
+Flight asset versions match their file contents.
+Flight asset versions match their file contents.
+Flight asset versions match their file contents.
+npm notice run test
+npm notice run node tests/run.cjs
+PASS audio modules: standalone synth, shared facade identity and all HTML dependency orders
+PASS flight skybox: selection, persistence, native resolution and fixed star sizes
+PASS sky lighting assets: source hash, finite diffuse SH and power-of-two reflection maps
+PASS target-lock ablation: holds valid targets; leaves acquisition, death replacement and other inputs unchanged
+PASS furball telemetry: opportunities, gate accounting, target switches, shot/hit deltas
+PASS retail gun counts: numeric POF bank import, odd/even counts and corrupt input rejection
+All 340 browser-native tests passed.
+PASS flight composition: retained combat settings, pause/resume clocks, contact/death/completion status
+PASS battle-consequences (tick 3000)
+PASS tug-arrival (tick 2400)
+PASS inspector paint controls and distinct original model catalog entry
+Character assets: 6 models, 196 clip variants; provenance hashes and local dependencies verified.
+PASS astronaut palettes preserve hardware, restore source colors and skip unsupported rigs
+PASS body variants: continuous edits, crew guardrails and ratios, idempotent clamping, original restoration
+PASS bay ramps: thick panel sweep clears posts, perimeter rails, pod ribs and sockets at 41 positions
+PASS bay ramps: 401 rigid hinge poses clear the actual legs at eleven deployment settings
+PASS fixed infill: stationary black roof/side panels clear yellow leaves, tower and neighboring bays across 401 poses
+PASS mining ramps: independent first-contact stops, full travel when clear, thick-leaf clearance throughout opening
+PASS mining terrain: actual-mesh raycasts, chassis clearance, eight fixed-length IK chains, gripper contact, missing/unreachable targets and study wiring
+PASS mining terrain cache: one mesh, one solve per site, including failed sites; cache reads perform no raycasts
+PASS mining ramp cache: one sweep per site, no repeated terrain queries
+(node:58404) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///E:/workspace/driftworks/vendor/three/build/three.module.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\E:\workspace\driftworks\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Three.js asteroid bridge: original interleaved positions/normals and 75 projected landmarks across orbit, underside, pan, zoom and surface cameras
+PASS mining landing: 50 m release, safe nearby search, phase order, legs before descent, contact before ramps, rotating anchor attachment and continuous touchdown
+PASS landing transforms: affine batching preserves all positions and normals with constant per-batch transform evaluations
+PASS production mining contacts: shared solver, exact ramp sweep mesh, eight anchors, physical scale, rotation/zoom cache reuse, thick-leaf clearance and airborne height
+PASS gameplay preview: continuous asteroid rotation, freeze control and replay reset
+Mining lights: broad illumination, occlusion, docking wash and rigid transforms passed
+Mining docking bake: cached local illumination survives landing transforms without changing albedo
+PASS mining rig: reference geometry across 49 poses and component modes
+PASS procedural assets: reusable block, private static cache, and caller-owned geometry
+PASS mining structure: finite meshes, normals, material groups, rigid leaves, staged hinges/jacks, independent stops, leg pivots, knee lamps and cutaways
+PASS mining composition: component requests emit no discarded mesh
+PASS flight study worker: fetched source equals executed/fingerprinted source, ordered imports, cleanup and all three technique variants
+PASS fleet greybox: finite geometry, wing visibility, shared proportions and reset
+PASS shared viewer modes, mouse chords, modifiers, independent viewports and cleanup
+PASS shared focus rays, hit/miss, flight movement, look, speed, blur, Escape, reset and cleanup
+PASS fighter greybox: finite loft, broad crew pod, tapering tail, low centerline gun and reset
+PASS Barracuda variants: distinct finite hulls, shared cockpit and lightweight comparison panels
+PASS study viewer: independent worlds, manual framing, resize/reset, cleanup and physical reference scale
+PASS study zoom: subject plane preserved with background asteroid; terrain-focus default retained
+PASS livery lab: all subjects, finite fitted geometry, independent treatments and deterministic assemblies
+PASS livery symmetry toggle, confidence readout and source preservation
+PASS material preset controls, per-slot shader uniforms, neutral-color inspection and geometry-independent editing
+PASS shader wear decoding: interpolation around integer roles stays continuous
+PASS authored/baseline/guided comparison: identical geometry and independently controlled preferences
+PASS art directions: composable recipes, geometric curvature, immutable source and sparse surface-supported decal graphics
+PASS chunk coloration: region ownership, boundary gradients, deterministic weights and immutable sampling
+PASS symmetry: inferred and rotated planes, asymmetric rejection, canonical materials, clipped mirrored geometry and winding
+PASS design preferences: signed contours, sparse accents, quiet broad surfaces and baseline ablation
+PASS panel materials: explicit source ownership and stable face-normal lookup
+PASS surface materials: finite properties, distinct finishes and microstructure, normalized shared-mask blending
+Detected 4 local tubes and 16 profile transitions
+PASS local tubular section inference on the artist model
+PASS generic section roles: barrel, collar, end, inset, rotated axis, straight-tube and box rejection
+PASS whole-section coherence: final material weights uniform within real pod sections and contrasting across sections
+PASS geometry-aware plates: adjacency, semantic exclusions, tessellation independence, concavity, holes, deterministic real geometry
+PASS raised plate clearance with divergent source shading normals
+PASS narrow boundary triangles remain outward-facing under panel inset
+PASS portrait assets: seventeen packed characters, source/builder hashes, 256px poses; 11.72 MiB vs 36.68 MiB sources
+PASS shared radio noise: byte-identical existing audio, opening/closing gates, occasional middle bursts, clean/local bypass
+PASS comms display: visible edge peaks, random monotonic sign-off and reduced motion
+PASS concept ships: progressive stages, finite meshes, unit normals and complete glTF exports
+PASS Aegis flight: baked pivots, bounded tracking, upper/lower arcs, real projectile damage, allied safety, hull contact, pause/reset and static buffer reuse
+PASS Aegis accounting and targeting: shield/lethal/zero/occluded/dead hits, lock retention and reacquisition
+PASS AA projectile appearance: standard green fighter rounds reach the effect renderer
+PASS AA flight tuning: ordinary fighter speed, lifetime and bolt dimensions; predictive unguided firing retained
+PASS AA ballistics: existing rounds keep their launch heading when the target jinks
+PASS randomized AA acquisition: spread, non-nearest contacts, lock retention, deterministic reset and dead-target replacement
+PASS AA bursts: short aligned volleys, quiet gaps, independent timing, pause and hard-slew inhibition
+PASS speculative AA: sparse twin volleys against jinking targets, barrel-directed flight, long gaps, pause/disable/range guards
+PASS indexed hull sweeps: 2,400 original-algorithm comparisons, degenerate/stationary cases and cached spatial pruning
+PASS source scorch batches: exact posed geometry, immutable buffers, mark invalidation and hull ownership
+PASS indexed scorch projection: 80 exact comparisons against full-mesh clipping
+PASS static actor culling: 1,500 transformed box/clip-plane comparisons, edge/near/far/camera-inside cases
+PASS study effects: all nine fighter/engine/capital batches retained without truncation
+(node:52936) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///E:/workspace/driftworks/vendor/three/build/three.module.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\E:\workspace\driftworks\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS mining study: swept movement, wall sliding, vertical flight and static-door replacement
+PASS speech sprites: Mumble playback, radio lead-in, stop during unlock/playback, crew casting and completion
+PASS comms audition: speech-clock mouth cues, mute, completed cutoff, stop, portrait replacement and disposal
+PASS talking face: voiced mouth timing, radio silence, independent blink/expression layers, reduced motion, cancellation and completion
+PASS Aegis kit: outward armor, open couplings, viewport framing, two attachment banks, shared true-scale fighters and stable ship-only OBJ exports
+PASS dogfight portraits: stable cast, mood/stress mapping, fixed compact bitmap cache, idle warm-up, foreground priority, retries, late-decode cleanup, audio timing and live feelings
+PASS hero sky: local asset reuse, fixed layout, sphere seams, orientation and separate star pass

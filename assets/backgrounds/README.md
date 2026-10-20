@@ -17,7 +17,7 @@ The full credit for the active image is also shown in the in-game developer sett
 
 ## Authored hero sky
 
-`features/` contains three generated source images (galaxy, nebula and sun),
+`features/` contains four generated source images (galaxy, nebula, sun and a distinct blue filament),
 with exact prompts and provenance in `features/prompts.json`. These were created
 using the built-in image generation tool. They are separate from the ESO images
 above and do not inherit the ESO credits.
@@ -27,3 +27,7 @@ above and do not inherit the ESO credits.
 the runtime uses the original feature textures for greater local detail.
 See [sky authoring](../../docs/skybox-authoring.md) for the deterministic helper,
 export commands, compositing rules and resolution tradeoffs.
+
+`hero-nebula-v1-8k.jpg` is the nebula-family reference bake, containing a large primary cloud and a separate, smaller far-side filament. Compare actual foreground ships at [sky review](../../experiments/skybox-review.html).
+
+Ohio sortie: ohio-planet-v1.png is AI-generated orbital artwork (OpenAI ImageGen, 2026-10-20). It is bundled locally, displayed as a directional sky landmark, paired with features/warm-sun-v1.png at yaw 225 / elevation 30 degrees. Lighting is baked into the planet image; the sky sun matches that artistic light direction.

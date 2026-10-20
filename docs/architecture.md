@@ -20,6 +20,14 @@ exports `paintRecovery` alongside its other rendering helpers for regression che
 
 ### 3D scene prototype
 
+Authored flight skies supply cached environment lighting through a host-local
+`sky-environment` event. `skybox.js` owns probe/image loading; `scene3d.js` owns
+world-normal transforms, diffuse SH evaluation and rough-reflection texture
+sampling for shared materials. `tools/bake-sky-lighting.py` performs normalization
+and SH convolution during asset preparation. No environment resources enter world
+state or mission logic. See [sky authoring](skybox-authoring.md) for cache generation,
+coordinate conventions, coverage and reflection-filtering limits.
+
 `src/scene3d.js` supplies `Driftworks.scene3d.create(host, getWorld, setWorld)`
 with the same scene controller interface as the Pixi scene. `game.createScene`
 selects it only with `?renderer=3d`; the default and `?renderer=2d` use the existing

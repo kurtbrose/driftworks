@@ -235,6 +235,7 @@ export type RadioEvent = {
     wave: number;
 };
 export type Combat = {
+    ohioIntro: number;
     opponentStyle?: OpponentStyle;
     player: Craft;
     configured: boolean;
@@ -750,6 +751,8 @@ export type ExperimentModules = {
         create: (host: HTMLElement, config?:{style?:number}) => {
             setStyle: (style:number) => void;
             setExposure: (exposure:number) => void;
+            getLighting: () => import('../src/types').SkyEnvironmentLighting | null;
+            setLightingEnabled: (enabled:boolean) => void;
             getRenderStats: () => RenderStats['sky'];
             render: (pose: Pose, renderScale: number, empty: boolean) => void;
         };

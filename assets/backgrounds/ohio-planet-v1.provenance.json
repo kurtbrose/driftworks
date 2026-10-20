@@ -1,0 +1,16 @@
+{
+  "asset": "ohio-planet-v1.png",
+  "generator": "OpenAI built-in image_gen",
+  "date": "2026-10-20",
+  "prompt": "Create a photorealistic NASA-style orbital photograph for a space game, square 2048x2048. Entire Earthlike spherical planet fully visible centered at (50%,50%), diameter 80% of canvas, surrounded by pure black space with no stars. This is the 'It's all Ohio? Always has been' meme planet: the ONLY large continent has the unmistakable accurate outline of the US state of OHIO, enlarged to fill the visible hemisphere, geographic north at top. Recognizable Lake Erie indented sloping northern coast, straight western border, curved Ohio River southern/eastern border. Land is realistic satellite photography with detailed green forests, tan farm fields, river systems, Appalachian ridges to east and subtle cities; deep rich blue oceans surround Ohio on all sides. Beautiful physically realistic blue atmospheric rim, swirling thin white weather systems that leave the Ohio outline clearly readable, sunlight from upper left with realistic spherical shading, dark night limb at lower right. Gorgeous cinematic scientific realism, restrained natural colors, high microdetail, no cartoon, no flat color silhouette, no text, no astronauts, no weapons, no UI, no borders, no watermarks. Deliver a finished standalone planet sprite on solid black background; all edges of glow fade to perfect black well inside image bounds.",
+  "sun": {
+    "yaw": 225,
+    "pitch": 30
+  },
+  "planet": {
+    "yaw": 90,
+    "pitch": 4,
+    "widthDeg": 44
+  },
+  "imageOrientation": "UV horizontal flip corrects celestial-east tangent basis"
+}

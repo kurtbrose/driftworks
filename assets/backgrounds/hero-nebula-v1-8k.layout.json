@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "seed": 58319,
+  "library": {
+    "spiral": {
+      "file": "features/spiral-galaxy-v1.png",
+      "aspect": 1.5,
+      "family": "galaxy"
+    },
+    "nebula": {
+      "file": "features/blue-nebula-v1.png",
+      "aspect": 1.5,
+      "family": "nebula"
+    },
+    "sun": {
+      "file": "features/warm-sun-v1.png",
+      "aspect": 1,
+      "family": "sun"
+    },
+    "filament": {
+      "file": "features/blue-filament-v1.png",
+      "aspect": 1.5,
+      "family": "nebula"
+    }
+  },
+  "features": [
+    {
+      "asset": "spiral",
+      "yaw": 80,
+      "pitch": 2,
+      "roll": -14,
+      "widthDeg": 20,
+      "gain": 1
+    },
+    {
+      "asset": "nebula",
+      "yaw": 90,
+      "pitch": 0,
+      "roll": 22,
+      "widthDeg": 66,
+      "gain": 0.65
+    },
+    {
+      "asset": "sun",
+      "yaw": 74,
+      "pitch": 1,
+      "roll": 0,
+      "widthDeg": 7,
+      "gain": 1
+    },
+    {
+      "asset": "filament",
+      "yaw": -65,
+      "pitch": 15,
+      "roll": -28,
+      "widthDeg": 16,
+      "gain": 0.8
+    }
+  ],
+  "family": "nebula",
+  "minGapDeg": 10
+}

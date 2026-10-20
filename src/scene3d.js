@@ -790,6 +790,9 @@
       'attribute vec3 aBakedDocking; varying vec3 vBakedDocking; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; uniform mat3 uModelBasis; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vBakedDocking=aBakedDocking;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=uModelBasis*(local*uScale); p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);n=uModelBasis*n;vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }'));
     gl.attachShader(program, shader(gl.FRAGMENT_SHADER, art.shaderSource +
       '\nvarying vec3 vBakedDocking; uniform float uRigBakedEnabled; varying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform float uShadowPass,uWorkShadowEnabled; uniform sampler2D uWorkShadow; uniform vec2 uSpotPower,uSpotFrustum; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
+      'uniform float uEnvironmentEnabled;uniform vec3 uEnvironmentSH[9],uEnvironmentEye;uniform mat3 uEnvironmentBasis;uniform sampler2D uEnvironment;'+
+      'vec3 skyDiffuse(vec3 n){n=normalize(uEnvironmentBasis*n);float x=n.x,y=n.y,z=n.z;vec3 c=uEnvironmentSH[0]*.282095+uEnvironmentSH[1]*(.488603*y)+uEnvironmentSH[2]*(.488603*z)+uEnvironmentSH[3]*(.488603*x)+uEnvironmentSH[4]*(1.092548*x*y)+uEnvironmentSH[5]*(1.092548*y*z)+uEnvironmentSH[6]*(.315392*(3.*z*z-1.))+uEnvironmentSH[7]*(1.092548*x*z)+uEnvironmentSH[8]*(.546274*(x*x-y*y));return pow(clamp(c+vec3(.18),vec3(.14),vec3(1.35)),vec3(1./2.2));}'+
+      'vec3 skySpecular(vec3 n){vec3 incident=normalize(vRelative-uEnvironmentEye);vec3 ray=normalize(uEnvironmentBasis*reflect(incident,n));vec2 uv=vec2(atan(ray.y,ray.x)/6.28318530718+.5,acos(clamp(ray.z,-1.,1.))/3.14159265359);float metal=uFinish>.5&&uFinish<2.5?1.:0.;vec3 radiance=pow(texture2D(uEnvironment,uv,mix(5.,3.,metal)).rgb,vec3(2.2));float fresnel=pow(1.-max(0.,dot(n,-incident)),5.);return radiance*mix(.04,.18,metal)*(.4+.6*fresnel);}'+
       // Linear beam-depth, packed into RG for baseline WebGL without depth-texture extensions.
       (DW.miningLights?DW.miningLights.shaderSource:'vec3 rigIllumination(vec3 p,vec3 n){return vec3(0.);}')+
       'float workVisibility(vec3 p){if(uWorkShadowEnabled<.5)return 1.;vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection);if(z<=uSpotPower.y*uSpotFrustum.y||z>=uSpotPower.y)return 1.;vec2 uv=vec2(dot(beam,uSpotRight),dot(beam,uSpotUp))*uSpotFrustum.x/z*.5+.5;if(min(uv.x,uv.y)<.001||max(uv.x,uv.y)>.999)return 1.;float receiver=z/uSpotPower.y-.001;float visibility=0.;for(int y=0;y<2;y++)for(int x=0;x<2;x++){vec2 tap=(floor(uv*1024.)+vec2(float(x),float(y))+.5)/1024.;vec2 depthBytes=texture2D(uWorkShadow,tap).rg;visibility+=step(receiver,depthBytes.x+depthBytes.y/255.);}return visibility*.25;}\n'+
@@ -816,14 +819,14 @@
       'float ndl=max(0.,dot(n,light));float sunlight=exterior>.5?smoothstep(-.03,.10,dot(bodyNormal,light)):1.;float lit=pow(ndl,.82)*sunlight;'+
       'vec3 toLamp=uSpotPosition-vRelative;float lampDistance=max(.0001,length(toLamp));vec3 lampDirection=toLamp/lampDistance;float cone=smoothstep(.80,.94,dot(-lampDirection,uSpotDirection));float reach=lampDistance/max(.0001,uSpotPower.y);float fade=1.-smoothstep(.7,1.,reach);float localLight=uSpotPower.x*cone*fade*fade/(1.+16.*reach*reach)*max(0.,dot(n,lampDirection))*workVisibility(vRelative);'+
       'float ambient=.17*(1.-occ*.7);float brightness=ambient+lit*.98;'+
-      'col=globeColor(sphere)*(vec3(brightness)+vec3(.88,.94,1.)*localLight*(1.-occ*.5)+rigIllumination(vRelative,n)*(1.-occ*.35));col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight;'+
+      'col=globeColor(sphere)*((uEnvironmentEnabled>.5?skyDiffuse(n)*(1.-occ*.7):vec3(brightness))+vec3(.88,.94,1.)*localLight*(1.-occ*.5)+rigIllumination(vRelative,n)*(1.-occ*.35));col+=vec3(1.,.94,.81)*pow(ndl,8.)*.035*sunlight*(1.-uEnvironmentEnabled);'+
       '}else if(uHabitat>.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float angle=atan(vLocal.y,vLocal.z);vec2 p=vec2(vLocal.x,(angle-uSpin)*17.);float shell=1.-smoothstep(30.,35.5,abs(vLocal.x));vec3 masks=hullMasks(p,fp);n=mix(n,hullSurface(p,n,angle,fp),shell);float diffuse=max(0.,dot(n,light));'+
       'vec2 plate=floor((p+vec2(5.,4.45))/vec2(10.,8.9));float tone=hash31(vec3(plate,2.));vec3 base=vec3(.82,.79,.70)*(.94+.09*tone);float seam=min(abs(shipCell(p,vec2(10.,8.9)).x),abs(shipCell(p,vec2(10.,8.9)).y));float cavity=1.-smoothstep(.06,.06+fp,seam);base*=1.-cavity*.22;'+
-      'float close=1.-smoothstep(.018,.08,fp);float grain=noise3(vec3(p*70.,4.));base*=1.+(grain-.5)*.055*close;float grime=noise3(vec3(p*.45,3.))*exp(-seam*7.);base*=1.-grime*.14;col=base*(.26+diffuse*.88);'+
-      'vec3 halfVector=normalize(light+uBack);col+=vec3(.91,.89,.80)*pow(max(0.,dot(n,halfVector)),18.+tone*15.)*.045;col=mix(col,vec3(.57,.59,.57)*(.28+diffuse*.8),masks.y*.8*shell);'+
+      'float close=1.-smoothstep(.018,.08,fp);float grain=noise3(vec3(p*70.,4.));base*=1.+(grain-.5)*.055*close;float grime=noise3(vec3(p*.45,3.))*exp(-seam*7.);base*=1.-grime*.14;col=base*(uEnvironmentEnabled>.5?skyDiffuse(n):vec3(.26+diffuse*.88));'+
+      'vec3 halfVector=normalize(light+uBack);col+=vec3(.91,.89,.80)*pow(max(0.,dot(n,halfVector)),18.+tone*15.)*.045*(1.-uEnvironmentEnabled);col=mix(col,vec3(.57,.59,.57)*(uEnvironmentEnabled>.5?skyDiffuse(n):vec3(.28+diffuse*.8)),masks.y*.8*shell);'+
       'vec2 hatch=shipCell(p+vec2(2.,1.),vec2(20.,17.8));vec2 edge=abs(hatch)-vec2(.8,.6);float hatchDistance=max(edge.x,edge.y);float hatchMask=(1.-smoothstep(0.,fp,hatchDistance))*(1.-smoothstep(.18,.5,fp))*shell;float hatchRim=shipLine(hatchDistance,.035,fp)*shell;col=mix(col,col*.78,hatchMask);col+=vec3(.12,.13,.12)*hatchRim;'+
       'col*=.7+.3*shell;'+
-      '}else{if(uFinish>.5&&uFinish<6.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float near=1.-smoothstep(.02,.1,fp);vec3 gradient=noiseGradient3(vLocal*42.).yzw;vec3 grain=rotateNormal(gradient);n=normalize(n-(grain-n*dot(grain,n))*.09*near);float rough=noise3(vLocal*12.);col*=1.+(rough-.5)*.07*near;vec4 detail=hardwareMasks(vLocal,fp);col*=1.-detail.z*.23;col=mix(col,vec3(.72,.74,.70),detail.x*.72);col=mix(col,col*.72+vec3(.055),detail.y*.6);col=mix(col,vec3(.16,.19,.19),detail.w*.65);n=normalize(n+rotateNormal(vec3(.06,-.04,.03))*detail.y);if(uFinish>2.5&&uFinish<4.5){float joint=abs(mod(abs(vLocal.x)-42.,5.5)-.12);float weld=shipLine(joint,.04,fp);col=mix(col,col*.7,weld*.5);}}float diffuse=max(0.,dot(n,light));col*=(uFinish>.5?.25+.92*diffuse:.61+.55*diffuse)+uCraftFill;if(uFinish>.5&&uFinish<2.5){vec3 halfVector=normalize(light+uBack);col+=vec3(.85,.90,1.)*pow(max(0.,dot(n,halfVector)),uFinish<1.5?36.:12.)*.28;}if(uFinish>6.5&&uFinish<7.5)col=uColor*.95;else col+=uColor*(rigIllumination(vRelative,n)+vBakedDocking*uRigBakedEnabled);}gl_FragColor=vec4(col,uOpacity);}'));
+      '}else{if(uFinish>.5&&uFinish<6.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float near=1.-smoothstep(.02,.1,fp);vec3 gradient=noiseGradient3(vLocal*42.).yzw;vec3 grain=rotateNormal(gradient);n=normalize(n-(grain-n*dot(grain,n))*.09*near);float rough=noise3(vLocal*12.);col*=1.+(rough-.5)*.07*near;vec4 detail=hardwareMasks(vLocal,fp);col*=1.-detail.z*.23;col=mix(col,vec3(.72,.74,.70),detail.x*.72);col=mix(col,col*.72+vec3(.055),detail.y*.6);col=mix(col,vec3(.16,.19,.19),detail.w*.65);n=normalize(n+rotateNormal(vec3(.06,-.04,.03))*detail.y);if(uFinish>2.5&&uFinish<4.5){float joint=abs(mod(abs(vLocal.x)-42.,5.5)-.12);float weld=shipLine(joint,.04,fp);col=mix(col,col*.7,weld*.5);}}float diffuse=max(0.,dot(n,light));col*=uEnvironmentEnabled>.5?skyDiffuse(n):vec3((uFinish>.5?.25+.92*diffuse:.61+.55*diffuse)+uCraftFill);if(uEnvironmentEnabled<.5&&uFinish>.5&&uFinish<2.5){vec3 halfVector=normalize(light+uBack);col+=vec3(.85,.90,1.)*pow(max(0.,dot(n,halfVector)),uFinish<1.5?36.:12.)*.28;}if(uFinish>6.5&&uFinish<7.5)col=uColor*.95;else col+=uColor*(rigIllumination(vRelative,n)+vBakedDocking*uRigBakedEnabled);}if(uEnvironmentEnabled>.5 && !(uFinish>6.5&&uFinish<7.5))col+=skySpecular(n);gl_FragColor=vec4(col,uOpacity);}'));
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Shader linking failed');
     gl.useProgram(program); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
@@ -838,6 +841,23 @@
     gl.uniform1i(uniforms.ShipTexture,1);
 
     gl.uniform3fv(uniforms.Light, [-0.813733, -0.581238, 0.68]);
+    uniforms.EnvironmentEnabled=gl.getUniformLocation(program,'uEnvironmentEnabled');
+    uniforms.EnvironmentSH=gl.getUniformLocation(program,'uEnvironmentSH[0]');
+    uniforms.EnvironmentBasis=gl.getUniformLocation(program,'uEnvironmentBasis');
+    uniforms.EnvironmentEye=gl.getUniformLocation(program,'uEnvironmentEye');
+    uniforms.Environment=gl.getUniformLocation(program,'uEnvironment');
+    /** @type {import('./types').SkyEnvironmentLighting|null} */ var environment=null;
+    /** @type {{right:V3,up:V3,back:V3}|null} */ var environmentPose=null;
+    var environmentBasis=new Float32Array([1,0,0,0,1,0,0,0,1]);
+    /** @type {WeakMap<HTMLImageElement,WebGLTexture>} */ var environmentTextures=new WeakMap();
+    var blackEnvironment=gl.createTexture();
+    gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,blackEnvironment);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.activeTexture(gl.TEXTURE0);
+    host.addEventListener('sky-environment',function(event){
+      var data=/** @type {CustomEvent<{lighting:import('./types').SkyEnvironmentLighting|null,pose:{right:V3,up:V3,back:V3}}>} */ (event).detail;
+      environment=data.lighting;environmentPose=data.pose;
+    });
     /** @type {{texture:WebGLTexture,framebuffer:WebGLFramebuffer,depth:WebGLRenderbuffer}|null} */
     var workShadow = null;
     function allocateWorkShadow() {
@@ -1207,6 +1227,24 @@
       gl.uniform3fv(uniforms.Target, [w.camera.x, w.camera.y, orbit.height || 0]); gl.uniform3fv(uniforms.Right, v.right);
       gl.uniform3fv(uniforms.Up, v.up); gl.uniform3fv(uniforms.Back, v.back);
       gl.uniform4fv(uniforms.View, [v.distance, v.focal, vp.width / vp.height, 0]);
+      gl.uniform1f(uniforms.EnvironmentEnabled,environment?1:0);
+      gl.uniform1i(uniforms.Environment,3);gl.activeTexture(gl.TEXTURE3);
+      if(environment){
+        var environmentTexture=environmentTextures.get(environment.image);
+        if(!environmentTexture){
+          var allocated=gl.createTexture();if(!allocated)throw new Error('Sky environment allocation failed');
+          environmentTexture=allocated;environmentTextures.set(environment.image,allocated);
+          gl.bindTexture(gl.TEXTURE_2D,allocated);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,environment.image);
+          gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.generateMipmap(gl.TEXTURE_2D);
+        }
+        gl.bindTexture(gl.TEXTURE_2D,environmentTexture);
+        gl.uniform3fv(uniforms.EnvironmentSH,new Float32Array(environment.sh.flat()));
+        if(environmentPose){for(var column=0;column<3;column++)for(var row=0;row<3;row++)environmentBasis[column*3+row]=environmentPose.right[row]*v.right[column]+environmentPose.up[row]*v.up[column]+environmentPose.back[row]*v.back[column];}
+        gl.uniformMatrix3fv(uniforms.EnvironmentBasis,false,environmentBasis);
+        gl.uniform3fv(uniforms.EnvironmentEye,v.back.map(function(value){return value*v.distance;}));
+      }else gl.bindTexture(gl.TEXTURE_2D,blackEnvironment);
+      gl.activeTexture(gl.TEXTURE0);
       gl.uniform1f(uniforms.ShadowPass,shadowPass?1:0);
       gl.uniform1f(uniforms.WorkShadowEnabled,!shadowPass && spotlightEnabled && workShadowsEnabled && workShadow?1:0);
       gl.uniform1i(uniforms.WorkShadow,2);gl.activeTexture(gl.TEXTURE2);

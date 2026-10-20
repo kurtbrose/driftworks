@@ -10,6 +10,8 @@ import math
 import os
 from pathlib import Path
 import random
+import subprocess
+import sys
 
 import numpy as np
 from PIL import Image
@@ -158,6 +160,7 @@ def main():
     parser.add_argument('--sprinkle', type=int, default=0, help='Add seeded placements to the baked layout')
     parser.add_argument('--seed', type=int)
     parser.add_argument('--family', help='Select a coherent library family, e.g. galaxy, nebula, sun')
+    parser.add_argument('--lighting-output', type=Path, help='Also precompute the source layout lighting cache at this path')
     args = parser.parse_args()
     layout = json.loads(args.layout.read_text(encoding='utf-8'))
     if args.family:
@@ -174,6 +177,12 @@ def main():
     for asset in layout['library'].values():
         asset['file'] = Path(os.path.relpath((args.layout.parent/asset['file']).resolve(),args.output.parent.resolve())).as_posix()
     args.output.with_suffix('.layout.json').write_text(json.dumps(layout, indent=2)+'\n', encoding='utf-8')
+    if args.lighting_output:
+        # Fixed authored layouts bake directly from their runtime source. If
+        # sprinkling created a new layout, derive its lighting from that recipe.
+        lighting_layout = args.output.with_suffix('.layout.json') if args.sprinkle else args.layout
+        subprocess.run([sys.executable, str(Path(__file__).with_name('bake-sky-lighting.py')),
+            '--layout', str(lighting_layout), '--output', str(args.lighting_output)], check=True)
     print(f'{args.output}: {image.width} x {image.height}; SHA256 {hashlib.sha256(args.output.read_bytes()).hexdigest()}')
 
 

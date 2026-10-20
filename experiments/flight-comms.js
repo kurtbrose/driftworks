@@ -16,6 +16,227 @@
     /** @typedef {import('./types').Choices} Choices */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks);
     var dialogue = DW.flightDialogue;
+    /** @type {Record<string, string[]>} */
+    var ohioCalls = {
+    "support": [
+        "Ope, let me get that fighter off you.",
+        "Got your back. That's the neighborly thing.",
+        "Hang tight, bud. Bringing the jumper cables.",
+        "I'm on your six like salt on a county road.",
+        "Scooch over a smidge. I'll take the one behind ya.",
+        "Nobody gets left at the rest stop. Coming to help.",
+        "Got your tail. You can pay me back in pierogies.",
+        "Hold your horses. Cover's coming.",
+        "I'll get this one. You get the door on the way out.",
+        "Stay with me, bud. We carpooled here."
+    ],
+    "firing": [
+        "Ope. Just gonna squeeze a few rounds past ya.",
+        "Sending a little lake effect your way.",
+        "Guns are hotter than a seat belt buckle in July.",
+        "Little extra stadium mustard on this one.",
+        "These rounds got more zip than Grippo's.",
+        "Taking the shot. Tell your folks I says hi.",
+        "Serving it Cincinnati style. With everything on it.",
+        "Guns on. This ain't my first county fair.",
+        "Here comes the salt truck, bud.",
+        "Putting a little chili on that spaghetti."
+    ],
+    "target": [
+        "Next exit: that fighter.",
+        "Taking the scenic route to your six.",
+        "New target. Same orange barrels.",
+        "That one's wandering like a buggy on a back road.",
+        "Got another one. Must be a two-for-one at Meijer.",
+        "Changing lanes. Used my blinker and everything.",
+        "Found the next fella holding up the left lane.",
+        "Well, look what came off the turnpike.",
+        "Picking up that one past the water tower.",
+        "New contact. Looks like trouble in sensible shoes."
+    ],
+    "attack": [
+        "Welcome to the turnpike. Exact change only.",
+        "Coming in hot like a stadium mustard packet.",
+        "You've had the passing lane long enough, bud.",
+        "Gonna ride your bumper all the way to Toledo.",
+        "Coming around faster than a Cedar Point coaster.",
+        "I'm on ya like humidity in a church basement.",
+        "This lane ends right here, pal.",
+        "Time to find out if your warranty covers Ohio.",
+        "Here comes the part they don't put on the welcome sign.",
+        "Hate to be a bother. Gonna shoot at ya now."
+    ],
+    "evade": [
+        "Ope! Little help over here! Cover me!",
+        "This is worse than orange barrel season! Need a hand!",
+        "Got a fella on my tail like a state trooper. Cover me!",
+        "I'm getting rattled like a shopping cart at Marc's! Need a hand!",
+        "More holes than the road after the thaw! Cover me!",
+        "This guy's closer than family at a fish fry. Need a hand!",
+        "Ope, ope, ope! Get this fighter off me!",
+        "I'm sliding around like black ice on I-seventy-one. Cover me!",
+        "Bud, I'm getting worked like a snowblower in February! Cover me!",
+        "Need a hand! This one's stuck to me like lake-effect snow!"
+    ],
+    "break": [
+        "Just gonna scooch right out of here.",
+        "Taking the next exit!",
+        "Welp. Gonna head out.",
+        "Ope. This is my turn. Breaking off!",
+        "Making like a pothole. Opening up some space.",
+        "Backing out like Dad with the boat trailer.",
+        "Got a little squirrely there. Pulling clear.",
+        "That got spicy. And I eat Cincinnati chili.",
+        "Gonna duck out before this becomes a whole thing.",
+        "Heading out. For real this time. No driveway goodbye."
+    ],
+    "recover": [
+        "Back again. Midwest goodbye took a minute.",
+        "Still here. Like road construction.",
+        "Had to go around the block. Back in it.",
+        "Little duct tape, good as new.",
+        "Shook it off like snow off a work boot.",
+        "Well, that wasn't too bad. Coulda been worse.",
+        "Back on the road. Salt truck's behind me.",
+        "We're cooking with gas now, bud.",
+        "Had a little lie-down in the corn. I'm good.",
+        "Coming back like winter in the middle of April."
+    ],
+    "reposition": [
+        "Taking the long way round the corn.",
+        "Meet you by the water tower.",
+        "Gonna hang a left where the old barn used to be.",
+        "Taking the back roads. Less traffic.",
+        "Looping around like I'm looking for parking at the fair.",
+        "Just over yonder. Setting up a pass.",
+        "Gonna sneak around the outside. Real neighborly-like.",
+        "Taking the detour around the detour.",
+        "Go past the grain elevator. If you hit space, too far.",
+        "Getting situated. Takes a minute in these boots."
+    ],
+    "enemy": [
+        "Your GPS says Ohio. Your GPS is correct.",
+        "There is no detour around Ohio.",
+        "You're colder than a metal bleacher in Cleveland in January.",
+        "Colder than Lake Erie in February, bud.",
+        "That's as cold as a Browns tailgate before sunrise.",
+        "Your aim's colder than a scraper left in the trunk overnight.",
+        "You couldn't hit a pothole on the turnpike.",
+        "I've seen faster merges behind a combine.",
+        "Your flight plan's got more holes than spring pavement.",
+        "Ope. Looks like you took the wrong exit.",
+        "You're about as threatening as a goose. Actually, less.",
+        "All that flying and you still can't get out of Ohio.",
+        "This dogfight could've been a euchre game.",
+        "You fly like you're hauling a crockpot with no lid.",
+        "Your guns are colder than a detached garage in Ashtabula.",
+        "You're getting passed by a fella in work boots."
+    ],
+    "ally": [
+        "If we survive, diner pie is on me.",
+        "Space is just the Midwest with fewer exits.",
+        "Brought enough buckeyes for everybody. The candy kind.",
+        "Tell your folks I says hi. After the shooting.",
+        "Welp. Could use a pop about now.",
+        "We should get together sometime. I mean it this time.",
+        "It's not the vacuum. It's the wind chill.",
+        "I packed a casserole. Didn't know what kinda mission this was.",
+        "That planet's all Ohio. Still somehow an hour from Columbus.",
+        "Ope, sorry. Didn't mean to fly through your whole situation.",
+        "Anybody else smell somebody's brakes?",
+        "Lake-effect lasers. That's how they get ya.",
+        "Cold as a folding chair at a January tailgate out here.",
+        "I'm fine. Just gotta slap my knees and say welp first.",
+        "This would all go smoother with a church-basement coffee.",
+        "We doing euchre after this, or what?"
+    ],
+    "range": [
+        "You are now entering Ohio. You were also previously in Ohio.",
+        "Forecast: lake effect lasers.",
+        "Watch for deer. Yes, even here.",
+        "Road's closed. Other road's Ohio too.",
+        "Bridge may ice before rest of universe.",
+        "It's all Ohio. Always has been. Please drive friendly.",
+        "Visibility's good. Construction for the next eternity.",
+        "Keep right except to pass. That includes spacecraft.",
+        "Welcome to Ohio. Mind the orange barrels.",
+        "Welp. Radar says more Ohio."
+    ],
+    "danger": [
+        "Hull is looking rough, bud. Time to head home.",
+        "That hull's thinner than the ice Dad said was probably fine.",
+        "Ope. She's held together with hope and road salt. Break away.",
+        "You're rattling like a furnace in an old duplex. Pull clear.",
+        "Bud, that's not a check-engine light you can ignore. Break off.",
+        "Go on, get outta there. We'll hold the door."
+    ],
+    "damaged": [
+        "Ope! That's gonna need more than duct tape.",
+        "Well, there goes the security deposit.",
+        "Got dinged worse than a door in a grocery parking lot.",
+        "Little body damage. We'll buff 'er out.",
+        "That hit like a pothole full of February.",
+        "She's making a noise Dad would call expensive."
+    ],
+    "escaped": [
+        "Clear! Like the freeway during the game.",
+        "Welp, that got my blood pressure going.",
+        "Got out by the skin of my snow tires.",
+        "I'm clear. Somebody put the kettle on.",
+        "Ope. Thought I was gonna have to call my cousin with the tow truck.",
+        "Still here. Stubborn as a frozen garage door."
+    ],
+    "missed": [
+        "Aw, beans. Had that lined up.",
+        "Missed by a country mile. The long kind.",
+        "Ope. Just aerating the lawn out here.",
+        "That shot went clear to Youngstown.",
+        "Couldn't hit the broad side of the grain elevator today.",
+        "Well. We'll just go around again, then."
+    ],
+    "confused": [
+        "Hang on. Which way's the lake?",
+        "Where'd everybody go? I was following the salt truck.",
+        "I think I turned where the barn used to be.",
+        "Now is that our Ohio or their Ohio?",
+        "Directions said past the corn. It's all corn."
+    ],
+    "panicked": [
+        "Ope, ope, ope! This is a whole thing now!",
+        "They're everywhere like geese in a parking lot!",
+        "This is bad. This is gas-station coffee bad!",
+        "I'm fishtailing like a pickup on summer tires!",
+        "Somebody get me outta this interchange!"
+    ],
+    "afraid": [
+        "Bud, I could really use a hand here!",
+        "I'm shaking like the furnace in February!",
+        "This is colder than being locked out in your slippers!",
+        "Don't leave me out here like a lawn chair in January!",
+        "Little help! This ain't looking too good!"
+    ],
+    "frustrated": [
+        "Oh, for crying out loud!",
+        "Would ya just hold still a minute?",
+        "This is taking longer than the road work on my exit!",
+        "I'm about one missed shot from calling your mother!",
+        "Aw, jeez. Had it lined up and everything!"
+    ],
+    "confident": [
+        "We got this. Been through worse winters.",
+        "Steady as a crockpot on the floorboard.",
+        "We're doing all right, bud. All right.",
+        "Keep 'er moving. Like shoveling the driveway.",
+        "I didn't put on my good flannel to lose."
+    ],
+    "relieved": [
+        "Welp. Coulda been a whole lot worse.",
+        "Oh, jeez. I need to sit on the porch a minute.",
+        "Still here. Like the casserole dish nobody picked up.",
+        "That's better. Like taking your wet boots off.",
+        "I'm clear. Somebody owes me a pop."
+    ]
+};
     var lines = dialogue.lines, calls = dialogue.calls, emotionalLines = dialogue.emotionalLines, emotionalReplies = dialogue.emotionalReplies, emotionStrength = dialogue.emotionStrength, pilotVoice = dialogue.pilotVoice, voiceOptions = dialogue.voiceOptions, numberWords = dialogue.numberWords, compose = dialogue.compose, pickLine = dialogue.pickLine, contactData = dialogue.contactData;
     /** @param {HTMLElement} panel @param {HTMLElement} toggle */
     function mount(panel, toggle) {
@@ -288,6 +509,16 @@
     function step(state, dt, combat, busy, random, player) {
         dt = Math.max(0, dt);
         state.time += dt;
+        if (combat.enabled && combat.mode === 'ohio' && combat.ohioIntro < 3) {
+            if (busy || combat.time < 1 || combat.enemies.length < 9) return null;
+            if (combat.ohioIntro === 2) { combat.ohioIntro = 3; state.wait = 8; return null; }
+            var introIndex = combat.ohioIntro++;
+            var introCraft = combat.enemies[introIndex === 0 ? 0 : 8];
+            return {text: introIndex === 0 ? "It's all Ohio?" : 'Always has been.', speaker: DW.training.callsign(introCraft) + ' / OPEN CHANNEL',
+                voice: 'Scout', hostile: introIndex === 1, seed: 101 + introIndex * 37, radioSeed: 7919 + introIndex,
+                voiceSettings: pilotVoice(introCraft), portraitIndex: introCraft.index, craftId: introCraft.id, event: 'ohioIntro'};
+        }
+
         state.wait = Math.max(0, state.wait - dt);
         state.quiet = busy ? 0 : state.quiet + dt;
         random = random || Math.random;
@@ -467,6 +698,11 @@
         kind = kind || (danger && !state.danger ? 'danger' : enemies && random() < 0.5 ? 'enemy' : allies ? 'ally' : 'range');
         state.danger = danger;
         choices = choices || lines[kind];
+        if (combat.mode === 'ohio') {
+            var ohioEvent = selected ? selected.event : kind;
+            if (ohioEvent === 'emotion' && craft && state.emotions[craft.id]) ohioEvent = state.emotions[craft.id].current;
+            choices = ohioCalls[ohioEvent] || choices;
+        }
         var text = pickLine(state, choices, random);
         var replyTo = /** @type {string | null} */ (null);
         var feeling = craft && state.emotions[craft.id];

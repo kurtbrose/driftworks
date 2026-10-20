@@ -20,6 +20,28 @@
         });
         return new Float32Array(vertices);
     }
+    /** @type {Promise<Record<string,import('../src/types').SkyEnvironmentLighting>>|null} */
+    var lightingCache=null;
+    function loadSkyLighting(){
+        if(!lightingCache){
+            var url=new URL('../assets/backgrounds/sky-lighting-v1.json',window.location.href);
+            lightingCache=window.fetch(url).then(function(response){if(!response.ok)throw new Error('Sky lighting cache unavailable');return response.json();})
+                .then(/** @param {{version:number,families:Record<string,{sh:number[][],map:string}>}} data */ function(data){
+                    if(data.version!==1 || !data.families)throw new Error('Invalid sky lighting cache');
+                    return Promise.all(Object.keys(data.families).map(function(key){
+                        return new Promise(/** @param {(entry:{key:string,value:import('../src/types').SkyEnvironmentLighting})=>void} resolve */ function(resolve,reject){
+                            var image=new Image();image.onload=function(){resolve({key:key,value:{sh:data.families[key].sh,map:data.families[key].map,image:image}});};
+                            image.onerror=function(){reject(new Error('Sky reflection cache unavailable'));};image.src=new URL(data.families[key].map,url).href;
+                        });
+                    })).then(function(entries){
+                        /** @type {Record<string,import('../src/types').SkyEnvironmentLighting>} */ var result={};
+                        entries.forEach(function(entry){result[entry.key]=entry.value;});return result;
+                    });
+                });
+        }
+        return lightingCache;
+    }
+    var ohioMission = typeof window.location !== 'undefined' && /[?&]mission=ohio(?:&|$)/.test(window.location.search || '');
     var focal = 1 / Math.tan(Math.PI / 8);
     function stars() {
         var data = /** @type {number[]} */ ([]), seed = 58319;
@@ -165,9 +187,43 @@ void main(){
         /** @type {{buffer:WebGLBuffer|null,texture:WebGLTexture|null,gain:number,family:string}[]} */
         var heroFeatures=[];
         var heroLoading=false;
+        if (ohioMission) {
+            // The planet is lit from its upper left, toward the viewer.
+            // +Y faces the planet; the sun is behind the left shoulder (-X,-Y,+Z).
+            var ohioAssets = [
+                {asset:'ohio-planet-v1.png',yaw:90,pitch:4,roll:0,widthDeg:44,gain:1},
+                {asset:'features/warm-sun-v1.png',yaw:225,pitch:30,roll:0,widthDeg:7,gain:1}
+            ];
+            ohioAssets.forEach(function (feature) {
+                var image = new Image();
+                image.onload = function () {
+                    var texture=gl.createTexture();
+                    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
+                    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
+                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+                    var buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+                    var vertices=featureFrame(feature,1);
+                    // Celestial east points left on screen. Correct the image UVs,
+                    // preserving world bearings and the original geographic outline.
+                    for(var i=3;i<vertices.length;i+=5) vertices[i]=1-vertices[i];
+                    gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+                    heroFeatures.push({buffer:buffer,texture:texture,gain:feature.gain,family:'ohio'});
+                    canvas.dataset.ohio=heroFeatures.length===2 ? 'ready' : 'loading';
+                };
+                image.onerror=function () {canvas.dataset.ohio='error';};
+                image.src='../assets/backgrounds/'+feature.asset;
+            });
+        }
+        var lightingEnabled=true;
+        /** @type {Record<string,import('../src/types').SkyEnvironmentLighting>} */ var skyLighting={};
+        function getLighting(){return lightingEnabled && style>=7 ? skyLighting[['galaxy','nebula','sun'][style-7]] || null : null;}
         function loadHeroFeatures() {
             if(heroLoading || typeof window.fetch !== 'function') return;
             heroLoading=true;
+            loadSkyLighting().then(function(data){skyLighting=data;canvas.dataset.lighting='ready';}).catch(/** @param {unknown} error */ function(error){canvas.dataset.lighting=String(error);});
             var status=document.getElementById('skybox-status');
             if(status) status.textContent='Loading detailed sky features...';
             var manifestUrl=new URL('../assets/backgrounds/hero-layout-v1.json',window.location.href);
@@ -281,9 +337,14 @@ void main(){
             gl.uniform1f(gl.getUniformLocation(p, 'pixelRatio'), dpr);
         }
         var stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
-        return { setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
+        return {getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
             }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty */ function (pose, renderScale, empty) {
+                // Shared renderer integration: the host delivers the probe and sky basis.
+                // No mission or material code needs to choose lights.
+                if(typeof host.dispatchEvent==='function' && typeof CustomEvent==='function') {
+                    host.dispatchEvent(new CustomEvent('sky-environment',{detail:{lighting:getLighting(),pose:pose}}));
+                }
                 // Keep sky sampling and point footprints independent of scene resolution.
                 var dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1) * quality), width = Math.round(host.clientWidth * dpr), height = Math.round(host.clientHeight * dpr);
                 if (!width || !height)
@@ -299,11 +360,11 @@ void main(){
                     stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
                     return;
                 }
-                if(style>=7) loadHeroFeatures();
+                if(!ohioMission && style>=7) loadHeroFeatures();
                 stats = { drawCalls: 2, triangles: 2, points: starData.length / 4, meshes: 2, materials: 2 };
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
-                gl.uniform1f(gl.getUniformLocation(sky, 'style'), style);
+                gl.uniform1f(gl.getUniformLocation(sky, 'style'), ohioMission ? 10 : style);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), exposure);
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
                 gl.activeTexture(gl.TEXTURE0);
@@ -314,14 +375,14 @@ void main(){
                 gl.bindTexture(gl.TEXTURE_2D, texture);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disableVertexAttribArray(a);
-                if(style>=7 && heroFeatures.length) {
+                if((ohioMission || style>=7) && heroFeatures.length) {
                     uniforms(heroProgram,pose,width/height,dpr);
                     gl.uniform1f(gl.getUniformLocation(heroProgram,'exposure'),exposure);
                     gl.uniform1i(gl.getUniformLocation(heroProgram,'feature'),0);
                     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_COLOR);
                     var direction=gl.getAttribLocation(heroProgram,'direction'), texcoord=gl.getAttribLocation(heroProgram,'texcoord');
                     gl.enableVertexAttribArray(direction);gl.enableVertexAttribArray(texcoord);
-                    var family=['galaxy','nebula','sun'][style-7];
+                    var family=ohioMission ? 'ohio' : ['galaxy','nebula','sun'][style-7];
                     var visibleFeatures=heroFeatures.filter(function (feature) {return feature.family===family;});
                     visibleFeatures.forEach(function (feature) {
                         gl.bindBuffer(gl.ARRAY_BUFFER,feature.buffer);

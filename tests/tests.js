@@ -1673,6 +1673,30 @@
     assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
   });
 
+  test('Ohio reveal gates combat, respects occupied radio, and retains its cast across waves', function () {
+    var DW=window.Driftworks, api=DW.training, U=sim.METERS_PER_UNIT;
+    var player=DW.arcade.create(300/U), combat=api.create('ohio'), clock=DW.flightComms.create();
+    api.spawn(combat,player,300/U);
+    assert(combat.enemies.length===16 && combat.enemies.filter(function(e){return e.team==='ally';}).length===8);
+    var names=combat.enemies.map(function(e){return e.callsign;}), start=JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}));
+    assert(new Set(names).size===16 && names[0]==='Cuyahoga Cryptid');
+    api.step(combat,player,1,300/U);
+    assert(JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}))===start);
+    assert(DW.flightComms.step(clock,1,combat,true)===null && combat.ohioIntro===0);
+    var first=DW.flightComms.step(clock,0,combat,false);
+    assert(first.text==="It's all Ohio?" && first.craftId===combat.enemies[0].id);
+    assert(DW.flightComms.step(clock,4,combat,true)===null && combat.ohioIntro===1);
+    var second=DW.flightComms.step(clock,0,combat,false);
+    assert(second.text==='Always has been.' && second.hostile);
+    assert(DW.flightComms.step(clock,4,combat,true)===null && combat.ohioIntro===2);
+    DW.flightComms.step(clock,0,combat,false); assert(combat.ohioIntro===3);
+    api.step(combat,player,.1,300/U);
+    assert(JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}))!==start);
+    api.spawn(combat,player,300/U);
+    assert(combat.ohioIntro===3 && combat.enemies.every(function(e,i){return e.callsign===names[i];}));
+    assert(api.create('ohio').ohioIntro===0);
+  });
+
   test('flight callsigns are unique, stable across waves, and shared by comms', function () {
     var api=window.Driftworks.training,U=sim.METERS_PER_UNIT,player=window.Driftworks.arcade.create(300/U),combat=api.create('furball');
     api.spawn(combat,player,300/U);

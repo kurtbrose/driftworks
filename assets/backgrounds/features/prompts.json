@@ -14,6 +14,10 @@
     {
       "file": "warm-sun-v1.png",
       "prompt": "Use case: stylized-concept. Asset type: reusable isolated distant sun hero element to screen/additively composite over black in a gorgeous space game skybox. One tiny intensely luminous warm-white stellar disk at exact image center, surrounded by beautiful restrained concentric soft pale-gold corona and smoothly fading amber halo, subtle fine radial glow. Small core occupies only 2 percent image width, corona 12 percent, outer glow 45 percent. Entire remaining image and ALL edges perfectly pure black RGB zero. No background stars, no planets, no dust, no clouds, no text, no border, no long streaks or lens flare ghosts. Smooth premium cinematic light with no grain. Square image 1024x1024 or larger. Standalone element, not full sky."
+    },
+    {
+      "file": "blue-filament-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: standalone unique blue nebular filament landmark for compositing into a spherical space game sky. A long narrow broken diagonal sweep of delicate steel-blue luminous interstellar wisps and charcoal dust tendrils, like one torn feather or branching ribbon. NOT a circular nebula, NOT a crescent, no ring, no large cloud mass. Exquisite resolved fine folds and smoky pale blue edges; restrained blue-white highlights, deep natural blue-gray shadows. Its whole distinct asymmetric shape lies comfortably inside the central 70 percent of a landscape image with wide perfectly black RGB zero margins on every edge. All luminous material dissipates smoothly into pure black. No stars, no galaxy, no planets, no ships, no text, no border, no grain or noisy photographic texture. Detailed polished cinematic astronomical artwork. This will be a secondary distant landmark in the same visual family as a large smoky blue nebula. Landscape 1536x1024 or larger."
     }
   ]
 }

@@ -24,15 +24,16 @@
             status.textContent=entry.model.name+' / original textured 3D model';
         }catch(error){status.textContent=String(error);}
     }
-    var skyYaw=102, skyPitch=0;
+    var skyYaw=90, skyPitch=0;
     /** @param {number} yaw @param {number} pitch @param {string} caption */
     function framing(yaw,pitch,caption){skyYaw=yaw;skyPitch=pitch;control('caption').textContent=caption;}
-    control('opening').onclick=function(){framing(102,0,'Dark opening / calm silhouette with detail around the edges');};
-    control('rim').onclick=function(){framing(102,-14,'Bright rim / deliberate stress test for hull contrast');};
+    control('opening').onclick=function(){framing(90,0,'Dark opening / calm silhouette with detail around the edges');};
+    control('rim').onclick=function(){framing(90,-14,'Bright rim / deliberate stress test for hull contrast');};
     control('empty').onclick=function(){framing(50,0,'Open field / black space as a visual rest');};
-    control('landmark').onclick=function(){framing(-65,15,'Secondary landmark / unique filament on the far side of the sky');};
+    control('landmark').onclick=function(){framing(-80,15,'Secondary landmark / unique filament on the far side of the sky');};
     skyChoice.onchange=function(){sky.setStyle(Number(skyChoice.value));};
     control('review-exposure').oninput=function(){sky.setExposure(Number(control('review-exposure').value));};
+    control('review-lighting').onchange=function(){sky.setLightingEnabled(control('review-lighting').checked);};
     model.onchange=update;control('review-reset').onclick=reset;
     window.addEventListener('resize',reset);reset();update();
     var last=0;

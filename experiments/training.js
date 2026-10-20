@@ -100,7 +100,7 @@
         if (afterCombat) afterCombat();
         var firedBefore = guns.fired, hitsBefore = guns.hits;
         // Finish the gun tick after death to age existing bolts; suppress new fire.
-        DW.flightGuns.step(guns, pose, weapon, !t.dead && controls.fire, dt, function (start, end, bolt) {
+        DW.flightGuns.step(guns, pose, weapon, !t.dead && !(t.mode === 'ohio' && t.ohioIntro < 3) && controls.fire, dt, function (start, end, bolt) {
             return DW.training.trace(t, start, end, bolt, 'player', terrainHit, pose);
         }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft));
         return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore,
@@ -133,7 +133,7 @@
     /** @param {string} mode @returns {Combat} */
     function create(mode) {
         var player = createCraft('player', DW.arcade.create(0), 'ally');
-        var t = /** @type {Combat} */ ({ mode: mode || 'training', roundOver: false, enabled: true, time: 0, wave: 0, countdown: 3,
+        var t = /** @type {Combat} */ ({ mode: mode || 'training', ohioIntro: 0, roundOver: false, enabled: true, time: 0, wave: 0, countdown: 3,
             player: player, enemies: [], wrecks: [], kills: 0, targetId: null, targetLocked: false, slots: [], slotTimer: 0,
             flashes: [], radioEvents: [], radioSerial: 0, playerKills: 0, configured: false, hull: 100, shield: 120, lastHit: -100, hitFlash: 0, dead: false });
         // Compatibility views for the HUD and older local callers; craft state is canonical.
@@ -216,7 +216,7 @@
         t.countdown = 0;
         t.slotTimer = 0;
         t.slots = [];
-        var count = t.mode === 'asteroid-patrol' ? 2 : t.mode === 'furball' ? 16 : Math.min(6, t.wave + 2);
+        var count = t.mode === 'asteroid-patrol' ? 2 : (t.mode === 'furball' || t.mode === 'ohio') ? 16 : Math.min(6, t.wave + 2);
         t.roundOver = false;
         t.enemies = [];
         for (var i = 0; i < count; i++) {
@@ -230,7 +230,7 @@
             var skill = Math.min(2, Math.floor((t.wave - 1 + i) / 3));
             t.enemies.push(Object.assign(createCraft('wave-' + t.wave + '-' + i, pose, 'enemy'), {
                 controller: 'ai', opponentStyle:t.opponentStyle||'baseline', collision: { kind: 'sphere', radiusM: 9 }, shield: 0, maxShield: 0,
-                index: i, callsign: callsign({ index: i }), profile: DW.arcade.profiles[i % 3 === 1 ? 1 : 0],
+                index: i, callsign: t.mode === 'ohio' ? ['Cuyahoga Cryptid', 'Buckeye Bandit', 'Lake Erie Larry', 'Queen City Kid', 'Akron Afterburner', 'Toledo Tornado', 'Dayton Daydream', 'Ope Squadron', 'Turnpike Wraith', 'Chillicothe Chill', 'Parma Phantom', 'Lorain Lightning', 'Sandusky Siren', 'Hocking Goblin', 'Zanesville Zapper', 'Cleveland Comet'][i] : callsign({ index: i }), profile: DW.arcade.profiles[i % 3 === 1 ? 1 : 0],
                 hp: 90, maxHp: 90, pilot: ['Rookie', 'Veteran', 'Ace'][skill], skill: skill,
                 mode: 'approach', decision: i * .13, goal: player.eye.slice()
             }));
@@ -239,7 +239,7 @@
                 equip(craft, craft.profile, defaultWeapon(craft.profile));
             }
         }
-        if (t.mode === 'furball') {
+        if (t.mode === 'furball' || t.mode === 'ohio') {
             // Two opposing wings meet above the near side of the asteroid.
             var center = add(player.eye, add(scale(player.back, -450 / U), scale(player.up, 40 / U)));
             if (length(center) < radius + 100 / U)
@@ -275,7 +275,7 @@
     function decide(t, e, player) {
         if (e.opponentStyle === 'fso-pursuit' || e.opponentStyle === 'fso-breaker') { decideFreeSpace(t,e,player); return; }
         if (e.opponentStyle && e.opponentStyle !== 'baseline') { decideStyle(t,e,player); return; }
-        var distance = length(sub(player.eye, e.pose.eye)) * U, active = t.mode === 'furball' || t.slots.indexOf(e.id) >= 0;
+        var distance = length(sub(player.eye, e.pose.eye)) * U, active = (t.mode === 'furball' || t.mode === 'ohio') || t.slots.indexOf(e.id) >= 0;
         if (t.time >= e.until) {
             if (distance < 140) {
                 e.mode = 'break';
@@ -340,7 +340,7 @@
      * @param {Combat} t @param {Craft} e @param {FlightState} target */
     function decideFreeSpace(t,e,target) {
         var g=engagement(e,target), now=t.time;
-        var active=t.mode==='furball'||t.slots.indexOf(e.id)>=0;
+        var active=(t.mode==='furball'||t.mode==='ohio')||t.slots.indexOf(e.id)>=0;
         if(!active){e.mode='reposition';e.goal=add(target.eye,scale(e.pose.right,650/U));e.pose.throttle=.85;e.decision=.42;return;}
         var breaking=e.mode==='break', recovering=e.mode==='recover';
         if(breaking){
@@ -386,7 +386,7 @@
      * @param {Combat} t @param {Craft} e @param {FlightState} target */
     function decideStyle(t,e,target) {
         var delta=sub(target.eye,e.pose.eye), distance=length(delta)*U;
-        var active=t.mode==='furball'||t.slots.indexOf(e.id)>=0;
+        var active=(t.mode==='furball'||t.mode==='ohio')||t.slots.indexOf(e.id)>=0;
         var forward=scale(e.pose.back,-1), targetForward=scale(target.back,-1);
         var behind=dot(unit(sub(e.pose.eye,target.eye)),targetForward)<-.65;
         var style=e.opponentStyle, wasExtending=e.mode==='break';
@@ -563,6 +563,7 @@
         bindPlayer(t, player);
         stepWrecks(t, dt, terrainHit);
         t.time += dt;
+        if (t.mode === 'ohio' && t.ohioIntro < 3) return;
         participants(t).forEach(function (e) {
             e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);
             if (e.hp > 0 && e.maxShield !== undefined && t.time - e.damagedAt > 7)
@@ -594,7 +595,7 @@
             if (e.hp > 0 && e.controller !== 'input') {
                 var candidates = participants(t).filter(function (other) { return other.hp > 0 && (other.team || 'enemy') !== (e.team || 'enemy'); });
                 var opponent = candidates.length ? candidates[0].pose : null;
-                if (t.mode === 'furball') {
+                if (t.mode === 'furball' || t.mode === 'ohio') {
                     e.retarget -= dt;
                     var target = living.find(function (other) {
                         return other.id === e.targetId && other.hp > 0 && other.team !== e.team;
@@ -642,7 +643,7 @@
                 }
                 var aim = unit(sub(e.gunGoal || e.goal, e.pose.eye)), aligned = dot(aim, scale(e.pose.back, -1));
                 var primary = DW.retailWeapons[e.weaponIndex || 0];
-                e.fire = !!opponent && (t.mode === 'furball' || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > .996 && ((t.time + e.index * .77) % 3) < .8;
+                e.fire = !!opponent && ((t.mode === 'furball' || t.mode === 'ohio') || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > .996 && ((t.time + e.index * .77) % 3) < .8;
             }
             DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
                 return trace(t, start, end, bolt, e, terrainHit, player);
@@ -651,7 +652,7 @@
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)
             t.countdown = 5;
-        if (t.mode === 'furball' && !t.roundOver && t.wave > 0 && (!nowAlive.some(function (e) {
+        if ((t.mode === 'furball' || t.mode === 'ohio') && !t.roundOver && t.wave > 0 && (!nowAlive.some(function (e) {
             return e.team === 'ally';
         }) || !nowAlive.some(function (e) {
             return e.team === 'enemy';
