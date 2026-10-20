@@ -543,6 +543,7 @@ export type CommsState = {
     }>;
     emotions: Record<string, Emotion>;
     emotionWave: number | null;
+    acknowledgment: { caller: string; responder: string; kind: string; expires: number; wave: number } | null;
     emotionalConversation: {
         caller: string;
         emotion: string;
@@ -550,6 +551,7 @@ export type CommsState = {
     } | null;
 };
 export type Line = {
+    portraitIndex?: number;
     text: string;
     speaker: string;
     voice: string;
@@ -566,6 +568,17 @@ export type Line = {
     emotion?: Feeling;
 };
 export type ExperimentModules = {
+    flightPortraits: {
+        mount: (panel: HTMLElement) => {
+            show: (line: Line) => void;
+            play: (plan: SpeechPlan, context: AudioContext, time: number, speechOffset: number) => void;
+            stop: () => void;
+            clear: () => void;
+            update: (live?: Feeling, force?: boolean) => void;
+        };
+        slot: (line: Line) => number;
+        expression: (feeling?: Feeling) => string;
+    };
     flightStudy:{plan:(config:StudyConfig)=>StudyCase[];analyze:(rows:StudyRow[])=>{
         total:number;wins:number;losses:number;timeouts:number;medianKill:number|null;flagged:StudyRow[];
         groups:{separations:number;progressEscapes:number;style:OpponentStyle;meanRange:number;attackFraction:number;extendFraction:number;rearThreatFraction:number;opportunityFraction:number;label:string;pilot:string;skill:number;weapons:string;unshielded:boolean;n:number;wins:number;losses:number;timeouts:number;medianKill:number|null;observedMean:number;longestDry:number}[];
@@ -593,6 +606,7 @@ export type ExperimentModules = {
         calls: Record<string, string[]>;
         emotionalLines: Record<string, string[]>;
         emotionalReplies: Record<string, string[]>;
+        acknowledgments: Record<string, string[]>;
         emotionStrength: Record<string, number>;
         pilotCast: number[][];
         templates: Record<string, string[]>;

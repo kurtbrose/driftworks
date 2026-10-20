@@ -46,6 +46,8 @@
         frustrated: ['Take your time. You will get another shot.', 'We can do this.'],
         relieved: ["We're still here.", 'Good. Stay with us.']
     };
+    /** @type {Record<string, string[]>} */
+    var acknowledgments = { support: ['Copy. Keep him busy!', 'Thanks. Staying on the move.', 'Understood. Breaking clear.'], emotional: ['Copy. Staying with you.', 'Thanks. I needed that.', 'All right. One at a time.'] };
     /** @type {Record<string, number>} */
     var emotionStrength = { calm: 0, confident: 1, relieved: 1, frustrated: 2, confused: 2, afraid: 3, panicked: 4 };
     // Four adult masculine/feminine pairs per wing; index owns identity across rounds.
@@ -189,5 +191,5 @@
         }
         return { distance: distance, range: Math.max(100, Math.round(distance / 100) * 100), bearing: bearing, direction: direction, height: height, vertical: horizontal < distance * .25, sector: horizontal < distance * .25 ? direction : clock + height };
     }
-    DW.flightDialogue = { lines: lines, calls: calls, emotionalLines: emotionalLines, emotionalReplies: emotionalReplies, emotionStrength: emotionStrength, pilotCast: pilotCast, pilotVoice: pilotVoice, voiceOptions: voiceOptions, templates: templates, numberWords: numberWords, compose: compose, pickLine: pickLine, contactData: contactData };
+    DW.flightDialogue = { lines: lines, calls: calls, emotionalLines: emotionalLines, emotionalReplies: emotionalReplies, acknowledgments: acknowledgments, emotionStrength: emotionStrength, pilotCast: pilotCast, pilotVoice: pilotVoice, voiceOptions: voiceOptions, templates: templates, numberWords: numberWords, compose: compose, pickLine: pickLine, contactData: contactData };
 }());

@@ -60,17 +60,18 @@ export function chunkTreatment(regions,seed,symmetry=null,preferences=null){
  /** @typedef {{item:typeof faces[number],axis:number,left:Tree|null,right:Tree|null}} Tree */
  /** @param {typeof faces} items @param {number} depth @returns {Tree|null} */
  function tree(items,depth){if(!items.length)return null;const axis=depth%3;items.sort((a,b)=>a.p[axis]-b.p[axis]);const mid=items.length>>1;return {item:items[mid],axis,left:tree(items.slice(0,mid),depth+1),right:tree(items.slice(mid+1),depth+1)};}
+ const owners=new Map(faces.map(f=>[f.chart.r.id,f]));
  const direction=/** @param {number[]} n */n=>{let k=0;for(let j=1;j<3;j++)if(Math.abs(n[j])>Math.abs(n[k]))k=j;return k*2+(n[k]<0?1:0);};
  const roots=[0,1,2,3,4,5].map(i=>tree(faces.filter(f=>direction(f.normal)===i),0));
  const lookup=new Map(/** @type {[string,typeof faces[number]][]} */([]));
  const root=tree(faces,0),cache=new Map(/** @type {[string,number[]][]} */([]));
- /** @param {number[]} p @param {number[]} n @param {number} style @param {number[]} [anchor] @returns {number[]} */
- return function sample(p,n,style,anchor=p){
-  if(symmetry){if(dot(p,symmetry.normal)<symmetry.offset-1e-8){p=reflectHullPoint(p,symmetry);n=reflectHullPoint(n,symmetry,true);}anchor=p;}
-  const key=artVertexKey(p)+':'+n.map(x=>Math.round(x*100)).join(',')+':'+style+':'+artVertexKey(anchor);const old=cache.get(key);if(old)return old;
+ /** @param {number[]} p @param {number[]} n @param {number} style @param {number[]} [anchor] @param {number[]} [faceNormal] @param {number} [regionId] @returns {number[]} */
+ return function sample(p,n,style,anchor=p,faceNormal=n,regionId){
+  if(symmetry){if(dot(p,symmetry.normal)<symmetry.offset-1e-8){p=reflectHullPoint(p,symmetry);n=reflectHullPoint(n,symmetry,true);}if(dot(anchor,symmetry.normal)<symmetry.offset-1e-8){anchor=reflectHullPoint(anchor,symmetry);faceNormal=reflectHullPoint(faceNormal,symmetry,true);}}
+  const key=String(regionId)+':'+artVertexKey(p)+':'+n.map(x=>Math.round(x*100)).join(',')+':'+style+':'+artVertexKey(anchor)+':'+faceNormal.map(x=>Math.round(x*100)).join(',');const old=cache.get(key);if(old)return old;
   let best=Infinity;let found=faces[0];
-  /** @param {Tree|null} node */function visit(node){if(!node)return;const d=node.item.p.reduce((sum,x,k)=>sum+(x-anchor[k])**2,0),score=d*.1+dot(anchor.map((x,k)=>x-node.item.p[k]),node.item.normal)**2+(1-Math.max(-1,Math.min(1,dot(n,node.item.normal))))*.4;if(score<best){best=score;found=node.item;}const delta=anchor[node.axis]-node.item.p[node.axis];visit(delta<0?node.left:node.right);if(delta*delta*.1<best)visit(delta<0?node.right:node.left);}
-  const lookupKey=artVertexKey(anchor)+':'+n.map(x=>Math.round(x*100)).join(',');const known=lookup.get(lookupKey);if(known)found=known;else{visit(roots[direction(n)]||root);if(found)lookup.set(lookupKey,found);}if(!found)return [1,0,0];
+  /** @param {Tree|null} node */function visit(node){if(!node)return;const d=node.item.p.reduce((sum,x,k)=>sum+(x-anchor[k])**2,0),score=d*.1+dot(anchor.map((x,k)=>x-node.item.p[k]),node.item.normal)**2+(1-Math.max(-1,Math.min(1,dot(faceNormal,node.item.normal))))*.4;if(score<best){best=score;found=node.item;}const delta=anchor[node.axis]-node.item.p[node.axis];visit(delta<0?node.left:node.right);if(delta*delta*.1<best)visit(delta<0?node.right:node.left);}
+  const lookupKey=String(regionId)+':'+artVertexKey(anchor)+':'+faceNormal.map(x=>Math.round(x*100)).join(',');const owned=regionId===undefined?null:owners.get(regionId);const known=owned||lookup.get(lookupKey);if(known)found=known;else{visit(roots[direction(faceNormal)]||root);if(found)lookup.set(lookupKey,found);}if(!found)return [1,0,0];
   const face=found,c=face.chart;
   let distance=Infinity;if(style===2||style===4)c.bounds.forEach(e=>{const ab=e.b.map((x,k)=>x-e.a[k]),ap=p.map((x,k)=>x-e.a[k]),t=Math.max(0,Math.min(1,dot(ap,ab)/(dot(ab,ab)||1)));distance=Math.min(distance,Math.hypot(...ap.map((x,k)=>x-ab[k]*t)));});
   const edge=1-Math.min(1,distance/Math.max(.008,c.scale*.16));
@@ -83,8 +84,8 @@ export function chunkTreatment(regions,seed,symmetry=null,preferences=null){
    w[slot]=1;
   }else{const slope=1-Math.max(0,dot(n,c.r.normal));w[c.slot]=1;const dark=Math.min(.85,edge*.4+slope*1.7);w[c.slot]*=1-dark;w[3]+=dark;}
   // Newly exposed plate sidewalls use the detail material.
-  const side=1-Math.max(0,dot(n,c.r.normal));if(side>.45){for(let k=0;k<3;k++)w[k]*=.25;}
-  const result=design&&preferences?design.apply(p,n,w.slice(0,3),c.r.id,preferences):w.slice(0,3);cache.set(key,result);return result;
+  const side=1-Math.max(0,dot(faceNormal,c.r.normal));if(side>.45){for(let k=0;k<3;k++)w[k]*=.25;}
+  const result=design&&preferences?design.apply(p,n,w.slice(0,3),c.r.id,preferences,anchor,faceNormal):w.slice(0,3);cache.set(key,result);return result;
  };
 }
 

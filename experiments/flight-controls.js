@@ -12,6 +12,18 @@
         var document = environment.document, window = environment.window, navigator = environment.navigator;
         var get = DW.experimentDom(document);
         var inputMode = get('input-mode'), device = get('device'), bindingHost = get('bindings'), input = DW.flightInput;
+        var sensitivity = get('sensitivity'), preferredDevice = '';
+        try {
+            var savedMode = window.localStorage.getItem('driftworks.flight.input-mode');
+            if (savedMode === 'mouse' || savedMode === 'controller') inputMode.value = savedMode;
+            var savedSensitivity = Number(window.localStorage.getItem('driftworks.flight.sensitivity'));
+            if (Number.isFinite(savedSensitivity) && savedSensitivity >= .3 && savedSensitivity <= 3)
+                sensitivity.value = String(savedSensitivity);
+            preferredDevice = window.localStorage.getItem('driftworks.flight.device') || '';
+        } catch (error) { /* Defaults work without storage. */ }
+        sensitivity.oninput = function () {
+            try { window.localStorage.setItem('driftworks.flight.sensitivity', sensitivity.value); } catch (error) { /* Optional preference. */ }
+        };
         var keys = /** @type {Record<string, boolean>} */ ({}), mouse = [0, 0], mapping = input.defaults(true), padSignature = '', lastPad = /** @type {number | null} */ (null), previousButtons = { bank: false, lock: false, pause: false };
         var rumble = get('rumble');
         rumble.checked = true;
@@ -58,6 +70,7 @@
         }
         var steeringPreset = get('steering-preset');
         var mouseActive = true, lastAxes = /** @type {number[]} */ ([]);
+        var padActivity = /** @type {Record<string, {axes: number[]; buttons: boolean[]}>} */ ({});
         steeringPreset.value = 'medium-soft';
         try {
             var savedSteering = window.localStorage.getItem('driftworks.flight.steering');
@@ -179,6 +192,8 @@
             });
             if (pad) {
                 lastPad = pad.index;
+                preferredDevice = pad.id;
+                try { window.localStorage.setItem('driftworks.flight.device', preferredDevice); } catch (error) { /* Optional preference. */ }
                 configure(pad);
             }
         };
@@ -187,7 +202,10 @@
             get('deadzone').value = String(mapping.deadzone);
             saveBindings();
         };
-        inputMode.onchange = actions.pause;
+        inputMode.onchange = function () {
+            actions.pause();
+            try { window.localStorage.setItem('driftworks.flight.input-mode', inputMode.value); } catch (error) { /* Optional preference. */ }
+        };
         document.addEventListener('pointerlockchange', function () {
             if (document.pointerLockElement === host) {
                 if (actions.isDead()) {
@@ -302,6 +320,8 @@
                     return String(p.index) === selected;
                 }))
                     device.value = selected;
+                var preferred = connected.find(function (p) { return p.id === preferredDevice; });
+                if (preferred) device.value = String(preferred.index);
                 if (!connected.length) {
                     var empty = document.createElement('option');
                     empty.value = '';
@@ -315,6 +335,27 @@
                 actions.pause();
                 lastPad = null;
             }
+            // Poll every device: a different connected pad can be picked up at any time.
+            var activePad = /** @type {Gamepad | null} */ (null), pressedButton = false;
+            var nextActivity = /** @type {typeof padActivity} */ ({});
+            connected.forEach(function (candidate) {
+                var id = candidate.index + ':' + candidate.id, prior = padActivity[id];
+                var buttons = candidate.buttons.map(function (b) { return b.pressed || b.value > .5; });
+                var pressed = buttons.some(function (down, index) { return down && !(prior && prior.buttons[index]); });
+                var candidateMapping = candidate.index === lastPad ? mapping : input.defaults(candidate.mapping === 'standard', candidate.id);
+                var moved = [candidateMapping.pitch, candidateMapping.yaw, candidateMapping.roll, candidate.mapping === 'standard' ? 3 : -1].some(function (index) {
+                    var value = candidate.axes[index];
+                    // Absolute throttle may rest at an endpoint; discovery alone is not movement.
+                    return Number.isFinite(value) && Math.abs(value) > candidateMapping.deadzone &&
+                        Math.abs(value - (prior ? prior.axes[index] || 0 : 0)) > .02;
+                });
+                nextActivity[id] = {axes: Array.from(candidate.axes), buttons: buttons};
+                if (pressed || (moved && !actions.isPaused())) {
+                    if (!activePad || pressed) { activePad = candidate; pressedButton = pressed; }
+                }
+            });
+            padActivity = nextActivity;
+            if (activePad) device.value = String(activePad.index);
             var pad = connected.find(function (p) {
                 return String(p.index) === device.value;
             });
@@ -335,6 +376,12 @@
                 return v !== null;
             }).join(', ') : '';
             var controls = pad ? input.read(pad, mapping) : { pitch: 0, yaw: 0, roll: 0, throttle: null, throttleRate: 0, fire: false, boost: false, bank: false, lock: false, pause: false };
+            if (activePad) {
+                mouseActive = false;
+                mouse = [0, 0];
+                if (pressedButton && actions.isPaused() && !actions.isDead() && !controls.pause && !document.hidden)
+                    actions.resume();
+            }
             // A held stick or tiny hardware noise must not reclaim input after mouse movement.
             if (pad) {
                 var padAxes = pad.axes;

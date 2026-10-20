@@ -1,0 +1,46 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+(async function(){
+  let now=2000,lastLayers=[],created=0,canvas,loaded=0,offsetSeen;
+  const classes=new Set(),calls=[];
+  const document={baseURI:'http://localhost:8000/experiments/flight.html',createElement(){
+    return {width:0,height:0,dataset:{},setAttribute(name,value){this[name]=value;},getContext(){return {fillRect(){},drawImage(){}};}};
+  }};
+  const panel={ownerDocument:document,appendChild(value){canvas=value;},classList:{add:name=>classes.add(name),remove:name=>classes.delete(name)}};
+  const window={Driftworks:{},matchMedia:()=>({matches:false}),addEventListener(){}};
+  const box={window,document,URL,Float32Array,console,performance:{now:()=>now},Image:class{constructor(){this.naturalWidth=1448;this.naturalHeight=1086;}set src(value){assert.ok(value.startsWith('http://localhost:8000/assets/portraits/dogfight/'));loaded++;this.onload();}}};
+  vm.createContext(box);
+  for(const file of ['experiments/mumble.js','experiments/speech-sprites/generated-v1/face-blend.js','experiments/flight-portraits.js'])vm.runInContext(fs.readFileSync(file,'utf8'),box);
+  const DW=window.Driftworks,api=DW.flightPortraits;
+  DW.faceBlend.create=()=>{created++;return {draw:layers=>{lastLayers=layers;}};};
+  assert.equal(api.slot({portraitIndex:0}),1);assert.equal(api.slot({portraitIndex:1}),0);
+  assert.equal(api.slot({portraitIndex:8}),api.slot({portraitIndex:0}));assert.equal(api.slot({portraitIndex:-1}),2);
+  assert.equal(api.slot({portraitIndex:Infinity}),2);
+  for(const [current,stress,expected] of [['calm',0,'neutral'],['calm',.7,'afraid'],['calm',.4,'angry'],['frustrated',0,'angry'],['afraid',0,'afraid'],['panicked',0,'afraid'],['confused',0,'afraid'],['relieved',0,'smile'],['confident',0,'smile'],['reassuring',0,'smile']])assert.equal(api.expression({current,stress,intensity:1}),expected);
+  const view=api.mount(panel),line={portraitIndex:0,speaker:'WING ROOK / COVER',emotion:{current:'relieved',intensity:1,stress:0}};
+  view.show(line);view.show({...line,portraitIndex:1,speaker:'WING LYNX / COVER'});
+  for(let i=0;i<10;i++)await Promise.resolve();
+  assert.equal(created,1,'Late first-speaker image loading cannot replace the newer speaker');assert.equal(loaded,7);
+  assert.equal(canvas['aria-label'],'WING LYNX speaking portrait');assert.ok(classes.has('has-portrait'));assert.equal(lastLayers[0].image,'smile');
+  const plan=DW.mumble.analyze('Moon, crew!',{seed:17});const cue=plan.events.find(e=>e.kind==='syllable'),audio={currentTime:0};
+  view.play(plan,audio,0,.16);view.update(undefined,true);assert.ok(lastLayers.every(l=>l.image!=='oo'&&l.image!=='ah'));
+  audio.currentTime=.16+cue.start+.025;view.update({current:'panicked',stress:.9,intensity:1},true);
+  assert.equal(lastLayers[0].image,'afraid');assert.ok(lastLayers.some(l=>l.image==='oo'));assert.ok(lastLayers.every(l=>l.alpha===1));
+  view.stop();assert.ok(lastLayers.every(l=>l.image!=='oo'));
+  view.show(line);view.clear();for(let i=0;i<5;i++)await Promise.resolve();assert.ok(canvas.hidden);assert.ok(!classes.has('has-portrait'));
+  // Exercise the actual radio adapter's playback clock, live feelings and cleanup.
+  let queue=line,ended,startTime;
+  const context={state:'running',currentTime:2,createBuffer:()=>({copyToChannel(){}}),createBufferSource:()=>({connect(){},disconnect(){},stop(){},start(t){startTime=t;},set onended(fn){ended=fn;}})};
+  DW.flightPortraits.mount=()=>({show:l=>calls.push(['show',l]),play:(p,c,t,o)=>{offsetSeen=o;calls.push(['play',t]);},stop:()=>calls.push(['stop']),clear:()=>calls.push(['clear']),update:feeling=>calls.push(['update',feeling])});
+  const feeling={current:'frustrated',stress:.5,intensity:1};
+  DW.flightComms={create:()=>({emotions:{wing:feeling}}),step:()=>{const value=queue;queue=null;return value;}};
+  DW.flightDialogue={voiceOptions:()=>({seed:17})};DW.audio={setCommsActive(){},commsChannel:()=>({context,output:{}})};
+  DW.mumble.render=()=>new Float32Array(10);DW.mumble.transmit=()=>({samples:new Float32Array(10),duration:1,speechOffset:.16});
+  vm.runInContext(fs.readFileSync('experiments/flight-radio.js','utf8'),box);
+  const fields=[{},{}],radioPanel={querySelector:s=>s==='[data-speaker]'?fields[0]:fields[1],classList:{add(){},remove(){},toggle(){}}},toggle={setAttribute(){}};
+  queue={...line,craftId:'wing',text:'Cover me!',voice:'Scout',voiceSettings:{seed:17},seed:17,radioSeed:1};
+  const radio=DW.flightRadio.mount(radioPanel,toggle);radio.unlock();radio.update(0,{},{});
+  assert.equal(startTime,2);assert.equal(offsetSeen,.16);assert.equal(calls.find(c=>c[0]==='play')[1],2);
+  assert.equal(calls.filter(c=>c[0]==='update').at(-1)[1],feeling);
+  ended();assert.ok(calls.some(c=>c[0]==='stop'));radio.reset();assert.ok(calls.some(c=>c[0]==='clear'));
+  console.log('PASS dogfight portraits: stable cast, mood/stress mapping, async speaker races, audio-clock timing, silent lead-in, live feelings and lifecycle');
+})().catch(error=>{console.error(error);process.exitCode=1;});

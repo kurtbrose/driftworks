@@ -1,0 +1,14 @@
+{
+  "width": 1254,
+  "height": 1254,
+  "sampleStride": 3,
+  "mouthBox": [
+    490,
+    710,
+    710,
+    825
+  ],
+  "mouthMeanDifference": 12.42706080269165,
+  "outsideMeanDifference": 2.4255636328389976,
+  "outsidePercentAbove12": 1.3876126781041
+}

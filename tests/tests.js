@@ -558,7 +558,7 @@
   });
 
   // A small event/DOM fixture exercises the browser adapter without real devices.
-  function flightControlsFixture(){
+  function flightControlsFixture(storage){
     function target(){return {listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},emit:function(name,event){if(this.listeners[name])this.listeners[name](event||{});},appendChild:function(child){this.children.push(child);if(this.value===''&&child.value!==undefined)this.value=child.value;},children:[],value:'',textContent:'',setAttribute:function(){}};}
     var elements={},doc=target(),win=target(),host=target(),pads=[],counts={pause:0,weapon:0,target:0,lock:0,radar:0,diagnostics:0,performance:0,resume:0,failure:0},paused=false,dead=false,controls;
     doc.getElementById=function(id){return elements[id]||(elements[id]=target());};
@@ -566,6 +566,7 @@
     doc.body={classList:{add:function(){}}};doc.exitPointerLock=function(){doc.pointerLockElement=null;};
     host.clientWidth=1000;host.clientHeight=800;
     doc.getElementById('input-mode').value='mouse';doc.getElementById('sensitivity').value='1';
+    if(storage)win.localStorage=storage;
     controls=window.Driftworks.flightControls.mount(host,{
       isPaused:function(){return paused;},isDead:function(){return dead;},
       pause:function(){counts.pause++;paused=true;controls.clear();controls.release();},
@@ -577,6 +578,22 @@
     function key(code,tag,repeat){var event={code:code,target:{tagName:tag||'BODY'},repeat:!!repeat,preventDefault:function(){this.prevented=true;}};win.emit('keydown',event);return event;}
     return {controls:controls,doc:doc,win:win,host:host,counts:counts,key:key,elements:elements,setPads:function(value){pads=value;},setPaused:function(value){paused=value;},setDead:function(value){dead=value;}};
   }
+
+  test('flight settings follow the player between lab and mission mounts',function(){
+    var stored={},storage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};
+    var lab=flightControlsFixture(storage);
+    lab.elements['input-mode'].value='controller';lab.elements['input-mode'].onchange();
+    lab.elements.sensitivity.value='1.7';lab.elements.sensitivity.oninput();
+    var pad={index:2,id:'Preferred pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[]};
+    lab.setPads([pad]);lab.controls.sample();lab.elements.device.value='2';lab.elements.device.onchange();
+    var mission=flightControlsFixture(storage);
+    assert(mission.controls.view().inputMode==='controller');assert(mission.elements.sensitivity.value==='1.7');
+    var other={index:0,id:'Other pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[]};
+    pad.index=1;pad.axes=[.8,0,0,0];mission.setPads([other,pad]);
+    assert(mission.controls.sample().yaw!==0);assert(mission.elements.device.value==='1');
+    stored['driftworks.flight.input-mode']='invalid';stored['driftworks.flight.sensitivity']='99';
+    var defaults=flightControlsFixture(storage);assert(defaults.controls.view().inputMode==='mouse');assert(defaults.elements.sensitivity.value==='1');
+  });
 
   test('flight controls retain keyboard focus guards, shortcuts and pause clearing',function(){
     var f=flightControlsFixture(),c=f.controls;
@@ -638,6 +655,21 @@
     pad.axes[0]=.9;c.sample();assert(!c.view().showMouseStick);
     pad.axes[0]=0;c.sample();assert(!c.view().showMouseStick);
     f.doc.emit('mousemove',{movementX:1,movementY:0});assert(c.view().showMouseStick);
+  });
+
+  test('fresh controller buttons take over from mouse and another idle device',function(){
+    var f=flightControlsFixture(),c=f.controls;
+    function pad(index){return {index:index,id:'Takeover '+index,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};}
+    var idle=pad(0),active=pad(1);f.setPads([idle,active]);c.sample();
+    f.doc.pointerLockElement=f.host;f.doc.emit('mousemove',{movementX:100,movementY:0});
+    active.buttons[7].pressed=true;var demand=c.sample();
+    assert(f.elements.device.value==='1'&&demand.fire);assert(demand.yaw===0&&!c.view().showMouseStick,'Button takeover clears mouse steering');
+    f.doc.emit('mousemove',{movementX:50,movementY:0});c.sample();assert(c.view().showMouseStick,'Held button does not steal mouse back');
+    f.setPaused(true);c.sample();assert(f.counts.resume===0,'Held buttons do not unpause');
+    active.buttons[7].pressed=false;c.sample();active.buttons[0].pressed=true;c.sample();
+    assert(f.counts.resume===1&&!c.view().showMouseStick,'Fresh button resumes without pointer lock or mode selection');
+    active.buttons[9].pressed=true;c.sample();c.sample();assert(f.counts.pause===1&&f.counts.resume===1,'Pause remains paused while held');
+    active.buttons[9].pressed=false;c.sample();f.setDead(true);active.buttons[2].pressed=true;c.sample();assert(f.counts.resume===1,'Cannot resume a dead ship');
   });
 
   test('nonstandard joystick throttle axis and increase/decrease buttons can be remapped',function(){
@@ -1352,7 +1384,34 @@
     helper.pose.velocity=[1,0,0];var reply=api.step(clock,0,combat,false,rng);
     assert(reply.event==='support' && reply.craftId==='helper' && reply.replyTo==='caller');
     assert(reply.text.indexOf("I've got him")>=0 && clock.conversation===null);
-    assert(api.step(clock,3,combat,false,rng)===null); // One answer per request.
+    var third=api.step(clock,3,combat,false,rng);
+    assert(third.event==='acknowledgment' && third.craftId==='caller' && third.replyTo==='helper');
+    assert(api.step(clock,3,combat,false,rng)===null); // Exchange ends after A/B/A.
+  });
+
+  test('replies outrank urgent calls, bypass cooldowns and expire on a busy channel', function () {
+    var api=window.Driftworks.flightComms, rng=function(){return 0;};
+    [5,5.01].forEach(function(delay){
+      var clock=api.create(), caller={id:'c',team:'ally',hp:90,mode:'evade'};
+      var helper={id:'h',team:'ally',hp:90,mode:'attack',targetId:'t',fire:true};
+      var threat={id:'t',team:'enemy',hp:90,mode:'attack',targetId:'c'};
+      var urgent={id:'u',team:'ally',hp:90,mode:'attack'};
+      var combat={enabled:true,wave:1,hull:100,enemies:[caller,helper,threat,urgent]};
+      api.step(clock,0,combat,true,rng);
+      clock.conversation={caller:'c',threat:'t',expires:5};
+      clock.spoken.h=0;clock.activitySpoken.support=0;
+      api.step(clock,delay,combat,true,rng);
+      urgent.mode='evade';clock.quiet=10;clock.wait=100;
+      var line=api.step(clock,0,combat,false,rng);
+      assert(line.event===(delay===5?'support':'evade'));
+      if(delay>5)assert(clock.conversation===null);
+      if(delay===5){
+        api.step(clock,5.01,combat,true,rng);clock.quiet=10;
+        var next=api.step(clock,0,combat,false,rng);
+        assert(!next || next.event!=='acknowledgment');
+        assert(clock.acknowledgment===null);
+      }
+    });
   });
 
   test('flight comms cancels cover exchanges when the fight changes', function () {
@@ -1567,6 +1626,7 @@
     window.Driftworks.flightComms.step(clock,0,fight,false,function(){return 0;});pilot.mode='evade';
     var line=window.Driftworks.flightComms.step(clock,0,fight,false,function(){return 0;});assert(line.speaker.indexOf('WING Rook / ')===0);
     assert(api.callsign({index:0})==='Rook'&&api.callsign({id:'control'})==='Control');
+    assert(line.portraitIndex===0);
   });
 
   test('target camera centers a copy, fits hull bounds and caps redraws', function () {

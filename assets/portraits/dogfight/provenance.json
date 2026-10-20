@@ -1,0 +1,15 @@
+{
+  "master": "neutral.png",
+  "master_source": "User-supplied codex-clipboard-4c536910-2eec-40e3-8dfd-1bb39e35102c.png, copied unchanged",
+  "layout": {"columns": 4, "rows": 2, "width": 1448, "height": 1086},
+  "variants": {
+    "ah.png": "Conversational open AH mouth, localized edit of all eight master mouths",
+    "oo.png": "Rounded OO mouth, localized edit of all eight master mouths",
+    "blink.png": "Gently closed eyelids, localized edit of all eight master faces",
+    "smile.png": "Restrained closed-lip smile with coordinated cheeks and eyes",
+    "angry.png": "Frustrated/determined brows, eyes and cheeks with closed lips",
+    "afraid.png": "Alarmed/worried eyes and brows with closed lips"
+  },
+  "method": "Built-in imagegen edits of the neutral atlas, requested to preserve dimensions, cell positions, identity, hair and clothing. Generated results are not claimed to preserve every pixel.",
+  "runtime": "Explicit per-character eye/mouth calibration; source canvases are prepared locally. Only masked inner-face pixels from edited variants can enter the displayed master portrait. No runtime generation or network dependencies."
+}

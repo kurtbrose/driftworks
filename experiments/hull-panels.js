@@ -3,7 +3,7 @@
 /** @typedef {{vertices:Float32Array,stride?:number,color?:number[],opacity?:number,texture?:HTMLImageElement,role?:string,eligible?:(uv:number[])=>boolean}} HullBatch */
 /** @typedef {{v:V[],normal:V,area:number,neighbors:number[]}} Face */
 /** @typedef {{faces:Face[],normal:V,u:V,v:V,area:number,id:number}} Region */
-/** @typedef {{vertices:Float32Array,paint:V,diagnostic?:boolean,graphic?:boolean,decalLayer?:number}} PanelBatch */
+/** @typedef {{vertices:Float32Array,paint:V,diagnostic?:boolean,graphic?:boolean,decalLayer?:number,regionId?:number}} PanelBatch */
 /** @param {V} a @param {V} b */
 function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
 /** @param {V} a @param {V} b */
@@ -115,7 +115,7 @@ function plate(polygons,region,gap,bevel,height){
  /** @type {Map<string,{p:V,inward:V[],normal:V}>} */const points=new Map();
  /** @type {Map<string,{a:V,b:V,count:number}>} */const edges=new Map();
  polygons.forEach(poly=>poly.forEach((p,i)=>{
-  const k=key(p);if(!points.has(k))points.set(k,{p,inward:[],normal:unit(p.slice(3,6))});
+  const k=key(p);if(!points.has(k))points.set(k,{p,inward:[],normal:region.normal});
   const b=poly[(i+1)%poly.length],e=edgeKey(p,b),previous=edges.get(e);if(previous)previous.count++;else edges.set(e,{a:p,b,count:1});
  }));
  const boundary=Array.from(edges.values()).filter(e=>e.count===1);
@@ -252,7 +252,7 @@ export function buildHullPanels(batches,settings){
   diagnostics.push({vertices:new Float32Array(diagnostic),paint:[.3+random(region.id,3)*.65,.3+random(region.id,5)*.65,.3+random(region.id,7)*.65],diagnostic:true,decalLayer:1});
   if(!eligible.has(region.id))return;
   const polygons=region.faces.map(f=>f.v),out=grammars[style-1]({polygons,region,divisions:Math.max(1,Math.min(4,settings.divisions)),relief:Math.max(0,Math.min(1,settings.relief)),seed:settings.seed,axis,extent});
-  panels.push(...out.batches.filter(b=>b.vertices.length));plateCount+=out.batches.filter(b=>b.vertices.length).length;detailCount+=out.pieces;operation=out.operation;
+  panels.push(...out.batches.filter(b=>b.vertices.length).map(b=>({...b,regionId:region.id})));plateCount+=out.batches.filter(b=>b.vertices.length).length;detailCount+=out.pieces;operation=out.operation;
  });
  return {panels,diagnostics,regions:regions.length,eligible:eligible.size,skipped:regions.length-eligible.size,plates:plateCount,details:detailCount,operation,axis};
 }

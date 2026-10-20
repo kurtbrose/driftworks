@@ -66,3 +66,11 @@ for(let i=0;i<segments;i++){const a=i*Math.PI*2/segments,b=(i+1)*Math.PI*2/segme
 const tubeRegions=analyzeHull([{vertices:new Float32Array(tube)}]),tubeArea=tubeRegions.reduce((sum,region)=>sum+region.area,0),expectedArea=segments*2*radius*Math.sin(Math.PI/segments)*2;
 assert(Math.abs(tubeArea-expectedArea)<1e-5,'Normal atlas charts partition surface area without duplicate coplanar facets');
 console.log('PASS geometry-aware plates: adjacency, semantic exclusions, tessellation independence, concavity, holes, deterministic real geometry');
+
+// Shading normals at hard edges may be almost tangent to a geometric face.
+// They must not make the raised cap fold back into the source hull.
+const smoothFace={vertices:new Float32Array([0,0,0,.99,0,.1, 1,0,0,0,.99,.1, 0,1,0,-.99,0,.1])};
+const smoothRegions=analyzeHull([smoothFace]);
+const cap=context.plate(smoothRegions[0].faces.map(f=>f.v),smoothRegions[0],.004,.003,.02).vertices;
+for(let i=2;i<24;i+=8)assert(Math.abs(cap[i]-.02)<1e-6,'Cap clearance follows geometric surface normal, independent of smoothed shading normals');
+console.log('PASS raised plate clearance with divergent source shading normals');

@@ -1,5 +1,14 @@
 # Procedural portrait laboratory
 
+Source-preparation evaluation: [FRONTAL_PRESTEP_REPORT.md](FRONTAL_PRESTEP_REPORT.md)
+compares four user-generated frontal photos with their originals through the same
+illustration/pixel stages. The existing generations are treated as frozen, reviewed
+source assets, not claimed as deterministic conversion. To reproduce the paired
+downstream test, run `python evaluate_frontal_prestep.py` from this directory with
+the existing structural-model environment. It writes a fresh
+`results/frontal-evaluation-v1/` and refuses to overwrite it. No image-generation
+service is called by this evaluation.
+
 Latest pixel experiment: [PIXEL_REPORT.md](PIXEL_REPORT.md), with native-size
 comparisons under `results/pixel-v2/`. This freezes the promising illustration
 branch and compares pixel sampling/cluster cleanup; it does not rerun the model.

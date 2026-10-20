@@ -72,3 +72,7 @@ require('./livery-materials.cjs');
 require('./livery-sections.cjs');
 
 require('./hull-panels.cjs');
+
+require('./speech-sprites.cjs');
+require('./talking-face.cjs');
+require('./flight-portraits.cjs');

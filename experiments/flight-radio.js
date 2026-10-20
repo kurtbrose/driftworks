@@ -9,12 +9,15 @@
     function mount(panel, toggle) {
         var create = DW.flightComms.create, step = DW.flightComms.step, voiceOptions = DW.flightDialogue.voiceOptions;
         var history = panel.ownerDocument && panel.ownerDocument.getElementById('comms-history');
+        var portrait = DW.flightPortraits ? DW.flightPortraits.mount(panel) : null, reassurance = false;
         var clock = create(), context = /** @type {AudioContext | null} */ (null), source = /** @type {AudioBufferSourceNode | null} */ (null), generation = 0, muted = false, remaining = 0, channelRemaining = 0, currentSpeaker = /** @type {string | null} */ (null);
         var speakerElement = panel.querySelector('[data-speaker]'), subtitleElement = panel.querySelector('[data-subtitle]');
         if (!speakerElement || !subtitleElement)
             throw new Error('Comms requires speaker and subtitle elements');
         const speaker = speakerElement, subtitle = subtitleElement;
         function stop() {
+            if (portrait) portrait.stop();
+            reassurance = false;
             DW.audio.setCommsActive(false);
             generation++;
             channelRemaining = 0;
@@ -36,6 +39,8 @@
         }
         /** @param {Line} line */
         function speak(line) {
+            reassurance = line.event === 'emotionalReply';
+            if (portrait) portrait.show(line);
             currentSpeaker = line.craftId && line.craftId !== 'control' ? line.craftId : null;
             var emotionField = panel.ownerDocument && panel.querySelector('[data-emotion]');
             speaker.textContent = emotionField ? line.speaker.split(' / ')[0] : line.speaker;
@@ -74,9 +79,12 @@
                         channelRemaining = 0;
                         currentSpeaker = /** @type {string | null} */ (null);
                         panel.classList.remove('transmitting');
+                        if (portrait) portrait.stop();
                     }
                 };
-                source.start();
+                var started = context.currentTime || 0;
+                source.start(started);
+                if (portrait) portrait.play(plan, context, started, transmission.speechOffset);
                 DW.audio.setCommsActive(true);
                 channelRemaining = transmission.duration;
                 remaining = Math.max(9, transmission.duration + 2);
@@ -104,6 +112,7 @@
             pause: stop,
             reset: function () {
                 stop();
+                if (portrait) portrait.clear();
                 clock = create();
                 remaining = 0;
                 speaker.textContent = 'RANGE COMMS';
@@ -120,6 +129,7 @@
                 if (!source && channelRemaining <= 0)
                     currentSpeaker = /** @type {string | null} */ (null);
                 if (!remaining) {
+                    if (portrait) portrait.clear();
                     panel.classList.remove('transmitting');
                     subtitle.textContent = 'Channel clear.';
                     panel.classList.add('idle');
@@ -127,6 +137,7 @@
                 var line = step(clock, dt, combat, !!source || channelRemaining > 0, Math.random, player);
                 if (line)
                     speak(line);
+                if (portrait) portrait.update(!reassurance && currentSpeaker ? clock.emotions[currentSpeaker] : undefined);
             }
         };
     }

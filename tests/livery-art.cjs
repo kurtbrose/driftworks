@@ -68,3 +68,14 @@ const guided=context.chunkTreatment(regions,17,null,{contours:0,coherence:0,acce
 const trough=[{id:0,area:1,normal:[0,0,1],u:[1,0,0],v:[0,1,0],faces:[{v:[[0,0,0],[1,0,0],[0,1,0]],normal:[0,0,1],area:.5,neighbors:[]}]},{id:1,area:1,normal:[1,0,0],u:[0,1,0],v:[0,0,1],faces:[{v:[[0,1,0],[0,0,0],[0,0,1]],normal:[1,0,0],area:.5,neighbors:[]}]}];
 const valleyPlan=context.designPlan(trough);assert(valleyPlan.stats.concave>0,'Signed geometry identifies an actual concave join');const valley=valleyPlan.apply([.001,.4,0],[0,0,1],[1,0,0],0,{contours:1,coherence:0,accents:0});assert(valley.reduce((a,b)=>a+b,0)<.7,'Concave join blends toward the detail surface');
 console.log('PASS design preferences: signed contours, sparse accents, quiet broad surfaces and baseline ablation');
+
+// Raised plate vertices retain their generating chart instead of nearest-surface guesses.
+const owner=regions.find(r=>r.normal[2]>.99);
+assert(owner);
+const ownedSample=context.chunkTreatment(regions,17);
+const anchor=[.95,.95,1.02],normal=[0,0,1];
+const filled=ownedSample(anchor,normal,1,anchor,normal,owner.id);
+for(const n of [[0,0,1],[.8,0,.6],[0,.8,.6]])assert.deepEqual(ownedSample(anchor,n,1,anchor,normal,owner.id),filled,'Smoothed vertex normals cannot change the panel owner or create material teeth');
+assert(read('experiments/hull-panels.js').includes('regionId:region.id'),'Generated panels carry their source chart identity');
+assert(read('experiments/livery-lab.js').includes('.normal,source.regionId)'),'Viewer passes panel ownership into material assignment');
+console.log('PASS panel materials: explicit source ownership and stable face-normal lookup');

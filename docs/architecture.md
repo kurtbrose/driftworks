@@ -698,7 +698,7 @@ Comms observes living craft mode transitions each flight frame (attack, evade,
 break, recover, reposition). It records transitions even while blocked and
 drops those calls rather than queuing stale maneuvers. Reactive calls require
 a varied 0.9-3.7 seconds of clear channel and ten seconds since that pilot last spoke; distress
-precedes other transitions. Firing starts and target switches also offer calls,
+precedes other transitions. Valid support replies, reassurance, and returning acknowledgments take first priority and bypass pilot/activity cooldowns. Each reply must start within five active flight seconds of the preceding line being selected, or it is discarded, including while the channel is busy. Support and emotional exchanges finish with an A/B/A acknowledgment; each turn still waits for a clear channel. Firing starts and target switches also offer calls,
 and another speaker is preferred when several pilots have something to say. Speaker labels identify craft and maneuver. Tail
 calls additionally require a pursuing opponent behind the speaker. Muted
 subtitles reserve the estimated speech duration too. Reset clears observations.
@@ -711,8 +711,8 @@ call), leaving room for rarer maneuvers without inventing events or queuing them
 Comms retains one short-lived cover exchange using caller/threat IDs only.
 Replies revalidate both living participants, the threat's target, and a same-team
 helper attacking that threat while firing or moving toward it. Requests expire
-after 14 active seconds or when invalid. Support replies have their own airtime
-category, observe channel/pilot cooldowns, and consume the request once spoken;
+after five active seconds or when invalid. Support replies have their own airtime
+category, observe channel availability, and consume the request once spoken;
 they observe AI behavior without issuing orders or changing combat decisions.
 
 Training exposes a bounded `radioEvents` journal (64 entries, increasing
@@ -778,11 +778,10 @@ Non-calm pilots can voice their feeling and use emotional variants for routine
 maneuvers; factual reports retain their information. Transmissions carry a copied
 `emotion` descriptor. `voiceOptions` adjusts the existing character preset's
 pitch, pace, variation and tremor without changing voice identity. A single
-14-second emotional exchange retains caller ID and emotional category. A living,
+five-second emotional exchange retains caller ID and emotional category. A living,
 same-team pilot who is not afraid or panicked can reassure or acknowledge them,
-without needing to attack the caller's pursuer. Replies share channel, pilot and
-activity cooldowns; urgent tactical calls and verified cover replies retain
-priority. Reassuring delivery is local to the reply and does not overwrite the
+without needing to attack the caller's pursuer. Replies wait for channel availability, bypass pilot and activity
+cooldowns, and take priority over other calls. Reassuring delivery is local to the reply and does not overwrite the
 responding pilot's own emotion. Emotional observations continue on busy radio;
 expired feelings never form a backlog of old emotional calls.
 
@@ -842,6 +841,29 @@ owns emotions, combat observations and airtime scheduling; `flight-radio.js`
 owns subtitles, channel playback and Web Audio lifecycle. Load them in that
 order after training and mumble, before flight boot. The existing
 `flightComms` API forwards dialogue helpers and `mount` for compatibility.
+`flight-portraits.js` adds a presentation-only caller portrait to the radio
+adapter. It reuses `speech-sprites/generated-v1/face-blend.js` for fixed-master,
+inner-face masking and Mumble syllable timing. Load face-blend and portraits
+before flight-radio. Lines carry `portraitIndex`, copied from the same stable
+craft index used by voices; eight supplied portraits repeat over the sixteen
+voice slots in matching masculine/feminine order. Control uses the white-uniform
+command portrait. The original 4x2 atlas and six localized generated variants
+live in `assets/portraits/dogfight/`. Per-character eye/mouth anchors normalize
+their framing in cached canvases; hair, uniform and background always belong to
+the neutral master. The shared permission mask is computed once, not per caller.
+
+The radio adapter passes its actual AudioContext start time and radio speech
+offset to portrait playback. Muted/locked-audio messages show a resting expressive
+portrait; stop, pause and source completion close the mouth, while reset/channel
+clear invalidates pending image loads. Asset failures retain the original radio
+glyph and subtitles. Portrait draws are capped at 30 Hz and reduced motion keeps
+the face still. Current caller emotions update from the existing comms clock;
+fear/panic and high stress select the alarmed face, frustration/moderate stress
+select tension, and confident/relieved/reassuring lines select the restrained
+smile. Reassurance replies retain their own delivery instead of inheriting the
+speaker's baseline fear. Expression and mouth cores render at full opacity to
+avoid double lips, with feathering only around the surrounding skin. This module
+does not write combat state, introduce emotion rules, or change airtime selection.
 Comms may change its own clock, facts, conversations and emotions, but observes
 gameplay without writing it. Regression tests pass deeply frozen gameplay views
 through contacts, distress, combat events and lifecycle changes, and compare
@@ -906,9 +928,18 @@ retain sortie references or control simulation. Both ordinary scripts load befor
 `flight.js`; the existing radar and target-camera modules remain subordinate.
 
 `experiments/flight-controls.js` mounts keyboard, pointer-lock, mouse and gamepad
-input. It owns held keys, the virtual stick, device discovery, editable bindings
-and controller button edges, using `flightInput` for mapping math. The pause-screen Settings panel selects original, medium-soft, or wide-linear steering; the adapter stores only the preset ID in localStorage, tolerates unavailable storage, and centers input while keeping flight paused on changes. `flightInput.stickDemand` accepts an optional response exponent (default 1; softened presets use 1.6). `sample()`
+input. Flight lab and mission pages mount this same adapter and composition root.
+Input mode, mouse sensitivity, and preferred device ID persist across pages in
+localStorage, alongside per-device bindings, steering preset and rumble. Device
+selection follows the saved ID even if browser gamepad indices change; unavailable
+storage or invalid saved mode/sensitivity uses page defaults.
+It owns held keys, the virtual stick, device discovery, editable bindings
+and controller button edges, using `flightInput` for mapping math. The pause-screen Settings panel selects original, medium-soft, or wide-linear steering; the adapter stores the preset ID in localStorage, tolerates unavailable storage, and centers input while keeping flight paused on changes. `flightInput.stickDemand` accepts an optional response exponent (default 1; softened presets use 1.6). `sample()`
 polls devices, dispatches pause/bank actions, then returns merged flight demand;
+fresh button presses or above-deadzone stick changes select the active device
+across all connected controllers and clear mouse steering without a mode change.
+A fresh non-pause button starts/resumes a living ship without pointer lock;
+held buttons, axis noise, hidden pages and dead ships do not auto-resume.
 the browser loop checks pause after sampling. `view()` exposes only mouse/mode/
 stick-range data and `showMouseStick` for HUD rendering. Above-deadzone mapped stick changes hide the guide and clear mouse displacement; captured mouse movement restores it. Unchanged held axes and small axis noise do not reclaim the guide. Pause Settings shows a fixed reference for standard gamepads: right-stick Y changes throttle at up to 0.5/s, with neutral holding the current throttle. Nonstandard joysticks retain device bindings. `clear()` resets held input; `resetButtons()`
 is separately called on resume to preserve existing controller edge semantics.

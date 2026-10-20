@@ -30,8 +30,8 @@ export function designPlan(regions,symmetry=null){
  ordered.forEach(g=>{const valleys=g.members.reduce((sum,i)=>sum+concave[i].reduce((v,e)=>v+Math.hypot(...e.a.slice(0,3).map((x,k)=>x-e.b[k])),0),0),ridges=g.members.reduce((sum,i)=>sum+convex[i].reduce((v,e)=>v+Math.hypot(...e.a.slice(0,3).map((x,k)=>x-e.b[k])),0),0);if(g.slot!==2&&g.area<total*.015&&valleys>ridges*1.4)g.slot=3;});
  const slots=regions.map((r,i)=>groups.get(root(i))?.slot||0);
  /** @param {number[]} p @param {EdgeUse[]} list */function distance(p,list){let best=Infinity;for(const e of list){const ab=e.b.slice(0,3).map((x,k)=>x-e.a[k]),ap=p.map((x,k)=>x-e.a[k]),t=Math.max(0,Math.min(1,cueDot(ap,ab)/(cueDot(ab,ab)||1)));best=Math.min(best,Math.hypot(...ap.map((x,k)=>x-ab[k]*t)));}return best;}
- /** @param {number[]} p @param {number[]} n @param {number[]} base @param {number} index @param {DesignPreferences} preferences */
- function apply(p,n,base,index,preferences){const r=regions[index];if(!r)return base;
+ /** @param {number[]} p @param {number[]} n @param {number[]} base @param {number} index @param {DesignPreferences} preferences @param {number[]} [anchor] @param {number[]} [faceNormal] */
+ function apply(p,n,base,index,preferences,anchor=p,faceNormal=n){const r=regions[index];if(!r)return base;
   const w=[...base,Math.max(0,1-base.reduce((sum,x)=>sum+x,0))],target=[0,0,0,0];target[slots[index]]=1;
   const blend=Math.max(0,Math.min(1,preferences.coherence));for(let k=0;k<4;k++)w[k]=w[k]*(1-blend)+target[k]*blend;
   // Suppress random accent islands outside the geometric accent budget.
@@ -44,7 +44,8 @@ export function designPlan(regions,symmetry=null){
   const recess=valley*.72;for(let k=0;k<3;k++)w[k]*=1-recess;
   // A narrow bevel isn't an invitation to add another material island.
   if(r.area<total*.0003){const quiet=preferences.coherence*.65;for(let k=0;k<3;k++)w[k]=w[k]*(1-quiet)+(k===0?quiet:0);}
-  const section=preferences.sections?structure.sample(p,n):null;if(section){const strength=Math.max(0,Math.min(1,preferences.sections||0));for(let k=0;k<3;k++)w[k]=w[k]*(1-strength)+(section.slot===k?strength:0);}
+  const section=preferences.sections?(structure.sample(anchor,faceNormal)||structure.regionAssignments.get(r.id)):null;if(section){// Section coherence wins over earlier islands, contour masks and bevel quieting.
+   const strength=Math.max(0,Math.min(1,preferences.sections||0));for(let k=0;k<3;k++)w[k]=w[k]*(1-strength)+(section.slot===k?strength:0);}
   return w.slice(0,3);
  }
  return {apply,slots,centers,stats:{tubes:structure.stats.tubes,transitions:structure.stats.transitions,groups:ordered.length,regions:regions.length,accentFraction:accentArea/total,convex:convex.reduce((sum,x)=>sum+x.length,0),concave:concave.reduce((sum,x)=>sum+x.length,0)}};

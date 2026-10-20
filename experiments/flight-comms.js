@@ -232,7 +232,7 @@
     }
     /** @returns {CommsState} */
     function create() {
-        return { wait: 4, serial: 0, last: '', recentLines: [], danger: false, quiet: 2, time: 0, modes: {}, activity: {}, spoken: {}, quietGap: 2, lastCraft: null, recentActivities: [], activitySpoken: {}, conversation: null, situation: null, radioSerial: 0, facts: [], contactReports: {}, emotions: {}, emotionWave: null, emotionalConversation: null };
+        return { wait: 4, serial: 0, last: '', recentLines: [], danger: false, quiet: 2, time: 0, modes: {}, activity: {}, spoken: {}, quietGap: 2, lastCraft: null, recentActivities: [], activitySpoken: {}, conversation: null, situation: null, radioSerial: 0, facts: [], contactReports: {}, emotions: {}, emotionWave: null, emotionalConversation: null, acknowledgment: null };
     }
     /** @param {string} event */
     function activityKind(event) {
@@ -273,7 +273,7 @@
         }
         return living.find(function (helper) {
             if (helper.id === caller.id || helper.team !== caller.team || helper.mode !== 'attack' ||
-                helper.targetId !== threat.id || state.time - (state.spoken[helper.id] === undefined ? -Infinity : state.spoken[helper.id]) < 10)
+                helper.targetId !== threat.id)
                 return false;
             if (helper.fire)
                 return true;
@@ -298,6 +298,7 @@
         var modes = /** @type {Record<string, string>} */ ({}), activity = /** @type {CommsState['activity']} */ ({}), candidates = combat.enabled ? richer(state, combat, living, player) : [];
         if (!combat.enabled) {
             state.emotionalConversation = null;
+            state.acknowledgment = null;
             state.facts = [];
             state.situation = null;
             state.contactReports = {};
@@ -337,11 +338,20 @@
             else {
                 var listener = living.find(function (c) {
                     var e = state.emotions[c.id];
-                    return c.id !== caller.id && c.team === caller.team && e && emotionStrength[e.current] < 3 && state.time - (state.spoken[c.id] === undefined ? -Infinity : state.spoken[c.id]) >= 10;
+                    return c.id !== caller.id && c.team === caller.team && e && emotionStrength[e.current] < 3;
                 });
                 if (listener)
                     candidates.push({ craft: listener, event: 'emotionalReply', texts: emotionalReplies[exchange.emotion] });
             }
+        }
+        const acknowledgment = state.acknowledgment;
+        if (acknowledgment) {
+            var original = living.find(function (c) { return c.id === acknowledgment.caller && c.team === 'ally'; });
+            var answering = living.some(function (c) { return c.id === acknowledgment.responder && c.team === 'ally'; });
+            if (!original || !answering || acknowledgment.wave !== combat.wave || state.time > acknowledgment.expires)
+                state.acknowledgment = null;
+            else
+                candidates.push({ craft: original, event: 'acknowledgment', texts: dialogue.acknowledgments[acknowledgment.kind] });
         }
         living.forEach(function (c) {
             var e = state.emotions[c.id];
@@ -362,6 +372,8 @@
             // Enemy broadcasts use only the ambient taunt pool, never flight coordination.
             if (entry.craft.team !== 'ally')
                 return false;
+            if (/^(support|emotionalReply|acknowledgment)$/.test(entry.event))
+                return true;
             if (state.time - (state.spoken[entry.craft.id] === undefined ? -Infinity : state.spoken[entry.craft.id]) < 10)
                 return false;
             var category = activityKind(entry.event), last = state.activitySpoken[category];
@@ -372,13 +384,9 @@
                 return e.event === 'loss' || e.event === 'shield' || e.event === 'damaged' || e.event === 'evade' || e.event === 'break';
             });
             var replies = candidates.filter(function (e) {
-                return e.event === 'support';
+                return /^(support|emotionalReply|acknowledgment)$/.test(e.event);
             });
-            if (!replies.length)
-                replies = candidates.filter(function (e) {
-                    return e.event === 'emotionalReply';
-                });
-            var pool = urgent.length ? urgent : replies.length ? replies : candidates;
+            var pool = replies.length ? replies : urgent.length ? urgent : candidates;
             // Choose an activity before a pilot: eight shooters get no more weight than one recovering craft.
             var categories = /** @type {string[]} */ ([]);
             pool.forEach(function (entry) {
@@ -462,17 +470,23 @@
         var text = pickLine(state, choices, random);
         var replyTo = /** @type {string | null} */ (null);
         var feeling = craft && state.emotions[craft.id];
+        if (craft && selected && selected.event === 'acknowledgment' && state.acknowledgment) {
+            replyTo = state.acknowledgment.responder;
+            state.acknowledgment = null;
+        }
         if (craft && selected && selected.event === 'emotionalReply' && state.emotionalConversation) {
             replyTo = state.emotionalConversation.caller;
+            state.acknowledgment = { caller: replyTo, responder: craft.id, kind: 'emotional', expires: state.time + 5, wave: combat.wave };
             state.emotionalConversation = null;
         }
         else if (craft && selected && feeling && feeling.current !== 'calm' && /^(emotion|attack|firing|target|recover|reposition|damaged|escaped|loss|outnumbered|missed)$/.test(selected.event)) {
             feeling.announced = feeling.current;
             if (emotionalReplies[feeling.current] && !state.emotionalConversation)
-                state.emotionalConversation = { caller: craft.id, emotion: feeling.current, expires: state.time + 14 };
+                state.emotionalConversation = { caller: craft.id, emotion: feeling.current, expires: state.time + 5 };
         }
         if (craft && selected && selected.event === 'support' && state.conversation) {
             replyTo = state.conversation.caller;
+            state.acknowledgment = { caller: replyTo, responder: craft.id, kind: 'support', expires: state.time + 5, wave: combat.wave };
             state.conversation = null;
         }
         else if (craft && !state.conversation && /cover me|need a hand|get this fighter|on my tail/i.test(text)) {
@@ -481,7 +495,7 @@
                 return e.team !== requestingCraft.team && e.targetId === requestingCraft.id && e.mode === 'attack';
             });
             if (threats.length)
-                state.conversation = { caller: craft.id, threat: threats[0].id, expires: state.time + 14 };
+                state.conversation = { caller: craft.id, threat: threats[0].id, expires: state.time + 5 };
         }
         state.last = text;
         state.serial++;
@@ -501,6 +515,7 @@
             if (replyTo)
                 line.replyTo = replyTo;
         }
+        line.portraitIndex = craft && craft.id !== 'control' && typeof craft.index === 'number' ? craft.index : -1;
         line.voiceSettings = pilotVoice(craft);
         line.seed = line.voiceSettings.seed;
         line.radioSeed = state.serial * 7919 + line.seed;
