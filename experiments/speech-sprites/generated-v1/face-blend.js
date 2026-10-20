@@ -4,7 +4,12 @@
   /** @type {{canvas: HTMLCanvasElement; pixels: ImageData} | null} */ var cachedGuard=null;
   /** @param {HTMLCanvasElement} c */
   function context(c){return /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));}
-  /** @param {HTMLCanvasElement} target @param {Record<string, CanvasImageSource>} images */
+  /** @param {CanvasRenderingContext2D} ctx @param {import('./types').FaceSource} source */
+  function drawSource(ctx,source){
+    if('image' in source){var r=source.rect;ctx.drawImage(source.image,r[0],r[1],r[2],r[3],0,0,512,512);}
+    else ctx.drawImage(source,0,0,512,512);
+  }
+  /** @param {HTMLCanvasElement} target @param {Record<string, import('./types').FaceSource>} images */
   function create(target,images){
   target.width=target.height=512;
   var out=context(target), layer=document.createElement('canvas'), mask=document.createElement('canvas'), guard=document.createElement('canvas');
@@ -40,7 +45,7 @@
   }
   /** @param {string} name @param {number[]} shape @param {number} alpha */
   function composite(name,shape,alpha){
-    makeMask(shape);paint.clearRect(0,0,512,512);paint.drawImage(images[name],0,0,512,512);
+    makeMask(shape);paint.clearRect(0,0,512,512);drawSource(paint,images[name]);
     paint.globalCompositeOperation='destination-in';paint.drawImage(mask,0,0);paint.globalCompositeOperation='source-over';
     out.globalAlpha=alpha;out.drawImage(layer,0,0);out.globalAlpha=1;
   }
@@ -48,15 +53,16 @@
   // Resample the master once. Both the reference and every displayed frame
   // must use these exact pixels, rather than separate GPU/CPU image resampling.
   var frozen=document.createElement('canvas');frozen.width=frozen.height=512;
-  var frozenContext=context(frozen);frozenContext.drawImage(images.master,0,0,512,512);
+  var frozenContext=context(frozen);drawSource(frozenContext,images.master);
   var frozenPixels=frozenContext.getImageData(0,0,512,512);frozenContext.putImageData(frozenPixels,0,0);
   var base=frozenPixels.data;
   return {
     /** @param {FaceLayer[]} layers */
     draw:function(layers){out.clearRect(0,0,512,512);out.drawImage(frozen,0,0);layers.forEach(function(item){if(item.alpha>0)composite(item.image,item.shape,item.alpha);});},
     /** @param {HTMLCanvasElement} target @param {number[]} shape */
-    drawMask:function(target,shape){var view=context(target);makeMask(shape);view.clearRect(0,0,512,512);view.drawImage(images.master,0,0,512,512);view.globalAlpha=.55;view.drawImage(mask,0,0);view.globalAlpha=1;},
-    protectedChanges:function(){var pixels=out.getImageData(0,0,512,512).data,changed=0;for(var i=0;i<pixels.length;i+=4)if(!guardPixels.data[i+3]&&(pixels[i]!==base[i]||pixels[i+1]!==base[i+1]||pixels[i+2]!==base[i+2]))changed++;return changed;}
+    drawMask:function(target,shape){var view=context(target);makeMask(shape);view.clearRect(0,0,512,512);drawSource(view,images.master);view.globalAlpha=.55;view.drawImage(mask,0,0);view.globalAlpha=1;},
+    protectedChanges:function(){var pixels=out.getImageData(0,0,512,512).data,changed=0;for(var i=0;i<pixels.length;i+=4)if(!guardPixels.data[i+3]&&(pixels[i]!==base[i]||pixels[i+1]!==base[i+1]||pixels[i+2]!==base[i+2]))changed++;return changed;},
+    dispose:function(){[layer,mask,frozen].forEach(function(c){c.width=c.height=0;});if(!cachedGuard||guard!==cachedGuard.canvas)guard.width=guard.height=0;}
   };
   }
   /** @param {import('../../types').SpeechPlan} plan @param {number} elapsed */

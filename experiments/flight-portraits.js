@@ -4,9 +4,6 @@
   /** @typedef {import('./types').Feeling} Feeling */
   /** @typedef {import('./speech-sprites/generated-v1/types').FaceLayer} FaceLayer */
   var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
-  // Atlas coordinates, calibrated on the supplied 1448 x 1086 master.
-  // [mouth X in cell, mouth Y in cell, eye-line Y in cell].
-  var anchors=[[187,322,245],[181,322,239],[176,323,243],[179,310,216],[183,263,186],[185,269,188],[181,259,166],[185,270,190]];
   var cast=[1,0,3,2,4,5,6,7]; // Same adult masculine/feminine ordering as pilotVoice.
   /** @param {Line} line */
   function slot(line){return typeof line.portraitIndex==='number'&&Number.isFinite(line.portraitIndex)&&line.portraitIndex>=0?cast[Math.floor(line.portraitIndex)%8]:2;}
@@ -20,38 +17,58 @@
     if(mood==='confident'||mood==='relieved'||mood==='reassuring')return 'smile';
     return stress>=.35?'angry':'neutral';
   }
-  /** @type {Promise<Record<string, HTMLImageElement>> | null} */ var atlasPromise=null;
-  function atlases(){
-    if(!atlasPromise)atlasPromise=Promise.all(['neutral','ah','oo','blink','smile','angry','afraid'].map(/** @param {string} name @returns {Promise<{name:string;image:HTMLImageElement}>} */ function(name){return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){resolve({name:name,image:image});};image.onerror=reject;image.src=new URL('../assets/portraits/dogfight/'+name+'.png',document.baseURI).href;});})).then(function(items){
-      /** @type {Record<string, HTMLImageElement>} */ var result={};items.forEach(function(item){result[item.name]=item.image;});return result;
-    });
-    return atlasPromise;
-  }
-  /** @type {Record<number, Record<string, HTMLCanvasElement>>} */ var cache={};
-  /** @param {number} index @param {Record<string, HTMLImageElement>} source */
-  function prepare(index,source){
-    if(cache[index])return cache[index];
-    /** @type {Record<string, HTMLCanvasElement>} */ var result={};
-    var a=anchors[index],scale=(.61-.44)*512/(a[1]-a[2]),left=.48*512-a[0]*scale,top=.61*512-a[1]*scale;
-    Object.keys(source).forEach(function(name){
-      var image=source[name],canvas=document.createElement('canvas');canvas.width=canvas.height=512;
-      var ctx=/** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
-      ctx.fillStyle='#0b1115';ctx.fillRect(0,0,512,512);
-      ctx.drawImage(image,(index%4)*image.naturalWidth/4,Math.floor(index/4)*image.naturalHeight/2,image.naturalWidth/4,image.naturalHeight/2,left,top,362*scale,543*scale);
-      result[name==='neutral'?'master':name]=canvas;
-    });
-    result.eh=result.ah;cache[index]=result;return result;
-  }
+  var FRAME_SIZE=256,CACHE_LIMIT=8,poses=['master','ah','oo','blink','smile','angry','afraid'];
+  /** @typedef {{controller: AbortController; bitmap: ImageBitmap | null; promise: Promise<Record<string, import('./speech-sprites/generated-v1/types').FaceSource>>}} Entry */
   /** @param {HTMLElement} panel */
   function mount(panel){
     var canvas=panel.ownerDocument.createElement('canvas');canvas.width=canvas.height=512;canvas.className='radio-portrait';canvas.hidden=true;panel.appendChild(canvas);
-    // Decode while the sortie is still on its launch screen, not on first speech.
-    void atlases().catch(function(){ /* The radio glyph remains the fallback. */ });
+    // Fixed cast cache: compact bitmaps only, never persistent pose canvases.
+    /** @type {Map<number, Entry>} */ var cache=new Map();
+    /** @param {Entry} entry */
+    function release(entry){entry.controller.abort();if(entry.bitmap){entry.bitmap.close();entry.bitmap=null;}}
+    /** @param {number} index */
+    function load(index){
+      var cached=cache.get(index);
+      if(cached){cache.delete(index);cache.set(index,cached);return cached.promise;}
+      /** @type {Entry} */ var entry={controller:new AbortController(),bitmap:null,promise:Promise.resolve({})};
+      entry.promise=fetch(new URL('../assets/portraits/dogfight/runtime/portrait-'+index+'.png',document.baseURI).href,{signal:entry.controller.signal}).then(function(response){
+        if(!response.ok)throw new Error('Portrait request failed: '+response.status);
+        return response.blob();
+      }).then(function(blob){return createImageBitmap(blob);}).then(function(bitmap){
+        if(entry.controller.signal.aborted){bitmap.close();throw new Error('Portrait request cancelled');}
+        if(bitmap.width!==FRAME_SIZE*poses.length||bitmap.height!==FRAME_SIZE){bitmap.close();throw new Error('Invalid portrait dimensions');}
+        entry.bitmap=bitmap;
+        /** @type {Record<string, import('./speech-sprites/generated-v1/types').FaceSource>} */ var frames={};
+        poses.forEach(function(name,i){frames[name]={image:bitmap,rect:[i*FRAME_SIZE,0,FRAME_SIZE,FRAME_SIZE]};});
+        frames.eh=frames.ah;return frames;
+      }).catch(/** @param {unknown} error */ function(error){if(cache.get(index)===entry)cache.delete(index);throw error;});
+      cache.set(index,entry);
+      while(cache.size>CACHE_LIMIT){var oldest=cache.keys().next().value;if(oldest===undefined)break;var evicted=cache.get(oldest);cache.delete(oldest);if(evicted)release(evicted);}
+      return entry.promise;
+    }
+    var warmGeneration=0;
+    /** @param {() => void} callback */
+    function idle(callback){if(window.requestIdleCallback)window.requestIdleCallback(callback,{timeout:1500});else window.setTimeout(callback,100);}
+    function warmup(){
+      var run=++warmGeneration,next=0;
+      function advance(){
+        if(run!==warmGeneration||next>=cast.length)return;
+        // Rook first. Foreground callers share pending requests or start their
+        // own immediately, without waiting behind this sequential warm-up.
+        var index=cast[next++];
+        load(index).catch(function(){ /* A foreground request may retry later. */ }).then(function(){if(run===warmGeneration&&next<cast.length)idle(advance);});
+      }
+      idle(advance);
+    }
     /** @type {import('./speech-sprites/generated-v1/types').FaceRenderer | null} */ var renderer=null;
     /** @type {import('./types').SpeechPlan | null} */ var plan=null;
     /** @type {AudioContext | null} */ var audio=null;
     /** @type {Feeling | undefined} */ var feeling;
     var ticket=0,current=-1,started=0,offset=0,lastDraw=-Infinity,blinkAt=0,visible=false;
+    function discardRenderer(){if(renderer){renderer.dispose();renderer=null;}current=-1;}
+    window.addEventListener('pagehide',function(){warmGeneration++;ticket++;visible=false;plan=null;audio=null;discardRenderer();cache.forEach(release);cache.clear();canvas.hidden=true;panel.classList.remove('has-portrait');});
+    window.addEventListener('pageshow',function(event){if(event.persisted)warmup();});
+    warmup();
     var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     /** @param {Feeling} [live] @param {boolean} [force] */
     function update(live,force){
@@ -74,17 +91,17 @@
       show:function(line){
         var request=++ticket,index=slot(line);feeling=line.emotion;plan=null;audio=null;visible=true;
         canvas.setAttribute('aria-label',line.speaker.split(' / ')[0]+' speaking portrait');
-        if(index!==current){renderer=null;canvas.hidden=true;panel.classList.remove('has-portrait');}
-        atlases().then(function(source){
+        if(index!==current){discardRenderer();canvas.hidden=true;panel.classList.remove('has-portrait');}
+        load(index).then(function(source){
           if(request!==ticket||!visible)return;
-          if(index!==current||!renderer){renderer=DW.faceBlend.create(canvas,prepare(index,source));current=index;}
+          if(index!==current||!renderer){renderer=DW.faceBlend.create(canvas,source);current=index;}
           canvas.hidden=false;panel.classList.add('has-portrait');update(undefined,true);
         }).catch(function(){if(request===ticket){canvas.hidden=true;panel.classList.remove('has-portrait');}});
       },
       /** @param {import('./types').SpeechPlan} value @param {AudioContext} context @param {number} time @param {number} speechOffset */
       play:function(value,context,time,speechOffset){plan=value;audio=context;started=time;offset=speechOffset;},
       stop:function(){plan=null;audio=null;update(undefined,true);},
-      clear:function(){ticket++;visible=false;plan=null;audio=null;canvas.hidden=true;panel.classList.remove('has-portrait');},
+      clear:function(){ticket++;visible=false;plan=null;audio=null;discardRenderer();canvas.hidden=true;panel.classList.remove('has-portrait');},
       update:update
     };
   }

@@ -77,5 +77,5 @@ const anchor=[.95,.95,1.02],normal=[0,0,1];
 const filled=ownedSample(anchor,normal,1,anchor,normal,owner.id);
 for(const n of [[0,0,1],[.8,0,.6],[0,.8,.6]])assert.deepEqual(ownedSample(anchor,n,1,anchor,normal,owner.id),filled,'Smoothed vertex normals cannot change the panel owner or create material teeth');
 assert(read('experiments/hull-panels.js').includes('regionId:region.id'),'Generated panels carry their source chart identity');
-assert(read('experiments/livery-lab.js').includes('.normal,source.regionId)'),'Viewer passes panel ownership into material assignment');
+assert(read('experiments/livery-pipeline.js').includes('triangle.normal, source.regionId)'),'Viewer passes panel ownership into material assignment');
 console.log('PASS panel materials: explicit source ownership and stable face-normal lookup');

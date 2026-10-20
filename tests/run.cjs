@@ -76,3 +76,4 @@ require('./hull-panels.cjs');
 require('./speech-sprites.cjs');
 require('./talking-face.cjs');
 require('./flight-portraits.cjs');
+require('./portrait-assets.cjs');

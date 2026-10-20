@@ -38,6 +38,19 @@ vm.runInContext(read('experiments/livery-design.js').replace(/^import .*;\r?\n/g
 vm.runInContext(read('experiments/livery-art.js').replace(/^import .*;\r?\n/gm,'').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
 vm.runInContext(read('experiments/livery-materials.js').replaceAll('export function','function').replaceAll('export const','const'),sandbox);
 vm.runInContext(read('experiments/livery-depth.js').replaceAll('export function','function'),sandbox);
+vm.runInContext(read('experiments/livery-pipeline.js').replace(/^import .*;\r?\n/gm,'').replaceAll('export function','function'),sandbox);
+// CPU packing is callable independently of the viewer, DOM updates and GPU upload.
+const packingTriangle=new Float32Array([0,0,0,0,0,1,.1,.2, 1,0,0,0,0,1,.3,.4, 0,1,0,0,0,1,.5,.6]);
+const packingBefore=packingTriangle.slice();
+const packingHull={batches:[{vertices:packingTriangle,stride:8}],regions:[],curvature:new Map(),symmetry:null};
+const packed=[...Array(36).fill(0)];
+const sourcePass=sandbox.appendSourceSurface(packed,packingHull,null,null,false);
+assert.deepEqual(JSON.parse(JSON.stringify(sourcePass)),{start:3,count:3,bias:0});
+assert.equal(packed[46],packingTriangle[6],'Packing retains source UVs after an existing buffer prefix');
+const layerPasses=sandbox.appendTreatmentLayers(packed,[{vertices:packingTriangle,paint:[1,0,0],decalLayer:2},{vertices:packingTriangle,paint:[0,1,0],decalLayer:1}],packingHull,null,null,false,false);
+assert.deepEqual(Array.from(layerPasses,p=>p.bias),[1,2],'CPU layer packing preserves ordered decal passes');
+assert.deepEqual(Array.from(layerPasses,p=>p.start),[6,9],'Pass offsets follow existing source geometry');
+assert.deepEqual(packingTriangle,packingBefore,'Packing never mutates source buffers');
 const lab=read('experiments/livery-lab.js').replace(/^import .*;\r?\n/gm,'');
 vm.runInContext(lab,sandbox);
 for(const subject of ['cube','sphere','cylinder','random','A','B','C','D','E','fighter','carrier','patrol','escort','tug','mothership',...DW.shipPacks.flatMap(pack=>pack.models.map(model=>model.id))]){

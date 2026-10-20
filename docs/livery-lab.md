@@ -1,3 +1,7 @@
+## Rebuild pipeline
+
+`livery-lab.js` orchestrates scene planning, per-hull actors, the hangar deck, UI reporting, and one GPU upload. Geometry construction lives behind `prepareHullPanels`; material configuration lives behind `materialSampler`. `livery-pipeline.js` owns CPU source packing and generated-layer packing, including source ownership, sampling, symmetry, and decal pass ranges. It accepts explicit inputs and has no DOM or WebGL access. The packed vertex stride remains 12 floats; source UVs, material weights, draw order, and geometry caches retain their existing behavior. This refactor does not resolve the remaining jagged material boundaries.
+
 Plate boundary insets are reduced when they would reverse a cap triangle. Fine tessellation therefore cannot fold a narrow border triangle into a sawtooth overlap.
 
 Raised plate clearance uses the geometric region normal rather than interpolated artist shading normals, which can point along the surface at hard corners. Source triangle ownership is retained when adding material sampling vertices.
