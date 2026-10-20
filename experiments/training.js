@@ -17,6 +17,8 @@
     /** @typedef {import('./types').Batch} Batch */
     /** @typedef {import('./types').Guns} Guns */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), U = DW.sim.METERS_PER_UNIT;
+    /** Presentation-only rate limit for rapid-fire surface marks, never damage. @type {WeakMap<Craft,number>} */
+    var scorchTimes=new WeakMap();
     /** @param {Vector} a @param {Vector} b */
     function add(a, b) {
         return a.map(function (x, i) {
@@ -78,7 +80,7 @@
         if (craft.hp <= 0) { craft.fire = false; return; }
         var state = craft.pose;
         if (controls.throttle !== null) state.throttle = controls.throttle;
-        state.throttle = Math.max(0, Math.min(1, state.throttle + controls.throttleRate * dt * .5));
+        state.throttle = Math.max(-1, Math.min(1, state.throttle + controls.throttleRate * dt * .5));
         if (controls.stop) state.throttle = 0;
         craft.fire = controls.fire;
         DW.arcade.step(state, craft.profile, controls, dt);
@@ -485,8 +487,8 @@
         });
         return point;
     }
-    /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player */
-    function trace(t, start, end, bolt, team, terrainHit, player) {
+    /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player @param {number} [scorchInterval] */
+    function trace(t, start, end, bolt, team, terrainHit, player, scorchInterval) {
         bindPlayer(t, player);
         var hit = terrainHit ? terrainHit(start, end) : null, travel = length(sub(end,start));
         var best = hit && travel > 0 ? length(sub(hit,start)) / travel : Infinity;
@@ -501,8 +503,10 @@
             }
         });
         var struck = /** @type {Craft | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
-        if (struck && hull && hull.model && hull.local && hull.normal)
+        if (struck && hull && hull.model && hull.local && hull.normal && (!scorchInterval || t.time-(scorchTimes.get(struck)??-Infinity)>=scorchInterval)) {
             DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });
+            if(scorchInterval)scorchTimes.set(struck,t.time);
+        }
         if (!struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
         if (struck) damageCraft(t, struck, bolt.weapon, shooter || team);
         // Report close projectile passes, clipped at the first collision so occluded bolts cannot speak.

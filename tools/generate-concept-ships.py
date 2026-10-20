@@ -14,6 +14,18 @@ COLORS = {'armor': [.70, .73, .74], 'dark': [.10, .14, .17],
           'trim': [.39, .43, .45], 'machinery': [.20, .24, .25],
           'edge': [.81, .82, .79]}
 
+RAPTOR_SECTIONS = [(-3.7,4.7),(-2.8,5.0),(0,25/7),(3,100/49),(5,50/49),(7,.015)]
+
+def raptor_width(y):
+    for (a,wa),(b,wb) in zip(RAPTOR_SECTIONS,RAPTOR_SECTIONS[1:]):
+        if y<=b:return wa+(wb-wa)*max(0,(y-a)/(b-a))
+    return RAPTOR_SECTIONS[-1][1]
+
+def raptor_roof(x,y):
+    # One continuous shallow roof from its center crease to the outer delta edge.
+    edge=.02+.07*min(1,max(0,(7-y)/2))
+    return edge+.18*max(0,raptor_width(y)-abs(x))
+
 def texture():
     # Neutral tile: fine mottling, engraved panel joints and small fasteners.
     raw = bytearray()
@@ -150,6 +162,72 @@ class Mesh:
         poly=[(r*math.cos(t),r*math.sin(t)) for r,t in [(radius-width/2,a),(radius+width/2,a),(radius+width/2,b),(radius-width/2,b)]]
         self.wing(material,poly,z,depth,stage)
 
+    def delta_body(self):
+        loops=[]
+        for y,w in RAPTOR_SECTIONS:
+            bottom=[[w*t,y,-.04-.135*w*(1-abs(t))] for t in (-1,-.5,0,.5,1)]
+            top=[[w*t,y,raptor_roof(w*t,y)] for t in (1,.5,0,-.5,-1)]
+            loops.append(bottom+top)
+        for a,b in zip(loops,loops[1:]):
+            for j in range(len(a)):
+                k=(j+1)%len(a)
+                self.face('armor',[b[j],b[k],a[k],a[j]])
+        for loop,reverse in ((loops[0],False),(loops[-1],True)):
+            center=[sum(p[k] for p in loop)/len(loop) for k in range(3)]
+            for j in range(len(loop)):
+                triangle=[center,loop[j],loop[(j+1)%len(loop)]]
+                self.face('armor',list(reversed(triangle)) if reverse else triangle)
+
+    def recessed_gun_port(self,x):
+        segments=24
+        def ring(y,w,h,z):
+            return [[x+w*math.cos(i*2*math.pi/segments),y,z+h*math.sin(i*2*math.pi/segments)] for i in range(segments)]
+        # A long, low skin fairing grows out of the delta roof into a rounded lip.
+        shell=[ring(1.05,.025,.012,raptor_roof(x,1.05)),
+               ring(1.6,.27,.16,.40),ring(2.4,.36,.235,.40),
+               ring(3.15,.39,.28,.40),ring(3.43,.35,.265,.40)]
+        start=len(self.parts)
+        self.face('armor',shell[0],1)
+        for a,b in zip(shell,shell[1:]):
+            for j in range(segments):
+                k=(j+1)%segments
+                self.face('armor',[b[j],b[k],a[k],a[j]],1)
+        mouth=ring(3.46,.29,.21,.40)
+        throat=ring(2.98,.17,.15,.40)
+        # Rounded entry bevel and deep tapered cavity, with no exposed barrel trench.
+        for j in range(segments):
+            k=(j+1)%segments
+            self.face('armor',[shell[-1][k],shell[-1][j],mouth[j],mouth[k]],1)
+            self.face('machinery',[mouth[k],mouth[j],throat[j],throat[k]],1)
+        self.face('dark',list(reversed(throat)),1)
+        for part in self.parts[start:]:part['component']='gun-port'
+        self.gun(x,3.0,.40,.55)
+        outer=ring(3.294,.10,.10,.40);inner=ring(3.295,.075,.075,.40)
+        for j in range(segments):
+            k=(j+1)%segments
+            self.face('edge',[outer[k],outer[j],inner[j],inner[k]],1)
+
+    def delta_patch(self,material,outline,stage=1,offset=.006):
+        if sum(outline[i][0]*outline[(i+1)%len(outline)][1]-outline[(i+1)%len(outline)][0]*outline[i][1] for i in range(len(outline)))<0:
+            outline=list(reversed(outline))
+        def clip(poly,axis,bound,sign):
+            result=[]
+            for a,b in zip(poly,poly[1:]+poly[:1]):
+                inside_a=sign*(a[axis]-bound)>=-1e-10
+                inside_b=sign*(b[axis]-bound)>=-1e-10
+                if inside_a:result.append(a)
+                if inside_a!=inside_b:
+                    t=(bound-a[axis])/(b[axis]-a[axis])
+                    result.append([a[k]+t*(b[k]-a[k]) for k in range(2)])
+            return result
+        # Split at each shell station and the center crease so markings never
+        # bridge a roof change and disappear underneath the primary surface.
+        for (a,_),(b,_) in zip(RAPTOR_SECTIONS,RAPTOR_SECTIONS[1:]):
+            for side in (-1,1):
+                poly=clip(clip(clip(outline,1,a,1),1,b,-1),0,0,side)
+                points=[[x,y,raptor_roof(x,y)+offset] for x,y in poly]
+                for i in range(1,len(points)-1):self.face(material,[points[0],points[i],points[i+1]],stage)
+
     def arc_beam(self,a,b,radius,width,depth,center,vertical=False,material='armor',stage=0):
         # A swept octagonal beam: bevels belong to its cross-section, not a flat strip.
         section=[(-.7,-1),(.7,-1),(1,-.55),(1,.55),(.7,1),(-.7,1),(-1,.55),(-1,-.55)]
@@ -177,56 +255,37 @@ class Mesh:
 def build(name):
     m=Mesh()
     if name=='raptor':
-        # Broad, deep chines form the fuselage wedge; the thin wings meet its sides.
-        m.tag('wedge-body',m.hull,'armor',[(-4.25,1.35,.60,.02),(-2,2.05,.84,.08),(0,1.75,.76,.05),(3,.85,.46,0),(7,.035,.06,0)])
-        m.hull('dark',[(-4.22,1.25,.25,-.42),(0,1.51,.32,-.40),(5,.27,.12,-.13)])
-        m.hull('plate',[(-3.8,.58,.28,.86),(-1.1,.63,.30,.90),(.1,.48,.16,.83)],1)
+        # A single watertight delta shell replaces the separate fuselage and wings.
+        m.tag('delta-body',m.delta_body)
+        m.hull('plate',[(-3.8,.58,.22,.92),(-1.1,.63,.24,.91),(.1,.48,.12,.83)],1)
         for s in (-1,1):
-            outline=[(s*.65,3.5),(s*5,-2.8),(s*4.7,-3.7),(s*.7,-3.5)]
-            if s==1: outline.reverse()
-            m.wing('dark',outline,.09,.26)
-            # Separate inset wing plates leave real recessed joints between panels.
-            m.wing('armor',[(s*.77,3.16),(s*2.55,.18),(s*1.35,-1.7),(s*.77,-1.4)],.17,.075,1)
-            m.wing('armor',[(s*2.6,.10),(s*4.82,-2.77),(s*3.08,-2.99),(s*1.42,-1.76)],.17,.075,1)
-            m.wing('plate',[(s*.8,-1.5),(s*1.34,-1.8),(s*3.03,-3.06),(s*.8,-3.36)],.19,.09,1)
-            m.wing('armor',[(s*3.15,-3.04),(s*4.8,-2.88),(s*4.58,-3.51),(s*3.13,-3.37)],.17,.075,1)
-            m.wing('paint',[(s*1.5,-1.2),(s*4.7,-2.8),(s*4.5,-3.15),(s*1.5,-1.9)][::s],.208,.012,2)
+            # Flush service panels and paint follow the same sloping roof as the shell.
+            m.delta_patch('plate',[(s*1.96,.1),(s*2.35,.2),(s*3.8,-2.55),(s*1.96,-2.5)])
+            m.delta_patch('armor',[(s*2.44,.15),(s*3.25,-.4),(s*4.80,-2.8),(s*3.90,-2.8)],1,.010)
+            m.delta_patch('paint',[(s*1.55,-1.15),(s*4.75,-2.78),(s*4.58,-3.12),(s*1.55,-1.75)],2,.016)
+            m.delta_patch('trim',[(s*3.05,-2.05),(s*3.55,-2.45),(s*3.40,-2.65),(s*2.91,-2.24)],1,.018)
+            m.delta_patch('plate',[(s*1.0,-2.65),(s*4.45,-3.25),(s*4.40,-3.48),(s*1.0,-3.48)],1,.008)
             m.fin(s*1.38)
             m.pod('machinery',s*1.32,[(-4.8,.48,.43,.1),(-3.5,.58,.5,.1),(-1.5,.45,.38,.25)])
             m.pod('armor',s*1.32,[(-3.65,.56,.47,.13),(-1.8,.51,.44,.24),(-.7,.34,.27,.26)])
-            m.pod('dark',s*1.32,[(-4.84,.36,.33,.1),(-4.73,.36,.33,.1)])
             m.pod('trim',s*1.32,[(-4.68,.5,.45,.1),(-4.52,.5,.45,.1)])
             m.socket(s*1.32,-4.86,.1,.46,.42,.32,-1)
-            m.box('dark',s*1.37,-.80,.41,.46,.05,.3)
             m.socket(s*1.32,-.66,.27,.30,.23,.35)
-            m.gun(s*2.6,-1.15,-.03,2.0)
-            m.wing('armor',[(s*.85,-3.6),(s*1.58,-3.8),(s*2,-4.75),(s*.98,-4.48)],.05,.16,1)
-            m.wing('paint',[(s*1.63,-3.98),(s*1.91,-4.65),(s*1.64,-4.51),(s*1.35,-3.98)],.065,.016,2)
+            m.recessed_gun_port(s*1.5)
             for y in (-3,-2.6,-2.2):m.box('dark',s*.73,y,1.19,.20,.20,.035)
-            m.box('trim',s*1.04,.8,.43,.09,1.25,.16)
-            # Wing leading-edge reinforcement and a recessed outer access panel.
-            m.wing('edge',[(s*2.71,-.12),(s*4.8,-2.77),(s*4.61,-2.70),(s*2.68,-.27)],.213,.025,1)
-            m.wing('dark',[(s*3.02,-2.04),(s*3.55,-2.47),(s*3.40,-2.68),(s*2.88,-2.24)],.216,.02,1)
-            m.wing('trim',[(s*3.04,-2.10),(s*3.45,-2.44),(s*3.34,-2.58),(s*2.98,-2.25)],.224,.014,1)
             for x,y in ((2.0,-.25),(3.8,-2.7),(1.05,-2.8),(2.8,-2.8)):
-                m.fastener(s*x,y,.23)
-            # Visible side walls and inset avionics slots on the raised spine.
+                m.fastener(s*x,y,raptor_roof(s*x,y)+.02)
             for y in (-3.1,-2.25,-1.4):
                 m.box('dark',s*.60,y,1.06,.08,.40,.17)
                 m.box('edge',s*.61,y-.24,1.07,.08,.04,.20)
-        m.canopy([(-.45,.59,.18,.97),(.55,.67,.53,.92),(2.1,.51,.52,.76),(3.4,.12,.08,.48)])
-        # Nose stripe follows the actual taper instead of floating above the hull.
-        m.face('paint',[[-.20,3.45,.425],[.20,3.45,.425],[.015,6.8,.087],[-.015,6.8,.087]],2)
-        for y in (3.9,4.7,5.5):
-            w=.85-(y-3)*.815/4
-            z=.46-(y-3)*.40/4
-            m.box('trim',0,y,z+.01,w*1.3,.022,.012,2)
-        for s in (-1,1):
-            # Reference's sloping cheek armor and side intake louvers, fitted to the chine.
-            m.face('plate',[[s*.94,-1.8,.925],[s*1.42,-1.8,.925],[s*1.20,.2,.79],[s*.87,.2,.79]],1)
+            # Flush cheek louvers leave the uninterrupted arrowhead surface intact.
             for y in (-1.55,-1.25,-.95):
-                m.face('dark',[[s*1.56,y,.65],[s*1.80,y,.42],[s*1.78,y+.12,.42],[s*1.54,y+.12,.65]],1)
-            m.box('trim',s*.86,2.0,.65,.07,.8,.12)
+                m.delta_patch('dark',[(s*1.56,y),(s*1.91,y),(s*1.86,y+.12),(s*1.53,y+.12)],1,.02)
+        m.canopy([(-.45,.59,.18,.97),(.55,.67,.53,.92),(2.1,.51,.52,.76),(3.4,.12,.08,.48)])
+        m.delta_patch('paint',[(-.20,3.45),(.20,3.45),(.015,6.8),(-.015,6.8)],2,.008)
+        for y in (3.9,4.7,5.5):
+            w=raptor_width(y)*.45
+            m.delta_patch('trim',[(-w,y),(w,y),(w,y+.022),(-w,y+.022)],2,.012)
     elif name=='bulldog':
         m.hull('armor',[(-4,1,.65,0),(-1,1.05,.8,0),(3,.65,.55,0),(5,.25,.25,-.1)])
         m.hull('plate',[(-3.7,.67,.2,.78),(-1.3,.7,.28,.85),(-.5,.61,.12,.88)],1)

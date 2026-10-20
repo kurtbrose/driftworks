@@ -52,24 +52,98 @@
       190
     ]
   ],
-  "builderSha256": "5476de084425ef96554fd0156f49def20422c2fea89371f64b8185fb27abfba7",
+  "newCast": [
+    [
+      "viper",
+      180,
+      297,
+      208
+    ],
+    [
+      "wraith",
+      181,
+      310,
+      227
+    ],
+    [
+      "razor",
+      181,
+      296,
+      213
+    ],
+    [
+      "hex",
+      183,
+      310,
+      223
+    ],
+    [
+      "talon",
+      181,
+      290,
+      202
+    ],
+    [
+      "knell",
+      182,
+      300,
+      216
+    ],
+    [
+      "cinder",
+      181,
+      306,
+      219
+    ],
+    [
+      "shade",
+      181,
+      304,
+      222
+    ],
+    [
+      "control",
+      181,
+      305,
+      218
+    ]
+  ],
+  "builderSha256": "8928a544ae4d3566111d65c4530a31caeddd86516357f0826dbb43475377fd15",
   "sources": {
+    "cast/viper.png": "1dad9fdc91de92ba4c501fe49443980179c703462fe7fe5eecb237e447e0abe3",
+    "cast/hex.png": "67e08628b1f64f566614c631590c4b3e7ae6b88c35d236336648ef94f9b200c3",
+    "cast/razor.png": "e24c53b1b975f50b661d54f2eea9adf377aac8e2166acb76871cf5392a65dc74",
+    "cast/talon.png": "c6ad4a94507cfe6797157b28c867fc9a67bfb6fcfff60335698bff37d768614b",
+    "cast/control.png": "8f5a5924e532581dd4148f98b1d75c55fe36a7da5e65564364d0c5af9a84a3f1",
+    "angry.png": "8407fff3db39e7abcdddafc444fa35a2b527afc55669d730202f81581c905c83",
+    "ah.png": "50dd310fbad972e988c40fc5eb05815c0a2c2c1c20642491e68bfdef3634f3aa",
+    "cast/cinder.png": "37ea76465b231451cfcea4d241a50bb5e5399e264f5d50f7669bdd3bd4c4707d",
+    "cast/wraith.png": "08cb999ff38248c96b705e11dbd6776a42608139681d4ddce3fc34fb1d1a8842",
+    "smile.png": "1fe23a5f6ef1e37d04641047fdff47f72d642efbe776abe935540355e4154b6a",
+    "afraid.png": "b7c87ad2d99e8d3e913df93b967f98cd1e351fdd6b61a703f006c1db3313aabc",
     "oo.png": "64e2fd816121006632bd11e7cc8446922f0d389f27c6a4e585144c7947646f2f",
     "neutral.png": "6ebbd043d5822694b1966d11585fa7a3f9e9b72454aa18a39bedabe4c92d24bb",
-    "smile.png": "1fe23a5f6ef1e37d04641047fdff47f72d642efbe776abe935540355e4154b6a",
-    "ah.png": "50dd310fbad972e988c40fc5eb05815c0a2c2c1c20642491e68bfdef3634f3aa",
-    "blink.png": "1befca2d005f5a36fc1d91f076c26f921c5cab7b7c3f0065020b55cc0e255105",
-    "afraid.png": "b7c87ad2d99e8d3e913df93b967f98cd1e351fdd6b61a703f006c1db3313aabc",
-    "angry.png": "8407fff3db39e7abcdddafc444fa35a2b527afc55669d730202f81581c905c83"
+    "cast/knell.png": "32f4f09e7615204d22aaaac95590bf0849bcb16991e0e8cec3823ef00ec78948",
+    "cast/shade.png": "03fa064b5a823d38926e96a89bc4e6620bda7028f6c4d83cb9733c48277488d5",
+    "blink.png": "1befca2d005f5a36fc1d91f076c26f921c5cab7b7c3f0065020b55cc0e255105"
   },
   "outputs": {
-    "portrait-3.png": "0f55ae064fd78091ce32b7395ce38c34d9b846ff21819309645267ac05d61428",
+    "portrait-12.png": "7f8d279ce2e2ee93a4fc4d4769f97369d805fc0aca244c572a81bf277b2e8a5b",
+    "portrait-15.png": "1a2c2a157d72d52ead0f6b8d23d8999b4118908b17c000341201cf6f2abcbf63",
+    "portrait-13.png": "42f58d750788e73f226225cc74d6dadd6a6bfd018f0b6d40c4335afd5150611d",
+    "portrait-14.png": "4900e157884b6a41b9649e6ff9ff125da9bdad27862db00b36566c207624eeef",
     "portrait-0.png": "f291953e963a230b4d2d1429cd47bc33568c69e892cb794ee0efffafdcaed28c",
+    "portrait-5.png": "582000f150f0ec91847daf487620df579cf6d5d7993151a630c3be060d516a1b",
+    "portrait-10.png": "cbbb72fd4f03da971947bdb4ef1df6ff28902671752593a2edb2b0ed340bc07f",
+    "portrait-1.png": "95890342512e4169056ff01e7e0c113c6e5044b128df8b67d169880b29fe1c8b",
+    "portrait-3.png": "0f55ae064fd78091ce32b7395ce38c34d9b846ff21819309645267ac05d61428",
     "portrait-6.png": "d3846fdccf4b67949c85d4dceda94a2585999a7d136d48249341f9686dcb9fa4",
+    "portrait-2.png": "7377aaa6a3c3423df6e1b868787b75e612e2ca62aab598fcf06872ae05df3509",
+    "portrait-11.png": "eb598b6eaf75c273e1c34ef42672f2b54602d9bc9fd4bc2d61a6d6b9b9c8c485",
     "portrait-7.png": "de906705fc57b63c6e39d731924511fcc0520db0a8d97b44c29bdedbb13984d6",
     "portrait-4.png": "5f68b87208e1065e9dc101874de8ccd21f46a0670ca93df6445c0dce7665d134",
-    "portrait-1.png": "95890342512e4169056ff01e7e0c113c6e5044b128df8b67d169880b29fe1c8b",
-    "portrait-5.png": "582000f150f0ec91847daf487620df579cf6d5d7993151a630c3be060d516a1b",
-    "portrait-2.png": "7377aaa6a3c3423df6e1b868787b75e612e2ca62aab598fcf06872ae05df3509"
+    "portrait-8.png": "2570c882dd9adb81abcd515ece3c4efb74c1b5e4c1d67811016498778ad4f105",
+    "portrait-9.png": "4c821fea5ae9f9120937b4701b5215ab9b97979580e7b84812cad21d26704afe",
+    "portrait-16.png": "cec28d2f2ff6252a7afe8be0f80bb201e9cd88e217a2f6a215a9099aaacee7a2"
   }
 }

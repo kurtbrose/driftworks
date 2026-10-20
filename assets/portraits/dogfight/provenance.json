@@ -1,7 +1,12 @@
 {
   "master": "neutral.png",
   "master_source": "User-supplied codex-clipboard-4c536910-2eec-40e3-8dfd-1bb39e35102c.png, copied unchanged",
-  "layout": {"columns": 4, "rows": 2, "width": 1448, "height": 1086},
+  "layout": {
+    "columns": 4,
+    "rows": 2,
+    "width": 1448,
+    "height": 1086
+  },
   "variants": {
     "ah.png": "Conversational open AH mouth, localized edit of all eight master mouths",
     "oo.png": "Rounded OO mouth, localized edit of all eight master mouths",
@@ -11,5 +16,20 @@
     "afraid.png": "Alarmed/worried eyes and brows with closed lips"
   },
   "method": "Built-in imagegen edits of the neutral atlas, requested to preserve dimensions, cell positions, identity, hair and clothing. Generated results are not claimed to preserve every pixel.",
-  "runtime": "tools/prepare-flight-portraits.ps1 applies per-character calibration offline and packs seven 256px poses per runtime/portrait-N.png. Flight warms the eight compact bitmaps sequentially in background idle time, with foreground caller priority. Pose rectangles are composited directly, without persistent per-pose canvases. Page exit closes the fixed bitmap cache. Original source PNGs are preserved. Only masked inner-face pixels can enter the master portrait; no runtime generation or external network dependencies."
+  "runtime": "tools/prepare-flight-portraits.ps1 applies per-character calibration offline and packs seven 256px poses per runtime/portrait-N.png. Flight warms the sixteen pilot bitmaps sequentially in background idle time, with foreground caller priority. Pose rectangles are composited directly, without persistent per-pose canvases. Page exit closes the fixed seventeen-bitmap cache (Control loads on demand). Original source PNGs are preserved. Only masked inner-face pixels can enter the master portrait; no runtime generation or external network dependencies.",
+  "expanded_cast": {
+    "directory": "cast/",
+    "method": "Nine built-in imagegen character sheets, using neutral.png as a style reference; prompt set recorded in cast/prompts.json. Row-major frames: neutral, ah, oo, blink, smile, angry, afraid, unused neutral.",
+    "assignment": {
+      "8": "Viper",
+      "9": "Wraith",
+      "10": "Razor",
+      "11": "Hex",
+      "12": "Talon",
+      "13": "Knell",
+      "14": "Cinder",
+      "15": "Shade",
+      "16": "Control"
+    }
+  }
 }

@@ -42,8 +42,12 @@
             return !!(b && (b.pressed || b.value > .5));
         }
         var raw = pad.axes[map.throttle], throttle = map.throttle >= 0 && Number.isFinite(raw) ? Math.max(0, Math.min(1, (1 + (map.throttleInvert ? -raw : raw)) / 2)) : null;
-        var stickThrottle = pad.mapping === 'standard' && map.throttle < 0 ? -deadzone(pad.axes[3], map.deadzone) : 0;
-        return { pitch: axis('pitch'), yaw: -axis('yaw'), roll: -axis('roll'), throttle: throttle, throttleRate: Math.max(-1, Math.min(1, stickThrottle + (button('up') ? 1 : 0) - (button('down') ? 1 : 0))), fire: button('fire'), boost: button('boost'), bank: button('bank'), lock: button('lock'), pause: button('pause') };
+        var maneuver = pad.mapping === 'standard' && !!(pad.buttons[4] && (pad.buttons[4].pressed || pad.buttons[4].value > .5));
+        var side = maneuver ? deadzone(pad.axes[2], map.deadzone) : 0;
+        var vertical = maneuver ? -deadzone(pad.axes[3], map.deadzone) : 0;
+        var length = Math.max(1, Math.hypot(side, vertical));
+        var stickThrottle = pad.mapping === 'standard' && !maneuver && map.throttle < 0 ? -deadzone(pad.axes[3], map.deadzone) : 0;
+        return { pitch: axis('pitch'), yaw: -axis('yaw'), roll: maneuver ? 0 : -axis('roll'), side: side / length, vertical: vertical / length, throttle: throttle, throttleRate: Math.max(-1, Math.min(1, stickThrottle + (button('up') ? 1 : 0) - (button('down') ? 1 : 0))), fire: button('fire'), boost: button('boost'), bank: button('bank'), lock: button('lock'), pause: button('pause') };
     }
     /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightInput = { deadzone: deadzone, moveStick: moveStick, stickDemand: stickDemand, defaults: defaults, read: read };
 }());

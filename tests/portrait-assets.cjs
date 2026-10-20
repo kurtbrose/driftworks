@@ -9,12 +9,12 @@ const builder=fs.readFileSync(path.resolve(__dirname,'../tools/prepare-flight-po
 assert.ok([builder,Buffer.from(builder.toString().replace(/\r\n/g,'\n')),Buffer.from(builder.toString().replace(/\r?\n/g,'\r\n'))].some(bytes=>hash(bytes)===manifest.builderSha256),'Asset builder changed: regenerate checked-in portrait assets');
 let originalBytes=0,packedBytes=0;
 for(const [name,expected] of Object.entries(manifest.sources)){const bytes=fs.readFileSync(path.join(root,name));assert.equal(hash(bytes),expected,`${name} changed: regenerate runtime portraits`);originalBytes+=bytes.length;}
-assert.equal(Object.keys(manifest.outputs).length,8);
-for(let i=0;i<8;i++){
+assert.equal(Object.keys(manifest.outputs).length,17);
+for(let i=0;i<17;i++){
   const name=`portrait-${i}.png`,bytes=fs.readFileSync(path.join(runtime,name));
   assert.equal(hash(bytes),manifest.outputs[name],`${name} differs from prepared output`);
   assert.equal(bytes.subarray(1,4).toString(),'PNG');assert.equal(bytes.readUInt32BE(16),1792);assert.equal(bytes.readUInt32BE(20),256);
   packedBytes+=bytes.length;
 }
 assert.ok(packedBytes<originalBytes*.5,'Runtime portraits must remain substantially smaller than the source atlases');
-console.log(`PASS portrait assets: eight packed characters, source/builder hashes, 256px poses; ${(packedBytes/1048576).toFixed(2)} MiB vs ${(originalBytes/1048576).toFixed(2)} MiB sources`);
+console.log(`PASS portrait assets: seventeen packed characters, source/builder hashes, 256px poses; ${(packedBytes/1048576).toFixed(2)} MiB vs ${(originalBytes/1048576).toFixed(2)} MiB sources`);

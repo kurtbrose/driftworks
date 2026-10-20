@@ -7,7 +7,7 @@
     function create(target) {
         var ctx = context(target), base = target.ownerDocument.createElement('canvas');
         base.width = base.height = 256;
-        var face = context(base), nextBurst = -Infinity, burst = 0, texture = 0, lastProgress = 0;
+        var face = context(base), lastProgress = 0, ramp = /** @type {{at: number; level: number}[]} */ ([]);
         return {
             /** @param {CanvasImageSource} source @param {import('./types').RadioNoise | null} pattern @param {number} elapsed @param {number} speechDuration @param {import('./types').CommsDisplayOptions} [options] */
             draw: function (source, pattern, elapsed, speechDuration, options) {
@@ -25,17 +25,27 @@
                 }
 
                 var progress = Math.max(0, Math.min(1, options.breakup || 0));
-                if (!progress || progress < lastProgress) { nextBurst = -Infinity; burst = 0; }
-                lastProgress = progress;
-                if (progress && !options.reduced && elapsed >= nextBurst) {
-                    // A failing signal sputters in irregular packets, with recoveries.
-                    // Progress raises the odds, rather than smoothly fading noise in.
-                    burst = Math.random() < .24 ? .03 + Math.random() * .15 : Math.min(1, .15 + progress * .65 + Math.random() * .65);
-                    texture = Math.floor(Math.random() * 3);
-                    nextBurst = elapsed + .018 + Math.random() * .065;
+                if (!progress || progress < lastProgress) ramp = [];
+                if (progress && !options.reduced && !ramp.length) {
+                    // Random positive increments in both time and severity. Sampling
+                    // by sign-off progress also works when the speech clock is frozen.
+                    ramp.push({at: 0, level: 0});
+                    var at = 0, level = 0;
+                    for (var n = 0; n < 8; n++) {
+                        at += .25 + Math.random(); level += .1 + Math.random();
+                        ramp.push({at: at, level: level});
+                    }
+                    ramp.forEach(function (point) { point.at /= at; point.level /= level; });
                 }
-                var breakup = progress ? burst : 0;
-                if (progress > .94) { breakup = Math.max(.95, breakup); texture = 1; }
+                lastProgress = progress;
+                var breakup = 0, texture = 1;
+                for (var r = 1; r < ramp.length; r++) {
+                    var left = ramp[r - 1], right = ramp[r];
+                    if (progress <= right.at) {
+                        breakup = left.level + (right.level - left.level) * (progress - left.at) / (right.at - left.at);
+                        break;
+                    }
+                }
                 var s = {strength: Math.max(visualNoise, breakup * .35)}, palette = options.palette || 'green', reduced = !!options.reduced;
                 face.clearRect(0, 0, 256, 256); face.fillStyle = '#07100c'; face.fillRect(0, 0, 256, 256);
                 face.filter = palette === 'color' ? 'none' : 'grayscale(1) contrast(1.18)';

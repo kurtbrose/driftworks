@@ -421,6 +421,41 @@
     }
     /** @type {WeakMap<Model, number>} */
     var hullBounds = new WeakMap();
+    /** @typedef {{min:number[],max:number[],offsets:number[]|null,left:HullTree|null,right:HullTree|null}} HullTree */
+    /** @type {WeakMap<Model,HullTree>} */var hullTrees=new WeakMap();
+    /** Immutable source meshes get one median-split triangle index.
+     * @param {number[]} vertices @param {number[]} offsets @returns {HullTree} */
+    function buildHullTree(vertices,offsets){
+        var min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+        offsets.forEach(function(offset){for(var corner=0;corner<3;corner++)for(var axis=0;axis<3;axis++){
+            var v=vertices[offset+corner*6+axis];min[axis]=Math.min(min[axis],v);max[axis]=Math.max(max[axis],v);
+        }});
+        if(offsets.length<=12)return {min:min,max:max,offsets:offsets,left:null,right:null};
+        var axis=max[1]-min[1]>max[0]-min[0]?1:0;if(max[2]-min[2]>max[axis]-min[axis])axis=2;
+        offsets.sort(function(a,b){return vertices[a+axis]+vertices[a+6+axis]+vertices[a+12+axis]-vertices[b+axis]-vertices[b+6+axis]-vertices[b+12+axis];});
+        var middle=Math.floor(offsets.length/2);
+        return {min:min,max:max,offsets:null,left:buildHullTree(vertices,offsets.slice(0,middle)),right:buildHullTree(vertices,offsets.slice(middle))};
+    }
+    /** @param {HullTree} node @param {Vector} a @param {Vector} d @param {number} padding */
+    function intersectsHullNode(node,a,d,padding){
+        var lo=0,hi=1;
+        for(var axis=0;axis<3;axis++){
+            var min=node.min[axis]-padding,max=node.max[axis]+padding;
+            if(Math.abs(d[axis])<1e-12){if(a[axis]<min||a[axis]>max)return null;continue;}
+            var one=(min-a[axis])/d[axis],two=(max-a[axis])/d[axis];
+            lo=Math.max(lo,Math.min(one,two));hi=Math.min(hi,Math.max(one,two));if(lo>hi)return null;
+        }return lo;
+    }
+    /** @param {Model} model @param {Vector} a @param {Vector} d @param {number} padding */
+    function hullCandidates(model,a,d,padding){
+        var tree=hullTrees.get(model);
+        if(!tree){var offsets=/** @type {number[]} */([]);for(var i=0;i<model.vertices.length;i+=18)offsets.push(i);tree=buildHullTree(model.vertices,offsets);hullTrees.set(model,tree);}
+        var stack=[tree],result=/** @type {{offsets:number[],entry:number}[]} */([]);
+        while(stack.length){var node=stack.pop();if(!node)continue;var entry=intersectsHullNode(node,a,d,padding);if(entry===null)continue;
+            if(node.offsets)result.push({offsets:node.offsets,entry:entry});else {if(node.left)stack.push(node.left);if(node.right)stack.push(node.right);}
+        }
+        return result.sort(function(a,b){return a.entry-b.entry;});
+    }
     /** @param {Model} model @param {Pose} pose @param {Vector} start @param {Vector} end @param {number} units @param {number} [boltRadius] */
     function hullHit(model, pose, start, end, units, boltRadius) {
         var a = localPoint(pose, start, units), d = minus(localPoint(pose, end, units), a), v = model.vertices, best = /** @type {HullHit | null} */ (null);
@@ -437,18 +472,24 @@
             return x + d[j] * fraction;
         })) > radius + padding)
             return null;
-        for (var i = 0; i < v.length; i += 18) {
+        var candidates=hullCandidates(model,a,d,padding),bestOffset=Infinity;
+        for (var candidateIndex=0;candidateIndex<candidates.length;candidateIndex++) {
+          var leaf=candidates[candidateIndex];if(best&&leaf.entry>best.fraction)break;
+          for(var triangleIndex=0;triangleIndex<leaf.offsets.length;triangleIndex++) {
+            var i=leaf.offsets[triangleIndex];
             if (padding > 0) {
                 // Reject triangles outside the short swept bolt bounds before
                 // constructing face/edge tests on detailed meshes.
                 var outside = false;
                 for (var axis = 0; axis < 3; axis++) {
-                    var lo = Math.min(a[axis],a[axis]+d[axis])-padding, hi = Math.max(a[axis],a[axis]+d[axis])+padding;
+                    var segmentEndAxis=a[axis]+d[axis]*(best?best.fraction:1);
+                    var lo = Math.min(a[axis],segmentEndAxis)-padding, hi = Math.max(a[axis],segmentEndAxis)+padding;
                     if (Math.min(v[i+axis],v[i+6+axis],v[i+12+axis])>hi || Math.max(v[i+axis],v[i+6+axis],v[i+12+axis])<lo) { outside=true; break; }
                 }
                 if(outside) continue;
                 var contact = boltTriangle(a,d,[v.slice(i,i+3),v.slice(i+6,i+9),v.slice(i+12,i+15)],padding);
-                if(contact && (!best || contact.fraction < best.fraction)) {
+                if(contact && (!best || contact.fraction < best.fraction || contact.fraction===best.fraction&&i<bestOffset)) {
+                    bestOffset=i;
                     var local=contact.local;
                     best={fraction:contact.fraction,local:local,normal:contact.normal,model:model,
                         point:pose.eye.map(function(x,j){return x+(pose.right[j]*local[0]-pose.back[j]*local[1]+pose.up[j]*local[2])/units;})};
@@ -466,15 +507,16 @@
             if (w < 0 || u + w > 1)
                 continue;
             var t = dot3(f, q) / det;
-            if (t < 0 || t > 1 || best && t >= best.fraction)
+            if (t < 0 || t > 1 || best && (t > best.fraction || t===best.fraction&&i>=bestOffset))
                 continue;
             var n = normal(p, v.slice(i + 6, i + 9), v.slice(i + 12, i + 15));
-            best = { fraction: t, point: start.map(function (x, j) {
+            bestOffset=i;best = { fraction: t, point: start.map(function (x, j) {
                     return x + (end[j] - x) * t;
                 }),
                 local: a.map(function (x, j) {
                     return x + d[j] * t;
                 }), normal: n, model: model };
+          }
         }
         return best;
     }

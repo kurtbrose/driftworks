@@ -14,13 +14,21 @@ assert.ok(fills.length>0);
 draws.length=0;display.draw(source,null,.1,0,{breakup:0});assert.equal(draws.filter(args=>args.length===9).length,0);
 draws.length=0;fills.length=0;display.draw(source,null,.1,0,{breakup:1});assert.ok(draws.filter(args=>args.length===9).every(args=>Math.abs(args[5])<=16),'Sign-off horizontal displacement remains modest');assert.ok(fills.length>12000,'Final static obscures the portrait');
 draws.length=0;display.draw(source,null,.1,0,{breakup:1,reduced:true});assert.equal(draws.filter(args=>args.length===9).length,0,'Sign-off respects reduced motion');
-// A later packet can briefly clear even as sign-off progress increases.
-let values=[.8,.9,.4,.5,.5];math.random=()=>values.length?values.shift():.5;
-fills.length=0;display.draw(source,null,1,0,{breakup:.4});const loud=fills.length;
-values=[.1,.1,.4,.5,.5];fills.length=0;display.draw(source,null,1.2,0,{breakup:.6});assert.ok(fills.length<loud/4,'Noise can recede instead of following a perfect ramp');
-function texturePacket(mode,time){let packet=[.8,.9,mode,.5];math.random=()=>packet.length?packet.shift():.5;fills.length=0;display.draw(source,null,time,0,{breakup:.8});return fills.filter(rect=>rect[2]<100&&rect[3]<20);}
-const fine=texturePacket(.1,2),coarse=texturePacket(.5,3),streaks=texturePacket(.9,4);
-assert.ok(fine.length&&fine.every(rect=>rect[2]<=4&&rect[3]<=3),'Fine snow uses small grains');
-assert.ok(coarse.some(rect=>rect[2]>5&&rect[3]>5),'Coarse static includes larger grains');
-assert.ok(streaks.some(rect=>rect[2]>30&&rect[3]<=4),'Broken streaks are wide and thin');
-console.log('PASS comms display: visible edge peaks, fresh random geometry, clean speech intervals and reduced motion');
+// Sign-off severity only rises, even with a frozen playback clock.
+function progression(value) {
+  math.random=()=>value;
+  display.draw(source,null,1,0,{breakup:0});
+  const counts=[];
+  for(let i=1;i<=20;i++) {
+    fills.length=0;display.draw(source,null,1,0,{breakup:i/20});counts.push(fills.length);
+  }
+  assert.ok(counts.every((count,i)=>!i||count>=counts[i-1]),'Static must never recover');
+  return counts;
+}
+let seed=1;math.random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+display.draw(source,null,1,0,{breakup:0});
+fills.length=0;display.draw(source,null,1,0,{breakup:.4});const firstRamp=fills.length;
+seed=42;display.draw(source,null,1,0,{breakup:0});
+fills.length=0;display.draw(source,null,1,0,{breakup:.4});assert.notEqual(fills.length,firstRamp,'Each sign-off gets a different progression');
+progression(.2);progression(.8);
+console.log('PASS comms display: visible edge peaks, random monotonic sign-off and reduced motion');

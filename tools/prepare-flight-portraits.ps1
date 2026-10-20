@@ -40,8 +40,44 @@ try {
             $outputs["portrait-$index.png"] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
         } finally { $graphics.Dispose(); $packed.Dispose() }
     }
+    # New cast sources contain one character in a 4x2 expression sheet.
+    # Anchors are measured in each sheet's 362x543 source cell: x, mouth, eyes.
+    $newCast = @(
+        @('viper',180,297,208), @('wraith',181,310,227),
+        @('razor',181,296,213), @('hex',183,310,223),
+        @('talon',181,290,202), @('knell',182,300,216),
+        @('cinder',181,306,219), @('shade',181,304,222),
+        @('control',181,305,218)
+    )
+    for ($character = 0; $character -lt $newCast.Length; $character++) {
+        $spec = $newCast[$character]
+        $name = "cast/$($spec[0]).png"
+        $path = Join-Path $portraitRoot $name
+        $sheet = [System.Drawing.Bitmap]::new($path)
+        $sources[$name] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+        $packed = [System.Drawing.Bitmap]::new(1792,256,[System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $graphics = [System.Drawing.Graphics]::FromImage($packed)
+        try {
+            $graphics.Clear([System.Drawing.Color]::FromArgb(11,17,21))
+            $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
+            $scale = .17 * 256 / ($spec[2] - $spec[3])
+            $left = .48 * 256 - $spec[1] * $scale
+            $top = .61 * 256 - $spec[2] * $scale
+            for ($frame=0; $frame -lt 7; $frame++) {
+                $graphics.SetClip([System.Drawing.Rectangle]::new($frame*256,0,256,256))
+                $destination = [System.Drawing.RectangleF]::new($frame*256+$left,$top,362*$scale,543*$scale)
+                $source = [System.Drawing.RectangleF]::new(($frame%4)*$sheet.Width/4,[Math]::Floor($frame/4)*$sheet.Height/2,$sheet.Width/4,$sheet.Height/2)
+                $graphics.DrawImage($sheet,$destination,$source,[System.Drawing.GraphicsUnit]::Pixel)
+            }
+            $outputName = "portrait-$($character+8).png"
+            $path = Join-Path $outputRoot $outputName
+            $packed.Save($path,[System.Drawing.Imaging.ImageFormat]::Png)
+            $outputs[$outputName] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+        } finally { $graphics.Dispose(); $packed.Dispose(); $sheet.Dispose() }
+    }
     $builderHash = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    [ordered]@{version=1;tileSize=256;frames=$poses;anchors=$anchors;builderSha256=$builderHash;sources=$sources;outputs=$outputs} |
+    [ordered]@{version=1;tileSize=256;frames=$poses;anchors=$anchors;newCast=$newCast;builderSha256=$builderHash;sources=$sources;outputs=$outputs} |
         ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 (Join-Path $outputRoot 'manifest.json')
 } finally { foreach ($image in $images.Values) { $image.Dispose() } }
 Get-ChildItem -LiteralPath $outputRoot -Filter '*.png' | Measure-Object -Property Length -Sum | Select-Object Count,Sum

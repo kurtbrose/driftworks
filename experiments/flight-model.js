@@ -65,8 +65,13 @@
             return -x;
         }), basis = [state.right, state.up, forward];
         var max = input.boost ? p.afterburnerVelocity : p.maxVelocity;
-        var target = [(input.side || 0) * max[0], (input.vertical || 0) * max[1], input.boost ? max[2] : max[2] * state.throttle];
-        var taus = [target[0] === 0 ? p.slideDecel : p.slideAccel, target[1] === 0 ? p.slideDecel : p.slideAccel,
+        // Maneuvering velocities are m/s, independent of retail profile strafe limits.
+        // Normalize diagonals and combined keyboard/pad demands to a 5 m/s target.
+        var side = input.side || 0, vertical = input.vertical || 0;
+        var length = Math.max(1, Math.hypot(side, vertical));
+        var target = [side / length * 5, vertical / length * 5,
+            input.boost ? max[2] : state.throttle < 0 ? 5 * Math.max(-1, state.throttle) : max[2] * state.throttle];
+        var taus = [2, 2, state.throttle < 0 && !input.boost ? 2 :
             target[2] > 0 && target[2] >= state.ramp[2] ? (input.boost ? p.afterburnerAccel : p.forwardAccel) : p.forwardDecel];
         state.ramp = state.ramp.map(function (v, i) {
             return ramp(v, target[i], taus[i], dt);

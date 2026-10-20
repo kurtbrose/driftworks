@@ -28,9 +28,47 @@ for (const name of ['raptor', 'bulldog', 'halo']) {
     assert(mount.position.every(Number.isFinite) && mount.length > 0);
   });
   if (name === 'raptor') {
-    const body = model.parts.filter(p => p.component === 'wedge-body');
+    const body = model.parts.filter(p => p.assembly === 'delta-body');
     const width = bounds(body, 0), height = bounds(body, 2);
-    assert(width[1] - width[0] > 3.8 && height[1] - height[0] > 1.5, 'Raptor keeps a substantial wedge fuselage above and below the wings');
+    assert(width[1] - width[0] > 9.8 && height[1] - height[0] > 1.5, 'Raptor delta shell spans the complete arrowhead with a deep center');
+    const edges = new Map();
+    const key = p => p.map(v => v.toFixed(6)).join(',');
+    const roof = [];
+    for (const part of body) for (let i = 0; i < part.vertices.length; i += 24) {
+      const tri = [0, 8, 16].map(offset => part.vertices.slice(i + offset, i + offset + 3));
+      if (part.vertices[i + 5] > .1) roof.push(tri);
+      for (let j = 0; j < 3; j++) {
+        const edge = [key(tri[j]), key(tri[(j + 1) % 3])].sort().join('|');
+        edges.set(edge, (edges.get(edge) || 0) + 1);
+      }
+    }
+    assert([...edges.values()].every(n => n === 2), 'Raptor body is one closed shell without wing-root gaps or overlapping hull pieces');
+    function roofHeight(x, y) {
+      for (const [a, b, c] of roof) {
+        const det = (b[1]-c[1])*(a[0]-c[0]) + (c[0]-b[0])*(a[1]-c[1]);
+        if (Math.abs(det) < 1e-10) continue;
+        const u = ((b[1]-c[1])*(x-c[0])+(c[0]-b[0])*(y-c[1]))/det;
+        const v = ((c[1]-a[1])*(x-c[0])+(a[0]-c[0])*(y-c[1]))/det;
+        if (u >= -1e-6 && v >= -1e-6 && u+v <= 1+1e-6) return a[2]*u+b[2]*v+c[2]*(1-u-v);
+      }
+      assert.fail('Delta roof must cover the entire center-to-edge span');
+    }
+    let previous = roofHeight(0, 0);
+    for (let x = .25; x < 3.5; x += .25) {
+      const z = roofHeight(x, 0);
+      assert(z < previous && previous-z < .06, 'Delta roof slopes continuously outward without a separate body-to-wing drop');
+      previous = z;
+    }
+    for (const [index,mount] of model.gunMounts.entries()) {
+      const x=mount.position[0], muzzle=mount.position[1]+mount.length/2;
+      assert(Math.abs(x)===1.5 && muzzle<3.35 && mount.length<.8, 'Raptor uses compact inset muzzles rather than long exposed barrels');
+      const ports=model.parts.filter(p=>p.component==='gun-port' && p.vertices[0]*x>0);
+      assert(ports.length>0 && ports.some(p=>p.material==='machinery') && ports.some(p=>p.material==='dark'), 'Rounded port has a modeled cavity and dark back wall');
+      const front=bounds(ports,1)[1], top=bounds(ports,2)[1];
+      const gun=model.parts.filter(p=>p.component==='gun-'+index);
+      assert(front-muzzle>.15 && bounds(gun,2)[1]<top-.05, 'Barrel sits behind the rounded lip and beneath its outer skin');
+      assert(roofHeight(x,3.46)<mount.position[2]-.12, 'Gun port faces forward above the hull without cutting a trench through the arrowhead');
+    }
   }
   if (name === 'halo') {
     assert.equal(model.gunMounts[0].position[0], 0, 'Halo has one centerline nose gun');

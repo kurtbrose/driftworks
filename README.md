@@ -216,11 +216,15 @@ also links back to it.
 Open [the flight lab](experiments/flight.html) from the same static server.
 
 For the Aegis capital-ship sandbox, open [Aegis live batteries](experiments/flight.html?aegis=1).
-Fly a fighter alongside the stationary allied dreadnaught while its twelve
-articulated batteries track and engage hostile fighters. W/S adjusts throttle,
+Fly a fighter alongside the stationary allied dreadnaught while twelve small
+point-defense turrets engage fighters and twelve heavy batteries stand by.
+The ship retains its designed 1,305 m length. W/S adjusts throttle,
 Space fires, and Esc pauses. The capital hull is invulnerable; coarse collision
 proxies stop hull crossings. The [kit and rig reference](docs/dreadnaught-kit.md)
 describes this prototype's scope and asset generation.
+The flight-input selector is visible above Start/Resume. If the browser rejects
+mouse capture, mouse mode uses cursor steering: move away from screen center to
+turn and return to center to stop turning. Esc or leaving the flight area pauses.
 The [mission selector](experiments/missions.html) links to separate flight sorties.
 Asteroid patrol places exactly two hostiles near a randomized asteroid; clearing
 both completes the mission without spawning another wave. Restart keeps the same
@@ -576,3 +580,5 @@ Variant A now shortens the original overall length by 25% through the aft hull, 
 Open [Comms channel lab](experiments/comms-lab.html) to audition the eight crew portraits with animated mouths, local Mumble radio speech, phosphor tint and scanlines. Transmit line starts one synchronized transmission; radio effects apply to the next line. A shared radio noise plan drives audio squelch/static and visual interference, followed by a hard picture/audio cutoff. Stop cancels playback; mute leaves the picture moving. Reduced-motion preference suppresses mouth/blink and animated interference. Both flight simulators use this treatment by default: green phosphor, scanlines, random displaced strips, 0.4 s acquisition and 0.6 s closing, then a half-second visual linger lets you finish reading while portrait static sputters between fine snow, coarse grain and broken streaks, with brief recoveries before obscuring the face and disappearing. Subtitles and panel UI stay clean throughout. The lab retains palette and original-timing comparisons.
 
 `mumble.radioNoise(speechSamples, sampleRate, options)` builds the existing radio noise pattern independently of audio. Pass that same object to `mumble.transmit(samples, rate, {mode: 'radio', noise: pattern, seed})` and sample `mumble.radioNoiseAt(pattern, elapsed).strength` for visual interference. The plan preserves the original gate delays, crackle steps and occasional burst distribution; the seed for audio hiss remains in transmission options. `elapsed` is audio playback time relative to transmission start; mouth timing additionally subtracts `speechOffset`. The lab defaults to 2.5 times the original radio edge timing (0.4 s acquisition / 0.6 s closing), selectable against original flight timing. `edgeScale` stretches only opening/closing latch timing, preserving the original random draws and middle-burst distribution. The display holds edge noise peaks for 250 ms (40 ms during speech) so short latch steps have time to read; horizontal displacement remains restrained, with a modest boost. Visual strip positions and snow use fresh random samples, and each transmission gets a random radio seed. Outside the pattern duration the channel is closed. Local/clean audio ignores radio noise. Flight and the lab default to effects at 0.45 and edgeScale at 2.5.
+
+Flight maneuvering thrusters: **A/D** push left/right and **R/F** push up/down in ship coordinates. On standard controllers, hold **LB / L1** and move the **right stick** to translate; the left stick keeps steering. While held, the right stick leaves roll and throttle unchanged; D-pad throttle remains available. Translation targets 5 m/s at full input (including diagonals), with a gentle two-second response and automatic braking on release. Reduce throttle below zero with S, right-stick down, or D-pad down for reverse, from 0 to 5 m/s; X returns throttle to zero. Positive throttle and boost retain their normal speeds. Absolute flight-stick throttle retains its 0–100% range. The HUD shows REV while reverse is selected.

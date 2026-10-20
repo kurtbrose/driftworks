@@ -1,0 +1,41 @@
+{
+  "method": "Built-in imagegen; neutral.png used as style reference. Original outputs preserved in this directory. Row-major poses: neutral, ah, oo, blink, smile, angry, afraid, unused neutral.",
+  "prompts": [
+    {
+      "callsign": "viper",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: East Asian man, 40s, short swept black hair, strong cheekbones, teal flight suit. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    },
+    {
+      "callsign": "wraith",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: Black woman, 30s, close natural coiled hair, dark skin, violet flight jacket. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    },
+    {
+      "callsign": "razor",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: South Asian man, 30s, brown skin, neatly trimmed beard, short black hair, ochre flight suit. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    },
+    {
+      "callsign": "hex",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: East Asian woman, 50s, warm medium skin, dark hair with silver streaks tied back, plum flight suit. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    },
+    {
+      "callsign": "talon",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: Black man, 20s, deep dark skin, short textured high top, clean shaven, green flight suit. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    },
+    {
+      "callsign": "knell",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: Arab woman, 40s, olive skin, dark curly shoulder length hair, rust flight jacket. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    },
+    {
+      "callsign": "cinder",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: Pacific Islander man, 50s, broad face, tan brown skin, wavy salt and pepper hair, charcoal orange flight suit. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    },
+    {
+      "callsign": "shade",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: South Asian woman, 20s, dark brown skin, black braid, teal gray flight suit. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    },
+    {
+      "callsign": "control",
+      "prompt": "Use case: stylized-concept. Reference image is STYLE ONLY: match detailed retro pixel art space pilot busts and dark navy background. Create ONE new character sprite sheet: older Black woman, 60s, silver close cropped natural hair, dark skin, dignified navy and gold command uniform. Exactly 4 columns by 2 rows of equal square cells, no gutters, no text. Identical front-facing character, clothing, hair and pose across cells. Row-major: neutral closed mouth; conversational open AH mouth; rounded OO speaking mouth; blink closed eyes resting mouth; restrained closed lip smile; frustrated brows closed mouth; worried eyes closed mouth; neutral duplicate. Head and shoulder closeup, eyes at 44% cell height, mouth center 61%, nose centered 48% width. Keep face size and alignment identical across poses. Full head visible, no labels or borders."
+    }
+  ]
+}

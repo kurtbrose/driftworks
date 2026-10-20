@@ -318,6 +318,7 @@
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
         var demand = controls.sample();
+        var simMs=0,capitalMs=0,phaseStart=performance.now();
         if (!paused) {
             var before = view(), beforeSpeed = Math.hypot.apply(null, view().state.velocity), lastHit = before.combat.lastHit, shield = before.combat.shield, fired = before.guns.fired, contact = before.contact;
             if (watch) {
@@ -329,7 +330,9 @@
                 if (watch.summary().done) pause();
             } else session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
             var after = view();
+            simMs=performance.now()-phaseStart;phaseStart=performance.now();
             if(aegis&&!watch)aegis.step(elapsed,after);
+            capitalMs=performance.now()-phaseStart;
             if (!watch && after.contact && !contact) DW.audio.playImpact(2);
             DW.audio.setFlightEngine(elapsed, after.state.throttle, !!demand.boost, !paused && !watch && !after.contact && !after.combat.dead, {acceleration: elapsed > 0 ? Math.max(0, Math.hypot.apply(null, after.state.velocity) - beforeSpeed) / elapsed / Math.max(1, profile().maxVelocity[2] / profile().forwardAccel) : 0, damage: 1 - after.combat.hull / (after.combat.maxHull || after.combat.hull || 1), maneuver: Math.min(1, Math.abs(demand.pitch || 0) + Math.abs(demand.yaw || 0) + Math.abs(demand.roll || 0))});
             if (!watch) controls.haptics(elapsed, {boost: !after.contact && !after.combat.dead && !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
@@ -346,14 +349,18 @@
             comms.update(elapsed, currentView.combat, currentView.state);
         }
         var comparison = diagnostics.settings();
+        phaseStart=performance.now();
         presentation.render(currentView, appearance, comparison, elapsed);
+        var presentationMs=performance.now()-phaseStart;phaseStart=performance.now();
         if(aegis){var readout=document.getElementById('aegis-flight-readout');if(readout)readout.textContent=aegis.readout();}
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
         flightHud.render(Object.assign({}, currentView, { units: units, paused: paused, speakerId: comms.speakerId(), weapon: weapon() }, inputView, appearance));
         if (watch) get('combat-status').textContent = 'AI DUEL / ' + (watch.summary().category === 'perfect' ? 'PERFECT' : watch.summary().flavor.toUpperCase()) + ' VS ' + currentView.combat.enemies[0].pilot.toUpperCase();
         updateWatch();
+        var hudMs=performance.now()-phaseStart;
         diagnostics.endFrame(timing, paused, comparison, presentation.renderStats);
+        if(aegis&&get('perf-enabled').checked){var perf=get('perf-overlay');perf.textContent=perf.textContent.split('\nStages:')[0]+'\nStages: sim '+simMs.toFixed(1)+' / PD '+capitalMs.toFixed(1)+' / scene '+presentationMs.toFixed(1)+' / HUD '+hudMs.toFixed(1)+' ms';}
         requestAnimationFrame(frame);
     }
     labels();

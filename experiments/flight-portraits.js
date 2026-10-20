@@ -4,9 +4,9 @@
   /** @typedef {import('./types').Feeling} Feeling */
   /** @typedef {import('./speech-sprites/generated-v1/types').FaceLayer} FaceLayer */
   var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
-  var cast=[1,0,3,2,4,5,6,7]; // Same adult masculine/feminine ordering as pilotVoice.
+  var cast=[1,0,3,2,4,5,6,7,8,9,10,11,12,13,14,15]; // Same adult masculine/feminine ordering as pilotVoice.
   /** @param {Line} line */
-  function slot(line){return typeof line.portraitIndex==='number'&&Number.isFinite(line.portraitIndex)&&line.portraitIndex>=0?cast[Math.floor(line.portraitIndex)%8]:2;}
+  function slot(line){return typeof line.portraitIndex==='number'&&Number.isFinite(line.portraitIndex)&&line.portraitIndex>=0?cast[Math.floor(line.portraitIndex)%cast.length]:16;}
   /** @param {Feeling | undefined} feeling */
   function expression(feeling){
     if(!feeling)return 'neutral';
@@ -17,7 +17,7 @@
     if(mood==='confident'||mood==='relieved'||mood==='reassuring')return 'smile';
     return stress>=.35?'angry':'neutral';
   }
-  var FRAME_SIZE=256,CACHE_LIMIT=8,poses=['master','ah','oo','blink','smile','angry','afraid'];
+  var FRAME_SIZE=256,CACHE_LIMIT=17,poses=['master','ah','oo','blink','smile','angry','afraid'];
   /** @typedef {{controller: AbortController; bitmap: ImageBitmap | null; promise: Promise<Record<string, import('./speech-sprites/generated-v1/types').FaceSource>>}} Entry */
   /** @param {HTMLElement} panel */
   function mount(panel){

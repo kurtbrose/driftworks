@@ -144,8 +144,8 @@
             get('hull-meter').value = combat.hull;
             get('hull-meter').dataset.condition = combat.hull / get('hull-meter').max <= .25 ? 'critical' : combat.hull / get('hull-meter').max <= .5 ? 'damaged' : 'healthy';
             get('speed-value').textContent = String(Math.round(Math.hypot.apply(null, state.velocity)));
-            get('thrust-value').textContent = 'THRUST ' + Math.round(state.throttle * 100) + '%';
-            get('thrust-meter').value = state.throttle;
+            get('thrust-value').textContent = (state.throttle < 0 ? 'REV ' : 'THRUST ') + Math.round(Math.abs(state.throttle) * 100) + '%';
+            get('thrust-meter').value = Math.abs(state.throttle);
             var anchors = DW.training.gunAnchors(combat.player), mounts = anchors ? anchors.length : (combat.player.profile.gunMounts || 2);
             get('weapon-name').textContent = view.weapon.name + ' / ' + mounts + (mounts === 1 ? ' gun / ' : ' guns / ') + ((combat.player.profile.gunMounts || 2) / view.weapon.fireWait / mounts).toFixed(1) + ' volleys/s';
             var targetPanel = get('target-info');

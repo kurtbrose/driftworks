@@ -69,7 +69,7 @@
             } catch (error) { /* Haptics must never interrupt flight. */ }
         }
         var steeringPreset = get('steering-preset');
-        var mouseActive = true, uncapturedMouse=false, lastAxes = /** @type {number[]} */ ([]);
+        var mouseActive = true, uncapturedMouse=false, capturePending=false, captureGeneration=0, lastAxes = /** @type {number[]} */ ([]);
         var padActivity = /** @type {Record<string, {axes: number[]; buttons: boolean[]}>} */ ({});
         steeringPreset.value = 'medium-soft';
         try {
@@ -91,17 +91,18 @@
             previousButtons = { bank: false, lock: false, pause: false };
         }
         function release() {
-            uncapturedMouse=false;
+            uncapturedMouse=false;capturePending=false;captureGeneration++;
             if (document.pointerLockElement === host)
                 document.exitPointerLock();
         }
         /** @param {unknown} [error] */function captureFallback(error){
+            if(!capturePending)return;capturePending=false;
             if(inputMode.value!=='mouse'||actions.isDead()){actions.captureFailure(error);return;}
             if(uncapturedMouse&&!actions.isPaused())return;
             uncapturedMouse=true;mouseActive=true;actions.resume();
         }
         function capture() {
-            uncapturedMouse=false;
+            uncapturedMouse=false;capturePending=true;var generation=++captureGeneration;
             if (!host.requestPointerLock) {
                 captureFallback();
                 return;
@@ -109,7 +110,7 @@
             try {
                 var result = host.requestPointerLock();
                 if (result && result.catch)
-                    result.catch(captureFallback);
+                    result.catch(/** @param {unknown} error */function(error){if(generation===captureGeneration)captureFallback(error);});
             }
             catch (error) {
                 captureFallback(error);
@@ -215,7 +216,7 @@
         };
         document.addEventListener('pointerlockchange', function () {
             if (document.pointerLockElement === host) {
-                uncapturedMouse=false;
+                uncapturedMouse=false;capturePending=false;
                 if (actions.isDead()) {
                     actions.pause();
                     return;
@@ -391,7 +392,7 @@
             }).filter(function (v) {
                 return v !== null;
             }).join(', ') : '';
-            var controls = pad ? input.read(pad, mapping) : { pitch: 0, yaw: 0, roll: 0, throttle: null, throttleRate: 0, fire: false, boost: false, bank: false, lock: false, pause: false };
+            var controls = pad ? input.read(pad, mapping) : { pitch: 0, yaw: 0, roll: 0, side: 0, vertical: 0, throttle: null, throttleRate: 0, fire: false, boost: false, bank: false, lock: false, pause: false };
             if (activePad) {
                 mouseActive = false;
                 mouse = [0, 0];
@@ -419,7 +420,7 @@
             if (!actions.isPaused() && controls.lock && !previousButtons.lock) actions.toggleTargetLock();
             previousButtons = { bank: controls.bank, lock: controls.lock, pause: controls.pause };
             var look = inputMode.value === 'mouse' && mouseActive ? input.stickDemand(mouse, .08, steeringPreset.value === 'medium-soft' ? 1.6 : 1) : [0, 0];
-            return { throttle: controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA'), vertical: axis('KeyR', 'KeyF'), boost: keys.ShiftLeft || keys.ShiftRight || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
+            return { throttle: controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: keys.ShiftLeft || keys.ShiftRight || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
         }
         function view() {
             return { mouse: mouse, inputMode: inputMode.value, uncapturedMouse:uncapturedMouse, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };

@@ -565,6 +565,7 @@
     doc.createElement=target;doc.createTextNode=function(text){return {textContent:text};};
     doc.body={classList:{add:function(){}}};doc.exitPointerLock=function(){doc.pointerLockElement=null;};
     host.clientWidth=1000;host.clientHeight=800;
+    host.contains=function(node){return node===host;};host.getBoundingClientRect=function(){return {left:0,top:0,right:host.clientWidth,bottom:host.clientHeight,width:host.clientWidth,height:host.clientHeight};};
     doc.getElementById('input-mode').value='mouse';doc.getElementById('sensitivity').value='1';
     if(storage)win.localStorage=storage;
     controls=window.Driftworks.flightControls.mount(host,{
@@ -609,13 +610,18 @@
     f.setPaused(false);f.doc.hidden=true;f.doc.emit('visibilitychange');assert(f.counts.pause===3);
   });
 
-  test('flight controls preserve pointer capture, virtual stick and capture failures',function(){
+  test('flight controls preserve pointer capture and fall back to cursor steering',function(){
     var f=flightControlsFixture(),c=f.controls;
     f.elements['steering-preset'].value='wide-linear';
-    c.capture();assert(f.counts.failure===1);
-    f.host.requestPointerLock=function(){throw new Error('denied');};c.capture();assert(f.counts.failure===2);
-    f.host.requestPointerLock=function(){return {catch:function(fn){fn(new Error('rejected'));}};};c.capture();assert(f.counts.failure===3);
-    f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===1);
+    c.capture();assert(f.counts.failure===0&&f.counts.resume===1&&c.view().uncapturedMouse);
+    f.doc.emit('mousemove',{clientX:580,clientY:360});assert(c.sample().pitch>0&&c.sample().yaw<0);
+    f.doc.emit('mousemove',{clientX:500,clientY:400});assert(c.sample().pitch===0&&c.sample().yaw===0);
+    f.doc.emit('mousedown',{button:0,target:{}});assert(!c.sample().fire,'UI clicks do not fire');
+    f.doc.emit('mousedown',{button:0,target:f.host});assert(c.sample().fire);f.doc.emit('mouseup',{button:0});
+    f.host.requestPointerLock=function(){throw new Error('denied');};c.capture();assert(f.counts.failure===0&&f.counts.resume===2);
+    f.host.requestPointerLock=function(){return {catch:function(fn){fn(new Error('rejected'));}};};c.capture();assert(f.counts.failure===0&&f.counts.resume===3);
+    f.doc.emit('pointerlockerror');assert(f.counts.resume===3,'duplicate failure events do not restart flight');
+    f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===4&&!c.view().uncapturedMouse);
     f.doc.emit('mousemove',{movementX:80,movementY:-40});
     var demand=c.sample();assert(demand.pitch>0&&demand.yaw<0);assertClose(c.view().stickRange,360);
     assertClose(c.view().mouse[0],80/360);
@@ -626,7 +632,16 @@
     f.key('KeyC');assert(c.sample().pitch===0&&c.view().mouse[0]===0);
     f.doc.getElementById('input-mode').value='controller';f.doc.emit('mousemove',{movementX:80,movementY:40});assert(c.sample().yaw===0);
     c.release();assert(f.doc.pointerLockElement===null);f.doc.emit('pointerlockchange');assert(f.counts.pause===1);
-    f.setDead(true);f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===1&&f.counts.pause===2);
+    f.setDead(true);f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===4&&f.counts.pause===2);
+  });
+
+  test('cursor fallback pauses on exit and ignores a late canceled capture failure',function(){
+    var f=flightControlsFixture(),reject;
+    f.controls.capture();f.doc.emit('mousemove',{clientX:600,clientY:350});assert(f.controls.sample().yaw!==0);
+    f.host.emit('mouseleave');assert(f.counts.pause===1&&!f.controls.view().uncapturedMouse&&f.controls.sample().yaw===0);
+    f.host.requestPointerLock=function(){return {catch:function(fn){reject=fn;}};};f.controls.capture();
+    f.key('Escape');var resumes=f.counts.resume;reject(new Error('late rejection'));
+    assert(f.counts.resume===resumes&&!f.controls.view().uncapturedMouse);
   });
 
   test('paused steering presets preserve all three travel and response combinations',function(){
@@ -2608,6 +2623,43 @@
       assertClose(state.up.reduce(function(sum,x,i){return sum+x*state.back[i];},0),0);
     });
   });
+  test('maneuvering thrusters ease toward five m/s, cap diagonals and brake on release', function () {
+    var model=window.Driftworks.arcade;
+    model.profiles.forEach(function(p){
+      var state=model.create(0);
+      model.step(state,p,{side:1,vertical:1,boost:true},.05);
+      assert(Math.hypot(state.velocity[0],state.velocity[2])<.13);
+      for(var i=0;i<2000;i++)model.step(state,p,{side:1,vertical:1},.01);
+      assertClose(Math.hypot(state.velocity[0],state.velocity[2]),5,.01);
+      for(var j=0;j<2000;j++)model.step(state,p,{},.01);
+      assertClose(Math.hypot.apply(null,state.velocity),0,.01);
+      state.throttle=-1;
+      model.step(state,p,{},.05);assert(state.velocity[1]<0 && state.velocity[1]>-.13);
+      for(var k=0;k<2000;k++)model.step(state,p,{},.01);
+      assertClose(state.velocity[1],-5,.01);
+      state.throttle=-.5;
+      for(var n=0;n<2000;n++)model.step(state,p,{},.01);
+      assertClose(state.velocity[1],-2.5,.01);
+    });
+  });
+  test('LB maneuvering preserves steering and D-pad throttle while replacing right-stick controls', function () {
+    var api=window.Driftworks.flightInput,pad={mapping:'standard',axes:[.5,-.5,1,-1],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})},map=api.defaults(true);
+    var normal=api.read(pad,map);assert(normal.roll!==0 && normal.throttleRate===1);
+    pad.buttons[4].pressed=true;
+    var maneuver=api.read(pad,map);
+    assertClose(maneuver.pitch,normal.pitch);assertClose(maneuver.yaw,normal.yaw);
+    assert(maneuver.roll===0 && maneuver.throttleRate===0);
+    assertClose(Math.hypot(maneuver.side,maneuver.vertical),1);
+    pad.buttons[13].pressed=true;assert(api.read(pad,map).throttleRate===-1);
+    pad.buttons[4].pressed=false;assert(api.read(pad,map).side===0);
+  });
+  test('manual throttle passes through zero into weak reverse and stop clears it',function(){
+    var DW=window.Driftworks,state=DW.arcade.create(0),craft=DW.training.createCraft('manual',state,'ally');
+    DW.training.stepInput(craft,{throttle:null,throttleRate:-1,fire:false},.05);
+    assert(state.throttle<0 && state.velocity[1]<0);
+    DW.training.stepInput(craft,{throttle:null,throttleRate:0,stop:true,fire:false},.05);
+    assert(state.throttle===0);
+  });
   test('arcade contact scales normalized geology by body radius and retains five meter clearance', function () {
     var model=window.Driftworks.arcade,state=model.create(18);
     state.eye=[0,-17,0];state.velocity=[0,80,0];state.throttle=1;
@@ -2623,7 +2675,7 @@
     assertClose(Math.hypot.apply(null,state.velocity),p.afterburnerVelocity[2],.01);
     var before=state.eye.slice();model.step(state,p,{boost:true},.01);
     assertClose((state.eye[1]-before[1])*sim.METERS_PER_UNIT,p.afterburnerVelocity[2]*.01);
-    var side=model.create(18);model.step(side,p,{side:1},.05);assertClose(side.velocity[0],0);
+    var side=model.create(18);model.step(side,p,{side:1},.05);assert(side.velocity[0]>0 && side.velocity[0]<.13);
     assert(model.profiles[2].maxVelocity[2]>p.maxVelocity[2]);
   });
 

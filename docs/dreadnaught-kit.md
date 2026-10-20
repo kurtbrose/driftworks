@@ -81,16 +81,33 @@ allied 1,305 m battleship preset; customized bench configurations are not passed
 through. Capital hull damage and capital piloting are not modeled in this pass.
 
 Each battery has a fixed pedestal, yaw joint and pitch joint. The generated
-flight asset separates the immutable hull from the twelve gun assemblies, with
-meter-based pivots and Z-up geometry. `experiments/aegis-flight.js` limits yaw to
-0.45 rad/s and elevation to 0.30 rad/s, tracks hostile fighters within 2,400 m,
-leads their velocity and fires only after alignment. Upper and lower banks use
-their own outward hemispheres, with an elevation limit of 79.2 degrees.
+flight asset separates the immutable hull from twelve main batteries and twelve
+small point-defense mounts, with meter-based pivots and Z-up geometry. The main
+batteries remain at rest in the fighter-only scenario. Small PD mounts use 22%
+of the main turret geometry scale and handle fighter threats.
+`experiments/aegis-flight.js` limits PD yaw to 2.8 rad/s and elevation to 2.2 rad/s,
+retains valid targets within 1,800 m, solves a constant-velocity intercept and
+fires only after alignment. Its rounds travel at 2,200 m/s, live for 0.9 seconds
+and deal 3 damage before the shared weapon modifiers. Upper and lower banks use
+their own outward hemispheres, with an elevation limit of 84.6 degrees. The
+readout counts confirmed enemy shield/hull hits separately from hull impacts.
 Conservative hull and bridge boxes block firing lines and projectiles. These
 same coarse boxes stop player hull crossings; they are not mesh-accurate
 collision shapes. Turrets use the existing projectile renderer and shared
 fighter damage resolver. Pausing freezes their clocks and projectiles; Reset
 clears tracking and shots. Static hull buffers are reused between frames.
+Turret vertices are also immutable and shared between identical meshes. Each
+mount updates one column-major rotation basis; the existing scene shader applies
+rotation and pivot translation on the GPU. Drawing or pausing allocates no new
+turret vertex buffers or batch arrays. PD rounds request at most four cosmetic
+scorch projections per fighter per second; collision, hit reporting and damage
+still run for every round. Ordinary fighter weapons retain their mark behavior.
+
+`node tools/benchmark-aegis.cjs` measures geometry preparation and scorch cost
+locally. The original CPU transform path recreated 1,230,336 vertex bytes per
+frame and took about 2 ms in the development benchmark. The matrix path recreates
+zero vertex bytes and took roughly 0.02 ms on the same machine. These are CPU
+microbenchmarks, not end-to-end FPS measurements.
 
 Only Aegis mode loads `assets/ships/aegis-kit/flight-rig.js`. Normal flight and
 the asteroid mission retain their existing setup. Regenerate that asset with
@@ -98,4 +115,6 @@ the asteroid mission retain their existing setup. Regenerate that asset with
 `node tools/refresh-flight-assets.cjs` after changing simulator scripts.
 `node tests/aegis-flight.cjs` checks asset freshness, tracking limits, both firing
 hemispheres, shared damage, allied safety, collision, reset and buffer reuse.
+It includes a fighter crossing at 170 m/s, rather than relying only on stationary
+targets. The dreadnaught remains at its designed 1,305 m length.
 

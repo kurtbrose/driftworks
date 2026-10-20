@@ -21,8 +21,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
     return {draw:layers=>{assert.ok(!bitmap.closed,'Active rendering cannot use an evicted bitmap');lastLayers=layers;},dispose:()=>{disposed++;}};
   };
   assert.equal(api.slot({portraitIndex:0}),1);assert.equal(api.slot({portraitIndex:1}),0);
-  assert.equal(api.slot({portraitIndex:8}),api.slot({portraitIndex:0}));assert.equal(api.slot({portraitIndex:-1}),2);
-  assert.equal(api.slot({portraitIndex:Infinity}),2);
+  assert.equal(new Set(Array.from({length:16},(_,portraitIndex)=>api.slot({portraitIndex}))).size,16);assert.equal(api.slot({portraitIndex:8}),8);assert.equal(api.slot({portraitIndex:-1}),16);assert.ok(!Array.from({length:16},(_,portraitIndex)=>api.slot({portraitIndex})).includes(api.slot({portraitIndex:-1})));
+  assert.equal(api.slot({portraitIndex:Infinity}),16);
   for(const [current,stress,expected] of [['calm',0,'neutral'],['calm',.7,'afraid'],['calm',.4,'angry'],['frustrated',0,'angry'],['afraid',0,'afraid'],['panicked',0,'afraid'],['confused',0,'afraid'],['relieved',0,'smile'],['confident',0,'smile'],['reassuring',0,'smile']])assert.equal(api.expression({current,stress,intensity:1}),expected);
   const view=api.mount(panel),line={portraitIndex:0,speaker:'WING ROOK / COVER',emotion:{current:'relieved',intensity:1,stress:0}};
   assert.equal(loaded,0,'Mount defers compact-asset warm-up until idle time');
@@ -41,11 +41,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   // Background warm-up is sequential and reuses foreground requests.
   let warmed=0;
   while(idle.length){const before=loaded;idle.shift()();assert.ok(loaded<=before+1,'Warm-up starts at most one character per idle callback');await flush();warmed++;}
-  assert.equal(warmed,8);assert.equal(loaded,8,'Each compact character is requested once, including foreground callers');
-  assert.equal(bitmaps.filter(b=>!b.closed).length,8);assert.equal(canvases,3,'Whole-cast warm-up must not create pose canvases');
+  assert.equal(warmed,16);assert.equal(loaded,16,'Each compact character is requested once, including foreground callers');
+  assert.equal(bitmaps.filter(b=>!b.closed).length,16);assert.equal(canvases,3,'Whole-cast warm-up must not create pose canvases');
   const warmLoads=loaded;
-  for(let index=0;index<8;index++){view.show({...line,portraitIndex:index});await flush();}
+  for(let index=0;index<16;index++){view.show({...line,portraitIndex:index});await flush();}
   assert.equal(loaded,warmLoads,'Every warmed character is immediately reusable without another load');assert.ok(disposed>0);
+  view.show({...line,portraitIndex:-1,speaker:'CONTROL / COMMAND'});await flush();assert.equal(loaded,warmLoads+1);assert.ok(bitmaps.some(b=>!b.closed&&b.url.endsWith('portrait-16.png')),'Control has its own compact atlas');assert.equal(bitmaps.filter(b=>!b.closed).length,17);
   lifecycle.pagehide();assert.ok(canvas.hidden);assert.ok(bitmaps.every(b=>b.closed),'Page exit closes the entire fixed cast cache');
   // A foreground caller must not wait behind another character's warm-up.
   suspendNext=true;lifecycle.pageshow({persisted:true});idle.shift()();

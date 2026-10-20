@@ -845,20 +845,20 @@ order after training and mumble, before flight boot. The existing
 adapter. It reuses `speech-sprites/generated-v1/face-blend.js` for fixed-master,
 inner-face masking and Mumble syllable timing. Load face-blend and portraits
 before flight-radio. Lines carry `portraitIndex`, copied from the same stable
-craft index used by voices; eight supplied portraits repeat over the sixteen
-voice slots in matching masculine/feminine order. Control uses the white-uniform
-command portrait. The original 4x2 atlas and six localized generated variants
-live in `assets/portraits/dogfight/` as preparation sources. The optional Windows
+craft index used by voices; sixteen distinct pilot portraits cover the sixteen
+voice slots in matching masculine/feminine order. Control uses a dedicated silver-haired command portrait (slot 16). The original 4x2 atlas and six localized generated variants
+live in `assets/portraits/dogfight/` as preparation sources. Nine additional per-character
+4x2 expression sheets live under `cast/`, alongside their imagegen prompts. The optional Windows
 tool `tools/prepare-flight-portraits.ps1` applies the eye/mouth calibration offline
 and packs seven 256-square poses per character into the checked-in `runtime/`
 PNGs. Deploying still needs no build step. Source/builder/output hashes and PNG
 dimensions are checked by `tests/portrait-assets.cjs` to catch stale exports.
 
-Flight loads only these compact images (5.59 MiB for the cast versus 15.53 MiB
-for the source atlases). Idle-time warm-up fetches and decodes one character at a
+Flight loads only the compact runtime images (about 12 MiB for all seventeen
+characters versus about 36 MiB for the preparation sources). Idle-time warm-up fetches and decodes one character at a
 time, beginning with Rook; a foreground transmission can start its own request
-immediately or share the pending request. All eight compact ImageBitmaps remain
-in a fixed cache of about 14 MiB decoded pixels, avoiding first-use popping once
+immediately or share the pending request. Up to seventeen compact ImageBitmaps remain
+in a fixed cache of about 30 MiB decoded pixels, avoiding first-use popping once
 warm-up finishes. No seven-canvas cache is retained per character: the compositor
 reads frame rectangles directly from the bitmap. Working canvases belong only to
 the active portrait and are disposed on caller changes/clear. Page exit aborts
@@ -965,7 +965,13 @@ every 75 ms, and issues only bounded 110 ms effects. `clear()` also stops rumble
 pause, reset, focus loss, disconnect and device changes therefore cancel effects.
 The saved rumble toggle defaults on; missing APIs, thrown errors and rejected
 promises do not interrupt flight. Haptics remain browser state, outside saves.
-`capture()`/`release()` own browser pointer-lock requests. Gameplay and diagnostic
+`capture()`/`release()` own browser pointer-lock requests.
+If pointer capture is missing or rejected in mouse mode, the adapter resumes
+with absolute cursor steering using host bounds and the existing stick response.
+`view().uncapturedMouse` identifies this mode; release, Esc, focus loss or leaving
+the host clears it. Mouse firing is restricted to the host, and controller
+selection remains explicit. The input selector is visible above Start/Resume.
+Gameplay and diagnostic
 shortcuts call injected actions; the adapter does not access session, HUD, comms
 or weapon selectors. The optional environment argument supplies document/window/
 navigator for adapter regressions. Load it after `input.js` and before `flight.js`.
@@ -976,7 +982,11 @@ angles, projectile banks and collision proxies; it uses `flightGuns.step` and
 `training.trace` for the existing projectile and damage rules. The flight
 composition root advances the rig only while unpaused and resets it with the
 sortie. Presentation receives the rig through `setCapital`, reuses static hull
-buffers and transforms only the articulated gun geometry each frame. These
+buffers for both hull and turrets, with shared GPU meshes and per-mount rotation
+bases rather than CPU vertex transforms or streaming uploads. PD passes a 0.25 s
+cosmetic scorch interval to `training.trace`, rate-limiting surface projection
+through a weak per-craft cache while retaining every damage event. The optional
+interval defaults to existing behavior for all ordinary weapons. These
 experimental objects are outside the tactical world's save contract. See
 [the Aegis reference](dreadnaught-kit.md) for axes, units and prototype limits.
 
@@ -1454,4 +1464,4 @@ Both flight simulators and the comms lab load `mumble.js`, `comms-display.js`, a
 
 `commsDisplay.create(canvas)` owns one 256 px treatment buffer. Its `draw` accepts the animated source canvas, shared noise plan, elapsed playback seconds, speech duration and optional palette/scanline/reduced-motion settings. It preserves the lab treatment: green phosphor by default, scanlines, fresh random strip/snow geometry and a visual peak hold of 250 ms at channel edges or 40 ms during speech. It never generates independent noise-event timings. Callers own scheduling and channel cutoff.
 
-`flightPortraits` retains its fixed eight-atlas cache and uses one reusable animated source canvas plus the display buffer. `play` receives the noise plan alongside the audio context, start time and speech offset. Pause, mute and cancellation hide the portrait immediately and invalidate pending portrait loads; the playback clock also detects completion before a delayed `onended` callback. Natural playback completion closes the mouth and begins a 0.5 s visual sign-off: the portrait's static sputters in randomly timed bursts with brief recoveries, switching between fine snow, coarse grain and broken horizontal streaks before obscuring the face; horizontal displacement gets only a modest boost, then the panel hides. Subtitles, speaker labels and controls are player-facing UI and stay clean and readable throughout; no radio effects are applied to the panel. Cancellation hides it immediately. The audio clock drives the sign-off, with a simulation-clock fallback when no audio clock is available. Subtitle-only fallback uses the estimated transmission duration. The bounded comms history remains available independently. No audio context is created or closed by the portrait renderer.
+`flightPortraits` retains its fixed seventeen-atlas cache and uses one reusable animated source canvas plus the display buffer. `play` receives the noise plan alongside the audio context, start time and speech offset. Pause, mute and cancellation hide the portrait immediately and invalidate pending portrait loads; the playback clock also detects completion before a delayed `onended` callback. Natural playback completion closes the mouth and begins a 0.5 s visual sign-off: the portrait's static increases monotonically along a newly randomized progression for each sign-off, using coarse grain to obscure the face. Positive random timing and severity increments define the progression, sampled by sign-off progress even when the speech clock has stopped; horizontal displacement gets only a modest boost, then the panel hides. Subtitles, speaker labels and controls are player-facing UI and stay clean and readable throughout; no radio effects are applied to the panel. Cancellation hides it immediately. The audio clock drives the sign-off, with a simulation-clock fallback when no audio clock is available. Subtitle-only fallback uses the estimated transmission duration. The bounded comms history remains available independently. No audio context is created or closed by the portrait renderer.
