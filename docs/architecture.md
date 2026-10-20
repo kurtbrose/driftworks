@@ -848,9 +848,23 @@ before flight-radio. Lines carry `portraitIndex`, copied from the same stable
 craft index used by voices; eight supplied portraits repeat over the sixteen
 voice slots in matching masculine/feminine order. Control uses the white-uniform
 command portrait. The original 4x2 atlas and six localized generated variants
-live in `assets/portraits/dogfight/`. Per-character eye/mouth anchors normalize
-their framing in cached canvases; hair, uniform and background always belong to
-the neutral master. The shared permission mask is computed once, not per caller.
+live in `assets/portraits/dogfight/` as preparation sources. The optional Windows
+tool `tools/prepare-flight-portraits.ps1` applies the eye/mouth calibration offline
+and packs seven 256-square poses per character into the checked-in `runtime/`
+PNGs. Deploying still needs no build step. Source/builder/output hashes and PNG
+dimensions are checked by `tests/portrait-assets.cjs` to catch stale exports.
+
+Flight loads only these compact images (5.59 MiB for the cast versus 15.53 MiB
+for the source atlases). Idle-time warm-up fetches and decodes one character at a
+time, beginning with Rook; a foreground transmission can start its own request
+immediately or share the pending request. All eight compact ImageBitmaps remain
+in a fixed cache of about 14 MiB decoded pixels, avoiding first-use popping once
+warm-up finishes. No seven-canvas cache is retained per character: the compositor
+reads frame rectangles directly from the bitmap. Working canvases belong only to
+the active portrait and are disposed on caller changes/clear. Page exit aborts
+warm-up and pending fetches, closes cached or late-decoded bitmaps, and a restored
+page restarts warm-up. Failed requests can retry. Hair, uniform and background
+belong to the frozen neutral master; the shared permission mask is computed once.
 
 The radio adapter passes its actual AudioContext start time and radio speech
 offset to portrait playback. Muted/locked-audio messages show a resting expressive

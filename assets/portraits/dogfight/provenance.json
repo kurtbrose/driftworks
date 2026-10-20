@@ -11,5 +11,5 @@
     "afraid.png": "Alarmed/worried eyes and brows with closed lips"
   },
   "method": "Built-in imagegen edits of the neutral atlas, requested to preserve dimensions, cell positions, identity, hair and clothing. Generated results are not claimed to preserve every pixel.",
-  "runtime": "Explicit per-character eye/mouth calibration; source canvases are prepared locally. Only masked inner-face pixels from edited variants can enter the displayed master portrait. No runtime generation or network dependencies."
+  "runtime": "tools/prepare-flight-portraits.ps1 applies per-character calibration offline and packs seven 256px poses per runtime/portrait-N.png. Flight warms the eight compact bitmaps sequentially in background idle time, with foreground caller priority. Pose rectangles are composited directly, without persistent per-pose canvases. Page exit closes the fixed bitmap cache. Original source PNGs are preserved. Only masked inner-face pixels can enter the master portrait; no runtime generation or external network dependencies."
 }

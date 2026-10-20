@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 (async function(){
   let now=2000,lastLayers=[],created=0,canvas,loaded=0,offsetSeen,disposed=0,canvases=0;
-  const lifecycle={},bitmaps=[],requests=[],idle=[];let failNext=false;
+  const lifecycle={},bitmaps=[],requests=[],idle=[];let failNext=false,suspendNext=false,resumeFetch;
   const classes=new Set(),calls=[];
   const document={baseURI:'http://localhost:8000/experiments/flight.html',createElement(){canvases++;
     return {width:0,height:0,dataset:{},setAttribute(name,value){this[name]=value;},getContext(){return {fillRect(){},drawImage(){}};}};
@@ -9,7 +9,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   const panel={ownerDocument:document,appendChild(value){canvas=value;},classList:{add:name=>classes.add(name),remove:name=>classes.delete(name)}};
   const window={Driftworks:{},matchMedia:()=>({matches:false}),addEventListener:(name,fn)=>{lifecycle[name]=fn;},requestIdleCallback:fn=>{idle.push(fn);}};
   const box={window,document,URL,AbortController,Float32Array,console,performance:{now:()=>now},
-    fetch:(url,options)=>{assert.ok(url.startsWith('http://localhost:8000/assets/portraits/dogfight/runtime/portrait-'));loaded++;requests.push({url,signal:options.signal});const ok=!failNext;failNext=false;return Promise.resolve({ok,status:ok?200:503,blob:()=>Promise.resolve({url})});},
+    fetch:(url,options)=>{assert.ok(url.startsWith('http://localhost:8000/assets/portraits/dogfight/runtime/portrait-'));loaded++;requests.push({url,signal:options.signal});const ok=!failNext;failNext=false;const response={ok,status:ok?200:503,blob:()=>Promise.resolve({url})};if(suspendNext){suspendNext=false;return new Promise(resolve=>{resumeFetch=()=>resolve(response);});}return Promise.resolve(response);},
     createImageBitmap:blob=>{const bitmap={url:blob.url,width:1792,height:256,closed:false,close(){this.closed=true;}};bitmaps.push(bitmap);return Promise.resolve(bitmap);}
   };
   async function flush(){for(let i=0;i<20;i++)await Promise.resolve();}
@@ -45,6 +45,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   for(let index=0;index<8;index++){view.show({...line,portraitIndex:index});await flush();}
   assert.equal(loaded,warmLoads,'Every warmed character is immediately reusable without another load');assert.ok(disposed>0);
   lifecycle.pagehide();assert.ok(canvas.hidden);assert.ok(bitmaps.every(b=>b.closed),'Page exit closes the entire fixed cast cache');
+  // A foreground caller must not wait behind another character's warm-up.
+  suspendNext=true;lifecycle.pageshow({persisted:true});idle.shift()();
+  view.show({...line,portraitIndex:1,speaker:'WING LYNX / COVER'});await flush();
+  assert.ok(!canvas.hidden);assert.equal(canvas['aria-label'],'WING LYNX speaking portrait');
+  resumeFetch();await flush();assert.equal(canvas['aria-label'],'WING LYNX speaking portrait');
+  lifecycle.pagehide();while(idle.length)idle.shift()();await flush();
   // Failed loads must leave the glyph fallback and be retryable.
   failNext=true;view.show({...line,portraitIndex:4});await flush();assert.ok(canvas.hidden);assert.ok(!classes.has('has-portrait'));
   const failedLoads=loaded;view.show({...line,portraitIndex:4});await flush();assert.equal(loaded,failedLoads+1);assert.ok(!canvas.hidden);
