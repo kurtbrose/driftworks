@@ -255,6 +255,39 @@
     return { x: viewport.width / 2 + dot(p, v.right) * v.focal * viewport.height / (2 * depth),
       y: viewport.height / 2 - dot(p, v.up) * v.focal * viewport.height / (2 * depth), depth: depth };
   }
+  // Immutable source-space bounds; transforms and camera planes remain frame-local.
+  /** @type {WeakMap<Float32Array, {center:V3,half:V3}>} */
+  var studyBounds=new WeakMap();
+  /** Conservative box/frustum test matching the study vertex shader. No shadow/picking use.
+   * @param {import('../experiments/types').Batch} batch @param {V3} target @param {View} camera @param {number} aspect */
+  function studyBatchVisible(batch,target,camera,aspect){
+    var bounds=studyBounds.get(batch.vertices);
+    if(!bounds){
+      var lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity],stride=batch.stride||(batch.texture?8:6);
+      for(var i=0;i<batch.vertices.length;i+=stride)for(var k=0;k<3;k++){lo[k]=Math.min(lo[k],batch.vertices[i+k]);hi[k]=Math.max(hi[k],batch.vertices[i+k]);}
+      bounds={center:/** @type {V3} */(lo.map(function(v,k){return (v+hi[k])/2;})),half:/** @type {V3} */(lo.map(function(v,k){return (hi[k]-v)/2;}))};
+      studyBounds.set(batch.vertices,bounds);
+    }
+    var box=bounds;
+    var b=batch.basis,scale=batch.scale===undefined?1:batch.scale,c=Math.cos(batch.rotation||0),s=Math.sin(batch.rotation||0);
+    var a00=(c*(b?b[0]:1)-s*(b?b[1]:0))*scale,a10=(s*(b?b[0]:1)+c*(b?b[1]:0))*scale,a20=(b?b[2]:0)*scale;
+    var a01=(c*(b?b[3]:0)-s*(b?b[4]:1))*scale,a11=(s*(b?b[3]:0)+c*(b?b[4]:1))*scale,a21=(b?b[5]:0)*scale;
+    var a02=(c*(b?b[6]:0)-s*(b?b[7]:0))*scale,a12=(s*(b?b[6]:0)+c*(b?b[7]:0))*scale,a22=(b?b[8]:1)*scale;
+    var origin=batch.origin,cx=box.center[0],cy=box.center[1],cz=box.center[2];
+    var x=(origin?origin[0]:0)-target[0]+a00*cx+a01*cy+a02*cz,y=(origin?origin[1]:0)-target[1]+a10*cx+a11*cy+a12*cz,z=(origin?origin[2]:0)-target[2]+a20*cx+a21*cy+a22*cz;
+    /** @param {number} nx @param {number} ny @param {number} nz @param {number} constant */
+    function outside(nx,ny,nz,constant){
+      var support=Math.abs(nx*a00+ny*a10+nz*a20)*box.half[0]+Math.abs(nx*a01+ny*a11+nz*a21)*box.half[1]+Math.abs(nx*a02+ny*a12+nz*a22)*box.half[2];
+      return nx*x+ny*y+nz*z+constant+support < -1e-5;
+    }
+    var back=camera.back,d=camera.distance;
+    if(outside(-back[0],-back[1],-back[2],d-.1)||outside(back[0],back[1],back[2],30000))return false;
+    for(var dimension=0;dimension<2;dimension++){
+      var direction=dimension===0?camera.right:camera.up,tangent=(dimension===0?aspect:1)/camera.focal;
+      for(var sign=-1;sign<=1;sign+=2)if(outside(-back[0]*tangent+sign*direction[0],-back[1]*tangent+sign*direction[1],-back[2]*tangent+sign*direction[2],d*tangent))return false;
+    }
+    return true;
+  }
   /** Ray/plane intersection uses the same perspective camera as rendering. */
   /** @param {Vec2} point @param {Camera} camera @param {Viewport} viewport @param {Orbit} orbit @param {number} [z] @returns {Vec2 | null} */
   function unproject(point, camera, viewport, orbit, z) {
@@ -1342,6 +1375,7 @@
         setFinish(0);gl.uniform1f(uniforms.Habitat,0);pickSpin=0;gl.uniform1f(uniforms.AxialSpin,0);
         studyActors.forEach(function(batch,index){
           if(!batch.vertices.length)return;
+          if(batch.staticGeometry&&!shadowPass&&!viewerEnabled&&!studyBatchVisible(batch,[w.camera.x,w.camera.y,orbit.height||0],v,vp.width/vp.height))return;
           var stride=batch.stride || (batch.texture?8:6);
           /** @type {Mesh | undefined} */ var mesh;
           if(batch.staticGeometry){
@@ -1445,5 +1479,5 @@
     miningPlatformContactGeometry: function(deployment,panelOpen,interiorCut,poses,rampLimits){return miningPlatformGeometry(deployment,0,false,panelOpen,interiorCut,false,false,poses,rampLimits);},
     miningPlatformInfillGeometry: function(){return /** @type {Required<import('./types').DriftworksNamespace>} */ (DW).miningRig.infill();},
     /** @param {number} deployment */ miningPlatformLegGeometry: function(deployment){return /** @type {Required<import('./types').DriftworksNamespace>} */ (DW).miningRig.legs(deployment);}, rockField: rockField, asteroidMesh: asteroidMesh, pickAsteroid: pickAsteroid, platformHeight: platformHeight, inspectionHeight: inspectionHeight,
-    workLightFrame: workLightFrame, surfaceSpotlight: surfaceSpotlight, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, pickStudySurface: pickStudySurface, pickStudyBatches:pickStudyBatches, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
+    workLightFrame: workLightFrame, surfaceSpotlight: surfaceSpotlight, surfaceFrame: surfaceFrame, setStudyParameters: setStudyParameters, impactsFor: impactsFor, craterDistance: craterDistance, impactBytes: impactBytes, globeRelief: globeRelief, visualFor: visualFor, surfaceHeight: surfaceHeight, mothershipHardware: mothershipHardware, pickStudySurface: pickStudySurface, pickStudyBatches:pickStudyBatches, studyBatchVisible:studyBatchVisible, habitatLod: habitatLod, habitatMesh: habitatMesh, roundedHullMesh: roundedHullMesh };
 })(window);

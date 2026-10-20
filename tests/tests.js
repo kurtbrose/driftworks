@@ -479,7 +479,7 @@
         craftModel:function(craft,selection,wave){return {id:selection+':'+wave+':'+craft.id};},
         hullHit:function(model,pose,start,end,units){hullQuery={model:model,pose:pose,start:start,end:end,units:units};return hullQuery;},
         sourceFleetGeometry:function(craft,selection,wave,units,images,paint){var batch={kind:'hull',craft:craft,selection:selection,wave:wave,units:units,images:images,paint:paint};fleets.push(batch);return [batch];},
-        scorchGeometry:function(craft,selection){var batch={kind:'scorch',craft:craft,selection:selection};scorches.push(batch);return [batch];},
+        sourceScorchGeometry:function(craft,selection){var batch={kind:'scorch',craft:craft,selection:selection};scorches.push(batch);return [batch];},
         engineGeometry:function(craft,selection,wave,units,state,time){engines.push(craft);assert(time===7&&state===player);return {vertices:new Float32Array([craft[0].team==='ally'?1:2])};}
       });
       DW.flightGuns.geometry=function(){return [{kind:'guns'}];};

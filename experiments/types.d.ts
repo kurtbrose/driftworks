@@ -683,7 +683,7 @@ export type ExperimentModules = {
         sphereHit: (start: Vector, end: Vector, center: Vector, radius: number) => Hit | null;
         damageEnemy: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
         damagePlayer: (combat: Combat, weapon: Weapon) => void;
-        trace: (combat: Combat, start: Vector, end: Vector, bolt: Bolt, team: Craft | string, terrainHit: TerrainHit | undefined, player: FlightState, scorchInterval?:number) => Vector | null;
+        trace: (combat: Combat, start: Vector, end: Vector, bolt: Bolt, team: Craft | string, terrainHit: TerrainHit | undefined, player: FlightState, scorchInterval?:number, onDamage?:() => void) => Vector | null;
         step: (combat: Combat, player: FlightState, dt: number, radius: number, terrainHit?: TerrainHit) => void;
         cycle: (combat: Combat) => void;
         acquireTarget: (combat: Combat, state: FlightState) => void;

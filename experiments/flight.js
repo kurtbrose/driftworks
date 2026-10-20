@@ -306,8 +306,45 @@
         },
         toggleDiagnostics: diagnostics.toggleDiagnostics, togglePerformance: diagnostics.togglePerformance
     });
+    // Frozen-snapshot render A/B: same camera, actors and settings, ABBA order.
+    var benchmarking=false;
+    if(aegis){
+        var benchmarkButton=document.createElement('button'),benchmarkOutput=document.createElement('pre');
+        benchmarkButton.textContent='Benchmark Aegis on / off';
+        benchmarkOutput.id='aegis-benchmark-result';benchmarkOutput.style.whiteSpace='pre-wrap';
+        get('perf-reset').after(benchmarkButton,benchmarkOutput);
+        benchmarkButton.onclick=async function(){
+            if(benchmarking)return;
+            pause();benchmarking=true;benchmarkButton.disabled=true;
+            var snapshot=view(),art=presentation.appearance(),settings=diagnostics.settings();
+            /** @type {{on:boolean,cpu:number,interval:number,draws:number,triangles:number}[]} */var rows=[];
+            try{
+                for(var enabled of [false,true,true,false]){
+                    presentation.setCapital(enabled?aegis:null);
+                    var previous=0;
+                    for(var i=0;i<110;i++){
+                        var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});
+                        var begin=performance.now();presentation.render(snapshot,art,settings,0);
+                        var cpu=performance.now()-begin,stats=presentation.renderStats();
+                        if(i>=20)rows.push({on:enabled,cpu:cpu,interval:stamp-previous,draws:stats.scene.drawCalls+stats.sky.drawCalls,triangles:stats.scene.triangles+stats.sky.triangles});
+                        previous=stamp;
+                        benchmarkOutput.textContent='Frozen scene benchmark '+(rows.length)+' / 360 samples';
+                    }
+                }
+                var lines=['Frozen scene / ABBA / 20 warm-up + 90 samples per block','Rendering only; AI and projectiles frozen.'];
+                [false,true].forEach(function(on){var r=rows.filter(function(row){return row.on===on;});
+                    /** @param {keyof Omit<typeof rows[number],'on'>} key */function mean(key){return r.reduce(function(n,row){return n+row[key];},0)/r.length;}
+                    lines.push((on?'Ship ON':'Ship OFF')+': CPU '+mean('cpu').toFixed(2)+' ms, rAF '+mean('interval').toFixed(2)+' ms, '+mean('draws').toFixed(0)+' draws, '+mean('triangles').toFixed(0)+' triangles');
+                });
+                lines.push('CPU submission only; rAF includes browser pacing, not a GPU timer.');
+                benchmarkOutput.textContent=lines.join('\n');
+            }catch(error){benchmarkOutput.textContent='Benchmark interrupted: '+String(error);}
+            finally{presentation.setCapital(aegis);pause();benchmarking=false;benchmarkButton.disabled=false;diagnostics.reset();}
+        };
+    }
     /** @param {number} t */
     function frame(t) {
+        if(benchmarking){requestAnimationFrame(frame);return;}
         var timing = diagnostics.beginFrame(t, paused);
         if (!timing) {
             requestAnimationFrame(frame);

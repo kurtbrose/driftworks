@@ -1474,3 +1474,21 @@ Both flight simulators and the comms lab load `mumble.js`, `comms-display.js`, a
 `commsDisplay.create(canvas)` owns one 256 px treatment buffer. Its `draw` accepts the animated source canvas, shared noise plan, elapsed playback seconds, speech duration and optional palette/scanline/reduced-motion settings. It preserves the lab treatment: green phosphor by default, scanlines, fresh random strip/snow geometry and a visual peak hold of 250 ms at channel edges or 40 ms during speech. It never generates independent noise-event timings. Callers own scheduling and channel cutoff.
 
 `flightPortraits` retains its fixed seventeen-atlas cache and uses one reusable animated source canvas plus the display buffer. `play` receives the noise plan alongside the audio context, start time and speech offset. Pause, mute and cancellation hide the portrait immediately and invalidate pending portrait loads; the playback clock also detects completion before a delayed `onended` callback. Natural playback completion closes the mouth and begins a 0.5 s visual sign-off: the portrait's static increases monotonically along a newly randomized progression for each sign-off, using coarse grain to obscure the face. Positive random timing and severity increments define the progression, sampled by sign-off progress even when the speech clock has stopped; horizontal displacement gets only a modest boost, then the panel hides. Subtitles, speaker labels and controls are player-facing UI and stay clean and readable throughout; no radio effects are applied to the panel. Cancellation hides it immediately. The audio clock drives the sign-off, with a simulation-clock fallback when no audio clock is available. Subtitle-only fallback uses the estimated transmission duration. The bounded comms history remains available independently. No audio context is created or closed by the portrait renderer.
+
+
+### Static study actor visibility and projectile damage reporting
+
+`scene3d.studyBatchVisible` conservatively tests an immutable batch's cached
+source box against study-camera clip planes, using the same model basis, scale
+and rotation as the vertex shader. The study actor pass skips invisible static
+batches before upload/draw; retained batch ownership still controls buffer
+lifetime. It does not cull simulation, shadows, dynamic effects or model-viewer
+picking. Bounds depend on immutable vertex data, matching `staticGeometry`'s
+existing upload-once contract.
+
+`training.trace` retains its impact-point return value. Its optional final
+`onDamage` callback runs once when the chosen victim actually loses shield or
+hull health; it reports neither terrain contact nor zero damage. Aegis confirmed
+hit accounting uses this callback, avoiding whole-fleet health totals per trace.
+The fixed-scene browser and scripted CPU benchmarks are described in
+[dreadnaught kit](dreadnaught-kit.md#repeatable-performance-comparison).

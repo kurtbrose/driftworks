@@ -73,19 +73,25 @@
                 var normal=collision.normal;view.state.eye=world(collision.point.map(function(v,i){return v+normal[i]*3;}));
                 view.state.velocity=[0,0,0];view.state.ramp=[0,0,0];view.state.throttle=0;contacts++;
             }}lastEye=view.state.eye.slice();
-            var targets=DW.training.alive(combat).filter(function(c){return c.team!=='ally';});
+            var targets=DW.training.alive(combat).filter(function(c){return c.team!=='ally';}).map(function(c){return {craft:c,position:local(c.pose.eye)};});
             mounts.forEach(function(m){
                 // Main batteries await capital targets; fighter threats belong to small PD mounts.
                 if(m.source.kind==='heavy')return;
                 var p=m.source.position,side=m.source.side;
-                var candidates=targets.filter(function(c){var d=sub(local(c.pose.eye),p);return d[2]*side>2&&Math.hypot.apply(null,d)<1800;});
-                var target=candidates.find(function(c){return c.id===m.targetId;})||candidates.sort(function(a,b){return Math.hypot.apply(null,sub(local(a.pose.eye),p))-Math.hypot.apply(null,sub(local(b.pose.eye),p));})[0];
+                // Convert each contact once, preserve a valid lock, otherwise choose nearest.
+                var target=/** @type {import('./types').Craft|null} */(null),nearest=Infinity;
+                for(var candidate of targets){
+                    var q=candidate.position,dx=q[0]-p[0],dy=q[1]-p[1],dz=q[2]-p[2],distance2=dx*dx+dy*dy+dz*dz;
+                    if(dz*side<=2||distance2>=1800*1800)continue;
+                    if(candidate.craft.id===m.targetId){target=candidate.craft;break;}
+                    if(distance2<nearest){nearest=distance2;target=candidate.craft;}
+                }
                 m.targetId=target?target.id:'';
                 var goalYaw=0,goalElevation=side*.08,aim=/** @type {Vector|null} */(null);
                 if(target){
                     var d=sub(local(target.pose.eye),p),flight=interceptTime(d,target.pose.velocity,weapon.speed);
                     if(flight!==null&&flight<=weapon.lifetime){
-                        var travelTime=flight;aim=target.pose.eye.map(function(v,i){return v+target.pose.velocity[i]*travelTime/U;});
+                        var travelTime=flight,velocity=target.pose.velocity;aim=target.pose.eye.map(function(v,i){return v+velocity[i]*travelTime/U;});
                         d=sub(local(aim),p);goalYaw=wrap(Math.atan2(d[1],d[0])-Math.PI);
                         goalElevation=side*clamp(Math.atan2(d[2]*side,Math.hypot(d[0],d[1])),0,Math.PI*.47);
                     }
@@ -100,10 +106,7 @@
                 if(ready&&aim){var aimDirection=sub(local(aim),p),distance=Math.hypot.apply(null,aimDirection);if(dot(forward,aimDirection)/distance<.999)ready=false;var muzzle=p.map(function(v,i){return v+forward[i]*10.12;});if(hullHit(muzzle,local(aim)))ready=false;}
                 DW.flightGuns.step(m.guns,{eye:world(p),right:right,up:up,back:forward.map(function(v){return -v;})},weapon,combat.enabled&&ready,dt,
                     function(a,b,bolt){
-                        var defenses=combat.enemies.filter(function(c){return c.team!=='ally';}).reduce(function(n,c){return n+c.hp+(c.shield||0);},0);
-                        var point=DW.training.trace(combat,a,b,bolt,'player',hit,view.state,.25);
-                        var remaining=combat.enemies.filter(function(c){return c.team!=='ally';}).reduce(function(n,c){return n+c.hp+(c.shield||0);},0);
-                        if(remaining<defenses)confirmedHits++;return point;
+                        return DW.training.trace(combat,a,b,bolt,'player',hit,view.state,.25,function(){confirmedHits++;});
                     },
                     aim?function(){return aim;}:undefined,2,[[-1.683,9.9,-.099*side],[1.683,9.9,-.099*side]]);
             });

@@ -487,8 +487,8 @@
         });
         return point;
     }
-    /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player @param {number} [scorchInterval] */
-    function trace(t, start, end, bolt, team, terrainHit, player, scorchInterval) {
+    /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player @param {number} [scorchInterval] @param {() => void} [onDamage] */
+    function trace(t, start, end, bolt, team, terrainHit, player, scorchInterval, onDamage) {
         bindPlayer(t, player);
         var hit = terrainHit ? terrainHit(start, end) : null, travel = length(sub(end,start));
         var best = hit && travel > 0 ? length(sub(hit,start)) / travel : Infinity;
@@ -508,7 +508,11 @@
             if(scorchInterval)scorchTimes.set(struck,t.time);
         }
         if (!struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
-        if (struck) damageCraft(t, struck, bolt.weapon, shooter || team);
+        if (struck) {
+            var before=onDamage?struck.hp+(struck.shield||0):0;
+            damageCraft(t, struck, bolt.weapon, shooter || team);
+            if(onDamage&&struck.hp+(struck.shield||0)<before)onDamage();
+        }
         // Report close projectile passes, clipped at the first collision so occluded bolts cannot speak.
         var endPoint = hit || end, delta = sub(endPoint, start), span = dot(delta, delta);
         /** @param {Pose} pose @param {{nearMissAt?: number}} entity @param {string} id @param {string} factionName */

@@ -347,6 +347,7 @@ export interface DriftworksNamespace {
     miningPlatformLegGeometry: (deployment: number) => Record<string, number[]>;
     miningPlatformGeometry: (deployment: number, time: number, working: boolean, panelOpen?: number, interiorCut?: string) => Record<string, number[]>;
     mothershipHardware: (detail?: number) => Record<string, number[]>;
+    studyBatchVisible: (batch:import('../experiments/types').Batch, target:ViewerVector, camera:{right:ViewerVector;up:ViewerVector;back:ViewerVector;distance:number;focal:number}, aspect:number) => boolean;
     pickStudyBatches: (eye:ViewerVector, direction:ViewerVector, batches:ViewerPickBatch[]) => ViewerVector | null;
     pickStudySurface: (eye: [number,number,number], direction: [number,number,number], meshes: ArrayLike<number>[]) => [number,number,number] | null;
     habitatLod: (radiusPixels: number) => number;

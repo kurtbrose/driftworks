@@ -362,6 +362,11 @@ and points are included. Materials are finish/color variants in the custom
 renderer, not separate shader programs. GPU execution time is not measured;
 CPU submission can stay cheap while fragment work keeps the GPU busy.
 
+In the Aegis encounter, F3 > **Benchmark Aegis on / off** compares rendering of
+the same frozen scene with and without the capital ship. Flight stays paused
+afterwards. For the scripted CPU comparison and measurement limits, see
+[Aegis benchmarks](docs/dreadnaught-kit.md#repeatable-performance-comparison).
+
 Flight is capped at 60 FPS by default (30 and uncapped comparison options exist).
 Paused rendering is capped at 15 FPS. The cap only schedules frames; flight,
 weapons and AI continue to use real elapsed time with their existing substeps.

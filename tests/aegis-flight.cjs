@@ -65,3 +65,22 @@ assert.equal(marks,4,'PD marks are limited to four per victim per second');asser
 DW.training.trace(markView.combat,position(-1001,0,250),position(-999,0,250),bolt,'player',undefined,markView.state);assert.equal(marks,5,'ordinary fighter marks retain existing behavior');
 DW.shipPackModels=savedPacks;
 console.log('PASS Aegis flight: baked pivots, bounded tracking, upper/lower arcs, real projectile damage, allied safety, hull contact, pause/reset and static buffer reuse');
+
+// Hit accounting reports real damage directly, once per trace, including lethal hits.
+const reportView=fixture();let reports=0;
+function reportTrace(weapon,terrain){return DW.training.trace(reportView.combat,position(-1001,0,250),position(-999,0,250),{...bolt,weapon},'player',terrain,reportView.state,undefined,()=>reports++);}
+reportTrace({...bolt.weapon,damage:0});assert.equal(reports,0,'zero damage does not count');
+reportTrace({...bolt.weapon,damage:1},()=>position(-1001,0,250));assert.equal(reports,0,'terrain occlusion does not count');
+reportView.enemy.shield=10;reportTrace({...bolt.weapon,damage:1});assert.equal(reports,1,'shield damage counts once');
+reportView.enemy.shield=0;reportView.enemy.hp=.01;reportTrace({...bolt.weapon,damage:100});assert.equal(reports,2,'lethal hull damage counts once');
+reportTrace({...bolt.weapon,damage:100});assert.equal(reports,2,'dead targets do not count');
+// A retained target wins over a newly closer contact, then death triggers reacquisition.
+const lockedView=fixture(),lockRig=DW.aegisFlight.create();lockedView.combat.enabled=false;
+for(let i=0;i<60;i++)lockRig.step(1/60,lockedView);
+const lockedAngles=lockRig.telemetry().mounts.map(m=>m.yaw);
+const intruder=DW.training.createCraft('closer',DW.arcade.create(0),'enemy');intruder.pose.eye=position(0,100,250);lockedView.combat.enemies.unshift(intruder);
+for(let i=0;i<60;i++)lockRig.step(1/60,lockedView);
+assert.deepEqual(lockRig.telemetry().mounts.map(m=>m.yaw),lockedAngles,'valid lock is retained despite a nearer contact');
+lockedView.enemy.hp=0;for(let i=0;i<60;i++)lockRig.step(1/60,lockedView);
+assert.ok(lockRig.telemetry().mounts.some((m,i)=>Math.abs(m.yaw-lockedAngles[i])>.1),'dead lock reacquires');
+console.log('PASS Aegis accounting and targeting: shield/lethal/zero/occluded/dead hits, lock retention and reacquisition');

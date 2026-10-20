@@ -131,3 +131,48 @@ hemispheres, shared damage, allied safety, collision, reset and buffer reuse.
 It includes a fighter crossing at 170 m/s, rather than relying only on stationary
 targets. The dreadnaught remains at its designed 1,305 m length.
 
+
+
+## Repeatable performance comparison
+
+In Aegis flight, press F3 and choose **Benchmark Aegis on / off** under
+Renderer diagnostics. It pauses flight and renders the same snapshot, camera,
+resolution, sky and fighters in OFF/ON/ON/OFF order. Each block discards 20 warm-up
+frames and measures 90 frames using uncapped requestAnimationFrame scheduling,
+independent of the normal active/paused caps. Results report CPU submission,
+browser frame interval and actual submitted draws/triangles. The ship and its
+current projectile effects are the only rendering difference. Simulation stays
+frozen; this is not a total-game or GPU-timer benchmark. The ship is restored and
+flight stays paused afterwards. Keep the tab foreground and avoid changing
+settings or resizing while it runs.
+
+`node tools/benchmark-aegis-encounter.cjs` supplies the complementary CPU test:
+eight scripted fighters cross upper/lower PD banks for six seconds at 60 updates
+per second, using the actual Spitfire collision mesh, projectiles and damage.
+It warms both cases and reports three samples per case plus median update cost.
+The OFF case performs the same scripted fighter movement without the capital
+update; ordinary fighter AI, rendering and audio are excluded. Large target HP
+keeps the collision workload fixed. `--compare path/to/result.json` checks exact
+shot counts, confirmed hits and remaining health against a saved result.
+`--reference COMMIT` alternates current code with that commit's targeting and
+training resolver, keeping assets and other modules identical, and asserts exact
+combat agreement. `--contacts 128 --no-fire` isolates the targeting workload at a larger contact
+count. Timing is diagnostic, never a pass/fail threshold. See the
+[recorded comparison](benchmarks/aegis-2026-10-20.md) for measurements and limits.
+
+Target positions are converted once per update, then each mount retains its
+valid lock or selects the nearest valid contact in one pass (stable input order
+breaks ties). The damage resolver's optional `onDamage` callback reports only
+real shield/hull loss, once per trace, including lethal hits. PD uses this rather
+than scanning all fighters' health before and after every projectile segment;
+existing trace callers still receive the same impact point.
+
+The study renderer caches bounds for immutable static vertex arrays. It tests
+the transformed source box against the exact camera clip planes before issuing
+actor draw calls. Rotation, scale, turret bases and source stride are respected;
+near-plane intersections and camera-inside cases stay visible. Off-screen actors
+remain in simulation and retain their GPU buffers. Shadow passes and model-viewer
+picking retain their prior behavior, and dynamic effects retain their existing
+submission path. This applies to static fighter and wreck batches as well as
+capital hulls. `tests/study-culling.cjs` compares 1,500 transformed cases against
+an independent corner/clip-plane oracle.
