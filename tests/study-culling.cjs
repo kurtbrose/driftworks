@@ -36,3 +36,16 @@ const huge={vertices:new Float32Array([-100,-100,-10,0,0,1,100,100,10,0,0,1]),co
 assert.equal(visible(huge,[0,0,0],camera,1),true,'camera inside or near-plane intersection stays visible');
 console.log('PASS static actor culling: 1,500 transformed box/clip-plane comparisons, edge/near/far/camera-inside cases');
 
+
+// Exercise the real setter body: fighter fire + engines occupy the first five
+// batches; appended capital fire must survive the renderer boundary too.
+const source=fs.readFileSync(path.join(__dirname,'../src/scene3d.js'),'utf8');
+const setter=source.match(/setStudyEffects: function\(batches\)\{([^}]+)\}/);
+assert.ok(setter,'study effect submission API exists');
+const submit=vm.runInNewContext('(function(batches){var study=true,studyEffects=[];'+setter[1]+';return studyEffects;})');
+const effects=Array.from({length:9},(_,i)=>({vertices:new Float32Array(18),color:[0,i/9,1]}));
+const retained=submit(effects);
+assert.equal(retained.length,9,'AA effects after the fighter and engine batches cannot be truncated');
+assert.strictEqual(retained[7],effects[7],'AA projectile batch reaches renderer');
+effects.length=0;assert.equal(retained.length,9,'renderer owns its batch list snapshot');
+console.log('PASS study effects: all nine fighter/engine/capital batches retained without truncation');

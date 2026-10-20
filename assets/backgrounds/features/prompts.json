@@ -1,0 +1,19 @@
+{
+  "generator": "Built-in image_gen",
+  "created": "2026-10-20",
+  "purpose": "Reusable black-backed hero features for spherical sky compositing",
+  "assets": [
+    {
+      "file": "spiral-galaxy-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: isolated hero galaxy for compositing into a hard-science-fiction spherical skybox. Create a highly detailed luminous spiral galaxy seen at a shallow oblique angle, entire galaxy fully in frame with generous pure black margins on all four sides. Long axis horizontal, slightly tilted, occupies central 65 percent width and 40 percent height. Exquisite fine blue-white spiral arms, warm pale gold bulge, intricate brown-black dust lanes, tiny internal stellar knots; natural restrained astronomical color, cinematic clarity, rich resolved structure, no film grain or noisy photo texture. Very smooth falloff into perfectly black RGB zero background; all outer edges must be pure black. No foreground stars, no starfield, no other galaxies, no text, no border, no lens flare, no nebula outside the galaxy. This is a standalone reusable feature, not a complete space scene. Highest available detail, landscape 1536x1024 or larger."
+    },
+    {
+      "file": "blue-nebula-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: isolated reusable hero nebula for additive compositing into a hard-SF game spherical skybox. A sweeping asymmetric crescent of smoky blue-gray interstellar dust and luminous pale steel-blue wisps, with exquisite resolved billowing fractal edges, dark charcoal dust pillars and fine translucent tendrils. Shape occupies middle 75 percent of image; generous perfectly pure black margins on all four sides; nebula gradually dissipates into pure black RGB zero at every edge. Center of crescent mostly black negative space. No foreground stars, no starfield, no planets, no ships, no text, no borders. Muted natural astronomical palette, no neon, no saturated purple, no film grain or digital noise. Beautiful detailed form that reads at large scale, smooth gradients with fine real structure. Make a standalone cloud feature, NOT a whole sky or panorama. Landscape 1536x1024 or larger, highest detail."
+    },
+    {
+      "file": "warm-sun-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: reusable isolated distant sun hero element to screen/additively composite over black in a gorgeous space game skybox. One tiny intensely luminous warm-white stellar disk at exact image center, surrounded by beautiful restrained concentric soft pale-gold corona and smoothly fading amber halo, subtle fine radial glow. Small core occupies only 2 percent image width, corona 12 percent, outer glow 45 percent. Entire remaining image and ALL edges perfectly pure black RGB zero. No background stars, no planets, no dust, no clouds, no text, no border, no long streaks or lens flare ghosts. Smooth premium cinematic light with no grain. Square image 1024x1024 or larger. Standalone element, not full sky."
+    }
+  ]
+}

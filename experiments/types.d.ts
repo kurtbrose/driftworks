@@ -14,7 +14,7 @@ export type AegisFlightRig = {
     effects:(pose:Pose)=>Batch[];
     readout:()=>string;
     hit:(a:Vector,b:Vector)=>Vector|null;
-    telemetry:()=>{seconds:number;contacts:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string}[]};
+    telemetry:()=>{seconds:number;contacts:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string}[]};
 };
 export type Pose = {
     eye: Vector;
@@ -740,12 +740,16 @@ export type ExperimentModules = {
         };
     };
     flightSkybox: {
+        options: string[];
+        featureFrame: (feature:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number},aspect:number) => Float32Array;
         stars: () => Float32Array;
         project: (direction: Vector, pose: Pose, aspect: number) => {
             x: number;
             y: number;
         } | null;
-        create: (host: HTMLElement) => {
+        create: (host: HTMLElement, config?:{style?:number}) => {
+            setStyle: (style:number) => void;
+            setExposure: (exposure:number) => void;
             getRenderStats: () => RenderStats['sky'];
             render: (pose: Pose, renderScale: number, empty: boolean) => void;
         };

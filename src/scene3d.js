@@ -1432,7 +1432,7 @@
       /** @param {{yaw: number, tilt: number, height?: number}} value */
       setOrbit: function (value) { if(viewerControls && (viewerControls.isFlying() || viewerControls.isPicking())){var savedCamera=getWorld().camera;viewerControls.reset();var resetWorld=getWorld();setWorld(Object.assign({},resetWorld,{camera:savedCamera}));} if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       /** @param {{vertices:Float32Array,color:V3}[]} batches */
-      setStudyEffects: function(batches){if(study)studyEffects=batches.slice(0,5);},
+      setStudyEffects: function(batches){if(study)studyEffects=batches.slice();},
       /** @param {{vertices:Float32Array,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
       /** @param {import('./types').RigLighting[]} rigs */
       setStudyLightRigs:function(rigs){studyLightRigs=rigs.slice(0,2);},

@@ -47,16 +47,16 @@
     /** @returns {import('./types').AegisFlightRig} */
     function create(){
         var asset=DW.aegisFlightAsset,origin=[0,0,1200];
-        var weapon=Object.assign({},DW.retailWeapons[0],{name:'Aegis point defense',speed:2200,lifetime:.9,fireWait:.16,damage:3});
+        var weapon=Object.assign({},DW.retailWeapons[0],{name:'Aegis point defense',fireWait:.16,damage:3});
         /** @type {Map<string,Float32Array>} */var sharedVertices=new Map();
-        var mounts=asset.turrets.map(function(t){
+        var mounts=asset.turrets.map(function(t,index){
             var basis=new Float32Array([1,0,0,0,1,0,0,0,1]),pivot=/** @type {[number,number,number]} */(t.position.map(function(v,i){return v/U+origin[i];}));
             var batches=t.batches.map(function(b){
                 var key=b.vertices.join(','),vertices=sharedVertices.get(key);
                 if(!vertices){vertices=new Float32Array(b.vertices.map(function(v,i){return i%6<3?v/U:v;}));sharedVertices.set(key,vertices);}
                 return {vertices:vertices,color:b.color,origin:pivot,basis:basis,staticGeometry:true};
             });
-            return {source:t,yaw:0,elevation:0,targetId:'',guns:DW.flightGuns.create(),basis:basis,batches:batches};
+            return {source:t,yaw:0,elevation:0,targetId:'',randomState:(Math.imul(index+1,2654435761)>>>0),settled:0,burst:0,rest:0,specWait:0,specPause:2.8+(index%7)*.3,burstLength:.55+(index%3)*.05,burstPause:.8+(index%5)*.13,guns:DW.flightGuns.create(),basis:basis,batches:batches};
         });
         sharedVertices.clear();
         /** @type {Batch[]} */var staticBatches=asset.batches.map(function(b){return {vertices:new Float32Array(b.vertices.map(function(v,i){return i%6<3?v/U:v;})),color:b.color,origin:/** @type {[number,number,number]} */(origin),staticGeometry:true};});
@@ -64,7 +64,7 @@
         var seconds=0,contacts=0,confirmedHits=0;
         /** @param {Vector} p */function local(p){return p.map(function(v,i){return (v-origin[i])*U;});}
         /** @param {Vector} p */function world(p){return p.map(function(v,i){return v/U+origin[i];});}
-        function reset(){lastEye=null;seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.yaw=0;m.elevation=0;m.targetId='';m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
+        function reset(){lastEye=null;seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.rest=i*.037;m.specWait=m.specPause;m.randomState=Math.imul(i+1,2654435761)>>>0;m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
         /** @param {number} elapsed @param {FlightView} view */
         function step(elapsed,view){
             if(!Number.isFinite(elapsed)||elapsed<=0)return;
@@ -78,13 +78,19 @@
                 // Main batteries await capital targets; fighter threats belong to small PD mounts.
                 if(m.source.kind==='heavy')return;
                 var p=m.source.position,side=m.source.side;
-                // Convert each contact once, preserve a valid lock, otherwise choose nearest.
-                var target=/** @type {import('./types').Craft|null} */(null),nearest=Infinity;
-                for(var candidate of targets){
-                    var q=candidate.position,dx=q[0]-p[0],dy=q[1]-p[1],dz=q[2]-p[2],distance2=dx*dx+dy*dy+dz*dz;
-                    if(dz*side<=2||distance2>=1800*1800)continue;
-                    if(candidate.craft.id===m.targetId){target=candidate.craft;break;}
-                    if(distance2<nearest){nearest=distance2;target=candidate.craft;}
+                // Retain a valid lock; each mount independently samples a new contact.
+                var range2=weapon.speed*weapon.speed*weapon.lifetime*weapon.lifetime;
+                /** @param {{position:Vector}} candidate */
+                function eligible(candidate){var q=candidate.position,dx=q[0]-p[0],dy=q[1]-p[1],dz=q[2]-p[2];return dz*side>2&&dx*dx+dy*dy+dz*dz<range2;}
+                var retained=targets.find(function(candidate){return candidate.craft.id===m.targetId;});
+                var target=/** @type {import('./types').Craft|null} */(retained&&eligible(retained)?retained.craft:null),count=0;
+                if(!target)for(var candidate of targets){
+                    if(!eligible(candidate))continue;
+                    count++;
+                    // Seeded per-mount reservoir sampling avoids nearest-target dogpiles
+                    // and candidate arrays/sorts, while keeping resets reproducible.
+                    m.randomState=(Math.imul(m.randomState,1664525)+1013904223)>>>0;
+                    if(m.randomState/4294967296<1/count)target=candidate.craft;
                 }
                 m.targetId=target?target.id:'';
                 var goalYaw=0,goalElevation=side*.08,aim=/** @type {Vector|null} */(null);
@@ -96,6 +102,7 @@
                         goalElevation=side*clamp(Math.atan2(d[2]*side,Math.hypot(d[0],d[1])),0,Math.PI*.47);
                     }
                 }
+                var previousYaw=m.yaw,previousElevation=m.elevation;
                 m.yaw+=clamp(wrap(goalYaw-m.yaw),-2.8*dt,2.8*dt);
                 m.elevation=approach(m.elevation,goalElevation,2.2*dt);
                 var yaw=m.yaw,el=m.elevation;
@@ -104,11 +111,32 @@
                 var right=[-Math.sin(yaw),Math.cos(yaw),0];
                 var ready=!!target&&!!aim&&Math.abs(wrap(goalYaw-m.yaw))<.035&&Math.abs(goalElevation-el)<.035;
                 if(ready&&aim){var aimDirection=sub(local(aim),p),distance=Math.hypot.apply(null,aimDirection);if(dot(forward,aimDirection)/distance<.999)ready=false;var muzzle=p.map(function(v,i){return v+forward[i]*10.12;});if(hullHit(muzzle,local(aim)))ready=false;}
-                DW.flightGuns.step(m.guns,{eye:world(p),right:right,up:up,back:forward.map(function(v){return -v;})},weapon,combat.enabled&&ready,dt,
+                // Fire only after the mount settles; track through the pauses.
+                var slewRate=Math.hypot(m.yaw-previousYaw,m.elevation-previousElevation)/dt;
+                var stable=combat.enabled&&ready&&slewRate<=.8;
+                m.rest=Math.max(0,m.rest-dt);
+                m.settled=stable?m.settled+dt:0;
+                if(!stable&&m.burst>0){m.burst=0;m.rest=m.burstPause;}
+                if(stable&&m.settled>=.12&&m.burst<=0&&m.rest<=0)m.burst=m.burstLength;
+                // A quiet mount can occasionally loose one twin volley along its barrels.
+                // Never redirect this imperfect shot to the target or sweep a continuous hose.
+                if(combat.enabled&&target)m.specWait=Math.max(0,m.specWait-dt);
+                var speculative=false;
+                if(combat.enabled&&target&&!stable&&m.burst<=0&&m.rest<=0&&m.specWait<=0&&m.guns.cooldown<=1e-9){
+                    var toward=sub(local(aim||target.pose.eye),p),span=Math.hypot.apply(null,toward);
+                    if(span>0&&dot(forward,toward)/span>=.70710678){
+                        var launch=p.map(function(v,k){return v+forward[k]*9.9;}),end=p.map(function(v,k){return v+forward[k]*weapon.speed*weapon.lifetime;});
+                        speculative=!hullHit(launch,end);
+                    }
+                }
+                var firedBefore=m.guns.fired;
+                DW.flightGuns.step(m.guns,{eye:world(p),right:right,up:up,back:forward.map(function(v){return -v;})},weapon,(stable&&m.burst>0)||speculative,dt,
                     function(a,b,bolt){
                         return DW.training.trace(combat,a,b,bolt,'player',hit,view.state,.25,function(){confirmedHits++;});
                     },
-                    aim?function(){return aim;}:undefined,2,[[-1.683,9.9,-.099*side],[1.683,9.9,-.099*side]]);
+                    !speculative&&aim?function(){return aim;}:undefined,2,[[-1.683,9.9,-.099*side],[1.683,9.9,-.099*side]]);
+                if(m.guns.fired>firedBefore){m.specWait=m.specPause;if(speculative)m.rest=m.burstPause;}
+                if(m.burst>0){m.burst=Math.max(0,m.burst-dt);if(m.burst<=0)m.rest=m.burstPause;}
             });
         }
         var renderBatches=staticBatches.concat(mounts.flatMap(function(m){return m.batches;}));
@@ -121,9 +149,9 @@
             return renderBatches;
         }
         /** @param {Vector} a @param {Vector} b */function hit(a,b){var h=hullHit(local(a),local(b));return h?world(h.point):null;}
-        /** @param {import('./types').Pose} pose */function effects(pose){return DW.flightGuns.geometry({bolts:mounts.flatMap(function(m){return m.guns.bolts;}),impacts:mounts.flatMap(function(m){return m.guns.impacts;})},pose);}
+        /** @param {import('./types').Pose} pose */function effects(pose){return DW.flightGuns.geometry({bolts:mounts.flatMap(function(m){return m.guns.bolts.map(function(b){return Object.assign({},b,{team:'ally'});});}),impacts:mounts.flatMap(function(m){return m.guns.impacts;})},pose);}
         function readout(){var shots=mounts.reduce(function(n,m){return n+m.guns.fired;},0);return 'AEGIS / 1,305 m\n12 heavy batteries standing by · 12 point-defense mounts\nPD: '+shots+' rounds / '+confirmedHits+' confirmed hits\n'+seconds.toFixed(1)+' s · '+contacts+' hull contacts';}
-        function telemetry(){return {seconds:seconds,contacts:contacts,shots:mounts.reduce(function(n,m){return n+m.guns.fired;},0),hits:confirmedHits,mounts:mounts.map(function(m){return {yaw:m.yaw,elevation:m.elevation,side:m.source.side,kind:m.source.kind};})};}
+        function telemetry(){return {seconds:seconds,contacts:contacts,shots:mounts.reduce(function(n,m){return n+m.guns.fired;},0),hits:confirmedHits,mounts:mounts.map(function(m){return {yaw:m.yaw,elevation:m.elevation,side:m.source.side,kind:m.source.kind,targetId:m.targetId};})};}
         reset();return {reset:reset,step:step,geometry:geometry,effects:effects,readout:readout,hit:hit,telemetry:telemetry};
     }
     function load(){return new Promise(function(resolve,reject){if(DW.aegisFlightAsset){resolve(undefined);return;}var script=document.createElement('script');script.src='../assets/ships/aegis-kit/flight-rig.js';script.onload=function(){if(DW.aegisFlightAsset)resolve(undefined);else reject(new Error('Aegis rig asset did not register'));};script.onerror=function(){reject(new Error('Could not load the local Aegis rig asset'));};document.head.appendChild(script);});}

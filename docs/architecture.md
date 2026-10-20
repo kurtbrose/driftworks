@@ -1484,7 +1484,9 @@ and rotation as the vertex shader. The study actor pass skips invisible static
 batches before upload/draw; retained batch ownership still controls buffer
 lifetime. It does not cull simulation, shadows, dynamic effects or model-viewer
 picking. Bounds depend on immutable vertex data, matching `staticGeometry`'s
-existing upload-once contract.
+existing upload-once contract. `setStudyEffects` retains the complete submitted
+batch-list snapshot; it must not truncate to the original five fighter/engine
+batches, because capital-ship projectiles and impacts follow those batches.
 
 `training.trace` retains its impact-point return value. Its optional final
 `onDamage` callback runs once when the chosen victim actually loses shield or

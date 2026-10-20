@@ -86,8 +86,8 @@ small point-defense mounts, with meter-based pivots and Z-up geometry. The main
 batteries remain at rest in the fighter-only scenario. Small PD mounts use 22%
 of the main turret geometry scale and handle fighter threats.
 `experiments/aegis-flight.js` limits PD yaw to 2.8 rad/s and elevation to 2.2 rad/s,
-retains valid targets within 1,800 m, solves a constant-velocity intercept and
-fires only after alignment. Its rounds travel at 2,200 m/s, live for 0.9 seconds
+retains valid targets within 900 m, solves a constant-velocity intercept and
+fires only after alignment. Its rounds travel at 450 m/s, live for 2 seconds
 and deal 3 damage before the shared weapon modifiers. Upper and lower banks use
 their own outward hemispheres, with an elevation limit of 84.6 degrees. The
 readout counts confirmed enemy shield/hull hits separately from hull impacts.
@@ -161,8 +161,10 @@ count. Timing is diagnostic, never a pass/fail threshold. See the
 [recorded comparison](benchmarks/aegis-2026-10-20.md) for measurements and limits.
 
 Target positions are converted once per update, then each mount retains its
-valid lock or selects the nearest valid contact in one pass (stable input order
-breaks ties). The damage resolver's optional `onDamage` callback reports only
+valid lock or randomly samples a valid contact. Independent seeded per-mount reservoir
+sampling spreads acquisition beyond the closest fighter, avoids sorting and
+keeps resets reproducible. Locks persist until the target dies or leaves range
+or the mount hemisphere. The damage resolver's optional `onDamage` callback reports only
 real shield/hull loss, once per trace, including lethal hits. PD uses this rather
 than scanning all fighters' health before and after every projectile segment;
 existing trace callers still receive the same impact point.
@@ -176,3 +178,42 @@ picking retain their prior behavior, and dynamic effects retain their existing
 submission path. This applies to static fighter and wreck batches as well as
 capital hulls. `tests/study-culling.cjs` compares 1,500 transformed cases against
 an independent corner/clip-plane oracle.
+
+
+AA rounds use standard allied fighter green bolts, including the source weapon's
+10 m trail, 0.9 m collision/visual head radius, 450 m/s speed and 2 s lifetime.
+Their maximum acquisition range follows speed times lifetime (900 m); predicted
+intercepts must also fit the lifetime. PD damage and firing cadence remain as
+configured for the capital mount.
+
+The study effect setter retains the complete submitted batch list. Fighter shots
+(three color groups and impacts) plus fighter engines already consume five
+batches; capital projectile/impact batches are appended after them. The old
+five-batch cutoff discarded all AA artwork even while its damage simulation
+continued. The regression checks all nine batches survive the renderer boundary.
+
+AA aim still solves a constant-velocity intercept; projectiles remain unguided
+after launch. A fighter changing velocity during the longer flight time can
+naturally evade them. No extra spread, homing or deliberate aim penalty is added.
+Historical performance replays recorded with 2,200 m/s AA are not combat-equivalent
+to this tuning; use a reference with matching weapon settings for exact replay
+comparisons.
+
+
+AA mounts wait for 0.12 s of aligned tracking below 0.8 rad/s of combined yaw/pitch
+slew before starting a 0.55–0.65 s burst (usually 3–5 twin volleys). They then pause
+for 0.8–1.32 s while continuing to track. Mount durations and initial delays differ
+to avoid synchronized salvos. Losing alignment, clear firing line, target or slow
+tracking interrupts the burst and starts the pause. This gates only new shots;
+existing rounds continue their normal flight and collisions. All timers use the
+paused simulation clock and reset with the rig.
+
+
+For viewing variety, a mount with a live in-range enemy and no recent shots may
+fire one speculative twin volley after 2.8–4.6 seconds of silence. These shots
+follow the current barrel direction (standard twin-gun convergence), rather than
+snapping to the predicted intercept. The barrels must point within 45 degrees of
+the target/lead and have a clear forward ray past the ship hull. Each such volley
+starts a normal rest interval and resets the silence timer; any accurate shot
+also resets it. Normal aligned bursts remain preferred. Pausing freezes these
+timers and disabled combat or missing/out-of-range enemies cannot trigger them.

@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "seed": 58319,
+  "library": {
+    "spiral": {
+      "file": "features/spiral-galaxy-v1.png",
+      "aspect": 1.5,
+      "family": "galaxy"
+    },
+    "nebula": {
+      "file": "features/blue-nebula-v1.png",
+      "aspect": 1.5,
+      "family": "nebula"
+    },
+    "sun": {
+      "file": "features/warm-sun-v1.png",
+      "aspect": 1,
+      "family": "sun"
+    }
+  },
+  "features": [
+    {
+      "asset": "spiral",
+      "yaw": 80,
+      "pitch": 2,
+      "roll": -14,
+      "widthDeg": 20,
+      "gain": 1
+    },
+    {
+      "asset": "nebula",
+      "yaw": 102,
+      "pitch": 0,
+      "roll": 22,
+      "widthDeg": 26,
+      "gain": 0.85
+    },
+    {
+      "asset": "sun",
+      "yaw": 74,
+      "pitch": 1,
+      "roll": 0,
+      "widthDeg": 7,
+      "gain": 1
+    }
+  ],
+  "family": "galaxy",
+  "minGapDeg": 10
+}
