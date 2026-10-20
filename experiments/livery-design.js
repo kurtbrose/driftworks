@@ -1,11 +1,13 @@
+import {tubularSections} from './livery-sections.js';
 /** Geometry-only design preferences extracted from authored/procedural comparisons.
- * @typedef {{contours:number,coherence:number,accents:number}} DesignPreferences */
+ * @typedef {{contours:number,coherence:number,accents:number,sections?:number}} DesignPreferences */
 /** @param {number[]} a @param {number[]} b */
 const cueDot=(a,b)=>a.slice(0,3).reduce((sum,x,k)=>sum+x*b[k],0);
 /** @param {number[]} p */
 const cueKey=p=>p.slice(0,3).map(x=>Math.round(x*100000)).join(',');
 /** @param {import('./hull-panels').Region[]} regions @param {import('./livery-symmetry').MirrorPlane|null} [symmetry] */
 export function designPlan(regions,symmetry=null){
+ const structure=tubularSections(regions);
  /** @typedef {{a:number[],b:number[],face:import('./hull-panels').Face,region:number}} EdgeUse */
  const edges=new Map(/** @type {[string,EdgeUse[]][]} */([])),centers=regions.map(r=>[0,1,2].map(k=>r.faces.reduce((sum,f)=>sum+f.area*f.v.reduce((v,p)=>v+p[k],0)/3,0)/(r.area||1)));
  const parent=regions.map((r,i)=>i),convex=regions.map(()=>/** @type {EdgeUse[]} */([])),concave=regions.map(()=>/** @type {EdgeUse[]} */([]));
@@ -42,7 +44,8 @@ export function designPlan(regions,symmetry=null){
   const recess=valley*.72;for(let k=0;k<3;k++)w[k]*=1-recess;
   // A narrow bevel isn't an invitation to add another material island.
   if(r.area<total*.0003){const quiet=preferences.coherence*.65;for(let k=0;k<3;k++)w[k]=w[k]*(1-quiet)+(k===0?quiet:0);}
+  const section=preferences.sections?structure.sample(p,n):null;if(section){const strength=Math.max(0,Math.min(1,preferences.sections||0));for(let k=0;k<3;k++)w[k]=w[k]*(1-strength)+(section.slot===k?strength:0);}
   return w.slice(0,3);
  }
- return {apply,slots,centers,stats:{groups:ordered.length,regions:regions.length,accentFraction:accentArea/total,convex:convex.reduce((sum,x)=>sum+x.length,0),concave:concave.reduce((sum,x)=>sum+x.length,0)}};
+ return {apply,slots,centers,stats:{tubes:structure.stats.tubes,transitions:structure.stats.transitions,groups:ordered.length,regions:regions.length,accentFraction:accentArea/total,convex:convex.reduce((sum,x)=>sum+x.length,0),concave:concave.reduce((sum,x)=>sum+x.length,0)}};
 }

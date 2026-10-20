@@ -69,5 +69,6 @@ require('./livery-lab.cjs');
 
 require('./livery-art.cjs');
 require('./livery-materials.cjs');
+require('./livery-sections.cjs');
 
 require('./hull-panels.cjs');

@@ -1,0 +1,879 @@
+{
+  "assets_verified": 576,
+  "frozen_illustrations": {
+    "p001-005": "60d97f8a8a7519cbd76c5e89e28f8b857f359eee1744fe5c80f8d5e6d2e553d4",
+    "p001-012": "13310a54495dedc86f08f91e68e92a7201ceb19f427ad88f550fa7a787722aa2",
+    "p001-079": "fac81d96ad422d2f3866401bf1a83a835972050fc65c7961cfd8f5e102331ad6",
+    "p006-005": "fab465cd1ccdd5cef165f808e049fe38119687e0ca712a780758a182a7b152a9",
+    "p006-018": "c031e5cfa20da7677077a36ac56aff6be5f2603a41aa22c0bf0a0932a9ddeacb",
+    "p006-047": "8eca338d29c3cb689b7e0d89325065b81475000680a969cf67fd3a9dc26f5a38"
+  },
+  "cleanup_protection_verified": true,
+  "palettes_identical_between_runs": true,
+  "compression": [
+    {
+      "setting": "g128-area-c128",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 7199.0,
+      "min_bytes": 5965,
+      "max_bytes": 9127
+    },
+    {
+      "setting": "g128-area-c128",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 6282.0,
+      "min_bytes": 5366,
+      "max_bytes": 7900
+    },
+    {
+      "setting": "g128-area-c128",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 9454.5,
+      "min_bytes": 7447,
+      "max_bytes": 11938
+    },
+    {
+      "setting": "g128-area-c128",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7932.0,
+      "min_bytes": 6072,
+      "max_bytes": 10700
+    },
+    {
+      "setting": "g128-area-c256",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 8782.5,
+      "min_bytes": 7418,
+      "max_bytes": 10767
+    },
+    {
+      "setting": "g128-area-c256",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7850.0,
+      "min_bytes": 6070,
+      "max_bytes": 9800
+    },
+    {
+      "setting": "g128-area-c256",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 11973.5,
+      "min_bytes": 9457,
+      "max_bytes": 14789
+    },
+    {
+      "setting": "g128-area-c256",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 10112.0,
+      "min_bytes": 7780,
+      "max_bytes": 12892
+    },
+    {
+      "setting": "g128-area-rgb",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 21974.5,
+      "min_bytes": 20904,
+      "max_bytes": 27542
+    },
+    {
+      "setting": "g128-area-rgb",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 15844.0,
+      "min_bytes": 14852,
+      "max_bytes": 21004
+    },
+    {
+      "setting": "g128-area-rgb",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 28945.0,
+      "min_bytes": 27571,
+      "max_bytes": 36389
+    },
+    {
+      "setting": "g128-area-rgb",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 20655.0,
+      "min_bytes": 19276,
+      "max_bytes": 25938
+    },
+    {
+      "setting": "g128-feature-c128",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 7214.0,
+      "min_bytes": 5976,
+      "max_bytes": 9134
+    },
+    {
+      "setting": "g128-feature-c128",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 6298.0,
+      "min_bytes": 5346,
+      "max_bytes": 8442
+    },
+    {
+      "setting": "g128-feature-c128",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 9493.5,
+      "min_bytes": 7490,
+      "max_bytes": 11945
+    },
+    {
+      "setting": "g128-feature-c128",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7952.0,
+      "min_bytes": 6106,
+      "max_bytes": 10666
+    },
+    {
+      "setting": "g128-feature-c128-clean",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 6989.0,
+      "min_bytes": 5850,
+      "max_bytes": 8949
+    },
+    {
+      "setting": "g128-feature-c128-clean",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 6020.0,
+      "min_bytes": 4890,
+      "max_bytes": 8294
+    },
+    {
+      "setting": "g128-feature-c128-clean",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 9171.0,
+      "min_bytes": 7337,
+      "max_bytes": 11696
+    },
+    {
+      "setting": "g128-feature-c128-clean",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7832.0,
+      "min_bytes": 5934,
+      "max_bytes": 10350
+    },
+    {
+      "setting": "g128-feature-c256",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 8794.5,
+      "min_bytes": 7431,
+      "max_bytes": 10782
+    },
+    {
+      "setting": "g128-feature-c256",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7878.0,
+      "min_bytes": 6086,
+      "max_bytes": 9816
+    },
+    {
+      "setting": "g128-feature-c256",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 12013.0,
+      "min_bytes": 9492,
+      "max_bytes": 14781
+    },
+    {
+      "setting": "g128-feature-c256",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 10090.0,
+      "min_bytes": 7824,
+      "max_bytes": 12914
+    },
+    {
+      "setting": "g128-feature-c256-clean",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 8318.5,
+      "min_bytes": 7268,
+      "max_bytes": 10464
+    },
+    {
+      "setting": "g128-feature-c256-clean",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7412.0,
+      "min_bytes": 6254,
+      "max_bytes": 9308
+    },
+    {
+      "setting": "g128-feature-c256-clean",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 11415.5,
+      "min_bytes": 9275,
+      "max_bytes": 14355
+    },
+    {
+      "setting": "g128-feature-c256-clean",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 9458.0,
+      "min_bytes": 8196,
+      "max_bytes": 12188
+    },
+    {
+      "setting": "g128-feature-rgb",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 21984.5,
+      "min_bytes": 20917,
+      "max_bytes": 27551
+    },
+    {
+      "setting": "g128-feature-rgb",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 16014.0,
+      "min_bytes": 15010,
+      "max_bytes": 21130
+    },
+    {
+      "setting": "g128-feature-rgb",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 29031.5,
+      "min_bytes": 27669,
+      "max_bytes": 36451
+    },
+    {
+      "setting": "g128-feature-rgb",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 20807.0,
+      "min_bytes": 19460,
+      "max_bytes": 26142
+    },
+    {
+      "setting": "g64-area-c128",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 3760.0,
+      "min_bytes": 2931,
+      "max_bytes": 4532
+    },
+    {
+      "setting": "g64-area-c128",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 2811.0,
+      "min_bytes": 2140,
+      "max_bytes": 3484
+    },
+    {
+      "setting": "g64-area-c128",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4090.5,
+      "min_bytes": 3340,
+      "max_bytes": 4821
+    },
+    {
+      "setting": "g64-area-c128",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 3405.0,
+      "min_bytes": 2464,
+      "max_bytes": 4218
+    },
+    {
+      "setting": "g64-area-c256",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4519.5,
+      "min_bytes": 3659,
+      "max_bytes": 5407
+    },
+    {
+      "setting": "g64-area-c256",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 3436.0,
+      "min_bytes": 2708,
+      "max_bytes": 4160
+    },
+    {
+      "setting": "g64-area-c256",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4663.0,
+      "min_bytes": 3945,
+      "max_bytes": 5443
+    },
+    {
+      "setting": "g64-area-c256",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 4142.0,
+      "min_bytes": 3262,
+      "max_bytes": 4936
+    },
+    {
+      "setting": "g64-area-rgb",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 8453.5,
+      "min_bytes": 8017,
+      "max_bytes": 10065
+    },
+    {
+      "setting": "g64-area-rgb",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 6533.0,
+      "min_bytes": 5924,
+      "max_bytes": 8028
+    },
+    {
+      "setting": "g64-area-rgb",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 10052.0,
+      "min_bytes": 9594,
+      "max_bytes": 11991
+    },
+    {
+      "setting": "g64-area-rgb",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7455.0,
+      "min_bytes": 6754,
+      "max_bytes": 9022
+    },
+    {
+      "setting": "g64-feature-c128",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 3772.5,
+      "min_bytes": 2932,
+      "max_bytes": 4516
+    },
+    {
+      "setting": "g64-feature-c128",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 2816.0,
+      "min_bytes": 2126,
+      "max_bytes": 3480
+    },
+    {
+      "setting": "g64-feature-c128",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4095.5,
+      "min_bytes": 3336,
+      "max_bytes": 4806
+    },
+    {
+      "setting": "g64-feature-c128",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 3412.0,
+      "min_bytes": 2448,
+      "max_bytes": 4180
+    },
+    {
+      "setting": "g64-feature-c128-clean",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 3688.5,
+      "min_bytes": 2894,
+      "max_bytes": 4463
+    },
+    {
+      "setting": "g64-feature-c128-clean",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 2723.0,
+      "min_bytes": 2090,
+      "max_bytes": 3406
+    },
+    {
+      "setting": "g64-feature-c128-clean",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4008.0,
+      "min_bytes": 3298,
+      "max_bytes": 4751
+    },
+    {
+      "setting": "g64-feature-c128-clean",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 3314.0,
+      "min_bytes": 2408,
+      "max_bytes": 4120
+    },
+    {
+      "setting": "g64-feature-c256",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4526.0,
+      "min_bytes": 3676,
+      "max_bytes": 5402
+    },
+    {
+      "setting": "g64-feature-c256",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 3445.0,
+      "min_bytes": 2714,
+      "max_bytes": 4154
+    },
+    {
+      "setting": "g64-feature-c256",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4668.0,
+      "min_bytes": 3961,
+      "max_bytes": 5438
+    },
+    {
+      "setting": "g64-feature-c256",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 4139.0,
+      "min_bytes": 3272,
+      "max_bytes": 4930
+    },
+    {
+      "setting": "g64-feature-c256-clean",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4331.5,
+      "min_bytes": 3617,
+      "max_bytes": 5274
+    },
+    {
+      "setting": "g64-feature-c256-clean",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 3266.0,
+      "min_bytes": 2654,
+      "max_bytes": 4034
+    },
+    {
+      "setting": "g64-feature-c256-clean",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 4493.0,
+      "min_bytes": 3901,
+      "max_bytes": 5322
+    },
+    {
+      "setting": "g64-feature-c256-clean",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 3873.0,
+      "min_bytes": 3208,
+      "max_bytes": 4788
+    },
+    {
+      "setting": "g64-feature-rgb",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 8467.0,
+      "min_bytes": 8025,
+      "max_bytes": 10067
+    },
+    {
+      "setting": "g64-feature-rgb",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 6597.0,
+      "min_bytes": 5960,
+      "max_bytes": 8072
+    },
+    {
+      "setting": "g64-feature-rgb",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 10074.5,
+      "min_bytes": 9611,
+      "max_bytes": 12012
+    },
+    {
+      "setting": "g64-feature-rgb",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7491.0,
+      "min_bytes": 6800,
+      "max_bytes": 9088
+    },
+    {
+      "setting": "g96-area-c128",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 5558.5,
+      "min_bytes": 4506,
+      "max_bytes": 6933
+    },
+    {
+      "setting": "g96-area-c128",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 4576.0,
+      "min_bytes": 3528,
+      "max_bytes": 5892
+    },
+    {
+      "setting": "g96-area-c128",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 7186.5,
+      "min_bytes": 5694,
+      "max_bytes": 8955
+    },
+    {
+      "setting": "g96-area-c128",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 5787.0,
+      "min_bytes": 4522,
+      "max_bytes": 7488
+    },
+    {
+      "setting": "g96-area-c256",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 6705.0,
+      "min_bytes": 5567,
+      "max_bytes": 8132
+    },
+    {
+      "setting": "g96-area-c256",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 5646.0,
+      "min_bytes": 4622,
+      "max_bytes": 7104
+    },
+    {
+      "setting": "g96-area-c256",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 8723.5,
+      "min_bytes": 7129,
+      "max_bytes": 10687
+    },
+    {
+      "setting": "g96-area-c256",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7100.0,
+      "min_bytes": 5860,
+      "max_bytes": 8854
+    },
+    {
+      "setting": "g96-area-rgb",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 15287.0,
+      "min_bytes": 14408,
+      "max_bytes": 18663
+    },
+    {
+      "setting": "g96-area-rgb",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 11489.0,
+      "min_bytes": 10822,
+      "max_bytes": 14788
+    },
+    {
+      "setting": "g96-area-rgb",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 19540.5,
+      "min_bytes": 18525,
+      "max_bytes": 23951
+    },
+    {
+      "setting": "g96-area-rgb",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 13289.0,
+      "min_bytes": 12322,
+      "max_bytes": 16572
+    },
+    {
+      "setting": "g96-feature-c128",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 5557.0,
+      "min_bytes": 4508,
+      "max_bytes": 6933
+    },
+    {
+      "setting": "g96-feature-c128",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 4582.0,
+      "min_bytes": 3542,
+      "max_bytes": 5896
+    },
+    {
+      "setting": "g96-feature-c128",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 7201.0,
+      "min_bytes": 5711,
+      "max_bytes": 8931
+    },
+    {
+      "setting": "g96-feature-c128",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 5791.0,
+      "min_bytes": 4532,
+      "max_bytes": 7498
+    },
+    {
+      "setting": "g96-feature-c128-clean",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 5391.5,
+      "min_bytes": 4457,
+      "max_bytes": 6798
+    },
+    {
+      "setting": "g96-feature-c128-clean",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 4379.0,
+      "min_bytes": 3464,
+      "max_bytes": 5736
+    },
+    {
+      "setting": "g96-feature-c128-clean",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 6957.5,
+      "min_bytes": 5613,
+      "max_bytes": 8745
+    },
+    {
+      "setting": "g96-feature-c128-clean",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 5485.0,
+      "min_bytes": 4424,
+      "max_bytes": 7248
+    },
+    {
+      "setting": "g96-feature-c256",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 6717.5,
+      "min_bytes": 5572,
+      "max_bytes": 8140
+    },
+    {
+      "setting": "g96-feature-c256",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 5634.0,
+      "min_bytes": 4638,
+      "max_bytes": 7116
+    },
+    {
+      "setting": "g96-feature-c256",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 8743.0,
+      "min_bytes": 7175,
+      "max_bytes": 10687
+    },
+    {
+      "setting": "g96-feature-c256",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 7101.0,
+      "min_bytes": 5882,
+      "max_bytes": 8878
+    },
+    {
+      "setting": "g96-feature-c256-clean",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 6367.5,
+      "min_bytes": 5456,
+      "max_bytes": 7865
+    },
+    {
+      "setting": "g96-feature-c256-clean",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 5327.0,
+      "min_bytes": 4498,
+      "max_bytes": 6838
+    },
+    {
+      "setting": "g96-feature-c256-clean",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 8266.5,
+      "min_bytes": 7010,
+      "max_bytes": 10325
+    },
+    {
+      "setting": "g96-feature-c256-clean",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 6576.0,
+      "min_bytes": 5666,
+      "max_bytes": 8466
+    },
+    {
+      "setting": "g96-feature-rgb",
+      "size": 128,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 15299.5,
+      "min_bytes": 14471,
+      "max_bytes": 18673
+    },
+    {
+      "setting": "g96-feature-rgb",
+      "size": 128,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 11537.0,
+      "min_bytes": 10902,
+      "max_bytes": 14872
+    },
+    {
+      "setting": "g96-feature-rgb",
+      "size": 256,
+      "format": "png",
+      "count": 6,
+      "median_bytes": 19609.0,
+      "min_bytes": 18566,
+      "max_bytes": 23985
+    },
+    {
+      "setting": "g96-feature-rgb",
+      "size": 256,
+      "format": "webp",
+      "count": 6,
+      "median_bytes": 13340.0,
+      "min_bytes": 12408,
+      "max_bytes": 16680
+    }
+  ]
+}

@@ -1,3 +1,11 @@
+## Local tubular sections
+
+Structural section contrast adds a geometric hierarchy before the existing coherence preferences can flatten it. Local axis candidates come from repeated normal-cross-product directions on shared facet edges. Surfaces whose normals are approximately perpendicular to a candidate axis are reassembled for a cylindrical fit, including low-poly faceted barrels. Fits need sufficient radial-normal coverage; a small one-sided curved patch is not accepted as a whole tube. Fitted patches are clustered by coaxiality and proximity; measured axial patch boundaries and radius changes form the local profile.
+
+Within accepted assemblies the longest cylindrical run provides the barrel reference. A changed-radius run receives Secondary (or Detail for a substantial inward step), end-facing shoulders receive Secondary, and inward-facing cavity walls or axially recessed inner end surfaces receive Detail. A coplanar solid end disk is kept as an end cap rather than labeled an opening. The barrel uses Primary. These are geometric roles, not engine/inlet/exhaust labels. The same operation applies to tanks or tubular hulls. Straight uninterrupted barrels receive no arbitrary axial color bands; a box is rejected. Existing source triangles and generated geometry are unchanged.
+
+The Structural section contrast slider affects only the guided copy; zero restores the previous guided behavior. It shares the existing mirror folding and material slots. The readout reports candidate assemblies and profile transitions. These are approximate fits, not a solid-model decomposition: disconnected shells, nearby overlapping tubes and bevels can remain ambiguous, and accepted cylinders elsewhere on a ship may also receive section treatment. The implementation does not infer operational engine direction, add exhaust glow, or use per-model identifiers. A near-open center is not enough by itself: material assignment still evaluates actual sampled surfaces and normals.
+
 ## Authored / baseline / guided exercise
 
 The new default comparison puts three copies of the selected hull next to one another in the same hangar: original authored/source appearance, existing procedural baseline, and the same generator with design preferences. Both generated copies share geometry, source mesh, algorithm, material slots, seed and symmetry. Baseline algorithms remain available in Chunk coloration; this adds preferences rather than replacing them. Neutral colors provide a useful ablation.
@@ -14,7 +22,7 @@ Visual inspection of the Quaternius Spitfire and Challenger suggested these hypo
 
 These are visual observations from two models, not statistics learned from their textures. Gold can be a dominant body material rather than an accent; the rule concerns hierarchy, not a mandatory color ratio. The generator never samples source paint to make these decisions. Geometry-only operation still applies to arbitrary greyboxes and solids.
 
-The three adjustable preferences are Contour emphasis, Large-form coherence and Accent restraint. Setting all three to zero reproduces the selected baseline. Material slots remain independent and should offer useful contrast; the pass does not assume orange is always an edge highlight. Existing normal-map/detail controls remain independent. No cockpit, gun or engine recognizer is added.
+The adjustable preferences are Structural section contrast, Contour emphasis, Large-form coherence and Accent restraint. Setting all four to zero reproduces the selected baseline. Material slots remain independent and should offer useful contrast; the pass does not assume orange is always an edge highlight. Existing normal-map/detail controls remain independent. No cockpit, gun or engine recognizer is added.
 
 Signed convexity/concavity uses two-manifold shared mesh edges and adjacent face normals/centroids. Open and nonmanifold edges are left unclassified. This is not ambient occlusion: disconnected overlapping parts and T-junctions without shared edges do not produce reliable valley information. The readout exposes chart/group counts, accent candidate area and signed crease counts so these limitations remain visible.
 

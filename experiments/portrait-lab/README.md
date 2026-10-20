@@ -1,5 +1,33 @@
 # Procedural portrait laboratory
 
+Latest pixel experiment: [PIXEL_REPORT.md](PIXEL_REPORT.md), with native-size
+comparisons under `results/pixel-v2/`. This freezes the promising illustration
+branch and compares pixel sampling/cluster cleanup; it does not rerun the model.
+Painted and Region Redraw remain rejected negative controls. Feature Smooth remains
+an anatomy-preserving comparison, not a recommended illustration style.
+
+## Run pixel reduction of the frozen illustrations
+
+From this directory, with the existing Pillow/NumPy/OpenCV experiment environment:
+
+```
+python -m unittest -v test_pixel_lab.py
+python pixel_lab.py --grids 64 96 128 --output results/my-pixel-run
+```
+
+No PyTorch runtime, model weights or network are needed for this stage. It reads
+the six cached illustration images and landmark JSON files from structural-v2,
+plus the preserved painted-v2 mattes. A fresh output directory is required. Logical
+grids are exported to both 128 and 256 outputs. The palettes are learned jointly
+from the frozen illustrations; the old damaging palette is not used. Full RGB is
+preserved as a control against new palette-induced bands.
+
+`python audit_pixel.py` verifies the two preserved pixel-v1/pixel-v2 runs and writes
+the compact review and combined byte summary to pixel-v2. That audit targets those
+saved runs; a newly named run has its own run.json, palettes.json and sizes.csv.
+Grid 96 has unequal nearest-neighbor pixel widths at the requested output sizes;
+grids 64/128 provide integer-scaled controls.
+
 Latest investigation: [STRUCTURAL_REPORT.md](STRUCTURAL_REPORT.md). **Painted and
 Graphic are rejected negative controls**, preserved unchanged; see
 [NEGATIVE_EXAMPLES.md](NEGATIVE_EXAMPLES.md). The structural study compares
