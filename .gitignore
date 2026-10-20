@@ -17,3 +17,6 @@ Thumbs.db
 
 # Extracted character packs retain provenance instead of download archives
 /assets/characters/**/*.zip
+
+# Local Blender ship-generation experiments
+/.shipkit-lab/
