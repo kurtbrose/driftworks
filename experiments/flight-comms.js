@@ -500,7 +500,7 @@
         state.last = text;
         state.serial++;
         state.quiet = 0;
-        state.quietGap = 0.9 + random() * 2.8;
+        state.quietGap = 2 + random() * 1.7;
         state.lastCraft = craft ? craft.id : null;
         state.wait = 18 + random() * 12;
         /** @type {Line} */

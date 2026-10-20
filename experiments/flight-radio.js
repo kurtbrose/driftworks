@@ -21,6 +21,7 @@
             DW.audio.setCommsActive(false);
             generation++;
             channelRemaining = 0;
+            clock.quiet = 0;
             currentSpeaker = /** @type {string | null} */ (null);
             if (source) {
                 source.onended = null;
@@ -70,13 +71,14 @@
                 source = context.createBufferSource();
                 source.buffer = buffer;
                 source.connect(output);
-                var ticket = generation, playing = source;
+                var ticket = ++generation, playing = source;
                 source.onended = function () {
                     playing.disconnect();
-                    if (ticket === generation) {
+                    if (ticket === generation && source === playing) {
                         DW.audio.setCommsActive(false);
                         source = null;
                         channelRemaining = 0;
+                        clock.quiet = 0;
                         currentSpeaker = /** @type {string | null} */ (null);
                         panel.classList.remove('transmitting');
                         if (portrait) portrait.stop();
@@ -124,6 +126,8 @@
                 panel.classList.remove('idle');
             },
             update: /** @param {number} dt @param {Combat} combat @param {FlightState} player */ function (dt, combat, player) {
+                // Count this whole interval as occupied if playback was active at its start.
+                var wasBusy = !!source || channelRemaining > 0;
                 remaining = Math.max(0, remaining - dt);
                 channelRemaining = Math.max(0, channelRemaining - dt);
                 if (!source && channelRemaining <= 0)
@@ -134,7 +138,7 @@
                     subtitle.textContent = 'Channel clear.';
                     panel.classList.add('idle');
                 }
-                var line = step(clock, dt, combat, !!source || channelRemaining > 0, Math.random, player);
+                var line = step(clock, dt, combat, wasBusy || !!source || channelRemaining > 0, Math.random, player);
                 if (line)
                     speak(line);
                 if (portrait) portrait.update(!reassurance && currentSpeaker ? clock.emotions[currentSpeaker] : undefined);

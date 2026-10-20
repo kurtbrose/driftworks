@@ -682,7 +682,7 @@ Flight lab communications live in `experiments/flight-comms.js`. The pure
 `create`/`step` scheduler consumes active flight seconds and living training
 combatants. `mount` owns subtitles and a gesture-unlocked Web Audio context,
 using `mumble.js` synthesis and radio processing. Only one voice plays at a
-time; pause, reset, and page exit stop playback. Comms state is not persisted.
+time; actual source completion restarts the silent-gap timer, and occupied frame intervals never count as silence. Completion callbacks are scoped to their transmission; pause, reset, and page exit stop playback. Comms state is not persisted.
 `pilotVoice(craft)` assigns 16 curated adult timbres by stable craft index in
 furball, mixing masculine and feminine voices on both teams. Lines carry fresh
 `voiceSettings` and a character seed. Playback applies emotion over that stable
@@ -697,7 +697,7 @@ transitions and emotions cannot nominate reactive calls or start exchanges.
 Comms observes living craft mode transitions each flight frame (attack, evade,
 break, recover, reposition). It records transitions even while blocked and
 drops those calls rather than queuing stale maneuvers. Reactive calls require
-a varied 0.9-3.7 seconds of clear channel and ten seconds since that pilot last spoke; distress
+a varied 2-3.7 seconds of clear channel and ten seconds since that pilot last spoke; distress
 precedes other transitions. Valid support replies, reassurance, and returning acknowledgments take first priority and bypass pilot/activity cooldowns. Each reply must start within five active flight seconds of the preceding line being selected, or it is discarded, including while the channel is busy. Support and emotional exchanges finish with an A/B/A acknowledgment; each turn still waits for a clear channel. Firing starts and target switches also offer calls,
 and another speaker is preferred when several pilots have something to say. Speaker labels identify craft and maneuver. Tail
 calls additionally require a pursuing opponent behind the speaker. Muted

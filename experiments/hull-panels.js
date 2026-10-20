@@ -120,10 +120,17 @@ function plate(polygons,region,gap,bevel,height){
  }));
  const boundary=Array.from(edges.values()).filter(e=>e.count===1);
  boundary.forEach(e=>{const inward=unit(cross(region.normal,sub(e.b,e.a)));points.get(key(e.a))?.inward.push(inward);points.get(key(e.b))?.inward.push(inward);});
+ let insetScale=1;
  /** @param {V} p @param {number} amount @param {number} level */
  function inset(p,amount,level){const item=points.get(key(p));if(!item)return p;const normals=item.inward;let shift=[0,0,0];
-  if(normals.length){const average=unit([0,1,2].map(k=>normals.reduce((sum,n)=>sum+n[k],0)));const denominator=Math.max(.5,Math.min(...normals.map(n=>Math.abs(dot(n,average)))));shift=average.map(x=>x*amount/denominator);}
+  if(normals.length){const average=unit([0,1,2].map(k=>normals.reduce((sum,n)=>sum+n[k],0)));const denominator=Math.max(.5,Math.min(...normals.map(n=>Math.abs(dot(n,average)))));shift=average.map(x=>x*amount*insetScale/denominator);}
   return p.map((x,k)=>k<3?x+shift[k]+item.normal[k]*level:x);
+ }
+ // Small boundary triangles can be narrower than the requested inset. Never
+ // push a boundary vertex across the opposite edge and fold the cap into teeth.
+ for(let attempt=0;attempt<12;attempt++){
+  const valid=polygons.every(poly=>{const cap=poly.map(p=>inset(p,gap+bevel,height));for(let i=1;i<poly.length-1;i++){const before=cross(sub(poly[i],poly[0]),sub(poly[i+1],poly[0])),after=cross(sub(cap[i],cap[0]),sub(cap[i+1],cap[0]));if(dot(before,after)<dot(before,before)*.1)return false;}return true;});
+  if(valid)break;insetScale*=.5;
  }
  /** @type {number[]} */const data=[];
  polygons.forEach(poly=>{const cap=poly.map(p=>inset(p,gap+bevel,height));for(let i=1;i<cap.length-1;i++)triangle(data,cap[0],cap[i],cap[i+1]);});

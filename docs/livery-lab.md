@@ -1,3 +1,5 @@
+Plate boundary insets are reduced when they would reverse a cap triangle. Fine tessellation therefore cannot fold a narrow border triangle into a sawtooth overlap.
+
 Raised plate clearance uses the geometric region normal rather than interpolated artist shading normals, which can point along the surface at hard corners. Source triangle ownership is retained when adding material sampling vertices.
 
 Generated treatment panels retain their source region ID through material assignment. Their material owner is never re-guessed per vertex; fallback source-surface lookup uses the geometric face normal. Local boundary-distance treatments still use their owning region contours.

@@ -74,3 +74,8 @@ const smoothRegions=analyzeHull([smoothFace]);
 const cap=context.plate(smoothRegions[0].faces.map(f=>f.v),smoothRegions[0],.004,.003,.02).vertices;
 for(let i=2;i<24;i+=8)assert(Math.abs(cap[i]-.02)<1e-6,'Cap clearance follows geometric surface normal, independent of smoothed shading normals');
 console.log('PASS raised plate clearance with divergent source shading normals');
+
+const strip=[[[0,0,0,0,0,1],[1,0,0,0,0,1],[.5,.001,0,0,0,1]],[[1,0,0,0,0,1],[1,1,0,0,0,1],[.5,.001,0,0,0,1]],[[1,1,0,0,0,1],[0,1,0,0,0,1],[.5,.001,0,0,0,1]],[[0,1,0,0,0,1],[0,0,0,0,0,1],[.5,.001,0,0,0,1]]];
+const safe=context.plate(strip,{normal:[0,0,1]},.01,.01,.03).vertices;
+for(let t=0;t<strip.length;t++){const i=t*24,ax=safe[i+8]-safe[i],ay=safe[i+9]-safe[i+1],bx=safe[i+16]-safe[i],by=safe[i+17]-safe[i+1];assert(ax*by-ay*bx>0,'Requested inset cannot invert a narrow boundary triangle');}
+console.log('PASS narrow boundary triangles remain outward-facing under panel inset');

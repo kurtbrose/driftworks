@@ -1320,12 +1320,12 @@
     var combat={enabled:true,dead:false,hull:100,enemies:[red]};
     api.step(clock,0,combat,false,rng);red.fire=true;
     assert(api.step(clock,0,combat,false,rng).event==='firing');
-    assertClose(clock.quietGap,3.14);
+    assertClose(clock.quietGap,3.36);
     api.step(clock,1,combat,true,rng);red.fire=false;
     assert(api.step(clock,2,combat,false,rng)===null);
     api.step(clock,8,combat,false,rng);red.targetId='two';
     assert(api.step(clock,0,combat,false,function(){return 0;}).event==='target');
-    assertClose(clock.quietGap,0.9);
+    assertClose(clock.quietGap,2);
     assert(api.step(clock,5,combat,false,rng)===null); // No replay when the action stays unchanged.
   });
 
@@ -1605,6 +1605,32 @@
       toggle.onclick();assert(activity[activity.length-1]===false);
       radio.pause();assert(activity[activity.length-1]===false);
     } finally {DW.audio.commsChannel=oldChannel;DW.audio.setCommsActive=oldActive;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
+  });
+
+  test('radio waits for actual playback and a full silent gap before another transmission', function () {
+    var DW=window.Driftworks, oldChannel=DW.audio.commsChannel, oldStep=DW.flightComms.step;
+    var oldRender=DW.mumble.render, oldTransmit=DW.mumble.transmit, sources=[], clock, busy;
+    var context={state:'running',createBuffer:function(){return {copyToChannel:function(){}};},
+      createBufferSource:function(){var source={connect:function(){},disconnect:function(){},start:function(){},stop:function(){},onended:null};sources.push(source);return source;}};
+    DW.audio.commsChannel=function(){return {context:context,output:{}};};
+    DW.mumble.render=function(){return new Float32Array(16);};
+    DW.mumble.transmit=function(){return {samples:new Float32Array(16),duration:.1};};
+    DW.flightComms.step=function(state,dt,combat,occupied,random,player){clock=state;busy=occupied;return oldStep(state,dt,combat,occupied,function(){return 0;},player);};
+    try {
+      var fields=[{textContent:''},{textContent:''}],panel={querySelector:function(s){return s==='[data-speaker]'?fields[0]:fields[1];},classList:{add:function(){},remove:function(){},toggle:function(){}}};
+      var radio=DW.flightComms.mount(panel,{setAttribute:function(){}}), pilot={id:'w',team:'ally',hp:90,mode:'approach'};
+      var combat={enabled:true,hull:100,enemies:[pilot]};
+      radio.unlock();radio.update(0,combat);pilot.mode='evade';radio.update(0,combat);
+      assert(sources.length===1);
+      var ended=sources[0].onended;
+      radio.update(20,combat);assert(busy && sources.length===1 && clock.quiet===0);
+      ended();clock.wait=0;
+      radio.update(1.99,combat);assert(sources.length===1);
+      radio.update(.02,combat);assert(sources.length===2);
+      ended();radio.update(20,combat);
+      assert(busy && sources.length===2,'Old completion must not release the new source');
+      sources[1].onended();radio.pause();
+    } finally {DW.audio.commsChannel=oldChannel;DW.flightComms.step=oldStep;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
   });
 
   test('flight comms retains a bounded newest-first subtitle history', function () {
