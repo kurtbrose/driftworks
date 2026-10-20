@@ -800,6 +800,7 @@
 
   test('gamepad rumble mixes boost and priority jolts, stops and tolerates unsupported hardware', function () {
     var f=flightControlsFixture(),calls=[],resets=0;
+    f.elements['input-mode'].value='controller';
     var actuator={playEffect:function(type,effect){calls.push(effect);assert(type==='dual-rumble');return Promise.resolve('complete');},reset:function(){resets++;return Promise.resolve('complete');}};
     var pad={index:0,id:'Rumble pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[],vibrationActuator:actuator};
     f.setPads([pad]);f.controls.sample();
@@ -821,6 +822,21 @@
     f.controls.haptics(.1,{hit:true});f.controls.clear();
     pad.vibrationActuator={playEffect:function(){return Promise.reject(Error('Denied'));},reset:function(){return Promise.reject(Error('Gone'));}};
     f.controls.haptics(.1,{hit:true});f.controls.clear();
+  });
+
+  test('mouse takeover stops rumble until fresh controller activity resumes it', function () {
+    var f=flightControlsFixture(),c=f.controls,calls=0,resets=0;
+    var pad={index:0,id:'Takeover rumble',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[],vibrationActuator:{
+      playEffect:function(){calls++;return Promise.resolve('complete');},
+      reset:function(){resets++;return Promise.resolve('complete');}
+    }};
+    f.setPads([pad]);c.sample();c.haptics(.1,{boost:true,hit:true});assert(calls===0,'Idle connected pads stay quiet during mouse control');
+    pad.axes[0]=.7;c.sample();c.haptics(.1,{boost:true});assert(calls===1);
+    f.doc.pointerLockElement=f.host;
+    f.doc.emit('mousemove',{movementX:0,movementY:0});assert(resets===0);
+    f.doc.emit('mousemove',{movementX:10,movementY:0});assert(resets===1,'Mouse takeover immediately resets the actuator');
+    c.sample();c.haptics(.1,{boost:true,shieldBreak:true});assert(calls===1,'Held controller input and gameplay feedback cannot restart rumble');
+    pad.axes[0]=.9;c.sample();c.haptics(.1,{fire:true});assert(calls===2,'Fresh controller activity restores rumble');
   });
 
   test('asteroid patrol has two hostiles, seeded terrain and no reinforcements', function () {

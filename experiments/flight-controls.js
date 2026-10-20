@@ -48,7 +48,7 @@
             var pad = pads().find(function (p) { return String(p.index) === device.value; });
             var next = pad && pad.vibrationActuator;
             if (next !== actuator) { stopRumble(); actuator = next || null; }
-            if (!actuator || typeof actuator.playEffect !== 'function' || actions.isPaused() || !rumble.checked) { stopRumble(); return; }
+            if (!actuator || typeof actuator.playEffect !== 'function' || actions.isPaused() || !rumble.checked || (inputMode.value === 'mouse' && mouseActive)) { stopRumble(); return; }
             pulseTime = Math.max(0, pulseTime - dt);
             refresh -= dt;
             var strong = feedback.shieldBreak ? .8 : feedback.hit ? .55 : feedback.contact ? .65 : 0;
@@ -290,6 +290,7 @@
         document.addEventListener('mousemove', function (e) {
             if (!actions.isPaused() && document.pointerLockElement === host && (e.movementX || e.movementY)) {
                 mouseActive = true;
+                if (inputMode.value === 'mouse') stopRumble();
                 mouse = DW.flightInput.moveStick(mouse, e.movementX, e.movementY, stickRange(), Number(get('sensitivity').value));
             }
         });
