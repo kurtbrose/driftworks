@@ -148,7 +148,17 @@
         "Cold as a folding chair at a January tailgate out here.",
         "I'm fine. Just gotta slap my knees and say welp first.",
         "This would all go smoother with a church-basement coffee.",
-        "We doing euchre after this, or what?"
+        "We doing euchre after this, or what?",
+        "Put the leftovers in an ice cream tub. That's how you know it's home.",
+        "Anybody got a scraper? My canopy's colder than a bus stop in Akron.",
+        "Ope. Hang on. My good gloves are in the other ship.",
+        "If ya need anything, holler. Unless it's directions out of Ohio.",
+        "Came for the stars. Stayed because the ramp was closed.",
+        "This weather's about as settled as a folding table at the fish fry.",
+        "You don't like the space weather, give it twenty minutes.",
+        "Cold as the steering wheel before the heater kicks in.",
+        "Tell ya what, this beats standing in line at the BMV.",
+        "Might be all Ohio, but I still brought an emergency blanket."
     ],
     "range": [
         "You are now entering Ohio. You were also previously in Ohio.",

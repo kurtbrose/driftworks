@@ -1,5 +1,6 @@
 (function(){
   'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
   /** @param {string} id */
   function input(id){return /** @type {HTMLInputElement} */ (document.getElementById(id));}
   /** @param {string} id */
@@ -20,7 +21,7 @@
   region.onchange=preset;
   expression.onchange=function(){
     region.value=expression.value==='blink'||expression.value==='wide'?'eyes':expression.value==='angry'||expression.value==='smile'?'face':expression.value==='eh'?'mouth':'lower';
-    /** @type {HTMLImageElement} */ (document.getElementById('raw')).src=expression.value+'.png';preset();
+    /** @type {HTMLImageElement} */ (document.getElementById('raw')).src=assetUrl(expression.value+'.png');preset();
   };
   keys.concat(['amount']).forEach(function(key){input(key).oninput=controls;});
   var frameCount=0;
@@ -38,5 +39,5 @@
     }
     requestAnimationFrame(draw);
   }
-  Promise.all(['master','eh','blink','wide','shout','smile','angry'].map(function(name){return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){images[name]=image;resolve(image);};image.onerror=reject;image.src=name+'.png';});})).then(function(){renderer=api.create(target,images);preset();requestAnimationFrame(draw);}).catch(function(){/** @type {HTMLElement} */ (document.getElementById('proof')).textContent='An expression image failed to load.';});
+  Promise.all(['master','eh','blink','wide','shout','smile','angry'].map(function(name){return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){images[name]=image;resolve(image);};image.onerror=reject;image.src=assetUrl(name+'.png');});})).then(function(){renderer=api.create(target,images);preset();requestAnimationFrame(draw);}).catch(function(){/** @type {HTMLElement} */ (document.getElementById('proof')).textContent='An expression image failed to load.';});
 }());

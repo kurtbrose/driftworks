@@ -15,6 +15,9 @@ const quality = {value: '1.5', addEventListener(name, fn) { this[name] = fn; }};
 const canvas = {dataset:{},width: 0, height: 0, setAttribute() {}, getContext: () => gl};
 let stored = '3';
 const context = {window: {Driftworks: {}, devicePixelRatio: 2, localStorage: {getItem: () => stored, setItem: (_key, value) => { stored = value; }}}, document: {getElementById: id => ({'skybox-style': selector, 'skybox-brightness': brightness, 'skybox-quality': quality}[id] || null), createElement: name => name === 'canvas' ? canvas : {}}, Image: class {}, Float32Array};
+context.URL=URL; context.document.baseURI='http://localhost:8000/experiments/flight.html';
+context.document.currentScript={getAttribute:()=> '../src/asset-versions.js'};
+vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../src/asset-versions.js'), 'utf8'), context);
 vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../experiments/skybox.js'), 'utf8'), context);
 const sky = context.window.Driftworks.flightSkybox.create({clientWidth: 800, clientHeight: 600, prepend() {}});
 const pose = {right: [1,0,0], up: [0,0,1], back: [0,-1,0]};
@@ -49,7 +52,7 @@ async function testHeroComposition() {
   context.URL=URL;
   context.window.location={href:'http://localhost:8000/experiments/flight.html'};
   const lighting=JSON.parse(fs.readFileSync(require('node:path').join(__dirname,'../assets/backgrounds/sky-lighting-v1.json'),'utf8'));
-  context.window.fetch=async url => {requests++;return {ok:true,json:async()=>String(url).includes('sky-lighting')?lighting:layout};};
+  context.window.fetch=async url => {assert.ok(new URL(url).searchParams.has('v'),'sky manifests carry content versions');requests++;return {ok:true,json:async()=>String(url).includes('sky-lighting')?lighting:layout};};
   context.window.localStorage.getItem=()=>null;
   const imageUrls=[];
   context.Image=class {set src(value){imageUrls.push(value);queueMicrotask(()=>this.onload());}};
@@ -62,6 +65,7 @@ async function testHeroComposition() {
   await new Promise(setImmediate);
   renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,3,'one focal feature plus black and crisp stars');
+  assert.ok(imageUrls.every(url=>new URL(url).searchParams.has('v')), 'every sky image is content-versioned');
   assert.equal(requests,2,'layout and precomputed lighting are each loaded once');
   assert.equal(renderer.getLighting().sh.length,9);
   renderer.setLightingEnabled(false);assert.equal(renderer.getLighting(),null);renderer.setLightingEnabled(true);
@@ -89,12 +93,13 @@ async function testOhioSky() {
   const ohioContext={...context,window:{...context.window,Driftworks:{},location:{search:'?mission=ohio'},fetch:()=>{throw new Error('Ohio must use bundled images directly');}},
     document:{...context.document,createElement:name=>name==='canvas'?ohioCanvas:{}},
     Image:class {set src(value){images.push(value);queueMicrotask(()=>this.onload&&this.onload());}}};
+  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../src/asset-versions.js'),'utf8'),ohioContext);
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../experiments/skybox.js'),'utf8'),ohioContext);
   const renderer=ohioContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
   await new Promise(setImmediate);renderer.render(pose,1,false);
   assert.equal(ohioCanvas.dataset.ohio,'ready');
-  assert.ok(images.includes('../assets/backgrounds/ohio-planet-v1.png'));
-  assert.ok(images.includes('../assets/backgrounds/features/warm-sun-v1.png'));
+  assert.ok(images.some(url=>new URL(url).pathname.endsWith('/assets/backgrounds/ohio-planet-v1.png')));
+  assert.ok(images.some(url=>new URL(url).pathname.endsWith('/assets/backgrounds/features/warm-sun-v1.png')));
   const landmarks=buffers.filter(data=>data.length===30);
   assert.equal(landmarks.length,2);
   for(const vertices of landmarks) assert.equal(vertices[3],1,'unmirror celestial image UVs');

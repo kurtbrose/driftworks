@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mining pod - four-view study</title><link rel="stylesheet" href="../styles.css">
+<title>Mining pod - four-view study</title><link rel="stylesheet" href="../styles.css?v=8732c3648e27">
 <style>
 body{margin:0;background:#080d11;color:#e2d7b4;font:14px system-ui;overflow:hidden;display:flex;flex-direction:column;height:100dvh}
 header{flex:none;padding:18px 24px;background:#101c24;border-bottom:1px solid #635733}
@@ -18,34 +18,35 @@ h1{font-size:20px;margin:0 0 12px}.study-controls{display:flex;align-items:cente
 <section class="view fixed"><h2>Top</h2><div id="top" class="viewport scene"></div></section>
 <section class="view"><h2>Raised / orbit</h2><div id="orbit" class="viewport scene" aria-label="Interactive mining pod orbit view"></div><span class="hint">Drag to orbit / wheel to zoom</span></section>
 </main>
-<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js"}}</script>
+<script src="../src/asset-versions.js?v=1877d65c717f"></script>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
-    <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
-    <script src="../src/propulsion.js?v=20260920-population1"></script>
-    <script src="../src/combat.js?v=20260921-sensor-track1"></script>
-    <script src="../src/mining-lights.js"></script>
-<script src="../src/mining-terrain.js"></script>
-    <script src="../src/mining-landing.js"></script>
-    <script src="../src/logistics.js?v=20260921-craft1"></script>
-    <script src="../src/formations.js?v=20260920-population1"></script>
-    <script src="../src/sim.js?v=20260922-cavern10"></script>
-    <script src="../src/population.js"></script>
-    <script src="../src/session.js"></script>
-    <script src="../src/tactical/camera.js?v=20260920-population1"></script>
+    <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
+    <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+    <script src="../src/combat.js?v=ce0e0e6eb149"></script>
+    <script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+    <script src="../src/mining-landing.js?v=f00997919474"></script>
+    <script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+    <script src="../src/formations.js?v=c6006cf590e5"></script>
+    <script src="../src/sim.js?v=9a868143dfe8"></script>
+    <script src="../src/population.js?v=7a772b14be47"></script>
+    <script src="../src/session.js?v=6d1be0457a7b"></script>
+    <script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
     <script src="../src/engine-audio.js?v=061d71eda9b0"></script>
 <script src="../src/audio-mixer.js?v=86b2e5499688"></script>
 <script src="../src/audio.js?v=4c3a1ddd049c"></script>
-    <script src="../src/hud.js?v=20260922-cavern1"></script>
-    <script src="../src/mesh-builder.js"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=20261018-focus-flight3"></script><script src="../src/scene3d.js?v=20261018-focus-flight3"></script>
-    <script src="../src/game.js?v=20261007-3d-geology2"></script>
-<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js"></script>
-<script src="../experiments/ship-packs.js"></script>
-<script src="./mining-study-terrain.js"></script>
-<script src="../src/study-viewer.js"></script><script src="./mining-study-context.js"></script>
-<script src="./mining-study-landing.js"></script>
-<script src="./mining-study-cargo.js"></script>
-<script type="module" src="./mining-study-crew.js"></script>
-<script type="module" src="./mining-study-fps.js"></script>
+    <script src="../src/hud.js?v=b41c310fa59d"></script>
+    <script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=02d9b3545d85"></script><script src="../src/scene3d.js?v=1020b08d3c58"></script>
+    <script src="../src/game.js?v=4b2cf113b259"></script>
+<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=0fc9a4cc50fb"></script>
+<script src="../experiments/ship-packs.js?v=d092ab4f6ae4"></script>
+<script src="./mining-study-terrain.js?v=f1d69b502da0"></script>
+<script src="../src/study-viewer.js?v=6469b1e90a52"></script><script src="./mining-study-context.js?v=92d00bd14213"></script>
+<script src="./mining-study-landing.js?v=d34428442c3c"></script>
+<script src="./mining-study-cargo.js?v=570f2634dee7"></script>
+<script type="module" src="./mining-study-crew.js?v=af9f72746614"></script>
+<script type="module" src="./mining-study-fps.js?v=99c9977068af"></script>
 <script>
 (function(){
   var colors={ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49],lamp:[1,.94,.78],marker:[.35,.95,.85]};

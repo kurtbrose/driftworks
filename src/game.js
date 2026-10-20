@@ -1,5 +1,6 @@
 (function (global) {
   'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
 
   /** @typedef {import('./types').DriftworksNamespace} DriftworksNamespace */
   /** @typedef {import('./types').SimApi} SimApi */
@@ -900,7 +901,7 @@
     /** @param {{ image: string, brightness: number }} settings */
     function setBackground(settings) {
       var option = BACKGROUNDS.filter(function (candidate) { return candidate.id === settings.image; })[0] || BACKGROUNDS[0];
-      background.style.backgroundImage = option.url ? 'url("' + option.url + '")' : 'none';
+      background.style.backgroundImage = option.url ? 'url("' + assetUrl(option.url) + '")' : 'none';
       background.style.filter = 'contrast(' + option.contrast + ') brightness(' + settings.brightness + ')';
       background.dataset.background = option.id;
     }

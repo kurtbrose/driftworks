@@ -59,11 +59,14 @@ The root `.nojekyll` file tells GitHub Pages to serve the repository directly,
 without running its Markdown and source files through Jekyll. Keep it in the
 published root.
 
-The flight experiment's script and stylesheet URLs carry content hashes to avoid
-reusing stale browser/CDN assets. After editing those files, run
-`node tools/refresh-flight-assets.cjs` and deploy the updated
-`experiments/flight.html` together with its assets. This is a development helper,
-not a build or runtime dependency; `npm run check` detects stale versions.
+All HTML entry points carry content hashes for local scripts, stylesheets and
+images. Dynamic skybox manifests, reflection maps, feature images, ship textures,
+portraits and the Aegis rig use the checked-in `src/asset-versions.js` map.
+After editing browser code or assets, run `node tools/refresh-site-assets.cjs`
+(the old `refresh-flight-assets.cjs` command remains an alias). Commit the updated
+HTML and asset map together with the changed files. No build step is required.
+`npm run check` rejects missing or stale versions and missing local HTML assets.
+Local portrait-authoring result archives are excluded from the runtime map.
 Configure the host to revalidate HTML (`Cache-Control: no-cache`) so visitors
 receive the latest asset URLs. If the CDN ignores query strings in its cache
 key, configure it to include them or invalidate affected assets when deploying.
@@ -595,3 +598,5 @@ The flight sky also offers **G / Hero galaxy**, **H / Hero nebula**, and **I / H
 Ohio sortie: choose Ohio from experiments/missions.html or open experiments/flight.html?mission=ohio. A locally bundled realistic Ohio planet and sixteen recurring Ohio callsigns accompany an 8 vs 8 battle. Weapons and NPC movement wait for the opening radio exchange (including muted subtitles); pause freezes the reveal and restart replays it. Later rounds retain the cast and use Midwest combat chatter. A fixed sun at yaw 225 / elevation 30 degrees sits behind the left shoulder, consistent with the planet artwork lighting; background image UVs preserve the original east/west orientation.
 
 Authored hero skies automatically illuminate the shared 3D materials from precomputed diffuse SH and rough environment reflections. The sky review includes a **Sky-derived lighting** A/B checkbox. Lighting normalization, cache preparation, and current renderer limits are documented in [skybox authoring](docs/skybox-authoring.md).
+
+Ohio pilots and Control have their own winter wardrobes: trapper hats with earflaps, baseball caps, flannel, work jackets, scarves and quilted vests. Their original faces, seven animated expression poses, and voices are preserved. Preview the whole animated cast at experiments/flight-cast.html?mission=ohio.

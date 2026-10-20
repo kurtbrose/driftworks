@@ -1,24 +1,25 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><title>Asteroid material study</title>
 <style>body{margin:0;background:#10171b;color:#c9d1d2;font:14px system-ui}header{padding:20px 28px}h1{font-size:20px;margin:0 0 8px}p{margin:0;color:#95a4aa}canvas{display:block;margin:auto;width:min(1100px,100%);height:auto!important;width:min(1100px,100%)!important}button{float:right;background:#24343e;color:#dbe7eb;border:1px solid #53616a;padding:8px 16px;cursor:pointer}</style>
 <header><button id="rotation">Pause rotation</button><h1>Asteroid material study · 20 seeded examples</h1><p>Mixed composition · shared relief lighting · slope-oriented craters, fractures and grain · illustrative until mining uses local composition</p></header>
+<script src="../src/asset-versions.js?v=1877d65c717f"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
-<script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
-<script src="../src/propulsion.js?v=20260920-population1"></script>
-<script src="../src/combat.js?v=20260920-population1"></script>
-<script src="../src/mining-lights.js"></script>
-<script src="../src/mining-terrain.js"></script>
-<script src="../src/mining-landing.js"></script>
-<script src="../src/logistics.js?v=20260920-population1"></script>
-<script src="../src/formations.js?v=20260920-population1"></script>
-<script src="../src/sim.js?v=20260920-population1"></script>
-<script src="../src/population.js"></script>
-<script src="../src/session.js"></script>
-<script src="../src/tactical/camera.js?v=20260920-population1"></script>
+<script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
+<script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+<script src="../src/combat.js?v=ce0e0e6eb149"></script>
+<script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+<script src="../src/mining-landing.js?v=f00997919474"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=9a868143dfe8"></script>
+<script src="../src/population.js?v=7a772b14be47"></script>
+<script src="../src/session.js?v=6d1be0457a7b"></script>
+<script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
 <script src="../src/engine-audio.js?v=061d71eda9b0"></script>
 <script src="../src/audio-mixer.js?v=86b2e5499688"></script>
 <script src="../src/audio.js?v=4c3a1ddd049c"></script>
-<script src="../src/hud.js?v=20260920-population1"></script>
-<script src="../src/game.js?v=20260920-asteroid-surface12"></script><script>
+<script src="../src/hud.js?v=b41c310fa59d"></script>
+<script src="../src/game.js?v=4b2cf113b259"></script><script>
 const app = new PIXI.Application({width:1100,height:720,backgroundAlpha:0,antialias:true,resolution:devicePixelRatio,autoDensity:true});
 document.body.appendChild(app.view);
 const names=['Ice','Volatiles','Metals','Silicates'];

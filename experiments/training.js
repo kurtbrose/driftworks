@@ -230,7 +230,7 @@
             var skill = Math.min(2, Math.floor((t.wave - 1 + i) / 3));
             t.enemies.push(Object.assign(createCraft('wave-' + t.wave + '-' + i, pose, 'enemy'), {
                 controller: 'ai', opponentStyle:t.opponentStyle||'baseline', collision: { kind: 'sphere', radiusM: 9 }, shield: 0, maxShield: 0,
-                index: i, callsign: t.mode === 'ohio' ? ['Cuyahoga Cryptid', 'Buckeye Bandit', 'Lake Erie Larry', 'Queen City Kid', 'Akron Afterburner', 'Toledo Tornado', 'Dayton Daydream', 'Ope Squadron', 'Turnpike Wraith', 'Chillicothe Chill', 'Parma Phantom', 'Lorain Lightning', 'Sandusky Siren', 'Hocking Goblin', 'Zanesville Zapper', 'Cleveland Comet'][i] : callsign({ index: i }), profile: DW.arcade.profiles[i % 3 === 1 ? 1 : 0],
+                index: i, callsign: t.mode === 'ohio' ? ['Cuyahoga Cryptid', 'Buckeye Bandit', 'Lake Erie Larry', 'Aunt Barb', 'Doug', 'Deb', 'Big Dale', 'Marge', 'Turnpike Wraith', 'Tammy', 'Cousin Donnie', 'Sheryl', 'Scooter', 'Hocking Goblin', 'Uncle Rick', 'Joanie'][i] : callsign({ index: i }), profile: DW.arcade.profiles[i % 3 === 1 ? 1 : 0],
                 hp: 90, maxHp: 90, pilot: ['Rookie', 'Veteran', 'Ace'][skill], skill: skill,
                 mode: 'approach', decision: i * .13, goal: player.eye.slice()
             }));

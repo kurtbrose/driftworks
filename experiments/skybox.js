@@ -1,5 +1,6 @@
 (function () {
     'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
     /** @typedef {import('./types').Vector} Vector */
     /** @typedef {import('./types').Pose} Pose */
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
@@ -24,14 +25,14 @@
     var lightingCache=null;
     function loadSkyLighting(){
         if(!lightingCache){
-            var url=new URL('../assets/backgrounds/sky-lighting-v1.json',window.location.href);
+            var url=new URL(assetUrl('../assets/backgrounds/sky-lighting-v1.json'),window.location.href);
             lightingCache=window.fetch(url).then(function(response){if(!response.ok)throw new Error('Sky lighting cache unavailable');return response.json();})
                 .then(/** @param {{version:number,families:Record<string,{sh:number[][],map:string}>}} data */ function(data){
                     if(data.version!==1 || !data.families)throw new Error('Invalid sky lighting cache');
                     return Promise.all(Object.keys(data.families).map(function(key){
                         return new Promise(/** @param {(entry:{key:string,value:import('../src/types').SkyEnvironmentLighting})=>void} resolve */ function(resolve,reject){
                             var image=new Image();image.onload=function(){resolve({key:key,value:{sh:data.families[key].sh,map:data.families[key].map,image:image}});};
-                            image.onerror=function(){reject(new Error('Sky reflection cache unavailable'));};image.src=new URL(data.families[key].map,url).href;
+                            image.onerror=function(){reject(new Error('Sky reflection cache unavailable'));};image.src=assetUrl(data.families[key].map,url.href);
                         });
                     })).then(function(entries){
                         /** @type {Record<string,import('../src/types').SkyEnvironmentLighting>} */ var result={};
@@ -214,7 +215,7 @@ void main(){
                     canvas.dataset.ohio=heroFeatures.length===2 ? 'ready' : 'loading';
                 };
                 image.onerror=function () {canvas.dataset.ohio='error';};
-                image.src='../assets/backgrounds/'+feature.asset;
+                image.src=assetUrl('../assets/backgrounds/'+feature.asset);
             });
         }
         var lightingEnabled=true;
@@ -226,7 +227,7 @@ void main(){
             loadSkyLighting().then(function(data){skyLighting=data;canvas.dataset.lighting='ready';}).catch(/** @param {unknown} error */ function(error){canvas.dataset.lighting=String(error);});
             var status=document.getElementById('skybox-status');
             if(status) status.textContent='Loading detailed sky features...';
-            var manifestUrl=new URL('../assets/backgrounds/hero-layout-v1.json',window.location.href);
+            var manifestUrl=new URL(assetUrl('../assets/backgrounds/hero-layout-v1.json'),window.location.href);
             window.fetch(manifestUrl).then(function (response) {
                 if(!response.ok) throw new Error('Sky layout: '+response.status);
                 return response.json();
@@ -246,7 +247,7 @@ void main(){
                             resolve({key:key,texture:texture});
                         };
                         image.onerror=function () {reject(new Error('Could not load sky feature '+key));};
-                        image.src=new URL(layout.library[key].file,manifestUrl).href;
+                        image.src=assetUrl(layout.library[key].file,manifestUrl.href);
                     });
                 })).then(function (textures) {
                     heroFeatures=layout.features.map(function (feature) {
@@ -325,7 +326,7 @@ void main(){
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
             canvas.dataset.panorama = 'ready';
         };
-        image.src = '../assets/backgrounds/all-sky-milky-way.jpg';
+        image.src = assetUrl('../assets/backgrounds/all-sky-milky-way.jpg');
         /** @param {WebGLProgram} p @param {Pose} pose @param {number} aspect @param {number} dpr */
         function uniforms(p, pose, aspect, dpr) {
             gl.useProgram(p); /** @type {('right' | 'up' | 'back')[]} */ /** @type {('right' | 'up' | 'back')[]} */

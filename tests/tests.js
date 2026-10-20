@@ -1673,6 +1673,20 @@
     assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
   });
 
+  test('Ohio chatter uses actual transmitted text for repeat avoidance', function () {
+    var radio=window.Driftworks.flightComms, clock=radio.create();
+    var combat={mode:'ohio',enabled:false,hull:100,enemies:[]}, heard=[];
+    for(var i=0;i<10;i++) {
+      clock.wait=0;clock.quiet=10;
+      var line=radio.step(clock,0,combat,false,function(){return 0;});
+      assert(line && line.text);
+      heard.push(line.text);
+      assert(clock.last===line.text && clock.recentLines[clock.recentLines.length-1].text===line.text);
+    }
+    assert(new Set(heard).size===10,'Use all ten range variants before repeating, even with fixed random');
+    assert(heard.some(function(text){return /deer|Ohio|orange barrels/.test(text);}));
+  });
+
   test('Ohio reveal gates combat, respects occupied radio, and retains its cast across waves', function () {
     var DW=window.Driftworks, api=DW.training, U=sim.METERS_PER_UNIT;
     var player=DW.arcade.create(300/U), combat=api.create('ohio'), clock=DW.flightComms.create();
@@ -1680,6 +1694,7 @@
     assert(combat.enemies.length===16 && combat.enemies.filter(function(e){return e.team==='ally';}).length===8);
     var names=combat.enemies.map(function(e){return e.callsign;}), start=JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}));
     assert(new Set(names).size===16 && names[0]==='Cuyahoga Cryptid');
+    assert(names[3]==='Aunt Barb' && names[6]==='Big Dale' && names[14]==='Uncle Rick','Ohio mixes familiar Midwest names with its strongest callsigns');
     api.step(combat,player,1,300/U);
     assert(JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}))===start);
     assert(DW.flightComms.step(clock,1,combat,true)===null && combat.ohioIntro===0);

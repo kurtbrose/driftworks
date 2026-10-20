@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
   // Columns: neutral, four mouth openings, blink, happy, angry, scared, somber.
   // Explicit crops accommodate the reference sheet's slightly uneven spacing.
   var xs=[10,213,399,585,766,942,1115,1280,1442,1600];
@@ -99,6 +100,6 @@
   }
   image.onload=function(){select();requestAnimationFrame(tick);};
   image.onerror=function(){status.textContent='SHEET FAILED TO LOAD';};
-  image.src='crew-sheet-v2.png';
+  image.src=assetUrl('crew-sheet-v2.png');
   window.addEventListener('pagehide',function(){stop();if(context)void context.close();});
 }());

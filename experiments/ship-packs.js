@@ -1,5 +1,6 @@
 (function () {
     'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
     /** @typedef {import('./types').Pack} Pack */
     /** @typedef {import('./types').Model} Model */
@@ -205,7 +206,7 @@
                     image.onerror = function () {
                         reject(new Error('Could not load ' + model.texture));
                     };
-                    image.src = '../assets/ships/' + pack.id + '/' + model.texture;
+                    image.src = assetUrl('../assets/ships/' + pack.id + '/' + model.texture);
                 }));
                 textureImages.set(model.id, pending);
                 return pending;

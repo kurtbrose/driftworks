@@ -1,9 +1,10 @@
+const assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
 // Shared frozen source poses for the mining study and flight scenery.
-import * as THREE from '../../../vendor/three/build/three.module.js';
+import * as THREE from 'three';
 import { GLTFLoader } from '../../../vendor/three/examples/jsm/loaders/GLTFLoader.js';
 const state = window.Driftworks.miningStudyCrew = { poses: null, error: null };
 try {
-  const gltf = await new GLTFLoader().loadAsync(new URL('./original/Astronaut%20by%20Quaternius%20-%203hC2i0CTuO.glb', import.meta.url).href);
+  const gltf = await new GLTFLoader().loadAsync(assetUrl('./original/Astronaut%20by%20Quaternius%20-%203hC2i0CTuO.glb', import.meta.url));
   const root = gltf.scene, mixer = new THREE.AnimationMixer(root);
   function sample(clipName, time) {
     mixer.stopAllAction();

@@ -14,24 +14,25 @@
   <div><h1>Asteroid playground · fresh specimens every visit</h1><p>Per-pixel procedural geology and grazing-angle relief lighting.</p><p class="seed" id="seed"></p></div>
   <div class="controls"><label>Light direction<input id="azimuth" type="range" min="-180" max="180" value="-144"></label><label>Light elevation<input id="elevation" type="range" min="8" max="80" value="34"></label><button id="regenerate">New panel</button><button id="detail">Close-up</button><button id="rotation">Pause rotation</button></div>
 </header>
+<script src="../src/asset-versions.js?v=1877d65c717f"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
-<script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
-<script src="../src/propulsion.js?v=20260920-population1"></script>
-<script src="../src/combat.js?v=20260920-population1"></script>
-<script src="../src/mining-lights.js"></script>
-<script src="../src/mining-terrain.js"></script>
-<script src="../src/mining-landing.js"></script>
-<script src="../src/logistics.js?v=20260920-population1"></script>
-<script src="../src/formations.js?v=20260920-population1"></script>
-<script src="../src/sim.js?v=20260922-cavern10"></script>
-<script src="../src/population.js"></script>
-<script src="../src/session.js"></script>
-<script src="../src/tactical/camera.js?v=20260920-population1"></script>
+<script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
+<script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+<script src="../src/combat.js?v=ce0e0e6eb149"></script>
+<script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+<script src="../src/mining-landing.js?v=f00997919474"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=9a868143dfe8"></script>
+<script src="../src/population.js?v=7a772b14be47"></script>
+<script src="../src/session.js?v=6d1be0457a7b"></script>
+<script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
 <script src="../src/engine-audio.js?v=061d71eda9b0"></script>
 <script src="../src/audio-mixer.js?v=86b2e5499688"></script>
 <script src="../src/audio.js?v=4c3a1ddd049c"></script>
-<script src="../src/hud.js?v=20260922-cavern1"></script>
-<script src="../src/game.js?v=20260922-cavern10"></script>
+<script src="../src/hud.js?v=b41c310fa59d"></script>
+<script src="../src/game.js?v=4b2cf113b259"></script>
 <script>
   const seedBytes=new Uint32Array(1);crypto.getRandomValues(seedBytes);const panelSeed=seedBytes[0];
   document.querySelector('#seed').textContent='Panel seed: '+panelSeed.toString(16).padStart(8,'0');

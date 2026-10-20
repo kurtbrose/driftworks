@@ -1,5 +1,6 @@
 (function () {
     'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
     /** @typedef {{name:string,pilotSeat?:number[],colors:Record<string,[number,number,number]>,parts:{material:string,component?:string,stage:number,vertices:number[]}[]}} Concept */
     var DW = /** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
     /** @typedef {{viewer:HTMLElement,model:HTMLSelectElement,revision:HTMLSelectElement,stage:HTMLSelectElement,crew:HTMLInputElement,cutaway:HTMLInputElement,download:HTMLAnchorElement,metadata:HTMLElement,reset:HTMLButtonElement,spin:HTMLButtonElement,top:HTMLButtonElement,front:HTMLButtonElement,side:HTMLButtonElement}} Elements */
@@ -11,7 +12,7 @@
     var scene=DW.scene3d.create(host,function(){return world;},function(w){world=w;},{study:true,viewer:true});
     var units=DW.sim.METERS_PER_UNIT, spinning=true, last=0, revision=0, lastModel='', crewReady=false;
     /** @type {Concept | null} */ var model=null;
-    var image=new Image();image.src='../assets/ships/concept-trio/panels.png';
+    var image=new Image();image.src=assetUrl('../assets/ships/concept-trio/panels.png');
     image.onload=function(){draw();};
     function reset(){
         world.camera={x:0,y:0,zoom:Math.min(host.clientWidth,host.clientHeight)*.055*units};
@@ -56,7 +57,7 @@
         var ticket=++revision;
         try{
             var suffix=get('revision').value==='initial'?'-initial':'';
-            var response=await fetch('../assets/ships/concept-trio/'+get('model').value+suffix+'.json');
+            var response=await fetch(assetUrl('../assets/ships/concept-trio/'+get('model').value+suffix+'.json'));
             if(!response.ok)throw new Error('Mesh load failed: '+response.status);
             var data=/** @type {Concept} */(await response.json());
             if(ticket!==revision)return;

@@ -1,5 +1,6 @@
 (function(){
   'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
   /** @param {string} id */
   function element(id){return /** @type {HTMLElement} */ (document.getElementById(id));}
   /** @param {string} id */
@@ -69,7 +70,7 @@
     requestAnimationFrame(draw);
   }
   /** @type {Record<string, HTMLImageElement>} */ var images={};
-  Promise.all(['master','eh','ah','oo','blink','wide','smile-soft','angry'].map(function(name){return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){images[name]=image;resolve(image);};image.onerror=reject;image.src=name+'.png';});})).then(function(){
+  Promise.all(['master','eh','ah','oo','blink','wide','smile-soft','angry'].map(function(name){return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){images[name]=image;resolve(image);};image.onerror=reject;image.src=assetUrl(name+'.png');});})).then(function(){
     if(closed)return;renderer=blend.create(/** @type {HTMLCanvasElement} */ (element('face')),images);speak.disabled=false;element('status').textContent='CHANNEL READY';requestAnimationFrame(draw);
   }).catch(function(){element('status').textContent='PORTRAIT FAILED TO LOAD';});
   window.addEventListener('pagehide',function(){closed=true;stop();if(audio)void audio.close();});

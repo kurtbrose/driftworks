@@ -1,5 +1,6 @@
 (function(){
   'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
   /** @typedef {import('./types').Line} Line */
   /** @typedef {import('./types').Feeling} Feeling */
   /** @typedef {import('./speech-sprites/generated-v1/types').FaceLayer} FaceLayer */
@@ -21,7 +22,12 @@
   /** @typedef {{controller: AbortController; bitmap: ImageBitmap | null; promise: Promise<Record<string, import('./speech-sprites/generated-v1/types').FaceSource>>}} Entry */
   /** @param {HTMLElement} panel */
   function mount(panel){
+    var ohio=typeof window.location!=='undefined'&&/[?&]mission=ohio(?:&|$)/.test(window.location.search||'');
+    // Wardrobe is presentation-only. Both casts retain the same calibrated slots,
+    // seven expression rectangles, voice identities, and fixed cache budget.
+    var portraitRoot='../assets/portraits/'+(ohio?'ohio':'dogfight')+'/runtime/';
     var canvas=panel.ownerDocument.createElement('canvas');canvas.width=canvas.height=512;canvas.className='radio-portrait';canvas.hidden=true;panel.appendChild(canvas);
+    canvas.dataset.cast=ohio?'ohio':'standard';
     var animated=panel.ownerDocument.createElement('canvas');
     var display=DW.commsDisplay.create(canvas);
     /** @type {import('./types').RadioNoise | null} */ var noise=null;
@@ -34,7 +40,7 @@
       var cached=cache.get(index);
       if(cached){cache.delete(index);cache.set(index,cached);return cached.promise;}
       /** @type {Entry} */ var entry={controller:new AbortController(),bitmap:null,promise:Promise.resolve({})};
-      entry.promise=fetch(new URL('../assets/portraits/dogfight/runtime/portrait-'+index+'.png',document.baseURI).href,{signal:entry.controller.signal}).then(function(response){
+      entry.promise=fetch(assetUrl(portraitRoot+'portrait-'+index+'.png'),{signal:entry.controller.signal}).then(function(response){
         if(!response.ok)throw new Error('Portrait request failed: '+response.status);
         return response.blob();
       }).then(function(blob){return createImageBitmap(blob);}).then(function(bitmap){

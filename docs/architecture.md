@@ -849,6 +849,18 @@ owns emotions, combat observations and airtime scheduling; `flight-radio.js`
 owns subtitles, channel playback and Web Audio lifecycle. Load them in that
 order after training and mumble, before flight boot. The existing
 `flightComms` API forwards dialogue helpers and `mount` for compatibility.
+Ohio wardrobe selection is presentation-only: `mission=ohio` chooses the seventeen
+local atlases in `assets/portraits/ohio/runtime/` when the portrait panel mounts.
+All other sorties use the standard cast. Slot order, voices, seven frame rectangles,
+expression masks, speech timing, reduced-motion behavior, and the seventeen-bitmap
+cache budget remain shared. The optional `tools/prepare-ohio-portraits.ps1` packs
+ImageGen wardrobe masters while copying the original calibrated inner-face pixels
+into every expression frame; it feathers only outside that protected face boundary.
+Clothing and headwear are frozen across all poses. Generated masters, prompts,
+source/output hashes, and a cast preview are retained under `assets/portraits/ohio/`.
+`tests/ohio-portraits.cjs` verifies the shipped facial pixels and mission isolation.
+Preview every animated Ohio pilot at `experiments/flight-cast.html?mission=ohio`.
+
 `flight-portraits.js` adds a presentation-only caller portrait to the radio
 adapter. It reuses `speech-sprites/generated-v1/face-blend.js` for fixed-master,
 inner-face masking and Mumble syllable timing. Load face-blend and portraits
@@ -1502,3 +1514,15 @@ hull health; it reports neither terrain contact nor zero damage. Aegis confirmed
 hit accounting uses this callback, avoiding whole-fleet health totals per trace.
 The fixed-scene browser and scripted CPU benchmarks are described in
 [dreadnaught kit](dreadnaught-kit.md#repeatable-performance-comparison).
+
+### Static asset versions
+
+`tools/refresh-site-assets.cjs` versions local HTML resources and generates the
+checked-in `src/asset-versions.js` URL map. It loads before application scripts;
+`window.Driftworks.assetUrl(value, base?)` resolves document-relative or manifest-relative
+resources within the deployment root and appends a content hash, preserving other
+query parameters and fragments. External URLs pass through. Skybox JSON and its
+images are versioned independently; changing an image invalidates the map and all
+HTML references to it. Text hashes normalize CRLF to LF; binary hashes do not.
+Refresh and commit versions after edits; `npm run check` validates without writing.
+HTML still needs host revalidation to discover a new deployment.

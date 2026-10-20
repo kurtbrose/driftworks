@@ -14,6 +14,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   };
   async function flush(){for(let i=0;i<20;i++)await Promise.resolve();}
   vm.createContext(box);
+  box.URL=URL; box.document.baseURI='http://localhost:8000/experiments/flight.html';
+  box.document.currentScript={getAttribute:()=> '../src/asset-versions.js'};
+  vm.runInContext(fs.readFileSync('src/asset-versions.js','utf8'),box);
   for(const file of ['experiments/mumble.js','experiments/comms-display.js','experiments/speech-sprites/generated-v1/face-blend.js','experiments/flight-portraits.js'])vm.runInContext(fs.readFileSync(file,'utf8'),box);
   const DW=window.Driftworks,api=DW.flightPortraits;
   DW.faceBlend.create=(target,frames)=>{
@@ -46,7 +49,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   const warmLoads=loaded;
   for(let index=0;index<16;index++){view.show({...line,portraitIndex:index});await flush();}
   assert.equal(loaded,warmLoads,'Every warmed character is immediately reusable without another load');assert.ok(disposed>0);
-  view.show({...line,portraitIndex:-1,speaker:'CONTROL / COMMAND'});await flush();assert.equal(loaded,warmLoads+1);assert.ok(bitmaps.some(b=>!b.closed&&b.url.endsWith('portrait-16.png')),'Control has its own compact atlas');assert.equal(bitmaps.filter(b=>!b.closed).length,17);
+  view.show({...line,portraitIndex:-1,speaker:'CONTROL / COMMAND'});await flush();assert.equal(loaded,warmLoads+1);assert.ok(bitmaps.some(b=>!b.closed&&new URL(b.url).pathname.endsWith('portrait-16.png')),'Control has its own compact atlas');assert.equal(bitmaps.filter(b=>!b.closed).length,17);
   lifecycle.pagehide();assert.ok(canvas.hidden);assert.ok(bitmaps.every(b=>b.closed),'Page exit closes the entire fixed cast cache');
   // A foreground caller must not wait behind another character's warm-up.
   suspendNext=true;lifecycle.pageshow({persisted:true});idle.shift()();

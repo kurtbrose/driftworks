@@ -17,7 +17,7 @@ PASS sky lighting assets: source hash, finite diffuse SH and power-of-two reflec
 PASS target-lock ablation: holds valid targets; leaves acquisition, death replacement and other inputs unchanged
 PASS furball telemetry: opportunities, gate accounting, target switches, shot/hit deltas
 PASS retail gun counts: numeric POF bank import, odd/even counts and corrupt input rejection
-All 340 browser-native tests passed.
+All 341 browser-native tests passed.
 PASS flight composition: retained combat settings, pause/resume clocks, contact/death/completion status
 PASS battle-consequences (tick 3000)
 PASS tug-arrival (tick 2400)
@@ -32,7 +32,7 @@ PASS mining ramps: independent first-contact stops, full travel when clear, thic
 PASS mining terrain: actual-mesh raycasts, chassis clearance, eight fixed-length IK chains, gripper contact, missing/unreachable targets and study wiring
 PASS mining terrain cache: one mesh, one solve per site, including failed sites; cache reads perform no raycasts
 PASS mining ramp cache: one sweep per site, no repeated terrain queries
-(node:58404) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///E:/workspace/driftworks/vendor/three/build/three.module.js is not specified and it doesn't parse as CommonJS.
+(node:70976) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///E:/workspace/driftworks/vendor/three/build/three.module.js is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
 To eliminate this warning, add "type": "module" to \\?\E:\workspace\driftworks\package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
@@ -90,14 +90,71 @@ PASS source scorch batches: exact posed geometry, immutable buffers, mark invali
 PASS indexed scorch projection: 80 exact comparisons against full-mesh clipping
 PASS static actor culling: 1,500 transformed box/clip-plane comparisons, edge/near/far/camera-inside cases
 PASS study effects: all nine fighter/engine/capital batches retained without truncation
-(node:52936) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///E:/workspace/driftworks/vendor/three/build/three.module.js is not specified and it doesn't parse as CommonJS.
+(node:65012) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///E:/workspace/driftworks/vendor/three/build/three.module.js is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
 To eliminate this warning, add "type": "module" to \\?\E:\workspace\driftworks\package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
+evalmachine.<anonymous>:102
+  image.src=window.driftworksAssetUrl('crew-sheet-v2.png');
+                   ^
+
+TypeError: window.driftworksAssetUrl is not a function
+    at evalmachine.<anonymous>:102:20
+    at evalmachine.<anonymous>:104:2
+    at Script.runInContext (node:vm:149:12)
+    at Object.runInContext (node:vm:301:6)
+    at E:\workspace\driftworks\tests\speech-sprites.cjs:20:6
+    at Object.<anonymous> (E:\workspace\driftworks\tests\speech-sprites.cjs:42:3)
+    at Module._compile (node:internal/modules/cjs/loader:1929:14)
+    at Object..js (node:internal/modules/cjs/loader:2060:10)
+    at Module.load (node:internal/modules/cjs/loader:1651:32)
+    at Module._load (node:internal/modules/cjs/loader:1443:12)
+TypeError: window.driftworksAssetUrl is not a function
+    at load (evalmachine.<anonymous>:37:34)
+    at Object.show (evalmachine.<anonymous>:102:9)
+    at E:\workspace\driftworks\tests\flight-portraits.cjs:29:8
+    at Object.<anonymous> (E:\workspace\driftworks\tests\flight-portraits.cjs:83:3)
+    at Module._compile (node:internal/modules/cjs/loader:1929:14)
+    at Object..js (node:internal/modules/cjs/loader:2060:10)
+    at Module.load (node:internal/modules/cjs/loader:1651:32)
+    at Module._load (node:internal/modules/cjs/loader:1443:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.require (node:internal/modules/cjs/loader:1674:12)
+evalmachine.<anonymous>:37
+        next.src =window.driftworksAssetUrl( '../assets/portraits/dogfight/runtime/portrait-' + select('portrait').value + '.png');
+                         ^
+
+TypeError: window.driftworksAssetUrl is not a function
+    at load (evalmachine.<anonymous>:37:26)
+    at evalmachine.<anonymous>:39:68
+    at evalmachine.<anonymous>:97:2
+    at Script.runInContext (node:vm:149:12)
+    at Object.runInContext (node:vm:301:6)
+    at E:\workspace\driftworks\tests\comms-lab.cjs:25:6
+    at Object.<anonymous> (E:\workspace\driftworks\tests\comms-lab.cjs:40:3)
+    at Module._compile (node:internal/modules/cjs/loader:1929:14)
+    at Object..js (node:internal/modules/cjs/loader:2060:10)
+    at Module.load (node:internal/modules/cjs/loader:1651:32)
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- false
+
+    at E:\workspace\driftworks\tests\talking-face.cjs:30:10
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
 PASS mining study: swept movement, wall sliding, vertical flight and static-door replacement
-PASS speech sprites: Mumble playback, radio lead-in, stop during unlock/playback, crew casting and completion
-PASS comms audition: speech-clock mouth cues, mute, completed cutoff, stop, portrait replacement and disposal
-PASS talking face: voiced mouth timing, radio silence, independent blink/expression layers, reduced motion, cancellation and completion
 PASS Aegis kit: outward armor, open couplings, viewport framing, two attachment banks, shared true-scale fighters and stable ship-only OBJ exports
-PASS dogfight portraits: stable cast, mood/stress mapping, fixed compact bitmap cache, idle warm-up, foreground priority, retries, late-decode cleanup, audio timing and live feelings
 PASS hero sky: local asset reuse, fixed layout, sphere seams, orientation and separate star pass
+TypeError: window.driftworksAssetUrl is not a function
+    at evalmachine.<anonymous>:217:34
+    at Array.forEach (<anonymous>)
+    at Object.create (evalmachine.<anonymous>:197:24)
+    at testOhioSky (E:\workspace\driftworks\tests\flight-skybox.cjs:93:61)

@@ -1,24 +1,25 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Asteroid renderer comparison · Driftworks</title><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="../styles.css"><style>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Asteroid renderer comparison · Driftworks</title><link rel="icon" href="../assets/favicon.svg?v=83fbfb94936a"><link rel="stylesheet" href="../styles.css?v=8732c3648e27"><style>
 body{height:100vh;display:flex;flex-direction:column;margin:0;background:#080d11;color:#dce6e9;font:14px system-ui}header{padding:16px 20px;background:#101c24}h1{margin:0 0 12px;font-size:20px}nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}button,input,select,a{font:inherit;color:inherit;background:#1b2e39;border:1px solid #466171;border-radius:5px;padding:7px 10px}button,a{cursor:pointer}button[aria-pressed=true]{background:#365e6f;border-color:#9cd6e8}input{width:150px}a{text-decoration:none}main{display:grid;grid-template-columns:1fr 1fr;gap:2px;flex:1;min-height:0}article{position:relative;min-width:0;overflow:hidden;background:#080d11}.view{position:absolute;inset:0;overflow:hidden}.view canvas{display:block;width:100%;height:100%;pointer-events:none}.scene3d-overlay,.scene3d-controls{display:none}.night-sky-background{display:none}.tag{position:absolute;top:12px;left:12px;padding:8px 12px;background:#101c24dd;border-radius:5px;pointer-events:none}.tag strong{display:block}.tag small{color:#a6bdca}footer{line-height:1.5;padding:10px 20px;color:#a6bdca;font-size:12px}#status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:6px;color:#dce6e9}label{display:flex;gap:6px;align-items:center}#comparison-test-result{display:block}@media(max-width:650px){main{min-height:220px}header{padding:12px}nav{gap:5px}input{width:105px}}
 </style></head><body><header><h1>Asteroid renderer comparison</h1><nav aria-label="Comparison controls"><label>Seed <input id="seed" value="ast-ceres-01" maxlength="64"></label><button id="apply">Apply seed</button><button data-pose="orbit" aria-pressed="true">Orbit</button><button data-pose="underside" aria-pressed="false">Underside</button><button data-pose="surface" aria-pressed="false">Worksite</button><button id="cut" aria-pressed="false">Cutaway</button><button id="light" aria-pressed="false">Work light</button><button id="shadows" aria-pressed="true">Shadows</button><label title="Shown in Worksite view">Fixture <select id="fixture"><option value="posts">Test posts</option><option value="rig">Mining rig</option><option value="none">None</option></select></label><label>Surface <select id="surface"><option value="rock">Rock</option><option value="clay">Silhouette</option></select></label><label>Three.js detail <select id="detail"><option value="geometry">Geometry only</option><option value="micro">+ Fine texture</option><option value="normals">Legacy crater normals</option><option value="legacy" selected>+ Legacy darkening</option></select></label><label>Rock response <select id="response"><option value="original" selected>Original appearance</option><option value="standard">Standard physical</option></select></label><label>Three.js lights <select id="light-source"><option value="all">All</option><option value="work">Work light + dim fill</option><option value="lamp">Work light only</option><option value="sun">Sun only</option><option value="ambient">Ambient only</option></select></label><label>Reflections <select id="specular"><option value="on">Standard</option><option value="off">Off</option></select></label><button id="benchmark">Measure performance</button><a href="asteroid-orbit.html">Original viewer</a></nav></header><main><article><div id="raw" class="view" aria-label="Current WebGL renderer"></div><div class="tag"><strong>Current WebGL</strong><small>Existing custom lighting</small></div></article><article><div id="three" class="view" aria-label="Three.js renderer"></div><div class="tag"><strong>Three.js r180</strong><small>Custom rock material / Three.js lights and shadows</small></div></article></main><footer>Drag either view to orbit / look · Wheel to zoom · Worksite: WASD to walk · Shift + drag to pan in orbit. Cameras are linked. Lighting models differ; this is not a pixel-identical lighting comparison.<div id="performance" hidden style="min-height:110px"></div><div id="status" role="status">Loading comparison…</div></footer>
+<script src="../src/asset-versions.js?v=1877d65c717f"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
-    <script src="../vendor/pixi/pixi.min.js?v=20260912-launch1"></script>
-    <script src="../src/propulsion.js?v=20260920-population1"></script>
-    <script src="../src/combat.js?v=20260921-sensor-track1"></script>
-    <script src="../src/mining-lights.js"></script>
-<script src="../src/mining-terrain.js"></script>
-    <script src="../src/mining-landing.js"></script>
-    <script src="../src/logistics.js?v=20260921-craft1"></script>
-    <script src="../src/formations.js?v=20260920-population1"></script>
-    <script src="../src/sim.js?v=20260922-cavern10"></script>
-    <script src="../src/population.js"></script>
-    <script src="../src/session.js"></script>
-    <script src="../src/tactical/camera.js?v=20260920-population1"></script>
+    <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
+    <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+    <script src="../src/combat.js?v=ce0e0e6eb149"></script>
+    <script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+    <script src="../src/mining-landing.js?v=f00997919474"></script>
+    <script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+    <script src="../src/formations.js?v=c6006cf590e5"></script>
+    <script src="../src/sim.js?v=9a868143dfe8"></script>
+    <script src="../src/population.js?v=7a772b14be47"></script>
+    <script src="../src/session.js?v=6d1be0457a7b"></script>
+    <script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
     <script src="../src/engine-audio.js?v=061d71eda9b0"></script>
 <script src="../src/audio-mixer.js?v=86b2e5499688"></script>
 <script src="../src/audio.js?v=4c3a1ddd049c"></script>
-    <script src="../src/hud.js?v=20260922-cavern1"></script>
-    <script src="../src/mesh-builder.js"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=20261018-focus-flight3"></script><script src="../src/scene3d.js?v=20261018-focus-flight3"></script>
-    <script src="../src/game.js?v=20261007-3d-geology2"></script>
-<script src="mining-study-terrain.js"></script><script type="module" src="asteroid-three-comparison.js"></script></body></html>
+    <script src="../src/hud.js?v=b41c310fa59d"></script>
+    <script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=02d9b3545d85"></script><script src="../src/scene3d.js?v=1020b08d3c58"></script>
+    <script src="../src/game.js?v=4b2cf113b259"></script>
+<script src="mining-study-terrain.js?v=f1d69b502da0"></script><script type="module" src="asteroid-three-comparison.js?v=3282a38fa331"></script></body></html>

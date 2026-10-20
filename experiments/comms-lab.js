@@ -1,5 +1,6 @@
 (function () {
     'use strict';
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
     /** @param {string} id */
     function el(id) { return /** @type {HTMLElement} */ (document.getElementById(id)); }
     /** @param {string} id */
@@ -34,7 +35,7 @@
             ['master','ah','oo','blink','smile','angry','afraid'].forEach(function (name, index) { poses[name] = {image: image, rect: [index * 256, 0, 256, 256]}; });
             poses.eh = poses.ah; renderer = DW.faceBlend.create(animated, poses); loaded = true; original.clearRect(0, 0, 256, 256); original.drawImage(image, 0, 0, 256, 256, 0, 0, 256, 256); el('status').textContent = 'STANDBY'; };
         next.onerror = function () { if (ticket === generation) el('status').textContent = 'PORTRAIT LOAD FAILED'; };
-        next.src = '../assets/portraits/dogfight/runtime/portrait-' + select('portrait').value + '.png';
+        next.src =assetUrl( '../assets/portraits/dogfight/runtime/portrait-' + select('portrait').value + '.png');
     }
     select('portrait').onchange = function () { stop(); load(); }; load();
     input('noise').oninput = function () { el('amount').textContent = input('noise').value + '%'; };
