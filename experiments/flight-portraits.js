@@ -22,6 +22,9 @@
   /** @param {HTMLElement} panel */
   function mount(panel){
     var canvas=panel.ownerDocument.createElement('canvas');canvas.width=canvas.height=512;canvas.className='radio-portrait';canvas.hidden=true;panel.appendChild(canvas);
+    var animated=panel.ownerDocument.createElement('canvas');
+    var display=DW.commsDisplay.create(canvas);
+    /** @type {import('./types').RadioNoise | null} */ var noise=null;
     // Fixed cast cache: compact bitmaps only, never persistent pose canvases.
     /** @type {Map<number, Entry>} */ var cache=new Map();
     /** @param {Entry} entry */
@@ -64,7 +67,7 @@
     /** @type {import('./types').SpeechPlan | null} */ var plan=null;
     /** @type {AudioContext | null} */ var audio=null;
     /** @type {Feeling | undefined} */ var feeling;
-    var ticket=0,current=-1,started=0,offset=0,lastDraw=-Infinity,blinkAt=0,visible=false;
+    var ticket=0,current=-1,started=0,offset=0,lastDraw=-Infinity,blinkAt=0,visible=false,breakup=0;
     function discardRenderer(){if(renderer){renderer.dispose();renderer=null;}current=-1;}
     window.addEventListener('pagehide',function(){warmGeneration++;ticket++;visible=false;plan=null;audio=null;discardRenderer();cache.forEach(release);cache.clear();canvas.hidden=true;panel.classList.remove('has-portrait');});
     window.addEventListener('pageshow',function(event){if(event.persisted)warmup();});
@@ -74,6 +77,7 @@
     function update(live,force){
       if(live)feeling=live;
       if(!renderer||!visible)return;
+      if(noise&&audio&&(audio.currentTime-started>=noise.duration)){plan=null;noise=null;}
       var now=performance.now();if(!force&&now-lastDraw<1000/30)return;lastDraw=now;
       /** @type {FaceLayer[]} */ var layers=[];
       var mood=expression(feeling);
@@ -84,24 +88,30 @@
         if(now>=blinkAt+140)blinkAt=now+2800+(current*317)%2200;
         if(now>=blinkAt)layers.push({image:'blink',shape:[38.5,44.6,7.4,4.3,25],alpha:1},{image:'blink',shape:[56.5,44.6,7.4,4.3,25],alpha:1});
       }
-      renderer.draw(layers);canvas.dataset.expression=mood;
+      renderer.draw(layers);
+      display.draw(animated,noise,audio?audio.currentTime-started:0,plan?plan.duration:0,{reduced:reduce,breakup:breakup});
+      canvas.dataset.expression=mood;
     }
+    function stop(){breakup=0;ticket++;visible=false;plan=null;audio=null;noise=null;canvas.hidden=true;panel.classList.remove('has-portrait');}
     return {
       /** @param {Line} line */
       show:function(line){
-        var request=++ticket,index=slot(line);feeling=line.emotion;plan=null;audio=null;visible=true;
+        var request=++ticket,index=slot(line);feeling=line.emotion;breakup=0;plan=null;audio=null;noise=null;visible=true;
         canvas.setAttribute('aria-label',line.speaker.split(' / ')[0]+' speaking portrait');
         if(index!==current){discardRenderer();canvas.hidden=true;panel.classList.remove('has-portrait');}
         load(index).then(function(source){
           if(request!==ticket||!visible)return;
-          if(index!==current||!renderer){renderer=DW.faceBlend.create(canvas,source);current=index;}
+          if(index!==current||!renderer){renderer=DW.faceBlend.create(animated,source);current=index;}
           canvas.hidden=false;panel.classList.add('has-portrait');update(undefined,true);
         }).catch(function(){if(request===ticket){canvas.hidden=true;panel.classList.remove('has-portrait');}});
       },
-      /** @param {import('./types').SpeechPlan} value @param {AudioContext} context @param {number} time @param {number} speechOffset */
-      play:function(value,context,time,speechOffset){plan=value;audio=context;started=time;offset=speechOffset;},
-      stop:function(){plan=null;audio=null;update(undefined,true);},
-      clear:function(){ticket++;visible=false;plan=null;audio=null;discardRenderer();canvas.hidden=true;panel.classList.remove('has-portrait');},
+      /** @param {import('./types').SpeechPlan} value @param {AudioContext} context @param {number} time @param {number} speechOffset @param {import('./types').RadioNoise} [pattern] */
+      play:function(value,context,time,speechOffset,pattern){plan=value;audio=context;started=time;offset=speechOffset;noise=pattern||null;},
+      finish:function(){breakup=0;plan=null;noise=null;update(undefined,true);},
+      /** @param {number} progress */
+      decay:function(progress){breakup=progress;update(undefined,true);},
+      stop:stop,
+      clear:function(){ticket++;visible=false;plan=null;audio=null;noise=null;discardRenderer();canvas.hidden=true;panel.classList.remove('has-portrait');},
       update:update
     };
   }

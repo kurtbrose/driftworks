@@ -434,6 +434,12 @@ export type SpeechPlan = {
     events: (Cue | Syllable)[];
     duration: number;
 };
+export type RadioNoise = {
+    edgeScale: number; sampleRate: number; speechSamples: number; lead: number; duration: number; effects: number;
+    openLatch: RadioLatch; closeLatch: RadioLatch;
+    bursts: {start: number; end: number; gain: number}[];
+};
+export type RadioLatch = {delay: number; duration: number; frequency: number; steps: {until: number; gain: number}[]};
 export type TransmissionOptions = {
     mode?: string;
     speechDuration?: number;
@@ -441,6 +447,8 @@ export type TransmissionOptions = {
     effects?: number;
     seed?: number;
     staticBursts?: boolean;
+    noise?: RadioNoise;
+    edgeScale?: number;
 };
 export type Speaker = Partial<Craft> & {
     id: string;
@@ -567,11 +575,15 @@ export type Line = {
     radioSeed: number;
     emotion?: Feeling;
 };
+export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines?: number; reduced?: boolean};
 export type ExperimentModules = {
+    commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
     flightPortraits: {
         mount: (panel: HTMLElement) => {
             show: (line: Line) => void;
-            play: (plan: SpeechPlan, context: AudioContext, time: number, speechOffset: number) => void;
+            play: (plan: SpeechPlan, context: AudioContext, time: number, speechOffset: number, noise?: RadioNoise) => void;
+            finish: () => void;
+            decay: (progress: number) => void;
             stop: () => void;
             clear: () => void;
             update: (live?: Feeling, force?: boolean) => void;
@@ -825,10 +837,13 @@ export type ExperimentModules = {
         render: (plan: SpeechPlan, sampleRate?: number, options?: {
             style?: string;
         }) => Float32Array;
+        radioNoise: (speechSamples: number, sampleRate: number, options?: TransmissionOptions) => RadioNoise;
+        radioNoiseAt: (pattern: RadioNoise, time: number) => {strength: number; squelch: number; burst: number; chirp: number; carrier: number};
         transmit: (samples: Float32Array, sampleRate: number, options?: TransmissionOptions) => {
             samples: Float32Array;
             speechOffset: number;
             duration: number;
+
         };
     };
     flightComms: {

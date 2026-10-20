@@ -30,3 +30,5 @@ body:not(.flight-active) #comms{visibility:hidden}body.flight-active #comms{bott
 body.watching-ai #comms.has-portrait{padding-left:112px;min-height:116px;width:360px}
 body.watching-ai #comms .radio-portrait{width:84px;height:84px;left:12px;top:12px}
 @media(max-width:700px){#comms.has-portrait,body.flight-active #comms.has-portrait{padding-left:100px;min-height:112px}#comms .radio-portrait{left:10px;top:12px;width:78px;height:78px}body.watching-ai #comms.has-portrait{width:min(360px,calc(100vw - 20px));padding-left:100px}body.watching-ai #comms .radio-portrait{width:78px;height:78px}}
+
+#comms.idle{visibility:hidden;pointer-events:none}

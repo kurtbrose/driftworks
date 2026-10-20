@@ -77,3 +77,10 @@ require('./speech-sprites.cjs');
 require('./talking-face.cjs');
 require('./flight-portraits.cjs');
 require('./portrait-assets.cjs');
+
+require('./comms-signal.cjs');
+require('./comms-lab.cjs');
+require('./comms-display.cjs');
+require('./concept-ships.cjs');
+
+require('./dreadnaught-kit.cjs');

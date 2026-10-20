@@ -250,19 +250,13 @@
         }
         return pcm;
     }
-    // Contextual transmission is separate from character identity and speech timing.
-    /** @param {Float32Array} samples @param {number} sampleRate @param {TransmissionOptions} [options] */
-    function transmit(samples, sampleRate, options) {
+    /** Build the existing radio gate/static pattern once, before either consumer.
+     * @param {number} speechSamples @param {number} sampleRate @param {TransmissionOptions} [options]
+     * @returns {import('./types').RadioNoise} */
+    function radioNoise(speechSamples, sampleRate, options) {
         options = options || {};
-        if (options.mode !== 'radio' || !samples.length)
-            return { samples: samples, speechOffset: 0, duration: samples.length / sampleRate };
-        if (typeof options.speechDuration === 'number' && Number.isFinite(options.speechDuration))
-            samples = samples.subarray(0, Math.max(0, Math.min(samples.length, Math.ceil(options.speechDuration * sampleRate))));
-        var lead = Math.round(0.16 * sampleRate), tail = Math.round(0.24 * sampleRate);
-        var output = new Float32Array(lead + samples.length + tail);
-        var volume = typeof options.volume === 'number' && Number.isFinite(options.volume) ? Math.max(0, Math.min(1, options.volume)) : defaults.volume;
-        var effects = typeof options.effects === 'number' && Number.isFinite(options.effects) ? Math.max(0, Math.min(1, options.effects)) : 0.65;
-        var noise = random((options.seed || 0) ^ 0x52414449), low = 0, band = 0, hissLow = 0, noiseBand = 0;
+        var edgeScale = typeof options.edgeScale === 'number' && Number.isFinite(options.edgeScale) ? Math.max(1, Math.min(4, options.edgeScale)) : 1;
+        var lead = Math.round(.16 * edgeScale * sampleRate), tail = Math.round(.24 * edgeScale * sampleRate);
         var character = random((options.seed || 0) ^ 0x53515545);
         function latch() {
             var gate = { delay: character() * 0.025, duration: 0.014 + character() * 0.05, frequency: 1200 + character() * 1400, steps: /** @type {{until: number; gain: number}[]} */ ([]) }, time = 0;
@@ -273,50 +267,77 @@
             return gate;
         }
         var openLatch = latch(), closeLatch = latch();
+        [openLatch, closeLatch].forEach(function (gate) {
+            gate.delay *= edgeScale; gate.duration *= edgeScale;
+            gate.steps.forEach(function (step) { step.until *= edgeScale; });
+        });
         // Most transmissions are clean; eligible ones still wait an exponential random gap.
         var burstRate = options.staticBursts === false || character() < 0.6 ? 0 : 0.45;
         function waitBurst() {
             return -Math.log(Math.max(0.000001, 1 - character())) / 0.45;
         }
-        var nextBurst = lead / sampleRate + waitBurst(), burstEnd = 0, burstStart = 0, burstGain = 0;
+        var nextBurst = lead / sampleRate + waitBurst();
+        /** @type {{start: number; end: number; gain: number}[]} */ var bursts = [];
+        while (burstRate && nextBurst < (lead + speechSamples) / sampleRate) {
+            var start = Math.ceil(nextBurst * sampleRate) / sampleRate;
+            if (start >= (lead + speechSamples) / sampleRate) break;
+            var end = start + .025 + character() * .095;
+            var gain = .25 + character() * .4;
+            bursts.push({start: start, end: end, gain: gain}); nextBurst = end + waitBurst();
+        }
+        return {edgeScale: edgeScale, sampleRate: sampleRate, speechSamples: speechSamples, lead: lead, duration: (lead + speechSamples + tail) / sampleRate,
+            effects: typeof options.effects === 'number' && Number.isFinite(options.effects) ? Math.max(0, Math.min(1, options.effects)) : .65,
+            openLatch: openLatch, closeLatch: closeLatch, bursts: bursts};
+    }
+    /** Read the shared radio input at playback time, in seconds.
+     * @param {import('./types').RadioNoise} pattern @param {number} time */
+    function radioNoiseAt(pattern, time) {
+        var i = Math.floor(time * pattern.sampleRate + 1e-7), now = i / pattern.sampleRate;
+        if (time < 0 || time >= pattern.duration) return {strength: 0, squelch: 0, burst: 0, chirp: 0, carrier: 0};
+        var opening = i < pattern.lead, closing = i >= pattern.lead + pattern.speechSamples;
+        var edgeTime = opening ? now : (i - pattern.lead - pattern.speechSamples) / pattern.sampleRate;
+        var gate = opening ? pattern.openLatch : pattern.closeLatch;
+        var latchTime = (opening ? edgeTime : edgeTime - .12 * pattern.edgeScale) - gate.delay;
+        var squelch = 0, chirp = 0, burst = 0;
+        if ((opening || closing) && latchTime >= 0 && latchTime < gate.duration) {
+            for (var g = 0; g < gate.steps.length; g++) if (latchTime < gate.steps[g].until) { squelch = gate.steps[g].gain; break; }
+            chirp = Math.exp(-latchTime * 650) * Math.cos(2 * Math.PI * gate.frequency * latchTime) * .24;
+        }
+        for (var j = 0; j < pattern.bursts.length; j++) {
+            var event = pattern.bursts[j];
+            if (now >= event.start && now < event.end) { burst = event.gain * Math.min(1, (now - event.start) / .002, (event.end - now) / .004); break; }
+        }
+        return {strength: Math.min(1, pattern.effects * (squelch + burst)), squelch: squelch, burst: burst, chirp: chirp, carrier: opening || closing ? .16 : .075};
+    }
+    // Contextual transmission is separate from character identity and speech timing.
+    /** @param {Float32Array} samples @param {number} sampleRate @param {TransmissionOptions} [options] */
+    function transmit(samples, sampleRate, options) {
+        options = options || {};
+        if (options.mode !== 'radio' || !samples.length)
+            return { samples: samples, speechOffset: 0, duration: samples.length / sampleRate };
+        if (typeof options.speechDuration === 'number' && Number.isFinite(options.speechDuration))
+            samples = samples.subarray(0, Math.max(0, Math.min(samples.length, Math.ceil(options.speechDuration * sampleRate))));
+        var pattern = options.noise || radioNoise(samples.length, sampleRate, options);
+        var lead = pattern.lead, tail = Math.round(pattern.duration * sampleRate) - lead - samples.length;
+        var output = new Float32Array(lead + samples.length + tail);
+        var volume = typeof options.volume === 'number' && Number.isFinite(options.volume) ? Math.max(0, Math.min(1, options.volume)) : defaults.volume;
+        var effects = typeof options.effects === 'number' && Number.isFinite(options.effects) ? Math.max(0, Math.min(1, options.effects)) : 0.65;
+        var noise = random((options.seed || 0) ^ 0x52414449), low = 0, band = 0, hissLow = 0, noiseBand = 0;
         for (var i = 0; i < output.length; i++) {
             var now = i / sampleRate;
-            if (burstRate && now >= nextBurst && i < lead + samples.length) {
-                burstStart = now;
-                burstEnd = now + 0.025 + character() * 0.095;
-                burstGain = 0.25 + character() * 0.4;
-                nextBurst = burstEnd + waitBurst();
-            }
-            var burst = burstRate && now < burstEnd ? burstGain * Math.min(1, (now - burstStart) / 0.002, (burstEnd - now) / 0.004) : 0;
             var speech = i >= lead && i < lead + samples.length ? samples[i - lead] : 0;
             low += 0.08 * (speech - low);
             band += 0.55 * (speech - low - band);
             var raw = noise() * 2 - 1;
             hissLow += 0.2 * (raw - hissLow);
             noiseBand += 0.35 * (raw - hissLow - noiseBand);
-            var hiss = noiseBand * 2, squelch = 0, chirp = 0;
-            var opening = i < lead, closing = i >= lead + samples.length;
-            var edgeTime = opening ? i / sampleRate : (i - lead - samples.length) / sampleRate;
-            // Electrical gate, not a vocal envelope: steady carrier, sharply keyed
-            // crackle bursts, and a brief mechanical contact click at each latch.
-            var gate = opening ? openLatch : closeLatch;
-            var latchTime = (opening ? edgeTime : edgeTime - 0.12) - gate.delay;
-            if ((opening || closing) && latchTime >= 0 && latchTime < gate.duration) {
-                for (var g = 0; g < gate.steps.length; g++) {
-                    if (latchTime < gate.steps[g].until) {
-                        squelch = gate.steps[g].gain;
-                        break;
-                    }
-                }
-                chirp = Math.exp(-latchTime * 650) * Math.cos(2 * Math.PI * gate.frequency * latchTime) * 0.24;
-            }
-            var carrier = opening || closing ? 0.16 : 0.075;
+            var hiss = noiseBand * 2, gate = radioNoiseAt(pattern, now);
             // Only a 1–3 ms edge ramp prevents digital discontinuities; no soft swell.
             var fade = Math.min(1, i / (0.001 * sampleRate), (output.length - 1 - i) / (0.003 * sampleRate));
-            output[i] = (Math.tanh(band * 2.2) * 0.65 + volume * effects * (hiss * (carrier + squelch + burst) + chirp)) * fade;
+            output[i] = (Math.tanh(band * 2.2) * 0.65 + volume * pattern.effects * (hiss * (gate.carrier + gate.squelch + gate.burst) + gate.chirp)) * fade;
         }
         return { samples: output, speechOffset: lead / sampleRate, duration: output.length / sampleRate };
     }
     window.Driftworks = window.Driftworks || {};
-    window.Driftworks.mumble = { defaults: defaults, presets: presets, analyze: analyze, render: render, transmit: transmit };
+    window.Driftworks.mumble = { defaults: defaults, presets: presets, analyze: analyze, render: render, transmit: transmit, radioNoise: radioNoise, radioNoiseAt: radioNoiseAt };
 }());

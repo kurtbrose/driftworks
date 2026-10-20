@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aegis · modular dreadnaught kit</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#080e17;color:#dae4e7;font:14px/1.6 system-ui}aside{position:absolute;left:0;top:0;bottom:0;width:300px;padding:28px;overflow:auto;background:#101a24;border-right:1px solid #33424b}small{font-size:10px;letter-spacing:3px;color:#c69d65}h1{font-weight:400;font-size:36px;line-height:1.1;margin:18px 0}p{color:#91a5b4;font-size:12px}label{display:block;margin:18px 0;color:#b9c9d0;font-size:12px}select,button{background:#1a2a36;color:#e1e9ed;border:1px solid #415363;padding:10px;border-radius:3px}select,input[type=range]{display:block;width:100%;margin-top:7px}button{cursor:pointer;margin:4px 0}button:hover{border-color:#dab57e}#viewport{position:absolute;inset:0 0 0 300px}canvas{display:block;width:100%;height:100%;touch-action:none}#caption{position:absolute;left:28px;top:22px;pointer-events:none;font-size:11px;letter-spacing:2px;color:#9cb4c5}footer{position:absolute;bottom:20px;left:28px;font-size:11px;color:#8aa0b0;pointer-events:none}#stats{border-top:1px solid #33424b;padding-top:16px;color:#c6a775}a{color:#9fc5d6}@media(max-width:700px){aside{width:220px;padding:16px}#viewport{left:220px}h1{font-size:28px}}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js"}}</script></head>
+<body><aside><small>DRIFTWORKS / MODEL STUDY 02</small><h1>AEGIS<br>Ship kit.</h1><p>A procedural study from the supplied concept. Standard spine interfaces. Swappable mission sections. Shared attachment sockets.</p>
+<label>Configuration<select id="preset"><option value="cruiser">01 / Fleet cruiser</option><option value="carrier">02 / Fleet carrier</option><option value="battleship">03 / Dreadnaught</option></select></label>
+<label>Prow<select id="prow"><option value="lance">Lance / long sensor spine</option><option value="command">Command / armored wedge</option></select></label>
+<label>Mid-hull sections<input id="count" type="range" min="2" max="7" value="4"></label>
+<label>Mission section<select id="mission"><option value="standard">Armored hull</option><option value="hangar">Open hangar</option><option value="utility">Reactor / utility</option></select></label>
+<label>Drive block<select id="drive"><option value="standard">Standard / three drives</option><option value="heavy">Heavy / five drives</option></select></label>
+<label>Dorsal sockets<select id="attachment"><option value="turret">Twin heavy batteries</option><option value="cargo">Cargo pods</option><option value="sensor">Sensor stations</option><option value="none">Empty hardpoints</option></select></label>
+<label>Explode kit<input id="explode" type="range" min="0" max="100" value="0"></label>
+<label><input id="spin" type="checkbox"> Turntable</label>
+<button id="quarter">Perspective</button> <button id="top">Top</button> <button id="side">Side</button><br><button id="export">Export assembled OBJ</button>
+<p id="stats"></p><p>Drag to orbit · Wheel to zoom.<br>Export includes separate named modules; materials and engine lighting remain a viewer study.</p><a href="./">Experiments</a></aside>
+<div id="viewport"><div id="caption">MODULAR CAPITAL PLATFORM / GEOMETRY PROTOTYPE</div><footer>ARMOR / STRUCTURE / SYSTEMS &nbsp; • &nbsp; COMMON 10 × 8 INTERFACE</footer></div>
+<script type="module">import * as THREE from 'three';
+import { OrbitControls } from '../vendor/three/examples/jsm/controls/OrbitControls.js';
+
+const el = id => document.getElementById(id);
+const host = el('viewport');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#080e17');
+const camera = new THREE.PerspectiveCamera(35, 1, .1, 2000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor('#080e17');
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+host.prepend(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xc3d2df, 0x211d19, 1.6));
+const key = new THREE.DirectionalLight(0xffe3bb, 3.4); key.position.set(-30,70,45); scene.add(key);
+const rim = new THREE.DirectionalLight(0x8bb6df, 1.7); rim.position.set(30,15,-45); scene.add(rim);
+const mat = (color, metalness=.65, roughness=.48) => new THREE.MeshStandardMaterial({color,metalness,roughness});
+const armor = mat('#a8a497',.48,.65), pale = mat('#c4bdac',.42,.62), dark = mat('#151d23',.6,.7), trim = mat('#49535a'), gold = mat('#8b6838');
+const blue = new THREE.MeshStandardMaterial({color:0x87dfff,emissive:0x169fff,emissiveIntensity:3});
+const amber = new THREE.MeshStandardMaterial({color:0xffc779,emissive:0xcc7722,emissiveIntensity:1.5});
+let ship;
+function mesh(g, geometry, material, x=0,y=0,z=0) {
+  const m = new THREE.Mesh(geometry,material); m.position.set(x,y,z); g.add(m); return m;
+}
+function box(g,x,y,z,w,h,d,m=armor) { return mesh(g,new THREE.BoxGeometry(w,h,d),m,x,y,z); }
+// Clockwise when viewed from the bow; local profile pairs are Y,Z.
+function profile(w,h) {
+  const c=Math.min(w,h)*.19;
+  return [[-h/2,-w/2+c],[-h/2,w/2-c],[-h/2+c,w/2],[h/2-c,w/2],
+    [h/2,w/2-c],[h/2,-w/2+c],[h/2-c,-w/2],[-h/2+c,-w/2]];
+}
+function loft(g,stations,material=armor) {
+  const vertices=[];
+  const triangle=(a,b,c)=>vertices.push(...a,...b,...c);
+  const rings=stations.map(([x,w,h])=>profile(w,h).map(([y,z])=>[x,y,z]));
+  for(let k=0;k<rings.length-1;k++)for(let i=0;i<8;i++) {
+    const j=(i+1)%8,a=rings[k][i],b=rings[k][j],c=rings[k+1][j],d=rings[k+1][i];
+    triangle(a,c,b);triangle(a,d,c);
+  }
+  for(let i=1;i<7;i++){triangle(rings[0][0],rings[0][i],rings[0][i+1]);const r=rings.at(-1);triangle(r[0],r[i+1],r[i]);}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.computeVertexNormals();
+  return mesh(g,geo,material);
+}
+function collar(g,x,width=10,height=8,depth=.65) {
+  const shape=new THREE.Shape(profile(width,height).map(([y,z])=>new THREE.Vector2(z,y)));
+  const hole=new THREE.Path(profile(width-1.1,height-1.1).reverse().map(([y,z])=>new THREE.Vector2(z,y)));
+  shape.holes.push(hole);
+  const geo=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:false});geo.rotateY(Math.PI/2);geo.translate(x-depth/2,0,0);
+  return mesh(g,geo,trim);
+}
+function cylinder(g,x,y,z,r,length,material=trim,axis='x',endRadius=r) {
+  const m=mesh(g,new THREE.CylinderGeometry(endRadius,r,length,16),material,x,y,z);
+  if(axis==='x')m.rotation.z=-Math.PI/2;
+  return m;
+}
+// The spine runs along X. Every major section has the same Y/Z connector profile.
+function hull(g,length,width=10,height=8) {
+  const s = new THREE.Shape(); const w=width/2,h=height/2,c=1.5;
+  s.moveTo(-w+c,-h);s.lineTo(w-c,-h);s.lineTo(w,-h+c);s.lineTo(w,h-c);
+  s.lineTo(w-c,h);s.lineTo(-w+c,h);s.lineTo(-w,h-c);s.lineTo(-w,-h+c);s.closePath();
+  const geo=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false});
+  geo.rotateY(Math.PI/2);geo.translate(-length/2,0,0);
+  return mesh(g,geo,dark);
+}
+function connector(g,x) {
+  loft(g,[[x-.55,9.3,7.3],[x+.55,9.3,7.3]],dark);
+  collar(g,x,10,8,.6);
+  for(const y of [-2.5,2.5])for(const z of [-4.55,4.55])box(g,x,y,z,.8,.5,.45,gold);
+}
+function plated(g,length) {
+  hull(g,length,9.5,7.5);
+  const n=Math.max(3,Math.round(length/3.5)),pitch=(length-2)/n;
+  for(let i=0;i<n;i++) {
+    const x=-length/2+1+pitch*(i+.5),half=(pitch-.16)/2;
+    loft(g,[[x-half,9.9,7.8],[x-half+.26,10.5,8.35],[x+half-.26,10.5,8.35],[x+half,9.9,7.8]],i%3===0?pale:armor);
+    for(const side of [-1,1]) {
+      // Recessed service belt sits between proud upper/lower armor rails.
+      box(g,x,-.15,side*5.27,pitch-.3,1.35,.06,dark);
+      for(const yy of [-.48,.27])for(let j=0;j<4;j++)box(g,x-half+.4+j*(pitch-.8)/4,yy,side*5.32,.23,.12,.04,j===3?amber:blue);
+      for(const yy of [-1.02,.98])box(g,x,yy,side*5.38,pitch-.12,.24,.28,trim);
+      box(g,x,-2.2,side*4.8,pitch-.6,.35,.4,trim);
+      // Raised maintenance hatches and a sparse hierarchy of vents and fasteners.
+      box(g,x,side*4.23,0,pitch*.55,.13,2.6,trim);
+      box(g,x-.1,side*4.32,0,pitch*.47,.08,2.35,armor);
+      for(const z of [-2.8,2.8])box(g,x-half+.45,side*4.12,z,.32,.12,.23,dark);
+      for(let j=0;j<3;j++)box(g,x-.5+j*.34,side*4.2,2.2,.13,.12,.7,dark);
+    }
+  }
+  for(const side of [-1,1]) {
+    box(g,0,-3,side*3.9,length-3,.45,.5,trim);
+    box(g,1,-3.5,side*3.1,length*.55,.55,1.1,dark);
+  }
+  connector(g,-length/2+.35);connector(g,length/2-.35);
+}
+function turret(g,x,y,z) {
+  const t=new THREE.Group();t.name='twin_battery';t.position.set(x,y,z);g.add(t);
+  cylinder(t,0,.25,0,1.95,.5,dark,'y');
+  cylinder(t,0,.58,0,1.7,.25,trim,'y');
+  const head=loft(t,[[-1.8,2.5,1.25],[-1.2,3.4,1.8],[1.25,3.2,1.8],[1.65,2.6,1.3]],armor);head.position.y=1.35;
+  box(t,.2,2.3,0,1.7,.16,1.5,pale);
+  for(const zz of [-.85,.85]) {
+    cylinder(t,-2.8,1.3,zz,.28,3.8,trim);cylinder(t,-4.7,1.3,zz,.38,.55,armor);
+    cylinder(t,-5.01,1.3,zz,.22,.06,dark);
+    for(const x of [-2,-3.5])cylinder(t,x,1.3,zz,.34,.18,dark);
+  }
+}
+function sensor(g,x,y,z) {
+  box(g,x,y+.4,z,4,.8,4,trim);box(g,x,y+1.2,z,2.7,1,2.8,armor);
+  for(let i=0;i<5;i++)box(g,x+(i-2)*.5,y+2+i%3,z,.12,2+i%3,.12,trim);
+}
+function bridge(g) {
+  const b=new THREE.Group();b.name='command_citadel';b.position.set(3.5,4,0);g.add(b);
+  for(const [yy,w,l,h] of [[.6,6,5,1.2],[1.6,4.8,4,1],[2.55,3.6,3,1],[3.35,2.7,2.2,.65]]) {
+    const tier=loft(b,[[-l/2,w*.8,h],[-l/2+.4,w,h],[l/2-.25,w,h],[l/2,w*.8,h]],armor);tier.position.y=yy;
+    for(const side of [-1,1])box(b,-.25,yy+.12,side*(w/2+.02),l*.63,.18,.08,dark);
+  }
+  for(let i=0;i<7;i++) {
+    const x=(i-3)*.35,h=2.2+(i%3)*1.1;
+    cylinder(b,x,3.7+h/2,(i%2-.5)*.9,.06,h,trim,'y');
+    cylinder(b,x,3.9+(i%3), (i%2-.5)*.9,.13,.2,gold,'y');
+  }
+}
+function wedge(g,length,wide=10) {
+  const at=t=>[length*(t-.5),.16+(wide-.16)*Math.pow(t,.82),.12+7.88*Math.pow(t,1.2)];
+  loft(g,[0,.12,.32,.56,.8,1].map(t=>{const [x,w,h]=at(t);return [x,w*.9,h*.9];}),dark);
+  for(let i=0;i<10;i++) {
+    const a=at(i/10+.002),b=at((i+1)/10-.002);
+    loft(g,[a,b],i%4===0?pale:armor);
+    if(i>1)for(const side of [-1,1]) {
+      const t=(i+.5)/10,[x,w,h]=at(t);
+      const belt=box(g,x,-h*.03,side*(w/2+.035),length*.092,h*.19,.1,dark);
+      belt.rotation.y=-side*Math.atan((b[1]-a[1])/(2*(b[0]-a[0])));
+      for(let j=0;j<3;j++) {
+        const tt=t+(j-1)*.022,[xx,ww,hh]=at(tt);
+        box(g,xx,-hh*.03,side*(ww/2+.11),.22,.13,.07,blue);
+      }
+      box(g,x,h/2+.05,side*w*.18,length*.065,.12,w*.2,trim);
+    }
+  }
+  for(const side of [-1,1]) {
+    const pod=loft(g,[[length*.26,2.3,1.3],[length*.3,3.1,1.8],[length*.44,3.1,1.8]],trim);
+    pod.position.set(0,-2.8,side*3.7);
+  }
+  connector(g,length/2-.35);
+}
+function mid(g,type) {
+  if(type==='standard')plated(g,16);
+  if(type==='hangar') {
+    box(g,0,3.3,0,15,1.4,9.5);box(g,0,-3.3,0,15,1.4,9.5);
+    box(g,0,0,0,15,5.2,2,dark);
+    for(const x of [-7,7])collar(g,x,10,8,1.1);
+    for(const side of [-1,1]) {
+      box(g,0,-2.5,side*4,12,.1,2,trim);
+      for(const x of [-4,0,4]) {
+        box(g,x,0,side*1.12,2.7,3.2,.18,trim);
+        box(g,x,.05,side*1.24,2.15,2.5,.12,dark);
+        box(g,x,1.5,side*1.38,2.5,.16,.25,amber);
+        for(const xx of [-.7,.7])box(g,x+xx,0,side*1.35,.1,2,.12,gold);
+        box(g,x,-1.6,side*2,2.5,.5,1.5,trim);
+      }
+      for(let x=-5;x<=5;x+=2)box(g,x,-2.4,side*4,.15,.08,1.5,gold);
+      box(g,0,2.5,side*4.7,11,.15,.18,amber);
+      for(const x of [-5.8,5.8])box(g,x,0,side*4.8,.45,5.2,.5,armor);
+      for(let x=-5;x<6;x+=2) {
+        box(g,x,3.99,side*2.2,1.85,.12,3.4,pale);
+        box(g,x,-2.4,side*3.8,.12,.08,1.9,amber);
+      }
+    }connector(g,-8);connector(g,7.3);
+  }
+  if(type==='utility') {
+    hull(g,16,7,6);connector(g,-7.65);connector(g,7.65);
+    for(const side of [-1,1])for(const x of [-4,2]) {
+      const tank=mesh(g,new THREE.CylinderGeometry(1.8,1.8,5,12),pale,x,0,side*4);tank.rotation.z=Math.PI/2;
+      for(const dx of [-2,2])box(g,x+dx,0,side*4,.3,4,3.8,trim);
+    }
+    box(g,0,3,0,13,1,4,trim);
+    for(let x=-5;x<6;x++)box(g,x,3.7,0,.3,1,4,dark);
+    for(const x of [-6.5,6.5]) {
+      loft(g,[[x-.7,9.5,7.4],[x-.4,10.2,8],[x+.4,10.2,8],[x+.7,9.5,7.4]],armor);
+    }
+  }
+}
+function drive(g,heavy) {
+  plated(g,12);
+  const positions=heavy?[[0,0],[3.4,4.3],[-3.4,4.3],[3.4,-4.3],[-3.4,-4.3]]:[[2.3,0],[-2,4.7],[-2,-4.7]];
+  for(const [y,z] of positions) {
+    box(g,3,y*.7,z*.7,5,1.8,1.8,dark);
+    cylinder(g,5.8,y,z,2.1,6,trim);
+    for(const xx of [3.3,5.2,7.3])cylinder(g,xx,y,z,2.24,.42,armor);
+    for(const angle of [0,Math.PI/2,Math.PI,Math.PI*1.5])box(g,5.5,y+Math.cos(angle)*2.08,z+Math.sin(angle)*2.08,3.5,.28,.28,pale);
+    cylinder(g,8.5,y,z,2,1.2,dark,'x',2.5);
+    cylinder(g,9.15,y,z,2.5,.2,trim);
+    cylinder(g,9.27,y,z,1.85,.04,dark);
+    cylinder(g,9.3,y,z,1.25,.05,blue);
+    cylinder(g,9.35,y,z,.65,.06,pale);
+  }
+  for(const side of [-1,1])for(const flank of [-1,1]) {
+    const shape=new THREE.Shape();shape.moveTo(-1,0);shape.lineTo(4,0);shape.lineTo(7,5);shape.lineTo(4.5,4.5);shape.closePath();
+    const geo=new THREE.ExtrudeGeometry(shape,{depth:.3,bevelEnabled:false});
+    const fin=mesh(g,geo,armor,0,side*3.8,flank*4.1);fin.scale.y=side;fin.rotation.x=flank*.5;
+    const rib=box(g,3.7,side*6,flank*5,4,.2,.3,trim);rib.rotation.z=side*.75;
+  }
+}
+function config(){return Object.fromEntries(['prow','count','mission','drive','attachment','explode'].map(id=>[id,el(id).value]));}
+function rebuild() {
+  if(ship) {scene.remove(ship);ship.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
+  ship=new THREE.Group();scene.add(ship);
+  const c=config(),count=Number(c.count),gap=Number(c.explode)*.12;
+  const noseLength=c.prow==='lance'?37:26;
+  const total=noseLength+count*16+12;
+  let cursor=-total/2;
+  const module=(name,length,build,index)=>{
+    const g=new THREE.Group();g.name=name;g.position.x=cursor+length/2+(index-(count+1)/2)*gap;
+    ship.add(g);build(g);cursor+=length;return g;
+  };
+  module('P_'+c.prow,noseLength,g=>{wedge(g,noseLength);if(c.prow==='command')sensor(g,6,3,0);},0);
+  for(let i=0;i<count;i++) {
+    const type=c.mission==='standard'?'standard':(i%2===0?c.mission:'standard');
+    module(`M_${i+1}_${type}`,16,g=>{
+      mid(g,type);
+      if(i===count-1)bridge(g);
+      const mount=new THREE.Group();mount.name='dorsal_socket';mount.position.y=gap*.65;if(i===count-1)mount.position.x=-3.5;g.add(mount);box(mount,0,4.03,0,2,.16,2,trim);
+      if(c.attachment==='turret')turret(mount,0,4.1,0);
+      if(c.attachment==='sensor')sensor(mount,0,4.1,0);
+      if(c.attachment==='cargo'){box(mount,0,5.4,0,8,2.6,5,armor);for(let x=-3;x<=3;x+=2)box(mount,x,5.4,0,.2,2.8,5.2,trim);}
+    },i+1);
+  }
+  module('E_'+c.drive,12,g=>drive(g,c.drive==='heavy'),count+1);
+  el('stats').textContent=`${Math.round(total*9)} m nominal length · ${count+2} spine modules · ${count} dorsal sockets`;
+}
+function view(which='quarter') {
+  const span=37+Number(el('count').value)*16+12+Number(el('explode').value)*.65;
+  const frame=Math.max(1,1.3/(host.clientWidth/host.clientHeight));
+  camera.position.set(...(which==='top'?[0,span*1.65*frame,.01]:which==='side'?[0,8,span*1.65*frame]:[-span*.65*frame,span*.65*frame,span*1.32*frame]));
+  camera.up.set(0,1,0);controls.target.set(0,0,0);controls.update();
+}
+for(const id of ['prow','count','mission','drive','attachment','explode'])el(id).addEventListener('input',rebuild);
+el('preset').addEventListener('change',()=>{
+  const presets={cruiser:['lance',4,'standard','standard','turret'],carrier:['command',5,'hangar','heavy','sensor'],battleship:['lance',6,'standard','heavy','turret']};
+  ['prow','count','mission','drive','attachment'].forEach((id,i)=>el(id).value=presets[el('preset').value][i]);rebuild();view();
+});
+for(const id of ['quarter','top','side'])el(id).onclick=()=>view(id);
+el('export').onclick=()=>{
+  // Export in assembly coordinates, regardless of the inspection/explosion setting.
+  const previous=el('explode').value;el('explode').value='0';rebuild();ship.updateMatrixWorld(true);
+  let output='# Aegis modular kit / nominal units: 9 meters\n',offset=1,lastOwner='';
+  ship.traverse(o=>{if(!o.isMesh)return;let owner=o;while(owner.parent!==ship&&owner.parent)owner=owner.parent;
+    const name=owner.name+((o.parent.name==='dorsal_socket'||o.parent.parent?.name==='dorsal_socket')?'_attachment':'');if(name!==lastOwner){output+=`o ${name}\n`;lastOwner=name;}const p=o.geometry.attributes.position;
+    for(let i=0;i<p.count;i++){const v=new THREE.Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);output+=`v ${v.x} ${v.y} ${v.z}\n`;}
+    const idx=o.geometry.index;const n=idx?idx.count:p.count;
+    for(let i=0;i<n;i+=3)output+=`f ${[0,1,2].map(j=>offset+(idx?idx.getX(i+j):i+j)).join(' ')}\n`;
+    offset+=p.count;
+  });
+  const url=URL.createObjectURL(new Blob([output],{type:'text/plain'}));const a=document.createElement('a');a.href=url;a.download=`aegis-${el('preset').value}.obj`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  el('explode').value=previous;rebuild();
+};
+new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}).observe(host);
+rebuild();view();
+renderer.setAnimationLoop(()=>{if(el('spin').checked)ship.rotation.y+=.002;controls.update();renderer.render(scene,camera);});
+</script></body></html>
+
+
+
+
+
+

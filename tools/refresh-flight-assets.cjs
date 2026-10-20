@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-for (const name of ['flight.html', 'mission-asteroid-patrol.html', 'engine-lab.html']) {
+for (const name of ['flight.html', 'mission-asteroid-patrol.html', 'engine-lab.html', 'comms-lab.html']) {
 const page = path.resolve(__dirname, '../experiments/', name);
 const before = fs.readFileSync(page, 'utf8');
 const after = before.replace(/(<(?:script|link)\b[^>]*\b(?:src|href)=")([^"?#]+)(?:\?([^"#]*))?("[^>]*>)/g,
