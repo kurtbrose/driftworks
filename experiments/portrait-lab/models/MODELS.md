@@ -1,5 +1,14 @@
 # Optional offline 2D preprocessing models
 
+The later structural study also uses InsightFace **2D106** landmarks and a fixed
+Face Portrait v2 illustration checkpoint. These are research comparisons with
+additional upstream license limits, not cleared production dependencies. See
+../STRUCTURAL_REPORT.md and ../setup_structural_models.py for sources, hashes,
+scope and exact download URLs. No 3D landmark model is used. The illustration
+architecture is vendored as animegan_model.py with LICENSE-AnimeGAN-PyTorch.txt;
+animegan_hubconf.txt and insightface-landmark-reference.txt are source references,
+not code executed by the converter.
+
 The game does not load these files. `setup_painted_models.py` downloads required
 weights and verifies the following SHA-256 values before conversion. Both inference
 steps use OpenCV 4.11.0.86 on CPU with one thread. Neither generates a portrait or

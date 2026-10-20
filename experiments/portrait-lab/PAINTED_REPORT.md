@@ -1,5 +1,10 @@
 # Painted follow-up — 2026-10-19
 
+**Superseded assessment: these Painted/Graphic results are now rejected negative
+controls.** The user identified arbitrary value bands and skin islands that the
+review below underweighted. See STRUCTURAL_REPORT.md and NEGATIVE_EXAMPLES.md.
+This document remains as the historical experiment record, not a recommendation.
+
 This pass is visibly less photographic than Structure: skin has larger value
 regions, backgrounds are mostly flat, and the collection shares a warm-skin/cool-ink
 palette. **It is still an experiment, not a claim of hand-painted WC2 quality.**

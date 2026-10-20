@@ -1,15 +1,53 @@
 # Procedural portrait laboratory
 
+Latest investigation: [STRUCTURAL_REPORT.md](STRUCTURAL_REPORT.md). **Painted and
+Graphic are rejected negative controls**, preserved unchanged; see
+[NEGATIVE_EXAMPLES.md](NEGATIVE_EXAMPLES.md). The structural study compares
+continuous feature-aware smoothing, explicit 2D region redraw and a deterministic
+illustration-model intermediate. It does not continue posterization tuning.
+
+## Run the structural research comparison
+
+This optional branch uses research-only 2D weights. Read the model scope/terms in
+STRUCTURAL_REPORT.md before treating any dependency as suitable for production.
+With Python 3.12 on the tested Windows CPU setup, from the **repository root**:
+
+```
+python -m pip install --target .portrait-lab-runtime/neural -r experiments/portrait-lab/requirements-structural-neural.txt
+python experiments/portrait-lab/setup_structural_models.py
+python experiments/portrait-lab/structure_lab.py --output experiments/portrait-lab/results/my-structural-run
+```
+
+The existing Pillow/NumPy/OpenCV experiment dependencies are also required. The
+architecture source and its MIT license are vendored in models/; weights are
+downloaded only by explicit setup and verified by SHA-256. Inference uses
+weights-only loading, local CPU and deterministic algorithms. No torch.hub remote
+code loading, runtime network calls, 3D models or stochastic image-generation
+service is used. Model repeatability is tested in this environment, not promised
+across hardware and library versions.
+
+The six selected faces, original aligned inputs and masks are read from preserved
+painted-v2 outputs. A fresh result directory is required. Full-color 512 intermediates
+are retained before 128/256 reduction; the old palette is applied only as a fixed
+negative ablation. No threshold search is performed.
+
+From this lab directory run `python -m unittest -v test_structure_lab.py`.
+`python audit_structure.py` audits the preserved structural-v2 run, creates the
+fixed-palette comparison sheets and verifies negative control hashes. The original
+and painted workflows below are historical, reproducible experiment records.
+
 Offline research spike, isolated from the game. No gameplay files, script loading,
 assets, or deployment dependencies change. The original converter requires Pillow
 and NumPy. The painted follow-up adds OpenCV and checksum-pinned **2D detection and
-segmentation** models. No generative image model, 3D geometry, or hand retouching
-is used. WC2 attachments inform visual goals only; they are not inputs.
+segmentation** models. Those original/painted branches use no generative image
+model. The structural comparison additionally tests a fixed 2D illustration GAN.
+No branch uses 3D geometry or hand retouching. WC2 attachments inform visual goals
+only; they are not conversion inputs.
 
-## Painted follow-up — latest results
+## Painted follow-up — rejected historical results
 
 See [PAINTED_REPORT.md](PAINTED_REPORT.md) and `results/painted-v2/review.png`.
-The new pass standardizes eye-line/head scale, isolates the subject, uses a single
+That pass standardizes eye-line/head scale, isolates the subject, uses a single
 shared palette and reduces skin to broad value planes with protected features.
 The original `initial/` and `revised/` outputs remain unchanged. `painted-v1/`
 preserves the intermediate attempt; `painted-preview*` records failed/partial
