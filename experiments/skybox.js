@@ -231,6 +231,12 @@ void main(){
         var heroLoading=false;
         /** @type {{texture:WebGLTexture|null,center:number[],right:number[],up:number[],gain:number,loaded:boolean}[]} */
         var landmarkTextures=[];
+        /** @type {HTMLCanvasElement|HTMLImageElement|null} */var planetOverride=null;
+        /** @param {HTMLCanvasElement|HTMLImageElement} source */function setPlanetImage(source){
+            if(!landmarkSky||missionSky.features[0].asset!=='planet-hero-v1/master.png')return;
+            planetOverride=source;var entry=landmarkTextures[0];if(!entry||!entry.loaded)return;
+            gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);
+        }
         if (landmarkSky) {
             // The planet is lit from its upper left, toward the viewer.
             // +Y faces the planet; the sun is behind the left shoulder (-X,-Y,+Z).
@@ -257,7 +263,7 @@ void main(){
                 var image = new Image();
                 image.onload = function () {
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
-                    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
+                    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,feature.asset==='planet-hero-v1/master.png'&&planetOverride?planetOverride:image);
                     entry.loaded=true;
                     if(canvas.dataset.ohio!=='error')canvas.dataset.ohio=landmarkTextures.every(function(item){return item.loaded;})?'ready':'loading';
                 };
@@ -486,7 +492,7 @@ void main(){
         }
         var stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
         if(!landmarkSky&&typeof window.location!=='undefined'&&/(?:[?&])sky=impact(?:&|$)/.test(window.location.search||'')){style=12;if(selector)selector.value='12';}
-        return {setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
+        return {setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
             }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] */ function (pose, renderScale, empty,elapsed) {
                 // Shared renderer integration: the host delivers the probe and sky basis.

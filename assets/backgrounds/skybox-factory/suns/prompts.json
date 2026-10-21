@@ -1,0 +1,23 @@
+{
+  "generator": "Built-in image_gen",
+  "created": "2026-10-21",
+  "purpose": "Black-backed reusable sun sprites for screen/additive skybox compositing",
+  "assets": [
+    {
+      "file": "blue-white-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single reusable sun sprite for a cinematic hard-SF game spherical skybox, screen/additive compositing. Square 1024x1024 or larger. Exactly one star at exact center, isolated on opaque perfectly pure RGB zero black. All four edges and generous outer margins entirely black. Smooth luminous falloff completely into black within central 75 percent of canvas. Premium detailed astronomical artwork, no grain, no background stars, no nebula, planets, text, border, watermark, lens flare ghosts or long camera streaks. A brilliant compact blue-white sun, white-hot circular core diameter 4 percent of canvas, icy cyan inner corona, delicate short irregular radial rays and broad restrained steel-blue halo diameter 55 percent. Dazzling but graceful."
+    },
+    {
+      "file": "amber-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single reusable sun sprite for a cinematic hard-SF game spherical skybox, screen/additive compositing. Square 1024x1024 or larger. Exactly one star at exact center, isolated on opaque perfectly pure RGB zero black. All four edges and generous outer margins entirely black. Smooth luminous falloff completely into black within central 75 percent of canvas. Premium detailed astronomical artwork, no grain, no background stars, no nebula, planets, text, border, watermark, lens flare ghosts or long camera streaks. A golden amber sun, incandescent pale yellow-white circular core diameter 8 percent of canvas, delicately textured gold photosphere near rim, fine curling orange prominences and soft layered honey-gold corona diameter 50 percent. Strong warm light."
+    },
+    {
+      "file": "red-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single reusable sun sprite for a cinematic hard-SF game spherical skybox, screen/additive compositing. Square 1024x1024 or larger. Exactly one star at exact center, isolated on opaque perfectly pure RGB zero black. All four edges and generous outer margins entirely black. Smooth luminous falloff completely into black within central 75 percent of canvas. Premium detailed astronomical artwork, no grain, no background stars, no nebula, planets, text, border, watermark, lens flare ghosts or long camera streaks. A deep copper-red giant sun, resolved round stellar disk diameter 24 percent of canvas, luminous orange-red granular surface with darker convection cells, bright warm center, delicate crimson looping prominences near rim and restrained soft red corona diameter 60 percent. Clearly a glowing star, not a rocky planet."
+    },
+    {
+      "file": "white-corona-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single reusable sun sprite for a cinematic hard-SF game spherical skybox, screen/additive compositing. Square 1024x1024 or larger. Exactly one star at exact center, isolated on opaque perfectly pure RGB zero black. All four edges and generous outer margins entirely black. Smooth luminous falloff completely into black within central 75 percent of canvas. Premium detailed astronomical artwork, no grain, no background stars, no nebula, planets, text, border, watermark, lens flare ghosts or long camera streaks. A blazing white sun during high coronal activity. Small intensely white round core diameter 5 percent of canvas, elegant asymmetrical pearly-white coronal streamers tapering smoothly out to diameter 65 percent, delicate filament structure and faint pale champagne inner glow. No occulting disk. Distinct flowing corona silhouette."
+    }
+  ]
+}

@@ -780,6 +780,11 @@ export type ExperimentModules = {
             cpu: number;
         };
     };
+    planetImpact: {
+        times:number[];
+        sample:(seconds:number)=>{from:number;to:number;alpha:number};
+        create:()=>Promise<{canvas:HTMLCanvasElement;draw:(seconds:number,enabled?:boolean)=>boolean}>;
+    };
     flightSkybox: {
         options: string[];
         featureFrame: (feature:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number},aspect:number) => Float32Array;
@@ -789,6 +794,7 @@ export type ExperimentModules = {
             y: number;
         } | null;
         create: (host: HTMLElement, config?:{style?:number;fov?:number}) => {
+            setPlanetImage: (source:HTMLCanvasElement|HTMLImageElement) => void;
             setImpactTime: (seconds:number) => void;
             setStyle: (style:number) => void;
             setExposure: (exposure:number) => void;

@@ -5,7 +5,10 @@ For the separate complete-disk baseline, open
 planet image with black margins using the existing opaque landmark projection.
 Compare 80/110/140 degree card widths, inspect the limb with the flight lens, or
 follow the link into a real furball. The source, prompt and limitations are in
-`assets/backgrounds/planet-hero-v1/README.md`. It has no impact animation yet.
+`assets/backgrounds/planet-hero-v1/README.md`. The hero viewer now includes a
+separate seven-plate overhead impact sequence, with pause, scrub, speed and
+pristine-reference controls. It preserves the entire disk outside a local
+feather mask; skybox baking and animated flight remain deferred for art review.
 
 Open `experiments/impact-lab.html` from the static server. The standalone study
 uses seven native-resolution ImageGen plates in `assets/backgrounds/impact-v1/`:

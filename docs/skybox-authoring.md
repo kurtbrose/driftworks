@@ -9,6 +9,11 @@ Stars behind its disk are culled once from the point buffer. The dedicated
 to `flightSkybox.create`; this affects that sky instance only, clamps to 25–150,
 and leaves the default 45 degree flight projection unchanged. See the source
 and prompt in `assets/backgrounds/planet-hero-v1/` for native-resolution limits.
+The sky instance also accepts `setPlanetImage(canvasOrImage)` for this planet
+mission family. It updates only the existing planet texture, retaining its
+projection, star occlusion and sun. An override submitted before the original
+planet finishes loading is retained. The hero review viewer uses this for the
+local overhead impact compositor; normal flight continues using the baseline.
 
 The flight sky has three independent layers: black space, fixed authored hero
 features, and crisp stars. Stars keep a fixed CSS-pixel footprint while the camera
@@ -276,3 +281,24 @@ K uses twelve distinct imagegen source regions, each once, with offline radial
 feathering into one 8K panorama. It has an independent HDR lighting cache.
 See [the experiment log](skybox-experiments.md) for prompts, source hashes, exact
 bake commands, failed approaches and the brightness/texture decisions to preserve.
+
+## Skybox factory
+
+Open `experiments/skybox-factory.html` from the lab homepage to browse the sun
+sprite library. Four generated variants live in
+`assets/backgrounds/skybox-factory/suns/`, with exact prompts in `prompts.json`.
+The original warm sun is also linked for comparison. These black-backed PNGs
+are source assets for screen blending; their angular widths include the halo.
+To use one in an authored sky, add its relative path and aspect ratio to the
+layout library with family `sun`, then add a unique placement as described above.
+The gallery does not change existing mission layouts or lighting caches.
+
+The factory now includes a Canvas 2D optical-treatment bench in
+`experiments/skybox-factory.js`: original baseline, six glare treatments, visible
+continuum and a warm instrument study. Disk silhouettes and star positions stay
+fixed. Deterministic low-frequency brightness changes affect bloom and fixed
+surface patches; this is artistic time compression, not a physical solar model.
+Pause, motion amplitude, exposure, disk size and view offset are shared across
+previews. Reduced-motion preference starts paused; hidden tabs freeze elapsed
+time. Frame downloads render a clean 1024px black-backed sprite without preview stars.
+The bench is independent of flight rendering and does not modify skybox shaders.

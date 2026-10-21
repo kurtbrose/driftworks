@@ -1,6 +1,6 @@
 # Complete planet hero baseline
 
-`master.png` is a 1280px square full visible hemisphere generated with the built-in
+`master.png` is a 1254px square full visible hemisphere generated with the built-in
 ImageGen tool. The reference and exact prompt are in `provenance.json`. Its whole
 atmospheric limb is inside black image margins. It is ordinary flat artwork;
 ImageGen was not asked to produce a panorama or cube projection.
@@ -17,10 +17,29 @@ static sky. Width variants use mission IDs `planet-hero-80` and `planet-hero-140
 All share the unchanged training physics and combat rules. Existing missions and
 saved sky preferences are unaffected. Translation is ignored by the sky renderer.
 
-This baseline has no new impact sequence, cube bake, surface simulation, parallax
-or generated planet geometry. No planar/cubemap images are stitched together.
+The review viewer now plays the overhead impact sequence in `impact-overhead-v1/`.
+It contains six full-frame edits of the same master: flash, 12/32/60/90-second
+intermediates and a 120-second ejecta endpoint. The root is near the disk center,
+viewed from above along the local normal. These images are illustrative stages;
+the generation did not exactly enforce requested pixel diameters or physical times.
+The edits and master are all 1254px square. The compositor always draws in the
+master coordinate system; a mismatched aspect ratio is rejected.
+
+`experiments/planet-impact.js` redraws the frozen master and blends only the
+neighboring two frames through one radial permission mask centered at (.488,.472),
+radius .125, fully opaque through 72% of its radius. The limb, black margins and
+all pixels outside that region remain pristine. The ordinary sky renderer accepts
+the resulting canvas through `setPlanetImage`, preserving the same card projection.
+Uploads occur at most 30 times per second while playing, and stop on unchanged
+paused frames. Switching lenses also uploads the current canvas into that view.
+The viewer includes pause, restart, scrubbing, speed, painted-stage selection and
+a pristine-reference checkbox. Playback holds at 180 seconds and does not loop.
+
+Flight links still use the static baseline while this animation is reviewed.
+There is no cube bake, surface simulation, parallax or generated planet geometry.
+No planar/cubemap images are stitched together.
 Large cards occupy a large sky angle but still have finite native source detail;
-the close flight view can magnify this 1280px source beyond its useful resolution.
+the close flight view can magnify this 1254px source beyond its useful resolution.
 
 The optional `flightSkybox.create(...,{fov})` review setting controls only that
 instance's sky projection. It is clamped to 25–150 degrees; ordinary flight keeps
