@@ -97,10 +97,10 @@
         /** @param {HudView} view */
         function render(view) {
             var state = view.state, combat = view.combat, guns = view.guns, asteroid = view.asteroid, mothership = view.mothership, units = view.units, paused = view.paused, mouse = view.mouse, shipImages = view.shipImages;
-            var ohio=combat.mode==='ohio', displayScale=ohio?1/.9144:1, distanceUnit=ohio?' yd':' m';
+            var ohio=combat.mode==='ohio', displayScale=ohio?1/.9144:1, distanceUnit=ohio?' yd':' m', speedScale=ohio?3600/1609.344:1, speedLabel=ohio?'mph':'m/s';
             var shipDistance = Math.hypot(state.eye[0] - mothership.position.x, state.eye[1] - mothership.position.y, state.eye[2]) * units;
             var distance = Math.hypot.apply(null, state.eye), speed = Math.hypot.apply(null, state.velocity);
-            telemetry.textContent = (speed*displayScale).toFixed(0) + distanceUnit+'/s   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units*displayScale) + distanceUnit+' TO CENTER\n' + Math.round(asteroid.radius * 2 * units*displayScale) + distanceUnit+' BODY DIAMETER\n' + Math.round(shipDistance*displayScale) + distanceUnit+' TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
+            telemetry.textContent = (speed*speedScale).toFixed(0) + ' '+speedLabel+'   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units*displayScale) + distanceUnit+' TO CENTER\n' + Math.round(asteroid.radius * 2 * units*displayScale) + distanceUnit+' BODY DIAMETER\n' + Math.round(shipDistance*displayScale) + distanceUnit+' TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
             var w = host.clientWidth, h = host.clientHeight;
             if (combatCanvas.width !== w || combatCanvas.height !== h) {
                 combatCanvas.width = w;
@@ -144,8 +144,8 @@
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
             get('hull-meter').value = combat.hull;
             get('hull-meter').dataset.condition = combat.hull / get('hull-meter').max <= .25 ? 'critical' : combat.hull / get('hull-meter').max <= .5 ? 'damaged' : 'healthy';
-            get('speed-value').textContent = String(Math.round(Math.hypot.apply(null, state.velocity)*displayScale));
-            var speedUnit=document.getElementById('speed-unit');if(speedUnit)speedUnit.textContent=distanceUnit.trim()+'/s';
+            get('speed-value').textContent = String(Math.round(Math.hypot.apply(null, state.velocity)*speedScale));
+            var speedUnit=document.getElementById('speed-unit');if(speedUnit)speedUnit.textContent=speedLabel;
             get('thrust-value').textContent = (state.throttle < 0 ? 'REV ' : 'THRUST ') + Math.round(Math.abs(state.throttle) * 100) + '%';
             get('thrust-meter').value = Math.abs(state.throttle);
             var anchors = DW.training.gunAnchors(combat.player), mounts = anchors ? anchors.length : (combat.player.profile.gunMounts || 2);

@@ -13,7 +13,7 @@
         var ohioHint = document.querySelector('#launch > p');
         if (ohioHint) ohioHint.textContent = 'Wait for the radio reveal. Then welcome to Ohio. / Ford Folks vs. Chevy Crew';
         var ohioControls=document.getElementById('pause-controls');
-        if(ohioControls)ohioControls.innerHTML=ohioControls.innerHTML.replace(/5 m\/s/g,'5.5 yd/s');
+        if(ohioControls)ohioControls.innerHTML=ohioControls.innerHTML.replace(/5 m\/s/g,'11 mph');
     }
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
@@ -102,7 +102,7 @@
     }
     function gunLabels() {
         var w = weapon();
-        get('gun-stats').textContent = w.speed + ' m/s · ' + w.fireWait + ' s / volley · ' + (w.speed * w.lifetime) + ' m range';
+        get('gun-stats').textContent = (get('combat-mode').value==='ohio'?Math.round(w.speed*3600/1609.344)+' mph':w.speed+' m/s') + ' · ' + w.fireWait + ' s / volley · ' + (get('combat-mode').value==='ohio'?Math.round(w.speed*w.lifetime/.9144)+' yd':(w.speed*w.lifetime)+' m') + ' range';
     }
     function banks() {
         gunSelect.textContent = '';
@@ -131,7 +131,7 @@
     }
     function labels() {
         var p = profile();
-        stats.textContent = (p.species || '') + ' · ' + p.role + '\nHull / shields ' + p.hull + ' / ' + p.shield + '\nCruise / boost ' + p.maxVelocity[2] + ' / ' + p.afterburnerVelocity[2] + ' m/s\nAccel / decel ' + p.forwardAccel + ' / ' + p.forwardDecel + ' s\nPitch / yaw / roll (s/360°)\n' + p.rotationTime.join(' / ') + '\nDamp / rotdamp ' + p.damp + ' / ' + p.rotdamp;
+        stats.textContent = (p.species || '') + ' · ' + p.role + '\nHull / shields ' + p.hull + ' / ' + p.shield + '\nCruise / boost ' + (get('combat-mode').value==='ohio'?Math.round(p.maxVelocity[2]*3600/1609.344):p.maxVelocity[2]) + ' / ' + (get('combat-mode').value==='ohio'?Math.round(p.afterburnerVelocity[2]*3600/1609.344)+' mph':p.afterburnerVelocity[2]+' m/s') + '\nAccel / decel ' + p.forwardAccel + ' / ' + p.forwardDecel + ' s\nPitch / yaw / roll (s/360°)\n' + p.rotationTime.join(' / ') + '\nDamp / rotdamp ' + p.damp + ' / ' + p.rotdamp;
     }
     function clear() {
         DW.audio.setFlightEngine(0, 0, false, false);

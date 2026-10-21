@@ -134,12 +134,12 @@
         if(ohio){
             data=Object.assign({},data);
             if(typeof data.range==='number')data.range=Math.round(data.range/.9144/50)*50;
-            if(typeof data.speed==='number')data.speed=Math.round(data.speed/.9144/10)*10;
+            if(typeof data.speed==='number')data.speed=Math.round(data.speed*3600/1609.344/10)*10;
         }
         var variants = kind === 'remaining' && data.count === 1 ? ["One left. Let's wrap this up.", 'Last hostile. Finish this!'] : templates[kind];
         if (kind === 'contact' && data.vertical)
             variants = ['Pilot, contact {direction}, about {range} meters.', 'Hostile {direction}. Roughly {range} meters out.'];
-        if(ohio)variants=variants.map(function(text,index){return ohioAddress(text.replace(/meters/g,'yards'),index);});
+        if(ohio)variants=variants.map(function(text,index){return ohioAddress(text.replace(/meters per second/g,'miles per hour').replace(/meters/g,'yards'),index);});
         var composed = /** @type {Choices} */ (variants.map(function (text) {
             return text.replace(/\{(\w+)\}/g, /** @param {string} _ @param {string} key */ function (_, key) {
                 return typeof data[key] === 'number' ? numberWords(data[key]) : String(data[key] === undefined ? 'pilot' : data[key]);

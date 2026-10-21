@@ -1702,7 +1702,7 @@
   test('Ohio radio converts measured ranges and speeds to yards without changing source data', function () {
     var api=window.Driftworks.flightDialogue, data={range:1000,bearing:'three oclock',direction:'right',height:'',speed:100,pilot:'Big Dale'};
     assert(api.compose('contact',data,true).every(function(text){return /one thousand one hundred yards/.test(text)&&!/meters/.test(text);}));
-    assert(api.compose('closing',data,true).every(function(text){return /one hundred ten yards per second/.test(text);}));
+    assert(api.compose('closing',data,true).every(function(text){return /two hundred twenty miles per hour/.test(text);}));
     assert(api.compose('contact',data).every(function(text){return /one thousand meters/.test(text);}));
     assert(data.range===1000&&data.speed===100);
   });

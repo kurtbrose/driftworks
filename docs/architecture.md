@@ -860,8 +860,8 @@ selection weight before activity repetition penalties. Rivals actively targeting
 the player can offer a taunt after ten active seconds, with a separate 20-second
 category cooldown, independent of the ambient timer. Replies and urgent flight
 calls retain precedence; occupied radio, pause and death gates still apply.
-Ohio distances are displayed in yards (1 yard = 0.9144 m), with speed in yards per
-second; radar projection, contact data, and flight physics retain SI units.
+Ohio distances are displayed in yards (1 yard = 0.9144 m), with speed in miles per
+hour (1 mph = 0.44704 m/s); radar projection, contact data, and flight physics retain SI units.
 Radio composition converts a copy of numeric range/speed data before spelling
 out the numbers. Named Ohio variants are limited to direct social banter,
 help requests and actual conversational replies; routine activity reports do
