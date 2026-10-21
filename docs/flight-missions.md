@@ -1,0 +1,82 @@
+# Flight mission definitions, version 1
+
+The flight lab loads `experiments/flight-missions.js` before its consumers, then
+loads ordinary local scripts that register definitions. Ohio is defined in
+`experiments/mission-ohio.js`. No fetch, build step, engine copy or external
+runtime dependency is required. Worker/headless entry points load the same files.
+
+`flightMissions.define(id, overrides, parentId)` inherits `default` unless another
+registered parent is named. Nested records merge; arrays replace in full.
+Definitions are copied and deeply frozen, so editing an input array or another
+mission cannot change the defaults. IDs are unique. Version, finite positive
+unit scales, encounter counts, spawn settings, and opening speaker indices are
+checked at registration. Unknown or malformed URL mission IDs resolve to defaults.
+
+Select a registered mission with `flight.html?mission=county-fair`. Scripts for a
+new definition must be included before the flight modules that consume it; this
+initial format intentionally does not discover or execute arbitrary URL scripts.
+
+```js
+window.Driftworks.flightMissions.define('county-fair', {
+    heading: 'DRIFTWORKS / COUNTY FAIR',
+    subtitle: 'Blue Ribbon vs. Red Ribbon',
+    teams: {
+        ally: { status: 'Blue Ribbon', target: 'Blue Ribbon', radio: 'Blue Ribbon' },
+        enemy: { status: 'Red Ribbon', target: 'Red Ribbon', radio: 'Red Ribbon' }
+    },
+    encounter: {
+        count: 4,
+        spawn: { backRadii: 3, altitudeMeters: 500 },
+        callsigns: ['Pat', 'Chris', 'Lee', 'Jo']
+    },
+    comms: { calls: { firing: ['Taking the shot. Save me a funnel cake.'] } },
+    opening: []
+}, 'furball');
+```
+
+## Definition fields
+
+- `version`, `id`: schema version and registry identity. `define` supplies the ID.
+- `title`, `heading`, `subtitle`, `hint`: page and launch presentation.
+- `units`: distance/speed scales from SI, compact labels, spoken words, and
+  whether radar uses kilometres. Ohio uses yards/mph; default flight uses m/m/s.
+  These never modify simulation positions, velocities or weapon ranges.
+- `teams`: separate status, target-label and radio labels for each side.
+- `comms`: per-event line pools, named variants, friendly/rival forms of address,
+  and whether ambient chatter uses actual cast members. Unspecified event pools
+  fall back to shared dialogue; existing requests/replies and priority rules
+  remain in the shared scheduler. `{pilot}` references retain real names.
+- `portraits`: local atlas folder and diagnostic cast label, retaining shared
+  voice slots and facial animation layout.
+- `sky`: selectable shared sky by default. The `landmarks` handler currently
+  accepts exactly two authored tangent-space images (planet and sun), using the
+  existing single background pass and independent crisp stars.
+- `scenery`: authored renderer descriptors. The initial built-in handler is
+  `highway-sign`; its local image path comes from the definition. Additional
+  scenery types need renderer implementations, rather than functions in data.
+- `encounter`: built-in `training`, `furball` or `patrol` behavior, fixed count
+  (zero retains the training wave count), immediate spawn, cast names and start
+  offset. Furball wings split the count evenly (the ally wing gets the odd slot).
+  Spawn altitude is metres above the nominal radius, matching existing flight.
+- `opening`: ordered `{text, speakerIndex, channel}` transmissions. The shared
+  sequencer waits for radio availability and the configured speakers; player and
+  AI firing remain gated until the last line finishes. `Combat.openingStep` is
+  transient flight-session state and survives waves in that session, not a new
+  field in the persistent strategy-world save schema.
+
+Ohio inherits the `furball` encounter. Its labels, units, dialogue, cast, wardrobe,
+planet/sun bearings, sign asset and opening exchange reside in its definition.
+Existing shared geometry/shader implementations remain renderer code. The old
+`flightDialogue.ohioAddress` and boolean `compose(..., true)` entry points are thin
+compatibility adapters to the registry; gameplay consumers pass mission IDs.
+
+This is a small authored mission format, not a campaign/save format, scripting
+language or editor. New encounter and scenery mechanisms still require ordinary
+shared code. The truck-stop/farm assets are available but are not placed by this
+migration.
+
+Run `node tests/flight-missions.cjs` for inheritance/immutability validation and
+`npm run check` for the full suite. Browser checks should cover default flight,
+Ohio's full opening/combat transition, units, labels, wardrobe and sky/sign.
+The regression suite also registers a third mission with four ships, a different
+spawn, distance units and firing line, ensuring consumers do not depend on Ohio.

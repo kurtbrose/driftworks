@@ -3,18 +3,18 @@
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
-    if (new URLSearchParams(location.search).get('mission') === 'ohio') {
-        get('combat-mode').value = 'ohio';
-        document.title = 'Ohio / Always has been / Driftworks';
-        var ohioHeading = document.querySelector('header h1');
-        if (ohioHeading) ohioHeading.textContent = 'DRIFTWORKS / OHIO';
-        var ohioSubtitle = document.querySelector('header > span');
-        if (ohioSubtitle) ohioSubtitle.textContent = 'Ford Folks vs. Chevy Crew';
-        var ohioHint = document.querySelector('#launch > p');
-        if (ohioHint) ohioHint.textContent = 'Wait for the radio reveal. Then welcome to Ohio. / Ford Folks vs. Chevy Crew';
-        var ohioControls=document.getElementById('pause-controls');
-        if(ohioControls)ohioControls.innerHTML=ohioControls.innerHTML.replace(/5 m\/s/g,'11 mph');
+    var activeMission=DW.flightMissions.current();
+    if(activeMission.id!=='default'){
+        var modeOption=Array.from(get('combat-mode').options).some(function(option){return option.value===activeMission.id;});
+        if(!modeOption){var missionOption=document.createElement('option');missionOption.value=activeMission.id;missionOption.textContent=activeMission.heading;get('combat-mode').appendChild(missionOption);}
+        get('combat-mode').value=activeMission.id;
+        document.title=activeMission.title;
+        var missionHeading=document.querySelector('header h1');if(missionHeading)missionHeading.textContent=activeMission.heading;
+        var missionSubtitle=document.querySelector('header > span');if(missionSubtitle)missionSubtitle.textContent=activeMission.subtitle;
+        var missionHint=document.querySelector('#launch > p');if(missionHint)missionHint.textContent=activeMission.hint;
     }
+    var controlsHelp=document.getElementById('pause-controls');
+    if(controlsHelp&&activeMission.units.speedScale!==1)controlsHelp.innerHTML=controlsHelp.innerHTML.replace(/5 m\/s/g,Math.round(5*activeMission.units.speedScale)+' '+activeMission.units.speedLabel);
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
     if(aegisMode){try{await DW.aegisFlight.load();aegis=DW.aegisFlight.create();}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
@@ -101,8 +101,8 @@
         return DW.retailWeapons[Number(gunSelect.value)];
     }
     function gunLabels() {
-        var w = weapon();
-        get('gun-stats').textContent = (get('combat-mode').value==='ohio'?Math.round(w.speed*3600/1609.344)+' mph':w.speed+' m/s') + ' · ' + w.fireWait + ' s / volley · ' + (get('combat-mode').value==='ohio'?Math.round(w.speed*w.lifetime/.9144)+' yd':(w.speed*w.lifetime)+' m') + ' range';
+        var w = weapon(), units=DW.flightMissions.resolve(get('combat-mode').value).units;
+        get('gun-stats').textContent = Math.round(w.speed*units.speedScale)+' '+units.speedLabel + ' · ' + w.fireWait + ' s / volley · ' + Math.round(w.speed*w.lifetime*units.distanceScale)+' '+units.distanceLabel + ' range';
     }
     function banks() {
         gunSelect.textContent = '';
@@ -131,7 +131,8 @@
     }
     function labels() {
         var p = profile();
-        stats.textContent = (p.species || '') + ' · ' + p.role + '\nHull / shields ' + p.hull + ' / ' + p.shield + '\nCruise / boost ' + (get('combat-mode').value==='ohio'?Math.round(p.maxVelocity[2]*3600/1609.344):p.maxVelocity[2]) + ' / ' + (get('combat-mode').value==='ohio'?Math.round(p.afterburnerVelocity[2]*3600/1609.344)+' mph':p.afterburnerVelocity[2]+' m/s') + '\nAccel / decel ' + p.forwardAccel + ' / ' + p.forwardDecel + ' s\nPitch / yaw / roll (s/360°)\n' + p.rotationTime.join(' / ') + '\nDamp / rotdamp ' + p.damp + ' / ' + p.rotdamp;
+        var displayUnits=DW.flightMissions.resolve(get('combat-mode').value).units;
+        stats.textContent = (p.species || '') + ' · ' + p.role + '\nHull / shields ' + p.hull + ' / ' + p.shield + '\nCruise / boost ' + Math.round(p.maxVelocity[2]*displayUnits.speedScale) + ' / ' + Math.round(p.afterburnerVelocity[2]*displayUnits.speedScale)+' '+displayUnits.speedLabel + '\nAccel / decel ' + p.forwardAccel + ' / ' + p.forwardDecel + ' s\nPitch / yaw / roll (s/360°)\n' + p.rotationTime.join(' / ') + '\nDamp / rotdamp ' + p.damp + ' / ' + p.rotdamp;
     }
     function clear() {
         DW.audio.setFlightEngine(0, 0, false, false);
@@ -230,8 +231,9 @@
     get('watch-restart').onclick = function () { pause(); reset(); blurActiveControl(); };
     get('combat-mode').onchange = function () {
         var missionParams = new URLSearchParams(location.search);
-        if (get('combat-mode').value === 'ohio') { missionParams.set('mission', 'ohio'); location.search = missionParams.toString(); return; }
-        if (missionParams.get('mission') === 'ohio') { missionParams.delete('mission'); location.search = missionParams.toString(); return; }
+        var selectedMission=DW.flightMissions.resolve(get('combat-mode').value);
+        if(selectedMission.id!=='default'){missionParams.set('mission',selectedMission.id);}else{missionParams.delete('mission');}
+        if(missionParams.toString()!==new URLSearchParams(location.search).toString()){location.search=missionParams.toString();return;}
         pause();
         reset();
     };

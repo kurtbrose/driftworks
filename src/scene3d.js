@@ -824,6 +824,9 @@
       'vec2 hatch=shipCell(p+vec2(2.,1.),vec2(20.,17.8));vec2 edge=abs(hatch)-vec2(.8,.6);float hatchDistance=max(edge.x,edge.y);float hatchMask=(1.-smoothstep(0.,fp,hatchDistance))*(1.-smoothstep(.18,.5,fp))*shell;float hatchRim=shipLine(hatchDistance,.035,fp)*shell;col=mix(col,col*.78,hatchMask);col+=vec3(.12,.13,.12)*hatchRim;'+
       'col*=.7+.3*shell;'+
       '}else{if(uFinish>.5&&uFinish<6.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float near=1.-smoothstep(.02,.1,fp);vec3 gradient=noiseGradient3(vLocal*42.).yzw;vec3 grain=rotateNormal(gradient);n=normalize(n-(grain-n*dot(grain,n))*.09*near);float rough=noise3(vLocal*12.);col*=1.+(rough-.5)*.07*near;vec4 detail=hardwareMasks(vLocal,fp);col*=1.-detail.z*.23;col=mix(col,vec3(.72,.74,.70),detail.x*.72);col=mix(col,col*.72+vec3(.055),detail.y*.6);col=mix(col,vec3(.16,.19,.19),detail.w*.65);n=normalize(n+rotateNormal(vec3(.06,-.04,.03))*detail.y);if(uFinish>2.5&&uFinish<4.5){float joint=abs(mod(abs(vLocal.x)-42.,5.5)-.12);float weld=shipLine(joint,.04,fp);col=mix(col,col*.7,weld*.5);}}float diffuse=max(0.,dot(n,light));col*=uEnvironmentEnabled>.5?skyDiffuse(n):vec3((uFinish>.5?.25+.92*diffuse:.61+.55*diffuse)+uCraftFill);if(uEnvironmentEnabled<.5&&uFinish>.5&&uFinish<2.5){vec3 halfVector=normalize(light+uBack);col+=vec3(.85,.90,1.)*pow(max(0.,dot(n,halfVector)),uFinish<1.5?36.:12.)*.28;}if(uFinish>6.5&&uFinish<7.5)col=uColor*.95;else col+=uColor*(rigIllumination(vRelative,n)+vBakedDocking*uRigBakedEnabled);}if(uEnvironmentEnabled>.5 && !(uFinish>6.5&&uFinish<7.5))col+=skySpecular(n);gl_FragColor=vec4(col,uOpacity);}';
+    if(DW.explosions){
+      fragmentShader=fragmentShader.replace('void main(){',DW.explosions.shaderSource+'\nvoid main(){if(uFinish>9.5){gl_FragColor=uFinish<10.5?blastFire(vEffect.xy,uSpin,vEffect.z,uColor.r):blastWave(vEffect.xy,uSpin);if(gl_FragColor.a<.01)discard;return;}');
+    }
     /** @type {Record<string,{value:number|number[]|Float32Array|import('./three-types').Texture|null}>} */
     var uniforms = {};
     // RawShaderMaterial preserves the established display-space art, including packed shadows.
@@ -900,6 +903,8 @@
       else mesh.buffer.deleteAttribute('aBakedDocking');
     }
     /** @type {{vertices:Float32Array,color:V3,origin?:V3,rotation?:number}[]} */ var studyEffects=[];
+    /** @type {Parameters<NonNullable<typeof DW.explosions>['build']>[0][]} */ var studyExplosions=[];
+    /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
     /** @type {{vertices:Float32Array,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,basis?:Float32Array,scale?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
@@ -1431,7 +1436,7 @@
         fx.age += dt;
         if (fx.event.kind === 'weapon-fired' && fx.event.source) line([fx.event.source.x, fx.event.source.y, 0], [fx.event.position.x, fx.event.position.y, 0], 'rgba(255,160,100,' + Math.max(0, 1 - fx.age / 0.2) + ')');
       });
-      effects = effects.filter(function (fx) { return fx.age < 0.5; });
+      effects = effects.filter(function (fx) { return fx.age < (fx.event.kind==='ship-destroyed'?5.5:.5); });
       if (drag && drag.mode === 'select') { hud.strokeStyle = '#b4e8ef'; hud.strokeRect(drag.start.x, drag.start.y, drag.last.x - drag.start.x, drag.last.y - drag.start.y); }
       if(study && diagnostics.actors && studyActors.length){
         setUniform('CraftFill',.18);
@@ -1477,6 +1482,21 @@
         });
         depthWrite=true;blending=THREE.NoBlending;setFinish(0);
       }
+      if(DW.explosions){
+        var blasts=study?studyExplosions:effects.filter(function(fx){return fx.event.kind==='ship-destroyed';}).map(function(fx){var event=fx.event;return {position:/** @type {V3} */([event.position.x,event.position.y,0]),velocity:/** @type {V3} */([event.velocity?event.velocity.x:0,event.velocity?event.velocity.y:0,0]),age:fx.age,size:2,seed:Math.round(event.position.x*31+event.position.y*17)};});
+        var explosionIndex=0;
+        blasts.slice(-12).forEach(function(blast){
+          if(!DW.explosions)return;
+          DW.explosions.build(blast,v.right,v.up).forEach(function(batch){
+            var mesh=explosionMeshes[explosionIndex];if(!mesh)mesh=explosionMeshes[explosionIndex]=upload(new Float32Array(0));explosionIndex++;
+            updateGeometry(mesh.buffer,batch.vertices,6);mesh.count=batch.vertices.length/6;
+            blending=batch.finish===0?THREE.NoBlending:batch.finish===10?THREE.NormalBlending:THREE.AdditiveBlending;depthWrite=batch.finish===0;
+            setFinish(batch.finish);setUniform('Spin',batch.age);setUniform('Flat',batch.finish===0?1:0);
+            draw(mesh,[0,0,0],[1,1,1],0,batch.color);
+          });
+        });
+        setFinish(0);setUniform('Spin',w.elapsedSeconds);setUniform('Flat',0);depthWrite=true;blending=THREE.NoBlending;
+      }
       renderer.render(scene,camera);
       renderStats.meshes=frameMeshes.size;renderStats.materials=frameMaterials.size;renderStats.cpuMs=performance.now()-renderStart;
       if (wallDt > 0) fps = fps * 0.9 + Math.min(240, 1 / wallDt) * 0.1;
@@ -1497,6 +1517,8 @@
       setOrbit: function (value) { if(viewerControls && (viewerControls.isFlying() || viewerControls.isPicking())){var savedCamera=getWorld().camera;viewerControls.reset();var resetWorld=getWorld();setWorld(Object.assign({},resetWorld,{camera:savedCamera}));} if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       /** @param {{vertices:Float32Array,color:V3}[]} batches */
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice();},
+      /** @param {typeof studyExplosions} blasts */
+      setStudyExplosions:function(blasts){if(study)studyExplosions=blasts.slice(-12);},
       /** @param {{vertices:Float32Array,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
       /** @param {import('./types').RigLighting[]} rigs */
       setStudyLightRigs:function(rigs){studyLightRigs=rigs.slice(0,2);},
@@ -1509,7 +1531,7 @@
         staticActorMeshes.forEach(function(mesh,data){if(!retained.has(data)){mesh.buffer.dispose();staticActorMeshes.delete(data);}});
       },
       sync: sync, render: render, consumeCombatEvents: consume,
-      resetCombat: function () { effects = []; focus = false; },
+      resetCombat: function () { effects = []; studyExplosions=[]; focus = false; },
       /** @param {World} w @param {number} dt */
       applyCameraFocus: function (w, dt) {
         if (!focus || !DW.camera) return w;

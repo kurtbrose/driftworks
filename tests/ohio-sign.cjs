@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const context={window:{Driftworks:{sim:{METERS_PER_UNIT:10}}}};
 vm.createContext(context);
-for(const file of ['src/mesh-builder.js','experiments/flight-presentation.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
+for(const file of ['src/mesh-builder.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-presentation.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
 const texture={},radius=125,batches=context.window.Driftworks.flightPresentation.ohioSignGeometry(radius,texture);
 assert.equal(batches.length,4);
 assert(batches.every(b=>b.staticGeometry&&Array.from(b.vertices).every(Number.isFinite)));

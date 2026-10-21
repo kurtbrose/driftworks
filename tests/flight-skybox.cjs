@@ -18,6 +18,8 @@ const context = {window: {Driftworks: {}, devicePixelRatio: 2, localStorage: {ge
 context.URL=URL; context.document.baseURI='http://localhost:8000/experiments/flight.html';
 context.document.currentScript={getAttribute:()=> '../src/asset-versions.js'};
 vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../src/asset-versions.js'), 'utf8'), context);
+vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/flight-missions.js'),'utf8'),context);
+vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/mission-ohio.js'),'utf8'),context);
 vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../experiments/skybox.js'), 'utf8'), context);
 const sky = context.window.Driftworks.flightSkybox.create({clientWidth: 800, clientHeight: 600, prepend() {}});
 const pose = {right: [1,0,0], up: [0,0,1], back: [0,-1,0]};
@@ -56,6 +58,8 @@ async function testHeroComposition() {
   context.window.localStorage.getItem=()=>null;
   const imageUrls=[];
   context.Image=class {set src(value){imageUrls.push(value);queueMicrotask(()=>this.onload());}};
+  vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/flight-missions.js'),'utf8'),context);
+  vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/mission-ohio.js'),'utf8'),context);
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../experiments/skybox.js'),'utf8'),context);
   selector.children.length=0;
   const api=context.window.Driftworks.flightSkybox;
@@ -96,6 +100,8 @@ async function testOhioSky() {
     document:{...context.document,createElement:name=>name==='canvas'?ohioCanvas:{}},
     Image:class {set src(value){images.push(value);queueMicrotask(()=>this.onload&&this.onload());}}};
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../src/asset-versions.js'),'utf8'),ohioContext);
+  vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/flight-missions.js'),'utf8'),ohioContext);
+  vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/mission-ohio.js'),'utf8'),ohioContext);
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../experiments/skybox.js'),'utf8'),ohioContext);
   const renderer=ohioContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
   renderer.render(pose,1,false);

@@ -51,6 +51,8 @@ console.log('PASS Ohio portrait assets: seventeen distinct wardrobes, seven orig
   const DW={assetUrl:value=>value,commsDisplay:{create:()=>({draw(){}})},faceBlend:{presets:{face:[]},create:(_target,frames)=>{sources.push(frames);return {draw(){},dispose(){}};}}};
   const window={Driftworks:DW,location:{search:'?mission=ohio'},matchMedia:()=>({matches:true}),requestIdleCallback(){},addEventListener:(name,fn)=>{callbacks[name]=fn;}};
   const box={window,document,performance:{now:()=>0},AbortController,fetch:async(url)=>{requests.push(url);return {ok:true,blob:async()=>({url})};},createImageBitmap:async blob=>({width:1792,height:256,url:blob.url,close(){closed.push(blob.url);}})};
+  vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/flight-missions.js'),'utf8'),box);
+  vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/mission-ohio.js'),'utf8'),box);
   vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,'../experiments/flight-portraits.js'),'utf8'),box);
   const view=DW.flightPortraits.mount(panel),cast=[1,0,3,2,4,5,6,7,8,9,10,11,12,13,14,15,16];
   for(let i=0;i<17;i++){

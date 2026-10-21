@@ -32,10 +32,12 @@
         return { eye: [0, -radius * 2.6, 0], right: [1, 0, 0], up: [0, 0, 1], back: [0, -1, 0], velocity: [0, 0, 0], rates: [0, 0, 0], ramp: [0, 0, 0], throttle: 0 };
     }
     // Start above the asteroid so the forward combat approach stays clear of terrain.
-    /** @param {number} radius @param {Profile} profile */
-    function createSortie(radius, profile) {
+    /** @param {number} radius @param {Profile} profile @param {string} [missionId] */
+    function createSortie(radius, profile, missionId) {
         var state = create(radius);
-        state.eye[2] = radius + 300 / units;
+        var spawn=DW.flightMissions.resolve(missionId).encounter.spawn;
+        state.eye[1]=-radius*spawn.backRadii;
+        state.eye[2] = radius + spawn.altitudeMeters / units;
         state.throttle = 1;
         state.ramp[2] = profile.maxVelocity[2];
         state.velocity = state.back.map(function (v) {

@@ -5,7 +5,7 @@ const noop=()=>{},hud=new Proxy({},{get:()=>noop,set:()=>true});
 function element(){return {width:1,height:1,clientWidth:640,clientHeight:480,style:{},setAttribute:noop,appendChild:noop,addEventListener(type,callback){this.listeners=this.listeners||{};this.listeners[type]=callback;},querySelector:()=>element(),getContext:type=>{assert.equal(type,'2d','Production never requests a raw GPU context');return hud;}};}
 const context=vm.createContext({console,performance,AbortController,Float32Array,Uint8Array,Set,Map,WeakMap,Math,document:{createElement:element},window:null});
 context.window=context;context.DRIFTWORKS_TEST_MODE=true;context.addEventListener=noop;
-for(const name of ['vendor/three/build/three.global.js',...['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','population','session','tactical/camera','engine-audio','audio-mixer','audio','hud','mesh-builder','mining-rig','scene3d','game'].map(n=>'src/'+n+'.js')])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context,{filename:name});
+for(const name of ['vendor/three/build/three.global.js',...['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','population','session','tactical/camera','engine-audio','audio-mixer','audio','hud','mesh-builder','mining-rig','explosions','scene3d','game'].map(n=>'src/'+n+'.js')])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context,{filename:name});
 const THREE=context.THREE,DW=context.Driftworks,frames=[];
 THREE.WebGLRenderer=class {setSize(){}setRenderTarget(target){this.target=target;}setClearColor(){}clear(){}render(scene){frames.push(scene.children.filter(o=>o.material).map(o=>({geometry:o.geometry,uniforms:Object.fromEntries(Object.entries(o.material.uniforms||{}).map(([k,v])=>[k,v.value])),material:o.material,blending:o.material.blending,depthWrite:o.material.depthWrite})));}};
 DW.audio=null;
@@ -50,3 +50,18 @@ host.listeners['sky-environment']({detail:{lighting:null,pose}});viewer.render(w
 assert.ok(frames.at(-1)[0].material instanceof THREE.RawShaderMaterial,'Lighting-off comparison retains original path');
 host.listeners['sky-environment']({detail:{lighting,pose}});viewer.render(world,1,0,0);assert.equal(probeBakes,1,'Probe reused after sky reselect');
 console.log('PASS native sky-lit ships: original rough/nonmetal material, sRGB/UVs, per-renderer PMREM reuse and custom-material isolation');
+
+viewer.setStudyActors([]);viewer.setStudyEffects([]);
+viewer.setStudyExplosions([{position:[0,0,0],velocity:[1,0,0],age:.3,size:1,seed:4}]);
+viewer.render(world,1,0,0);
+const explosionFrame=frames.at(-1);
+assert(explosionFrame.some(d=>d.uniforms.uFinish===10),'Flight destruction draws turbulent fire');
+assert(explosionFrame.some(d=>d.uniforms.uFinish===11),'Flight destruction draws shockwave');
+assert(explosionFrame.filter(d=>d.uniforms.uFinish===10).every(d=>d.blending===THREE.NormalBlending&&!d.depthWrite));
+viewer.resetCombat();viewer.render(world,1,0,0);assert.equal(frames.at(-1).length,0,'Reset clears flight explosions');
+const tactical=DW.scene3d.create(element(),()=>world,w=>{world=w;});
+tactical.consumeCombatEvents([{kind:'ship-destroyed',position:{x:0,y:0},velocity:{x:1,y:0}}]);
+tactical.render(world,1,.3,0);assert(frames.at(-1).some(d=>d.uniforms.uFinish===10),'Tactical deaths use the same fire shader');
+tactical.render(world,1,0,0);assert(frames.at(-1).some(d=>d.uniforms.uFinish===10),'Pause retains tactical destruction');
+tactical.render(world,1,6,0);assert(!frames.at(-1).some(d=>d.uniforms.uFinish===10),'Tactical effects expire');
+console.log('PASS production explosions: flight snapshots, tactical deaths, blend state, pause and reset');

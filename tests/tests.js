@@ -466,7 +466,7 @@
   test('flight presentation shares appearance and preserves fleet, wreck and effect submission order',function(){
     var DW=window.Driftworks,doc=flightDisplayDocument(),saved={packs:DW.shipPackModels,scene:DW.scene3d.create,sky:DW.flightSkybox.create,gunGeometry:DW.flightGuns.geometry,blockout:DW.training.geometry};
     var events=[],fleets=[],scorches=[],engines=[],actors,effects,hullQuery,textureImages=new Map(),sourceWorld={},world=sourceWorld,sceneStats={},skyStats={};
-    var scene={setSurfaceCamera:function(pose){events.push('pose');assert(pose.eye===player.eye);},setStudyActors:function(value){events.push('actors');actors=value;},setStudyEffects:function(value){events.push('effects');effects=value;},setStudyDiagnostics:function(value){events.push('diagnostics');assert(value===comparison);},sync:function(value){events.push('sync');assert(value===world);},render:function(value,a,b,dt){events.push('scene');assert(value===world&&a===1&&b===0&&dt===.05);},getRenderStats:function(){return sceneStats;}};
+    var scene={setStudyExplosions:function(){},setSurfaceCamera:function(pose){events.push('pose');assert(pose.eye===player.eye);},setStudyActors:function(value){events.push('actors');actors=value;},setStudyEffects:function(value){events.push('effects');effects=value;},setStudyDiagnostics:function(value){events.push('diagnostics');assert(value===comparison);},sync:function(value){events.push('sync');assert(value===world);},render:function(value,a,b,dt){events.push('scene');assert(value===world&&a===1&&b===0&&dt===.05);},getRenderStats:function(){return sceneStats;}};
     var player=DW.arcade.create(20),comparison={mode:'empty',scale:.5};
     function craft(id,team,hp){return {id:id,team:team,hp:hp,pose:DW.arcade.create(20),guns:DW.flightGuns.create()};}
     var ally=craft('ally','ally',90),enemy=craft('enemy','enemy',90),dead=craft('dead','enemy',0),wreck=craft('wreck','ally',0),combat=DW.training.create();
@@ -1688,6 +1688,28 @@
     assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
   });
 
+  test('a new mission overrides shared encounter, spawn, units and chatter without Ohio branches', function () {
+    var DW=window.Driftworks;
+    if(DW.flightMissions.resolve('regression-mission').id==='default')DW.flightMissions.define('regression-mission',{
+      encounter:{kind:'furball',count:4,spawn:{backRadii:3,altitudeMeters:500},callsigns:['One','Two','Three','Four']},
+      comms:{calls:{firing:['Custom firing report.']}},
+      units:{distanceScale:2,distanceLabel:'test',distanceWord:'test units'},opening:[]
+    });
+    var profile=DW.arcade.profiles[0], radius=125, pose=DW.arcade.createSortie(radius,profile,'regression-mission');
+    assertClose(pose.eye[1],-radius*3);assertClose(pose.eye[2],radius+500/sim.METERS_PER_UNIT);
+    var combat=DW.training.create('regression-mission');DW.training.spawn(combat,pose,radius);
+    assert(combat.enemies.length===4&&combat.enemies.filter(function(c){return c.team==='ally';}).length===2);
+    assert(combat.enemies[3].callsign==='Four');
+    var text=DW.flightDialogue.compose('contact',{range:1000,direction:'right',height:'',bearing:'three oclock'},'regression-mission');
+    assert(text.every(function(line){return line.indexOf('two thousand test units')>=0;}));
+    assert(DW.flightDialogue.compose('closing',{pilot:'Test',speed:45},'regression-mission').every(function(line){return line.indexOf('forty five meters per second')>=0;}),'A distance-only override leaves speed defaults unchanged');
+    var clock=DW.flightComms.create(),ally=combat.enemies[0];
+    combat.enemies=[ally];ally.mode='attack';ally.fire=false;
+    DW.flightComms.step(clock,0,combat,true,function(){return 0;});ally.fire=true;clock.quiet=10;clock.wait=0;
+    var line=DW.flightComms.step(clock,4,combat,false,function(){return 0;});
+    assert(line&&line.text==='Custom firing report.');
+  });
+
   test('Ohio forms of address use bud, neighbor and hotshot while preserving real names', function () {
     var api=window.Driftworks.flightDialogue;
     var near=api.compose('nearPlayer',{},true);
@@ -1711,7 +1733,7 @@
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var barb={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'attack',fire:false};
     var dale={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'approach'};
-    var combat={mode:'ohio',ohioIntro:3,enabled:true,hull:100,enemies:[barb,dale]};
+    var combat={mode:'ohio',openingStep:3,enabled:true,hull:100,enemies:[barb,dale]};
     api.step(clock,0,combat,true,rng);clock.wait=0;clock.quiet=0;barb.fire=true;
     var line=api.step(clock,4,combat,false,rng);
     assert(line&&line.event==='firing');
@@ -1723,7 +1745,7 @@
     var caller={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'attack'};
     var helper={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'attack',targetId:'other',pose:{eye:[0,0,0],velocity:[1,0,0]}};
     var threat={id:'rick',callsign:'Uncle Rick',index:14,team:'enemy',hp:90,mode:'attack',targetId:'barb',pose:{eye:[10,0,0]}};
-    var combat={mode:'ohio',ohioIntro:3,enabled:true,dead:false,hull:100,enemies:[caller,threat,helper]};
+    var combat={mode:'ohio',openingStep:3,enabled:true,dead:false,hull:100,enemies:[caller,threat,helper]};
     api.step(clock,0,combat,false,rng);caller.mode='evade';
     var request=api.step(clock,0,combat,false,rng);
     assert(request.text==='Big Dale, get this guy off me!' && request.craftId==='barb' && request.replyTo==='dale');
@@ -1744,7 +1766,7 @@
     var barb={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'approach'};
     var dale={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'approach'};
     var dead={id:'dead',callsign:'Dead Doug',index:4,team:'ally',hp:0,mode:'approach'};
-    var combat={mode:'ohio',ohioIntro:3,enabled:true,hull:100,enemies:[barb,dale,dead]},clock=api.create();
+    var combat={mode:'ohio',openingStep:3,enabled:true,hull:100,enemies:[barb,dale,dead]},clock=api.create();
     api.step(clock,0,combat,true,rng);clock.wait=0;clock.quiet=10;
     var line=api.step(clock,0,combat,false,rng);
     assert(line.text==='Ope, sorry, Big Dale. Just gonna squeeze past ya.' && line.craftId==='barb' && line.replyTo==='dale');
@@ -1779,19 +1801,19 @@
     assert(new Set(names).size===16 && names[0]==='Cuyahoga Cryptid');
     api.step(combat,player,1,300/U);
     assert(JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}))===start);
-    assert(DW.flightComms.step(clock,1,combat,true)===null && combat.ohioIntro===0);
+    assert(DW.flightComms.step(clock,1,combat,true)===null && combat.openingStep===0);
     var first=DW.flightComms.step(clock,0,combat,false);
     assert(first.text==="It's all Ohio?" && first.craftId===combat.enemies[0].id);
-    assert(DW.flightComms.step(clock,4,combat,true)===null && combat.ohioIntro===1);
+    assert(DW.flightComms.step(clock,4,combat,true)===null && combat.openingStep===1);
     var second=DW.flightComms.step(clock,0,combat,false);
     assert(second.text==='Always has been.' && second.hostile);
-    assert(DW.flightComms.step(clock,4,combat,true)===null && combat.ohioIntro===2);
-    DW.flightComms.step(clock,0,combat,false); assert(combat.ohioIntro===3);
+    assert(DW.flightComms.step(clock,4,combat,true)===null && combat.openingStep===2);
+    DW.flightComms.step(clock,0,combat,false); assert(combat.openingStep===3);
     api.step(combat,player,.1,300/U);
     assert(JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}))!==start);
     api.spawn(combat,player,300/U);
-    assert(combat.ohioIntro===3 && combat.enemies.every(function(e,i){return e.callsign===names[i];}));
-    assert(api.create('ohio').ohioIntro===0);
+    assert(combat.openingStep===3 && combat.enemies.every(function(e,i){return e.callsign===names[i];}));
+    assert(api.create('ohio').openingStep===0);
   });
 
   test('flight callsigns are unique, stable across waves, and shared by comms', function () {
@@ -5223,6 +5245,20 @@
     assert(picker([10,20,5],[-1,0,0],[batch])===null,'Miss must not invent a focus');
     var spun=Object.assign({},batch,{basis:undefined,rotation:0,spin:Math.PI/2,origin:[0,0,0]});
     hit=picker([0,10,0],[0,-1,0],[spun]);assert(hit,'Axial rotor spin uses the rendered triangle');assertClose(hit[1],0);
+  });
+
+  test('flight destruction retains drift, pauses and expires independently of gun impacts', function () {
+    var DW=window.Driftworks, api=DW.training, pose=DW.arcade.create(0), combat=api.create('training');
+    api.configure(combat,DW.arcade.profiles[0]);api.spawn(combat,pose,0);
+    var victim=combat.enemies[0];victim.pose.velocity=[30,-20,10];
+    api.damageCraft(combat,victim,{damage:10000,armorFactor:1,shieldFactor:1},combat.player);
+    var flash=combat.flashes[0],units=DW.sim.METERS_PER_UNIT;
+    assert(flash.destruction && flash.age===0);
+    assertClose(flash.velocity[0],30/units);assertClose(flash.velocity[1],-20/units);
+    assert(api.allGuns(combat,DW.flightGuns.create()).impacts.indexOf(flash)<0,'Destruction does not also draw the old impact blob');
+    combat.enabled=false;api.step(combat,pose,.4,0);assert(flash.age===0,'Paused simulation freezes explosion');
+    combat.enabled=true;api.step(combat,pose,.4,0);assert(combat.flashes.indexOf(flash)>=0,'Destruction survives ordinary hit-flash expiry');
+    api.step(combat,pose,5.2,0);assert(combat.flashes.indexOf(flash)<0,'Destruction expires after 5.5 simulation seconds');
   });
 
   function run() {

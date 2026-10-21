@@ -22,12 +22,12 @@
   /** @typedef {{controller: AbortController; bitmap: ImageBitmap | null; promise: Promise<Record<string, import('./speech-sprites/generated-v1/types').FaceSource>>}} Entry */
   /** @param {HTMLElement} panel */
   function mount(panel){
-    var ohio=typeof window.location!=='undefined'&&/[?&]mission=ohio(?:&|$)/.test(window.location.search||'');
+    var portraits=DW.flightMissions.current().portraits;
     // Wardrobe is presentation-only. Both casts retain the same calibrated slots,
     // seven expression rectangles, voice identities, and fixed cache budget.
-    var portraitRoot='../assets/portraits/'+(ohio?'ohio':'dogfight')+'/runtime/';
+    var portraitRoot='../assets/portraits/'+portraits.folder+'/runtime/';
     var canvas=panel.ownerDocument.createElement('canvas');canvas.width=canvas.height=512;canvas.className='radio-portrait';canvas.hidden=true;panel.appendChild(canvas);
-    canvas.dataset.cast=ohio?'ohio':'standard';
+    canvas.dataset.cast=portraits.cast;
     var animated=panel.ownerDocument.createElement('canvas');
     var display=DW.commsDisplay.create(canvas);
     /** @type {import('./types').RadioNoise | null} */ var noise=null;

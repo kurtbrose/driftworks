@@ -1,5 +1,25 @@
 export type TargetStatus = {id: string; shield: number; hull: number; shieldTrail: number; hullTrail: number; shieldAge: number; hullAge: number; flash: number; time: number};
 import type { Asteroid, Ship, World, DriftworksNamespace } from '../src/types';
+export type FlightMission = {
+    version:1; id:string;
+    title:string; heading:string; subtitle:string; hint:string;
+    units:{distanceScale:number;distanceLabel:string;distanceWord:string;speedScale:number;speedLabel:string;speedWord:string;radarKilometers:boolean};
+    teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
+    comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
+    portraits:{folder:string;cast:string};
+    sky:{kind:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    scenery:{kind:string;asset:string}[];
+    encounter:{kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
+    opening:{text:string;speakerIndex:number;channel:string}[];
+};
+export type MissionOverrides = {
+    version?:1; title?:string;heading?:string;subtitle?:string;hint?:string;
+    units?:Partial<FlightMission['units']>;
+    teams?:{ally?:Partial<FlightMission['teams']['ally']>;enemy?:Partial<FlightMission['teams']['enemy']>};
+    comms?:Partial<FlightMission['comms']>;portraits?:Partial<FlightMission['portraits']>;
+    sky?:Partial<FlightMission['sky']>;scenery?:FlightMission['scenery'];
+    encounter?:Partial<FlightMission['encounter']>;opening?:FlightMission['opening'];
+};
 /** Scene-space positions; velocities and engine targets are metres per second. */
 export type Vector = number[];
 export type AegisFlightAsset = {
@@ -139,6 +159,8 @@ export type Bolt = {
     team?: string;
 };
 export type Impact = {
+    destruction?: boolean;
+    velocity?: Vector;
     position: Vector;
     age: number;
     scale?: number;
@@ -235,7 +257,7 @@ export type RadioEvent = {
     wave: number;
 };
 export type Combat = {
-    ohioIntro: number;
+    openingStep: number;
     opponentStyle?: OpponentStyle;
     player: Craft;
     configured: boolean;
@@ -594,6 +616,7 @@ export type Line = {
 };
 export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines?: number; reduced?: boolean};
 export type ExperimentModules = {
+    flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
     flightPortraits: {
         mount: (panel: HTMLElement) => {
@@ -648,7 +671,7 @@ export type ExperimentModules = {
     arcade: {
         profiles: Profile[];
         create: (radius: number) => FlightState;
-        createSortie: (radius: number, profile: Profile) => FlightState;
+        createSortie: (radius: number, profile: Profile, missionId?:string) => FlightState;
         step: (state: FlightState, profile: Profile, input: FlightInput, dt: number) => FlightState;
         contact: (state: FlightState, point: Vector, radius: number) => boolean;
     };
@@ -766,7 +789,7 @@ export type ExperimentModules = {
             distance: number;
         } | null;
         speakerHalo: (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => void;
-        draw: (ctx: CanvasRenderingContext2D, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean, ohio?:boolean) => void;
+        draw: (ctx: CanvasRenderingContext2D, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean, missionId?:string|boolean) => void;
     };
     flightControls: {
         mount: (host: HTMLElement, actions: ControlActions, environment?: ControlEnvironment) => {
@@ -877,7 +900,7 @@ export type ExperimentModules = {
     flightComms: {
         create: () => CommsState;
         step: (state: CommsState, dt: number, combat: Combat, busy: boolean, random?: () => number, player?: FlightState) => Line | null;
-        compose: (kind: string, data: LineData, ohio?:boolean) => Choices;
+        compose: (kind: string, data: LineData, missionId?:string|boolean) => Choices;
         numberWords: (value: unknown) => string;
         contactData: (player: Pose | undefined, point: Vector) => Contact | null;
         pickLine: (state: CommsState, choices: Choices, random: () => number) => string;

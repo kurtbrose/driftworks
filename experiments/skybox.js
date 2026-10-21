@@ -55,7 +55,7 @@
         }
         return lightingCache;
     }
-    var ohioMission = typeof window.location !== 'undefined' && /[?&]mission=ohio(?:&|$)/.test(window.location.search || '');
+    var missionSky=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).flightMissions.current().sky, landmarkSky=missionSky.kind==='landmarks';
     var focal = 1 / Math.tan(Math.PI / 8);
     function stars() {
         var data = /** @type {number[]} */ ([]), seed = 58319;
@@ -229,15 +229,12 @@ void main(){
         var heroFeatures=[];
         var heroLoading=false;
         /** @type {{texture:WebGLTexture|null,center:number[],right:number[],up:number[],gain:number,loaded:boolean}[]} */
-        var ohioTextures=[];
-        if (ohioMission) {
+        var landmarkTextures=[];
+        if (landmarkSky) {
             // The planet is lit from its upper left, toward the viewer.
             // +Y faces the planet; the sun is behind the left shoulder (-X,-Y,+Z).
-            var ohioAssets = [
-                {asset:'ohio-planet-v1.png',yaw:90,pitch:4,roll:0,widthDeg:44,gain:1},
-                {asset:'features/warm-sun-v1.png',yaw:225,pitch:30,roll:0,widthDeg:7,gain:1}
-            ];
-            ohioAssets.forEach(function (feature) {
+            var landmarkFeatures = missionSky.features;
+            landmarkFeatures.forEach(function (feature) {
                 var vertices=featureFrame(feature,1), center=/** @type {number[]} */ ([]), horizontal=/** @type {number[]} */ ([]), vertical=/** @type {number[]} */ ([]);
                 for(var axis=0;axis<3;axis++){
                     center.push((vertices[axis]+vertices[25+axis])/2);
@@ -255,13 +252,13 @@ void main(){
                 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
                 var entry={texture:texture,center:center,right:horizontal.map(function(v){return v/horizontalLength;}),
                     up:vertical.map(function(v){return v/verticalLength;}),gain:feature.gain,loaded:false};
-                ohioTextures.push(entry);
+                landmarkTextures.push(entry);
                 var image = new Image();
                 image.onload = function () {
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
                     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
                     entry.loaded=true;
-                    if(canvas.dataset.ohio!=='error')canvas.dataset.ohio=ohioTextures.every(function(item){return item.loaded;})?'ready':'loading';
+                    if(canvas.dataset.ohio!=='error')canvas.dataset.ohio=landmarkTextures.every(function(item){return item.loaded;})?'ready':'loading';
                 };
                 image.onerror=function () {canvas.dataset.ohio='error';};
                 image.src=assetUrl('../assets/backgrounds/'+feature.asset);
@@ -403,7 +400,7 @@ void main(){
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
             canvas.dataset.panorama = 'ready';
         };
-        if(!ohioMission) image.src = assetUrl('../assets/backgrounds/all-sky-milky-way.jpg');
+        if(!landmarkSky) image.src = assetUrl('../assets/backgrounds/all-sky-milky-way.jpg');
         /** @param {WebGLProgram} p @param {Pose} pose @param {number} aspect @param {number} dpr */
         function uniforms(p, pose, aspect, dpr) {
             gl.useProgram(p); /** @type {('right' | 'up' | 'back')[]} */ /** @type {('right' | 'up' | 'back')[]} */
@@ -438,15 +435,15 @@ void main(){
                     stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
                     return;
                 }
-                if(!ohioMission && style>=7 && style<=9) loadHeroFeatures();
-                if(!ohioMission && style===10) loadRiver();
+                if(!landmarkSky && style>=7 && style<=9) loadHeroFeatures();
+                if(!landmarkSky && style===10) loadRiver();
                 stats = { drawCalls: 2, triangles: 2, points: starData.length / 4, meshes: 2, materials: 2 };
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
-                gl.uniform1f(gl.getUniformLocation(sky, 'style'), ohioMission ? 11 : style);
+                gl.uniform1f(gl.getUniformLocation(sky, 'style'), landmarkSky ? 11 : style);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), exposure);
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
-                if(ohioMission) ohioTextures.forEach(function(entry,index){
+                if(landmarkSky) landmarkTextures.forEach(function(entry,index){
                     var prefix=index===0?'ohioPlanet':'ohioSun';
                     gl.activeTexture(gl.TEXTURE0+2+index);gl.bindTexture(gl.TEXTURE_2D,entry.texture);
                     gl.uniform1i(gl.getUniformLocation(sky,prefix),2+index);
@@ -460,17 +457,17 @@ void main(){
                 var a = gl.getAttribLocation(sky, 'position');
                 gl.enableVertexAttribArray(a);
                 gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-                gl.bindTexture(gl.TEXTURE_2D,!ohioMission && style===10 ? riverTexture : texture);
+                gl.bindTexture(gl.TEXTURE_2D,!landmarkSky && style===10 ? riverTexture : texture);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disableVertexAttribArray(a);
-                if(!ohioMission && style>=7 && style<=9 && heroFeatures.length) {
+                if(!landmarkSky && style>=7 && style<=9 && heroFeatures.length) {
                     uniforms(heroProgram,pose,width/height,dpr);
                     gl.uniform1f(gl.getUniformLocation(heroProgram,'exposure'),exposure);
                     gl.uniform1i(gl.getUniformLocation(heroProgram,'feature'),0);
                     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_COLOR);
                     var direction=gl.getAttribLocation(heroProgram,'direction'), texcoord=gl.getAttribLocation(heroProgram,'texcoord');
                     gl.enableVertexAttribArray(direction);gl.enableVertexAttribArray(texcoord);
-                    var family=ohioMission ? 'ohio' : ['galaxy','nebula','sun','river'][style-7];
+                    var family=['galaxy','nebula','sun','river'][style-7];
                     var visibleFeatures=heroFeatures.filter(function (feature) {return feature.family===family;});
                     visibleFeatures.forEach(function (feature) {
                         gl.bindBuffer(gl.ARRAY_BUFFER,feature.buffer);

@@ -189,9 +189,9 @@
             get('art-credit').textContent = String(error);
         });
         var skybox = DW.flightSkybox.create(host);
-        var ohioMission=new URLSearchParams(typeof location==='undefined'?'':location.search).get('mission')==='ohio';
-        var ohioSign=ohioMission?new Image():null, signRadius=-1, signBatches=/** @type {Batch[]} */([]);
-        if(ohioSign)ohioSign.src=assetUrl('../assets/backgrounds/ohio-highway-sign.svg');
+        var signDefinition=DW.flightMissions.current().scenery.find(function(item){return item.kind==='highway-sign';});
+        var ohioSign=signDefinition?new Image():null, signRadius=-1, signBatches=/** @type {Batch[]} */([]);
+        if(ohioSign&&signDefinition)ohioSign.src=assetUrl(signDefinition.asset);
         /** @type {import('./types').AegisFlightRig|null} */var capital=null;
         var tetherKm = Number(new URLSearchParams(typeof location === 'undefined' ? '' : location.search).get('tether'));
         var tether = [100,50,20,10,2].includes(tetherKm) ? tetherGeometry(tetherKm) : [];
@@ -312,6 +312,7 @@
             effectBatches.push({ vertices: engines, color: [.25, .65, 1] });
             if(capital)effectBatches=effectBatches.concat(capital.effects(state));
             scene.setStudyEffects(effectBatches);
+            scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).slice(-12).map(function(f){return {position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:Math.round(f.position[0]*31+f.position[1]*17)};}));
             scene.setStudyDiagnostics(comparison);
             skybox.render(state, comparison.scale, comparison.mode === 'empty');
             scene.sync(world);

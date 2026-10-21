@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Explosion lab · Driftworks</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080e16;color:#dce7ed;font:14px/1.5 system-ui}main{display:grid;grid-template-columns:320px 1fr;min-height:100vh}aside{padding:24px;background:#111e29;height:100vh;overflow:auto;border-right:1px solid #30414c}a{color:#93d8cf}h1{font-size:32px;margin:14px 0 6px}p,small{color:#a1b6c3}label{display:block;margin:14px 0}input[type=range],select,textarea{width:100%}output{float:right;color:#ffd496}button,select,textarea{background:#1b303e;color:inherit;border:1px solid #476170;border-radius:4px;padding:9px}button{cursor:pointer;margin:3px 2px 3px 0}button:hover{background:#304a57}button:focus-visible,input:focus-visible{outline:2px solid #ffcc81}.primary{background:#885326}fieldset{border:1px solid #304958;margin:20px 0}fieldset label{display:inline-block;margin:6px}.stage{position:relative;min-width:0;height:100vh;overflow:hidden}canvas{display:block;width:100%;height:100%;touch-action:none}.caption{position:absolute;top:24px;left:24px;pointer-events:none;letter-spacing:.12em;font-size:12px}.transport{position:absolute;bottom:24px;left:24px;right:24px;padding:16px;background:#101d29e8;border:1px solid #304958}.transport label{margin:8px 0 0}textarea{font:12px monospace;resize:vertical}#status{min-height:1.5em}@media(max-width:720px){main{display:flex;flex-direction:column}.stage{order:-1;height:55vh}aside{height:auto;width:100%}.caption{top:12px;left:12px}.transport{bottom:12px;left:12px;right:12px}}
+</style></head><body><main><aside>
+<a href="./">← Experiments</a><h1>Blast chamber.</h1><p>Layered destruction study. Drag to orbit, scroll to zoom. Every replay uses the same seed.</p>
+<label>Starting point<select id="preset"><option value="fighter">Fighter rupture</option><option value="reactor">Reactor overload</option><option value="capital">Capital cascade</option></select></label>
+<div id="knobs"></div>
+<fieldset><legend>Visible layers</legend><div id="layers"></div></fieldset>
+<button id="seed">New seed</button><button id="reset">Reset preset</button><button id="camera">Reset camera</button>
+<p><small>Changes apply at the current time. Scrub backward to inspect the same blast. These settings affect this lab only.</small></p>
+<label>Recipe · JSON<textarea id="recipe" rows="6" spellcheck="false" aria-label="Explosion recipe JSON"></textarea></label><button id="export">Export recipe</button><button id="import">Import recipe</button><p id="status" role="status"></p>
+</aside><section class="stage" aria-label="Explosion preview"><canvas id="view" aria-label="Interactive explosion preview"></canvas><div class="caption">DRIFTWORKS / FX STUDY 01<br><span id="seed-label"></span></div><div class="transport"><button id="replay" class="primary">Replay</button><button id="pause">Pause</button><label><input id="loop" type="checkbox" checked> Loop</label><label>Playback speed <select id="speed"><option value="0.15">0.15×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option></select></label><label>Timeline <output id="time"></output><input id="timeline" type="range" min="0" max="6" step="0.01" value="0"></label></div></section></main>
+<script src="../src/asset-versions.js?v=235e18d33549"></script>
+<script src="../src/explosions.js?v=014a7fc70ec2"></script>
+<script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
+<script>
+/* Standalone visual prototype. Analytic, seeded motion makes timeline scrubbing reversible. */
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id), T = window.THREE;
+  const defaults = {size:1, flash:1, fire:1, shock:1, sparks:60, debris:22, drift:1, cascade:1};
+  const ranges = {size:['Blast size',0.4,2.5,0.05],flash:['Flash intensity',0,2,0.05],fire:['Fireball duration',0.3,2,0.05],shock:['Shockwave speed',0.3,2,0.05],sparks:['Spark count',0,120,1],debris:['Debris count',0,40,1],drift:['Inherited drift',0,3,0.1],cascade:['Secondary blasts',1,5,1]};
+  let settings = {...defaults}, seed = 1827, time = 0, playing = true, yaw = 0.35, pitch = 0.25, distance = 36;
+  const enabled = {}, controls = {};
+  Object.entries(ranges).forEach(([key, [title,min,max,step]]) => {
+    const label = document.createElement('label'), output = document.createElement('output'), input = document.createElement('input');
+    label.append(title, output, input); input.type='range'; input.min=min; input.max=max; input.step=step;
+    input.addEventListener('input', () => {settings[key]=Number(input.value); output.value=input.value;});
+    controls[key]={input,output}; $('knobs').append(label);
+  });
+  ['Flash','Fireball','Shockwave','Sparks','Debris'].forEach(name => {
+    const label=document.createElement('label'), input=document.createElement('input'); input.type='checkbox'; input.checked=true;
+    enabled[name]=true; input.onchange=()=>enabled[name]=input.checked; label.append(input,name); $('layers').append(label);
+  });
+  function sync() {Object.keys(controls).forEach(k=>{controls[k].input.value=settings[k]; controls[k].output.value=settings[k];}); $('seed-label').textContent='SEED '+seed;}
+  const renderer = new T.WebGLRenderer({canvas:$('view'),antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setClearColor(0x080e16);
+  const scene=new T.Scene(), camera=new T.PerspectiveCamera(45,1,0.1,1000);
+  scene.add(new T.AmbientLight(0x8196b5,1.5)); const light=new T.PointLight(0xffb66b,100,65,1); scene.add(light);
+  const grid=new T.GridHelper(160,40,0x253847,0x14212e); grid.position.y=-5; scene.add(grid);
+  const reference=new T.Mesh(new T.BoxGeometry(4,1,1.8),new T.MeshStandardMaterial({color:0x6c8792,metalness:0.7,roughness:0.4})); reference.position.set(-10,0,-3); scene.add(reference);
+  function texture() {
+    const c=document.createElement('canvas'); c.width=c.height=128; const ctx=c.getContext('2d'), g=ctx.createRadialGradient(64,64,0,64,64,64);
+    g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.2,'rgba(255,255,255,.9)');g.addColorStop(.5,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fillRect(0,0,128,128);return new T.CanvasTexture(c);
+  }
+  const glow=texture(), shardGeometry=new T.TetrahedronGeometry(1), planeGeometry=new T.PlaneGeometry(1,1), streakGeometry=new T.BoxGeometry(1,1,1);
+  const vertexShader='varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}';
+  const sharedShader=window.Driftworks.explosions.shaderSource;
+  function fireMaterial(offset) {return new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{age:{value:0},phase:{value:0},offset:{value:offset}},vertexShader,fragmentShader:`
+    varying vec2 vUv;uniform float age,phase,offset;${sharedShader}
+    void main(){gl_FragColor=blastFire(vUv*2.-1.,age,phase,offset);if(gl_FragColor.a<.01)discard;}`});}
+  function waveMaterial() {return new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,uniforms:{age:{value:0}},vertexShader,fragmentShader:`
+    varying vec2 vUv;uniform float age;${sharedShader}
+    void main(){gl_FragColor=blastWave(vUv*2.-1.,age);}`});}
+  const pool=[];
+  function sprite() {return new T.Sprite(new T.SpriteMaterial({map:glow,transparent:true,depthWrite:false,blending:T.AdditiveBlending}));}
+  // Allocate once: all presets use a bounded pool, including the capital cascade.
+  for(let b=0;b<5;b++) {
+    const flash=sprite(), lobes=Array.from({length:9},(_,i)=>new T.Mesh(planeGeometry,fireMaterial(i*13.7+b*29.1))), ring=new T.Mesh(planeGeometry,waveMaterial());
+    const sparks=Array.from({length:120},()=>new T.Mesh(streakGeometry,new T.MeshBasicMaterial({color:0xffc17b,transparent:true,depthWrite:false,blending:T.AdditiveBlending})));
+    const debris=Array.from({length:40},(_,i)=>new T.Mesh(i%3?shardGeometry:streakGeometry,new T.MeshStandardMaterial({color:0x30383d,emissive:0xff3e03,emissiveIntensity:0,metalness:.6,roughness:.6,transparent:true})));
+    const trails=Array.from({length:24},sprite);
+    [flash,ring,...lobes,...sparks,...debris,...trails].forEach(o=>scene.add(o)); pool.push({flash,lobes,ring,sparks,debris,trails});
+  }
+  function random(n) {const v=Math.sin(seed*12.73+n*78.233)*43758.5453;return v-Math.floor(v);}
+  function direction(n) {const z=random(n)*2-1,a=random(n+1)*Math.PI*2,r=Math.sqrt(1-z*z);return new T.Vector3(r*Math.cos(a),z,r*Math.sin(a));}
+  function renderBlast(b,index) {
+    const age=time-index*.26, active=index<settings.cascade&&age>=0&&age<5.5;
+    const origin=new T.Vector3(index*2.5+Math.max(0,age)*settings.drift,Math.sin(index*3)*.8,0), size=settings.size*(index? .7:1);
+    const fade=(life)=>Math.max(0,1-age/life);
+    b.flash.visible=active&&enabled.Flash&&age<.065;
+    b.flash.position.copy(origin);b.flash.scale.setScalar(size*(8+age*85));b.flash.material.opacity=fade(.065)*settings.flash;b.flash.material.color.setRGB(1,.97,.9);
+    b.lobes.forEach((o,i)=>{const t=age-i*.017,life=settings.fire*(.6+random(i+30)*.5);o.visible=active&&enabled.Fireball&&t>0&&t<life;
+      const p=Math.max(0,t/life), d=direction(i*7+index*191);o.position.copy(origin).addScaledVector(d,size*(.2+Math.sqrt(Math.max(0,t))*3.5));o.scale.setScalar(size*(2+Math.sqrt(Math.max(0,t))*8)*(0.6+random(i+17)*.7));
+      o.quaternion.copy(camera.quaternion);o.material.uniforms.age.value=Math.max(0,t);o.material.uniforms.phase.value=p;o.material.uniforms.offset.value=i*13.7+index*29.1+seed*.01;
+    });
+    b.ring.visible=active&&enabled.Shockwave&&age<.38; b.ring.position.copy(origin);b.ring.quaternion.copy(camera.quaternion);b.ring.scale.setScalar(size*(3+Math.max(0,age)*42*settings.shock));b.ring.material.uniforms.age.value=age;
+    b.sparks.forEach((o,i)=>{const hero=i%13===0,life=.25+random(i+50)*1.2;o.visible=active&&enabled.Sparks&&i<settings.sparks&&age<life;const d=direction(i*9+index*193+500), speed=(hero?22:5)+random(i+80)*13;
+      o.position.copy(origin).addScaledVector(d,size*speed*Math.max(0,age));o.quaternion.setFromUnitVectors(new T.Vector3(1,0,0),d);o.scale.set(size*(hero?2.4:.12+random(i+91)*.8)*fade(life),size*(hero?.045:.014),size*.018);o.material.opacity=fade(life)*(hero?1:.25+random(i+70)*.65);o.material.color.setRGB(1,hero?.94:.35+random(i+90)*.45,hero?.65:.08);
+    });
+    b.debris.forEach((o,i)=>{o.visible=active&&enabled.Debris&&i<settings.debris;const d=direction(i*13+index*197+900),big=i%7===0;const speed=3+random(i+10)*10;o.position.copy(origin).addScaledVector(d,size*speed*Math.max(0,age));o.rotation.set(age*(i+1)*.7,age*(i+3)*.4,i);o.scale.set(size*(big?1.1:.15+random(i+3)*.4),size*(big?.35:.12),size*(big?.65:.23));o.material.opacity=Math.min(1,fade(5.5)*3);o.material.emissiveIntensity=i%3===0?fade(2)*.65:0;});
+    b.trails.forEach((o,i)=>{const fragment=b.debris[Math.floor(i/4)*3],step=i%4;o.visible=fragment.visible&&age>.06&&age<1.9;const d=direction(Math.floor(i/4)*3*13+index*197+900);o.position.copy(fragment.position).addScaledVector(d,-size*(.3+step*.45));o.scale.setScalar(size*(.8+step*.22));o.material.color.setRGB(1,.45-step*.09,.015);o.material.opacity=fade(1.9)*(.65-step*.14);});
+  }
+  function preset() {settings={...defaults,...($('preset').value==='reactor'?{size:1.5,flash:1.8,fire:1.5,shock:1.4,sparks:100}:$('preset').value==='capital'?{size:1.5,fire:1.3,debris:36,cascade:5,drift:.6}:{})};sync();time=0;playing=true;}
+  $('preset').onchange=preset;$('reset').onclick=preset;$('seed').onclick=()=>{seed=(seed+7919)%100000;sync();time=0;};$('camera').onclick=()=>{yaw=.35;pitch=.25;distance=36;};
+  $('replay').onclick=()=>{time=0;playing=true;};$('pause').onclick=()=>playing=!playing;
+  $('timeline').oninput=()=>{time=Number($('timeline').value);playing=false;};
+  $('export').onclick=()=>{$('recipe').value=JSON.stringify({seed,...settings},null,2);$('status').textContent='Recipe ready to copy.';};
+  $('import').onclick=()=>{try {const data=JSON.parse($('recipe').value);if(!Number.isInteger(data.seed)||data.seed<0||data.seed>100000)throw Error('Seed must be an integer from 0 to 100000.');const next={};Object.keys(ranges).forEach(k=>{const value=data[k],r=ranges[k];if(typeof value!=='number'||!Number.isFinite(value)||value<r[1]||value>r[2]||(r[3]===1&&!Number.isInteger(value)))throw Error('Invalid '+k+'.');next[k]=value;});seed=data.seed;settings=next;sync();time=0;playing=true;$('status').textContent='Recipe loaded.';}catch(e){$('status').textContent=e.message;}};
+  let drag=null;const canvas=$('view');canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.008;pitch=Math.max(-1.2,Math.min(1.2,pitch+(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];};canvas.onpointerup=canvas.onpointercancel=()=>drag=null;canvas.addEventListener('wheel',e=>{e.preventDefault();distance=Math.max(12,Math.min(100,distance*Math.exp(e.deltaY*.001)));},{passive:false});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)playing=false;});
+  let previous=performance.now();sync();
+  function frame(now) {requestAnimationFrame(frame);const dt=Math.min(.05,(now-previous)/1000);previous=now;if(playing){time+=dt*Number($('speed').value);if(time>=6){time=$('loop').checked?0:6;if(time===6)playing=false;}}
+    const w=canvas.clientWidth,h=canvas.clientHeight;if(canvas.width!==Math.round(w*renderer.getPixelRatio())||canvas.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);
+    camera.aspect=w/Math.max(1,h);camera.updateProjectionMatrix();camera.position.set(Math.sin(yaw)*Math.cos(pitch)*distance,Math.sin(pitch)*distance,Math.cos(yaw)*Math.cos(pitch)*distance);camera.lookAt(3,0,0);
+    pool.forEach(renderBlast);light.position.set(time*settings.drift,0,0);light.intensity=enabled.Flash?Math.max(0,1-time/.35)*350*settings.flash:0;
+    $('timeline').value=time;$('time').value=time.toFixed(2)+' s';$('pause').textContent=playing?'Pause':'Play';renderer.render(scene,camera);
+  } requestAnimationFrame(frame);
+})();
+</script></body></html>

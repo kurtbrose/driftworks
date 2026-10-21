@@ -7,7 +7,7 @@ const seconds=Number(value('--seconds','120')),seeds=Number(value('--seeds','5')
 if(!Number.isFinite(seconds)||seconds<=0||!Number.isSafeInteger(seeds)||seeds<1||!['baseline','aggressor','interceptor','passer','fso-pursuit','fso-breaker'].includes(style))throw Error('Invalid seconds, seeds or style');
 global.window=global;global.DRIFTWORKS_TEST_MODE=true;
 const sources={};
-for(const file of ['src/propulsion.js','src/combat.js','src/logistics.js','src/formations.js','src/sim.js','experiments/retail-profiles.js','experiments/retail-weapons.js','experiments/guns.js','experiments/training.js','experiments/flight-model.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js']){
+for(const file of ['src/propulsion.js','src/combat.js','src/logistics.js','src/formations.js','src/sim.js','experiments/retail-profiles.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/training.js','experiments/flight-model.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js']){
     const source=fs.readFileSync(path.join(root,file),'utf8');sources[file]=crypto.createHash('sha256').update(source.replace(/\r\n/g,'\n')).digest('hex');vm.runInThisContext(source,{filename:file});
 }
 const DW=global.Driftworks,U=DW.sim.METERS_PER_UNIT,dt=1/120;

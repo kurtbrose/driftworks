@@ -97,7 +97,7 @@
         /** @param {HudView} view */
         function render(view) {
             var state = view.state, combat = view.combat, guns = view.guns, asteroid = view.asteroid, mothership = view.mothership, units = view.units, paused = view.paused, mouse = view.mouse, shipImages = view.shipImages;
-            var ohio=combat.mode==='ohio', displayScale=ohio?1/.9144:1, distanceUnit=ohio?' yd':' m', speedScale=ohio?3600/1609.344:1, speedLabel=ohio?'mph':'m/s';
+            var mission=DW.flightMissions.resolve(combat.mode), displayScale=mission.units.distanceScale, distanceUnit=' '+mission.units.distanceLabel, speedScale=mission.units.speedScale, speedLabel=mission.units.speedLabel;
             var shipDistance = Math.hypot(state.eye[0] - mothership.position.x, state.eye[1] - mothership.position.y, state.eye[2]) * units;
             var distance = Math.hypot.apply(null, state.eye), speed = Math.hypot.apply(null, state.velocity);
             telemetry.textContent = (speed*speedScale).toFixed(0) + ' '+speedLabel+'   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units*displayScale) + distanceUnit+' TO CENTER\n' + Math.round(asteroid.radius * 2 * units*displayScale) + distanceUnit+' BODY DIAMETER\n' + Math.round(shipDistance*displayScale) + distanceUnit+' TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
@@ -136,9 +136,9 @@
             status = targetStatus(status, selected, combat.time);
             get('combat-status').textContent = !combat.enabled ? 'FREE FLIGHT' : combat.dead ? 'SORTIE OVER / ' + combat.kills + ' KILLS' : living.filter(function (e) {
                 return e.team === 'enemy';
-            }).length + (combat.mode === 'ohio' ? ' Chevy Crew / ' : ' HOSTILES / ') + living.filter(function (e) {
+            }).length + (' '+mission.teams.enemy.status+' / ') + living.filter(function (e) {
                 return e.team === 'ally';
-            }).length + (combat.mode === 'ohio' ? ' Ford Folks / ' : ' WINGMEN / ') + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
+            }).length + (' '+mission.teams.ally.status+' / ') + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
             get('shield-meter').max = Math.max(1, combat.maxShield === undefined ? 120 : combat.maxShield);
             get('shield-meter').value = combat.shield;
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
@@ -154,7 +154,7 @@
             targetPanel.hidden = !selected;
             if (selected) {
                 var selection = selected.team === 'ally' ? view.allyArt : view.enemyArt, art = DW.flightPresentation.model(selected, combat.wave, view);
-                get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (combat.mode === 'ohio' ? (selected.team === 'ally' ? 'Ford Folks / ' : 'Chevy Crew / ') : (selected.team === 'ally' ? 'WING / ' : 'TARGET / ')) + DW.training.callsign(selected);
+                get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (selected.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.training.callsign(selected);
                 get('target-detail').textContent = (art.name || 'Training fighter') + ' / ' + Math.round(Math.hypot.apply(null, selected.pose.eye.map(function (v, i) {
                     return v - state.eye[i];
                 })) * units*displayScale) + distanceUnit+' / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
@@ -174,7 +174,7 @@
             }));
             radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
             radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
-            DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, ohio);
+            DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, combat.mode);
             combatHud.font = '12px ui-monospace,monospace';
             combatHud.textAlign = 'center';
             /** @param {Vector} point */
@@ -224,7 +224,7 @@
                         });
                         combatHud.restore();
                         if (status) paintTargetStatus(combatHud, x, y, status);
-                        combatHud.fillText((combat.mode === 'ohio' ? (e.team === 'ally' ? 'Ford Folks / ' : 'Chevy Crew / ') : (e.team === 'ally' ? 'WING / ' : 'TARGET / ')) + DW.training.callsign(e), x, y - 37);
+                        combatHud.fillText((e.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.training.callsign(e), x, y - 37);
                     }
                 }
                 else {

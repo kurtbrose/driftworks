@@ -850,6 +850,10 @@ owns emotions, combat observations and airtime scheduling; `flight-radio.js`
 owns subtitles, channel playback and Web Audio lifecycle. Load them in that
 order after training and mumble, before flight boot. The existing
 `flightComms` API forwards dialogue helpers and `mount` for compatibility.
+Flight mission defaults and overrides are registered in `flight-missions.js`;
+Ohio's authored data lives in `mission-ohio.js`. Shared consumers resolve mission
+settings rather than branching on Ohio's ID. See [mission format](flight-missions.md)
+for inheritance, load order, supported handlers and transient opening progress.
 Ohio radio templates resolve named addressees from living contacts at delivery.
 Ohio's literal player address uses “bud” or “neighbor” in friendly lines and
 “hotshot” in rival taunts. Address substitution preserves `{pilot}` placeholders
@@ -1577,3 +1581,13 @@ are cached per sky and renderer from the normalized lighting assets. Custom
 asteroid/mining/procedural materials remain independent and preserve their
 existing surface and lighting shaders. See [skybox authoring](skybox-authoring.md)
 for probe limits, coordinate conventions and the original-color comparison.
+
+
+`src/explosions.js` owns visual destruction geometry and the turbulent fire and
+shockwave shaders shared with `experiments/explosion-lab.html`. Load it before
+`scene3d.js`. Flight supplies `setStudyExplosions` snapshots (position, velocity in
+world units/second, simulation age, size, seed); tactical scenes consume
+`ship-destroyed` events directly. Flight destruction flashes are separate from
+bullet impacts, retain inherited velocity, and expire after 5.5 simulation seconds.
+Pause freezes their age. Geometry and draw pools are reused; only the newest twelve
+explosions are drawn. Effects add no damage rules or persistent world state.

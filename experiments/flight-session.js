@@ -109,7 +109,7 @@
             if (!enabled) {
                 combat.enemies = [];
                 combat.countdown = 0;
-            } else if (mode === 'asteroid-patrol' || mode === 'ohio') {
+            } else if (DW.flightMissions.resolve(mode).encounter.immediate) {
                 DW.training.spawn(combat, state, asteroid.radius);
             }
             return snapshot();
@@ -121,7 +121,7 @@
             DW.training.configure(combat, activeProfile);
             combat.enabled = config.enabled;
             guns = DW.flightGuns.create();
-            state = model.createSortie(asteroid.radius, config.profile);
+            state = model.createSortie(asteroid.radius, config.profile, config.mode);
             combat.useHullModels = true;
             DW.training.bindPlayer(combat, state).guns = guns;
             contact = false;

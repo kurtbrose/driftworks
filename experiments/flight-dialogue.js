@@ -123,23 +123,20 @@
     /** Replace forms of address, preserving named-pilot template placeholders.
      * @param {string} text @param {number} index @param {boolean} [hostile] */
     function ohioAddress(text,index,hostile){
-        return text.replace(/\{pilot\}|\b[Pp]ilot\b/g,function(word){
-            if(word==='{pilot}')return word;
-            var name=hostile?'hotshot':index%2?'neighbor':'bud';
-            return word==='Pilot'?name[0].toUpperCase()+name.slice(1):name;
-        });
+        return DW.flightMissions.address(text,index,!!hostile,DW.flightMissions.resolve('ohio'));
     }
-    /** @param {string} kind @param {LineData} data @param {boolean} [ohio] */
-    function compose(kind, data, ohio) {
-        if(ohio){
+    /** @param {string} kind @param {LineData} data @param {string|boolean} [missionId] */
+    function compose(kind, data, missionId) {
+        var mission=DW.flightMissions.resolve(missionId);
+        if(mission.units.distanceScale!==1||mission.units.speedScale!==1){
             data=Object.assign({},data);
-            if(typeof data.range==='number')data.range=Math.round(data.range/.9144/50)*50;
-            if(typeof data.speed==='number')data.speed=Math.round(data.speed*3600/1609.344/10)*10;
+            if(typeof data.range==='number'&&mission.units.distanceScale!==1)data.range=Math.round(data.range*mission.units.distanceScale/50)*50;
+            if(typeof data.speed==='number'&&mission.units.speedScale!==1)data.speed=Math.round(data.speed*mission.units.speedScale/10)*10;
         }
         var variants = kind === 'remaining' && data.count === 1 ? ["One left. Let's wrap this up.", 'Last hostile. Finish this!'] : templates[kind];
         if (kind === 'contact' && data.vertical)
             variants = ['Pilot, contact {direction}, about {range} meters.', 'Hostile {direction}. Roughly {range} meters out.'];
-        if(ohio)variants=variants.map(function(text,index){return ohioAddress(text.replace(/meters per second/g,'miles per hour').replace(/meters/g,'yards'),index);});
+        variants=variants.map(function(text,index){return DW.flightMissions.address(text.replace(/meters per second|meters/g,function(unit){return unit==='meters per second'?mission.units.speedWord:mission.units.distanceWord;}),index,false,mission);});
         var composed = /** @type {Choices} */ (variants.map(function (text) {
             return text.replace(/\{(\w+)\}/g, /** @param {string} _ @param {string} key */ function (_, key) {
                 return typeof data[key] === 'number' ? numberWords(data[key]) : String(data[key] === undefined ? 'pilot' : data[key]);
