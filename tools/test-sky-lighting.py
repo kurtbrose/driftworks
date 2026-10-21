@@ -3,6 +3,7 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+import tempfile
 import numpy as np
 from PIL import Image
 
@@ -13,6 +14,20 @@ spec.loader.exec_module(lighting)
 
 
 class LightingTests(unittest.TestCase):
+    def test_hdr_probe_keeps_sparse_highlight_energy(self):
+        pixels=np.zeros((64,128,3),dtype=np.uint8)
+        pixels[25:35,55:65]=[255,190,90]
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as folder:
+            path=Path(folder)/'probe.bin'
+            lighting.derive(Image.fromarray(pixels),path)
+            hdr=np.fromfile(path,dtype='<f4').reshape(256,512,4)
+        self.assertTrue(np.isfinite(hdr).all())
+        self.assertGreater(hdr[...,:3].max(),1)
+        np.testing.assert_array_equal(hdr[...,3],1)
+        weights=np.sin((np.arange(256)+.5)/256*np.pi)[:,None]
+        average=((hdr[...,:3]@[.2126,.7152,.0722])*weights).sum()/(weights.sum()*512)
+        self.assertAlmostEqual(average,.42,delta=.005)
+
     def test_constant_sky_is_direction_independent(self):
         probe, image = lighting.derive(Image.new('RGB', (128, 64), (128, 128, 128)))
         directions = np.array([[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]])

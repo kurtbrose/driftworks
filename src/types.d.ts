@@ -1,4 +1,4 @@
-export type SkyEnvironmentLighting = {sh:number[][];map:string;image:HTMLImageElement};
+export type SkyEnvironmentLighting = {sh:number[][];map:string;image:HTMLImageElement;radiance?:Float32Array};
 /** Shared, checkable contracts for the plain-JavaScript simulation. */
 
 export type Vec2 = { x: number; y: number };

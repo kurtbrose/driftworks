@@ -12,6 +12,39 @@
     /** @typedef {import('./types').Comparison} Comparison */
     /** @typedef {import('./types').Batch} Batch */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks);
+    var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
+    /** Ohio's roadside monument, in asteroid-local world units. Front faces the spawn (-Y).
+     * @param {number} radius @param {HTMLImageElement} texture @param {number} [surfaceHeight] @returns {Batch[]}
+     */
+    function ohioSignGeometry(radius, texture, surfaceHeight) {
+        var units=DW.sim.METERS_PER_UNIT, bottom=(surfaceHeight===undefined?radius*.78:surfaceHeight)*units+50, center=bottom+240;
+        var groups={steel:/** @type {number[]} */([]),green:/** @type {number[]} */([]),lamps:/** @type {number[]} */([])};
+        var b=DW.meshBuilder.create(groups);
+        b.block('green',[0,-300,center],[552,9,242]);
+        [-350,350].forEach(function(x){
+            b.block('steel',[x,-280,(bottom+600)/2],[12,14,(bottom-600)/2]);
+        });
+        // Short outriggers carry real, tilted floodlight housings and luminous lenses.
+        // Their upward face wash is baked into the sign, keeping the draw cost fixed.
+        var lampBasis=[[1,0,0],[0,.8,.6],[0,-.6,.8]];
+        [-350,0,350].forEach(function(x){
+            b.link('steel',[x,-280,bottom-25],[x,-370,bottom-25],4);
+            b.block('steel',[x,-370,bottom-18],[29,18,9],lampBasis);
+            b.block('lamps',[x,-376,bottom-10],[24,14,1.5],lampBasis);
+            b.block('steel',[x,-393,bottom-23],[30,3,5]);
+        });
+        [bottom+35,center+170].forEach(function(z){b.block('steel',[0,-278,z],[540,12,9]);});
+        var batches=/** @type {Batch[]} */(Object.keys(groups).map(function(key,index){
+            var vertices=groups[/** @type {keyof typeof groups} */(key)];
+            for(var i=0;i<vertices.length;i+=6)for(var k=0;k<3;k++)vertices[i+k]/=units;
+            return {vertices:new Float32Array(vertices),staticGeometry:true,color:/** @type {[number,number,number]} */([[.33,.37,.38],[.025,.16,.10],[1,.95,.72]][index]),finish:index===2?7:0};
+        }));
+        var face=/** @type {number[]} */([]);
+        var corners=[[-550,bottom,0,1],[550,bottom,1,1],[550,center+240,1,0],[-550,center+240,0,0]];
+        [0,1,2,0,2,3].forEach(function(i){var p=corners[i];face.push(p[0]/units,-310/units,p[1]/units,0,-1,0,p[2],p[3]);});
+        batches.push({vertices:new Float32Array(face),color:[1,1,1],staticGeometry:true,texture:texture,stride:8,finish:0});
+        return batches;
+    }
     /** Symmetric rotating tether; real seconds, metres, m/s and m/s squared.
      * Tip acceleration is limited to the selected 1, 2 or 3 g operating load.
      * @param {number} lengthKm @param {string} mode
@@ -156,6 +189,9 @@
             get('art-credit').textContent = String(error);
         });
         var skybox = DW.flightSkybox.create(host);
+        var ohioMission=new URLSearchParams(typeof location==='undefined'?'':location.search).get('mission')==='ohio';
+        var ohioSign=ohioMission?new Image():null, signRadius=-1, signBatches=/** @type {Batch[]} */([]);
+        if(ohioSign)ohioSign.src=assetUrl('../assets/backgrounds/ohio-highway-sign.svg');
         /** @type {import('./types').AegisFlightRig|null} */var capital=null;
         var tetherKm = Number(new URLSearchParams(typeof location === 'undefined' ? '' : location.search).get('tether'));
         var tether = [100,50,20,10,2].includes(tetherKm) ? tetherGeometry(tetherKm) : [];
@@ -227,6 +263,13 @@
                 });
             });
             var asteroid = world.asteroids[0];
+            if(asteroid&&ohioSign&&ohioSign.complete&&ohioSign.naturalWidth){
+                if(signRadius!==asteroid.radius){
+                    var signSurface=DW.scene3d.surfaceFrame(asteroid,[0,-.24,1]).point[2]*asteroid.radius;
+                    signBatches=ohioSignGeometry(asteroid.radius,ohioSign,signSurface);signRadius=asteroid.radius;
+                }
+                signBatches.forEach(function(batch){actorBatches.push(Object.assign({},batch,{origin:/** @type {[number,number,number]} */([asteroid.position.x,asteroid.position.y,0]),rotation:asteroid.rotation}));});
+            }
             if (asteroid) (combat.terrainScorches || []).forEach(function (point) {
                 var batches = burns.get(point);
                 if (!batches) { batches = terrainScorch(asteroid, point); burns.set(point, batches); }
@@ -279,5 +322,5 @@
         }
         return { appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
     }
-    DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin };
+    DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin, ohioSignGeometry:ohioSignGeometry };
 }());

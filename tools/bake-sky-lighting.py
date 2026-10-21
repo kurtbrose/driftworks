@@ -1,6 +1,7 @@
 """Precompute normalized L2 diffuse SH and compact rough-reflection maps.
 
-Accept a hero layout or any local equirectangular image. No runtime convolution.
+Accept a hero layout or local equirectangular image. Native ships filter the HDR
+probe once per renderer with Three.js PMREM; custom materials use the baked SH.
 """
 import argparse
 import importlib.util
@@ -24,7 +25,7 @@ def basis(directions):
         1.092548*x*y, 1.092548*y*z, .315392*(3*z*z-1), 1.092548*x*z, .546274*(x*x-y*y)], axis=-1)
 
 
-def derive(image):
+def derive(image, radiance_output=None):
     pixels = np.asarray(image.convert('RGB'), dtype=np.float64)/255
     linear = np.where(pixels <= .04045, pixels/12.92, ((pixels+.055)/1.055)**2.4)
     h, w = pixels.shape[:2]
@@ -54,6 +55,11 @@ def derive(image):
     encoded = np.clip(radiance, 0, 1)
     encoded = np.where(encoded <= .0031308, encoded*12.92, 1.055*encoded**(1/2.4)-.055)
     reflection = Image.fromarray(np.rint(encoded*255).astype(np.uint8)).resize((512, 256), Image.Resampling.LANCZOS)
+    if radiance_output is not None:
+        # Native PMREM needs unclipped linear energy, especially for sparse suns.
+        channels=[np.asarray(Image.fromarray(radiance[...,i].astype(np.float32)).resize((512,256),Image.Resampling.BOX)) for i in range(3)]
+        rgba=np.stack(channels+[np.ones((256,512),dtype=np.float32)],axis=-1)
+        rgba.astype('<f4').tofile(radiance_output)
     return dict(sh=np.round(coefficients, 8).tolist(), averageLuminance=average,
         normalization=gain, highlightCap=cap), reflection
 
@@ -68,7 +74,7 @@ def main():
     if bool(args.layout) == bool(args.image):
         parser.error('Choose exactly one of --layout or --image')
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    result = dict(version=1, method='solid-angle L2 cosine-convolved SH; bounded mipmapped radiance', families={},
+    result = dict(version=1, method='solid-angle L2 cosine-convolved SH; bounded PNG and linear HDR radiance for PMREM', families={},
         processorHash=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         composerHash=hashlib.sha256(Path(__file__).with_name('compose-skybox.py').read_bytes()).hexdigest())
     if args.layout:
@@ -91,7 +97,9 @@ def main():
         source = args.image.read_bytes()
     result['sourceHash'] = hashlib.sha256(source).hexdigest()
     for name, image in images.items():
-        data, reflection = derive(image)
+        radiance_name=args.output.stem+'-'+name+'.rgba32f.bin'
+        data, reflection = derive(image,args.output.parent/radiance_name)
+        data['radiance'] = radiance_name
         filename = args.output.stem+'-'+name+'.png'
         reflection.save(args.output.parent/filename)
         data['map'] = filename

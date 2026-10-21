@@ -52,7 +52,7 @@ async function testHeroComposition() {
   context.URL=URL;
   context.window.location={href:'http://localhost:8000/experiments/flight.html'};
   const lighting=JSON.parse(fs.readFileSync(require('node:path').join(__dirname,'../assets/backgrounds/sky-lighting-v1.json'),'utf8'));
-  context.window.fetch=async url => {assert.ok(new URL(url).searchParams.has('v'),'sky manifests carry content versions');requests++;return {ok:true,json:async()=>String(url).includes('sky-lighting')?lighting:layout};};
+  context.window.fetch=async url => {assert.ok(new URL(url).searchParams.has('v'),'sky manifests carry content versions');requests++;if(new URL(url).pathname.endsWith('.bin'))return {ok:true,arrayBuffer:async()=>{const bytes=fs.readFileSync(require('node:path').join(__dirname,'..',new URL(url).pathname));return bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);}};return {ok:true,json:async()=>String(url).includes('sky-lighting')?lighting:layout};};
   context.window.localStorage.getItem=()=>null;
   const imageUrls=[];
   context.Image=class {set src(value){imageUrls.push(value);queueMicrotask(()=>this.onload());}};
@@ -66,7 +66,8 @@ async function testHeroComposition() {
   renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,3,'one focal feature plus black and crisp stars');
   assert.ok(imageUrls.every(url=>new URL(url).searchParams.has('v')), 'every sky image is content-versioned');
-  assert.equal(requests,2,'layout and precomputed lighting are each loaded once');
+  assert.equal(requests,6,'layout, lighting manifest and four HDR probes are each loaded once');
+  assert.equal(renderer.getLighting().radiance.length,512*256*4);
   assert.equal(renderer.getLighting().sh.length,9);
   renderer.setLightingEnabled(false);assert.equal(renderer.getLighting(),null);renderer.setLightingEnabled(true);
   assert.equal(imageUrls.filter(url=>url.includes('/features/')).length,4,'unique landmarks share four source textures');
@@ -83,7 +84,7 @@ async function testHeroComposition() {
   renderer.setStyle(8);renderer.setExposure(.75);renderer.render(pose,1,false);assert.equal(values.exposure,.75,'art-review API changes sky exposure independently');
   selector.value='1';handlers.change();renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,2,'procedural choices do not draw hero features');
-  const second=api.create({clientWidth:800,clientHeight:600,prepend(){}},{style:8});second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);renderer.setStyle(8);assert.equal(second.getLighting(),renderer.getLighting(),'multiple renderer instances share one precomputed environment cache');assert.equal(requests,3,'second scene loads its layout but reuses lighting');
+  const second=api.create({clientWidth:800,clientHeight:600,prepend(){}},{style:8});second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);renderer.setStyle(8);assert.equal(second.getLighting(),renderer.getLighting(),'multiple renderer instances share one precomputed environment cache');assert.equal(requests,7,'second scene loads its layout but reuses lighting and HDR probes');
   second.setStyle(10);second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);assert.equal(second.getRenderStats().drawCalls,2,'river panorama and crisp foreground stars use two draws');assert.equal(JSON.stringify(second.getLighting().sh),JSON.stringify(lighting.families.river.sh),'stellar streams select their derived lighting');assert.equal(canvas.dataset.river,'ready');assert.ok(imageUrls.some(url=>url.includes('star-river-v1-8k.jpg')),'river uses the local 8K texture');
   console.log('PASS hero sky: local asset reuse, fixed layout, sphere seams, orientation and separate star pass');
 }
@@ -141,5 +142,10 @@ for(const probe of Object.values(bakedLighting.families)){
   assert.equal(probe.sh.length,9);assert.ok(probe.sh.every(color=>color.length===3&&color.every(Number.isFinite)));
   const image=fs.readFileSync(pathLighting.join(__dirname,'../assets/backgrounds',probe.map));
   assert.equal(image.readUInt32BE(16),512);assert.equal(image.readUInt32BE(20),256);
+  const hdr=fs.readFileSync(pathLighting.join(__dirname,'../assets/backgrounds',probe.radiance));
+  assert.equal(hdr.length,512*256*4*4);
+  let maximum=0;
+  for(let i=0;i<hdr.length;i+=16){for(let channel=0;channel<3;channel++){const value=hdr.readFloatLE(i+channel*4);assert.ok(Number.isFinite(value)&&value>=0);maximum=Math.max(maximum,value);}assert.equal(hdr.readFloatLE(i+12),1);}
+  assert.ok(maximum>1,'Native PMREM receives unclipped normalized HDR energy');
 }
 console.log('PASS sky lighting assets: source hash, finite diffuse SH and power-of-two reflection maps');

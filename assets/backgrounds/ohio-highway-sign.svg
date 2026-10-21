@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="960" viewBox="0 0 2200 960">
+  <defs>
+    <radialGradient id="wash"><stop stop-color="#eeffc2" stop-opacity=".85"/><stop offset=".22" stop-color="#c8f88e" stop-opacity=".48"/><stop offset="1" stop-color="#9ade75" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="2200" height="960" rx="38" fill="#07543c"/>
+  <ellipse cx="400" cy="955" rx="440" ry="690" fill="url(#wash)"/>
+  <ellipse cx="1100" cy="955" rx="440" ry="690" fill="url(#wash)"/>
+  <ellipse cx="1800" cy="955" rx="440" ry="690" fill="url(#wash)"/>
+  <rect x="30" y="30" width="2140" height="900" rx="28" fill="none" stroke="#f4f5e9" stroke-width="14"/>
+  <g fill="#f4f5e9" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">
+    <text x="1100" y="260" font-size="150" letter-spacing="12">NEXT EXIT</text>
+    <text x="1100" y="555" font-size="222" font-weight="bold" textLength="1940" lengthAdjust="spacingAndGlyphs">GREATER OHIO</text>
+    <text x="1100" y="790" font-size="120" letter-spacing="3">pop. 8,412,000,000</text>
+  </g>
+  <g fill="#c5c9b9"><circle cx="65" cy="65" r="10"/><circle cx="2135" cy="65" r="10"/><circle cx="65" cy="895" r="10"/><circle cx="2135" cy="895" r="10"/></g>
+</svg>

@@ -814,6 +814,7 @@ export type ExperimentModules = {
         error: string | null;
     };
     flightPresentation: {
+        ohioSignGeometry: (radius:number, texture:HTMLImageElement, surfaceHeight?:number) => Batch[];
         tetherSpin: (lengthKm: number, mode: string) => {tipSpeed: number; angularSpeed: number; periodSeconds: number; tipG: number};
         tetherGeometry: (lengthKm: number) => Batch[];
         model: (craft: ArtCraft, wave: number, appearance: Pick<Appearance, 'allyArt' | 'enemyArt'>) => Model;

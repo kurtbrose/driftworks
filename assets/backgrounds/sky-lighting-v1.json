@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "method": "solid-angle L2 cosine-convolved SH; bounded mipmapped radiance",
+  "method": "solid-angle L2 cosine-convolved SH; bounded PNG and linear HDR radiance for PMREM",
   "families": {
     "galaxy": {
       "sh": [
@@ -53,6 +53,7 @@
       "averageLuminance": 0.0001947634083036045,
       "normalization": 2156.462569936588,
       "highlightCap": 0.7758803745292396,
+      "radiance": "sky-lighting-v1-galaxy.rgba32f.bin",
       "map": "sky-lighting-v1-galaxy.png"
     },
     "nebula": {
@@ -106,6 +107,7 @@
       "averageLuminance": 0.0011804536686478488,
       "normalization": 355.79541252227983,
       "highlightCap": 0.24524246985423925,
+      "radiance": "sky-lighting-v1-nebula.rgba32f.bin",
       "map": "sky-lighting-v1-nebula.png"
     },
     "sun": {
@@ -159,6 +161,7 @@
       "averageLuminance": 4.028359429817123e-05,
       "normalization": 10426.080574916992,
       "highlightCap": 0.9396382552298168,
+      "radiance": "sky-lighting-v1-sun.rgba32f.bin",
       "map": "sky-lighting-v1-sun.png"
     },
     "river": {
@@ -212,10 +215,11 @@
       "averageLuminance": 0.001616442011626095,
       "normalization": 259.82992088747545,
       "highlightCap": 0.02,
+      "radiance": "sky-lighting-v1-river.rgba32f.bin",
       "map": "sky-lighting-v1-river.png"
     }
   },
-  "processorHash": "3c53bbe966df99cced18e91366bb3cfd72f50e38da89e304d73c1dd185ae934b",
+  "processorHash": "45bc5bc9c69d5b6d9a617f3d6f78cd22256fa2a288217566f9a9785b88fb536b",
   "composerHash": "042feb6115e81faa7d72a2c15b9937893beb5b561d2b29d7ead04ac53ad195f3",
   "sourceHash": "04b04c7640fa96c2fce309608e6394cdbcde98fa06467eaa1103f789b844107b"
 }

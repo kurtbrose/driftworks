@@ -141,8 +141,8 @@ away lets its colored illumination reach the visible hull faces.
 Current coverage is the three authored hero families and River of stars. Legacy procedural/photo
 comparison choices retain their original lighting. The `--image` input accepts
 other 2:1 LDR equirectangular panoramas for the same preprocessing path. Reflection
-filtering uses conventional mipmaps with a finish-based bias; it is a practical
-approximation, not Three.js PMREM/GGX or a new PBR material system. Animated
+filtering for the custom rock, mining and procedural materials uses conventional
+mipmaps with a finish-based bias. Source-textured ships use the native PBR path below. Animated
 environments and interpolation between cached probes are future extensions.
 
 References: [Three.js diffuse light probes](https://threejs.org/docs/pages/LightProbe.html)
@@ -194,3 +194,29 @@ single opaque background plus point-star draw contract. Browser before/after
 readbacks of planet, sun, edge and opposite views differed by at most one 8-bit
 channel level. Desktop timing is not evidence of a speedup on another GPU; compare
 on the affected MacBook before treating the reported slowdown as resolved.
+
+
+### Native PBR for source-textured ships
+
+Source-textured Quaternius ships use Three.js `MeshStandardMaterial` when a sky
+lighting probe is active. The eleven archived glTF exports all specify
+`metallicFactor: 0`, implicit `roughnessFactor: 1`, and double-sided surfaces.
+The imported source color PNGs, UVs and smooth normals are retained; the color
+textures are decoded as sRGB. Faction paint remains optional and affects the
+orange regions only. The sky review page defaults to original colors and offers
+an **Apply faction paint** checkbox.
+
+A normalized 512 × 256 linear HDR RGBA float32 probe feeds `PMREMGenerator` once per
+sky per renderer. Generated targets are retained for sky reselection; the 8K
+visible sky is independent. The offline bake preserves unclipped normalized energy in little-endian
+`.rgba32f.bin` files (2 MiB per sky), while retaining bounded PNGs and SH for
+custom materials. The shared loader validates the float payload dimensions. Native
+PBR receives diffuse and roughness-filtered specular environment illumination.
+A shared ambient readability floor and environment intensity apply to every sky,
+with no mission-specific lights. Panorama axes are converted explicitly to
+Three's environment coordinates. Native ships use the same camera projection
+and model placement as custom batches.
+
+Asteroid geology, mining lighting and procedural hull shaders are unchanged.
+They continue to consume the existing SH/reflection cache. Shadows, unlit effects,
+legacy skies and the lighting-off comparison retain the custom path.

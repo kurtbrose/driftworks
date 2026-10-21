@@ -752,6 +752,8 @@
     var renderer = new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true,premultipliedAlpha:false});
     renderer.autoClear=false;renderer.sortObjects=false;
     var scene = new THREE.Scene(), camera = new THREE.Camera();
+    // Common readability floor for native PBR; custom asteroid/mining shaders ignore it.
+    scene.add(new THREE.AmbientLight(0xffffff,.35));
     var blending=THREE.NoBlending, depthWrite=true;
     if (!DW.asteroidArt) throw new Error('Shared asteroid artwork did not load');
     var art = DW.asteroidArt;
@@ -834,6 +836,27 @@
       defaultAttributeValues:{aUV:[0,0],aBakedDocking:[0,0,0]}});}
     /** @type {{object:import('./three-types').Object3D,material:import('./three-types').Material,uniforms:typeof uniforms,lines:boolean}[]} */
     var drawPool=[];
+    /** @type {WeakMap<import('./three-types').Material,import('./three-types').StandardMaterial>} */ var standardShips=new WeakMap();
+    /** @type {Map<HTMLImageElement,import('./three-types').RenderTarget>} */ var probes=new Map();
+    /** @type {WeakMap<import('./three-types').Texture,import('./three-types').Texture>} */ var pbrTextures=new WeakMap();
+    /** @type {import('./three-types').RenderTarget|null} */ var activeProbe=null;
+    var skyBasis=new Float32Array(9);
+    /** Native PBR only for source-textured ships. Rock/mining/procedural shaders stay intact.
+     * @param {typeof uniforms} snapshot */
+    function shipMaterial(snapshot){
+      // Archived glTF materials: metallicFactor=0, omitted roughnessFactor defaults to 1.
+      var result=new THREE.MeshStandardMaterial({metalness:0,roughness:1,side:THREE.DoubleSide,alphaTest:.5});
+      result.onBeforeCompile=function(shader){
+        shader.uniforms.uSkyBasis={value:skyBasis};
+        shader.uniforms.uShipPaint=snapshot.uPaint;
+        shader.uniforms.uShipPaintEnabled=snapshot.uPaintEnabled;
+        shader.fragmentShader='uniform mat3 uSkyBasis;uniform vec3 uShipPaint;uniform float uShipPaintEnabled;\n'+shader.fragmentShader;
+        shader.fragmentShader=shader.fragmentShader.replace('#include <envmap_physical_pars_fragment>',THREE.ShaderChunk.envmap_physical_pars_fragment.replace(/envMapRotation \*/g,'uSkyBasis *'));
+        shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',THREE.ShaderChunk.map_fragment+
+          '\n#ifdef USE_MAP\nvec3 rgb=pow(max(sampledDiffuseColor.rgb,vec3(0.)),vec3(1./2.2));float hi=max(rgb.r,max(rgb.g,rgb.b)),lo=min(rgb.r,min(rgb.g,rgb.b)),chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uShipPaintEnabled;float value=max(uShipPaint.r,max(uShipPaint.g,uShipPaint.b));vec3 paint=mix(vec3(lo*value),uShipPaint*hi,chroma/max(.001,hi));diffuseColor.rgb=mix(diffuseColor.rgb,diffuse*pow(max(paint,vec3(0.)),vec3(2.2)),mask);\n#endif\n');
+      };
+      return result;
+    }
     var drawIndex=0;
     /** @param {string} name @param {number|number[]|Float32Array|import('./three-types').Texture|null} value */
     function setUniform(name,value){uniforms['u'+name].value=value;}
@@ -867,7 +890,9 @@
       var interleaved=new THREE.InterleavedBuffer(data,stride);geometryData.set(geometry,interleaved);
       geometry.setAttribute('aPosition',new THREE.InterleavedBufferAttribute(interleaved,3,0));
       geometry.setAttribute('aNormal',new THREE.InterleavedBufferAttribute(interleaved,3,3));
-      if(stride===8)geometry.setAttribute('aUV',new THREE.InterleavedBufferAttribute(interleaved,2,6));
+      geometry.setAttribute('position',new THREE.InterleavedBufferAttribute(interleaved,3,0));
+      geometry.setAttribute('normal',new THREE.InterleavedBufferAttribute(interleaved,3,3));
+      if(stride===8){geometry.setAttribute('aUV',new THREE.InterleavedBufferAttribute(interleaved,2,6));geometry.setAttribute('uv',new THREE.InterleavedBufferAttribute(interleaved,2,6));}
     }
     /** @param {Mesh} mesh @param {Float32Array|undefined} values */
     function uploadDocking(mesh,values){if(mesh.bakedValues===values)return;mesh.bakedValues=values;
@@ -924,6 +949,29 @@
         object.frustumCulled=false;entry={object:object,material:drawMaterial,uniforms:snapshot,lines:!!lines};drawPool[drawIndex]=entry;
       }
       Object.keys(uniforms).forEach(function(key){entry.uniforms[key].value=uniforms[key].value;});
+      var useStandard=!!activeProbe && !shadowPass && !rock && !lines && uniforms.uTextured.value===1 && uniforms.uFlat.value!==1;
+      var submitted=entry.material;
+      if(useStandard && activeProbe){
+        var standard=standardShips.get(entry.material);
+        if(!standard){standard=shipMaterial(entry.uniforms);standardShips.set(entry.material,standard);}
+        var rawMap=/** @type {import('./three-types').Texture} */(uniforms.uShipTexture.value);
+        var map=pbrTextures.get(rawMap);
+        if(!map){map=rawMap.clone();map.colorSpace=THREE.SRGBColorSpace;map.needsUpdate=true;pbrTextures.set(rawMap,map);}
+        if(standard.map!==map||standard.envMap!==activeProbe.texture){standard.map=map;standard.envMap=activeProbe.texture;standard.needsUpdate=true;}
+        standard.color.setRGB(color[0],color[1],color[2],THREE.SRGBColorSpace);standard.opacity=/** @type {number} */(uniforms.uOpacity.value);
+        if(standard.transparent!==(standard.opacity<1)){standard.transparent=standard.opacity<1;standard.needsUpdate=true;}
+        standard.envMapIntensity=1;submitted=standard;
+        var b=basis||identityBasis,c=Math.cos(rotation),s=Math.sin(rotation);
+        /** @type {number[]} */ var m=[];
+        for(var axis=0;axis<3;axis++){m.push((c*b[axis*3]-s*b[axis*3+1])*scale[axis],(s*b[axis*3]+c*b[axis*3+1])*scale[axis],b[axis*3+2]*scale[axis],0);}
+        var target=/** @type {number[]} */(uniforms.uTarget.value);
+        m.push(origin[0]-target[0],origin[1]-target[1],origin[2]-target[2],1);
+        entry.object.matrixAutoUpdate=false;entry.object.matrix.fromArray(m);
+      }else{entry.object.matrixAutoUpdate=true;}
+      // The raw shader ignores object matrices; identity restores normal scene bookkeeping.
+      if(!useStandard)entry.object.matrix.fromArray([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+      /** @type {import('./three-types').Object3D & {material:import('./three-types').Material}} */(entry.object).material=submitted;
+      submitted.blending=blending;submitted.depthWrite=depthWrite;
       entry.material.blending=blending;entry.material.depthWrite=depthWrite;entry.object.geometry=mesh.buffer;
       scene.add(entry.object);drawIndex++;
       renderStats.drawCalls++;if(lines)renderStats.lines+=mesh.count/2;else renderStats.triangles+=mesh.count/3;
@@ -1196,6 +1244,12 @@
       setUniform('Target', [w.camera.x, w.camera.y, orbit.height || 0]); setUniform('Right', v.right);
       setUniform('Up', v.up); setUniform('Back', v.back);
       setUniform('View', [v.distance, v.focal, vp.width / vp.height, 0]);
+      camera.matrixAutoUpdate=false;
+      camera.matrix.fromArray([v.right[0],v.right[1],v.right[2],0,v.up[0],v.up[1],v.up[2],0,v.back[0],v.back[1],v.back[2],0,v.back[0]*v.distance,v.back[1]*v.distance,v.back[2]*v.distance,1]);
+      camera.matrixWorld.copy(camera.matrix);camera.matrixWorldInverse.copy(camera.matrix).invert();
+      var top=.1/v.focal,right=top*vp.width/vp.height;
+      camera.projectionMatrix.makePerspective(-right,right,top,-top,.1,v.distance+30000);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+      activeProbe=null;
       setUniform('EnvironmentEnabled',environment?1:0);
       if(environment){
         var environmentTexture=environmentTextures.get(environment.image);
@@ -1203,6 +1257,16 @@
         setUniform('Environment',environmentTexture);
         setUniform('EnvironmentSH',new Float32Array(environment.sh.flat()));
         if(environmentPose){for(var column=0;column<3;column++)for(var row=0;row<3;row++)environmentBasis[column*3+row]=environmentPose.right[row]*v.right[column]+environmentPose.up[row]*v.up[column]+environmentPose.back[row]*v.back[column];}
+        if(!shadowPass){
+          activeProbe=probes.get(environment.image)||null;
+          if(!activeProbe){
+            var source=environment.radiance?new THREE.DataTexture(environment.radiance,512,256,THREE.RGBAFormat,THREE.FloatType):new THREE.Texture(environment.image);
+            source.flipY=false;source.colorSpace=environment.radiance?THREE.LinearSRGBColorSpace:THREE.SRGBColorSpace;source.mapping=THREE.EquirectangularReflectionMapping;source.needsUpdate=true;
+            var pmrem=new THREE.PMREMGenerator(renderer);activeProbe=pmrem.fromEquirectangular(source);probes.set(environment.image,activeProbe);source.dispose();pmrem.dispose();
+          }
+          // Panorama uses Z as its pole and top-down rows; Three uses Y and bottom-up UVs.
+          for(var col=0;col<3;col++){skyBasis[col*3]=environmentBasis[col*3];skyBasis[col*3+1]=-environmentBasis[col*3+2];skyBasis[col*3+2]=environmentBasis[col*3+1];}
+        }
         setUniform('EnvironmentBasis',environmentBasis);
         setUniform('EnvironmentEye',v.back.map(function(value){return value*v.distance;}));
       }else setUniform('Environment',blackEnvironment);

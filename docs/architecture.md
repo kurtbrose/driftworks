@@ -1554,3 +1554,11 @@ post shadows on matching ground pixels. `tests/three-production.cjs` verifies
 native Three.js resources, per-draw uniforms, blend order, pass submission and
 resource reuse. `tests/asteroid-three.cjs` retains the shared study geometry,
 camera projection, geology material and excavation rig regressions.
+
+
+Source-textured ships now use native `MeshStandardMaterial` under sky-derived
+lighting, with source glTF rough/nonmetal settings and sRGB textures. PMREM targets
+are cached per sky and renderer from the normalized lighting assets. Custom
+asteroid/mining/procedural materials remain independent and preserve their
+existing surface and lighting shaders. See [skybox authoring](skybox-authoring.md)
+for probe limits, coordinate conventions and the original-color comparison.

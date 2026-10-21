@@ -20,7 +20,7 @@
         status.textContent='Loading '+entry.model.name+'...';
         try{
             var images=await textures;if(current!==ticket)return;
-            scene.setStudyActors([DW.shipPackModels.sourceGeometry(entry.model,[actor],units,images.get(entry.model.id),DW.shipPackModels.paintColor('#607451'))]);
+            scene.setStudyActors([DW.shipPackModels.sourceGeometry(entry.model,[actor],units,images.get(entry.model.id),control('review-paint').checked?DW.shipPackModels.paintColor('#607451'):undefined)]);
             status.textContent=entry.model.name+' / original textured 3D model';
         }catch(error){status.textContent=String(error);}
     }
@@ -42,7 +42,7 @@
     };
     control('review-exposure').oninput=function(){sky.setExposure(Number(control('review-exposure').value));};
     control('review-lighting').onchange=function(){sky.setLightingEnabled(control('review-lighting').checked);};
-    model.onchange=update;control('review-reset').onclick=reset;
+    control('review-paint').onchange=update;model.onchange=update;control('review-reset').onclick=reset;
     window.addEventListener('resize',reset);reset();update();
     var last=0;
     /** @param {number} now */

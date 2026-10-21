@@ -2,15 +2,16 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 require('node:child_process').execFileSync(process.execPath,[path.join(__dirname,'../tools/vendor-three-classic.cjs'),'--check']);
 const noop=()=>{},hud=new Proxy({},{get:()=>noop,set:()=>true});
-function element(){return {width:1,height:1,clientWidth:640,clientHeight:480,style:{},setAttribute:noop,appendChild:noop,addEventListener:noop,querySelector:()=>element(),getContext:type=>{assert.equal(type,'2d','Production never requests a raw GPU context');return hud;}};}
+function element(){return {width:1,height:1,clientWidth:640,clientHeight:480,style:{},setAttribute:noop,appendChild:noop,addEventListener(type,callback){this.listeners=this.listeners||{};this.listeners[type]=callback;},querySelector:()=>element(),getContext:type=>{assert.equal(type,'2d','Production never requests a raw GPU context');return hud;}};}
 const context=vm.createContext({console,performance,AbortController,Float32Array,Uint8Array,Set,Map,WeakMap,Math,document:{createElement:element},window:null});
 context.window=context;context.DRIFTWORKS_TEST_MODE=true;context.addEventListener=noop;
 for(const name of ['vendor/three/build/three.global.js',...['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','population','session','tactical/camera','engine-audio','audio-mixer','audio','hud','mesh-builder','mining-rig','scene3d','game'].map(n=>'src/'+n+'.js')])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context,{filename:name});
 const THREE=context.THREE,DW=context.Driftworks,frames=[];
-THREE.WebGLRenderer=class {setSize(){}setRenderTarget(target){this.target=target;}setClearColor(){}clear(){}render(scene){frames.push(scene.children.map(o=>({geometry:o.geometry,uniforms:Object.fromEntries(Object.entries(o.material.uniforms).map(([k,v])=>[k,v.value])),material:o.material,blending:o.material.blending,depthWrite:o.material.depthWrite})));}};
+THREE.WebGLRenderer=class {setSize(){}setRenderTarget(target){this.target=target;}setClearColor(){}clear(){}render(scene){frames.push(scene.children.filter(o=>o.material).map(o=>({geometry:o.geometry,uniforms:Object.fromEntries(Object.entries(o.material.uniforms||{}).map(([k,v])=>[k,v.value])),material:o.material,blending:o.material.blending,depthWrite:o.material.depthWrite})));}};
 DW.audio=null;
 let world=DW.sim.createInitialWorld();Object.assign(world,{asteroids:[],ships:[],platforms:[],wrecks:[],packets:[],selectedShipIds:[]});world.combat.drones=[];
-const viewer=DW.scene3d.create(element(),()=>world,w=>{world=w;},{study:true});
+const host=element();
+const viewer=DW.scene3d.create(host,()=>world,w=>{world=w;},{study:true});
 const data=new Float32Array([0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,0,0,1]);
 const batches=[{vertices:data,color:[.2,.3,.4],origin:[1,2,3],staticGeometry:true},{vertices:new Float32Array(data),color:[.7,.6,.5],origin:[4,5,6],opacity:.5}];
 viewer.setStudyActors(batches);viewer.setStudyEffects([{vertices:new Float32Array(data),color:[1,.2,.1]}]);
@@ -25,3 +26,27 @@ const dynamic=frames[1][1].geometry.getAttribute('aPosition').data;viewer.render
 viewer.setStudyActors([batches[0]]);viewer.setStudyEffects([]);viewer.render(world,1,0,0);assert.equal(frames.at(-1).length,1,'Unused pooled draws are removed');
 console.log('PASS Three production submission: native geometry/materials, per-draw uniforms, alpha/additive ordering, one render per pass and buffer/material reuse');
 
+
+// Probe generation is GPU work; this test verifies ownership/cache and native material wiring.
+let probeBakes=0;
+THREE.PMREMGenerator=class {fromEquirectangular(){probeBakes++;return {texture:new THREE.Texture(),dispose(){}};}dispose(){}};
+const image={width:512,height:256};
+const lighting={image,sh:Array.from({length:9},()=>[.1,.1,.1])};
+const pose={right:[1,0,0],up:[0,1,0],back:[0,0,1]};
+host.listeners['sky-environment']({detail:{lighting,pose}});
+const textured=new Float32Array([0,0,0,0,0,1,0,0,1,0,0,0,0,1,1,0,0,1,0,0,0,1,0,1]);
+viewer.setStudyActors([{vertices:textured,color:[1,1,1],texture:{width:16,height:16},stride:8,staticGeometry:true,origin:[1,2,3],scale:2},batches[0]]);
+viewer.render(world,1,0,0);
+const native=frames.at(-1)[0],custom=frames.at(-1)[1];
+assert.ok(native.material instanceof THREE.MeshStandardMaterial);
+assert.equal(native.material.metalness,0);assert.equal(native.material.roughness,1);
+assert.equal(native.material.map.colorSpace,THREE.SRGBColorSpace);
+assert.equal(native.material.map.flipY,false,'glTF UV orientation retained');
+assert.ok(custom.material instanceof THREE.RawShaderMaterial,'Untextured procedural material preserved');
+assert.equal(probeBakes,1);
+viewer.render(world,1,0,0);assert.equal(probeBakes,1,'Probe reused across frames');
+assert.equal(frames.at(-1)[0].material,native.material,'Native materials pooled');
+host.listeners['sky-environment']({detail:{lighting:null,pose}});viewer.render(world,1,0,0);
+assert.ok(frames.at(-1)[0].material instanceof THREE.RawShaderMaterial,'Lighting-off comparison retains original path');
+host.listeners['sky-environment']({detail:{lighting,pose}});viewer.render(world,1,0,0);assert.equal(probeBakes,1,'Probe reused after sky reselect');
+console.log('PASS native sky-lit ships: original rough/nonmetal material, sRGB/UVs, per-renderer PMREM reuse and custom-material isolation');

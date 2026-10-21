@@ -2,6 +2,7 @@ require('./asset-versions.cjs');
 // Run the ordinary-script suite without adding a build or dependency pipeline.
 require('./audio-modules.cjs');
 require('./flight-skybox.cjs');
+require('./ohio-sign.cjs');
 require('./flight-furball-target-lock.cjs');
 require('./flight-furball-telemetry.cjs');
 require('./retail-gun-mounts.cjs');
