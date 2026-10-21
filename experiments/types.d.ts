@@ -2,6 +2,7 @@ export type TargetStatus = {id: string; shield: number; hull: number; shieldTrai
 import type { Asteroid, Ship, World, DriftworksNamespace } from '../src/types';
 export type FlightMission = {
     version:1; id:string;
+    emptySpace?:boolean;
     title:string; heading:string; subtitle:string; hint:string;
     units:{distanceScale:number;distanceLabel:string;distanceWord:string;speedScale:number;speedLabel:string;speedWord:string;radarKilometers:boolean};
     teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
@@ -17,6 +18,7 @@ export type MissionScenery={kind:string;asset:string;scale?:number;anchor?:[numb
 export type RoadsideCatalog={version:number;binary:string;bytes:number;models:Record<string,{parts:{offset:number;count:number;color:[number,number,number]}[]}>};
 export type MissionOverrides = {
     version?:1; title?:string;heading?:string;subtitle?:string;hint?:string;
+    emptySpace?:boolean;
     units?:Partial<FlightMission['units']>;
     teams?:{ally?:Partial<FlightMission['teams']['ally']>;enemy?:Partial<FlightMission['teams']['enemy']>};
     comms?:Partial<FlightMission['comms']>;portraits?:Partial<FlightMission['portraits']>;

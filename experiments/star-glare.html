@@ -4,15 +4,21 @@
 *{box-sizing:border-box}body{margin:0;background:#000;color:#dce6eb;font:14px/1.5 system-ui}canvas{display:block;width:100vw;height:100vh;touch-action:none}aside{position:fixed;top:16px;left:16px;width:280px;max-height:calc(100vh - 32px);overflow:auto;padding:20px;background:#0a1720ed;border:1px solid #354b58;border-radius:12px}h1{font-size:22px;margin:0 0 8px}p{color:#a9bac4}a{color:#a9ded7}button{color:inherit;background:#20333f;border:1px solid #536874;border-radius:5px;padding:8px;margin:3px 0;cursor:pointer}label{display:block;margin:12px 0}input[type=range]{width:100%}output{font-variant-numeric:tabular-nums}#readout{font:12px/1.7 monospace;color:#abd6cc}button:focus-visible,input:focus-visible{outline:2px solid #b5ffe3}details summary{cursor:pointer}@media(max-width:650px){aside{width:220px;padding:12px;max-height:45vh;top:auto;bottom:10px;left:10px}}
 </style></head><body>
 <canvas id="glare-view" aria-label="Interactive star-lit asteroid; drag to orbit, shift-drag to look around" tabindex="0"></canvas>
-<aside><a href="../index.html">← Driftworks lab</a><h1>Into the light</h1><p>A bright star, a rough asteroid, and a camera adapting between them. Drag to orbit. Shift-drag to look around. Wheel to approach.</p>
-<button id="glare-eclipse">Total eclipse</button> <button id="glare-limb">Grazing the limb</button> <button id="glare-clear">Star beside asteroid</button> <button id="glare-lit">Sunlit face</button>
+<aside><a href="../index.html">← Driftworks lab</a><h1>Into the light</h1><p>A bright star, a sphere standing in for the asteroid, and a camera adapting between them. Drag to orbit. Shift-drag to look around. Wheel to approach.</p>
+<button id="glare-eclipse">Align behind sphere</button> <button id="glare-limb">Grazing the limb</button> <button id="glare-clear">Star beside asteroid</button> <button id="glare-lit">Sunlit face</button>
 <label><input id="glare-sweep" type="checkbox"> Sweep through eclipse</label>
 <label><input id="glare-effects" type="checkbox" checked> Bloom &amp; veiling glare</label>
 <label><input id="glare-adapt" type="checkbox" checked> Automatic exposure</label>
 <label>Glare strength <input id="glare-strength" type="range" min="0" max="2" step=".05" value="1"></label>
 <label>Camera distance <input id="glare-distance" type="range" min="2.2" max="10" step=".1" value="4.5"></label>
 <label>Star diameter <input id="glare-radius" type="range" min=".5" max="8" step=".1" value="4"></label>
+<hr><label><input id="glare-nova" type="checkbox"> HDR environment / nova test</label>
+<label>Environment transition <input id="glare-nova-phase" type="range" min="0" max="1" step=".005" value="0"></label>
+<label><input id="glare-nova-play" type="checkbox"> Play transition (18 s)</label>
+<label><input id="glare-nova-shadows" type="checkbox" checked> Sampled area shadows (32 rays)</label>
+<p id="nova-note">Seven cached linear HDR maps + finite-source lighting lookup. No ambient fill or point-source glare in this mode. The small sphere casts onto the large sphere. Toggle shadows to compare cached lighting alone. Replay by scrubbing to zero.</p>
 <p id="readout" role="status">Starting renderer…</p>
 <details><summary>What to look for</summary><p>At the limb, only the exposed part of the star contributes glare. The rock stays opaque. Turning toward the light lowers exposure; looking away lets shadow detail recover. The asteroid is lit from the same fixed sky direction as the star.</p><p>Floating-point light values are tone-mapped to the display. Bloom and camera adaptation are illustrative, not a calibrated camera model. No lens-ghost chain. The star is at infinity; the asteroid has depth.</p></details>
 <p><a href="skybox-factory.html">Skybox factory / source studies</a></p></aside>
-<script src="star-glare.js"></script></body></html>
+<script src="../src/asset-versions.js?v=8d0de7d3f80b"></script>
+<script src="star-glare.js?v=dbdde8100b41"></script></body></html>

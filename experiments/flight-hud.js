@@ -156,8 +156,10 @@
             var radarContacts = /** @type {RadarContact[]} */ (living.map(function (e) {
                 return { point: e.pose.eye, color: e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
             }));
-            radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
-            radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
+            if(!mission.emptySpace){
+                radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
+                radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
+            }
             DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, combat.mode);
             combatHud.font = '12px ui-monospace,monospace';
             combatHud.textAlign = 'center';

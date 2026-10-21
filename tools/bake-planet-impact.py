@@ -16,14 +16,14 @@ spec = importlib.util.spec_from_file_location('composer', Path(__file__).with_na
 composer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(composer)
 source = ROOT / 'assets/backgrounds/planet-hero-v1'
-target = source / 'baked-v1'
+target = source / 'baked-v3'
 target.mkdir(exist_ok=True)
-files = ['master.png'] + ['impact-overhead-v1/' + name + '.png' for name in ['flash', '12', '32', '60', '90', '120']]
+files = ['registered-v3/' + str(i) + '.png' for i in range(7)]
 master = np.asarray(Image.open(source / files[0]).convert('RGB'), dtype=np.float32)
 h, w = master.shape[:2]
 y, x = np.mgrid[:h, :w]
-radius = np.sqrt(((x + .5 - w*.488)/(w*.125))**2 + ((y + .5 - h*.472)/(h*.125))**2)
-mask = (1 - np.clip((radius - .72)/.28, 0, 1))[..., None]
+radius = np.sqrt(((x + .5 - w*.49)/(w*.085))**2 + ((y + .5 - h*.46)/(h*.085))**2)
+mask = np.ones((h, w, 1), dtype=np.float32)  # Registered plates already contain their local feather.
 layout = {'version': 1, 'minGapDeg': 0, 'library': {
     'planet': {'file': '../master.png', 'aspect': 1},
     'sun': {'file': '../../features/warm-sun-v1.png', 'aspect': 1}},
@@ -48,6 +48,6 @@ for index, file in enumerate(files):
     Image.fromarray(output).save(target / f'{index}.png')
     print(f'Baked {index}: {file}', flush=True)
 (target / 'recipe.json').write_text(json.dumps({'projection': 'equirectangular', 'width': width,
-    'height': height, 'times': [0, .25, 12, 32, 60, 90, 120], 'sources': files,
-    'mask': {'center': [.488, .472], 'radius': [.125, .125], 'solidUntil': .72},
+    'height': height, 'times': [0, 2, 30, 60, 120, 300, 600], 'sources': files,
+    'mask': {'registeredPlates': '../registered-v3/registration.json'},
     'layout': layout, 'mirrorSourceU': True, 'timing': 'Illustrative, not a physical simulation'}, indent=2)+'\n')

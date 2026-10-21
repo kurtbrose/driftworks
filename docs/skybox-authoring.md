@@ -14,9 +14,11 @@ mission family. It updates only the existing planet texture, retaining its
 projection, star occlusion and sun. An override submitted before the original
 planet finishes loading is retained. The hero review viewer uses this for the
 local overhead impact compositor. Mission `planet-impact-baked` instead samples
-adjacent offline-baked 4K spherical maps, with three textures resident and a
+adjacent offline-baked 4K spherical maps from `baked-v2/`, with three textures resident and a
 flight-time clock that freezes on pause/loading. `sky.bakedImpact` selects this
 pass while preserving the same landmark placement and disk star occlusion.
+The eight stages now span ten minutes; `planet-impact-watch` provides an empty
+flight world without asteroid, mothership, contacts or collision.
 See [physical timing and bake notes](impact-timing.md). Other planet missions
 continue using the static baseline.
 
@@ -307,3 +309,56 @@ Pause, motion amplitude, exposure, disk size and view offset are shared across
 previews. Reduced-motion preference starts paused; hidden tabs freeze elapsed
 time. Frame downloads render a clean 1024px black-backed sprite without preview stars.
 The bench is independent of flight rendering and does not modify skybox shaders.
+
+## Star glare rendering experiment
+
+`experiments/star-glare.html` is a standalone camera-response study, linked from
+the lab and factory. A static directional starfield and bright stellar disk are
+behind a simple analytically intersected sphere standing in for the asteroid. The same fixed star direction drives surface
+lighting. A 97-sample stellar-disk visibility estimate uses the same asteroid
+surface function as the fragment shader to gate glare and exposure response.
+Drag or arrow keys orbit; shift-drag changes viewing direction; wheel changes
+distance. Eclipse, limb, clear-star and sunlit presets aid comparisons.
+Bloom/veiling glare and automatic exposure toggle independently. Radiance is
+computed above display white and exponentially tone-mapped; this is an illustrative
+shader experiment, not a calibrated HDR camera or a floating-point postprocess
+pipeline. The star remains at infinity; exposure adapts quickly to brightness
+and recovers more slowly in darkness. No lens ghosts are included. This experiment
+does not alter flight rendering or the skybox baker.
+
+### Cached HDR environment test
+
+The optional nova mode uses seven 512x256 linear floating-point radiance maps,
+generated once on page load. A synthetic bright cap expands over the transition.
+The compact and fully expanded endpoints have equal integrated source energy;
+intermediate states include an illustrative brightness peak. There is no invented
+ambient fill: empty sky texels are zero. These are test inputs, not HDR recovered
+from existing PNG/JPEG assets. OES_texture_float is required for this mode.
+
+The dominant bright cap is excluded from nine-coefficient ambient SH. Representing
+it entirely in L2 SH produced a false illuminated lobe on back-facing surfaces
+and a dark ring; this is a demonstrated limit of the approximation. Broad ambient
+lighting can still use SH. In this single-emitter fixture its coefficients are
+zero. A cached 256x7 finite-source cosine-integral lookup supplies the emitter's
+irradiance instead, with explicit interpolation between angle and stage samples.
+The fully unlit side receives zero direct light. Runtime does not integrate the
+sky or regenerate this lookup each frame.
+
+A small sphere casts onto the large sphere. Optional 32-direction finite-source
+visibility runs in the fragment shader. This is a separate runtime cost and may
+show bands. Shadow directions follow the interpolated source radius rather than
+the exact mixture of two source maps, so this remains an approximate reference.
+Toggle sampled shadows off to isolate cached lighting. The 18-second timeline is
+illustrative and can be paused/scrubbed. The fixture uses only simple spheres.
+
+The automatic exposure control remains the directional-star heuristic. This lab
+does not implement screen-luminance metering, reflection-map prefiltering, or a
+general mesh-shadow pipeline. Those are separate integration decisions. A fully
+occluded source suppresses camera glare; occlusion does not dim unrelated sky
+pixels. No changes to flight rendering or the skybox baker are implied.
+
+Nova mode also disables the original point-source camera-glare overlay: applying
+a global source-visibility factor to a center glow painted a false bright patch
+over the occluder. General HDR bloom would need to spread light from actually
+visible bright pixels. The alignment preset cannot fully eclipse an expanded
+source larger than the sphere; its visible surrounding sky correctly stays bright.

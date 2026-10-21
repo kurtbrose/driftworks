@@ -128,6 +128,12 @@ uniform vec3 ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp;
 uniform vec3 ohioSunCenter,ohioSunRight,ohioSunUp;
 uniform float ohioPlanetGain,ohioSunGain;
 uniform float bakedBlend;
+uniform float impactFlash; uniform vec3 impactDirection;
+vec3 impactOptics(vec3 color, vec3 ray){
+    float distance=1.-dot(ray,normalize(impactDirection));
+    vec3 radiance=impactFlash*vec3(1.,.92,.76)*(12.*exp(-distance/.000004)+.45*exp(-distance/.00007));
+    return 1.-(1.-color)*exp(-radiance);
+}
 // Same tangent-plane UVs and edge treatment as the authored landmark quads,
 // composed directly into the opaque background instead of blended over it.
 vec3 ohioLandmark(sampler2D sourceMap,vec3 ray,vec3 center,vec3 horizontal,vec3 vertical,float gain){
@@ -175,13 +181,13 @@ void main(){
     if(style>20.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec2 uv=vec2(atan(ray.y,ray.x)/6.28318530718+.5,acos(clamp(ray.z,-1.,1.))/3.14159265359);
-        gl_FragColor=vec4(mix(texture2D(ohioPlanet,uv).rgb,texture2D(ohioSun,uv).rgb,bakedBlend)*exposure,1.);return;
+        gl_FragColor=vec4(impactOptics(mix(texture2D(ohioPlanet,uv).rgb,texture2D(ohioSun,uv).rgb,bakedBlend)*exposure,ray),1.);return;
     }
     if(style>19.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec3 planet=ohioLandmark(ohioPlanet,ray,ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp,ohioPlanetGain);
         vec3 sun=ohioLandmark(ohioSun,ray,ohioSunCenter,ohioSunRight,ohioSunUp,ohioSunGain);
-        gl_FragColor=vec4(planet+sun-planet*sun,1.);return;
+        gl_FragColor=vec4(impactOptics(planet+sun-planet*sun,ray),1.);return;
     }
     if(style>6.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}
     vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
@@ -384,11 +390,11 @@ void main(){
     }
     gl_FragColor=vec4(color*exposure,1.);
 }`);
-        var impactTimes=[0,.25,12,32,60,90,120],impactTime=-5,impactSpeed=1,impactStarted=false,impactLoaded=0;
+        var impactTimes=missionSky.bakedImpact?[0,2,30,60,120,300,600]:[0,.25,12,32,60,90,120],impactTime=-5,impactSpeed=1,impactStarted=false,impactLoaded=0;
         /** @type {(WebGLTexture|null)[]} */var impactTextures=[];
         /** @type {HTMLDivElement|null} */var impactControls=null;
         /** @type {HTMLInputElement|null} */var impactSlider=null;
-        /** @param {number} value */function setImpactTime(value){if(Number.isFinite(value))impactTime=Math.max(-5,Math.min(180,value));}
+        /** @param {number} value */function setImpactTime(value){if(Number.isFinite(value))impactTime=Math.max(-5,Math.min(missionSky.bakedImpact?600:180,value));}
         // At most three 4K maps resident (~96 MiB RGBA); no per-frame canvas uploads.
         /** @type {Map<number,{texture:WebGLTexture|null,ready:boolean}>} */var bakedMaps=new Map();
         var bakedControls=false;
@@ -405,7 +411,7 @@ void main(){
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);
                 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);entry.ready=true;
             };image.onerror=function(){canvas.dataset.bakedImpact='error';};
-            image.src=assetUrl('../assets/backgrounds/planet-hero-v1/baked-v1/'+index+'.png');return entry;
+            image.src=assetUrl('../assets/backgrounds/planet-hero-v1/baked-v3/'+index+'.png');return entry;
         }
         /** @param {number} elapsed */function prepareBaked(elapsed){
             if(!bakedControls){
@@ -413,14 +419,15 @@ void main(){
                 var status=document.getElementById('skybox-status');
                 if(status&&status.parentElement){
                     impactControls=document.createElement('div');
-                    impactControls.innerHTML='<label>Illustrative impact time <input aria-label="Impact time" type="range" min="-5" max="180" step=".1" value="-5" style="width:100%"></label><button type="button">Restart impact</button><small>Painted timing study; pause freezes the event.</small>';
+                    impactControls.innerHTML='<label>Impact time (seconds) <input aria-label="Impact time" type="range" min="-5" max="600" step=".1" value="-5" style="width:100%"></label><label>Impact speed <select aria-label="Impact playback"><option value="1">1× / real time</option><option value="5">5×</option><option value="20">20×</option></select></label><button type="button">Restart impact</button><small>Research-informed artwork; pause freezes the event.</small>';
                     status.parentElement.appendChild(impactControls);impactSlider=impactControls.querySelector('input');
                     if(impactSlider){const slider=impactSlider;slider.oninput=function(){setImpactTime(Number(slider.value));};}
                     var restart=impactControls.querySelector('button');if(restart)restart.onclick=function(){setImpactTime(-5);};
+                    var speed=impactControls.querySelector('select');if(speed){const select=speed;select.onchange=function(){impactSpeed=Number(select.value)||1;};}
                 }
             }
             var from=0;for(var i=1;i<impactTimes.length;i++)if(impactTime>=impactTimes[i])from=i;
-            var to=Math.min(from+1,6),next=Math.min(to+1,6),keep=[from,to,next];
+            var to=Math.min(from+1,impactTimes.length-1),next=Math.min(to+1,impactTimes.length-1),keep=[from,to,next];
             bakedMaps.forEach(function(entry,index){if(keep.indexOf(index)<0){gl.deleteTexture(entry.texture);bakedMaps.delete(index);}});
             var a=bakedMap(from),b=bakedMap(to);bakedMap(next);
             var ready=a.ready&&b.ready,blend=from===to?0:Math.max(0,Math.min(1,(impactTime-impactTimes[from])/(impactTimes[to]-impactTimes[from])));
@@ -428,7 +435,7 @@ void main(){
             if(impactSlider)impactSlider.value=String(impactTime);
             var status=document.getElementById('skybox-status');if(status)status.textContent=canvas.dataset.bakedImpact==='error'?'Baked sky unavailable (requires 4096px textures).':ready?'Baked spherical impact / '+impactTime.toFixed(1)+' s / illustrative timing':'Loading baked sky maps...';
             // A missing frame freezes the event clock; loading cannot skip the flash.
-            if(ready)impactTime=Math.min(180,impactTime+Math.max(0,elapsed));
+            if(ready)impactTime=Math.min(600,impactTime+Math.max(0,elapsed)*impactSpeed);
             return {a:a.texture,b:b.texture,blend:blend*blend*(3-2*blend)};
         }
         function loadImpact(){
@@ -585,6 +592,13 @@ void main(){
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), exposure);
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
+                var flash=impactTime>=0&&impactTime<.8?Math.exp(-impactTime/.12)*(1-Math.exp(-impactTime/.008)):0;
+                var impactPlanet=landmarkTextures[0],eventDirection=[0,1,0];
+                if(impactPlanet&&missionSky.features[0].asset==='planet-hero-v1/master.png'){
+                    var rx=impactPlanet.right.reduce(function(sum,v){return sum+v*v;},0),uy=impactPlanet.up.reduce(function(sum,v){return sum+v*v;},0);
+                    eventDirection=impactPlanet.center.map(function(v,i){return v+impactPlanet.right[i]/rx*(1-2*.49)+impactPlanet.up[i]/uy*(1-2*.46);});
+                }else flash=0;
+                gl.uniform1f(gl.getUniformLocation(sky,'impactFlash'),flash);gl.uniform3fv(gl.getUniformLocation(sky,'impactDirection'),eventDirection);
                 if(missionSky.bakedImpact){
                     var baked=prepareBaked(elapsed||0);
                     [baked.a,baked.b].forEach(function(map,index){gl.activeTexture(gl.TEXTURE0+2+index);gl.bindTexture(gl.TEXTURE_2D,map);gl.uniform1i(gl.getUniformLocation(sky,index===0?'ohioPlanet':'ohioSun'),2+index);});

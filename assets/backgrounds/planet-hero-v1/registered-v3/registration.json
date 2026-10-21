@@ -1,0 +1,137 @@
+{
+  "method": "Signed local RGB difference registration; warm-difference centroid; frozen master",
+  "center": [
+    614.46,
+    576.84
+  ],
+  "uv": [
+    0.49,
+    0.46
+  ],
+  "times": [
+    0,
+    2,
+    30,
+    60,
+    120,
+    300,
+    600
+  ],
+  "flash": "No painted flash in playback; live radiance pulse only",
+  "frames": [
+    {
+      "time": 2,
+      "source": "../impact-overhead-v2/2.png",
+      "file": "1.png",
+      "sourceCenter": [
+        617.9787852551988,
+        578.9528765924249
+      ],
+      "shift": [
+        -3.132825622247424,
+        -2.0514160728071147
+      ],
+      "radiusPixels": 18,
+      "registeredCenter": [
+        614.4601499838974,
+        576.8400974633723
+      ],
+      "errorPixels": 0.0001788694451458439
+    },
+    {
+      "time": 30,
+      "source": "../impact-overhead-v2/30.png",
+      "file": "2.png",
+      "sourceCenter": [
+        625.3360012944535,
+        588.7710469316821
+      ],
+      "shift": [
+        -10.581360245689439,
+        -11.68753146429151
+      ],
+      "radiusPixels": 42,
+      "registeredCenter": [
+        614.4602665133674,
+        576.8407875770654
+      ],
+      "errorPixels": 0.0008314487409657584
+    },
+    {
+      "time": 60,
+      "source": "../impact-overhead-v2/60.png",
+      "file": "3.png",
+      "sourceCenter": [
+        623.4306322948987,
+        571.5201695007977
+      ],
+      "shift": [
+        -8.271596139004828,
+        5.4171830769998905
+      ],
+      "radiusPixels": 56,
+      "registeredCenter": [
+        614.4602153237088,
+        576.840033026198
+      ],
+      "errorPixels": 0.0002178417528753652
+    },
+    {
+      "time": 120,
+      "source": "../impact-overhead-v2/120.png",
+      "file": "4.png",
+      "sourceCenter": [
+        619.528326813157,
+        571.1815553410651
+      ],
+      "shift": [
+        -4.8457211036070476,
+        5.5939260666048085
+      ],
+      "radiusPixels": 60,
+      "registeredCenter": [
+        614.4594154765467,
+        576.8394335628145
+      ],
+      "errorPixels": 0.0008139525493559797
+    },
+    {
+      "time": 300,
+      "source": "../impact-overhead-v2/300.png",
+      "file": "5.png",
+      "sourceCenter": [
+        627.7240055793912,
+        576.5434705258616
+      ],
+      "shift": [
+        -13.83109964341702,
+        0.3032966052460324
+      ],
+      "radiusPixels": 74,
+      "registeredCenter": [
+        614.4594816433726,
+        576.8381121276544
+      ],
+      "errorPixels": 0.0019577424719700465
+    },
+    {
+      "time": 600,
+      "source": "../impact-overhead-v2/600.png",
+      "file": "6.png",
+      "sourceCenter": [
+        624.8938692145721,
+        578.3376689979589
+      ],
+      "shift": [
+        -13.538360877043147,
+        -3.2409777585794473
+      ],
+      "radiusPixels": 90,
+      "registeredCenter": [
+        614.4611355016436,
+        576.8393479296825
+      ],
+      "errorPixels": 0.0013094119602424952
+    }
+  ]
+}

@@ -2,7 +2,8 @@
 
 The current artwork is a successful composition test, not a calibrated impact
 simulation. The flight proof is `experiments/flight.html?mission=planet-impact-baked`;
-the same maps can be scrubbed in
+For an actually empty map without the training asteroid, mothership or hostiles,
+use `experiments/flight.html?mission=planet-impact-watch`. The same maps can be scrubbed in
 `experiments/planet-hero-review.html?mission=planet-impact-baked`.
 
 ## Reference assumptions
@@ -38,28 +39,32 @@ That does not mean the initial optical flash stays white for minutes, nor that a
 visible cloud ring directly measures the pressure front. There is no defensible
 single ring speed or fade time from these paintings alone.
 
-## Changes worth making to the next image series
+## Scale correction in revision 2
 
-The current affected area is roughly 100 source pixels in radius versus a planet
+The original v1 affected area was roughly 100 source pixels in radius versus a planet
 radius near 550 pixels. For an Earth-radius world, a near-center orthographic
 estimate `6371 * asin(100/550)` gives about 1,160 km. This is an approximate
 art-scale check, not a reconstruction of the generated planet's camera.
-The existing early labels therefore imply a very large disturbance very quickly.
-Specify physical footprint sizes in the next prompts, reduce the early extent,
-and give 5/10-minute stages new artwork rather than relabeling the present plates.
+The original early labels therefore implied a very large disturbance very quickly.
+Revision 2 uses seven new ImageGen edits with deliberately smaller physical
+footprints, a brief flash, and new 5/10-minute artwork. These remain artistic
+interpretations of the research, not quantitative hydrodynamic output.
 
 Keep the plume top-down and irregular, let the bright core cool, and make any
 condensation rim patchy and transient. Expansion should move a front; a crossfade
 between differently sized rings can otherwise expose two rings simultaneously.
-The existing seven plates remain labeled illustrative; their final 120-second
-painting holds through 180 seconds. There are no 5/10-minute plates yet.
+Revision 2 has eight stages: pristine, 0.25 s optical flash, 2 s faded flash,
+30 s, 60 s, 120 s, 300 s and 600 s. The distinct two-second frame prevents a
+white flash from lingering through the long blend to the thirty-second image.
+The ten-minute painting remains as a persistent aftermath. Original v1 plates
+and bakes are retained for comparison.
 
 ## Bake and runtime
 
 `tools/bake-planet-impact.py` reuses `tools/compose-skybox.py` with Pillow/NumPy
 offline. It applies the review's frozen-master mask before projection and writes
-seven lossless 4096×2048 equirectangular maps plus a recipe under
-`assets/backgrounds/planet-hero-v1/baked-v1/`. These are ordinary spherical sky
+eight lossless 4096×2048 equirectangular maps plus a recipe under
+`assets/backgrounds/planet-hero-v1/baked-v2/`. These are ordinary spherical sky
 textures, not AI-generated cube faces. Runtime requires no Python or network.
 
 The baked projection matches the opaque landmark renderer's horizontal UV
@@ -69,4 +74,5 @@ maps. Playback uses two texture samples and adjacent smoothstep crossfades;
 only three maps are resident (up to about 96 MiB if stored RGBA), with one
 prefetched. A 4096px texture limit is required. This is a desktop visual proof.
 The clock starts five seconds before contact, advances with active flight time,
-and freezes on pause/loading. Settings contain a scrubber and restart button.
+and freezes on pause/loading. Settings contain a scrubber, 1×/5×/20× playback speed and restart button.
+The Missions page links both quiet free flight and the ordinary 8v8 dogfight.

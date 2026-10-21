@@ -35,7 +35,13 @@
     /** @param {number} radius @param {Profile} profile @param {string} [missionId] */
     function createSortie(radius, profile, missionId) {
         var state = create(radius);
-        var spawn=DW.flightMissions.resolve(missionId).encounter.spawn;
+        var mission=DW.flightMissions.resolve(missionId),spawn=mission.encounter.spawn;
+        if(mission.emptySpace){
+            var angle=-30*Math.PI/180;
+            state.eye=[0,-radius*3,radius*2];
+            state.up=[0,-Math.sin(angle),Math.cos(angle)];state.back=[0,-Math.cos(angle),-Math.sin(angle)];
+            return state;
+        }
         state.eye[1]=-radius*spawn.backRadii;
         state.eye[2] = radius + spawn.altitudeMeters / units;
         state.throttle = 1;

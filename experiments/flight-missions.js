@@ -55,9 +55,15 @@
     },'furball');
     define('planet-impact-baked',{
         title:'Baked impact flight · Driftworks',heading:'DRIFTWORKS / IMPACT SKY TEST',
-        subtitle:'ANIMATED 4K SPHERICAL SKY · ILLUSTRATIVE TWO-MINUTE EVENT',
+        subtitle:'ANIMATED 4K SPHERICAL SKY · TEN-MINUTE IMPACT STUDY',
         sky:{bakedImpact:true}
     },'planet-hero');
+    define('planet-impact-watch',{
+        emptySpace:true,
+        title:'Impact watch · Driftworks',heading:'DRIFTWORKS / IMPACT WATCH',
+        subtitle:'FREE FLIGHT · NO HOSTILES · TEN-MINUTE SKY EVENT',
+        hint:'Start flight to begin the impact. W/S throttle · X stop · arrows steer · Esc pause. Settings: impact scrubber, speed and restart.'
+    },'planet-impact-baked');
     define('planet-hero-80',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:80,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
     define('planet-hero-140',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:140,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
     define('asteroid-patrol',{encounter:{kind:'patrol',count:2,immediate:true}});

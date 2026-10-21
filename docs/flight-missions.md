@@ -16,6 +16,13 @@ Select a registered mission with `flight.html?mission=county-fair`. Scripts for 
 new definition must be included before the flight modules that consume it; this
 initial format intentionally does not discover or execute arbitrary URL scripts.
 
+The optional `emptySpace: true` mission flag removes the training asteroid and
+mothership from the flight world, suppresses their radar contacts, disables
+combat and terrain/projectile collision, and starts stationary facing the planet.
+`planet-impact-watch` uses this for an unobstructed ten-minute sky study;
+`planet-impact-baked` keeps the normal asteroid and 8v8 fight. The flag belongs
+to the flight preset and adds no persistent simulation fields.
+
 ```js
 window.Driftworks.flightMissions.define('county-fair', {
     heading: 'DRIFTWORKS / COUNTY FAIR',

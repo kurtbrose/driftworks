@@ -123,7 +123,9 @@
         }
         /** @param {string} mode */
         function applyGeology(mode) {
-            DW.scene3d.setStudyParameters(asteroid, {bulk: DW.flightMissions.resolve(mode).asteroidBulk});
+            var mission=DW.flightMissions.resolve(mode);
+            world.asteroids=mission.emptySpace?[]:[asteroid];world.ships=mission.emptySpace?[]:[mothership];
+            DW.scene3d.setStudyParameters(asteroid, {bulk: mission.asteroidBulk});
         }
         /** @param {string} mode @param {boolean} enabled */
         function setCombat(mode, enabled) {
@@ -133,8 +135,8 @@
             DW.training.bindPlayer(combat, state).guns = guns;
             DW.training.configure(combat, activeProfile);
             configureCombat();
-            combat.enabled = enabled;
-            if (!enabled) {
+            combat.enabled = enabled&&!DW.flightMissions.resolve(mode).emptySpace;
+            if (!combat.enabled) {
                 combat.enemies = [];
                 combat.countdown = 0;
             } else if (DW.flightMissions.resolve(mode).encounter.immediate) {
@@ -148,7 +150,7 @@
             combat = DW.training.create(config.mode);
             activeProfile = config.profile;
             DW.training.configure(combat, activeProfile);
-            combat.enabled = config.enabled;
+            combat.enabled = config.enabled&&!DW.flightMissions.resolve(config.mode).emptySpace;
             guns = DW.flightGuns.create();
             state = model.createSortie(asteroid.radius, config.profile, config.mode);
             combat.useHullModels = true;
@@ -189,7 +191,8 @@
                     if (marks.length > 96) marks.shift();
                 };
                 updateLaunchOrigin();
-                var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, environment.terrainHit);
+                var emptySpace=DW.flightMissions.resolve(combat.mode).emptySpace;
+                var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, emptySpace?undefined:environment.terrainHit);
                 if (feedback.fired)
                     environment.onGunshot();
                 if (feedback.impact)
@@ -201,7 +204,7 @@
                 var length = Math.hypot.apply(null, state.eye), direction = state.eye.map(function (x) {
                     return x / (length || 1);
                 });
-                if (length < asteroid.radius * 1.12 + 5 / units) {
+                if (!emptySpace&&length < asteroid.radius * 1.12 + 5 / units) {
                     var surface = environment.surfaceFrame(asteroid, rotateVector(direction, -asteroid.rotation));
                     grounded = model.contact(state, rotateVector(surface.point, asteroid.rotation), asteroid.radius);
                     // Preserve resting contact at the exact clearance boundary.
