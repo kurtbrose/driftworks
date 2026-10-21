@@ -1,6 +1,9 @@
 (function () {
   'use strict';
   var DW = window.Driftworks;
+  /** Half-size in blast units; shared with the fighter comparison in the lab.
+   * @param {number} index @param {number} variation */
+  function fragmentSize(index,variation){return index%7===0?.24:.035+variation*.09;}
   /** Camera-facing coordinates live in normals; z stores normalized lobe age.
    * @typedef {[number,number,number]} V3
    * @typedef {{position:V3,velocity?:V3,age:number,size:number,seed:number}} Blast
@@ -41,7 +44,7 @@
     // Opaque fragments first, before translucent fire and additive light.
     /** @type {number[]} */ var hull=[];
     for(var i=0;i<22;i++){
-      var p=center(i*13+900,size*(3+random(i+10)*10)*age),s=size*(i%7===0?1.1:.15+random(i+3)*.4),a=age*(i+1)*.7;
+      var p=center(i*13+900,size*(3+random(i+10)*10)*age),s=size*fragmentSize(i,random(i+3)),a=age*(i+1)*.7;
       /** @type {V3[]} */ var points=[[s*Math.cos(a),s*Math.sin(a),0],[-s*Math.sin(a),s*Math.cos(a),s*.4],[-s*Math.cos(a),-s*Math.sin(a),0],[0,0,-s*.6]];
       [[0,1,2],[0,3,1],[1,3,2],[2,3,0]].forEach(function(face){face.forEach(function(k){hull.push(p[0]+points[k][0],p[1]+points[k][1],p[2]+points[k][2],0,0,1);});});
     }batch(hull,[.12,.15,.17],0);
@@ -71,5 +74,5 @@
     }
     batch(glow,[1,.55,.12],9);return batches;
   }
-  DW.explosions={shaderSource:shaderSource,build:build};
+  DW.explosions={shaderSource:shaderSource,build:build,fragmentSize:fragmentSize};
 })();

@@ -76,15 +76,31 @@ in its OBJ export. Their small size alongside the capital hull is intentional.
 
 Open `experiments/flight.html?aegis=1` or choose Aegis from the mission list.
 This uses the ordinary flight simulator controls, physics, HUD, NPCs, projectile
-stepping and damage resolver. The player flies a fighter alongside a stationary
-allied 1,305 m battleship preset; customized bench configurations are not passed
-through. Capital hull damage and capital piloting are not modeled in this pass.
+stepping and damage resolver. The player flies between allied and red-team
+1,305 m battleships exchanging main-battery fire. Customized bench configurations
+are not passed through. The ships patrol on bounded opposing arcs at about
+12 m/s, with a gentle heading swing. Red starts 1,500 m across the beam and
+180 m higher, allowing the allied dorsal and hostile ventral batteries clear
+firing arcs. Red illumination and red bolts distinguish the opposing ship.
 
 Each battery has a fixed pedestal, yaw joint and pitch joint. The generated
 flight asset separates the immutable hull from twelve main batteries and twelve
 small point-defense mounts, with meter-based pivots and Z-up geometry. The main
-batteries remain at rest in the fighter-only scenario. Small PD mounts use 22%
-of the main turret geometry scale and handle fighter threats.
+batteries track only the opposing capital. They slew at 0.35 rad/s in yaw and
+0.25 rad/s in elevation, settle before short twin-barrel salvos, and pause
+an independently randomized 2.8-5.2 seconds between salvos, keeping the
+original average cadence and two twin volleys per burst. Initial delays vary
+per gun and per faction. Each battery
+chooses a continuous random 3D hull point for the next salvo: longitudinal,
+lateral and vertical offsets vary independently. Empty through-hangar volume
+is excluded. The guns do not converge on a midline or fire in an ordered sequence. Unguided main rounds travel at 700 m/s
+with an 8-second lifetime, 35 m visual length and 20 damage. Swept proxy-hull
+contacts emit the fighter destruction effect at a smaller 5 m scale, inherit
+the struck ship's drift, and reduce the opponent's 20,000 integrity;
+zero integrity disables propulsion, weapons and allied hangar launches, without
+a capital breakup effect. Reset restores both ships. Small PD mounts use 22%
+of the main turret geometry scale and handle opposing fighters (including the
+player for red AA).
 `experiments/aegis-flight.js` limits PD yaw to 2.8 rad/s and elevation to 2.2 rad/s,
 retains valid targets within 900 m, solves a constant-velocity intercept and
 fires only after alignment. Its rounds travel at 450 m/s, live for 2 seconds
@@ -229,7 +245,7 @@ OBJ export retains separate named segment and attachment objects.
 
 The hangar is an open box across the beam, with a deck, ceiling, end walls,
 portal frames and runway lights. Its center has no spine or closed rear wall.
-The flight bake records module positions and conservative 90 m × 40 m clear
+The flight bake records module positions and conservative 90 m × 20 m clear
 apertures. Runtime collision partitions the hull around these apertures so a
 player or projectile can pass through either side while floors, ceilings and
 end walls remain solid. Flight currently uses the baked mixed Dreadnaught
@@ -255,3 +271,10 @@ wave behavior. Temporary `Craft.hangarLaunch.remaining` is JSON-safe and is
 removed when departure hands over to AI. Tests cover independent slot choices,
 mesh and collision through-rays, deck/end-wall solidity, alternating departures,
 launch pose orientation, AI handoff, wing limits, replenishment and reset.
+
+`aegisFlight.createBattle()` composes two independent rigs behind the existing
+flight-rig interface. `create()` remains the stationary single-ship harness for
+benchmarks and focused tests. Both ships share immutable mesh buffers; hull and
+turret bases, muzzle vectors, launch poses and collision queries transform
+through each ship's current heading and position. The battle telemetry includes
+per-capital position, heading, integrity, round count and confirmed hits.

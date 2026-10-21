@@ -12,7 +12,7 @@ export type FlightMission = {
     encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
     opening:{text:string;speakerIndex:number;channel:string}[];
 };
-export type MissionScenery={kind:string;asset:string;scale?:number;anchor?:[number,number];offset?:[number,number];placements?:{model:string;x:number;y:number;size:number;yaw:number}[]};
+export type MissionScenery={kind:string;asset:string;scale?:number;anchor?:[number,number];offset?:[number,number];placements?:{model:string;x:number;y:number;size:number;yaw:number;decal?:{asset:string;centerZ:number;radius:[number,number];height:number;arc:number}}[]};
 export type RoadsideCatalog={version:number;binary:string;bytes:number;models:Record<string,{parts:{offset:number;count:number;color:[number,number,number]}[]}>};
 export type MissionOverrides = {
     version?:1; title?:string;heading?:string;subtitle?:string;hint?:string;
@@ -38,8 +38,10 @@ export type AegisFlightRig = {
     effects:(pose:Pose)=>Batch[];
     readout:()=>string;
     hit:(a:Vector,b:Vector)=>Vector|null;
-    telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string}[]};
+    telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string;shots?:number;aimPoint?:Vector}[];capitals?:{team:string;position:Vector;heading:number;integrity:number;shots:number;hits:number}[]};
 };
+export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number};
+export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig};
 export type Pose = {
     eye: Vector;
     right: Vector;
@@ -1062,7 +1064,7 @@ export type VoiceNumberKey = Exclude<keyof Voice, "compactWords" | "emotion">;
 declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
         aegisFlightAsset?: AegisFlightAsset;
-        aegisFlight?: {create:()=>AegisFlightRig;load:()=>Promise<unknown>};
+        aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:()=>AegisFlightRig;load:()=>Promise<unknown>};
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];
         retailWeapons?: Weapon[];

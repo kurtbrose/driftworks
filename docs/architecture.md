@@ -1606,3 +1606,15 @@ them. An optional `Craft.hangarLaunch.remaining` holds straight departure until
 clear, then ordinary AI resumes. These fields belong to the experiment combat,
 not the persistent Driftworks world. Normal flight and missions omit the flag
 and retain their existing lifecycle.
+
+### Aegis capital engagement
+
+`aegisFlight.createBattle()` composes two runtime rigs with independent team,
+position, heading, velocity, weapons and integrity. This experiment state does
+not enter persistent world saves. Bounded patrol motion updates both poses
+before weapon stepping; all hull queries and mount directions transform between
+local meters and scene space. Heavy rounds use swept opposing-hull contacts and
+reduce integrity once per contact; PD keeps the ordinary faction-aware fighter
+damage resolver. Both rigs share immutable vertex buffers while keeping mutable
+bases, origins and weapons separate. The original no-options `create()` stays
+stationary for benchmarks and tests.

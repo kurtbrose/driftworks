@@ -5,14 +5,15 @@
 </style></head><body><main><aside>
 <a href="./">← Experiments</a><h1>Blast chamber.</h1><p>Layered destruction study. Drag to orbit, scroll to zoom. Every replay uses the same seed.</p>
 <label>Starting point<select id="preset"><option value="fighter">Fighter rupture</option><option value="reactor">Reactor overload</option><option value="capital">Capital cascade</option></select></label>
-<div id="knobs"></div>
+<label><input id="fighter" type="checkbox" checked> Spitfire reference · flight scale</label><div id="knobs"></div>
 <fieldset><legend>Visible layers</legend><div id="layers"></div></fieldset>
 <button id="seed">New seed</button><button id="reset">Reset preset</button><button id="camera">Reset camera</button>
 <p><small>Changes apply at the current time. Scrub backward to inspect the same blast. These settings affect this lab only.</small></p>
 <label>Recipe · JSON<textarea id="recipe" rows="6" spellcheck="false" aria-label="Explosion recipe JSON"></textarea></label><button id="export">Export recipe</button><button id="import">Import recipe</button><p id="status" role="status"></p>
 </aside><section class="stage" aria-label="Explosion preview"><canvas id="view" aria-label="Interactive explosion preview"></canvas><div class="caption">DRIFTWORKS / FX STUDY 01<br><span id="seed-label"></span></div><div class="transport"><button id="replay" class="primary">Replay</button><button id="pause">Pause</button><label><input id="loop" type="checkbox" checked> Loop</label><label>Playback speed <select id="speed"><option value="0.15">0.15×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option></select></label><label>Timeline <output id="time"></output><input id="timeline" type="range" min="0" max="6" step="0.01" value="0"></label></div></section></main>
-<script src="../src/asset-versions.js?v=a8efd5c594df"></script>
-<script src="../src/explosions.js?v=014a7fc70ec2"></script>
+<script src="../src/asset-versions.js?v=ba5d78df8b3c"></script>
+<script src="../src/explosions.js?v=ba20ec3731d9"></script>
+<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=0fc9a4cc50fb"></script>
 <script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
 <script>
 /* Standalone visual prototype. Analytic, seeded motion makes timeline scrubbing reversible. */
@@ -38,7 +39,17 @@
   const scene=new T.Scene(), camera=new T.PerspectiveCamera(45,1,0.1,1000);
   scene.add(new T.AmbientLight(0x8196b5,1.5)); const light=new T.PointLight(0xffb66b,100,65,1); scene.add(light);
   const grid=new T.GridHelper(160,40,0x253847,0x14212e); grid.position.y=-5; scene.add(grid);
-  const reference=new T.Mesh(new T.BoxGeometry(4,1,1.8),new T.MeshStandardMaterial({color:0x6c8792,metalness:0.7,roughness:0.4})); reference.position.set(-10,0,-3); scene.add(reference);
+  // A default flight blast has size 14/(METERS_PER_UNIT*2): one lab unit is 7 m.
+  const fighterModel=window.Driftworks.shipPacks.flatMap(p=>p.models).find(m=>m.name==='Spitfire');
+  const fighterGeometry=new T.BufferGeometry(), positions=[], normals=[];
+  for(let i=0;i<fighterModel.vertices.length;i+=6){
+    positions.push(fighterModel.vertices[i]/7,fighterModel.vertices[i+2]/7,-fighterModel.vertices[i+1]/7);
+    normals.push(fighterModel.vertices[i+3],fighterModel.vertices[i+5],-fighterModel.vertices[i+4]);
+  }
+  fighterGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));fighterGeometry.setAttribute('normal',new T.Float32BufferAttribute(normals,3));
+  const reference=new T.Mesh(fighterGeometry,new T.MeshStandardMaterial({color:0x91a5b2,metalness:.5,roughness:.45}));scene.add(reference);
+  scene.add(new T.DirectionalLight(0xc9e3ff,2));
+
   function texture() {
     const c=document.createElement('canvas'); c.width=c.height=128; const ctx=c.getContext('2d'), g=ctx.createRadialGradient(64,64,0,64,64,64);
     g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.2,'rgba(255,255,255,.9)');g.addColorStop(.5,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fillRect(0,0,128,128);return new T.CanvasTexture(c);
@@ -78,7 +89,7 @@
     b.sparks.forEach((o,i)=>{const hero=i%13===0,life=.25+random(i+50)*1.2;o.visible=active&&enabled.Sparks&&i<settings.sparks&&age<life;const d=direction(i*9+index*193+500), speed=(hero?22:5)+random(i+80)*13;
       o.position.copy(origin).addScaledVector(d,size*speed*Math.max(0,age));o.quaternion.setFromUnitVectors(new T.Vector3(1,0,0),d);o.scale.set(size*(hero?2.4:.12+random(i+91)*.8)*fade(life),size*(hero?.045:.014),size*.018);o.material.opacity=fade(life)*(hero?1:.25+random(i+70)*.65);o.material.color.setRGB(1,hero?.94:.35+random(i+90)*.45,hero?.65:.08);
     });
-    b.debris.forEach((o,i)=>{o.visible=active&&enabled.Debris&&i<settings.debris;const d=direction(i*13+index*197+900),big=i%7===0;const speed=3+random(i+10)*10;o.position.copy(origin).addScaledVector(d,size*speed*Math.max(0,age));o.rotation.set(age*(i+1)*.7,age*(i+3)*.4,i);o.scale.set(size*(big?1.1:.15+random(i+3)*.4),size*(big?.35:.12),size*(big?.65:.23));o.material.opacity=Math.min(1,fade(5.5)*3);o.material.emissiveIntensity=i%3===0?fade(2)*.65:0;});
+    b.debris.forEach((o,i)=>{o.visible=active&&enabled.Debris&&i<settings.debris;const d=direction(i*13+index*197+900),big=i%7===0;const speed=3+random(i+10)*10;o.position.copy(origin).addScaledVector(d,size*speed*Math.max(0,age));o.rotation.set(age*(i+1)*.7,age*(i+3)*.4,i);const fragmentSize=size*window.Driftworks.explosions.fragmentSize(i,random(i+3));o.scale.set(fragmentSize,fragmentSize*.35,fragmentSize*.6);o.material.opacity=Math.min(1,fade(5.5)*3);o.material.emissiveIntensity=i%3===0?fade(2)*.65:0;});
     b.trails.forEach((o,i)=>{const fragment=b.debris[Math.floor(i/4)*3],step=i%4;o.visible=fragment.visible&&age>.06&&age<1.9;const d=direction(Math.floor(i/4)*3*13+index*197+900);o.position.copy(fragment.position).addScaledVector(d,-size*(.3+step*.45));o.scale.setScalar(size*(.8+step*.22));o.material.color.setRGB(1,.45-step*.09,.015);o.material.opacity=fade(1.9)*(.65-step*.14);});
   }
   function preset() {settings={...defaults,...($('preset').value==='reactor'?{size:1.5,flash:1.8,fire:1.5,shock:1.4,sparks:100}:$('preset').value==='capital'?{size:1.5,fire:1.3,debris:36,cascade:5,drift:.6}:{})};sync();time=0;playing=true;}
@@ -93,6 +104,7 @@
   function frame(now) {requestAnimationFrame(frame);const dt=Math.min(.05,(now-previous)/1000);previous=now;if(playing){time+=dt*Number($('speed').value);if(time>=6){time=$('loop').checked?0:6;if(time===6)playing=false;}}
     const w=canvas.clientWidth,h=canvas.clientHeight;if(canvas.width!==Math.round(w*renderer.getPixelRatio())||canvas.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);
     camera.aspect=w/Math.max(1,h);camera.updateProjectionMatrix();camera.position.set(Math.sin(yaw)*Math.cos(pitch)*distance,Math.sin(pitch)*distance,Math.cos(yaw)*Math.cos(pitch)*distance);camera.lookAt(3,0,0);
+    reference.visible=$('fighter').checked;reference.position.x=time*settings.drift;
     pool.forEach(renderBlast);light.position.set(time*settings.drift,0,0);light.intensity=enabled.Flash?Math.max(0,1-time/.35)*350*settings.flash:0;
     $('timeline').value=time;$('time').value=time.toFixed(2)+' s';$('pause').textContent=playing?'Pause':'Play';renderer.render(scene,camera);
   } requestAnimationFrame(frame);

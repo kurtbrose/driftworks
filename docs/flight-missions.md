@@ -107,3 +107,5 @@ plumes, target cameras and wrecks. Optional model `gunMounts`/`engineMounts` use
 the existing flight coordinates in metres (+X right, +Y forward, +Z up).
 Mission-only packs are excluded from the generic mixed-spaceship catalog.
 These settings are optional; set `reinforcements: null` to disable an inherited continuous roster. Other missions retain their existing wave rules.
+
+Roadside placements may include a cylindrical decal: {asset, centerZ, radius:[x,y], height, arc}. Dimensions are normalized to the source model's maximum dimension; arc is radians around the front (-Y). Decals share the placement transform and terrain cache, load local textures once, and add one static UV batch each.

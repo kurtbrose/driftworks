@@ -6,6 +6,13 @@ const api=context.window.Driftworks.explosions,right=[1,0,0],up=[0,1,0];
 const blast={position:[10,20,30],velocity:[3,-2,1],age:.3,size:1.75,seed:27};
 const snapshot=b=>api.build(b,right,up).map(x=>({...x,vertices:Array.from(x.vertices),color:Array.from(x.color)}));
 const initial=snapshot(blast);
+// A fighter rupture must throw scraps, not pieces comparable to the whole hull.
+// At age zero every fragment shares its origin, isolating size from travel.
+const hull=snapshot({...blast,age:0}).find(b=>b.finish===0).vertices;
+for(let axis=0;axis<3;axis++){
+  const values=hull.filter((_,i)=>i%6===axis);
+  assert(Math.max(...values)-Math.min(...values)<blast.size*.6,'Scraps stay small relative to the fighter blast');
+}
 assert.deepEqual(initial,snapshot(blast),'Paused/scrubbed snapshots are repeatable');
 assert(initial.some(b=>b.finish===10)&&initial.some(b=>b.finish===11));
 assert(!snapshot({...blast,age:.4}).some(b=>b.finish===11),'Shockwave expires early');

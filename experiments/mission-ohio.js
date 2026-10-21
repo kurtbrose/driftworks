@@ -383,7 +383,7 @@
             {kind:'roadside',scale:1/3,anchor:[0,-300],offset:[0,-350],asset:'../assets/environments/ohio-roadside-v1/catalog.json',placements:[
                 {model:'Barn',x:-450,y:-420,size:340,yaw:.12},
                 {model:'Silo',x:-690,y:-310,size:270,yaw:0},
-                {model:'WaterTower',x:720,y:-450,size:320,yaw:0},
+                {model:'WaterTower',x:720,y:-450,size:320,yaw:0,decal:{asset:'../assets/backgrounds/ohio-state-flag.svg',centerZ:.84,radius:[.158,.145],height:.14,arc:1.8}},
                 {model:'Windmill',x:-780,y:-110,size:290,yaw:.3},
                 {model:'ChickenCoop',x:-100,y:-590,size:105,yaw:-.3},
                 {model:'FuelStop',x:340,y:-490,size:400,yaw:0},

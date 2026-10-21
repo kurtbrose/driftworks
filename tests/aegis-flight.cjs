@@ -223,3 +223,55 @@ launchCombat.enemies=[firstLaunch,passive];const survivorPosition=firstLaunch.po
 assert.equal(launchCombat.enemies.filter(e=>e.team==='ally').length,1,'new enemy wave does not teleport in an allied wing');
 assert.ok(launchCombat.enemies.includes(firstLaunch),'surviving hangar fighters remain across waves');assert.deepEqual(firstLaunch.pose.eye,survivorPosition);
 console.log('PASS hangar wave continuity: survivors remain in flight and fresh allies still require launches');
+
+// The battle facade preserves the single-rig API, with independently moving factions.
+const battle=DW.aegisFlight.createBattle(),battleView=fixture();
+battleView.combat.enemies=[];battleView.state.eye=position(0,-5000,1000);
+const battleStart=battle.telemetry(),battleGeometry=battle.geometry(),half=battleGeometry.length/2;
+assert.equal(battleStart.mounts.length,48);
+assert.equal(battleStart.capitals.length,2);
+assert.equal(battleStart.capitals[1].team,'enemy');
+assert.equal(battleStart.capitals[1].heading,Math.PI,'red ship faces the opposite direction');
+assert.ok(battleGeometry.slice(0,half).every((b,i)=>b.vertices===battleGeometry[i+half].vertices),'both ships share immutable GPU mesh buffers');
+assert.ok(battleGeometry.slice(0,half).some((b,i)=>b.color.some((v,k)=>v!==battleGeometry[i+half].color[k])),'red ship has its own illuminated livery');
+const redSurface=battle.hit(position(120,1400,180),position(120,1600,180));
+assert.ok(redSurface&&redSurface[1]<1500/U,'collision includes the opposing capital');
+let greenBolts=false,redBolts=false;
+const heavyEvents=Array.from({length:48},()=>[]),aimPoints=new Set();let previousMountShots=Array(48).fill(0);
+for(let i=0;i<2400;i++){
+ battleView.combat.time+=1/60;battle.step(1/60,battleView);
+ const report=battle.telemetry();report.mounts.forEach((m,k)=>{if(m.kind==='heavy'){aimPoints.add(m.aimPoint.join(','));if(m.shots>previousMountShots[k])heavyEvents[k].push(i/60);}previousMountShots[k]=m.shots;});
+ if(i%30===0){const effects=battle.effects(battleView.state);greenBolts ||= effects.some(b=>b.color[1]===1&&b.vertices.length>0);redBolts ||= effects.some(b=>b.color[0]===1&&b.color[1]===.12&&b.vertices.length>0);}
+}
+const fought=battle.telemetry();
+assert.ok(fought.capitals.every(c=>c.shots>20&&c.hits>10),'both main-battery banks fire and physically hit the opposing hull');
+assert.ok(greenBolts&&redBolts,'both factions submit visible team-colored projectiles');
+assert.ok(aimPoints.size>12,'main batteries independently scatter and renew their hull aim points');
+for(let axis=0;axis<3;axis++){const values=[...aimPoints].map(p=>Number(p.split(',')[axis]));assert.ok(Math.max(...values)-Math.min(...values)>[500,40,35][axis],'aim points spread continuously over each hull axis');}
+assert.ok(new Set(heavyEvents.filter(e=>e.length).map(e=>e[0])).size>=6,'initial main-battery salvos are independently staggered');
+for(const events of heavyEvents){let volleys=0;for(let i=0;i<events.length;i++){if(i===0||events[i]-events[i-1]>1.2)volleys=0;volleys++;assert.ok(volleys<=2,'desynchronizing preserves at most two twin volleys per burst');if(i)assert.ok(events[i]-events[i-1]>=.54,'main-gun cyclic fire rate stays unchanged');}}
+assert.ok(fought.mounts.filter(m=>m.kind==='heavy').every(m=>m.targetId.startsWith('capital-')),'main guns exclusively track capitals');
+assert.ok(fought.mounts.filter(m=>m.kind==='point-defense').every(m=>m.targetId===''),'AA does not substitute a capital target');
+assert.equal(fought.capitals[0].integrity,20000-fought.capitals[1].hits*20,'red hits reduce green integrity exactly once');
+assert.equal(fought.capitals[1].integrity,20000-fought.capitals[0].hits*20,'green hits reduce red integrity exactly once');
+assert.equal(battleView.combat.flashes.length,fought.capitals.reduce((n,c)=>n+c.hits,0),'every main-battery hull hit emits one explosion');
+assert.ok(battleView.combat.flashes.every(f=>f.destruction&&f.age===0&&f.scale===5&&f.velocity.every(Number.isFinite)),'capital impacts reuse fighter destruction animation at a smaller scale, with inherited scene-space velocity');
+assert.ok(battleView.combat.flashes.some(f=>f.velocity[0]>0)&&battleView.combat.flashes.some(f=>f.velocity[0]<0),'explosions drift with either struck hull');
+assert.equal(view.combat.flashes.filter(f=>f.destruction).length,0,'ordinary AA hits do not create destruction explosions');
+assert.ok(fought.capitals.every((c,i)=>Math.hypot(...c.position.map((v,k)=>v-battleStart.capitals[i].position[k]))*U>100),'both capitals slowly maneuver');
+assert.ok(fought.capitals.every((c,i)=>Math.abs(c.heading-battleStart.capitals[i].heading)>.01),'heading and hull orientation change together');
+assert.strictEqual(battle.geometry(),battleGeometry,'battle geometry keeps a stable batching array');
+assert.ok(battleGeometry.every((b,i)=>b.vertices===battleGeometry[i%half].vertices),'movement never replaces shared vertex buffers');
+battle.reset();assert.deepEqual(battle.telemetry(),battleStart,'reset restores both transforms, integrity, weapons and timers');
+const pausedBattle=fixture();pausedBattle.combat.enabled=false;pausedBattle.combat.enemies=[];
+for(let i=0;i<600;i++)battle.step(1/60,pausedBattle);
+assert.equal(battle.telemetry().shots,0,'combat-disabled capitals never fire');
+// A rotated hostile AA mount uses world-space barrels, enemy damage and red bolts.
+const hostileView=fixture();hostileView.state.eye=position(0,-5000,1000);hostileView.enemy.team='ally';hostileView.enemy.pose.eye=position(0,-500,250);
+const friendly=DW.training.createCraft('red-friendly',DW.arcade.create(0),'enemy');friendly.pose.eye=position(0,-300,250);friendly.hp=10000;hostileView.combat.enemies.push(friendly);
+const hostileRig=DW.aegisFlight.create({state:{team:'enemy',position:[0,0,1200],heading:Math.PI/2,velocity:[0,0,0],integrity:20000},opponent:{team:'ally',position:position(0,10000,0),heading:0,velocity:[0,0,0],integrity:20000}});
+for(let i=0;i<600;i++){hostileView.combat.time+=1/60;hostileRig.step(1/60,hostileView);}
+assert.ok(hostileRig.telemetry().hits>0&&hostileView.enemy.hp<10000,'rotated hostile AA aims and damages allied fighters');
+assert.equal(friendly.hp,10000,'hostile AA ignores its own team');
+assert.ok(hostileRig.telemetry().mounts.filter(m=>m.kind==='point-defense').every(m=>m.targetId!=='red-friendly'),'hostile locks remain faction-correct');
+console.log('PASS capital battle: two factions, shared GPU buffers, moving/rotating hulls, heavy intercepts and actual damage, colored rounds, hostile AA, reset and combat disable');

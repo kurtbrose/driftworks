@@ -219,11 +219,11 @@ also links back to it.
 Open [the flight lab](experiments/flight.html) from the same static server.
 
 For the Aegis capital-ship sandbox, open [Aegis live batteries](experiments/flight.html?aegis=1).
-Fly a fighter alongside the stationary allied dreadnaught while twelve small
-point-defense turrets engage fighters and twelve heavy batteries stand by.
-The ship retains its designed 1,305 m length. W/S adjusts throttle,
-Space fires, and Esc pauses. The capital hull is invulnerable; coarse collision
-proxies stop hull crossings. The [kit and rig reference](docs/dreadnaught-kit.md)
+Fly between allied and red dreadnaughts slowly maneuvering and exchanging heavy
+salvos. Their small point-defense turrets engage opposing fighters. Each ship
+retains its designed 1,305 m length. W/S adjusts throttle, Space fires, and Esc
+pauses. Heavy hull hits produce fighter-style explosions and reduce capital
+integrity; coarse collision proxies stop hull crossings. The [kit and rig reference](docs/dreadnaught-kit.md)
 describes this prototype's scope and asset generation.
 The flight-input selector is visible above Start/Resume. If the browser rejects
 mouse capture, mouse mode uses cursor steering: move away from screen center to

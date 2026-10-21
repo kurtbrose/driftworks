@@ -22,3 +22,10 @@ assert(triangles<20000,'bounded scenery geometry');assert.equal(queries,9,'Only 
 const road=batches.find(b=>b.color[0]===.075);assert(road);const heights=Array.from(road.vertices).filter((_,i)=>i%6===2);assert(Math.max(...heights)-Math.min(...heights)<1e-6,'Asphalt is a single flat plane');
 assert(Math.max(...Array.from(road.vertices).filter((_,i)=>i%6===1))<-30,'Entire stop sits in front of the sign');
 console.log(`PASS Ohio roadside: ${triangles} triangles in ${batches.length} static palette batches, local provenance, finite terrain placement and flat supported platform`);
+
+const decal=definition.placements.find(p=>p.model==='WaterTower').decal,texture={};
+const withFlag=DW.flightScenery.build({id:'test',radius:125},definition,catalog,data,new Map([[decal.asset,texture]]));
+const flag=withFlag.find(b=>b.texture===texture);assert(flag&&flag.staticGeometry&&flag.stride===8);
+assert.equal(flag.vertices.length,16*6*8);assert(Array.from(flag.vertices).every(Number.isFinite));
+for(let i=0;i<flag.vertices.length;i+=8){assert(flag.vertices[i+4]<0);assert(flag.vertices[i+6]>=0&&flag.vertices[i+6]<=1);assert(flag.vertices[i+7]>=0&&flag.vertices[i+7]<=1);}
+assert.equal((fs.readFileSync('assets/backgrounds/ohio-state-flag.svg','utf8').match(/<polygon/g)||[]).length,17);

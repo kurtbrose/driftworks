@@ -6,8 +6,9 @@
     /** @typedef {import('./types').MissionScenery} Definition */
     /** @typedef {import('./types').RoadsideCatalog} Catalog */
     /** Bake the terrain placement once, combining every instance by palette color.
-     * @param {import('../src/types').Asteroid} asteroid @param {Definition} definition @param {Catalog} catalog @param {Float32Array} data @returns {Batch[]} */
-    function build(asteroid,definition,catalog,data){
+     * @param {import('../src/types').Asteroid} asteroid @param {Definition} definition @param {Catalog} catalog @param {Float32Array} data @param {Map<string,HTMLImageElement>} [textures] @returns {Batch[]} */
+    function build(asteroid,definition,catalog,data,textures){
+        var decals=/** @type {Batch[]} */([]);
         var units=DW.sim.METERS_PER_UNIT,r=asteroid.radius*units,scale=definition.scale===undefined?1:definition.scale,anchor=definition.anchor||[0,0],offset=definition.offset||[0,0];
         var groups=/** @type {Map<string,{vertices:number[];color:[number,number,number]}>} */(new Map());
         /** @param {[number,number,number]} color */
@@ -34,6 +35,21 @@
                     for(var k=0;k<3;k++)out.push(x[k]*data[i+3]+y[k]*data[i+4]+z[k]*data[i+5]);
                 }
             });
+            const decal=item.decal;var texture=decal&&textures&&textures.get(decal.asset);
+            if(decal&&texture){
+                var vertices=/** @type {number[]} */([]);
+                for(var segment=0;segment<16;segment++){
+                    [[segment,0],[segment+1,0],[segment+1,1],[segment,0],[segment+1,1],[segment,1]].forEach(function(uv){
+                        var u=uv[0]/16,angle=(u-.5)*decal.arc;
+                        var local=[Math.sin(angle)*decal.radius[0],-Math.cos(angle)*decal.radius[1],decal.centerZ+(uv[1]-.5)*decal.height];
+                        var normal=[Math.sin(angle)/decal.radius[0],-Math.cos(angle)/decal.radius[1],0],length=Math.hypot.apply(null,normal);
+                        for(var k=0;k<3;k++)vertices.push(frame.point[k]*asteroid.radius+(x[k]*local[0]+y[k]*local[1]+z[k]*local[2])*item.size*scale/units);
+                        for(var k=0;k<3;k++)vertices.push((x[k]*normal[0]+y[k]*normal[1])/length);
+                        vertices.push(u,uv[1]);
+                    });
+                }
+                decals.push({vertices:new Float32Array(vertices),color:[1,1,1],texture:texture,stride:8,staticGeometry:true});
+            }
         });
         // One flat asphalt deck with solid sides; markings share the same plane.
         var samples=/** @type {Map<string,{point:number[];normal:number[]}>} */(new Map());
@@ -53,14 +69,20 @@
         }
         for(var a=0;a<11;a++)patch(-550+a*100,-905,48,4,[.87,.66,.12],0.2);
         for(var a=0;a<5;a++)for(var b=0;b<5;b++)patch(180+a*65,-815+b*25,3,25,[.65,.65,.56],0.2);
-        return Array.from(groups.values()).map(function(entry){return {vertices:new Float32Array(entry.vertices),color:entry.color,staticGeometry:true};});
+        var result=/** @type {Batch[]} */(Array.from(groups.values()).map(function(entry){return {vertices:new Float32Array(entry.vertices),color:entry.color,staticGeometry:true};}));
+        return result.concat(decals);
     }
     /** @param {Definition} definition */
     function create(definition){
         var catalog=/** @type {Catalog|null} */(null),data=/** @type {Float32Array|null} */(null),state='loading',key='';
         var batches=/** @type {Batch[]} */([]);
         var url=assetUrl(definition.asset);
-        fetch(url).then(function(response){if(!response.ok)throw new Error('Roadside catalog unavailable');return response.json();})
+        var textures=/** @type {Map<string,HTMLImageElement>} */(new Map());
+        var images=/** @type {Promise<unknown[]>} */(Promise.all((definition.placements||[]).filter(function(item){return !!item.decal;}).map(function(item){
+            const src=item.decal&&item.decal.asset;if(!src)return Promise.resolve();
+            return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){textures.set(src,image);resolve(undefined);};image.onerror=function(){reject(new Error('Scenery decal unavailable: '+src));};image.src=assetUrl(src);});
+        })));
+        images.then(function(){return fetch(url);}).then(function(response){if(!response.ok)throw new Error('Roadside catalog unavailable');return response.json();})
             .then(/** @param {Catalog} value */async function(value){
                 if(value.version!==1)throw new Error('Unknown roadside catalog version');
                 var response=await fetch(assetUrl(value.binary,new URL(url,document.baseURI).href));if(!response.ok)throw new Error('Roadside geometry unavailable');
@@ -69,9 +91,11 @@
             }).catch(/** @param {unknown} error */function(error){state='error';console.error('Mission scenery:',error);});
         return {status:function(){return state;},render:/** @param {import('../src/types').Asteroid} asteroid */function(asteroid){
             var next=JSON.stringify([asteroid.id,asteroid.radius,asteroid.excavation]);
-            if(catalog&&data&&next!==key){batches=build(asteroid,definition,catalog,data);key=next;}
+            if(catalog&&data&&next!==key){batches=build(asteroid,definition,catalog,data,textures);key=next;}
             return batches;
         }};
     }
     DW.flightScenery={build:build,create:create};
 }());
+
+

@@ -17,7 +17,7 @@
     if(controlsHelp&&activeMission.units.speedScale!==1)controlsHelp.innerHTML=controlsHelp.innerHTML.replace(/5 m\/s/g,Math.round(5*activeMission.units.speedScale)+' '+activeMission.units.speedLabel);
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
-    if(aegisMode){try{await DW.aegisFlight.load();aegis=DW.aegisFlight.create();}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
+    if(aegisMode){try{await DW.aegisFlight.load();aegis=DW.aegisFlight.createBattle();}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
     var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: function (start, end) {
             var asteroid = session.snapshot().asteroid;
             var terrain=DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
@@ -68,12 +68,12 @@
     });
     if(aegis){
         presentation.setCapital(aegis);
-        document.title='Aegis live turret flight / Driftworks';
+        document.title='Aegis capital engagement / Driftworks';
         var aegisPanel=document.createElement('div');aegisPanel.id='aegis-flight-readout';aegisPanel.style.cssText='position:fixed;z-index:5;left:20px;top:170px;max-width:330px;white-space:pre-line;font:11px/1.6 monospace;color:#b9d9db;background:#07151dc9;padding:9px;pointer-events:none';document.body.appendChild(aegisPanel);
         get('watch-panel').hidden=true;get('draw-mothership').checked=false;
-        var aegisHeading=document.querySelector('header h1');if(aegisHeading)aegisHeading.textContent='DRIFTWORKS / AEGIS RANGE';
-        var aegisSubtitle=document.querySelector('header > span');if(aegisSubtitle)aegisSubtitle.textContent='ALLIED DREADNAUGHT / LIVE BATTERIES';
-        var aegisHint=document.querySelector('#launch > p');if(aegisHint)aegisHint.textContent='Fighter fly-around · engines stopped · allied automatic batteries. Capital hull is invulnerable in this prototype.';
+        var aegisHeading=document.querySelector('header h1');if(aegisHeading)aegisHeading.textContent='DRIFTWORKS / AEGIS ENGAGEMENT';
+        var aegisSubtitle=document.querySelector('header > span');if(aegisSubtitle){aegisSubtitle.textContent='GREEN / RED CAPITAL SHIPS';/** @type {HTMLElement} */(aegisSubtitle).style.display='block';}
+        var aegisHint=document.querySelector('#launch > p');if(aegisHint)aegisHint.textContent='Fly between two maneuvering dreadnaughts exchanging heavy volleys. Red AA targets allied fighters. Engines start stopped.';
     }
     var select = get('profile'), stats = get('stats'), status = get('status');
     var watch = /** @type {ReturnType<Required<DriftworksNamespace>['flightWatch']['create']> | null} */ (null);
