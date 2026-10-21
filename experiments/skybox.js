@@ -80,8 +80,9 @@
         var depth = -dot(direction, pose.back);
         return depth > 0 ? { x: dot(direction, pose.right) * focal / aspect / depth, y: dot(direction, pose.up) * focal / depth } : null;
     }
-    /** @param {HTMLElement} host @param {{style?:number}=} config */
+    /** @param {HTMLElement} host @param {{style?:number,fov?:number}=} config */
     function create(host, config) {
+        var viewFocal=config&&config.fov?1/Math.tan(Math.max(25,Math.min(150,config.fov))*Math.PI/360):focal;
         var canvas = document.createElement('canvas');
         canvas.className = 'flight-skybox';
         canvas.setAttribute('aria-hidden', 'true');
@@ -403,6 +404,15 @@ void main(){
         gl.bindBuffer(gl.ARRAY_BUFFER, quad);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
         var starData = stars(), starBuffer = gl.createBuffer();
+        if(landmarkSky&&missionSky.features[0].asset==='planet-hero-v1/master.png'){
+            var planet=landmarkTextures[0],visible=/** @type {number[]} */([]);
+            for(var star=0;star<starData.length;star+=4){
+                var depth=0,px=0,py=0;for(var axis=0;axis<3;axis++){depth+=starData[star+axis]*planet.center[axis];px+=starData[star+axis]*planet.right[axis];py+=starData[star+axis]*planet.up[axis];}
+                if(depth>0&&(px*px+py*py)/(depth*depth)<.91*.91)continue;
+                visible.push(starData[star],starData[star+1],starData[star+2],starData[star+3]);
+            }
+            starData=new Float32Array(visible);
+        }
         gl.bindBuffer(gl.ARRAY_BUFFER, starBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, starData, gl.STATIC_DRAW);
         // Shared 256-square lattice; linear sampling makes the six noise octaves smooth.
@@ -471,7 +481,7 @@ void main(){
                 gl.uniform3fv(gl.getUniformLocation(p, key), pose[key]);
             });
             gl.uniform1f(gl.getUniformLocation(p, 'aspect'), aspect);
-            gl.uniform1f(gl.getUniformLocation(p, 'focal'), focal);
+            gl.uniform1f(gl.getUniformLocation(p, 'focal'), viewFocal);
             gl.uniform1f(gl.getUniformLocation(p, 'pixelRatio'), dpr);
         }
         var stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };

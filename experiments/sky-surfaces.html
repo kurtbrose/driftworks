@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sky surface comparison</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#05090d;color:#d5e5ec;font:14px system-ui}header{padding:16px}h1{font-size:21px;margin:0 0 8px}p{margin:8px 0;color:#9fb7c4}button,select{background:#182b38;color:inherit;border:1px solid #496170;padding:7px;margin:3px}label{display:inline-block;margin:4px 12px}#grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:8px}.panel{height:32vh;min-height:230px;position:relative;border:1px solid #344b5b;touch-action:none;cursor:grab}.panel h2,.panel p{position:absolute;z-index:1;left:10px;right:10px;pointer-events:none;text-shadow:0 1px 4px #000;background:#05090dbb;padding:4px}.panel h2{top:0;font-size:14px}.panel p{bottom:0;font-size:12px}canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}#status{color:#accbd7}@media(max-width:900px){#grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){#grid{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>Same sky, different surfaces</h1><p>Drag any panel to turn all cameras. No seam repair, feathering, added stars or lighting. Panorama panels use the original uploaded pixels.</p>
+<div id="directions"><button data-yaw="90" data-pitch="0">Front</button><button data-yaw="180" data-pitch="0">Right</button><button data-yaw="270" data-pitch="0">Back</button><button data-yaw="0" data-pitch="0">Left</button><button data-yaw="90" data-pitch="80">Near north pole</button><button data-yaw="90" data-pitch="90">North pole</button><button data-yaw="90" data-pitch="-90">South pole</button><button data-yaw="135" data-pitch="35.264">Cube corner</button><button data-yaw="180" data-pitch="0">Panorama wrap</button></div>
+<label>Vertical FOV <input id="fov" type="range" min="25" max="110" value="45"> <output id="fov-value">45°</output></label><label>Vertical coverage (cylinder / Mercator) <input id="coverage" type="range" min="60" max="170" value="140"> <output id="coverage-value">140°</output></label><span id="status">Loading…</span></header>
+<main id="grid"></main><canvas id="view"></canvas>
+<script src="../src/asset-versions.js?v=fcb771abdb2f"></script>
+<script type="module">
+import * as THREE from '../vendor/three/build/three.module.js?v=c8211c69345d';
+const descriptions=[
+ ['Sphere / equirectangular','Longitude × latitude; same mapping as flight J.'],
+ ['Sphere / equal area','Longitude × sin(latitude); another common full-sphere encoding.'],
+ ['Mercator panorama','Longitude × log(tan(latitude)); uncovered polar regions shown dark.'],
+ ['Open cylinder','Ray intersects vertical cylinder; no caps. Coverage sets cylinder height.'],
+ ['Square tube','Four planar walls; continuous image around perimeter, open top and bottom.'],
+ ['Flat plate','Original 2:1 picture on a single plane, 120° wide. Outside is dark.'],
+ ['Cube cross / new upload','Six perspective faces from the uploaded 4 × 3 cross; raw joins.']
+];
+const panels=descriptions.map(([title,description])=>{const el=document.createElement('section');el.className='panel';const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=description;el.append(h,p);document.getElementById('grid').append(el);return el;});
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('view'),antialias:false,alpha:true});
+renderer.setClearColor(0x000000,0);renderer.setScissorTest(true);
+const uniforms={image:{value:null},cross:{value:null},mode:{value:0},aspect:{value:1},focal:{value:1},yaw:{value:Math.PI/2},pitch:{value:0},coverage:{value:140*Math.PI/180}};
+const material=new THREE.ShaderMaterial({uniforms,depthTest:false,depthWrite:false,
+vertexShader:'varying vec2 screen;void main(){screen=position.xy;gl_Position=vec4(position.xy,0.,1.);}',
+fragmentShader:`precision highp float;
+varying vec2 screen;uniform sampler2D image,cross;uniform float mode,aspect,focal,yaw,pitch,coverage;
+void main(){
+ vec3 r=normalize(vec3(screen.x*aspect/focal,1.,screen.y/focal));
+ float c=cos(pitch),s=sin(pitch);r=vec3(r.x,r.y*c-r.z*s,r.y*s+r.z*c);
+ c=cos(yaw-1.57079632679);s=sin(yaw-1.57079632679);r=vec3(r.x*c-r.y*s,r.x*s+r.y*c,r.z);
+ float lat=asin(clamp(r.z,-1.,1.)),u=fract(atan(r.y,r.x)/6.28318530718+.5),v=.5-lat/3.14159265359;
+ bool valid=true;
+ if(mode==1.)v=.5-r.z*.5;
+ if(mode==2.){float limit=log(tan(.78539816339+coverage*.25));v=.5-log(tan(.78539816339+clamp(lat,-1.57079,1.57079)*.5))/(2.*limit);}
+ if(mode==3.)v=.5-r.z/max(length(r.xy),.000001)/(2.*tan(coverage*.5));
+ if(mode==4.){
+  float wall=max(abs(r.x),abs(r.y));vec2 p=r.xy/max(wall,.000001);
+  if(r.y>=abs(r.x))u=(p.x+1.)/8.;
+  else if(r.x>=abs(r.y))u=.25+(1.-p.y)/8.;
+  else if(-r.y>=abs(r.x))u=.5+(1.-p.x)/8.;
+  else u=.75+(p.y+1.)/8.;
+  v=.5-r.z/max(wall,.000001)/(2.*tan(coverage*.5));
+ }
+ if(mode==5.){u=.5+r.x/max(r.y,.000001)/3.46410161514;v=.5-r.z/max(r.y,.000001)/1.73205080757;valid=r.y>0.&&u>=0.&&u<=1.;}
+ if(mode==6.){
+  vec3 a=abs(r);vec2 p,tile;
+  if(a.z>=a.x&&a.z>=a.y){if(r.z>0.){p=vec2(r.x,-r.y)/a.z;tile=vec2(1.5,0.);}else{p=vec2(r.x,r.y)/a.z;tile=vec2(1.5,2.);}}
+  else if(a.x>=a.y){if(r.x>0.){p=vec2(-r.y,r.z)/a.x;tile=vec2(2.,1.);}else{p=vec2(r.y,r.z)/a.x;tile=vec2(0.,1.);}}
+  else{if(r.y>0.){p=vec2(r.x,r.z)/a.y;tile=vec2(1.,1.);}else{p=vec2(-r.x,r.z)/a.y;tile=vec2(3.,1.);}}
+  vec2 uv=(tile+clamp(vec2(p.x*.5+.5,.5-p.y*.5),.0014,.9986))/vec2(4.,3.);
+  gl_FragColor=vec4(texture2D(cross,uv).rgb,1.);return;
+ }
+ valid=valid&&v>=0.&&v<=1.;
+ gl_FragColor=vec4(valid?texture2D(image,vec2(u,v)).rgb:vec3(.018,.027,.038),1.);
+}`});
+const scene=new THREE.Scene(),camera=new THREE.Camera();scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),material));
+let loaded=0;
+function load(file,key){new THREE.TextureLoader().load(window.Driftworks.assetUrl(file),texture=>{texture.flipY=false;texture.minFilter=texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;uniforms[key].value=texture;loaded++;document.getElementById('status').textContent=loaded===2?'Both source images loaded':'Loading second image…';},undefined,()=>{document.getElementById('status').textContent='Image failed to load: '+file;});}
+load('../assets/backgrounds/user-panorama-v1-source.png','image');load('../assets/backgrounds/user-cube-cross-v1.png','cross');
+let drag=null;
+panels.forEach(panel=>{panel.onpointerdown=e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY};panel.setPointerCapture(e.pointerId);};panel.onpointermove=e=>{if(!drag||drag.id!==e.pointerId)return;uniforms.yaw.value-=(e.clientX-drag.x)*.005;uniforms.pitch.value=Math.max(-Math.PI/2,Math.min(Math.PI/2,uniforms.pitch.value+(e.clientY-drag.y)*.005));drag.x=e.clientX;drag.y=e.clientY;};panel.onpointerup=panel.onpointercancel=()=>{drag=null;};});
+document.getElementById('directions').onclick=e=>{const b=e.target.closest('button');if(b){uniforms.yaw.value=Number(b.dataset.yaw)*Math.PI/180;uniforms.pitch.value=Number(b.dataset.pitch)*Math.PI/180;}};
+function render(){requestAnimationFrame(render);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(document.documentElement.clientWidth,innerHeight,false);uniforms.focal.value=1/Math.tan(Number(document.getElementById('fov').value)*Math.PI/360);uniforms.coverage.value=Number(document.getElementById('coverage').value)*Math.PI/180;document.getElementById('fov-value').value=document.getElementById('fov').value+'°';document.getElementById('coverage-value').value=document.getElementById('coverage').value+'°';panels.forEach((panel,i)=>{const r=panel.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;renderer.setViewport(r.left,innerHeight-r.bottom,r.width,r.height);renderer.setScissor(r.left,Math.max(0,innerHeight-r.bottom),r.width,Math.min(innerHeight,r.bottom)-Math.max(0,r.top));uniforms.mode.value=i;uniforms.aspect.value=r.width/r.height;renderer.render(scene,camera);});}
+render();
+</script></body></html>

@@ -1,5 +1,15 @@
 # Hero sky authoring
 
+The complete-planet experiment uses the existing opaque two-landmark pass with
+one black-backed full-disk planet and a separate sun. Missions `planet-hero`,
+`planet-hero-80` and `planet-hero-140` retain the ordinary 8v8 furball rules and
+vary the planet card width. The planet remains fixed at yaw 90 / pitch -30.
+Stars behind its disk are culled once from the point buffer. The dedicated
+`planet-hero-review.html` viewer can pass an optional vertical `fov` in degrees
+to `flightSkybox.create`; this affects that sky instance only, clamps to 25–150,
+and leaves the default 45 degree flight projection unchanged. See the source
+and prompt in `assets/backgrounds/planet-hero-v1/` for native-resolution limits.
+
 The flight sky has three independent layers: black space, fixed authored hero
 features, and crisp stars. Stars keep a fixed CSS-pixel footprint while the camera
 turns; ship position never moves the sky. The original procedural choices remain

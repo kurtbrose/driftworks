@@ -1,5 +1,12 @@
 # Orbital impact image study
 
+For the separate complete-disk baseline, open
+`experiments/planet-hero-review.html?mission=planet-hero`. It places one generated
+planet image with black margins using the existing opaque landmark projection.
+Compare 80/110/140 degree card widths, inspect the limb with the flight lens, or
+follow the link into a real furball. The source, prompt and limitations are in
+`assets/backgrounds/planet-hero-v1/README.md`. It has no impact animation yet.
+
 Open `experiments/impact-lab.html` from the static server. The standalone study
 uses seven native-resolution ImageGen plates in `assets/backgrounds/impact-v1/`:
 `master.png`, `flash.png`, four `between-*.png` stages, and `plume.png`.

@@ -122,3 +122,7 @@ latitudes. Flat-image distortion alone cannot certify correct spherical mapping.
 Cubemap edge/corner perspective compensation and equirectangular polar stretching
 are different projections. Validate the intended mapping from actual viewing
 directions, and evaluate native source detail separately from projection quality.
+
+## Interactive surface comparison
+
+Open xperiments/sky-surfaces.html for synchronized camera views of the user panorama on equirectangular and equal-area spheres, Mercator, an open cylinder, square tube and flat plate, plus the uploaded cube cross on six cube faces. Drag any panel or use pole, wrap and corner presets. Coverage controls the finite cylinder/tube height and Mercator latitude range; uncovered directions are dark. The cube uses left, front, right, back across the middle and the centered upper/lower squares as top/bottom; this convention is a hypothesis for the supplied artwork. No seam correction is applied.

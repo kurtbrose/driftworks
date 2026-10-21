@@ -788,7 +788,7 @@ export type ExperimentModules = {
             x: number;
             y: number;
         } | null;
-        create: (host: HTMLElement, config?:{style?:number}) => {
+        create: (host: HTMLElement, config?:{style?:number;fov?:number}) => {
             setImpactTime: (seconds:number) => void;
             setStyle: (style:number) => void;
             setExposure: (exposure:number) => void;

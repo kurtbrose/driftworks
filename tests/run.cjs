@@ -1,6 +1,7 @@
 require('./asset-versions.cjs');
 require('./impact-lab.cjs');
 require('./impact-sky.cjs');
+require('./planet-hero.cjs');
 require('./explosions.cjs');
 require('./gpu-ui.cjs');
 require('./flight-hud-markers.cjs');
