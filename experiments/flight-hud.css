@@ -32,3 +32,11 @@ body.watching-ai #comms .radio-portrait{width:84px;height:84px;left:12px;top:12p
 @media(max-width:700px){#comms.has-portrait,body.flight-active #comms.has-portrait{padding-left:100px;min-height:112px}#comms .radio-portrait{left:10px;top:12px;width:78px;height:78px}body.watching-ai #comms.has-portrait{width:min(360px,calc(100vw - 20px));padding-left:100px}body.watching-ai #comms .radio-portrait{width:78px;height:78px}}
 
 #comms.idle{visibility:hidden;pointer-events:none}
+
+/* A small coverage falloff softens rounded panel edges at fractional display scales. */
+header,.flight-plate,#comms,body.flight-active #comms,#watch-panel,#flight-settings,#pause-controls,#perf-overlay{border-color:transparent;box-shadow:inset 0 0 1px 1px var(--panel-edge,#72bfba40),0 8px 30px #0003}
+#watch-panel,#flight-settings,#pause-controls{--panel-edge:#578178}
+#perf-overlay{--panel-edge:#386059}
+#comms{--panel-edge:#8ccecd50}
+#comms.transmitting{--panel-edge:#adf5df}
+

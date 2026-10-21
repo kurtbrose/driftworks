@@ -45,7 +45,7 @@
         else {
             emotion.modifier = { current: current, intensity: intensity, until: state.time + 10 };
             if (current === 'confused' || current === 'frustrated')
-                emotion.stress = Math.min(1, emotion.stress + 0.08);
+                emotion.stress = Math.max(emotion.stress, Math.min(0.55, emotion.stress + 0.08));
         }
         deriveEmotion(emotion, state.time);
     }
@@ -68,7 +68,12 @@
             // Integrate only an observed interval, not time before a craft appeared.
             if (old) {
                 if (old.pursued && pursuers)
-                    emotion.stress = Math.min(1, emotion.stress + dt * (pursuers > 1 ? 0.1 : 0.06));
+                    {
+                    // Pressure has an equilibrium, rather than filling a panic meter.
+                    var baseline = pursuers > 1 ? 0.65 : 0.5;
+                    var interval = emotion.stress > baseline ? Math.max(0, state.time - Math.max(state.time - dt, emotion.recoverAfter)) : dt;
+                    emotion.stress = baseline + (emotion.stress - baseline) * Math.exp(-0.12 * interval);
+                }
                 else if (!old.pursued && !pursuers) {
                     var recovery = Math.max(0, state.time - Math.max(state.time - dt, emotion.recoverAfter));
                     emotion.stress = Math.max(0, emotion.stress - recovery * 0.035);

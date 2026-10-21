@@ -1141,7 +1141,7 @@
     var a={id:'a',team:'ally',hp:90,mode:'evade'},h={id:'h',team:'ally',hp:90,mode:'recover'};
     var r={id:'r',team:'enemy',hp:90,mode:'attack',targetId:'a'};
     var t={enabled:true,wave:1,hull:100,enemies:[a,h,r]};
-    api.step(clock,0,t,true,rng);api.step(clock,6,t,true,rng);
+    api.step(clock,0,t,true,rng);api.step(clock,12,t,true,rng);
     assert(clock.emotions.a.current==='afraid');
     var call=api.step(clock,2,t,false,rng);
     assert(call.event==='emotion'&&call.craftId==='a'&&call.text==='Help me!');
@@ -1149,8 +1149,10 @@
     assert(reply.event==='emotionalReply'&&reply.craftId==='h'&&reply.replyTo==='a');
     assert(reply.emotion.current==='reassuring'&&h.mode==='recover'&&!h.targetId);
     assert(clock.emotions.h.current==='calm'&&!clock.emotionalConversation);
-    api.step(clock,6,t,true,rng);assert(clock.emotions.a.current==='panicked');
-    a.mode='attack';api.step(clock,0,t,true,rng);assert(clock.emotions.a.current==='panicked');
+    api.step(clock,60,t,true,rng);assert(clock.emotions.a.current==='afraid');
+    assert(clock.emotions.a.stress>0.49&&clock.emotions.a.stress<=0.5);
+    a.mode='attack';api.step(clock,0,t,true,rng);assert(clock.emotions.a.current==='afraid');
+    a.hp=20;api.step(clock,0,t,true,rng);assert(clock.emotions.a.current==='panicked');
   });
 
   test('emotional replies expire and require a living composed teammate', function () {

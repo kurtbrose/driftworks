@@ -846,6 +846,11 @@ use scene units for positions and SI metres/seconds for velocity and engine ramp
 reports missing IDs immediately. Load it before browser adapters, including the
 standalone voice and ship previews.
 
+Flight stress approaches a pressure baseline (0.5 for one pursuer, 0.65 for
+multiple pursuers), and recovers toward it after damage recovery delays. Missed
+shots cannot raise stress above 0.55; damage and severe events can still cause
+panic. Safe flight continues to reduce stress toward zero.
+
 Flight comms has three layers: `flight-dialogue.js` owns line templates, stable
 pilot voices, contact phrasing and line repetition scoring; `flight-comms.js`
 owns emotions, combat observations and airtime scheduling; `flight-radio.js`

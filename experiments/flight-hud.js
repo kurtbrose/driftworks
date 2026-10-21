@@ -102,14 +102,19 @@
             var distance = Math.hypot.apply(null, state.eye), speed = Math.hypot.apply(null, state.velocity);
             telemetry.textContent = (speed*speedScale).toFixed(0) + ' '+speedLabel+'   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units*displayScale) + distanceUnit+' TO CENTER\n' + Math.round(asteroid.radius * 2 * units*displayScale) + distanceUnit+' BODY DIAMETER\n' + Math.round(shipDistance*displayScale) + distanceUnit+' TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
             var w = host.clientWidth, h = host.clientHeight;
-            if (combatCanvas.width !== w || combatCanvas.height !== h) {
-                combatCanvas.width = w;
-                combatCanvas.height = h;
+            // Keep geometry in CSS pixels; supersample thin curves on low-DPI displays.
+            var dpr = Math.max(2, window.devicePixelRatio || 1);
+            var pixelWidth = Math.max(1, Math.round(w * dpr)), pixelHeight = Math.max(1, Math.round(h * dpr));
+            if (combatCanvas.width !== pixelWidth || combatCanvas.height !== pixelHeight) {
+                combatCanvas.width = pixelWidth;
+                combatCanvas.height = pixelHeight;
             }
-            if (bearingCanvas.width !== w || bearingCanvas.height !== h) {
-                bearingCanvas.width = w;
-                bearingCanvas.height = h;
+            if (bearingCanvas.width !== pixelWidth || bearingCanvas.height !== pixelHeight) {
+                bearingCanvas.width = pixelWidth;
+                bearingCanvas.height = pixelHeight;
             }
+            combatHud.setTransform(pixelWidth / (w || 1), 0, 0, pixelHeight / (h || 1), 0, 0);
+            bearingHud.setTransform(pixelWidth / (w || 1), 0, 0, pixelHeight / (h || 1), 0, 0);
             bearingHud.clearRect(0, 0, w, h);
             combatHud.clearRect(0, 0, w, h);
             if (!paused && view.showMouseStick) {
