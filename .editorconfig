@@ -1,0 +1,8 @@
+root = true
+
+[*]
+end_of_line = lf
+
+# Preserve the original character assets byte-for-byte.
+[assets/characters/**/original/**]
+end_of_line = unset
