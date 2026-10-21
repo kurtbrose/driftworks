@@ -804,8 +804,8 @@ export type ExperimentModules = {
             altitude: number;
             distance: number;
         } | null;
-        speakerHalo: (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => void;
-        draw: (ctx: CanvasRenderingContext2D, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean, missionId?:string|boolean) => void;
+        speakerHalo: (ctx: import('./gpu-ui-types').PaintContext, x: number, y: number, radius: number) => void;
+        draw: (ctx: import('./gpu-ui-types').PaintContext, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean, missionId?:string|boolean) => void;
     };
     flightControls: {
         mount: (host: HTMLElement, actions: ControlActions, environment?: ControlEnvironment) => {
@@ -885,13 +885,13 @@ export type ExperimentModules = {
     flightTargetCamera: {
         radius: (model: Model) => number;
         mount: (host: HTMLElement) => {
-            update: (target: Craft, selection: string, wave: number, units: number, images: Images, paint: Vector | undefined, view: Pose, time: number) => void;
+            update: (target: Craft, selection: string, wave: number, units: number, images: Images, paint: Vector | undefined, view: Pose, time: number) => boolean;
         };
     };
     flightHud: {
-        paintTargetBearing: (ctx: CanvasRenderingContext2D, w: number, h: number, angle: number) => void;
+        paintTargetBearing: (ctx: import('./gpu-ui-types').PaintContext, w: number, h: number, angle: number) => void;
         targetStatus: (previous: TargetStatus | null, target: {id: string; shield?: number; maxShield?: number; hp: number; maxHp: number} | undefined, time: number) => TargetStatus | null;
-        paintTargetStatus: (ctx: CanvasRenderingContext2D, x: number, y: number, status: TargetStatus) => void;
+        paintTargetStatus: (ctx: import('./gpu-ui-types').PaintContext, x: number, y: number, status: TargetStatus) => void;
         mount: (host: HTMLElement) => {
             render: (view: HudView) => void;
             cycleRadarRange: () => void;
@@ -1063,6 +1063,7 @@ export type ElementsGetter = <K extends keyof Elements>(id: K) => Elements[K];
 export type VoiceNumberKey = Exclude<keyof Voice, "compactWords" | "emotion">;
 declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
+        gpuUi?: {create:(host:HTMLElement)=>import('./gpu-ui-types').GpuUi;color:(value:string|CanvasGradient|CanvasPattern)=>number[]};
         aegisFlightAsset?: AegisFlightAsset;
         aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:()=>AegisFlightRig;load:()=>Promise<unknown>};
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};

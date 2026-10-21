@@ -1,7 +1,0 @@
-inputs/
-__pycache__/
-*.tmp
-.deps/
-.deps-neural/
-models/*.onnx
-models/*.pt

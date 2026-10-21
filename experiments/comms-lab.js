@@ -15,7 +15,7 @@
     var DW = /** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
     var display = DW.commsDisplay.create(screen);
     var animated = document.createElement('canvas');
-    /** @type {import('./speech-sprites/generated-v1/types').FaceRenderer | null} */ var renderer = null;
+    /** @type {import('./face-blend-types').FaceRenderer | null} */ var renderer = null;
     /** @type {import('./types').SpeechPlan | null} */ var plan = null;
     /** @type {ReturnType<typeof DW.mumble.transmit> | null} */ var transmission = null;
     /** @type {import('./types').RadioNoise | null} */ var channelNoise = null;
@@ -31,7 +31,7 @@
         var ticket = ++generation, next = new Image(); loaded = false; el('status').textContent = 'LOADING';
         next.onload = function () { if (ticket !== generation) return; image = next;
             if (renderer) renderer.dispose();
-            /** @type {Record<string, import('./speech-sprites/generated-v1/types').FaceSource>} */ var poses = {};
+            /** @type {Record<string, import('./face-blend-types').FaceSource>} */ var poses = {};
             ['master','ah','oo','blink','smile','angry','afraid'].forEach(function (name, index) { poses[name] = {image: image, rect: [index * 256, 0, 256, 256]}; });
             poses.eh = poses.ah; renderer = DW.faceBlend.create(animated, poses); loaded = true; original.clearRect(0, 0, 256, 256); original.drawImage(image, 0, 0, 256, 256, 0, 0, 256, 256); el('status').textContent = 'STANDBY'; };
         next.onerror = function () { if (ticket === generation) el('status').textContent = 'PORTRAIT LOAD FAILED'; };
@@ -80,7 +80,7 @@
         }
         if (frozen) return;
         var cue = DW.faceBlend.speechCue(plan, elapsed - transmission.speechOffset);
-        /** @type {import('./speech-sprites/generated-v1/types').FaceLayer[]} */ var layers = [];
+        /** @type {import('./face-blend-types').FaceLayer[]} */ var layers = [];
         if (!reduced) {
             if (cue.alpha > 0) layers.push({image: cue.image, shape: [48,61,13,8,20], alpha: 1});
             if (time() > blinkAt + .14) blinkAt = time() + 3.4;

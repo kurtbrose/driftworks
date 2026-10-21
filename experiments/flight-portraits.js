@@ -3,7 +3,7 @@
     var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
   /** @typedef {import('./types').Line} Line */
   /** @typedef {import('./types').Feeling} Feeling */
-  /** @typedef {import('./speech-sprites/generated-v1/types').FaceLayer} FaceLayer */
+  /** @typedef {import('./face-blend-types').FaceLayer} FaceLayer */
   var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
   var cast=[1,0,3,2,4,5,6,7,8,9,10,11,12,13,14,15]; // Same adult masculine/feminine ordering as pilotVoice.
   /** @param {Line} line */
@@ -19,7 +19,7 @@
     return stress>=.35?'angry':'neutral';
   }
   var FRAME_SIZE=256,CACHE_LIMIT=17,poses=['master','ah','oo','blink','smile','angry','afraid'];
-  /** @typedef {{controller: AbortController; bitmap: ImageBitmap | null; promise: Promise<Record<string, import('./speech-sprites/generated-v1/types').FaceSource>>}} Entry */
+  /** @typedef {{controller: AbortController; bitmap: ImageBitmap | null; promise: Promise<Record<string, import('./face-blend-types').FaceSource>>}} Entry */
   /** @param {HTMLElement} panel */
   function mount(panel){
     var portraits=DW.flightMissions.current().portraits;
@@ -47,7 +47,7 @@
         if(entry.controller.signal.aborted){bitmap.close();throw new Error('Portrait request cancelled');}
         if(bitmap.width!==FRAME_SIZE*poses.length||bitmap.height!==FRAME_SIZE){bitmap.close();throw new Error('Invalid portrait dimensions');}
         entry.bitmap=bitmap;
-        /** @type {Record<string, import('./speech-sprites/generated-v1/types').FaceSource>} */ var frames={};
+        /** @type {Record<string, import('./face-blend-types').FaceSource>} */ var frames={};
         poses.forEach(function(name,i){frames[name]={image:bitmap,rect:[i*FRAME_SIZE,0,FRAME_SIZE,FRAME_SIZE]};});
         frames.eh=frames.ah;return frames;
       }).catch(/** @param {unknown} error */ function(error){if(cache.get(index)===entry)cache.delete(index);throw error;});
@@ -69,7 +69,7 @@
       }
       idle(advance);
     }
-    /** @type {import('./speech-sprites/generated-v1/types').FaceRenderer | null} */ var renderer=null;
+    /** @type {import('./face-blend-types').FaceRenderer | null} */ var renderer=null;
     /** @type {import('./types').SpeechPlan | null} */ var plan=null;
     /** @type {AudioContext | null} */ var audio=null;
     /** @type {Feeling | undefined} */ var feeling;

@@ -898,8 +898,12 @@ source/output hashes, and a cast preview are retained under `assets/portraits/oh
 `tests/ohio-portraits.cjs` verifies the shipped facial pixels and mission isolation.
 Preview every animated Ohio pilot at `experiments/flight-cast.html?mission=ohio`.
 
+Portrait artwork comes from ImageGen sprite sheets. The discarded photo transformation
+laboratory and single-face edit auditions have been removed; `experiments/face-blend.js`
+and `face-blend-types.d.ts` own the shared sheet compositor and its API.
+
 `flight-portraits.js` adds a presentation-only caller portrait to the radio
-adapter. It reuses `speech-sprites/generated-v1/face-blend.js` for fixed-master,
+adapter. It reuses `face-blend.js` for fixed-master,
 inner-face masking and Mumble syllable timing. Load face-blend and portraits
 before flight-radio. Lines carry `portraitIndex`, copied from the same stable
 craft index used by voices; sixteen distinct pilot portraits cover the sixteen
@@ -1504,7 +1508,7 @@ Study panel configuration accepts `zoomToTerrain` (default true). The fighter st
 
 ### Radio portraits and shared channel noise
 
-Both flight simulators and the comms lab load `mumble.js`, `comms-display.js`, and `speech-sprites/generated-v1/face-blend.js` before their portrait/radio controllers. `mumble.radioNoise` creates a channel-noise plan independently of either output; audio transmission and display sampling receive the same object and the same playback clock. Local audio bypasses radio processing. Flight uses effects 0.45 and edgeScale 2.5 (0.4 s opening / 0.6 s closing); original radio timing remains available in the lab. Pilot identity, mood and speech cues remain in their existing owners.
+Both flight simulators and the comms lab load `mumble.js`, `comms-display.js`, and `face-blend.js` before their portrait/radio controllers. `mumble.radioNoise` creates a channel-noise plan independently of either output; audio transmission and display sampling receive the same object and the same playback clock. Local audio bypasses radio processing. Flight uses effects 0.45 and edgeScale 2.5 (0.4 s opening / 0.6 s closing); original radio timing remains available in the lab. Pilot identity, mood and speech cues remain in their existing owners.
 
 `commsDisplay.create(canvas)` owns one 256 px treatment buffer. Its `draw` accepts the animated source canvas, shared noise plan, elapsed playback seconds, speech duration and optional palette/scanline/reduced-motion settings. It preserves the lab treatment: green phosphor by default, scanlines, fresh random strip/snow geometry and a visual peak hold of 250 ms at channel edges or 40 ms during speech. It never generates independent noise-event timings. Callers own scheduling and channel cutoff.
 
@@ -1630,3 +1634,33 @@ Ohio flight music uses `audio.createOhioMusic()` and local media in `assets/audi
 `tools/trim-ohio-intro.py` derives `radio-intro.wav` from the preserved `radio-intro-source.wav`, shortening only sustained quiet gaps. Longer pauses retain 350 ms for emphasis; shorter gaps retain 160 ms. A 5 ms blend at each cut avoids clicks.
 
 Audible Ohio soundtrack playback calls the mixer's transient `setMusicActive` gate to reduce only the flight engine by 3 dB. Pausing or setting the Ohio music slider to zero restores the engine. This multiplier composes with comms/impact ducking without changing the saved engine slider or other missions.
+
+
+### GPU flight HUD
+
+`experiments/gpu-ui.js` provides a small immediate-mode UI renderer over the
+vendored Three.js WebGL2 renderer. Load it before `flight-hud.js`. Its typed
+painter subset is in `gpu-ui-types.d.ts`; Canvas 2D implementations can still
+exercise shared radar/target paint helpers in tests. This is a UI painter, not
+an implementation of the full Canvas API: current paths are convex, transforms
+are translation/rotation, and dashed rings support the lead indicator.
+
+The reusable components are analytic rounded panels, rectangles/meters,
+capsule lines, rings, convex markers, distance-field glyphs and image tiles.
+One interleaved vertex batch preserves painter order, with depth writes disabled
+and straight-alpha blending. GLSL3 fragment derivatives control edge coverage at
+native device pixel ratio. A one-time local monospace glyph raster is converted
+to a signed-distance atlas; visible text is composed and shaded by the GPU,
+without per-frame text canvases or DOM screenshots. Geometry storage and the
+font atlas are reused; image sources are cached and GPU resources are disposed
+on non-BFCache page exit. There are no runtime network dependencies.
+
+`flight-hud.js` owns responsive instrument layout and projects session contacts;
+`radar.js` retains the shared contact projection and painter. The target camera
+returns whether it rendered a new frame so its GPU texture is uploaded only at
+its 15 FPS cadence, preserving the previous image between frames. Existing
+portrait canvases supply animated image tiles; the HUD does not change portrait
+or radio timing. Offscreen DOM text/meters retain accessible semantics and the
+existing presentation producers, while configuration controls live in the pause
+menu. F3/P pause before opening diagnostics. No persistent simulation state or
+flight targeting rules move into the renderer.

@@ -63,7 +63,7 @@ module.exports = function runFlightTransitions(namespace) {
           sample:() => ({throttle:0,throttleRate:0,stop:true,fire:false})};
       }}
     });
-    const context = vm.createContext({window:{Driftworks:DW}, document, HTMLElement:Element,
+    const context = vm.createContext({window:{Driftworks:DW}, document, HTMLElement:Element, HTMLDetailsElement:Element,
       URLSearchParams, location:{search}, performance:{now:() => now},
       requestAnimationFrame:callback => { frame = callback; }});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight.js'), 'utf8'), context, {filename:'experiments/flight.js'});
@@ -112,6 +112,14 @@ module.exports = function runFlightTransitions(namespace) {
   assert.equal(status.get('status').textContent, 'Training over · Restart training to try again');
   assert(status.actions.isPaused()); assert.equal(status.get('fly').textContent, 'Restart flight');
   status.tick(1200); assert.equal(status.get('status').textContent, 'Training over · Restart training to try again');
+
+  const menu = mount();
+  menu.tick(1000); menu.actions.resume(); menu.tick(1050);
+  menu.actions.toggleDiagnostics();
+  assert(menu.actions.isPaused(), 'F3 pauses flight before opening DOM diagnostics');
+  assert.equal(menu.get('flight-lab').open,true);
+  menu.actions.resume(); menu.actions.togglePerformance();
+  assert(menu.actions.isPaused(), 'P keeps performance controls on the pause screen');
 
   const watch = mount('?duel=1&duration=.05&category=human&flavor=novice');
   watch.tick(1000); watch.get('watch-play').onclick(); watch.tick(1050); watch.tick(1060);

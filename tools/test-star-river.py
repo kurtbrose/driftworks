@@ -29,7 +29,9 @@ class RiverTests(unittest.TestCase):
     def test_empty_pockets_and_resolved_bright_stars(self):
         pixels=np.asarray(river.generate(2048,76841),dtype=float).mean(axis=2)
         tiles=pixels.reshape(32,32,64,32).mean(axis=(1,3))
-        self.assertGreater(np.percentile(tiles,90),np.percentile(tiles,10)*5)
+        self.assertGreater(np.percentile(tiles,90),np.percentile(tiles,10)*2)
+        self.assertGreater(((pixels>1)&(pixels<12)).sum(),(pixels>32).sum()*20,
+                           'Faint unresolved texture must dominate the bright point population')
         # Resolved stars need bright neighboring pixels, not just isolated noise.
         bright=pixels>100
         neighbors=bright[:-1,:-1]&bright[1:,:-1]&bright[:-1,1:]&bright[1:,1:]

@@ -220,3 +220,41 @@ and model placement as custom batches.
 Asteroid geology, mining lighting and procedural hull shaders are unchanged.
 They continue to consume the existing SH/reflection cache. Shadows, unlit effects,
 legacy skies and the lighting-off comparison retain the custom path.
+
+
+River's faint stellar population is baked as softly blended, mostly unresolved
+photographic texture, with restrained density variations and a few resolved halo
+stars. Bright pinpoints do not dominate its clouds. The 8K panorama is one
+fullscreen textured draw; the shared 3,200-star layer is one additional batched
+draw, not individual scene objects. The texture receives mipmaps once on upload.
+Sky rendering now defaults to native display resolution; 150% and 200%
+supersampling remain optional. Source texture resolution is independent of this
+screen pixel budget; 150% costs 2.25 times native pixel shading work.
+
+
+### Photographic River art direction
+
+The active J sky uses `star-river-photo-v3-8k.jpg`. Its stellar texture comes from
+`star-river-photo-panel-v1.png`, created with built-in imagegen using the user's
+asteroid screenshot as a background-only style reference. The prompt and source
+provenance are in `assets/backgrounds/star-river-photo-v2.json`.
+
+A first generated full-sphere draft (1774 × 887) looked good as a whole image but
+failed the in-game crop comparison: its stars were too large. The square panel
+instead contains local photographic detail. `tools/bake-photo-star-river.py`
+projects that panel through 64 independently rotated tangent patches,
+feathered with radial windows around the sphere. This replaces the earlier
+three-axis bake, whose orientation transitions looked like box corners. Panels
+are sampled strictly inside their borders; no tile edge reaches the sky.
+The panel has no large landmark stars; unique prominent points remain in the
+existing batched star layer. This is deterministic offline texture compositing,
+not runtime generation or individual star objects. It does not create native
+8K imagegen detail: the 8K bake preserves the local panel's angular detail.
+
+```sh
+python tools/bake-photo-star-river.py --source assets/backgrounds/star-river-photo-panel-v1.png --output assets/backgrounds/star-river-photo-v3-8k.jpg
+python tools/bake-sky-lighting.py --layout assets/backgrounds/hero-layout-v1.json --output assets/backgrounds/sky-lighting-v1.json
+```
+
+The procedural generator remains as an archived experiment. J uses the generated
+photographic texture and derives its lighting from that same active asset.

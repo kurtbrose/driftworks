@@ -1,5 +1,8 @@
 require('./asset-versions.cjs');
+require('./impact-lab.cjs');
 require('./explosions.cjs');
+require('./gpu-ui.cjs');
+require('./flight-hud-markers.cjs');
 require('./flight-missions.cjs');
 require('./headless.cjs');
 // Run the ordinary-script suite without adding a build or dependency pipeline.
@@ -83,7 +86,6 @@ require('./livery-sections.cjs');
 require('./hull-panels.cjs');
 
 require('./speech-sprites.cjs');
-require('./talking-face.cjs');
 require('./flight-portraits.cjs');
 require('./portrait-assets.cjs');
 require('./ohio-portraits.cjs');

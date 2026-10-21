@@ -40,3 +40,19 @@ Ohio sortie: ohio-planet-v1.png is AI-generated orbital artwork (OpenAI ImageGen
 Ohio rendering uses the two compact source textures in one opaque sky-shader draw, followed by the separate crisp stars. It retains the existing landmark projection and orientation, without a panorama bake or additional GPU copies. The Ohio path skips the unused Milky Way image. See docs/skybox-authoring.md for the pass and sampler contract.
 
 `ohio-highway-sign.svg` is locally authored vector artwork for the Ohio-only asteroid monument. The 1,100 m panel faces the initial approach, with its bottom 50 m above the sampled rock surface; short visible steel posts extend into the rock. `flight-presentation.js` caches its four static mesh batches by asteroid radius and attaches them to the asteroid transform. Three tilted floodlight housings and warm luminous lenses sit on short outriggers below the panel. Their matching light pools are baked into the face artwork, avoiding additional shadow passes. This is presentation geometry, not a collision or saved simulation entity.
+
+
+`star-river-photo-v1-source.png` was generated with built-in imagegen using the
+user's asteroid screenshot as background-only style reference. Native source:
+1774 × 887. `star-river-photo-v1-2k.png` is its power-of-two 2048 × 1024 runtime
+copy; this resize adds no new detail. It replaces the procedural River image in
+J. See docs/skybox-authoring.md for the prompt and lighting preparation.
+
+
+The active River sky is now `star-river-photo-v2-8k.jpg`, baked offline from the
+imagegen square texture panel `star-river-photo-panel-v1.png`. The earlier small
+full-sphere generated image is an art-direction draft, not the active runtime
+sky. Its blown-up star scale was rejected in screenshot crop comparisons.
+The panel's prompt and provenance are in `star-river-photo-v2.json`.
+
+The active runtime image is now `star-river-photo-v3-8k.jpg`. Its 64 overlapping spherical tangent patches replace the three-axis v2 bake, which showed orientation folds resembling box corners. The imagegen panel itself is unchanged.

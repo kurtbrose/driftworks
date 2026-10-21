@@ -1,13 +1,14 @@
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
-const shaders = [], values = {}, handlers = {};
+const shaders = [], values = {}, handlers = {}, mipmaps = [];
 const gl = new Proxy({
   createShader: () => ({}), createProgram: () => ({}), createBuffer: () => ({}), createTexture: () => ({}),
   getShaderParameter: () => true, getProgramParameter: () => true,
   shaderSource: (_shader, source) => shaders.push(source),
   getUniformLocation: (_program, name) => name,
-  uniform1f: (name, value) => { values[name] = value; }, getAttribLocation: () => 0
+  uniform1f: (name, value) => { values[name] = value; }, getAttribLocation: () => 0,
+  generateMipmap: target => mipmaps.push(target)
 }, { get: (target, key) => key in target ? target[key] : () => {} });
 const selector = {value: '', children: [], appendChild(option) { this.children.push(option); }, addEventListener(name, fn) { handlers[name] = fn; }};
 const brightness = {value: '1', addEventListener(name, fn) { this[name] = fn; }};
@@ -27,13 +28,13 @@ assert.equal(selector.children.length, 11);
 assert.equal(selector.value, '3', 'restores the selected flight sky');
 sky.render(pose, 1, false);
 assert.equal(values.style, 3);
-assert.equal(canvas.width, 2400);
+assert.equal(canvas.width, 1600);
 selector.value = '6'; handlers.change();
 sky.render(pose, .25, false);
 assert.equal(values.style, 6, 'selection reaches the sky shader');
 assert.equal(stored, '6');
-assert.equal(canvas.width, 2400, 'sky stays sharp when scene resolution drops');
-assert.equal(values.pixelRatio, 3);
+assert.equal(canvas.width, 1600, 'sky defaults to native resolution independently of scene quality');
+assert.equal(values.pixelRatio, 2);
 assert.ok(shaders.find(source => source.includes('gl_PointSize=(0.75+star.w*1.05)*pixelRatio')), 'star size does not depend on depth or focal length');
 brightness.value='2'; brightness.input();
 quality.value='1'; quality.change(); sky.render(pose, .25, false);
@@ -89,7 +90,8 @@ async function testHeroComposition() {
   selector.value='1';handlers.change();renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,2,'procedural choices do not draw hero features');
   const second=api.create({clientWidth:800,clientHeight:600,prepend(){}},{style:8});second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);renderer.setStyle(8);assert.equal(second.getLighting(),renderer.getLighting(),'multiple renderer instances share one precomputed environment cache');assert.equal(requests,7,'second scene loads its layout but reuses lighting and HDR probes');
-  second.setStyle(10);second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);assert.equal(second.getRenderStats().drawCalls,2,'river panorama and crisp foreground stars use two draws');assert.equal(JSON.stringify(second.getLighting().sh),JSON.stringify(lighting.families.river.sh),'stellar streams select their derived lighting');assert.equal(canvas.dataset.river,'ready');assert.ok(imageUrls.some(url=>url.includes('star-river-v1-8k.jpg')),'river uses the local 8K texture');
+  second.setStyle(10);second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);assert.equal(second.getRenderStats().drawCalls,2,'river panorama and crisp foreground stars use two draws');assert.equal(JSON.stringify(second.getLighting().sh),JSON.stringify(lighting.families.river.sh),'stellar streams select their derived lighting');assert.equal(canvas.dataset.river,'ready');assert.ok(imageUrls.some(url=>url.includes('star-river-photo-v3-8k.jpg')),'river uses the local generated photographic texture');
+  assert.equal(mipmaps.length,1,'River mipmaps are baked once on texture upload');second.render(pose,1,false);assert.equal(mipmaps.length,1,'No per-frame sky mipmap generation');
   console.log('PASS hero sky: local asset reuse, fixed layout, sphere seams, orientation and separate star pass');
 }
 async function testOhioSky() {

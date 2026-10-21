@@ -7,7 +7,7 @@ export interface Geometry {
  setDrawRange(start:number,count:number):void;
  dispose():void;
 }
-export interface Texture {needsUpdate:boolean;flipY:boolean;wrapS:number;minFilter:number;colorSpace:string;mapping:number;clone():Texture;dispose():void}
+export interface Texture {needsUpdate:boolean;flipY:boolean;wrapS:number;minFilter:number;magFilter:number;colorSpace:string;mapping:number;clone():Texture;dispose():void}
 export interface Matrix {elements:number[];fromArray(values:number[]|Float32Array):Matrix;copy(matrix:Matrix):Matrix;invert():Matrix;makePerspective(left:number,right:number,top:number,bottom:number,near:number,far:number):Matrix}
 export interface RenderTarget {texture:Texture;dispose():void}
 export interface Material {uniforms:Record<string,{value:UniformValue}>;blending:number;depthWrite:boolean;dispose():void}
@@ -25,18 +25,18 @@ export interface Three {
  WebGLRenderer:new(options:{canvas:HTMLCanvasElement;antialias:boolean;alpha:boolean;premultipliedAlpha:boolean})=>Renderer;
  Scene:new()=>Scene;Camera:new()=>Object3D;
  AmbientLight:new(color:number,intensity:number)=>Object3D;
- RawShaderMaterial:new(options:{vertexShader:string;fragmentShader:string;uniforms:Record<string,{value:UniformValue}>;side:number;transparent:boolean;depthWrite:boolean;blending:number;defaultAttributeValues:Record<string,number[]>})=>Material;
+ RawShaderMaterial:new(options:{glslVersion?:string;vertexShader:string;fragmentShader:string;uniforms:Record<string,{value:UniformValue}>;side:number;transparent:boolean;depthTest?:boolean;depthWrite:boolean;forceSinglePass?:boolean;blending:number;defaultAttributeValues:Record<string,number[]>})=>Material;
  MeshStandardMaterial:new(options:{metalness:number;roughness:number;side:number;alphaTest:number})=>StandardMaterial;
  PMREMGenerator:new(renderer:Renderer)=>{fromEquirectangular(texture:Texture):RenderTarget;dispose():void};
  ShaderChunk:Record<string,string>;
- SRGBColorSpace:string;EquirectangularReflectionMapping:number;
+ GLSL3:string;SRGBColorSpace:string;EquirectangularReflectionMapping:number;
  BufferGeometry:new()=>Geometry;
  InterleavedBuffer:new(data:Float32Array,stride:number)=>Interleaved;
  InterleavedBufferAttribute:new(buffer:Attribute,size:number,offset:number)=>Attribute;
  BufferAttribute:new(data:Float32Array,size:number)=>Attribute;
  Mesh:new(geometry:Geometry,material:Material)=>Object3D;
  LineSegments:new(geometry:Geometry,material:Material)=>Object3D;
- Texture:new(image:HTMLImageElement)=>Texture;
+ Texture:new(image:HTMLImageElement|HTMLCanvasElement)=>Texture;
  DataTexture:new(data:Uint8Array|Float32Array,width:number,height:number,format?:number,type?:number)=>Texture;
  RGBAFormat:number;FloatType:number;LinearSRGBColorSpace:string;
  WebGLRenderTarget:new(width:number,height:number,options:{minFilter:number;magFilter:number})=>RenderTarget;

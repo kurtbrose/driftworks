@@ -17,7 +17,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   box.URL=URL; box.document.baseURI='http://localhost:8000/experiments/flight.html';
   box.document.currentScript={getAttribute:()=> '../src/asset-versions.js'};
   vm.runInContext(fs.readFileSync('src/asset-versions.js','utf8'),box);
-  for(const file of ['experiments/mumble.js','experiments/comms-display.js','experiments/speech-sprites/generated-v1/face-blend.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-portraits.js'])vm.runInContext(fs.readFileSync(file,'utf8'),box);
+  for(const file of ['experiments/mumble.js','experiments/comms-display.js','experiments/face-blend.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-portraits.js'])vm.runInContext(fs.readFileSync(file,'utf8'),box);
   const DW=window.Driftworks,api=DW.flightPortraits;
   DW.faceBlend.create=(target,frames)=>{
     created++;const bitmap=frames.master.image;assert.deepEqual(Array.from(frames.master.rect),[0,0,256,256]);assert.equal(frames.ah.image,bitmap);assert.equal(frames.eh,frames.ah);

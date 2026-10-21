@@ -22,7 +22,7 @@
         return { x: dot(state.right), y: dot(state.back), altitude: dot(state.up), distance: distance };
     }
     // Shared by radar blips, ship markers and off-screen arrows; preserve team/target colors.
-    /** @param {CanvasRenderingContext2D} ctx @param {number} x @param {number} y @param {number} radius */
+    /** @param {import('./gpu-ui-types').PaintContext} ctx @param {number} x @param {number} y @param {number} radius */
     function speakerHalo(ctx, x, y, radius) {
         ctx.save();
         ctx.setLineDash([]);
@@ -37,10 +37,10 @@
         ctx.stroke();
         ctx.restore();
     }
-    /** @param {CanvasRenderingContext2D} ctx @param {Pose} state @param {RadarContact[]} contacts @param {number} units @param {number} range @param {number} w @param {number} h @param {boolean} paused @param {string|boolean} [missionId] */
+    /** @param {import('./gpu-ui-types').PaintContext} ctx @param {Pose} state @param {RadarContact[]} contacts @param {number} units @param {number} range @param {number} w @param {number} h @param {boolean} paused @param {string|boolean} [missionId] */
     function draw(ctx, state, contacts, units, range, w, h, paused, missionId) {
         var mission=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).flightMissions.resolve(missionId);
-        var radius = Math.min(86, w * .19, h * .17), cx = w / 2, cy = h - radius - 38;
+        var radius = Math.min(w < 600 ? 60 : 76, w * .19, h * .17), cx = w / 2, cy = h - radius - (w < 600 ? 240 : 24);
         ctx.save();
         ctx.translate(cx, cy);
         ctx.font = '10px ui-monospace,monospace';
@@ -102,9 +102,7 @@
         ctx.lineTo(4, 4);
         ctx.closePath();
         ctx.fill();
-        ctx.fillText('RADAR / ' + (mission.units.radarKilometers ? (range/1000)+' km' : Math.round(range*mission.units.distanceScale)+' '+mission.units.distanceLabel) + ' / V', 0, -radius - 17);
-        ctx.fillStyle = '#91bdb5';
-        ctx.fillText(count + ' contacts / stems = altitude', 0, radius + 23);
+        ctx.fillText((mission.units.radarKilometers ? (range/1000)+' km' : Math.round(range*mission.units.distanceScale)+' '+mission.units.distanceLabel), 0, radius + 19);
         ctx.restore();
     }
     /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightRadar = { project: project, draw: draw, speakerHalo: speakerHalo };

@@ -23,7 +23,7 @@ const vm = require('node:vm');
   vm.runInContext(fs.readFileSync('src/asset-versions.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('experiments/mumble.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('experiments/comms-display.js','utf8'),sandbox);
-  vm.runInContext(fs.readFileSync('experiments/speech-sprites/generated-v1/face-blend.js','utf8'),sandbox);
+  vm.runInContext(fs.readFileSync('experiments/face-blend.js','utf8'),sandbox);
   DW.faceBlend.create=()=>({draw:v=>{layers=v;},dispose(){disposed++;}});
   vm.runInContext(fs.readFileSync('experiments/comms-lab.js','utf8'),sandbox);
   await nodes.speak.onclick();

@@ -312,7 +312,7 @@ void main(){
         }
         var style = config && typeof config.style==='number' ? config.style : 7;
         var exposure = 1;
-        var quality = 1.5;
+        var quality = 1;
         var brightnessControl = /** @type {HTMLInputElement|null} */ (document.getElementById('skybox-brightness'));
         var qualityControl = /** @type {HTMLSelectElement|null} */ (document.getElementById('skybox-quality'));
         if (brightnessControl) {
@@ -321,7 +321,7 @@ void main(){
         }
         if (qualityControl) {
             const control = qualityControl;
-            control.addEventListener('change', function () { quality = [1,1.5,2].includes(Number(control.value)) ? Number(control.value) : 1.5; });
+            control.addEventListener('change', function () { quality = [1,1.5,2].includes(Number(control.value)) ? Number(control.value) : 1; });
         }
         var selector = /** @type {HTMLSelectElement|null} */ (config ? null : document.getElementById('skybox-style'));
         if (selector) {
@@ -371,7 +371,7 @@ void main(){
         var riverLoading=false;
         function loadRiver(){
             if(riverLoading)return;riverLoading=true;
-            var status=document.getElementById('skybox-status');if(status)status.textContent='Loading 8K stellar streams...';
+            var status=document.getElementById('skybox-status');if(status)status.textContent='Loading photographic stellar streams...';
             riverTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,riverTexture);
             gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -387,12 +387,14 @@ void main(){
                 }
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,riverTexture);
                 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,source);
+                gl.generateMipmap(gl.TEXTURE_2D);
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
                 canvas.dataset.river='ready';canvas.dataset.riverWidth=String(source.width);
                 if(status)status.textContent='River of stars / fixed stellar streams, dark lanes and a separate point-star foreground.';
             };
             image.onerror=function(){canvas.dataset.river='error';if(status)status.textContent='Could not load the stellar streams texture.';};
-            image.src=assetUrl('../assets/backgrounds/star-river-v1-8k.jpg');
+            image.src=assetUrl('../assets/backgrounds/star-river-photo-v3-8k.jpg');
         }
         var image = new Image();
         image.onload = function () {

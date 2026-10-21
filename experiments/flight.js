@@ -53,7 +53,7 @@
         panel.id='tether-panel';
         panel.style.cssText='position:fixed;z-index:8;top:12px;left:50%;transform:translateX(-50%);background:#182024ee;color:#ddd;padding:12px;font:12px/1.6 monospace;max-width:44vw';
         panel.innerHTML='<b>TETHER GREYBOX / </b><select id="tether-size" aria-label="Tether span"></select> <select id="tether-start" aria-label="Starting position"><option value="hub">Hub  /  300 m away</option><option value="tip">Tip  /  300 m away</option><option value="overview">Overview</option></select><select id="tether-spin" aria-label="Operational spin"><option value="1g">1 g tip load</option><option value="2g">2 g tip load</option><option value="3g">3 g tip load</option></select><div id="tether-readout"></div><small>4 m cable  /  100 m hub  /  40 m tips. Symmetric spin / real seconds. Tip acceleration limited to 1-3 g. Scenery only: no collision / catches. Esc to change study.</small>';
-        document.body.appendChild(panel);
+        (document.querySelector('aside') || document.body).appendChild(panel);
         var size=/** @type {HTMLSelectElement} */ (document.getElementById('tether-size'));
         [100,50,20,10,2].forEach(function(km){var option=document.createElement('option');option.value=String(km);option.textContent=km+' km';size.appendChild(option);});
         size.value=String(tetherKm);
@@ -72,7 +72,7 @@
     if(aegis){
         presentation.setCapital(aegis);
         document.title='Aegis capital engagement / Driftworks';
-        var aegisPanel=document.createElement('div');aegisPanel.id='aegis-flight-readout';aegisPanel.style.cssText='position:fixed;z-index:5;left:20px;top:170px;max-width:330px;white-space:pre-line;font:11px/1.6 monospace;color:#b9d9db;background:#07151dc9;padding:9px;pointer-events:none';document.body.appendChild(aegisPanel);
+        var aegisPanel=document.createElement('div');aegisPanel.id='aegis-flight-readout';aegisPanel.style.cssText='position:fixed;z-index:5;left:20px;top:170px;max-width:330px;white-space:pre-line;font:11px/1.6 monospace;color:#b9d9db;background:#07151dc9;padding:9px;pointer-events:none';(document.querySelector('aside') || document.body).appendChild(aegisPanel);
         get('watch-panel').hidden=true;get('draw-mothership').checked=false;
         var aegisHeading=document.querySelector('header h1');if(aegisHeading)aegisHeading.textContent='DRIFTWORKS / AEGIS ENGAGEMENT';
         var aegisSubtitle=document.querySelector('header > span');if(aegisSubtitle){aegisSubtitle.textContent='GREEN / RED CAPITAL SHIPS';/** @type {HTMLElement} */(aegisSubtitle).style.display='block';}
@@ -327,7 +327,7 @@
             select.value = String(index);
             select.dispatchEvent(new Event('change'));
         },
-        toggleDiagnostics: diagnostics.toggleDiagnostics, togglePerformance: diagnostics.togglePerformance
+        toggleDiagnostics: function () { pause(); diagnostics.toggleDiagnostics(); var lab=document.getElementById('flight-lab');if(lab instanceof HTMLDetailsElement)lab.open=true; }, togglePerformance: function () { pause(); diagnostics.togglePerformance(); var lab=document.getElementById('flight-lab');if(lab instanceof HTMLDetailsElement)lab.open=true; }
     });
     // Frozen-snapshot render A/B: same camera, actors and settings, ABBA order.
     var benchmarking=false;

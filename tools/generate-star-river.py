@@ -3,7 +3,7 @@ import argparse
 import hashlib
 from pathlib import Path
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 
 def generate(width=8192, seed=76841):
@@ -31,18 +31,23 @@ def generate(width=8192, seed=76841):
         clouds=sum(amplitude*np.sin(x*d[0]+y*d[1]+z*d[2]+phase)
                    for d,phase,amplitude in waves)
         lane=np.exp(-((latitude+.1*np.sin(x*11+y*8))/.065)**2)
-        clumps=np.clip(np.exp(clouds*2.5)-.45,0,4)
-        stream=(main*.8+branch*.45)*clumps*(1-lane*.94)
+        clumps=np.clip(.2+np.exp(clouds*1.35)*.6,0,2)
+        stream=(.18+main*.65+branch*.35)*clumps*(1-lane*.7)
         shape=x.shape
-        density=np.clip(.003+stream*.32,0,.75)*np.sin(theta[:,None])
+        density=np.clip(.045+stream*.22,0,.45)*np.sin(theta[:,None])
         stars=rng.random(shape)<density
-        flux=(.035+.75*rng.random(shape)**9)*stars
+        # Most of the stellar population is barely resolved photographic grain,
+        # not a carpet of equally legible white pinpoints.
+        flux=(.009+.17*rng.random(shape)**10)*stars
         # Mostly neutral unresolved stars, with restrained warm/cool populations.
         warm=rng.random(shape)
         temperature=np.stack([.83+warm*.17,.9+warm*.05,1.-warm*.3],axis=-1)
-        haze=np.array([.001,.002,.003])+stream[...,None]*np.array([.012,.013,.016])
+        haze=np.array([.001,.002,.003])+stream[...,None]*np.array([.004,.004,.005])
         color=haze+flux[...,None]*temperature
         output[row:row+len(theta)]=np.rint(np.clip(color,0,1)*255).astype(np.uint8)
+    field=Image.fromarray(output)
+    softened=field.filter(ImageFilter.GaussianBlur(max(.15,width/8192*.65)))
+    output=np.asarray(Image.blend(field,softened,.75)).copy()
     # A sparse second population has resolved cores and broad, very faint halos.
     # Draw in angular coordinates so these stars stay round away from the equator.
     bright_rng=np.random.default_rng(seed+2)

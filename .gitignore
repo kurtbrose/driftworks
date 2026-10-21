@@ -1,6 +1,5 @@
 # Local development dependencies
 node_modules/
-/.portrait-lab-runtime/
 
 # TypeScript and tooling output
 *.tsbuildinfo

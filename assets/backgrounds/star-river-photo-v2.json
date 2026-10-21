@@ -1,0 +1,10 @@
+{
+  "generator": "built-in imagegen",
+  "reference": "User-supplied asteroid screenshot; background-only style reference",
+  "source": "star-river-photo-panel-v1.png",
+  "sourceSHA256": "a156ca297855c41e4a49930b7194b718502ec5f53fa489f913714715a975f2ca",
+  "runtime": "star-river-photo-v3-8k.jpg",
+  "baker": "tools/bake-photo-star-river.py",
+  "prompt": "Use case: stylized-concept. Generate a SQUARE seamless tileable photographic stellar TEXTURE PANEL for a space-game skybox, highest available resolution. Reference only the dark starry background outside the asteroid. This panel covers a SMALL PATCH of sky, not a whole panorama; do not add equirectangular polar distortion. It should match the reference's extremely fine barely resolved star texture: hundreds of thousands of minute dim grey pinpricks merging into a very faint grey-brown-blue smoky stellar field, dark dusty wisps, local denser and emptier patches. Restrained low contrast. Nearly black interstices. Most pixel values very dark (roughly 5-20 on 0-255 scale), rare tiny stars may be brighter but NO large or hero stars, NO bright stars with halos, NO sun, NO nebula, NO galaxy silhouette, NO planets, NO objects, NO asteroid, NO interface. Stars should be smaller than a pinhead, near the resolution limit, not large bright white speckles. Organic photographic texture, not uniform noise, not a regular grid. All edges seamlessly tile, matching brightness and color across opposing edges, no vignette. The reference image is a style reference only; exclude the asteroid and all foreground/UI. Output only the completed full-bleed texture panel, no text, no framing, no watermark.",
+  "projection": "64 spherical tangent patches with cubic radial feathering; no cube faces or tile borders"
+}

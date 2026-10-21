@@ -33,9 +33,9 @@
         var scene = /** @type {Scene | null} */ (null), last = -Infinity;
         return { update: /** @param {Craft} target @param {string} selection @param {number} wave @param {number} units @param {Images} images @param {Vector | undefined} paint @param {Pose} view @param {number} time */ function (target, selection, wave, units, images, paint, view, time) {
                 if (!target || !host.clientWidth || document.hidden)
-                    return;
+                    return false;
                 if (time - last < 1 / 15 && time >= last)
-                    return;
+                    return false;
                 last = time;
                 if (!scene) {
                     scene = DW.scene3d.create(host, function () {
@@ -55,6 +55,7 @@
                 scene.setStudyEffects(DW.shipPackModels.scorchGeometry([centered], selection, wave, units));
                 scene.sync(world);
                 scene.render(world, 1, 0, 1 / 15);
+                return true;
             } };
     }
     DW.flightTargetCamera = { radius: radius, mount: mount };
