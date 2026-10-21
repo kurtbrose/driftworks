@@ -5,6 +5,22 @@
     /** @typedef {import('./types').ControlEnvironment} ControlEnvironment */
     /** @typedef {import('./types').Mapping} Mapping */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks);
+    /** Shared UI component: flight pages need no touch-specific markup.
+     * @param {Document} document @param {HTMLSelectElement} inputMode */
+    function mountTouchUi(document, inputMode) {
+        // Shared flight UI owns its touch component; pages only mount flightControls.
+        if (inputMode.options && !Array.from(inputMode.options).some(function (option) { return option.value === 'touch'; })) {
+            var touchOption = document.createElement('option');
+            touchOption.value = 'touch'; touchOption.textContent = 'Touch / mobile (experimental)';
+            inputMode.appendChild(touchOption);
+        }
+        if (!document.getElementById('touch-controls')) {
+            var touchContainer = document.createElement('div');
+            touchContainer.innerHTML = "<div id=\"touch-controls\" aria-label=\"Touch flight controls\">\n<button data-touch=\"pause\" class=\"touch-pause\">Pause</button>\n<div id=\"touch-stick\" role=\"group\" aria-label=\"Drag to steer pitch and yaw\"><span id=\"touch-knob\"></span><span class=\"stick-caption\">STEER</span></div>\n<div class=\"touch-actions\"><button data-touch=\"target\">Target</button><button data-touch=\"weapon\">Weapon</button><button data-touch=\"boost\">Boost</button><button data-touch=\"fire\" class=\"touch-fire\">Fire</button></div>\n<div class=\"touch-throttle\"><button data-touch=\"down\" aria-label=\"Decrease throttle\">−</button><span>THR</span><button data-touch=\"up\" aria-label=\"Increase throttle\">+</button></div>\n</div>";
+            var touchElement = touchContainer.firstElementChild;
+            if (touchElement) document.body.appendChild(touchElement);
+        }
+    }
     // Environment injection keeps browser wiring testable without changing input math.
     /** @param {HTMLElement} host @param {ControlActions} actions @param {ControlEnvironment} [environment] */
     function mount(host, actions, environment) {
@@ -15,7 +31,7 @@
         var sensitivity = get('sensitivity'), preferredDevice = '';
         try {
             var savedMode = window.localStorage.getItem('driftworks.flight.input-mode');
-            if (savedMode === 'mouse' || savedMode === 'controller' || savedMode === 'touch') inputMode.value = savedMode;
+            if (savedMode === 'mouse' || savedMode === 'controller') inputMode.value = savedMode;
             var savedSensitivity = Number(window.localStorage.getItem('driftworks.flight.sensitivity'));
             if (Number.isFinite(savedSensitivity) && savedSensitivity >= .3 && savedSensitivity <= 3)
                 sensitivity.value = String(savedSensitivity);
@@ -82,6 +98,7 @@
             clear();
             try { window.localStorage.setItem('driftworks.flight.steering', steeringPreset.value); } catch (error) { /* Session controls still work. */ }
         };
+        mountTouchUi(document, inputMode);
         // Pointer IDs keep both thumbs independent; cancellation always releases demand.
         var touch = {pitch: 0, yaw: 0, fire: false, boost: false, throttleRate: 0};
         var touchRoot = document.getElementById('touch-controls');
@@ -99,10 +116,19 @@
             document.body.classList.toggle('touch-flight', inputMode.value === 'touch');
             clearTouch();
         }
+        function touchDevice() {
+            return !!(window.matchMedia && (window.matchMedia('(pointer: coarse)').matches ||
+                (navigator.maxTouchPoints > 0 && !window.matchMedia('(any-pointer: fine)').matches)));
+        }
         if (touchRoot && touchStick && touchRoot.querySelectorAll) {
-            try {
-                if (window.location.search.indexOf('mobile=1') >= 0 || (!window.localStorage.getItem('driftworks.flight.input-mode') && window.matchMedia('(pointer: coarse)').matches)) inputMode.value = 'touch';
-            } catch (error) { if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) inputMode.value = 'touch'; }
+            // Old desktop preferences must not disable the phone's default controls.
+            // Keep deliberate touch-device overrides separate from the desktop choice.
+            var touchPreference = '';
+            try { if (window.localStorage.getItem('driftworks.flight.input-mode') === 'touch') inputMode.value = 'touch'; } catch (error) { /* Optional preference. */ }
+            try { touchPreference = window.localStorage.getItem('driftworks.flight.touch-input-mode') || ''; } catch (error) { /* Detection works without storage. */ }
+            var forcedTouch = new URLSearchParams(window.location.search).get('mobile') === '1';
+            if (forcedTouch || touchDevice() && !/^(mouse|controller)$/.test(touchPreference)) inputMode.value = 'touch';
+            else if (touchDevice() && /^(mouse|controller)$/.test(touchPreference)) inputMode.value = touchPreference;
             touchLayout();
             /** @param {PointerEvent} e */
             function moveTouch(e) {
@@ -287,7 +313,10 @@
         inputMode.onchange = function () {
             actions.pause();
             touchLayout();
-            try { window.localStorage.setItem('driftworks.flight.input-mode', inputMode.value); } catch (error) { /* Optional preference. */ }
+            try {
+                window.localStorage.setItem('driftworks.flight.input-mode', inputMode.value);
+                if (touchRoot && touchDevice()) window.localStorage.setItem('driftworks.flight.touch-input-mode', inputMode.value);
+            } catch (error) { /* Optional preference. */ }
         };
         document.addEventListener('pointerlockchange', function () {
             if (document.pointerLockElement === host) {

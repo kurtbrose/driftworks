@@ -15,10 +15,18 @@ function hash(bytes, text = true) {
 function refresh(root, check = false) {
   const names = fs.existsSync(path.join(root, '.git')) ? require('node:child_process').execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {cwd: root, maxBuffer: 32 * 1024 * 1024}).toString().split('\0').filter(name => name && fs.existsSync(path.join(root, name))).sort() : files(root).sort();
   const versions = {};
+  // HTML already versions ordinary JS/CSS. Putting those in the runtime catalog
+  // invalidates every page's catalog URL for an unrelated control/code edit.
+  // Keep code shipped as an asset (e.g. dynamically loaded ship rigs), plus all
+  // non-code resources; retain a full lookup for static imports and CSS URLs.
+  const dynamicVersions = {};
   for (const name of names.filter(name => name !== 'src/asset-versions.js' && /^(assets|src|experiments|vendor)\//.test(name) && /\.(?:js|css|png|jpe?g|webp|svg|gif|json|glb|gltf|mp3|m4a|wav|ogg|bin)$/.test(name))) {
     versions[name] = hash(fs.readFileSync(path.join(root, name)), /\.(js|css|json|svg|gltf)$/.test(name));
   }
-  const runtime = `(function () {\n  'use strict';\n  var DW = /** @type {import('./types').DriftworksNamespace} */ (window.Driftworks = window.Driftworks || {});\n  var root = typeof document !== 'undefined' && document.currentScript ? new URL('../', new URL(document.currentScript.getAttribute('src') || '', document.baseURI)).href : '';\n  /** @type {Record<string,string>} */\n  var versions = ${JSON.stringify(versions, null, 2)};\n  /** @param {string} value @param {string=} base */\n  DW.assetUrl = function (value, base) {\n    if (!root) return value;\n    var url = new URL(value, base || document.baseURI);\n    if (url.href.startsWith(root)) {\n      var key = decodeURI(url.pathname.slice(new URL(root).pathname.length));\n      if (versions[key]) url.searchParams.set('v', versions[key]);\n    }\n    return url.href;\n  };\n})();\n`;
+  for (const [name, version] of Object.entries(versions)) {
+    if (name.startsWith('assets/') || !/\.(js|css)$/.test(name)) dynamicVersions[name] = version;
+  }
+  const runtime = `(function () {\n  'use strict';\n  var DW = /** @type {import('./types').DriftworksNamespace} */ (window.Driftworks = window.Driftworks || {});\n  var root = typeof document !== 'undefined' && document.currentScript ? new URL('../', new URL(document.currentScript.getAttribute('src') || '', document.baseURI)).href : '';\n  /** @type {Record<string,string>} */\n  var versions = ${JSON.stringify(dynamicVersions, null, 2)};\n  /** @param {string} value @param {string=} base */\n  DW.assetUrl = function (value, base) {\n    if (!root) return value;\n    var url = new URL(value, base || document.baseURI);\n    if (url.href.startsWith(root)) {\n      var key = decodeURI(url.pathname.slice(new URL(root).pathname.length));\n      if (versions[key]) url.searchParams.set('v', versions[key]);\n    }\n    return url.href;\n  };\n})();\n`;
   let failures = 0;
   // Image/script assignments are dynamic requests, so HTML versioning cannot
   // protect them. Keep authored request sites routed through the URL map.

@@ -37,6 +37,24 @@ try {
   assert.ok(refresh(root, true), 'removed version fails');
   process.exitCode = 0;
   refresh(root);
+  // A control-only edit updates its callers, without invalidating unrelated pages.
+  const unrelated = path.join(root, 'experiments/other.html');
+  fs.writeFileSync(unrelated, '<script src="../src/other.js"></script>');
+  fs.writeFileSync(path.join(root, 'src/other.js'), 'other');
+  fs.mkdirSync(path.join(root, 'assets/ships'), {recursive:true});
+  fs.writeFileSync(path.join(root, 'assets/ships/rig.js'), 'rig');
+  refresh(root);
+  const beforeOther = fs.readFileSync(unrelated, 'utf8');
+  const beforeCatalog = fs.readFileSync(path.join(root, 'src/asset-versions.js'), 'utf8');
+  const beforePage = fs.readFileSync(page, 'utf8');
+  fs.writeFileSync(path.join(root, 'src/app.js'), 'changed controls');
+  refresh(root);
+  assert.equal(fs.readFileSync(unrelated, 'utf8'), beforeOther);
+  assert.equal(fs.readFileSync(path.join(root, 'src/asset-versions.js'), 'utf8'), beforeCatalog);
+  assert.notEqual(fs.readFileSync(page, 'utf8'), beforePage);
+  assert.ok(beforeCatalog.includes('assets/ships/rig.js'), 'dynamic asset scripts remain versioned');
+  assert.ok(!beforeCatalog.includes('src/app.js'), 'ordinary code is versioned by its HTML caller');
+  assert.equal(refresh(root, true), 0);
   fs.writeFileSync(path.join(root, 'src/app.js'), "image.src='../assets/backgrounds/features/sky.png';");
   assert.ok(refresh(root, true), 'new dynamic requests must use the URL helper');
   process.exitCode = 0;

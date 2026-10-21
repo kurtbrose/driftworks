@@ -607,8 +607,9 @@ Ohio teams are Ford Folks (allies) versus Chevy Crew (opponents). The pilots and
 ### Experimental mobile flight UI
 
 Open `experiments/flight.html?mobile=1` to preview the touch layout on any device,
-or choose **Touch / mobile** in Flight input. Touch-first devices select it by
-default when no input preference is saved. Landscape gives both thumbs room.
+or choose **Touch / mobile** in Flight input. Touch-first devices select it automatically, including when an older desktop
+input preference is saved. Explicit input choices made on a touch device are
+remembered separately. Landscape gives both thumbs room.
 Drag the left stick to pitch/yaw; release to stop turning. Hold Fire or Boost on
 the right, tap Target or Weapon to cycle, and hold −/+ to adjust throttle.
 Pause opens the existing flight settings. Touch controls release on cancellation,

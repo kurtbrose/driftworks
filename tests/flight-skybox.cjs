@@ -149,10 +149,11 @@ testHeroComposition().then(testOhioSky).catch(error=>{console.error(error);proce
 const pathLighting=require('node:path'),cryptoLighting=require('node:crypto');
 const layoutPath=pathLighting.join(__dirname,'../assets/backgrounds/hero-layout-v1.json');
 const layoutLighting=JSON.parse(fs.readFileSync(layoutPath,'utf8'));
-const sourceLighting=Buffer.concat([fs.readFileSync(layoutPath),...Object.values(layoutLighting.library).map(asset=>fs.readFileSync(pathLighting.join(pathLighting.dirname(layoutPath),asset.file))),...Object.values(layoutLighting.extraImages || {}).map(file=>fs.readFileSync(pathLighting.join(pathLighting.dirname(layoutPath),file)))]);
+const textLighting=file=>Buffer.from(fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n'));
+const sourceLighting=Buffer.concat([textLighting(layoutPath),...Object.values(layoutLighting.library).map(asset=>fs.readFileSync(pathLighting.join(pathLighting.dirname(layoutPath),asset.file))),...Object.values(layoutLighting.extraImages || {}).map(file=>fs.readFileSync(pathLighting.join(pathLighting.dirname(layoutPath),file)))]);
 const bakedLighting=JSON.parse(fs.readFileSync(pathLighting.join(__dirname,'../assets/backgrounds/sky-lighting-v1.json'),'utf8'));
 assert.equal(cryptoLighting.createHash('sha256').update(sourceLighting).digest('hex'),bakedLighting.sourceHash,'rebake sky lighting after changing the layout or art');
-for(const [key,file] of [['processorHash','bake-sky-lighting.py'],['composerHash','compose-skybox.py']])assert.equal(cryptoLighting.createHash('sha256').update(fs.readFileSync(pathLighting.join(__dirname,'../tools',file))).digest('hex'),bakedLighting[key],'rebake lighting after changing its preprocessing');
+for(const [key,file] of [['processorHash','bake-sky-lighting.py'],['composerHash','compose-skybox.py']])assert.equal(cryptoLighting.createHash('sha256').update(textLighting(pathLighting.join(__dirname,'../tools',file))).digest('hex'),bakedLighting[key],'rebake lighting after changing its preprocessing');
 for(const probe of Object.values(bakedLighting.families)){
   assert.equal(probe.sh.length,9);assert.ok(probe.sh.every(color=>color.length===3&&color.every(Number.isFinite)));
   const image=fs.readFileSync(pathLighting.join(__dirname,'../assets/backgrounds',probe.map));

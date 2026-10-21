@@ -1666,3 +1666,18 @@ or radio timing. Offscreen DOM text/meters retain accessible semantics and the
 existing presentation producers, while configuration controls live in the pause
 menu. F3/P pause before opening diagnostics. No persistent simulation state or
 flight targeting rules move into the renderer.
+
+### Shared touch controls and asset versions
+
+`flightControls.mount` owns the touch input option and creates the joystick/action
+component once. Flight pages supply the standard input selector and load the shared
+`flight-controls.js` and `flight-hud.css`; they must not duplicate touch markup or
+phone detection. The existing shared HUD chooses its simplified layout from the
+`touch-flight` body class. Input behavior stays in controls, appearance in shared CSS.
+
+`tools/refresh-site-assets.cjs` versions static script/style/import references in
+their HTML callers. The runtime `asset-versions.js` catalog covers dynamic resources
+(images, data, audio and scripts under `assets/`), excluding ordinary application
+JS/CSS. Thus an input-code edit updates only pages that load that code, rather than
+invalidating the catalog on every page. Dynamic application-code loading must add
+an explicit versioning strategy; asset scripts remain supported through `assetUrl`.

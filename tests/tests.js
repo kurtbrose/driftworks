@@ -558,7 +558,7 @@
   });
 
   // A small event/DOM fixture exercises the browser adapter without real devices.
-  function flightControlsFixture(storage,withTouch){
+  function flightControlsFixture(storage,withTouch,deviceOptions){
     function target(){return {listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},emit:function(name,event){if(this.listeners[name])this.listeners[name](event||{});},appendChild:function(child){this.children.push(child);if(this.value===''&&child.value!==undefined)this.value=child.value;},children:[],value:'',textContent:'',setAttribute:function(){}};}
     var elements={},doc=target(),win=target(),host=target(),pads=[],counts={pause:0,weapon:0,target:0,lock:0,radar:0,diagnostics:0,performance:0,resume:0,failure:0},paused=false,dead=false,controls;
     doc.getElementById=function(id){return elements[id]||(elements[id]=target());};
@@ -569,7 +569,7 @@
     doc.getElementById('input-mode').value='mouse';doc.getElementById('sensitivity').value='1';
     if(storage)win.localStorage=storage;
     if(withTouch){
-      win.location={search:'?mobile=1'};win.matchMedia=function(){return {matches:false};};
+      win.location={search:deviceOptions ? deviceOptions.search || '' : '?mobile=1'};win.matchMedia=function(query){return {matches:!!(deviceOptions && (query==='(pointer: coarse)' ? deviceOptions.coarse : deviceOptions.fine))};};
       var root=doc.getElementById('touch-controls'),stick=doc.getElementById('touch-stick');
       doc.getElementById('touch-knob').style={};
       stick.setPointerCapture=function(){};stick.getBoundingClientRect=function(){return {left:0,top:0,width:144,height:144};};
@@ -583,10 +583,24 @@
       captureFailure:function(){counts.failure++;paused=true;controls.clear();},
       toggleTargetLock:function(){counts.lock++;},nextWeapon:function(){counts.weapon++;},nextTarget:function(){counts.target++;},nextRadarRange:function(){counts.radar++;},
       toggleDiagnostics:function(){counts.diagnostics++;},togglePerformance:function(){counts.performance++;},selectProfile:function(index){counts.profile=index;}
-    },{document:doc,window:win,navigator:{getGamepads:function(){return pads;}}});
+    },{document:doc,window:win,navigator:{maxTouchPoints:deviceOptions && deviceOptions.touchPoints || 0,getGamepads:function(){return pads;}}});
     function key(code,tag,repeat){var event={code:code,target:{tagName:tag||'BODY'},repeat:!!repeat,preventDefault:function(){this.prevented=true;}};win.emit('keydown',event);return event;}
     return {controls:controls,doc:doc,win:win,host:host,counts:counts,key:key,elements:elements,setPads:function(value){pads=value;},setPaused:function(value){paused=value;},setDead:function(value){dead=value;}};
   }
+
+  test('phone input detection ignores legacy desktop preference and retains explicit phone overrides',function(){
+    var stored={'driftworks.flight.input-mode':'mouse'},storage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};
+    var phone=flightControlsFixture(storage,true,{coarse:true});
+    assert(phone.controls.view().inputMode==='touch');
+    assert(flightControlsFixture(storage,true,{touchPoints:5}).controls.view().inputMode==='touch');
+    assert(flightControlsFixture(storage,true,{touchPoints:5,fine:true}).controls.view().inputMode==='mouse');
+    phone.elements['input-mode'].value='controller';phone.elements['input-mode'].onchange();
+    assert(flightControlsFixture(storage,true,{coarse:true}).controls.view().inputMode==='controller');
+    assert(flightControlsFixture(storage,true,{coarse:true,search:'?mobile=1'}).controls.view().inputMode==='touch');
+    var blocked={getItem:function(){throw new Error('Storage blocked');}};
+    assert(flightControlsFixture(blocked,true,{coarse:true}).controls.view().inputMode==='touch');
+    assert(flightControlsFixture(storage,true,{search:'?note=mobile=1'}).controls.view().inputMode==='controller');
+  });
 
   test('touch flight keeps two pointers independent and releases on cancellation and pause',function(){
     var f=flightControlsFixture(undefined,true),root=f.elements['touch-controls'],stick=f.elements['touch-stick'];

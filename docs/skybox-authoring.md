@@ -418,3 +418,7 @@ six-face HDR asset baker, dynamic nova sequencing API, or general mesh-shadow
 system. The fixture's finite-source irradiance lookup and sampled sphere shadows
 remain experimental; concentrated emitters should not be silently added to low
 order ambient SH because of its demonstrated rear-lobe artifact.
+
+Lighting provenance hashes normalize CRLF text to LF for the layout and Python
+preprocessors; image bytes remain exact. This keeps Windows bakes verifiable in
+Linux CI. The baker writes its JSON with LF line endings.

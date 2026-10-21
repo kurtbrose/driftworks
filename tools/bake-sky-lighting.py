@@ -64,6 +64,11 @@ def derive(image, radiance_output=None):
         normalization=gain, highlightCap=cap), reflection
 
 
+def text_bytes(path):
+    """Hash text identically on Windows and LF-only CI checkouts."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--layout', type=Path)
@@ -75,8 +80,8 @@ def main():
         parser.error('Choose exactly one of --layout or --image')
     args.output.parent.mkdir(parents=True, exist_ok=True)
     result = dict(version=1, method='solid-angle L2 cosine-convolved SH; bounded PNG and linear HDR radiance for PMREM', families={},
-        processorHash=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        composerHash=hashlib.sha256(Path(__file__).with_name('compose-skybox.py').read_bytes()).hexdigest())
+        processorHash=hashlib.sha256(text_bytes(Path(__file__))).hexdigest(),
+        composerHash=hashlib.sha256(text_bytes(Path(__file__).with_name('compose-skybox.py'))).hexdigest())
     if args.layout:
         layout = json.loads(args.layout.read_text())
         families = sorted({asset['family'] for asset in layout['library'].values()})
@@ -84,7 +89,7 @@ def main():
         for family in families:
             layout['family'] = family
             images[family] = compose.bake(layout, args.layout.parent, 1024)
-        source = args.layout.read_bytes()+b''.join((args.layout.parent/asset['file']).read_bytes() for asset in layout['library'].values())
+        source = text_bytes(args.layout)+b''.join((args.layout.parent/asset['file']).read_bytes() for asset in layout['library'].values())
         for name, filename in layout.get('extraImages', {}).items():
             image_path=args.layout.parent/filename
             images[name]=Image.open(image_path).convert('RGB').resize((1024,512),Image.Resampling.LANCZOS)
@@ -104,7 +109,7 @@ def main():
         reflection.save(args.output.parent/filename)
         data['map'] = filename
         result['families'][name] = data
-    args.output.write_text(json.dumps(result, indent=2)+'\n')
+    args.output.write_text(json.dumps(result, indent=2)+'\n', encoding='utf-8', newline='\n')
     print(f'{args.output}: {len(images)} cached environments')
 
 

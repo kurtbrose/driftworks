@@ -539,7 +539,7 @@ void main(){
                 if(status)status.textContent=selected===11?'Woven starlight / twelve unique regions, feathered into one fixed 8K sphere.':'River of stars / earlier repeated-panel comparison.';
             };
             image.onerror=function(){canvas.dataset[key]='error';if(status)status.textContent='Could not load the stellar streams texture.';};
-            image.src=assetUrl(selected===11?'../assets/backgrounds/star-river-woven-v1-8k.jpg':'../assets/backgrounds/user-panorama-v1.png');
+            image.src=assetUrl(selected===11?'../assets/backgrounds/star-river-woven-v1-8k.jpg':'../assets/backgrounds/star-river-photo-v3-8k.jpg');
         }
         var image = new Image();
         image.onload = function () {
