@@ -599,4 +599,6 @@ Ohio sortie: choose Ohio from experiments/missions.html or open experiments/flig
 
 Authored hero skies automatically illuminate the shared 3D materials from precomputed diffuse SH and rough environment reflections. The sky review includes a **Sky-derived lighting** A/B checkbox. Lighting normalization, cache preparation, and current renderer limits are documented in [skybox authoring](docs/skybox-authoring.md).
 
-Ohio pilots and Control have their own winter wardrobes: trapper hats with earflaps, baseball caps, flannel, work jackets, scarves and quilted vests. Their original faces, seven animated expression poses, and voices are preserved. Preview the whole animated cast at experiments/flight-cast.html?mission=ohio.
+Ohio teams are Ford Folks (allies) versus Chevy Crew (opponents). The pilots and Control have their own winter wardrobes: trapper hats with earflaps, baseball caps, flannel, work jackets, scarves and quilted vests. Their original faces, seven animated expression poses, and voices are preserved. Preview the whole animated cast at experiments/flight-cast.html?mission=ohio.
+
+**J / River of stars** adds an 8K, densely textured stellar sky with flowing concentrations, dark lanes and a separate crisp point-star foreground. Choose it under Flight Settings > Skybox or in the 3D sky review. The generator uses a fixed seed; it does not randomize between missions.

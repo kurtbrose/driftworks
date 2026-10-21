@@ -176,6 +176,8 @@ def main():
     # Keep the exported recipe portable with paths relative to its destination.
     for asset in layout['library'].values():
         asset['file'] = Path(os.path.relpath((args.layout.parent/asset['file']).resolve(),args.output.parent.resolve())).as_posix()
+    for name, filename in layout.get('extraImages', {}).items():
+        layout['extraImages'][name] = Path(os.path.relpath((args.layout.parent/filename).resolve(),args.output.parent.resolve())).as_posix()
     args.output.with_suffix('.layout.json').write_text(json.dumps(layout, indent=2)+'\n', encoding='utf-8')
     if args.lighting_output:
         # Fixed authored layouts bake directly from their runtime source. If

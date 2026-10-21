@@ -124,7 +124,7 @@ A common readability floor and display transfer adapt the result to the existing
 display-referred material pipeline. The sky brightness slider remains an art
 exposure control; it does not undo the lighting normalization.
 
-`sky-lighting-v1.json` and its three 512 × 256 PNGs are precomputed and locally
+`sky-lighting-v1.json` and its four 512 × 256 PNGs are precomputed and locally
 served. They are shared across sky instances; each GL context uploads a reflection
 map and creates its inexpensive mip chain once, then reuses it. No spherical
 integration or diffuse convolution happens during flight. The source hash in the
@@ -138,7 +138,7 @@ independently of the model camera. Its **Sky-derived lighting** checkbox provide
 an A/B comparison. Looking toward the large nebula backlights the ship; looking
 away lets its colored illumination reach the visible hull faces.
 
-Current coverage is the three authored hero families. Legacy procedural/photo
+Current coverage is the three authored hero families and River of stars. Legacy procedural/photo
 comparison choices retain their original lighting. The `--image` input accepts
 other 2:1 LDR equirectangular panoramas for the same preprocessing path. Reflection
 filtering uses conventional mipmaps with a finish-based bias; it is a practical
@@ -147,3 +147,50 @@ environments and interpolation between cached probes are future extensions.
 
 References: [Three.js diffuse light probes](https://threejs.org/docs/pages/LightProbe.html)
 and [PMREM filtering](https://archive.threejs.org/docs/api/en/extras/PMREMGenerator.html).
+
+## River of stars
+
+**J / River of stars** explores a denser photographic style: unresolved stellar
+texture across the sphere, broad flowing concentrations, warmer stellar populations
+and dark dust lanes. Irregular concentrations at several angular scales create
+dense knots and nearly empty pockets; a sparse population of larger blue and amber
+stars adds bright cores and soft halos. It uses an independently seeded, offline-generated 8192 × 4096
+panorama beneath the existing crisp point stars. Its structure rotates with the
+camera and is identical on every load. No hero galaxy or nebula is layered over it.
+
+```sh
+python tools/generate-star-river.py --output assets/backgrounds/star-river-v1-8k.jpg
+python tools/bake-sky-lighting.py --layout assets/backgrounds/hero-layout-v1.json --output assets/backgrounds/sky-lighting-v1.json
+python tools/test-star-river.py
+```
+
+The fixed seed is 76841. The authoring layout's `extraImages.river` registers the
+panorama with the same lighting preparation and cache validation used by the hero
+families. The new style adds one textured background draw, followed by the existing
+point-star draw. The source is about 8 MB compressed; an 8K texture can use roughly
+128 MiB of GPU memory. It loads lazily when selected. Devices limited to 4096-pixel
+textures automatically receive a 4K resize, leaving point-star sharpness unchanged.
+The review page also offers this style for comparison with real ship geometry.
+
+### Ohio compact background pass
+
+The Ohio mission keeps its planet and sun as two local 1254-square source images.
+The opaque sky shader samples them directly using the same tangent-plane projection,
+geographic UV orientation, source black-level correction, edge feather, gain and
+exposure as the original hero quads. It combines their screen-blend result in that
+single draw; the unchanged point-star pass follows. No Ohio hero geometry or
+blended landmark draws are submitted. Total sky draws are two, including stars.
+The unused Milky Way panorama is not loaded in Ohio mode.
+
+Each image initially has a complete black 1x1 texture, so loading or failure of one
+source leaves the other source and the stars usable. The planet/sun use texture
+units 2 and 3; panorama and noise retain units 0 and 1 for the other sky styles.
+Image resolution and the existing NPOT linear filtering stay unchanged. No large
+equirectangular bake, runtime resampling, or duplicate GPU image copy is required.
+
+`tests/flight-skybox.cjs` checks projection agreement, original sun bearing, sampler
+assignments, only two image requests, the absence of landmark geometry, and the
+single opaque background plus point-star draw contract. Browser before/after
+readbacks of planet, sun, edge and opposite views differed by at most one 8-bit
+channel level. Desktop timing is not evidence of a speedup on another GPU; compare
+on the affected MacBook before treating the reported slowdown as resolved.

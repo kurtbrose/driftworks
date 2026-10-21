@@ -84,11 +84,12 @@ async function testHeroComposition() {
   selector.value='1';handlers.change();renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,2,'procedural choices do not draw hero features');
   const second=api.create({clientWidth:800,clientHeight:600,prepend(){}},{style:8});second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);renderer.setStyle(8);assert.equal(second.getLighting(),renderer.getLighting(),'multiple renderer instances share one precomputed environment cache');assert.equal(requests,3,'second scene loads its layout but reuses lighting');
+  second.setStyle(10);second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);assert.equal(second.getRenderStats().drawCalls,2,'river panorama and crisp foreground stars use two draws');assert.equal(JSON.stringify(second.getLighting().sh),JSON.stringify(lighting.families.river.sh),'stellar streams select their derived lighting');assert.equal(canvas.dataset.river,'ready');assert.ok(imageUrls.some(url=>url.includes('star-river-v1-8k.jpg')),'river uses the local 8K texture');
   console.log('PASS hero sky: local asset reuse, fixed layout, sphere seams, orientation and separate star pass');
 }
 async function testOhioSky() {
-  const buffers=[], images=[];
-  const ohioGl=new Proxy({...gl,bufferData:(_target,data)=>buffers.push(Array.from(data))},{get:(target,key)=>key in target?target[key]:()=>{}});
+  const buffers=[], images=[],vectors={},units={},draws=[],blends=[],uploads=[];
+  const ohioGl=new Proxy({...gl,bufferData:(_target,data)=>buffers.push(Array.from(data)),uniform3fv:(name,value)=>{vectors[name]=Array.from(value);},uniform1i:(name,value)=>{units[name]=value;},drawArrays:(_mode,_first,count)=>draws.push(count),blendFunc:(...args)=>blends.push(args),texImage2D:(...args)=>uploads.push(args)},{get:(target,key)=>key in target?target[key]:()=>{}});
   const ohioCanvas={...canvas,dataset:{},getContext:()=>ohioGl};
   const ohioContext={...context,window:{...context.window,Driftworks:{},location:{search:'?mission=ohio'},fetch:()=>{throw new Error('Ohio must use bundled images directly');}},
     document:{...context.document,createElement:name=>name==='canvas'?ohioCanvas:{}},
@@ -96,18 +97,35 @@ async function testOhioSky() {
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../src/asset-versions.js'),'utf8'),ohioContext);
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../experiments/skybox.js'),'utf8'),ohioContext);
   const renderer=ohioContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
+  renderer.render(pose,1,false);
+  assert.equal(renderer.getRenderStats().drawCalls,2,'Pending images still render black placeholders and stars');
+  assert.equal(uploads.filter(args=>args.length===9&&args[3]===1&&args[4]===1&&args[8].length===4&&args[8][3]===0).length,2,'Both compact samplers have complete transparent-black placeholders before decoding');
+  draws.length=0;blends.length=0;
   await new Promise(setImmediate);renderer.render(pose,1,false);
   assert.equal(ohioCanvas.dataset.ohio,'ready');
   assert.ok(images.some(url=>new URL(url).pathname.endsWith('/assets/backgrounds/ohio-planet-v1.png')));
   assert.ok(images.some(url=>new URL(url).pathname.endsWith('/assets/backgrounds/features/warm-sun-v1.png')));
-  const landmarks=buffers.filter(data=>data.length===30);
-  assert.equal(landmarks.length,2);
-  for(const vertices of landmarks) assert.equal(vertices[3],1,'unmirror celestial image UVs');
-  const sun=landmarks[1];
-  const center=[0,1,2].map(axis=>(sun[axis]+sun[axis+25])/2);
-  assert.ok(center[0]<0&&center[1]<0&&center[2]>0,'sun sits behind the left shoulder above the plane');
-  assert.equal(renderer.getRenderStats().drawCalls,4,'planet and sun share the directional landmark pass');
-  console.log('PASS Ohio sky: local planet and sun, original image orientation and physical light bearing');
+  assert.equal(images.length,2,'Ohio only loads the two compact source textures, without an unused panorama');
+  assert.equal(buffers.filter(data=>data.length===30).length,0,'Ohio no longer allocates or draws landmark quads');
+  const api=ohioContext.window.Driftworks.flightSkybox;
+  for(const [prefix,feature] of [['ohioPlanet',{asset:'ohio',yaw:90,pitch:4,roll:0,widthDeg:44,gain:1}],['ohioSun',{asset:'sun',yaw:225,pitch:30,roll:0,widthDeg:7,gain:1}]]){
+    const frame=api.featureFrame(feature,1),center=vectors[prefix+'Center'],right=vectors[prefix+'Right'],up=vectors[prefix+'Up'];
+    for(let vertex=0;vertex<30;vertex+=5){
+      const ray=frame.slice(vertex,vertex+3),dot=(a,b)=>a.reduce((sum,value,i)=>sum+value*b[i],0),depth=dot(ray,center);
+      assert.ok(Math.abs((1-dot(ray,right)/depth)/2-(1-frame[vertex+3]))<1e-5,'Single-pass projection preserves unmirrored image longitude');
+      assert.ok(Math.abs((1-dot(ray,up)/depth)/2-frame[vertex+4])<1e-5,'Single-pass projection preserves image latitude');
+    }
+  }
+  const sun=vectors.ohioSunCenter;
+  assert.ok(sun[0]<0&&sun[1]<0&&sun[2]>0,'sun remains behind the left shoulder above the plane');
+  assert.equal(units.ohioPlanet,2);assert.equal(units.ohioSun,3);
+  assert.deepEqual(draws,[6,3200],'Only the opaque fullscreen background and crisp point stars are submitted');
+  assert.equal(blends.length,1,'Only the star pass blends; Ohio images compose in the opaque background');
+  assert.equal(renderer.getRenderStats().drawCalls,2);
+  renderer.render({...pose,right:[-1,0,0],back:[0,1,0]},1,false);
+  assert.equal(renderer.getRenderStats().drawCalls,2,'Turning away adds no landmark passes');
+  renderer.render(pose,1,true);assert.equal(renderer.getRenderStats().drawCalls,0,'Empty comparison still skips the entire sky');
+  console.log('PASS Ohio sky: two compact images in one opaque sky draw, identical geographic UVs and sun bearing, separate crisp stars');
 }
 
 testHeroComposition().then(testOhioSky).catch(error=>{console.error(error);process.exitCode=1;});

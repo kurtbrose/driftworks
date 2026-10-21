@@ -22,7 +22,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 <div id="viewer" class="scene" aria-label="Orbiting 3D asteroid"></div>
 <header><div><h1>Asteroid orbit</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="spotlight" aria-pressed="false">Work light</button><button id="work-shadows" aria-pressed="true">Shadows</button><button id="shadow-posts" aria-pressed="true">Test posts</button><button id="cut" aria-pressed="false">Cutaway</button><button id="walk" aria-pressed="false">Surface walk</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
 <section class="parameters" aria-label="Asteroid parameters">
-<p>Surface restored to the remove-boulders checkpoint. <a href="asteroid-surface-experiment.html">Archived surface experiment</a> · <a href="terrain-lab.html">Rock laboratory</a> · <a href="asteroid-three-comparison.html">Three.js comparison</a></p><h2>Geology controls</h2>
+<p>Surface restored to the remove-boulders checkpoint. <a href="asteroid-surface-experiment.html">Archived surface experiment</a> · <a href="terrain-lab.html">Rock laboratory</a> · <a href="asteroid-migration.html">Three.js migration review</a></p><h2>Geology controls</h2>
 <label for="seed">Seed</label><input id="seed" type="text" maxlength="64" autocomplete="off" spellcheck="false">
 <div class="seed-row"><button id="reseed">Re-seed</button><button id="apply-seed">Apply seed</button></div>
 <label>Composition</label><div class="presets" role="group" aria-label="Composition presets"><button data-material="mixed" aria-pressed="true">Mixed</button><button data-material="0" aria-pressed="false">Ice</button><button data-material="1" aria-pressed="false">Volatiles</button><button data-material="2" aria-pressed="false">Metals</button><button data-material="3" aria-pressed="false">Silicates</button></div>
@@ -33,7 +33,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 <button id="defaults" style="margin-top:8px">Reset parameters</button>
 </section>
 <div id="walk-controls" class="walk-controls" hidden><span id="walk-altitude" style="background:#15232cdc;border:1px solid #40505b;border-radius:6px;padding:10px 12px">Altitude</span><button data-step="left" aria-label="Step left">←</button><button data-step="forward" aria-label="Step forward">↑</button><button data-step="back" aria-label="Step backward">↓</button><button data-step="right" aria-label="Step right">→</button></div><footer>Driftworks · live 3D geology · camera orbit, stationary asteroid</footer>
-<script src="../src/asset-versions.js?v=ac96a86b3c1c"></script>
+<script src="../src/asset-versions.js?v=58f50d9894fd"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
     <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
@@ -51,7 +51,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 <script src="../src/audio-mixer.js?v=86b2e5499688"></script>
 <script src="../src/audio.js?v=4c3a1ddd049c"></script>
     <script src="../src/hud.js?v=b41c310fa59d"></script>
-    <script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=02d9b3545d85"></script><script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script><script src="../src/scene3d.js?v=10fbbf4b5bad"></script>
+    <script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=02d9b3545d85"></script><script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script><script src="../src/scene3d.js?v=0a0111aeaac6"></script>
     <script src="../src/game.js?v=4b2cf113b259"></script>
 <script src="mining-study-terrain.js?v=f1d69b502da0"></script>
 <script>

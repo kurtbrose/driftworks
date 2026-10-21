@@ -662,7 +662,7 @@
             if (combat.ohioIntro === 2) { combat.ohioIntro = 3; state.wait = 8; return null; }
             var introIndex = combat.ohioIntro++;
             var introCraft = combat.enemies[introIndex === 0 ? 0 : 8];
-            return {text: introIndex === 0 ? "It's all Ohio?" : 'Always has been.', speaker: DW.training.callsign(introCraft) + ' / OPEN CHANNEL',
+            return {text: introIndex === 0 ? "It's all Ohio?" : 'Always has been.', speaker: (introCraft.team === 'ally' ? 'Ford Folks ' : 'Chevy Crew ') + DW.training.callsign(introCraft) + ' / OPEN CHANNEL',
                 voice: 'Scout', hostile: introIndex === 1, seed: 101 + introIndex * 37, radioSeed: 7919 + introIndex,
                 voiceSettings: pilotVoice(introCraft), portraitIndex: introCraft.index, craftId: introCraft.id, event: 'ohioIntro'};
         }
@@ -925,7 +925,7 @@
         /** @type {Line} */
         var line = { voiceSettings: pilotVoice(craft), radioSeed: 0, text: text, speaker: kind === 'enemy' ? 'BANDIT / OPEN CHANNEL' : kind === 'ally' ? 'WING / FLIGHT CHANNEL' : 'CONTROL / RANGE CHANNEL', voice: kind === 'enemy' ? 'Pirate' : kind === 'ally' ? 'Scout' : 'Navigator', hostile: kind === 'enemy', seed: state.serial + 37 };
         if (craft && selected) {
-            line.speaker = (craft.team === 'ally' ? 'WING ' : 'BANDIT ') + callsign(craft) + ' / ' + (selected.event === 'support' ? 'COVER' : selected.event === 'emotionalReply' ? 'REASSURANCE' : selected.event === 'emotion' ? (feeling ? feeling.current : 'calm').toUpperCase() : selected.event.toUpperCase());
+            line.speaker = (combat.mode === 'ohio' ? (craft.team === 'ally' ? 'Ford Folks ' : 'Chevy Crew ') : (craft.team === 'ally' ? 'WING ' : 'BANDIT ')) + callsign(craft) + ' / ' + (selected.event === 'support' ? 'COVER' : selected.event === 'emotionalReply' ? 'REASSURANCE' : selected.event === 'emotion' ? (feeling ? feeling.current : 'calm').toUpperCase() : selected.event.toUpperCase());
             line.craftId = craft.id;
             line.mode = craft.mode;
             line.event = selected.event;

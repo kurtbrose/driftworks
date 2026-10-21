@@ -31,7 +31,15 @@
     control('rim').onclick=function(){framing(90,-14,'Bright rim / deliberate stress test for hull contrast');};
     control('empty').onclick=function(){framing(50,0,'Open field / black space as a visual rest');};
     control('landmark').onclick=function(){framing(-80,15,'Secondary landmark / unique filament on the far side of the sky');};
-    skyChoice.onchange=function(){sky.setStyle(Number(skyChoice.value));};
+    skyChoice.onchange=function(){
+        sky.setStyle(Number(skyChoice.value));
+        var river=skyChoice.value==='10';
+        control('opening').textContent=river?'Default stream view':'Dark opening';
+        control('rim').textContent=river?'Look down':'Bright cloud rim';
+        control('empty').textContent=river?'Look across':'Open field';
+        control('landmark').textContent=river?'Far side':'Secondary landmark';
+        control('caption').textContent=river?'River of stars / dense stellar texture with dark lanes':'Sky family / compare its silhouette and open regions';
+    };
     control('review-exposure').oninput=function(){sky.setExposure(Number(control('review-exposure').value));};
     control('review-lighting').onchange=function(){sky.setLightingEnabled(control('review-lighting').checked);};
     model.onchange=update;control('review-reset').onclick=reset;

@@ -58,5 +58,8 @@
     }
   ],
   "family": "galaxy",
-  "minGapDeg": 10
+  "minGapDeg": 10,
+  "extraImages": {
+    "river": "star-river-v1-8k.jpg"
+  }
 }

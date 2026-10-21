@@ -1,0 +1,69 @@
+{
+  "description": "Frozen WebGL versus production Three.js r180; meanChannelDifference is in 8-bit channel units over nontransparent pixel union.",
+  "cases": [
+    {
+      "meanChannelDifference": 0.0017865316186567051,
+      "pixels": 135458,
+      "pose": "orbit",
+      "seed": "ast-ceres-01"
+    },
+    {
+      "meanChannelDifference": 0.0007155335391389666,
+      "pixels": 139290,
+      "pose": "underside",
+      "seed": "ast-ceres-01"
+    },
+    {
+      "meanChannelDifference": 0,
+      "pixels": 481900,
+      "pose": "surface",
+      "seed": "ast-ceres-01"
+    },
+    {
+      "meanChannelDifference": 0.004431100454780143,
+      "pixels": 94258,
+      "pose": "cutaway",
+      "seed": "ast-ceres-01"
+    },
+    {
+      "meanChannelDifference": 0.0007794304162342903,
+      "pixels": 144550,
+      "pose": "orbit",
+      "seed": "migration-review-2"
+    },
+    {
+      "meanChannelDifference": 0.0020731589523950876,
+      "pixels": 141491,
+      "pose": "underside",
+      "seed": "migration-review-2"
+    },
+    {
+      "meanChannelDifference": 0.00001182704134733655,
+      "pixels": 563680,
+      "pose": "surface",
+      "seed": "migration-review-2"
+    },
+    {
+      "meanChannelDifference": 0.005702188210387492,
+      "pixels": 96045,
+      "pose": "cutaway",
+      "seed": "migration-review-2"
+    }
+  ],
+  "status": "pass",
+  "viewport": [
+    [
+      947,
+      756
+    ],
+    [
+      947,
+      756
+    ]
+  ],
+  "shadowRegression": {
+    "shadowedGroundPixels": 75343,
+    "darkenedPixels": 88710,
+    "brightenedPixels": 0
+  }
+}

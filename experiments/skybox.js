@@ -109,6 +109,22 @@ uniform float aspect,focal,style;
 uniform sampler2D panorama;
 uniform sampler2D noiseMap;
 uniform float exposure;
+uniform sampler2D ohioPlanet,ohioSun;
+uniform vec3 ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp;
+uniform vec3 ohioSunCenter,ohioSunRight,ohioSunUp;
+uniform float ohioPlanetGain,ohioSunGain;
+// Same tangent-plane UVs and edge treatment as the authored landmark quads,
+// composed directly into the opaque background instead of blended over it.
+vec3 ohioLandmark(sampler2D sourceMap,vec3 ray,vec3 center,vec3 horizontal,vec3 vertical,float gain){
+    float depth=dot(ray,center);
+    if(depth<=0.)return vec3(0.);
+    vec2 p=vec2(dot(ray,horizontal),dot(ray,vertical))/depth;
+    if(abs(p.x)>1. || abs(p.y)>1.)return vec3(0.);
+    vec2 uv=(vec2(1.)-p)*.5;
+    vec4 source=texture2D(sourceMap,uv);
+    float edge=smoothstep(0.,.035,min(min(uv.x,uv.y),min(1.-uv.x,1.-uv.y)));
+    return clamp(max(vec3(0.),(source.rgb-2./255.)/(1.-2./255.))*source.a*edge*gain*exposure,0.,1.);
+}
 // Continuous directional noise. The texture supplies random values, not visible grain.
 float noise(vec3 p){
     vec3 cell=floor(p), f=fract(p); f=f*f*(3.-2.*f);
@@ -140,6 +156,12 @@ void main(){
         vec3 riverRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec2 riverUV=vec2(atan(riverRay.y,riverRay.x)/6.28318530718+.5,acos(clamp(riverRay.z,-1.,1.))/3.14159265359);
         gl_FragColor=vec4(texture2D(panorama,riverUV).rgb*exposure,1.);return;
+    }
+    if(style>10.5){
+        vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+        vec3 planet=ohioLandmark(ohioPlanet,ray,ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp,ohioPlanetGain);
+        vec3 sun=ohioLandmark(ohioSun,ray,ohioSunCenter,ohioSunRight,ohioSunUp,ohioSunGain);
+        gl_FragColor=vec4(planet+sun-planet*sun,1.);return;
     }
     if(style>6.5){gl_FragColor=vec4(0.,0.,0.,1.);return;}
     vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
@@ -193,6 +215,8 @@ void main(){
         /** @type {{buffer:WebGLBuffer|null,texture:WebGLTexture|null,gain:number,family:string}[]} */
         var heroFeatures=[];
         var heroLoading=false;
+        /** @type {{texture:WebGLTexture|null,center:number[],right:number[],up:number[],gain:number,loaded:boolean}[]} */
+        var ohioTextures=[];
         if (ohioMission) {
             // The planet is lit from its upper left, toward the viewer.
             // +Y faces the planet; the sun is behind the left shoulder (-X,-Y,+Z).
@@ -201,23 +225,30 @@ void main(){
                 {asset:'features/warm-sun-v1.png',yaw:225,pitch:30,roll:0,widthDeg:7,gain:1}
             ];
             ohioAssets.forEach(function (feature) {
+                var vertices=featureFrame(feature,1), center=/** @type {number[]} */ ([]), horizontal=/** @type {number[]} */ ([]), vertical=/** @type {number[]} */ ([]);
+                for(var axis=0;axis<3;axis++){
+                    center.push((vertices[axis]+vertices[25+axis])/2);
+                    horizontal.push((vertices[5+axis]-vertices[axis])/2);
+                    vertical.push((vertices[10+axis]-vertices[axis])/2);
+                }
+                var horizontalLength=horizontal.reduce(function(sum,v){return sum+v*v;},0);
+                var verticalLength=vertical.reduce(function(sum,v){return sum+v*v;},0);
+                var texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
+                // Complete black placeholder: either image may load first or fail.
+                gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,0]));
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+                var entry={texture:texture,center:center,right:horizontal.map(function(v){return v/horizontalLength;}),
+                    up:vertical.map(function(v){return v/verticalLength;}),gain:feature.gain,loaded:false};
+                ohioTextures.push(entry);
                 var image = new Image();
                 image.onload = function () {
-                    var texture=gl.createTexture();
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
                     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
-                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-                    var buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
-                    var vertices=featureFrame(feature,1);
-                    // Celestial east points left on screen. Correct the image UVs,
-                    // preserving world bearings and the original geographic outline.
-                    for(var i=3;i<vertices.length;i+=5) vertices[i]=1-vertices[i];
-                    gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
-                    heroFeatures.push({buffer:buffer,texture:texture,gain:feature.gain,family:'ohio'});
-                    canvas.dataset.ohio=heroFeatures.length===2 ? 'ready' : 'loading';
+                    entry.loaded=true;
+                    if(canvas.dataset.ohio!=='error')canvas.dataset.ohio=ohioTextures.every(function(item){return item.loaded;})?'ready':'loading';
                 };
                 image.onerror=function () {canvas.dataset.ohio='error';};
                 image.src=assetUrl('../assets/backgrounds/'+feature.asset);
@@ -294,6 +325,7 @@ void main(){
             selector.addEventListener('change', function () {
                 var value = Number(control.value);
                 style = Number.isInteger(value) && value >= 0 && value < options.length ? value : 0;
+                var status=document.getElementById('skybox-status');if(status)status.textContent=style===10?'River of stars / dense stellar streams and dark lanes.':style>=7?'Hero sky / unique landmarks and one visual family.':'';
                 try { window.localStorage.setItem('driftworks-flight-skybox-v1', String(style)); } catch (error) { /* Storage is optional. */ }
             });
         }
@@ -358,7 +390,7 @@ void main(){
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
             canvas.dataset.panorama = 'ready';
         };
-        image.src = assetUrl('../assets/backgrounds/all-sky-milky-way.jpg');
+        if(!ohioMission) image.src = assetUrl('../assets/backgrounds/all-sky-milky-way.jpg');
         /** @param {WebGLProgram} p @param {Pose} pose @param {number} aspect @param {number} dpr */
         function uniforms(p, pose, aspect, dpr) {
             gl.useProgram(p); /** @type {('right' | 'up' | 'back')[]} */ /** @type {('right' | 'up' | 'back')[]} */
@@ -401,6 +433,15 @@ void main(){
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), ohioMission ? 11 : style);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), exposure);
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
+                if(ohioMission) ohioTextures.forEach(function(entry,index){
+                    var prefix=index===0?'ohioPlanet':'ohioSun';
+                    gl.activeTexture(gl.TEXTURE0+2+index);gl.bindTexture(gl.TEXTURE_2D,entry.texture);
+                    gl.uniform1i(gl.getUniformLocation(sky,prefix),2+index);
+                    gl.uniform3fv(gl.getUniformLocation(sky,prefix+'Center'),entry.center);
+                    gl.uniform3fv(gl.getUniformLocation(sky,prefix+'Right'),entry.right);
+                    gl.uniform3fv(gl.getUniformLocation(sky,prefix+'Up'),entry.up);
+                    gl.uniform1f(gl.getUniformLocation(sky,prefix+'Gain'),entry.gain);
+                });
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindBuffer(gl.ARRAY_BUFFER, quad);
                 var a = gl.getAttribLocation(sky, 'position');
@@ -409,7 +450,7 @@ void main(){
                 gl.bindTexture(gl.TEXTURE_2D,!ohioMission && style===10 ? riverTexture : texture);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disableVertexAttribArray(a);
-                if((ohioMission || (style>=7 && style<=9)) && heroFeatures.length) {
+                if(!ohioMission && style>=7 && style<=9 && heroFeatures.length) {
                     uniforms(heroProgram,pose,width/height,dpr);
                     gl.uniform1f(gl.getUniformLocation(heroProgram,'exposure'),exposure);
                     gl.uniform1i(gl.getUniformLocation(heroProgram,'feature'),0);

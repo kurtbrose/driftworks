@@ -1,0 +1,73 @@
+{
+  "left": "Frozen custom WebGL baseline",
+  "right": "Production Three.js",
+  "seed": "ast-ceres-01",
+  "views": [
+    {
+      "number": 1,
+      "title": "Orbit",
+      "image": "01-orbit.jpg",
+      "reproduce": "../../../asteroid-migration.html"
+    },
+    {
+      "number": 2,
+      "title": "Underside",
+      "image": "02-underside.jpg",
+      "reproduce": "../../../asteroid-migration.html?pose=underside"
+    },
+    {
+      "number": 3,
+      "title": "Cutaway",
+      "image": "03-cutaway.jpg",
+      "reproduce": "../../../asteroid-migration.html?cut=1"
+    },
+    {
+      "number": 4,
+      "title": "Surface, 2 m, no work light",
+      "image": "04-surface-unlit.jpg",
+      "reproduce": "../../../asteroid-migration.html?pose=surface"
+    },
+    {
+      "number": 5,
+      "title": "Surface, 2 m, work light, shadows off",
+      "image": "05-work-light-no-shadows.jpg",
+      "reproduce": "../../../asteroid-migration.html?pose=surface&light=1&shadows=0"
+    },
+    {
+      "number": 6,
+      "title": "Surface, 2 m, work light and shadows",
+      "image": "06-work-light-shadows.jpg",
+      "reproduce": "../../../asteroid-migration.html?pose=surface&light=1"
+    },
+    {
+      "number": 7,
+      "title": "Surface, 0.5 m, work light and shadows",
+      "image": "07-close-up-0.5m.jpg",
+      "reproduce": "../../../asteroid-migration.html?pose=surface&light=1&height=0.5"
+    },
+    {
+      "number": 8,
+      "title": "Ice composition",
+      "image": "08-ice.jpg",
+      "reproduce": "../../../asteroid-migration.html?composition=ice"
+    },
+    {
+      "number": 9,
+      "title": "Volatiles composition",
+      "image": "09-volatiles.jpg",
+      "reproduce": "../../../asteroid-migration.html?composition=volatiles"
+    },
+    {
+      "number": 10,
+      "title": "Metals composition",
+      "image": "10-metals.jpg",
+      "reproduce": "../../../asteroid-migration.html?composition=metals"
+    },
+    {
+      "number": 11,
+      "title": "Silicates composition",
+      "image": "11-silicates.jpg",
+      "reproduce": "../../../asteroid-migration.html?composition=silicates"
+    }
+  ]
+}

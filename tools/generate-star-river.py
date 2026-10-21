@@ -9,6 +9,14 @@ from PIL import Image
 def generate(width=8192, seed=76841):
     height=width//2
     rng=np.random.default_rng(seed)
+    structure_rng=np.random.default_rng(seed+1)
+    # Randomly oriented waves on the sphere avoid a repeating grid or a panorama seam.
+    waves=[]
+    for frequency, amplitude in [(4,.85),(9,.6),(19,.32),(43,.16)]:
+        directions=structure_rng.normal(size=(9,3))
+        directions/=np.linalg.norm(directions,axis=1)[:,None]
+        waves.extend((direction*frequency,structure_rng.uniform(0,2*np.pi),amplitude/3)
+                     for direction in directions)
     output=np.zeros((height,width,3),dtype=np.uint8)
     longitude=((np.arange(width,dtype=np.float32)+.5)/width-.5)*2*np.pi
     for row in range(0,height,64):
@@ -20,19 +28,43 @@ def generate(width=8192, seed=76841):
         warp=.12*np.sin(x*7+y*5)+.07*np.sin(y*13-z*8)
         main=np.exp(-((latitude+warp)/.36)**2)
         branch=np.exp(-((latitude-.46+warp*.8)/.28)**2)
-        detail=.5+.21*np.sin(x*17+y*9+np.sin(z*12))+.15*np.sin(y*31-z*19)
+        clouds=sum(amplitude*np.sin(x*d[0]+y*d[1]+z*d[2]+phase)
+                   for d,phase,amplitude in waves)
         lane=np.exp(-((latitude+.1*np.sin(x*11+y*8))/.065)**2)
-        stream=(main*.8+branch*.45)*(.45+detail*.65)*(1-lane*.8)
+        clumps=np.clip(np.exp(clouds*2.5)-.45,0,4)
+        stream=(main*.8+branch*.45)*clumps*(1-lane*.94)
         shape=x.shape
-        density=(.035+stream*.21)*np.sin(theta[:,None])
+        density=np.clip(.003+stream*.32,0,.75)*np.sin(theta[:,None])
         stars=rng.random(shape)<density
-        flux=(.045+.8*rng.random(shape)**6)*stars
+        flux=(.035+.75*rng.random(shape)**9)*stars
         # Mostly neutral unresolved stars, with restrained warm/cool populations.
         warm=rng.random(shape)
         temperature=np.stack([.83+warm*.17,.9+warm*.05,1.-warm*.3],axis=-1)
-        haze=np.array([.006,.007,.01])+stream[...,None]*np.array([.026,.026,.029])
+        haze=np.array([.001,.002,.003])+stream[...,None]*np.array([.012,.013,.016])
         color=haze+flux[...,None]*temperature
         output[row:row+len(theta)]=np.rint(np.clip(color,0,1)*255).astype(np.uint8)
+    # A sparse second population has resolved cores and broad, very faint halos.
+    # Draw in angular coordinates so these stars stay round away from the equator.
+    bright_rng=np.random.default_rng(seed+2)
+    for i in range(180):
+        u=bright_rng.random()*width
+        latitude=np.arcsin(bright_rng.uniform(-1,1))
+        v=(.5-latitude/np.pi)*height
+        large=i<24
+        sigma=width/8192*bright_rng.uniform(1.6,3.8) if large else width/8192*bright_rng.uniform(.5,1.2)
+        sigma=max(.32,sigma)
+        halo=sigma*(6 if large else 3)
+        stretch=1/max(.06,np.cos(latitude))
+        radius=int(np.ceil(halo*3))
+        xs=np.arange(int(u-radius*stretch),int(u+radius*stretch)+1)
+        ys=np.arange(max(0,int(v-radius)),min(height,int(v+radius)+1))
+        r2=((xs[None,:]-u)/stretch)**2+(ys[:,None]-v)**2
+        profile=1.9*np.exp(-r2/(2*sigma*sigma))
+        profile+=(.12 if large else .035)*np.exp(-r2/(2*halo*halo))
+        tint=np.array([.68,.82,1.]) if bright_rng.random()<.65 else np.array([1.,.72,.43])
+        patch=output[ys[:,None],xs[None,:]%width].astype(float)/255
+        patch=1-(1-patch)*np.exp(-profile[...,None]*tint)
+        output[ys[:,None],xs[None,:]%width]=np.rint(patch*255).astype(np.uint8)
     return Image.fromarray(output)
 
 

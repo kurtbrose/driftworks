@@ -884,7 +884,7 @@
     function bindShipTexture(image){
       setUniform('PaintEnabled',0);setUniform('Textured',image?1:0);if(!image)return;
       var texture=shipTextures.get(image);
-      if(!texture){texture=new THREE.Texture(image);texture.flipY=false;texture.needsUpdate=true;texture.minFilter=THREE.LinearFilter;shipTextures.set(image,texture);}
+      if(!texture){texture=new THREE.Texture(image);texture.flipY=false;texture.needsUpdate=true;texture.minFilter=((image.width&(image.width-1))===0&&(image.height&(image.height-1))===0)?THREE.LinearMipmapLinearFilter:THREE.LinearFilter;shipTextures.set(image,texture);}
       setUniform('ShipTexture',texture);
     }
     var box = upload(boxMesh());
@@ -1141,6 +1141,9 @@
           rocks[id].mesh.buffer.dispose(); rocks[id].texture.dispose();
           contactTerrain.delete(id); delete surfaceLamps[id]; delete rocks[id]; delete geology[id]; delete shells[id]; delete impacts[id];
         }
+      });
+      Object.keys(miningMeshes).forEach(function(key){
+        if(!w.platforms.some(function(platform){return key.indexOf(platform.id+':')===0;})){miningMeshes[key].buffer.dispose();delete miningMeshes[key];}
       });
       w.asteroids.forEach(function (a) {
         var key = a.radius + ':' + JSON.stringify(a.excavation || null);

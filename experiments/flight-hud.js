@@ -135,9 +135,9 @@
             status = targetStatus(status, selected, combat.time);
             get('combat-status').textContent = !combat.enabled ? 'FREE FLIGHT' : combat.dead ? 'SORTIE OVER / ' + combat.kills + ' KILLS' : living.filter(function (e) {
                 return e.team === 'enemy';
-            }).length + ' HOSTILES / ' + living.filter(function (e) {
+            }).length + (combat.mode === 'ohio' ? ' Chevy Crew / ' : ' HOSTILES / ') + living.filter(function (e) {
                 return e.team === 'ally';
-            }).length + ' WINGMEN / ' + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
+            }).length + (combat.mode === 'ohio' ? ' Ford Folks / ' : ' WINGMEN / ') + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
             get('shield-meter').max = Math.max(1, combat.maxShield === undefined ? 120 : combat.maxShield);
             get('shield-meter').value = combat.shield;
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
@@ -152,7 +152,7 @@
             targetPanel.hidden = !selected;
             if (selected) {
                 var selection = selected.team === 'ally' ? view.allyArt : view.enemyArt, art = DW.flightPresentation.model(selected, combat.wave, view);
-                get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (selected.team === 'ally' ? 'WING / ' : 'TARGET / ') + DW.training.callsign(selected);
+                get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (combat.mode === 'ohio' ? (selected.team === 'ally' ? 'Ford Folks / ' : 'Chevy Crew / ') : (selected.team === 'ally' ? 'WING / ' : 'TARGET / ')) + DW.training.callsign(selected);
                 get('target-detail').textContent = (art.name || 'Training fighter') + ' / ' + Math.round(Math.hypot.apply(null, selected.pose.eye.map(function (v, i) {
                     return v - state.eye[i];
                 })) * units) + ' m / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
@@ -222,7 +222,7 @@
                         });
                         combatHud.restore();
                         if (status) paintTargetStatus(combatHud, x, y, status);
-                        combatHud.fillText((e.team === 'ally' ? 'WING / ' : 'TARGET / ') + DW.training.callsign(e), x, y - 37);
+                        combatHud.fillText((combat.mode === 'ohio' ? (e.team === 'ally' ? 'Ford Folks / ' : 'Chevy Crew / ') : (e.team === 'ally' ? 'WING / ' : 'TARGET / ')) + DW.training.callsign(e), x, y - 37);
                     }
                 }
                 else {

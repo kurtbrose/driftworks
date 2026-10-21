@@ -9,9 +9,9 @@
         var ohioHeading = document.querySelector('header h1');
         if (ohioHeading) ohioHeading.textContent = 'DRIFTWORKS / OHIO';
         var ohioSubtitle = document.querySelector('header > span');
-        if (ohioSubtitle) ohioSubtitle.textContent = 'ALL ROADS LEAD TO OHIO';
+        if (ohioSubtitle) ohioSubtitle.textContent = 'Ford Folks vs. Chevy Crew';
         var ohioHint = document.querySelector('#launch > p');
-        if (ohioHint) ohioHint.textContent = 'Wait for the radio reveal. Then welcome to Ohio. / 8 allies vs 8 enemies';
+        if (ohioHint) ohioHint.textContent = 'Wait for the radio reveal. Then welcome to Ohio. / Ford Folks vs. Chevy Crew';
     }
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
