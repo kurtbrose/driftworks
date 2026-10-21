@@ -1,2 +1,4 @@
+* text=auto eol=lf
+
 # Preserve upstream bytes verified by the character asset provenance manifests.
 /assets/characters/**/original/** -text
