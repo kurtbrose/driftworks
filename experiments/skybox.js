@@ -89,7 +89,7 @@
         var sourceStyle=-1;
         /** @type {Record<string,import('../src/types').SkyCameraSource[]>} */var authoredSources={};
         if(effects&&typeof window.fetch==='function'){
-            window.fetch(assetUrl('../assets/backgrounds/sky-camera-sources-v1.json')).then(function(response){if(!response.ok)throw new Error('Sky camera sources unavailable');return response.json();}).then(/** @param {{version:number,styles:Record<string,import('../src/types').SkyCameraSource[]>}} data */function(data){if(data.version!==1)throw new Error('Invalid sky camera source version');authoredSources=data.styles;sourceStyle=-1;}).catch(function(){authoredSources={};sourceStyle=-1;});
+            window.fetch(assetUrl('../assets/backgrounds/sky-camera-sources-v1.json')).then(function(response){if(!response.ok)throw new Error('Sky camera sources unavailable');return response.json();}).then(/** @param {{version:number,styles:Record<string,import('../src/types').SkyCameraSource[]>}} data */function(data){if(data.version!==1||!data.styles||typeof data.styles!=='object')throw new Error('Invalid sky camera source version');authoredSources=data.styles;sourceStyle=-1;}).catch(function(){authoredSources={};sourceStyle=-1;});
         }
         /** @type {import('../src/types').SkyEnvironmentLighting|null} */var environmentOverride=null;
         /** @type {WebGLTexture|null} */var hdrTexture=null;
@@ -595,7 +595,7 @@ void main(){
                     stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
                     return;
                 }
-                if(!landmarkSky&&style===12){
+                if(!hdrTexture&&!landmarkSky&&style===12){
                     loadImpact();
                     if(impactLoaded===8)impactTime=Math.min(180,impactTime+Math.max(0,elapsed||0)*impactSpeed);
                     var from=0;for(var i=1;i<impactTimes.length;i++)if(impactTime>=impactTimes[i])from=i;
@@ -608,8 +608,8 @@ void main(){
                     var status=document.getElementById('skybox-status');if(status)status.textContent=canvas.dataset.impact==='ready'?'Orbital impact / '+impactTime.toFixed(1)+' s / flight pause freezes event':canvas.dataset.impact==='error'?'Impact sky image failed to load.':'Loading eight local impact sky images...';
                     stats={drawCalls:1,triangles:2,points:0,meshes:1,materials:1};return;
                 }
-                if(!landmarkSky && style>=7 && style<=9) loadHeroFeatures();
-                if(!landmarkSky && style>=10) loadRiver(style);
+                if(!hdrTexture && !landmarkSky && style>=7 && style<=9) loadHeroFeatures();
+                if(!hdrTexture && !landmarkSky && style>=10) loadRiver(style);
                 stats = { drawCalls: 2, triangles: 2, points: starData.length / 4, meshes: 2, materials: 2 };
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
@@ -643,7 +643,7 @@ void main(){
                 var a = gl.getAttribLocation(sky, 'position');
                 gl.enableVertexAttribArray(a);
                 gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-                gl.bindTexture(gl.TEXTURE_2D,!landmarkSky && style>=10 ? panoramaTextures[style] : texture);
+                gl.bindTexture(gl.TEXTURE_2D,!hdrTexture && !landmarkSky && style>=10 ? panoramaTextures[style] : texture);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disableVertexAttribArray(a);
                 if(!hdrTexture && !landmarkSky && style>=7 && style<=9 && heroFeatures.length) {

@@ -65,3 +65,15 @@ tactical.render(world,1,.3,0);assert(frames.at(-1).some(d=>d.uniforms.uFinish===
 tactical.render(world,1,0,0);assert(frames.at(-1).some(d=>d.uniforms.uFinish===10),'Pause retains tactical destruction');
 tactical.render(world,1,6,0);assert(!frames.at(-1).some(d=>d.uniforms.uFinish===10),'Tactical effects expire');
 console.log('PASS production explosions: flight snapshots, tactical deaths, blend state, pause and reset');
+
+viewer.setStudyActors([{vertices:textured,color:[1,1,1],texture:{width:16,height:16},stride:8},batches[0]]);
+host.listeners['sky-environment']({detail:{lighting,pose,exposure:.4}});viewer.render(world,1,0,0);
+const exposed=frames.at(-1),compiled={uniforms:{},fragmentShader:'#include <opaque_fragment>',vertexShader:''};
+exposed[0].material.onBeforeCompile(compiled);
+assert.equal(compiled.uniforms.uSkyCameraExposure.value,.4,'native ship receives shared camera exposure');
+assert.equal(exposed[1].uniforms.uCameraExposure,.4,'procedural geometry receives same exposure');
+assert.ok(exposed[1].material.fragmentShader.indexOf('precision highp float;')<exposed[1].material.fragmentShader.indexOf('uniform float uCameraExposure;'),'raw shader establishes precision before exposure uniform');
+host.listeners['sky-environment']({detail:{lighting,pose}});viewer.render(world,1,0,0);
+assert.equal(compiled.uniforms.uSkyCameraExposure.value,1,'legacy sky events reset native exposure');
+assert.equal(frames.at(-1)[1].uniforms.uCameraExposure,1,'legacy sky events reset procedural exposure');
+console.log('PASS shared camera response: native/procedural exposure parity, shader precision and legacy neutral reset');

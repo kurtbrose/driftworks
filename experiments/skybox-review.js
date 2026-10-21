@@ -31,7 +31,7 @@
     function framing(yaw,pitch,caption){skyYaw=yaw;skyPitch=pitch;control('caption').textContent=caption;}
     control('review-face-sun').onclick=function(){sky.setStyle(9);skyChoice.value='9';framing(74,1,'Sun / restrained camera glare and shared foreground exposure');};
     control('review-away-sun').onclick=function(){framing(254,0,'Looking away / camera exposure recovers');};
-    if(initialStyle===9)framing(74,1,'Sun / restrained camera glare and shared foreground exposure');
+    if(initialStyle===9)framing(66,7,'Sun / restrained camera glare and shared foreground exposure');
     control('opening').onclick=function(){framing(90,0,'Dark opening / calm silhouette with detail around the edges');};
     control('rim').onclick=function(){framing(90,-14,'Bright rim / deliberate stress test for hull contrast');};
     control('empty').onclick=function(){framing(50,0,'Open field / black space as a visual rest');};
