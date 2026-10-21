@@ -7,7 +7,7 @@ if(!Number.isInteger(contactCount)||contactCount<1||contactCount>256)throw new E
 const reference=refIndex<0?null:cp.execFileSync('git',['rev-parse','--verify',process.argv[refIndex+1]+'^{commit}'],{cwd:root,encoding:'utf8'}).trim();
 function load(ref){
  const DW={sim:{METERS_PER_UNIT:10000/600}},ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math});
- for(const f of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js']){
+ for(const f of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','experiments/ship-packs.js']){
   const source=ref&&['experiments/training.js','experiments/aegis-flight.js'].includes(f)?cp.execFileSync('git',['show',ref+':'+f],{cwd:root,encoding:'utf8'}):fs.readFileSync(path.join(root,f),'utf8');
   vm.runInContext(source,ctx,{filename:f});
  }

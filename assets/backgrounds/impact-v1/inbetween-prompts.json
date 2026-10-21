@@ -1,0 +1,38 @@
+{
+  "mode": "built-in image_gen",
+  "referenceOrder": [
+    "master.png",
+    "flash.png",
+    "plume.png"
+  ],
+  "frames": [
+    {
+      "file": "between-12.png",
+      "seconds": 12,
+      "prompt": "Use case: precise-object-edit. Produce ONE full-frame cinematic photoreal impact animation in-between, not a montage or a blended double exposure. Image 1 is the pristine frozen master/edit target; Image 2 is the early flash endpoint; Image 3 is the later developed plume endpoint. All three show the SAME locked camera and planet. Preserve the master's exact dimensions, framing, horizon, sun, stars, oceans, clouds, geography, islands and grading. Modify ONLY the local impact region, centered at 62% across and 63% down. Impact stays rooted at this identical surface point. Keep image edges and distant scenery identical. The event should naturally evolve from image 2 toward image 3; retain the same overall plume family, lighting and perspective. No intact asteroid, no laser, no text/UI, no new background objects. Requested frame: about 12 seconds after impact, FIRST of FOUR intermediate stages. A compact brilliant orange-white vapor dome has begun to expand and cool from the flash. A low turbulent bronze-gray ejecta curtain and a thin white ocean-steam skirt surround the base. Very little vertical rise: top around y=55%, base around y=66%, total width about 15% of frame. This is much smaller and lower than image 3, still mostly luminous vapor near the ocean. Preserve fine film-VFX detail and the immense planetary scale. This must be a new physically legible stage of growth, not a semitransparent copy of the final plume."
+    },
+    {
+      "file": "between-32.png",
+      "seconds": 32,
+      "prompt": "Use case: precise-object-edit. Produce ONE full-frame cinematic photoreal impact animation in-between, not a montage or a blended double exposure. Image 1 is the pristine frozen master/edit target; Image 2 is the early flash endpoint; Image 3 is the later developed plume endpoint. All three show the SAME locked camera and planet. Preserve the master's exact dimensions, framing, horizon, sun, stars, oceans, clouds, geography, islands and grading. Modify ONLY the local impact region, centered at 62% across and 63% down. Impact stays rooted at this identical surface point. Keep image edges and distant scenery identical. The event should naturally evolve from image 2 toward image 3; retain the same overall plume family, lighting and perspective. No intact asteroid, no laser, no text/UI, no new background objects. Requested frame: about 32 seconds after impact, SECOND of FOUR intermediate stages. Ejecta is developing into a low dense churning column: incandescent orange vapor in its lower core, dark bronze/charcoal billows starting to conceal the white-hot surface. An expanding white steam skirt surrounds the ocean footprint. The plume top reaches y=48%, base y=66%, total width around 19% image width. Less tall and less dark than the final plume in image 3. Avoid a clean spherical fireball: show a ragged upward-breaking dome evolving into billowing ejecta. Keep root at x62%, y63%; no displacement of islands or camera. New concrete intermediate shape, no double exposure."
+    },
+    {
+      "file": "between-60.png",
+      "seconds": 60,
+      "prompt": "Use case: precise-object-edit. Produce ONE full-frame cinematic photoreal impact animation in-between, not a montage or a blended double exposure. Image 1 is the pristine frozen master/edit target; Image 2 is the early flash endpoint; Image 3 is the later developed plume endpoint. All three show the SAME locked camera and planet. Preserve the master's exact dimensions, framing, horizon, sun, stars, oceans, clouds, geography, islands and grading. Modify ONLY the local impact region, centered at 62% across and 63% down. Impact stays rooted at this identical surface point. Keep image edges and distant scenery identical. The event should naturally evolve from image 2 toward image 3; retain the same overall plume family, lighting and perspective. No intact asteroid, no laser, no text/UI, no new background objects. Requested frame: about 60 seconds after impact, THIRD of FOUR intermediate stages. The plume is now approximately THREE QUARTERS of the final endpoint's height. Top at about y=35%, base near y=64%, rooted x62%,y63%. Preserve image 3's recognizable branching billow structure, but shorten its main tower and show younger warmer orange-brown vapor. White ocean steam skirt expands slowly, roughly 31% image width, not wider than endpoint's skirt. Lower orange fissures still incandescent, upper billows darker and strongly lit from the sun at upper left. This state must be intermediate between the early flash and final plume, not equal to the final image. Keep all geography outside the event unchanged. Single crisp full image, not a blend."
+    },
+    {
+      "file": "between-90.png",
+      "seconds": 90,
+      "prompt": "Use case: precise-object-edit. Produce ONE full-frame cinematic photoreal impact animation in-between, not a montage or a blended double exposure. Image 1 is the pristine frozen master/edit target; Image 2 is the early flash endpoint; Image 3 is the later developed plume endpoint. All three show the SAME locked camera and planet. Preserve the master's exact dimensions, framing, horizon, sun, stars, oceans, clouds, geography, islands and grading. Modify ONLY the local impact region, centered at 62% across and 63% down. Impact stays rooted at this identical surface point. Keep image edges and distant scenery identical. The event should naturally evolve from image 2 toward image 3; retain the same overall plume family, lighting and perspective. No intact asteroid, no laser, no text/UI, no new background objects. Requested frame: about 90 seconds after impact, FOURTH and last intermediate stage before the two-minute endpoint. Match image 3 very closely: same branching dark charcoal plume, same root, same sunlit billows, same steam skirt. The plume is just slightly younger: main tower approximately 90% final height, top near y=32%, hot orange core a little more exposed, lower steam skirt slightly smaller and less spread. Reproduce recognizable individual large lobes from image 3 so a gentle dissolve into that endpoint reads as slow continued growth, with no sudden shape change. No zoom, no global exposure change, no relocated coastline or cloud bank. Single full-frame sharp film-VFX plate.",
+      "selectedRevision": {
+        "references": [
+          "between-60.png",
+          "plume.png"
+        ],
+        "prompt": "Use case: precise-object-edit. Image 1 is the earlier roughly one-minute impact plate. Image 2 is the final two-minute impact plate. Create ONE in-between full image at ninety seconds, preserving exact original 1672 by 941 framing, camera, sky, horizon, sun, ocean, clouds, all coastlines. This is almost identical to Image 2 but a slightly younger plume. CRITICAL: the highest tip must be BETWEEN the heights of the endpoints: image 1 top near pixel y=303, image 2 top near y=285, so put this frame's highest tip at approximately pixel y=294. It MUST NOT extend higher than the final endpoint. Same rooted impact location, unchanged base at x=1040,y=580. Same recognizable large billows, dark charcoal rising tower, slightly more exposed orange-hot core than image 2, slowly expanding white ocean steam skirt. Do not enlarge whole explosion, do not move it, do not change geography or exposure. Paint a crisp intermediate state, not double exposure, no text. All unedited scenery from image 2 must remain fixed."
+      }
+    }
+  ],
+  "timing": "Illustrative art timing, not physical calibration."
+}

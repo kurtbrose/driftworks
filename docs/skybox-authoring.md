@@ -258,3 +258,11 @@ python tools/bake-sky-lighting.py --layout assets/backgrounds/hero-layout-v1.jso
 
 The procedural generator remains as an archived experiment. J uses the generated
 photographic texture and derives its lighting from that same active asset.
+
+
+## Woven starlight / K
+
+K uses twelve distinct imagegen source regions, each once, with offline radial
+feathering into one 8K panorama. It has an independent HDR lighting cache.
+See [the experiment log](skybox-experiments.md) for prompts, source hashes, exact
+bake commands, failed approaches and the brightness/texture decisions to preserve.

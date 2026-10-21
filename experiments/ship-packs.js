@@ -112,7 +112,7 @@
         var packs = (DW.shipPacks || []).filter(function(pack){return !pack.missionOnly;}), models = /** @type {Model[]} */ ([]), longest = Math.max.apply(null, packs.map(function (p) {
             return p.models.length;
         }));
-        // Cycle through the available Quaternius models across waves.
+        // Interleave the general-purpose packs across waves; mission-only art stays out.
         for (var i = 0; i < longest; i++)
             packs.forEach(function (pack) {
                 if (pack.models[i])

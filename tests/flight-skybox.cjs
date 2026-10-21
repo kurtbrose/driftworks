@@ -24,7 +24,7 @@ vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../ex
 vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../experiments/skybox.js'), 'utf8'), context);
 const sky = context.window.Driftworks.flightSkybox.create({clientWidth: 800, clientHeight: 600, prepend() {}});
 const pose = {right: [1,0,0], up: [0,0,1], back: [0,-1,0]};
-assert.equal(selector.children.length, 11);
+assert.equal(selector.children.length, 12);
 assert.equal(selector.value, '3', 'restores the selected flight sky');
 sky.render(pose, 1, false);
 assert.equal(values.style, 3);
@@ -71,7 +71,7 @@ async function testHeroComposition() {
   renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,3,'one focal feature plus black and crisp stars');
   assert.ok(imageUrls.every(url=>new URL(url).searchParams.has('v')), 'every sky image is content-versioned');
-  assert.equal(requests,6,'layout, lighting manifest and four HDR probes are each loaded once');
+  assert.equal(requests,7,'layout, lighting manifest and five HDR probes are each loaded once');
   assert.equal(renderer.getLighting().radiance.length,512*256*4);
   assert.equal(renderer.getLighting().sh.length,9);
   renderer.setLightingEnabled(false);assert.equal(renderer.getLighting(),null);renderer.setLightingEnabled(true);
@@ -89,9 +89,16 @@ async function testHeroComposition() {
   renderer.setStyle(8);renderer.setExposure(.75);renderer.render(pose,1,false);assert.equal(values.exposure,.75,'art-review API changes sky exposure independently');
   selector.value='1';handlers.change();renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,2,'procedural choices do not draw hero features');
-  const second=api.create({clientWidth:800,clientHeight:600,prepend(){}},{style:8});second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);renderer.setStyle(8);assert.equal(second.getLighting(),renderer.getLighting(),'multiple renderer instances share one precomputed environment cache');assert.equal(requests,7,'second scene loads its layout but reuses lighting and HDR probes');
+  const second=api.create({clientWidth:800,clientHeight:600,prepend(){}},{style:8});second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);renderer.setStyle(8);assert.equal(second.getLighting(),renderer.getLighting(),'multiple renderer instances share one precomputed environment cache');assert.equal(requests,8,'second scene loads its layout but reuses lighting and HDR probes');
   second.setStyle(10);second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);assert.equal(second.getRenderStats().drawCalls,2,'river panorama and crisp foreground stars use two draws');assert.equal(JSON.stringify(second.getLighting().sh),JSON.stringify(lighting.families.river.sh),'stellar streams select their derived lighting');assert.equal(canvas.dataset.river,'ready');assert.ok(imageUrls.some(url=>url.includes('star-river-photo-v3-8k.jpg')),'river uses the local generated photographic texture');
   assert.equal(mipmaps.length,1,'River mipmaps are baked once on texture upload');second.render(pose,1,false);assert.equal(mipmaps.length,1,'No per-frame sky mipmap generation');
+  second.setStyle(11);second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);
+  assert.equal(canvas.dataset.woven,'ready');assert.equal(second.getRenderStats().drawCalls,2,'Woven sky stays one baked panorama plus one star batch');
+  assert.equal(values.style,11,'Selectable woven style reaches panorama shader without entering mission landmark branch');
+  assert.equal(JSON.stringify(second.getLighting().sh),JSON.stringify(lighting.families.woven.sh));
+  assert.ok(imageUrls.some(url=>url.includes('star-river-woven-v1-8k.jpg')));
+  assert.equal(mipmaps.length,2,'Each distinct panorama uploads once');
+  second.setStyle(10);second.render(pose,1,false);second.setStyle(11);second.render(pose,1,false);assert.equal(mipmaps.length,2,'Panoramas cached across selection changes');
   console.log('PASS hero sky: local asset reuse, fixed layout, sphere seams, orientation and separate star pass');
 }
 async function testOhioSky() {

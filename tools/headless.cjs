@@ -15,7 +15,7 @@ const files = [
   'experiments/retail-profiles.js', 'experiments/flight-missions.js',
   'experiments/mission-ohio.js', 'experiments/retail-weapons.js',
   'experiments/guns.js', 'experiments/training.js', 'experiments/flight-model.js',
-  'assets/ships/quaternius-ultimate-spaceships/meshes.js',
+  'assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js',
   'assets/ships/ohio-vehicles/meshes.js', 'experiments/ship-packs.js',
   'experiments/mumble.js', 'experiments/flight-dialogue.js',
   'experiments/flight-comms.js', 'experiments/flight-session.js',

@@ -1,0 +1,93 @@
+{
+  "generator": "built-in imagegen",
+  "panels": [
+    {
+      "id": "equator-2",
+      "file": "woven-stars-v1/equator-2.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. Continue to the RIGHT of the reference with about 20% overlap at your LEFT edge. New region: an asymmetrical branching dark channel opening into a quiet sparse pocket, with fine cool stellar mist drifting along its lower edge. Avoid the reference's large diagonal clump. Output ONLY the new square panel, not a collage.",
+      "references": [
+        "river-continuation-study-v1/panel-b.png"
+      ]
+    },
+    {
+      "id": "equator-3",
+      "file": "woven-stars-v1/equator-3.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. Continue to the RIGHT of the reference with about 20% overlap at your LEFT edge. New region: a broad faint warm-grey field with delicate irregular dust islands and tiny scattered blue stellar knots, much quieter on the lower right. No central band. Output ONLY the new square panel, not a collage.",
+      "references": [
+        "woven-stars-v1/equator-2.png"
+      ]
+    },
+    {
+      "id": "equator-4",
+      "file": "woven-stars-v1/equator-4.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. Image 1 locks the fine PHOTOGRAPHIC star scale and soft low contrast: do not exaggerate stars into worms, pebbles or thick impasto. Image 2 is the neighbor to your LEFT. Continue RIGHT with a narrow matching left-edge overlap, but otherwise NEW structure: predominantly sparse black space with tiny scattered loose clouds and delicate blue-grey streaks, an off-center bent dark lane. Output ONLY the new square panel.",
+      "references": [
+        "star-river-photo-panel-v1.png",
+        "woven-stars-v1/equator-3.png"
+      ]
+    },
+    {
+      "id": "equator-5",
+      "file": "woven-stars-v1/equator-5.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. Image 1 is the future neighbor to your RIGHT and the photographic style reference. Image 2 is your neighbor to the LEFT. Create the unique intervening new region, faint stellar haze at the left edge drifting into fine scattered knots at the right, with a large uneven quiet black pocket BELOW center. No thick cloud band, no worm-like stars. Output ONLY the new square panel.",
+      "references": [
+        "star-river-photo-panel-v1.png",
+        "woven-stars-v1/equator-4.png"
+      ]
+    },
+    {
+      "id": "north-0",
+      "file": "woven-stars-v1/north-0.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. Create a NEW region ABOVE the two references. Your bottom 20% continues the upper edges of this neighboring field; the rest is new. Give this region several broken delicate silver-blue stellar streams surrounding an uneven dark oval pocket off to the left, with sparse warm points. Keep stars exceptionally fine photographic grains, not thick squiggles. Output ONLY the new square panel.",
+      "references": [
+        "star-river-photo-panel-v1.png",
+        "river-continuation-study-v1/panel-b.png"
+      ]
+    },
+    {
+      "id": "north-1",
+      "file": "woven-stars-v1/north-1.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. First image locks fine photographic texture. Second is below this NEW region. Continue its upper edge only near your bottom border. New field: an irregular diffuse warm-grey stellar shelf in the upper right, opening into very quiet black sky at lower left, crossed by a few delicate branching dust threads. Preserve bright and faint variation; no central band, no thick squiggles. Output ONLY the new square panel.",
+      "references": [
+        "star-river-photo-panel-v1.png",
+        "woven-stars-v1/equator-3.png"
+      ]
+    },
+    {
+      "id": "north-2",
+      "file": "woven-stars-v1/north-2.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. First image is photographic style, second is the neighbor BELOW. Continue the neighboring texture near your bottom edge. A wholly NEW northern region: meandering loose silver-grey clouds split by a thin crooked dark ravine, sparse background on the upper half, uneven tiny amber stars. The haze must be made of near-resolution-limit faint stars, not coarse worms. Output ONLY the new square panel.",
+      "references": [
+        "star-river-photo-panel-v1.png",
+        "woven-stars-v1/equator-5.png"
+      ]
+    },
+    {
+      "id": "south-0",
+      "file": "woven-stars-v1/south-0.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. Create a wholly NEW region BELOW the second reference; first reference locks the photographic fine grain. Match broad texture only near your top overlap. New lower-sky structure: several small disconnected soft blue-grey stellar islands separated by generous asymmetric black channels, with restrained warm dust along one edge. Do not repeat either reference's diagonal central feature. Output ONLY the new square panel.",
+      "references": [
+        "star-river-photo-panel-v1.png",
+        "river-continuation-study-v1/panel-b.png"
+      ]
+    },
+    {
+      "id": "south-1",
+      "file": "woven-stars-v1/south-1.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. A wholly NEW lower sky region BELOW image 2; image 1 is the photographic style reference. Connect texture near your upper border only. New structure: a broad quiet central black pool, a faint ragged warm stellar arc near lower-left, isolated cool wisps on the far right. More sparse area than dense area; asymmetrical, no thick paint or wormlike texture. Output ONLY the new square panel.",
+      "references": [
+        "star-river-photo-panel-v1.png",
+        "woven-stars-v1/equator-3.png"
+      ]
+    },
+    {
+      "id": "south-2",
+      "file": "woven-stars-v1/south-2.png",
+      "prompt": "Use case: scene continuation / stylized-concept. Production square photographic deep-space texture panel, maximum available resolution. The attached image(s) are neighboring sky regions used ONLY for edge/style guidance. Invent a genuinely NEW adjacent region: NEVER copy, rotate, mirror or rearrange their recognizable stellar clumps, wisps or star groupings. No repeated waves, no tiled pattern. Match minute barely resolved photographic stars, dark dusty mottling, near-black background, restrained grey-blue and grey-brown populations. Most stars extremely faint, finer than pinheads; only sparse small brighter stars. No large halo stars, no sun, no planets, no galaxy silhouette, no colorful gas nebula, no foreground, HUD, text, watermark or border. Keep local angular detail and faint texture rather than a whole-sky panorama. A wholly NEW lower polar sky region BELOW image 2, matching fine photographic grain of image 1. Uniquely shaped slender broken streams travel in a shallow irregular S across the lower part, split by little dark dust channels, fading to sparse stars above. Avoid repeating any previous clumps. Quiet natural varied luminosity, no chunky paint or worms. Output ONLY the new square panel.",
+      "references": [
+        "star-river-photo-panel-v1.png",
+        "woven-stars-v1/equator-5.png"
+      ]
+    }
+  ]
+}

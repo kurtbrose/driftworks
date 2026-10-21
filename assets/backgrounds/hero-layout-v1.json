@@ -60,6 +60,7 @@
   "family": "galaxy",
   "minGapDeg": 10,
   "extraImages": {
-    "river": "star-river-photo-v3-8k.jpg"
+    "river": "star-river-photo-v3-8k.jpg",
+    "woven": "star-river-woven-v1-8k.jpg"
   }
 }

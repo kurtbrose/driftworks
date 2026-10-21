@@ -2,7 +2,7 @@
 
 Three low-poly reconstructions from the concept sheet supplied in chat: V-1 Raptor, B-2 Bulldog and C-3 Halo. This is a manual procedural interpretation, not an automatic image-to-3D reconstruction. Unseen surfaces and the Halo's ambiguous ring connections are inferred. The supplied reference's authorship and license are unknown; these assets make no third-party CC0 claim.
 
-Open `experiments/concept-ships.html` through the repository's static server. Switch between blockout, detail and painted stages; orbit or inspect top, front and side views. Gameplay ships are unchanged.
+Open `experiments/concept-ships.html` through the repository's static server. Switch between blockout, detail and painted stages; orbit or inspect top, front and side views. The three models also participate in the normal mixed placeholder fleet and can be selected individually in the flight lab. Gameplay handling and combat rules are unchanged.
 
 Each `.gltf` is an actual triangle mesh with embedded geometry, UVs, named materials and a relative reference to `panels.png`. Keep the texture beside the model when importing into Blender or another glTF tool. Models export with Y up; the lab's internal meshes use Z up and +Y forward. Study geometry is expressed in metres and compared with a 1.80 m astronaut; this does not assign physical dimensions to gameplay ships.
 
@@ -27,3 +27,9 @@ Raised armor, seams, fasteners and sockets are geometry visible in the detail st
 The standing scale reference reuses the local [Quaternius astronaut](../../characters/quaternius-astronaut/README.md), sampled by its existing pose loader and uniformly scaled to 1.80 m. **Cockpit fit / seated pilot** removes the opaque canopy shell, makes glazing transparent, and places the existing `fighter-cockpit.js` seated astronaut and chair at the model's authored `pilotSeat`. Frame bands are open rings, so their caps do not block the cabin. The armored Bulldog brow stays visible during this inspection.
 
 The seated pose is already calibrated to a standing 1.80 m astronaut by `tools/bake-fighter-cockpit.mjs`; no limb or body scaling is applied in this lab. Tests check helmet and shoulder envelopes against canopy bounds, alongside the requested gun placement, delta-shell closure and center-to-edge continuity, inset muzzle clearance, flush cavity geometry and clear firing paths through the rounded ports, pod spacing and ring thickness. This is a fit study rather than a full cockpit interior or a collision-certified seating design. Astronauts and chairs are viewer references and are not included in ship glTF exports. Their existing separate source provenance applies.
+
+## Flight pack
+
+`meshes.js` registers the three fighters as the `concept-trio` ship pack. The generator also bakes a material-color atlas for each ship (`*-flight.png`), allowing the normal cached single-texture ship draw path to preserve authored finishes without per-frame material batching. These are local generated assets; no glTF loader or runtime generation is required.
+
+Flight meshes use the same centered 8.5 m comparison radius as the placeholder pack. Gun muzzle and engine nozzle anchors undergo the identical centering and scale transform. This comparison normalization is independent of the metre-scaled astronaut study. The mixed rotation interleaves this pack with Quaternius; mission-specific vehicle packs remain excluded. Headless sessions, study workers, the catalog and browser flight pages load the same pack. Provenance stays separate from the Quaternius CC0 library.

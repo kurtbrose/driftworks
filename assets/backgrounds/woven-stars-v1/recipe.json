@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "generator": "built-in imagegen; saved panels reused exactly once",
+  "radiusDeg": 58,
+  "linearGain": 0.65,
+  "regions": [
+    {
+      "id": "equator-0",
+      "file": "../star-river-photo-panel-v1.png",
+      "yaw": 0,
+      "pitch": 0,
+      "sha256": "a156ca297855c41e4a49930b7194b718502ec5f53fa489f913714715a975f2ca"
+    },
+    {
+      "id": "equator-1",
+      "file": "../river-continuation-study-v1/panel-b.png",
+      "yaw": 60,
+      "pitch": 0,
+      "sha256": "a53fbd643efd3a7f83275fc71d6fbb65fe5167d4d86ca3b8299c6db76b4b27dd"
+    },
+    {
+      "id": "equator-2",
+      "file": "equator-2.png",
+      "yaw": 120,
+      "pitch": 0,
+      "sha256": "ab94087db63b09b1bc26dd14b6c05673708364ba87d7d8bfdd3aef00da61c247"
+    },
+    {
+      "id": "equator-3",
+      "file": "equator-3.png",
+      "yaw": 180,
+      "pitch": 0,
+      "sha256": "e33155ed7ccc087c5bb36df4845a474674349be30f793665ffd347f78c596564"
+    },
+    {
+      "id": "equator-4",
+      "file": "equator-4.png",
+      "yaw": 240,
+      "pitch": 0,
+      "sha256": "9c6401101cfa4dd7dca3d94f604bd11d438c30e7807cc72833b9855bb30226b1"
+    },
+    {
+      "id": "equator-5",
+      "file": "equator-5.png",
+      "yaw": 300,
+      "pitch": 0,
+      "sha256": "e731df3be3b8dd0bf69325c62ed57ea5861dd251b38faa795d3a2fe42600b776"
+    },
+    {
+      "id": "north-0",
+      "file": "north-0.png",
+      "yaw": 30,
+      "pitch": 55,
+      "sha256": "b3a022a78c989535cebd2ff19be55f161865ae4ea57a32dab9e5fd79ef436597"
+    },
+    {
+      "id": "north-1",
+      "file": "north-1.png",
+      "yaw": 150,
+      "pitch": 55,
+      "sha256": "a50e6653d47e93372b6fc6dfb81d39a091ba2c8ff84854fab90024c787798e02"
+    },
+    {
+      "id": "north-2",
+      "file": "north-2.png",
+      "yaw": 270,
+      "pitch": 55,
+      "sha256": "6fe64fb0830be76f8a857a3bed5991110119c03cd1092c491ba64bbdc7f6aab7"
+    },
+    {
+      "id": "south-0",
+      "file": "south-0.png",
+      "yaw": 90,
+      "pitch": -55,
+      "sha256": "e37a1a14484fb80a95c06f97a32ea3064efdda492ba9f909d14adcffdbf95bd9"
+    },
+    {
+      "id": "south-1",
+      "file": "south-1.png",
+      "yaw": 210,
+      "pitch": -55,
+      "sha256": "a978c67a2321fd5ec79fa8fa855951751e56d983c2c77ebeb49254659ab9f304"
+    },
+    {
+      "id": "south-2",
+      "file": "south-2.png",
+      "yaw": 330,
+      "pitch": -55,
+      "sha256": "949241b969ca835d8f0961765e7906b19130bce5dd444b38ea4134d374c9561e"
+    }
+  ]
+}

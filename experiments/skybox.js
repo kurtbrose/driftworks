@@ -4,7 +4,7 @@
     /** @typedef {import('./types').Vector} Vector */
     /** @typedef {import('./types').Pose} Pose */
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
-    var options = ['Milky Way  / original', 'A  / Open void', 'B  / Galactic horizon', 'C  / Dark dust', 'D  / Distant sun', 'E  / Cold veil', 'F  / Island universes', 'G / Hero galaxy', 'H / Hero nebula', 'I / Hero sun', 'J / River of stars'];
+    var options = ['Milky Way  / original', 'A  / Open void', 'B  / Galactic horizon', 'C  / Dark dust', 'D  / Distant sun', 'E  / Cold veil', 'F  / Island universes', 'G / Hero galaxy', 'H / Hero nebula', 'I / Hero sun', 'J / River of stars', 'K / Woven starlight'];
     /** @typedef {{asset:string,yaw:number,pitch:number,roll:number,widthDeg:number,gain:number}} HeroFeature */
     /** @param {HeroFeature} feature @param {number} aspect */
     function featureFrame(feature, aspect) {
@@ -165,12 +165,12 @@ vec3 galaxy(vec3 ray,vec3 center,vec3 axis){
     return vec3(.16,.22,.32)*disk*(.3+arms*2.)*(.45+knots)*(.4+.6*lane)+vec3(.9,.72,.46)*core;
 }
 void main(){
-    if(style>9.5 && style<10.5){
+    if(style>9.5 && style<11.5){
         vec3 riverRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec2 riverUV=vec2(atan(riverRay.y,riverRay.x)/6.28318530718+.5,acos(clamp(riverRay.z,-1.,1.))/3.14159265359);
         gl_FragColor=vec4(texture2D(panorama,riverUV).rgb*exposure,1.);return;
     }
-    if(style>10.5){
+    if(style>19.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec3 planet=ohioLandmark(ohioPlanet,ray,ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp,ohioPlanetGain);
         vec3 sun=ohioLandmark(ohioSun,ray,ohioSunCenter,ohioSunRight,ohioSunUp,ohioSunGain);
@@ -266,7 +266,7 @@ void main(){
         }
         var lightingEnabled=true;
         /** @type {Record<string,import('../src/types').SkyEnvironmentLighting>} */ var skyLighting={};
-        function getLighting(){return lightingEnabled && style>=7 ? skyLighting[['galaxy','nebula','sun','river'][style-7]] || null : null;}
+        function getLighting(){return lightingEnabled && style>=7 ? skyLighting[['galaxy','nebula','sun','river','woven'][style-7]] || null : null;}
         function loadHeroFeatures() {
             if(heroLoading || typeof window.fetch !== 'function') return;
             heroLoading=true;
@@ -335,7 +335,7 @@ void main(){
             selector.addEventListener('change', function () {
                 var value = Number(control.value);
                 style = Number.isInteger(value) && value >= 0 && value < options.length ? value : 0;
-                var status=document.getElementById('skybox-status');if(status)status.textContent=style===10?'River of stars / dense stellar streams and dark lanes.':style>=7?'Hero sky / unique landmarks and one visual family.':'';
+                var status=document.getElementById('skybox-status');if(status)status.textContent=style===11?'Woven starlight / unique regions with feathered joins.':style===10?'River of stars / earlier repeated-panel comparison.':style>=7?'Hero sky / unique landmarks and one visual family.':'';
                 try { window.localStorage.setItem('driftworks-flight-skybox-v1', String(style)); } catch (error) { /* Storage is optional. */ }
             });
         }
@@ -367,12 +367,14 @@ void main(){
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        /** @type {WebGLTexture|null} */ var riverTexture=null;
-        var riverLoading=false;
-        function loadRiver(){
-            if(riverLoading)return;riverLoading=true;
+        /** @type {Record<number,WebGLTexture|null>} */ var panoramaTextures={};
+        /** @type {Set<number>} */ var panoramaLoading=new Set();
+        /** @param {number} selected */
+        function loadRiver(selected){
+            if(panoramaLoading.has(selected))return;panoramaLoading.add(selected);
+            var key=selected===11?'woven':'river';
             var status=document.getElementById('skybox-status');if(status)status.textContent='Loading photographic stellar streams...';
-            riverTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,riverTexture);
+            var texture=gl.createTexture();panoramaTextures[selected]=texture;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
             gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
             if(typeof window.fetch==='function')loadSkyLighting().then(function(data){skyLighting=data;canvas.dataset.lighting='ready';}).catch(/** @param {unknown} error */ function(error){canvas.dataset.lighting=String(error);});
@@ -385,16 +387,16 @@ void main(){
                     var context=resized.getContext('2d');if(!context)throw new Error('Sky texture resize unavailable');
                     context.drawImage(image,0,0,resized.width,resized.height);source=resized;
                 }
-                gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,riverTexture);
+                gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
                 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,source);
                 gl.generateMipmap(gl.TEXTURE_2D);
                 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-                canvas.dataset.river='ready';canvas.dataset.riverWidth=String(source.width);
-                if(status)status.textContent='River of stars / fixed stellar streams, dark lanes and a separate point-star foreground.';
+                canvas.dataset[key]='ready';canvas.dataset[key+'Width']=String(source.width);
+                if(status)status.textContent=selected===11?'Woven starlight / twelve unique regions, feathered into one fixed 8K sphere.':'River of stars / earlier repeated-panel comparison.';
             };
-            image.onerror=function(){canvas.dataset.river='error';if(status)status.textContent='Could not load the stellar streams texture.';};
-            image.src=assetUrl('../assets/backgrounds/star-river-photo-v3-8k.jpg');
+            image.onerror=function(){canvas.dataset[key]='error';if(status)status.textContent='Could not load the stellar streams texture.';};
+            image.src=assetUrl(selected===11?'../assets/backgrounds/star-river-woven-v1-8k.jpg':'../assets/backgrounds/star-river-photo-v3-8k.jpg');
         }
         var image = new Image();
         image.onload = function () {
@@ -438,11 +440,11 @@ void main(){
                     return;
                 }
                 if(!landmarkSky && style>=7 && style<=9) loadHeroFeatures();
-                if(!landmarkSky && style===10) loadRiver();
+                if(!landmarkSky && style>=10) loadRiver(style);
                 stats = { drawCalls: 2, triangles: 2, points: starData.length / 4, meshes: 2, materials: 2 };
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
-                gl.uniform1f(gl.getUniformLocation(sky, 'style'), landmarkSky ? 11 : style);
+                gl.uniform1f(gl.getUniformLocation(sky, 'style'), landmarkSky ? 20 : style);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), exposure);
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
                 if(landmarkSky) landmarkTextures.forEach(function(entry,index){
@@ -459,7 +461,7 @@ void main(){
                 var a = gl.getAttribLocation(sky, 'position');
                 gl.enableVertexAttribArray(a);
                 gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-                gl.bindTexture(gl.TEXTURE_2D,!landmarkSky && style===10 ? riverTexture : texture);
+                gl.bindTexture(gl.TEXTURE_2D,!landmarkSky && style>=10 ? panoramaTextures[style] : texture);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disableVertexAttribArray(a);
                 if(!landmarkSky && style>=7 && style<=9 && heroFeatures.length) {
@@ -469,7 +471,7 @@ void main(){
                     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_COLOR);
                     var direction=gl.getAttribLocation(heroProgram,'direction'), texcoord=gl.getAttribLocation(heroProgram,'texcoord');
                     gl.enableVertexAttribArray(direction);gl.enableVertexAttribArray(texcoord);
-                    var family=['galaxy','nebula','sun','river'][style-7];
+                    var family=['galaxy','nebula','sun','river','woven'][style-7];
                     var visibleFeatures=heroFeatures.filter(function (feature) {return feature.family===family;});
                     visibleFeatures.forEach(function (feature) {
                         gl.bindBuffer(gl.ARRAY_BUFFER,feature.buffer);

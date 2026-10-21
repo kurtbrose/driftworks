@@ -56,3 +56,9 @@ sky. Its blown-up star scale was rejected in screenshot crop comparisons.
 The panel's prompt and provenance are in `star-river-photo-v2.json`.
 
 The active runtime image is now `star-river-photo-v3-8k.jpg`. Its 64 overlapping spherical tangent patches replace the three-axis v2 bake, which showed orientation folds resembling box corners. The imagegen panel itself is unchanged.
+
+
+K / Woven starlight uses `star-river-woven-v1-8k.jpg`. Its twelve unique sources,
+recipe, prompts, contact sheet and bake audit are under `woven-stars-v1/`; the
+first two sources are referenced from their original folders. Each is used once.
+See `docs/skybox-experiments.md` for reproduction and review guidance.

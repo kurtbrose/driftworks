@@ -1,0 +1,10 @@
+{
+  "size": [
+    2194,
+    1254
+  ],
+  "overlapPixels": 314,
+  "panelBLinearExposureGain": 0.857490824114282,
+  "maximumShiftedRotatedMirroredCorrelation": 0.3131711763784321,
+  "method": "coarse mean-centered correlation; diagnostic only, not proof of motif uniqueness"
+}

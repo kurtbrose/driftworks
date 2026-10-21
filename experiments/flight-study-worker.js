@@ -3,7 +3,7 @@
     var scope=/** @type {import('./types').StudyWorkerScope} */ (/** @type {unknown} */ (globalThis));
     scope.window=scope;
     scope.DRIFTWORKS_TEST_MODE=true;
-    var files=['../src/propulsion.js','../src/combat.js','../src/logistics.js','../src/formations.js','../src/sim.js','retail-profiles.js','retail-weapons.js','guns.js','flight-missions.js','mission-ohio.js','training.js','flight-model.js','../assets/ships/quaternius-ultimate-spaceships/meshes.js','ship-packs.js','flight-ai.js','flight-duel.js','flight-study.js'];
+    var files=['../src/propulsion.js','../src/combat.js','../src/logistics.js','../src/formations.js','../src/sim.js','retail-profiles.js','retail-weapons.js','guns.js','flight-missions.js','mission-ohio.js','training.js','flight-model.js','../assets/ships/quaternius-ultimate-spaceships/meshes.js','../assets/ships/concept-trio/meshes.js','ship-packs.js','flight-ai.js','flight-duel.js','flight-study.js'];
     scope.onmessage=async function(event){
         try {
             var hashes=/** @type {Record<string,string>} */ ({});

@@ -57,7 +57,7 @@
             if (ticket !== revision)
                 return;
             scene.setStudyActors([DW.shipPackModels.sourceGeometry(model, [pose], units, textures.get(model.id), get('paint-enabled').checked ? DW.shipPackModels.paintColor(get('paint-color').value) : undefined)]);
-            metadata.textContent = entry.pack.author + ' / ' + model.name + '\n' + entry.pack.license + '\nOriginal glTF texture, UVs and normals\n' + ((model.texturedVertices || []).length / 24).toLocaleString() + ' triangles / ' + DW.shipPackModels.engineAnchors(model).length + ' engines';
+            metadata.textContent = entry.pack.author + ' / ' + model.name + '\n' + entry.pack.license + (entry.pack.id==='concept-trio'?'\nConcept geometry / baked material atlas\n':'\nOriginal glTF texture, UVs and normals\n') + ((model.texturedVertices || []).length / 24).toLocaleString() + ' triangles / ' + DW.shipPackModels.engineAnchors(model).length + ' engines';
         }
         catch (error) {
             if (ticket === revision)

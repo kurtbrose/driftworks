@@ -211,11 +211,11 @@
         });
         function artCredit() {
             var entry = DW.shipPackModels.find(artSelect.value);
-            get('art-credit').textContent = artSelect.value === 'mixed' ? 'Mixed fleet · Quaternius CC0 library · changes each wave' : entry ? entry.pack.author + ' / ' + entry.model.name + ' · ' + entry.pack.license + ' · ' + entry.model.triangles.toLocaleString() + ' triangles per ship' : 'Original six-triangle training hull';
+            get('art-credit').textContent = artSelect.value === 'mixed' ? 'Mixed fleet · Quaternius + Driftworks concept ships · changes each wave' : entry ? entry.pack.author + ' / ' + entry.model.name + ' · ' + entry.pack.license + ' · ' + entry.model.triangles.toLocaleString() + ' triangles per ship' : 'Original six-triangle training hull';
         }
         function allyCredit() {
             var entry = DW.shipPackModels.find(allyArt.value);
-            get('ally-credit').textContent = allyArt.value === 'mixed' ? 'Mixed fleet · Quaternius CC0 library · changes each wave' : entry ? entry.pack.author + ' / ' + entry.model.name + ' · ' + entry.pack.license : 'Original training blockout';
+            get('ally-credit').textContent = allyArt.value === 'mixed' ? 'Mixed fleet · Quaternius + Driftworks concept ships · changes each wave' : entry ? entry.pack.author + ' / ' + entry.model.name + ' · ' + entry.pack.license : 'Original training blockout';
         }
         allyArt.onchange = allyCredit;
         allyCredit();

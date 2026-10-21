@@ -1,0 +1,12 @@
+{
+  "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+  "pillow": "12.3.0",
+  "numpy": "2.3.5",
+  "bakerSHA256": "b60cefa4efb896081586f4ba673b504ab3548b63bb232dfcf8b79266505a82ef",
+  "recipeSHA256": "39a46a226f108d79ef55a2a9f9d53ccede09a98f6b7807eaec051931b7b3cd4a",
+  "outputSHA256": "77acd1e09faee8ae4591411f7ed5088eacace0b31f5a957cf40c5986e32de9dc",
+  "outputPixels": [
+    8192,
+    4096
+  ]
+}

@@ -29,7 +29,7 @@ global.document = {
   },
   createElement: () => ({ appendChild: () => {} })
 };
-for (const file of ['src/asset-versions.js', 'src/propulsion.js', 'src/combat.js', 'src/mining-lights.js', 'src/mining-terrain.js', 'src/mining-landing.js', 'src/logistics.js', 'src/formations.js', 'src/sim.js', 'src/population.js', 'src/session.js', 'src/tactical/camera.js', 'src/engine-audio.js', 'src/audio-mixer.js', 'src/audio.js', 'src/hud.js', 'src/mesh-builder.js', 'src/mining-rig.js', 'src/explosions.js', 'src/scene3d.js', 'src/ship-models.js', 'src/game.js', 'tests/scenario.js', 'tests/population-tests.js', 'experiments/dom.js', 'experiments/retail-profiles.js', 'experiments/flight-missions.js','experiments/mission-ohio.js','experiments/skybox.js', 'experiments/retail-weapons.js', 'experiments/guns.js', 'experiments/training.js', 'experiments/performance.js', 'experiments/input.js', 'experiments/flight-model.js', 'experiments/radar.js', 'assets/ships/quaternius-ultimate-spaceships/meshes.js', 'assets/ships/ohio-vehicles/meshes.js', 'experiments/ship-packs.js', 'experiments/target-camera.js', 'experiments/mumble.js', 'experiments/flight-dialogue.js', 'experiments/flight-comms.js', 'experiments/flight-radio.js', 'experiments/flight-presentation.js', 'experiments/flight-diagnostics.js', 'experiments/flight-controls.js', 'experiments/flight-session.js', 'experiments/flight-hud.js', 'experiments/flight-ai.js', 'experiments/flight-duel.js', 'experiments/flight-watch.js', 'experiments/flight-study.js', 'tests/tests.js']) {
+for (const file of ['src/asset-versions.js', 'src/propulsion.js', 'src/combat.js', 'src/mining-lights.js', 'src/mining-terrain.js', 'src/mining-landing.js', 'src/logistics.js', 'src/formations.js', 'src/sim.js', 'src/population.js', 'src/session.js', 'src/tactical/camera.js', 'src/engine-audio.js', 'src/audio-mixer.js', 'src/audio.js', 'src/hud.js', 'src/mesh-builder.js', 'src/mining-rig.js', 'src/explosions.js', 'src/scene3d.js', 'src/ship-models.js', 'src/game.js', 'tests/scenario.js', 'tests/population-tests.js', 'experiments/dom.js', 'experiments/retail-profiles.js', 'experiments/flight-missions.js','experiments/mission-ohio.js','experiments/skybox.js', 'experiments/retail-weapons.js', 'experiments/guns.js', 'experiments/training.js', 'experiments/performance.js', 'experiments/input.js', 'experiments/flight-model.js', 'experiments/radar.js', 'assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js', 'assets/ships/ohio-vehicles/meshes.js', 'experiments/ship-packs.js', 'experiments/target-camera.js', 'experiments/mumble.js', 'experiments/flight-dialogue.js', 'experiments/flight-comms.js', 'experiments/flight-radio.js', 'experiments/flight-presentation.js', 'experiments/flight-diagnostics.js', 'experiments/flight-controls.js', 'experiments/flight-session.js', 'experiments/flight-hud.js', 'experiments/flight-ai.js', 'experiments/flight-duel.js', 'experiments/flight-watch.js', 'experiments/flight-study.js', 'tests/tests.js']) {
   vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: file });
 }
 console.log(summary.textContent);
@@ -94,6 +94,7 @@ require('./comms-signal.cjs');
 require('./comms-lab.cjs');
 require('./comms-display.cjs');
 require('./concept-ships.cjs');
+require('./concept-flight.cjs');
 
 require('./dreadnaught-kit.cjs');
 

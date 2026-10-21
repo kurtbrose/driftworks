@@ -2204,7 +2204,7 @@
 
   var createFreshWorld = sim.createInitialWorld;
   test('imported ship libraries retain distinct provenance and bounded valid geometry', function(){
-    var packs=window.Driftworks.shipPacks.filter(function(pack){return !pack.missionOnly;}),ids={};assert(packs.length===1);assert(packs[0].id==='quaternius-ultimate-spaceships');assert(packs[0].models.length===11);
+    var packs=window.Driftworks.shipPacks.filter(function(pack){return !pack.missionOnly&&pack.id!=='concept-trio';}),ids={};assert(packs.length===1);assert(packs[0].id==='quaternius-ultimate-spaceships');assert(packs[0].models.length===11);
     packs.forEach(function(pack){assert(pack.license==='CC0-1.0');assert(pack.url.indexOf('https://')===0);pack.models.forEach(function(m){assert(!ids[m.id]);ids[m.id]=true;assert(m.id.indexOf(pack.id+':')===0);assert(m.sha256.length===64);assert(m.vertices.length===m.triangles*18);for(var i=0;i<m.vertices.length;i+=6){assert(Math.hypot.apply(null,m.vertices.slice(i,i+3))<=8.50001);assertClose(Math.hypot.apply(null,m.vertices.slice(i+3,i+6)),1,.00001);}});});
     assert(window.Driftworks.shipPackModels.find('missing')===null);
   });
@@ -2223,7 +2223,7 @@
   });
   test('source ship fleets preserve artist UVs and normals across poses without dropping models',function(){
     var api=window.Driftworks.shipPackModels,models=window.Driftworks.shipPacks[0].models,images=new Map(),craft=[];
-    models.forEach(function(m,i){images.set(m.id,{name:m.name});craft.push({index:i,pose:{eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]}});});
+    models.forEach(function(m,i){images.set(m.id,{name:m.name});craft.push({index:i,modelId:m.id,pose:{eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]}});});
     var batches=api.sourceFleetGeometry(craft,'mixed',1,10,images);assert(batches.length===11);
     batches.forEach(function(b,i){var v=models[i].texturedVertices;assert(b.stride===8);assert(b.texture===images.get(models[i].id));assert(b.vertices.length===v.length);assertClose(b.vertices[0],3+v[1]/10,.00001);assertClose(b.vertices[1],4+v[0]/10,.00001);assertClose(b.vertices[3],v[4],.00001);for(var j=0;j<v.length;j+=8){assertClose(b.vertices[j+6],v[j+6],.000001);assertClose(b.vertices[j+7],v[j+7],.000001);}});
     assert(api.sourceFleetGeometry([],'mixed',1,10,images).length===0);
@@ -2231,7 +2231,7 @@
   test('cached flight draw transforms match baked hull positions, normals and UVs',function(){
     var DW=window.Driftworks,api=DW.shipPackModels,models=DW.shipPacks[0].models;
     var half=Math.SQRT1_2,pose={eye:[3,4,5],right:[half,half,0],back:[.5,-.5,half],up:[-.5,.5,half]},images=new Map();
-    var craft=models.map(function(model,index){return {index:index,pose:pose};});
+    var craft=models.map(function(model,index){return {index:index,modelId:model.id,pose:pose};});
     var draws=api.sourceFleetGeometry(craft,'mixed',1,10,images,undefined,true);
     assert(draws.length===models.length);
     draws.forEach(function(batch,index){
@@ -2280,10 +2280,10 @@
     });
   });
 
-  test('mixed fighter fleets cover the Quaternius library, keep assignments and merge finishes',function(){
+  test('mixed fighter fleets cover the placeholder and concept libraries, keep assignments and merge finishes',function(){
     var api=window.Driftworks.shipPackModels,seen={},pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},craft=[];
     for(var wave=1;wave<=3;wave++)for(var i=0;i<16;i++){var model=api.mixedModel(i,wave);seen[model.id]=true;assert(api.mixedModel(i,wave)===model);}
-    assert(Object.keys(seen).length===11);
+    assert(Object.keys(seen).length===14);['raptor','bulldog','halo'].forEach(function(name){assert(seen['concept-trio:'+name]);});
     for(var j=0;j<8;j++)craft.push({index:j,pose:pose});
     var batches=api.fleetGeometry(craft,'mixed',1,10),expected=0;
     craft.forEach(function(e){api.detailedGeometry(api.mixedModel(e.index,1),[pose],10).forEach(function(b){expected+=b.vertices.length;});});
