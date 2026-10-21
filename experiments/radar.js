@@ -37,8 +37,8 @@
         ctx.stroke();
         ctx.restore();
     }
-    /** @param {CanvasRenderingContext2D} ctx @param {Pose} state @param {RadarContact[]} contacts @param {number} units @param {number} range @param {number} w @param {number} h @param {boolean} paused */
-    function draw(ctx, state, contacts, units, range, w, h, paused) {
+    /** @param {CanvasRenderingContext2D} ctx @param {Pose} state @param {RadarContact[]} contacts @param {number} units @param {number} range @param {number} w @param {number} h @param {boolean} paused @param {boolean} [ohio] */
+    function draw(ctx, state, contacts, units, range, w, h, paused, ohio) {
         var radius = Math.min(86, w * .19, h * .17), cx = w / 2, cy = h - radius - 38;
         ctx.save();
         ctx.translate(cx, cy);
@@ -101,7 +101,7 @@
         ctx.lineTo(4, 4);
         ctx.closePath();
         ctx.fill();
-        ctx.fillText('RADAR / ' + (range / 1000) + ' km / V', 0, -radius - 17);
+        ctx.fillText('RADAR / ' + (ohio ? Math.round(range/.9144)+' yd' : (range/1000)+' km') + ' / V', 0, -radius - 17);
         ctx.fillStyle = '#91bdb5';
         ctx.fillText(count + ' contacts / stems = altitude', 0, radius + 23);
         ctx.restore();

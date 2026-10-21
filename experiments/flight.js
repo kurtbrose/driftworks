@@ -12,6 +12,8 @@
         if (ohioSubtitle) ohioSubtitle.textContent = 'Ford Folks vs. Chevy Crew';
         var ohioHint = document.querySelector('#launch > p');
         if (ohioHint) ohioHint.textContent = 'Wait for the radio reveal. Then welcome to Ohio. / Ford Folks vs. Chevy Crew';
+        var ohioControls=document.getElementById('pause-controls');
+        if(ohioControls)ohioControls.innerHTML=ohioControls.innerHTML.replace(/5 m\/s/g,'5.5 yd/s');
     }
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;

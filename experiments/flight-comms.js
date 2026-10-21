@@ -115,16 +115,16 @@
         "Getting situated. Takes a minute in these boots."
     ],
     "enemy": [
-        "Your GPS says Ohio. Your GPS is correct.",
+        "Your GPS says Ohio, hotshot. Your GPS is correct.",
         "There is no detour around Ohio.",
         "You're colder than a metal bleacher in Cleveland in January.",
-        "Colder than Lake Erie in February, bud.",
+        "Colder than Lake Erie in February, hotshot.",
         "That's as cold as a Browns tailgate before sunrise.",
         "Your aim's colder than a scraper left in the trunk overnight.",
         "You couldn't hit a pothole on the turnpike.",
         "I've seen faster merges behind a combine.",
         "Your flight plan's got more holes than spring pavement.",
-        "Ope. Looks like you took the wrong exit.",
+        "Ope, hotshot. Looks like you took the wrong exit.",
         "You're about as threatening as a goose. Actually, less.",
         "All that flying and you still can't get out of Ohio.",
         "This dogfight could've been a euchre game.",
@@ -474,7 +474,7 @@
         function offer(craft, event, data, fact) {
             if (!craft)
                 return;
-            var entry = /** @type {Candidate} */ ({ craft: craft, event: event, data: data || {}, texts: compose(event, data || {}) });
+            var entry = /** @type {Candidate} */ ({ craft: craft, event: event, data: data || {}, texts: compose(event, data || {}, combat.mode==='ohio') });
             var feeling = /** @type {Record<string, string>} */ ({ loss: 'confused', kill: 'confident', missed: 'frustrated', outnumbered: 'panicked' })[event];
             if (feeling)
                 setEmotion(state, craft.id, feeling, 0.8);
@@ -739,6 +739,13 @@
             if (e.current === 'calm')
                 e.announced = null;
         });
+        // Player-facing rival broadcasts get an independent opportunity, rather
+        // than waiting for the ambient timer that every allied line resets.
+        if(state.time>=10 && state.time-(state.activitySpoken.taunt===undefined?-Infinity:state.activitySpoken.taunt)>=20){
+            living.filter(function(c){return c.team==='enemy'&&c.targetId==='player';}).forEach(function(c){
+                candidates.push({craft:c,event:'taunt',texts:lines.enemy});
+            });
+        }
         if (busy || combat.dead || state.quiet < state.quietGap)
             return null;
         var kind = /** @type {string | undefined} */ (undefined), choices = /** @type {Choices | undefined} */ (undefined), craft = /** @type {Speaker | undefined} */ (undefined), selected = /** @type {Candidate | undefined} */ (undefined);
@@ -748,8 +755,8 @@
             counts[kind] = (counts[kind] || 0) + 1;
         });
         candidates = candidates.filter(function (entry) {
-            // Enemy broadcasts use only the ambient taunt pool, never flight coordination.
-            if (entry.craft.team !== 'ally')
+            // Rivals may taunt the player, but never broadcast flight coordination.
+            if (entry.craft.team !== 'ally' && entry.event!=='taunt')
                 return false;
             if (/^(support|emotionalReply|acknowledgment)$/.test(entry.event))
                 return true;
@@ -760,7 +767,7 @@
         });
         if (candidates.length) {
             var urgent = candidates.filter(function (e) {
-                return e.event === 'loss' || e.event === 'shield' || e.event === 'damaged' || e.event === 'evade' || e.event === 'break';
+                return e.event === 'loss' || e.event === 'shield' || e.event === 'nearPlayer' || e.event === 'damaged' || e.event === 'evade' || e.event === 'break';
             });
             var replies = candidates.filter(function (e) {
                 return /^(support|emotionalReply|acknowledgment)$/.test(e.event);
@@ -774,7 +781,8 @@
                     categories.push(category);
             });
             var weights = categories.map(function (category) {
-                return 1 / Math.pow(1 + (counts[category] || 0), 2);
+                var playerDirected=/^(taunt|contact|closing|nearPlayer|shield|streak)$/.test(category);
+                return (playerDirected?6:1) / Math.pow(1 + (counts[category] || 0), 2);
             });
             var draw = random() * weights.reduce(function (sum, weight) {
                 return sum + weight;
@@ -803,7 +811,7 @@
                 }), freshContact = contactTarget ? contactData(player, contactTarget.pose.eye) : null;
                 if (!freshContact)
                     return null;
-                selected.texts = compose('contact', freshContact);
+                selected.texts = compose('contact', freshContact, combat.mode==='ohio');
                 state.contactReports[selected.contactId] = { time: state.time, sector: freshContact.sector, range: freshContact.range };
             }
             const selectedCraft = selected.craft;
@@ -861,15 +869,18 @@
             }
             var ohioEvent = selected ? selected.event : kind;
             if (ohioEvent === 'emotion' && craft && state.emotions[craft.id]) ohioEvent = state.emotions[craft.id].current;
-            choices = ohioCalls[ohioEvent] || choices;
+            choices = ohioCalls[ohioEvent] || (ohioEvent==='taunt'?ohioCalls.enemy:choices);
+            var addressedChoices=/** @type {Choices} */(choices.map(function(text,index){return dialogue.ohioAddress(text,index,kind==='enemy');}));
+            addressedChoices.templateKeys=(choices.templateKeys||choices).map(function(text,index){return dialogue.ohioAddress(text,index,kind==='enemy');});
+            choices=addressedChoices;
             var addressedId = ohioEvent === 'support' && state.conversation ? state.conversation.caller :
                 ohioEvent === 'emotionalReply' && state.emotionalConversation ? state.emotionalConversation.caller :
                 ohioEvent === 'acknowledgment' && state.acknowledgment ? state.acknowledgment.responder : null;
             if (addressedId) addressee = living.find(function (c) { return c.id === addressedId; }) || null;
-            else if (ohioNamedCalls[ohioEvent]) {
+            else if (ohioNamedCalls[ohioEvent] && /^(ally|enemy|evade|damaged|afraid|panicked)$/.test(ohioEvent)) {
                 const speaker = craft;
                 var neighbors = living.filter(function (c) {
-                    return c.id !== (speaker && speaker.id) && (kind === 'enemy' ? c.team !== 'enemy' : c.team === 'ally');
+                    return c.id !== (speaker && speaker.id) && (ohioEvent === 'enemy' ? c.team !== (speaker ? speaker.team : 'enemy') : c.team === (speaker ? speaker.team : 'ally'));
                 });
                 if (speaker && /^(evade|damaged|afraid|panicked)$/.test(ohioEvent)) {
                     const attacker = living.find(function (c) { return c.team !== speaker.team && c.targetId === speaker.id && c.mode === 'attack'; });

@@ -97,9 +97,10 @@
         /** @param {HudView} view */
         function render(view) {
             var state = view.state, combat = view.combat, guns = view.guns, asteroid = view.asteroid, mothership = view.mothership, units = view.units, paused = view.paused, mouse = view.mouse, shipImages = view.shipImages;
+            var ohio=combat.mode==='ohio', displayScale=ohio?1/.9144:1, distanceUnit=ohio?' yd':' m';
             var shipDistance = Math.hypot(state.eye[0] - mothership.position.x, state.eye[1] - mothership.position.y, state.eye[2]) * units;
             var distance = Math.hypot.apply(null, state.eye), speed = Math.hypot.apply(null, state.velocity);
-            telemetry.textContent = speed.toFixed(0) + ' m/s   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units) + ' m TO CENTER\n' + Math.round(asteroid.radius * 2 * units) + ' m BODY DIAMETER\n' + Math.round(shipDistance) + ' m TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
+            telemetry.textContent = (speed*displayScale).toFixed(0) + distanceUnit+'/s   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units*displayScale) + distanceUnit+' TO CENTER\n' + Math.round(asteroid.radius * 2 * units*displayScale) + distanceUnit+' BODY DIAMETER\n' + Math.round(shipDistance*displayScale) + distanceUnit+' TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
             var w = host.clientWidth, h = host.clientHeight;
             if (combatCanvas.width !== w || combatCanvas.height !== h) {
                 combatCanvas.width = w;
@@ -143,7 +144,8 @@
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
             get('hull-meter').value = combat.hull;
             get('hull-meter').dataset.condition = combat.hull / get('hull-meter').max <= .25 ? 'critical' : combat.hull / get('hull-meter').max <= .5 ? 'damaged' : 'healthy';
-            get('speed-value').textContent = String(Math.round(Math.hypot.apply(null, state.velocity)));
+            get('speed-value').textContent = String(Math.round(Math.hypot.apply(null, state.velocity)*displayScale));
+            var speedUnit=document.getElementById('speed-unit');if(speedUnit)speedUnit.textContent=distanceUnit.trim()+'/s';
             get('thrust-value').textContent = (state.throttle < 0 ? 'REV ' : 'THRUST ') + Math.round(Math.abs(state.throttle) * 100) + '%';
             get('thrust-meter').value = Math.abs(state.throttle);
             var anchors = DW.training.gunAnchors(combat.player), mounts = anchors ? anchors.length : (combat.player.profile.gunMounts || 2);
@@ -155,7 +157,7 @@
                 get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (combat.mode === 'ohio' ? (selected.team === 'ally' ? 'Ford Folks / ' : 'Chevy Crew / ') : (selected.team === 'ally' ? 'WING / ' : 'TARGET / ')) + DW.training.callsign(selected);
                 get('target-detail').textContent = (art.name || 'Training fighter') + ' / ' + Math.round(Math.hypot.apply(null, selected.pose.eye.map(function (v, i) {
                     return v - state.eye[i];
-                })) * units) + ' m / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
+                })) * units*displayScale) + distanceUnit+' / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
                 get('target-hull').max = selected.maxHp;
                 get('target-hull').value = selected.hp;
                 get('target-hull').dataset.condition = selected.hp / selected.maxHp <= .25 ? 'critical' : selected.hp / selected.maxHp <= .5 ? 'damaged' : 'healthy';
@@ -172,7 +174,7 @@
             }));
             radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
             radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
-            DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused);
+            DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, ohio);
             combatHud.font = '12px ui-monospace,monospace';
             combatHud.textAlign = 'center';
             /** @param {Vector} point */
@@ -204,7 +206,7 @@
                         DW.flightRadar.speakerHalo(combatHud, x, y, r + 6);
                     combatHud.fillText(Math.round(Math.hypot.apply(null, e.pose.eye.map(function (v, i) {
                         return v - state.eye[i];
-                    })) * units) + ' m', x, y + r + 15);
+                    })) * units*displayScale) + distanceUnit, x, y + r + 15);
                     if (target) {
                         combatHud.save();
                         combatHud.strokeStyle = '#ffe7a3';

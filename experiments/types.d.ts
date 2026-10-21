@@ -631,6 +631,7 @@ export type ExperimentModules = {
         copy:(state:FlightState)=>FlightState;
     };
     flightDialogue: Pick<ExperimentModules['flightComms'], 'compose' | 'numberWords' | 'contactData' | 'pickLine' | 'voiceOptions' | 'pilotVoice'> & {
+        ohioAddress:(text:string,index:number,hostile?:boolean)=>string;
         lines: Record<string, string[]>;
         calls: Record<string, string[]>;
         emotionalLines: Record<string, string[]>;
@@ -765,7 +766,7 @@ export type ExperimentModules = {
             distance: number;
         } | null;
         speakerHalo: (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => void;
-        draw: (ctx: CanvasRenderingContext2D, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean) => void;
+        draw: (ctx: CanvasRenderingContext2D, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean, ohio?:boolean) => void;
     };
     flightControls: {
         mount: (host: HTMLElement, actions: ControlActions, environment?: ControlEnvironment) => {
@@ -876,7 +877,7 @@ export type ExperimentModules = {
     flightComms: {
         create: () => CommsState;
         step: (state: CommsState, dt: number, combat: Combat, busy: boolean, random?: () => number, player?: FlightState) => Line | null;
-        compose: (kind: string, data: LineData) => Choices;
+        compose: (kind: string, data: LineData, ohio?:boolean) => Choices;
         numberWords: (value: unknown) => string;
         contactData: (player: Pose | undefined, point: Vector) => Contact | null;
         pickLine: (state: CommsState, choices: Choices, random: () => number) => string;

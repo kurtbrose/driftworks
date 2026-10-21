@@ -851,6 +851,21 @@ owns subtitles, channel playback and Web Audio lifecycle. Load them in that
 order after training and mumble, before flight boot. The existing
 `flightComms` API forwards dialogue helpers and `mount` for compatibility.
 Ohio radio templates resolve named addressees from living contacts at delivery.
+Ohio's literal player address uses “bud” or “neighbor” in friendly lines and
+“hotshot” in rival taunts. Address substitution preserves `{pilot}` placeholders
+so named references to other cast members keep their actual callsigns.
+Across missions, player-facing radio categories (contacts, closing warnings,
+near misses, shield warnings, streaks and rival taunts) get six times the base
+selection weight before activity repetition penalties. Rivals actively targeting
+the player can offer a taunt after ten active seconds, with a separate 20-second
+category cooldown, independent of the ambient timer. Replies and urgent flight
+calls retain precedence; occupied radio, pause and death gates still apply.
+Ohio distances are displayed in yards (1 yard = 0.9144 m), with speed in yards per
+second; radar projection, contact data, and flight physics retain SI units.
+Radio composition converts a copy of numeric range/speed data before spelling
+out the numbers. Named Ohio variants are limited to direct social banter,
+help requests and actual conversational replies; routine activity reports do
+not select an unrelated neighbor simply to insert a name.
 Friendly banter and requests exclude the speaker and use their wing; enemy taunts
 may name a living opponent. Cover, reassurance, and acknowledgments address the
 actual caller/responder in the validated exchange. Named requests still require

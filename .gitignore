@@ -20,3 +20,6 @@ Thumbs.db
 
 # Local Blender ship-generation experiments
 /.shipkit-lab/
+
+# Original environment downloads; prepared runtime assets have provenance hashes.
+/.asset-imports/

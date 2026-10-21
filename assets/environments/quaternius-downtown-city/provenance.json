@@ -1,0 +1,3384 @@
+{
+  "author": "Quaternius",
+  "license": "CC0-1.0",
+  "source": "https://quaternius.itch.io/downtown-city-megakit",
+  "archive": {
+    "url": ".asset-imports/Downtown City MegaKit[Standard].zip",
+    "bytes": 234753092,
+    "sha256": "5b1a945576d54cdbb4ccc9c3d52711e6d530da74c74c586407ecc28b165335da",
+    "retainedLocally": false,
+    "note": "Original download removed after preparation; reacquire from the source URL if needed."
+  },
+  "models": [
+    {
+      "url": "models/Brick_90Angle_L.gltf",
+      "bytes": 3341,
+      "sha256": "c3731388ce48d3732869d1a96b17494208c84c983505ebb1555cf6be44587191",
+      "id": "Brick_90Angle_L",
+      "triangles": 18,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_90Angle_L.gltf",
+      "sourceSha256": "4ed3edb72d5749b564cff8d5c09274cea1e5a528cf1ba7a08e4dab1a43089138"
+    },
+    {
+      "url": "models/Brick_90Angle_R.gltf",
+      "bytes": 3386,
+      "sha256": "dd46cae517f4d379eecaa74faf893fdcf0b22f92308d98cee035d69404c7d128",
+      "id": "Brick_90Angle_R",
+      "triangles": 18,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_90Angle_R.gltf",
+      "sourceSha256": "e976a9a697ef479f4d9490d93e2747661360013af6c9495fc8e878c7f0fba2cf"
+    },
+    {
+      "url": "models/Brick_BottomTrim.gltf",
+      "bytes": 4905,
+      "sha256": "232b090489bdb1128696b20032f1bc2d61e5b8276c09fb324a878e69c54040a2",
+      "id": "Brick_BottomTrim",
+      "triangles": 52,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_BottomTrim.gltf",
+      "sourceSha256": "82c9a04e6e4f1c43b330cda65633af3908a3bcc2b76a2f560431270cf136d99e"
+    },
+    {
+      "url": "models/Brick_Column_RedBricks.gltf",
+      "bytes": 1772,
+      "sha256": "b7073c01dbb1d9e1dda2f506bb34770d1369a762eef2a785d64103af924b507c",
+      "id": "Brick_Column_RedBricks",
+      "triangles": 380,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Column_RedBricks.gltf",
+      "sourceSha256": "74ae118e8315e58e64b48efdfdea4ef182674d0aa0656d3075cefdb47f2f0c9b"
+    },
+    {
+      "url": "models/Brick_Column_Small.gltf",
+      "bytes": 1706,
+      "sha256": "d7509f59873196e0e74a27d38f8076257b23e9a49c4dbee2202dc35730fc5e5b",
+      "id": "Brick_Column_Small",
+      "triangles": 32,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Column_Small.gltf",
+      "sourceSha256": "3a39cc79f8ceae549ae8680fe3927ecde4c592478eb8efe9e302ef903afe8911"
+    },
+    {
+      "url": "models/Brick_Column_TrimBricks.gltf",
+      "bytes": 3079,
+      "sha256": "edd603a4eb7182050f5083b26be99545e915d1bf62c728e8633be5cf01a5fa77",
+      "id": "Brick_Column_TrimBricks",
+      "triangles": 298,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Column_TrimBricks.gltf",
+      "sourceSha256": "450c18482630dbd2590144dc52a605a9c91da8ac2d41370713f97e6145c68904"
+    },
+    {
+      "url": "models/Brick_Corner_Plain.gltf",
+      "bytes": 3314,
+      "sha256": "3ae175abcff5bd596e56f42b768a30a2c9263f7d5f98e387a5b8e974f4788475",
+      "id": "Brick_Corner_Plain",
+      "triangles": 12,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Corner_Plain.gltf",
+      "sourceSha256": "bef9b255fbd7ceedfa95a264283589ef0a641c08e4a7739c70961051658d44a4"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Bottom.gltf",
+      "bytes": 3653,
+      "sha256": "c05f730d3796e264afaa3058e9fc085efa6e34de9f5c4921c23812fe10111b33",
+      "id": "Brick_CornerColumn_Bottom",
+      "triangles": 80,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_CornerColumn_Bottom.gltf",
+      "sourceSha256": "13c25035d8db9e602a314cb0b8c8dc5c418710bc39950d0b25a0c3a35caca279"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Cap.gltf",
+      "bytes": 3653,
+      "sha256": "65bc80a4ee6759cdeb1d4955648f88fa8f1b847fb03f63d207fb87e6f3a1b625",
+      "id": "Brick_CornerColumn_Cap",
+      "triangles": 108,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_CornerColumn_Cap.gltf",
+      "sourceSha256": "8478fba841e6779eac0f02c8906c0d37071c05a946ecfa4e6dcc996b38d8c15c"
+    },
+    {
+      "url": "models/Brick_CornerColumn_CapShort.gltf",
+      "bytes": 2032,
+      "sha256": "c0963c0077a1907ad0ea85b1a34b0c730241dd33fdd899bf75108d023a7c9e61",
+      "id": "Brick_CornerColumn_CapShort",
+      "triangles": 60,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_CornerColumn_CapShort.gltf",
+      "sourceSha256": "270fb4bb503ddaec2dc0a35cf6707952fba2634687480d568c17d794cfeaa48f"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Center.gltf",
+      "bytes": 2027,
+      "sha256": "b9263574e7184186de41eb0e436d462781b7ef6544a39974f47da71b11909f28",
+      "id": "Brick_CornerColumn_Center",
+      "triangles": 32,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_CornerColumn_Center.gltf",
+      "sourceSha256": "3edb3d11849f91f3928d7b2d47d7cc1c4241c2d39719ec2f6fcb26eecad5cd17"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Center_Half.gltf",
+      "bytes": 2111,
+      "sha256": "0af62f8af166ef80247e8d30a0f7b29a25949629fb4ec56d21ed1bfe0c8b6361",
+      "id": "Brick_CornerColumn_Center_Half",
+      "triangles": 32,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_CornerColumn_Center_Half.gltf",
+      "sourceSha256": "1441edef3ce9c9e38e60c03c76de57cb04c31c211f588c65860578236bbe5d78"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Top.gltf",
+      "bytes": 3645,
+      "sha256": "0b7279db9b4d262e62716501000139bab289de93a27121eeab5b2f459d325e98",
+      "id": "Brick_CornerColumn_Top",
+      "triangles": 80,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_CornerColumn_Top.gltf",
+      "sourceSha256": "99ab3bb041a54547dae1426797ef060bbcb3441e88c587c4bf845d7365d7edf9"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Bottom.gltf",
+      "bytes": 3063,
+      "sha256": "9f32db5f9a0c64df36e667081dd59da2341db414ca23f9b087b7bf9db40daa26",
+      "id": "Brick_HalfColumn_Bottom",
+      "triangles": 84,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_HalfColumn_Bottom.gltf",
+      "sourceSha256": "6bdd130c019345e051d682894a985d0ccb19eecd12661d3ad4622ead064fb104"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Center.gltf",
+      "bytes": 1760,
+      "sha256": "cf69a8bca8ae899db2fc018b499319107b35114461e5f926cd8231f1676d9abd",
+      "id": "Brick_HalfColumn_Center",
+      "triangles": 48,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_HalfColumn_Center.gltf",
+      "sourceSha256": "de90d6f6fee0c57fbbdcc6779d4823786e273d1fe56c04ba6348c69ee9823eaf"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Top.gltf",
+      "bytes": 3071,
+      "sha256": "d4ae5ea9e16dd4b5e34900c688395066d2e1c17cdf8816f95ec345da7ca8ba99",
+      "id": "Brick_HalfColumn_Top",
+      "triangles": 84,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_HalfColumn_Top.gltf",
+      "sourceSha256": "3eaf3bdac7e5078eef0ae6fe20dcaa91cad10e69996f7516eadb8d90a7df630f"
+    },
+    {
+      "url": "models/Brick_HalfTrim.gltf",
+      "bytes": 4918,
+      "sha256": "a26afd5da6c7d7181af01e2cae7ef7bcc49bc74508190cd11d09863a0f322a39",
+      "id": "Brick_HalfTrim",
+      "triangles": 24,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_HalfTrim.gltf",
+      "sourceSha256": "f7e8de0af8c9e1afb4c5cf93e37d860a809f4c1e0f3373f124baa1a15b093328"
+    },
+    {
+      "url": "models/Brick_Inset.gltf",
+      "bytes": 4931,
+      "sha256": "c9b369bac8988e3e9f1182161c55705aa9a1e25ae3ab612345dc636beb215f3e",
+      "id": "Brick_Inset",
+      "triangles": 72,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Inset.gltf",
+      "sourceSha256": "cb25cefaa8c3b2fd6f1f10cb1d528184b1f16fa8d6d56d44e03cb46c6afaa73e"
+    },
+    {
+      "url": "models/Brick_Inset_Window.gltf",
+      "bytes": 6960,
+      "sha256": "610671121c24d1194aefed5a001b81865c496d50f887d411da532664cd69e5d2",
+      "id": "Brick_Inset_Window",
+      "triangles": 488,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Inset_Window.gltf",
+      "sourceSha256": "af26a4877af7681b504907fcd5920139c2e1baa61f5b5025900459342585bee9"
+    },
+    {
+      "url": "models/Brick_Inset_Window_Curved.gltf",
+      "bytes": 6964,
+      "sha256": "4cc4420d801f1e507ed3eddeb89d846a3da3b9cb0dd455221ba5f265a2b0f5f3",
+      "id": "Brick_Inset_Window_Curved",
+      "triangles": 656,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Inset_Window_Curved.gltf",
+      "sourceSha256": "3c6c629f7cb342837e192956fea029984a1813c3f2ff4a19d9db08e5ee14e9f9"
+    },
+    {
+      "url": "models/Brick_Inset_Window_Curved_Small.gltf",
+      "bytes": 7763,
+      "sha256": "c47cdbf8ade57f55b02cede8f621d605721c434ac44e5430abde6fb87e000586",
+      "id": "Brick_Inset_Window_Curved_Small",
+      "triangles": 568,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Inset_Window_Curved_Small.gltf",
+      "sourceSha256": "1d65637f8109d26f96204d35750e571c55ff36b434d0d415fdfe57067e479ca9"
+    },
+    {
+      "url": "models/Brick_InteriorWall_1.gltf",
+      "bytes": 1978,
+      "sha256": "692224c9a00b355426fc718dacd1489909165fafa17f339ab9e33cfea3b49743",
+      "id": "Brick_InteriorWall_1",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_InteriorWall_1.gltf",
+      "sourceSha256": "05080b68ad757a7a17ec9150fb4c39e5690c020f5d53e8496e4794db473653a6"
+    },
+    {
+      "url": "models/Brick_InteriorWall_3.gltf",
+      "bytes": 1979,
+      "sha256": "6be85160662bd85beb466981d7694f8634aaed2957b2af5394f51287308f8d9a",
+      "id": "Brick_InteriorWall_3",
+      "triangles": 4,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_InteriorWall_3.gltf",
+      "sourceSha256": "051f9c674d87e1c6776bf4ade73f2a4b6d7c06d3744e83282f82ab382e5eeb77"
+    },
+    {
+      "url": "models/Brick_InteriorWall_4.gltf",
+      "bytes": 1979,
+      "sha256": "30d067f9b8f3abe960e1fea102928ddcd153dd14ec7a1ee5cb360c6b184d5cad",
+      "id": "Brick_InteriorWall_4",
+      "triangles": 4,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_InteriorWall_4.gltf",
+      "sourceSha256": "bae951d058abd6e059cc51d0eaf91bf1ad000eee6da79fcd82ea573bd111291f"
+    },
+    {
+      "url": "models/Brick_Ornament_Horizontal.gltf",
+      "bytes": 1743,
+      "sha256": "4ea52c5d60b43b6554b8f58e9c0cfe70f178bb60abba4317fa14ab1a07dd145b",
+      "id": "Brick_Ornament_Horizontal",
+      "triangles": 312,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Ornament_Horizontal.gltf",
+      "sourceSha256": "f0c529811ed6d2fc5054e28d9499f0153280df47a223508157af8cddd2cb86c8"
+    },
+    {
+      "url": "models/Brick_Plain_1.gltf",
+      "bytes": 3267,
+      "sha256": "55fcf22d0b7082ee31a1f482fa92ebf2be726599ae2dcf8a60f0380af10bb8e0",
+      "id": "Brick_Plain_1",
+      "triangles": 4,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Plain_1.gltf",
+      "sourceSha256": "e5952b1fe4fce2d26b88e2e5363e8b6942608bc9fd43ec56e61df78f83db34ba"
+    },
+    {
+      "url": "models/Brick_Plain_3.gltf",
+      "bytes": 2958,
+      "sha256": "9064cfde78d471d7c3c76a4c3a54e0748c59aaf0c9f9645b642707bb0c356917",
+      "id": "Brick_Plain_3",
+      "triangles": 6,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Plain_3.gltf",
+      "sourceSha256": "bc86dfb9e5bb4d6fa4e7c38fd541a5b82ce8d9eb99557ce6228b480c68552bba"
+    },
+    {
+      "url": "models/Brick_Plain_3_noWear.gltf",
+      "bytes": 2972,
+      "sha256": "d39c051c3b77ea400d6c374d7ee749bb878739984722313dd306ad4d9797151d",
+      "id": "Brick_Plain_3_noWear",
+      "triangles": 6,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Plain_3_noWear.gltf",
+      "sourceSha256": "26d761410cce9c648023af2ad819ca0620d7db9b8421df46aa4e6d793bc16b29"
+    },
+    {
+      "url": "models/Brick_Plain_4.gltf",
+      "bytes": 3290,
+      "sha256": "1e03c9db1842e1b455ef1c4381336e710d5443bb3444f838cbf8a31d3da8cf56",
+      "id": "Brick_Plain_4",
+      "triangles": 8,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Plain_4.gltf",
+      "sourceSha256": "d35be7cf9f3a27232554c20b318d76afb9f7f8fb281225de3f8b6f4ac1e4c50e"
+    },
+    {
+      "url": "models/Brick_RedWhite_DoubleWindow.gltf",
+      "bytes": 9437,
+      "sha256": "6468220535562a900ccbaa6cde1593752e23f5d53392e7c7b775d195b24dfcf7",
+      "id": "Brick_RedWhite_DoubleWindow",
+      "triangles": 794,
+      "materials": 6,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_RedWhite_DoubleWindow.gltf",
+      "sourceSha256": "f4d537874274a1a49b13c5dd9d8409f8441d5a375c77f8fa0a17fb09822117cc"
+    },
+    {
+      "url": "models/Brick_TopTrim.gltf",
+      "bytes": 4883,
+      "sha256": "b5df6210bcc40e832b770ff121ef0b6370b5874773e4cb8eac0bd4bed0d98df2",
+      "id": "Brick_TopTrim",
+      "triangles": 16,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_TopTrim.gltf",
+      "sourceSha256": "52e08108d7018519db4112af7c1c1f8066171bf3c3e07767eee344900b4873ad"
+    },
+    {
+      "url": "models/Brick_TopTrim_90Angle_L.gltf",
+      "bytes": 4960,
+      "sha256": "a8dedc81572cb0f14de2a01174aeff7ae9cfb8b6582b96c9a777ece227795f48",
+      "id": "Brick_TopTrim_90Angle_L",
+      "triangles": 38,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_TopTrim_90Angle_L.gltf",
+      "sourceSha256": "d27b9eeeb5803ae02f59e3be22160ef1a4dca9594d32ef221b04b2fc4915774b"
+    },
+    {
+      "url": "models/Brick_TopTrim_90Angle_R.gltf",
+      "bytes": 4954,
+      "sha256": "327620aeac431e47c128c5fe20949cba77df210805afd7d5f947ba529a531521",
+      "id": "Brick_TopTrim_90Angle_R",
+      "triangles": 38,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_TopTrim_90Angle_R.gltf",
+      "sourceSha256": "aca265db771345220b5c0b0280c9312427bd914db3c175c358e9d338d722f4e2"
+    },
+    {
+      "url": "models/Brick_TopTrim_Corner.gltf",
+      "bytes": 4925,
+      "sha256": "5ede08fb4026b05468487e977e3986ca902b500e5c21b210ce2929fc3807fc43",
+      "id": "Brick_TopTrim_Corner",
+      "triangles": 24,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_TopTrim_Corner.gltf",
+      "sourceSha256": "55bd90e86e5e38fa9b0392bdf3d2ad50f9645c39bec9fa992c07c01de0091965"
+    },
+    {
+      "url": "models/Brick_Window_CurvedDouble.gltf",
+      "bytes": 7072,
+      "sha256": "5f9e8ee63048c1a9b34235cc68a65631df72bb47a6f97021546fd4e9567b1391",
+      "id": "Brick_Window_CurvedDouble",
+      "triangles": 1137,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Window_CurvedDouble.gltf",
+      "sourceSha256": "9a52e0435a50a18677fdacbbd560f46bd9141d09c04b0b8fd1ea6d7af3217018"
+    },
+    {
+      "url": "models/Brick_Window_Square_Single.gltf",
+      "bytes": 7711,
+      "sha256": "0bde19753694a3f403e907a88cfc2a2bcf58240dbd0a9e537e07720c3e9b6b91",
+      "id": "Brick_Window_Square_Single",
+      "triangles": 190,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Window_Square_Single.gltf",
+      "sourceSha256": "64b21d1bbe6a320095c69bd521d2e2c0f7f7586fe86c73765ff89607664625b4"
+    },
+    {
+      "url": "models/Brick_Window_Trim.gltf",
+      "bytes": 8462,
+      "sha256": "1178011f1641de7fe88c0c140d1c43269211a93a96993094089057afd225ceae",
+      "id": "Brick_Window_Trim",
+      "triangles": 652,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Window_Trim.gltf",
+      "sourceSha256": "6f9b512a5bef61cadc822876bf95f3a8502b4c5da13f83bcdef6007de838cebe"
+    },
+    {
+      "url": "models/Brick_Window_Trim_Single.gltf",
+      "bytes": 7785,
+      "sha256": "d11284a1a0a806c0b53ab636979feb43c13dafb9aa24aa35c60b45d7e2387d05",
+      "id": "Brick_Window_Trim_Single",
+      "triangles": 426,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Brick_Window_Trim_Single.gltf",
+      "sourceSha256": "cd30951c3d67ba2e811367ed09d0714d4fecc62625ca8fb72642e86355447523"
+    },
+    {
+      "url": "models/Building_Large_2.gltf",
+      "bytes": 16588,
+      "sha256": "c8ba7bcd3e81a649e2ecdf07f2d6114c619c670567ab03a831a6972640f257fd",
+      "id": "Building_Large_2",
+      "triangles": 45122,
+      "materials": 12,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Building_Large_2.gltf",
+      "sourceSha256": "903209b63ad4e151190dce32ccab47a2c0dc256c09d999835984a0459ef2bd91"
+    },
+    {
+      "url": "models/Building_Medium_2_001.gltf",
+      "bytes": 18394,
+      "sha256": "569611e82aafe6c8086aa7c40466fe1c395fd1f090ba3c1ede7ab8c49e13911a",
+      "id": "Building_Medium_2_001",
+      "triangles": 25612,
+      "materials": 12,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Building_Medium_2_001.gltf",
+      "sourceSha256": "423f4b3e709ef5633eac4a94a8a1ce25750aa42fe34e3b983d7aac39846f9a1c"
+    },
+    {
+      "url": "models/Building_Small_1.gltf",
+      "bytes": 19949,
+      "sha256": "320ab511b1cbc74004f87bc5caaaa11ed9bfa2925b0ce5f90b63d37a0066f0a3",
+      "id": "Building_Small_1",
+      "triangles": 18344,
+      "materials": 13,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Building_Small_1.gltf",
+      "sourceSha256": "3c864724fffd016ca440191bca169d6ba486e14617bb3cafa09ddbac7532f3d7"
+    },
+    {
+      "url": "models/Cornice_Brick_90Angle_L.gltf",
+      "bytes": 1986,
+      "sha256": "94b642693c5f8c806bd40eeb3b13630cc786bf706fe84c69f8014d08277ff556",
+      "id": "Cornice_Brick_90Angle_L",
+      "triangles": 29,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Brick_90Angle_L.gltf",
+      "sourceSha256": "bb0fb55bdcce37496fe021c2cf3c00e29e65910b6950f1e8506e2934ad9205bc"
+    },
+    {
+      "url": "models/Cornice_Brick_90Angle_R.gltf",
+      "bytes": 1986,
+      "sha256": "cec99e3ce50eb3edd63b9b745b46e9b01fe364afc9cac75d78443142a6296747",
+      "id": "Cornice_Brick_90Angle_R",
+      "triangles": 29,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Brick_90Angle_R.gltf",
+      "sourceSha256": "72198c53cc026dc1948ea8f5f5adbb9806d6ac121f3f3ae6e880ba8306674bb2"
+    },
+    {
+      "url": "models/Cornice_Brick_Center.gltf",
+      "bytes": 1970,
+      "sha256": "9b85dc311c84719156cae3bb8f1ee26f713f7d5ea605d4aed5c286a184c2059e",
+      "id": "Cornice_Brick_Center",
+      "triangles": 6,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Brick_Center.gltf",
+      "sourceSha256": "2ab7e490a616f3e33a871efe47751dba468394187619de80b991967e3d330530"
+    },
+    {
+      "url": "models/Cornice_Brick_L.gltf",
+      "bytes": 1960,
+      "sha256": "560cc56e243f41d94293ed4102664a0cd771faf89557847e11a0f489049366fe",
+      "id": "Cornice_Brick_L",
+      "triangles": 6,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Brick_L.gltf",
+      "sourceSha256": "5506326089bb483d22e71fea9931d5b6cc85467bd7a148a10215c07115e5db4e"
+    },
+    {
+      "url": "models/Cornice_Brick_R.gltf",
+      "bytes": 1960,
+      "sha256": "cfad89042e1f2e5f14da5df961ec74ccc73fe6c3bf5da639c135117c25e8b079",
+      "id": "Cornice_Brick_R",
+      "triangles": 6,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Brick_R.gltf",
+      "sourceSha256": "9491e1f973c8a4a795f5ee46dc6cf68bad087a20d4bc14c018c76e8aeab3aefe"
+    },
+    {
+      "url": "models/Cornice_Metal_90Angle_L.gltf",
+      "bytes": 1918,
+      "sha256": "6507ba274373efa91438c66590fff2494069086a5545654efee9f9fdc21cc5c3",
+      "id": "Cornice_Metal_90Angle_L",
+      "triangles": 90,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Metal_90Angle_L.gltf",
+      "sourceSha256": "631c67fc844ca99bcc02f6c02b7a7bee7146a48ba0b3b4830a8bfd0d25e13e9e"
+    },
+    {
+      "url": "models/Cornice_Metal_90Angle_R.gltf",
+      "bytes": 1918,
+      "sha256": "c94dacd88688f365a44a7d5d5f22db121ab99bc6d9549bd273bb48a1944fa7a4",
+      "id": "Cornice_Metal_90Angle_R",
+      "triangles": 90,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Metal_90Angle_R.gltf",
+      "sourceSha256": "206d613e51d9593a7e1f07913635851012d43241d644446eec34302d855daaa4"
+    },
+    {
+      "url": "models/Cornice_Metal_Center.gltf",
+      "bytes": 1901,
+      "sha256": "581a4cd566c0dc35ffe6abb1cfda373a04a9a3900620301ff4d98583a87a9ada",
+      "id": "Cornice_Metal_Center",
+      "triangles": 30,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Metal_Center.gltf",
+      "sourceSha256": "85b21a653d1dc695cd96b0fe9125c231cc4bed1855343efaeb60c03954d49d7b"
+    },
+    {
+      "url": "models/Cornice_Metal_L.gltf",
+      "bytes": 1917,
+      "sha256": "5f684bd5febc8ccad4b901bd2eb79f25b64a1d54ede7db99a52de2452b111282",
+      "id": "Cornice_Metal_L",
+      "triangles": 72,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Metal_L.gltf",
+      "sourceSha256": "81479571b9d20de0af4af6fe53e384687f9abf00d62d3fea83596584b8d8c7cd"
+    },
+    {
+      "url": "models/Cornice_Metal_R.gltf",
+      "bytes": 1917,
+      "sha256": "8f0f7cbc5103b7428f15ee86ef9bf10197db7ac8666756ed885f7ca52924e866",
+      "id": "Cornice_Metal_R",
+      "triangles": 72,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Metal_R.gltf",
+      "sourceSha256": "a4b6852bbfa188d826ded39a8d09ae653cb9fba31e02507cbaadf538b1fd6d5d"
+    },
+    {
+      "url": "models/Cornice_Trim_90Angle_L.gltf",
+      "bytes": 1700,
+      "sha256": "ab181f7a32ffd7259809bfdead00232883704cb7a1f159ad61f756c9177f60e0",
+      "id": "Cornice_Trim_90Angle_L",
+      "triangles": 160,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Trim_90Angle_L.gltf",
+      "sourceSha256": "54600e6086bef2b92db8b66a9c74a2be808ba8eeaabef9e647fa1a814506fc2c"
+    },
+    {
+      "url": "models/Cornice_Trim_90Angle_R.gltf",
+      "bytes": 1716,
+      "sha256": "1ae13012f1780b70999e081b9d66a4cdf2e8d98a88c8ceed16e4e5df37b389df",
+      "id": "Cornice_Trim_90Angle_R",
+      "triangles": 160,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Trim_90Angle_R.gltf",
+      "sourceSha256": "a6491c622197586749240c08789623f60fb27553ccb1a757171e28eeb3bd0174"
+    },
+    {
+      "url": "models/Cornice_Trim_Center.gltf",
+      "bytes": 1676,
+      "sha256": "23391d64c63a239d935b1e5414f59ade7be7b7d12b824e99692676ae2771075a",
+      "id": "Cornice_Trim_Center",
+      "triangles": 112,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Trim_Center.gltf",
+      "sourceSha256": "fe4c40e61284b264da4b366ae738d8e573afc2a536658bb4dedf2f1bdcc3d9b7"
+    },
+    {
+      "url": "models/Cornice_Trim_L.gltf",
+      "bytes": 1683,
+      "sha256": "187b535f6558a0d819d04fe145ef129fe1f285f6e1721de35ef3a8f54541face",
+      "id": "Cornice_Trim_L",
+      "triangles": 116,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Trim_L.gltf",
+      "sourceSha256": "48db2e34b4b3bf42cb6af7409bd4c3c27691005b3872b7e8fe9fc955d2fb2d4b"
+    },
+    {
+      "url": "models/Cornice_Trim_R.gltf",
+      "bytes": 1683,
+      "sha256": "8e0c1a4bd8dd66ad45ef5436bfea84d8d9c7aa259f9e6cf9f71869ed9ee1f812",
+      "id": "Cornice_Trim_R",
+      "triangles": 116,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Cornice_Trim_R.gltf",
+      "sourceSha256": "90f98398692ed9c78481540144072da216e5d0d023c77ed9a7f13436f27d3d79"
+    },
+    {
+      "url": "models/Decal_ArrowForwardLeft.gltf",
+      "bytes": 1384,
+      "sha256": "ced8229179790385f95234f11ba725c844f24fb2487e46446214c344aabf3bbd",
+      "id": "Decal_ArrowForwardLeft",
+      "triangles": 10,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_ArrowForwardLeft.gltf",
+      "sourceSha256": "acbc5abd46bbdbd8ee88db13640a78241a5f95b85a22823175b5cbf3bfbeeae8"
+    },
+    {
+      "url": "models/Decal_ArrowForwardRight.gltf",
+      "bytes": 1386,
+      "sha256": "41bb52509e61028a53597552efe1155ec667e720d0a16c09f452f61337495727",
+      "id": "Decal_ArrowForwardRight",
+      "triangles": 10,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_ArrowForwardRight.gltf",
+      "sourceSha256": "bdf612f6c96eedfdcb98edcebe6387938e44d0f608a22d6e97e215917850086a"
+    },
+    {
+      "url": "models/Decal_ArrowStraight.gltf",
+      "bytes": 1374,
+      "sha256": "4b6b0856d8c80cbf68ee9ea1fc9008286b7bb81ff252a07a421e0365fc09d97b",
+      "id": "Decal_ArrowStraight",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_ArrowStraight.gltf",
+      "sourceSha256": "6340876dbe0d4573e16de5f569583a9e76a4305dbd40e5bc0a6ae85f4b7ef6d5"
+    },
+    {
+      "url": "models/Decal_ArrowTurnLeft.gltf",
+      "bytes": 1375,
+      "sha256": "0c247d93d7e824d35a5b2424bff85b6c6207b1ab834064a13820d67d4f3d2202",
+      "id": "Decal_ArrowTurnLeft",
+      "triangles": 4,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_ArrowTurnLeft.gltf",
+      "sourceSha256": "d5db5faffb29b42ce04b8136e0ab02e4344f8cbe8fe4a9e9a3400ea2fe4b27d4"
+    },
+    {
+      "url": "models/Decal_ArrowTurnRight.gltf",
+      "bytes": 1518,
+      "sha256": "f99711f5e2c7cdad81d4de2d0af0ae8aa540c57bfa6c646c71f22dba6b268ab1",
+      "id": "Decal_ArrowTurnRight",
+      "triangles": 4,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_ArrowTurnRight.gltf",
+      "sourceSha256": "707d8dc2a242ef9e1852c72f59fa5b898c0b4fe595c05ff41f2d5c86c69025ea"
+    },
+    {
+      "url": "models/Decal_Bikelane.gltf",
+      "bytes": 1371,
+      "sha256": "e43cad481dd1b01be5ea43ed29f3ff6deae9c58e47b15313028b7ff59c737b55",
+      "id": "Decal_Bikelane",
+      "triangles": 8,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Bikelane.gltf",
+      "sourceSha256": "7b7ecdc57f806049ff3d4140e7dcf09f5d72ca07d78d9b9da3f2fd8f5ebd584b"
+    },
+    {
+      "url": "models/Decal_BrokenLine_Straight.gltf",
+      "bytes": 1491,
+      "sha256": "166f3fda8b4995e5a302c65ef2283a437d8955a4bb0831ca51a9637e77e95e4c",
+      "id": "Decal_BrokenLine_Straight",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_BrokenLine_Straight.gltf",
+      "sourceSha256": "270c6af2b8399f31aa4bb7d68f1fd07de517b96810517c648ded5b2ef614d058"
+    },
+    {
+      "url": "models/Decal_Crosswalk.gltf",
+      "bytes": 1366,
+      "sha256": "fd09872e54be78de4c1630b95b3a413280566007a69c9c473573db5586bec64c",
+      "id": "Decal_Crosswalk",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Crosswalk.gltf",
+      "sourceSha256": "979b6024af70ca61270ce07c89e0996d2eb2debf1357e7ca10d5fc559d6b2c90"
+    },
+    {
+      "url": "models/Decal_Crosswalk_Wide.gltf",
+      "bytes": 1409,
+      "sha256": "53f032af2c7bb6705a84d7019c7d4a60afc7468eae4254befd9ee2f760845cf7",
+      "id": "Decal_Crosswalk_Wide",
+      "triangles": 4,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Crosswalk_Wide.gltf",
+      "sourceSha256": "cdf51bc6d02c595264af2532e2cd64607c65bf6e302728bb9f2032f63e672c8d"
+    },
+    {
+      "url": "models/Decal_Curve_2Lane_Stripe.gltf",
+      "bytes": 1537,
+      "sha256": "532c267d669fa27d6ecccdb385e966b706e1097bcf7ead06668f4269af555333",
+      "id": "Decal_Curve_2Lane_Stripe",
+      "triangles": 32,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Curve_2Lane_Stripe.gltf",
+      "sourceSha256": "6c2c45957b44930db0b8ce0d99ebab02efd9f5cad700f8d552fce71d9eb72103"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort.gltf",
+      "bytes": 1515,
+      "sha256": "4b100686cfd52cf21f157c333ddc28ec42d796d6fff0bfed0bcea85c108cc914",
+      "id": "Decal_Curve_4LaneShort",
+      "triangles": 48,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Curve_4LaneShort.gltf",
+      "sourceSha256": "056c2f3e9f0c4a47b3755e8daaebfaa7f9914d238b10bd35ef453df5c50f7f2f"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort_DoubleYellow.gltf",
+      "bytes": 1546,
+      "sha256": "f4a352579c4b03119793d7ba26a180e8243cf1fc10c57ade24b89880b58c7851",
+      "id": "Decal_Curve_4LaneShort_DoubleYellow",
+      "triangles": 48,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Curve_4LaneShort_DoubleYellow.gltf",
+      "sourceSha256": "28a06eaf7f66f94488bc754d99a8a7f74412b9e00ff3dc237e959079d8f09c27"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort_Stripe.gltf",
+      "bytes": 1551,
+      "sha256": "8f9e589bdadeda01dd3ccab4ffe6a82dcdf5b965da6e0f03eff24313b2ba2790",
+      "id": "Decal_Curve_4LaneShort_Stripe",
+      "triangles": 48,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Curve_4LaneShort_Stripe.gltf",
+      "sourceSha256": "d2695f6238f5c9c43369552df157ace9c222510aa3b9211aa01bf8ece6eb3377"
+    },
+    {
+      "url": "models/Decal_DoubleYellow_Straight.gltf",
+      "bytes": 1359,
+      "sha256": "f30d586ebf7d539832c06ce90b6a22758742697e1142d785450fd78db40b3cdb",
+      "id": "Decal_DoubleYellow_Straight",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_DoubleYellow_Straight.gltf",
+      "sourceSha256": "d63f9bc78522c3ce9524af8784dcaf46038e1d078d9954e51d3f00662a53bcc6"
+    },
+    {
+      "url": "models/Decal_Only.gltf",
+      "bytes": 1355,
+      "sha256": "b286cdb75f5b4c406db1f06d7da2f1030abfd4a7a36e36fabfe8c3f786291720",
+      "id": "Decal_Only",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Only.gltf",
+      "sourceSha256": "f0f7fea4fedf844fe4afb4cbf1d01d5c8ccf9290c72be1f5092ea31f3645df88"
+    },
+    {
+      "url": "models/Decal_Slow.gltf",
+      "bytes": 1355,
+      "sha256": "a930de4953516f1ad49cc0f84f1656f6d11806cbf22b1ca5129cfe946448820c",
+      "id": "Decal_Slow",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Slow.gltf",
+      "sourceSha256": "2515effd7e8bd9adaa4c13c1943a2c5058314db9db74f8f86f8618ee8f4d4514"
+    },
+    {
+      "url": "models/Decal_Stop.gltf",
+      "bytes": 1353,
+      "sha256": "51a719f9d71e42afe8c61d961285ed02bb254cf439e43d0bfac7c58f286efacd",
+      "id": "Decal_Stop",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Decal_Stop.gltf",
+      "sourceSha256": "ce4037a07295d723231df5fb39d8c4e97b2bcf41936d040d018c8b3febe0b93a"
+    },
+    {
+      "url": "models/Door_1.gltf",
+      "bytes": 1745,
+      "sha256": "53e40802ec9cde18398b54456a4d676b63dd9278e4bae4b2dd3c5b3adab3d775",
+      "id": "Door_1",
+      "triangles": 676,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Door_1.gltf",
+      "sourceSha256": "f42457e1d39744f1ccfe7e1459052e2acbb74f076baaad9f62059d53b661d3b4"
+    },
+    {
+      "url": "models/Door_2.gltf",
+      "bytes": 3452,
+      "sha256": "67b450df431f322eb6801e67e64612203135d6790a4cc3ab1a7767247bd37061",
+      "id": "Door_2",
+      "triangles": 186,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Door_2.gltf",
+      "sourceSha256": "afd3e0a931cdfffa40d21c3304655f6433314d27aa752d86a0b8c08d68e6ea6a"
+    },
+    {
+      "url": "models/Door_3.gltf",
+      "bytes": 3452,
+      "sha256": "cf30fbd9fe820f63a346824df9d9472b80cd0c9031ca659ce33dff35b5f2b540",
+      "id": "Door_3",
+      "triangles": 278,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Door_3.gltf",
+      "sourceSha256": "45fa80aa2ea960523cf7ee66765208941949cabff3381516301dd2877e29aba5"
+    },
+    {
+      "url": "models/DoorFrame_Metal_Single.gltf",
+      "bytes": 3443,
+      "sha256": "939514961e6d80efb3874600cc3f5be9c40adfa0cd38a32bb79bccafbe2c0be2",
+      "id": "DoorFrame_Metal_Single",
+      "triangles": 239,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/DoorFrame_Metal_Single.gltf",
+      "sourceSha256": "c30cbb493a15191ea6432f246b601d741694015b9e6826ee80759bc66587a39e"
+    },
+    {
+      "url": "models/DoorFrame_Trim.gltf",
+      "bytes": 5766,
+      "sha256": "f3ab8763c78099ab4c5586256401f52c59c01bd611c7fba391e061b655be9230",
+      "id": "DoorFrame_Trim",
+      "triangles": 860,
+      "materials": 4,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/DoorFrame_Trim.gltf",
+      "sourceSha256": "79a41d327aa8486b4ca461d3d3fd012f2dd5486ad8493cf823271ea5ace745a9"
+    },
+    {
+      "url": "models/DoorFrame_Wooden.gltf",
+      "bytes": 2785,
+      "sha256": "dea51daac923bde5df6ebde10b852b720eb1c8eee3147374f11a8607f7665e84",
+      "id": "DoorFrame_Wooden",
+      "triangles": 438,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/DoorFrame_Wooden.gltf",
+      "sourceSha256": "7fda1b1102b8d7fbdaa0f172f0de32c03740e97c79d3514808ab323da0044f6b"
+    },
+    {
+      "url": "models/Entrance_Concrete_2x1.gltf",
+      "bytes": 1768,
+      "sha256": "73f05c3e2ef1d106694ab64847144f631e1fba40c74ee464be3566683b93eb83",
+      "id": "Entrance_Concrete_2x1",
+      "triangles": 12,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Entrance_Concrete_2x1.gltf",
+      "sourceSha256": "37328e60e3605563ec5b5f02a309829a68ba56c54bbde507c73deaae34d4ee5f"
+    },
+    {
+      "url": "models/Entrance_Concrete_2x2.gltf",
+      "bytes": 1764,
+      "sha256": "3d69dc3782d99cb7742335212b546cc0cd07f4e5a7f284c8a7efcd390e573249",
+      "id": "Entrance_Concrete_2x2",
+      "triangles": 12,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Entrance_Concrete_2x2.gltf",
+      "sourceSha256": "3bf9d43646ea50c441db43cdc56ebffb407cad15cef123b1f33b9f30ce2b2e4e"
+    },
+    {
+      "url": "models/Floor_2x2.gltf",
+      "bytes": 2625,
+      "sha256": "b6673926c08afe8960535239afd3e6c764fb8d333ffa8f406c4997296c1dd09b",
+      "id": "Floor_2x2",
+      "triangles": 4,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Floor_2x2.gltf",
+      "sourceSha256": "5aca0bb65884ab575b57821c7ef5a4b6ce69c55ce2610b9fed495b65189b4e42"
+    },
+    {
+      "url": "models/Floor_4x4.gltf",
+      "bytes": 2925,
+      "sha256": "c1d6c43163a3a8d2048d60c986ed26eb0cec41b609a7c07ae69f236b54c0dad2",
+      "id": "Floor_4x4",
+      "triangles": 16,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Floor_4x4.gltf",
+      "sourceSha256": "a4a6514e043eee868b48fa592ec50cdeca18008e63ddf961aad95bf4b21032b6"
+    },
+    {
+      "url": "models/Floor_Inset.gltf",
+      "bytes": 2948,
+      "sha256": "171d52911abe954c6792f6f431786ed774af727ddca27f4d65bb1c1512dd8a80",
+      "id": "Floor_Inset",
+      "triangles": 8,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Floor_Inset.gltf",
+      "sourceSha256": "9ae2b6f202c0fd14378be5aa1599de6b9d61e796d64e11330679062e7b71dbc1"
+    },
+    {
+      "url": "models/Metal_Column_Bottom.gltf",
+      "bytes": 1776,
+      "sha256": "fe11c87fba44345a92144fb0bf39855f559ca7f15203b2dcc5bb1963cc9d65d8",
+      "id": "Metal_Column_Bottom",
+      "triangles": 112,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Column_Bottom.gltf",
+      "sourceSha256": "2afa819c9a10b5f488340536833ef25ff610fbc29e18c76fd6052f249de5bbb1"
+    },
+    {
+      "url": "models/Metal_Column_Center.gltf",
+      "bytes": 1767,
+      "sha256": "543d14b3fd6750c57a8a40f895e8fcf34e8c24ff073c56ade968696e90c3f7d9",
+      "id": "Metal_Column_Center",
+      "triangles": 16,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Column_Center.gltf",
+      "sourceSha256": "675c58eebda25ffc7b5886a7ba65f82d83825c8de75c2e69edecfbfde10e4b84"
+    },
+    {
+      "url": "models/Metal_Column_Small_Bottom.gltf",
+      "bytes": 1790,
+      "sha256": "9a025841664f1b86d5010b2b17895cf48944c733901ecdb18afba0099ca34029",
+      "id": "Metal_Column_Small_Bottom",
+      "triangles": 112,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Column_Small_Bottom.gltf",
+      "sourceSha256": "6f40c4081233c40ec1c86894769fa40d169a687f5c4aaec0afd22ccdc7861073"
+    },
+    {
+      "url": "models/Metal_Column_Small_Center.gltf",
+      "bytes": 1780,
+      "sha256": "3c230b20638cc70f60c07fe55686fb1bcd83fc6abaa958245023cc23ac2055fd",
+      "id": "Metal_Column_Small_Center",
+      "triangles": 16,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Column_Small_Center.gltf",
+      "sourceSha256": "6c162dcf27e81b41447077fb390227b50714742ed45aafe4535f7d464fa784fa"
+    },
+    {
+      "url": "models/Metal_Column_Small_Top.gltf",
+      "bytes": 1785,
+      "sha256": "131400ca48f1f788c3f4148f2bc272fce897681056d53b8b71740f4caab4a3a4",
+      "id": "Metal_Column_Small_Top",
+      "triangles": 120,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Column_Small_Top.gltf",
+      "sourceSha256": "edd64e0e6f764dcf8b5738d5a26c407a3f760133036000fb80bca6b2dc3505bc"
+    },
+    {
+      "url": "models/Metal_Column_Top.gltf",
+      "bytes": 1773,
+      "sha256": "07493a4f5c712a8c9e1e597472bb24089efd03d2f9be30740da699e1e9cbe256",
+      "id": "Metal_Column_Top",
+      "triangles": 120,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Column_Top.gltf",
+      "sourceSha256": "523e8f695274db2454a31870cb404ac3b3ed56d8734f47d46abd952242e4abbc"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Wall.gltf",
+      "bytes": 4754,
+      "sha256": "282ff4bb5c80065aa9259ae7b1695d0e5406085a40efde6e0abd99427e1bf6ae",
+      "id": "Metal_FirstFloor_Wall",
+      "triangles": 36,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_FirstFloor_Wall.gltf",
+      "sourceSha256": "0f4d600afb016a4911c611da8ee5b3f4254ead6f131402211f7e3ae79bbbafa6"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Wall_1.gltf",
+      "bytes": 3229,
+      "sha256": "620b1e8d7b892139de484b184a2b1a6590e089ab817e10c9f31cfd26f0c66bf7",
+      "id": "Metal_FirstFloor_Wall_1",
+      "triangles": 8,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_FirstFloor_Wall_1.gltf",
+      "sourceSha256": "59d896203eb653a1a5f4c7a6f025e637dd6676627c092230cd3982d34169af6a"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Window.gltf",
+      "bytes": 7205,
+      "sha256": "bd67c5ca9f198fcfefa8a8264cc19ecb8efbf125a7332bc0acfb9069e513e68e",
+      "id": "Metal_FirstFloor_Window",
+      "triangles": 156,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_FirstFloor_Window.gltf",
+      "sourceSha256": "4e9029f004d6e0031222be220b3494241a88e837b40fe3b6bb1d96b1a55f43e7"
+    },
+    {
+      "url": "models/Metal_FullWindow.gltf",
+      "bytes": 4784,
+      "sha256": "2486fcdce8765c6db92222b706f63791c08e2f336dc4695732f923dd16a827e3",
+      "id": "Metal_FullWindow",
+      "triangles": 210,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_FullWindow.gltf",
+      "sourceSha256": "0ca31d1e8ddebbfd8910a50ee68608841fa8b59b1f91a41df71ea03e5a1054b0"
+    },
+    {
+      "url": "models/Metal_Plain_1.gltf",
+      "bytes": 3615,
+      "sha256": "568b5095358440cbfff6c70189f6d5bc47ad3d30cc28a8ec2300220a79ff3bdc",
+      "id": "Metal_Plain_1",
+      "triangles": 6,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Plain_1.gltf",
+      "sourceSha256": "ce6eedf8abfa656477ccf16eeb0f45ece50d3f52d9d43916dcce747a80d17e71"
+    },
+    {
+      "url": "models/Metal_Plain_3.gltf",
+      "bytes": 3677,
+      "sha256": "672564b20b8961248ac0845c1621ed4f36bc90ede74932143282ede02ff05477",
+      "id": "Metal_Plain_3",
+      "triangles": 18,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Plain_3.gltf",
+      "sourceSha256": "1311b5c4bffda0beefa95d90590f4fbb0c6f07fca1371c1aa6a1b829e5bb7f11"
+    },
+    {
+      "url": "models/Metal_Window.gltf",
+      "bytes": 7757,
+      "sha256": "67397bd8b57660fa55b641fe8bf87f54339a5b387887d88906d26f4429ca4083",
+      "id": "Metal_Window",
+      "triangles": 578,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Window.gltf",
+      "sourceSha256": "6e8be236918316777d8b3707718138501856715d4edb4b667781380d22514e89"
+    },
+    {
+      "url": "models/Metal_Window_Half.gltf",
+      "bytes": 4846,
+      "sha256": "d7a69a6c3a13432a55e6686d8e35839e1825befc3791380ac6e4308d5bffcabb",
+      "id": "Metal_Window_Half",
+      "triangles": 312,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Metal_Window_Half.gltf",
+      "sourceSha256": "99f7c206eec1cb5e66d46c57936e7574f30390cfb4fd7731a4bdd75e9260bc61"
+    },
+    {
+      "url": "models/Prop_ACUnit.gltf",
+      "bytes": 1749,
+      "sha256": "a29bb7865a21dfa28317140122d1f9803c93bc3fe405ad4ec130ade68029f07d",
+      "id": "Prop_ACUnit",
+      "triangles": 136,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Prop_ACUnit.gltf",
+      "sourceSha256": "f81fae2b49804312d23cc5c56fdf36f6bec89f342df9d135c1565ed31a7e968d"
+    },
+    {
+      "url": "models/Prop_Bollard.gltf",
+      "bytes": 1767,
+      "sha256": "f3d6a70d1c64f5bf44200679e8028e4bfcc8fe9a3be37b7bc3372160f7024ac5",
+      "id": "Prop_Bollard",
+      "triangles": 190,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Prop_Bollard.gltf",
+      "sourceSha256": "4a05291a05873e4043c6354c7cae969c0726fd9b4590625a24ee3bcf940a1c9a"
+    },
+    {
+      "url": "models/Prop_Drain.gltf",
+      "bytes": 1573,
+      "sha256": "3ef270ba1c14b5e7bd18be401a18709f475abacb47640717c089fbb06bbf43be",
+      "id": "Prop_Drain",
+      "triangles": 10,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Prop_Drain.gltf",
+      "sourceSha256": "b81de6bf5cac90f6b62cd739218f4ee0a82cc930226af2060e9616ec7a5ac75f"
+    },
+    {
+      "url": "models/Prop_ManholeCover.gltf",
+      "bytes": 1622,
+      "sha256": "fb0785b872d253b2412d262ac16cb88e4dde10ef66fa2f5adee1ab1fcedb1d1b",
+      "id": "Prop_ManholeCover",
+      "triangles": 118,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Prop_ManholeCover.gltf",
+      "sourceSha256": "c8519276b3628a217ec7ae0198e598868279046e329f9f6d16b3eec3e0aa2fc9"
+    },
+    {
+      "url": "models/Prop_Planter_Single.gltf",
+      "bytes": 3014,
+      "sha256": "e7a7d225334dc70dad70ef673fa9b7e143212a0aee22f83bb497582f45c7ae2e",
+      "id": "Prop_Planter_Single",
+      "triangles": 118,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Prop_Planter_Single.gltf",
+      "sourceSha256": "5ab51700931236c2de45c9c8c5c1206ff312d56f00cedf134bfa462da4ef4f13"
+    },
+    {
+      "url": "models/Roof_2x2.gltf",
+      "bytes": 1520,
+      "sha256": "e5d33631cf361d1b849fe95175d95e06ed68b4f8f3ce61d717ca9bb1967de3cd",
+      "id": "Roof_2x2",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_2x2.gltf",
+      "sourceSha256": "fb9686ae868cad0a566767f4777c7dfc3ebb7917296eac8528c2d2ebb225159f"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_Center.gltf",
+      "bytes": 1567,
+      "sha256": "2fa68f609c277a3f87ff79560c7dc6b583c89f016e9c5ee9289150777c9b1e98",
+      "id": "Roof_2x2_90Angle_Center",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_2x2_90Angle_Center.gltf",
+      "sourceSha256": "800bb55774d47a1d7895c5b74ca02e946b617ac2edbfb51a8c58a710dd289d66"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_L.gltf",
+      "bytes": 1542,
+      "sha256": "6a081b36d5efb5dbae968d5f1dae84f6d7837da58cd3e5ed2dbdaaa2ff6505e8",
+      "id": "Roof_2x2_90Angle_L",
+      "triangles": 6,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_2x2_90Angle_L.gltf",
+      "sourceSha256": "01c4b6b36055e08eacf0ae23026b343b06c052afe29ed9d0aa95fdbaeb23a2be"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_R.gltf",
+      "bytes": 1542,
+      "sha256": "16b09ec5e05638747d767d6118ae1bb5168ba246e8cc9563aca900b3d419deda",
+      "id": "Roof_2x2_90Angle_R",
+      "triangles": 6,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_2x2_90Angle_R.gltf",
+      "sourceSha256": "6d8bfb334fab0ae043797824901ce7fe9219217ee74188353c3e3e04ed1a8af6"
+    },
+    {
+      "url": "models/Roof_4x4.gltf",
+      "bytes": 1529,
+      "sha256": "8024c1f3fb9d3139dec07070e8ddf645871c8c5ce257aad011098abbf96a2f02",
+      "id": "Roof_4x4",
+      "triangles": 8,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_4x4.gltf",
+      "sourceSha256": "2e07d03f08bf1331b5938f0f22e189071bf369caeca0d61131c74b6d3b8d81fd"
+    },
+    {
+      "url": "models/Roof_Slate_Center.gltf",
+      "bytes": 2919,
+      "sha256": "679b926330c6fc34ef496e8df864e4c67aa956d829616a0985f69d62de4ec4fa",
+      "id": "Roof_Slate_Center",
+      "triangles": 6,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_Slate_Center.gltf",
+      "sourceSha256": "4d85124c5896d1fa35926b5995d73bbdc85ebcea8e385cfa00b3791a933e2312"
+    },
+    {
+      "url": "models/Roof_Slate_Corner.gltf",
+      "bytes": 1718,
+      "sha256": "cb0fabdcdcb2271994d57cbe06df80ceb3de156adccc2e97c0d997c4f5eb3ba3",
+      "id": "Roof_Slate_Corner",
+      "triangles": 44,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_Slate_Corner.gltf",
+      "sourceSha256": "eff42380f0f1d9e740929cafe9872f88c363499bfa3c9a8f0745a5fc89ab9fca"
+    },
+    {
+      "url": "models/Roof_Slate_InnerCorner.gltf",
+      "bytes": 3028,
+      "sha256": "fed598f571dabb1a5392658c117eb77f34e1cf805bfbda59ec50955ed9a25c95",
+      "id": "Roof_Slate_InnerCorner",
+      "triangles": 10,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_Slate_InnerCorner.gltf",
+      "sourceSha256": "fd7d634c1bad3ac6a9820f2951e8a346c7f291db5ac5c230904fa608ffb0bdf7"
+    },
+    {
+      "url": "models/Roof_Slate_Window_1.gltf",
+      "bytes": 6446,
+      "sha256": "d811f49804369ba3a2ff9e889f4e16aa246fa7742c088f3c9593132aaa9e0f6b",
+      "id": "Roof_Slate_Window_1",
+      "triangles": 370,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_Slate_Window_1.gltf",
+      "sourceSha256": "9663df957d76e68a0f2d8636e18d029a78148090ff4cf8bba2b46fff58f3af66"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Center.gltf",
+      "bytes": 4218,
+      "sha256": "48a19c6518ce2297b4ee05a5a31f15430d1553e3e49c41ce97b29f5fd8f48708",
+      "id": "Roof_SlateCornice_Center",
+      "triangles": 26,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_SlateCornice_Center.gltf",
+      "sourceSha256": "5666aad879306fd0eeb06f4989d8b368d1b4a0fc8136c3acf83db0a90b164fc5"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Corner.gltf",
+      "bytes": 3014,
+      "sha256": "dddafd61066f6b3f7566b86ebae6e824feaf03a2fbad61dad875c815a6b6358d",
+      "id": "Roof_SlateCornice_Corner",
+      "triangles": 76,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_SlateCornice_Corner.gltf",
+      "sourceSha256": "3ae1548b262fc6e276f81d82c02ff5c5e2d789d0aed9811e1c61e83461704188"
+    },
+    {
+      "url": "models/Roof_SlateCornice_InnerCorner.gltf",
+      "bytes": 4375,
+      "sha256": "294419f0f318a9fafe103d444a85247b246db86627c952befc5971f2edd4dff7",
+      "id": "Roof_SlateCornice_InnerCorner",
+      "triangles": 42,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_SlateCornice_InnerCorner.gltf",
+      "sourceSha256": "e4d3c36450150494e09f417a043ccee95094731d82090f4b55105f0f086e9e56"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Window_1.gltf",
+      "bytes": 6425,
+      "sha256": "01c7732472cb1084345fc6cc844ad320c8e81a74eba4b32a9936c8672cf9714e",
+      "id": "Roof_SlateCornice_Window_1",
+      "triangles": 390,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Roof_SlateCornice_Window_1.gltf",
+      "sourceSha256": "611c60d835438bc91cd40f3b4617ef28b8fc5775c019ad96e933e476178f6098"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Flat_3m.gltf",
+      "bytes": 1936,
+      "sha256": "704835e1db91bf8d98ef04082d0c0d834d2de2ededddc7455548083e0e21970f",
+      "id": "Sidewalk_Corner_Flat_3m",
+      "triangles": 97,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Sidewalk_Corner_Flat_3m.gltf",
+      "sourceSha256": "76ae3f0766121a5a77bfbd9cc5cc073818b9ed1cfeff730a56c933d1135e5672"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Flat_3m_Stripe.gltf",
+      "bytes": 1515,
+      "sha256": "4e39d88ad8b0768d981403314844b0b55cef42cb4336a4d87f809af716049471",
+      "id": "Sidewalk_Corner_Flat_3m_Stripe",
+      "triangles": 14,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Sidewalk_Corner_Flat_3m_Stripe.gltf",
+      "sourceSha256": "29a343a9c52d995d0326d74668319c2b1a045ba3341f86b8f0fc3e9cc33679cc"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Round_3m.gltf",
+      "bytes": 1942,
+      "sha256": "e055337acd0eb71ff55fda8f7076c7b6b584f32943dc300fabf4cb0c16322544",
+      "id": "Sidewalk_Corner_Round_3m",
+      "triangles": 177,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Sidewalk_Corner_Round_3m.gltf",
+      "sourceSha256": "099002b275669d77f610cd96c41613b1a3de19d8408df7be7d80827c83356f7f"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Round_3m_Stripe.gltf",
+      "bytes": 1408,
+      "sha256": "ff1f95aeca582aa22642f6b9ae209d7dff90eaa8f2a8ea427c1eb1e357070897",
+      "id": "Sidewalk_Corner_Round_3m_Stripe",
+      "triangles": 24,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Sidewalk_Corner_Round_3m_Stripe.gltf",
+      "sourceSha256": "0c9335de7ce9d7b4d06728e77a105215bbee64aa94729b9a7e3f73a7df64a112"
+    },
+    {
+      "url": "models/Sidewalk_NoCurb_3m.gltf",
+      "bytes": 1729,
+      "sha256": "0d037958daef0c932302c1e5b0c8bc831d706283ed1f034f3fee0f8ea0ae8ba6",
+      "id": "Sidewalk_NoCurb_3m",
+      "triangles": 42,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Sidewalk_NoCurb_3m.gltf",
+      "sourceSha256": "c32ac81ec8485b1b0b03186ac8e43573266dfcfd8c39dde1b97e8522ef61546b"
+    },
+    {
+      "url": "models/Sidewalk_Planter.gltf",
+      "bytes": 3097,
+      "sha256": "94bfe733686b0a3fe0ba125d21b612d36ac6f212a5d660fbded2a70fc8cba705",
+      "id": "Sidewalk_Planter",
+      "triangles": 598,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Sidewalk_Planter.gltf",
+      "sourceSha256": "55bf5b2b916999a08e8f995bdc1c3c51a54dff4b7e1b1d9c3fbe7d5dfc70fbe3"
+    },
+    {
+      "url": "models/Sidewalk_Straight_3m.gltf",
+      "bytes": 1892,
+      "sha256": "beca6a4e23b6e1e160723a60c54eab4304a7bd852bac43cd4caf842b5416632a",
+      "id": "Sidewalk_Straight_3m",
+      "triangles": 60,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Sidewalk_Straight_3m.gltf",
+      "sourceSha256": "ecfc8c7c7b802afd0a6171409d05abc887162c2030e9d012bc89549f33e76c5f"
+    },
+    {
+      "url": "models/Sidewalk_Straight_3m_Stripe.gltf",
+      "bytes": 1359,
+      "sha256": "0b91223cd1945fd572894e34c4993c0af58df7ec869f6011efe5d3b86563642c",
+      "id": "Sidewalk_Straight_3m_Stripe",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Sidewalk_Straight_3m_Stripe.gltf",
+      "sourceSha256": "4d13226203c1a27408b5a0c895ffba5dadbeedb1f53c844f09edb4e1f1a45d9d"
+    },
+    {
+      "url": "models/Stairs_Entrance_Concrete.gltf",
+      "bytes": 3109,
+      "sha256": "c2eff38cf8adb0592867af65dc67ff9cf86b05c46660fca08e828cc2e892c7fe",
+      "id": "Stairs_Entrance_Concrete",
+      "triangles": 128,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Stairs_Entrance_Concrete.gltf",
+      "sourceSha256": "8645a6e3a0cfd3018d0b53655720dbe5a23ecbd24b98037593b5892caf2748aa"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal.gltf",
+      "bytes": 1785,
+      "sha256": "24c94a7bb80244cbfde2788ed41aafe987426e7455b55c90fb4fb3bd6ed470be",
+      "id": "Stairs_Rails_Metal",
+      "triangles": 564,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Stairs_Rails_Metal.gltf",
+      "sourceSha256": "0bc2e54ec9fe67de394653281ccee626f83f9be7c23ab1e498200a86d218e092"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal_Straight_1.gltf",
+      "bytes": 1783,
+      "sha256": "41da00a98f11f7594a42fd125e8d8f96bd527f81556d0d7db515052acf5733f0",
+      "id": "Stairs_Rails_Metal_Straight_1",
+      "triangles": 168,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Stairs_Rails_Metal_Straight_1.gltf",
+      "sourceSha256": "59dfd4dd9a6c684436a4dadb75bc64cb07ea33e2c3990d6adceaea01b4880024"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal_Straight_2.gltf",
+      "bytes": 1785,
+      "sha256": "04d405065bb527e32e14385988f9f1ce1e531ef862283213ebc377927e8c5c46",
+      "id": "Stairs_Rails_Metal_Straight_2",
+      "triangles": 320,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Stairs_Rails_Metal_Straight_2.gltf",
+      "sourceSha256": "91062c81770b84f6bced8fc13f58d2d323d7a3c29997869300fdca32cd9dab3c"
+    },
+    {
+      "url": "models/Street_2Lane.gltf",
+      "bytes": 4631,
+      "sha256": "7c3b229fd38803e9b919b1696a7742f2e52b561a6c83cd3fba4273dd23202c29",
+      "id": "Street_2Lane",
+      "triangles": 220,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_2Lane.gltf",
+      "sourceSha256": "4bfa763a0a1988276fd5604e8e9e1d401c31cf5438401d42a15cf3a7ec3a60fe"
+    },
+    {
+      "url": "models/Street_2Lane_noSidewalk.gltf",
+      "bytes": 3127,
+      "sha256": "5e6a24a56566ed9e0afed664a5bc48a7cf50e389f63ad414b23b6ab7500429a7",
+      "id": "Street_2Lane_noSidewalk",
+      "triangles": 16,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_2Lane_noSidewalk.gltf",
+      "sourceSha256": "f69d933bae59e7baad74d5403ced00152c264e0c39293ef0b17e20f36d628d61"
+    },
+    {
+      "url": "models/Street_4Lane.gltf",
+      "bytes": 4574,
+      "sha256": "36f6f8fbb808514f027ea31e91b0664047ba80c0be75be6cf35fb38becbe1390",
+      "id": "Street_4Lane",
+      "triangles": 252,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_4Lane.gltf",
+      "sourceSha256": "ac7c9b2043a7f9f7c8f0230965db056b8a58d04d568ca329ca0ebd29a46d8f1c"
+    },
+    {
+      "url": "models/Street_4Lane_noSidewalk.gltf",
+      "bytes": 3101,
+      "sha256": "32aa797e418c11dca9bc37fe452f976ca859288fb98151ccb98b31cdb5bae0b2",
+      "id": "Street_4Lane_noSidewalk",
+      "triangles": 12,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_4Lane_noSidewalk.gltf",
+      "sourceSha256": "926b21443fc7a7d616cb1bec554d7d83b908edf83741f8899932f7dee8402ad9"
+    },
+    {
+      "url": "models/Street_4WayIntersection.gltf",
+      "bytes": 4699,
+      "sha256": "4dcc86c479ed87ac138ff5c5fe2f2ba4a0533f8b6ad9470b574880ad70bf7e0a",
+      "id": "Street_4WayIntersection",
+      "triangles": 892,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_4WayIntersection.gltf",
+      "sourceSha256": "b332bf9afd47ec6ae1c19151f8eafccee3b45037f4dfff2f115001d9d4cac34e"
+    },
+    {
+      "url": "models/Street_Asphalt_6x6.gltf",
+      "bytes": 1556,
+      "sha256": "0b751a2582aa89c2521165639736e670cb55b202848c933b0a20cdac503edcc1",
+      "id": "Street_Asphalt_6x6",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_Asphalt_6x6.gltf",
+      "sourceSha256": "5a6092eeb46cd61a5b9fe6782574e2d90942e1e41408e41a54ba6413974b0a13"
+    },
+    {
+      "url": "models/Street_Asphalt_9x9.gltf",
+      "bytes": 1560,
+      "sha256": "048a212f68e54e0d4863e0fc4878a76fc5703b18e0cba34fe3fff38975dcbb1f",
+      "id": "Street_Asphalt_9x9",
+      "triangles": 2,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_Asphalt_9x9.gltf",
+      "sourceSha256": "010f8ad35fec1e365116616c259af9f892c8b1e2a078e2775b2d2447e96a8713"
+    },
+    {
+      "url": "models/Street_Asphalt_Curve_2Lane.gltf",
+      "bytes": 1876,
+      "sha256": "db4f51780d60ae1f3aee038cc8809bb01e32febcc11f52e89208456f1d9efe34",
+      "id": "Street_Asphalt_Curve_2Lane",
+      "triangles": 48,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_Asphalt_Curve_2Lane.gltf",
+      "sourceSha256": "16aad644c9c453a21aa1757ac27149b33bd2f8d06c43f4cd68d5b30d2b18342e"
+    },
+    {
+      "url": "models/Street_Asphalt_Curve_4Lane_Short.gltf",
+      "bytes": 1887,
+      "sha256": "44aba6f5fedeaf53ad49f1bc8dbf4e433e3b26d6670e7204defdc4d3847a64ab",
+      "id": "Street_Asphalt_Curve_4Lane_Short",
+      "triangles": 49,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_Asphalt_Curve_4Lane_Short.gltf",
+      "sourceSha256": "a3ea0903bbad3d0922c72107645b5b89d519d0398974428d3d01cab86b912914"
+    },
+    {
+      "url": "models/Street_Curve_2Lane.gltf",
+      "bytes": 4704,
+      "sha256": "365123ecff32df0a11cbd7a783fd452f6df742084d730c06baea1b3510954de7",
+      "id": "Street_Curve_2Lane",
+      "triangles": 505,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_Curve_2Lane.gltf",
+      "sourceSha256": "761eeb26fec563eacf343a02d74f1a70c2df9f1917f9572d93b2de2bda795ef6"
+    },
+    {
+      "url": "models/Street_Curve_2Lane_Curb.gltf",
+      "bytes": 1960,
+      "sha256": "ee829b514e13aceb646a39e4cec39b88b908ae393f574bb6a03e8500f187716d",
+      "id": "Street_Curve_2Lane_Curb",
+      "triangles": 224,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_Curve_2Lane_Curb.gltf",
+      "sourceSha256": "b5ba48c6ea83bcc6f5e4cb2433556071526be395838b45189cd5745caf5d366d"
+    },
+    {
+      "url": "models/Street_Curve_4Lane_Short_Curb.gltf",
+      "bytes": 1959,
+      "sha256": "0571bd0bc376bc2ff5216c3a4ecff9e3fee42c46921fd8eb8929f02caf116064",
+      "id": "Street_Curve_4Lane_Short_Curb",
+      "triangles": 336,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_Curve_4Lane_Short_Curb.gltf",
+      "sourceSha256": "db49354fd6878f6d99756cb8ee1ee1b91f75795e9359274221e3bdefdb8b7438"
+    },
+    {
+      "url": "models/Street_Curve_4LaneShort.gltf",
+      "bytes": 4700,
+      "sha256": "62c5a3a4651c8b9463bb422145d1f0a9b1bc201bfa2f1de4ddbc2e920305e106",
+      "id": "Street_Curve_4LaneShort",
+      "triangles": 634,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_Curve_4LaneShort.gltf",
+      "sourceSha256": "9b4c0aa7cbc50c5ce6030542aabef351ae4ee3eaba40123d303a362b7a522bec"
+    },
+    {
+      "url": "models/Street_TIntersection.gltf",
+      "bytes": 4673,
+      "sha256": "5fd9207f6f3db79ca2e9ac9af98f2ad3fc7411ff52a5dab88368f9326922f783",
+      "id": "Street_TIntersection",
+      "triangles": 858,
+      "materials": 3,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Street_TIntersection.gltf",
+      "sourceSha256": "b8ecb3ec2514027af88d61b93e844ce004d21e759b730b27d73d880d9a270943"
+    },
+    {
+      "url": "models/Trim_90Angle_TopCover.gltf",
+      "bytes": 3555,
+      "sha256": "33fda314da4462e41fbbe71ea9ef7274f0d2e7e6c27bbb91e34619e7f1a994a1",
+      "id": "Trim_90Angle_TopCover",
+      "triangles": 10,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_90Angle_TopCover.gltf",
+      "sourceSha256": "e1182fec82b13929557d44b940649e340b8403e6ac01d2fa47bea23736f722fd"
+    },
+    {
+      "url": "models/Trim_Column_Bottom.gltf",
+      "bytes": 1719,
+      "sha256": "15c5db28b06ff9c76d690100f58464fdfafcfeb627f2d250f44e623bf3410459",
+      "id": "Trim_Column_Bottom",
+      "triangles": 216,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_Column_Bottom.gltf",
+      "sourceSha256": "f8d4a7f80615df50166a9c8555d9815387cd9d5f15c6eec80efff72592799e50"
+    },
+    {
+      "url": "models/Trim_Column_Center.gltf",
+      "bytes": 1688,
+      "sha256": "94058f03bc4d2fda5d4734dd0fde8547b83f71ce238ac9102f45139a652aafd0",
+      "id": "Trim_Column_Center",
+      "triangles": 64,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_Column_Center.gltf",
+      "sourceSha256": "1fd155424bf13d98893c72ef0c3ae7466442a0b38dde3e6ccab90a07ee3c805c"
+    },
+    {
+      "url": "models/Trim_Column_Top.gltf",
+      "bytes": 1727,
+      "sha256": "ba9304432a7cb446c9b6f9bfe44542ce5c3ba6ea269ad39d034fcc4a413a025f",
+      "id": "Trim_Column_Top",
+      "triangles": 216,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_Column_Top.gltf",
+      "sourceSha256": "1829ee5d92645c2a1dd89dfe1401906263be941366942f5f62245c76c64eb230"
+    },
+    {
+      "url": "models/Trim_Corner.gltf",
+      "bytes": 3542,
+      "sha256": "55a6ee39dcbb981b299a0bfc9bd794d6996ed66f52145d349eff8bd6b56b02c5",
+      "id": "Trim_Corner",
+      "triangles": 68,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_Corner.gltf",
+      "sourceSha256": "5356455e6163971a87d829332eb18a24805d6fb05de4f34a575c59e2dda0e539"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Wall.gltf",
+      "bytes": 3557,
+      "sha256": "e99f23092f006c6f7b3e1c61d79e71267698f189f0c088ae95836ad7ac2794a5",
+      "id": "Trim_FirstFloor_Wall",
+      "triangles": 50,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_FirstFloor_Wall.gltf",
+      "sourceSha256": "b6dec6c4817e76cce835d714d834aa3f6229d4a2afc8b2c9b1d042110f6524f7"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Window_001.gltf",
+      "bytes": 5734,
+      "sha256": "a6ba1bb3af5560eda55748a83e78feb5b81fc6b6e311b98cab39caa1e7d7e821",
+      "id": "Trim_FirstFloor_Window_001",
+      "triangles": 160,
+      "materials": 4,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_FirstFloor_Window_001.gltf",
+      "sourceSha256": "d3e80aa99e89533fe2af979a45be9004684926176bbeb79860c45cc574cb9506"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Window_Columns.gltf",
+      "bytes": 1892,
+      "sha256": "44ec3de53af934e893cb2ca85c48eb6c9596390bb24fcce6b5b8cc31671ef185",
+      "id": "Trim_FirstFloor_Window_Columns",
+      "triangles": 32,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_FirstFloor_Window_Columns.gltf",
+      "sourceSha256": "97da02e9f0bbbc9036d282a49f50fca7f4383ba176a31035abe0f22db3f0afe7"
+    },
+    {
+      "url": "models/Trim_Plain_3.gltf",
+      "bytes": 3541,
+      "sha256": "4fe3d3815b6ee50660aa28541fed8d63d8d97a5911cab5c6ddc0c91276e5424a",
+      "id": "Trim_Plain_3",
+      "triangles": 34,
+      "materials": 2,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_Plain_3.gltf",
+      "sourceSha256": "193fa82b2a7cdfd98e031f51d21e40a733896b30668ec705f46b128a87a9352f"
+    },
+    {
+      "url": "models/Trim_Wall_Guard.gltf",
+      "bytes": 1810,
+      "sha256": "4a789724c1d282f45b8d217f4c36b49350b694ea2b75eab579d1ca3d19029316",
+      "id": "Trim_Wall_Guard",
+      "triangles": 32,
+      "materials": 1,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_Wall_Guard.gltf",
+      "sourceSha256": "1a8fed582619dfeafc3660d9f28aae193715c4f3800d5593f354c99ee6723019"
+    },
+    {
+      "url": "models/Trim_Window.gltf",
+      "bytes": 7766,
+      "sha256": "19a56fd9312d7779262ac9f753f16c2f05c5771e35a1dcf61787c2fb5c637a86",
+      "id": "Trim_Window",
+      "triangles": 574,
+      "materials": 5,
+      "animations": 0,
+      "sourceArchivePath": "Exports/glTF (Godot)/Trim_Window.gltf",
+      "sourceSha256": "253942c661a09da5bad08ced802ecabe17624fbe1907a2fac1a84a60bc968aae"
+    }
+  ],
+  "files": [
+    {
+      "url": "LICENSE.txt",
+      "bytes": 847,
+      "sha256": "afac5819301671301c41e90402d26e4ade5e459ad58fdf77f142147410862f1f"
+    },
+    {
+      "url": "models/Brick_90Angle_L.bin",
+      "bytes": 1876,
+      "sha256": "416bc83c75c60cd5d654afa2551d2c21b8c4dda671e749c2a6041367db1f08fd"
+    },
+    {
+      "url": "models/Brick_90Angle_L.gltf",
+      "bytes": 3341,
+      "sha256": "c3731388ce48d3732869d1a96b17494208c84c983505ebb1555cf6be44587191"
+    },
+    {
+      "url": "models/Brick_90Angle_R.bin",
+      "bytes": 1876,
+      "sha256": "84caea809434b67980cd52f0303d38fa6b42222a25e7faf7ad917771483d914e"
+    },
+    {
+      "url": "models/Brick_90Angle_R.gltf",
+      "bytes": 3386,
+      "sha256": "dd46cae517f4d379eecaa74faf893fdcf0b22f92308d98cee035d69404c7d128"
+    },
+    {
+      "url": "models/Brick_BottomTrim.bin",
+      "bytes": 5512,
+      "sha256": "e251a3eb1ae85c757e385acf519f771c48495625855b59d39f5490af6be7c8fa"
+    },
+    {
+      "url": "models/Brick_BottomTrim.gltf",
+      "bytes": 4905,
+      "sha256": "232b090489bdb1128696b20032f1bc2d61e5b8276c09fb324a878e69c54040a2"
+    },
+    {
+      "url": "models/Brick_Column_RedBricks.bin",
+      "bytes": 32680,
+      "sha256": "e5d1572c38d3110a9963d1cc28674d1566f42eb2f9fe36a97693e37e51dfcba5"
+    },
+    {
+      "url": "models/Brick_Column_RedBricks.gltf",
+      "bytes": 1772,
+      "sha256": "b7073c01dbb1d9e1dda2f506bb34770d1369a762eef2a785d64103af924b507c"
+    },
+    {
+      "url": "models/Brick_Column_Small.bin",
+      "bytes": 2752,
+      "sha256": "2564153a3597bde42996da5f5a404603a98889309cc49efe84e604317c123021"
+    },
+    {
+      "url": "models/Brick_Column_Small.gltf",
+      "bytes": 1706,
+      "sha256": "d7509f59873196e0e74a27d38f8076257b23e9a49c4dbee2202dc35730fc5e5b"
+    },
+    {
+      "url": "models/Brick_Column_TrimBricks.bin",
+      "bytes": 25628,
+      "sha256": "c83c4a12e1a35343fa6a44d1d809c6437cfa60fb91b9d8e9e688117dc9f35b2f"
+    },
+    {
+      "url": "models/Brick_Column_TrimBricks.gltf",
+      "bytes": 3079,
+      "sha256": "edd603a4eb7182050f5083b26be99545e915d1bf62c728e8633be5cf01a5fa77"
+    },
+    {
+      "url": "models/Brick_Corner_Plain.bin",
+      "bytes": 1320,
+      "sha256": "d69862b5da35a3bc3b45aa54e61ff471e46a7b50d9f2805a193d5d6059443cdf"
+    },
+    {
+      "url": "models/Brick_Corner_Plain.gltf",
+      "bytes": 3314,
+      "sha256": "3ae175abcff5bd596e56f42b768a30a2c9263f7d5f98e387a5b8e974f4788475"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Bottom.bin",
+      "bytes": 6512,
+      "sha256": "65f8e0f75eacdf88bf30977d170ff479742d37795c7a981e229732ae33a1dde9"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Bottom.gltf",
+      "bytes": 3653,
+      "sha256": "c05f730d3796e264afaa3058e9fc085efa6e34de9f5c4921c23812fe10111b33"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Cap.bin",
+      "bytes": 8032,
+      "sha256": "2f086fb062029493f71be9f7906f76b465131ae188cb9cb30ab7e296d0f3254c"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Cap.gltf",
+      "bytes": 3653,
+      "sha256": "65bc80a4ee6759cdeb1d4955648f88fa8f1b847fb03f63d207fb87e6f3a1b625"
+    },
+    {
+      "url": "models/Brick_CornerColumn_CapShort.bin",
+      "bytes": 4208,
+      "sha256": "4a301bf5d4a5f8b47eb3b75621b702f5f9ac33324dc188a85254b480b1be2133"
+    },
+    {
+      "url": "models/Brick_CornerColumn_CapShort.gltf",
+      "bytes": 2032,
+      "sha256": "c0963c0077a1907ad0ea85b1a34b0c730241dd33fdd899bf75108d023a7c9e61"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Center.bin",
+      "bytes": 3520,
+      "sha256": "579da09c2b8ce693c9f2ff95a7ef2abd8194cba74c28eb2ab952304545511f87"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Center.gltf",
+      "bytes": 2027,
+      "sha256": "b9263574e7184186de41eb0e436d462781b7ef6544a39974f47da71b11909f28"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Center_Half.bin",
+      "bytes": 3776,
+      "sha256": "65a021d0f069c9d482c12a92f7e174615ecd7bd54a7b2c7c85896404c1071f2f"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Center_Half.gltf",
+      "bytes": 2111,
+      "sha256": "0af62f8af166ef80247e8d30a0f7b29a25949629fb4ec56d21ed1bfe0c8b6361"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Top.bin",
+      "bytes": 6512,
+      "sha256": "304bcbc390af90a58b8376949c6ddbb71efbf0ee4dd2d7cc2dc26c805b1e2755"
+    },
+    {
+      "url": "models/Brick_CornerColumn_Top.gltf",
+      "bytes": 3645,
+      "sha256": "0b7279db9b4d262e62716501000139bab289de93a27121eeab5b2f459d325e98"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Bottom.bin",
+      "bytes": 6184,
+      "sha256": "c414d1ee2a530750454572cf492cf88d89dde44d6c4baa73ff20ae9b4b9ce540"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Bottom.gltf",
+      "bytes": 3063,
+      "sha256": "9f32db5f9a0c64df36e667081dd59da2341db414ca23f9b087b7bf9db40daa26"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Center.bin",
+      "bytes": 2928,
+      "sha256": "a28cdfbf78600105eee0bb1f68db30e50f3e12dfd1db886b008bc9fc4dc916ec"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Center.gltf",
+      "bytes": 1760,
+      "sha256": "cf69a8bca8ae899db2fc018b499319107b35114461e5f926cd8231f1676d9abd"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Top.bin",
+      "bytes": 6184,
+      "sha256": "9d3ad49841d73a535615516cdc82d4feb1ec90d225aecb3f13daf663ea5a18e8"
+    },
+    {
+      "url": "models/Brick_HalfColumn_Top.gltf",
+      "bytes": 3071,
+      "sha256": "d4ae5ea9e16dd4b5e34900c688395066d2e1c17cdf8816f95ec345da7ca8ba99"
+    },
+    {
+      "url": "models/Brick_HalfTrim.bin",
+      "bytes": 2536,
+      "sha256": "8be766fc0e0072649b4dba52acccb91b238b5fd6b1a308a76d58c20564067cb8"
+    },
+    {
+      "url": "models/Brick_HalfTrim.gltf",
+      "bytes": 4918,
+      "sha256": "a26afd5da6c7d7181af01e2cae7ef7bcc49bc74508190cd11d09863a0f322a39"
+    },
+    {
+      "url": "models/Brick_Inset.bin",
+      "bytes": 6152,
+      "sha256": "472582b2314b0dc9a4ab0aeda4e1cbb5f5185dae6a077ef1fa0b97d70554f6c7"
+    },
+    {
+      "url": "models/Brick_Inset.gltf",
+      "bytes": 4931,
+      "sha256": "c9b369bac8988e3e9f1182161c55705aa9a1e25ae3ab612345dc636beb215f3e"
+    },
+    {
+      "url": "models/Brick_Inset_Window.bin",
+      "bytes": 39936,
+      "sha256": "e795de38c8771076907e01a84863e52823fde5bc7fd0d8e53f1462c0695c94ef"
+    },
+    {
+      "url": "models/Brick_Inset_Window.gltf",
+      "bytes": 6960,
+      "sha256": "610671121c24d1194aefed5a001b81865c496d50f887d411da532664cd69e5d2"
+    },
+    {
+      "url": "models/Brick_Inset_Window_Curved.bin",
+      "bytes": 48768,
+      "sha256": "d992fe75a6e4038d5bf02fab07de11a0023bb7b6c58a7fc340ce72a4ba4ed3da"
+    },
+    {
+      "url": "models/Brick_Inset_Window_Curved.gltf",
+      "bytes": 6964,
+      "sha256": "4cc4420d801f1e507ed3eddeb89d846a3da3b9cb0dd455221ba5f265a2b0f5f3"
+    },
+    {
+      "url": "models/Brick_Inset_Window_Curved_Small.bin",
+      "bytes": 43916,
+      "sha256": "921a9dcff066adddf25ba2336037f1881c71e7542fd9c4e3640cd5425d8539eb"
+    },
+    {
+      "url": "models/Brick_Inset_Window_Curved_Small.gltf",
+      "bytes": 7763,
+      "sha256": "c47cdbf8ade57f55b02cede8f621d605721c434ac44e5430abde6fb87e000586"
+    },
+    {
+      "url": "models/Brick_InteriorWall_1.bin",
+      "bytes": 220,
+      "sha256": "a6651fb8b9723e1a85a6c55998eeafb713cfbdde699586bf5e4c3b752d5d1fc5"
+    },
+    {
+      "url": "models/Brick_InteriorWall_1.gltf",
+      "bytes": 1978,
+      "sha256": "692224c9a00b355426fc718dacd1489909165fafa17f339ab9e33cfea3b49743"
+    },
+    {
+      "url": "models/Brick_InteriorWall_3.bin",
+      "bytes": 440,
+      "sha256": "f6721652f63854841c4ab327957aaeeace18c15e255d55a341399e36ab9adc73"
+    },
+    {
+      "url": "models/Brick_InteriorWall_3.gltf",
+      "bytes": 1979,
+      "sha256": "6be85160662bd85beb466981d7694f8634aaed2957b2af5394f51287308f8d9a"
+    },
+    {
+      "url": "models/Brick_InteriorWall_4.bin",
+      "bytes": 440,
+      "sha256": "87caac2246b2096624a550afac051032d7c9b9f9af5f5ab2580208eb519bd754"
+    },
+    {
+      "url": "models/Brick_InteriorWall_4.gltf",
+      "bytes": 1979,
+      "sha256": "30d067f9b8f3abe960e1fea102928ddcd153dd14ec7a1ee5cb360c6b184d5cad"
+    },
+    {
+      "url": "models/Brick_Ornament_Horizontal.bin",
+      "bytes": 24912,
+      "sha256": "99e9e11c5ed0a778416d22adcec01478d328dd0e6aca54b85737fd29dae3593d"
+    },
+    {
+      "url": "models/Brick_Ornament_Horizontal.gltf",
+      "bytes": 1743,
+      "sha256": "4ea52c5d60b43b6554b8f58e9c0cfe70f178bb60abba4317fa14ab1a07dd145b"
+    },
+    {
+      "url": "models/Brick_Plain_1.bin",
+      "bytes": 440,
+      "sha256": "99b927a3175d6a9612803298f61d9e9ce9f463430cad9b0ae1c4af1ee3404729"
+    },
+    {
+      "url": "models/Brick_Plain_1.gltf",
+      "bytes": 3267,
+      "sha256": "55fcf22d0b7082ee31a1f482fa92ebf2be726599ae2dcf8a60f0380af10bb8e0"
+    },
+    {
+      "url": "models/Brick_Plain_3.bin",
+      "bytes": 612,
+      "sha256": "7abf0a393a650bae471d2c1df7527dd4448663483cb97312a64e3ae0ec9c4dec"
+    },
+    {
+      "url": "models/Brick_Plain_3.gltf",
+      "bytes": 2958,
+      "sha256": "9064cfde78d471d7c3c76a4c3a54e0748c59aaf0c9f9645b642707bb0c356917"
+    },
+    {
+      "url": "models/Brick_Plain_3_noWear.bin",
+      "bytes": 612,
+      "sha256": "e88f8f4a2a880f2e3d4aa715d7a468d5ceb052aa7d442057dbaea1e458614593"
+    },
+    {
+      "url": "models/Brick_Plain_3_noWear.gltf",
+      "bytes": 2972,
+      "sha256": "d39c051c3b77ea400d6c374d7ee749bb878739984722313dd306ad4d9797151d"
+    },
+    {
+      "url": "models/Brick_Plain_4.bin",
+      "bytes": 880,
+      "sha256": "857fa4e7122af4a143c734322af2e5a01bc068dbba9d4c1887b8c01195dc5f1a"
+    },
+    {
+      "url": "models/Brick_Plain_4.gltf",
+      "bytes": 3290,
+      "sha256": "1e03c9db1842e1b455ef1c4381336e710d5443bb3444f838cbf8a31d3da8cf56"
+    },
+    {
+      "url": "models/Brick_RedWhite_DoubleWindow.bin",
+      "bytes": 78292,
+      "sha256": "3494ee7f685037f1cc6a78e6e7dafecba5b1068ac83ecb3c2556012765f67b58"
+    },
+    {
+      "url": "models/Brick_RedWhite_DoubleWindow.gltf",
+      "bytes": 9437,
+      "sha256": "6468220535562a900ccbaa6cde1593752e23f5d53392e7c7b775d195b24dfcf7"
+    },
+    {
+      "url": "models/Brick_TopTrim.bin",
+      "bytes": 1448,
+      "sha256": "3cd7e0fa30917047ad257efbf9eb0d975bd52798dc00f8cc8768c4eefd798cea"
+    },
+    {
+      "url": "models/Brick_TopTrim.gltf",
+      "bytes": 4883,
+      "sha256": "b5df6210bcc40e832b770ff121ef0b6370b5874773e4cb8eac0bd4bed0d98df2"
+    },
+    {
+      "url": "models/Brick_TopTrim_90Angle_L.bin",
+      "bytes": 3036,
+      "sha256": "8d44b3e94c008900d25598d7b79fcb5c4ba331bd91254a0dbde8dcf60bfe7958"
+    },
+    {
+      "url": "models/Brick_TopTrim_90Angle_L.gltf",
+      "bytes": 4960,
+      "sha256": "a8dedc81572cb0f14de2a01174aeff7ae9cfb8b6582b96c9a777ece227795f48"
+    },
+    {
+      "url": "models/Brick_TopTrim_90Angle_R.bin",
+      "bytes": 3036,
+      "sha256": "53a77238092e251eb053dffa23fbea3f99fafd1f878985d61601195cfeaa32e3"
+    },
+    {
+      "url": "models/Brick_TopTrim_90Angle_R.gltf",
+      "bytes": 4954,
+      "sha256": "327620aeac431e47c128c5fe20949cba77df210805afd7d5f947ba529a531521"
+    },
+    {
+      "url": "models/Brick_TopTrim_Corner.bin",
+      "bytes": 2224,
+      "sha256": "c87b4ad7582059f73677a088fb38453bd2dc407b58c913701913676df65b7b3f"
+    },
+    {
+      "url": "models/Brick_TopTrim_Corner.gltf",
+      "bytes": 4925,
+      "sha256": "5ede08fb4026b05468487e977e3986ca902b500e5c21b210ce2929fc3807fc43"
+    },
+    {
+      "url": "models/Brick_Window_CurvedDouble.bin",
+      "bytes": 84536,
+      "sha256": "ded4f3a0aab515b6ec6b0e779c98db2cc657ba693458dbba8dc62e74cde1b873"
+    },
+    {
+      "url": "models/Brick_Window_CurvedDouble.gltf",
+      "bytes": 7072,
+      "sha256": "5f9e8ee63048c1a9b34235cc68a65631df72bb47a6f97021546fd4e9567b1391"
+    },
+    {
+      "url": "models/Brick_Window_Square_Single.bin",
+      "bytes": 17260,
+      "sha256": "49a6023bb41aa66c9bbd4161fc216c5d903ff3b9f8b5c76e862661176ea85644"
+    },
+    {
+      "url": "models/Brick_Window_Square_Single.gltf",
+      "bytes": 7711,
+      "sha256": "0bde19753694a3f403e907a88cfc2a2bcf58240dbd0a9e537e07720c3e9b6b91"
+    },
+    {
+      "url": "models/Brick_Window_Trim.bin",
+      "bytes": 65232,
+      "sha256": "518f90310c4358621e3898ad58a7ddec6898e7b08281409f46865cfe32a2c257"
+    },
+    {
+      "url": "models/Brick_Window_Trim.gltf",
+      "bytes": 8462,
+      "sha256": "1178011f1641de7fe88c0c140d1c43269211a93a96993094089057afd225ceae"
+    },
+    {
+      "url": "models/Brick_Window_Trim_Single.bin",
+      "bytes": 34952,
+      "sha256": "ef540db1d55ace3f0f02d6bc267afb53e7d4215bff9ddf75eb523e0d0872bd32"
+    },
+    {
+      "url": "models/Brick_Window_Trim_Single.gltf",
+      "bytes": 7785,
+      "sha256": "d11284a1a0a806c0b53ab636979feb43c13dafb9aa24aa35c60b45d7e2387d05"
+    },
+    {
+      "url": "models/Building_Large_2.bin",
+      "bytes": 3345228,
+      "sha256": "e25636464da7b96a346f89314e498099ce33d3b0e9b1f8d9cba3eee94b63fac3"
+    },
+    {
+      "url": "models/Building_Large_2.gltf",
+      "bytes": 16588,
+      "sha256": "c8ba7bcd3e81a649e2ecdf07f2d6114c619c670567ab03a831a6972640f257fd"
+    },
+    {
+      "url": "models/Building_Medium_2_001.bin",
+      "bytes": 2443288,
+      "sha256": "8a8bd4462ff5f784e0ea7fbe753b009713f4017192c9d82b467f445eae88a35d"
+    },
+    {
+      "url": "models/Building_Medium_2_001.gltf",
+      "bytes": 18394,
+      "sha256": "569611e82aafe6c8086aa7c40466fe1c395fd1f090ba3c1ede7ab8c49e13911a"
+    },
+    {
+      "url": "models/Building_Small_1.bin",
+      "bytes": 1556100,
+      "sha256": "a5fb691fe7ab0d93d5d47eef51af576f2d65bd78103c92c9e714215b26d679a2"
+    },
+    {
+      "url": "models/Building_Small_1.gltf",
+      "bytes": 19949,
+      "sha256": "320ab511b1cbc74004f87bc5caaaa11ed9bfa2925b0ce5f90b63d37a0066f0a3"
+    },
+    {
+      "url": "models/Cornice_Brick_90Angle_L.bin",
+      "bytes": 2932,
+      "sha256": "8c6a6ad8885f3f69faf9951708482531a07f4ec8be91ea4efbc020aa92695906"
+    },
+    {
+      "url": "models/Cornice_Brick_90Angle_L.gltf",
+      "bytes": 1986,
+      "sha256": "94b642693c5f8c806bd40eeb3b13630cc786bf706fe84c69f8014d08277ff556"
+    },
+    {
+      "url": "models/Cornice_Brick_90Angle_R.bin",
+      "bytes": 2932,
+      "sha256": "bb34ce16d7f208cd5c2116ae6ca2a162504493f5cbbc310aa5df93875b911a76"
+    },
+    {
+      "url": "models/Cornice_Brick_90Angle_R.gltf",
+      "bytes": 1986,
+      "sha256": "cec99e3ce50eb3edd63b9b745b46e9b01fe364afc9cac75d78443142a6296747"
+    },
+    {
+      "url": "models/Cornice_Brick_Center.bin",
+      "bytes": 660,
+      "sha256": "2759ad2718aa0116d1e6a15d06bd9fafc49141c0252e3072b1de12271fb4fb2e"
+    },
+    {
+      "url": "models/Cornice_Brick_Center.gltf",
+      "bytes": 1970,
+      "sha256": "9b85dc311c84719156cae3bb8f1ee26f713f7d5ea605d4aed5c286a184c2059e"
+    },
+    {
+      "url": "models/Cornice_Brick_L.bin",
+      "bytes": 660,
+      "sha256": "16ad7ca6369237311d718b5c6354549353398415c7bd9f39b8c17638355a4dea"
+    },
+    {
+      "url": "models/Cornice_Brick_L.gltf",
+      "bytes": 1960,
+      "sha256": "560cc56e243f41d94293ed4102664a0cd771faf89557847e11a0f489049366fe"
+    },
+    {
+      "url": "models/Cornice_Brick_R.bin",
+      "bytes": 660,
+      "sha256": "14b0b264ea9ba0e703f4de6a3c7085320dd7138cef888e850751fa901996517e"
+    },
+    {
+      "url": "models/Cornice_Brick_R.gltf",
+      "bytes": 1960,
+      "sha256": "cfad89042e1f2e5f14da5df961ec74ccc73fe6c3bf5da639c135117c25e8b079"
+    },
+    {
+      "url": "models/Cornice_Metal_90Angle_L.bin",
+      "bytes": 8412,
+      "sha256": "803e27bbc308e7657faa585584d0c68b707af7d3468776f5fbd127628694cd33"
+    },
+    {
+      "url": "models/Cornice_Metal_90Angle_L.gltf",
+      "bytes": 1918,
+      "sha256": "6507ba274373efa91438c66590fff2494069086a5545654efee9f9fdc21cc5c3"
+    },
+    {
+      "url": "models/Cornice_Metal_90Angle_R.bin",
+      "bytes": 8412,
+      "sha256": "50f3d951cfdf6cfb53f272a0584a6d5c7c05e719b18ddc13947094617acecbab"
+    },
+    {
+      "url": "models/Cornice_Metal_90Angle_R.gltf",
+      "bytes": 1918,
+      "sha256": "c94dacd88688f365a44a7d5d5f22db121ab99bc6d9549bd273bb48a1944fa7a4"
+    },
+    {
+      "url": "models/Cornice_Metal_Center.bin",
+      "bytes": 3060,
+      "sha256": "7ef67e718e81968e0ab046a997d5005526d24fc303ae915b9bab841623b3c27b"
+    },
+    {
+      "url": "models/Cornice_Metal_Center.gltf",
+      "bytes": 1901,
+      "sha256": "581a4cd566c0dc35ffe6abb1cfda373a04a9a3900620301ff4d98583a87a9ada"
+    },
+    {
+      "url": "models/Cornice_Metal_L.bin",
+      "bytes": 6192,
+      "sha256": "8f09eec0dbc98fb3c9431420b5f51b0d0df819ce17f171fe4b9389cfba8e8f42"
+    },
+    {
+      "url": "models/Cornice_Metal_L.gltf",
+      "bytes": 1917,
+      "sha256": "5f684bd5febc8ccad4b901bd2eb79f25b64a1d54ede7db99a52de2452b111282"
+    },
+    {
+      "url": "models/Cornice_Metal_R.bin",
+      "bytes": 6192,
+      "sha256": "3510d3804bc07f6f39450eba44fcb07eef8c5f0b16850e37cd5776a2e4ffb008"
+    },
+    {
+      "url": "models/Cornice_Metal_R.gltf",
+      "bytes": 1917,
+      "sha256": "8f0f7cbc5103b7428f15ee86ef9bf10197db7ac8666756ed885f7ca52924e866"
+    },
+    {
+      "url": "models/Cornice_Trim_90Angle_L.bin",
+      "bytes": 11680,
+      "sha256": "4802ff7c657fdc004bf3c000ad4d2b14227828a67f2e8ea9e07be827cc164457"
+    },
+    {
+      "url": "models/Cornice_Trim_90Angle_L.gltf",
+      "bytes": 1700,
+      "sha256": "ab181f7a32ffd7259809bfdead00232883704cb7a1f159ad61f756c9177f60e0"
+    },
+    {
+      "url": "models/Cornice_Trim_90Angle_R.bin",
+      "bytes": 11680,
+      "sha256": "d2d37e85f2a1ee2cf54176db81fb5f51c7c0bb2f60c762ba032405afa2b8be95"
+    },
+    {
+      "url": "models/Cornice_Trim_90Angle_R.gltf",
+      "bytes": 1716,
+      "sha256": "1ae13012f1780b70999e081b9d66a4cdf2e8d98a88c8ceed16e4e5df37b389df"
+    },
+    {
+      "url": "models/Cornice_Trim_Center.bin",
+      "bytes": 7312,
+      "sha256": "ea818dfa37288175f7e2b9dd8431bc2505144b516e7a72d0481865d6ade81aeb"
+    },
+    {
+      "url": "models/Cornice_Trim_Center.gltf",
+      "bytes": 1676,
+      "sha256": "23391d64c63a239d935b1e5414f59ade7be7b7d12b824e99692676ae2771075a"
+    },
+    {
+      "url": "models/Cornice_Trim_L.bin",
+      "bytes": 8616,
+      "sha256": "974d25a3d6f29e7851de17db814ea8bcd09e8e4b6dba15141baa33a04984282e"
+    },
+    {
+      "url": "models/Cornice_Trim_L.gltf",
+      "bytes": 1683,
+      "sha256": "187b535f6558a0d819d04fe145ef129fe1f285f6e1721de35ef3a8f54541face"
+    },
+    {
+      "url": "models/Cornice_Trim_R.bin",
+      "bytes": 8616,
+      "sha256": "384f33f7eee0eb7496d513a1da721de6e755016f541215f0a3ad42a042406459"
+    },
+    {
+      "url": "models/Cornice_Trim_R.gltf",
+      "bytes": 1683,
+      "sha256": "8e0c1a4bd8dd66ad45ef5436bfea84d8d9c7aa259f9e6cf9f71869ed9ee1f812"
+    },
+    {
+      "url": "models/Decal_ArrowForwardLeft.bin",
+      "bytes": 444,
+      "sha256": "0bd81b0d0c84068e754c3e967a124e17d0bffd95a0fa958eafae4115d52d9a36"
+    },
+    {
+      "url": "models/Decal_ArrowForwardLeft.gltf",
+      "bytes": 1384,
+      "sha256": "ced8229179790385f95234f11ba725c844f24fb2487e46446214c344aabf3bbd"
+    },
+    {
+      "url": "models/Decal_ArrowForwardRight.bin",
+      "bytes": 444,
+      "sha256": "b38e18d68168bab1f9b7da76ea1884613ce959aa09ae220d2b23eccdaf570979"
+    },
+    {
+      "url": "models/Decal_ArrowForwardRight.gltf",
+      "bytes": 1386,
+      "sha256": "41bb52509e61028a53597552efe1155ec667e720d0a16c09f452f61337495727"
+    },
+    {
+      "url": "models/Decal_ArrowStraight.bin",
+      "bytes": 140,
+      "sha256": "b8483b899291629b843e7921f338e64d0610482e4dcbd916d6d14353f99c93e5"
+    },
+    {
+      "url": "models/Decal_ArrowStraight.gltf",
+      "bytes": 1374,
+      "sha256": "4b6b0856d8c80cbf68ee9ea1fc9008286b7bb81ff252a07a421e0365fc09d97b"
+    },
+    {
+      "url": "models/Decal_ArrowTurnLeft.bin",
+      "bytes": 216,
+      "sha256": "ab8c5789e11b582b600f65652c8c66546d1faba18af8f464dbf2f18dc13c0e5d"
+    },
+    {
+      "url": "models/Decal_ArrowTurnLeft.gltf",
+      "bytes": 1375,
+      "sha256": "0c247d93d7e824d35a5b2424bff85b6c6207b1ab834064a13820d67d4f3d2202"
+    },
+    {
+      "url": "models/Decal_ArrowTurnRight.bin",
+      "bytes": 264,
+      "sha256": "e08839f48d8a52b1d9cb2241d2bb3248b3dd398734ab9e8b29b4fb4245711e67"
+    },
+    {
+      "url": "models/Decal_ArrowTurnRight.gltf",
+      "bytes": 1518,
+      "sha256": "f99711f5e2c7cdad81d4de2d0af0ae8aa540c57bfa6c646c71f22dba6b268ab1"
+    },
+    {
+      "url": "models/Decal_Bikelane.bin",
+      "bytes": 368,
+      "sha256": "fb7e93f04dc266887bfdcc9d7e74a7b9faa6e1ad8c07c9e3efe9cda2ff79d458"
+    },
+    {
+      "url": "models/Decal_Bikelane.gltf",
+      "bytes": 1371,
+      "sha256": "e43cad481dd1b01be5ea43ed29f3ff6deae9c58e47b15313028b7ff59c737b55"
+    },
+    {
+      "url": "models/Decal_BrokenLine_Straight.bin",
+      "bytes": 172,
+      "sha256": "20881f24ce840570fd59189ab873268fb8eb72414ba53a11ac1f4772d94a841f"
+    },
+    {
+      "url": "models/Decal_BrokenLine_Straight.gltf",
+      "bytes": 1491,
+      "sha256": "166f3fda8b4995e5a302c65ef2283a437d8955a4bb0831ca51a9637e77e95e4c"
+    },
+    {
+      "url": "models/Decal_Crosswalk.bin",
+      "bytes": 140,
+      "sha256": "d2830f63d0487f0d67db64ee0b1c94e718bf4bdbb89285d336b3d57ae3e12a1d"
+    },
+    {
+      "url": "models/Decal_Crosswalk.gltf",
+      "bytes": 1366,
+      "sha256": "fd09872e54be78de4c1630b95b3a413280566007a69c9c473573db5586bec64c"
+    },
+    {
+      "url": "models/Decal_Crosswalk_Wide.bin",
+      "bytes": 280,
+      "sha256": "6318f94da7fb5529f9485b06cd7569fb2615870363fc2ab846634fe9ea37ffeb"
+    },
+    {
+      "url": "models/Decal_Crosswalk_Wide.gltf",
+      "bytes": 1409,
+      "sha256": "53f032af2c7bb6705a84d7019c7d4a60afc7468eae4254befd9ee2f760845cf7"
+    },
+    {
+      "url": "models/Decal_Curve_2Lane_Stripe.bin",
+      "bytes": 1552,
+      "sha256": "53ac670b3fdeaf6b55e801f9acc3c8e9ca8e24695f2e961ef0c322997acd0b23"
+    },
+    {
+      "url": "models/Decal_Curve_2Lane_Stripe.gltf",
+      "bytes": 1537,
+      "sha256": "532c267d669fa27d6ecccdb385e966b706e1097bcf7ead06668f4269af555333"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort.bin",
+      "bytes": 2288,
+      "sha256": "2b7641c7b9a0aa5927e2f5ed9cac9c90ceeb7e27799680965ff3a501a33242f3"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort.gltf",
+      "bytes": 1515,
+      "sha256": "4b100686cfd52cf21f157c333ddc28ec42d796d6fff0bfed0bcea85c108cc914"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort_DoubleYellow.bin",
+      "bytes": 2288,
+      "sha256": "d6d686673647f6ab827c412d92f1284acb42081b989e0c35e2a32bb1937f604c"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort_DoubleYellow.gltf",
+      "bytes": 1546,
+      "sha256": "f4a352579c4b03119793d7ba26a180e8243cf1fc10c57ade24b89880b58c7851"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort_Stripe.bin",
+      "bytes": 2288,
+      "sha256": "28a1f522866ded3073d89b58f960fde11dcbf1cd8238a16579e9ab320e862fa8"
+    },
+    {
+      "url": "models/Decal_Curve_4LaneShort_Stripe.gltf",
+      "bytes": 1551,
+      "sha256": "8f9e589bdadeda01dd3ccab4ffe6a82dcdf5b965da6e0f03eff24313b2ba2790"
+    },
+    {
+      "url": "models/Decal_DoubleYellow_Straight.bin",
+      "bytes": 140,
+      "sha256": "c9712444e0e0d760680b795265127021ce78480e24c457c6a9c2fc1ab9f6dd5d"
+    },
+    {
+      "url": "models/Decal_DoubleYellow_Straight.gltf",
+      "bytes": 1359,
+      "sha256": "f30d586ebf7d539832c06ce90b6a22758742697e1142d785450fd78db40b3cdb"
+    },
+    {
+      "url": "models/Decal_Only.bin",
+      "bytes": 140,
+      "sha256": "192750b4b643de4894f09bc3b74af8a63bdfc06f4a7cdf450485c9edeed7c6e0"
+    },
+    {
+      "url": "models/Decal_Only.gltf",
+      "bytes": 1355,
+      "sha256": "b286cdb75f5b4c406db1f06d7da2f1030abfd4a7a36e36fabfe8c3f786291720"
+    },
+    {
+      "url": "models/Decal_Slow.bin",
+      "bytes": 140,
+      "sha256": "8f6cd7be5f64dbbfb59bea9880750f6c4cb728da94278239cc7c2f34be40a4e3"
+    },
+    {
+      "url": "models/Decal_Slow.gltf",
+      "bytes": 1355,
+      "sha256": "a930de4953516f1ad49cc0f84f1656f6d11806cbf22b1ca5129cfe946448820c"
+    },
+    {
+      "url": "models/Decal_Stop.bin",
+      "bytes": 140,
+      "sha256": "7f7e92ab9e250961c0eb93d65a1ee2dd4c6e260bcf414e73fdab42cf1f59a5cd"
+    },
+    {
+      "url": "models/Decal_Stop.gltf",
+      "bytes": 1353,
+      "sha256": "51a719f9d71e42afe8c61d961285ed02bb254cf439e43d0bfac7c58f286efacd"
+    },
+    {
+      "url": "models/Door_1.bin",
+      "bytes": 43256,
+      "sha256": "c8a8b6fff86908c332600edb91596a3e1135975ef61fb07e861f6be3aff0560a"
+    },
+    {
+      "url": "models/Door_1.gltf",
+      "bytes": 1745,
+      "sha256": "53e40802ec9cde18398b54456a4d676b63dd9278e4bae4b2dd3c5b3adab3d775"
+    },
+    {
+      "url": "models/Door_2.bin",
+      "bytes": 15260,
+      "sha256": "d9331e9bc042befeb72ad244deddff7ead2de1a164ff801d79763a396c196342"
+    },
+    {
+      "url": "models/Door_2.gltf",
+      "bytes": 3452,
+      "sha256": "67b450df431f322eb6801e67e64612203135d6790a4cc3ab1a7767247bd37061"
+    },
+    {
+      "url": "models/Door_3.bin",
+      "bytes": 22884,
+      "sha256": "037d08964c53a761ea685a490144f44ea424407576e4b5bd9ee3c08634e0e76c"
+    },
+    {
+      "url": "models/Door_3.gltf",
+      "bytes": 3452,
+      "sha256": "cf30fbd9fe820f63a346824df9d9472b80cd0c9031ca659ce33dff35b5f2b540"
+    },
+    {
+      "url": "models/DoorFrame_Metal_Single.bin",
+      "bytes": 20832,
+      "sha256": "516af4807c1cf2d85559a6c9815e36c30ce49b4b823151cfacfabc85c1f5d79a"
+    },
+    {
+      "url": "models/DoorFrame_Metal_Single.gltf",
+      "bytes": 3443,
+      "sha256": "939514961e6d80efb3874600cc3f5be9c40adfa0cd38a32bb79bccafbe2c0be2"
+    },
+    {
+      "url": "models/DoorFrame_Trim.bin",
+      "bytes": 54600,
+      "sha256": "6226b14e10451f341840e03e890c71074c655a69b73fafcc776c71f4a3d8d6c5"
+    },
+    {
+      "url": "models/DoorFrame_Trim.gltf",
+      "bytes": 5766,
+      "sha256": "f3ab8763c78099ab4c5586256401f52c59c01bd611c7fba391e061b655be9230"
+    },
+    {
+      "url": "models/DoorFrame_Wooden.bin",
+      "bytes": 33748,
+      "sha256": "e6502296fb3e77aa8a0611b4d920cb8128f96676e46f39c7b1b367e280c95084"
+    },
+    {
+      "url": "models/DoorFrame_Wooden.gltf",
+      "bytes": 2785,
+      "sha256": "dea51daac923bde5df6ebde10b852b720eb1c8eee3147374f11a8607f7665e84"
+    },
+    {
+      "url": "models/Entrance_Concrete_2x1.bin",
+      "bytes": 1032,
+      "sha256": "4cae6cee53e17cd547e52fecbdfb6be69be7fedc8126dc5a15b9ab6c61f95fbb"
+    },
+    {
+      "url": "models/Entrance_Concrete_2x1.gltf",
+      "bytes": 1768,
+      "sha256": "73f05c3e2ef1d106694ab64847144f631e1fba40c74ee464be3566683b93eb83"
+    },
+    {
+      "url": "models/Entrance_Concrete_2x2.bin",
+      "bytes": 1032,
+      "sha256": "08fd277d0b98f6566c64460c4f7178506a3d2059de0160cdb3c679eb680b7ab1"
+    },
+    {
+      "url": "models/Entrance_Concrete_2x2.gltf",
+      "bytes": 1764,
+      "sha256": "3d69dc3782d99cb7742335212b546cc0cd07f4e5a7f284c8a7efcd390e573249"
+    },
+    {
+      "url": "models/Floor_2x2.bin",
+      "bytes": 280,
+      "sha256": "45bec7350e6100257d11e52921a92a0df581d31172c5342b20318b559ca31ecb"
+    },
+    {
+      "url": "models/Floor_2x2.gltf",
+      "bytes": 2625,
+      "sha256": "b6673926c08afe8960535239afd3e6c764fb8d333ffa8f406c4997296c1dd09b"
+    },
+    {
+      "url": "models/Floor_4x4.bin",
+      "bytes": 1376,
+      "sha256": "89716ad7749ffb93c3d3615cfb1ced474ae27c6df3e844fafb2ebe111fcd2892"
+    },
+    {
+      "url": "models/Floor_4x4.gltf",
+      "bytes": 2925,
+      "sha256": "c1d6c43163a3a8d2048d60c986ed26eb0cec41b609a7c07ae69f236b54c0dad2"
+    },
+    {
+      "url": "models/Floor_Inset.bin",
+      "bytes": 528,
+      "sha256": "cf4f9462fce98e96ecfda01758304105ad00fb31810a9135012b2d2a436d0ab4"
+    },
+    {
+      "url": "models/Floor_Inset.gltf",
+      "bytes": 2948,
+      "sha256": "171d52911abe954c6792f6f431786ed774af727ddca27f4d65bb1c1512dd8a80"
+    },
+    {
+      "url": "models/Metal_Column_Bottom.bin",
+      "bytes": 8672,
+      "sha256": "e6748124610892b08c0184db2a1d667d96cbb3f9e2adbd357ae67200595da187"
+    },
+    {
+      "url": "models/Metal_Column_Bottom.gltf",
+      "bytes": 1776,
+      "sha256": "fe11c87fba44345a92144fb0bf39855f559ca7f15203b2dcc5bb1963cc9d65d8"
+    },
+    {
+      "url": "models/Metal_Column_Center.bin",
+      "bytes": 1376,
+      "sha256": "3e0a958b7e527d4304cf14598ef14977528d63963bbf5a68ac46678b73e4fed3"
+    },
+    {
+      "url": "models/Metal_Column_Center.gltf",
+      "bytes": 1767,
+      "sha256": "543d14b3fd6750c57a8a40f895e8fcf34e8c24ff073c56ade968696e90c3f7d9"
+    },
+    {
+      "url": "models/Metal_Column_Small_Bottom.bin",
+      "bytes": 8032,
+      "sha256": "918e7351c076ab021080346ecc1c78482f7f138b84386fc75aaa8eb64ca7845e"
+    },
+    {
+      "url": "models/Metal_Column_Small_Bottom.gltf",
+      "bytes": 1790,
+      "sha256": "9a025841664f1b86d5010b2b17895cf48944c733901ecdb18afba0099ca34029"
+    },
+    {
+      "url": "models/Metal_Column_Small_Center.bin",
+      "bytes": 1376,
+      "sha256": "8d7d18a89100cfe3c6d2ea853f6e10f9fe13b77e99237fd234c4fc1bd4f9fb65"
+    },
+    {
+      "url": "models/Metal_Column_Small_Center.gltf",
+      "bytes": 1780,
+      "sha256": "3c230b20638cc70f60c07fe55686fb1bcd83fc6abaa958245023cc23ac2055fd"
+    },
+    {
+      "url": "models/Metal_Column_Small_Top.bin",
+      "bytes": 10040,
+      "sha256": "0743022ed46e581d989dad0dd01eccff3c5151abcefac98650628b211e3dc2ae"
+    },
+    {
+      "url": "models/Metal_Column_Small_Top.gltf",
+      "bytes": 1785,
+      "sha256": "131400ca48f1f788c3f4148f2bc272fce897681056d53b8b71740f4caab4a3a4"
+    },
+    {
+      "url": "models/Metal_Column_Top.bin",
+      "bytes": 10040,
+      "sha256": "6f0d95ad0378cabbc5b61211e19949caa97668b8bef538f54f7b635a23cd0fa2"
+    },
+    {
+      "url": "models/Metal_Column_Top.gltf",
+      "bytes": 1773,
+      "sha256": "07493a4f5c712a8c9e1e597472bb24089efd03d2f9be30740da699e1e9cbe256"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Wall.bin",
+      "bytes": 3192,
+      "sha256": "d48f180d3f7ebe16a13db0f3aa196aed40a8a07c1ec36e9e70f1122314571ae1"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Wall.gltf",
+      "bytes": 4754,
+      "sha256": "282ff4bb5c80065aa9259ae7b1695d0e5406085a40efde6e0abd99427e1bf6ae"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Wall_1.bin",
+      "bytes": 816,
+      "sha256": "6dccb78f817f03f921d125848470458050b5da6e0f20b65907bed3a7c543f44f"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Wall_1.gltf",
+      "bytes": 3229,
+      "sha256": "620b1e8d7b892139de484b184a2b1a6590e089ab817e10c9f31cfd26f0c66bf7"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Window.bin",
+      "bytes": 12840,
+      "sha256": "9bf54a1a568d6c2f2c6965eda5c1830e7376e84c62aff6a4e0e3df4dc0c6572a"
+    },
+    {
+      "url": "models/Metal_FirstFloor_Window.gltf",
+      "bytes": 7205,
+      "sha256": "bd67c5ca9f198fcfefa8a8264cc19ecb8efbf125a7332bc0acfb9069e513e68e"
+    },
+    {
+      "url": "models/Metal_FullWindow.bin",
+      "bytes": 16028,
+      "sha256": "5986f859976c39141d3fc99f4ea0956ec89ce67df2c657e02b12cbc2870055b3"
+    },
+    {
+      "url": "models/Metal_FullWindow.gltf",
+      "bytes": 4784,
+      "sha256": "2486fcdce8765c6db92222b706f63791c08e2f336dc4695732f923dd16a827e3"
+    },
+    {
+      "url": "models/Metal_Plain_1.bin",
+      "bytes": 660,
+      "sha256": "39fe7fe467d6b17bf6cfe8bc308bf10ae8a64769f7df9690407814a486aab398"
+    },
+    {
+      "url": "models/Metal_Plain_1.gltf",
+      "bytes": 3615,
+      "sha256": "568b5095358440cbfff6c70189f6d5bc47ad3d30cc28a8ec2300220a79ff3bdc"
+    },
+    {
+      "url": "models/Metal_Plain_3.bin",
+      "bytes": 1876,
+      "sha256": "94a852cc914f7f84a9f1d9d63f1a43294228abe01075233c329143392d7f0425"
+    },
+    {
+      "url": "models/Metal_Plain_3.gltf",
+      "bytes": 3677,
+      "sha256": "672564b20b8961248ac0845c1621ed4f36bc90ede74932143282ede02ff05477"
+    },
+    {
+      "url": "models/Metal_Window.bin",
+      "bytes": 42884,
+      "sha256": "a3214c95ecccbb9604e2eb0ed417148753965c0e4eb4ad1cf93d51326c61158f"
+    },
+    {
+      "url": "models/Metal_Window.gltf",
+      "bytes": 7757,
+      "sha256": "67397bd8b57660fa55b641fe8bf87f54339a5b387887d88906d26f4429ca4083"
+    },
+    {
+      "url": "models/Metal_Window_Half.bin",
+      "bytes": 28640,
+      "sha256": "a5ebf4c237e70d845931c4c6ad2cfe1f7b89eedef3364ba5a7ca2184d05db4a1"
+    },
+    {
+      "url": "models/Metal_Window_Half.gltf",
+      "bytes": 4846,
+      "sha256": "d7a69a6c3a13432a55e6686d8e35839e1825befc3791380ac6e4308d5bffcabb"
+    },
+    {
+      "url": "models/Prop_ACUnit.bin",
+      "bytes": 6256,
+      "sha256": "71c8dcc458ec8fa31ca7c3f391b1b95dc17864c6bb5c1addbdde899849c3324a"
+    },
+    {
+      "url": "models/Prop_ACUnit.gltf",
+      "bytes": 1749,
+      "sha256": "a29bb7865a21dfa28317140122d1f9803c93bc3fe405ad4ec130ade68029f07d"
+    },
+    {
+      "url": "models/Prop_Bollard.bin",
+      "bytes": 10140,
+      "sha256": "53b7227fade437ae5066359170e88fbcb537f9e96773a6c1ad0fb2bcc0f92125"
+    },
+    {
+      "url": "models/Prop_Bollard.gltf",
+      "bytes": 1767,
+      "sha256": "f3d6a70d1c64f5bf44200679e8028e4bfcc8fe9a3be37b7bc3372160f7024ac5"
+    },
+    {
+      "url": "models/Prop_Drain.bin",
+      "bytes": 700,
+      "sha256": "a5ba2a9331e2ac60f1083d05d9707373f49052362509720943d2dd978b0845bb"
+    },
+    {
+      "url": "models/Prop_Drain.gltf",
+      "bytes": 1573,
+      "sha256": "3ef270ba1c14b5e7bd18be401a18709f475abacb47640717c089fbb06bbf43be"
+    },
+    {
+      "url": "models/Prop_ManholeCover.bin",
+      "bytes": 4548,
+      "sha256": "de8edeb728cac5469eea1e6e3fed6fc0f4afe875d7c416ec14dc03886650daa7"
+    },
+    {
+      "url": "models/Prop_ManholeCover.gltf",
+      "bytes": 1622,
+      "sha256": "fb0785b872d253b2412d262ac16cb88e4dde10ef66fa2f5adee1ab1fcedb1d1b"
+    },
+    {
+      "url": "models/Prop_Planter_Single.bin",
+      "bytes": 9428,
+      "sha256": "9350eb1b2bf17f057c8d57b9a59de8dc0c4c0bf8ec3580bba13fc7d0f9016e91"
+    },
+    {
+      "url": "models/Prop_Planter_Single.gltf",
+      "bytes": 3014,
+      "sha256": "e7a7d225334dc70dad70ef673fa9b7e143212a0aee22f83bb497582f45c7ae2e"
+    },
+    {
+      "url": "models/Roof_2x2.bin",
+      "bytes": 140,
+      "sha256": "286c4a4634d66bb39c7ebd868e8cdcc3d1845a1e92362136e0f4f073f9e3a58f"
+    },
+    {
+      "url": "models/Roof_2x2.gltf",
+      "bytes": 1520,
+      "sha256": "e5d33631cf361d1b849fe95175d95e06ed68b4f8f3ce61d717ca9bb1967de3cd"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_Center.bin",
+      "bytes": 140,
+      "sha256": "a3675ce26420c2aac2a89b877f9b7786cbda9ac8f32a6c0c0b80c5343d088d58"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_Center.gltf",
+      "bytes": 1567,
+      "sha256": "2fa68f609c277a3f87ff79560c7dc6b583c89f016e9c5ee9289150777c9b1e98"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_L.bin",
+      "bytes": 292,
+      "sha256": "8159865dc12204f5f775fa9eb8a9b9eb5e5d5e4486dc7cdc618f2fd72f93efcb"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_L.gltf",
+      "bytes": 1542,
+      "sha256": "6a081b36d5efb5dbae968d5f1dae84f6d7837da58cd3e5ed2dbdaaa2ff6505e8"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_R.bin",
+      "bytes": 292,
+      "sha256": "29bf995359e52bd6c20fc297f89e033e10ee13a98d7a399e6cad6989b00292e9"
+    },
+    {
+      "url": "models/Roof_2x2_90Angle_R.gltf",
+      "bytes": 1542,
+      "sha256": "16b09ec5e05638747d767d6118ae1bb5168ba246e8cc9563aca900b3d419deda"
+    },
+    {
+      "url": "models/Roof_4x4.bin",
+      "bytes": 560,
+      "sha256": "2ca354edd1a5fb4959f463fcd7fd29778d5807e9970daef0131994b2e84b93d2"
+    },
+    {
+      "url": "models/Roof_4x4.gltf",
+      "bytes": 1529,
+      "sha256": "8024c1f3fb9d3139dec07070e8ddf645871c8c5ce257aad011098abbf96a2f02"
+    },
+    {
+      "url": "models/Roof_Slate_Center.bin",
+      "bytes": 516,
+      "sha256": "77d8241fa9bf7233a975618f51035cd204dfec7a46352720d59143fa6e08234a"
+    },
+    {
+      "url": "models/Roof_Slate_Center.gltf",
+      "bytes": 2919,
+      "sha256": "679b926330c6fc34ef496e8df864e4c67aa956d829616a0985f69d62de4ec4fa"
+    },
+    {
+      "url": "models/Roof_Slate_Corner.bin",
+      "bytes": 3104,
+      "sha256": "8b5f986d0a0af83827a8a84cd9ef189a6d70a20a6256801daecca8ab963f37b5"
+    },
+    {
+      "url": "models/Roof_Slate_Corner.gltf",
+      "bytes": 1718,
+      "sha256": "cb0fabdcdcb2271994d57cbe06df80ceb3de156adccc2e97c0d997c4f5eb3ba3"
+    },
+    {
+      "url": "models/Roof_Slate_InnerCorner.bin",
+      "bytes": 860,
+      "sha256": "8c863fe4c1cc4b2327f0ccc549380d9a3e9c830eff2e376caf0e3feee7c19d1a"
+    },
+    {
+      "url": "models/Roof_Slate_InnerCorner.gltf",
+      "bytes": 3028,
+      "sha256": "fed598f571dabb1a5392658c117eb77f34e1cf805bfbda59ec50955ed9a25c95"
+    },
+    {
+      "url": "models/Roof_Slate_Window_1.bin",
+      "bytes": 23620,
+      "sha256": "68fe7e781e53937eb59fde40c86265c6241514bf02f587a12c8a1cf65fc65f61"
+    },
+    {
+      "url": "models/Roof_Slate_Window_1.gltf",
+      "bytes": 6446,
+      "sha256": "d811f49804369ba3a2ff9e889f4e16aa246fa7742c088f3c9593132aaa9e0f6b"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Center.bin",
+      "bytes": 2076,
+      "sha256": "4966df93f83778cd8e0d65228fa4bf8dc35cb221b9bace2c7c6bece4ac5036ff"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Center.gltf",
+      "bytes": 4218,
+      "sha256": "48a19c6518ce2297b4ee05a5a31f15430d1553e3e49c41ce97b29f5fd8f48708"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Corner.bin",
+      "bytes": 5456,
+      "sha256": "273de7c2b4e55918c40977ea5adee45d465b8e335972f41ef66b1323e6c05cdb"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Corner.gltf",
+      "bytes": 3014,
+      "sha256": "dddafd61066f6b3f7566b86ebae6e824feaf03a2fbad61dad875c815a6b6358d"
+    },
+    {
+      "url": "models/Roof_SlateCornice_InnerCorner.bin",
+      "bytes": 3212,
+      "sha256": "04f88264e2ef943dd1aa35482d6d2bcf45fa6ba713740f9453012b148b679f68"
+    },
+    {
+      "url": "models/Roof_SlateCornice_InnerCorner.gltf",
+      "bytes": 4375,
+      "sha256": "294419f0f318a9fafe103d444a85247b246db86627c952befc5971f2edd4dff7"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Window_1.bin",
+      "bytes": 25180,
+      "sha256": "41ddd9a5d2836896f58d580ae31743f2714fdafa76ab56a45242c8df9b07fe14"
+    },
+    {
+      "url": "models/Roof_SlateCornice_Window_1.gltf",
+      "bytes": 6425,
+      "sha256": "01c7732472cb1084345fc6cc844ad320c8e81a74eba4b32a9936c8672cf9714e"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Flat_3m.bin",
+      "bytes": 6296,
+      "sha256": "7a35abe9d699556718cd0b49317140231f069ebd893486bcd2f73ba89e9c8ffd"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Flat_3m.gltf",
+      "bytes": 1936,
+      "sha256": "704835e1db91bf8d98ef04082d0c0d834d2de2ededddc7455548083e0e21970f"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Flat_3m_Stripe.bin",
+      "bytes": 724,
+      "sha256": "ab8916db75268964b5b5bcdf14379eabb2dbee7fed0a9ccb1315b51f5c24954d"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Flat_3m_Stripe.gltf",
+      "bytes": 1515,
+      "sha256": "4e39d88ad8b0768d981403314844b0b55cef42cb4336a4d87f809af716049471"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Round_3m.bin",
+      "bytes": 8984,
+      "sha256": "dae8b8c25500ff0510a4dbd9623fb9f4be153e076d948c7f57eef998127e3eb7"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Round_3m.gltf",
+      "bytes": 1942,
+      "sha256": "e055337acd0eb71ff55fda8f7076c7b6b584f32943dc300fabf4cb0c16322544"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Round_3m_Stripe.bin",
+      "bytes": 976,
+      "sha256": "83806df826ed159d9f627ca58225b4f33e15d1663dacfd46e5d5137ef9f01947"
+    },
+    {
+      "url": "models/Sidewalk_Corner_Round_3m_Stripe.gltf",
+      "bytes": 1408,
+      "sha256": "ff1f95aeca582aa22642f6b9ae209d7dff90eaa8f2a8ea427c1eb1e357070897"
+    },
+    {
+      "url": "models/Sidewalk_NoCurb_3m.bin",
+      "bytes": 2572,
+      "sha256": "a9d21b06fbef9f1a588759d5401bc32bc9ffd4e8dcd9fdff34c87a2f87b442a1"
+    },
+    {
+      "url": "models/Sidewalk_NoCurb_3m.gltf",
+      "bytes": 1729,
+      "sha256": "0d037958daef0c932302c1e5b0c8bc831d706283ed1f034f3fee0f8ea0ae8ba6"
+    },
+    {
+      "url": "models/Sidewalk_Planter.bin",
+      "bytes": 50708,
+      "sha256": "43679701cfeaf2d06d0be191c296e01421a099194158b448d186b7662e469c26"
+    },
+    {
+      "url": "models/Sidewalk_Planter.gltf",
+      "bytes": 3097,
+      "sha256": "94bfe733686b0a3fe0ba125d21b612d36ac6f212a5d660fbded2a70fc8cba705"
+    },
+    {
+      "url": "models/Sidewalk_Straight_3m.bin",
+      "bytes": 4296,
+      "sha256": "b160eeecdefe135d61edd91391bff8c3f60a40499b555d87b2ae4e1008527649"
+    },
+    {
+      "url": "models/Sidewalk_Straight_3m.gltf",
+      "bytes": 1892,
+      "sha256": "beca6a4e23b6e1e160723a60c54eab4304a7bd852bac43cd4caf842b5416632a"
+    },
+    {
+      "url": "models/Sidewalk_Straight_3m_Stripe.bin",
+      "bytes": 140,
+      "sha256": "23ecbed604e255d4dc7c6cec293f388b9d25278fa5a912c771a55b235e4df03d"
+    },
+    {
+      "url": "models/Sidewalk_Straight_3m_Stripe.gltf",
+      "bytes": 1359,
+      "sha256": "0b91223cd1945fd572894e34c4993c0af58df7ec869f6011efe5d3b86563642c"
+    },
+    {
+      "url": "models/Stairs_Entrance_Concrete.bin",
+      "bytes": 7088,
+      "sha256": "324b94af265d614751154bb21d60cdcf6a32b3f9c0d52690a07b71c352875463"
+    },
+    {
+      "url": "models/Stairs_Entrance_Concrete.gltf",
+      "bytes": 3109,
+      "sha256": "c2eff38cf8adb0592867af65dc67ff9cf86b05c46660fca08e828cc2e892c7fe"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal.bin",
+      "bytes": 38904,
+      "sha256": "fb958970f01b27c795e6d9f44398a6b2abcb9b4cc131d9cb4bada6865b398273"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal.gltf",
+      "bytes": 1785,
+      "sha256": "24c94a7bb80244cbfde2788ed41aafe987426e7455b55c90fb4fb3bd6ed470be"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal_Straight_1.bin",
+      "bytes": 14448,
+      "sha256": "808dc9e62c4ab249330838f1a9defe5dd64395f9d70eb8ab6f13bbf39674c6a2"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal_Straight_1.gltf",
+      "bytes": 1783,
+      "sha256": "41da00a98f11f7594a42fd125e8d8f96bd527f81556d0d7db515052acf5733f0"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal_Straight_2.bin",
+      "bytes": 26880,
+      "sha256": "d51419c4e483b7aa2a35fcf5b9b76635d11f9af60e5bb3b4dcfd97ba7e777023"
+    },
+    {
+      "url": "models/Stairs_Rails_Metal_Straight_2.gltf",
+      "bytes": 1785,
+      "sha256": "04d405065bb527e32e14385988f9f1ce1e531ef862283213ebc377927e8c5c46"
+    },
+    {
+      "url": "models/Street_2Lane.bin",
+      "bytes": 15912,
+      "sha256": "f01d04eeb99a1bc486703e27f8f05e3976a73c08493b828ed9e680e68c6a6b43"
+    },
+    {
+      "url": "models/Street_2Lane.gltf",
+      "bytes": 4631,
+      "sha256": "7c3b229fd38803e9b919b1696a7742f2e52b561a6c83cd3fba4273dd23202c29"
+    },
+    {
+      "url": "models/Street_2Lane_noSidewalk.bin",
+      "bytes": 1440,
+      "sha256": "630238dffe8b151f98be6f3a1b7269e2d7ba7e4ecdddfb10e8a81a6aedcf5d65"
+    },
+    {
+      "url": "models/Street_2Lane_noSidewalk.gltf",
+      "bytes": 3127,
+      "sha256": "5e6a24a56566ed9e0afed664a5bc48a7cf50e389f63ad414b23b6ab7500429a7"
+    },
+    {
+      "url": "models/Street_4Lane.bin",
+      "bytes": 18024,
+      "sha256": "f3ef1b10390061bdcc73902e89f41350401945fe32e3a0336bb65f58c889cc3b"
+    },
+    {
+      "url": "models/Street_4Lane.gltf",
+      "bytes": 4574,
+      "sha256": "36f6f8fbb808514f027ea31e91b0664047ba80c0be75be6cf35fb38becbe1390"
+    },
+    {
+      "url": "models/Street_4Lane_noSidewalk.bin",
+      "bytes": 1224,
+      "sha256": "f1a09d1804280cd7af279b7449db697b846da91520b6afad0d63284b6cfb68d3"
+    },
+    {
+      "url": "models/Street_4Lane_noSidewalk.gltf",
+      "bytes": 3101,
+      "sha256": "32aa797e418c11dca9bc37fe452f976ca859288fb98151ccb98b31cdb5bae0b2"
+    },
+    {
+      "url": "models/Street_4WayIntersection.bin",
+      "bytes": 54360,
+      "sha256": "b26844243cf82d51f1106308b0bdbcf4c53ac7e1f093c7187e479c690712b193"
+    },
+    {
+      "url": "models/Street_4WayIntersection.gltf",
+      "bytes": 4699,
+      "sha256": "4dcc86c479ed87ac138ff5c5fe2f2ba4a0533f8b6ad9470b574880ad70bf7e0a"
+    },
+    {
+      "url": "models/Street_Asphalt_6x6.bin",
+      "bytes": 140,
+      "sha256": "37cb73c307fa6fa6362851213241b960cf3924b8449791320487092eec3c4d11"
+    },
+    {
+      "url": "models/Street_Asphalt_6x6.gltf",
+      "bytes": 1556,
+      "sha256": "0b751a2582aa89c2521165639736e670cb55b202848c933b0a20cdac503edcc1"
+    },
+    {
+      "url": "models/Street_Asphalt_9x9.bin",
+      "bytes": 140,
+      "sha256": "737147fb2cf691dc7847b794d8f53331f7f53892c2252cf2be7892fe4a19ed12"
+    },
+    {
+      "url": "models/Street_Asphalt_9x9.gltf",
+      "bytes": 1560,
+      "sha256": "048a212f68e54e0d4863e0fc4878a76fc5703b18e0cba34fe3fff38975dcbb1f"
+    },
+    {
+      "url": "models/Street_Asphalt_Curve_2Lane.bin",
+      "bytes": 2064,
+      "sha256": "1f77ccbdca57dc5884975dff472df6be6785ef5a34311857258b867209794ab4"
+    },
+    {
+      "url": "models/Street_Asphalt_Curve_2Lane.gltf",
+      "bytes": 1876,
+      "sha256": "db4f51780d60ae1f3aee038cc8809bb01e32febcc11f52e89208456f1d9efe34"
+    },
+    {
+      "url": "models/Street_Asphalt_Curve_4Lane_Short.bin",
+      "bytes": 2120,
+      "sha256": "31adb0618b4e1c468651efcab1ec549ccc49101ce821e01828d879901989173d"
+    },
+    {
+      "url": "models/Street_Asphalt_Curve_4Lane_Short.gltf",
+      "bytes": 1887,
+      "sha256": "44aba6f5fedeaf53ad49f1bc8dbf4e433e3b26d6670e7204defdc4d3847a64ab"
+    },
+    {
+      "url": "models/Street_Curve_2Lane.bin",
+      "bytes": 26216,
+      "sha256": "29d029524454ddaade769a0b1f000080d38979c60bb4c25cc479093ec12099a6"
+    },
+    {
+      "url": "models/Street_Curve_2Lane.gltf",
+      "bytes": 4704,
+      "sha256": "365123ecff32df0a11cbd7a783fd452f6df742084d730c06baea1b3510954de7"
+    },
+    {
+      "url": "models/Street_Curve_2Lane_Curb.bin",
+      "bytes": 11952,
+      "sha256": "d563b5cb640a41eb8564742af4b65a7217be263d1a7346d72fa6766daf67667c"
+    },
+    {
+      "url": "models/Street_Curve_2Lane_Curb.gltf",
+      "bytes": 1960,
+      "sha256": "ee829b514e13aceb646a39e4cec39b88b908ae393f574bb6a03e8500f187716d"
+    },
+    {
+      "url": "models/Street_Curve_4Lane_Short_Curb.bin",
+      "bytes": 17568,
+      "sha256": "8babb9e800f7d97289c1a31e589ac4450a5b03e39f1db17067d38513d8fb890f"
+    },
+    {
+      "url": "models/Street_Curve_4Lane_Short_Curb.gltf",
+      "bytes": 1959,
+      "sha256": "0571bd0bc376bc2ff5216c3a4ecff9e3fee42c46921fd8eb8929f02caf116064"
+    },
+    {
+      "url": "models/Street_Curve_4LaneShort.bin",
+      "bytes": 39376,
+      "sha256": "23af139eb0734b882c79126694e9e495d92a9354b361ca5b42228cdc9d5f0724"
+    },
+    {
+      "url": "models/Street_Curve_4LaneShort.gltf",
+      "bytes": 4700,
+      "sha256": "62c5a3a4651c8b9463bb422145d1f0a9b1bc201bfa2f1de4ddbc2e920305e106"
+    },
+    {
+      "url": "models/Street_TIntersection.bin",
+      "bytes": 58668,
+      "sha256": "740c56eeda980f416505bdf4010e9d45ad60e314d803c0b238f30680cc3c5304"
+    },
+    {
+      "url": "models/Street_TIntersection.gltf",
+      "bytes": 4673,
+      "sha256": "5fd9207f6f3db79ca2e9ac9af98f2ad3fc7411ff52a5dab88368f9326922f783"
+    },
+    {
+      "url": "models/T_Concrete_Asphalt_BaseColor.png",
+      "bytes": 988093,
+      "sha256": "a37ca932c4287a67d9cf7f78997b5cc4b026ca7319a4c8454132d076307ca5cf"
+    },
+    {
+      "url": "models/T_Concrete_BaseColor.png",
+      "bytes": 1341594,
+      "sha256": "697276f680b34d6321e6b06da208a0fc3516db372d4a7de543fc2c33e895f482"
+    },
+    {
+      "url": "models/T_Concrete_Normal.png",
+      "bytes": 4416770,
+      "sha256": "e4de917d2506bff4b17d44380a136336cf16e5ea828edfdb8981f4f27e30a86a"
+    },
+    {
+      "url": "models/T_Concrete_ORM.png",
+      "bytes": 896797,
+      "sha256": "be17636c061a7c6c4f4bf23c3887a3f894da0e88394e233926e816c735a49244"
+    },
+    {
+      "url": "models/T_dark_interior.png",
+      "bytes": 325090,
+      "sha256": "59e5c77292953d93c3cd239c2f06d4e80e393761195da66d886d3887ad59f1dc"
+    },
+    {
+      "url": "models/T_Dirt_BaseColor.png",
+      "bytes": 2003269,
+      "sha256": "bcb7b1d7bb9801aae25720f495af76306d11cce7654f52763e3cb6b273845302"
+    },
+    {
+      "url": "models/T_Dirt_Normal.png",
+      "bytes": 9650819,
+      "sha256": "88958149742c2ebf8447079edd80ac1133f7b72a5fce0c118206b2f742a350ea"
+    },
+    {
+      "url": "models/T_Dirt_ORM.png",
+      "bytes": 1373373,
+      "sha256": "a2803d1ce2d6ccfdd0896de05a96e3c6aec898000c5897e1669c000faf2b2060"
+    },
+    {
+      "url": "models/T_lit_interior_1.png",
+      "bytes": 395226,
+      "sha256": "d20aa9f249a506eb145d76e264e59667cec4bef66c07e4baace6583a28cc3be4"
+    },
+    {
+      "url": "models/T_lit_interior_2.png",
+      "bytes": 316427,
+      "sha256": "83c3f1b2ad84b65aab88d5744e6997730a04140e41d230e2cecfe9bfb2ae0559"
+    },
+    {
+      "url": "models/T_MarbleFloor_BaseColor.png",
+      "bytes": 1095714,
+      "sha256": "a01f57e2976d3af21a59f1ae18e12be84d2acae7ba3e93d184d2874224f737c0"
+    },
+    {
+      "url": "models/T_MarbleFloor_Normal.png",
+      "bytes": 1382828,
+      "sha256": "52ba88ccfd35f072a51d11c31cdfb6e6ea8cde641ab4521115994d2c3216b451"
+    },
+    {
+      "url": "models/T_MarbleFloor_ORM.png",
+      "bytes": 567860,
+      "sha256": "95008e79cdba191b525afce2a95452fe28934efd5546d35919c24ea6cbcc0c22"
+    },
+    {
+      "url": "models/T_MetalConcrete_BaseColor.png",
+      "bytes": 1488628,
+      "sha256": "adae656323f15cd2c3f1a6453685cb1ca104b700dc114076137cb3a4c253d3d0"
+    },
+    {
+      "url": "models/T_MetalConcrete_Normal.png",
+      "bytes": 4815924,
+      "sha256": "93f95a96c32b27820c590301f00f5ba1d23d4054046d92bf6d58adbf23007419"
+    },
+    {
+      "url": "models/T_MetalConcrete_ORM.png",
+      "bytes": 1857257,
+      "sha256": "c4d35f684d20c47f199bea2fbe098d60a000fa7d1489df0f00a4c3c1ace4fcb7"
+    },
+    {
+      "url": "models/T_Ornaments_BaseColor.png",
+      "bytes": 4776648,
+      "sha256": "528cbe672c62384aa3bac703f574b60509bd69b4d492291cb2915022a12a449c"
+    },
+    {
+      "url": "models/T_Ornaments_Normal.png",
+      "bytes": 7172215,
+      "sha256": "c1aa6b307d47386b63e775ba88d82992dd0aaf34f1e4c2b7824002e3cc0a795a"
+    },
+    {
+      "url": "models/T_Ornaments_ORM.png",
+      "bytes": 4548795,
+      "sha256": "c65b673f871e6b4b2fa61fd110286a096d05d9a311e71ca71804cea46811885d"
+    },
+    {
+      "url": "models/T_RedBrick_BaseColor.png",
+      "bytes": 1732063,
+      "sha256": "ea85bfc02c4c807265a85f7ab50656f7eaa19f6567301d362d78c1d06da161ab"
+    },
+    {
+      "url": "models/T_RedBrick_Normal.png",
+      "bytes": 7273659,
+      "sha256": "147f14d7f665d2598d0d796bd02a227f6b8b0fbc790c3e0737b1b90128101c93"
+    },
+    {
+      "url": "models/T_RedBrick_ORM.png",
+      "bytes": 2346959,
+      "sha256": "dfba8a1da5ca7dcff1b707a051e82717e93013c2ad36c93b7a41b0f331414b70"
+    },
+    {
+      "url": "models/T_RoofSlate_BaseColor.png",
+      "bytes": 1483692,
+      "sha256": "2057fecd5f405c56adfc94df056d3f0bcfe7cd3e444779bcabc85db389761503"
+    },
+    {
+      "url": "models/T_RoofSlate_Normal.png",
+      "bytes": 3679324,
+      "sha256": "cd5cb711b2cc4f59a846604309cb0d312596b0e178b3aa2cd56e3a2f84d9471b"
+    },
+    {
+      "url": "models/T_RoofSlate_ORM.png",
+      "bytes": 3160276,
+      "sha256": "7e8bafdd2a33af3d5ae9493305b48ed40c6ea8f7354808da6d6e40ec42a1e01b"
+    },
+    {
+      "url": "models/T_Street_Decals.png",
+      "bytes": 2233893,
+      "sha256": "90eca7571c910f713952d7568674e231fd21bc6f6693de5514a563c19c91148e"
+    },
+    {
+      "url": "models/T_Trim_BaseColor.png",
+      "bytes": 4421593,
+      "sha256": "c3334902f8315783477eec63e2d462f8cefedf9c55b41ef452d8374b5603f08e"
+    },
+    {
+      "url": "models/T_Trim_Normal.png",
+      "bytes": 4104873,
+      "sha256": "95fa43093067956fa6e206408f3e2f2302c18c7453b75a02f6e29fe57e2cd041"
+    },
+    {
+      "url": "models/T_Trim_ORM.png",
+      "bytes": 2538116,
+      "sha256": "52449f201ad3cf606a2eb2972702b10051c369cdc67b6fadd109502b4735d7fb"
+    },
+    {
+      "url": "models/Trim_90Angle_TopCover.bin",
+      "bytes": 1100,
+      "sha256": "293df0f97faf6f94b572b0e2690bad236ba3b06e364cffef8df9e80131f05609"
+    },
+    {
+      "url": "models/Trim_90Angle_TopCover.gltf",
+      "bytes": 3555,
+      "sha256": "33fda314da4462e41fbbe71ea9ef7274f0d2e7e6c27bbb91e34619e7f1a994a1"
+    },
+    {
+      "url": "models/Trim_Column_Bottom.bin",
+      "bytes": 14456,
+      "sha256": "9256ad009d182531b1b77f6740d57f08b036cceebbed82301f714ca5809d4d11"
+    },
+    {
+      "url": "models/Trim_Column_Bottom.gltf",
+      "bytes": 1719,
+      "sha256": "15c5db28b06ff9c76d690100f58464fdfafcfeb627f2d250f44e623bf3410459"
+    },
+    {
+      "url": "models/Trim_Column_Center.bin",
+      "bytes": 4944,
+      "sha256": "823bb979d1eb78647647b8900204e03acc21d034e0c06eda3e69368170486631"
+    },
+    {
+      "url": "models/Trim_Column_Center.gltf",
+      "bytes": 1688,
+      "sha256": "94058f03bc4d2fda5d4734dd0fde8547b83f71ce238ac9102f45139a652aafd0"
+    },
+    {
+      "url": "models/Trim_Column_Top.bin",
+      "bytes": 14456,
+      "sha256": "bfd203a326d45adf646b4d9b63d47a73afc92175d6bb901b86ea49caae6d5788"
+    },
+    {
+      "url": "models/Trim_Column_Top.gltf",
+      "bytes": 1727,
+      "sha256": "ba9304432a7cb446c9b6f9bfe44542ce5c3ba6ea269ad39d034fcc4a413a025f"
+    },
+    {
+      "url": "models/Trim_Corner.bin",
+      "bytes": 6024,
+      "sha256": "70437a6a1dec0b2a277fc08362c1bfb4fdb4de66a304e2ddccebdc7c9b45e58b"
+    },
+    {
+      "url": "models/Trim_Corner.gltf",
+      "bytes": 3542,
+      "sha256": "55a6ee39dcbb981b299a0bfc9bd794d6996ed66f52145d349eff8bd6b56b02c5"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Wall.bin",
+      "bytes": 4356,
+      "sha256": "911ac30b25d7fcdb3990c6db23d932040d53ee390a73c3fe210bf130319adaf1"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Wall.gltf",
+      "bytes": 3557,
+      "sha256": "e99f23092f006c6f7b3e1c61d79e71267698f189f0c088ae95836ad7ac2794a5"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Window_001.bin",
+      "bytes": 11712,
+      "sha256": "f399e311565967fda33f8dd010831b71fcc5f143a39ef4d9851d5aae40d25649"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Window_001.gltf",
+      "bytes": 5734,
+      "sha256": "a6ba1bb3af5560eda55748a83e78feb5b81fc6b6e311b98cab39caa1e7d7e821"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Window_Columns.bin",
+      "bytes": 2496,
+      "sha256": "aa64ea656cd4d885ec1cce0f7229140d2aaeee7929c9ef5fda09369086186368"
+    },
+    {
+      "url": "models/Trim_FirstFloor_Window_Columns.gltf",
+      "bytes": 1892,
+      "sha256": "44ec3de53af934e893cb2ca85c48eb6c9596390bb24fcce6b5b8cc31671ef185"
+    },
+    {
+      "url": "models/Trim_Plain_3.bin",
+      "bytes": 2908,
+      "sha256": "46a1aa5467decbc6aede1fec8ead0c609ef7cfdc6b929774d319ee88a2f11bc2"
+    },
+    {
+      "url": "models/Trim_Plain_3.gltf",
+      "bytes": 3541,
+      "sha256": "4fe3d3815b6ee50660aa28541fed8d63d8d97a5911cab5c6ddc0c91276e5424a"
+    },
+    {
+      "url": "models/Trim_Wall_Guard.bin",
+      "bytes": 2784,
+      "sha256": "1cc722bb3145bfe261b004d63dd9eea8418ecb35fb07fd4f28382052f1fb2458"
+    },
+    {
+      "url": "models/Trim_Wall_Guard.gltf",
+      "bytes": 1810,
+      "sha256": "4a789724c1d282f45b8d217f4c36b49350b694ea2b75eab579d1ca3d19029316"
+    },
+    {
+      "url": "models/Trim_Window.bin",
+      "bytes": 48372,
+      "sha256": "9bbf05ce0ae134ba9b07da45250a5320b33250160507c3b716058b2bf18c0520"
+    },
+    {
+      "url": "models/Trim_Window.gltf",
+      "bytes": 7766,
+      "sha256": "19a56fd9312d7779262ac9f753f16c2f05c5771e35a1dcf61787c2fb5c637a86"
+    }
+  ],
+  "sourceRecords": {
+    "files": [],
+    "retainedLocally": false,
+    "blenderVersion": null
+  }
+}

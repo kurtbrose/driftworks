@@ -1360,6 +1360,21 @@
     assert(api.step(clock,5,combat,false,rng)===null); // No replay when the action stays unchanged.
   });
 
+  test('player-directed rival taunts beat routine chatter without waiting for ambient silence', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return .4;};
+    var ally={id:'ally',team:'ally',index:0,hp:90,mode:'approach'},red={id:'red',team:'enemy',index:1,hp:90,mode:'attack',targetId:'player'};
+    var combat={enabled:true,wave:1,time:0,hull:100,enemies:[ally,red]};
+    api.step(clock,0,combat,true,rng);ally.mode='attack';clock.wait=100;clock.quiet=10;
+    var line=api.step(clock,10,combat,false,rng);
+    assert(line&&line.event==='taunt'&&line.hostile&&line.craftId==='red');
+    clock.wait=100;clock.quiet=10;
+    assert(api.step(clock,4,combat,false,rng)===null,'Independent taunt cooldown prevents spam');
+    clock=api.create();ally.mode='approach';api.step(clock,0,combat,true,rng);
+    ally.mode='evade';clock.wait=100;clock.quiet=10;
+    line=api.step(clock,10,combat,false,rng);
+    assert(line&&line.event==='evade'&&!line.hostile,'Urgent flight calls still outrank teasing');
+  });
+
   test('enemy comms only broadcasts taunts despite maneuvers, damage and emotions', function () {
     var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0;};
     var red={id:'red',hp:90,team:'enemy',mode:'approach',targetId:'player',fire:false};
@@ -1671,6 +1686,36 @@
     var radio=window.Driftworks.flightComms.mount(panel,{setAttribute:function(){}}),pilot={id:'wing',index:0,team:'ally',mode:'approach',hp:90},combat={enabled:true,dead:false,hull:100,enemies:[pilot]};
     for(var i=0;i<15;i++){radio.reset();pilot.mode='approach';radio.update(0,combat);pilot.mode='evade';radio.update(0,combat);}
     assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
+  });
+
+  test('Ohio forms of address use bud, neighbor and hotshot while preserving real names', function () {
+    var api=window.Driftworks.flightDialogue;
+    var near=api.compose('nearPlayer',{},true);
+    assert(near[0].indexOf('bud')>=0&&near[1].indexOf('neighbor')>=0);
+    assert(api.ohioAddress('That all you have, pilot?',0,true)==='That all you have, hotshot?');
+    assert(api.ohioAddress('Pilot, watch it.',1)==='Neighbor, watch it.');
+    assert(api.ohioAddress('Nice shooting, {pilot}!',0)==='Nice shooting, {pilot}!');
+    assert(api.compose('kill',{pilot:'Aunt Barb'},true).some(function(text){return text.indexOf('Aunt Barb')>=0;}));
+    assert(api.compose('nearPlayer',{}).some(function(text){return /pilot/.test(text);}));
+  });
+
+  test('Ohio radio converts measured ranges and speeds to yards without changing source data', function () {
+    var api=window.Driftworks.flightDialogue, data={range:1000,bearing:'three oclock',direction:'right',height:'',speed:100,pilot:'Big Dale'};
+    assert(api.compose('contact',data,true).every(function(text){return /one thousand one hundred yards/.test(text)&&!/meters/.test(text);}));
+    assert(api.compose('closing',data,true).every(function(text){return /one hundred ten yards per second/.test(text);}));
+    assert(api.compose('contact',data).every(function(text){return /one thousand meters/.test(text);}));
+    assert(data.range===1000&&data.speed===100);
+  });
+
+  test('Ohio generic shooting reports do not summon an unrelated neighbor', function () {
+    var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
+    var barb={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'attack',fire:false};
+    var dale={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'approach'};
+    var combat={mode:'ohio',ohioIntro:3,enabled:true,hull:100,enemies:[barb,dale]};
+    api.step(clock,0,combat,true,rng);clock.wait=0;clock.quiet=0;barb.fire=true;
+    var line=api.step(clock,4,combat,false,rng);
+    assert(line&&line.event==='firing');
+    assert(!line.replyTo&&!/Big Dale|Aunt Barb/.test(line.text));
   });
 
   test('Ohio pilots address real neighbors and complete named cover exchanges', function () {

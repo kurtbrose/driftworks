@@ -120,11 +120,26 @@
             return small[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' ' + numberWords(n % 100) : '');
         return numberWords(Math.floor(n / 1000)) + ' thousand' + (n % 1000 ? ' ' + numberWords(n % 1000) : '');
     }
-    /** @param {string} kind @param {LineData} data */
-    function compose(kind, data) {
+    /** Replace forms of address, preserving named-pilot template placeholders.
+     * @param {string} text @param {number} index @param {boolean} [hostile] */
+    function ohioAddress(text,index,hostile){
+        return text.replace(/\{pilot\}|\b[Pp]ilot\b/g,function(word){
+            if(word==='{pilot}')return word;
+            var name=hostile?'hotshot':index%2?'neighbor':'bud';
+            return word==='Pilot'?name[0].toUpperCase()+name.slice(1):name;
+        });
+    }
+    /** @param {string} kind @param {LineData} data @param {boolean} [ohio] */
+    function compose(kind, data, ohio) {
+        if(ohio){
+            data=Object.assign({},data);
+            if(typeof data.range==='number')data.range=Math.round(data.range/.9144/50)*50;
+            if(typeof data.speed==='number')data.speed=Math.round(data.speed/.9144/10)*10;
+        }
         var variants = kind === 'remaining' && data.count === 1 ? ["One left. Let's wrap this up.", 'Last hostile. Finish this!'] : templates[kind];
         if (kind === 'contact' && data.vertical)
             variants = ['Pilot, contact {direction}, about {range} meters.', 'Hostile {direction}. Roughly {range} meters out.'];
+        if(ohio)variants=variants.map(function(text,index){return ohioAddress(text.replace(/meters/g,'yards'),index);});
         var composed = /** @type {Choices} */ (variants.map(function (text) {
             return text.replace(/\{(\w+)\}/g, /** @param {string} _ @param {string} key */ function (_, key) {
                 return typeof data[key] === 'number' ? numberWords(data[key]) : String(data[key] === undefined ? 'pilot' : data[key]);
@@ -191,5 +206,5 @@
         }
         return { distance: distance, range: Math.max(100, Math.round(distance / 100) * 100), bearing: bearing, direction: direction, height: height, vertical: horizontal < distance * .25, sector: horizontal < distance * .25 ? direction : clock + height };
     }
-    DW.flightDialogue = { lines: lines, calls: calls, emotionalLines: emotionalLines, emotionalReplies: emotionalReplies, acknowledgments: acknowledgments, emotionStrength: emotionStrength, pilotCast: pilotCast, pilotVoice: pilotVoice, voiceOptions: voiceOptions, templates: templates, numberWords: numberWords, compose: compose, pickLine: pickLine, contactData: contactData };
+    DW.flightDialogue = { ohioAddress:ohioAddress, lines: lines, calls: calls, emotionalLines: emotionalLines, emotionalReplies: emotionalReplies, acknowledgments: acknowledgments, emotionStrength: emotionStrength, pilotCast: pilotCast, pilotVoice: pilotVoice, voiceOptions: voiceOptions, templates: templates, numberWords: numberWords, compose: compose, pickLine: pickLine, contactData: contactData };
 }());

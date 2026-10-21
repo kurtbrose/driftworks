@@ -1,0 +1,279 @@
+{
+  "author": "Quaternius",
+  "license": "CC0-1.0",
+  "source": "https://quaternius.com/packs/farmbuildings.html",
+  "archive": {
+    "url": ".asset-imports/Blend-20261021T010719Z-1-001.zip",
+    "bytes": 1622396,
+    "sha256": "0d94b1f0cd1916d5703aa83b3e23aa8994bdbeeaa447b0265de45b8c7c86f87b",
+    "retainedLocally": false,
+    "note": "Original download removed after preparation; reacquire from the source URL if needed."
+  },
+  "models": [
+    {
+      "url": "models/Barn.glb",
+      "bytes": 125440,
+      "sha256": "eba12d3f068f24e021240cb24a0abcc33e7a25932de02aad848ac2262ec2ce97",
+      "id": "Barn",
+      "triangles": 2910,
+      "materials": 4,
+      "animations": 0
+    },
+    {
+      "url": "models/BigBarn.glb",
+      "bytes": 183952,
+      "sha256": "b1c3c7db4462f423462d5f94b039c7e02d9e1120ca833390b85d2c7be9e77260",
+      "id": "BigBarn",
+      "triangles": 4224,
+      "materials": 4,
+      "animations": 0
+    },
+    {
+      "url": "models/ChickenCoop.glb",
+      "bytes": 47320,
+      "sha256": "7e41b967937e53334d6428598bfef4cbed58000b55fb0a29d430980eab357e82",
+      "id": "ChickenCoop",
+      "triangles": 948,
+      "materials": 5,
+      "animations": 0
+    },
+    {
+      "url": "models/Fence.glb",
+      "bytes": 10324,
+      "sha256": "7a0a0b746d2a6a4d32d0a24b3bf8f0f1ad1e665a213f278f483dae0fbbb95945",
+      "id": "Fence",
+      "triangles": 188,
+      "materials": 1,
+      "animations": 0
+    },
+    {
+      "url": "models/Fence2.glb",
+      "bytes": 16516,
+      "sha256": "b0b4f6b0c4a717d8ae6677436fca703c6326d03a2d251afac8c22d7b06e1fdcb",
+      "id": "Fence2",
+      "triangles": 324,
+      "materials": 1,
+      "animations": 0
+    },
+    {
+      "url": "models/OpenBarn.glb",
+      "bytes": 74824,
+      "sha256": "417c27583646ddaf578a608f2e2c96ef67277719ad350272d0d45d5a1309542b",
+      "id": "OpenBarn",
+      "triangles": 1612,
+      "materials": 5,
+      "animations": 0
+    },
+    {
+      "url": "models/Silo.glb",
+      "bytes": 68340,
+      "sha256": "d4ef2b3b74a27539e18dafa9cac41693697f706eaa4579468154451edad8af59",
+      "id": "Silo",
+      "triangles": 1592,
+      "materials": 5,
+      "animations": 0
+    },
+    {
+      "url": "models/Silo_House.glb",
+      "bytes": 126404,
+      "sha256": "44829bf2bc3eda7f219d06454b623666bd5889f4df0c0eb5ca9b1451ae1ffdf6",
+      "id": "Silo_House",
+      "triangles": 2880,
+      "materials": 7,
+      "animations": 0
+    },
+    {
+      "url": "models/SmallBarn.glb",
+      "bytes": 95608,
+      "sha256": "0a188cb0859a77a6552be9e895c4bbe99246dba9763c0dcd0d8a66d719007bdd",
+      "id": "SmallBarn",
+      "triangles": 2176,
+      "materials": 4,
+      "animations": 0
+    },
+    {
+      "url": "models/TowerWindmill.glb",
+      "bytes": 327148,
+      "sha256": "f535baa95844745f6ff4abbcf22227d5beea883d16cdf5d3605db7f30e560b32",
+      "id": "TowerWindmill",
+      "triangles": 7827,
+      "materials": 7,
+      "animations": 0
+    },
+    {
+      "url": "models/WaterTower.glb",
+      "bytes": 104072,
+      "sha256": "d3df3c99337036c3e7f9461e04d1c7ccab2f055b8de021afc9b2fd701dff9d9d",
+      "id": "WaterTower",
+      "triangles": 2507,
+      "materials": 3,
+      "animations": 0
+    },
+    {
+      "url": "models/Well.glb",
+      "bytes": 151664,
+      "sha256": "8d89b73fc4c40680aaa2aa874adafd70b7f4ed2f99276f79d59da4a6a68ff8cb",
+      "id": "Well",
+      "triangles": 2880,
+      "materials": 5,
+      "animations": 0
+    },
+    {
+      "url": "models/Windmill.glb",
+      "bytes": 73276,
+      "sha256": "5270a5557685bba3415031b44831347a733d760d3950128f3a2d03dca6a6a79a",
+      "id": "Windmill",
+      "triangles": 1440,
+      "materials": 2,
+      "animations": 0
+    }
+  ],
+  "files": [
+    {
+      "url": "LICENSE.txt",
+      "bytes": 270,
+      "sha256": "931a9aad3dfb158f3a8a292ed02631e7ccb6017e5680eb318c86224f9811cb08"
+    },
+    {
+      "url": "models/Barn.glb",
+      "bytes": 125440,
+      "sha256": "eba12d3f068f24e021240cb24a0abcc33e7a25932de02aad848ac2262ec2ce97"
+    },
+    {
+      "url": "models/BigBarn.glb",
+      "bytes": 183952,
+      "sha256": "b1c3c7db4462f423462d5f94b039c7e02d9e1120ca833390b85d2c7be9e77260"
+    },
+    {
+      "url": "models/ChickenCoop.glb",
+      "bytes": 47320,
+      "sha256": "7e41b967937e53334d6428598bfef4cbed58000b55fb0a29d430980eab357e82"
+    },
+    {
+      "url": "models/Fence.glb",
+      "bytes": 10324,
+      "sha256": "7a0a0b746d2a6a4d32d0a24b3bf8f0f1ad1e665a213f278f483dae0fbbb95945"
+    },
+    {
+      "url": "models/Fence2.glb",
+      "bytes": 16516,
+      "sha256": "b0b4f6b0c4a717d8ae6677436fca703c6326d03a2d251afac8c22d7b06e1fdcb"
+    },
+    {
+      "url": "models/OpenBarn.glb",
+      "bytes": 74824,
+      "sha256": "417c27583646ddaf578a608f2e2c96ef67277719ad350272d0d45d5a1309542b"
+    },
+    {
+      "url": "models/Silo.glb",
+      "bytes": 68340,
+      "sha256": "d4ef2b3b74a27539e18dafa9cac41693697f706eaa4579468154451edad8af59"
+    },
+    {
+      "url": "models/Silo_House.glb",
+      "bytes": 126404,
+      "sha256": "44829bf2bc3eda7f219d06454b623666bd5889f4df0c0eb5ca9b1451ae1ffdf6"
+    },
+    {
+      "url": "models/SmallBarn.glb",
+      "bytes": 95608,
+      "sha256": "0a188cb0859a77a6552be9e895c4bbe99246dba9763c0dcd0d8a66d719007bdd"
+    },
+    {
+      "url": "models/TowerWindmill.glb",
+      "bytes": 327148,
+      "sha256": "f535baa95844745f6ff4abbcf22227d5beea883d16cdf5d3605db7f30e560b32"
+    },
+    {
+      "url": "models/WaterTower.glb",
+      "bytes": 104072,
+      "sha256": "d3df3c99337036c3e7f9461e04d1c7ccab2f055b8de021afc9b2fd701dff9d9d"
+    },
+    {
+      "url": "models/Well.glb",
+      "bytes": 151664,
+      "sha256": "8d89b73fc4c40680aaa2aa874adafd70b7f4ed2f99276f79d59da4a6a68ff8cb"
+    },
+    {
+      "url": "models/Windmill.glb",
+      "bytes": 73276,
+      "sha256": "5270a5557685bba3415031b44831347a733d760d3950128f3a2d03dca6a6a79a"
+    }
+  ],
+  "sourceRecords": {
+    "files": [
+      {
+        "url": "conversion.log",
+        "bytes": 7733,
+        "sha256": "f306c8a931a7435f060d9369cc9d58ec82a525b2eaddd791d23bdc1c9d39c21f"
+      },
+      {
+        "url": "source/Barn.blend",
+        "bytes": 674776,
+        "sha256": "cfdd9aa6a15725ef3b338960979d9e79cea80c00eb3a442f676055fc316773d2"
+      },
+      {
+        "url": "source/BigBarn.blend",
+        "bytes": 742232,
+        "sha256": "c536db55ac565e257c862627c6761c339546f006db9ffee9a2fb4b5bc94b18a6"
+      },
+      {
+        "url": "source/ChickenCoop.blend",
+        "bytes": 567788,
+        "sha256": "b694d273f6b02fe79ca7071beb7ee9cdeea812b03d092b027a6e57c81b9ad536"
+      },
+      {
+        "url": "source/Fence.blend",
+        "bytes": 506040,
+        "sha256": "1563f9bf768f1e952dec2ac3186b6623cfc63eafaa1e70119acea949008e66ce"
+      },
+      {
+        "url": "source/Fence2.blend",
+        "bytes": 512504,
+        "sha256": "78f3aff585556e633c42486c7ee3af77e1989c8c02f4536e35129dc88db9d5bd"
+      },
+      {
+        "url": "source/OpenBarn.blend",
+        "bytes": 595340,
+        "sha256": "3ef8927c9ade10a541cbf8d41d458d591ffb0c4862aa756e08f1573460d47052"
+      },
+      {
+        "url": "source/Silo.blend",
+        "bytes": 595900,
+        "sha256": "de733ada3bf187377dbb5ab11c745640bbaac4bf1cce7055c97aa20829323ade"
+      },
+      {
+        "url": "source/Silo_House.blend",
+        "bytes": 666868,
+        "sha256": "d25e11e0a5067a7466a13fe39b516562735eaae76193d35be192a9f45c559911"
+      },
+      {
+        "url": "source/SmallBarn.blend",
+        "bytes": 634908,
+        "sha256": "29fee5bf670a10624ecee1d628ad99914c1cce2c4bb4488d2099f042765924ea"
+      },
+      {
+        "url": "source/TowerWindmill.blend",
+        "bytes": 884588,
+        "sha256": "c2d3109dcbeb07c3e503130145ffa7236b509f44d3cda454020595aedf397534"
+      },
+      {
+        "url": "source/WaterTower.blend",
+        "bytes": 622368,
+        "sha256": "53248d2bde0e344bf8fabaaececf09543b17b60c9f555c0b72e36422ae83413a"
+      },
+      {
+        "url": "source/Well.blend",
+        "bytes": 670132,
+        "sha256": "f58629907bbdd530da439ec662bd36dc76758995624c9fd65481b9aa2b7ec560"
+      },
+      {
+        "url": "source/Windmill.blend",
+        "bytes": 575324,
+        "sha256": "79b89771b7a8ddf02c76cf1bd45da1d4bd96895da6fa68e279e853e1445d1885"
+      }
+    ],
+    "retainedLocally": false,
+    "blenderVersion": "5.2.2 LTS"
+  }
+}
