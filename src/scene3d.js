@@ -15,7 +15,7 @@
   var FOCAL = 1 / Math.tan(Math.PI / 8);
   /** @type {Record<string, { radius: number, visual: import('./types').AsteroidVisual }>} */
   var geology = {};
-  // Geology shared with the Three.js comparison; lighting remains backend-owned.
+  // Procedural geology shared by production and Three.js material studies.
   var ROCK_SURFACE_SHADER =
       'vec3 rotateNormal(vec3 n){float c=cos(uRotation),s=sin(uRotation);return vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z);}\n'+
       'float stripe(float value,float center,float halfWidth,float aa){return 1.-smoothstep(halfWidth,halfWidth+aa,abs(value-center));}\n'+
@@ -788,7 +788,7 @@
       'uniform float uEnvironmentEnabled;uniform vec3 uEnvironmentSH[9],uEnvironmentEye;uniform mat3 uEnvironmentBasis;uniform sampler2D uEnvironment;'+
       'vec3 skyDiffuse(vec3 n){n=normalize(uEnvironmentBasis*n);float x=n.x,y=n.y,z=n.z;vec3 c=uEnvironmentSH[0]*.282095+uEnvironmentSH[1]*(.488603*y)+uEnvironmentSH[2]*(.488603*z)+uEnvironmentSH[3]*(.488603*x)+uEnvironmentSH[4]*(1.092548*x*y)+uEnvironmentSH[5]*(1.092548*y*z)+uEnvironmentSH[6]*(.315392*(3.*z*z-1.))+uEnvironmentSH[7]*(1.092548*x*z)+uEnvironmentSH[8]*(.546274*(x*x-y*y));return pow(clamp(c+vec3(.18),vec3(.14),vec3(1.35)),vec3(1./2.2));}'+
       'vec3 skySpecular(vec3 n){vec3 incident=normalize(vRelative-uEnvironmentEye);vec3 ray=normalize(uEnvironmentBasis*reflect(incident,n));vec2 uv=vec2(atan(ray.y,ray.x)/6.28318530718+.5,acos(clamp(ray.z,-1.,1.))/3.14159265359);float metal=uFinish>.5&&uFinish<2.5?1.:0.;vec3 radiance=pow(texture2D(uEnvironment,uv,mix(5.,3.,metal)).rgb,vec3(2.2));float fresnel=pow(1.-max(0.,dot(n,-incident)),5.);return radiance*mix(.04,.18,metal)*(.4+.6*fresnel);}'+
-      // Linear beam-depth, packed into RG for baseline WebGL without depth-texture extensions.
+      // Linear beam-depth packed into RG for the authored work-light material.
       (DW.miningLights?DW.miningLights.shaderSource:'vec3 rigIllumination(vec3 p,vec3 n){return vec3(0.);}')+
       'float workVisibility(vec3 p){if(uWorkShadowEnabled<.5)return 1.;vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection);if(z<=uSpotPower.y*uSpotFrustum.y||z>=uSpotPower.y)return 1.;vec2 uv=vec2(dot(beam,uSpotRight),dot(beam,uSpotUp))*uSpotFrustum.x/z*.5+.5;if(min(uv.x,uv.y)<.001||max(uv.x,uv.y)>.999)return 1.;float receiver=z/uSpotPower.y-.001;float visibility=0.;for(int y=0;y<2;y++)for(int x=0;x<2;x++){vec2 tap=(floor(uv*1024.)+vec2(float(x),float(y))+.5)/1024.;vec2 depthBytes=texture2D(uWorkShadow,tap).rg;visibility+=step(receiver,depthBytes.x+depthBytes.y/255.);}return visibility*.25;}\n'+
       ROCK_SURFACE_SHADER +

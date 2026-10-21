@@ -393,7 +393,7 @@ Separate surface boulder meshes are omitted to keep close flight and walking
 views free of tile generation, uploads, and additional rock draw calls.
 
 The later surface-detail and shadow experiments are retained separately; see
-[Archived asteroid surface experiments](#archived-asteroid-surface-experiments).
+[Retired asteroid surface experiments](#retired-asteroid-surface-experiments).
 
 ### Mothership 3D artwork
 
@@ -1093,41 +1093,15 @@ Cargo deck top (z=4.5) and belly (z=4.15) are separate surfaces with closed rim 
 
 The sorting/transfer tray top is below deck at z=4.3; the tower core and cargo-load undersides penetrate their support surfaces slightly instead of ending exactly on them. The depth regression checks smaller overlapping faces too, not just full-width floor/chassis faces.
 
-### Archived asteroid surface experiments
+### Retired asteroid surface experiments
 
-The production asteroid renderer and `tests/asteroid-orbit.html` use the terrain
-from commit `b251793` ("breaking up bottleneck and remove boulders"). Later mining
-platform artwork and inspection features are preserved. The active surface uses
-fixed-resolution crater geometry and the earlier material shader: no separate
-boulders, close-camera terrain refinement, cellular rock volume, or cast-shadow
-passes from the abandoned experiment.
-
-The experiment remains available independently:
-
-- [Archived asteroid surface viewer](../tests/asteroid-surface-experiment.html):
-  procedural relief, close refinement, shadows, fixed camera poses, diagnostic
-  normals/wireframe, mesh freeze, and the repeatable benchmark.
-- [Isolated rock laboratory](../tests/terrain-lab.html): block/plane shadow control,
-  cellular comparison, and a deterministic structured rock patch; seed 1729,
-  fixed 25-degree sun, and 2 m altitude plus 20/200 m distance cameras.
-- `tests/fixtures/asteroid-surface-scene3d.js`: frozen experimental renderer.
-  It exports `Driftworks.terrainExperiment`; ordinary application pages never
-  load it. The archived viewer explicitly selects that renderer. Experimental
-  regression cases run against its separate API, not the production renderer.
-- [Original baseline](../tests/benchmarks/asteroid-baseline-2026-10-16.json),
-  [bounded refinement run](../tests/benchmarks/asteroid-bounded-lod-2026-10-16.json),
-  and [patch measurements](../tests/benchmarks/terrain-lab-2026-10-16.json).
-
-The close surface was rejected for its regular leather-like appearance, weak
-geometric correspondence to shading, shadow artifacts, and excessive generation
-and rendering costs. The recorded 2 m entry stall improved from 7863 ms to 81 ms
-with a 1536-added-triangle cap; the capped case had 127416 visible triangles.
-These are session measurements, not portable GPU performance guarantees.
-
-If revisited, start with the isolated patch and real geometric occlusion. Keep
-one deterministic formation definition for geometry, normals, materials, and
-future distant approximations. Prove shapes and budgets before integration;
-parallax relief and representation transitions remain unimplemented candidates.
+The production surface retains the approved fixed-resolution crater geometry
+and authored surface shader. The later experimental cellular/refinement terrain
+was rejected for artificial patterns, weak geometry/shading correspondence,
+shadow artifacts and generation/rendering cost. Its custom WebGL renderer,
+standalone viewers/lab and experiment-only tests have been removed following
+approval of the Three.js migration. Historical benchmark JSON remains under
+`tests/benchmarks/`; source history remains in Git.
 
 Rampdock crew interiors are architectural blockouts only: lower entry floor z=4.7 with vestibule, inner doorway, staging and utility niche; upper control floor z=10 with a shared opening through both supporting slabs. The microgravity circulation well stays open: slender guide rails, staggered individual grab handles, entry/staging grips and bridge arrival grips provide places to stop and redirect. A separate handhold route reaches the roof hatch; there are no stairs or ladder rungs. Optional sixth geometry argument `interiorCut` (`lower`/`upper`) removes the cabin shell/roof for inspection; lower mode sections wall height and removes upper slabs and sections the guide rails. No furniture, life-support systems, navigation or interior gameplay is added.
 
@@ -1177,7 +1151,11 @@ Terrain-fitted ramp opening now clamps each bay to its first rock intersection a
 The mining rig now has one canonical implementation: retired original/pod/anchors/recessed/fabricated/workboat/drydock variants and their tests have been removed, including the duplicate mesh from the frozen terrain-renderer fixture. `miningPlatformGeometry(deployment,time,working,panelOpen,interiorCut)` no longer accepts a variant selector; the remaining diagnostic/contact arguments are internal. Time/working remain accepted by the main renderer without idle mechanical animation. `src/ship-models.js` registers the rig under `Driftworks.originalShipModels`, separately from imported `shipPacks`. The ship-model catalog shows a distinct Driftworks originals group, project provenance, canonical materials and a link to the detailed study; import-only paint and exhaust controls are disabled for original models.
 
 
-The earlier physical-material trial is tests/asteroid-three-comparison.html, backed by the vendored r180 runtime and a frozen WebGL reference. Production now uses the appearance-preserving Three.js path described below. Both panes share the seed, original interleaved asteroid positions/normals, cutaway geometry and procedural crater/composition/microrelief GLSL exposed by scene3d.rockSurfaceShader(). The Three.js pane uses MeshStandardMaterial with albedo/normal hooks and standard directional/spot lights and shadow maps. Its light attenuation, material response and color pipeline intentionally differ from the legacy backend. tests/asteroid-three-bridge.js copies the full camera basis, including the legacy orbit reflection that cannot be represented by a quaternion. Authored normals are used explicitly instead of inferring their sign from legacy triangle winding. Orbit, underside, cutaway, surface, posts and a metre-scaled rig fixture share camera/geometry inputs. Rendering is on demand while idle. The node regression checks shared buffer attributes and 75 projected landmarks; append ?test=1 for GPU silhouette, multi-seed, cutaway, shadow and rig checks. CPU submission is not presented as a GPU performance benchmark.
+The excavation study uses the shared Three.js geometry/camera bridge and
+`asteroid-rock-material.js` for its physical-material experiment. The retired
+side-by-side migration trial has been removed; these shared study helpers and
+their geometry, camera, material and rig-placement regressions remain active.
+
 
 
 The Three.js comparison now separates surface lighting layers. Geometry only retains procedural albedo but derives actual face normals from triangle derivatives (flat shading). This matters because legacy exterior vertex normals deliberately omit crater slopes, expecting the shader to restore them. + Fine texture adds only the shared microrelief gradient to those actual face normals. Legacy crater normals reproduces the broad-body normals plus analytic crater and microrelief gradients. + Legacy darkening additionally applies the cavity color multiplier. Legacy darkening is the default to preserve the established orbital appearance; only the Three.js pane changes. Distinct shader program keys let disabled layers be compiled out. Browser regressions verify the independent layers without changing legacy pixels. Measure performance runs each renderer/layer sequentially, with eight warm-up draws and 24 measured draws per configuration, reporting median CPU submission and draw-plus-one-pixel synchronous readback. Readback includes browser/driver overhead, so it is not pure GPU time or FPS. Static Three.js shadow maps are cached; the legacy shadow behavior and different lighting models remain part of the compared configurations. Controls and movement are frozen during measurement, and viewport changes abort the run.
@@ -1539,79 +1517,40 @@ Refresh and commit versions after edits; `npm run check` validates without writi
 HTML still needs host revalidation to discover a new deployment.
 
 
-### Production Three.js migration
+### Production Three.js renderer
 
-`scene3d.create` now submits the production 3D scene through vendored Three.js
-r180. `BufferGeometry`, interleaved attributes, textures, `RawShaderMaterial`
-and `WebGLRenderTarget` own GPU resource binding, shader compilation, drawing
-and work-light targets. There are no direct WebGL calls in `src/scene3d.js`.
-The existing display-space surface shaders, projection basis, packed work-light
-depth and lighting response are retained so this backend migration does not
-also change the art direction. This is a custom Three.js material, not a switch
-to `MeshStandardMaterial` or physical attenuation. Three.js r180 requires WebGL2.
+`scene3d.create` submits the production 3D scene through vendored Three.js r180.
+`BufferGeometry`, interleaved attributes, textures, `RawShaderMaterial` and
+`WebGLRenderTarget` own GPU resource binding, shader compilation, drawing and
+work-light targets. There are no direct WebGL calls in `src/scene3d.js`.
+The approved display-space surface shaders, projection basis, packed work-light
+depth and lighting response remain custom material logic. Replacing those with
+physical materials/attenuation would change the approved appearance. Three.js
+r180 requires WebGL2.
 
 Each pass queues pooled draw objects with independent uniform snapshots and
-submits one Three.js render. Opaque, alpha and additive batches retain their
-original submission order, with automatic sorting and culling disabled; the
-existing explicit study culling remains authoritative. Same-size dynamic
-buffers update in place; changed layouts release their old GPU attributes.
-Platform material geometry is owned per platform, because queued rendering
-must not overwrite another platform's vertices before submission.
+submits one Three.js render. Opaque, alpha and additive batches retain submission
+order; automatic sorting and culling are disabled, and explicit study culling
+remains authoritative. Same-size dynamic buffers update in place; changed
+layouts release old GPU attributes. Platform material geometry belongs to each
+platform so queued draws cannot overwrite another platform's vertices.
 
 Ordinary-script pages load `vendor/three/build/three.global.js` before scene3d.
-It is a checked-in classic distribution of the existing local ES modules,
-reproduced by `node tools/vendor-three-classic.cjs` when updating the vendor.
-There is no deployment build or network import. `src/three-types.d.ts` describes
-the small vendor boundary used by the strict application type check.
+It is a checked-in classic distribution of the local ES modules, reproduced by
+`node tools/vendor-three-classic.cjs` when updating the vendor. Deployment needs
+no build or network import. `src/three-types.d.ts` describes the used vendor API.
 
-[Migration review](../tests/asteroid-migration.html) compares the production
-renderer with `tests/fixtures/asteroid-webgl-reference.js`, a frozen pre-migration
-snapshot used only for review. Seeds, composition, camera, cutaway, posts and
-work-light settings are linked. Run pixel comparisons, or append `?test=1`, for
-two seeds across orbit, underside, surface and cutaway; error figures are
-8-bit mean channel differences over the rendered union, not aesthetic scores.
-The original physical-material comparison remains available separately and
-also uses the frozen baseline. Do not add features to the reference renderer.
-The production orbit viewer's `?shadow-test=1` exercises the real Three.js GPU
-path, checking darkness-only shadow changes and post shadows on matching ground.
-`tests/three-production.cjs` verifies native Three.js resources, independent draw
-uniforms, blend order, pass submission and buffer/material reuse without a GPU.
+The migration is approved. Both custom asteroid WebGL backends, their standalone
+archive/lab, live comparisons, comparison benchmarks and archive-only tests have
+been retired. [Approved visual baseline](../tests/asteroid-migration.html) is a
+static gallery of eleven saved comparisons: orbit, underside, cutaway, surface
+lighting/shadows, 0.5 m inspection and composition extremes. Images and historical
+timing JSON remain in `tests/benchmarks/three-migration/`; initial timings are
+provisional because of machine contention. Future performance work optimizes
+Three.js against the approved appearance, without a parallel asteroid backend.
 
-Captured migration evidence is kept with the repository:
-[orbit](../tests/benchmarks/three-migration/orbit.jpg),
-[cutaway](../tests/benchmarks/three-migration/cutaway.jpg),
-[work light](../tests/benchmarks/three-migration/work-light.jpg), and
-[pixel/shadow measurements](../tests/benchmarks/three-migration/results.json).
-
-
-The migration review's **Compare performance** button (or `?benchmark=1`)
-measures production Three.js against the frozen WebGL backend with the same
-seed, mesh, physical camera and framebuffer dimensions. Cases cover orbit,
-2 m surface inspection with lamp/shadows off and on, 0.5 m inspection, removal
-of shadow-test posts and half-resolution rendering. Each backend gets six warmup
-draws, then 48 paired samples with alternating AB/BA order. The other pane stays
-idle. CPU submission excludes camera preparation; completed-draw timing includes
-one synchronous pixel readback and must not be interpreted as FPS. When supported,
-disjoint timer queries independently record GPU time across both shadow and color
-passes; unavailable/disjoint results are excluded and their sample count reported.
-Both backends regenerate their shadow map for every measured draw. JSON results
-include individual samples, median/p95, renderer identity, viewport/DPR, draw and
-triangle counts. Controls and pointer input are locked during measurement; resize
-invalidates a run. This is a fixed asteroid/posts rendering comparison, not a full
-fleet or moving-camera gameplay benchmark.
-
-Append `&pixels=1920x1080` to the benchmark URL to request full-HD backing
-buffers per pane, independently of browser-window size. Run timing comparisons
-with other GPU work and repository checks stopped. The initial saved performance
-runs are marked provisional because machine contention was reported; they are
-not an isolated performance baseline.
-
-
-The visual review checkpoint contains eleven numbered before/after captures in
-`tests/benchmarks/three-migration/review/`; its `index.json` records captions and
-reproducible viewer URLs. It covers orbit, underside, cutaway, 2 m surface with
-light/shadow variations, 0.5 m inspection and four composition extremes. URL
-presets accept `pose`, `cut`, `light`, `shadows`, `posts`, `height`, `composition`
-and `seed`. The chosen production direction is Three.js: retain the frozen
-renderer for visual comparison, and treat subsequent performance work as
-Three.js optimization while guarding appearance against these checkpoints.
+The production orbit viewer's `?shadow-test=1` checks darkness-only changes and
+post shadows on matching ground pixels. `tests/three-production.cjs` verifies
+native Three.js resources, per-draw uniforms, blend order, pass submission and
+resource reuse. `tests/asteroid-three.cjs` retains the shared study geometry,
+camera projection, geology material and excavation rig regressions.

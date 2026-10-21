@@ -1,25 +1,15 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Three.js migration review · Driftworks</title>
-<style>body{margin:0;background:#080d11;color:#dce6e9;font:14px system-ui}header{padding:16px}h1{font-size:20px;margin:0 0 10px}nav{display:flex;gap:8px;flex-wrap:wrap;align-items:center}button,input,select,a{font:inherit;color:inherit;background:#1b2e39;border:1px solid #466171;border-radius:5px;padding:7px}a{text-decoration:none}main{display:grid;grid-template-columns:1fr 1fr;height:70vh;gap:2px}article{position:relative;min-width:0;overflow:hidden}.view{position:absolute;inset:0}.view canvas{width:100%;height:100%;pointer-events:none}.scene3d-controls,.scene3d-overlay,.night-sky-background{display:none}.tag{position:absolute;left:12px;top:12px;background:#101c24dd;padding:8px;pointer-events:none}footer{padding:16px;line-height:1.5}button[aria-pressed=true]{background:#365e6f}#results{white-space:pre-wrap}</style>
-<header><h1>Three.js production migration review</h1><nav><label>Seed <input id="seed" value="ast-ceres-01"></label><button id="apply">Apply seed</button><label>Composition <select id="composition"><option value="mixed">Mixed</option><option value="ice">Ice</option><option value="volatiles">Volatiles</option><option value="metals">Metals</option><option value="silicates">Silicates</option></select></label><button data-pose="orbit">Orbit</button><button data-pose="underside">Underside</button><button data-pose="surface">Surface</button><button id="cut" aria-pressed="false">Cutaway</button><button id="light" aria-pressed="false">Work light</button><button id="shadows" aria-pressed="true">Shadows</button><button id="posts" aria-pressed="true">Test posts</button><button id="test">Run pixel comparisons</button><button id="benchmark">Compare performance</button><a href="asteroid-three-comparison.html">Earlier physical-material trial</a></nav></header>
-<main><article><div id="before" class="view"></div><div class="tag">Before · frozen custom WebGL</div></article><article><div id="after" class="view"></div><div class="tag">After · production Three.js</div></article></main><footer>Drag either pane to orbit; Shift + drag to pan; wheel to zoom. Both panes share the seed, geometry, shading and camera. Surface detail remains authored GLSL; Three.js owns GPU resources and rendering. The baseline is frozen for review only. Pixel differences are diagnostics, not a judgment of whether the surface looks natural.<div id="status" role="status">Loading…</div><div id="performance" hidden style="min-height:220px"></div><output id="results"></output></footer>
-<script src="../src/asset-versions.js?v=58f50d9894fd"></script>
-<script>window.DRIFTWORKS_TEST_MODE=true;</script>
-    <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
-    <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
-    <script src="../src/combat.js?v=ce0e0e6eb149"></script>
-    <script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
-<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
-    <script src="../src/mining-landing.js?v=f00997919474"></script>
-    <script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
-    <script src="../src/formations.js?v=c6006cf590e5"></script>
-    <script src="../src/sim.js?v=9a868143dfe8"></script>
-    <script src="../src/population.js?v=7a772b14be47"></script>
-    <script src="../src/session.js?v=6d1be0457a7b"></script>
-    <script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
-    <script src="../src/engine-audio.js?v=061d71eda9b0"></script>
-<script src="../src/audio-mixer.js?v=86b2e5499688"></script>
-<script src="../src/audio.js?v=4c3a1ddd049c"></script>
-    <script src="../src/hud.js?v=b41c310fa59d"></script>
-    <script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=02d9b3545d85"></script><script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script><script src="../src/scene3d.js?v=0a0111aeaac6"></script>
-    <script src="../src/game.js?v=4b2cf113b259"></script>
-<script src="mining-study-terrain.js?v=f1d69b502da0"></script><script src="fixtures/asteroid-webgl-reference.js?v=94eded31af90"></script><script src="asteroid-migration.js?v=561d0d150352"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Approved Three.js visual baseline · Driftworks</title><style>
+body{margin:0 auto;padding:24px;max-width:1440px;background:#080d11;color:#dce6e9;font:16px system-ui}h1{font-size:24px}a{color:#9cd6e8}figure{margin:28px 0}figcaption{font-weight:600;margin-bottom:10px}img{display:block;width:100%;height:auto;border:1px solid #263d49}
+</style></head><body><h1>Approved Three.js visual baseline</h1><p>Old renderer on the left; approved production Three.js on the right. These are saved reference images. The retired WebGL backends and live comparison code have been removed.</p><p><a href="asteroid-orbit.html">Open the production Three.js viewer</a> · <a href="excavation-study.html">Excavation study</a> · <a href="../?renderer=3d">Game</a></p>
+<figure id="view-1"><figcaption>1 — Orbit</figcaption><img loading="lazy" src="benchmarks/three-migration/review/01-orbit.jpg?v=79f087a9ba10" alt="Orbit: old renderer left, approved Three.js right"></figure>
+<figure id="view-2"><figcaption>2 — Underside</figcaption><img loading="lazy" src="benchmarks/three-migration/review/02-underside.jpg?v=d89f4b2ba432" alt="Underside: old renderer left, approved Three.js right"></figure>
+<figure id="view-3"><figcaption>3 — Cutaway</figcaption><img loading="lazy" src="benchmarks/three-migration/review/03-cutaway.jpg?v=f623749183f2" alt="Cutaway: old renderer left, approved Three.js right"></figure>
+<figure id="view-4"><figcaption>4 — Surface, 2 m, no work light</figcaption><img loading="lazy" src="benchmarks/three-migration/review/04-surface-unlit.jpg?v=ec4afb3bf179" alt="Surface, 2 m, no work light: old renderer left, approved Three.js right"></figure>
+<figure id="view-5"><figcaption>5 — Surface, 2 m, work light, shadows off</figcaption><img loading="lazy" src="benchmarks/three-migration/review/05-work-light-no-shadows.jpg?v=6307910c7164" alt="Surface, 2 m, work light, shadows off: old renderer left, approved Three.js right"></figure>
+<figure id="view-6"><figcaption>6 — Surface, 2 m, work light and shadows</figcaption><img loading="lazy" src="benchmarks/three-migration/review/06-work-light-shadows.jpg?v=3e26228ff1ce" alt="Surface, 2 m, work light and shadows: old renderer left, approved Three.js right"></figure>
+<figure id="view-7"><figcaption>7 — Surface, 0.5 m, work light and shadows</figcaption><img loading="lazy" src="benchmarks/three-migration/review/07-close-up-0.5m.jpg?v=81ada4bc9150" alt="Surface, 0.5 m, work light and shadows: old renderer left, approved Three.js right"></figure>
+<figure id="view-8"><figcaption>8 — Ice composition</figcaption><img loading="lazy" src="benchmarks/three-migration/review/08-ice.jpg?v=154bbd897ef6" alt="Ice composition: old renderer left, approved Three.js right"></figure>
+<figure id="view-9"><figcaption>9 — Volatiles composition</figcaption><img loading="lazy" src="benchmarks/three-migration/review/09-volatiles.jpg?v=7f4c7d543636" alt="Volatiles composition: old renderer left, approved Three.js right"></figure>
+<figure id="view-10"><figcaption>10 — Metals composition</figcaption><img loading="lazy" src="benchmarks/three-migration/review/10-metals.jpg?v=123979dd0c90" alt="Metals composition: old renderer left, approved Three.js right"></figure>
+<figure id="view-11"><figcaption>11 — Silicates composition</figcaption><img loading="lazy" src="benchmarks/three-migration/review/11-silicates.jpg?v=989e0f890ea0" alt="Silicates composition: old renderer left, approved Three.js right"></figure>
+</body></html>

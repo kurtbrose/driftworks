@@ -379,7 +379,7 @@
   "src/model-viewer.js": "02d9b3545d85",
   "src/population.js": "7a772b14be47",
   "src/propulsion.js": "fc0b16cad22a",
-  "src/scene3d.js": "0a0111aeaac6",
+  "src/scene3d.js": "023cfd8431b4",
   "src/session.js": "6d1be0457a7b",
   "src/ship-models.js": "a53fd7c5a044",
   "src/sim.js": "9a868143dfe8",

@@ -34,9 +34,7 @@ for(const name of ['propulsion','combat','mining-lights','mining-terrain','logis
   assert.ok(compiled.fragmentShader.includes('vec3 fine=rockBump(vRockLocal,footprint)'));
   assert.ok(compiled.fragmentShader.includes('globeCraters(vRockLocal)'));
   const studySource=fs.readFileSync(require('node:path').join(__dirname,'excavation-study.js'),'utf8');
-  const comparisonSource=fs.readFileSync(require('node:path').join(__dirname,'asteroid-three-comparison.js'),'utf8');
   assert.ok(studySource.includes("import {createRockMaterial} from './asteroid-rock-material.js'"));
-  assert.ok(comparisonSource.includes("import {createRockMaterial} from './asteroid-rock-material.js'"));
   shared.material.dispose();
   const {excavationRigs}=await import('./excavation-rigs.js');
   const cavern=Driftworks.sim.toggleAsteroidExcavation(Driftworks.sim.createInitialWorld(),asteroid.id).asteroids[0];
