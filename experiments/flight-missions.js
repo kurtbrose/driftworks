@@ -34,6 +34,8 @@
         if(result.version!==1||!(result.units.distanceScale>0)||!(result.units.speedScale>0))throw new Error('Invalid mission version or units');
         if(result.sky.kind==='landmarks'&&result.sky.features.length!==2)throw new Error('Landmark skies require a planet and a sun');
         if(['training','furball','patrol'].indexOf(result.encounter.kind)<0||!Number.isInteger(result.encounter.count)||result.encounter.count<0)throw new Error('Invalid encounter kind or count');
+        var reserve=result.encounter.reinforcements;
+        if(reserve&&(!Number.isInteger(reserve.rosterSplit)||reserve.rosterSplit<1||result.encounter.count<2||result.encounter.count%2||result.encounter.count>reserve.rosterSplit*2||result.encounter.callsigns.length<reserve.rosterSplit*2||!(reserve.launchSeconds>0)||!(reserve.launchSpeed>0)))throw new Error('Invalid reinforcement roster or launch');
         if(!(result.encounter.spawn.backRadii>0)||!Number.isFinite(result.encounter.spawn.altitudeMeters))throw new Error('Invalid spawn');
         if(result.opening.some(function(line){return !Number.isInteger(line.speakerIndex)||line.speakerIndex<0||(result.encounter.count>0&&line.speakerIndex>=result.encounter.count);}))throw new Error('Invalid opening speaker');
         freeze(result);definitions[id]=result;return result;

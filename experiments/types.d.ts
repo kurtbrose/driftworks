@@ -8,10 +8,12 @@ export type FlightMission = {
     comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
     portraits:{folder:string;cast:string};
     sky:{kind:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
-    scenery:{kind:string;asset:string}[];
-    encounter:{kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
+    scenery:MissionScenery[];
+    encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
     opening:{text:string;speakerIndex:number;channel:string}[];
 };
+export type MissionScenery={kind:string;asset:string;scale?:number;anchor?:[number,number];offset?:[number,number];placements?:{model:string;x:number;y:number;size:number;yaw:number}[]};
+export type RoadsideCatalog={version:number;binary:string;bytes:number;models:Record<string,{parts:{offset:number;count:number;color:[number,number,number]}[]}>};
 export type MissionOverrides = {
     version?:1; title?:string;heading?:string;subtitle?:string;hint?:string;
     units?:Partial<FlightMission['units']>;
@@ -25,16 +27,18 @@ export type Vector = number[];
 export type AegisFlightAsset = {
     name:string; lengthMeters:number; source:string;
     batches:{color:[number,number,number];vertices:number[]}[];
+    modules?:{id:string;type:string;position:Vector}[];
+    hangars?:{id:string;position:Vector;halfWidth:number;halfHeight:number}[];
     turrets:{id:string;kind:'heavy'|'point-defense';position:Vector;side:number;batches:{color:[number,number,number];vertices:number[]}[]}[];
 };
 export type AegisFlightRig = {
-    reset:()=>void;
+    reset:(combat?:Combat)=>void;
     step:(dt:number,view:FlightView)=>void;
     geometry:()=>Batch[];
     effects:(pose:Pose)=>Batch[];
     readout:()=>string;
     hit:(a:Vector,b:Vector)=>Vector|null;
-    telemetry:()=>{seconds:number;contacts:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string}[]};
+    telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string}[]};
 };
 export type Pose = {
     eye: Vector;
@@ -190,6 +194,7 @@ export type Scorch = {
     layers: number[][];
 };
 export type ArtCraft = {
+    modelId?:string;
     index: number;
     pose: Pose & {
         velocity: Vector;
@@ -203,6 +208,7 @@ export type ArtCraft = {
 };
 export type CollisionShape = { kind: 'sphere'; radiusM: number } | { kind: 'model'; modelId: string };
 export type Craft = ArtCraft & {
+    hangarLaunch?:{remaining:number};
     controller: 'input' | 'ai';
     collision: CollisionShape;
     hitFlash?: number;
@@ -257,6 +263,11 @@ export type RadioEvent = {
     wave: number;
 };
 export type Combat = {
+    rosterNext?:{ally:number;enemy:number};
+    replacementSerial?:number;
+    reinforcementOrigin?:Vector;
+    reinforcementDirection?:Vector;
+    hangarSupport?:boolean;
     openingStep: number;
     opponentStyle?: OpponentStyle;
     player: Craft;
@@ -292,6 +303,7 @@ export type Combat = {
     onTerrainImpact?: (point: Vector) => void;
 };
 export type Model = {
+    gunMounts?:Vector[];engineMounts?:number[][];
     id: string;
     name: string;
     triangles: number;
@@ -300,6 +312,7 @@ export type Model = {
     texture?: string;
 };
 export type Pack = {
+    missionOnly?:boolean;
     id: string;
     author: string;
     license: string;
@@ -616,6 +629,7 @@ export type Line = {
 };
 export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines?: number; reduced?: boolean};
 export type ExperimentModules = {
+    flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
     flightPortraits: {

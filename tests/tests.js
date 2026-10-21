@@ -1792,13 +1792,30 @@
     assert(heard.some(function(text){return /deer|Ohio|orange barrels/.test(text);}));
   });
 
+  test('Ohio barn launch follows the supported deck and asteroid rotation with cached terrain queries', function () {
+    var DW=window.Driftworks,queries=0,U=sim.METERS_PER_UNIT;
+    var session=DW.flightSession.create({surfaceFrame:function(){queries++;return {point:[0,0,.8],normal:[0,0,1]};},terrainHit:function(){return null;},onGunshot:function(){},onImpact:function(){}});
+    var profile=DW.arcade.profiles[0],snapshot=session.reset({mode:'ohio',enabled:true,profile:profile});
+    var demand={pitch:0,yaw:0,roll:0,throttle:0,throttleRate:0,fire:false,boost:false};
+    session.advance(1/120,demand,{profile:profile,weapon:DW.retailWeapons[0]});
+    var origin=snapshot.combat.reinforcementOrigin,angle=snapshot.asteroid.rotation;
+    var localX=origin[0]*Math.cos(angle)+origin[1]*Math.sin(angle),localY=-origin[0]*Math.sin(angle)+origin[1]*Math.cos(angle);
+    var front=340/3*.3;
+    assert(Math.abs(localX-(-150+Math.sin(.12)*front)/U)<1e-8);
+    assert(Math.abs(localY-(-690-Math.cos(.12)*front)/U)<1e-8);
+    assert(Math.abs(origin[2]-(snapshot.asteroid.radius*.8+9/U))<1e-8);assert(queries===9);
+    var before=origin.slice();session.advance(.1,demand,{profile:profile,weapon:DW.retailWeapons[0]});
+    assert(queries===9&&snapshot.combat.reinforcementOrigin[0]!==before[0]);
+    var clock=snapshot.combat.time;session.advance(0,demand,{profile:profile,weapon:DW.retailWeapons[0]});assert(snapshot.combat.time===clock);
+  });
+
   test('Ohio reveal gates combat, respects occupied radio, and retains its cast across waves', function () {
     var DW=window.Driftworks, api=DW.training, U=sim.METERS_PER_UNIT;
     var player=DW.arcade.create(300/U), combat=api.create('ohio'), clock=DW.flightComms.create();
     api.spawn(combat,player,300/U);
-    assert(combat.enemies.length===16 && combat.enemies.filter(function(e){return e.team==='ally';}).length===8);
+    assert(combat.enemies.length===8 && combat.enemies.filter(function(e){return e.team==='ally';}).length===4);
     var names=combat.enemies.map(function(e){return e.callsign;}), start=JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}));
-    assert(new Set(names).size===16 && names[0]==='Cuyahoga Cryptid');
+    assert(new Set(names).size===8 && names[0]==='Cuyahoga Cryptid');
     api.step(combat,player,1,300/U);
     assert(JSON.stringify(combat.enemies.map(function(e){return e.pose.eye;}))===start);
     assert(DW.flightComms.step(clock,1,combat,true)===null && combat.openingStep===0);
@@ -2185,7 +2202,7 @@
 
   var createFreshWorld = sim.createInitialWorld;
   test('imported ship libraries retain distinct provenance and bounded valid geometry', function(){
-    var packs=window.Driftworks.shipPacks,ids={};assert(packs.length===1);assert(packs[0].id==='quaternius-ultimate-spaceships');assert(packs[0].models.length===11);
+    var packs=window.Driftworks.shipPacks.filter(function(pack){return !pack.missionOnly;}),ids={};assert(packs.length===1);assert(packs[0].id==='quaternius-ultimate-spaceships');assert(packs[0].models.length===11);
     packs.forEach(function(pack){assert(pack.license==='CC0-1.0');assert(pack.url.indexOf('https://')===0);pack.models.forEach(function(m){assert(!ids[m.id]);ids[m.id]=true;assert(m.id.indexOf(pack.id+':')===0);assert(m.sha256.length===64);assert(m.vertices.length===m.triangles*18);for(var i=0;i<m.vertices.length;i+=6){assert(Math.hypot.apply(null,m.vertices.slice(i,i+3))<=8.50001);assertClose(Math.hypot.apply(null,m.vertices.slice(i+3,i+6)),1,.00001);}});});
     assert(window.Driftworks.shipPackModels.find('missing')===null);
   });

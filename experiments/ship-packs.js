@@ -109,7 +109,7 @@
     }
     /** @param {number} index @param {number} wave */
     function mixedModel(index, wave) {
-        var packs = DW.shipPacks || [], models = /** @type {Model[]} */ ([]), longest = Math.max.apply(null, packs.map(function (p) {
+        var packs = (DW.shipPacks || []).filter(function(pack){return !pack.missionOnly;}), models = /** @type {Model[]} */ ([]), longest = Math.max.apply(null, packs.map(function (p) {
             return p.models.length;
         }));
         // Cycle through the available Quaternius models across waves.
@@ -125,7 +125,7 @@
         /** @type {Map<Model, Pose[]>} */
         var groups = new Map();
         craft.forEach(function (e) {
-            var entry = selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model;
+            var entry = (e.modelId ? find(e.modelId)?.model : null) || (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model);
             if (!entry)
                 return;
             if (!groups.has(entry))
@@ -227,7 +227,7 @@
         /** @type {Map<Model, Pose[]>} */
         var groups = new Map();
         craft.forEach(function (e) {
-            var model = selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model;
+            var model = (e.modelId ? find(e.modelId)?.model : null) || (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model);
             if (!model)
                 return;
             if (!groups.has(model))
@@ -279,6 +279,7 @@
     };
     /** @param {Model} model @returns {Vector[]} */
     function gunAnchors(model) {
+        if(model.gunMounts)return model.gunMounts;
         if (model.id === 'blockout') return [[-3, 4, -1.3], [3, 4, -1.3]];
         var anchors = gunMounts[model.name];
         if (!anchors) throw new Error('No reviewed gun anchors for ' + model.id);
@@ -286,7 +287,7 @@
     }
     /** @param {Model} model */
     function engineAnchors(model) {
-        return engineMounts[model.name] || [];
+        return model.engineMounts || engineMounts[model.name] || [];
     }
     /** @param {ArtCraft[]} craft @param {string} selection @param {number} wave @param {number} units @param {Pose} view @param {number} time @returns {Batch} */
     function engineGeometry(craft, selection, wave, units, view, time) {
@@ -302,7 +303,7 @@
         craft.forEach(function (e) {
             if ((e.hp !== undefined && e.hp <= 0) || e.age !== undefined || e.pose.throttle <= 0)
                 return;
-            var entry = selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model;
+            var entry = (e.modelId ? find(e.modelId)?.model : null) || (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model);
             var anchors = entry ? engineAnchors(entry) : [[0, -6, 0]], p = e.pose;
             var power = Math.min(1, Math.max(0, p.throttle)), pulse = 1 + .035 * Math.sin(time * 23 + e.index * 2.7);
             anchors.forEach(function (anchor) {
@@ -368,7 +369,7 @@
     }
     /** @param {ArtCraft} e @param {string} selection @param {number} wave */
     function craftModel(e, selection, wave) {
-        return (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model) || blockout;
+        return (e.modelId ? find(e.modelId)?.model : null) || (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model) || blockout;
     }
     /** @param {Pose} p @param {Vector} world @param {number} units */
     function localPoint(p, world, units) {

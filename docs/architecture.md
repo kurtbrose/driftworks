@@ -187,6 +187,7 @@ Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 | `styles.css`, `index.html` | DOM layout and static entry point. |
 | `tests/tests.js` | Shared browser/headless regression suite for simulation and exposed game helpers. |
 | `tests/scenario.js`, `tests/scenarios.cjs` | Shared deterministic replay/assertion helpers and Node JSON fixture entry point; see [scenario replay](scenarios.md). |
+| `tools/headless.cjs` | Development-only isolated production-script loader and fixed-tick flight driver, exposing real session state, comms transcripts and observed events without browser resources; see [headless development](headless.md). |
 
 New durable gameplay rules belong in simulation transitions. Rendering should
 consume world snapshots, and input should translate gestures into commands.
@@ -1591,3 +1592,17 @@ world units/second, simulation age, size, seed); tactical scenes consume
 bullet impacts, retain inherited velocity, and expire after 5.5 simulation seconds.
 Pause freezes their age. Geometry and draw pools are reused; only the newest twelve
 explosions are drawn. Effects add no damage rules or persistent world state.
+
+
+### Aegis hangar departures
+
+The kit bake owns mixed hull layout and conservative through-hangar apertures.
+The Aegis rig subtracts those apertures from its coarse hull boxes, and owns the
+bounded reinforcement schedule and initial departure poses. The flight
+composition opts its encounter into `Combat.hangarSupport` when resetting the
+rig. Training stages allies during supported waves rather than spawning them in
+open space, and does not declare an allied defeat while the carrier can replace
+them. An optional `Craft.hangarLaunch.remaining` holds straight departure until
+clear, then ordinary AI resumes. These fields belong to the experiment combat,
+not the persistent Driftworks world. Normal flight and missions omit the flag
+and retain their existing lifecycle.

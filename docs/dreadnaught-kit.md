@@ -217,3 +217,41 @@ the target/lead and have a clear forward ray past the ship hull. Each such volle
 starts a normal rest interval and resets the silence timer; any accurate shot
 also resets it. Normal aligned bursts remain preferred. Pausing freezes these
 timers and disabled combat or missing/out-of-range enemies cannot trigger them.
+
+
+## Through-hull hangars and mixed segments
+
+Open **Individual hull segments** in the kit to choose each segment's hull,
+upper attachment and lower attachment independently. The Dreadnaught preset uses
+armored / hangar / armored / utility / armored / armored hulls. Preset changes
+reset the overrides; the reset button returns to the bulk controls' layout.
+OBJ export retains separate named segment and attachment objects.
+
+The hangar is an open box across the beam, with a deck, ceiling, end walls,
+portal frames and runway lights. Its center has no spine or closed rear wall.
+The flight bake records module positions and conservative 90 m × 40 m clear
+apertures. Runtime collision partitions the hull around these apertures so a
+player or projectile can pass through either side while floors, ceilings and
+end walls remain solid. Flight currently uses the baked mixed Dreadnaught
+preset; edits in the kit are authoring previews and do not automatically replace
+the running flight asset. Regenerate with `node tools/bake-aegis-flight.cjs`.
+
+In the Aegis encounter the initial allied wing is staged inside the hangar.
+The first fighter launches after one second, then one every three seconds,
+alternating port and starboard mouths (and cycling hangars if several are baked).
+Each craft spends 2.2 seconds moving straight at 60 m/s before normal combat AI
+takes control in clear space. Launch poses use the flight model's handedness,
+and collision hulls follow the same selected fleet artwork as other fighters.
+The hangar maintains up to eight live wingmen and replaces losses; dead launched
+craft are removed from the active list once their ordinary wreck copy exists.
+Existing wreck limits remain in force. Pause, disabled combat, player death and
+between-wave countdowns suppress launches.
+
+`AegisFlightRig.reset(combat)` stages the allied wing and opts that experiment
+combat into `hangarSupport`. Subsequent furball waves retain surviving allied craft and their original hull
+art while spawning their enemies, leaving new allies for the hangar; an empty allied roster does not end a wave while
+reinforcements are available. Other flight modes retain their ordinary spawn and
+wave behavior. Temporary `Craft.hangarLaunch.remaining` is JSON-safe and is
+removed when departure hands over to AI. Tests cover independent slot choices,
+mesh and collision through-rays, deck/end-wall solidity, alternating departures,
+launch pose orientation, AI handoff, wing limits, replenishment and reset.

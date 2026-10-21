@@ -189,6 +189,8 @@
             get('art-credit').textContent = String(error);
         });
         var skybox = DW.flightSkybox.create(host);
+        var roadsideDefinition=DW.flightMissions.current().scenery.find(function(item){return item.kind==='roadside';});
+        var roadside=roadsideDefinition?DW.flightScenery.create(roadsideDefinition):null;
         var signDefinition=DW.flightMissions.current().scenery.find(function(item){return item.kind==='highway-sign';});
         var ohioSign=signDefinition?new Image():null, signRadius=-1, signBatches=/** @type {Batch[]} */([]);
         if(ohioSign&&signDefinition)ohioSign.src=assetUrl(signDefinition.asset);
@@ -270,6 +272,7 @@
                 }
                 signBatches.forEach(function(batch){actorBatches.push(Object.assign({},batch,{origin:/** @type {[number,number,number]} */([asteroid.position.x,asteroid.position.y,0]),rotation:asteroid.rotation}));});
             }
+            if(asteroid&&roadside)roadside.render(asteroid).forEach(function(batch){actorBatches.push(Object.assign({},batch,{origin:/** @type {[number,number,number]} */([asteroid.position.x,asteroid.position.y,0]),rotation:asteroid.rotation}));});
             if (asteroid) (combat.terrainScorches || []).forEach(function (point) {
                 var batches = burns.get(point);
                 if (!batches) { batches = terrainScorch(asteroid, point); burns.set(point, batches); }

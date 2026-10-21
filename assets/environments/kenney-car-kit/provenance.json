@@ -1,0 +1,13 @@
+{
+  "author": "Kenney",
+  "license": "CC0-1.0",
+  "source": "https://kenney.nl/assets/car-kit",
+  "archiveSha256": "fac7dacac5c7874348cf19729af3ef205f3d366493edaf0a827d93f4fdf3d0c4",
+  "retainedLocally": false,
+  "models": [
+    "tractor",
+    "truck",
+    "truck-flat"
+  ],
+  "processing": "Blender 5.2 glTF export, texture palette sampled into materials; runtime bake reduces to six palette colors."
+}

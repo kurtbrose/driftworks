@@ -379,8 +379,28 @@
         comms:{calls:calls,named:named,friendlyAddress:['bud','neighbor'],hostileAddress:['hotshot'],ambientCast:true},
         portraits:{folder:'ohio',cast:'ohio'},
         sky:{kind:'landmarks',features:[{asset:'ohio-planet-v1.png',yaw:90,pitch:4,roll:0,widthDeg:44,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:30,roll:0,widthDeg:7,gain:1}]},
-        scenery:[{kind:'highway-sign',asset:'../assets/backgrounds/ohio-highway-sign.svg'}],
-        encounter:{immediate:true,callsigns:['Cuyahoga Cryptid','Buckeye Bandit','Lake Erie Larry','Aunt Barb','Doug','Deb','Big Dale','Marge','Turnpike Wraith','Tammy','Cousin Donnie','Sheryl','Scooter','Hocking Goblin','Uncle Rick','Joanie']},
-        opening:[{text:"It's all Ohio?",speakerIndex:0,channel:'OPEN CHANNEL'},{text:'Always has been.',speakerIndex:8,channel:'OPEN CHANNEL'}]
+        scenery:[{kind:'highway-sign',asset:'../assets/backgrounds/ohio-highway-sign.svg'},
+            {kind:'roadside',scale:1/3,anchor:[0,-300],offset:[0,-350],asset:'../assets/environments/ohio-roadside-v1/catalog.json',placements:[
+                {model:'Barn',x:-450,y:-420,size:340,yaw:.12},
+                {model:'Silo',x:-690,y:-310,size:270,yaw:0},
+                {model:'WaterTower',x:720,y:-450,size:320,yaw:0},
+                {model:'Windmill',x:-780,y:-110,size:290,yaw:.3},
+                {model:'ChickenCoop',x:-100,y:-590,size:105,yaw:-.3},
+                {model:'FuelStop',x:340,y:-490,size:400,yaw:0},
+                {model:'Tractor',x:-450,y:-610,size:90,yaw:.4},
+                {model:'Truck',x:210,y:-725,size:100,yaw:0},
+                {model:'Flatbed',x:590,y:-720,size:105,yaw:.1},
+                {model:'Fence',x:-680,y:-120,size:110,yaw:0},
+                {model:'Fence',x:-570,y:-120,size:110,yaw:0},
+                {model:'Fence',x:-460,y:-120,size:110,yaw:0},
+                {model:'Fence',x:-350,y:-120,size:110,yaw:0},
+                {model:'Fence',x:-740,y:-190,size:110,yaw:1.5708},
+                {model:'Fence',x:-740,y:-300,size:110,yaw:1.5708},
+                {model:'Fence',x:540,y:-560,size:110,yaw:0},
+                {model:'Fence',x:650,y:-560,size:110,yaw:0}
+            ]}],
+        encounter:{count:8,reinforcements:{launchModel:'Barn',rosterSplit:8,launchSeconds:4,launchSpeed:90},craftModels:['','ohio-truck','ohio-tractor',''],immediate:true,callsigns:['Cuyahoga Cryptid','Buckeye Bandit','Lake Erie Larry','Aunt Barb','Doug','Deb','Big Dale','Marge','Turnpike Wraith','Tammy','Cousin Donnie','Sheryl','Scooter','Hocking Goblin','Uncle Rick','Joanie']},
+        opening:[{text:"It's all Ohio?",speakerIndex:0,channel:'OPEN CHANNEL'},{text:'Always has been.',speakerIndex:4,channel:'OPEN CHANNEL'}]
     },'furball');
 }());
+

@@ -8,8 +8,21 @@ use relative URLs and do not introduce runtime network dependencies.
 
 - From the repository root, run `python -m http.server 8000`, `serve.bat` on
   Windows, or `./serve.sh` on Unix. Open `http://localhost:8000/`.
-- Run `npm run check` before considering a task complete. It performs both the
-  type check and the dependency-free test suite.
+- During development, run focused tests covering the changed code and affected
+  callers instead of rerunning the entire suite after every edit. Run standalone
+  checks with `node tests/<relevant-file>.cjs`, or selected scenario replays with
+  `node tests/scenarios.cjs tests/scenarios/<relevant-scenario>.json`. Inspect the
+  test entry point first: some checks require the shared runner's setup.
+- Validate behavior headlessly before opening the renderer. For flight spawning,
+  targeting and callouts, use the real session from `tools/headless.cjs` in Node or
+  Codex's JavaScript REPL; see [headless development](docs/headless.md) for setup,
+  stepping, live state access and transcripts. Turn useful probes into focused
+  regressions. Use browser checks for presentation/input/audio and integration
+  that the headless API does not exercise.
+- Run `npm run check` once before considering a code task complete. It performs
+  type checking, asset validation, and the dependency-free test suite. Repeat it
+  only when subsequent changes, failures, or unresolved concerns justify it.
+  Documentation-only changes need a review of the diff, not the full suite.
 - Run the dependency-free suite with `node tests/run.cjs`, or open
   `http://localhost:8000/tests/`. Both execute `tests/tests.js`.
 - For a captured gameplay bug, follow [scenario replay](docs/scenarios.md).

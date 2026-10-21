@@ -1,20 +1,21 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aegis · modular dreadnaught kit</title>
 <style>*{box-sizing:border-box}body{margin:0;background:#080e17;color:#dae4e7;font:14px/1.6 system-ui}aside{position:absolute;left:0;top:0;bottom:0;width:300px;padding:28px;overflow:auto;background:#101a24;border-right:1px solid #33424b}small{font-size:10px;letter-spacing:3px;color:#c69d65}h1{font-weight:400;font-size:36px;line-height:1.1;margin:18px 0}p{color:#91a5b4;font-size:12px}label{display:block;margin:18px 0;color:#b9c9d0;font-size:12px}select,button{background:#1a2a36;color:#e1e9ed;border:1px solid #415363;padding:10px;border-radius:3px}select,input[type=range]{display:block;width:100%;margin-top:7px}button{cursor:pointer;margin:4px 0}button:hover{border-color:#dab57e}#viewport{position:absolute;inset:0 0 0 300px}canvas{display:block;width:100%;height:100%;touch-action:none}#caption{position:absolute;left:28px;top:22px;pointer-events:none;font-size:11px;letter-spacing:2px;color:#9cb4c5}footer{position:absolute;bottom:20px;left:28px;font-size:11px;color:#8aa0b0;pointer-events:none}#stats{border-top:1px solid #33424b;padding-top:16px;color:#c6a775}a{color:#9fc5d6}@media(max-width:700px){aside{width:220px;padding:16px}#viewport{left:220px}h1{font-size:28px}}</style>
-<script src="../src/asset-versions.js?v=235e18d33549"></script>
+<script src="../src/asset-versions.js?v=a8efd5c594df"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
 <body><aside><small>DRIFTWORKS / MODEL STUDY 02</small><h1>AEGIS<br>Ship kit.</h1><p>A procedural study from the supplied concept. Standard spine interfaces. Swappable mission sections. Shared attachment sockets.</p>
 <label>Configuration<select id="preset"><option value="cruiser">01 / Fleet cruiser</option><option value="carrier">02 / Fleet carrier</option><option value="battleship">03 / Dreadnaught</option></select></label>
 <label>Prow<select id="prow"><option value="lance">Lance / long sensor spine</option><option value="command">Command / armored wedge</option></select></label>
 <label>Mid-hull sections<input id="count" type="range" min="2" max="7" value="4"></label>
-<label>Mission section<select id="mission"><option value="standard">Armored hull</option><option value="hangar">Open hangar</option><option value="utility">Reactor / utility</option></select></label>
+<label>Mission section<select id="mission"><option value="standard">Armored hull</option><option value="hangar">Through hangar</option><option value="utility">Reactor / utility</option></select></label>
+<details><summary>Individual hull segments</summary><p>Override the hull and upper/lower attachment on each segment.</p><div id="segments"></div><button id="reset-segments">Reset segment overrides</button></details>
 <label>Drive block<select id="drive"><option value="standard">Standard / three drives</option><option value="heavy">Heavy / five drives</option></select></label>
 <label>Dorsal sockets<select id="attachment"><option value="turret">Twin heavy batteries</option><option value="cargo">Cargo pods</option><option value="sensor">Sensor stations</option><option value="none">Empty hardpoints</option></select></label>
 <label>Ventral sockets<select id="ventral"><option value="turret">Twin heavy batteries</option><option value="cargo">Cargo pods</option><option value="sensor">Sensor stations</option><option value="none">Empty hardpoints</option></select></label>
 <label><input id="fighters" type="checkbox" checked> Escort fighters · true scale, 12 m</label>
 <label>Explode kit<input id="explode" type="range" min="0" max="100" value="0"></label>
 <label><input id="spin" type="checkbox"> Turntable</label>
-<button id="quarter">Perspective</button> <button id="top">Top</button> <button id="side">Side</button> <button id="bottom">Underside</button> <button id="escort-view">Escort detail</button><br><button id="export">Export assembled OBJ</button>
+<button id="quarter">Perspective</button> <button id="top">Top</button> <button id="side">Side</button> <button id="bottom">Underside</button> <button id="escort-view">Escort detail</button> <button id="hangar-view">Hangar detail</button><br><button id="export">Export assembled OBJ</button>
 <p id="stats"></p><p><a href="flight.html?aegis=1">Fly Aegis battleship · live turret scenario</a></p><p>Drag to orbit · Wheel to zoom.<br>Export includes separate named modules; materials and engine lighting remain a viewer study.</p><a href="./">Experiments</a></aside>
 <div id="viewport"><div id="caption">MODULAR CAPITAL PLATFORM / GEOMETRY PROTOTYPE</div><footer>ARMOR / STRUCTURE / SYSTEMS &nbsp; • &nbsp; COMMON 10 × 8 INTERFACE</footer></div>
 <script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script>
@@ -170,26 +171,19 @@ function wedge(g,length,wide=10) {
 function mid(g,type) {
   if(type==='standard')plated(g,16);
   if(type==='hangar') {
+    // A real open box: roof/floor and longitudinal end walls, no center spine.
     box(g,0,3.3,0,15,1.4,9.5);box(g,0,-3.3,0,15,1.4,9.5);
-    box(g,0,0,0,15,5.2,2,dark);
+    for(const x of [-6.7,6.7])box(g,x,0,0,1.6,5.2,9.5,dark);
     for(const x of [-7,7])collar(g,x,10,8,1.1);
     for(const side of [-1,1]) {
-      box(g,0,-2.5,side*4,12,.1,2,trim);
-      for(const x of [-4,0,4]) {
-        box(g,x,0,side*1.12,2.7,3.2,.18,trim);
-        box(g,x,.05,side*1.24,2.15,2.5,.12,dark);
-        box(g,x,1.5,side*1.38,2.5,.16,.25,amber);
-        for(const xx of [-.7,.7])box(g,x+xx,0,side*1.35,.1,2,.12,gold);
-        box(g,x,-1.6,side*2,2.5,.5,1.5,trim);
-      }
-      for(let x=-5;x<=5;x+=2)box(g,x,-2.4,side*4,.15,.08,1.5,gold);
-      box(g,0,2.5,side*4.7,11,.15,.18,amber);
-      for(const x of [-5.8,5.8])box(g,x,0,side*4.8,.45,5.2,.5,armor);
-      for(let x=-5;x<6;x+=2) {
-        box(g,x,3.99,side*2.2,1.85,.12,3.4,pale);
-        box(g,x,-2.4,side*3.8,.12,.08,1.9,amber);
-      }
-    }connector(g,-8);connector(g,7.3);
+      for(const x of [-5.9,5.9])box(g,x,0,side*4.75,.3,5.2,.35,armor);
+      box(g,0,2.5,side*4.75,11.5,.16,.25,amber);
+      box(g,0,-2.5,side*4.75,11.5,.16,.25,trim);
+      for(let x=-5;x<=5;x+=1)box(g,x,-2.56,side*3.9,.35,.07,1.3,gold);
+    }
+    for(const z of [-1.8,0,1.8])box(g,0,2.55,z,9,.06,.1,blue);
+    for(let z=-4;z<=4;z+=1)for(const x of [-3.5,3.5])box(g,x,-2.56,z,.12,.07,.5,blue);
+    connector(g,-8);connector(g,7.3);
   }
   if(type==='utility') {
     hull(g,16,7,6);connector(g,-7.65);connector(g,7.65);
@@ -225,6 +219,23 @@ function drive(g,heavy) {
     const rib=box(g,3.7,side*6,flank*5,4,.2,.3,trim);rib.rotation.z=side*.75;
   }
 }
+let segmentOverrides=[];
+function segmentChoice(index,c=config()) {
+  return Object.assign({mission:c.mission==='standard'?'standard':(index%2===0?c.mission:'standard'),attachment:c.attachment,ventral:c.ventral},segmentOverrides[index]);
+}
+function segmentEditors(c,count){
+  const choices={mission:[['standard','Armored hull'],['hangar','Through hangar'],['utility','Reactor / utility']],attachment:[['turret','Turrets'],['cargo','Cargo'],['sensor','Sensors'],['none','Empty']],ventral:[['turret','Turrets'],['cargo','Cargo'],['sensor','Sensors'],['none','Empty']]};
+  el('segments').innerHTML=Array.from({length:count},(_,i)=>{
+    const selected=segmentChoice(i,c);
+    return `<fieldset style="border:1px solid #33424b;margin:12px 0"><legend>Segment ${i+1} / bow to stern</legend>`+Object.entries(choices).map(([slot,options])=>`<label>${slot==='mission'?'Hull':slot==='attachment'?'Upper attachment':'Lower attachment'}<select aria-label="Segment ${i+1} ${slot}" data-segment="${i}" data-slot="${slot}">${options.map(([value,label])=>`<option value="${value}" ${selected[slot]===value?'selected':''}>${label}</option>`).join('')}</select></label>`).join('')+'</fieldset>';
+  }).join('');
+}
+el('segments').addEventListener('change',event=>{
+  const {segment,slot}=event.target.dataset,index=Number(segment);
+  if(!Number.isInteger(index)||index<0||index>=Number(el('count').value)||!['mission','attachment','ventral'].includes(slot))return;
+  segmentOverrides[index]=Object.assign({},segmentOverrides[index],{[slot]:event.target.value});rebuild();
+});
+el('reset-segments').onclick=()=>{segmentOverrides=[];rebuild();};
 function config(){return Object.fromEntries(['prow','count','mission','drive','attachment','ventral','explode'].map(id=>[id,el(id).value]));}
 function attach(g,kind,side,gap,last) {
   const mount=new THREE.Group();mount.name=side===1?'dorsal_socket':'ventral_socket';
@@ -262,15 +273,16 @@ function rebuild() {
   };
   module('P_'+c.prow,noseLength,g=>{wedge(g,noseLength);if(c.prow==='command')sensor(g,6,3,0);},0);
   for(let i=0;i<count;i++) {
-    const type=c.mission==='standard'?'standard':(i%2===0?c.mission:'standard');
+    const selected=segmentChoice(i,c),type=selected.mission;
     module(`M_${i+1}_${type}`,16,g=>{
       mid(g,type);
       if(i===count-1)bridge(g);
-      attach(g,c.attachment,1,gap,i===count-1);
-      attach(g,c.ventral,-1,gap,false);
+      attach(g,selected.attachment,1,gap,i===count-1);
+      attach(g,selected.ventral,-1,gap,false);
     },i+1);
   }
   module('E_'+c.drive,12,g=>drive(g,c.drive==='heavy'),count+1);
+  segmentEditors(c,count);
   el('stats').textContent=`${Math.round(total*9)} m nominal length · ${count+2} spine modules · ${count} dorsal + ${count} ventral sockets. Escorts: 12 m each, no scale exaggeration.`;
 }
 function view(which='quarter') {
@@ -282,10 +294,16 @@ function view(which='quarter') {
 for(const id of ['prow','count','mission','drive','attachment','ventral','explode'])el(id).addEventListener('input',rebuild);
 el('preset').addEventListener('change',()=>{
   const presets={cruiser:['lance',4,'standard','standard','turret','turret'],carrier:['command',5,'hangar','heavy','sensor','cargo'],battleship:['lance',6,'standard','heavy','turret','turret']};
+  segmentOverrides=el('preset').value==='battleship'?[,{mission:'hangar'},,{mission:'utility'}]:[];
   ['prow','count','mission','drive','attachment','ventral'].forEach((id,i)=>el(id).value=presets[el('preset').value][i]);rebuild();view();
 });
 for(const id of ['quarter','top','side','bottom'])el(id).onclick=()=>view(id);
 el('escort-view').onclick=()=>{el('fighters').checked=true;escorts.visible=true;const f=Math.max(1,1.3/(host.clientWidth/host.clientHeight));camera.position.set(-13-6*f,9*f,14+28*f);controls.target.set(-13,0,14);controls.update();};
+el('hangar-view').onclick=()=>{
+  const bay=ship.children.find(section=>section.name.endsWith('_hangar'));
+  if(!bay){el('stats').textContent='Choose a through-hangar segment to inspect its passage.';return;}
+  camera.position.set(bay.position.x-4,1.8,18);controls.target.set(bay.position.x,0,0);controls.update();
+};
 el('export').onclick=()=>{
   // Export in assembly coordinates, regardless of the inspection/explosion setting.
   const previous=el('explode').value;el('explode').value='0';rebuild();ship.updateMatrixWorld(true);

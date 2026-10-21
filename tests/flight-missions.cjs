@@ -5,10 +5,10 @@ for(const file of ['experiments/flight-missions.js','experiments/mission-ohio.js
 const api=context.window.Driftworks.flightMissions,defaults=api.resolve(),ohio=api.current();
 assert.equal(ohio.id,'ohio');assert.equal(api.resolve('unknown'),defaults);
 assert.equal(ohio.units.speedLabel,'mph');assert.equal(ohio.units.distanceLabel,'yd');
-assert.equal(ohio.encounter.kind,'furball');assert.equal(ohio.encounter.count,16);
+assert.equal(ohio.encounter.kind,'furball');assert.equal(ohio.encounter.count,8);
 assert.equal(ohio.opening[1].text,'Always has been.');assert.equal(ohio.scenery[0].kind,'highway-sign');
 assert.equal(defaults.opening.length,0);assert.equal(defaults.comms.friendlyAddress[0],'pilot');
-const patch={units:{distanceLabel:'ft',distanceScale:3.28084},teams:{ally:{target:'TEST'}},opening:[],encounter:{callsigns:['Test One']}};
+const patch={units:{distanceLabel:'ft',distanceScale:3.28084},teams:{ally:{target:'TEST'}},opening:[],encounter:{reinforcements:null,callsigns:['Test One']}};
 const test=api.define('test',patch,'ohio');
 assert.equal(test.units.speedLabel,'mph');assert.equal(test.units.distanceLabel,'ft');
 assert.equal(test.teams.ally.status,'Ford Folks');assert.equal(test.teams.ally.target,'TEST');

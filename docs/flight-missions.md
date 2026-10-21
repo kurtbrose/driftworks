@@ -52,7 +52,12 @@ window.Driftworks.flightMissions.define('county-fair', {
   accepts exactly two authored tangent-space images (planet and sun), using the
   existing single background pass and independent crisp stars.
 - `scenery`: authored renderer descriptors. The initial built-in handler is
-  `highway-sign`; its local image path comes from the definition. Additional
+  `highway-sign`; its local image path comes from the definition. The `roadside`
+  handler loads a local normalized mesh catalog and accepts `placements` with
+  `model`, `x`, `y`, `size` (maximum dimension in metres), and `yaw` (radians).
+  Optional `scale` and `anchor` shrink the entire layout together; `offset`
+  translates it in asteroid-local metres after scaling. The settlement
+  uses a flat platform resting on sampled terrain and batches by color. Additional
   scenery types need renderer implementations, rather than functions in data.
 - `encounter`: built-in `training`, `furball` or `patrol` behavior, fixed count
   (zero retains the training wave count), immediate spawn, cast names and start
@@ -72,11 +77,33 @@ compatibility adapters to the registry; gameplay consumers pass mission IDs.
 
 This is a small authored mission format, not a campaign/save format, scripting
 language or editor. New encounter and scenery mechanisms still require ordinary
-shared code. The truck-stop/farm assets are available but are not placed by this
-migration.
+shared code. Ohio places a small farm/fuel-stop cluster beneath the sign through its `roadside` descriptor.
 
 Run `node tests/flight-missions.cjs` for inheritance/immutability validation and
 `npm run check` for the full suite. Browser checks should cover default flight,
 Ohio's full opening/combat transition, units, labels, wardrobe and sky/sign.
 The regression suite also registers a third mission with four ships, a different
 spawn, distance units and firing line, ensuring consumers do not depend on Ohio.
+
+### Continuous rosters and craft overrides
+
+`encounter.count` is the number of AI craft, excluding the player. Ohio uses eight
+(four on each side). Its sixteen `callsigns` retain stable cast/voice indices:
+the first eight belong to Ford Folks, the next eight to Chevy Crew.
+`encounter.reinforcements` supplies `rosterSplit`, `launchModel`, `launchSeconds`
+and `launchSpeed` (metres/second). A destroyed AI slot immediately receives the
+next inactive pilot from its own half of the roster, with a fresh unique ID and
+defenses. Continuous encounters do not trigger round victory/wave resets.
+
+The session samples the flat roadside deck once per asteroid radius/mission and
+rotates the named building's doorway with the asteroid. Replacements fly a short
+straight departure before normal AI steering takes over. They cannot fire during
+this departure. Death effects and bounded wrecks retain the original model.
+
+`encounter.craftModels` cycles optional model IDs by stable cast index; empty
+entries use the ordinary chosen fighter artwork. `ArtCraft.modelId` carries the
+explicit override through collision, display, headlight gun anchors, engine
+plumes, target cameras and wrecks. Optional model `gunMounts`/`engineMounts` use
+the existing flight coordinates in metres (+X right, +Y forward, +Z up).
+Mission-only packs are excluded from the generic mixed-spaceship catalog.
+These settings are optional; set `reinforcements: null` to disable an inherited continuous roster. Other missions retain their existing wave rules.

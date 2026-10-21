@@ -185,3 +185,41 @@ const stoppedShow=showRig.telemetry();showRig.step(0,showView);assert.deepEqual(
 showView.combat.enabled=false;for(let i=0;i<360;i++)showRig.step(1/60,showView);assert.equal(showRig.telemetry().shots,stoppedShow.shots,'disabled combat suppresses speculative shots');
 showView.combat.enabled=true;showView.enemy.pose.eye=position(10000,0,200);const noContactShots=showRig.telemetry().shots;for(let i=0;i<600;i++)showRig.step(1/60,showView);assert.equal(showRig.telemetry().shots,noContactShots,'no speculative fire without an enemy in range');
 console.log('PASS speculative AA: sparse twin volleys against jinking targets, barrel-directed flight, long gaps, pause/disable/range guards');
+
+// The baked mixed fit owns both its visible through-bay and its collision opening.
+const bay=DW.aegisFlightAsset.hangars[0];assert.ok(bay);
+assert.ok(new Set(DW.aegisFlightAsset.modules.map(m=>m.type)).size>=3,'default flight hull mixes armored, hangar and utility segments');
+const bayRig=DW.aegisFlight.create(),cx=bay.position[0],cz=bay.position[2];
+assert.equal(bayRig.hit(position(cx,-100,cz),position(cx,100,cz)),null,'collision passage goes in one side and out the other');
+assert.ok(bayRig.hit(position(cx+bay.halfWidth+2,-100,cz),position(cx+bay.halfWidth+2,100,cz)),'solid end wall remains');
+assert.ok(bayRig.hit(position(cx,0,cz),position(cx,0,cz-40)),'deck blocks movement');
+assert.ok(bayRig.hit(position(cx,0,cz),position(cx,0,cz+40)),'ceiling blocks movement');
+const passage=fixture();passage.state.eye=position(cx,-100,cz);bayRig.step(.01,passage);passage.state.eye=position(cx,100,cz);bayRig.step(.01,passage);assert.equal(bayRig.telemetry().contacts,0,'player can cross the bay');
+const bayView=fixture();bayView.enemy.pose.eye=position(10000,0,200);bayRig.reset(bayView.combat);
+for(let i=0;i<65;i++)bayRig.step(1/60,bayView);
+const firstLaunch=bayView.combat.enemies.find(e=>e.team==='ally');assert.ok(firstLaunch);assert.ok(firstLaunch.hangarLaunch);assert.ok(firstLaunch.pose.right[0]*firstLaunch.pose.up[2]*-firstLaunch.pose.back[1]>.99,'launch pose retains the flight model handedness');assert.ok(firstLaunch.pose.velocity[1]<0);assert.equal(firstLaunch.pose.eye[0],cx/U);assert.equal(firstLaunch.pose.eye[2],1200+cz/U);
+for(let i=0;i<180;i++)bayRig.step(1/60,bayView);
+const otherMouth=bayView.combat.enemies.filter(e=>e.team==='ally')[1];assert.ok(otherMouth.pose.velocity[1]>0,'successive craft launch through opposite sides');
+for(let i=0;i<2400;i++)bayRig.step(1/60,bayView);
+assert.equal(bayView.combat.enemies.filter(e=>e.team==='ally'&&e.hp>0).length,8,'bounded reinforcement wing');
+const cappedLaunches=bayRig.telemetry().launches;bayView.combat.enabled=false;for(let i=0;i<360;i++)bayRig.step(1/60,bayView);assert.equal(bayRig.telemetry().launches,cappedLaunches,'disabled combat cannot launch');
+bayView.combat.enabled=true;firstLaunch.hp=0;for(let i=0;i<240;i++)bayRig.step(1/60,bayView);assert.equal(bayRig.telemetry().launches,cappedLaunches+1,'lost wingman gets a replacement');
+const bayPause=bayRig.telemetry();bayRig.step(0,bayView);assert.deepEqual(bayRig.telemetry(),bayPause);
+// Use the real training loop to hold a launched ship straight until clear, then hand off to AI.
+vm.runInContext(fs.readFileSync(path.join(root,'experiments/flight-missions.js'),'utf8'),ctx);
+const launchCombat=DW.training.create('furball');launchCombat.wave=1;launchCombat.hangarSupport=true;launchCombat.enabled=true;DW.training.bindPlayer(launchCombat,bayView.state);
+firstLaunch.hp=firstLaunch.maxHp;firstLaunch.pose.eye=position(cx,0,cz);firstLaunch.pose.velocity=[0,-60,0];firstLaunch.hangarLaunch={remaining:2.2};firstLaunch.fire=false;
+const passive=DW.training.createCraft('passive',DW.arcade.create(0),'enemy');passive.pose.eye=position(10000,0,200);passive.controller='input';
+launchCombat.enemies=[firstLaunch,passive];
+for(let i=0;i<132;i++)DW.training.step(launchCombat,bayView.state,1/60,0);
+assert.ok(firstLaunch.pose.eye[1]*U< -125,'craft reaches clear space beyond the hull');
+assert.ok(Math.abs(firstLaunch.pose.eye[0]*U-cx)<1e-7&&Math.abs((firstLaunch.pose.eye[2]-1200)*U-cz)<1e-7,'launch path stays straight in the tunnel');
+DW.training.step(launchCombat,bayView.state,1/60,0);assert.equal(firstLaunch.hangarLaunch,undefined,'launch phase hands off to normal AI');
+launchCombat.enemies=[passive];DW.training.step(launchCombat,bayView.state,1/60,0);assert.equal(launchCombat.roundOver,false,'pending hangar reinforcements keep furball alive without wingmen');
+bayRig.reset(bayView.combat);assert.equal(bayRig.telemetry().launches,0);assert.ok(bayView.combat.enemies.every(e=>e.team!=='ally'),'reset restages wingmen instead of leaving old launches');
+console.log('PASS Aegis hangars: mixed hull, through collision/deck/walls, alternating launch mouths, bounded replenishment, straight departure, AI handoff and reset');
+
+launchCombat.enemies=[firstLaunch,passive];const survivorPosition=firstLaunch.pose.eye.slice();DW.training.spawn(launchCombat,bayView.state,0);
+assert.equal(launchCombat.enemies.filter(e=>e.team==='ally').length,1,'new enemy wave does not teleport in an allied wing');
+assert.ok(launchCombat.enemies.includes(firstLaunch),'surviving hangar fighters remain across waves');assert.deepEqual(firstLaunch.pose.eye,survivorPosition);
+console.log('PASS hangar wave continuity: survivors remain in flight and fresh allies still require launches');

@@ -89,6 +89,28 @@
             hulls = { ally: ally, enemy: enemy };
             DW.training.configureHulls(combat, ally, enemy);
         }
+        var launchRadius=-1,launchMode='',launchLocal=/** @type {number[]|null} */(null);
+        // Match the roadside deck's nine support samples once, then rotate its barn doorway.
+        function updateLaunchOrigin(){
+            var definition=DW.flightMissions.resolve(combat.mode);const reserve=definition.encounter.reinforcements;
+            if(!reserve)return;
+            if(launchRadius!==asteroid.radius||launchMode!==combat.mode){
+                launchRadius=asteroid.radius;launchMode=combat.mode;launchLocal=null;
+                var roadside=definition.scenery.find(function(item){return item.kind==='roadside';});
+                var building=roadside&&roadside.placements&&roadside.placements.find(function(item){return item.model===reserve.launchModel;});
+                if(roadside&&building){
+                    var anchor=roadside.anchor||[0,0],offset=roadside.offset||[0,0],scale=roadside.scale===undefined?1:roadside.scale,r=asteroid.radius*units,deck=0;
+                    [-1000,-25,950].forEach(function(x){[-1000,-450,100].forEach(function(y){
+                        var px=anchor[0]+(x-anchor[0])*scale+offset[0],py=anchor[1]+(y-anchor[1])*scale+offset[1];
+                        deck=Math.max(deck,environment.surfaceFrame(asteroid,[px,py,Math.sqrt(Math.max(r*r*.05,r*r-px*px-py*py))]).point[2]*asteroid.radius);
+                    });});
+                    var front=building.size*scale*.3;
+                    launchLocal=[(anchor[0]+(building.x-anchor[0])*scale+offset[0]+Math.sin(building.yaw)*front)/units,
+                        (anchor[1]+(building.y-anchor[1])*scale+offset[1]-Math.cos(building.yaw)*front)/units,deck+9/units];
+                }
+            }
+            if(launchLocal){combat.reinforcementOrigin=rotateVector(launchLocal,asteroid.rotation);combat.reinforcementDirection=rotateVector([0,-.6,.8],asteroid.rotation);}
+        }
         function acquireTarget() { DW.training.acquireTarget(combat, state); }
         function toggleTargetLock() { acquireTarget(); DW.training.toggleTargetLock(combat); }
         function nextTarget() { DW.training.cycle(combat); }
@@ -159,6 +181,7 @@
                     marks.push(rotateVector(point, -asteroid.rotation));
                     if (marks.length > 96) marks.shift();
                 };
+                updateLaunchOrigin();
                 var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, environment.terrainHit);
                 if (feedback.fired)
                     environment.onGunshot();

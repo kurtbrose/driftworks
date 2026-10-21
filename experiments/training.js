@@ -222,6 +222,7 @@
         t.slots = [];
         var count = mission(t).encounter.count || Math.min(6,t.wave+2);
         t.roundOver = false;
+        var retainedAllies=t.hangarSupport?t.enemies.filter(function(e){return e.hp>0&&e.team==='ally';}):[];
         t.enemies = [];
         for (var i = 0; i < count; i++) {
             var pose = DW.arcade.create(radius), lateral = (i - (count - 1) / 2) * 180;
@@ -261,10 +262,18 @@
                 e.retarget = 0;
             });
         }
+        var reserve=mission(t).encounter.reinforcements,art=mission(t).encounter.craftModels||[];
+        if(reserve){
+            var half=Math.ceil(count/2),split=reserve.rosterSplit;
+            t.rosterNext={ally:half,enemy:half};t.replacementSerial=0;
+            t.enemies.forEach(function(e,i){e.index=i<half?i:split+i-half;e.callsign=mission(t).encounter.callsigns[e.index];});
+        }
+        t.enemies.forEach(function(e){if(art.length)e.modelId=art[e.index%art.length]||undefined;});
         if (t.useHullModels) t.enemies.forEach(function (e) {
             var selection = t.hullModels ? ((e.team || 'enemy') === 'ally' ? t.hullModels.ally : t.hullModels.enemy) : 'mixed';
             e.collision = { kind: 'model', modelId: DW.shipPackModels.craftModel(e, selection, t.wave).id };
         });
+        if(t.hangarSupport)t.enemies=t.enemies.filter(function(e){return e.team!=='ally';}).concat(retainedAllies);
         var target = t.enemies.find(function (e) {
             return e.team !== 'ally';
         });
@@ -450,7 +459,7 @@
             radioEvent(t, { kind: 'destroyed', victim: e.id, team: e.team || 'enemy', index: e.index, killer: shooter && typeof shooter === 'object' ? shooter.id : shooter || null });
             var pose = { eye: e.pose.eye.slice(), right: e.pose.right.slice(), up: e.pose.up.slice(), back: e.pose.back.slice(), velocity: e.pose.velocity.slice(), throttle: 0 };
             var axis = unit(add(pose.right, scale(pose.up, e.index % 2 ? -.7 : .7)));
-            t.wrecks.push({ id: e.id + '-wreck', index: e.index, team: e.team, artWave: t.wave, pose: pose, axis: axis, spin: (e.index % 2 ? -1 : 1) * (.25 + (e.index % 5) * .09), age: 0, scorches: e.scorches || [] });
+            t.wrecks.push({ id: e.id + '-wreck', index: e.index, modelId:e.modelId, team: e.team, artWave: t.wave, pose: pose, axis: axis, spin: (e.index % 2 ? -1 : 1) * (.25 + (e.index % 5) * .09), age: 0, scorches: e.scorches || [] });
             // Keep debris across waves, with a bounded rendering/memory budget.
             if (t.wrecks.length > 48)
                 t.wrecks.shift();
@@ -562,6 +571,30 @@
             return true;
         });
     }
+    /** Replace each lost AI slot with the next cast member on its own team.
+     * Launch origins are supplied by the session in scene units; no terrain or browser resources here.
+     * @param {Combat} t @param {FlightState} player @param {number} radius */
+    function replenish(t,player,radius){
+        const config=mission(t).encounter.reinforcements;if(!config||!t.rosterNext)return;
+        var names=mission(t).encounter.callsigns,art=mission(t).encounter.craftModels||[];
+        var assigned=new Set(t.enemies.filter(function(e){return e.hp>0;}).map(function(e){return e.index;}));
+        t.enemies=t.enemies.map(function(old){
+            if(old.hp>0)return old;
+            var side=/** @type {'ally'|'enemy'} */(old.team==='ally'?'ally':'enemy'),next=t.rosterNext;
+            if(!next)return old;
+            var index=0;do{index=(side==='enemy'?config.rosterSplit:0)+(next[side]++%config.rosterSplit);}while(assigned.has(index));assigned.add(index);
+            var pose=DW.arcade.create(radius),direction=t.reinforcementDirection||[0,-.6,.8];
+            pose.eye=(t.reinforcementOrigin||[0,0,radius+10/U]).slice();face(pose,direction);
+            pose.velocity=scale(direction,config.launchSpeed);pose.throttle=1;
+            var craft=createCraft('reserve-'+(t.replacementSerial=(t.replacementSerial||0)+1),pose,side);
+            craft.index=index;craft.callsign=names[index];craft.modelId=art[index%art.length]||undefined;
+            craft.skill=old.skill;craft.pilot=old.pilot;craft.controller='ai';craft.opponentStyle=t.opponentStyle||'baseline';craft.profile=DW.arcade.profiles[index%3===1?1:0];
+            equip(craft,craft.profile,defaultWeapon(craft.profile));
+            craft.hangarLaunch={remaining:config.launchSeconds};craft.mode='launch';craft.goal=player.eye.slice();
+            if(t.useHullModels){var selection=t.hullModels?(side==='ally'?t.hullModels.ally:t.hullModels.enemy):'mixed';craft.collision={kind:'model',modelId:DW.shipPackModels.craftModel(craft,selection,t.wave).id};}
+            return craft;
+        });
+    }
     /** @param {Combat} t @param {FlightState} player @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit] */
     function step(t, player, dt, radius, terrainHit) {
         if (!t.enabled)
@@ -579,6 +612,7 @@
             f.age += dt;
             return f.age < (f.destruction ? 5.5 : .22);
         });
+        replenish(t,player,radius);
         var living = alive(t);
         if (!t.dead && t.mode !== 'asteroid-patrol' && (!living.length || t.roundOver)) {
             t.countdown -= dt;
@@ -598,7 +632,11 @@
         }
         t.enemies.forEach(function (e) {
             if (e.controller !== 'input') e.fire = false;
-            if (e.hp > 0 && e.controller !== 'input') {
+            if(e.hp>0&&e.hangarLaunch){
+                e.pose.eye=add(e.pose.eye,scale(e.pose.velocity,dt/U));
+                e.hangarLaunch.remaining-=dt;e.fire=false;
+                if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
+            } else if (e.hp > 0 && e.controller !== 'input') {
                 var candidates = participants(t).filter(function (other) { return other.hp > 0 && (other.team || 'enemy') !== (e.team || 'enemy'); });
                 var opponent = candidates.length ? candidates[0].pose : null;
                 if (mission(t).encounter.kind==='furball') {
@@ -655,12 +693,13 @@
                 return trace(t, start, end, bolt, e, terrainHit, player);
             }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e));
         });
+        replenish(t,player,radius);
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)
             t.countdown = 5;
-        if ((mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && (!nowAlive.some(function (e) {
+        if (!mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
             return e.team === 'ally';
-        }) || !nowAlive.some(function (e) {
+        })) || !nowAlive.some(function (e) {
             return e.team === 'enemy';
         }))) {
             t.roundOver = true;
@@ -736,3 +775,4 @@
     }
     DW.training = { stepControlled: stepControlled, acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
 }());
+

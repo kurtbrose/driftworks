@@ -124,6 +124,7 @@
     get('combat-toggle').onchange = function (e) {
         comms.reset();
         session.setCombat(get('combat-mode').value, get('combat-toggle').checked);
+        if(aegis)aegis.reset(session.snapshot().combat);
     };
     function profile() {
         if (watch) return model.profiles[watch.replay.options.profile];
@@ -168,7 +169,7 @@
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
         if(aegis){
-            aegis.reset();var snapshot=session.snapshot(),oldEye=snapshot.state.eye.slice(),aegisStart=[-200/units,-1100/units,1200+220/units];
+            var snapshot=session.snapshot();aegis.reset(snapshot.combat);var oldEye=snapshot.state.eye.slice(),aegisStart=[-200/units,-1100/units,1200+220/units];
             DW.training.participants(snapshot.combat).filter(function(c){return c.controller!=='input';}).forEach(function(c){c.pose.eye=c.pose.eye.map(function(v,i){return v+aegisStart[i]-oldEye[i];});});
             session.setStartPosition(aegisStart);snapshot.state.ramp=[0,0,0];snapshot.state.throttle=0;
             var forward=[200,1100,-220],forwardLength=Math.hypot.apply(null,forward);forward=forward.map(function(v){return v/forwardLength;});
