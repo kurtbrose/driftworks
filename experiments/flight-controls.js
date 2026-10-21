@@ -16,7 +16,7 @@
         }
         if (!document.getElementById('touch-controls')) {
             var touchContainer = document.createElement('div');
-            touchContainer.innerHTML = "<div id=\"touch-controls\" aria-label=\"Touch flight controls\">\n<button data-touch=\"pause\" class=\"touch-pause\">Pause</button>\n<div id=\"touch-stick\" role=\"group\" aria-label=\"Drag to steer pitch and yaw\"><span id=\"touch-knob\"></span><span class=\"stick-caption\">STEER</span></div>\n<div class=\"touch-actions\"><button data-touch=\"target\">Target</button><button data-touch=\"weapon\">Weapon</button><button data-touch=\"boost\">Boost</button><button data-touch=\"fire\" class=\"touch-fire\">Fire</button></div>\n<div class=\"touch-throttle\"><button data-touch=\"down\" aria-label=\"Decrease throttle\">−</button><span>THR</span><button data-touch=\"up\" aria-label=\"Increase throttle\">+</button></div>\n</div>";
+            touchContainer.innerHTML = "<div id=\"touch-controls\" aria-label=\"Touch flight controls\">\n<button id=\"flight-fullscreen\" class=\"touch-fullscreen\" type=\"button\">Full screen</button>\n<button data-touch=\"pause\" class=\"touch-pause\">Pause</button>\n<div id=\"touch-stick\" role=\"group\" aria-label=\"Drag to steer pitch and yaw\"><span id=\"touch-knob\"></span><span class=\"stick-caption\">STEER</span></div>\n<div class=\"touch-actions\"><button data-touch=\"target\">Target</button><button data-touch=\"weapon\">Weapon</button><button data-touch=\"boost\">Boost</button><button data-touch=\"fire\" class=\"touch-fire\">Fire</button></div>\n<div class=\"touch-throttle\"><button data-touch=\"down\" aria-label=\"Decrease throttle\">−</button><span>THR</span><button data-touch=\"up\" aria-label=\"Increase throttle\">+</button></div>\n</div>";
             var touchElement = touchContainer.firstElementChild;
             if (touchElement) document.body.appendChild(touchElement);
         }
@@ -99,6 +99,21 @@
             try { window.localStorage.setItem('driftworks.flight.steering', steeringPreset.value); } catch (error) { /* Session controls still work. */ }
         };
         mountTouchUi(document, inputMode);
+        var fullscreenButton = document.getElementById('flight-fullscreen');
+        function enterFullscreen() {
+            if (document.fullscreenElement || !document.documentElement || !document.documentElement.requestFullscreen) return;
+            document.documentElement.requestFullscreen().catch(function () {
+                if (fullscreenButton) fullscreenButton.title = 'Fullscreen was declined. Tap Full screen to retry.';
+            });
+        }
+        if (fullscreenButton) fullscreenButton.onclick = function () {
+            if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+            else enterFullscreen();
+        };
+        get('fly').addEventListener('click', function () { if (inputMode.value === 'touch') enterFullscreen(); });
+        document.addEventListener('fullscreenchange', function () {
+            if (fullscreenButton) fullscreenButton.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+        });
         // Pointer IDs keep both thumbs independent; cancellation always releases demand.
         var touch = {pitch: 0, yaw: 0, fire: false, boost: false, throttleRate: 0};
         var touchRoot = document.getElementById('touch-controls');

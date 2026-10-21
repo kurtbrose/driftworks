@@ -1681,3 +1681,8 @@ their HTML callers. The runtime `asset-versions.js` catalog covers dynamic resou
 JS/CSS. Thus an input-code edit updates only pages that load that code, rather than
 invalidating the catalog on every page. Dynamic application-code loading must add
 an explicit versioning strategy; asset scripts remain supported through `assetUrl`.
+
+The radar draw helper accepts an optional `compact` flag for a 44px-radius mobile
+instrument. Mobile comms use the existing animated portrait texture at 52px.
+Touch Start/Resume requests document fullscreen from its user gesture; the shared
+Full screen control provides a retry/exit action without coupling HUD scale to hit targets.

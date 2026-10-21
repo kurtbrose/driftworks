@@ -615,3 +615,8 @@ the right, tap Target or Weapon to cycle, and hold −/+ to adjust throttle.
 Pause opens the existing flight settings. Touch controls release on cancellation,
 focus loss, and pause. The simplified HUD keeps shield, hull, speed, throttle and
 target name visible; desktop inputs remain available by changing Flight input.
+
+In touch mode, Start/Resume requests fullscreen when the browser supports it.
+The Full screen button retries or exits fullscreen. Mobile browsers that do not
+support element fullscreen can use their Add to Home Screen mode. Comms retain
+small animated portraits; the large touch targets are independent of HUD scale.

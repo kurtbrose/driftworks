@@ -820,7 +820,7 @@ export type ExperimentModules = {
             distance: number;
         } | null;
         speakerHalo: (ctx: import('./gpu-ui-types').PaintContext, x: number, y: number, radius: number) => void;
-        draw: (ctx: import('./gpu-ui-types').PaintContext, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean, missionId?:string|boolean) => void;
+        draw: (ctx: import('./gpu-ui-types').PaintContext, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean, missionId?:string|boolean, compact?:boolean) => void;
     };
     flightControls: {
         mount: (host: HTMLElement, actions: ControlActions, environment?: ControlEnvironment) => {

@@ -602,6 +602,18 @@
     assert(flightControlsFixture(storage,true,{search:'?note=mobile=1'}).controls.view().inputMode==='controller');
   });
 
+  test('touch start requests document fullscreen while desktop start does not',function(){
+    var f=flightControlsFixture(undefined,true),requests=0,exits=0;
+    f.doc.documentElement={requestFullscreen:function(){requests++;return Promise.resolve();}};
+    f.doc.exitFullscreen=function(){exits++;return Promise.resolve();};
+    f.elements.fly.emit('click');assert(requests===1);
+    f.doc.fullscreenElement={};f.elements['flight-fullscreen'].onclick();assert(exits===1);
+    f.doc.fullscreenElement=null;f.elements['input-mode'].value='mouse';
+    f.elements.fly.emit('click');assert(requests===1);
+    delete f.doc.documentElement;f.elements['input-mode'].value='touch';
+    f.elements.fly.emit('click');assert(requests===1);
+  });
+
   test('touch flight keeps two pointers independent and releases on cancellation and pause',function(){
     var f=flightControlsFixture(undefined,true),root=f.elements['touch-controls'],stick=f.elements['touch-stick'];
     function event(id,x,y){return {pointerId:id,clientX:x,clientY:y,preventDefault:function(){}};}

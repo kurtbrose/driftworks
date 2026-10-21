@@ -37,10 +37,10 @@
         ctx.stroke();
         ctx.restore();
     }
-    /** @param {import('./gpu-ui-types').PaintContext} ctx @param {Pose} state @param {RadarContact[]} contacts @param {number} units @param {number} range @param {number} w @param {number} h @param {boolean} paused @param {string|boolean} [missionId] */
-    function draw(ctx, state, contacts, units, range, w, h, paused, missionId) {
+    /** @param {import('./gpu-ui-types').PaintContext} ctx @param {Pose} state @param {RadarContact[]} contacts @param {number} units @param {number} range @param {number} w @param {number} h @param {boolean} paused @param {string|boolean} [missionId] @param {boolean} [compact] */
+    function draw(ctx, state, contacts, units, range, w, h, paused, missionId, compact) {
         var mission=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).flightMissions.resolve(missionId);
-        var radius = Math.min(w < 600 ? 60 : 76, w * .19, h * .17), cx = w / 2, cy = h - radius - (w < 600 ? 240 : 24);
+        var radius = Math.min(compact ? 44 : w < 600 ? 60 : 76, w * .19, h * .17), cx = w / 2, cy = h - radius - (compact ? 28 : w < 600 ? 240 : 24);
         ctx.save();
         ctx.translate(cx, cy);
         ctx.font = '10px ui-monospace,monospace';

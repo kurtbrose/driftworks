@@ -160,7 +160,7 @@
                 radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
                 radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
             }
-            DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, combat.mode);
+            DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, combat.mode, document.body.classList.contains('touch-flight'));
             combatHud.font = '12px ui-monospace,monospace';
             combatHud.textAlign = 'center';
             /** @param {Vector} point */
@@ -292,12 +292,12 @@
             /** @param {string} name @param {number} value @param {number} max @param {number} x @param {number} y @param {number} width @param {string} color */
             function meter(name,value,max,x,y,width,color){var fraction=Math.max(0,Math.min(1,value/Math.max(1,max)));label(name,x,y,10,muted);label(Math.round(fraction*100)+'%',x+width-27,y,10,ink);ctx.fillStyle='#233c43';ctx.fillRect(x,y+6,width,4);ctx.fillStyle=color;ctx.fillRect(x,y+6,width*fraction,4);}
             if (document.body.classList.contains('touch-flight')) {
-                panel(12,12,Math.min(290,w-112),84);
-                meter('SHIELD',combat.shield,combat.maxShield||120,24,32,100,'#79b8e7');
-                meter('HULL',combat.hull,combat.maxHull||100,24,62,100,'#91d29b');
-                label(Math.round(Math.hypot.apply(null,view.state.velocity)*mission.units.speedScale)+' '+mission.units.speedLabel,140,36,16);
-                label('THR '+Math.round(view.state.throttle*100)+'%',140,65,16);
-                label(selected ? DW.training.callsign(selected) : 'NO TARGET',12,120,16,gold);
+                panel(12,12,Math.min(250,w-202),70);
+                meter('SHIELD',combat.shield,combat.maxShield||120,24,29,86,'#79b8e7');
+                meter('HULL',combat.hull,combat.maxHull||100,24,54,86,'#91d29b');
+                label(Math.round(Math.hypot.apply(null,view.state.velocity)*mission.units.speedScale)+' '+mission.units.speedLabel,124,32,13);
+                label('THR '+Math.round(view.state.throttle*100)+'%',124,57,13);
+                label(selected ? DW.training.callsign(selected) : 'NO TARGET',12,104,12,gold);
             } else {
             var leftY=bottom-162;
             panel(margin,leftY,pw,162);
@@ -332,15 +332,15 @@
             var subtitle=commsPanel.querySelector('[data-subtitle]'),speaker=commsPanel.querySelector('[data-speaker]');
             if(!view.paused&&!commsPanel.classList.contains('idle')&&subtitle&&subtitle.textContent){
                 var mobile=document.body.classList.contains('touch-flight');
-                var cw=mobile?Math.min(420,w>600?w-410:w-24):Math.min(640,w-margin*2),cx=(w-cw)/2,cy=mobile?(w>600?12:138):margin;
-                if(mobile&&w>600)cx=320;
-                var portrait=commsPanel.querySelector('canvas.radio-portrait'),hasPortrait=!mobile&&portrait instanceof HTMLCanvasElement&&!portrait.hidden;
-                var portraitSize=Math.min(compact?112:128,h<480?96:128);
+                var cw=mobile?Math.min(360,w>600?w-370:w-24):Math.min(640,w-margin*2),cx=(w-cw)/2,cy=mobile?(w>600?12:114):margin;
+                if(mobile&&w>600)cx=280;
+                var portrait=commsPanel.querySelector('canvas.radio-portrait'),hasPortrait=portrait instanceof HTMLCanvasElement&&!portrait.hidden;
+                var portraitSize=mobile?52:Math.min(compact?112:128,h<480?96:128);
                 var textX=cx+(hasPortrait?portraitSize+30:18),textWidth=cw-(hasPortrait?portraitSize+48:36),fontSize=Math.min(compact?18:32,Math.max(14,Number(get('dialogue-size').value)||22)),columns=Math.max(12,Math.floor(textWidth/(fontSize*.603)));
-                if(mobile)fontSize=14;
+                if(mobile){fontSize=12;columns=Math.max(12,Math.floor(textWidth/(fontSize*.603)));}
                 var words=subtitle.textContent.split(/\s+/),lines=[''];words.forEach(function(word){var last=lines.length-1;if((lines[last]+' '+word).trim().length>columns)lines.push(word);else lines[last]=(lines[last]+' '+word).trim();});
                 if(mobile)lines=lines.slice(0,3);
-                var ch=Math.max(hasPortrait?portraitSize+24:92,48+lines.length*(fontSize+5));panel(cx,cy,cw,ch);
+                var ch=Math.max(hasPortrait?portraitSize+24:mobile?64:92,48+lines.length*(fontSize+5));panel(cx,cy,cw,ch);
                 if(hasPortrait&&portrait instanceof HTMLCanvasElement)ctx.image(portrait,cx+12,cy+12,portraitSize,portraitSize,1);
                 label((speaker&&speaker.textContent)||'COMMS',textX,cy+24,11,gold);
                 lines.forEach(function(line,i){label(line,textX,cy+49+i*(fontSize+5),fontSize,ink);});
