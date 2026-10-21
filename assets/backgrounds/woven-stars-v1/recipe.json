@@ -2,7 +2,7 @@
   "version": 1,
   "generator": "built-in imagegen; saved panels reused exactly once",
   "radiusDeg": 58,
-  "linearGain": 0.65,
+  "linearGain": 0.4,
   "regions": [
     {
       "id": "equator-0",
@@ -88,5 +88,7 @@
       "pitch": -55,
       "sha256": "949241b969ca835d8f0961765e7906b19130bce5dd444b38ea4134d374c9561e"
     }
-  ]
+  ],
+  "highlightCompression": 6,
+  "projection": "azimuthal equidistant spherical caps"
 }

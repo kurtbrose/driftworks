@@ -1,0 +1,10 @@
+{
+  "mode": "built-in image_gen",
+  "file": "surround-v1.png",
+  "references": [
+    "master.png",
+    "coverage-study.png"
+  ],
+  "prompt": "Use case: precise-object-edit / outpainting. Image 1 is the original pristine forward hero plate of an alien ocean planet. Image 2 is the first panoramic extension study. Create the surrounding COMPLETE 360 by 180 degree EQUIRECTANGULAR skybox environment, exact 2:1 aspect ratio, based on the same world and photoreal cinematic appearance. This is supporting surrounding coverage for image 1, which will be kept intact in the forward direction. Refine image 2 into a correctly spherical environment map: horizontal axis is all 360 longitude, vertical axis zenith to nadir. A continuous shallow atmospheric blue horizon encircles the whole width on a LEVEL line at 50 percent image height, EXACT same height on left and right. Black quiet space with sparse fine stars fills upper half. The massive close planet fills lower half, richly detailed deep blue oceans, thin cloud bands, unfamiliar green/ochre continents and islands, photographic low-orbit texture. Coherent ocean at bottom pole, black zenith at top pole. Left and right edges must match seamlessly in horizon height, clouds, land/ocean and brightness. NO SUN IN THIS SURROUNDING MAP: the sun already belongs to original forward hero plate; natural sunlight enters from forward left. No small round globe. No impact or fire, no ships, no extra planets/moons, no UI/text. Make diverse contiguous geography across the lower hemisphere; no mirrored or repeated continents. High-resolution native image, fine film-VFX detail, no procedural noise or painterly brushwork. Single map not panels. Preserve the blue/gold ocean-world art direction and intricate weather detail of image 1.",
+  "projection": "2:1 equirectangular surrounding image. Native hero plates remain separate tangent-plane textures. Runtime feathering handles edge/pole convergence."
+}

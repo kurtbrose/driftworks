@@ -2,9 +2,9 @@
   "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
   "pillow": "12.3.0",
   "numpy": "2.3.5",
-  "bakerSHA256": "b60cefa4efb896081586f4ba673b504ab3548b63bb232dfcf8b79266505a82ef",
-  "recipeSHA256": "39a46a226f108d79ef55a2a9f9d53ccede09a98f6b7807eaec051931b7b3cd4a",
-  "outputSHA256": "77acd1e09faee8ae4591411f7ed5088eacace0b31f5a957cf40c5986e32de9dc",
+  "bakerSHA256": "94efd104a3285816b767d16a8e7d8967b9f89460b9e5ea0ef8b8f4e774b776a3",
+  "recipeSHA256": "5c1b79fc5ed1358df3a0b618e4383295396f056e79c1138b317795a5c9eb6bdc",
+  "outputSHA256": "89de8422a67e49b763fdf111a034975e5c80d5fa0f41c5ff4551d7110be5f097",
   "outputPixels": [
     8192,
     4096

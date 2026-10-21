@@ -37,13 +37,17 @@ def sample(image,u,v):
 def project(rays,regions,radius=58):
     color=np.zeros(rays.shape,dtype=np.float32)
     total=np.zeros(rays.shape[:-1],dtype=np.float32)
-    edge=np.cos(np.deg2rad(radius));extent=np.tan(np.deg2rad(radius))*1.15
+    angle_limit=np.deg2rad(radius);edge=np.cos(angle_limit)
     for image,center,right,up in regions:
         depth=np.einsum('...k,k->...',rays,center);visible=depth>edge
         if not visible.any():continue
         local=rays[visible]
-        u=.5+np.einsum('...k,k->...',local,right)/depth[visible]/extent*.5
-        v=.5-np.einsum('...k,k->...',local,up)/depth[visible]/extent*.5
+        angle=np.arccos(np.clip(depth[visible],-1,1))
+        angular_scale=angle/np.maximum(np.sin(angle),1e-8)/(angle_limit*1.15)*.5
+        # Azimuthal equidistant caps keep radial angular scale constant. A wide
+        # gnomonic/tangent projection magnifies the central source texels badly.
+        u=.5+np.einsum('...k,k->...',local,right)*angular_scale
+        v=.5-np.einsum('...k,k->...',local,up)*angular_scale
         # Raised-cosine alpha, zero slope at each window's center and edge.
         t=(depth[visible]-edge)/(1-edge)
         weight=(.5-.5*np.cos(np.pi*t))**2
@@ -60,6 +64,7 @@ def bake(recipe_path,width=8192):
         theta=(np.arange(row,min(row+32,width//2),dtype=np.float32)+.5)/(width//2)*np.pi
         x=np.sin(theta[:,None])*np.cos(phi);y=np.sin(theta[:,None])*np.sin(phi);z=np.cos(theta[:,None])+phi*0
         linear=project(np.stack([x,y,z],axis=-1),regions,recipe['radiusDeg'])*recipe['linearGain']
+        linear=linear/(1+linear*recipe.get('highlightCompression',0))
         srgb=np.where(linear<=.0031308,linear*12.92,1.055*np.maximum(linear,0)**(1/2.4)-.055)
         output[row:row+len(theta)]=np.rint(np.clip(srgb,0,1)*255).astype('uint8')
     return Image.fromarray(output)

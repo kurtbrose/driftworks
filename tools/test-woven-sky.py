@@ -14,6 +14,14 @@ RECIPE=Path(__file__).resolve().parents[1]/'assets/backgrounds/woven-stars-v1/re
 
 
 class WovenTests(unittest.TestCase):
+    def test_angular_scale_does_not_magnify_patch_centers(self):
+        gradient=np.broadcast_to(np.linspace(0,1,1024,dtype=np.float32)[None,:,None],(16,1024,3))
+        center=np.array([1,0,0]);right=np.array([0,1,0]);up=np.array([0,0,1])
+        angles=np.deg2rad([0,10,20])
+        rays=np.stack([np.cos(angles),np.sin(angles),angles*0],axis=-1)
+        colors=woven.project(rays,[(gradient,center,right,up)],58)
+        np.testing.assert_allclose(np.diff(colors[:,0]),10/(2*58*1.15),atol=1e-6)
+
     def test_unique_art_and_full_sphere_coverage(self):
         recipe,regions=woven.load_regions(RECIPE)
         self.assertEqual(len(regions),12)

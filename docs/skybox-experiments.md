@@ -27,6 +27,12 @@ Always compare actual in-game crops and inspect several headings and pitches.
 The procedural/three-axis mistakes show why an attractive contact sheet is not
 sufficient validation.
 
+A first twelve-region bake used wide gnomonic projections. In-game inspection
+showed excessive magnification of stars near patch centers. The current bake uses
+azimuthal equidistant caps: equal radial angular steps sample equal source steps.
+A focused regression locks that property. Global highlight compression restrains
+large bright source grains without equalizing regional brightness.
+
 ### Current reproducible recipe
 
 - Runtime: `assets/backgrounds/star-river-woven-v1-8k.jpg`, 8192 × 4096.
@@ -43,10 +49,11 @@ sufficient validation.
 
 The twelve regions occupy six equatorial positions plus three upper and three
 lower positions. No source is tiled, mirrored, rotated into multiple positions,
-or reused. Each source SHA must be unique. The tangent windows have a 58° radius,
+or reused. Each source SHA must be unique. The azimuthal equidistant cap windows have a 58° radius,
 raised-cosine alpha squared, and a 15% sampling margin so source borders are never
 sampled at full strength. Linear-light weighted blending joins overlaps. One
-global linear gain of 0.65 applies to the whole sky; individual panels are not
+global linear gain of 0.4 and a common highlight-compression factor of 6 apply
+to the whole sky; individual panels are not
 normalized to equal brightness. North/south poles and longitude wrap are sampled
 from spherical directions, with no cube-face boundaries.
 

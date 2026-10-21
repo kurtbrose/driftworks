@@ -2728,7 +2728,7 @@
 
   test('flight sky directions rotate with the cockpit, ignore translation, and cover the sphere', function () {
     var sky=window.Driftworks.flightSkybox,pose={right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
-    assert(sky.options.length===11 && sky.options[1].includes('Open void') && sky.options[6].includes('Island universes'));
+    assert(sky.options.length===12 && sky.options[1].includes('Open void') && sky.options[6].includes('Island universes') && sky.options[11].includes('Woven starlight'));
     var center=sky.project([0,1,0],pose,2);assert(center);assertClose(center.x,0);assertClose(center.y,0);
     assert(sky.project([0,-1,0],pose,2)===null);
     var star=[.2,1,.3],before=sky.project(star,pose,2);pose.eye=[10000,20000,-5000];
