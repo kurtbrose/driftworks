@@ -3,6 +3,7 @@ type FlightMix = import('./engine-types').FlightMix;
 export type MixerOptions = {getMaster: () => number; setMaster: (value: number) => void};
 export type AudioMixer = {
   get: () => FlightMix; set: (value: Partial<FlightMix>) => void;
+  setMusicActive: (value: boolean) => void;
   setCommsActive: (value: boolean) => void; impact: () => void;
   mount: (host: HTMLElement) => void;
   attach: (context: AudioContext, effects: GainNode, master: GainNode, destination: AudioNode) => void;

@@ -15,7 +15,7 @@
     /** @type {GainNode | null} */ var weaponsBus = null;
     /** @type {GainNode | null} */ var impactsBus = null;
     /** @type {GainNode | null} */ var commsBus = null;
-    var commsActive = false, impactUntil = 0;
+    var commsActive = false, musicActive = false, impactUntil = 0;
     var mix = loadMix();
     /** @param {Partial<FlightMix>} value @returns {FlightMix} */
     function normalizeMix(value) {
@@ -32,7 +32,7 @@
     /** @param {FlightMix} value @param {boolean} speech @param {boolean} hit */
     function mixLevels(value, speech, hit) {
       var talking = value.ducking && speech && value.comms > 0;
-      return {engine:value.engine * Math.min(talking?.84:1, value.ducking && hit && value.impacts > 0?.3:1),
+      return {engine:value.engine * (musicActive ? Math.pow(10, -3 / 20) : 1) * Math.min(talking?.84:1, value.ducking && hit && value.impacts > 0?.3:1),
         weapons:value.weapons * (talking?.6:1), impacts:value.impacts, comms:value.comms*.5};
     }
     function applyMix() {
@@ -53,6 +53,12 @@
     }
     /** @param {boolean} active */
     function setCommsActive(active) { commsActive=active;applyMix(); }
+    /** @param {boolean} active */
+    function setMusicActive(active) {
+      if (musicActive === active) return;
+      musicActive = active;
+      applyMix();
+    }
     /** @param {HTMLElement} host */
     function mountMixer(host) {
       var details=global.document.createElement('details'), summary=global.document.createElement('summary');
@@ -88,7 +94,7 @@
       master.connect(limiter).connect(destination);
       applyMix();
     }
-    return {get:function(){return Object.assign({},mix);}, set:setMix, setCommsActive:setCommsActive,
+    return {get:function(){return Object.assign({},mix);}, set:setMix, setCommsActive:setCommsActive, setMusicActive:setMusicActive,
       impact:function(){if(context){impactUntil=context.currentTime+.22;applyMix();}},
       mount:mountMixer, attach:attach, normalize:normalizeMix, levels:mixLevels,
       channel:/** @param {'engine'|'weapons'|'impacts'|'comms'} name */ function(name) {

@@ -33,7 +33,10 @@
         }, onImpact: function () {
             DW.audio.playImpact(1);
         } });
+    var ohioMusic = activeMission.id === 'ohio' ? DW.audio.createOhioMusic() : null;
+    var ohioMusicStarted = false;
     var mixerHost=document.getElementById('flight-settings');
+    if(mixerHost && ohioMusic) ohioMusic.mount(mixerHost);
     if(mixerHost)DW.audio.mountMixer(mixerHost);
     var units = DW.sim.METERS_PER_UNIT;
     var tetherParams = new URLSearchParams(location.search), tetherKm = Number(tetherParams.get('tether'));
@@ -151,6 +154,7 @@
         paused = true;
         diagnostics.resetSimulationClock();
         comms.pause();
+        if(ohioMusic) ohioMusic.pause();
         document.body.classList.remove('flight-active');
         clear();
         controls.release();
@@ -266,6 +270,7 @@
             return;
         }
         DW.audio.unlock();
+        if(ohioMusic && ohioMusicStarted) ohioMusic.resume();
         comms.unlock();
         clear();
         controls.resetButtons();
@@ -362,6 +367,7 @@
     }
     /** @param {number} t */
     function frame(t) {
+        if(ohioMusic && !paused) ohioMusic.update();
         if(benchmarking){requestAnimationFrame(frame);return;}
         var timing = diagnostics.beginFrame(t, paused);
         if (!timing) {
@@ -401,7 +407,15 @@
         if (!paused && !watch) session.acquireTarget();
         if (!paused) {
             if (!watch) session.advanceScenery(elapsed);
-            comms.update(elapsed, currentView.combat, currentView.state);
+            if(!ohioMusic || !ohioMusicStarted || !ohioMusic.isAnnouncing()) {
+                comms.update(elapsed, currentView.combat, currentView.state);
+            }
+            // Comms advances past the opening only after the final transmission ends.
+            if(ohioMusic && !ohioMusicStarted && currentView.combat.openingStep > activeMission.opening.length) {
+                ohioMusicStarted = true;
+                comms.pause();
+                ohioMusic.resume();
+            }
         }
         var comparison = diagnostics.settings();
         phaseStart=performance.now();

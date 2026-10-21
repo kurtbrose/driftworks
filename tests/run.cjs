@@ -4,6 +4,7 @@ require('./flight-missions.cjs');
 require('./headless.cjs');
 // Run the ordinary-script suite without adding a build or dependency pipeline.
 require('./audio-modules.cjs');
+require('./ohio-music.cjs');
 require('./flight-skybox.cjs');
 require('./ohio-sign.cjs');
 require('./ohio-roadside.cjs');

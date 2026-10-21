@@ -1618,3 +1618,9 @@ reduce integrity once per contact; PD keeps the ordinary faction-aware fighter
 damage resolver. Both rigs share immutable vertex buffers while keeping mutable
 bases, origins and weapons separate. The original no-options `create()` stays
 stationary for benchmarks and tests.
+
+Ohio flight music uses `audio.createOhioMusic()` and local media in `assets/audio/ohio/`. The DJ waits until the opening radio exchange has finished (`combat.openingStep` advances beyond the opening line count only when the channel is no longer busy). Pause/resume before that point keeps the DJ waiting. The announcer plays once at 1.25x with pitch preservation; its final three playback seconds fade into the looping instrumental. The instrumental holds its selected level for ten playback seconds from track start, then fades exponentially over twenty seconds to 30% of that level (about -10.5 dB), retaining the quiet level across loops and pauses. Flight holds comms updates while `isAnnouncing()` is true, releasing chatter after the announcer ends, including its crossfade tail. Flight owns resume/pause and frame updates; pagehide also pauses both elements. A separately remembered Ohio radio/music slider defaults to 65%, independent of the tactical synth music preference and flight SFX mix. Restarting a sortie in the same page retains music position; reloading replays the intro.
+
+`tools/trim-ohio-intro.py` derives `radio-intro.wav` from the preserved `radio-intro-source.wav`, shortening only sustained quiet gaps. Longer pauses retain 350 ms for emphasis; shorter gaps retain 160 ms. A 5 ms blend at each cut avoids clicks.
+
+Audible Ohio soundtrack playback calls the mixer's transient `setMusicActive` gate to reduce only the flight engine by 3 dB. Pausing or setting the Ohio music slider to zero restores the engine. This multiplier composes with comms/impact ducking without changing the saved engine slider or other missions.

@@ -4,6 +4,9 @@
   var root = typeof document !== 'undefined' && document.currentScript ? new URL('../', new URL(document.currentScript.getAttribute('src') || '', document.baseURI)).href : '';
   /** @type {Record<string,string>} */
   var versions = {
+  "assets/audio/ohio/open-highway-spirit.m4a": "43515134f9d4",
+  "assets/audio/ohio/radio-intro-source.wav": "9118644c2f57",
+  "assets/audio/ohio/radio-intro.wav": "f1c29ea4d6f5",
   "assets/backgrounds/all-sky-milky-way.jpg": "9055c7a80103",
   "assets/backgrounds/coalsack-wide-field.jpg": "d410aff32a20",
   "assets/backgrounds/deep-field.jpg": "24340463625f",
@@ -665,7 +668,7 @@
   "experiments/flight-study-worker.js": "46a72359d0c4",
   "experiments/flight-study.js": "539a6f9413eb",
   "experiments/flight-watch.js": "49b4caa0eff3",
-  "experiments/flight.js": "4bff2c1ae617",
+  "experiments/flight.js": "443c69b7a4be",
   "experiments/guns.js": "0d8395695e7e",
   "experiments/hull-panels.js": "0a29cdfd1aaa",
   "experiments/input.js": "f4504aaa17e7",
@@ -730,8 +733,8 @@
   "experiments/speech-sprites/speech.js": "b0e6bacfcbd8",
   "experiments/target-camera.js": "e846c0847e93",
   "experiments/training.js": "60b2292a5dcd",
-  "src/audio-mixer.js": "86b2e5499688",
-  "src/audio.js": "4c3a1ddd049c",
+  "src/audio-mixer.js": "34c90880514e",
+  "src/audio.js": "9b40b45d23e3",
   "src/combat.js": "ce0e0e6eb149",
   "src/engine-audio.js": "061d71eda9b0",
   "src/explosions.js": "ba20ec3731d9",
