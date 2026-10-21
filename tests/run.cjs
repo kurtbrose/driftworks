@@ -1,5 +1,6 @@
 require('./asset-versions.cjs');
 require('./impact-lab.cjs');
+require('./impact-sky.cjs');
 require('./explosions.cjs');
 require('./gpu-ui.cjs');
 require('./flight-hud-markers.cjs');
@@ -105,3 +106,5 @@ require('./hull-sweep-index.cjs');
 require('./study-culling.cjs');
 
 require('./three-production.cjs');
+
+require('./asteroid-detail-lab.cjs');

@@ -4,7 +4,7 @@
     /** @typedef {import('./types').Vector} Vector */
     /** @typedef {import('./types').Pose} Pose */
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
-    var options = ['Milky Way  / original', 'A  / Open void', 'B  / Galactic horizon', 'C  / Dark dust', 'D  / Distant sun', 'E  / Cold veil', 'F  / Island universes', 'G / Hero galaxy', 'H / Hero nebula', 'I / Hero sun', 'J / River of stars', 'K / Woven starlight'];
+    var options = ['Milky Way  / original', 'A  / Open void', 'B  / Galactic horizon', 'C  / Dark dust', 'D  / Distant sun', 'E  / Cold veil', 'F  / Island universes', 'G / Hero galaxy', 'H / Hero nebula', 'I / Hero sun', 'J / River of stars', 'K / Woven starlight', 'L / Orbital impact experiment'];
     /** @typedef {{asset:string,yaw:number,pitch:number,roll:number,widthDeg:number,gain:number}} HeroFeature */
     /** @param {HeroFeature} feature @param {number} aspect */
     function featureFrame(feature, aspect) {
@@ -340,6 +340,65 @@ void main(){
             });
         }
         var points = program('attribute vec4 star;uniform vec3 right,up,back; uniform float aspect,focal,pixelRatio;varying float brightness;void main(){float depth=-dot(star.xyz,back);brightness=star.w;gl_Position=depth>0.?vec4(dot(star.xyz,right)*focal/aspect,dot(star.xyz,up)*focal,0.,depth):vec4(2.,2.,2.,1.);gl_PointSize=(0.75+star.w*1.05)*pixelRatio;}', 'precision mediump float;varying float brightness;void main(){float r=length(gl_PointCoord-.5)*2.;float alpha=(1.-smoothstep(.15,1.,r))*brightness;gl_FragColor=vec4(.82,.9,1.,alpha);}');
+        // Image-only environment: the existing sky pass projects an outpainted
+        // sphere and the untouched native-detail hero plate in the same direction space.
+        var impactProgram=program('attribute vec2 position;varying vec2 screen;void main(){screen=position;gl_Position=vec4(position,0.,1.);}',`
+precision highp float;
+varying vec2 screen;uniform vec3 right,up,back;uniform float aspect,focal,exposure,impactBlend;
+uniform sampler2D impactSurround,impactMaster,impactFrom,impactTo;
+vec3 surround(vec2 uv){
+    vec3 a=texture2D(impactSurround,uv).rgb,b=texture2D(impactSurround,vec2(1.-uv.x,uv.y)).rgb;
+    a=mix(a,b,.5*(1.-smoothstep(0.,.035,min(uv.x,1.-uv.x))));
+    // Every longitude converges to the same color at each pole.
+    a=mix(texture2D(impactSurround,vec2(.5,.001)).rgb,a,smoothstep(0.,.035,uv.y));
+    return mix(a,texture2D(impactSurround,vec2(.5,.999)).rgb,smoothstep(.965,1.,uv.y));
+}
+void main(){
+    vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+    vec2 sphereUV=vec2(fract(atan(ray.y,ray.x)/6.28318530718+.5),acos(clamp(ray.z,-1.,1.))/3.14159265359);
+    vec3 color=surround(sphereUV);
+    // Forward plate: yaw +Y, pitch -5 degrees, 85-degree horizontal extent.
+    vec3 center=vec3(0.,.996194698,-.087155743),north=vec3(0.,.087155743,.996194698);
+    float depth=dot(ray,center);
+    vec2 uv=vec2(.5+ray.x/max(depth,.00001)/1.832662348,.5-dot(ray,north)/max(depth,.00001)/1.031779704);
+    if(depth>0. && uv.x>0. && uv.x<1. && uv.y>0. && uv.y<1.){
+        vec3 master=texture2D(impactMaster,uv).rgb;
+        vec3 event=mix(texture2D(impactFrom,uv).rgb,texture2D(impactTo,uv).rgb,impactBlend);
+        float permission=1.-smoothstep(.72,1.,length((uv-vec2(.625,.525))/vec2(.255,.285)));
+        vec3 plate=mix(master,event,permission);
+        float edge=smoothstep(0.,.13,min(min(uv.x,1.-uv.x),min(uv.y,1.-uv.y)));
+        color=mix(color,plate,edge);
+    }
+    gl_FragColor=vec4(color*exposure,1.);
+}`);
+        var impactTimes=[0,.25,12,32,60,90,120],impactTime=-5,impactSpeed=1,impactStarted=false,impactLoaded=0;
+        /** @type {(WebGLTexture|null)[]} */var impactTextures=[];
+        /** @type {HTMLDivElement|null} */var impactControls=null;
+        /** @type {HTMLInputElement|null} */var impactSlider=null;
+        /** @param {number} value */function setImpactTime(value){if(Number.isFinite(value))impactTime=Math.max(-5,Math.min(180,value));}
+        function loadImpact(){
+            if(impactStarted)return;impactStarted=true;canvas.dataset.impact='loading';
+            ['surround-v1','master','flash','between-12','between-32','between-60','between-90','plume'].forEach(function(name,index){
+                var texture=gl.createTexture();impactTextures[index]=texture;
+                gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
+                gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([2,4,8,255]));
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+                var image=new Image();image.onload=function(){
+                    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);
+                    impactLoaded++;if(impactLoaded===8)canvas.dataset.impact='ready';
+                };image.onerror=function(){canvas.dataset.impact='error';};image.src=assetUrl('../assets/backgrounds/impact-v1/'+name+'.png');
+            });
+            var status=document.getElementById('skybox-status');
+            if(status&&status.parentElement){
+                impactControls=document.createElement('div');impactControls.innerHTML='<label>Impact time <input aria-label="Impact time" type="range" min="-5" max="180" step="0.1" value="-5" style="width:100%"></label><label>Impact playback <select aria-label="Impact playback"><option value="1">1×</option><option value="5">5×</option><option value="20">20×</option></select></label><button type="button">Restart impact</button>';
+                status.parentElement.appendChild(impactControls);
+                impactSlider=impactControls.querySelector('input');var speed=impactControls.querySelector('select'),restart=impactControls.querySelector('button');
+                if(impactSlider){const slider=impactSlider;slider.oninput=function(){setImpactTime(Number(slider.value));};}
+                if(speed){const select=speed;select.onchange=function(){impactSpeed=Number(select.value)||1;};}
+                if(restart)restart.onclick=function(){setImpactTime(-5);};
+            }
+        }
         var quad = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, quad);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
@@ -396,7 +455,7 @@ void main(){
                 if(status)status.textContent=selected===11?'Woven starlight / twelve unique regions, feathered into one fixed 8K sphere.':'River of stars / earlier repeated-panel comparison.';
             };
             image.onerror=function(){canvas.dataset[key]='error';if(status)status.textContent='Could not load the stellar streams texture.';};
-            image.src=assetUrl(selected===11?'../assets/backgrounds/star-river-woven-v1-8k.jpg':'../assets/backgrounds/star-river-photo-v3-8k.jpg');
+            image.src=assetUrl(selected===11?'../assets/backgrounds/star-river-woven-v1-8k.jpg':'../assets/backgrounds/user-panorama-v1.png');
         }
         var image = new Image();
         image.onload = function () {
@@ -416,9 +475,10 @@ void main(){
             gl.uniform1f(gl.getUniformLocation(p, 'pixelRatio'), dpr);
         }
         var stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
-        return {getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
+        if(!landmarkSky&&typeof window.location!=='undefined'&&/(?:[?&])sky=impact(?:&|$)/.test(window.location.search||'')){style=12;if(selector)selector.value='12';}
+        return {setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
-            }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty */ function (pose, renderScale, empty) {
+            }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] */ function (pose, renderScale, empty,elapsed) {
                 // Shared renderer integration: the host delivers the probe and sky basis.
                 // No mission or material code needs to choose lights.
                 if(typeof host.dispatchEvent==='function' && typeof CustomEvent==='function') {
@@ -433,11 +493,25 @@ void main(){
                     canvas.height = height;
                 }
                 gl.viewport(0, 0, width, height);
+                if(impactControls)impactControls.hidden=style!==12||landmarkSky;
                 if (empty) {
                     gl.clearColor(0, 0, 0, 1);
                     gl.clear(gl.COLOR_BUFFER_BIT);
                     stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
                     return;
+                }
+                if(!landmarkSky&&style===12){
+                    loadImpact();
+                    if(impactLoaded===8)impactTime=Math.min(180,impactTime+Math.max(0,elapsed||0)*impactSpeed);
+                    var from=0;for(var i=1;i<impactTimes.length;i++)if(impactTime>=impactTimes[i])from=i;
+                    var to=Math.min(from+1,impactTimes.length-1),blend=from===to?0:Math.max(0,Math.min(1,(impactTime-impactTimes[from])/(impactTimes[to]-impactTimes[from])));
+                    gl.disable(gl.BLEND);uniforms(impactProgram,pose,width/height,dpr);
+                    gl.uniform1f(gl.getUniformLocation(impactProgram,'exposure'),exposure);gl.uniform1f(gl.getUniformLocation(impactProgram,'impactBlend'),blend*blend*(3-2*blend));
+                    [0,1,from+1,to+1].forEach(function(index,unit){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,impactTextures[index]);gl.uniform1i(gl.getUniformLocation(impactProgram,['impactSurround','impactMaster','impactFrom','impactTo'][unit]),unit);});
+                    gl.bindBuffer(gl.ARRAY_BUFFER,quad);var position=gl.getAttribLocation(impactProgram,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);gl.drawArrays(gl.TRIANGLES,0,6);gl.disableVertexAttribArray(position);
+                    if(impactSlider)impactSlider.value=String(impactTime);
+                    var status=document.getElementById('skybox-status');if(status)status.textContent=canvas.dataset.impact==='ready'?'Orbital impact / '+impactTime.toFixed(1)+' s / flight pause freezes event':canvas.dataset.impact==='error'?'Impact sky image failed to load.':'Loading eight local impact sky images...';
+                    stats={drawCalls:1,triangles:2,points:0,meshes:1,materials:1};return;
                 }
                 if(!landmarkSky && style>=7 && style<=9) loadHeroFeatures();
                 if(!landmarkSky && style>=10) loadRiver(style);

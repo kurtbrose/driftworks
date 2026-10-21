@@ -24,7 +24,7 @@ vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../ex
 vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../experiments/skybox.js'), 'utf8'), context);
 const sky = context.window.Driftworks.flightSkybox.create({clientWidth: 800, clientHeight: 600, prepend() {}});
 const pose = {right: [1,0,0], up: [0,0,1], back: [0,-1,0]};
-assert.equal(selector.children.length, 12);
+assert.equal(selector.children.length, 13);
 assert.equal(selector.value, '3', 'restores the selected flight sky');
 sky.render(pose, 1, false);
 assert.equal(values.style, 3);

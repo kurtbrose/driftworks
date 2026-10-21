@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orbital cubemap projection review</title>
+<style>body{margin:0;background:#020408;color:#dfebef;font:14px system-ui}canvas{position:fixed;inset:0;touch-action:none}aside{position:fixed;z-index:1;top:16px;left:16px;width:240px;padding:16px;background:#08151eea;border:1px solid #426070;border-radius:8px}h1{font-size:19px;margin:0 0 12px}button,a{color:inherit}button{padding:7px;background:#18303d;border:1px solid #426070;border-radius:4px;margin:3px}p{line-height:1.5;color:#a9bdc8}output{display:block;margin-top:12px}input{width:100%}</style></head>
+<body><canvas id="view"></canvas><aside><h1>Raw cubemap test</h1><p>Six 90° perspective faces. No feathering or seam repair.</p><div id="headings"><button data-yaw="0" data-pitch="0">Front</button><button data-yaw="90" data-pitch="0">Right</button><button data-yaw="180" data-pitch="0">Back</button><button data-yaw="-90" data-pitch="0">Left</button><button data-yaw="0" data-pitch="90">Up</button><button data-yaw="0" data-pitch="-90">Down</button><button data-yaw="45" data-pitch="0">Front / right join</button><button data-yaw="0" data-pitch="-45">Front / down join</button></div><label>Field of view<input id="fov" type="range" min="45" max="110" value="90"></label><p><a href="impact-cubemap-review.html">Original atlas</a> / <a href="impact-cubemap-review.html?revision=repair">Projection revision</a></p><p>Drag to look around. Each original face is 512 × 512 pixels; this is a projection test.</p><output id="status">Loading…</output><p><a href="impact-lab.html">Back to impact blending</a> · <a href="../assets/backgrounds/impact-cubemap-v1/atlas.png">Source atlas</a></p></aside>
+<script src="../src/asset-versions.js?v=68b1605e1069"></script>
+<script type="module">
+import * as THREE from '../vendor/three/build/three.module.js?v=c8211c69345d';
+const canvas=document.getElementById('view');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false});
+const scene=new THREE.Scene(),camera=new THREE.Camera();
+let yaw=0,pitch=0,drag=false,lastX=0,lastY=0;
+const uniforms={atlas:{value:null},aspect:{value:1},focal:{value:1},yaw:{value:0},pitch:{value:0}};
+const material=new THREE.ShaderMaterial({uniforms,depthTest:false,depthWrite:false,
+vertexShader:'varying vec2 screen;void main(){screen=position.xy;gl_Position=vec4(position.xy,0.,1.);}',
+fragmentShader:`precision highp float;
+varying vec2 screen;uniform sampler2D atlas;uniform float aspect,focal,yaw,pitch;
+void main(){
+ vec3 r=normalize(vec3(screen.x*aspect/focal,1.,screen.y/focal));
+ float c=cos(pitch),s=sin(pitch);r=vec3(r.x,r.y*c-r.z*s,r.y*s+r.z*c);
+ c=cos(yaw);s=sin(yaw);r=vec3(r.x*c+r.y*s,r.y*c-r.x*s,r.z);
+ vec3 a=abs(r);vec2 p;float face;
+ if(a.z>=a.x&&a.z>=a.y){
+  if(r.z>0.){face=4.;p=vec2(r.x,-r.y)/a.z;}else{face=5.;p=vec2(r.x,r.y)/a.z;}
+ }else if(a.x>=a.y){
+  if(r.x>0.){face=0.;p=vec2(-r.y,r.z)/a.x;}else{face=1.;p=vec2(r.y,r.z)/a.x;}
+ }else{
+  if(r.y>0.){face=2.;p=vec2(r.x,r.z)/a.y;}else{face=3.;p=vec2(-r.x,r.z)/a.y;}
+ }
+ vec2 local=clamp(vec2(p.x*.5+.5,.5-p.y*.5),vec2(.5/512.),vec2(1.-.5/512.));
+ vec2 uv=(vec2(mod(face,3.),floor(face/3.))+local)/vec2(3.,2.);
+ gl_FragColor=vec4(texture2D(atlas,uv).rgb,1.);
+}`});
+scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),material));
+new THREE.TextureLoader().load(new URLSearchParams(location.search).get('revision')==='repair'?'../assets/backgrounds/impact-cubemap-v1/atlas-revision.png':'../assets/backgrounds/impact-cubemap-v1/atlas.png',texture=>{
+ texture.flipY=false;texture.minFilter=THREE.LinearFilter;texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;uniforms.atlas.value=texture;
+ document.getElementById('status').textContent='Loaded / raw unblended faces';
+},undefined,()=>{document.getElementById('status').textContent='Atlas failed to load';});
+document.getElementById('headings').onclick=e=>{const b=e.target.closest('button');if(b){yaw=Number(b.dataset.yaw)*Math.PI/180;pitch=Number(b.dataset.pitch)*Math.PI/180;}};
+canvas.onpointerdown=e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};
+canvas.onpointermove=e=>{if(drag){yaw-=(e.clientX-lastX)*.004;pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch+(e.clientY-lastY)*.004));lastX=e.clientX;lastY=e.clientY;}};
+canvas.onpointerup=canvas.onpointercancel=()=>{drag=false;};
+function render(){requestAnimationFrame(render);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight,false);uniforms.aspect.value=innerWidth/innerHeight;uniforms.focal.value=1/Math.tan(Number(document.getElementById('fov').value)*Math.PI/360);uniforms.yaw.value=yaw;uniforms.pitch.value=pitch;renderer.render(scene,camera);}
+render();
+</script></body></html>

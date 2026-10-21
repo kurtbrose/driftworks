@@ -23,7 +23,9 @@ exports `paintRecovery` alongside its other rendering helpers for regression che
 Authored flight skies supply cached environment lighting through a host-local
 `sky-environment` event. `skybox.js` owns probe/image loading; `scene3d.js` owns
 world-normal transforms, diffuse SH evaluation and rough-reflection texture
-sampling for shared materials. `tools/bake-sky-lighting.py` performs normalization
+sampling for shared materials. Asteroid geology retains its directional sun and
+terminator gate under environment lighting; the sky colors the .17 ambient fill
+rather than replacing the normal-dependent sun response. `tools/bake-sky-lighting.py` performs normalization
 and SH convolution during asset preparation. No environment resources enter world
 state or mission logic. See [sky authoring](skybox-authoring.md) for cache generation,
 coordinate conventions, coverage and reflection-filtering limits.

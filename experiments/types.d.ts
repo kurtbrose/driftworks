@@ -789,12 +789,13 @@ export type ExperimentModules = {
             y: number;
         } | null;
         create: (host: HTMLElement, config?:{style?:number}) => {
+            setImpactTime: (seconds:number) => void;
             setStyle: (style:number) => void;
             setExposure: (exposure:number) => void;
             getLighting: () => import('../src/types').SkyEnvironmentLighting | null;
             setLightingEnabled: (enabled:boolean) => void;
             getRenderStats: () => RenderStats['sky'];
-            render: (pose: Pose, renderScale: number, empty: boolean) => void;
+            render: (pose: Pose, renderScale: number, empty: boolean, elapsed?:number) => void;
         };
     };
     flightRadar: {

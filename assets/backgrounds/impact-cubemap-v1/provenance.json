@@ -1,0 +1,15 @@
+{
+  "mode": "built-in image_gen",
+  "prompt": "Use case: stylized-concept, technical game environment asset. Create a CUBEMAP SKYBOX of the provided fictional ocean planet from low orbit. Input image is visual/style reference, not an image to paste across panels. Output ONE precisely arranged 3-column by 2-row atlas of SIX EQUAL SQUARE CUBEMAP FACES, edge-to-edge with NO gutters, NO borders, NO labels or text. Overall aspect ratio EXACTLY 3:2, largest available resolution. Face order: TOP ROW = RIGHT (+X), LEFT (-X), FRONT (+Y); BOTTOM ROW = BACK (-Y), UP (+Z), DOWN (-Z). Coordinate system: +Z is physical up toward space, -Z toward planet nadir, +Y forward. Each square is a mathematically coherent 90-degree horizontal AND 90-degree vertical RECTILINEAR / GNOMONIC perspective camera from ONE identical observer position at the CENTER OF A CUBE. Correct tangent projection x=tan(horizontal angle), y=tan(vertical angle): equal angular details enlarge toward face edges and corners. Faces are NOT flat panorama slices, NOT fisheye, NOT six unrelated illustrations, NOT miniature planet globes. Shared edges must depict identical world directions, with CONTINUOUS coastline/cloud structures, stars, atmospheric rim, lighting and exposure across their correct neighboring edges when folded into the cube. All four side cameras have physical up +Z. UP camera looks +Z with its image TOP pointing BACK (-Y), image RIGHT pointing +X. DOWN camera looks -Z with image TOP pointing FRONT (+Y), image RIGHT pointing +X. The observer is in LOW ORBIT, enormous terrestrial planet centered beneath them at -Z. Planet surface fills the DOWN face completely: oceans, alien archipelagos, detailed clouds, NO horizon and NO starfield in DOWN. UP face is entirely black starry space: NO planet and NO horizon. RIGHT/LEFT/FRONT/BACK each contain ONE connected planetary limb across lower-middle with planet below and space above. The physical horizon is about 10 degrees BELOW local horizontal, so in rectilinear side faces the limb appears near 59% down at center and curves gently down toward corners; all four side faces agree at shared edges. Deep blue oceans, unfamiliar green/ochre continents, fine wispy white weather systems and storm bands, thin luminous blue atmosphere, photorealistic premium cinematic VFX. Small warm sun only ONCE, in FRONT face at upper left, consistent illumination everywhere. Dramatic delicate natural stars. No asteroid impact in this pristine baseline. No spaceships, no foreground objects, no giant repeated suns, no grid lines. This is a usable texture atlas intended to be cut into six square faces and sampled as a cubemap from inside, so projection and cross-face continuity are essential.",
+  "reference": "../impact-v1/master.png",
+  "faceOrder": [
+    "+X right",
+    "-X left",
+    "+Y front",
+    "-Y back",
+    "+Z up",
+    "-Z down"
+  ],
+  "layout": "3 columns x 2 rows, 512px square faces",
+  "status": "Projection experiment; inspect without blending. Not approved for flight."
+}

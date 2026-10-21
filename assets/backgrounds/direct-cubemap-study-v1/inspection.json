@@ -1,0 +1,182 @@
+{
+  "atlasPixels": [
+    1536,
+    1024
+  ],
+  "facePixels": [
+    512,
+    512
+  ],
+  "edgeMean": 9.095323398247112,
+  "coarseCloudMean": 7.233025714788501,
+  "edges": [
+    {
+      "face": 0,
+      "axis": 0,
+      "sign": -1,
+      "meanAbsoluteDifference": 8.624957195667504,
+      "coarseCloudDifference": 7.792583923907881
+    },
+    {
+      "face": 0,
+      "axis": 0,
+      "sign": 1,
+      "meanAbsoluteDifference": 3.0144799037531134,
+      "coarseCloudDifference": 2.0235303897100283
+    },
+    {
+      "face": 0,
+      "axis": 1,
+      "sign": -1,
+      "meanAbsoluteDifference": 3.2865124005628474,
+      "coarseCloudDifference": 2.16342144362952
+    },
+    {
+      "face": 0,
+      "axis": 1,
+      "sign": 1,
+      "meanAbsoluteDifference": 16.622665429640747,
+      "coarseCloudDifference": 12.090778150372516
+    },
+    {
+      "face": 1,
+      "axis": 0,
+      "sign": -1,
+      "meanAbsoluteDifference": 10.961659194255745,
+      "coarseCloudDifference": 8.48205813240387
+    },
+    {
+      "face": 1,
+      "axis": 0,
+      "sign": 1,
+      "meanAbsoluteDifference": 4.4181409354728585,
+      "coarseCloudDifference": 3.163964704485782
+    },
+    {
+      "face": 1,
+      "axis": 1,
+      "sign": -1,
+      "meanAbsoluteDifference": 11.17123568448902,
+      "coarseCloudDifference": 10.7363357763326
+    },
+    {
+      "face": 1,
+      "axis": 1,
+      "sign": 1,
+      "meanAbsoluteDifference": 10.043646507687049,
+      "coarseCloudDifference": 5.30553668405538
+    },
+    {
+      "face": 2,
+      "axis": 0,
+      "sign": -1,
+      "meanAbsoluteDifference": 10.03812941268813,
+      "coarseCloudDifference": 5.297417759781592
+    },
+    {
+      "face": 2,
+      "axis": 0,
+      "sign": 1,
+      "meanAbsoluteDifference": 16.62322470542727,
+      "coarseCloudDifference": 12.091202210222649
+    },
+    {
+      "face": 2,
+      "axis": 1,
+      "sign": -1,
+      "meanAbsoluteDifference": 4.728109032855191,
+      "coarseCloudDifference": 3.3123180525318876
+    },
+    {
+      "face": 2,
+      "axis": 1,
+      "sign": 1,
+      "meanAbsoluteDifference": 14.789804480390123,
+      "coarseCloudDifference": 14.37794085513101
+    },
+    {
+      "face": 3,
+      "axis": 0,
+      "sign": -1,
+      "meanAbsoluteDifference": 11.169927992021485,
+      "coarseCloudDifference": 10.735761689684509
+    },
+    {
+      "face": 3,
+      "axis": 0,
+      "sign": 1,
+      "meanAbsoluteDifference": 3.2865429075490162,
+      "coarseCloudDifference": 2.162893038787742
+    },
+    {
+      "face": 3,
+      "axis": 1,
+      "sign": -1,
+      "meanAbsoluteDifference": 12.200443037571373,
+      "coarseCloudDifference": 9.375500138152152
+    },
+    {
+      "face": 3,
+      "axis": 1,
+      "sign": 1,
+      "meanAbsoluteDifference": 9.281747104453828,
+      "coarseCloudDifference": 7.977708444676622
+    },
+    {
+      "face": 4,
+      "axis": 0,
+      "sign": -1,
+      "meanAbsoluteDifference": 4.419920184212892,
+      "coarseCloudDifference": 3.163961520831372
+    },
+    {
+      "face": 4,
+      "axis": 0,
+      "sign": 1,
+      "meanAbsoluteDifference": 8.626685702648539,
+      "coarseCloudDifference": 7.794273925708805
+    },
+    {
+      "face": 4,
+      "axis": 1,
+      "sign": -1,
+      "meanAbsoluteDifference": 9.284766068969654,
+      "coarseCloudDifference": 7.976335916201596
+    },
+    {
+      "face": 4,
+      "axis": 1,
+      "sign": 1,
+      "meanAbsoluteDifference": 4.729710811678973,
+      "coarseCloudDifference": 3.3114593749839556
+    },
+    {
+      "face": 5,
+      "axis": 0,
+      "sign": -1,
+      "meanAbsoluteDifference": 3.0145706097799825,
+      "coarseCloudDifference": 2.0247493038737896
+    },
+    {
+      "face": 5,
+      "axis": 0,
+      "sign": 1,
+      "meanAbsoluteDifference": 10.957128755198028,
+      "coarseCloudDifference": 8.475815020005506
+    },
+    {
+      "face": 5,
+      "axis": 1,
+      "sign": -1,
+      "meanAbsoluteDifference": 12.202197285067479,
+      "coarseCloudDifference": 9.37979220802829
+    },
+    {
+      "face": 5,
+      "axis": 1,
+      "sign": 1,
+      "meanAbsoluteDifference": 14.791556215889827,
+      "coarseCloudDifference": 14.377278491424965
+    }
+  ]
+}

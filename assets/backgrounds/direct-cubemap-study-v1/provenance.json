@@ -1,0 +1,14 @@
+{
+  "generator": "built-in imagegen",
+  "prompt": "Use case: game texture atlas. Generate a production-ready SIX-FACE CUBEMAP SKYBOX directly, like an accurately arranged spritesheet. Output ONE landscape 3:2 image divided into an EXACT 3 columns by 2 rows grid of SIX equal SQUARE faces. Fill every pixel; no gutters, labels, borders, perspective drawing of a cube, or UI. Requested largest available native resolution, ideally 6144x4096 (each face 2048 square), otherwise maximum supported. This is an unfolded texture atlas, not a scene mockup. Face order top row: +X, -X, +Y. Bottom row: -Y, +Z, -Z. Use standard OpenGL cubemap camera orientations with Y-up: +X looks +X with image right toward -Z and image up +Y; -X right +Z/up +Y; +Y right +X/up -Z; -Y right +X/up +Z; +Z right +X/up +Y; -Z right -X/up +Y. Each square is a true rectilinear 90-degree view, not an equirectangular panorama. All physically adjacent edges, including rotated top/bottom joins, must continue the SAME star field across the cube, seamless in a skybox renderer. Stars and diffuse dust should cross edges naturally. Each face shows a DIFFERENT unique portion of one 360-degree sky, not repeated or rotated artwork. Reference image is photographic style only: tiny near-resolution-limit stars merging into faint mottled grey-blue and grey-brown stellar clouds, irregular dark dusty channels, some brighter and some much quieter areas, sparse occasional brighter blue-white or amber stars. Preserve natural brightness variation; avoid a uniform carpet of white dots. Keep the texture photographically fine, no thick impasto or worm-like strokes. No dominant galaxy, nebula gas, planets, sun, horizon, objects, text or watermark. Create the actual finished cubemap atlas.",
+  "reference": "../star-river-photo-panel-v1.png",
+  "faceOrder": [
+    "+X",
+    "-X",
+    "+Y",
+    "-Y",
+    "+Z",
+    "-Z"
+  ],
+  "projection": "Each square is a rectilinear 90 degree view; Y-up"
+}

@@ -33,6 +33,17 @@ azimuthal equidistant caps: equal radial angular steps sample equal source steps
 A focused regression locks that property. Global highlight compression restrains
 large bright source grains without equalizing regional brightness.
 
+**Current limitation, confirmed by the user's in-flight screenshot:** K still
+looks low resolution. Each generated region is roughly 1254 pixels square and
+covers a broad spherical cap. Source texels are enlarged on screen; wide overlap
+also averages stars and softens them. The 8192 × 4096 output is a bake container,
+not native 8K imagegen detail. The equidistant mapping improves scale consistency
+but does not solve the source-detail shortage. Supersampling or resizing the
+same artwork cannot recover that missing detail. A sharper successor needs
+higher-resolution generated sources or more **unique** regions covering smaller
+angles. Do not fix this by reusing/rotating the existing sources. K demonstrates
+unique regions and irregular brightness successfully; sharpness is unresolved.
+
 ### Current reproducible recipe
 
 - Runtime: `assets/backgrounds/star-river-woven-v1-8k.jpg`, 8192 × 4096.
@@ -88,3 +99,26 @@ renderer, using its own preprocessed HDR lighting source.
 Keep the photographic generated structure, unique neighboring regions, broad
 edge feathering and irregular brightness. Avoid recurring procedural waves,
 reused clumps and global equalization that erases quiet/bright differences.
+
+## Direct cubemap generation: format recognized, geometry not yet reliable
+
+The next experiment requested a six-face 3 × 2 cubemap directly, with explicit
+90° face orientations and neighboring edge constraints. Imagegen returned the
+correct atlas layout but only 1536 × 1024 total: 512 square pixels per face.
+Cube-coordinate inspection revealed obvious face seams and corner discontinuities.
+A second edit supplied all twelve exact edge pairings and reversal directions.
+It retained the layout but changed overall brightness/interiors and still failed
+the inside-cube seam inspection. These two trials do not establish that imagegen
+can directly supply a production cubemap; recognizing the layout is insufficient.
+
+Prompts, both native atlases, sampling conventions, edge reports and projected
+views are in `assets/backgrounds/direct-cubemap-study-v1/`. No face was resized
+or feathered during inspection; this isolates the generator's direct output.
+
+The user's separate 1774 × 887 example has the appearance of an equirectangular
+panorama, including horizontal stretching toward its poles. A 45°-FOV spherical
+inspection looks attractive at the equator but still pinches/streaks at high
+latitudes. Flat-image distortion alone cannot certify correct spherical mapping.
+Cubemap edge/corner perspective compensation and equirectangular polar stretching
+are different projections. Validate the intended mapping from actual viewing
+directions, and evaluate native source detail separately from projection quality.
