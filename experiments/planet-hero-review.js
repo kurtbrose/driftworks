@@ -16,7 +16,7 @@
     timeline.oninput=function(){time=Number(timeline.value);};
     stages.onchange=function(){time=Number(stages.value);if(playing)toggle();};
     DW.planetImpact.create().then(function(value){animation=value;toggle();}).catch(/** @param {unknown} error */function(error){control('event-phase').textContent=String(error);});
-    var fly=/** @type {HTMLAnchorElement} */(control('fly'));fly.href='flight.html?mission='+mission.id;
+    var fly=/** @type {HTMLAnchorElement} */(control('fly'));fly.href='flight.html?mission=planet-impact-baked';
     control('disk').onclick=function(){yaw=90;pitch=-30;};
     control('limb').onclick=function(){yaw=90;pitch=width===80?3:width===140?35:19;};
     control('side').onclick=function(){yaw=90+width*.42;pitch=-25;};
@@ -38,6 +38,7 @@
         }
         var canvases=host.querySelectorAll('canvas');canvases.forEach(function(c){c.style.visibility=c===canvases[0]&&flightSky?(active===flightSky?'visible':'hidden'):active===sky?'visible':'hidden';});
         var a=yaw*Math.PI/180,b=pitch*Math.PI/180,c=Math.cos(b),s=Math.sin(b);
+        if(mission.sky.bakedImpact)active.setImpactTime(pristine.checked?-5:time);
         active.render({eye:[0,0,0],right:[Math.sin(a),-Math.cos(a),0],up:[-Math.cos(a)*s,-Math.sin(a)*s,c],back:[-Math.cos(a)*c,-Math.sin(a)*c,-s]},1,false);
         var image=host.querySelector('canvas[data-ohio="ready"]');control('status').textContent=(image?'Loaded':'Loading')+' / '+width+'° card / yaw '+yaw.toFixed(0)+'° / pitch '+pitch.toFixed(0)+'°';
     }

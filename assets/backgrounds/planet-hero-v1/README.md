@@ -44,3 +44,12 @@ the close flight view can magnify this 1254px source beyond its useful resolutio
 The optional `flightSkybox.create(...,{fov})` review setting controls only that
 instance's sky projection. It is clamped to 25–150 degrees; ordinary flight keeps
 its existing 45 degree lens.
+
+## Baked playable proof
+
+Mission `planet-impact-baked` uses the seven lossless 4K spherical maps in
+`baked-v1/`, produced by `tools/bake-planet-impact.py` from the existing plates.
+The recipe records placement and mask; no artwork was regenerated for the bake.
+See `docs/impact-timing.md` for physical references, timing caveats and the
+proposed 30-second through 10-minute art beats. Current playback still ends at
+the 120-second painting; it does not claim to model the later stages.

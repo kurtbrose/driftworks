@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make a skybox"
+  short_description: "Compose sprite skies and bake six cubemap faces"
+  default_prompt: "Use $make-skybox to compose a sky from reusable sprite assets and bake a verified six-face cubemap with its editable recipe."

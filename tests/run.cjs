@@ -4,6 +4,7 @@ require('./impact-lab.cjs');
 require('./impact-sky.cjs');
 require('./planet-hero.cjs');
 require('./planet-impact.cjs');
+require('./planet-impact-baked.cjs');
 require('./explosions.cjs');
 require('./gpu-ui.cjs');
 require('./flight-hud-markers.cjs');

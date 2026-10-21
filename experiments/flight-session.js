@@ -64,6 +64,7 @@
         function setAsteroidDiameter(meters) {
             if (!Number.isFinite(meters) || meters < 200 || meters > 4000) return false;
             asteroid.radius = meters / 2 / units;
+            applyGeology(combat.mode);
             return true;
         }
         /** Place a stationary study start in scene units and restart its scenery clock.
@@ -120,8 +121,13 @@
             if (!Number.isFinite(elapsed) || elapsed < 0) throw new Error('Invalid elapsed time');
             world.elapsedSeconds += elapsed;
         }
+        /** @param {string} mode */
+        function applyGeology(mode) {
+            DW.scene3d.setStudyParameters(asteroid, {bulk: DW.flightMissions.resolve(mode).asteroidBulk});
+        }
         /** @param {string} mode @param {boolean} enabled */
         function setCombat(mode, enabled) {
+            applyGeology(mode);
             combat = DW.training.create(mode);
             combat.useHullModels = true;
             DW.training.bindPlayer(combat, state).guns = guns;
@@ -138,6 +144,7 @@
         }
         /** @param {{mode: string; enabled: boolean; profile: Profile}} config */
         function reset(config) {
+            applyGeology(config.mode);
             combat = DW.training.create(config.mode);
             activeProfile = config.profile;
             DW.training.configure(combat, activeProfile);

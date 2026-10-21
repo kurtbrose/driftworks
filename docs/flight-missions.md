@@ -109,3 +109,9 @@ Mission-only packs are excluded from the generic mixed-spaceship catalog.
 These settings are optional; set `reinforcements: null` to disable an inherited continuous roster. Other missions retain their existing wave rules.
 
 Roadside placements may include a cylindrical decal: {asset, centerZ, radius:[x,y], height, arc}. Dimensions are normalized to the source model's maximum dimension; arc is radians around the front (-Y). Decals share the placement transform and terrain cache, load local textures once, and add one static UV batch each.
+
+Optional `asteroidBulk` supplies artwork fractions in ice, volatiles, metals,
+and silicates order. Flight sessions apply the mix on reset, combat mode changes,
+and diameter edits so terrain queries and rendering share the same geology.
+Omitting it restores the generated default. Ohio uses 85% ice and 15% volatiles;
+this does not change simulation ore resources.

@@ -6,6 +6,10 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const flight = createFlight({mission: 'ohio', seed: 29});
 assert.equal(flight.snapshot().combat, flight.session.snapshot().combat, 'Expose real session-owned objects');
 assert.equal(flight.snapshot().combat.enemies.length, 8);
+assert.deepEqual(copy(flight.DW.scene3d.visualFor(flight.snapshot().asteroid).bulk), [0.85, 0.15, 0, 0]);
+flight.session.setAsteroidDiameter(2000);
+assert.deepEqual(copy(flight.DW.scene3d.visualFor(flight.snapshot().asteroid).bulk), [0.85, 0.15, 0, 0]);
+flight.session.setAsteroidDiameter(2500);
 const initialSpawn = copy(flight.events[0]);
 flight.advance(8, {stop: true});
 assert.deepEqual(flight.transcript.filter(line => line.event === 'missionIntro').map(line => line.text),

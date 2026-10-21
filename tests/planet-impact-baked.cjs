@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const values={},pending=[],deleted=[],requests=[];
+let id=0;
+const gl=new Proxy({createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),createTexture:()=>({id:++id}),getShaderParameter:()=>true,getProgramParameter:()=>true,getParameter:()=>8192,getUniformLocation:(_,name)=>name,getAttribLocation:()=>0,uniform1f:(name,value)=>{values[name]=value;},deleteTexture:t=>deleted.push(t)}, {get:(o,k)=>k in o?o[k]:()=>{}});
+const canvas={dataset:{},setAttribute(){},getContext:()=>gl};
+const context={window:{Driftworks:{assetUrl:s=>s},location:{search:'?mission=planet-impact-baked'},devicePixelRatio:1},document:{getElementById:()=>null,createElement:()=>canvas},Image:class{set src(file){this.file=file;this.width=4096;this.height=2048;requests.push(file);pending.push(this);}},Float32Array,Uint8Array};
+for(const name of ['flight-missions','skybox'])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/'+name+'.js'),'utf8'),context);
+const DW=context.window.Driftworks,sky=DW.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}}),pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+const render=dt=>sky.render(pose,1,false,dt);
+const finish=()=>pending.splice(0).forEach(image=>image.onload());
+render(10);render(10);
+assert.equal(values.style,21);assert.equal(values.bakedBlend,0,'loading freezes the event before contact');
+assert.equal(requests.filter(s=>s.includes('/baked-v1/')).length,3,'only current, next and prefetch load');
+finish();render(0);assert.equal(canvas.dataset.bakedImpact,'ready');
+sky.setImpactTime(22);render(0);finish();render(0);
+assert.equal(values.bakedBlend,.5,'same adjacent stage blend as the hero compositor');
+assert.ok(deleted.length>=2,'obsolete GPU maps are released');
+sky.setImpactTime(60);render(0);finish();render(0);assert.equal(values.bakedBlend,0);
+render(0);assert.equal(values.bakedBlend,0,'paused flight does not advance the clock');
+render(15);render(0);assert.equal(values.bakedBlend,.5,'active flight time advances the event');
+const root=path.join(__dirname,'../assets/backgrounds/planet-hero-v1/baked-v1'),recipe=JSON.parse(fs.readFileSync(path.join(root,'recipe.json')));
+assert.deepEqual(recipe.times,[0,.25,12,32,60,90,120]);
+for(let i=0;i<7;i++){const bytes=fs.readFileSync(path.join(root,i+'.png'));assert.equal(bytes.readUInt32BE(16),4096);assert.equal(bytes.readUInt32BE(20),2048);}
+const {createFlight}=require('../tools/headless.cjs');const flight=createFlight({mission:'planet-impact-baked',seed:29});flight.advance(2,{stop:true});assert.equal(flight.snapshot().combat.enemies.length,16);
+console.log('PASS baked impact: local 4K maps, bounded prefetch/cache release, load/pause clock, adjacent blends and real furball session');

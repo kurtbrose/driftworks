@@ -7,7 +7,8 @@ export type FlightMission = {
     teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
     comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
     portraits:{folder:string;cast:string};
-    sky:{kind:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    sky:{kind:string;bakedImpact?:boolean;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    asteroidBulk?:[number,number,number,number];
     scenery:MissionScenery[];
     encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
     opening:{text:string;speakerIndex:number;channel:string}[];
@@ -19,6 +20,7 @@ export type MissionOverrides = {
     units?:Partial<FlightMission['units']>;
     teams?:{ally?:Partial<FlightMission['teams']['ally']>;enemy?:Partial<FlightMission['teams']['enemy']>};
     comms?:Partial<FlightMission['comms']>;portraits?:Partial<FlightMission['portraits']>;
+    asteroidBulk?:FlightMission['asteroidBulk'];
     sky?:Partial<FlightMission['sky']>;scenery?:FlightMission['scenery'];
     encounter?:Partial<FlightMission['encounter']>;opening?:FlightMission['opening'];
 };

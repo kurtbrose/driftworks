@@ -13,7 +13,12 @@ The sky instance also accepts `setPlanetImage(canvasOrImage)` for this planet
 mission family. It updates only the existing planet texture, retaining its
 projection, star occlusion and sun. An override submitted before the original
 planet finishes loading is retained. The hero review viewer uses this for the
-local overhead impact compositor; normal flight continues using the baseline.
+local overhead impact compositor. Mission `planet-impact-baked` instead samples
+adjacent offline-baked 4K spherical maps, with three textures resident and a
+flight-time clock that freezes on pause/loading. `sky.bakedImpact` selects this
+pass while preserving the same landmark placement and disk star occlusion.
+See [physical timing and bake notes](impact-timing.md). Other planet missions
+continue using the static baseline.
 
 The flight sky has three independent layers: black space, fixed authored hero
 features, and crisp stars. Stars keep a fixed CSS-pixel footprint while the camera

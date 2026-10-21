@@ -372,6 +372,7 @@
 };
 
     DW.flightMissions.define('ohio',{
+        asteroidBulk:[0.85,0.15,0,0],
         title:'Ohio / Always has been / Driftworks',heading:'DRIFTWORKS / OHIO',subtitle:'Ford Folks vs. Chevy Crew',
         hint:'Wait for the radio reveal. Then welcome to Ohio. / Ford Folks vs. Chevy Crew',
         units:{distanceScale:1/.9144,distanceLabel:'yd',distanceWord:'yards',speedScale:3600/1609.344,speedLabel:'mph',speedWord:'miles per hour',radarKilometers:false},

@@ -53,6 +53,11 @@
         title:'Planet hero flight · Driftworks',heading:'DRIFTWORKS / PLANET HERO TEST',subtitle:'STATIC PLANET BACKDROP · LOCAL DOGFIGHT',
         sky:{kind:'landmarks',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}
     },'furball');
+    define('planet-impact-baked',{
+        title:'Baked impact flight · Driftworks',heading:'DRIFTWORKS / IMPACT SKY TEST',
+        subtitle:'ANIMATED 4K SPHERICAL SKY · ILLUSTRATIVE TWO-MINUTE EVENT',
+        sky:{bakedImpact:true}
+    },'planet-hero');
     define('planet-hero-80',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:80,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
     define('planet-hero-140',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:140,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
     define('asteroid-patrol',{encounter:{kind:'patrol',count:2,immediate:true}});

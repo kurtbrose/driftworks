@@ -8,7 +8,9 @@ follow the link into a real furball. The source, prompt and limitations are in
 `assets/backgrounds/planet-hero-v1/README.md`. The hero viewer now includes a
 separate seven-plate overhead impact sequence, with pause, scrub, speed and
 pristine-reference controls. It preserves the entire disk outside a local
-feather mask; skybox baking and animated flight remain deferred for art review.
+feather mask. Mission `planet-impact-baked` now uses seven baked 4K spherical
+maps in real flight. See [timing and bake notes](impact-timing.md) for the physical
+reference and the distinction between illustrative timing and simulation.
 
 Open `experiments/impact-lab.html` from the static server. The standalone study
 uses seven native-resolution ImageGen plates in `assets/backgrounds/impact-v1/`:
