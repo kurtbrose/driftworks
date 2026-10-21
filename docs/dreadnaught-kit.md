@@ -278,3 +278,8 @@ benchmarks and focused tests. Both ships share immutable mesh buffers; hull and
 turret bases, muzzle vectors, launch poses and collision queries transform
 through each ship's current heading and position. The battle telemetry includes
 per-capital position, heading, integrity, round count and confirmed hits.
+
+Hangar roof and deck armor reuse the neighboring hull's four ribbed plate bays,
+pale/armor alternation, dark service recesses, cyan/amber lights and maintenance
+hatches. Interior light strips stand clear of the floor and ceiling to prevent
+depth fighting at flight-view distances; the through passage stays open.

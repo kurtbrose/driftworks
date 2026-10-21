@@ -188,9 +188,12 @@ console.log('PASS speculative AA: sparse twin volleys against jinking targets, b
 
 // The baked mixed fit owns both its visible through-bay and its collision opening.
 const bay=DW.aegisFlightAsset.hangars[0];assert.ok(bay);
+assert.equal(bay.halfHeight,10,'flight opening is reduced to twenty meters high');
 assert.ok(new Set(DW.aegisFlightAsset.modules.map(m=>m.type)).size>=3,'default flight hull mixes armored, hangar and utility segments');
 const bayRig=DW.aegisFlight.create(),cx=bay.position[0],cz=bay.position[2];
 assert.equal(bayRig.hit(position(cx,-100,cz),position(cx,100,cz)),null,'collision passage goes in one side and out the other');
+assert.ok(bayRig.hit(position(cx,-100,cz+14),position(cx,100,cz+14)),'upper portion of former opening is now solid');
+assert.ok(bayRig.hit(position(cx,-100,cz-14),position(cx,100,cz-14)),'lower portion of former opening is now solid');
 assert.ok(bayRig.hit(position(cx+bay.halfWidth+2,-100,cz),position(cx+bay.halfWidth+2,100,cz)),'solid end wall remains');
 assert.ok(bayRig.hit(position(cx,0,cz),position(cx,0,cz-40)),'deck blocks movement');
 assert.ok(bayRig.hit(position(cx,0,cz),position(cx,0,cz+40)),'ceiling blocks movement');

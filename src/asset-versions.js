@@ -590,7 +590,7 @@
   "assets/portraits/ohio/runtime/portrait-7.png": "1b9e653046eb",
   "assets/portraits/ohio/runtime/portrait-8.png": "72a0f335c4f7",
   "assets/portraits/ohio/runtime/portrait-9.png": "6fe9222ebeb9",
-  "assets/ships/aegis-kit/flight-rig.js": "39018dd4b4b0",
+  "assets/ships/aegis-kit/flight-rig.js": "857eb4969b70",
   "assets/ships/aegis-kit/reference-fighter.js": "115e1686a2da",
   "assets/ships/concept-trio/bulldog-initial.json": "43dd7308acf4",
   "assets/ships/concept-trio/bulldog.gltf": "ff6d04c75dc9",
