@@ -797,7 +797,11 @@ export type ExperimentModules = {
             x: number;
             y: number;
         } | null;
-        create: (host: HTMLElement, config?:{style?:number;fov?:number}) => {
+        create: (host: HTMLElement, config?:{style?:number;fov?:number;sources?:import('../src/types').SkyCameraSource[];optics?:boolean}) => {
+            setEnvironment:(lighting:import('../src/types').SkyEnvironmentLighting|null)=>void;
+            setCameraSources:(sources:import('../src/types').SkyCameraSource[]|null)=>void;
+            setOccluders:(occluders:import('../src/types').SkyOccluder[])=>void;
+            setOpticsEnabled:(enabled:boolean)=>void;
             setPlanetImage: (source:HTMLCanvasElement|HTMLImageElement) => void;
             setImpactTime: (seconds:number) => void;
             setStyle: (style:number) => void;

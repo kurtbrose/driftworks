@@ -70,3 +70,15 @@ hostiles, landmarks or invisible terrain collision. It starts stationary facing
 the planet; the sky begins five seconds before impact when flight starts.
 Settings provide time, speed and restart. `planet-impact-baked` retains the 8v8
 dogfight. Current playback uses v2; the v1 notes above describe the earlier study.
+
+## Registered playback revision 3
+
+The v2 source edits are preserved, but the painted flash is excluded from
+playback. `tools/register-planet-impact.py` aligns only tightly feathered local event
+patches over the frozen master. It records source centers, shifts and
+measured post-registration centers in `registered-v3/registration.json`;
+`registered-v3/0.png` through `6.png` are the composited images. No coastlines
+or clouds outside each feathered permission region move. The bake uses these
+plates in `baked-v3/`, with times 0,2,30,60,120,300,600 seconds. A brief live
+radiance/bloom pulse, anchored at source UV (.49,.46), supplies the initial
+optical flash instead of blending a painted bright object.

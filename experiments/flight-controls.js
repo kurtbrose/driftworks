@@ -15,7 +15,7 @@
         var sensitivity = get('sensitivity'), preferredDevice = '';
         try {
             var savedMode = window.localStorage.getItem('driftworks.flight.input-mode');
-            if (savedMode === 'mouse' || savedMode === 'controller') inputMode.value = savedMode;
+            if (savedMode === 'mouse' || savedMode === 'controller' || savedMode === 'touch') inputMode.value = savedMode;
             var savedSensitivity = Number(window.localStorage.getItem('driftworks.flight.sensitivity'));
             if (Number.isFinite(savedSensitivity) && savedSensitivity >= .3 && savedSensitivity <= 3)
                 sensitivity.value = String(savedSensitivity);
@@ -82,8 +82,82 @@
             clear();
             try { window.localStorage.setItem('driftworks.flight.steering', steeringPreset.value); } catch (error) { /* Session controls still work. */ }
         };
+        // Pointer IDs keep both thumbs independent; cancellation always releases demand.
+        var touch = {pitch: 0, yaw: 0, fire: false, boost: false, throttleRate: 0};
+        var touchRoot = document.getElementById('touch-controls');
+        var touchStick = document.getElementById('touch-stick');
+        var touchKnob = document.getElementById('touch-knob');
+        var stickPointer = -1;
+        function clearTouch() {
+            touch.pitch = touch.yaw = touch.throttleRate = 0;
+            touch.fire = touch.boost = false;
+            stickPointer = -1;
+            if (touchKnob && touchKnob.style) touchKnob.style.transform = '';
+            if (touchRoot && touchRoot.querySelectorAll) touchRoot.querySelectorAll('button').forEach(function (button) { button.classList.remove('held'); });
+        }
+        function touchLayout() {
+            document.body.classList.toggle('touch-flight', inputMode.value === 'touch');
+            clearTouch();
+        }
+        if (touchRoot && touchStick && touchRoot.querySelectorAll) {
+            try {
+                if (window.location.search.indexOf('mobile=1') >= 0 || (!window.localStorage.getItem('driftworks.flight.input-mode') && window.matchMedia('(pointer: coarse)').matches)) inputMode.value = 'touch';
+            } catch (error) { if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) inputMode.value = 'touch'; }
+            touchLayout();
+            /** @param {PointerEvent} e */
+            function moveTouch(e) {
+                if (e.pointerId !== stickPointer) return;
+                if (!touchStick) return;
+                var rect = touchStick.getBoundingClientRect(), radius = rect.width * .32;
+                var x = (e.clientX - rect.left - rect.width / 2) / radius;
+                var y = (e.clientY - rect.top - rect.height / 2) / radius;
+                var length = Math.max(1, Math.hypot(x, y)); x /= length; y /= length;
+                var demand = input.stickDemand([x, y], .08, 1.4);
+                touch.pitch = demand[0]; touch.yaw = demand[1];
+                if (touchKnob && touchKnob.style) touchKnob.style.transform = 'translate(' + x * radius + 'px,' + y * radius + 'px)';
+            }
+            touchStick.addEventListener('pointerdown', function (e) {
+                if (actions.isPaused() || stickPointer !== -1 || !touchStick) return;
+                e.preventDefault(); stickPointer = e.pointerId; touchStick.setPointerCapture(e.pointerId); moveTouch(e);
+            });
+            touchStick.addEventListener('pointermove', moveTouch);
+            ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (name) {
+                if (!touchStick) return;
+                touchStick.addEventListener(name, function (e) {
+                    if (/** @type {PointerEvent} */(e).pointerId === stickPointer) {
+                        stickPointer = -1; touch.pitch = touch.yaw = 0;
+                        if (touchKnob && touchKnob.style) touchKnob.style.transform = '';
+                    }
+                });
+            });
+            touchRoot.querySelectorAll('button[data-touch]').forEach(function (button) {
+                var pointer = -1, name = button.getAttribute('data-touch');
+                button.addEventListener('pointerdown', function (event) {
+                    var e = /** @type {PointerEvent} */(event);
+                    if (actions.isPaused() || pointer !== -1) return;
+                    e.preventDefault(); pointer = e.pointerId; button.setPointerCapture(pointer); button.classList.add('held');
+                    if (name === 'fire') touch.fire = true;
+                    if (name === 'boost') touch.boost = true;
+                    if (name === 'up') touch.throttleRate = 1;
+                    if (name === 'down') touch.throttleRate = -1;
+                    if (name === 'target') actions.nextTarget();
+                    if (name === 'weapon') actions.nextWeapon();
+                    if (name === 'pause') actions.pause();
+                });
+                ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (eventName) {
+                    button.addEventListener(eventName, function (event) {
+                        if (/** @type {PointerEvent} */(event).pointerId !== pointer) return;
+                        pointer = -1; button.classList.remove('held');
+                        if (name === 'fire') touch.fire = false;
+                        if (name === 'boost') touch.boost = false;
+                        if (name === 'up' && touch.throttleRate > 0 || name === 'down' && touch.throttleRate < 0) touch.throttleRate = 0;
+                    });
+                });
+            });
+        }
         function clear() {
             stopRumble();
+            clearTouch();
             keys = /** @type {Record<string, boolean>} */ ({});
             mouse = [0, 0];
         }
@@ -212,6 +286,7 @@
         };
         inputMode.onchange = function () {
             actions.pause();
+            touchLayout();
             try { window.localStorage.setItem('driftworks.flight.input-mode', inputMode.value); } catch (error) { /* Optional preference. */ }
         };
         document.addEventListener('pointerlockchange', function () {
@@ -320,6 +395,10 @@
             return (keys[a] ? 1 : 0) - (keys[b] ? 1 : 0);
         }
         function sample() {
+            if (inputMode.value === 'touch') {
+                if (actions.isPaused()) clearTouch();
+                return {pitch: touch.pitch, yaw: touch.yaw, fire: touch.fire, boost: touch.boost, throttleRate: touch.throttleRate, throttle: null};
+            }
             var connected = pads(), signature = connected.map(function (p) {
                 return p.index + ':' + p.id;
             }).join('|');

@@ -53,18 +53,23 @@ interpretations of the research, not quantitative hydrodynamic output.
 Keep the plume top-down and irregular, let the bright core cool, and make any
 condensation rim patchy and transient. Expansion should move a front; a crossfade
 between differently sized rings can otherwise expose two rings simultaneously.
-Revision 2 has eight stages: pristine, 0.25 s optical flash, 2 s faded flash,
-30 s, 60 s, 120 s, 300 s and 600 s. The distinct two-second frame prevents a
-white flash from lingering through the long blend to the thirty-second image.
+Playback revision 3 has seven registered image stages: pristine, 2 s early vapor,
+30 s, 60 s, 120 s, 300 s and 600 s. The painted flash is excluded. A live
+HDR-like radiance/bloom pulse peaks in the first few hundredths of a second and
+decays within 0.8 s; it is not crossfaded as a picture. Its direction uses the
+same fixed source UV (.49,.46) as the registered event.
 The ten-minute painting remains as a persistent aftermath. Original v1 plates
 and bakes are retained for comparison.
 
 ## Bake and runtime
 
 `tools/bake-planet-impact.py` reuses `tools/compose-skybox.py` with Pillow/NumPy
-offline. It applies the review's frozen-master mask before projection and writes
-eight lossless 4096×2048 equirectangular maps plus a recipe under
-`assets/backgrounds/planet-hero-v1/baked-v2/`. These are ordinary spherical sky
+offline. `tools/register-planet-impact.py` first aligns feathered local image
+patches to one fixed center, without shifting the underlying geography.
+It applies per-stage feathered permission regions, then the baker projects those
+registered plates and writes
+seven lossless 4096×2048 equirectangular maps plus a recipe under
+`assets/backgrounds/planet-hero-v1/baked-v3/`. These are ordinary spherical sky
 textures, not AI-generated cube faces. Runtime requires no Python or network.
 
 The baked projection matches the opaque landmark renderer's horizontal UV

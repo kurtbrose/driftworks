@@ -80,8 +80,19 @@
         var depth = -dot(direction, pose.back);
         return depth > 0 ? { x: dot(direction, pose.right) * focal / aspect / depth, y: dot(direction, pose.up) * focal / depth } : null;
     }
-    /** @param {HTMLElement} host @param {{style?:number,fov?:number}=} config */
+    /** @param {HTMLElement} host @param {{style?:number,fov?:number,sources?:import('../src/types').SkyCameraSource[],optics?:boolean}=} config */
     function create(host, config) {
+        var effects=window.Driftworks.skyEffects?window.Driftworks.skyEffects.create(host):null;
+        var opticsControl=/** @type {HTMLInputElement|null} */(document.getElementById('skybox-optics'));
+        if(effects){effects.setEnabled(config&&config.optics!==undefined?config.optics:!opticsControl||opticsControl.checked);if(opticsControl)opticsControl.addEventListener('change',function(){if(effects&&opticsControl)effects.setEnabled(opticsControl.checked);});}
+        /** @type {import('../src/types').SkyCameraSource[]|null} */var cameraSources=config&&config.sources?config.sources:null;
+        var sourceStyle=-1;
+        /** @type {Record<string,import('../src/types').SkyCameraSource[]>} */var authoredSources={};
+        if(effects&&typeof window.fetch==='function'){
+            window.fetch(assetUrl('../assets/backgrounds/sky-camera-sources-v1.json')).then(function(response){if(!response.ok)throw new Error('Sky camera sources unavailable');return response.json();}).then(/** @param {{version:number,styles:Record<string,import('../src/types').SkyCameraSource[]>}} data */function(data){if(data.version!==1)throw new Error('Invalid sky camera source version');authoredSources=data.styles;sourceStyle=-1;}).catch(function(){authoredSources={};sourceStyle=-1;});
+        }
+        /** @type {import('../src/types').SkyEnvironmentLighting|null} */var environmentOverride=null;
+        /** @type {WebGLTexture|null} */var hdrTexture=null;
         var viewFocal=config&&config.fov?1/Math.tan(Math.max(25,Math.min(150,config.fov))*Math.PI/360):focal;
         var canvas = document.createElement('canvas');
         canvas.className = 'flight-skybox';
@@ -122,7 +133,7 @@ uniform vec3 right,up,back;
 uniform float aspect,focal,style;
 uniform sampler2D panorama;
 uniform sampler2D noiseMap;
-uniform float exposure;
+uniform float exposure;uniform float hdrEnabled;uniform sampler2D hdrEnvironment;
 uniform sampler2D ohioPlanet,ohioSun;
 uniform vec3 ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp;
 uniform vec3 ohioSunCenter,ohioSunRight,ohioSunUp;
@@ -173,6 +184,7 @@ vec3 galaxy(vec3 ray,vec3 center,vec3 axis){
     return vec3(.16,.22,.32)*disk*(.3+arms*2.)*(.45+knots)*(.4+.6*lane)+vec3(.9,.72,.46)*core;
 }
 void main(){
+    if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
     if(style>9.5 && style<11.5){
         vec3 riverRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec2 riverUV=vec2(atan(riverRay.y,riverRay.x)/6.28318530718+.5,acos(clamp(riverRay.z,-1.,1.))/3.14159265359);
@@ -180,6 +192,7 @@ void main(){
     }
     if(style>20.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+
         vec2 uv=vec2(atan(ray.y,ray.x)/6.28318530718+.5,acos(clamp(ray.z,-1.,1.))/3.14159265359);
         gl_FragColor=vec4(impactOptics(mix(texture2D(ohioPlanet,uv).rgb,texture2D(ohioSun,uv).rgb,bakedBlend)*exposure,ray),1.);return;
     }
@@ -285,7 +298,7 @@ void main(){
         }
         var lightingEnabled=true;
         /** @type {Record<string,import('../src/types').SkyEnvironmentLighting>} */ var skyLighting={};
-        function getLighting(){return lightingEnabled && style>=7 ? skyLighting[['galaxy','nebula','sun','river','woven'][style-7]] || null : null;}
+        function getLighting(){if(lightingEnabled&&environmentOverride)return environmentOverride;return lightingEnabled && style>=7 ? skyLighting[['galaxy','nebula','sun','river','woven'][style-7]] || null : null;}
         function loadHeroFeatures() {
             if(heroLoading || typeof window.fetch !== 'function') return;
             heroLoading=true;
@@ -547,13 +560,24 @@ void main(){
         }
         var stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
         if(!landmarkSky&&typeof window.location!=='undefined'&&/(?:[?&])sky=impact(?:&|$)/.test(window.location.search||'')){style=12;if(selector)selector.value='12';}
-        return {setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
+        return {setEnvironment:/** @param {import('../src/types').SkyEnvironmentLighting|null} value */function(value){
+                if(value===environmentOverride)return;
+                if(value&&(!value.radiance||value.radiance.length!==512*256*4||!value.radiance.every(Number.isFinite)||value.sh.length!==9||value.sh.some(function(row){return row.length!==3||!row.every(Number.isFinite);})))throw new Error('Expected cached 512x256 RGBA linear HDR radiance and nine RGB SH coefficients');
+                if(value&&!gl.getExtension('OES_texture_float'))throw new Error('HDR sky requires float textures');
+                if(hdrTexture)gl.deleteTexture(hdrTexture);hdrTexture=null;environmentOverride=value;sourceStyle=-1;
+                if(value){var hdrFilter=gl.getExtension('OES_texture_float_linear')?gl.LINEAR:gl.NEAREST;hdrTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,512,256,0,gl.RGBA,gl.FLOAT,value.radiance||null);gl.activeTexture(gl.TEXTURE0);}
+            },setCameraSources:/** @param {import('../src/types').SkyCameraSource[]|null} value */function(value){cameraSources=value;sourceStyle=-1;},setOccluders:/** @param {import('../src/types').SkyOccluder[]} value */function(value){if(effects)effects.setOccluders(value);},setOpticsEnabled:/** @param {boolean} value */function(value){if(effects)effects.setEnabled(value);},setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
             }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] */ function (pose, renderScale, empty,elapsed) {
+                if(effects&&sourceStyle!==style){
+                    effects.setSources(cameraSources||(!landmarkSky&&!hdrTexture?authoredSources[String(style)]||[]:[]));sourceStyle=style;
+                }
+                var cameraExposure=effects?effects.render(pose,viewFocal,elapsed===undefined?performance.now()/1000:elapsed,empty):1;
+                var effectiveExposure=exposure*cameraExposure;
                 // Shared renderer integration: the host delivers the probe and sky basis.
                 // No mission or material code needs to choose lights.
                 if(typeof host.dispatchEvent==='function' && typeof CustomEvent==='function') {
-                    host.dispatchEvent(new CustomEvent('sky-environment',{detail:{lighting:getLighting(),pose:pose}}));
+                    host.dispatchEvent(new CustomEvent('sky-environment',{detail:{lighting:getLighting(),pose:pose,exposure:cameraExposure}}));
                 }
                 // Keep sky sampling and point footprints independent of scene resolution.
                 var dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1) * quality), width = Math.round(host.clientWidth * dpr), height = Math.round(host.clientHeight * dpr);
@@ -577,7 +601,7 @@ void main(){
                     var from=0;for(var i=1;i<impactTimes.length;i++)if(impactTime>=impactTimes[i])from=i;
                     var to=Math.min(from+1,impactTimes.length-1),blend=from===to?0:Math.max(0,Math.min(1,(impactTime-impactTimes[from])/(impactTimes[to]-impactTimes[from])));
                     gl.disable(gl.BLEND);uniforms(impactProgram,pose,width/height,dpr);
-                    gl.uniform1f(gl.getUniformLocation(impactProgram,'exposure'),exposure);gl.uniform1f(gl.getUniformLocation(impactProgram,'impactBlend'),blend*blend*(3-2*blend));
+                    gl.uniform1f(gl.getUniformLocation(impactProgram,'exposure'),effectiveExposure);gl.uniform1f(gl.getUniformLocation(impactProgram,'impactBlend'),blend*blend*(3-2*blend));
                     [0,1,from+1,to+1].forEach(function(index,unit){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,impactTextures[index]);gl.uniform1i(gl.getUniformLocation(impactProgram,['impactSurround','impactMaster','impactFrom','impactTo'][unit]),unit);});
                     gl.bindBuffer(gl.ARRAY_BUFFER,quad);var position=gl.getAttribLocation(impactProgram,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);gl.drawArrays(gl.TRIANGLES,0,6);gl.disableVertexAttribArray(position);
                     if(impactSlider)impactSlider.value=String(impactTime);
@@ -590,7 +614,9 @@ void main(){
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
-                gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), exposure);
+                gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), effectiveExposure);
+                gl.uniform1f(gl.getUniformLocation(sky,'hdrEnabled'),hdrTexture?1:0);gl.uniform1i(gl.getUniformLocation(sky,'hdrEnvironment'),4);
+                if(hdrTexture){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.activeTexture(gl.TEXTURE0);}
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
                 var flash=impactTime>=0&&impactTime<.8?Math.exp(-impactTime/.12)*(1-Math.exp(-impactTime/.008)):0;
                 var impactPlanet=landmarkTextures[0],eventDirection=[0,1,0];
@@ -620,9 +646,9 @@ void main(){
                 gl.bindTexture(gl.TEXTURE_2D,!landmarkSky && style>=10 ? panoramaTextures[style] : texture);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disableVertexAttribArray(a);
-                if(!landmarkSky && style>=7 && style<=9 && heroFeatures.length) {
+                if(!hdrTexture && !landmarkSky && style>=7 && style<=9 && heroFeatures.length) {
                     uniforms(heroProgram,pose,width/height,dpr);
-                    gl.uniform1f(gl.getUniformLocation(heroProgram,'exposure'),exposure);
+                    gl.uniform1f(gl.getUniformLocation(heroProgram,'exposure'),effectiveExposure);
                     gl.uniform1i(gl.getUniformLocation(heroProgram,'feature'),0);
                     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_COLOR);
                     var direction=gl.getAttribLocation(heroProgram,'direction'), texcoord=gl.getAttribLocation(heroProgram,'texcoord');

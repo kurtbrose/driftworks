@@ -824,6 +824,8 @@
       'vec2 hatch=shipCell(p+vec2(2.,1.),vec2(20.,17.8));vec2 edge=abs(hatch)-vec2(.8,.6);float hatchDistance=max(edge.x,edge.y);float hatchMask=(1.-smoothstep(0.,fp,hatchDistance))*(1.-smoothstep(.18,.5,fp))*shell;float hatchRim=shipLine(hatchDistance,.035,fp)*shell;col=mix(col,col*.78,hatchMask);col+=vec3(.12,.13,.12)*hatchRim;'+
       'col*=.7+.3*shell;'+
       '}else{if(uFinish>.5&&uFinish<6.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float near=1.-smoothstep(.02,.1,fp);vec3 gradient=noiseGradient3(vLocal*42.).yzw;vec3 grain=rotateNormal(gradient);n=normalize(n-(grain-n*dot(grain,n))*.09*near);float rough=noise3(vLocal*12.);col*=1.+(rough-.5)*.07*near;vec4 detail=hardwareMasks(vLocal,fp);col*=1.-detail.z*.23;col=mix(col,vec3(.72,.74,.70),detail.x*.72);col=mix(col,col*.72+vec3(.055),detail.y*.6);col=mix(col,vec3(.16,.19,.19),detail.w*.65);n=normalize(n+rotateNormal(vec3(.06,-.04,.03))*detail.y);if(uFinish>2.5&&uFinish<4.5){float joint=abs(mod(abs(vLocal.x)-42.,5.5)-.12);float weld=shipLine(joint,.04,fp);col=mix(col,col*.7,weld*.5);}}float diffuse=max(0.,dot(n,light));col*=uEnvironmentEnabled>.5?skyDiffuse(n):vec3((uFinish>.5?.25+.92*diffuse:.61+.55*diffuse)+uCraftFill);if(uEnvironmentEnabled<.5&&uFinish>.5&&uFinish<2.5){vec3 halfVector=normalize(light+uBack);col+=vec3(.85,.90,1.)*pow(max(0.,dot(n,halfVector)),uFinish<1.5?36.:12.)*.28;}if(uFinish>6.5&&uFinish<7.5)col=uColor*.95;else col+=uColor*(rigIllumination(vRelative,n)+vBakedDocking*uRigBakedEnabled);}if(uEnvironmentEnabled>.5 && !(uFinish>6.5&&uFinish<7.5))col+=skySpecular(n);gl_FragColor=vec4(col,uOpacity);}';
+    fragmentShader=fragmentShader.replace('precision highp float;','precision highp float;uniform float uCameraExposure;').replace('gl_FragColor=vec4(col,uOpacity);','gl_FragColor=vec4(col*pow(uCameraExposure,1./2.2),uOpacity);');
+    var cameraExposureUniform={value:1};
     if(DW.explosions){
       fragmentShader=fragmentShader.replace('void main(){',DW.explosions.shaderSource+'\nvoid main(){if(uFinish>9.5){gl_FragColor=uFinish<10.5?blastFire(vEffect.xy,uSpin,vEffect.z,uColor.r):blastWave(vEffect.xy,uSpin);if(gl_FragColor.a<.01)discard;return;}');
     }
@@ -850,10 +852,11 @@
       // Archived glTF materials: metallicFactor=0, omitted roughnessFactor defaults to 1.
       var result=new THREE.MeshStandardMaterial({metalness:0,roughness:1,side:THREE.DoubleSide,alphaTest:.5});
       result.onBeforeCompile=function(shader){
-        shader.uniforms.uSkyBasis={value:skyBasis};
+        shader.uniforms.uSkyBasis={value:skyBasis};shader.uniforms.uSkyCameraExposure=cameraExposureUniform;
         shader.uniforms.uShipPaint=snapshot.uPaint;
         shader.uniforms.uShipPaintEnabled=snapshot.uPaintEnabled;
-        shader.fragmentShader='uniform mat3 uSkyBasis;uniform vec3 uShipPaint;uniform float uShipPaintEnabled;\n'+shader.fragmentShader;
+        shader.fragmentShader='uniform float uSkyCameraExposure;uniform mat3 uSkyBasis;uniform vec3 uShipPaint;uniform float uShipPaintEnabled;\n'+shader.fragmentShader;
+        shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>','outgoingLight*=uSkyCameraExposure;\n#include <opaque_fragment>');
         shader.fragmentShader=shader.fragmentShader.replace('#include <envmap_physical_pars_fragment>',THREE.ShaderChunk.envmap_physical_pars_fragment.replace(/envMapRotation \*/g,'uSkyBasis *'));
         shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',THREE.ShaderChunk.map_fragment+
           '\n#ifdef USE_MAP\nvec3 rgb=pow(max(sampledDiffuseColor.rgb,vec3(0.)),vec3(1./2.2));float hi=max(rgb.r,max(rgb.g,rgb.b)),lo=min(rgb.r,min(rgb.g,rgb.b)),chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uShipPaintEnabled;float value=max(uShipPaint.r,max(uShipPaint.g,uShipPaint.b));vec3 paint=mix(vec3(lo*value),uShipPaint*hi,chroma/max(.001,hi));diffuseColor.rgb=mix(diffuseColor.rgb,diffuse*pow(max(paint,vec3(0.)),vec3(2.2)),mask);\n#endif\n');
@@ -870,8 +873,8 @@
     /** @type {WeakMap<HTMLImageElement,import('./three-types').Texture>} */ var environmentTextures=new WeakMap();
     var blackEnvironment=new THREE.DataTexture(new Uint8Array([0,0,0,255]),1,1);blackEnvironment.needsUpdate=true;
     host.addEventListener('sky-environment',function(event){
-      var data=/** @type {CustomEvent<{lighting:import('./types').SkyEnvironmentLighting|null,pose:{right:V3,up:V3,back:V3}}>} */ (event).detail;
-      environment=data.lighting;environmentPose=data.pose;
+      var data=/** @type {CustomEvent<{lighting:import('./types').SkyEnvironmentLighting|null,exposure?:number,pose:{right:V3,up:V3,back:V3}}>} */ (event).detail;
+      environment=data.lighting;environmentPose=data.pose;cameraExposureUniform.value=data.exposure===undefined?1:Math.max(.05,Math.min(3,data.exposure));
     });
     /** @type {import('./three-types').RenderTarget|null} */
     var workShadow=null;
@@ -1255,7 +1258,7 @@
       var top=.1/v.focal,right=top*vp.width/vp.height;
       camera.projectionMatrix.makePerspective(-right,right,top,-top,.1,v.distance+30000);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
       activeProbe=null;
-      setUniform('EnvironmentEnabled',environment?1:0);
+      setUniform('EnvironmentEnabled',environment?1:0);setUniform('CameraExposure',shadowPass?1:cameraExposureUniform.value);
       if(environment){
         var environmentTexture=environmentTextures.get(environment.image);
         if(!environmentTexture){environmentTexture=new THREE.Texture(environment.image);environmentTexture.flipY=false;environmentTexture.wrapS=THREE.RepeatWrapping;environmentTexture.minFilter=THREE.LinearMipmapLinearFilter;environmentTexture.needsUpdate=true;environmentTextures.set(environment.image,environmentTexture);}

@@ -18,7 +18,7 @@ function glareVisibility(eye,sun,radius,moon=false){
     }return visible/97;
 }
 /** @param {number} current @param {number} target @param {number} dt */
-function glareExposure(current,target,dt){return current+(target-current)*(1-Math.exp(-Math.max(0,Math.min(dt,.1))/(target<current?.28:1.6)));}
+function glareExposure(current,target,dt){if(typeof window!=='undefined'&&window.Driftworks.skyEffects)return window.Driftworks.skyEffects.adapt(current,target,dt);return current+(target-current)*(1-Math.exp(-Math.max(0,Math.min(dt,.1))/(target<current?.28:1.6)));}
 
 /** @param {number} phase */
 function novaProfile(phase){const t=Math.max(0,Math.min(1,phase));return {radius:.035+1.05*t*t,energy:6*(1+2*Math.sin(Math.PI*t)),color:[1,.97-.22*t,.91-.4*t]};}

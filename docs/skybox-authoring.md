@@ -14,10 +14,12 @@ mission family. It updates only the existing planet texture, retaining its
 projection, star occlusion and sun. An override submitted before the original
 planet finishes loading is retained. The hero review viewer uses this for the
 local overhead impact compositor. Mission `planet-impact-baked` instead samples
-adjacent offline-baked 4K spherical maps from `baked-v2/`, with three textures resident and a
+adjacent offline-baked 4K spherical maps from `baked-v3/`, with three textures resident and a
 flight-time clock that freezes on pause/loading. `sky.bakedImpact` selects this
 pass while preserving the same landmark placement and disk star occlusion.
-The eight stages now span ten minutes; `planet-impact-watch` provides an empty
+Seven registered image stages span ten minutes, with a separate brief live
+radiance pulse replacing the painted flash. Local event patches are aligned
+before baking, so the original geography is never translated. `planet-impact-watch` provides an empty
 flight world without asteroid, mothership, contacts or collision.
 See [physical timing and bake notes](impact-timing.md). Other planet missions
 continue using the static baseline.
@@ -362,3 +364,57 @@ a global source-visibility factor to a center glow painted a false bright patch
 over the occluder. General HDR bloom would need to spread light from actually
 visible bright pixels. The alignment preset cannot fully eclipse an expanded
 source larger than the sphere; its visible surrounding sky correctly stays bright.
+
+## Shared HDR skies and camera response
+
+`src/sky-effects.js` now provides camera response to the normal sky renderer;
+the star-glare fixture uses its same exposure adaptation function. Normal sky
+consumers load it before `experiments/skybox.js`. Broad lighting and reflections
+still use the existing precomputed cache; optical sources do not add light a
+second time. `assets/backgrounds/sky-camera-sources-v1.json` holds authored
+optical-source metadata keyed by sky style (currently Hero Sun / style 9).
+Directions are unit sky-space vectors with Z up; radius is angular radians,
+strength is an optical tuning value and color is an RGB tint. Star cores include
+only their emitting disk, not the source sprite's full glow-card width.
+
+`flightSkybox.create` optionally accepts `sources` and `optics`. The instance
+exposes `setCameraSources(array)` (explicit override), `setCameraSources(null)`
+(restore authored defaults), `setOccluders([{center,radius}])` and
+`setOpticsEnabled(boolean)`. Occluders and the camera eye use the same world
+units; the sky direction stays fixed while the eye moves. Flight supplies
+conservative asteroid bounding spheres. Hull/cockpit mesh occlusion is not yet
+provided. Twenty-five disk samples estimate visibility and the exposed centroid.
+No configured source means no overlay allocation and neutral exposure. Disabling
+the effect or switching away restores neutral exposure. Sources wider than .12
+radians do not get a point-centered bloom approximation.
+
+The `sky-environment` event additionally carries optional camera `exposure`,
+which defaults to one for existing callers. Custom geometry shaders apply its
+display-space equivalent; native PBR ships apply it before output conversion.
+The background uses the same exposure response. This is source-direction-based
+camera adaptation plus restrained glare, not screen-space HDR bloom or scene
+luminance metering. It runs after foreground rendering as a pointer-transparent
+overlay, without a lens-ghost chain. Flight Settings and the sky review expose
+an A/B checkbox. `skybox-review.html?sky=9` opens the normal Sun sky with real
+ships and has Face the sun / Look away buttons. Model orbit is independent of
+the sky framing in this art viewer.
+
+`setEnvironment(cache)` accepts the same immutable precomputed environment used
+by scene lighting: nine RGB SH coefficients, a decoded reflection `image`, `map`
+identity and 512x256 RGBA `Float32Array` linear `radiance`. The normal background
+renderer uploads the floating-point texture once per cache identity and tone-maps
+it at display time; values above one survive until then. The scene receives that
+same cache for SH and its existing per-renderer PMREM reflections. `null` restores
+the authored sky. Validation and float-texture support are checked before changing
+the current state. A custom HDR environment must supply its own camera sources;
+it does not inherit unrelated optical sources from the previously selected sky.
+Treat cache objects/images as immutable: the scene's PMREM cache keys by image
+identity. Repeatedly resubmitting the same object does not reupload its texture.
+
+The review's optional cached-HDR preview exercises this shared path using existing
+lighting assets; it intentionally displays only their 512x256 resolution. Full
+resolution PNG/JPEG sky artwork remains the ordinary default. This is not a new
+six-face HDR asset baker, dynamic nova sequencing API, or general mesh-shadow
+system. The fixture's finite-source irradiance lookup and sampled sphere shadows
+remain experimental; concentrated emitters should not be silently added to low
+order ambient SH because of its demonstrated rear-lobe artifact.

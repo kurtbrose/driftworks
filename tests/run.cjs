@@ -1,5 +1,7 @@
 require('./asset-versions.cjs');
 require('./skybox-factory.cjs');
+require('./sky-effects.cjs');
+require('./sky-environment.cjs');
 require('./star-glare.cjs');
 require('./impact-lab.cjs');
 require('./impact-sky.cjs');

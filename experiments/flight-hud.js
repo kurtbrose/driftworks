@@ -291,6 +291,14 @@
             function label(text,x,y,size,color){ctx.font=(size||11)+'px monospace';ctx.fillStyle=color||ink;ctx.textAlign='left';ctx.fillText(text,x,y);}
             /** @param {string} name @param {number} value @param {number} max @param {number} x @param {number} y @param {number} width @param {string} color */
             function meter(name,value,max,x,y,width,color){var fraction=Math.max(0,Math.min(1,value/Math.max(1,max)));label(name,x,y,10,muted);label(Math.round(fraction*100)+'%',x+width-27,y,10,ink);ctx.fillStyle='#233c43';ctx.fillRect(x,y+6,width,4);ctx.fillStyle=color;ctx.fillRect(x,y+6,width*fraction,4);}
+            if (document.body.classList.contains('touch-flight')) {
+                panel(12,12,Math.min(290,w-112),84);
+                meter('SHIELD',combat.shield,combat.maxShield||120,24,32,100,'#79b8e7');
+                meter('HULL',combat.hull,combat.maxHull||100,24,62,100,'#91d29b');
+                label(Math.round(Math.hypot.apply(null,view.state.velocity)*mission.units.speedScale)+' '+mission.units.speedLabel,140,36,16);
+                label('THR '+Math.round(view.state.throttle*100)+'%',140,65,16);
+                label(selected ? DW.training.callsign(selected) : 'NO TARGET',12,120,16,gold);
+            } else {
             var leftY=bottom-162;
             panel(margin,leftY,pw,162);
             label('YOUR SHIP',margin+14,leftY+23,10,muted);
@@ -312,6 +320,7 @@
                 meter('SHIELD',selected.shield||0,selected.maxShield||1,rightX+14,rightY+157,pw-28,'#79b8e7');
                 meter('HULL',selected.hp,selected.maxHp,rightX+14,rightY+181,pw-28,'#91d29b');
             }else label('TAB / ACQUIRE',rightX+14,rightY+50,11,muted);
+            }
             // A small reticle replaces the DOM ring and repeated keyboard hints.
             if(!document.body.classList.contains('watch-chase')){
                 ctx.strokeStyle='rgba(178,232,214,.8)';ctx.lineWidth=1;
@@ -322,11 +331,15 @@
             // Transmissions are temporary; no idle comms box or voice button in play.
             var subtitle=commsPanel.querySelector('[data-subtitle]'),speaker=commsPanel.querySelector('[data-speaker]');
             if(!view.paused&&!commsPanel.classList.contains('idle')&&subtitle&&subtitle.textContent){
-                var cw=Math.min(640,w-margin*2),cx=(w-cw)/2,cy=margin;
-                var portrait=commsPanel.querySelector('canvas.radio-portrait'),hasPortrait=portrait instanceof HTMLCanvasElement&&!portrait.hidden;
+                var mobile=document.body.classList.contains('touch-flight');
+                var cw=mobile?Math.min(420,w>600?w-410:w-24):Math.min(640,w-margin*2),cx=(w-cw)/2,cy=mobile?(w>600?12:138):margin;
+                if(mobile&&w>600)cx=320;
+                var portrait=commsPanel.querySelector('canvas.radio-portrait'),hasPortrait=!mobile&&portrait instanceof HTMLCanvasElement&&!portrait.hidden;
                 var portraitSize=Math.min(compact?112:128,h<480?96:128);
                 var textX=cx+(hasPortrait?portraitSize+30:18),textWidth=cw-(hasPortrait?portraitSize+48:36),fontSize=Math.min(compact?18:32,Math.max(14,Number(get('dialogue-size').value)||22)),columns=Math.max(12,Math.floor(textWidth/(fontSize*.603)));
+                if(mobile)fontSize=14;
                 var words=subtitle.textContent.split(/\s+/),lines=[''];words.forEach(function(word){var last=lines.length-1;if((lines[last]+' '+word).trim().length>columns)lines.push(word);else lines[last]=(lines[last]+' '+word).trim();});
+                if(mobile)lines=lines.slice(0,3);
                 var ch=Math.max(hasPortrait?portraitSize+24:92,48+lines.length*(fontSize+5));panel(cx,cy,cw,ch);
                 if(hasPortrait&&portrait instanceof HTMLCanvasElement)ctx.image(portrait,cx+12,cy+12,portraitSize,portraitSize,1);
                 label((speaker&&speaker.textContent)||'COMMS',textX,cy+24,11,gold);

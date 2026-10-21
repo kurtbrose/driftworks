@@ -6,8 +6,10 @@
     var host=control('viewer'), world=DW.sim.createInitialWorld(), units=DW.sim.METERS_PER_UNIT;
     world.asteroids=[];world.ships=[];world.platforms=[];world.wrecks=[];world.packets=[];world.combat.drones=[];world.selectedShipIds=[];
     var scene=DW.scene3d.create(host,function(){return world;},function(value){world=value;},{study:true,viewer:true});
-    var sky=DW.flightSkybox.create(host,{style:8});
+    var initialStyle=new URLSearchParams(window.location.search).get('sky')==='9'?9:8;
+    var sky=DW.flightSkybox.create(host,{style:initialStyle});
     var model=/** @type {HTMLSelectElement} */ (document.getElementById('review-model')), skyChoice=control('review-sky'), status=control('review-status');
+    skyChoice.value=String(initialStyle);
     DW.shipPackModels.populate(model,false);
     model.value='quaternius-ultimate-spaceships:Striker';
     /** @type {import('./types').Pose} */
@@ -27,6 +29,9 @@
     var skyYaw=90, skyPitch=0;
     /** @param {number} yaw @param {number} pitch @param {string} caption */
     function framing(yaw,pitch,caption){skyYaw=yaw;skyPitch=pitch;control('caption').textContent=caption;}
+    control('review-face-sun').onclick=function(){sky.setStyle(9);skyChoice.value='9';framing(74,1,'Sun / restrained camera glare and shared foreground exposure');};
+    control('review-away-sun').onclick=function(){framing(254,0,'Looking away / camera exposure recovers');};
+    if(initialStyle===9)framing(74,1,'Sun / restrained camera glare and shared foreground exposure');
     control('opening').onclick=function(){framing(90,0,'Dark opening / calm silhouette with detail around the edges');};
     control('rim').onclick=function(){framing(90,-14,'Bright rim / deliberate stress test for hull contrast');};
     control('empty').onclick=function(){framing(50,0,'Open field / black space as a visual rest');};
@@ -44,10 +49,15 @@
     control('review-lighting').onchange=function(){sky.setLightingEnabled(control('review-lighting').checked);};
     control('review-paint').onchange=update;model.onchange=update;control('review-reset').onclick=reset;
     window.addEventListener('resize',reset);reset();update();
+    var hdrPreview=control('review-hdr'),previewActive=false;
+    hdrPreview.onchange=function(){if(!hdrPreview.checked){sky.setEnvironment(null);previewActive=false;}};
+    var oldSkyChange=skyChoice.onchange;
+    skyChoice.onchange=function(event){sky.setEnvironment(null);previewActive=false;if(oldSkyChange)oldSkyChange.call(skyChoice,event);};
     var last=0;
     /** @param {number} now */
     function render(now){
         requestAnimationFrame(render);if(document.hidden || now-last<1000/30)return;last=now;
+        if(hdrPreview.checked&&!previewActive){var cached=sky.getLighting();if(cached&&cached.radiance){try{sky.setEnvironment(cached);previewActive=true;}catch(error){hdrPreview.checked=false;control('caption').textContent=String(error);}}}
         var yaw=skyYaw*Math.PI/180,pitch=skyPitch*Math.PI/180,c=Math.cos(pitch),s=Math.sin(pitch);
         sky.render({eye:[0,0,0],right:[Math.sin(yaw),-Math.cos(yaw),0],up:[-Math.cos(yaw)*s,-Math.sin(yaw)*s,c],back:[-Math.cos(yaw)*c,-Math.sin(yaw)*c,-s]},1,false);
         scene.sync(world);scene.render(world,1,0,0);

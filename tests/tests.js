@@ -558,16 +558,24 @@
   });
 
   // A small event/DOM fixture exercises the browser adapter without real devices.
-  function flightControlsFixture(storage){
+  function flightControlsFixture(storage,withTouch){
     function target(){return {listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},emit:function(name,event){if(this.listeners[name])this.listeners[name](event||{});},appendChild:function(child){this.children.push(child);if(this.value===''&&child.value!==undefined)this.value=child.value;},children:[],value:'',textContent:'',setAttribute:function(){}};}
     var elements={},doc=target(),win=target(),host=target(),pads=[],counts={pause:0,weapon:0,target:0,lock:0,radar:0,diagnostics:0,performance:0,resume:0,failure:0},paused=false,dead=false,controls;
     doc.getElementById=function(id){return elements[id]||(elements[id]=target());};
     doc.createElement=target;doc.createTextNode=function(text){return {textContent:text};};
-    doc.body={classList:{add:function(){}}};doc.exitPointerLock=function(){doc.pointerLockElement=null;};
+    doc.body={classList:{add:function(){},toggle:function(){}}};doc.exitPointerLock=function(){doc.pointerLockElement=null;};
     host.clientWidth=1000;host.clientHeight=800;
     host.contains=function(node){return node===host;};host.getBoundingClientRect=function(){return {left:0,top:0,right:host.clientWidth,bottom:host.clientHeight,width:host.clientWidth,height:host.clientHeight};};
     doc.getElementById('input-mode').value='mouse';doc.getElementById('sensitivity').value='1';
     if(storage)win.localStorage=storage;
+    if(withTouch){
+      win.location={search:'?mobile=1'};win.matchMedia=function(){return {matches:false};};
+      var root=doc.getElementById('touch-controls'),stick=doc.getElementById('touch-stick');
+      doc.getElementById('touch-knob').style={};
+      stick.setPointerCapture=function(){};stick.getBoundingClientRect=function(){return {left:0,top:0,width:144,height:144};};
+      root.buttons=['fire','boost','up','down','pause','target','weapon'].map(function(name){var b=target();b.getAttribute=function(){return name;};b.setPointerCapture=function(){};b.classList={add:function(){},remove:function(){}};return b;});
+      root.querySelectorAll=function(){return root.buttons;};
+    }
     controls=window.Driftworks.flightControls.mount(host,{
       isPaused:function(){return paused;},isDead:function(){return dead;},
       pause:function(){counts.pause++;paused=true;controls.clear();controls.release();},
@@ -579,6 +587,22 @@
     function key(code,tag,repeat){var event={code:code,target:{tagName:tag||'BODY'},repeat:!!repeat,preventDefault:function(){this.prevented=true;}};win.emit('keydown',event);return event;}
     return {controls:controls,doc:doc,win:win,host:host,counts:counts,key:key,elements:elements,setPads:function(value){pads=value;},setPaused:function(value){paused=value;},setDead:function(value){dead=value;}};
   }
+
+  test('touch flight keeps two pointers independent and releases on cancellation and pause',function(){
+    var f=flightControlsFixture(undefined,true),root=f.elements['touch-controls'],stick=f.elements['touch-stick'];
+    function event(id,x,y){return {pointerId:id,clientX:x,clientY:y,preventDefault:function(){}};}
+    assert(f.controls.view().inputMode==='touch');
+    stick.emit('pointerdown',event(1,118,72));root.buttons[0].emit('pointerdown',event(2));
+    var demand=f.controls.sample();assert(Math.abs(demand.yaw)>.9&&demand.fire);
+    stick.emit('pointerup',event(2));assert(Math.abs(f.controls.sample().yaw)>.9);
+    root.buttons[0].emit('pointercancel',event(2));assert(!f.controls.sample().fire);
+    stick.emit('lostpointercapture',event(1));assert(f.controls.sample().yaw===0);
+    root.buttons[1].emit('pointerdown',event(3));root.buttons[2].emit('pointerdown',event(4));
+    assert(f.controls.sample().boost&&f.controls.sample().throttleRate===1);
+    root.buttons[4].emit('pointerdown',event(5));demand=f.controls.sample();
+    assert(!demand.boost&&!demand.fire&&demand.throttleRate===0);
+    assert(!f.controls.view().showMouseStick);
+  });
 
   test('flight settings follow the player between lab and mission mounts',function(){
     var stored={},storage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};

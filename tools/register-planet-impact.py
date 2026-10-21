@@ -1,4 +1,4 @@
-"""Register local signed image differences; never move the frozen geography."""
+"""Register feathered local event patches over a frozen full-planet master."""
 from pathlib import Path
 import json
 import numpy as np
@@ -27,19 +27,21 @@ def translate(delta, dx, dy):
 
 Image.fromarray(master.astype(np.uint8)).save(target/'0.png')
 frames = []
-for index, (time, radius) in enumerate([(2, 18), (30, 42), (60, 56), (120, 60), (300, 74), (600, 90)], 1):
-    delta = np.asarray(Image.open(root/f'impact-overhead-v2/{time}.png').convert('RGB'), dtype=np.float32)-master
+for index, (time, radius) in enumerate([(2, 12), (30, 32), (60, 42), (120, 45), (300, 60), (600, 75)], 1):
+    plate = np.asarray(Image.open(root/f'impact-overhead-v2/{time}.png').convert('RGB'), dtype=np.float32)
+    delta = plate-master
     source_center = center(delta)
     dx, dy = cx-source_center[0], cy-source_center[1]
-    # Shift only signed event differences, not the underlying planet pixels.
+    # Move only a tightly permissioned local patch. Blending absolute colours
+    # avoids negative-difference holes where a source cloud crossed the mask.
     radial = np.sqrt((x-cx)**2+(y-cy)**2)/radius
     mask = (1-np.clip((radial-.72)/.28, 0, 1))[..., None]
     for _ in range(10):
-        registered = translate(delta, dx, dy)*mask
-        measured = center(np.clip(np.rint(master+registered), 0, 255)-master)
+        registered = master*(1-mask)+translate(plate, dx, dy)*mask
+        measured = center(np.clip(np.rint(registered), 0, 255)-master)
         dx += cx-measured[0]
         dy += cy-measured[1]
-    final = np.clip(np.rint(master+translate(delta, dx, dy)*mask), 0, 255).astype(np.uint8)
+    final = np.clip(np.rint(master*(1-mask)+translate(plate, dx, dy)*mask), 0, 255).astype(np.uint8)
     actual = center(final.astype(np.float32)-master)
     error = float(np.hypot(actual[0]-cx, actual[1]-cy))
     assert error < .5, (time, error)
@@ -49,6 +51,6 @@ for index, (time, radius) in enumerate([(2, 18), (30, 42), (60, 56), (120, 60), 
         sourceCenter=source_center, shift=[dx, dy], radiusPixels=radius,
         registeredCenter=actual, errorPixels=error))
     print(time, 'center error', round(error, 3), 'pixels', flush=True)
-(target/'registration.json').write_text(json.dumps(dict(method='Signed local RGB difference registration; warm-difference centroid; frozen master',
+(target/'registration.json').write_text(json.dumps(dict(method='Feathered absolute-colour event patch registration; warm-difference centroid; frozen master',
     center=[cx, cy], uv=[.49, .46], times=[0, 2, 30, 60, 120, 300, 600],
     flash='No painted flash in playback; live radiance pulse only', frames=frames), indent=2)+'\n')

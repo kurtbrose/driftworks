@@ -1,3 +1,5 @@
+export type SkyCameraSource = {direction:number[];radius:number;strength:number;color:number[]};
+export type SkyOccluder = {center:number[];radius:number};
 export type SkyEnvironmentLighting = {sh:number[][];map:string;image:HTMLImageElement;radiance?:Float32Array};
 /** Shared, checkable contracts for the plain-JavaScript simulation. */
 
@@ -311,6 +313,11 @@ export type LandingOptions = {unitsPerMetre?:number; spin?:number};
 export type LandingSample = {time:number; altitude:number; deployment:number; ramps:number; match:number; travel:number; offset:number[]; headingOffset:number; contact:boolean; done:boolean; phase:string};
 export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
+  skyEffects?: {
+    create:(host:HTMLElement)=>{setSources:(sources:SkyCameraSource[])=>void;setOccluders:(occluders:SkyOccluder[])=>void;setEnabled:(enabled:boolean)=>void;render:(pose:{eye?:number[];right:number[];up:number[];back:number[]},focal:number,seconds:number,empty:boolean)=>number;dispose:()=>void};
+    visibility:(source:SkyCameraSource,eye:number[],occluders:SkyOccluder[])=>{fraction:number;direction:number[]};
+    adapt:(current:number,target:number,dt:number)=>number;
+  };
   explosions?: {fragmentSize:(index:number,variation:number)=>number;shaderSource:string;build:(blast:{position:[number,number,number];velocity?:[number,number,number];age:number;size:number;seed:number},right:[number,number,number],up:[number,number,number])=>{vertices:Float32Array;color:[number,number,number];finish:number;age:number}[]};
   assetUrl?: (value: string, base?: string) => string;
   meshBuilder?: {create:(groups:Record<string,number[]>)=>{block:(material:string,center:number[],size:number[],basis?:number[][])=>void;link:(material:string,a:number[],b:number[],width:number,depth?:number)=>void;plate:(material:string,points:number[][])=>void;barrel:(material:string,a:number[],b:number[],radius:number)=>void};boxMesh:()=>Float32Array};
