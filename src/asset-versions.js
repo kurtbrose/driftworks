@@ -740,7 +740,7 @@
   "src/explosions.js": "ba20ec3731d9",
   "src/formations.js": "c6006cf590e5",
   "src/game.js": "4b2cf113b259",
-  "src/hud.js": "b41c310fa59d",
+  "src/hud.js": "286fcabf0284",
   "src/logistics.js": "9fbb6cae3bc9",
   "src/mesh-builder.js": "dc5005c681a3",
   "src/mining-landing.js": "f00997919474",

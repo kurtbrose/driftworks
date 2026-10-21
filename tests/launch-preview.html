@@ -2,7 +2,7 @@
 <html><head><meta charset="utf-8"><title>Recovery preview setup</title></head><body>
 <button id="carry">Preview carried fighter</button>
 <button id="launch">Preview repair and launch</button>
-<script src="../src/asset-versions.js?v=0a35d1e4dae4"></script>
+<script src="../src/asset-versions.js?v=a6caf69d8dcf"></script>
 <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
 <script src="../src/combat.js?v=ce0e0e6eb149"></script>
 <script src="../src/sim.js?v=9a868143dfe8"></script>
@@ -27,7 +27,7 @@ function preview(carry) {
     world.selectedShipIds = [fighter.id];
   }
   sim.saveWorld(world);
-  location.href = '../index.html';
+  location.href = '../rts.html';
 }
 document.querySelector('#carry').onclick = function () { preview(true); };
 document.querySelector('#launch').onclick = function () { preview(false); };

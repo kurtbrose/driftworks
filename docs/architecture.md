@@ -170,7 +170,7 @@ Workers use projected positions with a small height offset; selection brackets
 stay uncompressed. Simulation positions and carried geometry remain unchanged.
 
 The site loads ordinary scripts into `window.Driftworks`; there are no ES module
-imports or build artifacts. `index.html` loads Pixi, propulsion, combat,
+imports or build artifacts. `rts.html` loads Pixi, propulsion, combat,
 simulation, audio, HUD, then game. The test entry points load the same application scripts without
 Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 
@@ -184,7 +184,8 @@ Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 | `src/audio-mixer.js` | Flight channel balance, ducking, headroom and settings UI; receives context and master callbacks. |
 | `src/audio.js` | `Driftworks.audio`: lazily unlocked Web Audio resources, sound events, engine telemetry and separately persisted volume settings. No simulation ownership. |
 | `src/hud.js` | `Driftworks.hud`: DOM panels, fleet/readouts, control availability and event binding. Reads simulation queries and audio status; delegates actions to the app. No Pixi or scene dependency. |
-| `styles.css`, `index.html` | DOM layout and static entry point. |
+| `styles.css`, `rts.html` | Tactical DOM layout and game entry point. |
+| `index.html` | Experiments landing page. |
 | `tests/tests.js` | Shared browser/headless regression suite for simulation and exposed game helpers. |
 | `tests/scenario.js`, `tests/scenarios.cjs` | Shared deterministic replay/assertion helpers and Node JSON fixture entry point; see [scenario replay](scenarios.md). |
 | `tools/headless.cjs` | Development-only isolated production-script loader and fixed-tick flight driver, exposing real session state, comms transcripts and observed events without browser resources; see [headless development](headless.md). |

@@ -20,7 +20,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 </head>
 <body>
 <div id="viewer" class="scene" aria-label="Orbiting 3D asteroid"></div>
-<header><div><h1>Asteroid orbit</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="spotlight" aria-pressed="false">Work light</button><button id="work-shadows" aria-pressed="true">Shadows</button><button id="shadow-posts" aria-pressed="true">Test posts</button><button id="cut" aria-pressed="false">Cutaway</button><button id="walk" aria-pressed="false">Surface walk</button><button id="reset">Reset view</button><a href="../?renderer=3d">Back to game</a></nav></header>
+<header><div><h1>Asteroid orbit</h1><p id="viewer-help">Drag to orbit · Wheel to zoom<br>Middle or Space + drag to pan</p></div><nav aria-label="Viewer controls"><button id="motion" aria-pressed="false">Pause orbit</button><button id="spotlight" aria-pressed="false">Work light</button><button id="work-shadows" aria-pressed="true">Shadows</button><button id="shadow-posts" aria-pressed="true">Test posts</button><button id="cut" aria-pressed="false">Cutaway</button><button id="walk" aria-pressed="false">Surface walk</button><button id="reset">Reset view</button><a href="../rts.html?renderer=3d">Back to game</a></nav></header>
 <section class="parameters" aria-label="Asteroid parameters">
 <p>Production Three.js surface. <a href="asteroid-migration.html">Approved visual baseline</a></p><h2>Geology controls</h2>
 <label for="seed">Seed</label><input id="seed" type="text" maxlength="64" autocomplete="off" spellcheck="false">
@@ -33,7 +33,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
 <button id="defaults" style="margin-top:8px">Reset parameters</button>
 </section>
 <div id="walk-controls" class="walk-controls" hidden><span id="walk-altitude" style="background:#15232cdc;border:1px solid #40505b;border-radius:6px;padding:10px 12px">Altitude</span><button data-step="left" aria-label="Step left">←</button><button data-step="forward" aria-label="Step forward">↑</button><button data-step="back" aria-label="Step backward">↓</button><button data-step="right" aria-label="Step right">→</button></div><footer>Driftworks · live 3D geology · camera orbit, stationary asteroid</footer>
-<script src="../src/asset-versions.js?v=0a35d1e4dae4"></script>
+<script src="../src/asset-versions.js?v=a6caf69d8dcf"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
     <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
     <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
@@ -50,7 +50,7 @@ nav{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}button,a{background:
     <script src="../src/engine-audio.js?v=061d71eda9b0"></script>
 <script src="../src/audio-mixer.js?v=34c90880514e"></script>
 <script src="../src/audio.js?v=9b40b45d23e3"></script>
-    <script src="../src/hud.js?v=b41c310fa59d"></script>
+    <script src="../src/hud.js?v=286fcabf0284"></script>
     <script src="../src/mesh-builder.js?v=dc5005c681a3"></script><script src="../src/mining-rig.js?v=ebc32e1f4b09"></script><script src="../src/model-viewer.js?v=02d9b3545d85"></script><script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script><script src="../src/explosions.js?v=ba20ec3731d9"></script><script src="../src/scene3d.js?v=4e40423a5e14"></script>
     <script src="../src/game.js?v=4b2cf113b259"></script>
 <script src="mining-study-terrain.js?v=f1d69b502da0"></script>

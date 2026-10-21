@@ -43,7 +43,7 @@ use relative URLs and do not introduce runtime network dependencies.
 | Artwork, effects | `src/game.js`: paint/geometry helpers |
 | DOM HUD, fleet/readouts, control availability | `src/hud.js`; `styles.css` |
 | Sound and audio preferences | `src/audio.js`; event/telemetry calls in `src/game.js` |
-| Script loading or test harness | `index.html`, `tests/index.html`, `tests/run.cjs` |
+| Script loading or test harness | `index.html`, `rts.html`, `tests/index.html`, `tests/run.cjs` |
 
 ## Constraints to preserve
 

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aegis · modular dreadnaught kit</title>
 <style>*{box-sizing:border-box}body{margin:0;background:#080e17;color:#dae4e7;font:14px/1.6 system-ui}aside{position:absolute;left:0;top:0;bottom:0;width:300px;padding:28px;overflow:auto;background:#101a24;border-right:1px solid #33424b}small{font-size:10px;letter-spacing:3px;color:#c69d65}h1{font-weight:400;font-size:36px;line-height:1.1;margin:18px 0}p{color:#91a5b4;font-size:12px}label{display:block;margin:18px 0;color:#b9c9d0;font-size:12px}select,button{background:#1a2a36;color:#e1e9ed;border:1px solid #415363;padding:10px;border-radius:3px}select,input[type=range]{display:block;width:100%;margin-top:7px}button{cursor:pointer;margin:4px 0}button:hover{border-color:#dab57e}#viewport{position:absolute;inset:0 0 0 300px}canvas{display:block;width:100%;height:100%;touch-action:none}#caption{position:absolute;left:28px;top:22px;pointer-events:none;font-size:11px;letter-spacing:2px;color:#9cb4c5}footer{position:absolute;bottom:20px;left:28px;font-size:11px;color:#8aa0b0;pointer-events:none}#stats{border-top:1px solid #33424b;padding-top:16px;color:#c6a775}a{color:#9fc5d6}@media(max-width:700px){aside{width:220px;padding:16px}#viewport{left:220px}h1{font-size:28px}}</style>
-<script src="../src/asset-versions.js?v=0a35d1e4dae4"></script>
+<script src="../src/asset-versions.js?v=a6caf69d8dcf"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
 <body><aside><small>DRIFTWORKS / MODEL STUDY 02</small><h1>AEGIS<br>Ship kit.</h1><p>A procedural study from the supplied concept. Standard spine interfaces. Swappable mission sections. Shared attachment sockets.</p>
 <label>Configuration<select id="preset"><option value="cruiser">01 / Fleet cruiser</option><option value="carrier">02 / Fleet carrier</option><option value="battleship">03 / Dreadnaught</option></select></label>
@@ -16,7 +16,7 @@
 <label>Explode kit<input id="explode" type="range" min="0" max="100" value="0"></label>
 <label><input id="spin" type="checkbox"> Turntable</label>
 <button id="quarter">Perspective</button> <button id="top">Top</button> <button id="side">Side</button> <button id="bottom">Underside</button> <button id="escort-view">Escort detail</button> <button id="hangar-view">Hangar detail</button><br><button id="export">Export assembled OBJ</button>
-<p id="stats"></p><p><a href="flight.html?aegis=1">Fly Aegis battleship · live turret scenario</a></p><p>Drag to orbit · Wheel to zoom.<br>Export includes separate named modules; materials and engine lighting remain a viewer study.</p><a href="./">Experiments</a></aside>
+<p id="stats"></p><p><a href="flight.html?aegis=1">Fly Aegis battleship · live turret scenario</a></p><p>Drag to orbit · Wheel to zoom.<br>Export includes separate named modules; materials and engine lighting remain a viewer study.</p><a href="../">Experiments</a></aside>
 <div id="viewport"><div id="caption">MODULAR CAPITAL PLATFORM / GEOMETRY PROTOTYPE</div><footer>ARMOR / STRUCTURE / SYSTEMS &nbsp; • &nbsp; COMMON 10 × 8 INTERFACE</footer></div>
 <script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script>
 <script type="module">import * as THREE from 'three';

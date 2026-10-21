@@ -1,6 +1,6 @@
 # Driftworks
 
-Driftworks is a browser-based hard-SF economic/RTS prototype with planar fleet movement and an optional 3D rendering experiment. This repository state is deliberately small: a static tactical sandbox where a persistent handful of industrial spacecraft can begin doing useful work.
+Driftworks is a collection of browser-based flight experiments, artwork viewers, and a hard-SF economic/RTS prototype. The landing page is the experiments index; the original tactical mining and fleet simulation is available as the Driftworks 2D experiment at `rts.html`, with an optional 3D renderer at `rts.html?renderer=3d`. Everything is served as static files.
 
 For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 [architecture map](docs/architecture.md) and [world-state contract](docs/world-state.md).
@@ -88,13 +88,14 @@ serve.bat
 
 Then open:
 
-- Game: http://localhost:8000/
+- Experiments index: http://localhost:8000/
+- Original tactical RTS: http://localhost:8000/rts.html
 - Tests: http://localhost:8000/tests/
 - Asteroid playground: http://localhost:8000/tests/asteroid-playground.html
 - 3D asteroid orbit viewer: http://localhost:8000/tests/asteroid-orbit.html (automatic camera orbit, drag/zoom, cutaway, surface walking, re-seeding, composition presets and geology sliders)
 - 3D mothership study: http://localhost:8000/tests/mothership-orbit.html (orbit, zoom/pan, preset angles, machinery pause and animation scrubbing; uses the production model)
 
-The game keeps the existing Pixi artwork by default. Open `?renderer=3d` to try
+The game keeps the existing Pixi artwork by default. Open `rts.html?renderer=3d` to try
 the rough 3D geometry prototype. **Cutaway** focuses the asteroid
 and exposes its existing excavation geometry; **Orbit ↻** steps around it.
 Hold **Alt** while dragging to orbit continuously, use middle-drag or
