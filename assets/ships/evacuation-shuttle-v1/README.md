@@ -1,5 +1,8 @@
 # Evacuation shuttle / first transport study
 
+Retired from the depot viewer in favor of the civilian commuter and double-deck
+liner GLBs under `../civilian-airliners/`. This source remains an archived study.
+
 Original Driftworks model. Rebuild from the repository root:
 
     blender --background --python tools/build-evacuation-shuttle.py
@@ -19,7 +22,7 @@ positions, are exported as local-coordinate anchors. These reserve interfaces
 for approach alignment, arm mating and departure effects. Capacity, propulsion,
 collision, docking and fuel-transfer rules are not established by this study.
 
-The depot viewer places one shuttle near the first service arm, parallel to the
+The earlier depot viewer placed one shuttle near the first service arm, parallel to the
 spine and in clear space outside the tank racks. It is a static scale and
 silhouette review; the arm is not attached. The Shuttle / scale view includes
 the existing fighter references. No existing flight session or ship catalog

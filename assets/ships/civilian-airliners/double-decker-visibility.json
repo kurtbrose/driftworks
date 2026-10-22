@@ -1,0 +1,197 @@
+{
+  "eyePositions": [
+    [
+      -0.72,
+      82.14,
+      6.180000000000001
+    ],
+    [
+      0.72,
+      82.14,
+      6.180000000000001
+    ]
+  ],
+  "note": "Geometric design probe, not a certified field-of-view assessment. Glass excluded; all ship geometry included.",
+  "rays": [
+    {
+      "pilot": -1,
+      "yaw": -30,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": -30,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": -30,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": -15,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": -15,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": -15,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 0,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 0,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 0,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 15,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 15,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 15,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 30,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 30,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": -1,
+      "yaw": 30,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": -30,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": -30,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": -30,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": -15,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": -15,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": -15,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 0,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 0,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 0,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 15,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 15,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 15,
+      "pitch": 15,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 30,
+      "pitch": -10,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 30,
+      "pitch": 0,
+      "blocked": []
+    },
+    {
+      "pilot": 1,
+      "yaw": 30,
+      "pitch": 15,
+      "blocked": []
+    }
+  ]
+}

@@ -2,12 +2,14 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Driftworks / Refueling depot</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#000;color:#e0e8eb;font:14px system-ui}#sky,#view{position:fixed;inset:0 0 0 280px}canvas{position:absolute;width:100%;height:100%;touch-action:none}aside{position:fixed;inset:0 auto 0 0;width:280px;padding:24px;background:#101a23;overflow:auto;border-right:1px solid #41515b}small{color:#dcaa61;letter-spacing:2px}h1{font-weight:400;font-size:32px}p{color:#a6b8c2;line-height:1.5}button,select{background:#21323e;color:inherit;border:1px solid #53646e;padding:9px;margin:3px 0;cursor:pointer}label{display:block;margin:20px 0}input[type=range],select{width:100%}a{color:#b9dbea}#caption{position:fixed;bottom:20px;left:304px;font-size:12px;color:#d0dce2;pointer-events:none}@media(max-width:650px){aside{width:210px;padding:14px}#sky,#view{left:210px}#caption{left:224px}}
-</style><script src="../src/asset-versions.js?v=8cc988b992f7"></script>
+</style><script src="../src/asset-versions.js?v=a70ef91de324"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
 <body><div id="sky"></div><div id="view"></div><aside><small>DRIFTWORKS / ASSET STUDY</small><h1>Orbital<br>fuel depot.</h1><p>Long open spine, eight tank banks and three articulated service arms. First silhouette and Blender export prototype.</p>
 <button id="overview">Overview</button> <button id="approach">Service approach</button> <button id="top">Plan view</button> <button id="fighter-view">Fighter close-up</button> <button id="offline-view">Inactive module C</button> <button id="rack-view">Tank rack</button>
 <button id="shuttle-view">Shuttle / scale</button>
-<label><input type="checkbox" id="shuttle" checked> 60 m evacuation transport</label>
+<button id="commuter-view">Commuter close-up</button> <button id="liner-view">Large liner close-up</button>
+<label>Civilian transports<select id="liner-model"><option value="both">Both / true scale</option><option value="commuter">Commuter / 72 m hull</option><option value="double-decker">Double-decker / 180 m hull</option><option value="none">Hidden</option></select></label>
+<p id="liner-status">Loading civilian liners…</p>
 <label>Berth bearing<input id="arms" type="range" min="-35" max="35" value="0"></label>
 <label>Wrist reach / metres<input id="reach" type="range" min="24" max="58" value="48"></label>
 <label>Wrist height / metres<input id="height" type="range" min="-32" max="12" value="-20"></label>
@@ -24,6 +26,7 @@
 <script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script>
 <script type="module">
 import * as THREE from 'three';
+import {GLTFLoader} from '../vendor/three/examples/jsm/loaders/GLTFLoader.js?v=67ac5551fdaf';
 import {solveDepotArm} from './depot-arm.js?v=0dac00891044';
 import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js?v=b97879c74817';
 const el=id=>document.getElementById(id),DW=window.Driftworks;
@@ -37,18 +40,20 @@ const sun=new THREE.DirectionalLight(0xffe7c5,3.1);sun.position.set(-200,400,300
 const fill=new THREE.DirectionalLight(0x7493bc,.8);fill.position.set(0,-100,-200);scene.add(fill);
 const depot=new THREE.Group();depot.rotation.x=-Math.PI/2;scene.add(depot);
 const groups=new Map(),materials=[],base=new Map();
-const shuttle=new THREE.Group();shuttle.position.set(-112,-40.2,66);shuttle.rotation.x=-Math.PI/2;scene.add(shuttle);
-const shuttleHull=new THREE.Group();shuttleHull.rotation.z=-Math.PI/2;shuttle.add(shuttleHull);
-el('shuttle').onchange=()=>shuttle.visible=el('shuttle').checked;
-el('shuttle-view').onclick=()=>{shuttle.visible=true;el('shuttle').checked=true;view([-35,10,175],[-112,-32,77]);};
-fetch(DW.assetUrl('../assets/ships/evacuation-shuttle-v1/shuttle.json')).then(r=>{if(!r.ok)throw Error(r.statusText);return r.json();}).then(asset=>{
- for(const batch of asset.batches){
-  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(batch.positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(batch.normals,3));
-  const c=asset.materials[batch.material],material=new THREE.MeshStandardMaterial({color:new THREE.Color(...c),metalness:.25,roughness:batch.material==='glass'?.16:.5});
-  if(batch.material.endsWith('-light')){material.emissive=new THREE.Color(...c);material.emissiveIntensity=2;}
-  materials.push(material);shuttleHull.add(new THREE.Mesh(geometry,material));
- }
-}).catch(error=>el('status').textContent='Shuttle load failed: '+error.message);
+const liners=new Map(),loader=new GLTFLoader();
+function showLiners(){for(const [id,root] of liners)root.visible=el('liner-model').value==='both'||el('liner-model').value===id;}
+el('liner-model').onchange=showLiners;
+el('shuttle-view').onclick=()=>{el('liner-model').value='both';showLiners();view([330,150,440],[-10,-25,120]);};
+el('commuter-view').onclick=()=>{el('liner-model').value='commuter';showLiners();view([-20,8,196],[-112,-35,80]);};
+el('liner-view').onclick=()=>{el('liner-model').value='double-decker';showLiners();view([245,38,355],[35,-48,160]);};
+Promise.all([['commuter',[-112,-41,80]],['double-decker',[35,-55,165]]].map(async([id,position])=>{
+ const gltf=await loader.loadAsync(DW.assetUrl(`../assets/ships/civilian-airliners/${id}.glb`));
+ // Blender's GLB exporter already converts Z-up to glTF Y-up. Rotate the
+ // resulting -Z bow onto +X, preserving the authored metre scale.
+ const root=new THREE.Group();root.rotation.y=-Math.PI/2;root.position.set(...position);root.add(gltf.scene);scene.add(root);liners.set(id,root);
+ root.traverse(object=>{if(object.isMesh)for(const material of Array.isArray(object.material)?object.material:[object.material]){materials.push(material);material.wireframe=el('wire').checked;}});
+ root.updateMatrixWorld(true);markers.add(new THREE.Box3Helper(new THREE.Box3().setFromObject(root),id==='commuter'?0xe1b671:0xcf916d));showLiners();
+})).then(()=>el('liner-status').textContent='72 m commuter + 180 m double-decker / original GLB materials, true scale.').catch(error=>el('liner-status').textContent='Liner load failed: '+error.message);
 const paintTexture=new THREE.TextureLoader().load(DW.assetUrl('../assets/depots/refueling-v1/caution-paint.png'));
 paintTexture.colorSpace=THREE.SRGBColorSpace;paintTexture.wrapS=paintTexture.wrapT=THREE.RepeatWrapping;paintTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
 let data;
@@ -58,7 +63,7 @@ el('overview').onclick=()=>view([480,300,510]);el('approach').onclick=()=>view([
 el('offline-view').onclick=()=>view([153,28,108],[112,0,12]);
 el('rack-view').onclick=()=>view([207,90,120],[150,2,31]);
 const markers=new THREE.Group();scene.add(markers);
-for(const [name,size,pos,color] of [['12 m fighter',[12,5,17],[-112,-35,95],0x78d9d1],['60 m transport',[60,16,25],[-112,-40.2,66],0xe1b671]]){
+for(const [name,size,pos,color] of [['12 m fighter',[12,5,17],[-108,-40,111],0x78d9d1]]){
  const mesh=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(...size)),new THREE.LineBasicMaterial({color}));mesh.position.set(...pos);mesh.name=name;markers.add(mesh);
 }
 el('scale').onchange=()=>markers.visible=el('scale').checked;

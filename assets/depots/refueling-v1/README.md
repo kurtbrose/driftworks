@@ -45,8 +45,8 @@ hoses. Local link meshes use +Y along their length and zero pivot origins.
 The editable Blender source is arranged into the default study pose by
 `tools/pose-refueling-depot.py` after the local-coordinate browser bake.
 Ship attachment, self/ship collision avoidance and fuel transfer remain future
-work. The view's fighter/shuttle wire boxes are scale envelopes,
-not new ship models. Five actual Quaternius Spitfire references also surround
+work. The optional wire boxes show fighter/transport scale envelopes.
+Five actual Quaternius Spitfire references also surround
 the depot, restored from the shared Aegis asset's nine-metres-per-unit bake to
 12 m length. They share geometry/materials and have a separate visibility toggle
 and close-up view. Original CC0 provenance remains in the ship pack and shared
@@ -56,3 +56,14 @@ Open `experiments/refueling-depot.html` through the static server to inspect the
 export against the existing registered planet-impact sky stages. Lighting is
 fixed art-study lighting, not automatic sky-derived illumination. No flight
 mission, persistent world state or existing ship catalog is changed.
+
+The depot now loads the user-authored `civilian-airliners/commuter.glb` and
+`double-decker.glb` directly through the vendored GLTFLoader. These replace the
+earlier evacuation-shuttle study in this scene. The selector can show either or
+both at authored metre scale (72 m and 180 m hulls, respectively); drives extend
+aft of those hull lengths. Original materials and glazing are retained.
+Blender's GLB export is already Y-up; the viewer only rotates the -Z bow to +X
+and positions the models outside the tank racks. No rescaling or rebaking is
+applied. Transport envelopes use their actual loaded world bounds. Separate
+close-up views and the shared scale view support inspection. Both remain static
+references pending approach/refueling/departure behavior.
