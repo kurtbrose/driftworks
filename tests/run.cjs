@@ -11,6 +11,7 @@ require('./planet-impact-baked.cjs');
 require('./explosions.cjs');
 require('./refueling-depot.cjs');
 require('./evacuation-shuttle.cjs');
+require('./civilian-airliners.cjs');
 require('./gpu-ui.cjs');
 require('./flight-hud-markers.cjs');
 require('./flight-missions.cjs');

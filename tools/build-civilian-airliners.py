@@ -57,14 +57,15 @@ def add_scale_crew(length, width, height):
         bpy.data.objects.remove(obj, do_unlink=True)
     collection = bpy.data.collections.new('Scale crew — Quaternius — 1.80 m (studio only)')
     bpy.context.scene.collection.children.link(collection)
-    ground = -height*.65
-    for i, (x,y,angle) in enumerate([(width*.59,length*.18,-.5),
-                                    (width*.59+1.4,length*.18+1.2,1.1),
-                                    (width*.39,length*.37,-.8)]):
+    ground = -height/2-.8
+    door_floor = -1.9 if length == 72 else -2.8
+    for i, (x,y,z,angle) in enumerate([(width/2+1.0,length*.19,door_floor,-.5),
+                                      (width/2+3.8,length*.19+1.0,ground,1.1),
+                                      (width/2+4.5,length*.19-1.5,ground,-.8)]):
         for j,data in enumerate(frozen):
             obj = bpy.data.objects.new('Scale astronaut %d part %d'%(i+1,j+1),data)
             collection.objects.link(obj)
-            obj.location = (x,y,ground)
+            obj.location = (x,y,z)
             obj.rotation_euler.z = angle
     return ground
 
@@ -79,8 +80,13 @@ def render_crew_views(length, width, height):
         ('side',(length,0,length*.10),(0,0,0),length*1.16),
         ('top',(0,0,length),(0,0,0),length*1.14),
         ('rear',(length*.33,-length,length*.30),(0,0,0),length*.90),
-        ('scale',(width*1.25,length*.68,height*.10),
-         (width*.35,length*.34,-height*.27),height*1.65)]:
+        ('scale',(width/2+22,length*.19+7,4),
+         (width/2,length*.19,-1.0 if length == 72 else -.8),14)]:
+        if '--refresh-scale' in sys.argv and view != 'scale':
+            continue
+        ground_crew = [obj for obj in bpy.data.objects if obj.name.startswith(('Scale astronaut 2 part','Scale astronaut 3 part'))]
+        for obj in ground_crew:
+            obj.hide_render = view == 'scale'
         camera.location = loc
         camera.rotation_euler = (Vector(target)-camera.location).to_track_quat('-Z','Y').to_euler()
         if view == 'top':
@@ -88,6 +94,8 @@ def render_crew_views(length, width, height):
         camera.data.ortho_scale = scale
         scene.render.filepath = str(ROOT/(key+'-'+view+'.png'))
         bpy.ops.render.render(write_still=True)
+        for obj in ground_crew:
+            obj.hide_render = False
     camera.matrix_world, camera.data.ortho_scale = old_matrix, old_scale
 
 
@@ -193,13 +201,31 @@ def build(key, length, width, height, decks):
                 faces.append((k+steps+1, k+steps+2, k+1, k))
         return mesh(name, verts, faces, mat, True)
 
-    patch('Continuous pressure hull', -length*.5, length*.5, 0, math.tau, 'ivory', 0, 128)
+    # Paint belongs to the pressure hull itself. Independent curved overlays
+    # can intersect its triangles and compete for depth in the game renderer.
+    angles = sorted(set([i*math.tau/128 for i in range(128)] + [1.22,1.92,4.40,5.02]))
+    ys = sorted(set([-length*.5+i*length/128 for i in range(129)] +
+                    [-length*.49,length*.43,-length*.46]))
+    count = len(angles)
+    verts = [skin(y,a,0) for y in ys for a in angles]
+    faces, finishes = [], []
+    for j in range(len(ys)-1):
+        for i,a in enumerate(angles):
+            k=(i+1)%count
+            faces.append(((j+1)*count+i,(j+1)*count+k,j*count+k,j*count+i))
+            mid_a=(a+(angles[i+1] if i+1<count else math.tau))/2
+            mid_y=(ys[j]+ys[j+1])/2
+            finishes.append(1 if 1.22<mid_a<1.92 and -length*.49<mid_y<length*.43
+                            else 2 if 4.40<mid_a<5.02 and -length*.46<mid_y<length*.43 else 0)
+    hull=mesh('Continuous pressure hull',verts,faces,'ivory',True)
+    hull.data.materials.append(mats['red'])
+    hull.data.materials.append(mats['metal'])
+    for face,finish in zip(hull.data.polygons,finishes):
+        face.material_index=finish
     for y, reverse in [(-length*.5, False), (length*.5, True)]:
         ring = [skin(y, i*math.tau/64, 0) for i in range(64)]
         mesh('Pressure hull end closure', ring,
              [tuple(reversed(range(64))) if reverse else tuple(range(64))], 'ivory')
-    patch('Dorsal red ribbon', -length*.49, length*.478, 1.22, 1.92, 'red', .035, 64)
-    patch('Graphite ventral keel', -length*.46, length*.43, 4.40, 5.02, 'metal', .035, 48)
     # Individual panels follow the same analytic surface as the hull.
     for j in range(28 if decks == 2 else 20):
         y = -length*.47 + j*length*.93/(28 if decks == 2 else 20)
@@ -207,26 +233,66 @@ def build(key, length, width, height, decks):
     for a in [.7, 1.05, 2.09, 2.44, 3.65, 5.77]:
         patch('Longitudinal panel seam', -length*.46, length*.465, a, a+.004, 'seam', .05, 48)
 
-    angles = [.17] if decks == 1 else [-.13, .36]
+    # All cabin details are authored in metres, not fractions of ship size.
+    deck_floors = [-1.9] if decks == 1 else [-2.8, .3]
+    door_width, door_height = 1.05, 2.10
+    window_width, window_height, window_pitch = .65, .80, 1.0
+    window_records, door_records = [], []
+
+    def side_panel(name, side, y0, y1, z0, z1, mat, offset=.018, steps=4):
+        verts = []
+        for j in range(steps+1):
+            y = y0+(y1-y0)*j/steps
+            w,h = section(y)
+            for i in range(steps+1):
+                z = z0+(z1-z0)*i/steps
+                verts.append((side*(w*math.sqrt(max(0,1-(z/h)**2))+offset),y,z))
+        faces = []
+        for j in range(steps):
+            for i in range(steps):
+                k=j*(steps+1)+i
+                f=(k,k+steps+1,k+steps+2,k+1)
+                faces.append(f if side == 1 else tuple(reversed(f)))
+        return mesh(name,verts,faces,mat,True)
+
     for side in [1, -1]:
         a = .62 if side == 1 else math.pi-.62
         patch('Sweeping red cabin shoulder stripe', -length*.43, length*.40,
-              a-.028, a+.028, 'red', .09, 48)
-        for deck, a in enumerate(angles):
-            angle = a if side == 1 else math.pi-a
-            patch('Recessed passenger deck belt', -length*.355, length*.30,
-                  angle-.105, angle+.105, 'dark', .10, 48)
-            count = 28 if decks == 2 else 18
-            pitch = length*.64/count
+              a-.012, a+.012, 'red', .025, 80)
+        for deck, floor_z in enumerate(deck_floors):
+            window_z = floor_z+1.35
+            y_start,y_end = -length*.35,length*.30
+            side_panel('Recessed passenger deck belt',side,y_start,y_end,
+                       window_z-.46,window_z+.46,'dark',.012,100)
+            count = int((y_end-y_start)/window_pitch)
+            door_ys = [-length*.25,length*.19]
+            if decks == 2:
+                door_ys += [-length*.02]
             for i in range(count):
-                y = -length*.348+i*pitch
-                patch('Passenger glazing D%d %02d' % (deck+1, i+1), y, y+pitch*.72,
-                      angle-.071, angle+.071, 'warm' if i % 7 != 3 else 'glass', .14, 2)
-                # Narrow inner sill makes windows read as cabin openings, not dots.
-                patch('Window sill', y, y+pitch*.72, angle-.074, angle-.059, 'metal', .16, 2)
-                patch('Cabin ceiling shadow', y, y+pitch*.72, angle+.038, angle+.071, 'glass', .17, 2)
-                patch('Seat back silhouette', y+pitch*.19, y+pitch*.34, angle-.063, angle+.004, 'dark', .19, 2)
-                patch('Window central divider', y+pitch*.51, y+pitch*.54, angle-.071, angle+.071, 'metal', .19, 2)
+                y = y_start+.5+i*window_pitch
+                if any(abs(y-d)<1.0 for d in door_ys):
+                    continue
+                side_panel('Passenger glazing D%d %03d'%(deck+1,i+1),side,
+                           y-window_width/2,y+window_width/2,
+                           window_z-window_height/2,window_z+window_height/2,
+                           'warm' if i%9 != 3 else 'glass',.025)
+                side_panel('Cabin upper shadow',side,y-.325,y+.325,
+                           window_z+.21,window_z+.40,'glass',.032)
+                side_panel('Seat silhouette',side,y-.12,y+.10,
+                           window_z-.40,window_z-.09,'dark',.036)
+                window_records.append(dict(deck=deck+1,side=side,width=window_width,
+                                           height=window_height,center=[y,window_z]))
+            for y in door_ys:
+                side_panel('Door surround',side,y-.60,y+.60,floor_z-.05,floor_z+2.18,'metal',.04)
+                door = side_panel('Passenger door 1.05 x 2.10 m',side,
+                           y-door_width/2,y+door_width/2,floor_z,floor_z+door_height,'ivory',.052,8)
+                door['clearWidthMeters']=door_width
+                door['clearHeightMeters']=door_height
+                side_panel('Door observation window',side,y-.16,y+.16,
+                           floor_z+1.43,floor_z+1.79,'glass',.065)
+                side_panel('Door handle',side,y+.30,y+.43,floor_z+.93,floor_z+.98,'dark',.07)
+                door_records.append(dict(deck=deck+1,side=side,width=door_width,
+                                         height=door_height,floor=floor_z,y=y))
         for j in range(4):
             y = length*(.445+j*.008)
             patch('Forward approach light', y, y+length*.004,
@@ -253,13 +319,6 @@ def build(key, length, width, height, decks):
             y = -length*.34+j*length*.013
             a = 1.12 if side == 1 else math.pi-1.12
             patch('Dorsal heat exchanger', y, y+length*.007, a-.045, a+.045, 'dark', .12, 2)
-        for y in [-length*.25, length*.19]:
-            w,h = section(y)
-            box('Flush boarding hatch', (side*(w+.08), y, -height*.18),
-                (.12, length*.032, height*.24), 'metal', .06)
-            box('Boarding hatch inset', (side*(w+.16), y, -height*.18),
-                (.08, length*.026, height*.20), 'ivory', .04)
-
     engines = [-.28, .28] if decks == 1 else [-.30, 0, .30]
     for i, x in enumerate(engines):
         r = width*(.145 if decks == 1 else .14)
@@ -280,62 +339,90 @@ def build(key, length, width, height, decks):
     box('Communication blade', (0,-length*.29,height*.64), (.15,length*.018,height*.24), 'red')
     box('Beacon', (0,-length*.29,height*.77), (.22,.22,.2), 'nav')
 
-    # A real forward-facing bridge volume replaces the old side-only decals.
-    # Cut the pressure shell and all surface overlays with the same closed mesh,
-    # so cockpit eye rays cannot encounter an invisible uncut nose underneath.
-    bridge_width = 5.6 if decks == 1 else 7.4
-    half = bridge_width/2
-    front = length*.473
-    rear = front-(8 if decks == 1 else 11)
-    low = height*.17
-    high = low+2.3
-    rake = 1.15 if decks == 1 else 1.6
-    corners = [(-half*1.15,rear,low), (half*1.15,rear,low), (half*.82,front,low), (-half*.82,front,low),
-               (-half*1.15,rear,high+.55), (half*1.15,rear,high+.55),
-               (half*.82,front-rake,high), (-half*.82,front-rake,high)]
-    faces = [(3,2,1,0),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7),(4,5,6,7)]
-    cutter = mesh('Bridge pressure cavity cutter', corners, faces, 'dark')
-    for obj in list(parts):
-        if obj == cutter:
-            continue
-        if obj.name.startswith(('Continuous pressure hull', 'Dorsal red ribbon',
-                                'Circumferential panel seam', 'Longitudinal panel seam',
-                                'Sweeping red cabin shoulder stripe')):
-            bpy.context.view_layer.objects.active = obj
-            mod = obj.modifiers.new('Actual flight deck opening', 'BOOLEAN')
-            mod.operation = 'DIFFERENCE'
-            mod.object = cutter
-            bpy.ops.object.modifier_apply(modifier=mod.name)
-    parts.remove(cutter)
-    bpy.data.objects.remove(cutter, do_unlink=True)
-    # Roof and lower sill form a shallow brow; glazing wraps around both corners.
-    mesh('Bridge red roof', corners, [(4,5,6,7)], 'red')
-    mesh('Bridge floor', corners, [(3,2,1,0)], 'dark')
-    mesh('Bridge aft pressure bulkhead', corners, [(0,1,5,4)], 'ivory')
-    glazing = mesh('Forward and quarter windshield', corners,
-                   [(1,2,6,5),(2,3,7,6),(3,0,4,7)], 'glass')
-    for a,b in [(2,3),(6,7),(2,6),(3,7),(4,7),(5,6)]:
-        p,q = Vector(corners[a]),Vector(corners[b])
-        frame = box('Windshield perimeter frame', (p+q)/2, (.09,.09,(q-p).length), 'metal', .025)
-        frame.rotation_euler = (q-p).to_track_quat('Z','Y').to_euler()
-    # Narrow center post lies between pilots, rather than across either eye line.
-    p = Vector((0,front,low))
-    q = Vector((0,front-rake,high))
-    post = box('Windshield center post', (p+q)/2, (.085,.085,(q-p).length), 'ivory', .02)
-    post.rotation_euler = (q-p).to_track_quat('Z','Y').to_euler()
-    eye_y = front-rake-1.4
-    eye_z = low+1.25
+    # Flush flight-deck glazing is sampled on the original nose surface.
+    # Each pane cuts a real opening; there is no added bridge roof or housing.
+    eye_z = 1.65 if decks == 1 else 2.6
+    low,high = eye_z-.58,eye_z+.65
+
+    def nose_y(x,z):
+        lo,hi = length*.28,length*.5
+        for _ in range(45):
+            mid=(lo+hi)/2
+            w,h=section(mid)
+            if (x/w)**2+(z/h)**2 < 1:
+                lo=mid
+            else:
+                hi=mid
+        return (lo+hi)/2
+
+    def nose_pane(name, outline, mat, offset=.008):
+        # Bilinear subpatch, projected onto the same continuous pressure hull.
+        verts=[]
+        steps=10
+        for j in range(steps+1):
+            v=j/steps
+            for i in range(steps+1):
+                u=i/steps
+                left=Vector(outline[0]).lerp(Vector(outline[3]),v)
+                right=Vector(outline[1]).lerp(Vector(outline[2]),v)
+                x,z=left.lerp(right,u)
+                verts.append((x,nose_y(x,z)+offset,z))
+        faces=[]
+        for j in range(steps):
+            for i in range(steps):
+                k=j*(steps+1)+i
+                faces.append((k,k+steps+1,k+steps+2,k+1))
+        return mesh(name,verts,faces,mat,True)
+
+    pane_outlines = []
     for side in [-1,1]:
-        x = side*.72
-        box('Pilot seat cushion', (x,eye_y,eye_z-.76), (.53,.58,.12), 'dark')
-        box('Pilot seat back', (x,eye_y-.30,eye_z-.45), (.53,.12,.64), 'dark')
-        box('Low instrument console', (x,eye_y+.65,eye_z-.64), (.9,.48,.24), 'metal')
+        for x0,x1,z0,z1 in [(.055,1.62,low,high),(1.72,2.75,low+.10,high-.13)]:
+            outline=[(side*x0,z0),(side*x1,z0+.07),
+                     (side*(x1-.12),z1),(side*x0,z1)]
+            if side < 0:
+                outline=list(reversed(outline))
+            pane_outlines.append(outline)
+    glazings=[]
+    for i,outline in enumerate(pane_outlines):
+        # Extruded projected silhouette removes only the corresponding pane.
+        y_back=min(nose_y(x,z) for x,z in outline)-4
+        y_front=length*.5+1
+        verts=[(x,y,z) for y in [y_back,y_front] for x,z in outline]
+        faces=[(3,2,1,0),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]
+        faces=[tuple(reversed(face)) for face in faces]
+        cutter=mesh('Temporary flush windshield opening',verts,faces,'dark')
+        for obj in list(parts):
+            if obj == cutter:
+                continue
+            if obj.name.startswith(('Continuous pressure hull','Dorsal red ribbon',
+                                    'Circumferential panel seam','Longitudinal panel seam',
+                                    'Sweeping red cabin shoulder stripe')):
+                bpy.context.view_layer.objects.active=obj
+                mod=obj.modifiers.new('Flush windshield opening','BOOLEAN')
+                mod.operation='DIFFERENCE'
+                mod.object=cutter
+                bpy.ops.object.modifier_apply(modifier=mod.name)
+        parts.remove(cutter)
+        bpy.data.objects.remove(cutter,do_unlink=True)
+        glazings.append(nose_pane('Flush airline windshield %d'%(i+1),outline,'glass'))
+    front=nose_y(0,eye_z)
+    eye_y=nose_y(.72,eye_z)-.35
+    for side in [-1,1]:
+        x=side*.72
+        box('Pilot seat cushion',(x,eye_y,eye_z-.76),(.53,.58,.12),'dark')
+        box('Pilot seat back',(x,eye_y-.30,eye_z-.45),(.53,.12,.64),'dark')
+        box('Low instrument console',(x,eye_y+.10,eye_z-.67),(.9,.28,.20),'metal')
+    dimensions=dict(length=length,beam=width,height=height,
+                    doorWidth=door_width,doorHeight=door_height,
+                    windowWidth=window_width,windowHeight=window_height,
+                    windowPitch=window_pitch,deckFloors=deck_floors,
+                    windows=window_records,doors=door_records)
+    (ROOT/(key+'-dimensions.json')).write_text(json.dumps(dimensions,indent=2)+'\n',
+                                              encoding='utf-8',newline='\n')
     # Check actual evaluated geometry, including the cut hull and cockpit frames.
     bpy.context.view_layer.update()
     deps = bpy.context.evaluated_depsgraph_get()
     visibility = []
-    glazing.hide_set(True)
-    glazing.hide_render = True
     for side in [-1,1]:
         origin = Vector((side*.72,eye_y,eye_z))
         for yaw in [-30,-15,0,15,30]:
@@ -345,7 +432,7 @@ def build(key, length, width, height, decks):
                 # Object-level ray casts deliberately exclude only transparent glazing.
                 blocked = []
                 for obj in parts:
-                    if obj == glazing:
+                    if obj in glazings:
                         continue
                     evaluated = obj.evaluated_get(deps)
                     inverse = evaluated.matrix_world.inverted()
@@ -353,8 +440,6 @@ def build(key, length, width, height, decks):
                     if hit:
                         blocked.append(obj.name)
                 visibility.append(dict(pilot=side,yaw=yaw,pitch=pitch,blocked=blocked))
-    glazing.hide_set(False)
-    glazing.hide_render = False
     failures = [ray for ray in visibility if ray['blocked']]
     (ROOT/(key+'-visibility.json')).write_text(json.dumps(dict(
         eyePositions=[[-.72,eye_y,eye_z],[.72,eye_y,eye_z]],
@@ -368,6 +453,8 @@ def build(key, length, width, height, decks):
     for obj in parts:
         obj.select_set(True)
     bpy.ops.export_scene.gltf(filepath=str(ROOT/(key+'.glb')), export_format='GLB', use_selection=True)
+    if '--geometry-only' in sys.argv:
+        return
 
     scene = bpy.context.scene
     scene.unit_settings.system = 'METRIC'
@@ -379,7 +466,7 @@ def build(key, length, width, height, decks):
     scene.render.resolution_percentage = 100
     scene.world.color = (.18,.18,.18)
     scene.view_settings.view_transform = 'AgX'
-    bpy.ops.mesh.primitive_plane_add(size=length*200, location=(0,0,-height*.65))
+    bpy.ops.mesh.primitive_plane_add(size=length*200, location=(0,0,-height/2-.8))
     floor = bpy.context.object
     floor.name = 'Studio floor (render only)'
     floor.data.materials.append(material('Studio slate', (.09,.115,.14), .05))
@@ -396,53 +483,40 @@ def build(key, length, width, height, decks):
     camera = bpy.context.object
     scene.camera = camera
     camera.data.type = 'ORTHO'
-    for view, loc, ortho in [('hero', (length*.85,length*.94,length*.64), length*1.12),
-                              ('side', (length,0,length*.10), length*1.16),
-                              ('top', (0,0,length), length*1.14),
-                              ('bridge', (width*.7,front+width*.7,high+width*.32), width*.9),
-                              ('rear', (length*.33,-length,length*.30), length*.90)]:
-        camera.location = loc
-        target = Vector((0,front-2,low+1)) if view == 'bridge' else Vector((0,0,0))
-        camera.rotation_euler = (target-camera.location).to_track_quat('-Z','Y').to_euler()
-        if view == 'top':
-            camera.rotation_euler.z = math.pi/2
-        camera.data.ortho_scale = ortho
-        scene.render.filepath = str(ROOT/(key+'-'+view+'.png'))
-        bpy.ops.render.render(write_still=True)
-    camera.location = (length*.85,length*.94,length*.64)
-    camera.rotation_euler = (-camera.location).to_track_quat('-Z','Y').to_euler()
-    camera.data.ortho_scale = length*1.12
     add_scale_crew(length, width, height)
-    render_crew_views(length, width, height)
+    # Small apron platform places a crew member directly beside a door.
+    floor_z=deck_floors[0]
+    box('Studio boarding platform',(width/2+1.1,length*.19,floor_z-.10),
+        (2.2,3.0,.20),'metal')
+    for y in [length*.19-1.3,length*.19+1.3]:
+        box('Studio platform support',(width/2+1.7,y,(floor_z-height/2-.8)/2),
+            (.10,.10,floor_z+height/2+.8),'metal')
+    render_crew_views(length,width,height)
+    target=Vector((0,front-1,eye_z))
+    camera.location=(9,front+12,eye_z+5)
+    camera.rotation_euler=(target-camera.location).to_track_quat('-Z','Y').to_euler()
+    camera.data.ortho_scale=12
+    scene.render.filepath=str(ROOT/(key+'-bridge.png'))
+    bpy.ops.render.render(write_still=True)
+    camera.location=(length*.85,length*.94,length*.64)
+    camera.rotation_euler=(-camera.location).to_track_quat('-Z','Y').to_euler()
+    camera.data.ortho_scale=length*1.12
     bpy.context.preferences.filepaths.save_version = 0
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/(key+'.blend')))
 
 
-if '--refresh-crew' in sys.argv:
-    for key, length, width, height in [('commuter',72,22,16),('double-decker',180,43,29)]:
+if '--refresh-scale' in sys.argv:
+    for key,length,width,height in [('commuter',72,18,11),('double-decker',180,30,16.5)]:
+        bpy.ops.wm.open_mainfile(filepath=str(ROOT/(key+'.blend')))
+        render_crew_views(length,width,height)
+elif '--refresh-crew' in sys.argv:
+    for key, length, width, height in [('commuter',72,18,11),('double-decker',180,30,16.5)]:
         bpy.ops.wm.open_mainfile(filepath=str(ROOT/(key+'.blend')))
         add_scale_crew(length,width,height)
         render_crew_views(length,width,height)
         bpy.context.preferences.filepaths.save_version = 0
         bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/(key+'.blend')))
-elif '--refresh-views' in sys.argv or '--refresh-bridge' in sys.argv:
-    for key, length, width, height in [('commuter', 72, 22, 16), ('double-decker', 180, 43, 29)]:
-        bpy.ops.wm.open_mainfile(filepath=str(ROOT/(key+'.blend')))
-        scene = bpy.context.scene
-        camera = scene.camera
-        views = [('top', (0,0,length), length*1.14),
-                 ('rear', (length*.33,-length,length*.30), length*.90)]
-        if '--refresh-bridge' in sys.argv:
-            views = [('bridge', (width*.7,length*.473+width*.7,height*.17+2.3+width*.32),width*.9)]
-        for view, loc, scale in views:
-            camera.location = loc
-            target = Vector((0,length*.473-2,height*.17+1)) if view == 'bridge' else Vector((0,0,0))
-            camera.rotation_euler = (target-camera.location).to_track_quat('-Z','Y').to_euler()
-            if view == 'top':
-                camera.rotation_euler.z = math.pi/2
-            camera.data.ortho_scale = scale
-            scene.render.filepath = str(ROOT/(key+'-'+view+'.png'))
-            bpy.ops.render.render(write_still=True)
 else:
-    build('commuter', 72, 22, 16, 1)
-    build('double-decker', 180, 43, 29, 2)
+    if '--only-liner' not in sys.argv:
+        build('commuter', 72, 18, 11, 1)
+    build('double-decker', 180, 30, 16.5, 2)
