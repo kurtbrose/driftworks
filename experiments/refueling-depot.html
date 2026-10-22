@@ -10,6 +10,8 @@
 <button id="commuter-view">Commuter close-up</button> <button id="liner-view">Large liner close-up</button>
 <label>Civilian transports<select id="liner-model"><option value="both">Both / true scale</option><option value="commuter">Commuter / 72 m hull</option><option value="double-decker">Double-decker / 180 m hull</option><option value="none">Hidden</option></select></label>
 <p id="liner-status">Loading civilian liners…</p>
+<label>Liner docking attitude <output id="attitude-value">90° / vertical</output><input id="liner-attitude" type="range" min="0" max="90" step="1" value="90"></label>
+<p>0°: horizontal cruise · 90°: nose up, roof toward depot.</p>
 <label>Berth bearing<input id="arms" type="range" min="-35" max="35" value="0"></label>
 <label>Wrist reach / metres<input id="reach" type="range" min="24" max="58" value="48"></label>
 <label>Wrist height / metres<input id="height" type="range" min="-32" max="12" value="-20"></label>
@@ -41,7 +43,21 @@ const fill=new THREE.DirectionalLight(0x7493bc,.8);fill.position.set(0,-100,-200
 const depot=new THREE.Group();depot.rotation.x=-Math.PI/2;scene.add(depot);
 const groups=new Map(),materials=[],base=new Map();
 const liners=new Map(),loader=new GLTFLoader();
-function showLiners(){for(const [id,root] of liners)root.visible=el('liner-model').value==='both'||el('liner-model').value===id;}
+const linerEnvelopes=new Map();
+const cruiseAttitude=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
+// glTF forward = -Z, dorsal = +Y. At the vertical berth, forward is
+// world +Y and dorsal is world -Z, toward the depot from these berths.
+const dockAttitude=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(-1,0,0),new THREE.Vector3(0,0,-1),new THREE.Vector3(0,-1,0)));
+function poseLiners(){
+ const degrees=Number(el('liner-attitude').value);
+ el('attitude-value').textContent=`${degrees}° / ${degrees===90?'vertical':degrees===0?'horizontal':'transition'}`;
+ for(const [id,root] of liners){
+  root.quaternion.slerpQuaternions(cruiseAttitude,dockAttitude,degrees/90);root.updateMatrixWorld(true);
+  const envelope=linerEnvelopes.get(id);if(envelope)envelope.box.setFromObject(root);
+ }
+}
+el('liner-attitude').oninput=poseLiners;
+function showLiners(){for(const [id,root] of liners){root.visible=el('liner-model').value==='both'||el('liner-model').value===id;const envelope=linerEnvelopes.get(id);if(envelope)envelope.visible=root.visible;}}
 el('liner-model').onchange=showLiners;
 el('shuttle-view').onclick=()=>{el('liner-model').value='both';showLiners();view([330,150,440],[-10,-25,120]);};
 el('commuter-view').onclick=()=>{el('liner-model').value='commuter';showLiners();view([-20,8,196],[-112,-35,80]);};
@@ -52,7 +68,7 @@ Promise.all([['commuter',[-112,-41,80]],['double-decker',[35,-55,165]]].map(asyn
  // resulting -Z bow onto +X, preserving the authored metre scale.
  const root=new THREE.Group();root.rotation.y=-Math.PI/2;root.position.set(...position);root.add(gltf.scene);scene.add(root);liners.set(id,root);
  root.traverse(object=>{if(object.isMesh)for(const material of Array.isArray(object.material)?object.material:[object.material]){materials.push(material);material.wireframe=el('wire').checked;}});
- root.updateMatrixWorld(true);markers.add(new THREE.Box3Helper(new THREE.Box3().setFromObject(root),id==='commuter'?0xe1b671:0xcf916d));showLiners();
+ root.updateMatrixWorld(true);const envelope=new THREE.Box3Helper(new THREE.Box3().setFromObject(root),id==='commuter'?0xe1b671:0xcf916d);linerEnvelopes.set(id,envelope);markers.add(envelope);poseLiners();showLiners();
 })).then(()=>el('liner-status').textContent='72 m commuter + 180 m double-decker / original GLB materials, true scale.').catch(error=>el('liner-status').textContent='Liner load failed: '+error.message);
 const paintTexture=new THREE.TextureLoader().load(DW.assetUrl('../assets/depots/refueling-v1/caution-paint.png'));
 paintTexture.colorSpace=THREE.SRGBColorSpace;paintTexture.wrapS=paintTexture.wrapT=THREE.RepeatWrapping;paintTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());

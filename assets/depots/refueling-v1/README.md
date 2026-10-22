@@ -67,3 +67,10 @@ and positions the models outside the tank racks. No rescaling or rebaking is
 applied. Transport envelopes use their actual loaded world bounds. Separate
 close-up views and the shared scale view support inspection. Both remain static
 references pending approach/refueling/departure behavior.
+
+The liner docking-attitude slider defaults to 90 degrees: bows point world +Y
+(up in the study), dorsal surfaces point world -Z toward the depot. Zero restores
+the horizontal cruise pose. Quaternion interpolation preserves rigid geometry
+and true scale; loaded transport envelopes update with each pose. Berth origins
+stay fixed during this attitude study. This does not attach the arms or solve
+approach trajectories/collision avoidance.
