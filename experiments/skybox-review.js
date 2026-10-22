@@ -26,12 +26,14 @@
             status.textContent=entry.model.name+' / original textured 3D model';
         }catch(error){status.textContent=String(error);}
     }
+    var missionSun=DW.flightMissions.current().sky.features.find(function(feature){return feature.asset==='features/warm-sun-v1.png'&&feature.gain>0;});
+    var sunYaw=missionSun?missionSun.yaw:74,sunPitch=missionSun?missionSun.pitch:1;
     var skyYaw=90, skyPitch=0;
     /** @param {number} yaw @param {number} pitch @param {string} caption */
     function framing(yaw,pitch,caption){skyYaw=yaw;skyPitch=pitch;control('caption').textContent=caption;}
-    control('review-face-sun').onclick=function(){sky.setStyle(9);skyChoice.value='9';framing(74,1,'Sun / restrained camera glare and shared foreground exposure');};
-    control('review-away-sun').onclick=function(){framing(254,0,'Looking away / camera exposure recovers');};
-    if(initialStyle===9)framing(66,7,'Sun / restrained camera glare and shared foreground exposure');
+    control('review-face-sun').onclick=function(){sky.setStyle(9);skyChoice.value='9';framing(sunYaw,sunPitch,'Sun / restrained camera glare and shared foreground exposure');};
+    control('review-away-sun').onclick=function(){framing(sunYaw+180,0,'Looking away / camera exposure recovers');};
+    if(initialStyle===9)framing(sunYaw-8,sunPitch+6,'Sun / restrained camera glare and shared foreground exposure');
     control('opening').onclick=function(){framing(90,0,'Dark opening / calm silhouette with detail around the edges');};
     control('rim').onclick=function(){framing(90,-14,'Bright rim / deliberate stress test for hull contrast');};
     control('empty').onclick=function(){framing(50,0,'Open field / black space as a visual rest');};

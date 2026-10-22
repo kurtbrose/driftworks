@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
-let allocations=0,draws=0;
-const context={clearRect(){},fillRect(){draws++;},createRadialGradient(){return {addColorStop(){}};}};
+let allocations=0,draws=0;const stops=[];
+const context={clearRect(){},fillRect(){draws++;},createRadialGradient(){return {addColorStop(at,color){stops.push({at,color});}};}};
 const scope={window:{Driftworks:{}},document:{createElement(){allocations++;return {style:{},setAttribute(){},getContext(){return context;},remove(){}};}}};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../src/sky-effects.js'),'utf8'),scope);
 const api=scope.window.Driftworks.skyEffects,source={direction:[0,1,0],radius:.01,strength:1,color:[1,.9,.8]};
@@ -56,3 +56,6 @@ for(let frame=0;frame<360;frame++)exposure=adapting.render(away,2,12+frame/60,fa
 assert.ok(exposure>.98,'looking away restores exposure');
 adapting.dispose();
 console.log('PASS authored sun adaptation: visible exposure response and recovery');
+
+assert.ok(stops.some(s=>s.at===0&&Number(s.color.split(',').pop().replace(')',''))>.65),'authored sun produces a bright bloom core, rather than an imperceptible veil');
+assert.ok(stops.some(s=>s.at>.2&&s.at<.3&&Number(s.color.split(',').pop().replace(')',''))>.15),'broad glare spills beyond the tight core');

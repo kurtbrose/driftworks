@@ -443,3 +443,11 @@ does not get an invented light. The effects toggle still provides an A/B control
 HDR overrides continue to require explicit source metadata rather than inheriting
 unrelated sources. Local asteroid bounds occlude the glare; detailed hull and
 cockpit mesh occlusion and nova area shadows remain separate future integration.
+
+The shared camera bloom uses the star-glare study's tight and broad angular
+Gaussian lobes, compressed into a display-space screen overlay. Its footprint
+scales with camera focal length, and exposed source fraction controls both
+lobes. This is an optical approximation, not general HDR framebuffer bloom.
+Camera adaptation uses wall time even when flight supplies frame durations or
+pauses simulation. The ship review accepts `?sky=9&mission=ohio`; Face the sun
+uses that mission's authored sun bearing for an on/off comparison.

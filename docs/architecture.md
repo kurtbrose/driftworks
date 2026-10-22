@@ -704,8 +704,9 @@ Lines carry a separate `radioSeed` derived from transmission serial for varying
 squelch and intermittent static without changing speaker identity.
 
 Coordination, distress, combat reports, and emotional exchanges are audible only
-from allies or control. Enemy broadcasts use only the ambient taunt pool; enemy
-transitions and emotions cannot nominate reactive calls or start exchanges.
+from allies or control. Enemy broadcasts use the taunt pool and brief reactions
+to actual hits; enemy transitions and emotions cannot nominate coordination
+calls or start exchanges.
 
 Comms observes living craft mode transitions each flight frame (attack, evade,
 break, recover, reposition). It records transitions even while blocked and

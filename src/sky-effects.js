@@ -53,7 +53,7 @@
             render:/** @param {{eye?:number[],right:number[],up:number[],back:number[]}} pose @param {number} focal @param {number} now @param {boolean} empty */function(pose,focal,now,empty){
                 var dt=last?Math.max(0,now-last):0;last=now;
                 if(!enabled||empty||!sources.length){exposure=1;clear();return exposure;}
-                if(!canvas){canvas=document.createElement('canvas');canvas.className='sky-camera-effects';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;';host.appendChild(canvas);ctx=canvas.getContext('2d');}
+                if(!canvas){canvas=document.createElement('canvas');canvas.className='sky-camera-effects';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;mix-blend-mode:screen;';host.appendChild(canvas);ctx=canvas.getContext('2d');}
                 if(!ctx||!canvas)return 1;
                 var width=Math.max(1,Math.round(host.clientWidth)),height=Math.max(1,Math.round(host.clientHeight)),aspect=width/height,energy=0;
                 if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
@@ -66,10 +66,17 @@
                     // Extended emitters need screen-derived bloom; do not paint a false central lobe.
                     if(source.radius>.12)return;
                     var x=(dot(visible.direction,pose.right)*focal/aspect/depth+1)*width/2,y=(1-dot(visible.direction,pose.up)*focal/depth)*height/2;
-                    var size=height*.2,alpha=Math.min(.22,source.strength*visible.fraction*.17);
+                    // Match the star-glare study's two angular Gaussian lobes, then
+                    // compress radiance and encode for the display-space screen layer.
+                    var pixelsPerRadian=height*focal/2,extent=.65,size=pixelsPerRadian*extent;
                     var color=source.color.map(function(c){return Math.round(Math.min(1,c)*255);}).join(',');
                     var gradient=context.createRadialGradient(x,y,0,x,y,size);
-                    gradient.addColorStop(0,'rgba('+color+','+alpha+')');gradient.addColorStop(.15,'rgba('+color+','+alpha*.35+')');gradient.addColorStop(1,'rgba('+color+',0)');
+                    for(var stop=0;stop<=32;stop++){
+                        var angle=extent*stop/32;
+                        var radiance=source.strength*visible.fraction*(1.2*Math.exp(-angle*angle/.0035)+.12*Math.exp(-angle*angle/.05));
+                        var alpha=stop===32?0:Math.pow(1-Math.exp(-radiance),1/2.2);
+                        gradient.addColorStop(stop/32,'rgba('+color+','+alpha+')');
+                    }
                     context.fillStyle=gradient;context.fillRect(x-size,y-size,size*2,size*2);
                 });
                 ctx.globalCompositeOperation='source-over';exposure=adapt(exposure,1/(1+energy*1.5),dt);return exposure;
