@@ -1,5 +1,10 @@
 # Driftworks
 
+Depot asset prototype: open [Refueling depot study](experiments/refueling-depot.html)
+to inspect the Blender-baked orbital tank farm against the existing planet sky.
+It includes articulated refueling arms, sky stages and true-scale fighters.
+See [asset source and rebuild notes](assets/depots/refueling-v1/README.md).
+
 Driftworks is a collection of browser-based flight experiments, artwork viewers, and a hard-SF economic/RTS prototype. The landing page is the experiments index; the original tactical mining and fleet simulation is available as the Driftworks 2D experiment at `rts.html`, with an optional 3D renderer at `rts.html?renderer=3d`. Everything is served as static files.
 
 For code changes, start with [AGENTS.md](AGENTS.md), then consult the

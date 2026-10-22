@@ -9,6 +9,8 @@ require('./planet-hero.cjs');
 require('./planet-impact.cjs');
 require('./planet-impact-baked.cjs');
 require('./explosions.cjs');
+require('./refueling-depot.cjs');
+require('./evacuation-shuttle.cjs');
 require('./gpu-ui.cjs');
 require('./flight-hud-markers.cjs');
 require('./flight-missions.cjs');
