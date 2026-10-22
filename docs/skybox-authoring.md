@@ -1,5 +1,9 @@
 # Hero sky authoring
 
+The impact watch now defaults to mission-triggered cinematic stages. See
+[impact cues](impact-cues.md) for the trigger API, manual cue panel, queue/pause
+rules, generated land fire/smoke stages and live atmospheric re-entry layer.
+
 The complete-planet experiment uses the existing opaque two-landmark pass with
 one black-backed full-disk planet and a separate sun. Missions `planet-hero`,
 `planet-hero-80` and `planet-hero-140` retain the ordinary 8v8 furball rules and
@@ -422,3 +426,20 @@ order ambient SH because of its demonstrated rear-lobe artifact.
 Lighting provenance hashes normalize CRLF text to LF for the layout and Python
 preprocessors; image bytes remain exact. This keeps Windows bakes verifiable in
 Linux CI. The baker writes its JSON with LF line endings.
+
+### Sun effects coverage
+
+Camera effects are now enabled for selectable D / Distant sun and I / Hero sun.
+The source catalog also has asset metadata for `features/warm-sun-v1.png`.
+Landmark skies derive their optical source direction, radius and gain from the
+same authored feature placement, including Ohio, all planet-hero variants and
+the inherited baked planet-impact/watch missions. This avoids copying angles
+into a separate per-mission table. Invisible source sprites (gain zero) do not
+produce glare. Disk diameter is .064 of the card width for this source artwork.
+
+Skies without an authored bright source remain neutral; the older standalone
+orbital-impact panorama (style L) has no reliable stellar-source metadata and
+does not get an invented light. The effects toggle still provides an A/B control.
+HDR overrides continue to require explicit source metadata rather than inheriting
+unrelated sources. Local asteroid bounds occlude the glare; detailed hull and
+cockpit mesh occlusion and nova area shadows remain separate future integration.

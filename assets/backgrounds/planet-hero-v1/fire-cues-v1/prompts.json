@@ -1,0 +1,14 @@
+{
+  "mode": "built-in image_gen",
+  "reference": "../registered-v3/6.png",
+  "frames": [
+    {
+      "file": "fires.png",
+      "prompt": "Use case: precise-object-edit. Edit the provided EXACT full-frame planet image. Preserve the complete disk, camera, lighting, all black margins, all coastlines and existing central gray impact cloud EXACTLY. No changes to the impact root or silhouette. Add ONLY small wildfire/smoke patches on nearby LAND, never on ocean. Geographic target areas normalized: green island immediately left of impact around (.43,.44), left island southern land (.40,.48), small island immediately right of impact (.54,.47), nearest mainland headland (.60,.44). Show surface curvature and directly overhead plan view near disk center, no upright pasted side-profile columns. Photographic daytime orbital view. Keep fires tiny compared with the 1100-pixel planet diameter. No glowing whole continents, no new asteroid, no meteor streaks painted in, no text, no camera zoom. One full-frame image. Stage: Early regional wildfires: several separate modest brown-gray smoke puffs and thin smoke ribbons above these land patches. Smoke more apparent than fire on the day side. A few tiny dull amber pinpricks at smoke bases, not giant orange fireballs. Each smoke patch15-35pixels across. Existing central impact exactly unchanged."
+    },
+    {
+      "file": "smoke.png",
+      "prompt": "Use case: precise-object-edit. Edit the provided EXACT full-frame planet image. Preserve the complete disk, camera, lighting, all black margins, all coastlines and existing central gray impact cloud EXACTLY. No changes to the impact root or silhouette. Add ONLY small wildfire/smoke patches on nearby LAND, never on ocean. Geographic target areas normalized: green island immediately left of impact around (.43,.44), left island southern land (.40,.48), small island immediately right of impact (.54,.47), nearest mainland headland (.60,.44). Show surface curvature and directly overhead plan view near disk center, no upright pasted side-profile columns. Photographic daytime orbital view. Keep fires tiny compared with the 1100-pixel planet diameter. No glowing whole continents, no new asteroid, no meteor streaks painted in, no text, no camera zoom. One full-frame image. Stage: Later regional smoke: more developed irregular gray-brown smoke sheets above the same nearby land areas, 30-60pixels across, becoming a thin patchy smoke veil drifting slightly down-right over adjacent coast. Fires mostly obscured, only very faint warm gaps. Keep oceans and geography recognizable between plumes. Existing central impact unchanged. Do not darken the entire planet or create huge volcanic towers."
+    }
+  ]
+}

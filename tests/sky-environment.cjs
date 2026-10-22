@@ -19,3 +19,14 @@ assert.throws(()=>renderer.setEnvironment({...environment,radiance:new Float32Ar
 assert.equal(renderer.getLighting(),environment,'invalid data leaves current sky intact');
 renderer.setEnvironment(null);renderer.render({right:[1,0,0],up:[0,0,1],back:[0,-1,0]},1,false);assert.equal(values.hdrEnabled,0);
 console.log('PASS normal HDR sky: shared lighting identity, unclipped radiance input, one upload per cache, validation and baseline restoration');
+
+// Flight supplies a frame duration (and zero while paused), never an absolute clock.
+let clock=1000;const opticsTimes=[];
+scope.performance={now:()=>clock};
+window.Driftworks.skyEffects={create:()=>({setEnabled(){},setSources(){},render(_pose,_focal,time){opticsTimes.push(time);return 1;}})};
+const flightSky=window.Driftworks.flightSkybox.create({clientWidth:640,clientHeight:480,prepend(){}},{style:8});
+const pose={right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+flightSky.render(pose,1,false,.016);clock+=100;flightSky.render(pose,1,false,.016);
+clock+=100;flightSky.render(pose,1,false,0);
+assert.deepEqual(opticsTimes,[1,1.1,1.2],'camera adaptation advances with real time, including paused flight');
+console.log('PASS flight optics clock: repeated frame durations and paused simulation retain camera adaptation');

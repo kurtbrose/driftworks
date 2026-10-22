@@ -1,5 +1,8 @@
 # Planet impact: physical reference and playable study
 
+Current playback is [mission-cued](impact-cues.md). The time labels below are
+physical/art research references, not automatic deadlines for the cinematic.
+
 The current artwork is a successful composition test, not a calibrated impact
 simulation. The flight proof is `experiments/flight.html?mission=planet-impact-baked`;
 For an actually empty map without the training asteroid, mothership or hostiles,

@@ -6,6 +6,8 @@ Run with Python containing Pillow and NumPy, from any working directory.
 import importlib.util
 import json
 import sys
+import argparse
+import shutil
 from pathlib import Path
 import numpy as np
 from PIL import Image
@@ -16,9 +18,14 @@ spec = importlib.util.spec_from_file_location('composer', Path(__file__).with_na
 composer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(composer)
 source = ROOT / 'assets/backgrounds/planet-hero-v1'
-target = source / 'baked-v3'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--cinematic', action='store_true', help='Append masked land fire/smoke cues; retain the original seven bakes byte-for-byte')
+args = parser.parse_args()
+target = source / ('baked-cues-v1' if args.cinematic else 'baked-v3')
 target.mkdir(exist_ok=True)
 files = ['registered-v3/' + str(i) + '.png' for i in range(7)]
+if args.cinematic:
+    files += ['fire-cues-v1/7.png', 'fire-cues-v1/8.png']
 master = np.asarray(Image.open(source / files[0]).convert('RGB'), dtype=np.float32)
 h, w = master.shape[:2]
 y, x = np.mgrid[:h, :w]
@@ -36,6 +43,9 @@ width = 4096
 height = width//2
 longitude = ((np.arange(width, dtype=np.float32)+.5)/width-.5)*2*np.pi
 for index, file in enumerate(files):
+    if args.cinematic and index < 7:
+        shutil.copyfile(source/f'baked-v3/{index}.png', target/f'{index}.png')
+        continue
     plate = np.asarray(Image.open(source / file).convert('RGB'), dtype=np.float32)
     frozen = np.rint(master*(1-mask)+plate*mask)/255
     images = {'planet': np.maximum(0, (frozen-2/255)/(1-2/255))[:, ::-1], 'sun': sun}
@@ -48,6 +58,7 @@ for index, file in enumerate(files):
     Image.fromarray(output).save(target / f'{index}.png')
     print(f'Baked {index}: {file}', flush=True)
 (target / 'recipe.json').write_text(json.dumps({'projection': 'equirectangular', 'width': width,
-    'height': height, 'times': [0, 2, 30, 60, 120, 300, 600], 'sources': files,
+    'height': height, 'times': None if args.cinematic else [0, 2, 30, 60, 120, 300, 600], 'sources': files,
+    'sourceRoot': '..', 'stages': ['before','contact','ejecta','plume','cooling','fallout','aftermath','fires','smoke'] if args.cinematic else None,
     'mask': {'registeredPlates': '../registered-v3/registration.json'},
     'layout': layout, 'mirrorSourceU': True, 'timing': 'Illustrative, not a physical simulation'}, indent=2)+'\n')

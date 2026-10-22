@@ -101,7 +101,8 @@
                 var range = view.stickRange, cx = w / 2, cy = h / 2, sx = cx + mouse[0] * range, sy = cy + mouse[1] * range;
                 combatHud.strokeStyle = 'rgba(166,239,222,.3)';
                 combatHud.beginPath();
-                combatHud.arc(cx, cy, 3, 0, Math.PI * 2);
+                // The outer guide represents full steering travel, in CSS pixels.
+                combatHud.arc(cx, cy, range, 0, Math.PI * 2);
                 combatHud.stroke();
                 combatHud.beginPath();
                 combatHud.arc(cx, cy, range * .08, 0, Math.PI * 2);
@@ -321,11 +322,11 @@
                 meter('HULL',selected.hp,selected.maxHp,rightX+14,rightY+181,pw-28,'#91d29b');
             }else label('TAB / ACQUIRE',rightX+14,rightY+50,11,muted);
             }
-            // A small reticle replaces the DOM ring and repeated keyboard hints.
+            // Preserve the original DOM reticle's 42 CSS-pixel diameter in the GPU HUD.
             if(!document.body.classList.contains('watch-chase')){
                 ctx.strokeStyle='rgba(178,232,214,.8)';ctx.lineWidth=1;
-                ctx.beginPath();ctx.arc(w/2,h/2,5,0,Math.PI*2);ctx.stroke();
-                ctx.beginPath();ctx.moveTo(w/2-10,h/2);ctx.lineTo(w/2-7,h/2);ctx.moveTo(w/2+7,h/2);ctx.lineTo(w/2+10,h/2);ctx.stroke();
+                ctx.beginPath();ctx.arc(w/2,h/2,21,0,Math.PI*2);ctx.stroke();
+                ctx.beginPath();ctx.moveTo(w/2-4,h/2);ctx.lineTo(w/2+4,h/2);ctx.moveTo(w/2,h/2-4);ctx.lineTo(w/2,h/2+4);ctx.stroke();
             }
             if(combat.dead||combat.roundOver){ctx.textAlign='center';ctx.font='18px monospace';ctx.fillStyle=gold;ctx.fillText(combat.dead?'SHIP LOST':combat.kills+' KILLS / SORTIE COMPLETE',w/2,h*.29);}
             // Transmissions are temporary; no idle comms box or voice button in play.

@@ -6,13 +6,20 @@ const gl=new Proxy({createShader:()=>({}),createProgram:()=>({}),createBuffer:()
 const canvas={dataset:{},setAttribute(){},getContext:()=>gl};
 const context={window:{Driftworks:{assetUrl:s=>s},location:{search:'?mission=planet-impact-baked'},devicePixelRatio:1},document:{getElementById:()=>null,createElement:()=>canvas},Image:class{set src(file){this.file=file;this.width=4096;this.height=2048;requests.push(file);pending.push(this);}},Float32Array,Uint8Array};
 for(const name of ['flight-missions','skybox'])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/'+name+'.js'),'utf8'),context);
-const DW=context.window.Driftworks,sky=DW.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}}),pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+const handlers={},DW=context.window.Driftworks,sky=DW.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){},addEventListener(name,callback){handlers[name]=callback;}}),pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
 const render=dt=>sky.render(pose,1,false,dt);
 const finish=()=>pending.splice(0).forEach(image=>image.onload());
 render(10);render(10);
 assert.equal(values.style,21);assert.equal(values.bakedBlend,0,'loading freezes the event before contact');
-assert.equal(requests.filter(s=>s.includes('/baked-v3/')).length,3,'only current, next and prefetch load');
+assert.equal(requests.filter(s=>s.includes('/baked-cues-v1/')).length,3,'only current, next and prefetch load');
 finish();render(0);assert.equal(canvas.dataset.bakedImpact,'ready');
+render(100);assert.equal(sky.getImpactState().stage,'before','mission stage holds indefinitely without a cue');
+sky.cueImpact('contact',2);render(0);render(.04);assert.ok(values.impactFlash>.6,'contact cue triggers independent brief optical pulse');
+render(1.96);render(100);assert.equal(sky.getImpactState().stage,'contact');assert.equal(sky.getImpactState().transitioning,false,'finishing a blend does not schedule the next stage');
+sky.cueImpact('fires',8);render(0);finish();render(4);assert.equal(values.bakedBlend,.5);assert.equal(sky.getImpactState().to,7);
+render(0);assert.equal(values.bakedBlend,.5,'paused cinematic blend stays fixed');render(4);assert.equal(sky.getImpactState().stage,'fires');assert.equal(values.impactDebris,1);
+sky.resetImpact();render(0);finish();render(0);assert.equal(sky.getImpactState().stage,'before');assert.equal(values.impactFlash,0);assert.equal(values.impactDebris,0);
+handlers['impact-cue']({detail:{stage:'smoke',seconds:0}});render(0);finish();render(0);assert.equal(sky.getImpactState().stage,'smoke','mission event bridge reaches the requested stage');handlers['impact-reset']();render(0);finish();render(0);assert.equal(sky.getImpactState().stage,'before');
 sky.setImpactTime(.04);render(0);assert.ok(values.impactFlash>.6,'brief radiance pulse replaces painted flash');sky.setImpactTime(1);render(0);assert.equal(values.impactFlash,0,'optical flash gone before one second');
 sky.setImpactTime(45);render(0);finish();render(0);
 assert.equal(values.bakedBlend,.5,'same adjacent stage blend as the hero compositor');
@@ -24,6 +31,11 @@ const root=path.join(__dirname,'../assets/backgrounds/planet-hero-v1/baked-v3'),
 assert.deepEqual(recipe.times,[0,2,30,60,120,300,600]);
 for(let i=0;i<7;i++){const bytes=fs.readFileSync(path.join(root,i+'.png'));assert.equal(bytes.readUInt32BE(16),4096);assert.equal(bytes.readUInt32BE(20),2048);}
 const registration=JSON.parse(fs.readFileSync(path.join(__dirname,'../assets/backgrounds/planet-hero-v1/registered-v3/registration.json')));for(const frame of registration.frames)assert.ok(frame.errorPixels<.5,'registered impact root stays within half a source pixel');
+const cinematic=path.join(__dirname,'../assets/backgrounds/planet-hero-v1/baked-cues-v1'),cueRecipe=JSON.parse(fs.readFileSync(path.join(cinematic,'recipe.json')));assert.equal(cueRecipe.times,null);assert.equal(cueRecipe.stages.length,9);
+for(let i=0;i<7;i++)assert.ok(fs.readFileSync(path.join(root,i+'.png')).equals(fs.readFileSync(path.join(cinematic,i+'.png'))),'new cues retain existing bakes byte-for-byte');
+for(const i of [7,8]){const bytes=fs.readFileSync(path.join(cinematic,i+'.png'));assert.equal(bytes.readUInt32BE(16),4096);assert.equal(bytes.readUInt32BE(20),2048);}
+const cues=DW.flightSkybox.createImpactCues();cues.trigger('ejecta',4);cues.trigger('smoke',2);cues.update(2,false);assert.equal(cues.snapshot().blend,0,'resource load freezes transition');cues.update(2,true);assert.equal(cues.snapshot().blend,.5);cues.update(0,true);assert.equal(cues.snapshot().blend,.5);cues.update(2,true);assert.equal(cues.snapshot().stage,'ejecta');cues.update(0,false);assert.equal(cues.snapshot().to,8,'queued mission triggers retain order');cues.update(2,true);assert.equal(cues.snapshot().stage,'smoke');cues.update(600,true);assert.equal(cues.snapshot().stage,'smoke');cues.reset();assert.equal(cues.snapshot().queued,0);assert.throws(()=>cues.trigger('missing'));assert.throws(()=>cues.trigger('fires',NaN));
+const repeated=DW.flightSkybox.createImpactCues();repeated.trigger('contact');repeated.update(0,false);repeated.trigger('fires');repeated.trigger('contact');assert.equal(repeated.snapshot().queued,1,'repeated mission condition does not replay an active cue after queued stages');
 const {createFlight}=require('../tools/headless.cjs');const flight=createFlight({mission:'planet-impact-baked',seed:29});flight.advance(2,{stop:true});assert.equal(flight.snapshot().combat.enemies.length,16);
 const empty=createFlight({mission:'planet-impact-watch',seed:29}),watch=empty.snapshot();
 assert.equal(watch.world.asteroids.length,0);assert.equal(watch.world.ships.length,0);assert.equal(watch.combat.enabled,false);assert.equal(watch.combat.enemies.length,0);

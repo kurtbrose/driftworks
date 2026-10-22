@@ -152,6 +152,8 @@
                 if (killer)
                     offer(witness(killer.team || 'enemy', killer.id), 'kill', { pilot: callsign(killer) }, true);
             }
+            else if (e.kind === 'hit' && subject && subject.hp > 30 && !state.facts.some(function(entry){return entry.event === 'hit' && entry.craft.id === e.victim;}))
+                offer(subject, 'hit', {}, true);
             else if (e.kind === 'near')
                 offer(subject || (e.victim === 'player' ? witness('ally') : null), e.victim === 'player' ? 'nearPlayer' : 'near', {}, true);
             else if (e.kind === 'shield')
@@ -230,7 +232,7 @@
                 var c = e.id === entry.contactId && e.pose ? contactData(player, e.pose.eye) : null;
                 return c && c.distance <= 3000;
             })) && (entry.event !== 'remaining' || entry.data?.count === enemies) && (entry.event !== 'shield' || combat.shield <= 0) && (entry.event !== 'outnumbered' || (allies > 0 && enemies > allies)) && (entry.craft.id === 'control' || living.some(function (e) {
-                return e.id === entry.craft.id;
+                return e.id === entry.craft.id && (entry.event !== 'hit' || e.hp > 30);
             }));
         }).slice(-12);
         return result.concat(state.facts);
@@ -379,7 +381,14 @@
         // Player-facing rival broadcasts get an independent opportunity, rather
         // than waiting for the ambient timer that every allied line resets.
         if(state.time>=10 && state.time-(state.activitySpoken.taunt===undefined?-Infinity:state.activitySpoken.taunt)>=20){
-            living.filter(function(c){return c.team==='enemy'&&c.targetId==='player';}).forEach(function(c){
+            living.filter(function(c){
+                if (c.team !== 'enemy') return false;
+                if (c.targetId === 'player') return true;
+                // Team dogfights select NPC opponents, so a player lock is not required.
+                return mission.encounter.kind === 'furball' && c.mode === 'attack' && living.some(function(target){
+                    return target.id === c.targetId && target.team === 'ally';
+                });
+            }).forEach(function(c){
                 candidates.push({craft:c,event:'taunt',texts:lines.enemy});
             });
         }
@@ -392,19 +401,19 @@
             counts[kind] = (counts[kind] || 0) + 1;
         });
         candidates = candidates.filter(function (entry) {
-            // Rivals may taunt the player, but never broadcast flight coordination.
-            if (entry.craft.team !== 'ally' && entry.event!=='taunt')
+            // Rivals can taunt and react to hits, but never broadcast flight coordination.
+            if (entry.craft.team !== 'ally' && entry.event!=='taunt' && entry.event!=='hit')
                 return false;
             if (/^(support|emotionalReply|acknowledgment)$/.test(entry.event))
                 return true;
             if (state.time - (state.spoken[entry.craft.id] === undefined ? -Infinity : state.spoken[entry.craft.id]) < 10)
                 return false;
             var category = activityKind(entry.event), last = state.activitySpoken[category];
-            return last === undefined || state.time - last >= (category === 'contact' ? 18 : 4) + (counts[category] || 0) * 3;
+            return last === undefined || state.time - last >= (category === 'contact' ? 18 : category === 'hit' ? 12 : 4) + (counts[category] || 0) * 3;
         });
         if (candidates.length) {
             var urgent = candidates.filter(function (e) {
-                return e.event === 'loss' || e.event === 'shield' || e.event === 'nearPlayer' || e.event === 'damaged' || e.event === 'evade' || e.event === 'break';
+                return e.event === 'hit' || e.event === 'loss' || e.event === 'shield' || e.event === 'nearPlayer' || e.event === 'damaged' || e.event === 'evade' || e.event === 'break';
             });
             var replies = candidates.filter(function (e) {
                 return /^(support|emotionalReply|acknowledgment)$/.test(e.event);

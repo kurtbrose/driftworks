@@ -19,3 +19,40 @@ assert.throws(()=>effect.setSources([{...source,radius:NaN}]));
 assert.equal(api.adapt(1,.4,0),1);assert.ok(api.adapt(1,.4,.1)>.4);
 effect.dispose();
 console.log('PASS shared sky effects: opt-in allocation, partial/full occlusion, source limits, neutral reset and bounded exposure');
+
+const catalog=JSON.parse(fs.readFileSync(path.join(__dirname,'../assets/backgrounds/sky-camera-sources-v1.json'),'utf8'));
+assert.ok(catalog.styles['4'].length&&catalog.styles['9'].length,'both authored selectable suns configured');
+assert.equal(catalog.styles['8'],undefined,'nebula gets no invented sun');
+for(const pitch of [30,35]){
+ const features=[{asset:'planet.png',yaw:90,pitch:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch,widthDeg:7,gain:1}];
+ const sources=api.fromFeatures(features,catalog.assets);
+ assert.equal(sources.length,1,'planet/Ohio/impact sun derives from asset metadata');
+ assert.ok(Math.abs(sources[0].direction[2]-Math.sin(pitch*Math.PI/180))<1e-9);
+ assert.ok(sources[0].direction[0]<0&&sources[0].direction[1]<0,'same authored yaw as rendered sun');
+ assert.equal(api.fromFeatures([{...features[1],gain:0}],catalog.assets).length,0,'hidden source emits no glare');
+ assert.equal(api.fromFeatures([{...features[1],widthDeg:14}],catalog.assets)[0].radius,sources[0].radius*2,'card scale changes disk radius');
+}
+console.log('PASS source coverage: distant/hero suns, placement-derived landmark suns, hidden sources and angular scaling');
+
+const missions={window:{Driftworks:{}}};vm.createContext(missions);
+for(const file of ['flight-missions.js','mission-ohio.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../experiments',file),'utf8'),missions);
+for(const id of ['ohio','planet-hero','planet-hero-80','planet-hero-140','planet-impact-baked','planet-impact-watch']){
+ const mission=missions.window.Driftworks.flightMissions.resolve(id);
+ const sources=api.fromFeatures(mission.sky.features,catalog.assets);
+ assert.equal(sources.length,1,id+' enables exactly its authored sun');
+ const feature=mission.sky.features.find(f=>catalog.assets[f.asset]);
+ const yaw=Math.atan2(sources[0].direction[1],sources[0].direction[0])*180/Math.PI;
+ assert.ok(Math.abs(((yaw-feature.yaw)%360+540)%360-180)<1e-6,id+' preserves source direction');
+}
+assert.equal(api.fromFeatures(missions.window.Driftworks.flightMissions.resolve().sky.features,catalog.assets).length,0,'default selectable skies do not invent a mission sun');
+console.log('PASS mission sun effects: Ohio, planet variants and inherited baked-impact/watch placements');
+
+const adapting=api.create(host);adapting.setSources([{...source,strength:.45}]);
+let exposure=1;
+for(let frame=0;frame<120;frame++)exposure=adapting.render(pose,2,10+frame/60,false);
+assert.ok(exposure<.61&&exposure>.59,'authored sun visibly reduces exposure to about 60 percent');
+const away={...pose,back:[0,1,0]};
+for(let frame=0;frame<360;frame++)exposure=adapting.render(away,2,12+frame/60,false);
+assert.ok(exposure>.98,'looking away restores exposure');
+adapting.dispose();
+console.log('PASS authored sun adaptation: visible exposure response and recovery');

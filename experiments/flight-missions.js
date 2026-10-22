@@ -55,14 +55,14 @@
     },'furball');
     define('planet-impact-baked',{
         title:'Baked impact flight · Driftworks',heading:'DRIFTWORKS / IMPACT SKY TEST',
-        subtitle:'ANIMATED 4K SPHERICAL SKY · TEN-MINUTE IMPACT STUDY',
+        subtitle:'ANIMATED 4K SPHERICAL SKY · MISSION-CUED IMPACT',
         sky:{bakedImpact:true}
     },'planet-hero');
     define('planet-impact-watch',{
         emptySpace:true,
         title:'Impact watch · Driftworks',heading:'DRIFTWORKS / IMPACT WATCH',
-        subtitle:'FREE FLIGHT · NO HOSTILES · TEN-MINUTE SKY EVENT',
-        hint:'Start flight to begin the impact. W/S throttle · X stop · arrows steer · Esc pause. Settings: impact scrubber, speed and restart.'
+        subtitle:'FREE FLIGHT · NO HOSTILES · MISSION-CUED SKY EVENT',
+        hint:'Next cue advances the cinematic sky; each stage holds. W/S throttle · X stop · arrows steer · Esc pause. Cue buttons simulate mission triggers.'
     },'planet-impact-baked');
     define('planet-hero-80',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:80,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
     define('planet-hero-140',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:140,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');

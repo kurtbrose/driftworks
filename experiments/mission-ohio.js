@@ -165,6 +165,13 @@
         "Bud, that's not a check-engine light you can ignore. Break off.",
         "Go on, get outta there. We'll hold the door."
     ],
+    "hit": [
+        "Ope! Watch the paint!",
+        "Hey! I just washed this thing!",
+        "That one rattled the casserole.",
+        "Felt that one all the way to Toledo.",
+        "Easy! This is a loaner!"
+    ],
     "damaged": [
         "Ope! That's gonna need more than duct tape.",
         "Well, there goes the security deposit.",

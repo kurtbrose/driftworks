@@ -1,4 +1,5 @@
 export type TargetStatus = {id: string; shield: number; hull: number; shieldTrail: number; hullTrail: number; shieldAge: number; hullAge: number; flash: number; time: number};
+export type ImpactCueSnapshot = {from:number;to:number;blend:number;stage:string;transitioning:boolean;queued:number;flashAge:number};
 import type { Asteroid, Ship, World, DriftworksNamespace } from '../src/types';
 export type FlightMission = {
     version:1; id:string;
@@ -790,6 +791,8 @@ export type ExperimentModules = {
         create:()=>Promise<{canvas:HTMLCanvasElement;draw:(seconds:number,enabled?:boolean)=>boolean}>;
     };
     flightSkybox: {
+        impactStages:{id:string;label:string}[];
+        createImpactCues:()=>{snapshot:()=>ImpactCueSnapshot;trigger:(stage:string|number,seconds?:number)=>boolean;reset:()=>void;update:(elapsed:number,ready:boolean)=>ImpactCueSnapshot};
         options: string[];
         featureFrame: (feature:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number},aspect:number) => Float32Array;
         stars: () => Float32Array;
@@ -797,7 +800,10 @@ export type ExperimentModules = {
             x: number;
             y: number;
         } | null;
-        create: (host: HTMLElement, config?:{style?:number;fov?:number;sources?:import('../src/types').SkyCameraSource[];optics?:boolean}) => {
+        create: (host: HTMLElement, config?:{style?:number;fov?:number;cueControls?:boolean;sources?:import('../src/types').SkyCameraSource[];optics?:boolean}) => {
+            cueImpact:(stage:string|number,seconds?:number)=>boolean;
+            resetImpact:()=>void;
+            getImpactState:()=>ImpactCueSnapshot;
             setEnvironment:(lighting:import('../src/types').SkyEnvironmentLighting|null)=>void;
             setCameraSources:(sources:import('../src/types').SkyCameraSource[]|null)=>void;
             setOccluders:(occluders:import('../src/types').SkyOccluder[])=>void;

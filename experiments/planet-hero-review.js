@@ -3,7 +3,7 @@
     var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks);
     /** @param {string} id */function control(id){var e=document.getElementById(id);if(!e)throw new Error(id);return e;}
     var host=control('viewer'),mission=DW.flightMissions.current(),width=mission.sky.features[0].widthDeg;
-    var sky=DW.flightSkybox.create(host,{fov:140}),yaw=90,pitch=-30,drag=false,x=0,y=0;
+    var sky=DW.flightSkybox.create(host,{fov:140,cueControls:false}),yaw=90,pitch=-30,drag=false,x=0,y=0;
     var lens=/** @type {HTMLSelectElement} */(control('lens'));
     /** @type {ReturnType<typeof DW.flightSkybox.create>|null} */var flightSky=null;
     /** @type {Awaited<ReturnType<typeof DW.planetImpact.create>>|null} */var animation=null;
@@ -24,7 +24,7 @@
     host.onpointerdown=function(e){drag=true;x=e.clientX;y=e.clientY;host.setPointerCapture(e.pointerId);};
     host.onpointermove=function(e){if(drag){yaw-=(e.clientX-x)*.15;pitch=Math.max(-89,Math.min(89,pitch+(e.clientY-y)*.15));x=e.clientX;y=e.clientY;}};
     host.onpointerup=host.onpointercancel=function(){drag=false;};
-    lens.onchange=function(){if(lens.value==='flight'&&!flightSky)flightSky=DW.flightSkybox.create(host,{fov:45});};
+    lens.onchange=function(){if(lens.value==='flight'&&!flightSky)flightSky=DW.flightSkybox.create(host,{fov:45,cueControls:false});};
     /** @param {number} now */function render(now){
         requestAnimationFrame(render);var dt=last?Math.min(.1,(now-last)/1000):0;last=now;if(document.hidden)return;
         if(playing&&animation)time=Math.min(600,time+dt*Number(speed.value));

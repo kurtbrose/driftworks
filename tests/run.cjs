@@ -13,6 +13,7 @@ require('./gpu-ui.cjs');
 require('./flight-hud-markers.cjs');
 require('./flight-missions.cjs');
 require('./headless.cjs');
+require('./flight-hit-reactions.cjs');
 // Run the ordinary-script suite without adding a build or dependency pipeline.
 require('./audio-modules.cjs');
 require('./ohio-music.cjs');

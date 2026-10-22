@@ -853,6 +853,11 @@ multiple pursuers), and recovers toward it after damage recovery delays. Missed
 shots cannot raise stress above 0.55; damage and severe events can still cause
 panic. Safe flight continues to reduce stress toward zero.
 
+Surviving NPCs above critical hull react to actual shield or hull damage with a
+`hit` radio fact. Both teams can react; repeated hits coalesce per speaker while
+pending, expire after seven seconds, and share a 12-second category cooldown plus
+activity repetition penalties. Critical hull retains the existing distress calls.
+
 Flight comms has three layers: `flight-dialogue.js` owns line templates, stable
 pilot voices, contact phrasing and line repetition scoring; `flight-comms.js`
 owns emotions, combat observations and airtime scheduling; `flight-radio.js`
@@ -870,7 +875,9 @@ so named references to other cast members keep their actual callsigns.
 Across missions, player-facing radio categories (contacts, closing warnings,
 near misses, shield warnings, streaks and rival taunts) get six times the base
 selection weight before activity repetition penalties. Rivals actively targeting
-the player can offer a taunt after ten active seconds, with a separate 20-second
+the player can offer a taunt after ten active seconds; in team dogfights, rivals
+actively attacking a living wingmate also qualify because those encounters select
+NPC opponents. Taunts use a separate 20-second
 category cooldown, independent of the ambient timer. Replies and urgent flight
 calls retain precedence; occupied radio, pause and death gates still apply.
 Ohio distances are displayed in yards (1 yard = 0.9144 m), with speed in miles per
@@ -1658,7 +1665,11 @@ font atlas are reused; image sources are cached and GPU resources are disposed
 on non-BFCache page exit. There are no runtime network dependencies.
 
 `flight-hud.js` owns responsive instrument layout and projects session contacts;
-`radar.js` retains the shared contact projection and painter. The target camera
+`radar.js` retains the shared contact projection and painter. The virtual joystick
+outer ring must use the input adapter's full `stickRange`; its inner ring is 8%
+of that range and its cursor uses the same displacement scale. The central
+reticle retains its original 42 CSS-pixel diameter, independent of device pixel
+ratio. Renderer changes must preserve these dimensions. The target camera
 returns whether it rendered a new frame so its GPU texture is uploaded only at
 its 15 FPS cadence, preserving the previous image between frames. Existing
 portrait canvases supply animated image tiles; the HUD does not change portrait

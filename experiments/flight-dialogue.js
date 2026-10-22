@@ -99,6 +99,7 @@
         nearPlayer: ['Close pass, pilot. Stay sharp!', 'That nearly hit you, pilot. Keep moving!'],
         near: ['That was a little close.', 'Too close for comfort!', 'Missed me. Barely.'],
         shield: ["Your shields are gone, pilot. Break clear!", 'Pilot, you are exposed. Get out of there!'],
+        hit: ['Taking hits!', 'Hey! Watch the paint!', 'That one connected. Still flying.', 'Took a hit. Still here.', 'All right, I felt that!'],
         damaged: ['My hull is coming apart! Cover me!', 'Taking heavy damage. Need a hand!'],
         vulnerable: ["His hull is failing! Finish him!", '{pilot} is badly damaged. Stay on him!'],
         escaped: ['Finally shook that bastard.', 'Lost my tail. Coming back around.', 'Clear at last. Coming around.'],

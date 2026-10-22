@@ -25,6 +25,16 @@
     }
     /** @param {number} current @param {number} target @param {number} dt */
     function adapt(current,target,dt){return current+(target-current)*(1-Math.exp(-Math.max(0,Math.min(.1,dt))/(target<current?.28:1.6)));}
+    /** Derive optics from the same placement that draws/bakes each source sprite.
+     * @param {{asset:string,yaw:number,pitch:number,widthDeg:number,gain:number}[]} features
+     * @param {Record<string,{diskFraction:number,strength:number,color:number[]}>} assets
+     * @returns {Source[]} */
+    function fromFeatures(features,assets){
+        return features.filter(function(feature){return !!assets[feature.asset]&&feature.gain>0;}).map(function(feature){
+            var source=assets[feature.asset],yaw=feature.yaw*Math.PI/180,pitch=feature.pitch*Math.PI/180;
+            return {direction:[Math.cos(yaw)*Math.cos(pitch),Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch)],radius:feature.widthDeg*Math.PI/360*source.diskFraction,strength:source.strength*feature.gain,color:source.color.slice()};
+        });
+    }
     /** @param {HTMLElement} host */
     function create(host){
         /** @type {HTMLCanvasElement|null} */ var canvas=null;
@@ -67,5 +77,5 @@
             dispose:function(){if(canvas)canvas.remove();canvas=null;ctx=null;sources=[];blockers=[];}
         };
     }
-    DW.skyEffects={create:create,visibility:visibility,adapt:adapt};
+    DW.skyEffects={create:create,visibility:visibility,adapt:adapt,fromFeatures:fromFeatures};
 }());

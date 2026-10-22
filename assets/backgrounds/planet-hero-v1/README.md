@@ -1,5 +1,9 @@
 # Complete planet hero baseline
 
+Current flight playback uses named cinematic cues and `baked-cues-v1/`, including
+two new generated land fire/smoke stages. See `docs/impact-cues.md` and
+`fire-cues-v1/prompts.json`. Older timed versions below remain comparison assets.
+
 `master.png` is a 1254px square full visible hemisphere generated with the built-in
 ImageGen tool. The reference and exact prompt are in `provenance.json`. Its whole
 atmospheric limb is inside black image margins. It is ordinary flat artwork;

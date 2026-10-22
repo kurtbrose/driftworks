@@ -76,3 +76,26 @@ for (const options of [{mission: 'typo'}, {seed: -1}, {seed: 1.2}, {profile: 999
 const runtime = loadRuntime();
 assert(runtime.sim && runtime.flightDuel && runtime.explosions && runtime.scene3d);
 console.log('PASS headless API: production parity, live state, isolated runtimes, deterministic reset/chunking, scripted comms, destruction/replacements and clock bounds');
+
+// Ohio's team dogfight selects NPC opponents; taunts must survive ordinary wing chatter.
+const tauntFlight = createFlight({mission: 'ohio', seed: 29});
+tauntFlight.advance(60, {stop: true});
+const taunts = tauntFlight.transcript.filter(line => line.event === 'taunt');
+assert(taunts.length > 0, 'A real Ohio dogfight offers rival taunts');
+assert(taunts.every(line => line.hostile && line.craftId), 'Taunts belong to actual rivals');
+for (let i = 1; i < taunts.length; i++) {
+  assert(taunts[i].seconds - taunts[i - 1].seconds >= 20, 'Rival taunts retain category cooldown');
+}
+console.log('PASS Ohio rival taunts: real NPC target selection, occupied radio and category cooldown');
+
+for (const target of ['missing', 'dead', 'enemy']) {
+  const api = loadRuntime().flightComms, clock = api.create();
+  const combat = {enabled: true, mode: 'furball', wave: 1, hull: 100,
+    enemies: [{id: 'rival', team: 'enemy', hp: 90, mode: 'attack', targetId: target},
+      {id: 'dead', team: 'ally', hp: 0, mode: 'approach'},
+      {id: 'enemy', team: 'enemy', hp: 90, mode: 'approach'}]};
+  api.step(clock, 0, combat, true, () => .4);
+  clock.wait = 100; clock.quiet = 10;
+  assert.equal(api.step(clock, 10, combat, false, () => .4), null,
+    'A missing, dead or friendly rival target does not qualify for a team taunt');
+}

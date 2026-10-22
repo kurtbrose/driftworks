@@ -57,6 +57,34 @@
     }
     var missionSky=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).flightMissions.current().sky, landmarkSky=missionSky.kind==='landmarks';
     var focal = 1 / Math.tan(Math.PI / 8);
+    var impactStages=[{id:'before',label:'Before impact'},{id:'contact',label:'Contact / flash'},{id:'ejecta',label:'Young ejecta'},{id:'plume',label:'Growing plume'},{id:'cooling',label:'Cooling cap'},{id:'fallout',label:'Returning debris'},{id:'aftermath',label:'Regional aftermath'},{id:'fires',label:'Land fires'},{id:'smoke',label:'Smoke veil'}];
+    function createImpactCues(){
+        var held=0,from=0,to=0,age=0,duration=0,active=false,started=false,flashAge=Infinity;
+        /** @type {{stage:number,duration:number}[]} */var queue=[];
+        function snapshot(){var a=active?(duration?Math.min(1,age/duration):1):0;return {from:active?from:held,to:active?to:held,blend:a*a*(3-2*a),stage:impactStages[held].id,transitioning:active,queued:queue.length,flashAge:flashAge};}
+        return {snapshot:snapshot,
+            /** @param {string|number} stage @param {number} [seconds] */
+            trigger:function(stage,seconds){var index=typeof stage==='number'?stage:impactStages.findIndex(function(s){return s.id===stage;}),d=seconds===undefined?8:seconds;
+                if(!Number.isInteger(index)||index<0||index>=impactStages.length)throw new RangeError('Unknown impact cue');
+                if(!Number.isFinite(d)||d<0||d>120)throw new RangeError('Impact transition must be 0–120 seconds');
+                if((active&&index===to)||(queue.length&&queue[queue.length-1].stage===index))return true;
+                if(queue.length>=16)return false;
+                if(!active&&index===held&&!queue.length)return true;
+                queue.push({stage:index,duration:d});return true;},
+            reset:function(){held=from=to=0;age=duration=0;active=started=false;flashAge=Infinity;queue=[];},
+            /** @param {number} elapsed @param {boolean} ready */
+            update:function(elapsed,ready){
+                if(!Number.isFinite(elapsed)||elapsed<0)throw new RangeError('Invalid cue elapsed time');
+                if(!active&&queue.length){var command=queue.shift();if(command){from=held;to=command.stage;duration=command.duration;age=0;active=true;started=false;}}
+                if(ready){
+                    if(active&&!started){started=true;if(to===1)flashAge=0;}
+                    if(Number.isFinite(flashAge))flashAge+=elapsed;
+                    if(active){age=Math.min(duration,age+elapsed);if(age>=duration){held=to;active=false;}}
+                }
+                return snapshot();
+            }
+        };
+    }
     function stars() {
         var data = /** @type {number[]} */ ([]), seed = 58319;
         function random() {
@@ -80,7 +108,7 @@
         var depth = -dot(direction, pose.back);
         return depth > 0 ? { x: dot(direction, pose.right) * focal / aspect / depth, y: dot(direction, pose.up) * focal / depth } : null;
     }
-    /** @param {HTMLElement} host @param {{style?:number,fov?:number,sources?:import('../src/types').SkyCameraSource[],optics?:boolean}=} config */
+    /** @param {HTMLElement} host @param {{style?:number,fov?:number,cueControls?:boolean,sources?:import('../src/types').SkyCameraSource[],optics?:boolean}=} config */
     function create(host, config) {
         var effects=window.Driftworks.skyEffects?window.Driftworks.skyEffects.create(host):null;
         var opticsControl=/** @type {HTMLInputElement|null} */(document.getElementById('skybox-optics'));
@@ -88,8 +116,9 @@
         /** @type {import('../src/types').SkyCameraSource[]|null} */var cameraSources=config&&config.sources?config.sources:null;
         var sourceStyle=-1;
         /** @type {Record<string,import('../src/types').SkyCameraSource[]>} */var authoredSources={};
+        /** @type {Record<string,{diskFraction:number,strength:number,color:number[]}>} */var authoredAssetSources={};
         if(effects&&typeof window.fetch==='function'){
-            window.fetch(assetUrl('../assets/backgrounds/sky-camera-sources-v1.json')).then(function(response){if(!response.ok)throw new Error('Sky camera sources unavailable');return response.json();}).then(/** @param {{version:number,styles:Record<string,import('../src/types').SkyCameraSource[]>}} data */function(data){if(data.version!==1||!data.styles||typeof data.styles!=='object')throw new Error('Invalid sky camera source version');authoredSources=data.styles;sourceStyle=-1;}).catch(function(){authoredSources={};sourceStyle=-1;});
+            window.fetch(assetUrl('../assets/backgrounds/sky-camera-sources-v1.json')).then(function(response){if(!response.ok)throw new Error('Sky camera sources unavailable');return response.json();}).then(/** @param {{version:number,styles:Record<string,import('../src/types').SkyCameraSource[]>,assets?:Record<string,{diskFraction:number,strength:number,color:number[]}>}} data */function(data){if(data.version!==1||!data.styles||typeof data.styles!=='object')throw new Error('Invalid sky camera source version');authoredSources=data.styles;authoredAssetSources=data.assets||{};sourceStyle=-1;}).catch(function(){authoredSources={};sourceStyle=-1;});
         }
         /** @type {import('../src/types').SkyEnvironmentLighting|null} */var environmentOverride=null;
         /** @type {WebGLTexture|null} */var hdrTexture=null;
@@ -139,10 +168,25 @@ uniform vec3 ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp;
 uniform vec3 ohioSunCenter,ohioSunRight,ohioSunUp;
 uniform float ohioPlanetGain,ohioSunGain;
 uniform float bakedBlend;
-uniform float impactFlash; uniform vec3 impactDirection;
+uniform float impactFlash,impactDebris,impactMotion; uniform vec3 impactDirection;
 vec3 impactOptics(vec3 color, vec3 ray){
     float distance=1.-dot(ray,normalize(impactDirection));
     vec3 radiance=impactFlash*vec3(1.,.92,.76)*(12.*exp(-distance/.000004)+.45*exp(-distance/.00007));
+    float depth=dot(ray,ohioPlanetCenter);
+    if(impactDebris>0. && depth>0.){
+        vec2 uv=(1.-vec2(dot(ray,ohioPlanetRight),dot(ray,ohioPlanetUp))/depth)*.5;
+        // Short, sparse luminous re-entries in fixed planet direction space.
+        for(int i=0;i<8;i++){
+            float f=float(i),phase=fract(impactMotion/(9.+f*1.7)+f*.173);
+            if(phase<.12){
+                vec2 start=vec2(.30+fract(sin(f*12.31+2.)*437.1)*.38,.27+fract(sin(f*23.71+7.)*321.9)*.38);
+                vec2 head=start+vec2(.012,-.018)*(phase/.12),tail=head-vec2(.004,-.006);
+                vec2 segment=head-tail;float along=clamp(dot(uv-tail,segment)/dot(segment,segment),0.,1.);
+                float distance=length(uv-(tail+along*segment));
+                radiance+=impactDebris*vec3(.7,.66,.55)*exp(-distance*distance/.00000005)*sin(phase/.12*3.14159265)*(.25+.75*along);
+            }
+        }
+    }
     return 1.-(1.-color)*exp(-radiance);
 }
 // Same tangent-plane UVs and edge treatment as the authored landmark quads,
@@ -407,7 +451,15 @@ void main(){
         /** @type {(WebGLTexture|null)[]} */var impactTextures=[];
         /** @type {HTMLDivElement|null} */var impactControls=null;
         /** @type {HTMLInputElement|null} */var impactSlider=null;
-        /** @param {number} value */function setImpactTime(value){if(Number.isFinite(value))impactTime=Math.max(-5,Math.min(missionSky.bakedImpact?600:180,value));}
+        var impactCues=createImpactCues(),cueMode=!!missionSky.bakedImpact,impactMotion=0;
+        /** @type {HTMLDivElement|null} */var cueControls=null;
+        /** @param {number} value */function setImpactTime(value){if(Number.isFinite(value)){cueMode=false;impactTime=Math.max(-5,Math.min(missionSky.bakedImpact?600:180,value));}}
+        /** @param {string|number} stage @param {number} [seconds] */function cueImpact(stage,seconds){cueMode=true;return impactCues.trigger(stage,seconds);}
+        function resetImpact(){cueMode=true;impactCues.reset();impactMotion=0;impactTime=-5;}
+        if(missionSky.bakedImpact&&(!config||config.cueControls!==false)&&typeof host.addEventListener==='function'){
+            host.addEventListener('impact-cue',function(event){var detail=/** @type {CustomEvent<{stage:string;seconds?:number}>} */(event).detail;if(detail)cueImpact(detail.stage,detail.seconds);});
+            host.addEventListener('impact-reset',resetImpact);
+        }
         // At most three 4K maps resident (~96 MiB RGBA); no per-frame canvas uploads.
         /** @type {Map<number,{texture:WebGLTexture|null,ready:boolean}>} */var bakedMaps=new Map();
         var bakedControls=false;
@@ -424,7 +476,7 @@ void main(){
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);
                 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);entry.ready=true;
             };image.onerror=function(){canvas.dataset.bakedImpact='error';};
-            image.src=assetUrl('../assets/backgrounds/planet-hero-v1/baked-v3/'+index+'.png');return entry;
+            image.src=assetUrl('../assets/backgrounds/planet-hero-v1/baked-cues-v1/'+index+'.png');return entry;
         }
         /** @param {number} elapsed */function prepareBaked(elapsed){
             if(!bakedControls){
@@ -432,24 +484,44 @@ void main(){
                 var status=document.getElementById('skybox-status');
                 if(status&&status.parentElement){
                     impactControls=document.createElement('div');
-                    impactControls.innerHTML='<label>Impact time (seconds) <input aria-label="Impact time" type="range" min="-5" max="600" step=".1" value="-5" style="width:100%"></label><label>Impact speed <select aria-label="Impact playback"><option value="1">1× / real time</option><option value="5">5×</option><option value="20">20×</option></select></label><button type="button">Restart impact</button><small>Research-informed artwork; pause freezes the event.</small>';
+                    impactControls.innerHTML='<details><summary>Timed artwork diagnostic</summary><label>Artwork reference time <input aria-label="Impact time" type="range" min="-5" max="600" step=".1" value="-5" style="width:100%"></label><label>Diagnostic speed <select aria-label="Impact playback"><option value="1">1×</option><option value="5">5×</option><option value="20">20×</option></select></label></details><button type="button">Restart impact</button><small>Mission cues control playback by default. Restart returns to cue mode.</small>';
                     status.parentElement.appendChild(impactControls);impactSlider=impactControls.querySelector('input');
                     if(impactSlider){const slider=impactSlider;slider.oninput=function(){setImpactTime(Number(slider.value));};}
-                    var restart=impactControls.querySelector('button');if(restart)restart.onclick=function(){setImpactTime(-5);};
+                    var restart=impactControls.querySelector('button');if(restart)restart.onclick=resetImpact;
                     var speed=impactControls.querySelector('select');if(speed){const select=speed;select.onchange=function(){impactSpeed=Number(select.value)||1;};}
                 }
+                if((!config||config.cueControls!==false)&&typeof document.body!=='undefined'){
+                    cueControls=document.createElement('div');cueControls.className='impact-cues';
+                    cueControls.style.cssText='position:fixed;right:14px;top:14px;z-index:12;background:#08151ee8;color:#dcebf0;padding:12px;border:1px solid #46606c;border-radius:7px;font:13px system-ui;max-width:265px';
+                    cueControls.innerHTML='<style>.impact-cues button,.impact-cues select{font:13px system-ui;padding:6px;margin:4px 0;color:#dcebf0;background:#172d39;border:1px solid #46606c;border-radius:4px;width:auto}.impact-cues label{display:block}</style><strong>Mission sky cues</strong><p data-cue-status>Holding: Before impact</p><label>Target stage <select aria-label="Impact cue stage">'+impactStages.map(function(s){return '<option value="'+s.id+'">'+s.label+'</option>';}).join('')+'</select></label><label>Blend duration <select aria-label="Impact cue duration"><option value="2">2 seconds</option><option value="8" selected>8 seconds</option><option value="15">15 seconds</option></select></label><button type="button" data-next>Next cue</button> <button type="button" data-trigger>Trigger target</button> <button type="button" data-reset>Reset cues</button><small style="display:block">Each stage holds until triggered. Esc pauses flight and transitions.</small>';
+                    (missionSky.bakedImpact&&missionSky.features[0].asset==='planet-hero-v1/master.png'?document.body:host).appendChild(cueControls);
+                    var target=/** @type {HTMLSelectElement} */(cueControls.querySelector('[aria-label="Impact cue stage"]')),duration=/** @type {HTMLSelectElement} */(cueControls.querySelector('[aria-label="Impact cue duration"]'));
+                    var nextButton=/** @type {HTMLButtonElement} */(cueControls.querySelector('[data-next]')),trigger=/** @type {HTMLButtonElement} */(cueControls.querySelector('[data-trigger]')),reset=/** @type {HTMLButtonElement} */(cueControls.querySelector('[data-reset]'));
+                    nextButton.onclick=function(){var s=impactCues.snapshot(),index=Math.min(impactStages.length-1,s.transitioning?s.to+1:s.from+1);target.value=impactStages[index].id;cueImpact(index,Number(duration.value));};
+                    trigger.onclick=function(){cueImpact(target.value,Number(duration.value));};reset.onclick=resetImpact;
+                }
             }
+            impactCues.update(0,false);var cue=impactCues.snapshot();
             var from=0;for(var i=1;i<impactTimes.length;i++)if(impactTime>=impactTimes[i])from=i;
-            var to=Math.min(from+1,impactTimes.length-1),next=Math.min(to+1,impactTimes.length-1),keep=[from,to,next];
+            var to=Math.min(from+1,impactTimes.length-1);
+            if(cueMode){from=cue.from;to=cue.to;}
+            var next=Math.min(to+1,impactStages.length-1),keep=from===to?[from,next,Math.min(next+1,impactStages.length-1)]:[from,to,next];
             bakedMaps.forEach(function(entry,index){if(keep.indexOf(index)<0){gl.deleteTexture(entry.texture);bakedMaps.delete(index);}});
-            var a=bakedMap(from),b=bakedMap(to);bakedMap(next);
+            var a=bakedMap(from),b=bakedMap(to);keep.forEach(bakedMap);
             var ready=a.ready&&b.ready,blend=from===to?0:Math.max(0,Math.min(1,(impactTime-impactTimes[from])/(impactTimes[to]-impactTimes[from])));
+            if(cueMode){cue=impactCues.update(elapsed,ready);a=bakedMap(cue.from);b=bakedMap(cue.to);blend=cue.blend;}
+            if(ready)impactMotion+=Math.max(0,elapsed);
             if(ready&&canvas.dataset.bakedImpact!=='error')canvas.dataset.bakedImpact='ready';
             if(impactSlider)impactSlider.value=String(impactTime);
-            var status=document.getElementById('skybox-status');if(status)status.textContent=canvas.dataset.bakedImpact==='error'?'Baked sky unavailable (requires 4096px textures).':ready?'Baked spherical impact / '+impactTime.toFixed(1)+' s / illustrative timing':'Loading baked sky maps...';
+            var label=cueMode?(cue.transitioning?'Blending to '+impactStages[cue.to].label:'Holding: '+impactStages[cue.from].label)+(cue.queued?' / '+cue.queued+' queued':''):'Timed artwork preview / '+impactTime.toFixed(1)+' s';
+            if(cueControls){var readout=cueControls.querySelector('[data-cue-status]');if(readout)readout.textContent=ready?label:'Loading cue artwork...';}
+            var status=document.getElementById('skybox-status');if(status)status.textContent=canvas.dataset.bakedImpact==='error'?'Baked sky unavailable (requires 4096px textures).':ready?label:'Loading baked sky maps...';
             // A missing frame freezes the event clock; loading cannot skip the flash.
-            if(ready)impactTime=Math.min(600,impactTime+Math.max(0,elapsed)*impactSpeed);
-            return {a:a.texture,b:b.texture,blend:blend*blend*(3-2*blend)};
+            if(ready&&!cueMode)impactTime=Math.min(600,impactTime+Math.max(0,elapsed)*impactSpeed);
+            var pulse=cueMode?cue.flashAge:impactTime;
+            var flash=pulse>=0&&pulse<.8?Math.exp(-pulse/.12)*(1-Math.exp(-pulse/.008)):0;
+            var debris=cueMode?((cue.from>=5?1:0)*(1-cue.blend)+(cue.to>=5?1:0)*cue.blend):impactTime>=300?1:0;
+            return {a:a.texture,b:b.texture,blend:cueMode?blend:blend*blend*(3-2*blend),flash:flash,debris:debris};
         }
         function loadImpact(){
             if(impactStarted)return;impactStarted=true;canvas.dataset.impact='loading';
@@ -566,13 +638,13 @@ void main(){
                 if(value&&!gl.getExtension('OES_texture_float'))throw new Error('HDR sky requires float textures');
                 if(hdrTexture)gl.deleteTexture(hdrTexture);hdrTexture=null;environmentOverride=value;sourceStyle=-1;
                 if(value){var hdrFilter=gl.getExtension('OES_texture_float_linear')?gl.LINEAR:gl.NEAREST;hdrTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,512,256,0,gl.RGBA,gl.FLOAT,value.radiance||null);gl.activeTexture(gl.TEXTURE0);}
-            },setCameraSources:/** @param {import('../src/types').SkyCameraSource[]|null} value */function(value){cameraSources=value;sourceStyle=-1;},setOccluders:/** @param {import('../src/types').SkyOccluder[]} value */function(value){if(effects)effects.setOccluders(value);},setOpticsEnabled:/** @param {boolean} value */function(value){if(effects)effects.setEnabled(value);},setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
+            },cueImpact:cueImpact,resetImpact:resetImpact,getImpactState:impactCues.snapshot,setCameraSources:/** @param {import('../src/types').SkyCameraSource[]|null} value */function(value){cameraSources=value;sourceStyle=-1;},setOccluders:/** @param {import('../src/types').SkyOccluder[]} value */function(value){if(effects)effects.setOccluders(value);},setOpticsEnabled:/** @param {boolean} value */function(value){if(effects)effects.setEnabled(value);},setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
             }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] */ function (pose, renderScale, empty,elapsed) {
                 if(effects&&sourceStyle!==style){
-                    effects.setSources(cameraSources||(!landmarkSky&&!hdrTexture?authoredSources[String(style)]||[]:[]));sourceStyle=style;
+                    effects.setSources(cameraSources||(hdrTexture?[]:landmarkSky&&window.Driftworks.skyEffects?window.Driftworks.skyEffects.fromFeatures(missionSky.features,authoredAssetSources):authoredSources[String(style)]||[]));sourceStyle=style;
                 }
-                var cameraExposure=effects?effects.render(pose,viewFocal,elapsed===undefined?performance.now()/1000:elapsed,empty):1;
+                var cameraExposure=effects?effects.render(pose,viewFocal,performance.now()/1000,empty):1;
                 var effectiveExposure=exposure*cameraExposure;
                 // Shared renderer integration: the host delivers the probe and sky basis.
                 // No mission or material code needs to choose lights.
@@ -625,8 +697,15 @@ void main(){
                     eventDirection=impactPlanet.center.map(function(v,i){return v+impactPlanet.right[i]/rx*(1-2*.49)+impactPlanet.up[i]/uy*(1-2*.46);});
                 }else flash=0;
                 gl.uniform1f(gl.getUniformLocation(sky,'impactFlash'),flash);gl.uniform3fv(gl.getUniformLocation(sky,'impactDirection'),eventDirection);
+                gl.uniform1f(gl.getUniformLocation(sky,'impactDebris'),0);gl.uniform1f(gl.getUniformLocation(sky,'impactMotion'),impactMotion);
+                if(impactPlanet){
+                    gl.uniform3fv(gl.getUniformLocation(sky,'ohioPlanetCenter'),impactPlanet.center);
+                    gl.uniform3fv(gl.getUniformLocation(sky,'ohioPlanetRight'),impactPlanet.right);
+                    gl.uniform3fv(gl.getUniformLocation(sky,'ohioPlanetUp'),impactPlanet.up);
+                }
                 if(missionSky.bakedImpact){
                     var baked=prepareBaked(elapsed||0);
+                    gl.uniform1f(gl.getUniformLocation(sky,'impactFlash'),baked.flash);gl.uniform1f(gl.getUniformLocation(sky,'impactDebris'),baked.debris);gl.uniform1f(gl.getUniformLocation(sky,'impactMotion'),impactMotion);
                     [baked.a,baked.b].forEach(function(map,index){gl.activeTexture(gl.TEXTURE0+2+index);gl.bindTexture(gl.TEXTURE_2D,map);gl.uniform1i(gl.getUniformLocation(sky,index===0?'ohioPlanet':'ohioSun'),2+index);});
                     gl.uniform1f(gl.getUniformLocation(sky,'bakedBlend'),baked.blend);
                 }else if(landmarkSky) landmarkTextures.forEach(function(entry,index){
@@ -675,5 +754,5 @@ void main(){
                 gl.disableVertexAttribArray(a);
             } };
     }
-    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightSkybox = { create: create, stars: stars, project: project, options: options, featureFrame: featureFrame };
+    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightSkybox = { create: create, createImpactCues:createImpactCues,impactStages:impactStages, stars: stars, project: project, options: options, featureFrame: featureFrame };
 }());

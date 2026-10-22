@@ -447,10 +447,13 @@
     function damageCraft(t, e, weapon, shooter) {
         if (e.hp <= 0)
             return;
+        var hpBefore = e.hp;
         var shieldBefore = e.shield || 0, shieldDamage = weapon.damage * weapon.shieldFactor, absorbed = Math.min(shieldBefore, shieldDamage);
         if (e.shield !== undefined) e.shield = shieldBefore - absorbed;
         e.hp = Math.max(0, e.hp - weapon.damage * weapon.armorFactor * (1 - (shieldDamage > 0 ? absorbed / shieldDamage : 0)));
         if (shieldBefore > 0 && !e.shield) radioEvent(t, { kind:'shield', victim:e.id, team:e.team || 'enemy', index:e.index });
+        if (e.hp > 0 && (e.hp < hpBefore || (e.shield || 0) < shieldBefore))
+            radioEvent(t, { kind: 'hit', victim: e.id, team: e.team || 'enemy', index: e.index });
         e.damagedAt = t.time;
         e.hitFlash = .35;
         if (e.hp <= 0) {

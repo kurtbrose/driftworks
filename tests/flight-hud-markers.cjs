@@ -14,7 +14,7 @@ const painter={globalAlpha:1,lineWidth:1,strokeStyle:'#fff',fillStyle:'#fff',
   save(){stack.push({globalAlpha:this.globalAlpha,lineWidth:this.lineWidth,strokeStyle:this.strokeStyle,fillStyle:this.fillStyle});},
   restore(){Object.assign(this,stack.pop());},
   beginPath(){points=[];},moveTo(x,y){points.push([x,y]);},lineTo(x,y){points.push([x,y]);},closePath(){},
-  translate(){},rotate(){},arc(){},setLineDash(){},fillRect(){},fillText(){},panel(){},image(){},
+  translate(){},rotate(){},arc(x,y,r){calls.push({kind:'arc',x,y,r});},setLineDash(){},fillRect(){},fillText(){},panel(){},image(){},
   stroke(){calls.push({kind:'stroke',points:points.slice(),color:this.strokeStyle,alpha:this.globalAlpha,width:this.lineWidth});},
   fill(){calls.push({kind:'fill',points:points.slice(),color:this.fillStyle,alpha:this.globalAlpha});},
   strokeRect(x,y,w,h){calls.push({kind:'rect',x,y,w,h,color:this.strokeStyle,alpha:this.globalAlpha,width:this.lineWidth});}
@@ -42,3 +42,16 @@ assert.equal(hostile.filter(c=>c.kind==='fill'&&c.points.length===3).length,2,'E
 assert.ok(calls.some(c=>c.kind==='rect'&&c.color==='#63f58d'&&c.w===24),'Allied contact remains distinct');
 assert.ok(calls.filter(c=>c.color==='#05090f'&&c.width===3.5).length>=5,'Contact outlines have dark contrast backing');
 console.log('PASS flight HUD markers: real session contacts, unselected enemies, rear/offscreen arrows, readable size/opacity and contrast');
+
+// Keep the pre-GPU steering guide and reticle dimensions, including after resize.
+const host={clientWidth:1000,clientHeight:700},guidanceHud=DW.flightHud.mount(host);
+for(const [w,h,range] of [[1000,700,240],[2048,1532,240],[390,844,120],[844,390,160]]){
+  Object.assign(host,{clientWidth:w,clientHeight:h});
+  guidanceHud.render({...view,units:10,paused:false,speakerId:null,mouse:[.5,-.25],stickRange:range,showMouseStick:true,weapon:DW.retailWeapons[0],shipImages:new Map()});
+  const centerArcs=calls.filter(c=>c.kind==='arc'&&c.x===w/2&&c.y===h/2);
+  assert.ok(centerArcs.some(c=>c.r===range),'Outer joystick ring shows the full steering range');
+  assert.ok(centerArcs.some(c=>c.r===range*.08),'Inner ring preserves the steering deadzone guide');
+  assert.ok(centerArcs.some(c=>c.r===21),'Crosshair keeps its original 42 CSS-pixel diameter');
+  assert.ok(calls.some(c=>c.kind==='arc'&&c.x===w/2+range*.5&&c.y===h/2-range*.25&&c.r===5),'Stick cursor follows the same range as the guide');
+}
+console.log('PASS flight guidance: full steering travel, deadzone, cursor alignment and original crosshair size across desktop/mobile resize');

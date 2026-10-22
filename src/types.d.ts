@@ -314,6 +314,7 @@ export type LandingSample = {time:number; altitude:number; deployment:number; ra
 export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
   skyEffects?: {
+    fromFeatures:(features:{asset:string;yaw:number;pitch:number;widthDeg:number;gain:number}[],assets:Record<string,{diskFraction:number;strength:number;color:number[]}>)=>SkyCameraSource[];
     create:(host:HTMLElement)=>{setSources:(sources:SkyCameraSource[])=>void;setOccluders:(occluders:SkyOccluder[])=>void;setEnabled:(enabled:boolean)=>void;render:(pose:{eye?:number[];right:number[];up:number[];back:number[]},focal:number,seconds:number,empty:boolean)=>number;dispose:()=>void};
     visibility:(source:SkyCameraSource,eye:number[],occluders:SkyOccluder[])=>{fraction:number;direction:number[]};
     adapt:(current:number,target:number,dt:number)=>number;
