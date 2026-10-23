@@ -172,10 +172,24 @@ uniform float ohioPlanetGain,ohioSunGain;
 uniform float bakedBlend;
 uniform float impactFlash,impactDebris,impactMotion; uniform vec3 impactDirection;
 uniform vec4 gasCells[8];uniform vec2 gasDrift[8];uniform float gasFlashes[8];
+// The limb is encoded in the texture, so geometry MSAA cannot smooth it.
+// Apply a small Gaussian reconstruction only in the source silhouette ring.
+vec3 gasLimbSample(samplerCube source,vec3 ray,vec2 uv){
+ float rim=length((uv-vec2(.496,.493))/vec2(.462,.456));
+ if(ray.y<=0. || rim<.96 || rim>1.04)return textureCube(source,ray).rgb;
+ vec3 color=vec3(0.);
+ for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++){
+  vec2 sampleUV=uv+vec2(float(x),float(y))*.00125;
+  vec3 direction=vec3((.5-sampleUV.x)*2.856296,1.,(.5-sampleUV.y)*2.856296);
+  float weight=(x==0?2.:1.)*(y==0?2.:1.);
+  color+=textureCube(source,direction).rgb*weight;
+ }
+ return color/16.;
+}
 vec3 gasSurface(vec3 ray){
  // Recipe: yaw 90, pitch 0, roll 0, square card, width 110 degrees.
  vec2 uv=vec2(.5-ray.x/max(ray.y,.00001)/2.856296,.5-ray.z/max(ray.y,.00001)/2.856296);
- vec3 base=textureCube(bakedCube,ray).rgb;
+ vec3 base=gasLimbSample(bakedCube,ray,uv);
  vec3 emission=vec3(0.);
  if(ray.y>0.)for(int i=0;i<8;i++){
   vec2 sourceUV=uv-gasDrift[i];float d=length((sourceUV-gasCells[i].xy)/gasCells[i].zw);
@@ -394,7 +408,10 @@ void main(){
                 if(image.width!==1024||image.height!==1024){canvas.dataset.cube='error';return;}
                 gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,cubeTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
                 gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+index,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
-                cubeLoaded++;if(cubeLoaded===6&&canvas.dataset.cube!=='error'){canvas.dataset.cube='ready';canvas.dataset.ohio='ready';}
+                cubeLoaded++;if(cubeLoaded===6&&canvas.dataset.cube!=='error'){
+                    if(missionSky.gasGiant){gl.generateMipmap(gl.TEXTURE_CUBE_MAP);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);}
+                    canvas.dataset.cube='ready';canvas.dataset.ohio='ready';
+                }
             };image.onerror=function(){canvas.dataset.cube='error';};image.src=assetUrl('../assets/backgrounds/'+file);});
             gl.activeTexture(gl.TEXTURE0);
         }
@@ -410,7 +427,10 @@ void main(){
                 if(image.width!==1024||image.height!==1024){canvas.dataset.gas='error';return;}
                 gl.activeTexture(gl.TEXTURE0+6);gl.bindTexture(gl.TEXTURE_CUBE_MAP,gasLitTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
                 gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+index,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
-                gasLitLoaded++;if(gasLitLoaded===6&&canvas.dataset.gas!=='error')canvas.dataset.gas='ready';
+                gasLitLoaded++;if(gasLitLoaded===6&&canvas.dataset.gas!=='error'){
+                    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+                    canvas.dataset.gas='ready';
+                }
             };image.onerror=function(){canvas.dataset.gas='error';};image.src=assetUrl('../assets/backgrounds/gas-giant-lightning-v1/lit-cube/'+face+'.png');});
             gl.activeTexture(gl.TEXTURE0);
         }

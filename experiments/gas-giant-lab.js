@@ -17,13 +17,27 @@ gl.attachShader(program,shader(gl.FRAGMENT_SHADER,`precision highp float;
 varying vec2 screen;uniform samplerCube darkSky,litSky;uniform float aspect,focal,yaw,pitch;
 uniform vec4 cells[8];uniform float flashes[8];uniform vec2 drift[8];
 uniform vec3 palettePale,paletteBelt;uniform float paletteAmount;
+// The limb is encoded in the texture, so geometry MSAA cannot smooth it.
+// Apply a small Gaussian reconstruction only in the source silhouette ring.
+vec3 gasLimbSample(samplerCube source,vec3 ray,vec2 uv){
+ float rim=length((uv-vec2(.496,.493))/vec2(.462,.456));
+ if(ray.y<=0. || rim<.96 || rim>1.04)return textureCube(source,ray).rgb;
+ vec3 color=vec3(0.);
+ for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++){
+  vec2 sampleUV=uv+vec2(float(x),float(y))*.00125;
+  vec3 direction=vec3((.5-sampleUV.x)*2.856296,1.,(.5-sampleUV.y)*2.856296);
+  float weight=(x==0?2.:1.)*(y==0?2.:1.);
+  color+=textureCube(source,direction).rgb*weight;
+ }
+ return color/16.;
+}
 void main(){
  vec3 ray=normalize(vec3(screen.x*aspect/focal,1.,screen.y/focal));
  float c=cos(pitch),s=sin(pitch);ray=vec3(ray.x,ray.y*c-ray.z*s,ray.y*s+ray.z*c);
  c=cos(yaw);s=sin(yaw);ray=vec3(ray.x*c+ray.y*s,ray.y*c-ray.x*s,ray.z);
  // Recipe: yaw 90, pitch 0, roll 0, square card, width 110 degrees.
  vec2 uv=vec2(.5-ray.x/max(ray.y,.00001)/2.856296,.5-ray.z/max(ray.y,.00001)/2.856296);
- vec3 base=textureCube(darkSky,ray).rgb;
+ vec3 base=gasLimbSample(darkSky,ray,uv);
  vec3 emission=vec3(0.);
  if(ray.y>0.)for(int i=0;i<8;i++){
   vec2 sourceUV=uv-drift[i];float d=length((sourceUV-cells[i].xy)/cells[i].zw);
@@ -63,7 +77,8 @@ async function loadCube(stage,unit){
     if(images.some(image=>image.width!==1024||image.height!==1024))throw new Error('Expected six square 1024px faces');
     const texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_CUBE_MAP,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
     images.forEach((image,i)=>gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+i,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image));
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 }
 const fov=/** @type {HTMLInputElement} */(element('fov')),activity=/** @type {HTMLInputElement} */(element('activity')),mode=/** @type {HTMLSelectElement} */(element('mode'));

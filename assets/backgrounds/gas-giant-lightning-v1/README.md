@@ -52,7 +52,7 @@ whole-hemisphere framing and reduced-motion initial pause are available.
 Unchanged paused, hidden and static-comparison frames skip GPU draws; camera,
 resize and manual burst changes still redraw. No depth/stencil buffer is requested.
 The twelve runtime PNGs total 3,127,337 bytes; 1024-square RGB cube storage is
-36 MiB, or 48 MiB if the driver stores RGB as RGBA, excluding canvas buffers.
+48 MiB with mipmaps, or 64 MiB if the driver stores RGB as RGBA, excluding canvas buffers.
 GPU frame time has not been benchmarked. Resource lifecycle regressions exercise
 the real preview with a stub renderer: twelve startup uploads, zero animation
 uploads, and pause/static/hidden draw suppression with correct resumption.
@@ -66,6 +66,14 @@ Highlights desaturate as necessary to stay in gamut. The light difference is
 added after this treatment, retaining the approved blue-violet lightning.
 Original or strength zero restores the original cloud colors. Palette changes
 redraw paused views without loading, rebaking or uploading any new textures.
+
+Both viewers generate mipmaps once after each complete six-face upload and use
+trilinear minification. A nine-tap Gaussian reconstruction applies only in the
+source limb ring (ellipse center .496/.493, radii .462/.456, normalized radius
+.96–1.04, UV tap spacing .00125). This smooths the texture-encoded silhouette
+while preserving interior cloud detail. Geometry MSAA alone cannot antialias
+an edge painted inside a fullscreen sky texture. The extra taps are restricted
+to the thin ring; GPU frame-time impact remains unbenchmarked.
 
 This is an isolated skybox animation experiment; flight mission choices are
 unchanged. The source hemisphere is intentionally complete even when a closer
