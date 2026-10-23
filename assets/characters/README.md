@@ -131,7 +131,8 @@ measured byte costs, generation briefs, limitations and the 100-record test.
 ## Warm head experiments
 
 Crew deck now defaults to Helmet portrait: the original comms face is recessed
-inside a shared opaque 3D shell. Head also offers Authored 3D (all generated skins
+inside the existing astronaut helmet, with its faceplate opened and its size
+reduced around the original head pivot. Head also offers Authored 3D (all generated skins
 and hair retained) and Exposed portrait control. Render retains Neutral and
 Illustrated treatments. See the helmet section in [the cast workflow](../../docs/character-cast.md)
 for occlusion, ownership, animation behavior and prototype limitations.

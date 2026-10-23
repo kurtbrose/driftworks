@@ -128,39 +128,41 @@ catalog references their small WebP delivery variants.
 
 ## Helmet portrait experiment
 
-The default Head option is now Helmet portrait. Authored 3D retains the generated
-UV skins, source head meshes and hair. Exposed portrait control retains the simple
-unshielded panel for comparison. Skin remains an authored-3D control; Render keeps
-the Neutral and Illustrated lighting/shading experiments available in every mode.
-No previous source mesh, generated texture or recipe was replaced by the helmet.
+Head defaults to Helmet portrait. Authored 3D keeps the generated UV skins, source
+head meshes and hair; Exposed portrait control keeps the unshielded panel. Render
+keeps Neutral and Illustrated available. No original mesh file or generated face
+texture was overwritten. 3D skin controls apply only to Authored 3D.
 
-Helmet portrait uses the existing comms atlas directly. A fixed plane samples the
-inner face crop (82,77,92,108) in a 256px pose, sharing the seven-pose source image.
-A rounded armor shell, dark opaque recess and closed back surround it. The panel
-is physically behind the front rim; depth testing and real tunnel side walls hide
-it at grazing angles. It follows the animated Head bone without billboarding,
-camera-facing rotation or angle-triggered disappearance. The original sealed
-astronaut helmet is hidden because its opaque face geometry obstructs the panel.
-The procedural replacement shell is shared across the cast; helmet colors live
-in the appearance recipes. No extra character-specific portrait art is needed.
+Helmet portrait reuses the astronaut's existing helmet geometry and materials.
+The discarded procedural bubble shell is no longer part of the scene. During
+one-time source preparation, triangles are clipped precisely against a rectangular
+faceplate aperture in bind-space metres. Outside fragments retain interpolated
+UVs, normals and skin attributes; the opaque plate is removed, while side hardware
+and the surrounding source shell remain. The prepared geometry is shared by crew.
+Original GLB bytes remain unchanged. The helmet is uniformly reduced to 82% around
+the original Head pivot; the body calibration remains unchanged.
 
-Blink and timed talking-frame selection reuse the original atlas. These are visual
-pose placeholders, not audio synchronization. Helmet atlas resources are reference
-counted with an eight-entry cache; per-instance texture transforms select poses.
-Replacing an identity or head mode releases only owned materials and texture views.
-Per-actor revision checks discard obsolete asynchronous head loads. Controls that
-need actors are disabled until initial loading completes.
+The face uses the original comms atlas directly, sampling crop (82,77,92,108) from
+a 256px pose. Its rounded boundary is a 0.17m by 0.205m shape before applying the
+same helmet/actor scale. It sits recessed at local z=0.025m, follows the animated
+Head bone, and has no projecting background rectangle. The source helmet itself
+occludes it in profile. It does not billboard or disappear at a scripted angle.
+Body proportions provides a full-body check alongside the three head views.
 
-The shell is a prototype silhouette, not a finished helmet design. Moderate angles
-can still reveal that facial perspective is fixed; the purpose is to find how much
-physical occlusion is enough. Front, three-quarter and profile inspection views
-and ordinary walking remain the quickest comparison. Automated ray tests require
-a clear frontal view and an obstructing side wall along an oblique ray aimed at the
-face. Tests also cover original blink/talk pose selection and stale mode loads.
+Blink and timed speaking frames reuse the original atlas. These are visual pose
+placeholders, not audio synchronization. Helmet atlas resources are reference
+counted with an eight-entry cache. Replacement releases owned materials and texture
+views while preserving shared geometry. Per-actor revisions reject stale async
+head loads. Actor-dependent controls stay disabled until initial loading completes.
 
-Illustrated mode currently adds a warm key, cool fill/rim, cooler shadow color,
-mild lighting-band shaping, subpixel-width backface ink and a shared shadow map.
-Neutral remains a presentation control. The image treatment does not reconstruct
-portrait anatomy or establish likeness; the helmet branch bypasses that problem
-by retaining the approved face artwork itself. Native resolution/MSAA remains the
-default. No further facial-rendering work is implied by this experiment.
+Tests verify clipping leaves the original geometry untouched, creates a clear
+front opening, retains a side wall that blocks a ray aimed at the recessed face,
+and scales the helmet uniformly. Tests also cover pose selection and stale loads.
+Browser checks include front, profile and full-body proportions. The portrait's
+perspective remains fixed; this is a visual trick to evaluate, not a 3D face.
+
+Illustrated mode retains warm key/cool fill and rim, cooler shadow color, mild
+lighting bands, backface ink and a shared shadow map. Neutral stays available.
+These style treatments do not reconstruct anatomy or establish likeness. Helmet
+mode preserves identity by retaining the actual face artwork. Native resolution
+and MSAA remain the default.

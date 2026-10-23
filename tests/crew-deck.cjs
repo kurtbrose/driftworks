@@ -44,17 +44,24 @@ applySkin();assert.equal(skinMesh.material.map,guidedSkin);assert.notEqual(brow.
 skinState.value='original';applySkin();assert.equal(skinMesh.material.map,originalSkin);assert.equal(brow.color.getHex(),0xffffff);assert.equal(skinMesh.geometry,geometryBefore,'Texture switching never deforms the head');
 console.log('PASS Jo skin: reversible texture/brow comparison without geometry changes');
 
-const helmetContext=vm.createContext({T});
-for(const name of ['roundedHelmetShape','createHelmetTunnel','createHelmetArmor'])vm.runInContext(html.match(new RegExp('function '+name+'\\([^\\n]+'))[0],helmetContext);
-const tunnel=new T.Mesh(vm.runInContext('createHelmetTunnel()',helmetContext),new T.MeshBasicMaterial({side:T.DoubleSide}));
-const panel=new T.Mesh(new T.PlaneGeometry(.21,.26),new T.MeshBasicMaterial());panel.position.set(0,.125,.074);panel.updateMatrixWorld(true);tunnel.updateMatrixWorld(true);
-const center=new T.Vector3(0,.125,.074);
-function helmetRay(origin){return new T.Raycaster(origin,center.clone().sub(origin).normalize()).intersectObjects([panel,tunnel]);}
-assert.equal(helmetRay(new T.Vector3(0,.125,1))[0].object,panel,'Portrait visible through the front opening');
-assert.equal(helmetRay(new T.Vector3(1,.125,.14))[0].object,tunnel,'Opaque tunnel physically occludes the portrait from the side');
+const cutHelmet=vm.runInNewContext('('+html.match(/function openHelmetGeometry\(input,matrix,head\)\{[\s\S]*?\n\}/)[0]+')',{T});
+const originalShell=new T.BoxGeometry(.3,.4,.25);originalShell.translate(0,.1,-.025);const jointIds=new Uint16Array(originalShell.attributes.position.count*4),jointWeights=new Float32Array(jointIds.length);for(let i=0;i<jointIds.length;i+=4){jointIds[i]=3;jointWeights[i]=1;}originalShell.setAttribute('skinIndex',new T.BufferAttribute(jointIds,4));originalShell.setAttribute('skinWeight',new T.BufferAttribute(jointWeights,4));const originalPositions=Array.from(originalShell.attributes.position.array);
+const openedShell=cutHelmet(originalShell,new T.Matrix4(),new T.Vector3());
+assert.deepEqual(Array.from(originalShell.attributes.position.array),originalPositions,'Source helmet geometry remains untouched');
+const shell=new T.Mesh(openedShell,new T.MeshBasicMaterial({side:T.DoubleSide}));
+const panel=new T.Mesh(new T.PlaneGeometry(.17,.205),new T.MeshBasicMaterial());panel.position.set(0,.115,.025);panel.updateMatrixWorld(true);shell.updateMatrixWorld(true);
+const center=new T.Vector3(0,.115,.025);
+function helmetRay(origin){return new T.Raycaster(origin,center.clone().sub(origin).normalize()).intersectObjects([panel,shell]);}
+assert.equal(helmetRay(new T.Vector3(0,.115,1))[0].object,panel,'Original faceplate removed through the full opening');
+assert.equal(helmetRay(new T.Vector3(1,.115,0))[0].object,shell,'Retained source side wall occludes the recessed face');
+for(let i=0;i<openedShell.attributes.skinIndex.count;i++){assert.equal(openedShell.attributes.skinIndex.array[i*4],3);assert.equal(openedShell.attributes.skinWeight.array[i*4],1);}
+for(const name of ['position','normal','uv'])assert(Array.from(openedShell.attributes[name].array).every(Number.isFinite));
+const prepare=vm.runInNewContext('('+html.match(/function prepareSourceHelmet\(root\)\{[\s\S]*?\n\}/)[0]+')',{T,openHelmetGeometry:cutHelmet});
+const sourceRoot=new T.Group(),sourceHead=new T.Object3D(),sourceShell=new T.Group(),sourceMesh=new T.Mesh(originalShell,new T.MeshBasicMaterial());sourceHead.name='Head';sourceShell.name='SpaceSuit_Head';sourceShell.add(sourceMesh);sourceRoot.add(sourceHead,sourceShell);prepare(sourceRoot);sourceMesh.geometry.computeBoundingBox();
+assert(Math.abs(sourceMesh.geometry.boundingBox.getSize(new T.Vector3()).x-.3*.82)<1e-6,'Helmet reduced uniformly to 82% around its Head pivot');
 actor.face.portraitMap={offset:{x:0}};actor.person={voiceIndex:0};actor.talk=0;poseFace(actor,0);const faceNeutral=actor.face.portraitMap.offset.x;
 poseFace(actor,4500);assert(actor.face.portraitMap.offset.x>faceNeutral,'Helmet uses original blink frame');actor.talk=1;poseFace(actor,200);assert(actor.face.portraitMap.offset.x>faceNeutral&&actor.face.portraitMap.offset.x<1,'Helmet uses original talking frames');
-console.log('PASS helmet portraits: front aperture, real side-wall occlusion, original blink/talking poses and animated head attachment');
+console.log('PASS helmet portraits: front aperture, retained source-shell occlusion, original blink/talking poses and animated head attachment');
 
 (async()=>{
  const pending=[],released=[],target={headRevision:0,root:{children:[{}]},face:{id:'initial'},paint:{apply(){}}};
