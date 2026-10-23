@@ -38,7 +38,8 @@ console.log('Gas giant: isolated masks, independent reproducible bursts and twel
   if(key==='getAttribLocation')return ()=>0;
   return /^[A-Z_0-9]+$/.test(String(key))?1:()=>{};
  }});
- const elements={};for(const id of ['sky','play','home','burst','status','mode','fov','activity'])elements[id]={textContent:'',value:'',addEventListener(){}};
+ const elements={};for(const id of ['sky','play','home','burst','status','mode','fov','activity','palette','color-strength'])elements[id]={textContent:'',value:'',addEventListener(){}};
+ elements.palette.value='teal';elements['color-strength'].value='.9';
  elements.mode.value='live';elements.fov.value='60';elements.activity.value='1';
  Object.assign(elements.sky,{width:0,height:0,dataset:{},getContext:(_,options)=>{contextOptions=options;return gl;}});
  const document={hidden:false,getElementById:id=>elements[id]};
@@ -58,6 +59,10 @@ console.log('Gas giant: isolated masks, independent reproducible bursts and twel
  elements.mode.value='live';nextFrame(228);assert.equal(draws,staticDraws+1);
  document.hidden=true;nextFrame(244);nextFrame(260);assert.equal(draws,staticDraws+1,'Hidden preview stops drawing');
  document.hidden=false;nextFrame(276);assert.equal(draws,staticDraws+2,'Visible preview resumes');
+ elements.play.onclick();nextFrame(292);const pausedDraws=draws;
+ elements.palette.value='jade';nextFrame(308);assert.equal(draws,pausedDraws+1,'Palette changes redraw while paused');
+ elements['color-strength'].value='.5';nextFrame(324);assert.equal(draws,pausedDraws+2,'Palette strength redraws while paused');
+ nextFrame(340);assert.equal(draws,pausedDraws+2,'Unchanged palette remains idle');
  assert.equal(uploads,12,'Animation never reuploads textures');
  console.log('Gas giant resource lifecycle: twelve initial uploads, no animation uploads, pause/static/hidden draw suppression pass');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -37,9 +37,15 @@
         var state = create(radius);
         var mission=DW.flightMissions.resolve(missionId),spawn=mission.encounter.spawn;
         if(mission.emptySpace){
-            var angle=-30*Math.PI/180;
+            var angle=(mission.sky.gasGiant?0:-30)*Math.PI/180;
             state.eye=[0,-radius*3,radius*2];
             state.up=[0,-Math.sin(angle),Math.cos(angle)];state.back=[0,-Math.cos(angle),-Math.sin(angle)];
+            if(mission.sky.gasGiant){
+                var heading=120*Math.PI/180,elevation=32*Math.PI/180;
+                state.right=[Math.sin(heading),-Math.cos(heading),0];
+                state.up=[-Math.cos(heading)*Math.sin(elevation),-Math.sin(heading)*Math.sin(elevation),Math.cos(elevation)];
+                state.back=[-Math.cos(heading)*Math.cos(elevation),-Math.sin(heading)*Math.cos(elevation),-Math.sin(elevation)];
+            }
             return state;
         }
         state.eye[1]=-radius*spawn.backRadii;

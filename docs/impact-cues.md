@@ -80,6 +80,13 @@ the latter retains the dogfight. The old `planet-hero-v1` artwork and
 equirectangular bakes remain archived for provenance and format regressions,
 but are not used by those active missions.
 
+The evacuation depot/liner preview (`refueling-depot.html?mission=evacuation`)
+also uses this sequence. Its Planet stage selector cues each stage over eight
+seconds; Intact resets the cinematic. It no longer loads the old Canvas2D
+planet compositor. Sky transitions use the visible-frame clock independently
+of the refueling choreography; hidden tabs freeze both clocks. Refueling phase
+events are unchanged and do not automatically advance the sky.
+
 Short re-entry streaks are an optional stage-dependent live optical layer in
 the planet's fixed direction space. They are deliberately sparse and faint in
 daylight, have no world-space collision or near-player trajectories, and continue

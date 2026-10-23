@@ -104,7 +104,7 @@
         if (afterCombat) afterCombat();
         var firedBefore = guns.fired, hitsBefore = guns.hits;
         // Finish the gun tick after death to age existing bolts; suppress new fire.
-        DW.flightGuns.step(guns, pose, weapon, !t.dead && !openingPending(t) && controls.fire, dt, function (start, end, bolt) {
+        DW.flightGuns.step(guns, pose, weapon, !mission(t).weaponsDisabled && !t.dead && !openingPending(t) && controls.fire, dt, function (start, end, bolt) {
             return DW.training.trace(t, start, end, bolt, 'player', terrainHit, pose);
         }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft));
         return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore,

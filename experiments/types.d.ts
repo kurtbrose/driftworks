@@ -3,13 +3,13 @@ export type ImpactCueSnapshot = {from:number;to:number;blend:number;stage:string
 import type { Asteroid, Ship, World, DriftworksNamespace } from '../src/types';
 export type FlightMission = {
     version:1; id:string;
-    emptySpace?:boolean;
+    emptySpace?:boolean; weaponsDisabled?:boolean;
     title:string; heading:string; subtitle:string; hint:string;
     units:{distanceScale:number;distanceLabel:string;distanceWord:string;speedScale:number;speedLabel:string;speedWord:string;radarKilometers:boolean};
     teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
     comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
     portraits:{folder:string;cast:string};
-    sky:{kind:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    sky:{kind:string;gasGiant?:boolean;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
     asteroidBulk?:[number,number,number,number];
     scenery:MissionScenery[];
     encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
@@ -19,7 +19,7 @@ export type MissionScenery={kind:string;asset:string;scale?:number;anchor?:[numb
 export type RoadsideCatalog={version:number;binary:string;bytes:number;models:Record<string,{parts:{offset:number;count:number;color:[number,number,number]}[]}>};
 export type MissionOverrides = {
     version?:1; title?:string;heading?:string;subtitle?:string;hint?:string;
-    emptySpace?:boolean;
+    emptySpace?:boolean; weaponsDisabled?:boolean;
     units?:Partial<FlightMission['units']>;
     teams?:{ally?:Partial<FlightMission['teams']['ally']>;enemy?:Partial<FlightMission['teams']['enemy']>};
     comms?:Partial<FlightMission['comms']>;portraits?:Partial<FlightMission['portraits']>;
@@ -636,6 +636,7 @@ export type Line = {
 };
 export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines?: number; reduced?: boolean};
 export type ExperimentModules = {
+    gasGiantWeather:typeof import('./gas-giant-weather');
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};

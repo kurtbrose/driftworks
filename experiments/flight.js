@@ -4,8 +4,15 @@
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
     var activeMission=DW.flightMissions.current();
+    if(activeMission.sky.gasGiant&&!DW.gasGiantWeather)await new Promise(/** @param {(value:boolean)=>void} resolve */function(resolve){window.addEventListener('gas-weather-ready',function(){resolve(true);},{once:true});});
     var impactWatch=!!activeMission.emptySpace;
     if(impactWatch)get('combat-toggle').checked=false;
+    if(activeMission.weaponsDisabled){
+        get('combat-toggle').disabled=true;get('watch-panel').hidden=true;
+        host.setAttribute('aria-label','Free flight above a jade gas giant');
+        ['weapons','integrity','target-info'].forEach(function(id){var panel=document.getElementById(id);if(panel)panel.hidden=true;});
+        var footer=document.querySelector('footer');if(footer)footer.textContent='W/S throttle · X stop · Shift boost · arrows steer · Q/E roll · A/D lateral · R/F vertical · Esc pause';
+    }
     if(activeMission.id!=='default'){
         var modeOption=Array.from(get('combat-mode').options).some(function(option){return option.value===activeMission.id;});
         if(!modeOption){var missionOption=document.createElement('option');missionOption.value=activeMission.id;missionOption.textContent=activeMission.heading;get('combat-mode').appendChild(missionOption);}

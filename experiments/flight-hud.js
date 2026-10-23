@@ -96,6 +96,12 @@
             telemetry.textContent = (speed*speedScale).toFixed(0) + ' '+speedLabel+'   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units*displayScale) + distanceUnit+' TO CENTER\n' + Math.round(asteroid.radius * 2 * units*displayScale) + distanceUnit+' BODY DIAMETER\n' + Math.round(shipDistance*displayScale) + distanceUnit+' TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
             var w = host.clientWidth, h = host.clientHeight;
             gpu.begin(w, h);
+            if(mission.weaponsDisabled){
+                get('speed-value').textContent=String(Math.round(speed*speedScale));
+                get('thrust-value').textContent='THRUST '+Math.round(state.throttle*100)+'%';
+                get('thrust-meter').value=Math.abs(state.throttle);
+                instruments(view,undefined,w,h);gpu.end();return;
+            }
             var chase = document.body.classList.contains('watch-chase');
             if (!paused && view.showMouseStick) {
                 var range = view.stickRange, cx = w / 2, cy = h / 2, sx = cx + mouse[0] * range, sy = cy + mouse[1] * range;
@@ -292,6 +298,12 @@
             function label(text,x,y,size,color){ctx.font=(size||11)+'px monospace';ctx.fillStyle=color||ink;ctx.textAlign='left';ctx.fillText(text,x,y);}
             /** @param {string} name @param {number} value @param {number} max @param {number} x @param {number} y @param {number} width @param {string} color */
             function meter(name,value,max,x,y,width,color){var fraction=Math.max(0,Math.min(1,value/Math.max(1,max)));label(name,x,y,10,muted);label(Math.round(fraction*100)+'%',x+width-27,y,10,ink);ctx.fillStyle='#233c43';ctx.fillRect(x,y+6,width,4);ctx.fillStyle=color;ctx.fillRect(x,y+6,width*fraction,4);}
+            if(mission.weaponsDisabled){
+                panel(margin,bottom-65,220,65);
+                label('JADE WEATHER / FREE FLIGHT',margin+12,bottom-43,10,muted);
+                label(Math.round(Math.hypot.apply(null,view.state.velocity)*mission.units.speedScale)+' '+mission.units.speedLabel+' / THR '+Math.round(view.state.throttle*100)+'%',margin+12,bottom-19,12);
+                return;
+            }
             if (document.body.classList.contains('touch-flight')) {
                 panel(12,12,Math.min(250,w-202),70);
                 meter('SHIELD',combat.shield,combat.maxShield||120,24,29,86,'#79b8e7');

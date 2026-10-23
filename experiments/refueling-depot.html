@@ -25,13 +25,13 @@
 <label>Coupler tilt<input id="tilt" type="range" min="-80" max="80" value="-35"></label>
 <label>Coupler swivel<input id="swivel" type="range" min="-75" max="75" value="0"></label>
 <label>Coupler roll<input id="roll" type="range" min="-180" max="180" value="0"></label>
-<label>Planet stage<select id="stage"><option value="-5">Intact</option><option value="30">Young ejecta</option><option value="120">Opaque cap</option><option value="600">Aftermath</option></select></label>
+<label>Planet stage<select id="stage"><option value="before">Intact</option><option value="contact">Contact / flash</option><option value="ejecta">Young ejecta</option><option value="plume">Growing plume</option><option value="cooling">Cooling cap</option><option value="fallout">Returning debris</option><option value="aftermath">Aftermath</option><option value="fires">Land fires</option><option value="smoke">Smoke veil</option></select></label>
 <label><input type="checkbox" id="scale" checked> Fighter / transport envelopes</label>
 <label><input type="checkbox" id="fighters" checked> Five 12 m Spitfire fighters</label>
 <label><input type="checkbox" id="wire"> Wireframe</label>
 <p id="status">Loading baked depot…</p><p id="arm-status"></p><p>Drag to orbit · Wheel to zoom · Right drag to pan.</p><p>Shoulder and elbow solve for wrist position. Gimballed couplers set mating attitude. Fuel runs inside the rigid links; no loose hoses. The cycle previews approach, surface coupling, fueling and departure; traffic collision avoidance remains future work.</p><a href="../assets/depots/refueling-v1/depot.blend">Editable Blender source</a></aside><div id="caption">336 m SPINE • 28 / 32 TANKS INSTALLED • INDUSTRIAL SERVICE DEPOT</div>
-<script>history.replaceState(null,'',location.pathname+'?mission=planet-hero');</script>
-<script src="flight-missions.js?v=2399ccc58357"></script><script src="../src/sky-effects.js?v=136fdb626647"></script><script src="skybox.js?v=2a1446b2fb4f"></script><script src="planet-impact.js?v=fdd7f29eecda"></script>
+<script>history.replaceState(null,'',location.pathname+'?mission=evacuation');</script>
+<script src="flight-missions.js?v=facf7a70e40a"></script><script src="../src/sky-effects.js?v=136fdb626647"></script><script src="skybox.js?v=49c5f0707b10"></script>
 <script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script>
 <script type="module">
 import * as THREE from 'three';
@@ -247,19 +247,19 @@ function updateCycle(now){
  if(previous!==cycle.phase){window.dispatchEvent(new CustomEvent('refueling-cycle-stage',{detail:{shipId:cycleShip,phase:cycle.phase}}));}
  if(cycle.phase==='complete'){el('cycle-pause').disabled=true;el('cycle-ship').disabled=false;el('cycle-trigger').disabled=false;}
 }
-const sky=DW.flightSkybox.create(el('sky'),{fov:45,cueControls:false});let impact=null;
-DW.planetImpact.create().then(value=>{impact=value;stage();}).catch(error=>el('status').textContent+=' / Sky failed: '+error.message);
-function stage(){if(impact){impact.draw(Number(el('stage').value),true);sky.setPlanetImage(impact.canvas);sky.setImpactTime(Number(el('stage').value));}}
+const sky=DW.flightSkybox.create(el('sky'),{fov:45,cueControls:false});let lastSkyFrame=null;
+function stage(){const target=el('stage').value;if(target==='before')sky.resetImpact();else sky.cueImpact(target,8);}
 el('stage').onchange=stage;
 const right=new THREE.Vector3(),up=new THREE.Vector3(),back=new THREE.Vector3();
 let benchmark=null;
-document.addEventListener('visibilitychange',()=>{lastFrame=null;if(document.hidden&&benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}});
-el('benchmark').onclick=()=>{if(!data||liners.size<2||!impact){el('performance').textContent='Wait for the depot, liners and planet to load.';return;}benchmark={start:performance.now(),previous:0,gaps:[],submit:[],calls:[],triangles:[],warmup:10,width:el('view').clientWidth,height:el('view').clientHeight,selection:el('liner-model').value,batching:el('liner-batching').checked,position:camera.position.clone(),rotation:camera.quaternion.clone()};controls.enabled=false;el('performance').textContent='Measuring current view / camera held fixed…';};
+document.addEventListener('visibilitychange',()=>{lastFrame=null;lastSkyFrame=null;if(document.hidden&&benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}});
+el('benchmark').onclick=()=>{if(!data||liners.size<2||el('sky').querySelector('canvas')?.dataset.bakedImpact!=='ready'){el('performance').textContent='Wait for the depot, liners and planet to load.';return;}benchmark={start:performance.now(),previous:0,gaps:[],submit:[],calls:[],triangles:[],warmup:10,width:el('view').clientWidth,height:el('view').clientHeight,selection:el('liner-model').value,batching:el('liner-batching').checked,position:camera.position.clone(),rotation:camera.quaternion.clone()};controls.enabled=false;el('performance').textContent='Measuring current view / camera held fixed…';};
 function frame(now){requestAnimationFrame(frame);if(document.hidden){lastFrame=null;if(benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}return;}const host=el('view'),w=host.clientWidth,h=host.clientHeight;if(benchmark&&(benchmark.width!==w||benchmark.height!==h||benchmark.selection!==el('liner-model').value||benchmark.batching!==el('liner-batching').checked||!camera.position.equals(benchmark.position)||!camera.quaternion.equals(benchmark.rotation))){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: camera, resolution or liner selection changed.';}if(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(!benchmark)controls.update();camera.updateMatrixWorld();
  updateCycle(now);
  right.setFromMatrixColumn(camera.matrixWorld,0);up.setFromMatrixColumn(camera.matrixWorld,1);back.setFromMatrixColumn(camera.matrixWorld,2);
  // Three Y-up to the flight sky's Z-up convention; the sky ignores translation.
- const skyVector=v=>[v.x,-v.z,v.y],start=performance.now();sky.render({eye:[0,0,0],right:skyVector(right),up:skyVector(up),back:skyVector(back)},1,false);renderer.render(scene,camera);
+ const skyElapsed=lastSkyFrame===null?0:Math.max(0,Math.min(.1,(now-lastSkyFrame)/1000));lastSkyFrame=now;
+ const skyVector=v=>[v.x,-v.z,v.y],start=performance.now();sky.render({eye:[0,0,0],right:skyVector(right),up:skyVector(up),back:skyVector(back)},1,false,skyElapsed);renderer.render(scene,camera);
  if(benchmark){const b=benchmark;if(b.warmup>0){b.warmup--;b.previous=now;b.start=now;}else{
   b.gaps.push(now-b.previous);b.previous=now;b.submit.push(performance.now()-start);b.calls.push(renderer.info.render.calls);b.triangles.push(renderer.info.render.triangles);
   if(now-b.start>=5000){

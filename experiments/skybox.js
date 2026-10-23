@@ -171,6 +171,34 @@ uniform vec3 ohioSunCenter,ohioSunRight,ohioSunUp;
 uniform float ohioPlanetGain,ohioSunGain;
 uniform float bakedBlend;
 uniform float impactFlash,impactDebris,impactMotion; uniform vec3 impactDirection;
+uniform vec4 gasCells[8];uniform vec2 gasDrift[8];uniform float gasFlashes[8];
+vec3 gasSurface(vec3 ray){
+ // Recipe: yaw 90, pitch 0, roll 0, square card, width 110 degrees.
+ vec2 uv=vec2(.5-ray.x/max(ray.y,.00001)/2.856296,.5-ray.z/max(ray.y,.00001)/2.856296);
+ vec3 base=textureCube(bakedCube,ray).rgb;
+ vec3 emission=vec3(0.);
+ if(ray.y>0.)for(int i=0;i<8;i++){
+  vec2 sourceUV=uv-gasDrift[i];float d=length((sourceUV-gasCells[i].xy)/gasCells[i].zw);
+  float a=(1.-smoothstep(.48,1.,d))*gasFlashes[i];
+  if(a>.001){
+   vec3 sourceRay=normalize(vec3((.5-sourceUV.x)*2.856296,1.,(.5-sourceUV.y)*2.856296));
+   // Transfer only the light difference. Translating the lit plate itself would
+   // slide the gas bands; the frozen dark sky continues to own all geography.
+   vec3 light=max(vec3(0.),textureCube(bakedCubeTo,sourceRay).rgb-textureCube(bakedCube,sourceRay).rgb);
+   emission=max(emission,light*a);
+  }
+ }
+ // Recolor only reflected cloud light. Preserve luminance and leave lightning
+ // emission separate, so every palette keeps the same night-side exposure.
+ float luminance=dot(base,vec3(.2126,.7152,.0722));
+ float belt=clamp((base.r-base.b)/max(luminance,.01)*1.8+.18,0.,1.);
+ vec3 tint=mix(vec3(.83,.90,.74),vec3(.12,.35,.25),belt);
+ vec3 colored=luminance*tint/max(dot(tint,vec3(.2126,.7152,.0722)),.001);
+ float peak=max(colored.r,max(colored.g,colored.b));
+ colored=vec3(luminance)+(colored-vec3(luminance))*min(1.,(1.-luminance)/max(peak-luminance,.001));
+ base=mix(base,colored,.9);
+ return min(vec3(1.),base+emission);
+}
 vec3 impactOptics(vec3 color, vec3 ray){
     float distance=1.-dot(ray,normalize(impactDirection));
     vec3 radiance=impactFlash*vec3(1.,.92,.76)*(12.*exp(-distance/.000004)+.45*exp(-distance/.00007));
@@ -236,6 +264,12 @@ void main(){
         vec3 riverRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec2 riverUV=vec2(atan(riverRay.y,riverRay.x)/6.28318530718+.5,acos(clamp(riverRay.z,-1.,1.))/3.14159265359);
         gl_FragColor=vec4(texture2D(panorama,riverUV).rgb*exposure,1.);return;
+    }
+    if(style>22.5){
+        vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+        vec3 planet=gasSurface(ray);
+        vec3 sun=ohioLandmark(ohioSun,ray,ohioSunCenter,ohioSunRight,ohioSunUp,ohioSunGain);
+        gl_FragColor=vec4(clamp(planet*exposure+sun,0.,1.),1.);return;
     }
     if(style>21.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
@@ -336,7 +370,7 @@ void main(){
                 var entry={texture:texture,center:center,right:horizontal.map(function(v){return v/horizontalLength;}),
                     up:vertical.map(function(v){return v/verticalLength;}),gain:feature.gain,loaded:false};
                 landmarkTextures.push(entry);
-                if(missionSky.cubeFaces)return; // Frames are metadata only; never load the source cards in cube mode.
+                if(missionSky.cubeFaces&&(!missionSky.gasGiant||landmarkTextures.length===1))return; // Frames are metadata only; never load the source cards in cube mode.
                 var image = new Image();
                 image.onload = function () {
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
@@ -362,6 +396,22 @@ void main(){
                 gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+index,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
                 cubeLoaded++;if(cubeLoaded===6&&canvas.dataset.cube!=='error'){canvas.dataset.cube='ready';canvas.dataset.ohio='ready';}
             };image.onerror=function(){canvas.dataset.cube='error';};image.src=assetUrl('../assets/backgrounds/'+file);});
+            gl.activeTexture(gl.TEXTURE0);
+        }
+        var gasLitTexture=missionSky.gasGiant?gl.createTexture():null,gasLitLoaded=0,gasTime=0,gasFlashes=new Float32Array(8),gasOffsets=new Float32Array(16);
+        var gasWeather=window.Driftworks.gasGiantWeather,gasCellData=gasWeather?new Float32Array(gasWeather.gasGiantCells.flat()):new Float32Array(0);
+        if(missionSky.gasGiant){
+            gl.activeTexture(gl.TEXTURE0+6);gl.bindTexture(gl.TEXTURE_CUBE_MAP,gasLitTexture);
+            for(var gasFace=0;gasFace<6;gasFace++)gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+gasFace,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+            canvas.dataset.gas='loading';
+            ['px','nx','py','ny','pz','nz'].forEach(function(face,index){var image=new Image();image.onload=function(){
+                if(image.width!==1024||image.height!==1024){canvas.dataset.gas='error';return;}
+                gl.activeTexture(gl.TEXTURE0+6);gl.bindTexture(gl.TEXTURE_CUBE_MAP,gasLitTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+                gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+index,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
+                gasLitLoaded++;if(gasLitLoaded===6&&canvas.dataset.gas!=='error')canvas.dataset.gas='ready';
+            };image.onerror=function(){canvas.dataset.gas='error';};image.src=assetUrl('../assets/backgrounds/gas-giant-lightning-v1/lit-cube/'+face+'.png');});
             gl.activeTexture(gl.TEXTURE0);
         }
         var lightingEnabled=true;
@@ -589,7 +639,7 @@ void main(){
         gl.bindBuffer(gl.ARRAY_BUFFER, quad);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
         var starData = stars(), starBuffer = gl.createBuffer();
-        if(landmarkSky&&['planet-hero-v1/master.png','planet-hero-orbital-v2/master.png'].indexOf(missionSky.features[0].asset)>=0){
+        if(landmarkSky&&(missionSky.gasGiant||['planet-hero-v1/master.png','planet-hero-orbital-v2/master.png'].indexOf(missionSky.features[0].asset)>=0)){
             var planet=landmarkTextures[0],visible=/** @type {number[]} */([]);
             for(var star=0;star<starData.length;star+=4){
                 var depth=0,px=0,py=0;for(var axis=0;axis<3;axis++){depth+=starData[star+axis]*planet.center[axis];px+=starData[star+axis]*planet.right[axis];py+=starData[star+axis]*planet.up[axis];}
@@ -724,7 +774,7 @@ void main(){
                 stats = { drawCalls: 2, triangles: 2, points: starData.length / 4, meshes: 2, materials: 2 };
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
-                gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
+                gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.gasGiant ? 23 : missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
                 gl.uniform1i(gl.getUniformLocation(sky,'bakedCube'),5);
                 gl.uniform1i(gl.getUniformLocation(sky,'bakedCubeTo'),6);
                 gl.uniform1f(gl.getUniformLocation(sky,'cubeProjection'),missionSky.cubeStages?1:0);
@@ -753,7 +803,7 @@ void main(){
                     gl.uniform1f(gl.getUniformLocation(sky,'bakedBlend'),cube.blend);
                 }else if(missionSky.cubeFaces){
                     gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,cubeTexture);gl.uniform1i(gl.getUniformLocation(sky,'bakedCube'),5);
-                    gl.activeTexture(gl.TEXTURE0+6);gl.bindTexture(gl.TEXTURE_CUBE_MAP,cubeTexture);
+                    gl.activeTexture(gl.TEXTURE0+6);gl.bindTexture(gl.TEXTURE_CUBE_MAP,missionSky.gasGiant?gasLitTexture:cubeTexture);
                 }else if(missionSky.bakedImpact){
                     var baked=prepareBaked(elapsed||0);
                     gl.uniform1f(gl.getUniformLocation(sky,'impactFlash'),baked.flash);gl.uniform1f(gl.getUniformLocation(sky,'impactDebris'),baked.debris);gl.uniform1f(gl.getUniformLocation(sky,'impactMotion'),impactMotion);
@@ -768,6 +818,19 @@ void main(){
                     gl.uniform3fv(gl.getUniformLocation(sky,prefix+'Up'),entry.up);
                     gl.uniform1f(gl.getUniformLocation(sky,prefix+'Gain'),entry.gain);
                 });
+                if(missionSky.gasGiant){
+                    var weather=window.Driftworks.gasGiantWeather,sun=landmarkTextures[1];
+                    if(cubeLoaded===6&&gasLitLoaded===6)gasTime+=Math.max(0,elapsed||0);
+                    if(weather){
+                        gl.uniform4fv(gl.getUniformLocation(sky,'gasCells[0]'),gasCellData);
+                        for(var cell=0;cell<8;cell++){gasFlashes[cell]=weather.gasGiantFlash(gasTime,cell);var offset=weather.gasGiantDrift(gasTime,cell);gasOffsets[cell*2]=offset[0];gasOffsets[cell*2+1]=offset[1];}
+                        gl.uniform1fv(gl.getUniformLocation(sky,'gasFlashes[0]'),gasFlashes);gl.uniform2fv(gl.getUniformLocation(sky,'gasDrift[0]'),gasOffsets);
+                    }
+                    if(sun){
+                        gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,sun.texture);gl.uniform1i(gl.getUniformLocation(sky,'ohioSun'),3);
+                        gl.uniform3fv(gl.getUniformLocation(sky,'ohioSunCenter'),sun.center);gl.uniform3fv(gl.getUniformLocation(sky,'ohioSunRight'),sun.right);gl.uniform3fv(gl.getUniformLocation(sky,'ohioSunUp'),sun.up);gl.uniform1f(gl.getUniformLocation(sky,'ohioSunGain'),sun.gain);
+                    }
+                }
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindBuffer(gl.ARRAY_BUFFER, quad);
                 var a = gl.getAttribLocation(sky, 'position');

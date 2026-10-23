@@ -459,6 +459,15 @@ pauses simulation. The ship review accepts `?sky=9&mission=ohio`; Face the sun
 uses that mission's authored sun bearing for an on/off comparison.
 # Six-camera planet export
 
+The `gas-giant` free-flight mission uses the separate jade gas giant cube pair
+and shared `gas-giant-weather.js` burst sampler. `sky.gasGiant` selects the jade
+shader, drifting light differences, local sun sprite and planet-occluded point
+stars. No new textures upload during animation. `emptySpace` removes local
+actors; `weaponsDisabled` separately blocks player gun discharge. Both gas and
+weapons flags default off for existing missions. See the gas giant asset README
+for source coordinates, controls and the distinction between a sky at infinity
+and simulated orbital motion.
+
 `tools/bake-sky-cube.py` captures six square 90-degree perspective views from
 one origin using the existing card intersection/sampling compositor. This is a
 software camera capture, not six independent image generations. Example:

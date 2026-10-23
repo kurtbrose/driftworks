@@ -49,6 +49,16 @@
         encounter:{kind:'training',count:0,immediate:false,callsigns:['Rook','Jinx','Flint','Echo','Mako','Sable','Patch','Nova','Viper','Wraith','Razor','Hex','Talon','Knell','Cinder','Shade'],spawn:{backRadii:2.6,altitudeMeters:300}},opening:[]
     });
     define('furball',{encounter:{kind:'furball',count:16}});
+    define('gas-giant',{
+        emptySpace:true,weaponsDisabled:true,
+        title:'Jade weather / free flight · Driftworks',heading:'DRIFTWORKS / JADE WEATHER',
+        subtitle:'GAS GIANT / QUIET FREE FLIGHT',
+        hint:'No combat. W/S throttle · X stop · arrows steer · Q/E roll · Shift boost · Esc pause. Fly and watch the storms.',
+        sky:{kind:'landmarks',gasGiant:true,cubeFaces:['px','nx','py','ny','pz','nz'].map(function(face){return 'gas-giant-lightning-v1/dark-cube/'+face+'.png';}),features:[
+            {asset:'gas-giant-lightning-v1/dark.png',yaw:90,pitch:0,roll:0,widthDeg:110,gain:1},
+            {asset:'features/warm-sun-v1.png',yaw:20,pitch:20,roll:0,widthDeg:7,gain:1}
+        ]}
+    });
     define('planet-hero',{
         title:'Planet hero flight · Driftworks',heading:'DRIFTWORKS / PLANET HERO TEST',subtitle:'STATIC PLANET BACKDROP · LOCAL DOGFIGHT',
         sky:{kind:'landmarks',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}
@@ -76,6 +86,7 @@
     // Existing bookmarks now use the approved planet and six-camera sequence.
     define('planet-impact-baked',{emptySpace:false,title:'Orbital impact dogfight · Driftworks'},'planet-orbital-cube');
     define('planet-impact-watch',{emptySpace:true,title:'Orbital impact watch · Driftworks'},'planet-orbital-cube');
+    define('evacuation',{title:'Orbital evacuation · Driftworks',heading:'DRIFTWORKS / EVACUATION'},'planet-orbital-cube');
     define('asteroid-patrol',{encounter:{kind:'patrol',count:2,immediate:true}});
     /** Boolean support retains the old compose(kind,data,true) API during migration. @param {string|boolean} [id] */
     function resolve(id){return definitions[id===true?'ohio':typeof id==='string'?id:'default']||definitions.default;}
