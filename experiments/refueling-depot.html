@@ -9,6 +9,7 @@
 <button id="shuttle-view">Shuttle / scale</button>
 <button id="commuter-view">Commuter close-up</button> <button id="liner-view">Large liner close-up</button>
 <label>Civilian transports<select id="liner-model"><option value="both">Both / true scale</option><option value="commuter">Commuter / 72 m hull</option><option value="double-decker">Double-decker / 180 m hull</option><option value="none">Hidden</option></select></label>
+<label><input id="liner-batching" type="checkbox" checked> Batch static liner surfaces</label>
 <p id="liner-status">Loading civilian liners…</p>
 <button id="benchmark">Measure performance / 5 seconds</button><p id="performance" aria-live="polite">Benchmark uses the current camera, visibility and resolution.</p>
 <label>Liner docking attitude <output id="attitude-value">90° / vertical</output><input id="liner-attitude" type="range" min="0" max="90" step="1" value="90"></label>
@@ -29,6 +30,7 @@
 <script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script>
 <script type="module">
 import * as THREE from 'three';
+import {mergeGeometries} from '../vendor/three/examples/jsm/utils/BufferGeometryUtils.js?v=fda7e946b8e0';
 import {GLTFLoader} from '../vendor/three/examples/jsm/loaders/GLTFLoader.js?v=67ac5551fdaf';
 import {solveDepotArm} from './depot-arm.js?v=0dac00891044';
 import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js?v=b97879c74817';
@@ -44,7 +46,40 @@ const fill=new THREE.DirectionalLight(0x7493bc,.8);fill.position.set(0,-100,-200
 const depot=new THREE.Group();depot.rotation.x=-Math.PI/2;scene.add(depot);
 const groups=new Map(),materials=[],base=new Map();
 const liners=new Map(),loader=new GLTFLoader();
-const linerEnvelopes=new Map();
+const linerEnvelopes=new Map(),linerVariants=new Map();
+// Static render copies only: retain the original named hierarchy for anchors and A/B.
+// Transparent, animated, mirrored, partial and special meshes stay independent.
+function batchStaticLiner(source,animations=[]){
+ const result=new THREE.Group(),buckets=new Map();source.updateMatrixWorld(true);
+ const inverse=new THREE.Matrix4();if(source.parent)inverse.copy(source.parent.matrixWorld).invert();
+ source.traverseVisible(object=>{
+  if(!object.isMesh)return;
+  const geometry=object.geometry,material=object.material;
+  const matrix=new THREE.Matrix4().multiplyMatrices(inverse,object.matrixWorld);
+  const eligible=!animations.length&&!object.isSkinnedMesh&&!object.isInstancedMesh&&
+   !Array.isArray(material)&&!material.transparent&&!material.transmission&&
+   !Object.keys(geometry.morphAttributes).length&&matrix.determinant()>0&&
+   geometry.drawRange.start===0&&geometry.drawRange.count===Infinity&&!geometry.groups.length;
+  if(!eligible){const copy=object.clone(false);copy.matrix.copy(matrix);copy.matrixAutoUpdate=false;result.add(copy);return;}
+  const layout=Object.keys(geometry.attributes).sort().map(name=>{const a=geometry.attributes[name];return `${name}:${a.itemSize}:${a.normalized}:${a.array.constructor.name}`;}).join('|');
+  const key=[material.uuid,layout,!!geometry.index,object.renderOrder,object.castShadow,object.receiveShadow,object.layers.mask,object.frustumCulled].join('/');
+  if(!buckets.has(key))buckets.set(key,{object,parts:[]});
+  buckets.get(key).parts.push(geometry.clone().applyMatrix4(matrix));
+ });
+ for(const {object,parts} of buckets.values()){
+  const geometry=mergeGeometries(parts,false);
+  if(!geometry)throw new Error('Incompatible static liner geometry');
+  for(const part of parts)part.dispose();
+  geometry.computeBoundingBox();geometry.computeBoundingSphere();
+  const mesh=new THREE.Mesh(geometry,object.material);mesh.name=`Batched / ${object.material.name}`;
+  mesh.renderOrder=object.renderOrder;mesh.castShadow=object.castShadow;mesh.receiveShadow=object.receiveShadow;
+  mesh.layers.mask=object.layers.mask;mesh.frustumCulled=object.frustumCulled;result.add(mesh);
+ }
+ return result;
+}
+function showLinerVariants(){for(const {source,batched} of linerVariants.values()){source.visible=!el('liner-batching').checked;batched.visible=el('liner-batching').checked;}}
+el('liner-batching').onchange=()=>{showLinerVariants();el('liner-status').textContent=el('liner-batching').checked?'72 m + 180 m / batched surfaces, original materials and scale.':'72 m + 180 m / original mesh hierarchy, original materials and scale.';};
+
 const cruiseAttitude=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
 // glTF forward = -Z, dorsal = +Y. At the vertical berth, forward is
 // world +Y and dorsal is world -Z, toward the depot from these berths.
@@ -67,10 +102,10 @@ Promise.all([['commuter',[-112,-41,80]],['double-decker',[35,-55,165]]].map(asyn
  const gltf=await loader.loadAsync(DW.assetUrl(`../assets/ships/civilian-airliners/${id}.glb`));
  // Blender's GLB exporter already converts Z-up to glTF Y-up. Rotate the
  // resulting -Z bow onto +X, preserving the authored metre scale.
- const root=new THREE.Group();root.rotation.y=-Math.PI/2;root.position.set(...position);root.add(gltf.scene);scene.add(root);liners.set(id,root);
+ const root=new THREE.Group();root.rotation.y=-Math.PI/2;root.position.set(...position);const batched=batchStaticLiner(gltf.scene,gltf.animations);root.add(gltf.scene,batched);linerVariants.set(id,{source:gltf.scene,batched});showLinerVariants();scene.add(root);liners.set(id,root);
  root.traverse(object=>{if(object.isMesh)for(const material of Array.isArray(object.material)?object.material:[object.material]){materials.push(material);material.wireframe=el('wire').checked;}});
  root.updateMatrixWorld(true);const envelope=new THREE.Box3Helper(new THREE.Box3().setFromObject(root),id==='commuter'?0xe1b671:0xcf916d);linerEnvelopes.set(id,envelope);markers.add(envelope);poseLiners();showLiners();
-})).then(()=>el('liner-status').textContent='72 m commuter + 180 m double-decker / original GLB materials, true scale.').catch(error=>el('liner-status').textContent='Liner load failed: '+error.message);
+})).then(()=>el('liner-status').textContent='72 m commuter + 180 m double-decker / static surfaces batched / original materials and true scale.').catch(error=>el('liner-status').textContent='Liner load failed: '+error.message);
 const paintTexture=new THREE.TextureLoader().load(DW.assetUrl('../assets/depots/refueling-v1/caution-paint.png'));
 paintTexture.colorSpace=THREE.SRGBColorSpace;paintTexture.wrapS=paintTexture.wrapT=THREE.RepeatWrapping;paintTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
 let data;
@@ -133,8 +168,8 @@ el('stage').onchange=stage;
 const right=new THREE.Vector3(),up=new THREE.Vector3(),back=new THREE.Vector3();
 let benchmark=null;
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}});
-el('benchmark').onclick=()=>{if(!data||liners.size<2||!impact){el('performance').textContent='Wait for the depot, liners and planet to load.';return;}benchmark={start:performance.now(),previous:0,gaps:[],submit:[],calls:[],triangles:[],warmup:10,width:el('view').clientWidth,height:el('view').clientHeight,selection:el('liner-model').value,position:camera.position.clone(),rotation:camera.quaternion.clone()};controls.enabled=false;el('performance').textContent='Measuring current view / camera held fixed…';};
-function frame(now){requestAnimationFrame(frame);if(document.hidden){if(benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}return;}const host=el('view'),w=host.clientWidth,h=host.clientHeight;if(benchmark&&(benchmark.width!==w||benchmark.height!==h||benchmark.selection!==el('liner-model').value||!camera.position.equals(benchmark.position)||!camera.quaternion.equals(benchmark.rotation))){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: camera, resolution or liner selection changed.';}if(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(!benchmark)controls.update();camera.updateMatrixWorld();
+el('benchmark').onclick=()=>{if(!data||liners.size<2||!impact){el('performance').textContent='Wait for the depot, liners and planet to load.';return;}benchmark={start:performance.now(),previous:0,gaps:[],submit:[],calls:[],triangles:[],warmup:10,width:el('view').clientWidth,height:el('view').clientHeight,selection:el('liner-model').value,batching:el('liner-batching').checked,position:camera.position.clone(),rotation:camera.quaternion.clone()};controls.enabled=false;el('performance').textContent='Measuring current view / camera held fixed…';};
+function frame(now){requestAnimationFrame(frame);if(document.hidden){if(benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}return;}const host=el('view'),w=host.clientWidth,h=host.clientHeight;if(benchmark&&(benchmark.width!==w||benchmark.height!==h||benchmark.selection!==el('liner-model').value||benchmark.batching!==el('liner-batching').checked||!camera.position.equals(benchmark.position)||!camera.quaternion.equals(benchmark.rotation))){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: camera, resolution or liner selection changed.';}if(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(!benchmark)controls.update();camera.updateMatrixWorld();
  right.setFromMatrixColumn(camera.matrixWorld,0);up.setFromMatrixColumn(camera.matrixWorld,1);back.setFromMatrixColumn(camera.matrixWorld,2);
  // Three Y-up to the flight sky's Z-up convention; the sky ignores translation.
  const skyVector=v=>[v.x,-v.z,v.y],start=performance.now();sky.render({eye:[0,0,0],right:skyVector(right),up:skyVector(up),back:skyVector(back)},1,false);renderer.render(scene,camera);

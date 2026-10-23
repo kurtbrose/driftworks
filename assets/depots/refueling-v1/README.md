@@ -96,3 +96,32 @@ Each sample contained 376 measured frames. These are observations of the loaded
 asset snapshot and local browser, not portable performance guarantees. An earlier
 camera-away sample with zero foreground draws was discarded. The high draw-count
 increase suggests static material batching as the first optimization to investigate.
+
+Static liner batching (2026-10-22): the depot study now prepares a render copy
+once per load, merging opaque compatible geometry by shared material, attribute
+layout and render state. The original GLBs, named hierarchy, authored metres and
+materials remain intact. The checkbox switches between original and batched
+copies without moving the camera. Poses move cached geometry with the liner root.
+Transparent/transmissive and special meshes remain independent; animated exports
+are excluded from merging. This is a static reference-asset path, not a rigged
+vehicle animation system. Batching trades some per-part culling granularity and
+extra study-only A/B memory for fewer submissions.
+
+The real-GLB regression loads both exports through GLTFLoader and verifies equal
+triangle counts and bounds (0.1 mm tolerance), plus the synthetic nested-transform,
+glass, animation-exclusion and buffer-reuse checks:
+
+| Asset | Original mesh submissions | Prepared batches | Triangles retained |
+| --- | ---: | ---: | ---: |
+| Commuter | 654 | 14 | 248,507 |
+| Double-decker | 2,113 | 14 | 380,774 |
+
+Measured GLB SHA-256 prefixes: commuter `c9bbacc61e75`, double-decker
+`a361d561863d`.
+
+These are full-asset structural counts: 2,767 meshes become 28 batches (99% fewer).
+They are not visible-scene draw counts or timing results. The exports differ from
+the older timing snapshot above. A fresh matched browser timing/visual comparison
+was blocked by a zero-width preview; its stalled sample is invalid. No FPS or GPU
+speedup is claimed. Use the original/batched switch and five-second sampler in a
+visible preview for that comparison. Source GLBs and Blender files are unchanged.

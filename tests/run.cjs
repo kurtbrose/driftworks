@@ -120,3 +120,5 @@ require('./study-culling.cjs');
 require('./three-production.cjs');
 
 require('./asteroid-detail-lab.cjs');
+
+require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'liner-batching.cjs')], {stdio: 'inherit'});
