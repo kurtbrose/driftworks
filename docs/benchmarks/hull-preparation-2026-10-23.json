@@ -1,0 +1,933 @@
+{
+  "reference": "d23bda76d394f5e47473792a452ef4b4d9627e63",
+  "method": "Six alternating AB/BA pairs after one warm-up each. Load: repeated warmed-code-cache script evaluation plus runtime registration of all three packs; no network/disk timing. Cold hull: first origin-through sweep of each model, evaluation excluded. Warm scorch: eight marks per intersected model, tree warm, exact mark-output SHA-256. Session: actual headless 16-fighter furball seed 29, .5 simulated seconds warmup then four measured seconds, exact full state/events/dialogue SHA-256; asset evaluation excluded. CPU only, no GPU/audio/DOM.",
+  "sourceHash": "1d798c4cfd829e9ce5463cd9aaaad20e4ef0c79fbb8294035cf7eab0daff082b",
+  "assetBytes": {
+    "before": 24349117,
+    "after": 25917645
+  },
+  "rows": {
+    "load": {
+      "beforeMs": 4.38005000000004,
+      "afterMs": 16.711750000000052,
+      "reductionPercent": -281.5424481455668,
+      "pairs": [
+        {
+          "beforeMs": 7.221499999999992,
+          "afterMs": 14.816799999999944
+        },
+        {
+          "beforeMs": 4.8034999999999854,
+          "afterMs": 18.241700000000037
+        },
+        {
+          "beforeMs": 4.030900000000088,
+          "afterMs": 14.761699999999905
+        },
+        {
+          "beforeMs": 4.4459000000000515,
+          "afterMs": 18.389400000000023
+        },
+        {
+          "beforeMs": 4.314200000000028,
+          "afterMs": 15.181800000000067
+        },
+        {
+          "beforeMs": 3.877100000000155,
+          "afterMs": 18.534000000000106
+        }
+      ]
+    },
+    "coldHull": {
+      "beforeMs": 1809.0827499999975,
+      "afterMs": 6.034200000000055,
+      "reductionPercent": 99.66644975195302,
+      "pairs": [
+        {
+          "beforeMs": 1805.9286999999981,
+          "afterMs": 5.968899999999849,
+          "beforeModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 161.47450000000026
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 146.85019999999986
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 217.1183000000001
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 69.53710000000001
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 74.221
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 28.94320000000016
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 58.65390000000025
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 19.459899999999834
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 124.86869999999999
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 88.32039999999961
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 334.70979999999963
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 40.96429999999964
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 86.26350000000002
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 126.21779999999944
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 160.07759999999962
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 68.2484999999997
+            }
+          ],
+          "afterModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 0.5025000000005093
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 0.45420000000012806
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 0.2602999999999156
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 0.12040000000069995
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 0.2234999999991487
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 0.27269999999953143
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 0.6192000000000917
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 0.03599999999914871
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 0.4508000000005268
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 0.7042999999994208
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 0.5214999999998327
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 0.40170000000034634
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 0.447400000000016
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 0.26040000000011787
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 0.34060000000044965
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 0.3533999999999651
+            }
+          ]
+        },
+        {
+          "beforeMs": 1888.7080999999998,
+          "afterMs": 6.099500000000262,
+          "beforeModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 156.84860000000026
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 160.17749999999978
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 230.1282999999994
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 72.5664999999999
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 73.28780000000006
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 30.85020000000077
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 60.897899999999936
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 20.870700000000397
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 138.28200000000015
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 92.45120000000043
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 330.85719999999947
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 44.427599999999984
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 93.2538999999997
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 135.27130000000034
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 174.41209999999955
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 74.1252999999997
+            }
+          ],
+          "afterModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 0.5363999999999578
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 0.5146000000004278
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 0.35310000000026776
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 0.15949999999975262
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 0.2271999999993568
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 0.27520000000004075
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 0.6270000000004075
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 0.03510000000005675
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 0.4540999999999258
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 0.6957000000002154
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 0.5114999999996144
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 0.376100000000406
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 0.4324000000005981
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 0.29349999999976717
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 0.24359999999978754
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 0.36449999999967986
+            }
+          ]
+        },
+        {
+          "beforeMs": 1870.6484000000019,
+          "afterMs": 5.737600000000384,
+          "beforeModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 163.98329999999987
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 154.3036000000002
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 236.8672999999999
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 71.83749999999964
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 72.22410000000036
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 30.13929999999982
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 60.2512999999999
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 19.903299999999945
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 121.09659999999985
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 92.17709999999988
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 337.6229999999996
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 41.09360000000015
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 91.8696000000009
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 139.13240000000042
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 169.747800000001
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 68.39860000000044
+            }
+          ],
+          "afterModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 0.504399999999805
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 0.5621000000010099
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 0.24829999999928987
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 0.11219999999957508
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 0.22149999999965075
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 0.26740000000063446
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 0.5802999999996246
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 0.03499999999985448
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 0.4271000000007916
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 0.6748000000006869
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 0.49719999999979336
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 0.3563000000012835
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 0.42560000000048603
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 0.25939999999900465
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 0.2930999999989581
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 0.27289999999993597
+            }
+          ]
+        },
+        {
+          "beforeMs": 1812.236799999997,
+          "afterMs": 6.332900000003065,
+          "beforeModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 166.40390000000116
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 156.95819999999912
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 235.91229999999996
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 68.43049999999857
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 64.82579999999871
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 27.684699999999793
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 56.08559999999852
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 18.919200000000274
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 120.59649999999965
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 91.25490000000173
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 322.2454999999991
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 40.83190000000104
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 85.48099999999977
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 123.88570000000072
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 163.86309999999867
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 68.85800000000017
+            }
+          ],
+          "afterModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 0.5064999999995052
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 0.4422000000013213
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 0.25
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 0.1103000000002794
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 0.21810000000004948
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 0.26679999999942083
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 1.0179000000007363
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 0.036999999998442945
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 0.4304000000011001
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 0.8221000000012282
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 0.5396999999993568
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 0.36920000000100117
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 0.4418000000005122
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 0.37080000000059954
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 0.269800000000032
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 0.24029999999947904
+            }
+          ]
+        },
+        {
+          "beforeMs": 1792.7134000000024,
+          "afterMs": 5.9166000000022905,
+          "beforeModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 156.65279999999984
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 143.72190000000046
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 225.59089999999924
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 67.77800000000025
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 66.1185000000005
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 27.648199999999633
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 56.65569999999934
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 18.660000000001673
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 128.0532000000003
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 92.73250000000007
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 322.39540000000125
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 45.21609999999964
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 89.35310000000027
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 124.36750000000029
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 159.4925000000003
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 68.27709999999934
+            }
+          ],
+          "afterModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 0.49320000000079744
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 0.4503000000004249
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 0.30169999999998254
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 0.17150000000037835
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 0.3052000000006956
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 0.265400000000227
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 0.5820000000003347
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 0.035499999999956344
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 0.4301999999988766
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 0.6669000000001688
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 0.507499999999709
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 0.3651999999983673
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 0.43220000000110304
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 0.28100000000085856
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 0.32549999999901047
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 0.3033000000013999
+            }
+          ]
+        },
+        {
+          "beforeMs": 1801.9341000000004,
+          "afterMs": 9.776100000000952,
+          "beforeModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 161.09139999999934
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 155.89320000000043
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 216.48099999999977
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 67.42759999999907
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 65.2565999999988
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 27.298499999998967
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 57.86069999999927
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 19.627300000000105
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 125.33080000000155
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 87.2513999999992
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 332.6182000000008
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 40.925100000000384
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 89.55459999999948
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 125.27540000000045
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 160.60370000000148
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 69.43860000000132
+            }
+          ],
+          "afterModels": [
+            {
+              "id": "concept-trio:raptor",
+              "ms": 0.5
+            },
+            {
+              "id": "concept-trio:bulldog",
+              "ms": 0.46230000000105065
+            },
+            {
+              "id": "concept-trio:halo",
+              "ms": 0.2440999999998894
+            },
+            {
+              "id": "ohio-truck",
+              "ms": 0.1934000000001106
+            },
+            {
+              "id": "ohio-tractor",
+              "ms": 0.29399999999986903
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Bob",
+              "ms": 0.3371000000006461
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Challenger",
+              "ms": 0.5941000000002532
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Dispatcher",
+              "ms": 0.03510000000096625
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Executioner",
+              "ms": 0.462599999998929
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Imperial",
+              "ms": 4.384700000000521
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Insurgent",
+              "ms": 0.5246999999999389
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Omen",
+              "ms": 0.36709999999948195
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Pancake",
+              "ms": 0.4568999999992229
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Spitfire",
+              "ms": 0.283000000001266
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Striker",
+              "ms": 0.3544999999994616
+            },
+            {
+              "id": "quaternius-ultimate-spaceships:Zenith",
+              "ms": 0.28249999999934516
+            }
+          ]
+        }
+      ]
+    },
+    "warmScorch": {
+      "beforeMs": 861.0309499999985,
+      "afterMs": 128.36574999999903,
+      "reductionPercent": 85.09162185168846,
+      "pairs": [
+        {
+          "beforeMs": 853.429699999997,
+          "afterMs": 161.0206999999973,
+          "marks": 120
+        },
+        {
+          "beforeMs": 941.5936999999976,
+          "afterMs": 163.49399999999878,
+          "marks": 120
+        },
+        {
+          "beforeMs": 873.9817000000003,
+          "afterMs": 125.34480000000258,
+          "marks": 120
+        },
+        {
+          "beforeMs": 828.7389000000003,
+          "afterMs": 119.0573000000004,
+          "marks": 120
+        },
+        {
+          "beforeMs": 833.5616000000009,
+          "afterMs": 131.38669999999547,
+          "marks": 120
+        },
+        {
+          "beforeMs": 868.6322,
+          "afterMs": 124.73029999999562,
+          "marks": 120
+        }
+      ]
+    },
+    "session": {
+      "beforeMs": 1757.7329499999978,
+      "afterMs": 765.5829999999987,
+      "reductionPercent": 56.44486268519915,
+      "pairs": [
+        {
+          "beforeMs": 1687.8631000000023,
+          "afterMs": 743.7635999999984
+        },
+        {
+          "beforeMs": 1798.2135000000053,
+          "afterMs": 791.8118000000031
+        },
+        {
+          "beforeMs": 1936.946799999998,
+          "afterMs": 775.1927999999971
+        },
+        {
+          "beforeMs": 1793.8073999999979,
+          "afterMs": 827.7624999999971
+        },
+        {
+          "beforeMs": 1721.6584999999977,
+          "afterMs": 741.8243000000002
+        },
+        {
+          "beforeMs": 1720.748599999999,
+          "afterMs": 755.9732000000004
+        }
+      ]
+    }
+  }
+}

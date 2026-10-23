@@ -1,0 +1,12 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-23",
+  "prompt": "Edit Image 1, a production 3D skin UV atlas. Preserve its EXACT normalized UV layout: ALL island boundaries, eye socket holes, nose/lip positions and ear/neck placement. Image 2 is identity reference (neutral first frame). Keep source anatomy and UVs, no feature movement. No eyeballs (separate geometry), no eyebrows (separate mesh), no hair on scalp, no helmet, microphone, clothing or baked directional lighting. Coherent stylized painted skin across front, sides, ears and neck; not a portrait pasted onto an atlas. All other islands retain their original layout. Square output. Adapt the face's complexion and neutral lip/eyelid detail toward Asha from Image 2: warm brown skin, dark warm neutral lips, gently defined mature cheek detail and calm expression. Preserve eye socket openings and existing nose/lip UV alignment. Avoid cosmetics, dramatic shadows and painted equipment.",
+  "inputs": [
+    "E:/workspace/driftworks/assets/characters/quaternius-universal-base-characters/original/Base Characters/Godot - UE/T_Superhero_Female_Dark_BaseColor.png",
+    "E:/workspace/driftworks/assets/portraits/runway-workers/runtime/portrait-2.png"
+  ],
+  "output": "asha-skin-v1.png",
+  "status": "portrait-guided-v1; requires likeness review",
+  "sha256": "f99d741cb84c881ff51f085b55782276b71183ef12f14dc2e33071d34e24181a"
+}

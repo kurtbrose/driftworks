@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "check": "npm run check:types && npm run check:assets && npm test",
-    "check:assets": "node tools/refresh-site-assets.cjs --check",
+    "check:assets": "node tools/refresh-site-assets.cjs --check && node tools/bake-hull-indices.cjs --check",
     "refresh:assets": "node tools/refresh-site-assets.cjs",
     "test": "node tests/run.cjs",
     "check:types": "node tests/check-types.cjs"

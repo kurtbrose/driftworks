@@ -1,0 +1,12 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-23",
+  "prompt": "Edit target Image 1 is a 2048x2048 game character base-color UV atlas. Image 2 is identity/style reference Jo, neutral portrait first panel. Create a revised UV atlas EXACTLY preserving Image 1 island positions, silhouette boundaries, eye socket holes, nose at approximately (18.5%,23%), lips at (18.5%,26%), ears and all other body UV islands. DO NOT draw a portrait or move features. Adapt the existing upper-left face island's complexion, subtly dark brown eyelid detail and neutral lip coloration toward Jo from Image 2, with stylized painted detail, no strong baked lighting. Respect the existing large stylized eye holes; real eyes are separate geometry so DO NOT paint eyeballs onto the skin. Keep face island clean shaved scalp with NO hair, helmet, microphone, shadows from equipment, eyebrows (separate meshes), or clothes. Keep original mesh anatomy and UV feature alignment completely unchanged. Coherent matching warm medium skin tone across face sides, ears, neck and all skin islands. All other atlas layout and garment regions identical. This is a production diffuse texture edit, not a rendered head. Output square atlas, no labels.",
+  "inputs": [
+    "../original/Base Characters/Godot - UE/T_Superhero_Female_Dark_BaseColor.png",
+    "../../../portraits/runway-workers/runtime/portrait-0.png"
+  ],
+  "output": "jo-skin-v1.png",
+  "sha256": "25f72a0b1c33629f71295ad91463a525388e8862dd12bf58569ec16f6d50ca96",
+  "notes": "AI-assisted UV atlas variant; not an unmodified CC0 source texture. No geometry or UV edits. Jo only. Original source texture remains selectable. Likeness is preliminary, not identity reconstruction."
+}

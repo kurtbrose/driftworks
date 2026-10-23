@@ -1,0 +1,188 @@
+[
+  {
+    "id": "jo-mercer",
+    "status": "portrait-guided-v1",
+    "identity": "Jo Mercer, age 28, Deck Supervisor. Medium warm complexion, dark brown hair, brown eyes, dark arched brows; direct, watchful expression. Personality: Direct and watchful; coordinates the deck and makes sure every worker is accounted for.",
+    "workflow": {
+      "newCharacter": [
+        "approve identity recipe",
+        "assemble head, eyes, hair and suit",
+        "generate UV skin against fixed atlas",
+        "review front/three-quarter/profile",
+        "render neutral 3D identity reference",
+        "generate comms using that reference",
+        "review likeness and mark ready"
+      ],
+      "existingPortrait": [
+        "retain original portrait as identity reference",
+        "generate UV skin for selected base head",
+        "review 3D alongside portrait",
+        "mark ready only after likeness review"
+      ]
+    },
+    "comms": "For a new character use approved front and three-quarter renders of the assembled 3D identity as references. For an existing character preserve the approved original portrait identity. Create the established seven-pose comms atlas (neutral, ah, oo, blink, smile, angry, afraid), same adult identity in every frame. Jo Mercer, age 28, Deck Supervisor. Medium warm complexion, dark brown hair, brown eyes, dark arched brows; direct, watchful expression. Personality: Direct and watchful; coordinates the deck and makes sure every worker is accounted for. Keep uniform and identity consistent. Use the existing comms template and its exact frame layout.",
+    "skin": "Edit the female source UV atlas using the approved neutral portrait as identity reference. Jo Mercer, age 28, Deck Supervisor. Medium warm complexion, dark brown hair, brown eyes, dark arched brows; direct, watchful expression. Personality: Direct and watchful; coordinates the deck and makes sure every worker is accounted for. Preserve every UV island, eye opening, nose/lip position and neck/ear boundaries. No hair, helmet, microphone, equipment shadows or painted eyeballs. Uniform diffuse lighting. Keep side and back skin coherent. Do not change geometry or shift features. Separate eye, eyebrow and hair materials supply those parts.",
+    "review": [
+      "Portrait and in-world identity recognizable as the same adult",
+      "Front, both three-quarter views, profile and rear checked",
+      "No UV seam, displaced eyes, painted equipment or stretched facial features",
+      "Comms pose atlas dimensions and frame order verified",
+      "Status remains base-template until character-specific art passes review"
+    ]
+  },
+  {
+    "id": "luis-ortega",
+    "status": "portrait-guided-v1",
+    "identity": "Luis Ortega, age 24, Marshaller. Young adult, warm medium skin, dark parted hair, brown eyes; calm attentive expression. Personality: Patient with arriving pilots; gives crisp directions and never rushes an approach.",
+    "workflow": {
+      "newCharacter": [
+        "approve identity recipe",
+        "assemble head, eyes, hair and suit",
+        "generate UV skin against fixed atlas",
+        "review front/three-quarter/profile",
+        "render neutral 3D identity reference",
+        "generate comms using that reference",
+        "review likeness and mark ready"
+      ],
+      "existingPortrait": [
+        "retain original portrait as identity reference",
+        "generate UV skin for selected base head",
+        "review 3D alongside portrait",
+        "mark ready only after likeness review"
+      ]
+    },
+    "comms": "For a new character use approved front and three-quarter renders of the assembled 3D identity as references. For an existing character preserve the approved original portrait identity. Create the established seven-pose comms atlas (neutral, ah, oo, blink, smile, angry, afraid), same adult identity in every frame. Luis Ortega, age 24, Marshaller. Young adult, warm medium skin, dark parted hair, brown eyes; calm attentive expression. Personality: Patient with arriving pilots; gives crisp directions and never rushes an approach. Keep uniform and identity consistent. Use the existing comms template and its exact frame layout.",
+    "skin": "Edit the male source UV atlas using the approved neutral portrait as identity reference. Luis Ortega, age 24, Marshaller. Young adult, warm medium skin, dark parted hair, brown eyes; calm attentive expression. Personality: Patient with arriving pilots; gives crisp directions and never rushes an approach. Preserve every UV island, eye opening, nose/lip position and neck/ear boundaries. No hair, helmet, microphone, equipment shadows or painted eyeballs. Uniform diffuse lighting. Keep side and back skin coherent. Do not change geometry or shift features. Separate eye, eyebrow and hair materials supply those parts.",
+    "review": [
+      "Portrait and in-world identity recognizable as the same adult",
+      "Front, both three-quarter views, profile and rear checked",
+      "No UV seam, displaced eyes, painted equipment or stretched facial features",
+      "Comms pose atlas dimensions and frame order verified",
+      "Status remains base-template until character-specific art passes review"
+    ]
+  },
+  {
+    "id": "asha-menon",
+    "status": "portrait-guided-v1",
+    "identity": "Asha Menon, age 35, Fuel Technician. Adult, warm brown skin, dark tied-back hair, brown eyes; precise, composed expression. Personality: Methodical and dryly funny; gives exact fuel totals and double-checks every coupling.",
+    "workflow": {
+      "newCharacter": [
+        "approve identity recipe",
+        "assemble head, eyes, hair and suit",
+        "generate UV skin against fixed atlas",
+        "review front/three-quarter/profile",
+        "render neutral 3D identity reference",
+        "generate comms using that reference",
+        "review likeness and mark ready"
+      ],
+      "existingPortrait": [
+        "retain original portrait as identity reference",
+        "generate UV skin for selected base head",
+        "review 3D alongside portrait",
+        "mark ready only after likeness review"
+      ]
+    },
+    "comms": "For a new character use approved front and three-quarter renders of the assembled 3D identity as references. For an existing character preserve the approved original portrait identity. Create the established seven-pose comms atlas (neutral, ah, oo, blink, smile, angry, afraid), same adult identity in every frame. Asha Menon, age 35, Fuel Technician. Adult, warm brown skin, dark tied-back hair, brown eyes; precise, composed expression. Personality: Methodical and dryly funny; gives exact fuel totals and double-checks every coupling. Keep uniform and identity consistent. Use the existing comms template and its exact frame layout.",
+    "skin": "Edit the female source UV atlas using the approved neutral portrait as identity reference. Asha Menon, age 35, Fuel Technician. Adult, warm brown skin, dark tied-back hair, brown eyes; precise, composed expression. Personality: Methodical and dryly funny; gives exact fuel totals and double-checks every coupling. Preserve every UV island, eye opening, nose/lip position and neck/ear boundaries. No hair, helmet, microphone, equipment shadows or painted eyeballs. Uniform diffuse lighting. Keep side and back skin coherent. Do not change geometry or shift features. Separate eye, eyebrow and hair materials supply those parts.",
+    "review": [
+      "Portrait and in-world identity recognizable as the same adult",
+      "Front, both three-quarter views, profile and rear checked",
+      "No UV seam, displaced eyes, painted equipment or stretched facial features",
+      "Comms pose atlas dimensions and frame order verified",
+      "Status remains base-template until character-specific art passes review"
+    ]
+  },
+  {
+    "id": "ben-harlow",
+    "status": "base-template",
+    "identity": "Ben Harlow, age 59, Maintenance Lead. Older adult, greying short hair and brows, weathered face; patient practical expression. Personality: Seasoned mechanic; describes faults plainly and usually has a practical fix ready.",
+    "workflow": {
+      "newCharacter": [
+        "approve identity recipe",
+        "assemble head, eyes, hair and suit",
+        "generate UV skin against fixed atlas",
+        "review front/three-quarter/profile",
+        "render neutral 3D identity reference",
+        "generate comms using that reference",
+        "review likeness and mark ready"
+      ],
+      "existingPortrait": [
+        "retain original portrait as identity reference",
+        "generate UV skin for selected base head",
+        "review 3D alongside portrait",
+        "mark ready only after likeness review"
+      ]
+    },
+    "comms": "For a new character use approved front and three-quarter renders of the assembled 3D identity as references. For an existing character preserve the approved original portrait identity. Create the established seven-pose comms atlas (neutral, ah, oo, blink, smile, angry, afraid), same adult identity in every frame. Ben Harlow, age 59, Maintenance Lead. Older adult, greying short hair and brows, weathered face; patient practical expression. Personality: Seasoned mechanic; describes faults plainly and usually has a practical fix ready. Keep uniform and identity consistent. Use the existing comms template and its exact frame layout.",
+    "skin": "Edit the male source UV atlas using the approved neutral portrait as identity reference. Ben Harlow, age 59, Maintenance Lead. Older adult, greying short hair and brows, weathered face; patient practical expression. Personality: Seasoned mechanic; describes faults plainly and usually has a practical fix ready. Preserve every UV island, eye opening, nose/lip position and neck/ear boundaries. No hair, helmet, microphone, equipment shadows or painted eyeballs. Uniform diffuse lighting. Keep side and back skin coherent. Do not change geometry or shift features. Separate eye, eyebrow and hair materials supply those parts.",
+    "review": [
+      "Portrait and in-world identity recognizable as the same adult",
+      "Front, both three-quarter views, profile and rear checked",
+      "No UV seam, displaced eyes, painted equipment or stretched facial features",
+      "Comms pose atlas dimensions and frame order verified",
+      "Status remains base-template until character-specific art passes review"
+    ]
+  },
+  {
+    "id": "nadiya-bell",
+    "status": "base-template",
+    "identity": "Nadiya Bell, age 21, Cargo Handler. Young adult, warm skin, short dark hair, alert curious expression. Personality: Energetic and observant; keeps cargo moving while checking restraints and clearances.",
+    "workflow": {
+      "newCharacter": [
+        "approve identity recipe",
+        "assemble head, eyes, hair and suit",
+        "generate UV skin against fixed atlas",
+        "review front/three-quarter/profile",
+        "render neutral 3D identity reference",
+        "generate comms using that reference",
+        "review likeness and mark ready"
+      ],
+      "existingPortrait": [
+        "retain original portrait as identity reference",
+        "generate UV skin for selected base head",
+        "review 3D alongside portrait",
+        "mark ready only after likeness review"
+      ]
+    },
+    "comms": "For a new character use approved front and three-quarter renders of the assembled 3D identity as references. For an existing character preserve the approved original portrait identity. Create the established seven-pose comms atlas (neutral, ah, oo, blink, smile, angry, afraid), same adult identity in every frame. Nadiya Bell, age 21, Cargo Handler. Young adult, warm skin, short dark hair, alert curious expression. Personality: Energetic and observant; keeps cargo moving while checking restraints and clearances. Keep uniform and identity consistent. Use the existing comms template and its exact frame layout.",
+    "skin": "Edit the female source UV atlas using the approved neutral portrait as identity reference. Nadiya Bell, age 21, Cargo Handler. Young adult, warm skin, short dark hair, alert curious expression. Personality: Energetic and observant; keeps cargo moving while checking restraints and clearances. Preserve every UV island, eye opening, nose/lip position and neck/ear boundaries. No hair, helmet, microphone, equipment shadows or painted eyeballs. Uniform diffuse lighting. Keep side and back skin coherent. Do not change geometry or shift features. Separate eye, eyebrow and hair materials supply those parts.",
+    "review": [
+      "Portrait and in-world identity recognizable as the same adult",
+      "Front, both three-quarter views, profile and rear checked",
+      "No UV seam, displaced eyes, painted equipment or stretched facial features",
+      "Comms pose atlas dimensions and frame order verified",
+      "Status remains base-template until character-specific art passes review"
+    ]
+  },
+  {
+    "id": "kenji-sato",
+    "status": "base-template",
+    "identity": "Kenji Sato, age 47, Launch Technician. Middle-aged adult, dark parted hair, straight dark brows; quiet precise expression. Personality: Quiet and precise; reports launch equipment status and catches small problems early.",
+    "workflow": {
+      "newCharacter": [
+        "approve identity recipe",
+        "assemble head, eyes, hair and suit",
+        "generate UV skin against fixed atlas",
+        "review front/three-quarter/profile",
+        "render neutral 3D identity reference",
+        "generate comms using that reference",
+        "review likeness and mark ready"
+      ],
+      "existingPortrait": [
+        "retain original portrait as identity reference",
+        "generate UV skin for selected base head",
+        "review 3D alongside portrait",
+        "mark ready only after likeness review"
+      ]
+    },
+    "comms": "For a new character use approved front and three-quarter renders of the assembled 3D identity as references. For an existing character preserve the approved original portrait identity. Create the established seven-pose comms atlas (neutral, ah, oo, blink, smile, angry, afraid), same adult identity in every frame. Kenji Sato, age 47, Launch Technician. Middle-aged adult, dark parted hair, straight dark brows; quiet precise expression. Personality: Quiet and precise; reports launch equipment status and catches small problems early. Keep uniform and identity consistent. Use the existing comms template and its exact frame layout.",
+    "skin": "Edit the male source UV atlas using the approved neutral portrait as identity reference. Kenji Sato, age 47, Launch Technician. Middle-aged adult, dark parted hair, straight dark brows; quiet precise expression. Personality: Quiet and precise; reports launch equipment status and catches small problems early. Preserve every UV island, eye opening, nose/lip position and neck/ear boundaries. No hair, helmet, microphone, equipment shadows or painted eyeballs. Uniform diffuse lighting. Keep side and back skin coherent. Do not change geometry or shift features. Separate eye, eyebrow and hair materials supply those parts.",
+    "review": [
+      "Portrait and in-world identity recognizable as the same adult",
+      "Front, both three-quarter views, profile and rear checked",
+      "No UV seam, displaced eyes, painted equipment or stretched facial features",
+      "Comms pose atlas dimensions and frame order verified",
+      "Status remains base-template until character-specific art passes review"
+    ]
+  }
+]

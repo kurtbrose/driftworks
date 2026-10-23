@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "stride": 8,
+  "sourceHeadPivot": [
+    -2.706402781127346e-13,
+    1.549600005756255,
+    -0.010899782225668054
+  ],
+  "groups": [
+    {
+      "material": "MI_Hair_2",
+      "vertexOffset": 0,
+      "vertexCount": 912,
+      "indexOffset": 29184,
+      "indexCount": 4440
+    },
+    {
+      "material": "MI_Eyes",
+      "vertexOffset": 38064,
+      "vertexCount": 420,
+      "indexOffset": 51504,
+      "indexCount": 2304
+    },
+    {
+      "material": "MI_Superhero_Female",
+      "vertexOffset": 56112,
+      "vertexCount": 1644,
+      "indexOffset": 108720,
+      "indexCount": 9060
+    }
+  ]
+}

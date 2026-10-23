@@ -86,27 +86,44 @@ The on-screen stats and Crew toggle support further comparisons. A focused Node
 regression checks shared geometry, independent skeletons, palette ownership and
 source preservation (`node tests/crew-deck.cjs`).
 
-### Authored head baseline
+### Authored heads and portrait-guided skins
 
-Crew deck now uses a derived head from the CC0 Quaternius Universal Base Characters
-female Superhero model. The same static head geometry and original base-color
-textures are shared by all three astronauts. Head, eyes and eyebrow triangles keep
-the source UVs and normals; the procedural head and projected portrait faces have
-been removed. No facial animation or character-specific likeness is claimed.
+Crew deck uses derived heads from the CC0 Quaternius Universal Base Characters
+male and female Superhero models. Their authored geometry, UVs and normals replace
+the earlier procedural head and portrait-projection experiments. Original source
+files remain untouched. Extract with `node tools/extract-crew-head.mjs female` or
+`node tools/extract-crew-head.mjs male`; the derivation keeps complete triangles
+above the neck cutoff that belong to the neck/head bone chain, excluding shoulders.
+The resulting rigid head follows the astronaut's animated Head bone in metres.
 
-Rebuild with `node tools/extract-crew-head.mjs`. The extractor loads the bind pose,
-keeps complete triangles above the source neck cutoff, bakes their world-space
-positions relative to the source Head bone, and writes `runtime/female-head.json`.
-The suit scene places that rigid head at the astronaut's animated Head bone without
-reusing the source skeleton. The source helmet is hidden. Geometry uses source
-metres; no nonuniform deformation or texture projection is applied. The cut neck
-opening sits within the suit collar. Original files remain untouched.
+Jo, Luis and Asha have separate first-pass skin variants guided by their approved
+runway-worker portraits. Built-in ImageGen edited the skin UV atlases; source
+geometry and UVs stayed fixed. Exact prompts, references and output hashes are in
+the `runtime/*-skin-v1-generation.json` files. Generated derivatives are separate
+from unmodified CC0 sources. Runtime consumes packed WebP derivatives of those PNGs.
 
-The baseline uses the original base-color maps and roughness settings; source
-normal and roughness textures are not currently loaded. The original neutral hair
-map produces pale eyebrows without the pack's optional tint shader. Hairstyles and
-portrait likeness are subsequent art work. Head front and Head profile buttons
-provide repeatable inspection views. Browser checks cover front, profile and live
-head movement. The derived head has 5,358 triangles before neck-cutoff revisions;
-the JSON contains its actual retained triangle data and shares buffers/materials
-across crew. This is an experiment, not the final compact shipping format.
+The Skin selector restores original or guided skin and eyebrow color. Shared hair
+pieces remain fitted in both modes. Inspect selects an identity, while Head front,
+Head ¾ and Head profile provide unobstructed comparison views with the matching
+comms portrait. No facial mesh animation or synchronized lip motion is claimed.
+Likeness is preliminary; source anatomy constrains facial proportions, and the
+remaining three cast entries are still explicitly marked as base templates.
+
+## Shared cast pipeline
+
+Crew deck now reads `crew-cast/catalog.json`, built from the existing comms roster
+and `crew-cast/recipes.json`. Inspect selects six identities without creating a
+new suit or rig. The matching comms portrait, voice ID, role and personality come
+from the same record as the 3D recipe. Two authored head templates and origin-zero
+hairstyles are cached and reused. Hair placement subtracts each source Head pivot;
+head extraction also requires neck/head bone influence so shoulders are excluded.
+
+Geometry is indexed/interleaved in small binary buffers. Runtime skin/hair maps
+use 1024px maximum WebP quality 90; comms WebP atlases retain all seven 256px frames.
+Editable originals remain intact. The viewer caches at most eight skin resources
+(active ones pinned) and four decoded comms atlases, releasing replaced face
+materials while retaining shared geometry. These are experiment-local caches;
+the production radio renderer has not been migrated to this catalog.
+
+See [the cast workflow](../../docs/character-cast.md) for authoring, build commands,
+measured byte costs, generation briefs, limitations and the 100-record test.

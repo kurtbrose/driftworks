@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "stride": 8,
+  "sourceHeadPivot": [
+    0,
+    1.5997999685933693,
+    -0.017399985977202482
+  ],
+  "groups": [
+    {
+      "material": "MI_Hair_1",
+      "vertexOffset": 0,
+      "vertexCount": 646,
+      "indexOffset": 20672,
+      "indexCount": 2952
+    },
+    {
+      "material": "MI_Eyes",
+      "vertexOffset": 26576,
+      "vertexCount": 420,
+      "indexOffset": 40016,
+      "indexCount": 2304
+    },
+    {
+      "material": "MI_Superhero_Male",
+      "vertexOffset": 44624,
+      "vertexCount": 1555,
+      "indexOffset": 94384,
+      "indexCount": 8532
+    }
+  ]
+}

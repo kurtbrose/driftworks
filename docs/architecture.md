@@ -1568,6 +1568,25 @@ space. Candidates retain participant order for equal-distance hits. Source meshe
 are immutable; `shipPackModels.hullRadius(model)` returns their cached metre-space
 sphere radius.
 
+The three shipped `assets/ships/*/meshes.js` packs append generated `hullIndex`
+metadata: version, vertex count, vertex SHA-256, radius and the complete median-split
+triangle tree. `node tools/bake-hull-indices.cjs` rebuilds it after an authoring
+export; `--check` is included in `npm run check:assets`. Original mesh/script
+content precedes the generated suffix. Bounds preserve signed zero and original
+double precision. The runtime adopts the tree on first query rather than sorting
+triangles during combat. Models without compatible baked metadata retain the
+runtime builder (including tiny procedural/test hulls). Vertex content is
+immutable; build-time fingerprints detect stale same-size edits without hashing
+the full mesh in the flight loop. This adds no runtime fetch or deployment build.
+
+Impact scorches retain the original five-layer, fourteen-plane clipping result.
+Plane directions and limits are computed once per impact; clipping alternates
+between two reusable Float64 polygon buffers. Only finished numeric layers escape
+to craft state. The convex input and fourteen planes bound output to seventeen
+vertices (scratch capacity is sixty-four). Synchronous projection does not nest.
+Output triangle order and all existing hit, damage, mark-retention and draw rules
+are unchanged. See [hull preparation measurements](benchmarks/hull-preparation-2026-10-23.md).
+
 The default `grid-events` mode caches candidates for a projectile corridor up to
 250 ms ahead, bounded by remaining bolt lifetime. Corridors include the current
 segment and future straight-line travel, expanded by the larger of the 30 m

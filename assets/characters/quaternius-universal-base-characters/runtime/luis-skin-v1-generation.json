@@ -1,0 +1,12 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-23",
+  "prompt": "Edit Image 1, a production 3D skin UV atlas. Preserve its EXACT normalized UV layout: ALL island boundaries, eye socket holes, nose/lip positions and ear/neck placement. Image 2 is identity reference (neutral first frame). Keep source anatomy and UVs, no feature movement. No eyeballs (separate geometry), no eyebrows (separate mesh), no hair on scalp, no helmet, microphone, clothing or baked directional lighting. Coherent stylized painted skin across front, sides, ears and neck; not a portrait pasted onto an atlas. All other islands retain their original layout. Square output. Adapt the face's complexion and neutral mouth detail toward Luis from Image 2: warm medium brown skin, adult masculine face, and his recognizable dark full moustache painted ABOVE the existing UV lips, respecting nose and philtrum. Keep clean shaved cheeks and chin, no additional beard. Do not paint eyes or move eye holes.",
+  "inputs": [
+    "E:/workspace/driftworks/assets/characters/quaternius-universal-base-characters/original/Base Characters/Godot - UE/T_Superhero_Male_Dark.png",
+    "E:/workspace/driftworks/assets/portraits/runway-workers/runtime/portrait-1.png"
+  ],
+  "output": "luis-skin-v1.png",
+  "status": "portrait-guided-v1; requires likeness review",
+  "sha256": "a161e22c51fceaa14aa9abf8172e03c4797855df5d9d59b200dfc000a7151b4d"
+}

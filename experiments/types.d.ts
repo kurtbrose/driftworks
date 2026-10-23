@@ -312,7 +312,9 @@ export type Combat = {
     terrainScorches?: Vector[];
     onTerrainImpact?: (point: Vector) => void;
 };
+export type HullTree = {min:number[];max:number[];offsets:number[]|null;left:HullTree|null;right:HullTree|null};
 export type Model = {
+    hullIndex?: {version:1;vertexCount:number;sourceHash:string;radius:number;tree:HullTree};
     gunMounts?:Vector[];engineMounts?:number[][];
     id: string;
     name: string;

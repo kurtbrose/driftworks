@@ -35,3 +35,11 @@ for(const group of headData.groups){
  for(let i=0;i<group.positions.length;i+=3){assert(Math.abs(group.positions[i])<.16);assert(group.positions[i+1]>-.08&&group.positions[i+1]<.24);assert(Math.abs(group.positions[i+2])<.2);}
 }
 console.log('PASS authored head asset: complete triangles, source-metre head bounds, UV/normal coverage and three material groups');
+
+const skinState={value:'guided'},originalSkin=new T.Texture(),guidedSkin=new T.Texture();
+const skinMesh=new T.Mesh(new T.BoxGeometry(),new T.MeshStandardMaterial({map:originalSkin}));skinMesh.name='MI_Superhero_Female';
+const skinAnchor=new T.Group();skinAnchor.add(skinMesh);const brow=new T.MeshStandardMaterial(),geometryBefore=skinMesh.geometry;
+const applySkin=vm.runInNewContext('('+html.match(/function applyJoSkin\(\)\{[^\n]+/)[0]+')',{actors:[{face:{jo:true,anchor:skinAnchor,skin:guidedSkin,original:originalSkin,brows:brow}}],$:()=>skinState});
+applySkin();assert.equal(skinMesh.material.map,guidedSkin);assert.notEqual(brow.color.getHex(),0xffffff);
+skinState.value='original';applySkin();assert.equal(skinMesh.material.map,originalSkin);assert.equal(brow.color.getHex(),0xffffff);assert.equal(skinMesh.geometry,geometryBefore,'Texture switching never deforms the head');
+console.log('PASS Jo skin: reversible texture/brow comparison without geometry changes');

@@ -1,0 +1,147 @@
+{
+  "characters": 6,
+  "uniqueResources": 26,
+  "uniqueBytes": 1458897,
+  "perCharacterExample": {
+    "id": "jo-mercer",
+    "skinBytes": 52722,
+    "portraitAtlasBytes": 107068
+  },
+  "projection100": {
+    "uniqueSkinBytes": 5272200,
+    "portraitAtlasBytes": 10706800,
+    "note": "Arithmetic storage projection from Jo files, not 100 generated identities or a 100-actor rendering benchmark. Shared bodies/heads/hair are additional; original source assets excluded."
+  },
+  "files": [
+    {
+      "path": "assets/characters/crew-cast/portraits/portrait-0.webp",
+      "bytes": 107068,
+      "sha256": "3797b395f8542038e28e8a4191ab0407aaa4f5c2b87bac2bcc0cb32cd5efe4cc"
+    },
+    {
+      "path": "assets/characters/crew-cast/portraits/portrait-1.webp",
+      "bytes": 104646,
+      "sha256": "2c019563a51dd7580e1f297a14fa43876b545779c984a688e021851374237479"
+    },
+    {
+      "path": "assets/characters/crew-cast/portraits/portrait-2.webp",
+      "bytes": 104018,
+      "sha256": "a3a0e6cb6c9cdbe44f74fc7421ba3ef0458cab6791366bf11a0be39d67a382b7"
+    },
+    {
+      "path": "assets/characters/crew-cast/portraits/portrait-3.webp",
+      "bytes": 116144,
+      "sha256": "9a6c5f6c963ec540484856f7cdb874412df7e5eb3fe505180e98d852bdb0c05a"
+    },
+    {
+      "path": "assets/characters/crew-cast/portraits/portrait-4.webp",
+      "bytes": 106044,
+      "sha256": "f12301f0ba40e0e1520568463f68f971ec6663403d58bf4cc4a260b6d38bad91"
+    },
+    {
+      "path": "assets/characters/crew-cast/portraits/portrait-5.webp",
+      "bytes": 109624,
+      "sha256": "0ca9e9981cf786d0d4828d25e7d5a61b2f3f83353c60ccdc69d602bb86b7f6e7"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/Hair_Buns.bin",
+      "bytes": 131768,
+      "sha256": "4f6d4c010201278483da8d6d46ec40e3beb8d9e679ec2139bed216c561bccd38"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/Hair_Buns.gltf",
+      "bytes": 2243,
+      "sha256": "2bb3593575e21c9af39a53e48c42c1314b0a894e9577f3f14abffcb145cd56c5"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/Hair_Buzzed.bin",
+      "bytes": 19892,
+      "sha256": "89992fc7a5319df6f2908e44a3b694329fac4b500629a573224702e5fdd16f77"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/Hair_Buzzed.gltf",
+      "bytes": 2006,
+      "sha256": "43752a4c8f2464eb2494a8ab179bf7ad237638a3d47fb3de0a38361db40e1451"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/Hair_BuzzedFemale.bin",
+      "bytes": 19892,
+      "sha256": "6f1ab9bc997b01311dc0635ee165edfe27bd9715222718bc4cf4265e10b933af"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/Hair_BuzzedFemale.gltf",
+      "bytes": 2191,
+      "sha256": "3f30e5a7b0fc6d04d2980a4e937cc5e4b03ca923c9247869168ef13e1b40b747"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/Hair_SimpleParted.bin",
+      "bytes": 32032,
+      "sha256": "57c6359703a37e346ee38a9c7ba55c8dee761c0a02da99847d06f5a91728f3cc"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/Hair_SimpleParted.gltf",
+      "bytes": 2010,
+      "sha256": "ce6c666d00bcca2baa0c58d0442505f90f8feff952592effc4697a2341e9e56d"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/asha-skin-v1.webp",
+      "bytes": 68696,
+      "sha256": "dca448b3be4db0805dcce117b8f81e89b804ec4f56c9fdc08b5a0202445a000f"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/eyes.webp",
+      "bytes": 2660,
+      "sha256": "7bfdb4a0aa5956f7c4a046ab4285dafcbc858604f04e1f90a291ef40c1ea2a20"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/female-head.bin",
+      "bytes": 126840,
+      "sha256": "0a8dc9159477dbc47659a9e7496bf90caa9aa1c3c4311cd845ca9b9c90a2a983"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/female-head.json",
+      "bytes": 619,
+      "sha256": "d41d024e6ceb14877b66f01a68bad381a174f3cb355f9d8d701af52181bc3101"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/female-skin.webp",
+      "bytes": 32014,
+      "sha256": "5d8d36a752d526be8665424b47f1bc8428c03e7c7bcbcdf28e62c7b5297d71b3"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/hair-1.webp",
+      "bytes": 48126,
+      "sha256": "60b97db1e90c6a7118ea8d98ddeb5f936fafd9cb9c54a7d261420ef6d02febd9"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/hair-2.webp",
+      "bytes": 62620,
+      "sha256": "a4e8969639e1e93b5e901ccc9162595bc0ff566bc4a14c8aec1327e3bfa9aa9d"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/jo-skin-v1.webp",
+      "bytes": 52722,
+      "sha256": "2006e15b305f68505089f21bfd575958135391d5c414aad80a1f82a54d7fd413"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/luis-skin-v1.webp",
+      "bytes": 60522,
+      "sha256": "a27b7d1d900ae03e7d95950f2b20265073b652c5b997179f752069860fe59773"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/male-head.bin",
+      "bytes": 111448,
+      "sha256": "6cceebd36ad7248fe2f78c25a4c2bb22038b2c00a25a52e42aade110200188d9"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/male-head.json",
+      "bytes": 596,
+      "sha256": "20111d3d2bd695240096acc0a21f4030da5f8ea8d25bb2ea719d7fb9bfc75fe3"
+    },
+    {
+      "path": "assets/characters/quaternius-universal-base-characters/runtime/packed/male-skin.webp",
+      "bytes": 32456,
+      "sha256": "9c4a1a27c2af50a76c29c52b6de2b5410e7276f8137662db24fbcadf00ee6bc4"
+    }
+  ]
+}

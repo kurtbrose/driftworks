@@ -428,11 +428,20 @@
     /** Rotation-independent source-mesh bound, in metres. @param {Model} model */
     function hullRadius(model) {
         var radius=hullBounds.get(model);
+        if(radius===undefined&&model.hullIndex&&model.hullIndex.version===1&&model.hullIndex.vertexCount===model.vertices.length)radius=model.hullIndex.radius;
         if(radius===undefined){radius=0;for(var i=0;i<model.vertices.length;i+=6)radius=Math.max(radius,Math.hypot(model.vertices[i],model.vertices[i+1],model.vertices[i+2]));hullBounds.set(model,radius);}
         return radius;
     }
     /** @typedef {{min:number[],max:number[],offsets:number[]|null,left:HullTree|null,right:HullTree|null}} HullTree */
     /** @type {WeakMap<Model,HullTree>} */var hullTrees=new WeakMap();
+    /** @param {Model} model */
+    function hullTree(model){
+        var tree=hullTrees.get(model);
+        if(!tree){var baked=model.hullIndex;if(baked&&baked.version===1&&baked.vertexCount===model.vertices.length)tree=baked.tree;
+            else {var offsets=/** @type {number[]} */([]);for(var i=0;i<model.vertices.length;i+=18)offsets.push(i);tree=buildHullTree(model.vertices,offsets);}
+            hullTrees.set(model,tree);
+        }return tree;
+    }
     /** Immutable source meshes get one median-split triangle index.
      * @param {number[]} vertices @param {number[]} offsets @returns {HullTree} */
     function buildHullTree(vertices,offsets){
@@ -458,8 +467,7 @@
     }
     /** @param {Model} model @param {Vector} a @param {Vector} d @param {number} padding */
     function hullCandidates(model,a,d,padding){
-        var tree=hullTrees.get(model);
-        if(!tree){var offsets=/** @type {number[]} */([]);for(var i=0;i<model.vertices.length;i+=18)offsets.push(i);tree=buildHullTree(model.vertices,offsets);hullTrees.set(model,tree);}
+        var tree=hullTree(model);
         var stack=[tree],result=/** @type {{offsets:number[],entry:number}[]} */([]);
         while(stack.length){var node=stack.pop();if(!node)continue;var entry=intersectsHullNode(node,a,d,padding);if(entry===null)continue;
             if(node.offsets)result.push({offsets:node.offsets,entry:entry});else {if(node.left)stack.push(node.left);if(node.right)stack.push(node.right);}
@@ -480,8 +488,7 @@
         })) > radius + padding)
             return null;
         // Warm the shared tree once; traverse directly instead of collecting/sorting leaves.
-        if(!hullTrees.has(model))hullCandidates(model,a,d,padding);
-        var tree=hullTrees.get(model),stack=hitStack;stack.length=0;if(tree)stack.push(tree);
+        var tree=hullTree(model),stack=hitStack;stack.length=0;stack.push(tree);
         var bestOffset=Infinity,tri=hitTriangle;
         while(stack.length) {
           var leaf=stack.pop();if(!leaf)continue;
@@ -537,10 +544,16 @@
         }
         return best;
     }
+    // A convex triangle clipped by fourteen planes has at most seventeen vertices.
+    // Synchronous projection owns scratch buffers; only finished numeric layers escape.
+    var scorchPolyA=new Float64Array(64*3),scorchPolyB=new Float64Array(64*3);
     /** @param {ArtCraft} e @param {HullHit} hit */
     function addScorch(e, hit) {
         var n = hit.normal, center = hit.local, axis = Math.abs(n[2]) < .9 ? [0, 0, 1] : [0, 1, 0];
         var tangent = normal([0, 0, 0], n, axis), side = cross3(n, tangent), layers = /** @type {number[][]} */ ([[], [], [], [], []]);
+        var planes=[n,n.map(function(x){return -x;})],limits=/** @type {number[][]} */([]),radii=[.78,.63,.48,.33,.18];
+        for(var edge=0;edge<12;edge++){var angle=edge*Math.PI/6;planes.push(tangent.map(function(x,k){return x*Math.cos(angle)+side[k]*Math.sin(angle);}));}
+        for(var layer=0;layer<5;layer++){var values=[.3,.3];for(var edge=0;edge<12;edge++)values.push(radii[layer]*(1+.22*Math.sin(edge*7.3+center[0]*2.1+center[1]*3.7+center[2])));limits.push(values);}
         // Clip a small polygonal burn to nearby hull triangles. No floating quads,
         // back-side bleed, textures, or per-frame mesh projection.
         var v = hit.model.vertices;
@@ -552,41 +565,26 @@
                 return Math.min(tri[0][k], tri[1][k], tri[2][k]) > center[k] + 1.4 || Math.max(tri[0][k], tri[1][k], tri[2][k]) < center[k] - 1.4;
             }))
                 continue;
-            [.78, .63, .48, .33, .18].forEach(function (radius, layer) {
-                var poly = tri;
-                /** @param {Vector} direction @param {number} limit */
-                function clip(direction, limit) {
-                    var out = /** @type {number[][]} */ ([]);
-                    poly.forEach(function (a, j) {
-                        var b = poly[(j + 1) % poly.length], da = dot3(minus(a, center), direction) - limit, db = dot3(minus(b, center), direction) - limit;
-                        if (da <= 0)
-                            out.push(a);
-                        if ((da <= 0) !== (db <= 0)) {
-                            var t = da / (da - db);
-                            out.push(a.map(function (x, k) {
-                                return x + (b[k] - x) * t;
-                            }));
-                        }
-                    });
-                    poly = out;
+            for(var layer=0;layer<5;layer++){
+                var input=scorchPolyA,output=scorchPolyB,count=3;
+                for(var corner=0;corner<3;corner++)for(var component=0;component<3;component++)input[corner*3+component]=tri[corner][component];
+                for(var plane=0;plane<14&&count;plane++){
+                    var direction=planes[plane],limit=limits[layer][plane],written=0;
+                    for(var vertex=0;vertex<count;vertex++){
+                        var next=(vertex+1)%count,ai=vertex*3,bi=next*3;
+                        var da=(input[ai]-center[0])*direction[0]+(input[ai+1]-center[1])*direction[1]+(input[ai+2]-center[2])*direction[2]-limit;
+                        var db=(input[bi]-center[0])*direction[0]+(input[bi+1]-center[1])*direction[1]+(input[bi+2]-center[2])*direction[2]-limit;
+                        if(da<=0){for(var k=0;k<3;k++)output[written*3+k]=input[ai+k];written++;}
+                        if((da<=0)!==(db<=0)){var t=da/(da-db);for(var k=0;k<3;k++)output[written*3+k]=input[ai+k]+(input[bi+k]-input[ai+k])*t;written++;}
+                    }
+                    var swap=input;input=output;output=swap;count=written;
                 }
-                clip(n, .3);
-                clip(n.map(function (x) {
-                    return -x;
-                }), .3);
-                for (var edge = 0; edge < 12 && poly.length; edge++) {
-                    var angle = edge * Math.PI / 6;
-                    clip(tangent.map(function (x, k) {
-                        return x * Math.cos(angle) + side[k] * Math.sin(angle);
-                    }), radius * (1 + .22 * Math.sin(edge * 7.3 + center[0] * 2.1 + center[1] * 3.7 + center[2])));
+                for(var j=1;j+1<count;j++)for(var corner=0;corner<3;corner++){
+                    var offset=(corner===0?0:corner===1?j:j+1)*3;
+                    for(var k=0;k<3;k++)layers[layer].push(input[offset+k]+face[k]*(.012+layer*.004));
+                    layers[layer].push(face[0],face[1],face[2]);
                 }
-                for (var j = 1; j + 1 < poly.length; j++)
-                    [poly[0], poly[j], poly[j + 1]].forEach(function (p) {
-                        layers[layer].push.apply(layers[layer], p.map(function (x, k) {
-                            return x + face[k] * (.012 + layer * .004);
-                        }).concat(face));
-                    });
-            });
+            }
         }
         if (!e.scorches)
             e.scorches = [];

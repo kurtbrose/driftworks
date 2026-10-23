@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "sourceRoster": "assets/portraits/runway-workers/roster.json",
+  "characters": [
+    {
+      "id": "jo-mercer",
+      "head": "female",
+      "hair": "Hair_Buns",
+      "hairColor": "#39251e",
+      "suit": "navy",
+      "skin": "jo-skin-v1",
+      "status": "portrait-guided-v1",
+      "appearance": "Medium warm complexion, dark brown hair, brown eyes, dark arched brows; direct, watchful expression."
+    },
+    {
+      "id": "luis-ortega",
+      "head": "male",
+      "hair": "Hair_SimpleParted",
+      "hairColor": "#30251d",
+      "suit": "rescue",
+      "status": "portrait-guided-v1",
+      "appearance": "Young adult, warm medium skin, dark parted hair, brown eyes; calm attentive expression.",
+      "skin": "luis-skin-v1"
+    },
+    {
+      "id": "asha-menon",
+      "head": "female",
+      "hair": "Hair_Buns",
+      "hairColor": "#211a17",
+      "suit": "engineering",
+      "status": "portrait-guided-v1",
+      "appearance": "Adult, warm brown skin, dark tied-back hair, brown eyes; precise, composed expression.",
+      "skin": "asha-skin-v1"
+    },
+    {
+      "id": "ben-harlow",
+      "head": "male",
+      "hair": "Hair_Buzzed",
+      "hairColor": "#77706a",
+      "suit": "engineering",
+      "status": "base-template",
+      "appearance": "Older adult, greying short hair and brows, weathered face; patient practical expression."
+    },
+    {
+      "id": "nadiya-bell",
+      "head": "female",
+      "hair": "Hair_BuzzedFemale",
+      "hairColor": "#432a22",
+      "suit": "rescue",
+      "status": "base-template",
+      "appearance": "Young adult, warm skin, short dark hair, alert curious expression."
+    },
+    {
+      "id": "kenji-sato",
+      "head": "male",
+      "hair": "Hair_SimpleParted",
+      "hairColor": "#251f1b",
+      "suit": "navy",
+      "status": "base-template",
+      "appearance": "Middle-aged adult, dark parted hair, straight dark brows; quiet precise expression."
+    }
+  ]
+}

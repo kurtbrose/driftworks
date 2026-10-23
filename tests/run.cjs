@@ -1,3 +1,4 @@
+require('./character-cast.cjs');
 require('./crew-deck.cjs');
 require('./civilian-portraits.cjs');
 require('./campaign-intro.cjs');
@@ -126,6 +127,7 @@ require('./dreadnaught-kit.cjs');
 require('./aegis-flight.cjs');
 
 require('./hull-sweep-index.cjs');
+require('./baked-hull-indices.cjs');
 require('./projectile-broadphase.cjs');
 require('./collision-events.cjs');
 
