@@ -11,7 +11,10 @@ The planet stays intact. The bomber encounter and later cycles are not authored.
 `evacuation-mission.js` owns transient `combat.evacuation` state. The radio
 scheduler advances one authored line only when the channel is available; combat
 does not use the opening-dialogue weapons gate. Two NPC fighters plus the player
-form the whole patrol. Four reserved hostiles enter after the weapons-free call;
+form the whole patrol. Actual and Finch have mission-only plot armor: shields
+and hull take damage, but hull stops at one point, preventing death events and
+wrecks. Player, enemies and other missions retain ordinary damage rules. The
+optional transient craft flag is `plotArmor`. Four reserved hostiles enter after the weapons-free call;
 generic furball wave resets are disabled. Fuel-complete dialogue requires the
 two-minute minimum fueling interval and five seconds clear of living hostiles.
 The diversion has its own pause before departure clearance. Pausing freezes both

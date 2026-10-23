@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../assets/depots/refueling-v1/depot.json'), 'utf8'));
+const data = require('./depot-asset.cjs');
 const paintPng=fs.readFileSync(path.join(__dirname,'../assets/depots/refueling-v1/caution-paint.png'));
 assert.equal(paintPng.subarray(1,4).toString(),'PNG');
 assert.equal(paintPng.readUInt32BE(16),512);

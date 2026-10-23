@@ -1,3 +1,4 @@
+import {decodeDepot} from './depot-asset.js';
 import * as timeline from './refueling-cycle.js';
 import * as arms from './depot-arm.js';
 (function () {
@@ -5,7 +6,7 @@ import * as arms from './depot-arm.js';
     var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks),U=DW.sim.METERS_PER_UNIT;
     var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
     /** @typedef {import('./types').Batch} Batch */
-    /** @typedef {{material:string;group?:string;positions:number[];normals:number[];uvs?:number[]}} SourceBatch */
+    /** @typedef {import('./depot-asset').DepotBatch} SourceBatch */
     /** @typedef {{materials:Record<string,[number,number,number]>;batches:SourceBatch[]}} Asset */
     /** @type {{batches:Batch[];port:number[]}[]} */var transports=[];
     var status='Loading depot and civilian liners';
@@ -30,7 +31,7 @@ import * as arms from './depot-arm.js';
     /** @type {ReturnType<typeof buildDepot>} */var modules=[];
     if(DW.flightMissions.current().id==='evacuation'){
         var style=document.createElement('style');style.textContent='.impact-cues{display:none!important}';document.head.appendChild(style);
-        Promise.all([fetch(assetUrl('../assets/depots/refueling-v1/depot.json')).then(function(r){if(!r.ok)throw Error(r.statusText);return /** @type {Promise<Asset>} */(r.json());}),loadTransport('commuter'),loadTransport('double-decker')]).then(function(values){modules=buildDepot(values[0]);transports=[values[1],values[2]];status='Ready';}).catch(/** @param {unknown} error */function(error){status='Asset load failed: '+String(error);});
+        Promise.all([fetch(assetUrl('../assets/depots/refueling-v1/depot.glb')).then(function(r){if(!r.ok)throw Error(r.statusText);return r.arrayBuffer().then(decodeDepot);}),loadTransport('commuter'),loadTransport('double-decker')]).then(function(values){modules=buildDepot(values[0]);transports=[values[1],values[2]];status='Ready';}).catch(/** @param {unknown} error */function(error){status='Asset load failed: '+String(error);});
     }
     /** @type {WeakMap<import('./types').Combat,{last:number;five:import('./refueling-cycle').RefuelingCycle;six:import('./refueling-cycle').RefuelingCycle}>} */var cycles=new WeakMap();
     var dockBasis=new Float32Array([1,0,0,0,0,1,0,-1,0]);

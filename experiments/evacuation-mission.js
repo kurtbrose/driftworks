@@ -25,6 +25,7 @@
         player.right=[1,0,0];player.up=[0,0,1];player.back=[0,-1,0];
         combat.enemies.forEach(function(c,i){c.team=i<2?'ally':'enemy';c.callsign=i<2?['Actual','Finch'][i]:'Raider '+(i-1);c.pose.eye=[(i<2?(i?100:-100):280+i*40)/U,(-140+i*55)/U,1200+(i<2?45:90)/U];});
         combat.evacuation={scene:0,line:0,wait:2,elapsed:0,quiet:0,departure:0,complete:false,reserve:combat.enemies.splice(2),origin:[0,0,1200]};
+        combat.enemies.forEach(function(c){c.plotArmor=true;});
         combat.targetId=null;combat.roundOver=false;
     }
     /** The channel owns progression: never consume a line until it can actually be heard.

@@ -376,7 +376,7 @@
   "assets/characters/quaternius-universal-animation-library/original/Unreal_Setup.png": "c2c64e659943",
   "assets/characters/quaternius-universal-animation-library/provenance.json": "893381d1d0e6",
   "assets/depots/refueling-v1/caution-paint.png": "a8b17b3d7215",
-  "assets/depots/refueling-v1/depot.json": "77b2f46f5193",
+  "assets/depots/refueling-v1/depot.glb": "ea765a5c8d84",
   "assets/environments/kenney-car-kit/provenance.json": "62a08bfbbc15",
   "assets/environments/kenney-car-kit/tractor.glb": "b9debcc342cd",
   "assets/environments/kenney-car-kit/truck-flat.glb": "eb93ab8336d9",

@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Driftworks / Refueling depot</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#000;color:#e0e8eb;font:14px system-ui}#sky,#view{position:fixed;inset:0 0 0 280px}canvas{position:absolute;width:100%;height:100%;touch-action:none}aside{position:fixed;inset:0 auto 0 0;width:280px;padding:24px;background:#101a23;overflow:auto;border-right:1px solid #41515b}small{color:#dcaa61;letter-spacing:2px}h1{font-weight:400;font-size:32px}p{color:#a6b8c2;line-height:1.5}button,select{background:#21323e;color:inherit;border:1px solid #53646e;padding:9px;margin:3px 0;cursor:pointer}label{display:block;margin:20px 0}input[type=range],select{width:100%}a{color:#b9dbea}#caption{position:fixed;bottom:20px;left:304px;font-size:12px;color:#d0dce2;pointer-events:none}@media(max-width:650px){aside{width:210px;padding:14px}#sky,#view{left:210px}#caption{left:224px}}
-</style><script src="../src/asset-versions.js?v=ca9ff38e0cb6"></script>
+</style><script src="../src/asset-versions.js?v=388bf290f41c"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
 <body><div id="sky"></div><div id="view"></div><aside><small>DRIFTWORKS / ASSET STUDY</small><h1>Orbital<br>fuel depot.</h1><p>Long open spine, eight tank banks and three articulated service arms. First silhouette and Blender export prototype.</p>
 <button id="overview">Overview</button> <button id="approach">Service approach</button> <button id="top">Plan view</button> <button id="fighter-view">Fighter close-up</button> <button id="offline-view">Inactive module C</button> <button id="rack-view">Tank rack</button>
@@ -50,8 +50,9 @@ scene.add(new THREE.HemisphereLight(0xb8cee2,0x24201a,1.1));
 const sun=new THREE.DirectionalLight(0xffe7c5,3.1);sun.position.set(-200,400,300);scene.add(sun);
 const fill=new THREE.DirectionalLight(0x7493bc,.8);fill.position.set(0,-100,-200);scene.add(fill);
 const depot=new THREE.Group();depot.rotation.x=-Math.PI/2;scene.add(depot);
-const groups=new Map(),materials=[],base=new Map();
+const groups=new Map(),materials=[];
 const liners=new Map(),loader=new GLTFLoader();
+loader.manager.setURLModifier(url=>DW.assetUrl(url));
 const linerEnvelopes=new Map(),linerVariants=new Map(),linerPorts=new Map(),linerLocalBounds=new Map();
 // Static render copies only: retain the original named hierarchy for anchors and A/B.
 // Transparent, animated, mirrored, partial and special meshes stay independent.
@@ -122,8 +123,6 @@ Promise.all([['commuter',[-112,-41,80]],['double-decker',[35,-55,165]]].map(asyn
  linerPorts.set(id,{point:portPoint,normal:portNormal,home:root.position.clone()});
  root.updateMatrixWorld(true);const envelope=new THREE.Box3Helper(new THREE.Box3().setFromObject(root),id==='commuter'?0xe1b671:0xcf916d);linerLocalBounds.set(id,envelope.box.clone().applyMatrix4(root.matrixWorld.clone().invert()));linerEnvelopes.set(id,envelope);markers.add(envelope);poseLiners();showLiners();
 })).then(()=>{el('liner-status').textContent='72 m commuter + 180 m double-decker / static surfaces batched / original materials and true scale.';readyCycle();}).catch(error=>el('liner-status').textContent='Liner load failed: '+error.message);
-const paintTexture=new THREE.TextureLoader().load(DW.assetUrl('../assets/depots/refueling-v1/caution-paint.png'));
-paintTexture.colorSpace=THREE.SRGBColorSpace;paintTexture.wrapS=paintTexture.wrapT=THREE.RepeatWrapping;paintTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
 let data;
 function view(position,target=[0,0,0]){camera.position.set(...position);controls.target.set(...target);controls.update();}
 view([480,300,510]);
@@ -167,15 +166,16 @@ function pose(){if(!data)return;
  el('arm-status').textContent=(solution.clamped?'Wrist target limited to safe reach.':'Wrist target reached.')+' Two active arms / module C offline, arm parked.';
 }
 for(const id of ['arms','reach','height','tilt','swivel','roll'])el(id).oninput=pose;
-fetch(DW.assetUrl('../assets/depots/refueling-v1/depot.json')).then(r=>{if(!r.ok)throw Error(r.statusText);return r.json();}).then(value=>{
- data=value;for(const batch of data.batches){let group=groups.get(batch.group);if(!group){group=new THREE.Group();const p=data.pivots[batch.group]||[0,0,0];group.position.set(...p);base.set(batch.group,group.position.clone());groups.set(batch.group,group);depot.add(group);}
- const p=base.get(batch.group),vertices=batch.positions.map((v,i)=>v-[p.x,p.y,p.z][i%3]);
- const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(batch.normals,3));
- if(batch.uvs)geometry.setAttribute('uv',new THREE.Float32BufferAttribute(batch.uvs,2));
- const c=data.materials[batch.material],paint=batch.material.startsWith('safety-')||batch.material==='wear',material=new THREE.MeshStandardMaterial({color:new THREE.Color(...c),metalness:paint?.12:batch.material==='dark'?.1:.65,roughness:paint?.78:.46});
- if(batch.material==='caution-paint'){material.map=paintTexture;material.metalness=.1;material.roughness=.8;}
- if(batch.material==='lamp'||batch.material.endsWith('-light')){material.emissive=new THREE.Color(...c);material.emissiveIntensity=batch.material==='lamp'?1:2;}materials.push(material);group.add(new THREE.Mesh(geometry,material));}
- el('status').textContent=`Blender bake loaded / ${groups.size} modules / ${Math.round(data.batches.reduce((n,b)=>n+b.positions.length/9,0)).toLocaleString()} triangles`;pose();readyCycle();
+loader.loadAsync(DW.assetUrl('../assets/depots/refueling-v1/depot.glb')).then(gltf=>{
+ data=gltf.parser.json.extras;
+ const root=gltf.scene.children[0];root.quaternion.identity();depot.add(root);
+ for(const group of root.children){groups.set(group.name,group);}
+ let triangles=0;root.traverse(object=>{if(!object.isMesh)return;
+  triangles+=object.geometry.index.count/3;
+  const material=object.material;materials.push(material);
+  if(material.map){material.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}
+ });
+ el('status').textContent=`Indexed GLB loaded / ${groups.size} modules / ${triangles.toLocaleString()} triangles`;pose();readyCycle();
 }).catch(error=>el('status').textContent='Depot load failed: '+error.message);
 // One serviced liner at a time; retain both assets for replay and scale inspection.
 let cycle=null,cyclePaused=false,cycleShip='commuter',cycleBerth=null,lastFrame=null;

@@ -7,11 +7,14 @@ Rebuild from the repository root:
 
     blender --background --python tools/build-refueling-depot.py
 
-`depot.blend` is the editable authoring source. `depot.json` contains evaluated,
-triangulated Blender meshes batched by named module and material, plus arm pivot
-positions. Coordinates are metres, Z up. The study rotates these into Three's
-Y-up space. This is a static local asset; Blender is only an offline authoring
-dependency. Named modules reserve future breakup boundaries, not damage rules.
+`depot.blend` is the editable authoring source. `depot.glb` contains evaluated,
+indexed triangle meshes batched by named module and material. Full position/normal/UV tuples are deduplicated, retaining
+hard edges and UV seams. Coordinates are metres: mesh-local coordinates remain
+Z up for arm articulation, with a root quaternion converting the GLB scene to
+glTF Y up. The study removes that root rotation inside its existing Z-up depot
+container. Module names, zero local arm pivots and authoring metadata remain in
+the GLB hierarchy and extras. This is a static local asset; Blender is only an
+offline authoring dependency. Named modules reserve future breakup boundaries, not damage rules.
 Curved cylinder walls, tank caps and rings use smooth corner normals; cylinder
 end caps and eight-sided structural beams retain hard shading. The export uses
 evaluated per-corner normals, rather than replacing them with face normals.
@@ -172,3 +175,40 @@ regression in `tests/refueling-cycle.cjs` checks both ports, contact error,
 reachable rigid IK, phase order, stationary fueling and manual release.
 This is a visual single-berth prototype. It does not yet implement traffic
 collision avoidance, fuel transfer quantities or persistent mission state.
+
+## Indexed runtime export (2026-10-22)
+
+The offline authoring script calls `tools/depot-glb.py`; the writer uses only
+the Python standard library. The vendored GLTFLoader reads `depot.glb` in the
+study. `experiments/depot-asset.js` adapts this specific uncompressed GLB profile
+into the flight renderer's existing Z-up, unindexed batches once at load time.
+It is not a general-purpose glTF loader. The external caution texture remains a
+relative local URL. glTF UV V coordinates are flipped on export and restored by
+the flight adapter; repeat wrapping, linear palette, emissive strength and the
+study's previous metallic/roughness settings are retained.
+
+The old 55,633,226-byte JSON (`77b2f46f5193`) is replaced by a 13,480,732-byte
+GLB (`ea765a5c8d84`), 75.8% smaller. Standard gzip reduces the GLB to 2.78 MiB
+versus 4.21 MiB for JSON when the static host enables compression.
+There are still 375,793 triangles and 138 material batches across 21 modules;
+1,127,379 triangle corners share 439,838 complete vertex tuples. All 6,826,722
+expanded position/normal/UV components were compared against the old bake:
+positions/normals match their float32 conversion exactly; maximum UV round-trip
+error is 0.000000114. No geometry was decimated or dimensions changed.
+
+Matched foreground overview samples, both liners shown with static batching,
+five fighters and envelopes enabled, intact planet, default arm pose, canvas
+1939 x 1602, DPR 1.5, ten warm-up frames and five-second samples:
+
+| Export | Frames | Frame median / p95 | Median combined submission | Main draws | Main triangles |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| JSON | 376 | 13.3 / 13.4 ms | 1.4 ms | 189 | 1,023,634 |
+| Indexed GLB | 375 | 13.3 / 13.4 ms | 1.1 ms | 189 | 1,023,634 |
+
+These refresh-limited samples establish preserved scene workload and cadence,
+not a GPU speedup. GPU completion and network transfer time were not measured.
+A separate Node CPU probe (one warm-up, median of seven iterations, bytes already
+in memory) measured 310.0 ms for old JSON parsing versus 44.2 ms for GLB decoding
+including flight batch expansion. This is a preparation microbenchmark, not a
+whole-game timing. Browser overview, tank-rack close-up and articulated refueling
+cycle were inspected; existing arm, palette and mission regressions remain in use.

@@ -1,6 +1,26 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {createFlight}=require('../tools/headless.cjs');
+const armor=createFlight({mission:'evacuation',seed:29}),protectedCombat=armor.snapshot().combat;
+const lethal={damage:1e6,shieldFactor:1,armorFactor:1};
+for(const wingman of protectedCombat.enemies){
+    armor.DW.training.damageCraft(protectedCombat,wingman,lethal,protectedCombat.player);
+    armor.DW.training.damageCraft(protectedCombat,wingman,lethal,protectedCombat.player);
+    assert.equal(wingman.hp,1,'Story wingmen survive repeated lethal hits');
+    assert.equal(wingman.shield,0,'Shields still show real battle damage');
+}
+assert.equal(protectedCombat.wrecks.length,0);
+assert.equal(protectedCombat.playerKills,0);
+assert(!protectedCombat.radioEvents.some(e=>e.kind==='destroyed'));
+const raider=protectedCombat.evacuation.reserve[0];
+armor.DW.training.damageCraft(protectedCombat,raider,lethal,protectedCombat.player);
+assert.equal(raider.hp,0,'Hostiles remain vulnerable');
+armor.DW.training.damagePlayer(protectedCombat,lethal);
+assert(protectedCombat.dead,'Player remains vulnerable');
+const ordinary=createFlight({mission:'furball',seed:29}),ordinaryCombat=ordinary.snapshot().combat;
+const ordinaryWingman=ordinaryCombat.enemies.find(e=>e.team==='ally');
+ordinary.DW.training.damageCraft(ordinaryCombat,ordinaryWingman,lethal,ordinaryCombat.player);
+assert.equal(ordinaryWingman.hp,0,'Other missions retain ordinary wingman damage');
 const f=createFlight({mission:'evacuation',seed:29});
 let c=f.snapshot().combat;
 assert.equal(c.enemies.length,2);

@@ -4,7 +4,7 @@ const source=fs.readFileSync('experiments/evacuation-scenery.js','utf8');
 const context={U:16.666666666666668,paint:{}};
 vm.createContext(context);
 vm.runInContext(source.slice(source.indexOf('    function buildDepot('),source.indexOf('    /** @type {ReturnType<typeof buildDepot>}'))+'\nthis.build=buildDepot;',context);
-const asset=JSON.parse(fs.readFileSync('assets/depots/refueling-v1/depot.json','utf8'));
+const asset = require('./depot-asset.cjs');
 const before=JSON.stringify(asset.materials),batches=context.build(asset);
 const index=asset.batches.findIndex(b=>b.material==='safety-orange');
 assert(index>=0);

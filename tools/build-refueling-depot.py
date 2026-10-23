@@ -1,10 +1,9 @@
 """Offline authoring: blender --background --python tools/build-refueling-depot.py.
 
 Metres, Z up. Evaluated meshes retain named breakup modules and arm pivots.
-The browser consumes the baked JSON, with no Blender/runtime dependency.
+The browser consumes the indexed GLB, with no Blender/runtime dependency.
 """
 import bpy
-import json
 import math
 import runpy
 from pathlib import Path
@@ -256,6 +255,6 @@ data=dict(version=1,units='metres',up='Z',pivots=pivots,
           textures={'caution-paint':'caution-paint.png'},
           sourceParts=[obj.name for obj in parts],tankSlots=32,installedTanks=28,
           materials={name:list(mat.diffuse_color[:3]) for name,mat in materials.items()},batches=list(batches.values()))
-(OUT/'depot.json').write_text(json.dumps(data,separators=(',',':'))+'\n',encoding='utf-8',newline='\n')
+runpy.run_path(str(ROOT/'tools/depot-glb.py'))['write_depot_glb'](data, OUT/'depot.glb')
 print('DEPOT BAKE:',len(parts),'source objects;',sum(len(b['positions'])//9 for b in batches.values()),'triangles;',len(batches),'batches')
 runpy.run_path(str(ROOT/'tools/pose-refueling-depot.py'),init_globals={'depot_loaded':True})

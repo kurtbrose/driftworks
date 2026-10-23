@@ -215,6 +215,7 @@ export type ArtCraft = {
 };
 export type CollisionShape = { kind: 'sphere'; radiusM: number } | { kind: 'model'; modelId: string };
 export type Craft = ArtCraft & {
+    plotArmor?: boolean;
     hangarLaunch?:{remaining:number};
     controller: 'input' | 'ai';
     collision: CollisionShape;
