@@ -86,3 +86,20 @@ louvers are separated solid geometry. Underside renders hide the studio floor,
 boarding platform and scale crew, and add temporary lower softboxes. Those
 inspection lights are removed before saving the editable scene. Re-render the
 three belly views with `-- --refresh-underside` after the builder command.
+
+## Flight mission render copies
+
+`python tools/export-civilian-flight.py` derives `*-flight.bin` and
+`*-flight.json` from the approved GLBs. These retain the authored metre geometry,
+node transforms, normals and all nine material groups, converted back to +Y bow
+and +Z dorsal for the shared flight renderer. The manifest records the source
+SHA-256 and a ray-tested ventral service contact. The originals stay editable.
+The binary contains interleaved position/normal float32 triangles; manifest
+batch offsets are bytes, counts are floats. Runtime positions alone convert to
+scene units once at loading. The flight shader approximates PBR finishes while
+retaining base colors and emissive material classification.
+
+The evacuation cockpit imports the same refueling timeline and arm solver used
+by the depot study. Its dock basis maps the authored bow to flight +Z, with
+vertical clearance/departure and independent retracting arm links. See
+`docs/flight-missions.md` for the first-cycle scope and benchmark control.

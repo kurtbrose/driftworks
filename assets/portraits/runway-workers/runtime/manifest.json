@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "tileSize": 256,
+  "frames": [
+    "neutral",
+    "ah",
+    "oo",
+    "blink",
+    "smile",
+    "angry",
+    "afraid"
+  ],
+  "anchors": [
+    [
+      0.5,
+      0.386,
+      0.58
+    ],
+    [
+      0.5,
+      0.374,
+      0.564
+    ],
+    [
+      0.5,
+      0.383,
+      0.58
+    ],
+    [
+      0.5,
+      0.37,
+      0.553
+    ],
+    [
+      0.5,
+      0.383,
+      0.58
+    ],
+    [
+      0.5,
+      0.38,
+      0.58
+    ]
+  ],
+  "builderSha256": "45272957d9b468ac6a23001e395e6bd4cc9a452bb982f335ca8964571cc5a7be",
+  "sources": {
+    "source/jo-mercer-sheet.png": "4dd0f10be1271b30e0af6b18db9d4fb62584c3612fab74776068ab7fe4c4edba",
+    "source/luis-ortega-sheet.png": "0f302e39d85985d117660947f8f885d0a808512ee17c27eb453f372ba101ac32",
+    "source/asha-menon-sheet.png": "5ff0c86413f2f8c01019e191ea42e8ead9d549af3a87de7b06034c0876a78c15",
+    "source/ben-harlow-sheet.png": "990a15714c65c2e55a2cf5234a39ae4084ebd834919e484c926ad61887dfbdb8",
+    "source/nadiya-bell-sheet.png": "f2c41cd6950e29901620684568ef3f3b032a224cfd9028828292f060889825c6",
+    "source/kenji-sato-sheet.png": "64c72e7f7742ea3fa9fcb9b02d4c5f8214cce3b73d3ffd35c88af935408c9813"
+  },
+  "outputs": {
+    "portrait-0.png": "828ea2b0f5aa661cca300fe3ff765271ad5c667f36e4fba368fb65becb65dabc",
+    "portrait-1.png": "46ab727577445719157c05619ee08995a8cd2034e8529e87d9e975b034c5a801",
+    "portrait-2.png": "65d1a8aeb97fed8e9df8ab4bcda4ec15b16f0ed917596aa1ffe9eb08b1b5adb0",
+    "portrait-3.png": "b2a1c1f58de5085f7f9f275dfe4b8900fc98f0a211322ded98e34ab777c0a572",
+    "portrait-4.png": "115f9081926a0b206850436ea0c03d0db335b80e04754447c47ca1c85aacd78e",
+    "portrait-5.png": "6086c2bd9f31c3dcb0d4893582755991af2c367d02959b3be63bbdbddc8ac394"
+  }
+}

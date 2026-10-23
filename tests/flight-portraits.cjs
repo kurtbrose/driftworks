@@ -9,7 +9,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   const panel={ownerDocument:document,appendChild(value){canvas=value;},classList:{add:name=>classes.add(name),remove:name=>classes.delete(name)}};
   const window={Driftworks:{},matchMedia:()=>({matches:false}),addEventListener:(name,fn)=>{lifecycle[name]=fn;},requestIdleCallback:fn=>{idle.push(fn);}};
   const box={window,document,URL,AbortController,Float32Array,console,performance:{now:()=>now},
-    fetch:(url,options)=>{assert.ok(url.startsWith('http://localhost:8000/assets/portraits/dogfight/runtime/portrait-'));loaded++;requests.push({url,signal:options.signal});const ok=!failNext;failNext=false;const response={ok,status:ok?200:503,blob:()=>Promise.resolve({url})};if(suspendNext){suspendNext=false;return new Promise(resolve=>{resumeFetch=()=>resolve(response);});}return Promise.resolve(response);},
+    fetch:(url,options)=>{assert.ok(/assets\/portraits\/(dogfight|civilian-shuttle|runway-workers)\/runtime\/portrait-/.test(url));loaded++;requests.push({url,signal:options.signal});const ok=!failNext;failNext=false;const response={ok,status:ok?200:503,blob:()=>Promise.resolve({url})};if(suspendNext){suspendNext=false;return new Promise(resolve=>{resumeFetch=()=>resolve(response);});}return Promise.resolve(response);},
     createImageBitmap:blob=>{const bitmap={url:blob.url,width:1792,height:256,closed:false,close(){this.closed=true;}};bitmaps.push(bitmap);return Promise.resolve(bitmap);}
   };
   async function flush(){for(let i=0;i<20;i++)await Promise.resolve();}
@@ -19,6 +19,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   vm.runInContext(fs.readFileSync('src/asset-versions.js','utf8'),box);
   for(const file of ['experiments/mumble.js','experiments/comms-display.js','experiments/face-blend.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-portraits.js'])vm.runInContext(fs.readFileSync(file,'utf8'),box);
   const DW=window.Driftworks,api=DW.flightPortraits;
+  for(let i=0;i<6;i++)assert.equal(api.slot({civilianPortraitIndex:i,portraitIndex:0}),17+i);
+  for(let i=0;i<6;i++)assert.equal(api.slot({runwayPortraitIndex:i,portraitIndex:0}),23+i);
+  for(const value of [-1,6,1.5,NaN,Infinity])assert.equal(api.slot({runwayPortraitIndex:value,portraitIndex:0}),1);
+  for(const value of [-1,6,1.5,NaN,Infinity])assert.equal(api.slot({civilianPortraitIndex:value,portraitIndex:0}),1);
+
   DW.faceBlend.create=(target,frames)=>{
     created++;const bitmap=frames.master.image;assert.deepEqual(Array.from(frames.master.rect),[0,0,256,256]);assert.equal(frames.ah.image,bitmap);assert.equal(frames.eh,frames.ah);
     return {draw:layers=>{assert.ok(!bitmap.closed,'Active rendering cannot use an evicted bitmap');lastLayers=layers;},dispose:()=>{disposed++;}};
@@ -57,6 +62,14 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   assert.ok(!canvas.hidden);assert.equal(canvas['aria-label'],'WING LYNX speaking portrait');
   resumeFetch();await flush();assert.equal(canvas['aria-label'],'WING LYNX speaking portrait');
   lifecycle.pagehide();while(idle.length)idle.shift()();await flush();
+  view.show({...line,civilianPortraitIndex:2});await flush();
+  assert.ok(requests.at(-1).url.includes('civilian-shuttle/runtime/portrait-2.png'));
+  assert.ok(!canvas.hidden);
+  view.show({...line,runwayPortraitIndex:4});await flush();
+  assert.ok(requests.at(-1).url.includes('runway-workers/runtime/portrait-4.png'));
+  assert.ok(!canvas.hidden);
+  view.show({...line,civilianPortraitIndex:4});await flush();
+  assert.ok(requests.at(-1).url.includes('civilian-shuttle/runtime/portrait-4.png'),'Same numbered slots in different pools must never share a bitmap');
   // Failed loads must leave the glyph fallback and be retryable.
   failNext=true;view.show({...line,portraitIndex:4});await flush();assert.ok(canvas.hidden);assert.ok(!classes.has('has-portrait'));
   const failedLoads=loaded;view.show({...line,portraitIndex:4});await flush();assert.equal(loaded,failedLoads+1);assert.ok(!canvas.hidden);

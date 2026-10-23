@@ -300,6 +300,7 @@
             e.collision = { kind: 'model', modelId: DW.shipPackModels.craftModel(e, selection, t.wave).id };
         });
         if(t.hangarSupport)t.enemies=t.enemies.filter(function(e){return e.team!=='ally';}).concat(retainedAllies);
+        if(t.mode==='evacuation')DW.evacuationMission.start(t,player);
         var target = t.enemies.find(function (e) {
             return e.team !== 'ally';
         });
@@ -639,7 +640,7 @@
         });
         replenish(t,player,radius);
         var living = alive(t);
-        if (!t.dead && t.mode !== 'asteroid-patrol' && (!living.length || t.roundOver)) {
+        if (!t.dead && t.mode !== 'asteroid-patrol' && t.mode !== 'evacuation' && (!living.length || t.roundOver)) {
             t.countdown -= dt;
             if (t.countdown <= 0) {
                 spawn(t, player, radius);
@@ -724,7 +725,7 @@
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)
             t.countdown = 5;
-        if (!mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
+        if (t.mode!=='evacuation' && !mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
             return e.team === 'ally';
         })) || !nowAlive.some(function (e) {
             return e.team === 'enemy';

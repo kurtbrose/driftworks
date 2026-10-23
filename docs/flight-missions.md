@@ -1,5 +1,47 @@
 # Flight mission definitions, version 1
 
+## Evacuation cockpit dry run
+
+Open `experiments/flight.html?mission=evacuation` from the static server (also
+linked on the home page). This first playable pass implements only Cycle A of
+the October 21 working draft: Five departing, Six already refueling, the safed
+charges exchange, four raiders, Station Four's diversion, and Six's departure.
+The planet stays intact. The bomber encounter and later cycles are not authored.
+
+`evacuation-mission.js` owns transient `combat.evacuation` state. The radio
+scheduler advances one authored line only when the channel is available; combat
+does not use the opening-dialogue weapons gate. Two NPC fighters plus the player
+form the whole patrol. Four reserved hostiles enter after the weapons-free call;
+generic furball wave resets are disabled. Fuel-complete dialogue requires the
+two-minute minimum fueling interval and five seconds clear of living hostiles.
+The diversion has its own pause before departure clearance. Pausing freezes both
+story and flight, and restarting creates a fresh cycle. The same controller runs
+through `tools/headless.cjs`; `tests/evacuation-mission.cjs` covers its gates.
+
+`evacuation-scenery.js` uses the approved commuter and double-decker geometry,
+preserving their metre scale. It directly imports the existing
+`refueling-cycle.js` and `depot-arm.js`: Five starts in vertical departure, Six
+starts in the connected hold, and clearance releases disconnect, vertical
+clearance and departure. These remain visual transports, with no weapons,
+damage, collision, passenger simulation or fuel-resource accounting in this pass.
+The three-fighter combat and mission dialogue are real; depot defense damage and
+runner-specific AI remain future mission systems. Shuttle Five uses Captain Daniel Okafor and Shuttle Six uses Captain Elena Park
+from the civilian shuttle roster, including their suggested voice slots. Every
+transmission from each shuttle retains that civilian portrait; fighters and
+Defense Control keeps its existing cast. Depot Control uses Deck Supervisor
+Jo Mercer from the runway-worker roster for every transmission, with the
+functional facility identifier retained on the radio.
+
+Run `python tools/export-civilian-flight.py` after editing the approved GLBs to
+regenerate material-grouped binary geometry and ventral contact metadata. The
+static flight renderer uses immutable local buffers and GPU poses. It preserves
+geometry, vertex normals and base material colors; the shared flight shader
+approximates GLB PBR finishes. The depot's UV paint and independent arm links are
+retained. Its Blender palette is linear RGB and converts to display sRGB once
+when creating study batches, preserving the authored safety-orange bands. The lab's **Benchmark depot / transports on / off** button performs a
+frozen-camera ABBA comparison, with 20 warm-up and 90 recorded frames per block.
+Its CPU submission/frame median and p95 exclude GPU completion timing.
+
 The flight lab loads `experiments/flight-missions.js` before its consumers, then
 loads ordinary local scripts that register definitions. Ohio is defined in
 `experiments/mission-ohio.js`. No fetch, build step, engine copy or external

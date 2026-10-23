@@ -7,7 +7,11 @@
   var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */ (window.Driftworks);
   var cast=[1,0,3,2,4,5,6,7,8,9,10,11,12,13,14,15]; // Same adult masculine/feminine ordering as pilotVoice.
   /** @param {Line} line */
-  function slot(line){return typeof line.portraitIndex==='number'&&Number.isFinite(line.portraitIndex)&&line.portraitIndex>=0?cast[Math.floor(line.portraitIndex)%cast.length]:16;}
+  function slot(line){
+    if(typeof line.runwayPortraitIndex==='number'&&Number.isInteger(line.runwayPortraitIndex)&&line.runwayPortraitIndex>=0&&line.runwayPortraitIndex<6)return 23+line.runwayPortraitIndex;
+    if(typeof line.civilianPortraitIndex==='number'&&Number.isInteger(line.civilianPortraitIndex)&&line.civilianPortraitIndex>=0&&line.civilianPortraitIndex<6)return 17+line.civilianPortraitIndex;
+    return typeof line.portraitIndex==='number'&&Number.isFinite(line.portraitIndex)&&line.portraitIndex>=0?cast[Math.floor(line.portraitIndex)%cast.length]:16;
+  }
   /** @param {Feeling | undefined} feeling */
   function expression(feeling){
     if(!feeling)return 'neutral';
@@ -40,7 +44,8 @@
       var cached=cache.get(index);
       if(cached){cache.delete(index);cache.set(index,cached);return cached.promise;}
       /** @type {Entry} */ var entry={controller:new AbortController(),bitmap:null,promise:Promise.resolve({})};
-      entry.promise=fetch(assetUrl(portraitRoot+'portrait-'+index+'.png'),{signal:entry.controller.signal}).then(function(response){
+      var url=index>=23?'../assets/portraits/runway-workers/runtime/portrait-'+(index-23)+'.png':index>=17?'../assets/portraits/civilian-shuttle/runtime/portrait-'+(index-17)+'.png':portraitRoot+'portrait-'+index+'.png';
+      entry.promise=fetch(assetUrl(url),{signal:entry.controller.signal}).then(function(response){
         if(!response.ok)throw new Error('Portrait request failed: '+response.status);
         return response.blob();
       }).then(function(blob){return createImageBitmap(blob);}).then(function(bitmap){

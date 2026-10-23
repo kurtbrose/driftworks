@@ -33,7 +33,9 @@ vertical cage rods or upper light stalks. Rack lights mount directly to the
 outer structural corners, including the corners beside empty bays.
 Visible splice plates and paired bolts articulate the repeatable truss sections.
 Service hub C (`hub-112`) is inactive: its windows and fitted navigation fixtures
-have dark, non-emissive materials and a closed isolation valve. Its arm stays
+have dark, non-emissive materials. Its shell retains the same white paint as
+the active hubs; there is no special gray treatment, caution collar or isolation
+valve marker. Its arm stays
 folded at a 24 m reach and -8 m wrist height while the
 other two arms respond to the study controls. The Blender source uses the same
 parked pose. This is authored visual state, not a fuel or mission simulation.

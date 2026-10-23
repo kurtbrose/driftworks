@@ -1518,6 +1518,24 @@ Study panel configuration accepts `zoomToTerrain` (default true). The fighter st
 
 ### Radio portraits and shared channel noise
 
+Civilian passenger crews are catalogued in `assets/portraits/civilian-shuttle/roster.json`
+under `civilian-shuttle-pilot`, with stable character IDs, ages, ranks, suggested
+voice slots and six `civilianPortraitIndex` values. A radio `Line` may set that
+index (integer 0–5) to use the corresponding civilian atlas regardless of the
+mission wardrobe or combat `portraitIndex`. Invalid values retain normal cast
+selection. Civilian atlases share the seven calibrated 256px poses, speech clock,
+face masks, cancellation rules and bounded bitmap cache. The roster does not
+change persistent world state or automatically recast existing missions.
+`experiments/civilian-cast.html` previews all six with Mumble audio and moods.
+
+Spaceport ground crew use `assets/portraits/runway-workers/roster.json`, category
+`runway-worker`, and `Line.runwayPortraitIndex` (integer 0–5). This selects the
+worker atlas before a civilian pilot or ordinary mission portrait. Set one NPC
+pool index per line; invalid values fall back to the next normal selection.
+The six industrial pressure-suit portraits use the same masks, seven poses,
+speech clock and bounded cache. The shared cast preview switches to this pool
+with `?category=runway-workers`; existing civilian pilot URLs retain their cast.
+
 Both flight simulators and the comms lab load `mumble.js`, `comms-display.js`, and `face-blend.js` before their portrait/radio controllers. `mumble.radioNoise` creates a channel-noise plan independently of either output; audio transmission and display sampling receive the same object and the same playback clock. Local audio bypasses radio processing. Flight uses effects 0.45 and edgeScale 2.5 (0.4 s opening / 0.6 s closing); original radio timing remains available in the lab. Pilot identity, mood and speech cues remain in their existing owners.
 
 `commsDisplay.create(canvas)` owns one 256 px treatment buffer. Its `draw` accepts the animated source canvas, shared noise plan, elapsed playback seconds, speech duration and optional palette/scanline/reduced-motion settings. It preserves the lab treatment: green phosphor by default, scanlines, fresh random strip/snow geometry and a visual peak hold of 250 ms at channel edges or 40 ms during speech. It never generates independent noise-event timings. Callers own scheduling and channel cutoff.

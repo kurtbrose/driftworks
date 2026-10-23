@@ -124,7 +124,7 @@
         /** @param {string} mode */
         function applyGeology(mode) {
             var mission=DW.flightMissions.resolve(mode);
-            world.asteroids=mission.emptySpace?[]:[asteroid];world.ships=mission.emptySpace?[]:[mothership];
+            world.asteroids=mission.emptySpace||mode==='evacuation'?[]:[asteroid];world.ships=mission.emptySpace||mode==='evacuation'?[]:[mothership];
             DW.scene3d.setStudyParameters(asteroid, {bulk: mission.asteroidBulk});
         }
         /** @param {string} mode @param {boolean} enabled */
@@ -191,7 +191,7 @@
                     if (marks.length > 96) marks.shift();
                 };
                 updateLaunchOrigin();
-                var emptySpace=DW.flightMissions.resolve(combat.mode).emptySpace;
+                var emptySpace=DW.flightMissions.resolve(combat.mode).emptySpace||combat.mode==='evacuation';
                 var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, emptySpace?undefined:environment.terrainHit);
                 if (feedback.fired)
                     environment.onGunshot();

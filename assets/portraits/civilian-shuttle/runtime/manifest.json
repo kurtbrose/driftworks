@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "tileSize": 256,
+  "frames": [
+    "neutral",
+    "ah",
+    "oo",
+    "blink",
+    "smile",
+    "angry",
+    "afraid"
+  ],
+  "anchors": [
+    [
+      0.5,
+      0.381,
+      0.58
+    ],
+    [
+      0.49,
+      0.35,
+      0.542
+    ],
+    [
+      0.507,
+      0.415,
+      0.632
+    ],
+    [
+      0.5,
+      0.377,
+      0.58
+    ],
+    [
+      0.5,
+      0.413,
+      0.609
+    ],
+    [
+      0.49,
+      0.374,
+      0.564
+    ]
+  ],
+  "builderSha256": "45272957d9b468ac6a23001e395e6bd4cc9a452bb982f335ca8964571cc5a7be",
+  "sources": {
+    "source/mara-vale-sheet.png": "81df4a1ef2cc410a4913a3112592819ee56e82b10ec047e4b597019d8285c927",
+    "source/daniel-okafor-sheet.png": "3d03e47b8014d3063678d7fbf0d35c6a7d440d5d619f12db445b16e61270bfc2",
+    "source/elena-park-sheet.png": "53de7fb19d75a5c94ffef6304ee37ffc1b09520d700bf5d6053f68cefcc9cb64",
+    "source/samir-haddad-sheet.png": "733ad9e9a96d684ad59f00bc6b497c13a202253d82222fb645da7109a30b0c3d",
+    "source/ines-duarte-sheet.png": "35e3dd4ca0be2627ca2fc297b4b16f3eadbbec4f8ca5120bb6d69f62a3b3dfd7",
+    "source/thomas-reed-sheet.png": "8e9367b29c95f8639ad431d62795412c4bbbc19e342385ad8af6594fd8538940"
+  },
+  "outputs": {
+    "portrait-0.png": "6d91a9089d6a633a34f6c4e123302eda46458d63ae7aa32abdfb6f3d2419a7c4",
+    "portrait-1.png": "268fb00558211fad0b58ae4969af154f932ba00e13d18bf0158b97bd3819f134",
+    "portrait-2.png": "59554d387dc86ac90ed51f6382a91a6586146752ccc971d356dc46f990fff705",
+    "portrait-3.png": "761cfc168f88698ddd07cf3e71be96878c42bd9052d80403de6c2299291176a8",
+    "portrait-4.png": "aa8edb8ac4af7db4a8768ad0651ad62f59e23a9e7b1cf808871bb781425ae26b",
+    "portrait-5.png": "eb14f91b10408341bfb27994c0e3c43a71a7cd3b42db07d1a7bfaf2b6a7517e5"
+  }
+}

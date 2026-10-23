@@ -1,0 +1,45 @@
+{
+  "mode": "built-in image_gen",
+  "reference": "../civilian-shuttle/source/mara-vale-sheet.png (style and layout only)",
+  "sharedPrompt": "Use case: stylized-concept. Asset type: game radio animation expression sprite sheet for Driftworks. Reference attached ONLY for pixel-art style and sheet layout; CREATE A DIFFERENT PERSON described below, not the reference woman. ONE distinct civilian SPACEPORT GROUND WORKER repeated in all eight cells, service-aircraft / airport ramp and carrier flight-deck crew visual language. Practical bulky scuffed spacesuit with fluorescent high-visibility vest/panels and silver reflective bands; industrial pressure helmet, completely CLEAR unobstructed face opening, slim comms mic outside cheek. Helmet rim stays outside face; neck seal below chin; NO face mask, tinted visor, face reflections, weapons, armor or pilot epaulettes. Detailed hand-pixelled 1990s space simulator art, crisp intentional pixel clusters, grounded everyday worker. Near-black navy background. Wide 2:1 image: exactly FOUR columns TWO rows EIGHT equal SQUARE cells, edge to edge, no gutters/borders/text. Identical fixed frontal head-and-shoulders composition across every cell; no head tilting. Position eyes at 44% of cell height, mouth center at 61%, face center at 48% width. Row 1: neutral closed mouth, speech open AH mouth showing teeth and tongue, speech pursed round OO mouth, blink BOTH EYES FULLY CLOSED with neutral closed mouth. Row 2: relieved subtle closed-mouth smile, frustrated furrowed brows closed mouth, worried raised inner brows closed mouth, repeat neutral. Only facial features change; preserve helmet, suit, face position and identity exactly across cells. Subject: ",
+  "subjects": [
+    {
+      "id": "jo-mercer",
+      "subject": "White woman, 52, broad weathered face, short steel-gray hair visible inside helmet. Fluorescent yellow-green high visibility vest panels and wide silver reflective bands over charcoal pressure suit, yellow safety helmet shell."
+    },
+    {
+      "id": "luis-ortega",
+      "subject": "Latino man, 44, warm brown skin, black mustache, compact face. Orange pressure suit with fluorescent yellow shoulder panels, reflective silver harness bands, white work helmet shell."
+    },
+    {
+      "id": "asha-menon",
+      "subject": "South Asian woman, 35, medium brown skin, dark hair tucked into helmet liner, strong brows. Charcoal EVA work suit with neon lime chest vest, orange reinforced shoulders, white safety helmet shell."
+    },
+    {
+      "id": "ben-harlow",
+      "subject": "White man, 59, weathered lined face, gray stubble, heavy brows. Worn navy-gray pressure suit, fluorescent orange safety tabard, silver reflective stripes, scuffed orange industrial helmet shell."
+    },
+    {
+      "id": "nadiya-bell",
+      "subject": "Black woman, 31, deep brown skin, round face, short natural hair tucked under helmet liner. Orange EVA coverall with lime high visibility safety panels, reflective silver webbing, white industrial helmet shell."
+    },
+    {
+      "id": "kenji-sato",
+      "subject": "East Asian man, 47, tan skin, slightly graying short hair, clean shaven, square face. Fluorescent yellow-green pressure suit chest over dark gray undersuit, silver reflective bands, dark yellow safety helmet shell."
+    }
+  ],
+  "ageRevisions": [
+    {
+      "id": "jo-mercer",
+      "prompt": "Edit target: attached eight-cell worker expression sprite sheet. AGE REVISION ONLY: Jo is 28 years old, a young adult woman with short dark auburn hair. Remove ALL gray hair, crow feet, forehead wrinkles and age spots. Smooth youthful adult skin, energetic alert eyes, full youthful cheeks; clearly late 20s. Keep her an ordinary capable deck supervisor, no glamour styling. Preserve same person overall, skin tone, gender, suit colors, every helmet and high-vis suit detail, background, lighting, pixel-art style, sheet dimensions, exact 4 columns by 2 rows layout, identical pose/framing and facial landmarks in every cell. All eight cells must show the revised YOUNGER identity consistently. Keep row1 neutral closed mouth, open AH mouth, round OO mouth, blink both eyes closed; row2 relieved closed-mouth smile, frustrated brow closed mouth, worried brows closed mouth, neutral. Face must stay at exactly same size and eye/nose/mouth positions as reference for animation registration. No text, no new equipment, no changes to helmet or clothes."
+    },
+    {
+      "id": "nadiya-bell",
+      "prompt": "Edit target: attached eight-cell worker expression sprite sheet. AGE REVISION ONLY: Nadiya is 21 years old, a young Black adult woman, youthful deep-brown skin, fresh round youthful adult face, bright eyes, no wrinkles or age lines. Clearly early 20s, ordinary hardworking cargo crew. Preserve same person overall, skin tone, gender, suit colors, every helmet and high-vis suit detail, background, lighting, pixel-art style, sheet dimensions, exact 4 columns by 2 rows layout, identical pose/framing and facial landmarks in every cell. All eight cells must show the revised YOUNGER identity consistently. Keep row1 neutral closed mouth, open AH mouth, round OO mouth, blink both eyes closed; row2 relieved closed-mouth smile, frustrated brow closed mouth, worried brows closed mouth, neutral. Face must stay at exactly same size and eye/nose/mouth positions as reference for animation registration. No text, no new equipment, no changes to helmet or clothes."
+    },
+    {
+      "id": "luis-ortega",
+      "prompt": "Edit target: attached 4x2 eight-cell spaceport marshaller sprite sheet. AGE REVISION ONLY: Luis is a YOUNG ADULT MAN aged 24. Keep Latino identity and medium brown skin, short black hair, retain a shorter tidy dark mustache. Make him clearly early twenties: smooth youthful skin, youthful full cheeks, youthful adult jaw, bright alert eyes, NO wrinkles, no forehead lines, no age spots, no gray hair. Preserve exact helmet, mic, high visibility orange suit, reflective straps, lighting, pixel art, background, dimensions, head position, scale and facial landmark locations in all cells. Same ONE youthful man across every cell. Keep exact 4 columns 2 rows layout: row1 neutral closed mouth, open AH with teeth/tongue, round OO, both eyes fully closed blink; row2 relieved closed smile, frustrated brows closed mouth, worried brows closed mouth, neutral. No text; no changes to any helmet or clothing pixels."
+    }
+  ]
+}

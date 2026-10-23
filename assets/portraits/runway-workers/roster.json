@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "runway-worker",
+      "label": "Runway workers",
+      "description": "Spaceport ground and flight-deck crews in high-vis pressure suits."
+    }
+  ],
+  "characters": [
+    {
+      "id": "jo-mercer",
+      "name": "Jo Mercer",
+      "age": 28,
+      "rank": "Deck Supervisor",
+      "category": "runway-worker",
+      "runwayPortraitIndex": 0,
+      "voiceIndex": 1,
+      "personality": "Direct and watchful; coordinates the deck and makes sure every worker is accounted for."
+    },
+    {
+      "id": "luis-ortega",
+      "name": "Luis Ortega",
+      "age": 24,
+      "rank": "Marshaller",
+      "category": "runway-worker",
+      "runwayPortraitIndex": 1,
+      "voiceIndex": 0,
+      "personality": "Patient with arriving pilots; gives crisp directions and never rushes an approach."
+    },
+    {
+      "id": "asha-menon",
+      "name": "Asha Menon",
+      "age": 35,
+      "rank": "Fuel Technician",
+      "category": "runway-worker",
+      "runwayPortraitIndex": 2,
+      "voiceIndex": 3,
+      "personality": "Methodical and dryly funny; gives exact fuel totals and double-checks every coupling."
+    },
+    {
+      "id": "ben-harlow",
+      "name": "Ben Harlow",
+      "age": 59,
+      "rank": "Maintenance Lead",
+      "category": "runway-worker",
+      "runwayPortraitIndex": 3,
+      "voiceIndex": 2,
+      "personality": "Seasoned mechanic; describes faults plainly and usually has a practical fix ready."
+    },
+    {
+      "id": "nadiya-bell",
+      "name": "Nadiya Bell",
+      "age": 21,
+      "rank": "Cargo Handler",
+      "category": "runway-worker",
+      "runwayPortraitIndex": 4,
+      "voiceIndex": 5,
+      "personality": "Energetic and observant; keeps cargo moving while checking restraints and clearances."
+    },
+    {
+      "id": "kenji-sato",
+      "name": "Kenji Sato",
+      "age": 47,
+      "rank": "Launch Technician",
+      "category": "runway-worker",
+      "runwayPortraitIndex": 5,
+      "voiceIndex": 4,
+      "personality": "Quiet and precise; reports launch equipment status and catches small problems early."
+    }
+  ]
+}

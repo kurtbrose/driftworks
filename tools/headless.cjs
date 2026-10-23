@@ -18,7 +18,7 @@ const files = [
   'assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js',
   'assets/ships/ohio-vehicles/meshes.js', 'experiments/ship-packs.js',
   'experiments/mumble.js', 'experiments/flight-dialogue.js',
-  'experiments/flight-comms.js', 'experiments/flight-session.js',
+  'experiments/evacuation-mission.js', 'experiments/flight-comms.js', 'experiments/flight-session.js',
   'experiments/flight-ai.js', 'experiments/flight-duel.js', 'experiments/flight-study.js'
 ];
 

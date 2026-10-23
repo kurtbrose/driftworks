@@ -269,7 +269,9 @@ export type RadioEvent = {
     time: number;
     wave: number;
 };
+export type EvacuationState = {scene:number;line:number;wait:number;elapsed:number;quiet:number;departure:number;complete:boolean;reserve:Craft[];origin:[number,number,number]};
 export type Combat = {
+    evacuation?:EvacuationState;
     rosterNext?:{ally:number;enemy:number};
     replacementSerial?:number;
     reinforcementOrigin?:Vector;
@@ -618,6 +620,8 @@ export type CommsState = {
     } | null;
 };
 export type Line = {
+    runwayPortraitIndex?: number;
+    civilianPortraitIndex?: number;
     portraitIndex?: number;
     text: string;
     speaker: string;
@@ -636,6 +640,8 @@ export type Line = {
 };
 export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines?: number; reduced?: boolean};
 export type ExperimentModules = {
+    evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};
+    evacuationScenery:{geometry:(combat:Combat)=>Batch[];status:()=>string;visible:boolean};
     gasGiantWeather:typeof import('./gas-giant-weather');
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};

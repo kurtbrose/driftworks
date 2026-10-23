@@ -294,6 +294,7 @@
     /** @param {CommsState} state @param {number} dt @param {Combat} combat @param {boolean} busy @param {(() => number)} [random] @param {FlightState} [player] @returns {Line | null} */
     function step(state, dt, combat, busy, random, player) {
         var mission=DW.flightMissions.resolve(combat.mode);
+        if(combat.mode==='evacuation')return DW.evacuationMission.step(combat,Math.max(0,dt),busy);
         dt = Math.max(0, dt);
         state.time += dt;
         if (combat.enabled && mission.opening.length && combat.openingStep < mission.opening.length+1) {

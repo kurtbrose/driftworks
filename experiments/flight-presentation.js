@@ -293,6 +293,7 @@
                 }
             }
             if(capital)actorBatches=actorBatches.concat(capital.geometry());
+            if(combat.mode==='evacuation'&&DW.evacuationScenery)actorBatches=actorBatches.concat(DW.evacuationScenery.geometry(combat));
             scene.setStudyActors(actorBatches.concat(crews.map(function (batch) {
                 var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });
                 return Object.assign({}, batch, {origin: /** @type {[number,number,number]} */ ([asteroid ? asteroid.position.x : 0, asteroid ? asteroid.position.y : 0, 0]), rotation: asteroid ? asteroid.rotation : 0});

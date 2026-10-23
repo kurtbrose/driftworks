@@ -51,10 +51,9 @@ parts = []
 pivots = {}
 def finish(obj, name, material, bevel=0):
     if module.startswith('arm-112-') and material.endswith('-light'):material='dark'
-    # One service module has been isolated and mothballed; fixtures remain fitted.
+    # Inactive fixtures stay fitted; the shell keeps the same paint as active hubs.
     if module=='hub-112':
         if material=='lamp' or material.endswith('-light'):material='dark'
-        elif material=='shell':material='wear'
     obj.name = module + '/' + name
     obj.data.materials.append(materials[material])
     if bevel:
@@ -162,7 +161,7 @@ for x in [-112,0,112]:
     cylinder('pressure-core',(x,0,0),8,37)
     cylinder('control-deck',(x,0,17),11,8)
     for z in [-20,-12,12,22]:
-        cylinder('collar',(x,0,z),10,1.2,'caution-paint' if z==-12 else 'frame')
+        cylinder('collar',(x,0,z),10,1.2,'caution-paint' if z==-12 and x!=112 else 'frame')
         ring('safety-stripe',(x,0,z+.8),10,.24)
     for i in range(12):
         a=i*math.tau/12
@@ -172,9 +171,6 @@ for x in [-112,0,112]:
     # Low protected fixtures at the roof edge, rather than decorative masts.
     light('port', (x-8,-6,23),'red-light')
     light('starboard', (x+8,6,23),'green-light')
-    if x==112:
-        box('isolation-valve',(x,9,-6),(3,2,3),'safety-orange')
-        box('locked-valve-handle',(x,10.2,-6),(4,.3,.5),'dark')
 
 module='spine'
 for i in range(28):

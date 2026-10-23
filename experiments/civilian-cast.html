@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Civilian shuttle pilots · Driftworks</title>
+<style>
+body{background:#0b1115;color:#d7e4e9;font:16px/1.5 system-ui;margin:24px}a{color:#a7d9dc}main{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1100px}figure{margin:0;background:#14212b;padding:12px}canvas{width:100%;aspect-ratio:1;image-rendering:pixelated}h2{font-size:19px;margin:8px 0}p{max-width:900px}button,select,input{font:inherit;padding:8px}label{display:inline-block;margin:0 16px 16px 0}input{width:min(90vw,600px)}small{color:#a7bbc6}#status{min-height:24px}
+@media(max-width:900px){main{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){main{grid-template-columns:1fr}}
+</style>
+<h1>Flight cast</h1>
+<nav><a href="flight-cast.html">Military pilots & Control</a> / <a href="flight-cast.html?mission=ohio">Ohio winter cast</a> / <a href="civilian-cast.html">Civilian shuttle pilots</a> / <a href="civilian-cast.html?category=runway-workers">Runway workers</a></nav>
+<p id="description">Experienced passenger crews in airline uniforms. Six reusable mission characters, ages 36–62. Mouths follow the same Mumble syllable plan used by radio voices; blinking and expressions remain active between calls.</p>
+<label>Expression <select id="mood"><option value="neutral">Neutral</option><option value="smile">Relieved</option><option value="angry">Frustrated</option><option value="afraid">Worried</option></select></label>
+<label>Test transmission <input id="line" value="Shuttle control, all passengers are aboard. We are ready for departure."></label>
+<p id="status" role="status">Loading civilian shuttle pilots…</p><main></main>
+<script src="../src/asset-versions.js?v=5faf1acb8209"></script>
+<script src="mumble.js?v=34f6fe78ba45"></script><script src="face-blend.js?v=d6a04d3381d7"></script>
+<script>
+(async function(){
+const DW=window.Driftworks,views=[];let audio=null,speech=null,active=null,closed=false;
+const workers=new URLSearchParams(location.search).get('category')==='runway-workers';
+const pool=workers?'runway-workers':'civilian-shuttle',field=workers?'runwayPortraitIndex':'civilianPortraitIndex',label=workers?'runway workers':'civilian shuttle pilots';
+document.title=(workers?'Runway workers':'Civilian shuttle pilots')+' · Driftworks';
+if(workers){document.querySelector('#description').textContent='Spaceport ground crews in high-vis pressure suits: marshalling, fueling, cargo, maintenance and launch support. Mouths follow the same Mumble syllable plan used by radio voices, with blinking and emotional expressions.';document.querySelector('#line').value='Flight deck, servicing is complete. All equipment is clear. You are ready for departure.';}
+const ready='Ready · six animated '+label;
+document.querySelector('#status').textContent='Loading '+label+'…';
+const roster=await (await fetch(DW.assetUrl('../assets/portraits/'+pool+'/roster.json'))).json();
+const moods=document.querySelector('#mood'),status=document.querySelector('#status');
+for(const person of roster.characters){
+ const figure=document.createElement('figure'),canvas=document.createElement('canvas'),caption=document.createElement('figcaption'),title=document.createElement('h2'),details=document.createElement('small'),bio=document.createElement('p'),button=document.createElement('button');
+ title.textContent=workers?person.name:person.rank+' '+person.name;details.textContent=person.age+' · '+(workers?person.rank:'Civilian shuttle pilot');bio.textContent=person.personality;button.textContent='Hear transmission';caption.append(title,details,bio,button);figure.append(canvas,caption);document.querySelector('main').append(figure);
+ const response=await fetch(DW.assetUrl('../assets/portraits/'+pool+'/runtime/portrait-'+person[field]+'.png'));
+ if(!response.ok)throw new Error('Portrait unavailable: '+person.id);
+ const bitmap=await createImageBitmap(await response.blob()),frames={};
+ ['master','ah','oo','blink','smile','angry','afraid'].forEach((name,i)=>{frames[name]={image:bitmap,rect:[i*256,0,256,256]};});frames.eh=frames.ah;
+ const view={person,bitmap,renderer:DW.faceBlend.create(canvas,frames),plan:null,started:0};views.push(view);
+ button.onclick=async()=>{
+  if(speech){speech.onended=null;speech.stop();speech.disconnect();speech=null;}active=null;
+  audio=audio||new AudioContext();await audio.resume();if(closed)return;
+  const settings={...DW.mumble.defaults,seed:104+person.voiceIndex,pitch:person.voiceIndex%2?155:105,volume:.45};
+  view.plan=DW.mumble.analyze(document.querySelector('#line').value,settings);
+  const pcm=DW.mumble.render(view.plan,22050),buffer=audio.createBuffer(1,pcm.length,22050);buffer.copyToChannel(pcm,0);
+  speech=audio.createBufferSource();speech.buffer=buffer;speech.connect(audio.destination);view.started=audio.currentTime+.04;active=view;
+  speech.onended=()=>{active=null;speech.disconnect();speech=null;status.textContent=ready;};speech.start(view.started);status.textContent=person.name+' transmitting';
+ };
+}
+status.textContent=ready;
+function draw(){if(closed)return;const now=performance.now()/1000;
+ for(const view of views){const layers=[];if(moods.value!=='neutral')layers.push({image:moods.value,shape:DW.faceBlend.presets.face,alpha:1});
+  if(active===view&&audio){const cue=DW.faceBlend.speechCue(view.plan,audio.currentTime-view.started);if(cue&&cue.alpha>0)layers.push({image:cue.image,shape:[48,61,13,8,20],alpha:1});}
+  if((now+view.person[field]*.53)%3.9<.14)layers.push({image:'blink',shape:[38.5,44.6,7.4,4.3,25],alpha:1},{image:'blink',shape:[56.5,44.6,7.4,4.3,25],alpha:1});view.renderer.draw(layers);
+ }requestAnimationFrame(draw);
+}draw();window.addEventListener('pagehide',()=>{closed=true;if(speech){speech.onended=null;speech.stop();speech.disconnect();}if(audio)audio.close();for(const view of views){view.renderer.dispose();view.bitmap.close();}},{once:true});
+})().catch(error=>{document.querySelector('#status').textContent='Cast could not load: '+error.message;});
+</script></html>

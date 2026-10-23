@@ -1,0 +1,31 @@
+{
+  "mode": "built-in image_gen",
+  "base": "Use case: stylized-concept. Asset type: finished square game radio portrait for Driftworks. ONE person only, frontal head and shoulders centered, entire top of head visible. Detailed hand-pixelled 1990s space simulator portrait, crisp deliberate pixel clusters, limited colors, no smooth painting or photorealism. Near-black navy plain backdrop. Eyes at 44% height, closed relaxed mouth at 61% height. Civilian space airline shuttle pilot, experienced everyday passenger transport professional. Navy airline uniform jacket, white collared shirt, dark tie, gold shoulder epaulettes and small abstract gold wings, practical slim radio headset with microphone beside cheek, no helmet or armor. Neutral calm expression, eyes looking forward. Restrained warm lighting. No text, labels, logos, borders, panels. Subject: ",
+  "subjects": [
+    [
+      "mara-vale",
+      "Captain Mara Vale, woman aged 58, warm brown skin, short silver curls, steady kind eyes"
+    ],
+    [
+      "daniel-okafor",
+      "Captain Daniel Okafor, Black man aged 62, close gray hair, neatly trimmed gray mustache, broad face"
+    ],
+    [
+      "elena-park",
+      "Captain Elena Park, East Asian woman aged 46, straight dark bob with a few silver strands, composed expression"
+    ],
+    [
+      "samir-haddad",
+      "First Officer Samir Haddad, Middle Eastern man aged 39, olive skin, short dark hair, neatly trimmed beard"
+    ],
+    [
+      "ines-duarte",
+      "Captain Ines Duarte, Latina woman aged 53, tan skin, dark hair in a practical bun with gray at temples, softly lined face"
+    ],
+    [
+      "thomas-reed",
+      "First Officer Thomas Reed, white man aged 36, sandy hair with receding temples, clean shaven, sturdy ordinary face"
+    ]
+  ],
+  "expressionSheet": "Edit target: attached civilian airline pilot portrait. Create an animation expression SPRITE SHEET of this EXACT SAME PERSON, preserving identity, age, face, hair, headset, uniform, lighting, pixel art style. Output wide 2:1 image, exact FOUR columns TWO rows of EIGHT equal SQUARE cells, edge to edge, no gutters, no borders, no text. Every cell has identical frontal head/shoulders framing, identical head scale, fixed eye/nose/mouth positions, dark navy background. Eyes centered at 44% cell height; mouth center 61%; face centered at 48% width, eyes at 38.5% and 56.5%. Row 1 left to right: neutral closed mouth; speech open AH mouth with teeth/tongue; speech pursed round OO mouth; blink BOTH EYES CLOSED and closed neutral mouth. Row 2: relieved subtle smile closed mouth; frustrated furrowed brows closed mouth; worried raised inner brows closed mouth; repeat neutral. Only facial features change. Keep all hair, jacket, shoulders, head pose pixel aligned across frames. The open mouths must be visibly distinct, blink eyes fully closed. Exactly ONE repeated person throughout."
+}

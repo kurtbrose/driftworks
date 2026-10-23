@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "categories": [{"id": "civilian-shuttle-pilot", "label": "Civilian shuttle pilots", "description": "Uniformed passenger transport crews: experienced space airline professionals."}],
+  "characters": [
+    {"id":"mara-vale","name":"Mara Vale","age":58,"rank":"Captain","category":"civilian-shuttle-pilot","civilianPortraitIndex":0,"voiceIndex":1,"personality":"Patient and reassuring; explains the next step before anyone has to ask."},
+    {"id":"daniel-okafor","name":"Daniel Okafor","age":62,"rank":"Captain","category":"civilian-shuttle-pilot","civilianPortraitIndex":1,"voiceIndex":0,"personality":"Unhurried veteran with dry humor; precise about passenger counts and fuel reserves."},
+    {"id":"elena-park","name":"Elena Park","age":46,"rank":"Captain","category":"civilian-shuttle-pilot","civilianPortraitIndex":2,"voiceIndex":3,"personality":"Clear, economical radio calls; meticulous with checklists and approach clearances."},
+    {"id":"samir-haddad","name":"Samir Haddad","age":39,"rank":"First Officer","category":"civilian-shuttle-pilot","civilianPortraitIndex":3,"voiceIndex":2,"personality":"Friendly and resourceful; volunteers useful observations while keeping the cabin calm."},
+    {"id":"ines-duarte","name":"Ines Duarte","age":53,"rank":"Captain","category":"civilian-shuttle-pilot","civilianPortraitIndex":4,"voiceIndex":5,"personality":"Warm but firm; puts crew and passengers first and speaks up when a plan is unsafe."},
+    {"id":"thomas-reed","name":"Thomas Reed","age":36,"rank":"First Officer","category":"civilian-shuttle-pilot","civilianPortraitIndex":5,"voiceIndex":4,"personality":"Conscientious and slightly formal; repeats clearances and gives dependable progress reports."}
+  ]
+}
