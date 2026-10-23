@@ -425,6 +425,12 @@
     }
     /** @type {WeakMap<Model, number>} */
     var hullBounds = new WeakMap();
+    /** Rotation-independent source-mesh bound, in metres. @param {Model} model */
+    function hullRadius(model) {
+        var radius=hullBounds.get(model);
+        if(radius===undefined){radius=0;for(var i=0;i<model.vertices.length;i+=6)radius=Math.max(radius,Math.hypot(model.vertices[i],model.vertices[i+1],model.vertices[i+2]));hullBounds.set(model,radius);}
+        return radius;
+    }
     /** @typedef {{min:number[],max:number[],offsets:number[]|null,left:HullTree|null,right:HullTree|null}} HullTree */
     /** @type {WeakMap<Model,HullTree>} */var hullTrees=new WeakMap();
     /** Immutable source meshes get one median-split triangle index.
@@ -460,25 +466,31 @@
         }
         return result.sort(function(a,b){return a.entry-b.entry;});
     }
+    // Synchronous hull queries do not nest; scratch storage never escapes a query.
+    /** @type {HullTree[]} */var hitStack=[];
+    var hitTriangle=[[0,0,0],[0,0,0],[0,0,0]];
     /** @param {Model} model @param {Pose} pose @param {Vector} start @param {Vector} end @param {number} units @param {number} [boltRadius] */
     function hullHit(model, pose, start, end, units, boltRadius) {
         var a = localPoint(pose, start, units), d = minus(localPoint(pose, end, units), a), v = model.vertices, best = /** @type {HullHit | null} */ (null);
-        var radius = hullBounds.get(model);
-        if (radius === undefined) {
-            radius = 0;
-            for (var b = 0; b < v.length; b += 6)
-                radius = Math.max(radius, Math.hypot(v[b], v[b + 1], v[b + 2]));
-            hullBounds.set(model, radius);
-        }
+        var radius = hullRadius(model);
         var padding = boltRadius || 0;
         var span = dot3(d, d), fraction = span ? Math.max(0, Math.min(1, -dot3(a, d) / span)) : 0;
         if (Math.hypot.apply(null, a.map(function (x, j) {
             return x + d[j] * fraction;
         })) > radius + padding)
             return null;
-        var candidates=hullCandidates(model,a,d,padding),bestOffset=Infinity;
-        for (var candidateIndex=0;candidateIndex<candidates.length;candidateIndex++) {
-          var leaf=candidates[candidateIndex];if(best&&leaf.entry>best.fraction)break;
+        // Warm the shared tree once; traverse directly instead of collecting/sorting leaves.
+        if(!hullTrees.has(model))hullCandidates(model,a,d,padding);
+        var tree=hullTrees.get(model),stack=hitStack;stack.length=0;if(tree)stack.push(tree);
+        var bestOffset=Infinity,tri=hitTriangle;
+        while(stack.length) {
+          var leaf=stack.pop();if(!leaf)continue;
+          var entry=intersectsHullNode(leaf,a,d,padding);if(entry===null||best&&entry>best.fraction)continue;
+          if(!leaf.offsets){
+            var left=leaf.left,right=leaf.right,l=left?intersectsHullNode(left,a,d,padding):null,r=right?intersectsHullNode(right,a,d,padding):null;
+            if(l!==null&&r!==null&&left&&right){if(l<r){stack.push(right,left);}else{stack.push(left,right);}}
+            else {if(l!==null&&left)stack.push(left);if(r!==null&&right)stack.push(right);}continue;
+          }
           for(var triangleIndex=0;triangleIndex<leaf.offsets.length;triangleIndex++) {
             var i=leaf.offsets[triangleIndex];
             if (padding > 0) {
@@ -491,7 +503,8 @@
                     if (Math.min(v[i+axis],v[i+6+axis],v[i+12+axis])>hi || Math.max(v[i+axis],v[i+6+axis],v[i+12+axis])<lo) { outside=true; break; }
                 }
                 if(outside) continue;
-                var contact = boltTriangle(a,d,[v.slice(i,i+3),v.slice(i+6,i+9),v.slice(i+12,i+15)],padding);
+                for(var corner=0;corner<3;corner++)for(var component=0;component<3;component++)tri[corner][component]=v[i+corner*6+component];
+                var contact = boltTriangle(a,d,tri,padding);
                 if(contact && (!best || contact.fraction < best.fraction || contact.fraction===best.fraction&&i<bestOffset)) {
                     bestOffset=i;
                     var local=contact.local;
@@ -641,5 +654,5 @@
     function paintColor(hex) {
         return /^#[0-9a-f]{6}$/i.test(hex) ? [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255] : undefined;
     }
-    DW.shipPackModels = { gunAnchors: gunAnchors, craftModel: craftModel, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, sourceScorchGeometry: sourceScorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
+    DW.shipPackModels = { gunAnchors: gunAnchors, craftModel: craftModel, hullRadius: hullRadius, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, sourceScorchGeometry: sourceScorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
 }());

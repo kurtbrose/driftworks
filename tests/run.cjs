@@ -27,6 +27,7 @@ require('./evacuation-mission.cjs');
 require('./evacuation-materials.cjs');
 require('./civilian-flight.cjs');
 require('./headless.cjs');
+require('./pilot-training.cjs');
 require('./flight-hit-reactions.cjs');
 // Run the ordinary-script suite without adding a build or dependency pipeline.
 require('./audio-modules.cjs');
@@ -124,6 +125,7 @@ require('./dreadnaught-kit.cjs');
 require('./aegis-flight.cjs');
 
 require('./hull-sweep-index.cjs');
+require('./projectile-broadphase.cjs');
 
 require('./study-culling.cjs');
 

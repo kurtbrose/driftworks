@@ -1,0 +1,105 @@
+{
+  "reference": "bc588081f073e986e30469f5a25fe02b0f492b54",
+  "method": "CPU only. 24 persistent projectile probes x 120 steps; mixed near/distant paths, moving source-mesh fighters, damage and near misses. One warm-up each, six alternating AB/BA pairs per fleet size. This isolates trace cost; excludes rendering, AI, gun lifecycle and terrain.",
+  "rows": [
+    {
+      "ships": 8,
+      "beforeMs": 63.97809999999993,
+      "afterMs": 20.77710000000002,
+      "reductionPercent": 67.52466859753565,
+      "pairs": [
+        {
+          "beforeMs": 69.04169999999999,
+          "afterMs": 23.759000000000015
+        },
+        {
+          "beforeMs": 66.03670000000011,
+          "afterMs": 21.40530000000001
+        },
+        {
+          "beforeMs": 64.50069999999982,
+          "afterMs": 21.148500000000013
+        },
+        {
+          "beforeMs": 63.45550000000003,
+          "afterMs": 20.405700000000024
+        },
+        {
+          "beforeMs": 62.536800000000085,
+          "afterMs": 19.629200000000083
+        },
+        {
+          "beforeMs": 62.22349999999983,
+          "afterMs": 20.079799999999977
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 64,
+      "beforeMs": 433.3996999999997,
+      "afterMs": 92.0758500000004,
+      "reductionPercent": 78.75498067949736,
+      "pairs": [
+        {
+          "beforeMs": 451.01639999999975,
+          "afterMs": 90.9068000000002
+        },
+        {
+          "beforeMs": 427.44219999999996,
+          "afterMs": 90.45609999999988
+        },
+        {
+          "beforeMs": 435.83399999999983,
+          "afterMs": 93.55519999999979
+        },
+        {
+          "beforeMs": 428.8762999999999,
+          "afterMs": 91.73720000000003
+        },
+        {
+          "beforeMs": 432.81429999999955,
+          "afterMs": 92.41450000000077
+        },
+        {
+          "beforeMs": 433.9850999999999,
+          "afterMs": 97.5657000000001
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 128,
+      "beforeMs": 854.2664000000009,
+      "afterMs": 142.54080000000022,
+      "reductionPercent": 83.31424483041823,
+      "pairs": [
+        {
+          "beforeMs": 855.1714000000002,
+          "afterMs": 143.6282000000001
+        },
+        {
+          "beforeMs": 870.2105999999994,
+          "afterMs": 155.54269999999997
+        },
+        {
+          "beforeMs": 853.9954000000007,
+          "afterMs": 141.45340000000033
+        },
+        {
+          "beforeMs": 854.5374000000011,
+          "afterMs": 143.67679999999928
+        },
+        {
+          "beforeMs": 838.3793999999998,
+          "afterMs": 138.7456999999995
+        },
+        {
+          "beforeMs": 851.6575999999986,
+          "afterMs": 140.46529999999984
+        }
+      ],
+      "combatMatches": true
+    }
+  ]
+}

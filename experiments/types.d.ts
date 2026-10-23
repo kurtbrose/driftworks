@@ -766,6 +766,7 @@ export type ExperimentModules = {
         engineAnchors: (model: Model) => number[][];
         engineGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, view: Pose, time: number) => Batch;
         craftModel: (craft: ArtCraft, selection: string, wave: number) => Model;
+        hullRadius: (model: Model) => number;
         hullHit: (model: Model, pose: Pose, start: Vector, end: Vector, units: number, boltRadius?: number) => HullHit | null;
         addScorch: (craft: ArtCraft, hit: HullHit) => void;
         scorchGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number) => Batch[];

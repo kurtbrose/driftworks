@@ -1559,6 +1559,26 @@ batches, because capital-ship projectiles and impacts follow those batches.
 `onDamage` callback runs once when the chosen victim actually loses shield or
 hull health; it reports neither terrain contact nor zero damage. Aegis confirmed
 hit accounting uses this callback, avoiding whole-fleet health totals per trace.
+Projectile broad phase uses a 128 m 3D center-cell hash, with conservative
+rotation-independent source-mesh spheres. Oversized hulls have a separate list;
+fleets of at most 24 participants and queries covering over 4,096 cells use a
+linear bounds pass. Candidates retain participant order for equal-distance hits.
+The index observes every query, including movement interleaved within a substep.
+Membership, team, alive-state and collision-shape changes invalidate clearance.
+Mesh vertices are immutable, matching the shared triangle hierarchy contract;
+`shipPackModels.hullRadius(model)` returns its cached metre-space sphere radius.
+
+An empty query expanded by 100 m beyond the larger of the 30 m near-miss radius
+and bolt radius establishes a per-bolt clearance certificate. Ship queries sleep
+while the distance from that certificate's endpoint to both current segment
+endpoints, plus cumulative observed ship displacement, remains strictly below
+100 m. This is a conservative event condition, not a predicted-speed deadline:
+acceleration, teleports and direction changes consume clearance immediately.
+Terrain queries still run every segment. No unchecked projectile interval or
+delayed damage is introduced, including on a bolt's final lifetime segment.
+All caches are WeakMaps outside serializable combat state. Hull sweeps traverse
+the triangle hierarchy near-first using reusable scratch arrays, without sorting
+or allocating candidate leaves or padded triangle vertices per query.
 The fixed-scene browser and scripted CPU benchmarks are described in
 [dreadnaught kit](dreadnaught-kit.md#repeatable-performance-comparison).
 

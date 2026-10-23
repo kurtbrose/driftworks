@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "description": "Optional offline pilot evolution lab; not a site dependency",
+  "dependencies": { "@tensorflow/tfjs": "4.22.0" }
+}

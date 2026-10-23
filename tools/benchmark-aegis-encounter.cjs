@@ -8,7 +8,7 @@ const reference=refIndex<0?null:cp.execFileSync('git',['rev-parse','--verify',pr
 function load(ref){
  const DW={sim:{METERS_PER_UNIT:10000/600}},ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math});
  for(const f of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','experiments/ship-packs.js']){
-  const source=ref&&['experiments/training.js','experiments/aegis-flight.js'].includes(f)?cp.execFileSync('git',['show',ref+':'+f],{cwd:root,encoding:'utf8'}):fs.readFileSync(path.join(root,f),'utf8');
+  const source=ref&&['experiments/training.js','experiments/aegis-flight.js','experiments/ship-packs.js'].includes(f)?cp.execFileSync('git',['show',ref+':'+f],{cwd:root,encoding:'utf8'}):fs.readFileSync(path.join(root,f),'utf8');
   vm.runInContext(source,ctx,{filename:f});
  }
  return DW;
@@ -30,8 +30,8 @@ function run(ship,DW=current){
 }
 run(false);run(true);if(prior)run(true,prior);
 const off=[],on=[],referenceRuns=[];
-for(let i=0;i<3;i++){off.push(run(false));if(prior&&i%2===0)referenceRuns.push(run(true,prior));on.push(run(true));if(prior&&i%2===1)referenceRuns.push(run(true,prior));}
-function median(rows){return rows.map(r=>r.ms).sort((a,b)=>a-b)[1];}
+for(let i=0;i<6;i++){off.push(run(false));if(prior&&i%2===0)referenceRuns.push(run(true,prior));on.push(run(true));if(prior&&i%2===1)referenceRuns.push(run(true,prior));}
+function median(rows){const values=rows.map(r=>r.ms).sort((a,b)=>a-b),middle=Math.floor(values.length/2);return values.length%2?values[middle]:(values[middle-1]+values[middle])/2;}
 const result={description:'Fixed 6-second scripted fighter replay, identical poses; real mesh collision and damage. CPU only; excludes renderer and ordinary fighter AI.',contactCount,weaponsEnabled,frames,baselineMs:median(off),withShipMs:median(on),addedMs:median(on)-median(off),off,on};
 if(prior){
  const assert=require('node:assert/strict');
@@ -39,5 +39,5 @@ if(prior){
  result.reference=reference;result.referenceMs=median(referenceRuns);result.referenceRuns=referenceRuns;result.combatMatches=true;
 }
 const compare=process.argv.indexOf('--compare');
-if(compare>=0){const previous=JSON.parse(fs.readFileSync(process.argv[compare+1],'utf8').replace(/^\uFEFF/,''));const assert=require('node:assert/strict');for(let i=0;i<on.length;i++)assert.deepEqual({shots:on[i].shots,hits:on[i].hits,hp:on[i].hp},{shots:previous.on[i].shots,hits:previous.on[i].hits,hp:previous.on[i].hp},'replay damage and firing must be identical');result.combatMatches=true;}
+if(compare>=0){const previous=JSON.parse(fs.readFileSync(process.argv[compare+1],'utf8').replace(/^\uFEFF/,''));const assert=require('node:assert/strict');for(let i=0;i<on.length;i++){const prior=previous.on[i%previous.on.length];assert.deepEqual({shots:on[i].shots,hits:on[i].hits,hp:on[i].hp},{shots:prior.shots,hits:prior.hits,hp:prior.hp},'replay damage and firing must be identical');}result.combatMatches=true;}
 console.log(JSON.stringify(result,null,2));

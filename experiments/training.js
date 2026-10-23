@@ -528,15 +528,90 @@
         });
         return point;
     }
+    /** @typedef {{craft:Craft, x:number,y:number,z:number,r:number,key:string,shape:string,team:string,alive:boolean,order:number}} CollisionEntry */
+    /** @typedef {{entries:CollisionEntry[],cells:Map<string,CollisionEntry[]>,large:CollisionEntry[],motion:number,epoch:number,time:number}} CollisionIndex */
+    /** @type {WeakMap<Combat,CollisionIndex>} */var collisionIndices=new WeakMap();
+    /** @type {WeakMap<Bolt,{index:CollisionIndex,epoch:number,motion:number,point:Vector,radius:number,faction:string}>} */var collisionSleeps=new WeakMap();
+    var collisionCell=128/U, sleepClearance=100/U;
+    /** @param {Craft} craft */
+    function collisionRadius(craft){
+        var shape=craft.collision;
+        if(!shape||shape.kind==='sphere')return (shape?shape.radiusM:9)/U;
+        // Minimal test adapters without a bound API retain the exhaustive path.
+        if(!DW.shipPackModels||!DW.shipPackModels.hullRadius)return Infinity;
+        var model=DW.shipPackModels.find(shape.modelId);
+        var geometry=model?model.model:DW.shipPackModels.craftModel(craft,'',1);
+        if(geometry.id!==shape.modelId)throw new Error('Unknown collision model '+shape.modelId);
+        return DW.shipPackModels.hullRadius(geometry)/U;
+    }
+    /** Refresh against actual poses on EVERY query, including interleaved movement within a step.
+     * The cumulative displacement budget makes sleeping safe under acceleration and teleports.
+     * No speed prediction, frame-order assumption or delayed damage is needed.
+     * @param {Combat} t */
+    function collisionIndex(t){
+        var index=collisionIndices.get(t);
+        if(!index){index={entries:[],cells:new Map(/** @type {[string,CollisionEntry[]][]} */([])),large:[],motion:0,epoch:0,time:t.time};collisionIndices.set(t,index);}
+        var rebuild=index.entries.length!==t.enemies.length+1;
+        if(t.time<index.time){index.epoch++;}index.time=t.time;
+        for(var i=0;i<=t.enemies.length;i++){
+            var craft=i?t.enemies[i-1]:t.player,entry=index.entries[i],p=craft.pose.eye;
+            var shape=craft.collision,signature=!shape?'sphere:9':shape.kind==='sphere'?'sphere:'+shape.radiusM:'model:'+shape.modelId;
+            var team=craft.team||'enemy',living=craft.hp>0;
+            if(!entry||entry.craft!==craft||entry.shape!==signature){
+                entry={craft:craft,x:p[0],y:p[1],z:p[2],r:collisionRadius(craft),key:'',shape:signature,team:team,alive:living,order:i};
+                index.entries[i]=entry;index.epoch++;rebuild=true;
+            }
+            if(entry.team!==team||entry.alive!==living){entry.team=team;entry.alive=living;index.epoch++;}
+            if(!entry.key||p[0]!==entry.x||p[1]!==entry.y||p[2]!==entry.z){
+                index.motion+=Math.hypot(p[0]-entry.x,p[1]-entry.y,p[2]-entry.z);
+                entry.x=p[0];entry.y=p[1];entry.z=p[2];
+                var key=Math.floor(p[0]/collisionCell)+','+Math.floor(p[1]/collisionCell)+','+Math.floor(p[2]/collisionCell);
+                if(key!==entry.key){entry.key=key;rebuild=true;}
+            }
+        }
+        if(index.entries.length>t.enemies.length+1){index.entries.length=t.enemies.length+1;index.epoch++;}
+        if(rebuild){index.cells.clear();index.large.length=0;for(var j=0;j<index.entries.length;j++){var e=index.entries[j];
+            if(e.r>collisionCell){index.large.push(e);continue;}
+            var bucket=index.cells.get(e.key);if(!bucket){bucket=[];index.cells.set(e.key,bucket);}bucket.push(e);
+        }}
+        return index;
+    }
+    /** @param {CollisionIndex} index @param {Vector} a @param {Vector} b @param {number} margin */
+    function collisionCandidates(index,a,b,margin){
+        // A handful of scalar box checks beats hash lookups for a small encounter.
+        if(index.entries.length<=24)return index.entries;
+        var lo=[0,0,0],hi=[0,0,0];for(var k=0;k<3;k++){lo[k]=Math.floor((Math.min(a[k],b[k])-margin-collisionCell)/collisionCell);hi[k]=Math.floor((Math.max(a[k],b[k])+margin+collisionCell)/collisionCell);}
+        // Long diagonal traces must not enumerate an unbounded volume of empty cells.
+        if((hi[0]-lo[0]+1)*(hi[1]-lo[1]+1)*(hi[2]-lo[2]+1)>4096)return index.entries;
+        var result=index.large.slice();
+        for(var x=lo[0];x<=hi[0];x++)for(var y=lo[1];y<=hi[1];y++)for(var z=lo[2];z<=hi[2];z++){
+            var bucket=index.cells.get(x+','+y+','+z);if(bucket)for(var j=0;j<bucket.length;j++)result.push(bucket[j]);
+        }
+        return result.sort(function(a,b){return a.order-b.order;});
+    }
+    /** @param {CollisionEntry} e @param {Vector} a @param {Vector} b @param {number} margin */
+    function collisionNearby(e,a,b,margin){
+        var r=e.r+margin;
+        return e.x>=Math.min(a[0],b[0])-r&&e.x<=Math.max(a[0],b[0])+r&&e.y>=Math.min(a[1],b[1])-r&&e.y<=Math.max(a[1],b[1])+r&&e.z>=Math.min(a[2],b[2])-r&&e.z<=Math.max(a[2],b[2])+r;
+    }
     /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player @param {number} [scorchInterval] @param {() => void} [onDamage] */
     function trace(t, start, end, bolt, team, terrainHit, player, scorchInterval, onDamage) {
         bindPlayer(t, player);
         var hit = terrainHit ? terrainHit(start, end) : null, travel = length(sub(end,start));
         var best = hit && travel > 0 ? length(sub(hit,start)) / travel : Infinity;
         var victim = /** @type {Craft | null} */ (null), surface = /** @type {Hit | null} */ (null);
-        var shooter = typeof team === 'object' ? team : participants(t).find(function (e) { return e.id === team; });
+        var index=collisionIndex(t);
+        var shooter = typeof team === 'object' ? team : index.entries.find(function (e) { return e.craft.id === team; })?.craft;
         var faction = shooter ? shooter.team || 'enemy' : team === 'player' ? 'ally' : 'enemy';
-        participants(t).forEach(function (e) {
+        var radius=bolt.weapon.headRadius||0,margin=Math.max(30,radius)/U,sleep=collisionSleeps.get(bolt);
+        var sleeping=sleep&&sleep.index===index&&sleep.epoch===index.epoch&&sleep.radius===radius&&sleep.faction===faction&&
+            Math.max(Math.hypot(start[0]-sleep.point[0],start[1]-sleep.point[1],start[2]-sleep.point[2]),Math.hypot(end[0]-sleep.point[0],end[1]-sleep.point[1],end[2]-sleep.point[2]))+index.motion-sleep.motion<sleepClearance;
+        var candidates=sleeping?[]:collisionCandidates(index,start,end,margin+sleepClearance).filter(function(entry){
+            return entry.craft.hp>0&&entry.craft!==shooter&&entry.team!==faction&&collisionNearby(entry,start,end,margin+sleepClearance);
+        });
+        if(!sleeping&&!candidates.length)collisionSleeps.set(bolt,{index:index,epoch:index.epoch,motion:index.motion,point:end.slice(),radius:radius,faction:faction});
+        candidates.forEach(function (entry) {
+            var e=entry.craft;if(!collisionNearby(entry,start,end,radius/U))return;
             if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction) return;
             var candidate = hullHit(e, start, end, bolt.weapon.headRadius || 0);
             if (candidate) {
@@ -567,7 +642,8 @@
                 radioEvent(t, { kind: 'near', victim: id, team: factionName });
             }
         }
-        participants(t).forEach(function (e) {
+        candidates.forEach(function (entry) {
+            var e=entry.craft;
             if (e.hp > 0 && (e.team || 'enemy') !== faction && victim !== e)
                 near(e.pose, e, e.id, e.team || 'enemy');
         });

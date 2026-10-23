@@ -134,6 +134,10 @@ batches.map(batch => ({finish: batch.finish, vertices: batch.vertices.length}));
 These expose existing APIs without adding another representation of their state.
 Tactical JSON regressions continue to use [scenario replay](scenarios.md).
 
+For the optional TensorFlow.js pilot evolution experiment built on real duels,
+see [pilot training](pilot-training.md). It exports local weights, checkpoints,
+held-out comparisons and deterministic control replays without changing gameplay.
+
 ## Turn an investigation into a regression
 
 Write a focused `.cjs` test using `require('../tools/headless.cjs')` and Node's

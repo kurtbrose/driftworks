@@ -4,6 +4,7 @@ node_modules/
 # TypeScript and tooling output
 *.tsbuildinfo
 coverage/
+.pilot-training/
 
 # Local editor and OS metadata
 .vscode/

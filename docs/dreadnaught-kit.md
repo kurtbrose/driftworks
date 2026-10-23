@@ -165,16 +165,18 @@ settings or resizing while it runs.
 `node tools/benchmark-aegis-encounter.cjs` supplies the complementary CPU test:
 eight scripted fighters cross upper/lower PD banks for six seconds at 60 updates
 per second, using the actual Spitfire collision mesh, projectiles and damage.
-It warms both cases and reports three samples per case plus median update cost.
+It warms both cases and reports six samples per case plus median update cost.
 The OFF case performs the same scripted fighter movement without the capital
 update; ordinary fighter AI, rendering and audio are excluded. Large target HP
 keeps the collision workload fixed. `--compare path/to/result.json` checks exact
 shot counts, confirmed hits and remaining health against a saved result.
-`--reference COMMIT` alternates current code with that commit's targeting and
-training resolver, keeping assets and other modules identical, and asserts exact
+`--reference COMMIT` alternates six AB/BA pairs with that commit's targeting,
+training resolver and hull-query module, keeping assets and other modules identical, and asserts exact
 combat agreement. `--contacts 128 --no-fire` isolates the targeting workload at a larger contact
 count. Timing is diagnostic, never a pass/fail threshold. See the
 [recorded comparison](benchmarks/aegis-2026-10-20.md) for measurements and limits.
+The [projectile collision comparison](benchmarks/collision-2026-10-23.md) records
+the later spatial broad phase, conservative sleeping and allocation reductions.
 
 Target positions are converted once per update, then each mount retains its
 valid lock or randomly samples a valid contact. Independent seeded per-mount reservoir

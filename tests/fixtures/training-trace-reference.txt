@@ -1,0 +1,44 @@
+    function trace(t, start, end, bolt, team, terrainHit, player, scorchInterval, onDamage) {
+        bindPlayer(t, player);
+        var hit = terrainHit ? terrainHit(start, end) : null, travel = length(sub(end,start));
+        var best = hit && travel > 0 ? length(sub(hit,start)) / travel : Infinity;
+        var victim = /** @type {Craft | null} */ (null), surface = /** @type {Hit | null} */ (null);
+        var shooter = typeof team === 'object' ? team : participants(t).find(function (e) { return e.id === team; });
+        var faction = shooter ? shooter.team || 'enemy' : team === 'player' ? 'ally' : 'enemy';
+        participants(t).forEach(function (e) {
+            if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction) return;
+            var candidate = hullHit(e, start, end, bolt.weapon.headRadius || 0);
+            if (candidate) {
+                if (candidate.fraction < best) { best = candidate.fraction; hit = candidate.point; victim = e; surface = candidate; }
+            }
+        });
+        var struck = /** @type {Craft | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
+        if (struck && hull && hull.model && hull.local && hull.normal && (!scorchInterval || t.time-(scorchTimes.get(struck)??-Infinity)>=scorchInterval)) {
+            DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });
+            if(scorchInterval)scorchTimes.set(struck,t.time);
+        }
+        if (!struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
+        if (struck) {
+            var before=onDamage?struck.hp+(struck.shield||0):0;
+            damageCraft(t, struck, bolt.weapon, shooter || team);
+            if(onDamage&&struck.hp+(struck.shield||0)<before)onDamage();
+        }
+        // Report close projectile passes, clipped at the first collision so occluded bolts cannot speak.
+        var endPoint = hit || end, delta = sub(endPoint, start), span = dot(delta, delta);
+        /** @param {Pose} pose @param {{nearMissAt?: number}} entity @param {string} id @param {string} factionName */
+        function near(pose, entity, id, factionName) {
+            if (!pose || span < 1e-12 || t.time - (entity.nearMissAt === undefined ? -100 : entity.nearMissAt) < 6)
+                return;
+            var fraction = Math.max(0, Math.min(1, dot(sub(pose.eye, start), delta) / span));
+            var meters = length(sub(pose.eye, add(start, scale(delta, fraction)))) * U;
+            if (meters > 10 && meters < 30) {
+                entity.nearMissAt = t.time;
+                radioEvent(t, { kind: 'near', victim: id, team: factionName });
+            }
+        }
+        participants(t).forEach(function (e) {
+            if (e.hp > 0 && (e.team || 'enemy') !== faction && victim !== e)
+                near(e.pose, e, e.id, e.team || 'enemy');
+        });
+        return hit;
+    }
