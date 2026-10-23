@@ -1,0 +1,1342 @@
+{
+  "method": "Production headless session, half-second warmup, then 12 simulated seconds sampled in 60 Hz batches (two 120 Hz substeps). Three seeds, ascending/reversed count order, ordinary health/damage/AI; no timing assertions. Stock spawn stretches with fleet size; dense fixture keeps teams in a compact encounter volume. Mean/tails exclude the external invariant scan but include headless session observation/transcript work. Parent/child stage timings overlap; do not sum. CPU only: no renderer, GPU, DOM or real audio. All source meshes and baked hull data retained.",
+  "sources": {
+    "experiments/training.js": "b1a67dd8a47fa03be1a0e8cbb29a1a9f9385cb95fbbad8cffe0fd49cc70164cf",
+    "experiments/ship-packs.js": "1d798c4cfd829e9ce5463cd9aaaad20e4ef0c79fbb8294035cf7eab0daff082b",
+    "experiments/flight-session.js": "cea0aa449c79bba098e17563575a5e9db198ba97e3c4c68122fb619a21619acb"
+  },
+  "rows": [
+    {
+      "count": 16,
+      "seed": 29,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 2.809172222222215,
+      "p50Ms": 2.1034999999997126,
+      "p95Ms": 6.4728999999999814,
+      "p99Ms": 10.366899999999987,
+      "worstMs": 16.463100000000054,
+      "over16ms": 0,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 16,
+        "final": 16,
+        "mean": 16
+      },
+      "shots": 568,
+      "hits": 153,
+      "maxBolts": 177,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 29.80663304338266,
+      "duplicateCallsigns": 0,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 44,
+        "syncs": 3000,
+        "moves": 254,
+        "queries": 4595,
+        "reuses": 104497,
+        "popped": 4551,
+        "wakes": 4551
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 2.025527777777773,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.3056955555555414,
+          "callsPerFrame": 34
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.39054361111109476,
+          "callsPerFrame": 36.86388888888889
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 0.22532569444443673,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.17530430555555876,
+          "callsPerFrame": 0.2125
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.061668888888893825,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.06069013888884819,
+          "callsPerFrame": 151.31666666666666
+        }
+      ],
+      "digest": "f5842b6353bf94a81faf17020ea27e16d883f5a1fae1e490f27ea1c7b69fc49b"
+    },
+    {
+      "count": 50,
+      "seed": 29,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 7.969817777777801,
+      "p50Ms": 7.156600000000253,
+      "p95Ms": 13.066899999999805,
+      "p99Ms": 17.267700000000332,
+      "worstMs": 19.895900000000438,
+      "over16ms": 12,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 50,
+        "final": 50,
+        "mean": 50
+      },
+      "shots": 824,
+      "hits": 321,
+      "maxBolts": 208,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 18.913258527760263,
+      "duplicateCallsigns": 34,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 74,
+        "syncs": 3000,
+        "moves": 748,
+        "queries": 6257,
+        "reuses": 129809,
+        "popped": 6183,
+        "wakes": 6196
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 6.035460277777764,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.9063997222224347,
+          "callsPerFrame": 102
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 1.0688450000000336,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.6343209722224458,
+          "callsPerFrame": 117.59861111111111
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.2897756944444388,
+          "callsPerFrame": 0.44583333333333336
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.18804541666666144,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.07010847222219607,
+          "callsPerFrame": 188.99444444444444
+        }
+      ],
+      "digest": "5dce6edca2d8cb06db065278a7c75e01ae05974eaa13152f751a35b62ca638c3"
+    },
+    {
+      "count": 100,
+      "seed": 29,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 18.953828611111096,
+      "p50Ms": 18.519000000000233,
+      "p95Ms": 23.02219999999943,
+      "p99Ms": 25.261200000000827,
+      "worstMs": 32.736400000001595,
+      "over16ms": 698,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 100,
+        "final": 100,
+        "mean": 100
+      },
+      "shots": 775,
+      "hits": 220,
+      "maxBolts": 166,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 34.973234606650784,
+      "duplicateCallsigns": 84,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 91,
+        "syncs": 3000,
+        "moves": 1534,
+        "queries": 7043,
+        "reuses": 135008,
+        "popped": 6952,
+        "wakes": 6970
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 14.336239027777806,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 3.2965783333333523,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 2.027536527777751,
+          "callsPerFrame": 202
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.7038354166668999,
+          "callsPerFrame": 231.38611111111112
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.3515527777777682,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.20541402777778836,
+          "callsPerFrame": 0.3055555555555556
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.0765915277787321,
+          "callsPerFrame": 197.28472222222223
+        }
+      ],
+      "digest": "25fdb70f5d61a30cc973628e8ff532103ed31313092f38b9d30ff8d99aa4921c"
+    },
+    {
+      "count": 16,
+      "seed": 29,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 3.6565023611110163,
+      "p50Ms": 2.203699999998207,
+      "p95Ms": 9.680199999998877,
+      "p99Ms": 15.09599999999773,
+      "worstMs": 32.955299999997806,
+      "over16ms": 5,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 12,
+        "final": 12,
+        "mean": 13.89875173370319
+      },
+      "shots": 828,
+      "hits": 404,
+      "maxBolts": 195,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 22.603019829797198,
+      "duplicateCallsigns": 0,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 66,
+        "syncs": 3000,
+        "moves": 219,
+        "queries": 7282,
+        "reuses": 127895,
+        "popped": 7216,
+        "wakes": 7231
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 2.892107638888946,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 2.2446001388889725,
+          "callsPerFrame": 34
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.8749259722224401,
+          "callsPerFrame": 35.6375
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.3847243055555231,
+          "callsPerFrame": 0.5611111111111111
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 0.20133388888869175,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.08112277777719706,
+          "callsPerFrame": 191.98194444444445
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.051883472222152706,
+          "callsPerFrame": 2
+        }
+      ],
+      "digest": "99d5dd24bd987b17429d046ff2de65fdfec737633708b92c26d20324d7ac8579"
+    },
+    {
+      "count": 50,
+      "seed": 29,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 7.939381805555498,
+      "p50Ms": 7.282500000001164,
+      "p95Ms": 12.39719999999943,
+      "p99Ms": 15.414899999999761,
+      "worstMs": 20.496899999998277,
+      "over16ms": 3,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 49,
+        "final": 49,
+        "mean": 49.335644937586686
+      },
+      "shots": 628,
+      "hits": 149,
+      "maxBolts": 198,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 23.33286578775159,
+      "duplicateCallsigns": 34,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 52,
+        "syncs": 3000,
+        "moves": 754,
+        "queries": 8845,
+        "reuses": 117517,
+        "popped": 7255,
+        "wakes": 8803
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 6.022830138888857,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.6984312500000114,
+          "callsPerFrame": 102
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 1.0457845833332462,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.41212347222286655,
+          "callsPerFrame": 111.475
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.17582305555559086,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.13601097222222053,
+          "callsPerFrame": 0.20694444444444443
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.0795009722221443,
+          "callsPerFrame": 176.68194444444444
+        }
+      ],
+      "digest": "d97696711b9e9acb7bd70cedd31c4b84590aca243e8ea235e0cb3ad7020877bb"
+    },
+    {
+      "count": 100,
+      "seed": 29,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 19.123849166666737,
+      "p50Ms": 18.82680000000255,
+      "p95Ms": 22.028299999998126,
+      "p99Ms": 25.466599999999744,
+      "worstMs": 30.71440000000439,
+      "over16ms": 709,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 100,
+        "final": 100,
+        "mean": 100
+      },
+      "shots": 418,
+      "hits": 40,
+      "maxBolts": 129,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 10.087304137792534,
+      "duplicateCallsigns": 84,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 116,
+        "syncs": 3000,
+        "moves": 1511,
+        "queries": 6710,
+        "reuses": 82997,
+        "popped": 6594,
+        "wakes": 6667
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 14.362917499999913,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 3.30002930555527,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.4476991666681494,
+          "callsPerFrame": 202
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.4214483333321166,
+          "callsPerFrame": 212.59305555555557
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.3647070833332489,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.06390680555368818,
+          "callsPerFrame": 124.24027777777778
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.04382486111110969,
+          "callsPerFrame": 0.05555555555555555
+        }
+      ],
+      "digest": "696c38004202977a9429b738af652ba9473237ad4270e7011e011ff0db8e994f"
+    },
+    {
+      "count": 100,
+      "seed": 73,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 19.279851944444232,
+      "p50Ms": 18.87879999999859,
+      "p95Ms": 24.10319999999774,
+      "p99Ms": 27.451999999997497,
+      "worstMs": 34.803500000001804,
+      "over16ms": 658,
+      "over33ms": 2,
+      "alive": {
+        "minimum": 100,
+        "final": 100,
+        "mean": 100
+      },
+      "shots": 775,
+      "hits": 220,
+      "maxBolts": 166,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 34.973234606650784,
+      "duplicateCallsigns": 84,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 91,
+        "syncs": 3000,
+        "moves": 1534,
+        "queries": 7043,
+        "reuses": 135008,
+        "popped": 6952,
+        "wakes": 6970
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 14.612802361110992,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 3.2891348611111124,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 2.1264755555567416,
+          "callsPerFrame": 202
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.7215186111109688,
+          "callsPerFrame": 231.38611111111112
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.3597302777775945,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.2129540277777879,
+          "callsPerFrame": 0.3055555555555556
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.08577638888942198,
+          "callsPerFrame": 197.28472222222223
+        }
+      ],
+      "digest": "356383765ce86a165b35c072c3e04b3e2d6e1de2aa713c7b78689975767880dc"
+    },
+    {
+      "count": 50,
+      "seed": 73,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 8.197942777777573,
+      "p50Ms": 7.415899999999965,
+      "p95Ms": 13.593399999997928,
+      "p99Ms": 17.63180000000284,
+      "worstMs": 21.65799999999581,
+      "over16ms": 16,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 50,
+        "final": 50,
+        "mean": 50
+      },
+      "shots": 824,
+      "hits": 321,
+      "maxBolts": 208,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 18.913258527760263,
+      "duplicateCallsigns": 34,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 74,
+        "syncs": 3000,
+        "moves": 748,
+        "queries": 6257,
+        "reuses": 129809,
+        "popped": 6183,
+        "wakes": 6196
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 6.185232499999812,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.9757862500003385,
+          "callsPerFrame": 102
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 1.099413472222275,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.6482465277772866,
+          "callsPerFrame": 117.59861111111111
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.28358388888886515,
+          "callsPerFrame": 0.44583333333333336
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.1974279166669981,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.08082930555531978,
+          "callsPerFrame": 188.99444444444444
+        }
+      ],
+      "digest": "1de7852381d5d01772756fcc469343533d2fd2a0e61f5f6ebba2b92070d81528"
+    },
+    {
+      "count": 16,
+      "seed": 73,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 2.872441805555496,
+      "p50Ms": 2.3407999999908498,
+      "p95Ms": 6.486999999993714,
+      "p99Ms": 9.321700000000419,
+      "worstMs": 15.251799999998184,
+      "over16ms": 0,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 16,
+        "final": 16,
+        "mean": 16
+      },
+      "shots": 568,
+      "hits": 153,
+      "maxBolts": 177,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 29.80663304338266,
+      "duplicateCallsigns": 0,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 44,
+        "syncs": 3000,
+        "moves": 254,
+        "queries": 4595,
+        "reuses": 104497,
+        "popped": 4551,
+        "wakes": 4551
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 2.0510661111110795,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.3187001388884205,
+          "callsPerFrame": 34
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.3924079166669091,
+          "callsPerFrame": 36.86388888888889
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 0.23187222222194476,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.1574813888888861,
+          "callsPerFrame": 0.2125
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.06805708333583121,
+          "callsPerFrame": 151.31666666666666
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.06439444444452723,
+          "callsPerFrame": 2
+        }
+      ],
+      "digest": "39f48261b05c2b87188b849fd82413205d3551a71e9809b115de34f1d36ccfc7"
+    },
+    {
+      "count": 100,
+      "seed": 73,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 19.15422944444415,
+      "p50Ms": 18.785999999992782,
+      "p95Ms": 22.17160000000149,
+      "p99Ms": 25.58029999998689,
+      "worstMs": 29.60009999999602,
+      "over16ms": 719,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 100,
+        "final": 100,
+        "mean": 100
+      },
+      "shots": 418,
+      "hits": 40,
+      "maxBolts": 129,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 10.087304137792534,
+      "duplicateCallsigns": 84,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 116,
+        "syncs": 3000,
+        "moves": 1511,
+        "queries": 6710,
+        "reuses": 82997,
+        "popped": 6594,
+        "wakes": 6667
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 14.425307916667002,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 3.274428333333142,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.431137499995465,
+          "callsPerFrame": 202
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.4216047222203997,
+          "callsPerFrame": 212.59305555555557
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.3678798611110122,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.060342083334499974,
+          "callsPerFrame": 124.24027777777778
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.04321361111114028,
+          "callsPerFrame": 0.05555555555555555
+        }
+      ],
+      "digest": "0e33045fa66868b1f22dddc244166a2eff1001386652b9072137eacb43caa21a"
+    },
+    {
+      "count": 50,
+      "seed": 73,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 8.063819305555505,
+      "p50Ms": 7.3865000000078,
+      "p95Ms": 13.015100000004168,
+      "p99Ms": 16.007200000007288,
+      "worstMs": 20.490399999995134,
+      "over16ms": 6,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 49,
+        "final": 49,
+        "mean": 49.335644937586686
+      },
+      "shots": 628,
+      "hits": 149,
+      "maxBolts": 198,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 23.33286578775159,
+      "duplicateCallsigns": 34,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 52,
+        "syncs": 3000,
+        "moves": 754,
+        "queries": 8845,
+        "reuses": 117517,
+        "popped": 7255,
+        "wakes": 8803
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 6.115806805555419,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.7513452777736045,
+          "callsPerFrame": 102
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 1.068815833333186,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.41805222222355953,
+          "callsPerFrame": 111.475
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.1803641666667924,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.17634347222220742,
+          "callsPerFrame": 0.20694444444444443
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.07859777777959809,
+          "callsPerFrame": 176.68194444444444
+        }
+      ],
+      "digest": "7b5c5aaf3808c108fffd1b903586f8e77178bc0bead760e81e9a4d7fcf5e3e16"
+    },
+    {
+      "count": 16,
+      "seed": 73,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 3.644380416666455,
+      "p50Ms": 2.2256999999954132,
+      "p95Ms": 9.904399999999441,
+      "p99Ms": 15.39440000000468,
+      "worstMs": 26.932600000000093,
+      "over16ms": 7,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 12,
+        "final": 12,
+        "mean": 13.89875173370319
+      },
+      "shots": 828,
+      "hits": 404,
+      "maxBolts": 195,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 22.603019829797198,
+      "duplicateCallsigns": 0,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 66,
+        "syncs": 3000,
+        "moves": 219,
+        "queries": 7282,
+        "reuses": 127895,
+        "popped": 7216,
+        "wakes": 7231
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 2.880018472221895,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 2.236103888888465,
+          "callsPerFrame": 34
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.8705399999987397,
+          "callsPerFrame": 35.6375
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.38069750000003194,
+          "callsPerFrame": 0.5611111111111111
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 0.20411333333354884,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.08009152777792931,
+          "callsPerFrame": 191.98194444444445
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.05245388888892598,
+          "callsPerFrame": 2
+        }
+      ],
+      "digest": "78670847a6ba21c282f1214ea83f1f6063e6e4a1c7e4214a4372532876d5c0b0"
+    },
+    {
+      "count": 16,
+      "seed": 149,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 2.7315330555557216,
+      "p50Ms": 2.164600000003702,
+      "p95Ms": 6.039600000003702,
+      "p99Ms": 9.112999999997555,
+      "worstMs": 16.491600000008475,
+      "over16ms": 0,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 16,
+        "final": 16,
+        "mean": 16
+      },
+      "shots": 568,
+      "hits": 153,
+      "maxBolts": 177,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 29.80663304338266,
+      "duplicateCallsigns": 0,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 44,
+        "syncs": 3000,
+        "moves": 254,
+        "queries": 4595,
+        "reuses": 104497,
+        "popped": 4551,
+        "wakes": 4551
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 1.9581904166668513,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.247318333332603,
+          "callsPerFrame": 34
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.37827527777745773,
+          "callsPerFrame": 36.86388888888889
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 0.22056749999947997,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.14891694444441883,
+          "callsPerFrame": 0.2125
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.06739291667080478,
+          "callsPerFrame": 151.31666666666666
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.06172763888850265,
+          "callsPerFrame": 2
+        }
+      ],
+      "digest": "52806bc28b1a627ef5afcca99ccdf318e4cae45c170d923bd74c034b972652a0"
+    },
+    {
+      "count": 50,
+      "seed": 149,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 7.941447361110982,
+      "p50Ms": 7.1133000000118045,
+      "p95Ms": 13.232999999992899,
+      "p99Ms": 17.556400000001304,
+      "worstMs": 20.111900000003516,
+      "over16ms": 14,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 50,
+        "final": 50,
+        "mean": 50
+      },
+      "shots": 824,
+      "hits": 321,
+      "maxBolts": 208,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 18.913258527760263,
+      "duplicateCallsigns": 34,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 74,
+        "syncs": 3000,
+        "moves": 748,
+        "queries": 6257,
+        "reuses": 129809,
+        "popped": 6183,
+        "wakes": 6196
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 6.008931111110925,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.9317006944419013,
+          "callsPerFrame": 102
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 1.0574447222224586,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.6398469444498712,
+          "callsPerFrame": 117.59861111111111
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.284776527777851,
+          "callsPerFrame": 0.44583333333333336
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.18845180555545085,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.07720277777407318,
+          "callsPerFrame": 188.99444444444444
+        }
+      ],
+      "digest": "9ecf6a4a363ce2084ca283d2608d1634d4e2c334778016d9d1628124363adfde"
+    },
+    {
+      "count": 100,
+      "seed": 149,
+      "layout": "stock",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 19.00459972222248,
+      "p50Ms": 18.617199999993318,
+      "p95Ms": 23.501799999998184,
+      "p99Ms": 26.24189999999362,
+      "worstMs": 34.271999999997206,
+      "over16ms": 623,
+      "over33ms": 1,
+      "alive": {
+        "minimum": 100,
+        "final": 100,
+        "mean": 100
+      },
+      "shots": 775,
+      "hits": 220,
+      "maxBolts": 166,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 34.973234606650784,
+      "duplicateCallsigns": 84,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 91,
+        "syncs": 3000,
+        "moves": 1534,
+        "queries": 7043,
+        "reuses": 135008,
+        "popped": 6952,
+        "wakes": 6970
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 14.459505833333363,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 3.2176436111110687,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 2.067953888888365,
+          "callsPerFrame": 202
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.7148888888877587,
+          "callsPerFrame": 231.38611111111112
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.34769833333290684,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.2061279166667292,
+          "callsPerFrame": 0.3055555555555556
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.08548819444689192,
+          "callsPerFrame": 197.28472222222223
+        }
+      ],
+      "digest": "8a27af42b2a921891e87ea22c6864a6647f9edfb5d1f0b6b0a142cd0d26ad37b"
+    },
+    {
+      "count": 16,
+      "seed": 149,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 3.7054780555553304,
+      "p50Ms": 2.297900000005029,
+      "p95Ms": 9.898300000000745,
+      "p99Ms": 14.404299999994691,
+      "worstMs": 26.457299999994575,
+      "over16ms": 6,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 12,
+        "final": 12,
+        "mean": 13.89875173370319
+      },
+      "shots": 828,
+      "hits": 404,
+      "maxBolts": 195,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 22.603019829797198,
+      "duplicateCallsigns": 0,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 66,
+        "syncs": 3000,
+        "moves": 219,
+        "queries": 7282,
+        "reuses": 127895,
+        "popped": 7216,
+        "wakes": 7231
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 2.922586666666737,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 2.266913472225921,
+          "callsPerFrame": 34
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.8734133333339236,
+          "callsPerFrame": 35.6375
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.38463083333313586,
+          "callsPerFrame": 0.5611111111111111
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 0.20824166666716337,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.08408486110670815,
+          "callsPerFrame": 191.98194444444445
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.05272236111114681,
+          "callsPerFrame": 2
+        }
+      ],
+      "digest": "2e7ddb4fc33c4a4a94a4183c4eb88adfbcd6dcbd1532c2108f2f79ecf1166df5"
+    },
+    {
+      "count": 50,
+      "seed": 149,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 7.9229768055555825,
+      "p50Ms": 7.393899999995483,
+      "p95Ms": 12.322200000009616,
+      "p99Ms": 15.041100000002189,
+      "worstMs": 20.22060000000056,
+      "over16ms": 2,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 49,
+        "final": 49,
+        "mean": 49.335644937586686
+      },
+      "shots": 628,
+      "hits": 149,
+      "maxBolts": 198,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 23.33286578775159,
+      "duplicateCallsigns": 34,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 52,
+        "syncs": 3000,
+        "moves": 754,
+        "queries": 8845,
+        "reuses": 117517,
+        "popped": 7255,
+        "wakes": 8803
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 5.999001111111041,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.6923215277826886,
+          "callsPerFrame": 102
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 1.0525488888889312,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.4058516666661995,
+          "callsPerFrame": 111.475
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.1751687499995872,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.1376126388890043,
+          "callsPerFrame": 0.20694444444444443
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.07813597222575482,
+          "callsPerFrame": 176.68194444444444
+        }
+      ],
+      "digest": "6af0e610cb063f29f8f249b3369fb1409828d31fcdb130eddd2860261855bcea"
+    },
+    {
+      "count": 100,
+      "seed": 149,
+      "layout": "dense",
+      "frames": 720,
+      "simulatedSeconds": 12,
+      "meanMs": 18.97429916666719,
+      "p50Ms": 18.60010000001057,
+      "p95Ms": 21.988999999986845,
+      "p99Ms": 25.72469999999157,
+      "worstMs": 30.39869999999064,
+      "over16ms": 716,
+      "over33ms": 0,
+      "alive": {
+        "minimum": 100,
+        "final": 100,
+        "mean": 100
+      },
+      "shots": 418,
+      "hits": 40,
+      "maxBolts": 129,
+      "wave": 1,
+      "playerDead": false,
+      "minimumFinalSeparationM": 10.087304137792534,
+      "duplicateCallsigns": 84,
+      "collision": {
+        "mode": "grid-events",
+        "queued": 116,
+        "syncs": 3000,
+        "moves": 1511,
+        "queries": 6710,
+        "reuses": 82997,
+        "popped": 6594,
+        "wakes": 6667
+      },
+      "stages": [
+        {
+          "name": "combatInclusive",
+          "msPerFrame": 14.297552916666104,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "comms",
+          "msPerFrame": 3.252467916666602,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "gunsInclusive",
+          "msPerFrame": 1.4064081944442781,
+          "callsPerFrame": 202
+        },
+        {
+          "name": "mesh",
+          "msPerFrame": 0.4132966666657618,
+          "callsPerFrame": 212.59305555555557
+        },
+        {
+          "name": "acquire",
+          "msPerFrame": 0.35678347222112483,
+          "callsPerFrame": 2
+        },
+        {
+          "name": "terrain",
+          "msPerFrame": 0.061715833336165815,
+          "callsPerFrame": 124.24027777777778
+        },
+        {
+          "name": "scorch",
+          "msPerFrame": 0.04265013888895434,
+          "callsPerFrame": 0.05555555555555555
+        }
+      ],
+      "digest": "21945ae5a57d81289e348289ce6e8b9bac1e92b32b02e9999429a0bbc8a0c275"
+    }
+  ]
+}

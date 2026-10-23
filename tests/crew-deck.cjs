@@ -43,3 +43,26 @@ const applySkin=vm.runInNewContext('('+html.match(/function applyJoSkin\(\)\{[^\
 applySkin();assert.equal(skinMesh.material.map,guidedSkin);assert.notEqual(brow.color.getHex(),0xffffff);
 skinState.value='original';applySkin();assert.equal(skinMesh.material.map,originalSkin);assert.equal(brow.color.getHex(),0xffffff);assert.equal(skinMesh.geometry,geometryBefore,'Texture switching never deforms the head');
 console.log('PASS Jo skin: reversible texture/brow comparison without geometry changes');
+
+const helmetContext=vm.createContext({T});
+for(const name of ['roundedHelmetShape','createHelmetTunnel','createHelmetArmor'])vm.runInContext(html.match(new RegExp('function '+name+'\\([^\\n]+'))[0],helmetContext);
+const tunnel=new T.Mesh(vm.runInContext('createHelmetTunnel()',helmetContext),new T.MeshBasicMaterial({side:T.DoubleSide}));
+const panel=new T.Mesh(new T.PlaneGeometry(.21,.26),new T.MeshBasicMaterial());panel.position.set(0,.125,.074);panel.updateMatrixWorld(true);tunnel.updateMatrixWorld(true);
+const center=new T.Vector3(0,.125,.074);
+function helmetRay(origin){return new T.Raycaster(origin,center.clone().sub(origin).normalize()).intersectObjects([panel,tunnel]);}
+assert.equal(helmetRay(new T.Vector3(0,.125,1))[0].object,panel,'Portrait visible through the front opening');
+assert.equal(helmetRay(new T.Vector3(1,.125,.14))[0].object,tunnel,'Opaque tunnel physically occludes the portrait from the side');
+actor.face.portraitMap={offset:{x:0}};actor.person={voiceIndex:0};actor.talk=0;poseFace(actor,0);const faceNeutral=actor.face.portraitMap.offset.x;
+poseFace(actor,4500);assert(actor.face.portraitMap.offset.x>faceNeutral,'Helmet uses original blink frame');actor.talk=1;poseFace(actor,200);assert(actor.face.portraitMap.offset.x>faceNeutral&&actor.face.portraitMap.offset.x<1,'Helmet uses original talking frames');
+console.log('PASS helmet portraits: front aperture, real side-wall occlusion, original blink/talking poses and animated head attachment');
+
+(async()=>{
+ const pending=[],released=[],target={headRevision:0,root:{children:[{}]},face:{id:'initial'},paint:{apply(){}}};
+ const replace=vm.runInNewContext('('+html.match(/async function replaceHead\(a,person\)\{[^\n]+/)[0]+')',{
+  createCrewHead:()=>new Promise(resolve=>pending.push(resolve)),releaseFace:face=>released.push(face.id),setSourceHelmet(){},presets:[{id:'navy',primary:'#000000',accent:'#ffffff'}],applyJoSkin(){}
+ });
+ const old=replace(target,{id:'old',suit:'navy'}),next=replace(target,{id:'next',suit:'navy'});
+ pending[1]({id:'new-head',mode:'helmet'});assert(await next);pending[0]({id:'stale-head',mode:'3d'});assert.equal(await old,false);
+ assert.equal(target.face.id,'new-head');assert(released.includes('initial')&&released.includes('stale-head'));assert(!released.includes('new-head'));
+ console.log('PASS head experiments: stale asynchronous mode/identity loads cannot replace the current head');
+})().catch(error=>{console.error(error);process.exitCode=1;});

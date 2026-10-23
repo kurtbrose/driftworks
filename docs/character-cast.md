@@ -125,3 +125,42 @@ Generated skin prompt records (built-in ImageGen):
 [Asha](../assets/characters/quaternius-universal-base-characters/runtime/asha-skin-v1-generation.json).
 The corresponding PNG authoring outputs sit beside these records; the generated
 catalog references their small WebP delivery variants.
+
+## Helmet portrait experiment
+
+The default Head option is now Helmet portrait. Authored 3D retains the generated
+UV skins, source head meshes and hair. Exposed portrait control retains the simple
+unshielded panel for comparison. Skin remains an authored-3D control; Render keeps
+the Neutral and Illustrated lighting/shading experiments available in every mode.
+No previous source mesh, generated texture or recipe was replaced by the helmet.
+
+Helmet portrait uses the existing comms atlas directly. A fixed plane samples the
+inner face crop (82,77,92,108) in a 256px pose, sharing the seven-pose source image.
+A rounded armor shell, dark opaque recess and closed back surround it. The panel
+is physically behind the front rim; depth testing and real tunnel side walls hide
+it at grazing angles. It follows the animated Head bone without billboarding,
+camera-facing rotation or angle-triggered disappearance. The original sealed
+astronaut helmet is hidden because its opaque face geometry obstructs the panel.
+The procedural replacement shell is shared across the cast; helmet colors live
+in the appearance recipes. No extra character-specific portrait art is needed.
+
+Blink and timed talking-frame selection reuse the original atlas. These are visual
+pose placeholders, not audio synchronization. Helmet atlas resources are reference
+counted with an eight-entry cache; per-instance texture transforms select poses.
+Replacing an identity or head mode releases only owned materials and texture views.
+Per-actor revision checks discard obsolete asynchronous head loads. Controls that
+need actors are disabled until initial loading completes.
+
+The shell is a prototype silhouette, not a finished helmet design. Moderate angles
+can still reveal that facial perspective is fixed; the purpose is to find how much
+physical occlusion is enough. Front, three-quarter and profile inspection views
+and ordinary walking remain the quickest comparison. Automated ray tests require
+a clear frontal view and an obstructing side wall along an oblique ray aimed at the
+face. Tests also cover original blink/talk pose selection and stale mode loads.
+
+Illustrated mode currently adds a warm key, cool fill/rim, cooler shadow color,
+mild lighting-band shaping, subpixel-width backface ink and a shared shadow map.
+Neutral remains a presentation control. The image treatment does not reconstruct
+portrait anatomy or establish likeness; the helmet branch bypasses that problem
+by retaining the approved face artwork itself. Native resolution/MSAA remains the
+default. No further facial-rendering work is implied by this experiment.

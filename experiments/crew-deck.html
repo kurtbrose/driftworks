@@ -2,9 +2,9 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crew deck · Driftworks</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#101820;color:#e3e9e8;font:14px/1.5 system-ui}canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated}header{position:absolute;top:24px;left:28px;pointer-events:none}header a,button,select{pointer-events:auto}a{color:#94d8ca}h1{font-size:30px;margin:4px 0}small,.muted{color:#9fb2bb}button,select{background:#203440;color:#e3e9e8;border:1px solid #537078;padding:9px;font:inherit;cursor:pointer}#panel{position:absolute;bottom:24px;left:28px;max-width:470px;background:#10212bef;border-left:3px solid #e4ae62;padding:16px 20px}#prompt{position:absolute;top:56%;left:50%;transform:translateX(-50%);background:#10212bdd;padding:7px 12px}#cross{position:absolute;top:50%;left:50%;color:#fff9;pointer-events:none}#stats{position:absolute;right:22px;bottom:20px;font:12px/1.6 monospace;text-align:right;color:#a6bfc6}#error{color:#ffc69c}h2{margin:0 0 6px;font-size:18px}
-</style><script src="../src/asset-versions.js?v=600def4bf90f"></script>
+</style><script src="../src/asset-versions.js?v=09db3c77f143"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
-<body><header><a href="../">← Experiments</a><div class="muted">INTERIOR STUDY / 01</div><h1>Crew deck</h1><small>WASD move · mouse look · Shift hurry · E talk · Esc release</small><p><button id="enter" disabled>Loading crew…</button> <button id="front">Head front</button> <button id="threequarter">Head ¾</button> <button id="side">Head profile</button> <label>Inspect <select id="identity"></select></label> <label>Skin <select id="skin"><option value="guided" selected>Portrait guided</option><option value="original">Original</option></select></label> <label>Render <select id="art"><option value="painted" selected>Illustrated</option><option value="neutral">Neutral</option></select></label> <label>Pixels <select id="resolution"><option value="0" selected>Native / smooth</option><option value="0.5">Light pixelation</option><option value="1">Low res</option><option value="1.5">Chunky</option></select></label> <label><input id="crew" type="checkbox" checked> Crew</label></p><div id="error" role="status"></div></header>
+<body><header><a href="../">← Experiments</a><div class="muted">INTERIOR STUDY / 01</div><h1>Crew deck</h1><small>WASD move · mouse look · Shift hurry · E talk · Esc release</small><p><button id="enter" disabled>Loading crew…</button> <button id="front">Head front</button> <button id="threequarter">Head ¾</button> <button id="side">Head profile</button> <label>Inspect <select id="identity" disabled></select></label> <label>Head <select id="head-mode" disabled><option value="helmet" selected>Helmet portrait</option><option value="3d">Authored 3D</option><option value="paper">Exposed portrait control</option></select></label> <label>3D skin <select id="skin" disabled><option value="guided" selected>Portrait guided</option><option value="original">Original</option></select></label> <label>Render <select id="art"><option value="painted" selected>Illustrated</option><option value="neutral">Neutral</option></select></label> <label>Pixels <select id="resolution"><option value="0" selected>Native / smooth</option><option value="0.5">Light pixelation</option><option value="1">Low res</option><option value="1.5">Chunky</option></select></label> <label><input id="crew" type="checkbox" checked> Crew</label></p><div id="error" role="status"></div></header>
 <div id="cross">+</div><div id="prompt" hidden></div><section id="panel"><canvas id="portrait" width="256" height="256" aria-label="Matching comms portrait" style="display:none;width:112px;height:112px;float:left;margin-right:14px"></canvas><h2>Hangar 04 / Standby</h2><div id="dialogue">Three crew, one shared model. A quiet place between sorties.<br>Click Walk aboard to explore, or drag to look before entering.</div></section><output id="stats"></output>
 <script type="module">
 import * as T from 'three';
@@ -74,7 +74,7 @@ box(-4,1,-10,3,2,1.5,'#364b59',true);box(-4,2.05,-10,2.8,.1,1.4,'#77b1b0');
 function cloneRig(source){const copy=source.clone(true),map=new Map();function pair(a,b){map.set(a,b);a.children.forEach((child,i)=>pair(child,b.children[i]));}pair(source,copy);source.traverse(n=>{if(n.isSkinnedMesh){const c=map.get(n);c.skeleton=n.skeleton.clone();c.skeleton.bones=n.skeleton.bones.map(b=>map.get(b));c.bindMatrix.copy(n.bindMatrix);c.material=Array.isArray(n.material)?n.material.map(m=>m.clone()):n.material.clone();}});return copy;}
 // Authored Quaternius head: original anatomy, UVs and source base-color maps.
 const headTemplates=new Map(),hairTemplates=new Map(),skinCache=new Map();
-const rootURL=path=>'../'+path;
+const rootURL=path=>window.Driftworks.assetUrl('../'+path);
 async function acquireSkin(path){
  if(!skinCache.has(path)){
   for(const [key,entry] of skinCache){if(skinCache.size<8)break;if(entry.refs===0){(await entry.promise).dispose();skinCache.delete(key);}}
@@ -108,10 +108,39 @@ async function authoredHead(root,rig,person){
   hair.position.sub(new T.Vector3(...anchor.userData.sourceHeadPivot));
   hair.traverse(mesh=>{if(mesh.isMesh){mesh.material=mesh.material.clone();mesh.material.color.set(person.hairColor);}});anchor.add(hair);
  }
- root.add(anchor);rig.getObjectByName('SpaceSuit_Head').visible=false;decorateCrew(anchor);
- return {anchor,bone:rig.getObjectByName('Head'),jo:true,skin,original,brows,hairColor:person.hairColor,skinPath:person.skinTexture};
+ root.add(anchor);decorateCrew(anchor);
+ return {mode:'3d',anchor,bone:rig.getObjectByName('Head'),jo:true,skin,original,brows,hairColor:person.hairColor,skinPath:person.skinTexture};
 }
-function releaseFace(face){face.anchor.removeFromParent();face.anchor.traverse(mesh=>{if(mesh.userData.crewInk)artOutlines.delete(mesh);else if(mesh.isMesh)mesh.material.dispose();});skinCache.get(face.skinPath).refs--;}
+// The portrait stays fixed to the skull. Opaque tunnel walls hide its edge.
+function roundedHelmetShape(w,h,r){const shape=new T.Shape(),x=-w/2,y=-h/2;shape.moveTo(x+r,y);shape.lineTo(x+w-r,y);shape.quadraticCurveTo(x+w,y,x+w,y+r);shape.lineTo(x+w,y+h-r);shape.quadraticCurveTo(x+w,y+h,x+w-r,y+h);shape.lineTo(x+r,y+h);shape.quadraticCurveTo(x,y+h,x,y+h-r);shape.lineTo(x,y+r);shape.quadraticCurveTo(x,y,x+r,y);return shape;}
+function createHelmetTunnel(){const shape=roundedHelmetShape(.27,.325,.065),hole=roundedHelmetShape(.212,.265,.047);shape.holes.push(new T.Path(hole.getPoints(12).reverse()));const geometry=new T.ExtrudeGeometry(shape,{depth:.09,bevelEnabled:false,curveSegments:12});geometry.translate(0,.125,.07);return geometry;}
+function createHelmetArmor(){const shape=new T.Shape();shape.absellipse(0,0,.1675,.2075,0,Math.PI*2,false,0);const hole=roundedHelmetShape(.245,.305,.065);shape.holes.push(new T.Path(hole.getPoints(12).reverse()));const geometry=new T.ExtrudeGeometry(shape,{depth:.22,bevelEnabled:true,bevelThickness:.006,bevelSize:.006,bevelSegments:2,curveSegments:12});geometry.translate(0,.125,-.07);return geometry;}
+const helmetArmorGeometry=createHelmetArmor(),helmetRearGeometry=new T.ShapeGeometry((()=>{const s=new T.Shape();s.absellipse(0,0,.1675,.2075,0,Math.PI*2,false,0);return s;})()),helmetEarGeometry=new T.CylinderGeometry(.054,.054,.05,16),helmetTunnelGeometry=createHelmetTunnel(),helmetPanelGeometry=new T.PlaneGeometry(.21,.26),helmetBackGeometry=new T.PlaneGeometry(.255,.31);
+const helmetPortraitCache=new Map();
+async function acquireHelmetPortrait(path){
+ if(!helmetPortraitCache.has(path)){
+  for(const [key,entry] of helmetPortraitCache){if(helmetPortraitCache.size<8)break;if(entry.refs===0){(await entry.promise).dispose();helmetPortraitCache.delete(key);}}
+  if(helmetPortraitCache.size>=8)throw Error('Active helmet portrait cache limit reached');
+  helmetPortraitCache.set(path,{refs:0,promise:new T.TextureLoader().loadAsync(rootURL(path)).then(t=>{t.colorSpace=T.SRGBColorSpace;return t;})});
+ }
+ const entry=helmetPortraitCache.get(path);entry.refs++;try{return await entry.promise;}catch(error){entry.refs--;helmetPortraitCache.delete(path);throw error;}
+}
+async function helmetHead(root,rig,person,exposed=false){
+ const source=await acquireHelmetPortrait(person.portrait),map=source.clone();map.needsUpdate=true;map.repeat.set(92/1792,108/256);map.offset.set(82/1792,1-185/256);
+ const anchor=new T.Group();anchor.scale.setScalar(.86);const panel=new T.Mesh(helmetPanelGeometry,new T.MeshBasicMaterial({map,toneMapped:false}));panel.position.set(0,.125,.074);panel.name='PortraitFace';anchor.add(panel);
+ if(!exposed){
+  const armorMaterial=new T.MeshStandardMaterial({color:person.helmetColor||'#b9b8a7',roughness:.7,metalness:.15});
+  const armor=new T.Mesh(helmetArmorGeometry,armorMaterial);armor.castShadow=true;anchor.add(armor);
+  const rear=new T.Mesh(helmetRearGeometry,armorMaterial);rear.position.set(0,.125,-.077);rear.rotation.y=Math.PI;anchor.add(rear);
+  for(const side of [-1,1]){const ear=new T.Mesh(helmetEarGeometry,armorMaterial);ear.rotation.z=Math.PI/2;ear.position.set(side*.18,.125,-.015);anchor.add(ear);}
+  const sleeve=new T.Mesh(helmetTunnelGeometry,new T.MeshStandardMaterial({color:0x18252c,roughness:.95,side:T.DoubleSide}));sleeve.name='HelmetRecess';sleeve.castShadow=true;anchor.add(sleeve);
+  const back=new T.Mesh(helmetBackGeometry,new T.MeshBasicMaterial({color:0x080e14}));back.position.set(0,.125,.065);anchor.add(back);
+ }
+ root.add(anchor);return {mode:exposed?'paper':'helmet',anchor,bone:rig.getObjectByName('Head'),jo:false,portraitPath:person.portrait,portraitMap:map};
+}
+function setSourceHelmet(rig,mode){rig.getObjectByName('SpaceSuit_Head').visible=false;}
+async function createCrewHead(root,rig,person){return $('head-mode').value==='3d'?authoredHead(root,rig,person):helmetHead(root,rig,person,$('head-mode').value==='paper');}
+function releaseFace(face){face.anchor.removeFromParent();const materials=new Set();face.anchor.traverse(mesh=>{if(mesh.userData.crewInk)artOutlines.delete(mesh);else if(mesh.isMesh)materials.add(mesh.material);});for(const material of materials)material.dispose();if(face.portraitMap){face.portraitMap.dispose();helmetPortraitCache.get(face.portraitPath).refs--;}else skinCache.get(face.skinPath).refs--;}
 const portraitCache=new Map();let portraitPerson=null,portraitBitmap=null;
 async function showPortrait(person){portraitPerson=person;portraitBitmap=null;const key=person.portrait;
  if(!portraitCache.has(key)){if(portraitCache.size>=4){const first=portraitCache.keys().next().value;portraitCache.get(first).close();portraitCache.delete(first);}const response=await fetch(rootURL(key));portraitCache.set(key,await createImageBitmap(await response.blob()));}
@@ -120,6 +149,7 @@ async function showPortrait(person){portraitPerson=person;portraitBitmap=null;co
 function poseFace(a,now){if(!a.face)return;const {anchor,bone}=a.face;
  a.root.updateMatrixWorld(true);anchor.position.copy(a.root.worldToLocal(bone.getWorldPosition(new T.Vector3())));
  anchor.quaternion.copy(a.root.getWorldQuaternion(new T.Quaternion()).invert().multiply(bone.getWorldQuaternion(new T.Quaternion())));
+ if(a.face.portraitMap){const blink=(now+(a.person?.voiceIndex||0)*577)%4600>4430,frame=blink?3:a.talk>0?(Math.floor(now/190)%2?1:2):0;a.face.portraitMap.offset.x=(frame*256+82)/1792;}
 }
 const actors=[],crewGroup=new T.Group();scene.add(crewGroup);let sourceBytes=0;
 try{
@@ -128,17 +158,18 @@ try{
  const bytes=await (await fetch(url)).arrayBuffer();sourceBytes=bytes.byteLength;
  const gltf=await new GLTFLoader().parseAsync(bytes,new URL('../assets/characters/'+entry.id+'/original/',location.href).href);
  const sourceBounds=new T.Box3().setFromObject(gltf.scene),height=sourceBounds.max.y-sourceBounds.min.y;
- const cast=await (await fetch('../assets/characters/crew-cast/catalog.json')).json();
+ const cast=await (await fetch(rootURL('assets/characters/crew-cast/catalog.json'))).json();
  const specs=[['jo-mercer',-3,3,false],['asha-menon',-4,-7,false],['luis-ortega',4,-2,true]];
  $('identity').replaceChildren(...cast.characters.map(p=>new Option(p.name+' · '+p.status,p.id)));
  $('identity').onchange=()=>changeIdentity(cast.characters.find(p=>p.id===$('identity').value));
- for(const [id,x,z,patrol] of specs){const person=cast.characters.find(p=>p.id===id),name=person.name,palette=person.suit,line=person.personality;const root=new T.Group(),rig=cloneRig(gltf.scene);root.add(rig);rig.scale.setScalar(1.8/height);rig.position.y=-sourceBounds.min.y*1.8/height;root.position.set(x,0,z);crewGroup.add(root);const materials=[];rig.traverse(n=>{if(n.material)materials.push(...(Array.isArray(n.material)?n.material:[n.material]));if(n.isSkinnedMesh)n.frustumCulled=false;});const paint=presets.find(p=>p.id===palette);const paletteController=createPalette(materials);paletteController.apply(paint.primary,paint.accent,true);const mixer=new T.AnimationMixer(rig),clips=new Map(gltf.animations.map(c=>[c.name.split('|').pop(),c]));const actor={name,line,root,mixer,clips,action:null,mode:'',talk:0,patrol,person,paint:paletteController,materials,origin:new T.Vector3(x,0,z)};actor.face=await authoredHead(root,rig,person);decorateCrew(rig);actors.push(actor);play(actor,actor.patrol?'Walk':'Idle');}
- applyJoSkin();$('enter').disabled=false;$('enter').textContent='Walk aboard';window.crewDeck={actors,renderer,scene,camera,sourceBytes,solids};
+ for(const [id,x,z,patrol] of specs){const person=cast.characters.find(p=>p.id===id),name=person.name,palette=person.suit,line=person.personality;const root=new T.Group(),rig=cloneRig(gltf.scene);root.add(rig);rig.scale.setScalar(1.8/height);rig.position.y=-sourceBounds.min.y*1.8/height;root.position.set(x,0,z);crewGroup.add(root);const materials=[];rig.traverse(n=>{if(n.material)materials.push(...(Array.isArray(n.material)?n.material:[n.material]));if(n.isSkinnedMesh)n.frustumCulled=false;});const paint=presets.find(p=>p.id===palette);const paletteController=createPalette(materials);paletteController.apply(paint.primary,paint.accent,true);const mixer=new T.AnimationMixer(rig),clips=new Map(gltf.animations.map(c=>[c.name.split('|').pop(),c]));const actor={name,line,root,mixer,clips,action:null,mode:'',talk:0,patrol,person,paint:paletteController,materials,origin:new T.Vector3(x,0,z)};actor.headRevision=0;actor.face=await createCrewHead(root,rig,person);setSourceHelmet(rig,actor.face.mode);decorateCrew(rig);actors.push(actor);play(actor,actor.patrol?'Walk':'Idle');}
+ applyJoSkin();$('skin').disabled=$('head-mode').value!=='3d';$('head-mode').disabled=false;$('identity').disabled=false;$('enter').disabled=false;$('enter').textContent='Walk aboard';window.crewDeck={actors,renderer,scene,camera,sourceBytes,solids};
 }catch(error){$('error').textContent='Could not load crew: '+error.message;}
 function applyJoSkin(){for(const a of actors){if(!a.face.jo)continue;const guided=$('skin').value==='guided';a.face.anchor.traverse(mesh=>{if(mesh.isMesh&&/Superhero/.test(mesh.name)){mesh.material.map=guided?a.face.skin:a.face.original;mesh.material.needsUpdate=true;}});a.face.brows.color.set(guided?(a.face.hairColor||'#39251e'):'#ffffff');}}
 $('skin').onchange=applyJoSkin;
-let identityRevision=0;
-async function changeIdentity(person){const ticket=++identityRevision,a=actors[0];try{const face=await authoredHead(a.root,a.root.children[0],person);if(ticket!==identityRevision){releaseFace(face);return;}releaseFace(a.face);a.face=face;a.person=person;a.name=person.name;a.line=person.personality;const palette=presets.find(p=>p.id===person.suit);a.paint.apply(palette.primary,palette.accent,true);applyJoSkin();await showPortrait(person);}catch(error){$('error').textContent=error.message;}}
+async function replaceHead(a,person){const ticket=++a.headRevision,rig=a.root.children[0];const face=await createCrewHead(a.root,rig,person);if(ticket!==a.headRevision){releaseFace(face);return false;}releaseFace(a.face);a.face=face;a.person=person;a.name=person.name;a.line=person.personality;setSourceHelmet(rig,face.mode);const palette=presets.find(p=>p.id===person.suit);a.paint.apply(palette.primary,palette.accent,true);applyJoSkin();return true;}
+async function changeIdentity(person){try{if(await replaceHead(actors[0],person))await showPortrait(person);}catch(error){$('error').textContent=error.message;}}
+$('head-mode').onchange=async()=>{$('skin').disabled=$('head-mode').value!=='3d';try{await Promise.all(actors.map(a=>replaceHead(a,a.person)));if(actors[0])await showPortrait(actors[0].person);}catch(error){$('error').textContent=error.message;}};
 function play(a,name){if(a.mode===name)return;a.action?.fadeOut(.2);a.action=a.mixer.clipAction(a.clips.get(name));a.action.reset().fadeIn(.2).play();a.mode=name;}
 const keys=new Set();let yaw=0,pitch=0,drag=false,nearest=null,walking=false,inspecting=false;
 for(const [id,x,z,angle] of [['front',-3,4.05,0],['threequarter',-2.22,3.78,Math.PI/4],['side',-1.9,3,Math.PI/2]])$(id).onclick=()=>{walking=false;inspecting=true;$('cross').hidden=true;document.exitPointerLock?.();camera.position.set(x,1.68,z);yaw=angle;pitch=0;camera.rotation.set(0,yaw,0);if(actors[0])showPortrait(actors[0].person);};

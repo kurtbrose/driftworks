@@ -5,6 +5,14 @@ renderer. It loads the actual ordinary application scripts into an isolated Node
 VM. There is no DOM, WebGL context, audio context, server, or network access.
 No installation or build step is needed.
 
+For a repeatable fleet-size CPU sweep, run `node tools/stress-flight.cjs`.
+It tests 16/50/100 AI fighters in stock and compact layouts, reporting mean and
+tail times, overlapping stage costs, shot/hit counts, population and invariants.
+`--counts 16,50,100 --seconds 12` sets the sweep; `--profile 100 --layout dense`
+collects a separate V8 sampling profile. Graphics and real audio are excluded.
+See [the recorded scaling test](benchmarks/flight-scale-2026-10-23.md) for results
+and the distinction between CPU batches and browser FPS.
+
 ## Start in a REPL
 
 In a Node REPL opened at the repository root (`node`):

@@ -33,5 +33,8 @@ for(const kind of ['female','male']){
  const pinned=await fn('pinned');
  for(let i=0;i<100;i++){await fn('fixture-'+i);cache.get('fixture-'+i).refs--;assert(cache.size<=8);}
  assert(cache.has('pinned'),'Active texture never evicted');assert(disposed.length>=93);assert.equal(cache.get('pinned').refs,1);assert(pinned);
+ const helmetCache=new Map();
+ const acquireHelmet=vm.runInNewContext('('+html.match(/async function acquireHelmetPortrait\(path\)\{[\s\S]*?\n\}/)[0]+')',{helmetPortraitCache:helmetCache,T:{TextureLoader},rootURL:p=>p});
+ await acquireHelmet('active-helmet');for(let i=0;i<100;i++){await acquireHelmet('helmet-'+i);helmetCache.get('helmet-'+i).refs--;assert(helmetCache.size<=8);}assert(helmetCache.has('active-helmet'));
  console.log('PASS cast pipeline: shared comms/3D identity, synthetic 100-record compile, duplicate rejection, geometry/UV parity and bounded 100-texture traversal');
 })().catch(error=>{console.error(error);process.exitCode=1;});

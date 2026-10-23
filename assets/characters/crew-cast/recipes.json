@@ -10,7 +10,8 @@
       "suit": "navy",
       "skin": "jo-skin-v1",
       "status": "portrait-guided-v1",
-      "appearance": "Medium warm complexion, dark brown hair, brown eyes, dark arched brows; direct, watchful expression."
+      "appearance": "Medium warm complexion, dark brown hair, brown eyes, dark arched brows; direct, watchful expression.",
+      "helmetColor": "#bf9740"
     },
     {
       "id": "luis-ortega",
@@ -20,7 +21,8 @@
       "suit": "rescue",
       "status": "portrait-guided-v1",
       "appearance": "Young adult, warm medium skin, dark parted hair, brown eyes; calm attentive expression.",
-      "skin": "luis-skin-v1"
+      "skin": "luis-skin-v1",
+      "helmetColor": "#c1c4b7"
     },
     {
       "id": "asha-menon",
@@ -30,7 +32,8 @@
       "suit": "engineering",
       "status": "portrait-guided-v1",
       "appearance": "Adult, warm brown skin, dark tied-back hair, brown eyes; precise, composed expression.",
-      "skin": "asha-skin-v1"
+      "skin": "asha-skin-v1",
+      "helmetColor": "#c1c4b7"
     },
     {
       "id": "ben-harlow",
@@ -39,7 +42,8 @@
       "hairColor": "#77706a",
       "suit": "engineering",
       "status": "base-template",
-      "appearance": "Older adult, greying short hair and brows, weathered face; patient practical expression."
+      "appearance": "Older adult, greying short hair and brows, weathered face; patient practical expression.",
+      "helmetColor": "#b97837"
     },
     {
       "id": "nadiya-bell",
@@ -48,7 +52,8 @@
       "hairColor": "#432a22",
       "suit": "rescue",
       "status": "base-template",
-      "appearance": "Young adult, warm skin, short dark hair, alert curious expression."
+      "appearance": "Young adult, warm skin, short dark hair, alert curious expression.",
+      "helmetColor": "#c1c4b7"
     },
     {
       "id": "kenji-sato",
@@ -57,7 +62,8 @@
       "hairColor": "#251f1b",
       "suit": "navy",
       "status": "base-template",
-      "appearance": "Middle-aged adult, dark parted hair, straight dark brows; quiet precise expression."
+      "appearance": "Middle-aged adult, dark parted hair, straight dark brows; quiet precise expression.",
+      "helmetColor": "#bb8c43"
     }
   ]
 }

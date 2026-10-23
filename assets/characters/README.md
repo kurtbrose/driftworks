@@ -127,3 +127,11 @@ the production radio renderer has not been migrated to this catalog.
 
 See [the cast workflow](../../docs/character-cast.md) for authoring, build commands,
 measured byte costs, generation briefs, limitations and the 100-record test.
+
+## Warm head experiments
+
+Crew deck now defaults to Helmet portrait: the original comms face is recessed
+inside a shared opaque 3D shell. Head also offers Authored 3D (all generated skins
+and hair retained) and Exposed portrait control. Render retains Neutral and
+Illustrated treatments. See the helmet section in [the cast workflow](../../docs/character-cast.md)
+for occlusion, ownership, animation behavior and prototype limitations.
