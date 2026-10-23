@@ -711,6 +711,10 @@ export type ExperimentModules = {
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
     };
     training: {
+        setCollisionMode: (combat: Combat, mode: 'legacy'|'grid'|'tree'|'grid-events'|'tree-events') => void;
+        collisionBatch: <T>(combat: Combat, work: () => T) => T;
+        collisionChanged: (combat: Combat, craft?: Craft) => void;
+        collisionStats: (combat: Combat) => {mode:string;queued:number;syncs:number;moves:number;queries:number;reuses:number;popped:number;wakes:number};
         stepControlled: (combat: Combat, controls: Demand, weapon: Weapon, dt: number, radius: number, terrainHit?: TerrainHit, afterCombat?: () => void) => {playerDamaged: boolean; fired: boolean; impact: boolean};
         stepInput: (craft: Craft, controls: Demand, dt: number) => void;
         damageCraft: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;

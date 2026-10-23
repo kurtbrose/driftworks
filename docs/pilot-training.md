@@ -184,3 +184,27 @@ Local ignored artifacts are in `.pilot-training/kill-first/`,
 These results used fixed duel-only cases and end-state damage scoring. The
 current version 2 code deliberately changes those assumptions, so old scores
 must not be compared numerically with new scores.
+
+## First mixed-scenario version 2 run
+
+On 2026-10-23, seed 1729, 30 generations of 8 mutations, 30-second encounter
+limits, 8 fresh cases per generation and 24 cases per final split:
+
+| Held-out controller | Wins | Losses | Timeouts | Personal kills | Hits |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Zero-weight scaffold | 14 | 5 | 5 | 14 | 998 |
+| Selected champion | 14 | 5 | 5 | 14 | 998 |
+
+The selected champion's weights were all zero: no evolved candidate beat the
+baseline on final validation. Both controllers therefore inflicted the same
+credited 2816.49 hull damage and 8195.5 shield damage, with mean score 4.45845.
+This run evaluated 240 new candidate networks across 1920 offspring encounters,
+plus parent re-evaluations and final validation/test encounters. It establishes
+the expanded harness, not successful neural improvement. Local artifacts are in
+`.pilot-training/mixed-v2-first/`.
+
+A next diagnostic would vary mutation scale and parameterization: unrestricted
+additive pitch/yaw corrections may spoil an already accurate aiming scaffold.
+That is an untested explanation, not evidence that evolution or neural policies
+cannot improve this task. The current observation's missing health and other
+contacts also limits what a policy can learn from disadvantaged scenarios.

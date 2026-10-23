@@ -1,0 +1,185 @@
+{
+  "method": "Real headless 16-fighter furball, seed 29, .5 simulated seconds warmup then four measured seconds (480 substeps), fire and stop held. Six alternating AB/BA pairs against legacy collision path in the same runtime; exact full-session JSON SHA-256 comparison. Includes simulation, acquisition, scenery, comms and transcript generation; excludes graphics/audio. Counters include warmup.",
+  "sources": {
+    "experiments/training.js": "b1a67dd8a47fa03be1a0e8cbb29a1a9f9385cb95fbbad8cffe0fd49cc70164cf",
+    "experiments/aegis-flight.js": "61fd539e5ecf16a11ef50fa9a88d80f56b521a20340ab83c209acec1e1477d62"
+  },
+  "rows": [
+    {
+      "mode": "grid",
+      "beforeMs": 1990.628450000002,
+      "afterMs": 1966.9131499999967,
+      "reductionPercent": 1.191347385796948,
+      "stats": {
+        "mode": "grid",
+        "queued": 0,
+        "syncs": 1080,
+        "moves": 83,
+        "queries": 46671,
+        "reuses": 0,
+        "popped": 0,
+        "wakes": 0
+      },
+      "shots": 294,
+      "pairs": [
+        {
+          "beforeMs": 2031.2925999999989,
+          "afterMs": 2008.3125
+        },
+        {
+          "beforeMs": 1985.8183000000026,
+          "afterMs": 1922.7058000000015
+        },
+        {
+          "beforeMs": 1982.2849999999999,
+          "afterMs": 2016.7502999999997
+        },
+        {
+          "beforeMs": 1978.8081999999995,
+          "afterMs": 1899.5066000000006
+        },
+        {
+          "beforeMs": 1995.8388999999988,
+          "afterMs": 1972.7469999999958
+        },
+        {
+          "beforeMs": 1995.4386000000013,
+          "afterMs": 1961.0792999999976
+        }
+      ],
+      "sessionMatches": true
+    },
+    {
+      "mode": "tree",
+      "beforeMs": 1946.2369000000035,
+      "afterMs": 1793.847249999999,
+      "reductionPercent": 7.829964070663975,
+      "stats": {
+        "mode": "tree",
+        "queued": 0,
+        "syncs": 1080,
+        "moves": 83,
+        "queries": 46671,
+        "reuses": 0,
+        "popped": 0,
+        "wakes": 0
+      },
+      "shots": 294,
+      "pairs": [
+        {
+          "beforeMs": 1966.594100000002,
+          "afterMs": 1793.9732999999978
+        },
+        {
+          "beforeMs": 1924.4402000000046,
+          "afterMs": 1795
+        },
+        {
+          "beforeMs": 1925.2339999999967,
+          "afterMs": 1758.291099999995
+        },
+        {
+          "beforeMs": 1968.587400000004,
+          "afterMs": 1779.7153000000035
+        },
+        {
+          "beforeMs": 1927.6770000000033,
+          "afterMs": 1793.7212
+        },
+        {
+          "beforeMs": 1964.7968000000037,
+          "afterMs": 1840.9838000000018
+        }
+      ],
+      "sessionMatches": true
+    },
+    {
+      "mode": "grid-events",
+      "beforeMs": 1988.0011000000086,
+      "afterMs": 1793.3571500000035,
+      "reductionPercent": 9.790937741433059,
+      "stats": {
+        "mode": "grid-events",
+        "queued": 158,
+        "syncs": 1080,
+        "moves": 83,
+        "queries": 1869,
+        "reuses": 44802,
+        "popped": 1711,
+        "wakes": 1720
+      },
+      "shots": 294,
+      "pairs": [
+        {
+          "beforeMs": 1937.8267999999953,
+          "afterMs": 1789.1389000000054
+        },
+        {
+          "beforeMs": 1988.5583000000042,
+          "afterMs": 1797.5754000000015
+        },
+        {
+          "beforeMs": 1934.4435999999987,
+          "afterMs": 1789.1071999999986
+        },
+        {
+          "beforeMs": 1987.443900000013,
+          "afterMs": 1730.121100000004
+        },
+        {
+          "beforeMs": 1994.4616999999998,
+          "afterMs": 1883.180600000007
+        },
+        {
+          "beforeMs": 2034.613799999992,
+          "afterMs": 1873.7082999999984
+        }
+      ],
+      "sessionMatches": true
+    },
+    {
+      "mode": "tree-events",
+      "beforeMs": 2005.7468000000008,
+      "afterMs": 1896.5072000000073,
+      "reductionPercent": 5.446330513901032,
+      "stats": {
+        "mode": "tree-events",
+        "queued": 158,
+        "syncs": 1080,
+        "moves": 83,
+        "queries": 1869,
+        "reuses": 44802,
+        "popped": 1711,
+        "wakes": 1720
+      },
+      "shots": 294,
+      "pairs": [
+        {
+          "beforeMs": 2022.893299999996,
+          "afterMs": 1967.0546000000031
+        },
+        {
+          "beforeMs": 2065.4906000000046,
+          "afterMs": 1866.88979999999
+        },
+        {
+          "beforeMs": 1966.3778999999922,
+          "afterMs": 1867.6687999999995
+        },
+        {
+          "beforeMs": 2033.6273999999976,
+          "afterMs": 1899.2035000000033
+        },
+        {
+          "beforeMs": 1944.0288,
+          "afterMs": 1905.9780000000028
+        },
+        {
+          "beforeMs": 1988.6003000000055,
+          "afterMs": 1893.8109000000113
+        }
+      ],
+      "sessionMatches": true
+    }
+  ]
+}

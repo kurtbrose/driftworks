@@ -1559,26 +1559,47 @@ batches, because capital-ship projectiles and impacts follow those batches.
 `onDamage` callback runs once when the chosen victim actually loses shield or
 hull health; it reports neither terrain contact nor zero damage. Aegis confirmed
 hit accounting uses this callback, avoiding whole-fleet health totals per trace.
-Projectile broad phase uses a 128 m 3D center-cell hash, with conservative
-rotation-independent source-mesh spheres. Oversized hulls have a separate list;
-fleets of at most 24 participants and queries covering over 4,096 cells use a
-linear bounds pass. Candidates retain participant order for equal-distance hits.
-The index observes every query, including movement interleaved within a substep.
-Membership, team, alive-state and collision-shape changes invalidate clearance.
-Mesh vertices are immutable, matching the shared triangle hierarchy contract;
-`shipPackModels.hullRadius(model)` returns its cached metre-space sphere radius.
+Projectile queries use padded ship proxies in an incrementally maintained 128 m
+3D grid. Each proxy encloses the source-mesh sphere plus a 32 m movement cushion;
+rotation cannot escape this sphere. A ship only changes spatial buckets when its
+actual bound leaves the proxy. Proxies covering more than 512 cells have a global
+fallback list; long queries scan occupied buckets instead of enumerating empty
+space. Candidates retain participant order for equal-distance hits. Source meshes
+are immutable; `shipPackModels.hullRadius(model)` returns their cached metre-space
+sphere radius.
 
-An empty query expanded by 100 m beyond the larger of the 30 m near-miss radius
-and bolt radius establishes a per-bolt clearance certificate. Ship queries sleep
-while the distance from that certificate's endpoint to both current segment
-endpoints, plus cumulative observed ship displacement, remains strictly below
-100 m. This is a conservative event condition, not a predicted-speed deadline:
-acceleration, teleports and direction changes consume clearance immediately.
-Terrain queries still run every segment. No unchecked projectile interval or
-delayed damage is introduced, including on a bolt's final lifetime segment.
-All caches are WeakMaps outside serializable combat state. Hull sweeps traverse
-the triangle hierarchy near-first using reusable scratch arrays, without sorting
-or allocating candidate leaves or padded triangle vertices per query.
+The default `grid-events` mode caches candidates for a projectile corridor up to
+250 ms ahead, bounded by remaining bolt lifetime. Corridors include the current
+segment and future straight-line travel, expanded by the larger of the 30 m
+near-miss radius and bolt radius. A second spatial index holds these corridors.
+When a ship leaves its padded proxy, its new envelope queries this reverse index
+and wakes overlapping corridors; motion inside the proxy needs no invalidation.
+A min-heap expires corridors at their refresh deadlines. Superseded events are
+marked inactive and discarded lazily; periodic compaction bounds stale entries.
+A state epoch invalidates candidate caches on roster, order, shape, team or
+alive-state changes. Changed paths must remain inside their certified corridor
+or query again. This schedules conservative refreshes, not exact impact times.
+
+`training.collisionBatch(combat, work)` observes poses once at the boundary,
+then reuses proxies across traces. The fighter update notifies each moved craft
+before its guns run; controlled guns and Aegis mount loops also use batches.
+Custom batched callers must call `collisionChanged(combat, craft)` after moving a
+craft, or `collisionChanged(combat)` after arbitrary roster/state edits. Nested
+batches share the outer observation and always release management in `finally`.
+Public unbatched `trace` calls still observe every pose, preserving compatibility
+with direct mutation, including same-time teleports. Terrain queries and precise
+nearby hull sweeps retain per-segment timing, including the final lifetime segment.
+Damage-only legacy bolts without ballistic metadata use immediate queries.
+There is no delayed damage or unchecked path interval.
+
+Development APIs `setCollisionMode(combat, mode)` and `collisionStats(combat)`
+allow matched comparisons of `legacy`, `grid`, `tree`, `grid-events`, and
+`tree-events`. The tree variants use incrementally refitted balanced binary AABB
+trees. The legacy mode retains the prior center-cell hash and global movement
+clearance certificate. All index, corridor and queue state lives in WeakMaps,
+outside serialized combat data. Hull sweeps retain near-first traversal with
+scratch storage, without sorting candidate leaves or allocating padded triangle
+vertices per query. See [scheduling measurements](benchmarks/collision-scheduling-2026-10-23.md).
 The fixed-scene browser and scripted CPU benchmarks are described in
 [dreadnaught kit](dreadnaught-kit.md#repeatable-performance-comparison).
 

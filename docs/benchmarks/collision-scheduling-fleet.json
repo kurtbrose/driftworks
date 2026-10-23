@@ -1,0 +1,414 @@
+{
+  "reference": "14a503c6d1ccee51c75119959bbbebe560bf8047",
+  "method": "CPU only. 24 persistent projectile probes x 120 steps; mixed near/distant paths, moving source-mesh fighters, damage and near misses. One warm-up each, six alternating AB/BA pairs per fleet size. This isolates trace cost; excludes rendering, AI, gun lifecycle and terrain.",
+  "rows": [
+    {
+      "ships": 8,
+      "mode": "grid",
+      "beforeMs": 21.14360000000005,
+      "afterMs": 26.921549999999968,
+      "reductionPercent": -27.327181747667883,
+      "pairs": [
+        {
+          "beforeMs": 26.9131000000001,
+          "afterMs": 29.414499999999975
+        },
+        {
+          "beforeMs": 21.28670000000011,
+          "afterMs": 26.97460000000001
+        },
+        {
+          "beforeMs": 22.630899999999997,
+          "afterMs": 26.712900000000104
+        },
+        {
+          "beforeMs": 20.865999999999985,
+          "afterMs": 27.660799999999995
+        },
+        {
+          "beforeMs": 21.000499999999988,
+          "afterMs": 26.868499999999926
+        },
+        {
+          "beforeMs": 20.431400000000167,
+          "afterMs": 26.304200000000037
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 8,
+      "mode": "tree",
+      "beforeMs": 19.7422499999999,
+      "afterMs": 19.96040000000005,
+      "reductionPercent": -1.1049905659190395,
+      "pairs": [
+        {
+          "beforeMs": 19.74689999999987,
+          "afterMs": 19.957200000000057
+        },
+        {
+          "beforeMs": 18.800500000000056,
+          "afterMs": 21.07569999999987
+        },
+        {
+          "beforeMs": 19.212299999999914,
+          "afterMs": 19.583200000000033
+        },
+        {
+          "beforeMs": 19.758000000000038,
+          "afterMs": 19.963600000000042
+        },
+        {
+          "beforeMs": 20.051600000000008,
+          "afterMs": 19.245300000000043
+        },
+        {
+          "beforeMs": 19.73759999999993,
+          "afterMs": 20.1559000000002
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 8,
+      "mode": "grid-events",
+      "beforeMs": 19.321150000000102,
+      "afterMs": 17.78404999999998,
+      "reductionPercent": 7.9555305972994095,
+      "pairs": [
+        {
+          "beforeMs": 19.41470000000004,
+          "afterMs": 18.163800000000037
+        },
+        {
+          "beforeMs": 19.819400000000087,
+          "afterMs": 18.125
+        },
+        {
+          "beforeMs": 20.463899999999967,
+          "afterMs": 17.357600000000048
+        },
+        {
+          "beforeMs": 19.227600000000166,
+          "afterMs": 17.44309999999996
+        },
+        {
+          "beforeMs": 18.91730000000007,
+          "afterMs": 18.60480000000007
+        },
+        {
+          "beforeMs": 19.006599999999935,
+          "afterMs": 16.791500000000042
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 8,
+      "mode": "tree-events",
+      "beforeMs": 19.615499999999997,
+      "afterMs": 23.07519999999988,
+      "reductionPercent": -17.637582524023788,
+      "pairs": [
+        {
+          "beforeMs": 20.226699999999937,
+          "afterMs": 24.405899999999974
+        },
+        {
+          "beforeMs": 18.705600000000004,
+          "afterMs": 23.496199999999817
+        },
+        {
+          "beforeMs": 19.964999999999918,
+          "afterMs": 24.80580000000009
+        },
+        {
+          "beforeMs": 20.01260000000002,
+          "afterMs": 22.654199999999946
+        },
+        {
+          "beforeMs": 19.153499999999894,
+          "afterMs": 21.617700000000013
+        },
+        {
+          "beforeMs": 19.266000000000076,
+          "afterMs": 21.84140000000002
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 64,
+      "mode": "grid",
+      "beforeMs": 93.39724999999999,
+      "afterMs": 36.300700000000006,
+      "reductionPercent": 61.13300980489254,
+      "pairs": [
+        {
+          "beforeMs": 95.3103000000001,
+          "afterMs": 39.40639999999985
+        },
+        {
+          "beforeMs": 90.81910000000016,
+          "afterMs": 35.34780000000001
+        },
+        {
+          "beforeMs": 93.55479999999989,
+          "afterMs": 37.253600000000006
+        },
+        {
+          "beforeMs": 93.23970000000008,
+          "afterMs": 38.20399999999972
+        },
+        {
+          "beforeMs": 95.75909999999976,
+          "afterMs": 34.94439999999986
+        },
+        {
+          "beforeMs": 89.24319999999989,
+          "afterMs": 34.90890000000036
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 64,
+      "mode": "tree",
+      "beforeMs": 97.30185000000006,
+      "afterMs": 32.52525000000014,
+      "reductionPercent": 66.57283494609803,
+      "pairs": [
+        {
+          "beforeMs": 98.05259999999998,
+          "afterMs": 32.13580000000002
+        },
+        {
+          "beforeMs": 93.08420000000024,
+          "afterMs": 32.202400000000125
+        },
+        {
+          "beforeMs": 95.4371000000001,
+          "afterMs": 32.84810000000016
+        },
+        {
+          "beforeMs": 96.55110000000013,
+          "afterMs": 32.89280000000008
+        },
+        {
+          "beforeMs": 99.93309999999974,
+          "afterMs": 31.198499999999967
+        },
+        {
+          "beforeMs": 105.6241,
+          "afterMs": 33.23059999999987
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 64,
+      "mode": "grid-events",
+      "beforeMs": 99.61995000000024,
+      "afterMs": 29.426950000000033,
+      "reductionPercent": 70.46078621802164,
+      "pairs": [
+        {
+          "beforeMs": 97.65650000000005,
+          "afterMs": 36.65169999999989
+        },
+        {
+          "beforeMs": 114.73280000000022,
+          "afterMs": 30.690599999999904
+        },
+        {
+          "beforeMs": 101.58340000000044,
+          "afterMs": 29.260699999999815
+        },
+        {
+          "beforeMs": 91.94320000000062,
+          "afterMs": 27.973700000000463
+        },
+        {
+          "beforeMs": 97.0592999999999,
+          "afterMs": 29.59320000000025
+        },
+        {
+          "beforeMs": 102.20969999999943,
+          "afterMs": 27.872400000000198
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 64,
+      "mode": "tree-events",
+      "beforeMs": 93.28314999999975,
+      "afterMs": 34.52405000000044,
+      "reductionPercent": 62.99004696989699,
+      "pairs": [
+        {
+          "beforeMs": 95.3809999999994,
+          "afterMs": 33.96340000000055
+        },
+        {
+          "beforeMs": 89.42419999999947,
+          "afterMs": 35.23940000000039
+        },
+        {
+          "beforeMs": 95.67959999999948,
+          "afterMs": 35.45650000000023
+        },
+        {
+          "beforeMs": 94.48319999999967,
+          "afterMs": 34.258200000000215
+        },
+        {
+          "beforeMs": 92.08309999999983,
+          "afterMs": 33.202000000000226
+        },
+        {
+          "beforeMs": 91.86250000000018,
+          "afterMs": 34.78990000000067
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 128,
+      "mode": "grid",
+      "beforeMs": 154.37639999999965,
+      "afterMs": 52.02215000000024,
+      "reductionPercent": 66.3017468991372,
+      "pairs": [
+        {
+          "beforeMs": 143.54740000000038,
+          "afterMs": 46.3708000000006
+        },
+        {
+          "beforeMs": 149.64150000000063,
+          "afterMs": 46.83800000000065
+        },
+        {
+          "beforeMs": 160.08150000000023,
+          "afterMs": 58.07759999999962
+        },
+        {
+          "beforeMs": 156.73269999999957,
+          "afterMs": 53.539999999999964
+        },
+        {
+          "beforeMs": 152.02009999999973,
+          "afterMs": 50.967900000000554
+        },
+        {
+          "beforeMs": 162.3798999999999,
+          "afterMs": 53.07639999999992
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 128,
+      "mode": "tree",
+      "beforeMs": 164.74094999999988,
+      "afterMs": 51.50895000000037,
+      "reductionPercent": 68.73336592996435,
+      "pairs": [
+        {
+          "beforeMs": 153.04579999999987,
+          "afterMs": 45.22639999999956
+        },
+        {
+          "beforeMs": 165.79439999999977,
+          "afterMs": 50.9390999999996
+        },
+        {
+          "beforeMs": 163.6875,
+          "afterMs": 59.4983000000002
+        },
+        {
+          "beforeMs": 181.07380000000012,
+          "afterMs": 62.531300000000556
+        },
+        {
+          "beforeMs": 170.41159999999945,
+          "afterMs": 51.54980000000069
+        },
+        {
+          "beforeMs": 161.35809999999947,
+          "afterMs": 51.46810000000005
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 128,
+      "mode": "grid-events",
+      "beforeMs": 146.55164999999943,
+      "afterMs": 42.58215000000018,
+      "reductionPercent": 70.94393000692905,
+      "pairs": [
+        {
+          "beforeMs": 147.42439999999988,
+          "afterMs": 44.20600000000013
+        },
+        {
+          "beforeMs": 145.67889999999898,
+          "afterMs": 41.03069999999934
+        },
+        {
+          "beforeMs": 149.1239000000005,
+          "afterMs": 44.66870000000017
+        },
+        {
+          "beforeMs": 151.0627000000004,
+          "afterMs": 44.133600000001024
+        },
+        {
+          "beforeMs": 142.29600000000028,
+          "afterMs": 39.873600000000806
+        },
+        {
+          "beforeMs": 139.29390000000058,
+          "afterMs": 39.647399999999834
+        }
+      ],
+      "combatMatches": true
+    },
+    {
+      "ships": 128,
+      "mode": "tree-events",
+      "beforeMs": 140.43745000000035,
+      "afterMs": 47.44849999999951,
+      "reductionPercent": 66.2137841437598,
+      "pairs": [
+        {
+          "beforeMs": 140.51680000000124,
+          "afterMs": 46.266099999998914
+        },
+        {
+          "beforeMs": 141.59670000000006,
+          "afterMs": 48.63090000000011
+        },
+        {
+          "beforeMs": 140.1841000000004,
+          "afterMs": 49.31089999999858
+        },
+        {
+          "beforeMs": 142.68489999999838,
+          "afterMs": 48.96389999999883
+        },
+        {
+          "beforeMs": 140.35809999999947,
+          "afterMs": 45.54480000000149
+        },
+        {
+          "beforeMs": 139.43279999999868,
+          "afterMs": 45.99029999999948
+        }
+      ],
+      "combatMatches": true
+    }
+  ]
+}

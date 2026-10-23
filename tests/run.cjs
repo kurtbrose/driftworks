@@ -1,3 +1,4 @@
+require('./crew-deck.cjs');
 require('./civilian-portraits.cjs');
 require('./campaign-intro.cjs');
 require('./flight-aim-tracking.cjs');
@@ -126,6 +127,7 @@ require('./aegis-flight.cjs');
 
 require('./hull-sweep-index.cjs');
 require('./projectile-broadphase.cjs');
+require('./collision-events.cjs');
 
 require('./study-culling.cjs');
 

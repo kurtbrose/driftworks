@@ -152,7 +152,7 @@
             }
             var roster=DW.training.alive(combat);if(team==='enemy'&&combat.player.hp>0)roster=roster.concat([combat.player]);
             var targets=roster.filter(function(c){return (c.team||'enemy')!==team;}).map(function(c){return {craft:c,position:local(c.pose.eye)};});
-            mounts.forEach(function(m){
+            DW.training.collisionBatch(combat,function(){mounts.forEach(function(m){
                 if(m.source.kind==='heavy'){stepHeavy(m,dt,view);return;}
                 var p=m.source.position,side=m.source.side;
                 // Retain a valid lock; each mount independently samples a new contact.
@@ -214,7 +214,7 @@
                     !speculative&&aim?function(){return aim;}:undefined,2,[[-1.683,9.9,-.099*side],[1.683,9.9,-.099*side]]);
                 if(m.guns.fired>firedBefore){m.specWait=m.specPause;if(speculative)m.rest=m.burstPause;}
                 if(m.burst>0){m.burst=Math.max(0,m.burst-dt);if(m.burst<=0)m.rest=m.burstPause;}
-            });
+            });});
         }
         var renderBatches=staticBatches.concat(mounts.flatMap(function(m){return m.batches;}));
         /** @returns {Batch[]} */function geometry(){
