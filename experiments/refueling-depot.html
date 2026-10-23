@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Driftworks / Refueling depot</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#000;color:#e0e8eb;font:14px system-ui}#sky,#view{position:fixed;inset:0 0 0 280px}canvas{position:absolute;width:100%;height:100%;touch-action:none}aside{position:fixed;inset:0 auto 0 0;width:280px;padding:24px;background:#101a23;overflow:auto;border-right:1px solid #41515b}small{color:#dcaa61;letter-spacing:2px}h1{font-weight:400;font-size:32px}p{color:#a6b8c2;line-height:1.5}button,select{background:#21323e;color:inherit;border:1px solid #53646e;padding:9px;margin:3px 0;cursor:pointer}label{display:block;margin:20px 0}input[type=range],select{width:100%}a{color:#b9dbea}#caption{position:fixed;bottom:20px;left:304px;font-size:12px;color:#d0dce2;pointer-events:none}@media(max-width:650px){aside{width:210px;padding:14px}#sky,#view{left:210px}#caption{left:224px}}
-</style><script src="../src/asset-versions.js?v=12f1aa1c1c48"></script>
+</style><script src="../src/asset-versions.js?v=3ceeb821e75c"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
 <body><div id="sky"></div><div id="view"></div><aside><small>DRIFTWORKS / ASSET STUDY</small><h1>Orbital<br>fuel depot.</h1><p>Long open spine, eight tank banks and three articulated service arms. First silhouette and Blender export prototype.</p>
 <button id="overview">Overview</button> <button id="approach">Service approach</button> <button id="top">Plan view</button> <button id="fighter-view">Fighter close-up</button> <button id="offline-view">Inactive module C</button> <button id="rack-view">Tank rack</button>
@@ -11,9 +11,14 @@
 <label>Civilian transports<select id="liner-model"><option value="both">Both / true scale</option><option value="commuter">Commuter / 72 m hull</option><option value="double-decker">Double-decker / 180 m hull</option><option value="none">Hidden</option></select></label>
 <label><input id="liner-batching" type="checkbox" checked> Batch static liner surfaces</label>
 <p id="liner-status">Loading civilian liners…</p>
+<hr><label>Refueling cycle<select id="cycle-ship"><option value="commuter">Commuter / berth A</option><option value="double-decker">Large liner / berth B</option></select></label>
+<button id="cycle-start" disabled>Run / replay cycle</button> <button id="cycle-pause" disabled>Pause</button> <button id="cycle-reset">Reset</button>
+<button id="cycle-finish" disabled>Finish fueling</button>
+<label><input id="cycle-trigger" type="checkbox"> Hold until fueling-complete trigger</label>
+<p id="cycle-status" aria-live="polite">Loading cycle assets�</p><progress id="cycle-progress" max="1" value="0" aria-label="Fueling progress" style="width:100%"></progress><hr>
 <button id="benchmark">Measure performance / 5 seconds</button><p id="performance" aria-live="polite">Benchmark uses the current camera, visibility and resolution.</p>
 <label>Liner docking attitude <output id="attitude-value">90° / vertical</output><input id="liner-attitude" type="range" min="0" max="90" step="1" value="90"></label>
-<p>0°: horizontal cruise · 90°: nose up, roof toward depot.</p>
+<p>0°: horizontal cruise · 90°: nose up, belly toward depot.</p>
 <label>Berth bearing<input id="arms" type="range" min="-35" max="35" value="0"></label>
 <label>Wrist reach / metres<input id="reach" type="range" min="24" max="58" value="48"></label>
 <label>Wrist height / metres<input id="height" type="range" min="-32" max="12" value="-20"></label>
@@ -24,14 +29,15 @@
 <label><input type="checkbox" id="scale" checked> Fighter / transport envelopes</label>
 <label><input type="checkbox" id="fighters" checked> Five 12 m Spitfire fighters</label>
 <label><input type="checkbox" id="wire"> Wireframe</label>
-<p id="status">Loading baked depot…</p><p id="arm-status"></p><p>Drag to orbit · Wheel to zoom · Right drag to pan.</p><p>Shoulder and elbow solve for wrist position. Gimballed couplers set mating attitude. Fuel runs inside the rigid links; no loose hoses. Ship attachment and collision remain future work.</p><a href="../assets/depots/refueling-v1/depot.blend">Editable Blender source</a></aside><div id="caption">336 m SPINE • 28 / 32 TANKS INSTALLED • INDUSTRIAL SERVICE DEPOT</div>
+<p id="status">Loading baked depot…</p><p id="arm-status"></p><p>Drag to orbit · Wheel to zoom · Right drag to pan.</p><p>Shoulder and elbow solve for wrist position. Gimballed couplers set mating attitude. Fuel runs inside the rigid links; no loose hoses. The cycle previews approach, surface coupling, fueling and departure; traffic collision avoidance remains future work.</p><a href="../assets/depots/refueling-v1/depot.blend">Editable Blender source</a></aside><div id="caption">336 m SPINE • 28 / 32 TANKS INSTALLED • INDUSTRIAL SERVICE DEPOT</div>
 <script>history.replaceState(null,'',location.pathname+'?mission=planet-hero');</script>
-<script src="flight-missions.js?v=20d4c4f6dd56"></script><script src="../src/sky-effects.js?v=136fdb626647"></script><script src="skybox.js?v=71fac701cedc"></script><script src="planet-impact.js?v=fdd7f29eecda"></script>
+<script src="flight-missions.js?v=2399ccc58357"></script><script src="../src/sky-effects.js?v=136fdb626647"></script><script src="skybox.js?v=2a1446b2fb4f"></script><script src="planet-impact.js?v=fdd7f29eecda"></script>
 <script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script>
 <script type="module">
 import * as THREE from 'three';
 import {mergeGeometries} from '../vendor/three/examples/jsm/utils/BufferGeometryUtils.js?v=fda7e946b8e0';
 import {GLTFLoader} from '../vendor/three/examples/jsm/loaders/GLTFLoader.js?v=67ac5551fdaf';
+import {createRefuelingCycle,stepRefuelingCycle,finishRefueling,sampleRefuelingCycle} from './refueling-cycle.js?v=08395bbafc7c';
 import {solveDepotArm} from './depot-arm.js?v=0dac00891044';
 import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js?v=b97879c74817';
 const el=id=>document.getElementById(id),DW=window.Driftworks;
@@ -46,7 +52,7 @@ const fill=new THREE.DirectionalLight(0x7493bc,.8);fill.position.set(0,-100,-200
 const depot=new THREE.Group();depot.rotation.x=-Math.PI/2;scene.add(depot);
 const groups=new Map(),materials=[],base=new Map();
 const liners=new Map(),loader=new GLTFLoader();
-const linerEnvelopes=new Map(),linerVariants=new Map();
+const linerEnvelopes=new Map(),linerVariants=new Map(),linerPorts=new Map(),linerLocalBounds=new Map();
 // Static render copies only: retain the original named hierarchy for anchors and A/B.
 // Transparent, animated, mirrored, partial and special meshes stay independent.
 function batchStaticLiner(source,animations=[]){
@@ -77,19 +83,19 @@ function batchStaticLiner(source,animations=[]){
  }
  return result;
 }
-function showLinerVariants(){for(const {source,batched} of linerVariants.values()){source.visible=!el('liner-batching').checked;batched.visible=el('liner-batching').checked;}}
+function showLinerVariants(){for(const {root,source,batched} of linerVariants.values()){const active=el('liner-batching').checked?batched:source,inactive=el('liner-batching').checked?source:batched;root.remove(inactive);root.add(active);active.visible=true;}}
 el('liner-batching').onchange=()=>{showLinerVariants();el('liner-status').textContent=el('liner-batching').checked?'72 m + 180 m / batched surfaces, original materials and scale.':'72 m + 180 m / original mesh hierarchy, original materials and scale.';};
 
 const cruiseAttitude=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
 // glTF forward = -Z, dorsal = +Y. At the vertical berth, forward is
-// world +Y and dorsal is world -Z, toward the depot from these berths.
-const dockAttitude=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(-1,0,0),new THREE.Vector3(0,0,-1),new THREE.Vector3(0,-1,0)));
+// world +Y and the ventral hull is world -Z, toward the depot.
+const dockAttitude=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(1,0,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,-1,0)));
 function poseLiners(){
  const degrees=Number(el('liner-attitude').value);
  el('attitude-value').textContent=`${degrees}° / ${degrees===90?'vertical':degrees===0?'horizontal':'transition'}`;
  for(const [id,root] of liners){
   root.quaternion.slerpQuaternions(cruiseAttitude,dockAttitude,degrees/90);root.updateMatrixWorld(true);
-  const envelope=linerEnvelopes.get(id);if(envelope)envelope.box.setFromObject(root);
+  const envelope=linerEnvelopes.get(id);if(envelope)envelope.box.copy(linerLocalBounds.get(id)).applyMatrix4(root.matrixWorld);
  }
 }
 el('liner-attitude').oninput=poseLiners;
@@ -102,10 +108,20 @@ Promise.all([['commuter',[-112,-41,80]],['double-decker',[35,-55,165]]].map(asyn
  const gltf=await loader.loadAsync(DW.assetUrl(`../assets/ships/civilian-airliners/${id}.glb`));
  // Blender's GLB exporter already converts Z-up to glTF Y-up. Rotate the
  // resulting -Z bow onto +X, preserving the authored metre scale.
- const root=new THREE.Group();root.rotation.y=-Math.PI/2;root.position.set(...position);const batched=batchStaticLiner(gltf.scene,gltf.animations);root.add(gltf.scene,batched);linerVariants.set(id,{source:gltf.scene,batched});showLinerVariants();scene.add(root);liners.set(id,root);
+ const root=new THREE.Group();root.rotation.y=-Math.PI/2;root.position.set(...position);const batched=batchStaticLiner(gltf.scene,gltf.animations);root.add(gltf.scene,batched);linerVariants.set(id,{root,source:gltf.scene,batched});showLinerVariants();scene.add(root);liners.set(id,root);
  root.traverse(object=>{if(object.isMesh)for(const material of Array.isArray(object.material)?object.material:[object.material]){materials.push(material);material.wireframe=el('wire').checked;}});
- root.updateMatrixWorld(true);const envelope=new THREE.Box3Helper(new THREE.Box3().setFromObject(root),id==='commuter'?0xe1b671:0xcf916d);linerEnvelopes.set(id,envelope);markers.add(envelope);poseLiners();showLiners();
-})).then(()=>el('liner-status').textContent='72 m commuter + 180 m double-decker / static surfaces batched / original materials and true scale.').catch(error=>el('liner-status').textContent='Liner load failed: '+error.message);
+ root.updateMatrixWorld(true);
+ // Find an underside contact on the existing hull; add no marker geometry.
+ const rayOrigin=root.localToWorld(new THREE.Vector3(id==='commuter'?2:4,-100,0));
+ const rayDirection=new THREE.Vector3(0,1,0).transformDirection(root.matrixWorld);
+ const hit=new THREE.Raycaster(rayOrigin,rayDirection).intersectObject(root,true)[0];
+ if(!hit||!hit.face)throw new Error('No ventral refueling surface on '+id);
+ const portPoint=root.worldToLocal(hit.point.clone());
+ const worldNormal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+ const portNormal=worldNormal.applyQuaternion(root.quaternion.clone().invert()).normalize();
+ linerPorts.set(id,{point:portPoint,normal:portNormal,home:root.position.clone()});
+ root.updateMatrixWorld(true);const envelope=new THREE.Box3Helper(new THREE.Box3().setFromObject(root),id==='commuter'?0xe1b671:0xcf916d);linerLocalBounds.set(id,envelope.box.clone().applyMatrix4(root.matrixWorld.clone().invert()));linerEnvelopes.set(id,envelope);markers.add(envelope);poseLiners();showLiners();
+})).then(()=>{el('liner-status').textContent='72 m commuter + 180 m double-decker / static surfaces batched / original materials and true scale.';readyCycle();}).catch(error=>el('liner-status').textContent='Liner load failed: '+error.message);
 const paintTexture=new THREE.TextureLoader().load(DW.assetUrl('../assets/depots/refueling-v1/caution-paint.png'));
 paintTexture.colorSpace=THREE.SRGBColorSpace;paintTexture.wrapS=paintTexture.wrapT=THREE.RepeatWrapping;paintTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
 let data;
@@ -159,17 +175,88 @@ fetch(DW.assetUrl('../assets/depots/refueling-v1/depot.json')).then(r=>{if(!r.ok
  const c=data.materials[batch.material],paint=batch.material.startsWith('safety-')||batch.material==='wear',material=new THREE.MeshStandardMaterial({color:new THREE.Color(...c),metalness:paint?.12:batch.material==='dark'?.1:.65,roughness:paint?.78:.46});
  if(batch.material==='caution-paint'){material.map=paintTexture;material.metalness=.1;material.roughness=.8;}
  if(batch.material==='lamp'||batch.material.endsWith('-light')){material.emissive=new THREE.Color(...c);material.emissiveIntensity=batch.material==='lamp'?1:2;}materials.push(material);group.add(new THREE.Mesh(geometry,material));}
- el('status').textContent=`Blender bake loaded / ${groups.size} modules / ${Math.round(data.batches.reduce((n,b)=>n+b.positions.length/9,0)).toLocaleString()} triangles`;pose();
+ el('status').textContent=`Blender bake loaded / ${groups.size} modules / ${Math.round(data.batches.reduce((n,b)=>n+b.positions.length/9,0)).toLocaleString()} triangles`;pose();readyCycle();
 }).catch(error=>el('status').textContent='Depot load failed: '+error.message);
+// One serviced liner at a time; retain both assets for replay and scale inspection.
+let cycle=null,cyclePaused=false,cycleShip='commuter',cycleBerth=null,lastFrame=null;
+const manualArmControls=['arms','reach','height','tilt','swivel','roll','liner-attitude'];
+function readyCycle(){if(data&&linerPorts.size===2){el('cycle-start').disabled=false;el('cycle-status').textContent='Ready / underside refueling contact on the existing hull.';}}
+function setCycleControls(active){for(const id of manualArmControls)el(id).disabled=active;el('cycle-pause').disabled=!active;el('cycle-ship').disabled=active;el('cycle-trigger').disabled=active;}
+function cycleArm(x,wristWorld,aimWorld){
+ const origin=new THREE.Vector3(x,-10,-9),local=depot.worldToLocal(wristWorld.clone()).sub(origin);
+ const solution=solveDepotArm(Math.hypot(local.x,local.y),local.z,Math.atan2(local.x,-local.y),0);
+ const point=p=>new THREE.Vector3(p[0],-p[1],p[2]).add(origin);
+ const elbow=point(solution.elbow),wrist=point(solution.wrist);
+ const aim=aimWorld.clone().transformDirection(new THREE.Matrix4().copy(depot.matrixWorld).invert());
+ for(const [section,start,end] of [['upper',origin,elbow],['forearm',elbow,wrist],['wrist',wrist,wrist.clone().addScaledVector(aim,6)]]){
+  const group=groups.get(`arm-${x}-${section}`);group.position.copy(start);group.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),end.clone().sub(start).normalize());
+ }
+ return {clamped:solution.clamped,tip:depot.localToWorld(wrist.clone().addScaledVector(aim,7))};
+}
+function drawCycle(sample){
+ if(!cycleBerth)return;
+ const b=cycleBerth,root=liners.get(cycleShip),port=linerPorts.get(cycleShip);
+ const standoff=b.dock.clone().add(new THREE.Vector3(0,-18,0));
+ const entry=standoff.clone().add(new THREE.Vector3(0,-200,0));
+ root.position.lerpVectors(entry,standoff,sample.approach).lerp(b.dock,sample.settle);
+ root.position.addScaledVector(new THREE.Vector3(0,18,0),sample.clearance);
+ root.position.addScaledVector(new THREE.Vector3(0,240,0),sample.departure);
+ root.quaternion.copy(dockAttitude);
+ root.updateMatrixWorld(true);
+ const wrist=b.parkWrist.clone().lerp(b.wrist,sample.arm);
+ const aim=b.parkAim.clone().lerp(b.aim,sample.arm).normalize();
+ const solved=cycleArm(b.arm,wrist,aim);
+ const error=solved.tip.distanceTo(root.localToWorld(port.point.clone()));
+ const names={approach:'Approaching berth',settle:'Easing into position',connect:'Arm extending / coupling',fueling:'Connected / fueling',disconnect:'Arm disconnecting / retracting',clearance:'Rising clear of the berth',depart:'Departing',complete:'Cycle complete'};
+ el('cycle-status').textContent=names[sample.phase]+(sample.connected?` / contact error ${(error*1000).toFixed(1)} mm`:'')+(sample.connected&&cycle.manualHold?' / awaiting completion trigger':'');
+ el('cycle-progress').value=sample.fuel;el('cycle-finish').disabled=!sample.connected;
+ const envelope=linerEnvelopes.get(cycleShip);if(envelope)envelope.box.copy(linerLocalBounds.get(cycleShip)).applyMatrix4(root.matrixWorld);
+ el('arm-status').textContent=solved.clamped?'Cycle arm target exceeds reach.':'Cycle arm / two rigid links and surface-aligned coupling.';
+}
+function resetCycle(){
+ cycle=null;cycleBerth=null;cyclePaused=false;lastFrame=null;setCycleControls(false);el('cycle-pause').textContent='Pause';el('cycle-finish').disabled=true;
+ for(const [id,port] of linerPorts){liners.get(id).position.copy(port.home);}
+ poseLiners();pose();el('cycle-progress').value=0;el('cycle-status').textContent='Ready / underside refueling contact on the existing hull.';
+}
+function startCycle(){
+ if(!data||linerPorts.size<2)return;
+ resetCycle();cycleShip=el('cycle-ship').value;
+ const port=linerPorts.get(cycleShip),arm=cycleShip==='commuter'?-112:0;
+ depot.updateMatrixWorld(true);
+ const normal=port.normal.clone().applyQuaternion(dockAttitude),contact=new THREE.Vector3(arm,-23,61);
+ const dock=contact.clone().sub(port.point.clone().applyQuaternion(dockAttitude));
+ const wrist=contact.clone().addScaledVector(normal,7),aim=normal.clone().negate();
+ const park=solveDepotArm(24,-8,0,-1.2);
+ const parkWrist=depot.localToWorld(new THREE.Vector3(arm+park.wrist[0],-10-park.wrist[1],-9+park.wrist[2]));
+ const parkAim=new THREE.Vector3(park.aim[0],-park.aim[1],park.aim[2]).transformDirection(depot.matrixWorld);
+ cycleBerth={arm,dock,wrist,aim,parkWrist,parkAim};cycle=createRefuelingCycle(el('cycle-trigger').checked);setCycleControls(true);
+ el('liner-model').value=cycleShip;showLiners();el('scale').checked=false;markers.visible=false;
+ const framing=cycleShip==='double-decker'?1.65:1;view([arm+140*framing,-20-75*framing,60-50*framing],[arm,-20,60]);drawCycle(sampleRefuelingCycle(cycle));
+}
+function releaseCycle(){return cycle?finishRefueling(cycle):false;}
+el('cycle-start').onclick=startCycle;el('cycle-reset').onclick=resetCycle;
+el('cycle-finish').onclick=releaseCycle;
+el('cycle-pause').onclick=()=>{cyclePaused=!cyclePaused;el('cycle-pause').textContent=cyclePaused?'Resume':'Pause';lastFrame=null;};
+window.addEventListener('refueling-complete',event=>{if(!event.detail?.shipId||event.detail.shipId===cycleShip)releaseCycle();});
+// Prototype hook: a future mission trigger can release the hold without a timer.
+DW.depotRefueling={start:startCycle,reset:resetCycle,finishFueling:releaseCycle,getState:()=>cycle?{...cycle,shipId:cycleShip,paused:cyclePaused}:null};
+function updateCycle(now){
+ const dt=lastFrame===null?0:Math.max(0,Math.min(.1,(now-lastFrame)/1000));lastFrame=now;
+ if(!cycle||cyclePaused||benchmark)return;
+ const previous=cycle.phase,sample=stepRefuelingCycle(cycle,dt);drawCycle(sample);
+ if(previous!==cycle.phase){window.dispatchEvent(new CustomEvent('refueling-cycle-stage',{detail:{shipId:cycleShip,phase:cycle.phase}}));}
+ if(cycle.phase==='complete'){el('cycle-pause').disabled=true;el('cycle-ship').disabled=false;el('cycle-trigger').disabled=false;}
+}
 const sky=DW.flightSkybox.create(el('sky'),{fov:45,cueControls:false});let impact=null;
 DW.planetImpact.create().then(value=>{impact=value;stage();}).catch(error=>el('status').textContent+=' / Sky failed: '+error.message);
 function stage(){if(impact){impact.draw(Number(el('stage').value),true);sky.setPlanetImage(impact.canvas);sky.setImpactTime(Number(el('stage').value));}}
 el('stage').onchange=stage;
 const right=new THREE.Vector3(),up=new THREE.Vector3(),back=new THREE.Vector3();
 let benchmark=null;
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}});
+document.addEventListener('visibilitychange',()=>{lastFrame=null;if(document.hidden&&benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}});
 el('benchmark').onclick=()=>{if(!data||liners.size<2||!impact){el('performance').textContent='Wait for the depot, liners and planet to load.';return;}benchmark={start:performance.now(),previous:0,gaps:[],submit:[],calls:[],triangles:[],warmup:10,width:el('view').clientWidth,height:el('view').clientHeight,selection:el('liner-model').value,batching:el('liner-batching').checked,position:camera.position.clone(),rotation:camera.quaternion.clone()};controls.enabled=false;el('performance').textContent='Measuring current view / camera held fixed…';};
-function frame(now){requestAnimationFrame(frame);if(document.hidden){if(benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}return;}const host=el('view'),w=host.clientWidth,h=host.clientHeight;if(benchmark&&(benchmark.width!==w||benchmark.height!==h||benchmark.selection!==el('liner-model').value||benchmark.batching!==el('liner-batching').checked||!camera.position.equals(benchmark.position)||!camera.quaternion.equals(benchmark.rotation))){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: camera, resolution or liner selection changed.';}if(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(!benchmark)controls.update();camera.updateMatrixWorld();
+function frame(now){requestAnimationFrame(frame);if(document.hidden){lastFrame=null;if(benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}return;}const host=el('view'),w=host.clientWidth,h=host.clientHeight;if(benchmark&&(benchmark.width!==w||benchmark.height!==h||benchmark.selection!==el('liner-model').value||benchmark.batching!==el('liner-batching').checked||!camera.position.equals(benchmark.position)||!camera.quaternion.equals(benchmark.rotation))){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: camera, resolution or liner selection changed.';}if(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(!benchmark)controls.update();camera.updateMatrixWorld();
+ updateCycle(now);
  right.setFromMatrixColumn(camera.matrixWorld,0);up.setFromMatrixColumn(camera.matrixWorld,1);back.setFromMatrixColumn(camera.matrixWorld,2);
  // Three Y-up to the flight sky's Z-up convention; the sky ignores translation.
  const skyVector=v=>[v.x,-v.z,v.y],start=performance.now();sky.render({eye:[0,0,0],right:skyVector(right),up:skyVector(up),back:skyVector(back)},1,false);renderer.render(scene,camera);

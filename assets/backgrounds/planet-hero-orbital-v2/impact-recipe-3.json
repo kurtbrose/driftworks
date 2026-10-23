@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "family": "orbital",
+  "minGapDeg": 0,
+  "library": {
+    "planet": {
+      "file": "impact-registered-v1/3.png",
+      "aspect": 1,
+      "family": "orbital"
+    },
+    "sun": {
+      "file": "../features/warm-sun-v1.png",
+      "aspect": 1,
+      "family": "orbital"
+    }
+  },
+  "features": [
+    {
+      "asset": "planet",
+      "yaw": 90,
+      "pitch": -30,
+      "roll": 0,
+      "widthDeg": 110,
+      "gain": 1
+    },
+    {
+      "asset": "sun",
+      "yaw": 225,
+      "pitch": 35,
+      "roll": 0,
+      "widthDeg": 7,
+      "gain": 1
+    }
+  ]
+}

@@ -69,7 +69,7 @@ close-up views and the shared scale view support inspection. Both remain static
 references pending approach/refueling/departure behavior.
 
 The liner docking-attitude slider defaults to 90 degrees: bows point world +Y
-(up in the study), dorsal surfaces point world -Z toward the depot. Zero restores
+(up in the study), ventral surfaces point world -Z toward the depot. Zero restores
 the horizontal cruise pose. Quaternion interpolation preserves rigid geometry
 and true scale; loaded transport envelopes update with each pose. Berth origins
 stay fixed during this attitude study. This does not attach the arms or solve
@@ -125,3 +125,48 @@ the older timing snapshot above. A fresh matched browser timing/visual compariso
 was blocked by a zero-width preview; its stalled sample is invalid. No FPS or GPU
 speedup is claimed. Use the original/batched switch and five-second sampler in a
 visible preview for that comparison. Source GLBs and Blender files are unchanged.
+
+## Refueling cycle prototype
+
+The depot study can run either civilian liner through approach (12 s), final
+settling (4 s), coupling (4 s), fueling (10 s), uncoupling (4 s), clearance (4 s)
+and departure (10 s). The ship eases between poses with quintic interpolation.
+The liner arrives already bow-up from below, eases into the berth, and continues
+upward after arm retraction. There is no lateral slide or attitude turnover; the
+ventral hull faces the depot throughout the cycle.
+Only the selected liner is shown during the cycle so the other reference hull
+does not obscure the berth. Reset restores the authored reference positions.
+Replay restarts the selected cycle; Pause freezes the ship, arm and fueling clock.
+A hidden tab freezes the presentation clock. Benchmark sampling also holds it.
+
+The underside contact is found once by raycasting the existing GLB ventral
+surface. No dot, marker or extra hull fitting is added.
+The berth position is derived from that model-local contact and its normal.
+The same two-link IK solver poses the rigid arm, with the wrist seven metres
+behind the surface along the outward normal: six metres of wrist boom plus
+one metre to the end of the coupling. No links are scaled. The ship stays fixed
+through coupling, fueling and retraction; clearance starts after retraction.
+Movement reuses the existing static liner batches and arm geometry. The inactive
+A/B hierarchy is detached from the moving root, and envelope bounds use a cached
+local box, avoiding thousands of hidden-node updates and bounds scans each frame.
+
+Enable **Hold until fueling-complete trigger** before starting to wait indefinitely
+in the connected phase. **Finish fueling** releases that hold (or ends the timed
+hold early). It is accepted only during fueling. Future prototype integration:
+
+```js
+window.Driftworks.depotRefueling.finishFueling();
+// Or dispatch a completion for the currently serviced ship:
+window.dispatchEvent(new CustomEvent('refueling-complete', {
+  detail: {shipId: 'commuter'} // or 'double-decker'; omit to release current ship
+}));
+```
+
+`depotRefueling` also exposes `start()`, `reset()` and `getState()`, returning a
+snapshot with `shipId`, phase, elapsed phase seconds and pause state. Each phase
+transition dispatches `refueling-cycle-stage` with `{shipId, phase}`. The pure,
+renderer-free timeline is `experiments/refueling-cycle.js`; the real-GLB
+regression in `tests/refueling-cycle.cjs` checks both ports, contact error,
+reachable rigid IK, phase order, stationary fueling and manual release.
+This is a visual single-berth prototype. It does not yet implement traffic
+collision avoidance, fuel transfer quantities or persistent mission state.

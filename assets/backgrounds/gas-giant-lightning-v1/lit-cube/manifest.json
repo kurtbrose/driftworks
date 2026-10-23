@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "projection": "six-perspective-cameras",
+  "size": 1024,
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "fovDegrees": 90,
+  "aspect": 1,
+  "near": 0.01,
+  "far": 10,
+  "cardDistance": 1,
+  "worldUp": "+Z",
+  "flipY": false,
+  "color": "display RGB, screen blend, no exposure adaptation",
+  "timestamp": 0,
+  "stars": "separate runtime pass",
+  "faces": {
+    "px": {
+      "file": "px.png",
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "c52968d22ebddd1e153b26c61156a59ee9a2661f587552dee9f64363f31bcbb3"
+    },
+    "nx": {
+      "file": "nx.png",
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "562cdeb1256a0535edb712201a4516abd2df68fc7f76d08b7735f1c8737b1e84"
+    },
+    "py": {
+      "file": "py.png",
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "b99224592f26272c8b0adb8f17be7d43e3f9ef057a131e7add3585d6a970ce5b"
+    },
+    "ny": {
+      "file": "ny.png",
+      "forward": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        1
+      ],
+      "sha256": "d69112264db6c2c1b6f6bc930b7d7cf38c27a4fead1b5000259265c5405c66ef"
+    },
+    "pz": {
+      "file": "pz.png",
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "e2ab86a765a8ca60b876a3b7587eb59c774760f62e9a91aa1cb57bf2929cb048"
+    },
+    "nz": {
+      "file": "nz.png",
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "1b11f1f57cf441933298cf4828515608fc481e2603a87bb422dab557e98c8140"
+    }
+  },
+  "recipeSha256": "1960aee66fb60f49dbe733e6da9f6b9a7087cdac92c82b787b8b0c302357d50a"
+}

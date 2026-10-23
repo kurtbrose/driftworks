@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "projection": "six-perspective-cameras",
+  "size": 1024,
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "fovDegrees": 90,
+  "aspect": 1,
+  "near": 0.01,
+  "far": 10,
+  "cardDistance": 1,
+  "worldUp": "+Z",
+  "flipY": false,
+  "color": "display RGB, screen blend, no exposure adaptation",
+  "timestamp": 0,
+  "stars": "separate runtime pass",
+  "faces": {
+    "px": {
+      "file": "px.png",
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "d3b407d9a4731f38e4c9c7ce06b5dd9c36491502a04ebda91cd182f362605109"
+    },
+    "nx": {
+      "file": "nx.png",
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "01b2e7bc7671a479571bd6f6ca2ee6f24a39d131d8759a2556ff57f295bd8fb8"
+    },
+    "py": {
+      "file": "py.png",
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "248b814e60ea74946381b74e91596f02ead3c0a44ca660e982824deafffceb80"
+    },
+    "ny": {
+      "file": "ny.png",
+      "forward": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        1
+      ],
+      "sha256": "852aea101875f49339ac667819fc8629bb10ff6f0af3611befe5fa64986281ad"
+    },
+    "pz": {
+      "file": "pz.png",
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "51b6b3e065e7b9a3355c3410becb1a347fc0262b2987e9830bfb3a617177bd2d"
+    },
+    "nz": {
+      "file": "nz.png",
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "c6baef92c2b7932b0737d69f60b4bf61ae9e903dcef88a62fa295e9c0cd6daed"
+    }
+  },
+  "recipeSha256": "d8bc282f266dfaf034e3fd1a7c38d10f7cee888091544198ce6c0b608988756f",
+  "sources": {
+    "planet": {
+      "file": "impact-registered-v1/4.png",
+      "sha256": "0914be7acd63d0c246e44914eabed8f68b83020ad632b35dfe8322b04bbbd490"
+    },
+    "sun": {
+      "file": "../features/warm-sun-v1.png",
+      "sha256": "d8278e37c07867c87cae402c6966b48853c8e77fa013f664b55ccbf64230fd72"
+    }
+  }
+}

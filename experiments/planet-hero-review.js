@@ -3,9 +3,11 @@
     var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks);
     /** @param {string} id */function control(id){var e=document.getElementById(id);if(!e)throw new Error(id);return e;}
     var host=control('viewer'),mission=DW.flightMissions.current(),width=mission.sky.features[0].widthDeg;
-    var sky=DW.flightSkybox.create(host,{fov:140,cueControls:false}),yaw=90,pitch=-30,drag=false,x=0,y=0;
-    var lens=/** @type {HTMLSelectElement} */(control('lens'));
-    /** @type {ReturnType<typeof DW.flightSkybox.create>|null} */var flightSky=null;
+    var sky=DW.flightSkybox.create(host,{fov:45,cueControls:!!mission.sky.cubeStages}),yaw=90,pitch=-30,drag=false,x=0,y=0;
+    if(mission.sky.cubeFaces){
+        var title=document.querySelector('h1');if(title)title.textContent='Six-camera baked skybox';
+        var composition=document.querySelector('aside p:nth-of-type(2)');if(composition)composition.textContent='Approved planet composition / six baked faces';
+    }
     /** @type {Awaited<ReturnType<typeof DW.planetImpact.create>>|null} */var animation=null;
     /** @type {ReturnType<typeof DW.flightSkybox.create>|null} */var uploaded=null;
     var time=-5,playing=false,last=0,lastDraw=0;
@@ -15,13 +17,13 @@
     control('event-play').onclick=toggle;control('event-reset').onclick=function(){time=-5;};
     timeline.oninput=function(){time=Number(timeline.value);};
     stages.onchange=function(){time=Number(stages.value);if(playing)toggle();};
-    var orbital=mission.id==='planet-orbital-watch';
+    var orbital=!!mission.sky.cubeFaces||mission.id==='planet-orbital-watch';
     if(orbital){
-        control('event-phase').textContent='Static orbital-reference baseline / impact frames not rebuilt';
+        control('event-phase').textContent=mission.sky.cubeStages?'Animated six-face skybox / mission-cued transitions':mission.sky.cubeFaces?'Six baked 1024² faces / static skybox':'Static orbital-reference baseline';
         ['event-play','event-reset','event-time','event-speed','event-stage','pristine'].forEach(function(id){var element=control(id);/** @type {HTMLInputElement} */(element).disabled=true;(element.closest('label')||element).style.display='none';});
-        var note=document.querySelector('aside p:last-child');if(note)note.textContent='Orbital geometry study: original palette, photographic apparent relief. Source is 1254 × 1254; narrow views still reveal its detail limit. Width links above return to the original artwork.';
+        var note=document.querySelector('aside p:last-child');if(note)note.textContent='Orbital geometry study: original palette, photographic apparent relief. Source is 1254 × 1254; narrow views still reveal its detail limit.';
     }else DW.planetImpact.create().then(function(value){animation=value;toggle();}).catch(/** @param {unknown} error */function(error){control('event-phase').textContent=String(error);});
-    var fly=/** @type {HTMLAnchorElement} */(control('fly'));fly.href='flight.html?mission='+(orbital?'planet-orbital-watch':'planet-impact-watch');
+    var fly=/** @type {HTMLAnchorElement} */(control('fly'));fly.href='flight.html?mission='+(orbital?mission.id:'planet-impact-watch');
     control('disk').onclick=function(){yaw=90;pitch=-30;};
     control('limb').onclick=function(){yaw=90;pitch=width===80?3:width===140?35:19;};
     control('side').onclick=function(){yaw=90+width*.42;pitch=-25;};
@@ -29,11 +31,10 @@
     host.onpointerdown=function(e){drag=true;x=e.clientX;y=e.clientY;host.setPointerCapture(e.pointerId);};
     host.onpointermove=function(e){if(drag){yaw-=(e.clientX-x)*.15;pitch=Math.max(-89,Math.min(89,pitch+(e.clientY-y)*.15));x=e.clientX;y=e.clientY;}};
     host.onpointerup=host.onpointercancel=function(){drag=false;};
-    lens.onchange=function(){if(lens.value==='flight'&&!flightSky)flightSky=DW.flightSkybox.create(host,{fov:45,cueControls:false});};
     /** @param {number} now */function render(now){
         requestAnimationFrame(render);var dt=last?Math.min(.1,(now-last)/1000):0;last=now;if(document.hidden)return;
         if(playing&&animation)time=Math.min(600,time+dt*Number(speed.value));
-        var active=lens.value==='flight'&&flightSky?flightSky:sky;
+        var active=sky;
         if(animation&&(now-lastDraw>=1000/30||!playing||uploaded!==active)){
             var changed=animation.draw(time,!pristine.checked);
             if(changed||uploaded!==active){active.setPlanetImage(animation.canvas);uploaded=active;}lastDraw=now;
@@ -41,10 +42,9 @@
             var exact=Array.from(stages.options).find(function(option){return option.value!==''&&Math.abs(Number(option.value)-time)<.001;});stages.value=exact?exact.value:'';
             control('event-phase').textContent=(pristine.checked?'Pristine reference':names[sample.from]+(sample.alpha>0?' → '+names[sample.to]:''))+' / '+time.toFixed(1)+' s';
         }
-        var canvases=host.querySelectorAll('canvas');canvases.forEach(function(c){c.style.visibility=c===canvases[0]&&flightSky?(active===flightSky?'visible':'hidden'):active===sky?'visible':'hidden';});
         var a=yaw*Math.PI/180,b=pitch*Math.PI/180,c=Math.cos(b),s=Math.sin(b);
-        active.setImpactTime(pristine.checked?-5:time);
-        active.render({eye:[0,0,0],right:[Math.sin(a),-Math.cos(a),0],up:[-Math.cos(a)*s,-Math.sin(a)*s,c],back:[-Math.cos(a)*c,-Math.sin(a)*c,-s]},1,false);
+        if(!mission.sky.cubeStages)active.setImpactTime(pristine.checked?-5:time);
+        active.render({eye:[0,0,0],right:[Math.sin(a),-Math.cos(a),0],up:[-Math.cos(a)*s,-Math.sin(a)*s,c],back:[-Math.cos(a)*c,-Math.sin(a)*c,-s]},1,false,dt);
         var image=host.querySelector('canvas[data-ohio="ready"]');control('status').textContent=(image?'Loaded':'Loading')+' / '+width+'° card / yaw '+yaw.toFixed(0)+'° / pitch '+pitch.toFixed(0)+'°';
     }
     requestAnimationFrame(render);

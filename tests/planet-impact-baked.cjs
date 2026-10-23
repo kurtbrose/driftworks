@@ -5,7 +5,11 @@ let id=0;
 const gl=new Proxy({createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),createTexture:()=>({id:++id}),getShaderParameter:()=>true,getProgramParameter:()=>true,getParameter:()=>8192,getUniformLocation:(_,name)=>name,getAttribLocation:()=>0,uniform1f:(name,value)=>{values[name]=value;},deleteTexture:t=>deleted.push(t)}, {get:(o,k)=>k in o?o[k]:()=>{}});
 const canvas={dataset:{},setAttribute(){},getContext:()=>gl};
 const context={window:{Driftworks:{assetUrl:s=>s},location:{search:'?mission=planet-impact-baked'},devicePixelRatio:1},document:{getElementById:()=>null,createElement:()=>canvas},Image:class{set src(file){this.file=file;this.width=4096;this.height=2048;requests.push(file);pending.push(this);}},Float32Array,Uint8Array};
-for(const name of ['flight-missions','skybox'])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/'+name+'.js'),'utf8'),context);
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/flight-missions.js'),'utf8'),context);
+// Retained archive format stays covered, but no active mission selects it.
+context.window.Driftworks.flightMissions.define('legacy-impact-test',{sky:{bakedImpact:true}},'planet-hero');
+context.window.location.search='?mission=legacy-impact-test';
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/skybox.js'),'utf8'),context);
 const handlers={},DW=context.window.Driftworks,sky=DW.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){},addEventListener(name,callback){handlers[name]=callback;}}),pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
 const render=dt=>sky.render(pose,1,false,dt);
 const finish=()=>pending.splice(0).forEach(image=>image.onload());

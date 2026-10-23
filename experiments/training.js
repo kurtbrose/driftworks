@@ -392,9 +392,10 @@
             var stalled=e.opponentStyle==='fso-breaker'&&(e.noProgress||0)>7&&g.distance<800&&!g.useful;
             // A productive tail is not broken merely because range is short.
             if(now>=(e.breakCooldown||0)&&((g.distance<95&&!g.useful)||overshoot||stalled)){
-                e.mode='break';e.maneuverAt=now;e.until=now+(stalled?5:3);
+                e.mode='break';e.maneuverAt=now;e.until=now+(stalled?5:6);
+                // Open range even when the current forward vector points at the target.
                 var ahead=scale(e.pose.back,-1), away=unit(sub(e.pose.eye,target.eye));
-                var direction=unit(add(stalled?add(scale(ahead,.5),away):ahead,scale(e.pose.right,(e.index%2?1:-1)*.65)));
+                var direction=unit(add(add(scale(ahead,.5),away),scale(e.pose.right,(e.index%2?1:-1)*.65)));
                 e.extensionGoal=add(e.pose.eye,scale(direction,1600/U));
                 e.breakReason=stalled?'no-progress':'overshoot';
                 e.separations=(e.separations||0)+1;
@@ -406,7 +407,8 @@
         var nav=add(target.eye,scale(target.velocity,Math.min(1.5,g.distance/Math.max(60,e.profile.maxVelocity[2]))/U));
         var blend=Math.max(0,Math.min(1,(g.facing-.3)/.6))*Math.max(0,Math.min(1,(700-g.distance)/350));
         var goal=add(scale(nav,1-blend),scale(g.gun.point,blend));
-        if(g.distance<280&&g.closure>10)goal=add(goal,scale(target.back,Math.min(100,g.closure*2)/U));
+        // Overshoot spacing is navigation only; relinquish it as gun lead takes priority.
+        if(g.distance<280&&g.closure>10)goal=add(goal,scale(target.back,(1-blend)*Math.min(100,g.closure*2)/U));
         if(e.mode==='break'&&e.extensionGoal)goal=e.extensionGoal;
         if(e.mode==='recover'&&e.reentryGoal)goal=e.reentryGoal;
         e.goal=goal;

@@ -1,0 +1,1 @@
+{"version":1,"family":"gas-giant","minGapDeg":0,"library":{"planet":{"file":"dark.png","aspect":1,"family":"gas-giant"}},"features":[{"asset":"planet","yaw":90,"pitch":0,"roll":0,"widthDeg":110,"gain":1}]}

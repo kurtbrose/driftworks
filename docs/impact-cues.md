@@ -30,7 +30,7 @@ Stage IDs, in default order:
 | ID | Artwork / motion |
 | --- | --- |
 | `before` | Pristine planet |
-| `contact` | Tiny early vapor; a separate brief optical flash at cue start |
+| `contact` | Unchanged baseline; a separate brief optical flash at cue start |
 | `ejecta` | Young hot ejecta |
 | `plume` | Growing overhead plume |
 | `cooling` | Cooling opaque cap |
@@ -58,17 +58,27 @@ manual trigger source until an authored mission supplies its actual conditions.
 
 ## Artwork and bake
 
-Built-in ImageGen edits and exact prompts are in
-`assets/backgrounds/planet-hero-v1/fire-cues-v1/`. They are based on the registered
-aftermath plate. `tools/compose-impact-fire-cues.py` applies separate feathered
-permission regions over nearby land, protecting the existing central impact
-patch exactly. It produces `7.png` and `8.png` alongside `masks.json`.
+The active sequence uses the approved `planet-hero-orbital-v2/master.png`.
+Built-in ImageGen edits and exact prompts are in that folder's `impact-art-v1/`.
+`tools/bake-orbital-impact.py` registers the central event at UV (.49,.46), freezes
+all pixels outside the local event masks, then composites the fire/smoke regions
+over the completed aftermath while protecting its central patch exactly.
+Registration errors are recorded in `impact-registered-v1/registration.json`.
 
-Run `tools/bake-planet-impact.py --cinematic` with the existing authoring-only
-Pillow/NumPy runtime to create `baked-cues-v1/`. The first seven 4K spherical maps
-are copied byte-for-byte from the approved `baked-v3/`; only the two new land
-stages are projected. The portable recipe lists stages, not physical timestamps.
-These are equirectangular textures using the existing spherical compositor.
+Run that tool with the authoring-only Pillow/NumPy runtime. It calls
+`tools/bake-sky-cube.py` for every stage, producing nine sets of six 1024-square
+90-degree shared-origin camera captures in `animation-cube-v1/`. Each stage has
+a manifest with camera bases and hashes. The first two stages are identical
+images: contact brightness is live optical radiance only. The runtime blends
+two cube samplers and retains at most three stage cubes (about 72 MiB RGBA).
+All six faces must load before a transition advances.
+
+The review at `planet-hero-review.html?mission=planet-orbital-cube` and the empty
+flight mission use the same cue controls and fixed 45-degree lens. Existing
+`planet-impact-watch` and `planet-impact-baked` bookmarks now select this sequence;
+the latter retains the dogfight. The old `planet-hero-v1` artwork and
+equirectangular bakes remain archived for provenance and format regressions,
+but are not used by those active missions.
 
 Short re-entry streaks are an optional stage-dependent live optical layer in
 the planet's fixed direction space. They are deliberately sparse and faint in
@@ -78,7 +88,6 @@ with flight pause. The flash remains a separate radiance pulse, not an image
 crossfade. Both reset with the cinematic controller.
 
 Settings retains a collapsed **Timed artwork diagnostic** for inspecting the
-original seven image stages. `setImpactTime(seconds)` explicitly switches to
-that diagnostic mode; **Reset cues** / **Restart impact** returns to mission
-control. The older hero review remains a timed comparison and suppresses the
-floating cue panel with `create(..., {cueControls: false})`.
+first seven stages. `setImpactTime(seconds)` explicitly switches to that mode;
+**Reset cues** / **Restart impact** returns to mission control. Hiding cue UI
+with `create(..., {cueControls: false})` does not disable mission DOM events.

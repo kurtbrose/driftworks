@@ -302,3 +302,16 @@ For every implementation stage run `npm run check`. Browser verification is addi
 - How much of near-terrain difficulty comes from AI decisions versus the existing asymmetric safety handling? Keep this separate from the open-space verdict.
 
 Choose the smallest behavior change that wins these comparisons. FreeSpace is a source of tested ideas and instructive compromises, not a target feature count.
+
+
+### Stationary-target regression follow-up
+
+The predictable-flight audit exposed overshoot escapes directed toward the target
+and expiring before separation. Overshoot exits now bias away and permit up to
+six seconds, while still exiting early once separation is sufficient. No-progress
+exits retain their five-second bound. Navigation spacing yields to the acquired
+gun solution as the attack blend increases. See the
+[flight incentives validation](flight-ai-validation.md#stationary-target-breakaway-repair)
+for the real-projectile stationary-target regressions and before/after reports.
+Constant circles remain valid acceleration-based evasion rather than a failed
+accuracy requirement.

@@ -111,3 +111,84 @@ runtime with flight/projectile integration frozen: it checks stationary and line
 convergence, curved motion, reversal recovery, skill differences and determinism.
 It does not measure combat hit rates. Historical benchmarks above predate this
 opponent change and remain historical evidence.
+
+## Flight incentives and predictable-flight audit
+
+Run `node tests/flight-evasion.cjs` for a focused end-to-end regression. It uses
+legal, unarmed pilot inputs in the shared duel runtime, with real opponent
+steering, flight integration, muzzle emission, swept triangle hull hits and death.
+Nothing is frozen and neither craft is moved directly during the trial. Matched
+cases share initial state, ship, weapon, defenses, opponent and duration. The
+stationary policy decelerates using throttle zero; straight, circle and jink
+policies use the same .8 throttle. Jinks are predetermined changes in pitch/yaw
+without observing the enemy's trigger, tracking solution or intentions.
+
+Across head-on, crossing and tail starts against a veteran baseline opponent,
+stationary and straight pilots must take substantial damage and die within the
+20-second trial. Jinks must take less than half that damage and survive at least
+three seconds longer while remaining within 800 m. These deliberately broad
+thresholds protect an observed gameplay consequence; they do not define hit rolls
+or prescribe opponent decisions. Deterministic repeat coverage reuses legal
+inputs. Reduced firing due to tracking/steering is part of the measured benefit.
+
+For a wider diagnostic run, use:
+
+```powershell
+node tools/evaluate-flight-evasion.cjs --full > output/flight-evasion.json
+node tools/evaluate-flight-evasion.cjs --full --audit
+```
+
+The second command exits nonzero when it finds unpunished stationary cases.
+Constant circling is accepted evasion: it continually changes velocity, even
+though the turn input is held constant. Circle damage remains a measurement,
+not an acceptance requirement.
+These are unmet design goals, not passing regressions or instructions to force
+a hit. The ordinary suite reports findings without requiring loopholes to persist.
+The JSON includes normalized source hashes, damage, first damage time, damage
+steps, shots, range, survival duration and outcome. Damage steps are not individual
+bolt hits; shielded runs report net per-step loss after recharge. CLI fixtures are
+unshielded Ulysses/Subach with blockout triangle hulls. Survival is censored at
+20 seconds and damage at death, so compare both rather than treating survivors'
+end time as an eventual time to death. Circle is a constant .45 yaw demand;
+jinks change direction every .85 seconds. This is a counterexample search, not
+human skill calibration. It does not test shooting, terrain, objectives or a
+pilot maintaining offensive opportunities.
+
+[Initial 216-case audit](../tests/benchmarks/flight-evasion-2026-10-22.json)
+uses three starts, three skills, three opponent styles and jink phases 1 and 7.
+The phase repeats other policies exactly; those repetitions are matched controls,
+not independent samples. Each style has 18 rows per policy:
+
+| Style | Stationary deaths | Straight deaths | Circle deaths | Jink deaths | Mean jink damage |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| baseline | 18/18 | 18/18 | 0/18 | 0/18 | 6.75 |
+| fso-pursuit | 12/18 | 18/18 | 0/18 | 0/18 | 12 |
+| fso-breaker | 12/18 | 18/18 | 0/18 | 0/18 | 12 |
+
+All circle rows took zero damage. Both FreeSpace styles' stationary tail starts
+also took zero damage at every skill, with almost no shooting at short range.
+The harness's `tail` start places the enemy ahead of the pilot, facing the same
+direction. The circle finding in that historical report was subsequently reclassified as
+acceptable evasion. The stationary cases were a pursuit/range-control failure.
+Preserve the results when changing AI; do not fix them by detecting policy names
+or assigning damage.
+
+### Stationary-target breakaway repair
+
+FreeSpace overshoot escapes now bias their latched direction away from the target,
+including when the fighter starts pointed toward it. Their maximum commitment
+is six seconds rather than three; existing early separation exits and cooldowns
+still apply. No-progress escapes retain their five-second deadline. This gives
+the ordinary turn/flight integrator time to open range before re-entry. The
+close-range navigation spacing offset fades out with the gun-lead blend so it
+cannot continuously steer an attacking fighter off its firing solution. The
+positive throttle floor and actual ballistic firing/hit rules are unchanged.
+
+The focused regression now requires both FreeSpace styles at all three skills
+to destroy the stationary pilot in the previously failing tail fixture within
+20 seconds, through emitted projectiles and real hull collisions. It also
+checks that a damage-free constant circle is not an audit failure.
+
+[Post-repair 216-case audit](../tests/benchmarks/flight-evasion-stationary-fix-2026-10-22.json)
+records the same fixtures under the revised maneuvering rules. The original
+report remains historical, including its obsolete circle-failure classification.

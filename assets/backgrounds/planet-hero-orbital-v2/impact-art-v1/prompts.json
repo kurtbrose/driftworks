@@ -1,0 +1,50 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "../master.png",
+  "date": "2026-10-22",
+  "stages": [
+    {
+      "stage": 2,
+      "file": "2.png",
+      "prompt": "Edit this exact fictional full-disk planet, preserving ALL geography, clouds, lighting, framing and black margins pixel-aligned. This is an animation plate, not a new composition. Add a large asteroid impact seen DIRECTLY FROM ABOVE at image coordinate x=49% y=46%, close to disk center. The impact is SMALL relative to planet, keep exact fixed location. All height points radially toward observer: show cloud TOPS, NEVER a sideways mushroom cloud, vertical tower, asteroid rock, beam or horizon plume. No painted flash or global exposure change. Do not change anything outside a small local event patch. Keep planet silhouette identical. Native square image matching input. Stage: Young ejecta: a small pale-hot circular vapor cap with a subtle orange core and thin outward ejecta curtain. Total affected radius 30 pixels.",
+      "original": "C:\\Users\\kurt\\.codex\\generated_images\\01a15cf6-771a-7d20-85a2-03c11fe9ccb6\\exec-a998d98b-b964-430c-b150-974919b12cf0.png"
+    },
+    {
+      "stage": 3,
+      "file": "3.png",
+      "prompt": "Edit this exact fictional full-disk planet, preserving ALL geography, clouds, lighting, framing and black margins pixel-aligned. This is an animation plate, not a new composition. Add a large asteroid impact seen DIRECTLY FROM ABOVE at image coordinate x=49% y=46%, close to disk center. The impact is SMALL relative to planet, keep exact fixed location. All height points radially toward observer: show cloud TOPS, NEVER a sideways mushroom cloud, vertical tower, asteroid rock, beam or horizon plume. No painted flash or global exposure change. Do not change anything outside a small local event patch. Keep planet silhouette identical. Native square image matching input. Stage: Growing plume: a top-down low circular pale grey vapor/ejecta cap, turbulent fine texture, thin muted warm core. Total affected radius 42 pixels.",
+      "original": "C:\\Users\\kurt\\.codex\\generated_images\\01a15cf6-771a-7d20-85a2-03c11fe9ccb6\\exec-205cb54b-fbb5-461f-8808-93119d3a5707.png"
+    },
+    {
+      "stage": 4,
+      "file": "4.png",
+      "prompt": "Edit this exact fictional full-disk planet, preserving ALL geography, clouds, lighting, framing and black margins pixel-aligned. This is an animation plate, not a new composition. Add a large asteroid impact seen DIRECTLY FROM ABOVE at image coordinate x=49% y=46%, close to disk center. The impact is SMALL relative to planet, keep exact fixed location. All height points radially toward observer: show cloud TOPS, NEVER a sideways mushroom cloud, vertical tower, asteroid rock, beam or horizon plume. No painted flash or global exposure change. Do not change anything outside a small local event patch. Keep planet silhouette identical. Native square image matching input. Stage: Cooling cap: a compact opaque grey-brown circular cap, cooler outer steam and faint tiny orange fissures directly at its center. Total affected radius 45 pixels.",
+      "original": "C:\\Users\\kurt\\.codex\\generated_images\\01a15cf6-771a-7d20-85a2-03c11fe9ccb6\\exec-4467fe05-1d8d-4c2a-a6b5-857b3cadaa8b.png"
+    },
+    {
+      "stage": 5,
+      "file": "5.png",
+      "prompt": "Edit this exact fictional full-disk planet, preserving ALL geography, clouds, lighting, framing and black margins pixel-aligned. This is an animation plate, not a new composition. Add a large asteroid impact seen DIRECTLY FROM ABOVE at image coordinate x=49% y=46%, close to disk center. The impact is SMALL relative to planet, keep exact fixed location. All height points radially toward observer: show cloud TOPS, NEVER a sideways mushroom cloud, vertical tower, asteroid rock, beam or horizon plume. No painted flash or global exposure change. Do not change anything outside a small local event patch. Keep planet silhouette identical. Native square image matching input. Stage: Returning debris: broader soft grey steam and dust veil with a compact brown central ejecta cap. Slightly irregular circular expansion, no sharp bright ring. Total affected radius 60 pixels.",
+      "original": "C:\\Users\\kurt\\.codex\\generated_images\\01a15cf6-771a-7d20-85a2-03c11fe9ccb6\\exec-e4376bcc-d1db-4cda-a310-59a1fed52544.png"
+    },
+    {
+      "stage": 6,
+      "file": "6.png",
+      "prompt": "Edit this exact fictional full-disk planet, preserving ALL geography, clouds, lighting, framing and black margins pixel-aligned. This is an animation plate, not a new composition. Add a large asteroid impact seen DIRECTLY FROM ABOVE at image coordinate x=49% y=46%, close to disk center. The impact is SMALL relative to planet, keep exact fixed location. All height points radially toward observer: show cloud TOPS, NEVER a sideways mushroom cloud, vertical tower, asteroid rock, beam or horizon plume. No painted flash or global exposure change. Do not change anything outside a small local event patch. Keep planet silhouette identical. Native square image matching input. Stage: Regional aftermath: a cooling dark brown central disturbed region, faint tiny ember at exact center, surrounding thin whitish steam and dusty haze. Total affected radius 75 pixels.",
+      "original": "C:\\Users\\kurt\\.codex\\generated_images\\01a15cf6-771a-7d20-85a2-03c11fe9ccb6\\exec-ecf825e8-148b-4e87-807d-aa02666f565a.png"
+    },
+    {
+      "stage": 7,
+      "file": "7.png",
+      "prompt": "Edit the supplied exact full-disk fictional planet for an animation plate. Preserve all geography, clouds, lighting, disk silhouette and black margins pixel-aligned. Near-nadir orbital camera, terrain and smoke seen from above with physically shallow apparent relief. Change only the specified small land regions; do not add a central impact, it will be composited separately. Land fires: sparse small orange fire clusters and wispy grey smoke on the LAND ONLY in these image-relative regions: (0.48,0.34), (0.57,0.32), (0.68,0.40), (0.58,0.64), (0.28,0.31). Each affected region is only 3 to 5 percent of image width in radius. Daylight makes the fires subtle. No orange oceans, no streaks, no glowing coastline.",
+      "original": "C:\\Users\\kurt\\.codex\\generated_images\\01a15cf6-771a-7d20-85a2-03c11fe9ccb6\\exec-fed53198-5a2d-42d0-ba27-5ab624c2c29c.png"
+    },
+    {
+      "stage": 8,
+      "file": "8.png",
+      "prompt": "Edit the supplied exact full-disk fictional planet for an animation plate. Preserve all geography, clouds, lighting, disk silhouette and black margins pixel-aligned. Near-nadir orbital camera, terrain and smoke seen from above with physically shallow apparent relief. Change only the specified small land regions; do not add a central impact, it will be composited separately. Smoke veil from those same land fires: sparse muted orange fire clusters largely obscured by fine grey-brown smoke veils hugging the surface over LAND ONLY at these image-relative regions: (0.48,0.34), (0.57,0.32), (0.68,0.40), (0.58,0.64), (0.28,0.31). Each affected region is 3 to 5 percent image width in radius. No giant smoke towers or global pall.",
+      "original": "C:\\Users\\kurt\\.codex\\generated_images\\01a15cf6-771a-7d20-85a2-03c11fe9ccb6\\exec-dbef8375-e326-4819-b21c-bc0fb938e466.png"
+    }
+  ],
+  "contact": "No painted plate: identical baseline plus live optical pulse. Fixed impact UV .49,.46."
+}

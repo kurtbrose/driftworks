@@ -1,4 +1,5 @@
 require('./flight-aim-tracking.cjs');
+require('./flight-evasion.cjs');
 require('./asset-versions.cjs');
 require('./skybox-factory.cjs');
 require('./sky-effects.cjs');
@@ -7,6 +8,9 @@ require('./star-glare.cjs');
 require('./impact-lab.cjs');
 require('./impact-sky.cjs');
 require('./planet-hero.cjs');
+require('./sky-cube.cjs');
+require('./gas-giant-weather.cjs');
+require('./orbital-impact-cube.cjs');
 require('./planet-impact.cjs');
 require('./planet-impact-baked.cjs');
 require('./explosions.cjs');
@@ -122,3 +126,5 @@ require('./three-production.cjs');
 require('./asteroid-detail-lab.cjs');
 
 require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'liner-batching.cjs')], {stdio: 'inherit'});
+
+require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'refueling-cycle.cjs')], {stdio: 'inherit'});

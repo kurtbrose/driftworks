@@ -164,6 +164,8 @@ uniform sampler2D panorama;
 uniform sampler2D noiseMap;
 uniform float exposure;uniform float hdrEnabled;uniform sampler2D hdrEnvironment;
 uniform sampler2D ohioPlanet,ohioSun;
+uniform samplerCube bakedCube,bakedCubeTo;
+uniform float cubeProjection;
 uniform vec3 ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp;
 uniform vec3 ohioSunCenter,ohioSunRight,ohioSunUp;
 uniform float ohioPlanetGain,ohioSunGain;
@@ -175,6 +177,7 @@ vec3 impactOptics(vec3 color, vec3 ray){
     float depth=dot(ray,ohioPlanetCenter);
     if(impactDebris>0. && depth>0.){
         vec2 uv=(1.-vec2(dot(ray,ohioPlanetRight),dot(ray,ohioPlanetUp))/depth)*.5;
+        if(cubeProjection>.5)uv.x=1.-uv.x;
         // Short, sparse luminous re-entries in fixed planet direction space.
         for(int i=0;i<8;i++){
             float f=float(i),phase=fract(impactMotion/(9.+f*1.7)+f*.173);
@@ -233,6 +236,10 @@ void main(){
         vec3 riverRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec2 riverUV=vec2(atan(riverRay.y,riverRay.x)/6.28318530718+.5,acos(clamp(riverRay.z,-1.,1.))/3.14159265359);
         gl_FragColor=vec4(texture2D(panorama,riverUV).rgb*exposure,1.);return;
+    }
+    if(style>21.5){
+        vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+        gl_FragColor=vec4(impactOptics(mix(textureCube(bakedCube,ray).rgb,textureCube(bakedCubeTo,ray).rgb,bakedBlend)*exposure,ray),1.);return;
     }
     if(style>20.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
@@ -302,7 +309,7 @@ void main(){
         var landmarkTextures=[];
         /** @type {HTMLCanvasElement|HTMLImageElement|null} */var planetOverride=null;
         /** @param {HTMLCanvasElement|HTMLImageElement} source */function setPlanetImage(source){
-            if(!landmarkSky||missionSky.features[0].asset!=='planet-hero-v1/master.png')return;
+            if(missionSky.cubeFaces||!landmarkSky||missionSky.features[0].asset!=='planet-hero-v1/master.png')return;
             planetOverride=source;var entry=landmarkTextures[0];if(!entry||!entry.loaded)return;
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);
         }
@@ -329,6 +336,7 @@ void main(){
                 var entry={texture:texture,center:center,right:horizontal.map(function(v){return v/horizontalLength;}),
                     up:vertical.map(function(v){return v/verticalLength;}),gain:feature.gain,loaded:false};
                 landmarkTextures.push(entry);
+                if(missionSky.cubeFaces)return; // Frames are metadata only; never load the source cards in cube mode.
                 var image = new Image();
                 image.onload = function () {
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
@@ -339,6 +347,22 @@ void main(){
                 image.onerror=function () {canvas.dataset.ohio='error';};
                 image.src=assetUrl('../assets/backgrounds/'+feature.asset);
             });
+        }
+        var cubeTexture=gl.createTexture(),cubeLoaded=0;
+        if(missionSky.cubeFaces&&!missionSky.cubeStages){
+            if(missionSky.cubeFaces.length!==6)throw new Error('A baked skybox requires six faces in +X,-X,+Y,-Y,+Z,-Z order');
+            gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,cubeTexture);
+            for(var faceIndex=0;faceIndex<6;faceIndex++)gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+faceIndex,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+            canvas.dataset.cube='loading';
+            missionSky.cubeFaces.forEach(function(file,index){var image=new Image();image.onload=function(){
+                if(image.width!==1024||image.height!==1024){canvas.dataset.cube='error';return;}
+                gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,cubeTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+                gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+index,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
+                cubeLoaded++;if(cubeLoaded===6&&canvas.dataset.cube!=='error'){canvas.dataset.cube='ready';canvas.dataset.ohio='ready';}
+            };image.onerror=function(){canvas.dataset.cube='error';};image.src=assetUrl('../assets/backgrounds/'+file);});
+            gl.activeTexture(gl.TEXTURE0);
         }
         var lightingEnabled=true;
         /** @type {Record<string,import('../src/types').SkyEnvironmentLighting>} */ var skyLighting={};
@@ -456,16 +480,31 @@ void main(){
         /** @param {number} value */function setImpactTime(value){if(Number.isFinite(value)){cueMode=false;impactTime=Math.max(-5,Math.min(missionSky.bakedImpact?600:180,value));}}
         /** @param {string|number} stage @param {number} [seconds] */function cueImpact(stage,seconds){cueMode=true;return impactCues.trigger(stage,seconds);}
         function resetImpact(){cueMode=true;impactCues.reset();impactMotion=0;impactTime=-5;}
-        if(missionSky.bakedImpact&&(!config||config.cueControls!==false)&&typeof host.addEventListener==='function'){
+        if(missionSky.bakedImpact&&typeof host.addEventListener==='function'){
             host.addEventListener('impact-cue',function(event){var detail=/** @type {CustomEvent<{stage:string;seconds?:number}>} */(event).detail;if(detail)cueImpact(detail.stage,detail.seconds);});
             host.addEventListener('impact-reset',resetImpact);
         }
-        // At most three 4K maps resident (~96 MiB RGBA); no per-frame canvas uploads.
+        // At most three stages: cube sets ~72 MiB; archived 4K maps ~96 MiB RGBA.
         /** @type {Map<number,{texture:WebGLTexture|null,ready:boolean}>} */var bakedMaps=new Map();
         var bakedControls=false;
         /** @param {number} index */function bakedMap(index){
             var existing=bakedMaps.get(index);if(existing)return existing;
             var entry={texture:gl.createTexture(),ready:false};bakedMaps.set(index,entry);
+            if(missionSky.cubeStages){
+                var loaded=0;
+                gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,entry.texture);
+                for(var face=0;face<6;face++)gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+face,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+                gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+                ['px','nx','py','ny','pz','nz'].forEach(function(name,faceIndex){var image=new Image();image.onload=function(){
+                    if(bakedMaps.get(index)!==entry)return;
+                    if(image.width!==1024||image.height!==1024){canvas.dataset.bakedImpact='error';return;}
+                    gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,entry.texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+                    gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+faceIndex,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
+                    loaded++;entry.ready=loaded===6;
+                };image.onerror=function(){canvas.dataset.bakedImpact='error';};image.src=assetUrl('../assets/backgrounds/'+missionSky.cubeStages+index+'/'+name+'.png');});
+                return entry;
+            }
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);
             gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,1,1,0,gl.RGB,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0]));
             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -494,7 +533,7 @@ void main(){
                     cueControls=document.createElement('div');cueControls.className='impact-cues';
                     cueControls.style.cssText='position:fixed;right:14px;top:14px;z-index:12;background:#08151ee8;color:#dcebf0;padding:12px;border:1px solid #46606c;border-radius:7px;font:13px system-ui;max-width:265px';
                     cueControls.innerHTML='<style>.impact-cues button,.impact-cues select{font:13px system-ui;padding:6px;margin:4px 0;color:#dcebf0;background:#172d39;border:1px solid #46606c;border-radius:4px;width:auto}.impact-cues label{display:block}</style><strong>Mission sky cues</strong><p data-cue-status>Holding: Before impact</p><label>Target stage <select aria-label="Impact cue stage">'+impactStages.map(function(s){return '<option value="'+s.id+'">'+s.label+'</option>';}).join('')+'</select></label><label>Blend duration <select aria-label="Impact cue duration"><option value="2">2 seconds</option><option value="8" selected>8 seconds</option><option value="15">15 seconds</option></select></label><button type="button" data-next>Next cue</button> <button type="button" data-trigger>Trigger target</button> <button type="button" data-reset>Reset cues</button><small style="display:block">Each stage holds until triggered. Esc pauses flight and transitions.</small>';
-                    (missionSky.bakedImpact&&missionSky.features[0].asset==='planet-hero-v1/master.png'?document.body:host).appendChild(cueControls);
+                    (missionSky.bakedImpact?document.body:host).appendChild(cueControls);
                     var target=/** @type {HTMLSelectElement} */(cueControls.querySelector('[aria-label="Impact cue stage"]')),duration=/** @type {HTMLSelectElement} */(cueControls.querySelector('[aria-label="Impact cue duration"]'));
                     var nextButton=/** @type {HTMLButtonElement} */(cueControls.querySelector('[data-next]')),trigger=/** @type {HTMLButtonElement} */(cueControls.querySelector('[data-trigger]')),reset=/** @type {HTMLButtonElement} */(cueControls.querySelector('[data-reset]'));
                     nextButton.onclick=function(){var s=impactCues.snapshot(),index=Math.min(impactStages.length-1,s.transitioning?s.to+1:s.from+1);target.value=impactStages[index].id;cueImpact(index,Number(duration.value));};
@@ -511,7 +550,7 @@ void main(){
             var ready=a.ready&&b.ready,blend=from===to?0:Math.max(0,Math.min(1,(impactTime-impactTimes[from])/(impactTimes[to]-impactTimes[from])));
             if(cueMode){cue=impactCues.update(elapsed,ready);a=bakedMap(cue.from);b=bakedMap(cue.to);blend=cue.blend;}
             if(ready)impactMotion+=Math.max(0,elapsed);
-            if(ready&&canvas.dataset.bakedImpact!=='error')canvas.dataset.bakedImpact='ready';
+            if(ready&&canvas.dataset.bakedImpact!=='error'){canvas.dataset.bakedImpact='ready';if(missionSky.cubeStages){canvas.dataset.cube='ready';canvas.dataset.ohio='ready';}}
             if(impactSlider)impactSlider.value=String(impactTime);
             var label=cueMode?(cue.transitioning?'Blending to '+impactStages[cue.to].label:'Holding: '+impactStages[cue.from].label)+(cue.queued?' / '+cue.queued+' queued':''):'Timed artwork preview / '+impactTime.toFixed(1)+' s';
             if(cueControls){var readout=cueControls.querySelector('[data-cue-status]');if(readout)readout.textContent=ready?label:'Loading cue artwork...';}
@@ -685,16 +724,20 @@ void main(){
                 stats = { drawCalls: 2, triangles: 2, points: starData.length / 4, meshes: 2, materials: 2 };
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
-                gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
+                gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
+                gl.uniform1i(gl.getUniformLocation(sky,'bakedCube'),5);
+                gl.uniform1i(gl.getUniformLocation(sky,'bakedCubeTo'),6);
+                gl.uniform1f(gl.getUniformLocation(sky,'cubeProjection'),missionSky.cubeStages?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'bakedBlend'),0);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), effectiveExposure);
                 gl.uniform1f(gl.getUniformLocation(sky,'hdrEnabled'),hdrTexture?1:0);gl.uniform1i(gl.getUniformLocation(sky,'hdrEnvironment'),4);
                 if(hdrTexture){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.activeTexture(gl.TEXTURE0);}
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
                 var flash=impactTime>=0&&impactTime<.8?Math.exp(-impactTime/.12)*(1-Math.exp(-impactTime/.008)):0;
                 var impactPlanet=landmarkTextures[0],eventDirection=[0,1,0];
-                if(impactPlanet&&missionSky.features[0].asset==='planet-hero-v1/master.png'){
+                if(impactPlanet&&(missionSky.cubeStages||missionSky.features[0].asset==='planet-hero-v1/master.png')){
                     var rx=impactPlanet.right.reduce(function(sum,v){return sum+v*v;},0),uy=impactPlanet.up.reduce(function(sum,v){return sum+v*v;},0);
-                    eventDirection=impactPlanet.center.map(function(v,i){return v+impactPlanet.right[i]/rx*(1-2*.49)+impactPlanet.up[i]/uy*(1-2*.46);});
+                    eventDirection=impactPlanet.center.map(function(v,i){return v+impactPlanet.right[i]/rx*(missionSky.cubeStages?2*.49-1:1-2*.49)+impactPlanet.up[i]/uy*(1-2*.46);});
                 }else flash=0;
                 gl.uniform1f(gl.getUniformLocation(sky,'impactFlash'),flash);gl.uniform3fv(gl.getUniformLocation(sky,'impactDirection'),eventDirection);
                 gl.uniform1f(gl.getUniformLocation(sky,'impactDebris'),0);gl.uniform1f(gl.getUniformLocation(sky,'impactMotion'),impactMotion);
@@ -703,7 +746,15 @@ void main(){
                     gl.uniform3fv(gl.getUniformLocation(sky,'ohioPlanetRight'),impactPlanet.right);
                     gl.uniform3fv(gl.getUniformLocation(sky,'ohioPlanetUp'),impactPlanet.up);
                 }
-                if(missionSky.bakedImpact){
+                if(missionSky.cubeStages){
+                    var cube=prepareBaked(elapsed||0);
+                    gl.uniform1f(gl.getUniformLocation(sky,'impactFlash'),cube.flash);gl.uniform1f(gl.getUniformLocation(sky,'impactDebris'),cube.debris);gl.uniform1f(gl.getUniformLocation(sky,'impactMotion'),impactMotion);
+                    [cube.a,cube.b].forEach(function(map,index){gl.activeTexture(gl.TEXTURE0+5+index);gl.bindTexture(gl.TEXTURE_CUBE_MAP,map);});
+                    gl.uniform1f(gl.getUniformLocation(sky,'bakedBlend'),cube.blend);
+                }else if(missionSky.cubeFaces){
+                    gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,cubeTexture);gl.uniform1i(gl.getUniformLocation(sky,'bakedCube'),5);
+                    gl.activeTexture(gl.TEXTURE0+6);gl.bindTexture(gl.TEXTURE_CUBE_MAP,cubeTexture);
+                }else if(missionSky.bakedImpact){
                     var baked=prepareBaked(elapsed||0);
                     gl.uniform1f(gl.getUniformLocation(sky,'impactFlash'),baked.flash);gl.uniform1f(gl.getUniformLocation(sky,'impactDebris'),baked.debris);gl.uniform1f(gl.getUniformLocation(sky,'impactMotion'),impactMotion);
                     [baked.a,baked.b].forEach(function(map,index){gl.activeTexture(gl.TEXTURE0+2+index);gl.bindTexture(gl.TEXTURE_2D,map);gl.uniform1i(gl.getUniformLocation(sky,index===0?'ohioPlanet':'ohioSun'),2+index);});

@@ -4,7 +4,13 @@ The impact watch now defaults to mission-triggered cinematic stages. See
 [impact cues](impact-cues.md) for the trigger API, manual cue panel, queue/pause
 rules, generated land fire/smoke stages and live atmospheric re-entry layer.
 
-The complete-planet experiment uses the existing opaque two-landmark pass with
+The active animation uses the approved orbital planet and six-camera captures;
+see [impact cues](impact-cues.md) and the six-camera export section below.
+`planet-orbital-cube`, `planet-impact-watch` and `planet-impact-baked` all select
+the new nine-stage sequence. The last retains its dogfight; the others are empty.
+The review uses the same fixed 45-degree perspective as flight.
+
+The archived complete-planet experiment uses the opaque two-landmark pass with
 one black-backed full-disk planet and a separate sun. Missions `planet-hero`,
 `planet-hero-80` and `planet-hero-140` retain the ordinary 8v8 furball rules and
 vary the planet card width. The planet remains fixed at yaw 90 / pitch -30.
@@ -17,7 +23,7 @@ The sky instance also accepts `setPlanetImage(canvasOrImage)` for this planet
 mission family. It updates only the existing planet texture, retaining its
 projection, star occlusion and sun. An override submitted before the original
 planet finishes loading is retained. The hero review viewer uses this for the
-local overhead impact compositor. Mission `planet-impact-baked` instead samples
+local overhead impact compositor. The archived equirectangular path samples
 adjacent offline-baked 4K spherical maps from `baked-v3/`, with three textures resident and a
 flight-time clock that freezes on pause/loading. `sky.bakedImpact` selects this
 pass while preserving the same landmark placement and disk star occlusion.
@@ -451,3 +457,35 @@ lobes. This is an optical approximation, not general HDR framebuffer bloom.
 Camera adaptation uses wall time even when flight supplies frame durations or
 pauses simulation. The ship review accepts `?sky=9&mission=ohio`; Face the sun
 uses that mission's authored sun bearing for an on/off comparison.
+# Six-camera planet export
+
+`tools/bake-sky-cube.py` captures six square 90-degree perspective views from
+one origin using the existing card intersection/sampling compositor. This is a
+software camera capture, not six independent image generations. Example:
+
+```
+python tools/bake-sky-cube.py assets/backgrounds/planet-hero-orbital-v2/cube-recipe.json --size 1024 --output assets/backgrounds/planet-hero-orbital-v2/cube-v1
+```
+
+The manifest records camera bases, origin, FOV, row convention, source recipe
+hash and all six face hashes. Order is +X,-X,+Y,-Y,+Z,-Z. PNG row zero maps to
+texture t=0; upload without flipping Y. Axis diagnostic faces encode world XYZ
+as RGB and use the identical cameras. Stars remain a fixed-direction runtime
+point pass, with planet occlusion retained. Camera optics remain live.
+
+The `planet-orbital-static` mission loads only those six files through samplerCube;
+the original source cards are not loaded at runtime. Its 1024-square faces do
+not add detail to the 1254-square master. The review is locked to the 45-degree
+flight perspective. Wide lens controls were removed after severe edge stretch
+made the planet silhouette misleading during review.
+
+Completion requires six saved faces, a manifest, axis/edge regression checks,
+cube-only runtime loading and inspection in flight. A card preview or an
+equirectangular export alone does not meet a six-camera skybox request.
+`tests/sky-cube.cjs` checks these artifacts, all twelve shared camera edge ray
+sequences, and distinct HDR/cube sampler slots.
+
+The animated `planet-orbital-cube` variant uses `sky.cubeStages` plus
+`sky.bakedImpact`: two cube samplers blend one pair of six-face captures from
+`animation-cube-v1/`. `tools/bake-orbital-impact.py` registers and bakes the nine
+stages using this exact camera convention. Each target waits for all six faces.
