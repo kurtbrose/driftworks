@@ -1,4 +1,5 @@
 require('./civilian-portraits.cjs');
+require('./campaign-intro.cjs');
 require('./flight-aim-tracking.cjs');
 require('./flight-evasion.cjs');
 require('./asset-versions.cjs');

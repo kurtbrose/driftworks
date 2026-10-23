@@ -49,7 +49,7 @@
         var row=scene[s.line++],index=Number(row[0]),text=String(row[1]);s.wait=2;
         var civilian=shuttlePilots[index],worker=index===2?depotWorker:undefined,voiceIndex=civilian?civilian.voice:worker?worker.voice:index;
         return {text:text,speaker:names[index],voice:'Scout',hostile:false,seed:101+index*37,radioSeed:7919+index,
-            voiceSettings:DW.flightDialogue.pilotVoice(/** @type {import('./types').Craft} */({id:civilian?civilian.id:worker?worker.id:'evac-radio-'+index,index:voiceIndex})),
+            voiceSettings:Object.assign({},DW.flightDialogue.pilotVoice(/** @type {import('./types').Craft} */({id:civilian?civilian.id:worker?worker.id:'evac-radio-'+index,index:voiceIndex})),{speed:.85}),
             runwayPortraitIndex:worker?worker.portrait:undefined,civilianPortraitIndex:civilian?civilian.portrait:undefined,portraitIndex:Math.min(index,4),craftId:index<2?combat.enemies[index]?.id:'control',event:'evacuationStory'};
     }
     DW.evacuationMission={start:start,step:step};

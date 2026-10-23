@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enlistment · Driftworks</title>
+<link rel="icon" href="../assets/favicon.svg?v=83fbfb94936a" type="image/svg+xml">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#202925;color:#262d28;font:16px/1.5 Georgia,serif;background-image:repeating-linear-gradient(0deg,transparent,transparent 79px,#ffffff03 80px)}a{color:inherit}button,input{font:inherit}button,a,input{ -webkit-tap-highlight-color:transparent}a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid #ae6239;outline-offset:5px}.shell{max-width:1180px;margin:auto;padding:30px 40px 50px}.topbar{display:flex;justify-content:space-between;align-items:center;color:#bcc5b8;font:11px monospace;letter-spacing:.15em;text-transform:uppercase}.topbar a{text-decoration:none}.brand{display:flex;align-items:center;gap:12px}.insignia{display:grid;place-items:center;border:1px solid currentColor;width:32px;height:32px;transform:rotate(45deg)}.insignia span{transform:rotate(-45deg);font-size:20px}.intro{display:flex;justify-content:space-between;align-items:end;color:#d9dccf;margin:55px 0 24px}.eyebrow{font:11px/1.5 monospace;letter-spacing:.17em;text-transform:uppercase}.intro h1{font-size:clamp(30px,5vw,52px);font-weight:400;letter-spacing:-.035em;line-height:1.1;margin:10px 0}.intro p{font:13px monospace;color:#aab5a6;margin:0 0 5px}.paper{background:#e7e3d5;box-shadow:0 24px 70px #0004;position:relative}.paper:before{content:"";display:block;height:8px;background:repeating-linear-gradient(135deg,#424e42 0,#424e42 8px,#e7e3d5 8px,#e7e3d5 16px)}.document-head{padding:27px 36px 22px;border-bottom:2px solid #424e42;display:flex;justify-content:space-between;gap:20px}.document-head h2{font:700 19px/1.2 monospace;letter-spacing:-.04em;margin:7px 0}.document-head p{margin:0;font:11px monospace;color:#626a5e}.document-code{text-align:right;white-space:nowrap}.document-code strong{font:25px monospace;display:block;margin-bottom:7px}.columns{display:grid;grid-template-columns:1.45fr 1fr}.application{padding:32px 36px 36px;border-right:1px solid #a8ad9b}.section-label{display:flex;gap:12px;align-items:center;font:11px monospace;letter-spacing:.13em;text-transform:uppercase;margin-bottom:24px}.section-label b{background:#414d40;color:#eeeadd;padding:4px 7px;font-weight:400}.application h3{font-size:27px;font-weight:400;margin:0 0 8px}.description{font-size:14px;color:#626a5e;margin:0 0 30px;max-width:390px}label{display:block;font:700 11px monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}label span{font-weight:400;color:#68705f}input{width:100%;border:0;border-bottom:1px solid #7d8774;border-radius:0;background:#f8f5eb75;color:#262d28;padding:13px 12px;font-size:21px;min-height:54px}input::placeholder{color:#969b8a}input:focus{background:#faf7ee}small.hint{display:block;color:#6c7465;font:11px/1.6 monospace;margin:8px 0 24px}.preview{padding:32px 30px;background:#d8dccc66}.record{border:1px solid #9ea791;padding:22px;position:relative}.record:after{content:"DW / PERSONNEL";display:block;font:9px monospace;letter-spacing:.2em;color:#7d8872;border-top:1px solid #aab29e;padding-top:16px;margin-top:25px}.record-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:33px;font:10px monospace;color:#6a745f}.emblem{width:52px;height:52px;border:1px solid #879278;border-radius:50%;display:grid;place-items:center;font:30px Georgia,serif}.record-name{font-size:25px;overflow-wrap:anywhere;margin:0 0 8px;line-height:1.2}.record-call{font:13px monospace;color:#5b6952;overflow-wrap:anywhere}.record dl{font:10px monospace;margin:30px 0 0}.record dl div{display:flex;justify-content:space-between;margin-top:10px;gap:12px}.record dt{color:#727b68}.record dd{margin:0}.note{font-size:14px;font-style:italic;color:#66705e;margin:25px 4px 0}.actions{padding:23px 36px;display:flex;justify-content:space-between;align-items:center;gap:25px;border-top:1px solid #a8ad9b}.actions p{font:11px/1.6 monospace;color:#6c7465;max-width:320px;margin:0}button,.continue{background:#3e4e3d;color:#f1eddf;border:1px solid #3e4e3d;padding:16px 23px;cursor:pointer;font:12px monospace;letter-spacing:.06em;text-decoration:none;display:inline-block}button:hover,.continue:hover{background:#293d2c}.footer{display:flex;justify-content:space-between;gap:15px;color:#939f8d;font:10px monospace;letter-spacing:.08em;margin-top:22px}.confirmation{padding:45px 36px;text-align:center}.confirmation h3{font-size:35px;font-weight:400;margin:15px 0}.confirmation p{max-width:440px;margin:15px auto 28px;color:#626a5e}.stamp{display:inline-block;border:2px solid #52684b;color:#52684b;font:14px monospace;letter-spacing:.2em;padding:9px 15px;transform:rotate(-5deg)}.edit{background:transparent;color:#3e4e3d;margin-left:10px}.edit:hover{background:#d8dccc}[hidden]{display:none!important}@media(max-width:720px){.shell{padding:22px 18px}.intro{margin-top:38px}.intro>p{display:none}.document-head{padding:22px}.document-code strong{font-size:19px}.columns{grid-template-columns:1fr}.application{padding:26px 22px;border-right:0}.preview{padding:24px 22px;border-top:1px solid #a8ad9b}.record-top{margin-bottom:20px}.actions{padding:22px;align-items:stretch;flex-direction:column;gap:18px}.actions p{max-width:none}.footer{font-size:9px}.topbar{font-size:9px}.confirmation{padding:35px 22px}.confirmation button,.confirmation .continue{margin:8px}}
+</style>
+</head>
+<body>
+<main class="shell">
+<nav class="topbar" aria-label="Main"><a class="brand" href="../"><span class="insignia" aria-hidden="true"><span>✦</span></span> Driftworks / Personnel</a><span>Campaign · Prologue</span></nav>
+<header class="intro"><div><span class="eyebrow">Every service record starts somewhere.</span><h1>Make your name.</h1></div><p>The fleet is taking volunteers.</p></header>
+<article class="paper">
+<header class="document-head"><div><span class="eyebrow">Fleet personnel office</span><h2>APPLICATION FOR ENLISTMENT</h2><p>Voluntary service / Flight personnel</p></div><div class="document-code"><strong>01—A</strong><p>UNCLASSIFIED</p></div></header>
+<form id="enlistment">
+<div class="columns"><section class="application" aria-labelledby="identity-title"><div class="section-label"><b>01</b> Personal particulars</div><h3 id="identity-title">Who are you, recruit?</h3><p class="description">Before we find you a berth, we need a name for the roster and a callsign for the radio.</p>
+<label for="recruit-name">Full name <span>/ Service record</span></label><input id="recruit-name" name="name" autocomplete="name" required maxlength="60" placeholder="Enter your name" aria-describedby="name-hint"><small class="hint" id="name-hint">As you wish it to appear on your service record.</small>
+<label for="recruit-callsign">Callsign <span>/ Radio identification</span></label><input id="recruit-callsign" name="callsign" autocomplete="off" spellcheck="false" required maxlength="24" placeholder="Enter your callsign" aria-describedby="callsign-hint"><small class="hint" id="callsign-hint">Keep it short. Your wingmates will be saying it a lot.</small>
+</section><aside class="preview" aria-label="Service record preview"><div class="section-label">Provisional service record</div><div class="record"><div class="record-top"><span>FLIGHT PERSONNEL</span><span class="emblem" aria-hidden="true">✦</span></div><p class="record-name" id="preview-name">Name pending</p><div class="record-call" id="preview-callsign">“UNASSIGNED”</div><dl><div><dt>ENTRY RANK</dt><dd>Recruit</dd></div><div><dt>ASSIGNMENT</dt><dd>Awaiting orders</dd></div><div><dt>STATUS</dt><dd id="record-status">Unsigned</dd></div></dl></div><p class="note">“Out here, a familiar voice on the radio can mean everything.”</p></aside></div>
+<footer class="actions"><p>Submitting this form opens your service record.<br><span id="storage-note">Your record is saved on this device.</span></p><button type="submit">Sign enlistment papers <span aria-hidden="true">→</span></button></footer>
+</form>
+<section class="confirmation" id="confirmation" aria-labelledby="welcome-title" tabindex="-1" hidden><span class="stamp">ENLISTMENT ACCEPTED</span><h3 id="welcome-title">Welcome to the fleet.</h3><p id="welcome-copy"></p><a class="continue" href="missions.html">View available sorties →</a><button class="edit" id="edit-record" type="button">Amend record</button></section>
+</article><footer class="footer"><span>DW / RECRUITMENT DIVISION</span><span>Enlistment prototype · 01</span></footer>
+</main>
+<script src="../src/asset-versions.js?v=ca9ff38e0cb6"></script>
+<script>
+(function () {
+  'use strict';
+  const form = document.querySelector('#enlistment');
+  const name = document.querySelector('#recruit-name');
+  const callsign = document.querySelector('#recruit-callsign');
+  const confirmation = document.querySelector('#confirmation');
+  const key = 'driftworks.campaign.recruit.v1';
+  function preview() {
+    document.querySelector('#preview-name').textContent = name.value.trim() || 'Name pending';
+    document.querySelector('#preview-callsign').textContent = '“' + (callsign.value.trim() || 'UNASSIGNED') + '”';
+    name.setCustomValidity('');
+    callsign.setCustomValidity('');
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    if (saved && typeof saved.name === 'string' && typeof saved.callsign === 'string') {
+      name.value = saved.name.slice(0, 60);
+      callsign.value = saved.callsign.slice(0, 24);
+    }
+  } catch (_) { /* An unavailable store must not prevent enlistment. */ }
+  form.addEventListener('input', preview);
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    name.value = name.value.trim();
+    callsign.value = callsign.value.trim();
+    if (!name.value) name.setCustomValidity('Enter a name for your service record.');
+    if (!callsign.value) callsign.setCustomValidity('Enter a callsign for the radio.');
+    if (!form.reportValidity()) return;
+    const recruit = { name: name.value, callsign: callsign.value };
+    let persisted = true;
+    try { localStorage.setItem(key, JSON.stringify(recruit)); } catch (_) { persisted = false; }
+    document.querySelector('#welcome-title').textContent = 'Welcome to the fleet, ' + recruit.callsign + '.';
+    document.querySelector('#welcome-copy').textContent = recruit.name + ', your provisional service record is open. Report to flight operations for available sorties.' + (persisted ? '' : ' This browser could not save your record; it will last only while this page remains open.');
+    form.hidden = true;
+    confirmation.hidden = false;
+    confirmation.focus();
+  });
+  document.querySelector('#edit-record').addEventListener('click', function () {
+    confirmation.hidden = true;
+    form.hidden = false;
+    name.focus();
+  });
+  preview();
+})();
+</script>
+</body>
+</html>

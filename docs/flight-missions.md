@@ -28,9 +28,10 @@ The three-fighter combat and mission dialogue are real; depot defense damage and
 runner-specific AI remain future mission systems. Shuttle Five uses Captain Daniel Okafor and Shuttle Six uses Captain Elena Park
 from the civilian shuttle roster, including their suggested voice slots. Every
 transmission from each shuttle retains that civilian portrait; fighters and
-Defense Control keeps its existing cast. Depot Control uses Deck Supervisor
+Defense Control keep their existing cast. Depot Control uses Deck Supervisor
 Jo Mercer from the runway-worker roster for every transmission, with the
-functional facility identifier retained on the radio.
+functional facility identifier retained on the radio. Scripted evacuation calls
+use a fixed 0.85 speech rate; shared combat quip voice rates remain unchanged.
 
 Run `python tools/export-civilian-flight.py` after editing the approved GLBs to
 regenerate material-grouped binary geometry and ventral contact metadata. The
