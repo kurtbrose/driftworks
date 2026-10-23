@@ -24,6 +24,14 @@ actorRoot.position.set(4,0,-2);actorRoot.rotation.y=.8;actorRoot.add(rig,anchor)
 const texture={offset:{x:0}},actor={root:actorRoot,face:{anchor,bone:head,texture,index:0},talk:0};
 poseFace(actor,0);actorRoot.updateMatrixWorld(true);
 assert(anchor.getWorldPosition(new T.Vector3()).distanceTo(head.getWorldPosition(new T.Vector3()))<1e-9,'Face follows transformed head bone');
-const neutral=texture.offset.x;poseFace(actor,4200);assert(texture.offset.x>neutral,'Blink selects atlas pose');
-actor.talk=1;poseFace(actor,200);assert(texture.offset.x>neutral&&texture.offset.x<1,'Talking selects valid atlas pose');
-console.log('PASS portrait heads: transformed bone attachment and neutral/blink/talking atlas selection');
+console.log('PASS authored head attachment follows the transformed astronaut bone');
+
+const headData=JSON.parse(fs.readFileSync('assets/characters/quaternius-universal-base-characters/runtime/female-head.json','utf8'));
+assert.equal(headData.units,'metres');assert.equal(headData.groups.length,3);
+for(const group of headData.groups){
+ assert(group.positions.length>0&&group.positions.length%9===0);
+ assert.equal(group.positions.length,group.normals.length);assert.equal(group.positions.length/3,group.uvs.length/2);
+ assert(group.positions.every(Number.isFinite)&&group.normals.every(Number.isFinite)&&group.uvs.every(Number.isFinite));
+ for(let i=0;i<group.positions.length;i+=3){assert(Math.abs(group.positions[i])<.16);assert(group.positions[i+1]>-.08&&group.positions[i+1]<.24);assert(Math.abs(group.positions[i+2])<.2);}
+}
+console.log('PASS authored head asset: complete triangles, source-metre head bounds, UV/normal coverage and three material groups');

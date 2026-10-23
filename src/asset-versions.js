@@ -414,6 +414,7 @@
   "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/T_Hair_2_BaseColor.png": "f9f4f2fb3eee",
   "assets/characters/quaternius-universal-base-characters/original/Hairstyles/Origin at 0/glTF (Godot)/T_Hair_2_Normal.png": "172f230aae0d",
   "assets/characters/quaternius-universal-base-characters/provenance.json": "894346f2e9f4",
+  "assets/characters/quaternius-universal-base-characters/runtime/female-head.json": "431af4f9112b",
   "assets/depots/refueling-v1/caution-paint.png": "a8b17b3d7215",
   "assets/depots/refueling-v1/depot.glb": "ea765a5c8d84",
   "assets/environments/kenney-car-kit/provenance.json": "62a08bfbbc15",

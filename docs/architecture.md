@@ -1580,7 +1580,7 @@ A state epoch invalidates candidate caches on roster, order, shape, team or
 alive-state changes. Changed paths must remain inside their certified corridor
 or query again. This schedules conservative refreshes, not exact impact times.
 
-`training.collisionBatch(combat, work)` observes poses once at the boundary,
+`training.collisionBatch(combat, work)` runs a synchronous callback, observing poses once at the boundary,
 then reuses proxies across traces. The fighter update notifies each moved craft
 before its guns run; controlled guns and Aegis mount loops also use batches.
 Custom batched callers must call `collisionChanged(combat, craft)` after moving a

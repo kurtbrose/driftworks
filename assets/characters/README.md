@@ -86,20 +86,27 @@ The on-screen stats and Crew toggle support further comparisons. A focused Node
 regression checks shared geometry, independent skeletons, palette ownership and
 source preservation (`node tests/crew-deck.cjs`).
 
-### Portrait faces
+### Authored head baseline
 
-Crew deck now uses Jo, Luis and Asha from the existing runway-worker portraits.
-Each face is a shallow curved, tapered surface mounted relative to the animated
-Head bone; the original helmet remains behind it. The surface geometry is shared.
-UV transforms sample the inner face from the original seven-pose atlas; no new
-portrait images are generated. Neutral, blink and alternating mouth poses are
-selected without uploading new pixels each frame. Mouth motion is a timed visual
-placeholder during interaction, not speech synchronization. Palette, body rig and
-source GLB remain independent of the face overlay. Portrait textures use their
-existing artwork provenance; the astronaut's CC0 license does not apply to them.
+Crew deck now uses a derived head from the CC0 Quaternius Universal Base Characters
+female Superhero model. The same static head geometry and original base-color
+textures are shared by all three astronauts. Head, eyes and eyebrow triangles keep
+the source UVs and normals; the procedural head and projected portrait faces have
+been removed. No facial animation or character-specific likeness is claimed.
 
-This is a frontal portrait projection study, not a finished all-angle head UV map.
-The helmet hides the back; oblique views expose limited depth and the lighting
-baked into the portrait. A better side profile, nose depth and bespoke face atlas
-are subsequent art experiments. Texture atlases are loaded once per identity and
-mipmapped; no runtime network dependencies have been added.
+Rebuild with `node tools/extract-crew-head.mjs`. The extractor loads the bind pose,
+keeps complete triangles above the source neck cutoff, bakes their world-space
+positions relative to the source Head bone, and writes `runtime/female-head.json`.
+The suit scene places that rigid head at the astronaut's animated Head bone without
+reusing the source skeleton. The source helmet is hidden. Geometry uses source
+metres; no nonuniform deformation or texture projection is applied. The cut neck
+opening sits within the suit collar. Original files remain untouched.
+
+The baseline uses the original base-color maps and roughness settings; source
+normal and roughness textures are not currently loaded. The original neutral hair
+map produces pale eyebrows without the pack's optional tint shader. Hairstyles and
+portrait likeness are subsequent art work. Head front and Head profile buttons
+provide repeatable inspection views. Browser checks cover front, profile and live
+head movement. The derived head has 5,358 triangles before neck-cutoff revisions;
+the JSON contains its actual retained triangle data and shares buffers/materials
+across crew. This is an experiment, not the final compact shipping format.

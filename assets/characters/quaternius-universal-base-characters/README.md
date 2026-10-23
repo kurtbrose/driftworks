@@ -26,6 +26,8 @@ a future runtime derivation should resolve these aliases explicitly.
 
 Acquisition validation: source bytes were copied directly from the downloaded ZIP;
 `provenance.json` records a SHA-256 and byte length for each retained file.
-The existing character catalog and crew-deck scene have not been switched to this
-pack yet. Inspect and derive one head first, checking front, three-quarter and
-profile views with its original textures.
+The character catalog retains its existing entries. Crew deck uses the derived
+`runtime/female-head.json`; regenerate it with `node tools/extract-crew-head.mjs`.
+The head retains original UVs, normals, source scale and base-color textures.
+Eyes and eyebrows are retained; source normal/roughness maps are not loaded in
+the baseline. All crew share this one head while fit and profile are evaluated.

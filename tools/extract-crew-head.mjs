@@ -13,3 +13,17 @@ const gltf=await new GLTFLoader().parseAsync(JSON.stringify(doc),'');gltf.scene.
 const head=gltf.scene.getObjectByName('Head').getWorldPosition(new T.Vector3());
 const neck=gltf.scene.getObjectByName('neck_01').getWorldPosition(new T.Vector3());
 console.log({head:head.toArray(),neck:neck.toArray(),bounds:new T.Box3().setFromObject(gltf.scene)});
+const groups=[];
+const cutoff=neck.y-.005;
+gltf.scene.traverse(mesh=>{
+ if(!mesh.isMesh)return;
+ const geometry=mesh.geometry,position=geometry.attributes.position,uv=geometry.attributes.uv;
+ const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+ const points=[];for(let i=0;i<position.count;i++){const p=new T.Vector3().fromBufferAttribute(position,i);if(mesh.isSkinnedMesh)mesh.applyBoneTransform(i,p);points.push(p.applyMatrix4(mesh.matrixWorld));}
+ const parts=geometry.groups.length?geometry.groups:[{start:0,count:geometry.index?.count||position.count,materialIndex:0}];
+ for(const part of parts){const positions=[],uvs=[],normals=[];for(let j=part.start;j<part.start+part.count;j+=3){const ids=[0,1,2].map(k=>geometry.index?geometry.index.getX(j+k):j+k);if(ids.some(i=>points[i].y<cutoff))continue;for(const i of ids){positions.push(...points[i].clone().sub(head).toArray());uvs.push(uv.getX(i),uv.getY(i));normals.push(...new T.Vector3().fromBufferAttribute(geometry.attributes.normal,i).applyMatrix3(new T.Matrix3().getNormalMatrix(mesh.matrixWorld)).normalize().toArray());}}
+ if(positions.length)groups.push({material:materials[part.materialIndex].name,positions:positions.map(n=>+n.toFixed(7)),uvs:uvs.map(n=>+n.toFixed(7)),normals:normals.map(n=>+n.toFixed(7))});}
+});
+const data={source:'Superhero_Female_FullBody.gltf',units:'metres',pivot:'Source Head bone in bind pose',cutoff,groups};
+fs.mkdirSync(new URL('runtime/',dir),{recursive:true});fs.writeFileSync(new URL('runtime/female-head.json',dir),JSON.stringify(data)+'\n');
+console.log('Head triangles',groups.reduce((s,g)=>s+g.positions.length/9,0));
