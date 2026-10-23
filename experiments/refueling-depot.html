@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Driftworks / Refueling depot</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#000;color:#e0e8eb;font:14px system-ui}#sky,#view{position:fixed;inset:0 0 0 280px}canvas{position:absolute;width:100%;height:100%;touch-action:none}aside{position:fixed;inset:0 auto 0 0;width:280px;padding:24px;background:#101a23;overflow:auto;border-right:1px solid #41515b}small{color:#dcaa61;letter-spacing:2px}h1{font-weight:400;font-size:32px}p{color:#a6b8c2;line-height:1.5}button,select{background:#21323e;color:inherit;border:1px solid #53646e;padding:9px;margin:3px 0;cursor:pointer}label{display:block;margin:20px 0}input[type=range],select{width:100%}a{color:#b9dbea}#caption{position:fixed;bottom:20px;left:304px;font-size:12px;color:#d0dce2;pointer-events:none}@media(max-width:650px){aside{width:210px;padding:14px}#sky,#view{left:210px}#caption{left:224px}}
-</style><script src="../src/asset-versions.js?v=602e48873eec"></script>
+</style><script src="../src/asset-versions.js?v=12f1aa1c1c48"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
 <body><div id="sky"></div><div id="view"></div><aside><small>DRIFTWORKS / ASSET STUDY</small><h1>Orbital<br>fuel depot.</h1><p>Long open spine, eight tank banks and three articulated service arms. First silhouette and Blender export prototype.</p>
 <button id="overview">Overview</button> <button id="approach">Service approach</button> <button id="top">Plan view</button> <button id="fighter-view">Fighter close-up</button> <button id="offline-view">Inactive module C</button> <button id="rack-view">Tank rack</button>
@@ -10,6 +10,7 @@
 <button id="commuter-view">Commuter close-up</button> <button id="liner-view">Large liner close-up</button>
 <label>Civilian transports<select id="liner-model"><option value="both">Both / true scale</option><option value="commuter">Commuter / 72 m hull</option><option value="double-decker">Double-decker / 180 m hull</option><option value="none">Hidden</option></select></label>
 <p id="liner-status">Loading civilian liners…</p>
+<button id="benchmark">Measure performance / 5 seconds</button><p id="performance" aria-live="polite">Benchmark uses the current camera, visibility and resolution.</p>
 <label>Liner docking attitude <output id="attitude-value">90° / vertical</output><input id="liner-attitude" type="range" min="0" max="90" step="1" value="90"></label>
 <p>0°: horizontal cruise · 90°: nose up, roof toward depot.</p>
 <label>Berth bearing<input id="arms" type="range" min="-35" max="35" value="0"></label>
@@ -24,7 +25,7 @@
 <label><input type="checkbox" id="wire"> Wireframe</label>
 <p id="status">Loading baked depot…</p><p id="arm-status"></p><p>Drag to orbit · Wheel to zoom · Right drag to pan.</p><p>Shoulder and elbow solve for wrist position. Gimballed couplers set mating attitude. Fuel runs inside the rigid links; no loose hoses. Ship attachment and collision remain future work.</p><a href="../assets/depots/refueling-v1/depot.blend">Editable Blender source</a></aside><div id="caption">336 m SPINE • 28 / 32 TANKS INSTALLED • INDUSTRIAL SERVICE DEPOT</div>
 <script>history.replaceState(null,'',location.pathname+'?mission=planet-hero');</script>
-<script src="flight-missions.js?v=1d378b50cdae"></script><script src="../src/sky-effects.js?v=136fdb626647"></script><script src="skybox.js?v=e8cda1251cc5"></script><script src="planet-impact.js?v=fdd7f29eecda"></script>
+<script src="flight-missions.js?v=20d4c4f6dd56"></script><script src="../src/sky-effects.js?v=136fdb626647"></script><script src="skybox.js?v=71fac701cedc"></script><script src="planet-impact.js?v=fdd7f29eecda"></script>
 <script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script>
 <script type="module">
 import * as THREE from 'three';
@@ -130,9 +131,20 @@ DW.planetImpact.create().then(value=>{impact=value;stage();}).catch(error=>el('s
 function stage(){if(impact){impact.draw(Number(el('stage').value),true);sky.setPlanetImage(impact.canvas);sky.setImpactTime(Number(el('stage').value));}}
 el('stage').onchange=stage;
 const right=new THREE.Vector3(),up=new THREE.Vector3(),back=new THREE.Vector3();
-function frame(){requestAnimationFrame(frame);if(document.hidden)return;const host=el('view'),w=host.clientWidth,h=host.clientHeight;if(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();controls.update();camera.updateMatrixWorld();
+let benchmark=null;
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}});
+el('benchmark').onclick=()=>{if(!data||liners.size<2||!impact){el('performance').textContent='Wait for the depot, liners and planet to load.';return;}benchmark={start:performance.now(),previous:0,gaps:[],submit:[],calls:[],triangles:[],warmup:10,width:el('view').clientWidth,height:el('view').clientHeight,selection:el('liner-model').value,position:camera.position.clone(),rotation:camera.quaternion.clone()};controls.enabled=false;el('performance').textContent='Measuring current view / camera held fixed…';};
+function frame(now){requestAnimationFrame(frame);if(document.hidden){if(benchmark){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: page hidden.';}return;}const host=el('view'),w=host.clientWidth,h=host.clientHeight;if(benchmark&&(benchmark.width!==w||benchmark.height!==h||benchmark.selection!==el('liner-model').value||!camera.position.equals(benchmark.position)||!camera.quaternion.equals(benchmark.rotation))){benchmark=null;controls.enabled=true;el('performance').textContent='Measurement cancelled: camera, resolution or liner selection changed.';}if(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(!benchmark)controls.update();camera.updateMatrixWorld();
  right.setFromMatrixColumn(camera.matrixWorld,0);up.setFromMatrixColumn(camera.matrixWorld,1);back.setFromMatrixColumn(camera.matrixWorld,2);
  // Three Y-up to the flight sky's Z-up convention; the sky ignores translation.
- const skyVector=v=>[v.x,-v.z,v.y];sky.render({eye:[0,0,0],right:skyVector(right),up:skyVector(up),back:skyVector(back)},1,false);renderer.render(scene,camera);
-}frame();
+ const skyVector=v=>[v.x,-v.z,v.y],start=performance.now();sky.render({eye:[0,0,0],right:skyVector(right),up:skyVector(up),back:skyVector(back)},1,false);renderer.render(scene,camera);
+ if(benchmark){const b=benchmark;if(b.warmup>0){b.warmup--;b.previous=now;b.start=now;}else{
+  b.gaps.push(now-b.previous);b.previous=now;b.submit.push(performance.now()-start);b.calls.push(renderer.info.render.calls);b.triangles.push(renderer.info.render.triangles);
+  if(now-b.start>=5000){
+   const median=a=>a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.5)],p95=a=>a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.95)];
+   el('performance').textContent=`${b.gaps.length} frames / median ${median(b.gaps).toFixed(1)} ms / p95 ${p95(b.gaps).toFixed(1)} ms / mean ${(1000*b.gaps.length/b.gaps.reduce((a,v)=>a+v,0)).toFixed(1)} fps. Render submission median ${median(b.submit).toFixed(1)} ms. Main scene: ${median(b.calls)} draw calls / ${Math.round(median(b.triangles)).toLocaleString()} triangles. Canvas ${renderer.domElement.width} × ${renderer.domElement.height}; DPR ${renderer.getPixelRatio()}. Sky included in timings; excluded from geometry counts. GPU completion not measured.`;
+   benchmark=null;controls.enabled=true;
+  }
+ }}
+}requestAnimationFrame(frame);
 </script></body></html>

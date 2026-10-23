@@ -54,6 +54,7 @@ direct.reset({mode: 'training', enabled: true, profile: manual.config.profile});
 const demand = {throttle: null, throttleRate: 0, fire: true, stop: true};
 for (let i = 0; i < 480; i++) {
   direct.advance(dt, demand, manual.config);
+  if (direct.snapshot().combat.dead) break;
   direct.acquireTarget(); direct.advanceScenery(dt);
 }
 manual.advance(4, demand);

@@ -66,6 +66,13 @@
     },'planet-impact-baked');
     define('planet-hero-80',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:80,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
     define('planet-hero-140',{sky:{features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:140,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}},'planet-hero');
+    define('planet-orbital-watch',{
+        emptySpace:true,
+        title:'Orbital planet study · Driftworks',heading:'DRIFTWORKS / ORBITAL PLANET STUDY',
+        subtitle:'STATIC GEOMETRY STUDY · EMPTY SPACE',
+        hint:'W/S throttle · X stop · arrows steer · Esc pause. Static orbital-reference planet; impact animation remains in Impact Watch.',
+        sky:{features:[{asset:'planet-hero-orbital-v2/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}
+    },'planet-hero');
     define('asteroid-patrol',{encounter:{kind:'patrol',count:2,immediate:true}});
     /** Boolean support retains the old compose(kind,data,true) API during migration. @param {string|boolean} [id] */
     function resolve(id){return definitions[id===true?'ohio':typeof id==='string'?id:'default']||definitions.default;}

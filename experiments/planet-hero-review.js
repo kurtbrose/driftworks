@@ -15,8 +15,13 @@
     control('event-play').onclick=toggle;control('event-reset').onclick=function(){time=-5;};
     timeline.oninput=function(){time=Number(timeline.value);};
     stages.onchange=function(){time=Number(stages.value);if(playing)toggle();};
-    DW.planetImpact.create().then(function(value){animation=value;toggle();}).catch(/** @param {unknown} error */function(error){control('event-phase').textContent=String(error);});
-    var fly=/** @type {HTMLAnchorElement} */(control('fly'));fly.href='flight.html?mission=planet-impact-watch';
+    var orbital=mission.id==='planet-orbital-watch';
+    if(orbital){
+        control('event-phase').textContent='Static orbital-reference baseline / impact frames not rebuilt';
+        ['event-play','event-reset','event-time','event-speed','event-stage','pristine'].forEach(function(id){var element=control(id);/** @type {HTMLInputElement} */(element).disabled=true;(element.closest('label')||element).style.display='none';});
+        var note=document.querySelector('aside p:last-child');if(note)note.textContent='Orbital geometry study: original palette, photographic apparent relief. Source is 1254 × 1254; narrow views still reveal its detail limit. Width links above return to the original artwork.';
+    }else DW.planetImpact.create().then(function(value){animation=value;toggle();}).catch(/** @param {unknown} error */function(error){control('event-phase').textContent=String(error);});
+    var fly=/** @type {HTMLAnchorElement} */(control('fly'));fly.href='flight.html?mission='+(orbital?'planet-orbital-watch':'planet-impact-watch');
     control('disk').onclick=function(){yaw=90;pitch=-30;};
     control('limb').onclick=function(){yaw=90;pitch=width===80?3:width===140?35:19;};
     control('side').onclick=function(){yaw=90+width*.42;pitch=-25;};

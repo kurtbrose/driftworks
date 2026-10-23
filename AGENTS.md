@@ -4,6 +4,19 @@ Driftworks is a deployable static site: ordinary JavaScript scripts, vendored
 PixiJS, no build step or required package manager. Keep that deployment model;
 use relative URLs and do not introduce runtime network dependencies.
 
+## Large 3D assets
+
+When integrating or substantially revising a large or detailed runtime asset
+(capital ship, station, liner, or repeated fleet), use `$optimize-big-asset`
+before calling it ready. The personal skill lives at
+`~/.codex/skills/optimize-big-asset/SKILL.md`. Include a measured performance
+readiness pass in the actual scene; optimize the demonstrated bottleneck while
+preserving appearance, metre scale, materials, pivots and gameplay behavior.
+If the skill is unavailable, use the performance comparison and optimization
+references in `docs/dreadnaught-kit.md` and
+`assets/depots/refueling-v1/README.md`. Existing local timings are examples, not
+universal budgets. Offline-only render studies do not need runtime optimization.
+
 ## Run and verify
 
 - From the repository root, run `python -m http.server 8000`, `serve.bat` on

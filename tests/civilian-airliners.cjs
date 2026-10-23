@@ -51,15 +51,15 @@ for (const key of ['commuter','double-decker']) {
       seenTriangles.add(signature);
     }
   }
-  function vertices(node) {
-    assert(!node.matrix && !node.rotation && !node.scale && !node.translation,'authored metre coordinates');
+  function vertices(node, allowTranslation=false) {
+    assert(!node.matrix && !node.rotation && !node.scale && (allowTranslation || !node.translation),'authored metre coordinates');
     const a = gltf.accessors[gltf.meshes[node.mesh].primitives[0].attributes.POSITION];
     assert.equal(a.componentType,5126);
     const view = gltf.bufferViews[a.bufferView], start = binStart+(view.byteOffset||0)+(a.byteOffset||0);
     return Array.from({length:a.count},(_,i) => [0,1,2].map(k=>bytes.readFloatLE(start+i*(view.byteStride||12)+k*4)));
   }
   function extent(node, axis) {
-    const values = vertices(node).map(p=>p[axis]);
+    const values = vertices(node,true).map(p=>p[axis]);
     return Math.max(...values)-Math.min(...values);
   }
   const doors = gltf.nodes.filter(n=>n.name?.startsWith('Passenger door'));
@@ -83,8 +83,20 @@ for (const key of ['commuter','double-decker']) {
   const sightlines = JSON.parse(fs.readFileSync(path.join(root,key+'-visibility.json')));
   assert.equal(sightlines.rays.length,30);
   assert(sightlines.rays.every(ray=>ray.blocked.length===0));
+  const cargo=gltf.nodes.filter(n=>n.name?.startsWith('Cargo clamshell leaf'));
+  const gear=gltf.nodes.filter(n=>n.name?.startsWith('Stowed landing gear housing recessed floor'));
+  const vents=gltf.nodes.filter(n=>n.name?.startsWith('Ventral heat exchanger recessed floor'));
+  assert.equal(cargo.length,key==='commuter'?4:12,'liner adds complete cargo bays');
+  assert.equal(gear.length,key==='commuter'?4:6,'stowed gear housings');
+  assert.equal(vents.length,key==='commuter'?6:18,'recessed service modules');
+  assert.equal(gltf.nodes.filter(n=>n.name?.startsWith('Ventral RCS well')).length,4);
+  for(const leaf of cargo) {
+    assert(Math.abs(extent(leaf,0)-1.00)<1e-4,'same cargo leaf width on both ships');
+    assert(Math.abs(extent(leaf,2)-3.56)<1e-4,'same cargo leaf length on both ships');
+    assert(leaf.translation[1]<-3,'cargo is on the underside');
+  }
   measured.push({windows:windows.length,doors:doors.length,dimensions});
 }
 assert(measured[1].windows > measured[0].windows*4,'liner adds windows and decks');
 assert(Math.abs(measured[1].dimensions.deckFloors[1]-measured[1].dimensions.deckFloors[0]-3.1)<1e-8);
-console.log('PASS civilian airliners: metre-scale doors/windows, flush glazing, seated sightlines and single-surface hull paint');
+console.log('PASS civilian airliners: metre-scale fittings, flush glazing, seated sightlines, single-surface paint and ventral equipment');

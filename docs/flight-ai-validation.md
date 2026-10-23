@@ -1,6 +1,6 @@
 # Flight AI validation
 
-The flight lab has three AI roles. Existing `experiments/training.js` remains the **opponent AI**, unchanged. `experiments/flight-ai.js` adds initial **perfect** and **human simulator** policies. `experiments/flight-duel.js` evaluates either testing policy in the player seat against one existing opponent in open space. The same simulation powers the lab's watch mode and the command-line evaluator, with no runtime network dependencies.
+The flight lab has three AI roles. `experiments/training.js` owns the **opponent AI**, including observation-based gun tracking. `experiments/flight-ai.js` adds initial **perfect** and **human simulator** policies. `experiments/flight-duel.js` evaluates either testing policy in the player seat against one existing opponent in open space. The same simulation powers the lab's watch mode and the command-line evaluator, with no runtime network dependencies.
 
 ## Watch a duel
 
@@ -18,7 +18,7 @@ From the repository root:
 node tools/evaluate-flight-ai.cjs --seconds 30
 ```
 
-This emits JSON for five geometries × three opponent skill levels × four player policies (perfect, novice, practiced, expert): 60 duels. Starts are `headOn`, `crossing`, `tail`, `turning` and `opening`. `turning` is an offset parallel start that lets turning develop; it does not inject an initial turn command. Both ships use the baseline Ulysses profile and Subach weapon. Both receive their selected class hull/shields with symmetric absorption and recharge. The opponent retains its attack decisions and fire windows; aiming uses the selected cannon. CLI options --ship, --opponent-ship, --weapon, --opponent-weapon and --unshielded match the watch settings. No terrain query is installed; fixtures start far from the spherical safety shell.
+This emits JSON for five geometries × three opponent skill levels × four player policies (perfect, novice, practiced, expert): 60 duels. Starts are `headOn`, `crossing`, `tail`, `turning` and `opening`. `turning` is an offset parallel start that lets turning develop; it does not inject an initial turn command. Both ships use the baseline Ulysses profile and Subach weapon. Both receive their selected class hull/shields with symmetric absorption and recharge. The opponent retains its tactical attack decisions; firing uses the tracked solution and selected cannon. CLI options --ship, --opponent-ship, --weapon, --opponent-weapon and --unshielded match the watch settings. No terrain query is installed; fixtures start far from the spherical safety shell.
 
 Select a case and capture its actual player controls:
 
@@ -29,7 +29,7 @@ node tools/evaluate-flight-ai.cjs --replay duel.json
 
 Use `--category perfect` for the stress pilot; flavor is irrelevant for it. `--record` requires one selected case, including a single human flavor if applicable. Output JSON may be redirected to a file. Recording a duel saves metadata and complete player inputs, not screenshots or an executable script. CLI records include normalized source hashes and reject replay on different source content, so an old policy revision cannot silently produce a different result. Retrieve the matching source revision before replaying it. Browser-created records omit those CLI-added hashes and are local diagnostic replays.
 
-The shared browser-native regression suite loads the controller, duel and watch-adapter scripts in `tests/index.html`. Run `npm run check` for types, assets and the full dependency-free suite. Gun behavior, ship tuning and opponent behavior remain unchanged.
+The shared browser-native regression suite loads the controller, duel and watch-adapter scripts in `tests/index.html`. Run `npm run check` for types, assets and the full dependency-free suite. Ship and weapon tuning remain unchanged. Opponent aiming follows the tracking contract below.
 
 ## Controller contracts
 
@@ -57,7 +57,7 @@ Every tick, the pilot aims from its current belief, manages throttle by estimate
 
 `flightDuel.create(options)` builds one player and one opponent; `advance(seconds)` accumulates elapsed time and executes complete 1/120-second steps. Display-frame batching does not change the trajectory. Each step matches the session's movement → opponent/training update → player gun order. Both sides now receive selected class hull/shields with symmetric absorption and recharge. Both participants use their selected model triangles, and the two policies have different goals; outcomes are not symmetric win probabilities. The old 100-hull/120-shield player versus 90-unshielded-hull opponent setup applies only to the historical baseline below.
 
-The duel stops at the first destruction or configured duration; it never starts another wave. Replay schema 2 stores both ship/weapon choices and the unshielded override alongside category/flavor, seed, policy version, observation contract and cadence. Schema 1 requires its historical source revision and is rejected by the current runtime. The opponent is reproduced by rerunning unchanged deterministic `training.step`; opponent controls are not independently recorded. Replays therefore need the matching opponent source as well as the testing pilot and physics source. Player controls may be replayed without rerunning the testing pilot's decision logic.
+The duel stops at the first destruction or configured duration; it never starts another wave. Replay schema 2 stores both ship/weapon choices and the unshielded override alongside category/flavor, seed, policy version, observation contract and cadence. Schema 1 requires its historical source revision and is rejected by the current runtime. The opponent is reproduced by rerunning deterministic `training.step`; opponent controls are not independently recorded. Replays therefore need the matching opponent source as well as the testing pilot and physics source. Player controls may be replayed without rerunning the testing pilot's decision logic.
 
 The harness exposes state for test assertions, but controllers only receive the documented observation. Tests or analysis must not mutate that state during a measured duel. The harness is currently specific to player-testing-policy versus existing opponent; symmetric perfect-vs-perfect and simulator-vs-simulator bouts require a later adapter and a separately labeled damage model.
 
@@ -88,3 +88,26 @@ Use [Combat research](../experiments/flight-study.html) to screen loadouts witho
 
 
 Hull options: CLI `--hull MODEL_ID` and `--opponent-hull MODEL_ID` match watch hull selectors. Defaults resolve the mixed-fleet choices to explicit model IDs. Use `blockout` for the original training mesh. Historical benchmark files retain their older sphere-collision results and must be rerun before comparison with current results.
+
+## Opponent gun tracking
+
+All opponent styles sample target positions every 240/140/80 ms (rookie/veteran/ace).
+World-space position differences estimate motion independently of the shooter's
+movement. Velocity estimates converge exponentially with 650/320/140 ms response
+times; between observations the last estimate is extrapolated. Acquisition starts
+with zero estimated velocity and resets on a new target or clock rewind. Gun aiming
+never reads target velocity; navigation may still use instrument velocity.
+Constant motion becomes predictable, while changes in motion stale the solution.
+There is no sinusoidal aim displacement, lead multiplier, hit roll or fixed burst
+schedule. Attack steering follows the acquired gun solution; break/recovery and
+safety steering retain priority. Fire requires a positive intercept within the
+shorter of two seconds and bolt lifetime, existing attack-slot/range constraints,
+and alignment within atan(5 m / range). This nominal five-meter aiming tolerance
+is a firing criterion, not a hit guarantee: real muzzles, trajectories and hulls
+still resolve hits. These skill constants are provisional, not human calibration.
+
+`node tests/flight-aim-tracking.cjs` isolates perception using the real headless
+runtime with flight/projectile integration frozen: it checks stationary and linear
+convergence, curved motion, reversal recovery, skill differences and determinism.
+It does not measure combat hit rates. Historical benchmarks above predate this
+opponent change and remain historical evidence.

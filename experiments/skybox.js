@@ -550,7 +550,7 @@ void main(){
         gl.bindBuffer(gl.ARRAY_BUFFER, quad);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
         var starData = stars(), starBuffer = gl.createBuffer();
-        if(landmarkSky&&missionSky.features[0].asset==='planet-hero-v1/master.png'){
+        if(landmarkSky&&['planet-hero-v1/master.png','planet-hero-orbital-v2/master.png'].indexOf(missionSky.features[0].asset)>=0){
             var planet=landmarkTextures[0],visible=/** @type {number[]} */([]);
             for(var star=0;star<starData.length;star+=4){
                 var depth=0,px=0,py=0;for(var axis=0;axis<3;axis++){depth+=starData[star+axis]*planet.center[axis];px+=starData[star+axis]*planet.right[axis];py+=starData[star+axis]*planet.up[axis];}

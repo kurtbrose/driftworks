@@ -74,3 +74,25 @@ the horizontal cruise pose. Quaternion interpolation preserves rigid geometry
 and true scale; loaded transport envelopes update with each pose. Berth origins
 stay fixed during this attitude study. This does not attach the arms or solve
 approach trajectories/collision avoidance.
+
+The on-demand performance button samples five seconds after ten warm-up frames.
+It reports frame cadence, frame p95, median combined sky/main render-submission
+time, and main-renderer draw/triangle counts at the current resolution. Camera
+controls pause during measurement; changing liner selection, resizing or hiding
+the page cancels the run. Counts exclude the separate sky renderer. Timings do
+not wait for GPU completion and are not isolated GPU measurements. Compare
+visibility settings with the same camera and resolution and without other
+workloads running. The result is a static-view sample, not a gameplay benchmark.
+
+Local fixed-camera samples on 2026-10-22, scale view, vertical attitude, envelopes
+hidden, main canvas 1732 x 1602 at DPR 1.5:
+
+| Visibility | Mean fps | Frame p95 | Median render submission | Main draws | Main triangles |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Liners hidden | 75.1 | 13.5 ms | 1.8 ms | 159 | 394,505 |
+| Both liners | 75.1 | 13.4 ms | 7.6 ms | 2,380 | 991,186 |
+
+Each sample contained 376 measured frames. These are observations of the loaded
+asset snapshot and local browser, not portable performance guarantees. An earlier
+camera-away sample with zero foreground draws was discarded. The high draw-count
+increase suggests static material batching as the first optimization to investigate.

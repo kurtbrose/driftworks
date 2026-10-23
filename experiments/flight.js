@@ -4,7 +4,7 @@
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
     var activeMission=DW.flightMissions.current();
-    var impactWatch=activeMission.id==='planet-impact-watch';
+    var impactWatch=!!activeMission.emptySpace;
     if(impactWatch)get('combat-toggle').checked=false;
     if(activeMission.id!=='default'){
         var modeOption=Array.from(get('combat-mode').options).some(function(option){return option.value===activeMission.id;});

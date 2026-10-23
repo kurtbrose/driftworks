@@ -1,3 +1,4 @@
+require('./flight-aim-tracking.cjs');
 require('./asset-versions.cjs');
 require('./skybox-factory.cjs');
 require('./sky-effects.cjs');

@@ -1,0 +1,21 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-22",
+  "purpose": "Alternate static baseline: real orbital geometry with vivid fictional color; current impact sequence retained.",
+  "prompts": [
+    {
+      "file": "first-edit.png",
+      "prompt": "Use case: photorealistic-natural. Create an improved full-disk fictional terrestrial planet hero asset for a space game. Input 1 is the existing artwork: retain its overall disk composition, invented ocean-and-island geography, vivid deep blue oceans, turquoise shelves, green/ochre land, upper-left sunlight and thin blue atmospheric limb. Inputs 2 and 3 are real orbital Earth references ONLY for physically coherent projection and realistic apparent relief, never copy Earth geography. Correct the existing artwork's storybook/isometric mountain and cloud perspective. This is a single camera looking toward the planet center: at disk center we see strictly DOWN onto cloud TOPS and terrain, with NO sideways mountain walls or cloud towers; toward the limb the same spherical surface progressively foreshortens. At planetary scale mountains are delicate texture, not gigantic raised ridges. Clouds form a very thin shell hugging the globe, finely textured broad weather systems, restrained shallow shadows. Keep vivid colors but use satellite-photographic geometry and fine scale. Full circular disk wholly visible with about 6 percent pure black margin on every side. No stars, sun, impact, text or extra objects. Highest available native image resolution. Do not make an oblique map, miniature diorama, cotton-ball clouds, exaggerated topography or globally repeated 3/4 viewing angles.",
+      "assessment": "Rejected as final: retained exaggerated miniature mountains."
+    },
+    {
+      "file": "master.png",
+      "prompt": "Generate a square full-disk photograph-like fictional terrestrial planet. The first two reference images are REAL EARTH images: follow their planetary scale, physical geometry, subtle terrain and thin cloud layer closely, but invent completely different continents and islands. The third reference is previous game artwork: use ONLY its vivid blue/turquoise/green color palette and black-backed disk composition. DO NOT reproduce its exaggerated mountainous islands or towering clouds. This must look like a satellite photograph at planetary scale, with zero miniature/isometric/map illustration appearance. Center of disk is seen straight down from above: terrain has almost imperceptible height, mountains read as fine geological color patterns rather than visible peaks/walls, cloud tops read as thin flat white weather textures, not giant cotton balls casting huge dark shadows. Foreshortening increases smoothly towards the limb on one spherical surface. An Earth-sized planet, entire disk visible, 6% black margin all sides. Invented broad landmasses and ocean basins, smaller archipelagos, vivid deep blue ocean, restrained turquoise shallows, natural green and ochre land. Broad wispy fronts and fine stippled cloud fields. Thin luminous blue atmosphere, sunlight upper left, mostly daylit, slight shaded lower-right limb. No recognizable Earth geography, no impact, no stars, no text. Use maximum native output resolution. The priority is orbital-photograph realism of geometry and scale while retaining rich color.",
+      "assessment": "Flatter terrain and cloud shell. Native pixel density remains limited; review under flight lens."
+    }
+  ],
+  "references": [
+    "../planet-hero-v1/master.png",
+    "User supplied real Earth full-disk and orbital images, geometry references only."
+  ]
+}

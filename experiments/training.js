@@ -213,6 +213,32 @@
         }
         return { point: add(position, scale(velocity, Math.min(2, time))), time: time };
     }
+    // Sortie-local perception history; never read target velocity for gun aiming.
+    /** @type {WeakMap<Craft, {target: FlightState, at: number, position: Vector, velocity: Vector}>} */
+    var tracks = new WeakMap();
+    /** Sample positions in world space so own motion does not masquerade as target motion.
+     * Between samples extrapolate the last belief, including while maneuvering.
+     * @param {Combat} t @param {Craft} e @param {FlightState} target */
+    function trackAim(t, e, target) {
+        var track = tracks.get(e), interval = [.24, .14, .08][e.skill];
+        if (!track || track.target !== target || t.time < track.at) {
+            track = {target: target, at: t.time, position: target.eye.slice(), velocity: [0, 0, 0]};
+            tracks.set(e, track);
+        } else if (t.time - track.at >= interval) {
+            var elapsed = t.time - track.at;
+            var measured = scale(sub(target.eye, track.position), 1 / elapsed);
+            var response = 1 - Math.exp(-elapsed / [.65, .32, .14][e.skill]);
+            track.velocity = add(track.velocity, scale(sub(measured, track.velocity), response));
+            track.position = target.eye.slice();
+            track.at = t.time;
+        }
+        var position = add(track.position, scale(track.velocity, t.time - track.at));
+        var weapon = DW.retailWeapons[e.weaponIndex || 0];
+        var solution = intercept(e.pose.eye, position, track.velocity, weapon.speed / U);
+        e.gunGoal = solution.point;
+        e.gunValid = solution.time > 0 && solution.time <= Math.min(2, weapon.lifetime);
+        return solution;
+    }
     /** @param {Combat} t @param {FlightState} player @param {number} radius */
     function spawn(t, player, radius) {
         bindPlayer(t, player);
@@ -308,8 +334,7 @@
                 e.until = t.time + .8;
             }
         }
-        var lead = intercept(e.pose.eye, player.eye, scale(player.velocity, 1 / U), DW.retailWeapons[e.weaponIndex || 0].speed / U);
-        var goal = add(player.eye, scale(sub(lead.point, player.eye), [.25, .7, 1][e.skill]));
+        var goal = (e.gunGoal || player.eye).slice();
         if (e.mode === 'break' || e.mode === 'evade') {
             var away = unit(sub(e.pose.eye, player.eye)), side = scale(e.pose.right, (e.index % 2 ? 1 : -1) * 220 / U);
             goal = add(e.pose.eye, add(scale(away, 450 / U), side));
@@ -321,10 +346,6 @@
             var angle = t.time * .16 + e.index * 2.4;
             goal = add(player.eye, [Math.cos(angle) * 650 / U, Math.sin(angle) * 650 / U, (150 + Math.sin(angle * .7) * 140) / U]);
         }
-        else {
-            // Predictable pilot error, held between human-scale decisions.
-            goal = add(goal, scale(e.pose.right, Math.sin(t.time * .9 + e.index) * [32, 16, 6][e.skill] / U));
-        }
         e.goal = goal;
         e.pose.throttle = e.mode === 'recover' ? .65 : e.mode === 'attack' && distance < 450 ? .72 : 1;
         e.decision = [.65, .42, .28][e.skill];
@@ -335,7 +356,7 @@
         var delta=sub(target.eye,e.pose.eye), distance=length(delta)*U, direction=unit(delta);
         var forward=scale(e.pose.back,-1), relative=sub(target.velocity,e.pose.velocity);
         var weapon=DW.retailWeapons[e.weaponIndex||0];
-        var gun=intercept(e.pose.eye,target.eye,scale(target.velocity,1/U),weapon.speed/U);
+        var gun={point:e.gunGoal || target.eye,time:e.gunValid ? length(sub(e.gunGoal || target.eye,e.pose.eye))*U/weapon.speed : 0};
         var facing=dot(forward,direction), alignment=dot(forward,unit(sub(gun.point,e.pose.eye)));
         return {distance:distance,facing:facing,closure:-dot(relative,direction),gun:gun,
             useful:gun.time>0&&gun.time<=weapon.lifetime&&distance>130&&distance<Math.min(760,weapon.speed*weapon.lifetime)&&alignment>.996};
@@ -388,7 +409,7 @@
         if(g.distance<280&&g.closure>10)goal=add(goal,scale(target.back,Math.min(100,g.closure*2)/U));
         if(e.mode==='break'&&e.extensionGoal)goal=e.extensionGoal;
         if(e.mode==='recover'&&e.reentryGoal)goal=e.reentryGoal;
-        e.goal=goal;e.gunGoal=g.gun.point;e.gunValid=g.gun.time>0&&g.gun.time<=DW.retailWeapons[e.weaponIndex||0].lifetime;
+        e.goal=goal;
         // Positive forward floor, no stop/reverse/strafe. Match projected target
         // speed with a range correction, accounting for closure and facing.
         var along=dot(target.velocity,scale(e.pose.back,-1));
@@ -413,7 +434,7 @@
             } else {e.mode=active?'attack':'reposition';e.until=t.time+.6;}
         }
         var weapon=DW.retailWeapons[e.weaponIndex||0];
-        var lead=intercept(e.pose.eye,target.eye,scale(target.velocity,1/U),weapon.speed/U);
+        var lead={point:e.gunGoal || target.eye};
         var goal=lead.point;
         if(e.mode==='break'&&e.extensionGoal)goal=e.extensionGoal;
         else if(!active)goal=add(target.eye,scale(e.pose.right,650/U));
@@ -422,7 +443,6 @@
             // Cut toward a bounded future position before settling onto gun lead.
             goal=add(target.eye,scale(target.velocity,Math.min(1.5,distance/450)/U));
         }
-        if(e.mode==='attack')goal=add(goal,scale(e.pose.right,Math.sin(t.time*.45+e.index)*[24,12,4][e.skill]/U));
         e.goal=goal;
         e.pose.throttle=e.mode==='break'||style==='passer'?1:style==='aggressor'?.92:distance<350?.68:1;
         e.decision=[.65,.42,.28][e.skill];
@@ -661,11 +681,13 @@
                     }
                     opponent = target ? target.pose : opponent;
                 }
+                if (opponent) trackAim(t, e, opponent);
+                else { tracks.delete(e); e.gunValid = false; }
                 if(opponent&&(e.opponentStyle==='fso-pursuit'||e.opponentStyle==='fso-breaker'))progressFreeSpace(t,e,opponent,dt);
                 e.decision -= dt;
                 if (e.decision <= 0 && opponent)
                     decide(t, e, opponent);
-                var goal = e.goal;
+                var goal = e.mode === 'attack' && (!e.opponentStyle || e.opponentStyle === 'baseline') ? (e.gunGoal || e.goal) : e.goal;
                 var future = add(e.pose.eye, scale(e.pose.velocity, 1.6 / U)), avoid = radius + 65 / U;
                 if (length(future) < avoid || length(e.pose.eye) < avoid)
                     goal = add(e.pose.eye, add(scale(unit(e.pose.eye), 400 / U), scale(e.pose.right, 180 / U)));
@@ -690,7 +712,7 @@
                 }
                 var aim = unit(sub(e.gunGoal || e.goal, e.pose.eye)), aligned = dot(aim, scale(e.pose.back, -1));
                 var primary = DW.retailWeapons[e.weaponIndex || 0];
-                e.fire = !!opponent && ((mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > .996 && ((t.time + e.index * .77) % 3) < .8;
+                e.fire = !!opponent && ((mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > Math.cos(Math.atan2(5, Math.max(130, distance)));
             }
             DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
                 return trace(t, start, end, bolt, e, terrainHit, player);

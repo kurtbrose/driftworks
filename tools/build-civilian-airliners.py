@@ -112,6 +112,45 @@ def material(name, color, metal=.25, glow=0):
     return m
 
 
+def render_underside_views(key, length, width, height):
+    scene=bpy.context.scene
+    camera=scene.camera
+    old_matrix,old_scale=camera.matrix_world.copy(),camera.data.ortho_scale
+    hidden=[]
+    for obj in scene.objects:
+        if obj.name.startswith(('Studio floor','Studio boarding','Studio platform','Scale astronaut')):
+            hidden.append((obj,obj.hide_render))
+            obj.hide_render=True
+    lights=[]
+    for loc,power in [((length*.3,length*.15,-length*.55),1800),
+                      ((-length*.35,-length*.3,-length*.25),1000)]:
+        bpy.ops.object.light_add(type='AREA',location=loc)
+        light=bpy.context.object
+        light.name='Underside inspection softbox'
+        light.data.energy=power*(length/20)**2
+        light.data.shape='DISK'
+        light.data.size=length*.55
+        light.rotation_euler=(-light.location).to_track_quat('-Z','Y').to_euler()
+        lights.append(light)
+    for view,loc,target,scale in [
+        ('underside',(length*.65,length*.8,-length*.65),(0,0,0),length*1.12),
+        ('bottom',(0,0,-length),(0,0,0),length*1.14),
+        ('belly-detail',(width*.5,length*.02+9,-height/2-10),
+         (0,length*.02,-height/2),18)]:
+        camera.location=loc
+        camera.rotation_euler=(Vector(target)-camera.location).to_track_quat('-Z','Y').to_euler()
+        if view=='bottom':
+            camera.rotation_euler.z=math.pi/2
+        camera.data.ortho_scale=scale
+        scene.render.filepath=str(ROOT/(key+'-'+view+'.png'))
+        bpy.ops.render.render(write_still=True)
+    for obj,state in hidden:
+        obj.hide_render=state
+    for light in lights:
+        bpy.data.objects.remove(light,do_unlink=True)
+    camera.matrix_world,camera.data.ortho_scale=old_matrix,old_scale
+
+
 def build(key, length, width, height, decks):
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.delete(use_global=False)
@@ -339,6 +378,70 @@ def build(key, length, width, height, decks):
     box('Communication blade', (0,-length*.29,height*.64), (.15,length*.018,height*.24), 'red')
     box('Beacon', (0,-length*.29,height*.77), (.22,.22,.2), 'nav')
 
+    # Civilian ventral equipment. Modules have fixed metre dimensions; the
+    # liner gains additional bays rather than oversized doors and fittings.
+    def belly_z(x,y):
+        w,h=section(y)
+        return -h*math.sqrt(max(0,1-(x/w)**2))
+
+    def belly_bay(name,x,y,w,l):
+        z=min(belly_z(x+dx,y+dy) for dx in [-w/2,0,w/2] for dy in [-l/2,0,l/2])
+        # Structural shoulder meets the hull; a smaller recessed dark floor
+        # sits behind the lip. These are volumes, not near-coplanar decals.
+        box(name+' shoulder',(x,y,z+.10),(w+.32,l+.32,.42),'ivory',.15)
+        box(name+' recessed floor',(x,y,z-.135),(w,l,.08),'dark',.05)
+        for dx in [-w/2,w/2]:
+            box(name+' rim',(x+dx,y,z-.24),(.12,l+.12,.22),'metal',.035)
+        for dy in [-l/2,l/2]:
+            box(name+' end rim',(x,y+dy,z-.24),(w+.12,.12,.22),'metal',.035)
+        return z
+
+    cargo_ys=[length*.02] if decks==1 else [-length*.16,length*.02,length*.20]
+    bay_x=3.0 if decks==1 else 5.0
+    for side in [-1,1]:
+        for y in cargo_ys:
+            x=side*bay_x
+            z=belly_bay('Ventral cargo bay',x,y,2.2,3.8)
+            for dx in [-.53,.53]:
+                box('Cargo clamshell leaf',(x+dx,y,z-.19),(1.00,3.56,.06),'ivory',.045)
+                for dy in [-1.4,1.4]:
+                    box('Cargo door hinge',(x+dx,y+dy,z-.24),(.30,.12,.12),'metal',.025)
+            box('Cargo door release',(x,y+.9,z-.25),(.20,.25,.06),'red',.02)
+        gear_ys=[-length*.24,length*.20] if decks==1 else [-length*.27,-length*.05,length*.22]
+        for y in gear_ys:
+            x=side*width*.28
+            z=belly_bay('Stowed landing gear housing',x,y,1.25,3.0)
+            for dy in [-.94,0,.94]:
+                box('Gear door segmented cover',(x,y+dy,z-.19),(1.02,.83,.07),'metal',.07)
+            box('Gear housing red index',(x,y+.97,z-.25),(.25,.18,.04),'red',.02)
+        for y in [-length*.32,length*.30]:
+            x=side*width*.32
+            z=belly_z(x,y)
+            cylinder('Ventral RCS socket',(x,y,z-.12),.46,.28,'ivory','Z')
+            cylinder('Ventral RCS well',(x,y,z-.27),.32,.08,'dark','Z')
+            cylinder('Ventral RCS throat',(x,y,z-.32),.16,.04,'metal','Z')
+        for y in [-length*.12,length*.13]:
+            x=side*(bay_x+1.7)
+            z=belly_z(x,y)
+            box('Belly inspection lamp bezel',(x,y,z-.10),(.45,.75,.18),'metal',.06)
+            box('Belly inspection lamp',(x,y,z-.20),(.22,.45,.06),'warm',.04)
+    for i in range(6 if decks==1 else 18):
+        y=-length*.28+i*3.8
+        z=belly_bay('Ventral heat exchanger',0,y,.95,2.2)
+        for j in range(8):
+            box('Heat exchanger louver',(0,y-.86+j*.245,z-.22),(.78,.10,.10),'metal',.018)
+    for side in [-1,1]:
+        x=side*1.05
+        count=math.ceil(length*.55/3)
+        for i in range(count):
+            y0=-length*.30+i*length*.55/count
+            y1=-length*.30+(i+1)*length*.55/count
+            a=Vector((x,y0,belly_z(x,y0)-.18))
+            b=Vector((x,y1,belly_z(x,y1)-.18))
+            pipe=cylinder('Protected belly service conduit',(a+b)/2,.085,(b-a).length,'metal','Z')
+            pipe.rotation_euler=(b-a).to_track_quat('Z','Y').to_euler()
+            cylinder('Conduit support collar',a,.12,.12,'dark','Y')
+
     # Flush flight-deck glazing is sampled on the original nose surface.
     # Each pane cuts a real opening; there is no added bridge roof or housing.
     eye_z = 1.65 if decks == 1 else 2.6
@@ -498,6 +601,7 @@ def build(key, length, width, height, decks):
     camera.data.ortho_scale=12
     scene.render.filepath=str(ROOT/(key+'-bridge.png'))
     bpy.ops.render.render(write_still=True)
+    render_underside_views(key,length,width,height)
     camera.location=(length*.85,length*.94,length*.64)
     camera.rotation_euler=(-camera.location).to_track_quat('-Z','Y').to_euler()
     camera.data.ortho_scale=length*1.12
@@ -505,7 +609,11 @@ def build(key, length, width, height, decks):
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/(key+'.blend')))
 
 
-if '--refresh-scale' in sys.argv:
+if '--refresh-underside' in sys.argv:
+    for key,length,width,height in [('commuter',72,18,11),('double-decker',180,30,16.5)]:
+        bpy.ops.wm.open_mainfile(filepath=str(ROOT/(key+'.blend')))
+        render_underside_views(key,length,width,height)
+elif '--refresh-scale' in sys.argv:
     for key,length,width,height in [('commuter',72,18,11),('double-decker',180,30,16.5)]:
         bpy.ops.wm.open_mainfile(filepath=str(ROOT/(key+'.blend')))
         render_crew_views(length,width,height)

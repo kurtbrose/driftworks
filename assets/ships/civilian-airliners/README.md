@@ -12,7 +12,7 @@ reuse the repository's CC0 Quaternius astronaut; see
 - Both use metres, +Y bow and +Z dorsal. Drives extend behind the nominal hull.
 - `.blend` files contain named editable parts plus studio lighting and cameras.
 - `.glb` files contain the ship geometry and materials only.
-- Six PNG inspection views per ship, including bridge and scale close-ups, are shown in
+- Nine PNG inspection views per ship, including bridge, scale and underside close-ups, are shown in
   `experiments/civilian-airliners.html`.
 
 Rebuild with Blender 5.2:
@@ -71,3 +71,18 @@ the ships using `-- --refresh-crew` after the builder command above.
 
 The two scale close-ups share a 14 m orthographic camera width, so crew, doors
 and windows appear at the same magnification. Their background hulls differ.
+
+## Ventral equipment
+
+The commuter has two 2.20 × 3.80 m cargo bays, four stowed landing-gear housings
+and six recessed louver modules. The liner adds bays rather than enlarging the
+fittings: six cargo bays, six gear housings and eighteen louver modules. Both
+have paired protected service conduits, four downward maneuvering-thruster
+sockets and four warm inspection lamps. Gear covers are modeled stowed; no
+deployment mechanism or simulation behavior is implied.
+
+Bay rims stand proud of their recessed floors; clamshell leaves, hinges and
+louvers are separated solid geometry. Underside renders hide the studio floor,
+boarding platform and scale crew, and add temporary lower softboxes. Those
+inspection lights are removed before saving the editable scene. Re-render the
+three belly views with `-- --refresh-underside` after the builder command.
