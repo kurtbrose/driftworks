@@ -564,3 +564,65 @@ This resolves the demonstrated outer sky cutoff. Depth-shell sampling misses,
 object-patch branch switching and fast landmark motion near the critical ring
 remain separate issues; this change does not establish their continuity.
 Historical rendering/performance captures above predate this optical profile.
+
+### Capital performance pass (2026-10-24)
+
+Measured the actual Ellis flight renderer at a frozen 31-second patrol pose
+(region 0, center `[0, -2420, 1550]` metres, heading `-pi/2`), with the initial
+mission camera and fighter snapshot. Asset revision: `857eb4969b70`. The visible
+stern and engines were inspected before/after batching; a near hull pose at 28 s
+and a destination-chart pose at 35 s were also inspected. The latter does not
+establish visual continuity for a hull spanning the throat; that remains unresolved.
+
+The foreground in-app browser used 902 x 939 CSS pixels, DPR 1.5, 1353 x 1409
+main backing resolution, 100% render scale, production materials and default
+Ellis effects/lattice. No tests or asset rebuilds ran during these measurements.
+Each comparison froze simulation and used OFF/ON/ON/OFF blocks with 20 warm-up
+and 90 recorded frames per block. The capital pose was pre-stepped using the
+production patrol and then held fixed in a temporary copy of the flight page.
+
+| Metric | Before batching | After batching |
+| --- | --- | --- |
+| Total ON draws | 405 | 117 |
+| Total OFF draws | 96 | 96 |
+| Total ON triangles | 1,309,783 | 1,309,783 |
+| Total OFF triangles | 1,177,027 | 1,177,027 |
+| ON CPU median / p95 | 5.0 / 5.9 ms | 2.2 / 2.6 ms |
+| OFF CPU median / p95 | 1.9 / 2.3 ms | 1.8 / 2.5 ms |
+| ON frame median / p95 | 26.6 / 40.1 ms | 26.7 / 53.3 ms |
+| OFF frame median / p95 | 13.3 / 13.4 ms | 13.3 / 26.7 ms |
+
+This resolves the demonstrated submission overhead without reducing geometry or
+resolution. It does **not** establish improved browser cadence or GPU execution:
+frame timing remained uneven, and no GPU timer was used. This fixed close-up
+comparison excludes live combat update cost. Automated checks cover repeated
+outbound/return crossings, turnarounds, region ownership, pause/reset, retained
+triangle count, material grouping, metre-scale length and immutable buffer reuse.
+
+## Nearby contact readability and moon-edge filtering
+
+Nearby same-chart geometry now uses a local visual frame: full ordinary shape
+through 100 m, smoothly blended toward the optical representation from 100 to
+200 m. The full depth-shell compositor restores the ordinary foreground image
+and suppresses its nearby atlas copies. Object patches and HUD contact markers
+use the corresponding CPU primary-image direction. The ballistic lead cue
+retains its firing-direction projection. Cross-chart targets never receive the
+local bypass. To preserve chart-crossing continuity, the local approximation
+fades to zero as either endpoint approaches the 300 m throat, over 330–300 m
+areal radius. Very close to the throat, depth-shell misses and secondary images
+can therefore still occur; this is not a complete near-throat geometry solution.
+
+The observation lab's **Near ship** camera selects a reproducible 42 m contact
+(12 m lateral, 40 m forward). It was visually inspected in full ray-search and
+object-patch modes with the Bob mesh; both show one intact nearby ship. Tests
+cover both chart identities, remote isolation, 100/200 m blending, the existing
+antipodal primary-image limit, ordinary geometry restoration and HUD projection.
+
+For lensed moon silhouettes, the sky renderer now measures the final bent-ray
+screen footprint outside destination branches (when OES_standard_derivatives is
+available). Analytic moon coverage uses this bounded footprint, and stretched
+Rime disk edges receive four-tap reconstruction. Unlensed skies retain their
+ordinary footprint; unsupported contexts keep the previous sampling. This is
+an aliasing mitigation, not a change to the optical paths. A Rime-side 380 m,
+oblique-inward sky-only view was inspected. The user's exact jagged-angle pose
+was not captured as a replay, so its artifact is not yet visually closed out.

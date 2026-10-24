@@ -62,3 +62,20 @@ assert.equal(calls.length,0,'No persistent throat box or camera-relative grid');
 DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:1,distance:350,gap:50,proximity:.83,flash:1});
 assert(calls.some(c=>c.kind==='text'&&c.text==='THROAT CROSSED / RIME'));assert.equal(painter.globalAlpha,1);
 console.log('PASS throat HUD: quiet during ordinary transit, brief chart-crossing confirmation and painter restoration');
+
+// Contact diamonds follow the same primary optical direction as object patches;
+// the weapon lead cue retains its ordinary firing-direction projection.
+const ellisView=flight.reset(),nearEnemy=ellisView.combat.enemies.find(e=>e.team==='enemy');
+ellisView.combat.mode='ellis';
+Object.assign(ellisView.state,{eye:[0,-2380/DW.sim.METERS_PER_UNIT,1550/DW.sim.METERS_PER_UNIT],right:[1,0,0],up:[0,0,1],back:[0,-1,0],region:0});
+nearEnemy.pose.eye=[12/DW.sim.METERS_PER_UNIT,-2340/DW.sim.METERS_PER_UNIT,1550/DW.sim.METERS_PER_UNIT];nearEnemy.pose.region=0;
+ellisView.combat.enemies=[nearEnemy];ellisView.combat.targetId=nearEnemy.id;
+let opticalCalls=0;const savedOptics=DW.ellisOptics,savedPresentation=DW.flightPresentation;
+DW.flightPresentation={model:()=>({name:"Fixture fighter"})};
+DW.ellisOptics={primary:(eye,target,region,destination)=>{opticalCalls++;assert.equal(region,0);assert.equal(destination,0);assert(Math.abs(target[0]-12)<1e-8);return {direction:[.2,1,0],length:42,direct:false,turning:false,impact:1};}};
+hud.render({...ellisView,paint:{ally:[1,1,1],enemy:[1,1,1]},units:DW.sim.METERS_PER_UNIT,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});
+const projected=DW.flightSkybox.project([.2,1,0],ellisView.state,1000/700),targetX=1000*(projected.x+1)/2;
+assert(calls.some(c=>c.kind==='stroke'&&c.color==='#ffe7a3'&&c.points.length===4&&Math.abs(c.points.reduce((sum,p)=>sum+p[0],0)/4-targetX)<1e-6),'Selected contact diamond uses the optical image direction');
+assert.equal(opticalCalls,1,'Only the contact marker uses optical projection, not the ballistic lead');
+DW.ellisOptics=savedOptics;DW.flightPresentation=savedPresentation;
+console.log('PASS Ellis HUD projection: optical contact image, local chart ownership and unchanged ballistic lead');

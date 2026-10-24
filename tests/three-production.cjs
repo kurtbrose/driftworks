@@ -195,3 +195,13 @@ assert(explicitDraw.material.fragmentShader.includes('textureLod(s,uv,0.)'));
 assert(!explicitDraw.material.fragmentShader.includes('texture2D('),'divergent geometry traversal uses no implicit texture derivatives');
 assert(explicitDraw.material.vertexShader.includes('out vec2 screen'));
 console.log('PASS Ellis default explicit LOD: GLSL 3 varying/output conversion and fixed-level texture sampling');
+
+assert(explicitDraw.material.fragmentShader.includes('ordinary*localWeight'),'Full renderer restores nearby ordinary geometry');
+assert(explicitDraw.material.fragmentShader.includes('1.-ellisLocalWeight(eye,point,side)'),'Full renderer suppresses nearby captured copies');
+viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry=objects';viewer.setStudyBridge(true);
+const U=context.window.Driftworks.sim.METERS_PER_UNIT;
+viewer.setStudyActors([{vertices:data,color:[1,1,1],region:0,origin:[12/U,-2340/U,1550/U],lensCenter:[12/U,-2340/U,1550/U],lensRadius:5}]);
+viewer.setSurfaceCamera({region:0,eye:[0,-2380/U,1550/U],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});viewer.render(world,1,0,0);
+const nearbyDraw=frames.at(-1)[0];assert(nearbyDraw);assert.equal(nearbyDraw.uniforms.uLensEnabled,0,'42 m ship retains original mesh geometry');
+assert.equal(nearbyDraw.uniforms.uLensMode,3,'Local ship is not sliced by the aperture mask');
+console.log('PASS Ellis nearby geometry: ordinary local mesh, no aperture slicing and captured-copy suppression');

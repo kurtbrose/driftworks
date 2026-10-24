@@ -48,10 +48,32 @@
     /** Immutable mesh buffers are shared across both capital ships and all mounts. */
     var cachedAsset=/** @type {import('./types').AegisFlightAsset|null} */(null);
     /** @type {Map<string,Float32Array>} */var vertexCache=new Map();
+    /** Shared prepared resource, invalidated with its authored asset revision. */
+    var idleAsset=/** @type {import('./types').AegisFlightAsset|null} */(null);
+    /** Fixed turrets can join the hull; armed mounts retain independent pivots.
+     * @param {import('./types').AegisFlightAsset} source */
+    function prepareIdleAsset(source){
+        if(idleAsset)return idleAsset;
+        /** @type {Map<string,{color:[number,number,number];vertices:number[]}>} */var groups=new Map();
+        /** @param {{color:[number,number,number];vertices:number[]}} batch @param {Vector} pivot */
+        function add(batch,pivot){
+            var key=batch.color.join(','),group=groups.get(key);
+            if(!group){group={color:batch.color,vertices:[]};groups.set(key,group);}
+            for(var k=0;k<batch.vertices.length;k+=6){
+                for(var axis=0;axis<3;axis++)group.vertices.push(batch.vertices[k+axis]+pivot[axis]);
+                group.vertices.push(batch.vertices[k+3],batch.vertices[k+4],batch.vertices[k+5]);
+            }
+        }
+        source.batches.forEach(function(b){add(b,[0,0,0]);});
+        source.turrets.forEach(function(t){t.batches.forEach(function(b){add(b,t.position);});});
+        idleAsset=Object.assign({},source,{batches:Array.from(groups.values()),turrets:[]});
+        return idleAsset;
+    }
     /** @param {import('./types').AegisRigOptions} [options] @returns {import('./types').AegisFlightRig} */
     function create(options){
-        var asset=DW.aegisFlightAsset,origin=options?options.state.position:[0,0,1200],team=options?options.state.team:'ally';
-        if(cachedAsset!==asset){cachedAsset=asset;vertexCache.clear();}
+        var sourceAsset=DW.aegisFlightAsset,unarmed=!!(options&&options.unarmed),origin=options?options.state.position:[0,0,1200],team=options?options.state.team:'ally';
+        if(cachedAsset!==sourceAsset){cachedAsset=sourceAsset;vertexCache.clear();idleAsset=null;}
+        var asset=unarmed?prepareIdleAsset(sourceAsset):sourceAsset;
         /** @param {number[]} values */function vertices(values){var key=values.join(','),buffer=vertexCache.get(key);if(!buffer){buffer=new Float32Array(values.map(function(v,i){return i%6<3?v/U:v;}));vertexCache.set(key,buffer);}return buffer;}
         /** @param {[number,number,number]} color @returns {[number,number,number]} */function livery(color){return team==='enemy'&&color[2]>color[0]*1.25?[Math.max(.45,color[2]),color[1]*.22,color[0]*.3]:color;}
         /** @param {Vector} p @param {boolean} [inverse] */function rotate(p,inverse){var a=(options?options.state.heading:0)*(inverse?-1:1),c=Math.cos(a),s=Math.sin(a);return [c*p[0]-s*p[1],s*p[0]+c*p[1],p[2]];}
@@ -92,7 +114,7 @@
             hangars.forEach(function(h){if(Math.abs(m.aimOffset[0]-h.position[0])<h.halfWidth&&Math.abs(m.aimOffset[2]-h.position[2])<h.halfHeight)m.aimOffset[0]=h.position[0]+h.halfWidth+10+random()*25;});
         }
         /** @param {import('./types').Combat} [combat] */
-        function reset(combat){launchClock=1;launched=0;if(combat&&hangars.length){combat.hangarSupport=true;combat.enemies=combat.enemies.filter(function(e){return e.team!=='ally';});}lastEye=null;seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.specWait=m.specPause;m.randomState=Math.imul(i+1+(team==='enemy'?97:0),2654435761)>>>0;m.rest=m.source.kind==='heavy'?.15+m.randomState/4294967296*3.5:i*.037;if(m.source.kind==='heavy')randomAim(m);m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
+        function reset(combat){launchClock=1;launched=0;if(!unarmed&&combat&&hangars.length){combat.hangarSupport=true;combat.enemies=combat.enemies.filter(function(e){return e.team!=='ally';});}lastEye=null;seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.specWait=m.specPause;m.randomState=Math.imul(i+1+(team==='enemy'?97:0),2654435761)>>>0;m.rest=m.source.kind==='heavy'?.15+m.randomState/4294967296*3.5:i*.037;if(m.source.kind==='heavy')randomAim(m);m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
         /** Main batteries engage the opposing hull, never the fighter roster.
          * @param {typeof mounts[number]} m @param {number} dt @param {FlightView} view */
         function stepHeavy(m,dt,view){
@@ -136,7 +158,7 @@
                 var normal=collision.normal;view.state.eye=world(collision.point.map(function(v,i){return v+normal[i]*3;}));
                 view.state.velocity=[0,0,0];view.state.ramp=[0,0,0];view.state.throttle=0;contacts++;
             }}lastEye=local(view.state.eye);
-            if(team==='ally'&&combat.hangarSupport&&hangars.length&&combat.enabled&&!combat.dead&&!combat.roundOver&&(!options||options.state.integrity>0)){
+            if(!unarmed&&team==='ally'&&combat.hangarSupport&&hangars.length&&combat.enabled&&!combat.dead&&!combat.roundOver&&(!options||options.state.integrity>0)){
                 launchClock=Math.max(0,launchClock-dt);
                 var allies=combat.enemies.filter(function(e){return e.hp>0&&e.team==='ally';});
                 if(launchClock<=0&&allies.length<8){
@@ -150,6 +172,7 @@
                     combat.enemies.push(craft);launchClock=3;
                 }
             }
+            if(unarmed)return;
             var roster=DW.training.alive(combat);if(team==='enemy'&&combat.player.hp>0)roster=roster.concat([combat.player]);
             var targets=roster.filter(function(c){return (c.team||'enemy')!==team;}).map(function(c){return {craft:c,position:local(c.pose.eye)};});
             DW.training.collisionBatch(combat,function(){mounts.forEach(function(m){
@@ -230,7 +253,7 @@
         }
         /** @param {Vector} a @param {Vector} b */function hit(a,b){var h=hullHit(local(a),local(b));return h?world(h.point):null;}
         /** @param {import('./types').Pose} pose */function effects(pose){return DW.flightGuns.geometry({bolts:mounts.flatMap(function(m){return m.guns.bolts.map(function(b){return Object.assign({},b,{team:team});});}),impacts:mounts.flatMap(function(m){return m.guns.impacts;})},pose);}
-        function readout(){var shots=mounts.reduce(function(n,m){return n+m.guns.fired;},0);return 'AEGIS / 1,305 m\n12 heavy batteries standing by · 12 point-defense mounts\nPD: '+shots+' rounds / '+confirmedHits+' confirmed hits\n'+seconds.toFixed(1)+' s · '+contacts+' hull contacts'+(hangars.length?'\nHangar: '+launched+' fighters launched':'');}
+        function readout(){if(unarmed)return 'AEGIS / 1,305 m � UNARMED';var shots=mounts.reduce(function(n,m){return n+m.guns.fired;},0);return 'AEGIS / 1,305 m\n12 heavy batteries standing by · 12 point-defense mounts\nPD: '+shots+' rounds / '+confirmedHits+' confirmed hits\n'+seconds.toFixed(1)+' s · '+contacts+' hull contacts'+(hangars.length?'\nHangar: '+launched+' fighters launched':'');}
         function telemetry(){return {seconds:seconds,contacts:contacts,launches:launched,shots:mounts.reduce(function(n,m){return n+m.guns.fired;},0),hits:confirmedHits,mounts:mounts.map(function(m){return {yaw:m.yaw,elevation:m.elevation,side:m.source.side,kind:m.source.kind,targetId:m.targetId,shots:m.guns.fired,aimPoint:m.source.kind==='heavy'?m.aimOffset.slice():undefined};})};}
         reset();return {reset:reset,step:step,geometry:geometry,effects:effects,readout:readout,hit:hit,telemetry:telemetry};
     }
@@ -258,10 +281,10 @@
      * Positions are scene units; route distances and speed are metres and m/s.
      * @returns {import('./types').AegisFlightRig} */
     function createEllisPatrol(){
-        var state={team:/** @type {'ally'} */('ally'),position:[0,4000/U,1550/U],heading:Math.PI/2,velocity:[0,-180,0],integrity:20000};
-        var rig=create({state:state,opponent:state}),region=0,seconds=0,direction=-1,turn=0,inbound=true;
+        var state={team:/** @type {'ally'} */('ally'),position:[0,-8000/U,1550/U],heading:0,velocity:[0,180,0],integrity:20000};
+        var rig=create({state:state,opponent:state,unarmed:true}),region=0,seconds=0,direction=1,turn=0,inbound=true;
         var batches=rig.geometry();
-        function reset(){region=0;seconds=0;direction=-1;turn=0;inbound=true;state.position.splice(0,3,0,4000/U,1550/U);state.heading=Math.PI/2;rig.reset();}
+        function reset(){region=0;seconds=0;direction=1;turn=0;inbound=true;state.position.splice(0,3,0,-8000/U,1550/U);state.heading=-Math.PI/2;rig.reset();}
         /** @param {number} elapsed */function step(elapsed){
             if(!Number.isFinite(elapsed)||elapsed<=0)return;
             var dt=Math.min(.1,elapsed);seconds+=dt;

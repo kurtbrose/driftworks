@@ -154,9 +154,15 @@ vec4 lens(){
  hit=trace(e);
 #endif
 #endif
- if(hit.z<.5)return vec4(0.);
- float side;vec3 point=ellisPoint(e,hit.x,side);
- return vec4(shellColor(point,side).rgb,1.);
+ vec4 bent=vec4(0.);
+ if(hit.z>.5){
+  float side;vec3 point=ellisPoint(e,hit.x,side);
+  bent=vec4(shellColor(point,side).rgb,1.)*(1.-ellisLocalWeight(eye,point,side));
+ }
+ // Preserve nearby local geometry at its ordinary screen position; suppress
+ // its atlas-derived copies even where the ordinary pixel is transparent.
+ float localWeight=depth<.999999?ellisLocalWeight(eye,eye+ray*distance,ellisRegion):0.;
+ return bent*(1.-ordinary.a*localWeight)+ordinary*localWeight;
 }
 void main(){
  vec4 base=lens();vec2 uv=screen*.5+.5;
@@ -302,7 +308,8 @@ void main(){
                     else{p=patch(center,side,e.lensRadius||20);cache.set(key,p);if(p){maxError=Math.max(maxError,p.error);if(p.error>2)bad++;}}
                     if(!p&&side!==region){e.object.visible=false;return;}
                     var u=e.uniforms;
-                    u.uLensMode.value=side!==region?1:p&&!p.direct&&!p.turning?3:2;
+                    var localDistance=Math.hypot.apply(null,center.map(function(v,i){return v*units-eye[i];}));
+                    u.uLensMode.value=side===region&&localDistance<200&&p?3:side!==region?1:p&&!p.direct&&!p.turning?3:2;
                     u.uLensMouth.value=[region*12000/units-pose.eye[0],-2000/units-pose.eye[1],1550/units-pose.eye[2]];u.uLensRadius.value=300/units;
                     u.uLensEnabled.value=p&&!p.direct?1:0;u.uLensDebug.value=params.get('bridgeWarpDebug')==='1'&&p&&p.error>2?1:0;
                     if(p&&!p.direct){u.uLensCenter.value=center;u.uLensViewCenter.value=p.view;u.uLensX.value=p.columns[0];u.uLensY.value=p.columns[1];u.uLensZ.value=p.columns[2];}

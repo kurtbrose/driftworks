@@ -148,6 +148,7 @@
             throw new Error('Flight skybox requires WebGL');
         const gl = context;
         var explicitBridgeLod=!!gl.getExtension('EXT_shader_texture_lod');
+        var bridgeDerivatives=!!missionSky.wormhole&&!!gl.getExtension('OES_standard_derivatives');
         /** @param {number} type @param {string} source */
         function shader(type, source) {
             var sh = gl.createShader(type);
@@ -166,6 +167,7 @@
                 throw new Error('Could not allocate skybox program');
             gl.attachShader(p, shader(gl.VERTEX_SHADER, vertex));
             if(explicitBridgeLod&&fragment.includes('uniform sampler2D ellisTable;'))fragment='#extension GL_EXT_shader_texture_lod : enable\n'+fragment.replace('texture2D(ellisTable,uv)','texture2DLodEXT(ellisTable,uv,0.)');
+            if(bridgeDerivatives&&fragment.includes('vec3 jadeSatellites('))fragment=fragment.replace('precision highp float;','#extension GL_OES_standard_derivatives : enable\nprecision highp float;');
             gl.attachShader(p, shader(gl.FRAGMENT_SHADER, fragment));
             gl.linkProgram(p);
             if (!gl.getProgramParameter(p, gl.LINK_STATUS))
@@ -179,6 +181,7 @@ varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
 uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeGrid,bridgeGridPixel,bridgeOutline;
+float bridgeFootprint=0.;
 uniform sampler2D panorama;
 uniform sampler2D noiseMap,rimeSurface;uniform float rimeDetailed;
 uniform float exposure;uniform float hdrEnabled;uniform sampler2D hdrEnvironment;
@@ -301,10 +304,12 @@ vec3 jadeSatellites(vec3 sky,vec3 ray){
   vec3 center=jadeMoons[i].xyz;float radius=jadeMoons[i].w;
   float depth=dot(ray,center);if(depth<=0.)continue;
   float r=length(cross(ray,center))/radius;
-  if(r>1.+moonPixel/radius)continue;
+  // Measure the lensed screen footprint before destination/limb branches.
+  float footprint=max(moonPixel,min(bridgeFootprint*.75,radius*.04));
+  if(r>1.+footprint/radius)continue;
   float hit=(depth-radius*sqrt(max(0.,1.-min(r*r,1.))))*jadeRanges[i];
   if(hit>closest)continue;closest=hit;
-  float coverage=1.-smoothstep(1.-moonPixel/radius,1.+moonPixel/radius,r);
+  float coverage=1.-smoothstep(1.-footprint/radius,1.+footprint/radius,r);
   vec3 normal=normalize((ray*depth-center)/radius-ray*sqrt(max(0.,1.-min(r*r,1.))));
   vec3 p=vec3(dot(normal,gasFrameX),dot(normal,gasFrameY),dot(normal,gasFrameZ))*4.+vec3(float(i)*17.3,2.1,8.7);
   float terrain=noise(p)*.65+noise(p*3.1)*.25+noise(p*11.)*.1;
@@ -321,7 +326,12 @@ vec3 jadeSatellites(vec3 sky,vec3 ray){
    vec3 diskUp=cross(center,diskRight);
    float tangentRadius=radius/sqrt(1.-radius*radius);
    vec2 diskXY=vec2(dot(ray,diskRight),-dot(ray,diskUp))/(depth*tangentRadius);
-   vec4 disk=texture2D(rimeSurface,vec2(.5)+diskXY*.484);
+   vec2 diskUV=vec2(.5)+diskXY*.484;
+   vec4 disk=texture2D(rimeSurface,diskUV);
+   if(footprint>moonPixel*1.5&&r>.94){
+    float stepUV=min(.01,footprint/radius*.242);
+    disk=(texture2D(rimeSurface,diskUV+vec2(stepUV,stepUV))+texture2D(rimeSurface,diskUV+vec2(-stepUV,stepUV))+texture2D(rimeSurface,diskUV+vec2(stepUV,-stepUV))+texture2D(rimeSurface,diskUV-vec2(stepUV,stepUV)))*.25;
+   }
    albedo=disk.rgb;coverage*=disk.a;
   }
   float sunlight=max(0.,dot(normal,normalize(ohioSunCenter)));
@@ -367,6 +377,7 @@ void main(){
             if(l<0.){destination=1.-side;outgoing=-outgoing;}
         }
         }
+        ${bridgeDerivatives?'bridgeFootprint=max(length(dFdx(outgoing)),length(dFdy(outgoing)));':''}
         if(destination>.5){
             vec3 local=vec3(dot(outgoing,gasFrameX),dot(outgoing,gasFrameY),dot(outgoing,gasFrameZ));
             vec3 sourceRay=normalize(vec3(local.x/gasScale,local.y,local.z/gasScale));

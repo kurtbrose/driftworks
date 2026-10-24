@@ -201,3 +201,16 @@ console.log('PASS Ellis outline: outer lensing volume, local chart colors, inter
 assert.equal(values.bridgeOutline,1,'Navigation outline remains enabled by default');
 latticeContext.location.search=latticeContext.window.location.search='?mission=ellis&bridgeOutline=0';
 latticeSky.render(latticePose,1,false);assert.equal(values.bridgeOutline,0,'Sky-only diagnostics can suppress the outline');
+
+assert(latticeFragment.includes('#extension GL_OES_standard_derivatives : enable'));
+assert(latticeFragment.includes('bridgeFootprint=max(length(dFdx(outgoing)),length(dFdy(outgoing)))'),'Footprint uses final bent rays before destination branches');
+assert(latticeFragment.indexOf('bridgeFootprint=max(')<latticeFragment.indexOf('if(destination>.5)'),'Derivatives are evaluated outside divergent destination branches');
+assert(latticeFragment.includes('footprint/radius')&&latticeFragment.includes('footprint>moonPixel*1.5&&r>.94'),'Limb reconstruction follows the deformed pixel footprint');
+console.log('PASS Ellis limb filtering: bent-ray footprint, bounded coverage and selective disk-edge reconstruction');
+
+const fallbackStart=shaders.length;gl.getExtension=()=>null;
+latticeContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
+const fallbackFragment=shaders.slice(fallbackStart).find(source=>source.includes('vec3 jadeSatellites('));
+assert(fallbackFragment&&!fallbackFragment.includes('dFdx(outgoing)'),'No derivative calls on unsupported WebGL contexts');
+assert(!fallbackFragment.includes('#extension GL_OES_standard_derivatives'),'No unsupported extension requirement');
+console.log('PASS Ellis limb fallback: shader remains usable without derivative/LOD extensions');

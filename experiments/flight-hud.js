@@ -185,15 +185,19 @@
             DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, combat.mode, document.body.classList.contains('touch-flight'));
             combatHud.font = '12px ui-monospace,monospace';
             combatHud.textAlign = 'center';
-            /** @param {Vector} point */
-            function projection(point) {
+            /** @param {Vector} point @param {boolean=} optical */
+            function projection(point,optical) {
+                if(optical&&mission.sky.wormhole&&DW.ellisOptics){
+                    var path=DW.ellisOptics.primary(state.eye.map(function(v){return v*units;}),point.map(function(v){return v*units;}),state.region||0,state.region||0);
+                    if(path)return DW.flightSkybox.project(path.direction,state,w/h);
+                }
                 return DW.flightSkybox.project(point.map(function (x, i) {
                     return x - state.eye[i];
                 }), state, w / h);
             }
             var targetBearing = /** @type {number | null} */ (null);
             living.forEach(function (e) {
-                var q = projection(e.pose.eye), target = e.id === combat.targetId;
+                var q = projection(e.pose.eye,true), target = e.id === combat.targetId;
                 combatHud.globalAlpha = 1;
                 combatHud.lineWidth = 1.5;
                 combatHud.strokeStyle = target ? '#ffe7a3' : e.team === 'ally' ? '#63f58d' : '#ff655d';

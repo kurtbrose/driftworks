@@ -47,7 +47,7 @@ export type AegisFlightRig = {
     telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string;shots?:number;aimPoint?:Vector}[];capitals?:{team:string;position:Vector;heading:number;integrity:number;shots:number;hits:number}[]};
 };
 export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number};
-export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig};
+export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig;unarmed?:boolean};
 export type Pose = {
     region?: number;
     eye: Vector;

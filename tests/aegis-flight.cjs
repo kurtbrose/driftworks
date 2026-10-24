@@ -282,7 +282,11 @@ console.log('PASS capital battle: two factions, shared GPU buffers, moving/rotat
 // Scenery traverses both charts indefinitely without firing or allocating meshes.
 const patrol=DW.aegisFlight.createEllisPatrol(),patrolBatches=patrol.geometry(),patrolBuffers=patrolBatches.map(b=>b.vertices);
 assert.equal(patrolBatches[0].region,0);
-assert.equal(patrol.telemetry().capitals[0].position[1]*U,4000);
+assert.equal(patrolBatches.reduce((n,b)=>n+b.vertices.length,0),initial.reduce((n,b)=>n+b.vertices.length,0),'material batching preserves all hull and turret triangles');
+assert.equal(patrolBatches.length,new Set(initial.map(b=>b.color.join(','))).size,'one draw per compatible idle material');
+const localX=patrolBatches.flatMap(b=>Array.from(b.vertices).filter((v,i)=>i%6===0));
+assert((localX.reduce((a,b)=>Math.max(a,b),-Infinity)-localX.reduce((a,b)=>Math.min(a,b),Infinity))*U>1300,'batching preserves authored metre-scale length and pivots');
+assert.equal(patrol.telemetry().capitals[0].position[1]*U,-8000);
 let crossings=0,lastRegion=0,turning=false;
 for(let i=0;i<24000;i++){
  patrol.step(.05,view);
@@ -298,3 +302,23 @@ assert.equal(patrol.telemetry().shots,0);assert.equal(patrol.hit([0,0,0],[1,1,1]
 const patrolTime=patrol.telemetry().seconds;patrol.step(0,view);assert.equal(patrol.telemetry().seconds,patrolTime);
 patrol.reset();assert.equal(patrol.geometry()[0].region,0);assert.equal(patrol.telemetry().seconds,0);
 console.log('PASS Ellis capital patrol: repeated centerline crossings, turnarounds, region ownership, reset and immutable mesh reuse');
+
+// The optimized representation belongs to the shared ship factory, independent of maps.
+const sourceAsset=DW.aegisFlightAsset;
+function sceneryShip(x=0,heading=0){const state={team:'ally',position:[x,0,1200],heading,velocity:[0,0,0],integrity:20000};return DW.aegisFlight.create({state,opponent:state,unarmed:true});}
+const idleOne=sceneryShip(),idleTwo=sceneryShip(700,1.2),idleGeometry=idleOne.geometry(),idleOther=idleTwo.geometry();
+assert(idleGeometry.every((b,i)=>b.vertices===idleOther[i].vertices),'all maps and instances reuse the prepared unarmed asset buffers');
+assert(idleGeometry.every((b,i)=>b.origin!==idleOther[i].origin&&b.basis!==idleOther[i].basis),'shared geometry never shares actor poses');
+assert(idleGeometry.every((b,i)=>b.vertices===patrol.geometry()[i].vertices),'Ellis consumes the common optimized asset');
+assert(idleGeometry.length<initial.length,'generic unarmed factory receives material batching without mission code');
+const expectedIdle=new Map();
+function expectedPart(b,pivot){const key=b.color.join(',');if(!expectedIdle.has(key))expectedIdle.set(key,[]);const out=expectedIdle.get(key);for(let i=0;i<b.vertices.length;i++)out.push(i%6<3?(b.vertices[i]+pivot[i%6])/U:b.vertices[i]);}
+sourceAsset.batches.forEach(b=>expectedPart(b,[0,0,0]));sourceAsset.turrets.forEach(t=>t.batches.forEach(b=>expectedPart(b,t.position)));
+for(const b of idleGeometry){const expected=expectedIdle.get(b.color.join(','));assert.equal(b.vertices.length,expected.length);for(let i=0;i<expected.length;i++)assert(Math.abs(b.vertices[i]-expected[i])<1e-5,'all authored vertices, pivot offsets and normals survive shared batching');}
+const noWeapons=fixture();noWeapons.combat.hangarSupport=true;idleOne.reset(noWeapons.combat);
+for(let i=0;i<120;i++)idleOne.step(1/60,noWeapons);
+assert.equal(idleOne.telemetry().shots,0);assert.equal(idleOne.telemetry().launches,0,'unarmed factory disables hangar launches');
+assert.equal(DW.aegisFlight.create().geometry()[0].vertices,initial[0].vertices,'idle preparation preserves armed resource sharing');
+DW.aegisFlightAsset={...sourceAsset};const revisedIdle=sceneryShip().geometry();assert.notEqual(revisedIdle[0].vertices,idleGeometry[0].vertices,'asset revision invalidates prepared resources');DW.aegisFlightAsset=sourceAsset;
+assert.equal(sourceAsset.turrets.length,24,'authoring hierarchy and armed pivots remain intact');
+console.log('PASS shared capital optimization: map-independent factory, cross-instance buffers, independent poses, exact authored geometry and revision invalidation');

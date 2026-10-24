@@ -67,6 +67,10 @@
         var n=O.map(function(v){return v/R;}),m=T.map(function(v){return v/S;}),other=region!==destination;
         var delta=T.map(function(v,i){return v-O[i];}),distance=Math.hypot.apply(null,delta);
         var straight=delta.map(function(v){return v/Math.max(.000001,distance);}),along=-O.reduce(function(sum,v,i){return sum+v*straight[i];},0),impact2=R*R-along*along;
+        var nearT=Math.max(0,Math.min(1,(distance*a-100)/100));
+        var eyeT=Math.max(0,Math.min(1,(R-1)*10)),targetT=Math.max(0,Math.min(1,(S-1)*10));
+        var localWeight=other?0:(1-nearT*nearT*(3-2*nearT))*eyeT*eyeT*(3-2*eyeT)*targetT*targetT*(3-2*targetT);
+        if(localWeight>=1)return {direction:straight,length:distance*a,impact:Math.sqrt(Math.max(0,impact2)),direct:true,turning:false};
         if(!other&&R>=2&&(along<=0||impact2>=4||distance<along-Math.sqrt(Math.max(0,4-impact2))))return {direction:straight,length:distance*a,impact:Math.sqrt(Math.max(0,impact2)),direct:true,turning:false};
         var cosine=Math.max(-1,Math.min(1,n.reduce(function(sum,v,i){return sum+v*m[i]*(other?-1:1);},0))),angle=Math.acos(cosine);
         var tangent=m.map(function(v,i){return v*(other?-1:1)-n[i]*cosine;}),tn=Math.hypot.apply(null,tangent);
@@ -88,12 +92,24 @@
         /** @param {number} end */function arc(end){var total=0;for(var j=0;j<16;j++){var t=end*(j+.5)/16,l=root*(b<1?Math.sinh(t):Math.cosh(t));total+=Math.sqrt(1+l*l)*radialScale(1+l*l)*end/16;}return total;}
         var first=arc(u(b,E)),last=arc(u(b,S)),length=(other||turning?first+last:Math.abs(first-last));
         if(R>2)length+=Math.sqrt(Math.max(0,R*R-b*b))-Math.sqrt(Math.max(0,4-b*b));
-        return {direction:direction,length:Math.max(.001,length*a),impact:b,direct:false,turning:turning};
+        // Blend the local visual frame into the primary optical path over 100-200 m.
+        var weight=localWeight;
+        if(weight>0){
+            direction=direction.map(function(v,i){return v*(1-weight)+straight[i]*weight;});
+            var magnitude=Math.hypot.apply(null,direction);direction=direction.map(function(v){return v/Math.max(.000001,magnitude);});
+        }
+        return {direction:direction,length:Math.max(.001,length*a*(1-weight)+distance*a*weight),impact:b,direct:false,turning:turning};
     }
     var shader=`
 uniform sampler2D ellisTable;
 uniform float ellisRegion;
 struct EllisRay {vec3 radial;vec3 tangent;float b;float u0;float f0;float entry;float side;float hit;float inward;};
+// Same local visual-frame policy as the CPU primary-image projection.
+float ellisLocalWeight(vec3 eye,vec3 point,float side){
+    vec3 mouth=vec3(ellisRegion*12000.,-2000.,1550.);
+    // Fade back to the shared throat solution before a chart transition.
+    return side==ellisRegion?(1.-smoothstep(100.,200.,length(point-eye)))*smoothstep(300.,330.,length(eye-mouth))*smoothstep(300.,330.,length(point-mouth)):0.;
+}
 float ellisAsinh(float x){return log(x+sqrt(x*x+1.));}
 float ellisAcosh(float x){return log(x+sqrt(max(0.,x*x-1.)));}
 float ellisPackedIntegral(float b,float u){

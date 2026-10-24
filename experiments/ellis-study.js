@@ -10,7 +10,7 @@
     function pose(eye,forward,region){var f=unit(forward),right=unit(cross(f,[0,0,1]));return {eye:eye.map(function(v){return v/units;}),right:right,up:cross(right,f),back:f.map(function(v){return -v;}),region:region};}
     /** Fixed chart-local camera positions, in metres. @param {string} name @returns {Pose} */
     function camera(name){
-        var presets=/** @type {Record<string,number[]>} */({front:[0,-2900,1550],close:[0,-2340,1550],side:[650,-2400,1650],rim:[400,-2200,1550],above:[0,-2500,2200],rime:[12000,-1100,1550]});
+        var presets=/** @type {Record<string,number[]>} */({front:[0,-2900,1550],chase:[0,-2380,1550],close:[0,-2340,1550],side:[650,-2400,1650],rim:[400,-2200,1550],above:[0,-2500,2200],rime:[12000,-1100,1550]});
         var eye=presets[name]||presets.front,region=name==='rime'?1:0;
         return pose(eye,[region*12000-eye[0],-2000-eye[1],1550-eye[2]],region);
     }
@@ -18,6 +18,7 @@
      * The crossing uses signed Ellis proper radius and the same antipodal chart convention.
      * @param {number} time @param {string} scenario */
     function sample(time,scenario){
+        if(scenario==='nearby')return [{pose:pose([12,-2340,1550],[Math.sin(time*.4)*.2,1,0],0),velocity:[0,0,0]}];
         var phase=time*Math.PI/12,normal=unit([.12,-1,.035]),l=-800*Math.cos(phase),side=l<0?0:1,r=Math.hypot(300,l),sign=side===0?1:-1;
         var center=[side*12000,-2000,1550],eye=center.map(function(v,i){return v+normal[i]*r*sign;}),speed=800*Math.PI/12*Math.sin(phase),forward=normal.map(function(v){return -v;});
         var crossing=pose(eye,forward,side);
@@ -45,7 +46,7 @@
     speedSelect.value=params.get('speed')||'1';scenario.value=params.get('pass')||'combined';
     /** @type {HTMLInputElement} */(get('bridge-grid')).checked=params.get('bridgeGrid')!=='0';renderer.value=params.get('bridgeGeometry')==='full'?'full':'objects';
     function cameraUI(){document.querySelectorAll('button[data-camera]').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-camera')===cameraName?'true':'false');});get('camera-note').textContent=(cameraName==='rime'?'Rime chart':'Asteroid chart')+' · fixed camera · throat radius 300 m';}
-    document.querySelectorAll('button[data-camera]').forEach(function(b){b.addEventListener('click',function(){cameraName=b.getAttribute('data-camera')||'front';cameraUI();draw();});});
+    document.querySelectorAll('button[data-camera]').forEach(function(b){b.addEventListener('click',function(){cameraName=b.getAttribute('data-camera')||'front';if(cameraName==='chase')scenario.value='nearby';cameraUI();draw();});});
     function playback(){get('play').textContent=playing?'Pause':'Play';}
     get('play').onclick=function(){playing=!playing;playback();};
     get('step').onclick=function(){playing=false;time=(time+1/30)%24;playback();draw();};

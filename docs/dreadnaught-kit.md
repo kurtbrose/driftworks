@@ -138,8 +138,9 @@ identity or hull ownership changes; the legacy posed-vertex method remains
 available. This prevents accumulating burns and drifting wrecks from adding
 per-frame projection and vertex-upload work.
 
-Only Aegis mode loads `assets/ships/aegis-kit/flight-rig.js`. Normal flight and
-the asteroid mission retain their existing setup. Regenerate that asset with
+Aegis mode and the Ellis centerline patrol load
+`assets/ships/aegis-kit/flight-rig.js`. Normal flight and the asteroid mission
+retain their existing setup. Regenerate that asset with
 `node tools/bake-aegis-flight.cjs` after changing ship geometry or pivots, then run
 `node tools/refresh-flight-assets.cjs` after changing simulator scripts.
 `node tests/aegis-flight.cjs` checks asset freshness, tracking limits, both firing
@@ -285,3 +286,24 @@ Hangar roof and deck armor reuse the neighboring hull's four ribbed plate bays,
 pale/armor alternation, dark service recesses, cyan/amber lights and maintenance
 hatches. Interior light strips stand clear of the floor and ceiling to prevent
 depth fighting at flight-view distances; the through passage stays open.
+
+## Shared runtime optimization policy
+
+Capital rendering preparation belongs to `aegis-flight.js`, not mission code.
+`aegisFlight.create({state, opponent, unarmed: true})` uses the shared unarmed
+representation: hull and fixed idle turrets are combined into seven material
+batches, with mount offsets baked in authored metres. This prepared resource
+and its immutable GPU vertex arrays are cached per source asset revision and
+shared by every instance; origins and rotation bases remain actor-owned.
+The Ellis patrol only supplies its route and region ownership and requests this
+common representation. Other unarmed capital traffic can use the same factory.
+
+Armed ships use the same factory with the default articulated representation.
+They retain independently tracked turret pivots, shared immutable meshes and GPU
+pose transforms on every map. The seven-draw whole-ship representation applies
+to fixed turrets; armed ships require separate articulated draws. Batching must
+never freeze working guns to reproduce an unarmed benchmark. Changing source
+asset identity invalidates both preparations together, without editing authoring
+geometry, collision, weapon rules, scale or livery. Regression coverage checks
+cross-instance resource sharing, exact authored vertices/normals and pivot
+translation, independent poses, revision invalidation, and live armed combat.
