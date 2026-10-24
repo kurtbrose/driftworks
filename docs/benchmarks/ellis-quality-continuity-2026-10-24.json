@@ -1,0 +1,42 @@
+{
+  "forward": {
+    "direction": "forward",
+    "pass": true,
+    "unbentNegativeControl": 66,
+    "untransportedNegativeControl": 227,
+    "pixels": 4096,
+    "maxChannelDifference": 1,
+    "meanChannelDifference": 0.103515625,
+    "destinationMismatches": 0,
+    "beforeMeters": [
+      0,
+      -2300.000003,
+      1550
+    ],
+    "afterMeters": [
+      12000,
+      -1699.999994666667,
+      1550
+    ]
+  },
+  "reverse": {
+    "direction": "return",
+    "pass": true,
+    "unbentNegativeControl": 66,
+    "untransportedNegativeControl": 227,
+    "pixels": 4096,
+    "maxChannelDifference": 1,
+    "meanChannelDifference": 0.10872395833333333,
+    "destinationMismatches": 0,
+    "beforeMeters": [
+      12000,
+      -1699.999997,
+      1550
+    ],
+    "afterMeters": [
+      0,
+      -2300.0000053333333,
+      1550
+    ]
+  }
+}

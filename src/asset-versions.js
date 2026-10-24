@@ -361,6 +361,8 @@
   "assets/backgrounds/woven-stars-v1/south-0.png": "e37a1a14484f",
   "assets/backgrounds/woven-stars-v1/south-1.png": "a978c67a2321",
   "assets/backgrounds/woven-stars-v1/south-2.png": "949241b969ca",
+  "assets/bolts/bolt-atlas-v1.png": "204e8050958a",
+  "assets/bolts/plasma-balls-v2.png": "664c84eba5ee",
   "assets/characters/catalog.json": "8f44c1848368",
   "assets/characters/crew-cast/body-sprites/jo-crouch-deep-v1-generation.json": "c6eb0ce4ad44",
   "assets/characters/crew-cast/body-sprites/jo-crouch-deep-v1.png": "1fd03c0156f8",

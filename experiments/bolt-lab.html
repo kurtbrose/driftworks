@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bolt range · Driftworks</title>
+<link rel="stylesheet" href="bolt-lab.css?v=ac19d9f494a3"></head>
+<body>
+<header><div><small>DRIFTWORKS / WEAPON VFX STUDY</small><h1>Bolt range</h1></div><a href="flight.html">Back to flight ↗</a></header>
+<main><aside>
+<label>3D flight pattern<select id="view"><option value="dogfight">Dogfight / outbound + incoming + crossing</option><option value="pilot">Your guns / flying away</option><option value="crossing">Crossfire / near, middle, far</option><option value="incoming">Incoming / near misses</option></select></label>
+<label>Projectile<select id="style"><option value="0">Cyan confinement</option><option value="1">Green pulse</option><option value="2">Red laser pulse</option><option value="3">Amber plasma</option></select></label>
+<label>Style comparison<select id="palette"><option value="single">Selected style</option><option value="all">All four / same 3D scene</option></select></label>
+<label>Engagement distance <output id="distance-value"></output><input id="distance" type="range" min="150" max="1500" step="50" value="450"></label>
+<label>Bolt size <output id="size-value"></output><input id="size" type="range" min="0.4" max="2.5" step="0.1" value="1"></label>
+<label>Playback<select id="speed"><option value="1">1× real time</option><option value="0.25">¼× slow motion</option><option value="0.1">⅒× inspect</option></select></label>
+<label>Projectile speed<select id="velocity"><option value="1100">1,100 m/s</option><option value="650">650 m/s</option><option value="1800">1,800 m/s</option></select></label>
+<label>Shot appearance<select id="animation"><option value="off" selected>Fixed variant per shot</option><option value="same">Same variant / comparison</option></select></label>
+<label>Flight-aligned length<select id="stretch"><option value="1" selected>At least 1 frame of travel</option><option value="2">At least 2 frames of travel</option><option value="0">Compact ball / comparison</option></select></label>
+<label>Firing cadence<select id="cadence"><option value="0.2">Stream / 5 volleys per second</option><option value="1.6">Isolated pulses / 1.6 s apart</option></select></label>
+<label>Compositing<select id="blend"><option value="lighter">Additive glow</option><option value="source-over">Normal alpha</option></select></label>
+<label class="check"><input id="auto" type="checkbox" checked> Auto fire</label>
+<label class="check"><input id="maneuver" type="checkbox"> Camera bank / maneuver</label>
+<div class="buttons"><button id="fire">Fire burst</button><button id="pause">Pause</button><button id="clear">Clear</button></div>
+<p>Move over the scene to steer your view. Hold click or Space to fire. P pauses. Bolts keep their world trajectories as you turn.</p>
+<p>Perspective camera, 3D trajectories and 12 m fighter silhouettes. Range and bolt size are study settings; this is a visual dogfight rig.</p>
+<p id="status" role="status">Loading generated atlas…</p>
+</aside><section><canvas id="range" tabindex="0" aria-label="Three dimensional dogfight projectile test range"></canvas><div class="reticle" aria-hidden="true">+</div><div class="scene-note">LIVE FIRE / 3D SPACE<span>AWAY / CROSSING / INCOMING</span></div><footer><span id="caption"></span><span id="stats"></span></footer></section></main>
+<img id="atlas" src="../assets/bolts/plasma-balls-v2.png?v=664c84eba5ee" hidden alt="Four styles, four animation frames each">
+<script src="../src/asset-versions.js?v=16308cf0b7d6"></script>
+<script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
+<script src="bolt-lab-model.js?v=0599e661a04a"></script>
+<script src="bolt-lab.js?v=3552b438d04a"></script></body></html>

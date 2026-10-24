@@ -1,5 +1,8 @@
 # Hero sky authoring
 
+For deterministic offline velocity distortion of an existing panorama, see
+[relativistic skybox baking](relativistic-skybox.md).
+
 The impact watch now defaults to mission-triggered cinematic stages. See
 [impact cues](impact-cues.md) for the trigger API, manual cue panel, queue/pause
 rules, generated land fire/smoke stages and live atmospheric re-entry layer.

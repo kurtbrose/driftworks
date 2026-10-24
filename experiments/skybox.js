@@ -175,6 +175,7 @@ precision highp float;
 varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
+uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;
 uniform sampler2D panorama;
 uniform sampler2D noiseMap,rimeSurface;uniform float rimeDetailed;
 uniform float exposure;uniform float hdrEnabled;uniform sampler2D hdrEnvironment;
@@ -326,8 +327,55 @@ vec3 jadeSatellites(vec3 sky,vec3 ray){
  }
  return sky;
 }
+${window.Driftworks.ellisOptics?window.Driftworks.ellisOptics.shader:'struct EllisRay {float hit;}; EllisRay ellisInit(vec3 e,vec3 r){return EllisRay(0.);} vec3 ellisExit(EllisRay e){return vec3(0.);} vec3 ellisPoint(EllisRay e,float t,out float side){side=0.;return vec3(0.);}'}
 void main(){
     if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
+    if(bridgeEnabled>.5){
+        vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+        float side=step(6000.,bridgeEye.x);
+        vec3 offset=(bridgeEye-vec3(side*12000.,-2000.,1550.))/300.;
+        float along=dot(offset,ray),impact2=dot(offset,offset)-along*along;
+        vec3 outgoing=ray;float destination=side;
+        if(bridgeLookup>.5){
+            EllisRay bridge=ellisInit(bridgeEye,ray);
+            if(bridge.hit>.5){outgoing=ellisExit(bridge);float ignored;ellisPoint(bridge,1.,ignored);destination=ignored;}
+        }else{
+        // Null geodesic: ds²=-dt²+dl²+(l²+a²)dOmega², a=1.
+        // Finite integration domain and steps make this a visual approximation.
+        if(along<0. && impact2<4.){
+            vec3 entry=offset+ray*max(0.,-along-sqrt(max(0.,4.-impact2)));
+            float r=max(1.00001,length(entry)),l=sqrt(r*r-1.);
+            vec3 radial=entry/r;
+            float cosine=dot(ray,radial);
+            vec3 tangent=normalize(ray-radial*cosine+vec3(1.e-7));
+            float b=r*sqrt(max(0.,1.-cosine*cosine));
+            float momentum=cosine,phi=0.;
+            for(int i=0;i<192;i++){
+                float h=.065,mid=l+momentum*h*.5;
+                float accel=b*b*mid/pow(1.+mid*mid,2.);
+                phi+=h*b/(1.+mid*mid);
+                l+=h*(momentum+accel*h*.5);momentum+=h*accel;
+                if(abs(l)>7.)break;
+            }
+            vec3 radialEnd=radial*cos(phi)+tangent*sin(phi);
+            vec3 tangentEnd=-radial*sin(phi)+tangent*cos(phi);
+            outgoing=normalize(radialEnd*momentum+tangentEnd*b/sqrt(1.+l*l));
+            if(l<0.){destination=1.-side;outgoing=-outgoing;}
+        }
+        }
+        if(destination>.5){
+            vec3 local=vec3(dot(outgoing,gasFrameX),dot(outgoing,gasFrameY),dot(outgoing,gasFrameZ));
+            vec3 sourceRay=normalize(vec3(local.x/gasScale,local.y,local.z/gasScale));
+            vec3 planet=local.y>0.?gasSurface(sourceRay):vec3(0.);
+            gl_FragColor=vec4(clamp(jadeSatellites(planet*exposure+ohioLandmark(ohioSun,outgoing,ohioSunCenter,ohioSunRight,ohioSunUp,ohioSunGain),outgoing),0.,1.),1.);
+        }else{
+            vec2 uv=vec2(atan(outgoing.y,outgoing.x)/6.28318530718+.5,acos(clamp(outgoing.z,-1.,1.))/3.14159265359);
+            vec3 cell=floor(outgoing*1400.);
+            float star=pow(fract(sin(dot(cell,vec3(12.9898,78.233,37.719)))*43758.5453),420.);
+            gl_FragColor=vec4((texture2D(panorama,uv).rgb+vec3(star*.22))*exposure,1.);
+        }
+        return;
+    }
     if(style>9.5 && style<11.5){
         vec3 riverRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         vec2 riverUV=vec2(atan(riverRay.y,riverRay.x)/6.28318530718+.5,acos(clamp(riverRay.z,-1.,1.))/3.14159265359);
@@ -803,13 +851,22 @@ void main(){
             image.onerror=function(){canvas.dataset[key]='error';if(status)status.textContent='Could not load the stellar streams texture.';};
             image.src=assetUrl(selected===11?'../assets/backgrounds/star-river-woven-v1-8k.jpg':'../assets/backgrounds/star-river-photo-v3-8k.jpg');
         }
+        var bridgeMode=typeof location==='undefined'?'':new URLSearchParams(location.search).get('bridge');
+        var bridgeTable=missionSky.wormhole&&window.Driftworks.ellisOptics&&bridgeMode!=='legacy'?gl.createTexture():null;
+        if(bridgeTable){
+            var optics=/** @type {Required<DriftworksNamespace>} */(window.Driftworks).ellisOptics;
+            gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);
+            gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,optics.size,optics.size,0,gl.RGBA,gl.UNSIGNED_BYTE,optics.table());
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0);
+        }
         var image = new Image();
         image.onload = function () {
             gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
             canvas.dataset.panorama = 'ready';
         };
-        if(!landmarkSky) image.src = assetUrl('../assets/backgrounds/all-sky-milky-way.jpg');
+        if(!landmarkSky||missionSky.wormhole) image.src = assetUrl(missionSky.wormhole?'../assets/backgrounds/hero-composition-v1-8k.jpg':'../assets/backgrounds/all-sky-milky-way.jpg');
         /** @param {WebGLProgram} p @param {Pose} pose @param {number} aspect @param {number} dpr */
         function uniforms(p, pose, aspect, dpr) {
             gl.useProgram(p); /** @type {('right' | 'up' | 'back')[]} */ /** @type {('right' | 'up' | 'back')[]} */
@@ -876,6 +933,10 @@ void main(){
                 gl.disable(gl.BLEND);
                 uniforms(sky, pose, width / height, dpr);
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.gasGiant ? 23 : missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeEnabled'),missionSky.wormhole?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeLookup'),bridgeTable?1:0);
+                if(bridgeTable){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);gl.uniform1i(gl.getUniformLocation(sky,'ellisTable'),4);gl.activeTexture(gl.TEXTURE0);}
+                if(missionSky.wormhole)gl.uniform3fv(gl.getUniformLocation(sky,'bridgeEye'),pose.eye.map(function(v){return v*(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT;}));
                 gl.uniform1i(gl.getUniformLocation(sky,'bakedCube'),5);
                 gl.uniform1i(gl.getUniformLocation(sky,'bakedCubeTo'),6);
                 gl.uniform1f(gl.getUniformLocation(sky,'cubeProjection'),missionSky.cubeStages?1:0);
@@ -969,6 +1030,7 @@ void main(){
                     gl.disableVertexAttribArray(direction);gl.disableVertexAttribArray(texcoord);
                     stats.drawCalls+=visibleFeatures.length;stats.triangles+=visibleFeatures.length*2;stats.meshes+=visibleFeatures.length;stats.materials+=visibleFeatures.length;
                 }
+                if(missionSky.wormhole)return;
                 uniforms(points, pose, width / height, dpr);
                 gl.bindBuffer(gl.ARRAY_BUFFER, starBuffer);
                 a = gl.getAttribLocation(points, 'star');

@@ -189,6 +189,8 @@
             get('art-credit').textContent = String(error);
         });
         var skybox = DW.flightSkybox.create(host);
+        var bridgeMode=typeof location==='undefined'?'':new URLSearchParams(location.search).get('bridge');
+        if(DW.flightMissions.current().sky.wormhole&&scene.setStudyBridge)scene.setStudyBridge(bridgeMode!=='legacy'&&bridgeMode!=='sky');
         var roadsideDefinition=DW.flightMissions.current().scenery.find(function(item){return item.kind==='roadside';});
         var roadside=roadsideDefinition?DW.flightScenery.create(roadsideDefinition):null;
         var signDefinition=DW.flightMissions.current().scenery.find(function(item){return item.kind==='highway-sign';});

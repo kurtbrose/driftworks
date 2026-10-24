@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "beta": 0.99,
+  "direction": [
+    1.0,
+    0.0,
+    0.0
+  ],
+  "source": "../../../assets/backgrounds/star-river-photo-v3-8k.jpg",
+  "sourceSha256": "8601e74ffd0ad27e94c92933e5a70463ff09e6e239bc00d020aaba48d9e94f34",
+  "size": 512,
+  "samples": 2,
+  "worldUp": "+Z",
+  "flipY": false,
+  "color": "blackbody",
+  "assumedTemperatureK": 6500,
+  "exposureStops": 0,
+  "limitations": "RGB-modulated blackbody at 610/550/460 nm; no recovered IR/UV, no eye-response integration; LDR clipping; finite source resolution.",
+  "faces": {
+    "px": {
+      "file": "px.png",
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "257f05bde3d982034b7545c4bf6b04b531dd3d587a2f1121f33ff5042e9cdafc"
+    },
+    "nx": {
+      "file": "nx.png",
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "1707efe457307d0a5e2f5a1ec1cff55b2a44286f3c4d8dda32bf394be8963b8b"
+    },
+    "py": {
+      "file": "py.png",
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "de8a909f915e86ad6fc134c03eade3160167e9f1d38bc58cb5de3e05b339e870"
+    },
+    "ny": {
+      "file": "ny.png",
+      "forward": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        1
+      ],
+      "sha256": "fbc1a8ee11f1e863825eed05fd81e25b13be7363a942ea9aed527785b194baa4"
+    },
+    "pz": {
+      "file": "pz.png",
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "4cf44e62046de3b8e527ad77cdbe145b897e418be76eb2684b90dd1ecf81f873"
+    },
+    "nz": {
+      "file": "nz.png",
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "23ca66e5dbb608b349b33dd37a34c03ada6c60ac7d6a868779f72ca97c35a5f4"
+    }
+  }
+}

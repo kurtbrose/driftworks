@@ -1,0 +1,90 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..');
+function probe(){
+ const DW=window.Driftworks,params=new URLSearchParams(location.search),mode=params.get('bridge')||'new',view=params.get('view')||'approach',fly=params.has('fly'),firing=params.has('fire'),live=params.has('live')||fly||firing;
+ if(params.get('quality')==='coarse'){
+  const Raw=window.THREE.RawShaderMaterial;
+  window.THREE.RawShaderMaterial=class extends Raw {constructor(options){
+   if(options.fragmentShader.includes('float shellGap'))options={...options,fragmentShader:options.fragmentShader.replace(/\/\/ A sample behind[\s\S]*?(?= return vec4\(0\.\);)/,`for(int i=0;i<64;i++){
+    float side;vec3 p=ellisPoint(e,(float(i)+.5)/64.,side);
+    if(shellGap(p,side)>=0.)return vec4(shellColor(p,side).rgb,1.);
+   }
+`)};
+   super(options);
+  }};
+ }
+ let stages={};
+ const Renderer=window.THREE.WebGLRenderer;
+ window.THREE.WebGLRenderer=class extends Renderer {constructor(...args){
+  super(...args);let target=null,captured=0;
+  const set=this.setRenderTarget.bind(this),clear=this.clear.bind(this),render=this.render.bind(this);
+  this.setRenderTarget=(t,...rest)=>{target=t;return set(t,...rest);};
+  const atlas=()=>target&&target.width===1152&&target.height===768;
+  const skip=()=>params.get('ablate')==='captures'&&atlas()&&captured>=12;
+  this.clear=(...args)=>{if(!skip())return clear(...args);};
+  this.render=(scene,camera)=>{
+   if(skip())return;
+   const stage=atlas()?'captures':target?'primary':'screen',t=performance.now();
+   render(scene,camera);if(atlas())captured++;
+   const row=stages[stage]||(stages[stage]={calls:0,triangles:0,cpu:0});
+   row.calls+=this.info.render.calls;row.triangles+=this.info.render.triangles;row.cpu+=performance.now()-t;
+  };
+ }};
+ if(params.get('ablate')==='geometry'){
+  const Raw=window.THREE.RawShaderMaterial;
+  window.THREE.RawShaderMaterial=class extends Raw {constructor(o){super({...o,fragmentShader:o.fragmentShader.replace('vec4 base=lens();','vec4 base=texture2D(sourceColor,screen*.5+.5);')});}};
+ }
+ let sampleStart;
+ let frozen=false;
+ let session,presentation,rows=[],collect=false,last=0,ready=false;
+ const create=DW.flightSession.create;
+ DW.flightSession.create=function(environment){
+  const result=create({...environment,seed:29}),reset=result.reset;
+  result.reset=function(config){const s=reset(config),u=DW.sim.METERS_PER_UNIT;
+   if(params.has('slow'))config.profile.maxVelocity[2]=2;
+   let eye=[0,-3250,1550],f=[0,1,0];
+   if(view==='transit')eye=[0,-2400,1550];
+   if(view==='limb'){eye=[80,-2320,1550];f=[.35,Math.sqrt(1-.35*.35),0];}
+   if(view==='before-throat')eye=[0,-2300.000003,1550];
+   if(view==='after-throat')eye=[12000,-1699.999994666667,1550];
+   if(view==='return-transit'){eye=[12000,-1600,1550];f=[0,-1,0];}
+   if(view==='rim'){eye=[550,-2200,1550];const d=Math.hypot(550,200);f=[-550/d,200/d,0];}
+   if(view==='moon'){eye=[12000,-1250,1550];f=[0,-1,0];}
+   Object.assign(s.state,{eye:eye.map(x=>x/u),right:[f[1],-f[0],0],up:[0,0,1],back:f.map(x=>-x),velocity:[0,0,0],ramp:[0,0,0],throttle:0});
+   if(view==='after-throat'){s.state.right=[-1,0,0];s.state.up=[0,0,-1];}
+   if(view==='foreground'){s.combat.enemies[0].pose.eye=[0,-3150/u,1550/u];s.combat.enemies[0].pose.back=[0,-1,0];}
+   return s;
+  };
+  const advance=result.advance;result.advance=function(dt,controls,config){return live&&!frozen?advance(dt,{...controls,stop:!fly,throttle:fly?1:null,fire:firing},config):result.snapshot();};
+  session=result;return result;
+ };
+ const mount=DW.flightPresentation.mount;
+ DW.flightPresentation.mount=function(...args){const result=mount(...args),render=result.render;
+  result.render=function(...args){stages={};const t=performance.now();render(...args);if(collect){const now=performance.now(),s=result.renderStats().scene;rows.push({frame:now-last,cpu:now-t,draws:s.drawCalls,triangles:s.triangles,captures:s.bridgeCaptures||0,bridgeCpu:s.bridgeCpuMs||0,stages});last=now;}};
+  presentation=result;return result;
+ };
+ const panel=document.createElement('details');panel.open=true;panel.id='ellis-benchmark';
+ panel.style.cssText='position:fixed;z-index:100;top:8px;right:8px;max-width:500px;background:#06131eef;padding:12px;color:white;font:12px monospace;';
+ panel.innerHTML='<summary>Ellis matched benchmark</summary><button id="measure">Measure (2 s warmup + 8 s sample)</button> <button id="preview">Preview only</button> <button id="snapshot">Snapshot state</button> <button id="freeze">Freeze</button><pre id="bench-result">'+mode+' / '+view+' / '+(live?'live':'frozen simulation')+'</pre>';
+ document.body.appendChild(panel);
+ function start(){if(!ready){document.querySelector('#input-mode').value='controller';document.querySelector('#input-mode').dispatchEvent(new Event('change'));document.querySelector('#fps-cap').value=params.get('cap')||'0';document.querySelector('#fps-cap').dispatchEvent(new Event('change'));document.querySelector('#render-scale').value=params.get('scale')||'1';document.querySelector('#render-scale').dispatchEvent(new Event('change'));document.querySelector('#fly').click();ready=true;}}
+ document.querySelector('#freeze').onclick=()=>{frozen=!frozen;};
+ document.querySelector('#snapshot').onclick=()=>{const s=session.snapshot(),u=DW.sim.METERS_PER_UNIT;document.querySelector('#bench-result').textContent=JSON.stringify({view,fired:s.guns.fired,bolts:s.guns.bolts.map(b=>({position:b.position.map(x=>x*u),direction:b.direction})),positionMeters:s.state.eye.map(x=>x*u),velocity:s.state.velocity,scene:presentation.renderStats().scene},null,2);};
+ document.querySelector('#preview').onclick=()=>{start();panel.open=false;};
+ document.querySelector('#measure').onclick=()=>{
+  start();document.querySelector('#bench-result').textContent='Warming up';rows=[];collect=false;
+  setTimeout(()=>{last=performance.now();sampleStart=new Date().toISOString();collect=true;document.querySelector('#bench-result').textContent='Measuring';setTimeout(()=>{
+   collect=false;const stat=k=>{const a=rows.map(r=>r[k]).sort((a,b)=>a-b);return {mean:a.reduce((a,b)=>a+b,0)/a.length,p50:a[Math.floor(a.length*.5)],p95:a[Math.floor(a.length*.95)]};};
+   const canvas=document.querySelector('#viewer canvas'),gl=canvas.getContext('webgl2')||canvas.getContext('webgl'),ext=gl.getExtension('WEBGL_debug_renderer_info');
+   const stageStats={};for(const name of ['captures','primary','screen']){stageStats[name]={};for(const key of ['calls','triangles','cpu']){const a=rows.map(r=>(r.stages[name]||{})[key]||0).sort((a,b)=>a-b);stageStats[name][key]={mean:a.reduce((a,b)=>a+b,0)/a.length,p95:a[Math.floor(a.length*.95)]};}}
+   const result={sampleStart,sampleEnd:new Date().toISOString(),stageStats,ablation:params.get('ablate'),cap:params.get('cap')||'0',scale:params.get('scale')||'1',mode,view,quality:params.get('quality')||'refined',live,samples:rows.length,visibility:document.visibilityState,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,backing:[canvas.width,canvas.height],renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'unavailable',gpuTimerAvailable:!!gl.getExtension('EXT_disjoint_timer_query_webgl2'),frame:stat('frame'),cpu:stat('cpu'),draws:stat('draws'),triangles:stat('triangles'),captures:stat('captures'),bridgeCpu:stat('bridgeCpu'),actors:session.snapshot().combat.enemies.filter(c=>c.hp>0).length,scene:presentation.renderStats().scene};
+   document.querySelector('#bench-result').textContent=JSON.stringify(result,null,2);document.querySelector('#bench-result').dataset.complete='true';
+  },8000);},2000);
+ };
+}
+let html=fs.readFileSync(path.join(root,'experiments/flight.html'),'utf8');
+html=html.replace('<head>','<head><base href="../experiments/">').replace(/<script src="flight.js[^>]*><\/script>/,'<script>('+probe.toString()+')();</script>$&');
+html=html.replace(/(src|href)="(?![.#/]|https?:|data:)([^"]+)"/g,'$1="../experiments/$2"');
+fs.mkdirSync(path.join(root,'output'),{recursive:true});fs.writeFileSync(path.join(root,'output/ellis-benchmark.html'),html);
+console.log('Open http://localhost:8000/output/ellis-benchmark.html?mission=ellis&bridge=new&view=approach');

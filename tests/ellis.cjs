@@ -1,0 +1,45 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createFlight,dt}=require('../tools/headless.cjs');
+function probe(x,y,offset=0,speed=200){
+    const flight=createFlight({mission:'ellis',enabled:false});
+    const {state}=flight.snapshot(),u=flight.DW.sim.METERS_PER_UNIT;
+    state.eye=[x/u,y/u,(1550+offset)/u];
+    state.velocity=[0,speed,0];state.back=[0,-Math.sign(speed),0];
+    state.ramp[2]=Math.abs(speed);flight.config.profile.maxVelocity[2]=Math.abs(speed);
+    return {flight,state,u};
+}
+let p=probe(0,-2310);p.flight.advance(.2,{throttle:1});
+assert.equal(p.state.eye[0]*p.u,12000,'outbound crossing');
+assert(p.state.eye[1]*p.u>-1700,'emerges outward');
+assert(p.state.velocity[1]>0,'radial velocity preserved');
+assert.deepEqual(Array.from(p.state.right,v=>v||0),[-1,0,0],'antipodal chart reverses tangent right');
+assert.deepEqual(Array.from(p.state.up,v=>v||0),[0,0,-1],'antipodal chart reverses tangent up');
+assert.deepEqual(Array.from(p.state.back,v=>v||0),[0,-1,0],'radial forward direction stays forward');
+p.flight.advance(.2,{throttle:1});assert.equal(p.state.eye[0]*p.u,12000,'no immediate bounce');
+p=probe(12000,-1690,0,-200);p.flight.advance(.2,{throttle:1});
+assert.equal(p.state.eye[0],0,'return crossing');
+assert(p.state.eye[1]*p.u<-2300);
+p=probe(0,-2400,350);p.flight.advance(4,{throttle:1});assert.equal(p.state.eye[0],0,'near miss');
+p=probe(0,-2400,0,120000);p.flight.advance(dt,{throttle:1});
+assert.equal(p.state.eye[0]*p.u,12000,'swept crossing catches a full-diameter tick');
+p=probe(0,-2400);const snap=p.flight.snapshot();
+snap.guns.bolts.push({position:[0,-2301/p.u,1550/p.u],direction:[0,1,0],age:0,weapon:p.flight.config.weapon});
+p.flight.advance(dt,{stop:true});
+assert.equal(snap.guns.bolts[0].position[0]*p.u,12000,'gunfire crosses');
+p=probe(0,-2400);const angled=p.flight.snapshot();
+angled.guns.bolts.push({position:[100/p.u,-2283/p.u,1550/p.u],direction:[0,1,0],age:0,weapon:p.flight.config.weapon});
+p.flight.advance(dt,{stop:true});const direction=angled.guns.bolts[0].direction;
+assert(direction[0]<0,'off-axis projectile tangent is transported');
+assert(Math.abs(Math.hypot(...direction)-1)<1e-10,'transport preserves projectile direction length');
+const live=createFlight({mission:'ellis'});live.advance(2,{stop:true});
+assert.equal(live.snapshot().combat.enemies.length,8);
+assert(live.snapshot().combat.enemies.every(c=>c.pose.eye.every(Number.isFinite)));
+console.log('PASS Ellis bridge: return, overshoot, near miss, no bounce, gunfire and live combat');
+
+const firing=createFlight({mission:'ellis',enabled:false}),fsnap=firing.snapshot(),fu=firing.DW.sim.METERS_PER_UNIT;
+Object.assign(fsnap.state,{eye:[0,-2400/fu,1550/fu],right:[1,0,0],up:[0,0,1],back:[0,-1,0],velocity:[0,0,0]});
+firing.advance(.05,{stop:true,fire:true});
+assert(fsnap.guns.fired>0&&fsnap.guns.bolts.length>0,'forward fire emits live bolts inside lens volume');
+assert(fsnap.guns.bolts.every(b=>b.direction[1]>.99&&b.position[1]>fsnap.state.eye[1]),'bolts travel locally forward');
+console.log('PASS Ellis local firing: live gun emission and forward projectile travel');

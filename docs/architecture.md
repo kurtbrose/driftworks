@@ -1786,3 +1786,18 @@ The radar draw helper accepts an optional `compact` flag for a 44px-radius mobil
 instrument. Mobile comms use the existing animated portrait texture at 52px.
 Touch Start/Resume requests document fullscreen from its user gesture; the shared
 Full screen control provides a retry/exit action without coupling HUD scale to hit targets.
+
+The experimental `ellis` sortie connects the asteroid and Rime skies with a
+a shared normalized Ellis-integral lookup. `ellis-optics.js` supplies the sky
+and finite-distance ray mapping; `ellis-renderer.js` owns color/depth atlas and
+primary render targets, plus a separate full-resolution color/depth layer for
+local additive gun/engine effects. That layer is opaque-depth tested and clipped
+before the throat; distant transparent transport remains approximate.
+`scene3d.setStudyBridge` is an opt-in presentation pass:
+it reuses submitted buffers, restores raw view uniforms and native matrices after
+capture, and counts capture submissions in render statistics. Other sorties keep
+the original one-pass renderer. Antipodal traversal transports position residuals,
+ship bases, velocities and projectile directions through the same proper chart
+rotation; outward optical rays remain curved after emergence. No additional state
+is persisted. Chart, depth-shell
+and combat limitations are documented in [Ellis bridge playtest](ellis-bridge.md).

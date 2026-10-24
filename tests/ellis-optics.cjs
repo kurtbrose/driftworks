@@ -1,0 +1,45 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const context={window:{Driftworks:{}}};vm.createContext(context);
+vm.runInContext(fs.readFileSync('experiments/ellis-optics.js','utf8'),context);
+const optics=context.window.Driftworks.ellisOptics,table=optics.table(),N=optics.size;
+assert.equal(table.length,N*N*4);assert.equal(optics.table(),table,'one shared dimensionless table');
+function sample(b,u){
+ const x=Math.min(N-1,-Math.log(Math.abs(1-b))/12*(N-1)),y=u/12*(N-1);
+ const ix=Math.floor(x),iy=Math.floor(y),dx=x-ix,dy=y-iy,channel=b<1?0:2;
+ function read(a,c){const i=(Math.min(N-1,c)*N+Math.min(N-1,a))*4+channel;return (table[i]*256+table[i+1])*32/65535;}
+ return (read(ix,iy)*(1-dx)+read(ix+1,iy)*dx)*(1-dy)+(read(ix,iy+1)*(1-dx)+read(ix+1,iy+1)*dx)*dy;
+}
+// Independent quadrature in proper radial l for transmitted rays, rather than
+// the table builder's u coordinate. Endpoints span nearby and far sources.
+function radialIntegral(b,l){let sum=0,n=20000,h=l/n;for(let i=0;i<n;i++){const r2=1+((i+.5)*h)**2;sum+=b/(r2*Math.sqrt(1-b*b/r2))*h;}return sum;}
+let worst=0;
+for(const b of [.05,.2,.6,.9,.99,.999])for(const l of [.1,.5,2,12]){
+ const u=Math.asinh(l/Math.sqrt(1-b*b)),expected=radialIntegral(b,l),actual=sample(b,u);
+ worst=Math.max(worst,Math.abs(expected-actual));assert(Math.abs(expected-actual)<.006,`finite distance angle b=${b}, l=${l}`);
+}
+for(const b of [1.001,1.05,1.4,1.95])for(const u of [.1,1,4,9])assert(Math.abs(sample(b,u)-optics.integral(b,u,20000))<.006,'turning branch');
+assert.equal(optics.integral(0,5),0,'radial rays stay radial');
+assert(optics.shader.includes('ellisPoint'),'finite-distance path, not only a sky exit direction');
+console.log(`PASS Ellis optics: shared cache, independent finite-source quadrature and turning branch; worst ${worst.toFixed(6)} rad`);
+
+// Compare both exit constructions against high-precision geodesic phase. The old
+// finite difference takes a derivative of the quantized table, amplifying error.
+let analyticWorst=0,differenceWorst=0;
+for(let n=1;n<250;n++){
+ const b=.01+n/250*1.98;if(Math.abs(1-b)<1e-5)continue;
+ const root=Math.sqrt(Math.abs(1-b*b));
+ const u0=b<1?Math.asinh(1.8/root):Math.acosh(Math.max(1,1.8/root));
+ const end=b<1?Math.asinh(24/root):Math.acosh(24/root);
+ const phase=(integrate,u)=>integrate(b,u0)+integrate(b,u);
+ function point(t){const u=-u0+(end+u0)*t,angle=phase(sample,u),l=root*(b<1?Math.sinh(u):Math.cosh(u)),r=Math.sqrt(1+l*l);return [r*Math.cos(angle),r*Math.sin(angle)];}
+ const phi=phase(sample,end),exactPhi=phase((b,u)=>optics.integral(b,u,20000),end),r=Math.sqrt(577),sine=b/r;
+ const correction=Math.atan2(sine,24/r*Math.sqrt(1-sine*sine));
+ const exact=exactPhi+correction,analytic=phi+correction;
+ const a=point(.999),z=point(1),old=Math.atan2(z[1]-a[1],z[0]-a[0]);
+ const error=x=>Math.abs(Math.atan2(Math.sin(x-exact),Math.cos(x-exact)));
+ analyticWorst=Math.max(analyticWorst,error(analytic));differenceWorst=Math.max(differenceWorst,error(old));
+}
+assert(analyticWorst<.001,'analytic exit stays within lookup phase accuracy');
+assert(differenceWorst>analyticWorst*5,'negative control exposes derivative amplification');
+console.log(`PASS Ellis exit quantization: analytic ${analyticWorst.toFixed(6)} rad vs finite-difference ${differenceWorst.toFixed(6)} rad`);

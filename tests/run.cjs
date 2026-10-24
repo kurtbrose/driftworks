@@ -11,6 +11,7 @@ require('./sky-effects.cjs');
 require('./sky-environment.cjs');
 require('./star-glare.cjs');
 require('./impact-lab.cjs');
+require('./bolt-lab.cjs');
 require('./impact-sky.cjs');
 require('./planet-hero.cjs');
 require('./sky-cube.cjs');
@@ -31,6 +32,8 @@ require('./evacuation-mission.cjs');
 require('./evacuation-materials.cjs');
 require('./civilian-flight.cjs');
 require('./headless.cjs');
+require('./ellis.cjs');
+require('./ellis-optics.cjs');
 require('./pilot-training.cjs');
 require('./flight-hit-reactions.cjs');
 // Run the ordinary-script suite without adding a build or dependency pipeline.

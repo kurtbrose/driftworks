@@ -7,7 +7,7 @@ const context=vm.createContext({console,performance,AbortController,Float32Array
 context.window=context;context.DRIFTWORKS_TEST_MODE=true;context.addEventListener=noop;
 for(const name of ['vendor/three/build/three.global.js',...['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','population','session','tactical/camera','engine-audio','audio-mixer','audio','hud','mesh-builder','mining-rig','explosions','scene3d','game'].map(n=>'src/'+n+'.js')])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context,{filename:name});
 const THREE=context.THREE,DW=context.Driftworks,frames=[];
-THREE.WebGLRenderer=class {setSize(){}setRenderTarget(target){this.target=target;}setClearColor(){}clear(){}render(scene){frames.push(scene.children.filter(o=>o.material).map(o=>({geometry:o.geometry,uniforms:Object.fromEntries(Object.entries(o.material.uniforms||{}).map(([k,v])=>[k,v.value])),material:o.material,blending:o.material.blending,depthWrite:o.material.depthWrite})));}};
+THREE.WebGLRenderer=class {setSize(){}setRenderTarget(target){this.target=target;}setClearColor(){}clear(){}render(scene){frames.push(scene.children.filter(o=>o.material&&o.visible).map(o=>({geometry:o.geometry,matrix:o.matrix.elements.slice(),uniforms:Object.fromEntries(Object.entries(o.material.uniforms||{}).map(([k,v])=>[k,v.value])),material:o.material,blending:o.material.blending,depthWrite:o.material.depthWrite})));}};
 DW.audio=null;
 let world=DW.sim.createInitialWorld();Object.assign(world,{asteroids:[],ships:[],platforms:[],wrecks:[],packets:[],selectedShipIds:[]});world.combat.drones=[];
 const host=element();
@@ -77,3 +77,40 @@ host.listeners['sky-environment']({detail:{lighting,pose}});viewer.render(world,
 assert.equal(compiled.uniforms.uSkyCameraExposure.value,1,'legacy sky events reset native exposure');
 assert.equal(frames.at(-1)[1].uniforms.uCameraExposure,1,'legacy sky events reset procedural exposure');
 console.log('PASS shared camera response: native/procedural exposure parity, shader precision and legacy neutral reset');
+
+// The optional Ellis pass reuses submitted geometry and restores every raw/PBR pose.
+context.URLSearchParams=URLSearchParams;context.location={search:'?mission=ellis'};
+for(const file of ['experiments/ellis-optics.js','experiments/ellis-renderer.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
+THREE.WebGLRenderer.prototype.setViewport=noop;THREE.WebGLRenderer.prototype.setScissor=noop;THREE.WebGLRenderer.prototype.setScissorTest=noop;
+viewer.setStudyActors([{vertices:textured,color:[1,1,1],texture:{width:16,height:16},stride:8,origin:[0,-170,93],scale:2},{...batches[0],origin:[1,-168,93]}]);viewer.setStudyEffects([]);viewer.setStudyExplosions([]);
+viewer.setSurfaceCamera({eye:[0,-195,93],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+viewer.render(world,1,0,0);const ordinary=frames.at(-1)[0],rawOrdinary=frames.at(-1)[1],before=frames.length;
+viewer.setStudyBridge(true);viewer.render(world,1,0,0);
+assert.equal(frames.length-before,14,'first frame fills both six-face charts plus primary and compositor');
+assert.equal(viewer.getRenderStats().bridgeCaptures,12);
+assert.equal(frames[before][0].geometry,ordinary.geometry,'captures share production geometry');
+const count=frames.length;viewer.render(world,1,0,0);assert.equal(frames.length-count,4,'steady frame amortizes two capture faces');
+assert.equal(viewer.getRenderStats().bridgeCaptures,2);
+const chartFlip=frames.length;
+viewer.setSurfaceCamera({eye:[720,-75,93],right:[-1,0,0],up:[0,0,1],back:[0,1,0]});viewer.render(world,1,0,0);
+assert.equal(frames.length-chartFlip,14,'crossing refreshes both charts before sampling');
+viewer.setSurfaceCamera({eye:[0,-195,93],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+viewer.setStudyBridge(false);viewer.render(world,1,0,0);
+assert.deepEqual(frames.at(-1)[0].matrix,ordinary.matrix,'native PBR matrix restored');
+assert.deepEqual(Array.from(frames.at(-1)[1].uniforms.uTarget),Array.from(rawOrdinary.uniforms.uTarget),'raw camera target restored');
+assert.deepEqual(Array.from(frames.at(-1)[1].uniforms.uView),Array.from(rawOrdinary.uniforms.uView),'projection restored');
+assert.equal(viewer.getRenderStats().bridgeCaptures,0,'ordinary missions retain one pass');
+console.log('PASS Ellis scene pass: shared buffers, twelve-face warmup, rolling captures, restored view and reversible disposal');
+
+viewer.setStudyEffects([{vertices:new Float32Array(data),color:[1,.75,.25]}]);
+viewer.setStudyBridge(true);const effectStart=frames.length;viewer.render(world,1,0,0);
+assert.equal(frames.length-effectStart,15,'effects add one full-resolution pass');
+assert.equal(frames[effectStart].length,2,'opaque primary excludes additive bolts');
+const effects=frames[effectStart+1];assert.equal(effects.length,1,'separate layer contains only additive effects');
+assert.equal(effects[0].uniforms.uFinish,9);assert.equal(effects[0].depthWrite,true,'effect layer records fragment depth');
+assert(frames.slice(effectStart+2,-1).every(f=>f.every(d=>d.uniforms.uFinish!==9)),'radial shells exclude depthless effects');
+assert.equal(frames.at(-1)[0].uniforms.hasEffects,1,'compositor receives effect layer');
+viewer.setStudyBridge(false);viewer.render(world,1,0,0);
+assert.equal(frames.at(-1).length,3,'all draw visibility restored');
+assert.equal(frames.at(-1)[2].depthWrite,false,'ordinary additive depth state restored');
+console.log('PASS Ellis additive effects: separate full-resolution color/depth, shell exclusion and restored draw state');

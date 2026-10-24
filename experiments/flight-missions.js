@@ -89,6 +89,13 @@
         hint:'Look up for the jade giant. Rime fills the sky below. Fixed observation point; flight controls move the ship, not the orbital tableau.',
         sky:{jadeSystem:jadeSystem(true),rimeSurface:'jade-moons-v1/rime-disk-v2.png'}
     },'gas-giant');
+    define('ellis',{
+        title:'Ellis bridge / Driftworks',heading:'DRIFTWORKS / ELLIS BRIDGE',
+        subtitle:'ASTEROID RANGE / RIME WORMHOLE DOGFIGHT',
+        hint:'Fly through the spherical mouth ahead, above the asteroid. Turn around to return. W/S throttle / Shift boost / X stop / Esc pause.',
+        emptySpace:false,weaponsDisabled:false,sky:{wormhole:true},
+        encounter:{kind:'furball',count:8,immediate:true}
+    },'jade-rime');
     define('planet-hero',{
         title:'Planet hero flight · Driftworks',heading:'DRIFTWORKS / PLANET HERO TEST',subtitle:'STATIC PLANET BACKDROP · LOCAL DOGFIGHT',
         sky:{kind:'landmarks',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}

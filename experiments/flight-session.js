@@ -46,9 +46,41 @@
         var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.training.create('training'), contact = false, grounded = false;
         combat.useHullModels = true;
         DW.training.bindPlayer(combat, state).guns = guns;
+        /** Proper chart transport: a half-turn around the crossing radial axis.
+         * Radial motion is preserved, tangential components reverse, handedness stays positive.
+         * @param {number[]} vector @param {number[]} normal */
+        function bridgeVector(vector,normal){
+            var radial=vector.reduce(function(sum,v,i){return sum+v*normal[i];},0);
+            return vector.map(function(v,i){return 2*radial*normal[i]-v;});
+        }
+        /** Swept mouth crossing in the two exterior charts.
+         * @param {number[]} before @param {number[]} after */
+        function crossBridge(before,after){
+            var side=before[0]*units>6000?1:0;
+            var center=[side*12000/units,-2000/units,1550/units],radius=300/units;
+            var offset=before.map(function(v,i){return v-center[i];});
+            var move=after.map(function(v,i){return v-before[i];});
+            var a=move.reduce(function(sum,v){return sum+v*v;},0);
+            var b=offset.reduce(function(sum,v,i){return sum+v*move[i];},0);
+            var c=offset.reduce(function(sum,v){return sum+v*v;},0)-radius*radius;
+            var discriminant=b*b-a*c;
+            if(a<1e-20||discriminant<0||b>=0)return null;
+            var t=(-b-Math.sqrt(discriminant))/a;
+            if(t<0||t>1)return null;
+            var entry=offset.map(function(v,i){return v+move[i]*t;}),normal=entry.map(function(v){return v/radius;});
+            var remaining=bridgeVector(move.map(function(v){return v*(1-t);}),normal);
+            return {normal:normal,eye:after.map(function(v,i){
+                return center[i]+(i===0?(side?-12000:12000)/units:0)-entry[i]+remaining[i];
+            })};
+        }
         var activeProfile = model.profiles[0], remainder = 0;
         var opponentStyle = /** @type {import('./types').OpponentStyle} */ ('baseline');
         var hulls = /** @type {{ally: string; enemy: string} | null} */ (null);
+        function seedBridgeCombat(){
+            if(combat.mode==='ellis')combat.enemies.forEach(function(c,index){
+                if(index%4>=2)c.pose.eye[0]+=12000/units;
+            });
+        }
         function configureCombat() {
             combat.opponentStyle = opponentStyle;
             if (hulls) DW.training.configureHulls(combat, hulls.ally, hulls.enemy);
@@ -141,6 +173,7 @@
                 combat.countdown = 0;
             } else if (DW.flightMissions.resolve(mode).encounter.immediate) {
                 DW.training.spawn(combat, state, asteroid.radius);
+                seedBridgeCombat();
             }
             return snapshot();
         }
@@ -159,8 +192,10 @@
             grounded = false;
             remainder = 0;
             configureCombat();
-            if (combat.enabled)
+            if (combat.enabled){
                 DW.training.spawn(combat, state, asteroid.radius);
+                seedBridgeCombat();
+            }
             return snapshot();
         }
         /** @param {number} elapsed @param {Demand} controls @param {{profile: Profile; weapon: Weapon}} config */
@@ -192,7 +227,26 @@
                 };
                 updateLaunchOrigin();
                 var emptySpace=DW.flightMissions.resolve(combat.mode).emptySpace||combat.mode==='evacuation';
+                var bridge=DW.flightMissions.resolve(combat.mode).sky.wormhole;
+                var travelers=bridge?[state].concat(combat.enemies.map(function(c){return c.pose;})):[];
+                var previous=travelers.map(function(p){return p.eye.slice();});
+                var bridgeBolts=bridge?[guns].concat(combat.enemies.map(function(c){return c.guns;})).flatMap(function(g){
+                    return g.bolts.map(function(bolt){return {bolt:bolt,before:bolt.position.slice()};});
+                }):[];
                 var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, emptySpace?undefined:environment.terrainHit);
+                if(bridge){
+                    travelers.forEach(function(pose,index){
+                        var crossing=crossBridge(previous[index],pose.eye);
+                        if(!crossing)return;
+                        pose.eye=crossing.eye;pose.right=bridgeVector(pose.right,crossing.normal);
+                        pose.up=bridgeVector(pose.up,crossing.normal);pose.back=bridgeVector(pose.back,crossing.normal);
+                        pose.velocity=bridgeVector(pose.velocity,crossing.normal);
+                    });
+                    bridgeBolts.forEach(function(record){
+                        var crossing=crossBridge(record.before,record.bolt.position);
+                        if(crossing){record.bolt.position=crossing.eye;record.bolt.direction=bridgeVector(record.bolt.direction,crossing.normal);}
+                    });
+                }
                 if (feedback.fired)
                     environment.onGunshot();
                 if (feedback.impact)

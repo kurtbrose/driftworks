@@ -1,0 +1,28 @@
+{
+  "view": "return-transit",
+  "positionMeters": [
+    0,
+    -6702.547817310115,
+    1550
+  ],
+  "velocity": [
+    0,
+    -70,
+    0
+  ],
+  "scene": {
+    "bridgeCaptures": 2,
+    "bridgeCpuMs": 1.2000000476837158,
+    "drawCalls": 214,
+    "triangles": 1419497,
+    "shadowDrawCalls": 0,
+    "shadowTriangles": 0,
+    "lines": 0,
+    "meshes": 71,
+    "materials": 24,
+    "width": 1920,
+    "height": 1080,
+    "pixelRatio": 1.5,
+    "cpuMs": 1.7000000476837158
+  }
+}

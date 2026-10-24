@@ -1,0 +1,220 @@
+# Ellis bridge playtest
+
+Serve the repository and open `experiments/flight.html?mission=ellis`, or choose
+Ellis Bridge in Missions / the main index. Four wingmen and four hostiles are
+split between the asteroid range and Rime. The 300 m radius mouths are at
+(0, -2000, 1550) m and (12000, -2000, 1550) m. The first is directly ahead of the
+default start. Fly through its center, then turn around to return. Standard
+controls apply; reset restores the encounter. Deployment remains static/local.
+
+The asteroid sky uses the existing baked hero galaxy panorama. Rime uses its
+existing Jade/Rime cube faces and detailed moon disk.
+
+## Shared optics
+
+`experiments/ellis-optics.js` reduces null geodesics in the static Ellis metric
+`ds² = -dt² + dl² + (l² + a²)dΩ²` to a normalized radial integral, setting `a=1`.
+Spherical symmetry keeps each ray in a plane. Both charts and all physical sizes
+reuse the same 512 × 512 RGBA8 table (1 MiB CPU data, cached once per page).
+Its two 16-bit channel pairs store transmitted and turning branches.
+
+For conserved normalized angular momentum `b`, angular motion obeys
+`dphi/dl = b / ((1+l²) sqrt(1-b²/(1+l²)))` on an outward branch. Substitutions
+`l = sqrt(1-b²) sinh(u)` for transmitted rays and
+`l = sqrt(b²-1) cosh(u)` for turning rays remove the radial square-root endpoint.
+The table stores their cumulative integrals, not merely an asymptotic sky warp.
+A logarithmic impact-parameter coordinate concentrates samples near `b=1`.
+Both `skybox.js` and the geometry compositor use the same GLSL mapping.
+Inside the integration-entry sphere, inward and outward initial rays are both
+traced. Outward rays start on the escaping branch and remain in their current
+chart; curvature must not be disabled immediately after emergence.
+
+This follows the analytic-geodesic/precomputation approach discussed by
+[Müller, Exact geometric optics in a Morris–Thorne wormhole spacetime (2008)](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.77.044043)
+and the symmetry-based lookup strategy demonstrated for Schwarzschild geometry by
+[Bruneton (2020)](https://ebruneton.github.io/black_hole_shader/).
+The table is an original numerical implementation for Ellis geometry; it is not
+a copied Schwarzschild table or a claim of implementing those renderers verbatim.
+[James et al. (2015)](https://arxiv.org/html/1502.03809) supplies the wormhole
+camera/sky and traversal reference.
+
+## Nearby geometry and depth
+
+The rendering route follows the practical environment-map strategy described in
+[SpaceEngine's GR beta notes](https://spaceengine.org/news/blog220920/): two maps
+per wormhole with updates spread over successive frames. Its earlier
+[warp/wormhole post](https://spaceengine.org/news/blog220812/) also discusses a
+color/depth approximation specifically for warp bubbles; it does not claim that
+this exact depth-shell algorithm was used for its wormholes.
+
+`experiments/ellis-renderer.js` uses two 3 × 2 atlases of 384 px cube faces, each
+with color and depth, captured from the fixed mouth centers. Existing production
+geometry, raw materials and native PBR transforms are reused; scene composition
+and uploads happen once. Main-camera static actor culling is disabled only in
+this optional pass so offscreen actors remain available to the curved view.
+Captures temporarily rebind view uniforms and native object matrices, then restore
+them before returning. Ordinary sorties retain their original renderer path.
+
+A full-resolution primary color/depth target preserves geometry in front of the
+2a integration-entry sphere. Inside the affected image, the compositor samples
+32 ordered points along the curved trajectory, brackets a negative-to-positive
+radial depth residual, and refines that crossing with nine bisection steps. Hits
+whose residual remains larger than a capture footprint are rejected as depth or
+silhouette discontinuities. Captured color is sampled at the refined crossing. With no hit the
+compositor is transparent, exposing the identically lensed sky beneath it.
+This addresses the former unconditional asteroid/ship foreground layer.
+
+The first rendered frame and chart changes fill all twelve faces. Steady frames
+update one face per chart; `bridgeFaces=6` updates all twelve each frame for a
+quality/cost comparison. Captures are viewer-owned, allocated only for this
+mission, and disposed by `setStudyBridge(false)`. Primary targets are disposed
+and recreated on resolution changes. `bridge=legacy` and `bridge=sky` retain
+comparison paths. See the [measured comparison](benchmarks/ellis-bridge-2026-10-23.md).
+
+## Deliberate limits
+
+This is a depth-shell approximation, not triangle intersection against every
+curved ray. Each capture direction stores only its nearest surface. Concavity,
+transparency/additive effects, very close geometry, fine critical-ring images
+and temporally stale moving ships can be inaccurate. Secondary images have
+384 px capture resolution and 32 finite trajectory samples (with crossing refinement). The primary
+postprocess target does not add multisampling. Lensing is restricted to an entry
+sphere of radius 2a; the exit radial bound is 24a, and critical trajectories are
+clamped by the finite logarithmic table. These limits need further visual work.
+
+Gameplay still uses swept spherical crossing and antipodal position identification
+between Euclidean exterior charts. At a crossing, the antipodal identification
+transports the ship basis, velocity, projectile directions and residual tick
+travel by a proper half-turn around the crossing radial axis (`2nnᵀ - I`).
+This preserves speed, radial motion, orthonormality and handedness while reversing
+tangent components in the destination chart. They do not follow curved spacetime
+geodesics during ordinary exterior flight.
+The chart is selected by x < 6000 m versus x >= 6000 m. Targeting, HUD markers,
+AI route planning and projectile collision use the existing Euclidean rules;
+collision is evaluated before traversal in each physics tick. Cross-mouth combat
+is still experimental.
+
+## Validation
+
+`node tests/ellis.cjs` exercises both crossing directions, high-speed overshoot,
+near misses, no immediate bounce, gunfire and live combat in the actual session.
+`node tests/ellis-optics.cjs` compares finite-distance transmitted integrals against
+independent proper-radial quadrature, checks turning rays and shared cache reuse.
+The sampled worst angular difference was 0.000221 radians; this is not an error
+bound at the critical orbit. `tests/three-production.cjs` checks shared geometry,
+raw/native pose restoration, rolling capture counts, chart refresh and disabling.
+
+Browser inspection covers approach, oblique rim, return-side sky/asteroid,
+foreground fighter occlusion, actual forward/return crossings and a short live fight. Labeled cases and raw timing
+results are in the benchmark report. Prolonged free maneuvering, close concave
+objects, transparent effects and cross-mouth aim alignment remain unresolved.
+
+### Throat continuity regression
+
+The first version traced inward rays only and kept world-space attitudes unchanged
+at the antipodal teleport. These caused a discontinuous sky at the crossing.
+The outward branch and matching chart transport now make the limiting camera views
+agree. `node tools/prepare-ellis-continuity.cjs` generates an opt-in browser check;
+`--return` generates its reverse-direction counterpart. Both use poses immediately
+before and after a crossing executed by the real headless flight session, then
+compile the actual shared GLSL shader and compare 4096 rendered exit rays.
+
+Both directions passed with a maximum one-byte RGB difference and zero destination
+mismatches. Negative controls that disable outward curvature or skip attitude
+transport produce maximum differences of 65 and 227 bytes, respectively, so the
+check detects the original failures. This is a boundary continuity check away from
+the critical orbit, not validation of every ray near the ring. The main scene was
+also inspected in matched before/after throat stills. The existing finite 2a outer
+integration boundary, depth-shell artifacts and screen-space HUD markers remain
+separate limitations.
+
+[Raw continuity results](benchmarks/ellis-continuity-2026-10-23.json),
+[before](benchmarks/ellis-throat-before-2026-10-23.png) and
+[after](benchmarks/ellis-throat-after-2026-10-23.png).
+
+### Local additive effects
+
+Gun bolts and engine glows (`uFinish=9`) are separated from opaque geometry and
+captured into a full-resolution color/depth target. The regular scene keeps
+additive depth writes disabled; the effects-only pass writes depth and discards
+nearly transparent fragments. The compositor adds this layer only in the current
+chart, in front of the ordinary opaque depth, and before the first throat
+intersection. It excludes these effects from the radial environment captures.
+This prevents firing toward the wormhole from silently disappearing merely
+because additive materials do not write opaque depth.
+
+This is a local straight-segment approximation, not transparent curved-ray
+transport. For rays entering the lens volume the contribution fades over the last
+third of a range ending 150 m beyond the lens entry; from inside the volume this
+means 100–150 m. The physical throat clips it sooner when nearer. Distant bolts,
+bolts observed through the other mouth, and explosions still need further work.
+Simulation bolts continue moving and crossing charts independently of this fade.
+One additional full-resolution effects pass/target is used only when additive
+batches exist (the allocated target persists until resize/disposal). Existing draw
+statistics conservatively include effects in capture counts, so they overestimate
+actual capture submissions.
+
+Validation: real-session forward firing inside the lens volume emits bolts and
+advances them forward (`tests/ellis.cjs`); the production submission regression
+checks effect-only depth, exclusion from shells, and restoration of visibility and
+normal additive state (`tests/three-production.cjs`). Browser inspection at
+100 m before the throat shows the yellow forward bolt glow while live projectiles
+cross into the destination chart. See the [firing still](benchmarks/ellis-firing-2026-10-23.png).
+
+A live eight-second firing sample at 1920×1080 on the RTX 3070 Ti averaged
+14.02 ms/frame (about 71 fps), 2.74 ms presentation CPU and 1.46 ms bridge CPU.
+There were 571 samples and seven surviving fighters at the end. This is a live
+workload observation, not a matched before/after optimization comparison or GPU
+timing; no GPU timer extension was available. [Raw firing timings](benchmarks/ellis-firing-2026-10-23.json).
+
+### Sampling artifacts and quality pass (2026-10-24)
+
+The sky formerly estimated its exit direction by subtracting points at `t=.999`
+and `t=1`. This differentiated the quantized lookup field and amplified small
+phase errors into visible bands and planet/space slices. The exit direction now
+uses the radial/tangent basis and conserved impact parameter analytically at the
+same finite outer endpoint. The table itself remains unchanged. Across 248
+noncritical test rays, maximum direction error against high-resolution quadrature
+fell from 0.018791 rad to 0.000358 rad. This is a sampled regression, not a bound
+near the critical orbit. The real GLSL crossing fixture still differs by at most
+one RGB byte across either throat direction.
+
+The former geometry test accepted any point behind a captured depth. A captured
+ship texel could therefore become an extended radial wedge, producing floating
+rectangles and repeated strips. The compositor now seeks and refines a shell
+crossing and rejects large residuals at depth jumps. Capture faces increased from
+192 to 384 px. This reduces the artifacts rather than making a nearest-surface
+map equivalent to full scene ray tracing. Very small or occluded objects can
+still be missed, and rolling captures can still lag moving objects by five frames.
+The physical critical ring and genuine magnification remain visible.
+
+The first refined version retained 64 coarse steps and cost 31.46 ms/frame in the
+frozen magnified-limb fixture. Using 32 coarse steps plus local refinement reduced
+that to 17.93 ms (about 56 fps); presentation CPU averaged 1.52 ms. The old coarse
+shell acceptance at the same 384 px capture resolution averaged 13.34 ms (75 fps),
+but reproduced the floating rectangles. All runs used 1920×1080 backing size,
+the RTX 3070 Ti, eight frozen fighters, the same pose and two rolling faces/frame.
+These are frame timings without a GPU timer, measured while the full test suite
+was also running; they are workload observations rather than universal budgets.
+Raw results: [coarse](benchmarks/ellis-quality-coarse-2026-10-24.json),
+[64-step refined](benchmarks/ellis-quality-refined-2026-10-24.json), and
+[32-step refined](benchmarks/ellis-quality-refined32-2026-10-24.json).
+
+Visual inspection covered the oblique rim and magnified limb, plus slow actual
+flight toward/through the throat. The [coarse control](benchmarks/ellis-limb-coarse-2026-10-24.png)
+shows the patches; the [refined view](benchmarks/ellis-limb-quality-2026-10-24.png)
+has a smooth limb and omits those wedges. Subpixel silhouette aliasing,
+nearest-shell occlusion, critical-orbit sampling and long dogfights remain limits.
+The benchmark generator's `quality=coarse` option restores the former shell
+acceptance only in that development page for comparisons; production has one path.
+
+The final 32-step version was also inspected during actual 2 m/s flight from the
+magnified-limb fixture through the throat. The camera emerged in the destination
+chart, and the enlarged limb remained smooth in the inspected views. The live
+sample averaged 18.93 ms/frame (about 53 fps), with 51.5 ms p95 while the test suite
+was running; there is still frame-time variation to investigate. See the
+[final live sample](benchmarks/ellis-quality-live32-2026-10-24.json),
+[moving still](benchmarks/ellis-limb-moving-2026-10-24.png), and
+[updated GPU continuity checks](benchmarks/ellis-quality-continuity-2026-10-24.json).
+`npm run check`, the focused optics and production-renderer tests, asset hash
+validation, and `git diff --check` passed after this quality pass.

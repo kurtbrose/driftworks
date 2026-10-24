@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8"><title>Relativistic sky experiment</title>
+<style>body{margin:0;background:#050810;color:#eee;font:16px system-ui}header{position:absolute;z-index:1;background:#101724dd;padding:12px}canvas{display:block}select,button{font:inherit}small{display:block;margin-top:6px}</style>
+<header>0.99c toward +X · <select id="mode"><option value="original">Original</option><option value="geometry">Aberration only</option><option value="shifted" selected>Aberration + approximate spectrum</option></select>
+<button id="forward">Forward</button><button id="back">Rear</button><button id="side">Side</button>
+<small>Drag to look · wheel changes field of view · +Z is up · fixed exposure</small><small id="status">Loading six faces…</small></header>
+<script src="../../src/asset-versions.js?v=16308cf0b7d6"></script>
+<script src="../../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
+<script>
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);document.body.append(renderer.domElement);
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,10);camera.up.set(0,0,1);
+let yaw=0,pitch=0,drag=false;const textures={};
+const skyMaterial=new THREE.ShaderMaterial({uniforms:{sky:{value:null}},side:THREE.BackSide,depthWrite:false,vertexShader:'varying vec3 ray; void main(){ray=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform samplerCube sky; varying vec3 ray; void main(){gl_FragColor=textureCube(sky,normalize(ray));\n#include <colorspace_fragment>\n}'});
+scene.add(new THREE.Mesh(new THREE.BoxGeometry(2,2,2),skyMaterial));
+const names=['px','nx','py','ny','pz','nz'];
+Promise.all(['original','geometry','shifted'].map(mode=>new Promise((resolve,reject)=>{new THREE.CubeTextureLoader().load(names.map(n=>mode+'/'+n+'.png'),t=>{t.colorSpace=THREE.SRGBColorSpace;textures[mode]=t;resolve();},undefined,reject);}))).then(()=>{skyMaterial.uniforms.sky.value=textures.shifted;document.querySelector('#status').textContent='Six baked faces loaded. RGB spectrum is an assumed 6500 K blackbody modulation.';}).catch(e=>document.querySelector('#status').textContent=String(e));
+document.querySelector('#mode').onchange=e=>skyMaterial.uniforms.sky.value=textures[e.target.value];
+document.querySelector('#forward').onclick=()=>{yaw=0;pitch=0;};document.querySelector('#back').onclick=()=>{yaw=Math.PI;pitch=0;};document.querySelector('#side').onclick=()=>{yaw=Math.PI/2;pitch=0;};
+renderer.domElement.onpointerdown=e=>{drag=true;renderer.domElement.setPointerCapture(e.pointerId);};renderer.domElement.onpointerup=()=>drag=false;
+renderer.domElement.onpointermove=e=>{if(drag){yaw+=e.movementX*.004;pitch=Math.max(-1.55,Math.min(1.55,pitch+e.movementY*.004));}};
+renderer.domElement.onwheel=e=>{e.preventDefault();camera.fov=Math.max(25,Math.min(110,camera.fov+e.deltaY*.03));camera.updateProjectionMatrix();};
+onresize=()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();};
+function frame(){camera.lookAt(Math.cos(pitch)*Math.cos(yaw),Math.cos(pitch)*Math.sin(yaw),Math.sin(pitch));renderer.render(scene,camera);requestAnimationFrame(frame);}frame();
+</script>

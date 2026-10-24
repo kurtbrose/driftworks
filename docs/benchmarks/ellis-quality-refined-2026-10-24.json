@@ -1,0 +1,64 @@
+{
+  "mode": "new",
+  "view": "limb",
+  "live": false,
+  "samples": 254,
+  "visibility": "visible",
+  "viewport": [
+    1280,
+    720
+  ],
+  "dpr": 1.5,
+  "backing": [
+    1920,
+    1080
+  ],
+  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "gpuTimerAvailable": false,
+  "frame": {
+    "mean": 31.461417323022378,
+    "p50": 28.299999952316284,
+    "p95": 99.20000004768372
+  },
+  "cpu": {
+    "mean": 1.455905513969932,
+    "p50": 1.5,
+    "p95": 1.9000000953674316
+  },
+  "draws": {
+    "mean": 91,
+    "p50": 91,
+    "p95": 91
+  },
+  "triangles": {
+    "mean": 1212029,
+    "p50": 1212029,
+    "p95": 1212029
+  },
+  "captures": {
+    "mean": 2,
+    "p50": 2,
+    "p95": 2
+  },
+  "bridgeCpu": {
+    "mean": 0.7303149648538725,
+    "p50": 0.7000000476837158,
+    "p95": 1
+  },
+  "actors": 8,
+  "scene": {
+    "bridgeCaptures": 2,
+    "bridgeCpuMs": 0.7000000476837158,
+    "drawCalls": 91,
+    "triangles": 1212029,
+    "shadowDrawCalls": 0,
+    "shadowTriangles": 0,
+    "lines": 0,
+    "meshes": 30,
+    "materials": 22,
+    "width": 1920,
+    "height": 1080,
+    "pixelRatio": 1.5,
+    "cpuMs": 1
+  }
+}

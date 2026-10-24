@@ -1,0 +1,7 @@
+{
+  "experiments/ellis-optics.js": "1ae3517e98ae887e9c8a28c44052588ae8db7ce0e45e4c777137828197fbccd1",
+  "experiments/ellis-renderer.js": "37601be6e9e099aeafc31ddef9e104a1b515faa67aa270f6cdb9f793fcafac54",
+  "experiments/flight-presentation.js": "a90db4dc0acc19595f944c759eacf9fd4f915eded7c83c5b9cfcff97975250de",
+  "src/scene3d.js": "1590df3fc71ab53fde62a2ed25a9800a91c20534ca8e4ccf30b844ce2689a0d0",
+  "tools/prepare-ellis-benchmark.cjs": "6430e15182b51961f363458bd1b9d98594ffb2e1fff52aeab93a95454298fa12"
+}
