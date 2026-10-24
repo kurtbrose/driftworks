@@ -6,6 +6,7 @@ export type BoltRangeModel = {
  local(basis:Basis,point:V3):V3;
  advance(shot:BallisticShot,dt:number):void;
  bodyLength(speed:number,interval:number,diameter:number,frames:number):number;
+ projectedBody(position:V3,velocity:V3,eye:V3,basis:Basis,length:number,diameter:number):{center:V3;span:[number,number]}|null;
  crossing(distance:number,phase:number):{position:V3;direction:V3};
 };
 declare module '../src/types' {interface DriftworksNamespace {boltRangeModel?:BoltRangeModel}}

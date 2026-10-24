@@ -75,13 +75,6 @@
         var activeProfile = model.profiles[0], remainder = 0;
         var opponentStyle = /** @type {import('./types').OpponentStyle} */ ('baseline');
         var hulls = /** @type {{ally: string; enemy: string} | null} */ (null);
-        function seedBridgeCombat(){
-            state.region=0;
-            if(combat.mode==='ellis')combat.enemies.forEach(function(c,index){
-                c.pose.region=index%4>=2?1:0;
-                if(c.pose.region)c.pose.eye[0]+=12000/units;
-            });
-        }
         function configureCombat() {
             combat.opponentStyle = opponentStyle;
             if (hulls) DW.training.configureHulls(combat, hulls.ally, hulls.enemy);
@@ -174,7 +167,6 @@
                 combat.countdown = 0;
             } else if (DW.flightMissions.resolve(mode).encounter.immediate) {
                 DW.training.spawn(combat, state, asteroid.radius);
-                seedBridgeCombat();
             }
             return snapshot();
         }
@@ -195,7 +187,6 @@
             configureCombat();
             if (combat.enabled){
                 DW.training.spawn(combat, state, asteroid.radius);
-                seedBridgeCombat();
             }
             return snapshot();
         }
@@ -229,7 +220,7 @@
                 updateLaunchOrigin();
                 var emptySpace=DW.flightMissions.resolve(combat.mode).emptySpace||combat.mode==='evacuation';
                 var bridge=DW.flightMissions.resolve(combat.mode).sky.wormhole;
-                var travelers=bridge?[state].concat(combat.enemies.map(function(c){return c.pose;})):[];
+                var travelers=bridge?[state,...combat.enemies.map(function(c){return c.pose;}),...combat.wrecks.map(function(c){return c.pose;})]:[];
                 var previous=travelers.map(function(p){return p.eye.slice();});
                 var bridgeBolts=bridge?[guns].concat(combat.enemies.map(function(c){return c.guns;})).flatMap(function(g){
                     return g.bolts.map(function(bolt){return {bolt:bolt,before:bolt.position.slice()};});

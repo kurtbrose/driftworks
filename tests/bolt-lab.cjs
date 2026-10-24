@@ -29,3 +29,18 @@ for(const yaw of [0,Math.PI/4,Math.PI/2]){
  near(6+(body-6)*projected,6+(body-6)*Math.abs(Math.sin(yaw)));
 }
 console.log('PASS flight-aligned bodies: frame travel coverage, compact/two-frame modes and head-on/side-on projection');
+// Project two successive positions independently. Body axis must be collinear
+// with that trajectory, including off-axis depth motion and camera banking.
+for(const angles of [[0,0,0],[.25,-.2,.6]])for(const velocity of [[900,0,500],[0,0,-1100],[0,0,1100]]){
+ const basis=model.basis(...angles),position=[-150,95,-500],eye=[12,-5,4];
+ const body=model.projectedBody(position,velocity,eye,basis,100,6);assert.ok(body);
+ const project=p=>{const r=p.map((n,i)=>n-eye[i]),z=-dot(r,basis.back);return [dot(r,basis.right)/z,dot(r,basis.up)/z];};
+ const a=project(position),b=project(position.map((n,i)=>n+velocity[i]*.01));
+ const dx=b[0]-a[0],dy=b[1]-a[1];
+ near(body.span[0]*dy-body.span[1]*dx,0);
+ assert.ok(body.span[0]*dx+body.span[1]*dy>0);
+}
+const straight=model.projectedBody([0,0,-500],[0,0,-1100],[0,0,0],model.basis(0,0,0),100,6);near(Math.hypot(...straight.span),0);
+assert.equal(model.projectedBody([0,0,10],[0,0,1100],[0,0,0],model.basis(0,0,0),6,6),null);
+const clipped=model.projectedBody([1,2,5],[0,0,1100],[0,0,0],model.basis(0,0,0),100,6);assert.ok([...clipped.center,...clipped.span].every(Number.isFinite));
+console.log('PASS perspective alignment: off-axis crossing, axial travel, camera rotation and near-plane clipping');

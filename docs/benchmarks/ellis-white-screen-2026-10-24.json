@@ -1,0 +1,65 @@
+{
+  "url": "http://localhost:8000/experiments/flight.html?mission=ellis",
+  "logs": [],
+  "canvases": [
+    {
+      "className": "flight-skybox",
+      "clientHeight": 937,
+      "clientWidth": 902,
+      "height": 1406,
+      "width": 1353
+    },
+    {
+      "className": "",
+      "clientHeight": 937,
+      "clientWidth": 902,
+      "height": 1406,
+      "width": 1353
+    },
+    {
+      "className": "scene3d-overlay",
+      "clientHeight": 937,
+      "clientWidth": 902,
+      "height": 1406,
+      "width": 1353
+    },
+    {
+      "className": "sky-camera-effects",
+      "clientHeight": 937,
+      "clientWidth": 902,
+      "height": 937,
+      "width": 902
+    },
+    {
+      "className": "",
+      "clientHeight": 125,
+      "clientWidth": 211,
+      "height": 188,
+      "width": 317
+    },
+    {
+      "className": "scene3d-overlay",
+      "clientHeight": 125,
+      "clientWidth": 211,
+      "height": 188,
+      "width": 317
+    },
+    {
+      "className": "radio-portrait",
+      "clientHeight": 0,
+      "clientWidth": 0,
+      "height": 512,
+      "width": 512
+    },
+    {
+      "className": "gpu-flight-hud",
+      "clientHeight": 937,
+      "clientWidth": 902,
+      "height": 1406,
+      "width": 1353
+    }
+  ],
+  "minimalProbe": "[\n  {\n    \"type\": \"webgl\",\n    \"available\": false\n  },\n  {\n    \"type\": \"webgl2\",\n    \"available\": false\n  }\n]",
+  "gpuSnapshot": "RTX 3070 Ti; driver 610.88; 2756/8192 MiB; 40 C; 40% GPU; 29 W",
+  "systemEventLog": "Read denied by OS; reset history not established"
+}

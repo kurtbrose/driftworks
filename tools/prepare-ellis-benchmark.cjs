@@ -22,11 +22,13 @@ function probe(){
   }};
  }
  let compareRequested=false;
- let stages={},gpuRows=[],gpuInvalid=0;
+ let stages={},gpuRows=[],gpuInvalid=0,contextLosses=0;
  function timer(gl){
+  if(gl)gl.canvas.addEventListener('webglcontextlost',()=>{contextLosses++;});
   const modern=gl&&gl.getExtension('EXT_disjoint_timer_query_webgl2'),ext=modern||gl&&gl.getExtension('EXT_disjoint_timer_query'),pending=[];
   if(!ext||!params.has('gpu'))return ()=>()=>{};
   return stage=>{
+   if(contextLosses)return ()=>{};
    if(gl.getParameter(ext.GPU_DISJOINT_EXT)){gpuInvalid+=pending.length;pending.splice(0).forEach(p=>modern?gl.deleteQuery(p.q):ext.deleteQueryEXT(p.q));}
    while(pending.length){const p=pending[0],available=modern?gl.getQueryParameter(p.q,gl.QUERY_RESULT_AVAILABLE):ext.getQueryObjectEXT(p.q,ext.QUERY_RESULT_AVAILABLE_EXT);if(!available)break;
     const ns=modern?gl.getQueryParameter(p.q,gl.QUERY_RESULT):ext.getQueryObjectEXT(p.q,ext.QUERY_RESULT_EXT);gpuRows.push({stage:p.stage,ms:ns/1e6});modern?gl.deleteQuery(p.q):ext.deleteQueryEXT(p.q);pending.shift();
@@ -53,6 +55,7 @@ function probe(){
    const stage=scene.children.some(o=>o.material&&o.material.fragmentShader&&o.material.fragmentShader.startsWith('#define ELLIS_REFINE_PASS'))?'refinement':scene.children.some(o=>o.material&&o.material.fragmentShader&&o.material.fragmentShader.includes('ELLIS_HIT_MAP_PASS'))?'hitMap':atlas()?'captures':target?'primary':scene.children.some(o=>o.material&&o.material.uniforms&&o.material.uniforms.sourceDepth)?'compositor':'screen',t=performance.now(),end=clock(stage);
    render(scene,camera);end();if(atlas())captured++;
    if(stage==='compositor')fastScene=scene;
+   if(params.get('bridgeTemporal')==='1'&&compareRequested){compareRequested=false;document.querySelector('#bench-result').textContent='Temporal validation uses separate matched runs; synchronous comparison is disabled.';}
    if((compareRequested==='map'&&stage==='refinement')||(compareRequested==='angle'&&stage==='compositor')){
     const comparison=compareRequested;compareRequested=false;const gl=this.getContext(),w=gl.drawingBufferWidth,h=gl.drawingBufferHeight,obj=fastScene.children.find(o=>o.material&&o.material.uniforms&&o.material.uniforms.useHitMap),original=obj.material;
     if(!referenceMaterial)referenceMaterial=new window.THREE.RawShaderMaterial({vertexShader:original.vertexShader,fragmentShader:'#define ELLIS_FULL_PASS\n'+original.fragmentShader,uniforms:original.uniforms,side:window.THREE.DoubleSide,transparent:false,depthTest:false,depthWrite:false,blending:window.THREE.NoBlending,defaultAttributeValues:{}});
@@ -90,18 +93,24 @@ function probe(){
    if(view==='return-transit'){eye=[12000,-1600,1550];f=[0,-1,0];}
    if(view==='rim'){eye=[550,-2200,1550];const d=Math.hypot(550,200);f=[-550/d,200/d,0];}
    if(view==='moon'){eye=[12000,-1250,1550];f=[0,-1,0];}
+   if(view==='moon-away'){eye=[12000,-1250,1550];f=[0,1,0];}
    Object.assign(s.state,{eye:eye.map(x=>x/u),right:[f[1],-f[0],0],up:[0,0,1],back:f.map(x=>-x),velocity:[0,0,0],ramp:[0,0,0],throttle:0});
    if(view==='after-throat'){s.state.right=[-1,0,0];s.state.up=[0,0,-1];}
-   if(view==='warped'){s.combat.enemies[0].pose.eye=[12000/u,-1650/u,1550/u];s.combat.enemies[0].pose.back=[0,-1,0];}
+   s.state.region=['moon','moon-away','return-transit','after-throat'].includes(view)?1:0;
+   if(view==='warped'){s.combat.enemies[0].pose.region=1;s.combat.enemies[0].pose.eye=[12000/u,-1650/u,1550/u];s.combat.enemies[0].pose.back=[0,-1,0];}
    if(view==='foreground'){s.combat.enemies[0].pose.eye=[0,-3150/u,1550/u];s.combat.enemies[0].pose.back=[0,-1,0];}
    return s;
   };
   const advance=result.advance;result.advance=function(dt,controls,config){return live&&!frozen?advance(dt,{...controls,stop:!fly,throttle:fly?1:null,fire:firing},config):result.snapshot();};
+  const scenery=result.advanceScenery;result.advanceScenery=function(dt){if(live&&!frozen)scenery(dt);};
   session=result;return result;
  };
  const mount=DW.flightPresentation.mount;
  DW.flightPresentation.mount=function(...args){const result=mount(...args),render=result.render;
-  result.render=function(...args){stages={};const t=performance.now();render(...args);if(collect){const now=performance.now(),s=result.renderStats().scene;rows.push({frame:now-last,cpu:now-t,draws:s.drawCalls,triangles:s.triangles,captures:s.bridgeCaptures||0,bridgeCpu:s.bridgeCpuMs||0,stages});last=now;}};
+  let panAngle=0;
+  result.render=function(...args){
+   if(params.has('pan')){panAngle+=params.get('pan')==='fast'?.1:.001;const s=args[0].state;s.right=[Math.cos(panAngle),-Math.sin(panAngle),0];s.back=[-Math.sin(panAngle),-Math.cos(panAngle),0];result.pose(s);args[0]={...args[0],world:session.snapshot().world};}
+   stages={};const t=performance.now();render(...args);if(collect){const now=performance.now(),s=result.renderStats().scene;rows.push({frame:now-last,cpu:now-t,historyValid:s.bridgeHistoryValid||0,draws:s.drawCalls,triangles:s.triangles,captures:s.bridgeCaptures||0,bridgeCpu:s.bridgeCpuMs||0,stages});last=now;}};
   presentation=result;return result;
  };
  const panel=document.createElement('details');panel.open=true;panel.id='ellis-benchmark';
@@ -121,8 +130,8 @@ function probe(){
    collect=false;const stat=k=>{const a=rows.map(r=>r[k]).sort((a,b)=>a-b);return {mean:a.reduce((a,b)=>a+b,0)/a.length,p50:a[Math.floor(a.length*.5)],p95:a[Math.floor(a.length*.95)]};};
    const canvas=document.querySelector('#viewer canvas'),gl=canvas.getContext('webgl2')||canvas.getContext('webgl'),ext=gl.getExtension('WEBGL_debug_renderer_info');
    const stageStats={};for(const name of ['captures','primary','hitMap','compositor','refinement','screen']){stageStats[name]={};for(const key of ['calls','triangles','cpu']){const a=rows.map(r=>(r.stages[name]||{})[key]||0).sort((a,b)=>a-b);stageStats[name][key]={mean:a.reduce((a,b)=>a+b,0)/a.length,p95:a[Math.floor(a.length*.95)]};}}
-   const gpu={invalid:gpuInvalid,stages:{}};for(const stage of ['sky','captures','primary','hitMap','compositor','refinement','screen']){const a=gpuRows.filter(r=>r.stage===stage).map(r=>r.ms).sort((a,b)=>a-b);gpu.stages[stage]={samples:a.length,mean:a.length?a.reduce((a,b)=>a+b,0)/a.length:null,p50:a.length?a[Math.floor(a.length*.5)]:null,p95:a.length?a[Math.floor(a.length*.95)]:null};}
-   const result={geometryAngle:params.get('bridgeAngle')||'unlimited',geometry:params.get('bridgeGeometry')||'full',hoist:params.has('hoist'),gpu,sampleStart,sampleEnd:new Date().toISOString(),stageStats,ablation:params.get('ablate'),cap:params.get('cap')||'0',scale:params.get('scale')||'1',mode,view,quality:params.get('quality')||'refined',live,samples:rows.length,visibility:document.visibilityState,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,backing:[canvas.width,canvas.height],renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'unavailable',gpuTimerAvailable:!!(gl.getExtension('EXT_disjoint_timer_query_webgl2')||gl.getExtension('EXT_disjoint_timer_query')),frame:stat('frame'),cpu:stat('cpu'),draws:stat('draws'),triangles:stat('triangles'),captures:stat('captures'),bridgeCpu:stat('bridgeCpu'),actors:session.snapshot().combat.enemies.filter(c=>c.hp>0).length,scene:presentation.renderStats().scene};
+   const gpu={valid:contextLosses===0,contextLosses,invalid:gpuInvalid,stages:{}};for(const stage of ['sky','captures','primary','hitMap','compositor','refinement','screen']){const a=gpuRows.filter(r=>r.stage===stage).map(r=>r.ms).sort((a,b)=>a-b);gpu.stages[stage]={samples:a.length,mean:a.length?a.reduce((a,b)=>a+b,0)/a.length:null,p50:a.length?a[Math.floor(a.length*.5)]:null,p95:a.length?a[Math.floor(a.length*.95)]:null};}
+   const result={temporalTile:params.get('bridgeTemporalTile')==='1'?1:8,temporal:params.get('bridgeTemporal')==='1',pan:params.get('pan'),historyValid:stat('historyValid'),geometryAngle:params.get('bridgeAngle')||'unlimited',geometry:params.get('bridgeGeometry')||'full',hoist:params.has('hoist'),gpu,sampleStart,sampleEnd:new Date().toISOString(),stageStats,ablation:params.get('ablate'),cap:params.get('cap')||'0',scale:params.get('scale')||'1',mode,view,quality:params.get('quality')||'refined',live,samples:rows.length,visibility:document.visibilityState,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,backing:[canvas.width,canvas.height],renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'unavailable',gpuTimerAvailable:!!(gl.getExtension('EXT_disjoint_timer_query_webgl2')||gl.getExtension('EXT_disjoint_timer_query')),frame:stat('frame'),cpu:stat('cpu'),draws:stat('draws'),triangles:stat('triangles'),captures:stat('captures'),bridgeCpu:stat('bridgeCpu'),actors:session.snapshot().combat.enemies.filter(c=>c.hp>0).length,scene:presentation.renderStats().scene};
    document.querySelector('#bench-result').textContent=JSON.stringify(result,null,2);document.querySelector('#bench-result').dataset.complete='true';
   },8000);},2000);
  };

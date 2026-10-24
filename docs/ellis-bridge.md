@@ -284,3 +284,47 @@ unresolved. Both experiments remain opt-in and the default remains full/unlimite
 Raw timings: [recovery measurements](benchmarks/ellis-recovery-2026-10-24.json).
 Focused optics/renderer tests, type checking, and npm run check passed before
 this recovery run. Positive-geometry and motion QA remain outstanding.
+
+## Region ownership
+
+Flight poses, projectiles, impact effects and submitted geometry carry a numeric
+`region` (0 = asteroid range, 1 = Rime; omitted means 0 for existing callers).
+Crossing the swept throat transfers membership along with position and basis.
+Wrecks also traverse. Wave spawning distributes both teams across the regions.
+The existing 12,000 m coordinate offset remains a storage transform, not a
+physical separation or a rule for determining membership: moving across x=6000
+cannot change region. Sky and geometry optics receive the camera region explicitly.
+
+The ordinary color/depth pass includes only the camera's region. Each radial
+capture independently includes only the region it represents. Fleet hulls,
+scorches, engines, projectiles and explosions retain region when batched; static
+asteroid-range scenery defaults to region 0. Thus other-region objects can be
+seen only on traced paths into that region, regardless of coordinate proximity.
+
+Radar, HUD markers, target acquisition/cycling, gun convergence, AI opponents and
+projectile damage use local membership. Asteroid terrain applies only to region 0.
+Radar marks the local throat; telemetry identifies the region and throat range.
+Cross-throat radar/target locks are intentionally unsupported until there is an
+optical bearing/path-distance solution, rather than displaying storage distances.
+This remains an approximate Ellis renderer and throat transport, not a general
+curved-space physics engine. The adaptive renderer remains opt-in.
+
+Region verification: focused real-session tests cover two-way player/projectile
+membership transfer, colocated remote hulls being untargetable/non-collidable,
+and wreck/explosion ownership. Renderer tests place two regions at identical
+coordinates and inspect the primary pass and all twelve capture faces. Browser
+checks covered asteroid approach, Rime facing toward and away from the throat,
+and live forward crossing with continuous fire (Rime telemetry, 372 shots,
+no console errors). Captures: [approach](benchmarks/ellis-region-approach.png),
+[Rime away](benchmarks/ellis-region-rime-away.png),
+[live crossing](benchmarks/ellis-region-live-crossing.png).
+
+
+Temporal hit-map reuse is available only with `bridgeTemporal=1` and remains an
+experiment. Preliminary frozen-view measurements show 4.05 -> 3.08 ms total
+adaptive geometry GPU time using alternating 8x8 tiles; one-pixel alternation
+saved essentially nothing. Scene motion currently invalidates the whole history,
+so this is not yet a demonstrated dogfight improvement. See the
+[temporal report](benchmarks/ellis-temporal-2026-10-24.md) for revision ownership,
+rotation-only reprojection, one-frame age bounds, invalidation, context-loss
+findings and incomplete browser acceptance.

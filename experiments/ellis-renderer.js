@@ -17,17 +17,19 @@
     /** @param {Three} THREE @param {Renderer} renderer */
     function create(THREE,renderer){
         var units=DW.sim.METERS_PER_UNIT,size=384,next=0,initialized=false,lastSide=-1;
-        var params=new URLSearchParams(location.search),updates=params.get('bridgeFaces')==='6'?6:1,adaptive=params.get('bridgeGeometry')==='adaptive';
+        var params=new URLSearchParams(location.search),updates=params.get('bridgeFaces')==='6'?6:1,objects=params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
         /** @param {number} width @param {number} height */
         function target(width,height){
             var t=new THREE.WebGLRenderTarget(width,height,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
             return Object.assign(t,{depthTexture:new THREE.DepthTexture(width,height,THREE.UnsignedIntType)});
         }
         var atlases=[target(size*3,size*2),target(size*3,size*2)];
-        var primary=target(1,1),effects=target(1,1),hitMap=target(1,1),primaryWidth=1,primaryHeight=1;
+        var primary=target(1,1),effects=target(1,1),hitMap=target(1,1),historyMap=target(1,1),primaryWidth=1,primaryHeight=1;
+        var historyPose=/** @type {Pose|null} */(null),historyRevision=/** @type {string|null} */(null),historyFocal=0,phase=0;
         var lookup=new THREE.DataTexture(DW.ellisOptics.table(),512,512,THREE.RGBAFormat);
         lookup.minFilter=THREE.LinearFilter;lookup.magFilter=THREE.LinearFilter;lookup.needsUpdate=true;lookup.flipY=false;
         /** @type {Record<string,{value:Value}>} */var uniforms={
+            historyMap:{value:historyMap.texture},historyValid:{value:0},historyPhase:{value:0},historyTile:{value:params.get('bridgeTemporalTile')==='1'?1:8},previousRight:{value:[1,0,0]},previousUp:{value:[0,0,1]},previousBack:{value:[0,-1,0]},
             maxGeometryAngle:{value:params.has('bridgeAngle')&&Number(params.get('bridgeAngle'))>0?Number(params.get('bridgeAngle'))*Math.PI/180:1.e6},hitMap:{value:hitMap.texture},hitSize:{value:[1,1]},useHitMap:{value:adaptive?1:0},
             effectColor:{value:effects.texture},effectDepth:{value:effects.depthTexture},hasEffects:{value:0},
             ellisTable:{value:lookup},sourceColor:{value:primary.texture},sourceDepth:{value:primary.depthTexture},
@@ -188,11 +190,42 @@ void main(){
         var material=resolveMaterial(''),fullMaterial=resolveMaterial('#define ELLIS_FULL_PASS\n'),refineMaterial=resolveMaterial('#define ELLIS_REFINE_PASS\n');
         var mapMaterial=new THREE.RawShaderMaterial({
             vertexShader:'precision highp float;attribute vec2 position;varying vec2 screen;void main(){screen=position;gl_Position=vec4(position,0.,1.);}',
-            fragmentShader:fieldShader+`// ELLIS_HIT_MAP_PASS
+            fragmentShader:(temporal?'#define ELLIS_TEMPORAL\n':'')+fieldShader+`// ELLIS_HIT_MAP_PASS
+uniform sampler2D historyMap;
+uniform float historyValid,historyPhase,historyTile;
+uniform vec3 previousRight,previousUp,previousBack;
 void main(){
  vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
- vec3 h=trace(ellisInit(eye,ray));float quantized=floor(clamp(h.x,0.,1.)*65535.+.5);
- gl_FragColor=vec4(floor(quantized/256.)/255.,mod(quantized,256.)/255.,(h.y+1.)*.25,h.z);
+ EllisRay e=ellisInit(eye,ray);
+#ifdef ELLIS_TEMPORAL
+ // Rotation-only reprojection: identical eye means the world ray follows the
+ // same curved path. No perspective position reprojection through the throat.
+ if(historyValid>.5&&mod(floor(gl_FragCoord.x/historyTile)+floor(gl_FragCoord.y/historyTile),2.)!=historyPhase&&abs(e.b-1.)>.03){
+  float forward=dot(ray,-previousBack);
+  vec2 uv=vec2(dot(ray,previousRight)*focal/aspect,dot(ray,previousUp)*focal)/max(.00001,forward)*.5+.5;
+  if(forward>0.&&min(uv.x,uv.y)>1./hitSize.x&&max(uv.x,uv.y)<1.-1./hitSize.y){
+   vec2 cell=floor(uv*hitSize-.5),center=(floor(uv*hitSize)+.5)/hitSize;
+   vec4 h=texture2D(historyMap,center);
+   float low=3.,high=0.;
+   for(int y=0;y<2;y++)for(int x=0;x<2;x++){
+    vec4 n=texture2D(historyMap,(cell+vec2(float(x),float(y))+.5)/hitSize);
+    float kind=step(.5,n.a)*(floor(n.b*4.+.5));low=min(low,kind);high=max(high,kind);
+   }
+   bool fresh=h.a>.9||(h.a>.2&&h.a<.3),valid=high-low<.1;
+   if(h.a>.5){
+    float t=dot(h.rg,vec2(65280.,255.))/65535.,side,travel;
+    vec3 point=ellisPointPhase(e,t,side,travel);
+    float footprint=max(1.,length(point-vec3(side*12000.,-2000.,1550.))*.008);
+    valid=valid&&side==floor(h.b*4.+.5)-1.&&travel<=maxGeometryAngle&&abs(shellGap(point,side))<footprint&&shellColor(point,side).a>.5;
+   }
+   // Never propagate reused history again: every accepted sample is at most
+   // one frame old, including under rotation and for empty-space samples.
+   if(fresh&&valid){gl_FragColor=vec4(h.rgb,h.a>.5?.75:0.);return;}
+  }
+ }
+#endif
+ vec3 h=trace(e);float quantized=floor(clamp(h.x,0.,1.)*65535.+.5);
+ gl_FragColor=vec4(floor(quantized/256.)/255.,mod(quantized,256.)/255.,(h.y+1.)*.25,h.z>.5?1.:.25);
 }`,
             uniforms:uniforms,side:THREE.DoubleSide,transparent:false,depthTest:false,depthWrite:false,blending:THREE.NoBlending,defaultAttributeValues:{}
         });
@@ -220,11 +253,67 @@ void main(){
             renderer.setScissor(face%3*size,Math.floor(face/3)*size,size,size);renderer.setScissorTest(true);
             renderer.setClearColor(0,0);renderer.clear();renderer.render(scene,captureCamera);
         }
-        /** @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} camera @param {Draw[]} entries @param {Pose} pose @param {number} focal @param {number} far @param {number} width @param {number} height */
-        function render(scene,camera,entries,pose,focal,far,width,height){
+
+        /** Four finite paths define a 3D affine patch; a fifth probes its screen error.
+         * @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} camera
+         * @param {Draw[]} entries @param {Pose} pose @param {number} focal @param {number} width @param {number} height */
+        function renderObjects(scene,camera,entries,pose,focal,width,height){
+            var start=performance.now(),eye=pose.eye.map(function(v){return v*units;}),region=pose.region||0,paths=0,maxError=0,bad=0;
+            /** @typedef {{direct:boolean;turning:boolean;view:number[];columns:number[][];error:number}} Patch */
+            var cache=/** @type {Map<string,Patch|null>} */(new Map());
+            /** @param {number[]} point @param {number} side */
+            function project(point,side){
+                paths++;var h=DW.ellisOptics.primary(eye,point,region,side);if(!h)return null;
+                var r=h.direction,d=h.length/units;
+                return {hit:h,q:[r.reduce(function(sum,v,i){return sum+v*pose.right[i];},0)*d,r.reduce(function(sum,v,i){return sum+v*pose.up[i];},0)*d,-r.reduce(function(sum,v,i){return sum+v*pose.back[i];},0)*d]};
+            }
+            /** @param {number[]} center @param {number} side @param {number} radius @returns {Patch|null} */
+            function patch(center,side,radius){
+                var meters=center.map(function(v){return v*units;});const base=project(meters,side);
+                if(!base||base.q[2]<.001)return null;
+                if(base.hit.direct)return {direct:true,turning:false,view:base.q,columns:[],error:0};
+                var columns=/** @type {number[][]} */([]),step=4;
+                for(var axis=0;axis<3;axis++){
+                    var offset=meters.slice();offset[axis]+=step;var p=project(offset,side);if(!p)return null;
+                    var column=p.q.map(function(v,i){return (v-base.q[i])*units/step;});
+                    if(column.some(function(v){return !Number.isFinite(v)||Math.abs(v)>30;}))return null;
+                    columns.push(column);
+                }
+                var span=Math.max(4,Math.min(2000,radius)),delta=pose.right.map(function(v,i){return (v+pose.up[i])*span/Math.sqrt(2);});
+                var actual=project(meters.map(function(v,i){return v+delta[i];}),side),predicted=base.q.map(function(v,i){return v+columns.reduce(function(sum,c,j){return sum+c[i]*delta[j]/units;},0);}),error=9999;
+                if(actual&&actual.q[2]>.001&&predicted[2]>.001){
+                    error=Math.hypot((actual.q[0]/actual.q[2]-predicted[0]/predicted[2])*focal*height*.5,(actual.q[1]/actual.q[2]-predicted[1]/predicted[2])*focal*height*.5);
+                }
+                return {direct:false,turning:base.hit.turning,view:base.q,columns:columns,error:error};
+            }
+            var keys=['uLensEnabled','uLensMode','uLensCenter','uLensViewCenter','uLensX','uLensY','uLensZ','uLensMouth','uLensRadius','uLensDebug'];
+            var saved=entries.map(function(e){return {e:e,visible:e.object.visible,material:/** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(e.object).material,values:keys.map(function(k){return e.uniforms[k].value;})};});
+            try{
+                entries.forEach(function(e){
+                    if(!e.object.visible)return;
+                    var side=e.region||0,center=e.lensCenter||/** @type {number[]} */(e.uniforms.uOrigin.value),key=side+':'+center.join(','),p=/** @type {Patch|null} */(null);
+                    if(cache.has(key))p=cache.get(key)||null;
+                    else{p=patch(center,side,e.lensRadius||20);cache.set(key,p);if(p){maxError=Math.max(maxError,p.error);if(p.error>2)bad++;}}
+                    if(!p&&side!==region){e.object.visible=false;return;}
+                    var u=e.uniforms;
+                    u.uLensMode.value=side!==region?1:p&&!p.direct&&!p.turning?3:2;
+                    u.uLensMouth.value=[region*12000/units-pose.eye[0],-2000/units-pose.eye[1],1550/units-pose.eye[2]];u.uLensRadius.value=300/units;
+                    u.uLensEnabled.value=p&&!p.direct?1:0;u.uLensDebug.value=params.get('bridgeWarpDebug')==='1'&&p&&p.error>2?1:0;
+                    if(p&&!p.direct){u.uLensCenter.value=center;u.uLensViewCenter.value=p.view;u.uLensX.value=p.columns[0];u.uLensY.value=p.columns[1];u.uLensZ.value=p.columns[2];}
+                    // The production raw fallback supports the vertex patch and retains
+                    // source textures/colors. Native PBR patching is a later comparison.
+                    /** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(e.object).material=e.material;
+                });
+                renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);renderer.setClearColor(0,0);renderer.clear();renderer.render(scene,camera);
+            }finally{saved.forEach(function(s){s.e.object.visible=s.visible;/** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(s.e.object).material=s.material;keys.forEach(function(k,i){s.e.uniforms[k].value=s.values[i];});});}
+            return {objectPaths:paths,objectPatches:cache.size,objectError:maxError,objectBad:bad,compositionPasses:0,historyValid:0,extraPasses:0,captures:0,cpuMs:performance.now()-start};
+        }
+        /** @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} camera @param {Draw[]} entries @param {Pose} pose @param {number} focal @param {number} far @param {number} width @param {number} height @param {string|null} [revision] */
+        function render(scene,camera,entries,pose,focal,far,width,height,revision){
+            if(objects)return renderObjects(scene,camera,entries,pose,focal,width,height);
             var start=performance.now(),region=pose.region||0;
             uniforms.ellisRegion.value=region;
-            if(primaryWidth!==width||primaryHeight!==height){primary.dispose();effects.dispose();hitMap.dispose();hitMap=target(Math.ceil(width/2),Math.ceil(height/2));hitMap.texture.minFilter=THREE.NearestFilter;hitMap.texture.magFilter=THREE.NearestFilter;uniforms.hitMap.value=hitMap.texture;uniforms.hitSize.value=[Math.ceil(width/2),Math.ceil(height/2)];primary=target(width,height);effects=target(width,height);uniforms.effectColor.value=effects.texture;uniforms.effectDepth.value=effects.depthTexture;primaryWidth=width;primaryHeight=height;uniforms.sourceColor.value=primary.texture;uniforms.sourceDepth.value=primary.depthTexture;}
+            if(primaryWidth!==width||primaryHeight!==height){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();historyPose=null;historyMap=target(Math.ceil(width/2),Math.ceil(height/2));historyMap.texture.minFilter=THREE.NearestFilter;historyMap.texture.magFilter=THREE.NearestFilter;hitMap=target(Math.ceil(width/2),Math.ceil(height/2));hitMap.texture.minFilter=THREE.NearestFilter;hitMap.texture.magFilter=THREE.NearestFilter;uniforms.hitMap.value=hitMap.texture;uniforms.hitSize.value=[Math.ceil(width/2),Math.ceil(height/2)];primary=target(width,height);effects=target(width,height);uniforms.effectColor.value=effects.texture;uniforms.effectDepth.value=effects.depthTexture;primaryWidth=width;primaryHeight=height;uniforms.sourceColor.value=primary.texture;uniforms.sourceDepth.value=primary.depthTexture;}
             var originalVisibility=entries.map(function(e){return e.object.visible;});
             entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&(e.region||0)===region;});
             var lights=entries.filter(function(e){return e.object.visible&&e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending;});
@@ -249,7 +338,7 @@ void main(){
             try{
                 for(var chart=0;chart<2;chart++)for(var i=0;i<count;i++){
                     restore();var worldSide=chart===0?side:1-side;
-                    entries.forEach(function(e,k){e.object.visible=originalVisibility[k]&&(e.region||0)===worldSide&&lights.indexOf(e)<0;});
+                    entries.forEach(function(e,k){e.object.visible=originalVisibility[k]&&(e.region||0)===worldSide&&!(e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending);});
                     capture(scene,entries,[worldSide*12000/units,-2000/units,1550/units],chart,(next+i)%6);
                 }
             }finally{restore();renderer.setScissorTest(false);renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);}
@@ -257,12 +346,23 @@ void main(){
             initialized=true;next=(next+count)%6;
             uniforms.eye.value=pose.eye.map(function(v){return v*units;});uniforms.right.value=pose.right;uniforms.up.value=pose.up;uniforms.back.value=pose.back;
             uniforms.aspect.value=width/height;uniforms.focal.value=focal;uniforms.sourceFar.value=far;
-            if(adaptive){renderer.setRenderTarget(hitMap);renderer.setViewport(0,0,Math.ceil(width/2),Math.ceil(height/2));renderer.setClearColor(0,0);renderer.clear();renderer.render(mapScene,postCamera);renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);}
+            const previousPose=historyPose;
+            var valid=!!(temporal&&previousPose&&revision!==undefined&&revision!==null&&revision===historyRevision&&historyFocal===focal&&(previousPose.region||0)===region&&pose.eye.every(function(v,i){return Math.abs(v-previousPose.eye[i])*units<.000001;})&&pose.back.reduce(function(sum,v,i){return sum+v*previousPose.back[i];},0)>.9998);
+            uniforms.historyValid.value=valid?1:0;uniforms.historyPhase.value=phase;
+            if(historyPose){uniforms.previousRight.value=historyPose.right;uniforms.previousUp.value=historyPose.up;uniforms.previousBack.value=historyPose.back;}
+            uniforms.historyMap.value=historyMap.texture;
+            if(adaptive){uniforms.hitMap.value=hitMap.texture;renderer.setRenderTarget(hitMap);renderer.setViewport(0,0,Math.ceil(width/2),Math.ceil(height/2));renderer.setClearColor(0,0);renderer.clear();renderer.render(mapScene,postCamera);renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);}
             renderer.setClearColor(0,0);renderer.clear();renderer.render(adaptive?postScene:fullScene,postCamera);if(adaptive)renderer.render(refineScene,postCamera);
-            return {extraPasses:adaptive?2:0,captures:count*2,cpuMs:performance.now()-start};
+            if(temporal){
+                var swap=historyMap;historyMap=hitMap;hitMap=swap;
+                uniforms.hitMap.value=hitMap.texture;
+                historyPose={eye:pose.eye.slice(),right:pose.right.slice(),up:pose.up.slice(),back:pose.back.slice(),region:region};
+                historyRevision=revision===undefined?null:revision;historyFocal=focal;phase=1-phase;
+            }
+            return {objectPaths:0,objectPatches:0,objectError:0,objectBad:0,compositionPasses:adaptive?3:1,historyValid:valid?1:0,extraPasses:adaptive?2:0,captures:count*2,cpuMs:performance.now()-start};
         }
-        function dispose(){primary.dispose();effects.dispose();hitMap.dispose();mapMaterial.dispose();fullMaterial.dispose();refineMaterial.dispose();atlases.forEach(function(t){t.dispose();});lookup.dispose();quad.dispose();material.dispose();}
-        return {render:render,dispose:dispose};
+        function dispose(){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();mapMaterial.dispose();fullMaterial.dispose();refineMaterial.dispose();atlases.forEach(function(t){t.dispose();});lookup.dispose();quad.dispose();material.dispose();}
+        return {render:render,dispose:dispose,invalidate:function(){initialized=false;lastSide=-1;historyPose=null;historyRevision=null;phase=0;}};
     }
     DW.ellisRenderer={create:create,faces:faces};
 }());

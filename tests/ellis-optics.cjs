@@ -43,3 +43,22 @@ for(let n=1;n<250;n++){
 assert(analyticWorst<.001,'analytic exit stays within lookup phase accuracy');
 assert(differenceWorst>analyticWorst*5,'negative control exposes derivative amplification');
 console.log(`PASS Ellis exit quantization: analytic ${analyticWorst.toFixed(6)} rad vs finite-difference ${differenceWorst.toFixed(6)} rad`);
+// Finite-source inverse paths must agree with independent proper-radial quadrature.
+let inverseWorst=0;
+for(const R of [1.1,1.6,4,8])for(const S of [1.05,2,8])for(const angle of [.02,.3,1,2.5]){
+ const eye=[0,-2000-300*R,1550],target=[12000+300*S*Math.sin(angle),-2000+300*S*Math.cos(angle),1550];
+ const h=optics.primary(eye,target,0,1);assert(h&&!h.direct&&!h.turning&&h.impact<1);
+ assert(Math.abs(Math.hypot(...h.direction)-1)<1e-7,'normalized primary ray');
+ const b=h.impact,E=Math.min(R,2),phase=radialIntegral(b,Math.sqrt(E*E-1))+radialIntegral(b,Math.sqrt(S*S-1))+(R>2?Math.asin(b/2)-Math.asin(b/R):0);
+ inverseWorst=Math.max(inverseWorst,Math.abs(phase-angle));assert(Math.abs(phase-angle)<.004,'inverse finite-source phase agrees with quadrature');
+ assert(Number.isFinite(h.length)&&h.length>0);
+}
+for(const angle of [.1,.4,.8]){
+ const e=1e-7,n=[Math.sin(angle),Math.cos(angle),0],eye=[0,-2400,1550];
+ const remote=[12000+n[0]*(300+e),-2000+n[1]*(300+e),1550],local=[-n[0]*(300+e),-2000-n[1]*(300+e),1550];
+ const a=optics.primary(eye,remote,0,1),b=optics.primary(eye,local,0,0);assert(a&&b);
+ assert(Math.hypot(...a.direction.map((v,i)=>v-b.direction[i]))<.001,'primary direction is continuous at antipodal crossing');
+ assert(Math.abs(a.length-b.length)<.1,'path distance is continuous at throat');
+}
+const direct=optics.primary([0,-3250,1550],[1000,-3250,1550],0,0);assert(direct&&direct.direct&&direct.direction[0]===1,'ordinary path outside lens influence');
+console.log(`PASS Ellis primary inversion: finite-source quadrature (${inverseWorst.toFixed(6)} rad), ordinary rays and throat continuity`);

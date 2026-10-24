@@ -1,0 +1,1427 @@
+{
+  "runs": [
+    {
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "adaptive",
+      "hoist": false,
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 601,
+            "mean": 0.1981154608985028,
+            "p50": 0.181248,
+            "p95": 0.203776
+          },
+          "captures": {
+            "samples": 1202,
+            "mean": 0.16063140099833625,
+            "p50": 0.069632,
+            "p95": 0.812032
+          },
+          "primary": {
+            "samples": 1202,
+            "mean": 0.9325891247920138,
+            "p50": 1.7152,
+            "p95": 1.948672
+          },
+          "hitMap": {
+            "samples": 601,
+            "mean": 2.7820352745424297,
+            "p50": 2.772992,
+            "p95": 2.794496
+          },
+          "compositor": {
+            "samples": 601,
+            "mean": 0.0551494176372709,
+            "p50": 0.047104,
+            "p95": 0.057344
+          },
+          "refinement": {
+            "samples": 601,
+            "mean": 1.2040517004991675,
+            "p50": 1.19808,
+            "p95": 1.273856
+          },
+          "screen": {
+            "samples": 708,
+            "mean": 0.13386802259886982,
+            "p50": 0.134144,
+            "p95": 0.166592
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T07:40:53.011Z",
+      "sampleEnd": "2026-10-24T07:41:01.027Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.15913621175328757,
+            "p95": 0.30000007152557373
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 26,
+            "p95": 26
+          },
+          "triangles": {
+            "mean": 392107,
+            "p95": 392107
+          },
+          "cpu": {
+            "mean": 0.22823920202413667,
+            "p95": 0.3999999761581421
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.014784053512585915,
+            "p95": 0.10000002384185791
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.012624584955234464,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.013455149145221394,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.1794019933554818,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 529.7607973421927,
+            "p95": 1233
+          },
+          "cpu": {
+            "mean": 0.2539867053792326,
+            "p95": 0.40000009536743164
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 602,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 13.304651162949115,
+        "p50": 13.299999952316284,
+        "p95": 14.399999976158142
+      },
+      "cpu": {
+        "mean": 1.3327242498381986,
+        "p50": 1.2999999523162842,
+        "p95": 1.7000000476837158
+      },
+      "draws": {
+        "mean": 96,
+        "p50": 96,
+        "p95": 96
+      },
+      "triangles": {
+        "mean": 1212033,
+        "p50": 1212033,
+        "p95": 1212033
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.7136212603198333,
+        "p50": 0.7000000476837158,
+        "p95": 0.9000000953674316
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.7000000476837158,
+        "drawCalls": 96,
+        "triangles": 1212033,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 0.9000000953674316
+      },
+      "notes": "Scenery clock was not frozen; preliminary control."
+    },
+    {
+      "temporal": true,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 600,
+            "mean": 0.2008261333333337,
+            "p50": 0.182112,
+            "p95": 0.323584
+          },
+          "captures": {
+            "samples": 1200,
+            "mean": 0.17645274666666663,
+            "p50": 0.069632,
+            "p95": 0.826368
+          },
+          "primary": {
+            "samples": 1200,
+            "mean": 0.9216790400000019,
+            "p50": 1.690624,
+            "p95": 1.87392
+          },
+          "hitMap": {
+            "samples": 600,
+            "mean": 2.79978986666667,
+            "p50": 2.788416,
+            "p95": 2.814976
+          },
+          "compositor": {
+            "samples": 600,
+            "mean": 0.05850501333333304,
+            "p50": 0.047104,
+            "p95": 0.057344
+          },
+          "refinement": {
+            "samples": 600,
+            "mean": 1.2112252266666672,
+            "p50": 1.19808,
+            "p95": 1.276928
+          },
+          "screen": {
+            "samples": 705,
+            "mean": 0.13313339007092148,
+            "p50": 0.13312,
+            "p95": 0.16384
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T07:41:16.701Z",
+      "sampleEnd": "2026-10-24T07:41:24.705Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.19184692191601593,
+            "p95": 0.3999999761581421
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 26,
+            "p95": 26
+          },
+          "triangles": {
+            "mean": 392107,
+            "p95": 392107
+          },
+          "cpu": {
+            "mean": 0.2534109836013464,
+            "p95": 0.3999999761581421
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.019301165558534138,
+            "p95": 0.10000002384185791
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.013976704856123583,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.015973378735255086,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.1763727121464227,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 543.9650582362729,
+            "p95": 1253
+          },
+          "cpu": {
+            "mean": 0.226289517867585,
+            "p95": 0.3999999761581421
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 601,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 13.310149750376302,
+        "p50": 13.299999952316284,
+        "p95": 13.899999976158142
+      },
+      "cpu": {
+        "mean": 1.5347753753281275,
+        "p50": 1.5,
+        "p95": 1.8000000715255737
+      },
+      "draws": {
+        "mean": 96,
+        "p50": 96,
+        "p95": 96
+      },
+      "triangles": {
+        "mean": 1212033,
+        "p50": 1212033,
+        "p95": 1212033
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.8059900185827804,
+        "p50": 0.7999999523162842,
+        "p95": 1.100000023841858
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.7000000476837158,
+        "drawCalls": 96,
+        "triangles": 1212033,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1
+      },
+      "notes": "Excluded temporal efficacy: scenery clock advanced; history invalid every frame."
+    },
+    {
+      "temporal": true,
+      "pan": null,
+      "historyValid": {
+        "mean": 1,
+        "p50": 1,
+        "p95": 1
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 601,
+            "mean": 0.18396560399334455,
+            "p50": 0.181248,
+            "p95": 0.19456
+          },
+          "captures": {
+            "samples": 1202,
+            "mean": 0.15653606655574065,
+            "p50": 0.068608,
+            "p95": 0.806912
+          },
+          "primary": {
+            "samples": 1202,
+            "mean": 0.9641195341098171,
+            "p50": 1.697792,
+            "p95": 1.97632
+          },
+          "hitMap": {
+            "samples": 601,
+            "mean": 2.7892763261231264,
+            "p50": 2.787328,
+            "p95": 2.806784
+          },
+          "compositor": {
+            "samples": 601,
+            "mean": 0.050971261231280665,
+            "p50": 0.048128,
+            "p95": 0.057344
+          },
+          "refinement": {
+            "samples": 601,
+            "mean": 1.208432612312811,
+            "p50": 1.2032,
+            "p95": 1.28
+          },
+          "screen": {
+            "samples": 707,
+            "mean": 0.1324183988684579,
+            "p50": 0.13312,
+            "p95": 0.16384
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T07:42:16.188Z",
+      "sampleEnd": "2026-10-24T07:42:24.198Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.19700996582690267,
+            "p95": 0.3999999761581421
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 26,
+            "p95": 26
+          },
+          "triangles": {
+            "mean": 392107,
+            "p95": 392107
+          },
+          "cpu": {
+            "mean": 0.25099667837453443,
+            "p95": 0.3999999761581421
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.021594685573514513,
+            "p95": 0.10000002384185791
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.011794019775137157,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.013787376524206016,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.1777408637873754,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 544.6179401993355,
+            "p95": 1253
+          },
+          "cpu": {
+            "mean": 0.29136212798844147,
+            "p95": 0.5
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 602,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 13.29734219269103,
+        "p50": 13.299999952316284,
+        "p95": 14.5
+      },
+      "cpu": {
+        "mean": 1.5134551515214862,
+        "p50": 1.5,
+        "p95": 1.8000000715255737
+      },
+      "draws": {
+        "mean": 96,
+        "p50": 96,
+        "p95": 96
+      },
+      "triangles": {
+        "mean": 1212033,
+        "p50": 1212033,
+        "p95": 1212033
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.8033222599679053,
+        "p50": 0.7999999523162842,
+        "p95": 1
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeHistoryValid": 1,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.8000000715255737,
+        "drawCalls": 96,
+        "triangles": 1212033,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1
+      },
+      "temporalTile": 1,
+      "notes": "Fully frozen geometry, one-pixel alternating pattern."
+    },
+    {
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "adaptive",
+      "hoist": false,
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 600,
+            "mean": 0.18715759999999967,
+            "p50": 0.178176,
+            "p95": 0.192512
+          },
+          "captures": {
+            "samples": 1200,
+            "mean": 0.1611974933333333,
+            "p50": 0.068608,
+            "p95": 0.816128
+          },
+          "primary": {
+            "samples": 1200,
+            "mean": 0.9548167200000001,
+            "p50": 1.719296,
+            "p95": 2.310144
+          },
+          "hitMap": {
+            "samples": 600,
+            "mean": 2.791455360000001,
+            "p50": 2.787328,
+            "p95": 2.81088
+          },
+          "compositor": {
+            "samples": 600,
+            "mean": 0.05086607999999963,
+            "p50": 0.048128,
+            "p95": 0.057376
+          },
+          "refinement": {
+            "samples": 600,
+            "mean": 1.21060352,
+            "p50": 1.204224,
+            "p95": 1.288192
+          },
+          "screen": {
+            "samples": 703,
+            "mean": 0.13372021621621558,
+            "p50": 0.135168,
+            "p95": 0.164576
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T07:42:48.250Z",
+      "sampleEnd": "2026-10-24T07:42:56.255Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.16189684129991072,
+            "p95": 0.30000007152557373
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 26,
+            "p95": 26
+          },
+          "triangles": {
+            "mean": 392107,
+            "p95": 392107
+          },
+          "cpu": {
+            "mean": 0.22329450764394243,
+            "p95": 0.30000007152557373
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.01680532330879554,
+            "p95": 0.10000002384185791
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.012811980112618495,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.012978368511612522,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.173044925124792,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 536.9168053244592,
+            "p95": 1243
+          },
+          "cpu": {
+            "mean": 0.26239600197447716,
+            "p95": 0.40000009536743164
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 601,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 13.310316139767055,
+        "p50": 13.300000071525574,
+        "p95": 13.899999976158142
+      },
+      "cpu": {
+        "mean": 1.3457570702779709,
+        "p50": 1.3000000715255737,
+        "p95": 1.600000023841858
+      },
+      "draws": {
+        "mean": 96,
+        "p50": 96,
+        "p95": 96
+      },
+      "triangles": {
+        "mean": 1212033,
+        "p50": 1212033,
+        "p95": 1212033
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.7206322783836707,
+        "p50": 0.7000000476837158,
+        "p95": 0.8999999761581421
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.7999999523162842,
+        "drawCalls": 96,
+        "triangles": 1212033,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1.1999999284744263
+      },
+      "notes": "Fully frozen adaptive control."
+    },
+    {
+      "temporal": true,
+      "pan": null,
+      "historyValid": {
+        "mean": 1,
+        "p50": 1,
+        "p95": 1
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 600,
+            "mean": 0.18616591999999926,
+            "p50": 0.178176,
+            "p95": 0.191296
+          },
+          "captures": {
+            "samples": 1200,
+            "mean": 0.17004895999999992,
+            "p50": 0.068608,
+            "p95": 0.817152
+          },
+          "primary": {
+            "samples": 1200,
+            "mean": 0.970989093333334,
+            "p50": 1.721344,
+            "p95": 2.622464
+          },
+          "hitMap": {
+            "samples": 600,
+            "mean": 1.812505493333333,
+            "p50": 1.800192,
+            "p95": 1.84832
+          },
+          "compositor": {
+            "samples": 600,
+            "mean": 0.05533359999999958,
+            "p50": 0.048128,
+            "p95": 0.058336
+          },
+          "refinement": {
+            "samples": 600,
+            "mean": 1.209856373333334,
+            "p50": 1.19808,
+            "p95": 1.283072
+          },
+          "screen": {
+            "samples": 706,
+            "mean": 0.13358798866855445,
+            "p50": 0.135168,
+            "p95": 0.16384
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T07:43:17.803Z",
+      "sampleEnd": "2026-10-24T07:43:25.807Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.1718801983977713,
+            "p95": 0.30000007152557373
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 26,
+            "p95": 26
+          },
+          "triangles": {
+            "mean": 392107,
+            "p95": 392107
+          },
+          "cpu": {
+            "mean": 0.22579034751346228,
+            "p95": 0.30000007152557373
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.020965058474294754,
+            "p95": 0.10000002384185791
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.016472547105862177,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.011647254377355592,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.178036605657238,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 540.4109816971713,
+            "p95": 1243
+          },
+          "cpu": {
+            "mean": 0.2648918473978408,
+            "p95": 0.5
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 601,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 13.308652246256239,
+        "p50": 13.300000071525574,
+        "p95": 13.899999976158142
+      },
+      "cpu": {
+        "mean": 1.464059902903641,
+        "p50": 1.4000000953674316,
+        "p95": 1.8000000715255737
+      },
+      "draws": {
+        "mean": 96,
+        "p50": 96,
+        "p95": 96
+      },
+      "triangles": {
+        "mean": 1212033,
+        "p50": 1212033,
+        "p95": 1212033
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.7519134771010642,
+        "p50": 0.7000000476837158,
+        "p95": 1
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeHistoryValid": 1,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.6999999284744263,
+        "drawCalls": 96,
+        "triangles": 1212033,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 0.8999999761581421
+      },
+      "temporalTile": 8,
+      "notes": "Fully frozen temporal 8x8 tiles."
+    },
+    {
+      "temporal": true,
+      "pan": "1",
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 601,
+            "mean": 0.183416758735441,
+            "p50": 0.181248,
+            "p95": 0.195584
+          },
+          "captures": {
+            "samples": 1202,
+            "mean": 0.17362630282861885,
+            "p50": 0.068608,
+            "p95": 0.81408
+          },
+          "primary": {
+            "samples": 1202,
+            "mean": 0.826297504159734,
+            "p50": 0.900096,
+            "p95": 1.980416
+          },
+          "hitMap": {
+            "samples": 601,
+            "mean": 2.8321600532445927,
+            "p50": 2.834432,
+            "p95": 2.86208
+          },
+          "compositor": {
+            "samples": 601,
+            "mean": 0.053669217970049386,
+            "p50": 0.048128,
+            "p95": 0.057344
+          },
+          "refinement": {
+            "samples": 601,
+            "mean": 1.0792714542429278,
+            "p50": 1.108992,
+            "p95": 1.265664
+          },
+          "screen": {
+            "samples": 707,
+            "mean": 0.1318987043847234,
+            "p50": 0.13312,
+            "p95": 0.16384
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T07:44:02.533Z",
+      "sampleEnd": "2026-10-24T07:44:10.543Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.1911960153088617,
+            "p95": 0.3999999761581421
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 25,
+            "p95": 25
+          },
+          "triangles": {
+            "mean": 391161,
+            "p95": 391161
+          },
+          "cpu": {
+            "mean": 0.2569767438692112,
+            "p95": 0.40000009536743164
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.02441860433432747,
+            "p95": 0.10000002384185791
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.015282392105786904,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.015614618494661147,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.1777408637873754,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 520.8239202657808,
+            "p95": 1221
+          },
+          "cpu": {
+            "mean": 0.26661129488897484,
+            "p95": 0.5
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "warped",
+      "quality": "refined",
+      "live": false,
+      "samples": 602,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 13.296511627906977,
+        "p50": 13.300000071525574,
+        "p95": 14.399999976158142
+      },
+      "cpu": {
+        "mean": 1.5338870439418526,
+        "p50": 1.5,
+        "p95": 1.8000000715255737
+      },
+      "draws": {
+        "mean": 96,
+        "p50": 96,
+        "p95": 96
+      },
+      "triangles": {
+        "mean": 1212033,
+        "p50": 1212033,
+        "p95": 1212033
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.8270764117225065,
+        "p50": 0.8000000715255737,
+        "p95": 1
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.6999999284744263,
+        "drawCalls": 96,
+        "triangles": 1212033,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1
+      },
+      "notes": "Excluded rotation conclusion: stale benchmark camera/world snapshot; subsequently corrected. Context loss observed in subsequent fixture."
+    }
+  ],
+  "contextLogs": [
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T07:40:33.849Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T07:41:12.116Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T07:42:11.625Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T07:42:43.692Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T07:43:12.811Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T07:43:57.927Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T07:45:16.014Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T07:45:19.731Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T07:45:19.736Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T07:45:19.736Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Restored.",
+      "timestamp": "2026-10-24T07:45:20.733Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "warn",
+      "message": "THREE.WebGLProgram: Program Info Log: (148,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value\n(148,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value\n(148,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value",
+      "timestamp": "2026-10-24T07:45:22.945Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Restored.",
+      "timestamp": "2026-10-24T07:45:24.114Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Restored.",
+      "timestamp": "2026-10-24T07:45:24.125Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T07:45:25.356Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T07:45:25.359Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T07:45:25.362Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    }
+  ],
+  "limitations": "Static timings only; no proven gameplay improvement. Later far-side fixture also lost contexts with temporal disabled.",
+  "rotationValidationBlocker": [
+    {
+      "level": "error",
+      "message": "THREE.WebGLRenderer: A WebGL context could not be created. Reason:  Could not create a WebGL context, VENDOR = 0xffff, DEVICE = 0xffff, GL_VENDOR = Disabled, GL_RENDERER = Disabled, Sandboxed = yes, Optimus = no, AMD switchable = no, Reset notification strategy = 0x0000, ErrorMessage = BindToCurrentSequence failed: .",
+      "timestamp": "2026-10-24T07:50:42.182Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "error",
+      "message": "THREE.WebGLRenderer: A WebGL context could not be created. Reason:  Could not create a WebGL context, VENDOR = 0xffff, DEVICE = 0xffff, GL_VENDOR = Disabled, GL_RENDERER = Disabled, Sandboxed = yes, Optimus = no, AMD switchable = no, Reset notification strategy = 0x0000, ErrorMessage = BindToCurrentSequence failed: .",
+      "timestamp": "2026-10-24T07:50:42.183Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "error",
+      "message": "THREE.WebGLRenderer: Error creating WebGL context.",
+      "timestamp": "2026-10-24T07:50:42.183Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "error",
+      "message": "Error: Error creating WebGL context.\n    at new WebGLRenderer (http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2:73993:13)\n    at new window.THREE.WebGLRenderer (http://localhost:8000/output/ellis-benchmark.html?mission=ellis&view=limb&bridgeTemporal=1&pan=1&cap=30:120:3)\n    at Object.create (http://localhost:8000/src/scene3d.js?v=364e94f14cf4:752:20)\n    at mount (http://localhost:8000/experiments/flight-presentation.js?v=30c253b84c93:181:32)\n    at DW.flightPresentation.mount (http://localhost:8000/output/ellis-benchmark.html?mission=ellis&view=limb&bridgeTemporal=1&pan=1&cap=30:182:61)\n    at http://localhost:8000/experiments/flight.js?v=19381bcbcf5a:76:46",
+      "timestamp": "2026-10-24T07:50:42.209Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    }
+  ]
+}

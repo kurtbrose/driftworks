@@ -21,13 +21,20 @@ Space to fire; P pauses, Fire burst queues six volleys, Clear removes live bolts
 Switching patterns clears old shots. Hidden tabs pause the rig.
 
 Flight-aligned length replaces the earlier shutter-blur experiment. The default
-body length is `max(sprite diameter, speed * simulation frame interval)`; two-frame
+body length is `max(sprite diameter, speed * simulation frame interval * 4)`.
+Six-, eight-, ten- and twelve-frame lengths allow stronger elongation; one-frame, two-frame
 and compact modes provide comparisons. The interval uses actual render timing
 (up to the same 50 ms simulation cap), scales with playback and freezes on pause.
 The body lies along the shot's fixed world velocity. Its camera-facing artwork
 foreshortens with that direction, becoming round head-on and elongated side-on.
 Camera rotation does not contribute to length. A center shift along the 3D flight
-axis keeps the extension behind the projectile. This is a flight-aligned billboard
+axis keeps the extension behind the projectile. Both axial endpoints are projected
+with perspective before computing the billboard orientation: using only the view
+velocity's X/Y components incorrectly made off-axis, depth-changing shots slide
+diagonally across their own stretch. Axial segments are clipped against the near
+plane before perspective division. Regression tests compare the displayed axis
+with independently projected successive flight positions, including a rotated
+camera. This is a flight-aligned billboard
 approximation, rather than a volumetric mesh or full-scene motion blur.
 
 Each shot picks one of four atlas variants at birth and retains it. There is no

@@ -301,8 +301,12 @@
         });
         if(t.hangarSupport)t.enemies=t.enemies.filter(function(e){return e.team!=='ally';}).concat(retainedAllies);
         if(t.mode==='evacuation')DW.evacuationMission.start(t,player);
+        if(t.mode==='ellis')t.enemies.forEach(function(e,i){
+            var region=i%4>=2?1:0,shift=(region-(player.region||0))*12000/U;
+            e.pose.region=region;e.pose.eye[0]+=shift;e.goal[0]+=shift;
+        });
         var target = t.enemies.find(function (e) {
-            return e.team !== 'ally';
+            return e.team !== 'ally'&&(e.pose.region||0)===(t.player.pose.region||0);
         });
         t.targetId = target ? target.id : null;
         t.targetLocked = false;
@@ -483,7 +487,7 @@
             if (shooter === t.player || shooter === t.player.id)
                 t.playerKills = (t.playerKills || 0) + 1;
             radioEvent(t, { kind: 'destroyed', victim: e.id, team: e.team || 'enemy', index: e.index, killer: shooter && typeof shooter === 'object' ? shooter.id : shooter || null });
-            var pose = { eye: e.pose.eye.slice(), right: e.pose.right.slice(), up: e.pose.up.slice(), back: e.pose.back.slice(), velocity: e.pose.velocity.slice(), throttle: 0 };
+            var pose = { region:e.pose.region||0, eye: e.pose.eye.slice(), right: e.pose.right.slice(), up: e.pose.up.slice(), back: e.pose.back.slice(), velocity: e.pose.velocity.slice(), throttle: 0 };
             var axis = unit(add(pose.right, scale(pose.up, e.index % 2 ? -.7 : .7)));
             t.wrecks.push({ id: e.id + '-wreck', index: e.index, modelId:e.modelId, team: e.team, artWave: t.wave, pose: pose, axis: axis, spin: (e.index % 2 ? -1 : 1) * (.25 + (e.index % 5) * .09), age: 0, scorches: e.scorches || [] });
             // Keep debris across waves, with a bounded rendering/memory budget.
@@ -495,7 +499,7 @@
                 t.kills++;
             if (!alive(t).length)
                 t.countdown = 5;
-            t.flashes.push({ position: e.pose.eye.slice(), velocity: e.pose.velocity.map(function(v){return v/U;}), age: 0, scale: 14, destruction: true });
+            t.flashes.push({ region:e.pose.region||0, position: e.pose.eye.slice(), velocity: e.pose.velocity.map(function(v){return v/U;}), age: 0, scale: 14, destruction: true });
             if(t.flashes.length>48)t.flashes.splice(0,t.flashes.length-48);
         }
     }
@@ -515,11 +519,11 @@
      * @returns {Vector | null} */
     function convergencePoint(t, shooter, weapon, terrainHit) {
         var start = shooter.pose.eye, end = add(start, scale(shooter.pose.back, -weapon.speed * weapon.lifetime / U));
-        var terrain = terrainHit ? terrainHit(start, end) : null;
+        var terrain = terrainHit&&!(shooter.pose.region||0) ? terrainHit(start, end) : null;
         var best = terrain ? length(sub(terrain, start)) : Infinity;
         var point = /** @type {Vector | null} */ (null);
         participants(t).forEach(function (craft) {
-            if (craft === shooter || craft.hp <= 0 || (craft.team || 'enemy') === (shooter.team || 'enemy')) return;
+            if (craft === shooter || craft.hp <= 0 || (craft.team || 'enemy') === (shooter.team || 'enemy') || (craft.pose.region||0)!==(shooter.pose.region||0)) return;
             var hit = hullHit(craft, start, end);
             if (!hit) return;
             var distance = length(sub(hit.point, start));
@@ -744,7 +748,7 @@
     /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player @param {number} [scorchInterval] @param {() => void} [onDamage] */
     function trace(t, start, end, bolt, team, terrainHit, player, scorchInterval, onDamage) {
         bindPlayer(t, player);
-        var hit = terrainHit ? terrainHit(start, end) : null, travel = length(sub(end,start));
+        var hit = terrainHit&&!(bolt.region||0) ? terrainHit(start, end) : null, travel = length(sub(end,start));
         var best = hit && travel > 0 ? length(sub(hit,start)) / travel : Infinity;
         var victim = /** @type {Craft | null} */ (null), surface = /** @type {Hit | null} */ (null);
         var index=collisionIndex(t);
@@ -760,7 +764,7 @@
         if(!engine&&!sleeping&&!candidates.length)collisionSleeps.set(bolt,{index:index,epoch:index.epoch,motion:index.motion,point:end.slice(),radius:radius,faction:faction});
         candidates.forEach(function (entry) {
             var e=entry.craft;if(!collisionNearby(entry,start,end,radius/U))return;
-            if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction) return;
+            if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction || (e.pose.region||0)!==(bolt.region||0)) return;
             var candidate = hullHit(e, start, end, bolt.weapon.headRadius || 0);
             if (candidate) {
                 if (candidate.fraction < best) { best = candidate.fraction; hit = candidate.point; victim = e; surface = candidate; }
@@ -803,7 +807,7 @@
             w.age += dt;
             if (w.age >= 120)
                 return false;
-            var p = w.pose, next = add(p.eye, scale(p.velocity, dt / U)), hit = terrainHit ? terrainHit(p.eye, next) : null;
+            var p = w.pose, next = add(p.eye, scale(p.velocity, dt / U)), hit = terrainHit&&!(p.region||0) ? terrainHit(p.eye, next) : null;
             if (hit) {
                 p.velocity = [0, 0, 0];
                 w.spin = 0;
@@ -887,16 +891,16 @@
                 e.hangarLaunch.remaining-=dt;e.fire=false;
                 if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
-                var candidates = participants(t).filter(function (other) { return other.hp > 0 && (other.team || 'enemy') !== (e.team || 'enemy'); });
+                var candidates = participants(t).filter(function (other) { return other.hp > 0 && (other.pose.region||0)===(e.pose.region||0) && (other.team || 'enemy') !== (e.team || 'enemy'); });
                 var opponent = candidates.length ? candidates[0].pose : null;
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;
                     var target = living.find(function (other) {
-                        return other.id === e.targetId && other.hp > 0 && other.team !== e.team;
+                        return other.id === e.targetId && other.hp > 0 && other.team !== e.team&&(other.pose.region||0)===(e.pose.region||0);
                     });
                     if (!target || e.retarget <= 0) {
                         var choices = living.filter(function (other) {
-                            return other.hp > 0 && other.team !== e.team;
+                            return other.hp > 0 && other.team !== e.team&&(other.pose.region||0)===(e.pose.region||0);
                         });
                         choices.sort(function (a, b) {
                             return length(sub(a.pose.eye, e.pose.eye)) - length(sub(b.pose.eye, e.pose.eye));
@@ -916,11 +920,11 @@
                     decide(t, e, opponent);
                 var goal = e.mode === 'attack' && (!e.opponentStyle || e.opponentStyle === 'baseline') ? (e.gunGoal || e.goal) : e.goal;
                 var future = add(e.pose.eye, scale(e.pose.velocity, 1.6 / U)), avoid = radius + 65 / U;
-                if (length(future) < avoid || length(e.pose.eye) < avoid)
+                if (!(e.pose.region||0)&&(length(future) < avoid || length(e.pose.eye) < avoid))
                     goal = add(e.pose.eye, add(scale(unit(e.pose.eye), 400 / U), scale(e.pose.right, 180 / U)));
                 // Separate nearby craft using steering demand, never velocity changes.
                 living.forEach(function (other) {
-                    if (other.id === e.id)
+                    if (other.id === e.id||(other.pose.region||0)!==(e.pose.region||0))
                         return;
                     var away = sub(e.pose.eye, other.pose.eye), d = length(away) * U;
                     if (d < 50)
@@ -932,7 +936,7 @@
                 stepInput(e, Object.assign({ throttle: e.pose.throttle, throttleRate: 0, fire: false }, control), dt);
                 // Conservative safety shell keeps AI craft clear of the asteroid.
                 var safe = radius + 20 / U;
-                if (length(e.pose.eye) < safe) {
+                if (!(e.pose.region||0)&&length(e.pose.eye) < safe) {
                     e.pose.eye = scale(unit(e.pose.eye), safe);
                     e.mode = 'break';
                     e.until = t.time + 2;
@@ -959,17 +963,17 @@
             t.countdown = 5;
         }
         var targets = nowAlive.filter(function (e) {
-            return e.team !== 'ally';
+            return e.team !== 'ally'&&(e.pose.region||0)===(t.player.pose.region||0);
         });
         if (t.targetId && !nowAlive.some(function (e) {
-            return e.id === t.targetId;
+            return e.id === t.targetId&&(e.pose.region||0)===(player.region||0);
         }))
             { t.targetId = targets.length ? targets[0].id : null; t.targetLocked = false; }
     }
     /** Acquire the nearest hull crossed by the forward sight line; retain the last contact in empty space.
      * @param {Combat} t @param {FlightState} state */
     function acquireTarget(t, state) {
-        var living = alive(t);
+        var living = alive(t).filter(function(e){return (e.pose.region||0)===(state.region||0);});
         if (!living.some(function (e) { return e.id === t.targetId; })) {
             t.targetId = null;
             t.targetLocked = false;
@@ -991,7 +995,7 @@
     function cycle(t) {
         t.targetLocked = false;
         var list = alive(t).filter(function (e) {
-            return e.team !== 'ally';
+            return e.team !== 'ally'&&(e.pose.region||0)===(t.player.pose.region||0);
         }), index = list.findIndex(function (e) {
             return e.id === t.targetId;
         });

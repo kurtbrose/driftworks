@@ -39,7 +39,7 @@
             var hit = hitTest ? hitTest(bolt.position, end, bolt) : null;
             bolt.age += dt;
             if (hit) {
-                guns.impacts.push({ position: hit, age: 0 });
+                guns.impacts.push({ region:bolt.region||0, position: hit, age: 0 });
                 guns.hits++;
                 return false;
             }

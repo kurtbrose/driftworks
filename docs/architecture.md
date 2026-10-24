@@ -1810,3 +1810,17 @@ separate masked refinement pass; the default remains the full geometry tracer.
 returned by the shared GLSL `ellisPointPhase`. It does not limit the sky or alter
 simulation/collision. Neither experiment is visually accepted yet; see the
 validation status in [Ellis bridge playtest](ellis-bridge.md).
+
+Ellis flight uses explicit pose/projectile/effect/batch `region` ownership (missing
+means 0). The 12 km chart translation is storage only. Each capture and the direct
+pass filter by region; radar/targeting, AI and damage never compare contacts across
+regions as ordinary Euclidean neighbors. Traversal transfers ownership with the
+pose. See [region ownership](ellis-bridge.md#region-ownership) for limits.
+
+The opt-in `bridgeTemporal=1` Ellis experiment uses two packed hit maps and
+rotation-only history reprojection. Flight presentation supplies an explicit
+geometry revision via `setStudyBridgeRevision`; absent/changing revisions forbid
+reuse. History age is bounded to one frame. Translation, region/projection/size
+changes and GPU context loss/restoration invalidate history. Restoring the GPU
+also forces all radial capture faces to refill. See the
+[temporal experiment report](benchmarks/ellis-temporal-2026-10-24.md).

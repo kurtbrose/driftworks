@@ -207,17 +207,17 @@
         [artSelect, allyArt].forEach(function (select) {
             var option = document.createElement('option');
             option.value = 'mixed';
-            option.textContent = 'Mixed fleet · all ship models';
+            option.textContent = 'Mixed fleet ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· all ship models';
             select.insertBefore(option, select.firstChild);
             select.value = 'mixed';
         });
         function artCredit() {
             var entry = DW.shipPackModels.find(artSelect.value);
-            get('art-credit').textContent = artSelect.value === 'mixed' ? 'Mixed fleet · Quaternius + Driftworks concept ships · changes each wave' : entry ? entry.pack.author + ' / ' + entry.model.name + ' · ' + entry.pack.license + ' · ' + entry.model.triangles.toLocaleString() + ' triangles per ship' : 'Original six-triangle training hull';
+            get('art-credit').textContent = artSelect.value === 'mixed' ? 'Mixed fleet ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Quaternius + Driftworks concept ships ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· changes each wave' : entry ? entry.pack.author + ' / ' + entry.model.name + ' ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ' + entry.pack.license + ' ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ' + entry.model.triangles.toLocaleString() + ' triangles per ship' : 'Original six-triangle training hull';
         }
         function allyCredit() {
             var entry = DW.shipPackModels.find(allyArt.value);
-            get('ally-credit').textContent = allyArt.value === 'mixed' ? 'Mixed fleet · Quaternius + Driftworks concept ships · changes each wave' : entry ? entry.pack.author + ' / ' + entry.model.name + ' · ' + entry.pack.license : 'Original training blockout';
+            get('ally-credit').textContent = allyArt.value === 'mixed' ? 'Mixed fleet ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Quaternius + Driftworks concept ships ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· changes each wave' : entry ? entry.pack.author + ' / ' + entry.model.name + ' ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ' + entry.pack.license : 'Original training blockout';
         }
         allyArt.onchange = allyCredit;
         allyCredit();
@@ -237,33 +237,35 @@
         }
         /** @param {Pose} state */
         function pose(state) {
-            scene.setSurfaceCamera(/** @type {Parameters<Scene['setSurfaceCamera']>[0]} */ ({ eye: state.eye, right: state.right, up: state.up, back: state.back }));
+            scene.setSurfaceCamera(/** @type {Parameters<Scene['setSurfaceCamera']>[0]} */ ({ region:state.region||0, eye: state.eye, right: state.right, up: state.up, back: state.back }));
         }
         /** @param {FlightView} view @param {Appearance} appearance @param {Comparison} comparison @param {number} elapsed */
         function render(view, appearance, comparison, elapsed) {
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
+            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects';
             var livingArt = /** @type {ArtCraft[]} */ (DW.training.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
             if (view.observerCraft) livingArt.push(view.observerCraft);
-            ['ally', 'enemy'].forEach(function (team) {
-                var craft = livingArt.filter(function (e) {
-                    return (e.team || 'enemy') === team;
-                }), selection = team === 'ally' ? appearance.allyArt : appearance.enemyArt;
+            var groups=/** @type {{team:string;region:number;craft:ArtCraft[]}[]} */([]);
+            ['ally','enemy'].forEach(function(team){regions.forEach(function(region){var list=livingArt.filter(function(c){return (c.team||'enemy')===team&&(c.pose.region||0)===region;});if(objectWarp)list.forEach(function(c){groups.push({team:team,region:region,craft:[c]});});else groups.push({team:team,region:region,craft:list});});});
+            groups.forEach(function (group) {
+                var team=group.team;
+                var craft = group.craft, selection = team === 'ally' ? appearance.allyArt : appearance.enemyArt;
                 if (!craft.length)
                     return;
                 var batches = selection ? DW.shipPackModels.sourceFleetGeometry(craft, selection, combat.wave, units, appearance.shipImages, appearance.paint[team], true) : DW.training.geometry({ enemies: craft.map(function (e) {
                         return Object.assign({}, e, { hp: 1 });
                     }) });
                 batches.forEach(function (batch) {
-                    actorBatches.push(batch);
+                    actorBatches.push(Object.assign({},batch,{region:group.region,lensRadius:objectWarp?DW.shipPackModels.hullRadius(DW.shipPackModels.craftModel(craft[0],team==='ally'?appearance.allyArt:appearance.enemyArt,combat.wave)):undefined,lensCenter:objectWarp?craft[0].pose.eye:undefined}));
                 });
             });
-            ['ally', 'enemy'].forEach(function (team) {
-                var craft = livingArt.filter(function (e) {
-                    return (e.team || 'enemy') === team;
-                });
+            groups.forEach(function (group) {
+                var team=group.team;
+                var craft = group.craft;
+                if(!craft.length)return;
                 var scorchDraw=DW.shipPackModels.sourceScorchGeometry||DW.shipPackModels.scorchGeometry;
                 scorchDraw(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units).forEach(function (batch) {
-                    actorBatches.push(batch);
+                    actorBatches.push(Object.assign({},batch,{region:group.region,lensRadius:objectWarp?DW.shipPackModels.hullRadius(DW.shipPackModels.craftModel(craft[0],team==='ally'?appearance.allyArt:appearance.enemyArt,combat.wave)):undefined,lensCenter:objectWarp?craft[0].pose.eye:undefined}));
                 });
             });
             var asteroid = world.asteroids[0];
@@ -300,25 +302,34 @@
                 var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });
                 return Object.assign({}, batch, {origin: /** @type {[number,number,number]} */ ([asteroid ? asteroid.position.x : 0, asteroid ? asteroid.position.y : 0, 0]), rotation: asteroid ? asteroid.rotation : 0});
             })));
-            var effectBatches = DW.flightGuns.geometry(DW.training.allGuns(combat, guns), state), engineParts = /** @type {Float32Array[]} */ ([]);
-            ['ally', 'enemy'].forEach(function (team) {
-                var craft = /** @type {ArtCraft[]} */ (DW.training.alive(combat).filter(function (e) {
-                    return (e.team || 'enemy') === team;
-                }));
-                if (view.observerCraft && view.observerCraft.team === team && view.observerCraft.hp) craft = craft.concat(view.observerCraft);
-                engineParts.push(DW.shipPackModels.engineGeometry(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units, state, world.elapsedSeconds).vertices);
+            var allGuns=DW.training.allGuns(combat,guns),effectBatches=/** @type {Batch[]} */([]),engineParts=/** @type {{region:number;vertices:Float32Array}[]} */([]);
+            if(objectWarp){
+                allGuns.bolts.forEach(function(b){DW.flightGuns.geometry({bolts:[b],impacts:[]},state).forEach(function(batch){effectBatches.push(Object.assign({},batch,{region:b.region||0,lensCenter:b.position}));});});
+                allGuns.impacts.forEach(function(b){DW.flightGuns.geometry({bolts:[],impacts:[b]},state).forEach(function(batch){effectBatches.push(Object.assign({},batch,{region:b.region||0,lensCenter:b.position}));});});
+            }else{
+            regions.forEach(function(region){DW.flightGuns.geometry({bolts:allGuns.bolts.filter(function(b){return (b.region||0)===region;}),impacts:allGuns.impacts.filter(function(b){return (b.region||0)===region;})},state).forEach(function(b){effectBatches.push(Object.assign({},b,{region:region}));});});
+            }
+            groups.forEach(function (group) {
+                var team=group.team;
+                var craft=group.craft.filter(function(c){return (c.hp||0)>0;});
+                if(!craft.length)return;
+                var engine=Object.assign({},DW.shipPackModels.engineGeometry(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units, state, world.elapsedSeconds),{region:group.region,lensRadius:objectWarp?DW.shipPackModels.hullRadius(DW.shipPackModels.craftModel(craft[0],team==='ally'?appearance.allyArt:appearance.enemyArt,combat.wave)):undefined,lensCenter:objectWarp?craft[0].pose.eye:undefined});
+                if(objectWarp)effectBatches.push(engine);else engineParts.push(engine);
             });
-            var engines = new Float32Array(engineParts.reduce(function (n, p) {
-                return n + p.length;
-            }, 0)), engineOffset = 0;
-            engineParts.forEach(function (p) {
-                engines.set(p, engineOffset);
-                engineOffset += p.length;
+            if(!objectWarp)regions.forEach(function(region){
+                var parts=engineParts.filter(function(p){return p.region===region;}),vertices=new Float32Array(parts.reduce(function(n,p){return n+p.vertices.length;},0)),offset=0;
+                parts.forEach(function(p){vertices.set(p.vertices,offset);offset+=p.vertices.length;});
+                effectBatches.push({region:region,vertices:vertices,color:[.25,.65,1]});
             });
-            effectBatches.push({ vertices: engines, color: [.25, .65, 1] });
             if(capital)effectBatches=effectBatches.concat(capital.effects(state));
             scene.setStudyEffects(effectBatches);
-            scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).slice(-12).map(function(f){return {position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:Math.round(f.position[0]*31+f.position[1]*17)};}));
+            scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).slice(-12).map(function(f){return {region:f.region||0,position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:Math.round(f.position[0]*31+f.position[1]*17)};}));
+            // This conservative revision covers simulation-driven mesh motion,
+            // pose changes, asset readiness, appearance edits and actor lifetime.
+            // Additive bolts/engines are composited live and never cached.
+            if(scene.setStudyBridgeRevision&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeTemporal')==='1'){
+                scene.setStudyBridgeRevision(JSON.stringify([world.elapsedSeconds,world.asteroids,world.ships,appearance.allyArt,appearance.enemyArt,appearance.paint,comparison,livingArt.map(function(c){return [c.hp,c.pose,c.scorches];}),combat.flashes,actorBatches.map(function(b){return [b.vertices.length,b.origin,b.rotation,b.basis,b.scale,b.finish,b.color,b.opacity,b.texture&&b.texture.src];})]));
+            }
             scene.setStudyDiagnostics(comparison);
             if(skybox.setOccluders)skybox.setOccluders(world.asteroids.map(function(a){return {center:[a.position.x,a.position.y,0],radius:a.radius};}));
             skybox.render(state, comparison.scale, comparison.mode === 'empty',elapsed);

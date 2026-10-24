@@ -376,15 +376,16 @@ export interface DriftworksNamespace {
     inspectionHeight: (world: World) => number;
     create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; viewer?: boolean; zoomToTerrain?:boolean}) => {
       setStudyBridge:(enabled:boolean)=>void;
+      setStudyBridgeRevision:(revision:string|null)=>void;
       setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean}) => void;
-      getRenderStats: () => {bridgeCaptures?:number;bridgeCpuMs?:number;drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
+      getRenderStats: () => {bridgeObjectPaths?:number;bridgeObjectPatches?:number;bridgeObjectError?:number;bridgeObjectBad?:number;bridgeHistoryValid?:number;bridgeCaptures?:number;bridgeCpuMs?:number;drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyLightRigs:(rigs:RigLighting[])=>void;
     setRigLightsEnabled:(enabled:boolean)=>void;
-    setStudyActors: (batches: {vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
-      setStudyEffects: (batches: {vertices: Float32Array; color: [number,number,number]}[]) => void;
-      setStudyExplosions: (blasts: {position:[number,number,number];velocity?:[number,number,number];age:number;size:number;seed:number}[]) => void;
+    setStudyActors: (batches: {lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
+      setStudyEffects: (batches: {lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; color: [number,number,number]}[]) => void;
+      setStudyExplosions: (blasts: {region?:number;position:[number,number,number];velocity?:[number,number,number];age:number;size:number;seed:number}[]) => void;
       getOrbit: () => {yaw: number; tilt: number; height?: number};
-      setSurfaceCamera: (pose: {eye: [number, number, number]; right: [number, number, number]; up: [number, number, number]; back: [number, number, number]} | null) => void;
+      setSurfaceCamera: (pose: {region?:number;eye: [number, number, number]; right: [number, number, number]; up: [number, number, number]; back: [number, number, number]} | null) => void;
       setOrbit: (value: {yaw: number; tilt: number; height?: number}) => void;
       sync: (world: World) => void;
       render: (world: World, alpha: number, dt: number, wallDt: number) => void;

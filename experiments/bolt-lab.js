@@ -37,19 +37,16 @@
   // Camera angular velocity never contributes to its world-space length.
   const vertex = `precision highp float;
 attribute vec3 position;
-uniform mat4 modelViewMatrix;uniform mat4 projectionMatrix;
-uniform float diameter;uniform float boltLength;uniform vec3 flightAxis;
+uniform mat4 projectionMatrix;
+uniform float diameter;uniform vec3 viewCenter;uniform vec2 viewSpan;
 varying vec2 uv;
 void main(){
  uv=position.xy*.5+.5;
- vec4 p=modelViewMatrix*vec4(0.,0.,0.,1.);
- vec3 axis=(modelViewMatrix*vec4(flightAxis,0.)).xyz;
- float projected=length(axis.xy);
- vec2 along=projected>.0001?axis.xy/projected:vec2(1.,0.);
+ float projected=length(viewSpan);
+ vec2 along=projected>.0001?viewSpan/projected:vec2(1.,0.);
  vec2 side=vec2(-along.y,along.x);
- float extension=max(0.,boltLength-diameter);
- p.xyz-=axis*extension*.5;
- p.xy+=along*position.x*(diameter+extension*projected)*.5+side*position.y*diameter*.5;
+ vec4 p=vec4(viewCenter,1.);
+ p.xy+=along*position.x*(diameter+projected)*.5+side*position.y*diameter*.5;
  gl_Position=projectionMatrix*p;
 }`;
   const fragment = `precision highp float;
@@ -61,7 +58,7 @@ void main(){
  if(c.a<.002)discard;gl_FragColor=c;
 }`;
   /** @param {number} style */
-  function shotMaterial(style) {return new THREE.RawShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:{atlas:{value:texture},frame:{value:0},row:{value:style},diameter:{value:6},boltLength:{value:6},flightAxis:{value:[0,0,-1]}},side:THREE.DoubleSide,transparent:true,depthTest:true,depthWrite:false,blending:THREE.AdditiveBlending,defaultAttributeValues:{}});}
+  function shotMaterial(style) {return new THREE.RawShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:{atlas:{value:texture},frame:{value:0},row:{value:style},diameter:{value:6},viewCenter:{value:[0,0,-1]},viewSpan:{value:[0,0]}},side:THREE.DoubleSide,transparent:true,depthTest:true,depthWrite:false,blending:THREE.AdditiveBlending,defaultAttributeValues:{}});}
   const flat = new THREE.RawShaderMaterial({vertexShader:'precision highp float;attribute vec3 position;attribute vec3 color;uniform mat4 modelViewMatrix;uniform mat4 projectionMatrix;varying vec3 col;void main(){col=color;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'precision highp float;varying vec3 col;void main(){gl_FragColor=vec4(col,1.);}',uniforms:{},side:THREE.DoubleSide,transparent:false,depthWrite:true,blending:THREE.NoBlending,defaultAttributeValues:{color:[.3,.36,.43]}});
   /** @param {Object3D} object @param {V3} position @param {Basis} [rotation] */
   function place(object, position, rotation) {
@@ -127,7 +124,7 @@ void main(){
     if(last && elapsed>0 && elapsed<.5){frameSeconds+=elapsed;frameCount++;if(frameSeconds>=.5){measuredFps=frameCount/frameSeconds;frameSeconds=0;frameCount=0;}}
     const dt=Math.min(elapsed,.05);last=ms;const step=paused?0:dt*+value('speed');time+=step;if(!paused && dt>0)flightInterval=step;updateCamera();
     if(!paused&&(auto.checked||held||burst>0)&&time>=next){fire();next=time+ +value('cadence');if(burst>0)burst--;}
-    for(let i=shots.length-1;i>=0;i--) {const shot=shots[i];model.advance(shot,step);if(shot.age>shot.life){remove(i);continue;}place(shot.mesh,shot.position);shot.material.uniforms.frame.value=value('animation')==='same'?0:shot.variant;shot.material.uniforms.diameter.value=6*+value('size');shot.material.uniforms.boltLength.value=model.bodyLength(Math.hypot(...shot.velocity),flightInterval,6*+value('size'),+value('stretch'));shot.material.uniforms.flightAxis.value=normalize(shot.velocity);shot.material.blending=value('blend')==='lighter'?THREE.AdditiveBlending:THREE.NormalBlending;}
+    for(let i=shots.length-1;i>=0;i--) {const shot=shots[i];model.advance(shot,step);if(shot.age>shot.life){remove(i);continue;}place(shot.mesh,shot.position);shot.material.uniforms.frame.value=value('animation')==='same'?0:shot.variant;shot.material.uniforms.diameter.value=6*+value('size');const body=model.projectedBody(shot.position,shot.velocity,eye,basis,model.bodyLength(Math.hypot(...shot.velocity),flightInterval,6*+value('size'),+value('stretch')),6*+value('size'));shot.mesh.visible=!!body;if(body){shot.material.uniforms.viewCenter.value=body.center;shot.material.uniforms.viewSpan.value=body.span;}shot.material.blending=value('blend')==='lighter'?THREE.AdditiveBlending:THREE.NormalBlending;}
     renderer.render(scene,camera);el('stats').textContent=(paused?'PAUSED · ':'')+shots.length+' bolts · '+volley+' volleys / '+measuredFps.toFixed(0)+' fps / '+(measuredFps?1000/measuredFps:0).toFixed(1)+' ms / '+(measuredFps?+value('velocity')*+value('speed')/measuredFps:0).toFixed(1)+' m per frame';
     el('caption').textContent='3D / 70° FOV · '+value('velocity')+' m/s · '+(value('palette')==='all'?'CYAN / GREEN / RED / AMBER':names[+value('style')]);requestAnimationFrame(tick);
   }

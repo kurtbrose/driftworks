@@ -94,6 +94,10 @@
             var shipDistance = Math.hypot(state.eye[0] - mothership.position.x, state.eye[1] - mothership.position.y, state.eye[2]) * units;
             var distance = Math.hypot.apply(null, state.eye), speed = Math.hypot.apply(null, state.velocity);
             telemetry.textContent = (speed*speedScale).toFixed(0) + ' '+speedLabel+'   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units*displayScale) + distanceUnit+' TO CENTER\n' + Math.round(asteroid.radius * 2 * units*displayScale) + distanceUnit+' BODY DIAMETER\n' + Math.round(shipDistance*displayScale) + distanceUnit+' TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
+            if(mission.sky.wormhole){
+                var mouthDistance=Math.hypot(state.eye[0]-(state.region||0)*12000/units,state.eye[1]+2000/units,state.eye[2]-1550/units)*units;
+                telemetry.textContent=((state.region||0)?'RIME':'ASTEROID RANGE')+' REGION / '+Math.round(mouthDistance)+' m TO THROAT\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
+            }
             var w = host.clientWidth, h = host.clientHeight;
             gpu.begin(w, h);
             if(mission.weaponsDisabled){
@@ -122,7 +126,7 @@
                 combatHud.arc(sx, sy, 5, 0, Math.PI * 2);
                 combatHud.stroke();
             }
-            var speakerId = view.speakerId, living = DW.training.alive(combat), selected = living.find(function (e) {
+            var speakerId = view.speakerId, living = DW.training.alive(combat).filter(function(e){return (e.pose.region||0)===(state.region||0);}), selected = living.find(function (e) {
                 return e.id === combat.targetId;
             });
             status = targetStatus(status, selected, combat.time);
@@ -163,10 +167,11 @@
             var radarContacts = /** @type {RadarContact[]} */ (living.map(function (e) {
                 return { point: e.pose.eye, color: e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
             }));
-            if(!mission.emptySpace){
+            if(!mission.emptySpace&&!(state.region||0)){
                 radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
                 radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
             }
+            if(mission.sky.wormhole)radarContacts.push({point:[(state.region||0)*12000/units,-2000/units,1550/units],color:'#b7a6ff',landmark:true});
             DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, combat.mode, document.body.classList.contains('touch-flight'));
             combatHud.font = '12px ui-monospace,monospace';
             combatHud.textAlign = 'center';
