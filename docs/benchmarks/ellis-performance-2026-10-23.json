@@ -126,7 +126,7 @@
         "mean": {
           "utilizationPercent": 91.625,
           "powerWatts": 255.1525,
-          "temperatureCelsius": 67.0,
+          "temperatureCelsius": 67,
           "fanPercent": 71.375
         }
       }
@@ -251,7 +251,7 @@
           "utilizationPercent": 40.75,
           "powerWatts": 190.76749999999998,
           "temperatureCelsius": 64.125,
-          "fanPercent": 83.0
+          "fanPercent": 83
         }
       }
     },
@@ -375,7 +375,7 @@
           "utilizationPercent": 85.125,
           "powerWatts": 254.1375,
           "temperatureCelsius": 68.375,
-          "fanPercent": 82.0
+          "fanPercent": 82
         }
       }
     },
@@ -499,7 +499,7 @@
           "utilizationPercent": 56.625,
           "powerWatts": 199.9925,
           "temperatureCelsius": 65.5,
-          "fanPercent": 85.0
+          "fanPercent": 85
         }
       }
     },
@@ -623,7 +623,7 @@
           "utilizationPercent": 44.125,
           "powerWatts": 192.1475,
           "temperatureCelsius": 63.75,
-          "fanPercent": 84.0
+          "fanPercent": 84
         }
       }
     },
@@ -747,7 +747,7 @@
           "utilizationPercent": 86.375,
           "powerWatts": 255.6525,
           "temperatureCelsius": 68.875,
-          "fanPercent": 83.0
+          "fanPercent": 83
         }
       }
     },
@@ -871,7 +871,7 @@
           "utilizationPercent": 83.875,
           "powerWatts": 254.47375,
           "temperatureCelsius": 70.75,
-          "fanPercent": 87.0
+          "fanPercent": 87
         }
       }
     },
@@ -995,7 +995,7 @@
           "utilizationPercent": 74.75,
           "powerWatts": 227.15875,
           "temperatureCelsius": 68.5,
-          "fanPercent": 89.0
+          "fanPercent": 89
         }
       }
     },
@@ -1118,7 +1118,7 @@
         "mean": {
           "utilizationPercent": 91.125,
           "powerWatts": 255.5125,
-          "temperatureCelsius": 71.0,
+          "temperatureCelsius": 71,
           "fanPercent": 88.125
         }
       }
@@ -1243,8 +1243,793 @@
           "utilizationPercent": 87.375,
           "powerWatts": 254.25875,
           "temperatureCelsius": 71.625,
-          "fanPercent": 89.0
+          "fanPercent": 89
         }
+      }
+    }
+  ],
+  "timerProbeCorrection": "Initial sky-context check used the wrong extension name; both WebGL1 sky and WebGL2 Three contexts support timer queries.",
+  "gpuTimingRuns": [
+    {
+      "label": "full",
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 385,
+            "mean": 0.19746618181818196,
+            "p50": 0.193504,
+            "p95": 0.207872
+          },
+          "captures": {
+            "samples": 771,
+            "mean": 0.21544583138780804,
+            "p50": 0.080896,
+            "p95": 0.867328
+          },
+          "primary": {
+            "samples": 772,
+            "mean": 0.9608189430051814,
+            "p50": 1.662976,
+            "p95": 1.992704
+          },
+          "screen": {
+            "samples": 870,
+            "mean": 5.185351062068963,
+            "p50": 0.171232,
+            "p95": 11.979776
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T06:42:31.927Z",
+      "sampleEnd": "2026-10-24T06:42:39.942Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 58,
+            "p95": 58
+          },
+          "triangles": {
+            "mean": 807858,
+            "p95": 807858
+          },
+          "cpu": {
+            "mean": 0.3866323906842112,
+            "p95": 0.6000000238418579
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 30,
+            "p95": 30
+          },
+          "triangles": {
+            "mean": 404009,
+            "p95": 404009
+          },
+          "cpu": {
+            "mean": 0.33598971795913185,
+            "p95": 0.5
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 2.2596401028277633,
+            "p95": 3
+          },
+          "triangles": {
+            "mean": 651.8688946015424,
+            "p95": 1301
+          },
+          "cpu": {
+            "mean": 0.3272493538329411,
+            "p95": 0.6000001430511475
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 389,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 20.590231362529156,
+        "p50": 15.799999952316284,
+        "p95": 42.199999928474426
+      },
+      "cpu": {
+        "mean": 1.5305912559014052,
+        "p50": 1.5,
+        "p95": 1.899999976158142
+      },
+      "draws": {
+        "mean": 91,
+        "p50": 91,
+        "p95": 91
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.8282776347775692,
+        "p50": 0.8000000715255737,
+        "p95": 1.100000023841858
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.7000000476837158,
+        "drawCalls": 91,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 30,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1.100000023841858
+      }
+    },
+    {
+      "label": "bypass",
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 598,
+            "mean": 0.19455154515050166,
+            "p50": 0.183296,
+            "p95": 0.200704
+          },
+          "captures": {
+            "samples": 1196,
+            "mean": 0.227680963210702,
+            "p50": 0.080896,
+            "p95": 0.820224
+          },
+          "primary": {
+            "samples": 1196,
+            "mean": 0.9348920936454851,
+            "p50": 1.687552,
+            "p95": 1.917952
+          },
+          "screen": {
+            "samples": 1300,
+            "mean": 0.0852542030769226,
+            "p50": 0.062464,
+            "p95": 0.164864
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T06:43:12.534Z",
+      "sampleEnd": "2026-10-24T06:43:20.542Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 58,
+            "p95": 58
+          },
+          "triangles": {
+            "mean": 807858,
+            "p95": 807858
+          },
+          "cpu": {
+            "mean": 0.3590984957445046,
+            "p95": 0.5
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 30,
+            "p95": 30
+          },
+          "triangles": {
+            "mean": 404009,
+            "p95": 404009
+          },
+          "cpu": {
+            "mean": 0.30116861909379145,
+            "p95": 0.40000009536743164
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 2.1752921535893157,
+            "p95": 3
+          },
+          "triangles": {
+            "mean": 585.1669449081803,
+            "p95": 1293
+          },
+          "cpu": {
+            "mean": 0.2829716237439138,
+            "p95": 0.5
+          }
+        }
+      },
+      "ablation": "geometry",
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 599,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 13.360434056721466,
+        "p50": 13.300000071525574,
+        "p95": 16.899999976158142
+      },
+      "cpu": {
+        "mean": 1.4415692853211162,
+        "p50": 1.4000000953674316,
+        "p95": 1.8000000715255737
+      },
+      "draws": {
+        "mean": 91,
+        "p50": 91,
+        "p95": 91
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.7652754628399576,
+        "p50": 0.7999999523162842,
+        "p95": 1
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.8999999761581421,
+        "drawCalls": 91,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 30,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1.1999999284744263
+      }
+    },
+    {
+      "label": "full-tagged",
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 386,
+            "mean": 0.19768306735751298,
+            "p50": 0.192512,
+            "p95": 0.20992
+          },
+          "captures": {
+            "samples": 773,
+            "mean": 0.22303176196636487,
+            "p50": 0.082944,
+            "p95": 0.876544
+          },
+          "primary": {
+            "samples": 774,
+            "mean": 0.9583649819121453,
+            "p50": 1.660928,
+            "p95": 1.978368
+          },
+          "compositor": {
+            "samples": 386,
+            "mean": 11.539127378238343,
+            "p50": 11.597824,
+            "p95": 12.13952
+          },
+          "screen": {
+            "samples": 484,
+            "mean": 0.15058604958677696,
+            "p50": 0.140288,
+            "p95": 0.17408
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T06:44:01.929Z",
+      "sampleEnd": "2026-10-24T06:44:09.934Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 58,
+            "p95": 58
+          },
+          "triangles": {
+            "mean": 807858,
+            "p95": 807858
+          },
+          "cpu": {
+            "mean": 0.3997435927391052,
+            "p95": 0.6000000238418579
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 30,
+            "p95": 30
+          },
+          "triangles": {
+            "mean": 404009,
+            "p95": 404009
+          },
+          "cpu": {
+            "mean": 0.3341025627576388,
+            "p95": 0.5
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.025384614100823037,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.2538461538461538,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 640.4410256410256,
+            "p95": 1291
+          },
+          "cpu": {
+            "mean": 0.29948717753092446,
+            "p95": 0.6000000238418579
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 390,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 20.504358974175574,
+        "p50": 15.800000071525574,
+        "p95": 40.40000009536743
+      },
+      "cpu": {
+        "mean": 1.5523076907182352,
+        "p50": 1.5,
+        "p95": 1.899999976158142
+      },
+      "draws": {
+        "mean": 91,
+        "p50": 91,
+        "p95": 91
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.8492307690473703,
+        "p50": 0.8000000715255737,
+        "p95": 1.1999999284744263
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.8999999761581421,
+        "drawCalls": 91,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 30,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1.2999999523162842
+      }
+    },
+    {
+      "label": "explicit-hoist",
+      "hoist": true,
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 386,
+            "mean": 0.19713193782383445,
+            "p50": 0.190464,
+            "p95": 0.207872
+          },
+          "captures": {
+            "samples": 772,
+            "mean": 0.21953985492227976,
+            "p50": 0.079872,
+            "p95": 0.854016
+          },
+          "primary": {
+            "samples": 772,
+            "mean": 0.9523964352331618,
+            "p50": 1.644544,
+            "p95": 1.9712
+          },
+          "compositor": {
+            "samples": 386,
+            "mean": 11.318907191709853,
+            "p50": 11.312128,
+            "p95": 11.994112
+          },
+          "screen": {
+            "samples": 484,
+            "mean": 0.1354218842975206,
+            "p50": 0.13824,
+            "p95": 0.173056
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T06:45:47.121Z",
+      "sampleEnd": "2026-10-24T06:45:55.127Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 58,
+            "p95": 58
+          },
+          "triangles": {
+            "mean": 807858,
+            "p95": 807858
+          },
+          "cpu": {
+            "mean": 0.36615384297493175,
+            "p95": 0.5999999046325684
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 30,
+            "p95": 30
+          },
+          "triangles": {
+            "mean": 404009,
+            "p95": 404009
+          },
+          "cpu": {
+            "mean": 0.2958974361419678,
+            "p95": 0.40000009536743164
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.020256412029266358,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.2538461538461538,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 644.5333333333333,
+            "p95": 1299
+          },
+          "cpu": {
+            "mean": 0.29846153595508673,
+            "p95": 0.6000000238418579
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 390,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 20.469743589865857,
+        "p50": 16.100000023841858,
+        "p95": 44.299999952316284
+      },
+      "cpu": {
+        "mean": 1.4679487130580804,
+        "p50": 1.5,
+        "p95": 1.8000000715255737
+      },
+      "draws": {
+        "mean": 91,
+        "p50": 91,
+        "p95": 91
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.7653846163016099,
+        "p50": 0.7000000476837158,
+        "p95": 1
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.7000000476837158,
+        "drawCalls": 91,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 30,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 0.9000000953674316
+      }
+    },
+    {
+      "label": "hoist-control",
+      "hoist": false,
+      "gpu": {
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 383,
+            "mean": 0.2041422036553525,
+            "p50": 0.192512,
+            "p95": 0.207872
+          },
+          "captures": {
+            "samples": 766,
+            "mean": 0.2138104647519581,
+            "p50": 0.080896,
+            "p95": 0.866304
+          },
+          "primary": {
+            "samples": 766,
+            "mean": 0.9775208355091377,
+            "p50": 1.668096,
+            "p95": 2.26288
+          },
+          "compositor": {
+            "samples": 383,
+            "mean": 11.626550809399475,
+            "p50": 11.698176,
+            "p95": 12.382208
+          },
+          "screen": {
+            "samples": 483,
+            "mean": 0.13529215734989655,
+            "p50": 0.137216,
+            "p95": 0.17408
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T06:46:45.657Z",
+      "sampleEnd": "2026-10-24T06:46:53.664Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 58,
+            "p95": 58
+          },
+          "triangles": {
+            "mean": 807858,
+            "p95": 807858
+          },
+          "cpu": {
+            "mean": 0.3547803622499609,
+            "p95": 0.5
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 30,
+            "p95": 30
+          },
+          "triangles": {
+            "mean": 404009,
+            "p95": 404009
+          },
+          "cpu": {
+            "mean": 0.2906976762668107,
+            "p95": 0.40000009536743164
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.01808785714536366,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.2609819121447028,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 634.5193798449612,
+            "p95": 1279
+          },
+          "cpu": {
+            "mean": 0.28372093503789386,
+            "p95": 0.5
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "0",
+      "scale": "1",
+      "mode": "new",
+      "view": "limb",
+      "quality": "refined",
+      "live": false,
+      "samples": 387,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 20.621447028423773,
+        "p50": 16.100000023841858,
+        "p95": 39.10000002384186
+      },
+      "cpu": {
+        "mean": 1.411369511631416,
+        "p50": 1.399999976158142,
+        "p95": 1.7000000476837158
+      },
+      "draws": {
+        "mean": 91,
+        "p50": 91,
+        "p95": 91
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.7387596910930111,
+        "p50": 0.7000000476837158,
+        "p95": 1
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.7000000476837158,
+        "drawCalls": 91,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 30,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 0.9000000953674316
       }
     }
   ]
