@@ -49,6 +49,7 @@ export type AegisFlightRig = {
 export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number};
 export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig};
 export type Pose = {
+    region?: number;
     eye: Vector;
     right: Vector;
     up: Vector;
@@ -164,6 +165,7 @@ export type Weapon = {
     color2: Vector;
 };
 export type Bolt = {
+    region?: number;
     position: Vector;
     direction: Vector;
     weapon: Weapon;
@@ -171,6 +173,7 @@ export type Bolt = {
     team?: string;
 };
 export type Impact = {
+    region?: number;
     destruction?: boolean;
     velocity?: Vector;
     position: Vector;
@@ -333,6 +336,7 @@ export type Pack = {
     models: Model[];
 };
 export type Batch = {
+    region?: number;
     basis?: Float32Array;
     scale?: number;
     origin?: [number,number,number];
@@ -643,8 +647,8 @@ export type Line = {
     emotion?: Feeling;
 };
 export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines?: number; reduced?: boolean};
-export type EllisDraw={material:import('../src/three-types').Material;object:import('../src/three-types').Object3D;uniforms:Record<string,{value:import('../src/three-types').UniformValue}>};
-export type EllisRenderPass={render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number)=>{captures:number;cpuMs:number};dispose:()=>void};
+export type EllisDraw={region?:number;material:import('../src/three-types').Material;object:import('../src/three-types').Object3D;uniforms:Record<string,{value:import('../src/three-types').UniformValue}>};
+export type EllisRenderPass={render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number)=>{extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
     evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};

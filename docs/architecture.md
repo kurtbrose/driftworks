@@ -1801,3 +1801,12 @@ ship bases, velocities and projectile directions through the same proper chart
 rotation; outward optical rays remain curved after emergence. No additional state
 is persisted. Chart, depth-shell
 and combat limitations are documented in [Ellis bridge playtest](ellis-bridge.md).
+
+
+Ellis presentation experiments are opt-in: `bridgeGeometry=adaptive` adds a
+half-resolution hit-coordinate pass, full-resolution reconstruction, and a
+separate masked refinement pass; the default remains the full geometry tracer.
+`bridgeAngle` limits only the searched geometry path prefix, using angular travel
+returned by the shared GLSL `ellisPointPhase`. It does not limit the sky or alter
+simulation/collision. Neither experiment is visually accepted yet; see the
+validation status in [Ellis bridge playtest](ellis-bridge.md).

@@ -79,21 +79,21 @@ assert.equal(frames.at(-1)[1].uniforms.uCameraExposure,1,'legacy sky events rese
 console.log('PASS shared camera response: native/procedural exposure parity, shader precision and legacy neutral reset');
 
 // The optional Ellis pass reuses submitted geometry and restores every raw/PBR pose.
-context.URLSearchParams=URLSearchParams;context.location={search:'?mission=ellis'};
+context.URLSearchParams=URLSearchParams;context.location={search:'?mission=ellis&bridgeGeometry=adaptive'};
 for(const file of ['experiments/ellis-optics.js','experiments/ellis-renderer.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
 THREE.WebGLRenderer.prototype.setViewport=noop;THREE.WebGLRenderer.prototype.setScissor=noop;THREE.WebGLRenderer.prototype.setScissorTest=noop;
 viewer.setStudyActors([{vertices:textured,color:[1,1,1],texture:{width:16,height:16},stride:8,origin:[0,-170,93],scale:2},{...batches[0],origin:[1,-168,93]}]);viewer.setStudyEffects([]);viewer.setStudyExplosions([]);
 viewer.setSurfaceCamera({eye:[0,-195,93],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
 viewer.render(world,1,0,0);const ordinary=frames.at(-1)[0],rawOrdinary=frames.at(-1)[1],before=frames.length;
 viewer.setStudyBridge(true);viewer.render(world,1,0,0);
-assert.equal(frames.length-before,14,'first frame fills both six-face charts plus primary and compositor');
+assert.equal(frames.length-before,16,'first frame fills charts, primary, half-resolution hit map and compositor');
 assert.equal(viewer.getRenderStats().bridgeCaptures,12);
 assert.equal(frames[before][0].geometry,ordinary.geometry,'captures share production geometry');
-const count=frames.length;viewer.render(world,1,0,0);assert.equal(frames.length-count,4,'steady frame amortizes two capture faces');
+const count=frames.length;viewer.render(world,1,0,0);assert.equal(frames.length-count,6,'steady frame amortizes two capture faces');
 assert.equal(viewer.getRenderStats().bridgeCaptures,2);
 const chartFlip=frames.length;
 viewer.setSurfaceCamera({eye:[720,-75,93],right:[-1,0,0],up:[0,0,1],back:[0,1,0]});viewer.render(world,1,0,0);
-assert.equal(frames.length-chartFlip,14,'crossing refreshes both charts before sampling');
+assert.equal(frames.length-chartFlip,16,'crossing refreshes both charts before sampling');
 viewer.setSurfaceCamera({eye:[0,-195,93],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
 viewer.setStudyBridge(false);viewer.render(world,1,0,0);
 assert.deepEqual(frames.at(-1)[0].matrix,ordinary.matrix,'native PBR matrix restored');
@@ -104,7 +104,7 @@ console.log('PASS Ellis scene pass: shared buffers, twelve-face warmup, rolling 
 
 viewer.setStudyEffects([{vertices:new Float32Array(data),color:[1,.75,.25]}]);
 viewer.setStudyBridge(true);const effectStart=frames.length;viewer.render(world,1,0,0);
-assert.equal(frames.length-effectStart,15,'effects add one full-resolution pass');
+assert.equal(frames.length-effectStart,17,'effects add one full-resolution pass');
 assert.equal(frames[effectStart].length,2,'opaque primary excludes additive bolts');
 const effects=frames[effectStart+1];assert.equal(effects.length,1,'separate layer contains only additive effects');
 assert.equal(effects[0].uniforms.uFinish,9);assert.equal(effects[0].depthWrite,true,'effect layer records fragment depth');
@@ -114,3 +114,18 @@ viewer.setStudyBridge(false);viewer.render(world,1,0,0);
 assert.equal(frames.at(-1).length,3,'all draw visibility restored');
 assert.equal(frames.at(-1)[2].depthWrite,false,'ordinary additive depth state restored');
 console.log('PASS Ellis additive effects: separate full-resolution color/depth, shell exclusion and restored draw state');
+
+const mapDraw=frames.find(f=>f.some(d=>d.material.fragmentShader&&d.material.fragmentShader.includes('ELLIS_HIT_MAP_PASS'))).find(d=>d.material.fragmentShader.includes('ELLIS_HIT_MAP_PASS'));
+assert.equal(mapDraw.uniforms.useHitMap,1);
+assert.deepEqual(Array.from(mapDraw.uniforms.hitSize),[320,240],'hit map is half the main 640 by 480 backing dimensions');
+assert.equal(mapDraw.uniforms.hitMap.minFilter,THREE.NearestFilter,'packed hit coordinates are decoded before interpolation');
+console.log('PASS Ellis hit map: separate half-resolution pass, packed nearest sampling and unchanged full-resolution output');
+
+viewer.setStudyBridge(false);viewer.setStudyEffects([]);context.location.search='?mission=ellis';
+viewer.setStudyBridge(true);const defaultStart=frames.length;viewer.render(world,1,0,0);
+assert.equal(frames.length-defaultStart,14,'default retains the validated single-compositor path');
+assert.equal(frames.at(-1)[0].uniforms.useHitMap,0,'experimental map is opt-in');
+assert.equal(frames.at(-1)[0].uniforms.maxGeometryAngle,1e6,'default does not remove geometry windings');
+viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeAngle=180';viewer.setStudyBridge(true);viewer.render(world,1,0,0);
+assert(Math.abs(frames.at(-1)[0].uniforms.maxGeometryAngle-Math.PI)<1e-10,'angular budget applies only to geometry uniforms');
+console.log('PASS Ellis experiment controls: unchanged default, opt-in map and angular budget');

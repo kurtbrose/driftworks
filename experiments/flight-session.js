@@ -54,9 +54,8 @@
             return vector.map(function(v,i){return 2*radial*normal[i]-v;});
         }
         /** Swept mouth crossing in the two exterior charts.
-         * @param {number[]} before @param {number[]} after */
-        function crossBridge(before,after){
-            var side=before[0]*units>6000?1:0;
+         * @param {number[]} before @param {number[]} after @param {number} side */
+        function crossBridge(before,after,side){
             var center=[side*12000/units,-2000/units,1550/units],radius=300/units;
             var offset=before.map(function(v,i){return v-center[i];});
             var move=after.map(function(v,i){return v-before[i];});
@@ -77,8 +76,10 @@
         var opponentStyle = /** @type {import('./types').OpponentStyle} */ ('baseline');
         var hulls = /** @type {{ally: string; enemy: string} | null} */ (null);
         function seedBridgeCombat(){
+            state.region=0;
             if(combat.mode==='ellis')combat.enemies.forEach(function(c,index){
-                if(index%4>=2)c.pose.eye[0]+=12000/units;
+                c.pose.region=index%4>=2?1:0;
+                if(c.pose.region)c.pose.eye[0]+=12000/units;
             });
         }
         function configureCombat() {
@@ -236,15 +237,15 @@
                 var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, emptySpace?undefined:environment.terrainHit);
                 if(bridge){
                     travelers.forEach(function(pose,index){
-                        var crossing=crossBridge(previous[index],pose.eye);
+                        var crossing=crossBridge(previous[index],pose.eye,pose.region||0);
                         if(!crossing)return;
-                        pose.eye=crossing.eye;pose.right=bridgeVector(pose.right,crossing.normal);
+                        pose.region=1-(pose.region||0);pose.eye=crossing.eye;pose.right=bridgeVector(pose.right,crossing.normal);
                         pose.up=bridgeVector(pose.up,crossing.normal);pose.back=bridgeVector(pose.back,crossing.normal);
                         pose.velocity=bridgeVector(pose.velocity,crossing.normal);
                     });
                     bridgeBolts.forEach(function(record){
-                        var crossing=crossBridge(record.before,record.bolt.position);
-                        if(crossing){record.bolt.position=crossing.eye;record.bolt.direction=bridgeVector(record.bolt.direction,crossing.normal);}
+                        var crossing=crossBridge(record.before,record.bolt.position,record.bolt.region||0);
+                        if(crossing){record.bolt.region=1-(record.bolt.region||0);record.bolt.position=crossing.eye;record.bolt.direction=bridgeVector(record.bolt.direction,crossing.normal);}
                     });
                 }
                 if (feedback.fired)
@@ -258,7 +259,7 @@
                 var length = Math.hypot.apply(null, state.eye), direction = state.eye.map(function (x) {
                     return x / (length || 1);
                 });
-                if (!emptySpace&&length < asteroid.radius * 1.12 + 5 / units) {
+                if (!emptySpace&&!(state.region||0)&&length < asteroid.radius * 1.12 + 5 / units) {
                     var surface = environment.surfaceFrame(asteroid, rotateVector(direction, -asteroid.rotation));
                     grounded = model.contact(state, rotateVector(surface.point, asteroid.rotation), asteroid.radius);
                     // Preserve resting contact at the exact clearance boundary.

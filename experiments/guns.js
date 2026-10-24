@@ -67,7 +67,7 @@
                         -x * (convergenceM - launchForward) - pose.right[i] * muzzle[0] - pose.up[i] * muzzle[2];
                 });
                 var distance = Math.hypot.apply(null, aim);
-                guns.bolts.push({ position: position, direction: aim.map(function (x) {
+                guns.bolts.push({ region:pose.region||0, position: position, direction: aim.map(function (x) {
                         return x / distance;
                     }), weapon: weapon, age: 0 });
             }

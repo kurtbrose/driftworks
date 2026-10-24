@@ -81,7 +81,7 @@
             /** @param {string|number} stage @param {number} [seconds] */
             trigger:function(stage,seconds){var index=typeof stage==='number'?stage:impactStages.findIndex(function(s){return s.id===stage;}),d=seconds===undefined?8:seconds;
                 if(!Number.isInteger(index)||index<0||index>=impactStages.length)throw new RangeError('Unknown impact cue');
-                if(!Number.isFinite(d)||d<0||d>120)throw new RangeError('Impact transition must be 0–120 seconds');
+                if(!Number.isFinite(d)||d<0||d>120)throw new RangeError('Impact transition must be 0Ã¢â‚¬â€œ120 seconds');
                 if((active&&index===to)||(queue.length&&queue[queue.length-1].stage===index))return true;
                 if(queue.length>=16)return false;
                 if(!active&&index===held&&!queue.length)return true;
@@ -332,7 +332,7 @@ void main(){
     if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
     if(bridgeEnabled>.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
-        float side=step(6000.,bridgeEye.x);
+        float side=ellisRegion;
         vec3 offset=(bridgeEye-vec3(side*12000.,-2000.,1550.))/300.;
         float along=dot(offset,ray),impact2=dot(offset,offset)-along*along;
         vec3 outgoing=ray;float destination=side;
@@ -340,7 +340,7 @@ void main(){
             EllisRay bridge=ellisInit(bridgeEye,ray);
             if(bridge.hit>.5){outgoing=ellisExit(bridge);float ignored;ellisPoint(bridge,1.,ignored);destination=ignored;}
         }else{
-        // Null geodesic: ds²=-dt²+dl²+(l²+a²)dOmega², a=1.
+        // Null geodesic: dsÃ‚Â²=-dtÃ‚Â²+dlÃ‚Â²+(lÃ‚Â²+aÃ‚Â²)dOmegaÃ‚Â², a=1.
         // Finite integration domain and steps make this a visual approximation.
         if(along<0. && impact2<4.){
             vec3 entry=offset+ray*max(0.,-along-sqrt(max(0.,4.-impact2)));
@@ -715,7 +715,7 @@ void main(){
                 var status=document.getElementById('skybox-status');
                 if(status&&status.parentElement){
                     impactControls=document.createElement('div');
-                    impactControls.innerHTML='<details><summary>Timed artwork diagnostic</summary><label>Artwork reference time <input aria-label="Impact time" type="range" min="-5" max="600" step=".1" value="-5" style="width:100%"></label><label>Diagnostic speed <select aria-label="Impact playback"><option value="1">1×</option><option value="5">5×</option><option value="20">20×</option></select></label></details><button type="button">Restart impact</button><small>Mission cues control playback by default. Restart returns to cue mode.</small>';
+                    impactControls.innerHTML='<details><summary>Timed artwork diagnostic</summary><label>Artwork reference time <input aria-label="Impact time" type="range" min="-5" max="600" step=".1" value="-5" style="width:100%"></label><label>Diagnostic speed <select aria-label="Impact playback"><option value="1">1Ãƒâ€”</option><option value="5">5Ãƒâ€”</option><option value="20">20Ãƒâ€”</option></select></label></details><button type="button">Restart impact</button><small>Mission cues control playback by default. Restart returns to cue mode.</small>';
                     status.parentElement.appendChild(impactControls);impactSlider=impactControls.querySelector('input');
                     if(impactSlider){const slider=impactSlider;slider.oninput=function(){setImpactTime(Number(slider.value));};}
                     var restart=impactControls.querySelector('button');if(restart)restart.onclick=resetImpact;
@@ -769,7 +769,7 @@ void main(){
             });
             var status=document.getElementById('skybox-status');
             if(status&&status.parentElement){
-                impactControls=document.createElement('div');impactControls.innerHTML='<label>Impact time <input aria-label="Impact time" type="range" min="-5" max="180" step="0.1" value="-5" style="width:100%"></label><label>Impact playback <select aria-label="Impact playback"><option value="1">1×</option><option value="5">5×</option><option value="20">20×</option></select></label><button type="button">Restart impact</button>';
+                impactControls=document.createElement('div');impactControls.innerHTML='<label>Impact time <input aria-label="Impact time" type="range" min="-5" max="180" step="0.1" value="-5" style="width:100%"></label><label>Impact playback <select aria-label="Impact playback"><option value="1">1Ãƒâ€”</option><option value="5">5Ãƒâ€”</option><option value="20">20Ãƒâ€”</option></select></label><button type="button">Restart impact</button>';
                 status.parentElement.appendChild(impactControls);
                 impactSlider=impactControls.querySelector('input');var speed=impactControls.querySelector('select'),restart=impactControls.querySelector('button');
                 if(impactSlider){const slider=impactSlider;slider.oninput=function(){setImpactTime(Number(slider.value));};}
@@ -934,6 +934,7 @@ void main(){
                 uniforms(sky, pose, width / height, dpr);
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.gasGiant ? 23 : missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeEnabled'),missionSky.wormhole?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'ellisRegion'),pose.region||0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeLookup'),bridgeTable?1:0);
                 if(bridgeTable){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);gl.uniform1i(gl.getUniformLocation(sky,'ellisTable'),4);gl.activeTexture(gl.TEXTURE0);}
                 if(missionSky.wormhole)gl.uniform3fv(gl.getUniformLocation(sky,'bridgeEye'),pose.eye.map(function(v){return v*(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT;}));

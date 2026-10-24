@@ -13,15 +13,15 @@ existing Jade/Rime cube faces and detailed moon disk.
 ## Shared optics
 
 `experiments/ellis-optics.js` reduces null geodesics in the static Ellis metric
-`ds² = -dt² + dl² + (l² + a²)dΩ²` to a normalized radial integral, setting `a=1`.
+`dsÂ² = -dtÂ² + dlÂ² + (lÂ² + aÂ²)dÎ©Â²` to a normalized radial integral, setting `a=1`.
 Spherical symmetry keeps each ray in a plane. Both charts and all physical sizes
-reuse the same 512 × 512 RGBA8 table (1 MiB CPU data, cached once per page).
+reuse the same 512 Ã— 512 RGBA8 table (1 MiB CPU data, cached once per page).
 Its two 16-bit channel pairs store transmitted and turning branches.
 
 For conserved normalized angular momentum `b`, angular motion obeys
-`dphi/dl = b / ((1+l²) sqrt(1-b²/(1+l²)))` on an outward branch. Substitutions
-`l = sqrt(1-b²) sinh(u)` for transmitted rays and
-`l = sqrt(b²-1) cosh(u)` for turning rays remove the radial square-root endpoint.
+`dphi/dl = b / ((1+lÂ²) sqrt(1-bÂ²/(1+lÂ²)))` on an outward branch. Substitutions
+`l = sqrt(1-bÂ²) sinh(u)` for transmitted rays and
+`l = sqrt(bÂ²-1) cosh(u)` for turning rays remove the radial square-root endpoint.
 The table stores their cumulative integrals, not merely an asymptotic sky warp.
 A logarithmic impact-parameter coordinate concentrates samples near `b=1`.
 Both `skybox.js` and the geometry compositor use the same GLSL mapping.
@@ -30,7 +30,7 @@ traced. Outward rays start on the escaping branch and remain in their current
 chart; curvature must not be disabled immediately after emergence.
 
 This follows the analytic-geodesic/precomputation approach discussed by
-[Müller, Exact geometric optics in a Morris–Thorne wormhole spacetime (2008)](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.77.044043)
+[MÃ¼ller, Exact geometric optics in a Morrisâ€“Thorne wormhole spacetime (2008)](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.77.044043)
 and the symmetry-based lookup strategy demonstrated for Schwarzschild geometry by
 [Bruneton (2020)](https://ebruneton.github.io/black_hole_shader/).
 The table is an original numerical implementation for Ellis geometry; it is not
@@ -47,7 +47,7 @@ per wormhole with updates spread over successive frames. Its earlier
 color/depth approximation specifically for warp bubbles; it does not claim that
 this exact depth-shell algorithm was used for its wormholes.
 
-`experiments/ellis-renderer.js` uses two 3 × 2 atlases of 384 px cube faces, each
+`experiments/ellis-renderer.js` uses two 3 Ã— 2 atlases of 384 px cube faces, each
 with color and depth, captured from the fixed mouth centers. Existing production
 geometry, raw materials and native PBR transforms are reused; scene composition
 and uploads happen once. Main-camera static actor culling is disabled only in
@@ -85,7 +85,7 @@ clamped by the finite logarithmic table. These limits need further visual work.
 Gameplay still uses swept spherical crossing and antipodal position identification
 between Euclidean exterior charts. At a crossing, the antipodal identification
 transports the ship basis, velocity, projectile directions and residual tick
-travel by a proper half-turn around the crossing radial axis (`2nnᵀ - I`).
+travel by a proper half-turn around the crossing radial axis (`2nnáµ€ - I`).
 This preserves speed, radial motion, orthonormality and handedness while reversing
 tangent components in the destination chart. They do not follow curved spacetime
 geodesics during ordinary exterior flight.
@@ -146,7 +146,7 @@ because additive materials do not write opaque depth.
 This is a local straight-segment approximation, not transparent curved-ray
 transport. For rays entering the lens volume the contribution fades over the last
 third of a range ending 150 m beyond the lens entry; from inside the volume this
-means 100–150 m. The physical throat clips it sooner when nearer. Distant bolts,
+means 100â€“150 m. The physical throat clips it sooner when nearer. Distant bolts,
 bolts observed through the other mouth, and explosions still need further work.
 Simulation bolts continue moving and crossing charts independently of this fade.
 One additional full-resolution effects pass/target is used only when additive
@@ -161,7 +161,7 @@ normal additive state (`tests/three-production.cjs`). Browser inspection at
 100 m before the throat shows the yellow forward bolt glow while live projectiles
 cross into the destination chart. See the [firing still](benchmarks/ellis-firing-2026-10-23.png).
 
-A live eight-second firing sample at 1920×1080 on the RTX 3070 Ti averaged
+A live eight-second firing sample at 1920Ã—1080 on the RTX 3070 Ti averaged
 14.02 ms/frame (about 71 fps), 2.74 ms presentation CPU and 1.46 ms bridge CPU.
 There were 571 samples and seven surviving fighters at the end. This is a live
 workload observation, not a matched before/after optimization comparison or GPU
@@ -192,7 +192,7 @@ The first refined version retained 64 coarse steps and cost 31.46 ms/frame in th
 frozen magnified-limb fixture. Using 32 coarse steps plus local refinement reduced
 that to 17.93 ms (about 56 fps); presentation CPU averaged 1.52 ms. The old coarse
 shell acceptance at the same 384 px capture resolution averaged 13.34 ms (75 fps),
-but reproduced the floating rectangles. All runs used 1920×1080 backing size,
+but reproduced the floating rectangles. All runs used 1920Ã—1080 backing size,
 the RTX 3070 Ti, eight frozen fighters, the same pose and two rolling faces/frame.
 These are frame timings without a GPU timer, measured while the full test suite
 was also running; they are workload observations rather than universal budgets.
@@ -218,3 +218,69 @@ was running; there is still frame-time variation to investigate. See the
 [updated GPU continuity checks](benchmarks/ellis-quality-continuity-2026-10-24.json).
 `npm run check`, the focused optics and production-renderer tests, asset hash
 validation, and `git diff --check` passed after this quality pass.
+
+
+### Opt-in geometry-budget experiments (2026-10-24)
+
+The default remains the full-resolution, unlimited-angle geometry tracer. Two
+experimental controls are available for testing without altering sky lensing or
+simulation:
+
+- `bridgeGeometry=adaptive`: render an RGBA8 hit-coordinate map at half width and
+  height, using nearest filtering and manually decoded 16-bit path parameters.
+  Reconstruct colors from the existing capture atlases at full resolution. Mixed
+  hit/miss or chart neighborhoods, steep path changes, large depth residuals and
+  critical-orbit rays request a separate full-resolution refinement pass. Foreground
+  color/depth tests and the local additive effect layer stay full resolution.
+- `bridgeAngle=180` (or `360`): stop the geometry search once angular travel exceeds
+  the specified degree budget. Zero/omission means unlimited. This restricts the
+  searched path prefix, so an early hit is retained even when the rest of its ray
+  would wind much farther. The sky remains unrestricted. This does not guarantee
+  exactly one image per object: image order also depends on source/camera geometry,
+  and a hard angular boundary may omit primary views or cause a moving image to pop.
+
+The shared GLSL `ellisPointPhase` returns the same point/chart as `ellisPoint`, plus
+continuous angular travel in the ray plane before the antipodal chart-coordinate
+flip. It uses the already computed phase; the angular test adds no extra integral
+lookup per march step. Coarse and refined geometry paths use the same budget.
+`ellisPoint` remains the original point-only wrapper used by the sky.
+
+An initial adaptive version called the long traversal conditionally inside the
+same full-size shader. It cost about 2.93 ms for the hit map **plus 11.57 ms** for
+composition in the magnified-limb fixture, so it did not reduce GPU work. It was
+replaced by distinct fast-composition and refinement shaders, with the latter
+rejecting non-refinement pixels before tracing. No speedup is claimed for this
+replacement or the angular budgets yet.
+
+Validation is incomplete: the in-app browser stopped accepting WebGL contexts,
+including a fresh full-resolution control tab (`GL_RENDERER = Disabled`,
+`BindToCurrentSequence failed`). A zero-sized/zero-geometry pixel comparison was
+rejected, not counted as a pass. A fresh Chrome test surface was unavailable. The
+browser/app GPU backend needs restarting before matched GPU timings and visual
+acceptance can finish. The default was kept full-resolution/unlimited for this
+reason. Existing nearest-shell and capture-update limitations still apply; coarse
+all-miss cells can miss subpixel geometry and require explicit thin-object tests.
+
+After recovery, generate `output/ellis-benchmark.html` with
+`node tools/prepare-ellis-benchmark.cjs`. Use the same `view=limb&gpu=1` pose for
+`bridgeGeometry=full`, `bridgeGeometry=adaptive`, and each angular budget. Alternate
+full/adaptive/adaptive/full with no tests running. The **Compare hit map** button
+on an adaptive page compares same-frame final pixels against the full tracer. The
+**Compare angular cutoff** button on a full page compares its budget to unlimited.
+Both require positive render dimensions and visible opaque geometry; an all-sky
+comparison cannot validate geometry. Test `view=foreground`, `view=warped` (a real
+fighter placed near the other mouth), rim/approach/return, live firing, and slow
+motion before enabling a new default. Check the planet edge and critical ring in
+actual screenshots as well as pixel counts.
+
+GPU recovery follow-up (2026-10-24): fully restarting Codex restored WebGL1/2
+on the RTX 3070 Ti. Matched 1920x1080 limb samples measured full geometry
+composition at 12.05 ms, a 180-degree geometry budget at 10.80 ms, and adaptive
+hit-map/composition/refinement at 2.87 + 0.085 + 1.24 = 4.20 ms. These are
+single samples, not visual acceptance or a power measurement. The limb comparison
+correctly rejected zero opaque geometry (the visible planet is sky content).
+The subsequent warped-fighter comparison lost its WebGL context; the cause is
+unresolved. Both experiments remain opt-in and the default remains full/unlimited.
+Raw timings: [recovery measurements](benchmarks/ellis-recovery-2026-10-24.json).
+Focused optics/renderer tests, type checking, and npm run check passed before
+this recovery run. Positive-geometry and motion QA remain outstanding.

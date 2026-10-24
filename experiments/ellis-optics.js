@@ -32,6 +32,7 @@
     }
     var shader=`
 uniform sampler2D ellisTable;
+uniform float ellisRegion;
 struct EllisRay {vec3 radial;vec3 tangent;float b;float u0;float f0;float entry;float side;float hit;float inward;};
 float ellisAsinh(float x){return log(x+sqrt(x*x+1.));}
 float ellisAcosh(float x){return log(x+sqrt(max(0.,x*x-1.)));}
@@ -42,7 +43,7 @@ float ellisIntegral(float b,float u){
     return (b<1.?dot(encoded.rg,vec2(65280.,255.)):dot(encoded.ba,vec2(65280.,255.)))*32./65535.;
 }
 EllisRay ellisInit(vec3 eye,vec3 ray){
-    float side=step(6000.,eye.x);
+    float side=ellisRegion;
     vec3 offset=(eye-vec3(side*12000.,-2000.,1550.))/300.;
     float along=dot(offset,ray),impact2=max(0.,dot(offset,offset)-along*along);
     bool inside=dot(offset,offset)<4.;
@@ -60,7 +61,7 @@ EllisRay ellisInit(vec3 eye,vec3 ray){
     float u=b<1.?ellisAsinh(l/root):ellisAcosh(max(1.,l/root));
     return EllisRay(radial,tangent,b,u,ellisIntegral(b,u),entry*300.,side,hit,cosine<0.?1.:0.);
 }
-vec3 ellisPoint(EllisRay e,float t,out float side){
+vec3 ellisPointPhase(EllisRay e,float t,out float side,out float travel){
     float root=sqrt(max(.0000001,abs(1.-e.b*e.b)));
     float end=e.b<1.?ellisAsinh(24./root):ellisAcosh(max(1.,24./root));
     float start=e.inward>.5&&e.b>=1.?-e.u0:e.u0;
@@ -68,11 +69,13 @@ vec3 ellisPoint(EllisRay e,float t,out float side){
     float u=mix(start,finish,t);
     float l=root*(e.b<1.?ellisSinh(u):ellisCosh(u));
     float phi=e.inward<.5?ellisIntegral(e.b,abs(u))-e.f0:e.f0+(e.b<1.?-sign(u):sign(u))*ellisIntegral(e.b,abs(u));
+    travel=phi;
     vec3 radial=e.radial*cos(phi)+e.tangent*sin(phi);
     side=e.b<1.&&u<0.?1.-e.side:e.side;
     if(e.b<1.&&u<0.)radial=-radial;
     return vec3(side*12000.,-2000.,1550.)+radial*sqrt(1.+l*l)*300.;
 }
+vec3 ellisPoint(EllisRay e,float t,out float side){float travel;return ellisPointPhase(e,t,side,travel);}
 vec3 ellisExit(EllisRay e){
     float side;vec3 point=ellisPoint(e,1.,side);
     vec3 radial=normalize(point-vec3(side*12000.,-2000.,1550.));
@@ -85,7 +88,9 @@ vec3 ellisExit(EllisRay e){
 }
 `;
     // WebGL 1 GLSL has no hyperbolic built-ins.
-    shader=shader.replace('uniform sampler2D ellisTable;',`uniform sampler2D ellisTable;
+    shader=shader.replace('uniform sampler2D ellisTable;
+uniform float ellisRegion;',`uniform sampler2D ellisTable;
+uniform float ellisRegion;
 float ellisSinh(float x){return (exp(x)-exp(-x))*.5;}
 float ellisCosh(float x){return (exp(x)+exp(-x))*.5;}`);
     DW.ellisOptics={table:table,integral:integral,shader:shader,size:size};
