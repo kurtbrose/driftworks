@@ -57,13 +57,8 @@ for(const [w,h,range] of [[1000,700,240],[2048,1532,240],[390,844,120],[844,390,
 console.log('PASS flight guidance: full steering travel, deadzone, cursor alignment and original crosshair size across desktop/mobile resize');
 
 const throatPose={eye:[0,-2340/DW.sim.METERS_PER_UNIT,1550/DW.sim.METERS_PER_UNIT],right:[1,0,0],up:[0,0,1],back:[0,-1,0],region:0};
-calls.length=0;
-DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:0,distance:340,gap:40,proximity:.87,flash:0});
-assert(calls.some(c=>c.kind==='text'&&c.text==='THROAT TRANSIT / ASTEROID'));
-assert(calls.filter(c=>c.kind==='stroke').some(c=>c.points.length>2),'Projected guide meridians are visible');
-assert(calls.flatMap(c=>c.points||[]).flat().every(Number.isFinite));assert.equal(painter.globalAlpha,1,'Guide restores painter state');
-calls.length=0;DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:1,distance:650,gap:350,proximity:0,flash:1});
-assert(calls.some(c=>c.kind==='text'&&c.text==='THROAT CROSSED / RIME'));
-calls.length=0;DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:0,distance:2000,gap:1700,proximity:0,flash:0});assert.equal(calls.length,0);
-calls.length=0;DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:0,distance:834,gap:534,proximity:0,flash:0});assert(calls.some(c=>c.kind==='text'&&c.text==='THROAT AHEAD / ASTEROID'),'Approach status is visible before the field cue');assert(calls.some(c=>c.kind==='text'&&c.text.includes('534 m')));
-console.log('PASS throat HUD: finite projected grid, transit/arrival labels, distant suppression and painter restoration');
+calls.length=0;DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:0,distance:340,gap:40,proximity:.87,flash:0});
+assert.equal(calls.length,0,'No persistent throat box or camera-relative grid');
+DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:1,distance:350,gap:50,proximity:.83,flash:1});
+assert(calls.some(c=>c.kind==='text'&&c.text==='THROAT CROSSED / RIME'));assert.equal(painter.globalAlpha,1);
+console.log('PASS throat HUD: quiet during ordinary transit, brief chart-crossing confirmation and painter restoration');

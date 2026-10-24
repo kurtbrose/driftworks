@@ -241,7 +241,8 @@ asteroid, while reloading the page generates another.
 
 [Ellis Bridge](experiments/flight.html?mission=ellis) adds field-entry and crossing
 chimes, gentle controller rumble near the throat, and a stronger crossing pulse.
-The HUD names your local side and keeps a faint navigation grid visible nearby.
+A world-anchored spatial lattice is lensed around the mouth: amber marks the
+asteroid side and cyan marks Rime. Toggle it in Settings.
 Sound follows SFX settings; vibration follows the existing controller-rumble
 setting. The [observation lab](experiments/ellis-study.html) offers fixed cameras,
 scripted ships, pause and frame stepping without combat.

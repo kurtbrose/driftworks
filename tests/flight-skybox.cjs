@@ -165,3 +165,18 @@ for(const probe of Object.values(bakedLighting.families)){
   assert.ok(maximum>1,'Native PMREM receives unclipped normalized HDR energy');
 }
 console.log('PASS sky lighting assets: source hash, finite diffuse SH and power-of-two reflection maps');
+
+// Isolate the lattice fixture from the asynchronous hero-image checks above.
+const gridControl={checked:true};
+const latticeContext={window:{Driftworks:{assetUrl:context.window.Driftworks.assetUrl,sim:{METERS_PER_UNIT:60}},devicePixelRatio:2,localStorage:{getItem:()=>null},location:{search:'?mission=ellis'}},document:{...context.document,getElementById:id=>id==='bridge-grid'?gridControl:null},Image:class{},Float32Array,URL,URLSearchParams,location:{search:'?mission=ellis'}};
+gl.getExtension=()=>({});
+for(const file of ['flight-missions.js','mission-ohio.js','ellis-optics.js','skybox.js'])vm.runInNewContext(fs.readFileSync(pathLighting.join(__dirname,'../experiments',file),'utf8'),latticeContext);
+const latticeSky=latticeContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
+const latticePose={...pose,eye:[0,-40,1550/60],region:0};latticeSky.render(latticePose,1,false);
+assert.equal(values.bridgeGrid,1);assert(values.bridgeGridPixel>0);
+const latticeFragment=shaders.find(s=>s.includes('vec4 ellisLatticeWire('));assert(latticeFragment);
+assert(latticeFragment.startsWith('#extension GL_EXT_shader_texture_lod : enable'));
+assert(latticeFragment.includes('texture2DLodEXT(ellisTable,uv,0.)'),'Grid lookup does not rely on implicit derivatives in ray branches');
+assert(!latticeFragment.includes('texture2D(ellisTable,uv)'));
+gridControl.checked=false;latticeSky.render(latticePose,1,false);assert.equal(values.bridgeGrid,0,'Live toggle bypasses the spatial grid');
+console.log('PASS Ellis lattice: production shader integration, fixed-LOD sampling, pixel width and live toggle');

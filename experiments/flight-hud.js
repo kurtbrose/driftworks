@@ -50,34 +50,15 @@
         }
         ctx.restore();
     }
-    /** Navigation shell, not a second optical simulation.
+    /** Brief chart-crossing confirmation; the spatial lattice lives in the sky optics.
      * @param {import('./gpu-ui-types').PaintContext} ctx @param {number} w @param {number} h
      * @param {import('./types').Pose} pose @param {import('./types').EllisCue} cue */
     function paintThroatGuide(ctx,w,h,pose,cue){
-        if(cue.distance>1800&&cue.flash<=0)return;
-        var units=DW.sim.METERS_PER_UNIT,center=[cue.region*12000/units,-2000/units,1550/units];
-        var normal=pose.eye.map(function(v,i){return (v-center[i])*units/Math.max(1,cue.distance);});
-        var east=[-normal[1],normal[0],0],length=Math.hypot.apply(null,east);
-        if(length<.001)east=[1,0,0];else east=east.map(function(v){return v/length;});
-        var north=[normal[1]*east[2]-normal[2]*east[1],normal[2]*east[0]-normal[0]*east[2],normal[0]*east[1]-normal[1]*east[0]];
-        ctx.save();ctx.strokeStyle='#aeacf5';ctx.lineWidth=1;ctx.globalAlpha=cue.distance<1000?.10+cue.proximity*.30:0;
-        [-.12,0,.12].forEach(function(longitude){
-            ctx.beginPath();var pen=false;
-            for(var j=0;j<=96;j++){
-                var latitude=-1.35+j*2.7/96;
-                var relative=center.map(function(v,i){return v-pose.eye[i]+305/units*(normal[i]*Math.cos(latitude)*Math.cos(longitude)+east[i]*Math.cos(latitude)*Math.sin(longitude)+north[i]*Math.sin(latitude));});
-                var p=DW.flightSkybox.project(relative,pose,w/h);
-                if(!p||Math.abs(p.x)>1.05||Math.abs(p.y)>1.05){pen=false;continue;}
-                var x=(p.x+1)*w*.5,y=(1-p.y)*h*.5;if(pen)ctx.lineTo(x,y);else ctx.moveTo(x,y);pen=true;
-            }
-            ctx.stroke();
-        });
-        ctx.globalAlpha=1;var width=Math.min(320,w-32),x=(w-width)/2,y=h*.5+55;
-        ctx.fillStyle='rgba(5,15,25,.72)';ctx.strokeStyle='rgba(174,172,245,.4)';ctx.fillRect(x,y,width,51);ctx.strokeRect(x,y,width,51);
+        if(cue.flash<=0)return;
+        ctx.save();var width=Math.min(320,w-32),x=(w-width)/2,y=h*.5+55;
+        ctx.fillStyle='rgba(5,15,25,.72)';ctx.strokeStyle='rgba(174,172,245,.4)';ctx.fillRect(x,y,width,33);ctx.strokeRect(x,y,width,33);
         ctx.textAlign='center';ctx.fillStyle='#d2d1ff';ctx.font='12px monospace';
-        ctx.fillText(cue.flash>0?'THROAT CROSSED / '+(cue.region?'RIME':'ASTEROID'):(cue.distance<360?'THROAT TRANSIT / ':cue.distance<600?'LENS FIELD / ':normal.reduce(function(sum,v,i){return sum+v*pose.back[i];},0)>0?'THROAT AHEAD / ':'THROAT ASTERN / ')+(cue.region?'RIME':'ASTEROID'),w/2,y+19);
-        ctx.font='10px monospace';ctx.fillStyle='#a5b9c7';
-        ctx.fillText(cue.flash>0?(cue.proximity>0?'LENS FIELD ACTIVE':'LOCAL SPACE REACQUIRED'):'NAV GRID / BOUNDARY RANGE '+Math.round(cue.gap)+' m',w/2,y+38);ctx.restore();
+        ctx.fillText('THROAT CROSSED / '+(cue.region?'RIME':'ASTEROID'),w/2,y+21);ctx.restore();
     }
     /** @param {import('./gpu-ui-types').PaintContext} ctx @param {number} w @param {number} h @param {number} angle */
     function paintTargetBearing(ctx, w, h, angle) {

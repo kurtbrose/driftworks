@@ -133,5 +133,53 @@ vec3 ellisExit(EllisRay e){
     shader=shader.replace('uniform sampler2D ellisTable;',`uniform sampler2D ellisTable;
 float ellisSinh(float x){return (exp(x)-exp(-x))*.5;}
 float ellisCosh(float x){return (exp(x)+exp(-x))*.5;}`);
-    DW.ellisOptics={primary:primary,lookup:lookup,table:table,integral:integral,shader:shader,size:size};
+    // A static spherical coordinate lattice. Intersect five radial shells
+    // analytically in the ray's u coordinate, then sample their angular wires.
+    // This shares the baked integral and does not march arbitrary geometry.
+    var latticeShader=`
+vec4 ellisLatticeWire(vec3 radial,float side,float radius,vec3 eye,float pixel,float phase){
+    vec3 localEye=eye-vec3(ellisRegion*12000.,-2000.,1550.);
+    // Chart translations are storage offsets, never optical distances.
+    float span=side!=ellisRegion?max(30.,length(localEye)+radius*300.-600.):length(radial*radius*300.-localEye);
+    float width=clamp(pixel*span/(radius*300.),.0007,.012);
+    float spacing=.5235987756;
+    float longitude=atan(radial.y,radial.x+1.e-8),latitude=asin(clamp(radial.z,-1.,1.));
+    float meridian=abs(mod(longitude+spacing*.5,spacing)-spacing*.5)*max(.08,length(radial.xy));
+    float parallel=abs(mod(latitude+spacing*.5,spacing)-spacing*.5);
+    float wire=1.-smoothstep(width,width*2.,min(meridian,parallel));
+    // Suppress highly wound copies: this is a navigation scaffold, not scenery.
+    wire*=1.-smoothstep(2.7,3.14159265,abs(phase));
+    wire*=smoothstep(.025,.12,length(radial.xy));
+    vec3 color=side<.5?vec3(1.,.64,.20):vec3(.18,.82,1.);
+    return vec4(color,wire*.38);
+}
+vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){
+    vec4 result=vec4(0.);
+    float root=sqrt(max(.0000001,abs(1.-e.b*e.b)));
+    for(int i=0;i<5;i++){
+        float radius=1.0001+float(i)*.249975;
+        float l=sqrt(max(0.,radius*radius-1.));
+        float u=e.b<1.?ellisAsinh(l/root):ellisAcosh(max(1.,l/root));
+        // Keep the lookup outside all per-surface visibility branches.
+        float integral=ellisIntegral(e.b,u);
+        float reachable=e.b<=radius?1.:0.;
+        for(int j=0;j<2;j++){
+            float side=e.side,phase=0.,visible=reachable;
+            if(e.inward>.5){
+                if(j==0){phase=e.f0-integral;visible*=u<=e.u0?1.:0.;}
+                else{phase=e.f0+integral;if(e.b<1.)side=1.-side;}
+            }else{
+                phase=integral-e.f0;visible*=j==0&&u>=e.u0?1.:0.;
+            }
+            vec3 radial=e.radial*cos(phase)+e.tangent*sin(phase);
+            if(side!=e.side)radial=-radial;
+            vec4 wire=ellisLatticeWire(radial,side,radius,eye,pixel,phase);
+            float alpha=wire.a*visible;
+            result.rgb+=(1.-result.a)*wire.rgb*alpha;
+            result.a+=(1.-result.a)*alpha;
+        }
+    }
+    return result;
+}`;
+    DW.ellisOptics={primary:primary,lookup:lookup,table:table,integral:integral,shader:shader,latticeShader:latticeShader,size:size};
 }());

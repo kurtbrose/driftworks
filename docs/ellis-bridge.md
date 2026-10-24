@@ -427,15 +427,10 @@ The existing controller rumble path mixes a gentle continuous field load (up to
 pulses retain priority. Existing rumble opt-out, controller selection, mouse
  takeover, pause/disconnect handling and 75 ms submission throttling apply.
 
-The HUD shows an approach/astern readout and boundary surface range within
-1800 m of the center. The navigation meridians appear within 1000 m; the
-LENS FIELD state starts within 600 m, switching
-to THROAT TRANSIT within 360 m. A crossing holds THROAT CROSSED / RIME or ASTEROID
-for 1.8 simulation seconds. It explicitly says LENS FIELD ACTIVE when still near
-the mouth, rather than implying that all distortion ends at the chart crossing.
-Three faint projected navigation meridians use a 305 m shell around the mouth;
-they are fictional instrument guides, not additional traced light geodesics.
-They can leave the viewport at the exact throat, where the text and rumble remain.
+The persistent throat-status box and camera-relative HUD meridians have been
+replaced by the spatial lattice described below. Only the brief 1.8-second
+chart-crossing confirmation remains; the entry/crossing audio and rumble are
+unchanged. The scaffold's colors provide the ongoing local/remote reference.
 
 `ellis-feedback.js` owns only transient presentation state; simulation/world save
 rules are unchanged. Both flight entry points load it before `flight.js`.
@@ -449,3 +444,45 @@ flight throat crossing and field view with no captured console errors:
 [arrival](benchmarks/ellis-arrival-feedback.png),
 [field guide](benchmarks/ellis-field-guide.png).
 Physical controller feel and subjective sound balance still need a playtest.
+
+
+## Lensed spatial lattice
+
+The Ellis flight and observation lab enable a world-anchored spherical lattice
+by default. Five concentric layers span approximately 300–600 m around each
+300 m mouth, with 30-degree latitude/longitude lines. Amber belongs to the
+asteroid chart and cyan to Rime. Their axes and spacing never follow the camera
+or advance with time. The antipodal throat identification preserves this grid's
+angular pattern. This is a spherical coordinate lattice, not a Cartesian volume
+or an external embedding-diagram mesh.
+
+The sky shader analytically intersects each curved ray with the five fixed
+areal-radius shells in the existing geodesic's u coordinate. It uses five extra
+radial-integral lookups from the existing cached 512-square table, then tests the
+two possible shell crossings. It does not perform another depth search, capture
+geometry or allocate another ray table. The expensive radial integral is already
+baked; the observer-dependent projection is evaluated at runtime. Grid lookup
+sampling uses explicit level zero through EXT_shader_texture_lod when available.
+
+The grid is an additive navigation scaffold in the sky pass. Opaque scene
+objects mask it; this does not implement exact grid/geometry depth ordering.
+Angular travel above 2.7 radians fades out, reaching zero at pi, to avoid filling
+the critical region with higher-order grid copies. Anti-alias width is an
+approximation; chart storage offsets are excluded from its distance estimate.
+It is intended to expose the primary structure, not every possible lensed image.
+
+Toggle **Wormhole spatial lattice** in flight Settings, or **Spatial lattice**
+in the observation lab. `bridgeGrid=0` starts without it and is required when
+reproducing pre-lattice benchmarks. The observation lab retains the toggle when
+switching geometry renderers. Flight's toggle is session-local and applies live.
+
+Visual checks cover front, close, rim and Rime views; both chart colors and the
+live on/off control. Numerical optics regressions still cover finite-source and
+turning rays; sky tests cover lattice integration, fixed-level sampling and toggle
+uniforms. Captures: [front](benchmarks/ellis-lattice-front.png),
+[close](benchmarks/ellis-lattice-close.png),
+[Rime](benchmarks/ellis-lattice-rime.png).
+
+The initial matched 1920x1080 GPU check added roughly 0.55–0.82 ms of sky
+work with no context loss. See the [lattice report](benchmarks/ellis-lattice-2026-10-24.md)
+for setup, raw evidence and approximation limits.

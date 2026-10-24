@@ -147,6 +147,7 @@
         if (!context)
             throw new Error('Flight skybox requires WebGL');
         const gl = context;
+        var explicitBridgeLod=!!gl.getExtension('EXT_shader_texture_lod');
         /** @param {number} type @param {string} source */
         function shader(type, source) {
             var sh = gl.createShader(type);
@@ -164,6 +165,7 @@
             if (!p)
                 throw new Error('Could not allocate skybox program');
             gl.attachShader(p, shader(gl.VERTEX_SHADER, vertex));
+            if(explicitBridgeLod&&fragment.includes('uniform sampler2D ellisTable;'))fragment='#extension GL_EXT_shader_texture_lod : enable\n'+fragment.replace('texture2D(ellisTable,uv)','texture2DLodEXT(ellisTable,uv,0.)');
             gl.attachShader(p, shader(gl.FRAGMENT_SHADER, fragment));
             gl.linkProgram(p);
             if (!gl.getProgramParameter(p, gl.LINK_STATUS))
@@ -176,7 +178,7 @@ precision highp float;
 varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
-uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;
+uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeGrid,bridgeGridPixel;
 uniform sampler2D panorama;
 uniform sampler2D noiseMap,rimeSurface;uniform float rimeDetailed;
 uniform float exposure;uniform float hdrEnabled;uniform sampler2D hdrEnvironment;
@@ -329,6 +331,7 @@ vec3 jadeSatellites(vec3 sky,vec3 ray){
  return sky;
 }
 ${window.Driftworks.ellisOptics?window.Driftworks.ellisOptics.shader:'uniform float ellisRegion; struct EllisRay {float hit;}; EllisRay ellisInit(vec3 e,vec3 r){return EllisRay(0.);} vec3 ellisExit(EllisRay e){return vec3(0.);} vec3 ellisPoint(EllisRay e,float t,out float side){side=0.;return vec3(0.);}'}
+${window.Driftworks.ellisOptics&&window.Driftworks.ellisOptics.latticeShader?window.Driftworks.ellisOptics.latticeShader:'vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){return vec4(0.);}'}
 void main(){
     if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
     if(bridgeEnabled>.5){
@@ -336,10 +339,10 @@ void main(){
         float side=ellisRegion;
         vec3 offset=(bridgeEye-vec3(side*12000.,-2000.,1550.))/300.;
         float along=dot(offset,ray),impact2=dot(offset,offset)-along*along;
-        vec3 outgoing=ray;float destination=side;
+        vec3 outgoing=ray;float destination=side;vec4 lattice=vec4(0.);
         if(bridgeLookup>.5){
             EllisRay bridge=ellisInit(bridgeEye,ray);
-            if(bridge.hit>.5){outgoing=ellisExit(bridge);float ignored;ellisPoint(bridge,1.,ignored);destination=ignored;}
+            if(bridge.hit>.5){outgoing=ellisExit(bridge);float ignored;ellisPoint(bridge,1.,ignored);destination=ignored;if(bridgeGrid>.5)lattice=ellisLattice(bridge,bridgeEye,bridgeGridPixel);}
         }else{
         // Null geodesic: ds²=-dt²+dl²+(l²+a²)dOmega², a=1.
         // Finite integration domain and steps make this a visual approximation.
@@ -375,6 +378,7 @@ void main(){
             float star=pow(fract(sin(dot(cell,vec3(12.9898,78.233,37.719)))*43758.5453),420.);
             gl_FragColor=vec4((texture2D(panorama,uv).rgb+vec3(star*.22))*exposure,1.);
         }
+        gl_FragColor.rgb=gl_FragColor.rgb*(1.-lattice.a*.65)+lattice.rgb;
         return;
     }
     if(style>9.5 && style<11.5){
@@ -936,6 +940,9 @@ void main(){
                 uniforms(sky, pose, width / height, dpr);
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.gasGiant ? 23 : missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeEnabled'),missionSky.wormhole?1:0);
+                var gridControl=/** @type {HTMLInputElement|null} */(document.getElementById('bridge-grid'));
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeGrid'),missionSky.wormhole&&(gridControl?gridControl.checked:new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeGrid')!=='0')?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeGridPixel'),2.2*dpr/(height*viewFocal));
                 gl.uniform1f(gl.getUniformLocation(sky,'ellisRegion'),pose.region||0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeLookup'),bridgeTable?1:0);
                 if(bridgeTable){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);gl.uniform1i(gl.getUniformLocation(sky,'ellisTable'),4);gl.activeTexture(gl.TEXTURE0);}

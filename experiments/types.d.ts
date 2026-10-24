@@ -661,7 +661,7 @@ export type ExperimentModules = {
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
     ellisFeedback:{describe:(pose:Pose)=>{region:number;distance:number;gap:number;proximity:number};create:()=>{reset:()=>void;update:(pose:Pose,dt:number,active:boolean,enabled:boolean)=>EllisCue}};
     ellisStudy:{camera:(name:string)=>Pose;sample:(time:number,scenario:string)=>{pose:Pose;velocity:number[]}[]};
-    ellisOptics:{primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;size:number};
+    ellisOptics:{primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;latticeShader:string;size:number};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
     flightPortraits: {

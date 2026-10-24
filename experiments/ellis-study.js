@@ -42,7 +42,8 @@
     var presentation=DW.flightPresentation.mount(get('viewer'),function(){return snapshot.world;},function(w){snapshot.world=w;session.setWorld(w);});
     var model=/** @type {HTMLSelectElement} */(get('enemy-art')),ally=/** @type {HTMLSelectElement} */(get('ally-art')),timeline=/** @type {HTMLInputElement} */(get('timeline')),scenario=/** @type {HTMLSelectElement} */(get('scenario')),renderer=/** @type {HTMLSelectElement} */(get('renderer')),speedSelect=/** @type {HTMLSelectElement} */(get('speed'));
     var first=Array.from(model.options).find(function(o){return o.value&&o.value!=='mixed';});if(first)model.value=first.value;if(params.get('ship'))model.value=params.get('ship')||model.value;
-    speedSelect.value=params.get('speed')||'1';scenario.value=params.get('pass')||'combined';renderer.value=params.get('bridgeGeometry')==='full'?'full':'objects';
+    speedSelect.value=params.get('speed')||'1';scenario.value=params.get('pass')||'combined';
+    /** @type {HTMLInputElement} */(get('bridge-grid')).checked=params.get('bridgeGrid')!=='0';renderer.value=params.get('bridgeGeometry')==='full'?'full':'objects';
     function cameraUI(){document.querySelectorAll('button[data-camera]').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-camera')===cameraName?'true':'false');});get('camera-note').textContent=(cameraName==='rime'?'Rime chart':'Asteroid chart')+' · fixed camera · throat radius 300 m';}
     document.querySelectorAll('button[data-camera]').forEach(function(b){b.addEventListener('click',function(){cameraName=b.getAttribute('data-camera')||'front';cameraUI();draw();});});
     function playback(){get('play').textContent=playing?'Pause':'Play';}
@@ -51,7 +52,7 @@
     get('reset').onclick=function(){time=0;draw();};
     var exactTime=/** @type {HTMLInputElement} */(get('time'));exactTime.oninput=exactTime.onchange=function(){playing=false;time=Math.max(0,Math.min(24,Number(exactTime.value)||0));playback();draw();};
     timeline.oninput=function(){playing=false;time=Number(timeline.value);playback();draw();};
-    renderer.onchange=function(){var url=new URL(location.href);url.searchParams.set('bridgeGeometry',renderer.value);url.searchParams.set('time',String(time));url.searchParams.set('camera',cameraName);url.searchParams.set('pass',scenario.value);url.searchParams.set('paused',playing?'0':'1');url.searchParams.set('ship',model.value);url.searchParams.set('speed',speedSelect.value);location.href=url.href;};
+    renderer.onchange=function(){var url=new URL(location.href);url.searchParams.set('bridgeGeometry',renderer.value);url.searchParams.set('time',String(time));url.searchParams.set('camera',cameraName);url.searchParams.set('pass',scenario.value);url.searchParams.set('paused',playing?'0':'1');url.searchParams.set('ship',model.value);url.searchParams.set('speed',speedSelect.value);url.searchParams.set('bridgeGrid',/** @type {HTMLInputElement} */(get('bridge-grid')).checked?'1':'0');location.href=url.href;};
     function draw(){
         var view=camera(cameraName),tracks=sample(time,scenario.value);ally.value=model.value;
         snapshot.combat.enemies=tracks.map(function(track,i){var state=Object.assign(DW.arcade.create(1),track.pose,{velocity:track.velocity,throttle:.5}),craft=DW.training.createCraft('study-'+i,state,i===2?'ally':'enemy');craft.index=i;return craft;});

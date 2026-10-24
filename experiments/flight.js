@@ -47,6 +47,12 @@
     var mixerHost=document.getElementById('flight-settings');
     if(mixerHost && ohioMusic) ohioMusic.mount(mixerHost);
     if(mixerHost)DW.audio.mountMixer(mixerHost);
+    if(mixerHost&&activeMission.sky.wormhole){
+        var latticeLabel=document.createElement('label'),latticeToggle=document.createElement('input');
+        latticeToggle.type='checkbox';latticeToggle.id='bridge-grid';latticeToggle.checked=new URLSearchParams(location.search).get('bridgeGrid')!=='0';
+        latticeLabel.append(latticeToggle,document.createTextNode(' Wormhole spatial lattice / amber: asteroid, cyan: Rime'));mixerHost.appendChild(latticeLabel);
+    }
+
     var bridgeFeedback=DW.ellisFeedback.create();
     var bridgeCue=bridgeFeedback.update(session.snapshot().state,0,false,!!activeMission.sky.wormhole);
     var units = DW.sim.METERS_PER_UNIT;
