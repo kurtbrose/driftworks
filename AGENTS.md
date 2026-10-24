@@ -17,6 +17,18 @@ references in `docs/dreadnaught-kit.md` and
 `assets/depots/refueling-v1/README.md`. Existing local timings are examples, not
 universal budgets. Offline-only render studies do not need runtime optimization.
 
+## Portraits and sprite sheets
+
+Do not call portrait artwork fixed, ready or done based on hashes, pixel-copy
+checks, registration scores, or the test suite. Follow `docs/portrait-authoring.md`.
+Inspect actual runtime composites at 256px or larger, including all expressions
+at rest, AH, OO and blink, and capture labeled stills. Check eyes/brows, mouth,
+nose, chin and blend seams, plus transitions in the cast gallery. Record which
+characters and combinations were visually inspected and what remains unresolved.
+Mechanical checks and visual acceptance are separate. A successful generation
+or registration proposal is not visual approval; never claim a whole cast is
+approved from a few spot checks.
+
 ## Run and verify
 
 - From the repository root, run `python -m http.server 8000`, `serve.bat` on

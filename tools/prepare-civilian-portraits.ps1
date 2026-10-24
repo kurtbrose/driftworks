@@ -1,11 +1,12 @@
 # Offline packing only; the checked-in PNGs need no runtime dependencies.
 param([string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot),
-      [ValidateSet('civilian-shuttle','runway-workers')][string]$Pool = 'civilian-shuttle')
+      [ValidateSet('civilian-shuttle','runway-workers')][string]$Pool = 'civilian-shuttle', [switch]$Unregistered, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
+. (Join-Path $PSScriptRoot 'portrait-registration.ps1')
 $root = Join-Path $RepositoryRoot ('assets/portraits/' + $Pool)
 $indexField = if ($Pool -eq 'runway-workers') { 'runwayPortraitIndex' } else { 'civilianPortraitIndex' }
-$runtime = Join-Path $root 'runtime'
+$runtime = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $root 'runtime' }
 New-Item -ItemType Directory -Force -Path $runtime | Out-Null
 $roster = Get-Content -Raw -LiteralPath (Join-Path $root 'roster.json') | ConvertFrom-Json
 $outputs = [ordered]@{}
@@ -34,10 +35,11 @@ foreach ($person in $roster.characters) {
             $graphics.DrawImage($sheet,$destination,$source,[System.Drawing.GraphicsUnit]::Pixel)
         }
         $output = 'portrait-' + $person.$indexField + '.png'
-        $packed.Save((Join-Path $runtime $output),[System.Drawing.Imaging.ImageFormat]::Png)
+        $registered = Register-Portrait $packed "$Pool/$($person.$indexField)"
+        try { $registered.Save((Join-Path $runtime $output),[System.Drawing.Imaging.ImageFormat]::Png) } finally { $registered.Dispose() }
         $outputs[$output] = (Get-FileHash -LiteralPath (Join-Path $runtime $output) -Algorithm SHA256).Hash.ToLowerInvariant()
     } finally { $graphics.Dispose(); $packed.Dispose(); $sheet.Dispose() }
 }
-$manifest = [ordered]@{version=1;tileSize=256;frames=@('neutral','ah','oo','blink','smile','angry','afraid');anchors=$anchors;builderSha256=(Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant();sources=$sources;outputs=$outputs}
+$manifest = [ordered]@{version=1;registrationApplied=(!$Unregistered);registrationSha256=$registrationHash;registrationHelperSha256=$registrationHelperHash;tileSize=256;frames=@('neutral','ah','oo','blink','smile','angry','afraid');anchors=$anchors;builderSha256=(Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant();sources=$sources;outputs=$outputs}
 $json = ($manifest | ConvertTo-Json -Depth 6).Replace("`r`n","`n") + "`n"
 [System.IO.File]::WriteAllText((Join-Path $runtime 'manifest.json'),$json,[System.Text.UTF8Encoding]::new($false))

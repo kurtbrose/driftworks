@@ -363,6 +363,10 @@ profiles. There are no external runtime dependencies or tactical-save changes.
 
 ### Flight renderer profiling
 
+Flight shortcuts ignore Ctrl, Alt, and Windows/Command combinations so browser and OS shortcuts remain available. Shift alone still boosts. Screenshot overlays that take focus or release pointer lock still pause flight; use a full-screen capture shortcut that keeps the game focused to capture it in motion.
+
+The flight pause screen offers **Copy screenshot** and **Copy screenshot (no HUD)**. Both capture the frozen scene without the pause menu at the display's pixel resolution. A PNG download link is also available, including when the browser blocks image clipboard access.
+
 Open **Flight lab & diagnostics** on the pause screen, then **Renderer diagnostics**. **P** pauses flight and toggles the diagnostic readout in that menu:
 rolling FPS/frame time and p95 (120 samples), worst interval since reset, CPU work,
 scene submission time, draw calls, submitted triangles, unique drawn GPU meshes,

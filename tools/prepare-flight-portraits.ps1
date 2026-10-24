@@ -1,9 +1,10 @@
 # Optional asset preparation only. Checked-in runtime PNGs deploy without this tool.
-param([string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot))
+param([string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot), [switch]$Unregistered, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
+. (Join-Path $PSScriptRoot 'portrait-registration.ps1')
 $portraitRoot = Join-Path (Resolve-Path -LiteralPath $RepositoryRoot) 'assets/portraits/dogfight'
-$outputRoot = Join-Path $portraitRoot 'runtime'
+$outputRoot = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $portraitRoot 'runtime' }
 New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
 $poses = @('neutral', 'ah', 'oo', 'blink', 'smile', 'angry', 'afraid')
 $anchors = @(@(187,322,245), @(181,322,239), @(176,323,243), @(179,310,216), @(183,263,186), @(185,269,188), @(181,259,166), @(185,270,190))
@@ -36,7 +37,8 @@ try {
                 $graphics.DrawImage($image, $destination, $source, [System.Drawing.GraphicsUnit]::Pixel)
             }
             $path = Join-Path $outputRoot "portrait-$index.png"
-            $packed.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+            $registered = Register-Portrait $packed "dogfight/$index"
+            try { $registered.Save($path, [System.Drawing.Imaging.ImageFormat]::Png) } finally { $registered.Dispose() }
             $outputs["portrait-$index.png"] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
         } finally { $graphics.Dispose(); $packed.Dispose() }
     }
@@ -72,12 +74,13 @@ try {
             }
             $outputName = "portrait-$($character+8).png"
             $path = Join-Path $outputRoot $outputName
-            $packed.Save($path,[System.Drawing.Imaging.ImageFormat]::Png)
+            $registered = Register-Portrait $packed "dogfight/$($character+8)"
+            try { $registered.Save($path,[System.Drawing.Imaging.ImageFormat]::Png) } finally { $registered.Dispose() }
             $outputs[$outputName] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
         } finally { $graphics.Dispose(); $packed.Dispose(); $sheet.Dispose() }
     }
     $builderHash = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    [ordered]@{version=1;tileSize=256;frames=$poses;anchors=$anchors;newCast=$newCast;builderSha256=$builderHash;sources=$sources;outputs=$outputs} |
+    [ordered]@{version=1;registrationApplied=(!$Unregistered);registrationSha256=$registrationHash;registrationHelperSha256=$registrationHelperHash;tileSize=256;frames=$poses;anchors=$anchors;newCast=$newCast;builderSha256=$builderHash;sources=$sources;outputs=$outputs} |
         ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 (Join-Path $outputRoot 'manifest.json')
 } finally { foreach ($image in $images.Values) { $image.Dispose() } }
 Get-ChildItem -LiteralPath $outputRoot -Filter '*.png' | Measure-Object -Property Length -Sum | Select-Object Count,Sum

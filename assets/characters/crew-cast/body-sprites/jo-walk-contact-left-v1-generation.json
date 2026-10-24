@@ -1,0 +1,8 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "jo-standing-v1.png",
+  "prompt": "Production game sprite sheet matching EXACT woman, outfit, painting style and fixed framing of the reference. Eight full-body figures, one pose shown from eight directions. EXACT 4 columns x 2 rows, equal portrait cells width:height=1:2, square whole image. Row1: front; front three-quarter facing IMAGE LEFT; left-facing profile; rear three-quarter facing IMAGE LEFT. Row2: back; rear three-quarter facing IMAGE RIGHT; right-facing profile; front three-quarter facing IMAGE RIGHT. SAME pose and anatomical limbs from every view. Crown near 2% cell height and lowest boot sole at 96%, fixed adult height and pelvis x50%; do not crop boots or change person scale. Same short brown-haired Jo, warm skin, navy coveralls with teal shoulders/collar, ivory piping, gray knees, black boots/gloves, orange pouch on her anatomical left hip. Head looks straight in the torso's forward direction, no independent head turning. Transparent background, no ground, shadow, text, labels or grid. WALK CONTACT A: anatomical LEFT leg extended forward heel strike and RIGHT leg extended backward toe push. Anatomical RIGHT arm swings forward, LEFT arm swings back. Clear natural stride, straight supporting front leg and rear knee slightly bent. Whole body is walking in place; no camera tilt. This is a single freeze frame from a walk cycle, NOT standing with both feet together.",
+  "output": "jo-walk-contact-left-v1.png",
+  "status": "rough animation trial; view consistency not production-approved",
+  "registration": "Runtime crops only within each direction and shifts vertically to align boot baseline; fixed pixel scale and horizontal placement retained."
+}

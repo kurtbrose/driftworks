@@ -646,6 +646,24 @@
     var defaults=flightControlsFixture(storage);assert(defaults.controls.view().inputMode==='mouse');assert(defaults.elements.sensitivity.value==='1');
   });
 
+  test('flight controls leave modified browser and OS shortcuts alone',function(){
+    var f=flightControlsFixture();
+    ['ctrlKey','altKey','metaKey'].forEach(function(modifier){
+      f.key('KeyW');
+      ['KeyP','F3','Escape','KeyS','KeyG','KeyV','Tab','Digit2','Space'].forEach(function(code){
+        var event={code:code,shiftKey:true,target:{tagName:'BODY'},preventDefault:function(){this.prevented=true;}};
+        event[modifier]=true;f.win.emit('keydown',event);
+        assert(!event.prevented,'Modified '+code+' must remain available to the browser/OS');
+      });
+      assert(f.controls.sample().throttleRate===0&&!f.controls.sample().fire);
+    });
+    assert(f.counts.pause===0&&f.counts.performance===0&&f.counts.diagnostics===0);
+    assert(f.counts.weapon===0&&f.counts.radar===0&&f.counts.target===0&&f.counts.profile===undefined);
+    f.key('ShiftLeft');assert(f.controls.sample().boost);
+    f.win.emit('keyup',{code:'ShiftLeft',metaKey:true});assert(!f.controls.sample().boost);
+    f.key('KeyP');assert(f.counts.performance===1);
+  });
+
   test('flight controls retain keyboard focus guards, shortcuts and pause clearing',function(){
     var f=flightControlsFixture(),c=f.controls;
     assert(f.key('KeyW').prevented);assert(c.sample().throttleRate===1);

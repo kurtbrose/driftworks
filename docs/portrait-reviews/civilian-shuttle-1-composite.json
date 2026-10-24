@@ -1,0 +1,10 @@
+{
+  "status": "visual-review-pending",
+  "cast": "civilian-shuttle",
+  "slot": 1,
+  "mode": "composite",
+  "atlasSha256": "3f2791dde736bc5b241915e89faee3379f1cb08271803ea58e5ded398398bb41",
+  "compositorSha256": "50dea498a8c78d71689de6b8161d4296a670acbe5b739ca52773e20335033377",
+  "sheetSha256": "cb1e97961c8a221bed3fe18cc68db5937e7c526c39715150d212983d1b1f4c37",
+  "combinations": 16
+}

@@ -36,16 +36,26 @@
   g.putImageData(guardPixels,0,0);
   cachedGuard={canvas:guard,pixels:guardPixels};
   }
-  /** @param {number[]} shape */
-  function makeMask(shape){
+  /** @param {number[]} shape @param {boolean} [feature] */
+  function makeMask(shape,feature){
     m.clearRect(0,0,512,512);m.save();m.translate(shape[0]*5.12,shape[1]*5.12);m.scale(shape[2]*5.12,shape[3]*5.12);
     var gradient=m.createRadialGradient(0,0,0,0,0,1), core=1-shape[4]/100;
-    gradient.addColorStop(0,'#fff');gradient.addColorStop(core,'#fff');gradient.addColorStop(1,'transparent');m.fillStyle=gradient;m.fillRect(-1,-1,2,2);m.restore();
+    gradient.addColorStop(0,'#fff');gradient.addColorStop(core,'#fff');gradient.addColorStop(1,'transparent');
+    // A radial core fades the corners of a wide mouth/eye patch, leaving
+    // fragments of the previous lips or eyelids underneath. Feature ownership
+    // is rectangular: replace the whole core, feather only its surroundings.
+    if(feature){
+      var horizontal=m.createLinearGradient(-1,0,1,0),vertical=m.createLinearGradient(0,-1,0,1);
+      [horizontal,vertical].forEach(function(edge){edge.addColorStop(0,'transparent');edge.addColorStop((1-core)/2,'#fff');edge.addColorStop((1+core)/2,'#fff');edge.addColorStop(1,'transparent');});
+      m.fillStyle=horizontal;m.fillRect(-1,-1,2,2);
+      m.globalCompositeOperation='destination-in';m.fillStyle=vertical;m.fillRect(-1,-1,2,2);m.globalCompositeOperation='source-over';
+    }else{m.fillStyle=gradient;m.fillRect(-1,-1,2,2);}
+    m.restore();
     m.globalCompositeOperation='destination-in';m.drawImage(guard,0,0);m.globalCompositeOperation='source-over';
   }
   /** @param {string} name @param {number[]} shape @param {number} alpha */
   function composite(name,shape,alpha){
-    makeMask(shape);paint.clearRect(0,0,512,512);drawSource(paint,images[name]);
+    makeMask(shape,name==='ah'||name==='oo'||name==='eh'||name==='blink');paint.clearRect(0,0,512,512);drawSource(paint,images[name]);
     paint.globalCompositeOperation='destination-in';paint.drawImage(mask,0,0);paint.globalCompositeOperation='source-over';
     out.globalAlpha=alpha;out.drawImage(layer,0,0);out.globalAlpha=1;
   }

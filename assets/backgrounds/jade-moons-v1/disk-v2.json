@@ -1,0 +1,13 @@
+{
+  "asset": "rime-disk-v2.png",
+  "origin": "OpenAI built-in image_gen, original fictional moon, no image references",
+  "prompt": "Use case: scientific-educational. Asset type: finished flat astronomical moon DISK SPRITE for a static sky, square 2048x2048 or highest square resolution, transparent background. Primary request: a single complete photorealistic fictional icy moon seen straight on from space, centered circular disk filling 96 percent of square width and height with a narrow transparent margin. This is a FINISHED VISIBLE HEMISPHERE, NOT an equirectangular map, NOT a texture strip, NOT a globe atlas. Extremely sharp spacecraft-quality surface detail across the visible disk: finely cratered ancient grey-ivory water-ice crust, small overlapping impact craters, occasional eroded basins, very thin irregular broken tectonic faults and parallel scarps, fragmented polygonal ice plates, subtly darker mineral deposits. Geological detail must remain fine and sharp even at the center. Natural perspective foreshortening authored directly into the disk near the limb. Broad light grey ice plains balanced with detailed rugged regions, subdued dirty ivory and blue-grey tones. Globally diffuse near-full illumination across the entire disk with NO global day/night terminator and no prominent single-sided lighting, because runtime will apply the correct phase. Tiny crater relief may have subtle shading. No atmosphere, glow, halo, stars, other planets, text, border, labels, large worm-shaped black markings, cartoon, softness or blur. Clean precise circular silhouette, actual transparency outside the disk. Original invented moon geography; do not reproduce any identifiable Solar System moon.",
+  "blend": "Opaque disk with source alpha and runtime shared-sun phase",
+  "mapping": "Fixed tangent-plane disk, source radius 0.484; no equirectangular wrapping",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "bytes": 3283892,
+  "sha256": "0dbca4a4981c6c9ad54da29160e26a258ec931ad64ed694a3c26ac39a3b24c42"
+}

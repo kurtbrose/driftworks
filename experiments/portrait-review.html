@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portrait registration review · Driftworks</title>
+<style>body{background:#0b1115;color:#d7e4e9;font:16px system-ui;margin:24px}select{font:inherit;margin:8px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(256px,256px));gap:12px}figure{margin:0}canvas{width:100%;image-rendering:pixelated}small{display:block}a{color:#a7d9dc}</style>
+<h1>Portrait registration review</h1>
+<p>Frozen combinations: compare each resting expression with AH, OO and blink. No speech clock or radio noise hides placement errors. <a href="../docs/portrait-authoring.md">Authoring workflow</a></p>
+<label>Cast <select id="pool"><option>dogfight</option><option>ohio</option><option>civilian-shuttle</option><option>runway-workers</option></select></label>
+<label>Portrait slot <select id="slot"></select></label>
+<label><input type="checkbox" id="raw"> Show raw source poses instead</label>
+<button id="download" disabled>Show labeled contact sheet</button>
+<p><strong>Visual approval pending.</strong> Pixel checks below only test compositing. Inspect eyes, brows, nose, lips, chin and seams in every still at 256px or larger, then inspect transitions in the cast gallery.</p>
+<p id="status" role="status"></p><section id="proof"></section><main></main>
+<script src="../src/asset-versions.js?v=6adebd451198"></script>
+<script src="face-blend.js?v=50dea498a8c7"></script>
+<script>
+(function(){
+ const DW=window.Driftworks,$=id=>document.getElementById(id),names=['master','ah','oo','blink','smile','angry','afraid'];
+ let generation=0,bitmap=null,renderers=[],stills=[];
+ const castNames={dogfight:['Jinx','Rook','Echo','Flint','Mako','Sable','Patch','Nova','Viper','Wraith','Razor','Hex','Talon','Knell','Cinder','Shade','Control'],ohio:['Buckeye Bandit','Cuyahoga Cryptid','Aunt Barb','Lake Erie Larry','Doug','Deb','Big Dale','Marge','Turnpike Wraith','Tammy','Cousin Donnie','Sheryl','Scooter','Hocking Goblin','Uncle Rick','Joanie','Control'],'civilian-shuttle':['Mara Vale','Daniel Okafor','Elena Park','Samir Haddad','Ines Duarte','Thomas Reed'],'runway-workers':['Jo Mercer','Luis Ortega','Asha Menon','Ben Harlow','Nadiya Bell','Kenji Sato']};
+ function slots(){const cast=castNames[$('pool').value];$('slot').replaceChildren(...cast.map((name,i)=>{const o=document.createElement('option');o.value=i;o.textContent=i+' · '+name;return o;}));review();}
+ async function review(){
+  const ticket=++generation;$('status').textContent='Loading…';$('download').disabled=true;
+  try{
+   const response=await fetch(DW.assetUrl('../assets/portraits/'+$('pool').value+'/runtime/portrait-'+$('slot').value+'.png'));
+   if(!response.ok)throw Error('HTTP '+response.status);
+   const next=await createImageBitmap(await response.blob());if(ticket!==generation){next.close();return;}
+   renderers.forEach(r=>r.dispose());renderers=[];if(bitmap)bitmap.close();bitmap=next;
+   if(bitmap.width!==1792||bitmap.height!==256)throw Error('Expected seven 256px cells');
+   const frames={};names.forEach((n,i)=>frames[n]={image:bitmap,rect:[i*256,0,256,256]});
+   $('status').textContent='';$('proof').replaceChildren();document.querySelector('main').replaceChildren();stills=[];let protectedPixels=0,coreErrors=0;
+   for(const mood of ['master','smile','angry','afraid'])for(const pose of ['rest','ah','oo','blink']){
+    const figure=document.createElement('figure'),canvas=document.createElement('canvas'),caption=document.createElement('figcaption');
+    caption.textContent=castNames[$('pool').value][Number($('slot').value)]+' · '+mood+' / '+pose;figure.append(canvas,caption);document.querySelector('main').append(figure);stills.push({canvas,label:caption.textContent});
+    const renderer=DW.faceBlend.create(canvas,frames);renderers.push(renderer);const layers=[];
+    if(mood!=='master')layers.push({image:mood,shape:DW.faceBlend.presets.face,alpha:1});
+    if(pose==='ah'||pose==='oo')layers.push({image:pose,shape:[48,61,13,8,20],alpha:1});
+    if(pose==='blink')layers.push({image:pose,shape:[38.5,44.6,7.4,4.3,25],alpha:1},{image:pose,shape:[56.5,44.6,7.4,4.3,25],alpha:1});
+    renderer.draw(layers);protectedPixels+=renderer.protectedChanges();
+    const source=document.createElement('canvas');source.width=source.height=512;const ctx=source.getContext('2d');
+    const frame=pose==='rest'?mood:pose;ctx.drawImage(bitmap,names.indexOf(frame)*256,0,256,256,0,0,512,512);
+    // Sample inside the opaque ownership cores and away from the face guard.
+    // Allow one channel level for browser canvas resampling roundoff.
+    const samples=pose==='blink'?[[174,239,4,4],[310,239,4,4]]:pose==='ah'||pose==='oo'?[[274,338,6,4]]:[];
+    for(const rect of samples){
+     const actual=canvas.getContext('2d').getImageData(...rect).data,expected=ctx.getImageData(...rect).data;
+     for(let i=0;i<actual.length;i++)if(Math.abs(actual[i]-expected[i])>1)coreErrors++;
+    }
+    if($('raw').checked)canvas.getContext('2d').drawImage(source,0,0);
+   }
+   $('status').textContent=(coreErrors||protectedPixels?'COMPOSITING CHECK FAILED':'COMPOSITING CHECK ONLY — visual review required')+' · feature ownership errors: '+coreErrors+' · changes outside face guard: '+protectedPixels;
+   $('download').disabled=false;
+  }catch(error){$('status').textContent=String(error);}
+ }
+ $('pool').onchange=slots;$('slot').onchange=review;$('raw').onchange=review;slots();
+ $('download').onclick=async()=>{
+  const sheet=document.createElement('canvas');sheet.width=1024;sheet.height=4*288+48;const ctx=sheet.getContext('2d');ctx.fillStyle='#0b1115';ctx.fillRect(0,0,sheet.width,sheet.height);ctx.fillStyle='#d7e4e9';ctx.font='14px system-ui';
+  ctx.fillText($('pool').value+' / '+$('slot').selectedOptions[0].textContent+' / '+($('raw').checked?'raw source':'runtime composite')+' / VISUAL REVIEW REQUIRED',12,28);
+  stills.forEach((still,i)=>{const x=(i%4)*256,y=48+Math.floor(i/4)*288;ctx.drawImage(still.canvas,x,y,256,256);ctx.fillText(still.label,x+4,y+274);});
+  const image=document.createElement('img'),link=document.createElement('a');image.id='contact-sheet';image.alt='Labeled runtime portrait contact sheet';image.src=sheet.toDataURL('image/png');image.style.maxWidth='none';image.width=1024;image.height=sheet.height;
+  link.download=$('pool').value+'-'+$('slot').value+'-'+($('raw').checked?'raw':'composite')+'-review.png';link.href=image.src;link.textContent='Download PNG';$('proof').style.overflow='auto';$('proof').replaceChildren(link,image);
+  if(new URLSearchParams(location.search).get('capture')==='1'&&['localhost','127.0.0.1'].includes(location.hostname)){
+   try{const response=await fetch('/__portrait_review__',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pool:$('pool').value,slot:Number($('slot').value),raw:$('raw').checked,image:image.src})});if(!response.ok)throw Error('Capture server HTTP '+response.status);const result=await response.json();link.href=result.path;link.textContent='Saved review PNG · visual approval pending';}
+   catch(error){link.textContent='Local capture unavailable · download PNG';}
+  }
+ };
+ window.addEventListener('pagehide',()=>{generation++;renderers.forEach(r=>r.dispose());if(bitmap)bitmap.close();},{once:true});
+})();
+</script></html>

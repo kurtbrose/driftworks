@@ -11,18 +11,27 @@ module.exports = function runFlightTransitions(namespace) {
   function mount(search = '') {
     class Element {
       constructor() {
-        this.value = ''; this.checked = false; this.options = []; this.dataset = {};
+        this.value = ''; this.checked = false; this.options = []; this.dataset = {}; this.style = {};
         this.classList = {add() {}, remove() {}, toggle() {}};
       }
       set textContent(value) { this.text = value; this.options = []; }
       get textContent() { return this.text || ''; }
       appendChild(option) { this.options.push(option); if (this.options.length === 1) this.value = option.value; }
       addEventListener() {}
+      setAttribute() {}
       cloneNode() { return Object.assign(new Element(), this); }
       dispatchEvent(event) { if (event.type === 'change' && this.onchange) this.onchange(event); }
       blur() {}
     }
     const nodes = new Map();
+    const captures = [], clipboard = [];
+    const layers = ['sky', 'scene', 'effects'].map(name => ({name, width:640, height:360}));
+    class Canvas extends Element {
+      constructor(name='output') { super(); this.name=name; this.width=640; this.height=360; this.drawn=[]; }
+      getContext() { return {fillRect() {}, drawImage:layer => this.drawn.push(layer.name)}; }
+      toBlob(callback) { captures.push(this); callback({type:'image/png'}); }
+    }
+    const hudCanvas = new Canvas('hud');
     const get = id => { if (!nodes.has(id)) nodes.set(id, new Element()); return nodes.get(id); };
     for (const [id, value] of Object.entries({
       'watch-pilot':'manual', 'watch-style':'baseline', 'combat-mode':'training',
@@ -34,8 +43,11 @@ module.exports = function runFlightTransitions(namespace) {
     get('combat-toggle').checked = true;
     const document = {
       body: Object.assign(new Element(), {dataset:{}}), getElementById:get,
-      createElement:() => new Element(), activeElement:null, pointerLockElement:null
+      createElement:tag => tag==='canvas' ? new Canvas() : new Element(), activeElement:null, pointerLockElement:null,
+      querySelector:selector => selector==='canvas.gpu-flight-hud' ? hudCanvas : null
     };
+    get('viewer').clientWidth=640;get('viewer').clientHeight=360;
+    get('viewer').querySelectorAll=() => layers;
     let actions, session, frame, now = 0;
     const elapsed = [];
     const noop = () => {};
@@ -63,13 +75,31 @@ module.exports = function runFlightTransitions(namespace) {
           sample:() => ({throttle:0,throttleRate:0,stop:true,fire:false})};
       }}
     });
-    const context = vm.createContext({window:{Driftworks:DW}, document, HTMLElement:Element, HTMLDetailsElement:Element,
+    const context = vm.createContext({window:{Driftworks:DW,devicePixelRatio:2}, document, HTMLElement:Element, HTMLDetailsElement:Element, HTMLCanvasElement:Canvas,
+      navigator:{clipboard:{write(items) { clipboard.push(items); return Promise.resolve(); }}},
+      ClipboardItem:class { constructor(data) { this.data=data; } },
+      URL:{createObjectURL:() => 'blob:test',revokeObjectURL() {}},
       URLSearchParams, location:{search}, performance:{now:() => now},
       requestAnimationFrame:callback => { frame = callback; }});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight.js'), 'utf8'), context, {filename:'experiments/flight.js'});
-    return {get, actions, session, elapsed, document,
+    return {get, actions, session, elapsed, document, captures, clipboard,
       tick(time) { now = time; const callback = frame; frame = null; callback(time); assert(frame); }};
   }
+
+  for (const hud of [true,false]) {
+    const shot=mount(),panel=shot.get('launch').options.at(-1),button=panel.options[hud?0:1];
+    shot.tick(1000);
+    const before=JSON.stringify(shot.session.snapshot());
+    button.onclick();
+    assert.equal(shot.clipboard.length,1,'Clipboard write starts inside click activation');
+    assert.equal(typeof shot.clipboard[0][0].data['image/png'].then,'function');
+    assert.equal(shot.captures.length,0,'Capture waits for freshly rendered WebGL buffers');
+    shot.tick(1100);
+    assert.deepEqual(shot.captures[0].drawn,hud?['sky','scene','effects','hud']:['sky','scene','effects']);
+    assert.equal(shot.captures[0].width,1280);assert.equal(shot.captures[0].height,720);
+    assert(shot.actions.isPaused());assert.equal(JSON.stringify(shot.session.snapshot()),before);
+  }
+  console.log('PASS pause screenshots: fresh frame, ordered layers, optional HUD, display resolution and frozen simulation');
 
   const style = mount();
   style.get('watch-style').value = 'passer'; style.get('watch-style').onchange();

@@ -1518,6 +1518,16 @@ Study panel configuration accepts `zoomToTerrain` (default true). The fighter st
 
 ### Radio portraits and shared channel noise
 
+Portrait mouth and blink patches use opaque rectangular cores with feathered
+edges; emotional face layers retain radial masks. The inner-face guard still
+limits both. See [portrait authoring](portrait-authoring.md) for per-frame
+registration and the frozen expression/feature review matrix.
+Both source packers apply the seven explicit integer offsets per character in
+`assets/portraits/registration.json` after neutral calibration. Source hashes
+invalidate stale registration; output manifests bind the offsets and shared
+helper. Ohio inherits the corrected facial pixels. Stable-feature residuals
+are mechanical diagnostics; visual acceptance requires labeled runtime stills.
+
 Civilian passenger crews are catalogued in `assets/portraits/civilian-shuttle/roster.json`
 under `civilian-shuttle-pilot`, with stable character IDs, ages, ranks, suggested
 voice slots and six `civilianPortraitIndex` values. A radio `Line` may set that

@@ -1,3 +1,4 @@
+export type JadeSystem={planetRadiusKm:number;planetMassKg:number;planeNormal:number[];observer:number[];frame:number[][];moons:{name:string;diameterKm:number;orbitKm:number;phaseDeg:number;position:number[]}[]};
 export type TargetStatus = {id: string; shield: number; hull: number; shieldTrail: number; hullTrail: number; shieldAge: number; hullAge: number; flash: number; time: number};
 export type ImpactCueSnapshot = {from:number;to:number;blend:number;stage:string;transitioning:boolean;queued:number;flashAge:number};
 import type { Asteroid, Ship, World, DriftworksNamespace } from '../src/types';
@@ -9,7 +10,7 @@ export type FlightMission = {
     teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
     comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
     portraits:{folder:string;cast:string};
-    sky:{kind:string;gasGiant?:boolean;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    sky:{kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
     asteroidBulk?:[number,number,number,number];
     scenery:MissionScenery[];
     encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};

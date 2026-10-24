@@ -353,6 +353,11 @@
                 actions.pause();
         });
         window.addEventListener('keydown', function (e) {
+            // Leave browser and OS shortcuts alone; Shift by itself remains boost.
+            if (e.ctrlKey || e.altKey || e.metaKey) {
+                keys = {};
+                return;
+            }
             if (e.code === 'F3' && !e.repeat) {
                 e.preventDefault();
                 actions.toggleDiagnostics();

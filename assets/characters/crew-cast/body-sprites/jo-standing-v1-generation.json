@@ -1,0 +1,10 @@
+{
+  "tool": "built-in image_gen",
+  "reference": [
+    "../head-sprites/jo-directions-v1.png"
+  ],
+  "prompt": "Use case: stylized-concept. Production videogame FULL-BODY directional sprite sheet, painted graphic-novel realism matching reference head sheet. ONE adult woman Jo Mercer (same warm medium complexion, strong dark brows, brown eyes, short dark brown practical hair), one outfit: navy blue fitted flight-deck coveralls with muted teal collar/shoulder panels, ivory angular chest piping, grey reinforced knees, charcoal boots and gloves, utility belt with a small orange pouch on her anatomical LEFT hip. No helmet. Natural adult proportions, about 7.5 heads tall, practical athletic build. Not chibi, not a 3D render. Eight full-length standing figures, arms resting with slight separation from torso, feet shoulder width. EXACT 4 columns by 2 rows grid, equal PORTRAIT cells with width:height 1:2, making total sheet SQUARE. Same fixed orthographic scale each cell: crown at y8%, boot soles at y94%, ground pivot x50% y94%, no cropped limbs, generous horizontal room for later arm gestures. Row1 left-right: front facing viewer; front three-quarter facing IMAGE LEFT; left-facing profile; rear three-quarter facing IMAGE LEFT. Row2: straight back; rear three-quarter facing IMAGE RIGHT; right-facing profile; front three-quarter facing IMAGE RIGHT. Same person and outfit in every cell, coherent asymmetric belt pouch. Soft neutral ambient light, crisp painted silhouette, genuine transparent background, NO cast ground shadows, NO floor, labels, borders or text. This is an unanimated standing baseline for a 3D billboard experiment. Reference image supplies identity, hairstyle, palette and painting style only; generate the whole body.",
+  "output": "jo-standing-v1.png",
+  "status": "static test candidate",
+  "generationCalls": 1
+}

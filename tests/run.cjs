@@ -1,5 +1,6 @@
 require('./character-cast.cjs');
 require('./crew-deck.cjs');
+require('./body-sprites.cjs');
 require('./civilian-portraits.cjs');
 require('./campaign-intro.cjs');
 require('./flight-aim-tracking.cjs');
@@ -15,6 +16,7 @@ require('./planet-hero.cjs');
 require('./sky-cube.cjs');
 require('./gas-giant-weather.cjs');
 require('./gas-giant-flight.cjs');
+require('node:child_process').execFileSync(process.execPath, [require('node:path').join(__dirname, 'gas-giant-flight.cjs'),'jade-rime'], {stdio:'inherit'});
 require('./orbital-impact-cube.cjs');
 require('./evacuation-sky.cjs');
 require('./planet-impact.cjs');
@@ -114,6 +116,7 @@ require('./hull-panels.cjs');
 require('./speech-sprites.cjs');
 require('./flight-portraits.cjs');
 require('./portrait-assets.cjs');
+require('./portrait-registration.cjs');
 require('./ohio-portraits.cjs');
 
 require('./comms-signal.cjs');

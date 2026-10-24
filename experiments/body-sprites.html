@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Full-body sprite trial · Driftworks</title>
+<script src="../src/asset-versions.js?v=6adebd451198"></script>
+<script>if(!new URLSearchParams(location.search).has('inspect'))location.replace('crew-deck.html?comparison=1');</script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b151e;color:#e1e9e9;font:14px/1.5 system-ui}main{display:grid;grid-template-columns:320px 1fr;height:100vh}aside{padding:22px;overflow:auto;border-right:1px solid #35515c;background:#10212b}a{color:#96d7c6}h1{font-size:25px;line-height:1.15}h2{font-size:15px;margin-top:24px}p,small{color:#aabfc7}label{display:block;margin:13px 0}label span{display:flex;justify-content:space-between}input[type=range],select{width:100%}select,button{background:#203b48;border:1px solid #527383;color:#eef5f4;padding:7px;font:inherit;border-radius:4px}button{cursor:pointer}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #ecbc6b}#stage{min-width:0;position:relative;overflow:hidden}#stage canvas{display:block;width:100%;height:100%;touch-action:none}#readout{position:absolute;left:16px;bottom:16px;right:16px;background:#0c1829dc;padding:10px;font:12px/1.5 monospace;white-space:pre-line;pointer-events:none}#error{color:#ffc398}summary{cursor:pointer;color:#e5bf78}.review label{font-size:12px}.review select{margin-top:3px}.row{display:flex;gap:6px;flex-wrap:wrap}#verdict{color:#efc382}output{color:#efc382}#phase-note{padding:10px;border-left:2px solid #e1b273}input[type=checkbox]{accent-color:#9bdac8}@media(max-width:700px){main{grid-template-columns:1fr;height:auto}aside{max-height:43vh;border-bottom:1px solid #35515c}#stage{height:57vh}h1{margin:8px 0}aside{padding:12px 18px}}
+</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
+<body><main><aside><a href="crew-deck.html">← Animated comparison room</a><h1>Original atlas review</h1><p>Jo / one outfit / eight bearings.<br>Find the failure, then decide.</p>
+<label>Motion<select id="motion"><option value="standing">Standing baseline</option><option value="walk" disabled>Walk · art gate failed</option><option value="reach" disabled>Reach · stopped at walk gate</option><option value="crouch" disabled>Crouch · stopped at walk gate</option></select></label>
+<p id="phase-note">Phase 1: static silhouette, 360° switching and camera elevation. Standing is a static baseline, not an idle animation.</p>
+<p style="color:#efc382">The first dense walk atlas failed twice. The comparison room now has a separate, rough pose-per-sheet animation trial.</p><button id="inspect-failure">Inspect failed walk sheets</button><div class="row"><button id="pause">Pause orbit</button><button id="reset">Reset view</button></div>
+<label><span>Orbit <output id="orbit-value">0°</output></span><input id="orbit" type="range" min="-180" max="180" value="0" step="0.01"></label>
+<label><input id="auto-orbit" type="checkbox"> Auto orbit</label>
+<label>Distance<select id="distance"><option value="2.2">Close · 2.2 m</option><option value="4" selected>Medium · 4 m</option><option value="9">Far · 9 m</option></select></label>
+<label>Elevation<select id="elevation"><option value="0" selected>Eye level</option><option value="20">20° above</option><option value="-12">12° below</option></select></label>
+<label>Background<select id="background"><option value="busy">Busy hangar</option><option value="bright">Bright wall</option><option value="dark">Dark wall</option></select></label>
+<label><span>Actor facing <output id="facing-value">0°</output></span><input id="facing" type="range" min="-180" max="180" value="0" step="1"></label>
+
+<label><input id="guide" type="checkbox" checked> Foot anchor + 1.8 m reference</label>
+<label><input id="occluder" type="checkbox"> Foreground crate · depth test</label>
+<details class="review"><summary>Pass / fail review</summary><p>Mark each after checking all eight bearings. Results stay in this browser.</p>
+<label>Standing identity / stable scale<select data-review="identity"><option value="">Not reviewed</option><option>Pass</option><option>Fail</option></select></label>
+<label>Walk · readable limbs and grounded feet<select data-review="walk" disabled><option value="Fail" selected>Fail · authoring gate</option></select></label>
+<label>Reach · arm clear across torso<select data-review="reach" disabled><option value="">Not run · stopped at walk</option></select></label>
+<label>Crouch · coherent compressed anatomy<select data-review="crouch" disabled><option value="">Not run · stopped at walk</option></select></label>
+<label>Orbit, ± elevation, three distances<select data-review="camera"><option value="">Not reviewed</option><option>Pass</option><option>Fail</option></select></label>
+<label>Bright / dark / busy + crate overlap<select data-review="contrast"><option value="">Not reviewed</option><option>Pass</option><option>Fail</option></select></label>
+<p id="verdict">Unreviewed. A loading asset is not a visual pass.</p><button id="clear-review">Clear review</button></details>
+<p><a href="../docs/body-sprites.md">Protocol &amp; limitations</a></p><div id="error" role="status"></div></aside><section id="stage" aria-label="3D sprite stress-test stage"><output id="readout"></output></section></main>
+<dialog id="failure-dialog" style="background:#10212b;color:#e1e9e9;border:1px solid #527383;max-width:95vw;max-height:95vh"><button id="close-failure">Close sheet review</button><h2>Walk gate · failed authoring outputs</h2><label>Candidate<select id="candidate"><option value="2">Repair · fourth row clipped / facing flips</option><option value="1">First attempt · only three rows</option></select></label><p id="failure-caption">Requested: four synchronized poses × eight bearings. Repair: last row cropped; left-profile column changes facing in row 3.</p><img id="failure-sheet" src="../assets/characters/crew-cast/body-sprites/jo-walk-v2.png?v=9d98088356d9" alt="Failed generated walk atlas: clipped fourth row and inconsistent direction" style="display:block;max-height:65vh;max-width:85vw;object-fit:contain;background:#32414d"><p><a href="../assets/characters/crew-cast/body-sprites/jo-walk-v1.png" target="_blank">First original</a> · <a href="../assets/characters/crew-cast/body-sprites/jo-walk-v2.png" target="_blank">Repair original</a></p></dialog>
+<script type="module">
+import * as T from 'three';
+const $=id=>document.getElementById(id),assetUrl=window.Driftworks.assetUrl;
+const sheets={standing:{file:'jo-standing-v1.png',columns:4,rows:2,frames:1,sequence:[0],fps:1,note:'Phase 1: static silhouette, 360° switching and camera elevation. Standing is a static baseline, not an idle animation.'}};
+function bodyDirection(angle,previous=null){const step=Math.PI/4;if(previous!==null&&Math.abs(Math.atan2(Math.sin(angle-previous*step),Math.cos(angle-previous*step)))<=step/2+.035)return previous;return ((Math.round(angle/step)%8)+8)%8;}
+function bodyCell(direction,frame,columns,frames){const cell=frames===1?direction:frame*8+direction;return {x:cell%columns,y:Math.floor(cell/columns)};}
+const scene=new T.Scene();scene.background=new T.Color('#192936');const camera=new T.PerspectiveCamera(44,1,.03,60);
+const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=T.SRGBColorSpace;$('stage').prepend(renderer.domElement);
+scene.add(new T.HemisphereLight(0xd4e8f3,0x1b2434,2));const light=new T.DirectionalLight(0xffd7ae,2);light.position.set(-3,6,5);scene.add(light);
+function box(w,h,d,x,y,z,color){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshStandardMaterial({color,roughness:.85}));mesh.position.set(x,y,z);scene.add(mesh);return mesh;}
+const floor=box(24,.08,24,0,-.06,0,'#344754'),wall=box(24,8,.18,0,3,-12,'#476172');
+const walls=[wall,box(24,8,.18,0,3,12,'#476172'),box(.18,8,24,-12,3,0,'#476172'),box(.18,8,24,12,3,0,'#476172')];
+const busy=new T.Group();scene.add(busy);for(let i=0;i<11;i++){const rib=box(.12,5,.14,-7+i*1.4,2.5,-3.86,i%2?'#a39770':'#1c3548');busy.attach(rib);const cargo=box(.7,.5+(i%3)*.3,.6,-7+i*1.4,.25+(i%3)*.15,-3,'#6f7778');busy.attach(cargo);}
+const grid=new T.GridHelper(20,40,0x58737d,0x40545c);grid.position.y=-.012;scene.add(grid);
+const crate=box(.48,.68,.45,.1,.34,.7,'#a88751');crate.visible=false;
+const actor=new T.Group();scene.add(actor);
+// Entire painted figure, including hair and limbs, is a single vertical billboard.
+// No per-frame crop normalization: drift remains visible during the kill test.
+const geometry=new T.PlaneGeometry(.96,1.92),material=new T.MeshBasicMaterial({transparent:true,alphaTest:.15,toneMapped:false});
+const figure=new T.Mesh(geometry,material);figure.position.y=.8832;actor.add(figure);
+const shadow=new T.Mesh(new T.CircleGeometry(.25,32),new T.MeshBasicMaterial({color:0x070d14,transparent:true,opacity:.35,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.scale.y=.62;shadow.position.y=.002;actor.add(shadow);
+const guide=new T.Group();actor.add(guide);const ring=new T.Mesh(new T.RingGeometry(.23,.245,40),new T.MeshBasicMaterial({color:0xf8c56b,side:T.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.006;guide.add(ring);
+const line=new T.LineSegments(new T.BufferGeometry().setFromPoints([new T.Vector3(-.64,0,0),new T.Vector3(-.64,1.8,0),new T.Vector3(-.7,1.8,0),new T.Vector3(-.58,1.8,0),new T.Vector3(-.7,0,0),new T.Vector3(-.58,0,0)]),new T.LineBasicMaterial({color:0xf8c56b}));guide.add(line);
+const textures=new Map();let loadTicket=0,current='standing',clock=0,paused=false,sector=null,bytes=0,decoded=0;
+async function loadSheet(name){const ticket=++loadTicket;$('error').textContent='Loading '+name+'…';try{let entry=textures.get(name);if(!entry){const response=await fetch(assetUrl('../assets/characters/crew-cast/body-sprites/'+sheets[name].file));if(!response.ok)throw Error('Sprite load failed: '+response.status);const blob=await response.blob(),bitmap=await createImageBitmap(blob,{imageOrientation:'flipY'}),texture=new T.Texture(bitmap);texture.colorSpace=T.SRGBColorSpace;texture.needsUpdate=true;texture.repeat.set(1/sheets[name].columns,1/sheets[name].rows);entry={texture,bitmap,bytes:blob.size};textures.set(name,entry);bytes+=blob.size;decoded+=bitmap.width*bitmap.height*4;}if(ticket!==loadTicket)return;current=name;clock=0;sector=null;material.map=entry.texture;material.needsUpdate=true;$('phase-note').textContent=sheets[name].note;$('error').textContent='';}catch(error){if(ticket===loadTicket)$('error').textContent=error.message;}}
+$('inspect-failure').onclick=()=>$('failure-dialog').showModal();$('close-failure').onclick=()=>$('failure-dialog').close();
+$('candidate').onchange=()=>{const first=$('candidate').value==='1';$('failure-sheet').src=assetUrl('../assets/characters/crew-cast/body-sprites/jo-walk-v'+(first?'1':'2')+'.png');$('failure-caption').textContent=first?'Requested: four poses × eight bearings. Output: only three rows, repeated stepping poses, unused bottom region.':'Requested: four synchronized poses × eight bearings. Repair: last row cropped; left-profile column changes facing in row 3.';};
+$('motion').onchange=()=>loadSheet($('motion').value);
+$('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'Resume orbit':'Pause orbit';};
+$('reset').onclick=()=>{$('orbit').value='0';$('facing').value='0';$('distance').value='4';$('elevation').value='0';$('auto-orbit').checked=false;sector=null;clock=0;};
+$('background').onchange=()=>{const value=$('background').value;for(const panel of walls)panel.material.color.set(value==='bright'?'#e4ded0':value==='dark'?'#08121e':'#476172');busy.visible=value==='busy';};
+let drag=null;renderer.domElement.onpointerdown=e=>{drag={x:e.clientX,angle:Number($('orbit').value)};renderer.domElement.setPointerCapture(e.pointerId);};renderer.domElement.onpointermove=e=>{if(drag){$('auto-orbit').checked=false;$('orbit').value=String(((drag.angle+(e.clientX-drag.x)*.4+540)%360)-180);}};renderer.domElement.onpointerup=()=>drag=null;renderer.domElement.onpointercancel=()=>drag=null;
+const reviewKeys=['identity','walk','reach','crouch','camera','contrast'];
+function updateReview(){const values=reviewKeys.map(key=>document.querySelector('[data-review="'+key+'"]').value);$('verdict').textContent=values.includes('Fail')?'Rethink: at least one test fails. Record the bad angle/phase before expanding.':values.every(value=>value==='Pass')?'All visual checks marked pass by reviewer. Authoring/repair effort still needs review.':'Review incomplete. Do not call this production-ready.';}
+for(const node of document.querySelectorAll('[data-review]')){if(node.disabled)continue;try{node.value=localStorage.getItem('dw-body-sprites-v1-'+node.dataset.review)||'';}catch{}node.onchange=()=>{try{localStorage.setItem('dw-body-sprites-v1-'+node.dataset.review,node.value);}catch{}updateReview();};}
+$('clear-review').onclick=()=>{for(const node of document.querySelectorAll('[data-review]')){if(node.disabled)continue;node.value='';try{localStorage.removeItem('dw-body-sprites-v1-'+node.dataset.review);}catch{}}updateReview();};updateReview();
+function resize(){const stage=$('stage');renderer.setSize(stage.clientWidth,stage.clientHeight);camera.aspect=stage.clientWidth/stage.clientHeight;camera.updateProjectionMatrix();}new ResizeObserver(resize).observe($('stage'));resize();
+let last=performance.now(),samples=[],reported=last;let stats='';
+function tick(now){requestAnimationFrame(tick);const elapsed=now-last,dt=Math.min(.05,elapsed/1000);last=now;if(document.hidden)return;if(!paused)clock+=dt;if(!paused&&$('auto-orbit').checked)$('orbit').value=String(((Number($('orbit').value)+dt*18+540)%360)-180);
+ const bearing=Number($('orbit').value)*Math.PI/180,elevation=Number($('elevation').value)*Math.PI/180,distance=Number($('distance').value),facing=Number($('facing').value)*Math.PI/180;
+ const target=new T.Vector3(0,.95,0);camera.position.set(target.x+Math.sin(bearing)*distance*Math.cos(elevation),target.y+Math.sin(elevation)*distance,target.z+Math.cos(bearing)*distance*Math.cos(elevation));camera.lookAt(target);
+ figure.rotation.y=bearing;sector=bodyDirection(bearing-facing,sector);const sheet=sheets[current],phase=0,cell=bodyCell(sector,phase,sheet.columns,sheet.frames);
+ if(material.map)material.map.offset.set(cell.x/sheet.columns,1-(cell.y+1)/sheet.rows);
+ guide.visible=$('guide').checked;crate.visible=$('occluder').checked;$('orbit-value').textContent=Math.round(Number($('orbit').value))+'°';$('facing-value').textContent=$('facing').value+'°';
+ const start=performance.now();renderer.render(scene,camera);samples.push([elapsed,performance.now()-start]);if(now-reported>1000){const frame=samples.map(s=>s[0]).sort((a,b)=>a-b),cpu=samples.map(s=>s[1]).sort((a,b)=>a-b);stats='frame median '+frame[Math.floor(frame.length*.5)].toFixed(1)+' / p95 '+frame[Math.floor(frame.length*.95)].toFixed(1)+' ms · CPU submit '+cpu[Math.floor(cpu.length*.5)].toFixed(1)+' ms';samples=[];reported=now;}
+ $('readout').textContent=current+' · bearing '+sector+'/7 · pose '+phase+' · '+'static baseline'+'\n'+stats+'\n'+renderer.info.render.calls+' draws / '+renderer.info.render.triangles+' triangles · '+(bytes/1048576).toFixed(2)+' MiB loaded · '+(decoded/1048576).toFixed(1)+' MiB decoded base pixels\nPainted ambient lighting · flat depth · fixed foot pivot · drag to orbit';
+}
+document.addEventListener('visibilitychange',()=>last=performance.now());
+addEventListener('pagehide',event=>{if(event.persisted)return;for(const entry of textures.values()){entry.texture.dispose();entry.bitmap.close();}renderer.dispose();},{once:true});
+loadSheet('standing');requestAnimationFrame(tick);
+</script></body></html>

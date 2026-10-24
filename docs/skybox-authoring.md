@@ -498,3 +498,16 @@ The animated `planet-orbital-cube` variant uses `sky.cubeStages` plus
 `sky.bakedImpact`: two cube samplers blend one pair of six-face captures from
 `animation-cube-v1/`. `tools/bake-orbital-impact.py` registers and bakes the nine
 stages using this exact camera convention. Each target waits for all six faces.
+
+### Jade moon observation scenes
+
+The jade missions carry `sky.jadeSystem` (see `experiments/types.d.ts`):
+planet radius/mass, common plane normal, physical observer position, a proper
+rotation frame, and four moon orbital radii/phases/positions in kilometers.
+`flight-missions.js` resolves this JSON-safe recipe for `gas-giant` and
+`jade-rime`. The sky renderer derives observer ranges, exact sphere angular
+radii, normals, depth occlusion and the scaled cube projection from those
+values. Do not independently hand-place moon bearings or resize the near
+scene's planet. The asset README documents the physical recipe and the limit
+of reusing the original painted planet lighting. Both are frozen observation
+points, independent of the ship's local flight translation.

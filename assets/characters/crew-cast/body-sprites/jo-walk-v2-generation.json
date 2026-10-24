@@ -1,0 +1,10 @@
+{
+  "tool": "built-in image_gen",
+  "reference": [
+    "jo-standing-v1.png"
+  ],
+  "prompt": "Create a NEW FULL-BODY WALK SPRITE SHEET matching the reference woman/outfit. This is a strict sprite atlas, not an illustration. EXACTLY 32 sprites. EXACTLY FOUR ROWS, EIGHT COLUMNS. The prior attempt incorrectly used three rows: DO NOT DO THAT. All four rows must fill the sheet from top to bottom in an exact uniform grid. Square 2048x2048 transparent image. Every one of the 32 cells is a portrait rectangle 256 wide x512 high. Row centers at y=256,768,1280,1792. Every cell keeps head crown near top 4%, lowest planted boot at cell y96%, hip center x50%. Keep blank 4% gutters INSIDE cells and absolutely no art crossing cell edges. NO empty bottom quarter. NO labels or shadows. Same painterly graphic novel woman with short brown hair, warm skin, navy coveralls/teal collar and shoulders/ivory piping/gray knee pads/black boots and gloves/orange left-hip pouch. Preserve realistic adult proportions. EIGHT COLUMNS ARE VIEW ROTATION, SAME FOR ALL FOUR ROWS: 1 FRONT; 2 FRONT LEFT THREEQUARTER; 3 LEFT PROFILE; 4 REAR LEFT THREEQUARTER; 5 BACK; 6 REAR RIGHT THREEQUARTER; 7 RIGHT PROFILE; 8 FRONT RIGHT THREEQUARTER. Left/right here is nose direction in image. FOUR ROWS ARE DISTINCT WALK POSES, synced across views: ROW 1 anatomical left leg extended forward heel strike, right leg extended backward toe push, opposite arm swing. ROW 2 left leg supporting at center, right knee raised and passing forward, arms near torso. ROW 3 REVERSE OF ROW 1: right leg extended forward heel strike, left leg extended backward toe push, opposite arm swing reversed. ROW 4 REVERSE OF ROW 2: right leg supporting at center, left knee raised and passing forward. Camera level orthographic. Natural clear long enough stride and visible arm swing, not four duplicates. Every cell shows one entire head-to-boots figure and no cropping. Prioritize EXACT FOUR ROWS and correct opposite stepping over fine texture detail.",
+  "output": "jo-walk-v2.png",
+  "status": "FAILED walk authoring gate; preserved for review",
+  "generationCalls": 1
+}

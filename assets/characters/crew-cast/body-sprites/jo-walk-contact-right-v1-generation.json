@@ -1,0 +1,11 @@
+{
+  "tool": "built-in image_gen",
+  "reference": [
+    "jo-standing-v1.png",
+    "jo-walk-contact-left-v1.png"
+  ],
+  "prompt": "Production game sprite sheet matching EXACT woman, outfit, painting style and fixed framing of the reference. Eight full-body figures, one pose shown from eight directions. EXACT 4 columns x 2 rows, equal portrait cells width:height=1:2, square whole image. Row1: front; front three-quarter facing IMAGE LEFT; left-facing profile; rear three-quarter facing IMAGE LEFT. Row2: back; rear three-quarter facing IMAGE RIGHT; right-facing profile; front three-quarter facing IMAGE RIGHT. SAME pose and anatomical limbs from every view. Crown near 2% cell height and lowest boot sole at 96%, fixed adult height and pelvis x50%; do not crop boots or change person scale. Same short brown-haired Jo, warm skin, navy coveralls with teal shoulders/collar, ivory piping, gray knees, black boots/gloves, orange pouch on her anatomical left hip. Head looks straight in the torso's forward direction, no independent head turning. Transparent background, no ground, shadow, text, labels or grid. WALK CONTACT B, opposite footfall to the reference walk sheet (image 2). Change only the limb pose: anatomical RIGHT leg forward heel strike, LEFT leg backward toe push. Anatomical LEFT arm swings forward, RIGHT arm swings back. This MUST reverse the leading boot and swinging arms relative to image 2 in EVERY viewing direction. Do not mirror the whole image: preserve hairstyle, orange pouch location and view directions. Same exact character height and cell positions. Image1 is identity/outfit/layout reference; image2 is previous opposite walk contact to reverse. Natural distinct walk stride, not standing or marching.",
+  "output": "jo-walk-contact-right-v1.png",
+  "status": "rejected: repeated opposite contact pose; superseded by v2",
+  "registration": "Runtime crops only within each direction and shifts vertically to align boot baseline; fixed pixel scale and horizontal placement retained."
+}

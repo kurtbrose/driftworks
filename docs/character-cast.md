@@ -128,7 +128,7 @@ catalog references their small WebP delivery variants.
 
 ## Helmet portrait experiment
 
-Head defaults to Helmet portrait. Authored 3D keeps the generated UV skins, source
+Helmet portrait remains selectable. Authored 3D keeps the generated UV skins, source
 head meshes and hair; Exposed portrait control keeps the unshielded panel. Render
 keeps Neutral and Illustrated available. No original mesh file or generated face
 texture was overwritten. 3D skin controls apply only to Authored 3D.
@@ -166,3 +166,79 @@ lighting bands, backface ink and a shared shadow map. Neutral stays available.
 These style treatments do not reconstruct anatomy or establish likeness. Helmet
 mode preserves identity by retaining the actual face artwork. Native resolution
 and MSAA remain the default.
+
+## Directional head sprite experiment
+
+Crew deck now defaults to Directional sprites · Jo. Jo uses a generated transparent
+4 × 2 sheet of eight unhelmeted head views on a camera-facing vertical plane.
+Other identities retain Helmet portrait in this mode; their sprite art is not yet
+created. The Helmet portrait, Authored 3D and Exposed portrait modes remain available.
+
+The plane follows the animated Head position, faces the camera horizontally and
+selects its 45-degree sector relative to the animated head orientation. It keeps
+a fixed neck pivot and body scale. The views run front, left-facing three-quarter,
+left profile, left rear three-quarter, back, right rear three-quarter, right profile,
+right-facing three-quarter. Rear and back buttons supplement the existing inspection
+views; walking around Jo tests the discrete transitions.
+
+This is a neutral-expression likeness and silhouette test. It has no blinking or
+speech animation yet. Extreme elevations still expose the vertical billboard trick,
+and eight views visibly snap rather than interpolate. Generated views need visual
+approval before extending this to the cast. Source sheet and built-in ImageGen
+prompt record live in `assets/characters/crew-cast/head-sprites/`. No runtime image
+generation, network service, new body geometry or save schema is involved.
+
+Focused regressions cover angle wraparound and sector boundaries, camera facing
+under a rotated parent, UV cell selection and animated neck attachment. Browser
+inspection covered front/profile attachment and existing body proportions.
+
+### Sixteen-angle comparison
+
+Angles now defaults to 16, interleaving the original eight views with a second
+4 × 2 sheet requested at 22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5 and
+337.5 degrees. These generated paintings approximate the requested bearings;
+they are not calibrated renders. The 8 option keeps the original art available.
+Both modes retain a two-degree hysteresis margin beyond the nearest-sector
+boundary, avoiding back-and-forth changes from small idle or camera movements.
+Changing angle count clears the retained sector. Both sheets share the same plane,
+neck pivot and size, are loaded once through the bounded reference-counted cache,
+and release their per-head texture views when replaced.
+
+Animation cost need not multiply full portraits: 16 directions with neutral,
+blink and two mouth poses would naively require 64 head frames per identity.
+A future patch experiment can keep hair/head silhouettes static, add small
+registered mouth/eyelid patches for visible face angles, and omit facial animation
+at rear bearings. Profile occlusion and seams still require validation. No patch
+animation, blink or talking frames were added to directional mode in this pass.
+
+## Parked checkpoint · 23 October 2026
+
+The 16-angle Jo head on the animated 3D body is retained in `experiments/crew-deck.html`.
+The original eight views, eight halfway views, 8/16 selector and two-degree switching
+hysteresis remain available alongside helmet and authored-3D heads. The user found
+this direction promising. Resume here if the full-body sprite trial fails.
+
+Next head-specific test: animate only small mouth/eyelid regions over the fixed
+painted face. Do not replace the entire head for each expression. This patch test
+has not been implemented. The separate full-body trial is `experiments/body-sprites.html`;
+it does not replace the crew-deck rig or the existing comms system.
+
+Crew deck now presents all head variants at once, plus the full-body sprite, for
+free walking comparison. The 8- and 16-angle samples keep separate per-actor
+angle counts. Optional identity/head/angle controls change only the left sample;
+they no longer replace every comparison head at once. Click the scene to walk;
+WASD and mouse-look own the camera until Escape or focus loss. The main full-body
+entry points to this room; `body-sprites.html?inspect=1` retains the old orbit lab.
+
+Unlocked mouse-look uses successive canvas client coordinates, not `movementX/Y`.
+Entry, exit, canvas leave and pointer-lock transitions reset the cursor baseline.
+Captured input retains relative deltas. Nonfinite or over-120px single-event jumps
+are rejected rather than driving the camera into its pitch clamp. Tests cover
+continuity around positive/negative 45 degrees and pointer/coordinate transitions.
+
+The comparison room now animates all variants with a shared motion clock.
+Motion defaults to Auto cycle; manual motion selection and Pause characters are
+independent of player movement. Existing rig clips cover walking, interacting,
+waving and kicking. The full-body sprite has a rough four-pose walk plus reach
+and crouch key poses, authored one eight-direction pose sheet at a time. See
+`docs/body-sprites.md` for file names, registration, costs and remaining art drift.

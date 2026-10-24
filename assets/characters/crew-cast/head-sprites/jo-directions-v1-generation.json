@@ -1,0 +1,7 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "assets/characters/crew-cast/portraits/portrait-0.webp",
+  "prompt": "Use case: stylized-concept. Create a production game sprite sheet: eight directional views of ONE unhelmeted woman's HEAD AND SHORT NECK ONLY, based closely on the woman in the reference comms portrait. Preserve her warm medium complexion, brown eyes, strong dark brows, facial proportions and short dark brown practical hair, no helmet, headset, clothing, shoulders or accessories. Painted graphic-novel realism like the reference, appealing expressive face, neutral closed mouth, soft ambient light consistent across all views. Transparent background. Exact 4-column by 2-row grid of equal square cells, one head centered per cell, identical scale, crown at 12% cell height and base of neck at 90%, neck pivot at x50% y85%. Row one left to right: front facing viewer, three-quarter facing image left, profile facing image left, rear three-quarter facing image left. Row two left to right: back of head, rear three-quarter facing image right, profile facing image right, three-quarter facing image right. Orthographic level camera, no tilt. Clean isolated complete hair silhouettes, ample transparent margins, no text, no grid lines, no extra heads. This will be an eight-angle Doom-style billboard on a 3D body, not a contact sheet of bust portraits.",
+  "output": "jo-directions-v1.png",
+  "status": "experimental-neutral-eight-directions"
+}

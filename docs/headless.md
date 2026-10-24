@@ -6,6 +6,8 @@ VM. There is no DOM, WebGL context, audio context, server, or network access.
 No installation or build step is needed.
 
 For a repeatable fleet-size CPU sweep, run `node tools/stress-flight.cjs`.
+For the corresponding rendered browser sweep and its optional automation setup,
+see [browser fighter scaling](benchmarks/flight-browser-2026-10-23.md).
 It tests 16/50/100 AI fighters in stock and compact layouts, reporting mean and
 tail times, overlapping stage costs, shot/hit counts, population and invariants.
 `--counts 16,50,100 --seconds 12` sets the sweep; `--profile 100 --layout dense`

@@ -9,7 +9,7 @@
     if(impactWatch)get('combat-toggle').checked=false;
     if(activeMission.weaponsDisabled){
         get('combat-toggle').disabled=true;get('watch-panel').hidden=true;
-        host.setAttribute('aria-label','Free flight above a jade gas giant');
+        host.setAttribute('aria-label',activeMission.id==='jade-rime'?'Free flight near Rime, with the jade giant overhead':'Free flight above a jade gas giant');
         ['weapons','integrity','target-info'].forEach(function(id){var panel=document.getElementById(id);if(panel)panel.hidden=true;});
         var footer=document.querySelector('footer');if(footer)footer.textContent='W/S throttle · X stop · Shift boost · arrows steer · Q/E roll · A/D lateral · R/F vertical · Esc pause';
     }
@@ -95,6 +95,48 @@
     }
     // The initial reset below creates the sortie before any frame or input runs.
     var paused = true;
+    // Copy freshly rendered buffers in the same frame: WebGL does not retain
+    // its drawing buffer after compositing. Never resume simulation to capture.
+    var screenshotRequest = /** @type {{hud:boolean,resolve:(blob:Blob)=>void,reject:(error:Error)=>void}|null} */ (null);
+    var screenshotPanel=document.createElement('div');
+    screenshotPanel.style.cssText='pointer-events:auto;margin:12px 0;padding:10px;background:#07151df5';
+    var screenshotStatus=document.createElement('small');screenshotStatus.setAttribute('role','status');
+    var screenshotDownload=document.createElement('a');screenshotDownload.textContent='Download screenshot';screenshotDownload.hidden=true;
+    var screenshotUrl='';
+    var screenshotButtons=/** @type {HTMLButtonElement[]} */([]);
+    [true,false].forEach(function(hud){
+        var button=document.createElement('button');button.type='button';button.textContent=hud?'Copy screenshot':'Copy screenshot (no HUD)';
+        button.style.cssText='display:block;width:100%;margin:6px 0';screenshotButtons.push(button);screenshotPanel.appendChild(button);
+        button.onclick=function(){
+            screenshotButtons.forEach(function(b){b.disabled=true;});screenshotDownload.hidden=true;screenshotStatus.textContent='Capturing…';
+            var image=new Promise(/** @param {(blob:Blob)=>void} resolve @param {(error:Error)=>void} reject */function(resolve,reject){screenshotRequest={hud:hud,resolve:resolve,reject:reject};});
+            // Start clipboard write during the click, before awaiting the frame.
+            var copying=/** @type {Promise<void>} */(Promise.resolve());
+            try{copying=navigator.clipboard&&typeof ClipboardItem!=='undefined'?navigator.clipboard.write([new ClipboardItem({'image/png':image})]):Promise.reject(new Error('Image clipboard unavailable'));}
+            catch(error){copying=Promise.reject(error);}
+            var download=image.then(function(blob){
+                if(screenshotUrl)URL.revokeObjectURL(screenshotUrl);
+                screenshotUrl=URL.createObjectURL(blob);screenshotDownload.href=screenshotUrl;screenshotDownload.download='driftworks'+(hud?'':'-no-hud')+'.png';screenshotDownload.hidden=false;
+            });
+            var copied=copying.then(function(){return true;},function(){return false;});
+            Promise.all([download,copied]).then(function(results){screenshotStatus.textContent=results[1]?'Screenshot copied. ':'Clipboard unavailable. Download the PNG instead. ';})
+                .catch(function(){screenshotStatus.textContent='Screenshot failed. Please try again.';}).finally(function(){screenshotButtons.forEach(function(b){b.disabled=false;});});
+        };
+    });
+    screenshotPanel.appendChild(screenshotStatus);screenshotPanel.appendChild(screenshotDownload);get('launch').appendChild(screenshotPanel);
+    function captureScreenshot(){
+        const request=screenshotRequest;if(!request)return;screenshotRequest=null;
+        try{
+            var output=document.createElement('canvas'),layers=Array.from(host.querySelectorAll('canvas'));
+            // Sky, scene and scene effects precede the single GPU HUD canvas.
+            if(request.hud){var hudCanvas=document.querySelector('canvas.gpu-flight-hud');if(hudCanvas instanceof HTMLCanvasElement)layers.push(hudCanvas);}
+            output.width=Math.max(1,Math.round(host.clientWidth*(window.devicePixelRatio||1)));output.height=Math.max(1,Math.round(host.clientHeight*(window.devicePixelRatio||1)));
+            const ctx=output.getContext('2d');if(!ctx)throw new Error('Screenshot canvas unavailable');
+            ctx.fillStyle='#000';ctx.fillRect(0,0,output.width,output.height);
+            layers.forEach(function(layer){if(layer.width&&layer.height)ctx.drawImage(layer,0,0,output.width,output.height);});
+            output.toBlob(function(blob){if(blob)request.resolve(blob);else request.reject(new Error('PNG encoding failed'));},'image/png');
+        }catch(error){request.reject(error instanceof Error?error:new Error(String(error)));}
+    }
     model.profiles.forEach(function (p, i) {
         var option = document.createElement('option');
         option.value = String(i);
@@ -435,6 +477,7 @@
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
         flightHud.render(Object.assign({}, currentView, { units: units, paused: paused, speakerId: comms.speakerId(), weapon: weapon() }, inputView, appearance));
+        captureScreenshot();
         if (watch) get('combat-status').textContent = 'AI DUEL / ' + (watch.summary().category === 'perfect' ? 'PERFECT' : watch.summary().flavor.toUpperCase()) + ' VS ' + currentView.combat.enemies[0].pilot.toUpperCase();
         updateWatch();
         var hudMs=performance.now()-phaseStart;

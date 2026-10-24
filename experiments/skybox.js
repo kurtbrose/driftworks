@@ -56,6 +56,21 @@
         return lightingCache;
     }
     var missionSky=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).flightMissions.current().sky, landmarkSky=missionSky.kind==='landmarks';
+    var system=missionSky.jadeSystem;
+    /** @param {number[]} v */
+    function jadeRotate(v){var frame=system?system.frame:[[1,0,0],[0,1,0],[0,0,1]];return frame[0].map(function(_,j){return v.reduce(function(sum,x,i){return sum+x*frame[i][j];},0);});}
+    var jadeObserver=system?system.observer:[0,-85000,0];
+    var jadeMoons=(system?system.moons:[]).map(function(moon){
+        var delta=moon.position.map(function(v,i){return v-jadeObserver[i];}),rangeKm=Math.hypot(...delta);
+        return {...moon,rangeKm,direction:jadeRotate(delta.map(function(v){return v/rangeKm;})),radius:Math.asin(moon.diameterKm/2/rangeKm)};
+    });
+    var moonData=new Float32Array(jadeMoons.flatMap(function(moon){return moon.direction.concat(Math.sin(moon.radius));}));
+    var moonRanges=new Float32Array(jadeMoons.map(function(m){return m.rangeKm;}));
+    var planetRange=system?Math.hypot(...system.observer):85000;
+    var planetRadius=system?Math.asin(system.planetRadiusKm/planetRange):Math.atan(1.31);
+    var planetDirection=system?jadeRotate(system.observer.map(function(v){return -v/planetRange;})):[0,1,0];
+    var jadePlanetData=new Float32Array(planetDirection.concat(Math.cos(planetRadius)));
+    var gasScale=missionSky.jadeSystem&&planetRange>100000?Math.tan(planetRadius)/1.31:1;
     var focal = 1 / Math.tan(Math.PI / 8);
     var impactStages=[{id:'before',label:'Before impact'},{id:'contact',label:'Contact / flash'},{id:'ejecta',label:'Young ejecta'},{id:'plume',label:'Growing plume'},{id:'cooling',label:'Cooling cap'},{id:'fallout',label:'Returning debris'},{id:'aftermath',label:'Regional aftermath'},{id:'fires',label:'Land fires'},{id:'smoke',label:'Smoke veil'}];
     function createImpactCues(){
@@ -161,7 +176,7 @@ varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
 uniform sampler2D panorama;
-uniform sampler2D noiseMap;
+uniform sampler2D noiseMap,rimeSurface;uniform float rimeDetailed;
 uniform float exposure;uniform float hdrEnabled;uniform sampler2D hdrEnvironment;
 uniform sampler2D ohioPlanet,ohioSun;
 uniform samplerCube bakedCube,bakedCubeTo;
@@ -171,6 +186,9 @@ uniform vec3 ohioSunCenter,ohioSunRight,ohioSunUp;
 uniform float ohioPlanetGain,ohioSunGain;
 uniform float bakedBlend;
 uniform float impactFlash,impactDebris,impactMotion; uniform vec3 impactDirection;
+uniform vec4 jadeRanges,jadePlanet;uniform float jadePlanetRange;
+uniform vec4 jadeMoons[4];uniform float moonPixel;
+uniform vec3 gasFrameX,gasFrameY,gasFrameZ;uniform float gasScale;
 uniform vec4 gasCells[8];uniform vec2 gasDrift[8];uniform float gasFlashes[8];
 // The limb is encoded in the texture, so geometry MSAA cannot smooth it.
 // Apply a small Gaussian reconstruction only in the source silhouette ring.
@@ -272,6 +290,42 @@ vec3 galaxy(vec3 ray,vec3 center,vec3 axis){
     float lane=smoothstep(.0,.005,abs(y+.0015*sin(x*100.)));
     return vec3(.16,.22,.32)*disk*(.3+arms*2.)*(.45+knots)*(.4+.6*lane)+vec3(.9,.72,.46)*core;
 }
+// Analytic opaque spheres retain sub-degree detail independently of cube resolution.
+vec3 jadeSatellites(vec3 sky,vec3 ray){
+ float closest=dot(ray,jadePlanet.xyz)>jadePlanet.w?jadePlanetRange:1.e20;
+ for(int i=0;i<4;i++){
+  vec3 center=jadeMoons[i].xyz;float radius=jadeMoons[i].w;
+  float depth=dot(ray,center);if(depth<=0.)continue;
+  float r=length(cross(ray,center))/radius;
+  if(r>1.+moonPixel/radius)continue;
+  float hit=(depth-radius*sqrt(max(0.,1.-min(r*r,1.))))*jadeRanges[i];
+  if(hit>closest)continue;closest=hit;
+  float coverage=1.-smoothstep(1.-moonPixel/radius,1.+moonPixel/radius,r);
+  vec3 normal=normalize((ray*depth-center)/radius-ray*sqrt(max(0.,1.-min(r*r,1.))));
+  vec3 p=vec3(dot(normal,gasFrameX),dot(normal,gasFrameY),dot(normal,gasFrameZ))*4.+vec3(float(i)*17.3,2.1,8.7);
+  float terrain=noise(p)*.65+noise(p*3.1)*.25+noise(p*11.)*.1;
+  vec3 dark=vec3(.24,.19,.15),light=vec3(.65,.53,.36);
+  if(i==1){dark=vec3(.40,.48,.49);light=vec3(.83,.86,.79);}
+  if(i==2){dark=vec3(.15,.13,.12);light=vec3(.48,.43,.37);}
+  if(i==3){dark=vec3(.30,.33,.36);light=vec3(.69,.73,.75);}
+  vec3 albedo=mix(dark,light,smoothstep(.22,.78,terrain));
+  // Rime has irregular frozen seams; the others have muted mottled regolith.
+  if(i==1&&rimeDetailed>.5){
+   // Fixed observer: project a finished disk on its tangent plane. Never wrap
+   // the visible artwork around a sphere or spend pixels on the hidden hemisphere.
+   vec3 diskRight=normalize(cross(vec3(0.,0.,1.),center));
+   vec3 diskUp=cross(center,diskRight);
+   float tangentRadius=radius/sqrt(1.-radius*radius);
+   vec2 diskXY=vec2(dot(ray,diskRight),-dot(ray,diskUp))/(depth*tangentRadius);
+   vec4 disk=texture2D(rimeSurface,vec2(.5)+diskXY*.484);
+   albedo=disk.rgb;coverage*=disk.a;
+  }
+  float sunlight=max(0.,dot(normal,normalize(ohioSunCenter)));
+  vec3 color=albedo*pow(sunlight,1./2.2)*exposure;
+  sky=mix(sky,color,coverage);
+ }
+ return sky;
+}
 void main(){
     if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
     if(style>9.5 && style<11.5){
@@ -281,9 +335,11 @@ void main(){
     }
     if(style>22.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
-        vec3 planet=gasSurface(ray);
+        vec3 local=vec3(dot(ray,gasFrameX),dot(ray,gasFrameY),dot(ray,gasFrameZ));
+        vec3 sourceRay=normalize(vec3(local.x/gasScale,local.y,local.z/gasScale));
+        vec3 planet=local.y>0.?gasSurface(sourceRay):vec3(0.);
         vec3 sun=ohioLandmark(ohioSun,ray,ohioSunCenter,ohioSunRight,ohioSunUp,ohioSunGain);
-        gl_FragColor=vec4(clamp(planet*exposure+sun,0.,1.),1.);return;
+        gl_FragColor=vec4(clamp(jadeSatellites(planet*exposure+sun,ray),0.,1.),1.);return;
     }
     if(style>21.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
@@ -365,6 +421,11 @@ void main(){
             // The planet is lit from its upper left, toward the viewer.
             // +Y faces the planet; the sun is behind the left shoulder (-X,-Y,+Z).
             var landmarkFeatures = missionSky.features;
+            if(system)landmarkFeatures=landmarkFeatures.map(function(feature){
+                var yaw=feature.yaw*Math.PI/180,pitch=feature.pitch*Math.PI/180;
+                var direction=jadeRotate([Math.cos(yaw)*Math.cos(pitch),Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch)]);
+                return {...feature,yaw:Math.atan2(direction[1],direction[0])*180/Math.PI,pitch:Math.asin(direction[2])*180/Math.PI};
+            });
             landmarkFeatures.forEach(function (feature) {
                 var vertices=featureFrame(feature,1), center=/** @type {number[]} */ ([]), horizontal=/** @type {number[]} */ ([]), vertical=/** @type {number[]} */ ([]);
                 for(var axis=0;axis<3;axis++){
@@ -413,6 +474,19 @@ void main(){
                     canvas.dataset.cube='ready';canvas.dataset.ohio='ready';
                 }
             };image.onerror=function(){canvas.dataset.cube='error';};image.src=assetUrl('../assets/backgrounds/'+file);});
+            gl.activeTexture(gl.TEXTURE0);
+        }
+        var rimeTexture=missionSky.rimeSurface?gl.createTexture():null,rimeLoaded=false;
+        if(missionSky.rimeSurface){
+            gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,rimeTexture);
+            gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([170,175,173,255]));
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+            canvas.dataset.rime='loading';
+            var rimeImage=new Image();rimeImage.onload=function(){
+                gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,rimeTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+                gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,rimeImage);rimeLoaded=true;canvas.dataset.rime='ready';gl.activeTexture(gl.TEXTURE0);
+            };rimeImage.onerror=function(){canvas.dataset.rime='error';};rimeImage.src=assetUrl('../assets/backgrounds/'+missionSky.rimeSurface);
             gl.activeTexture(gl.TEXTURE0);
         }
         var gasLitTexture=missionSky.gasGiant?gl.createTexture():null,gasLitLoaded=0,gasTime=0,gasFlashes=new Float32Array(8),gasOffsets=new Float32Array(16);
@@ -663,7 +737,14 @@ void main(){
             var planet=landmarkTextures[0],visible=/** @type {number[]} */([]);
             for(var star=0;star<starData.length;star+=4){
                 var depth=0,px=0,py=0;for(var axis=0;axis<3;axis++){depth+=starData[star+axis]*planet.center[axis];px+=starData[star+axis]*planet.right[axis];py+=starData[star+axis]*planet.up[axis];}
-                if(depth>0&&(px*px+py*py)/(depth*depth)<.91*.91)continue;
+                if(missionSky.gasGiant&&gasScale!==1){
+                    var planetDot=planetDirection.reduce(function(sum,v,i){return sum+v*starData[star+i];},0);
+                    if(planetDot>Math.cos(planetRadius))continue;
+                }else if(depth>0&&(px*px+py*py)/(depth*depth)<.91*.91)continue;
+                if(missionSky.gasGiant&&jadeMoons.some(function(moon){
+                    var d=moon.direction,dot=starData[star]*d[0]+starData[star+1]*d[1]+starData[star+2]*d[2];
+                    return dot>Math.cos(moon.radius);
+                }))continue;
                 visible.push(starData[star],starData[star+1],starData[star+2],starData[star+3]);
             }
             starData=new Float32Array(visible);
@@ -800,6 +881,9 @@ void main(){
                 gl.uniform1f(gl.getUniformLocation(sky,'cubeProjection'),missionSky.cubeStages?1:0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bakedBlend'),0);
                 gl.uniform1f(gl.getUniformLocation(sky, 'exposure'), effectiveExposure);
+                gl.uniform1i(gl.getUniformLocation(sky,'rimeSurface'),rimeTexture?7:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'rimeDetailed'),rimeLoaded?1:0);
+                if(rimeTexture){gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,rimeTexture);}
                 gl.uniform1f(gl.getUniformLocation(sky,'hdrEnabled'),hdrTexture?1:0);gl.uniform1i(gl.getUniformLocation(sky,'hdrEnvironment'),4);
                 if(hdrTexture){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.activeTexture(gl.TEXTURE0);}
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
@@ -840,6 +924,14 @@ void main(){
                 });
                 if(missionSky.gasGiant){
                     var weather=window.Driftworks.gasGiantWeather,sun=landmarkTextures[1];
+                    gl.uniform4fv(gl.getUniformLocation(sky,'jadeMoons[0]'),moonData);
+                    gl.uniform4fv(gl.getUniformLocation(sky,'jadeRanges'),moonRanges);
+                    gl.uniform4fv(gl.getUniformLocation(sky,'jadePlanet'),jadePlanetData);
+                    gl.uniform1f(gl.getUniformLocation(sky,'jadePlanetRange'),planetRange);
+                    var frame=system?system.frame:[[1,0,0],[0,1,0],[0,0,1]];
+                    ['gasFrameX','gasFrameY','gasFrameZ'].forEach(function(name,i){gl.uniform3fv(gl.getUniformLocation(sky,name),frame[i]);});
+                    gl.uniform1f(gl.getUniformLocation(sky,'gasScale'),gasScale);
+                    gl.uniform1f(gl.getUniformLocation(sky,'moonPixel'),1/(focal*canvas.height));
                     if(cubeLoaded===6&&gasLitLoaded===6)gasTime+=Math.max(0,elapsed||0);
                     if(weather){
                         gl.uniform4fv(gl.getUniformLocation(sky,'gasCells[0]'),gasCellData);

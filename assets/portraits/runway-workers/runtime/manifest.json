@@ -1,5 +1,8 @@
 {
   "version": 1,
+  "registrationApplied": true,
+  "registrationSha256": "32154f08063164f86f60bf5d6c77112684eb5f6fb673a818654b07e3461fb53b",
+  "registrationHelperSha256": "55242e8032ef6847cabd6ec09722e6852be721100936336059dfb48db1f0aee5",
   "tileSize": 256,
   "frames": [
     "neutral",
@@ -42,7 +45,7 @@
       0.58
     ]
   ],
-  "builderSha256": "45272957d9b468ac6a23001e395e6bd4cc9a452bb982f335ca8964571cc5a7be",
+  "builderSha256": "7541d966ed1598a1411b7942209dd54947d5212bb119a175520b6ba52f97d5db",
   "sources": {
     "source/jo-mercer-sheet.png": "4dd0f10be1271b30e0af6b18db9d4fb62584c3612fab74776068ab7fe4c4edba",
     "source/luis-ortega-sheet.png": "0f302e39d85985d117660947f8f885d0a808512ee17c27eb453f372ba101ac32",
@@ -52,11 +55,11 @@
     "source/kenji-sato-sheet.png": "64c72e7f7742ea3fa9fcb9b02d4c5f8214cce3b73d3ffd35c88af935408c9813"
   },
   "outputs": {
-    "portrait-0.png": "828ea2b0f5aa661cca300fe3ff765271ad5c667f36e4fba368fb65becb65dabc",
-    "portrait-1.png": "46ab727577445719157c05619ee08995a8cd2034e8529e87d9e975b034c5a801",
-    "portrait-2.png": "65d1a8aeb97fed8e9df8ab4bcda4ec15b16f0ed917596aa1ffe9eb08b1b5adb0",
+    "portrait-0.png": "c4dd61e1ec745bd2b392ca364ac79880a3f467cc8de9e51403ed1b784704a413",
+    "portrait-1.png": "ea298e75201d634ae64225d82bd9480a54780cf0759165d51605767df4b9611b",
+    "portrait-2.png": "c748a320af9cd05fe5c18460a4dbd88b31e76e01e8090eeb70884453c65bb1f9",
     "portrait-3.png": "b2a1c1f58de5085f7f9f275dfe4b8900fc98f0a211322ded98e34ab777c0a572",
-    "portrait-4.png": "115f9081926a0b206850436ea0c03d0db335b80e04754447c47ca1c85aacd78e",
+    "portrait-4.png": "595a0815c4a1301ed3c251694c6ff48a1e387aeac46001c2eb012bc9428cad90",
     "portrait-5.png": "6086c2bd9f31c3dcb0d4893582755991af2c367d02959b3be63bbdbddc8ac394"
   }
 }

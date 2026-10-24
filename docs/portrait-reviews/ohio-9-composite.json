@@ -1,0 +1,10 @@
+{
+  "status": "visual-review-pending",
+  "cast": "ohio",
+  "slot": 9,
+  "mode": "composite",
+  "atlasSha256": "ec071c5836a7ebca513d246ec7f441391b619c76336d6d7e0ac8221a8fdff0cf",
+  "compositorSha256": "50dea498a8c78d71689de6b8161d4296a670acbe5b739ca52773e20335033377",
+  "sheetSha256": "b78a57328a9699bd610e734576c969add05f77b73b7b113f89b4c62c00d873cf",
+  "combinations": 16
+}

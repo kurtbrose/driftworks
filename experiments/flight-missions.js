@@ -49,16 +49,46 @@
         encounter:{kind:'training',count:0,immediate:false,callsigns:['Rook','Jinx','Flint','Echo','Mako','Sable','Patch','Nova','Viper','Wraith','Razor','Hex','Talon','Knell','Cinder','Shade'],spawn:{backRadii:2.6,altitudeMeters:300}},opening:[]
     });
     define('furball',{encounter:{kind:'furball',count:16}});
+    /** Frozen fictional system in planet-centered km; all moon centers share one plane.
+     * @param {boolean} nearMoon @returns {import('./types').JadeSystem} */
+    function jadeSystem(nearMoon){
+        var tilt=25*Math.PI/180,e1=[-Math.cos(tilt),0,Math.sin(tilt)],normal=[Math.sin(tilt),0,Math.cos(tilt)];
+        var moons=[{name:'Cinder',diameterKm:3620,orbitKm:390000,phaseDeg:110},
+            {name:'Rime',diameterKm:3100,orbitKm:620000,phaseDeg:0},
+            {name:'Umber',diameterKm:5180,orbitKm:1030000,phaseDeg:80},
+            {name:'Serein',diameterKm:4740,orbitKm:1770000,phaseDeg:250}].map(function(m){
+                var phase=m.phaseDeg*Math.PI/180;
+                return {...m,position:e1.map(function(v,i){return m.orbitKm*(v*Math.sin(phase)-(i===1?Math.cos(phase):0));})};
+            });
+        var observer=[0,-85000,0],frame=[[1,0,0],[0,1,0],[0,0,1]];
+        if(nearMoon){
+            // 900 km above Rime; planet and moon separated by about 55 degrees.
+            observer=moons[1].position.map(function(v,i){return v+2450*(-e1[i]*Math.sin(55*Math.PI/180)-(i===1?Math.cos(55*Math.PI/180):0));});
+            var yaw=120*Math.PI/180,pitch=48*Math.PI/180;
+            var center=[Math.cos(yaw)*Math.cos(pitch),Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch)];
+            var north=[-Math.cos(yaw)*Math.sin(pitch),-Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch)];
+            var east=[-Math.sin(yaw),Math.cos(yaw),0];
+            // Proper rotation: e1 -> -north, +Y -> center, plane normal -> east.
+            frame=[0,1,2].map(function(i){return north.map(function(v,j){return -e1[i]*v+(i===1?center[j]:0)+normal[i]*east[j];});});
+        }
+        return {planetRadiusKm:68000,planetMassKg:1.7e27,planeNormal:normal,observer,frame,moons};
+    }
     define('gas-giant',{
         emptySpace:true,weaponsDisabled:true,
         title:'Jade weather / free flight · Driftworks',heading:'DRIFTWORKS / JADE WEATHER',
         subtitle:'GAS GIANT / QUIET FREE FLIGHT',
         hint:'No combat. W/S throttle · X stop · arrows steer · Q/E roll · Shift boost · Esc pause. Fly and watch the storms.',
-        sky:{kind:'landmarks',gasGiant:true,cubeFaces:['px','nx','py','ny','pz','nz'].map(function(face){return 'gas-giant-lightning-v1/dark-cube/'+face+'.png';}),features:[
+        sky:{kind:'landmarks',gasGiant:true,jadeSystem:jadeSystem(false),cubeFaces:['px','nx','py','ny','pz','nz'].map(function(face){return 'gas-giant-lightning-v1/dark-cube/'+face+'.png';}),features:[
             {asset:'gas-giant-lightning-v1/dark.png',yaw:90,pitch:0,roll:0,widthDeg:110,gain:1},
             {asset:'features/warm-sun-v1.png',yaw:20,pitch:20,roll:0,widthDeg:7,gain:1}
         ]}
     });
+    define('jade-rime',{
+        title:'Rime / moon-side free flight / Driftworks',heading:'DRIFTWORKS / RIME APPROACH',
+        subtitle:'900 KM ABOVE RIME / JADE GIANT OVERHEAD',
+        hint:'Look up for the jade giant. Rime fills the sky below. Fixed observation point; flight controls move the ship, not the orbital tableau.',
+        sky:{jadeSystem:jadeSystem(true),rimeSurface:'jade-moons-v1/rime-disk-v2.png'}
+    },'gas-giant');
     define('planet-hero',{
         title:'Planet hero flight · Driftworks',heading:'DRIFTWORKS / PLANET HERO TEST',subtitle:'STATIC PLANET BACKDROP · LOCAL DOGFIGHT',
         sky:{kind:'landmarks',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}

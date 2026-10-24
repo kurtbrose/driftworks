@@ -83,3 +83,60 @@ its silhouette as expected for a tangent-plane astronomical sprite.
 Run `node tests/gas-giant-weather.cjs` for source mask separation, concurrent bursts,
 reproducibility, drift bounds, stable visible bursts and baked-face checks. The shared cube regression checks the
 baker's twelve edge ray pairs and camera conventions.
+
+## Fictional satellite system / two viewpoints
+
+`flight-missions.js` resolves an immutable, JSON-safe `sky.jadeSystem` in
+planet-centered kilometers. Planet radius is 68,000 km and mass 1.7e27 kg.
+Moon centers are circular orbit samples in one exact plane, tilted 25 degrees;
+normal = (sin(25), 0, cos(25)). These are frozen phases, not orbit animation.
+The radii are deliberately distinct from the Galilean moons but comparable in
+scale ([NASA Ganymede facts](https://science.nasa.gov/jupiter/jupiter-moons/ganymede/facts/)).
+They lie at 5.7–26 planet radii, outside the disruption region for rocky/icy
+satellites. This is a plausible layout, not a long-term numerical stability study.
+
+| Moon | Diameter km | Planet-centered orbit km | Frozen phase degrees | Circular period days |
+| --- | ---: | ---: | ---: | ---: |
+| Cinder | 3620 | 390000 | 110 | 1.66 |
+| Rime | 3100 | 620000 | 0 | 3.33 |
+| Umber | 5180 | 1030000 | 80 | 7.14 |
+| Serein | 4740 | 1770000 | 250 | 16.08 |
+
+Periods use 2*pi*sqrt(a^3/(G*M)), G=6.67430e-11 SI. Positions are
+`a*(e1*sin(phase) + e2*cos(phase))`, e1=(-cos(25),0,sin(25)),
+e2=(0,-1,0). The original observer is (0,-85000,0) km. Observed moon
+ranges and diameters now derive from this offset, rather than invented sky
+bearings. A shared orbital plane need not appear as a great circle when the
+observer is displaced from its center (especially outside that plane).
+
+`gas-giant` retains the approved jade giant and lightning. `jade-rime` is a
+separate quiet free-flight observation scene 900 km above Rime's surface,
+2450 km from its center. Rime is 78.49 degrees across; the giant is about
+12.57 degrees across at 621,409 km. A rigid proper rotation places the giant
+high in the sky and Rime below, rotating the sun and the other satellites
+together. The camera starts at the regular flight orientation. Both scenes
+are sky tableaux: flight translation does not approach or orbit these bodies.
+
+Moons are opaque analytic ray/sphere intersections. The distant scene uses
+original seeded mineral/ice mottling. The near scene uses the original generated
+`jade-moons-v1/rime-disk-v2.png` finished visible-hemisphere disk; its prompt and provenance
+are retained beside it. Neither uses reference moon photographs.
+True `asin(radius/range)` angular radii and surface normals work for both
+sub-degree moons and the nearby large disk. Sunlight uses the same authored
+sun direction as the giant. Nightsides remain dark. The near scene reprojects
+the existing cube pair to the giant's physical angular size and rotated bearing;
+it reuses the painted cloud hemisphere, not a new volumetric planet. The small
+viewpoint offset from the original planet-facing radial line is under 0.2 degrees;
+painted cloud lighting remains an approximation at that level.
+
+Sphere hit ranges choose the nearest surface where moons overlap, and the
+planet hides distant moons. Stars are removed against opaque planet/moon disks.
+The near scene adds one square disk texture at startup (14 images versus
+13 in the distant scene), with zero per-frame uploads or additional geometry.
+There are no runtime network dependencies. This live layer is not included in frozen cube exports or the
+palette lab. The two cube pairs are unchanged; a new six-camera bake is not needed.
+
+`node tests/gas-giant-flight.cjs` and
+`node tests/gas-giant-flight.cjs jade-rime` check coplanarity, orbital radii,
+physical angular size, rigid rotation without reflection, near-moon altitude,
+star occlusion and resource lifecycle. Both viewpoints run in the shared suite.
