@@ -1,0 +1,18 @@
+Matched ABOVE camera / asteroid retained
+NEAREST
+Frozen above camera / t=5.99 / capital crossing
+ABBA: 20 warmup + 60 samples per block
+bridgeShips=readable
+OFF CPU 0.80 / 1.10 ms; frame 13.30 / 13.40 ms; prep 0.00 / 0.10 ms; 27 draws / 698154 tris
+ON CPU 1.00 / 1.20 ms; frame 13.30 / 13.70 ms; prep 0.00 / 0.10 ms; 34 draws / 742406 tris
+median / p95; CPU submission and rAF cadence, no GPU timer.
+1920x1080, 1920x1080, 1920x1080, 1280x720; DPR 1.5
+
+INTERPOLATED / final refinement-only traversal
+Frozen above camera / t=5.99 / capital crossing
+ABBA: 20 warmup + 60 samples per block
+bridgeShips=readable
+OFF CPU 0.80 / 1.10 ms; frame 13.30 / 13.40 ms; prep 0.00 / 0.10 ms; 27 draws / 698154 tris
+ON CPU 1.00 / 1.20 ms; frame 13.30 / 26.60 ms; prep 0.00 / 0.10 ms; 34 draws / 742406 tris
+median / p95; CPU submission and rAF cadence, no GPU timer.
+1920x1080, 1920x1080, 1920x1080, 1280x720; DPR 1.5

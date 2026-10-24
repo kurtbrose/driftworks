@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Disruption lab · Driftworks</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#050b12;color:#a7dfd4;font:12px ui-monospace,monospace;height:100svh;display:flex;flex-direction:column}header{padding:18px 24px;background:#09141d;border-bottom:1px solid #29434c}h1{font:500 19px system-ui;margin:0 0 8px}p{color:#799da2;margin:0 0 14px}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}select{background:#12242d;color:inherit;border:1px solid #45646a;padding:8px}button{background:#12242d;color:inherit;border:1px solid #45646a;padding:9px 12px;cursor:pointer}label{display:flex;gap:7px;align-items:center}input{accent-color:#98e6d6}#readout{margin-left:auto}main{position:relative;flex:1;min-height:360px;overflow:hidden}iframe{border:0;width:100%;height:100%;display:block;pointer-events:none}#boot{position:absolute;pointer-events:none;font:9px ui-monospace,monospace;letter-spacing:.08em;color:#a7dfd4;background:#06121aec;padding:4px 8px;text-align:center;border:1px solid #43665d66}#boot[hidden]{display:none}@media(max-width:650px){header{padding:12px}.controls{gap:8px}#readout{width:100%;margin:0}}
+</style></head><body><header><h1>Instrument disruption / actual flight HUD</h1><p>EMP · heavy damage · wormhole transit · gas giant electrical storms. One shared effect. Flight scene held still for comparison.</p><div class="controls"><label>Effect <select id="effect"><option value="static">Flicker / static</option><option value="tear">Horizontal tear</option><option value="echo">Signal echo</option><option value="reboot">Chatter / reboot</option></select></label><button id="trigger">Disrupt one panel</button><button id="clear">Clear</button><label>Severity <input id="intensity" type="range" min="0.15" max="1" step="0.05" value="0.7"></label><label><input id="hold" type="checkbox" checked> Occasional disruptions</label><label><input id="slips" type="checkbox" checked> Pixel slips</label><label><input id="sample" type="checkbox"> Hold sample</label><label><input id="gentle" type="checkbox"> Reduced flicker</label><span id="readout" role="status">LOADING FLIGHT HUD</span></div></header>
+<main><iframe id="flight" src="flight.html" title="Actual Driftworks flight HUD preview" tabindex="-1"></iframe><div id="boot" hidden></div></main>
+<script src="../src/asset-versions.js?v=16308cf0b7d6"></script>
+<script>
+'use strict';
+// Sequence timing. Shared across all environmental causes.
+function sampleDisruption(age,severity,reduced){
+  const bounce=[0,24,49,67,93,118,145,177,210,280,302,326,347,374,401,425,453,520,543,566,590,620,647,675];
+  const blackout=450+severity*650,recovery=2400+severity*2200;
+  if(age<700)return {alpha:reduced?.55:bounce.filter(t=>t<=age).length%2?0:1,reveal:1,phase:'CONTACT CHATTER',label:'',done:false};
+  if(age<700+blackout)return {alpha:0,reveal:1,phase:'PANEL OFFLINE',label:'',done:false};
+  const progress=Math.min(1,(age-700-blackout)/recovery),reveal=Math.max(0,(progress-.18)/.82);
+  return {alpha:.2+.8*reveal,reveal,phase:'REBOOT / '+Math.floor(progress*100)+'%',label:progress<.23?'BOOT / SELF TEST':progress<.6?'RESTORING TELEMETRY':progress<.9?'ACQUIRING SIGNAL':'SYNCHRONIZING',done:progress>=1};
+}
+// Short contact faults rather than continuous random jitter. Values are sampled
+// from fixed burst windows; calm intervals inside each event remain fully clean.
+function sampleGlitch(age,severity,reduced,kind){
+  const duration=kind==='echo'?2600:2300;
+  if(age>=duration)return {done:true,shift:0,alpha:0,band:0};
+  if(kind==='static'){
+    const burst=[[0,180],[300,620],[1050,1210],[1660,1740]].some(v=>age>=v[0]&&age<v[1]);
+    const tick=Math.floor(age/45),levels=[1,.18,.85,0,.55,.95,.3,1];
+    return {done:false,shift:0,alpha:burst?(reduced?.12:.12+severity*.36):0,band:0,brightness:reduced?.9:levels[tick%levels.length],seed:reduced?1:tick%31+1};
+  }
+  if(reduced)return {done:false,shift:0,alpha:.12,band:.46};
+  if(kind==='echo'){
+    const envelope=age<180?age/180:Math.pow(Math.max(0,1-(age-180)/2420),2);
+    return {done:false,shift:(5+severity*16)*envelope,alpha:.32*envelope,band:0};
+  }
+  const windows=[[0,150,.26,1],[230,360,.46,-.65],[480,740,.62,1.25],[1050,1140,.36,-.5],[1500,1600,.54,.3]];
+  const hit=windows.find(v=>age>=v[0]&&age<v[1]);
+  return {done:false,shift:hit?(5+severity*20)*hit[3]:0,alpha:hit?1:0,band:hit?hit[2]:0};
+}
+function sampleRegistration(age,reduced){
+  if(reduced)return {x:0,y:0};
+  // Sparse held integer offsets, with a clean return between contacts.
+  const contacts=[[70,125,1,0],[155,205,-1,1],[490,625,2,-1],[660,710,0,1],[1100,1190,-1,0],[1700,1820,1,0]];
+  const hit=contacts.find(v=>age>=v[0]&&age<v[1]);
+  return {x:hit?hit[2]:0,y:hit?hit[3]:0};
+}
+// Preview harness. Use the real flight page and its GPU HUD, not a replica.
+const effect=document.querySelector('#effect'),sample=document.querySelector('#sample'),slips=document.querySelector('#slips');
+const flight=document.querySelector('#flight'),severity=document.querySelector('#intensity'),repeat=document.querySelector('#hold'),gentle=document.querySelector('#gentle'),readout=document.querySelector('#readout'),boot=document.querySelector('#boot');
+gentle.checked=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let canvas=null,active=null,sequence=0,nextAt=Infinity,filterHost=null;
+// Bounds match flight-hud.js instruments() and radar.js draw(); only the HUD
+// canvas is masked, leaving the actual scene and all other instruments intact.
+function bounds(index,w,h){
+  const compact=w<760,margin=compact?12:24,pw=w<600?(w-margin*3)/2:Math.min(compact?166:224,(w-190)/2-margin*2),bottom=h-margin;
+  if(index===0)return {x:margin-2,y:bottom-181,w:pw+4,h:183,name:'YOUR SHIP'};
+  if(index===2)return {x:w-margin-pw-2,y:bottom-200,w:pw+4,h:202,name:'TARGET MONITOR'};
+  const radius=Math.min(w<600?60:76,w*.19,h*.17),cx=w/2,cy=h-radius-(w<600?240:24);
+  return {x:cx-radius-12,y:cy-radius-12,w:radius*2+24,h:radius*2+36,name:'RADAR'};
+}
+function resetMask(){if(canvas){canvas.style.maskImage='';canvas.style.webkitMaskImage='';canvas.style.filter='';}boot.hidden=true;}
+function clear(){resetMask();active=null;nextAt=Infinity;repeat.checked=false;readout.textContent=canvas?'SYSTEMS NOMINAL':'LOADING FLIGHT HUD';}
+function trigger(now){if(!canvas||active)return;active={index:sequence++%3,start:now,severity:Number(severity.value),kind:effect.value};nextAt=Infinity;}
+document.querySelector('#trigger').addEventListener('click',()=>trigger(performance.now()));
+document.querySelector('#clear').addEventListener('click',clear);
+effect.addEventListener('change',()=>{resetMask();active=null;nextAt=performance.now()+600;});
+repeat.addEventListener('change',()=>{nextAt=repeat.checked?performance.now()+2200:Infinity;});
+flight.addEventListener('load',()=>{
+  const doc=flight.contentDocument,style=doc.createElement('style');
+  style.textContent='#launch,aside,footer,#hud-help,#perf-overlay{display:none!important}';doc.head.append(style);
+});
+// SVG operates on the real GPU canvas SourceGraphic: no screenshot, copied HUD,
+// renderer patch or scene displacement. Only the chosen rectangular strips move.
+function glitchFilter(box,w,h,state,kind,slip){
+  if(!filterHost){filterHost=flight.contentDocument.createElementNS('http://www.w3.org/2000/svg','svg');filterHost.style.cssText='position:absolute;width:0;height:0;pointer-events:none';flight.contentDocument.body.append(filterHost);}
+  if(!state.alpha&&!slip.x&&!slip.y){canvas.style.filter='';return;}
+  const x=box.x,y=box.y,bw=box.w,bh=box.h;
+  let primitives='';
+  if(kind==='static'){
+    // Fine monochrome snow is generated locally, then clipped to this instrument.
+    // Dim only the instrument beneath it; all other SourceGraphic pixels survive.
+    primitives='<feFlood x="'+x+'" y="'+y+'" width="'+bw+'" height="'+bh+'" flood-color="white" result="region"/><feComposite in="SourceGraphic" in2="region" operator="out" result="clean"/><feComposite in="SourceGraphic" in2="region" operator="in" result="panel"/><feComponentTransfer in="panel" result="flicker"><feFuncA type="linear" slope="'+(state.alpha?state.brightness:1)+'"/></feComponentTransfer><feTurbulence type="fractalNoise" baseFrequency=".72 .85" numOctaves="1" seed="'+state.seed+'" result="grain"/><feColorMatrix in="grain" type="saturate" values="0" result="mono"/><feComponentTransfer in="mono" result="specks"><feFuncR type="discrete" tableValues="0 0 0 1 1"/><feFuncG type="discrete" tableValues="0 0 0 1 1"/><feFuncB type="discrete" tableValues="0 0 0 1 1"/><feFuncA type="linear" slope="'+state.alpha+'"/></feComponentTransfer><feComposite in="specks" in2="region" operator="in" result="snow"/><feMerge result="staticOut"><feMergeNode in="clean"/><feMergeNode in="flicker"/><feMergeNode in="snow"/></feMerge>';
+  }else if(kind==='echo'){
+    primitives='<feOffset in="SourceGraphic" dx="'+state.shift+'" dy="0" result="offset"/><feFlood x="'+x+'" y="'+y+'" width="'+bw+'" height="'+bh+'" flood-color="white" result="region"/><feComposite in="offset" in2="region" operator="in" result="clipped"/><feComponentTransfer in="clipped" result="ghost"><feFuncA type="linear" slope="'+state.alpha+'"/></feComponentTransfer><feMerge result="echoed"><feMergeNode in="SourceGraphic"/><feMergeNode in="ghost"/></feMerge>';
+  }else{
+    // One displaced strip plus a thinner counter-shift, as in comms-display.js.
+    const bands=[{y:y+bh*state.band,h:Math.max(7,bh*.065),dx:state.shift},{y:y+bh*state.band+bh*.11,h:3,dx:-state.shift*.45}];
+    let input='SourceGraphic';
+    bands.forEach((band,i)=>{
+      primitives+='<feFlood x="'+x+'" y="'+band.y+'" width="'+bw+'" height="'+band.h+'" flood-color="white" result="band'+i+'"/><feComposite in="'+input+'" in2="band'+i+'" operator="out" result="base'+i+'"/><feOffset in="SourceGraphic" dx="'+band.dx+'" dy="0" result="shift'+i+'"/><feComposite in="shift'+i+'" in2="band'+i+'" operator="in" result="slice'+i+'"/><feMerge result="merged'+i+'"><feMergeNode in="base'+i+'"/><feMergeNode in="slice'+i+'"/></feMerge>';
+      input='merged'+i;
+    });
+  }
+  if(slip.x||slip.y){
+    const input=kind==='static'?'staticOut':kind==='echo'?'echoed':'merged1';
+    primitives+='<feFlood x="'+x+'" y="'+y+'" width="'+bw+'" height="'+bh+'" flood-color="white" result="panelRegion"/><feComposite in="'+input+'" in2="panelRegion" operator="out" result="stationary"/><feComposite in="'+input+'" in2="panelRegion" operator="in" result="panelOnly"/><feOffset in="panelOnly" dx="'+slip.x+'" dy="'+slip.y+'" result="slipped"/><feMerge><feMergeNode in="stationary"/><feMergeNode in="slipped"/></feMerge>';
+  }
+  filterHost.innerHTML='<defs><filter id="instrument-glitch" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="'+w+'" height="'+h+'" color-interpolation-filters="sRGB">'+primitives+'</filter></defs>';
+  canvas.style.filter='url(#instrument-glitch)';
+}
+function frame(now){
+  requestAnimationFrame(frame);
+  if(!canvas){canvas=flight.contentDocument&&flight.contentDocument.querySelector('canvas.gpu-flight-hud');if(!canvas)return;readout.textContent='SYSTEMS NOMINAL';nextAt=now+2800;}
+  if(!active){if(repeat.checked&&now>=nextAt)trigger(now);return;}
+  const w=flight.clientWidth,h=flight.clientHeight,box=bounds(active.index,w,h);
+  if(active.kind!=='reboot'){
+    const glitch=sampleGlitch(sample.checked?560:now-active.start,active.severity,gentle.checked,active.kind);
+    if(glitch.done){resetMask();active=null;nextAt=now+3200+(sequence%3)*1100;readout.textContent='SYSTEMS NOMINAL';return;}
+    const slip=sampleRegistration(sample.checked?560:now-active.start,gentle.checked||!slips.checked);
+    glitchFilter(box,w,h,glitch,active.kind,slip);
+    readout.textContent=box.name+' / '+(active.kind==='static'?'FLICKER / STATIC':active.kind==='echo'?'SIGNAL ECHO':'HORIZONTAL TEAR');return;
+  }
+  const state=sampleDisruption(sample.checked?2800:now-active.start,active.severity,gentle.checked);
+  if(state.done){resetMask();active=null;nextAt=now+3200+(sequence%3)*1100;readout.textContent='SYSTEMS NOMINAL';return;}
+  // SVG alpha mask cuts out just this instrument. Reboot restores its scanlines
+  // top to bottom, while the rest of the real GPU HUD remains fully visible.
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><defs><mask id="cut"><rect width="100%" height="100%" fill="white"/><rect x="'+box.x+'" y="'+box.y+'" width="'+box.w+'" height="'+box.h+'" fill="black"/><rect x="'+box.x+'" y="'+box.y+'" width="'+box.w+'" height="'+(box.h*state.reveal)+'" fill="white" opacity="'+state.alpha+'"/></mask></defs><rect width="100%" height="100%" fill="white" mask="url(#cut)"/></svg>';
+  canvas.style.maskImage='url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';
+  boot.hidden=!state.label;boot.textContent=state.label;boot.style.left=(box.x+6)+'px';boot.style.top=(box.y+box.h-24)+'px';boot.style.width=(box.w-12)+'px';
+  readout.textContent=box.name+' / '+state.phase;
+}
+requestAnimationFrame(frame);
+</script></body></html>

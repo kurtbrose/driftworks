@@ -1,3 +1,4 @@
+export type FiringSolution={direction:number[];distance:number;time:number;point:number[];region:number};
 export type JadeSystem={planetRadiusKm:number;planetMassKg:number;planeNormal:number[];observer:number[];frame:number[][];moons:{name:string;diameterKm:number;orbitKm:number;phaseDeg:number;position:number[]}[]};
 export type TargetStatus = {id: string; shield: number; hull: number; shieldTrail: number; hullTrail: number; shieldAge: number; hullAge: number; flash: number; time: number};
 export type ImpactCueSnapshot = {from:number;to:number;blend:number;stage:string;transitioning:boolean;queued:number;flashAge:number};
@@ -660,8 +661,8 @@ export type ExperimentModules = {
     gasGiantWeather:typeof import('./gas-giant-weather');
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
     ellisFeedback:{describe:(pose:Pose)=>{region:number;distance:number;gap:number;proximity:number};create:()=>{reset:()=>void;update:(pose:Pose,dt:number,active:boolean,enabled:boolean)=>EllisCue}};
-    ellisStudy:{camera:(name:string)=>Pose;sample:(time:number,scenario:string)=>{pose:Pose;velocity:number[]}[]};
-    ellisOptics:{primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;latticeShader:string;size:number};
+    ellisStudy:{camera:(name:string,time?:number)=>Pose;sample:(time:number,scenario:string)=>{pose:Pose;velocity:number[]}[]};
+    ellisOptics:{primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];sourceDirection:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;latticeShader:string;size:number};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
     flightPortraits: {
@@ -722,8 +723,13 @@ export type ExperimentModules = {
         contact: (state: FlightState, point: Vector, radius: number) => boolean;
     };
     flightGuns: {
+        bridgeVector:(vector:Vector,normal:Vector)=>Vector;
+        crossBridge:(before:Vector,after:Vector,side:number)=>{normal:Vector;fraction:number;entry:Vector;exit:Vector;eye:Vector}|null;
+        bridgeTravel:(start:Vector,move:Vector,region:number)=>{point:Vector;region:number;normal:Vector|null;segments:{start:Vector;end:Vector;region:number}[]};
+        ballisticPath:(origin:Vector,target:Vector,region:number,destination:number,bridge?:boolean)=>{direction:Vector;distance:number}|null;
+        lead:(shooter:Pose,target:Pose & {velocity:Vector},weapon:Weapon,bridge?:boolean,launchMeters?:number)=>FiringSolution|null;
         create: () => Guns;
-        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[]) => void;
+        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[], bridge?:boolean) => void;
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
     };
@@ -732,7 +738,7 @@ export type ExperimentModules = {
         collisionBatch: <T>(combat: Combat, work: () => T) => T;
         collisionChanged: (combat: Combat, craft?: Craft) => void;
         collisionStats: (combat: Combat) => {mode:string;queued:number;syncs:number;moves:number;queries:number;reuses:number;popped:number;wakes:number};
-        stepControlled: (combat: Combat, controls: Demand, weapon: Weapon, dt: number, radius: number, terrainHit?: TerrainHit, afterCombat?: () => void) => {playerDamaged: boolean; fired: boolean; impact: boolean};
+        stepControlled: (combat: Combat, controls: Demand, weapon: Weapon, dt: number, radius: number, terrainHit?: TerrainHit, afterCombat?: () => void, afterMovement?:()=>void) => {playerDamaged: boolean; fired: boolean; impact: boolean};
         stepInput: (craft: Craft, controls: Demand, dt: number) => void;
         damageCraft: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
         createCraft: (id: string, pose: FlightState, team: string) => Craft;
@@ -741,6 +747,7 @@ export type ExperimentModules = {
         configureHulls: (combat: Combat, ally: string, enemy: string) => void;
         bindPlayer: (combat: Combat, pose: FlightState) => Craft;
         hullHit: (craft: Craft, start: Vector, end: Vector, boltRadius?: number) => Hit | null;
+        firingSolution:(combat:Combat,shooter:Craft,target:Craft,weapon:Weapon)=>FiringSolution|null;
         convergencePoint: (combat: Combat, shooter: Craft, weapon: Weapon, terrainHit?: TerrainHit) => Vector | null;
         defaultWeapon:(profile:Profile)=>number;
         configure:(combat:Combat,profile:Profile,unshielded?:boolean)=>void;
@@ -759,7 +766,7 @@ export type ExperimentModules = {
         damageEnemy: (combat: Combat, craft: Craft, weapon: Weapon, shooter?: Craft | string | null) => void;
         damagePlayer: (combat: Combat, weapon: Weapon) => void;
         trace: (combat: Combat, start: Vector, end: Vector, bolt: Bolt, team: Craft | string, terrainHit: TerrainHit | undefined, player: FlightState, scorchInterval?:number, onDamage?:() => void) => Vector | null;
-        step: (combat: Combat, player: FlightState, dt: number, radius: number, terrainHit?: TerrainHit) => void;
+        step: (combat: Combat, player: FlightState, dt: number, radius: number, terrainHit?: TerrainHit, afterMovement?:()=>void) => void;
         cycle: (combat: Combat) => void;
         acquireTarget: (combat: Combat, state: FlightState) => void;
         toggleTargetLock: (combat: Combat) => void;

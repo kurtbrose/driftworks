@@ -2298,6 +2298,17 @@
     assert(direct.paint===green);assert(original.paint===undefined);assert(direct.texture===original.texture);assert(direct.vertices.every(function(v,i){return v===original.vertices[i];}));
     var mixed=api.sourceFleetGeometry(craft,'mixed',1,10,images,green);assert(mixed.length===1&&mixed[0].paint===green);
   });
+  test('wreck hulls lose faction paint without mutating shared live geometry',function(){
+    var api=window.Driftworks.shipPackModels,model=window.Driftworks.shipPacks[0].models[0],images=new Map(),paint=[.2,.8,.3];
+    var pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]};
+    var live={index:0,modelId:model.id,pose:pose,hp:10},wreck={index:1,modelId:model.id,pose:pose,age:0};
+    [true,false].forEach(function(transforms){
+      var batches=api.sourceFleetGeometry([live,wreck],model.id,1,10,images,paint,transforms);
+      assert(batches.length===2);assert(batches[0].paint===paint);assert(batches[1].paint===undefined);
+      assert(batches[0].vertices.every(function(v,i){return v===batches[1].vertices[i];}));
+      if(transforms)assert(batches[0].vertices===batches[1].vertices);
+    });
+  });
   test('source ship fleets preserve artist UVs and normals across poses without dropping models',function(){
     var api=window.Driftworks.shipPackModels,models=window.Driftworks.shipPacks[0].models,images=new Map(),craft=[];
     models.forEach(function(m,i){images.set(m.id,{name:m.name});craft.push({index:i,modelId:m.id,pose:{eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]}});});

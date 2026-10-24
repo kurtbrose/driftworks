@@ -1,0 +1,8 @@
+Frozen side camera / t=5.99 / capital crossing
+ABBA: 20 warmup + 60 samples per block
+bridgeShips=readable
+OFF CPU 0.60 / 0.80 ms; frame 13.30 / 13.40 ms; prep 0.00 / 0.10 ms; 3 draws / 4 tris
+ON CPU 0.90 / 1.20 ms; frame 13.30 / 13.50 ms; prep 0.00 / 0.10 ms; 10 draws / 44256 tris
+median / p95; CPU submission and rAF cadence, no GPU timer.
+1920x1080, 1920x1080, 1920x1080, 1280x720; DPR 1.5
+Previous matched scene before endpoint transport: OFF CPU 0.50/0.70 ms, ON 0.70/0.90 ms; frame 13.30/13.40 ms, same asset and draw/triangle counts.

@@ -8,14 +8,88 @@
     /** @typedef {import('./types').Bolt} Bolt */
     /** @typedef {import('./types').Batch} Batch */
     var units = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).sim.METERS_PER_UNIT;
+    /** @param {Vector} vector @param {Vector} normal */
+    function bridgeVector(vector,normal){var radial=vector.reduce(function(sum,v,i){return sum+v*normal[i];},0);return vector.map(function(v,i){return 2*radial*normal[i]-v;});}
+    /** Swept physical crossing, shared by motion, projectile collision and lead prediction.
+     * @param {Vector} before @param {Vector} after @param {number} side */
+    function crossBridge(before,after,side){
+        var center=[side*12000/units,-2000/units,1550/units],radius=300/units;
+        var offset=before.map(function(v,i){return v-center[i];}),move=after.map(function(v,i){return v-before[i];});
+        var a=move.reduce(function(sum,v){return sum+v*v;},0),b=offset.reduce(function(sum,v,i){return sum+v*move[i];},0),c=offset.reduce(function(sum,v){return sum+v*v;},0)-radius*radius,disc=b*b-a*c;
+        if(a<1e-20||disc<0||b>=0)return null;
+        var t=(-b-Math.sqrt(disc))/a;if(t<0||t>1)return null;
+        var entry=offset.map(function(v,i){return v+move[i]*t;}),normal=entry.map(function(v){return v/radius;}),remaining=bridgeVector(move.map(function(v){return v*(1-t);}),normal);
+        var exit=center.map(function(v,i){return v+(i===0?(side?-12000:12000)/units:0)-entry[i];});
+        return {normal:normal,fraction:t,entry:entry.map(function(v,i){return v+center[i];}),exit:exit,eye:exit.map(function(v,i){return v+remaining[i];})};
+    }
+    /** @param {Vector} start @param {Vector} move @param {number} region */
+    function bridgeTravel(start,move,region){
+        var end=start.map(function(v,i){return v+move[i];}),crossing=crossBridge(start,end,region);
+        if(!crossing)return {point:end,region:region,normal:null,segments:[{start:start,end:end,region:region}]};
+        return {point:crossing.eye,region:1-region,normal:crossing.normal,segments:[{start:start,end:crossing.entry,region:region},{start:crossing.exit,end:crossing.eye,region:1-region}]};
+    }
+    /** Straight projectile route, with at most one physical mouth transit.
+     * This is deliberately independent of the optical Ellis ray.
+     * Coordinates/distances are scene units, not metres.
+     * @param {Vector} origin @param {Vector} target @param {number} region @param {number} destination @param {boolean} [bridge] */
+    function ballisticPath(origin,target,region,destination,bridge){
+        var delta=target.map(function(v,i){return v-origin[i];}),distance=Math.hypot.apply(null,delta);
+        if(!bridge||region===destination){
+            if(region!==destination||distance<1e-10)return null;
+            var crossing=bridge?crossBridge(origin,target,region):null;
+            if(crossing&&crossing.fraction<1-1e-9)return null;
+            return {direction:delta.map(function(v){return v/distance;}),distance:distance};
+        }
+        var a=300/units,O=origin.map(function(v,i){return v-[region*12000/units,-2000/units,1550/units][i];}),T=target.map(function(v,i){return v-[destination*12000/units,-2000/units,1550/units][i];});
+        var R=Math.hypot.apply(null,O),S=Math.hypot.apply(null,T);if(R<a-1e-8||S<a-1e-8)return null;
+        R=Math.max(a,R);S=Math.max(a,S);
+        var n=O.map(function(v){return v/R;}),m=T.map(function(v){return -v/S;}),cosine=Math.max(-1,Math.min(1,n.reduce(function(sum,v,i){return sum+v*m[i];},0))),angle=Math.acos(cosine);
+        var maximum=Math.PI-Math.asin(a/R)-Math.asin(a/S);if(angle>maximum-1e-9&&angle>1e-8)return null;
+        var tangent=m.map(function(v,i){return v-n[i]*cosine;}),tn=Math.hypot.apply(null,tangent);tangent=tangent.map(function(v){return v/Math.max(1e-12,tn);});
+        var low=0,high=a*(1-1e-12);
+        for(var i=0;i<40;i++){var mid=(low+high)*.5,phase=2*Math.asin(mid/a)-Math.asin(mid/R)-Math.asin(mid/S);if(phase<angle)low=mid;else high=mid;}
+        var impact=(low+high)*.5,sine=impact/R;
+        return {direction:n.map(function(v,i){return -v*Math.sqrt(Math.max(0,1-sine*sine))+tangent[i]*sine;}),distance:Math.sqrt(Math.max(0,R*R-impact*impact))+Math.sqrt(Math.max(0,S*S-impact*impact))-2*Math.sqrt(Math.max(0,a*a-impact*impact))};
+    }
+    /** An actionable aim direction, never an optically warped future point.
+     * Predict current world velocity through the same mouth transport as live shots.
+     * A later jink is not knowable; unverified/out-of-lifetime solutions return null.
+     * @param {Pose} shooter @param {Pose & {velocity:Vector}} target @param {Weapon} weapon @param {boolean} [bridge] @param {number} [launchMeters]
+     * @returns {import('./types').FiringSolution|null} */
+    function lead(shooter,target,weapon,bridge,launchMeters){
+        var speed=weapon.speed/units,launch=Math.max(0,launchMeters===undefined?4:launchMeters)/units,life=weapon.lifetime;
+        if(!(speed>0&&life>0))return null;
+        /** @param {number} time */function sample(time){
+            var move=target.velocity.map(function(v){return v*time/units;}),future=bridge?bridgeTravel(target.eye,move,target.region||0):{point:target.eye.map(function(v,i){return v+move[i];}),region:target.region||0};
+            var path=ballisticPath(shooter.eye,future.point,shooter.region||0,future.region,bridge);if(!path)return null;
+            return {direction:path.direction,distance:path.distance,time:time,point:future.point,region:future.region,error:path.distance-Math.min(launch,path.distance*.5)-speed*time};
+        }
+        var times=Array.from({length:65},function(_,i){return life*i/64;});
+        if(bridge){var crossing=crossBridge(target.eye,target.eye.map(function(v,i){return v+target.velocity[i]*life/units;}),target.region||0);if(crossing){var event=crossing.fraction*life;times.push(Math.max(0,event-1e-7),event,Math.min(life,event+1e-7));times.sort(function(a,b){return a-b;});}}
+        var previous=sample(0);
+        for(var i=1;i<times.length;i++){
+            var current=sample(times[i]);
+            if(previous&&current&&previous.error>=0&&current.error<=0){
+                var lo=previous.time,hi=current.time,valid=true;
+                for(var j=0;j<32;j++){var middle=sample((lo+hi)*.5);if(!middle){valid=false;break;}if(middle.error>0)lo=middle.time;else hi=middle.time;}
+                var result=valid?sample((lo+hi)*.5):null;
+                if(result&&Math.abs(result.error)*units<.02){
+                    var end=bridge?bridgeTravel(shooter.eye,result.direction.map(function(v){return v*result.distance;}),shooter.region||0):{point:shooter.eye.map(function(v,k){return v+result.direction[k]*result.distance;}),region:shooter.region||0};
+                    if(end.region===result.region&&Math.hypot.apply(null,end.point.map(function(v,k){return v-result.point[k];}))*units<.05)return {direction:result.direction,distance:result.distance,time:result.time,point:result.point,region:result.region};
+                }
+            }
+            previous=current;
+        }
+        return null;
+    }
     // Shared crosshair aim point, measured forward from the eye in metres.
     var convergenceM = 300;
     /** @returns {Guns} */
     function create() {
         return { bolts: [], impacts: [], cooldown: 0, fired: 0, hits: 0 };
     }
-    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] */
-    function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount, anchors) {
+    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] @param {boolean} [bridge] */
+    function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount, anchors, bridge) {
         var count = mountCount === undefined ? 2 : mountCount;
         if (!Number.isInteger(count) || count < 1 || count > 128) throw new Error('Invalid gun mount count');
         var muzzles = anchors || Array.from({length:count}, function (/** @type {unknown} */ _, mount) {
@@ -36,7 +110,11 @@
             var end = bolt.position.map(function (x, i) {
                 return x + bolt.direction[i] * bolt.weapon.speed * travel / units;
             });
-            var hit = hitTest ? hitTest(bolt.position, end, bolt) : null;
+            var route=bridge?bridgeTravel(bolt.position,end.map(function(v,i){return v-bolt.position[i];}),bolt.region||0):{point:end,region:bolt.region||0,normal:null,segments:[{start:bolt.position,end:end,region:bolt.region||0}]};
+            var hit=/** @type {Vector|null} */(null);
+            for(var segment of route.segments){bolt.region=segment.region;hit=hitTest?hitTest(segment.start,segment.end,bolt):null;if(hit)break;}
+            if(!hit&&route.normal)bolt.direction=bridgeVector(bolt.direction,route.normal);
+            end=route.point;
             bolt.age += dt;
             if (hit) {
                 guns.impacts.push({ region:bolt.region||0, position: hit, age: 0 });
@@ -66,8 +144,16 @@
                     return target ? (target[i] - position[i]) * units :
                         -x * (convergenceM - launchForward) - pose.right[i] * muzzle[0] - pose.up[i] * muzzle[2];
                 });
+                var launchRegion=pose.region||0;
+                if(bridge){
+                    var range=target?Math.max(.001,target.reduce(function(sum,v,i){return sum-(v-pose.eye[i])*pose.back[i];},0)):convergenceM/units;
+                    var goal=bridgeTravel(pose.eye,pose.back.map(function(v){return -v*range;}),pose.region||0),muzzleRoute=bridgeTravel(pose.eye,position.map(function(v,i){return v-pose.eye[i];}),pose.region||0);
+                    position=muzzleRoute.point;launchRegion=muzzleRoute.region;
+                    var path=ballisticPath(position,goal.point,launchRegion,goal.region,true);
+                    aim=path?path.direction:muzzleRoute.normal?bridgeVector(pose.back.map(function(v){return -v;}),muzzleRoute.normal):pose.back.map(function(v){return -v;});
+                }
                 var distance = Math.hypot.apply(null, aim);
-                guns.bolts.push({ region:pose.region||0, position: position, direction: aim.map(function (x) {
+                guns.bolts.push({ region:launchRegion, position: position, direction: aim.map(function (x) {
                         return x / distance;
                     }), weapon: weapon, age: 0 });
             }
@@ -183,5 +269,5 @@
         batches.push({ vertices: new Float32Array(impacts), color: [1, .75, .3] });
         return batches;
     }
-    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = { create: create, step: step, intersect: intersect, geometry: geometry };
+    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = { bridgeVector:bridgeVector, crossBridge:crossBridge, bridgeTravel:bridgeTravel, ballisticPath:ballisticPath, lead:lead, create: create, step: step, intersect: intersect, geometry: geometry };
 }());

@@ -242,7 +242,7 @@
         /** @param {FlightView} view @param {Appearance} appearance @param {Comparison} comparison @param {number} elapsed */
         function render(view, appearance, comparison, elapsed) {
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
-            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects';
+            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(typeof location==='undefined'||new URLSearchParams(location.search).get('bridgeShips')!=='warped'||new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
             var livingArt = /** @type {ArtCraft[]} */ (DW.training.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
             if (view.observerCraft) livingArt.push(view.observerCraft);
             var groups=/** @type {{team:string;region:number;craft:ArtCraft[]}[]} */([]);

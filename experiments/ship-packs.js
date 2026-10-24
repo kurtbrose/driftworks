@@ -222,26 +222,63 @@
             return result;
         });
     }
+    // One derived atlas per source image; wrecks retain the artist's UVs and panels.
+    /** @type {WeakMap<HTMLImageElement,HTMLImageElement>} */
+    var wreckTextures = new WeakMap();
+    /** @param {HTMLImageElement | undefined} image */
+    function wreckTexture(image) {
+        if (!image || !image.naturalWidth || typeof document === 'undefined') return image;
+        var cached = wreckTextures.get(image);
+        if (cached) return cached;
+        var canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+        var ctx = canvas.getContext('2d');
+        if (!ctx) return image;
+        ctx.drawImage(image, 0, 0);
+        var pixels = ctx.getImageData(0, 0, canvas.width, canvas.height), data = pixels.data;
+        for (var y = 0; y < canvas.height; y++) for (var x = 0; x < canvas.width; x++) {
+            var i = (y * canvas.width + x) * 4;
+            var u = x / canvas.width, v = y / canvas.height;
+            // Warped, overlapping burns avoid a regular camouflage/checker pattern.
+            var field = Math.sin(u*23+Math.sin(v*19)*2) + Math.sin(v*31-u*11) * .65 + Math.sin(u*83+v*67)*.22;
+            var grain = (Math.sin(x*127.1+y*311.7)*43758.5453)%1;
+            var soot = Math.max(0, Math.min(1, (field+.65)*.65));
+            var metal = Math.max(0, -field-.35)*.22;
+            var heat = Math.max(0, 1-Math.abs(field+.25)*3)*.13;
+            var luma = data[i]*.2126 + data[i+1]*.7152 + data[i+2]*.0722;
+            var base = 12 + luma*(.19 + metal - soot*.13) + grain*5;
+            data[i] = base + heat*95;
+            data[i+1] = base*.98 + heat*38;
+            data[i+2] = base*1.06 + heat*12;
+        }
+        ctx.putImageData(pixels, 0, 0);
+        // Both renderers accept a canvas as an immediately uploadable texture source.
+        cached = /** @type {HTMLImageElement} */ (/** @type {unknown} */ (canvas));
+        wreckTextures.set(image, cached);
+        return cached;
+    }
     /** @param {ArtCraft[]} craft @param {string} selection @param {number} wave @param {number} units @param {Images} images @param {Vector} [paint] @param {boolean} [transforms] */
     function sourceFleetGeometry(craft, selection, wave, units, images, paint, transforms) {
-        /** @type {Map<Model, Pose[]>} */
-        var groups = new Map();
-        craft.forEach(function (e) {
-            var model = (e.modelId ? find(e.modelId)?.model : null) || (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model);
-            if (!model)
-                return;
-            if (!groups.has(model))
-                groups.set(model, []);
-            var poses = groups.get(model);
-            if (poses)
-                poses.push(e.pose);
-        });
         var batches = /** @type {Batch[]} */ ([]);
-        groups.forEach(function (poses, model) {
-            if (transforms) poses.forEach(function (pose) {
-                batches.push(sourceDraw(model, pose, units, images.get(model.id), paint));
+        [false, true].forEach(function (wreck) {
+            /** @type {Map<Model, Pose[]>} */
+            var groups = new Map();
+            craft.forEach(function (e) {
+                if ((e.age !== undefined || (e.hp !== undefined && e.hp <= 0)) !== wreck) return;
+                var model = (e.modelId ? find(e.modelId)?.model : null) || (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model);
+                if (!model) return;
+                if (!groups.has(model)) groups.set(model, []);
+                var poses = groups.get(model);
+                if (poses) poses.push(e.pose);
             });
-            else batches.push(sourceGeometry(model, poses, units, images.get(model.id), paint));
+            groups.forEach(function (poses, model) {
+                var texture = wreck ? wreckTexture(images.get(model.id)) : images.get(model.id);
+                var tint = wreck ? undefined : paint;
+                if (transforms) poses.forEach(function (pose) {
+                    batches.push(sourceDraw(model, pose, units, texture, tint));
+                });
+                else batches.push(sourceGeometry(model, poses, units, texture, tint));
+            });
         });
         return batches;
     }

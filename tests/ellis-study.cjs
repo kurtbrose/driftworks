@@ -17,3 +17,14 @@ assert.equal(nearby.length,1);assert.equal(nearby[0].pose.region,chase.region);
 const nearRange=Math.hypot(...nearby[0].pose.eye.map((v,i)=>(v-chase.eye[i])*units));
 assert(Math.abs(nearRange-Math.hypot(12,40))<1e-8,'Nearby fixture reproduces a 42 m chase contact');
 console.log('PASS Ellis nearby fixture: fixed local camera and 42 m ship');
+
+for(let t=0;t<24;t+=.05){basis(study.camera('pursuit',t));assert.equal(study.sample(t,'pursuit').length,1);}
+for(const [leader,camera] of [[3,4.5],[15,16.5]]){
+ assert.notEqual(study.sample(leader-.001,'pursuit')[0].pose.region,study.sample(leader+.001,'pursuit')[0].pose.region);
+ assert.notEqual(study.camera('pursuit',camera-.001).region,study.camera('pursuit',camera+.001).region);
+ assert.notEqual(study.camera('pursuit',leader+.1).region,study.sample(leader+.1,'pursuit')[0].pose.region,'Fixture covers an actual cross-chart chase interval');
+}
+console.log('PASS Ellis pursuit fixture: delayed following camera and two leader/observer throat crossings');
+
+for(let t=0;t<24;t+=.05){const p=study.camera('pursuit-offset',t);basis(p);const a=study.camera('pursuit',t);assert.equal(p.region,a.region);const mouth=[p.region*12000,-2000,1550];assert(Math.abs(Math.hypot(...p.eye.map((v,i)=>v*units-mouth[i]))-Math.hypot(...a.eye.map((v,i)=>v*units-mouth[i])))<1e-8,'offset pursuit preserves proper radial crossing');}
+console.log('PASS Ellis offset pursuit: continuous angular offset, orthonormal frames and unchanged throat radii');

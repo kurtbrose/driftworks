@@ -626,3 +626,160 @@ ordinary footprint; unsupported contexts keep the previous sampling. This is
 an aliasing mitigation, not a change to the optical paths. A Rime-side 380 m,
 oblique-inward sky-only view was inspected. The user's exact jagged-angle pose
 was not captured as a replay, so its artifact is not yet visually closed out.
+
+## Readable fighter images across the chase range
+
+The near-field blend did not prevent ships outside its band from turning into
+large distorted shapes. The default Ellis presentation now separates fighters,
+wrecks, their scorch geometry and engine images by craft and renders one rigid
+hull at the primary optical image position. Vertex offsets retain lengths and
+angles at all ranges; no affine stretch or depth-shell reconstruction is applied
+to these ships. Across charts, a half-turn about the target's radial axis
+transports the transverse frame so the rigid-image approximation does not add
+a hull flip at a radial throat crossing. The sky remains fully lensed.
+
+In full/adaptive geometry modes these craft are excluded from the primary and
+mouth-capture passes and drawn once after background composition, with ordinary
+ship-to-ship depth. Object-patch mode uses the same rigid ship rule. This is an
+explicit gameplay approximation: the late ship pass does not inherit reconstructed
+background depth, so static lensed geometry can be incorrectly occluded by a
+fighter. It does not model optical hull magnification, shear or secondary images.
+An unsolved remote primary path can still hide an image. `bridgeShips=warped`
+restores the previous ship rendering for controlled comparison. NPC targeting,
+projectile trajectories, region ownership and physical hull dimensions are
+unchanged. Other large/static scene meshes retain their existing renderer.
+
+The observation lab's **Pursuit** camera follows a crossing craft 1.5 seconds
+behind. The leader crosses at 3 and 15 seconds; the observer at 4.5 and 16.5.
+Tests assert one ship submission (no captured copies) and orthonormal vertex
+transforms at near/far ranges, in both charts and full/object rendering modes.
+The pursuit fixture checks the intervals where leader and observer occupy
+opposite charts. This replaces the distance-limited readability workaround as
+the default fighter shape policy; the primary-image position still uses its
+existing smooth optical/local direction mapping.
+
+
+## Capital hull dropout at the throat
+
+The unarmed Aegis patrol was not tagged as a complete ship image, so it still
+entered the sparse radial depth-shell reconstruction. The side-camera lab view
+at 5.99 / 6.01 s reproduces the missing hull with `bridgeShips=warped`, despite
+submission of its geometry to the captures. This is a visibility reconstruction
+failure, not evidence that continuous distortion of a mesh is impossible.
+
+The patrol now supplies a shared image center and a conservative radius computed
+once from its existing mesh buffers. All seven material batches use one primary
+optical path and draw their complete triangles once, like the fighters. Existing
+material batching, shared buffers, metre scale and unarmed behavior are retained.
+The patrol transports its transverse hull basis when it changes charts; the
+renderer undoes that transport about the target radius, rather than the observer
+radius. Off-axis views otherwise introduced a visible orientation flip.
+
+Choose **Aegis crossing** in the observation lab and scrub through 6 s. The
+regression uses the actual patrol and authored asset in both full/object routes,
+checking every material and vertex before/after crossing, one shared path, and
+continuous hull orientation from the side camera. Patrol tests cover repeated
+crossings, turnarounds, reset and immutable buffers. This remains the same rigid
+image approximation and background occlusion limitation described above.
+
+`node tools/prepare-ellis-capital.cjs` generates a frozen observation-scene
+benchmark at `output/ellis-capital-benchmark.html`. It alternates asset off/on/on/off
+with 20 warmup and 60 recorded frames per block. It instruments actual Three
+render submissions rather than the scene's estimated capture multiplier.
+
+
+Measured 2026-10-24 with the asset SHA-256
+`857eb4969b70b418f32635920c188f07e38c6b12f25cd13b87472c9ebeeee607`,
+side camera, 5.99 s, full geometry, grid off, no AI/projectiles, scale 1,
+1280 x 720 layout, DPR 1.5 (1920 x 1080 scene/sky backing). Only the measured
+tab was active; no tests ran during sampling. Corrected asset OFF/ON CPU
+submission median/p95 was 0.50/0.70 and 0.70/0.90 ms respectively; frame cadence
+was 13.30/13.40 ms in both. Geometry update median/p95 was 0.00/0.10 ms at the
+browser timer precision. Actual totals were 3 draws / 4 triangles without the
+asset and 10 draws / 44,256 triangles with it: seven material draws and all
+44,252 hull triangles once. The old reconstruction submitted 17 draws / 88,508
+triangles with CPU 0.70/0.90 ms and frame 13.30/13.50 ms, but the hull was missing
+in its final image. That baseline is not an equivalent-image speedup comparison.
+No GPU execution timer or gameplay AI cost was measured. Raw output is in
+`output/ellis-capital-performance.txt`.
+
+Visually checked side view at 5.99 and 6.01 s, above at 6.01 s, and Rime rear
+view at 5.99 and 6.01 s. These retain solid hull geometry; perspective size can
+still change quickly near the throat with the current patrol trajectory and
+primary-path distance. This change addresses dropped hull surfaces, not all
+optical position/size continuity or correct clipping of a hull straddling charts.
+
+
+## Ship pose and surface continuity follow-up
+
+Off-axis pursuit exposed three independent problems in the finite-source ship
+path. Turning rays were assigned an outward observer tangent whenever the target
+radius exceeded the observer radius, even though the ray first travels inward.
+Crossing equal radii could therefore flip the viewing direction abruptly (the
+250 m lateral / 500 m target-radius probe jumped about 25 degrees). Finite direct
+segments also subtracted large quantized integrals near critical impact, creating
+small gaps and false branches. They now integrate only the finite segment, using
+24 midpoint samples in the regularized u coordinate. Turning/transmitted paths
+retain the shared table. The renderer no longer falls back to the ordinary pose
+when an optical center is behind the camera: it retains that center and lets
+near-plane clipping determine visibility.
+
+The finite-source solver now returns the optical tangent at both endpoints.
+Rigid hulls are transported by the rotation between the source tangent and the
+observer tangent, including antipodal frame transport. This preserves hull lengths
+and angles while allowing orientation to follow a curved viewing path. The old
+rigid rule moved the center without rotating the hull with the light path. This
+is still a primary-image approximation: some oblique appearance is legitimate,
+and magnification/shear, caustic image multiplicity and background depth remain
+approximate. No temporal smoothing or change to simulation positions is added.
+
+Focused tests sweep 100/250/400 m lateral pursuit offsets, including equal-radius,
+critical-impact and flat-exterior transitions, and check reversed-path source
+tangents. Renderer tests check endpoint-tangent alignment, every capital material,
+antipodal pose continuity and behind-camera ownership. The lab adds **Offset
+pursuit**; `bridgeScenery=1` retains the actual local asteroid for surface checks.
+
+Radial captures used nearest depth texels as a stair-stepped surface, producing
+comb-like contours after strong lensing. Shell depths now use explicit bilinear
+reconstruction within coherent occupied surface patches, with nearest fallback
+at silhouettes and separated depth layers. Empty capture pixels cannot establish
+a false surface crossing. `bridgeDepth=nearest` retains the old rule for A/B.
+`node tools/prepare-ellis-surface.cjs` builds a WebGL2 regression using the actual
+production shellDepth GLSL on an independently defined tilted plane. It measured
+mean surface-depth error 57.0 mm with nearest sampling versus 7.7 mm reconstructed
+(maximum 160.8 vs 31.4 mm, including float-depth and byte readback precision).
+Its empty-pixel guard test is exact. The above-camera asteroid view at 5.8 s was
+visually compared; edge stipple is reduced, although highly stretched silhouettes
+and surfaces hidden from the mouth captures remain limitations.
+
+
+The final surface path retains cheap nearest-depth coarse bracketing and uses
+continuous reconstruction for hit refinement/validation. The performance pass
+kept the same source asset revision, 1280 x 720 layout / DPR 1.5, scale 1, grid
+off, frozen scene and ABBA warmup/sample conditions as the capital pass above.
+The side-camera ship-only scene measured CPU OFF 0.60/0.80 ms, ON 0.90/1.20 ms
+(median/p95), frame OFF 13.30/13.40 ms, ON 13.30/13.50 ms. Counts remain
+3 / 10 draws and 4 / 44,256 triangles: no extra hull buffers or mesh complexity.
+The previous matched pass was CPU ON 0.70/0.90 ms, frame 13.30/13.40 ms. This is
+an added CPU cost for stable finite-segment inversion and optical orientation,
+not a speedup. Geometry-update time remained 0.00/0.10 ms at timer resolution.
+
+With the actual asteroid retained, the above-camera scene at 5.99 s measured
+nearest-depth OFF/ON CPU 0.80/1.10 and 1.00/1.20 ms; frame 13.30/13.40 and
+13.30/13.70 ms. Reconstructed depth had the same CPU medians/p95 and frame
+medians, but the asset-ON frame p95 rose to 26.60 ms. Actual counts were identical
+(OFF 27 draws / 698,154 triangles; ON 34 / 742,406). Restricting filtering to hit
+refinement did not improve that measured tail. This is a known shader/cadence
+cost in a strongly stretched view, not evidence of spare GPU budget; GPU
+execution was not timed separately. Raw measurements are in
+`output/ellis-pose-performance.txt` and `output/ellis-surface-performance.txt`.
+
+Visual inspection covered the radial capital at lab time 12 s (rear face aligned
+with the image), offset pursuit at 3.01 s, and the above-camera asteroid at
+5.8 s. The user's exact live chase was not recorded as a deterministic replay;
+these controlled poses and numerical sweeps provide the present acceptance scope.
+
+The off-axis observer crossing regression additionally compares all nine optical
+orientation coefficients and the three image-center components at 4.5 s and
+16.5 s, immediately before/after the camera changes charts. Both directions
+remain continuous without an ordinary-pose fallback.

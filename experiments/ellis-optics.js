@@ -70,8 +70,8 @@
         var nearT=Math.max(0,Math.min(1,(distance*a-100)/100));
         var eyeT=Math.max(0,Math.min(1,(R-1)*10)),targetT=Math.max(0,Math.min(1,(S-1)*10));
         var localWeight=other?0:(1-nearT*nearT*(3-2*nearT))*eyeT*eyeT*(3-2*eyeT)*targetT*targetT*(3-2*targetT);
-        if(localWeight>=1)return {direction:straight,length:distance*a,impact:Math.sqrt(Math.max(0,impact2)),direct:true,turning:false};
-        if(!other&&R>=2&&(along<=0||impact2>=4||distance<along-Math.sqrt(Math.max(0,4-impact2))))return {direction:straight,length:distance*a,impact:Math.sqrt(Math.max(0,impact2)),direct:true,turning:false};
+        if(localWeight>=1)return {direction:straight,sourceDirection:straight,length:distance*a,impact:Math.sqrt(Math.max(0,impact2)),direct:true,turning:false};
+        if(!other&&R>=2&&(along<=0||impact2>=4||distance<along-Math.sqrt(Math.max(0,4-impact2))))return {direction:straight,sourceDirection:straight,length:distance*a,impact:Math.sqrt(Math.max(0,impact2)),direct:true,turning:false};
         var cosine=Math.max(-1,Math.min(1,n.reduce(function(sum,v,i){return sum+v*m[i]*(other?-1:1);},0))),angle=Math.acos(cosine);
         var tangent=m.map(function(v,i){return v*(other?-1:1)-n[i]*cosine;}),tn=Math.hypot.apply(null,tangent);
         if(tn<.000001&&angle>.1)return null; // Axial caustic has no unique primary image.
@@ -79,26 +79,37 @@
         var E=Math.min(R,2),turning=false,outward=!other&&R<2&&S>R;
         /** @param {number} b @param {number} r */function u(b,r){var root=Math.sqrt(Math.max(1e-10,Math.abs(1-b*b))),l=Math.sqrt(Math.max(0,r*r-1));return b<1?Math.asinh(l/root):Math.acosh(Math.max(1,l/root));}
         /** @param {number} b */function entry(b){return R>2?Math.asin(Math.min(1,b/2))-Math.asin(Math.min(1,b/R)):0;}
-        /** @param {number} b @param {boolean} sum */function phase(b,sum){var first=lookup(b,u(b,E)),last=lookup(b,u(b,S));return entry(b)+(sum?first+last:outward?last-first:first-last);}
+        // Subtracting two large, quantized integrals near b=1 creates branch jumps.
+        // Integrate the finite segment directly; its u span remains well behaved.
+        /** @param {number} b @param {boolean} arcLength */function segment(b,arcLength){
+            var first=u(b,E),last=u(b,S),h=(last-first)/24,total=0,root=Math.sqrt(Math.max(1e-10,Math.abs(1-b*b)));
+            for(var j=0;j<24;j++){var t=first+(j+.5)*h,l=root*(b<1?Math.sinh(t):Math.cosh(t)),r2=1+l*l;total+=(arcLength?Math.sqrt(r2):b/Math.sqrt(r2))*radialScale(r2);}
+            return Math.abs(total*h);
+        }
+        /** @param {number} b @param {boolean} sum */function phase(b,sum){return entry(b)+(sum?lookup(b,u(b,E))+lookup(b,u(b,S)):segment(b,false));}
         var low=0,high=.999999,decreasing=false;
         if(!other){
-            high=Math.min(E,S)*(1-1e-7);
+            high=Math.min(E,S);
             var directLimit=R>=2&&S>=2?-1:phase(high,false);
             if(angle>directLimit){turning=true;low=1.000001;decreasing=true;if(high<=low||angle<phase(high,true))return null;}
         }
         for(var i=0;i<24;i++){var mid=(low+high)*.5,value=phase(mid,other||turning);if((value<angle)!==decreasing)low=mid;else high=mid;}
-        var b=(low+high)*.5,sine=b/R,radial=(outward?1:-1)*Math.sqrt(Math.max(0,1-sine*sine));
+        var b=(low+high)*.5,sine=b/R,radial=(outward&&!turning?1:-1)*Math.sqrt(Math.max(0,1-sine*sine));
         var direction=n.map(function(v,i){return v*radial+tangent[i]*sine;}),root=Math.sqrt(Math.max(1e-10,Math.abs(1-b*b)));
         /** @param {number} end */function arc(end){var total=0;for(var j=0;j<16;j++){var t=end*(j+.5)/16,l=root*(b<1?Math.sinh(t):Math.cosh(t));total+=Math.sqrt(1+l*l)*radialScale(1+l*l)*end/16;}return total;}
-        var first=arc(u(b,E)),last=arc(u(b,S)),length=(other||turning?first+last:Math.abs(first-last));
+        var targetTangent=m.map(function(v,i){return (cosine*v-n[i]*(other?-1:1))/Math.max(.000001,tn);});
+        var sourceDirection=m.map(function(v,i){return v*(other||turning||outward?1:-1)*Math.sqrt(Math.max(0,1-b*b/(S*S)))+targetTangent[i]*b/S;});
+        var first=arc(u(b,E)),last=arc(u(b,S)),length=(other||turning?first+last:segment(b,true));
         if(R>2)length+=Math.sqrt(Math.max(0,R*R-b*b))-Math.sqrt(Math.max(0,4-b*b));
         // Blend the local visual frame into the primary optical path over 100-200 m.
         var weight=localWeight;
         if(weight>0){
             direction=direction.map(function(v,i){return v*(1-weight)+straight[i]*weight;});
+            sourceDirection=sourceDirection.map(function(v,i){return v*(1-weight)+straight[i]*weight;});
             var magnitude=Math.hypot.apply(null,direction);direction=direction.map(function(v){return v/Math.max(.000001,magnitude);});
         }
-        return {direction:direction,length:Math.max(.001,length*a*(1-weight)+distance*a*weight),impact:b,direct:false,turning:turning};
+        var sourceNorm=Math.hypot.apply(null,sourceDirection);sourceDirection=sourceDirection.map(function(v){return v/Math.max(.000001,sourceNorm);});
+        return {direction:direction,sourceDirection:sourceDirection,length:Math.max(.001,length*a*(1-weight)+distance*a*weight),impact:b,direct:false,turning:turning};
     }
     var shader=`
 uniform sampler2D ellisTable;

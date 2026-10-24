@@ -108,3 +108,22 @@ for(const distance of [100,200]){
  assert(Math.abs(a.length-b.length)<.1,'Near-field transition has no path-length switch');
 }
 console.log('PASS Ellis near-field blend: continuous direction and distance at 100/200 m');
+
+// Off-axis pursuit previously flipped the ray when source/eye radii exchanged
+// order, and quantized integral subtraction caused holes around critical impact.
+for(const x of [100,250,400]){
+ let previous=null;
+ for(let z=301;z<=900;z+=.5){
+  const eye=[x,-2000-z,1550],target=[0,-2500,1550],p=optics.primary(eye,target,0,0);assert(p,'off-axis pursuit has a primary path');
+  if(previous)assert(Math.hypot(...p.direction.map((v,i)=>v-previous.direction[i]))<.01,'no pursuit branch reversal or critical-impact jump');
+  const reverse=optics.primary(target,eye,0,0);assert(reverse);
+  assert(Math.hypot(...p.sourceDirection.map((v,i)=>v+reverse.direction[i]))<.004,'endpoint direction agrees with independently reversed path');
+  previous=p;
+ }
+}
+for(const z of [Math.sqrt(500*500-250*250),600]){
+ const a=optics.primary([250,-2000-z+.00001,1550],[0,-2500,1550],0,0),b=optics.primary([250,-2000-z-.00001,1550],[0,-2500,1550],0,0);assert(a&&b);
+ assert(Math.hypot(...a.direction.map((v,i)=>v-b.direction[i]))<.0001);
+ assert(Math.abs(a.length-b.length)<.01);
+}
+console.log('PASS Ellis off-axis pursuit: continuous rays, no missing branches, reciprocal source headings and finite-segment distance');

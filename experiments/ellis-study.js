@@ -8,8 +8,20 @@
     function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
     /** @param {number[]} eye @param {number[]} forward @param {number} region @returns {Pose} */
     function pose(eye,forward,region){var f=unit(forward),right=unit(cross(f,[0,0,1]));return {eye:eye.map(function(v){return v/units;}),right:right,up:cross(right,f),back:f.map(function(v){return -v;}),region:region};}
-    /** Fixed chart-local camera positions, in metres. @param {string} name @returns {Pose} */
-    function camera(name){
+    /** Fixed chart-local camera positions, or a delayed chase pose. @param {string} name @param {number=} time @returns {Pose} */
+    function camera(name,time){
+        if(name==='pursuit'||name==='pursuit-offset'){
+            var t=(time||0)+3,view=sample(t-1.5,'crossing')[0].pose;
+            var delta=-Math.cos(t*Math.PI/12)+Math.cos((t-1.5)*Math.PI/12);
+            if(delta<0){view.right=view.right.map(function(v){return -v;});view.back=view.back.map(function(v){return -v;});}
+            if(name==='pursuit-offset'){
+                var c=Math.cos(.15),s=Math.sin(.15),mouth=[(view.region||0)*12000/units,-2000/units,1550/units];
+                /** @param {number[]} v */function rotate(v){return [c*v[0]-s*v[1],s*v[0]+c*v[1],v[2]];}
+                view.eye=rotate(view.eye.map(function(v,i){return v-mouth[i];})).map(function(v,i){return v+mouth[i];});
+                view.right=rotate(view.right);view.up=rotate(view.up);view.back=rotate(view.back);
+            }
+            return view;
+        }
         var presets=/** @type {Record<string,number[]>} */({front:[0,-2900,1550],chase:[0,-2380,1550],close:[0,-2340,1550],side:[650,-2400,1650],rim:[400,-2200,1550],above:[0,-2500,2200],rime:[12000,-1100,1550]});
         var eye=presets[name]||presets.front,region=name==='rime'?1:0;
         return pose(eye,[region*12000-eye[0],-2000-eye[1],1550-eye[2]],region);
@@ -18,6 +30,7 @@
      * The crossing uses signed Ellis proper radius and the same antipodal chart convention.
      * @param {number} time @param {string} scenario */
     function sample(time,scenario){
+        if(scenario==='pursuit')return sample(time+3,'crossing');
         if(scenario==='nearby')return [{pose:pose([12,-2340,1550],[Math.sin(time*.4)*.2,1,0],0),velocity:[0,0,0]}];
         var phase=time*Math.PI/12,normal=unit([.12,-1,.035]),l=-800*Math.cos(phase),side=l<0?0:1,r=Math.hypot(300,l),sign=side===0?1:-1;
         var center=[side*12000,-2000,1550],eye=center.map(function(v,i){return v+normal[i]*r*sign;}),speed=800*Math.PI/12*Math.sin(phase),forward=normal.map(function(v){return -v;});
@@ -39,14 +52,23 @@
     var session=DW.flightSession.create({seed:29,terrainHit:function(){return null;},surfaceFrame:function(_a,d){return {point:d};},onGunshot:function(){},onImpact:function(){}});
     var snapshot=session.reset({mode:'ellis',enabled:false,profile:DW.arcade.profiles[0]});
     // Keep just the sky and scripted craft, avoiding unrelated scene occluders.
-    snapshot.world.asteroids=[];snapshot.world.ships=[];
+    if(params.get('bridgeScenery')!=='1')snapshot.world.asteroids=[];snapshot.world.ships=[];
     var presentation=DW.flightPresentation.mount(get('viewer'),function(){return snapshot.world;},function(w){snapshot.world=w;session.setWorld(w);});
     var model=/** @type {HTMLSelectElement} */(get('enemy-art')),ally=/** @type {HTMLSelectElement} */(get('ally-art')),timeline=/** @type {HTMLInputElement} */(get('timeline')),scenario=/** @type {HTMLSelectElement} */(get('scenario')),renderer=/** @type {HTMLSelectElement} */(get('renderer')),speedSelect=/** @type {HTMLSelectElement} */(get('speed'));
     var first=Array.from(model.options).find(function(o){return o.value&&o.value!=='mixed';});if(first)model.value=first.value;if(params.get('ship'))model.value=params.get('ship')||model.value;
     speedSelect.value=params.get('speed')||'1';scenario.value=params.get('pass')||'combined';
     /** @type {HTMLInputElement} */(get('bridge-grid')).checked=params.get('bridgeGrid')!=='0';renderer.value=params.get('bridgeGeometry')==='full'?'full':'objects';
-    function cameraUI(){document.querySelectorAll('button[data-camera]').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-camera')===cameraName?'true':'false');});get('camera-note').textContent=(cameraName==='rime'?'Rime chart':'Asteroid chart')+' · fixed camera · throat radius 300 m';}
-    document.querySelectorAll('button[data-camera]').forEach(function(b){b.addEventListener('click',function(){cameraName=b.getAttribute('data-camera')||'front';if(cameraName==='chase')scenario.value='nearby';cameraUI();draw();});});
+    var capital=/** @type {import('./types').AegisFlightRig|null} */(null),capitalTime=0;
+    DW.aegisFlight.load().then(function(){capital=DW.aegisFlight.createEllisPatrol();draw();});
+    /** @param {number} t */function capitalAt(t){
+        if(!capital)return null;
+        var target=t+5700/180-6;
+        if(target<capitalTime){capital.reset();capitalTime=0;}
+        while(capitalTime<target-1e-8){var dt=Math.min(.05,target-capitalTime);capital.step(dt,snapshot);capitalTime+=dt;}
+        return capital;
+    }
+    function cameraUI(){get('study-hint').textContent=scenario.value==='capital'?'Aegis center crosses at 6 s. Scrub to inspect the entire hull.':cameraName.startsWith('pursuit')?'Leader crosses at 3 / 15 s; you follow at 4.5 / 16.5 s.':'Throat crossings at 6 s and 18 s. Pause to compare the same frame.';document.querySelectorAll('button[data-camera]').forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-camera')===cameraName?'true':'false');});get('camera-note').textContent=(camera(cameraName,time).region?'Rime chart':'Asteroid chart')+(cameraName.startsWith('pursuit')?' · pursuit camera':' · fixed camera')+' · throat radius 300 m';}
+    document.querySelectorAll('button[data-camera]').forEach(function(b){b.addEventListener('click',function(){cameraName=b.getAttribute('data-camera')||'front';if(cameraName==='chase')scenario.value='nearby';if(cameraName.startsWith('pursuit'))scenario.value='pursuit';cameraUI();draw();});});
     function playback(){get('play').textContent=playing?'Pause':'Play';}
     get('play').onclick=function(){playing=!playing;playback();};
     get('step').onclick=function(){playing=false;time=(time+1/30)%24;playback();draw();};
@@ -55,13 +77,13 @@
     timeline.oninput=function(){playing=false;time=Number(timeline.value);playback();draw();};
     renderer.onchange=function(){var url=new URL(location.href);url.searchParams.set('bridgeGeometry',renderer.value);url.searchParams.set('time',String(time));url.searchParams.set('camera',cameraName);url.searchParams.set('pass',scenario.value);url.searchParams.set('paused',playing?'0':'1');url.searchParams.set('ship',model.value);url.searchParams.set('speed',speedSelect.value);url.searchParams.set('bridgeGrid',/** @type {HTMLInputElement} */(get('bridge-grid')).checked?'1':'0');location.href=url.href;};
     function draw(){
-        var view=camera(cameraName),tracks=sample(time,scenario.value);ally.value=model.value;
+        var view=camera(cameraName,time),isCapital=scenario.value==='capital',tracks=isCapital?[]:sample(time,scenario.value);presentation.setCapital(isCapital?capitalAt(time):null);ally.value=model.value;cameraUI();
         snapshot.combat.enemies=tracks.map(function(track,i){var state=Object.assign(DW.arcade.create(1),track.pose,{velocity:track.velocity,throttle:.5}),craft=DW.training.createCraft('study-'+i,state,i===2?'ally':'enemy');craft.index=i;return craft;});
         snapshot.world.elapsedSeconds=time;
         presentation.pose(view);presentation.render(Object.assign({},snapshot,{camera:view}),presentation.appearance(),{mode:'normal',scale:1,flat:false,mothership:false,actors:true},0);
         timeline.value=String(time);if(document.activeElement!==exactTime)exactTime.value=time.toFixed(2);
         var stats=presentation.renderStats().scene;
-        get('readout').textContent='24 s loop / '+(playing?'playing':'paused')+'\n'+tracks.map(function(track,i){return (i===0&&scenario.value!=='orbit'?'Crossing ship':'Orbit ship')+' · '+(track.pose.region===1?'Rime':'asteroid');}).join('\n')+'\n'+renderer.options[renderer.selectedIndex].text+'\n'+stats.drawCalls+' draws · '+Math.round(stats.triangles).toLocaleString()+' triangles'+(renderer.value==='objects'?'\n'+stats.bridgeObjectPaths+' paths · probe error '+Number(stats.bridgeObjectError||0).toFixed(2)+' px':'');
+        get('readout').textContent='24 s loop / '+(playing?'playing':'paused')+'\n'+tracks.map(function(track,i){return (i===0&&scenario.value!=='orbit'?'Crossing ship':'Orbit ship')+' · '+(track.pose.region===1?'Rime':'asteroid');}).join('\n')+(isCapital?'\nAegis · '+(capital&&capital.geometry()[0].region?'Rime':'asteroid')+' · center crosses at 6 s':'')+'\n'+renderer.options[renderer.selectedIndex].text+'\n'+stats.drawCalls+' draws · '+Math.round(stats.triangles).toLocaleString()+' triangles'+(renderer.value==='objects'?'\n'+stats.bridgeObjectPaths+(params.get('bridgeShips')==='warped'?' paths · probe error '+Number(stats.bridgeObjectError||0).toFixed(2)+' px':' image paths · rigid hulls'):'');
     }
     /** @param {number} now */
     function tick(now){var dt=last?Math.min(.05,(now-last)/1000):0;last=now;if(!document.hidden&&playing)time=(time+dt*Number(speedSelect.value))%24;if(!document.hidden&&now-lastDraw>=1000/30){draw();lastDraw=now;}requestAnimationFrame(tick);}

@@ -282,6 +282,7 @@ console.log('PASS capital battle: two factions, shared GPU buffers, moving/rotat
 // Scenery traverses both charts indefinitely without firing or allocating meshes.
 const patrol=DW.aegisFlight.createEllisPatrol(),patrolBatches=patrol.geometry(),patrolBuffers=patrolBatches.map(b=>b.vertices);
 assert.equal(patrolBatches[0].region,0);
+assert(patrolBatches.every(b=>b.lensCenter===patrolBatches[0].origin&&b.lensRadius>650),'all capital materials share one complete-hull optical image');
 assert.equal(patrolBatches.reduce((n,b)=>n+b.vertices.length,0),initial.reduce((n,b)=>n+b.vertices.length,0),'material batching preserves all hull and turret triangles');
 assert.equal(patrolBatches.length,new Set(initial.map(b=>b.color.join(','))).size,'one draw per compatible idle material');
 const localX=patrolBatches.flatMap(b=>Array.from(b.vertices).filter((v,i)=>i%6===0));
@@ -294,7 +295,9 @@ for(let i=0;i<24000;i++){
  if(region!==lastRegion){crossings++;lastRegion=region;assert(Math.abs(ship.position[1]*U+2000)<310,'crosses along throat axis');}
  assert(Math.abs(ship.position[0]*U-region*12000)<1e-7);
  assert(Math.abs(ship.position[2]*U-1550)<1e-7);
- assert(batches.every((b,k)=>b.vertices===patrolBuffers[k]&&b.region===region));
+ assert(batches.every((b,k)=>b.vertices===patrolBuffers[k]&&b.region===region&&b.lensCenter===patrolBatches[0].origin));
+ assert.equal(batches[0].basis[8],region===1?-1:1,'capital transports transverse hull axes across the throat');
+ const firstBasis=Array.from(batches[0].basis);patrol.geometry();assert.deepEqual(Array.from(batches[0].basis),firstBasis,'repeated geometry reads do not accumulate chart rotations');
  if(Math.abs(Math.cos(ship.heading))>.1)turning=true;
 }
 assert(crossings>=10,'patrol repeatedly crosses outward and back');assert(turning,'turns between passes');

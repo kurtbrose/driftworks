@@ -17,7 +17,7 @@
     /** @param {Three} THREE @param {Renderer} renderer */
     function create(THREE,renderer){
         var units=DW.sim.METERS_PER_UNIT,size=384,next=0,initialized=false,lastSide=-1;
-        var params=new URLSearchParams(location.search),updates=params.get('bridgeFaces')==='6'?6:1,explicit=params.get('bridgeLod')!=='implicit',objects=params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
+        var params=new URLSearchParams(location.search),readableShips=params.get('bridgeShips')!=='warped',updates=params.get('bridgeFaces')==='6'?6:1,explicit=params.get('bridgeLod')!=='implicit',objects=params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
         /** @param {number} width @param {number} height */
         function target(width,height){
             var t=new THREE.WebGLRenderTarget(width,height,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
@@ -30,6 +30,7 @@
         lookup.minFilter=THREE.LinearFilter;lookup.magFilter=THREE.LinearFilter;lookup.needsUpdate=true;lookup.flipY=false;
         /** @type {Record<string,{value:Value}>} */var uniforms={
             historyMap:{value:historyMap.texture},historyValid:{value:0},historyPhase:{value:0},historyTile:{value:params.get('bridgeTemporalTile')==='1'?1:8},previousRight:{value:[1,0,0]},previousUp:{value:[0,0,1]},previousBack:{value:[0,-1,0]},
+            smoothShell:{value:params.get('bridgeDepth')==='nearest'?0:1},
             maxGeometryAngle:{value:params.has('bridgeAngle')&&Number(params.get('bridgeAngle'))>0?Number(params.get('bridgeAngle'))*Math.PI/180:1.e6},hitMap:{value:hitMap.texture},hitSize:{value:[1,1]},useHitMap:{value:adaptive?1:0},
             effectColor:{value:effects.texture},effectDepth:{value:effects.depthTexture},hasEffects:{value:0},
             ellisTable:{value:lookup},sourceColor:{value:primary.texture},sourceDepth:{value:primary.depthTexture},
@@ -44,7 +45,7 @@ uniform sampler2D sourceColor,sourceDepth,localColor,localDepth,otherColor,other
 uniform sampler2D hitMap;uniform vec2 hitSize;uniform float useHitMap;
 uniform vec3 eye,right,up,back;uniform float aspect,focal,units,sourceFar;
 ${DW.ellisOptics.shader}
-uniform float maxGeometryAngle;
+uniform float maxGeometryAngle,smoothShell;
 float linearDepth(float z,float far){return .2*far/(far+.1-(2.*z-1.)*(far-.1));}
 vec2 atlasUV(vec3 p){
  vec3 a=abs(p);float face,depth;vec2 q;
@@ -54,17 +55,30 @@ vec2 atlasUV(vec3 p){
  vec2 uv=clamp(q/max(.000001,depth)*.5+.5,vec2(.5/384.),vec2(1.-.5/384.));
  return (vec2(mod(face,3.),floor(face/3.))+uv)/vec2(3.,2.);
 }
-float shellGap(vec3 point,float side){
+float shellDepth(sampler2D tex,vec2 uv){
+ if(smoothShell<.5)return texture2D(tex,uv).r;
+ // Explicit bilinear reconstruction also works on unfilterable depth formats.
+ vec2 p=uv*vec2(1152.,768.)-.5,cell=floor(p),f=fract(p);
+ vec2 a=(cell+.5)/vec2(1152.,768.),d=vec2(1./1152.,1./768.);
+ vec4 z=vec4(texture2D(tex,a).r,texture2D(tex,a+vec2(d.x,0.)).r,texture2D(tex,a+vec2(0.,d.y)).r,texture2D(tex,a+d).r);
+ vec4 distance=vec4(linearDepth(z.x,30000.),linearDepth(z.y,30000.),linearDepth(z.z,30000.),linearDepth(z.w,30000.));
+ float near=min(min(distance.x,distance.y),min(distance.z,distance.w)),far=max(max(distance.x,distance.y),max(distance.z,distance.w));
+ // Never interpolate foreground into empty capture pixels or another surface.
+ if(max(max(z.x,z.y),max(z.z,z.w))>=.999999||far-near>max(5./units,near*.03))return texture2D(tex,uv).r;
+ return mix(mix(z.x,z.y,f.x),mix(z.z,z.w,f.x),f.y);
+}
+float shellGap(vec3 point,float side,bool refineSurface){
  vec3 delta=(point-vec3(side*12000.,-2000.,1550.))/units;
  float radius=length(delta);vec2 uv=atlasUV(delta);
  bool local=side==ellisRegion;
- float depth=local?texture2D(localDepth,uv).r:texture2D(otherDepth,uv).r;
+ float depth=refineSurface?(local?shellDepth(localDepth,uv):shellDepth(otherDepth,uv)):(local?texture2D(localDepth,uv).r:texture2D(otherDepth,uv).r);
  if(depth>=.999999)return -1.e6;
  float dominant=max(max(abs(delta.x),abs(delta.y)),abs(delta.z))/max(.000001,radius);
  float radialDepth=linearDepth(depth,30000.)/max(.000001,dominant);
  if(radialDepth<300./units||radialDepth>5500./units)return -1.e6;
  return (radius-radialDepth)*units;
 }
+float shellGap(vec3 point,float side){return shellGap(point,side,true);}
 vec4 shellColor(vec3 point,float side){
  vec2 uv=atlasUV(point-vec3(side*12000.,-2000.,1550.));
  return side==ellisRegion?texture2D(localColor,uv):texture2D(otherColor,uv);
@@ -74,12 +88,12 @@ vec3 trace(EllisRay e){
  // A sample behind a radial shell is not itself a hit: that extrudes a
  // captured texel into a long wedge. Bracket and refine the actual crossing.
  float previousSide;vec3 previous=ellisPoint(e,0.,previousSide);
- float previousGap=shellGap(previous,previousSide),previousT=0.;
+ float previousGap=shellGap(previous,previousSide,false),previousT=0.;
  for(int i=0;i<32;i++){
   float t=(float(i)+1.)/32.,side,travel;vec3 point=ellisPointPhase(e,t,side,travel);
   if(travel>maxGeometryAngle)break;
-  float gap=shellGap(point,side);
-  if(previousSide==side&&previousGap<0.&&gap>=0.){
+  float gap=shellGap(point,side,false);
+  if(previousSide==side&&(smoothShell<.5||previousGap> -1.e5)&&previousGap<0.&&gap>=0.){
    float low=previousT,high=t;
    for(int j=0;j<9;j++){
     float middle=(low+high)*.5,midSide;vec3 p=ellisPoint(e,middle,midSide);
@@ -266,10 +280,12 @@ void main(){
             renderer.setClearColor(0,0);renderer.clear();renderer.render(scene,captureCamera);
         }
 
+        /** @param {Draw} entry */
+        function readable(entry){return readableShips&&!!entry.lensCenter&&(entry.lensRadius||0)>0;}
         /** Four finite paths define a 3D affine patch; a fifth probes its screen error.
          * @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} camera
-         * @param {Draw[]} entries @param {Pose} pose @param {number} focal @param {number} width @param {number} height */
-        function renderObjects(scene,camera,entries,pose,focal,width,height){
+         * @param {Draw[]} entries @param {Pose} pose @param {number} focal @param {number} width @param {number} height @param {boolean=} overlay */
+        function renderObjects(scene,camera,entries,pose,focal,width,height,overlay){
             var start=performance.now(),eye=pose.eye.map(function(v){return v*units;}),region=pose.region||0,paths=0,maxError=0,bad=0;
             /** @typedef {{direct:boolean;turning:boolean;view:number[];columns:number[][];error:number}} Patch */
             var cache=/** @type {Map<string,Patch|null>} */(new Map());
@@ -279,11 +295,30 @@ void main(){
                 var r=h.direction,d=h.length/units;
                 return {hit:h,q:[r.reduce(function(sum,v,i){return sum+v*pose.right[i];},0)*d,r.reduce(function(sum,v,i){return sum+v*pose.up[i];},0)*d,-r.reduce(function(sum,v,i){return sum+v*pose.back[i];},0)*d]};
             }
-            /** @param {number[]} center @param {number} side @param {number} radius @returns {Patch|null} */
-            function patch(center,side,radius){
+            /** @param {number[]} center @param {number} side @param {number} radius @param {boolean} rigid @returns {Patch|null} */
+            function patch(center,side,radius,rigid){
                 var meters=center.map(function(v){return v*units;});const base=project(meters,side);
-                if(!base||base.q[2]<.001)return null;
+                if(!base||(!rigid&&base.q[2]<.001))return null;
                 if(base.hit.direct)return {direct:true,turning:false,view:base.q,columns:[],error:0};
+                if(rigid){
+                    var mouth=[side*12000,-2000,1550],radialAxis=meters.map(function(v,i){return v-mouth[i];}),norm=Math.hypot.apply(null,radialAxis);
+                    radialAxis=radialAxis.map(function(v){return v/Math.max(.000001,norm);});
+                    /** @param {number[]} v */function transport(v){return side===region?v:radialAxis.map(function(n,i){return 2*n*v.reduce(function(sum,x,j){return sum+x*radialAxis[j];},0)-v[i];});}
+                    var from=transport(base.hit.sourceDirection),to=base.hit.direction;
+                    var rotationAxis=[from[1]*to[2]-from[2]*to[1],from[2]*to[0]-from[0]*to[2],from[0]*to[1]-from[1]*to[0]],cosine=from.reduce(function(sum,x,i){return sum+x*to[i];},0);
+                    /** @param {number[]} a @param {number[]} b */function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+                    var w=1+cosine,qNorm=Math.hypot(rotationAxis[0],rotationAxis[1],rotationAxis[2],w);
+                    if(qNorm<1e-8){rotationAxis=cross(from,Math.abs(from[2])<.9?[0,0,1]:[0,1,0]);qNorm=Math.hypot.apply(null,rotationAxis);w=0;}
+                    rotationAxis=rotationAxis.map(function(v){return v/qNorm;});w/=qNorm;
+                    var rigidColumns=[0,1,2].map(function(i){
+                        var v=transport([i===0?1:0,i===1?1:0,i===2?1:0]);
+                        // Parallel transport in the optical plane, preserving a rigid hull.
+                        var first=cross(rotationAxis,v),second=cross(rotationAxis,first);
+                        v=v.map(function(x,j){return x+2*(w*first[j]+second[j]);});
+                        return [v.reduce(function(sum,n,j){return sum+n*pose.right[j];},0),v.reduce(function(sum,n,j){return sum+n*pose.up[j];},0),-v.reduce(function(sum,n,j){return sum+n*pose.back[j];},0)];
+                    });
+                    return {direct:false,turning:base.hit.turning,view:base.q,columns:rigidColumns,error:0};
+                }
                 var columns=/** @type {number[][]} */([]),step=4;
                 for(var axis=0;axis<3;axis++){
                     var offset=meters.slice();offset[axis]+=step;var p=project(offset,side);if(!p)return null;
@@ -300,16 +335,17 @@ void main(){
             }
             var keys=['uLensEnabled','uLensMode','uLensCenter','uLensViewCenter','uLensX','uLensY','uLensZ','uLensMouth','uLensRadius','uLensDebug'];
             var saved=entries.map(function(e){return {e:e,visible:e.object.visible,material:/** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(e.object).material,values:keys.map(function(k){return e.uniforms[k].value;})};});
+            var autoClear=renderer.autoClear;
             try{
                 entries.forEach(function(e){
                     if(!e.object.visible)return;
                     var side=e.region||0,center=e.lensCenter||/** @type {number[]} */(e.uniforms.uOrigin.value),key=side+':'+center.join(','),p=/** @type {Patch|null} */(null);
                     if(cache.has(key))p=cache.get(key)||null;
-                    else{p=patch(center,side,e.lensRadius||20);cache.set(key,p);if(p){maxError=Math.max(maxError,p.error);if(p.error>2)bad++;}}
-                    if(!p&&side!==region){e.object.visible=false;return;}
+                    else{p=patch(center,side,e.lensRadius||20,readable(e));cache.set(key,p);if(p){maxError=Math.max(maxError,p.error);if(p.error>2)bad++;}}
+                    if(!p&&(readable(e)||side!==region)){e.object.visible=false;return;}
                     var u=e.uniforms;
                     var localDistance=Math.hypot.apply(null,center.map(function(v,i){return v*units-eye[i];}));
-                    u.uLensMode.value=side===region&&localDistance<200&&p?3:side!==region?1:p&&!p.direct&&!p.turning?3:2;
+                    u.uLensMode.value=readable(e)?3:side===region&&localDistance<200&&p?3:side!==region?1:p&&!p.direct&&!p.turning?3:2;
                     u.uLensMouth.value=[region*12000/units-pose.eye[0],-2000/units-pose.eye[1],1550/units-pose.eye[2]];u.uLensRadius.value=300/units;
                     u.uLensEnabled.value=p&&!p.direct?1:0;u.uLensDebug.value=params.get('bridgeWarpDebug')==='1'&&p&&p.error>2?1:0;
                     if(p&&!p.direct){u.uLensCenter.value=center;u.uLensViewCenter.value=p.view;u.uLensX.value=p.columns[0];u.uLensY.value=p.columns[1];u.uLensZ.value=p.columns[2];}
@@ -317,8 +353,8 @@ void main(){
                     // source textures/colors. Native PBR patching is a later comparison.
                     /** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(e.object).material=e.material;
                 });
-                renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);renderer.setClearColor(0,0);renderer.clear();renderer.render(scene,camera);
-            }finally{saved.forEach(function(s){s.e.object.visible=s.visible;/** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(s.e.object).material=s.material;keys.forEach(function(k,i){s.e.uniforms[k].value=s.values[i];});});}
+                renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);renderer.setClearColor(0,0);if(!overlay)renderer.clear();renderer.autoClear=false;renderer.render(scene,camera);
+            }finally{renderer.autoClear=autoClear;saved.forEach(function(s){s.e.object.visible=s.visible;/** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(s.e.object).material=s.material;keys.forEach(function(k,i){s.e.uniforms[k].value=s.values[i];});});}
             return {objectPaths:paths,objectPatches:cache.size,objectError:maxError,objectBad:bad,compositionPasses:0,historyValid:0,extraPasses:0,captures:0,cpuMs:performance.now()-start};
         }
         /** @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} camera @param {Draw[]} entries @param {Pose} pose @param {number} focal @param {number} far @param {number} width @param {number} height @param {string|null} [revision] */
@@ -327,8 +363,8 @@ void main(){
             var start=performance.now(),region=pose.region||0;
             uniforms.ellisRegion.value=region;
             if(primaryWidth!==width||primaryHeight!==height){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();historyPose=null;historyMap=target(Math.ceil(width/2),Math.ceil(height/2));historyMap.texture.minFilter=THREE.NearestFilter;historyMap.texture.magFilter=THREE.NearestFilter;hitMap=target(Math.ceil(width/2),Math.ceil(height/2));hitMap.texture.minFilter=THREE.NearestFilter;hitMap.texture.magFilter=THREE.NearestFilter;uniforms.hitMap.value=hitMap.texture;uniforms.hitSize.value=[Math.ceil(width/2),Math.ceil(height/2)];primary=target(width,height);effects=target(width,height);uniforms.effectColor.value=effects.texture;uniforms.effectDepth.value=effects.depthTexture;primaryWidth=width;primaryHeight=height;uniforms.sourceColor.value=primary.texture;uniforms.sourceDepth.value=primary.depthTexture;}
-            var originalVisibility=entries.map(function(e){return e.object.visible;});
-            entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&(e.region||0)===region;});
+            var originalVisibility=entries.map(function(e){return e.object.visible;}),ships=entries.filter(readable);
+            entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&(e.region||0)===region&&!readable(e);});
             var lights=entries.filter(function(e){return e.object.visible&&e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending;});
             var visibility=entries.map(function(e){return e.object.visible;}),writes=lights.map(function(e){return e.material.depthWrite;});
             // Additive fragments have no opaque surface depth. Keep them separate
@@ -353,7 +389,7 @@ void main(){
             try{
                 for(var chart=0;chart<2;chart++)for(var i=0;i<count;i++){
                     restore();var worldSide=chart===0?side:1-side;
-                    entries.forEach(function(e,k){e.object.visible=originalVisibility[k]&&(e.region||0)===worldSide&&!(e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending);});
+                    entries.forEach(function(e,k){e.object.visible=originalVisibility[k]&&!readable(e)&&(e.region||0)===worldSide&&!(e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending);});
                     capture(scene,entries,[worldSide*12000/units,-2000/units,1550/units],chart,(next+i)%6);
                 }
             }finally{restore();renderer.setScissorTest(false);renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);}
@@ -375,7 +411,13 @@ void main(){
                 historyPose={eye:pose.eye.slice(),right:pose.right.slice(),up:pose.up.slice(),back:pose.back.slice(),region:region};
                 historyRevision=revision===undefined?null:revision;historyFocal=focal;phase=1-phase;
             }
-            return {objectPaths:0,objectPatches:0,objectError:0,objectBad:0,compositionPasses:adaptive?3:1,historyValid:valid?1:0,extraPasses:adaptive?2:0,captures:count*2,cpuMs:performance.now()-start};
+            var shipStats={objectPaths:0,objectPatches:0,objectError:0,objectBad:0};
+            if(ships.length){
+                entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&readable(e);});
+                try{shipStats=renderObjects(scene,camera,ships,pose,focal,width,height,true);}
+                finally{entries.forEach(function(e,i){e.object.visible=originalVisibility[i];});}
+            }
+            return {objectPaths:shipStats.objectPaths,objectPatches:shipStats.objectPatches,objectError:shipStats.objectError,objectBad:shipStats.objectBad,compositionPasses:(adaptive?3:1)+(ships.length?1:0),historyValid:valid?1:0,extraPasses:(adaptive?2:0)+(ships.length?1:0),captures:count*2,cpuMs:performance.now()-start};
         }
         function dispose(){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();mapMaterial.dispose();fullMaterial.dispose();refineMaterial.dispose();atlases.forEach(function(t){t.dispose();});lookup.dispose();quad.dispose();material.dispose();}
         return {render:render,dispose:dispose,invalidate:function(){initialized=false;lastSide=-1;historyPose=null;historyRevision=null;phase=0;}};

@@ -175,7 +175,7 @@ assert.equal(frames.length-lostStart,16,'lost context forces all twelve capture 
 assert.equal(temporalFrame().uniforms.historyValid,1);
 viewerCanvas.listeners.webglcontextrestored();assert.equal(temporalFrame().uniforms.historyValid,0,'restored context cannot reuse absent GPU contents');
 console.log('PASS Ellis context recovery: history discarded and both capture charts refilled');
-viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry=objects&bridgeWarpDebug=1';viewer.setStudyBridge(true);
+viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry=objects&bridgeWarpDebug=1&bridgeShips=warped';viewer.setStudyBridge(true);
 viewer.setStudyEffects([]);viewer.setStudyExplosions([]);
 viewer.setStudyActors([{vertices:data,color:[1,1,1],region:1,origin:[720,-99,93],lensCenter:[720,-99,93],lensRadius:20}]);
 viewer.setSurfaceCamera({region:0,eye:[0,-144,93],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
@@ -190,7 +190,7 @@ viewer.setStudyBridge(false);viewer.render(world,1,0,0);assert.equal(frames.at(-
 assert.equal(frames.at(-1)[0].uniforms.uLensMode,0,'aperture mask cannot leak into other missions');
 console.log('PASS Ellis object patch: finite real-mesh warp, five paths per object, aperture clipping, no captures and reversible state');
 viewer.setStudyBridge(false);context.location.search='?mission=ellis';viewer.setStudyBridge(true);viewer.render(world,1,0,0);
-const explicitDraw=frames.at(-1)[0];assert.equal(explicitDraw.material.glslVersion,'300 es');
+const explicitDraw=frames.slice().reverse().flat().find(d=>d.material.fragmentShader.includes("#define ELLIS_FULL_PASS"));assert.equal(explicitDraw.material.glslVersion,'300 es');
 assert(explicitDraw.material.fragmentShader.includes('textureLod(s,uv,0.)'));
 assert(!explicitDraw.material.fragmentShader.includes('texture2D('),'divergent geometry traversal uses no implicit texture derivatives');
 assert(explicitDraw.material.vertexShader.includes('out vec2 screen'));
@@ -205,3 +205,94 @@ viewer.setSurfaceCamera({region:0,eye:[0,-2380/U,1550/U],right:[1,0,0],up:[0,0,1
 const nearbyDraw=frames.at(-1)[0];assert(nearbyDraw);assert.equal(nearbyDraw.uniforms.uLensEnabled,0,'42 m ship retains original mesh geometry');
 assert.equal(nearbyDraw.uniforms.uLensMode,3,'Local ship is not sliced by the aperture mask');
 console.log('PASS Ellis nearby geometry: ordinary local mesh, no aperture slicing and captured-copy suppression');
+
+// Readable ships never enter mouth captures, and their vertex transform stays
+// orthonormal at ranges beyond the old local-frame band, in both render routes.
+for(const geometry of ['full','objects'])for(const side of [0,1])for(const x of [12,120,240,480]){
+ viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry='+geometry;viewer.setStudyBridge(true);
+ const center=[(side*12000+x)/U,(side? -1660:-2340)/U,1550/U];
+ viewer.setStudyActors([{vertices:data,color:[.123,.456,.789],region:side,origin:center,lensCenter:center,lensRadius:5}]);
+ viewer.setSurfaceCamera({region:0,eye:[0,-2380/U,1550/U],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+ const start=frames.length;viewer.render(world,1,0,0);
+ const hull=frames.slice(start).flat().filter(d=>Math.abs(d.uniforms.uColor?.[0]-.123)<1e-6);
+ assert.equal(hull.length,1,'Each ship is submitted exactly once, never to capture atlases');
+ const draw=hull[0];assert.equal(draw.uniforms.uLensMode,3,'Readable hull is not sliced by a distance-dependent aperture rule');
+ if(draw.uniforms.uLensEnabled){
+  const columns=[draw.uniforms.uLensX,draw.uniforms.uLensY,draw.uniforms.uLensZ];
+  columns.forEach((a,i)=>columns.forEach((b,j)=>assert(Math.abs(a.reduce((sum,v,k)=>sum+v*b[k],0)-(i===j?1:0))<1e-6,'Optical image preserves hull lengths and angles')));
+ }
+}
+console.log('PASS Ellis readable ships: one intact image at near/far ranges, both charts and both geometry routes');
+
+const studyContext={window:{Driftworks:{sim:{METERS_PER_UNIT:U}}}};
+vm.runInNewContext(fs.readFileSync('experiments/ellis-study.js','utf8'),studyContext);
+const pursuit=studyContext.window.Driftworks.ellisStudy;
+viewer.setStudyBridge(false);context.location.search='?mission=ellis';viewer.setStudyBridge(true);
+for(const t of [2.99,3.01,4.49,4.51,14.99,15.01,16.49,16.51]){
+ const observer=pursuit.camera('pursuit',t),leader=pursuit.sample(t,'pursuit')[0].pose;
+ viewer.setSurfaceCamera(observer);
+ viewer.setStudyActors([{vertices:data,color:[.123,.456,.789],region:leader.region,origin:Array.from(leader.eye),lensCenter:Array.from(leader.eye),lensRadius:5}]);
+ const start=frames.length;viewer.render(world,1,0,0);
+ const hull=frames.slice(start).flat().filter(d=>Math.abs(d.uniforms.uColor?.[0]-.123)<1e-6);
+ assert.equal(hull.length,1,'Pursued hull remains one visible submission across leader and observer crossings at '+t);
+}
+console.log('PASS Ellis pursuit rendering: intact single hull before/after both leader and follower crossings');
+
+// Exercise the actual seven-material capital asset and its real patrol crossing.
+for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
+for(const geometry of ['full','objects']){
+ viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry='+geometry;viewer.setStudyBridge(true);
+ const capital=DW.aegisFlight.createEllisPatrol();let clock=0,previousFrame,previousTime;
+ for(const t of [30,31.65,5700/180-.000001,5700/180+.000001,31.7,32,34]){
+  while(clock<t-1e-8){const dt=Math.min(.05,t-clock);capital.step(dt);clock+=dt;}
+  const batches=capital.geometry();viewer.setStudyActors(batches);
+  viewer.setSurfaceCamera({region:0,eye:[650/U,-2400/U,1650/U],right:[0,1,0],up:[0,0,1],back:[1,0,0]});
+  const start=frames.length;viewer.render(world,1,0,0);
+  const hull=frames.slice(start).flat().filter(d=>d.uniforms.uLensMode===3&&d.uniforms.uColor);
+  assert.equal(hull.length,batches.length,'every capital material is submitted once at '+t+' s / '+geometry);
+  assert.equal(hull.reduce((n,d)=>n+d.geometry.attributes.position.count,0),batches.reduce((n,b)=>n+b.vertices.length/6,0),'all capital vertices survive the throat crossing');
+  assert.equal(viewer.getRenderStats().bridgeObjectPaths,1,'all materials use one coherent optical center');
+  const d=hull[0],columns=d.uniforms.uLensEnabled?[d.uniforms.uLensX,d.uniforms.uLensY,d.uniforms.uLensZ]:[[0,0,-1],[1,0,0],[0,1,0]];
+  const basis=batches[0].basis,orientation=Array.from({length:9},(_,k)=>columns.reduce((sum,c,j)=>sum+c[k%3]*basis[Math.floor(k/3)*3+j],0));
+  if(previousFrame&&t-previousTime<.00001)orientation.forEach((v,i)=>assert(Math.abs(v-previousFrame[i])<.002,'optical hull orientation is continuous across antipodal transport'));
+  previousFrame=orientation;previousTime=t;
+ }
+}
+console.log('PASS Ellis capital image: actual patrol hull, every material/vertex, one coherent path before and after crossing');
+
+// A heading along the source-end optical ray must appear along the same image
+// direction at the observer, while all material batches keep an orthonormal pose.
+for(const side of [0,1]){
+ viewer.setStudyBridge(false);context.location.search='?mission=ellis';viewer.setStudyBridge(true);
+ const eye=[100,-2390,1550],target=[side*12000+150,side?-1600:-2500,1550],h=DW.ellisOptics.primary(eye,target,0,side);assert(h);
+ const right=[h.direction[1],-h.direction[0],0];viewer.setSurfaceCamera({region:0,eye:eye.map(x=>x/U),right,up:[0,0,1],back:h.direction.map(v=>-v)});
+ const center=target.map(x=>x/U);viewer.setStudyActors([{vertices:data,color:[.123,.456,.789],region:side,origin:center,lensCenter:center,lensRadius:5}]);
+ const start=frames.length;viewer.render(world,1,0,0);const d=frames.slice(start).flat().find(d=>Math.abs(d.uniforms.uColor?.[0]-.123)<1e-6);assert(d);
+ const c=[d.uniforms.uLensX,d.uniforms.uLensY,d.uniforms.uLensZ],mapped=[0,1,2].map(i=>c.reduce((n,v,j)=>n+v[i]*h.sourceDirection[j],0));
+ const expected=[0,0,1];
+ mapped.forEach((v,i)=>assert(Math.abs(v-expected[i])<1e-6,'source-end viewing tangent maps to apparent direction '+JSON.stringify({side,mapped,expected,enabled:d.uniforms.uLensEnabled,h})));
+}
+console.log('PASS Ellis optical headings: forward/reverse path tangents share one rigid image orientation');
+assert(explicitDraw.material.fragmentShader.includes('float shellDepth(')&&explicitDraw.material.fragmentShader.includes('far-near>max(5./units,near*.03)'),'surface interpolation retains a depth-discontinuity guard');
+
+viewer.setStudyBridge(false);context.location.search='?mission=ellis';viewer.setStudyBridge(true);
+const behindCenter=[150/U,-2500/U,1550/U];viewer.setStudyActors([{vertices:data,color:[.123,.456,.789],region:0,origin:behindCenter,lensCenter:behindCenter,lensRadius:5}]);
+viewer.setSurfaceCamera({region:0,eye:[100/U,-2390/U,1550/U],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+const behindStart=frames.length;viewer.render(world,1,0,0);const behind=frames.slice(behindStart).flat().find(d=>Math.abs(d.uniforms.uColor?.[0]-.123)<1e-6);
+assert(behind&&behind.uniforms.uLensEnabled===1&&behind.uniforms.uLensViewCenter[2]<0,'behind-camera optical image never falls back to ordinary screen position');
+console.log('PASS Ellis behind-camera image: optical center is retained and near-plane clipping owns visibility');
+
+// Both image position and orientation must survive the observer's chart change.
+viewer.setStudyBridge(false);context.location.search='?mission=ellis';viewer.setStudyBridge(true);
+for(const crossing of [4.5,16.5]){
+ let previous;
+ for(const t of [crossing-1e-6,crossing+1e-6]){
+  const observer=pursuit.camera('pursuit-offset',t),leader=pursuit.sample(t,'pursuit')[0].pose,center=Array.from(leader.eye);
+  viewer.setSurfaceCamera(observer);viewer.setStudyActors([{vertices:data,color:[.123,.456,.789],region:leader.region,origin:center,lensCenter:center,lensRadius:5}]);
+  const start=frames.length;viewer.render(world,1,0,0);const d=frames.slice(start).flat().find(d=>Math.abs(d.uniforms.uColor?.[0]-.123)<1e-6);assert(d&&d.uniforms.uLensEnabled===1);
+  const frame=[...d.uniforms.uLensX,...d.uniforms.uLensY,...d.uniforms.uLensZ,...d.uniforms.uLensViewCenter];
+  if(previous)frame.forEach((v,i)=>assert(Math.abs(v-previous[i])<.002,'off-axis observer crossing keeps optical position/orientation continuous: '+crossing+' / '+i+' / '+v+' vs '+previous[i]));
+  previous=frame;
+ }
+}
+console.log('PASS Ellis observer chart crossings: continuous off-axis image position and orientation in both directions');

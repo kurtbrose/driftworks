@@ -283,7 +283,10 @@
     function createEllisPatrol(){
         var state={team:/** @type {'ally'} */('ally'),position:[0,-8000/U,1550/U],heading:0,velocity:[0,180,0],integrity:20000};
         var rig=create({state:state,opponent:state,unarmed:true}),region=0,seconds=0,direction=1,turn=0,inbound=true;
-        var batches=rig.geometry();
+        var batches=rig.geometry(),radius=0;
+        batches.forEach(function(b){for(var i=0;i<b.vertices.length;i+=6)radius=Math.max(radius,Math.hypot(b.vertices[i],b.vertices[i+1],b.vertices[i+2]));});
+        // Share one complete optical image across every hull material.
+        batches.forEach(function(b){b.lensCenter=state.position;b.lensRadius=radius*U;});
         function reset(){region=0;seconds=0;direction=1;turn=0;inbound=true;state.position.splice(0,3,0,-8000/U,1550/U);state.heading=-Math.PI/2;rig.reset();}
         /** @param {number} elapsed */function step(elapsed){
             if(!Number.isFinite(elapsed)||elapsed<=0)return;
@@ -296,7 +299,13 @@
             }
             if(!inbound&&Math.abs(state.position[1]*U+2000)>=4000)turn=12;
         }
-        function geometry(){rig.geometry();batches.forEach(function(b){b.region=region;});return batches;}
+        function geometry(){
+            rig.geometry();
+            // Transport the hull frame with the same antipodal half-turn as fighters.
+            var basis=batches[0].basis;
+            if(region===1&&basis)for(var i=0;i<9;i++)if(i%3!==1)basis[i]=-basis[i];
+            batches.forEach(function(b){b.region=region;});return batches;
+        }
         function telemetry(){var report=rig.telemetry();report.seconds=seconds;report.capitals=[{team:state.team,position:state.position.slice(),heading:state.heading,integrity:state.integrity,shots:0,hits:0}];return report;}
         reset();return {reset:reset,step:step,geometry:geometry,effects:function(){return [];},hit:function(){return null;},readout:function(){return 'AEGIS / ELLIS CENTERLINE PATROL';},telemetry:telemetry};
     }
