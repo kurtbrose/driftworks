@@ -4,6 +4,7 @@ const reverse=process.argv.includes('--return');
 const f=createFlight({mission:'ellis',enabled:false}),s=f.snapshot().state,U=f.DW.sim.METERS_PER_UNIT;
 s.eye=reverse?[12000/U,-1699.999997/U,1550/U]:[0,-2300.000003/U,1550/U];s.velocity=[0,reverse?-.001:.001,0];
 if(reverse){s.right=[-1,0,0];s.back=[0,1,0];}s.ramp[2]=.001;f.config.profile.maxVelocity[2]=.001;
+s.region=reverse?1:0;
 const before=JSON.parse(JSON.stringify(s));f.advance(dt,{throttle:1});const after=JSON.parse(JSON.stringify(s));
 assert(Math.abs(after.eye[0]*U-(reverse?0:12000))<1e-6,'production session crossed');
 function run(){
@@ -17,7 +18,7 @@ function run(){
  const data=DW.ellisOptics.table(),texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,512,512,0,gl.RGBA,gl.UNSIGNED_BYTE,data);
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);const position=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
- function render(pose,unbend=0){gl.uniform1f(gl.getUniformLocation(program,'unbend'),unbend);for(const name of ['eye','right','up','back'])gl.uniform3fv(gl.getUniformLocation(program,name),pose[name].map(x=>name==='eye'?x*fixtures.units:x));gl.drawArrays(gl.TRIANGLES,0,6);const pixels=new Uint8Array(size*size*4);gl.readPixels(0,0,size,size,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;}
+ function render(pose,unbend=0){gl.uniform1f(gl.getUniformLocation(program,'ellisRegion'),pose.region||0);gl.uniform1f(gl.getUniformLocation(program,'unbend'),unbend);for(const name of ['eye','right','up','back'])gl.uniform3fv(gl.getUniformLocation(program,name),pose[name].map(x=>name==='eye'?x*fixtures.units:x));gl.drawArrays(gl.TRIANGLES,0,6);const pixels=new Uint8Array(size*size*4);gl.readPixels(0,0,size,size,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;}
  const a=render(fixtures.before),b=render(fixtures.after);let maximum=0,mismatch=0,mean=0;
  for(let i=0;i<a.length;i+=4){if(a[i+3]!==b[i+3])mismatch++;for(let j=0;j<3;j++){const delta=Math.abs(a[i+j]-b[i+j]);maximum=Math.max(maximum,delta);mean+=delta;}}
  const unbent=render(fixtures.after,1),untransported=render({...fixtures.after,right:fixtures.before.right,up:fixtures.before.up,back:fixtures.before.back});

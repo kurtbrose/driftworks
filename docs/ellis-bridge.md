@@ -12,8 +12,10 @@ existing Jade/Rime cube faces and detailed moon disk.
 
 ## Shared optics
 
-`experiments/ellis-optics.js` reduces null geodesics in the static Ellis metric
+`experiments/ellis-optics.js` starts from null geodesics in the static Ellis metric
 `dsÂ² = -dtÂ² + dlÂ² + (lÂ² + aÂ²)dÎ©Â²` to a normalized radial integral, setting `a=1`.
+The current presentation smoothly flattens the exterior as described below; it
+is a compact visual approximation, not the unmodified infinite Ellis metric.
 Spherical symmetry keeps each ray in a plane. Both charts and all physical sizes
 reuse the same 512 Ã— 512 RGBA8 table (1 MiB CPU data, cached once per page).
 Its two 16-bit channel pairs store transmitted and turning branches.
@@ -449,15 +451,15 @@ Physical controller feel and subjective sound balance still need a playtest.
 ## Lensed spatial lattice
 
 The Ellis flight and observation lab enable a world-anchored spherical lattice
-by default. Five concentric layers span approximately 300–600 m around each
+by default. Three concentric layers span approximately 300–600 m around each
 300 m mouth, with 30-degree latitude/longitude lines. Amber belongs to the
 asteroid chart and cyan to Rime. Their axes and spacing never follow the camera
 or advance with time. The antipodal throat identification preserves this grid's
 angular pattern. This is a spherical coordinate lattice, not a Cartesian volume
 or an external embedding-diagram mesh.
 
-The sky shader analytically intersects each curved ray with the five fixed
-areal-radius shells in the existing geodesic's u coordinate. It uses five extra
+The sky shader analytically intersects each curved ray with the three fixed
+areal-radius shells in the existing geodesic's u coordinate. It uses three extra
 radial-integral lookups from the existing cached 512-square table, then tests the
 two possible shell crossings. It does not perform another depth search, capture
 geometry or allocate another ray table. The expensive radial integral is already
@@ -483,6 +485,82 @@ uniforms. Captures: [front](benchmarks/ellis-lattice-front.png),
 [close](benchmarks/ellis-lattice-close.png),
 [Rime](benchmarks/ellis-lattice-rime.png).
 
-The initial matched 1920x1080 GPU check added roughly 0.55–0.82 ms of sky
+The initial five-layer matched 1920x1080 GPU check added roughly 0.55–0.82 ms of sky
 work with no context loss. See the [lattice report](benchmarks/ellis-lattice-2026-10-24.md)
 for setup, raw evidence and approximation limits.
+
+### Lensing-region outline
+
+The lookup sky pass adds a thin antialiased outline around the local 600 m
+integration sphere: all rays that enter the bent-ray renderer lie inside this
+silhouette, including same-chart returning rays. Orange marks the asteroid
+chart's lensing region; green marks Rime's. This replaces the narrower outline
+of only throat-crossing rays, which left distorted returning images outside it.
+Angular distance to the sphere's silhouette keeps the line width stable.
+Inside the sphere every direction can be bent, so the silhouette is suppressed
+rather than suggesting some part of the sky is unaffected. This is a navigation
+overlay marking the renderer's cutoff, not a physical wall. It remains enabled
+when the spatial lattice is hidden; foreground geometry can occlude it. Objects
+in front of the region can still appear inside its projected outline without
+being distorted. The legacy integration pass is unchanged.
+
+Focused tests exercise the production cone-distance math at near and distant
+radii, both sides of the edge, backward rays, chart colors, interior suppression
+and containment of returning distorted images.
+
+Visual check: the flight starting view has a larger orange outline enclosing
+both the throat and the stretched same-chart scenery; the old inner green ring
+is absent. Lab front/close views can fill the viewport with the lensing region,
+leaving its outline off-screen. No browser renderer errors were logged.
+
+## Smooth outer optical boundary
+
+The 600 m entry sphere previously switched outward sky rays from a curved path
+to a straight path abruptly. A real shared-GLSL probe reproduced a worst change
+of about 0.1155 direction-vector chord (6.62 degrees) between radii 599.99 m and
+600.01 m. The new model prioritizes visual continuity while retaining the cutoff
+and its navigation outline.
+
+The inner region through 450 m keeps the Ellis radial metric. From 450 to 600 m,
+a quintic taper changes q(r) from 1 to 0 in the areal-radius metric
+`dr²/(1-q(r)/r²) + r² dΩ²`, with r measured in throat radii. The table integrand
+is multiplied by `sqrt((r²-1)/(r²-q(r)))`; the factor is 1 in the inner region.
+The taper and its first two derivatives join smoothly. Beyond 600 m the metric
+is Euclidean. Its remaining angular integral is evaluated analytically from
+the 600 m table value, so LUT quantization cannot leave a residual tail at the
+cutoff. The escaping direction also uses the flat exterior tangent. CPU inverse
+paths and path lengths use the same compact model. No second lookup texture or
+per-frame table rebuild is introduced. Gameplay movement and throat transport
+are unchanged; the opt-in legacy shader remains an old comparison.
+
+The navigation outline fades over the last 15 m of exterior approach rather
+than disappearing abruptly as the camera enters the volume. `bridgeOutline=0`
+hides it independently of `bridgeGrid=0` for controlled sky studies.
+
+### Continuity verification and reproduction
+
+- `node tests/ellis-optics.cjs` checks independent finite-source quadrature,
+  inverse paths, outward convergence to straight rays and the exact flat tail.
+- `node tools/prepare-ellis-boundary.cjs` prepares
+  [the actual-GLSL probe](../output/ellis-boundary-continuity.html): 1,024 rays
+  per view, both charts, five view directions around 600 m and a grazing sweep.
+  Its hard-cutoff negative control is reconstructed explicitly, independent of
+  Git HEAD. The maximum chord falls from 0.115517 to 0.000183 (about 0.0105
+  degrees); the pass threshold is 0.0005. There are no destination mismatches
+  in these boundary fixtures. This is sampled evidence, not a global bound.
+- `node tools/prepare-ellis-continuity.cjs` and the `--return` variant regenerate
+  actual production-session throat poses. The fixture now supplies explicit
+  region ownership to both the session and GLSL, matching the current API.
+  Both directions retain maximum one-byte RGB differences and zero destination
+  mismatches across 4,096 tested rays, with working unbent/untransported negative
+  controls.
+- [Sky-only study](../experiments/ellis-sky-study.html) uses the production sky
+  renderer with ships, lattice and outline absent. It has exact distance entry,
+  both charts, five viewing directions and 0.7/7/70 m/s playback. The default
+  speed is 1/100 of 70 m/s and playback sweeps 550–650 m. Visually inspected
+  tangent views at 599.99 and 600.01 m in both charts without a visible snap.
+
+This resolves the demonstrated outer sky cutoff. Depth-shell sampling misses,
+object-patch branch switching and fast landmark motion near the critical ring
+remain separate issues; this change does not establish their continuity.
+Historical rendering/performance captures above predate this optical profile.

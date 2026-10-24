@@ -6,10 +6,19 @@
     // Ellis radial integral, reduced by spherical symmetry. The substitutions
     // l=sqrt(1-b*b)*sinh(u) (transmitted) and l=sqrt(b*b-1)*cosh(u)
     // (turning) remove the radial square-root singularity. See docs/ellis-bridge.md.
+    // Compact optical metric: retain Ellis inside 1.5a, smoothly flatten
+    // by 2a. dr^2/(1-q/r^2) joins Euclidean space with two derivatives.
+    /** @param {number} r2 */
+    function radialScale(r2){
+        var t=Math.max(0,Math.min(1,(Math.sqrt(r2)-1.5)*2));
+        var q=1-t*t*t*(10+t*(-15+6*t));
+        return r2<=2.25?1:Math.sqrt((r2-1)/(r2-q));
+    }
     /** @param {number} b @param {number} u @param {boolean} transmitted */
     function integrand(b,u,transmitted){
         var v=transmitted?Math.sinh(u):Math.cosh(u);
-        return b/Math.sqrt(1+Math.abs(1-b*b)*v*v);
+        var r2=1+Math.abs(1-b*b)*v*v;
+        return b/Math.sqrt(r2)*radialScale(r2);
     }
     /** @param {number} b @param {number} u @param {number} [steps] */
     function integral(b,u,steps){
@@ -32,11 +41,20 @@
     }
 
     /** Same packed/bilinear radial integral used by the GPU. @param {number} b @param {number} u */
-    function lookup(b,u){
+    function packedLookup(b,u){
         var data=table(),x=Math.max(0,Math.min(511,-Math.log(Math.max(Math.exp(-12),Math.abs(1-b)))/12*511)),y=Math.max(0,Math.min(511,u/12*511));
         var ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,channel=b<1?0:2;
         /** @param {number} dx @param {number} dy */function at(dx,dy){var i=(Math.min(511,iy+dy)*512+Math.min(511,ix+dx))*4+channel;return (data[i]*256+data[i+1])*32/65535;}
         return (at(0,0)*(1-fx)+at(1,0)*fx)*(1-fy)+(at(0,1)*(1-fx)+at(1,1)*fx)*fy;
+    }
+    /** Flat exterior tail is analytic: no quantized phase jump at 2a.
+     * @param {number} b @param {number} u */
+    function lookup(b,u){
+        var root=Math.sqrt(Math.max(.0000001,Math.abs(1-b*b)));
+        var edge=b<1?Math.asinh(Math.sqrt(3)/root):Math.acosh(Math.max(1,Math.sqrt(3)/root));
+        if(u<=edge)return packedLookup(b,u);
+        var l=root*(b<1?Math.sinh(u):Math.cosh(u)),r=Math.sqrt(1+l*l);
+        return packedLookup(b,edge)+Math.asin(Math.min(1,b/2))-Math.asin(Math.min(1,b/r));
     }
     /** Primary finite-source optical path, restricted to the existing 2a entry sphere.
      * Coordinates are metres; chart translation has no physical distance.
@@ -67,7 +85,7 @@
         for(var i=0;i<24;i++){var mid=(low+high)*.5,value=phase(mid,other||turning);if((value<angle)!==decreasing)low=mid;else high=mid;}
         var b=(low+high)*.5,sine=b/R,radial=(outward?1:-1)*Math.sqrt(Math.max(0,1-sine*sine));
         var direction=n.map(function(v,i){return v*radial+tangent[i]*sine;}),root=Math.sqrt(Math.max(1e-10,Math.abs(1-b*b)));
-        /** @param {number} end */function arc(end){var total=0;for(var j=0;j<16;j++){var t=end*(j+.5)/16,l=root*(b<1?Math.sinh(t):Math.cosh(t));total+=Math.sqrt(1+l*l)*end/16;}return total;}
+        /** @param {number} end */function arc(end){var total=0;for(var j=0;j<16;j++){var t=end*(j+.5)/16,l=root*(b<1?Math.sinh(t):Math.cosh(t));total+=Math.sqrt(1+l*l)*radialScale(1+l*l)*end/16;}return total;}
         var first=arc(u(b,E)),last=arc(u(b,S)),length=(other||turning?first+last:Math.abs(first-last));
         if(R>2)length+=Math.sqrt(Math.max(0,R*R-b*b))-Math.sqrt(Math.max(0,4-b*b));
         return {direction:direction,length:Math.max(.001,length*a),impact:b,direct:false,turning:turning};
@@ -78,11 +96,22 @@ uniform float ellisRegion;
 struct EllisRay {vec3 radial;vec3 tangent;float b;float u0;float f0;float entry;float side;float hit;float inward;};
 float ellisAsinh(float x){return log(x+sqrt(x*x+1.));}
 float ellisAcosh(float x){return log(x+sqrt(max(0.,x*x-1.)));}
-float ellisIntegral(float b,float u){
+float ellisPackedIntegral(float b,float u){
     float x=clamp(-log(max(.000006144,abs(1.-b)))/12.,0.,1.);
     vec2 uv=(vec2(x,clamp(u/12.,0.,1.))*511.+.5)/512.;
     vec4 encoded=texture2D(ellisTable,uv);
     return (b<1.?dot(encoded.rg,vec2(65280.,255.)):dot(encoded.ba,vec2(65280.,255.)))*32./65535.;
+}
+float ellisIntegral(float b,float u){
+    float root=sqrt(max(.0000001,abs(1.-b*b)));
+    float edge=b<1.?ellisAsinh(sqrt(3.)/root):ellisAcosh(max(1.,sqrt(3.)/root));
+    float phase=ellisPackedIntegral(b,min(u,edge));
+    if(u>edge){
+        float l=root*(b<1.?ellisSinh(u):ellisCosh(u));
+        float r=sqrt(1.+l*l);
+        phase+=asin(min(1.,b/2.))-asin(min(1.,b/r));
+    }
+    return phase;
 }
 EllisRay ellisInit(vec3 eye,vec3 ray){
     float side=ellisRegion;
@@ -126,14 +155,14 @@ vec3 ellisExit(EllisRay e){
     // Differencing two quantized table positions magnifies lookup error into
     // visible stripes in the sky direction, especially at a planet silhouette.
     float r=sqrt(577.),s=e.b/r;
-    return normalize(radial*(24./r)*sqrt(max(0.,1.-s*s))+tangent*s);
+    return normalize(radial*sqrt(max(0.,1.-s*s))+tangent*s);
 }
 `;
     // WebGL 1 GLSL has no hyperbolic built-ins.
     shader=shader.replace('uniform sampler2D ellisTable;',`uniform sampler2D ellisTable;
 float ellisSinh(float x){return (exp(x)-exp(-x))*.5;}
 float ellisCosh(float x){return (exp(x)+exp(-x))*.5;}`);
-    // A static spherical coordinate lattice. Intersect five radial shells
+    // A static spherical coordinate lattice. Intersect three radial shells
     // analytically in the ray's u coordinate, then sample their angular wires.
     // This shares the baked integral and does not march arbitrary geometry.
     var latticeShader=`
@@ -156,8 +185,8 @@ vec4 ellisLatticeWire(vec3 radial,float side,float radius,vec3 eye,float pixel,f
 vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){
     vec4 result=vec4(0.);
     float root=sqrt(max(.0000001,abs(1.-e.b*e.b)));
-    for(int i=0;i<5;i++){
-        float radius=1.0001+float(i)*.249975;
+    for(int i=0;i<3;i++){
+        float radius=1.0001+float(i)*.49995;
         float l=sqrt(max(0.,radius*radius-1.));
         float u=e.b<1.?ellisAsinh(l/root):ellisAcosh(max(1.,l/root));
         // Keep the lookup outside all per-surface visibility branches.

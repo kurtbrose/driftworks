@@ -638,3 +638,7 @@ In touch mode, Start/Resume requests fullscreen when the browser supports it.
 The Full screen button retries or exits fullscreen. Mobile browsers that do not
 support element fullscreen can use their Add to Home Screen mode. Comms retain
 small animated portraits; the large touch targets are independent of HUD scale.
+
+The [Ellis sky continuity study](experiments/ellis-sky-study.html) isolates the
+sky with exact distance controls and 1/100-speed sweeps across the outer lensing
+boundary. It hides ships and navigation overlays for comparing sky motion.

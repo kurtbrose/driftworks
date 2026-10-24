@@ -1117,7 +1117,7 @@ declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
         gpuUi?: {create:(host:HTMLElement)=>import('./gpu-ui-types').GpuUi;color:(value:string|CanvasGradient|CanvasPattern)=>number[]};
         aegisFlightAsset?: AegisFlightAsset;
-        aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:()=>AegisFlightRig;load:()=>Promise<unknown>};
+        aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:()=>AegisFlightRig;createEllisPatrol:()=>AegisFlightRig;load:()=>Promise<unknown>};
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];
         retailWeapons?: Weapon[];

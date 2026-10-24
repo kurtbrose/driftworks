@@ -278,3 +278,23 @@ assert.ok(hostileRig.telemetry().hits>0&&hostileView.enemy.hp<10000,'rotated hos
 assert.equal(friendly.hp,10000,'hostile AA ignores its own team');
 assert.ok(hostileRig.telemetry().mounts.filter(m=>m.kind==='point-defense').every(m=>m.targetId!=='red-friendly'),'hostile locks remain faction-correct');
 console.log('PASS capital battle: two factions, shared GPU buffers, moving/rotating hulls, heavy intercepts and actual damage, colored rounds, hostile AA, reset and combat disable');
+
+// Scenery traverses both charts indefinitely without firing or allocating meshes.
+const patrol=DW.aegisFlight.createEllisPatrol(),patrolBatches=patrol.geometry(),patrolBuffers=patrolBatches.map(b=>b.vertices);
+assert.equal(patrolBatches[0].region,0);
+assert.equal(patrol.telemetry().capitals[0].position[1]*U,4000);
+let crossings=0,lastRegion=0,turning=false;
+for(let i=0;i<24000;i++){
+ patrol.step(.05,view);
+ const batches=patrol.geometry(),region=batches[0].region,ship=patrol.telemetry().capitals[0];
+ if(region!==lastRegion){crossings++;lastRegion=region;assert(Math.abs(ship.position[1]*U+2000)<310,'crosses along throat axis');}
+ assert(Math.abs(ship.position[0]*U-region*12000)<1e-7);
+ assert(Math.abs(ship.position[2]*U-1550)<1e-7);
+ assert(batches.every((b,k)=>b.vertices===patrolBuffers[k]&&b.region===region));
+ if(Math.abs(Math.cos(ship.heading))>.1)turning=true;
+}
+assert(crossings>=10,'patrol repeatedly crosses outward and back');assert(turning,'turns between passes');
+assert.equal(patrol.telemetry().shots,0);assert.equal(patrol.hit([0,0,0],[1,1,1]),null);
+const patrolTime=patrol.telemetry().seconds;patrol.step(0,view);assert.equal(patrol.telemetry().seconds,patrolTime);
+patrol.reset();assert.equal(patrol.geometry()[0].region,0);assert.equal(patrol.telemetry().seconds,0);
+console.log('PASS Ellis capital patrol: repeated centerline crossings, turnarounds, region ownership, reset and immutable mesh reuse');

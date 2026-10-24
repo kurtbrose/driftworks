@@ -180,3 +180,24 @@ assert(latticeFragment.includes('texture2DLodEXT(ellisTable,uv,0.)'),'Grid looku
 assert(!latticeFragment.includes('texture2D(ellisTable,uv)'));
 gridControl.checked=false;latticeSky.render(latticePose,1,false);assert.equal(values.bridgeGrid,0,'Live toggle bypasses the spatial grid');
 console.log('PASS Ellis lattice: production shader integration, fixed-LOD sampling, pixel width and live toggle');
+
+// Exercise the production angular-distance expression independently of the LUT.
+const rimMath=latticeFragment.match(/float eyeRadius=[\s\S]*?float edge=abs\(angle-cone\);/)[0]
+ .replace(/float /g,'let ');
+const rimDistance=new Function('offset','along','max','length','asin','acos','clamp','abs',rimMath+';return edge;');
+function edgeAt(radius,angle){return rimDistance([radius,0,0],-radius*Math.cos(angle),Math.max,v=>Math.hypot(...v),Math.asin,Math.acos,(v,a,b)=>Math.max(a,Math.min(b,v)),Math.abs);}
+for(const radius of [2.00001,2.1,3,10,100]){
+ const cone=Math.asin(2/Math.max(2.000001,radius));
+ assert(edgeAt(radius,cone)<.002,'Outline follows the outer lensing volume at near and distant views');
+ assert(edgeAt(radius,Math.PI)>.5,'Looking away from the throat never produces a rim');
+ if(radius>2.01)for(const delta of [-.001,.001])assert(Math.abs(edgeAt(radius,cone+delta)-.001)<1e-8,'Angular width is stable on both sides');
+}
+assert(latticeFragment.includes('side<.5?vec3(1.,.48,.10):vec3(.22,1.,.38)'),'Local chart colors are orange for asteroid and green for Rime');
+assert(latticeFragment.includes('smoothstep(2.,2.05,length(offset))'),'Inside the lensing volume there is no false safe-sky silhouette');
+// The entire bent-ray cone must be enclosed, including returning b>1 rays.
+for(const radius of [2.1,3,10])for(const impact of [1,1.5,1.99])assert(Math.asin(impact/radius)<Math.asin(2/radius),'Returning distorted images are inside the warning boundary');
+console.log('PASS Ellis outline: outer lensing volume, local chart colors, interior suppression and angular width');
+
+assert.equal(values.bridgeOutline,1,'Navigation outline remains enabled by default');
+latticeContext.location.search=latticeContext.window.location.search='?mission=ellis&bridgeOutline=0';
+latticeSky.render(latticePose,1,false);assert.equal(values.bridgeOutline,0,'Sky-only diagnostics can suppress the outline');

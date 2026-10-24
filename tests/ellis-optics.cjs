@@ -12,7 +12,16 @@ function sample(b,u){
 }
 // Independent quadrature in proper radial l for transmitted rays, rather than
 // the table builder's u coordinate. Endpoints span nearby and far sources.
-function radialIntegral(b,l){let sum=0,n=20000,h=l/n;for(let i=0;i<n;i++){const r2=1+((i+.5)*h)**2;sum+=b/(r2*Math.sqrt(1-b*b/r2))*h;}return sum;}
+function radialIntegral(b,l){
+ let sum=0,n=20000,h=l/n;
+ for(let i=0;i<n;i++){
+  const r2=1+((i+.5)*h)**2,r=Math.sqrt(r2),t=Math.max(0,Math.min(1,2*r-3));
+  const q=r<=1.5?1:r>=2?0:1-10*t**3+15*t**4-6*t**5;
+  const scale=r<=1.5?1:Math.sqrt((r2-1)/(r2-q));
+  sum+=b/(r2*Math.sqrt(1-b*b/r2))*scale*h;
+ }
+ return sum;
+}
 let worst=0;
 for(const b of [.05,.2,.6,.9,.99,.999])for(const l of [.1,.5,2,12]){
  const u=Math.asinh(l/Math.sqrt(1-b*b)),expected=radialIntegral(b,l),actual=sample(b,u);
@@ -34,7 +43,7 @@ for(let n=1;n<250;n++){
  const phase=(integrate,u)=>integrate(b,u0)+integrate(b,u);
  function point(t){const u=-u0+(end+u0)*t,angle=phase(sample,u),l=root*(b<1?Math.sinh(u):Math.cosh(u)),r=Math.sqrt(1+l*l);return [r*Math.cos(angle),r*Math.sin(angle)];}
  const phi=phase(sample,end),exactPhi=phase((b,u)=>optics.integral(b,u,20000),end),r=Math.sqrt(577),sine=b/r;
- const correction=Math.atan2(sine,24/r*Math.sqrt(1-sine*sine));
+ const correction=Math.asin(sine);
  const exact=exactPhi+correction,analytic=phi+correction;
  const a=point(.999),z=point(1),old=Math.atan2(z[1]-a[1],z[0]-a[0]);
  const error=x=>Math.abs(Math.atan2(Math.sin(x-exact),Math.cos(x-exact)));
@@ -62,3 +71,21 @@ for(const angle of [.1,.4,.8]){
 }
 const direct=optics.primary([0,-3250,1550],[1000,-3250,1550],0,0);assert(direct&&direct.direct&&direct.direction[0]===1,'ordinary path outside lens influence');
 console.log(`PASS Ellis primary inversion: finite-source quadrature (${inverseWorst.toFixed(6)} rad), ordinary rays and throat continuity`);
+
+// Outward sky must converge to the untouched direction at the entry boundary.
+// Compare against that independent flat-space direction, not another LUT path.
+let boundaryWorst=0;
+for(const R of [1.99,1.999,1.99999,2])for(const theta of [.01,.3,.8,1.3,1.55]){
+ const b=R*Math.sin(theta),root=Math.sqrt(Math.abs(1-b*b));
+ const u0=b<1?Math.asinh(Math.sqrt(R*R-1)/root):Math.acosh(Math.sqrt(R*R-1)/root);
+ const end=b<1?Math.asinh(24/root):Math.acosh(24/root);
+ const exit=optics.lookup(b,end)-optics.lookup(b,u0)+Math.asin(b/Math.sqrt(577));
+ const delta=Math.abs(exit-theta);if(R>1.999)boundaryWorst=Math.max(boundaryWorst,delta);
+ if(R>1.999)assert(delta<.0005,'Outward sky approaches straight direction without an edge snap');
+}
+for(const b of [.1,.8,1.2,1.8,1.99]){
+ const root=Math.sqrt(Math.abs(1-b*b)),u=r=>b<1?Math.asinh(Math.sqrt(r*r-1)/root):Math.acosh(Math.sqrt(r*r-1)/root);
+ const tail=optics.lookup(b,u(8))-optics.lookup(b,u(2));
+ assert(Math.abs(tail-(Math.asin(b/2)-Math.asin(b/8)))<1e-10,'Flat exterior tail is analytic, avoiding LUT residual at cutoff');
+}
+console.log(`PASS Ellis compact boundary: outward flat limit ${boundaryWorst.toFixed(6)} rad and exact exterior tail`);

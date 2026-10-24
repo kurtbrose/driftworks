@@ -254,6 +254,29 @@
         function readout(){return 'AEGIS CAPITAL ENGAGEMENT / 1,305 m each\n'+states.map(function(s,i){var t=rigs[i].telemetry();return (i===0?'GREEN':'RED')+' '+(s.integrity>0?Math.ceil(s.integrity/200)+'% integrity':'disabled')+' · '+t.shots+' rounds / '+t.hits+' hits';}).join('\n')+'\n12 heavy + 12 PD mounts per ship\nHangar: '+rigs[0].telemetry().launches+' fighters launched';}
         reset();return {reset:reset,step:step,geometry:function(){rigs.forEach(function(r){r.geometry();});return renderBatches;},effects:function(pose){return rigs.flatMap(function(r){return r.effects(pose);});},readout:readout,hit:hit,telemetry:telemetry};
     }
+    /** Unarmed centerline traffic using the same antipodal chart transport as fighters.
+     * Positions are scene units; route distances and speed are metres and m/s.
+     * @returns {import('./types').AegisFlightRig} */
+    function createEllisPatrol(){
+        var state={team:/** @type {'ally'} */('ally'),position:[0,4000/U,1550/U],heading:Math.PI/2,velocity:[0,-180,0],integrity:20000};
+        var rig=create({state:state,opponent:state}),region=0,seconds=0,direction=-1,turn=0,inbound=true;
+        var batches=rig.geometry();
+        function reset(){region=0;seconds=0;direction=-1;turn=0;inbound=true;state.position.splice(0,3,0,4000/U,1550/U);state.heading=Math.PI/2;rig.reset();}
+        /** @param {number} elapsed */function step(elapsed){
+            if(!Number.isFinite(elapsed)||elapsed<=0)return;
+            var dt=Math.min(.1,elapsed);seconds+=dt;
+            if(turn>0){var used=Math.min(turn,dt);turn-=used;state.heading+=Math.PI*used/12;if(turn<=1e-9){turn=0;direction=-direction;inbound=true;state.heading=direction>0?-Math.PI/2:Math.PI/2;}return;}
+            state.position[1]+=direction*180*dt/U;
+            var y=state.position[1]*U+2000;
+            if(inbound&&y*direction>=-300){
+                inbound=false;region=1-region;state.position[0]=region*12000/U;state.position[1]+=direction*600/U;
+            }
+            if(!inbound&&Math.abs(state.position[1]*U+2000)>=4000)turn=12;
+        }
+        function geometry(){rig.geometry();batches.forEach(function(b){b.region=region;});return batches;}
+        function telemetry(){var report=rig.telemetry();report.seconds=seconds;report.capitals=[{team:state.team,position:state.position.slice(),heading:state.heading,integrity:state.integrity,shots:0,hits:0}];return report;}
+        reset();return {reset:reset,step:step,geometry:geometry,effects:function(){return [];},hit:function(){return null;},readout:function(){return 'AEGIS / ELLIS CENTERLINE PATROL';},telemetry:telemetry};
+    }
     function load(){return new Promise(function(resolve,reject){if(DW.aegisFlightAsset){resolve(undefined);return;}var script=document.createElement('script');script.src=assetUrl('../assets/ships/aegis-kit/flight-rig.js');script.onload=function(){if(DW.aegisFlightAsset)resolve(undefined);else reject(new Error('Aegis rig asset did not register'));};script.onerror=function(){reject(new Error('Could not load the local Aegis rig asset'));};document.head.appendChild(script);});}
-    DW.aegisFlight={create:create,createBattle:createBattle,load:load};
+    DW.aegisFlight={create:create,createBattle:createBattle,createEllisPatrol:createEllisPatrol,load:load};
 }());

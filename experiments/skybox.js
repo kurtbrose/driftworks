@@ -178,7 +178,7 @@ precision highp float;
 varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
-uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeGrid,bridgeGridPixel;
+uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeGrid,bridgeGridPixel,bridgeOutline;
 uniform sampler2D panorama;
 uniform sampler2D noiseMap,rimeSurface;uniform float rimeDetailed;
 uniform float exposure;uniform float hdrEnabled;uniform sampler2D hdrEnvironment;
@@ -379,6 +379,19 @@ void main(){
             gl_FragColor=vec4((texture2D(panorama,uv).rgb+vec3(star*.22))*exposure,1.);
         }
         gl_FragColor.rgb=gl_FragColor.rgb*(1.-lattice.a*.65)+lattice.rgb;
+        if(bridgeLookup>.5&&bridgeOutline>.5){
+            // Mark the whole 600 m lensing volume, including same-chart
+            // returning rays. Inside it every direction can be distorted;
+            // there is no silhouette separating bent and untouched sky.
+            float eyeRadius=max(2.000001,length(offset));
+            float cone=asin(2./eyeRadius);
+            float angle=acos(clamp(-along/eyeRadius,-1.,1.));
+            float edge=abs(angle-cone);
+            float width=bridgeGridPixel*1.4;
+            float rim=(1.-smoothstep(width*.55,width,edge))*smoothstep(2.,2.05,length(offset));
+            vec3 rimColor=side<.5?vec3(1.,.48,.10):vec3(.22,1.,.38);
+            gl_FragColor.rgb=mix(gl_FragColor.rgb,rimColor,rim*.9);
+        }
         return;
     }
     if(style>9.5 && style<11.5){
@@ -942,6 +955,7 @@ void main(){
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeEnabled'),missionSky.wormhole?1:0);
                 var gridControl=/** @type {HTMLInputElement|null} */(document.getElementById('bridge-grid'));
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeGrid'),missionSky.wormhole&&(gridControl?gridControl.checked:new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeGrid')!=='0')?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeOutline'),missionSky.wormhole&&new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeOutline')!=='0'?1:0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeGridPixel'),2.2*dpr/(height*viewFocal));
                 gl.uniform1f(gl.getUniformLocation(sky,'ellisRegion'),pose.region||0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeLookup'),bridgeTable?1:0);
