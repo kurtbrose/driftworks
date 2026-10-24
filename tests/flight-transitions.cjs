@@ -52,7 +52,7 @@ module.exports = function runFlightTransitions(namespace) {
     const elapsed = [];
     const noop = () => {};
     const DW = Object.assign({}, namespace, {
-      audio:{mountMixer:noop, unlock:noop, setFlightEngine:noop, playGunshot:noop, playImpact:noop},
+      audio:{mountMixer:noop, unlock:noop, setFlightEngine:noop, playGunshot:noop, playImpact:noop, playWormhole:noop},
       flightDiagnostics:{mount:() => namespace.flightDiagnostics.mount({document, performance:{now:() => now}})},
       scene3d:{surfaceFrame:(_asteroid, direction) => ({point:direction})},
       flightSession:{create(environment) {
@@ -81,6 +81,7 @@ module.exports = function runFlightTransitions(namespace) {
       URL:{createObjectURL:() => 'blob:test',revokeObjectURL() {}},
       URLSearchParams, location:{search}, performance:{now:() => now},
       requestAnimationFrame:callback => { frame = callback; }});
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/ellis-feedback.js'), 'utf8'), context, {filename:'experiments/ellis-feedback.js'});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight.js'), 'utf8'), context, {filename:'experiments/flight.js'});
     return {get, actions, session, elapsed, document, captures, clipboard,
       tick(time) { now = time; const callback = frame; frame = null; callback(time); assert(frame); }};

@@ -907,6 +907,15 @@
     f.controls.haptics(.1,{hit:true});f.controls.clear();
   });
 
+  test('wormhole haptics are gentle nearby, pulse at crossing, and yield to damage', function(){
+    var f=flightControlsFixture(),calls=[];f.elements['input-mode'].value='controller';
+    f.setPads([{index:0,id:'Throat pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[],vibrationActuator:{playEffect:function(type,effect){calls.push(effect);return Promise.resolve('complete');},reset:function(){return Promise.resolve('complete');}}}]);
+    f.controls.sample();f.controls.haptics(.1,{throat:1});assert(calls[0].strongMagnitude===.08&&calls[0].weakMagnitude===.14);
+    f.controls.haptics(.1,{throat:1,transit:true});assert(calls[1].strongMagnitude===.3);
+    f.controls.haptics(.01,{transit:true,hit:true});assert(calls[2].strongMagnitude===.55,'Damage retains priority');
+    f.controls.clear();f.elements.rumble.checked=false;f.controls.haptics(.1,{throat:1,transit:true});assert(calls.length===3,'Existing rumble opt-out applies');
+  });
+
   test('mouse takeover stops rumble until fresh controller activity resumes it', function () {
     var f=flightControlsFixture(),c=f.controls,calls=0,resets=0;
     var pad={index:0,id:'Takeover rumble',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[],vibrationActuator:{

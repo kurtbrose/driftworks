@@ -1,0 +1,3208 @@
+{
+  "runs": [
+    {
+      "temporalTile": 8,
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "valid": true,
+        "contextLosses": 0,
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "captures": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "primary": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "hitMap": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "compositor": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "refinement": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "screen": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T08:19:46.824Z",
+      "sampleEnd": "2026-10-24T08:19:54.827Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        }
+      },
+      "ablation": "sky-only",
+      "cap": "30",
+      "scale": "1",
+      "mode": "new",
+      "view": "warped",
+      "quality": "refined",
+      "live": false,
+      "samples": 240,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 33.28875000029802,
+        "p50": 32.200000047683716,
+        "p95": 40.39999997615814
+      },
+      "cpu": {
+        "mean": 0.8091666683554649,
+        "p50": 0.8000000715255737,
+        "p95": 1
+      },
+      "draws": {
+        "mean": 94,
+        "p50": 94,
+        "p95": 94
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.07708333631356558,
+        "p50": 0.10000002384185791,
+        "p95": 0.19999992847442627
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.10000002384185791,
+        "drawCalls": 94,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 0.5
+      }
+    },
+    {
+      "temporalTile": 8,
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "valid": true,
+        "contextLosses": 0,
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "captures": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "primary": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "hitMap": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "compositor": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "refinement": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "screen": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T08:20:37.367Z",
+      "sampleEnd": "2026-10-24T08:20:45.380Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 26.379166666666666,
+            "p95": 27
+          },
+          "triangles": {
+            "mean": 391839.63333333336,
+            "p95": 392390
+          },
+          "cpu": {
+            "mean": 0.5804166639844577,
+            "p95": 0.8999999761581421
+          }
+        }
+      },
+      "ablation": "direct",
+      "cap": "30",
+      "scale": "1",
+      "mode": "new",
+      "view": "warped",
+      "quality": "refined",
+      "live": false,
+      "samples": 240,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 33.282083333532015,
+        "p50": 39.300000071525574,
+        "p95": 40.5
+      },
+      "cpu": {
+        "mean": 1.0799999982118607,
+        "p50": 1.0999999046325684,
+        "p95": 1.3000000715255737
+      },
+      "draws": {
+        "mean": 31,
+        "p50": 31,
+        "p95": 31
+      },
+      "triangles": {
+        "mean": 404009,
+        "p50": 404009,
+        "p95": 404009
+      },
+      "captures": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "bridgeCpu": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 0,
+        "bridgeCpuMs": 0,
+        "drawCalls": 31,
+        "triangles": 404009,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 0.6000000238418579
+      }
+    },
+    {
+      "temporalTile": 8,
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "valid": true,
+        "contextLosses": 0,
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "captures": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "primary": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "hitMap": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "compositor": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "refinement": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "screen": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T08:21:24.763Z",
+      "sampleEnd": "2026-10-24T08:21:32.768Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.21624999394019445,
+            "p95": 0.3999999761581421
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 25,
+            "p95": 25
+          },
+          "triangles": {
+            "mean": 391161,
+            "p95": 391161
+          },
+          "cpu": {
+            "mean": 0.2674999972184499,
+            "p95": 0.3999999761581421
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.017083334426085155,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.375,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 668.3333333333334,
+            "p95": 1221
+          },
+          "cpu": {
+            "mean": 0.24791666517655056,
+            "p95": 0.40000009536743164
+          }
+        }
+      },
+      "ablation": "geometry",
+      "cap": "30",
+      "scale": "1",
+      "mode": "new",
+      "view": "warped",
+      "quality": "refined",
+      "live": false,
+      "samples": 240,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 33.30166666656733,
+        "p50": 39.200000047683716,
+        "p95": 40.60000002384186
+      },
+      "cpu": {
+        "mean": 1.5599999994039535,
+        "p50": 1.5,
+        "p95": 1.9000000953674316
+      },
+      "draws": {
+        "mean": 94,
+        "p50": 94,
+        "p95": 94
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.839583332836628,
+        "p50": 0.8000000715255737,
+        "p95": 1.100000023841858
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.8000000715255737,
+        "drawCalls": 94,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1.100000023841858
+      }
+    },
+    {
+      "temporalTile": 8,
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "valid": true,
+        "contextLosses": 0,
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "captures": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "primary": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "hitMap": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "compositor": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "refinement": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "screen": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T08:23:25.038Z",
+      "sampleEnd": "2026-10-24T08:23:33.044Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.25000000099341074,
+            "p95": 0.49999988079071045
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 25,
+            "p95": 25
+          },
+          "triangles": {
+            "mean": 391161,
+            "p95": 391161
+          },
+          "cpu": {
+            "mean": 0.3075000047683716,
+            "p95": 0.5
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.021250003079573313,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.3875,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 677.6833333333333,
+            "p95": 1221
+          },
+          "cpu": {
+            "mean": 0.2950000007947286,
+            "p95": 0.5
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "30",
+      "scale": "1",
+      "mode": "new",
+      "view": "warped",
+      "quality": "refined",
+      "live": false,
+      "samples": 240,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 33.30625,
+        "p50": 36.799999952316284,
+        "p95": 40.700000047683716
+      },
+      "cpu": {
+        "mean": 1.7045833398898442,
+        "p50": 1.7000000476837158,
+        "p95": 2.100000023841858
+      },
+      "draws": {
+        "mean": 94,
+        "p50": 94,
+        "p95": 94
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.9558333372076352,
+        "p50": 0.9000000953674316,
+        "p95": 1.2000000476837158
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.9000000953674316,
+        "drawCalls": 94,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1.100000023841858
+      },
+      "lod": "explicit"
+    },
+    {
+      "temporalTile": 8,
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "full",
+      "hoist": false,
+      "gpu": {
+        "valid": true,
+        "contextLosses": 0,
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "captures": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "primary": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "hitMap": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "compositor": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "refinement": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "screen": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T08:24:52.098Z",
+      "sampleEnd": "2026-10-24T08:25:00.105Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.21374999731779099,
+            "p95": 0.3999999761581421
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 25,
+            "p95": 25
+          },
+          "triangles": {
+            "mean": 391161,
+            "p95": 391161
+          },
+          "cpu": {
+            "mean": 0.2616666634877523,
+            "p95": 0.3999999761581421
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.01999999930461248,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 0,
+            "p95": 0
+          },
+          "triangles": {
+            "mean": 0,
+            "p95": 0
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.3791666666666667,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 671.45,
+            "p95": 1221
+          },
+          "cpu": {
+            "mean": 0.24624999910593032,
+            "p95": 0.40000009536743164
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "30",
+      "scale": "1",
+      "mode": "new",
+      "view": "warped",
+      "quality": "refined",
+      "live": false,
+      "samples": 240,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 33.30541666696469,
+        "p50": 38.200000047683716,
+        "p95": 40.60000002384186
+      },
+      "cpu": {
+        "mean": 1.574583332737287,
+        "p50": 1.5,
+        "p95": 2.0999999046325684
+      },
+      "draws": {
+        "mean": 94,
+        "p50": 94,
+        "p95": 94
+      },
+      "triangles": {
+        "mean": 1212029,
+        "p50": 1212029,
+        "p95": 1212029
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.8570833285649617,
+        "p50": 0.8000000715255737,
+        "p95": 1.100000023841858
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.8000000715255737,
+        "drawCalls": 94,
+        "triangles": 1212029,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1.100000023841858
+      },
+      "lod": "implicit"
+    },
+    {
+      "temporalTile": 8,
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "adaptive",
+      "hoist": false,
+      "gpu": {
+        "valid": true,
+        "contextLosses": 0,
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "captures": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "primary": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "hitMap": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "compositor": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "refinement": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "screen": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T08:26:03.084Z",
+      "sampleEnd": "2026-10-24T08:26:11.090Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 29,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 403929,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.2233333279689153,
+            "p95": 0.3999999761581421
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 25,
+            "p95": 25
+          },
+          "triangles": {
+            "mean": 391161,
+            "p95": 391161
+          },
+          "cpu": {
+            "mean": 0.2666666656732559,
+            "p95": 0.3999999761581421
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.016249999403953552,
+            "p95": 0.10000002384185791
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.010416667163372039,
+            "p95": 0.10000002384185791
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.013749998807907105,
+            "p95": 0.10000002384185791
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.3791666666666667,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 671.8166666666667,
+            "p95": 1219
+          },
+          "cpu": {
+            "mean": 0.2437500014901161,
+            "p95": 0.5
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "30",
+      "scale": "1",
+      "mode": "new",
+      "view": "warped",
+      "quality": "refined",
+      "live": false,
+      "samples": 240,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimerAvailable": true,
+      "frame": {
+        "mean": 33.30333333313465,
+        "p50": 37.300000071525574,
+        "p95": 40.5
+      },
+      "cpu": {
+        "mean": 1.5420833294590315,
+        "p50": 1.5,
+        "p95": 1.899999976158142
+      },
+      "draws": {
+        "mean": 96,
+        "p50": 96,
+        "p95": 96
+      },
+      "triangles": {
+        "mean": 1212033,
+        "p50": 1212033,
+        "p95": 1212033
+      },
+      "captures": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.8629166627923648,
+        "p50": 0.8000000715255737,
+        "p95": 1.100000023841858
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.8999999761581421,
+        "drawCalls": 96,
+        "triangles": 1212033,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 1.0999999046325684
+      },
+      "lod": "explicit"
+    },
+    {
+      "temporalTile": 8,
+      "temporal": false,
+      "pan": null,
+      "historyValid": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0
+      },
+      "geometryAngle": "unlimited",
+      "geometry": "adaptive",
+      "hoist": false,
+      "gpu": {
+        "valid": false,
+        "contextLosses": 7,
+        "invalid": 0,
+        "stages": {
+          "sky": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "captures": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "primary": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "hitMap": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "compositor": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "refinement": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          },
+          "screen": {
+            "samples": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null
+          }
+        }
+      },
+      "sampleStart": "2026-10-24T08:27:05.134Z",
+      "sampleEnd": "2026-10-24T08:27:13.142Z",
+      "stageStats": {
+        "captures": {
+          "calls": {
+            "mean": 3.7960199004975124,
+            "p95": 29
+          },
+          "triangles": {
+            "mean": 26128.601990049752,
+            "p95": 403929
+          },
+          "cpu": {
+            "mean": 0.024875623669790393,
+            "p95": 0.2999999523162842
+          }
+        },
+        "primary": {
+          "calls": {
+            "mean": 3.487562189054726,
+            "p95": 25
+          },
+          "triangles": {
+            "mean": 25302.71144278607,
+            "p95": 391161
+          },
+          "cpu": {
+            "mean": 0.023383084814346845,
+            "p95": 0.2999999523162842
+          }
+        },
+        "hitMap": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.00298507474548188,
+            "p95": 0
+          }
+        },
+        "compositor": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0.0019900496326275725,
+            "p95": 0
+          }
+        },
+        "refinement": {
+          "calls": {
+            "mean": 1,
+            "p95": 1
+          },
+          "triangles": {
+            "mean": 2,
+            "p95": 2
+          },
+          "cpu": {
+            "mean": 0,
+            "p95": 0
+          }
+        },
+        "screen": {
+          "calls": {
+            "mean": 1.3930348258706469,
+            "p95": 2
+          },
+          "triangles": {
+            "mean": 620.9900497512438,
+            "p95": 1075
+          },
+          "cpu": {
+            "mean": 0.017412935916464128,
+            "p95": 0.19999992847442627
+          }
+        }
+      },
+      "ablation": null,
+      "cap": "30",
+      "scale": "1",
+      "mode": "new",
+      "view": "warped",
+      "quality": "refined",
+      "live": false,
+      "samples": 201,
+      "visibility": "visible",
+      "viewport": [
+        1280,
+        720
+      ],
+      "dpr": 1.5,
+      "backing": [
+        1920,
+        1080
+      ],
+      "renderer": "unavailable",
+      "gpuTimerAvailable": false,
+      "frame": {
+        "mean": 39.827860696398794,
+        "p50": 39.200000047683716,
+        "p95": 40.699999928474426
+      },
+      "cpu": {
+        "mean": 1.0348258623436315,
+        "p50": 0.8999999761581421,
+        "p95": 1.8000000715255737
+      },
+      "draws": {
+        "mean": 97.54228855721394,
+        "p50": 96,
+        "p95": 96
+      },
+      "triangles": {
+        "mean": 1232132.9502487562,
+        "p50": 1212033,
+        "p95": 1212033
+      },
+      "captures": {
+        "mean": 2.0497512437810945,
+        "p50": 2,
+        "p95": 2
+      },
+      "bridgeCpu": {
+        "mean": 0.391542284049798,
+        "p50": 0.30000007152557373,
+        "p95": 1.0999999046325684
+      },
+      "actors": 8,
+      "scene": {
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 2,
+        "bridgeCpuMs": 0.2999999523162842,
+        "drawCalls": 96,
+        "triangles": 1212033,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 31,
+        "materials": 22,
+        "width": 1920,
+        "height": 1080,
+        "pixelRatio": 1.5,
+        "cpuMs": 0.5
+      },
+      "lod": "implicit"
+    }
+  ],
+  "persistent": {
+    "run": "mvm4xt20",
+    "stage": "three.direct",
+    "sequence": 18508,
+    "recent": [
+      {
+        "stage": "ellis.hit-map",
+        "sequence": 18497,
+        "time": 85075.80000007153
+      },
+      {
+        "stage": "ellis.composition",
+        "sequence": 18498,
+        "time": 85075.80000007153
+      },
+      {
+        "stage": "ellis.refinement",
+        "sequence": 18499,
+        "time": 85075.80000007153
+      },
+      {
+        "stage": "sky.render",
+        "sequence": 18500,
+        "time": 85115.20000004768
+      },
+      {
+        "stage": "ellis.primary",
+        "sequence": 18501,
+        "time": 85115.60000002384
+      },
+      {
+        "stage": "ellis.effects",
+        "sequence": 18502,
+        "time": 85115.70000004768
+      },
+      {
+        "stage": "ellis.capture.0.3",
+        "sequence": 18503,
+        "time": 85115.70000004768
+      },
+      {
+        "stage": "ellis.capture.1.3",
+        "sequence": 18504,
+        "time": 85115.80000007153
+      },
+      {
+        "stage": "ellis.hit-map",
+        "sequence": 18505,
+        "time": 85115.89999997616
+      },
+      {
+        "stage": "ellis.composition",
+        "sequence": 18506,
+        "time": 85115.89999997616
+      },
+      {
+        "stage": "ellis.refinement",
+        "sequence": 18507,
+        "time": 85115.89999997616
+      },
+      {
+        "stage": "three.direct",
+        "sequence": 18508,
+        "time": 85116.60000002384
+      }
+    ],
+    "records": [
+      {
+        "run": "mvm4t7iy",
+        "time": "2026-10-24T08:23:19.797Z",
+        "kind": "webglcontextcreationerror",
+        "stage": "sky.create",
+        "sequence": 2,
+        "recent": [
+          {
+            "stage": "three.create",
+            "sequence": 1,
+            "time": 132.20000004768372
+          },
+          {
+            "stage": "sky.create",
+            "sequence": 2,
+            "time": 211.90000009536743
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "Canvas has an existing context of a different type",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 300,
+            "height": 150,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4t7iy",
+        "time": "2026-10-24T08:23:33.043Z",
+        "kind": "webglcontextcreationerror",
+        "stage": "ellis.composition",
+        "sequence": 1981,
+        "recent": [
+          {
+            "stage": "ellis.primary",
+            "sequence": 1970,
+            "time": 13468.100000023842
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 1971,
+            "time": 13468.400000095367
+          },
+          {
+            "stage": "ellis.capture.0.5",
+            "sequence": 1972,
+            "time": 13468.5
+          },
+          {
+            "stage": "ellis.capture.1.5",
+            "sequence": 1973,
+            "time": 13468.700000047684
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 1974,
+            "time": 13468.800000071526
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 1975,
+            "time": 13469.5
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 1976,
+            "time": 13494.100000023842
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 1977,
+            "time": 13494.5
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 1978,
+            "time": 13494.900000095367
+          },
+          {
+            "stage": "ellis.capture.0.0",
+            "sequence": 1979,
+            "time": 13495
+          },
+          {
+            "stage": "ellis.capture.1.0",
+            "sequence": 1980,
+            "time": 13495.200000047684
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 1981,
+            "time": 13495.300000071526
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "Canvas has an existing context of a different type",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 1920,
+            "height": 1080,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4t7iy",
+        "time": "2026-10-24T08:24:46.737Z",
+        "kind": "pagehide",
+        "stage": "ellis.composition",
+        "sequence": 16053,
+        "recent": [
+          {
+            "stage": "ellis.primary",
+            "sequence": 16042,
+            "time": 87143.60000002384
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 16043,
+            "time": 87143.90000009537
+          },
+          {
+            "stage": "ellis.capture.0.2",
+            "sequence": 16044,
+            "time": 87144.10000002384
+          },
+          {
+            "stage": "ellis.capture.1.2",
+            "sequence": 16045,
+            "time": 87144.30000007153
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 16046,
+            "time": 87144.30000007153
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 16047,
+            "time": 87145.10000002384
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 16048,
+            "time": 87170
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 16049,
+            "time": 87170.60000002384
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 16050,
+            "time": 87171
+          },
+          {
+            "stage": "ellis.capture.0.3",
+            "sequence": 16051,
+            "time": 87171.10000002384
+          },
+          {
+            "stage": "ellis.capture.1.3",
+            "sequence": 16052,
+            "time": 87171.40000009537
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 16053,
+            "time": 87171.60000002384
+          }
+        ],
+        "path": "/output/ellis-benchmark.html"
+      },
+      {
+        "run": "mvm4v2t1",
+        "time": "2026-10-24T08:24:46.837Z",
+        "kind": "startup",
+        "stage": "startup",
+        "sequence": 0,
+        "recent": [],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "debug": true,
+          "mission": "ellis",
+          "geometry": "full"
+        }
+      },
+      {
+        "run": "mvm4v2t1",
+        "time": "2026-10-24T08:24:47.007Z",
+        "kind": "webglcontextcreationerror",
+        "stage": "sky.create",
+        "sequence": 2,
+        "recent": [
+          {
+            "stage": "three.create",
+            "sequence": 1,
+            "time": 146.70000004768372
+          },
+          {
+            "stage": "sky.create",
+            "sequence": 2,
+            "time": 227.30000007152557
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "Canvas has an existing context of a different type",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 300,
+            "height": 150,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4v2t1",
+        "time": "2026-10-24T08:25:00.103Z",
+        "kind": "webglcontextcreationerror",
+        "stage": "ellis.composition",
+        "sequence": 1979,
+        "recent": [
+          {
+            "stage": "ellis.primary",
+            "sequence": 1968,
+            "time": 13337.399999976158
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 1969,
+            "time": 13337.800000071526
+          },
+          {
+            "stage": "ellis.capture.0.5",
+            "sequence": 1970,
+            "time": 13337.899999976158
+          },
+          {
+            "stage": "ellis.capture.1.5",
+            "sequence": 1971,
+            "time": 13338.200000047684
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 1972,
+            "time": 13338.399999976158
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 1973,
+            "time": 13338.800000071526
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 1974,
+            "time": 13363.399999976158
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 1975,
+            "time": 13363.899999976158
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 1976,
+            "time": 13364.200000047684
+          },
+          {
+            "stage": "ellis.capture.0.0",
+            "sequence": 1977,
+            "time": 13364.300000071526
+          },
+          {
+            "stage": "ellis.capture.1.0",
+            "sequence": 1978,
+            "time": 13364.5
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 1979,
+            "time": 13364.700000047684
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "Canvas has an existing context of a different type",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 1920,
+            "height": 1080,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4v2t1",
+        "time": "2026-10-24T08:25:56.992Z",
+        "kind": "pagehide",
+        "stage": "three.direct",
+        "sequence": 12844,
+        "recent": [
+          {
+            "stage": "ellis.primary",
+            "sequence": 12833,
+            "time": 70232.5
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 12834,
+            "time": 70232.89999997616
+          },
+          {
+            "stage": "ellis.capture.0.5",
+            "sequence": 12835,
+            "time": 70233
+          },
+          {
+            "stage": "ellis.capture.1.5",
+            "sequence": 12836,
+            "time": 70233.30000007153
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 12837,
+            "time": 70233.39999997616
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 12838,
+            "time": 70258.39999997616
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 12839,
+            "time": 70259
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 12840,
+            "time": 70259.39999997616
+          },
+          {
+            "stage": "ellis.capture.0.0",
+            "sequence": 12841,
+            "time": 70259.60000002384
+          },
+          {
+            "stage": "ellis.capture.1.0",
+            "sequence": 12842,
+            "time": 70260.10000002384
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 12843,
+            "time": 70260.20000004768
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 12844,
+            "time": 70260.80000007153
+          }
+        ],
+        "path": "/output/ellis-benchmark.html"
+      },
+      {
+        "run": "mvm4wl0y",
+        "time": "2026-10-24T08:25:57.107Z",
+        "kind": "startup",
+        "stage": "startup",
+        "sequence": 0,
+        "recent": [],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "debug": true,
+          "mission": "ellis",
+          "geometry": "adaptive"
+        }
+      },
+      {
+        "run": "mvm4wl0y",
+        "time": "2026-10-24T08:25:57.254Z",
+        "kind": "webglcontextcreationerror",
+        "stage": "sky.create",
+        "sequence": 2,
+        "recent": [
+          {
+            "stage": "three.create",
+            "sequence": 1,
+            "time": 156
+          },
+          {
+            "stage": "sky.create",
+            "sequence": 2,
+            "time": 224.69999992847443
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "Canvas has an existing context of a different type",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 300,
+            "height": 150,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4wl0y",
+        "time": "2026-10-24T08:26:11.089Z",
+        "kind": "webglcontextcreationerror",
+        "stage": "ellis.refinement",
+        "sequence": 2595,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 2584,
+            "time": 14071.399999976158
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 2585,
+            "time": 14071.399999976158
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 2586,
+            "time": 14071.399999976158
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 2587,
+            "time": 14072.100000023842
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 2588,
+            "time": 14096.799999952316
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 2589,
+            "time": 14097.299999952316
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 2590,
+            "time": 14097.600000023842
+          },
+          {
+            "stage": "ellis.capture.0.0",
+            "sequence": 2591,
+            "time": 14097.600000023842
+          },
+          {
+            "stage": "ellis.capture.1.0",
+            "sequence": 2592,
+            "time": 14097.899999976158
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 2593,
+            "time": 14098.100000023842
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 2594,
+            "time": 14098.199999928474
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 2595,
+            "time": 14098.199999928474
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "Canvas has an existing context of a different type",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 1920,
+            "height": 1080,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4wl0y",
+        "time": "2026-10-24T08:26:54.052Z",
+        "kind": "pagehide",
+        "stage": "three.direct",
+        "sequence": 13353,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 13342,
+            "time": 57009
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 13343,
+            "time": 57009
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 13344,
+            "time": 57009.10000002384
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 13345,
+            "time": 57034.5
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 13346,
+            "time": 57035.10000002384
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 13347,
+            "time": 57035.39999997616
+          },
+          {
+            "stage": "ellis.capture.0.0",
+            "sequence": 13348,
+            "time": 57035.60000002384
+          },
+          {
+            "stage": "ellis.capture.1.0",
+            "sequence": 13349,
+            "time": 57035.799999952316
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 13350,
+            "time": 57036.10000002384
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 13351,
+            "time": 57036.10000002384
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 13352,
+            "time": 57036.10000002384
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 13353,
+            "time": 57036.799999952316
+          }
+        ],
+        "path": "/output/ellis-benchmark.html"
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:54.168Z",
+        "kind": "startup",
+        "stage": "startup",
+        "sequence": 0,
+        "recent": [],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "debug": true,
+          "mission": "ellis",
+          "geometry": "adaptive"
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:54.309Z",
+        "kind": "webglcontextcreationerror",
+        "stage": "sky.create",
+        "sequence": 2,
+        "recent": [
+          {
+            "stage": "three.create",
+            "sequence": 1,
+            "time": 151.20000004768372
+          },
+          {
+            "stage": "sky.create",
+            "sequence": 2,
+            "time": 215.60000002384186
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "Canvas has an existing context of a different type",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 300,
+            "height": 150,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:57.783Z",
+        "kind": "webglcontextlost",
+        "stage": "three.direct",
+        "sequence": 99,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 88,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 89,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 90,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 91,
+            "time": 2929.899999976158
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 92,
+            "time": 2930.7000000476837
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 93,
+            "time": 2931.8000000715256
+          },
+          {
+            "stage": "ellis.capture.0.2",
+            "sequence": 94,
+            "time": 2932
+          },
+          {
+            "stage": "ellis.capture.1.2",
+            "sequence": 95,
+            "time": 2932.3000000715256
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 96,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 97,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 98,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 99,
+            "time": 2933.5
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "",
+            "width": 1920,
+            "height": 1080,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:57.790Z",
+        "kind": "webglcontextlost",
+        "stage": "three.direct",
+        "sequence": 99,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 88,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 89,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 90,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 91,
+            "time": 2929.899999976158
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 92,
+            "time": 2930.7000000476837
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 93,
+            "time": 2931.8000000715256
+          },
+          {
+            "stage": "ellis.capture.0.2",
+            "sequence": 94,
+            "time": 2932
+          },
+          {
+            "stage": "ellis.capture.1.2",
+            "sequence": 95,
+            "time": 2932.3000000715256
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 96,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 97,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 98,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 99,
+            "time": 2933.5
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 1920,
+            "height": 1080,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:57.791Z",
+        "kind": "webglcontextlost",
+        "stage": "three.direct",
+        "sequence": 99,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 88,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 89,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 90,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 91,
+            "time": 2929.899999976158
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 92,
+            "time": 2930.7000000476837
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 93,
+            "time": 2931.8000000715256
+          },
+          {
+            "stage": "ellis.capture.0.2",
+            "sequence": 94,
+            "time": 2932
+          },
+          {
+            "stage": "ellis.capture.1.2",
+            "sequence": 95,
+            "time": 2932.3000000715256
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 96,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 97,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 98,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 99,
+            "time": 2933.5
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "gpu-flight-hud",
+            "width": 1920,
+            "height": 1080,
+            "parent": ""
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:57.792Z",
+        "kind": "webglcontextlost",
+        "stage": "three.direct",
+        "sequence": 99,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 88,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 89,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 90,
+            "time": 2891.3000000715256
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 91,
+            "time": 2929.899999976158
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 92,
+            "time": 2930.7000000476837
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 93,
+            "time": 2931.8000000715256
+          },
+          {
+            "stage": "ellis.capture.0.2",
+            "sequence": 94,
+            "time": 2932
+          },
+          {
+            "stage": "ellis.capture.1.2",
+            "sequence": 95,
+            "time": 2932.3000000715256
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 96,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 97,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 98,
+            "time": 2932.600000023842
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 99,
+            "time": 2933.5
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "",
+            "width": 317,
+            "height": 188,
+            "parent": "target-camera"
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:58.788Z",
+        "kind": "webglcontextrestored",
+        "stage": "ellis.refinement",
+        "sequence": 235,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 224,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 225,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 226,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 227,
+            "time": 4701.300000071526
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 228,
+            "time": 4740.100000023842
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 229,
+            "time": 4740.800000071526
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 230,
+            "time": 4740.800000071526
+          },
+          {
+            "stage": "ellis.capture.0.4",
+            "sequence": 231,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.capture.1.4",
+            "sequence": 232,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 233,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 234,
+            "time": 4741.100000023842
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 235,
+            "time": 4741.100000023842
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "",
+            "width": 1920,
+            "height": 1080,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:58.797Z",
+        "kind": "webglcontextrestored",
+        "stage": "ellis.refinement",
+        "sequence": 235,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 224,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 225,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 226,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 227,
+            "time": 4701.300000071526
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 228,
+            "time": 4740.100000023842
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 229,
+            "time": 4740.800000071526
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 230,
+            "time": 4740.800000071526
+          },
+          {
+            "stage": "ellis.capture.0.4",
+            "sequence": 231,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.capture.1.4",
+            "sequence": 232,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 233,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 234,
+            "time": 4741.100000023842
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 235,
+            "time": 4741.100000023842
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "gpu-flight-hud",
+            "width": 1920,
+            "height": 1080,
+            "parent": ""
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:26:58.804Z",
+        "kind": "webglcontextrestored",
+        "stage": "ellis.refinement",
+        "sequence": 235,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 224,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 225,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 226,
+            "time": 4700.800000071526
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 227,
+            "time": 4701.300000071526
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 228,
+            "time": 4740.100000023842
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 229,
+            "time": 4740.800000071526
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 230,
+            "time": 4740.800000071526
+          },
+          {
+            "stage": "ellis.capture.0.4",
+            "sequence": 231,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.capture.1.4",
+            "sequence": 232,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 233,
+            "time": 4741
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 234,
+            "time": 4741.100000023842
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 235,
+            "time": 4741.100000023842
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "",
+            "width": 317,
+            "height": 188,
+            "parent": "target-camera"
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:27:06.255Z",
+        "kind": "webglcontextlost",
+        "stage": "ellis.refinement",
+        "sequence": 372,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 361,
+            "time": 11494.100000023842
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 362,
+            "time": 11494.200000047684
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 363,
+            "time": 11494.200000047684
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 364,
+            "time": 11494.800000071526
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 365,
+            "time": 11519.200000047684
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 366,
+            "time": 11519.700000047684
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 367,
+            "time": 11520.200000047684
+          },
+          {
+            "stage": "ellis.capture.0.0",
+            "sequence": 368,
+            "time": 11520.399999976158
+          },
+          {
+            "stage": "ellis.capture.1.0",
+            "sequence": 369,
+            "time": 11520.700000047684
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 370,
+            "time": 11520.899999976158
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 371,
+            "time": 11520.899999976158
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 372,
+            "time": 11521
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "",
+            "width": 1920,
+            "height": 1080,
+            "parent": "viewer"
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:27:06.256Z",
+        "kind": "webglcontextlost",
+        "stage": "ellis.refinement",
+        "sequence": 372,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 361,
+            "time": 11494.100000023842
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 362,
+            "time": 11494.200000047684
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 363,
+            "time": 11494.200000047684
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 364,
+            "time": 11494.800000071526
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 365,
+            "time": 11519.200000047684
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 366,
+            "time": 11519.700000047684
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 367,
+            "time": 11520.200000047684
+          },
+          {
+            "stage": "ellis.capture.0.0",
+            "sequence": 368,
+            "time": 11520.399999976158
+          },
+          {
+            "stage": "ellis.capture.1.0",
+            "sequence": 369,
+            "time": 11520.700000047684
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 370,
+            "time": 11520.899999976158
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 371,
+            "time": 11520.899999976158
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 372,
+            "time": 11521
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "gpu-flight-hud",
+            "width": 1920,
+            "height": 1080,
+            "parent": ""
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:27:06.257Z",
+        "kind": "webglcontextlost",
+        "stage": "ellis.refinement",
+        "sequence": 372,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 361,
+            "time": 11494.100000023842
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 362,
+            "time": 11494.200000047684
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 363,
+            "time": 11494.200000047684
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 364,
+            "time": 11494.800000071526
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 365,
+            "time": 11519.200000047684
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 366,
+            "time": 11519.700000047684
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 367,
+            "time": 11520.200000047684
+          },
+          {
+            "stage": "ellis.capture.0.0",
+            "sequence": 368,
+            "time": 11520.399999976158
+          },
+          {
+            "stage": "ellis.capture.1.0",
+            "sequence": 369,
+            "time": 11520.700000047684
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 370,
+            "time": 11520.899999976158
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 371,
+            "time": 11520.899999976158
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 372,
+            "time": 11521
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "",
+          "canvas": {
+            "className": "",
+            "width": 317,
+            "height": 188,
+            "parent": "target-camera"
+          }
+        }
+      },
+      {
+        "run": "mvm4xt20",
+        "time": "2026-10-24T08:27:13.141Z",
+        "kind": "webglcontextcreationerror",
+        "stage": "ellis.refinement",
+        "sequence": 1960,
+        "recent": [
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 1949,
+            "time": 19071
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 1950,
+            "time": 19071
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 1951,
+            "time": 19071
+          },
+          {
+            "stage": "three.direct",
+            "sequence": 1952,
+            "time": 19071.399999976158
+          },
+          {
+            "stage": "sky.render",
+            "sequence": 1953,
+            "time": 19097.200000047684
+          },
+          {
+            "stage": "ellis.primary",
+            "sequence": 1954,
+            "time": 19097.600000023842
+          },
+          {
+            "stage": "ellis.effects",
+            "sequence": 1955,
+            "time": 19097.700000047684
+          },
+          {
+            "stage": "ellis.capture.0.1",
+            "sequence": 1956,
+            "time": 19097.800000071526
+          },
+          {
+            "stage": "ellis.capture.1.1",
+            "sequence": 1957,
+            "time": 19097.800000071526
+          },
+          {
+            "stage": "ellis.hit-map",
+            "sequence": 1958,
+            "time": 19097.899999976158
+          },
+          {
+            "stage": "ellis.composition",
+            "sequence": 1959,
+            "time": 19097.899999976158
+          },
+          {
+            "stage": "ellis.refinement",
+            "sequence": 1960,
+            "time": 19097.899999976158
+          }
+        ],
+        "path": "/output/ellis-benchmark.html",
+        "detail": {
+          "status": "Canvas has an existing context of a different type",
+          "canvas": {
+            "className": "flight-skybox",
+            "width": 1920,
+            "height": 1080,
+            "parent": "viewer"
+          }
+        }
+      }
+    ]
+  },
+  "logs": [
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T08:19:36.221Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T08:20:29.455Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "THREE.WebGLProgram: Program Info Log: (153,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value\n(153,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value\n(153,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value",
+      "timestamp": "2026-10-24T08:20:34.058Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T08:21:19.884Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T08:23:19.666Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T08:24:46.871Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T08:25:57.133Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "warn",
+      "message": "WARNING: Multiple instances of Three.js being imported.",
+      "timestamp": "2026-10-24T08:26:54.190Z",
+      "url": "http://localhost:8000/vendor/three/build/three.core.js"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T08:26:57.797Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T08:26:57.801Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T08:26:57.802Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Restored.",
+      "timestamp": "2026-10-24T08:26:58.789Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Restored.",
+      "timestamp": "2026-10-24T08:26:58.797Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Restored.",
+      "timestamp": "2026-10-24T08:26:58.805Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "warn",
+      "message": "THREE.WebGLProgram: Program Info Log: (153,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value\n(153,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value\n(153,12-86): warning X3595: gradient instruction used in a loop with varying iteration; partial derivatives may have undefined value",
+      "timestamp": "2026-10-24T08:27:03.442Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T08:27:06.260Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T08:27:06.260Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    },
+    {
+      "level": "log",
+      "message": "THREE.WebGLRenderer: Context Lost.",
+      "timestamp": "2026-10-24T08:27:06.260Z",
+      "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
+    }
+  ]
+}

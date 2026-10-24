@@ -239,6 +239,14 @@ Asteroid patrol places exactly two hostiles near a randomized asteroid; clearing
 both completes the mission without spawning another wave. Restart keeps the same
 asteroid, while reloading the page generates another.
 
+[Ellis Bridge](experiments/flight.html?mission=ellis) adds field-entry and crossing
+chimes, gentle controller rumble near the throat, and a stronger crossing pulse.
+The HUD names your local side and keeps a faint navigation grid visible nearby.
+Sound follows SFX settings; vibration follows the existing controller-rumble
+setting. The [observation lab](experiments/ellis-study.html) offers fixed cameras,
+scripted ships, pause and frame stepping without combat.
+
+
 The flight HUD uses a dedicated Three.js GPU layer: shader-smoothed panels, rings and lines, distance-field text, integrity meters, radar, aiming/target guidance, a live target monitor and temporary radio transmissions. Ship status sits at lower left, radar at lower center and the target monitor at lower right; small screens move radar above the instruments. All contacts retain visible team-colored markers and offscreen arrows, with dark contrast outlines; enemy arrows are filled. Range labels are reserved for the selected target and current speaker. The selected target retains gold brackets, fixed-size shield/hull bars, half-second damage trails, a shield-collapse flash and gold bearing cues. **L** or controller **X / Square** locks the target; **Tab** cycles enemies and unlocks. **Esc** opens the pause/configuration screen. Settings, radio mute, controls, AI setup, scenario tools, comms history and diagnostics remain DOM controls there. **F3** and **P** pause flight and open the lab section; diagnostics never cover active play. The dialogue-size slider is in the lab's comms history section. The target monitor updates at 15 FPS, and animated radio portraits retain their existing audio synchronization.
 This separate cockpit experiment reuses the production 3D asteroid and background.
 Choose from 35 Terran, Vasudan and Shivan fighter/bomber stat profiles, including the original Hercules and Mk II, Horus, Thoth, Mara, Dragon and Basilisk.

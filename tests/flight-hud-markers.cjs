@@ -14,7 +14,7 @@ const painter={globalAlpha:1,lineWidth:1,strokeStyle:'#fff',fillStyle:'#fff',
   save(){stack.push({globalAlpha:this.globalAlpha,lineWidth:this.lineWidth,strokeStyle:this.strokeStyle,fillStyle:this.fillStyle});},
   restore(){Object.assign(this,stack.pop());},
   beginPath(){points=[];},moveTo(x,y){points.push([x,y]);},lineTo(x,y){points.push([x,y]);},closePath(){},
-  translate(){},rotate(){},arc(x,y,r){calls.push({kind:'arc',x,y,r});},setLineDash(){},fillRect(){},fillText(){},panel(){},image(){},
+  translate(){},rotate(){},arc(x,y,r){calls.push({kind:'arc',x,y,r});},setLineDash(){},fillRect(){},fillText(text,x,y){calls.push({kind:'text',text,x,y});},panel(){},image(){},
   stroke(){calls.push({kind:'stroke',points:points.slice(),color:this.strokeStyle,alpha:this.globalAlpha,width:this.lineWidth});},
   fill(){calls.push({kind:'fill',points:points.slice(),color:this.fillStyle,alpha:this.globalAlpha});},
   strokeRect(x,y,w,h){calls.push({kind:'rect',x,y,w,h,color:this.strokeStyle,alpha:this.globalAlpha,width:this.lineWidth});}
@@ -55,3 +55,15 @@ for(const [w,h,range] of [[1000,700,240],[2048,1532,240],[390,844,120],[844,390,
   assert.ok(calls.some(c=>c.kind==='arc'&&c.x===w/2+range*.5&&c.y===h/2-range*.25&&c.r===5),'Stick cursor follows the same range as the guide');
 }
 console.log('PASS flight guidance: full steering travel, deadzone, cursor alignment and original crosshair size across desktop/mobile resize');
+
+const throatPose={eye:[0,-2340/DW.sim.METERS_PER_UNIT,1550/DW.sim.METERS_PER_UNIT],right:[1,0,0],up:[0,0,1],back:[0,-1,0],region:0};
+calls.length=0;
+DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:0,distance:340,gap:40,proximity:.87,flash:0});
+assert(calls.some(c=>c.kind==='text'&&c.text==='THROAT TRANSIT / ASTEROID'));
+assert(calls.filter(c=>c.kind==='stroke').some(c=>c.points.length>2),'Projected guide meridians are visible');
+assert(calls.flatMap(c=>c.points||[]).flat().every(Number.isFinite));assert.equal(painter.globalAlpha,1,'Guide restores painter state');
+calls.length=0;DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:1,distance:650,gap:350,proximity:0,flash:1});
+assert(calls.some(c=>c.kind==='text'&&c.text==='THROAT CROSSED / RIME'));
+calls.length=0;DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:0,distance:2000,gap:1700,proximity:0,flash:0});assert.equal(calls.length,0);
+calls.length=0;DW.flightHud.paintThroatGuide(painter,1280,720,throatPose,{region:0,distance:834,gap:534,proximity:0,flash:0});assert(calls.some(c=>c.kind==='text'&&c.text==='THROAT AHEAD / ASTEROID'),'Approach status is visible before the field cue');assert(calls.some(c=>c.kind==='text'&&c.text.includes('534 m')));
+console.log('PASS throat HUD: finite projected grid, transit/arrival labels, distant suppression and painter restoration');

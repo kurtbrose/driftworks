@@ -1,0 +1,221 @@
+{
+  "temporalTile": 8,
+  "temporal": false,
+  "pan": null,
+  "historyValid": {
+    "mean": 0,
+    "p50": 0,
+    "p95": 0
+  },
+  "geometryAngle": "unlimited",
+  "geometry": "adaptive",
+  "hoist": false,
+  "gpu": {
+    "valid": true,
+    "contextLosses": 0,
+    "invalid": 0,
+    "stages": {
+      "sky": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "captures": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "primary": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "hitMap": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "compositor": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "refinement": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "screen": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      }
+    }
+  },
+  "sampleStart": "2026-10-24T08:31:57.799Z",
+  "sampleEnd": "2026-10-24T08:32:05.801Z",
+  "stageStats": {
+    "captures": {
+      "calls": {
+        "mean": 29,
+        "p95": 29
+      },
+      "triangles": {
+        "mean": 403929,
+        "p95": 403929
+      },
+      "cpu": {
+        "mean": 0.21916666328907014,
+        "p95": 0.3999999761581421
+      }
+    },
+    "primary": {
+      "calls": {
+        "mean": 25,
+        "p95": 25
+      },
+      "triangles": {
+        "mean": 391161,
+        "p95": 391161
+      },
+      "cpu": {
+        "mean": 0.25291666587193806,
+        "p95": 0.3999999761581421
+      }
+    },
+    "hitMap": {
+      "calls": {
+        "mean": 1,
+        "p95": 1
+      },
+      "triangles": {
+        "mean": 2,
+        "p95": 2
+      },
+      "cpu": {
+        "mean": 0.01833333373069763,
+        "p95": 0.10000002384185791
+      }
+    },
+    "compositor": {
+      "calls": {
+        "mean": 1,
+        "p95": 1
+      },
+      "triangles": {
+        "mean": 2,
+        "p95": 2
+      },
+      "cpu": {
+        "mean": 0.015416667362054189,
+        "p95": 0.10000002384185791
+      }
+    },
+    "refinement": {
+      "calls": {
+        "mean": 1,
+        "p95": 1
+      },
+      "triangles": {
+        "mean": 2,
+        "p95": 2
+      },
+      "cpu": {
+        "mean": 0.010416666169961293,
+        "p95": 0.10000002384185791
+      }
+    },
+    "screen": {
+      "calls": {
+        "mean": 1.3875,
+        "p95": 2
+      },
+      "triangles": {
+        "mean": 677.075,
+        "p95": 1221
+      },
+      "cpu": {
+        "mean": 0.2841666718324026,
+        "p95": 0.5
+      }
+    }
+  },
+  "ablation": null,
+  "cap": "30",
+  "scale": "1",
+  "mode": "new",
+  "view": "warped",
+  "quality": "refined",
+  "live": false,
+  "samples": 240,
+  "visibility": "visible",
+  "viewport": [
+    1280,
+    720
+  ],
+  "dpr": 1.5,
+  "backing": [
+    1920,
+    1080
+  ],
+  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "gpuTimerAvailable": true,
+  "frame": {
+    "mean": 33.32833333313465,
+    "p50": 29.800000071525574,
+    "p95": 44.700000047683716
+  },
+  "cpu": {
+    "mean": 1.5862499977151552,
+    "p50": 1.600000023841858,
+    "p95": 1.899999976158142
+  },
+  "draws": {
+    "mean": 96,
+    "p50": 96,
+    "p95": 96
+  },
+  "triangles": {
+    "mean": 1212033,
+    "p50": 1212033,
+    "p95": 1212033
+  },
+  "captures": {
+    "mean": 2,
+    "p50": 2,
+    "p95": 2
+  },
+  "bridgeCpu": {
+    "mean": 0.8833333308498065,
+    "p50": 0.8999999761581421,
+    "p95": 1.100000023841858
+  },
+  "actors": 8,
+  "scene": {
+    "bridgeObjectPaths": 0,
+    "bridgeObjectPatches": 0,
+    "bridgeObjectError": 0,
+    "bridgeObjectBad": 0,
+    "bridgeHistoryValid": 0,
+    "bridgeCaptures": 2,
+    "bridgeCpuMs": 0.8999999761581421,
+    "drawCalls": 96,
+    "triangles": 1212033,
+    "shadowDrawCalls": 0,
+    "shadowTriangles": 0,
+    "lines": 0,
+    "meshes": 31,
+    "materials": 22,
+    "width": 1920,
+    "height": 1080,
+    "pixelRatio": 1.5,
+    "cpuMs": 1.2000000476837158
+  }
+}

@@ -392,7 +392,9 @@ export type FlightView = {
     camera?: Pose;
     observerCraft?: ArtCraft;
 };
+export type EllisCue = {region:number;distance:number;gap:number;proximity:number;near:boolean;entered:boolean;exited:boolean;crossed:boolean;flash:number};
 export type HudView = FlightView & Appearance & {
+    bridgeCue?:EllisCue;
     asteroid: Asteroid;
     mothership: Ship;
     units: number;
@@ -651,11 +653,14 @@ export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines
 export type EllisDraw={lensRadius?:number;lensCenter?:number[];region?:number;material:import('../src/three-types').Material;object:import('../src/three-types').Object3D;uniforms:Record<string,{value:import('../src/three-types').UniformValue}>};
 export type EllisRenderPass={invalidate:()=>void;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number,revision?:string|null)=>{objectPaths:number;objectPatches:number;objectError:number;objectBad:number;compositionPasses:number;historyValid:number;extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {
+    gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
     evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};
     evacuationScenery:{geometry:(combat:Combat)=>Batch[];status:()=>string;visible:boolean};
     gasGiantWeather:typeof import('./gas-giant-weather');
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
+    ellisFeedback:{describe:(pose:Pose)=>{region:number;distance:number;gap:number;proximity:number};create:()=>{reset:()=>void;update:(pose:Pose,dt:number,active:boolean,enabled:boolean)=>EllisCue}};
+    ellisStudy:{camera:(name:string)=>Pose;sample:(time:number,scenario:string)=>{pose:Pose;velocity:number[]}[]};
     ellisOptics:{primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;size:number};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
@@ -855,7 +860,7 @@ export type ExperimentModules = {
     };
     flightControls: {
         mount: (host: HTMLElement, actions: ControlActions, environment?: ControlEnvironment) => {
-            haptics: (dt: number, feedback: {boost?: boolean; hit?: boolean; shieldBreak?: boolean; fire?: boolean; contact?: boolean}) => void;
+            haptics: (dt: number, feedback: {boost?: boolean; hit?: boolean; shieldBreak?: boolean; fire?: boolean; contact?: boolean; throat?:number; transit?:boolean}) => void;
             sample: () => Demand;
             view: () => {
                 mouse: number[];
@@ -935,6 +940,7 @@ export type ExperimentModules = {
         };
     };
     flightHud: {
+        paintThroatGuide:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,pose:Pose,cue:EllisCue)=>void;
         paintTargetBearing: (ctx: import('./gpu-ui-types').PaintContext, w: number, h: number, angle: number) => void;
         targetStatus: (previous: TargetStatus | null, target: {id: string; shield?: number; maxShield?: number; hp: number; maxHp: number} | undefined, time: number) => TargetStatus | null;
         paintTargetStatus: (ctx: import('./gpu-ui-types').PaintContext, x: number, y: number, status: TargetStatus) => void;

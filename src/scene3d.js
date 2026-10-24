@@ -749,6 +749,7 @@
     canvas.setAttribute('aria-label', '3D tactical scene');
     var THREE = global.THREE;
     if (!THREE) throw new Error('Vendored Three.js did not load');
+    if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('three.create');
     var renderer = new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true,premultipliedAlpha:false});
     // Restored GPU textures have no capture or temporal contents. Refill both.
     canvas.addEventListener('webglcontextlost',function(){if(bridgeRenderer)bridgeRenderer.invalidate();});
@@ -1523,7 +1524,7 @@
         renderStats.bridgeObjectPaths=bridge.objectPaths;renderStats.bridgeObjectPatches=bridge.objectPatches;renderStats.bridgeObjectError=bridge.objectError;renderStats.bridgeObjectBad=bridge.objectBad;renderStats.bridgeHistoryValid=bridge.historyValid;renderStats.bridgeCaptures=bridge.captures;renderStats.bridgeCpuMs=bridge.cpuMs;
         renderStats.drawCalls=renderStats.drawCalls*(1+bridge.captures)+bridge.compositionPasses;
         renderStats.triangles=renderStats.triangles*(1+bridge.captures)+2*bridge.compositionPasses;
-      }else renderer.render(scene,camera);
+      }else{if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('three.direct');renderer.render(scene,camera);}
       renderStats.meshes=frameMeshes.size;renderStats.materials=frameMaterials.size;renderStats.cpuMs=performance.now()-renderStart;
       if (wallDt > 0) fps = fps * 0.9 + Math.min(240, 1 / wallDt) * 0.1;
       if (DW.audio) DW.audio.setEngineThrust(Math.min(1, Math.max.apply(null, w.ships.map(function (s) { return s.disabled || s.docked ? 0 : Math.hypot(s.velocity.x - s.previousVelocity.x, s.velocity.y - s.previousVelocity.y) / Math.max(1, s.acceleration / 30); }))));

@@ -17,7 +17,7 @@
     /** @param {Three} THREE @param {Renderer} renderer */
     function create(THREE,renderer){
         var units=DW.sim.METERS_PER_UNIT,size=384,next=0,initialized=false,lastSide=-1;
-        var params=new URLSearchParams(location.search),updates=params.get('bridgeFaces')==='6'?6:1,objects=params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
+        var params=new URLSearchParams(location.search),updates=params.get('bridgeFaces')==='6'?6:1,explicit=params.get('bridgeLod')!=='implicit',objects=params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
         /** @param {number} width @param {number} height */
         function target(width,height){
             var t=new THREE.WebGLRenderTarget(width,height,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
@@ -181,16 +181,21 @@ void main(){
  }
  gl_FragColor=base;
 }`;
+        var postVertex='precision highp float;attribute vec2 position;varying vec2 screen;void main(){screen=position;gl_Position=vec4(position,0.,1.);}';
+        if(explicit)postVertex=postVertex.replace('attribute vec2','in vec2').replace('varying vec2','out vec2');
+        /** Fixed LOD avoids implicit derivatives inside divergent traversal loops.
+         * @param {string} source */
+        function fragmentSource(source){return explicit?source.replace('varying vec2 screen;','in vec2 screen;out vec4 ellisOutput;vec4 ellisTexture(sampler2D s,vec2 uv){return textureLod(s,uv,0.);}') .replace(/texture2D\(/g,'ellisTexture(').replace(/gl_FragColor/g,'ellisOutput'):source;}
         /** @param {string} defines */
         function resolveMaterial(defines){return new THREE.RawShaderMaterial({
-            vertexShader:'precision highp float;attribute vec2 position;varying vec2 screen;void main(){screen=position;gl_Position=vec4(position,0.,1.);}',
-            fragmentShader:defines+resolveShader,
+            ...(explicit?{glslVersion:'300 es'}:{}),vertexShader:postVertex,
+            fragmentShader:fragmentSource(defines+resolveShader),
             uniforms:uniforms,side:THREE.DoubleSide,transparent:false,depthTest:false,depthWrite:false,blending:THREE.NoBlending,defaultAttributeValues:{}
         });}
         var material=resolveMaterial(''),fullMaterial=resolveMaterial('#define ELLIS_FULL_PASS\n'),refineMaterial=resolveMaterial('#define ELLIS_REFINE_PASS\n');
         var mapMaterial=new THREE.RawShaderMaterial({
-            vertexShader:'precision highp float;attribute vec2 position;varying vec2 screen;void main(){screen=position;gl_Position=vec4(position,0.,1.);}',
-            fragmentShader:(temporal?'#define ELLIS_TEMPORAL\n':'')+fieldShader+`// ELLIS_HIT_MAP_PASS
+            ...(explicit?{glslVersion:'300 es'}:{}),vertexShader:postVertex,
+            fragmentShader:fragmentSource((temporal?'#define ELLIS_TEMPORAL\n':'')+fieldShader+`// ELLIS_HIT_MAP_PASS
 uniform sampler2D historyMap;
 uniform float historyValid,historyPhase,historyTile;
 uniform vec3 previousRight,previousUp,previousBack;
@@ -226,7 +231,7 @@ void main(){
 #endif
  vec3 h=trace(e);float quantized=floor(clamp(h.x,0.,1.)*65535.+.5);
  gl_FragColor=vec4(floor(quantized/256.)/255.,mod(quantized,256.)/255.,(h.y+1.)*.25,h.z>.5?1.:.25);
-}`,
+}`),
             uniforms:uniforms,side:THREE.DoubleSide,transparent:false,depthTest:false,depthWrite:false,blending:THREE.NoBlending,defaultAttributeValues:{}
         });
         var quad=new THREE.BufferGeometry();quad.setAttribute('position',new THREE.BufferAttribute(new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),2));
@@ -236,6 +241,7 @@ void main(){
         var quadObject=new THREE.Mesh(quad,material);quadObject.frustumCulled=false;postScene.add(quadObject);
         /** @param {import('../src/three-types').Scene} scene @param {Draw[]} entries @param {number[]} center @param {number} chart @param {number} face */
         function capture(scene,entries,center,chart,face){
+            if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('ellis.capture.'+chart+'.'+face);
             var f=faces[face];
             entries.forEach(function(entry){
                 var u=entry.uniforms,old=/** @type {number[]} */(u.uTarget.value);
@@ -321,10 +327,12 @@ void main(){
             // Additive fragments have no opaque surface depth. Keep them separate
             // from the radial shells rather than letting the lens erase them.
             lights.forEach(function(e){e.object.visible=false;});
+            if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('ellis.primary');
             renderer.setRenderTarget(primary);renderer.setClearColor(0,0);renderer.clear();renderer.render(scene,camera);
             if(lights.length){
                 entries.forEach(function(e){e.object.visible=false;});
                 lights.forEach(function(e){e.object.visible=true;e.material.depthWrite=true;});
+                if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('ellis.effects');
                 renderer.setRenderTarget(effects);renderer.clear();renderer.render(scene,camera);
                 lights.forEach(function(e,i){e.object.visible=false;e.material.depthWrite=writes[i];});
                 entries.forEach(function(e,i){if(lights.indexOf(e)<0)e.object.visible=visibility[i];});
@@ -351,8 +359,9 @@ void main(){
             uniforms.historyValid.value=valid?1:0;uniforms.historyPhase.value=phase;
             if(historyPose){uniforms.previousRight.value=historyPose.right;uniforms.previousUp.value=historyPose.up;uniforms.previousBack.value=historyPose.back;}
             uniforms.historyMap.value=historyMap.texture;
-            if(adaptive){uniforms.hitMap.value=hitMap.texture;renderer.setRenderTarget(hitMap);renderer.setViewport(0,0,Math.ceil(width/2),Math.ceil(height/2));renderer.setClearColor(0,0);renderer.clear();renderer.render(mapScene,postCamera);renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);}
-            renderer.setClearColor(0,0);renderer.clear();renderer.render(adaptive?postScene:fullScene,postCamera);if(adaptive)renderer.render(refineScene,postCamera);
+            if(adaptive){if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('ellis.hit-map');uniforms.hitMap.value=hitMap.texture;renderer.setRenderTarget(hitMap);renderer.setViewport(0,0,Math.ceil(width/2),Math.ceil(height/2));renderer.setClearColor(0,0);renderer.clear();renderer.render(mapScene,postCamera);renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);}
+            if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('ellis.composition');
+            renderer.setClearColor(0,0);renderer.clear();renderer.render(adaptive?postScene:fullScene,postCamera);if(adaptive){if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('ellis.refinement');renderer.render(refineScene,postCamera);}
             if(temporal){
                 var swap=historyMap;historyMap=hitMap;hitMap=swap;
                 uniforms.hitMap.value=hitMap.texture;

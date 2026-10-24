@@ -328,3 +328,124 @@ so this is not yet a demonstrated dogfight improvement. See the
 [temporal report](benchmarks/ellis-temporal-2026-10-24.md) for revision ownership,
 rotation-only reprojection, one-frame age bounds, invalidation, context-loss
 findings and incomplete browser acceptance.
+
+
+## Context-loss investigation, 24 October 2026
+
+The post-process geometry shaders now use GLSL 3 `textureLod(..., 0.)` by
+ default. The LUT and render targets have no mipmaps, so level zero is the
+ intended source. This avoids implicit texture derivatives inside divergent
+ traversal/refinement loops. `bridgeLod=implicit` retains the previous shader
+ for controlled diagnosis; avoid using it for normal adaptive rendering.
+
+A matched isolation fixture reproduced simultaneous context loss across the
+ Three renderer, sky, and HUD canvases with adaptive geometry and implicit
+ sampling. Sky-only, direct geometry, captures without the curved search,
+ full geometry, and explicit-sampling adaptive cases completed their samples.
+ A subsequent explicit adaptive repeat and a rapid camera-rotation fixture
+ each completed 240 frames at 1920×1080 with zero context losses. These are
+ bounded stability checks, not proof that every crash is resolved or GPU
+ performance measurements. See [investigation](benchmarks/ellis-crash-isolation-2026-10-24.md).
+
+Flight pages persist context loss/restoration/creation errors and JavaScript
+ errors locally under `driftworks.gpu-diagnostics.v1`. `gpuDebug=1` adds a
+ graphics log panel and recent submission markers. Markers show queued work,
+ not the exact GPU instruction responsible. The benchmark now reuses known
+ context handles instead of probing incompatible context types, which had
+ produced misleading creation-error events.
+
+
+## Primary object-patch experiment
+
+Add `bridgeGeometry=objects` to the flight URL to replace the curved per-pixel
+geometry search with a primary-image mesh warp. The ordinary full geometry
+renderer remains the default. The sky retains its shared Ellis lensing.
+
+Each nontrivial object patch solves a center path and three 4 m world-axis
+neighbor paths, then interpolates a 3D virtual-view position for mesh vertices.
+A fifth diagonal path probes screen error at the object radius; it does not
+bound error over the whole hull. Ordinary direct objects need one path.
+`bridgeWarpDebug=1` tints patches whose probe error exceeds two pixels.
+Hull, scorch and engine batches share the craft anchor; individual bolts and
+impacts have their own anchors. The prototype draws the existing mesh buffers
+once, with no radial captures or full-screen geometry intersection shader.
+
+This is one affine patch per object, without adaptive subdivision or persistent
+image-branch tracking. It omits secondary images, uses approximate depth overlap,
+and uses the production raw material fallback rather than native PBR parity.
+Large/crossing hulls and caustic transitions are not visually accepted.
+
+A frozen matched fighter scene measured approximately 63% less total timed GPU
+work at 1920x1080, with little change in CPU time. This is not a 63% FPS gain
+or an accepted 8v8/capital-ship budget. See the
+[object experiment report](benchmarks/ellis-objects-2026-10-24.md).
+
+
+## Observation lab
+
+Open `experiments/ellis-study.html` (also linked on the main index) for a
+combat-free, fixed-camera test. Front, close, side, rim, elevated and Rime-side
+presets observe the same deterministic 24-second ship tracks. One ship crosses
+both ways at 6 and 18 seconds; two escorts orbit in separate charts. Select
+crossing-only or orbit-only to isolate them. The crossing follows signed proper
+radius mapped to exterior areal radius, with antipodal position and transverse
+basis transport. It is a scripted optical fixture, not an AI/physics replay.
+
+Pause/play, frame stepping, a range scrubber, exact time entry, playback speed
+and source ship selection let reviewers repeat a view. Switching between object
+patches and full ray search reloads this isolated page while retaining camera,
+time, pause, pass, model and speed. Ordinary player flight is unaffected. The
+scene uses the production presentation/optics and real meshes at source metre
+scale, with asteroid and mothership scenery removed. Hidden tabs do not advance
+the timeline. The view is capped at 30 render submissions per second.
+
+Browser checks covered all six camera presets, exact-time scrubbing, a frame
+step from 5.99 through 6.02 s, and paused renderer switching. The close crossing
+exposes 44–57 px object-patch probe errors and a visible shape change; the full
+ray-search fixture also loses the crossing ship immediately after the mouth.
+Neither renderer is a visual ground truth. These are unresolved renderer issues,
+made reproducible by this lab; this change does not fix them. No new performance
+claim is made by the lab's submission counts.
+
+Captures: [before](benchmarks/ellis-study-close-before.png),
+[after](benchmarks/ellis-study-close-after.png),
+[full search](benchmarks/ellis-study-full-close.png),
+[Rime view](benchmarks/ellis-study-rime.png).
+
+
+## Throat orientation feedback
+
+Player flight now adds a soft two-note field-entry chime, a three-note crossing
+chord, and a descending field-exit cue. They use the shared SFX bus and mute /
+volume controls. Entry arms at 550 m from the local mouth center; exit requires
+620 m to prevent repeated cues near the boundary. A region change, not a skybox
+change or image distortion, triggers the crossing chord and arrival label.
+Initialization, reset, paused motion and observer playback do not fabricate cues.
+
+The existing controller rumble path mixes a gentle continuous field load (up to
+0.08 strong / 0.14 weak) with a 0.3 crossing pulse. Hit, contact and shield-break
+pulses retain priority. Existing rumble opt-out, controller selection, mouse
+ takeover, pause/disconnect handling and 75 ms submission throttling apply.
+
+The HUD shows an approach/astern readout and boundary surface range within
+1800 m of the center. The navigation meridians appear within 1000 m; the
+LENS FIELD state starts within 600 m, switching
+to THROAT TRANSIT within 360 m. A crossing holds THROAT CROSSED / RIME or ASTEROID
+for 1.8 simulation seconds. It explicitly says LENS FIELD ACTIVE when still near
+the mouth, rather than implying that all distortion ends at the chart crossing.
+Three faint projected navigation meridians use a 305 m shell around the mouth;
+they are fictional instrument guides, not additional traced light geodesics.
+They can leave the viewport at the exact throat, where the text and rumble remain.
+
+`ellis-feedback.js` owns only transient presentation state; simulation/world save
+rules are unchanged. Both flight entry points load it before `flight.js`.
+The optical observation lab remains free of cockpit sounds and controller events.
+
+Verification covers entry/exit hysteresis, actual two-way region changes,
+pause/reset and mission isolation; real audio-facade scheduling and SFX mute;
+controller mixing/opt-out via a simulated actuator; finite projected HUD paths,
+arrival labels and painter restoration. Browser captures exercise a production
+flight throat crossing and field view with no captured console errors:
+[arrival](benchmarks/ellis-arrival-feedback.png),
+[field guide](benchmarks/ellis-field-guide.png).
+Physical controller feel and subjective sound balance still need a playtest.

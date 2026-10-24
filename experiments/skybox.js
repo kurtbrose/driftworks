@@ -142,6 +142,7 @@
         canvas.className = 'flight-skybox';
         canvas.setAttribute('aria-hidden', 'true');
         host.prepend(canvas);
+        if(window.Driftworks.gpuDiagnostics)window.Driftworks.gpuDiagnostics.mark('sky.create');
         var context = canvas.getContext('webgl', { alpha: false, antialias: false });
         if (!context)
             throw new Error('Flight skybox requires WebGL');
@@ -888,6 +889,7 @@ void main(){
             },cueImpact:cueImpact,resetImpact:resetImpact,getImpactState:impactCues.snapshot,setCameraSources:/** @param {import('../src/types').SkyCameraSource[]|null} value */function(value){cameraSources=value;sourceStyle=-1;},setOccluders:/** @param {import('../src/types').SkyOccluder[]} value */function(value){if(effects)effects.setOccluders(value);},setOpticsEnabled:/** @param {boolean} value */function(value){if(effects)effects.setEnabled(value);},setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
             }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] */ function (pose, renderScale, empty,elapsed) {
+                if(window.Driftworks.gpuDiagnostics)window.Driftworks.gpuDiagnostics.mark('sky.render');
                 if(effects&&sourceStyle!==style){
                     effects.setSources(cameraSources||(hdrTexture?[]:landmarkSky&&window.Driftworks.skyEffects?window.Driftworks.skyEffects.fromFeatures(missionSky.features,authoredAssetSources):authoredSources[String(style)]||[]));sourceStyle=style;
                 }

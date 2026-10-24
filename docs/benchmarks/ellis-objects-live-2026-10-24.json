@@ -1,0 +1,241 @@
+{
+  "temporalTile": 8,
+  "temporal": false,
+  "pan": null,
+  "historyValid": {
+    "mean": 0,
+    "p50": 0,
+    "p95": 0
+  },
+  "geometryAngle": "unlimited",
+  "geometry": "objects",
+  "hoist": false,
+  "gpu": {
+    "valid": true,
+    "contextLosses": 0,
+    "invalid": 0,
+    "stages": {
+      "sky": {
+        "samples": 238,
+        "mean": 0.4334771092436976,
+        "p50": 0.403456,
+        "p95": 0.516096
+      },
+      "captures": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "primary": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "hitMap": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "compositor": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "refinement": {
+        "samples": 0,
+        "mean": null,
+        "p50": null,
+        "p95": null
+      },
+      "objectWarp": {
+        "samples": 247,
+        "mean": 2.762445214574899,
+        "p50": 2.199552,
+        "p95": 6.262784
+      },
+      "screen": {
+        "samples": 238,
+        "mean": 0.43053794957983205,
+        "p50": 0.466944,
+        "p95": 0.646144
+      }
+    }
+  },
+  "sampleStart": "2026-10-24T14:03:53.414Z",
+  "sampleEnd": "2026-10-24T14:04:01.419Z",
+  "stageStats": {
+    "captures": {
+      "calls": {
+        "mean": 0,
+        "p95": 0
+      },
+      "triangles": {
+        "mean": 0,
+        "p95": 0
+      },
+      "cpu": {
+        "mean": 0,
+        "p95": 0
+      }
+    },
+    "primary": {
+      "calls": {
+        "mean": 0,
+        "p95": 0
+      },
+      "triangles": {
+        "mean": 0,
+        "p95": 0
+      },
+      "cpu": {
+        "mean": 0,
+        "p95": 0
+      }
+    },
+    "hitMap": {
+      "calls": {
+        "mean": 0,
+        "p95": 0
+      },
+      "triangles": {
+        "mean": 0,
+        "p95": 0
+      },
+      "cpu": {
+        "mean": 0,
+        "p95": 0
+      }
+    },
+    "compositor": {
+      "calls": {
+        "mean": 0,
+        "p95": 0
+      },
+      "triangles": {
+        "mean": 0,
+        "p95": 0
+      },
+      "cpu": {
+        "mean": 0,
+        "p95": 0
+      }
+    },
+    "refinement": {
+      "calls": {
+        "mean": 0,
+        "p95": 0
+      },
+      "triangles": {
+        "mean": 0,
+        "p95": 0
+      },
+      "cpu": {
+        "mean": 0,
+        "p95": 0
+      }
+    },
+    "objectWarp": {
+      "calls": {
+        "mean": 119.5020920502092,
+        "p95": 190
+      },
+      "triangles": {
+        "mean": 59912.94979079498,
+        "p95": 406386
+      },
+      "cpu": {
+        "mean": 1.3100418406051573,
+        "p95": 2.3000000715255737
+      }
+    },
+    "screen": {
+      "calls": {
+        "mean": 1,
+        "p95": 1
+      },
+      "triangles": {
+        "mean": 360.7029288702929,
+        "p95": 511
+      },
+      "cpu": {
+        "mean": 0.26652719685223314,
+        "p95": 0.3999999761581421
+      }
+    }
+  },
+  "ablation": null,
+  "cap": "30",
+  "scale": "1",
+  "mode": "new",
+  "view": "transit",
+  "quality": "refined",
+  "live": true,
+  "samples": 239,
+  "visibility": "visible",
+  "viewport": [
+    1280,
+    720
+  ],
+  "dpr": 1.5,
+  "backing": [
+    1920,
+    1080
+  ],
+  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "gpuTimerAvailable": true,
+  "frame": {
+    "mean": 33.47531380763114,
+    "p50": 29.899999976158142,
+    "p95": 46.799999952316284
+  },
+  "cpu": {
+    "mean": 8.487029291097091,
+    "p50": 8.399999976158142,
+    "p95": 17
+  },
+  "draws": {
+    "mean": 233.52301255230125,
+    "p50": 219,
+    "p95": 387
+  },
+  "triangles": {
+    "mean": 427740.30962343095,
+    "p50": 434489,
+    "p95": 437980
+  },
+  "captures": {
+    "mean": 0,
+    "p50": 0,
+    "p95": 0
+  },
+  "bridgeCpu": {
+    "mean": 4.846025108792293,
+    "p50": 4.799999952316284,
+    "p95": 9.600000023841858
+  },
+  "actors": 3,
+  "scene": {
+    "bridgeObjectPaths": 55,
+    "bridgeObjectPatches": 55,
+    "bridgeObjectError": 0,
+    "bridgeObjectBad": 0,
+    "bridgeHistoryValid": 0,
+    "bridgeCaptures": 0,
+    "bridgeCpuMs": 1,
+    "drawCalls": 117,
+    "triangles": 434435,
+    "shadowDrawCalls": 0,
+    "shadowTriangles": 0,
+    "lines": 0,
+    "meshes": 117,
+    "materials": 25,
+    "width": 1920,
+    "height": 1080,
+    "pixelRatio": 1.5,
+    "cpuMs": 2
+  }
+}

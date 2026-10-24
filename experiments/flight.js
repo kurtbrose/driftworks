@@ -47,6 +47,8 @@
     var mixerHost=document.getElementById('flight-settings');
     if(mixerHost && ohioMusic) ohioMusic.mount(mixerHost);
     if(mixerHost)DW.audio.mountMixer(mixerHost);
+    var bridgeFeedback=DW.ellisFeedback.create();
+    var bridgeCue=bridgeFeedback.update(session.snapshot().state,0,false,!!activeMission.sky.wormhole);
     var units = DW.sim.METERS_PER_UNIT;
     var tetherParams = new URLSearchParams(location.search), tetherKm = Number(tetherParams.get('tether'));
     var tetherStudy = [100,50,20,10,2].includes(tetherKm);
@@ -218,6 +220,7 @@
         presentation.pose(current.camera || current.state);
     }
     function reset() {
+        bridgeFeedback.reset();
         clear();
         diagnostics.resetSimulationClock();
         comms.reset();
@@ -443,12 +446,16 @@
                 if (watch.summary().done) pause();
             } else session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
             var after = view();
+            bridgeCue=bridgeFeedback.update(after.state,elapsed,!watch,!!DW.flightMissions.resolve(after.combat.mode).sky.wormhole);
+            if(bridgeCue.crossed)DW.audio.playWormhole('cross');
+            else if(bridgeCue.entered)DW.audio.playWormhole('enter');
+            else if(bridgeCue.exited)DW.audio.playWormhole('exit');
             simMs=performance.now()-phaseStart;phaseStart=performance.now();
             if(aegis&&!watch)aegis.step(elapsed,after);
             capitalMs=performance.now()-phaseStart;
             if (!watch && after.contact && !contact) DW.audio.playImpact(2);
             DW.audio.setFlightEngine(elapsed, after.state.throttle, !!demand.boost, !paused && !watch && !after.contact && !after.combat.dead, {acceleration: elapsed > 0 ? Math.max(0, Math.hypot.apply(null, after.state.velocity) - beforeSpeed) / elapsed / Math.max(1, profile().maxVelocity[2] / profile().forwardAccel) : 0, damage: 1 - after.combat.hull / (after.combat.maxHull || after.combat.hull || 1), maneuver: Math.min(1, Math.abs(demand.pitch || 0) + Math.abs(demand.yaw || 0) + Math.abs(demand.roll || 0))});
-            if (!watch) controls.haptics(elapsed, {boost: !after.contact && !after.combat.dead && !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
+            if (!watch) controls.haptics(elapsed, {throat:bridgeCue.proximity,transit:bridgeCue.crossed,boost: !after.contact && !after.combat.dead && !!demand.boost, hit: after.combat.lastHit > lastHit, shieldBreak: shield > 0 && after.combat.shield <= 0, fire: after.guns.fired > fired, contact: after.contact && !contact});
             if (!watch && after.combat.dead) {
                 pause();
             }
@@ -456,6 +463,7 @@
             updateStatus();
         }
         var currentView = view();
+        if(paused)bridgeCue=bridgeFeedback.update(currentView.state,0,false,!!DW.flightMissions.resolve(currentView.combat.mode).sky.wormhole);
         if (!paused && !watch) session.acquireTarget();
         if (!paused) {
             if (!watch) session.advanceScenery(elapsed);
@@ -476,7 +484,7 @@
         if(aegis){var readout=document.getElementById('aegis-flight-readout');if(readout)readout.textContent=aegis.readout();}
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
-        flightHud.render(Object.assign({}, currentView, { units: units, paused: paused, speakerId: comms.speakerId(), weapon: weapon() }, inputView, appearance));
+        flightHud.render(Object.assign({}, currentView, { units: units, paused: paused, speakerId: comms.speakerId(), bridgeCue:bridgeCue, weapon: weapon() }, inputView, appearance));
         captureScreenshot();
         if (watch) get('combat-status').textContent = 'AI DUEL / ' + (watch.summary().category === 'perfect' ? 'PERFECT' : watch.summary().flavor.toUpperCase()) + ' VS ' + currentView.combat.enemies[0].pilot.toUpperCase();
         updateWatch();

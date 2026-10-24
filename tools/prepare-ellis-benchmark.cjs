@@ -22,6 +22,7 @@ function probe(){
   }};
  }
  let compareRequested=false;
+ const contexts=new WeakMap();
  let stages={},gpuRows=[],gpuInvalid=0,contextLosses=0;
  function timer(gl){
   if(gl)gl.canvas.addEventListener('webglcontextlost',()=>{contextLosses++;});
@@ -39,20 +40,23 @@ function probe(){
   };
  }
  const makeSky=DW.flightSkybox.create;
- DW.flightSkybox.create=function(host,...args){const sky=makeSky(host,...args),render=sky.render,canvas=host.querySelector('canvas.flight-skybox'),clock=timer(canvas.getContext('webgl2')||canvas.getContext('webgl'));
+ DW.flightSkybox.create=function(host,...args){
+  if(params.get('ablate')==='geometry-only')return {render(){},getRenderStats(){return {drawCalls:0,triangles:0,points:0,meshes:0,materials:0};}};
+  const sky=makeSky(host,...args),render=sky.render,canvas=host.querySelector('canvas.flight-skybox'),gl=canvas.getContext('webgl'),clock=timer(gl);contexts.set(canvas,gl);
   sky.render=function(...args){const end=clock('sky');render(...args);end();};return sky;
  };
  const Renderer=window.THREE.WebGLRenderer;
  window.THREE.WebGLRenderer=class extends Renderer {constructor(...args){
-  super(...args);let target=null,captured=0,fastScene=null,referenceMaterial=null;const clock=timer(this.getContext());
+  super(...args);let target=null,captured=0,fastScene=null,referenceMaterial=null;const clock=timer(this.getContext());contexts.set(this.domElement,this.getContext());
   const set=this.setRenderTarget.bind(this),clear=this.clear.bind(this),render=this.render.bind(this);
   this.setRenderTarget=(t,...rest)=>{target=t;return set(t,...rest);};
   const atlas=()=>target&&target.width===1152&&target.height===768;
   const skip=()=>params.get('ablate')==='captures'&&atlas()&&captured>=12;
   this.clear=(...args)=>{if(!skip())return clear(...args);};
   this.render=(scene,camera)=>{
+   if(params.get('ablate')==='sky-only')return;
    if(skip())return;
-   const stage=scene.children.some(o=>o.material&&o.material.fragmentShader&&o.material.fragmentShader.startsWith('#define ELLIS_REFINE_PASS'))?'refinement':scene.children.some(o=>o.material&&o.material.fragmentShader&&o.material.fragmentShader.includes('ELLIS_HIT_MAP_PASS'))?'hitMap':atlas()?'captures':target?'primary':scene.children.some(o=>o.material&&o.material.uniforms&&o.material.uniforms.sourceDepth)?'compositor':'screen',t=performance.now(),end=clock(stage);
+   const stage=scene.children.some(o=>o.material&&o.material.fragmentShader&&o.material.fragmentShader.startsWith('#define ELLIS_REFINE_PASS'))?'refinement':scene.children.some(o=>o.material&&o.material.fragmentShader&&o.material.fragmentShader.includes('ELLIS_HIT_MAP_PASS'))?'hitMap':atlas()?'captures':target?'primary':scene.children.some(o=>o.material&&o.material.uniforms&&o.material.uniforms.sourceDepth)?'compositor':params.get('bridgeGeometry')==='objects'&&scene.children.some(o=>o.material&&o.material.uniforms&&o.material.uniforms.uLensEnabled)?'objectWarp':'screen',t=performance.now(),end=clock(stage);
    render(scene,camera);end();if(atlas())captured++;
    if(stage==='compositor')fastScene=scene;
    if(params.get('bridgeTemporal')==='1'&&compareRequested){compareRequested=false;document.querySelector('#bench-result').textContent='Temporal validation uses separate matched runs; synchronous comparison is disabled.';}
@@ -73,6 +77,14 @@ function probe(){
    row.calls+=this.info.render.calls;row.triangles+=this.info.render.triangles;row.cpu+=performance.now()-t;
   };
  }};
+ if(params.get('ablate')==='direct'){
+  DW.ellisRenderer.create=function(THREE,renderer){return {invalidate(){},dispose(){},render(scene,camera,entries,pose,focal,far,width,height){
+   const visibility=entries.map(e=>e.object.visible);entries.forEach((e,i)=>{e.object.visible=visibility[i]&&(e.region||0)===(pose.region||0);});
+   try{if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('isolation.direct');renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);renderer.setClearColor(0,0);renderer.clear();renderer.render(scene,camera);}
+   finally{entries.forEach((e,i)=>{e.object.visible=visibility[i];});}
+   return {objectPaths:0,objectPatches:0,objectError:0,objectBad:0,compositionPasses:0,historyValid:0,extraPasses:0,captures:0,cpuMs:0};
+  }};};
+ }
  if(params.get('ablate')==='geometry'){
   const Raw=window.THREE.RawShaderMaterial;
   window.THREE.RawShaderMaterial=class extends Raw {constructor(o){super({...o,fragmentShader:o.fragmentShader.replace('vec4 base=lens();','vec4 base=texture2D(sourceColor,screen*.5+.5);')});}};
@@ -97,8 +109,8 @@ function probe(){
    Object.assign(s.state,{eye:eye.map(x=>x/u),right:[f[1],-f[0],0],up:[0,0,1],back:f.map(x=>-x),velocity:[0,0,0],ramp:[0,0,0],throttle:0});
    if(view==='after-throat'){s.state.right=[-1,0,0];s.state.up=[0,0,-1];}
    s.state.region=['moon','moon-away','return-transit','after-throat'].includes(view)?1:0;
-   if(view==='warped'){s.combat.enemies[0].pose.region=1;s.combat.enemies[0].pose.eye=[12000/u,-1650/u,1550/u];s.combat.enemies[0].pose.back=[0,-1,0];}
-   if(view==='foreground'){s.combat.enemies[0].pose.eye=[0,-3150/u,1550/u];s.combat.enemies[0].pose.back=[0,-1,0];}
+   if(view==='warped'){s.combat.enemies[0].pose.region=1;s.combat.enemies[0].pose.eye=[12040/u,-1650/u,1570/u];s.combat.enemies[0].pose.back=[0,-1,0];s.combat.enemies[0].pose.right=[1,0,0];s.combat.enemies[0].pose.up=[0,0,1];}
+   if(view==='foreground'){s.combat.enemies[0].pose.eye=[0,-3150/u,1550/u];s.combat.enemies[0].pose.back=[0,-1,0];s.combat.enemies[0].pose.right=[1,0,0];s.combat.enemies[0].pose.up=[0,0,1];}
    return s;
   };
   const advance=result.advance;result.advance=function(dt,controls,config){return live&&!frozen?advance(dt,{...controls,stop:!fly,throttle:fly?1:null,fire:firing},config):result.snapshot();};
@@ -118,7 +130,7 @@ function probe(){
  panel.innerHTML='<summary>Ellis matched benchmark</summary><button id="measure">Measure (2 s warmup + 8 s sample)</button> <button id="preview">Preview only</button> <button id="snapshot">Snapshot state</button> <button id="freeze">Freeze</button> <button id="gpu-caps">GPU capabilities</button> <button id="compare">Compare hit map</button> <button id="compare-angle">Compare angular cutoff</button><pre id="bench-result">'+mode+' / '+view+' / '+(live?'live':'frozen simulation')+'</pre>';
  document.body.appendChild(panel);
  function start(){if(!session||!presentation){document.querySelector('#bench-result').textContent='Flight is still loading';return false;}if(!ready){document.querySelector('#input-mode').value='controller';document.querySelector('#input-mode').dispatchEvent(new Event('change'));document.querySelector('#fps-cap').value=params.get('cap')||'0';document.querySelector('#fps-cap').dispatchEvent(new Event('change'));document.querySelector('#render-scale').value=params.get('scale')||'1';document.querySelector('#render-scale').dispatchEvent(new Event('change'));document.querySelector('#fly').click();ready=true;}return true;}
- document.querySelector('#gpu-caps').onclick=()=>{document.querySelector('#bench-result').textContent=JSON.stringify(Array.from(document.querySelectorAll('#viewer canvas')).map(c=>{const gl=c.getContext('webgl2')||c.getContext('webgl');return {className:c.className,width:c.width,height:c.height,webgl:!!gl,timer:gl?!!(gl.getExtension('EXT_disjoint_timer_query_webgl2')||gl.getExtension('EXT_disjoint_timer_query')):false};}),null,2);};
+ document.querySelector('#gpu-caps').onclick=()=>{document.querySelector('#bench-result').textContent=JSON.stringify(Array.from(document.querySelectorAll('#viewer canvas')).map(c=>{const gl=contexts.get(c);return {className:c.className,width:c.width,height:c.height,webgl:!!gl,timer:gl?!!(gl.getExtension('EXT_disjoint_timer_query_webgl2')||gl.getExtension('EXT_disjoint_timer_query')):false};}),null,2);};
  document.querySelector('#compare').onclick=()=>{if(params.get('bridgeGeometry')!=='adaptive'){document.querySelector('#bench-result').textContent='Compare requires bridgeGeometry=adaptive';return;}if(!start())return;document.querySelector('#bench-result').textContent='Warming up for comparison';setTimeout(()=>{compareRequested='map';},2000);};
  document.querySelector('#compare-angle').onclick=()=>{if(params.get('bridgeGeometry')==='adaptive'){document.querySelector('#bench-result').textContent='Angular comparison requires bridgeGeometry=full';return;}if(!start())return;document.querySelector('#bench-result').textContent='Warming up for comparison';setTimeout(()=>{compareRequested='angle';},2000);};
  document.querySelector('#freeze').onclick=()=>{frozen=!frozen;};
@@ -128,9 +140,9 @@ function probe(){
   if(!start())return;document.querySelector('#bench-result').textContent='Warming up';rows=[];gpuRows=[];gpuInvalid=0;collect=false;
   setTimeout(()=>{last=performance.now();sampleStart=new Date().toISOString();collect=true;document.querySelector('#bench-result').textContent='Measuring';setTimeout(()=>{
    collect=false;const stat=k=>{const a=rows.map(r=>r[k]).sort((a,b)=>a-b);return {mean:a.reduce((a,b)=>a+b,0)/a.length,p50:a[Math.floor(a.length*.5)],p95:a[Math.floor(a.length*.95)]};};
-   const canvas=document.querySelector('#viewer canvas'),gl=canvas.getContext('webgl2')||canvas.getContext('webgl'),ext=gl.getExtension('WEBGL_debug_renderer_info');
-   const stageStats={};for(const name of ['captures','primary','hitMap','compositor','refinement','screen']){stageStats[name]={};for(const key of ['calls','triangles','cpu']){const a=rows.map(r=>(r.stages[name]||{})[key]||0).sort((a,b)=>a-b);stageStats[name][key]={mean:a.reduce((a,b)=>a+b,0)/a.length,p95:a[Math.floor(a.length*.95)]};}}
-   const gpu={valid:contextLosses===0,contextLosses,invalid:gpuInvalid,stages:{}};for(const stage of ['sky','captures','primary','hitMap','compositor','refinement','screen']){const a=gpuRows.filter(r=>r.stage===stage).map(r=>r.ms).sort((a,b)=>a-b);gpu.stages[stage]={samples:a.length,mean:a.length?a.reduce((a,b)=>a+b,0)/a.length:null,p50:a.length?a[Math.floor(a.length*.5)]:null,p95:a.length?a[Math.floor(a.length*.95)]:null};}
+   const canvas=document.querySelector('#viewer canvas'),gl=contexts.get(canvas),ext=gl.getExtension('WEBGL_debug_renderer_info');
+   const stageStats={};for(const name of ['captures','primary','hitMap','compositor','refinement','objectWarp','screen']){stageStats[name]={};for(const key of ['calls','triangles','cpu']){const a=rows.map(r=>(r.stages[name]||{})[key]||0).sort((a,b)=>a-b);stageStats[name][key]={mean:a.reduce((a,b)=>a+b,0)/a.length,p95:a[Math.floor(a.length*.95)]};}}
+   const gpu={valid:contextLosses===0,contextLosses,invalid:gpuInvalid,stages:{}};for(const stage of ['sky','captures','primary','hitMap','compositor','refinement','objectWarp','screen']){const a=gpuRows.filter(r=>r.stage===stage).map(r=>r.ms).sort((a,b)=>a-b);gpu.stages[stage]={samples:a.length,mean:a.length?a.reduce((a,b)=>a+b,0)/a.length:null,p50:a.length?a[Math.floor(a.length*.5)]:null,p95:a.length?a[Math.floor(a.length*.95)]:null};}
    const result={temporalTile:params.get('bridgeTemporalTile')==='1'?1:8,temporal:params.get('bridgeTemporal')==='1',pan:params.get('pan'),historyValid:stat('historyValid'),geometryAngle:params.get('bridgeAngle')||'unlimited',geometry:params.get('bridgeGeometry')||'full',hoist:params.has('hoist'),gpu,sampleStart,sampleEnd:new Date().toISOString(),stageStats,ablation:params.get('ablate'),cap:params.get('cap')||'0',scale:params.get('scale')||'1',mode,view,quality:params.get('quality')||'refined',live,samples:rows.length,visibility:document.visibilityState,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,backing:[canvas.width,canvas.height],renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'unavailable',gpuTimerAvailable:!!(gl.getExtension('EXT_disjoint_timer_query_webgl2')||gl.getExtension('EXT_disjoint_timer_query')),frame:stat('frame'),cpu:stat('cpu'),draws:stat('draws'),triangles:stat('triangles'),captures:stat('captures'),bridgeCpu:stat('bridgeCpu'),actors:session.snapshot().combat.enemies.filter(c=>c.hp>0).length,scene:presentation.renderStats().scene};
    document.querySelector('#bench-result').textContent=JSON.stringify(result,null,2);document.querySelector('#bench-result').dataset.complete='true';
   },8000);},2000);

@@ -59,7 +59,7 @@
             stopRumble();
             try { window.localStorage.setItem('driftworks.flight.rumble', rumble.checked ? 'on' : 'off'); } catch (error) { /* Optional preference. */ }
         };
-        /** @param {number} dt @param {{boost?: boolean; hit?: boolean; shieldBreak?: boolean; fire?: boolean; contact?: boolean}} feedback */
+        /** @param {number} dt @param {{boost?: boolean; hit?: boolean; shieldBreak?: boolean; fire?: boolean; contact?: boolean; throat?:number; transit?:boolean}} feedback */
         function haptics(dt, feedback) {
             var pad = pads().find(function (p) { return String(p.index) === device.value; });
             var next = pad && pad.vibrationActuator;
@@ -67,15 +67,16 @@
             if (!actuator || typeof actuator.playEffect !== 'function' || actions.isPaused() || !rumble.checked || (inputMode.value === 'mouse' && mouseActive)) { stopRumble(); return; }
             pulseTime = Math.max(0, pulseTime - dt);
             refresh -= dt;
-            var strong = feedback.shieldBreak ? .8 : feedback.hit ? .55 : feedback.contact ? .65 : 0;
+            var strong = feedback.shieldBreak ? .8 : feedback.hit ? .55 : feedback.contact ? .65 : feedback.transit ? .3 : 0;
             var weak = strong ? .35 : feedback.fire ? .2 : 0;
             if ((strong || weak) && (pulseTime <= 0 || strong >= pulseStrong)) {
                 pulseStrong = strong; pulseWeak = weak;
-                pulseTime = feedback.shieldBreak ? .25 : strong ? .14 : .055;
+                pulseTime = feedback.shieldBreak ? .25 : feedback.transit ? .18 : strong ? .14 : .055;
                 refresh = 0;
             }
-            strong = Math.max(feedback.boost ? .07 : 0, pulseTime > 0 ? pulseStrong : 0);
-            weak = Math.max(feedback.boost ? .12 : 0, pulseTime > 0 ? pulseWeak : 0);
+            var throat=Math.max(0,Math.min(1,feedback.throat||0));
+            strong = Math.max(throat*.08,feedback.boost ? .07 : 0, pulseTime > 0 ? pulseStrong : 0);
+            weak = Math.max(throat*.14,feedback.boost ? .12 : 0, pulseTime > 0 ? pulseWeak : 0);
             if (!strong && !weak) { stopRumble(); return; }
             if (refresh > 0) return;
             refresh = .075;

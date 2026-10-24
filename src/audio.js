@@ -269,6 +269,13 @@
     beep(880, 0.11, 0.03, 'sine', 0.185);
   }
 
+  /** Soft spatial-transition cues use the existing SFX bus and mute/volume settings.
+   * @param {'enter'|'cross'|'exit'} kind */
+  function playWormhole(kind) {
+    var notes=kind==='cross'?[130.81,196,261.63]:kind==='enter'?[174.61,220]:[220,174.61];
+    notes.forEach(function(frequency,index){beep(frequency,.24,kind==='cross'?.035:.022,'sine',index*.09);});
+  }
+
   function playWarning() {
     beep(420, 0.13, 0.045, 'square');
     beep(315, 0.16, 0.04, 'square', 0.18);
@@ -403,6 +410,7 @@
     playDock: playDock,
     playDelivery: playDelivery,
     playWarning: playWarning,
+    playWormhole: playWormhole,
     setEngineThrust: setEngineThrust,
     _test: {
       loadSettings: loadSettings, normalizeMix:mixer.normalize, mixLevels:mixer.levels,

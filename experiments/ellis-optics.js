@@ -43,9 +43,9 @@
      * @param {number[]} eye @param {number[]} target @param {number} region @param {number} destination */
     function primary(eye,target,region,destination){
         var a=300,O=eye.map(function(v,i){return (v-[region*12000,-2000,1550][i])/a;}),T=target.map(function(v,i){return (v-[destination*12000,-2000,1550][i])/a;});
-        var R=Math.max(1.000001,Math.hypot.apply(null,O)),S=Math.hypot.apply(null,T);
+        var R=Math.max(1.000000000001,Math.hypot.apply(null,O)),S=Math.hypot.apply(null,T);
         if(S<1){T=T.map(function(v){return -v*(2-S)/Math.max(.000001,S);});S=2-S;destination=1-destination;}
-        S=Math.max(1.000001,S);
+        S=Math.max(1.000000000001,S);
         var n=O.map(function(v){return v/R;}),m=T.map(function(v){return v/S;}),other=region!==destination;
         var delta=T.map(function(v,i){return v-O[i];}),distance=Math.hypot.apply(null,delta);
         var straight=delta.map(function(v){return v/Math.max(.000001,distance);}),along=-O.reduce(function(sum,v,i){return sum+v*straight[i];},0),impact2=R*R-along*along;
