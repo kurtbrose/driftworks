@@ -26,6 +26,7 @@ const groups = {
 };
 
 const profiles = {
+  ellisBenchmark: {entries: ['@flight'], before: [{src: 'experiments/flight.js', entries: ['tests/fixtures/ellis-benchmark-probe.js']}]},
   // Studies share the production flight dependencies while retaining page-owned setup.
   flightStudy: {entries: ['@flight'], omit: ['experiments/flight.js']},
   ellisStudy: {entries: ['@flightStudy', 'experiments/ellis-study.js'], omit: ['experiments/ellis-feedback.js']},

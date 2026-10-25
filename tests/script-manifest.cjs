@@ -41,6 +41,12 @@ rejects(d => {d.profiles.headless.before = [{src: 'src/missing.js', entries: ['s
 rejects(d => {d.profiles.headless.entries.push({src: 'src/new.js', type: 'async'});}, /unsupported script type/);
 rejects(d => {d.groups.simulation.reverse();}, /load src\/propulsion.js before src\/sim.js/);
 
+const benchmarkScripts = manifest.resolve('ellisBenchmark');
+const probeIndex = benchmarkScripts.findIndex(script => script.src === 'tests/fixtures/ellis-benchmark-probe.js');
+assert.equal(benchmarkScripts[probeIndex + 1].src, 'experiments/flight.js', 'Benchmark instrumentation loads before flight boot');
+assert.ok(benchmarkScripts.findIndex(script => script.src === 'experiments/flight-presentation.js') < probeIndex);
+assert.deepEqual(benchmarkScripts.filter(script => script.src !== 'tests/fixtures/ellis-benchmark-probe.js'), manifest.resolve('flight'));
+
 // Exercise synchronization on an isolated static site, including import maps,
 // worker-relative paths, asset versioning, drift detection and repeatability.
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'driftworks-script-manifest-'));
@@ -71,6 +77,7 @@ try {
   assert.equal(sync(root), 0);
   assert.equal(refresh(root), 0);
   assert.equal(sync(root, true), 0, 'Asset versioning and script generation agree');
+  assert.ok(read('output/ellis-benchmark.html').includes('ellis-benchmark-probe.js'), 'Asset refresh retains benchmark instrumentation');
   const snapshots = surfaces.map(surface => read(surface.file));
   const tacticalSnapshot = read('rts.html');
   assert.equal(sync(root), 0);

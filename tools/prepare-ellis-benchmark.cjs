@@ -23,7 +23,17 @@ function probe(){
  }
  let compareRequested=false;
  const contexts=new WeakMap();
- let stages={},gpuRows=[],gpuInvalid=0,contextLosses=0;
+ let stages={},gpuRows=[],gpuInvalid=0,contextLosses=0,activeRow=null,lastSimMs=0;
+ const diagnosticsMount=DW.flightDiagnostics.mount;
+ DW.flightDiagnostics.mount=function(...args){
+  const diagnostics=diagnosticsMount(...args),begin=diagnostics.beginFrame,end=diagnostics.endFrame;
+  diagnostics.beginFrame=function(...values){const frame=begin(...values);if(frame){stages={};activeRow=null;}return frame;};
+  diagnostics.endFrame=function(frame,...values){if(activeRow){activeRow.fullCpu=performance.now()-frame.started;activeRow.rafFrame=frame.actualElapsed*1000;}return end(frame,...values);};
+  return diagnostics;
+ };
+ for(const [object,key,stage] of [[DW.ellisOptics,'primary','opticalInverse'],[DW.flightGuns,'geometry','boltGeometry'],[DW.shipPackModels,'engineGeometry','engines']]){
+  const original=object[key];object[key]=function(...args){const start=performance.now();try{return original(...args);}finally{const row=stages[stage]||(stages[stage]={calls:0,triangles:0,cpu:0});row.calls++;row.cpu+=performance.now()-start;}};
+ }
  function timer(gl){
   if(gl)gl.canvas.addEventListener('webglcontextlost',()=>{contextLosses++;});
   const modern=gl&&gl.getExtension('EXT_disjoint_timer_query_webgl2'),ext=modern||gl&&gl.getExtension('EXT_disjoint_timer_query'),pending=[];
@@ -45,6 +55,11 @@ function probe(){
   const sky=makeSky(host,...args),render=sky.render,canvas=host.querySelector('canvas.flight-skybox'),gl=canvas.getContext('webgl'),clock=timer(gl);contexts.set(canvas,gl);
   sky.render=function(...args){const end=clock('sky');render(...args);end();};return sky;
  };
+ function timedMethod(object,key,stage){const original=object[key];object[key]=function(...args){const start=performance.now();try{return original.apply(this,args);}finally{const row=stages[stage]||(stages[stage]={calls:0,triangles:0,cpu:0});row.calls++;row.cpu+=performance.now()-start;}};}
+ for(const [object,key,methods] of [[DW.flightHud,'mount',[['render','hud']]],[DW.flightComms,'mount',[['update','radio']]],[DW.flightPortraits,'mount',[['show','portraitShow'],['update','portraitUpdate']]],[DW.aegisFlight,'createEllisPatrol',[['step','capitalStep'],['geometry','capitalGeometry']]]]){
+  const factory=object[key];object[key]=function(...args){const result=factory.apply(this,args);for(const [method,stage] of methods)timedMethod(result,method,stage);return result;};
+ }
+ for(const [key,stage] of [['analyze','speechPlan'],['render','speechSynthesis'],['radioNoise','radioNoise'],['transmit','radioTransmit']])timedMethod(DW.mumble,key,stage);
  const Renderer=window.THREE.WebGLRenderer;
  window.THREE.WebGLRenderer=class extends Renderer {constructor(...args){
   super(...args);let target=null,captured=0,fastScene=null,referenceMaterial=null;const clock=timer(this.getContext());contexts.set(this.domElement,this.getContext());
@@ -113,7 +128,7 @@ function probe(){
    if(view==='foreground'){s.combat.enemies[0].pose.eye=[0,-3150/u,1550/u];s.combat.enemies[0].pose.back=[0,-1,0];s.combat.enemies[0].pose.right=[1,0,0];s.combat.enemies[0].pose.up=[0,0,1];}
    return s;
   };
-  const advance=result.advance;result.advance=function(dt,controls,config){return live&&!frozen?advance(dt,{...controls,stop:!fly,throttle:fly?1:null,fire:firing},config):result.snapshot();};
+  const advance=result.advance;result.advance=function(dt,controls,config){const start=performance.now();try{return live&&!frozen?advance(dt,{...controls,stop:!fly,throttle:fly?1:null,fire:firing},config):result.snapshot();}finally{lastSimMs=performance.now()-start;}};
   const scenery=result.advanceScenery;result.advanceScenery=function(dt){if(live&&!frozen)scenery(dt);};
   session=result;return result;
  };
@@ -122,7 +137,7 @@ function probe(){
   let panAngle=0;
   result.render=function(...args){
    if(params.has('pan')){panAngle+=params.get('pan')==='fast'?.1:.001;const s=args[0].state;s.right=[Math.cos(panAngle),-Math.sin(panAngle),0];s.back=[-Math.sin(panAngle),-Math.cos(panAngle),0];result.pose(s);args[0]={...args[0],world:session.snapshot().world};}
-   stages={};const t=performance.now();render(...args);if(collect){const now=performance.now(),s=result.renderStats().scene;rows.push({frame:now-last,cpu:now-t,historyValid:s.bridgeHistoryValid||0,draws:s.drawCalls,triangles:s.triangles,captures:s.bridgeCaptures||0,bridgeCpu:s.bridgeCpuMs||0,stages});last=now;}};
+   const t=performance.now();render(...args);if(collect){const now=performance.now(),s=result.renderStats().scene,snapshot=session.snapshot(),bolts=snapshot.guns.bolts.length+snapshot.combat.enemies.reduce((sum,craft)=>sum+craft.guns.bolts.length,0);activeRow={frame:now-last,cpu:now-t,fullCpu:0,rafFrame:0,sim:lastSimMs,bolts:bolts,historyValid:s.bridgeHistoryValid||0,draws:s.drawCalls,triangles:s.triangles,captures:s.bridgeCaptures||0,bridgeCpu:s.bridgeCpuMs||0,stages};rows.push(activeRow);last=now;}};
   presentation=result;return result;
  };
  const panel=document.createElement('details');panel.open=true;panel.id='ellis-benchmark';
@@ -139,17 +154,23 @@ function probe(){
  document.querySelector('#measure').onclick=()=>{
   if(!start())return;document.querySelector('#bench-result').textContent='Warming up';rows=[];gpuRows=[];gpuInvalid=0;collect=false;
   setTimeout(()=>{last=performance.now();sampleStart=new Date().toISOString();collect=true;document.querySelector('#bench-result').textContent='Measuring';setTimeout(()=>{
-   collect=false;const stat=k=>{const a=rows.map(r=>r[k]).sort((a,b)=>a-b);return {mean:a.reduce((a,b)=>a+b,0)/a.length,p50:a[Math.floor(a.length*.5)],p95:a[Math.floor(a.length*.95)]};};
+   collect=false;const stat=k=>{const a=rows.map(r=>r[k]).sort((a,b)=>a-b);return {mean:a.reduce((a,b)=>a+b,0)/a.length,p50:a[Math.floor(a.length*.5)],p95:a[Math.min(a.length-1,Math.floor(a.length*.95))],p99:a[Math.min(a.length-1,Math.floor(a.length*.99))],max:a[a.length-1]};};
    const canvas=document.querySelector('#viewer canvas'),gl=contexts.get(canvas),ext=gl.getExtension('WEBGL_debug_renderer_info');
-   const stageStats={};for(const name of ['captures','primary','hitMap','compositor','refinement','objectWarp','screen']){stageStats[name]={};for(const key of ['calls','triangles','cpu']){const a=rows.map(r=>(r.stages[name]||{})[key]||0).sort((a,b)=>a-b);stageStats[name][key]={mean:a.reduce((a,b)=>a+b,0)/a.length,p95:a[Math.floor(a.length*.95)]};}}
+   const stageStats={};for(const name of ['captures','primary','hitMap','compositor','refinement','objectWarp','screen','opticalInverse','boltGeometry','engines','hud','radio','capitalStep','capitalGeometry','portraitShow','portraitUpdate','speechPlan','speechSynthesis','radioNoise','radioTransmit']){stageStats[name]={};for(const key of ['calls','triangles','cpu']){const a=rows.map(r=>(r.stages[name]||{})[key]||0).sort((a,b)=>a-b);stageStats[name][key]={mean:a.reduce((a,b)=>a+b,0)/a.length,p95:a[Math.floor(a.length*.95)]};}}
    const gpu={valid:contextLosses===0,contextLosses,invalid:gpuInvalid,stages:{}};for(const stage of ['sky','captures','primary','hitMap','compositor','refinement','objectWarp','screen']){const a=gpuRows.filter(r=>r.stage===stage).map(r=>r.ms).sort((a,b)=>a-b);gpu.stages[stage]={samples:a.length,mean:a.length?a.reduce((a,b)=>a+b,0)/a.length:null,p50:a.length?a[Math.floor(a.length*.5)]:null,p95:a.length?a[Math.floor(a.length*.95)]:null};}
-   const result={lattice:params.get('bridgeGrid')!=='0',temporalTile:params.get('bridgeTemporalTile')==='1'?1:8,temporal:params.get('bridgeTemporal')==='1',pan:params.get('pan'),historyValid:stat('historyValid'),geometryAngle:params.get('bridgeAngle')||'unlimited',geometry:params.get('bridgeGeometry')||'full',hoist:params.has('hoist'),gpu,sampleStart,sampleEnd:new Date().toISOString(),stageStats,ablation:params.get('ablate'),cap:params.get('cap')||'0',scale:params.get('scale')||'1',mode,view,quality:params.get('quality')||'refined',live,samples:rows.length,visibility:document.visibilityState,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,backing:[canvas.width,canvas.height],renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'unavailable',gpuTimerAvailable:!!(gl.getExtension('EXT_disjoint_timer_query_webgl2')||gl.getExtension('EXT_disjoint_timer_query')),frame:stat('frame'),cpu:stat('cpu'),draws:stat('draws'),triangles:stat('triangles'),captures:stat('captures'),bridgeCpu:stat('bridgeCpu'),actors:session.snapshot().combat.enemies.filter(c=>c.hp>0).length,scene:presentation.renderStats().scene};
+   const result={lattice:params.get('bridgeGrid')!=='0',temporalTile:params.get('bridgeTemporalTile')==='1'?1:8,temporal:params.get('bridgeTemporal')==='1',pan:params.get('pan'),historyValid:stat('historyValid'),geometryAngle:params.get('bridgeAngle')||'unlimited',geometry:params.get('bridgeGeometry')||'full',hoist:params.has('hoist'),gpu,sampleStart,sampleEnd:new Date().toISOString(),stageStats,ablation:params.get('ablate'),cap:params.get('cap')||'0',scale:params.get('scale')||'1',mode,view,quality:params.get('quality')||'refined',live,samples:rows.length,visibility:document.visibilityState,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,backing:[canvas.width,canvas.height],renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'unavailable',gpuTimerAvailable:!!(gl.getExtension('EXT_disjoint_timer_query_webgl2')||gl.getExtension('EXT_disjoint_timer_query')),frame:stat('frame'),rafFrame:stat('rafFrame'),fullCpu:stat('fullCpu'),sim:stat('sim'),bolts:stat('bolts'),cpu:stat('cpu'),draws:stat('draws'),triangles:stat('triangles'),captures:stat('captures'),bridgeCpu:stat('bridgeCpu'),actors:session.snapshot().combat.enemies.filter(c=>c.hp>0).length,scene:presentation.renderStats().scene};
+   result.worstFrames=rows.slice().sort((a,b)=>b.fullCpu-a.fullCpu).slice(0,12);
    document.querySelector('#bench-result').textContent=JSON.stringify(result,null,2);document.querySelector('#bench-result').dataset.complete='true';
   },8000);},2000);
  };
 }
 let html=fs.readFileSync(path.join(root,'experiments/flight.html'),'utf8');
-html=html.replace('<head>','<head><base href="../experiments/">').replace(/<script src="flight.js[^>]*><\/script>/,'<script>('+probe.toString()+')();</script>$&');
+// Keep the probe in the managed dependency list so refresh:assets cannot
+// silently erase instrumentation that was injected inside a generated block.
+fs.writeFileSync(path.join(root,'tests/fixtures/ellis-benchmark-probe.js'),'('+probe.toString()+')();\n');
+html=html.replace('<head>','<head><base href="../experiments/">');
 html=html.replace(/(src|href)="(?![.#/]|https?:|data:)([^"]+)"/g,'$1="../experiments/$2"');
-fs.mkdirSync(path.join(root,'output'),{recursive:true});fs.writeFileSync(path.join(root,'output/ellis-benchmark.html'),html);
+const surface={file:'output/ellis-benchmark.html',profile:'ellisBenchmark'};
+html=html.replace(/<!-- script-manifest:flight -->[\s\S]*?<!-- \/script-manifest -->/,()=>require('./sync-script-lists.cjs').render(root,surface));
+fs.mkdirSync(path.join(root,'output'),{recursive:true});fs.writeFileSync(path.join(root,surface.file),html);
 console.log('Open http://localhost:8000/output/ellis-benchmark.html?mission=ellis&bridge=new&view=approach');

@@ -960,3 +960,12 @@ microscopic readout/local-only path. Inspected sky, rear arcs, remote beacons,
 fixed foreground and production HUD. Also checked real Tab target cycling,
 L lock, V radar change, physical 26 m foreground range, and a valid remote firing
 solution. Live gunfire remains outside this study.
+
+
+## Near-throat frame-time investigation (2026-10-25)
+
+See the [hitch investigation](benchmarks/ellis-hitches-2026-10-25.md) for the live
+reproduction, CPU/GPU stage measurements, finite-segment optimization and remaining
+limits. The benchmark now preserves instrumentation across asset refresh, records
+full-frame CPU tails and bolt counts, and reports the twelve worst CPU frames.
+The report also explains how to use the existing live CPU-stage overlay.

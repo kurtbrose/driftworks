@@ -88,7 +88,14 @@
         // Integrate the finite segment directly; its u span remains well behaved.
         /** @param {number} b @param {boolean} arcLength */function segment(b,arcLength){
             var first=u(b,E),last=u(b,S),h=(last-first)/24,total=0,root=Math.sqrt(Math.max(1e-10,Math.abs(1-b*b)));
-            for(var j=0;j<24;j++){var t=first+(j+.5)*h,l=root*(b<1?Math.sinh(t):Math.cosh(t)),r2=1+l*l;total+=(arcLength?Math.sqrt(r2):b/Math.sqrt(r2))*radialScale(r2);}
+            // Keep the same midpoint samples, advancing sinh/cosh together
+            // instead of evaluating a hyperbolic function at every sample.
+            var t=first+.5*h,transmitted=b<1,ch=Math.cosh(h),sh=Math.sinh(h);
+            var l=root*(transmitted?Math.sinh(t):Math.cosh(t)),slope=root*(transmitted?Math.cosh(t):Math.sinh(t));
+            for(var j=0;j<24;j++){
+                var r2=1+l*l;total+=(arcLength?Math.sqrt(r2):b/Math.sqrt(r2))*radialScale(r2);
+                var next=l*ch+slope*sh;slope=slope*ch+l*sh;l=next;
+            }
             return Math.abs(total*h);
         }
         /** @param {number} b @param {boolean} sum */function phase(b,sum){return entry(b)+(sum?lookup(b,u(b,E))+lookup(b,u(b,S)):segment(b,false));}

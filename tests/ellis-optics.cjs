@@ -137,3 +137,17 @@ for(const z of [Math.sqrt(500*500-250*250),600]){
  assert(Math.abs(a.length-b.length)<.01);
 }
 console.log('PASS Ellis off-axis pursuit: continuous rays, no missing branches, reciprocal source headings and finite-segment distance');
+
+// Radial travel within the constant Ellis core has an independent analytic
+// proper distance. Probe short same-chart segments very close to the throat.
+for(const side of [0,1])for(const pair of [[300.0001,300.01],[301,305],[340,350],[440,449]])for(const reverse of [false,true]){
+ const [R,S]=reverse?pair.slice().reverse():pair;
+ const eye=[side*12000,-2000-R,1550],target=[side*12000,-2000-S,1550];
+ const path=optics.primary(eye,target,side,side);
+ assert(path,'near-throat radial path exists');
+ assert(Math.abs(path.direction[0])+Math.abs(path.direction[2])<1e-6,'radial path has no lateral deflection');
+ assert.equal(Math.sign(path.direction[1]),Math.sign(R-S),'radial path points toward its endpoint');
+ const distance=Math.abs(Math.sqrt(S*S-90000)-Math.sqrt(R*R-90000));
+ assert(Math.abs(path.length-distance)<.005,'near-throat arc distance agrees with analytic Ellis radial travel');
+}
+console.log('PASS near-throat finite segments: analytic radial distance, both charts and both directions');
