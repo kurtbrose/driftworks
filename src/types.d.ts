@@ -325,6 +325,7 @@ export type LandingOptions = {unitsPerMetre?:number; spin?:number};
 export type LandingSample = {time:number; altitude:number; deployment:number; ramps:number; match:number; travel:number; offset:number[]; headingOffset:number; contact:boolean; done:boolean; phase:string};
 export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
+  shipArt?: import('./ship-art-types').ShipArtApi;
   skyEffects?: {
     fromFeatures:(features:{asset:string;yaw:number;pitch:number;widthDeg:number;gain:number}[],assets:Record<string,{diskFraction:number;strength:number;color:number[]}>)=>SkyCameraSource[];
     create:(host:HTMLElement)=>{setSources:(sources:SkyCameraSource[])=>void;setOccluders:(occluders:SkyOccluder[])=>void;setEnabled:(enabled:boolean)=>void;render:(pose:{eye?:number[];right:number[];up:number[];back:number[]},focal:number,seconds:number,empty:boolean)=>number;dispose:()=>void};

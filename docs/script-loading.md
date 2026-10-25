@@ -17,7 +17,10 @@ manifest.
 | Profile | Consumer |
 | --- | --- |
 | `tactical` | Generated script tags in `rts.html` |
-| `flight` | Generated script tags and import map in `experiments/flight.html` |
+| `flight` | Generated tags/import map in the flight lab and Ellis benchmark |
+| `flightStudy` | Ellis growth, aiming and curved-performance pages; flight dependencies without boot |
+| `ellisStudy`, `ellisCapture` | Observation lab and capital benchmark with their explicit feedback/entry-point differences |
+| `asteroidPatrol` | Asteroid patrol page with its smaller production dependency set |
 | `sharedTests` | `tests/helpers/shared-runtime.cjs`; loads the runtime and shared harness for Node groups |
 | `browserTests` | Generated tags in `tests/index.html`; derives from `sharedTests` with viewer resources |
 | `headless` | `tools/headless.cjs`; excludes the Pixi game and browser resources |
@@ -25,7 +28,8 @@ manifest.
 | `threeTests`, `asteroidTests` | Renderer submission, texture-prewarming and asteroid bridge test loaders |
 | `studyWorker` | Generated dependency array in `experiments/flight-study-worker.js` |
 
-Other standalone labs keep their own small script lists. Move them to a profile
+Other standalone labs keep their own script lists. The effects comparison retains
+inline replacement code between dependencies, so it remains page-owned. Move them to a profile
 when sharing their dependencies becomes useful. The manifest does not claim to
 describe every script loaded anywhere in the repository.
 
@@ -41,7 +45,9 @@ describe every script loaded anywhere in the repository.
 Do not manually edit inside `script-manifest` comment markers. Inline page setup
 and the asset-version helper remain outside the generated HTML block. Module
 scripts and the flight import map are explicit profile entries. Node and classic
-worker loaders reject profiles containing either.
+worker loaders reject profiles containing either. `src/ship-art.js` must follow
+simulation and asteroid geology and precede `src/game.js`; this is checked as a
+required dependency.
 
 `npm run check:scripts` checks every declared script exists, checks profile order,
 and rejects stale generated blocks or extra external scripts outside those

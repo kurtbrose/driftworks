@@ -5,6 +5,13 @@ const path = require('node:path');
 const manifest = require('./script-manifest.cjs');
 const {hash} = require('./refresh-site-assets.cjs');
 const surfaces = [
+  {file: 'experiments/ellis-growth.html', profile: 'flightStudy'},
+  {file: 'experiments/ellis-study.html', profile: 'ellisStudy'},
+  {file: 'experiments/mission-asteroid-patrol.html', profile: 'asteroidPatrol'},
+  {file: 'output/ellis-aim-study.html', profile: 'flightStudy'},
+  {file: 'output/ellis-benchmark.html', profile: 'flight'},
+  {file: 'output/ellis-capital-benchmark.html', profile: 'ellisCapture'},
+  {file: 'output/ellis-curved-performance.html', profile: 'flightStudy'},
   {file: 'rts.html', profile: 'tactical'},
   {file: 'experiments/flight.html', profile: 'flight'},
   {file: 'tests/index.html', profile: 'browserTests'},

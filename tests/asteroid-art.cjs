@@ -43,6 +43,7 @@ const context = vm.createContext({window: null, Driftworks: DW, DRIFTWORKS_TEST_
   }
 });
 context.window = context;
+vm.runInContext(fs.readFileSync(path.join(root, 'src/ship-art.js'), 'utf8'), context, {filename: 'src/ship-art.js'});
 vm.runInContext(fs.readFileSync(path.join(root, 'src/game.js'), 'utf8'), context, {filename: 'src/game.js'});
 assert.equal(DW.game.asteroidVisualDescription, art.describe, 'Retain the existing game helper');
 assert.equal(DW.game.asteroidSurfaceSample, art.surfaceSample);

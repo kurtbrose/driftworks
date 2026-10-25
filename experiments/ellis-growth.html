@@ -13,6 +13,7 @@
 <section id="growth-controls" aria-label="Growth playback"><button id="play">Pause</button><button id="restart">Restart</button><label>Time <input id="time" type="range" min="0" max="16" step="0.001" value="0"></label><label>View <select id="side"><option value="0">Asteroid end</option><option value="1">Rime end</option></select></label><label>Growth <select id="curve"><option value="log">Logarithmic</option><option value="linear">Linear</option></select></label><label>Duration <select id="duration"><option value="8">8 s</option><option value="16" selected>16 s</option><option value="30">30 s</option></select></label><label><input id="loop" type="checkbox" style="width:auto">Loop</label></section>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 
+<!-- script-manifest:flightStudy -->
 <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
 <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
 <script src="../src/combat.js?v=ce0e0e6eb149"></script>
@@ -37,7 +38,8 @@
 <script src="../src/explosions.js?v=ba20ec3731d9"></script>
 <script src="../src/asteroid-art.js?v=48aad8996df8"></script>
 <script src="../src/scene3d.js?v=b2e611d5710e"></script>
-<script src="../src/game.js?v=1069ca45dcaf"></script>
+<script src="../src/ship-art.js?v=394ca4b43117"></script>
+<script src="../src/game.js?v=737979d8df21"></script>
 <script src="dom.js?v=c1d4287e76cd"></script>
 <script src="retail-profiles.js?v=99526ebcd858"></script>
 <script src="flight-model.js?v=8a22d33bc921"></script>
@@ -82,6 +84,7 @@
 <script src="flight-watch.js?v=49b4caa0eff3"></script>
 <script type="module" src="gas-giant-flight.js?v=d4c1ae871933"></script>
 <script src="aegis-flight.js?v=2754db1f6763"></script>
+<!-- /script-manifest -->
 
 
 <script>

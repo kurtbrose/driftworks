@@ -18,6 +18,10 @@ assert.throws(() => manifest.files('flight'), /cannot execute module scripts or 
 assert.throws(() => manifest.files('unknown'), /Unknown script profile/);
 assert.equal(manifest.resolve('flight').filter(script => script.imports).length, 1);
 assert.equal(manifest.resolve('flight').filter(script => script.type === 'module').length, 3);
+assert.deepEqual(manifest.resolve('flightStudy'), manifest.resolve('flight').filter(script => script.src !== 'experiments/flight.js'));
+assert.ok(manifest.resolve('ellisStudy').at(-1).src === 'experiments/ellis-study.js');
+const patrol = manifest.resolve('asteroidPatrol');
+assert.deepEqual(patrol.slice(-2).map(script => script.src), ['experiments/ellis-feedback.js', 'experiments/flight.js']);
 const original = manifest.files('headless');
 original.reverse();
 assert.notDeepEqual(manifest.files('headless'), original, 'Each consumer owns its returned list');
@@ -68,6 +72,7 @@ try {
   assert.equal(refresh(root), 0);
   assert.equal(sync(root, true), 0, 'Asset versioning and script generation agree');
   const snapshots = surfaces.map(surface => read(surface.file));
+  const tacticalSnapshot = read('rts.html');
   assert.equal(sync(root), 0);
   assert.equal(refresh(root), 0);
   assert.deepEqual(surfaces.map(surface => read(surface.file)), snapshots, 'Repeated refresh is byte-identical');
@@ -85,9 +90,9 @@ try {
   assert.equal(sync(root), 0);
   write('rts.html', read('rts.html') + '<script src="src/game.js"></script>\n');
   assert.throws(() => sync(root, true), /scripts outside the generated block/);
-  write('rts.html', snapshots[0].replace('<!-- /script-manifest -->', ''));
+  write('rts.html', tacticalSnapshot.replace('<!-- /script-manifest -->', ''));
   assert.throws(() => sync(root, true), /expected one script-manifest block/);
-  write('rts.html', snapshots[0]);
+  write('rts.html', tacticalSnapshot);
   fs.unlinkSync(path.join(root, 'src/propulsion.js'));
   assert.throws(() => sync(root, true), /ENOENT/);
 } finally {

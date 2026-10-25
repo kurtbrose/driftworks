@@ -36,6 +36,7 @@ const suites = {
     "refueling-cycle.cjs"
   ],
   rendering: [
+    "ship-art.cjs",
     {"file":"shared.cjs","args":["rendering"]},
     "asteroid-art.cjs",
     "skybox-factory.cjs",
