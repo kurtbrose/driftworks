@@ -1,0 +1,72 @@
+{
+  "shader": "505536bb1ed6805941d71fa434a91dc54b3660106d24ed34d5df86b17edab93f",
+  "pixiShader": "a5e8d59e4da863705a469ba1990797dd464a0bae638be3f14bf641f60a89b785",
+  "cases": [
+    {
+      "seed": 29,
+      "index": 0,
+      "description": "8b481a352521a94366b1d45010116ca544f24176aaa1dc8b08ead89ecb7008fa",
+      "legacy": "824d7646a6a1929dbb888865c4da64e50e2719dfc64081cca26b239068ca49d9",
+      "uniforms": "2a6145e785845560ce48aa470bc67b937e749e2b8c124ae7ac2070ccca9f7339",
+      "craters": "22dbe48c56ae2d9aa5aa16c12a3f5babdfcd65cb59f616e60dd8440f8e56b387",
+      "samples": "e80068860a04c42ef6c9831e40c2a5ec8c7fd7a9e7d3fc5fae98f619630f04e8"
+    },
+    {
+      "seed": 1729,
+      "index": 0,
+      "id": "patrol-rock-1729",
+      "description": "2bfcd45d21b6ffcf91546a2a5f964b26e133844dcdf4ed4892803e0614f177eb",
+      "legacy": "05b04829492ec70517b5418cde138dac980a7604fafb1b2ad64c88b30d43f87b",
+      "uniforms": "e6f4936885775d9a34280a33cda6d3cd22f45388783d5a10ff3843005bf5a1fb",
+      "craters": "4b52a0b760bcea569f2e36eb6d5ee332e2e80f8fcad7dc01e276aca28c68ca15",
+      "samples": "008698a30617d0849038742974d405c8dc8385a768ac5288945c3e789328c3d0"
+    },
+    {
+      "seed": 1,
+      "index": 0,
+      "bulk": [
+        85,
+        15,
+        0,
+        0
+      ],
+      "description": "f78d629e424d804cd3ac8b07b0b481de9092d6957d3534c733681b5d2f19df38",
+      "legacy": "824d7646a6a1929dbb888865c4da64e50e2719dfc64081cca26b239068ca49d9",
+      "uniforms": "9e7fd03a9311d5d9947e6f8ab805c0c43f4b21439988f5f854a3ae54a5ad030c",
+      "craters": "37eab5941431897353e5c7659fc04a30b40315800126f09e777ae133de9897be",
+      "samples": "a07e8b5768dfd00fb9b8fc5a304441177288ee621ef7062b407f9dac82d825e8"
+    },
+    {
+      "seed": 42,
+      "index": 0,
+      "id": "study-rock-42",
+      "bulk": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "description": "e432a7145b873a0140ca165585fcfe8cc2a63a36252433ce393be384983f9e47",
+      "legacy": "7e1f3f08497b6be9b1ed691db70a131826f3c484176552f36c44b58922c1452e",
+      "uniforms": "8c2d1a729764c84ea31d4d193da9e750825c6619ed7d669bbbcff775e7be7a53",
+      "craters": "882139baa2dd4e5b74a56bd042e1de26ffa344279cdf578921269ee4d0863a6a",
+      "samples": "078082a1fc26ba06fb78792141946104ffc799730fad4de8878e1330c25dddb0"
+    },
+    {
+      "seed": 91,
+      "index": 0,
+      "id": "study-rock-91",
+      "bulk": [
+        -1,
+        1,
+        0,
+        0
+      ],
+      "description": "dd3a447fc99c6e654c3d9aac32bae8714774084612aaf982d4212fdedd6415cc",
+      "legacy": "6d5e5cf313fc53586ee0511db2b3fa55493d137eaec266df6028c45e3027df6a",
+      "uniforms": "2e1a9e5497edac0cc099ea457c83e18c9b1a84601c6d6e2383619745623b8d5c",
+      "craters": "8920e319040c88a1d6dbaa261f12a1da2ef604335dd7a919900b1eb2c179629c",
+      "samples": "f6c62d7168af22f45aedf5aa6729414404a6641566eba432d95b515ed1b38b57"
+    }
+  ]
+}

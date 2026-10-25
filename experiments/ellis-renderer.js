@@ -364,7 +364,7 @@ void main(){
             uniforms.ellisRegion.value=region;
             if(primaryWidth!==width||primaryHeight!==height){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();historyPose=null;historyMap=target(Math.ceil(width/2),Math.ceil(height/2));historyMap.texture.minFilter=THREE.NearestFilter;historyMap.texture.magFilter=THREE.NearestFilter;hitMap=target(Math.ceil(width/2),Math.ceil(height/2));hitMap.texture.minFilter=THREE.NearestFilter;hitMap.texture.magFilter=THREE.NearestFilter;uniforms.hitMap.value=hitMap.texture;uniforms.hitSize.value=[Math.ceil(width/2),Math.ceil(height/2)];primary=target(width,height);effects=target(width,height);uniforms.effectColor.value=effects.texture;uniforms.effectDepth.value=effects.depthTexture;primaryWidth=width;primaryHeight=height;uniforms.sourceColor.value=primary.texture;uniforms.sourceDepth.value=primary.depthTexture;}
             var originalVisibility=entries.map(function(e){return e.object.visible;}),ships=entries.filter(readable);
-            entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&(e.region||0)===region&&!readable(e);});
+            entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&(e.region||0)===region&&!readable(e)&&!e.projected;});
             var lights=entries.filter(function(e){return e.object.visible&&e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending;});
             var visibility=entries.map(function(e){return e.object.visible;}),writes=lights.map(function(e){return e.material.depthWrite;});
             // Additive fragments have no opaque surface depth. Keep them separate
@@ -389,7 +389,7 @@ void main(){
             try{
                 for(var chart=0;chart<2;chart++)for(var i=0;i<count;i++){
                     restore();var worldSide=chart===0?side:1-side;
-                    entries.forEach(function(e,k){e.object.visible=originalVisibility[k]&&!readable(e)&&(e.region||0)===worldSide&&!(e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending);});
+                    entries.forEach(function(e,k){e.object.visible=originalVisibility[k]&&!readable(e)&&!e.projected&&(e.region||0)===worldSide&&!(e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending);});
                     capture(scene,entries,[worldSide*12000/units,-2000/units,1550/units],chart,(next+i)%6);
                 }
             }finally{restore();renderer.setScissorTest(false);renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);}
@@ -417,7 +417,13 @@ void main(){
                 try{shipStats=renderObjects(scene,camera,ships,pose,focal,width,height,true);}
                 finally{entries.forEach(function(e,i){e.object.visible=originalVisibility[i];});}
             }
-            return {objectPaths:shipStats.objectPaths,objectPatches:shipStats.objectPatches,objectError:shipStats.objectError,objectBad:shipStats.objectBad,compositionPasses:(adaptive?3:1)+(ships.length?1:0),historyValid:valid?1:0,extraPasses:(adaptive?2:0)+(ships.length?1:0),captures:count*2,cpuMs:performance.now()-start};
+            var projected=entries.some(function(e,i){return originalVisibility[i]&&e.projected;});
+            if(projected){
+                entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&!!e.projected;});
+                var auto=renderer.autoClear;renderer.autoClear=false;
+                try{renderer.render(scene,camera);}finally{renderer.autoClear=auto;entries.forEach(function(e,i){e.object.visible=originalVisibility[i];});}
+            }
+            return {objectPaths:shipStats.objectPaths,objectPatches:shipStats.objectPatches,objectError:shipStats.objectError,objectBad:shipStats.objectBad,compositionPasses:(adaptive?3:1)+(ships.length?1:0)+(projected?1:0),historyValid:valid?1:0,extraPasses:(adaptive?2:0)+(ships.length?1:0)+(projected?1:0),captures:count*2,cpuMs:performance.now()-start};
         }
         function dispose(){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();mapMaterial.dispose();fullMaterial.dispose();refineMaterial.dispose();atlases.forEach(function(t){t.dispose();});lookup.dispose();quad.dispose();material.dispose();}
         return {render:render,dispose:dispose,invalidate:function(){initialized=false;lastSide=-1;historyPose=null;historyRevision=null;phase=0;}};

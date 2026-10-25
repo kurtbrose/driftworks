@@ -67,10 +67,7 @@
         var n=O.map(function(v){return v/R;}),m=T.map(function(v){return v/S;}),other=region!==destination;
         var delta=T.map(function(v,i){return v-O[i];}),distance=Math.hypot.apply(null,delta);
         var straight=delta.map(function(v){return v/Math.max(.000001,distance);}),along=-O.reduce(function(sum,v,i){return sum+v*straight[i];},0),impact2=R*R-along*along;
-        var nearT=Math.max(0,Math.min(1,(distance*a-100)/100));
-        var eyeT=Math.max(0,Math.min(1,(R-1)*10)),targetT=Math.max(0,Math.min(1,(S-1)*10));
-        var localWeight=other?0:(1-nearT*nearT*(3-2*nearT))*eyeT*eyeT*(3-2*eyeT)*targetT*targetT*(3-2*targetT);
-        if(localWeight>=1)return {direction:straight,sourceDirection:straight,length:distance*a,impact:Math.sqrt(Math.max(0,impact2)),direct:true,turning:false};
+        // Finite-source paths stay on the same metric as projectiles, including nearby ships.
         if(!other&&R>=2&&(along<=0||impact2>=4||distance<along-Math.sqrt(Math.max(0,4-impact2))))return {direction:straight,sourceDirection:straight,length:distance*a,impact:Math.sqrt(Math.max(0,impact2)),direct:true,turning:false};
         var cosine=Math.max(-1,Math.min(1,n.reduce(function(sum,v,i){return sum+v*m[i]*(other?-1:1);},0))),angle=Math.acos(cosine);
         var tangent=m.map(function(v,i){return v*(other?-1:1)-n[i]*cosine;}),tn=Math.hypot.apply(null,tangent);
@@ -96,20 +93,72 @@
         for(var i=0;i<24;i++){var mid=(low+high)*.5,value=phase(mid,other||turning);if((value<angle)!==decreasing)low=mid;else high=mid;}
         var b=(low+high)*.5,sine=b/R,radial=(outward&&!turning?1:-1)*Math.sqrt(Math.max(0,1-sine*sine));
         var direction=n.map(function(v,i){return v*radial+tangent[i]*sine;}),root=Math.sqrt(Math.max(1e-10,Math.abs(1-b*b)));
-        /** @param {number} end */function arc(end){var total=0;for(var j=0;j<16;j++){var t=end*(j+.5)/16,l=root*(b<1?Math.sinh(t):Math.cosh(t));total+=Math.sqrt(1+l*l)*radialScale(1+l*l)*end/16;}return total;}
+        /** Accurate arc time: integrate the compact core, use its analytic flat tail.
+         * @param {number} end */function arc(end){
+            var edge=u(b,2),join=u(b,1.5),stop=Math.min(end,edge),total=0,first=0;
+            for(var part=0;part<2;part++){
+                var last=part===0?Math.min(stop,join):stop,h=(last-first)/32;
+                for(var j=0;j<=32;j++){var t=first+j*h,l=root*(b<1?Math.sinh(t):Math.cosh(t)),r2=1+l*l;total+=Math.sqrt(r2)*radialScale(r2)*h*(j===0||j===32?1:j%2?4:2)/3;}
+                first=last;
+            }
+            if(end>edge){var l=root*(b<1?Math.sinh(end):Math.cosh(end));total+=Math.sqrt(Math.max(0,1+l*l-b*b))-Math.sqrt(Math.max(0,4-b*b));}
+            return total;
+        }
         var targetTangent=m.map(function(v,i){return (cosine*v-n[i]*(other?-1:1))/Math.max(.000001,tn);});
         var sourceDirection=m.map(function(v,i){return v*(other||turning||outward?1:-1)*Math.sqrt(Math.max(0,1-b*b/(S*S)))+targetTangent[i]*b/S;});
-        var first=arc(u(b,E)),last=arc(u(b,S)),length=(other||turning?first+last:segment(b,true));
+        var length=other||turning?arc(u(b,E))+arc(u(b,S)):segment(b,true);
         if(R>2)length+=Math.sqrt(Math.max(0,R*R-b*b))-Math.sqrt(Math.max(0,4-b*b));
-        // Blend the local visual frame into the primary optical path over 100-200 m.
-        var weight=localWeight;
-        if(weight>0){
-            direction=direction.map(function(v,i){return v*(1-weight)+straight[i]*weight;});
-            sourceDirection=sourceDirection.map(function(v,i){return v*(1-weight)+straight[i]*weight;});
-            var magnitude=Math.hypot.apply(null,direction);direction=direction.map(function(v){return v/Math.max(.000001,magnitude);});
-        }
         var sourceNorm=Math.hypot.apply(null,sourceDirection);sourceDirection=sourceDirection.map(function(v){return v/Math.max(.000001,sourceNorm);});
-        return {direction:direction,sourceDirection:sourceDirection,length:Math.max(.001,length*a*(1-weight)+distance*a*weight),impact:b,direct:false,turning:turning};
+        return {direction:direction,sourceDirection:sourceDirection,length:Math.max(.001,length*a),impact:b,direct:false,turning:turning};
+    }
+    /** @typedef {import('./types').OpticalRay} OpticalRay */
+    /** Start an unguided optical-metric projectile. All positions/distances are metres.
+     * @param {number[]} eye @param {number[]} direction @param {number} region @returns {OpticalRay} */
+    function ray(eye,direction,region){
+        var n=Math.hypot.apply(null,direction);
+        return {eye:eye.slice(),direction:direction.map(function(v){return v/n;}),region:region,originRegion:region,active:false,l:0,p:0,b:0,phase:0,radial:[0,0,0],tangent:[0,0,0]};
+    }
+    /** Integrate the optical Hamiltonian with RK4. p is local radial velocity;
+     * p^2+b^2/(1+l^2)=1, dphi/ds=b/(1+l^2). The compact radial scale is shared
+     * with the image integrals. No target information enters projectile motion.
+     * @param {OpticalRay} r @param {number} h */
+    function rayStep(r,h){
+        /** @param {number} l @param {number} p */function derivative(l,p){var r2=1+l*l,A=radialScale(r2);return [p/A,r.b*r.b*l/(A*r2*r2),r.b/r2];}
+        var a=derivative(r.l,r.p),b=derivative(r.l+a[0]*h*.5,r.p+a[1]*h*.5),c=derivative(r.l+b[0]*h*.5,r.p+b[1]*h*.5),d=derivative(r.l+c[0]*h,r.p+c[1]*h);
+        return {l:r.l+h*(a[0]+2*b[0]+2*c[0]+d[0])/6,p:r.p+h*(a[1]+2*b[1]+2*c[1]+d[1])/6,phase:r.phase+h*(a[2]+2*b[2]+2*c[2]+d[2])/6};
+    }
+    /** @param {OpticalRay} r @param {number} distance
+     * @returns {{start:number[];end:number[];region:number;direction:number[]}[]} */
+    function advanceRay(r,distance){
+        var segments=/** @type {{start:number[];end:number[];region:number;direction:number[]}[]} */([]),remaining=Math.max(0,distance);
+        /** @param {number[]} end @param {number} side @param {number[]} direction */function append(end,side,direction){segments.push({start:r.eye,end:end,region:side,direction:direction});r.eye=end;r.region=side;r.direction=direction;}
+        while(remaining>1e-8){
+            if(!r.active){
+                var O=r.eye.map(function(v,i){return v-[r.region*12000,-2000,1550][i];}),R=Math.hypot.apply(null,O),along=O.reduce(function(sum,v,i){return sum+v*r.direction[i];},0),disc=along*along-R*R+360000;
+                if(R>=600-1e-6){
+                    var entry=along<0&&disc>0?Math.max(0,-along-Math.sqrt(disc)):Infinity;
+                    if(entry>=remaining||!Number.isFinite(entry)){append(r.eye.map(function(v,i){return v+r.direction[i]*remaining;}),r.region,r.direction);break;}
+                    if(entry>1e-8){append(r.eye.map(function(v,i){return v+r.direction[i]*entry;}),r.region,r.direction);remaining-=entry;O=r.eye.map(function(v,i){return v-[r.region*12000,-2000,1550][i];});R=600;}
+                }
+                r.originRegion=r.region;r.radial=O.map(function(v){return v/Math.max(1e-10,R);});
+                r.p=Math.max(-1,Math.min(1,r.direction.reduce(function(sum,v,i){return sum+v*r.radial[i];},0)));r.b=R/300*Math.sqrt(Math.max(0,1-r.p*r.p));
+                var t=r.direction.map(function(v,i){return v-r.radial[i]*r.p;}),tn=Math.hypot.apply(null,t);r.tangent=t.map(function(v){return v/Math.max(1e-12,tn);});
+                r.l=Math.sqrt(Math.max(1e-12,R*R/90000-1));r.phase=0;r.active=true;
+            }
+            var h=Math.min(remaining,6)/300,next=rayStep(r,h),crossed=r.l*next.l<0;
+            if(crossed){
+                var lo=0,hi=h;for(var j=0;j<24;j++){var m=(lo+hi)*.5,state=rayStep(r,m);if(state.l*r.l>0)lo=m;else hi=m;}
+                var edge=rayStep(r,(lo+hi)*.5),q=r.radial.map(function(v,i){return v*Math.cos(edge.phase)+r.tangent[i]*Math.sin(edge.phase);}),sign=r.l<0?-1:1;
+                append(q.map(function(v,i){return [r.region*12000,-2000,1550][i]+sign*v*300;}),r.region,r.direction);
+                // The throat's two chart positions are identified, never sweep the storage gap.
+                r.region=1-r.region;r.eye=q.map(function(v,i){return [r.region*12000,-2000,1550][i]-sign*v*300;});
+            }
+            r.l=next.l;r.p=next.p;r.phase=next.phase;var radius=Math.sqrt(1+r.l*r.l),side=r.l<0?1-r.originRegion:r.originRegion,sign=r.l<0?-1:1,co=Math.cos(r.phase),si=Math.sin(r.phase);
+            var q=r.radial.map(function(v,i){return v*co+r.tangent[i]*si;}),t=r.radial.map(function(v,i){return -v*si+r.tangent[i]*co;}),direction=q.map(function(v,i){return v*r.p+sign*t[i]*r.b/radius;}),norm=Math.hypot.apply(null,direction);direction=direction.map(function(v){return v/norm;});
+            append(q.map(function(v,i){return [side*12000,-2000,1550][i]+sign*v*radius*300;}),side,direction);remaining-=h*300;
+            if(radius>=2&&r.l*r.p>0)r.active=false;
+        }
+        return segments;
     }
     var shader=`
 uniform sampler2D ellisTable;
@@ -237,5 +286,5 @@ vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){
     }
     return result;
 }`;
-    DW.ellisOptics={primary:primary,lookup:lookup,table:table,integral:integral,shader:shader,latticeShader:latticeShader,size:size};
+    DW.ellisOptics={ray:ray,advanceRay:advanceRay,primary:primary,lookup:lookup,table:table,integral:integral,shader:shader,latticeShader:latticeShader,size:size};
 }());

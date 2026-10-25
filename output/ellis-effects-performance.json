@@ -1,0 +1,23 @@
+{
+  "bolts": 160,
+  "order": "individual / batched / batched / individual",
+  "viewport": [
+    1280,
+    720
+  ],
+  "dpr": 1.5,
+  "before": {
+    "cpuMedian": 6.200000047683716,
+    "cpuP95": 7.799999952316284,
+    "frameMedian": 14.600000000000364,
+    "frameP95": 15.100000000000364,
+    "draws": 485
+  },
+  "after": {
+    "cpuMedian": 3.100000023841858,
+    "cpuP95": 3.5,
+    "frameMedian": 14.599999999999909,
+    "frameP95": 15.100000000000364,
+    "draws": 14
+  }
+}

@@ -5,7 +5,7 @@ const noop=()=>{},hud=new Proxy({},{get:()=>noop,set:()=>true});
 function element(){return {width:1,height:1,clientWidth:640,clientHeight:480,style:{},setAttribute:noop,appendChild:noop,addEventListener(type,callback){this.listeners=this.listeners||{};this.listeners[type]=callback;},querySelector:()=>element(),getContext:type=>{assert.equal(type,'2d','Production never requests a raw GPU context');return hud;}};}
 const context=vm.createContext({console,performance,AbortController,Float32Array,Uint8Array,Set,Map,WeakMap,Math,document:{createElement:element},window:null});
 context.window=context;context.DRIFTWORKS_TEST_MODE=true;context.addEventListener=noop;
-for(const name of ['vendor/three/build/three.global.js',...['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','population','session','tactical/camera','engine-audio','audio-mixer','audio','hud','mesh-builder','mining-rig','explosions','scene3d','game'].map(n=>'src/'+n+'.js')])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context,{filename:name});
+for(const name of ['vendor/three/build/three.global.js',...['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','asteroid-art','population','session','tactical/camera','engine-audio','audio-mixer','audio','hud','mesh-builder','mining-rig','explosions','scene3d','game'].map(n=>'src/'+n+'.js')])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name),'utf8'),context,{filename:name});
 const THREE=context.THREE,DW=context.Driftworks,frames=[];
 let submissionCanvas;
 THREE.WebGLRenderer=class {constructor(options){submissionCanvas=options.canvas;}setSize(){}setRenderTarget(target){this.target=target;}setClearColor(){}clear(){}render(scene){frames.push(scene.children.filter(o=>o.material&&o.visible).map(o=>({geometry:o.geometry,matrix:o.matrix.elements.slice(),uniforms:Object.fromEntries(Object.entries(o.material.uniforms||{}).map(([k,v])=>[k,v.value])),material:o.material,blending:o.material.blending,depthWrite:o.material.depthWrite})));}};
@@ -202,9 +202,9 @@ viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeome
 const U=context.window.Driftworks.sim.METERS_PER_UNIT;
 viewer.setStudyActors([{vertices:data,color:[1,1,1],region:0,origin:[12/U,-2340/U,1550/U],lensCenter:[12/U,-2340/U,1550/U],lensRadius:5}]);
 viewer.setSurfaceCamera({region:0,eye:[0,-2380/U,1550/U],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});viewer.render(world,1,0,0);
-const nearbyDraw=frames.at(-1)[0];assert(nearbyDraw);assert.equal(nearbyDraw.uniforms.uLensEnabled,0,'42 m ship retains original mesh geometry');
+const nearbyDraw=frames.at(-1)[0];assert(nearbyDraw);assert.equal(nearbyDraw.uniforms.uLensEnabled,1,'42 m ship uses the shared finite-source optical path');
 assert.equal(nearbyDraw.uniforms.uLensMode,3,'Local ship is not sliced by the aperture mask');
-console.log('PASS Ellis nearby geometry: ordinary local mesh, no aperture slicing and captured-copy suppression');
+console.log('PASS Ellis nearby geometry: rigid optical mesh, no aperture slicing and captured-copy suppression');
 
 // Readable ships never enter mouth captures, and their vertex transform stays
 // orthonormal at ranges beyond the old local-frame band, in both render routes.
@@ -296,3 +296,14 @@ for(const crossing of [4.5,16.5]){
  }
 }
 console.log('PASS Ellis observer chart crossings: continuous off-axis image position and orientation in both directions');
+
+viewer.setStudyBridge(false);context.location.search='?mission=ellis';viewer.setStudyBridge(true);
+viewer.setStudyActors([]);viewer.setStudyEffects([{vertices:new Float32Array(data),color:[.071,.082,.093],projected:true,region:1}]);
+viewer.setSurfaceCamera({region:0,eye:[0,-2350/U,1550/U],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+const projectedStart=frames.length;viewer.render(world,1,0,0);
+const projectedEffects=frames.slice(projectedStart).flat().filter(d=>Math.abs(d.uniforms.uColor?.[0]-.071)<1e-6);
+assert.equal(projectedEffects.length,1,'Projected cross-chart gunfire is submitted once, after composition, and excluded from all shell captures');
+assert.equal(projectedEffects[0].uniforms.uLensEnabled,0,'Preprojected trails do not receive a second optical transform');
+viewer.setStudyEffects([]);const clearStart=frames.length;viewer.render(world,1,0,0);
+assert(!frames.slice(clearStart).flat().some(d=>Math.abs(d.uniforms.uColor?.[0]-.071)<1e-6),'Pooled projectile draws do not linger after removal');
+console.log('PASS optical gunfire presentation: one observer-space overlay, cross-chart visibility, no shell capture/double warp and cleared pooled draws');

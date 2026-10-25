@@ -5,6 +5,10 @@ renderer. It loads the actual ordinary application scripts into an isolated Node
 VM. There is no DOM, WebGL context, audio context, server, or network access.
 No installation or build step is needed.
 
+Shared asteroid geology loads from `src/asteroid-art.js` after simulation.
+The headless runtime does not load the Pixi `src/game.js` composition root;
+CPU terrain queries remain available through `Driftworks.scene3d`.
+
 For a repeatable fleet-size CPU sweep, run `node tools/stress-flight.cjs`.
 For the corresponding rendered browser sweep and its optional automation setup,
 see [browser fighter scaling](benchmarks/flight-browser-2026-10-23.md).

@@ -198,15 +198,20 @@
                 var cached = textureImages.get(model.id);
                 if (cached)
                     return cached;
+                const texturePath = model.texture;
+                if (!texturePath) throw new Error('Model has no texture: ' + model.id);
                 var pending = /** @type {Promise<HTMLImageElement>} */ (new Promise(function (resolve, reject) {
                     var image = new Image();
                     image.onload = function () {
-                        resolve(image);
+                        var wreck = new Image();
+                        wreck.onload = function () { wreckTextures.set(image, wreck); resolve(image); };
+                        wreck.onerror = function () { reject(new Error('Could not load wreck texture: ' + model.texture)); };
+                        wreck.src = assetUrl('../assets/ships/' + pack.id + '/' + texturePath.replace(/\.[^.]+$/, '.wreck.webp'));
                     };
                     image.onerror = function () {
                         reject(new Error('Could not load ' + model.texture));
                     };
-                    image.src = assetUrl('../assets/ships/' + pack.id + '/' + model.texture);
+                    image.src = assetUrl('../assets/ships/' + pack.id + '/' + texturePath);
                 }));
                 textureImages.set(model.id, pending);
                 return pending;
@@ -222,40 +227,18 @@
             return result;
         });
     }
-    // One derived atlas per source image; wrecks retain the artist's UVs and panels.
+    // Baked offline; rendering a new wreck performs only a cache lookup.
     /** @type {WeakMap<HTMLImageElement,HTMLImageElement>} */
     var wreckTextures = new WeakMap();
     /** @param {HTMLImageElement | undefined} image */
-    function wreckTexture(image) {
-        if (!image || !image.naturalWidth || typeof document === 'undefined') return image;
-        var cached = wreckTextures.get(image);
-        if (cached) return cached;
-        var canvas = document.createElement('canvas');
-        canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
-        var ctx = canvas.getContext('2d');
-        if (!ctx) return image;
-        ctx.drawImage(image, 0, 0);
-        var pixels = ctx.getImageData(0, 0, canvas.width, canvas.height), data = pixels.data;
-        for (var y = 0; y < canvas.height; y++) for (var x = 0; x < canvas.width; x++) {
-            var i = (y * canvas.width + x) * 4;
-            var u = x / canvas.width, v = y / canvas.height;
-            // Warped, overlapping burns avoid a regular camouflage/checker pattern.
-            var field = Math.sin(u*23+Math.sin(v*19)*2) + Math.sin(v*31-u*11) * .65 + Math.sin(u*83+v*67)*.22;
-            var grain = (Math.sin(x*127.1+y*311.7)*43758.5453)%1;
-            var soot = Math.max(0, Math.min(1, (field+.65)*.65));
-            var metal = Math.max(0, -field-.35)*.22;
-            var heat = Math.max(0, 1-Math.abs(field+.25)*3)*.13;
-            var luma = data[i]*.2126 + data[i+1]*.7152 + data[i+2]*.0722;
-            var base = 12 + luma*(.19 + metal - soot*.13) + grain*5;
-            data[i] = base + heat*95;
-            data[i+1] = base*.98 + heat*38;
-            data[i+2] = base*1.06 + heat*12;
-        }
-        ctx.putImageData(pixels, 0, 0);
-        // Both renderers accept a canvas as an immediately uploadable texture source.
-        cached = /** @type {HTMLImageElement} */ (/** @type {unknown} */ (canvas));
-        wreckTextures.set(image, cached);
-        return cached;
+    function wreckTexture(image) { return image ? wreckTextures.get(image) || image : image; }
+    /** All source and wreck images, for renderer upload during loading.
+     * @param {Images} images @returns {HTMLImageElement[]} */
+    function textureSources(images) {
+        return Array.from(new Set(Array.from(images.values()).flatMap(function (image) {
+            var wreck = wreckTextures.get(image);
+            return wreck ? [image, wreck] : [image];
+        })));
     }
     /** @param {ArtCraft[]} craft @param {string} selection @param {number} wave @param {number} units @param {Images} images @param {Vector} [paint] @param {boolean} [transforms] */
     function sourceFleetGeometry(craft, selection, wave, units, images, paint, transforms) {
@@ -689,5 +672,5 @@
     function paintColor(hex) {
         return /^#[0-9a-f]{6}$/i.test(hex) ? [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255] : undefined;
     }
-    DW.shipPackModels = { gunAnchors: gunAnchors, craftModel: craftModel, hullRadius: hullRadius, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, sourceScorchGeometry: sourceScorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
+    DW.shipPackModels = { gunAnchors: gunAnchors, craftModel: craftModel, hullRadius: hullRadius, hullHit: hullHit, addScorch: addScorch, scorchGeometry: scorchGeometry, sourceScorchGeometry: sourceScorchGeometry, paintColor: paintColor, find: find, loadTextures: loadTextures, textureSources: textureSources, sourceGeometry: sourceGeometry, sourceDraw: sourceDraw, sourceFleetGeometry: sourceFleetGeometry, geometry: geometry, detailedGeometry: detailedGeometry, mixedModel: mixedModel, fleetGeometry: fleetGeometry, engineAnchors: engineAnchors, engineGeometry: engineGeometry, populate: populate };
 }());

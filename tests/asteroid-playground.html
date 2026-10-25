@@ -14,7 +14,7 @@
   <div><h1>Asteroid playground · fresh specimens every visit</h1><p>Per-pixel procedural geology and grazing-angle relief lighting.</p><p class="seed" id="seed"></p></div>
   <div class="controls"><label>Light direction<input id="azimuth" type="range" min="-180" max="180" value="-144"></label><label>Light elevation<input id="elevation" type="range" min="8" max="80" value="34"></label><button id="regenerate">New panel</button><button id="detail">Close-up</button><button id="rotation">Pause rotation</button></div>
 </header>
-<script src="../src/asset-versions.js?v=16308cf0b7d6"></script>
+<script src="../src/asset-versions.js?v=07ee9d9bdc70"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
 <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
@@ -32,7 +32,8 @@
 <script src="../src/audio-mixer.js?v=34c90880514e"></script>
 <script src="../src/audio.js?v=364df02d8266"></script>
 <script src="../src/hud.js?v=286fcabf0284"></script>
-<script src="../src/game.js?v=4b2cf113b259"></script>
+<script src="../src/asteroid-art.js?v=48aad8996df8"></script>
+<script src="../src/game.js?v=1069ca45dcaf"></script>
 <script>
   const seedBytes=new Uint32Array(1);crypto.getRandomValues(seedBytes);const panelSeed=seedBytes[0];
   document.querySelector('#seed').textContent='Panel seed: '+panelSeed.toString(16).padStart(8,'0');

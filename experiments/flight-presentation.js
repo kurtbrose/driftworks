@@ -184,7 +184,10 @@
         var burns = /** @type {WeakMap<Vector, Batch[]>} */ (new WeakMap());
         var crewKey = '', crewPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses, crews = /** @type {Batch[]} */ ([]);
         DW.shipPackModels.loadTextures().then(function (images) {
-            shipImages = images;
+            if (!scene.prepareStudyTextures) { shipImages = images; return; }
+            return Promise.resolve(scene.prepareStudyTextures(DW.shipPackModels.textureSources(images))).then(function () {
+                shipImages = images;
+            });
         }).catch(/** @param {unknown} error */ function (error) {
             get('art-credit').textContent = String(error);
         });
@@ -303,9 +306,14 @@
                 return Object.assign({}, batch, {origin: /** @type {[number,number,number]} */ ([asteroid ? asteroid.position.x : 0, asteroid ? asteroid.position.y : 0, 0]), rotation: asteroid ? asteroid.rotation : 0});
             })));
             var allGuns=DW.training.allGuns(combat,guns),effectBatches=/** @type {Batch[]} */([]),engineParts=/** @type {{region:number;vertices:Float32Array}[]} */([]);
-            if(objectWarp){
+            // Rigid ship placement does not warp individual projectiles. Keep
+            // their additive geometry batched per chart in the full renderer.
+            // Only the explicit object-warp experiment needs per-effect paths.
+            if(regions.length>1&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects'){
                 allGuns.bolts.forEach(function(b){DW.flightGuns.geometry({bolts:[b],impacts:[]},state).forEach(function(batch){effectBatches.push(Object.assign({},batch,{region:b.region||0,lensCenter:b.position}));});});
                 allGuns.impacts.forEach(function(b){DW.flightGuns.geometry({bolts:[],impacts:[b]},state).forEach(function(batch){effectBatches.push(Object.assign({},batch,{region:b.region||0,lensCenter:b.position}));});});
+            }else if(regions.length>1){
+                effectBatches=DW.flightGuns.geometry(allGuns,state,true);
             }else{
             regions.forEach(function(region){DW.flightGuns.geometry({bolts:allGuns.bolts.filter(function(b){return (b.region||0)===region;}),impacts:allGuns.impacts.filter(function(b){return (b.region||0)===region;})},state).forEach(function(b){effectBatches.push(Object.assign({},b,{region:region}));});});
             }

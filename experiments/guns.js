@@ -28,31 +28,17 @@
         if(!crossing)return {point:end,region:region,normal:null,segments:[{start:start,end:end,region:region}]};
         return {point:crossing.eye,region:1-region,normal:crossing.normal,segments:[{start:start,end:crossing.entry,region:region},{start:crossing.exit,end:crossing.eye,region:1-region}]};
     }
-    /** Straight projectile route, with at most one physical mouth transit.
-     * This is deliberately independent of the optical Ellis ray.
+    /** Finite-source firing route in the same compact optical metric as the image.
      * Coordinates/distances are scene units, not metres.
      * @param {Vector} origin @param {Vector} target @param {number} region @param {number} destination @param {boolean} [bridge] */
     function ballisticPath(origin,target,region,destination,bridge){
         var delta=target.map(function(v,i){return v-origin[i];}),distance=Math.hypot.apply(null,delta);
-        if(!bridge||region===destination){
-            if(region!==destination||distance<1e-10)return null;
-            var crossing=bridge?crossBridge(origin,target,region):null;
-            if(crossing&&crossing.fraction<1-1e-9)return null;
-            return {direction:delta.map(function(v){return v/distance;}),distance:distance};
-        }
-        var a=300/units,O=origin.map(function(v,i){return v-[region*12000/units,-2000/units,1550/units][i];}),T=target.map(function(v,i){return v-[destination*12000/units,-2000/units,1550/units][i];});
-        var R=Math.hypot.apply(null,O),S=Math.hypot.apply(null,T);if(R<a-1e-8||S<a-1e-8)return null;
-        R=Math.max(a,R);S=Math.max(a,S);
-        var n=O.map(function(v){return v/R;}),m=T.map(function(v){return -v/S;}),cosine=Math.max(-1,Math.min(1,n.reduce(function(sum,v,i){return sum+v*m[i];},0))),angle=Math.acos(cosine);
-        var maximum=Math.PI-Math.asin(a/R)-Math.asin(a/S);if(angle>maximum-1e-9&&angle>1e-8)return null;
-        var tangent=m.map(function(v,i){return v-n[i]*cosine;}),tn=Math.hypot.apply(null,tangent);tangent=tangent.map(function(v){return v/Math.max(1e-12,tn);});
-        var low=0,high=a*(1-1e-12);
-        for(var i=0;i<40;i++){var mid=(low+high)*.5,phase=2*Math.asin(mid/a)-Math.asin(mid/R)-Math.asin(mid/S);if(phase<angle)low=mid;else high=mid;}
-        var impact=(low+high)*.5,sine=impact/R;
-        return {direction:n.map(function(v,i){return -v*Math.sqrt(Math.max(0,1-sine*sine))+tangent[i]*sine;}),distance:Math.sqrt(Math.max(0,R*R-impact*impact))+Math.sqrt(Math.max(0,S*S-impact*impact))-2*Math.sqrt(Math.max(0,a*a-impact*impact))};
+        if(!bridge)return region===destination&&distance>1e-10?{direction:delta.map(function(v){return v/distance;}),distance:distance}:null;
+        var path=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics.primary(origin.map(function(v){return v*units;}),target.map(function(v){return v*units;}),region,destination);
+        return path?{direction:path.direction,distance:path.length/units}:null;
     }
     /** An actionable aim direction, never an optically warped future point.
-     * Predict current world velocity through the same mouth transport as live shots.
+     * Predict target motion with craft transport and solve its optical firing path.
      * A later jink is not knowable; unverified/out-of-lifetime solutions return null.
      * @param {Pose} shooter @param {Pose & {velocity:Vector}} target @param {Weapon} weapon @param {boolean} [bridge] @param {number} [launchMeters]
      * @returns {import('./types').FiringSolution|null} */
@@ -64,7 +50,25 @@
             var path=ballisticPath(shooter.eye,future.point,shooter.region||0,future.region,bridge);if(!path)return null;
             return {direction:path.direction,distance:path.distance,time:time,point:future.point,region:future.region,error:path.distance-Math.min(launch,path.distance*.5)-speed*time};
         }
-        var times=Array.from({length:65},function(_,i){return life*i/64;});
+        // Most combat targets move much slower than a bolt. Fixed-point flight
+        // time converges quickly there, without a lifetime-wide route scan.
+        // Every candidate must satisfy the optical travel-time residual;
+        // fast targets or unreachable intermediate routes retain the full search.
+        /** @param {ReturnType<typeof sample>} result */
+        function verified(result){
+            if(!result||Math.abs(result.error)*units>=.001)return null;
+            return {direction:result.direction,distance:result.distance,time:result.time,point:result.point,region:result.region};
+        }
+        if(Math.hypot.apply(null,target.velocity)/units<speed*.45){
+            var guess=sample(0);
+            for(var iteration=0;guess&&iteration<12;iteration++){
+                var answer=verified(guess);if(answer)return answer;
+                var nextTime=guess.time+guess.error/speed;
+                if(nextTime<0||nextTime>life)break;
+                guess=sample(nextTime);
+            }
+        }
+        var times=Array.from({length:65},/** @param {unknown} _ @param {number} i */function(_,i){return life*i/64;});
         if(bridge){var crossing=crossBridge(target.eye,target.eye.map(function(v,i){return v+target.velocity[i]*life/units;}),target.region||0);if(crossing){var event=crossing.fraction*life;times.push(Math.max(0,event-1e-7),event,Math.min(life,event+1e-7));times.sort(function(a,b){return a-b;});}}
         var previous=sample(0);
         for(var i=1;i<times.length;i++){
@@ -72,11 +76,8 @@
             if(previous&&current&&previous.error>=0&&current.error<=0){
                 var lo=previous.time,hi=current.time,valid=true;
                 for(var j=0;j<32;j++){var middle=sample((lo+hi)*.5);if(!middle){valid=false;break;}if(middle.error>0)lo=middle.time;else hi=middle.time;}
-                var result=valid?sample((lo+hi)*.5):null;
-                if(result&&Math.abs(result.error)*units<.02){
-                    var end=bridge?bridgeTravel(shooter.eye,result.direction.map(function(v){return v*result.distance;}),shooter.region||0):{point:shooter.eye.map(function(v,k){return v+result.direction[k]*result.distance;}),region:shooter.region||0};
-                    if(end.region===result.region&&Math.hypot.apply(null,end.point.map(function(v,k){return v-result.point[k];}))*units<.05)return {direction:result.direction,distance:result.distance,time:result.time,point:result.point,region:result.region};
-                }
+                const result=valid?sample((lo+hi)*.5):null;
+                var answer=verified(result);if(answer)return answer;
             }
             previous=current;
         }
@@ -110,11 +111,17 @@
             var end = bolt.position.map(function (x, i) {
                 return x + bolt.direction[i] * bolt.weapon.speed * travel / units;
             });
-            var route=bridge?bridgeTravel(bolt.position,end.map(function(v,i){return v-bolt.position[i];}),bolt.region||0):{point:end,region:bolt.region||0,normal:null,segments:[{start:bolt.position,end:end,region:bolt.region||0}]};
             var hit=/** @type {Vector|null} */(null);
-            for(var segment of route.segments){bolt.region=segment.region;hit=hitTest?hitTest(segment.start,segment.end,bolt):null;if(hit)break;}
-            if(!hit&&route.normal)bolt.direction=bridgeVector(bolt.direction,route.normal);
-            end=route.point;
+            if(bridge){
+                var optics=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics;
+                var ray=bolt.opticalRay||(bolt.opticalRay=optics.ray(bolt.position.map(function(v){return v*units;}),bolt.direction,bolt.region||0));
+                var segments=optics.advanceRay(ray,bolt.weapon.speed*travel);
+                for(var leg=0;leg<segments.length;leg++){
+                    var segment=segments[leg];bolt.region=segment.region;bolt.direction=segment.direction;
+                    hit=hitTest?hitTest(segment.start.map(function(v){return v/units;}),segment.end.map(function(v){return v/units;}),bolt):null;if(hit)break;
+                }
+                end=ray.eye.map(function(v){return v/units;});
+            }else hit=hitTest?hitTest(bolt.position,end,bolt):null;
             bolt.age += dt;
             if (hit) {
                 guns.impacts.push({ region:bolt.region||0, position: hit, age: 0 });
@@ -147,10 +154,17 @@
                 var launchRegion=pose.region||0;
                 if(bridge){
                     var range=target?Math.max(.001,target.reduce(function(sum,v,i){return sum-(v-pose.eye[i])*pose.back[i];},0)):convergenceM/units;
-                    var goal=bridgeTravel(pose.eye,pose.back.map(function(v){return -v*range;}),pose.region||0),muzzleRoute=bridgeTravel(pose.eye,position.map(function(v,i){return v-pose.eye[i];}),pose.region||0);
-                    position=muzzleRoute.point;launchRegion=muzzleRoute.region;
-                    var path=ballisticPath(position,goal.point,launchRegion,goal.region,true);
-                    aim=path?path.direction:muzzleRoute.normal?bridgeVector(pose.back.map(function(v){return -v;}),muzzleRoute.normal):pose.back.map(function(v){return -v;});
+                    var optics=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics;
+                    var forwardRay=pose.back.map(function(v){return -v;}),goal=optics.ray(pose.eye.map(function(v){return v*units;}),forwardRay,pose.region||0);
+                    optics.advanceRay(goal,range*units);
+                    var launch=optics.ray(pose.eye.map(function(v){return v*units;}),forwardRay,pose.region||0);optics.advanceRay(launch,launchForward);
+                    var normal=pose.eye.map(function(v,i){return v*units-[(pose.region||0)*12000,-2000,1550][i];}),n=Math.hypot.apply(null,normal);normal=normal.map(function(v){return v/n;});
+                    var right=launch.region===(pose.region||0)?pose.right:bridgeVector(pose.right,normal),up=launch.region===(pose.region||0)?pose.up:bridgeVector(pose.up,normal);
+                    position=launch.eye.map(function(v,i){return (v+right[i]*muzzle[0]+up[i]*muzzle[2])/units;});launchRegion=launch.region;
+                    // Lateral anchors at the throat can extend into the other chart.
+                    var offset=bridgeTravel(launch.eye.map(function(v){return v/units;}),position.map(function(v,i){return v-launch.eye[i]/units;}),launchRegion);position=offset.point;launchRegion=offset.region;
+                    var path=ballisticPath(position,goal.eye.map(function(v){return v/units;}),launchRegion,goal.region,true);
+                    aim=path?path.direction:launch.direction;
                 }
                 var distance = Math.hypot.apply(null, aim);
                 guns.bolts.push({ region:launchRegion, position: position, direction: aim.map(function (x) {
@@ -210,8 +224,8 @@
         }
         return null;
     }
-    /** @param {Pick<Guns, 'bolts' | 'impacts'>} guns @param {Pose} pose @returns {Batch[]} */
-    function geometry(guns, pose) {
+    /** @param {Pick<Guns, 'bolts' | 'impacts'>} guns @param {Pose} pose @param {boolean} [optical] @returns {Batch[]} */
+    function geometry(guns, pose, optical) {
         var groups = /** @type {{team: string; color: [number,number,number]; data: number[]}[]} */ ([{ team: 'ally', color: [.15, 1, .35], data: [] }, { team: 'enemy', color: [1, .12, .08], data: [] }, { team: 'player', color: [1, .75, .25], data: [] }]);
         /** @param {Vector} a @param {Vector} b */
         function dot(a, b) {
@@ -228,7 +242,22 @@
                 }).concat([p[0], p[1], opacity]));
             });
         }
+        /** @param {Vector} position @param {number} region */function image(position,region){
+            if(!optical)return {position:position,direction:null,source:null};
+            const p=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics.primary(pose.eye.map(function(v){return v*units;}),position.map(function(v){return v*units;}),pose.region||0,region);
+            return p?{position:pose.eye.map(function(v,i){return v+p.direction[i]*p.length/units;}),direction:p.direction,source:p.sourceDirection}:null;
+        }
         guns.bolts.forEach(function (bolt) {
+            var p=image(bolt.position,bolt.region||0);if(!p)return;
+            if(optical&&p.direction&&p.source){
+                // The same rigid source-to-observer tangent rotation used for hulls.
+                var normal=bolt.position.map(function(v,i){return v*units-[(bolt.region||0)*12000,-2000,1550][i];}),n=Math.hypot.apply(null,normal);normal=normal.map(function(v){return v/n;});
+                var from=(bolt.region||0)===(pose.region||0)?p.source:bridgeVector(p.source,normal),vector=(bolt.region||0)===(pose.region||0)?bolt.direction:bridgeVector(bolt.direction,normal),to=p.direction;
+                var axis=[from[1]*to[2]-from[2]*to[1],from[2]*to[0]-from[0]*to[2],from[0]*to[1]-from[1]*to[0]],cos=dot(from,to),w=1+cos,q=Math.hypot(axis[0],axis[1],axis[2],w);
+                if(q>1e-8){axis=axis.map(function(v){return v/q;});w/=q;var first=[axis[1]*vector[2]-axis[2]*vector[1],axis[2]*vector[0]-axis[0]*vector[2],axis[0]*vector[1]-axis[1]*vector[0]],second=[axis[1]*first[2]-axis[2]*first[1],axis[2]*first[0]-axis[0]*first[2],axis[0]*first[1]-axis[1]*first[0]];vector=vector.map(function(v,i){return v+2*(w*first[i]+second[i]);});}
+                bolt=Object.assign({},bolt,{position:p.position,direction:vector});
+            }
+
             var group = groups.find(function (g) {
                 return g.team === (bolt.team || 'player');
             });
@@ -256,17 +285,19 @@
             quad(group.data, center, along, side, Math.max(width, halfLength * projected + width), width, 1);
         });
         var batches = groups.map(function (g) {
-            return { vertices: new Float32Array(g.data), color: g.color };
+            return { vertices: new Float32Array(g.data), color: g.color, projected:!!optical, region:pose.region||0 };
         });
         var impacts = /** @type {number[]} */ ([]);
         guns.impacts.forEach(function (hit) {
+            var p=image(hit.position,hit.region||0);if(!p)return;
+            hit=Object.assign({},hit,{position:p.position});
             var r = (.5 + hit.age * 12) * (hit.scale || 1) / units;
             var center = hit.position.map(function (x, i) {
                 return x + pose.back[i] * .08 / units;
             });
             quad(impacts, center, pose.up, pose.right, r, r, 1 - hit.age / .22);
         });
-        batches.push({ vertices: new Float32Array(impacts), color: [1, .75, .3] });
+        batches.push({ vertices: new Float32Array(impacts), color: [1, .75, .3], projected:!!optical, region:pose.region||0 });
         return batches;
     }
     /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = { bridgeVector:bridgeVector, crossBridge:crossBridge, bridgeTravel:bridgeTravel, ballisticPath:ballisticPath, lead:lead, create: create, step: step, intersect: intersect, geometry: geometry };

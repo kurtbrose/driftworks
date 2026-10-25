@@ -12,8 +12,13 @@ npm test
 npm run check:types
 ```
 
-The shared contracts live in `src/types.d.ts`. JavaScript files should adopt
-them with JSDoc as subsystems are changed, for example:
+All application scripts in `src/` and `experiments/` pass strict checking and
+an additional audit rejecting explicit and inferred `any`. The checker rejects
+omitted application scripts and disabled per-file checking. Tests and vendored
+libraries are outside that application audit.
+
+Shared contracts live in `src/types.d.ts` and `experiments/types.d.ts`.
+Use them with JSDoc when changing subsystem interfaces, for example:
 
 ```js
 /** @param {import('./types').Order} order */
@@ -22,10 +27,6 @@ function targetFor(order) {
 }
 ```
 
-The migration is intentionally incremental. New or extracted subsystem
-interfaces should be annotated first, followed by the world root, entities,
-and order issuers/consumers. Runtime tests still own invariants TypeScript
-cannot prove, such as reciprocal tow relationships and cargo conservation.
-The long-term target is strict checking of all first-party JavaScript; the
-current configuration makes failures visible so each migration step can be
-completed rather than silently excluded.
+New or extracted subsystem interfaces should use explicit shared contracts.
+Runtime tests still own invariants TypeScript cannot prove, such as reciprocal
+tow relationships and cargo conservation.

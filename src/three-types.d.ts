@@ -20,6 +20,7 @@ export interface Renderer {
  setViewport(x:number,y:number,width:number,height:number):void;setScissor(x:number,y:number,width:number,height:number):void;setScissorTest(value:boolean):void;
  setRenderTarget(target:RenderTarget|null):void;
  setClearColor(color:number,alpha:number):void;clear():void;
+ initTexture(texture:Texture):void;
  render(scene:Scene,camera:Object3D):void;dispose():void;
 }
 export interface Three {

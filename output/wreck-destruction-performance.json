@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-24",
+  "fixture": "output/wreck-destruction-performance.html",
+  "method": "Foreground production scene3d renderer; fixed camera and source geometry; one visible fighter plus unchanged destruction explosion. A/B/B/A; second B reused the warmed scene. Four models, two destruction passes per run.",
+  "viewport": [
+    902,
+    939
+  ],
+  "backingResolution": [
+    1331,
+    987
+  ],
+  "dpr": 1.5,
+  "renderScale": 1,
+  "camera": {
+    "yaw": 0.6,
+    "tilt": 1.05,
+    "height": 0,
+    "zoom": 18
+  },
+  "warmup": "25 live frames per model; 20 wreck frames; 45 frames total per transition",
+  "sourceHashes": {
+    "output/wreck-texture-before.js": "28e8bd5694a8125ba0cbb9cea33e127a3da848f3720b8afefc01aea2164f3adb",
+    "experiments/ship-packs.js": "3589bc24992baad205dfabf0f2735fc34d45afe1a784fa8004904ab2e95fc2ba",
+    "src/scene3d.js": "7e623e8404e7f742d3f539c6b156e09249d14c13f655d04c9fa80c9c2c196a81",
+    "assets/ships/wreck-textures.json": "d162e81a7756811ffa7a90ef58e8e7f1e0f68aa6b64ddb1000c04b29611e5241"
+  },
+  "models": [
+    "Bob",
+    "Challenger",
+    "Dispatcher",
+    "Executioner"
+  ],
+  "drawsAtDeath": 10,
+  "trianglesAtDeath": [
+    1208,
+    2018,
+    1018,
+    3658
+  ],
+  "before": {
+    "firstWreckPreparationMs": [
+      1035.8,
+      987.2,
+      995.6,
+      1061.7
+    ],
+    "nextFrameMs": [
+      1038.7,
+      985.4,
+      985.6,
+      1052.1
+    ],
+    "steadyFrameMedianMs": 13.3,
+    "steadyFrameP95Ms": 13.4
+  },
+  "after": {
+    "firstWreckPreparationMs": [
+      0.1,
+      0.1,
+      0.1,
+      0.1
+    ],
+    "firstWreckSubmissionMs": [
+      2.8,
+      0.6,
+      0.8,
+      0.4
+    ],
+    "nextFrameMs": [
+      13.3,
+      13.3,
+      13.2,
+      13.2
+    ],
+    "steadyFrameMedianMs": 13.3,
+    "steadyFrameP95Ms": 13.4,
+    "lateTextureIdentities": 0
+  },
+  "repeatAfter": {
+    "nextFrameMs": [
+      13.3,
+      13.3,
+      13.3,
+      13.4
+    ]
+  },
+  "closingBefore": {
+    "firstWreckPreparationMs": [
+      869.5,
+      855.1,
+      847.2,
+      873.0
+    ],
+    "nextFrameMs": [
+      865.6,
+      852.4,
+      839,
+      865.7
+    ]
+  },
+  "tradeoffs": {
+    "bakedFiles": 15,
+    "addedAssetBytes": 37899658,
+    "loading": "Texture decode and raw/PBR GPU upload now happen before publishing fleet images, one image per task."
+  },
+  "limits": "CPU preparation/submission and requestAnimationFrame cadence only; no GPU timer. Frozen source-fighter/explosion fixture, not full live-combat or Ellis chart performance. Inspected visual comparison of Bob; remaining models preserve the same offline recipe and assets but have not each received a separate visual review."
+}

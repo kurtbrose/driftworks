@@ -72,10 +72,25 @@ nearEnemy.pose.eye=[12/DW.sim.METERS_PER_UNIT,-2340/DW.sim.METERS_PER_UNIT,1550/
 ellisView.combat.enemies=[nearEnemy];ellisView.combat.targetId=nearEnemy.id;
 let opticalCalls=0;const savedOptics=DW.ellisOptics,savedPresentation=DW.flightPresentation;
 DW.flightPresentation={model:()=>({name:"Fixture fighter"})};
-DW.ellisOptics={primary:(eye,target,region,destination)=>{opticalCalls++;assert.equal(region,0);assert.equal(destination,0);assert(Math.abs(target[0]-12)<1e-8);return {direction:[.2,1,0],length:42,direct:false,turning:false,impact:1};}};
+DW.ellisOptics={primary:(eye,target,region,destination)=>{opticalCalls++;assert.equal(region,0);assert.equal(destination,0);return {direction:[.2,1,0],length:42,direct:false,turning:false,impact:1};}};
 hud.render({...ellisView,paint:{ally:[1,1,1],enemy:[1,1,1]},units:DW.sim.METERS_PER_UNIT,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});
 const projected=DW.flightSkybox.project([.2,1,0],ellisView.state,1000/700),targetX=1000*(projected.x+1)/2;
 assert(calls.some(c=>c.kind==='stroke'&&c.color==='#ffe7a3'&&c.points.length===4&&Math.abs(c.points.reduce((sum,p)=>sum+p[0],0)/4-targetX)<1e-6),'Selected contact diamond uses the optical image direction');
-assert.equal(opticalCalls,1,'Only the contact marker uses optical projection, not the ballistic lead');
+assert(opticalCalls>1,'Contact and firing route share optical paths, but the pip direction is projected only once');
 DW.ellisOptics=savedOptics;DW.flightPresentation=savedPresentation;
-console.log('PASS Ellis HUD projection: optical contact image, local chart ownership and unchanged ballistic lead');
+console.log('PASS Ellis HUD projection: optical contact image, shared image/firing metric and no double warping of the pip');
+
+// Crosshairs on the displayed lead mean a physical firing direction, even when
+// the target's optical image is elsewhere or the target is in the other chart.
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../experiments/ellis-optics.js'),'utf8'),context);
+const u=DW.sim.METERS_PER_UNIT;
+Object.assign(ellisView.state,{eye:[0,-2350/u,1550/u],region:0,velocity:[20,70,0]});
+Object.assign(nearEnemy.pose,{eye:[12020/u,-1660/u,1550/u],region:1,velocity:[20,40,0]});nearEnemy.hp=100;nearEnemy.shield=0;
+const solution=DW.training.firingSolution(ellisView.combat,ellisView.combat.player,nearEnemy,DW.retailWeapons[0]);assert(solution);
+const forward=Array.from(solution.direction),norm=Math.hypot(forward[0],forward[1]);ellisView.state.back=forward.map(x=>-x);ellisView.state.right=[forward[1]/norm,-forward[0]/norm,0];ellisView.state.up=[-forward[0]*forward[2]/norm,-forward[1]*forward[2]/norm,norm];
+DW.flightPresentation={model:()=>({name:'Fixture fighter'})};
+function renderAim(){hud.render({...ellisView,paint:{ally:[1,1,1],enemy:[1,1,1]},units:u,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});}
+renderAim();assert.equal(get('target-info').dataset.leadState,'valid');const expectedRange=Math.round(DW.flightGuns.ballisticPath(ellisView.state.eye,nearEnemy.pose.eye,0,1,true).distance*u)+' m';assert(calls.filter(c=>c.kind==='text'&&c.text===expectedRange).length>=2,'contact and target-panel ranges exclude chart storage translation');assert(calls.some(c=>c.kind==='arc'&&c.r===7&&Math.abs(c.x-500)<1e-6&&Math.abs(c.y-350)<1e-6),'cross-chart firing solution projects exactly onto the crosshair');
+nearEnemy.pose.eye=[16000/u,-1600/u,1550/u];renderAim();assert.equal(get('target-info').dataset.leadState,'unavailable');assert(!calls.some(c=>c.kind==='arc'&&c.r===7),'unreachable shot never displays a guessed lead pip');assert(calls.some(c=>c.kind==='text'&&c.text==='NO FIRING SOLUTION'));
+DW.flightPresentation=savedPresentation;DW.ellisOptics=savedOptics;
+console.log('PASS truthful Ellis HUD lead: actual firing direction, cross-chart contact, no optical warp and no invalid/out-of-lifetime pip');

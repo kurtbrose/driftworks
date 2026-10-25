@@ -33,19 +33,19 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 - Simple threat director that warns, then sends raiders from beyond the local map once mining/construction activity exposes the operation.
 - Offscreen inbound groups develop from faint, ambiguous `POSSIBLE` contacts through `TRACKING`, `RESOLVED` and `LOCAL` edge markers, progressively tightening bearing, source count and ETA before visual acquisition.
 - Camera pan with middle mouse or Space + drag, plus mouse-wheel zoom.
-- Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 128×. Through 32×, the asteroid scales geometrically (keeping surface attachments aligned), other large bodies nearly geometrically, and small craft grow modestly on screen. Above 32×, artwork proportions hold steady and everything magnifies together, making craft four times longer at 128× than at 32×. These remain schematic proportions, not a literal physical hull scale. Movement and simulation distances remain unchanged.
+- Semantic zoom: default proportions are preserved; small craft stay readable while close inspection reveals their size relative to the mothership and asteroids. Wheel zoom extends to 128Ã—. Through 32Ã—, the asteroid scales geometrically (keeping surface attachments aligned), other large bodies nearly geometrically, and small craft grow modestly on screen. Above 32Ã—, artwork proportions hold steady and everything magnifies together, making craft four times longer at 128Ã— than at 32Ã—. These remain schematic proportions, not a literal physical hull scale. Movement and simulation distances remain unchanged.
 - Versioned localStorage save/load of serializable game state.
 - Stationary ESO night-sky backgrounds with developer-selectable imagery, pure black, and adjustable brightness.
 - Toggleable stress mode that animates thousands of simple sprites.
 - Opaque DOM HUD with a thin mission bar, an unobstructed tactical viewport, and a bottom shelf separating fleet, selection, local operations, and contextual commands. Entity count and measured FPS live in its developer menu.
-- Prominent in-game mission clock with inline units (00h 00m 00s) and Pause, 1×, 2×, and 4× controls. Simulation, combat, and effects follow the selected speed; camera and selection remain usable while paused. Saves retain elapsed mission time; playback speed is session-only.
+- Prominent in-game mission clock with inline units (00h 00m 00s) and Pause, 1Ã—, 2Ã—, and 4Ã— controls. Simulation, combat, and effects follow the selected speed; camera and selection remain usable while paused. Saves retain elapsed mission time; playback speed is session-only.
 - Browser-native simulation tests at `./tests/`; the same suite runs headlessly with `node tests/run.cjs` (optional, no dependencies).
 - Asteroid playground at `./tests/asteroid-playground.html`; every refresh creates twenty new seeded specimens using the production painter.
 
 ## Propellant, launchers, and mining platforms
 
-- Mobile craft carry propellant mass. Acceleration uses current wet mass; engine velocity changes consume fuel using the rocket equation. Loaded ships have less remaining Δv. Empty ships coast.
-- The fleet panel shows remaining Δv in m/s and lets you select craft stored inside the mothership. Selection details include fuel tonnes. New missions begin with Linehorse and both fighters docked internally; docked craft are hidden in the scene.
+- Mobile craft carry propellant mass. Acceleration uses current wet mass; engine velocity changes consume fuel using the rocket equation. Loaded ships have less remaining Î”v. Empty ships coast.
+- The fleet panel shows remaining Î”v in m/s and lets you select craft stored inside the mothership. Selection details include fuel tonnes. New missions begin with Linehorse and both fighters docked internally; docked craft are hidden in the scene.
 - Right-click the mothership or use **Return to mothership** in the selected craft's command panel to return deployed craft. Low-fuel craft automatically leave their current assignment when they reach a conservative return reserve. Return guidance allows a nonzero intercept velocity.
 - Craft assigned a job emerge from the mothership over one second before normal guidance begins. The mothership catches craft within 44 world units and at up to 32 m/s relative velocity. Docking places craft inside and refills tanks; outbound emergence receives a free launcher impulse up to the same 32 m/s, subject to work-zone guidance and stopping distance.
 - When raiders spawn, available docked fighters emerge into a mothership-centered skirmish formation and return inside after the last hostile is destroyed. Manually deployed fighters keep their assignments.
@@ -102,7 +102,7 @@ Then open:
 
 The game keeps the existing Pixi artwork by default. Open `rts.html?renderer=3d` to try
 the rough 3D geometry prototype. **Cutaway** focuses the asteroid
-and exposes its existing excavation geometry; **Orbit ↻** steps around it.
+and exposes its existing excavation geometry; **Orbit â†»** steps around it.
 Hold **Alt** while dragging to orbit continuously, use middle-drag or
 Space-drag to pan, and use the wheel to zoom about the cursor. **Top view** resets
 the camera angle; **Underside** shows the lower surface. Alt-drag can orbit
@@ -136,9 +136,9 @@ Fighter defense controls:
 
 - Select fighters and right-click empty space to defend that point. Two form a staggered wing, three a V, four a diamond, and larger groups a ring. Formations face the ordered destination.
 - Wings assemble around a shared moving formation center, then travel together. Cruise speed follows the slowest active member with speed reserved for catching up; the center slows or waits when a wingmate falls behind. Fighters match the center's velocity and correct their slot error, arriving together instead of racing to separate destinations. Disabled or reassigned fighters no longer hold up their old group.
-- Slot occupancy is approximate: each fighter has a stable 3–7 unit personal offset and a 6-unit steering deadband. Guidance speed and acceleration vary slightly per fighter within the hull's limits. Near combat, spacing eases to 1.65×, personal offsets widen, and tolerance grows to 30 units; range management takes priority over a gentle preference for the nominal slot. Slots remain assigned until membership changes or a new order, and the wing tightens gradually after threats leave.
+- Slot occupancy is approximate: each fighter has a stable 3â€“7 unit personal offset and a 6-unit steering deadband. Guidance speed and acceleration vary slightly per fighter within the hull's limits. Near combat, spacing eases to 1.65Ã—, personal offsets widen, and tolerance grows to 30 units; range management takes priority over a gentle preference for the nominal slot. Slots remain assigned until membership changes or a new order, and the wing tightens gradually after threats leave.
 - Formations are persistent internal groups with saved membership. When fighters are disabled or reassigned, survivors close into the appropriate smaller shape; empty groups are retired. Ordering the whole wing preserves its identity, while ordering a subset splits it off. New destinations take priority over lingering in the old engagement; local defense resumes on arrival.
-- Moving wings ease through course changes up to 60°, with outside fighters taking wider arcs and gentle slot corrections underway. Stopped wings (below 15 units/second) and sharper turns blend rotation, position correction, and acceleration toward the destination without a group-wide pause. Slots are matched to nearby occupants when the shape changes, so reversing a diamond makes the rear fighter the front fighter without swapping their physical positions. Stragglers still catch up, final arrival brakes normally, and combat evasion takes priority over holding the shape.
+- Moving wings ease through course changes up to 60Â°, with outside fighters taking wider arcs and gentle slot corrections underway. Stopped wings (below 15 units/second) and sharper turns blend rotation, position correction, and acceleration toward the destination without a group-wide pause. Slots are matched to nearby occupants when the shape changes, so reversing a diamond makes the rear fighter the front fighter without swapping their physical positions. Stragglers still catch up, final arrival brakes normally, and combat evasion takes priority over holding the shape.
 - Combat steering aims for about 260 units of range (raiders fire at 220; fighters at 280). Fighters account for closing velocity and braking time, compare short-term escape directions against every nearby enemy, and turn along the leash before crossing it. Avoiding incoming fire takes priority over formation occupancy; weapons favor close threats and enemies already under sustained fire.
 - Right-click another, unselected friendly ship to escort it in a looser formation. Its position becomes the moving defense anchor.
 - Fighters prioritize threats near the anchor, kite and orbit in weapon range, separate from nearby fighters, and return to their formation when threats leave. At the leash boundary they slide sideways instead of retreating farther.
@@ -258,9 +258,9 @@ fields and the source table hash. Hercules means the original Hercules, not Mk I
 Click **Fly / resume**. W/S raises/lowers throttle, X cuts throttle and brakes,
 Shift holds afterburner, arrows pitch/yaw, Q/E roll.
 The original four profiles have zero lateral/reverse speeds. Alien profiles preserve their table capabilities, but current pilots and normal controls continue to use forward dogfighting rather than lateral aiming. Captured mouse movement steers. Escape, losing focus, or hiding the tab pauses flight.
-Keys 1–4 select profiles and reset the starting pose; changing the dropdown also
+Keys 1â€“4 select profiles and reset the starting pose; changing the dropdown also
 resets it. After using a form control, click Fly to return to flight input.
-Reset stops the craft facing the asteroid. The diameter control (200–4,000 m)
+Reset stops the craft facing the asteroid. The diameter control (200â€“4,000 m)
 resets the range to compare scale; it defaults to 2,500 m. Surface contact stops
 the craft with a 5 m clearance. Asteroid impacts provide visual feedback without terrain damage or excavation.
 
@@ -273,7 +273,7 @@ for handling tests; fuel capacity and recharge are outside this experiment.
 
 The flight model uses exponential engine ramps, rotational damping and lateral
 slip damping, including automatic bank with yaw. These are time constants, not
-constant m/s² accelerations. It reproduces the ordinary-flight response equations;
+constant m/sÂ² accelerations. It reproduces the ordinary-flight response equations;
 it is not a complete port of FreeSpace's input, collision, or energy systems.
 Distance uses the existing meters-per-unit conversion with real elapsed seconds,
 independent of the tactical simulation clock. The lab never loads or writes saves.
@@ -344,7 +344,12 @@ The flight lab now starts training waves three seconds after flight resumes.
 Wave 1 contains three simple orange fighters; later waves grow to a maximum of
 six. Destroy the wave and the next arrives after five seconds. **Tab** cycles
 targets. Brackets identify enemies; the dashed cyan circle is a projectile lead
-cue. Off-screen chevrons point toward contacts (sensor markers can show through
+cue. In Ellis, ships and gunfire share curved optical paths: aiming at a stationary
+ship's visible image hits it, while the pip leads a moving target. The cue includes
+target transit and muzzle convergence; target lock persists across the
+mouth. An unverified or out-of-lifetime intercept shows **NO FIRING SOLUTION**.
+Lead assumes the target continues its current velocity; a later jink can still
+make a shot miss. Off-screen chevrons point toward contacts (sensor markers can show through
 terrain). Shield/hull and kills appear at the top left. Escape pauses everything
 and restores the configuration panel. **Restart training** resets the run; turn
 off **Training waves** for the original free-flight range. Reset, changing ship
@@ -414,7 +419,7 @@ before deciding to simplify models or shaders.
 
 The [ship pack inspection](experiments/ship-packs.html) shows the Quaternius library and the Raptor, Bulldog and Halo concept fighters. The normal mixed placeholder fleet rotates through both packs; allied and enemy hull selectors also offer each ship individually. Quaternius retains its original textures and CC0 provenance; the concept fighters use baked local material atlases and separate project provenance under `assets/ships/concept-trio/`.
 
-The [character and animation viewer](experiments/characters.html) inspects the Quaternius Astronaut and Standard Universal Animation Libraries 1 and 2. Choose a model and animation, pause or scrub playback, adjust speed, and toggle its skeleton. All six glTF/GLB exports load locally with original materials and rigs. Authoring formats, license evidence, and SHA-256 provenance are under `assets/characters/`; see its README for rebuilding the catalog. The astronaut includes 24 animations and reversible suit/trim color swaps with four crew palettes plus custom colors. The body selector offers balanced and short feminine silhouettes, short/sturdy, tall, slight and broad builds, combinable with every palette. Continuous sliders control height, hips, waist/belly width, shoulders, torso depth and chest volume. Stress presets push pronounced feminine, short (60%), tall (145%) and heavy silhouettes beyond typical proportions. Crew mode defaults to conservative limits on each control plus coupled waist/hip, shoulder/hip and combined chest/depth changes. Its height range is 70–130% of the source; this scales the whole person and suit, rather than changing limb ratios. A pronounced feminine and a fuller build are included for visual review. Stress mode retains the wide ranges and extreme presets separately. Random crew samples correlated continuous values within the crew guardrails; Random extremes samples the full slider ranges. These are artistic ranges, not anthropometric percentiles. Reset view refits the current shape; the camera stays fixed during edits for size comparison. These are reversible rest-mesh edits with unchanged skin weights, joint positions and source clips; height uniformly scales an outer group containing both mesh and rig. Helmet, boots and wrists keep their source shape. Inspect motion with the skeleton toggle and clip scrubber before adopting a variant; these are viewer prototypes, not exported GLBs. Library root-motion variants are preserved; applying library clips to other rigs requires retargeting. These assets are available for inspection and future use, with no gameplay changes.
+The [character and animation viewer](experiments/characters.html) inspects the Quaternius Astronaut and Standard Universal Animation Libraries 1 and 2. Choose a model and animation, pause or scrub playback, adjust speed, and toggle its skeleton. All six glTF/GLB exports load locally with original materials and rigs. Authoring formats, license evidence, and SHA-256 provenance are under `assets/characters/`; see its README for rebuilding the catalog. The astronaut includes 24 animations and reversible suit/trim color swaps with four crew palettes plus custom colors. The body selector offers balanced and short feminine silhouettes, short/sturdy, tall, slight and broad builds, combinable with every palette. Continuous sliders control height, hips, waist/belly width, shoulders, torso depth and chest volume. Stress presets push pronounced feminine, short (60%), tall (145%) and heavy silhouettes beyond typical proportions. Crew mode defaults to conservative limits on each control plus coupled waist/hip, shoulder/hip and combined chest/depth changes. Its height range is 70â€“130% of the source; this scales the whole person and suit, rather than changing limb ratios. A pronounced feminine and a fuller build are included for visual review. Stress mode retains the wide ranges and extreme presets separately. Random crew samples correlated continuous values within the crew guardrails; Random extremes samples the full slider ranges. These are artistic ranges, not anthropometric percentiles. Reset view refits the current shape; the camera stays fixed during edits for size comparison. These are reversible rest-mesh edits with unchanged skin weights, joint positions and source clips; height uniformly scales an outer group containing both mesh and rig. Helmet, boots and wrists keep their source shape. Inspect motion with the skeleton toggle and clip scrubber before adopting a variant; these are viewer prototypes, not exported GLBs. Library root-motion variants are preserved; applying library clips to other rigs requires retargeting. These assets are available for inspection and future use, with no gameplay changes.
 
 Flight lab starts paused with a centered Start flight button; Esc brings back Resume flight. You begin at full cruise above the asteroid, facing the already assembled combat wings. W/S adjusts throttle and X stops. Flight lab defaults to a green allied wing versus a red enemy wing (8 vs 8). Select each wing's imported artwork while paused. Pilots dogfight each other; your shots spare allies, and Tab targets enemies. A defeated wing starts a new round after five seconds. Use Combat scenario to return to solo training.
 
@@ -454,12 +459,12 @@ renderer interpolates continuously, with punctuation starting a fresh gesture. T
 Web Audio playback and text/mouth synchronization. No assets, network services,
 AudioWorklet, build step, or game audio changes are needed.
 
-The flight lab pause screen has a Settings button with three remembered mouse steering presets: Original · linear (160 px maximum radius, original linear response), Medium · softened (the default: 240 px maximum radius, power-1.6 response), and Wide · linear. Switching presets centers the stick and keeps flight paused. Flight lab mouse steering uses a persistent virtual joystick: displacement from screen center sets pitch/yaw demand, with a radial deadzone and limit. With the Wide · linear preset, full travel uses a radius of 45% of the shorter viewport dimension, scaled by the sensitivity slider. The circle and stick indicator extend behind the HUD panels; the center-to-stick line shows steering direction even when a panel obscures the dot. Beyond the 8% radial deadzone, turn demand increases linearly to full authority at the edge, with equal response increments throughout the outer travel. The stick holds when the mouse stops moving. Move back to center or press C to neutralize; pause, reset, or resume also centers it. Esc pauses and releases capture. The HUD shows stick position and travel. Moving a mapped controller stick hides the mouse guide and centers the stored mouse offset; moving the captured mouse shows it again. Controller noise inside the deadzone and unchanged held sticks do not take the guide back. Under pause Settings → Controller, standard dual-stick controllers show a fixed layout: left stick pitch/yaw, right stick horizontal roll, right stick up/down increase/decrease throttle, neutral holds throttle. Full deflection traverses the throttle range in two seconds; partial deflection changes it more slowly. D-pad up/down also adjusts throttle. Other joysticks retain device bindings.
+The flight lab pause screen has a Settings button with three remembered mouse steering presets: Original Â· linear (160 px maximum radius, original linear response), Medium Â· softened (the default: 240 px maximum radius, power-1.6 response), and Wide Â· linear. Switching presets centers the stick and keeps flight paused. Flight lab mouse steering uses a persistent virtual joystick: displacement from screen center sets pitch/yaw demand, with a radial deadzone and limit. With the Wide Â· linear preset, full travel uses a radius of 45% of the shorter viewport dimension, scaled by the sensitivity slider. The circle and stick indicator extend behind the HUD panels; the center-to-stick line shows steering direction even when a panel obscures the dot. Beyond the 8% radial deadzone, turn demand increases linearly to full authority at the edge, with equal response increments throughout the outer travel. The stick holds when the mouse stops moving. Move back to center or press C to neutralize; pause, reset, or resume also centers it. Esc pauses and releases capture. The HUD shows stick position and travel. Moving a mapped controller stick hides the mouse guide and centers the stored mouse offset; moving the captured mouse shows it again. Controller noise inside the deadzone and unchanged held sticks do not take the guide back. Under pause Settings â†’ Controller, standard dual-stick controllers show a fixed layout: left stick pitch/yaw, right stick horizontal roll, right stick up/down increase/decrease throttle, neutral holds throttle. Full deflection traverses the throttle range in two seconds; partial deflection changes it more slowly. D-pad up/down also adjusts throttle. Other joysticks retain device bindings.
 
 Mumble presets include Scout, Veteran, Navigator, warm/bright women, baritone man,
 Child, Old woman, Old man, Pirate, Ship computer, and Alien. Each combines pitch,
 vocal resonance, texture, and pace. Older voices add a continuous 2 Hz pitch tremor
-(`tremor`, 0–1, default 0); it follows utterance time rather than restarting on each
+(`tremor`, 0â€“1, default 0); it follows utterance time rather than restarting on each
 syllable. All presets keep the chosen popping synthesis and compact word rhythm.
 
 Transmission selects Local (default, clean playback) or Radio (band-limited voice,
@@ -469,7 +474,7 @@ of character presets. `transmit(pcm, sampleRate,
 mutating speech PCM. The preview offsets subtitles/mouth timing by `speechOffset`;
 Stop cancels the entire transmission. Effects follow volume, including mute.
 
-Radio effects level adjusts static and squelch independently of voice (0–1,
+Radio effects level adjusts static and squelch independently of voice (0â€“1,
 default 0.65). Zero disables the noise effects while retaining radio filtering.
 
 Test radio effects only plays the opening burst, half a second of static, and the
@@ -525,13 +530,13 @@ also counts: changing a pilot number or range does not make a repeated phrase ne
 The ship inspection viewer now defaults to Quaternius Striker with original glTF base-color texture, UVs and normals; both inspection and flight use the original source appearance. The offline converter reads the archived self-contained glTF 2.0 triangle exports and writes inspection vertex data plus local PNGs in `textures/`. This supports these single-mesh exports, not general glTF/GLB, scene transforms, animation, or full PBR. Flight uses the same source textures, UVs and normals, grouping ships by model and texture. Deployment still uses only relative local assets and needs no build.
 
 Voice lab timbre controls: `formant1/2/3` independently scale vowel resonances
-(0.7–1.3, default 1). `brightness` tilts harmonic energy (0–1, default 0.5);
+(0.7â€“1.3, default 1). `brightness` tilts harmonic energy (0â€“1, default 0.5);
 Rendered utterances receive one fixed RMS gain (target 0.12 times volume),
 with peak headroom capped at 0.95 times volume. This matches levels across voice
 textures while preserving within-line dynamics and the volume control.
 `nasality` adds a 300 Hz pole and 1100 Hz notch; `creak` alternates glottal
 pulse strength; `clipping` shortens audible bursts without changing reveal timing.
-These last three range from 0–1 and default to 0. `contour` (0–1, default 0.5)
+These last three range from 0â€“1 and default to 0. `contour` (0â€“1, default 0.5)
 scales phrase gestures; zero expression and zero contour give a flat pitch curve.
 The three Study presets share a 150 Hz fundamental: dark smooth, nasal clipped,
 and raspy creak. Compare the same line and seed in Local, then Radio, to judge
@@ -608,7 +613,7 @@ Open [Comms channel lab](experiments/comms-lab.html) to audition the eight crew 
 
 `mumble.radioNoise(speechSamples, sampleRate, options)` builds the existing radio noise pattern independently of audio. Pass that same object to `mumble.transmit(samples, rate, {mode: 'radio', noise: pattern, seed})` and sample `mumble.radioNoiseAt(pattern, elapsed).strength` for visual interference. The plan preserves the original gate delays, crackle steps and occasional burst distribution; the seed for audio hiss remains in transmission options. `elapsed` is audio playback time relative to transmission start; mouth timing additionally subtracts `speechOffset`. The lab defaults to 2.5 times the original radio edge timing (0.4 s acquisition / 0.6 s closing), selectable against original flight timing. `edgeScale` stretches only opening/closing latch timing, preserving the original random draws and middle-burst distribution. The display holds edge noise peaks for 250 ms (40 ms during speech) so short latch steps have time to read; horizontal displacement remains restrained, with a modest boost. Visual strip positions and snow use fresh random samples, and each transmission gets a random radio seed. Outside the pattern duration the channel is closed. Local/clean audio ignores radio noise. Flight and the lab default to effects at 0.45 and edgeScale at 2.5.
 
-Flight maneuvering thrusters: **A/D** push left/right and **R/F** push up/down in ship coordinates. On standard controllers, hold **LB / L1** and move the **right stick** to translate; the left stick keeps steering. While held, the right stick leaves roll and throttle unchanged; D-pad throttle remains available. Translation targets 5 m/s at full input (including diagonals), with a gentle two-second response and automatic braking on release. Reduce throttle below zero with S, right-stick down, or D-pad down for reverse, from 0 to 5 m/s; X returns throttle to zero. Positive throttle and boost retain their normal speeds. Absolute flight-stick throttle retains its 0–100% range. The HUD shows REV while reverse is selected.
+Flight maneuvering thrusters: **A/D** push left/right and **R/F** push up/down in ship coordinates. On standard controllers, hold **LB / L1** and move the **right stick** to translate; the left stick keeps steering. While held, the right stick leaves roll and throttle unchanged; D-pad throttle remains available. Translation targets 5 m/s at full input (including diagonals), with a gentle two-second response and automatic braking on release. Reduce throttle below zero with S, right-stick down, or D-pad down for reverse, from 0 to 5 m/s; X returns throttle to zero. Positive throttle and boost retain their normal speeds. Absolute flight-stick throttle retains its 0â€“100% range. The HUD shows REV while reverse is selected.
 
 Flight experiment skyboxes: Settings > Skybox selects the original ESO panorama or six procedural full-sphere directions (Open void, Galactic horizon, Dark dust, Distant sun, Cold veil, Island universes). Selection is remembered locally. Skies rotate with the cockpit and ignore translation; stars use fixed CSS-pixel point sizes on a separately supersampled sky canvas, independent of scene render resolution. Procedural options contain no baked stars or image grain. Layered directional noise, dust lanes and spiral galaxy structure use an explicit display transfer to retain faint detail. Settings includes sky brightness and independent native/150%/200% sky resolution (150% default, capped at 3 pixels per CSS pixel). Star footprints stay fixed across these choices.
 
@@ -629,7 +634,7 @@ or choose **Touch / mobile** in Flight input. Touch-first devices select it auto
 input preference is saved. Explicit input choices made on a touch device are
 remembered separately. Landscape gives both thumbs room.
 Drag the left stick to pitch/yaw; release to stop turning. Hold Fire or Boost on
-the right, tap Target or Weapon to cycle, and hold −/+ to adjust throttle.
+the right, tap Target or Weapon to cycle, and hold âˆ’/+ to adjust throttle.
 Pause opens the existing flight settings. Touch controls release on cancellation,
 focus loss, and pause. The simplified HUD keeps shield, hull, speed, throttle and
 target name visible; desktop inputs remain available by changing Flight input.

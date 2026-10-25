@@ -94,19 +94,19 @@
      * Scenery rotation, contact, audio, clocks and termination belong to the caller.
      * @param {Combat} t @param {import('./types').Demand} controls @param {Weapon} weapon
      * @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit]
-     * @param {() => void} [afterCombat] */
-    function stepControlled(t, controls, weapon, dt, radius, terrainHit, afterCombat) {
+     * @param {() => void} [afterCombat] @param {() => void} [afterMovement] */
+    function stepControlled(t, controls, weapon, dt, radius, terrainHit, afterCombat, afterMovement) {
         var craft = t.player, pose = craft.pose, guns = craft.guns;
         DW.training.stepInput(craft, controls, dt);
         var hullBefore = t.hull, shieldBefore = t.shield, hitBefore = t.lastHit;
-        DW.training.step(t, pose, dt, radius, terrainHit);
+        DW.training.step(t, pose, dt, radius, terrainHit, afterMovement);
         var playerDamaged = t.hull < hullBefore || t.shield < shieldBefore;
         if (afterCombat) afterCombat();
         var firedBefore = guns.fired, hitsBefore = guns.hits;
         // Finish the gun tick after death to age existing bolts; suppress new fire.
         collisionBatch(t,function(){DW.flightGuns.step(guns, pose, weapon, !mission(t).weaponsDisabled && !t.dead && !openingPending(t) && controls.fire, dt, function (start, end, bolt) {
             return DW.training.trace(t, start, end, bolt, 'player', terrainHit, pose);
-        }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft));});
+        }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft), !!mission(t).sky.wormhole);});
         return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore,
             impact: guns.hits > hitsBefore || t.lastHit > hitBefore };
     }
@@ -306,7 +306,7 @@
             e.pose.region=region;e.pose.eye[0]+=shift;e.goal[0]+=shift;
         });
         var target = t.enemies.find(function (e) {
-            return e.team !== 'ally'&&(e.pose.region||0)===(t.player.pose.region||0);
+            return e.team !== 'ally'&&(mission(t).sky.wormhole||(e.pose.region||0)===(t.player.pose.region||0));
         });
         t.targetId = target ? target.id : null;
         t.targetLocked = false;
@@ -514,11 +514,24 @@
         if (geometry.id !== shape.modelId) throw new Error('Unknown collision model ' + shape.modelId);
         return DW.shipPackModels.hullHit(geometry, craft.pose, start, end, U, boltRadius);
     }
+    /** @param {Combat} t @param {Craft} shooter @param {Craft} target @param {Weapon} weapon */
+    function firingSolution(t,shooter,target,weapon){
+        if(shooter.hp<=0||target.hp<=0||(shooter.team||'enemy')===(target.team||'enemy'))return null;
+        var anchors=gunAnchors(shooter),launch=anchors&&anchors.length?anchors.reduce(function(sum,p){return sum+Math.max(0,p[1]);},0)/anchors.length:4;
+        return DW.flightGuns.lead(shooter.pose,target.pose,weapon,!!mission(t).sky.wormhole,launch);
+    }
     /** Resolve a shared muzzle aim point only along the crosshair ray; no target snapping or lead.
      * @param {Combat} t @param {Craft} shooter @param {Weapon} weapon @param {TerrainHit} [terrainHit]
      * @returns {Vector | null} */
     function convergencePoint(t, shooter, weapon, terrainHit) {
-        var start = shooter.pose.eye, end = add(start, scale(shooter.pose.back, -weapon.speed * weapon.lifetime / U));
+        var start = shooter.pose.eye;
+        if(mission(t).sky.wormhole&&shooter===t.player){
+            var target=t.enemies.find(function(c){return c.id===t.targetId&&c.hp>0;}),solution=target?firingSolution(t,shooter,target,weapon):null;
+            // Choose convergence RANGE only. The point stays exactly on the
+            // player's firing ray; turning off the pip must still miss.
+            return solution?add(start,scale(shooter.pose.back,-solution.distance)):null;
+        }
+        var end = add(start, scale(shooter.pose.back, -weapon.speed * weapon.lifetime / U));
         var terrain = terrainHit&&!(shooter.pose.region||0) ? terrainHit(start, end) : null;
         var best = terrain ? length(sub(terrain, start)) : Infinity;
         var point = /** @type {Vector | null} */ (null);
@@ -849,14 +862,13 @@
             return craft;
         });
     }
-    /** @param {Combat} t @param {FlightState} player @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit] */
-    function step(t, player, dt, radius, terrainHit) {
-        if (!t.enabled)
-            return;
+    /** @param {Combat} t @param {FlightState} player @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit] @param {() => void} [afterMovement] */
+    function step(t, player, dt, radius, terrainHit, afterMovement) {
+        if (!t.enabled){if(afterMovement)afterMovement();return;}
         bindPlayer(t, player);
         stepWrecks(t, dt, terrainHit);
         t.time += dt;
-        if (openingPending(t)) return;
+        if (openingPending(t)){if(afterMovement)afterMovement();return;}
         participants(t).forEach(function (e) {
             e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);
             if (e.hp > 0 && e.maxShield !== undefined && t.time - e.damagedAt > 7)
@@ -883,6 +895,11 @@
                 return e.id;
             });
             t.slotTimer = 3;
+        }
+        /** @param {Craft} e */function fireGuns(e){
+            DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
+                return trace(t, start, end, bolt, e, terrainHit, player);
+            }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), !!mission(t).sky.wormhole);
         }
         collisionBatch(t,function(){t.enemies.forEach(function (e) {
             if (e.controller !== 'input') e.fire = false;
@@ -946,10 +963,11 @@
                 e.fire = !!opponent && ((mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > Math.cos(Math.atan2(5, Math.max(130, distance)));
             }
             var engine=getCollisionEngine(t);if(engine){var proxy=engine.proxies.get(e);moveCollisionProxy(engine,e,proxy?proxy.entry.order:0);}
-            DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
-                return trace(t, start, end, bolt, e, terrainHit, player);
-            }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e));
-        });});
+            if(!mission(t).sky.wormhole)fireGuns(e);
+        });
+        if(afterMovement)afterMovement();
+        if(mission(t).sky.wormhole)t.enemies.forEach(fireGuns);
+        });
         replenish(t,player,radius);
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)
@@ -963,28 +981,42 @@
             t.countdown = 5;
         }
         var targets = nowAlive.filter(function (e) {
-            return e.team !== 'ally'&&(e.pose.region||0)===(t.player.pose.region||0);
+            return e.team !== 'ally'&&(mission(t).sky.wormhole||(e.pose.region||0)===(t.player.pose.region||0));
         });
         if (t.targetId && !nowAlive.some(function (e) {
-            return e.id === t.targetId&&(e.pose.region||0)===(player.region||0);
+            return e.id === t.targetId&&(mission(t).sky.wormhole||(e.pose.region||0)===(player.region||0));
         }))
             { t.targetId = targets.length ? targets[0].id : null; t.targetLocked = false; }
     }
     /** Acquire the nearest hull crossed by the forward sight line; retain the last contact in empty space.
      * @param {Combat} t @param {FlightState} state */
     function acquireTarget(t, state) {
-        var living = alive(t).filter(function(e){return (e.pose.region||0)===(state.region||0);});
+        var living = alive(t).filter(function(e){return mission(t).sky.wormhole||(e.pose.region||0)===(state.region||0);});
         if (!living.some(function (e) { return e.id === t.targetId; })) {
             t.targetId = null;
             t.targetLocked = false;
         }
         if (t.targetLocked) return;
-        var start = state.eye, end = add(start, scale(state.back, -1000000)), best = Infinity;
-        living.forEach(function (craft) {
-            var hit = hullHit(craft, start, end);
-            if (!hit) return;
-            var distance = length(sub(hit.point, start));
-            if (distance < best) { best = distance; t.targetId = craft.id; }
+        if(mission(t).sky.wormhole){
+            // Select the visible primary image, using its apparent rigid hull bound.
+            // Collision itself still tests the authored hull along the curved shot.
+            var nearest=Infinity;
+            living.forEach(function(craft){
+                var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,true);if(!path)return;
+                var along=-dot(path.direction,state.back);if(along<=0)return;
+                var off=path.distance*Math.sqrt(Math.max(0,1-along*along));
+                if(off<=collisionRadius(craft)&&path.distance<nearest){nearest=path.distance;t.targetId=craft.id;}
+            });
+            return;
+        }
+        var start = state.eye, move=scale(state.back,-1000000),best=Infinity;
+        var route=mission(t).sky.wormhole?DW.flightGuns.bridgeTravel(start,move,state.region||0):{segments:[{start:start,end:add(start,move),region:state.region||0}]},traveled=0;
+        route.segments.forEach(function(segment){
+            living.forEach(function(craft){
+                if((craft.pose.region||0)!==segment.region)return;
+                var hit=hullHit(craft,segment.start,segment.end);if(!hit)return;
+                var distance=traveled+length(sub(hit.point,segment.start));if(distance<best){best=distance;t.targetId=craft.id;}
+            });traveled+=length(sub(segment.end,segment.start));
         });
     }
     /** @param {Combat} t */
@@ -995,7 +1027,7 @@
     function cycle(t) {
         t.targetLocked = false;
         var list = alive(t).filter(function (e) {
-            return e.team !== 'ally'&&(e.pose.region||0)===(t.player.pose.region||0);
+            return e.team !== 'ally'&&(mission(t).sky.wormhole||(e.pose.region||0)===(t.player.pose.region||0));
         }), index = list.findIndex(function (e) {
             return e.id === t.targetId;
         });
@@ -1030,6 +1062,6 @@
         });
         return result;
     }
-    DW.training = { setCollisionMode: setCollisionMode, collisionBatch: collisionBatch, collisionStats: collisionStats, collisionChanged: collisionChanged, stepControlled: stepControlled, acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
+    DW.training = { setCollisionMode: setCollisionMode, collisionBatch: collisionBatch, collisionStats: collisionStats, collisionChanged: collisionChanged, stepControlled: stepControlled, acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, firingSolution:firingSolution, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
 }());
 

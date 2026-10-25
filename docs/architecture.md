@@ -2,8 +2,8 @@
 
 ## Static type checks
 
-All application scripts in `src/` are checked with strict TypeScript via
-JSDoc and `src/types.d.ts`. Run `npm run check:types` (or
+All application scripts in `src/` and `experiments/` are checked with strict
+TypeScript via JSDoc and their shared declarations. Run `npm run check:types` (or
 `node tests/check-types.cjs`) after installing the optional development dependency.
 The check also rejects explicit `any` annotations and identifiers inferred as
 `any`, including values escaping from JSON parsing. Tests and vendored Pixi are
@@ -59,8 +59,9 @@ Height is derived presentation state and is never serialized.
 
 Asteroid meshes use cached marching tetrahedra over a body-local solid field.
 The equatorial silhouette matches `sim.surfaceRadius`; vertical extent and
-surface relief are presentation geometry. `Driftworks.asteroidArt`, exposed by
-game.js before boot, shares the existing seeded visual description, CPU relief,
+surface relief are presentation geometry. `Driftworks.asteroidArt`, supplied by
+`src/asteroid-art.js` after simulation and before either renderer, shares the
+seeded visual description, CPU relief,
 GLSL geology functions, uniform packing and raw RGBA8 crater data across both
 backends. The 3D backend lifts the authored crater centers onto a complete
 spheroid, undoing their original .96 projected-radius compression so impact
@@ -181,7 +182,8 @@ Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
 | `src/propulsion.js` | `Driftworks.propulsion`: tank initialization, rocket-equation burns/remaining delta-v, catcher envelope. Uses kg and m/s; `burn` mutates the supplied ship's fuel and returns the achievable burn fraction. |
 | `src/combat.js` | `Driftworks.combat`: deterministic combat state, threat director, hostile movement, weapon selection, damage resolution, and combat events. |
 | `src/sim.js` | `Driftworks.sim`: constructors, commands, fixed-step movement/industry/recovery, combat update orchestration, physical conversions, and save migration. Public commands and `stepWorld(world, dt)` return replacement worlds. Internal helpers mutate those working copies. |
-| `src/game.js` | `Driftworks.game` exposes testable UI/geometry helpers; `createApp` owns the current world, timing, scene and HUD. `createScene` owns Pixi objects, input, camera focus and effects, communicating through `getWorld`/`setWorld` and observing combat events. |
+| `src/asteroid-art.js` | `Driftworks.asteroidArt`: deterministic descriptions, CPU relief/surface samples, shared geology GLSL, uniforms and raw crater bytes. Depends on simulation only; creates no browser or renderer resources. Owns the shared artwork light for viewer controls. Legacy polygon descriptions/color helpers remain data-only compatibility support. |
+| `src/game.js` | `Driftworks.game` exposes testable UI/geometry helpers; `createApp` owns the current world, timing, scene and HUD. `createScene` owns Pixi objects, input, camera focus and effects, communicating through `getWorld`/`setWorld` and observing combat events. Asteroid description/sample exports alias `asteroidArt`; Pixi textures, excavation shading and final shader assembly remain here. |
 | `src/engine-audio.js` | Shared procedural engine synth, presets, tuning persistence and spool response; caller owns its context. |
 | `src/audio-mixer.js` | Flight channel balance, ducking, headroom and settings UI; receives context and master callbacks. |
 | `src/audio.js` | `Driftworks.audio`: lazily unlocked Web Audio resources, sound events, engine telemetry and separately persisted volume settings. No simulation ownership. |
@@ -803,7 +805,7 @@ The ship inspection viewer now defaults to Quaternius Striker with original glTF
 
 Quaternius engine exhaust uses explicit model-specific nozzle mounts in `experiments/ship-packs.js`, in normalized right-X / forward-Y / up-Z metres, plus nozzle radius. Mounts are presentation data and do not affect thrust physics. Four-engine ships retain all four outlets; plume dimensions follow nozzle radius and tails extend aft from each mount. The ship inspector provides an exhaust toggle and rear view for attachment review.
 
-Faction paint in the ship inspection viewer and flight lab is an optional per-batch `paint` RGB vector (0–1) on source ship geometry. `sourceGeometry` and `sourceFleetGeometry` accept it as their last argument; omitting it restores the source texture. The shared scene shader selects saturated orange texels with feathered hue boundaries and substitutes the primary paint while preserving source texture variation and neutral/weathered detail. Texture images remain shared and unmodified. Destroyed flight craft (`age` present or nonpositive `hp`) use a separate soot/heat-discolored atlas cached by source image in `ship-packs.js`; faction paint is disabled for these batches. The derived canvas retains source UVs, alpha and panel luminance, shares the original geometry buffers, and leaves living craft textures untouched. Orange markings in the same hue range also recolor; engines and untextured scenery do not. Flight exposes separate allied/enemy colors and a source-paint toggle; these preview settings are not saved world state.
+Faction paint in the ship inspection viewer and flight lab is an optional per-batch `paint` RGB vector (0–1) on source ship geometry. `sourceGeometry` and `sourceFleetGeometry` accept it as their last argument; omitting it restores the source texture. The shared scene shader selects saturated orange texels with feathered hue boundaries and substitutes the primary paint while preserving source texture variation and neutral/weathered detail. Texture images remain shared and unmodified. Destroyed flight craft (`age` present or nonpositive `hp`) use a separate soot/heat-discolored atlas cached by source image in `ship-packs.js`; faction paint is disabled for these batches. Lossless `.wreck.webp` files are baked offline by `tools/bake-wreck-textures.cjs` (authoring requires `sharp`), retaining source resolution, UVs, alpha and the approved soot treatment. `loadTextures` resolves only after both source and wreck images load. `textureSources(images)` supplies both variants to `scene.prepareStudyTextures`, which uploads one image per task before flight publishes the image map. Destruction performs only a texture-cache lookup and shares the original geometry buffers; it never generates pixels, decodes an image or starts a GPU texture upload. Source/derived hashes and sizes live in `assets/ships/wreck-textures.json`. Orange markings in the same hue range also recolor; engines and untextured scenery do not. Flight exposes separate allied/enemy colors and a source-paint toggle; these preview settings are not saved world state.
 
 The inspection viewer enables faction paint by default. Picking a primary color enables paint immediately (including after restoring source paint), without resetting the orbit or zoom. Turning off faction paint still restores the original texture.
 

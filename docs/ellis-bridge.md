@@ -13,17 +13,17 @@ existing Jade/Rime cube faces and detailed moon disk.
 ## Shared optics
 
 `experiments/ellis-optics.js` starts from null geodesics in the static Ellis metric
-`dsÂ² = -dtÂ² + dlÂ² + (lÂ² + aÂ²)dÎ©Â²` to a normalized radial integral, setting `a=1`.
+`dsÃ‚Â² = -dtÃ‚Â² + dlÃ‚Â² + (lÃ‚Â² + aÃ‚Â²)dÃŽÂ©Ã‚Â²` to a normalized radial integral, setting `a=1`.
 The current presentation smoothly flattens the exterior as described below; it
 is a compact visual approximation, not the unmodified infinite Ellis metric.
 Spherical symmetry keeps each ray in a plane. Both charts and all physical sizes
-reuse the same 512 Ã— 512 RGBA8 table (1 MiB CPU data, cached once per page).
+reuse the same 512 Ãƒâ€” 512 RGBA8 table (1 MiB CPU data, cached once per page).
 Its two 16-bit channel pairs store transmitted and turning branches.
 
 For conserved normalized angular momentum `b`, angular motion obeys
-`dphi/dl = b / ((1+lÂ²) sqrt(1-bÂ²/(1+lÂ²)))` on an outward branch. Substitutions
-`l = sqrt(1-bÂ²) sinh(u)` for transmitted rays and
-`l = sqrt(bÂ²-1) cosh(u)` for turning rays remove the radial square-root endpoint.
+`dphi/dl = b / ((1+lÃ‚Â²) sqrt(1-bÃ‚Â²/(1+lÃ‚Â²)))` on an outward branch. Substitutions
+`l = sqrt(1-bÃ‚Â²) sinh(u)` for transmitted rays and
+`l = sqrt(bÃ‚Â²-1) cosh(u)` for turning rays remove the radial square-root endpoint.
 The table stores their cumulative integrals, not merely an asymptotic sky warp.
 A logarithmic impact-parameter coordinate concentrates samples near `b=1`.
 Both `skybox.js` and the geometry compositor use the same GLSL mapping.
@@ -32,7 +32,7 @@ traced. Outward rays start on the escaping branch and remain in their current
 chart; curvature must not be disabled immediately after emergence.
 
 This follows the analytic-geodesic/precomputation approach discussed by
-[MÃ¼ller, Exact geometric optics in a Morrisâ€“Thorne wormhole spacetime (2008)](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.77.044043)
+[MÃƒÂ¼ller, Exact geometric optics in a MorrisÃ¢â‚¬â€œThorne wormhole spacetime (2008)](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.77.044043)
 and the symmetry-based lookup strategy demonstrated for Schwarzschild geometry by
 [Bruneton (2020)](https://ebruneton.github.io/black_hole_shader/).
 The table is an original numerical implementation for Ellis geometry; it is not
@@ -49,7 +49,7 @@ per wormhole with updates spread over successive frames. Its earlier
 color/depth approximation specifically for warp bubbles; it does not claim that
 this exact depth-shell algorithm was used for its wormholes.
 
-`experiments/ellis-renderer.js` uses two 3 Ã— 2 atlases of 384 px cube faces, each
+`experiments/ellis-renderer.js` uses two 3 Ãƒâ€” 2 atlases of 384 px cube faces, each
 with color and depth, captured from the fixed mouth centers. Existing production
 geometry, raw materials and native PBR transforms are reused; scene composition
 and uploads happen once. Main-camera static actor culling is disabled only in
@@ -87,7 +87,7 @@ clamped by the finite logarithmic table. These limits need further visual work.
 Gameplay still uses swept spherical crossing and antipodal position identification
 between Euclidean exterior charts. At a crossing, the antipodal identification
 transports the ship basis, velocity, projectile directions and residual tick
-travel by a proper half-turn around the crossing radial axis (`2nnáµ€ - I`).
+travel by a proper half-turn around the crossing radial axis (`2nnÃ¡Âµâ‚¬ - I`).
 This preserves speed, radial motion, orthonormality and handedness while reversing
 tangent components in the destination chart. They do not follow curved spacetime
 geodesics during ordinary exterior flight.
@@ -148,7 +148,7 @@ because additive materials do not write opaque depth.
 This is a local straight-segment approximation, not transparent curved-ray
 transport. For rays entering the lens volume the contribution fades over the last
 third of a range ending 150 m beyond the lens entry; from inside the volume this
-means 100â€“150 m. The physical throat clips it sooner when nearer. Distant bolts,
+means 100Ã¢â‚¬â€œ150 m. The physical throat clips it sooner when nearer. Distant bolts,
 bolts observed through the other mouth, and explosions still need further work.
 Simulation bolts continue moving and crossing charts independently of this fade.
 One additional full-resolution effects pass/target is used only when additive
@@ -163,7 +163,7 @@ normal additive state (`tests/three-production.cjs`). Browser inspection at
 100 m before the throat shows the yellow forward bolt glow while live projectiles
 cross into the destination chart. See the [firing still](benchmarks/ellis-firing-2026-10-23.png).
 
-A live eight-second firing sample at 1920Ã—1080 on the RTX 3070 Ti averaged
+A live eight-second firing sample at 1920Ãƒâ€”1080 on the RTX 3070 Ti averaged
 14.02 ms/frame (about 71 fps), 2.74 ms presentation CPU and 1.46 ms bridge CPU.
 There were 571 samples and seven surviving fighters at the end. This is a live
 workload observation, not a matched before/after optimization comparison or GPU
@@ -194,7 +194,7 @@ The first refined version retained 64 coarse steps and cost 31.46 ms/frame in th
 frozen magnified-limb fixture. Using 32 coarse steps plus local refinement reduced
 that to 17.93 ms (about 56 fps); presentation CPU averaged 1.52 ms. The old coarse
 shell acceptance at the same 384 px capture resolution averaged 13.34 ms (75 fps),
-but reproduced the floating rectangles. All runs used 1920Ã—1080 backing size,
+but reproduced the floating rectangles. All runs used 1920Ãƒâ€”1080 backing size,
 the RTX 3070 Ti, eight frozen fighters, the same pose and two rolling faces/frame.
 These are frame timings without a GPU timer, measured while the full test suite
 was also running; they are workload observations rather than universal budgets.
@@ -345,7 +345,7 @@ A matched isolation fixture reproduced simultaneous context loss across the
  sampling. Sky-only, direct geometry, captures without the curved search,
  full geometry, and explicit-sampling adaptive cases completed their samples.
  A subsequent explicit adaptive repeat and a rapid camera-rotation fixture
- each completed 240 frames at 1920×1080 with zero context losses. These are
+ each completed 240 frames at 1920Ã—1080 with zero context losses. These are
  bounded stability checks, not proof that every crash is resolved or GPU
  performance measurements. See [investigation](benchmarks/ellis-crash-isolation-2026-10-24.md).
 
@@ -403,7 +403,7 @@ the timeline. The view is capped at 30 render submissions per second.
 
 Browser checks covered all six camera presets, exact-time scrubbing, a frame
 step from 5.99 through 6.02 s, and paused renderer switching. The close crossing
-exposes 44–57 px object-patch probe errors and a visible shape change; the full
+exposes 44â€“57 px object-patch probe errors and a visible shape change; the full
 ray-search fixture also loses the crossing ship immediately after the mouth.
 Neither renderer is a visual ground truth. These are unresolved renderer issues,
 made reproducible by this lab; this change does not fix them. No new performance
@@ -451,7 +451,7 @@ Physical controller feel and subjective sound balance still need a playtest.
 ## Lensed spatial lattice
 
 The Ellis flight and observation lab enable a world-anchored spherical lattice
-by default. Three concentric layers span approximately 300–600 m around each
+by default. Three concentric layers span approximately 300â€“600 m around each
 300 m mouth, with 30-degree latitude/longitude lines. Amber belongs to the
 asteroid chart and cyan to Rime. Their axes and spacing never follow the camera
 or advance with time. The antipodal throat identification preserves this grid's
@@ -485,7 +485,7 @@ uniforms. Captures: [front](benchmarks/ellis-lattice-front.png),
 [close](benchmarks/ellis-lattice-close.png),
 [Rime](benchmarks/ellis-lattice-rime.png).
 
-The initial five-layer matched 1920x1080 GPU check added roughly 0.55–0.82 ms of sky
+The initial five-layer matched 1920x1080 GPU check added roughly 0.55â€“0.82 ms of sky
 work with no context loss. See the [lattice report](benchmarks/ellis-lattice-2026-10-24.md)
 for setup, raw evidence and approximation limits.
 
@@ -523,8 +523,8 @@ and its navigation outline.
 
 The inner region through 450 m keeps the Ellis radial metric. From 450 to 600 m,
 a quintic taper changes q(r) from 1 to 0 in the areal-radius metric
-`dr²/(1-q(r)/r²) + r² dΩ²`, with r measured in throat radii. The table integrand
-is multiplied by `sqrt((r²-1)/(r²-q(r)))`; the factor is 1 in the inner region.
+`drÂ²/(1-q(r)/rÂ²) + rÂ² dÎ©Â²`, with r measured in throat radii. The table integrand
+is multiplied by `sqrt((rÂ²-1)/(rÂ²-q(r)))`; the factor is 1 in the inner region.
 The taper and its first two derivatives join smoothly. Beyond 600 m the metric
 is Euclidean. Its remaining angular integral is evaluated analytically from
 the 600 m table value, so LUT quantization cannot leave a residual tail at the
@@ -557,7 +557,7 @@ hides it independently of `bridgeGrid=0` for controlled sky studies.
 - [Sky-only study](../experiments/ellis-sky-study.html) uses the production sky
   renderer with ships, lattice and outline absent. It has exact distance entry,
   both charts, five viewing directions and 0.7/7/70 m/s playback. The default
-  speed is 1/100 of 70 m/s and playback sweeps 550–650 m. Visually inspected
+  speed is 1/100 of 70 m/s and playback sweeps 550â€“650 m. Visually inspected
   tangent views at 599.99 and 600.01 m in both charts without a visible snap.
 
 This resolves the demonstrated outer sky cutoff. Depth-shell sampling misses,
@@ -608,7 +608,7 @@ and suppresses its nearby atlas copies. Object patches and HUD contact markers
 use the corresponding CPU primary-image direction. The ballistic lead cue
 retains its firing-direction projection. Cross-chart targets never receive the
 local bypass. To preserve chart-crossing continuity, the local approximation
-fades to zero as either endpoint approaches the 300 m throat, over 330–300 m
+fades to zero as either endpoint approaches the 300 m throat, over 330â€“300 m
 areal radius. Very close to the throat, depth-shell misses and secondary images
 can therefore still occur; this is not a complete near-throat geometry solution.
 
@@ -783,3 +783,161 @@ The off-axis observer crossing regression additionally compares all nine optical
 orientation coefficients and the three image-center components at 4.5 s and
 16.5 s, immediately before/after the camera changes charts. Both directions
 remain continuous without an ordinary-pose fallback.
+
+
+## Actionable lead near the throat
+
+Ship images, firing directions and live bolts share the compact Ellis optical
+metric. `flightGuns.ballisticPath` now delegates to `ellisOptics.primary`, returning
+its direction and arc distance in scene units. A stationary target's visible image
+supplies its firing bearing, including across the throat. The former straight
+per-chart projectile inverse is no longer used.
+
+`ellisOptics.ray` and `advanceRay` use metres. Each bolt stores signed proper
+radial coordinate l, local radial velocity p, conserved impact b and angular
+phase. With r^2=1+l^2 and shared compact radial scale A, RK4 integrates
+`dl/ds=p/A`, `dp/ds=b^2*l/(A*r^4)`, `dphi/ds=b/r^2`. Curved collision segments
+are at most six metres long. Throat crossings are refined and split into
+chart-local segments; the 12 km storage translation never becomes a collision
+sweep. Outside the compact field, motion is straight. Speed is optical arc length
+per second; bolts are unguided and receive no target data after emission.
+
+Rigid ships no longer use the nearby straight-image blend. Finite-source optics
+already approach locally straight rays at small separation. Scenery's local
+ordinary/depth-shell composition is separate. Arc lengths use split Simpson
+integration in the compact core and an analytic flat tail, avoiding the former
+coarse flight-time error.
+
+Target prediction still advances the current ship velocity through antipodal
+craft transport (`crossBridge`, `bridgeVector`, `bridgeTravel`). Those helpers no
+longer advance live Ellis bolts. Shooter velocity is not inherited. `lead` solves
+optical travel time within weapon lifetime, including target transit events;
+it returns FiringSolution or null. The bounded fast iteration retains exhaustive
+fallback. Invalid/expired solutions have no pip; friendlies have no damaging cue.
+
+Convergence uses only the selected solution's RANGE on the curved crosshair ray.
+Each muzzle accounts for its lateral anchor and routes to that common point;
+there is no target-direction snapping or homing. Off-pip shots miss. Automatic
+acquisition uses the primary image's apparent hull bound.
+
+Bolt/impact artwork uses the same optical image and source tangent frame, then
+batches both charts into four team/color groups in observer space. Its explicit
+`projected` draw flag excludes it from captures and a second warp/fade. The full
+renderer submits this overlay once after rigid ships, retaining ship depth tests
+and additive blending. Scenery occlusion of the overlay remains approximate;
+actual projectile collision still stops rounds on physical terrain/hulls. Engines
+retain their existing treatment.
+`training.firingSolution` supplies the same solution to HUD and convergence.
+The optional afterMovement hook on training.step/stepControlled lets the session
+transport all craft before Ellis gun collision queries. Non-Ellis NPC ordering is
+unchanged. Collision indices refresh after a transit.
+
+Locks/cycling may span both charts in Ellis. Physical collision eligibility remains
+region-specific on each leg; merely sharing storage coordinates cannot cause a
+cross-chart hit. Displayed target range follows the physical route rather than
+the 12 km storage translation. Radar remains local-chart. A lead prediction cannot
+foresee a subsequent new maneuver or guarantee clearance against future moving
+cover; it is an instantaneous firing solution, not a promised future hit.
+
+`tests/ellis-ballistics.cjs` checks an independent metre-space transit oracle,
+near-throat moving-target intercepts in both charts, lifetime/unreachable rejection,
+real-session pip-to-damage with multiple muzzles, source/exit collision ordering,
+moving shooters, target crossings during flight, and off-pip misses. Held yaw,
+pitch and roll trials use the production flight model next to the throat and
+confirm damage while both participants maneuver. HUD tests check that cross-chart
+lead projects onto the crosshair and invalid solutions draw no pip.
+`node tools/prepare-ellis-aim.cjs` builds `output/ellis-aim-study.html`: a controlled
+real scene/HUD/session with Aim at pip, Fire, Off-pip test, both chart directions,
+and target-transit/muzzle-straddle cases. Camera alignment is a test control only.
+
+Browser validation of the aiming fixture produced four actual hits from four
+bolts for the moving remote target, target transit, and muzzle-straddling cases;
+the off-pip control produced zero hits. Focused headless checks also exercise
+authored hull triangles and real gun-bank anchors. The old straight-chart cue
+misses the crossing-target negative control by 36.4 m; the corrected volley hits.
+
+### Combat performance follow-up (earlier straight-shot implementation)
+
+Readable ships had inadvertently enabled per-bolt/per-impact effect batches in
+full geometry mode. Their `lensCenter` did not make these effects rigid ship
+patches (they have no positive `lensRadius`); they still used the same additive
+pass. Batch them by chart and team/color again. Per-craft engine centers and
+rigid hull placement stay independent; `bridgeGeometry=objects` retains its
+individual effect optical centers. `tests/ellis-effects.cjs` runs the production
+presentation with 160 bolts and 12 impacts: eight nonempty effect batches,
+identical vertices, colors and chart membership, and 172 individual batches in
+the explicit object experiment.
+
+The lead solver now first tries a bounded fixed-point flight-time solve when
+target speed is below 45% of bolt speed. Candidates use the same physical
+endpoint validation, with less than 1 mm flight-distance error. Unreachable
+intermediate routes, fast targets and failed convergence retain the exhaustive
+search. There is no temporal cache or reduced HUD update rate. The existing
+independent transit and actual gun-hit checks pass, including added fast-target
+fallback cases.
+
+Reproduce the browser measurements with:
+
+```
+node tools/prepare-ellis-aim.cjs
+node tools/prepare-ellis-aim-performance.cjs
+node tools/prepare-ellis-effects-performance.cjs
+```
+
+Open `output/ellis-aim-performance.html` and click Measure aiming. On the local
+RTX 3070 Ti desktop, 2,000 calls/block in exhaustive/fast/fast/exhaustive order
+measured 0.2181 versus 0.038625 ms/call (5.65x). Across 300 moving target cases,
+maximum launch-direction vector difference was 4.45e-7 and flight-time
+difference 2.22 microseconds.
+
+Open `output/ellis-effects-performance.html?mission=ellis&bridgeGrid=0` and
+click Compare effect batching. The exact same frozen 160-bolt scene alternates
+individual/batched/batched/individual, with 20 warmup + 60 measured frames per
+block. At 1280x720 CSS pixels, DPR 1.5, total scene draw calls fell from 485 to 14;
+CPU median/p95 fell from 6.2/7.8 to 3.1/3.5 ms. Frame median remained 14.6 ms
+and p95 15.1 ms in both modes: this is measured CPU savings, not a demonstrated
+FPS doubling. The default grid, sky optics, shell quality, ship motion and
+projectile physics are unchanged. The real on-pip browser volley still produced
+four hits from four bolts after optimization.
+
+## Shared optical gunfire validation
+
+The shared metric above supersedes earlier independent ballistic-image policies
+and straight-shot timing measurements. Tests now check image inversion against
+forward live rays, independent craft transit predictions, pip-to-hit against real
+hull triangles, automatic visible-image acquisition, stationary visible-hull shots
+nearby/across charts in both directions, moving targets, simultaneous maneuvers,
+off-pip misses and lifetime rejection. Conserved-energy and reverse-path checks
+cover transmitted/turning rays. Production submission tests verify one projected
+effect overlay, no capture/double warp, and cleared pooled draws. Existing rigid
+ship position/orientation continuity checks pass.
+
+`node tools/prepare-ellis-aim.cjs` adds Stationary visible-image shot. In-browser,
+the authored remote hull took one hit from one emitted bolt; the moving remote
+case took four hits from four bolts, and the off-pip control took zero hits.
+These use the real HUD, session, anchors, collision and damage callbacks.
+
+`node tools/prepare-ellis-curved-performance.cjs` builds the 160-live-bolt stress
+fixture. Click Measure 160 curved bolts. Local RTX 3070 Ti, 1280x720 CSS / DPR 1.5,
+20 warmup + 80 samples: motion median/p95 0.3/0.5 ms (collision callback work
+excluded), render+HUD 4.8/5.8 ms, frame 13.3/13.4 ms, 15 scene draw calls; all 160
+bolts remained active. This is a bounded scene measurement, not a universal
+hardware budget. Current-motion leads cannot predict later jinks or moving cover.
+
+## Growth study
+
+`experiments/ellis-growth.html` animates a 1 micrometre throat diameter to
+50 m with a stationary observer 100 m from the centre. Playback can be scrubbed,
+paused, restarted or looped, with 8/16/30 second durations and smooth logarithmic
+or linear growth. The ruler marks a 50 m span at the centre depth.
+
+This sky-only study rescales the observer offset about the existing 300 m
+reference throat by `300 / animatedRadius`. This preserves the dimensionless
+rays of the compact static Ellis lens, including its scaled transition zone.
+It is a sequence of static optical solutions, not a time-dependent metric or
+physical formation model. It does not alter flight transport or combat. The
+opening is allowed to remain subpixel; no artificial glow enlarges it.
+
+Visual check: inspected the browser composite at the 50 m endpoint and checked
+linear midpoint scrubbing (25 m), initial subpixel readout and pause state.
+No ships or finite geometry are included in this sky-only experiment.

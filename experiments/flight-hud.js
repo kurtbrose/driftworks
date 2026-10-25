@@ -136,7 +136,7 @@
                 combatHud.arc(sx, sy, 5, 0, Math.PI * 2);
                 combatHud.stroke();
             }
-            var speakerId = view.speakerId, living = DW.training.alive(combat).filter(function(e){return (e.pose.region||0)===(state.region||0);}), selected = living.find(function (e) {
+            var speakerId = view.speakerId, living = DW.training.alive(combat).filter(function(e){return mission.sky.wormhole||(e.pose.region||0)===(state.region||0);}), selected = living.find(function (e) {
                 return e.id === combat.targetId;
             });
             status = targetStatus(status, selected, combat.time);
@@ -160,9 +160,7 @@
             if (selected) {
                 var selection = selected.team === 'ally' ? view.allyArt : view.enemyArt, art = DW.flightPresentation.model(selected, combat.wave, view);
                 get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (selected.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.training.callsign(selected);
-                get('target-detail').textContent = (art.name || 'Training fighter') + ' / ' + Math.round(Math.hypot.apply(null, selected.pose.eye.map(function (v, i) {
-                    return v - state.eye[i];
-                })) * units*displayScale) + distanceUnit+' / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
+                get('target-detail').textContent = (art.name || 'Training fighter') + ' / ' + rangeText(selected)+' / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
                 get('target-hull').max = selected.maxHp;
                 get('target-hull').value = selected.hp;
                 get('target-hull').dataset.condition = selected.hp / selected.maxHp <= .25 ? 'critical' : selected.hp / selected.maxHp <= .5 ? 'damaged' : 'healthy';
@@ -174,7 +172,7 @@
                 combatHud.fillStyle = 'rgba(255,55,25,' + (combat.hitFlash * .28) + ')';
                 combatHud.fillRect(0, 0, w, h);
             }
-            var radarContacts = /** @type {RadarContact[]} */ (living.map(function (e) {
+            var radarContacts = /** @type {RadarContact[]} */ (living.filter(function(e){return (e.pose.region||0)===(state.region||0);}).map(function (e) {
                 return { point: e.pose.eye, color: e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
             }));
             if(!mission.emptySpace&&!(state.region||0)){
@@ -185,19 +183,21 @@
             DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, combat.mode, document.body.classList.contains('touch-flight'));
             combatHud.font = '12px ui-monospace,monospace';
             combatHud.textAlign = 'center';
-            /** @param {Vector} point @param {boolean=} optical */
-            function projection(point,optical) {
-                if(optical&&mission.sky.wormhole&&DW.ellisOptics){
-                    var path=DW.ellisOptics.primary(state.eye.map(function(v){return v*units;}),point.map(function(v){return v*units;}),state.region||0,state.region||0);
-                    if(path)return DW.flightSkybox.project(path.direction,state,w/h);
+            /** @param {Vector} point @param {number} side */function visualDirection(point,side){
+                if(mission.sky.wormhole&&DW.ellisOptics){
+                    var path=DW.ellisOptics.primary(state.eye.map(function(v){return v*units;}),point.map(function(v){return v*units;}),state.region||0,side);
+                    return path?path.direction:null;
                 }
-                return DW.flightSkybox.project(point.map(function (x, i) {
-                    return x - state.eye[i];
-                }), state, w / h);
+                return point.map(function(v,i){return v-state.eye[i];});
+            }
+            /** @param {import('./types').Craft} craft */function rangeText(craft){
+                var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,!!mission.sky.wormhole);
+                return path?Math.round(path.distance*units*displayScale)+distanceUnit:'—';
             }
             var targetBearing = /** @type {number | null} */ (null);
             living.forEach(function (e) {
-                var q = projection(e.pose.eye,true), target = e.id === combat.targetId;
+                var direction=visualDirection(e.pose.eye,e.pose.region||0);if(!direction)return;
+                var q = DW.flightSkybox.project(direction,state,w/h), target = e.id === combat.targetId;
                 combatHud.globalAlpha = 1;
                 combatHud.lineWidth = 1.5;
                 combatHud.strokeStyle = target ? '#ffe7a3' : e.team === 'ally' ? '#63f58d' : '#ff655d';
@@ -228,9 +228,7 @@
                     }
                     if (e.id === speakerId)
                         DW.flightRadar.speakerHalo(combatHud, x, y, r + 6);
-                    if (target || e.id === speakerId) combatHud.fillText(Math.round(Math.hypot.apply(null, e.pose.eye.map(function (v, i) {
-                        return v - state.eye[i];
-                    })) * units*displayScale) + distanceUnit, x, y + r + 15);
+                    if (target || e.id === speakerId) combatHud.fillText(rangeText(e), x, y + r + 15);
                     if (target) {
                         combatHud.save();
                         combatHud.strokeStyle = '#ffe7a3';
@@ -252,9 +250,7 @@
                     }
                 }
                 else {
-                    var delta = e.pose.eye.map(function (v, i) {
-                        return v - state.eye[i];
-                    }), dx = delta.reduce(function (sum, v, i) {
+                    var delta = direction, dx = delta.reduce(function (sum, v, i) {
                         return sum + v * state.right[i];
                     }, 0), dy = -delta.reduce(function (sum, v, i) {
                         return sum + v * state.up[i];
@@ -287,9 +283,9 @@
 
             combatHud.globalAlpha = 1;
             if (selected) {
-                var lead = DW.training.intercept(state.eye, selected.pose.eye, selected.pose.velocity.map(function (v) {
-                    return v / units;
-                }), view.weapon.speed / units), q = projection(lead.point);
+                var lead=DW.training.firingSolution(combat,combat.player,selected,view.weapon),q=lead?DW.flightSkybox.project(lead.direction,state,w/h):null;
+                get('target-info').dataset.leadState=lead?'valid':'unavailable';get('target-info').dataset.leadTime=lead?lead.time.toFixed(4):'';
+                if(!lead){combatHud.fillStyle='#a9e5dc';combatHud.fillText(selected.team==='ally'?'FRIENDLY CONTACT':'NO FIRING SOLUTION',w/2,h/2+54);}
                 if (q && Math.abs(q.x) < 1 && Math.abs(q.y) < 1) {
                     combatHud.strokeStyle = '#a9e5dc';
                     combatHud.setLineDash([2, 3]);
@@ -348,8 +344,9 @@
                 label(DW.training.callsign(selected).slice(0,22),rightX+14,rightY+44,16,gold);
                 var source=get('target-camera').querySelector('canvas:not(.scene3d-overlay)');
                 if(source instanceof HTMLCanvasElement){var fit=Math.min((pw-24)/source.width,76/source.height);ctx.image(source,rightX+(pw-source.width*fit)/2,rightY+51,source.width*fit,source.height*fit,0,targetRendered);}
-                var distance=Math.hypot.apply(null,selected.pose.eye.map(function(v,i){return v-view.state.eye[i];}))*view.units*mission.units.distanceScale;
-                label(Math.round(distance)+' '+mission.units.distanceLabel,rightX+14,rightY+139,11);
+                var path=DW.flightGuns.ballisticPath(view.state.eye,selected.pose.eye,view.state.region||0,selected.pose.region||0,!!mission.sky.wormhole);
+                var distance=path?path.distance*view.units*mission.units.distanceScale:null;
+                label(distance===null?'—':Math.round(distance)+' '+mission.units.distanceLabel,rightX+14,rightY+139,11);
                 meter('SHIELD',selected.shield||0,selected.maxShield||1,rightX+14,rightY+157,pw-28,'#79b8e7');
                 meter('HULL',selected.hp,selected.maxHp,rightX+14,rightY+181,pw-28,'#91d29b');
             }else label('TAB / ACQUIRE',rightX+14,rightY+50,11,muted);

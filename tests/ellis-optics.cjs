@@ -92,10 +92,11 @@ console.log(`PASS Ellis compact boundary: outward flat limit ${boundaryWorst.toF
 
 for(const region of [0,1]){
  const eye=[region*12000,-2380,1550],target=[region*12000+12,-2340,1550];
- const p=optics.primary(eye,target,region,region);assert(p&&p.direct);
+ const p=optics.primary(eye,target,region,region);assert(p&&!p.direct);
  const delta=target.map((v,i)=>v-eye[i]),distance=Math.hypot(...delta);
- assert(p.direction.every((v,i)=>Math.abs(v-delta[i]/distance)<1e-10),'Near same-chart ship uses local straight frame');
- assert(Math.abs(p.length-distance)<1e-8);
+ const ray=optics.ray(eye,p.direction,region);optics.advanceRay(ray,p.length);
+ assert(Math.hypot(...ray.eye.map((v,i)=>v-target[i]))<.1,'Nearby image agrees with the same forward ray used by guns');
+ assert(p.direction.reduce((sum,v,i)=>sum+v*delta[i]/distance,0)>.99,'Nearby finite-source direction remains locally close to straight');
  const remote=optics.primary(eye,[12000-region*12000,-1660,1550],region,1-region);
  assert(!remote||!remote.direct,'Remote chart never receives local straight bypass');
 }
@@ -107,7 +108,7 @@ for(const distance of [100,200]){
  assert(Math.hypot(...a.direction.map((v,i)=>v-b.direction[i]))<.001,'Near-field transition has no hard direction switch');
  assert(Math.abs(a.length-b.length)<.1,'Near-field transition has no path-length switch');
 }
-console.log('PASS Ellis near-field blend: continuous direction and distance at 100/200 m');
+console.log('PASS Ellis finite-source continuity: continuous direction and distance at 100/200 m');
 
 // Off-axis pursuit previously flipped the ray when source/eye radii exchanged
 // order, and quantized integral subtraction caused holes around critical impact.

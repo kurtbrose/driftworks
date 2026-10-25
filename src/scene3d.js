@@ -848,9 +848,9 @@
     function material() {return new THREE.RawShaderMaterial({vertexShader:vertexShader,fragmentShader:fragmentShader,
       uniforms:uniforms,side:THREE.DoubleSide,transparent:true,depthWrite:depthWrite,blending:blending,
       defaultAttributeValues:{aUV:[0,0],aBakedDocking:[0,0,0]}});}
-    /** @type {{object:import('./three-types').Object3D,material:import('./three-types').Material,uniforms:typeof uniforms,lines:boolean,lensRadius?:number,lensCenter?:number[],region?:number}[]} */
+    /** @type {{object:import('./three-types').Object3D,material:import('./three-types').Material,uniforms:typeof uniforms,lines:boolean,projected?:boolean,lensRadius?:number,lensCenter?:number[],region?:number}[]} */
     var drawPool=[];
-    var drawLensRadius=0;
+    var drawLensRadius=0,drawProjected=false;
     var drawLensCenter=/** @type {number[]|null} */(null);
     var drawRegion=0,surfaceRegion=0,bridgeRevision=/** @type {string|null} */(null);
     /** @type {WeakMap<import('./three-types').Material,import('./three-types').StandardMaterial>} */ var standardShips=new WeakMap();
@@ -917,7 +917,7 @@
       if(values)mesh.buffer.setAttribute('aBakedDocking',new THREE.BufferAttribute(values,3));
       else mesh.buffer.deleteAttribute('aBakedDocking');
     }
-    /** @type {{vertices:Float32Array,color:V3,origin?:V3,rotation?:number,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
+    /** @type {{vertices:Float32Array,color:V3,origin?:V3,rotation?:number,projected?:boolean,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
@@ -925,12 +925,22 @@
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {WeakMap<HTMLImageElement,import('./three-types').Texture>} */ var shipTextures=new WeakMap();
+    /** @param {HTMLImageElement} image */
+    function shipTexture(image){
+      var texture=shipTextures.get(image);
+      if(!texture){texture=new THREE.Texture(image);texture.flipY=false;texture.needsUpdate=true;texture.minFilter=((image.width&(image.width-1))===0&&(image.height&(image.height-1))===0)?THREE.LinearMipmapLinearFilter:THREE.LinearFilter;shipTextures.set(image,texture);}
+      return texture;
+    }
+    /** @param {import('./three-types').Texture} rawMap */
+    function pbrShipTexture(rawMap){
+      var map=pbrTextures.get(rawMap);
+      if(!map){map=rawMap.clone();map.colorSpace=THREE.SRGBColorSpace;map.needsUpdate=true;pbrTextures.set(rawMap,map);}
+      return map;
+    }
     /** @param {HTMLImageElement | undefined} image */
     function bindShipTexture(image){
       setUniform('PaintEnabled',0);setUniform('Textured',image?1:0);if(!image)return;
-      var texture=shipTextures.get(image);
-      if(!texture){texture=new THREE.Texture(image);texture.flipY=false;texture.needsUpdate=true;texture.minFilter=((image.width&(image.width-1))===0&&(image.height&(image.height-1))===0)?THREE.LinearMipmapLinearFilter:THREE.LinearFilter;shipTextures.set(image,texture);}
-      setUniform('ShipTexture',texture);
+      setUniform('ShipTexture',shipTexture(image));
     }
     var box = upload(boxMesh());
     /** @type {Record<string, Mesh>} */ var miningMeshes = {};
@@ -968,7 +978,7 @@
         var object=lines?new THREE.LineSegments(mesh.buffer,drawMaterial):new THREE.Mesh(mesh.buffer,drawMaterial);
         object.frustumCulled=false;entry={object:object,material:drawMaterial,uniforms:snapshot,lines:!!lines};drawPool[drawIndex]=entry;
       }
-      entry.lensRadius=drawLensRadius;entry.region=drawRegion;entry.lensCenter=drawLensCenter||origin;
+      entry.projected=drawProjected;entry.lensRadius=drawLensRadius;entry.region=drawRegion;entry.lensCenter=drawLensCenter||origin;
       Object.keys(uniforms).forEach(function(key){entry.uniforms[key].value=uniforms[key].value;});
       var useStandard=!!activeProbe && !shadowPass && !rock && !lines && uniforms.uTextured.value===1 && uniforms.uFlat.value!==1;
       var submitted=entry.material;
@@ -976,8 +986,7 @@
         var standard=standardShips.get(entry.material);
         if(!standard){standard=shipMaterial(entry.uniforms);standardShips.set(entry.material,standard);}
         var rawMap=/** @type {import('./three-types').Texture} */(uniforms.uShipTexture.value);
-        var map=pbrTextures.get(rawMap);
-        if(!map){map=rawMap.clone();map.colorSpace=THREE.SRGBColorSpace;map.needsUpdate=true;pbrTextures.set(rawMap,map);}
+        var map=pbrShipTexture(rawMap);
         if(standard.map!==map||standard.envMap!==activeProbe.texture){standard.map=map;standard.envMap=activeProbe.texture;standard.needsUpdate=true;}
         standard.color.setRGB(color[0],color[1],color[2],THREE.SRGBColorSpace);standard.opacity=/** @type {number} */(uniforms.uOpacity.value);
         if(standard.transparent!==(standard.opacity<1)){standard.transparent=standard.opacity<1;standard.needsUpdate=true;}
@@ -1251,7 +1260,7 @@
     /** @param {World} w @param {number} alpha @param {number} dt @param {number} wallDt */
     function renderFrame(w, alpha, dt, wallDt) {
       if(study && !shadowPass)pickBatches=[];
-      drawPool.forEach(function(entry){scene.remove(entry.object);});drawIndex=0;drawRegion=0;drawLensRadius=0;drawLensCenter=null;
+      drawPool.forEach(function(entry){scene.remove(entry.object);});drawIndex=0;drawProjected=false;drawRegion=0;drawLensRadius=0;drawLensCenter=null;
       var renderStart=performance.now();renderStats.drawCalls=0;renderStats.triangles=0;renderStats.lines=0;frameMeshes.clear();frameMaterials.clear();
       var vp = viewport(); if (vp.width < 1 || vp.height < 1) return;
       var dpr = Math.min(2, window.devicePixelRatio || 1)*(study?diagnostics.scale:1);
@@ -1493,6 +1502,7 @@
         blending=THREE.AdditiveBlending;depthWrite=false;
         setFinish(9);setUniform('Habitat',0);pickSpin=0;setUniform('AxialSpin',0);
         studyEffects.forEach(function(batch,index){
+          drawProjected=!!batch.projected;
           drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;
           if(!batch.vertices.length)return;
           if(!studyEffectMeshes[index])studyEffectMeshes[index]=upload(new Float32Array(0));
@@ -1501,6 +1511,7 @@
         });
         depthWrite=true;blending=THREE.NoBlending;setFinish(0);
       }
+      drawProjected=false;
       if(DW.explosions){
         var blasts=study?studyExplosions:effects.filter(function(fx){return fx.event.kind==='ship-destroyed';}).map(function(fx){var event=fx.event;return {position:/** @type {V3} */([event.position.x,event.position.y,0]),velocity:/** @type {V3} */([event.velocity?event.velocity.x:0,event.velocity?event.velocity.y:0,0]),age:fx.age,size:2,seed:Math.round(event.position.x*31+event.position.y*17)};});
         var explosionIndex=0;
@@ -1552,6 +1563,16 @@
       setStudyLightRigs:function(rigs){studyLightRigs=rigs.slice(0,2);},
       /** @param {boolean} enabled */
       setRigLightsEnabled:function(enabled){rigLightsEnabled=enabled;if(rigLightButton)rigLightButton.setAttribute('aria-pressed',String(enabled));},
+      // Upload one image per task while the fleet is loading, before publishing
+      // textures to the combat renderer. No first-wreck upload or pixel processing.
+      prepareStudyTextures: /** @param {HTMLImageElement[]} images */ async function(images){
+        for(var image of new Set(images)){
+          await new Promise(function(resolve){setTimeout(resolve,0);});
+          var texture=shipTexture(image);
+          renderer.initTexture(texture);
+          renderer.initTexture(pbrShipTexture(texture));
+        }
+      },
       setStudyActors: /** @param {typeof studyActors} batches */ function(batches){
         if(!study)return;
         studyActors=batches.slice();

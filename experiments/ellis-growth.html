@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ellis growth / Driftworks</title>
+<script src="../src/asset-versions.js?v=07ee9d9bdc70"></script>
+<script>var address=new URL(location.href);address.searchParams.set('mission','ellis');address.searchParams.set('bridgeGrid','0');address.searchParams.set('bridgeOutline','0');history.replaceState(null,'',address);window.Driftworks=window.Driftworks||{};window.Driftworks.sim={METERS_PER_UNIT:60};</script>
+<style>*{box-sizing:border-box}body{margin:0;background:#000;color:#d4edeb;font:14px system-ui}#viewer{position:fixed;inset:0}canvas{position:absolute;width:100%;height:100%}header,section{position:fixed;background:#07151de8;border:1px solid #35545e;border-radius:10px;padding:16px}header{left:18px;top:18px;max-width:390px}h1{font-size:22px;margin:4px 0 10px}p{color:#abc1c2;line-height:1.5}section{bottom:18px;left:18px;right:18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}label{display:flex;gap:8px;align-items:center}button,select,input{font:inherit}button,select{background:#102a34;color:#ddf0eb;border:1px solid #45636e;padding:8px;border-radius:4px}input{width:180px}a{color:#9ee9dd}output{font:13px/1.7 monospace;white-space:pre-line}#ruler{position:fixed;left:50%;top:72%;transform:translateX(-50%);border-bottom:1px solid #9ee9dd;text-align:center;color:#9ee9dd;padding-bottom:8px;pointer-events:none}#ruler:before,#ruler:after{content:'';position:absolute;bottom:-5px;height:10px;border-left:1px solid #9ee9dd}#ruler:before{left:0}#ruler:after{right:0}@media(max-width:600px){header{max-width:290px;padding:10px}section{gap:8px;padding:10px}input{width:130px}}</style></head>
+<body><div id="viewer" aria-label="Growing Ellis wormhole"></div><header><small>DRIFTWORKS / FORMATION STUDY</small><h1>A throat opens</h1><p>One micrometre to 50 metres in diameter. Fixed camera, 100 m from the centre. The microscopic opening is initially below pixel size.</p><output id="readout"></output><p>Animated static Ellis lens solutions. An artistic growth experiment, not a dynamical spacetime solution.</p><a href="../">Experiments</a> · <a href="ellis-study.html">Observation lab</a></header>
+<div id="ruler">50 m at throat centre</div>
+<section aria-label="Growth playback"><button id="play">Pause</button><button id="restart">Restart</button><label>Time <input id="time" type="range" min="0" max="16" step="0.001" value="0"></label><label>Growth <select id="curve"><option value="log">Logarithmic</option><option value="linear">Linear</option></select></label><label>Duration <select id="duration"><option value="8">8 s</option><option value="16" selected>16 s</option><option value="30">30 s</option></select></label><label><input id="loop" type="checkbox" style="width:auto">Loop</label></section>
+<script src="flight-missions.js?v=f39b3ca6792d"></script><script src="mission-ohio.js?v=55d50526f5e4"></script><script src="ellis-optics.js?v=d2e316f47e74"></script><script src="skybox.js?v=f7facfdbad0f"></script>
+<script>
+(function(){
+ const get=id=>document.getElementById(id),sky=window.Driftworks.flightSkybox.create(get('viewer'),{fov:70,optics:false});
+ let time=0,playing=true,last=0;
+ // Scaling the observer about the existing 300 m throat gives the same
+ // dimensionless sky rays as scaling the entire compact Ellis metric.
+ function sample(t,duration,curve){const u=Math.max(0,Math.min(1,t/duration)),s=u*u*(3-2*u);return curve==='linear'?1e-6+(50-1e-6)*s:1e-6*Math.pow(50/1e-6,s);}
+ window.ellisGrowth={sample:sample,get time(){return time;}};
+ get('play').onclick=()=>{if(time>=Number(get('duration').value))time=0;playing=!playing;};
+ get('restart').onclick=()=>{time=0;playing=true;};
+ get('time').oninput=()=>{time=Number(get('time').value);playing=false;};
+ get('duration').onchange=()=>{time=Math.min(time,Number(get('duration').value));};
+ function frame(now){const dt=last?Math.min(.1,(now-last)/1000):0;last=now;const duration=Number(get('duration').value);
+ if(playing&&!document.hidden){time=Math.min(duration,time+dt);if(time===duration){if(get('loop').checked){if(now-lastEnd>2000){time=0;lastEnd=now;}}else playing=false;}else lastEnd=now;}
+ const diameter=sample(time,duration,get('curve').value),radius=diameter/2,virtualDistance=100*300/radius;
+ if(!document.hidden)sky.render({eye:[virtualDistance/60,-2000/60,1550/60],right:[0,1,0],up:[0,0,1],back:[1,0,0],region:0},1,false);
+ get('play').textContent=playing?'Pause':'Play';get('time').max=String(duration);get('time').value=String(time);
+ const pixels=innerHeight/(2*Math.tan(35*Math.PI/180))*diameter/100;
+ get('readout').textContent=time.toFixed(2)+' / '+duration+' s\nThroat diameter  '+(diameter<.001?(diameter*1e6).toFixed(2)+' µm':diameter<1?(diameter*1000).toFixed(2)+' mm':diameter.toFixed(2)+' m')+'\nProjected throat  '+(pixels<.01?'< 0.01':pixels.toFixed(2))+' px'+(pixels<1?' · subpixel':'');
+ get('ruler').style.width=(innerHeight/(2*Math.tan(35*Math.PI/180))*.5)+'px';requestAnimationFrame(frame);
+ }
+ let lastEnd=0;requestAnimationFrame(frame);
+}());
+</script></body></html>

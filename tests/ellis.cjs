@@ -27,7 +27,7 @@ p=probe(0,-2400,0,120000);p.flight.advance(dt,{throttle:1});
 assert.equal(p.state.eye[0]*p.u,12000,'swept crossing catches a full-diameter tick');
 p=probe(0,-2400);const snap=p.flight.snapshot();
 snap.guns.bolts.push({position:[0,-2301/p.u,1550/p.u],direction:[0,1,0],age:0,weapon:p.flight.config.weapon});
-p.flight.advance(dt,{stop:true});
+p.flight.advance(.1,{stop:true});
 assert.equal(snap.guns.bolts[0].position[0]*p.u,12000,'gunfire crosses');
 assert.equal(snap.guns.bolts[0].region,1,'projectile changes region');
 p=probe(0,-2400);const angled=p.flight.snapshot();
@@ -54,15 +54,15 @@ assert.equal(rs.combat.enemies.filter(c=>c.pose.region===1).length,4,'two teams 
 const remote=rs.combat.enemies.find(c=>c.team==='enemy'&&c.pose.region===1);
 remote.pose.eye=rs.state.eye.map((v,i)=>v-rs.state.back[i]*100/ru);
 rs.combat.targetId=remote.id;rs.combat.targetLocked=true;
-regions.session.acquireTarget();assert.equal(rs.combat.targetId,null,'coincident cross-region hull cannot retain lock');
-regions.session.nextTarget();assert.notEqual(rs.combat.targetId,remote.id,'target cycling excludes other region');
+regions.session.acquireTarget();assert.equal(rs.combat.targetId,remote.id,'Ellis lock survives a change of region');
+regions.session.nextTarget();assert(rs.combat.targetId,'target cycling includes both regions');
 const hp=remote.hp,shield=remote.shield;
 const start=remote.pose.eye.map((v,i)=>v+rs.state.back[i]*30/ru),end=remote.pose.eye.map((v,i)=>v-rs.state.back[i]*30/ru);
 const bolt={region:0,position:start,direction:rs.state.back.map(v=>-v),weapon:regions.config.weapon,age:0};
 regions.DW.training.trace(rs.combat,start,end,bolt,'player',undefined,rs.state);
 assert.equal(remote.hp,hp);assert.equal(remote.shield,shield,'bolts cannot hit colocated hull in another region');
 assert.equal(regions.DW.training.convergencePoint(rs.combat,rs.combat.player,regions.config.weapon,undefined),null,'remote hull cannot retract local muzzles');
-console.log('PASS Ellis regions: explicit membership, local targeting and cross-region collision isolation');
+console.log('PASS Ellis regions: explicit membership, persistent cross-mouth targeting and cross-region collision isolation');
 
 regions.DW.training.damageCraft(rs.combat,remote,{...regions.config.weapon,damage:1e9});
 assert.equal(rs.combat.wrecks.at(-1).pose.region,1,'wreck retains region');

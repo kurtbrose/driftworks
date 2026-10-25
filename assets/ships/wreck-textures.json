@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "recipe": "approved-soot-v1",
+  "format": "lossless WebP",
+  "textures": [
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Bob.png",
+      "sha256": "d65341b1c91903d53e3897b2b3387420eb3a9e56a67ffb731f73597527ca3c6e",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Bob.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3355872,
+      "outputSha256": "451012c7a252f1faca4c6ff5aca2f2bc94c92e6d06b9cb6b9c0cc59b4f5e8771"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Challenger.png",
+      "sha256": "159d27e8d0644d5b5807fccb50206715fd45d66d95c8631dc222e1fe9cfd224b",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Challenger.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3382544,
+      "outputSha256": "2aca8bd79d89b9db3c9f27024a3a8abc52050a2a081552b56e444ddd8b8b9d48"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Dispatcher.png",
+      "sha256": "0a0f80acff5d07ae8cc34d1fe1f45bcf44ffd40e1fba9916cf00397cb62f03a0",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Dispatcher.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3373544,
+      "outputSha256": "d5687a1119a9dbcf99674afaff71452d32051839cdfd713765d4344d05397b51"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Executioner.png",
+      "sha256": "ab50ca81a14e88ea366c591d7f5d769cd0e41bcb0d4df1df5b931de4b3758cc5",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Executioner.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3378722,
+      "outputSha256": "97ec9b16607309312b9b9f1995706d528d530b4c8ecb276247f7bd9e7211be62"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Imperial.png",
+      "sha256": "3d3b3fb5120ec211308ac0602d21eb8433bc6b8ac88109d5c90a757cdc6df234",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Imperial.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3381390,
+      "outputSha256": "65bb3eb974e48ef3cbc1d11210b96f6e1a1a7a6959ecee536f43a11d02bc8f06"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Insurgent.png",
+      "sha256": "747cc0798c673cfeb8294cf70786f5028b655a8b7beeb67d107d48ed4a2716ed",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Insurgent.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3381402,
+      "outputSha256": "656216601d5ee5e74be66847e849040d0a620ae7f526832a4c6b5f1ecc5854af"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Omen.png",
+      "sha256": "4925ba424ad828b1928926e057ca07232b7bfb7af8eb3542fa5e3d77d1d14648",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Omen.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3384416,
+      "outputSha256": "c8362951c54902eab218ab9eebd52464b959dc3cb934bf64091b6f219685f870"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Pancake.png",
+      "sha256": "a34022dc922c43d8d4b25dcd31419a60fcedbac78a80e2ff782351087581ad9f",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Pancake.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3367390,
+      "outputSha256": "206f43d742b5132b327931b03e4e9ad2599a3b9fc83b6425c2439995a56d1a73"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Spitfire.png",
+      "sha256": "8ace665482dba8dab915c25db3acd2045e8c29987cc2bc9b8b041feeff71aeb6",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Spitfire.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3389434,
+      "outputSha256": "592e3864db765020260987066f4e4b35c3d8f72a90e9bdbc3657493c68b389f6"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Striker.png",
+      "sha256": "bb5070f7db34206d4e17fb2b3003c77d60681437ad752beb924e731a40cc9391",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Striker.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3412178,
+      "outputSha256": "e3649768b1a221d2030a7865b1e9ad809125622a806690b7463dc7a38ed908b4"
+    },
+    {
+      "source": "assets/ships/quaternius-ultimate-spaceships/textures/Zenith.png",
+      "sha256": "849b8fae59d57487ca05a1652a8aa92f874a223f80004de373d1b604b3cf67f9",
+      "output": "assets/ships/quaternius-ultimate-spaceships/textures/Zenith.wreck.webp",
+      "width": 2048,
+      "height": 2048,
+      "bytes": 3380286,
+      "outputSha256": "454865ceadb5a156d076038de1347973295fdc832620cb51b8ace4799c4302f7"
+    },
+    {
+      "source": "assets/ships/concept-trio/raptor-flight.png",
+      "sha256": "6d63008beded11f87360c69954d72b10cf4a997eb0e8c1a58f8adc22aff43d94",
+      "output": "assets/ships/concept-trio/raptor-flight.wreck.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 237138,
+      "outputSha256": "113bdca8591143fcd27154722139a02e1868bceaa6b3b9c15192e790ea09184b"
+    },
+    {
+      "source": "assets/ships/concept-trio/bulldog-flight.png",
+      "sha256": "ff033696184c28ddf98f67d69c0062e686503b4c24b0eaab2fb52e014d95c7fb",
+      "output": "assets/ships/concept-trio/bulldog-flight.wreck.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 237844,
+      "outputSha256": "037af892fc3e62380eceacff34466510dd8a3747df234b614f7cffad543c2def"
+    },
+    {
+      "source": "assets/ships/concept-trio/halo-flight.png",
+      "sha256": "995f39b68d14b3468964fb4cbdac4cb7084d34de76b3e2ac85527ee0f7ce3e05",
+      "output": "assets/ships/concept-trio/halo-flight.wreck.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 237420,
+      "outputSha256": "bf1080e3e1a9fe315507597e62c0f9ba34f4839c51c435ac41afc610c01cc4e6"
+    },
+    {
+      "source": "assets/ships/ohio-vehicles/palette.png",
+      "sha256": "f4cdc950e0abcf8c3b99da3e2699079386250bf0f9f9de4cdbd65cea7f6dd082",
+      "output": "assets/ships/ohio-vehicles/palette.wreck.webp",
+      "width": 5,
+      "height": 1,
+      "bytes": 78,
+      "outputSha256": "6e89cf31b268436097813327423014cc49a3e407e3a5c5dca9da909847ec5c89"
+    }
+  ]
+}

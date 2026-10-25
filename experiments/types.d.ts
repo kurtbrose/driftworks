@@ -1,3 +1,4 @@
+export type OpticalRay={eye:number[];direction:number[];region:number;originRegion:number;active:boolean;l:number;p:number;b:number;phase:number;radial:number[];tangent:number[]};
 export type FiringSolution={direction:number[];distance:number;time:number;point:number[];region:number};
 export type JadeSystem={planetRadiusKm:number;planetMassKg:number;planeNormal:number[];observer:number[];frame:number[][];moons:{name:string;diameterKm:number;orbitKm:number;phaseDeg:number;position:number[]}[]};
 export type TargetStatus = {id: string; shield: number; hull: number; shieldTrail: number; hullTrail: number; shieldAge: number; hullAge: number; flash: number; time: number};
@@ -166,6 +167,7 @@ export type Weapon = {
     color2: Vector;
 };
 export type Bolt = {
+    opticalRay?: OpticalRay;
     region?: number;
     position: Vector;
     direction: Vector;
@@ -337,7 +339,7 @@ export type Pack = {
     models: Model[];
 };
 export type Batch = {
-    lensRadius?:number;lensCenter?:number[];
+    projected?:boolean;lensRadius?:number;lensCenter?:number[];
     region?: number;
     basis?: Float32Array;
     scale?: number;
@@ -651,7 +653,7 @@ export type Line = {
     emotion?: Feeling;
 };
 export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines?: number; reduced?: boolean};
-export type EllisDraw={lensRadius?:number;lensCenter?:number[];region?:number;material:import('../src/three-types').Material;object:import('../src/three-types').Object3D;uniforms:Record<string,{value:import('../src/three-types').UniformValue}>};
+export type EllisDraw={projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;material:import('../src/three-types').Material;object:import('../src/three-types').Object3D;uniforms:Record<string,{value:import('../src/three-types').UniformValue}>};
 export type EllisRenderPass={invalidate:()=>void;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number,revision?:string|null)=>{objectPaths:number;objectPatches:number;objectError:number;objectBad:number;compositionPasses:number;historyValid:number;extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
@@ -662,7 +664,7 @@ export type ExperimentModules = {
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
     ellisFeedback:{describe:(pose:Pose)=>{region:number;distance:number;gap:number;proximity:number};create:()=>{reset:()=>void;update:(pose:Pose,dt:number,active:boolean,enabled:boolean)=>EllisCue}};
     ellisStudy:{camera:(name:string,time?:number)=>Pose;sample:(time:number,scenario:string)=>{pose:Pose;velocity:number[]}[]};
-    ellisOptics:{primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];sourceDirection:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;latticeShader:string;size:number};
+    ellisOptics:{ray:(eye:number[],direction:number[],region:number)=>OpticalRay;advanceRay:(ray:OpticalRay,distance:number)=>{start:number[];end:number[];region:number;direction:number[]}[];primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];sourceDirection:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;latticeShader:string;size:number};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
     flightPortraits: {
@@ -731,7 +733,7 @@ export type ExperimentModules = {
         create: () => Guns;
         step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[], bridge?:boolean) => void;
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
-        geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose) => Batch[];
+        geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose, optical?:boolean) => Batch[];
     };
     training: {
         setCollisionMode: (combat: Combat, mode: 'legacy'|'grid'|'tree'|'grid-events'|'tree-events') => void;
@@ -790,6 +792,7 @@ export type ExperimentModules = {
         sourceGeometry: (model: Model, poses: Pose[], units: number, texture?: HTMLImageElement, paint?: Vector) => Batch;
         sourceFleetGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, images: Images, paint?: Vector, transforms?: boolean) => Batch[];
         loadTextures: () => Promise<Images>;
+        textureSources: (images: Images) => HTMLImageElement[];
         gunAnchors: (model: Model) => Vector[];
         engineAnchors: (model: Model) => number[][];
         engineGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, view: Pose, time: number) => Batch;

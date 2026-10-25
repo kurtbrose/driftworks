@@ -290,6 +290,18 @@ export type AsteroidVisual = {
   craters: { x: number; y: number; rx: number; ry: number; angle: number; depth: number; age: number; rimScale: number; sizeClass: string }[];
 };
 
+export type AsteroidSurfaceSample = {
+  height: number; normal: {x: number; y: number; z: number}; composition: number[]; occlusion: number;
+};
+export type LegacyAsteroidVisual = Omit<AsteroidVisual, 'seed' | 'craters'> & {
+  shape: number[];
+  cells: {points: number[]; composition: number[]; normal: {x: number; y: number; z: number}; occlusion: number; limb: number; color: number}[];
+  craters: {x: number; y: number; rx: number; ry: number; angle: number; depth: number; floor: number; rim: number; shadow: number; age: number; normal?: {x: number; y: number; z: number}; rimMask?: boolean[]}[];
+  pits: {x: number; y: number; radius: number; color: number}[];
+  fractures: {points: number[]; color: number}[];
+  microBumps: {x: number; y: number; radius: number; aspect: number; strength: number; normal: {x: number; y: number; z: number}}[];
+};
+
 export type RigLightUniforms = {uRigCount:number;uRigProjected:number;uRigPower:Float32Array;uRigOrigin:Float32Array;uRigX:Float32Array;uRigY:Float32Array;uRigZ:Float32Array};
 export type RigLightMount = {id:string;position:number[];target:number[];anchor:number[];range:number;power:number};
 export type RigLighting = {origin:number[];right:number[];forward:number[];up:number[];scale:number;power:number};
@@ -329,6 +341,12 @@ export interface DriftworksNamespace {
   asteroidArt?: {
     describe: (asteroid: Asteroid, bulkOverride?: number[]) => AsteroidVisual;
     reliefAt: (visual: AsteroidVisual, x: number, y: number) => number;
+    surfaceSample: (visual: AsteroidVisual, x: number, y: number) => AsteroidSurfaceSample;
+    legacyDescribe: (asteroid: Asteroid) => LegacyAsteroidVisual;
+    color: (rgb: number[], lightness: number) => number;
+    compositionColor: (composition: number[], lightness: number) => number;
+    light: {x: number; y: number; z: number};
+    craterTextureWidth: number;
     uniforms: (visual: AsteroidVisual) => { uLight: Float32Array; uBulk: Float32Array; uFieldLow: Float32Array; uFieldMed: Float32Array; uProfile: Float32Array; uRelief: Float32Array; uFieldBlobs: Float32Array; uBlobMaterial: Float32Array; uCraterCount: number; uHeterogeneity: number; uSeed: number; uPixelFootprint: number };
     craterBytes: (visual: AsteroidVisual) => Uint8Array;
     shaderSource: string;
@@ -381,8 +399,9 @@ export interface DriftworksNamespace {
       getRenderStats: () => {bridgeObjectPaths?:number;bridgeObjectPatches?:number;bridgeObjectError?:number;bridgeObjectBad?:number;bridgeHistoryValid?:number;bridgeCaptures?:number;bridgeCpuMs?:number;drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyLightRigs:(rigs:RigLighting[])=>void;
     setRigLightsEnabled:(enabled:boolean)=>void;
-    setStudyActors: (batches: {lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
-      setStudyEffects: (batches: {lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; color: [number,number,number]}[]) => void;
+    prepareStudyTextures: (images: HTMLImageElement[]) => Promise<void>;
+    setStudyActors: (batches: {projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
+      setStudyEffects: (batches: {projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; color: [number,number,number]}[]) => void;
       setStudyExplosions: (blasts: {region?:number;position:[number,number,number];velocity?:[number,number,number];age:number;size:number;seed:number}[]) => void;
       getOrbit: () => {yaw: number; tilt: number; height?: number};
       setSurfaceCamera: (pose: {region?:number;eye: [number, number, number]; right: [number, number, number]; up: [number, number, number]; back: [number, number, number]} | null) => void;

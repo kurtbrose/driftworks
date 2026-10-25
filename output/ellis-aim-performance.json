@@ -1,0 +1,10 @@
+{
+  "callsPerBlock": 2000,
+  "order": "exhaustive / fast / fast / exhaustive",
+  "beforeMs": 0.21809999999403953,
+  "afterMs": 0.038625,
+  "speedup": 5.646601941593256,
+  "matchedMovingCases": 300,
+  "maximumDirectionDifference": 4.4484014865047716e-7,
+  "maximumFlightTimeDifferenceSeconds": 0.000002214287439211704
+}
