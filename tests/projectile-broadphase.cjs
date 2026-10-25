@@ -6,7 +6,7 @@ function setup(reference=false){
  const DW={sim:{METERS_PER_UNIT:1}};let lookups=0,hulls=0;
  class CountMap extends Map{get(key){if(typeof key==='string')lookups++;return super.get(key);}}
  const context=vm.createContext({window:{Driftworks:DW},Map:CountMap});
- for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/training.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js']){
+ for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js']){
   let source=fs.readFileSync(path.join(root,file),'utf8');
   if(reference&&file==='experiments/training.js'){
    const start=source.indexOf('    function trace('),end=source.indexOf('    /** @param {Combat} t @param {number} dt',start);

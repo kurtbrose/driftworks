@@ -1,6 +1,32 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {loadRuntime,createFlight}=require('../tools/headless.cjs');
+// The broad phase must work without loading training, rules, renderers or a DOM.
+{
+ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+ const context=vm.createContext({window:{Driftworks:{sim:{METERS_PER_UNIT:1}}}});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../experiments/flight-collision.js'),'utf8'),context);
+ const DW=context.window.Driftworks,api=DW.flightCollision;
+ assert.equal(DW.training,undefined);
+ const craft=(id,team,x)=>({id,team,hp:10,pose:{eye:[x,0,0]},collision:{kind:'sphere',radiusM:1}});
+ for(const mode of ['legacy','grid','tree','grid-events','tree-events']){
+  const player=craft('player','ally',-500),first=craft('first','enemy',50),second=craft('second','enemy',50);
+  const combat={player,enemies:[first,second],time:0};
+  const bolt={age:0,weapon:{headRadius:.1,speed:100,lifetime:2}};
+  api.setMode(combat,mode);
+  const before=JSON.stringify(combat);
+  const query=api.query(combat,[0,0,0],[51,0,0],bolt,'player');
+  assert.deepEqual(Array.from(query.candidates,e=>e.craft.id),['first','second']);
+  assert.equal(query.shooter,player);assert.equal(query.faction,'ally');
+  assert.equal(JSON.stringify(combat),before,'Candidate queries do not apply damage or mutate combat');
+  assert.equal(api.batch(combat,()=>23),23,'Batch forwards its return value');
+  assert.throws(()=>api.batch(combat,()=>{throw new Error('batch failure');}),/batch failure/);
+  first.pose.eye=[500,0,0];api.changed(combat,first);
+  assert.ok(api.query(combat,[49,0,0],[51,0,0],bolt,player).candidates.some(e=>e.craft===second),'Batch failure does not leave scheduling suspended');
+ }
+ assert.throws(()=>api.setMode({},'invalid'),/Unknown collision mode/);
+}
+
 function fixture(mode){
  const DW=loadRuntime(),U=DW.sim.METERS_PER_UNIT,player=DW.arcade.create(0);player.eye=[0,-10000/U,0];
  const combat=DW.training.create('training');DW.training.bindPlayer(combat,player);DW.training.setCollisionMode(combat,mode);

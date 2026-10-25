@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const context={window:{Driftworks:{sim:{METERS_PER_UNIT:10},assetUrl:x=>x}},Float32Array,Map,Set,console};vm.createContext(context);
-for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/retail-weapons.js','experiments/guns.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/ohio-vehicles/meshes.js','experiments/ship-packs.js','experiments/training.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
+for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/retail-weapons.js','experiments/guns.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/ohio-vehicles/meshes.js','experiments/ship-packs.js','experiments/flight-collision.js','experiments/training.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
 const DW=context.window.Driftworks,api=DW.training,player=DW.arcade.create(125),t=api.create('ohio');
 api.configure(t,DW.arcade.profiles[0]);t.useHullModels=true;api.spawn(t,player,125);t.openingStep=3;
 assert.equal(t.enemies.length,8);assert.equal(t.enemies.filter(e=>e.team==='ally').length,4);

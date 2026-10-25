@@ -737,6 +737,7 @@ export type ExperimentModules = {
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose, optical?:boolean) => Batch[];
     };
+    flightCollision: import('./flight-collision-types').FlightCollisionApi;
     training: {
         setCollisionMode: (combat: Combat, mode: 'legacy'|'grid'|'tree'|'grid-events'|'tree-events') => void;
         collisionBatch: <T>(combat: Combat, work: () => T) => T;

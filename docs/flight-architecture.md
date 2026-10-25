@@ -138,6 +138,25 @@ asteroid spin, body-frame terrain marks, audio callbacks and post-gun contact;
 death skips contact and discards pending time. Duels pass radius zero without
 terrain and retain metrics, replay inputs and death/opponent-death/duration stops.
 
+`experiments/flight-collision.js` owns broad-phase indices, padded movement
+proxies, projectile candidate caches, grid/tree queries and event scheduling.
+It loads after simulation units and before training. It creates no browser
+resources and does not depend on training, pilot policy or damage callbacks.
+Optional model bounds are read from the shared ship catalog when queried.
+
+Its `query` returns candidate views in participant order plus shooter/faction
+metadata. Training still performs exact hull intersections, chart/team checks,
+nearest-hit selection, damage, scorches and near-miss callouts. Candidate entries
+are read-only to callers. All caches, modes and queues remain in module-owned
+WeakMaps rather than serializable combat state.
+
+`training.setCollisionMode`, `collisionBatch`, `collisionChanged` and
+`collisionStats` remain compatibility aliases. Batch entry/exit, explicit proxy
+movement updates and roster notifications retain their existing timing. Collision
+variants continue to share the exhaustive-reference regression and exact real
+session comparison in `tests/projectile-broadphase.cjs` and
+`tests/collision-events.cjs`.
+
 `experiments/training.js` owns the isolated wave director, pilot decisions,
 steering primitives, training health, target IDs, and simple enemy geometry.
 The page calls its simulation on the same 1/120 s substeps as player flight.
