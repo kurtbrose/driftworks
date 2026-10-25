@@ -834,9 +834,16 @@
 
   /** @param {World} world @returns {World} */
   function normalizeWorld(world) {
-    var initial = createInitialWorld(world.seed);
+    // Most callers already have current state. Build migration defaults only
+    // when a missing historical field actually needs them.
+    /** @type {World | undefined} */
+    var initial;
+    function defaults() {
+      if (!initial) initial = createInitialWorld(world.seed);
+      return initial;
+    }
     var next = clonePlain(world);
-    next.combat = next.combat || initial.combat;
+    next.combat = next.combat || defaults().combat;
     next.formations = next.formations || {};
     next.nextFormationId = next.nextFormationId || 1;
     next.wrecks = next.wrecks || [];
@@ -845,21 +852,21 @@
     });
     next.nextWreckId = next.nextWreckId || 1;
     next.recovery = next.recovery || { salvagedOre: 0, repairedShips: 0 };
-    next.mothership = next.mothership || initial.mothership;
+    next.mothership = next.mothership || defaults().mothership;
     next.mothership.storage = next.mothership.storage || { ore: 0, constructionMass: 0, depotSections: 0 };
     next.mothership.storage.ore = typeof next.mothership.storage.ore === 'number' ? next.mothership.storage.ore : 0;
     next.mothership.storage.constructionMass =
       typeof next.mothership.storage.constructionMass === 'number' ? next.mothership.storage.constructionMass : 0;
     next.mothership.storage.depotSections =
       typeof next.mothership.storage.depotSections === 'number' ? next.mothership.storage.depotSections : 0;
-    next.depot = next.depot || initial.depot;
+    next.depot = next.depot || defaults().depot;
     next.depot.builtStages = typeof next.depot.builtStages === 'number' ? next.depot.builtStages : 0;
     next.depot.totalStages = next.depot.totalStages || DEPOT_STAGE_COUNT;
-    next.contract = next.contract || initial.contract;
-    next.asteroids = next.asteroids || initial.asteroids;
+    next.contract = next.contract || defaults().contract;
+    next.asteroids = next.asteroids || defaults().asteroids;
     if (next.asteroids.length > 1 || (next.asteroids[0] && typeof next.asteroids[0].angularVelocity !== 'number')) {
       var ore = next.asteroids.reduce(function (sum, item) { return sum + item.ore; }, 0);
-      var body = initial.asteroids[0];
+      var body = defaults().asteroids[0];
       body.ore = ore;
       body.oreInitial = Math.max(540, ore);
       body.angularVelocity = 0.01;
@@ -869,10 +876,10 @@
       });
     }
     next.asteroids.forEach(function (body) {
-      if (!body.excavation) body.excavation = clonePlain(initial.asteroids[0].excavation);
+      if (!body.excavation) body.excavation = clonePlain(defaults().asteroids[0].excavation);
       else if (typeof body.excavation.depthM !== 'number') body.excavation.depthM = 500;
     });
-    next.ships = next.ships || initial.ships;
+    next.ships = next.ships || defaults().ships;
     next.ships.forEach(function (ship) {
       if (typeof ship.turnRate !== 'number') {
         ship.turnRate = ship.speed > 0 ? Math.max(1.4, Math.min(2.8, 180 / ship.speed)) : 0;
@@ -888,8 +895,8 @@
     });
     next.selectedShipIds = next.selectedShipIds || [];
     next.selectedPlatformId = next.selectedPlatformId || null;
-    next.camera = next.camera || initial.camera;
-    next.campaign = next.campaign || initial.campaign;
+    next.camera = next.camera || defaults().camera;
+    next.campaign = next.campaign || defaults().campaign;
     next.elapsedSeconds = typeof next.elapsedSeconds === 'number' ? next.elapsedSeconds : 0;
     next.version = next.version || WORLD_VERSION;
     if (!next.physicalUnitsVersion) {

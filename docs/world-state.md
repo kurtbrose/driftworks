@@ -5,7 +5,9 @@ Constructors, order issuers, `normalizeWorld` and subsystem orchestration in
 `src/sim.js`, with combat transitions in `src/combat.js`, implement it. Use those
 APIs rather than assembling partial worlds.
 Normalization fills historical defaults; it is not a validator for arbitrary
-JSON or broken references.
+JSON or broken references. Seeded starter-world defaults are constructed lazily
+within each normalization call, only when historical fields need repair; these
+default objects are never shared across calls.
 
 ## Root and units
 

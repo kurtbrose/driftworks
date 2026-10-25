@@ -13,6 +13,35 @@
     var findShip = fixtures.findShip;
 
 
+  test('simulation', 'missing world defaults stay seeded, independent and stable across reloads', function () {
+    [1729, 42].forEach(function (seed) {
+      var base = sim.createInitialWorld(seed);
+      var expected = sim.deserializeWorld(sim.serializeWorld(base));
+      function assertWorld(actual, message) {
+        assert(Object.keys(actual).length === Object.keys(expected).length, message);
+        Object.keys(expected).forEach(function (key) {
+          assert(JSON.stringify(actual[key]) === JSON.stringify(expected[key]), message + ': ' + key);
+        });
+      }
+      var fields = ['combat', 'mothership', 'depot', 'contract', 'asteroids', 'ships', 'camera', 'campaign'];
+      // Exercise individual fallback paths and several defaults in the same load.
+      fields.map(function (field) { return [field]; }).concat([fields]).forEach(function (missing) {
+        var old = JSON.parse(JSON.stringify(base));
+        missing.forEach(function (field) { delete old[field]; });
+        var saved = sim.serializeWorld(old);
+        var loaded = sim.deserializeWorld(saved);
+        assertWorld(loaded, 'Seeded defaults for ' + missing.join(', '));
+        assert(JSON.stringify(sim.deserializeWorld(sim.serializeWorld(loaded))) === JSON.stringify(loaded),
+          'Repeated default repair must be stable');
+        loaded.asteroids[0].excavation.depthM = 123;
+        loaded.ships[0].position.x = 456;
+        assertWorld(sim.deserializeWorld(saved),
+          'Default objects must not leak between loads');
+        assert(JSON.stringify(old) === JSON.stringify(JSON.parse(saved).world), 'Loading must preserve its input');
+      });
+    });
+  });
+
   test('simulation', 'explicit order recipients are independent of selection and preserve legacy commands', function () {
     var base=sim.createInitialWorld();
     base.ships.forEach(function(ship){ship.docked=false;ship.order={kind:'move',target:{x:100,y:100}};});
