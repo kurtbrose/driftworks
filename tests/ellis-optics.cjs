@@ -10,6 +10,15 @@ function sample(b,u){
  function read(a,c){const i=(Math.min(N-1,c)*N+Math.min(N-1,a))*4+channel;return (table[i]*256+table[i+1])*32/65535;}
  return (read(ix,iy)*(1-dx)+read(ix+1,iy)*dx)*(1-dy)+(read(ix,iy+1)*(1-dx)+read(ix+1,iy+1)*dx)*dy;
 }
+// The CPU sampler must match the packed texture's bilinear decoding exactly,
+// including both channels and clamped impact-parameter edges.
+for(const b of [0,.05,.6,.99,1-1e-8,1,1+1e-8,1.4,1.95,2]){
+ const root=Math.sqrt(Math.max(.0000001,Math.abs(1-b*b)));
+ const edge=b<1?Math.asinh(Math.sqrt(3)/root):Math.acosh(Math.max(1,Math.sqrt(3)/root));
+ for(const u of [0,edge*.01,edge*.25,edge*.99,edge]){
+  assert.equal(optics.lookup(b,u),sample(b,u),`packed bilinear sample b=${b}, u=${u}`);
+ }
+}
 // Independent quadrature in proper radial l for transmitted rays, rather than
 // the table builder's u coordinate. Endpoints span nearby and far sources.
 function radialIntegral(b,l){

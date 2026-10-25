@@ -48,8 +48,12 @@
     function packedLookup(b,u){
         var data=table(),x=Math.max(0,Math.min(511,-Math.log(Math.max(Math.exp(-12),Math.abs(1-b)))/12*511)),y=Math.max(0,Math.min(511,u/12*511));
         var ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,channel=b<1?0:2;
-        /** @param {number} dx @param {number} dy */function at(dx,dy){var i=(Math.min(511,iy+dy)*512+Math.min(511,ix+dx))*4+channel;return (data[i]*256+data[i+1])*32/65535;}
-        return (at(0,0)*(1-fx)+at(1,0)*fx)*(1-fy)+(at(0,1)*(1-fx)+at(1,1)*fx)*fy;
+        // Four packed texels share their clamped row/column offsets.
+        var first=(iy*512+ix)*4+channel,dx=ix<511?4:0,dy=iy<511?2048:0;
+        var right=first+dx,below=first+dy,diagonal=below+dx;
+        var topLeft=(data[first]*256+data[first+1])*32/65535,topRight=(data[right]*256+data[right+1])*32/65535;
+        var bottomLeft=(data[below]*256+data[below+1])*32/65535,bottomRight=(data[diagonal]*256+data[diagonal+1])*32/65535;
+        return (topLeft*(1-fx)+topRight*fx)*(1-fy)+(bottomLeft*(1-fx)+bottomRight*fx)*fy;
     }
     /** Flat exterior tail is analytic: no quantized phase jump at 2a.
      * @param {number} b @param {number} u */
