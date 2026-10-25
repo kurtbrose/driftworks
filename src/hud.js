@@ -174,8 +174,16 @@
         endMiningButton.disabled = !miningControls.canEnd;
         endMiningButton.hidden = !homeSelected;
         endMiningButton.textContent = miningControls.endLabel;
+        // Index existing buttons once; unmatched entries are stale after this update.
+        /** @type {Map<string, HTMLButtonElement>} */
+        var fleetButtons = new Map();
+        Array.from(fleet.children).forEach(function (button) {
+          var fleetButton = /** @type {HTMLButtonElement} */ (button);
+          fleetButtons.set(fleetButton.dataset.ship || '', fleetButton);
+        });
         world.ships.forEach(function (ship) {
-          var button = /** @type {HTMLButtonElement | undefined} */ (Array.from(fleet.children).filter(function (b) { return /** @type {HTMLElement} */ (b).dataset.ship === ship.id; })[0]);
+          var button = fleetButtons.get(ship.id);
+          fleetButtons.delete(ship.id);
           if (!button) {
             button = document.createElement('button'); button.type = 'button'; button.dataset.ship = ship.id;
             fleet.appendChild(button);
@@ -189,10 +197,7 @@
           if (button.textContent !== label) button.textContent = label;
           button.dataset.active = String(world.selectedShipIds.indexOf(ship.id) !== -1);
         });
-        Array.from(fleet.children).forEach(function (b) {
-          var fleetButton = /** @type {HTMLElement} */ (b);
-          if (!world.ships.some(function (s) { return s.id === fleetButton.dataset.ship; })) fleetButton.remove();
-        });
+        fleetButtons.forEach(function (button) { button.remove(); });
         var audioStatus = audio ? audio.status() : { sfxVolume: 0, musicVolume: 0, available: false };
         requiredElement('[data-role="location"]').textContent = world.campaign.location;
         requiredElement('[data-role="money"]').textContent = '$' + world.campaign.money.toLocaleString();
