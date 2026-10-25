@@ -1,0 +1,202 @@
+[
+  [
+    "sub training.js?v=308add8f7b31:39",
+    2382.459999999998
+  ],
+  [
+    "length training.js?v=308add8f7b31:57",
+    2085.181999999995
+  ],
+  [
+    " training.js?v=308add8f7b31:727",
+    1771.058999999996
+  ],
+  [
+    " training.js?v=308add8f7b31:688",
+    1169.25
+  ],
+  [
+    "(program) :0",
+    584.563
+  ],
+  [
+    " training.js?v=308add8f7b31:40",
+    399.297
+  ],
+  [
+    " training.js?v=308add8f7b31:695",
+    345.0970000000001
+  ],
+  [
+    "(garbage collector) :0",
+    294.40799999999996
+  ],
+  [
+    "quad gpu-ui.js?v=4a1c7acdcb66:122",
+    198.23100000000005
+  ],
+  [
+    "step flight-model.js?v=8a22d33bc921:74",
+    191.64599999999996
+  ],
+  [
+    "rotate flight-model.js?v=8a22d33bc921:22",
+    182.22299999999998
+  ],
+  [
+    " training.js?v=308add8f7b31:699",
+    130.58500000000004
+  ],
+  [
+    "moveCollisionProxy flight-collision.js?v=fd7602efae81:116",
+    127.06399999999996
+  ],
+  [
+    "texSubImage2D :0",
+    121.46199999999993
+  ],
+  [
+    "scale training.js?v=308add8f7b31:45",
+    116.187
+  ],
+  [
+    "add training.js?v=308add8f7b31:33",
+    105.28399999999998
+  ],
+  [
+    "getImageData :0",
+    100.441
+  ],
+  [
+    " training.js?v=308add8f7b31:52",
+    94.11099999999998
+  ],
+  [
+    "getProgramInfoLog :0",
+    83.089
+  ],
+  [
+    " flight-model.js?v=8a22d33bc921:26",
+    79.766
+  ],
+  [
+    " flight-model.js?v=8a22d33bc921:23",
+    67.848
+  ],
+  [
+    "dot training.js?v=308add8f7b31:51",
+    65.33700000000002
+  ],
+  [
+    "trackAim training.js?v=308add8f7b31:228",
+    62.478
+  ],
+  [
+    " training.js?v=308add8f7b31:46",
+    61.792
+  ],
+  [
+    "step guns.js?v=1923ff8ec3cf:93",
+    61.331999999999994
+  ],
+  [
+    "unit flight-model.js?v=8a22d33bc921:15",
+    59.754000000000005
+  ],
+  [
+    " flight-model.js?v=8a22d33bc921:122",
+    59.074999999999996
+  ],
+  [
+    "collisionNearby flight-collision.js?v=fd7602efae81:220",
+    57.41599999999999
+  ],
+  [
+    "participants training.js?v=308add8f7b31:120",
+    49.52000000000002
+  ],
+  [
+    "boxContains flight-collision.js?v=fd7602efae81:28",
+    41.80299999999999
+  ],
+  [
+    "draw scene3d.js?v=100cb9ec3b62:634",
+    38.773
+  ],
+  [
+    " ship-packs.js?v=3589bc24992b:317",
+    38.32699999999999
+  ],
+  [
+    " flight-comms.js?v=c0a1bd49e447:162",
+    37.548
+  ],
+  [
+    " flight-comms.js?v=c0a1bd49e447:65",
+    35.784000000000006
+  ],
+  [
+    "DW.flightMissions.resolve flight.js?v=66068745c116:4",
+    34.81100000000001
+  ],
+  [
+    "visit flight-collision.js?v=fd7602efae81:91",
+    34.342
+  ],
+  [
+    "cross flight-model.js?v=8a22d33bc921:11",
+    33.73
+  ],
+  [
+    "moved flight-collision.js?v=fd7602efae81:244",
+    32.432
+  ],
+  [
+    " guns.js?v=1923ff8ec3cf:109",
+    31.653999999999996
+  ],
+  [
+    "mixedModel ship-packs.js?v=3589bc24992b:111",
+    28.968999999999994
+  ],
+  [
+    "syncCollisionEngine flight-collision.js?v=fd7602efae81:133",
+    28.336000000000002
+  ],
+  [
+    "steer training.js?v=308add8f7b31:321",
+    28.315000000000005
+  ],
+  [
+    "addScorch ship-packs.js?v=3589bc24992b:571",
+    27.727
+  ],
+  [
+    " flight-model.js?v=8a22d33bc921:17",
+    27.051
+  ],
+  [
+    "vertexAt gpu-ui.js?v=4a1c7acdcb66:117",
+    26.83000000000001
+  ],
+  [
+    "eventCollisionCandidates flight-collision.js?v=fd7602efae81:150",
+    25.102000000000004
+  ],
+  [
+    "draw comms-display.js?v=2e3d8d7dcb2f:13",
+    25.038999999999998
+  ],
+  [
+    "intercept training.js?v=308add8f7b31:204",
+    23.917
+  ],
+  [
+    " flight-comms.js?v=c0a1bd49e447:164",
+    23.698999999999998
+  ],
+  [
+    " flight-comms.js?v=c0a1bd49e447:60",
+    23.004
+  ]
+]

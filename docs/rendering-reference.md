@@ -2,6 +2,23 @@
 
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
+## Flight effect capacity
+
+Flight retains every active projectile, impact and destruction flash. Explosions
+and wrecks expire through their existing 5.5-second and 120-second lifecycles;
+count-based 12/48-effect truncation is removed. Tactical transient effects also
+expire by age rather than an insertion-count cap. Scorch/history budgets are
+separate from live weapon effects.
+
+`scene3d.getRenderStats()` reports `explosions` (active blast records submitted),
+`explosionBatches` (their submitted material/layer batches), and `effectVertices`
+(additive study-effect vertices, including engines). These count submissions,
+not guaranteed visible pixels: camera clipping, depth occlusion and optical-region
+rules still apply. The browser stress probe additionally compares active bolt
+and impact counts against the actual quads emitted by `flightGuns.geometry`,
+and compares live destruction records with scene explosion submissions.
+See [the engaged battle and capacity audit](benchmarks/flight-effects-2026-10-25.md).
+
 ## CPU terrain boundary
 
 `src/asteroid-terrain.js` owns asteroid descriptions used by 3D terrain, relief,

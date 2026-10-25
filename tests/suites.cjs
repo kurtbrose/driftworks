@@ -11,6 +11,8 @@ const suites = {
     {"file":"shared.cjs","args":["flight"]},
     "flight-aim-tracking.cjs",
     "flight-evasion.cjs",
+    "flight-separation.cjs",
+    "flight-effects-capacity.cjs",
     "gas-giant-flight.cjs",
     {"file":"gas-giant-flight.cjs","args":["jade-rime"]},
     "flight-hud-markers.cjs",

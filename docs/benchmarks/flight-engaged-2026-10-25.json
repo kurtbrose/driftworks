@@ -1,0 +1,551 @@
+{
+  "cpu": "AMD Ryzen 9 3900X 12-Core Processor            ",
+  "reference": null,
+  "profiled": false,
+  "sources": {
+    "experiments/training.js": "10db00b140346b02175d75fcc8ffe3a7a7fb84c0bcb2a8f2433dfcc7138f6aed",
+    "experiments/flight-session.js": "41eb9fff75e1e5ffa3fc265106a150bd3039050eaea13c3ac4ae81e7d1154e1e",
+    "experiments/flight-collision.js": "fd7602efae819187ebdfb18ed8bf9ba88b75c33562b3b35887de2a0dd923f3ad",
+    "experiments/ship-packs.js": "3589bc24992baad205dfabf0f2735fc34d45afe1a784fa8004904ab2e95fc2ba",
+    "experiments/gpu-ui.js": "a03ba022417f3ad2a09c04a96947190bad56bda9695cc04895f0897025fb87e7",
+    "experiments/flight-presentation.js": "537e0db74665bb75b0a9d2f6a5d8ae4be50c4960dda8cf9aeea7d8ebfddb4dae",
+    "experiments/guns.js": "1923ff8ec3cfb0ac751b29774e156239ef96ec2bbe7ae41176a4742f2a36fc53",
+    "src/explosions.js": "ba20ec3731d9ab44c0394c18d23f44ad78e703e93da4b05d12bd6715fc6de375",
+    "src/scene3d.js": "2541d7e319432a1e34819b480512152a9ec0a5883826640663d8b0eb86bf4aeb"
+  },
+  "effectBurst": 0,
+  "counts": [
+    60,
+    128
+  ],
+  "scales": [
+    1
+  ],
+  "graphics": {
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)",
+    "gpuTimerAvailable": false,
+    "viewport": [
+      1280,
+      720
+    ],
+    "dpr": 1.0000000298023224,
+    "art": {
+      "shipImages": {},
+      "allyArt": "mixed",
+      "enemyArt": "mixed",
+      "paint": {
+        "ally": [
+          0.3764705882352941,
+          0.4549019607843137,
+          0.3176470588235294
+        ],
+        "enemy": [
+          0.7411764705882353,
+          0.44313725490196076,
+          0.24705882352941178
+        ]
+      }
+    },
+    "stats": {
+      "scene": {
+        "explosions": 0,
+        "explosionBatches": 0,
+        "effectVertices": 5664,
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 0,
+        "bridgeCpuMs": 0,
+        "drawCalls": 104,
+        "triangles": 577020,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 60,
+        "materials": 27,
+        "width": 1280,
+        "height": 720,
+        "pixelRatio": 1.0000000298023224,
+        "cpuMs": 1.7000000476837158
+      },
+      "sky": {
+        "drawCalls": 3,
+        "triangles": 4,
+        "points": 3200,
+        "meshes": 3,
+        "materials": 3
+      }
+    }
+  },
+  "errors": [],
+  "method": "Visible Chrome, 1280x720 DPR1, uncapped, dense seed29 with both teams staggered within 2s, 2s wall warmup then 12s live; 1s warmup and 4s with session.advance disabled. Real frame loop/HUD/audio. Timers overlap; GPU timer availability only, no GPU duration measurement. Frozen mode retains other per-frame maintenance; final live snapshot. Rendering is camera-dependent.",
+  "rows": [
+    {
+      "count": 60,
+      "scale": 1,
+      "mode": "live",
+      "combatStart": {
+        "allyShots": 107,
+        "enemyShots": 79,
+        "shots": 186,
+        "hits": 2,
+        "alive": 60,
+        "kills": 0,
+        "modes": {
+          "attack": 60
+        }
+      },
+      "combatEnd": {
+        "allyShots": 962,
+        "enemyShots": 666,
+        "shots": 1628,
+        "hits": 707,
+        "alive": 53,
+        "kills": 3,
+        "modes": {
+          "break": 30,
+          "recover": 3,
+          "attack": 27
+        }
+      },
+      "frames": 877,
+      "wallSeconds": 12.039599999999998,
+      "simulatedSeconds": 12.039599999999998,
+      "interval": {
+        "mean": 13.728164196123146,
+        "p50": 13.299999999999272,
+        "p95": 13.5,
+        "worst": 53.29999999999927
+      },
+      "cpu": {
+        "mean": 8.601026225524999,
+        "p50": 7.5,
+        "p95": 15.5,
+        "worst": 58.10000002384186
+      },
+      "simulation": {
+        "mean": 2.357924741241516,
+        "p50": 1.6999999284744263,
+        "p95": 6.100000023841858,
+        "worst": 25
+      },
+      "presentation": {
+        "mean": 4.021094642588051,
+        "p50": 3.600000023841858,
+        "p95": 6.600000023841858,
+        "worst": 25.700000047683716
+      },
+      "hud": {
+        "mean": 1.4141391110664898,
+        "p50": 1.2000000476837158,
+        "p95": 2.100000023841858,
+        "worst": 50.90000009536743
+      },
+      "draws": {
+        "mean": 201.19612314709235,
+        "p50": 207,
+        "p95": 274,
+        "worst": 296
+      },
+      "triangles": {
+        "mean": 573360.2964652224,
+        "p50": 589582,
+        "p95": 627975,
+        "worst": 630290
+      },
+      "alive": {
+        "mean": 54.710376282782214,
+        "p50": 53,
+        "p95": 60,
+        "worst": 60
+      },
+      "bolts": {
+        "mean": 182.25199543899657,
+        "p50": 76,
+        "p95": 514,
+        "worst": 569
+      },
+      "boltQuads": {
+        "mean": 182.25199543899657,
+        "p50": 76,
+        "p95": 514,
+        "worst": 569
+      },
+      "impacts": {
+        "mean": 12.028506271379703,
+        "p50": 2,
+        "p95": 50,
+        "worst": 96
+      },
+      "impactQuads": {
+        "mean": 12.028506271379703,
+        "p50": 2,
+        "p95": 50,
+        "worst": 96
+      },
+      "destructions": {
+        "mean": 3.2440136830102624,
+        "p50": 2,
+        "p95": 7,
+        "worst": 7
+      },
+      "explosions": {
+        "mean": 3.2440136830102624,
+        "p50": 2,
+        "p95": 7,
+        "worst": 7
+      },
+      "explosionBatches": {
+        "mean": 9.047890535917903,
+        "p50": 5,
+        "p95": 40,
+        "worst": 59
+      },
+      "firing": {
+        "mean": 3.8175598631698975,
+        "p50": 0,
+        "p95": 17,
+        "worst": 21
+      }
+    },
+    {
+      "count": 60,
+      "scale": 1,
+      "mode": "frozen-simulation",
+      "frames": 301,
+      "wallSeconds": 4.008799999999999,
+      "simulatedSeconds": 0,
+      "interval": {
+        "mean": 13.318272425249168,
+        "p50": 13.299999999999272,
+        "p95": 13.400000000001455,
+        "worst": 14.100000000002183
+      },
+      "cpu": {
+        "mean": 4.578737542874789,
+        "p50": 4.200000047683716,
+        "p95": 5.600000023841858,
+        "worst": 14.5
+      },
+      "simulation": {
+        "mean": 0.0009966775824461268,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0.10000002384185791
+      },
+      "presentation": {
+        "mean": 2.44850498299266,
+        "p50": 2.399999976158142,
+        "p95": 2.899999976158142,
+        "worst": 3.9000000953674316
+      },
+      "hud": {
+        "mean": 1.3943521600229003,
+        "p50": 1.2000000476837158,
+        "p95": 2.299999952316284,
+        "worst": 2.899999976158142
+      },
+      "draws": {
+        "mean": 122,
+        "p50": 122,
+        "p95": 122,
+        "worst": 122
+      },
+      "triangles": {
+        "mean": 480429,
+        "p50": 480429,
+        "p95": 480429,
+        "worst": 480429
+      },
+      "alive": {
+        "mean": 53,
+        "p50": 53,
+        "p95": 53,
+        "worst": 53
+      },
+      "bolts": {
+        "mean": 57,
+        "p50": 57,
+        "p95": 57,
+        "worst": 57
+      },
+      "boltQuads": {
+        "mean": 57,
+        "p50": 57,
+        "p95": 57,
+        "worst": 57
+      },
+      "impacts": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      },
+      "impactQuads": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      },
+      "destructions": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      },
+      "explosions": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      },
+      "explosionBatches": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      },
+      "firing": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      }
+    },
+    {
+      "count": 128,
+      "scale": 1,
+      "mode": "live",
+      "combatStart": {
+        "allyShots": 154,
+        "enemyShots": 131,
+        "shots": 285,
+        "hits": 12,
+        "alive": 128,
+        "kills": 0,
+        "modes": {
+          "attack": 128
+        }
+      },
+      "combatEnd": {
+        "allyShots": 1209,
+        "enemyShots": 1088,
+        "shots": 2297,
+        "hits": 927,
+        "alive": 124,
+        "kills": 2,
+        "modes": {
+          "recover": 7,
+          "break": 73,
+          "attack": 48
+        }
+      },
+      "frames": 767,
+      "wallSeconds": 12.013,
+      "simulatedSeconds": 12.013,
+      "interval": {
+        "mean": 15.66232073011734,
+        "p50": 13.300000000001091,
+        "p95": 26.700000000000728,
+        "worst": 66.60000000000036
+      },
+      "cpu": {
+        "mean": 14.134941331099967,
+        "p50": 12.199999928474426,
+        "p95": 26.200000047683716,
+        "worst": 64.60000002384186
+      },
+      "simulation": {
+        "mean": 4.862059973364858,
+        "p50": 3.399999976158142,
+        "p95": 13.200000047683716,
+        "worst": 37.5
+      },
+      "presentation": {
+        "mean": 6.094132983855505,
+        "p50": 5.700000047683716,
+        "p95": 10.099999904632568,
+        "worst": 13.899999976158142
+      },
+      "hud": {
+        "mean": 1.9713168172202178,
+        "p50": 1.7000000476837158,
+        "p95": 3.0999999046325684,
+        "worst": 52.89999997615814
+      },
+      "draws": {
+        "mean": 336.3142112125163,
+        "p50": 337,
+        "p95": 424,
+        "worst": 433
+      },
+      "triangles": {
+        "mean": 707847.6505867015,
+        "p50": 696391,
+        "p95": 774202,
+        "worst": 788807
+      },
+      "alive": {
+        "mean": 124.90482398956975,
+        "p50": 124,
+        "p95": 128,
+        "worst": 128
+      },
+      "bolts": {
+        "mean": 213.26205997392438,
+        "p50": 66,
+        "p95": 604,
+        "worst": 718
+      },
+      "boltQuads": {
+        "mean": 213.26205997392438,
+        "p50": 66,
+        "p95": 604,
+        "worst": 718
+      },
+      "impacts": {
+        "mean": 11.582790091264668,
+        "p50": 1,
+        "p95": 57,
+        "worst": 101
+      },
+      "impactQuads": {
+        "mean": 11.582790091264668,
+        "p50": 1,
+        "p95": 57,
+        "worst": 101
+      },
+      "destructions": {
+        "mean": 1.8435462842242503,
+        "p50": 1,
+        "p95": 4,
+        "worst": 4
+      },
+      "explosions": {
+        "mean": 1.8435462842242503,
+        "p50": 1,
+        "p95": 4,
+        "worst": 4
+      },
+      "explosionBatches": {
+        "mean": 4.225554106910039,
+        "p50": 1,
+        "p95": 18,
+        "worst": 34
+      },
+      "firing": {
+        "mean": 4.417209908735332,
+        "p50": 0,
+        "p95": 20,
+        "worst": 32
+      }
+    },
+    {
+      "count": 128,
+      "scale": 1,
+      "mode": "frozen-simulation",
+      "frames": 302,
+      "wallSeconds": 4.022099999999998,
+      "simulatedSeconds": 0,
+      "interval": {
+        "mean": 13.318211920529796,
+        "p50": 13.299999999999272,
+        "p95": 13.400000000001455,
+        "worst": 14.099999999998545
+      },
+      "cpu": {
+        "mean": 8.068211919819282,
+        "p50": 7.899999976158142,
+        "p95": 9.700000047683716,
+        "worst": 12.300000071525574
+      },
+      "simulation": {
+        "mean": 0.0013245028375789818,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0.10000002384185791
+      },
+      "presentation": {
+        "mean": 5.145364238331649,
+        "p50": 5.099999904632568,
+        "p95": 6,
+        "worst": 7.400000095367432
+      },
+      "hud": {
+        "mean": 1.9473509958248265,
+        "p50": 1.7000000476837158,
+        "p95": 3.100000023841858,
+        "worst": 4.400000095367432
+      },
+      "draws": {
+        "mean": 306,
+        "p50": 306,
+        "p95": 306,
+        "worst": 306
+      },
+      "triangles": {
+        "mean": 671099,
+        "p50": 671099,
+        "p95": 671099,
+        "worst": 671099
+      },
+      "alive": {
+        "mean": 124,
+        "p50": 124,
+        "p95": 124,
+        "worst": 124
+      },
+      "bolts": {
+        "mean": 65,
+        "p50": 65,
+        "p95": 65,
+        "worst": 65
+      },
+      "boltQuads": {
+        "mean": 65,
+        "p50": 65,
+        "p95": 65,
+        "worst": 65
+      },
+      "impacts": {
+        "mean": 1,
+        "p50": 1,
+        "p95": 1,
+        "worst": 1
+      },
+      "impactQuads": {
+        "mean": 1,
+        "p50": 1,
+        "p95": 1,
+        "worst": 1
+      },
+      "destructions": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      },
+      "explosions": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      },
+      "explosionBatches": {
+        "mean": 0,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0
+      },
+      "firing": {
+        "mean": 2,
+        "p50": 2,
+        "p95": 2,
+        "worst": 2
+      }
+    }
+  ]
+}

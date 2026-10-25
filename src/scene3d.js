@@ -444,7 +444,7 @@
     var studyHeight = 0;
     var diagnostics={mode:'normal',flat:false,scale:1,mothership:true,actors:true};
     /** @type {import('../experiments/types').EllisRenderPass|null} */var bridgeRenderer=null;
-    var renderStats={bridgeObjectPaths:0,bridgeObjectPatches:0,bridgeObjectError:0,bridgeObjectBad:0,bridgeHistoryValid:0,bridgeCaptures:0,bridgeCpuMs:0,drawCalls:0,triangles:0,shadowDrawCalls:0,shadowTriangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
+    var renderStats={explosions:0,explosionBatches:0,effectVertices:0,bridgeObjectPaths:0,bridgeObjectPatches:0,bridgeObjectError:0,bridgeObjectBad:0,bridgeHistoryValid:0,bridgeCaptures:0,bridgeCpuMs:0,drawCalls:0,triangles:0,shadowDrawCalls:0,shadowTriangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
     /** @type {Set<import('./three-types').Geometry>} */ var frameMeshes=new Set();
     /** @type {Set<string>} */ var frameMaterials=new Set();
     var materialFinish=0;
@@ -913,7 +913,6 @@
           if (event.kind === 'ship-damaged' || event.kind === 'ship-destroyed') DW.audio.playImpact(event.amount || 1);
         }
       });
-      if (effects.length > 260) effects.splice(0, effects.length - 260);
     }
     /** @param {World} w @param {number} alpha @param {number} dt @param {number} wallDt */
     function render(w, alpha, dt, wallDt) {
@@ -931,7 +930,7 @@
     function renderFrame(w, alpha, dt, wallDt) {
       if(study && !shadowPass)pickBatches=[];
       drawPool.forEach(function(entry){scene.remove(entry.object);});drawIndex=0;drawProjected=false;drawRegion=0;drawLensRadius=0;drawLensCenter=null;
-      var renderStart=performance.now();renderStats.drawCalls=0;renderStats.triangles=0;renderStats.lines=0;frameMeshes.clear();frameMaterials.clear();
+      var renderStart=performance.now();renderStats.explosions=0;renderStats.explosionBatches=0;renderStats.effectVertices=0;renderStats.drawCalls=0;renderStats.triangles=0;renderStats.lines=0;frameMeshes.clear();frameMaterials.clear();
       var vp = viewport(); if (vp.width < 1 || vp.height < 1) return;
       var dpr = Math.min(2, window.devicePixelRatio || 1)*(study?diagnostics.scale:1);
       var width = Math.round(vp.width * dpr), height = Math.round(vp.height * dpr);
@@ -1175,6 +1174,7 @@
           drawProjected=!!batch.projected;
           drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;
           if(!batch.vertices.length)return;
+          renderStats.effectVertices+=batch.vertices.length/6;
           if(!studyEffectMeshes[index])studyEffectMeshes[index]=upload(new Float32Array(0));
           var mesh=studyEffectMeshes[index];updateGeometry(mesh.buffer,batch.vertices,mesh.stride||6);mesh.count=batch.vertices.length/6;
           draw(mesh,[0,0,0],[1,1,1],0,batch.color);
@@ -1185,10 +1185,12 @@
       if(DW.explosions){
         var blasts=study?studyExplosions:effects.filter(function(fx){return fx.event.kind==='ship-destroyed';}).map(function(fx){var event=fx.event;return {position:/** @type {V3} */([event.position.x,event.position.y,0]),velocity:/** @type {V3} */([event.velocity?event.velocity.x:0,event.velocity?event.velocity.y:0,0]),age:fx.age,size:2,seed:Math.round(event.position.x*31+event.position.y*17)};});
         var explosionIndex=0;
-        blasts.slice(-12).forEach(function(blast){
+        blasts.forEach(function(blast){
           drawRegion='region' in blast?Number(blast.region)||0:0;drawLensCenter=blast.position;
           if(!DW.explosions)return;
-          DW.explosions.build(blast,v.right,v.up).forEach(function(batch){
+          var blastBatches=DW.explosions.build(blast,v.right,v.up);if(blastBatches.length)renderStats.explosions++;
+          blastBatches.forEach(function(batch){
+            renderStats.explosionBatches++;
             var mesh=explosionMeshes[explosionIndex];if(!mesh)mesh=explosionMeshes[explosionIndex]=upload(new Float32Array(0));explosionIndex++;
             updateGeometry(mesh.buffer,batch.vertices,6);mesh.count=batch.vertices.length/6;
             blending=batch.finish===0?THREE.NoBlending:batch.finish===10?THREE.NormalBlending:THREE.AdditiveBlending;depthWrite=batch.finish===0;
@@ -1227,7 +1229,7 @@
       /** @param {{vertices:Float32Array,color:V3}[]} batches */
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice();},
       /** @param {typeof studyExplosions} blasts */
-      setStudyExplosions:function(blasts){if(study)studyExplosions=blasts.slice(-12);},
+      setStudyExplosions:function(blasts){if(study)studyExplosions=blasts.slice();},
       /** @param {{vertices:Float32Array,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
       /** @param {import('./types').RigLighting[]} rigs */
       setStudyLightRigs:function(rigs){studyLightRigs=rigs.slice(0,2);},

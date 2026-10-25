@@ -1646,7 +1646,7 @@
     var art=window.Driftworks.shipPackModels.mixedModel(index,wreck.artWave);ai.spawn(t,player,18);assert(t.wrecks[0]===wreck);assert(window.Driftworks.shipPackModels.mixedModel(index,wreck.artWave)===art);
     ai.stepWrecks(t,1,function(){return [0,0,0];});assert(wreck.pose.velocity.every(function(v){return v===0;})&&wreck.spin===0);
     ai.stepWrecks(t,120,null);assert(t.wrecks.length===0);
-    for(var wave=0;wave<4;wave++){ai.spawn(t,player,18);t.enemies.forEach(function(s){ai.damageEnemy(t,s,{damage:1000,armorFactor:1});});}assert(t.wrecks.length===48);assert(ai.create().wrecks.length===0);
+    for(var wave=0;wave<4;wave++){ai.spawn(t,player,18);t.enemies.forEach(function(s){ai.damageEnemy(t,s,{damage:1000,armorFactor:1});});}assert(t.wrecks.length===64);ai.stepWrecks(t,120,null);assert(t.wrecks.length===0);assert(ai.create().wrecks.length===0);
   });
 
   test('flight', 'training waves are bounded, delayed and allocate at most two attackers', function () {

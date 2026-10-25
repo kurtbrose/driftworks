@@ -1,0 +1,85 @@
+{
+  "cpu": "AMD Ryzen 9 3900X 12-Core Processor            ",
+  "reference": null,
+  "profiled": false,
+  "sources": {
+    "experiments/training.js": "10db00b140346b02175d75fcc8ffe3a7a7fb84c0bcb2a8f2433dfcc7138f6aed",
+    "experiments/flight-session.js": "41eb9fff75e1e5ffa3fc265106a150bd3039050eaea13c3ac4ae81e7d1154e1e",
+    "experiments/flight-collision.js": "fd7602efae819187ebdfb18ed8bf9ba88b75c33562b3b35887de2a0dd923f3ad",
+    "experiments/ship-packs.js": "3589bc24992baad205dfabf0f2735fc34d45afe1a784fa8004904ab2e95fc2ba",
+    "experiments/gpu-ui.js": "a03ba022417f3ad2a09c04a96947190bad56bda9695cc04895f0897025fb87e7",
+    "experiments/flight-presentation.js": "537e0db74665bb75b0a9d2f6a5d8ae4be50c4960dda8cf9aeea7d8ebfddb4dae",
+    "experiments/guns.js": "1923ff8ec3cfb0ac751b29774e156239ef96ec2bbe7ae41176a4742f2a36fc53",
+    "src/explosions.js": "ba20ec3731d9ab44c0394c18d23f44ad78e703e93da4b05d12bd6715fc6de375",
+    "src/scene3d.js": "2541d7e319432a1e34819b480512152a9ec0a5883826640663d8b0eb86bf4aeb"
+  },
+  "effectBurst": 30,
+  "counts": [
+    60
+  ],
+  "scales": [
+    1
+  ],
+  "graphics": {
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)",
+    "gpuTimerAvailable": false,
+    "viewport": [
+      1280,
+      720
+    ],
+    "dpr": 1.0000000298023224,
+    "art": {
+      "shipImages": {},
+      "allyArt": "mixed",
+      "enemyArt": "mixed",
+      "paint": {
+        "ally": [
+          0.3764705882352941,
+          0.4549019607843137,
+          0.3176470588235294
+        ],
+        "enemy": [
+          0.7411764705882353,
+          0.44313725490196076,
+          0.24705882352941178
+        ]
+      }
+    },
+    "stats": {
+      "scene": {
+        "explosions": 30,
+        "explosionBatches": 360,
+        "effectVertices": 2382,
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 0,
+        "bridgeCpuMs": 0,
+        "drawCalls": 419,
+        "triangles": 479463,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 405,
+        "materials": 300,
+        "width": 1280,
+        "height": 720,
+        "pixelRatio": 1.0000000298023224,
+        "cpuMs": 7.600000023841858
+      },
+      "sky": {
+        "drawCalls": 3,
+        "triangles": 4,
+        "points": 3200,
+        "meshes": 3,
+        "materials": 3
+      }
+    }
+  },
+  "errors": [],
+  "method": "Visible Chrome, 1280x720 DPR1, uncapped, dense seed29 with both teams staggered within 2s, 2s wall warmup then 12s live; 1s warmup and 4s with session.advance disabled. Real frame loop/HUD/audio. Timers overlap; GPU timer availability only, no GPU duration measurement. Frozen mode retains other per-frame maintenance; final live snapshot. Rendering is camera-dependent.",
+  "rows": []
+}

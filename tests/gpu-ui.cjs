@@ -70,3 +70,29 @@ listeners.pagehide({persisted:true});assert.ok(!ui.canvas.removed,'BFCache retai
 ui.dispose();ui.dispose();assert.ok(ui.canvas.removed);
 assert.ok(resources.every(resource=>resource.disposals===1),'GPU resources disposed exactly once');
 console.log('PASS GPU UI: analytic shapes, GLSL3 SDF text, transforms, alpha, reusable buffers, DPR, throttled image uploads, empty frames and lifecycle');
+
+// Compare the entire submitted buffer with the previous allocating quad oracle,
+// including transformed glyphs/images and growth past the initial capacity.
+const currentSource=fs.readFileSync(path.join(__dirname,'../experiments/gpu-ui.js'),'utf8');
+const quadStart=currentSource.indexOf('        function quad('),quadEnd=currentSource.indexOf('        /** @param {string | CanvasGradient',quadStart);
+assert.ok(quadStart>0&&quadEnd>quadStart);
+const oracleSource=currentSource.slice(0,quadStart)+`
+        function quad(x,y,hw,hh,params,tint,uv,angle) {
+            uv=uv||[0,0,1,1];var pad=params[0]<2?1+params[2]*.5:0,co=Math.cos(angle||0),si=Math.sin(angle||0);
+            [[-1,-1],[1,-1],[-1,1],[-1,1],[1,-1],[1,1]].forEach(function(c){var lx=c[0]*(hw+pad),ly=c[1]*(hh+pad);vertexAt(point(x+co*lx-si*ly,y+si*lx+co*ly),[lx,ly],[hw,hh],params,tint,[uv[0]+(c[0]+1)*.5*(uv[2]-uv[0]),uv[1]+(c[1]+1)*.5*(uv[3]-uv[1])]);});
+        }
+`+currentSource.slice(quadEnd);
+function submitted(code){
+ const w={...window,Driftworks:{}};vm.runInNewContext(code,{window:w,document});
+ const u=w.Driftworks.gpuUi.create({appendChild(){}}),p=u.painter;
+ u.begin(1280,720);p.translate(13.7,29.3);p.rotate(.731);p.globalAlpha=.47;
+ p.fillStyle='#8cf9';p.strokeStyle='rgba(20,40,60,.7)';p.lineWidth=2.3;
+ p.font='17px monospace';p.textAlign='center';p.fillText('Alpha / TARGET 123',100,70);
+ p.panel(50,90,180,70,8);p.image(source,10,10,30,40,1);
+ p.beginPath();p.moveTo(0,0);p.lineTo(12,3);p.lineTo(-7,20);p.closePath();p.fill();p.stroke();
+ for(let i=0;i<6000;i++)p.fillRect(i%120,i/120,3.1,2.7);
+ u.end();const data=frames.at(-1).data;assert.ok(u.stats().capacity>32768);u.dispose();return data;
+}
+const optimizedData=submitted(currentSource),oracleData=submitted(oracleSource);
+assert.deepEqual(Buffer.from(optimizedData.buffer),Buffer.from(oracleData.buffer),'Direct writes preserve every submitted float, UV, transform and painter order through buffer growth');
+console.log('PASS GPU UI direct-buffer oracle, including capacity growth');

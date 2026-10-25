@@ -256,6 +256,7 @@
         t.roundOver = false;
         var retainedAllies=t.hangarSupport?t.enemies.filter(function(e){return e.hp>0&&e.team==='ally';}):[];
         t.enemies = [];
+        // Stagger both wings within two seconds, even in large encounters.
         for (var i = 0; i < count; i++) {
             var pose = DW.arcade.create(radius), lateral = (i - (count - 1) / 2) * 180;
             pose.eye = add(player.eye, add(scale(player.back, -(350 + i * 65) / U), add(scale(player.right, lateral / U), scale(player.up, (85 + (i % 2) * 65) / U))));
@@ -269,7 +270,7 @@
                 controller: 'ai', opponentStyle:t.opponentStyle||'baseline', collision: { kind: 'sphere', radiusM: 9 }, shield: 0, maxShield: 0,
                 index: i, callsign: mission(t).encounter.callsigns[i] || callsign({ index: i }), profile: DW.arcade.profiles[i % 3 === 1 ? 1 : 0],
                 hp: 90, maxHp: 90, pilot: ['Rookie', 'Veteran', 'Ace'][skill], skill: skill,
-                mode: 'approach', decision: i * .13, goal: player.eye.slice()
+                mode: 'approach', decision: (i % 16) * .13, goal: player.eye.slice()
             }));
             if (t.configured) {
                 var craft = t.enemies[t.enemies.length - 1];
@@ -496,9 +497,7 @@
             var pose = { region:e.pose.region||0, eye: e.pose.eye.slice(), right: e.pose.right.slice(), up: e.pose.up.slice(), back: e.pose.back.slice(), velocity: e.pose.velocity.slice(), throttle: 0 };
             var axis = unit(add(pose.right, scale(pose.up, e.index % 2 ? -.7 : .7)));
             t.wrecks.push({ id: e.id + '-wreck', index: e.index, modelId:e.modelId, team: e.team, artWave: t.wave, pose: pose, axis: axis, spin: (e.index % 2 ? -1 : 1) * (.25 + (e.index % 5) * .09), age: 0, scorches: e.scorches || [] });
-            // Keep debris across waves, with a bounded rendering/memory budget.
-            if (t.wrecks.length > 48)
-                t.wrecks.shift();
+            // Keep every wreck until its existing 120-second lifecycle expires.
             e.fire = false;
             e.pose.throttle = 0;
             if ((e.team || 'enemy') !== 'ally')
@@ -506,7 +505,6 @@
             if (!alive(t).length)
                 t.countdown = 5;
             t.flashes.push({ region:e.pose.region||0, position: e.pose.eye.slice(), velocity: e.pose.velocity.map(function(v){return v/U;}), age: 0, scale: 14, destruction: true });
-            if(t.flashes.length>48)t.flashes.splice(0,t.flashes.length-48);
         }
     }
     /** Geometry is selected by serializable simulation state, never by appearance controls.
@@ -646,6 +644,43 @@
             return craft;
         });
     }
+    // A tick-local index follows sequential movement. Entries retain the original
+    // living roster order, including craft destroyed later in this tick.
+    /** @param {Craft[]} living */
+    function separationGrid(living) {
+        var cell=64/U;
+        /** @typedef {{craft:Craft,order:number,x:number,y:number,z:number,region:number}} Neighbor */
+        /** @typedef {Map<number,Map<number,Map<number,Neighbor[]>>>} RegionCells */
+        /** @type {Map<number,RegionCells>} */ var regions=new Map();
+        /** @param {number} region @param {number} x @param {number} y @param {number} z */
+        function bucket(region,x,y,z){
+            var xs=regions.get(region);if(!xs){xs=new Map();regions.set(region,xs);}
+            var ys=xs.get(x);if(!ys){ys=new Map();xs.set(x,ys);}
+            var zs=ys.get(y);if(!zs){zs=new Map();ys.set(y,zs);}
+            var result=zs.get(z);if(!result){result=[];zs.set(z,result);}return result;
+        }
+        var entries=new Map(living.map(function(craft,order){var p=craft.pose.eye,entry={craft:craft,order:order,x:Math.floor(p[0]/cell),y:Math.floor(p[1]/cell),z:Math.floor(p[2]/cell),region:craft.pose.region||0};bucket(entry.region,entry.x,entry.y,entry.z).push(entry);return [craft,entry];}));
+        return {
+            nearby:/** @param {Craft} craft */ function(craft){
+                var p=craft.pose.eye,x=Math.floor(p[0]/cell),y=Math.floor(p[1]/cell),z=Math.floor(p[2]/cell),xs=regions.get(craft.pose.region||0);
+                /** @type {Neighbor[]} */ var result=[];
+                if(xs)for(var i=x-1;i<=x+1;i++){
+                    var ys=xs.get(i);if(!ys)continue;
+                    for(var j=y-1;j<=y+1;j++){var zs=ys.get(j);if(!zs)continue;
+                        for(var k=z-1;k<=z+1;k++){var near=zs.get(k);if(near)for(var entry of near)result.push(entry);}
+                    }
+                }
+                result.sort(function(a,b){return a.order-b.order;});
+                return result.map(function(entry){return entry.craft;});
+            },
+            moved:/** @param {Craft} craft */ function(craft){
+                var entry=entries.get(craft);if(!entry)return;var p=craft.pose.eye,x=Math.floor(p[0]/cell),y=Math.floor(p[1]/cell),z=Math.floor(p[2]/cell),region=craft.pose.region||0;
+                if(x===entry.x&&y===entry.y&&z===entry.z&&region===entry.region)return;
+                var before=bucket(entry.region,entry.x,entry.y,entry.z);before.splice(before.indexOf(entry),1);
+                entry.x=x;entry.y=y;entry.z=z;entry.region=region;bucket(region,x,y,z).push(entry);
+            }
+        };
+    }
     /** @param {Combat} t @param {FlightState} player @param {number} dt @param {number} radius @param {TerrainHit} [terrainHit] @param {() => void} [afterMovement] */
     function step(t, player, dt, radius, terrainHit, afterMovement) {
         if (!t.enabled){if(afterMovement)afterMovement();return;}
@@ -685,6 +720,7 @@
                 return trace(t, start, end, bolt, e, terrainHit, player);
             }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), !!mission(t).sky.wormhole);
         }
+        var neighbors=separationGrid(living), roster=participants(t), byId=new Map(living.map(function(craft){return [craft.id,craft];}));
         collisionBatch(t,function(){t.enemies.forEach(function (e) {
             if (e.controller !== 'input') e.fire = false;
             if(e.hp>0&&e.hangarLaunch){
@@ -692,27 +728,29 @@
                 e.hangarLaunch.remaining-=dt;e.fire=false;
                 if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
-                var candidates = participants(t).filter(function (other) { return other.hp > 0 && (other.pose.region||0)===(e.pose.region||0) && (other.team || 'enemy') !== (e.team || 'enemy'); });
-                var opponent = candidates.length ? candidates[0].pose : null;
+                /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;
-                    var target = living.find(function (other) {
-                        return other.id === e.targetId && other.hp > 0 && other.team !== e.team&&(other.pose.region||0)===(e.pose.region||0);
-                    });
+                    var target = e.targetId ? byId.get(e.targetId) : undefined;
+                    if(target && !(target.hp > 0 && target.team !== e.team && (target.pose.region||0)===(e.pose.region||0)))target=undefined;
                     if (!target || e.retarget <= 0) {
-                        var choices = living.filter(function (other) {
-                            return other.hp > 0 && other.team !== e.team&&(other.pose.region||0)===(e.pose.region||0);
+                        // Only the nearest three are used. Stable insertion preserves
+                        // roster tie order without sorting every opponent or recomputing distances.
+                        /** @type {{craft:Craft,distance:number}[]} */ var choices=[];
+                        living.forEach(function(other){
+                            if(!(other.hp>0)||other.team===e.team||(other.pose.region||0)!==(e.pose.region||0))return;
+                            var distance=length(sub(other.pose.eye,e.pose.eye)),at=0;
+                            while(at<choices.length&&choices[at].distance<=distance)at++;
+                            if(at<3){choices.splice(at,0,{craft:other,distance:distance});if(choices.length>3)choices.pop();}
                         });
-                        choices.sort(function (a, b) {
-                            return length(sub(a.pose.eye, e.pose.eye)) - length(sub(b.pose.eye, e.pose.eye));
-                        });
-                        // Commit to a nearby opponent for a few seconds rather than snapping targets.
-                        target = choices[e.index % Math.min(3, choices.length)];
+                        var choice=choices[e.index % choices.length];
+                        target = choice ? choice.craft : undefined;
                         e.targetId = target ? target.id : null;
                         e.retarget = 2.5 + (e.index % 3) * .7;
                     }
-                    opponent = target ? target.pose : opponent;
+                    opponent = target ? target.pose : null;
                 }
+                if(!opponent){var candidate=roster.find(function(other){return other.hp>0&&(other.pose.region||0)===(e.pose.region||0)&&(other.team||'enemy')!==(e.team||'enemy');});opponent=candidate?candidate.pose:null;}
                 if (opponent) trackAim(t, e, opponent);
                 else { tracks.delete(e); e.gunValid = false; }
                 if(opponent&&(e.opponentStyle==='fso-pursuit'||e.opponentStyle==='fso-breaker'))progressFreeSpace(t,e,opponent,dt);
@@ -724,7 +762,7 @@
                 if (!(e.pose.region||0)&&(length(future) < avoid || length(e.pose.eye) < avoid))
                     goal = add(e.pose.eye, add(scale(unit(e.pose.eye), 400 / U), scale(e.pose.right, 180 / U)));
                 // Separate nearby craft using steering demand, never velocity changes.
-                living.forEach(function (other) {
+                neighbors.nearby(e).forEach(function (other) {
                     if (other.id === e.id||(other.pose.region||0)!==(e.pose.region||0))
                         return;
                     var away = sub(e.pose.eye, other.pose.eye), d = length(away) * U;
@@ -746,6 +784,7 @@
                 var primary = DW.retailWeapons[e.weaponIndex || 0];
                 e.fire = !!opponent && ((mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > Math.cos(Math.atan2(5, Math.max(130, distance)));
             }
+            neighbors.moved(e);
             collision.moved(t,e);
             if(!mission(t).sky.wormhole)fireGuns(e);
         });
@@ -839,10 +878,8 @@
     function allGuns(t, playerGuns) {
         var result = { bolts: playerGuns.bolts.slice(), impacts: playerGuns.impacts.concat(t.flashes.filter(function(f){return !f.destruction;})) };
         t.enemies.forEach(function (e) {
-            result.bolts = result.bolts.concat(e.guns.bolts.map(function (b) {
-                return Object.assign({}, b, { team: e.team || 'enemy' });
-            }));
-            result.impacts = result.impacts.concat(e.guns.impacts);
+            e.guns.bolts.forEach(function(b){result.bolts.push(Object.assign({},b,{team:e.team||'enemy'}));});
+            e.guns.impacts.forEach(function(hit){result.impacts.push(hit);});
         });
         return result;
     }

@@ -1,0 +1,177 @@
+{
+  "cpu": "AMD Ryzen 9 3900X 12-Core Processor            ",
+  "counts": [
+    512
+  ],
+  "scales": [
+    1
+  ],
+  "graphics": {
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)",
+    "gpuTimerAvailable": false,
+    "viewport": [
+      1280,
+      720
+    ],
+    "dpr": 1.0000000298023224,
+    "art": {
+      "shipImages": {},
+      "allyArt": "mixed",
+      "enemyArt": "mixed",
+      "paint": {
+        "ally": [
+          0.3764705882352941,
+          0.4549019607843137,
+          0.3176470588235294
+        ],
+        "enemy": [
+          0.7411764705882353,
+          0.44313725490196076,
+          0.24705882352941178
+        ]
+      }
+    },
+    "stats": {
+      "scene": {
+        "bridgeObjectPaths": 0,
+        "bridgeObjectPatches": 0,
+        "bridgeObjectError": 0,
+        "bridgeObjectBad": 0,
+        "bridgeHistoryValid": 0,
+        "bridgeCaptures": 0,
+        "bridgeCpuMs": 0,
+        "drawCalls": 84,
+        "triangles": 602017,
+        "shadowDrawCalls": 0,
+        "shadowTriangles": 0,
+        "lines": 0,
+        "meshes": 37,
+        "materials": 23,
+        "width": 1280,
+        "height": 720,
+        "pixelRatio": 1.0000000298023224,
+        "cpuMs": 1.399999976158142
+      },
+      "sky": {
+        "drawCalls": 3,
+        "triangles": 4,
+        "points": 3200,
+        "meshes": 3,
+        "materials": 3
+      }
+    }
+  },
+  "errors": [],
+  "method": "Visible Chrome, 1280x720 DPR1, uncapped, dense seed29, 2s wall warmup then 12s live; 1s warmup and 4s with session.advance disabled. Real frame loop/HUD/audio. Timers overlap; GPU timer availability only, no GPU duration measurement. Frozen mode retains other per-frame maintenance; final live snapshot. Rendering is camera-dependent.",
+  "rows": [
+    {
+      "count": 512,
+      "scale": 1,
+      "mode": "live",
+      "frames": 68,
+      "interval": {
+        "mean": 185.3485294117647,
+        "p50": 174.70000000000073,
+        "p95": 250.90000000000146,
+        "worst": 632.2000000000007
+      },
+      "cpu": {
+        "mean": 176.31323529867564,
+        "p50": 169,
+        "p95": 243.79999995231628,
+        "worst": 306.7000000476837
+      },
+      "simulation": {
+        "mean": 144.86323528780656,
+        "p50": 139.60000002384186,
+        "p95": 212.89999997615814,
+        "worst": 228.89999997615814
+      },
+      "presentation": {
+        "mean": 9.539705877794939,
+        "p50": 8.299999952316284,
+        "p95": 10,
+        "worst": 99.20000004768372
+      },
+      "hud": {
+        "mean": 11.450000007362927,
+        "p50": 10.200000047683716,
+        "p95": 11.899999976158142,
+        "worst": 64.5
+      },
+      "draws": {
+        "mean": 183.94117647058823,
+        "p50": 184,
+        "p95": 279,
+        "worst": 294
+      },
+      "triangles": {
+        "mean": 903800.4558823529,
+        "p50": 899773,
+        "p95": 1194543,
+        "worst": 1221000
+      },
+      "alive": {
+        "mean": 512,
+        "p50": 512,
+        "p95": 512,
+        "worst": 512
+      }
+    },
+    {
+      "count": 512,
+      "scale": 1,
+      "mode": "frozen-simulation",
+      "frames": 171,
+      "interval": {
+        "mean": 23.421637426900578,
+        "p50": 29,
+        "p95": 30,
+        "worst": 30.30000000000291
+      },
+      "cpu": {
+        "mean": 22.897660819410582,
+        "p50": 22.699999928474426,
+        "p95": 25.300000071525574,
+        "worst": 28.699999928474426
+      },
+      "simulation": {
+        "mean": 0.0011695909221269931,
+        "p50": 0,
+        "p95": 0,
+        "worst": 0.10000002384185791
+      },
+      "presentation": {
+        "mean": 7.636257305479886,
+        "p50": 7.5,
+        "p95": 8.5,
+        "worst": 9.600000023841858
+      },
+      "hud": {
+        "mean": 9.284795328887583,
+        "p50": 9.299999952316284,
+        "p95": 10.200000047683716,
+        "worst": 13.100000023841858
+      },
+      "draws": {
+        "mean": 332,
+        "p50": 332,
+        "p95": 332,
+        "worst": 332
+      },
+      "triangles": {
+        "mean": 1318504,
+        "p50": 1318504,
+        "p95": 1318504,
+        "worst": 1318504
+      },
+      "alive": {
+        "mean": 512,
+        "p50": 512,
+        "p95": 512,
+        "worst": 512
+      }
+    }
+  ]
+}

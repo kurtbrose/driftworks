@@ -113,15 +113,32 @@ void main() {
         var paths = [];
         /** @type {Map<HTMLCanvasElement, import('../src/three-types').Texture>} */ var textures = new Map();
         /** @param {number} x @param {number} y */ function point(x,y) { var m=state.matrix;return [m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]]; }
+        /** @param {number} vertices */
+        function reserve(vertices) {
+            if((count+vertices)*16<=buffer.length)return;
+            var capacity=buffer.length;while((count+vertices)*16>capacity)capacity*=2;
+            var grown=new Float32Array(capacity);grown.set(buffer);geometry.dispose();buffer=grown;interleaved=new THREE.InterleavedBuffer(buffer,16);attributes();
+        }
         /** @param {number[]} position @param {number[]} local @param {number[]} bounds @param {number[]} params @param {number[]} tint @param {number[]} uv */
         function vertexAt(position,local,bounds,params,tint,uv) {
-            if ((count+1)*16>buffer.length) { var grown=new Float32Array(buffer.length*2);grown.set(buffer);geometry.dispose();buffer=grown;interleaved=new THREE.InterleavedBuffer(buffer,16);attributes(); }
-            buffer.set(position.concat(local,bounds,params,tint,uv),count++*16);
+            reserve(1);var offset=count++*16;
+            buffer.set(position,offset);buffer.set(local,offset+2);buffer.set(bounds,offset+4);buffer.set(params,offset+6);buffer.set(tint,offset+10);buffer.set(uv,offset+14);
         }
         /** @param {number} x @param {number} y @param {number} hw @param {number} hh @param {number[]} params @param {number[]} tint @param {number[]} [uv] @param {number} [angle] */
         function quad(x,y,hw,hh,params,tint,uv,angle) {
-            uv=uv||[0,0,1,1]; var pad=params[0]<2?1+params[2]*.5:0,co=Math.cos(angle||0),si=Math.sin(angle||0);
-            [[-1,-1],[1,-1],[-1,1],[-1,1],[1,-1],[1,1]].forEach(function(c){var lx=c[0]*(hw+pad),ly=c[1]*(hh+pad);vertexAt(point(x+co*lx-si*ly,y+si*lx+co*ly),[lx,ly],[hw,hh],params,tint,[uv[0]+(c[0]+1)*.5*(uv[2]-uv[0]),uv[1]+(c[1]+1)*.5*(uv[3]-uv[1])]);});
+            // Contact markers and glyphs share this hot path. Write directly to
+            // the retained GPU buffer instead of allocating six concatenated vertices.
+            var pad=params[0]<2?1+params[2]*.5:0,co=Math.cos(angle||0),si=Math.sin(angle||0),m=state.matrix;
+            var u0=uv?uv[0]:0,v0=uv?uv[1]:0,u1=uv?uv[2]:1,v1=uv?uv[3]:1;
+            reserve(6);
+            for(var i=0;i<6;i++){
+                var sx=i===1||i>=4?1:-1,sy=i>=2&&i!==4?1:-1,lx=sx*(hw+pad),ly=sy*(hh+pad);
+                var px=x+co*lx-si*ly,py=y+si*lx+co*ly,offset=count++*16;
+                buffer[offset]=m[0]*px+m[2]*py+m[4];buffer[offset+1]=m[1]*px+m[3]*py+m[5];
+                buffer[offset+2]=lx;buffer[offset+3]=ly;buffer[offset+4]=hw;buffer[offset+5]=hh;
+                buffer.set(params,offset+6);buffer.set(tint,offset+10);
+                buffer[offset+14]=u0+(sx+1)*.5*(u1-u0);buffer[offset+15]=v0+(sy+1)*.5*(v1-v0);
+            }
         }
         /** @param {string | CanvasGradient | CanvasPattern} style */ function tint(style) { var c=color(style);c[3]*=state.globalAlpha;return c; }
         /** @param {number[]} a @param {number[]} b */ function line(a,b) {var dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);quad((a[0]+b[0])*.5,(a[1]+b[1])*.5,(length+state.lineWidth)*.5,state.lineWidth*.5,[0,state.lineWidth*.5,0,0],tint(state.strokeStyle),undefined,Math.atan2(dy,dx));}

@@ -2,7 +2,7 @@
 const {createFlight}=require('./headless.cjs'),{performance}=require('node:perf_hooks'),assert=require('node:assert/strict'),fs=require('node:fs'),crypto=require('node:crypto');
 const option=(name,fallback)=>{const i=process.argv.indexOf(name);return i<0?fallback:process.argv[i+1];};
 const seconds=Number(option('--seconds','12')),counts=option('--counts','16,50,100').split(',').map(Number);
-if(!(seconds>=1&&seconds<=120)||counts.some(n=>!Number.isInteger(n)||n<2||n>256))throw new Error('Use 1–120 seconds and 2–256 fighters');
+if(!(seconds>=1&&seconds<=120)||counts.some(n=>!Number.isInteger(n)||n<2||n>2048))throw new Error('Use 1–120 seconds and 2–256 fighters');
 const percentile=(values,q)=>{const sorted=values.slice().sort((a,b)=>a-b);return sorted[Math.min(sorted.length-1,Math.floor(sorted.length*q))];};
 const unit=v=>{const length=Math.hypot(...v)||1;return v.map(x=>x/length);},cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 function fixture(count,seed,layout){
@@ -16,7 +16,7 @@ function fixture(count,seed,layout){
    const j=i%half,side=i<half?-1:1,x=side*(300+(j%2)*60),y=(Math.floor(j/2)%5-2)*60,z=(Math.floor(j/10)-(Math.ceil(half/10)-1)/2)*60;
    e.pose.eye=center.map((v,k)=>v+(state.right[k]*x-state.back[k]*y+state.up[k]*z)/U);
    const forward=unit(center.map((v,k)=>v-e.pose.eye[k])),reference=Math.abs(forward[2])>.95?[0,1,0]:[0,0,1];
-   e.pose.right=unit(cross(forward,reference));e.pose.up=unit(cross(e.pose.right,forward));e.pose.back=forward.map(v=>-v);e.pose.velocity=forward.map(v=>v*45);e.goal=center.slice();
+   e.pose.right=unit(cross(forward,reference));e.pose.up=unit(cross(e.pose.right,forward));e.pose.back=forward.map(v=>-v);e.pose.velocity=forward.map(v=>v*45);e.goal=center.slice();e.decision=(i%16)*.13;
   });
  }
  return flight;

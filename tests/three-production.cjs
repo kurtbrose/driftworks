@@ -307,3 +307,16 @@ assert.equal(projectedEffects[0].uniforms.uLensEnabled,0,'Preprojected trails do
 viewer.setStudyEffects([]);const clearStart=frames.length;viewer.render(world,1,0,0);
 assert(!frames.slice(clearStart).flat().some(d=>Math.abs(d.uniforms.uColor?.[0]-.071)<1e-6),'Pooled projectile draws do not linger after removal');
 console.log('PASS optical gunfire presentation: one observer-space overlay, cross-chart visibility, no shell capture/double warp and cleared pooled draws');
+
+// A burst larger than the old 12-explosion limit reaches actual queued draws.
+viewer.setStudyBridge(false);viewer.setStudyActors([]);viewer.setStudyEffects([]);
+viewer.setSurfaceCamera({eye:[0,0,0],right:[1,0,0],up:[0,1,0],back:[0,0,1]});
+const blasts=Array.from({length:60},(_,i)=>({position:[i-30,0,-100],velocity:[0,0,0],age:.2,size:1,seed:i}));
+const expectedBlastBatches=blasts.reduce((n,b)=>n+DW.explosions.build(b,[1,0,0],[0,1,0]).length,0);
+viewer.setStudyExplosions(blasts);blasts.length=0;viewer.render(world,1,0,0);
+assert.equal(viewer.getRenderStats().explosions,60,'All sixty explosions reach rendering, with a retained input snapshot');
+assert.equal(viewer.getRenderStats().explosionBatches,expectedBlastBatches);
+assert.equal(frames.at(-1).length,expectedBlastBatches,'Every explosion layer reaches the native renderer');
+viewer.setStudyExplosions([]);viewer.render(world,1,0,0);
+assert.equal(viewer.getRenderStats().explosions,0);assert.equal(frames.at(-1).length,0,'Pooled explosion draws clear without stale blasts');
+console.log('PASS explosion capacity: sixty complete blasts, every native layer submitted, input ownership and empty-frame cleanup');

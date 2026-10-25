@@ -54,6 +54,7 @@
                     '\nDraw calls ' + (render.drawCalls + skyStats.drawCalls) + ' · triangles ' + Math.round(render.triangles + skyStats.triangles).toLocaleString() +
                     '\nMeshes ' + (render.meshes + skyStats.meshes) + ' · material variants ' + (render.materials + skyStats.materials) +
                     '\n' + render.width + ' × ' + render.height + ' · pixel ratio ' + render.pixelRatio.toFixed(2) +
+                    '\nEffects ' + render.explosions + ' explosions / ' + render.explosionBatches + ' blast batches / ' + render.effectVertices + ' additive vertices' +
                     '\nSky points ' + skyStats.points + ' · shadow passes 0' +
                     '\nCPU timing only; GPU time not measured';
             }

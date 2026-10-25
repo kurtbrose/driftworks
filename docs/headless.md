@@ -18,12 +18,18 @@ contact fitting). Browser `scene3d` exports retain compatibility aliases.
 For a repeatable fleet-size CPU sweep, run `node tools/stress-flight.cjs`.
 For the corresponding rendered browser sweep and its optional automation setup,
 see [browser fighter scaling](benchmarks/flight-browser-2026-10-23.md).
+The [extended sweep and optimizations](benchmarks/flight-scale-2026-10-25.md)
+cover up to 1,024 fighters and document spatial separation/targeting invariants,
+browser profiling, source-reference comparisons and the remaining frame budget.
 It tests 16/50/100 AI fighters in stock and compact layouts, reporting mean and
 tail times, overlapping stage costs, shot/hit counts, population and invariants.
 `--counts 16,50,100 --seconds 12` sets the sweep; `--profile 100 --layout dense`
 collects a separate V8 sampling profile. Graphics and real audio are excluded.
 See [the recorded scaling test](benchmarks/flight-scale-2026-10-23.md) for results
 and the distinction between CPU batches and browser FPS.
+The [engaged effects audit](benchmarks/flight-effects-2026-10-25.md) supersedes
+readiness conclusions from index-delayed fleets; dense fixtures now activate
+both teams within two seconds and the browser probe audits complete effects.
 
 ## Start in a REPL
 

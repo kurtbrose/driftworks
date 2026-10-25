@@ -331,7 +331,7 @@
             });
             if(capital)effectBatches=effectBatches.concat(capital.effects(state));
             scene.setStudyEffects(effectBatches);
-            scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).slice(-12).map(function(f){return {region:f.region||0,position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:Math.round(f.position[0]*31+f.position[1]*17)};}));
+            scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).map(function(f){return {region:f.region||0,position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:Math.round(f.position[0]*31+f.position[1]*17)};}));
             // This conservative revision covers simulation-driven mesh motion,
             // pose changes, asset readiness, appearance edits and actor lifetime.
             // Additive bolts/engines are composited live and never cached.

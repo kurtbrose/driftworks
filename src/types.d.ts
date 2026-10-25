@@ -398,7 +398,7 @@ export interface DriftworksNamespace {
       setStudyBridge:(enabled:boolean)=>void;
       setStudyBridgeRevision:(revision:string|null)=>void;
       setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean}) => void;
-      getRenderStats: () => {bridgeObjectPaths?:number;bridgeObjectPatches?:number;bridgeObjectError?:number;bridgeObjectBad?:number;bridgeHistoryValid?:number;bridgeCaptures?:number;bridgeCpuMs?:number;drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
+      getRenderStats: () => {explosions:number;explosionBatches:number;effectVertices:number;bridgeObjectPaths?:number;bridgeObjectPatches?:number;bridgeObjectError?:number;bridgeObjectBad?:number;bridgeHistoryValid?:number;bridgeCaptures?:number;bridgeCpuMs?:number;drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyLightRigs:(rigs:RigLighting[])=>void;
     setRigLightsEnabled:(enabled:boolean)=>void;
     prepareStudyTextures: (images: HTMLImageElement[]) => Promise<void>;
