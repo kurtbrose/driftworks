@@ -12,6 +12,10 @@ npm test
 npm run check:types
 ```
 
+`npm run check` also verifies the shared script profiles and their checked-in
+HTML/worker lists, validates assets, and runs the tests. After changing loading
+order, run `npm run refresh:assets`; see [script loading](script-loading.md).
+
 All application scripts in `src/` and `experiments/` pass strict checking and
 an additional audit rejecting explicit and inferred `any`. The checker rejects
 omitted application scripts and disabled per-file checking. Tests and vendored

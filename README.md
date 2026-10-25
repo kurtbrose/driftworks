@@ -67,10 +67,12 @@ published root.
 All HTML entry points carry content hashes for local scripts, stylesheets and
 images. Dynamic skybox manifests, reflection maps, feature images, ship textures,
 portraits and the Aegis rig use the checked-in `src/asset-versions.js` map.
-After editing browser code or assets, run `node tools/refresh-site-assets.cjs`
-(the old `refresh-flight-assets.cjs` command remains an alias). Commit the updated
-HTML and asset map together with the changed files. No build step is required.
-`npm run check` rejects missing or stale versions and missing local HTML assets.
+After editing browser code, shared script profiles or assets, run
+`npm run refresh:assets`. It refreshes the [shared script lists](docs/script-loading.md)
+and content hashes. The direct `node tools/refresh-site-assets.cjs` command
+continues to refresh hashes only. Commit the updated HTML, worker list and asset
+map together with the changed files. No deployment build step is required.
+`npm run check` rejects stale script lists, stale versions and missing local assets.
 Local portrait-authoring result archives are excluded from the runtime map.
 Configure the host to revalidate HTML (`Cache-Control: no-cache`) so visitors
 receive the latest asset URLs. If the CDN ignores query strings in its cache

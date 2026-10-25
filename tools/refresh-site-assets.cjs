@@ -55,7 +55,10 @@ function refresh(root, check = false) {
     const helper = path.posix.relative(path.posix.dirname(name), 'src/asset-versions.js');
     text = text.replace(/<script\b[^>]*src=["'][^"']*asset-versions\.js[^"']*["'][^>]*><\/script>\s*/gi, '');
     {
-      text = text.replace(/<script\b/i, `<script src="${helper}"></script>\n<script`);
+      // Keep the helper outside managed script blocks. On pages without inline
+      // setup, the first ordinary script is already inside that generated block.
+      text = text.replace(/<!-- script-manifest:\w+ -->|<script\b/i,
+        match => `<script src="${helper}"></script>\n` + match);
     }
     text = text.replace(/(<(?:script|link|img|source)\b[^>]*\b(?:src|href)=['"])([^'"?#]+)(?:\?([^'"#]*))?(#[^'"]*)?(['"][^>]*>)/gi,
       (match, prefix, asset, query, fragment, suffix) => {

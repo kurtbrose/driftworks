@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 global.window=global;global.DRIFTWORKS_TEST_MODE=true;global.addEventListener=()=>{};global.document={};
-for(const name of ['propulsion','combat','mining-lights','mining-terrain','logistics','formations','sim','asteroid-art','population','session','tactical/camera','engine-audio','audio-mixer','audio','hud','mesh-builder','mining-rig','scene3d','game']){
-  vm.runInThisContext(fs.readFileSync(require('node:path').join(__dirname,'../src',name+'.js'),'utf8'),{filename:name});
+for(const file of require('../tools/script-manifest.cjs').files('asteroidTests')){
+  vm.runInThisContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),{filename:file});
 }
 (async()=>{
   const THREE=await import('../vendor/three/build/three.module.js');

@@ -5,6 +5,10 @@ renderer. It loads the actual ordinary application scripts into an isolated Node
 VM. There is no DOM, WebGL context, audio context, server, or network access.
 No installation or build step is needed.
 
+The loader consumes the `headless` profile in `tools/script-manifest.cjs`;
+change shared dependencies there rather than adding a second list to the driver.
+See [script loading](script-loading.md) for the browser, test and worker profiles.
+
 Shared asteroid geology loads from `src/asteroid-art.js` after simulation.
 The headless runtime does not load the Pixi `src/game.js` composition root;
 CPU terrain queries remain available through `Driftworks.scene3d`.

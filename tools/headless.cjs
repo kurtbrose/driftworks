@@ -5,22 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
-const files = [
-  'src/asset-versions.js', 'src/propulsion.js', 'src/combat.js',
-  'src/mining-lights.js', 'src/mining-terrain.js', 'src/mining-landing.js',
-  'src/logistics.js', 'src/formations.js', 'src/sim.js', 'src/asteroid-art.js',
-  'src/population.js', 'src/session.js', 'src/tactical/camera.js',
-  'src/mesh-builder.js', 'src/mining-rig.js', 'src/explosions.js',
-  'src/scene3d.js', 'src/ship-models.js',
-  'experiments/retail-profiles.js', 'experiments/flight-missions.js',
-  'experiments/mission-ohio.js', 'experiments/retail-weapons.js',
-  'experiments/ellis-optics.js', 'experiments/guns.js', 'experiments/training.js', 'experiments/flight-model.js',
-  'assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js',
-  'assets/ships/ohio-vehicles/meshes.js', 'experiments/ship-packs.js',
-  'experiments/mumble.js', 'experiments/flight-dialogue.js',
-  'experiments/evacuation-mission.js', 'experiments/flight-comms.js', 'experiments/flight-session.js',
-  'experiments/flight-ai.js', 'experiments/flight-duel.js', 'experiments/flight-study.js'
-];
+const files = require('./script-manifest.cjs').files('headless');
 
 function loadRuntime() {
   const context = vm.createContext({console});

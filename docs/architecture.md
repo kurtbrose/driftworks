@@ -172,10 +172,14 @@ connect the elevated body to its ground contacts, with rear legs drawn first.
 Workers use projected positions with a small height offset; selection brackets
 stay uncompressed. Simulation positions and carried geometry remain unchanged.
 
-The site loads ordinary scripts into `window.Driftworks`; there are no ES module
-imports or build artifacts. `rts.html` loads Pixi, propulsion, combat,
-simulation, audio, HUD, then game. The test entry points load the same application scripts without
-Pixi and set `DRIFTWORKS_TEST_MODE` to suppress browser boot.
+The core site loads ordinary scripts into `window.Driftworks`; the flight page
+also declares its module scripts and import map explicitly. Shared loading order
+lives in the development-only `tools/script-manifest.cjs`. Node loaders consume
+profiles directly; `rts.html`, `experiments/flight.html`, `tests/index.html` and the
+study worker retain checked-in generated lists. No manifest loader or generation
+step is needed to serve the site. The test entry points share an application/test
+profile and set `DRIFTWORKS_TEST_MODE` to suppress browser boot. See
+[script loading](script-loading.md) for profile ownership and update commands.
 
 | Module | Responsibility and interface |
 | --- | --- |

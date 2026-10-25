@@ -1,9 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "check": "npm run check:types && npm run check:assets && npm test",
+    "check": "npm run check:types && npm run check:scripts && npm run check:assets && npm test",
+    "check:scripts": "node tools/sync-script-lists.cjs --check",
     "check:assets": "node tools/refresh-site-assets.cjs --check && node tools/bake-hull-indices.cjs --check",
-    "refresh:assets": "node tools/refresh-site-assets.cjs",
+    "refresh:assets": "node tools/sync-script-lists.cjs && node tools/refresh-site-assets.cjs",
     "test": "node tests/run.cjs",
     "check:types": "node tests/check-types.cjs"
   },
