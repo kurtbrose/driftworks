@@ -212,6 +212,36 @@ window.registerPopulationTests = function (test, assert, assertClose) {
     assert(Object.keys(repeated.population.people).length === Object.keys(migrated.population.people).length);
     assert(fresh().world.platforms.every(function (p) { return !p.workerIds.length; }));
   });
+  test('Recovery history follows ship IDs across fleet changes and reloads without duplicate events', function () {
+    var s = fresh();
+    var fighters = s.world.ships.filter(function (ship) { return ship.type === 'escort'; });
+    fighters.forEach(function (ship) { ship.disabled = true; ship.docked = false; ship.damage = 1; });
+    fighters[0].launchElapsed = 5.99;
+    fighters[1].repairRemaining = 0.01;
+    var pilotIds = fighters.map(function (ship) { return ship.crewIds[0]; });
+    var added = sim.createShip('new-escort', 'New escort', 'escort', 0, 0, 115);
+    added.docked = true;
+    s.world.ships.reverse();
+    s.world.ships.push(added);
+    function recoveries(session, id) {
+      return session.population.people[id].history.filter(function (event) { return event.kind === 'recovery'; });
+    }
+    sessions.step(s, 1 / 30);
+    var events = recoveries(s, pilotIds[0]);
+    assert(events.length === 1 && recoveries(s, pilotIds[1]).length === 0,
+      'Only the fighter completing launch clearance should record recovery');
+    assert(events[0].assignment === fighters[0].id && events[0].missionId === s.world.contract.id);
+    var newPilotId = s.world.ships.find(function (ship) { return ship.id === added.id; }).crewIds[0];
+    assert(recoveries(s, newPilotId).length === 0, 'A newly crewed healthy ship has not recovered');
+    s = sessions.deserialize(sessions.serialize(s));
+    sessions.step(s, 6);
+    assert(recoveries(s, pilotIds[0]).length === 1 && recoveries(s, pilotIds[1]).length === 1,
+      'The second recovery survives a checkpoint without repeating the first');
+    sessions.step(s, 1 / 30);
+    assert(recoveries(s, pilotIds[0]).length === 1 && recoveries(s, pilotIds[1]).length === 1,
+      'Ordinary healthy ticks must not repeat recovery events');
+    assert(recoveries(s, newPilotId).length === 0);
+  });
   test('Disabled fighter retains its living pilot and shuttle ignores manual flight commands', function () {
     var s = fresh(), fighter = s.world.ships.find(function (ship) { return ship.type === 'escort'; });
     var id = fighter.crewIds[0]; fighter.docked = false; fighter.position.x = 100;

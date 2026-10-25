@@ -128,9 +128,13 @@
     var before = session.world;
     session.world = sim.stepWorld(before, dt);
     reconcile(session);
-    session.world.ships.forEach(function (ship) {
-      var previous = before.ships.filter(function (s) { return s.id === ship.id; })[0];
-      if (previous && previous.disabled && !ship.disabled) (ship.crewIds || []).forEach(function (id) {
+    // Only disabled ships can complete recovery. Index their IDs once instead
+    // of searching the previous fleet for every ship on every tick.
+    /** @type {Set<string>} */
+    var disabledShipIds = new Set();
+    before.ships.forEach(function (ship) { if (ship.disabled) disabledShipIds.add(ship.id); });
+    if (disabledShipIds.size) session.world.ships.forEach(function (ship) {
+      if (disabledShipIds.has(ship.id) && !ship.disabled) (ship.crewIds || []).forEach(function (id) {
         population.consume(session.population, [{ id: session.nextEventId++, personId: id, kind: 'recovery',
           atSeconds: now(session), location: session.population.people[id].location, assignment: ship.id, missionId: session.world.contract.id }]);
       });
