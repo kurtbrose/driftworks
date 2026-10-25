@@ -32,9 +32,12 @@ function runFiles(files) {
 
 module.exports = { runFiles };
 if (require.main === module) {
-  const files = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const directory = path.join(__dirname, 'scenarios');
+  const files = args.length === 1 && args[0] === '--all' ?
+    fs.readdirSync(directory).filter(file => file.endsWith('.json')).sort().map(file => path.join(directory, file)) : args;
   if (!files.length) {
-    console.error('Usage: node tests/scenarios.cjs path/to/scenario.json [...]');
+    console.error('Usage: node tests/scenarios.cjs --all | path/to/scenario.json [...]');
     process.exitCode = 1;
   } else process.exitCode = runFiles(files) ? 1 : 0;
 }

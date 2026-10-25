@@ -6,6 +6,13 @@
     "check:assets": "node tools/refresh-site-assets.cjs --check && node tools/bake-hull-indices.cjs --check",
     "refresh:assets": "node tools/sync-script-lists.cjs && node tools/refresh-site-assets.cjs",
     "test": "node tests/run.cjs",
+    "test:simulation": "node tests/run.cjs simulation",
+    "test:flight": "node tests/run.cjs flight",
+    "test:rendering": "node tests/run.cjs rendering",
+    "test:assets": "node tests/run.cjs assets",
+    "test:artwork": "node tests/run.cjs artwork",
+    "test:audio": "node tests/run.cjs audio",
+    "test:tooling": "node tests/run.cjs tooling",
     "check:types": "node tests/check-types.cjs"
   },
   "devDependencies": {

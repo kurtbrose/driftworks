@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict');
-const {poses,tree,query,bounds}=require('./mining-leg-clearance.cjs');
+const {tree,query,bounds,sweepPoses}=require('./fixtures/mining-clearance.cjs');
+const {poses}=sweepPoses();
 const model=global.Driftworks.scene3d.miningPlatformGeometry;
 const closed=model(1,0,false,0),movingA=model(1,0,false,.257),movingB=model(1,0,false,.733);
 const leafDarkLength=model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length;

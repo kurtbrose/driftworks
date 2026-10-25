@@ -159,7 +159,8 @@ held-out comparisons and deterministic control replays without changing gameplay
 ## Turn an investigation into a regression
 
 Write a focused `.cjs` test using `require('../tools/headless.cjs')` and Node's
-`assert`, then register it in `tests/run.cjs`. Prefer assertions about outcomes
+`assert`, then register it in the appropriate group in `tests/suites.cjs`.
+See [test groups](testing.md) for focused commands and setup. Prefer assertions about outcomes
 (roster counts, a replacement's launch phase, callout content/eligibility) over
 large state snapshots. Run `node tests/headless.cjs` for the driver's own regression.
 VM objects have a different realm's prototypes: use `Array.from(...)` for arrays

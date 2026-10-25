@@ -4,24 +4,10 @@
   var sim = window.Driftworks.sim;
   var game = window.Driftworks.game;
   var hud = window.Driftworks.hud;
-  var tests = [];
+  var harness = window.DriftworksTestHarness.create();
+  var test = harness.test, assert = harness.assert, assertClose = harness.assertClose;
 
-  function test(name, fn) {
-    tests.push({ name: name, fn: fn });
-  }
-
-  function assert(condition, message) {
-    if (!condition) {
-      throw new Error(message || 'Assertion failed');
-    }
-  }
-
-  function assertClose(actual, expected, epsilon) {
-    var limit = epsilon || 0.000001;
-    assert(Math.abs(actual - expected) <= limit, 'Expected ' + actual + ' to be within ' + limit + ' of ' + expected);
-  }
-
-  test('Selected offscreen bearing has a large filled edge arrow and a fixed central double chevron', function () {
+  test('flight', 'Selected offscreen bearing has a large filled edge arrow and a fixed central double chevron', function () {
     var translations=[],rotations=[],widths=[],points=[],fills=0,depth=0;
     var ctx={save:function(){depth++;},restore:function(){depth--;},translate:function(x,y){translations.push([x,y]);},
       rotate:function(a){rotations.push(a);},beginPath:function(){},closePath:function(){},
@@ -41,7 +27,7 @@
     assertClose(rotations[rotations.length-1],Math.PI);
   });
 
-  test('Target status trails, collapse flash, switching and rewind', function () {
+  test('flight', 'Target status trails, collapse flash, switching and rewind', function () {
     var update = window.Driftworks.flightHud.targetStatus;
     var fills = [];
     var context = {save: function () {}, restore: function () {},
@@ -75,7 +61,7 @@
     assertClose(state.time, 0);
   });
 
-  test('operational tether spin limits tip load to 1-3 g at every span', function () {
+  test('rendering', 'operational tether spin limits tip load to 1-3 g at every span', function () {
     [100,50,20,10,2].forEach(function(km) {
       ['1g','2g','3g'].forEach(function(mode,index) {
         var spin=window.Driftworks.flightPresentation.tetherSpin(km,mode);
@@ -90,7 +76,7 @@
     });
   });
 
-  test('tether greyboxes preserve all five true metre spans and finite mesh normals', function () {
+  test('rendering', 'tether greyboxes preserve all five true metre spans and finite mesh normals', function () {
     [100,50,20,10,2].forEach(function(km) {
       var batches=window.Driftworks.flightPresentation.tetherGeometry(km), xs=[];
       assert(batches.length===3);
@@ -106,7 +92,7 @@
     });
   });
 
-  test('explicit order recipients are independent of selection and preserve legacy commands', function () {
+  test('simulation', 'explicit order recipients are independent of selection and preserve legacy commands', function () {
     var base=sim.createInitialWorld();
     base.ships.forEach(function(ship){ship.docked=false;ship.order={kind:'move',target:{x:100,y:100}};});
     base.selectedShipIds=['escort-02'];base.selectedPlatformId='platform-02';
@@ -138,14 +124,14 @@
     assert(JSON.stringify(visual.selectedShipIds)===JSON.stringify(base.selectedShipIds)&&visual.selectedPlatformId===base.selectedPlatformId);
   });
 
-  test('automatic defense leaves both ship and platform selection untouched', function () {
+  test('simulation', 'automatic defense leaves both ship and platform selection untouched', function () {
     var world=sim.createInitialWorld();world.selectedShipIds=['tug-01'];world.selectedPlatformId='platform-01';
     world=sim.spawnHostileWave(world);var next=sim.stepWorld(world,1/30);
     assert(next.ships.some(function(ship){return ship.order.kind==='defend'&&ship.order.automatic;}));
     assert(next.selectedShipIds.join(',')==='tug-01'&&next.selectedPlatformId==='platform-01');
   });
 
-  test('controlled craft owns defenses, weapons and legal input just like AI craft', function () {
+  test('flight', 'controlled craft owns defenses, weapons and legal input just like AI craft', function () {
     var DW=window.Driftworks,api=DW.training,t=api.create(),pose=DW.arcade.create(0);
     var own=api.bindPlayer(t,pose),other=api.createCraft('wingman',DW.arcade.create(0),'ally');
     t.enemies=[other];other.pose.eye=[30,30,30];
@@ -162,7 +148,7 @@
     assert(checkpoint.player.hp===own.hp&&checkpoint.player.collision.kind==='sphere'&&!('hull' in checkpoint)&&!('dead' in checkpoint));
   });
 
-  test('all craft use team-aware nearest-hit damage and local death does not stop combat', function () {
+  test('flight', 'all craft use team-aware nearest-hit damage and local death does not stop combat', function () {
     var DW=window.Driftworks,api=DW.training,t=api.create('furball'),pose=DW.arcade.create(0),U=sim.METERS_PER_UNIT;
     api.bindPlayer(t,pose);pose.eye=[50,50,50];
     var ally=api.createCraft('wingman',DW.arcade.create(0),'ally'),enemy=api.createCraft('raider',DW.arcade.create(0),'enemy');
@@ -178,7 +164,7 @@
     api.damagePlayer(t,bolt.weapon);assert(t.wrecks.length===1,'Death resolves once');
   });
 
-  test('simulation collision models survive cosmetic changes and JSON round trips', function () {
+  test('flight', 'simulation collision models survive cosmetic changes and JSON round trips', function () {
     var DW=window.Driftworks,api=DW.training,session=DW.flightSession.create({});
     var view=session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]}),craft=view.combat.enemies[0];
     assert(craft.collision.kind==='model');
@@ -194,7 +180,7 @@
     sphere.collision.radiusM=4;assert(api.hullHit(sphere,[3/U,-10/U,0],[3/U,10/U,0]));
   });
 
-  test('normal flight hull selections match rendered models across changes, waves and reloads', function () {
+  test('flight', 'normal flight hull selections match rendered models across changes, waves and reloads', function () {
     var DW=window.Driftworks,api=DW.training,models=DW.shipPackModels,U=sim.METERS_PER_UNIT;
     var session=DW.flightSession.create({}),view=session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]});
     var catalog=DW.shipPacks[0].models,choices=[['mixed','mixed'],[catalog[0].id,catalog[1].id],['',''],[catalog[1].id,catalog[0].id]];
@@ -224,7 +210,7 @@
     });
     assert(DW.flightDuel.create({duration:1}).enemy.collision.kind==='model','Watch benchmarks share triangle collision rules');
   });
-  test('evaluation pilots reject illegal control records without silently repairing them', function () {
+  test('flight', 'evaluation pilots reject illegal control records without silently repairing them', function () {
     var api=window.Driftworks.flightAI, valid={pitch:0,yaw:0,roll:0,side:0,vertical:0,throttle:1,fire:false,boost:false};
     [Object.assign({},valid,{pitch:1.01}),Object.assign({},valid,{yaw:NaN}),Object.assign({},valid,{throttle:-.1}),Object.assign({},valid,{boost:1}),Object.assign({},valid,{teleport:true})].forEach(function(input){
       var rejected=false;try{api.validate(input);}catch(e){rejected=true;}assert(rejected);
@@ -232,7 +218,7 @@
     assert(api.validate(valid)!==valid);
   });
 
-  test('watch playback uses the benchmark clock and cameras never alter duel state', function () {
+  test('flight', 'watch playback uses the benchmark clock and cameras never alter duel state', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({terrainHit:function(){return null;},surfaceFrame:function(){return {point:[0,0,1]};},onGunshot:function(){},onImpact:function(){}});
     var options={start:'crossing',category:'human',flavor:'novice',seed:29,duration:3},watch=DW.flightWatch.create(session,options),reference=DW.flightDuel.run(options);
     var stateBefore=JSON.stringify(watch.snapshot(false).state);
@@ -250,7 +236,7 @@
     var rejected=false;try{restarted.advance(.1,2);}catch(e){rejected=true;}assert(rejected);
   });
 
-  test('evaluation pilots only read poses and replay through ordinary shared physics', function () {
+  test('flight', 'evaluation pilots only read poses and replay through ordinary shared physics', function () {
     var DW=window.Driftworks,api=DW.flightAI,p=DW.arcade.profiles[0],w=DW.retailWeapons[0];
     ['human','perfect'].forEach(function(category){
       var own=DW.arcade.createSortie(0,p),target=DW.arcade.createSortie(0,p);target.eye=[4,10,0];
@@ -263,7 +249,7 @@
     });
   });
 
-  test('human simulator reacts to delayed observations and cannot use current hidden truth', function () {
+  test('flight', 'human simulator reacts to delayed observations and cannot use current hidden truth', function () {
     var DW=window.Driftworks,api=DW.flightAI,p=DW.arcade.profiles[0],w=DW.retailWeapons[0],own=DW.arcade.create(0);
     var a=api.create('human','novice',17),b=api.create('human','novice',17),target={eye:[0,10,0],velocity:[0,0,0]};
     assert(!a.step(0,own,target,p,w).fire);b.step(0,own,target,p,w);
@@ -272,14 +258,14 @@
     assert(JSON.stringify(a.step(.57,own,target,p,w))!==JSON.stringify(b.step(.57,own,target,p,w)),'The changed observation must eventually affect controls');
   });
 
-  test('perfect pilot takes a valid shot immediately without opponent burst concessions', function () {
+  test('flight', 'perfect pilot takes a valid shot immediately without opponent burst concessions', function () {
     var DW=window.Driftworks,p=DW.arcade.profiles[0],own=DW.arcade.create(0),target={eye:[0,300/sim.METERS_PER_UNIT,0],velocity:[0,0,0]};
     assert(DW.flightAI.create('perfect').step(0,own,target,p,DW.retailWeapons[0]).fire);
     var invalid=DW.flightAI.solution(own,[0,2000/sim.METERS_PER_UNIT,0],[0,0,0],DW.retailWeapons[0]);
     assert(!invalid.valid && invalid.time>DW.retailWeapons[0].lifetime);
   });
 
-  test('duel input replays reproduce combat and frame batching preserves the fixed clock', function () {
+  test('flight', 'duel input replays reproduce combat and frame batching preserves the fixed clock', function () {
     var api=window.Driftworks.flightDuel,options={start:'crossing',category:'human',flavor:'expert',seed:29,duration:3};
     var a=api.run(options),b=api.create(options),physical=window.Driftworks.flightAI.copy(b.player);
     for(var i=0;i<180;i++)b.advance(1/60);
@@ -293,7 +279,7 @@
     var rejected=false;try{api.replay(bad);}catch(e){rejected=true;}assert(rejected);
   });
 
-  test('duels stop at destruction without respawning and equip retail defenses on both pilots', function () {
+  test('flight', 'duels stop at destruction without respawning and equip retail defenses on both pilots', function () {
     var api=window.Driftworks.flightDuel,duel=api.create({start:'headOn',category:'perfect',duration:10});
     duel.advance(.2);assert(duel.summary().playerShots>0);
     window.Driftworks.training.damageCraft(duel.combat,duel.enemy,{damage:10000,armorFactor:1,shieldFactor:1},duel.combat.player);
@@ -303,7 +289,7 @@
     assert(duel.combat.maxShield===380 && duel.enemy.maxShield===380);
   });
 
-  test('retail catalogs include old Hercules, Vasudan and Shivan capabilities without conflating artwork',function(){
+  test('flight', 'retail catalogs include old Hercules, Vasudan and Shivan capabilities without conflating artwork',function(){
     var DW=window.Driftworks,profiles=DW.arcade.profiles,find=function(name){return profiles.find(function(p){return p.name===name;});};
     assert(profiles.length===35 && DW.retailWeapons.length===10);
     assert(find('GTF Hercules').hull===250 && find('GTF Hercules').shield===600);
@@ -312,7 +298,7 @@
     profiles.forEach(function(p){assert(p.hull>0 && p.shield>=0 && p.rotationTime.every(function(v){return v>0;}));assert(DW.training.defaultWeapon(p)>=0);});
   });
 
-  test('shield absorption, hull spillover and recharge are symmetric and unshielded is explicit',function(){
+  test('flight', 'shield absorption, hull spillover and recharge are symmetric and unshielded is explicit',function(){
     var DW=window.Driftworks,ai=DW.training,player=DW.arcade.create(0),t=ai.create('training'),p=Object.assign({},DW.arcade.profiles[0],{hull:100,shield:10});
     ai.configure(t,p);ai.spawn(t,player,0);t.enemies=t.enemies.slice(0,1);var e=t.enemies[0];ai.equip(e,p,0);
     var weapon={damage:30,shieldFactor:1,armorFactor:1};ai.damagePlayer(t,weapon);ai.damageEnemy(t,e,weapon);
@@ -323,7 +309,7 @@
     assert(session.snapshot().combat.maxShield===600 && session.snapshot().combat.enemies.every(function(c){return c.maxShield===c.profile.shield;}));
   });
 
-  test('duel loadouts match or differ by ship and weapon and reject legacy replay schemas',function(){
+  test('flight', 'duel loadouts match or differ by ship and weapon and reject legacy replay schemas',function(){
     var DW=window.Driftworks,api=DW.flightDuel,dragon=DW.arcade.profiles.findIndex(function(p){return p.name==='SF Dragon';});
     var duel=api.create({profile:1,opponentProfile:dragon,weapon:2}),s=duel.summary();
     assert(s.playerMaxShield===600 && s.opponentMaxShield===700 && s.weapon==='Prometheus S' && s.opponentWeapon===s.weapon);
@@ -333,7 +319,7 @@
     var record=JSON.parse(JSON.stringify(duel.replay));record.version=1;var rejected=false;try{api.replay(record);}catch(e){rejected=true;}assert(rejected);
   });
 
-  test('watch and headless duels retain exact triangle hulls in links and replay', function () {
+  test('flight', 'watch and headless duels retain exact triangle hulls in links and replay', function () {
     var DW=window.Driftworks,api=DW.flightDuel,models=DW.shipPacks[0].models;
     var options={allyHull:models[1].id,enemyHull:models[4].id,duration:.2,start:'tail'};
     var duel=api.run(options);
@@ -355,7 +341,7 @@
     var session=DW.flightSession.create({}),watch=DW.flightWatch.create(session,options);
     assert(watch.snapshot(true).observerCraft.collision.modelId===options.allyHull);
   });
-  test('all duel geometries and human flavors stay finite, deterministic and input bounded', function () {
+  test('flight', 'all duel geometries and human flavors stay finite, deterministic and input bounded', function () {
     var DW=window.Driftworks,api=DW.flightDuel;
     api.starts.forEach(function(start){['novice','practiced','expert'].forEach(function(flavor){
       var options={start:start,category:'human',flavor:flavor,seed:8,duration:.6},a=api.run(options),b=api.run(options);
@@ -365,7 +351,7 @@
     });});
   });
 
-  test('surface work light retains metre scale across asteroid sizes', function () {
+  test('rendering', 'surface work light retains metre scale across asteroid sizes', function () {
     var scene=window.Driftworks.scene3d;
     [1,2].forEach(function(scale){
       var a=createFreshWorld().asteroids[0];a.radius*=scale;
@@ -379,7 +365,7 @@
     });
   });
 
-  test('work-light shadow frame preserves its beam under rotation and camera translation', function () {
+  test('rendering', 'work-light shadow frame preserves its beam under rotation and camera translation', function () {
     var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],lamp=scene.surfaceSpotlight(a),camera={x:17,y:-23,zoom:1};
     a.rotation=1.2;
     var f=scene.workLightFrame(a,lamp,camera,4);
@@ -397,14 +383,14 @@
     assertClose(dot(delta,moved.right),0);assertClose(dot(delta,moved.up),0);assertClose(dot(delta,moved.direction),lamp.range*.4);
   });
 
-  test('experiment controls report missing markup at the lookup boundary', function () {
+  test('tooling', 'experiment controls report missing markup at the lookup boundary', function () {
     var get = window.Driftworks.experimentDom({getElementById: function () { return null; }});
     var message = '';
     try { get('profile'); } catch (error) { message = error.message; }
     assert(message === 'Missing experiment element #profile');
   });
 
-  test('flight sessions expose complete state before the first reset', function () {
+  test('flight', 'flight sessions expose complete state before the first reset', function () {
     var session = window.Driftworks.flightSession.create({}), view = session.snapshot();
     assert(view.state.eye.every(Number.isFinite));
     assert(view.state.throttle === 0 && view.guns.fired === 0);
@@ -412,7 +398,7 @@
     assert(session.snapshot().state === view.state);
   });
 
-  test('mixed ship artwork falls back to the collision blockout without a pack', function () {
+  test('rendering', 'mixed ship artwork falls back to the collision blockout without a pack', function () {
     var DW = window.Driftworks, packs = DW.shipPacks;
     try {
       DW.shipPacks = [];
@@ -422,7 +408,7 @@
     } finally { DW.shipPacks = packs; }
   });
 
-  test('training destruction accepts an explicitly unknown shooter', function () {
+  test('flight', 'training destruction accepts an explicitly unknown shooter', function () {
     var DW = window.Driftworks, combat = DW.training.create('training'), pose = DW.arcade.create(20);
     DW.training.spawn(combat, pose, 20);
     var victim = combat.enemies[0];
@@ -438,7 +424,7 @@
     return {getElementById:function(id){return elements[id]||(elements[id]=element());},createElement:element,body:{classList:{toggle:function(name){classes[name]=!classes[name];return classes[name];}}}};
   }
 
-  test('flight diagnostics preserve frame pacing, elapsed clamps and measurement resets',function(){
+  test('flight', 'flight diagnostics preserve frame pacing, elapsed clamps and measurement resets',function(){
     var doc=flightDisplayDocument(),now=1000,reads=0;
     doc.getElementById('fps-cap').value='60';doc.getElementById('render-mode').value='normal';doc.getElementById('render-scale').value='0.5';
     doc.getElementById('draw-mothership').checked=true;doc.getElementById('draw-enemies').checked=true;
@@ -463,7 +449,7 @@
     frame=diagnostics.beginFrame(3300,true);diagnostics.endFrame(frame,true,comparison,stats);assert(!overlay.hidden&&overlay.textContent.indexOf('PAUSED / 15 FPS CAP')===0);
   });
 
-  test('flight presentation shares appearance and preserves fleet, wreck and effect submission order',function(){
+  test('rendering', 'flight presentation shares appearance and preserves fleet, wreck and effect submission order',function(){
     var DW=window.Driftworks,doc=flightDisplayDocument(),saved={packs:DW.shipPackModels,scene:DW.scene3d.create,sky:DW.flightSkybox.create,gunGeometry:DW.flightGuns.geometry,blockout:DW.training.geometry};
     var events=[],fleets=[],scorches=[],engines=[],actors,effects,hullQuery,textureImages=new Map(),sourceWorld={},world=sourceWorld,sceneStats={},skyStats={};
     var scene={setStudyExplosions:function(){},setSurfaceCamera:function(pose){events.push('pose');assert(pose.eye===player.eye);},setStudyActors:function(value){events.push('actors');actors=value;},setStudyEffects:function(value){events.push('effects');effects=value;},setStudyDiagnostics:function(value){events.push('diagnostics');assert(value===comparison);},sync:function(value){events.push('sync');assert(value===world);},render:function(value,a,b,dt){events.push('scene');assert(value===world&&a===1&&b===0&&dt===.05);},getRenderStats:function(){return sceneStats;}};
@@ -588,7 +574,7 @@
     return {controls:controls,doc:doc,win:win,host:host,counts:counts,key:key,elements:elements,setPads:function(value){pads=value;},setPaused:function(value){paused=value;},setDead:function(value){dead=value;}};
   }
 
-  test('phone input detection ignores legacy desktop preference and retains explicit phone overrides',function(){
+  test('flight', 'phone input detection ignores legacy desktop preference and retains explicit phone overrides',function(){
     var stored={'driftworks.flight.input-mode':'mouse'},storage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};
     var phone=flightControlsFixture(storage,true,{coarse:true});
     assert(phone.controls.view().inputMode==='touch');
@@ -602,7 +588,7 @@
     assert(flightControlsFixture(storage,true,{search:'?note=mobile=1'}).controls.view().inputMode==='controller');
   });
 
-  test('touch start requests document fullscreen while desktop start does not',function(){
+  test('flight', 'touch start requests document fullscreen while desktop start does not',function(){
     var f=flightControlsFixture(undefined,true),requests=0,exits=0;
     f.doc.documentElement={requestFullscreen:function(){requests++;return Promise.resolve();}};
     f.doc.exitFullscreen=function(){exits++;return Promise.resolve();};
@@ -614,7 +600,7 @@
     f.elements.fly.emit('click');assert(requests===1);
   });
 
-  test('touch flight keeps two pointers independent and releases on cancellation and pause',function(){
+  test('flight', 'touch flight keeps two pointers independent and releases on cancellation and pause',function(){
     var f=flightControlsFixture(undefined,true),root=f.elements['touch-controls'],stick=f.elements['touch-stick'];
     function event(id,x,y){return {pointerId:id,clientX:x,clientY:y,preventDefault:function(){}};}
     assert(f.controls.view().inputMode==='touch');
@@ -630,7 +616,7 @@
     assert(!f.controls.view().showMouseStick);
   });
 
-  test('flight settings follow the player between lab and mission mounts',function(){
+  test('flight', 'flight settings follow the player between lab and mission mounts',function(){
     var stored={},storage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};
     var lab=flightControlsFixture(storage);
     lab.elements['input-mode'].value='controller';lab.elements['input-mode'].onchange();
@@ -646,7 +632,7 @@
     var defaults=flightControlsFixture(storage);assert(defaults.controls.view().inputMode==='mouse');assert(defaults.elements.sensitivity.value==='1');
   });
 
-  test('flight controls leave modified browser and OS shortcuts alone',function(){
+  test('flight', 'flight controls leave modified browser and OS shortcuts alone',function(){
     var f=flightControlsFixture();
     ['ctrlKey','altKey','metaKey'].forEach(function(modifier){
       f.key('KeyW');
@@ -664,7 +650,7 @@
     f.key('KeyP');assert(f.counts.performance===1);
   });
 
-  test('flight controls retain keyboard focus guards, shortcuts and pause clearing',function(){
+  test('flight', 'flight controls retain keyboard focus guards, shortcuts and pause clearing',function(){
     var f=flightControlsFixture(),c=f.controls;
     assert(f.key('KeyW').prevented);assert(c.sample().throttleRate===1);
     f.win.emit('keyup',{code:'KeyW'});assert(c.sample().throttleRate===0);
@@ -678,7 +664,7 @@
     f.setPaused(false);f.doc.hidden=true;f.doc.emit('visibilitychange');assert(f.counts.pause===3);
   });
 
-  test('flight controls preserve pointer capture and fall back to cursor steering',function(){
+  test('flight', 'flight controls preserve pointer capture and fall back to cursor steering',function(){
     var f=flightControlsFixture(),c=f.controls;
     f.elements['steering-preset'].value='wide-linear';
     c.capture();assert(f.counts.failure===0&&f.counts.resume===1&&c.view().uncapturedMouse);
@@ -703,7 +689,7 @@
     f.setDead(true);f.doc.pointerLockElement=f.host;f.doc.emit('pointerlockchange');assert(f.counts.resume===4&&f.counts.pause===2);
   });
 
-  test('cursor fallback pauses on exit and ignores a late canceled capture failure',function(){
+  test('flight', 'cursor fallback pauses on exit and ignores a late canceled capture failure',function(){
     var f=flightControlsFixture(),reject;
     f.controls.capture();f.doc.emit('mousemove',{clientX:600,clientY:350});assert(f.controls.sample().yaw!==0);
     f.host.emit('mouseleave');assert(f.counts.pause===1&&!f.controls.view().uncapturedMouse&&f.controls.sample().yaw===0);
@@ -712,7 +698,7 @@
     assert(f.counts.resume===resumes&&!f.controls.view().uncapturedMouse);
   });
 
-  test('paused steering presets preserve all three travel and response combinations',function(){
+  test('flight', 'paused steering presets preserve all three travel and response combinations',function(){
     var f=flightControlsFixture(),c=f.controls,preset=f.elements['steering-preset'];
     assert(preset.value==='medium-soft');assertClose(c.view().stickRange,240);
     preset.value='medium-soft';preset.onchange();assert(f.counts.pause===1);assertClose(c.view().stickRange,240);
@@ -726,7 +712,7 @@
     f.doc.emit('mousemove',{movementX:194.4,movementY:0});assertClose(c.sample().yaw,-.5);
   });
 
-  test('mouse guide follows recent stick movement without noise or held input stealing it back',function(){
+  test('flight', 'mouse guide follows recent stick movement without noise or held input stealing it back',function(){
     var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Guide pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
     f.setPads([pad]);c.sample();assert(c.view().showMouseStick);
     f.doc.pointerLockElement=f.host;f.doc.emit('mousemove',{movementX:60,movementY:0});
@@ -740,7 +726,7 @@
     f.doc.emit('mousemove',{movementX:1,movementY:0});assert(c.view().showMouseStick);
   });
 
-  test('fresh controller buttons take over from mouse and another idle device',function(){
+  test('flight', 'fresh controller buttons take over from mouse and another idle device',function(){
     var f=flightControlsFixture(),c=f.controls;
     function pad(index){return {index:index,id:'Takeover '+index,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};}
     var idle=pad(0),active=pad(1);f.setPads([idle,active]);c.sample();
@@ -755,7 +741,7 @@
     active.buttons[9].pressed=false;c.sample();f.setDead(true);active.buttons[2].pressed=true;c.sample();assert(f.counts.resume===1,'Cannot resume a dead ship');
   });
 
-  test('nonstandard joystick throttle axis and increase/decrease buttons can be remapped',function(){
+  test('flight', 'nonstandard joystick throttle axis and increase/decrease buttons can be remapped',function(){
     var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Throttle pad',connected:true,mapping:'',axes:[0,0,0,-1],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
     f.setPads([pad]);c.sample();var bindings=f.elements.bindings.children;
     bindings[3].children[0].value='3';bindings[3].children[0].onchange();assertClose(c.sample().throttle,1);
@@ -768,7 +754,7 @@
     pad.buttons[4].pressed=false;pad.buttons[5].pressed=true;assertClose(c.sample().throttleRate,-1);
   });
 
-  test('flight controls retain controller edges, editable bindings and disconnect pause',function(){
+  test('flight', 'flight controls retain controller edges, editable bindings and disconnect pause',function(){
     var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Test controller',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
     f.setPads([null,pad,null]);c.sample();assert(f.elements.bindings.children.length===11);
     pad.buttons[3].pressed=true;c.sample();c.sample();assert(f.counts.weapon===1);
@@ -780,7 +766,7 @@
     f.setPaused(false);f.key('KeyW');f.setPads([]);c.sample();assert(f.counts.pause===3&&c.sample().throttleRate===0);
   });
 
-  test('flight mixer preserves urgent impacts and ducks only audible comms', function () {
+  test('audio', 'flight mixer preserves urgent impacts and ducks only audible comms', function () {
     var api=window.Driftworks.audio._test, mix=api.normalizeMix({});
     assert(mix.engine<mix.impacts && mix.weapons<mix.comms);
     var idle=api.mixLevels(mix,false,false),speech=api.mixLevels(mix,true,false),hit=api.mixLevels(mix,true,true);
@@ -797,7 +783,7 @@
     assert(repaired.engine===.55 && repaired.weapons===1 && repaired.impacts===0 && repaired.comms===.85);
   });
 
-  test('engine presets repair invalid values and spool independently of frame rate', function () {
+  test('audio', 'engine presets repair invalid values and spool independently of frame rate', function () {
     var engine = window.Driftworks.audio.engine;
     assert(engine.presets.length === 8);
     var repaired = engine.normalize({bass: NaN, pitch: 99, spool: -4, flutter: Infinity});
@@ -819,7 +805,7 @@
     });
   });
 
-  test('layered engine graph starts once, accepts tuning, and stops every source on disposal', function () {
+  test('audio', 'layered engine graph starts once, accepts tuning, and stops every source on disposal', function () {
     var params=[], sources=[], gains=[], filters=[];
     function param() {var p={value:0,setTargetAtTime:function(value){assert(Number.isFinite(value));p.value=value;},setValueAtTime:function(value){assert(Number.isFinite(value));p.value=value;},cancelScheduledValues:function(){},exponentialRampToValueAtTime:function(value){assert(value>0);p.value=value;}};params.push(p);return p;}
     function node() {return {connect:function(next){return next;},disconnect:function(){}};}
@@ -868,7 +854,7 @@
     voice.update(.1,{throttle:1});assert(gains[0].gain.value===0);
   });
 
-  test('flight engine bass spools up, releases and cuts on pause', function () {
+  test('audio', 'flight engine bass spools up, releases and cuts on pause', function () {
     var audio = Driftworks.audio;
     audio.flightFeedback(0, 0, false, false);
     var cruise = audio.flightFeedback(.016, 1, false, true);
@@ -881,7 +867,7 @@
     assert(stopped.load === 0 && stopped.boost === 0);
   });
 
-  test('gamepad rumble mixes boost and priority jolts, stops and tolerates unsupported hardware', function () {
+  test('flight', 'gamepad rumble mixes boost and priority jolts, stops and tolerates unsupported hardware', function () {
     var f=flightControlsFixture(),calls=[],resets=0;
     f.elements['input-mode'].value='controller';
     var actuator={playEffect:function(type,effect){calls.push(effect);assert(type==='dual-rumble');return Promise.resolve('complete');},reset:function(){resets++;return Promise.resolve('complete');}};
@@ -907,7 +893,7 @@
     f.controls.haptics(.1,{hit:true});f.controls.clear();
   });
 
-  test('wormhole haptics are gentle nearby, pulse at crossing, and yield to damage', function(){
+  test('flight', 'wormhole haptics are gentle nearby, pulse at crossing, and yield to damage', function(){
     var f=flightControlsFixture(),calls=[];f.elements['input-mode'].value='controller';
     f.setPads([{index:0,id:'Throat pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[],vibrationActuator:{playEffect:function(type,effect){calls.push(effect);return Promise.resolve('complete');},reset:function(){return Promise.resolve('complete');}}}]);
     f.controls.sample();f.controls.haptics(.1,{throat:1});assert(calls[0].strongMagnitude===.08&&calls[0].weakMagnitude===.14);
@@ -916,7 +902,7 @@
     f.controls.clear();f.elements.rumble.checked=false;f.controls.haptics(.1,{throat:1,transit:true});assert(calls.length===3,'Existing rumble opt-out applies');
   });
 
-  test('mouse takeover stops rumble until fresh controller activity resumes it', function () {
+  test('flight', 'mouse takeover stops rumble until fresh controller activity resumes it', function () {
     var f=flightControlsFixture(),c=f.controls,calls=0,resets=0;
     var pad={index:0,id:'Takeover rumble',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:[],vibrationActuator:{
       playEffect:function(){calls++;return Promise.resolve('complete');},
@@ -931,7 +917,7 @@
     pad.axes[0]=.9;c.sample();c.haptics(.1,{fire:true});assert(calls===2,'Fresh controller activity restores rumble');
   });
 
-  test('asteroid patrol has two hostiles, seeded terrain and no reinforcements', function () {
+  test('flight', 'asteroid patrol has two hostiles, seeded terrain and no reinforcements', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({seed:123}),config={mode:'asteroid-patrol',enabled:true,profile:DW.arcade.profiles[0]};
     var view=session.reset(config),rock=JSON.stringify(view.asteroid);
     assert(view.combat.enemies.length===2);
@@ -950,7 +936,7 @@
     assert(JSON.stringify(DW.flightSession.create({seed:124}).snapshot().asteroid)!==rock,'Seed changes asteroid');
   });
 
-  test('flight session reset replaces sortie state and preserves the environment', function () {
+  test('flight', 'flight session reset replaces sortie state and preserves the environment', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0]};
     var first=session.reset(config),world=first.world;
     assertClose(first.asteroid.radius*sim.METERS_PER_UNIT,1250);
@@ -968,7 +954,7 @@
     var toggled=session.setCombat('training',false);assert(toggled.state===player && toggled.guns===guns && toggled.combat.countdown===0);
   });
 
-  test('flight session operations own size, study starts and the current scenery clock', function () {
+  test('flight', 'flight session operations own size, study starts and the current scenery clock', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'training',enabled:false,profile:DW.arcade.profiles[0]};
     var view=session.reset(config),radius=view.asteroid.radius;
     [NaN,Infinity,199,4001].forEach(function(d){assert(!session.setAsteroidDiameter(d) && view.asteroid.radius===radius);});
@@ -988,7 +974,7 @@
     assert(next.state.eye[2]===101 && state.eye[2]===100,'Operations follow replaced sortie state');
   });
 
-  test('session target and opponent operations use the current combat after transitions', function () {
+  test('flight', 'session target and opponent operations use the current combat after transitions', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0]};
     var old=session.reset(config).combat,view=session.reset(config),combat=view.combat;
     session.setOpponentStyle('passer');
@@ -1007,7 +993,7 @@
     assert(session.snapshot().combat.targetId===null && !session.snapshot().combat.targetLocked);
   });
 
-  test('session combat configuration survives reset and immediate or delayed combat spawning', function () {
+  test('flight', 'session combat configuration survives reset and immediate or delayed combat spawning', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({});
     var config={mode:'training',enabled:true,profile:DW.arcade.profiles[0]};
     session.reset(config);session.setOpponentStyle('passer');session.configureHulls('','');
@@ -1027,7 +1013,7 @@
     assert(reset.combat.opponentStyle==='passer' && reset.combat.enemies.every(function(e){return e.opponentStyle==='passer' && e.collision.modelId==='blockout';}));
   });
 
-  test('fresh flight views follow replacements without caller synchronization', function () {
+  test('flight', 'fresh flight views follow replacements without caller synchronization', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({}),initial=session.snapshot();
     session.reset({mode:'training',enabled:false,profile:DW.arcade.profiles[0]});
     var sortie=session.snapshot();
@@ -1042,7 +1028,7 @@
     assert(session.snapshot().combat===toggled.combat);
   });
 
-  test('flight asteroid spins in simulation time and contact queries use its body frame', function () {
+  test('flight', 'flight asteroid spins in simulation time and contact queries use its body frame', function () {
     var DW=window.Driftworks, sampled, session=DW.flightSession.create({
       surfaceFrame:function(a,d){sampled=d;return {point:d};},
       terrainHit:function(){return null;},onGunshot:function(){},onImpact:function(){}
@@ -1073,7 +1059,7 @@
     p.forEach(function(v,i){assertClose(roundtrip[i],v);});
   });
 
-  test('manual flight fixed ticks reproduce combat, guns and spin across frame batching', function () {
+  test('flight', 'manual flight fixed ticks reproduce combat, guns and spin across frame batching', function () {
     var DW=window.Driftworks,dt=1/120;
     var config={mode:'training',enabled:true,profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]};
     var controls={throttle:.8,throttleRate:0,stop:false,fire:true,pitch:.5,yaw:.2,roll:0,boost:false};
@@ -1093,7 +1079,7 @@
     assert(run(irregular)===reference);
   });
 
-  test('manual flight retains fractional ticks, samples current demand and clears reset time', function () {
+  test('flight', 'manual flight retains fractional ticks, samples current demand and clears reset time', function () {
     var DW=window.Driftworks,dt=1/120,session=DW.flightSession.create({onGunshot:function(){},onImpact:function(){}});
     var config={mode:'training',enabled:false,profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]};
     var view=session.reset(config),controls={throttle:0,throttleRate:0,stop:false,fire:false};
@@ -1116,7 +1102,7 @@
     assert(view.state.throttle===.7,'Rejected calls must preserve valid accumulated time');
   });
 
-  test('flight session substeps preserve movement, training, guns, audio and contact order', function () {
+  test('flight', 'flight session substeps preserve movement, training, guns, audio and contact order', function () {
     var DW=window.Driftworks,model=DW.arcade,training=DW.training,guns=DW.flightGuns;
     var saved=[model.step,training.step,guns.step,training.trace,model.contact],events=[],dead=false;
     var terrain=function(){},session=DW.flightSession.create({terrainHit:terrain,surfaceFrame:function(){events.push('surface');return {point:[1,0,0]};},onGunshot:function(){events.push('shot');},onImpact:function(){events.push('impact');}});
@@ -1142,7 +1128,7 @@
     }finally{model.step=saved[0];training.step=saved[1];guns.step=saved[2];training.trace=saved[3];model.contact=saved[4];}
   });
 
-  test('shared duel ticks preserve damage sampling, no-terrain stepping and terminal gun work', function () {
+  test('flight', 'shared duel ticks preserve damage sampling, no-terrain stepping and terminal gun work', function () {
     var DW=window.Driftworks,training=DW.training,guns=DW.flightGuns;
     var savedStep=training.step,savedGuns=guns.step,savedTrace=training.trace,savedAim=training.convergencePoint;
     try {
@@ -1173,7 +1159,7 @@
     } finally {training.step=savedStep;guns.step=savedGuns;training.trace=savedTrace;training.convergencePoint=savedAim;}
   });
 
-  test('furball pilots keep a varied adult cast across lines and rounds', function () {
+  test('flight', 'furball pilots keep a varied adult cast across lines and rounds', function () {
     var api=window.Driftworks.flightComms,seen={};
     for(var i=0;i<16;i++) {
       var craft={id:'wave-1-'+i,index:i,team:i<8?'ally':'enemy'},v=api.pilotVoice(craft);
@@ -1192,7 +1178,7 @@
     assert(JSON.stringify(line.voiceSettings)===JSON.stringify(api.pilotVoice(craft)));
   });
 
-  test('pilot emotions survive maneuver changes and decay on active flight time', function () {
+  test('flight', 'pilot emotions survive maneuver changes and decay on active flight time', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var a={id:'a',team:'ally',hp:90,mode:'approach'},r={id:'r',team:'enemy',hp:90,mode:'approach'};
     var t={enabled:true,wave:1,hull:100,enemies:[a,r]};
@@ -1213,7 +1199,7 @@
     assert(Object.keys(api.create().emotions).length===0);
   });
 
-  test('sustained pressure prompts an emotional reply without a tactical order', function () {
+  test('flight', 'sustained pressure prompts an emotional reply without a tactical order', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var a={id:'a',team:'ally',hp:90,mode:'evade'},h={id:'h',team:'ally',hp:90,mode:'recover'};
     var r={id:'r',team:'enemy',hp:90,mode:'attack',targetId:'a'};
@@ -1232,7 +1218,7 @@
     a.hp=20;api.step(clock,0,t,true,rng);assert(clock.emotions.a.current==='panicked');
   });
 
-  test('emotional replies expire and require a living composed teammate', function () {
+  test('flight', 'emotional replies expire and require a living composed teammate', function () {
     var api=window.Driftworks.flightComms,rng=function(){return 0;};
     ['expired','dead','enemy','panicked'].forEach(function(reason){
       var clock=api.create(),a={id:'a',team:'ally',hp:90,mode:'attack'},h={id:'h',team:'ally',hp:90,mode:'attack'};
@@ -1247,7 +1233,7 @@
     });
   });
 
-  test('stress accumulates from small hits and blocks cheerful modifiers after damage', function () {
+  test('flight', 'stress accumulates from small hits and blocks cheerful modifiers after damage', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var a={id:'a',team:'ally',hp:90,mode:'attack'},h={id:'h',team:'ally',hp:90,mode:'recover'};
     var r={id:'r',team:'enemy',hp:90,mode:'attack',targetId:'a'};
@@ -1269,7 +1255,7 @@
     api.step(clock,40,t,true,rng);assert(clock.emotions.a.current==='calm'&&clock.emotions.a.stress===0);
   });
 
-  test('stress thresholds have hysteresis and recovery is independent of frame size', function () {
+  test('flight', 'stress thresholds have hysteresis and recovery is independent of frame size', function () {
     var api=window.Driftworks.flightComms,rng=function(){return 0;};
     function run(parts){
       var clock=api.create(),a={id:'a',team:'ally',hp:90,mode:'attack'},t={enabled:true,hull:100,enemies:[a]};
@@ -1281,7 +1267,7 @@
     assert(run([17]).current==='afraid');
   });
 
-  test('combat outcomes set frustration, confidence, confusion and relief', function () {
+  test('flight', 'combat outcomes set frustration, confidence, confusion and relief', function () {
     var api=window.Driftworks.flightComms,rng=function(){return 0;};
     var a={id:'a',index:0,team:'ally',hp:90,mode:'attack',targetId:'r',fire:true};
     var h={id:'h',index:1,team:'ally',hp:90,mode:'approach'};
@@ -1297,7 +1283,7 @@
     api.step(clock,0,t,true,rng);assert(clock.emotions.h.current==='confused');
   });
 
-  test('emotions shape synthetic delivery while retaining the pilot voice', function () {
+  test('audio', 'emotions shape synthetic delivery while retaining the pilot voice', function () {
     var api=window.Driftworks.flightComms,mumble=window.Driftworks.mumble,base=mumble.presets.Scout;
     var afraid=api.voiceOptions(base,{current:'afraid',intensity:1});
     var panic=api.voiceOptions(base,{current:'panicked',intensity:1});
@@ -1311,7 +1297,7 @@
     });
   });
 
-  test('comms observes frozen gameplay through contacts, damage, losses and lifecycle changes', function () {
+  test('flight', 'comms observes frozen gameplay through contacts, damage, losses and lifecycle changes', function () {
     var DW=window.Driftworks,api=DW.flightComms,clock=api.create(),session=DW.flightSession.create({seed:29});
     var view=session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]});
     var ally=view.combat.enemies.find(function(c){return c.team==='ally';});
@@ -1353,7 +1339,7 @@
     assert(clock.facts.length===0 && clock.situation===null && Object.keys(clock.emotions).length===0);
   });
 
-  test('enabling comms leaves live simulation state and subsequent ticks identical', function () {
+  test('flight', 'enabling comms leaves live simulation state and subsequent ticks identical', function () {
     var DW=window.Driftworks,api=DW.flightComms,clock=api.create(),lines=0;
     var environment={seed:29,onGunshot:function(){},onImpact:function(){}};
     var observed=DW.flightSession.create(environment),silent=DW.flightSession.create(environment);
@@ -1372,7 +1358,7 @@
     assert(observed.snapshot().guns.fired>0 && observed.snapshot().combat.time>0,'Exercise real weapons and combat');
   });
 
-  test('flight comms spaces lines and uses living combatants', function () {
+  test('flight', 'flight comms spaces lines and uses living combatants', function () {
     var api=window.Driftworks.flightComms, clock=api.create(), combat={enabled:true,dead:false,hull:100,enemies:[{hp:10,team:'enemy'}]}, rng=function(){return 0;};
     assert(api.step(clock,3,combat,false,rng)===null);
     assert(api.step(clock,1,combat,true,rng)===null);
@@ -1387,7 +1373,7 @@
     assert(api.create().wait===4);
   });
 
-  test('flight comms reacts to transitions after two quiet seconds without stale calls', function () {
+  test('flight', 'flight comms reacts to transitions after two quiet seconds without stale calls', function () {
     var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0;};
     var wing={id:'wing',index:0,team:'ally',hp:90,mode:'approach'};
     var combat={enabled:true,dead:false,hull:100,enemies:[wing]};
@@ -1409,7 +1395,7 @@
     assert(Object.keys(clock.modes).length===0 && Object.keys(clock.spoken).length===0);
   });
 
-  test('flight comms prioritizes distress and checks tail geometry', function () {
+  test('flight', 'flight comms prioritizes distress and checks tail geometry', function () {
     var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0;};
     var wing={id:'wing',team:'ally',hp:90,mode:'attack',pose:{eye:[0,0,0],back:[0,0,1]}};
     var red={id:'red',team:'enemy',hp:90,mode:'approach',targetId:'wing',pose:{eye:[0,0,5]}};
@@ -1424,7 +1410,7 @@
     wing.mode='evade';wing.hp=0;assert(api.step(clock,0,combat,false,rng)===null);
   });
 
-  test('flight comms varies gaps and describes firing and target changes', function () {
+  test('flight', 'flight comms varies gaps and describes firing and target changes', function () {
     var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0.8;};
     var red={id:'red',hp:90,team:'ally',mode:'attack',targetId:'one',fire:false};
     var combat={enabled:true,dead:false,hull:100,enemies:[red]};
@@ -1439,7 +1425,7 @@
     assert(api.step(clock,5,combat,false,rng)===null); // No replay when the action stays unchanged.
   });
 
-  test('player-directed rival taunts beat routine chatter without waiting for ambient silence', function () {
+  test('flight', 'player-directed rival taunts beat routine chatter without waiting for ambient silence', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return .4;};
     var ally={id:'ally',team:'ally',index:0,hp:90,mode:'approach'},red={id:'red',team:'enemy',index:1,hp:90,mode:'attack',targetId:'player'};
     var combat={enabled:true,wave:1,time:0,hull:100,enemies:[ally,red]};
@@ -1454,7 +1440,7 @@
     assert(line&&line.event==='evade'&&!line.hostile,'Urgent flight calls still outrank teasing');
   });
 
-  test('enemy comms only broadcasts taunts despite maneuvers, damage and emotions', function () {
+  test('flight', 'enemy comms only broadcasts taunts despite maneuvers, damage and emotions', function () {
     var api=window.Driftworks.flightComms, clock=api.create(), rng=function(){return 0;};
     var red={id:'red',hp:90,team:'enemy',mode:'approach',targetId:'player',fire:false};
     var combat={enabled:true,wave:1,time:0,hull:100,enemies:[red],radioEvents:[]};
@@ -1473,7 +1459,7 @@
     }
   });
 
-  test('flight comms balances activities instead of counting pilots', function () {
+  test('flight', 'flight comms balances activities instead of counting pilots', function () {
     var api=window.Driftworks.flightComms, clock=api.create();
     var craft=Array.from({length:9},function(_,i){return {id:'c'+i,hp:90,team:'ally',mode:'approach',fire:false};});
     var combat={enabled:true,dead:false,hull:100,enemies:craft};
@@ -1493,7 +1479,7 @@
     assert(clock.recentActivities.join(',')==='offense,recover,offense');
   });
 
-  test('flight comms answers cover requests only when a wingmate is helping', function () {
+  test('flight', 'flight comms answers cover requests only when a wingmate is helping', function () {
     var api=window.Driftworks.flightComms, rng=function(){return 0;}, clock=api.create();
     var caller={id:'caller',team:'ally',hp:90,mode:'attack'};
     var threat={id:'threat',team:'enemy',hp:90,mode:'attack',targetId:'caller',pose:{eye:[10,0,0]}};
@@ -1514,7 +1500,7 @@
     assert(api.step(clock,3,combat,false,rng)===null); // Exchange ends after A/B/A.
   });
 
-  test('replies outrank urgent calls, bypass cooldowns and expire on a busy channel', function () {
+  test('flight', 'replies outrank urgent calls, bypass cooldowns and expire on a busy channel', function () {
     var api=window.Driftworks.flightComms, rng=function(){return 0;};
     [5,5.01].forEach(function(delay){
       var clock=api.create(), caller={id:'c',team:'ally',hp:90,mode:'evade'};
@@ -1539,7 +1525,7 @@
     });
   });
 
-  test('flight comms cancels cover exchanges when the fight changes', function () {
+  test('flight', 'flight comms cancels cover exchanges when the fight changes', function () {
     var api=window.Driftworks.flightComms, rng=function(){return 0;};
     ['dead caller','dead threat','retarget','expired','disabled','wrong team','wrong target','not attacking'].forEach(function (reason) {
       var clock=api.create(), caller={id:'c',team:'ally',hp:90,mode:'evade'};
@@ -1558,7 +1544,7 @@
     });
   });
 
-  test('radio templates speak dynamic numbers and keep singular remaining calls accurate', function () {
+  test('flight', 'radio templates speak dynamic numbers and keep singular remaining calls accurate', function () {
     var api=window.Driftworks.flightComms;
     assert(api.numberWords(70)==='seventy' && api.numberWords(125)==='one hundred twenty five');
     assert(api.numberWords(Infinity)==='zero');
@@ -1568,7 +1554,7 @@
     assert(api.compose('remaining',{count:1})[0].indexOf('One left')===0);
   });
 
-  test('training records attributed deaths once and real shield depletion', function () {
+  test('flight', 'training records attributed deaths once and real shield depletion', function () {
     var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18);
     ai.spawn(t,player,18);var victim=t.enemies[8],killer=t.enemies[2],weapon={damage:1000,armorFactor:1,shieldFactor:1};
     ai.damageEnemy(t,victim,weapon,killer);ai.damageEnemy(t,victim,weapon,killer);
@@ -1580,7 +1566,7 @@
     assert(t.radioEvents.filter(function(e){return e.kind==='shield';}).length===1);
   });
 
-  test('training near misses use clipped projectile segments and throttle repeat reports', function () {
+  test('flight', 'training near misses use clipped projectile segments and throttle repeat reports', function () {
     var ai=window.Driftworks.training,t=ai.create(),U=sim.METERS_PER_UNIT,player={eye:[0,20/U,0]},bolt={weapon:{damage:1,armorFactor:1,shieldFactor:1}};
     ai.trace(t,[-50/U,0,0],[50/U,0,0],bolt,'enemy',null,player);
     assert(t.radioEvents.length===1 && t.radioEvents[0].kind==='near');
@@ -1590,7 +1576,7 @@
     assert(t.radioEvents.length===1); // Rock intercepts the bolt before its close pass.
   });
 
-  test('radio announces losses from surviving witnesses and expires facts across waves', function () {
+  test('flight', 'radio announces losses from surviving witnesses and expires facts across waves', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var wing={id:'w',index:0,team:'ally',mode:'attack',hp:90},lost={id:'four',index:3,team:'ally',mode:'attack',hp:0};
     var combat={enabled:true,dead:false,wave:1,time:1,hull:100,enemies:[wing,lost],radioEvents:[{serial:1,wave:1,time:1,kind:'destroyed',victim:'four',index:3,team:'ally'}]};
@@ -1603,7 +1589,7 @@
     api.step(clock,8,combat,true,rng);assert(clock.facts.length===0);
   });
 
-  test('radio tracks kill praise, player streaks and changing force counts', function () {
+  test('flight', 'radio tracks kill praise, player streaks and changing force counts', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var craft=[{id:'one',index:0,team:'ally',hp:90,mode:'attack'},{id:'three',index:2,team:'ally',hp:90,mode:'attack'},
       {id:'red1',team:'enemy',hp:90,mode:'attack'},{id:'red2',team:'enemy',hp:90,mode:'attack'}];
@@ -1622,7 +1608,7 @@
     api.step(clock,0,t,true,rng);assert(clock.facts.some(function(e){return e.event==='streak'&&e.data.count===2;}));
   });
 
-  test('radio observes hull vulnerability, shaken pursuit and actual closing speed', function () {
+  test('flight', 'radio observes hull vulnerability, shaken pursuit and actual closing speed', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var ally={id:'a',team:'ally',hp:90,mode:'evade',targetId:'r'};
     var red={id:'r',index:8,team:'enemy',hp:90,mode:'attack',targetId:'a',pose:{eye:[10,0,0],velocity:[0,0,0]}};
@@ -1636,7 +1622,7 @@
     var call=api.step(clock,0,t,false,rng,player);assert(call.event==='closing'&&call.text.indexOf('seventy')>=0);
   });
 
-  test('radio only calls a firing pass missed when the target took no damage', function () {
+  test('flight', 'radio only calls a firing pass missed when the target took no damage', function () {
     var api=window.Driftworks.flightComms,rng=function(){return 0;};
     [false,true].forEach(function(hit){
       var clock=api.create(),a={id:'a',team:'ally',mode:'attack',hp:90,fire:true,targetId:'r'},r={id:'r',team:'enemy',mode:'approach',hp:90};
@@ -1648,7 +1634,7 @@
     });
   });
 
-  test('radio discards obsolete shield and remaining-count facts', function () {
+  test('flight', 'radio discards obsolete shield and remaining-count facts', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var a={id:'a',team:'ally',hp:90,mode:'attack'},r={id:'r',team:'enemy',hp:90,mode:'attack'},s={id:'s',team:'enemy',hp:90,mode:'attack'};
     var t={enabled:true,dead:false,wave:1,time:1,hull:100,shield:0,enemies:[a,r,s],radioEvents:[]};
@@ -1660,7 +1646,7 @@
     assert(!clock.facts.some(function(e){return e.event==='shield'||e.event==='remaining';}));
   });
 
-  test('contact reports use player-relative clock directions and rounded SI ranges', function () {
+  test('flight', 'contact reports use player-relative clock directions and rounded SI ranges', function () {
     var api=window.Driftworks.flightComms,U=sim.METERS_PER_UNIT;
     var player={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     var front=api.contactData(player,[10,20+644/U,30]);
@@ -1676,7 +1662,7 @@
     assert(api.contactData({},[0,0,0])===null);
   });
 
-  test('contact acquisition refreshes bearing before speech and prevents duplicate reports', function () {
+  test('flight', 'contact acquisition refreshes bearing before speech and prevents duplicate reports', function () {
     var api=window.Driftworks.flightComms,U=sim.METERS_PER_UNIT,clock=api.create(),rng=function(){return 0;};
     var player={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0],velocity:[0,0,0]};
     var red={id:'r',team:'enemy',hp:90,mode:'approach',pose:{eye:[0,500/U,0],velocity:[0,0,0]}};
@@ -1692,7 +1678,7 @@
     red.hp=0;api.step(clock,1,t,true,rng,player);assert(clock.facts.length===0);
   });
 
-  test('comms speaker highlight follows transmission lifetime, mute, pause and reset', function () {
+  test('flight', 'comms speaker highlight follows transmission lifetime, mute, pause and reset', function () {
     var api=window.Driftworks.flightComms,fields=[{textContent:''},{textContent:''}];
     var panel={querySelector:function(selector){return selector==='[data-speaker]'?fields[0]:fields[1];},classList:{add:function(){},remove:function(){},toggle:function(){}}};
     var toggle={setAttribute:function(){},textContent:''},radio=api.mount(panel,toggle);
@@ -1708,7 +1694,7 @@
     radio.reset();assert(radio.speakerId()===null);
   });
 
-  test('radio routes into the shared mixer and clears ducking on end, mute and pause', function () {
+  test('audio', 'radio routes into the shared mixer and clears ducking on end, mute and pause', function () {
     var DW=window.Driftworks, oldChannel=DW.audio.commsChannel, oldActive=DW.audio.setCommsActive;
     var oldRender=DW.mumble.render, oldTransmit=DW.mumble.transmit, sources=[], activity=[], output={};
     var context={state:'running',createBuffer:function(){return {copyToChannel:function(){}};},
@@ -1732,7 +1718,7 @@
     } finally {DW.audio.commsChannel=oldChannel;DW.audio.setCommsActive=oldActive;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
   });
 
-  test('radio waits for actual playback and a full silent gap before another transmission', function () {
+  test('audio', 'radio waits for actual playback and a full silent gap before another transmission', function () {
     var DW=window.Driftworks, oldChannel=DW.audio.commsChannel, oldStep=DW.flightComms.step;
     var oldRender=DW.mumble.render, oldTransmit=DW.mumble.transmit, sources=[], clock, busy;
     var context={state:'running',createBuffer:function(){return {copyToChannel:function(){}};},
@@ -1758,7 +1744,7 @@
     } finally {DW.audio.commsChannel=oldChannel;DW.flightComms.step=oldStep;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
   });
 
-  test('flight comms retains a bounded newest-first subtitle history', function () {
+  test('flight', 'flight comms retains a bounded newest-first subtitle history', function () {
     var items=[],history={children:items,ownerDocument:{createElement:function(){return {textContent:''};}},prepend:function(item){items.unshift(item);}};
     Object.defineProperty(history,'lastElementChild',{get:function(){return {remove:function(){items.pop();}};}});
     var fields=[{textContent:''},{textContent:''}],panel={ownerDocument:{getElementById:function(){return history;}},querySelector:function(s){return s==='[data-speaker]'?fields[0]:fields[1];},classList:{add:function(){},remove:function(){},toggle:function(){}}};
@@ -1767,7 +1753,7 @@
     assert(items.length===12);assert(items[0].textContent.indexOf(fields[1].textContent)>=0);
   });
 
-  test('a new mission overrides shared encounter, spawn, units and chatter without Ohio branches', function () {
+  test('flight', 'a new mission overrides shared encounter, spawn, units and chatter without Ohio branches', function () {
     var DW=window.Driftworks;
     if(DW.flightMissions.resolve('regression-mission').id==='default')DW.flightMissions.define('regression-mission',{
       encounter:{kind:'furball',count:4,spawn:{backRadii:3,altitudeMeters:500},callsigns:['One','Two','Three','Four']},
@@ -1789,7 +1775,7 @@
     assert(line&&line.text==='Custom firing report.');
   });
 
-  test('Ohio forms of address use bud, neighbor and hotshot while preserving real names', function () {
+  test('flight', 'Ohio forms of address use bud, neighbor and hotshot while preserving real names', function () {
     var api=window.Driftworks.flightDialogue;
     var near=api.compose('nearPlayer',{},true);
     assert(near[0].indexOf('bud')>=0&&near[1].indexOf('neighbor')>=0);
@@ -1800,7 +1786,7 @@
     assert(api.compose('nearPlayer',{}).some(function(text){return /pilot/.test(text);}));
   });
 
-  test('Ohio radio converts measured ranges and speeds to yards without changing source data', function () {
+  test('flight', 'Ohio radio converts measured ranges and speeds to yards without changing source data', function () {
     var api=window.Driftworks.flightDialogue, data={range:1000,bearing:'three oclock',direction:'right',height:'',speed:100,pilot:'Big Dale'};
     assert(api.compose('contact',data,true).every(function(text){return /one thousand one hundred yards/.test(text)&&!/meters/.test(text);}));
     assert(api.compose('closing',data,true).every(function(text){return /two hundred twenty miles per hour/.test(text);}));
@@ -1808,7 +1794,7 @@
     assert(data.range===1000&&data.speed===100);
   });
 
-  test('Ohio generic shooting reports do not summon an unrelated neighbor', function () {
+  test('flight', 'Ohio generic shooting reports do not summon an unrelated neighbor', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     var barb={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'attack',fire:false};
     var dale={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'approach'};
@@ -1819,7 +1805,7 @@
     assert(!line.replyTo&&!/Big Dale|Aunt Barb/.test(line.text));
   });
 
-  test('Ohio pilots address real neighbors and complete named cover exchanges', function () {
+  test('flight', 'Ohio pilots address real neighbors and complete named cover exchanges', function () {
     var api=window.Driftworks.flightComms, rng=function(){return 0;}, clock=api.create();
     var caller={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'attack'};
     var helper={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'attack',targetId:'other',pose:{eye:[0,0,0],velocity:[1,0,0]}};
@@ -1840,7 +1826,7 @@
     assert(clock.recentLines.some(function(entry){return entry.key.indexOf('{pilot}')>=0;}),'Changing names retains shared template cooldowns');
   });
 
-  test('Ohio social chatter never addresses self or a dead neighbor and uses real pilot voices', function () {
+  test('flight', 'Ohio social chatter never addresses self or a dead neighbor and uses real pilot voices', function () {
     var DW=window.Driftworks, api=DW.flightComms, rng=function(){return 0;};
     var barb={id:'barb',callsign:'Aunt Barb',index:3,team:'ally',hp:90,mode:'approach'};
     var dale={id:'dale',callsign:'Big Dale',index:6,team:'ally',hp:90,mode:'approach'};
@@ -1857,7 +1843,7 @@
     line=api.step(clock,0,combat,false,rng);assert(line&&!line.replyTo&&!/\{pilot\}/.test(line.text));
   });
 
-  test('Ohio chatter uses actual transmitted text for repeat avoidance', function () {
+  test('flight', 'Ohio chatter uses actual transmitted text for repeat avoidance', function () {
     var radio=window.Driftworks.flightComms, clock=radio.create();
     var combat={mode:'ohio',enabled:false,hull:100,enemies:[]}, heard=[];
     for(var i=0;i<10;i++) {
@@ -1871,7 +1857,7 @@
     assert(heard.some(function(text){return /deer|Ohio|orange barrels/.test(text);}));
   });
 
-  test('Ohio barn launch follows the supported deck and asteroid rotation with cached terrain queries', function () {
+  test('flight', 'Ohio barn launch follows the supported deck and asteroid rotation with cached terrain queries', function () {
     var DW=window.Driftworks,queries=0,U=sim.METERS_PER_UNIT;
     var session=DW.flightSession.create({surfaceFrame:function(){queries++;return {point:[0,0,.8],normal:[0,0,1]};},terrainHit:function(){return null;},onGunshot:function(){},onImpact:function(){}});
     var profile=DW.arcade.profiles[0],snapshot=session.reset({mode:'ohio',enabled:true,profile:profile});
@@ -1888,7 +1874,7 @@
     var clock=snapshot.combat.time;session.advance(0,demand,{profile:profile,weapon:DW.retailWeapons[0]});assert(snapshot.combat.time===clock);
   });
 
-  test('Ohio reveal gates combat, respects occupied radio, and retains its cast across waves', function () {
+  test('flight', 'Ohio reveal gates combat, respects occupied radio, and retains its cast across waves', function () {
     var DW=window.Driftworks, api=DW.training, U=sim.METERS_PER_UNIT;
     var player=DW.arcade.create(300/U), combat=api.create('ohio'), clock=DW.flightComms.create();
     api.spawn(combat,player,300/U);
@@ -1912,7 +1898,7 @@
     assert(api.create('ohio').openingStep===0);
   });
 
-  test('flight callsigns are unique, stable across waves, and shared by comms', function () {
+  test('flight', 'flight callsigns are unique, stable across waves, and shared by comms', function () {
     var api=window.Driftworks.training,U=sim.METERS_PER_UNIT,player=window.Driftworks.arcade.create(300/U),combat=api.create('furball');
     api.spawn(combat,player,300/U);
     var names=combat.enemies.map(function(e){return api.callsign(e);});
@@ -1925,7 +1911,7 @@
     assert(line.portraitIndex===0);
   });
 
-  test('target camera centers a copy, fits hull bounds and caps redraws', function () {
+  test('flight', 'target camera centers a copy, fits hull bounds and caps redraws', function () {
     var api=window.Driftworks.flightTargetCamera,DW=window.Driftworks,original=DW.scene3d.create,draws=0,batches;
     DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&options.viewer===false,'Embedded combat camera must not mount model viewer controls');return {setStudyDiagnostics:function(){},setOrbit:function(){},setStudyActors:function(value){batches=value;},setStudyEffects:function(){},sync:function(){},render:function(){draws++;}};};
     try{
@@ -1938,14 +1924,14 @@
     }finally{DW.scene3d.create=original;}
   });
 
-  test('speaker halo draws a white outline with contrast underlay', function () {
+  test('flight', 'speaker halo draws a white outline with contrast underlay', function () {
     var strokes=[],saved=0,ctx={save:function(){saved++;},restore:function(){saved--;},setLineDash:function(){},beginPath:function(){},arc:function(x,y,r){assert(x===5&&y===9&&r===10);},stroke:function(){strokes.push([this.strokeStyle,this.lineWidth]);}};
     window.Driftworks.flightRadar.speakerHalo(ctx,5,9,10);
     assert(saved===0&&strokes.length===2);
     assert(strokes[0][1]===4 && strokes[1][0]==='rgba(255,255,255,.95)' && strokes[1][1]===2);
   });
 
-  test('radio prefers unheard lines, then older and less frequent lines', function () {
+  test('flight', 'radio prefers unheard lines, then older and less frequent lines', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;},choices=['Alpha','Bravo','Charlie'];
     assert(api.pickLine(clock,choices,rng)==='Alpha');
     assert(api.pickLine(clock,choices,rng)==='Bravo');
@@ -1960,7 +1946,7 @@
     assert(api.pickLine(clock,['Only line'],rng)==='Only line'); // A single truthful option remains usable.
   });
 
-  test('radio remembers template delivery across changing names and counts', function () {
+  test('flight', 'radio remembers template delivery across changing names and counts', function () {
     var api=window.Driftworks.flightComms,clock=api.create(),rng=function(){return 0;};
     assert(api.pickLine(clock,api.compose('loss',{pilot:'Four',count:1}),rng)==='We lost Four!');
     var second=api.pickLine(clock,api.compose('loss',{pilot:'Five',count:2}),rng);
@@ -1969,7 +1955,7 @@
     assert(third==='We have lost three. Keep your eyes open.');
   });
 
-  test('flight radar uses player basis, meters, spherical range and altitude', function(){
+  test('flight', 'flight radar uses player basis, meters, spherical range and altitude', function(){
     var radar=window.Driftworks.flightRadar,state={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     var front=radar.project(state,[10,25,30],100,1000);
     assertClose(front.y,-.5);assertClose(front.x,0);assertClose(front.distance,500);
@@ -1983,7 +1969,7 @@
     assertClose(radar.project(state,[20,20,30],100,1000).y,1);
   });
 
-  test('mumble produces deterministic syllables, pauses, and finite bounded audio', function () {
+  test('audio', 'mumble produces deterministic syllables, pauses, and finite bounded audio', function () {
     var api = window.Driftworks.mumble, line = 'Stay close, pilot! Ready?', plan = api.analyze(line, {seed: 42});
     assert(JSON.stringify(plan) === JSON.stringify(api.analyze(line, {seed: 42})));
     assert(JSON.stringify(plan) !== JSON.stringify(api.analyze(line, {seed: 43})));
@@ -2000,13 +1986,13 @@
     var muted = api.render(api.analyze('Quiet!', {volume: 0})); assert(muted.every(function(v) { return v === 0; }));
     assert(api.analyze('你好, pilot 👋').events.length > 0);
   });
-  test('retired radio color does not alter synthesized speech', function () {
+  test('audio', 'retired radio color does not alter synthesized speech', function () {
     var api = window.Driftworks.mumble, clean = api.render(api.analyze('Ready, pilot!', {seed: 42}), 8000);
     var legacy = api.render(api.analyze('Ready, pilot!', {seed: 42, radio: 1}), 8000);
     assert(clean.length === legacy.length);
     assert(clean.every(function (value, i) { return value === legacy[i]; }));
   });
-  test('low enunciation compresses syllables and preserves complete text coverage', function () {
+  test('audio', 'low enunciation compresses syllables and preserves complete text coverage', function () {
     var api = window.Driftworks.mumble, text = 'Navigation communication, ready?', clear = api.analyze(text, {enunciation: 1, compactWords:false}), loose = api.analyze(text, {enunciation: 0, compactWords:false});
     assert(loose.duration < clear.duration * 0.8);
     assert(loose.events.length < clear.events.length);
@@ -2021,7 +2007,7 @@
     assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v) <= 1; }));
   });
 
-  test('sound retention drops actual interior sounds without charging their duration', function () {
+  test('audio', 'sound retention drops actual interior sounds without charging their duration', function () {
     var api = window.Driftworks.mumble, text = 'communication';
     var full = api.analyze(text, {enunciation: 1, compactWords:false}), short = api.analyze(text, {enunciation: 0.35, compactWords:false});
     var a = full.events.filter(function(e) { return e.kind === 'syllable'; });
@@ -2037,7 +2023,7 @@
     assert(line.duration < 6 * 60 / 240, 'default reduced speech should fit a 240-word/minute reading budget for this line');
   });
 
-  test('field has a moving vowel and consonant closure rather than a held beep', function () {
+  test('audio', 'field has a moving vowel and consonant closure rather than a held beep', function () {
     var api = window.Driftworks.mumble, plan = api.analyze('field', api.presets.Scout), event = plan.events[0];
     assert(event.vowel === 'i' && event.vowelEnd === 'e' && event.closed);
     var samples = api.render(plan, 8000, {style:'original'});
@@ -2047,7 +2033,7 @@
     assert(samples.every(function(v) { return Number.isFinite(v) && Math.abs(v) <= 1; }));
   });
 
-  test('mumble pitch travels through phrases and inside syllables without resetting at words', function () {
+  test('audio', 'mumble pitch travels through phrases and inside syllables without resetting at words', function () {
     var api = window.Driftworks.mumble, plan = api.analyze('Keep your eyes on that asteroid field!', api.presets.Scout);
     var notes = plan.events.filter(function(e) { return e.kind === 'syllable'; });
     assert(notes.every(function(e) { return e.pitchCurve.length === 3 && e.pitchCurve.every(function(p) { return Number.isFinite(p) && p > 0; }); }));
@@ -2061,7 +2047,7 @@
     assert(api.analyze('Oh!').events[0].pitchCurve[0] !== api.analyze('Oh!').events[0].pitchCurve[2]);
   });
 
-  test('flowing vowel comparison overlaps only nearby syllables without changing the plan', function () {
+  test('audio', 'flowing vowel comparison overlaps only nearby syllables without changing the plan', function () {
     var api = window.Driftworks.mumble, plan = api.analyze('Keep your eyes. Field!', api.presets.Scout), original = JSON.stringify(plan);
     var a = api.render(plan, 8000), b = api.render(plan, 8000, {style: 'flowing'}), again = api.render(plan, 8000, {style: 'flowing'});
     assert(JSON.stringify(plan) === original && a.length === b.length);
@@ -2076,7 +2062,7 @@
     assert(b[Math.floor((stop.start + 0.06) * 8000)] === 0);
   });
 
-  test('popping vowel groups keep word signatures without held vowels', function () {
+  test('audio', 'popping vowel groups keep word signatures without held vowels', function () {
     var api = window.Driftworks.mumble;
     ['cool', 'meet', 'field', 'wait', 'out', 'cat'].forEach(function(text) {
       var plan = api.analyze(text, {enunciation: 1, speed: 0.5}), original = JSON.stringify(plan);
@@ -2097,7 +2083,7 @@
     assert(oo.some(function(v,i) { return Math.abs(v-aa[i]) > 0.01; }), 'vowel spelling still changes timbre');
   });
 
-  test('tighter mumble pauses shorten phrases without lengthening or compressing vowel bursts', function () {
+  test('audio', 'tighter mumble pauses shorten phrases without lengthening or compressing vowel bursts', function () {
     var api = window.Driftworks.mumble, text = 'Keep cool. Wait, scout!', a = api.analyze(text, {compactWords:false}), b = api.analyze(text, {pauseScale:0.45, compactWords:false});
     assert(b.duration < a.duration);
     assert(b.events.length === a.events.length);
@@ -2112,7 +2098,7 @@
     assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v)<=1; }));
   });
 
-  test('compact word rhythm varies onsets while preserving sentence pauses', function () {
+  test('audio', 'compact word rhythm varies onsets while preserving sentence pauses', function () {
     var api = window.Driftworks.mumble, text = 'Keep your eyes on that asteroid field! Wait, scout.', a = api.analyze(text,{compactWords:false}), b = api.analyze(text,{compactWords:true});
     assert(b.duration < a.duration);
     b.events.forEach(function(e,i) {
@@ -2128,7 +2114,7 @@
     var pcm = api.render(b,8000,{style:'vowel-groups'}); assert(pcm.every(function(v) { return Number.isFinite(v) && Math.abs(v)<=1; }));
   });
 
-  test('mumble defaults lock in popping vowels and compact word rhythm', function () {
+  test('audio', 'mumble defaults lock in popping vowels and compact word rhythm', function () {
     var api = window.Driftworks.mumble, plan = api.analyze('Keep cool, scout!');
     assert(plan.voice.compactWords === true);
     var defaults = api.render(plan,8000), explicit = api.render(plan,8000,{style:'vowel-groups'});
@@ -2136,7 +2122,7 @@
     assert(JSON.stringify(plan) === JSON.stringify(api.analyze('Keep cool, scout!',{compactWords:true})));
   });
 
-  test('voice character controls independently affect audio and repair old plans', function () {
+  test('audio', 'voice character controls independently affect audio and repair old plans', function () {
     var api = window.Driftworks.mumble, text = 'Keep cool, pilot!', base = api.render(api.analyze(text),8000);
     ['formant1','formant2','formant3','brightness','nasality','creak','clipping','contour'].forEach(function(key) {
       var options = {}; options[key] = key.indexOf('formant') === 0 ? 1.3 : 1;
@@ -2154,7 +2140,7 @@
     assert(flat.events.filter(function(e) { return e.kind === 'syllable'; }).every(function(e) { return e.pitchCurve.every(function(p) { return p === 150; }); }));
   });
 
-  test('all voice presets match output level while volume scales and mute stays silent', function () {
+  test('audio', 'all voice presets match output level while volume scales and mute stays silent', function () {
     var api = window.Driftworks.mumble;
     function rms(pcm) { return Math.sqrt(pcm.reduce(function(sum,v) { return sum+v*v; },0)/pcm.length); }
     ['Keep cool, pilot!', "We've got company. Keep your eyes on that asteroid field!"].forEach(function(line) {
@@ -2170,7 +2156,7 @@
     });
   });
 
-  test('study voices keep comparable levels and nasal bursts retain most of their duration', function () {
+  test('audio', 'study voices keep comparable levels and nasal bursts retain most of their duration', function () {
     var api = window.Driftworks.mumble, line = "We've got company. Keep your eyes on that asteroid field!";
     var levels = ['Study · dark smooth','Study · nasal clipped','Study · raspy creak'].map(function(name) {
       var pcm = api.render(api.analyze(line,api.presets[name]),22050);
@@ -2184,7 +2170,7 @@
     assert(last/22050 > Math.min(event.duration*0.72,0.075)*0.85, 'nasal gesture keeps at least 85% of its base burst');
   });
 
-  test('expanded mumble cast renders distinct bounded voices with optional deterministic tremor', function () {
+  test('audio', 'expanded mumble cast renders distinct bounded voices with optional deterministic tremor', function () {
     var api = window.Driftworks.mumble;
     ['Child','Woman · warm','Woman · bright','Old woman','Old man','Man · baritone','Pirate','Ship computer'].forEach(function(name) {
       assert(api.presets[name]);
@@ -2202,7 +2188,7 @@
     assert(api.presets.Child.resonance > api.presets['Man · baritone'].resonance);
   });
 
-  test('radio transmission adds deterministic bookends and quiet static without changing local speech', function () {
+  test('audio', 'radio transmission adds deterministic bookends and quiet static without changing local speech', function () {
     var api = window.Driftworks.mumble, pcm = api.render(api.analyze('Hello, pilot!'),8000), original = Array.from(pcm);
     var local = api.transmit(pcm,8000,{mode:'local'}), radio = api.transmit(pcm,8000,{mode:'radio',seed:9,volume:0.6});
     assert(local.samples === pcm && local.speechOffset === 0);
@@ -2217,7 +2203,7 @@
     assert(api.transmit(new Float32Array(0),8000,{mode:'radio'}).samples.length===0);
   });
 
-  test('radio effects level makes squelch and static adjustable independently of voice', function () {
+  test('audio', 'radio effects level makes squelch and static adjustable independently of voice', function () {
     var api = window.Driftworks.mumble, pcm = api.render(api.analyze('Hello!'),8000);
     var off = api.transmit(pcm,8000,{mode:'radio',effects:0}), on = api.transmit(pcm,8000,{mode:'radio',effects:1});
     assert(off.samples.slice(0,1280).every(function(v) { return v===0; }));
@@ -2228,7 +2214,7 @@
     assert(api.transmit(pcm,8000,{mode:'local',effects:1}).samples===pcm);
   });
 
-  test('radio latches vary by take and intermittent static preserves timing and effects controls', function () {
+  test('audio', 'radio latches vary by take and intermittent static preserves timing and effects controls', function () {
     var api=window.Driftworks.mumble,rate=8000,pcm=new Float32Array(rate*12);
     var a=api.transmit(pcm,rate,{mode:'radio',seed:42}),again=api.transmit(pcm,rate,{mode:'radio',seed:42});
     var b=api.transmit(pcm,rate,{mode:'radio',seed:43}),bed=api.transmit(pcm,rate,{mode:'radio',seed:42,staticBursts:false});
@@ -2249,7 +2235,7 @@
     assert(api.transmit(pcm,rate,{mode:'radio',effects:0,seed:42}).samples.every(function(v){return v===0;}));
   });
 
-  test('radio carrier hangs after speech before the closing latch', function () {
+  test('audio', 'radio carrier hangs after speech before the closing latch', function () {
     var api=window.Driftworks.mumble, rate=8000, pcm=new Float32Array(rate/2), result=api.transmit(pcm,rate,{mode:'radio',effects:1});
     var start=Math.round(result.speechOffset*rate)+pcm.length, energy=0;
     result.samples.slice(start+160,start+800).forEach(function(v) { energy+=v*v; });
@@ -2258,7 +2244,7 @@
     assert(result.samples[result.samples.length-1]===0);
   });
 
-  test('radio closes after the last voiced burst instead of waiting for final punctuation', function () {
+  test('audio', 'radio closes after the last voiced burst instead of waiting for final punctuation', function () {
     var api=window.Driftworks.mumble, plan=api.analyze('Wait outside, scout!'), pcm=api.render(plan,8000);
     var last=plan.events.filter(function(e) { return e.kind==='syllable'; }).pop();
     var speechDuration=last.start+Math.min(last.duration*0.72,0.075);
@@ -2268,7 +2254,7 @@
     assert(api.transmit(pcm,8000,{mode:'local',speechDuration:speechDuration}).samples === pcm);
   });
 
-  test('Scout exclamations retain energy without a steep final pitch drop', function () {
+  test('audio', 'Scout exclamations retain energy without a steep final pitch drop', function () {
     var api = window.Driftworks.mumble;
     [0, 7, 42, 99].forEach(function(seed) {
       var plan = api.analyze("We've got company. Keep your eyes on that asteroid field!", Object.assign({}, api.presets.Scout, {seed: seed}));
@@ -2280,25 +2266,25 @@
   });
 
   var createFreshWorld = sim.createInitialWorld;
-  test('imported ship libraries retain distinct provenance and bounded valid geometry', function(){
+  test('assets', 'imported ship libraries retain distinct provenance and bounded valid geometry', function(){
     var packs=window.Driftworks.shipPacks.filter(function(pack){return !pack.missionOnly&&pack.id!=='concept-trio';}),ids={};assert(packs.length===1);assert(packs[0].id==='quaternius-ultimate-spaceships');assert(packs[0].models.length===11);
     packs.forEach(function(pack){assert(pack.license==='CC0-1.0');assert(pack.url.indexOf('https://')===0);pack.models.forEach(function(m){assert(!ids[m.id]);ids[m.id]=true;assert(m.id.indexOf(pack.id+':')===0);assert(m.sha256.length===64);assert(m.vertices.length===m.triangles*18);for(var i=0;i<m.vertices.length;i+=6){assert(Math.hypot.apply(null,m.vertices.slice(i,i+3))<=8.50001);assertClose(Math.hypot.apply(null,m.vertices.slice(i+3,i+6)),1,.00001);}});});
     assert(window.Driftworks.shipPackModels.find('missing')===null);
   });
-  test('Quaternius glTF previews preserve UVs, source normals and bounded geometry',function(){
+  test('assets', 'Quaternius glTF previews preserve UVs, source normals and bounded geometry',function(){
     window.Driftworks.shipPacks[0].models.forEach(function(m){
       var v=m.texturedVertices;assert(v.length%24===0);assert(v.length>=m.triangles*24);assert(m.texture==='textures/'+m.name+'.png');assert(m.gltfSource.endsWith('/'+m.name+'.gltf'));
       for(var i=0;i<v.length;i+=8){assert(v.slice(i,i+8).every(Number.isFinite));assert(Math.hypot.apply(null,v.slice(i,i+3))<=8.50001);assertClose(Math.hypot.apply(null,v.slice(i+3,i+6)),1,.0001);assert(v[i+6]>=0&&v[i+6]<=1);assert(v[i+7]>=0&&v[i+7]<=1);}
     });
   });
-  test('faction paint is optional and stays separate from shared source textures',function(){
+  test('rendering', 'faction paint is optional and stays separate from shared source textures',function(){
     var api=window.Driftworks.shipPackModels,model=window.Driftworks.shipPacks[0].models[0],texture={},images=new Map([[model.id,texture]]),pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},craft=[{index:0,pose:pose}];
     var green=api.paintColor('#38BFA0');assertClose(green[0],56/255,.000001);assert(api.paintColor('bad')===undefined);
     var direct=api.sourceGeometry(model,[pose],10,texture,green),original=api.sourceGeometry(model,[pose],10,texture);
     assert(direct.paint===green);assert(original.paint===undefined);assert(direct.texture===original.texture);assert(direct.vertices.every(function(v,i){return v===original.vertices[i];}));
     var mixed=api.sourceFleetGeometry(craft,'mixed',1,10,images,green);assert(mixed.length===1&&mixed[0].paint===green);
   });
-  test('wreck hulls lose faction paint without mutating shared live geometry',function(){
+  test('rendering', 'wreck hulls lose faction paint without mutating shared live geometry',function(){
     var api=window.Driftworks.shipPackModels,model=window.Driftworks.shipPacks[0].models[0],images=new Map(),paint=[.2,.8,.3];
     var pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]};
     var live={index:0,modelId:model.id,pose:pose,hp:10},wreck={index:1,modelId:model.id,pose:pose,age:0};
@@ -2309,14 +2295,14 @@
       if(transforms)assert(batches[0].vertices===batches[1].vertices);
     });
   });
-  test('source ship fleets preserve artist UVs and normals across poses without dropping models',function(){
+  test('rendering', 'source ship fleets preserve artist UVs and normals across poses without dropping models',function(){
     var api=window.Driftworks.shipPackModels,models=window.Driftworks.shipPacks[0].models,images=new Map(),craft=[];
     models.forEach(function(m,i){images.set(m.id,{name:m.name});craft.push({index:i,modelId:m.id,pose:{eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]}});});
     var batches=api.sourceFleetGeometry(craft,'mixed',1,10,images);assert(batches.length===11);
     batches.forEach(function(b,i){var v=models[i].texturedVertices;assert(b.stride===8);assert(b.texture===images.get(models[i].id));assert(b.vertices.length===v.length);assertClose(b.vertices[0],3+v[1]/10,.00001);assertClose(b.vertices[1],4+v[0]/10,.00001);assertClose(b.vertices[3],v[4],.00001);for(var j=0;j<v.length;j+=8){assertClose(b.vertices[j+6],v[j+6],.000001);assertClose(b.vertices[j+7],v[j+7],.000001);}});
     assert(api.sourceFleetGeometry([],'mixed',1,10,images).length===0);
   });
-  test('cached flight draw transforms match baked hull positions, normals and UVs',function(){
+  test('rendering', 'cached flight draw transforms match baked hull positions, normals and UVs',function(){
     var DW=window.Driftworks,api=DW.shipPackModels,models=DW.shipPacks[0].models;
     var half=Math.SQRT1_2,pose={eye:[3,4,5],right:[half,half,0],back:[.5,-.5,half],up:[-.5,.5,half]},images=new Map();
     var craft=models.map(function(model,index){return {index:index,modelId:model.id,pose:pose};});
@@ -2341,7 +2327,7 @@
     model.texturedVertices=[1,0,0,0,0,1,0,0];
     assert(api.sourceDraw(model,pose,10).vertices!==first.vertices,'Replacing source data invalidates the mesh cache');
   });
-  test('target bounds scan each source vertex array once',function(){
+  test('rendering', 'target bounds scan each source vertex array once',function(){
     var reads=0,source=new Proxy([3,4,0,0,0,1],{get:function(target,key){if(key==='0'||key==='1'||key==='2')reads++;return target[key];}});
     var model={vertices:source},api=window.Driftworks.flightTargetCamera;
     assert(api.radius(model)===5&&reads===3);
@@ -2349,12 +2335,12 @@
     model.vertices=[0,0,12,0,0,1];assert(api.radius(model)===12);
   });
 
-  test('imported ship geometry transforms positions and normals without changing the source',function(){
+  test('rendering', 'imported ship geometry transforms positions and normals without changing the source',function(){
     var api=window.Driftworks.shipPackModels,m=window.Driftworks.shipPacks[0].models[0],original=m.vertices.slice(),pose={eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1]};
     var batch=api.geometry(m,[pose,pose],10)[0];assert(batch.vertices.length===m.vertices.length*2);assertClose(batch.vertices[0],3+m.vertices[1]/10,.00001);assertClose(batch.vertices[1],4+m.vertices[0]/10,.00001);assertClose(batch.vertices[3],m.vertices[4],.00001);assert(m.vertices.every(function(v,i){return v===original[i];}));assert(api.geometry(m,[],10)[0].vertices.length===0);
   });
 
-  test('default fighter noses face pose forward after pack axis conversion',function(){
+  test('rendering', 'default fighter noses face pose forward after pack axis conversion',function(){
     var api=window.Driftworks.shipPackModels;
     ['quaternius-ultimate-spaceships:Challenger'].forEach(function(id){
       var model=api.find(id).model,v=model.vertices,lo=Infinity,hi=-Infinity;
@@ -2368,7 +2354,7 @@
     });
   });
 
-  test('mixed fighter fleets cover the placeholder and concept libraries, keep assignments and merge finishes',function(){
+  test('rendering', 'mixed fighter fleets cover the placeholder and concept libraries, keep assignments and merge finishes',function(){
     var api=window.Driftworks.shipPackModels,seen={},pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},craft=[];
     for(var wave=1;wave<=3;wave++)for(var i=0;i<16;i++){var model=api.mixedModel(i,wave);seen[model.id]=true;assert(api.mixedModel(i,wave)===model);}
     assert(Object.keys(seen).length===14);['raptor','bulldog','halo'].forEach(function(name){assert(seen['concept-trio:'+name]);});
@@ -2380,7 +2366,7 @@
     assert(api.fleetGeometry([],'mixed',1,10).length===0);
   });
 
-  test('fighter exhaust stays aft, batches finite glow geometry and shuts down on disable',function(){
+  test('rendering', 'fighter exhaust stays aft, batches finite glow geometry and shuts down on disable',function(){
     var api=window.Driftworks.shipPackModels,pose={eye:[3,4,5],right:[1,0,0],back:[0,-1,0],up:[0,0,1],throttle:.8};
     window.Driftworks.shipPacks.forEach(function(pack){pack.models.forEach(function(model){
       var anchors=api.engineAnchors(model),v=model.vertices,lo=Infinity,hi=-Infinity;
@@ -2394,7 +2380,7 @@
     pose.throttle=0;assert(api.engineGeometry([{hp:90,index:0,pose:pose}],'mixed',1,10,pose,1).vertices.length===0);
   });
 
-  test('four-nozzle ships emit from both engine pairs at their own heights',function(){
+  test('rendering', 'four-nozzle ships emit from both engine pairs at their own heights',function(){
     var api=window.Driftworks.shipPackModels,pose={eye:[3,4,5],right:[0,1,0],back:[-1,0,0],up:[0,0,1],throttle:1};
     ['Executioner','Spitfire','Insurgent'].forEach(function(name){var id='quaternius-ultimate-spaceships:'+name,m=api.find(id).model,anchors=api.engineAnchors(m);assert(anchors.length===4);assert(new Set(anchors.map(function(p){return p.slice(0,3).join(',');})).size===4);
       var b=api.engineGeometry([{index:0,hp:1,pose:pose}],id,1,10,pose,0).vertices;
@@ -2402,7 +2388,7 @@
     });
     var spit=api.engineAnchors(api.find('quaternius-ultimate-spaceships:Spitfire').model);assert(new Set(spit.map(function(p){return p[2];})).size===2);
   });
-  test('fighter finishes retain source geometry and batch all poses with finite normals',function(){
+  test('rendering', 'fighter finishes retain source geometry and batch all poses with finite normals',function(){
     var api=window.Driftworks.shipPackModels,pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]};
     window.Driftworks.shipPacks.forEach(function(pack){pack.models.forEach(function(model){
       var original=model.vertices.slice(),one=api.detailedGeometry(model,[pose],10),two=api.detailedGeometry(model,[pose,pose],10);
@@ -2414,14 +2400,14 @@
   });
 
 
-  test('flight frame cap follows 60 Hz on high-refresh screens without accumulating stalls', function () {
+  test('flight', 'flight frame cap follows 60 Hz on high-refresh screens without accumulating stalls', function () {
     var perf=window.Driftworks.flightPerformance,clock=perf.pacer(),frames=0;
     for(var i=0;i<144;i++)if(perf.due(clock,i*1000/144,60))frames++;
     assert(frames===60);assert(perf.due(clock,10000,60));assert(!perf.due(clock,10001,60));
     assert(perf.due(clock,10002,0));assert(perf.due(clock,10003,0));
     clock=perf.pacer();frames=0;for(var j=0;j<144;j++)if(perf.due(clock,j*1000/144,15))frames++;assert(frames===15);
   });
-  test('flight diagnostics retain a bounded rolling window and a resettable worst frame', function () {
+  test('flight', 'flight diagnostics retain a bounded rolling window and a resettable worst frame', function () {
     var perf=window.Driftworks.flightPerformance,s=perf.create();perf.record(s,100,8);
     for(var i=0;i<150;i++)perf.record(s,20,2);
     var result=perf.summary(s);assert(s.frames.length===120 && s.cpu.length===120);
@@ -2429,7 +2415,7 @@
     assert(perf.summary(perf.create()).worst===0);
   });
 
-  test('furball wings acquire opposing targets, retain flight limits and spare friendlies',function(){
+  test('flight', 'furball wings acquire opposing targets, retain flight limits and spare friendlies',function(){
     var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18),U=sim.METERS_PER_UNIT;
     ai.spawn(t,player,18);assert(ai.alive(t).length===16);assert(t.enemies.filter(function(e){return e.team==='ally';}).length===8);
     for(var i=0;i<1200;i++)ai.step(t,player,1/120,18);
@@ -2439,7 +2425,7 @@
     ai.trace(t,[0,0,0],[0,6,0],{weapon:weapon},'player',null,player);assert(ally.hp===hp&&enemy.hp<redHp);
     ai.cycle(t);assert(t.enemies.find(function(e){return e.id===t.targetId;}).team==='enemy');
   });
-  test('furball rounds reset after a defeated wing and green fire damages red ships',function(){
+  test('flight', 'furball rounds reset after a defeated wing and green fire damages red ships',function(){
     var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18);ai.spawn(t,player,18);
     t.enemies.forEach(function(e){e.pose.eye=[100,100,100];});var ally=t.enemies[0],enemy=t.enemies[8];enemy.pose.eye=[0,2,0];
     ai.trace(t,[0,0,0],[0,3,0],{weapon:window.Driftworks.retailWeapons[0]},ally,null,player);assert(enemy.hp<90);
@@ -2448,7 +2434,7 @@
     var all=ai.allGuns(t,window.Driftworks.flightGuns.create());assert(all.bolts.every(function(b){return b.team==='ally'||b.team==='enemy';}));
   });
 
-  test('autonomous furball produces shots and casualties without player fire',function(){
+  test('flight', 'autonomous furball produces shots and casualties without player fire',function(){
     var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18),shots=0;
     // This fixture measures autonomous wing combat, not an idle player's survivability.
     t.player.hp=t.player.maxHp=10000;
@@ -2456,7 +2442,7 @@
     assert(shots>30);assert(t.kills>0);assert(t.enemies.length===16);assert(!t.dead);
   });
 
-  test('virtual mouse stick holds displacement, returns to center and clamps diagonally',function(){
+  test('flight', 'virtual mouse stick holds displacement, returns to center and clamps diagonally',function(){
     var input=window.Driftworks.flightInput,p=input.moveStick([0,0],80,-40,160,1),d=input.stickDemand(p,.08);
     assert(d[0]>0&&d[1]<0);assert(input.moveStick(p,0,0,160,1).every(function(v,i){return v===p[i];}));
     var center=input.moveStick(p,-80,40,160,1);assert(input.stickDemand(center,.08).every(function(v){return v===0;}));
@@ -2465,7 +2451,7 @@
     assertClose(input.moveStick([0,0],40,0,160,2)[0],.5);
   });
 
-  test('mouse stick response stays linear throughout travel and preserves direction and full turns',function(){
+  test('flight', 'mouse stick response stays linear throughout travel and preserves direction and full turns',function(){
     var input=window.Driftworks.flightInput;
     var half=input.stickDemand([.54,0],.08),diagonal=input.stickDemand([.324,.432],.08);
     assertClose(half[0],0);assertClose(half[1],-.5);
@@ -2476,7 +2462,7 @@
     assertClose(input.stickDemand([1,0],.08)[1],-1);
   });
 
-  test('training combat can clear a wave using the same player flight and gun models', function () {
+  test('flight', 'training combat can clear a wave using the same player flight and gun models', function () {
     var ai=window.Driftworks.training,flight=window.Driftworks.arcade,gun=window.Driftworks.flightGuns;
     var player=flight.create(18),t=ai.create(),guns=gun.create(),weapon=window.Driftworks.retailWeapons[0];t.countdown=.01;
     // This checks wave progression, not pilot balance against native multi-gun NPCs.
@@ -2490,7 +2476,7 @@
     assert(t.kills>=3 && t.wave===2 && !t.dead);
   });
 
-  test('disabled fighters drift and tumble across waves without remaining combat targets',function(){
+  test('flight', 'disabled fighters drift and tumble across waves without remaining combat targets',function(){
     var ai=window.Driftworks.training,t=ai.create('furball'),player=window.Driftworks.arcade.create(18),U=sim.METERS_PER_UNIT;
     ai.spawn(t,player,18);var e=t.enemies[8];e.pose.velocity=[20,-30,10];var position=e.pose.eye.slice(),back=e.pose.back.slice(),index=e.index;
     ai.damageEnemy(t,e,{damage:1000,armorFactor:1});assert(t.wrecks.length===1&&t.kills===1);assert(!ai.alive(t).some(function(s){return s.id===e.id;}));
@@ -2504,7 +2490,7 @@
     for(var wave=0;wave<4;wave++){ai.spawn(t,player,18);t.enemies.forEach(function(s){ai.damageEnemy(t,s,{damage:1000,armorFactor:1});});}assert(t.wrecks.length===48);assert(ai.create().wrecks.length===0);
   });
 
-  test('training waves are bounded, delayed and allocate at most two attackers', function () {
+  test('flight', 'training waves are bounded, delayed and allocate at most two attackers', function () {
     var ai=window.Driftworks.training,t=ai.create(),player=window.Driftworks.arcade.create(18);
     t.countdown=.01;ai.step(t,player,.02,18);assert(t.wave===1 && ai.alive(t).length===3 && t.slots.length===2);
     t.enemies.forEach(function(e){ai.damageEnemy(t,e,{damage:1000,armorFactor:1});});
@@ -2514,7 +2500,7 @@
     for(var j=0;j<10;j++)ai.spawn(t,player,18);assert(ai.alive(t).length===6);
     ai.step(t,player,.01,18);assert(t.slots.length===2);
   });
-  test('training steering uses local pitch and yaw and preserves physical flight limits', function () {
+  test('flight', 'training steering uses local pitch and yaw and preserves physical flight limits', function () {
     var ai=window.Driftworks.training,t=ai.create(),player=window.Driftworks.arcade.create(18);
     assert(ai.steer(player,[1,0,0]).yaw<0);assert(ai.steer(player,[0,0,100]).pitch>0);
     ai.spawn(t,player,18);
@@ -2526,7 +2512,7 @@
       if(t.slots.indexOf(e.id)<0)assert(!e.fire);
     });
   });
-  test('training shots sweep targets and stop at the nearest obstruction', function () {
+  test('flight', 'training shots sweep targets and stop at the nearest obstruction', function () {
     var ai=window.Driftworks.training,t=ai.create(),player=window.Driftworks.arcade.create(18),weapon=window.Driftworks.retailWeapons[0];
     ai.spawn(t,player,18);t.enemies[0].pose.eye=[0,2,0];t.enemies[1].pose.eye=[0,4,0];t.enemies[2].pose.eye=[5,5,0];
     var hit=ai.trace(t,[0,0,0],[0,6,0],{weapon:weapon},'player',function(){return [0,1,0];},player);
@@ -2536,7 +2522,7 @@
     ai.damageEnemy(t,t.enemies[0],{damage:1000,armorFactor:1});var kills=t.kills;
     ai.damageEnemy(t,t.enemies[0],weapon);assert(t.kills===kills);
   });
-  test('training shield absorption, recovery, death and restart have independent lifecycles', function () {
+  test('flight', 'training shield absorption, recovery, death and restart have independent lifecycles', function () {
     var ai=window.Driftworks.training,t=ai.create(),weapon=window.Driftworks.retailWeapons[0],player=window.Driftworks.arcade.create(18);
     ai.damagePlayer(t,weapon);assert(t.shield<120 && t.hull===100);
     t.shield=1;ai.damagePlayer(t,weapon);assert(t.shield===0 && t.hull<100);
@@ -2545,7 +2531,7 @@
     var before=t.time;ai.step(t,player,1,18);assert(t.time>before && t.dead, 'The observing craft death must not freeze the shared simulation');
     var fresh=ai.create();assert(!fresh.dead && fresh.shield===120 && fresh.kills===0);
   });
-  test('training intercept leads moving targets and models are simple bounded triangles', function () {
+  test('flight', 'training intercept leads moving targets and models are simple bounded triangles', function () {
     var ai=window.Driftworks.training,lead=ai.intercept([0,0,0],[0,20,0],[2,0,0],27);
     assert(lead.time>0 && lead.point[0]>0);
     var t=ai.create();ai.spawn(t,window.Driftworks.arcade.create(18),18);
@@ -2553,7 +2539,7 @@
     var guns=window.Driftworks.flightGuns.create();assert(ai.allGuns(t,guns).bolts.length===0);
   });
 
-  test('crosshair selects the nearest living hull and lock holds until released or destroyed', function () {
+  test('flight', 'crosshair selects the nearest living hull and lock holds until released or destroyed', function () {
     var DW=window.Driftworks,ai=DW.training,t=ai.create(),state=DW.arcade.create(0);
     function craft(id,distance,side){
       var pose=DW.arcade.create(0);pose.eye=state.eye.map(function(v,i){return v-state.back[i]*distance+state.right[i]*(side||0);});
@@ -2569,7 +2555,7 @@
     ai.toggleTargetLock(t);assert(!t.targetLocked,'Cannot lock without a target');
     ai.cycle(t);assert(t.targetId==='near'&&!t.targetLocked);
   });
-  test('L and standard X/Square toggle lock once per press and ignore paused input', function(){
+  test('flight', 'L and standard X/Square toggle lock once per press and ignore paused input', function(){
     var f=flightControlsFixture();f.key('KeyL');f.key('KeyL','BODY',true);assert(f.counts.lock===1);
     f.setPaused(true);f.key('KeyL');assert(f.counts.lock===1);f.setPaused(false);
     var pad={index:0,id:'Lock pad',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
@@ -2578,20 +2564,20 @@
     pad.buttons[2]={pressed:false,value:0};f.controls.sample();pad.buttons[2]={pressed:true,value:1};f.controls.sample();assert(f.counts.lock===3);
   });
 
-  test('controller deadzones rescale travel and reject noisy or missing values', function () {
+  test('flight', 'controller deadzones rescale travel and reject noisy or missing values', function () {
     var input=window.Driftworks.flightInput;
     assertClose(input.deadzone(.1,.12),0);assertClose(input.deadzone(-.1,.12),0);
     assertClose(input.deadzone(.56,.12),.5);assertClose(input.deadzone(-1,.12),-1);
     assertClose(input.deadzone(NaN,.12),0);
   });
-  test('standard gamepad maps aim, roll, throttle and buttons without neutral throttle override', function () {
+  test('flight', 'standard gamepad maps aim, roll, throttle and buttons without neutral throttle override', function () {
     var input=window.Driftworks.flightInput,map=input.defaults(true),pad={axes:[1,-1,-1,0],buttons:[]};
     pad.buttons[7]={pressed:true,value:1};pad.buttons[0]={pressed:true,value:1};pad.buttons[12]={pressed:true,value:1};
     var c=input.read(pad,map);assert(c.pitch===1 && c.yaw===-1 && c.roll===1);
     assert(c.throttle===null && c.throttleRate===1 && c.fire && c.boost);
     assert(!c.bank && !c.pause);
   });
-  test('standard right stick adjusts throttle proportionally and holds at neutral',function(){
+  test('flight', 'standard right stick adjusts throttle proportionally and holds at neutral',function(){
     var input=window.Driftworks.flightInput,map=input.defaults(true),pad={mapping:'standard',axes:[0,0,0,0],buttons:[]};
     assertClose(input.read(pad,map).throttleRate,0);assert(input.read(pad,map).throttle===null);
     pad.axes[3]=-1;assertClose(input.read(pad,map).throttleRate,1);
@@ -2602,7 +2588,7 @@
     pad.axes=[];assertClose(input.read(pad,map).throttleRate,1);
   });
 
-  test('joystick bindings survive reconnection with per-device storage', function () {
+  test('flight', 'joystick bindings survive reconnection with per-device storage', function () {
     var f=flightControlsFixture(),stored={};
     f.win.localStorage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};
     var pad={index:0,id:'Thrustmaster T.16000M',connected:true,mapping:'',axes:[0,0,0,1,0,1],buttons:[]};
@@ -2614,7 +2600,7 @@
     assert(Object.keys(stored).length===1);
   });
 
-  test('flight sticks map twist to yaw and lateral travel to roll', function () {
+  test('flight', 'flight sticks map twist to yaw and lateral travel to roll', function () {
     var input=window.Driftworks.flightInput;
     ['Thrustmaster T.16000M (Vendor: 044f Product: b10a)', 'Generic USB joystick'].forEach(function(id){
       var map=input.defaults(false,id),pad={axes:[1,-1,0,1],buttons:[]};
@@ -2630,7 +2616,7 @@
     });
   });
 
-  test('joystick permits inverted axes, absolute throttle and custom buttons', function () {
+  test('flight', 'joystick permits inverted axes, absolute throttle and custom buttons', function () {
     var input=window.Driftworks.flightInput,map=input.defaults(false),pad={axes:[.12,1,-1,-1],buttons:[]};
     map.fire=5;map.pause=6;pad.buttons[5]={pressed:true,value:1};pad.buttons[6]={pressed:true,value:1};
     var c=input.read(pad,map);assert(c.pitch===1 && c.yaw===0 && c.roll===1 && c.throttle===1 && c.fire && c.pause);
@@ -2639,7 +2625,7 @@
     c=input.read({axes:[],buttons:[]},map);assert(!c.fire && !c.boost && !c.pause);
   });
 
-  test('retail primary guns retain table ballistics and cadence', function () {
+  test('flight', 'retail primary guns retain table ballistics and cadence', function () {
     var weapons=window.Driftworks.retailWeapons,model=window.Driftworks.flightGuns;
     assert(weapons[0].speed===450 && weapons[0].fireWait===.2 && weapons[0].lifetime===2 && weapons[0].length===10);
     assert(weapons[1].speed===450 && weapons[1].fireWait===.45 && weapons[1].lifetime===2 && weapons[1].length===15);
@@ -2653,7 +2639,7 @@
       assert(guns.bolts.length===0);
     });
   });
-  test('legacy count-only gun calls retain imported counts and cadence', function () {
+  test('flight', 'legacy count-only gun calls retain imported counts and cadence', function () {
     var DW=window.Driftworks,gun=DW.flightGuns,weapon=DW.retailWeapons[0],pose=DW.arcade.create(0),U=sim.METERS_PER_UNIT;
     var find=function(name){return DW.arcade.profiles.find(function(p){return p.name===name;});};
     assert(find('GTF Ulysses').gunMounts===4 && find('GTF Hercules').gunMounts===6);
@@ -2676,7 +2662,7 @@
       assert(guns.fired===count*Math.ceil((1-1e-8)/weapon.fireWait));
     });
   });
-  test('manual, duel and NPC gun steps receive their own profile mount counts', function () {
+  test('flight', 'manual, duel and NPC gun steps receive their own profile mount counts', function () {
     var DW=window.Driftworks,original=DW.flightGuns.step,seen=[];
     try{
       DW.flightGuns.step=function(guns,pose,weapon,fire,dt,trace,aim,count){seen.push({pose:pose,count:count});return original(guns,pose,weapon,fire,dt,trace,aim,count);};
@@ -2691,7 +2677,7 @@
       assert(seen.some(function(call){return call.pose===duel.enemy.pose&&call.count===5;}));
     }finally{DW.flightGuns.step=original;}
   });
-  test('visible model muzzles transform with the hull and preserve sustained DPS', function () {
+  test('flight', 'visible model muzzles transform with the hull and preserve sustained DPS', function () {
     var DW=window.Driftworks,gun=DW.flightGuns,U=sim.METERS_PER_UNIT;
     DW.shipPacks[0].models.forEach(function(model){
       var anchors=DW.shipPackModels.gunAnchors(model),pose=DW.arcade.create(0);
@@ -2711,7 +2697,7 @@
     var pair=DW.shipPackModels.gunAnchors(striker);
     assert(pair.length===2&&pair[0][1]!==pair[1][1]&&pair[0][2]!==pair[1][2],'Preserve asymmetric source barrels');
   });
-  test('twin guns converge on the crosshair at 300 metres in any pose', function () {
+  test('flight', 'twin guns converge on the crosshair at 300 metres in any pose', function () {
     var DW=window.Driftworks,U=sim.METERS_PER_UNIT;
     [
       {eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]},
@@ -2729,7 +2715,7 @@
       });
     });
   });
-  test('close tail shots converge on the nearest crosshair hull and both hit', function () {
+  test('flight', 'close tail shots converge on the nearest crosshair hull and both hit', function () {
     var DW=window.Driftworks,U=sim.METERS_PER_UNIT,ai=DW.training,weapon=DW.retailWeapons[0];
     var pose=DW.arcade.create(18),combat=ai.create('training'),player=ai.bindPlayer(combat,pose);
     var enemyPose=DW.arcade.create(18);enemyPose.eye=pose.eye.map(function(x,i){return x-pose.back[i]*30/U;});
@@ -2756,7 +2742,7 @@
     far.team='enemy';far.pose.eye[1]=pose.eye[1]+(weapon.speed*weapon.lifetime+20)/U;
     assert(ai.convergencePoint(combat,player,weapon)===null,'Ignore hulls beyond weapon range');
   });
-  test('point-blank surfaces before the normal muzzle plane receive both forward shots', function () {
+  test('flight', 'point-blank surfaces before the normal muzzle plane receive both forward shots', function () {
     var DW=window.Driftworks,U=sim.METERS_PER_UNIT,ai=DW.training,w=DW.retailWeapons[0];
     [.5,2,3.9,4,6,10].forEach(function(distance){
       var pose=DW.arcade.create(18),combat=ai.create('training'),player=ai.bindPlayer(combat,pose);
@@ -2775,7 +2761,7 @@
       assert(target.hp<100,'Hidden bolt visuals must not suppress damage');
     });
   });
-  test('gun sweeps hit terrain between endpoints and remove bolts at impact', function () {
+  test('flight', 'gun sweeps hit terrain between endpoints and remove bolts at impact', function () {
     var model=window.Driftworks.flightGuns,field=function(p){return Math.hypot.apply(null,p)-1;};
     var hit=model.intersect([0,-2,0],[0,2,0],1,field);assert(hit);assertClose(hit[1],-1,.001);
     assert(model.intersect([2,-2,0],[2,2,0],1,field)===null);
@@ -2785,14 +2771,14 @@
     assert(guns.bolts.length===0 && guns.hits===2 && guns.impacts.length===2);
     for(var i=0;i<30;i++)model.step(guns,pose,w,false,1/120);assert(guns.impacts.length===0);
   });
-  test('gun rendering batches are bounded and contain world-space triangles', function () {
+  test('rendering', 'gun rendering batches are bounded and contain world-space triangles', function () {
     var model=window.Driftworks.flightGuns,guns=model.create(),pose=window.Driftworks.arcade.create(18);
     model.step(guns,pose,window.Driftworks.retailWeapons[0],true,1/120);
     var batches=model.geometry(guns,pose);assert(batches.length===4);assert(batches[2].vertices.length===72);
     assert(batches[1].vertices.length===0);batches[2].vertices.forEach(function(x){assert(Number.isFinite(x));});
   });
 
-  test('bolt artwork maintains angular size to thirty metres then shrinks in perspective', function () {
+  test('rendering', 'bolt artwork maintains angular size to thirty metres then shrinks in perspective', function () {
     var DW=window.Driftworks,U=DW.sim.METERS_PER_UNIT,weapon=DW.retailWeapons[0];
     var pose={eye:[10,20,30],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     function widthAt(m) {
@@ -2814,7 +2800,7 @@
     });
   });
 
-  test('flight sky directions rotate with the cockpit, ignore translation, and cover the sphere', function () {
+  test('rendering', 'flight sky directions rotate with the cockpit, ignore translation, and cover the sphere', function () {
     var sky=window.Driftworks.flightSkybox,pose={right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
     assert(sky.options.length===13 && sky.options[1].includes('Open void') && sky.options[6].includes('Island universes') && sky.options[11].includes('Woven starlight') && sky.options[12].includes('Orbital impact'));
     var center=sky.project([0,1,0],pose,2);assert(center);assertClose(center.x,0);assertClose(center.y,0);
@@ -2829,7 +2815,7 @@
   });
 
 
-  test('retail maneuver tables preserve original values and axis order', function () {
+  test('assets', 'retail maneuver tables preserve original values and axis order', function () {
     var profiles=window.Driftworks.arcade.profiles;
     var expected=[
       [70,150,2,1.5,.1,.35,3,2.6,5,.7,94],
@@ -2846,7 +2832,7 @@
       assertClose(state.rates[0],2*Math.PI/p.rotationTime[0]*(1-Math.exp(-.05/p.rotdamp)));
     });
   });
-  test('flight sortie starts at full cruise with a clear approach to the furball', function () {
+  test('flight', 'flight sortie starts at full cruise with a clear approach to the furball', function () {
     var model=window.Driftworks.arcade,U=sim.METERS_PER_UNIT;
     model.profiles.forEach(function(p){
       var state=model.createSortie(300/U,p),t=window.Driftworks.training.create('furball');
@@ -2857,7 +2843,7 @@
       t.enemies.forEach(function(e){assert(e.pose.eye[1]>state.eye[1]);assert(e.pose.eye[2]>300/U);});
     });
   });
-  test('arcade handling accelerates, caps cruise, brakes and preserves orthonormal attitude', function () {
+  test('flight', 'arcade handling accelerates, caps cruise, brakes and preserves orthonormal attitude', function () {
     var model=window.Driftworks.arcade;
     model.profiles.forEach(function(p){
       var state=model.create(18);state.throttle=1;
@@ -2874,7 +2860,7 @@
       assertClose(state.up.reduce(function(sum,x,i){return sum+x*state.back[i];},0),0);
     });
   });
-  test('maneuvering thrusters ease toward five m/s, cap diagonals and brake on release', function () {
+  test('flight', 'maneuvering thrusters ease toward five m/s, cap diagonals and brake on release', function () {
     var model=window.Driftworks.arcade;
     model.profiles.forEach(function(p){
       var state=model.create(0);
@@ -2893,7 +2879,7 @@
       assertClose(state.velocity[1],-2.5,.01);
     });
   });
-  test('LB maneuvering preserves steering and D-pad throttle while replacing right-stick controls', function () {
+  test('flight', 'LB maneuvering preserves steering and D-pad throttle while replacing right-stick controls', function () {
     var api=window.Driftworks.flightInput,pad={mapping:'standard',axes:[.5,-.5,1,-1],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})},map=api.defaults(true);
     var normal=api.read(pad,map);assert(normal.roll!==0 && normal.throttleRate===1);
     pad.buttons[4].pressed=true;
@@ -2904,14 +2890,14 @@
     pad.buttons[13].pressed=true;assert(api.read(pad,map).throttleRate===-1);
     pad.buttons[4].pressed=false;assert(api.read(pad,map).side===0);
   });
-  test('manual throttle passes through zero into weak reverse and stop clears it',function(){
+  test('flight', 'manual throttle passes through zero into weak reverse and stop clears it',function(){
     var DW=window.Driftworks,state=DW.arcade.create(0),craft=DW.training.createCraft('manual',state,'ally');
     DW.training.stepInput(craft,{throttle:null,throttleRate:-1,fire:false},.05);
     assert(state.throttle<0 && state.velocity[1]<0);
     DW.training.stepInput(craft,{throttle:null,throttleRate:0,stop:true,fire:false},.05);
     assert(state.throttle===0);
   });
-  test('arcade contact scales normalized geology by body radius and retains five meter clearance', function () {
+  test('flight', 'arcade contact scales normalized geology by body radius and retains five meter clearance', function () {
     var model=window.Driftworks.arcade,state=model.create(18);
     state.eye=[0,-17,0];state.velocity=[0,80,0];state.throttle=1;
     assert(model.contact(state,[0,-1,0],18));
@@ -2919,7 +2905,7 @@
     assertClose(Math.hypot.apply(null,state.velocity),0,.4);assert(state.throttle===0);
     assert(!model.contact(state,[0,-1,0],18));
   });
-  test('arcade boost, strafe and physical distance use lab units without simulation time scaling', function () {
+  test('flight', 'arcade boost, strafe and physical distance use lab units without simulation time scaling', function () {
     var model=window.Driftworks.arcade,p=model.profiles[0],state=model.create(18);
     state.throttle=1;
     for(var i=0;i<1000;i++)model.step(state,p,{boost:true},.01);
@@ -2930,7 +2916,7 @@
     assert(model.profiles[2].maxVelocity[2]>p.maxVelocity[2]);
   });
 
-  test('study focus picks the nearest surface from either side and rejects misses', function () {
+  test('rendering', 'study focus picks the nearest surface from either side and rejects misses', function () {
     var pick=window.Driftworks.scene3d.pickStudySurface;
     var front=[-1,-1,2,0,0,1, 1,-1,2,0,0,1, 0,1,2,0,0,1];
     var back=front.map(function(x,i){return i%6===2?x-2:x;});
@@ -2941,7 +2927,7 @@
     assert(pick([0,0,5],[1,0,0],[front])===null);
     assert(pick([0,0,5],[0,0,1],[front])===null);
   });
-  test('mothership close inspection refines curved silhouettes within a fixed ceiling', function () {
+  test('rendering', 'mothership close inspection refines curved silhouettes within a fixed ceiling', function () {
     var scene=window.Driftworks.scene3d;
     assert(scene.habitatLod(100) === 96);
     assert(scene.habitatLod(800) === 192);
@@ -2960,7 +2946,7 @@
       }
     });
   });
-  test('mining rig keeps finite unit normals and folds anchors without idle machinery motion', function () {
+  test('rendering', 'mining rig keeps finite unit normals and folds anchors without idle machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     ['current'].forEach(function(variant){
       var deployed=model(1,0,false),folded=model(0,0,false);
@@ -2971,7 +2957,7 @@
     });
   });
 
-  test('original mining rig catalog uses canonical geometry and separate provenance', function () {
+  test('assets', 'original mining rig catalog uses canonical geometry and separate provenance', function () {
     var DW=window.Driftworks,entry=DW.originalShipModels[0];assert(entry.id==='driftworks:mining-rig');assert(entry.author==='Driftworks');
     assert(entry.provenance.indexOf('driftworks-originals')>=0);
     var batches=entry.geometry(1),source=DW.scene3d.miningPlatformGeometry(1,0,false,0,'');
@@ -2980,7 +2966,7 @@
     assert(!DW.shipPackModels.find(entry.id),'Originals are kept out of imported fighter packs');
   });
 
-  test('inter-leg bay ramps reach ground while the protective cage stays fixed', function () {
+  test('rendering', 'inter-leg bay ramps reach ground while the protective cage stays fixed', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var closed=model(1,0,false,0),open=model(1,0,false,1);
     assert(JSON.stringify(closed.dark.slice(model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length))===JSON.stringify(open.dark.slice(model(1,0,false,1,'',false,false,undefined,undefined,true).dark.length)),'Load-bearing cage remains in place');
@@ -2991,7 +2977,7 @@
     [0,.5,1].forEach(function(t){var groups=model(1,0,false,t);Object.keys(groups).forEach(function(key){assert(groups[key].every(Number.isFinite));});});
   });
 
-  test('bay hull closes with vertical walls and a roof before two-stage unfolding', function () {
+  test('rendering', 'bay hull closes with vertical walls and a roof before two-stage unfolding', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,0),uncovered=model(1,0,false,.4),open=model(1,0,false,1);
     // The first leaf is a vertical wall; the second is the upper closure.
     assertClose(closed.ochre[5],0);
@@ -3002,14 +2988,14 @@
     [0,.2,.4,.7,1].forEach(function(t){var groups=model(1,0,false,t);Object.keys(groups).forEach(function(k){assert(groups[k].every(Number.isFinite));for(var i=3;i<groups[k].length;i+=6)assertClose(Math.hypot(groups[k][i],groups[k][i+1],groups[k][i+2]),1,.00001);});});
   });
 
-  test('roof shuttle docking collar and four hardpoints stay above the tower', function () {
+  test('rendering', 'roof shuttle docking collar and four hardpoints stay above the tower', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,0),open=model(1,0,false,1);
     function roof(groups){var result=[];Object.keys(groups).forEach(function(k){for(var i=0;i<groups[k].length;i+=18){if(groups[k][i+2]>13.5 && groups[k][i+8]>13.5 && groups[k][i+14]>13.5)result.push(k+':'+groups[k].slice(i,i+18).join(','));}});return result.join(';');}
     assert(roof(closed)===roof(open),'Docking hardware stays fixed while cargo doors unfold');
     [-1,1].forEach(function(x){[-1,1].forEach(function(y){var found=false,v=closed.ochre;for(var i=0;i<v.length;i+=6)if(Math.sign(v[i])===x && Math.sign(v[i+1])===y && v[i+2]>14.8)found=true;assert(found,'A raised hardpoint in each roof corner');});});
   });
 
-  test('transit shell stays yellow while door inner faces use work-deck grey', function () {
+  test('rendering', 'transit shell stays yellow while door inner faces use work-deck grey', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry,closed=model(1,0,false,0),open=model(1,0,false,1);
     assert(JSON.stringify(closed.steel)!==JSON.stringify(open.steel),'Grey door inner faces move with their yellow outer armor');
     assert(JSON.stringify(closed.dark.slice(model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length))===JSON.stringify(open.dark.slice(model(1,0,false,1,'',false,false,undefined,undefined,true).dark.length)),'Permanent dark chassis stays fixed');
@@ -3018,7 +3004,7 @@
     assert(yellowPad,'Docking pad retains yellow exposed roof armor');
   });
 
-  test('control tower has outward-downward glazing around all eight sides', function () {
+  test('rendering', 'control tower has outward-downward glazing around all eight sides', function () {
     var data=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,0).dark,faces={};
     for(var i=0;i<data.length;i+=18){
       if(data[i+2]>10 && data[i+2]<11.15 && data[i+5]<-.25){
@@ -3028,7 +3014,7 @@
     assert(Object.keys(faces).length===8,'Every tower face has a lower downward-looking pane');
   });
 
-  test('suspended tower egress is a downward hatch above the cargo deck', function () {
+  test('rendering', 'suspended tower egress is a downward hatch above the cargo deck', function () {
     var v=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,0).light,faces=0;
     for(var i=0;i<v.length;i+=18){
       if([0,6,12].every(function(k){return v[i+k]>=1.31 && v[i+k]<=4.19 && Math.abs(v[i+k+1])<=1.39 && Math.abs(v[i+k+2]-7.18)<.001;}) && v[i+5]<-.99)faces++;
@@ -3036,14 +3022,14 @@
     assert(faces===2,'Downward outer airlock leaf occupies the suspended pod floor, not cargo-floor height');
   });
 
-  test('door hinge barrels and actuator assemblies stay valid through both hinge stages', function () {
+  test('rendering', 'door hinge barrels and actuator assemblies stay valid through both hinge stages', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var closed=model(1,0,false,0),open=model(1,0,false,1);
     assert(JSON.stringify(closed.dark.slice(model(1,0,false,0,'',false,false,undefined,undefined,true).dark.length))===JSON.stringify(open.dark.slice(model(1,0,false,1,'',false,false,undefined,undefined,true).dark.length)),'Root cradles, stops and receivers remain frame-mounted');
     [0,.2,.4,.65,1].forEach(function(t){var groups=model(1,0,false,t);Object.keys(groups).forEach(function(k){var v=groups[k];assert(v.every(Number.isFinite));for(var i=3;i<v.length;i+=6)assertClose(Math.hypot(v[i],v[i+1],v[i+2]),1,.00001);});});
   });
 
-  test('cargo deck has no coplanar black belly or broad chassis top', function () {
+  test('rendering', 'cargo deck has no coplanar black belly or broad chassis top', function () {
     ['current'].forEach(function(variant){
       var groups=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,1),data=groups.dark,belly=false;
       for(var i=0;i<data.length;i+=18){
@@ -3058,7 +3044,7 @@
     });
   });
 
-  test('tower ceiling has one roof plane without a coplanar docking pad underside', function () {
+  test('rendering', 'tower ceiling has one roof plane without a coplanar docking pad underside', function () {
     var v=window.Driftworks.scene3d.miningPlatformGeometry(1,0,false,1,'').ochre,count=0;
     for(var i=0;i<v.length;i+=18){if([2,8,14].every(function(offset){return Math.abs(v[i+offset]-13.5)<.00001;}))count++;}
     assert(count===6,'Only the six triangles of the octagonal roof occupy z=13.5');
@@ -3067,7 +3053,7 @@
     assert(upward===16,'Eight upper shoulder windows face upward for overhead visibility');
   });
 
-  test('crew interior has separate entry/control decks and an unobstructed microgravity translation opening', function () {
+  test('rendering', 'crew interior has separate entry/control decks and an unobstructed microgravity translation opening', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     function floorAt(groups,x,y,z){var v=groups.steel;for(var i=0;i<v.length;i+=18){if(Math.abs(v[i+2]-z)>.001 || Math.abs(v[i+8]-z)>.001 || Math.abs(v[i+14]-z)>.001 || v[i+5]<.99)continue;var ax=v[i],ay=v[i+1],bx=v[i+6],by=v[i+7],cx=v[i+12],cy=v[i+13],d=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy);if(Math.abs(d)<1e-8)continue;var u=((by-cy)*(x-cx)+(cx-bx)*(y-cy))/d,w=((cy-ay)*(x-cx)+(ax-cx)*(y-cy))/d;if(u>=-.00001 && w>=-.00001 && u+w<=1.00001)return true;}return false;}
     var lower=model(1,0,false,1,'lower'),upper=model(1,0,false,1,'upper');
@@ -3086,7 +3072,7 @@
     ['','lower','upper'].forEach(function(cut){var g=model(1,0,false,1,cut);Object.keys(g).forEach(function(k){assert(g[k].every(Number.isFinite));});});
   });
 
-  test('mining platform geometry folds legs without decorative machinery motion', function () {
+  test('rendering', 'mining platform geometry folds legs without decorative machinery motion', function () {
     var model=window.Driftworks.scene3d.miningPlatformGeometry;
     var open=model(1,0,false),folded=model(0,0,false);
     function width(groups){var ys=[];Object.keys(groups).forEach(function(k){for(var i=1;i<groups[k].length;i+=6)ys.push(Math.abs(groups[k][i]));});return Math.max.apply(null,ys);}
@@ -3096,7 +3082,7 @@
     Object.keys(open).forEach(function(k){assert(open[k].length%18===0);assert(open[k].every(Number.isFinite));for(var i=3;i<open[k].length;i+=6)assert(Math.abs(Math.hypot(open[k][i],open[k][i+1],open[k][i+2])-1)<.00001);});
   });
 
-  test('3D station hardware has finite unit normals and a bounded geometry budget', function () {
+  test('rendering', '3D station hardware has finite unit normals and a bounded geometry budget', function () {
     var groups = window.Driftworks.scene3d.mothershipHardware(), triangles = 0;
     assert(Object.keys(groups).length <= 8, 'Hardware stays within eight material batches');
     Object.keys(groups).forEach(function (key) {
@@ -3113,7 +3099,7 @@
     });
     assert(triangles < 30000, 'Station hardware has a fixed triangle ceiling');
   });
-  test('3D mothership habitat preserves the rounded silhouette with real circular depth', function () {
+  test('rendering', '3D mothership habitat preserves the rounded silhouette with real circular depth', function () {
     var mesh = window.Driftworks.scene3d.habitatMesh();
     var min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
     for (var i = 0; i < mesh.length; i += 6) {
@@ -3126,7 +3112,7 @@
     assertClose(min[2], -17); assertClose(max[2], 17);
     assert(mesh.length % 18 === 0);
   });
-  test('3D mothership close inspection stays above the raised fixed machinery', function () {
+  test('rendering', '3D mothership close inspection stays above the raised fixed machinery', function () {
     var w = createFreshWorld(), home = w.ships.find(function (s) { return s.type === 'mothership'; });
     w.camera = { x: home.position.x, y: home.position.y, zoom: 128 };
     var before = JSON.stringify(w), height = window.Driftworks.scene3d.inspectionHeight(w);
@@ -3135,7 +3121,7 @@
     w.camera.zoom = 1;
     assert(window.Driftworks.scene3d.inspectionHeight(w) === 0);
   });
-  test('3D asteroid uses the original seeded geology and crater data', function () {
+  test('rendering', '3D asteroid uses the original seeded geology and crater data', function () {
     var scene = window.Driftworks.scene3d, art = window.Driftworks.asteroidArt;
     var a = createFreshWorld().asteroids[0], before = JSON.stringify(a);
     var visual = scene.visualFor(a);
@@ -3152,7 +3138,7 @@
     assert(art.shaderSource.indexOf('void main') === -1, 'Backends share geology while supplying their own main');
     assert(JSON.stringify(a) === before, 'Artwork remains outside serialized world state');
   });
-  test('3D surface intersects the full relief shell above and below', function () {
+  test('rendering', '3D surface intersects the full relief shell above and below', function () {
     var scene = window.Driftworks.scene3d, art = window.Driftworks.asteroidArt;
     var a = createFreshWorld().asteroids[0], visual = scene.visualFor(a);
     var crater = visual.craters.filter(function (c) { return Math.hypot(c.x, c.y) < 0.55; }).sort(function (a, b) { return b.depth - a.depth; })[0];
@@ -3168,7 +3154,7 @@
     assert(scene.rockField(a, [x, y, lower + .005]) < 0);
     assert(scene.rockField(a, [x, y, lower - .005]) > 0);
   });
-  test('3D crater relief covers both hemispheres and stays continuous across the equator and longitude seam', function () {
+  test('rendering', '3D crater relief covers both hemispheres and stays continuous across the equator and longitude seam', function () {
     var scene = window.Driftworks.scene3d, a = createFreshWorld().asteroids[0];
     var craters = scene.visualFor(a).craters, upper = 0, lower = 0;
     craters.forEach(function (c) {
@@ -3189,7 +3175,7 @@
       {x:a.position.x,y:a.position.y,zoom:.5}, {width:1400,height:900}, {yaw:.6,tilt:2.4});
     assert(picked && picked.position[2] < 0, 'Picking from below reaches the lower shell');
   });
-  test('3D impacts stay circular in actual surface tangent planes and survive GPU packing', function () {
+  test('rendering', '3D impacts stay circular in actual surface tangent planes and survive GPU packing', function () {
     var scene = window.Driftworks.scene3d, a = createFreshWorld().asteroids[0];
     var impacts = scene.impactsFor(a), bytes = scene.impactBytes(a);
     assert(impacts.length === scene.visualFor(a).craters.length * 2);
@@ -3216,7 +3202,7 @@
     var varied=impacts.some(function(impact){var c=impact.center,n=impact.normal,l=Math.hypot(c[0],c[1],c[2]);return Math.abs(n[2]-c[2]/l)>.1;});
     assert(varied,'Axes follow the irregular spheroid rather than an unstretched sphere');
   });
-  test('Asteroid study parameters are reproducible and never alter saved world data', function () {
+  test('rendering', 'Asteroid study parameters are reproducible and never alter saved world data', function () {
     var scene=window.Driftworks.scene3d, art=window.Driftworks.asteroidArt;
     var a=Object.assign({},createFreshWorld().asteroids[0],{id:'parameter-study-test'}), before=JSON.stringify(a);
     var original=art.describe(a), custom=scene.setStudyParameters(a,{bulk:[0,0,10,0],roughness:.5,craterDepth:1.5,heterogeneity:.2});
@@ -3234,7 +3220,7 @@
     var reseeded=art.describe(Object.assign({},a,{id:'another-parameter-seed'}));
     assert(JSON.stringify(reseeded.craters)!==JSON.stringify(original.craters),'Changing the seed changes the impact population');
   });
-  test('Surface walking frames follow the closed terrain with outward unit normals', function () {
+  test('rendering', 'Surface walking frames follow the closed terrain with outward unit normals', function () {
     var scene=window.Driftworks.scene3d,a=createFreshWorld().asteroids[0],before=JSON.stringify(a);
     [[0,0,1],[0,0,-1],[1,0,0],[-1,1,.4],[.4,-.7,.6]].forEach(function(direction){
       var frame=scene.surfaceFrame(a,direction),p=frame.point,n=frame.normal;
@@ -3246,7 +3232,7 @@
     });
     assert(JSON.stringify(a)===before,'Walking has no durable world state');
   });
-  test('3D perspective picking round trips the movement plane through orbit and zoom', function () {
+  test('rendering', '3D perspective picking round trips the movement plane through orbit and zoom', function () {
     var scene = window.Driftworks.scene3d, viewport = { width: 1400, height: 900 };
     [0.25, 1, 8, 128].forEach(function (zoom) {
       [0, 0.8, 2.7].forEach(function (yaw) {
@@ -3261,7 +3247,7 @@
       });
     });
   });
-  test('3D perspective orbit changes interior parallax according to depth', function () {
+  test('rendering', '3D perspective orbit changes interior parallax according to depth', function () {
     var scene = window.Driftworks.scene3d, camera = { x: 0, y: 0, zoom: 1 }, viewport = { width: 1400, height: 900 };
     var front = scene.project([0, 0, 0], camera, viewport, { yaw: 0, tilt: 0.6 });
     var behind = scene.project([0, 0, -100], camera, viewport, { yaw: 0, tilt: 0.6 });
@@ -3270,7 +3256,7 @@
     var original = scene.project([100, 0, -100], camera, viewport, { yaw: 0, tilt: 0.6 });
     assert(Math.abs(turned.x - original.x) > 20);
   });
-  test('excavation retains its roof independently of cutaway inspection and keeps a connected passage', function () {
+  test('rendering', 'excavation retains its roof independently of cutaway inspection and keeps a connected passage', function () {
     var scene = window.Driftworks.scene3d, world = createFreshWorld();
     var a = sim.toggleAsteroidExcavation(world, world.asteroids[0].id).asteroids[0], e = a.excavation;
     var before = JSON.stringify(a), depth = e.depthM / sim.METERS_PER_UNIT / a.radius;
@@ -3291,7 +3277,7 @@
     assert(!cutMesh.some(function (v, i) { return i%6 === 2 && v > .001; }), 'Cut mesh omits upper shell');
     assert(JSON.stringify(a) === before, 'Inspection and meshing never change saved excavation');
   });
-  test('excavation preserves the exterior field away from its entrance', function () {
+  test('rendering', 'excavation preserves the exterior field away from its entrance', function () {
     var scene=window.Driftworks.scene3d, world=createFreshWorld();
     var intact=world.asteroids[0], excavated=sim.toggleAsteroidExcavation(world,intact.id).asteroids[0];
     for(var i=0;i<24;i++){
@@ -3301,7 +3287,7 @@
       assert(scene.rockField(intact,p,false)===scene.rockField(excavated,p,false), 'Excavation must not alter exterior geology');
     }
   });
-  test('3D rock solid retains the body scale and excavates real chamber and tunnel voids', function () {
+  test('rendering', '3D rock solid retains the body scale and excavates real chamber and tunnel voids', function () {
     var scene = window.Driftworks.scene3d, a = createFreshWorld().asteroids[0];
     for (var angle = 0; angle < Math.PI * 2; angle += 0.3) {
       var r = sim.surfaceRadius(a, angle) / a.radius;
@@ -3324,7 +3310,7 @@
     }
     assert(deepest < -depth - 0.1, 'Mesh contains an upward-facing chamber floor below the cut');
   });
-  test('3D asteroid picking reaches the chamber floor and respects body rotation', function () {
+  test('rendering', '3D asteroid picking reaches the chamber floor and respects body rotation', function () {
     var scene = window.Driftworks.scene3d, w = createFreshWorld();
     var a = sim.toggleAsteroidExcavation(w, w.asteroids[0].id).asteroids[0];
     a.rotation = 1.2;
@@ -3341,7 +3327,7 @@
     var miss = scene.pickAsteroid(scene.project([a.position.x + 2 * a.radius, a.position.y, 0], camera, viewport, orbit), a, camera, viewport, orbit);
     assert(miss === null);
   });
-  test('3D inspection keeps close zoom above the visible surface without changing world state', function () {
+  test('rendering', '3D inspection keeps close zoom above the visible surface without changing world state', function () {
     var scene = window.Driftworks.scene3d, w = createFreshWorld(), a = w.asteroids[0];
     w.camera = { x: a.position.x, y: a.position.y, zoom: 128 };
     var snapshot = JSON.stringify(w);
@@ -3358,7 +3344,7 @@
     w.camera.x += a.radius * 2;
     assert(scene.inspectionHeight(w) === 0, 'Away from asteroids the camera targets the movement plane');
   });
-  test('background settings default safely and clamp persisted brightness', function () {
+  test('rendering', 'background settings default safely and clamp persisted brightness', function () {
     var defaults = game.normalizeBackgroundSettings(null);
     assert(defaults.image === 'all-sky-milky-way' && defaults.brightness === 0.28);
     var repaired = game.normalizeBackgroundSettings({ image: 'missing', brightness: 8 });
@@ -3371,7 +3357,7 @@
     assert(options.filter(function (option) { return option.id === 'all-sky-stars-only'; })[0].contrast >
       options.filter(function (option) { return option.id === 'all-sky-low-exposure'; })[0].contrast);
   });
-  test('asteroid artwork is stable through movement, depletion and save reload', function () {
+  test('artwork', 'asteroid artwork is stable through movement, depletion and save reload', function () {
     var world = createFreshWorld();
     var asteroid = world.asteroids[0];
     var before = JSON.stringify(game.asteroidVisualDescription(asteroid));
@@ -3381,7 +3367,7 @@
     assert(JSON.stringify(game.asteroidVisualDescription(loaded.asteroids[0])) === before);
   });
 
-  test('asteroid excavation persists, repairs old saves and reserves mining clearance', function () {
+  test('simulation', 'asteroid excavation persists, repairs old saves and reserves mining clearance', function () {
     var world = createFreshWorld();
     var excavation = world.asteroids[0].excavation;
     assert(excavation && excavation.level === 0 && excavation.pocketRadius > 0 && excavation.depthM === 500);
@@ -3404,7 +3390,7 @@
       'Mining sites should not overlap the cavern');
   });
 
-  test('dev excavation toggle preserves its geometry and round-trips through saves', function () {
+  test('simulation', 'dev excavation toggle preserves its geometry and round-trips through saves', function () {
     var world = createFreshWorld();
     var asteroid = world.asteroids[0], geometry = JSON.stringify(asteroid.excavation);
     world = sim.toggleAsteroidExcavation(world, asteroid.id);
@@ -3416,7 +3402,7 @@
     assert(JSON.stringify(world.asteroids[0].excavation) === geometry, 'Toggling should preserve cavern placement');
   });
 
-  test('asteroid surface is a normalized four-material composition field', function () {
+  test('artwork', 'asteroid surface is a normalized four-material composition field', function () {
     var base = createFreshWorld().asteroids[0];
     var craterCounts = new Set();
     var bulkWinners = new Set();
@@ -3479,7 +3465,7 @@
       'Field heterogeneity should span nearly homogeneous to chunky');
   });
 
-  test('asteroid renderer retains shader geometry while updating light uniforms', function () {
+  test('rendering', 'asteroid renderer retains shader geometry while updating light uniforms', function () {
     var graphic = { container: { position: { set: function (x, y) { this.x = x; this.y = y; } }, rotation: 0 },
       mesh: { scale: { value: 0, set: function (value) { this.value = value; } } },
       shader: { uniforms: {} }, visual: null, artworkKey: '' };
@@ -3516,7 +3502,7 @@
     return world;
   }
 
-  test('fresh fleet is stored inside the mothership and launches only on assignment', function () {
+  test('simulation', 'fresh fleet is stored inside the mothership and launches only on assignment', function () {
     var world = createFreshWorld();
     var home = findShip(world, 'msv-hardshell');
     ['tug-01', 'escort-01', 'escort-02'].forEach(function (id) {
@@ -3537,7 +3523,7 @@
     assert(tug.launchElapsed === null && tug.position.x > 0, 'Guidance should begin once emergence clears');
   });
 
-  test('hostile appearance scrambles docked fighters and returns only automatic defenders', function () {
+  test('simulation', 'hostile appearance scrambles docked fighters and returns only automatic defenders', function () {
     var world = createFreshWorld();
     findShip(world, 'escort-02').disabled = true;
     world = sim.spawnHostileWave(world);
@@ -3559,7 +3545,7 @@
       'Automatically scrambled fighters should return when the last hostile is gone');
   });
 
-  test('normalization preserves an already deployed craft in older saves', function () {
+  test('simulation', 'normalization preserves an already deployed craft in older saves', function () {
     var world = createFreshWorld();
     var tug = findShip(world, 'tug-01');
     tug.docked = false;
@@ -3570,7 +3556,7 @@
     assert(JSON.stringify(sim.deserializeWorld(sim.serializeWorld(loaded))) === JSON.stringify(loaded), 'Repeated loading should stay stable');
   });
 
-  test('seeded initialization and scenario replay are deterministic without rendering', function () {
+  test('simulation', 'seeded initialization and scenario replay are deterministic without rendering', function () {
     var replay = window.Driftworks.scenario;
     var scenario = { version: 1, seed: 12345, ticks: 300, commands: [
       { tick: 0, action: 'select', args: [['tug-01']] },
@@ -3599,7 +3585,7 @@
     });
   });
 
-  test('combat scenario replay produces the same complete world twice', function () {
+  test('simulation', 'combat scenario replay produces the same complete world twice', function () {
     var replay = window.Driftworks.scenario;
     var scenario = { version: 1, seed: 12345, ticks: 2400, commands: [
       { tick: 0, action: 'select', args: [['escort-01', 'escort-02']] },
@@ -3614,7 +3600,7 @@
       'Running the same combat scenario twice must produce identical complete worlds');
   });
 
-  test('combat scenario matches after saving and reloading midway', function () {
+  test('simulation', 'combat scenario matches after saving and reloading midway', function () {
     var replay = window.Driftworks.scenario;
     var commands = [
       { tick: 0, action: 'select', args: [['escort-01', 'escort-02']] },
@@ -3629,7 +3615,7 @@
       'A midpoint save/load must preserve the complete final combat world');
   });
 
-  test('old saves gain deterministic combat defaults and repeated loading preserves encounters', function () {
+  test('simulation', 'old saves gain deterministic combat defaults and repeated loading preserves encounters', function () {
     var old = createDeployedWorld(12345);
     delete old.combat;
     var repaired = sim.deserializeWorld(sim.serializeWorld(old));
@@ -3643,7 +3629,7 @@
     assert(new Set(spawned.combat.drones.map(function (d) { return d.id; })).size === 6, 'Spawn IDs must remain unique across loading');
   });
 
-  test('director warning and random sequence survive a save during the warning', function () {
+  test('simulation', 'director warning and random sequence survive a save during the warning', function () {
     var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(12345), ['msv-hardshell']), 'ast-ceres-01');
     world = sim.stepWorld(world, 1 / 30);
     assert(world.combat.director.state === 'warning', 'Exposed work starts a warning');
@@ -3657,7 +3643,7 @@
     assert(JSON.stringify(world) === JSON.stringify(loaded), 'Warning continuation must reproduce the same wave');
   });
 
-  test('battle replay matches after save/load and across render-frame groupings for 10000 ticks', function () {
+  test('simulation', 'battle replay matches after save/load and across render-frame groupings for 10000 ticks', function () {
     var initial = sim.spawnHostileWave(createDeployedWorld(12345));
     var a = initial, b = initial, ticks = 0, sawShot = false, sawDamage = false;
     // These are identical fixed ticks grouped as if frames ran at 30 Hz versus 5 Hz.
@@ -3677,7 +3663,7 @@
     assert(initial.elapsedSeconds === 0 && initial.combat.drones.length === 3, 'Stepping must preserve the input world');
   });
 
-  test('combat resolves simultaneous lethal fire once and leaves a recoverable wreck', function () {
+  test('simulation', 'combat resolves simultaneous lethal fire once and leaves a recoverable wreck', function () {
     var world = sim.spawnHostileWave(createDeployedWorld(42));
     world.ships = world.ships.filter(function (ship) { return ship.id !== 'escort-02'; });
     var fighter = findShip(world, 'escort-01');
@@ -3695,7 +3681,7 @@
     assert(later.wrecks.length === 1 && later.combat.events.length === 0, 'Events and salvage must not repeat on later ticks');
   });
 
-  test('disabled fighters and destroyed wrecks keep coasting on their last vectors', function () {
+  test('simulation', 'disabled fighters and destroyed wrecks keep coasting on their last vectors', function () {
     var world = createDeployedWorld();
     var fighter = findShip(world, 'escort-01');
     fighter.position = { x: 100, y: 200 };
@@ -3724,7 +3710,7 @@
     assertClose(world.wrecks[1].position.y, 9);
   });
 
-  test('legacy wrecks without rotation render finite recovery geometry', function () {
+  test('rendering', 'legacy wrecks without rotation render finite recovery geometry', function () {
     var world = createDeployedWorld();
     world.wrecks = [{ id: 'legacy-wreck', position: { x: 10, y: 20 } }];
     var points;
@@ -3737,7 +3723,7 @@
     assert(points.every(Number.isFinite), 'Missing rotation should use zero, not NaN');
   });
 
-  test('seeded RNG produces deterministic output', function () {
+  test('simulation', 'seeded RNG produces deterministic output', function () {
     var a = sim.createRng(1234);
     var b = sim.createRng(1234);
     var valuesA = [a(), a(), a(), a()];
@@ -3746,7 +3732,7 @@
     assertClose(valuesA[0], 0.07329497812315822);
   });
 
-  test('fixed-step advancement is deterministic', function () {
+  test('simulation', 'fixed-step advancement is deterministic', function () {
     var world = sim.issueMoveOrder(sim.selectShips(createDeployedWorld(), ['tug-01']), { x: 100, y: -90 });
     var a = sim.stepWorld(sim.stepWorld(world, 1 / 30), 1 / 30);
     var b = sim.stepWorld(sim.stepWorld(world, 1 / 30), 1 / 30);
@@ -3754,7 +3740,7 @@
     assert(a.elapsedSeconds > world.elapsedSeconds, 'Simulation clock should advance');
   });
 
-  test('move orders transition to arrival', function () {
+  test('simulation', 'move orders transition to arrival', function () {
     var world = sim.issueMoveOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 240, y: -125 });
     var guard = 0;
     var escort = null;
@@ -3770,7 +3756,7 @@
     assertClose(escort.position.y, -125);
   });
 
-  test('acceleration limits sudden direction reversal', function () {
+  test('simulation', 'acceleration limits sudden direction reversal', function () {
     var world = sim.selectShips(createDeployedWorld(), ['tug-01']);
     var miner = findShip(world, 'tug-01');
     miner.position = { x: 0, y: 0 };
@@ -3782,7 +3768,7 @@
     assert(miner.velocity.x > 0, 'Miner should not instantly reverse horizontal velocity');
   });
 
-  test('industrial loads reduce acceleration through mass while retaining guidance speed', function () {
+  test('simulation', 'industrial loads reduce acceleration through mass while retaining guidance speed', function () {
     ['tug-01'].forEach(function (id) {
       function cruise(load, ticks) {
         var world = sim.selectShips(createDeployedWorld(), [id]);
@@ -3813,7 +3799,7 @@
     });
   });
 
-  test('picking up cargo does not instantly clamp existing velocity', function () {
+  test('simulation', 'picking up cargo does not instantly clamp existing velocity', function () {
     var world = sim.selectShips(createDeployedWorld(), ['tug-01']);
     var miner = findShip(world, 'tug-01');
     miner.velocity = { x: miner.speed, y: 0 };
@@ -3824,7 +3810,7 @@
     assert(miner.speed - next.velocity.x <= miner.acceleration / 30, 'Loaded ship should decelerate gradually');
   });
 
-  test('rotation limits sudden in-place facing changes', function () {
+  test('simulation', 'rotation limits sudden in-place facing changes', function () {
     var world = sim.selectShips(createDeployedWorld(), ['escort-01']);
     var escort = findShip(world, 'escort-01');
     escort.position = { x: 0, y: 0 };
@@ -3839,7 +3825,7 @@
     assert(escort.rotation <= escort.turnRate / 30 + 0.000001, 'Escort should not exceed max turn rate in one tick');
   });
 
-  test('rotateToward uses the shortest wrapped angle', function () {
+  test('simulation', 'rotateToward uses the shortest wrapped angle', function () {
     var current = Math.PI - 0.02;
     var target = -Math.PI + 0.02;
     var next = sim.rotateToward(current, target, 0.03);
@@ -3847,7 +3833,7 @@
     assertClose(sim.angleDelta(next, target), 0.01);
   });
 
-  test('platform deployment waits through setup before extraction while carrier returns empty', function () {
+  test('simulation', 'platform deployment waits through setup before extraction while carrier returns empty', function () {
     var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
     for (var i = 0; i < 1500; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'setting-up');
@@ -3859,7 +3845,7 @@
     assert(findShip(world, 'tug-01').docked);
   });
 
-  test('hostile waves begin beyond the local map and approach from their entry bearing', function () {
+  test('simulation', 'hostile waves begin beyond the local map and approach from their entry bearing', function () {
     var world = createFreshWorld();
     var target = findShip(world, 'msv-hardshell').position;
     world = sim.spawnHostileWave(world);
@@ -3879,7 +3865,7 @@
     });
   });
 
-  test('platform transfer holds a zero-relative-velocity rendezvous for fifteen physical minutes', function () {
+  test('simulation', 'platform transfer holds a zero-relative-velocity rendezvous for fifteen physical minutes', function () {
     var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
     var carrier;
     for (var i = 0; i < 2500; i += 1) {
@@ -3905,7 +3891,7 @@
     assert(world.platforms[0].state === 'setting-up', 'Platform should release after the handling timer');
   });
 
-  test('ore packets deliver platform production to mothership storage', function () {
+  test('simulation', 'ore packets deliver platform production to mothership storage', function () {
     var world = sim.issueMineOrder(sim.selectShips(createDeployedWorld(), ['msv-hardshell']), 'ast-ceres-01');
     var guard = 0;
     while (world.mothership.storage.ore <= 0 && guard < 9000) {
@@ -3916,7 +3902,7 @@
     assert(findShip(world, 'tug-01').cargo === 0, 'Miner cargo should empty after deposit');
   });
 
-  test('mothership processes ore into depot construction sections', function () {
+  test('simulation', 'mothership processes ore into depot construction sections', function () {
     var world = createDeployedWorld();
     world.mothership.storage.ore = 1500;
     world = sim.stepWorld(world, 1 / 30);
@@ -3925,7 +3911,7 @@
     assertClose(world.mothership.storage.constructionMass, 0);
   });
 
-  test('tug carries a fabricated section to the depot site', function () {
+  test('simulation', 'tug carries a fabricated section to the depot site', function () {
     var world = createDeployedWorld();
     world.mothership.storage.depotSections = 1;
     world = sim.issueBuildOrder(sim.selectShips(world, ['tug-01']));
@@ -3939,7 +3925,7 @@
     assert(findShip(world, 'tug-01').carryingSection === false, 'Tug should no longer carry the section');
   });
 
-  test('escorts can engage the same hostile with independent laser timers', function () {
+  test('simulation', 'escorts can engage the same hostile with independent laser timers', function () {
     var escorts = createDeployedWorld().ships.filter(function (ship) { return ship.type === 'escort'; });
     escorts.forEach(function (ship) { ship.position = { x: 0, y: 0 }; });
     var drone = { id: 'shared-target', position: { x: 100, y: 0 } };
@@ -3955,7 +3941,7 @@
     assert(sim.stepDefenderWeapon(escorts[0], [drone], timers, 0.1) === null, 'Escorts must still respect weapon range');
   });
 
-  test('destroyed drones persist as distinct salvage wrecks across save and camera changes', function () {
+  test('simulation', 'destroyed drones persist as distinct salvage wrecks across save and camera changes', function () {
     var world = createDeployedWorld();
     var destroyed = { position: { x: 300, y: 100 }, velocity: { x: 10, y: -5 } };
     world = sim.addWreck(sim.addWreck(world, destroyed), destroyed);
@@ -3965,7 +3951,7 @@
     assert(JSON.stringify(restored.wrecks) === JSON.stringify(world.wrecks), 'Camera and save changes must preserve wrecks');
   });
 
-  test('hauler picks up a wreck beneath its frame and salvages it exactly once', function () {
+  test('simulation', 'hauler picks up a wreck beneath its frame and salvages it exactly once', function () {
     var world = sim.addWreck(createDeployedWorld(), { position: { x: 165, y: 120 }, velocity: { x: 0, y: 1 } });
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
     assert(findShip(world, 'tug-01').order.kind === 'recover', 'Right-click should dispatch recovery');
@@ -4005,7 +3991,7 @@
     assert(!findShip(world, 'tug-01').towTarget, 'Hauler should be free after delivery');
   });
 
-  test('salvage-all is opt-in and sends the tug for every recoverable target', function () {
+  test('simulation', 'salvage-all is opt-in and sends the tug for every recoverable target', function () {
     var world = createDeployedWorld();
     world.combat.director.wavesSpawned = 3;
     world = sim.addWreck(world, { position: { x: 165, y: 120 }, velocity: { x: 0, y: 0 } });
@@ -4020,7 +4006,7 @@
     assert(findShip(world, 'tug-01').docked, 'The tug should finish at the mothership');
   });
 
-  test('disabled fighters cannot move or fire and recover after being carried home', function () {
+  test('simulation', 'disabled fighters cannot move or fire and recover after being carried home', function () {
     var world = createDeployedWorld();
     var fighter = findShip(world, 'escort-01');
     fighter.position = { x: 165, y: 120 };
@@ -4051,7 +4037,7 @@
     assert(findShip(sim.stepWorld(world, 1 / 30), fighter.id).velocity.x > 0, 'Repaired fighter should accept orders');
   });
 
-  test('recovery approach builds speed and arrives from a distance', function () {
+  test('simulation', 'recovery approach builds speed and arrives from a distance', function () {
     var world = sim.addWreck(createDeployedWorld(), { position: { x: 400, y: 120 }, velocity: { x: 1, y: 0 } });
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01']), world.wrecks[0].position);
     for (var i = 0; i < 30; i += 1) world = sim.stepWorld(world, 1 / 30);
@@ -4060,7 +4046,7 @@
     assert(findShip(world, 'tug-01').towTarget, 'Hauler should rendezvous and secure a nearby wreck');
   });
 
-  test('repaired fighters launch slowly from inside the mothership before accepting orders', function () {
+  test('simulation', 'repaired fighters launch slowly from inside the mothership before accepting orders', function () {
     var world = sim.damageFighter(createDeployedWorld(), 'escort-01', 1);
     var fighter = findShip(world, 'escort-01');
     var mothership = world.ships.filter(function (ship) { return ship.type === 'mothership'; })[0];
@@ -4090,7 +4076,7 @@
     assertClose(world.recovery.repairedShips, 1);
   });
 
-  test('recovery cannot double-claim a wreck or stack payloads', function () {
+  test('simulation', 'recovery cannot double-claim a wreck or stack payloads', function () {
     var world = sim.addWreck(createDeployedWorld(), { position: { x: 165, y: 120 }, velocity: { x: 1, y: 0 } });
     world.ships.push(sim.createShip('tug-02', 'Second Hauler', 'tug', 160, 120, 62));
     world = sim.issueContextOrder(sim.selectShips(world, ['tug-01', 'tug-02']), world.wrecks[0].position);
@@ -4112,7 +4098,7 @@
     assert(findShip(world, other.id).order.kind !== 'recover', 'Carried module prevents accepting a hull');
   });
 
-  test('legacy saves receive empty recovery defaults', function () {
+  test('simulation', 'legacy saves receive empty recovery defaults', function () {
     var world = createDeployedWorld();
     delete world.wrecks;
     delete world.nextWreckId;
@@ -4128,7 +4114,7 @@
     assert(world.ships.every(function (ship) { return !ship.disabled && !ship.towTarget; }), 'Legacy ships should stay operational');
   });
 
-  test('operation exposure starts quiet and rises with industrial work', function () {
+  test('simulation', 'operation exposure starts quiet and rises with industrial work', function () {
     var world = createDeployedWorld();
     assertClose(sim.operationExposure(world), 0);
     world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), 'ast-ceres-01');
@@ -4137,7 +4123,7 @@
     assert(sim.operationExposure(world) > 1, 'Ready construction sections should add operational exposure');
   });
 
-  test('order line local vector rotates back to world target direction', function () {
+  test('rendering', 'order line local vector rotates back to world target direction', function () {
     var position = { x: -180, y: -90 };
     var target = { x: 220, y: -240 };
     var rotation = Math.PI * 0.63;
@@ -4150,7 +4136,7 @@
     assertClose(worldY, target.y - position.y);
   });
 
-  test('engine plume mixes fixed maneuvering thrusters', function () {
+  test('rendering', 'engine plume mixes fixed maneuvering thrusters', function () {
     var radius = 14;
     var forward = game.enginePlumeGeometry(20, 0, 0, 100, radius, false);
     var braking = game.enginePlumeGeometry(-20, 0, 0, 100, radius, false);
@@ -4171,7 +4157,7 @@
     assertClose(portTranslate.origin.y, -radius * 0.82);
   });
 
-  test('camera math uses logical screen pixels under high-DPI rendering', function () {
+  test('rendering', 'camera math uses logical screen pixels under high-DPI rendering', function () {
     var viewport = game.viewportFromApp({
       screen: { width: 1280, height: 720 },
       renderer: { width: 1920, height: 1080 }
@@ -4188,7 +4174,7 @@
     assertClose(world.y, -125);
   });
 
-  test('salvage-all intercepts a wreck moving faster than the tug work-zone speed', function () {
+  test('simulation', 'salvage-all intercepts a wreck moving faster than the tug work-zone speed', function () {
     var world = sim.addWreck(createDeployedWorld(), {
       position: { x: 400, y: 120 }, velocity: { x: 82, y: 0 }
     });
@@ -4206,7 +4192,7 @@
     assertClose(hauler.velocity.y, wreck.velocity.y);
   });
 
-  test('offscreen contacts clamp to the viewport edge and hand off once visible', function () {
+  test('rendering', 'offscreen contacts clamp to the viewport edge and hand off once visible', function () {
     var view = { width: 1280, height: 720 };
     var right = game.contactEdgeMarker({ x: 1800, y: 460 }, view, 26);
     assert(right.visible, 'A distant contact should use an edge marker');
@@ -4218,7 +4204,7 @@
       'The marker should disappear when the contact becomes visible');
   });
 
-  test('contact ETA uses the world-space operating area rather than the camera viewport', function () {
+  test('rendering', 'contact ETA uses the world-space operating area rather than the camera viewport', function () {
     var drone = { position: { x: 1900, y: 0 }, velocity: { x: -60, y: 0 } };
     assertClose(game.contactEtaSeconds(drone, { x: 0, y: 0 }, 700), 20);
     drone.position = { x: 700, y: 0 };
@@ -4229,7 +4215,7 @@
       'A receding contact should not claim an arrival time');
   });
 
-  test('inbound sensor tracks resolve through stable distance-based stages', function () {
+  test('rendering', 'inbound sensor tracks resolve through stable distance-based stages', function () {
     function droneAt(distance) { return [{ position: { x: distance, y: 0 } }]; }
     var center = { x: 0, y: 0 };
     assert(game.contactTrackState(droneAt(4800), center).key === 'possible', 'Distant tracks should be ambiguous');
@@ -4238,7 +4224,7 @@
     assert(game.contactTrackState(droneAt(900), center).key === 'local', 'Near contacts should become local tracks');
   });
 
-  test('focus camera tracks the current selected ship position', function () {
+  test('rendering', 'focus camera tracks the current selected ship position', function () {
     var world = sim.selectShips(createDeployedWorld(), ['escort-01']);
     world.camera = { x: 0, y: 0, zoom: 1 };
     var ids = ['escort-01'];
@@ -4256,7 +4242,7 @@
     assertClose(focusedWorld.camera.y, -280);
   });
 
-  test('mining effect becomes diffuse when miner overlaps asteroid', function () {
+  test('rendering', 'mining effect becomes diffuse when miner overlaps asteroid', function () {
     var position = { x: 40, y: -20 };
     var rotation = Math.PI / 2;
     var geometry = game.miningEffectGeometry(position, position, rotation);
@@ -4267,7 +4253,7 @@
     assertClose(geometry.seedAngle, Math.PI / 2);
   });
 
-  test('mothership drum bands roll top to bottom across the side silhouette', function () {
+  test('rendering', 'mothership drum bands roll top to bottom across the side silhouette', function () {
     var start = game.mothershipDrumMarkers(0);
     var later = game.mothershipDrumMarkers(4);
     var visibleCount = start.filter(function (marker) {
@@ -4287,7 +4273,7 @@
     assert(game.mothershipDrumMarkers(38)[0].visible, 'A band should reappear after one full rotation');
   });
 
-  test('mothership rotating details share one cylindrical projection', function () {
+  test('rendering', 'mothership rotating details share one cylindrical projection', function () {
     var top = game.drumSurfaceAt(Math.PI / 2);
     var near = game.drumSurfaceAt(0);
     assertClose(top.y, 16.5);
@@ -4296,7 +4282,7 @@
     assertClose(near.depth, 1);
   });
 
-  test('craft detail fades continuously across zoom boundaries', function () {
+  test('rendering', 'craft detail fades continuously across zoom boundaries', function () {
     [8, 32, 96].forEach(function (zoom) {
       var before = game.craftDetail(zoom - 0.0001);
       var after = game.craftDetail(zoom + 0.0001);
@@ -4308,7 +4294,7 @@
     assertClose(game.craftDetail(128).fine, 1);
   });
 
-  test('platform tangent projection preserves cross-slope length and clamps the limb', function () {
+  test('rendering', 'platform tangent projection preserves cross-slope length and clamps the limb', function () {
     var normal = { x: 0.48, y: 0.64, z: 0.6 };
     var p = game.platformProjection(normal, 0, 1);
     assertClose(Math.hypot(p.a * 0.6 + p.c * 0.8, p.b * 0.6 + p.d * 0.8), 0.6);
@@ -4323,7 +4309,7 @@
     assertClose(normal.x, 0.48);
   });
 
-  test('raised platform preserves ground contacts while height separates the chassis', function () {
+  test('rendering', 'raised platform preserves ground contacts while height separates the chassis', function () {
     var normal={x:0.48,y:0.64,z:0.6};
     var foot=game.platformRaisedPoint(normal,4,7,0);
     var body=game.platformRaisedPoint(normal,4,7,8);
@@ -4334,7 +4320,7 @@
     assertClose(limb.x,8.8); assertClose(limb.y,7);
   });
 
-  test('gameplay landing persists, attaches to the rotating site and gates setup', function () {
+  test('simulation', 'gameplay landing persists, attaches to the rotating site and gates setup', function () {
     var world=sim.createInitialWorld(),p=world.platforms[0],a=world.asteroids[0];
     p.state='setting-up';p.asteroidId=a.id;p.siteAngle=0;p.siteDepth=.5;
     p.setupRemainingSeconds=10800;p.landingElapsedSeconds=0;p.landingReleaseRotation=a.rotation;p.landingSitePending=true;
@@ -4361,7 +4347,7 @@
     assertClose(loaded.platforms[0].setupRemainingSeconds,10740);
   });
 
-  test('platform presentation follows lifecycle without mutating state', function () {
+  test('rendering', 'platform presentation follows lifecycle without mutating state', function () {
     var world = sim.createInitialWorld();
     var platform = world.platforms[0];
     [['carried', 0, 0], ['setting-up', 10800, 0], ['setting-up', 5400, 0.5],
@@ -4373,7 +4359,7 @@
     });
   });
 
-  test('excavation artwork only runs when extraction can run', function () {
+  test('rendering', 'excavation artwork only runs when extraction can run', function () {
     var world = sim.createInitialWorld(), platform = world.platforms[0], asteroid = world.asteroids[0];
     world.miningMission = 'active'; platform.state = 'deployed'; world.staffingEnabled = true;
     platform.workerIds = []; asteroid.ore = 100;
@@ -4386,7 +4372,7 @@
     assert(!game.platformIsWorking(platform, world, asteroid), 'Packing rig stays idle');
   });
 
-  test('mothership lighting remains fixed in world space as the hull turns', function () {
+  test('rendering', 'mothership lighting remains fixed in world space as the hull turns', function () {
     var initial = game.mothershipLocalLight(0);
     var quarterTurn = game.mothershipLocalLight(Math.PI / 2);
     assertClose(initial.x, -0.813733);
@@ -4396,7 +4382,7 @@
     assertClose(quarterTurn.z, initial.z);
   });
 
-  test('mothership habitat shader tracks spin, world light and screen pixel size', function () {
+  test('rendering', 'mothership habitat shader tracks spin, world light and screen pixel size', function () {
     var initial = game.mothershipHabitatUniforms(0, 0, 2);
     var later = game.mothershipHabitatUniforms(19, Math.PI / 2, 8);
     assertClose(initial.uSpin, 0);
@@ -4408,7 +4394,7 @@
     assertClose(later.uLight[1], 0.813733);
   });
 
-  test('mothership habitat hides lamps rotating across the far side', function () {
+  test('rendering', 'mothership habitat hides lamps rotating across the far side', function () {
     var front = game.mothershipHabitatLampVisibility(0);
     var back = game.mothershipHabitatLampVisibility(Math.PI);
     var shoulder = game.mothershipHabitatLampVisibility(Math.PI / 2);
@@ -4417,13 +4403,13 @@
     assertClose(shoulder.left, 0); assertClose(shoulder.right, 0);
   });
 
-  test('save serialization round-trips world state', function () {
+  test('simulation', 'save serialization round-trips world state', function () {
     var world = sim.issueMoveOrder(sim.selectShips(createDeployedWorld(), ['tug-01']), { x: -40, y: 90 });
     var restored = sim.deserializeWorld(sim.serializeWorld(world));
     assert(JSON.stringify(restored) === JSON.stringify(world), 'Restored world should match saved world');
   });
 
-  test('unsupported save versions are rejected', function () {
+  test('simulation', 'unsupported save versions are rejected', function () {
     var rejected = false;
     try {
       sim.deserializeWorld(JSON.stringify({ version: 99, world: createDeployedWorld() }));
@@ -4433,7 +4419,7 @@
     assert(rejected, 'Unsupported versions should throw a useful error');
   });
 
-  test('semantic zoom preserves baseline and reveals relative scale continuously', function () {
+  test('rendering', 'semantic zoom preserves baseline and reveals relative scale continuously', function () {
     ['escort', 'miner', 'tug', 'mothership', 'asteroid', 'depot'].forEach(function (type) {
       assertClose(game.semanticScale(type, 1), 1);
       assertClose(game.semanticScale(type, 1.000001), 1, 0.00001);
@@ -4446,7 +4432,7 @@
     assert(game.semanticScale('mothership', 32) > 0.8, 'Large bodies retain most world size');
   });
 
-  test('extended zoom retains the world point under the pointer and respects limits', function () {
+  test('rendering', 'extended zoom retains the world point under the pointer and respects limits', function () {
     var view = { width: 1200, height: 800 };
     var pointer = { x: 230, y: 570 };
     var camera = { x: 71, y: -83, zoom: 120 };
@@ -4459,7 +4445,7 @@
     assertClose(game.zoomCameraAt({ x: 0, y: 0, zoom: 0.35 }, pointer, view, 1).zoom, 0.35);
   });
 
-  test('detail zoom magnifies all hulls fourfold without changing relative proportions', function () {
+  test('rendering', 'detail zoom magnifies all hulls fourfold without changing relative proportions', function () {
     ['escort', 'miner', 'tug', 'mothership', 'asteroid', 'depot'].forEach(function (type) {
       var base = game.semanticScale(type, 32);
       assertClose(game.semanticScale(type, 32.000001), base, 0.000001);
@@ -4483,7 +4469,7 @@
     });
   });
 
-  test('close zoom recovery targets do not capture empty-space move orders', function () {
+  test('rendering', 'close zoom recovery targets do not capture empty-space move orders', function () {
     var world = createDeployedWorld();
     var escort = findShip(world, 'escort-01');
     escort.disabled = true;
@@ -4497,7 +4483,7 @@
     assert(findShip(recover, tug.id).order.kind === 'recover');
   });
 
-  test('zooming out preserves default size hierarchy for every object class', function () {
+  test('rendering', 'zooming out preserves default size hierarchy for every object class', function () {
     [0.35, 0.5, 0.8, 1].forEach(function (zoom) {
       ['mothership', 'depot', 'escort', 'miner', 'tug'].forEach(function (type) {
         assertClose(game.semanticScale(type, zoom) * zoom, 1);
@@ -4505,7 +4491,7 @@
     });
   });
 
-  test('UI effects retain pixel size across live zoom changes while selection follows ships', function () {
+  test('rendering', 'UI effects retain pixel size across live zoom changes while selection follows ships', function () {
     function graphic() {
       return { parent: true, x: 12, y: 34, scale: { set: function (value) { this.x = value; } } };
     }
@@ -4522,7 +4508,7 @@
     });
   });
 
-  test('short move orders accelerate instead of teleporting within the old arrival radius', function () {
+  test('simulation', 'short move orders accelerate instead of teleporting within the old arrival radius', function () {
     var world = createDeployedWorld();
     var fighter = findShip(world, 'escort-01');
     var start = { x: fighter.position.x, y: fighter.position.y };
@@ -4548,7 +4534,7 @@
     assert(arrived, 'Precision arrival must settle');
   });
 
-  test('deployed platforms retain rotating surface sites across saves', function () {
+  test('simulation', 'deployed platforms retain rotating surface sites across saves', function () {
     [-0.012, 0.012].forEach(function (spin) {
       var world = createDeployedWorld(); world.asteroids[0].angularVelocity = spin;
       world = sim.issueMineOrder(sim.selectShips(world, ['msv-hardshell']), world.asteroids[0].id);
@@ -4565,7 +4551,7 @@
     });
   });
 
-  test('legacy fields merge ore into one large asteroid', function () {
+  test('simulation', 'legacy fields merge ore into one large asteroid', function () {
     var world = createDeployedWorld();
     world.asteroids.push(sim.createAsteroid('old', 'Old rock', 100, 100, 80));
     world = sim.deserializeWorld(sim.serializeWorld(world));
@@ -4573,7 +4559,7 @@
     assertClose(world.asteroids[0].ore, 10205);
   });
 
-  test('mothership dispatches the existing cargo ship and rejects duplicate jobs', function () {
+  test('simulation', 'mothership dispatches the existing cargo ship and rejects duplicate jobs', function () {
     var world = createDeployedWorld();
     assert(world.ships.length === 4 && world.ships.every(function (s) { return s.type !== 'miner' && s.type !== 'cargo'; }));
     assert(world.platforms.every(function (p) { return p.state === 'stored'; }));
@@ -4587,7 +4573,7 @@
     assert(JSON.stringify(findShip(world, 'tug-01').order) === order);
   });
 
-  test('mining plume uses hull-local geometry and only appears while landed', function () {
+  test('rendering', 'mining plume uses hull-local geometry and only appears while landed', function () {
     var ship = findShip(createDeployedWorld(), 'tug-01');
     var circles = [];
     var graphics = { lineStyle: function () {}, beginFill: function () {}, endFill: function () {}, drawCircle: function (x, y, r) { circles.push([x, y, r]); } };
@@ -4605,7 +4591,7 @@
     assert(JSON.stringify(circles) === initial, 'Hull transform must handle anchoring, not world-space particle offsets');
   });
 
-  test('physical scale and payload masses have canonical values', function () {
+  test('simulation', 'physical scale and payload masses have canonical values', function () {
     var world = createDeployedWorld();
     var miner = findShip(world, 'tug-01');
     assertClose(sim.asteroidPhysicalStats(world.asteroids[0]).diameterM, 10000);
@@ -4623,7 +4609,7 @@
     assertClose(sim.physicalStats(world, tug).accelerationMps2, 588399 / 6462000);
   });
 
-  test('legacy physical-unit migration preserves load fraction and runs once', function () {
+  test('simulation', 'legacy physical-unit migration preserves load fraction and runs once', function () {
     var world = createDeployedWorld();
     delete world.physicalUnitsVersion;
     world.asteroids[0].ore = 540;
@@ -4642,7 +4628,7 @@
     assert(JSON.stringify(sim.deserializeWorld(sim.serializeWorld(world))) === JSON.stringify(world));
   });
 
-  test('textured thrusters ramp by ship role and stop on coast or disable', function () {
+  test('rendering', 'textured thrusters ramp by ship role and stop on coast or disable', function () {
     function graphics() {
       var g = { scale: { x: 1 }, fills: 0 };
       ['lineStyle', 'moveTo', 'lineTo', 'closePath', 'endFill'].forEach(function (name) { g[name] = function () {}; });
@@ -4669,7 +4655,7 @@
     assert(fighter.engineResponse === null && fighter.fills === 12, 'Disabled engines must stop immediately');
   });
 
-  test('fighter groups form up and retain their defense anchor', function () {
+  test('simulation', 'fighter groups form up and retain their defense anchor', function () {
     for (var count = 2; count <= 7; count += 1) {
       var world = createDeployedWorld();
       while (world.ships.filter(function (s) { return s.type === 'escort'; }).length < count) world = sim.spawnFighter(world);
@@ -4687,7 +4673,7 @@
     }
   });
 
-  test('fighters slide at the leash and return after threats leave', function () {
+  test('simulation', 'fighters slide at the leash and return after threats leave', function () {
     var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     var s = findShip(world, 'escort-01');
@@ -4706,7 +4692,7 @@
     assert(Math.hypot(s.position.x, s.position.y) < 14, 'Must reclaim the anchor neighborhood');
   });
 
-  test('ship defense follows its anchor and survives saves', function () {
+  test('simulation', 'ship defense follows its anchor and survives saves', function () {
     var world = createDeployedWorld();
     var miner = findShip(world, 'tug-01');
     world = game.issueVisualContextOrder(sim.selectShips(world, ['escort-01']), miner.position);
@@ -4717,7 +4703,7 @@
     assertClose(findShip(world, 'escort-01').order.anchor.x, miner.position.x + 100);
   });
 
-  test('formation travels together at the slower wingmate pace', function () {
+  test('simulation', 'formation travels together at the slower wingmate pace', function () {
     var world = createDeployedWorld();
     findShip(world, 'escort-02').speed = 55;
     world = sim.issueDefendOrder(sim.selectShips(world, ['escort-01', 'escort-02']), { x: 1800, y: -150 });
@@ -4738,7 +4724,7 @@
     assert(Math.abs(arrival['escort-01'] - arrival['escort-02']) <= 30, 'Wingmates should arrive within one second');
   });
 
-  test('formation waits for stragglers and releases disabled wingmates', function () {
+  test('simulation', 'formation waits for stragglers and releases disabled wingmates', function () {
     var world = createDeployedWorld();
     findShip(world, 'escort-02').position.x = -700;
     world = sim.issueDefendOrder(sim.selectShips(world, ['escort-01', 'escort-02']), { x: 1800, y: 0 });
@@ -4752,7 +4738,7 @@
     assert(Math.hypot(s.position.x - s.order.anchor.x - s.order.offset.x, s.position.y - s.order.anchor.y - s.order.offset.y) < 14, 'Survivor must continue without waiting forever');
   });
 
-  test('fighter slot tolerance leaves small deviations alone and corrects large ones', function () {
+  test('simulation', 'fighter slot tolerance leaves small deviations alone and corrects large ones', function () {
     var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     for (var i = 0; i < 600; i += 1) world = sim.stepWorld(world, 1 / 30);
     var s = findShip(world, 'escort-01');
@@ -4770,7 +4756,7 @@
     assert(JSON.stringify(sim.stepWorld(saved, 1 / 30)) === JSON.stringify(sim.stepWorld(world, 1 / 30)), 'Style must remain deterministic across saves');
   });
 
-  test('combat loosens the wing gradually without reassigning slots', function () {
+  test('simulation', 'combat loosens the wing gradually without reassigning slots', function () {
     var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01', 'escort-02']), { x: 0, y: 0 });
     for (var i = 0; i < 600; i += 1) world = sim.stepWorld(world, 1 / 30);
     var slots = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return JSON.stringify(s.order.offset); });
@@ -4787,7 +4773,7 @@
     });
   });
 
-  test('defender kites a closing raider before entering its firing range', function () {
+  test('simulation', 'defender kites a closing raider before entering its firing range', function () {
     var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     var s = findShip(world, 'escort-01');
@@ -4809,7 +4795,7 @@
     assert(firingFrames > 100, 'Kiting must retain enough range to return fire');
   });
 
-  test('defender avoids retreating into a second raider', function () {
+  test('simulation', 'defender avoids retreating into a second raider', function () {
     var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     var s = findShip(world, 'escort-01');
@@ -4823,7 +4809,7 @@
     assert(Math.abs(s.position.y) > 30, 'Fighter should escape sideways between opposing threats');
   });
 
-  test('defenders favor finishing an enemy already under sustained fire', function () {
+  test('simulation', 'defenders favor finishing an enemy already under sustained fire', function () {
     var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     var s = findShip(world, 'escort-01');
     s.position = { x: 0, y: 0 };
@@ -4839,7 +4825,7 @@
     formation.relocating = false;
   }
 
-  test('out-of-leash contact cannot crash the entire simulation', function () {
+  test('simulation', 'out-of-leash contact cannot crash the entire simulation', function () {
     var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     findShip(world, 'escort-01').position = { x: 650, y: 0 };
@@ -4850,7 +4836,7 @@
     assert(world.elapsedSeconds > 0.9 && findShip(world, 'tug-01').position.x < start, 'Clock and unrelated ships must keep moving');
   });
 
-  test('new formation orders disengage from old combat and reach their destination', function () {
+  test('simulation', 'new formation orders disengage from old combat and reach their destination', function () {
     var world = sim.issueDefendOrder(sim.selectShips(createDeployedWorld(), ['escort-01']), { x: 0, y: 0 });
     deployTestFormation(world);
     findShip(world, 'escort-01').position = { x: 0, y: 0 };
@@ -4866,7 +4852,7 @@
     assert(reached, 'Kiting must not pin a retreating formation in its old fight');
   });
 
-  test('persistent formations close gaps after casualties and reassignment', function () {
+  test('simulation', 'persistent formations close gaps after casualties and reassignment', function () {
     var world = sim.spawnFighter(sim.spawnFighter(createDeployedWorld()));
     var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
     world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 500, y: 0 });
@@ -4892,7 +4878,7 @@
     assert(!world.formations[id], 'Empty formations are retired');
   });
 
-  test('moving wings preserve momentum and wheel through direction changes', function () {
+  test('simulation', 'moving wings preserve momentum and wheel through direction changes', function () {
     [Math.PI / 9, Math.PI * 2 / 9].forEach(function (turn) {
       var world = sim.spawnFighter(sim.spawnFighter(createDeployedWorld()));
       var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
@@ -4933,7 +4919,7 @@
     });
   });
 
-  test('stopped wings and sharp turns pivot promptly instead of making huge arcs', function () {
+  test('simulation', 'stopped wings and sharp turns pivot promptly instead of making huge arcs', function () {
     [4, 10].forEach(function (count) {
       [0, Math.PI / 2, Math.PI].forEach(function (turn) {
         var world = createDeployedWorld();
@@ -4965,7 +4951,7 @@
     });
   });
 
-  test('reversed diamonds keep occupants in place and turn while accelerating', function () {
+  test('simulation', 'reversed diamonds keep occupants in place and turn while accelerating', function () {
     var world = sim.spawnFighter(sim.spawnFighter(createDeployedWorld()));
     var ids = world.ships.filter(function (s) { return s.type === 'escort'; }).map(function (s) { return s.id; });
     world = sim.issueDefendOrder(sim.selectShips(world, ids), { x: 1800, y: 0 });
@@ -4993,7 +4979,7 @@
     });
   });
 
-  test('rocket equation charges velocity changes and payload reduces delta-v', function () {
+  test('simulation', 'rocket equation charges velocity changes and payload reduces delta-v', function () {
     var world = createDeployedWorld(), ship = findShip(world, 'escort-01');
     var mass = sim.physicalStats(world, ship).massKg, fuel = ship.propulsion.fuelKg;
     var available = sim.remainingDeltaV(world, ship);
@@ -5006,7 +4992,7 @@
     assertClose(fuel - ship.propulsion.fuelKg, mass * (1 - Math.exp(-25 / 3000)));
   });
 
-  test('empty tanks coast without speed caps, arrival snaps or negative fuel', function () {
+  test('simulation', 'empty tanks coast without speed caps, arrival snaps or negative fuel', function () {
     var world = createDeployedWorld(), ship = findShip(world, 'escort-01');
     ship.position = { x: 900, y: 0 }; ship.velocity = { x: 500, y: 20 };
     ship.propulsion.fuelKg = 0;
@@ -5018,7 +5004,7 @@
     assert(ship.order.kind === 'return' && ship.order.automatic);
   });
 
-  test('launch and catch share a finite relative velocity envelope', function () {
+  test('simulation', 'launch and catch share a finite relative velocity envelope', function () {
     var world = createDeployedWorld(), ship = findShip(world, 'escort-01'), home = world.ships[0];
     ship.position = { x: 30, y: 0 }; ship.velocity = { x: -100, y: 0 };
     assert(sim.canCatch(ship, home));
@@ -5036,7 +5022,7 @@
     assert(Math.hypot(ship.velocity.x, ship.velocity.y) * sim.METERS_PER_UNIT / sim.PHYSICAL_SECONDS_PER_SECOND <= sim.EXCHANGE_MPS);
   });
 
-  test('fuel reserves recall fighters and allow a catch before exhaustion', function () {
+  test('simulation', 'fuel reserves recall fighters and allow a catch before exhaustion', function () {
     var world = createDeployedWorld(), ship = findShip(world, 'escort-01');
     ship.position = { x: 1000, y: 0 }; ship.velocity = { x: 100, y: 0 };
     ship.propulsion.fuelKg = 2500;
@@ -5053,7 +5039,7 @@
     assertClose(ship.propulsion.fuelKg, ship.propulsion.capacityKg);
   });
 
-  test('packets use the catch envelope and conserve ore exactly once', function () {
+  test('simulation', 'packets use the catch envelope and conserve ore exactly once', function () {
     var world = createDeployedWorld();
     world.packets = [{ id: 1, position: { x: 100, y: 0 }, velocity: { x: -100, y: 0 }, ore: 50 },
       { id: 2, position: { x: 100, y: 0 }, velocity: { x: -200, y: 0 }, ore: 75 }];
@@ -5064,7 +5050,7 @@
     assertClose(world.mothership.storage.ore + world.mothership.storage.constructionMass, 50);
   });
 
-  test('end mining retrieves all platforms, drains packets and conserves material across saves', function () {
+  test('simulation', 'end mining retrieves all platforms, drains packets and conserves material across saves', function () {
     var world = sim.issueMineOrder(sim.selectShips(createFreshWorld(), ['msv-hardshell']), 'ast-ceres-01');
     for (var i = 0; i < 7500 && world.platforms[0].state !== 'deployed'; i++) world = sim.stepWorld(world, 1 / 30);
     assert(world.platforms[0].state === 'deployed');
@@ -5087,7 +5073,7 @@
     assertClose(ore + storage.ore + storage.constructionMass + storage.depotSections * 1500, 10125, 0.001);
   });
 
-  test('legacy miners migrate once without losing ore or manufacturing platforms twice', function () {
+  test('simulation', 'legacy miners migrate once without losing ore or manufacturing platforms twice', function () {
     var world = createDeployedWorld();
     delete world.logisticsVersion; delete world.platforms; delete world.packets;
     var ship = sim.cloneWorld(findShip(world, 'tug-01')); ship.id = 'old-miner'; ship.type = 'miner'; ship.cargo = 123;
@@ -5102,7 +5088,7 @@
     assert(world.platforms.length === 2);
   });
 
-  test('saved mining phases restore control state and pending deployment', function () {
+  test('simulation', 'saved mining phases restore control state and pending deployment', function () {
     var slots = {};
     var storage = { setItem: function (key, value) { slots[key] = value; }, getItem: function (key) { return slots[key]; } };
     var world = sim.selectShips(createDeployedWorld(), ['msv-hardshell']);
@@ -5127,7 +5113,7 @@
     assert(hud.miningControlState(world).endLabel === 'Mining ended · platforms recovered');
   });
 
-  test('reset clears mining progress in memory and in the saved world', function () {
+  test('simulation', 'reset clears mining progress in memory and in the saved world', function () {
     var slots = {};
     var storage = { setItem: function (key, value) { slots[key] = value; }, getItem: function (key) { return slots[key]; } };
     var world = sim.endMining(createDeployedWorld());
@@ -5146,7 +5132,7 @@
     });
   });
 
-  test('Flight hull hits use model triangles and scorches stay on the surface', function () {
+  test('flight', 'Flight hull hits use model triangles and scorches stay on the surface', function () {
     var models=window.Driftworks.shipPackModels,U=sim.METERS_PER_UNIT;
     var model={id:'plate',vertices:[-2,-2,0,0,0,1, 2,-2,0,0,0,1, 0,2,0,0,0,1]};
     var pose={eye:[10,20,30],right:[1,0,0],back:[0,-1,0],up:[0,0,1]};
@@ -5163,7 +5149,7 @@
     assert(t.wrecks[0].scorches===e.scorches, 'The wreck retains its hull burns');
   });
 
-  test('visible bolt width registers shield and hull damage at triangle edges', function () {
+  test('flight', 'visible bolt width registers shield and hull damage at triangle edges', function () {
     var DW=window.Driftworks,models=DW.shipPackModels,ai=DW.training,U=sim.METERS_PER_UNIT;
     var model={id:'test-bolt-plate',name:'Bolt test plate',triangles:1,vertices:[-2,-2,0,0,0,1, 2,-2,0,0,0,1, 0,2,0,0,0,1]};
     var packs=DW.shipPacks;
@@ -5201,7 +5187,7 @@
     } finally { DW.shipPacks=packs; }
   });
 
-  test('Flight traces burn only the first unobstructed hull and preserve lethal impacts', function () {
+  test('flight', 'Flight traces burn only the first unobstructed hull and preserve lethal impacts', function () {
     var models=window.Driftworks.shipPackModels,ai=window.Driftworks.training,U=sim.METERS_PER_UNIT;
     var t=ai.create(),pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,0,0]},e={id:'target',index:0,hp:10,pose:pose};
     e.collision={kind:'model',modelId:models.craftModel(e,'',1).id};t.enemies=[e];
@@ -5217,7 +5203,7 @@
     assert(t.wrecks[0].scorches.length===1, 'The killing shot marks the wreck');
   });
 
-  test('Flight scorch batches follow translated and rotated hull poses', function () {
+  test('flight', 'Flight scorch batches follow translated and rotated hull poses', function () {
     var models=window.Driftworks.shipPackModels,U=sim.METERS_PER_UNIT;
     var pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},e={index:0,pose:pose};
     var model=models.craftModel(e,'',1),hit=models.hullHit(model,pose,[0,0,10/U],[0,0,-10/U],U);
@@ -5229,7 +5215,7 @@
     for(var i=0;i<before.length;i+=6){assertClose(after[i],10-before[i+1],.00001);assertClose(after[i+1],20+before[i],.00001);assertClose(after[i+2],30+before[i+2],.00001);}
   });
 
-  test('Combat study deduplicates deterministic pilots and equivalent weapons', function () {
+  test('flight', 'Combat study deduplicates deterministic pilots and equivalent weapons', function () {
     var study=window.Driftworks.flightStudy, DW=window.Driftworks;
     var config={ships:[0],weapons:[-1],starts:['headOn'],pilots:['perfect','practiced'],skills:[1],seeds:3,seed:1,duration:10,pairing:'mirror',defenses:'paired'};
     assert(study.plan(config).length===8);
@@ -5238,7 +5224,7 @@
     config.seeds=11;var rejected=false;try{study.plan(config);}catch(e){rejected=true;}assert(rejected);
   });
 
-  test('Combat study keeps timeouts censored and pairs shield observations', function () {
+  test('flight', 'Combat study keeps timeouts censored and pairs shield observations', function () {
     var DW=window.Driftworks,duel=DW.flightDuel.run({duration:1,seed:7}),options=duel.replay.options;
     var shield={id:'shield',options:Object.assign({},options,{unshielded:false}),summary:Object.assign({},duel.summary(),{outcome:'timeout',seconds:10,unshielded:false})};
     var bare={id:'bare',options:Object.assign({},options,{unshielded:true}),summary:Object.assign({},duel.summary(),{outcome:'player-win',seconds:2,unshielded:true})};
@@ -5246,7 +5232,7 @@
     assert(DW.flightStudy.analyze([shield]).medianKill===null);
   });
 
-  test('Combat study watch links reproduce the complete duel configuration', function () {
+  test('flight', 'Combat study watch links reproduce the complete duel configuration', function () {
     var DW=window.Driftworks,options=DW.flightDuel.create({duration:1,seed:17,profile:1,opponentProfile:31,category:'human',flavor:'expert',start:'crossing',unshielded:true}).replay.options;
     var url=DW.flightStudy.watchUrl(options),parsed=DW.flightDuel.readWatchSearch(url.slice(url.indexOf('?')));
     assert(JSON.stringify(parsed)===JSON.stringify(options));
@@ -5254,7 +5240,7 @@
     var rejected=false;try{DW.flightDuel.readWatchSearch('?duel=1&seed=-1');}catch(e){rejected=true;}assert(rejected);
   });
 
-  test('Opponent studies hold setup fixed across styles and preserve watch/replay identity', function () {
+  test('flight', 'Opponent studies hold setup fixed across styles and preserve watch/replay identity', function () {
     var DW=window.Driftworks,config={styles:['baseline','aggressor','interceptor','passer'],ships:[1],weapons:[-1],starts:['headOn'],pilots:['perfect'],skills:[1],seeds:2,seed:7,duration:6,pairing:'mirror',defenses:'retail'};
     var cases=DW.flightStudy.plan(config);assert(cases.length===4);
     cases.forEach(function(c){var duel=DW.flightDuel.run(c.options),summary=duel.summary();
@@ -5268,7 +5254,7 @@
     var invalid=false;try{DW.flightDuel.create({opponentStyle:'unknown'});}catch(e){invalid=true;}assert(invalid);
   });
 
-  test('Pass fighter commits to an exit while aggressor maintains close pressure', function () {
+  test('flight', 'Pass fighter commits to an exit while aggressor maintains close pressure', function () {
     var DW=window.Driftworks;
     var aggressive=DW.flightDuel.run({opponentStyle:'aggressor',duration:12,category:'perfect',start:'headOn',profile:1}).summary();
     var passer=DW.flightDuel.run({opponentStyle:'passer',duration:12,category:'perfect',start:'headOn',profile:1}).summary();
@@ -5278,7 +5264,7 @@
     duel.advance(.6);assert(JSON.stringify(goal)===JSON.stringify(duel.enemy.extensionGoal),'Exit heading does not track the opponent every decision');
   });
 
-  test('FreeSpace pursuit uses closure control without stopping or altering shared physics', function () {
+  test('flight', 'FreeSpace pursuit uses closure control without stopping or altering shared physics', function () {
     var DW=window.Driftworks,U=sim.METERS_PER_UNIT;
     function fixture(speed){var d=DW.flightDuel.create({opponentStyle:'fso-pursuit',duration:2,profile:1,start:'tail'});
       d.enemy.pose.eye=d.player.eye.map(function(v,i){return v-(i===1?330/U:0);});
@@ -5292,7 +5278,7 @@
     assert(closing.enemy.profile===DW.arcade.profiles[1]);
   });
 
-  test('FreeSpace no-progress escape is opt-in, committed, bounded and followed by re-entry', function () {
+  test('flight', 'FreeSpace no-progress escape is opt-in, committed, bounded and followed by re-entry', function () {
     var DW=window.Driftworks;
     function fixture(style){var d=DW.flightDuel.create({opponentStyle:style,duration:15,start:'crossing',profile:1});d.enemy.noProgress=8;d.advance(1/120);return d;}
     var pursuit=fixture('fso-pursuit'),breaker=fixture('fso-breaker');
@@ -5305,7 +5291,7 @@
     assert(breaker.enemy.progressEscapes===1,'Cooldown prevents repeated escape chatter');
   });
 
-  test('FreeSpace variants are deterministic through replay and study links', function () {
+  test('flight', 'FreeSpace variants are deterministic through replay and study links', function () {
     var DW=window.Driftworks;
     ['fso-pursuit','fso-breaker'].forEach(function(style){var d=DW.flightDuel.run({opponentStyle:style,category:'human',flavor:'practiced',seed:4,duration:4});
       assert(JSON.stringify(DW.flightDuel.replay(d.replay).summary())===JSON.stringify(d.summary()));
@@ -5313,14 +5299,13 @@
     });
   });
 
-  test('Manual training spawns inherit the selected experimental opponent policy', function () {
+  test('flight', 'Manual training spawns inherit the selected experimental opponent policy', function () {
     var DW=window.Driftworks,t=DW.training.create('training'),pose=DW.arcade.create(0);
     t.opponentStyle='fso-breaker';DW.training.spawn(t,pose,0);
     assert(t.enemies.length>0&&t.enemies.every(function(e){return e.opponentStyle==='fso-breaker';}));
   });
 
-  window.registerPopulationTests(test, assert, assertClose);
-  run();
+  window.registerPopulationTests(function (name, fn) {test('simulation', name, fn);}, assert, assertClose);
 
   function findShip(world, id) {
     return world.ships.filter(function (ship) {
@@ -5340,7 +5325,7 @@
     })[0];
   }
 
-  test('viewer picks nearest rendered triangles with texture stride and model transforms', function () {
+  test('rendering', 'viewer picks nearest rendered triangles with texture stride and model transforms', function () {
     var picker=window.Driftworks.scene3d.pickStudyBatches;
     // Local XY triangle, UV-interleaved. Basis swaps Y/Z, scale doubles it,
     // then a quarter turn around Z and a translation produce a vertical wall.
@@ -5354,7 +5339,7 @@
     hit=picker([0,10,0],[0,-1,0],[spun]);assert(hit,'Axial rotor spin uses the rendered triangle');assertClose(hit[1],0);
   });
 
-  test('flight destruction retains drift, pauses and expires independently of gun impacts', function () {
+  test('flight', 'flight destruction retains drift, pauses and expires independently of gun impacts', function () {
     var DW=window.Driftworks, api=DW.training, pose=DW.arcade.create(0), combat=api.create('training');
     api.configure(combat,DW.arcade.profiles[0]);api.spawn(combat,pose,0);
     var victim=combat.enemies[0];victim.pose.velocity=[30,-20,10];
@@ -5368,31 +5353,5 @@
     api.step(combat,pose,5.2,0);assert(combat.flashes.indexOf(flash)<0,'Destruction expires after 5.5 simulation seconds');
   });
 
-  function run() {
-    var summary = document.querySelector('#summary');
-    var results = document.querySelector('#results');
-    var passed = 0;
-
-    tests.forEach(function (current) {
-      var item = document.createElement('li');
-      try {
-        current.fn();
-        item.className = 'pass';
-        item.textContent = 'PASS: ' + current.name;
-        passed += 1;
-      } catch (error) {
-        item.className = 'fail';
-        item.textContent = 'FAIL: ' + current.name;
-        var detail = document.createElement('pre');
-        detail.textContent = error.stack || String(error);
-        item.appendChild(detail);
-        console.error(current.name, error);
-      }
-      results.appendChild(item);
-    });
-
-    var failed = tests.length - passed;
-    summary.className = failed === 0 ? 'pass' : 'fail';
-    summary.textContent = failed === 0 ? 'All ' + passed + ' browser-native tests passed.' : failed + ' of ' + tests.length + ' browser-native tests failed.';
-  }
+  window.DriftworksTestResult = harness.run();
 })();

@@ -162,3 +162,5 @@ module.exports = function runFlightTransitions(namespace) {
   assert.equal(watch.get('status').textContent, 'Duel complete · Replay duel or choose another pilot');
   console.log('PASS flight composition: retained combat settings, pause/resume clocks, contact/death/completion status');
 };
+
+if (require.main === module) module.exports(require('./helpers/shared-runtime.cjs').install().namespace);

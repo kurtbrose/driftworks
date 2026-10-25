@@ -38,6 +38,9 @@ approved from a few spot checks.
   checks with `node tests/<relevant-file>.cjs`, or selected scenario replays with
   `node tests/scenarios.cjs tests/scenarios/<relevant-scenario>.json`. Inspect the
   test entry point first: some checks require the shared runner's setup.
+- Prefer focused groups such as `npm run test:flight` or
+  `node tests/run.cjs simulation rendering` when a change spans several checks.
+  See [test groups](docs/testing.md) for membership and explicit legacy setup.
 - Validate behavior headlessly before opening the renderer. For flight spawning,
   targeting and callouts, use the real session from `tools/headless.cjs` in Node or
   Codex's JavaScript REPL; see [headless development](docs/headless.md) for setup,

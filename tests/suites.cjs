@@ -1,0 +1,144 @@
+'use strict';
+
+// Each executable check belongs to one group. Legacy globals require explicit setup.
+const suites = {
+  simulation: [
+    {"file":"shared.cjs","args":["simulation"]},
+    "campaign-intro.cjs",
+    {"file":"scenarios.cjs","args":["--all"]}
+  ],
+  flight: [
+    {"file":"shared.cjs","args":["flight"]},
+    "flight-aim-tracking.cjs",
+    "flight-evasion.cjs",
+    "gas-giant-flight.cjs",
+    {"file":"gas-giant-flight.cjs","args":["jade-rime"]},
+    "flight-hud-markers.cjs",
+    "flight-missions.cjs",
+    "evacuation-mission.cjs",
+    "headless.cjs",
+    "ellis.cjs",
+    "ellis-ballistics.cjs",
+    "ellis-feedback.cjs",
+    "pilot-training.cjs",
+    "flight-hit-reactions.cjs",
+    "ohio-flying-roster.cjs",
+    "flight-furball-target-lock.cjs",
+    "flight-furball-telemetry.cjs",
+    "flight-transitions.cjs",
+    "flight-study-worker.cjs",
+    "concept-flight.cjs",
+    "aegis-flight.cjs",
+    "hull-sweep-index.cjs",
+    "baked-hull-indices.cjs",
+    "projectile-broadphase.cjs",
+    "collision-events.cjs",
+    "refueling-cycle.cjs"
+  ],
+  rendering: [
+    {"file":"shared.cjs","args":["rendering"]},
+    "asteroid-art.cjs",
+    "skybox-factory.cjs",
+    "sky-effects.cjs",
+    "sky-environment.cjs",
+    "star-glare.cjs",
+    "impact-lab.cjs",
+    "bolt-lab.cjs",
+    "impact-sky.cjs",
+    "planet-hero.cjs",
+    "sky-cube.cjs",
+    "gas-giant-weather.cjs",
+    "orbital-impact-cube.cjs",
+    "evacuation-sky.cjs",
+    "planet-impact.cjs",
+    "planet-impact-baked.cjs",
+    "explosions.cjs",
+    "texture-prewarming.cjs",
+    "gpu-ui.cjs",
+    "evacuation-materials.cjs",
+    "civilian-flight.cjs",
+    "ellis-effects.cjs",
+    "gpu-diagnostics.cjs",
+    "ellis-study.cjs",
+    "ellis-growth.cjs",
+    "ellis-optics.cjs",
+    "flight-skybox.cjs",
+    "ship-viewer.cjs",
+    {"file":"mining-study-navigation.cjs","setup":"shared"},
+    {"file":"mining-ramp-clearance.cjs","setup":"shared"},
+    {"file":"mining-leg-clearance.cjs","setup":"shared"},
+    {"file":"mining-roof-clearance.cjs","setup":"shared"},
+    {"file":"mining-study-terrain.cjs","setup":"shared"},
+    "asteroid-three.cjs",
+    {"file":"mining-study-landing.cjs","setup":"shared"},
+    {"file":"mining-gameplay-contacts.cjs","setup":"shared"},
+    {"file":"mining-lights.cjs","setup":"shared"},
+    {"file":"mining-geometry.cjs","setup":"shared"},
+    "model-viewer.cjs",
+    "study-viewer.cjs",
+    "study-zoom.cjs",
+    "comms-display.cjs",
+    "study-culling.cjs",
+    "three-production.cjs",
+    "asteroid-detail-lab.cjs",
+    "liner-batching.cjs",
+    "disruption-lab.cjs"
+  ],
+  assets: [
+    {"file":"shared.cjs","args":["assets"]},
+    "asset-versions.cjs",
+    "wreck-textures.cjs",
+    "refueling-depot.cjs",
+    "civilian-airliners.cjs",
+    "retail-gun-mounts.cjs",
+    "character-assets.cjs",
+    "portrait-assets.cjs",
+    "ohio-portraits.cjs"
+  ],
+  artwork: [
+    {"file":"shared.cjs","args":["artwork"]},
+    "character-cast.cjs",
+    "crew-deck.cjs",
+    "body-sprites.cjs",
+    "civilian-portraits.cjs",
+    "ohio-sign.cjs",
+    "ohio-roadside.cjs",
+    "character-paints.cjs",
+    "character-bodies.cjs",
+    "fleet-greybox.cjs",
+    "fighter-greybox.cjs",
+    "livery-lab.cjs",
+    "livery-art.cjs",
+    "livery-materials.cjs",
+    "livery-sections.cjs",
+    "hull-panels.cjs",
+    "flight-portraits.cjs",
+    "portrait-registration.cjs",
+    "concept-ships.cjs",
+    "dreadnaught-kit.cjs"
+  ],
+  audio: [
+    {"file":"shared.cjs","args":["audio"]},
+    "audio-modules.cjs",
+    "ohio-music.cjs",
+    "speech-sprites.cjs",
+    "comms-signal.cjs",
+    "comms-lab.cjs"
+  ],
+  tooling: [
+    {"file":"shared.cjs","args":["tooling"]},
+    "script-manifest.cjs",
+    "test-runner.cjs"
+  ]
+};
+
+// Non-entry modules are explicit so adding a new root-level check cannot quietly
+// leave it out of npm test. Fixtures and setup live in their own subdirectories.
+const helpers = {
+  'run.cjs': 'test orchestrator',
+  'suites.cjs': 'group registry',
+  'check-types.cjs': 'separate development-only type gate in npm run check',
+  'depot-asset.cjs': 'asserted and imported by refueling-depot.cjs'
+};
+
+module.exports = {suites, helpers};

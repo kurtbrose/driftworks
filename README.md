@@ -40,6 +40,7 @@ For code changes, start with [AGENTS.md](AGENTS.md), then consult the
 - Opaque DOM HUD with a thin mission bar, an unobstructed tactical viewport, and a bottom shelf separating fleet, selection, local operations, and contextual commands. Entity count and measured FPS live in its developer menu.
 - Prominent in-game mission clock with inline units (00h 00m 00s) and Pause, 1Ã—, 2Ã—, and 4Ã— controls. Simulation, combat, and effects follow the selected speed; camera and selection remain usable while paused. Saves retain elapsed mission time; playback speed is session-only.
 - Browser-native simulation tests at `./tests/`; the same suite runs headlessly with `node tests/run.cjs` (optional, no dependencies).
+- Focused [test groups](docs/testing.md): `npm run test:simulation`, `test:flight`, `test:rendering`, `test:assets`, `test:artwork`, `test:audio` and `test:tooling`. `npm test` runs them all; `npm run check` remains the complete validation gate.
 - Asteroid playground at `./tests/asteroid-playground.html`; every refresh creates twenty new seeded specimens using the production painter.
 
 ## Propellant, launchers, and mining platforms

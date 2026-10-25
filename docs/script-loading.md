@@ -18,7 +18,7 @@ manifest.
 | --- | --- |
 | `tactical` | Generated script tags in `rts.html` |
 | `flight` | Generated script tags and import map in `experiments/flight.html` |
-| `sharedTests` | `tests/run.cjs` |
+| `sharedTests` | `tests/helpers/shared-runtime.cjs`; loads the runtime and shared harness for Node groups |
 | `browserTests` | Generated tags in `tests/index.html`; derives from `sharedTests` with viewer resources |
 | `headless` | `tools/headless.cjs`; excludes the Pixi game and browser resources |
 | `scenarios` | `tests/scenarios.cjs` |

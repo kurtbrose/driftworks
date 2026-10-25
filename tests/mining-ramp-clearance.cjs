@@ -1,8 +1,6 @@
 const assert=require('node:assert/strict');
+const {sub,dot,cross,doorTriangles}=require('./fixtures/mining-clearance.cjs');
 const perimeter=[[15,-6],[15,6],[5,10.5],[-5,10.5],[-17,4.5],[-17,-4.5],[-5,-10.5],[5,-10.5]];
-const sub=(a,b)=>a.map((v,k)=>v-b[k]);
-const dot=(a,b)=>a.reduce((s,v,k)=>s+v*b[k],0);
-const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 function beam(a,b,w,d){const v=sub(b,a),length=Math.hypot(...v),x=v.map(v=>v/length),h=Math.hypot(x[0],x[1]),y=h>1e-8?[-x[1]/h,x[0]/h,0]:[0,1,0];return {center:a.map((v,k)=>(v+b[k])/2),axes:[x,y,cross(x,y)],half:[length/2,w,d]};}
 const frame=[];
 perimeter.forEach((p,i)=>{
@@ -22,9 +20,4 @@ for(let step=0;step<=40;step++){
  for(let i=0;i<8*20*18;i+=18){const tri=[0,6,12].map(k=>data.slice(i+k,i+k+3));const triangles=[tri];if((i/18)%10<2)triangles.push(tri.map(p=>p.map((v,k)=>v-data[i+3+k]*.22)));for(const face of triangles)for(let n=0;n<frame.length;n++)assert.ok(!intersects(face,frame[n]),`Door triangle ${i/18} intersects frame member ${n} at opening ${t}`);}
 }
 console.log('PASS bay ramps: thick panel sweep clears posts, perimeter rails, pod ribs and sockets at 41 positions');
-function doorTriangles(t){
- const data=global.Driftworks.scene3d.miningPlatformGeometry(1,0,false,t).ochre,out=[];
- for(let i=0;i<8*20*18;i+=18){const tri=[0,6,12].map(k=>data.slice(i+k,i+k+3));out.push(tri);if((i/18)%10<2)out.push(tri.map(p=>p.map((v,k)=>v-data[i+3+k]*.22)));}
- return out;
-}
 module.exports={doorTriangles,sub,dot,cross};
