@@ -1,0 +1,231 @@
+{
+  "text": "Wormhole ahead. Keep your weapons ready!",
+  "sampleRate": 22050,
+  "cases": [
+    {
+      "name": "Study · dark smooth",
+      "style": "vowel-groups",
+      "hash": "c0dad960bb587119815a6a54baf103fff055202f63e6686535486e0bda54481b"
+    },
+    {
+      "name": "Study · dark smooth",
+      "style": "flowing",
+      "hash": "3bbe5d9333cb7b7ceb9e2841fee72835bd8ddcf3168203fa741edd9412330c95"
+    },
+    {
+      "name": "Study · dark smooth",
+      "style": "syllables",
+      "hash": "acafadc063f4e942c5367f8cbe2432002c37838d41a3d8584ae3cfd6b06784c9"
+    },
+    {
+      "name": "Study · nasal clipped",
+      "style": "vowel-groups",
+      "hash": "431e914b4ad061a10c16ebc8fc8b988010aa7bfc6d8de5c6fe4a0e486596eded"
+    },
+    {
+      "name": "Study · nasal clipped",
+      "style": "flowing",
+      "hash": "cefea280ebcfc13876e7d649d7fdd8271e4564419b9628b70c65bdb500279341"
+    },
+    {
+      "name": "Study · nasal clipped",
+      "style": "syllables",
+      "hash": "7c4c0318770ef683b86e8a4104cb5da5de0b9b833fd4e5f6654c65611b23e5bb"
+    },
+    {
+      "name": "Study · raspy creak",
+      "style": "vowel-groups",
+      "hash": "a5bab7e0c521b58f56f0f2316fcf5d7d0c7ce227258d790a9cd9f6c84ecc0c75"
+    },
+    {
+      "name": "Study · raspy creak",
+      "style": "flowing",
+      "hash": "a47727d9452fc17f70e833a6b75e588df0f287010a9f9709b68917ea65b8e72d"
+    },
+    {
+      "name": "Study · raspy creak",
+      "style": "syllables",
+      "hash": "b9fbbbfb66e205b2118ea38c281eebae92a24316aa8696be0adf7590676ffd29"
+    },
+    {
+      "name": "Scout",
+      "style": "vowel-groups",
+      "hash": "56b15e1085682ee5f81565d3b7c62985679ccb0037847f671d72b219f1834e08"
+    },
+    {
+      "name": "Scout",
+      "style": "flowing",
+      "hash": "d2e7daf24eaf3f355a4ab3a9e16a1cd76c289ea2e35643605d5c28cc18c9dff7"
+    },
+    {
+      "name": "Scout",
+      "style": "syllables",
+      "hash": "ab5085ba0e5553488dc1a897ceea694d81f13d51c51d09d620264c11f4645e88"
+    },
+    {
+      "name": "Veteran",
+      "style": "vowel-groups",
+      "hash": "76385b1235bce912b656e423ea5fc1f10617f38f667bd924adb7e075434bfb44"
+    },
+    {
+      "name": "Veteran",
+      "style": "flowing",
+      "hash": "57dae3f19a5f8440497661ff02f530373f8958152dc8b9bed6c25969c2422235"
+    },
+    {
+      "name": "Veteran",
+      "style": "syllables",
+      "hash": "752630f98cf11facff0a7855d7848d232b6668e50c6d80ad9ebf30f53d84e6e8"
+    },
+    {
+      "name": "Navigator",
+      "style": "vowel-groups",
+      "hash": "2ad5a2e5e735ba557a681104eda645af3d73320999300e8b1e8abdb17bbcdf7f"
+    },
+    {
+      "name": "Navigator",
+      "style": "flowing",
+      "hash": "c10fe40c9014b8d5d4b9c8fc988447c889fc80067ec80a9affeea68550ca7787"
+    },
+    {
+      "name": "Navigator",
+      "style": "syllables",
+      "hash": "f1427725972917a3952f4a22327dac0b46fd36e4f625330d2d30faf79467bcf0"
+    },
+    {
+      "name": "Woman · warm",
+      "style": "vowel-groups",
+      "hash": "ccf17256afdb4844bf6b512b22bef3b88d2da2c854ce9cbb5d514a289035e5b5"
+    },
+    {
+      "name": "Woman · warm",
+      "style": "flowing",
+      "hash": "9230611d6024ab12a52252f7acfd03e806c1b14fafd9bcbe7f4ab41b1e1a2a05"
+    },
+    {
+      "name": "Woman · warm",
+      "style": "syllables",
+      "hash": "4773cdd1d27fa41164cf5c7232cce3bf8d832d8d8a5b9d30b61f4ba1a3974f08"
+    },
+    {
+      "name": "Woman · bright",
+      "style": "vowel-groups",
+      "hash": "d4d2522af870ea5322a62f71b81b55a459a1992b93a6c22fb63a105a1649193a"
+    },
+    {
+      "name": "Woman · bright",
+      "style": "flowing",
+      "hash": "8582326b56dcf2b6e86f72741f65ea66fa850c986f3082bc9f59228d6ebf91e7"
+    },
+    {
+      "name": "Woman · bright",
+      "style": "syllables",
+      "hash": "290602bfef186fcdf2e0f888b2389559bbe612c51ba3450e6ef719eea28b2f3c"
+    },
+    {
+      "name": "Man · baritone",
+      "style": "vowel-groups",
+      "hash": "4868524659eb2cb39783a05ddec2d1239c25c2cbabf0085ddcfa2de9c0b28471"
+    },
+    {
+      "name": "Man · baritone",
+      "style": "flowing",
+      "hash": "489d98aa9a3b92602e8e724aa91bf4d32a4acf434cd171f54ffce2b10c891663"
+    },
+    {
+      "name": "Man · baritone",
+      "style": "syllables",
+      "hash": "f8382d25b3baf71e0fb46575bd2710e7e24b244f1e68297f572bcacdef2b00bd"
+    },
+    {
+      "name": "Child",
+      "style": "vowel-groups",
+      "hash": "5a706f9a12e8dd519ab1d605385303f5d18fc864a8f4ec82b080538a1a8f40f3"
+    },
+    {
+      "name": "Child",
+      "style": "flowing",
+      "hash": "fed49cf05f2170ad90bf8c385ef7061ed7bfad31981d1c99f562deb3aaea2941"
+    },
+    {
+      "name": "Child",
+      "style": "syllables",
+      "hash": "1a5b7d3c5ef0e0ef2b2dc8a164e197c1b3bc8ffc511a47ed93e30f3b5ab4533b"
+    },
+    {
+      "name": "Old woman",
+      "style": "vowel-groups",
+      "hash": "a0f0c8868bfabba830dac088bd72b9fbed4d447ea108fd306b980c015ba0d540"
+    },
+    {
+      "name": "Old woman",
+      "style": "flowing",
+      "hash": "172bf42494d94b27b9819817706058ddad7911452b659fe9ed7b14a7652027cf"
+    },
+    {
+      "name": "Old woman",
+      "style": "syllables",
+      "hash": "c985b84d51f513da3c83b048ae37073cb2c560d5e06109f06c7b39c1fad3f172"
+    },
+    {
+      "name": "Old man",
+      "style": "vowel-groups",
+      "hash": "67f451eb6f871ef88f01b59855230612cb358ddd80a638e819afc607cb4ec86f"
+    },
+    {
+      "name": "Old man",
+      "style": "flowing",
+      "hash": "5aeeaafc1aedebbd64c89dfa37d6d61505301e3edfcbbdbd0a6acc586f7a2b2b"
+    },
+    {
+      "name": "Old man",
+      "style": "syllables",
+      "hash": "3774d7d99912f1d01020000af5ff6545d3878058f74f3cfa060a44f0c7f99e16"
+    },
+    {
+      "name": "Pirate",
+      "style": "vowel-groups",
+      "hash": "0d57cabcb1391b4c7f2d1b7dfeb646f7151038c458ce1af45b3551263e3971fa"
+    },
+    {
+      "name": "Pirate",
+      "style": "flowing",
+      "hash": "13d49941435a59d55dc44dfed78bbfb7a45bd6ed9ddf561b8ef8ba7c5412d679"
+    },
+    {
+      "name": "Pirate",
+      "style": "syllables",
+      "hash": "618dd793dee3d819329aa2a57d6412bdec6ceb4abf4bbe8dc6b74a3b58755cbe"
+    },
+    {
+      "name": "Ship computer",
+      "style": "vowel-groups",
+      "hash": "0fb3646d16653c9a8c618359a36fbbacb6ae40f2ebdd13dcef0f5da80770957c"
+    },
+    {
+      "name": "Ship computer",
+      "style": "flowing",
+      "hash": "06ba126d1ec87342398caf0a5aa93dff81dc433f87a52ca271214587fed2095d"
+    },
+    {
+      "name": "Ship computer",
+      "style": "syllables",
+      "hash": "c8899cc6f219590065b6109247ecc3a6020965673678c8b1327f6ed0d5fbf5a7"
+    },
+    {
+      "name": "Alien",
+      "style": "vowel-groups",
+      "hash": "f270a1263828f7e892f67c3178dba01f3a5b248629dd85023f81ca0d1f5e6629"
+    },
+    {
+      "name": "Alien",
+      "style": "flowing",
+      "hash": "150854dbf2d4f8b5746aebb881c58a7600c06f6ad660321cddd5dc94e79616d7"
+    },
+    {
+      "name": "Alien",
+      "style": "syllables",
+      "hash": "eebedfc3cb751c462ff4071772f20e3a86af9abff94fae10f32b923655f50958"
+    }
+  ]
+}

@@ -118,3 +118,35 @@ instrumentation/profile changes, focused script-manifest and asset validation
 also passed. The benchmark ran in the browser after asset refresh, retaining its
 controls and reporting full-frame and radio/speech substage timings. No claim is
 made that all user-reported hitches are fixed.
+
+## Synchronous speech follow-up
+
+Hoist harmonic brightness weights once per utterance, resolve formant controls
+once, and calculate moving formant centers once per sample instead of once per
+harmonic. Hoist pitch-curve fallback and envelope timing out of the sample loop.
+Skip nasal/creak calculations only when their controls are zero. Preserve all 24
+harmonics, sample rate, RNG calls, arithmetic order, cue timing and normalization.
+
+Browser comparison used the same analyzed line, “Wormhole ahead. Keep your weapons
+ready!”, at 22,050 Hz. Twelve preset runs alternated old/new execution order, with
+the first two runs discarded as warmup. The remaining ten paired utterances
+averaged **90.27 ms before / 32.18 ms after** (2.81x faster; 64% less synthesis
+CPU); observed ranges were 61–119 ms and 21.7–44.3 ms. Both versions ran in the
+same browser document, using the pre-change source captured before editing.
+This is isolated synthesis timing, not an Ellis FPS measurement or a promise that
+all radio hitches disappear. Radio transmission processing remains synchronous.
+
+The browser comparison produced identical Float32 samples. Frozen pre-change
+PCM hashes additionally cover all 15 presets across vowel-groups, flowing and
+syllables styles (45 cases), including nasal and creak controls, in
+`tests/fixtures/mumble-pcm.json`, checked by `tests/comms-signal.cjs`.
+
+A follow-up live Ellis dogfight run (same near-throat/fast-pan/fire URL) captured
+one transmission: synthesis 34.8 ms, radio processing 9.0 ms, radio update 46.5 ms,
+and full frame CPU 61.0 ms. This confirms the remaining synchronous stall; the
+utterance differs from the earlier capture, so these are not paired before/after
+measurements. Full checks were running concurrently; use the isolated paired
+comparison above for the speedup, not this integration run's frame percentiles.
+
+Validation: focused audio checks and `npm run check` passed (116/116 entries),
+including strict types, script manifests, asset versions and all PCM regressions.

@@ -37,3 +37,14 @@ assert.equal(longer.duration,11);
 assert.equal(api.radioNoiseAt(extended,extended.duration).strength,0);
 assert.ok(middleBursts>0&&cleanLines>0,'existing mixture of clean lines and occasional bursts');
 console.log('PASS shared radio noise: byte-identical existing audio, opening/closing gates, occasional middle bursts, clean/local bypass');
+
+// Frozen synthesis output before hoisting harmonic/formant calculations. Cover
+// every preset and synthesis style, including nonzero nasal and creak effects.
+const synthesis = JSON.parse(fs.readFileSync('tests/fixtures/mumble-pcm.json', 'utf8'));
+for (const entry of synthesis.cases) {
+  const plan = api.analyze(synthesis.text, api.presets[entry.name]);
+  const pcm = api.render(plan, synthesis.sampleRate, {style: entry.style});
+  assert.equal(crypto.createHash('sha256').update(Buffer.from(pcm.buffer)).digest('hex'), entry.hash,
+    'synthesis samples unchanged: ' + entry.name + ' / ' + entry.style);
+}
+console.log('PASS synthesis PCM: all presets and three styles preserve existing samples exactly');

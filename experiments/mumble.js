@@ -175,6 +175,11 @@
         var popping = style === 'vowel-groups';
         sampleRate = sampleRate || 22050;
         var pcm = new Float32Array(Math.ceil(plan.duration * sampleRate)), v = voice(plan.voice), rng = random(hash(plan.text, v.seed)), phase = 0;
+        // Voice/harmonic weights are constant for the entire utterance.
+        var harmonicBrightness = new Float64Array(25), centers = new Float64Array(3);
+        var formantScales = [v.formant1, v.formant2, v.formant3];
+        for (var harmonic = 1; harmonic <= 24; harmonic++)
+            harmonicBrightness[harmonic] = Math.pow(harmonic, (v.brightness - 0.5) * 1.6);
         plan.events.forEach(function (event, eventIndex) {
             if (event.kind !== 'syllable')
                 return;
@@ -191,9 +196,10 @@
             var group = popping && plan.text.slice(event.sourceFrom, event.sourceTo).toLowerCase().match(/[aeiou][aeiouyw]?/);
             var mapped = group && vowelGroups[group[0]];
             var formants = vowels[mapped ? mapped[0] : event.vowel], targetFormants = vowels[mapped ? mapped[1] : event.vowelEnd] || formants, count = Math.floor(soundDuration * sampleRate), start = Math.floor(event.start * sampleRate);
+            var curve = event.pitchCurve || [event.pitch, event.pitch, event.pitch];
+            var attackTime = Math.min(0.008, soundDuration * 0.1), releaseTime = Math.min(0.035, soundDuration * 0.3);
             for (var i = 0; i < count; i++) {
                 var t = i / sampleRate, p = Math.min(1, t / event.duration);
-                var curve = event.pitchCurve || [event.pitch, event.pitch, event.pitch];
                 var segment = p < 0.5 ? 0 : 1, blend = p < 0.5 ? p * 2 : (p - 0.5) * 2;
                 var movingPitch = curve[segment] * Math.pow(curve[segment + 1] / curve[segment], blend);
                 var frequency = movingPitch * (1 + 0.025 * Math.sin(t * 32) + v.roughness * 0.035 * Math.sin(t * 173) + (v.tremor || 0) * 0.045 * Math.sin(2 * Math.PI * 2 * (event.start + t)));
@@ -205,6 +211,9 @@
                 if (popping)
                     glide = Math.min(1, t / soundDuration);
                 phase += 2 * Math.PI * frequency / sampleRate;
+                // Compute each moving formant once per sample, shared by all harmonics.
+                for (var formant = 0; formant < 3; formant++)
+                    centers[formant] = (formants[formant] * (1 - glide) + targetFormants[formant] * glide) * v.resonance * formantScales[formant] * (flowing ? 1 : 1.04 - 0.08 * p);
                 var value = 0;
                 for (var h = 1; h <= 24; h++) {
                     var hz = frequency * h;
@@ -212,17 +221,18 @@
                         break;
                     var weight = 0.06 / h;
                     for (var f = 0; f < 3; f++)
-                        weight += Math.exp(-Math.pow((hz - (formants[f] * (1 - glide) + targetFormants[f] * glide) * v.resonance * v[ /** @type {'formant1' | 'formant2' | 'formant3'} */('formant' + (f + 1))] * (flowing ? 1 : 1.04 - 0.08 * p)) / (100 + f * 65), 2)) * (0.7 / (f + 1));
+                        weight += Math.exp(-Math.pow((hz - centers[f]) / (100 + f * 65), 2)) * (0.7 / (f + 1));
                     // Nasal pole plus a broad antiresonance color the same harmonic source.
-                    weight = weight * (1 - v.nasality * 0.7 * Math.exp(-Math.pow((hz - 1100) / 350, 2))) + v.nasality * 0.65 * Math.exp(-Math.pow((hz - 300) / 100, 2));
-                    weight *= Math.pow(h, (v.brightness - 0.5) * 1.6);
+                    if (v.nasality !== 0)
+                        weight = weight * (1 - v.nasality * 0.7 * Math.exp(-Math.pow((hz - 1100) / 350, 2))) + v.nasality * 0.65 * Math.exp(-Math.pow((hz - 300) / 100, 2));
+                    weight *= harmonicBrightness[h];
                     value += Math.sin(phase * h) * weight;
                 }
                 // Alternate glottal pulses and flutter add creak without changing the pitch control.
-                value *= 1 - v.creak * (0.35 + 0.3 * Math.sin(phase * 0.5) + 0.2 * Math.sin(phase * 0.23));
+                if (v.creak !== 0)
+                    value *= 1 - v.creak * (0.35 + 0.3 * Math.sin(phase * 0.5) + 0.2 * Math.sin(phase * 0.23));
                 var noise = rng() * 2 - 1, envelope = Math.min(1, t / 0.018) * Math.min(1, (event.duration - t) / 0.04);
                 if (flowing) {
-                    var attackTime = Math.min(0.008, soundDuration * 0.1), releaseTime = Math.min(0.035, soundDuration * 0.3);
                     envelope = Math.min(1, t / attackTime) * Math.min(1, (soundDuration - t) / releaseTime);
                 }
                 if (popping) {
