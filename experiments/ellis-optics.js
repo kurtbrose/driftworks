@@ -10,9 +10,13 @@
     // by 2a. dr^2/(1-q/r^2) joins Euclidean space with two derivatives.
     /** @param {number} r2 */
     function radialScale(r2){
-        var t=Math.max(0,Math.min(1,(Math.sqrt(r2)-1.5)*2));
+        // The inner metric is constant and the exterior is exactly flat.
+        // Only the transition shell needs the smoothstep polynomial.
+        if(r2<=2.25)return 1;
+        if(r2>=4)return Math.sqrt((r2-1)/r2);
+        var t=(Math.sqrt(r2)-1.5)*2;
         var q=1-t*t*t*(10+t*(-15+6*t));
-        return r2<=2.25?1:Math.sqrt((r2-1)/(r2-q));
+        return Math.sqrt((r2-1)/(r2-q));
     }
     /** @param {number} b @param {number} u @param {boolean} transmitted */
     function integrand(b,u,transmitted){

@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Ellis crossing continuity</title></head><body><h1>Real GLSL / production-session crossing</h1><canvas width="64" height="64"></canvas><pre>Running</pre><script src="../src/asset-versions.js?v=07ee9d9bdc70"></script>
-<script>window.Driftworks={};</script><script src="../experiments/ellis-optics.js?v=d2e316f47e74"></script><script>(function run(){
+<script>window.Driftworks={};</script><script src="../experiments/ellis-optics.js?v=ff144882aedf"></script><script>(function run(){
  const fixtures={"before":{"eye":[720,-101.99999981999999,93],"right":[-1,0,0],"up":[0,0,1],"back":[0,1,0],"velocity":[0,-0.001,0],"rates":[0,0,0],"ramp":[0,0,0.001],"throttle":1,"region":1},"after":{"eye":[0,-138.00000032,93],"right":[1,0,0],"up":[0,0,-1],"back":[0,1,0],"velocity":[0,-0.001,0],"rates":[0,0,0],"ramp":[0,0,0.001],"throttle":1,"region":0},"units":16.666666666666668,"direction":"return"},DW=window.Driftworks,size=64;
  const canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{preserveDrawingBuffer:true});
  function compile(type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader;}
