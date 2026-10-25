@@ -927,17 +927,36 @@ hardware budget. Current-motion leads cannot predict later jinks or moving cover
 ## Growth study
 
 `experiments/ellis-growth.html` animates a 1 micrometre throat diameter to
-50 m with a stationary observer 100 m from the centre. Playback can be scrubbed,
-paused, restarted or looped, with 8/16/30 second durations and smooth logarithmic
-or linear growth. The ruler marks a 50 m span at the centre depth.
+50 m with stationary cameras 100 m from each centre. It opens paused at 50 m.
+Play, restart, scrub, loop, or compare logarithmic/linear growth over 8/16/30 s.
+The side selector switches between the asteroid and Rime skies.
 
-This sky-only study rescales the observer offset about the existing 300 m
-reference throat by `300 / animatedRadius`. This preserves the dimensionless
-rays of the compact static Ellis lens, including its scaled transition zone.
-It is a sequence of static optical solutions, not a time-dependent metric or
-physical formation model. It does not alter flight transport or combat. The
-opening is allowed to remain subpixel; no artificial glow enlarges it.
+Five simple solid fixtures exercise foreground occlusion, local geometry behind
+the mouth and remote geometry. They use the production Three scene and full
+Ellis geometry ray search, with all six capture faces refreshed each frame.
+These are small diagnostic meshes, not ship assets. Objects and cameras keep
+fixed physical sizes/positions while the reference coordinates scale by
+`300 / animatedRadius` about their own chart centres. The ruler marks a 50 m
+span at centre depth. Below 0.2 m diameter, only local straight geometry is drawn
+to avoid enormous coordinates; the sky continues to use the microscopic radius.
+That cutoff is an approximation and can introduce a small geometry discontinuity.
 
-Visual check: inspected the browser composite at the 50 m endpoint and checked
-linear midpoint scrubbing (25 m), initial subpixel readout and pause state.
-No ships or finite geometry are included in this sky-only experiment.
+The study mounts the production `flightHud` with a real `flightSession` snapshot.
+Fixture cubes are registered craft/models, so contacts, target status, live target
+preview, radar, reticle and firing pip use the same code as flight. Tab calls
+`training.cycle`, L calls `toggleTargetLock`, and V cycles the real radar range.
+There is no separately drawn study HUD. The flight HUD accepts optional
+`HudView.distanceScale` (default 1) to convert normalized presentation distances
+back to physical metres for contact/target ranges and radar. The study scales
+weapon speed into the same reference coordinates for its stationary-target
+firing solution. It does not advance combat or fire shots. Below the tiny-throat
+geometry cutoff it supplies ordinary training-mode contacts to avoid applying
+a 300 m reference lens to unscaled local positions.
+
+This is a sequence of static optical solutions, not a time-dependent metric or
+physical formation model. It does not alter flight transport or combat.
+Visual checks cover both ends at 50 m, the asteroid end at 25 m, and the
+microscopic readout/local-only path. Inspected sky, rear arcs, remote beacons,
+fixed foreground and production HUD. Also checked real Tab target cycling,
+L lock, V radar change, physical 26 m foreground range, and a valid remote firing
+solution. Live gunfire remains outside this study.

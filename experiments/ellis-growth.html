@@ -1,16 +1,116 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ellis growth / Driftworks</title>
 <script src="../src/asset-versions.js?v=07ee9d9bdc70"></script>
-<script>var address=new URL(location.href);address.searchParams.set('mission','ellis');address.searchParams.set('bridgeGrid','0');address.searchParams.set('bridgeOutline','0');history.replaceState(null,'',address);window.Driftworks=window.Driftworks||{};window.Driftworks.sim={METERS_PER_UNIT:60};</script>
-<style>*{box-sizing:border-box}body{margin:0;background:#000;color:#d4edeb;font:14px system-ui}#viewer{position:fixed;inset:0}canvas{position:absolute;width:100%;height:100%}header,section{position:fixed;background:#07151de8;border:1px solid #35545e;border-radius:10px;padding:16px}header{left:18px;top:18px;max-width:390px}h1{font-size:22px;margin:4px 0 10px}p{color:#abc1c2;line-height:1.5}section{bottom:18px;left:18px;right:18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}label{display:flex;gap:8px;align-items:center}button,select,input{font:inherit}button,select{background:#102a34;color:#ddf0eb;border:1px solid #45636e;padding:8px;border-radius:4px}input{width:180px}a{color:#9ee9dd}output{font:13px/1.7 monospace;white-space:pre-line}#ruler{position:fixed;left:50%;top:72%;transform:translateX(-50%);border-bottom:1px solid #9ee9dd;text-align:center;color:#9ee9dd;padding-bottom:8px;pointer-events:none}#ruler:before,#ruler:after{content:'';position:absolute;bottom:-5px;height:10px;border-left:1px solid #9ee9dd}#ruler:before{left:0}#ruler:after{right:0}@media(max-width:600px){header{max-width:290px;padding:10px}section{gap:8px;padding:10px}input{width:130px}}</style></head>
-<body><div id="viewer" aria-label="Growing Ellis wormhole"></div><header><small>DRIFTWORKS / FORMATION STUDY</small><h1>A throat opens</h1><p>One micrometre to 50 metres in diameter. Fixed camera, 100 m from the centre. The microscopic opening is initially below pixel size.</p><output id="readout"></output><p>Animated static Ellis lens solutions. An artistic growth experiment, not a dynamical spacetime solution.</p><a href="../">Experiments</a> · <a href="ellis-study.html">Observation lab</a></header>
-<div id="ruler">50 m at throat centre</div>
-<section aria-label="Growth playback"><button id="play">Pause</button><button id="restart">Restart</button><label>Time <input id="time" type="range" min="0" max="16" step="0.001" value="0"></label><label>Growth <select id="curve"><option value="log">Logarithmic</option><option value="linear">Linear</option></select></label><label>Duration <select id="duration"><option value="8">8 s</option><option value="16" selected>16 s</option><option value="30">30 s</option></select></label><label><input id="loop" type="checkbox" style="width:auto">Loop</label></section>
-<script src="flight-missions.js?v=f39b3ca6792d"></script><script src="mission-ohio.js?v=55d50526f5e4"></script><script src="ellis-optics.js?v=d2e316f47e74"></script><script src="skybox.js?v=f7facfdbad0f"></script>
+<script>var address=new URL(location.href);address.searchParams.set('mission','ellis');address.searchParams.set('bridgeGrid','0');address.searchParams.set('bridgeGeometry','full');address.searchParams.set('bridgeFaces','6');address.searchParams.set('bridgeOutline','0');history.replaceState(null,'',address);window.Driftworks=window.Driftworks||{};window.Driftworks.sim={METERS_PER_UNIT:60};</script>
+<style>*{box-sizing:border-box}body{margin:0;background:#000;color:#d4edeb;font:14px system-ui}#viewer{position:fixed;inset:0}canvas{position:absolute;width:100%;height:100%}header,section{position:fixed;background:#07151de8;border:1px solid #35545e;border-radius:10px;padding:16px}header{left:18px;top:18px;max-width:340px;padding:12px;font-size:12px}h1{font-size:22px;margin:4px 0 10px}p{color:#abc1c2;line-height:1.5}section{bottom:18px;left:18px;right:18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}label{display:flex;gap:8px;align-items:center}button,select,input{font:inherit}button,select{background:#102a34;color:#ddf0eb;border:1px solid #45636e;padding:8px;border-radius:4px}input{width:180px}a{color:#9ee9dd}output{font:13px/1.7 monospace;white-space:pre-line}.scene3d-controls,.scene3d-overlay,.night-sky-background{display:none!important}#growth-controls{bottom:auto;top:18px;left:380px;right:18px}#telemetry{display:none}.gpu-ui{pointer-events:none}header,section{z-index:5}#ruler{position:fixed;left:50%;top:72%;transform:translateX(-50%);border-bottom:1px solid #9ee9dd;text-align:center;color:#9ee9dd;padding-bottom:8px;pointer-events:none}#ruler:before,#ruler:after{content:'';position:absolute;bottom:-5px;height:10px;border-left:1px solid #9ee9dd}#ruler:before{left:0}#ruler:after{right:0}@media(max-width:600px){header{max-width:290px;padding:10px}section{gap:8px;padding:10px}input{width:130px}}</style><link rel="stylesheet" href="flight-hud.css?v=380daf526786"></head>
+<body><div id="viewer" aria-label="Growing Ellis wormhole"></div><header><small>DRIFTWORKS / FORMATION STUDY</small><h1>A throat opens</h1><p>One micrometre to 50 m diameter. Fixed objects on both sides; camera 100 m out. Production flight HUD. Tab cycles targets, L locks, V changes radar range. Test blocks are real craft contacts.</p><output id="readout"></output><p>Animated static Ellis lens solutions. An artistic growth experiment, not a dynamical spacetime solution.</p><a href="../">Experiments</a> · <a href="ellis-study.html">Observation lab</a></header>
+<div id="reticle" aria-hidden="true"></div><div id="telemetry"></div>
+<section id="integrity" class="flight-plate"><label>SHIELD <meter id="shield-meter" min="0" max="120" value="120"></meter></label><label>HULL <meter id="hull-meter" min="0" max="100" value="100"></meter></label></section>
+<section id="instruments" class="flight-plate"><small>VELOCITY</small><strong id="speed-value">0</strong> <span id="speed-unit">m/s</span><small id="thrust-value"></small><meter id="thrust-meter" min="0" max="1" value="1"></meter></section>
+<section id="weapons" class="flight-plate"><small>PRIMARY / G TO SWITCH</small><strong id="weapon-name"></strong><span>UNLIMITED ENERGY</span></section><section id="target-info" class="flight-plate" hidden aria-label="Selected target monitor"><div id="target-label"></div><div id="target-camera" aria-label="Live target camera"></div><div id="target-detail"></div><div class="target-integrity"><label>SHIELD <meter id="target-shield" min="0" max="100" value="100" aria-label="Target shield"></meter></label><label>HULL <meter id="target-hull" min="0" max="100" value="100" aria-label="Target hull"></meter></label></div></section><div id="hud-help">ESC PAUSE &middot; L LOCK &middot; TAB TARGET &middot; V RADAR &middot; F3 LAB</div>
+<section id="comms" aria-label="Flight communications"><div class="comms-head"><span data-speaker>RANGE COMMS</span><span data-emotion></span></div><p data-subtitle role="status">Standing by for flight.</p></section>
+<div id="combat-status" hidden></div><input id="dialogue-size" type="number" value="22" hidden><div id="ruler">50 m at throat centre</div>
+<section id="growth-controls" aria-label="Growth playback"><button id="play">Pause</button><button id="restart">Restart</button><label>Time <input id="time" type="range" min="0" max="16" step="0.001" value="0"></label><label>View <select id="side"><option value="0">Asteroid end</option><option value="1">Rime end</option></select></label><label>Growth <select id="curve"><option value="log">Logarithmic</option><option value="linear">Linear</option></select></label><label>Duration <select id="duration"><option value="8">8 s</option><option value="16" selected>16 s</option><option value="30">30 s</option></select></label><label><input id="loop" type="checkbox" style="width:auto">Loop</label></section>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+
+<script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
+<script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+<script src="../src/combat.js?v=ce0e0e6eb149"></script>
+<script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+<script src="../src/mining-landing.js?v=f00997919474"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=9a868143dfe8"></script>
+<script src="../src/population.js?v=7a772b14be47"></script>
+<script src="../src/session.js?v=6d1be0457a7b"></script>
+<script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
+<script src="../src/engine-audio.js?v=061d71eda9b0"></script>
+<script src="../src/audio-mixer.js?v=34c90880514e"></script>
+<script src="../src/audio.js?v=364df02d8266"></script>
+<script src="../src/hud.js?v=286fcabf0284"></script>
+<script src="gpu-diagnostics.js?v=099a7fa723af"></script>
+<script src="../src/mesh-builder.js?v=dc5005c681a3"></script>
+<script src="../src/mining-rig.js?v=ebc32e1f4b09"></script>
+<script src="../src/model-viewer.js?v=02d9b3545d85"></script>
+<script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
+<script src="../src/explosions.js?v=ba20ec3731d9"></script>
+<script src="../src/asteroid-art.js?v=48aad8996df8"></script>
+<script src="../src/scene3d.js?v=b2e611d5710e"></script>
+<script src="../src/game.js?v=1069ca45dcaf"></script>
+<script src="dom.js?v=c1d4287e76cd"></script>
+<script src="retail-profiles.js?v=99526ebcd858"></script>
+<script src="flight-model.js?v=8a22d33bc921"></script>
+<script src="radar.js?v=3a9471d6278e"></script>
+<script src="flight-missions.js?v=f39b3ca6792d"></script>
+<script src="mission-ohio.js?v=55d50526f5e4"></script>
+<script src="../src/sky-effects.js?v=136fdb626647"></script>
+<script src="ellis-feedback.js?v=8e207a58bf86"></script>
+<script src="ellis-optics.js?v=d2e316f47e74"></script>
+<script src="ellis-renderer.js?v=e7f9de8f3dad"></script>
+<script src="skybox.js?v=f7facfdbad0f"></script>
+<script src="retail-weapons.js?v=642a0025bb1b"></script>
+<script src="guns.js?v=1923ff8ec3cf"></script>
+<script src="input.js?v=f4504aaa17e7"></script>
+<script src="training.js?v=316346f7a2f2"></script>
+<script src="performance.js?v=ba17efe880d9"></script>
+<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
+<script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
+<script src="../assets/ships/ohio-vehicles/meshes.js?v=ce57f8e016e3"></script>
+<script src="ship-packs.js?v=3589bc24992b"></script>
+<script src="mumble.js?v=34f6fe78ba45"></script>
+<script src="flight-dialogue.js?v=f79b97b5513d"></script>
+<script src="evacuation-mission.js?v=2611bc3f57d1"></script>
+<script type="module" src="evacuation-scenery.js?v=f021be84af75"></script>
+<script src="flight-comms.js?v=c0a1bd49e447"></script>
+<script src="comms-display.js?v=2e3d8d7dcb2f"></script>
+<script src="face-blend.js?v=50dea498a8c7"></script>
+<script src="flight-portraits.js?v=f897046d4498"></script>
+<script src="flight-radio.js?v=0560b1066c26"></script>
+<script src="target-camera.js?v=1860d2a2f5d6"></script>
+<script src="flight-scenery.js?v=efd62ddfb867"></script>
+<script src="flight-presentation.js?v=f82f4f8f68db"></script>
+<script src="flight-diagnostics.js?v=978c7c862799"></script>
+<script src="flight-controls.js?v=98d3533e22c5"></script>
+<script src="flight-session.js?v=e2a327ca4729"></script>
+<script src="gpu-ui.js?v=4a1c7acdcb66"></script>
+<script src="flight-hud.js?v=e9a377daa830"></script>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script>
+<script type="module" src="../assets/characters/quaternius-astronaut/poses.js?v=768978930c66"></script>
+<script src="flight-ai.js?v=6aafa3682577"></script>
+<script src="flight-duel.js?v=443c69017af7"></script>
+<script src="flight-watch.js?v=49b4caa0eff3"></script>
+<script type="module" src="gas-giant-flight.js?v=d4c1ae871933"></script>
+<script src="aegis-flight.js?v=2754db1f6763"></script>
+
+
 <script>
 (function(){
- const get=id=>document.getElementById(id),sky=window.Driftworks.flightSkybox.create(get('viewer'),{fov:70,optics:false});
- let time=0,playing=true,last=0;
+ const get=id=>document.getElementById(id),sky=window.Driftworks.flightSkybox.create(get('viewer'),{fov:45,optics:false});
+ let time=16,playing=false,last=0,renderKey='';
+ const DW=window.Driftworks,units=DW.sim.METERS_PER_UNIT;
+ const session=DW.flightSession.create({seed:29,terrainHit:()=>null,surfaceFrame:(_a,d)=>({point:d}),onGunshot:()=>{},onImpact:()=>{}});
+ const snapshot=session.reset({mode:'ellis',enabled:false,profile:DW.arcade.profiles[0]});
+ let world=snapshot.world;
+ const flightHud=DW.flightHud.mount(get('viewer'));
+ const appearance={shipImages:new Map(),allyArt:'mixed',enemyArt:'mixed',paint:{ally:[.4,1,.65],enemy:[1,.65,.18]}};
+ document.getElementById('comms').classList.add('idle');
+ document.addEventListener('keydown',e=>{if(e.target.matches('input,select'))return;if(e.code==='Tab'){e.preventDefault();DW.training.cycle(snapshot.combat);renderKey='';}if(e.code==='KeyL'){DW.training.toggleTargetLock(snapshot.combat);renderKey='';}if(e.code==='KeyV'){flightHud.cycleRadarRange();renderKey='';}});
+ ['asteroids','ships','platforms','wrecks','depots','projectiles'].forEach(k=>{if(Array.isArray(world[k]))world[k]=[];});world.combat.drones=[];
+ const scene=DW.scene3d.create(get('viewer'),()=>world,w=>{world=w;},{study:true,viewer:false});
+ scene.setStudyDiagnostics({mode:'normal',scale:1,flat:false,mothership:false,actors:true});
+ function box(){const out=[],p=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];for(const face of [[0,3,2,1],[4,5,6,7],[0,1,5,4],[3,7,6,2],[0,4,7,3],[1,2,6,5]]){let a=p[face[0]],b=p[face[1]],c=p[face[2]],u=b.map((v,i)=>v-a[i]),v=c.map((v,i)=>v-a[i]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];n=n.map(x=>x/4);for(const j of [0,1,2,0,2,3])out.push(...p[face[j]],...n);}return new Float32Array(out);}
+ const vertices=box(),fixtures=[
+ {name:'Foreground · 26 m',side:0,p:[75,6,-4],size:1.5,color:[1,.65,.18]},
+ {name:'Local rear · 155 m',side:0,p:[-55,6,-3],size:5,color:[1,.28,.15]},
+ {name:'Local flank',side:0,p:[-35,34,20],size:4,color:[1,.7,.25]},
+ {name:'Remote beacon',side:1,p:[-65,0,0],size:5,color:[.1,.9,1]},
+ {name:'Remote flank',side:1,p:[-85,27,14],size:4,color:[.4,1,.65]}];
+ const pack={id:'ellis-fixtures',author:'Driftworks',license:'Original',url:'',models:fixtures.map((o,i)=>({id:'ellis-fixture-'+i,name:o.name,triangles:12,vertices:Array.from(vertices,(v,j)=>j%6<3?v*o.size:v)}))};
+ DW.shipPacks=DW.shipPacks||[];DW.shipPacks.push(pack);
+ snapshot.combat.targetId='fixture-3';
+ function mapped(p,side,scale){return [(side*12000+p[0]*scale)/units,(-2000+p[1]*scale)/units,(1550+p[2]*scale)/units];}
+
  // Scaling the observer about the existing 300 m throat gives the same
  // dimensionless sky rays as scaling the entire compact Ellis metric.
  function sample(t,duration,curve){const u=Math.max(0,Math.min(1,t/duration)),s=u*u*(3-2*u);return curve==='linear'?1e-6+(50-1e-6)*s:1e-6*Math.pow(50/1e-6,s);}
@@ -21,12 +121,27 @@
  get('duration').onchange=()=>{time=Math.min(time,Number(get('duration').value));};
  function frame(now){const dt=last?Math.min(.1,(now-last)/1000):0;last=now;const duration=Number(get('duration').value);
  if(playing&&!document.hidden){time=Math.min(duration,time+dt);if(time===duration){if(get('loop').checked){if(now-lastEnd>2000){time=0;lastEnd=now;}}else playing=false;}else lastEnd=now;}
- const diameter=sample(time,duration,get('curve').value),radius=diameter/2,virtualDistance=100*300/radius;
- if(!document.hidden)sky.render({eye:[virtualDistance/60,-2000/60,1550/60],right:[0,1,0],up:[0,0,1],back:[1,0,0],region:0},1,false);
+ const diameter=sample(time,duration,get('curve').value),radius=diameter/2,side=Number(get('side').value);
+ // Below 0.2 m use straight local geometry to keep coordinates well conditioned.
+ const active=diameter>=.2,scale=active?300/radius:1;
+ const view={eye:mapped([100,0,0],side,scale),right:[0,1,0],up:[0,0,1],back:[1,0,0],region:side};
+ const key=[time,side,diameter,innerWidth,innerHeight,snapshot.combat.targetId,snapshot.combat.targetLocked,Math.floor(now/1000)].join(':');
+ if(!document.hidden&&key!==renderKey){renderKey=key;
+ sky.render({...view,eye:mapped([100,0,0],side,300/radius)},1,false);
+ scene.setStudyBridge(active);scene.setSurfaceCamera(view);
+ const visible=fixtures.filter(o=>active||o.side===side);
+ scene.setStudyActors(visible.map(o=>({vertices,staticGeometry:true,origin:mapped(o.p,o.side,scale),scale:o.size*scale/units,color:o.color,finish:8,region:o.side})));
+ scene.sync(world);scene.render(world,1,0,0);
+ snapshot.state=Object.assign(DW.arcade.create(1),view,{velocity:[0,0,0],throttle:0});
+ const combat=snapshot.combat;combat.time=time;combat.mode=active?'ellis':'training';
+ combat.enemies=visible.map(o=>{const i=fixtures.indexOf(o),state=Object.assign(DW.arcade.create(1),{eye:mapped(o.p,o.side,scale),right:[0,1,0],up:[0,0,1],back:[1,0,0],region:o.side,velocity:[0,0,0],throttle:0});const craft=DW.training.createCraft('fixture-'+i,state,i===4?'ally':'enemy');craft.callsign=o.name;craft.modelId='ellis-fixture-'+i;return craft;});
+ DW.training.bindPlayer(combat,snapshot.state);
+ flightHud.render({...snapshot,...appearance,world,asteroid:snapshot.asteroid,mothership:snapshot.mothership,units,distanceScale:1/scale,paused:false,mouse:[0,0],inputMode:'keyboard',showMouseStick:false,stickRange:150,speakerId:null,weapon:{...DW.retailWeapons[DW.training.defaultWeapon(DW.arcade.profiles[0])],speed:DW.retailWeapons[DW.training.defaultWeapon(DW.arcade.profiles[0])].speed*scale}});
+ }
  get('play').textContent=playing?'Pause':'Play';get('time').max=String(duration);get('time').value=String(time);
- const pixels=innerHeight/(2*Math.tan(35*Math.PI/180))*diameter/100;
- get('readout').textContent=time.toFixed(2)+' / '+duration+' s\nThroat diameter  '+(diameter<.001?(diameter*1e6).toFixed(2)+' µm':diameter<1?(diameter*1000).toFixed(2)+' mm':diameter.toFixed(2)+' m')+'\nProjected throat  '+(pixels<.01?'< 0.01':pixels.toFixed(2))+' px'+(pixels<1?' · subpixel':'');
- get('ruler').style.width=(innerHeight/(2*Math.tan(35*Math.PI/180))*.5)+'px';requestAnimationFrame(frame);
+ const pixels=innerHeight/(2*Math.tan(Math.PI/8))*diameter/100;
+ get('readout').textContent=time.toFixed(2)+' / '+duration+' s\nThroat diameter  '+(diameter<.001?(diameter*1e6).toFixed(2)+' µm':diameter<1?(diameter*1000).toFixed(2)+' mm':diameter.toFixed(2)+' m')+'\nProjected throat  '+(pixels<.01?'< 0.01':pixels.toFixed(2))+' px'+(pixels<1?' · subpixel':'')+'\n'+(side?'Rime':'Asteroid')+' end · '+(active?'lensed geometry':'tiny throat / local geometry')+'\nTab target · L lock · V radar';
+ get('ruler').style.width=(innerHeight/(2*Math.tan(Math.PI/8))*.5)+'px';requestAnimationFrame(frame);
  }
  let lastEnd=0;requestAnimationFrame(frame);
 }());
