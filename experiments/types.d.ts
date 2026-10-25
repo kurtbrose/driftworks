@@ -397,6 +397,8 @@ export type FlightView = {
 };
 export type EllisCue = {region:number;distance:number;gap:number;proximity:number;near:boolean;entered:boolean;exited:boolean;crossed:boolean;flash:number};
 export type HudView = FlightView & Appearance & {
+    /** Presentation coordinate normalization; defaults to physical world scale. */
+    distanceScale?: number;
     bridgeCue?:EllisCue;
     asteroid: Asteroid;
     mothership: Ship;

@@ -91,6 +91,16 @@ const forward=Array.from(solution.direction),norm=Math.hypot(forward[0],forward[
 DW.flightPresentation={model:()=>({name:'Fixture fighter'})};
 function renderAim(){hud.render({...ellisView,paint:{ally:[1,1,1],enemy:[1,1,1]},units:u,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});}
 renderAim();assert.equal(get('target-info').dataset.leadState,'valid');const expectedRange=Math.round(DW.flightGuns.ballisticPath(ellisView.state.eye,nearEnemy.pose.eye,0,1,true).distance*u)+' m';assert(calls.filter(c=>c.kind==='text'&&c.text===expectedRange).length>=2,'contact and target-panel ranges exclude chart storage translation');assert(calls.some(c=>c.kind==='arc'&&c.r===7&&Math.abs(c.x-500)<1e-6&&Math.abs(c.y-350)<1e-6),'cross-chart firing solution projects exactly onto the crosshair');
+// Presentation normalization changes metre readouts, not optical contact projection.
+const originalRadar=DW.flightRadar.draw;let radarUnits;
+DW.flightRadar.draw=function(ctx,state,contacts,units,...rest){radarUnits=units;return originalRadar(ctx,state,contacts,units,...rest);};
+hud.render({...ellisView,paint:{ally:[1,1,1],enemy:[1,1,1]},units:u,distanceScale:.25,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});
+const scaledRange=Math.round(DW.flightGuns.ballisticPath(ellisView.state.eye,nearEnemy.pose.eye,0,1,true).distance*u*.25)+' m';
+assert.ok(calls.filter(c=>c.kind==='text'&&c.text===scaledRange).length>=2,'contact and target monitor both display physical normalized range');
+assert.equal(radarUnits,u*.25,'real radar uses the same physical scale');
+assert.equal(get('target-info').dataset.leadState,'valid','normalizing displayed metres preserves the actual solver');
+DW.flightRadar.draw=originalRadar;
+console.log('PASS real flight HUD normalization: contact/panel physical ranges, radar scale and unchanged lead solver');
 nearEnemy.pose.eye=[16000/u,-1600/u,1550/u];renderAim();assert.equal(get('target-info').dataset.leadState,'unavailable');assert(!calls.some(c=>c.kind==='arc'&&c.r===7),'unreachable shot never displays a guessed lead pip');assert(calls.some(c=>c.kind==='text'&&c.text==='NO FIRING SOLUTION'));
 DW.flightPresentation=savedPresentation;DW.ellisOptics=savedOptics;
 console.log('PASS truthful Ellis HUD lead: actual firing direction, cross-chart contact, no optical warp and no invalid/out-of-lifetime pip');

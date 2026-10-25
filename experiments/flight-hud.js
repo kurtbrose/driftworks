@@ -100,13 +100,13 @@
         /** @param {HudView} view */
         function render(view) {
             var state = view.state, combat = view.combat, guns = view.guns, asteroid = view.asteroid, mothership = view.mothership, units = view.units, paused = view.paused, mouse = view.mouse, shipImages = view.shipImages;
-            var mission=DW.flightMissions.resolve(combat.mode), displayScale=mission.units.distanceScale, distanceUnit=' '+mission.units.distanceLabel, speedScale=mission.units.speedScale, speedLabel=mission.units.speedLabel;
+            var mission=DW.flightMissions.resolve(combat.mode), displayScale=mission.units.distanceScale*(view.distanceScale||1), distanceUnit=' '+mission.units.distanceLabel, speedScale=mission.units.speedScale, speedLabel=mission.units.speedLabel;
             var shipDistance = Math.hypot(state.eye[0] - mothership.position.x, state.eye[1] - mothership.position.y, state.eye[2]) * units;
             var distance = Math.hypot.apply(null, state.eye), speed = Math.hypot.apply(null, state.velocity);
             telemetry.textContent = (speed*speedScale).toFixed(0) + ' '+speedLabel+'   /   ' + Math.round(state.throttle * 100) + '% THR\n' + Math.round(distance * units*displayScale) + distanceUnit+' TO CENTER\n' + Math.round(asteroid.radius * 2 * units*displayScale) + distanceUnit+' BODY DIAMETER\n' + Math.round(shipDistance*displayScale) + distanceUnit+' TO MOTHERSHIP\n' + guns.fired + ' SHOTS / ' + guns.hits + ' HITS';
             if(mission.sky.wormhole){
                 var mouthDistance=Math.hypot(state.eye[0]-(state.region||0)*12000/units,state.eye[1]+2000/units,state.eye[2]-1550/units)*units;
-                telemetry.textContent=((state.region||0)?'RIME':'ASTEROID RANGE')+' REGION / '+Math.round(mouthDistance)+' m TO THROAT\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
+                telemetry.textContent=((state.region||0)?'RIME':'ASTEROID RANGE')+' REGION / '+Math.round(mouthDistance*(view.distanceScale||1))+' m TO THROAT\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
             }
             var w = host.clientWidth, h = host.clientHeight;
             gpu.begin(w, h);
@@ -180,7 +180,7 @@
                 radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
             }
             if(mission.sky.wormhole)radarContacts.push({point:[(state.region||0)*12000/units,-2000/units,1550/units],color:'#b7a6ff',landmark:true});
-            DW.flightRadar.draw(combatHud, state, radarContacts, units, radarRanges[radarRangeIndex], w, h, paused, combat.mode, document.body.classList.contains('touch-flight'));
+            DW.flightRadar.draw(combatHud, state, radarContacts, units*(view.distanceScale||1), radarRanges[radarRangeIndex], w, h, paused, combat.mode, document.body.classList.contains('touch-flight'));
             combatHud.font = '12px ui-monospace,monospace';
             combatHud.textAlign = 'center';
             /** @param {Vector} point @param {number} side */function visualDirection(point,side){
@@ -345,7 +345,7 @@
                 var source=get('target-camera').querySelector('canvas:not(.scene3d-overlay)');
                 if(source instanceof HTMLCanvasElement){var fit=Math.min((pw-24)/source.width,76/source.height);ctx.image(source,rightX+(pw-source.width*fit)/2,rightY+51,source.width*fit,source.height*fit,0,targetRendered);}
                 var path=DW.flightGuns.ballisticPath(view.state.eye,selected.pose.eye,view.state.region||0,selected.pose.region||0,!!mission.sky.wormhole);
-                var distance=path?path.distance*view.units*mission.units.distanceScale:null;
+                var distance=path?path.distance*view.units*mission.units.distanceScale*(view.distanceScale||1):null;
                 label(distance===null?'—':Math.round(distance)+' '+mission.units.distanceLabel,rightX+14,rightY+139,11);
                 meter('SHIELD',selected.shield||0,selected.maxShield||1,rightX+14,rightY+157,pw-28,'#79b8e7');
                 meter('HULL',selected.hp,selected.maxHp,rightX+14,rightY+181,pw-28,'#91d29b');
