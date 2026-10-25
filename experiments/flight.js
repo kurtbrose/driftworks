@@ -30,13 +30,13 @@
     var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: function (start, end) {
             var asteroid = session.snapshot().asteroid;
             var terrain=DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
-                return DW.scene3d.rockField(asteroid, /** @type {[number, number, number]} */ (DW.flightSession.rotateVector(point, -asteroid.rotation)));
+                return DW.asteroidTerrain.rockField(asteroid, /** @type {[number, number, number]} */ (DW.flightSession.rotateVector(point, -asteroid.rotation)));
             });
             var capital=aegis&&aegis.hit(start,end);
             if(capital&&(!terrain||Math.hypot.apply(null,capital.map(function(v,i){return v-start[i];}))<Math.hypot.apply(null,terrain.map(function(v,i){return v-start[i];}))))return capital;
             return terrain;
         }, surfaceFrame: function (asteroid, direction) {
-            return DW.scene3d.surfaceFrame(asteroid, /** @type {[number, number, number]} */ (direction));
+            return DW.asteroidTerrain.surfaceFrame(asteroid, /** @type {[number, number, number]} */ (direction));
         }, onGunshot: function () {
             DW.audio.playGunshot();
         }, onImpact: function () {

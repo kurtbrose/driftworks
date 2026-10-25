@@ -26,7 +26,7 @@ vm.runInNewContext(read('experiments/ship-packs.js').toString(),context);
  const f=require('../tools/headless.cjs').createFlight(),F=f.DW,noop=()=>{};
  let finishUpload,prepared;
  const ready=new Promise(resolve=>{finishUpload=resolve;}),fleetImages=new Map([['fixture',{}]]),variants=[{},{}];
- F.scene3d.create=()=>({prepareStudyTextures(images){prepared=images;return ready;}});
+ F.scene3d={create:()=>({prepareStudyTextures(images){prepared=images;return ready;}})};
  F.flightSkybox={create:()=>({})};F.shipPackModels.populate=noop;
  F.shipPackModels.loadTextures=()=>Promise.resolve(fleetImages);F.shipPackModels.textureSources=images=>{assert.equal(images,fleetImages);return variants;};
  const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{value:'',checked:false,insertBefore:noop});return nodes.get(id);};

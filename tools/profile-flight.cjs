@@ -32,7 +32,7 @@ function upload(batches){for(const batch of batches){if(!batch.vertices.length)c
 DW.scene3d.create=()=>({setSurfaceCamera(){},setStudyActors:upload,setStudyEffects:upload,setStudyDiagnostics(){},sync(){},render(){},getRenderStats(){return {};}});
 DW.flightSkybox.create=()=>({render(){},getRenderStats(){return {};}});
 DW.shipPackModels.loadTextures=()=>({then(fn){fn(new Map());return {catch(){}};}});
-const session=DW.flightSession.create({terrainHit(){return null;},surfaceFrame(a,d){return DW.scene3d.surfaceFrame(a,d);},onGunshot(){},onImpact(){}});
+const session=DW.flightSession.create({terrainHit(){return null;},surfaceFrame(a,d){return DW.asteroidTerrain.surfaceFrame(a,d);},onGunshot(){},onImpact(){}});
 const config={mode:'furball',enabled:true,profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]};
 session.reset(config);
 const presentation=DW.flightPresentation.mount({},()=>session.snapshot().world,()=>{}, {document:global.document});

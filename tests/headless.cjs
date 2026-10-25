@@ -6,9 +6,9 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const flight = createFlight({mission: 'ohio', seed: 29});
 assert.equal(flight.snapshot().combat, flight.session.snapshot().combat, 'Expose real session-owned objects');
 assert.equal(flight.snapshot().combat.enemies.length, 8);
-assert.deepEqual(copy(flight.DW.scene3d.visualFor(flight.snapshot().asteroid).bulk), [0.85, 0.15, 0, 0]);
+assert.deepEqual(copy(flight.DW.asteroidTerrain.visualFor(flight.snapshot().asteroid).bulk), [0.85, 0.15, 0, 0]);
 flight.session.setAsteroidDiameter(2000);
-assert.deepEqual(copy(flight.DW.scene3d.visualFor(flight.snapshot().asteroid).bulk), [0.85, 0.15, 0, 0]);
+assert.deepEqual(copy(flight.DW.asteroidTerrain.visualFor(flight.snapshot().asteroid).bulk), [0.85, 0.15, 0, 0]);
 flight.session.setAsteroidDiameter(2500);
 const initialSpawn = copy(flight.events[0]);
 flight.advance(8, {stop: true});
@@ -43,11 +43,11 @@ assert.equal(flight.snapshot().combat.enemies.filter(craft => craft.hp > 0 && cr
 const manual = createFlight({seed: 7});
 const DW = manual.DW;
 let direct = DW.flightSession.create({seed: 7,
-  surfaceFrame: (asteroid, direction) => DW.scene3d.surfaceFrame(asteroid, direction),
+  surfaceFrame: (asteroid, direction) => DW.asteroidTerrain.surfaceFrame(asteroid, direction),
   terrainHit(start, end) {
     const {asteroid} = direct.snapshot();
     return DW.flightGuns.intersect(start, end, asteroid.radius,
-      point => DW.scene3d.rockField(asteroid, DW.flightSession.rotateVector(point, -asteroid.rotation)));
+      point => DW.asteroidTerrain.rockField(asteroid, DW.flightSession.rotateVector(point, -asteroid.rotation)));
   }, onGunshot() {}, onImpact() {}
 });
 direct.reset({mode: 'training', enabled: true, profile: manual.config.profile});
@@ -75,7 +75,8 @@ for (const options of [{mission: 'typo'}, {seed: -1}, {seed: 1.2}, {profile: 999
   assert.throws(() => createFlight(options));
 }
 const runtime = loadRuntime();
-assert(runtime.sim && runtime.flightDuel && runtime.explosions && runtime.scene3d);
+assert.equal(runtime.scene3d, undefined, 'Headless flight does not load the scene controller');
+assert(runtime.sim && runtime.flightDuel && runtime.explosions && runtime.asteroidTerrain);
 console.log('PASS headless API: production parity, live state, isolated runtimes, deterministic reset/chunking, scripted comms, destruction/replacements and clock bounds');
 
 // Ohio's team dogfight selects NPC opponents; taunts must survive ordinary wing chatter.

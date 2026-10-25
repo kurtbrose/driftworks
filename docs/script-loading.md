@@ -23,7 +23,8 @@ manifest.
 | `asteroidPatrol` | Asteroid patrol page with its smaller production dependency set |
 | `sharedTests` | `tests/helpers/shared-runtime.cjs`; loads the runtime and shared harness for Node groups |
 | `browserTests` | Generated tags in `tests/index.html`; derives from `sharedTests` with viewer resources |
-| `headless` | `tools/headless.cjs`; excludes the Pixi game and browser resources |
+| `headless` | `tools/headless.cjs`; CPU terrain and flight without the Pixi game or Three scene controller |
+| `terrain` | CPU terrain regression runtime; simulation, geology, mining geometry and asteroid terrain only |
 | `scenarios` | `tests/scenarios.cjs` |
 | `threeTests`, `asteroidTests` | Renderer submission, texture-prewarming and asteroid bridge test loaders |
 | `studyWorker` | Generated dependency array in `experiments/flight-study-worker.js` |
@@ -47,7 +48,9 @@ and the asset-version helper remain outside the generated HTML block. Module
 scripts and the flight import map are explicit profile entries. Node and classic
 worker loaders reject profiles containing either. `src/ship-art.js` must follow
 simulation and asteroid geology and precede `src/game.js`; this is checked as a
-required dependency.
+required dependency. `src/asteroid-terrain.js` follows simulation, geology and
+mining geometry; `src/scene3d.js` depends on it. Headless consumers use the CPU
+module directly rather than loading the scene controller for terrain helpers.
 
 `npm run check:scripts` checks every declared script exists, checks profile order,
 and rejects stale generated blocks or extra external scripts outside those

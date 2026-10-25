@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const DW={sim:{},meshBuilder:{},miningRig:{}},ctx=vm.createContext({window:{Driftworks:DW},Float32Array,WeakMap,Math});
+const DW={asteroidTerrain:{},sim:{},meshBuilder:{},miningRig:{}},ctx=vm.createContext({window:{Driftworks:DW},Float32Array,WeakMap,Math});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/scene3d.js'),'utf8'),ctx);
 const visible=DW.scene3d.studyBatchVisible;
 const camera={right:[1,0,0],up:[0,1,0],back:[0,0,1],distance:0,focal:2};

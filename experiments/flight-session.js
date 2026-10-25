@@ -126,7 +126,7 @@
         function applyGeology(mode) {
             var mission=DW.flightMissions.resolve(mode);
             world.asteroids=mission.emptySpace||mode==='evacuation'?[]:[asteroid];world.ships=mission.emptySpace||mode==='evacuation'?[]:[mothership];
-            DW.scene3d.setStudyParameters(asteroid, {bulk: mission.asteroidBulk});
+            DW.asteroidTerrain.setStudyParameters(asteroid, {bulk: mission.asteroidBulk});
         }
         /** @param {string} mode @param {boolean} enabled */
         function setCombat(mode, enabled) {

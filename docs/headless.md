@@ -10,8 +10,10 @@ change shared dependencies there rather than adding a second list to the driver.
 See [script loading](script-loading.md) for the browser, test and worker profiles.
 
 Shared asteroid geology loads from `src/asteroid-art.js` after simulation.
-The headless runtime does not load the Pixi `src/game.js` composition root;
-CPU terrain queries remain available through `Driftworks.scene3d`.
+The headless runtime loads neither `src/game.js` nor the Three scene controller
+`src/scene3d.js`. CPU terrain queries are available through
+`Driftworks.asteroidTerrain` (`rockField`, `surfaceFrame`, `asteroidMesh` and
+contact fitting). Browser `scene3d` exports retain compatibility aliases.
 
 For a repeatable fleet-size CPU sweep, run `node tools/stress-flight.cjs`.
 For the corresponding rendered browser sweep and its optional automation setup,

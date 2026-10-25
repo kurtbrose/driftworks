@@ -73,11 +73,11 @@ function createFlight(options = {}) {
     comms = DW.flightComms.create();
     // Use the same CPU surface and terrain intersection functions as flight.js.
     session = DW.flightSession.create({seed,
-      surfaceFrame: (asteroid, direction) => DW.scene3d.surfaceFrame(asteroid, direction),
+      surfaceFrame: (asteroid, direction) => DW.asteroidTerrain.surfaceFrame(asteroid, direction),
       terrainHit(start, end) {
         const {asteroid} = session.snapshot();
         return DW.flightGuns.intersect(start, end, asteroid.radius, point =>
-          DW.scene3d.rockField(asteroid, DW.flightSession.rotateVector(point, -asteroid.rotation)));
+          DW.asteroidTerrain.rockField(asteroid, DW.flightSession.rotateVector(point, -asteroid.rotation)));
       },
       onGunshot: () => emit({source: 'session', kind: 'gunshot'}),
       onImpact: () => emit({source: 'session', kind: 'impact'})

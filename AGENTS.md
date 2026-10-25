@@ -69,6 +69,7 @@ approved from a few spot checks.
 | Selection, right-click behavior, camera, zoom | `src/game.js`: `createScene`, `issueVisualContextOrder`, coordinate helpers; also `sim.issueContextOrder` |
 | Hostiles, weapons, threat director | `src/combat.js`; update ordering in `src/sim.js`; event-driven effects in `src/game.js` |
 | Craft/platform artwork | `src/ship-art.js`: Pixi painters, semantic scale, thrusters and platform presentation |
+| Terrain, excavation, surface contacts | `src/asteroid-terrain.js`: CPU fields, meshes, fitting and derived caches |
 | Scene effects, asteroid painting | `src/game.js`: scene lifecycle and effect helpers; geology in `src/asteroid-art.js` |
 | DOM HUD, fleet/readouts, control availability | `src/hud.js`; `styles.css` |
 | Sound and audio preferences | `src/audio.js`; event/telemetry calls in `src/game.js` |
@@ -80,6 +81,7 @@ approved from a few spot checks.
   Preserve original asset bytes where `.gitattributes` marks files `-text`.
 - Load scripts in dependency order: propulsion, combat, simulation, audio, HUD, game;
   Pixi precedes game boot; `ship-art.js` follows simulation/geology and precedes game.
+  `asteroid-terrain.js` follows simulation, geology and mining geometry, before `scene3d.js`.
   APIs live on `window.Driftworks`.
 - Keep persistent rules and serializable state in simulation code, SI propulsion
   math in propulsion, and browser resources in game/HUD/audio. Existing combat and

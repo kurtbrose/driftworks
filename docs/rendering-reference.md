@@ -2,6 +2,28 @@
 
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
+## CPU terrain boundary
+
+`src/asteroid-terrain.js` owns asteroid descriptions used by 3D terrain, relief,
+impact frames/packing, excavation fields, marching-tetrahedra meshes, surface
+frames and mining contact fitting. It needs simulation, shared geology and mining
+geometry, and creates no DOM, Pixi, Three or GPU resources. World data stays
+JSON-safe and unchanged by these derived queries. Flight collision and headless
+sessions call `Driftworks.asteroidTerrain` directly.
+
+CPU caches belong to that module. `setStudyParameters` replaces a visual and
+invalidates relief/impact caches; mesh/contact keys retain their radius,
+excavation and visual-identity checks. `release(id)` drops only that asteroid's
+CPU caches. The renderer calls it when removing an asteroid, alongside disposal
+of its own GPU resources. Contact geometry remains keyed by the surface object.
+
+`scene3d` retains the old terrain methods as direct aliases for browser viewers
+and existing tests. It owns camera projection, ray picking, materials, GPU
+uploads and scene lifecycle. Shaders remain in the renderer and consume the same
+CPU-derived impact data. The standalone CPU regression checks field/frame values,
+mesh bytes and study invalidation against a pre-extraction fixture; mechanical
+parity is separate from visual verification.
+
 ### 3D scene prototype
 
 Authored flight skies supply cached environment lighting through a host-local
@@ -20,7 +42,7 @@ selects it only with `?renderer=3d`; the default and `?renderer=2d` use the exis
 Pixi implementation with its detailed artwork.
 Load `mesh-builder.js`, `mining-rig.js` and the vendored
 `vendor/three/build/three.global.js` before `scene3d.js`, after
-simulation/camera/audio and before game. The backend uses Three.js with authored
+simulation/camera/audio and CPU asteroid terrain, and before game. The backend uses Three.js with authored
 materials, ordinary scripts and relative assets, with no network dependency or
 deployment build step. Game timing, session ownership and the DOM HUD
 remain in the existing modules.
@@ -397,7 +419,7 @@ requested components, without generating and discarding unrelated mesh data.
 The legacy `geometry` flags are interpreted only by a compatibility facade;
 combined flags retain their historical priority (ramps, then infill, then legs). Fixture
 geometry retains its existing shared read-only cache contract. Terrain sampling,
-contact fitting and fitted-pose caching remain in `scene3d.js`/`mining-terrain.js`;
+contact fitting and fitted-pose caching live in `asteroid-terrain.js`/`mining-terrain.js`;
 animation timing stays with existing callers. `scene3d` retains its geometry
 entry points as compatibility aliases. Custom WebGL and Three.js consumers use
 the same asset output and keep their existing lighting/rendering behavior.

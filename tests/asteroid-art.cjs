@@ -66,6 +66,10 @@ function checkPages(directory) {
     const scripts = Array.from(fs.readFileSync(file, 'utf8').matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/g), match =>
       path.resolve(directory, match[1].split('?')[0]));
     const position = name => scripts.indexOf(path.join(root, 'src', name + '.js'));
+    if (position('scene3d') >= 0) {
+      assert.ok(position('asteroid-terrain') > position('asteroid-art') && position('asteroid-terrain') < position('scene3d'),
+        path.relative(root, file) + ': load CPU terrain before the scene controller');
+    }
     for (const consumer of ['scene3d', 'game']) {
       if (position(consumer) < 0) continue;
       assert.ok(position('sim') >= 0 && position('sim') < position('asteroid-art') && position('asteroid-art') < position(consumer),

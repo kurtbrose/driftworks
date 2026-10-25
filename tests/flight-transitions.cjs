@@ -54,7 +54,7 @@ module.exports = function runFlightTransitions(namespace) {
     const DW = Object.assign({}, namespace, {
       audio:{mountMixer:noop, unlock:noop, setFlightEngine:noop, playGunshot:noop, playImpact:noop, playWormhole:noop},
       flightDiagnostics:{mount:() => namespace.flightDiagnostics.mount({document, performance:{now:() => now}})},
-      scene3d:{surfaceFrame:(_asteroid, direction) => ({point:direction})},
+      asteroidTerrain:Object.assign({}, namespace.asteroidTerrain, {surfaceFrame:(_asteroid, direction) => ({point:direction})}),
       flightSession:{create(environment) {
         session = namespace.flightSession.create(environment);
         const advance = session.advance;

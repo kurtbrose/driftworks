@@ -13,7 +13,7 @@ const definitions = () => structuredClone({groups: manifest.groups, profiles: ma
 // viewer resources are the entire deliberate difference between these profiles.
 const browserOnly = new Set(['src/model-viewer.js', 'vendor/three/build/three.global.js']);
 assert.deepEqual(manifest.files('browserTests').filter(file => !browserOnly.has(file)), manifest.files('sharedTests'));
-assert.ok(!manifest.files('headless').some(file => file.startsWith('vendor/') || file === 'src/game.js'));
+assert.ok(!manifest.files('headless').some(file => file.startsWith('vendor/') || file === 'src/game.js' || file === 'src/scene3d.js'));
 assert.throws(() => manifest.files('flight'), /cannot execute module scripts or import maps/);
 assert.throws(() => manifest.files('unknown'), /Unknown script profile/);
 assert.equal(manifest.resolve('flight').filter(script => script.imports).length, 1);
@@ -35,7 +35,7 @@ rejects(d => {d.groups.simulation = ['@simulation'];}, /cycle/);
 rejects(d => {d.profiles.headless.entries.push('@missing');}, /Unknown script profile\/group/);
 rejects(d => {d.profiles.headless.entries.push('src/sim.js');}, /duplicate script/);
 rejects(d => {d.profiles.headless.entries.push('src/../outside.js');}, /repository-relative/);
-rejects(d => {d.profiles.headless.omit = ['src/asteroid-art.js'];}, /load src\/asteroid-art.js before src\/scene3d.js/);
+rejects(d => {d.profiles.headless.omit = ['src/asteroid-art.js'];}, /load src\/asteroid-art.js before src\/asteroid-terrain.js/);
 rejects(d => {d.profiles.headless.omit = ['src/missing.js'];}, /cannot omit absent/);
 rejects(d => {d.profiles.headless.before = [{src: 'src/missing.js', entries: ['src/sim.js']}];}, /missing insertion point/);
 rejects(d => {d.profiles.headless.entries.push({src: 'src/new.js', type: 'async'});}, /unsupported script type/);

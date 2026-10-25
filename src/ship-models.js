@@ -10,7 +10,7 @@
      * @param {number} units @returns {import('../experiments/types').Batch[]} */
     geometry:function(units){
       if(!cached){
-        var groups=DW.scene3d.miningPlatformGeometry(1,0,false,0,''),radius=0;
+        var groups=DW.miningRig.geometry(1,0,false,0,''),radius=0;
         /** @type {Record<string,[number,number,number]>} */
         var colors={ochre:[.83,.64,.29],steel:[.46,.53,.52],dark:[.10,.15,.17],light:[.89,.79,.49],lamp:[1,.94,.78],marker:[.35,.95,.85]};
         Object.keys(groups).forEach(function(key){var v=groups[key];for(var i=0;i<v.length;i+=6)radius=Math.max(radius,Math.hypot(v[i]+1,v[i+1],v[i+2]-7));});

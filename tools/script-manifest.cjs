@@ -26,6 +26,7 @@ const groups = {
 };
 
 const profiles = {
+  terrain: {entries: ['@simulation', 'src/asteroid-art.js', '@meshes', 'src/asteroid-terrain.js']},
   ellisBenchmark: {entries: ['@flight'], before: [{src: 'experiments/flight.js', entries: ['tests/fixtures/ellis-benchmark-probe.js']}]},
   // Studies share the production flight dependencies while retaining page-owned setup.
   flightStudy: {entries: ['@flight'], omit: ['experiments/flight.js']},
@@ -40,11 +41,11 @@ const profiles = {
   tactical: {entries: [
     'src/asset-versions.js', 'vendor/pixi/pixi.min.js', '@simulation', '@session', '@audio',
     '@meshes', 'vendor/three/build/three.global.js', 'src/explosions.js',
-    'src/asteroid-art.js', 'src/scene3d.js', 'src/ship-art.js', 'src/game.js'
+    'src/asteroid-art.js', 'src/asteroid-terrain.js', 'src/scene3d.js', 'src/ship-art.js', 'src/game.js'
   ]},
   headless: {entries: [
     'src/asset-versions.js', '@simulation', 'src/asteroid-art.js', '@session', '@meshes',
-    'src/explosions.js', 'src/scene3d.js', 'src/ship-models.js',
+    'src/explosions.js', 'src/asteroid-terrain.js', 'src/ship-models.js',
     'experiments/retail-profiles.js', '@missions', 'experiments/retail-weapons.js',
     'experiments/ellis-optics.js', 'experiments/guns.js', 'experiments/training.js',
     'experiments/flight-model.js', '@fleet', '@dialogue', 'experiments/evacuation-mission.js',
@@ -52,7 +53,7 @@ const profiles = {
   ]},
   sharedTests: {entries: [
     'src/asset-versions.js', '@simulation', 'src/asteroid-art.js', '@session', '@audio',
-    '@meshes', 'src/explosions.js', 'src/scene3d.js', 'src/ship-models.js', 'src/ship-art.js', 'src/game.js',
+    '@meshes', 'src/explosions.js', 'src/asteroid-terrain.js', 'src/scene3d.js', 'src/ship-models.js', 'src/ship-art.js', 'src/game.js',
     'tests/scenario.js', 'tests/population-tests.js', 'experiments/dom.js',
     'experiments/retail-profiles.js', '@missions', 'experiments/skybox.js',
     'experiments/retail-weapons.js', 'experiments/guns.js', 'experiments/training.js',
@@ -69,7 +70,7 @@ const profiles = {
   ]},
   threeTests: {entries: [
     'vendor/three/build/three.global.js', '@simulation', 'src/asteroid-art.js',
-    '@session', '@audio', '@meshes', 'src/explosions.js', 'src/scene3d.js', 'src/ship-art.js', 'src/game.js'
+    '@session', '@audio', '@meshes', 'src/explosions.js', 'src/asteroid-terrain.js', 'src/scene3d.js', 'src/ship-art.js', 'src/game.js'
   ], omit: ['src/mining-landing.js']},
   asteroidTests: {entries: ['@threeTests'], omit: ['vendor/three/build/three.global.js', 'src/explosions.js']},
   scenarios: {entries: ['@simulation', 'src/population.js', 'src/session.js', 'tests/scenario.js']},
@@ -82,7 +83,7 @@ const profiles = {
     'src/asset-versions.js', 'vendor/pixi/pixi.min.js', '@simulation', '@session', '@audio',
     'experiments/gpu-diagnostics.js', '@meshes', 'src/model-viewer.js',
     'vendor/three/build/three.global.js', 'src/explosions.js', 'src/asteroid-art.js',
-    'src/scene3d.js', 'src/ship-art.js', 'src/game.js', 'experiments/dom.js', 'experiments/retail-profiles.js',
+    'src/asteroid-terrain.js', 'src/scene3d.js', 'src/ship-art.js', 'src/game.js', 'experiments/dom.js', 'experiments/retail-profiles.js',
     'experiments/flight-model.js', 'experiments/radar.js', '@missions', 'src/sky-effects.js',
     'experiments/ellis-feedback.js', 'experiments/ellis-optics.js', 'experiments/ellis-renderer.js',
     'experiments/skybox.js', 'experiments/retail-weapons.js', 'experiments/guns.js',
@@ -104,7 +105,8 @@ const dependencies = {
   'src/sim.js': ['src/propulsion.js', 'src/combat.js', 'src/logistics.js', 'src/formations.js'],
   'src/asteroid-art.js': ['src/sim.js'],
   'src/audio.js': ['src/engine-audio.js', 'src/audio-mixer.js'],
-  'src/scene3d.js': ['src/sim.js', 'src/asteroid-art.js', 'src/mesh-builder.js', 'src/mining-rig.js'],
+  'src/asteroid-terrain.js': ['src/sim.js', 'src/asteroid-art.js', 'src/mining-rig.js'],
+  'src/scene3d.js': ['src/asteroid-terrain.js', 'src/sim.js', 'src/asteroid-art.js', 'src/mesh-builder.js', 'src/mining-rig.js'],
   'src/ship-art.js': ['src/sim.js', 'src/asteroid-art.js'],
   'src/game.js': ['src/ship-art.js', 'src/sim.js', 'src/tactical/camera.js', 'src/asteroid-art.js'],
   'experiments/ship-packs.js': ['assets/ships/quaternius-ultimate-spaceships/meshes.js', 'assets/ships/concept-trio/meshes.js'],
