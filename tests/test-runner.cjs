@@ -12,6 +12,33 @@ const {suites} = require('./suites.cjs');
 assert.doesNotThrow(() => require('./fixtures/mining-clearance.cjs'),
   'Importing shared clearance helpers must not need a runtime or execute sweeps');
 
+// Registration must not execute test callbacks or boot application resources.
+// Check directory and profile membership so shared files cannot silently go missing.
+{
+  const vm = require('node:vm');
+  const root = path.resolve(__dirname, '..');
+  const expected = ['fixtures.js', ...harness.groups.map(group => group + '.js')];
+  assert.deepEqual(fs.readdirSync(path.join(__dirname, 'shared')).sort(), expected.slice().sort());
+  const profile = require('../tools/script-manifest.cjs').files('sharedTests');
+  assert.deepEqual(profile.filter(file => file.startsWith('tests/shared/')),
+    expected.map(file => 'tests/shared/' + file));
+  const context = vm.createContext({window: {Driftworks: {sim: {createInitialWorld() {} }}}});
+  for (const file of ['tests/population-tests.js', ...expected.map(file => 'tests/shared/' + file)]) {
+    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, {filename: file});
+  }
+  for (const group of harness.groups) {
+    const registered = [];
+    context.window.DriftworksSharedTests[group]({
+      test: (owner, name, callback) => {
+        assert.equal(owner, group, name + ' belongs to its file group');
+        assert.equal(typeof callback, 'function');
+        registered.push(name);
+      }, assert() {}, assertClose() {}
+    }, context.window.DriftworksSharedFixtures);
+    assert.ok(registered.length, group + ' must register tests');
+  }
+}
+
 assert.deepEqual(Object.keys(suites), harness.groups, 'Browser and Node group names agree');
 const all = runner.validateCoverage();
 assert.equal(all.length, harness.groups.reduce((count, group) => count + runner.plan([group]).length, 0));

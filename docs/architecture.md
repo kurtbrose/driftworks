@@ -194,7 +194,7 @@ profile and set `DRIFTWORKS_TEST_MODE` to suppress browser boot. See
 | `src/hud.js` | `Driftworks.hud`: DOM panels, fleet/readouts, control availability and event binding. Reads simulation queries and audio status; delegates actions to the app. No Pixi or scene dependency. |
 | `styles.css`, `rts.html` | Tactical DOM layout and game entry point. |
 | `index.html` | Experiments landing page. |
-| `tests/tests.js`, `tests/shared-harness.js` | Group-labeled shared browser/Node assertions and their registration/filtering/result harness. All tests register before execution. |
+| `tests/shared/*.js`, `tests/tests.js`, `tests/shared-harness.js` | Shared browser/Node assertions by group, reusable fixtures, the suite entry point and registration/filtering/result harness. All tests register before execution. |
 | `tests/suites.cjs`, `tests/run.cjs`, `tests/helpers/` | Explicit standalone groups, isolated child-process execution and shared legacy setup; see [test groups](testing.md). |
 | `tests/scenario.js`, `tests/scenarios.cjs` | Shared deterministic replay/assertion helpers and Node JSON fixture entry point; see [scenario replay](scenarios.md). |
 | `tools/headless.cjs` | Development-only isolated production-script loader and fixed-tick flight driver, exposing real session state, comms transcripts and observed events without browser resources; see [headless development](headless.md). |

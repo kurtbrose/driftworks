@@ -57,7 +57,7 @@ check does not execute the other checks as an import side effect.
 
 ## Shared browser and Node tests
 
-The declarations in `tests/tests.js` now carry explicit group labels:
+Shared declarations live in `tests/shared/<group>.js` and carry explicit group labels:
 
 ```js
 test('simulation', 'descriptive behavior', function () {
@@ -66,8 +66,11 @@ test('simulation', 'descriptive behavior', function () {
 ```
 
 `tests/shared-harness.js` owns registration, assertions, filtering and results.
-All declarations must precede the final `run()`; late registration and duplicate
-names fail. Population tests register through the simulation adapter. The Node
+`tests/tests.js` registers every group and runs the suite after registration.
+`tests/shared/fixtures.js` owns reusable world and DOM fixtures; group files keep
+their own test callbacks. All groups load as ordinary scripts through the manifest
+in both Node and the browser. Late registration and duplicate names fail.
+Population tests register through the simulation adapter. The Node
 entry `node tests/shared.cjs flight` runs only shared flight assertions;
 `npm run test:flight` also runs the standalone flight checks.
 

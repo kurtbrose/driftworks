@@ -49,7 +49,9 @@ const profiles = {
     'experiments/radar.js', '@fleet', 'experiments/target-camera.js', '@dialogue',
     'experiments/evacuation-mission.js', 'experiments/flight-comms.js', 'experiments/flight-radio.js',
     '@flightView', 'experiments/flight-hud.js', '@flightAi', 'experiments/flight-watch.js',
-    'experiments/flight-study.js', 'tests/shared-harness.js', 'tests/tests.js'
+    'experiments/flight-study.js', 'tests/shared-harness.js', 'tests/shared/fixtures.js',
+    'tests/shared/simulation.js', 'tests/shared/flight.js', 'tests/shared/rendering.js', 'tests/shared/assets.js', 'tests/shared/artwork.js', 'tests/shared/audio.js', 'tests/shared/tooling.js',
+    'tests/tests.js'
   ]},
   browserTests: {entries: ['@sharedTests'], before: [
     {src: 'src/explosions.js', entries: ['src/model-viewer.js', 'vendor/three/build/three.global.js']}
