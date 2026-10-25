@@ -151,3 +151,32 @@ for(const side of [0,1])for(const pair of [[300.0001,300.01],[301,305],[340,350]
  assert(Math.abs(path.length-distance)<.005,'near-throat arc distance agrees with analytic Ellis radial travel');
 }
 console.log('PASS near-throat finite segments: analytic radial distance, both charts and both directions');
+
+// Integrate in proper radial l with a squared offset at the turning point.
+// This oracle uses neither the production hyperbolic recurrence nor its grid.
+function properArc(b,r){
+ const low=Math.sqrt(Math.max(0,b*b-1));
+ const span=Math.sqrt(Math.max(0,Math.sqrt(r*r-1)-low)),n=8192,h=span/n;
+ let sum=0;
+ for(let i=0;i<n;i++){
+  const x=(i+.5)*h,l=low+x*x,r2=1+l*l,radius=Math.sqrt(r2);
+  const t=Math.max(0,Math.min(1,2*radius-3));
+  const q=radius<=1.5?1:radius>=2?0:1-10*t**3+15*t**4-6*t**5;
+  const scale=radius<=1.5?1:Math.sqrt((r2-1)/(r2-q));
+  sum+=2*x*scale/Math.sqrt(1-b*b/r2)*h;
+ }
+ return sum;
+}
+let arcWorst=0,turningPaths=0,remotePaths=0;
+for(const other of [false,true])for(const R of [1.001,1.4,2.1,4])for(const S of [1.05,1.6,3])for(const angle of [.3,1.5,2.8]){
+ const eye=[0,-2000-R*300,1550];
+ const target=[(other?12000:0)+Math.sin(angle)*S*300,-2000+(other?1:-1)*Math.cos(angle)*S*300,1550];
+ const path=optics.primary(eye,target,0,other?1:0);
+ if(!path||(!other&&!path.turning))continue;
+ const expected=300*(properArc(path.impact,R)+properArc(path.impact,S));
+ arcWorst=Math.max(arcWorst,Math.abs(path.length-expected));
+ if(other)remotePaths++;else turningPaths++;
+}
+assert.equal(remotePaths,36);assert.equal(turningPaths,15);
+assert(arcWorst<.002,'Arc lengths agree with independent proper-radial quadrature within 2 mm');
+console.log('PASS Ellis arc distance: independent proper-radial quadrature for transmitted and turning paths through core, shell and flat exterior');

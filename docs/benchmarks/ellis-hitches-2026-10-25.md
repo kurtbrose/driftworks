@@ -182,3 +182,45 @@ worker failures, timeout and suspended audio contexts.
 Validation: focused audio/worker/portrait checks passed. After updating the old
 synchronous portrait fixture to deliver an explicit worker reply, the complete
 `npm run check` rerun passed all 117 entries, types, manifests and asset checks.
+
+## Optical arc-length follow-up
+
+After the worker migration (`f6bcbf45`), the next measured busy-frame CPU cost
+remained optical weapon-trail geometry (roughly 6–7 ms in earlier live captures).
+Its primary-path arc-length integral evaluated sinh/cosh for every Simpson
+sample. Advance both hyperbolic components with the addition identity instead,
+retaining the same two 33-sample Simpson parts, compact metric and analytic
+exterior tail. Skip a part entirely when its interval is zero (common for
+near-throat endpoints inside the constant core). This follows the finite-segment recurrence already used by the
+inverse solver; it does not reduce quadrature resolution or change gun behavior.
+
+In 1,600 deterministic old/new queries spanning both charts, near-throat and
+exterior radii, and transmitted/turning/direct paths, all 1,596 existing paths
+kept identical direction vectors. Maximum path-length difference was
+1.82e-12 m. A separate proper-radial quadrature oracle covers 36 transmitted and
+15 turning paths through the core, transition shell and exterior; worst distance
+error was 0.000122 m (regression limit 0.002 m).
+
+A same-document native-browser comparison alternated execution order over 12
+rounds and discarded two warmup rounds. Per 1,600 queries, ten-run mean fell from
+**16.85 to 14.34 ms (14.9% less solver CPU)** for the final version. Full checks
+were running concurrently, so absolute wall timings vary with machine load; both
+versions ran in the same document with alternating order. The earlier recurrence
+change alone measured 24.86 to 23.10 ms (7.1%) in a separate paired run.
+
+Initial recurrence-only production-renderer orbit checks used an asteroid, eight fighters, a
+selected remote target, 160 bolts and a 350 m camera radius (20 warmup + 240
+samples). Scene median/p95 in old/new/new/old order was 3.5/4.2, 5.5/6.8,
+5.5/6.6 and 5.7/7.3 ms. The first run differed substantially from later runs;
+these results do not establish a scene-time speedup. All four runs retained
+13.3/13.4 ms rAF median/p95. Claim only the paired isolated solver saving, not
+an FPS gain or resolution of all near-wormhole hitches.
+
+The final zero-span-skipping version also completed the same renderer orbit: scene
+median/p95 5.7/7.5 ms and rAF median/p95 13.3/13.4 ms, with full checks running
+concurrently. The final rendered view was inspected; this run is an integration
+check, not evidence of an FPS improvement.
+
+Validation: optical, ballistic and effect-batching checks passed; `npm run check`
+passed all 117 entries. Strict types and asset versions were also rechecked after
+the final zero-span skip.

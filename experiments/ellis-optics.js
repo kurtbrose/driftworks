@@ -113,7 +113,16 @@
             var edge=u(b,2),join=u(b,1.5),stop=Math.min(end,edge),total=0,first=0;
             for(var part=0;part<2;part++){
                 var last=part===0?Math.min(stop,join):stop,h=(last-first)/32;
-                for(var j=0;j<=32;j++){var t=first+j*h,l=root*(b<1?Math.sinh(t):Math.cosh(t)),r2=1+l*l;total+=Math.sqrt(r2)*radialScale(r2)*h*(j===0||j===32?1:j%2?4:2)/3;}
+                // An endpoint inside the core has no transition-shell span.
+                if(h===0)continue;
+                // Preserve the 33 Simpson samples; advance both hyperbolic
+                // components instead of evaluating sinh/cosh at each point.
+                var transmitted=b<1,ch=Math.cosh(h),sh=Math.sinh(h);
+                var l=root*(transmitted?Math.sinh(first):Math.cosh(first)),slope=root*(transmitted?Math.cosh(first):Math.sinh(first));
+                for(var j=0;j<=32;j++){
+                    var r2=1+l*l;total+=Math.sqrt(r2)*radialScale(r2)*h*(j===0||j===32?1:j%2?4:2)/3;
+                    var next=l*ch+slope*sh;slope=slope*ch+l*sh;l=next;
+                }
                 first=last;
             }
             if(end>edge){var l=root*(b<1?Math.sinh(end):Math.cosh(end));total+=Math.sqrt(Math.max(0,1+l*l-b*b))-Math.sqrt(Math.max(0,4-b*b));}
