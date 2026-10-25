@@ -125,8 +125,22 @@
     });
   });
 
+  // Immediate transport keeps these existing mixer/gap tests synchronous;
+  // deferred delivery and worker cancellation are covered by mumble-worker.cjs.
+  function radioWorkerStub() {
+    this.postMessage = function(request) {
+      if (request.kind !== 'render') return;
+      var api = window.Driftworks.mumble, pcm = api.render(request.plan, 22050);
+      var noise = api.radioNoise(pcm.length, 22050, {effects:.45, edgeScale:2.5, seed:request.radioSeed});
+      var result = api.transmit(pcm, 22050, {mode:'radio', seed:request.radioSeed, noise:noise});
+      this.onmessage({data:{id:request.id, samples:result.samples, duration:result.duration, speechOffset:result.speechOffset || 0, noise:noise}});
+    };
+    this.terminate = function() {};
+  }
+
   test('audio', 'radio routes into the shared mixer and clears ducking on end, mute and pause', function () {
     var DW=window.Driftworks, oldChannel=DW.audio.commsChannel, oldActive=DW.audio.setCommsActive;
+    var oldWorker=window.Worker;window.Worker=radioWorkerStub;
     var oldRender=DW.mumble.render, oldTransmit=DW.mumble.transmit, sources=[], activity=[], output={};
     var context={state:'running',createBuffer:function(){return {copyToChannel:function(){}};},
       createBufferSource:function(){var source={connect:function(dest){assert(dest===output);},disconnect:function(){},start:function(){},stop:function(){},onended:null};sources.push(source);return source;}};
@@ -146,11 +160,12 @@
       assert(activity[activity.length-1]===true);
       toggle.onclick();assert(activity[activity.length-1]===false);
       radio.pause();assert(activity[activity.length-1]===false);
-    } finally {DW.audio.commsChannel=oldChannel;DW.audio.setCommsActive=oldActive;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
+    } finally {window.Worker=oldWorker;DW.audio.commsChannel=oldChannel;DW.audio.setCommsActive=oldActive;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
   });
 
   test('audio', 'radio waits for actual playback and a full silent gap before another transmission', function () {
     var DW=window.Driftworks, oldChannel=DW.audio.commsChannel, oldStep=DW.flightComms.step;
+    var oldWorker=window.Worker;window.Worker=radioWorkerStub;
     var oldRender=DW.mumble.render, oldTransmit=DW.mumble.transmit, sources=[], clock, busy;
     var context={state:'running',createBuffer:function(){return {copyToChannel:function(){}};},
       createBufferSource:function(){var source={connect:function(){},disconnect:function(){},start:function(){},stop:function(){},onended:null};sources.push(source);return source;}};
@@ -172,7 +187,7 @@
       ended();radio.update(20,combat);
       assert(busy && sources.length===2,'Old completion must not release the new source');
       sources[1].onended();radio.pause();
-    } finally {DW.audio.commsChannel=oldChannel;DW.flightComms.step=oldStep;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
+    } finally {window.Worker=oldWorker;DW.audio.commsChannel=oldChannel;DW.flightComms.step=oldStep;DW.mumble.render=oldRender;DW.mumble.transmit=oldTransmit;}
   });
 
   test('audio', 'mumble produces deterministic syllables, pauses, and finite bounded audio', function () {

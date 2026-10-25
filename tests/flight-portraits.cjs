@@ -80,7 +80,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   lifecycle.pageshow({persisted:true});assert.ok(idle.length>0,'Restored pages restart background warm-up');
   lifecycle.pagehide();const beforeCancelled=loaded;while(idle.length)idle.shift()();await flush();assert.equal(loaded,beforeCancelled,'Cancelled idle callbacks cannot restart asset loads');
   // Exercise the actual radio adapter's playback clock, live feelings and cleanup.
-  let queue=line,ended,startTime,sharedNoise,transmitNoise;
+  let queue=line,ended,startTime,sharedNoise,transmitNoise,workerRequest,workerReply;
+  window.Worker=class {postMessage(request){if(request.kind==='render'){workerRequest=request;workerReply=this;}}terminate(){}};
   const context={state:'running',currentTime:2,createBuffer:()=>({copyToChannel(){}}),createBufferSource:()=>({connect(){},disconnect(){},stop(){},start(t){startTime=t;},set onended(fn){ended=fn;}})};
   DW.flightPortraits.mount=()=>({show:l=>calls.push(['show',l]),play:(p,c,t,o,n)=>{sharedNoise=n;offsetSeen=o;calls.push(['play',t]);},finish:()=>calls.push(['finish']),decay:p=>calls.push(['decay',p]),stop:()=>calls.push(['stop']),clear:()=>calls.push(['clear']),update:feeling=>calls.push(['update',feeling])});
   const feeling={current:'frustrated',stress:.5,intensity:1};
@@ -92,6 +93,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
   const fields=[{},{}],radioPanel={querySelector:s=>s==='[data-speaker]'?fields[0]:fields[1],classList:{add:name=>panelClasses.add(name),remove:name=>panelClasses.delete(name),toggle(){}}},toggle={setAttribute(){}};
   queue={...line,craftId:'wing',text:'Cover me!',voice:'Scout',voiceSettings:{seed:17},seed:17,radioSeed:1};
   const radio=DW.flightRadio.mount(radioPanel,toggle);radio.unlock();radio.update(0,{},{});
+  assert.equal(startTime,undefined,'Portrait speech must await background synthesis');
+  const pcm=DW.mumble.render(workerRequest.plan,22050);
+  const noise=DW.mumble.radioNoise(pcm.length,22050,{effects:.45,edgeScale:2.5,seed:workerRequest.radioSeed});
+  const transmission=DW.mumble.transmit(pcm,22050,{mode:'radio',seed:workerRequest.radioSeed,noise});
+  workerReply.onmessage({data:{id:workerRequest.id,...transmission,noise}});
   assert.equal(startTime,2);assert.equal(offsetSeen,.4);assert.equal(sharedNoise,transmitNoise,'Audio and picture must receive the exact same noise object');assert.equal(sharedNoise.edgeScale,2.5);assert.equal(sharedNoise.effects,.45);assert.equal(calls.find(c=>c[0]==='play')[1],2);
   assert.equal(calls.filter(c=>c[0]==='update').at(-1)[1],feeling);
   assert.ok(!panelClasses.has('idle'));ended();assert.ok(!panelClasses.has('idle'),'Half-second sign-off keeps text readable after audio completion');assert.ok(calls.some(c=>c[0]==='finish'));context.currentTime=2.49;radio.update(.49,{},{});assert.ok(!panelClasses.has('idle'));assert.equal(fields[1].textContent,'Cover me!','Player-facing subtitle stays clean and readable through sign-off');assert.ok(calls.some(c=>c[0]==='decay'&&c[1]>.95));context.currentTime=2.5;radio.update(.01,{},{});assert.ok(panelClasses.has('idle'),'Whole transmission hides after the half-second decay');assert.equal(fields[1].textContent,'');assert.ok(calls.some(c=>c[0]==='stop'));radio.reset();assert.ok(calls.some(c=>c[0]==='clear'));

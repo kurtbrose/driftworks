@@ -151,6 +151,24 @@ with `?category=runway-workers`; existing civilian pilot URLs retain their cast.
 
 Both flight simulators and the comms lab load `mumble.js`, `comms-display.js`, and `face-blend.js` before their portrait/radio controllers. `mumble.radioNoise` creates a channel-noise plan independently of either output; audio transmission and display sampling receive the same object and the same playback clock. Local audio bypasses radio processing. Flight uses effects 0.45 and edgeScale 2.5 (0.4 s opening / 0.6 s closing); original radio timing remains available in the lab. Pilot identity, mood and speech cues remain in their existing owners.
 
+Flight radio prepares a persistent classic Web Worker on audio unlock.
+`mumble-worker.js` imports the versioned local `mumble.js`; it renders the existing
+22,050 Hz speech and radio filtering, then transfers the PCM buffer and returns
+the shared noise plan. Only text analysis, Web Audio playback and portrait
+scheduling stay on the main thread. The worker and synthesizer are explicit
+dynamic-code entries in the asset version catalog, so changes invalidate both
+requests on static hosts, including deployment beneath a path prefix.
+
+Pending preparation occupies the radio channel without consuming the estimated
+playback hold or starting portrait speech/ducking. Delivery starts audio and
+portrait cues from the current audio clock, including the unchanged radio
+lead-in. Pause, reset and mute invalidate the job and terminate a busy worker;
+page exit also terminates an idle worker. Late replies and old source completions
+cannot take ownership of a newer transmission. Unsupported/failed workers retain
+subtitle-only radio for that mount, with no blocking synthesis fallback. A job
+that remains pending for ten simulated seconds releases the worker and falls back
+to the normal subtitle hold. Other Mumble labs keep their existing direct API.
+
 `commsDisplay.create(canvas)` owns one 256 px treatment buffer. Its `draw` accepts the animated source canvas, shared noise plan, elapsed playback seconds, speech duration and optional palette/scanline/reduced-motion settings. It preserves the lab treatment: green phosphor by default, scanlines, fresh random strip/snow geometry and a visual peak hold of 250 ms at channel edges or 40 ms during speech. It never generates independent noise-event timings. Callers own scheduling and channel cutoff.
 
 `flightPortraits` retains its fixed seventeen-atlas cache and uses one reusable animated source canvas plus the display buffer. `play` receives the noise plan alongside the audio context, start time and speech offset. Pause, mute and cancellation hide the portrait immediately and invalidate pending portrait loads; the playback clock also detects completion before a delayed `onended` callback. Natural playback completion closes the mouth and begins a 0.5 s visual sign-off: the portrait's static increases monotonically along a newly randomized progression for each sign-off, using coarse grain to obscure the face. Positive random timing and severity increments define the progression, sampled by sign-off progress even when the speech clock has stopped; horizontal displacement gets only a modest boost, then the panel hides. Subtitles, speaker labels and controls are player-facing UI and stay clean and readable throughout; no radio effects are applied to the panel. Cancellation hides it immediately. The audio clock drives the sign-off, with a simulation-clock fallback when no audio clock is available. Subtitle-only fallback uses the estimated transmission duration. The bounded comms history remains available independently. No audio context is created or closed by the portrait renderer.

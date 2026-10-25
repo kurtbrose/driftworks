@@ -74,10 +74,13 @@ try {
         '<!-- script-manifest:' + surface.profile + ' -->\n<!-- /script-manifest -->\n<p>Untouched content</p>\n');
     }
   }
+  write('experiments/mumble-worker.js', '// speech worker fixture\n');
   assert.equal(sync(root), 0);
   assert.equal(refresh(root), 0);
   assert.equal(sync(root, true), 0, 'Asset versioning and script generation agree');
   assert.ok(read('output/ellis-benchmark.html').includes('ellis-benchmark-probe.js'), 'Asset refresh retains benchmark instrumentation');
+  assert.ok(read('src/asset-versions.js').includes('"experiments/mumble-worker.js":'), 'Dynamic worker is versioned');
+  assert.ok(read('src/asset-versions.js').includes('"experiments/mumble.js":'), 'Worker dependency is versioned');
   const snapshots = surfaces.map(surface => read(surface.file));
   const tacticalSnapshot = read('rts.html');
   assert.equal(sync(root), 0);

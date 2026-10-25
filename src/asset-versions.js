@@ -1164,6 +1164,8 @@
   "experiments/livery-structural-sections-preview.png": "3be29022e0ce",
   "experiments/livery-symmetry-preview.png": "b78afbe97b19",
   "experiments/livery-whole-sections-preview.png": "ed2193712ff3",
+  "experiments/mumble-worker.js": "f1c06f1477de",
+  "experiments/mumble.js": "96c5b42f6cc2",
   "experiments/speech-sprites/crew-sheet-v2.png": "d29f0d48ee9d",
   "experiments/speech-sprites/crew-sheet.png": "65a777273a49",
   "vendor/three/provenance.json": "8f398f7f81c5"

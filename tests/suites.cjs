@@ -125,6 +125,7 @@ const suites = {
     "ohio-music.cjs",
     "speech-sprites.cjs",
     "comms-signal.cjs",
+    "mumble-worker.cjs",
     "comms-lab.cjs"
   ],
   tooling: [

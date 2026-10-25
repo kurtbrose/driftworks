@@ -24,7 +24,8 @@ function refresh(root, check = false) {
     versions[name] = hash(fs.readFileSync(path.join(root, name)), /\.(js|css|json|svg|gltf)$/.test(name));
   }
   for (const [name, version] of Object.entries(versions)) {
-    if (name.startsWith('assets/') || !/\.(js|css)$/.test(name)) dynamicVersions[name] = version;
+    // Speech worker and its imported synthesizer are loaded dynamically.
+    if (name.startsWith('assets/') || ['experiments/mumble-worker.js', 'experiments/mumble.js'].includes(name) || !/\.(js|css)$/.test(name)) dynamicVersions[name] = version;
   }
   const runtime = `(function () {\n  'use strict';\n  var DW = /** @type {import('./types').DriftworksNamespace} */ (window.Driftworks = window.Driftworks || {});\n  var root = typeof document !== 'undefined' && document.currentScript ? new URL('../', new URL(document.currentScript.getAttribute('src') || '', document.baseURI)).href : '';\n  /** @type {Record<string,string>} */\n  var versions = ${JSON.stringify(dynamicVersions, null, 2)};\n  /** @param {string} value @param {string=} base */\n  DW.assetUrl = function (value, base) {\n    if (!root) return value;\n    var url = new URL(value, base || document.baseURI);\n    if (url.href.startsWith(root)) {\n      var key = decodeURI(url.pathname.slice(new URL(root).pathname.length));\n      if (versions[key]) url.searchParams.set('v', versions[key]);\n    }\n    return url.href;\n  };\n})();\n`;
   let failures = 0;

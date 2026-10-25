@@ -1137,3 +1137,12 @@ declare module '../src/types' {
         originalShipModels?: {id:string;name:string;author:string;provenance:string;study:string;geometry:(units:number)=>Batch[]}[];
     }
 }
+
+export type SpeechWorkerRequest = {kind: 'init'; url: string} | {kind: 'render'; id: number; plan: SpeechPlan; radioSeed: number};
+export type SpeechWorkerResult = {id: number; samples: Float32Array; noise: RadioNoise; speechOffset: number; duration: number};
+export type SpeechWorkerScope = {
+    window: unknown;
+    importScripts: (...urls: string[]) => void;
+    onmessage: ((event: MessageEvent<SpeechWorkerRequest>) => void) | null;
+    postMessage: (message: SpeechWorkerResult, transfer: ArrayBuffer[]) => void;
+};

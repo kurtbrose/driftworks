@@ -150,3 +150,35 @@ comparison above for the speedup, not this integration run's frame percentiles.
 
 Validation: focused audio checks and `npm run check` passed (116/116 entries),
 including strict types, script manifests, asset versions and all PCM regressions.
+
+## Background speech follow-up
+
+Flight now runs synthesis and radio filtering in a persistent classic Web Worker,
+with a transferred Float32 PCM buffer. Main-thread analysis retains the existing
+subtitle/voice plan, and playback/portrait cues start together when the result
+arrives. Cancellation terminates an in-flight job and rejects late replies.
+Failures retain subtitles rather than falling back to synchronous synthesis.
+See `docs/flight-presentation.md` for lifecycle and asset-versioning contracts.
+
+The normal live near-throat/fast-pan/fire benchmark recorded 536 frames after
+worker integration: main-thread synthesis and radio-filter calls were both zero;
+radio-update mean/p95 was 0.32/0.90 ms. Full-frame CPU p95/max was 21.5/39.3 ms.
+These scene timings are observations, not a matched before/after FPS comparison.
+
+A temporary instrumented copy of that production benchmark additionally wrapped
+native Worker messages and Web Audio source starts. Nine requests returned nine
+PCM results and started nine 22,050 Hz sources, with zero worker errors and zero
+main-thread synthesis/filter calls. Observed request-to-delivery latency ranged
+from 26.8 to 109.7 ms (including scheduling/startup), during which the scene kept
+running. The recorder's sample in this integration run still contained a 61.6 ms
+CPU frame, demonstrating that other hitches remain. No claim is made that all
+near-wormhole stalls have disappeared.
+
+Focused regressions use a real background thread to compare speech/filter PCM,
+noise plans and timing byte-for-byte, and deferred transport tests cover busy
+channel ownership, playback-clock cues, pause/reset/mute/pagehide, stale jobs,
+worker failures, timeout and suspended audio contexts.
+
+Validation: focused audio/worker/portrait checks passed. After updating the old
+synchronous portrait fixture to deliver an explicit worker reply, the complete
+`npm run check` rerun passed all 117 entries, types, manifests and asset checks.
