@@ -3,6 +3,9 @@
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
+    var texturesReady=false,textureLoadFailed=false;
+    get('fly').disabled=true;get('fly').textContent='Loading ship textures...';
+    get('status').textContent='Loading ship textures and preparing graphics...';
     var activeMission=DW.flightMissions.current();
     if(activeMission.sky.gasGiant&&!DW.gasGiantWeather)await new Promise(/** @param {(value:boolean)=>void} resolve */function(resolve){window.addEventListener('gas-weather-ready',function(){resolve(true);},{once:true});});
     var impactWatch=!!activeMission.emptySpace;
@@ -26,7 +29,7 @@
     if(controlsHelp&&activeMission.units.speedScale!==1)controlsHelp.innerHTML=controlsHelp.innerHTML.replace(/5 m\/s/g,Math.round(5*activeMission.units.speedScale)+' '+activeMission.units.speedLabel);
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
-    if(aegisMode||activeMission.sky.wormhole){try{await DW.aegisFlight.load();aegis=activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle();}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
+    if(aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'){try{await DW.aegisFlight.load();aegis=activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
     var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: function (start, end) {
             var asteroid = session.snapshot().asteroid;
             var terrain=DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
@@ -204,6 +207,12 @@
         controls.clear();
     }
     function updateStatus() {
+        if(!texturesReady){
+            get('fly').disabled=true;
+            get('fly').textContent=textureLoadFailed?'Textures unavailable':'Loading ship textures...';
+            status.textContent=textureLoadFailed?'Ship textures could not load. Reload to retry. '+get('art-credit').textContent:'Loading ship textures and preparing graphics...';
+            return;
+        }
         var current = view();
         status.textContent = watch && watch.summary().done ? 'Duel complete · Replay duel or choose another pilot' :
             !watch && current.combat.dead ? 'Training over · Restart training to try again' :
@@ -234,7 +243,7 @@
         comms.reset();
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
-        if(aegis&&!aegisMode)aegis.reset();
+        if(aegis&&!aegisMode)aegis.reset(activeMission.id==='battle'?session.snapshot().combat:undefined);
         if(aegis&&aegisMode){
             var snapshot=session.snapshot();aegis.reset(snapshot.combat);var oldEye=snapshot.state.eye.slice(),aegisStart=[-200/units,-1100/units,1200+220/units];
             DW.training.participants(snapshot.combat).filter(function(c){return c.controller!=='input';}).forEach(function(c){c.pose.eye=c.pose.eye.map(function(v,i){return v+aegisStart[i]-oldEye[i];});});
@@ -263,6 +272,7 @@
         status.textContent = observing ? 'AI duel paused · Play to watch' : 'Ready · Start flight when ready';
         updateWatch();
         pose();
+        if(!texturesReady)updateStatus();
     }
     function updateWatch() {
         document.body.classList.toggle('watch-chase', !!watch && get('watch-camera').value === 'chase');
@@ -328,6 +338,7 @@
             active.blur();
     }
     function resume() {
+        if(!texturesReady){updateStatus();return;}
         if (!watch && session.snapshot().combat.dead) {
             updateStatus();
             return;
@@ -354,6 +365,7 @@
         status.textContent = 'Mouse capture unavailable. Retry Fly or select Controller / keyboard.';
     }
     get('fly').onclick = function () {
+        if(!texturesReady){updateStatus();return;}
         if (watch) { if (watch.summary().done) reset(); resume(); return; }
         if (session.snapshot().combat.dead)
             reset();
@@ -399,15 +411,18 @@
         benchmarkButton.textContent=activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
         benchmarkOutput.id='aegis-benchmark-result';benchmarkOutput.style.whiteSpace='pre-wrap';
         get('perf-reset').after(benchmarkButton,benchmarkOutput);
-        benchmarkButton.onclick=async function(){
+        var capitalBenchmarkButton=activeMission.id==='battle'?document.createElement('button'):null;
+        if(capitalBenchmarkButton){capitalBenchmarkButton.textContent='Benchmark capital ships on / off';benchmarkButton.after(capitalBenchmarkButton);capitalBenchmarkButton.onclick=function(){runBenchmark(true);};}
+        benchmarkButton.onclick=function(){runBenchmark(false);};
+        /** @param {boolean} capitals */async function runBenchmark(capitals){
             if(benchmarking)return;
-            pause();benchmarking=true;benchmarkButton.disabled=true;
+            pause();benchmarking=true;benchmarkButton.disabled=true;if(capitalBenchmarkButton)capitalBenchmarkButton.disabled=true;
             var snapshot=view(),art=presentation.appearance(),settings=diagnostics.settings();
             /** @type {{on:boolean,cpu:number,interval:number,draws:number,triangles:number}[]} */var rows=[];
             try{
                 for(var enabled of [false,true,true,false]){
-                    if(aegis)presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
-                    var sampled=activeMission.id==='battle'?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
+                    if(aegis&&(activeMission.id!=='battle'||capitals))presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
+                    var sampled=activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
                     var previous=0;
                     for(var i=0;i<110;i++){
                         var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});
@@ -418,7 +433,7 @@
                         benchmarkOutput.textContent='Frozen scene benchmark '+(rows.length)+' / 360 samples';
                     }
                 }
-                var lines=['Frozen scene / ABBA / 20 warm-up + 90 samples per block','Rendering only; AI and projectiles frozen.'];
+                var lines=[(capitals?'Capital ships / ':'')+'Frozen scene / ABBA / 20 warm-up + 90 samples per block','Rendering only; AI and projectiles frozen.'];
                 [false,true].forEach(function(on){var r=rows.filter(function(row){return row.on===on;});
                     /** @param {keyof Omit<typeof rows[number],'on'>} key */function mean(key){return r.reduce(function(n,row){return n+row[key];},0)/r.length;}
                     function percentile(/** @type {'cpu'|'interval'} */key,/** @type {number} */fraction){var sorted=r.map(function(row){return row[key];}).sort(function(a,b){return a-b;});return sorted[Math.floor((sorted.length-1)*fraction)];}
@@ -427,7 +442,7 @@
                 lines.push('CPU submission only; rAF includes browser pacing, not a GPU timer.');
                 benchmarkOutput.textContent=lines.join('\n');
             }catch(error){benchmarkOutput.textContent='Benchmark interrupted: '+String(error);}
-            finally{if(aegis)presentation.setCapital(aegis);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=true;pause();benchmarking=false;benchmarkButton.disabled=false;diagnostics.reset();}
+            finally{if(aegis)presentation.setCapital(aegis);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=true;pause();benchmarking=false;benchmarkButton.disabled=false;if(capitalBenchmarkButton)capitalBenchmarkButton.disabled=false;diagnostics.reset();}
         };
     }
     /** @param {number} t */
@@ -518,6 +533,15 @@
         }
     }catch(error){importError='Could not load study case: '+(error instanceof Error?error.message:String(error));}
     reset();
+    presentation.ready.then(function(loaded){
+        texturesReady=loaded;textureLoadFailed=!loaded;
+        get('fly').disabled=!loaded;
+        get('fly').textContent=loaded?'Start flight':'Textures unavailable';
+        if(loaded){
+            status.textContent=importError||'Ready - Start flight when ready';
+            if(activeMission.id==='scramble'){resume();}
+        }else updateStatus();
+    });
     if(importError)status.textContent=importError;
     requestAnimationFrame(frame);
 }());

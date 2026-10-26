@@ -168,3 +168,42 @@ and silicates order. Flight sessions apply the mix on reset, combat mode changes
 and diameter edits so terrain queries and rendering share the same geology.
 Omitting it restores the generated default. Ohio uses 85% ice and 15% volatiles;
 this does not change simulation ore resources.
+
+### SCRAMBLE! scripted launch
+
+Open `experiments/flight.html?mission=scramble` from the mission selector.
+The player and three wingmen start inside the existing 1,305 m Aegis hangar:
+one on the left, two on the right, aligned across the deck. Wingmen accelerate
+from holds staggered at 0.2, 0.55 and 0.95 seconds. The player has normal flight
+controls immediately. After textures are prepared, SCRAMBLE enters the HUD and
+starts automatically with Flight Control's ordered scramble call.
+Raiders attack from above as the wingmen clear the deck, then dive past.
+The lead attacker uses a lethal bolt led onto the left fighter's known launch
+path. Destruction occurs only on a swept projectile/hull intersection, with an
+impact and the normal shield, hull, wreck and radio-event paths. There is no
+scheduled explosion or timer-applied damage. Player movement does not change
+the left fighter's route or the attacker's target. Other raiders fire weaker
+bursts at the right fighter. At ten seconds ordinary fighter AI resumes.
+Pause freezes the timeline; sortie reset replays it. Radio cues wait for the
+channel; the loss report also waits for actual destruction.
+The capital uses the existing static material batches / immutable GPU geometry.
+
+SCRAMBLE launch-camera readiness measurement (2026-10-25): existing Aegis
+`flight-rig.js` SHA256 `857eb4969b70b418f32635920c188f07e38c6b12f25cd13b87472c9ebeeee607`.
+Foreground in-app browser, 902 x 939 CSS pixels, DPR 1.5, main backing
+1353 x 1409, 100% render scale, production artwork, six fighters, fixed initial
+hangar camera, simulation/effects frozen. No test or rebuild ran during sampling.
+The built-in OFF/ON/ON/OFF comparison used 20 warm-up and 90 measured frames per
+block. Capital hidden: submission median/p95 0.70/0.90 ms, 8 draws, 16,238
+triangles. Capital visible: 0.80/1.00 ms, 15 draws, 60,490 triangles. Both had
+13.30/13.40 ms frame median/p95. The existing unarmed static material batching
+and cached GPU buffers remain sufficient for this view; no new bottleneck was
+demonstrated. These are CPU submission and browser cadence, not GPU execution
+or a live-combat frame budget. Cockpit launch and visible raider strafing passes
+were also inspected live; no portrait artwork was changed or approved.
+
+The flight page disables Start flight until `flightPresentation.ready` resolves
+successfully after both source/wreck image loading and renderer texture upload.
+Loading leaves the session paused. Completion enables flight: SCRAMBLE starts
+automatically in the HUD, while other sorties wait for Start flight. Failure
+keeps launch disabled and displays the error with a reload retry instruction. Resume and pointer capture also enforce the readiness gate.

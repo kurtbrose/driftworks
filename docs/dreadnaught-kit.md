@@ -307,3 +307,26 @@ asset identity invalidates both preparations together, without editing authoring
 geometry, collision, weapon rules, scale or livery. Regression coverage checks
 cross-instance resource sharing, exact authored vertices/normals and pivot
 translation, independent poses, revision invalidation, and live armed combat.
+
+## Zone-defense sortie integration
+
+`flight.html?mission=battle` automatically loads the same local Aegis asset and
+uses `aegisFlight.createBattle({battlefield:true})`. `reset(combat)` anchors the
+pair in the player's sortie frame at offsets (-1100, 1800, 300) and
+(1100, 2100, 650) metres (right, forward, up). Their authored -X bows face one another with a
+20-degree offset from the engagement line to expose their gun decks. The two rigs retain their original
+1,305 m hulls, independent articulated mounts, faction livery, SI weapons,
+bounded motion and shared immutable mesh buffers. Heavy batteries damage the
+opposing capital; point defense uses the existing fighter targeting/damage path.
+Player hull contact and projectile interception use the existing capital boxes.
+
+Battlefield mode leaves the thirty zone-owned fighters intact on reset and does
+not enable the standalone sandbox's hangar/replacement ownership. The five fighter
+zones retain their existing centers and pursuit rules. Default `createBattle()`
+keeps the standalone high-altitude engagement and hangar behavior unchanged.
+
+The battle's lab offers two separate frozen ABBA comparisons: distant squadrons
+on/off with capitals retained, and capital ships on/off with fighters retained.
+Use a camera where the hulls are visibly submitted; an offscreen pair mostly
+measures effect work and cannot establish the cost of drawing the ships. See
+[the battlefield comparison](benchmarks/battle-capitals-2026-10-25.md).

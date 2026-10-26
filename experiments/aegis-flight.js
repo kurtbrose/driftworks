@@ -258,14 +258,28 @@
         reset();return {reset:reset,step:step,geometry:geometry,effects:effects,readout:readout,hit:hit,telemetry:telemetry};
     }
     /** Two runtime rigs share meshes; their mutable transforms and weapons remain independent.
-     * @returns {import('./types').AegisFlightRig} */
-    function createBattle(){
+     * @param {{battlefield?:boolean}} [options] @returns {import('./types').AegisFlightRig} */
+    function createBattle(options){
         /** @type {import('./types').AegisCapitalState[]} */var states=[{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},{team:'enemy',position:[120/U,1500/U,1200+180/U],heading:Math.PI,velocity:[0,0,0],integrity:20000}];
         var starts=states.map(function(s){return {position:s.position.slice(),heading:s.heading};}),seconds=0;
         var configs=states.map(function(state,i){return {state:state,opponent:states[1-i],opponentRig:/** @type {import('./types').AegisFlightRig|undefined} */(undefined)};});
         var rigs=configs.map(function(config){return create(config);});configs.forEach(function(config,i){config.opponentRig=rigs[1-i];});
         var renderBatches=rigs.flatMap(function(rig){return rig.geometry();});
-        /** @param {import('./types').Combat} [combat] */function reset(combat){seconds=0;states.forEach(function(s,i){s.position.splice(0,3,...starts[i].position);s.heading=starts[i].heading;s.velocity=[0,0,0];s.integrity=20000;rigs[i].reset(i===0?combat:undefined);});}
+        /** @param {import('./types').Combat} [combat] */function reset(combat){
+            seconds=0;
+            if(options&&options.battlefield&&combat){
+                var pose=combat.player.pose;
+                [[-1100,1800,300],[1100,2100,650]].forEach(function(offset,i){
+                    starts[i].position=pose.eye.map(function(v,k){return v+(pose.right[k]*offset[0]-pose.back[k]*offset[1]+pose.up[k]*offset[2])/U;});
+                });
+                // The authored bow is local -X. Cant opposing bows twenty
+                // degrees off the engagement line to expose both gun decks.
+                var bearing=Math.atan2(starts[1].position[1]-starts[0].position[1],starts[1].position[0]-starts[0].position[0]);
+                starts[0].heading=bearing+Math.PI-Math.PI/9;
+                starts[1].heading=bearing+Math.PI/9;
+            }
+            states.forEach(function(s,i){s.position.splice(0,3,...starts[i].position);s.heading=starts[i].heading;s.velocity=[0,0,0];s.integrity=20000;rigs[i].reset(i===0&&!(options&&options.battlefield)?combat:undefined);});
+        }
         /** @param {number} elapsed @param {FlightView} view */function step(elapsed,view){
             if(!Number.isFinite(elapsed)||elapsed<=0)return;var dt=Math.min(.1,elapsed);seconds+=dt;
             // Bounded, opposing patrol arcs: ~12 m/s, a slow heading swing, no eventual collision/drift.

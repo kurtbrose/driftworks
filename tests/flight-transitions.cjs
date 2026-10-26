@@ -8,7 +8,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 module.exports = function runFlightTransitions(namespace) {
-  function mount(search = '') {
+  function mount(search = '', loaded = true) {
     class Element {
       constructor() {
         this.value = ''; this.checked = false; this.options = []; this.dataset = {}; this.style = {};
@@ -48,7 +48,7 @@ module.exports = function runFlightTransitions(namespace) {
     };
     get('viewer').clientWidth=640;get('viewer').clientHeight=360;
     get('viewer').querySelectorAll=() => layers;
-    let actions, session, frame, now = 0;
+    let actions, session, frame, finishTextures, now = 0;
     const elapsed = [];
     const noop = () => {};
     const DW = Object.assign({}, namespace, {
@@ -62,6 +62,7 @@ module.exports = function runFlightTransitions(namespace) {
         return session;
       }},
       flightPresentation:{mount() { return {
+        ready:{then(callback) { finishTextures=callback; if(loaded!==null)callback(loaded); }},
         pose:noop, render:noop,
         appearance:() => ({allyArt:get('ally-art').value, enemyArt:get('enemy-art').value}),
         renderStats:() => ({scene:{cpuMs:0,drawCalls:0,triangles:0,meshes:0,materials:0,width:1,height:1,pixelRatio:1},sky:{drawCalls:0,triangles:0,points:0}})
@@ -83,9 +84,24 @@ module.exports = function runFlightTransitions(namespace) {
       requestAnimationFrame:callback => { frame = callback; }});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/ellis-feedback.js'), 'utf8'), context, {filename:'experiments/ellis-feedback.js'});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight.js'), 'utf8'), context, {filename:'experiments/flight.js'});
-    return {get, actions, session, elapsed, document, captures, clipboard,
+    return {get, actions, session, elapsed, document, captures, clipboard, finishTextures,
       tick(time) { now = time; const callback = frame; frame = null; callback(time); assert(frame); }};
   }
+
+  const loading=mount('',null);
+  assert.equal(loading.get('fly').disabled,true);
+  loading.actions.resume();loading.tick(1000);loading.tick(1100);
+  assert(loading.actions.isPaused());assert.equal(loading.elapsed.length,0);
+  assert(loading.get('status').textContent.includes('Loading ship textures'));
+  loading.finishTextures(true);
+  assert.equal(loading.get('fly').disabled,false);
+  assert(loading.actions.isPaused(),'Finishing loads does not auto-start ordinary flight');
+  loading.get('fly').onclick();loading.tick(1200);loading.tick(1210);
+  assert(!loading.actions.isPaused());
+  const failed=mount('',false);failed.actions.resume();
+  assert(failed.actions.isPaused());assert.equal(failed.get('fly').disabled,true);
+  assert(failed.get('status').textContent.includes('Reload to retry'));
+  console.log('PASS flight loading gate: GPU readiness blocks start/resume, releases explicitly and retains failures');
 
   for (const hud of [true,false]) {
     const shot=mount(),panel=shot.get('launch').options.at(-1),button=panel.options[hud?0:1];

@@ -48,8 +48,9 @@
         portraits:{folder:'dogfight',cast:'standard'},sky:{kind:'selectable',features:[]},scenery:[],
         encounter:{kind:'training',count:0,immediate:false,callsigns:['Rook','Jinx','Flint','Echo','Mako','Sable','Patch','Nova','Viper','Wraith','Razor','Hex','Talon','Knell','Cinder','Shade'],spawn:{backRadii:2.6,altitudeMeters:300}},opening:[]
     });
+    define('scramble',{title:'SCRAMBLE! / Driftworks',heading:'DRIFTWORKS / SCRAMBLE!',subtitle:'SCRIPTED EVENTS / COMBAT LAUNCH',hint:'Launch begins as soon as textures are ready. One wingman left, two right. Fly immediately: W/S throttle / Shift boost / Esc pause.',encounter:{kind:'furball',count:6,immediate:true,callsigns:['Lancer Two','Lancer Three','Lancer Four','Raider One','Raider Two','Raider Three']}});
     define('furball',{encounter:{kind:'furball',count:16}});
-    define('battle',{title:'Battle background / Driftworks',heading:'DRIFTWORKS / BATTLE PROTOTYPE',subtitle:'SQUADRON ZONE DEFENSE / LIVE DOGFIGHTS',encounter:{count:30,immediate:true}},'furball');
+    define('battle',{title:'Battle background / Driftworks',heading:'DRIFTWORKS / BATTLE PROTOTYPE',subtitle:'CAPITAL ENGAGEMENT / SQUADRON ZONE DEFENSE',encounter:{count:30,immediate:true}},'furball');
     /** Frozen fictional system in planet-centered km; all moon centers share one plane.
      * @param {boolean} nearMoon @returns {import('./types').JadeSystem} */
     function jadeSystem(nearMoon){

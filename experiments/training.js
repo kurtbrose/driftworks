@@ -322,6 +322,19 @@
             e.collision = { kind: 'model', modelId: DW.shipPackModels.craftModel(e, selection, t.wave).id };
         });
         if(t.hangarSupport)t.enemies=t.enemies.filter(function(e){return e.team!=='ally';}).concat(retainedAllies);
+        if(t.mode==='scramble'){
+            player.eye=[-103.5/U,-25/U,1200];player.velocity=[0,0,0];player.ramp=[0,0,0];player.throttle=1;
+            player.right=[1,0,0];player.up=[0,0,1];player.back=[0,-1,0];
+            t.scramble={beat:0,radio:0};
+            t.enemies.forEach(function(e,i){
+                e.team=i<3?'ally':'enemy';
+                e.pose.eye=[(-103.5+(i===0?-12:i===1?12:28))/U,(i<3?-16:1100+(i-3)*160)/U,1200+(i<3?0:220)/U];
+                e.pose.right=[1,0,0];e.pose.up=[0,0,1];e.pose.back=[0,-1,0];
+                e.pose.velocity=[0,0,0];e.pose.throttle=1;
+                e.hangarLaunch={remaining:10};
+                if(i>=3)e.plotArmor=true;
+            });
+        }
         if(t.mode==='evacuation')DW.evacuationMission.start(t,player);
         if(t.mode==='ellis')t.enemies.forEach(function(e,i){
             var region=i%4>=2?1:0,shift=(region-(player.region||0))*12000/U;
@@ -720,7 +733,7 @@
         });
         replenish(t,player,radius);
         var living = alive(t);
-        if (!t.dead && t.mode !== 'asteroid-patrol' && t.mode !== 'evacuation' && (!living.length || t.roundOver)) {
+        if (!t.dead && t.mode !== 'asteroid-patrol' && t.mode !== 'evacuation' && t.mode !== 'scramble' && (!living.length || t.roundOver)) {
             t.countdown -= dt;
             if (t.countdown <= 0) {
                 spawn(t, player, radius);
@@ -737,7 +750,12 @@
             t.slotTimer = 3;
         }
         /** @param {Craft} e */function fireGuns(e){
+            if(t.scramble&&t.time<10){
+                if(e.team==='enemy')return;
+                e.fire=e.hp>0&&t.time>1.5&&Math.sin(t.time*12+e.index*2)>-.25;
+            }
             DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
+                if(t.scramble&&t.time<10)return null;
                 return trace(t, start, end, bolt, e, terrainHit, player);
             }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), !!mission(t).sky.wormhole);
         }
@@ -745,9 +763,13 @@
         collisionBatch(t,function(){t.enemies.forEach(function (e) {
             if (e.controller !== 'input') e.fire = false;
             if(e.hp>0&&e.hangarLaunch){
+                if(t.scramble&&e.team==='ally'){
+                    var launchAge=Math.max(0,t.time-[.2,.55,.95][e.index]);
+                    e.pose.velocity=[0,Math.min(90,launchAge*180),0];
+                }
                 e.pose.eye=add(e.pose.eye,scale(e.pose.velocity,dt/U));
                 e.hangarLaunch.remaining-=dt;e.fire=false;
-                if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
+                if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;if(t.scramble)delete e.plotArmor;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
                 /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {
@@ -823,6 +845,35 @@
         if(afterMovement)afterMovement();
         if(mission(t).sky.wormhole)t.enemies.forEach(fireGuns);
         });
+        if(t.scramble&&t.time<10){
+            var story=t.scramble;
+            // Every story hit is a real visible bolt/hull contact, never a timer.
+            t.enemies.slice(3).forEach(function(e,i){
+                var run=t.time-[0,.6,1.1][i],side=i===0?-1:1,phase=run*.85+i*1.7;
+                var x=-103.5+side*(125-16*run)+Math.sin(phase)*28;
+                var y=600-85*run,z=420-85*run+Math.sin(run*.65+i)*18;
+                var velocity=[side*-16+Math.cos(phase)*23.8,-85,-85+Math.cos(run*.65+i)*11.7];
+                e.pose.eye=[x/U,y/U,1200+z/U];e.pose.velocity=velocity;
+                face(e.pose,velocity);
+                // Roll into the escape rather than sliding an upright hull down a rail.
+                var bank=Math.sin(run*.7+i)*.65,c=Math.cos(bank),sn=Math.sin(bank),right=e.pose.right.slice(),up=e.pose.up.slice();
+                e.pose.right=add(scale(right,c),scale(up,sn));e.pose.up=add(scale(up,c),scale(right,-sn));
+                var victim=t.enemies[i===0?0:1];
+                var weapon=Object.assign({},DW.retailWeapons[0],{damage:i===0?100000:16,shieldFactor:1,armorFactor:1,fireWait:.13});
+                const aim=DW.flightGuns.lead(e.pose,victim.pose,weapon,false,0);
+                var burst=victim.hp>0&&(i===0?t.time>.8&&t.time<3.2:i===1?t.time>1.6&&t.time<3.5:t.time>2.1&&t.time<4.2);
+                DW.flightGuns.step(e.guns,e.pose,weapon,burst,dt,function(start,end,bolt){
+                    if(victim.hp<=0)return null;
+                    var hit=hullHit(victim,start,end,bolt.weapon.headRadius||0);
+                    if(!hit)return null;
+                    damageCraft(t,victim,bolt.weapon,e);
+                    story.beat++;
+                    t.flashes.push({position:hit.point.slice(),velocity:victim.pose.velocity.map(function(v){return v/U;}),age:0,scale:2,destruction:false});
+                    return hit.point;
+                },aim?function(){return aim.point;}:undefined,1,[[0,0,0]]);
+
+            });
+        }
         replenish(t,player,radius);
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)

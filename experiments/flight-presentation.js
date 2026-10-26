@@ -183,13 +183,15 @@
         var shipImages = new Map();
         var burns = /** @type {WeakMap<Vector, Batch[]>} */ (new WeakMap());
         var crewKey = '', crewPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses, crews = /** @type {Batch[]} */ ([]);
-        DW.shipPackModels.loadTextures().then(function (images) {
-            if (!scene.prepareStudyTextures) { shipImages = images; return; }
+        var ready=DW.shipPackModels.loadTextures().then(function (images) {
+            if (!scene.prepareStudyTextures) { shipImages = images; return true; }
             return Promise.resolve(scene.prepareStudyTextures(DW.shipPackModels.textureSources(images))).then(function () {
                 shipImages = images;
+                return true;
             });
         }).catch(/** @param {unknown} error */ function (error) {
             get('art-credit').textContent = String(error);
+            return false;
         });
         var skybox = DW.flightSkybox.create(host);
         var bridgeMode=typeof location==='undefined'?'':new URLSearchParams(location.search).get('bridge');
@@ -347,7 +349,7 @@
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };
         }
-        return { appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
+        return { ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
     }
     DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin, ohioSignGeometry:ohioSignGeometry };
 }());

@@ -280,6 +280,7 @@ export type RadioEvent = {
 };
 export type EvacuationState = {scene:number;line:number;wait:number;elapsed:number;quiet:number;departure:number;complete:boolean;reserve:Craft[];origin:[number,number,number]};
 export type Combat = {
+    scramble?:{beat:number;radio:number};
     evacuation?:EvacuationState;
     rosterNext?:{ally:number;enemy:number};
     replacementSerial?:number;
@@ -926,6 +927,7 @@ export type ExperimentModules = {
         mount: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, environment?: {
             document: Document;
         }) => {
+            ready: Promise<boolean>;
             appearance: () => Appearance;
             pose: (state: Pose) => void;
             render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number) => void;
@@ -1131,7 +1133,7 @@ declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
         gpuUi?: {create:(host:HTMLElement)=>import('./gpu-ui-types').GpuUi;color:(value:string|CanvasGradient|CanvasPattern)=>number[]};
         aegisFlightAsset?: AegisFlightAsset;
-        aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:()=>AegisFlightRig;createEllisPatrol:()=>AegisFlightRig;load:()=>Promise<unknown>};
+        aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:(options?:{battlefield?:boolean})=>AegisFlightRig;createEllisPatrol:()=>AegisFlightRig;load:()=>Promise<unknown>};
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];
         retailWeapons?: Weapon[];

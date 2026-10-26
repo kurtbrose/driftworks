@@ -294,6 +294,14 @@
     /** @param {CommsState} state @param {number} dt @param {Combat} combat @param {boolean} busy @param {(() => number)} [random] @param {FlightState} [player] @returns {Line | null} */
     function step(state, dt, combat, busy, random, player) {
         var mission=DW.flightMissions.resolve(combat.mode);
+        if(combat.scramble){
+            var cue=combat.scramble.radio,at=[.1,.8,2.1,3.2,8],texts=['ALL FIGHTERS, SCRAMBLE! SCRAMBLE! Clear the flight deck!','Incoming! Plunging fire, high twelve!','Two is gone! Keep accelerating!','Three hit! Still flying. Go, go!','Flight, weapons free. Take the fight to them!'];
+            if(cue<at.length){
+                if(busy||combat.time<at[cue]||(cue===2&&combat.enemies[0].hp>0))return null;
+                combat.scramble.radio++;
+                return {text:texts[cue],speaker:cue===3?'LANCER THREE':'FLIGHT CONTROL',voice:'Scout',hostile:false,seed:101,radioSeed:7919,voiceSettings:pilotVoice(combat.enemies[cue===3?1:2]),portraitIndex:cue===3?1:2,craftId:'scramble-control',event:'scrambleStory'};
+            }
+        }
         if(combat.mode==='evacuation')return DW.evacuationMission.step(combat,Math.max(0,dt),busy);
         dt = Math.max(0, dt);
         state.time += dt;

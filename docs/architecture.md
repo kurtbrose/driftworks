@@ -311,3 +311,8 @@ It retains the same camera, sky, renderer settings and local squadron and sample
 20 warm-up plus 90 measured frames per block. It measures render CPU submission,
 frame cadence, submitted draws and triangles, not GPU execution. Live simulation
 cost and actual combat behavior require separate real-session checks.
+
+The battle sortie also mounts the existing Aegis capital pair in the same sortie
+frame. Their factory's `battlefield` option preserves zone-fighter ownership
+instead of activating standalone hangar replacement. Capital state remains
+transient in the Aegis rig; see [capital integration](dreadnaught-kit.md).

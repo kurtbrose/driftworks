@@ -266,6 +266,24 @@ assert.ok(fought.capitals.every((c,i)=>Math.abs(c.heading-battleStart.capitals[i
 assert.strictEqual(battle.geometry(),battleGeometry,'battle geometry keeps a stable batching array');
 assert.ok(battleGeometry.every((b,i)=>b.vertices===battleGeometry[i%half].vertices),'movement never replaces shared vertex buffers');
 battle.reset();assert.deepEqual(battle.telemetry(),battleStart,'reset restores both transforms, integrity, weapons and timers');
+// The zone-defense sortie keeps its existing squadrons and positions capitals
+// in the real sortie frame instead of the high-altitude standalone sandbox.
+const zoned=fixture(),zonedRig=DW.aegisFlight.createBattle({battlefield:true});
+zoned.state.eye=[0,-3250/U,0];zoned.combat.player.pose=zoned.state;
+const roster=zoned.combat.enemies.slice();zonedRig.reset(zoned.combat);
+assert.deepEqual(zoned.combat.enemies,roster,'capital reset preserves zone fighters');
+assert.ok(!zoned.combat.hangarSupport,'zone sortie does not acquire standalone hangar ownership');
+const placed=zonedRig.telemetry().capitals;
+assert.ok(placed[0].position.every((v,k)=>Math.abs(v-[-1100/U,(-3250+1800)/U,300/U][k])<1e-10));
+assert.ok(placed[1].position.every((v,k)=>Math.abs(v-[1100/U,(-3250+2100)/U,650/U][k])<1e-10));
+const toward=placed[1].position.map((v,k)=>v-placed[0].position[k]),horizontal=Math.hypot(toward[0],toward[1]);
+placed.forEach((capital,i)=>{const sign=i===0?1:-1,bow=[-Math.cos(capital.heading),-Math.sin(capital.heading)];assert.ok(Math.abs((bow[0]*toward[0]+bow[1]*toward[1])*sign/horizontal-Math.cos(Math.PI/9))<1e-10,'bows face the opponent with twenty degrees of turret clearance');});
+const zoneMeshes=zonedRig.geometry(),zoneVertices=zoneMeshes.map(b=>b.vertices);
+for(let i=0;i<600;i++){zoned.combat.time+=1/60;zonedRig.step(1/60,zoned);}
+assert.ok(zonedRig.telemetry().capitals.every(c=>c.shots>0&&c.hits>0),'both battlefield capitals exchange real main-battery hits');
+assert.ok(zonedRig.geometry().every((b,i)=>b.vertices===zoneVertices[i]),'battlefield movement retains GPU buffers');
+zonedRig.reset(zoned.combat);assert.deepEqual(zonedRig.telemetry().capitals.map(c=>c.position),placed.map(c=>c.position));
+console.log('PASS zone-defense capitals: sortie-relative placement, real battery fire, stable buffers, reset and preserved fighter ownership');
 const pausedBattle=fixture();pausedBattle.combat.enabled=false;pausedBattle.combat.enemies=[];
 for(let i=0;i<600;i++)battle.step(1/60,pausedBattle);
 assert.equal(battle.telemetry().shots,0,'combat-disabled capitals never fire');
