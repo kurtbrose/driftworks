@@ -10,6 +10,7 @@ const suites = {
   flight: [
     {"file":"shared.cjs","args":["flight"]},
     "flight-aim-tracking.cjs",
+    "battle-zones.cjs",
     "flight-evasion.cjs",
     "flight-separation.cjs",
     "flight-effects-capacity.cjs",

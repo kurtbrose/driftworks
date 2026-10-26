@@ -223,6 +223,7 @@ export type ArtCraft = {
 export type CollisionShape = { kind: 'sphere'; radiusM: number } | { kind: 'model'; modelId: string };
 export type Craft = ArtCraft & {
     plotArmor?: boolean;
+    battleZone?: {id:number;center:Vector;radiusM:number;returning?:boolean};
     hangarLaunch?:{remaining:number};
     controller: 'input' | 'ai';
     collision: CollisionShape;

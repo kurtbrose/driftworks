@@ -1,0 +1,10 @@
+{
+  "tool": "built-in image_gen",
+  "prompt": "Use case: stylized-concept. Create a cinematic astronomical environment source image, landscape 3:2. The observer is INSIDE the extremely diffuse upper envelope of a RED GIANT STAR, immersed within the star, NOT outside looking at it. Entire frame filled with volumetric semi-transparent luminous gas, soft deep crimson and copper-red haze, enormous softly curling convection currents visible through successive layers of gas, dim amber light filtering from deeper denser regions below, a few pale peach diffuse brighter knots. No opaque solid surface, NO horizon, NO stellar disk, NO exterior view, NO black space, NO stars, no prominences against a black background, no lava or fire tongues. Subtle depth and low contrast large-scale flowing density variations, fine gauzy wisps, dreamlike but naturalistic astronomical visualization. Warm red-orange all around, muted burgundy darker pockets still visibly filled with gas, restrained bloom and gentle gradients, unclipped highlights. No spacecraft, objects, text, labels, frames. This is source artwork for an immersive skybox, not a six-panel atlas. High detail.",
+  "source": "source.png",
+  "dimensions": [
+    1536,
+    1024
+  ],
+  "blendIntent": "screen-blended diffuse emission; six unique source crops"
+}

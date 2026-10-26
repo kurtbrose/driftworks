@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "projection": "six-perspective-cameras",
+  "size": 512,
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "fovDegrees": 90,
+  "aspect": 1,
+  "near": 0.01,
+  "far": 10,
+  "cardDistance": 1,
+  "worldUp": "+Z",
+  "flipY": false,
+  "color": "display RGB, screen blend, no exposure adaptation",
+  "timestamp": 0,
+  "stars": "separate runtime pass",
+  "faces": {
+    "px": {
+      "file": "px.png",
+      "forward": [
+        1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        -1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "dacc4cc43925b2f717acac79a69c5df195a618b00d0d107d1a2ec450861a7847"
+    },
+    "nx": {
+      "file": "nx.png",
+      "forward": [
+        -1,
+        0,
+        0
+      ],
+      "right": [
+        0,
+        0,
+        1
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "c0a4b0fbd13c8859950d72edc1ff3fa288b162f907be4d0980322661d93d3b98"
+    },
+    "py": {
+      "file": "py.png",
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "353a3dd01c0319e2ad806905dd1752d2195affe2a2cad2f6715633804972e888"
+    },
+    "ny": {
+      "file": "ny.png",
+      "forward": [
+        0,
+        -1,
+        0
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        0,
+        1
+      ],
+      "sha256": "025f2d52cd50b445bcaa50c933876d59e38a27358058e0db121dda4bc6b20010"
+    },
+    "pz": {
+      "file": "pz.png",
+      "forward": [
+        0,
+        0,
+        1
+      ],
+      "right": [
+        1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "c2f8becbe8a2affd7da5dc1c71734b81c9eb0ae80fc7cc60efbace23798a6b3c"
+    },
+    "nz": {
+      "file": "nz.png",
+      "forward": [
+        0,
+        0,
+        -1
+      ],
+      "right": [
+        -1,
+        0,
+        0
+      ],
+      "imageTop": [
+        0,
+        1,
+        0
+      ],
+      "sha256": "27703e8cde39e4cb4ac715984dcc74b6fc5bc44577f6c4fdf8cbd74be23e78e1"
+    }
+  },
+  "sources": {
+    "gas-region-1": {
+      "file": "gas-region-1.png",
+      "sha256": "6fbe42de10ef5783657d3dd215f2abd1e029d0363e408731b52e8fff44cd1d22"
+    },
+    "gas-region-2": {
+      "file": "gas-region-2.png",
+      "sha256": "29e32564bfe7da94b9acae0c2fb7aa750a43b09bd0f51fb27100a0368ec30f68"
+    },
+    "gas-region-3": {
+      "file": "gas-region-3.png",
+      "sha256": "55d5146b5b11284766c4f9249c3b183bb032b7f8b93e986289ab8aa14cff6fc8"
+    },
+    "gas-region-4": {
+      "file": "gas-region-4.png",
+      "sha256": "d9a629cd184b607ec364b45c9121e60c20b226cf75ea9a31ca6f170fdfeb8227"
+    },
+    "gas-region-5": {
+      "file": "gas-region-5.png",
+      "sha256": "3a3c7fedf76a830a33f040e0043a1a6204f8cf4b1471165ad4321523fa99e118"
+    },
+    "gas-region-6": {
+      "file": "gas-region-6.png",
+      "sha256": "afc74b59b3dc68337cad702ee6e3d7f66be60e9112235b7ddb98774d285ec4f4"
+    }
+  },
+  "recipeSha256": "5a862be5e54a849add38f10fb3533c8649c90efa194d707e251c55f7f07b560a"
+}

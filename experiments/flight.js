@@ -394,9 +394,9 @@
     });
     // Frozen-snapshot render A/B: same camera, actors and settings, ABBA order.
     var benchmarking=false;
-    if(aegis||activeMission.id==='evacuation'){
+    if(aegis||activeMission.id==='evacuation'||activeMission.id==='battle'){
         var benchmarkButton=document.createElement('button'),benchmarkOutput=document.createElement('pre');
-        benchmarkButton.textContent=activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
+        benchmarkButton.textContent=activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
         benchmarkOutput.id='aegis-benchmark-result';benchmarkOutput.style.whiteSpace='pre-wrap';
         get('perf-reset').after(benchmarkButton,benchmarkOutput);
         benchmarkButton.onclick=async function(){
@@ -406,11 +406,12 @@
             /** @type {{on:boolean,cpu:number,interval:number,draws:number,triangles:number}[]} */var rows=[];
             try{
                 for(var enabled of [false,true,true,false]){
-                    if(aegis)presentation.setCapital(enabled?aegis:null);else DW.evacuationScenery.visible=enabled;
+                    if(aegis)presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
+                    var sampled=activeMission.id==='battle'?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
                     var previous=0;
                     for(var i=0;i<110;i++){
                         var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});
-                        var begin=performance.now();presentation.render(snapshot,art,settings,0);
+                        var begin=performance.now();presentation.render(sampled,art,settings,0);
                         var cpu=performance.now()-begin,stats=presentation.renderStats();
                         if(i>=20)rows.push({on:enabled,cpu:cpu,interval:stamp-previous,draws:stats.scene.drawCalls+stats.sky.drawCalls,triangles:stats.scene.triangles+stats.sky.triangles});
                         previous=stamp;
@@ -426,7 +427,7 @@
                 lines.push('CPU submission only; rAF includes browser pacing, not a GPU timer.');
                 benchmarkOutput.textContent=lines.join('\n');
             }catch(error){benchmarkOutput.textContent='Benchmark interrupted: '+String(error);}
-            finally{if(aegis)presentation.setCapital(aegis);else DW.evacuationScenery.visible=true;pause();benchmarking=false;benchmarkButton.disabled=false;diagnostics.reset();}
+            finally{if(aegis)presentation.setCapital(aegis);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=true;pause();benchmarking=false;benchmarkButton.disabled=false;diagnostics.reset();}
         };
     }
     /** @param {number} t */

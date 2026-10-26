@@ -49,6 +49,7 @@
         encounter:{kind:'training',count:0,immediate:false,callsigns:['Rook','Jinx','Flint','Echo','Mako','Sable','Patch','Nova','Viper','Wraith','Razor','Hex','Talon','Knell','Cinder','Shade'],spawn:{backRadii:2.6,altitudeMeters:300}},opening:[]
     });
     define('furball',{encounter:{kind:'furball',count:16}});
+    define('battle',{title:'Battle background / Driftworks',heading:'DRIFTWORKS / BATTLE PROTOTYPE',subtitle:'SQUADRON ZONE DEFENSE / LIVE DOGFIGHTS',encounter:{count:30,immediate:true}},'furball');
     /** Frozen fictional system in planet-centered km; all moon centers share one plane.
      * @param {boolean} nearMoon @returns {import('./types').JadeSystem} */
     function jadeSystem(nearMoon){

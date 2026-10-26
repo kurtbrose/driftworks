@@ -283,3 +283,31 @@ These anchors preserve links from the former single-file reference.
 
 <a id="shared-touch-controls-and-asset-versions"></a>
 - [Shared touch controls and asset versions](flight-presentation.md#shared-touch-controls-and-asset-versions)
+
+## Squadron zone defense prototype
+
+`flight.html?mission=battle` runs thirty real fighters across five contested
+zones, with three allies and three hostiles in each. The central zone starts
+near the player; the other four cover different distances, lateral offsets and
+altitudes. Every fighter uses the ordinary ship meshes, hull collision, damage,
+weapons, targeting, aiming and steering. There is no proxy artwork or simulated
+tracer exchange. The mission selector links to this sortie.
+
+Each fighter owns an optional JSON-safe `battleZone` with an ID, fixed world-space
+center, radius in metres and a return flag. Opponents must be within 1,000 m of
+that home and within 1,200 m of the fighter. The player joins the same candidate
+pool when entering a zone. There is no unrestricted fallback opponent for zoned
+fighters. Crossing the home radius latches a physical return maneuver until the
+fighter is within 600 m. Returning and unopposed patrols suppress gunfire; shared
+terrain avoidance and close-range separation still apply. Spawn offsets, initial
+velocities and patrol goals differ per pilot; there is no formation constraint.
+
+Zones remain fixed through player movement. A new wave reconstructs the sortie
+zones; individual depleted zones currently do not receive reinforcements. Standard
+furball and other missions retain their existing targeting and spawn rules.
+
+The flight lab includes a frozen ABBA comparison of distant squadrons on/off.
+It retains the same camera, sky, renderer settings and local squadron and samples
+20 warm-up plus 90 measured frames per block. It measures render CPU submission,
+frame cadence, submitted draws and triangles, not GPU execution. Live simulation
+cost and actual combat behavior require separate real-session checks.

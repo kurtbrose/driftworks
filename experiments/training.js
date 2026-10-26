@@ -295,6 +295,21 @@
                 e.retarget = 0;
             });
         }
+        if(t.mode==='battle') {
+            var half=Math.ceil(count/2);
+            t.enemies.forEach(function(e,i){
+                var local=i%half, zone=Math.floor(local/3), slot=local%3;
+                var lane=zone===0?[0,450,100]:zone===1?[-1600,1800,650]:zone===2?[1600,2000,1000]:zone===3?[-2600,3600,1200]:[2500,3900,700];
+                var home=add(player.eye,add(scale(player.right,lane[0]/U),add(scale(player.back,-lane[1]/U),scale(player.up,lane[2]/U))));
+                e.battleZone={id:zone,center:home,radiusM:1000};
+                // Independent approach positions and headings, never a rigid formation.
+                var side=e.team==='ally'?-1:1, jitter=i*2.399963;
+                e.pose.eye=add(home,add(scale(player.right,(side*280+Math.sin(jitter)*140)/U),add(scale(player.back,Math.cos(jitter)*230/U),scale(player.up,Math.sin(jitter*1.7)*180/U))));
+                face(e.pose,sub(add(home,scale(player.up,Math.sin(jitter)*70/U)),e.pose.eye));
+                e.pose.velocity=scale(e.pose.back,-(40+slot*11));
+                e.goal=home.slice();e.decision=(i%7)*.09;
+            });
+        }
         var reserve=mission(t).encounter.reinforcements,art=mission(t).encounter.craftModels||[];
         if(reserve){
             var half=Math.ceil(count/2),split=reserve.rosterSplit;
@@ -317,6 +332,12 @@
         });
         t.targetId = target ? target.id : null;
         t.targetLocked = false;
+    }
+    /** Zone ownership limits pursuit; real opponents inside a neighboring zone's
+     * overlap (including the player) remain eligible. @param {Craft} own @param {Craft} other */
+    function zoneEligible(own,other) {
+        var zone=own.battleZone;
+        return !zone || length(sub(other.pose.eye,zone.center))*U<=zone.radiusM && length(sub(other.pose.eye,own.pose.eye))*U<1200;
     }
     /** @param {Pose} pose @param {Vector} goal @returns {FlightInput} */
     function steer(pose, goal) {
@@ -720,7 +741,7 @@
                 return trace(t, start, end, bolt, e, terrainHit, player);
             }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), !!mission(t).sky.wormhole);
         }
-        var neighbors=separationGrid(living), roster=participants(t), byId=new Map(living.map(function(craft){return [craft.id,craft];}));
+        var neighbors=separationGrid(living), roster=participants(t), byId=new Map((t.mode==='battle'?roster:living).map(function(craft){return [craft.id,craft];}));
         collisionBatch(t,function(){t.enemies.forEach(function (e) {
             if (e.controller !== 'input') e.fire = false;
             if(e.hp>0&&e.hangarLaunch){
@@ -732,13 +753,13 @@
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;
                     var target = e.targetId ? byId.get(e.targetId) : undefined;
-                    if(target && !(target.hp > 0 && target.team !== e.team && (target.pose.region||0)===(e.pose.region||0)))target=undefined;
+                    if(target && !(target.hp > 0 && target.team !== e.team && (target.pose.region||0)===(e.pose.region||0) && zoneEligible(e,target)))target=undefined;
                     if (!target || e.retarget <= 0) {
                         // Only the nearest three are used. Stable insertion preserves
                         // roster tie order without sorting every opponent or recomputing distances.
                         /** @type {{craft:Craft,distance:number}[]} */ var choices=[];
-                        living.forEach(function(other){
-                            if(!(other.hp>0)||other.team===e.team||(other.pose.region||0)!==(e.pose.region||0))return;
+                        (e.battleZone?roster:living).forEach(function(other){
+                            if(!(other.hp>0)||other.team===e.team||(other.pose.region||0)!==(e.pose.region||0)||!zoneEligible(e,other))return;
                             var distance=length(sub(other.pose.eye,e.pose.eye)),at=0;
                             while(at<choices.length&&choices[at].distance<=distance)at++;
                             if(at<3){choices.splice(at,0,{craft:other,distance:distance});if(choices.length>3)choices.pop();}
@@ -750,7 +771,7 @@
                     }
                     opponent = target ? target.pose : null;
                 }
-                if(!opponent){var candidate=roster.find(function(other){return other.hp>0&&(other.pose.region||0)===(e.pose.region||0)&&(other.team||'enemy')!==(e.team||'enemy');});opponent=candidate?candidate.pose:null;}
+                if(!opponent&&!e.battleZone){var candidate=roster.find(function(other){return other.hp>0&&(other.pose.region||0)===(e.pose.region||0)&&(other.team||'enemy')!==(e.team||'enemy');});opponent=candidate?candidate.pose:null;}
                 if (opponent) trackAim(t, e, opponent);
                 else { tracks.delete(e); e.gunValid = false; }
                 if(opponent&&(e.opponentStyle==='fso-pursuit'||e.opponentStyle==='fso-breaker'))progressFreeSpace(t,e,opponent,dt);
@@ -758,6 +779,17 @@
                 if (e.decision <= 0 && opponent)
                     decide(t, e, opponent);
                 var goal = e.mode === 'attack' && (!e.opponentStyle || e.opponentStyle === 'baseline') ? (e.gunGoal || e.goal) : e.goal;
+                if(e.battleZone) {
+                    var zone=e.battleZone, fromHome=length(sub(e.pose.eye,zone.center))*U;
+                    if(fromHome>zone.radiusM)zone.returning=true;
+                    if(fromHome<zone.radiusM*.6)zone.returning=false;
+                    if(zone.returning || !opponent) {
+                        var phase=t.time*.09+e.index*2.399963;
+                        goal=add(zone.center,[Math.sin(phase)*180/U,Math.cos(phase*.73)*180/U,Math.sin(phase*1.31)*100/U]);
+                        e.goal=goal;e.mode=fromHome>zone.radiusM*.6?'return-zone':'patrol';
+                        e.pose.throttle=.75;e.gunValid=false;
+                    }
+                }
                 var future = add(e.pose.eye, scale(e.pose.velocity, 1.6 / U)), avoid = radius + 65 / U;
                 if (!(e.pose.region||0)&&(length(future) < avoid || length(e.pose.eye) < avoid))
                     goal = add(e.pose.eye, add(scale(unit(e.pose.eye), 400 / U), scale(e.pose.right, 180 / U)));
@@ -771,7 +803,7 @@
                 });
                 var control = steer(e.pose, goal), distance = opponent ? length(sub(opponent.eye, e.pose.eye)) * U : Infinity;
                 control.roll = e.mode === 'evade' ? Math.sin(t.time * 1.8 + e.index) * .65 : 0;
-                control.boost = distance > 1200 && dot(unit(sub(goal, e.pose.eye)), scale(e.pose.back, -1)) > .95;
+                control.boost = !!opponent && distance > 1200 && dot(unit(sub(goal, e.pose.eye)), scale(e.pose.back, -1)) > .95;
                 stepInput(e, Object.assign({ throttle: e.pose.throttle, throttleRate: 0, fire: false }, control), dt);
                 // Conservative safety shell keeps AI craft clear of the asteroid.
                 var safe = radius + 20 / U;

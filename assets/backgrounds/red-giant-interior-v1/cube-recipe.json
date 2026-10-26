@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "seed": 20261025,
+  "family": "stellar-envelope",
+  "minGapDeg": -180,
+  "library": {
+    "gas-region-1": {
+      "file": "gas-region-1.png",
+      "aspect": 1.0,
+      "family": "stellar-envelope",
+      "sourceBounds": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "gas-region-2": {
+      "file": "gas-region-2.png",
+      "aspect": 1.0,
+      "family": "stellar-envelope",
+      "sourceBounds": [
+        512,
+        0,
+        1024,
+        512
+      ]
+    },
+    "gas-region-3": {
+      "file": "gas-region-3.png",
+      "aspect": 1.0,
+      "family": "stellar-envelope",
+      "sourceBounds": [
+        1024,
+        0,
+        1536,
+        512
+      ]
+    },
+    "gas-region-4": {
+      "file": "gas-region-4.png",
+      "aspect": 1.0,
+      "family": "stellar-envelope",
+      "sourceBounds": [
+        0,
+        512,
+        512,
+        1024
+      ]
+    },
+    "gas-region-5": {
+      "file": "gas-region-5.png",
+      "aspect": 1.0,
+      "family": "stellar-envelope",
+      "sourceBounds": [
+        512,
+        512,
+        1024,
+        1024
+      ]
+    },
+    "gas-region-6": {
+      "file": "gas-region-6.png",
+      "aspect": 1.0,
+      "family": "stellar-envelope",
+      "sourceBounds": [
+        1024,
+        512,
+        1536,
+        1024
+      ]
+    }
+  },
+  "features": [
+    {
+      "asset": "gas-region-1",
+      "yaw": 90,
+      "pitch": 0,
+      "roll": 0,
+      "widthDeg": 142,
+      "gain": 0.9
+    },
+    {
+      "asset": "gas-region-2",
+      "yaw": 180,
+      "pitch": 0,
+      "roll": 13,
+      "widthDeg": 142,
+      "gain": 0.9
+    },
+    {
+      "asset": "gas-region-3",
+      "yaw": 270,
+      "pitch": 0,
+      "roll": -17,
+      "widthDeg": 142,
+      "gain": 0.9
+    },
+    {
+      "asset": "gas-region-4",
+      "yaw": 0,
+      "pitch": 0,
+      "roll": 7,
+      "widthDeg": 142,
+      "gain": 0.9
+    },
+    {
+      "asset": "gas-region-5",
+      "yaw": 0,
+      "pitch": 90,
+      "roll": 23,
+      "widthDeg": 142,
+      "gain": 0.9
+    },
+    {
+      "asset": "gas-region-6",
+      "yaw": 0,
+      "pitch": -90,
+      "roll": -11,
+      "widthDeg": 142,
+      "gain": 0.9
+    }
+  ],
+  "notes": "Deliberately overlapping diffuse gas cards; Z up, yaw 90 = +Y. Screen blend, exposure one, frozen timestamp zero. No point stars."
+}
