@@ -330,3 +330,34 @@ on/off with capitals retained, and capital ships on/off with fighters retained.
 Use a camera where the hulls are visibly submitted; an offscreen pair mostly
 measures effect work and cannot establish the cost of drawing the ships. See
 [the battlefield comparison](benchmarks/battle-capitals-2026-10-25.md).
+
+## Targetable flight systems
+
+Armed rigs expose 24 turret assemblies and five separate drives. The kit keeps
+named `engine_*` groups with nozzle pivots; the bake exports `engines` alongside
+`turrets`. Hull batches exclude those assemblies. Unarmed traffic merges both
+back into its shared material batches, retaining its existing draw cost.
+
+`rig.components()` returns stable IDs, current/max HP and world positions for
+HUD targeting. U cycles living enemy systems, then clears selection. Heavy guns
+have 180 HP, point defense 70 HP, and engines 240 HP. Projectile queries use
+cached component-local bounds before exact triangle intersection in the current
+articulated frame. They remain read-only. `TerrainHit.onImpact(point, bolt,
+combat)` runs only after the training resolver selects the nearest struck
+surface, so convergence probes and nearer fighters cannot damage a component.
+`rig.damage` routes the finalized hit to that surface; hull impacts below a gun
+do not damage its bounding box. Damage also reduces parent hull integrity once.
+The structural stern proxy ends at 652.5 m; exposed engine meshes resolve their
+own rear contacts.
+
+A destroyed mount freezes its aim and cannot fire; already launched rounds
+continue their normal damage resolution. Each destroyed drive removes one fifth
+of the capital's patrol/turn rate. With all five gone it stays at its current
+pose. Each part emits one inherited-velocity destruction flash and receives a
+local tiled soot texture, including extinguished engine faces. Wreck buffers are
+created once on destruction; reset restores shared intact buffers and health.
+These are encounter-local states, not additions to saved RTS worlds.
+
+Use [the component inspection lab](../output/capital-systems-check.html) for
+whole-ship, turret and drive views, individual destruction/reset and matched
+intact/damaged rendering samples. See [measured readiness](benchmarks/capital-systems-2026-10-26.md).

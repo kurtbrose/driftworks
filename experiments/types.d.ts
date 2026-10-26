@@ -37,6 +37,7 @@ export type AegisFlightAsset = {
     batches:{color:[number,number,number];vertices:number[]}[];
     modules?:{id:string;type:string;position:Vector}[];
     hangars?:{id:string;position:Vector;halfWidth:number;halfHeight:number}[];
+    engines?:{id:string;position:Vector;batches:{color:[number,number,number];vertices:number[]}[]}[];
     turrets:{id:string;kind:'heavy'|'point-defense';position:Vector;side:number;batches:{color:[number,number,number];vertices:number[]}[]}[];
 };
 export type AegisFlightRig = {
@@ -46,6 +47,8 @@ export type AegisFlightRig = {
     effects:(pose:Pose)=>Batch[];
     readout:()=>string;
     hit:(a:Vector,b:Vector)=>Vector|null;
+    damage?:(point:Vector,amount:number,combat:Combat)=>boolean;
+    components?:()=>{id:string;kind:string;hp:number;maxHp:number;position:Vector}[];
     telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string;shots?:number;aimPoint?:Vector}[];capitals?:{team:string;position:Vector;heading:number;integrity:number;shots:number;hits:number}[]};
 };
 export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number};
@@ -190,7 +193,7 @@ export type Guns = {
     fired: number;
     hits: number;
 };
-export type TerrainHit = (start: Vector, end: Vector) => Vector | null;
+export type TerrainHit = ((start: Vector, end: Vector) => Vector | null) & {onImpact?:(point:Vector,bolt:Bolt,combat:Combat)=>void};
 export type Hit = {
     fraction: number;
     point: Vector;
@@ -887,6 +890,7 @@ export type ExperimentModules = {
             clear: () => void;
             resetButtons: () => void;
             capture: () => void;
+            startUncaptured: () => void;
             release: () => void;
         };
     };

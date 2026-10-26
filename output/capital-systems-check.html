@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Capital systems inspection</title><style>body{margin:0;background:#02070b;color:#e6e6dd;font:14px monospace}#viewer{position:fixed;inset:0}#viewer canvas{position:absolute;inset:0;width:100%;height:100%}aside{position:fixed;z-index:10;top:12px;left:12px;padding:16px;background:#07131ded}button{padding:10px;margin:4px}output{display:block;white-space:pre;font-size:12px;margin-top:10px}.scene3d-controls{display:none!important}</style></head><body><div id="viewer"></div><aside><b>CAPITAL SYSTEMS / RUNTIME INSPECTION</b><div><select id="part" aria-label="Component"></select><button id="wide">Whole ship</button><button id="turret">Turret closeup</button><button id="engine">Engine closeup</button><button id="destroy">Destroy selected</button><button id="reset">Reset</button><button id="bench">Measure ABBA</button></div><output id="report"></output></aside><script src="../src/asset-versions.js?v=a4732b808b59"></script>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+<!-- script-manifest:ellisCapture -->
+<script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
+<script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+<script src="../src/combat.js?v=ce0e0e6eb149"></script>
+<script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+<script src="../src/mining-landing.js?v=f00997919474"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=a72f9b5b37c8"></script>
+<script src="../src/population.js?v=7a772b14be47"></script>
+<script src="../src/session.js?v=254909ab34f8"></script>
+<script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
+<script src="../src/engine-audio.js?v=061d71eda9b0"></script>
+<script src="../src/audio-mixer.js?v=34c90880514e"></script>
+<script src="../src/audio.js?v=364df02d8266"></script>
+<script src="../src/hud.js?v=be6ea0bd1bf2"></script>
+<script src="../experiments/gpu-diagnostics.js?v=099a7fa723af"></script>
+<script src="../src/mesh-builder.js?v=dc5005c681a3"></script>
+<script src="../src/mining-rig.js?v=ebc32e1f4b09"></script>
+<script src="../src/model-viewer.js?v=02d9b3545d85"></script>
+<script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
+<script src="../src/explosions.js?v=ba20ec3731d9"></script>
+<script src="../src/asteroid-art.js?v=48aad8996df8"></script>
+<script src="../src/asteroid-terrain.js?v=added36e3407"></script>
+<script src="../src/scene3d.js?v=2541d7e31943"></script>
+<script src="../src/ship-art.js?v=394ca4b43117"></script>
+<script src="../src/game.js?v=737979d8df21"></script>
+<script src="../experiments/dom.js?v=c1d4287e76cd"></script>
+<script src="../experiments/retail-profiles.js?v=99526ebcd858"></script>
+<script src="../experiments/flight-model.js?v=8a22d33bc921"></script>
+<script src="../experiments/radar.js?v=3a9471d6278e"></script>
+<script src="../experiments/flight-missions.js?v=610ac02f4456"></script>
+<script src="../experiments/mission-ohio.js?v=55d50526f5e4"></script>
+<script src="../src/sky-effects.js?v=136fdb626647"></script>
+<script src="../experiments/ellis-optics.js?v=9d2911041c42"></script>
+<script src="../experiments/ellis-renderer.js?v=e7f9de8f3dad"></script>
+<script src="../experiments/skybox.js?v=f7facfdbad0f"></script>
+<script src="../experiments/retail-weapons.js?v=642a0025bb1b"></script>
+<script src="../experiments/guns.js?v=1923ff8ec3cf"></script>
+<script src="../experiments/input.js?v=f4504aaa17e7"></script>
+<script src="../experiments/flight-collision.js?v=fd7602efae81"></script>
+<script src="../experiments/training.js?v=d4313bc2d996"></script>
+<script src="../experiments/performance.js?v=ba17efe880d9"></script>
+<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
+<script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
+<script src="../assets/ships/ohio-vehicles/meshes.js?v=ce57f8e016e3"></script>
+<script src="../experiments/ship-packs.js?v=3589bc24992b"></script>
+<script src="../experiments/mumble.js?v=96c5b42f6cc2"></script>
+<script src="../experiments/flight-dialogue.js?v=f79b97b5513d"></script>
+<script src="../experiments/evacuation-mission.js?v=2611bc3f57d1"></script>
+<script type="module" src="../experiments/evacuation-scenery.js?v=f021be84af75"></script>
+<script src="../experiments/flight-comms.js?v=92119ac4b828"></script>
+<script src="../experiments/comms-display.js?v=2e3d8d7dcb2f"></script>
+<script src="../experiments/face-blend.js?v=50dea498a8c7"></script>
+<script src="../experiments/flight-portraits.js?v=f897046d4498"></script>
+<script src="../experiments/flight-radio.js?v=9d8cfcd69def"></script>
+<script src="../experiments/target-camera.js?v=1860d2a2f5d6"></script>
+<script src="../experiments/flight-scenery.js?v=efd62ddfb867"></script>
+<script src="../experiments/flight-presentation.js?v=0bbe032eb3e2"></script>
+<script src="../experiments/flight-diagnostics.js?v=7b48f5faca80"></script>
+<script src="../experiments/flight-controls.js?v=1fc5202ba6f7"></script>
+<script src="../experiments/flight-session.js?v=62ffbbefdaf3"></script>
+<script src="../experiments/gpu-ui.js?v=a03ba022417f"></script>
+<script src="../experiments/flight-hud.js?v=e9a377daa830"></script>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script>
+<script type="module" src="../assets/characters/quaternius-astronaut/poses.js?v=768978930c66"></script>
+<script src="../experiments/flight-ai.js?v=6aafa3682577"></script>
+<script src="../experiments/flight-duel.js?v=443c69017af7"></script>
+<script src="../experiments/flight-watch.js?v=49b4caa0eff3"></script>
+<script type="module" src="../experiments/gas-giant-flight.js?v=d4c1ae871933"></script>
+<script src="../experiments/aegis-flight.js?v=45c6d28d46ab"></script>
+
+<script src="../assets/ships/aegis-kit/flight-rig.js?v=19ff1c719d6f"></script><script src="../experiments/aegis-flight.js?v=45c6d28d46ab"></script>
+<script>(async function(){
+const DW=Driftworks,U=DW.sim.METERS_PER_UNIT;await DW.aegisFlight.load();
+let world=DW.sim.createInitialWorld();world.asteroids=[];world.ships=[];world.hostiles=[];world.structures=[];
+const scene=DW.scene3d.create(document.getElementById('viewer'),()=>world,next=>{world=next},{study:true});
+const rig=DW.aegisFlight.create(),reference=DW.aegisFlight.create();
+const combat=DW.training.create('training');let selected=0,camera='wide',busy=false;
+const report=document.getElementById('report');
+function normalize(v){let l=Math.hypot(...v);return v.map(x=>x/l)}function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]}
+const picker=document.getElementById('part');for(const [i,p] of rig.components().entries()){let option=document.createElement('option');option.value=i;option.textContent=p.kind+' '+i;picker.appendChild(option)}picker.onchange=()=>{selected=Number(picker.value);view(selected>=24?'engine':'turret');info()};
+function view(name){camera=name;if(name==='engine'&&selected<24)selected=24;if(name==='turret'&&selected>=24)selected=0;picker.value=selected;const part=rig.components()[selected];let target=name==='wide'?[0,0,1200]:part.position,offset=name==='wide'?[500,-2100,1200]:name==='engine'?[130,-100,70]:[-90,-90,100*(DW.aegisFlightAsset.turrets[selected]?.side||1)];let eye=target.map((v,i)=>v+offset[i]/U),forward=normalize(target.map((v,i)=>v-eye[i])),right=normalize(cross(forward,[0,0,1]));scene.setSurfaceCamera({eye,right,up:cross(right,forward),back:forward.map(v=>-v)});draw();}
+function draw(ship=rig){scene.setStudyActors(ship?ship.geometry():[]);scene.sync(world);scene.render(world,1,0,0);}
+function info(){let p=rig.components()[selected];report.textContent=camera+' / '+p.id+' / '+p.hp+'/'+p.maxHp+'\n'+rig.components().filter(p=>p.hp===0).length+' disabled systems\n'+JSON.stringify(scene.getRenderStats());}
+for(let name of ['wide','turret','engine'])document.getElementById(name).onclick=()=>{view(name);info()};
+document.getElementById('destroy').onclick=()=>{let p=rig.components()[selected];rig.damage(p.position,1000,combat);draw();info()};document.getElementById('reset').onclick=()=>{rig.reset();draw();info()};
+document.getElementById('bench').onclick=async()=>{busy=true;let rows=[];for(const mode of ['intact','damaged','damaged','intact','hidden','damaged','damaged','hidden']){if(mode==='damaged')for(let p of rig.components())rig.damage(p.position,1000,combat);for(let i=0;i<80;i++){let t=performance.now();await new Promise(requestAnimationFrame);let start=performance.now();draw(mode==='intact'?reference:mode==='hidden'?null:rig);let stats=scene.getRenderStats();if(i>=20)rows.push({mode,frame:start-t,cpu:performance.now()-start,draws:stats.drawCalls,triangles:stats.triangles});}}let lines=['Frozen wide camera / 20 warmup + 60 samples per block / ABBA','Renderer submission CPU / rAF cadence; GPU not measured'];for(let mode of ['intact','hidden','damaged']){let r=rows.filter(x=>x.mode===mode),pct=(key,p)=>{let a=r.map(x=>x[key]).sort((a,b)=>a-b);return a[Math.floor((a.length-1)*p)].toFixed(2)};lines.push(mode+' CPU '+pct('cpu',.5)+' / '+pct('cpu',.95)+' ms; frame '+pct('frame',.5)+' / '+pct('frame',.95)+' ms; draws '+pct('draws',.5)+'; tris '+pct('triangles',.5));}lines.push([...document.querySelectorAll('canvas')].map(c=>c.width+'x'+c.height).join(', ')+' DPR '+devicePixelRatio);report.textContent=lines.join('\n');busy=false;};
+view('wide');info();function tick(){if(!busy)draw();requestAnimationFrame(tick)}requestAnimationFrame(tick);
+})().catch(e=>document.getElementById('report').textContent=e.stack);</script></body></html>

@@ -14,20 +14,25 @@ for(const controls of [{stop:true},{boost:true,throttle:1,yaw:.7,pitch:.4}]){
  assert.equal(c.enemies[1].pose.velocity[1],0);
  assert.equal(c.enemies[2].pose.velocity[1],0);
  let hitTick=false;
- for(let tick=0;tick<480;tick++){
+ for(let tick=0;tick<720;tick++){
   c=f.snapshot().combat;
   const before=c.enemies[0].hp,hits=c.enemies[3].guns.hits;
   f.advance(dt,controls);c=f.snapshot().combat;
-  if(c.enemies[0].hp<before){
+  if(tick===240)assert(c.enemies.slice(0,3).every(ship=>!ship.hangarLaunch),'All wingmen leave launch holds by 2.4 seconds');
+  if(before>0&&c.enemies[0].hp===0){
    assert(c.enemies[3].guns.hits>hits,'Loss occurs on an actual projectile/hull contact');
    assert(c.enemies[3].guns.impacts.length>0,'Contact has a visible impact');
    assert(c.enemies[0].pose.eye[1]>47.5/f.DW.sim.METERS_PER_UNIT,'Victim clears the flight deck before impact');
    hitTick=true;
   }
  }
+ assert(c.enemies.slice(1,3).every(ship=>!ship.hangarLaunch),'Wingmen use combat AI as soon as they clear the deck');
+ assert(c.enemies.slice(1,3).some(ship=>Math.abs(ship.pose.velocity[0])+Math.abs(ship.pose.velocity[2])>5),'Wingmen maneuver instead of riding straight launch rails');
+ assert(c.enemies.slice(6).reduce((n,ship)=>n+ship.guns.fired,0)>12,'Live furball fires real shots');
+ assert(c.enemies.slice(6).some(ship=>ship.guns.hits>0),'Live battle shots connect');
  assert(hitTick,'The left fighter is hit independently of player maneuvering');
  assert.equal(c.enemies[0].hp,0);
- assert(c.enemies[1].hp>0);
+
  assert(c.wrecks.some(w=>w.id===c.enemies[0].id+'-wreck'));
  assert(f.transcript.some(l=>l.text.includes('ALL FIGHTERS')));
  assert.equal(c.playerKills||0,0,'Scripted attacker owns the kill');

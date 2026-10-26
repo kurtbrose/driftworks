@@ -30,7 +30,8 @@
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
     if(aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'){try{await DW.aegisFlight.load();aegis=activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
-    var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: function (start, end) {
+    /** @type {import('./types').TerrainHit} */
+    var environmentHit = function (start, end) {
             var asteroid = session.snapshot().asteroid;
             var terrain=DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
                 return DW.asteroidTerrain.rockField(asteroid, /** @type {[number, number, number]} */ (DW.flightSession.rotateVector(point, -asteroid.rotation)));
@@ -38,7 +39,30 @@
             var capital=aegis&&aegis.hit(start,end);
             if(capital&&(!terrain||Math.hypot.apply(null,capital.map(function(v,i){return v-start[i];}))<Math.hypot.apply(null,terrain.map(function(v,i){return v-start[i];}))))return capital;
             return terrain;
-        }, surfaceFrame: function (asteroid, direction) {
+        };
+    environmentHit.onImpact=function(point,bolt,combat){if(aegis&&aegis.damage)aegis.damage(point,bolt.weapon.damage,combat);};
+    var subsystemId='';
+    var subsystemMarker=document.createElement('div');
+    subsystemMarker.style.cssText='position:absolute;z-index:8;pointer-events:none;color:#ffd18b;font:12px monospace;text-align:center;white-space:pre;text-shadow:0 1px 3px #000';
+    subsystemMarker.hidden=true;host.appendChild(subsystemMarker);
+    function nextSubsystem(){
+        if(!aegis||!aegis.components)return;
+        var parts=aegis.components().filter(function(p){return p.id.startsWith('capital-enemy-')&&p.hp>0;}),index=parts.findIndex(function(p){return p.id===subsystemId;});
+        subsystemId=index+1<parts.length?parts[index+1].id:'';
+    }
+    if(aegis&&aegis.components&&aegis.components().some(function(p){return p.id.startsWith('capital-enemy-');})){var systemButton=document.createElement('button');systemButton.textContent='Target capital system / U';systemButton.onclick=nextSubsystem;get('fly').after(systemButton);}
+    if(aegis&&aegis.components)document.addEventListener('keydown',function(e){if(e.code==='KeyU'&&!e.repeat&&!(e.target instanceof HTMLElement&&/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))){nextSubsystem();e.preventDefault();}});
+    /** @param {import('./types').FlightState} state */
+    function drawSubsystem(state){
+        var part=aegis&&aegis.components&&aegis.components().find(function(p){return p.id===subsystemId;});
+        subsystemMarker.hidden=!part;if(!part)return;
+        var d=part.position.map(function(v,i){return v-state.eye[i];}),forward=-d.reduce(function(n,v,i){return n+v*state.back[i];},0);
+        var w=host.clientWidth,h=host.clientHeight,f=h/(2*Math.tan(Math.PI/8)),x=d.reduce(function(n,v,i){return n+v*state.right[i];},0),y=d.reduce(function(n,v,i){return n+v*state.up[i];},0);
+        var sx=forward>0?w/2+x*f/forward:w/2+(x>=0?1:-1)*w,sy=forward>0?h/2-y*f/forward:h/2;
+        subsystemMarker.style.left=Math.max(90,Math.min(w-190,sx))+'px';subsystemMarker.style.top=Math.max(70,Math.min(h-90,sy))+'px';
+        subsystemMarker.textContent=(forward>0&&sx>0&&sx<w&&sy>0&&sy<h?'[+]':'>>')+' '+part.kind.toUpperCase()+' '+part.id.split('-').pop()+'\n'+(part.hp>0?Math.ceil(part.hp/part.maxHp*100)+'% SYSTEM':'DISABLED')+' / '+Math.round(Math.hypot(...d)*DW.sim.METERS_PER_UNIT)+' m';
+    }
+    var session = DW.flightSession.create({ seed: document.body.dataset.mission === 'asteroid-patrol' ? Math.floor(Math.random() * 4294967296) : undefined, terrainHit: environmentHit, surfaceFrame: function (asteroid, direction) {
             return DW.asteroidTerrain.surfaceFrame(asteroid, /** @type {[number, number, number]} */ (direction));
         }, onGunshot: function () {
             DW.audio.playGunshot();
@@ -408,10 +432,10 @@
     var benchmarking=false;
     if(aegis||activeMission.id==='evacuation'||activeMission.id==='battle'){
         var benchmarkButton=document.createElement('button'),benchmarkOutput=document.createElement('pre');
-        benchmarkButton.textContent=activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
+        benchmarkButton.textContent=activeMission.id==='scramble'?'Benchmark close furball on / off':activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
         benchmarkOutput.id='aegis-benchmark-result';benchmarkOutput.style.whiteSpace='pre-wrap';
         get('perf-reset').after(benchmarkButton,benchmarkOutput);
-        var capitalBenchmarkButton=activeMission.id==='battle'?document.createElement('button'):null;
+        var capitalBenchmarkButton=(activeMission.id==='battle'||activeMission.id==='scramble')?document.createElement('button'):null;
         if(capitalBenchmarkButton){capitalBenchmarkButton.textContent='Benchmark capital ships on / off';benchmarkButton.after(capitalBenchmarkButton);capitalBenchmarkButton.onclick=function(){runBenchmark(true);};}
         benchmarkButton.onclick=function(){runBenchmark(false);};
         /** @param {boolean} capitals */async function runBenchmark(capitals){
@@ -421,8 +445,8 @@
             /** @type {{on:boolean,cpu:number,interval:number,draws:number,triangles:number}[]} */var rows=[];
             try{
                 for(var enabled of [false,true,true,false]){
-                    if(aegis&&(activeMission.id!=='battle'||capitals))presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
-                    var sampled=activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
+                    if(aegis&&((activeMission.id!=='battle'&&activeMission.id!=='scramble')||capitals))presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
+                    var sampled=activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
                     var previous=0;
                     for(var i=0;i<110;i++){
                         var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});
@@ -506,6 +530,7 @@
         phaseStart=performance.now();
         presentation.render(currentView, appearance, comparison, elapsed);
         var presentationMs=performance.now()-phaseStart;phaseStart=performance.now();
+        drawSubsystem(currentView.state);
         if(aegis){var readout=document.getElementById('aegis-flight-readout');if(readout)readout.textContent=aegis.readout();}
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
@@ -539,7 +564,7 @@
         get('fly').textContent=loaded?'Start flight':'Textures unavailable';
         if(loaded){
             status.textContent=importError||'Ready - Start flight when ready';
-            if(activeMission.id==='scramble'){resume();}
+            if(activeMission.id==='scramble'){controls.startUncaptured();}
         }else updateStatus();
     });
     if(importError)status.textContent=importError;

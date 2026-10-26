@@ -176,14 +176,25 @@ The player and three wingmen start inside the existing 1,305 m Aegis hangar:
 one on the left, two on the right, aligned across the deck. Wingmen accelerate
 from holds staggered at 0.2, 0.55 and 0.95 seconds. The player has normal flight
 controls immediately. After textures are prepared, SCRAMBLE enters the HUD and
-starts automatically with Flight Control's ordered scramble call.
+starts automatically with Flight Control's ordered scramble call. Mouse mode
+starts in cursor steering immediately; keyboard/controller input is also live.
+Wingmen hold fire only during the short doorway clearance, then use normal
+target acquisition, attack, break, evade and recovery rules. Twelve additional
+fighters are already fighting roughly 150-480 metres outside the mouth at sortie start;
+their ordinary AI aims, fires and damages real opponents.
 Raiders attack from above as the wingmen clear the deck, then dive past.
-The lead attacker uses a lethal bolt led onto the left fighter's known launch
-path. Destruction occurs only on a swept projectile/hull intersection, with an
+The lead attacker uses a lethal bolt led onto the left fighter's flight
+path with the normal lead solver. Destruction occurs only on a swept projectile/hull intersection, with an
 impact and the normal shield, hull, wreck and radio-event paths. There is no
 scheduled explosion or timer-applied damage. Player movement does not change
 the left fighter's route or the attacker's target. Other raiders fire weaker
-bursts at the right fighter. At ten seconds ordinary fighter AI resumes.
+bursts at the right fighter. Launch holds release as each wingman clears 60 metres beyond the carrier
+center, around 1.3-2.1 seconds. A forward clearance goal keeps nearby pilots
+from breaking back into the doorway. Only the three incoming raiders retain
+the authored dive passes until ten seconds. The melee starts from an irregular
+3D spread with crossed target assignments, independent speed and bank, and
+pilots already attacking, breaking, evading or recovering; it uses no mirrored
+formation or synchronized maneuver clock.
 Pause freezes the timeline; sortie reset replays it. Radio cues wait for the
 channel; the loss report also waits for actual destruction.
 The capital uses the existing static material batches / immutable GPU geometry.
@@ -207,3 +218,17 @@ successfully after both source/wreck image loading and renderer texture upload.
 Loading leaves the session paused. Completion enables flight: SCRAMBLE starts
 automatically in the HUD, while other sorties wait for Start flight. Failure
 keeps launch disabled and displays the error with a reload retry instruction. Resume and pointer capture also enforce the readiness gate.
+
+Close-furball render comparison (2026-10-26): same existing cached fighter assets,
+initial hangar camera and capital, 902 x 939 CSS pixels, DPR 1.5, 1353 x 1409
+backing, production artwork at 100% scale. Foreground, no tests/rebuilds running,
+OFF/ON/ON/OFF, 20 warm-up plus 90 samples per block, fixed simulation snapshot.
+The new close-furball diagnostic toggles only the twelve additional fighters.
+OFF: CPU submission median/p95 0.80/1.00 ms, 15 draws, 60,490 triangles.
+ON: 1.00/1.20 ms, 23 draws, 84,600 triangles. Frame median/p95 stayed
+13.30/13.40 ms in both. Existing shared model buffers/material batches keep
+this integration inexpensive at the inspected camera; no new rendering
+bottleneck was demonstrated. This frozen comparison excludes AI execution
+and does not measure GPU time or establish a live-combat frame budget.
+Live cockpit inspection also checked nearby crossing fighters, banking,
+projectiles, the wingmen breaking out of formation, and the left fighter loss.

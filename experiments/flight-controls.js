@@ -217,6 +217,13 @@
             if(uncapturedMouse&&!actions.isPaused())return;
             uncapturedMouse=true;mouseActive=true;actions.resume();
         }
+        // Automatic starts cannot request pointer lock without a user gesture.
+        // Enable the existing absolute cursor steering path before simulation starts.
+        function startUncaptured() {
+            capturePending=false;captureGeneration++;
+            uncapturedMouse=inputMode.value==='mouse';mouseActive=true;
+            actions.resume();
+        }
         function capture() {
             uncapturedMouse=false;capturePending=true;var generation=++captureGeneration;
             if (!host.requestPointerLock) {
@@ -554,7 +561,7 @@
         function view() {
             return { mouse: mouse, inputMode: inputMode.value, uncapturedMouse:uncapturedMouse, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };
         }
-        return { haptics: haptics, sample: sample, view: view, clear: clear, resetButtons: resetButtons, capture: capture, release: release };
+        return { haptics: haptics, sample: sample, view: view, clear: clear, resetButtons: resetButtons, capture: capture, startUncaptured:startUncaptured, release: release };
     }
     DW.flightControls = { mount: mount };
 }());

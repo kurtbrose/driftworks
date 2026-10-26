@@ -334,7 +334,7 @@ assert(idleGeometry.every((b,i)=>b.vertices===patrol.geometry()[i].vertices),'El
 assert(idleGeometry.length<initial.length,'generic unarmed factory receives material batching without mission code');
 const expectedIdle=new Map();
 function expectedPart(b,pivot){const key=b.color.join(',');if(!expectedIdle.has(key))expectedIdle.set(key,[]);const out=expectedIdle.get(key);for(let i=0;i<b.vertices.length;i++)out.push(i%6<3?(b.vertices[i]+pivot[i%6])/U:b.vertices[i]);}
-sourceAsset.batches.forEach(b=>expectedPart(b,[0,0,0]));sourceAsset.turrets.forEach(t=>t.batches.forEach(b=>expectedPart(b,t.position)));
+sourceAsset.batches.forEach(b=>expectedPart(b,[0,0,0]));(sourceAsset.engines||[]).forEach(e=>e.batches.forEach(b=>expectedPart(b,e.position)));sourceAsset.turrets.forEach(t=>t.batches.forEach(b=>expectedPart(b,t.position)));
 for(const b of idleGeometry){const expected=expectedIdle.get(b.color.join(','));assert.equal(b.vertices.length,expected.length);for(let i=0;i<expected.length;i++)assert(Math.abs(b.vertices[i]-expected[i])<1e-5,'all authored vertices, pivot offsets and normals survive shared batching');}
 const noWeapons=fixture();noWeapons.combat.hangarSupport=true;idleOne.reset(noWeapons.combat);
 for(let i=0;i<120;i++)idleOne.step(1/60,noWeapons);
@@ -343,3 +343,44 @@ assert.equal(DW.aegisFlight.create().geometry()[0].vertices,initial[0].vertices,
 DW.aegisFlightAsset={...sourceAsset};const revisedIdle=sceneryShip().geometry();assert.notEqual(revisedIdle[0].vertices,idleGeometry[0].vertices,'asset revision invalidates prepared resources');DW.aegisFlightAsset=sourceAsset;
 assert.equal(sourceAsset.turrets.length,24,'authoring hierarchy and armed pivots remain intact');
 console.log('PASS shared capital optimization: map-independent factory, cross-instance buffers, independent poses, exact authored geometry and revision invalidation');
+
+// Component health follows the articulated asset, with finalized-impact routing.
+const systemsRig=DW.aegisFlight.create(),systemsView=fixture();
+const systemsBefore=systemsRig.geometry().map(b=>b.vertices);
+assert.equal(systemsRig.components().length,29);
+assert.equal(systemsRig.damage([99999,99999,99999],500,systemsView.combat),false,'asteroid impacts cannot damage a distant ship');
+for(const turret of sourceAsset.turrets){
+ const p=turret.position,side=turret.side;
+ const a=position(p[0],p[1],p[2]+side*80),b=position(p[0],p[1],p[2]-side*2);
+ const surface=systemsRig.hit(a,b);assert(surface,'every authored mount exposes a collision surface');
+ const id='capital-ally-'+turret.id;
+ assert.equal(systemsRig.components().find(p=>p.id===id).hp,systemsRig.components().find(p=>p.id===id).maxHp,'queries never damage mounts');
+ assert(systemsRig.damage(surface,1000,systemsView.combat));
+ assert.equal(systemsRig.components().find(p=>p.id===id).hp,0,'each individual gun can be destroyed');
+}
+for(const engine of sourceAsset.engines){
+ const p=engine.position,surface=systemsRig.hit(position(750,p[1],p[2]),position(600,p[1],p[2]));assert(surface);
+ assert(systemsRig.damage(surface,1000,systemsView.combat));
+ assert.equal(systemsRig.components().find(p=>p.id==='capital-ally-'+engine.id).hp,0,'each rear drive can be destroyed');
+}
+assert.equal(systemsView.combat.flashes.length,29,'one explosion per system');
+systemsRig.damage(systemsRig.components()[0].position,1000,systemsView.combat);
+assert.equal(systemsView.combat.flashes.length,29,'wrecks never explode twice');
+const burned=systemsRig.geometry();assert(burned.some(b=>b.stride===8),'destroyed modules receive persistent local scorch UVs');
+const burnedBuffers=burned.map(b=>b.vertices);systemsRig.geometry();assert(burned.every((b,i)=>b.vertices===burnedBuffers[i]),'wreck geometry is cached across frames');
+for(let i=0;i<300;i++)systemsRig.step(1/60,systemsView);
+assert.equal(systemsRig.telemetry().shots,0,'destroyed guns cannot fire');
+systemsRig.reset();assert(systemsRig.components().every(p=>p.hp===p.maxHp));assert(systemsRig.geometry().every((b,i)=>b.vertices===systemsBefore[i]&&!b.stride),'reset restores shared intact geometry');
+const crippled=DW.aegisFlight.createBattle(),crippledView=fixture();
+crippled.components().filter(p=>p.kind==='engine'&&p.id.startsWith('capital-enemy-')).forEach(p=>crippled.damage(p.position,1000,crippledView.combat));
+const stopped=crippled.telemetry().capitals[1];for(let i=0;i<120;i++)crippled.step(1/120,crippledView);
+assert.deepEqual(crippled.telemetry().capitals[1].position,stopped.position,'loss of all five engines stops patrol translation');
+assert.equal(crippled.telemetry().capitals[1].heading,stopped.heading,'loss of all engines stops powered turns');
+assert.notDeepEqual(crippled.telemetry().capitals[0].position,battleStart.capitals[0].position,'undamaged opponent continues moving');
+// Terrain callbacks fire only after nearest fighter/hull resolution, never on a probe.
+const impactView=fixture(),impactBolt={...bolt,weapon:{...DW.retailWeapons[0],damage:1}};let finalized=0;
+const surfaceTrace=()=>position(-998,0,250);surfaceTrace.onImpact=()=>finalized++;
+DW.training.convergencePoint(impactView.combat,impactView.combat.player,impactBolt.weapon,surfaceTrace);assert.equal(finalized,0);
+DW.training.trace(impactView.combat,position(-1001,0,250),position(-997,0,250),impactBolt,'player',surfaceTrace,impactView.state);assert.equal(finalized,0,'a nearer fighter occludes component damage');
+impactView.enemy.hp=0;DW.training.trace(impactView.combat,position(-1001,0,250),position(-997,0,250),impactBolt,'player',surfaceTrace,impactView.state);assert.equal(finalized,1,'final environment impact damages exactly once');
+console.log('PASS capital systems: all 24 guns + 5 engines, localized destruction, disabled firing, engine consequences, cached wrecks, reset, probe/occlusion safety');

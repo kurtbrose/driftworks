@@ -71,7 +71,7 @@ module.exports = function runFlightTransitions(namespace) {
       flightComms:{mount:() => ({reset:noop,pause:noop,unlock:noop,update:noop,speakerId:() => null})},
       flightControls:{mount(_host, callbacks) {
         actions = callbacks;
-        return {clear:noop,release:noop,resetButtons:noop,haptics:noop,
+        return {clear:noop,release:noop,resetButtons:noop,haptics:noop,startUncaptured:callbacks.resume,
           view:() => ({inputMode:'keyboard'}),
           sample:() => ({throttle:0,throttleRate:0,stop:true,fire:false})};
       }}

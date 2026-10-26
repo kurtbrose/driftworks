@@ -228,6 +228,9 @@ also links back to it.
 Open [the flight lab](experiments/flight.html) from the same static server.
 
 For the Aegis capital-ship sandbox, open [Aegis live batteries](experiments/flight.html?aegis=1).
+Press **U** to cycle enemy turrets and engines (after the last system, clear the selection).
+Shoot the individual part: destroyed guns stop firing; each destroyed engine removes
+one fifth of powered maneuvering. Parts explode and retain a localized scorched finish.
 Fly between allied and red dreadnaughts slowly maneuvering and exchanging heavy
 salvos. Their small point-defense turrets engage opposing fighters. Each ship
 retains its designed 1,305 m length. W/S adjusts throttle, Space fires, and Esc

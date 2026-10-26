@@ -332,8 +332,39 @@
                 e.pose.right=[1,0,0];e.pose.up=[0,0,1];e.pose.back=[0,-1,0];
                 e.pose.velocity=[0,0,0];e.pose.throttle=1;
                 e.hangarLaunch={remaining:10};
-                if(i>=3)e.plotArmor=true;
+                if(i===0||i>=3)e.plotArmor=true;
             });
+            // A fight is already underway immediately beyond the hangar mouth.
+            // Uneven, overlapping encounters: pursuit, crossing, escape and recovery.
+            // Slots alternate teams, but neither positions nor targets form mirrored pairs.
+            var melee=[
+                [-128,205,48,5,83,0,.35],[52,294,105,8,57,1,-.8],
+                [114,173,-32,9,71,2,.6],[-42,382,67,6,96,0,-.2],
+                [-185,344,-58,1,46,1,1.1],[28,192,136,10,78,0,-.65],
+                [176,438,24,3,64,3,.5],[-71,146,-46,0,91,2,-1],
+                [-8,478,172,11,54,0,.15],[142,315,82,2,87,0,-.45],
+                [-116,258,119,7,69,0,.9],[73,414,-76,4,43,3,-.3]
+            ];
+            melee.forEach(function(slot,index){
+                var side=index%2,pose=DW.arcade.create(0),target=melee[slot[3]],mode=['attack','break','evade','recover'][slot[5]];
+                pose.eye=[(-103.5+slot[0])/U,slot[1]/U,1200+slot[2]/U];
+                var direction=[target[0]-slot[0],target[1]-slot[1],target[2]-slot[2]];
+                if(mode!=='attack')direction=[direction[1]*(index%3?1:-1),-direction[0],80-index*17];
+                face(pose,direction);
+                var c=Math.cos(slot[6]),sn=Math.sin(slot[6]),right=pose.right.slice(),up=pose.up.slice();
+                pose.right=add(scale(right,c),scale(up,sn));pose.up=add(scale(up,c),scale(right,-sn));
+                pose.velocity=scale(pose.back,-slot[4]);pose.ramp=[0,0,slot[4]];pose.throttle=.65+(index%4)*.1;
+                var craft=createCraft('scramble-furball-'+index,pose,side?'enemy':'ally');
+                craft.controller='ai';craft.index=6+index;craft.callsign=(side?'Raider ':'Cover ')+(index+4);
+                craft.skill=index%3;craft.pilot=['Rookie','Veteran','Ace'][craft.skill];craft.mode=mode;
+                craft.decision=(index%5)*.047;craft.until=.45+(index%7)*.31;
+                craft.targetId='scramble-furball-'+slot[3];craft.retarget=1.7+(index%5)*.23;
+                craft.goal=add(pose.eye,scale(unit(direction),260/U));
+                equip(craft,craft.profile,defaultWeapon(craft.profile));
+                if(t.useHullModels)craft.collision={kind:'model',modelId:DW.shipPackModels.craftModel(craft,'mixed',t.wave).id};
+                t.enemies.push(craft);
+            });
+
         }
         if(t.mode==='evacuation')DW.evacuationMission.start(t,player);
         if(t.mode==='ellis')t.enemies.forEach(function(e,i){
@@ -604,6 +635,7 @@
             DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });
             if(scorchInterval)scorchTimes.set(struck,t.time);
         }
+        if (!struck && hit && terrainHit && terrainHit.onImpact) terrainHit.onImpact(hit,bolt,t);
         if (!struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
         if (struck) {
             var before=onDamage?struck.hp+(struck.shield||0):0;
@@ -750,12 +782,8 @@
             t.slotTimer = 3;
         }
         /** @param {Craft} e */function fireGuns(e){
-            if(t.scramble&&t.time<10){
-                if(e.team==='enemy')return;
-                e.fire=e.hp>0&&t.time>1.5&&Math.sin(t.time*12+e.index*2)>-.25;
-            }
+            if(t.scramble&&t.time<10&&t.enemies.indexOf(e)>=3&&t.enemies.indexOf(e)<6)return;
             DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
-                if(t.scramble&&t.time<10)return null;
                 return trace(t, start, end, bolt, e, terrainHit, player);
             }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), !!mission(t).sky.wormhole);
         }
@@ -766,10 +794,12 @@
                 if(t.scramble&&e.team==='ally'){
                     var launchAge=Math.max(0,t.time-[.2,.55,.95][e.index]);
                     e.pose.velocity=[0,Math.min(90,launchAge*180),0];
+                    e.pose.ramp=[0,0,e.pose.velocity[1]];
+                    if(e.pose.eye[1]*U>60)e.hangarLaunch.remaining=0;
                 }
                 e.pose.eye=add(e.pose.eye,scale(e.pose.velocity,dt/U));
                 e.hangarLaunch.remaining-=dt;e.fire=false;
-                if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;if(t.scramble)delete e.plotArmor;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
+                if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;if(t.scramble&&e.team==='enemy')delete e.plotArmor;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
                 /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {
@@ -815,6 +845,8 @@
                 var future = add(e.pose.eye, scale(e.pose.velocity, 1.6 / U)), avoid = radius + 65 / U;
                 if (!(e.pose.region||0)&&(length(future) < avoid || length(e.pose.eye) < avoid))
                     goal = add(e.pose.eye, add(scale(unit(e.pose.eye), 400 / U), scale(e.pose.right, 180 / U)));
+                // Clear the carrier's mouth while still allowing normal break/evade steering.
+                if(t.scramble&&e.pose.eye[1]*U<120&&goal[1]*U<180)goal=add(goal,[0,180/U-goal[1],0]);
                 // Separate nearby craft using steering demand, never velocity changes.
                 neighbors.nearby(e).forEach(function (other) {
                     if (other.id === e.id||(other.pose.region||0)!==(e.pose.region||0))
@@ -848,7 +880,7 @@
         if(t.scramble&&t.time<10){
             var story=t.scramble;
             // Every story hit is a real visible bolt/hull contact, never a timer.
-            t.enemies.slice(3).forEach(function(e,i){
+            t.enemies.slice(3,6).forEach(function(e,i){
                 var run=t.time-[0,.6,1.1][i],side=i===0?-1:1,phase=run*.85+i*1.7;
                 var x=-103.5+side*(125-16*run)+Math.sin(phase)*28;
                 var y=600-85*run,z=420-85*run+Math.sin(run*.65+i)*18;
@@ -861,11 +893,12 @@
                 var victim=t.enemies[i===0?0:1];
                 var weapon=Object.assign({},DW.retailWeapons[0],{damage:i===0?100000:16,shieldFactor:1,armorFactor:1,fireWait:.13});
                 const aim=DW.flightGuns.lead(e.pose,victim.pose,weapon,false,0);
-                var burst=victim.hp>0&&(i===0?t.time>.8&&t.time<3.2:i===1?t.time>1.6&&t.time<3.5:t.time>2.1&&t.time<4.2);
+                var burst=victim.hp>0&&(i===0?t.time>.8&&t.time<8:i===1?t.time>1.6&&t.time<3.5:t.time>2.1&&t.time<4.2);
                 DW.flightGuns.step(e.guns,e.pose,weapon,burst,dt,function(start,end,bolt){
                     if(victim.hp<=0)return null;
                     var hit=hullHit(victim,start,end,bolt.weapon.headRadius||0);
                     if(!hit)return null;
+                    if(i===0)delete victim.plotArmor;
                     damageCraft(t,victim,bolt.weapon,e);
                     story.beat++;
                     t.flashes.push({position:hit.point.slice(),velocity:victim.pose.velocity.map(function(v){return v/U;}),age:0,scale:2,destruction:false});

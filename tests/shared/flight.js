@@ -418,6 +418,18 @@
     f.setPaused(false);f.doc.hidden=true;f.doc.emit('visibilitychange');assert(f.counts.pause===3);
   });
 
+  test('flight', 'automatic flight starts enable cursor steering and fire immediately',function(){
+    var f=flightControlsFixture(),c=f.controls;
+    f.host.requestPointerLock=function(){throw new Error('Automatic start must not request capture');};
+    c.startUncaptured();
+    assert(f.counts.resume===1&&c.view().uncapturedMouse);
+    f.doc.emit('mousemove',{clientX:600,clientY:350});
+    assert(c.sample().yaw!==0&&c.sample().pitch!==0,'First mouse movement steers without pause/resume');
+    f.doc.emit('mousedown',{button:0,target:f.host});assert(c.sample().fire);
+    f.doc.emit('mouseup',{button:0});assert(!c.sample().fire);
+    f.key('KeyX');assert(c.sample().stop,'Keyboard works on the first automatic start');
+  });
+
   test('flight', 'flight controls preserve pointer capture and fall back to cursor steering',function(){
     var f=flightControlsFixture(),c=f.controls;
     f.elements['steering-preset'].value='wide-linear';
