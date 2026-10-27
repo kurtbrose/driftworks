@@ -251,8 +251,8 @@
         function pose(state) {
             scene.setSurfaceCamera(/** @type {Parameters<Scene['setSurfaceCamera']>[0]} */ ({ region:state.region||0, eye: state.eye, right: state.right, up: state.up, back: state.back }));
         }
-        /** @param {FlightView} view @param {Appearance} appearance @param {Comparison} comparison @param {number} elapsed */
-        function render(view, appearance, comparison, elapsed) {
+        /** @param {FlightView} view @param {Appearance} appearance @param {Comparison} comparison @param {number} elapsed @param {(()=>()=>void)=} gpuTimer */
+        function render(view, appearance, comparison, elapsed, gpuTimer) {
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
             var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
             var livingArt = /** @type {ArtCraft[]} */ (DW.training.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
@@ -359,7 +359,8 @@
                 var testAge=shieldTime-shieldTest;if(testAge>=0&&testAge<1.2){if(ownShield)discs=[{box:[0,0,1,1],waves:[.22,.1,-.97,testAge],depth:0,own:true}];else if(discs.length)discs[discs.length-1].waves=[.6,0,.8,testAge];}
                 if(ownShield&&shieldPreview!==null)discs=shieldPreview.length?[{box:[0,0,1,1],waves:shieldPreview,depth:0,own:true}]:[];
                 discs.forEach(function(d){if(shieldDegrees!==null)d.degrees=shieldDegrees;d.glow=shieldGlow;});shieldVisibleWave=discs.some(function(d){return d.box[3]>.08&&d.waves.some(function(age,i){return i%4===3&&age>=.2&&age<.8;});});shieldVisible=discs.length+defaultGlow.length;shieldVisibleWave=shieldVisibleWave||defaultGlow.some(function(b){return b.vertices.length>0;});shieldWaves=defaultGlow.reduce(function(n,b){return n+(b.shieldWaves||0);},0)+discs.reduce(function(sum,d){return sum+d.waves.length/4;},0);scene.setStudyShields(shieldEnabled&&comparison.actors&&comparison.mode!=='empty'?discs:[],shieldEnabled&&skyCanvas instanceof HTMLCanvasElement?skyCanvas:null);}
-            scene.render(world, 1, 0, elapsed);
+            var endGpu=gpuTimer?gpuTimer():null;
+            try{scene.render(world, 1, 0, elapsed);}finally{if(endGpu)endGpu();}
         }
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };

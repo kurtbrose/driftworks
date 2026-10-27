@@ -828,6 +828,7 @@ export type ExperimentModules = {
         read: (pad: Gamepad, map: Mapping) => PadDemand;
     };
     flightPerformance: {
+        gpuTimer:(canvas:HTMLCanvasElement|null)=>{renderer:string;available:boolean;begin:(receive:(ms:number)=>void)=>()=>void;poll:()=>void;pending:()=>number;valid:()=>boolean;dispose:()=>void};
         pacer: () => Pacer;
         due: (clock: Pacer, now: number, fps: number) => boolean;
         create: () => Measurements;
@@ -946,7 +947,7 @@ export type ExperimentModules = {
             ready: Promise<boolean>;
             appearance: () => Appearance;
             pose: (state: Pose) => void;
-            render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number) => void;
+            render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number, gpuTimer?:()=>()=>void) => void;
             renderStats: () => RenderStats;
             setShieldOptics:(degrees:number|null,glow:boolean)=>void;
             setShieldPreview:(waves:number[]|null)=>void;

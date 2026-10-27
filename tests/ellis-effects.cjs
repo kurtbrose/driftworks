@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const f=require('../tools/headless.cjs').createFlight({mission:'ellis'}),D=f.DW,U=D.sim.METERS_PER_UNIT,s=f.snapshot();
 s.world.asteroids=[];s.world.ships=[];s.combat.enemies=[];s.combat.wrecks=[];s.combat.flashes=[];
 const noop=()=>{},scene=new Proxy({setStudyEffects(b){this.effects=b;}},{get:(o,k)=>k in o?o[k]:noop});
-D.scene3d={create:()=>scene,miningPlatformGeometry:D.miningRig.geometry,surfaceFrame:D.asteroidTerrain.surfaceFrame};D.flightSkybox={create:()=>({render:noop,setOccluders:noop})};
+D.scene3d={create:()=>scene,miningPlatformGeometry:D.miningRig.geometry,surfaceFrame:D.asteroidTerrain.surfaceFrame};const sky={render:noop,setOccluders:noop};D.flightSkybox={create:()=>sky};
 D.shipPackModels.loadTextures=()=>Promise.resolve(new Map());D.shipPackModels.populate=noop;
 const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{value:'',checked:false,insertBefore:noop});return nodes.get(id);};
 D.experimentDom=()=>get;
@@ -19,3 +19,12 @@ assert(batched.every(b=>Array.from(b.vertices).every(Number.isFinite)));
 location.search='?mission=ellis&bridgeGeometry=objects';p.render(s,art,{mode:'normal',scale:1,flat:false,mothership:false,actors:true},0);
 const individual=scene.effects.filter(b=>b.vertices.length);assert.equal(individual.length,172,'object-warp experiment retains individual optical centers');assert(individual.every(b=>b.lensCenter));
 console.log('PASS Ellis effect batching: 160 bolts + 12 impacts in four projected draws; object-warp paths preserved');
+
+const order=[];scene.render=()=>order.push('scene');sky.render=()=>order.push('sky');
+// The benchmark hook belongs to the scene submission, after the sky pass.
+p.render(s,art,{mode:'normal',scale:1,flat:false,mothership:false,actors:true},0,()=>{order.push('begin');return ()=>order.push('end');});
+assert.deepEqual(order,['sky','begin','scene','end']);
+scene.render=()=>{throw new Error('test scene failure');};
+assert.throws(()=>p.render(s,art,{mode:'normal',scale:1,flat:false,mothership:false,actors:true},0,()=>{order.push('begin');return ()=>order.push('end');}),/test scene failure/);
+assert.equal(order.at(-1),'end','GPU query ends even when rendering throws');
+console.log('PASS scene GPU hook: begins at scene submission and closes on render failure');

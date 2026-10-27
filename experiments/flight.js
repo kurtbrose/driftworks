@@ -526,6 +526,50 @@
         }catch(error){shieldResult.textContent=String(error);}finally{presentation.setShields(shieldAngular||shieldOn);benchmarking=false;shieldToggle.disabled=false;shieldBench.disabled=false;shieldFrozen.disabled=false;shieldResume.disabled=false;shieldPanel.querySelectorAll('select,input,button').forEach(function(c){if(c instanceof HTMLSelectElement||c instanceof HTMLInputElement||c instanceof HTMLButtonElement)c.disabled=false;});diagnostics.reset();}
     }
 
+    if(activeMission.sky.wormhole&&shipStretching){
+        var stretchBenchmark=document.createElement('button'),stretchResult=document.createElement('pre');
+        stretchBenchmark.textContent='Benchmark rigid / stretched ships';stretchResult.id='stretch-benchmark-result';stretchResult.style.whiteSpace='pre-wrap';
+        get('perf-reset').after(stretchBenchmark,stretchResult);
+        stretchBenchmark.onclick=async function(){
+            if(benchmarking||!texturesReady||!shipStretching)return;
+            pause();benchmarking=true;
+            var initial=shipStretching.checked,snapshot=view(),art=presentation.appearance(),settings=diagnostics.settings();
+            var canvas=/** @type {HTMLCanvasElement|null} */(host.querySelector('canvas[aria-label="3D tactical scene"]'));
+            var timer=DW.flightPerformance.gpuTimer(canvas),dimensions=[host.clientWidth,host.clientHeight,window.devicePixelRatio,canvas&&canvas.width,canvas&&canvas.height].join(',');
+            var controls=/** @type {(HTMLInputElement|HTMLSelectElement|HTMLButtonElement)[]} */(Array.from(get('launch').querySelectorAll('input,select,button')));
+            var disabled=controls.map(function(c){return c.disabled;});controls.forEach(function(c){c.disabled=true;});
+            /** @type {{stretch:boolean;cpu:number;interval:number;gpu:number|null;draws:number;triangles:number}[]} */var rows=[];
+            function unchanged(){if(document.hidden||dimensions!==[host.clientWidth,host.clientHeight,window.devicePixelRatio,canvas&&canvas.width,canvas&&canvas.height].join(','))throw new Error('Hidden or resized viewport invalidates comparison');}
+            try{
+                for(var enabled of [false,true,true,false]){
+                    presentation.setShipStretching(enabled);var previous=0;
+                    for(var i=0;i<110;i++){
+                        var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});
+                        unchanged();timer.poll();
+                        let row={stretch:enabled,cpu:0,interval:previous?stamp-previous:0,gpu:/** @type {number|null} */(null),draws:0,triangles:0};
+                        // Warm-up frames also drain queries, but never enter the sample set.
+                        var measure=i>=20?function(){return timer.begin(function(ms){row.gpu=ms;});}:undefined;
+                        var start=performance.now();presentation.render(snapshot,art,settings,0,measure);
+                        row.cpu=performance.now()-start;var stats=presentation.renderStats();row.draws=stats.scene.drawCalls+stats.sky.drawCalls;row.triangles=stats.scene.triangles+stats.sky.triangles;
+                        if(i>=20)rows.push(row);previous=stamp;
+                        stretchResult.textContent='Frozen rigid / stretch benchmark: '+rows.length+' / 360 samples';
+                    }
+                }
+                for(var wait=0;timer.pending()&&wait<120;wait++){await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});unchanged();timer.poll();}
+                var lines=['Frozen wormhole / rigid-stretch-stretch-rigid','Renderer: '+timer.renderer,'20 warm-up + 90 samples per block; simulation frozen.','Host width,height,DPR,scene backing width,height: '+dimensions];
+                /** @param {number[]} values */function metric(values){if(!values.length)return 'unavailable';values.sort(function(a,b){return a-b;});return values[Math.floor((values.length-1)*.5)].toFixed(2)+' / '+values[Math.floor((values.length-1)*.95)].toFixed(2)+' ms';}
+                [false,true].forEach(function(on){var group=rows.filter(function(r){return r.stretch===on;}),gpu=group.filter(function(r){return r.gpu!==null;}).map(function(r){return /** @type {number} */(r.gpu);});
+                    lines.push((on?'STRETCHED':'RIGID')+': CPU median/p95 '+metric(group.map(function(r){return r.cpu;}))+', frame interval '+metric(group.map(function(r){return r.interval;})));
+                    lines.push('Scene GPU median/p95 '+(timer.available&&timer.valid()&&gpu.length>=group.length*.9?metric(gpu):'unavailable / unsupported, disjoint or insufficient samples')+' ('+gpu.length+'/'+group.length+')');
+                    lines.push('Draws '+Math.round(group.reduce(function(n,r){return n+r.draws;},0)/group.length)+' / triangles '+Math.round(group.reduce(function(n,r){return n+r.triangles;},0)/group.length));
+                });
+                lines.push('Scene GPU includes the wormhole compositor; excludes the separate sky context. Frame intervals include browser pacing. CPU is submission time.');
+                stretchResult.textContent=lines.join('\n');
+            }catch(error){stretchResult.textContent='Benchmark interrupted: '+String(error);}
+            finally{timer.dispose();presentation.setShipStretching(initial);controls.forEach(function(c,i){c.disabled=disabled[i];});benchmarking=false;pause();diagnostics.reset();}
+        };
+    }
+
     if(aegis||activeMission.id==='evacuation'||activeMission.id==='battle'){
         var benchmarkButton=document.createElement('button'),benchmarkOutput=document.createElement('pre');
         benchmarkButton.textContent=activeMission.id==='scramble'?'Benchmark close furball on / off':activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';

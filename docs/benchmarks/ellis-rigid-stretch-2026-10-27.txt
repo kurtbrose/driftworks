@@ -1,0 +1,11 @@
+Frozen wormhole / rigid-stretch-stretch-rigid
+Renderer: ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)
+20 warm-up + 90 samples per block; simulation frozen.
+Host width,height,DPR,scene backing width,height: 1280,720,1.5,1920,1080
+RIGID: CPU median/p95 1.40 / 1.90 ms, frame interval 13.30 / 13.40 ms
+Scene GPU median/p95 3.12 / 4.81 ms (180/180)
+Draws 136 / triangles 1309785
+STRETCHED: CPU median/p95 1.70 / 2.10 ms, frame interval 13.30 / 13.40 ms
+Scene GPU median/p95 3.13 / 4.35 ms (180/180)
+Draws 136 / triangles 1309785
+Scene GPU includes the wormhole compositor; excludes the separate sky context. Frame intervals include browser pacing. CPU is submission time.

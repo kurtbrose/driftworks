@@ -577,3 +577,22 @@ remains available through the study's explicit mode. Far-side aperture clipping
 continues to apply to ship images. If the local Jacobian is unusable, the live
 mode keeps a rigid image at the optical center rather than reverting to ordinary
 perspective.
+
+The wormhole pause menu's Renderer diagnostics offers “Benchmark rigid / stretched
+ships”. It freezes the current simulation, camera, appearance and render settings,
+then runs rigid/stretch/stretch/rigid blocks with 20 warm-up and 90 measured frames
+per block. It restores the original mode and control disabled states even after
+an interruption. Hidden/resized viewports invalidate the run. The displayed CPU
+and frame median/p95 are distinct from asynchronous WebGL2 scene GPU elapsed time.
+Queries wrap only `scene.render`, after the separate sky render. Unsupported,
+disjoint/context-lost or insufficient GPU samples report unavailable; timers never
+block waiting for results. The scene timer includes the wormhole compositor and
+excludes separate sky draws; it is not a whole-frame GPU timer. GPU adapter,
+viewport/DPR/backing dimensions and sample coverage accompany the results.
+The benchmark bypasses the normal frame cap and follows browser rAF pacing.
+
+Initial [RTX 3070 Ti result](benchmarks/ellis-rigid-stretch-2026-10-27.txt):
+at 1920x1080 scene backing resolution in the frozen starting encounter, rigid
+versus stretched CPU medians were 1.40/1.70 ms and scene GPU medians 3.12/3.13 ms,
+with 180/180 valid GPU samples per mode. This one pose does not establish
+performance near the throat or at a larger window resolution.

@@ -94,6 +94,7 @@ const suites = {
     "comms-display.cjs",
     "study-culling.cjs",
     "three-production.cjs",
+    "performance-timer.cjs",
     "asteroid-detail-lab.cjs",
     "liner-batching.cjs",
     "disruption-lab.cjs"
