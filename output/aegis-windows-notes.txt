@@ -1,0 +1,41 @@
+Approved window treatment, 2026-10-27
+480 authored windows retain their exact geometry and normals: 432 body/hangar
+windows (2.07 x 1.08 m), plus 48 narrower nose windows (1.98 x 1.17 m).
+One code-painted 1024 x 256 atlas supplies frames, reveal shading, back walls,
+ceiling strips, partitions, silhouettes, glass reflections, and dark rooms.
+This is painted depth, not real parallax or new room geometry.
+No dynamic lights, transparency passes, runtime downloads or extra triangles.
+The candidate uses finish -1: a textured interior illumination floor of 0.65,
+rendered with the existing custom shader rather than the standard PBR material.
+This prevents external shadow from extinguishing the painted room interiors.
+The production windows interior batch now uses that finish.
+
+Original 432-window review A/B, windows close-up, flight environment, DPR 1.5, 2463 x 1196 backing:
+20 warmup + 90 measured frames per block, ABBA, same camera.
+Both A/B: 23 submitted draws, 25872 triangles, CPU median/p95 0.6/0.8 ms,
+frame cadence median/p95 13.3/13.4 ms. GPU execution is unmeasured.
+The extra logical window batch replaces visible source lamp geometry; submitted
+counts depend on culling, so the measured view has unchanged draw count.
+
+Checks: all 480 source ranges are valid and non-overlapping; original triangles
+are retained. Production bake remains exact. Type and sky-environment checks
+pass. Visual checks cover close-up in studio and flight environment lighting.
+Review: http://localhost:8000/output/aegis-windows-review.html
+
+Production validation: npm run check completed with 130/131 entries passing.
+The sole failure counted an empty former window-light material as a draw.
+Updated that assertion to count nonempty batches while retaining the exact
+vertex-preservation assertion; tests/three-production.cjs then passed.
+The focused aegis-surface-study regression covers all 480 windows and 48 nose
+windows, immutable buffer reuse, surface toggles and damage/reset behavior.
+
+Production flight comparison, same paused initial Aegis encounter: 2 capitals,
+8 hostiles, 0 wingmen, unchanged camera, production artwork, 100% scale,
+1920 x 1080 backing / 1280 x 720 CSS (DPR 1.5). AI/projectiles frozen;
+ABBA asset on/off, 20 warmup + 90 samples/block. No tests/rebuilds concurrent.
+Previous: CPU median/p95 4.4/5.4 ms, 271 draws, 231732 triangles.
+Windows: CPU median/p95 4.2/5.0 ms, 269 draws, 231732 triangles.
+Both cadence median/p95 13.3/13.4 ms; no GPU execution timing.
+Treat the small CPU difference as run variation, not an established speedup.
+Both asset-off controls: 9 draws, 144452 triangles, 0.7 ms median CPU.
+Visual inspection: production body and nose windows, near and whole-ship views.

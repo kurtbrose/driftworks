@@ -273,7 +273,7 @@ for(const geometry of ['full','objects']){
   viewer.setSurfaceCamera({region:0,eye:[650/U,-2400/U,1650/U],right:[0,1,0],up:[0,0,1],back:[1,0,0]});
   const start=frames.length;viewer.render(world,1,0,0);
   const hull=frames.slice(start).flat().filter(d=>(d.uniforms.uLensMode===3||d.uniforms.uLensMode===1)&&d.uniforms.uColor);
-  assert.equal(hull.length,batches.length,'every capital material is submitted once at '+t+' s / '+geometry);
+  assert.equal(hull.length,batches.filter(b=>b.vertices.length).length,'every nonempty capital material is submitted once at '+t+' s / '+geometry);
   assert.equal(hull.reduce((n,d)=>n+d.geometry.attributes.position.count,0),batches.reduce((n,b)=>n+b.vertices.length/6,0),'all capital vertices survive the throat crossing');
   assert.equal(viewer.getRenderStats().bridgeObjectPaths,1,'all materials use one coherent optical center');
   const d=hull[0],columns=d.uniforms.uLensEnabled?[d.uniforms.uLensX,d.uniforms.uLensY,d.uniforms.uLensZ]:[[0,0,-1],[1,0,0],[0,1,0]];

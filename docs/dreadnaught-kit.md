@@ -429,7 +429,7 @@ The flight bake removes the old raised stripe and light blocks and stores three
 `interiors` batches: deck, ceiling and bulkheads. Each has six-float authored
 vertices; deck and bulkheads carry an `AegisSurfaceFinish` with a local `atlas`
 override. The loader shares those textures and prepared buffers across ships.
-Idle ships retain seven hull batches plus three interior batches. Surface
+Idle ships retain seven hull batches plus the interior batches. Surface
 toggles/reset preserve the selected textures; collision dimensions, launch
 anchors and articulated component ownership are unchanged.
 
@@ -443,3 +443,19 @@ Ship albedo textures use trilinear mipmaps, including non-power-of-two images
 and PBR variants share these sampler settings. This keeps thin deck markings
 and bulkhead seams stable under minification; MSAA alone does not filter
 texture-internal edges. Source artwork is retained for close approaches.
+
+## Approved windows
+
+All 480 authored windows, including the 48 narrower nose windows, retain their
+original geometry and normals. The flight bake moves them into a fourth
+`interiors` batch with a shared 1024 x 256 `window-atlas.png`. Rebuild that atlas
+with `tools/bake-aegis-window-atlas.cjs`; its painter lives in
+`tools/lib/aegis-window-atlas.cjs`. Frames, rooms, partitions and reflections
+are painted depth, without transparency, dynamic lights or added triangles.
+
+`AegisSurfaceFinish.shader` optionally selects the renderer finish. Windows use
+`-1`, retaining the custom shader with an interior albedo illumination floor
+instead of the exterior PBR material. Surface toggles and reset restore this
+selection. There are eleven logical idle batches; empty source batches and
+visibility affect submitted draw counts. The pre-window review baseline is
+frozen in `output/aegis-windows-before-rig.js`.

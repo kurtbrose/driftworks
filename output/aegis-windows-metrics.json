@@ -1,0 +1,58 @@
+{
+  "pass": "windows",
+  "view": "windows",
+  "lighting": "flight",
+  "camera": {
+    "target": [
+      -245,
+      -48,
+      -1
+    ],
+    "offset": [
+      -6,
+      -38,
+      3
+    ]
+  },
+  "yaw": 0,
+  "pitch": 0,
+  "zoom": 1,
+  "damaged": false,
+  "sourceHash": "72b182db775138394af7caecf676b2eee659144d869f1c299264935d17d6e72f",
+  "viewport": "1642,797,1.5",
+  "backing": [
+    [
+      2463,
+      1196
+    ],
+    [
+      2463,
+      1196
+    ]
+  ],
+  "atlas": [
+    1024,
+    256
+  ],
+  "gpuTimed": false,
+  "rows": [
+    {
+      "mode": "old",
+      "cpuMedian": 0.6,
+      "cpuP95": 0.8,
+      "frameMedian": 13.3,
+      "frameP95": 13.4,
+      "draws": 23,
+      "triangles": 25872
+    },
+    {
+      "mode": "new",
+      "cpuMedian": 0.6,
+      "cpuP95": 0.8,
+      "frameMedian": 13.3,
+      "frameP95": 13.4,
+      "draws": 23,
+      "triangles": 25872
+    }
+  ]
+}

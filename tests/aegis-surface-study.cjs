@@ -47,27 +47,29 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  const runtime=vm.createContext({window:{Driftworks:DW},Float32Array,Image,console});
  for(const f of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','assets/ships/aegis-kit/shield-envelope.js','experiments/aegis-flight.js'])vm.runInContext(read(f),runtime,{filename:f});
  await DW.aegisFlight.load();
- assert.equal(DW.aegisFlightAsset.interiors.length,3);
+ const glass=DW.aegisFlightAsset.interiors.find(b=>b.kind==='windows');assert.equal(glass.vertices.length/216,480);assert.equal(glass.vertices.filter((v,i)=>i%6===0&&v<-320).length/36,48,'all 48 prow windows included');assert.equal(glass.finish.shader,-1);
+
+ assert.equal(DW.aegisFlightAsset.interiors.length,4);
  const approved={window:{}};vm.createContext(approved);vm.runInContext(read('output/aegis-hangar-data.js'),approved);
- for(const b of DW.aegisFlightAsset.interiors){const expected=approved.window.AegisHangarData.interiors.find(x=>x.kind===b.kind);assert.equal(JSON.stringify(b.vertices),JSON.stringify(expected.vertices),'production keeps approved interior geometry');if(b.finish)assert.equal(JSON.stringify(b.finish.uv),JSON.stringify(expected.uv),'production keeps approved UV orientation');}
+ for(const b of DW.aegisFlightAsset.interiors.filter(b=>b.kind!=='windows')){const expected=approved.window.AegisHangarData.interiors.find(x=>x.kind===b.kind);assert.equal(JSON.stringify(b.vertices),JSON.stringify(expected.vertices),'production keeps approved interior geometry');if(b.finish)assert.equal(JSON.stringify(b.finish.uv),JSON.stringify(expected.uv),'production keeps approved UV orientation');}
  const one=DW.aegisFlight.create(),two=DW.aegisFlight.create(),styled=one.geometry(),buffers=styled.map(b=>b.vertices);
- assert.equal(styled.filter(b=>b.texture).length,18,'loaded armed rig enables approved hull and heavy turret finish by default');
+ assert.equal(styled.filter(b=>b.texture).length,19,'loaded armed rig enables approved hull and heavy turret finish by default');
  assert(styled.every((b,i)=>b.vertices===two.geometry()[i].vertices),'textured GPU data shared across ships');
  one.setSurfaceDetail(false);const plain=styled.map(b=>b.vertices);assert(styled.every(b=>!b.stride&&!b.texture));
  one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===buffers[i]));assert.equal(one.geometry(),styled,'toggle never replaces actor array');
  styled.forEach((b,i)=>{for(let k=0;k<plain[i].length/6;k++)for(let j=0;j<6;j++)assert.equal(b.vertices[k*(b.stride||6)+j],plain[i][k*6+j]);});
  const state={team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000};
  const idle=DW.aegisFlight.create({state,opponent:state,unarmed:true}),idleB=idle.geometry();
- assert.equal(idleB.length,10,'unarmed ships retain seven hull draws plus three interior finishes');assert.equal(idleB.filter(b=>b.texture).length,6);
+ assert.equal(idleB.length,11,'unarmed ships retain seven hull draws plus four interior finishes');assert.equal(idleB.filter(b=>b.texture).length,7);
  const total=b=>b.reduce((n,p)=>n+p.vertices.length/(p.stride||6),0);
  assert.equal(total(idleB),total(styled),'idle batching retains every vertex');
  assert(idleB.every(b=>b.vertices.every(Number.isFinite)));
  const idleBefore=idleB.map(b=>b.vertices);idle.setSurfaceDetail(false);const idlePlain=idleB.map(b=>b.vertices);idle.setSurfaceDetail(true);
  idleB.forEach((b,i)=>{assert.equal(b.vertices,idleBefore[i]);for(let k=0;k<idlePlain[i].length/6;k++)for(let j=0;j<6;j++)assert.equal(b.vertices[k*(b.stride||6)+j],idlePlain[i][k*6+j]);});
- one.setSurfaceDetail(false,'turrets');assert.equal(styled.filter(b=>b.texture).length,6);one.setSurfaceDetail(true,'turrets');
+ one.setSurfaceDetail(false,'turrets');assert.equal(styled.filter(b=>b.texture).length,7);one.setSurfaceDetail(true,'turrets');
  const heavy=one.components().find(p=>p.kind==='heavy'),heavyCombat=DW.training.create('training');one.damage(heavy.position,1000,heavyCombat);const destroyed=styled.map(b=>b.vertices);one.setSurfaceDetail(false);one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===destroyed[i]),'surface toggles preserve scorched turret buffers');one.reset();assert(styled.every((b,i)=>b.vertices===buffers[i]),'reset restores textured turret buffers');
  const combat=DW.training.create('training'),part=one.components().find(p=>p.kind==='engine');one.damage(part.position,1000,combat);one.setSurfaceDetail(false);one.setSurfaceDetail(true);assert.equal(one.components().find(p=>p.id===part.id).hp,0,'surface toggles preserve damage');
  one.reset();assert(one.geometry().every((b,i)=>b.vertices===buffers[i]),'reset restores original articulated buffers and keeps textured hull');
  const patrol=DW.aegisFlight.createEllisPatrol();assert(patrol.geometry().every(b=>b.lensRadius>650&&b.lensRadius<1000),'stride-aware bounds preserve optical image radius');
- console.log('PASS production capital surface: default load, shared buffers, ten-draw idle rig, exact geometry, stable toggle/reset/damage and optical bounds');
+ console.log('PASS production capital surface: default load, shared buffers, eleven-batch idle rig, exact geometry, stable toggle/reset/damage and optical bounds');
 })().catch(e=>{console.error(e);process.exitCode=1;});
