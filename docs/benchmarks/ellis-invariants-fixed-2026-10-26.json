@@ -1,0 +1,28 @@
+{
+  "maxRadialDistanceError": 8.237362862928421e-7,
+  "radialCases": 18,
+  "flatCases": 6,
+  "chartCases": 12,
+  "radialFailures": [],
+  "rotations": 108,
+  "reversed": 108,
+  "rotationError": 9.618658588413032e-15,
+  "lengthSymmetry": 6.821210263296962e-13,
+  "maxEnergy": 1.0975220732234447e-11,
+  "maxMomentum": 5.485167875463048e-12,
+  "maxPlane": 4.8405723873656825e-14,
+  "maxReturn": 0.0000026274288950760885,
+  "crossings": 10,
+  "turns": 4,
+  "shellTests": 48,
+  "maxShellDistance": 0.000002438327949681722,
+  "maxShellPhase": 0.00015263756055419742,
+  "critical": {
+    "startRadius": 1.0015059244150724,
+    "impact": 1.0000036612418444,
+    "shellRadius": 2
+  },
+  "criticalPhaseError": 0.00006434013514011738,
+  "criticalOracleStepDifference": 4.440892098500626e-16,
+  "reciprocityFailures": []
+}

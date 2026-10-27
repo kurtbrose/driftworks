@@ -1269,3 +1269,18 @@ and storage remain unchanged. The independent critical-shell error drops from
 mandatory 0.001 rad assertions. The sampled lattice diagnostic also passes its
 0.001 rad gate. This does not establish accuracy arbitrarily close to b=1,
 where finite table extent and float precision still limit resolution.
+
+Finite-segment distance correction: direct intervals now use 32-panel Simpson
+quadrature separately in the Ellis core and transition shell, plus exact flat
+exterior angle/length differences. Finite phases are still integrated directly,
+without subtracting two large packed phases. This removes the earlier midpoint
+bias and makes forward/reverse endpoint solves symmetric. On the invariant
+fixtures, worst exact radial distance error is 0.000000824 m and reversal length
+difference is 6.82e-13 m. Both limits now assert in the default suite; strict
+invariants pass. [Corrected measurements](benchmarks/ellis-invariants-fixed-2026-10-26.json)
+supersede the earlier failure baseline, which is retained for comparison.
+
+Browser integration was checked at the paused opposite-chart crossing (6.35 s,
+rigid Bob, lattice enabled), with no shader errors. This is a presentation smoke
+check; automated raster ID-mask coverage and the severe single-affine-patch
+shape error near the throat remain unresolved.

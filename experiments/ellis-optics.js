@@ -87,16 +87,26 @@
         // Subtracting two large, quantized integrals near b=1 creates branch jumps.
         // Integrate the finite segment directly; its u span remains well behaved.
         /** @param {number} b @param {boolean} arcLength */function segment(b,arcLength){
-            var first=u(b,E),last=u(b,S),h=(last-first)/24,total=0,root=Math.sqrt(Math.max(1e-10,Math.abs(1-b*b)));
-            // Keep the same midpoint samples, advancing sinh/cosh together
-            // instead of evaluating a hyperbolic function at every sample.
-            var t=first+.5*h,transmitted=b<1,ch=Math.cosh(h),sh=Math.sinh(h);
-            var l=root*(transmitted?Math.sinh(t):Math.cosh(t)),slope=root*(transmitted?Math.cosh(t):Math.sinh(t));
-            for(var j=0;j<24;j++){
-                var r2=1+l*l;total+=(arcLength?Math.sqrt(r2):b/Math.sqrt(r2))*radialScale(r2);
-                var next=l*ch+slope*sh;slope=slope*ch+l*sh;l=next;
+            var first=Math.min(u(b,E),u(b,S)),last=Math.max(u(b,E),u(b,S));
+            var root=Math.sqrt(Math.max(1e-10,Math.abs(1-b*b))),join=u(b,1.5),edge=u(b,2),total=0;
+            // Integrate only the finite interval, split at metric joins. Simpson
+            // weights avoid midpoint distance bias without subtracting large phases.
+            for(var part=0;part<2;part++){
+                var lo=Math.max(first,part===0?0:join),hi=Math.min(last,part===0?join:edge);
+                if(hi<=lo)continue;
+                var h=(hi-lo)/32,transmitted=b<1,ch=Math.cosh(h),sh=Math.sinh(h);
+                var l=root*(transmitted?Math.sinh(lo):Math.cosh(lo)),slope=root*(transmitted?Math.cosh(lo):Math.sinh(lo));
+                for(var j=0;j<=32;j++){
+                    var r2=1+l*l;total+=(arcLength?Math.sqrt(r2):b/Math.sqrt(r2))*radialScale(r2)*h*(j===0||j===32?1:j%2?4:2)/3;
+                    var next=l*ch+slope*sh;slope=slope*ch+l*sh;l=next;
+                }
             }
-            return Math.abs(total*h);
+            if(last>edge){
+                var low=Math.max(first,edge),l0=root*(b<1?Math.sinh(low):Math.cosh(low)),l1=root*(b<1?Math.sinh(last):Math.cosh(last));
+                var r0=Math.sqrt(1+l0*l0),r1=Math.sqrt(1+l1*l1);
+                total+=arcLength?Math.sqrt(Math.max(0,r1*r1-b*b))-Math.sqrt(Math.max(0,r0*r0-b*b)):Math.asin(Math.min(1,b/r0))-Math.asin(Math.min(1,b/r1));
+            }
+            return total;
         }
         /** @param {number} b @param {boolean} sum */function phase(b,sum){return entry(b)+(sum?lookup(b,u(b,E))+lookup(b,u(b,S)):segment(b,false));}
         var low=0,high=.999999,decreasing=false;
