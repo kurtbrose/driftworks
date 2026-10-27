@@ -47,29 +47,34 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  const runtime=vm.createContext({window:{Driftworks:DW},Float32Array,Image,console});
  for(const f of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','assets/ships/aegis-kit/shield-envelope.js','experiments/aegis-flight.js'])vm.runInContext(read(f),runtime,{filename:f});
  await DW.aegisFlight.load();
+ const nozzleAsset=DW.aegisFlightAsset.engines;
+ assert.equal(nozzleAsset.reduce((n,e)=>n+e.batches.reduce((m,b)=>m+b.vertices.length/18,0),0),3660,'approved open bells add only 480 triangles across five engines');
+ for(const e of nozzleAsset){assert.equal(e.batches.length,5);const throat=e.batches[4];assert.equal(throat.vertices.length/18,32);for(let i=0;i<throat.vertices.length;i+=6)assert(Math.abs(throat.vertices[i]-18.2)<2e-6,'throat is recessed 13.8 m behind the 32 m lip');for(const b of e.batches){assert.equal(b.finish.uv.length,b.vertices.length/3);assert(b.finish.uv.every(v=>Number.isFinite(v)&&v>=0&&v<=1));assert.equal(b.finish.atlas,'engine-atlas.png');}}
  const glass=DW.aegisFlightAsset.interiors.find(b=>b.kind==='windows');assert.equal(glass.vertices.length/216,480);assert.equal(glass.vertices.filter((v,i)=>i%6===0&&v<-320).length/36,48,'all 48 prow windows included');assert.equal(glass.finish.shader,-1);
 
  assert.equal(DW.aegisFlightAsset.interiors.length,4);
  const approved={window:{}};vm.createContext(approved);vm.runInContext(read('output/aegis-hangar-data.js'),approved);
  for(const b of DW.aegisFlightAsset.interiors.filter(b=>b.kind!=='windows')){const expected=approved.window.AegisHangarData.interiors.find(x=>x.kind===b.kind);assert.equal(JSON.stringify(b.vertices),JSON.stringify(expected.vertices),'production keeps approved interior geometry');if(b.finish)assert.equal(JSON.stringify(b.finish.uv),JSON.stringify(expected.uv),'production keeps approved UV orientation');}
  const one=DW.aegisFlight.create(),two=DW.aegisFlight.create(),styled=one.geometry(),buffers=styled.map(b=>b.vertices);
- assert.equal(styled.filter(b=>b.texture).length,19,'loaded armed rig enables approved hull and heavy turret finish by default');
+ for(const e of nozzleAsset){const p=e.position,ray=y=>one.hit([750/U,(p[1]+y)/U,1200+p[2]/U],[600/U,(p[1]+y)/U,1200+p[2]/U]);const throat=ray(0),rim=ray(21.5);assert(throat&&rim);assert(Math.abs(throat[0]*U-p[0]-18.2)<.001,'center ray reaches recessed throat instead of a phantom flat cap');assert(Math.abs(rim[0]*U-p[0]-32)<.001,'rim ray hits the physical lip');}
+ assert.equal(styled.filter(b=>b.texture).length,44,'loaded armed rig enables approved hull and heavy turret finish by default');
  assert(styled.every((b,i)=>b.vertices===two.geometry()[i].vertices),'textured GPU data shared across ships');
  one.setSurfaceDetail(false);const plain=styled.map(b=>b.vertices);assert(styled.every(b=>!b.stride&&!b.texture));
  one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===buffers[i]));assert.equal(one.geometry(),styled,'toggle never replaces actor array');
  styled.forEach((b,i)=>{for(let k=0;k<plain[i].length/6;k++)for(let j=0;j<6;j++)assert.equal(b.vertices[k*(b.stride||6)+j],plain[i][k*6+j]);});
  const state={team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000};
  const idle=DW.aegisFlight.create({state,opponent:state,unarmed:true}),idleB=idle.geometry();
- assert.equal(idleB.length,11,'unarmed ships retain seven hull draws plus four interior finishes');assert.equal(idleB.filter(b=>b.texture).length,7);
+ assert.equal(idleB.length,12,'unarmed ships retain seven hull batches, four interiors and one combined nozzle finish');assert.equal(idleB.filter(b=>b.texture).length,8);
  const total=b=>b.reduce((n,p)=>n+p.vertices.length/(p.stride||6),0);
  assert.equal(total(idleB),total(styled),'idle batching retains every vertex');
  assert(idleB.every(b=>b.vertices.every(Number.isFinite)));
  const idleBefore=idleB.map(b=>b.vertices);idle.setSurfaceDetail(false);const idlePlain=idleB.map(b=>b.vertices);idle.setSurfaceDetail(true);
  idleB.forEach((b,i)=>{assert.equal(b.vertices,idleBefore[i]);for(let k=0;k<idlePlain[i].length/6;k++)for(let j=0;j<6;j++)assert.equal(b.vertices[k*(b.stride||6)+j],idlePlain[i][k*6+j]);});
- one.setSurfaceDetail(false,'turrets');assert.equal(styled.filter(b=>b.texture).length,7);one.setSurfaceDetail(true,'turrets');
+ one.setSurfaceDetail(false,'turrets');assert.equal(styled.filter(b=>b.texture).length,32);one.setSurfaceDetail(true,'turrets');
  const heavy=one.components().find(p=>p.kind==='heavy'),heavyCombat=DW.training.create('training');one.damage(heavy.position,1000,heavyCombat);const destroyed=styled.map(b=>b.vertices);one.setSurfaceDetail(false);one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===destroyed[i]),'surface toggles preserve scorched turret buffers');one.reset();assert(styled.every((b,i)=>b.vertices===buffers[i]),'reset restores textured turret buffers');
+ const nozzleBatches=styled.slice(-25);assert(nozzleBatches.every(b=>b.texture===nozzleBatches[0].texture),'all five engines share one atlas');
  const combat=DW.training.create('training'),part=one.components().find(p=>p.kind==='engine');one.damage(part.position,1000,combat);one.setSurfaceDetail(false);one.setSurfaceDetail(true);assert.equal(one.components().find(p=>p.id===part.id).hp,0,'surface toggles preserve damage');
  one.reset();assert(one.geometry().every((b,i)=>b.vertices===buffers[i]),'reset restores original articulated buffers and keeps textured hull');
  const patrol=DW.aegisFlight.createEllisPatrol();assert(patrol.geometry().every(b=>b.lensRadius>650&&b.lensRadius<1000),'stride-aware bounds preserve optical image radius');
- console.log('PASS production capital surface: default load, shared buffers, eleven-batch idle rig, exact geometry, stable toggle/reset/damage and optical bounds');
+ console.log('PASS production capital surface: default load, shared buffers, twelve-batch idle rig, exact geometry, stable toggle/reset/damage and optical bounds');
 })().catch(e=>{console.error(e);process.exitCode=1;});

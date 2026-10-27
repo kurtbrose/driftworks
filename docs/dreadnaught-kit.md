@@ -456,7 +456,7 @@ are painted depth, without transparency, dynamic lights or added triangles.
 `AegisSurfaceFinish.shader` optionally selects the renderer finish. Windows use
 `-1`, retaining the custom shader with an interior albedo illumination floor
 instead of the exterior PBR material. Surface toggles and reset restore this
-selection. There are eleven logical idle batches; empty source batches and
+selection. The window-only revision had eleven logical idle batches; empty source batches and
 visibility affect submitted draw counts. The pre-window review baseline is
 frozen in `output/aegis-windows-before-rig.js`.
 
@@ -469,3 +469,21 @@ atlas bake. Its finish color is `[.065,.075,.08]`; geometry, UV layouts, texture
 dimensions, material ownership and draw batching are unchanged.
 The original atlas is retained in `output/aegis-service-before-atlas.png` for
 the review comparison.
+
+## Approved open engine bells
+
+The nozzle bake replaces capped exhaust discs with a 32-sided bell: outer
+wall, defined lip, tapered inner liner and throat recessed 13.8 m. Across five
+engines this adds 480 triangles (3180 to 3660 engine triangles). The original
+engine pivots and five material batches per engine remain independent for hits,
+destruction and reset. Engine batches may carry `AegisSurfaceFinish`; the loader
+deduplicates local atlas overrides across interiors and engines. The turret-only
+finish switch excludes engines. Wrecks replace the nozzle finish and reset
+restores shared intact buffers. Exact component collision follows the new bell.
+
+`tools/lib/aegis-nozzle.cjs` authors geometry and the shared 1024 x 512 atlas.
+Run `tools/bake-aegis-flight.cjs`, then `tools/bake-aegis-engine-atlas.cjs` with
+the offline canvas dependency. The idle ship combines finished engine geometry
+into one static atlas batch, giving twelve logical batches rather than eleven.
+The engine texture and GPU geometry are shared across instances; no new dynamic
+lights or transparent glow passes are introduced.

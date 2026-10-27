@@ -40,7 +40,7 @@ export type AegisFlightAsset = {
     interiors?:{kind:string;color:[number,number,number];vertices:number[];finish:AegisSurfaceFinish}[];
     modules?:{id:string;type:string;position:Vector}[];
     hangars?:{id:string;position:Vector;halfWidth:number;halfHeight:number}[];
-    engines?:{id:string;position:Vector;batches:{color:[number,number,number];vertices:number[]}[]}[];
+    engines?:{id:string;position:Vector;batches:{color:[number,number,number];vertices:number[];finish?:AegisSurfaceFinish}[]}[];
     turrets:{id:string;kind:'heavy'|'point-defense';position:Vector;side:number;batches:{color:[number,number,number];vertices:number[]}[]}[];
 };
 export type AegisFlightRig = {
