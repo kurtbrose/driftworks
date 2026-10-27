@@ -181,6 +181,7 @@
         var scene = DW.scene3d.create(host, getWorld, setWorld, { study: true, viewer: false });
         /** @type {import('./types').Images} */
         var shipImages = new Map();
+        var calibration = /** @type {Batch[]} */ ([]);
         var burns = /** @type {WeakMap<Vector, Batch[]>} */ (new WeakMap());
         var crewKey = '', crewPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses, crews = /** @type {Batch[]} */ ([]);
         var ready=DW.shipPackModels.loadTextures().then(function (images) {
@@ -305,7 +306,7 @@
             }
             if(capital)actorBatches=actorBatches.concat(capital.geometry());
             if(combat.mode==='evacuation'&&DW.evacuationScenery)actorBatches=actorBatches.concat(DW.evacuationScenery.geometry(combat));
-            scene.setStudyActors(actorBatches.concat(crews.map(function (batch) {
+            scene.setStudyActors(actorBatches.concat(calibration).concat(crews.map(function (batch) {
                 var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });
                 return Object.assign({}, batch, {origin: /** @type {[number,number,number]} */ ([asteroid ? asteroid.position.x : 0, asteroid ? asteroid.position.y : 0, 0]), rotation: asteroid ? asteroid.rotation : 0});
             })));
@@ -352,7 +353,7 @@
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };
         }
-        return {shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
+        return {setCalibration:/** @param {Batch[]} batches */function(batches){calibration=batches;},shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
     }
     DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin, ohioSignGeometry:ohioSignGeometry };
 }());

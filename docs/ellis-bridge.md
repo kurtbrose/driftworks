@@ -969,3 +969,149 @@ reproduction, CPU/GPU stage measurements, finite-segment optimization and remain
 limits. The benchmark now preserves instrumentation across asset refresh, records
 full-frame CPU tails and bolt counts, and reports the twelve worst CPU frames.
 The report also explains how to use the existing live CPU-stage overlay.
+
+
+### Repeatable approximation stress cases
+
+The observation lab Pass selector includes three single-fighter, 24-second loops:
+
+- `pass=axis-sweep`: a remote-chart fighter sweeps +/-30 m across the front/detail
+  camera optical axis, crossing alignment at 0 and 12 seconds.
+- `pass=throat-orbit`: a local fighter circles at chart radius 330 m, 30 m
+  outside the throat, heading tangent to the path.
+- `pass=tumble`: a remote fighter holds its center while changing heading and
+  roll, isolating orientation-dependent silhouette failures.
+
+Use Throat detail (`camera=detail`) for a resolved fighter image: the camera is
+15 m outside the throat and the remote source is near the opposite mouth.
+Stress cases default to this camera when the URL omits `camera`.
+Combine these with the fixed cameras. Pause, enter an exact time, step frames,
+and slow playback to compare failures. Geometry distinguishes the rigid hull
+baseline from the original single affine patch
+(`bridgeGeometry=objects&bridgeShips=warped`). Switching geometry preserves time,
+camera, pass, ship, speed, lattice and playback state. Full ray search remains
+an existing renderer comparison, not ground truth for all image branches;
+its readable-ship policy still uses rigid hulls.
+
+Example: `experiments/ellis-study.html?pass=axis-sweep&camera=front&time=3&paused=1&bridgeGeometry=objects&bridgeShips=warped`.
+
+These fixtures establish a baseline for subsequent connected-patch experiments.
+They do not add subdivision or additional optical images, or establish visual
+continuity. The displayed affine error measures one probe, not a hull-wide bound.
+The axis sweep crosses the transmitted radial image; it is not an axial-caustic
+branch discovery test.
+
+
+### Combat-shaped pursuit fixtures and numerical baseline
+
+The observation lab includes `pass=dogfight` and `pass=dogfight-crossing`.
+The corresponding Dogfight chase / Crossing chase cameras follow the leader by
+0.7 seconds and aim at its primary optical bearing. Selecting either pass also
+selects its chase camera; fixed cameras remain available for external views.
+Both loops take two laps around the throat with vertical jinks. The crossing
+variant oscillates in signed proper radius, changing charts at 6 and 18 seconds;
+the camera crosses at 6.7 and 18.7 seconds. Chart radii stay between 300 and 350 m,
+inside the 600 m lensing volume. These are scripted rendering fixtures, not
+flight-dynamics, AI, weapons or aiming acceptance tests. Keeping the optical
+center in view deliberately isolates hull distortion from camera tracking loss.
+
+Open `experiments/ellis-study.html?pass=dogfight-crossing&camera=dogfight-crossing&bridgeGeometry=objects&bridgeShips=warped`.
+
+Run `node tools/measure-ellis-pursuit.cjs --out output/ellis-pursuit-metrics.json`
+for an offline single-affine-patch baseline. It samples vertices and centroids
+from 63 evenly spaced triangles of the real Bob fighter (252 samples per pose),
+at 0.25-second intervals over each 24-second loop. It reproduces the current
+4-metre finite-difference affine projection and compares it with direct primary
+solves at those posed mesh samples. Pixel units use a 1920x1080 viewport and the
+normal 45-degree vertical field of view. Samples are unweighted; this is not a
+hull-wide error bound. Temporal measurements are residual changes per 0.25 s,
+not per rendered frame. CPU time and solve counts cover the measurement itself,
+including reference solves, not runtime rendering performance.
+
+Initial baseline (26 October 2026):
+
+| Path | Median error | 95th percentile | Maximum | Invalid samples |
+| --- | --- | --- | --- | --- |
+| Turning pursuit | 0.34 px | 3.08 px | 8.59 px | 0 / 24,192 |
+| Crossing pursuit | 1.33 px | 187.21 px | 1,340.52 px | 0 / 24,192 |
+
+The crossing case has 142 reference samples outside the viewport; the error
+statistics include them. Worst sampled error occurs at 17.5 s. Browser inspection
+at 6.35 s also shows a strongly stretched strip in the affine renderer. This is
+a recorded approximation failure, not an approved image. The headless regression
+checks all 720 center poses at 30 Hz: primary solutions exist throughout, optical
+range is 114-130 m, and there are 42 split-chart frames in the crossing case.
+Neither check certifies raster coverage, secondary branches, or optical-solver
+accuracy; full multi-patch convergence and image-space acceptance remain open.
+
+Raw baseline: [JSON](benchmarks/ellis-pursuit-2026-10-26.json).
+
+
+For an automated before/after check, run:
+
+```
+node tools/measure-ellis-pursuit.cjs --baseline docs/benchmarks/ellis-pursuit-2026-10-26.json --out output/ellis-pursuit-comparison.json
+```
+
+The command exits nonzero if missing/offscreen sample counts increase, or if
+median, p95, maximum, or temporal residual error grows by more than the larger
+of 0.05 px and 1% of baseline. It rejects incompatible model/viewport/sample
+settings and excludes measurement CPU time from comparison. This prevents
+regressions against a known failing baseline; passing does not approve that
+baseline or establish a quality budget. Repeat runs are deterministic for the
+error metrics. The full offline measurement is opt-in; the fast center-path
+regressions run in the normal suite.
+
+
+### Yo yo test: local physical-frame limit
+
+Select **Yo yo / near throat** (`pass=yoyo`) or **Yo yo / on throat**
+(`pass=yoyo-throat`) in the observation lab. The fixed observer has signed
+proper radial position 120 m or exactly 0 m. A 3 m calibration square moves
+radially inward and back over a 24-second loop, at proper separations 10-240 m;
+the near-throat variant places the target in both charts during the loop.
+An amber filled square uses the selected renderer. Amber corner dots are direct
+point-solver projections; the dashed cyan square is ordinary perspective.
+The readout's flat-reference error compares direct corner solves with cyan,
+not the affine renderer with cyan. The separate existing single-probe error
+still measures the renderer's affine approximation at one probe only.
+
+Source-plane tangent axes are parallel transported along the radial center
+trajectory. Corner placement integrates the intrinsic Ellis equations from that
+source-centered physical frame using independent RK4 steps <=0.1 m, with at
+least eight steps. It does not use the primary inverse or projectile integrator
+to construct targets. All fixture points stay in the compact metric's unmodified
+Ellis core. Thus chart-space stretching is not built into the reference square.
+The small plane is represented by two triangles; its rasterized interior is not
+an independently ray-traced reference.
+
+Open `experiments/ellis-study.html?pass=yoyo&bridgeGeometry=objects&bridgeShips=warped&bridgeGrid=0`.
+
+Run `node tools/measure-ellis-yoyo.cjs --out output/ellis-yoyo-metrics.json`.
+The offline check uses observer proper radii 120, 10, 1, 0.1 and 0 m, and target distances
+120, 30, 10, 3, 1, 0.3 and 0.1 m. It shrinks the square proportionally to distance
+(half-width = 0.05 * distance) to retain a fixed angular footprint while taking
+the local limit. It checks corner bearings and the exact radial center distance,
+using a 1920x1080 viewport and 45-degree vertical FOV. The local acceptance check
+at separations <=1 m is: no missing solutions, maximum corner error <0.05 px,
+and center-distance error <0.005 m. This is a finite-scale engineering check,
+not a proof of convergence or a requirement that distant targets look flat.
+
+Add `--assert-local-flatness` to exit nonzero when any observer case fails.
+The ordinary suite covers fixture geometry and near-throat convergence; it logs
+the exact-neck diagnostic separately without declaring that optics accepted.
+
+Initial result (26 October 2026): the 120 m and 10 m observers pass. At 0.1 m
+separation their corner errors are about 0.000005 and 0.000011 px respectively.
+The observer on or very close to the throat fails: error remains 7.66-7.85 px over
+0.1-1 m separations. No corners are missing. The 0.1 m observer also fails the local threshold; the 1 m observer fails when
+the target is exactly on the neck at 1 m separation, while its closer samples
+converge. This is an unresolved direct-solver
+local-limit issue, distinct from the single-affine-patch failure. No optical
+solver repair is included in this fixture change.
+
+The presentation API `setCalibration(batches)` submits optional transient study
+batches alongside ships, without manufacturing a capital rig or changing world
+state. Call it with an empty array to clear the calibration target.
+
+Raw yo yo diagnostic: [JSON](benchmarks/ellis-yoyo-2026-10-26.json).
