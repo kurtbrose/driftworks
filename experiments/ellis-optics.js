@@ -1,7 +1,7 @@
 (function(){
     'use strict';
     var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks);
-    var size=512,extent=12,angleRange=32;
+    var size=512,extent=12,impactExtent=16,angleRange=32;
     /** @type {Uint8Array|null} */var cached=null;
     // Ellis radial integral, reduced by spherical symmetry. The substitutions
     // l=sqrt(1-b*b)*sinh(u) (transmitted) and l=sqrt(b*b-1)*cosh(u)
@@ -34,7 +34,7 @@
         if(cached)return cached;
         var data=new Uint8Array(size*size*4),h=extent/(size-1);
         for(var x=0;x<size;x++){
-            var delta=Math.exp(-extent*x/(size-1)),near=1-delta,far=1+delta,a=0,b=0;
+            var delta=Math.exp(-impactExtent*x/(size-1)),near=1-delta,far=1+delta,a=0,b=0;
             for(var y=0;y<size;y++){
                 if(y){a+=integrand(near,(y-.5)*h,true)*h;b+=integrand(far,(y-.5)*h,false)*h;}
                 var ai=Math.round(a/angleRange*65535),bi=Math.round(b/angleRange*65535),i=(y*size+x)*4;
@@ -46,7 +46,7 @@
 
     /** Same packed/bilinear radial integral used by the GPU. @param {number} b @param {number} u */
     function packedLookup(b,u){
-        var data=table(),x=Math.max(0,Math.min(511,-Math.log(Math.max(Math.exp(-12),Math.abs(1-b)))/12*511)),y=Math.max(0,Math.min(511,u/12*511));
+        var data=table(),x=Math.max(0,Math.min(511,-Math.log(Math.max(Math.exp(-impactExtent),Math.abs(1-b)))/impactExtent*511)),y=Math.max(0,Math.min(511,u/12*511));
         var ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,channel=b<1?0:2;
         // Four packed texels share their clamped row/column offsets.
         var first=(iy*512+ix)*4+channel,dx=ix<511?4:0,dy=iy<511?2048:0;
@@ -197,7 +197,7 @@ float ellisLocalWeight(vec3 eye,vec3 point,float side){
 float ellisAsinh(float x){return log(x+sqrt(x*x+1.));}
 float ellisAcosh(float x){return log(x+sqrt(max(0.,x*x-1.)));}
 float ellisPackedIntegral(float b,float u){
-    float x=clamp(-log(max(.000006144,abs(1.-b)))/12.,0.,1.);
+    float x=clamp(-log(max(.000000112535175,abs(1.-b)))/16.,0.,1.);
     vec2 uv=(vec2(x,clamp(u/12.,0.,1.))*511.+.5)/512.;
     vec4 encoded=texture2D(ellisTable,uv);
     return (b<1.?dot(encoded.rg,vec2(65280.,255.)):dot(encoded.ba,vec2(65280.,255.)))*32./65535.;

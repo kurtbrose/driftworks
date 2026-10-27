@@ -5,7 +5,7 @@ vm.runInContext(fs.readFileSync('experiments/ellis-optics.js','utf8'),context);
 const optics=context.window.Driftworks.ellisOptics,table=optics.table(),N=optics.size;
 assert.equal(table.length,N*N*4);assert.equal(optics.table(),table,'one shared dimensionless table');
 function sample(b,u){
- const x=Math.min(N-1,-Math.log(Math.abs(1-b))/12*(N-1)),y=u/12*(N-1);
+ const x=Math.min(N-1,-Math.log(Math.abs(1-b))/16*(N-1)),y=u/12*(N-1);
  const ix=Math.floor(x),iy=Math.floor(y),dx=x-ix,dy=y-iy,channel=b<1?0:2;
  function read(a,c){const i=(Math.min(N-1,c)*N+Math.min(N-1,a))*4+channel;return (table[i]*256+table[i+1])*32/65535;}
  return (read(ix,iy)*(1-dx)+read(ix+1,iy)*dx)*(1-dy)+(read(ix,iy+1)*(1-dx)+read(ix+1,iy+1)*dx)*dy;

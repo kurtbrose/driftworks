@@ -1260,3 +1260,12 @@ unmasked local presentation. Production submission tests verify the material
 mask and chart-dependent mode, including every material of the capital patrol.
 This clips invalid hull spill; it does not repair the underlying affine shape
 or establish pixel-perfect lensing inside the aperture.
+
+Critical lookup correction: the impact-coordinate extent is now 16 while the
+independent hyperbolic-coordinate extent stays 12. CPU and GLSL mappings both
+cover |1-b| down to exp(-16), instead of clamping at exp(-12). Texture dimensions
+and storage remain unchanged. The independent critical-shell error drops from
+0.153941 rad to about 0.000064 rad; both branches through exp(-15) now have
+mandatory 0.001 rad assertions. The sampled lattice diagnostic also passes its
+0.001 rad gate. This does not establish accuracy arbitrarily close to b=1,
+where finite table extent and float precision still limit resolution.

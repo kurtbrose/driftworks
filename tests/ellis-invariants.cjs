@@ -90,6 +90,13 @@ const a=outwardShell(critical.startRadius,critical.impact,critical.shellRadius),
 assert(Math.abs(a.phase-b.phase)<1e-8,'critical oracle converges under halved step size');
 const phase=optics.lookup(critical.impact,u(critical.impact,2))-optics.lookup(critical.impact,u(critical.impact,critical.startRadius));
 const criticalPhaseError=Math.abs(phase-b.phase);
+assert(criticalPhaseError<.001,'near-critical packed shell phase agrees with independent ODE within 0.001 rad');
+for(const exponent of [12,13,15])for(const sign of [-1,1]){
+ const impact=1+sign*Math.exp(-exponent),R=1.0015,ref=outwardShell(R,impact,2);
+ const measured=optics.lookup(impact,u(impact,2))-optics.lookup(impact,u(impact,R));
+ assert(Math.abs(measured-ref.phase)<.001,'both critical branches remain accurate through exp(-15)');
+}
+
 console.log(`PASS Ellis independent shell invariants: ${shellTests} paths; worst intersection ${maxShellDistance.toExponential(2)} m, resolved lookup phase ${maxShellPhase.toExponential(2)} rad`);
 console.log('Ellis critical lookup diagnostic: '+criticalPhaseError.toFixed(6)+' rad; pass='+(criticalPhaseError<.001)+' (not accepted optics)');
 // Analytic limits do not use the inverse solver as their own oracle.

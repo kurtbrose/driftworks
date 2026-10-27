@@ -23,7 +23,7 @@ for(const exponent of [10,12,13,15])for(const sign of [-1,1]){
   const b=1+sign*Math.exp(-exponent),start=uAt(b,1.0015),end=uAt(b,2);
   const phase=optics.lookup(b,end)-optics.lookup(b,start);
   const reference=optics.integral(b,end,4096)-optics.integral(b,start,4096);
-  report.criticalProbes.push({impact:b,insideTableDomain:exponent<=12,phase,referencePhase:reference,phaseErrorRadians:Math.abs(phase-reference),fullyPhaseSuppressed:Math.abs(phase)>=Math.PI});
+  report.criticalProbes.push({impact:b,insideTableDomain:exponent<=16,phase,referencePhase:reference,phaseErrorRadians:Math.abs(phase-reference),fullyPhaseSuppressed:Math.abs(phase)>=Math.PI});
 }
 const baselineCamera=process.argv.indexOf('--baseline-camera');
 if(baselineCamera>=0){
