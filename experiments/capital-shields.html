@@ -1,17 +1,18 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Capital shield patches / Driftworks</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07101a;color:#d6eaff;font:14px/1.5 system-ui}main{display:grid;grid-template-columns:300px 1fr;height:100vh}aside{padding:20px;overflow:auto;background:#102130}h1{font-size:22px}label{display:block;margin:12px 0}button,select,input{max-width:100%;color:inherit;background:#19354c;border:1px solid #52758b;padding:6px;border-radius:4px}button{cursor:pointer}a{color:#9ae8e3}small{color:#a4bed0}pre{white-space:pre-wrap;font:12px/1.6 monospace}#viewer{position:relative;min-width:0;height:100%;overflow:hidden}#viewer canvas{position:relative;display:block;width:100%;height:100%}#viewer canvas.flight-skybox,#viewer canvas.scene3d-overlay{position:absolute;inset:0;pointer-events:none}.scene3d-controls,.night-sky-background,.model-viewer-controls,.model-viewer-navigation{display:none!important}@media(max-width:700px){main{grid-template-columns:210px 1fr}aside{padding:10px}}
-</style></head><body><main><aside><a href="fighter-shields.html">← Fighter shields</a><h1>Capital shield patches</h1><p>Short disturbances on a baked envelope around the actual Aegis. Drag to orbit; wheel to approach. Click near the ship to hit the nearest surface anchor.</p>
+#pixel-review{position:fixed;inset:12px;z-index:100;background:#102130;padding:18px;overflow:auto;border:1px solid #52758b}#pixel-review[hidden]{display:none}#pixel-images{display:flex;gap:10px}#pixel-images[data-view="a"] figure:not(:nth-child(1)),#pixel-images[data-view="b"] figure:not(:nth-child(2)),#pixel-images[data-view="diff"] figure:not(:nth-child(3)){display:none}#pixel-images figure{margin:0;flex:1;min-width:0}#pixel-images canvas{width:100%;height:auto}figcaption{font-size:12px;margin-bottom:8px}</style></head><body><main><aside><a href="fighter-shields.html">← Fighter shields</a><h1>Capital shield patches</h1><p>Short disturbances on a baked envelope around the actual Aegis. Drag to orbit; wheel to approach. Click near the ship to hit the nearest surface anchor.</p>
 <label>Effect <select id="mode"><option value="off">Off</option><option value="glow">Local glow only</option><option value="refraction" selected>Local glow + whole-image refraction</option><option value="envelope">Inspect envelope wire</option></select></label>
 <label>Surface submitted per hit <select id="strategy"><option value="patches">Local patch</option><option value="whole">Whole envelope / reference</option></select></label>
+<label>Impact submission <select id="submission"><option value="batched">One combined draw</option><option value="individual" selected>One draw per hit / reference</option></select></label>
 <label>Hits / second <select id="rate"><option>8</option><option selected>32</option><option>128</option><option>300</option></select></label>
 <label>Maximum distortion <select id="bend"><option value="0">0 pixels</option><option value="2" selected>2 backing pixels</option><option value="4">4 backing pixels</option></select></label>
 <label><input id="barrage" type="checkbox" checked> Scripted incoming fire</label><label><input id="pause" type="checkbox"> Freeze effects</label>
 <button id="hit">Gun hit / 36 m / 0.36 s</button> <button id="heavy">Heavy hit / 80 m / 0.65 s</button><p><button id="side">Broadside</button> <button id="bow">Bow</button> <button id="under">Underside</button></p>
 <label>Frozen benchmark impacts <select id="stress"><option>4</option><option selected>32</option><option>64</option><option>128</option></select></label>
-<label>Comparison <select id="comparison"><option value="off">Off / selected effect</option><option value="patches">Whole surface / local patches</option></select></label><button id="bench" disabled>Benchmark A/B/B/A</button>
-<pre id="status" role="status">Loading local capital asset…</pre><pre id="results"></pre><small>Rendering study with scripted impacts, not combat damage. Gun waves expire after 0.36 s and 36 m; there is no idle bubble. Half-resolution additive disturbance field combines overlapping waves, then samples the full-resolution scene. Envelope is a conservative fitted surface; wire view exposes its limitations. Refraction requires floating-point color attachments; unsupported devices use glow.</small>
-</aside><div id="viewer" class="scene" aria-label="Aegis capital with local shield impacts"></div></main>
+<label>Comparison <select id="comparison"><option value="batch" selected>Individual / batched impacts</option><option value="off">Off / selected effect</option><option value="patches">Whole surface / local patches</option></select></label><button id="bench" disabled>Benchmark A/B/B/A</button>
+<p><button id="pixel-compare">Compare refraction pixels</button></p><pre id="status" role="status">Loading local capital asset…</pre><pre id="results"></pre><small>Rendering study with scripted impacts, not combat damage. Gun waves expire after 0.36 s and 36 m; there is no idle bubble. Half-resolution additive disturbance field combines overlapping waves, then samples the full-resolution scene. Envelope is a conservative fitted surface; wire view exposes its limitations. Refraction requires floating-point color attachments; unsupported devices use glow.</small>
+</aside><div id="viewer" class="scene" aria-label="Aegis capital with local shield impacts"></div></main><section id="pixel-review" hidden aria-label="Frozen refraction pixel comparison"><button id="pixel-close">Close pixel comparison</button><h2>Refraction only: frozen A/B</h2><pre id="pixel-results"></pre><p>Inspect the frozen captures: <button id="pixel-all">Side by side</button> <button id="pixel-a">A / no displacement</button> <button id="pixel-b">B / refraction</button> <button id="pixel-diff">Difference ×16</button></p><div id="pixel-images"></div></section>
 <script src="../src/asset-versions.js?v=9b793fab4822"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script><!-- script-manifest:capitalShields -->
 <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
@@ -45,18 +46,18 @@
 <script src="retail-profiles.js?v=99526ebcd858"></script>
 <script src="flight-model.js?v=8a22d33bc921"></script>
 <script src="radar.js?v=3a9471d6278e"></script>
-<script src="flight-missions.js?v=610ac02f4456"></script>
+<script src="flight-missions.js?v=add9572185be"></script>
 <script src="mission-ohio.js?v=55d50526f5e4"></script>
 <script src="../src/sky-effects.js?v=136fdb626647"></script>
 <script src="ellis-feedback.js?v=8e207a58bf86"></script>
 <script src="ellis-optics.js?v=9d2911041c42"></script>
 <script src="ellis-renderer.js?v=e7f9de8f3dad"></script>
-<script src="skybox.js?v=f7facfdbad0f"></script>
+<script src="skybox.js?v=3b8f8b521319"></script>
 <script src="retail-weapons.js?v=642a0025bb1b"></script>
 <script src="guns.js?v=1923ff8ec3cf"></script>
 <script src="input.js?v=f4504aaa17e7"></script>
 <script src="flight-collision.js?v=fd7602efae81"></script>
-<script src="training.js?v=d4313bc2d996"></script>
+<script src="training.js?v=72b51146120e"></script>
 <script src="performance.js?v=ba17efe880d9"></script>
 <script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
 <script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
@@ -73,8 +74,9 @@
 <script src="flight-radio.js?v=9d8cfcd69def"></script>
 <script src="target-camera.js?v=1860d2a2f5d6"></script>
 <script src="flight-scenery.js?v=efd62ddfb867"></script>
-<script src="flight-shields.js?v=40cd08af2b1a"></script>
-<script src="flight-presentation.js?v=228afd66f0c0"></script>
+<script src="flight-shields.js?v=f1a2dd3ac352"></script>
+<script src="shield-pixel-diff.js?v=9a863e0ae736"></script>
+<script src="flight-presentation.js?v=621e88762443"></script>
 <script src="flight-diagnostics.js?v=7b48f5faca80"></script>
 <script src="flight-controls.js?v=1fc5202ba6f7"></script>
 <script src="flight-session.js?v=62ffbbefdaf3"></script>
@@ -84,11 +86,11 @@
 <script type="module" src="../assets/characters/quaternius-astronaut/poses.js?v=768978930c66"></script>
 <script src="flight-ai.js?v=6aafa3682577"></script>
 <script src="flight-duel.js?v=443c69017af7"></script>
-<script src="flight-watch.js?v=49b4caa0eff3"></script>
+<script src="flight-watch.js?v=5f944d95ceec"></script>
 <script type="module" src="gas-giant-flight.js?v=d4c1ae871933"></script>
-<script src="aegis-flight.js?v=45c6d28d46ab"></script>
+<script src="aegis-flight.js?v=f8b0ca7bf017"></script>
 <script src="../assets/ships/aegis-kit/shield-envelope.js?v=f1f477be04de"></script>
-<script src="capital-shield-pass.js?v=25cb58d71748"></script>
-<script src="capital-shields.js?v=6f84335dd309"></script>
+<script src="capital-shield-pass.js?v=06fcb7aae6f1"></script>
+<script src="capital-shields.js?v=b49c26fa756c"></script>
 <!-- /script-manifest -->
 </body></html>

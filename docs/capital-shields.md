@@ -126,3 +126,96 @@ heavy hit and source-hull visibility. Native capital
 movement, articulated clearances, live combat impacts, multiple capitals,
 cross-shield occlusion and target hardware beyond this browser remain unverified.
 The fitted surface is an authoring candidate, not a production shield contract.
+
+## Combined impact draw experiment (2026-10-26)
+
+The Impact submission control selects either cached per-hit geometry (default)
+or one combined draw. Comparison / Individual / batched impacts runs matched
+ABBA blocks with the same local triangles, shader kernel and source scene.
+The combined path expands position, normal, impact position, impact normal and
+age/lifetime/radius into a reusable 15-float interleaved vertex buffer. Capacity
+grows geometrically and the draw range shrinks with active impacts. It fills and
+uploads the buffer each frame, including in the frozen benchmark; that work is
+included in the CPU and synchronized measurements. No per-frame geometry object
+is created after capacity warmup. Empty batches submit no shield geometry.
+
+Measured in the foreground study, Aegis source SHA `19ff1c719d6f`, 903 x 1409
+backing pixels, DPR 1.5, scale 1, local patches, broadside yaw 0 / tilt 1.030,
+zoom 15.153, no AI, 2-pixel refraction. This is a closer view than the earlier
+measurements above; compare within each row, not against those earlier runs.
+Each case used 15 warmup + 60 recorded frames per block, ABBA, 120 samples per
+path, loaded sky and frozen camera/impacts/source streaks. No concurrent tests
+or asset generation. Browser cadence median/p95 was 13.30/13.40 ms throughout.
+CPU includes buffer preparation/uploads/submission; synchronized time includes
+the one-pixel readback, driver overhead and GPU wait, not GPU-only execution.
+
+| Mode / impacts | Individual CPU median/p95 ms | Batched CPU median/p95 ms | Individual synchronized median/p95 ms | Batched synchronized median/p95 ms | Total draws individual → batched | Triangles, identical per comparison |
+| --- | --- | --- | --- | --- | --- | --- |
+| Refraction / 4 | 0.80 / 1.00 | 0.80 / 1.10 | 5.10 / 7.50 | 4.80 / 5.80 | 16 → 13 | 44,603 |
+| Refraction / 32 | 1.00 / 1.40 | 1.10 / 1.50 | 5.30 / 6.50 | 5.20 / 6.90 | 44 → 13 | 47,118 |
+| Refraction / 128 | 2.00 / 2.80 | 2.00 / 2.70 | 6.20 / 7.70 | 5.60 / 7.10 | 140 → 13 | 55,372 |
+| Glow / 4 | 0.60 / 0.80 | 1.00 / 1.10 | 5.30 / 6.80 | 5.80 / 6.60 | 15 → 12 | 44,601 |
+| Glow / 32 | 0.90 / 1.00 | 1.20 / 1.40 | 4.40 / 5.20 | 5.20 / 6.20 | 43 → 12 | 47,114 |
+| Glow / 128 | 1.60 / 2.20 | 1.70 / 2.40 | 5.00 / 6.40 | 5.90 / 7.60 | 139 → 12 | 55,368 |
+
+This combined-buffer implementation is not a general performance win. At 128
+refractive impacts, synchronized median improved by 0.6 ms; at 32 it barely
+changed. Glow became slower in these runs. CPU did not improve. The default
+therefore remains cached individual draws; batching remains available for
+inspection. The evidence does not establish a purely draw-bound or bandwidth-
+bound workload. A possible next experiment is immutable patch geometry with
+small per-impact GPU parameters (instancing/atlas), avoiding expanded per-frame
+uploads; it has not been implemented or measured here.
+
+Visual validation of the combined path covered frozen broadside reference/batch
+switching with identical impacts, overlap under sustained fire, underside and
+bow views. Labeled UI captures are `output/capital-shields-individual.png` and
+`output/capital-shields-batched.png`. No visible change to wave shapes or hull
+occlusion was observed in those views. Tests additionally compare every submitted
+position, normal and impact attribute with the reference patch data and cover
+aging, heavy-hit parameters, buffer reuse and empty-batch suppression. These
+checks do not establish moving-capital or full-battle performance.
+
+## Refraction-only pixel comparison
+
+Click **Compare refraction pixels**. This freezes the visible-anchor fixture
+using the selected frozen impact count (ages 0.04–0.28 seconds), omits live
+incoming streaks and synchronously captures the same camera/source twice.
+A uses the refraction pipeline with zero displacement, B uses the selected
+pixel cap. Glow, source capture, field, resolution and shader path are identical.
+Each capture composites the sky and scene canvas into opaque 8-bit RGB. It does
+not compare direct glow against refraction, which would conflate pipeline changes.
+
+The review offers A, B, side-by-side and amplified RGB difference views without
+rerendering. Live drawing/clock advancement pauses while the review is open.
+Metrics count pixels with any RGB change, max-channel differences of at least
+3/255 and 10/255, maximum channel difference and mean absolute RGB difference
+over the whole viewport. These are byte thresholds, not perceptual guarantees.
+The heatmap maps maximum channel difference to red ×16 and green ×4. Counts
+exclude alpha because the compared captures are already composed over the sky.
+
+A/A, B/B and return-to-A repeat controls must match exactly; otherwise the
+result is explicitly marked INVALID. Unsupported float refraction reports an
+error rather than claiming a zero-change success. A zero-pixel negative control
+was verified in the browser: zero differences and zero repeat-control noise.
+
+Observed at 903 × 1409, 32 deterministic gun waves, individual local patches,
+zoom 6.161, yaw 0, tilt 1.030, 2-pixel cap: **2,368 changed pixels (0.186% of the
+viewport), 1,226 at ≥3/255 and 375 at ≥10/255**. Maximum channel change 60/255;
+whole-viewport mean absolute RGB difference 0.0082/255. Repeat-control noise was
+zero. This establishes a small, localized image change, not that viewers can
+reliably perceive it in motion. Most of this viewport is dark background; the
+percentage is explicitly relative to the entire viewport, not shield area.
+The same count was observed after removing the live source streaks. Close views
+and different impact counts can produce different results.
+
+The pure `shield-pixel-diff.js` helper has synthetic regressions for per-pixel
+counting, thresholds, RGB-only comparison, repeat instability, heatmap values
+and mismatched dimensions. Actual WebGL/canvas capture is verified separately
+in the browser. Preview: `output/capital-shields-pixel-comparison.png`.
+
+A closer broadside at zoom 9.662 with the same 32-wave fixture and 2-pixel cap
+changed 4,292 pixels (0.337%), with 2,162 ≥3/255 and 812 ≥10/255; max 92/255,
+mean 0.0176/255 and zero repeat-control noise. The A/B/single-difference view
+buttons were exercised in this close view. Capture:
+`output/capital-shields-pixel-comparison-close.png`.

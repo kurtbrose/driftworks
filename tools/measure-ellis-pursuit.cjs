@@ -15,7 +15,8 @@ for(let tri=0;tri<mesh.length/18;tri+=stride){
   points.push(...vertices,vertices[0].map((_,i)=>(vertices[0][i]+vertices[1][i]+vertices[2][i])/3));
 }
 const dot=(a,b)=>a.reduce((sum,x,i)=>sum+x*b[i],0),focal=1/Math.tan(Math.PI/8),height=1080,width=1920;
-const report={model:model.id,viewport:[width,height],sampleIntervalSeconds:.25,samplesPerFrame:points.length,
+const fixtureSha256=require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,'experiments/ellis-study.js'),'utf8').replace(/\r\n/g,'\n')).digest('hex');
+const report={model:model.id,fixtureSha256,viewport:[width,height],sampleIntervalSeconds:.25,samplesPerFrame:points.length,
   sampling:'Vertices and centroids of up to 64 evenly spaced source triangles; unweighted samples, not a surface-wide bound.',
   reference:'Same primary solver, evaluated at each posed mesh sample; CPU projection only, no rasterization or clipping validation.',cases:[]};
 for(const name of ['dogfight','dogfight-crossing']){
@@ -58,7 +59,7 @@ const baselineArg=process.argv.indexOf('--baseline');
 if(baselineArg>=0){
   if(!process.argv[baselineArg+1])throw new Error('--baseline requires a path');
   const baseline=JSON.parse(fs.readFileSync(process.argv[baselineArg+1],'utf8'));
-  for(const key of ['model','viewport','sampleIntervalSeconds','samplesPerFrame','sampling','reference']){
+  for(const key of ['model','fixtureSha256','viewport','sampleIntervalSeconds','samplesPerFrame','sampling','reference']){
     if(JSON.stringify(report[key])!==JSON.stringify(baseline[key]))throw new Error('Incompatible baseline: '+key);
   }
   const regressions=[];

@@ -196,7 +196,9 @@
         });
         var skybox = DW.flightSkybox.create(host);
         var shieldVisible=0,shieldWaves=0,shieldVisibleWave=false;
-        var shieldEnabled=typeof location!=='undefined'&&new URLSearchParams(location.search).get('shields')==='whole',shieldTracker=shieldEnabled&&DW.flightShields?DW.flightShields.tracker():null;
+        var shieldParams=new URLSearchParams(typeof location==='undefined'?'':location.search),ownShield=shieldParams.get('shields')==='own',shieldEnabled=['whole','own'].includes(shieldParams.get('shields')||''),shieldTracker=shieldEnabled&&DW.flightShields?DW.flightShields.tracker():null;
+        var shieldDegrees=shieldParams.get('shieldUnits')==='angle'?.35:null,shieldGlow=true,shieldTime=0,shieldTest=-Infinity;
+        /** @type {number[]|null} */var shieldPreview=null;
         var bridgeMode=typeof location==='undefined'?'':new URLSearchParams(location.search).get('bridge');
         if(DW.flightMissions.current().sky.wormhole&&scene.setStudyBridge)scene.setStudyBridge(bridgeMode!=='legacy'&&bridgeMode!=='sky');
         var roadsideDefinition=DW.flightMissions.current().scenery.find(function(item){return item.kind==='roadside';});
@@ -347,13 +349,17 @@
             if(skybox.setOccluders)skybox.setOccluders(world.asteroids.map(function(a){return {center:[a.position.x,a.position.y,0],radius:a.radius};}));
             skybox.render(state, comparison.scale, comparison.mode === 'empty',elapsed);
             scene.sync(world);
-            if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight);shieldVisibleWave=discs.some(function(d){return d.box[3]>.08&&d.waves.some(function(age,i){return i%4===3&&age>=.2&&age<.8;});});shieldVisible=discs.length;shieldWaves=discs.reduce(function(sum,d){return sum+d.waves.length/4;},0);scene.setStudyShields(shieldEnabled&&comparison.actors&&comparison.mode!=='empty'?discs:[],shieldEnabled&&skyCanvas instanceof HTMLCanvasElement?skyCanvas:null);}
+            if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,ownShield);shieldTime=view.combat.time;
+                if(shieldTime<shieldTest)shieldTest=-Infinity;
+                var testAge=shieldTime-shieldTest;if(testAge>=0&&testAge<1.2){if(ownShield)discs=[{box:[0,0,1,1],waves:[.22,.1,-.97,testAge],depth:0,own:true}];else if(discs.length)discs[discs.length-1].waves=[.6,0,.8,testAge];}
+                if(ownShield&&shieldPreview!==null)discs=shieldPreview.length?[{box:[0,0,1,1],waves:shieldPreview,depth:0,own:true}]:[];
+                discs.forEach(function(d){if(shieldDegrees!==null)d.degrees=shieldDegrees;d.glow=shieldGlow;});shieldVisibleWave=discs.some(function(d){return d.box[3]>.08&&d.waves.some(function(age,i){return i%4===3&&age>=.2&&age<.8;});});shieldVisible=discs.length;shieldWaves=discs.reduce(function(sum,d){return sum+d.waves.length/4;},0);scene.setStudyShields(shieldEnabled&&comparison.actors&&comparison.mode!=='empty'?discs:[],shieldEnabled&&skyCanvas instanceof HTMLCanvasElement?skyCanvas:null);}
             scene.render(world, 1, 0, elapsed);
         }
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };
         }
-        return {setCalibration:/** @param {Batch[]} batches */function(batches){calibration=batches;},shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
+        return {setShieldPreview:/** @param {number[]|null} waves */function(waves){shieldPreview=waves;},setCalibration:/** @param {Batch[]} batches */function(batches){calibration=batches;},setShieldOptics:/** @param {number|null} degrees @param {boolean} glow */function(degrees,glow){shieldDegrees=degrees;shieldGlow=glow;},injectShieldHit:function(){shieldTest=shieldTime-.12;},shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
     }
     DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin, ohioSignGeometry:ohioSignGeometry };
 }());

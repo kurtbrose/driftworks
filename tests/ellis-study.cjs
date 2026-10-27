@@ -90,6 +90,17 @@ for(const t of [6,18]){
  assert.notEqual(study.sample(t-.001,'dogfight-crossing')[0].pose.region,study.sample(t+.001,'dogfight-crossing')[0].pose.region);
  assert.notEqual(study.camera('dogfight-crossing',t+.699).region,study.camera('dogfight-crossing',t+.701).region);
 }
+for(const time of [6.7,18.7]){
+ const before=study.camera('dogfight-crossing',time-1e-6),after=study.camera('dogfight-crossing',time+1e-6);
+ const mouth=[before.region*12000,-2000,1550],radial=before.eye.map((v,i)=>v*units-mouth[i]);
+ const n=radial.map(v=>v/Math.hypot(...radial));
+ for(const axis of ['right','up','back']){
+  // Chart identification is a half-turn about the throat radial axis.
+  const transported=before[axis].map((v,i)=>2*n[i]*dot(before[axis],n)-v);
+  assert(dot(transported,after[axis])>.999999,'full chase frame must remain continuous across chart crossing: '+axis);
+ }
+}
+console.log('PASS Ellis chase frame: no artificial roll snap at either off-equator throat crossing');
 
 for(const name of ['yoyo','yoyo-throat']){
  const a=study.yoYo(0,name),far=study.yoYo(12,name),end=study.yoYo(24,name);

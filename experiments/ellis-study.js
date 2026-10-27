@@ -58,7 +58,13 @@
             // Follow the optical bearing, including the split-chart chase interval.
             var hit=DW.ellisOptics.primary(eye,target,follower.pose.region||0,leader.pose.region||0);
             var view=pose(eye,hit?hit.direction:follower.pose.back.map(function(v){return -v;}),follower.pose.region||0);
-            if(view.region===1){view.right=view.right.map(function(v){return -v;});view.up=view.up.map(function(v){return -v;});}
+            // Use a tangent up reference so the chart half-turn transports the
+            // entire camera frame. Negating a global-Z frame adds a roll snap
+            // whenever the observer is away from the equatorial plane.
+            var radial=unit(eye.map(function(v,i){return v-[(view.region||0)*12000,-2000,1550][i];}));
+            var up=radial.map(function(v,i){return ((i===2?1:0)-v*radial[2])*(view.region===1?-1:1);});
+            view.right=unit(cross(view.back.map(function(v){return -v;}),up));
+            view.up=cross(view.right,view.back.map(function(v){return -v;}));
             return view;
         }
         if(name==='pursuit'||name==='pursuit-offset'){

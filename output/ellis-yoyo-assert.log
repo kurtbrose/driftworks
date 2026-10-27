@@ -1,0 +1,285 @@
+{
+  "viewport": [
+    1920,
+    1080
+  ],
+  "reference": "Independent intrinsic source-plane RK4 placement, with radial parallel-transported tangent axes. Ordinary perspective is the limiting reference; finite-distance curvature is allowed.",
+  "criteria": "At distances <=1 m: zero missing solutions, corner error <0.05 px, radial center distance error <0.005 m.",
+  "cases": [
+    {
+      "observerProperRadiusMeters": 120,
+      "samples": [
+        {
+          "distance": 120,
+          "halfSize": 6,
+          "missing": 0,
+          "maxErrorPixels": 2.231582173412781,
+          "centerLengthErrorMeters": 0.0017448093714307333
+        },
+        {
+          "distance": 30,
+          "halfSize": 1.5,
+          "missing": 0,
+          "maxErrorPixels": 0.1230747089877661,
+          "centerLengthErrorMeters": 0.000019323424073292017
+        },
+        {
+          "distance": 10,
+          "halfSize": 0.5,
+          "missing": 0,
+          "maxErrorPixels": 0.013114129487742902,
+          "centerLengthErrorMeters": 7.00744223536276e-7
+        },
+        {
+          "distance": 3,
+          "halfSize": 0.15000000000000002,
+          "missing": 0,
+          "maxErrorPixels": 0.0011962202471812572,
+          "centerLengthErrorMeters": 1.8771400878137e-8
+        },
+        {
+          "distance": 1,
+          "halfSize": 0.05,
+          "missing": 0,
+          "maxErrorPixels": 0.0001511940876989144,
+          "centerLengthErrorMeters": 6.932443508134156e-10
+        },
+        {
+          "distance": 0.3,
+          "halfSize": 0.015,
+          "missing": 0,
+          "maxErrorPixels": 0.00001289138662928277,
+          "centerLengthErrorMeters": 1.8038959215260775e-11
+        },
+        {
+          "distance": 0.1,
+          "halfSize": 0.005000000000000001,
+          "missing": 0,
+          "maxErrorPixels": 0.000004842775851007215,
+          "centerLengthErrorMeters": 6.523809270575498e-13
+        }
+      ],
+      "localFlatnessPass": true
+    },
+    {
+      "observerProperRadiusMeters": 10,
+      "samples": [
+        {
+          "distance": 120,
+          "halfSize": 6,
+          "missing": 0,
+          "maxErrorPixels": 2.107292418254262,
+          "centerLengthErrorMeters": 9.668909228821576e-9
+        },
+        {
+          "distance": 30,
+          "halfSize": 1.5,
+          "missing": 0,
+          "maxErrorPixels": 1.8108366021345907,
+          "centerLengthErrorMeters": 2.518873998269555e-12
+        },
+        {
+          "distance": 10,
+          "halfSize": 0.5,
+          "missing": 0,
+          "maxErrorPixels": 0.01332689244259243,
+          "centerLengthErrorMeters": 0.0004250772704139649
+        },
+        {
+          "distance": 3,
+          "halfSize": 0.15000000000000002,
+          "missing": 0,
+          "maxErrorPixels": 0.0015758424462614933,
+          "centerLengthErrorMeters": 2.168895996135234e-8
+        },
+        {
+          "distance": 1,
+          "halfSize": 0.05,
+          "missing": 0,
+          "maxErrorPixels": 0.00014622126159868483,
+          "centerLengthErrorMeters": 8.024488851177125e-10
+        },
+        {
+          "distance": 0.3,
+          "halfSize": 0.015,
+          "missing": 0,
+          "maxErrorPixels": 0.00000876229530475653,
+          "centerLengthErrorMeters": 2.2291501977633743e-11
+        },
+        {
+          "distance": 0.1,
+          "halfSize": 0.005000000000000001,
+          "missing": 0,
+          "maxErrorPixels": 0.000011253029657219426,
+          "centerLengthErrorMeters": 4.56164273021642e-12
+        }
+      ],
+      "localFlatnessPass": true
+    },
+    {
+      "observerProperRadiusMeters": 1,
+      "samples": [
+        {
+          "distance": 120,
+          "halfSize": 6,
+          "missing": 0,
+          "maxErrorPixels": 1.8217973716948226,
+          "centerLengthErrorMeters": 1.4186468888510717e-8
+        },
+        {
+          "distance": 30,
+          "halfSize": 1.5,
+          "missing": 0,
+          "maxErrorPixels": 0.8006393132961009,
+          "centerLengthErrorMeters": 6.510347816401918e-11
+        },
+        {
+          "distance": 10,
+          "halfSize": 0.5,
+          "missing": 0,
+          "maxErrorPixels": 2.2547339703014866,
+          "centerLengthErrorMeters": 5.056577379036753e-11
+        },
+        {
+          "distance": 3,
+          "halfSize": 0.15000000000000002,
+          "missing": 0,
+          "maxErrorPixels": 7.8884115150729315,
+          "centerLengthErrorMeters": 4.979616718969737e-11
+        },
+        {
+          "distance": 1,
+          "halfSize": 0.05,
+          "missing": 0,
+          "maxErrorPixels": 7.8510968555107254,
+          "centerLengthErrorMeters": 0.0004241936257016743
+        },
+        {
+          "distance": 0.3,
+          "halfSize": 0.015,
+          "missing": 0,
+          "maxErrorPixels": 0.00003351213577021416,
+          "centerLengthErrorMeters": 3.6420200189013485e-11
+        },
+        {
+          "distance": 0.1,
+          "halfSize": 0.005000000000000001,
+          "missing": 0,
+          "maxErrorPixels": 0.0000528998847608414,
+          "centerLengthErrorMeters": 1.338606031575651e-10
+        }
+      ],
+      "localFlatnessPass": false
+    },
+    {
+      "observerProperRadiusMeters": 0.1,
+      "samples": [
+        {
+          "distance": 120,
+          "halfSize": 6,
+          "missing": 0,
+          "maxErrorPixels": 1.8689616141360696,
+          "centerLengthErrorMeters": 1.5194473235169426e-8
+        },
+        {
+          "distance": 30,
+          "halfSize": 1.5,
+          "missing": 0,
+          "maxErrorPixels": 0.6717268817142001,
+          "centerLengthErrorMeters": 5.549232184876018e-10
+        },
+        {
+          "distance": 10,
+          "halfSize": 0.5,
+          "missing": 0,
+          "maxErrorPixels": 0.3112144964199021,
+          "centerLengthErrorMeters": 5.415081716364512e-10
+        },
+        {
+          "distance": 3,
+          "halfSize": 0.15000000000000002,
+          "missing": 0,
+          "maxErrorPixels": 7.887475689901201,
+          "centerLengthErrorMeters": 5.404379166407125e-10
+        },
+        {
+          "distance": 1,
+          "halfSize": 0.05,
+          "missing": 0,
+          "maxErrorPixels": 7.89021943915796,
+          "centerLengthErrorMeters": 5.250813117640973e-10
+        },
+        {
+          "distance": 0.3,
+          "halfSize": 0.015,
+          "missing": 0,
+          "maxErrorPixels": 7.890533010585817,
+          "centerLengthErrorMeters": 4.206471282408586e-10
+        },
+        {
+          "distance": 0.1,
+          "halfSize": 0.005000000000000001,
+          "missing": 0,
+          "maxErrorPixels": 7.656456740668667,
+          "centerLengthErrorMeters": 0.00042337847726481304
+        }
+      ],
+      "localFlatnessPass": false
+    },
+    {
+      "observerProperRadiusMeters": 0,
+      "samples": [
+        {
+          "distance": 120,
+          "halfSize": 6,
+          "missing": 0,
+          "maxErrorPixels": 1.8745133912864134,
+          "centerLengthErrorMeters": 0.00042429848409142323
+        },
+        {
+          "distance": 30,
+          "halfSize": 1.5,
+          "missing": 0,
+          "maxErrorPixels": 0.6566207489905407,
+          "centerLengthErrorMeters": 0.00042428635503455325
+        },
+        {
+          "distance": 10,
+          "halfSize": 0.5,
+          "missing": 0,
+          "maxErrorPixels": 0.6003859499838414,
+          "centerLengthErrorMeters": 0.0004242944179555508
+        },
+        {
+          "distance": 3,
+          "halfSize": 0.15000000000000002,
+          "missing": 0,
+          "maxErrorPixels": 7.873919361932618,
+          "centerLengthErrorMeters": 0.0004243212020771381
+        },
+        {
+          "distance": 1,
+          "halfSize": 0.05,
+          "missing": 0,
+          "maxErrorPixels": 7.851185586634113,
+          "centerLengthErrorMeters": 0.0004243976177729092
+        },
+        {
+          "distance": 0.3,
+          "halfSize": 0.015,
+          "missing": 0,
+          "maxErrorPixels": 7.773891433159729,
+          "centerLengthErrorMeters": 0.00042466455371276135
+        },
+        {
+          "distance": 0.1,
+          "halfSize": 0.005000000000000001,
+          "missing": 0,
+          "maxErrorPixels": 7.656462968731646,
+          "centerLengthErrorMeters": 0.00042542065506998017
+        }
+      ],
+      "localFlatnessPass": false
+    }
+  ]
+}

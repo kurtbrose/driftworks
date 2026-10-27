@@ -180,3 +180,140 @@ real hits produce bounded waves without combat mutation, and checks frozen phase
 depleted shields, one source-scene submission, target reuse/resize and display
 capture configuration with a renderer stub. Browser inspection remains necessary
 for GLSL compilation, materials, resampling and motion.
+
+## Angular flight and own-shield experiments (2026-10-26)
+
+The study links now include two opt-in real flight views:
+
+- `flight.html?duel=1&shields=whole&shieldUnits=angle&seed=29&start=crossing&duration=120`
+  uses the existing chase-view duel with external fighter bubbles.
+- `flight.html?duel=1&shields=own&shieldUnits=angle&seed=29&start=crossing&duration=120`
+  selects the cockpit camera and responds only to the player's own shield loss.
+
+The strength menu offers legacy 2 backing pixels and 0, 0.05, 0.15, 0.35, 0.75
+and 1.5 degree caps. Legacy behavior remains the default for existing links.
+Angular mode reconstructs each view ray using the actual camera projection's
+X/Y scale, rotates it along a tangent by the damped wave amplitude times the
+degree cap, then reprojects it to source UVs. Thus backing resolution changes
+do not change the angle. FOV changes affect the corresponding screen pixels
+through the projection. A zero-slope guard avoids normalizing zero vectors.
+These are maximum angular settings; most pixels bend by less. External bubbles
+additionally cap displacement at 25% of their projected minor radius so very
+distant fighters are not displaced by a large fraction of their own size.
+That cap intentionally makes their effective angle distance-dependent.
+
+Own shields use a full-screen quad and perspective view directions instead of
+an external hemisphere proxy. Only active hit waves produce this pass; there
+is no idle capture. The same source-scene capture contains native geometry,
+bolts and other native effects, while the sky is sampled at the displaced UV.
+The GPU HUD, targeting markers, instruments, DOM controls and target-monitor
+canvas are drawn separately and remain sharp. This is a first-person shield
+presentation experiment, not a cockpit mesh, damage rule or physically traced
+shield volume. Directional hits outside the forward view may not cross the
+visible field before damping. Own waves use a narrower cosine-space pulse and
+lower glow gain than the external bubble; no persistent rim is drawn.
+
+**Freeze scripted shield hit** pauses the real duel and injects a presentation-
+only forward hit at age 0.12 seconds. It does not alter combat damage, shields,
+AI or physics. In own mode it temporarily replaces the visual hit list with one
+scripted wave; external mode replaces the nearest bubble’s wave list. Resume to watch its
+motion. **Displacement ZERO / same glow** toggles only refraction in angular
+mode; **Blue glow** independently disables the additive blue component.
+**Measure frozen displacement** compares the selected angle against zero on the
+same frozen source using the same glow/capture pipeline. It excludes the HUD,
+counts changed RGB pixels and ≥3/255 / ≥10/255 maximum-channel differences,
+and rejects nonidentical A/A, B/B or return-to-A repeat controls. This button is
+for angular mode; the existing performance benchmark still compares the whole
+shield pass on/off, including glow. It is not an isolated distortion timing.
+
+Browser checks at 0.35 degrees:
+
+| View | Frozen time | Backing size | Any RGB change | ≥3/255 | ≥10/255 | Max channel difference |
+| --- | --- | --- | --- | --- | --- | --- |
+| Own shield, glow on | 2.233 s | 1353 × 1409 | 698,326 (36.631%) | 209,576 | 33,299 | 220/255 |
+| Same own frame, glow off | 2.233 s | 1353 × 1409 | 611,969 (32.101%) | 200,534 | 32,746 | 220/255 |
+| External fighter | 22.167 s | 1920 × 1080 | 21,822 (1.052%) | 7,348 | 2,683 | 219/255 |
+
+All repeat controls were exact. The own-view zero-degree negative control
+changed zero pixels. These are different frames, cameras and viewport sizes,
+not matched performance or perceptual comparisons; whole-viewport percentages
+also reflect coverage. The own source used one scripted wave, temporarily replacing retained real
+impacts for inspection. Default duel hull/profile selections were used. PNGs:
+`output/own-shield-angular-on.png`, `output/own-shield-angular-zero.png`,
+`output/fighter-shield-angular.png`. Browser inspection checked the frozen
+on/zero switch, glow-off isolation and sharp HUD text/markers/instruments.
+No new GPU/CPU performance claim is made for these angular variants.
+
+Focused regressions in `tests/flight-shields.cjs` exercise real own-shield damage,
+bounded full-screen history, immutable combat state, camera projection uniforms,
+resolution-independent degree settings and zero-displacement controls. The
+original isolated orthographic WebGL lab retains its pixel units; angular tuning
+is in these actual perspective flight views.
+
+A final single-scripted-wave cockpit check at 4.750 s, 1353 × 1409, 1.5 degrees,
+glow disabled, changed 848,841 pixels (44.526%); 463,890 ≥3/255 and 149,468
+≥10/255, maximum 244/255. Repeat controls matched exactly and browser logs had
+no errors. The same frozen frame was inspected with zero displacement and
+restored to the selected angle. Captures: `output/own-shield-angular-strong.png`
+and `output/own-shield-angular-strong-zero.png`. This is an intentionally stronger
+inspection setting, not a default recommendation or evidence of motion comfort.
+
+## Repeating directional cockpit preview
+
+The own-shield panel now has **Play repeating hits / 0.7 s**, six presets
+(Front, Left, Right, Behind, Above, Below), a draggable equirectangular direction
+box and accessible yaw/elevation sliders. Horizontal drag spans yaw -180° to
+180°, with front in the middle and rear at either edge; vertical drag spans
++90° above to -90° below. Positive yaw is right. Presets and dragging update
+both sliders and the marker/readout. During playback the direction changes
+existing waves immediately while the emission cadence continues. The box captures the pointer so dragging outside it stays bounded.
+
+Playing pauses the duel/camera and advances only a presentation clock from
+requestAnimationFrame timestamps. A hit is emitted every 0.7 seconds with the
+existing 1.2-second lifetime, so at most two waves overlap. Starting playback
+explicitly enables blue glow and displacement; an existing nonzero angular
+strength is retained, otherwise it selects 0.75°. The user can then disable
+glow or toggle displacement to zero independently. **Pause hit animation**
+holds the last phase. Measurement and benchmark controls also hold the preview
+phase; **Pause / resume dogfight** exits the preview and returns to real damage.
+The scripted frozen-hit button exits the loop and retains its existing behavior.
+No combat state, health or AI changes are made by preview waves.
+
+Rear impacts remain directional: they can fade before reaching the forward
+camera field. The readout states this explicitly. This preview does not invent
+a front-facing flash for a rear hit. Side and vertical hits enter the forward
+field later than a front hit; the 0.7-second loop makes that timing inspectable.
+
+`flightShields.preview(yaw,pitch,seconds)` produces bounded, deterministic,
+camera-local unit directions and ages. `flightPresentation.setShieldPreview`
+accepts a packed wave array (including empty for an idle preview) or null to
+restore ordinary real/scripted hit handling. Focused regressions cover all six
+cardinal directions, continuous normalization, overlap, cadence and expiry.
+Browser verification exercised all preset controls, a drag to yaw 78° / elevation
+44°, repeated left/right/lower waves across the fixed starfield, and sharp HUD
+instruments. The preview was left playing with left hits and blue glow enabled.
+Capture: `output/shield-direction-preview.png`.
+
+### Directional preview render cost
+
+Foreground frozen ABBA measurement after project checks finished, with no
+concurrent tests or asset generation: own-shield left-hit preview, two active
+waves, 0.35°, blue glow enabled, duel source frozen at 1.66 s, 2463 × 1454 backing
+pixels, DPR 1.5. Same source/camera/settings per block; 10 warmup and 60 recorded
+frames/block, 120 samples/path. The source includes the ordinary duel scenery
+and native effects; simulation/AI and the separately rendered HUD are outside
+the timed presentation call. Draw counts include scene and sky.
+
+| Case | CPU median/p95 ms | Synchronized median/p95 ms | Cadence median/p95 ms | Draws / triangles |
+| --- | --- | --- | --- | --- |
+| Entire shield path off | 0.90 / 1.20 | 3.30 / 3.90 | 13.30 / 13.40 | 16 / 157,538 |
+| Shield capture + angular refraction + glow | 1.00 / 1.40 | 3.90 / 4.40 | 13.30 / 13.40 | 18 / 157,542 |
+
+Added median: 0.10 ms CPU and 0.60 ms synchronized, two draws/four triangles.
+This includes source target/resolve, scene/sky sampling and the two full-screen
+quads. It does not isolate distortion from glow, nor measure live emitter/AI
+cost or establish a GPU-only time; synchronization uses a one-pixel readback
+and includes driver/GPU wait. This is a fixed two-wave frame, not a temporal
+worst-case scan. Preview emission is bounded to at most two overlapping waves.
+The animation was resumed after measurement. Capture:
+`output/shield-direction-cost.png`. Full project check: 125/125 entries passed.

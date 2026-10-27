@@ -136,7 +136,7 @@
             DW.training.bindPlayer(combat, state).guns = guns;
             DW.training.configure(combat, activeProfile);
             configureCombat();
-            combat.enabled = enabled&&!DW.flightMissions.resolve(mode).emptySpace;
+            combat.enabled = enabled&&(!DW.flightMissions.resolve(mode).emptySpace||mode==='cinematic');
             if (!combat.enabled) {
                 combat.enemies = [];
                 combat.countdown = 0;
@@ -151,7 +151,7 @@
             combat = DW.training.create(config.mode);
             activeProfile = config.profile;
             DW.training.configure(combat, activeProfile);
-            combat.enabled = config.enabled&&!DW.flightMissions.resolve(config.mode).emptySpace;
+            combat.enabled = config.enabled&&(!DW.flightMissions.resolve(config.mode).emptySpace||config.mode==='cinematic');
             guns = DW.flightGuns.create();
             state = model.createSortie(asteroid.radius, config.profile, config.mode);
             combat.useHullModels = true;

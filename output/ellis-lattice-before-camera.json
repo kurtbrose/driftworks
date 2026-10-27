@@ -1,0 +1,471 @@
+{
+  "reference": "Direct midpoint quadrature of the compact metric, 2048/4096 steps, compared with the production packed lookup. CPU transcription of the lattice shader, not GPU raster verification.",
+  "verticalFovDegrees": 45,
+  "aspect": 1.7777777777777777,
+  "screenRayGrid": [
+    13,
+    13
+  ],
+  "cases": [
+    {
+      "camera": "front",
+      "time": 0,
+      "observerChartRadiusMeters": 900,
+      "observerProperRadiusMeters": 848.5281374238571,
+      "retainedIntersections": 578,
+      "phaseSuppressedIntersections": 40,
+      "p95PhaseErrorRadians": 0.00028233539147226594,
+      "maxPhaseErrorRadians": 0.0004531265260099282,
+      "maxQuadratureRefinementChangeRadians": 1.5478031745175258e-8,
+      "worst": {
+        "ray": [
+          4,
+          4
+        ],
+        "shellRadiusMeters": 600,
+        "leg": 1,
+        "impact": 0.8132476335920644,
+        "phase": 2.3823804675808273,
+        "referencePhase": 2.3828335941068373,
+        "phaseErrorRadians": 0.0004531265260099282
+      }
+    },
+    {
+      "camera": "rim",
+      "time": 0,
+      "observerChartRadiusMeters": 447.21359549995793,
+      "observerProperRadiusMeters": 331.66247903554,
+      "retainedIntersections": 656,
+      "phaseSuppressedIntersections": 20,
+      "p95PhaseErrorRadians": 0.00026718714080953276,
+      "maxPhaseErrorRadians": 0.00035832049876860506,
+      "maxQuadratureRefinementChangeRadians": 1.6927051760262657e-8,
+      "worst": {
+        "ray": [
+          2,
+          4
+        ],
+        "shellRadiusMeters": 300.03,
+        "leg": 1,
+        "impact": 0.6772340828321592,
+        "phase": 0.7278245005198614,
+        "referencePhase": 0.7274661800210928,
+        "phaseErrorRadians": 0.00035832049876860506
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 0,
+      "observerChartRadiusMeters": 349.857113690718,
+      "observerProperRadiusMeters": 179.99999999999991,
+      "retainedIntersections": 364,
+      "phaseSuppressedIntersections": 38,
+      "p95PhaseErrorRadians": 0.00028508603093335694,
+      "maxPhaseErrorRadians": 0.00040602668198130853,
+      "maxQuadratureRefinementChangeRadians": 3.303380768926445e-8,
+      "worst": {
+        "ray": [
+          8,
+          10
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.1566275256423628,
+        "phase": 0.923907179669287,
+        "referencePhase": 0.9243132063512683,
+        "phaseErrorRadians": 0.00040602668198130853
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 3,
+      "observerChartRadiusMeters": 349.857113690718,
+      "observerProperRadiusMeters": 179.99999999999991,
+      "retainedIntersections": 362,
+      "phaseSuppressedIntersections": 42,
+      "p95PhaseErrorRadians": 0.0002876125235204974,
+      "maxPhaseErrorRadians": 0.0004493626108027504,
+      "maxQuadratureRefinementChangeRadians": 2.1088930157731056e-8,
+      "worst": {
+        "ray": [
+          8,
+          4
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.1563773346803377,
+        "phase": 0.921333493394436,
+        "referencePhase": 0.9217828560052388,
+        "phaseErrorRadians": 0.0004493626108027504
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 5.9,
+      "observerChartRadiusMeters": 349.85711369071805,
+      "observerProperRadiusMeters": 180.00000000000009,
+      "retainedIntersections": 362,
+      "phaseSuppressedIntersections": 42,
+      "p95PhaseErrorRadians": 0.00028746888371067314,
+      "maxPhaseErrorRadians": 0.00043928324716624445,
+      "maxQuadratureRefinementChangeRadians": 2.167159873778246e-8,
+      "worst": {
+        "ray": [
+          8,
+          8
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.1562029497685489,
+        "phase": 0.91960341816623,
+        "referencePhase": 0.9200427014133963,
+        "phaseErrorRadians": 0.00043928324716624445
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 6,
+      "observerChartRadiusMeters": 349.8571136907181,
+      "observerProperRadiusMeters": 180.0000000000002,
+      "retainedIntersections": 362,
+      "phaseSuppressedIntersections": 42,
+      "p95PhaseErrorRadians": 0.00029094395090489833,
+      "maxPhaseErrorRadians": 0.0004552293114199468,
+      "maxQuadratureRefinementChangeRadians": 2.1321975740562493e-8,
+      "worst": {
+        "ray": [
+          8,
+          8
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.1562835621807508,
+        "phase": 0.9203895299452581,
+        "referencePhase": 0.9208447592566781,
+        "phaseErrorRadians": 0.0004552293114199468
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 6.35,
+      "observerChartRadiusMeters": 349.85711369071805,
+      "observerProperRadiusMeters": 180.00000000000009,
+      "retainedIntersections": 363,
+      "phaseSuppressedIntersections": 41,
+      "p95PhaseErrorRadians": 0.00027019978229492203,
+      "maxPhaseErrorRadians": 0.0004373183384708268,
+      "maxQuadratureRefinementChangeRadians": 2.0517100907113672e-8,
+      "worst": {
+        "ray": [
+          8,
+          8
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.1564667843581842,
+        "phase": 0.9222455726116388,
+        "referencePhase": 0.9226828909501096,
+        "phaseErrorRadians": 0.0004373183384708268
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 6.7,
+      "observerChartRadiusMeters": 349.85711369071794,
+      "observerProperRadiusMeters": 179.9999999999998,
+      "retainedIntersections": 363,
+      "phaseSuppressedIntersections": 41,
+      "p95PhaseErrorRadians": 0.0002852561898754047,
+      "maxPhaseErrorRadians": 0.0004328399301855024,
+      "maxQuadratureRefinementChangeRadians": 2.068220039674884e-8,
+      "worst": {
+        "ray": [
+          8,
+          8
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.1564900994936702,
+        "phase": 0.9224854864270104,
+        "referencePhase": 0.922918326357196,
+        "phaseErrorRadians": 0.0004328399301855024
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 9,
+      "observerChartRadiusMeters": 349.85711369071805,
+      "observerProperRadiusMeters": 180.00000000000009,
+      "retainedIntersections": 364,
+      "phaseSuppressedIntersections": 38,
+      "p95PhaseErrorRadians": 0.0003006637725706529,
+      "maxPhaseErrorRadians": 0.0004463622961796698,
+      "maxQuadratureRefinementChangeRadians": 2.905120854990173e-8,
+      "worst": {
+        "ray": [
+          8,
+          2
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.156413549127034,
+        "phase": 0.9217002664723399,
+        "referencePhase": 0.9221466287685196,
+        "phaseErrorRadians": 0.0004463622961796698
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 12,
+      "observerChartRadiusMeters": 349.85711369071805,
+      "observerProperRadiusMeters": 180.00000000000009,
+      "retainedIntersections": 364,
+      "phaseSuppressedIntersections": 38,
+      "p95PhaseErrorRadians": 0.00028508603093202467,
+      "maxPhaseErrorRadians": 0.00040602668198097547,
+      "maxQuadratureRefinementChangeRadians": 3.303380147201551e-8,
+      "worst": {
+        "ray": [
+          8,
+          2
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.1566275256423633,
+        "phase": 0.9239071796692875,
+        "referencePhase": 0.9243132063512685,
+        "phaseErrorRadians": 0.00040602668198097547
+      }
+    },
+    {
+      "camera": "dogfight",
+      "time": 18.35,
+      "observerChartRadiusMeters": 349.857113690718,
+      "observerProperRadiusMeters": 179.99999999999991,
+      "retainedIntersections": 363,
+      "phaseSuppressedIntersections": 41,
+      "p95PhaseErrorRadians": 0.00027019978229558816,
+      "maxPhaseErrorRadians": 0.00043731833846960555,
+      "maxQuadratureRefinementChangeRadians": 2.0517087584437377e-8,
+      "worst": {
+        "ray": [
+          8,
+          4
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.1564667843581835,
+        "phase": 0.9222455726116359,
+        "referencePhase": 0.9226828909501055,
+        "phaseErrorRadians": 0.00043731833846960555
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 0,
+      "observerChartRadiusMeters": 348.3159527056646,
+      "observerProperRadiusMeters": 176.98588336151212,
+      "retainedIntersections": 351,
+      "phaseSuppressedIntersections": 39,
+      "p95PhaseErrorRadians": 0.0002746142497769277,
+      "maxPhaseErrorRadians": 0.000353512325427241,
+      "maxQuadratureRefinementChangeRadians": 2.3938979687443407e-8,
+      "worst": {
+        "ray": [
+          1,
+          11
+        ],
+        "shellRadiusMeters": 300.03,
+        "leg": 1,
+        "impact": 0.9521056309476617,
+        "phase": 1.3339577155315347,
+        "referencePhase": 1.3336042032061075,
+        "phaseErrorRadians": 0.000353512325427241
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 3,
+      "observerChartRadiusMeters": 334.6723185186278,
+      "observerProperRadiusMeters": 148.34271395196282,
+      "retainedIntersections": 421,
+      "phaseSuppressedIntersections": 39,
+      "p95PhaseErrorRadians": 0.0002512915894035128,
+      "maxPhaseErrorRadians": 0.00035989052633000895,
+      "maxQuadratureRefinementChangeRadians": 1.4635546996544235e-8,
+      "worst": {
+        "ray": [
+          0,
+          7
+        ],
+        "shellRadiusMeters": 300.03,
+        "leg": 0,
+        "impact": 0.7193665220595972,
+        "phase": 0.44484887792181016,
+        "referencePhase": 0.44520876844814017,
+        "phaseErrorRadians": 0.00035989052633000895
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 5.9,
+      "observerChartRadiusMeters": 302.3252612438959,
+      "observerProperRadiusMeters": 37.42410434719709,
+      "retainedIntersections": 503,
+      "phaseSuppressedIntersections": 43,
+      "p95PhaseErrorRadians": 0.0002614274509677994,
+      "maxPhaseErrorRadians": 0.00034719674028460545,
+      "maxQuadratureRefinementChangeRadians": 6.769329230493781e-8,
+      "worst": {
+        "ray": [
+          9,
+          3
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.0055799825744238,
+        "phase": 2.245197542929784,
+        "referencePhase": 2.2455447396700685,
+        "phaseErrorRadians": 0.00034719674028460545
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 6,
+      "observerChartRadiusMeters": 301.7880002431264,
+      "observerProperRadiusMeters": 32.80239458858571,
+      "retainedIntersections": 505,
+      "phaseSuppressedIntersections": 41,
+      "p95PhaseErrorRadians": 0.0002537119766738427,
+      "maxPhaseErrorRadians": 0.0003957486163652657,
+      "maxQuadratureRefinementChangeRadians": 8.603361223435968e-8,
+      "worst": {
+        "ray": [
+          3,
+          4
+        ],
+        "shellRadiusMeters": 600,
+        "leg": 1,
+        "impact": 0.8131904662809685,
+        "phase": 1.3424334294047893,
+        "referencePhase": 1.3428291780211545,
+        "phaseErrorRadians": 0.0003957486163652657
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 6.35,
+      "observerChartRadiusMeters": 300.4517773245217,
+      "observerProperRadiusMeters": 16.47029135941391,
+      "retainedIntersections": 521,
+      "phaseSuppressedIntersections": 39,
+      "p95PhaseErrorRadians": 0.0002644625238178433,
+      "maxPhaseErrorRadians": 0.0003843045931266609,
+      "maxQuadratureRefinementChangeRadians": 1.1274460298693612e-7,
+      "worst": {
+        "ray": [
+          9,
+          9
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.0009787944869275,
+        "phase": 3.0211924036725666,
+        "referencePhase": 3.02080809907944,
+        "phaseErrorRadians": 0.0003843045931266609
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 6.7,
+      "observerChartRadiusMeters": 300.0000000000001,
+      "observerProperRadiusMeters": 0.000008940696716308594,
+      "retainedIntersections": 462,
+      "phaseSuppressedIntersections": 45,
+      "p95PhaseErrorRadians": 0.00019253942704212934,
+      "maxPhaseErrorRadians": 0.0002630927678266559,
+      "maxQuadratureRefinementChangeRadians": 3.076654664369016e-8,
+      "worst": {
+        "ray": [
+          7,
+          6
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 1,
+        "impact": 0.9867887118803614,
+        "phase": 2.3953399745113853,
+        "referencePhase": 2.395603067279212,
+        "phaseErrorRadians": 0.0002630927678266559
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 9,
+      "observerChartRadiusMeters": 316.85081539640356,
+      "observerProperRadiusMeters": 101.9531226464682,
+      "retainedIntersections": 343,
+      "phaseSuppressedIntersections": 47,
+      "p95PhaseErrorRadians": 0.0002709510239684576,
+      "maxPhaseErrorRadians": 0.0003937844044932248,
+      "maxQuadratureRefinementChangeRadians": 1.8988884242787663e-8,
+      "worst": {
+        "ray": [
+          8,
+          12
+        ],
+        "shellRadiusMeters": 600,
+        "leg": 1,
+        "impact": 1.052265109245585,
+        "phase": 2.2646630276630217,
+        "referencePhase": 2.265056812067515,
+        "phaseErrorRadians": 0.0003937844044932248
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 12,
+      "observerChartRadiusMeters": 348.3159527056644,
+      "observerProperRadiusMeters": 176.98588336151172,
+      "retainedIntersections": 351,
+      "phaseSuppressedIntersections": 39,
+      "p95PhaseErrorRadians": 0.00027461424977759386,
+      "maxPhaseErrorRadians": 0.00035351232542701894,
+      "maxQuadratureRefinementChangeRadians": 2.3938961923875013e-8,
+      "worst": {
+        "ray": [
+          11,
+          1
+        ],
+        "shellRadiusMeters": 300.03,
+        "leg": 1,
+        "impact": 0.9521056309476595,
+        "phase": 1.3339577155315123,
+        "referencePhase": 1.3336042032060853,
+        "phaseErrorRadians": 0.00035351232542701894
+      }
+    },
+    {
+      "camera": "dogfight-crossing",
+      "time": 18.35,
+      "observerChartRadiusMeters": 300.4517773245216,
+      "observerProperRadiusMeters": 16.470291359411487,
+      "retainedIntersections": 521,
+      "phaseSuppressedIntersections": 39,
+      "p95PhaseErrorRadians": 0.0002644625238177323,
+      "maxPhaseErrorRadians": 0.00038430459310312415,
+      "maxQuadratureRefinementChangeRadians": 1.1274458255883246e-7,
+      "worst": {
+        "ray": [
+          3,
+          3
+        ],
+        "shellRadiusMeters": 450.015,
+        "leg": 0,
+        "impact": 1.000978794486927,
+        "phase": 3.0211924036726456,
+        "referencePhase": 3.0208080990795425,
+        "phaseErrorRadians": 0.00038430459310312415
+      }
+    }
+  ]
+}

@@ -56,6 +56,7 @@
         return lightingCache;
     }
     var missionSky=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).flightMissions.current().sky, landmarkSky=missionSky.kind==='landmarks';
+    var cinemaSky=(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).flightMissions.current().id==='cinematic';
     var system=missionSky.jadeSystem;
     /** @param {number[]} v */
     function jadeRotate(v){var frame=system?system.frame:[[1,0,0],[0,1,0],[0,0,1]];return frame[0].map(function(_,j){return v.reduce(function(sum,x,i){return sum+x*frame[i][j];},0);});}
@@ -387,7 +388,7 @@ void main(){
             vec2 uv=vec2(atan(outgoing.y,outgoing.x)/6.28318530718+.5,acos(clamp(outgoing.z,-1.,1.))/3.14159265359);
             vec3 cell=floor(outgoing*1400.);
             float star=pow(fract(sin(dot(cell,vec3(12.9898,78.233,37.719)))*43758.5453),420.);
-            gl_FragColor=vec4((texture2D(panorama,uv).rgb+vec3(star*.22))*exposure,1.);
+            gl_FragColor=vec4((texture2D(panorama,uv).rgb+vec3(star*.22)${cinemaSky?'+ohioLandmark(ohioPlanet,outgoing,ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp,ohioPlanetGain)':''})*exposure,1.);
         }
         gl_FragColor.rgb=gl_FragColor.rgb*(1.-lattice.a*.65)+lattice.rgb;
         if(bridgeLookup>.5&&bridgeOutline>.5){
@@ -497,8 +498,8 @@ void main(){
         if (landmarkSky) {
             // The planet is lit from its upper left, toward the viewer.
             // +Y faces the planet; the sun is behind the left shoulder (-X,-Y,+Z).
-            var landmarkFeatures = missionSky.features;
-            if(system)landmarkFeatures=landmarkFeatures.map(function(feature){
+            var landmarkFeatures = cinemaSky?[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},missionSky.features[1]]:missionSky.features;
+            if(system&&!cinemaSky)landmarkFeatures=landmarkFeatures.map(function(feature){
                 var yaw=feature.yaw*Math.PI/180,pitch=feature.pitch*Math.PI/180;
                 var direction=jadeRotate([Math.cos(yaw)*Math.cos(pitch),Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch)]);
                 return {...feature,yaw:Math.atan2(direction[1],direction[0])*180/Math.PI,pitch:Math.asin(direction[2])*180/Math.PI};
@@ -522,7 +523,7 @@ void main(){
                 var entry={texture:texture,center:center,right:horizontal.map(function(v){return v/horizontalLength;}),
                     up:vertical.map(function(v){return v/verticalLength;}),gain:feature.gain,loaded:false};
                 landmarkTextures.push(entry);
-                if(missionSky.cubeFaces&&(!missionSky.gasGiant||landmarkTextures.length===1))return; // Frames are metadata only; never load the source cards in cube mode.
+                if(missionSky.cubeFaces&&(!missionSky.gasGiant||landmarkTextures.length===1)&&!cinemaSky)return; // Frames are metadata only; never load the source cards in cube mode.
                 var image = new Image();
                 image.onload = function () {
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);

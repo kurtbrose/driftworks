@@ -8,7 +8,8 @@
     get('status').textContent='Loading ship textures and preparing graphics...';
     var activeMission=DW.flightMissions.current();
     if(activeMission.sky.gasGiant&&!DW.gasGiantWeather)await new Promise(/** @param {(value:boolean)=>void} resolve */function(resolve){window.addEventListener('gas-weather-ready',function(){resolve(true);},{once:true});});
-    var impactWatch=!!activeMission.emptySpace;
+    var cinematic=activeMission.id==='cinematic';
+    var impactWatch=!!activeMission.emptySpace&&!cinematic;
     if(impactWatch)get('combat-toggle').checked=false;
     if(activeMission.weaponsDisabled){
         get('combat-toggle').disabled=true;get('watch-panel').hidden=true;
@@ -29,7 +30,7 @@
     if(controlsHelp&&activeMission.units.speedScale!==1)controlsHelp.innerHTML=controlsHelp.innerHTML.replace(/5 m\/s/g,Math.round(5*activeMission.units.speedScale)+' '+activeMission.units.speedLabel);
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
-    if(aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'){try{await DW.aegisFlight.load();aegis=activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
+    if(aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'){try{await DW.aegisFlight.load();aegis=activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):cinematic?DW.aegisFlight.createBattle({bridge:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
     /** @type {import('./types').TerrainHit} */
     var environmentHit = function (start, end) {
             var asteroid = session.snapshot().asteroid;
@@ -124,11 +125,21 @@
             var aegisHint=document.querySelector('#launch > p');if(aegisHint)aegisHint.textContent='Fly between two maneuvering dreadnaughts exchanging heavy volleys. Red AA targets allied fighters. Engines start stopped.';
         }
     }
+    if(cinematic){
+        document.body.classList.add('cinematic-demo');get('draw-mothership').checked=false;
+        var demoStyle=document.createElement('style');demoStyle.textContent='body.cinematic-demo.flight-active aside,body.cinematic-demo.flight-active header,body.cinematic-demo.flight-active footer,body.cinematic-demo.flight-active #subsystem-marker{display:none!important}.cinema-caption{position:fixed;bottom:24px;left:28px;color:#d8e6ee;z-index:12;font:12px monospace;letter-spacing:2px;pointer-events:none;text-shadow:0 2px 5px #000}';document.head.appendChild(demoStyle);
+        var caption=document.createElement('div');caption.className='cinema-caption';document.body.appendChild(caption);
+        var nextShot=document.createElement('button');nextShot.textContent='Next camera / C';nextShot.onclick=function(){if(director)director.next();};get('fly').after(nextShot);
+        window.addEventListener('keydown',function(e){if(e.code==='KeyC'&&director){director.next();e.preventDefault();}});
+    }
     var select = get('profile'), stats = get('stats'), status = get('status');
     var watch = /** @type {ReturnType<Required<DriftworksNamespace>['flightWatch']['create']> | null} */ (null);
+    var director=cinematic&&aegis?DW.flightWatch.cinema(aegis):null;
+    var demoSeconds=0;
     var watchDuration=120,watchOpponentWeapon=-2;
     function view() {
-        return watch ? watch.snapshot(get('watch-camera').value === 'chase') : session.snapshot();
+        var snapshot=watch ? watch.snapshot(get('watch-camera').value === 'chase') : session.snapshot();
+        return director?Object.assign({},snapshot,{camera:director.camera(snapshot)}):snapshot;
     }
     // The initial reset below creates the sortie before any frame or input runs.
     var paused = true;
@@ -261,13 +272,15 @@
         presentation.pose(current.camera || current.state);
     }
     function reset() {
+        if(director){director.reset();demoSeconds=0;}
         bridgeFeedback.reset();
         clear();
         diagnostics.resetSimulationClock();
         comms.reset();
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
-        if(aegis&&!aegisMode)aegis.reset(activeMission.id==='battle'?session.snapshot().combat:undefined);
+        if(aegis&&!aegisMode)aegis.reset(activeMission.id==='battle'||cinematic?session.snapshot().combat:undefined);
+        if(cinematic){session.setStartPosition([0,-10000/units,5000/units]);var observer=session.snapshot();observer.state.throttle=0;observer.combat.player.hp=observer.combat.player.maxHp=1e9;observer.combat.hull=observer.combat.maxHull=1e9;observer.combat.enabled=true;get('watch-panel').hidden=true;}
         if(aegis&&aegisMode){
             var snapshot=session.snapshot();aegis.reset(snapshot.combat);var oldEye=snapshot.state.eye.slice(),aegisStart=[-200/units,-1100/units,1200+220/units];
             DW.training.participants(snapshot.combat).filter(function(c){return c.controller!=='input';}).forEach(function(c){c.pose.eye=c.pose.eye.map(function(v,i){return v+aegisStart[i]-oldEye[i];});});
@@ -390,6 +403,7 @@
     }
     get('fly').onclick = function () {
         if(!texturesReady){updateStatus();return;}
+        if (cinematic){resume();return;}
         if (watch) { if (watch.summary().done) reset(); resume(); return; }
         if (session.snapshot().combat.dead)
             reset();
@@ -430,21 +444,58 @@
     });
     // Frozen-snapshot render A/B: same camera, actors and settings, ABBA order.
     var benchmarking=false;
-    var shieldStudy=new URLSearchParams(location.search).get('shields')==='whole',shieldOn=true,shieldPending=false;
+    var shieldQuery=new URLSearchParams(location.search),shieldStudy=['whole','own'].includes(shieldQuery.get('shields')||''),shieldOn=true,shieldPending=false;
+    var shieldPreviewPlaying=false,shieldPreviewStart=0,shieldYaw=0,shieldPitch=0;
+    var shieldAngular=shieldQuery.get('shieldUnits')==='angle',shieldAmount=.35;
+    if(shieldQuery.get('shields')==='own')get('watch-camera').value='cockpit';
     if(shieldStudy){
         var shieldStyle=document.createElement('style');shieldStyle.textContent='body.gpu-hud.shield-study.watching-ai #launch{display:none}';document.head.appendChild(shieldStyle);document.body.classList.add('shield-study');
         var shieldPanel=document.createElement('section'),shieldToggle=document.createElement('button'),shieldBench=document.createElement('button'),shieldFrozen=document.createElement('button'),shieldResume=document.createElement('button'),shieldResult=document.createElement('pre');
-        shieldPanel.id='shield-dogfight';shieldPanel.style.cssText='position:fixed;z-index:7;top:15px;left:15px;max-width:420px;padding:12px;background:#07151de8;border:1px solid #386059;font:12px/1.5 monospace';
+        shieldPanel.id='shield-dogfight';shieldPanel.style.cssText='max-height:90vh;overflow:auto;position:fixed;z-index:7;top:15px;left:15px;max-width:420px;padding:12px;background:#07151de8;border:1px solid #386059;font:12px/1.5 monospace';
         shieldResult.style.cssText='white-space:pre-wrap;max-height:35vh;overflow:auto';
         shieldToggle.textContent='Whole-image shields ON / 2px';shieldBench.textContent='Benchmark next shield hit';shieldFrozen.textContent='Benchmark frozen frame';shieldResume.textContent='Pause / resume dogfight';
-        shieldPanel.append(shieldToggle,shieldBench,shieldFrozen,shieldResume,shieldResult);document.body.appendChild(shieldPanel);
-        shieldToggle.onclick=function(){shieldOn=!shieldOn;presentation.setShields(shieldOn);shieldToggle.textContent='Whole-image shields '+(shieldOn?'ON':'OFF')+' / 2px';};
+        var shieldUnits=document.createElement('select'),shieldGlow=document.createElement('input'),shieldGlowLabel=document.createElement('label'),shieldTest=document.createElement('button');
+        shieldUnits.setAttribute('aria-label','Shield distortion strength');[['legacy','Legacy 2 backing pixels'],['0','0 degrees / glow only'],['0.05','0.05 degrees'],['0.15','0.15 degrees'],['0.35','0.35 degrees'],['0.75','0.75 degrees'],['1.5','1.5 degrees']].forEach(function(pair){var option=document.createElement('option');option.value=pair[0];option.textContent=pair[1];shieldUnits.appendChild(option);});shieldUnits.value=shieldAngular?'0.35':'legacy';
+        shieldGlow.type='checkbox';shieldGlow.checked=true;shieldGlow.setAttribute('aria-label','Shield glow');shieldGlowLabel.append(shieldGlow,document.createTextNode(' Blue glow'));shieldTest.textContent='Freeze scripted shield hit';
+        var shieldHint=document.createElement('small');shieldHint.textContent=shieldQuery.get('shields')==='own'?'Own shield / cockpit: scene refracts; HUD stays sharp. Scripted button is visual only.':'External fighters: angular bend capped at 25% of projected shield radius.';
+        function applyShieldOptics(){shieldAngular=shieldUnits.value!=='legacy';shieldAmount=shieldAngular?Number(shieldUnits.value):2;presentation.setShields(shieldAngular||shieldOn);presentation.setShieldOptics(shieldAngular?(shieldOn?shieldAmount:0):null,shieldGlow.checked);shieldToggle.textContent=shieldAngular?'Displacement '+(shieldOn?shieldAmount+' degrees':'ZERO / same glow'):'Whole-image shields '+(shieldOn?'ON':'OFF')+' / 2px';}
+        shieldUnits.onchange=applyShieldOptics;shieldGlow.onchange=applyShieldOptics;
+        var hitPreview=document.createElement('button');hitPreview.textContent='Play repeating hits / 0.7 s';
+        function holdShieldPreview(){shieldPreviewPlaying=false;hitPreview.textContent='Play repeating hits / 0.7 s';}
+        if(shieldQuery.get('shields')==='own'){
+            var directionPanel=document.createElement('div'),pad=document.createElement('div'),marker=document.createElement('span'),directionReadout=document.createElement('div'),yawInput=document.createElement('input'),pitchInput=document.createElement('input');
+            pad.setAttribute('aria-label','Drag shield hit direction');pad.style.cssText='position:relative;width:100%;height:110px;user-select:none;touch-action:none;cursor:crosshair;border:1px solid #70caff;margin:8px 0;background:linear-gradient(90deg,transparent 49.7%,#426674 50%,transparent 50.3%),linear-gradient(transparent 49.5%,#426674 50%,transparent 50.5%),#102938';
+            pad.textContent='← behind / left · FRONT · right / behind →';marker.style.cssText='position:absolute;width:12px;height:12px;border:2px solid #8cdbff;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none';pad.appendChild(marker);
+            yawInput.type=pitchInput.type='range';yawInput.min='-180';yawInput.max='180';pitchInput.min='-90';pitchInput.max='90';yawInput.value=pitchInput.value='0';yawInput.setAttribute('aria-label','Hit yaw degrees');pitchInput.setAttribute('aria-label','Hit elevation degrees');
+            function updateDirection(){shieldYaw=Number(yawInput.value);shieldPitch=Number(pitchInput.value);marker.style.left=((shieldYaw+180)/360*100)+'%';marker.style.top=((90-shieldPitch)/180*100)+'%';directionReadout.textContent='Yaw '+shieldYaw+'° / elevation '+shieldPitch+'° / hits every 0.7 s. '+(Math.cos(shieldYaw*Math.PI/180)*Math.cos(shieldPitch*Math.PI/180)<-.2?'Behind: waves may fade before reaching the forward view.':'Camera held still; sky and scene refract, HUD stays sharp.');if(!shieldPreviewPlaying){shieldPreviewStart=performance.now();presentation.setShieldPreview(DW.flightShields.preview(shieldYaw,shieldPitch,.12));}}
+            directionPanel.append(hitPreview,pad,directionReadout,yawInput,pitchInput);
+            [['Front',0,0],['Left',-90,0],['Right',90,0],['Behind',180,0],['Above',0,90],['Below',0,-90]].forEach(function(preset){var button=document.createElement('button');button.textContent=String(preset[0]);button.onclick=function(){pause();yawInput.value=String(preset[1]);pitchInput.value=String(preset[2]);updateDirection();};directionPanel.appendChild(button);});
+            yawInput.oninput=pitchInput.oninput=updateDirection;
+            /** @param {PointerEvent} e */function dragDirection(e){var rect=pad.getBoundingClientRect();yawInput.value=String(Math.round(Math.max(-180,Math.min(180,(e.clientX-rect.left)/rect.width*360-180))));pitchInput.value=String(Math.round(Math.max(-90,Math.min(90,90-(e.clientY-rect.top)/rect.height*180))));updateDirection();}
+            pad.onpointerdown=function(e){pad.setPointerCapture(e.pointerId);dragDirection(e);};pad.onpointermove=function(e){if(pad.hasPointerCapture(e.pointerId))dragDirection(e);};
+            hitPreview.onclick=function(){if(shieldPreviewPlaying){holdShieldPreview();return;}pause();shieldGlow.checked=true;shieldOn=true;if(!shieldAngular||shieldAmount===0)shieldUnits.value='0.75';applyShieldOptics();shieldPreviewStart=performance.now();shieldPreviewPlaying=true;hitPreview.textContent='Pause hit animation';shieldResult.textContent='Repeating directional preview / fixed camera and sky / visual hits only. Drag the box or choose a direction. Blue glow enabled.';};
+            updateDirection();presentation.setShieldPreview(null);shieldPanel.appendChild(directionPanel);
+        }
+
+        shieldTest.onclick=function(){holdShieldPreview();presentation.setShieldPreview(null);pause();presentation.injectShieldHit();shieldResult.textContent='Scripted hit / frozen phase. Toggle displacement to ZERO for the same glow without bending. Choose 0.35–1.5 degrees to compare strengths; resume to see motion.';};
+        var shieldMeasure=document.createElement('button');shieldMeasure.textContent='Measure frozen displacement';
+        shieldMeasure.onclick=function(){
+            if(!texturesReady||benchmarking||!shieldAngular)return;
+            holdShieldPreview();pause();var snapshot=view(),art=presentation.appearance(),settings=diagnostics.settings();if(watch){art.allyArt=watch.replay.options.allyHull;art.enemyArt=watch.replay.options.enemyHull;}
+            var source=host.querySelector('canvas[aria-label="3D tactical scene"]'),sky=host.querySelector('canvas.flight-skybox');if(!(source instanceof HTMLCanvasElement)||!(sky instanceof HTMLCanvasElement))return;
+            var w=source.width,h=source.height;
+            /** @param {number} angle */function capture(angle){presentation.setShieldOptics(angle,shieldGlow.checked);presentation.render(snapshot,art,settings,0);var c=document.createElement('canvas');c.width=w;c.height=h;var ctx=c.getContext('2d');if(!ctx)throw new Error('Capture unavailable');ctx.drawImage(/** @type {HTMLCanvasElement} */(sky),0,0,w,h);ctx.drawImage(/** @type {HTMLCanvasElement} */(source),0,0);return ctx.getImageData(0,0,w,h).data;}
+            try{capture(0);capture(shieldAmount);var a=capture(0),aa=capture(0),b=capture(shieldAmount),bb=capture(shieldAmount),aaa=capture(0),d=DW.shieldPixelDiff.compare(a,b,[aa,aaa],[bb]);shieldResult.textContent=(d.noise?'INVALID / '+d.noise+' unstable pixels':'Repeat controls: exact match')+'\nFrozen '+snapshot.combat.time.toFixed(3)+' s; '+w+' x '+h+'; '+shieldAmount+' degrees vs zero; same glow\n'+d.changed+' changed pixels ('+(100*d.changed/(w*h)).toFixed(3)+'% of viewport)\n'+d.visibleChanges+' at ≥3/255; '+d.strong+' at ≥10/255; max '+d.max+'/255. Byte thresholds, not perceptual visibility. Scene only; HUD excluded.';}
+            catch(error){shieldResult.textContent=String(error);}finally{applyShieldOptics();}
+        };
+        shieldPanel.append(shieldHint,document.createElement('br'),shieldUnits,shieldGlowLabel,shieldTest,shieldToggle,shieldMeasure,shieldBench,shieldFrozen,shieldResume,shieldResult);document.body.appendChild(shieldPanel);
+        shieldToggle.onclick=function(){shieldOn=!shieldOn;applyShieldOptics();};applyShieldOptics();
         shieldFrozen.onclick=function(){if(texturesReady&&presentation.shieldSummary().visible)void benchmarkShields();};
-        shieldResume.onclick=function(){if(paused)resume();else pause();};
-        shieldBench.onclick=function(){shieldPending=true;shieldResult.textContent='Waiting for a visible shield hit...';if(paused)resume();};
+        shieldResume.onclick=function(){holdShieldPreview();presentation.setShieldPreview(null);if(paused)resume();else pause();};
+        shieldBench.onclick=function(){holdShieldPreview();presentation.setShieldPreview(null);shieldPending=true;shieldResult.textContent='Waiting for a visible shield hit...';if(paused)resume();};
     }
     async function benchmarkShields(){
-        if(benchmarking)return;shieldPending=false;pause();benchmarking=true;shieldToggle.disabled=true;shieldBench.disabled=true;shieldFrozen.disabled=true;shieldResume.disabled=true;
+        if(benchmarking)return;shieldPreviewPlaying=false;hitPreview.textContent='Play repeating hits / 0.7 s';shieldPending=false;pause();benchmarking=true;shieldToggle.disabled=true;shieldBench.disabled=true;shieldFrozen.disabled=true;shieldResume.disabled=true;shieldPanel.querySelectorAll('select,input,button').forEach(function(c){if(c instanceof HTMLSelectElement||c instanceof HTMLInputElement||c instanceof HTMLButtonElement)c.disabled=true;});
         var snapshot=view(),art=presentation.appearance(),settings=diagnostics.settings(),startWidth=host.clientWidth,startHeight=host.clientHeight;
         if(watch){art.allyArt=watch.replay.options.allyHull;art.enemyArt=watch.replay.options.enemyHull;}
         var active=presentation.shieldSummary();
@@ -460,12 +511,12 @@
                     shieldResult.textContent='Frozen dogfight ABBA: '+rows.length+' / 240 samples';
                 }
             }
-            var lines=['Real duel frozen at '+snapshot.combat.time.toFixed(2)+'s; 2px; 4 waves max/ship',active.visible+' visible shields / '+active.waves+' active waves',rows[0].width+' x '+rows[0].height+' backing; DPR '+window.devicePixelRatio,'10 warmup + 60 samples/block, ABBA'];
+            var lines=['Real duel frozen at '+snapshot.combat.time.toFixed(2)+'s; '+(shieldAngular?shieldAmount+' degrees':'2px')+'; 4 tracked waves max/ship',active.visible+' visible shields / '+active.waves+' active waves',rows[0].width+' x '+rows[0].height+' backing; DPR '+window.devicePixelRatio,'10 warmup + 60 samples/block, ABBA'];
             [false,true].forEach(function(on){var r=rows.filter(function(row){return row.on===on;});
                 /** @param {'cpu'|'total'|'cadence'} key */function pair(key){var a=r.map(function(row){return row[key];}).sort(function(a,b){return a-b;});return a[Math.floor(a.length*.5)].toFixed(2)+' / '+a[Math.floor(a.length*.95)].toFixed(2);}
                 lines.push((on?'ON':'OFF')+': submit median/p95 '+pair('cpu')+' ms; synchronized '+pair('total')+' ms; cadence '+pair('cadence')+' ms; '+r[0].draws+' draws / '+r[0].triangles+' triangles');
             });lines.push('Synchronized includes driver, GPU wait + 1px readback. Not GPU-only. AI/physics frozen. Resume to watch.');shieldResult.textContent=lines.join('\n');
-        }catch(error){shieldResult.textContent=String(error);}finally{presentation.setShields(shieldOn);benchmarking=false;shieldToggle.disabled=false;shieldBench.disabled=false;shieldFrozen.disabled=false;shieldResume.disabled=false;diagnostics.reset();}
+        }catch(error){shieldResult.textContent=String(error);}finally{presentation.setShields(shieldAngular||shieldOn);benchmarking=false;shieldToggle.disabled=false;shieldBench.disabled=false;shieldFrozen.disabled=false;shieldResume.disabled=false;shieldPanel.querySelectorAll('select,input,button').forEach(function(c){if(c instanceof HTMLSelectElement||c instanceof HTMLInputElement||c instanceof HTMLButtonElement)c.disabled=false;});diagnostics.reset();}
     }
 
     if(aegis||activeMission.id==='evacuation'||activeMission.id==='battle'){
@@ -521,7 +572,8 @@
         var appearance = presentation.appearance();
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
-        var demand = controls.sample();
+        var demand = cinematic?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:controls.sample();
+        if(director&&!paused){director.advance(elapsed);demoSeconds+=elapsed;if(demoSeconds>=180)reset();}
         var simMs=0,capitalMs=0,phaseStart=performance.now();
         if (!paused) {
             var before = view(), beforeSpeed = Math.hypot.apply(null, view().state.velocity), lastHit = before.combat.lastHit, shield = before.combat.shield, fired = before.guns.fired, contact = before.contact;
@@ -550,6 +602,7 @@
             pose();
             updateStatus();
         }
+        if(cinematic&&director){var captionNode=document.querySelector('.cinema-caption');if(captionNode)captionNode.textContent='DRIFTWORKS / '+director.label().toUpperCase()+' / C NEXT / ESC PAUSE';}
         var currentView = view();
         if(paused)bridgeCue=bridgeFeedback.update(currentView.state,0,false,!!DW.flightMissions.resolve(currentView.combat.mode).sky.wormhole);
         if (!paused && !watch) session.acquireTarget();
@@ -567,6 +620,7 @@
         }
         var comparison = diagnostics.settings();
         phaseStart=performance.now();
+        if(shieldPreviewPlaying)presentation.setShieldPreview(DW.flightShields.preview(shieldYaw,shieldPitch,Math.max(0,(t-shieldPreviewStart)/1000)));
         presentation.render(currentView, appearance, comparison, elapsed);
         if(shieldPending&&presentation.shieldSummary().visibleWave)void benchmarkShields();
         var presentationMs=performance.now()-phaseStart;phaseStart=performance.now();
@@ -574,7 +628,7 @@
         if(aegis){var readout=document.getElementById('aegis-flight-readout');if(readout)readout.textContent=aegis.readout();}
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
-        flightHud.render(Object.assign({}, currentView, { units: units, paused: paused&&!shieldStudy, speakerId: comms.speakerId(), bridgeCue:bridgeCue, weapon: weapon() }, inputView, appearance));
+        if(!cinematic)flightHud.render(Object.assign({}, currentView, { units: units, paused: paused&&!shieldStudy, speakerId: comms.speakerId(), bridgeCue:bridgeCue, weapon: weapon() }, inputView, appearance));
         captureScreenshot();
         if (watch) get('combat-status').textContent = 'AI DUEL / ' + (watch.summary().category === 'perfect' ? 'PERFECT' : watch.summary().flavor.toUpperCase()) + ' VS ' + currentView.combat.enemies[0].pilot.toUpperCase();
         updateWatch();
@@ -605,6 +659,7 @@
         if(loaded){
             status.textContent=importError||'Ready - Start flight when ready';
             if(activeMission.id==='scramble'){controls.startUncaptured();}
+            if(cinematic)resume();
             if(shieldStudy&&watch)resume();
         }else updateStatus();
     });

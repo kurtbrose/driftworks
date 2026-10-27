@@ -1,0 +1,60 @@
+{
+  "model": "quaternius-ultimate-spaceships:Bob",
+  "viewport": [
+    1920,
+    1080
+  ],
+  "sampleIntervalSeconds": 0.25,
+  "samplesPerFrame": 252,
+  "sampling": "Vertices and centroids of up to 64 evenly spaced source triangles; unweighted samples, not a surface-wide bound.",
+  "reference": "Same primary solver, evaluated at each posed mesh sample; CPU projection only, no rasterization or clipping validation.",
+  "cases": [
+    {
+      "name": "dogfight",
+      "frames": 96,
+      "validSamples": 24192,
+      "missingOrInvalidSamples": 0,
+      "offscreenReferenceSamples": 0,
+      "medianPixels": 0.3365832583544856,
+      "p95Pixels": 3.075687154779801,
+      "maxPixels": 8.593971374531074,
+      "maxResidualChangePerSampleIntervalPixels": 0.819742589383086,
+      "worst": {
+        "time": 18,
+        "sample": 50,
+        "errorPixels": 8.593971374531074
+      },
+      "measurementPathSolves": 24576,
+      "measurementCpuMs": 6723.994100000001
+    },
+    {
+      "name": "dogfight-crossing",
+      "frames": 96,
+      "validSamples": 24192,
+      "missingOrInvalidSamples": 0,
+      "offscreenReferenceSamples": 142,
+      "medianPixels": 1.33021747541434,
+      "p95Pixels": 187.20539887492342,
+      "maxPixels": 1340.5169734118351,
+      "maxResidualChangePerSampleIntervalPixels": 1153.2393402569026,
+      "worst": {
+        "time": 17.5,
+        "sample": 193,
+        "errorPixels": 1340.5169734118351
+      },
+      "measurementPathSolves": 24576,
+      "measurementCpuMs": 5691.031099999999
+    }
+  ],
+  "comparison": {
+    "policy": "No increase in missing/offscreen samples; error tolerance max(0.05 px, 1% of baseline). CPU timing excluded. Baseline is a regression reference, not visual acceptance.",
+    "regressions": [
+      {
+        "case": "dogfight",
+        "metric": "p95Pixels",
+        "before": 0,
+        "after": 3.075687154779801
+      }
+    ]
+  }
+}

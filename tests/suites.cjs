@@ -33,6 +33,7 @@ const suites = {
     "flight-study-worker.cjs",
     "concept-flight.cjs",
     "aegis-flight.cjs",
+    "cinematic-demo.cjs",
     "hull-sweep-index.cjs",
     "baked-hull-indices.cjs",
     "projectile-broadphase.cjs",

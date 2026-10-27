@@ -51,8 +51,8 @@ export type AegisFlightRig = {
     components?:()=>{id:string;kind:string;hp:number;maxHp:number;position:Vector}[];
     telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string;shots?:number;aimPoint?:Vector}[];capitals?:{team:string;position:Vector;heading:number;integrity:number;shots:number;hits:number}[]};
 };
-export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number};
-export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig;unarmed?:boolean};
+export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number;region?:number};
+export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig;unarmed?:boolean;bridge?:boolean};
 export type Pose = {
     region?: number;
     eye: Vector;
@@ -392,8 +392,8 @@ export type RenderStats = {
     };
 };
 export type ShieldEnvelope={version:number;source:string;sha256:string;parameters:{rings:number;sides:number;inflation:number;gunRadius:number;heavyRadius:number};vertices:number[];indices:number[];anchors:{vertex:number;patches:number[][]}[]};
-export type CapitalShieldFrame={envelope:ShieldEnvelope;target:number[];mode:string;strategy:string;bend:number;impacts:{anchor:number;age:number;heavy:boolean}[]};
-export type ShieldDisc = {box:number[];waves:number[];depth:number};
+export type CapitalShieldFrame={envelope:ShieldEnvelope;target:number[];mode:string;strategy:string;submission?:string;bend:number;impacts:{anchor:number;age:number;heavy:boolean}[]};
+export type ShieldDisc = {box:number[];waves:number[];depth:number;degrees?:number;own?:boolean;glow?:boolean};
 export type FlightView = {
     world: World;
     state: FlightState;
@@ -696,7 +696,7 @@ export type ExperimentModules = {
         groups:{separations:number;progressEscapes:number;style:OpponentStyle;meanRange:number;attackFraction:number;extendFraction:number;rearThreatFraction:number;opportunityFraction:number;label:string;pilot:string;skill:number;weapons:string;unshielded:boolean;n:number;wins:number;losses:number;timeouts:number;medianKill:number|null;observedMean:number;longestDry:number}[];
         shieldPairs:number;pairsCensored:number;observedShieldDelta:number|null;
     };watchUrl:(options:DuelOptions)=>string};
-    flightWatch:{create:(scenery:Pick<ReturnType<ExperimentModules['flightSession']['create']>, 'snapshot' | 'advanceScenery'>, options:DuelOptions)=>{
+    flightWatch:{cinema:(rig:AegisFlightRig)=>{reset:()=>void;advance:(elapsed:number)=>void;next:()=>void;camera:(view:Snapshot)=>Pose;label:()=>string};create:(scenery:Pick<ReturnType<ExperimentModules['flightSession']['create']>, 'snapshot' | 'advanceScenery'>, options:DuelOptions)=>{
         advance:(elapsed:number,speed:number)=>DuelSummary;
         snapshot:(chase:boolean)=>Snapshot;
         summary:()=>DuelSummary;replay:DuelReplay;
@@ -928,8 +928,9 @@ export type ExperimentModules = {
         error: string | null;
     };
     aegisShieldEnvelope:ShieldEnvelope;
+    shieldPixelDiff:{compare:(a:Uint8ClampedArray,b:Uint8ClampedArray,repeatsA:Uint8ClampedArray[],repeatsB:Uint8ClampedArray[])=>{noise:number;changed:number;visibleChanges:number;strong:number;max:number;mean:number;heat:Uint8ClampedArray}};
     capitalShieldPass:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{supported:boolean;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,frame:CapitalShieldFrame,width:number,height:number)=>{draws:number;triangles:number};dispose:()=>void}};
-    flightShields:{tracker:()=>{collect:(view:FlightView,art:Appearance,aspect:number)=>ShieldDisc[];reset:()=>void};create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,discs:ShieldDisc[],width:number,height:number)=>number;dispose:()=>void}};
+    flightShields:{preview:(yaw:number,pitch:number,seconds:number)=>number[];tracker:()=>{collect:(view:FlightView,art:Appearance,aspect:number,own?:boolean)=>ShieldDisc[];reset:()=>void};create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,discs:ShieldDisc[],width:number,height:number)=>number;dispose:()=>void}};
     flightPresentation: {
         ohioSignGeometry: (radius:number, texture:HTMLImageElement, surfaceHeight?:number) => Batch[];
         tetherSpin: (lengthKm: number, mode: string) => {tipSpeed: number; angularSpeed: number; periodSeconds: number; tipG: number};
@@ -943,6 +944,9 @@ export type ExperimentModules = {
             pose: (state: Pose) => void;
             render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number) => void;
             renderStats: () => RenderStats;
+            setShieldOptics:(degrees:number|null,glow:boolean)=>void;
+            setShieldPreview:(waves:number[]|null)=>void;
+            injectShieldHit:()=>void;
             shieldSummary:()=>{visible:number;waves:number;visibleWave:boolean};
             completeFrame:()=>void;
             setShields:(enabled:boolean)=>void;
@@ -1148,7 +1152,7 @@ declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
         gpuUi?: {create:(host:HTMLElement)=>import('./gpu-ui-types').GpuUi;color:(value:string|CanvasGradient|CanvasPattern)=>number[]};
         aegisFlightAsset?: AegisFlightAsset;
-        aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:(options?:{battlefield?:boolean})=>AegisFlightRig;createEllisPatrol:()=>AegisFlightRig;load:()=>Promise<unknown>};
+        aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:(options?:{battlefield?:boolean;bridge?:boolean})=>AegisFlightRig;createEllisPatrol:()=>AegisFlightRig;load:()=>Promise<unknown>};
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];
         retailWeapons?: Weapon[];

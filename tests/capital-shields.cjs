@@ -24,12 +24,12 @@ for(const a of e.anchors.filter((_,i)=>i%31===0))for(const [level,radius] of [[0
 vm.runInNewContext(fs.readFileSync('experiments/capital-shield-pass.js','utf8'),sandbox);
 let created=0,disposed=0,bound=null,geometryCount=0;const calls=[];
 class Target{constructor(w,h,options){this.width=w;this.height=h;this.options=options;this.texture={};created++;}dispose(){disposed++;}}
-class Geometry{constructor(){geometryCount++;}setAttribute(){}dispose(){}}
+class Geometry{constructor(){geometryCount++;}setAttribute(name,a){(this.attributes||={})[name]=a;}setDrawRange(start,count){this.range={start,count};}dispose(){}}
 class Material{constructor(options){Object.assign(this,options);}dispose(){}}
 class Scene{constructor(){this.children=[];}add(m){this.children.push(m);}}
 class Texture{dispose(){}}
 class Mesh{constructor(g,m){this.geometry=g;this.material=m;}}
-const THREE={WebGLRenderTarget:Target,Texture,BufferGeometry:Geometry,BufferAttribute:class{},InterleavedBuffer:class{},InterleavedBufferAttribute:class{},RawShaderMaterial:Material,DepthTexture:Texture,Scene,Camera:class{},Mesh,DoubleSide:2,NoBlending:0,AdditiveBlending:2,NormalBlending:1,LinearFilter:1,HalfFloatType:16,UnsignedIntType:32,LinearSRGBColorSpace:'linear'};
+const THREE={WebGLRenderTarget:Target,Texture,BufferGeometry:Geometry,BufferAttribute:class{},InterleavedBuffer:class{constructor(array,stride){this.array=array;this.stride=stride;}},InterleavedBufferAttribute:class{constructor(buffer,size,offset){Object.assign(this,{buffer,size,offset});}},RawShaderMaterial:Material,DepthTexture:Texture,Scene,Camera:class{},Mesh,DoubleSide:2,NoBlending:0,AdditiveBlending:2,NormalBlending:1,LinearFilter:1,HalfFloatType:16,UnsignedIntType:32,LinearSRGBColorSpace:'linear'};
 const renderer={getContext:()=>({getExtension:()=>({})}),setRenderTarget(t){bound=t;},setViewport(){},setClearColor(){},clear(){},render(s){calls.push({scene:s,target:bound});}};
 const camera={matrixWorld:{elements:[1,0,0,0,0,1,0,0,0,0,1,0,0,0,10,1]}},sourceScene=new Scene(),pass=DW.capitalShieldPass.create(THREE,renderer,{});
 const frame={envelope:e,target:[0,0,0],mode:'refraction',strategy:'patches',bend:2,impacts:[{anchor:4,age:.15,heavy:false},{anchor:11,age:.2,heavy:false},{anchor:15,age:.4,heavy:false}]};
@@ -38,7 +38,25 @@ assert.equal(calls.filter(c=>c.scene===sourceScene).length,1);assert.equal(resul
 assert.equal(result.triangles,2+(e.anchors[4].patches[0].length+e.anchors[11].patches[0].length)/3);
 assert.equal(calls[1].scene.children[0].material.premultipliedAlpha,true,'signed additive field must use ONE/ONE blending');assert.equal(calls[1].scene.children[0].material.forceSinglePass,true);assert.equal(calls[1].target.width,400);assert.equal(calls[1].target.height,300);assert.notEqual(calls[0].target,calls[1].target);assert.equal(calls.at(-1).target,null);
 const prepared=geometryCount,allocated=created;pass.render(sourceScene,camera,frame,800,600);assert.equal(geometryCount,prepared,'no aging-hit geometry rebuilding');assert.equal(created,allocated,'targets reused');
+frame.submission='batched';calls.length=0;const batched=pass.render(sourceScene,camera,frame,800,600);assert.equal(batched.draws,2,'one combined patch draw and resolve');assert.equal(batched.triangles,result.triangles);
+const bg=calls[1].scene.children[0].geometry,buffer=bg.attributes.position.buffer,data=buffer.array;
+assert.equal(bg.range.count,(result.triangles-2)*3);let offset=0;
+for(const hit of frame.impacts.slice(0,2)){const a=e.anchors[hit.anchor];for(const id of a.patches[0]){for(let k=0;k<6;k++){assert.equal(data[offset+k],Math.fround(e.vertices[id*6+k]));assert.equal(data[offset+6+k],Math.fround(e.vertices[a.vertex*6+k]));}assert.equal(data[offset+12],Math.fround(hit.age));assert.equal(data[offset+13],Math.fround(.36));assert.equal(data[offset+14],36);offset+=15;}}
+const batchPrepared=geometryCount;frame.impacts[0].age=.18;pass.render(sourceScene,camera,frame,800,600);assert.equal(geometryCount,batchPrepared);assert.equal(data[12],Math.fround(.18),'aging updates existing attributes');
+frame.impacts=[{anchor:4,age:.2,heavy:true}];pass.render(sourceScene,camera,frame,800,600);assert.equal(bg.range.count,e.anchors[4].patches[1].length);assert.equal(data[13],Math.fround(.65));assert.equal(data[14],80);
+frame.impacts=[];calls.length=0;assert.equal(pass.render(sourceScene,camera,frame,800,600).draws,1,'empty batch has no stale draw');
+frame.impacts=[{anchor:4,age:.15,heavy:false},{anchor:11,age:.2,heavy:false}];frame.submission='individual';
 frame.strategy='whole';const reference=pass.render(sourceScene,camera,frame,800,600);assert.equal(reference.triangles,full*2+2);assert.ok(reference.triangles>result.triangles*5);
 frame.mode='glow';calls.length=0;pass.render(sourceScene,camera,frame,800,600);assert.ok(calls.every(c=>c.target===null),'glow requires no scene capture or field target');
 pass.dispose();assert.equal(disposed,created);
 console.log('Capital shields: closed finite envelope, conservative local patches, expiry, shared half-resolution field, one source capture, buffer reuse and glow path pass.');
+
+vm.runInNewContext(fs.readFileSync('experiments/shield-pixel-diff.js','utf8'),sandbox);
+const pixels=new Uint8ClampedArray([20,20,20,255,0,0,0,255,10,10,10,255,0,0,0,255]);
+const displaced=new Uint8ClampedArray([21,22,20,255,3,0,0,255,20,25,10,255,0,0,0,0]);
+const diff=DW.shieldPixelDiff.compare(pixels,displaced,[pixels],[displaced]);
+assert.equal(diff.changed,3);assert.equal(diff.visibleChanges,2);assert.equal(diff.strong,1);assert.equal(diff.max,15);assert.equal(diff.noise,0);assert.equal(diff.mean,31/12);assert.equal(diff.heat[8],240);
+assert.equal(DW.shieldPixelDiff.compare(pixels,pixels,[pixels],[pixels]).changed,0);
+const unstable=new Uint8ClampedArray(pixels);unstable[0]++;unstable[1]++;assert.equal(DW.shieldPixelDiff.compare(pixels,displaced,[unstable],[displaced]).noise,1,'repeat noise counts pixels once');
+assert.throws(()=>DW.shieldPixelDiff.compare(pixels,new Uint8ClampedArray(4),[],[]),/dimensions/);
+console.log('Shield pixel differences: RGB thresholds, alpha exclusion, repeat controls and heatmap pass.');
