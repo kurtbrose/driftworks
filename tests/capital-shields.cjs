@@ -8,7 +8,7 @@ assert.equal(e.sha256,crypto.createHash('sha256').update(fs.readFileSync(e.sourc
 vm.runInNewContext(fs.readFileSync(e.source,'utf8'),sandbox);
 const factor=Math.pow(2,.25),profiles=e.profiles,step=(profiles.at(-1).x-profiles[0].x)/(profiles.length-1);
 function contains(batch,pivot){for(let i=0;i<batch.vertices.length;i+=6){const p=batch.vertices.slice(i,i+3).map((v,k)=>v+pivot[k]),index=Math.max(0,Math.min(profiles.length-2,Math.floor((p[0]-profiles[0].x)/step))),a=profiles[index],b=profiles[index+1],t=Math.max(0,Math.min(1,(p[0]-a.x)/step)),w=a.w+(b.w-a.w)*t,lo=a.lo+(b.lo-a.lo)*t,hi=a.hi+(b.hi-a.hi)*t;assert.ok((Math.abs(p[1])/(w*factor))**4+(Math.abs(p[2]-(lo+hi)/2)/((hi-lo)/2*factor))**4<=1.0001,'original source vertex must remain inside fitted envelope');}}
-const source=DW.aegisFlightAsset;source.batches.forEach(b=>contains(b,[0,0,0]));for(const part of [...source.turrets,...source.engines||[]])part.batches.forEach(b=>contains(b,part.position));
+const source=DW.aegisFlightAsset;source.batches.concat((source.interiors||[]).filter(b=>b.kind==='structure')).forEach(b=>contains(b,[0,0,0]));for(const part of [...source.turrets,...source.engines||[]])part.batches.forEach(b=>contains(b,part.position));
 assert.ok(e.vertices.every(Number.isFinite));assert.equal(e.indices.length%3,0);
 const edges=new Map();for(let i=0;i<e.indices.length;i+=3){const face=e.indices.slice(i,i+3);assert.equal(new Set(face).size,3);for(let j=0;j<3;j++){const ids=[face[j],face[(j+1)%3]].sort((a,b)=>a-b),key=ids.join(',');edges.set(key,(edges.get(key)||0)+1);}}
 assert.ok([...edges.values()].every(n=>n===2),'closed envelope with no open seams');

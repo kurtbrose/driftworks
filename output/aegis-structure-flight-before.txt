@@ -1,0 +1,5 @@
+Frozen scene / ABBA / 20 warm-up + 90 samples per block
+Rendering only; AI and projectiles frozen.
+Asset OFF: CPU median/p95 0.70 / 0.90 ms, frame median/p95 13.30 / 13.40 ms, 9 draws, 144452 triangles
+Asset ON: CPU median/p95 4.10 / 4.90 ms, frame median/p95 13.30 / 13.40 ms, 269 draws, 232692 triangles
+CPU submission only; rAF includes browser pacing, not a GPU timer.

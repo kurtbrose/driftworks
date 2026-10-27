@@ -6,6 +6,8 @@ function build(){
     const asset=sandbox.window.Driftworks.aegisFlightAsset,triangles=[];
     function add(batch,pivot){for(let i=0;i<batch.vertices.length;i+=18){const tri=[];for(let j=0;j<3;j++)tri.push(batch.vertices.slice(i+j*6,i+j*6+3).map((v,k)=>v+pivot[k]));triangles.push(tri);}}
     asset.batches.forEach(b=>add(b,[0,0,0]));
+    // Structural surfaces were moved from hull batches without changing the hull envelope.
+    (asset.interiors||[]).filter(b=>b.kind==='structure').forEach(b=>add(b,[0,0,0]));
     for(const part of [...asset.turrets,...asset.engines||[]])part.batches.forEach(b=>add(b,part.position));
     let xmin=Infinity,xmax=-Infinity;for(const tri of triangles)for(const p of tri){xmin=Math.min(xmin,p[0]);xmax=Math.max(xmax,p[0]);}
     const rings=97,sides=32,inflation=12,step=(xmax-xmin)/(rings-1),profiles=Array.from({length:rings},(_,i)=>({x:xmin+i*step,w:0,lo:Infinity,hi:-Infinity}));

@@ -495,3 +495,19 @@ The original two unlit atlas tiles remain dark; original geometry, atlas detail,
 frames, mipmaps and window size are retained. There is no distance-dependent
 brightness fade. Finish `-1` remains the original interior treatment for A/B
 review; finish `-2` adds this boost on the existing 4 x 2 window atlas.
+
+## Structural finish coverage
+
+The exposed utility frame, couplings, rails and ventral pods use the dark
+charcoal material in `assets/ships/aegis-kit/structure-v1/`. Its ImageGen prompt
+and original asset are retained there. The flight baker selects substantial
+dark/trim source meshes, excludes thin service belts and tiny vents, and maps
+every dominant face before batching, including narrow sides and end caps.
+
+The bake moves 283 source meshes (6000 triangles) to one `structure` interior
+batch. Positions, normals and winding are unchanged. This adds one shared
+static material draw per visible ship; the idle rig has thirteen logical batches.
+Textures and prepared buffers remain shared across instances. The shield baker
+includes the redistributed structure so the shield geometry does not change.
+Use `node tools/bake-aegis-flight.cjs --structure-study` to regenerate the
+review data against `output/aegis-structure-before-rig.js`.

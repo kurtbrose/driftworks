@@ -1,0 +1,36 @@
+Aegis dark structural finish validation - 2026-10-27
+
+Approved treatment: dark graphite tint [0.32, 0.35, 0.37].
+Built-in ImageGen asset: assets/ships/aegis-kit/structure-v1/graphite.png
+Exact prompt: assets/ships/aegis-kit/structure-v1/prompts.txt
+
+Coverage: 283 substantial source meshes, 6000 existing triangles redistributed.
+All dominant faces mapped, including narrow sides and pod end caps.
+Thin nose-window belts and tiny vents excluded using local source thickness.
+Geometry multiset probe verifies positions, normals, winding and poses unchanged.
+Shield envelope vertices also unchanged; baker includes redistributed structure.
+Original texture PNG: 1254 x 1254, 2730231 bytes, shared with mipmaps.
+One extra material draw per visible capital; no added triangles.
+
+Visual inspection: final baked utility frame and ventral pod ends, studio lighting;
+actual Aegis encounter, flight lighting. Dark finish retains restrained seams,
+fittings and wear. Runtime screenshots: aegis-structure-approved.png and
+aegis-structure-pods-approved.png (same final pod finish).
+
+Actual paused Aegis encounter: two capitals, eight hostiles, no wingmen,
+100% render scale, 1920 x 1080 backing, 1280 x 720 CSS, DPR 1.5.
+Each page measured ABBA asset on/off, 20 warmup and 90 samples per block.
+Before: 269 draws, 232692 triangles; CPU median/p95 4.1/4.9 ms.
+After: 271 draws, 232692 triangles; CPU median/p95 4.0/4.7 ms.
+Asset-off: both 9 draws, 144452 triangles; CPU 0.7/0.9 ms.
+Frame cadence: both median/p95 13.3/13.4 ms.
+GPU execution time was not measured. Timing differences are within variation;
+these results do not establish a speedup. See flight-before/after.txt.
+
+Utility close-up ABBA: 2463 x 1196 backing; 20 warmup, 90 samples/block.
+Before/after: 56/57 draws, both 32284 triangles and CPU 1.2/1.6 ms.
+Both frame cadence 13.3/13.4 ms. See aegis-structure-metrics.json.
+
+Focused production surface, shield and strict type checks passed.
+Full npm run check passed: strict types, script/asset checks and 131/131 test entries.
+Detailed local log: aegis-structure-production-check.log.
