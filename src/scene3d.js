@@ -604,9 +604,10 @@
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {WeakMap<HTMLImageElement,import('./three-types').Texture>} */ var shipTextures=new WeakMap();
     /** @param {HTMLImageElement} image */
+    // WebGL2 supports mipmaps for non-power-of-two images too.
     function shipTexture(image){
       var texture=shipTextures.get(image);
-      if(!texture){texture=new THREE.Texture(image);texture.flipY=false;texture.needsUpdate=true;texture.minFilter=((image.width&(image.width-1))===0&&(image.height&(image.height-1))===0)?THREE.LinearMipmapLinearFilter:THREE.LinearFilter;shipTextures.set(image,texture);}
+      if(!texture){texture=new THREE.Texture(image);texture.flipY=false;texture.needsUpdate=true;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.anisotropy=Math.min(4,renderer.capabilities?.getMaxAnisotropy()||1);shipTextures.set(image,texture);}
       return texture;
     }
     /** @param {import('./three-types').Texture} rawMap */

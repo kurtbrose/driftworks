@@ -437,3 +437,9 @@ Art and flight-operations intent are recorded in
 `assets/ships/aegis-kit/hangar-v1/design.txt`. Lift, taxiing and recovery remain
 design intent; the existing launch logic is unchanged. The original review
 baseline is frozen in `output/aegis-hangar-before-rig.js`.
+
+Ship albedo textures use trilinear mipmaps, including non-power-of-two images
+(WebGL2), plus anisotropic filtering capped at 4x or the hardware limit. Raw
+and PBR variants share these sampler settings. This keeps thin deck markings
+and bulkhead seams stable under minification; MSAA alone does not filter
+texture-internal edges. Source artwork is retained for close approaches.

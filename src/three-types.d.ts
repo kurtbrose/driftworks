@@ -7,7 +7,7 @@ export interface Geometry {
  setDrawRange(start:number,count:number):void;
  dispose():void;
 }
-export interface Texture {internalFormat:string|null;needsUpdate:boolean;flipY:boolean;wrapS:number;minFilter:number;magFilter:number;colorSpace:string;mapping:number;clone():Texture;dispose():void}
+export interface Texture {anisotropy:number;internalFormat:string|null;needsUpdate:boolean;flipY:boolean;wrapS:number;minFilter:number;magFilter:number;colorSpace:string;mapping:number;clone():Texture;dispose():void}
 export interface Matrix {elements:number[];fromArray(values:number[]|Float32Array):Matrix;copy(matrix:Matrix):Matrix;invert():Matrix;makePerspective(left:number,right:number,top:number,bottom:number,near:number,far:number):Matrix}
 export interface RenderTarget {samples:number;texture:Texture;depthTexture?:Texture;dispose():void}
 export interface Material {uniforms:Record<string,{value:UniformValue}>;blending:number;depthWrite:boolean;depthTest:boolean;wireframe:boolean;dispose():void}
@@ -15,6 +15,7 @@ export interface StandardMaterial extends Material {map:Texture|null;envMap:Text
 export interface Object3D {visible:boolean;frustumCulled:boolean;geometry?:Geometry;matrixAutoUpdate:boolean;matrix:Matrix;matrixWorld:Matrix;matrixWorldInverse:Matrix;projectionMatrix:Matrix;projectionMatrixInverse:Matrix}
 export interface Scene {add(object:Object3D):void;remove(object:Object3D):void}
 export interface Renderer {
+ capabilities:{getMaxAnisotropy():number};
  getContext:()=>WebGL2RenderingContext;
  autoClear:boolean;sortObjects:boolean;
  setSize(width:number,height:number,style:boolean):void;

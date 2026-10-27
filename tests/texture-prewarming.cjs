@@ -18,6 +18,7 @@ const data=new Float32Array([0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,0,0,1]);
 
 (async()=>{
  const uploaded=[];
+ THREE.WebGLRenderer.prototype.capabilities={getMaxAnisotropy:()=>16};
  THREE.WebGLRenderer.prototype.initTexture=function(texture){uploaded.push(texture);};
  const image={width:4,height:4};
  const warming=viewer.prepareStudyTextures([image,image]);
@@ -28,5 +29,6 @@ const data=new Float32Array([0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,0,0,1]);
  assert.equal(uploaded[0],uploaded[2],'Prewarming reuses the raw texture cache');
  assert.equal(uploaded[1],uploaded[3],'Prewarming reuses the PBR texture cache');
  assert.equal(uploaded[0].image,image);
+ for(const [width,height] of [[1536,1024],[2172,724]]){const start=uploaded.length;await viewer.prepareStudyTextures([{width,height}]);for(const texture of uploaded.slice(start)){assert.equal(texture.minFilter,THREE.LinearMipmapLinearFilter,'NPOT hangar images use trilinear mipmaps in raw and PBR paths');assert.equal(texture.anisotropy,4,'oblique sampling is bounded at 4x');}}
  console.log('PASS fleet texture prewarming: deferred tasks, deduplicated images and shared GPU texture identity');
 })().catch(error=>{console.error(error);process.exitCode=1;});
