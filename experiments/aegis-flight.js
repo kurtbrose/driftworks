@@ -145,7 +145,7 @@
             if(unarmed||!Number.isFinite(amount)||amount<=0)return false;
             var p=local(point),part=lastSurface&&Math.hypot(...sub(point,lastSurface.point))<1e-7?lastSurface.part:parts.find(function(part){var q=partLocal(part,p);return q.every(function(v,k){return v>=part.box.min[k]-.05&&v<=part.box.max[k]+.05;});});
             if(!part&&!collisionBoxes.some(function(box){return p.every(function(v,k){return v>=box.min[k]-.05&&v<=box.max[k]+.05;});}))return false;
-            if(DW.combatShields&&DW.aegisShieldEnvelope&&(!options||options.state.integrity>0)){shieldHits.push({anchor:DW.combatShields.anchor(DW.aegisShieldEnvelope,p),time:seconds,heavy:amount>=20});if(shieldHits.length>64)shieldHits.shift();}
+            if(DW.combatShields&&DW.aegisShieldEnvelope&&(!options||options.state.integrity>0)){shieldHits.push({anchor:DW.combatShields.anchor(DW.aegisShieldEnvelope,p),time:seconds,heavy:amount>=20});if(shieldHits.length>32)shieldHits.shift();}
             if(options)options.state.integrity=Math.max(0,options.state.integrity-amount);
             if(!part||part.hp<=0)return !!options;
             part.hp=Math.max(0,part.hp-amount);

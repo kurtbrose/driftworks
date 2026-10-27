@@ -344,6 +344,7 @@ export type Pack = {
     models: Model[];
 };
 export type Batch = {
+    shieldGlow?:boolean;shieldWaves?:number;
     projected?:boolean;lensRadius?:number;lensCenter?:number[];
     region?: number;
     basis?: Float32Array;

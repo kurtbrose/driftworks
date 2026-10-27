@@ -339,6 +339,7 @@
             var defaultShieldDiscs=shieldDefault&&shieldTracker?shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,false,shieldEnabled?'default':'off'):null;
             if(shieldDefault&&shieldTracker&&shieldEnabled&&comparison.actors&&comparison.mode!=='empty')effectBatches=effectBatches.concat(shieldTracker.effects());
             if(capital)effectBatches=effectBatches.concat(capital.effects(state,shieldEnabled&&comparison.actors&&comparison.mode!=='empty'));
+            var defaultGlow=shieldDefault?effectBatches.filter(function(b){return b.shieldGlow;}):[];
             scene.setStudyEffects(effectBatches);
             scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).map(function(f){return {region:f.region||0,position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:Math.round(f.position[0]*31+f.position[1]*17)};}));
             // This conservative revision covers simulation-driven mesh motion,
@@ -355,7 +356,7 @@
                 if(shieldTime<shieldTest)shieldTest=-Infinity;
                 var testAge=shieldTime-shieldTest;if(testAge>=0&&testAge<1.2){if(ownShield)discs=[{box:[0,0,1,1],waves:[.22,.1,-.97,testAge],depth:0,own:true}];else if(discs.length)discs[discs.length-1].waves=[.6,0,.8,testAge];}
                 if(ownShield&&shieldPreview!==null)discs=shieldPreview.length?[{box:[0,0,1,1],waves:shieldPreview,depth:0,own:true}]:[];
-                discs.forEach(function(d){if(shieldDegrees!==null)d.degrees=shieldDegrees;d.glow=shieldGlow;});shieldVisibleWave=discs.some(function(d){return d.box[3]>.08&&d.waves.some(function(age,i){return i%4===3&&age>=.2&&age<.8;});});shieldVisible=discs.length;shieldWaves=discs.reduce(function(sum,d){return sum+d.waves.length/4;},0);scene.setStudyShields(shieldEnabled&&comparison.actors&&comparison.mode!=='empty'?discs:[],shieldEnabled&&skyCanvas instanceof HTMLCanvasElement?skyCanvas:null);}
+                discs.forEach(function(d){if(shieldDegrees!==null)d.degrees=shieldDegrees;d.glow=shieldGlow;});shieldVisibleWave=discs.some(function(d){return d.box[3]>.08&&d.waves.some(function(age,i){return i%4===3&&age>=.2&&age<.8;});});shieldVisible=discs.length+defaultGlow.length;shieldVisibleWave=shieldVisibleWave||defaultGlow.some(function(b){return b.vertices.length>0;});shieldWaves=defaultGlow.reduce(function(n,b){return n+(b.shieldWaves||0);},0)+discs.reduce(function(sum,d){return sum+d.waves.length/4;},0);scene.setStudyShields(shieldEnabled&&comparison.actors&&comparison.mode!=='empty'?discs:[],shieldEnabled&&skyCanvas instanceof HTMLCanvasElement?skyCanvas:null);}
             scene.render(world, 1, 0, elapsed);
         }
         function renderStats() {

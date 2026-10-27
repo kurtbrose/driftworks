@@ -2,7 +2,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07101a;color:#d6eaff;font:14px/1.5 system-ui}main{display:grid;grid-template-columns:300px 1fr;height:100vh}aside{padding:20px;overflow:auto;background:#102130}h1{font-size:22px}label{display:block;margin:12px 0}button,select,input{max-width:100%;color:inherit;background:#19354c;border:1px solid #52758b;padding:6px;border-radius:4px}button{cursor:pointer}a{color:#9ae8e3}small{color:#a4bed0}pre{white-space:pre-wrap;font:12px/1.6 monospace}#viewer{position:relative;min-width:0;height:100%;overflow:hidden}#viewer canvas{position:relative;display:block;width:100%;height:100%}#viewer canvas.flight-skybox,#viewer canvas.scene3d-overlay{position:absolute;inset:0;pointer-events:none}.scene3d-controls,.night-sky-background,.model-viewer-controls,.model-viewer-navigation{display:none!important}@media(max-width:700px){main{grid-template-columns:210px 1fr}aside{padding:10px}}
 #pixel-review{position:fixed;inset:12px;z-index:100;background:#102130;padding:18px;overflow:auto;border:1px solid #52758b}#pixel-review[hidden]{display:none}#pixel-images{display:flex;gap:10px}#pixel-images[data-view="a"] figure:not(:nth-child(1)),#pixel-images[data-view="b"] figure:not(:nth-child(2)),#pixel-images[data-view="diff"] figure:not(:nth-child(3)){display:none}#pixel-images figure{margin:0;flex:1;min-width:0}#pixel-images canvas{width:100%;height:auto}figcaption{font-size:12px;margin-bottom:8px}</style></head><body><main><aside><a href="fighter-shields.html">← Fighter shields</a><h1>Capital shield patches</h1><p>Short disturbances on a baked envelope around the actual Aegis. Drag to orbit; wheel to approach. Click near the ship to hit the nearest surface anchor.</p>
-<label>Effect <select id="mode"><option value="off">Off</option><option value="glow">Local glow only</option><option value="refraction" selected>Local glow + whole-image refraction</option><option value="envelope">Inspect envelope wire</option></select></label>
+<label>Effect <select id="mode"><option value="off">Off</option><option value="combat">Production glow / scene geometry</option><option value="glow">Local glow only</option><option value="refraction" selected>Local glow + whole-image refraction</option><option value="envelope">Inspect envelope wire</option></select></label>
 <label>Surface submitted per hit <select id="strategy"><option value="patches">Local patch</option><option value="whole">Whole envelope / reference</option></select></label>
 <label>Impact submission <select id="submission"><option value="batched">One combined draw</option><option value="individual" selected>One draw per hit / reference</option></select></label>
 <label>Hits / second <select id="rate"><option>8</option><option selected>32</option><option>128</option><option>300</option></select></label>
@@ -39,7 +39,7 @@
 <script src="../src/explosions.js?v=ba20ec3731d9"></script>
 <script src="../src/asteroid-art.js?v=48aad8996df8"></script>
 <script src="../src/asteroid-terrain.js?v=added36e3407"></script>
-<script src="../src/scene3d.js?v=8c3cbd5f8b5e"></script>
+<script src="../src/scene3d.js?v=5c60da0e3185"></script>
 <script src="../src/ship-art.js?v=394ca4b43117"></script>
 <script src="../src/game.js?v=737979d8df21"></script>
 <script src="dom.js?v=c1d4287e76cd"></script>
@@ -74,10 +74,10 @@
 <script src="flight-radio.js?v=9d8cfcd69def"></script>
 <script src="target-camera.js?v=1860d2a2f5d6"></script>
 <script src="flight-scenery.js?v=efd62ddfb867"></script>
-<script src="combat-shields.js?v=8650e45255f5"></script>
+<script src="combat-shields.js?v=ef734d17248b"></script>
 <script src="flight-shields.js?v=1181d2a2d954"></script>
 <script src="shield-pixel-diff.js?v=9a863e0ae736"></script>
-<script src="flight-presentation.js?v=271e2a8067c9"></script>
+<script src="flight-presentation.js?v=ab3873b7c85b"></script>
 <script src="flight-diagnostics.js?v=7b48f5faca80"></script>
 <script src="flight-controls.js?v=1fc5202ba6f7"></script>
 <script src="flight-session.js?v=a4eebbe1a9d8"></script>
@@ -89,9 +89,9 @@
 <script src="flight-duel.js?v=443c69017af7"></script>
 <script src="flight-watch.js?v=40fca503fafb"></script>
 <script type="module" src="gas-giant-flight.js?v=d4c1ae871933"></script>
-<script src="aegis-flight.js?v=39bc6f8f231b"></script>
+<script src="aegis-flight.js?v=83eef8d807ee"></script>
 <script src="../assets/ships/aegis-kit/shield-envelope.js?v=f1f477be04de"></script>
 <script src="capital-shield-pass.js?v=06fcb7aae6f1"></script>
-<script src="capital-shields.js?v=b49c26fa756c"></script>
+<script src="capital-shields.js?v=0aac9d07cd80"></script>
 <!-- /script-manifest -->
 </body></html>

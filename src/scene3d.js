@@ -489,7 +489,7 @@
       'else if(uFinish<5.5){float edge=min(abs(x-44.3),abs(x-61.7));float panelEdge=abs(mod(abs(p.y)-12.+4.,8.)-4.);bolt=shipLine(length(vec2(edge,abs(panelEdge-3.1))),.055,fp);channel=shipLine(mod(p.y+.15,.3)-.15,.018,fp);weld=shipLine(edge,.035,fp);}'+
       'else{mark=(.5+.5*cos((p.x+p.y+p.z)*12.))*close;}return vec4(bolt,weld,channel,mark); }'+
       // Feather orange paint; preserve texture variation while respecting target paint brightness.
-      'void main(){if(uShadowPass>.5){if(uOpacity<.99)discard;if(uTextured>.5&&texture2D(uShipTexture,vUV).a<.5)discard;float depth=clamp(dot(vRelative-uSpotPosition,uSpotDirection)/uSpotPower.y,0.,.99999);vec2 depthBytes=fract(vec2(1.,255.)*depth);depthBytes.x-=depthBytes.y/255.;gl_FragColor=vec4(depthBytes,0.,1.);return;}if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);if(glow*vEffect.z<.01)discard;gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);}'+
+      'void main(){if(uShadowPass>.5){if(uOpacity<.99)discard;if(uTextured>.5&&texture2D(uShipTexture,vUV).a<.5)discard;float depth=clamp(dot(vRelative-uSpotPosition,uSpotDirection)/uSpotPower.y,0.,.99999);vec2 depthBytes=fract(vec2(1.,255.)*depth);depthBytes.x-=depthBytes.y/255.;gl_FragColor=vec4(depthBytes,0.,1.);return;}if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);if(glow*vEffect.z<.01)discard;gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85*(1.-step(.5,uHabitat))),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);}'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
@@ -594,7 +594,7 @@
       if(values)mesh.buffer.setAttribute('aBakedDocking',new THREE.BufferAttribute(values,3));
       else mesh.buffer.deleteAttribute('aBakedDocking');
     }
-    /** @type {{vertices:Float32Array,color:V3,origin?:V3,rotation?:number,projected?:boolean,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
+    /** @type {{vertices:Float32Array,color:V3,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
@@ -1178,6 +1178,7 @@
         blending=THREE.AdditiveBlending;depthWrite=false;
         setFinish(9);setUniform('Habitat',0);pickSpin=0;setUniform('AxialSpin',0);
         studyEffects.forEach(function(batch,index){
+          setUniform('Habitat',batch.shieldGlow?1:0);
           drawProjected=!!batch.projected;
           drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;
           if(!batch.vertices.length)return;
@@ -1186,7 +1187,7 @@
           var mesh=studyEffectMeshes[index];updateGeometry(mesh.buffer,batch.vertices,mesh.stride||6);mesh.count=batch.vertices.length/6;
           draw(mesh,[0,0,0],[1,1,1],0,batch.color);
         });
-        depthWrite=true;blending=THREE.NoBlending;setFinish(0);
+        depthWrite=true;blending=THREE.NoBlending;setFinish(0);setUniform('Habitat',0);
       }
       drawProjected=false;
       if(DW.explosions){

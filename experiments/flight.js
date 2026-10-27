@@ -444,9 +444,9 @@
     });
     // Frozen-snapshot render A/B: same camera, actors and settings, ABBA order.
     var benchmarking=false;
-    var shieldQuery=new URLSearchParams(location.search),shieldStudy=['whole','own'].includes(shieldQuery.get('shields')||''),shieldOn=true,shieldPending=false;
+    var shieldQuery=new URLSearchParams(location.search),shieldStudy=['whole','own','default'].includes(shieldQuery.get('shields')||''),shieldOn=true,shieldPending=false;
     var shieldPreviewPlaying=false,shieldPreviewStart=0,shieldYaw=0,shieldPitch=0;
-    var shieldAngular=shieldQuery.get('shieldUnits')==='angle',shieldAmount=.35;
+    var shieldAngular=shieldQuery.get('shields')==='default'||shieldQuery.get('shieldUnits')==='angle',shieldAmount=.35;
     if(shieldQuery.get('shields')==='own')get('watch-camera').value='cockpit';
     if(shieldStudy){
         var shieldStyle=document.createElement('style');shieldStyle.textContent='body.gpu-hud.shield-study.watching-ai #launch{display:none}';document.head.appendChild(shieldStyle);document.body.classList.add('shield-study');
@@ -457,7 +457,7 @@
         var shieldUnits=document.createElement('select'),shieldGlow=document.createElement('input'),shieldGlowLabel=document.createElement('label'),shieldTest=document.createElement('button');
         shieldUnits.setAttribute('aria-label','Shield distortion strength');[['legacy','Legacy 2 backing pixels'],['0','0 degrees / glow only'],['0.05','0.05 degrees'],['0.15','0.15 degrees'],['0.35','0.35 degrees'],['0.75','0.75 degrees'],['1.5','1.5 degrees']].forEach(function(pair){var option=document.createElement('option');option.value=pair[0];option.textContent=pair[1];shieldUnits.appendChild(option);});shieldUnits.value=shieldAngular?'0.35':'legacy';
         shieldGlow.type='checkbox';shieldGlow.checked=true;shieldGlow.setAttribute('aria-label','Shield glow');shieldGlowLabel.append(shieldGlow,document.createTextNode(' Blue glow'));shieldTest.textContent='Freeze scripted shield hit';
-        var shieldHint=document.createElement('small');shieldHint.textContent=shieldQuery.get('shields')==='own'?'Own shield / cockpit: scene refracts; HUD stays sharp. Scripted button is visual only.':'External fighters: angular bend capped at 25% of projected shield radius.';
+        var shieldHint=document.createElement('small');shieldHint.textContent=shieldQuery.get('shields')==='default'?'Default combat shields: external glow, own-hit distortion + glow.':shieldQuery.get('shields')==='own'?'Own shield / cockpit: scene refracts; HUD stays sharp. Scripted button is visual only.':'External fighters: angular bend capped at 25% of projected shield radius.';
         function applyShieldOptics(){shieldAngular=shieldUnits.value!=='legacy';shieldAmount=shieldAngular?Number(shieldUnits.value):2;presentation.setShields(shieldAngular||shieldOn);presentation.setShieldOptics(shieldAngular?(shieldOn?shieldAmount:0):null,shieldGlow.checked);shieldToggle.textContent=shieldAngular?'Displacement '+(shieldOn?shieldAmount+' degrees':'ZERO / same glow'):'Whole-image shields '+(shieldOn?'ON':'OFF')+' / 2px';}
         shieldUnits.onchange=applyShieldOptics;shieldGlow.onchange=applyShieldOptics;
         var hitPreview=document.createElement('button');hitPreview.textContent='Play repeating hits / 0.7 s';
@@ -511,7 +511,7 @@
                     shieldResult.textContent='Frozen dogfight ABBA: '+rows.length+' / 240 samples';
                 }
             }
-            var lines=['Real duel frozen at '+snapshot.combat.time.toFixed(2)+'s; '+(shieldAngular?shieldAmount+' degrees':'2px')+'; 4 tracked waves max/ship',active.visible+' visible shields / '+active.waves+' active waves',rows[0].width+' x '+rows[0].height+' backing; DPR '+window.devicePixelRatio,'10 warmup + 60 samples/block, ABBA'];
+            var lines=['Real duel frozen at '+snapshot.combat.time.toFixed(2)+'s; '+(shieldAngular?shieldAmount+' degrees':'2px')+(shieldQuery.get('shields')==='default'?'; fighter 4 / capital 32 hit limits':'; 4 tracked waves max/ship'),active.visible+' visible shields / '+active.waves+' active waves',rows[0].width+' x '+rows[0].height+' backing; DPR '+window.devicePixelRatio,'10 warmup + 60 samples/block, ABBA'];
             [false,true].forEach(function(on){var r=rows.filter(function(row){return row.on===on;});
                 /** @param {'cpu'|'total'|'cadence'} key */function pair(key){var a=r.map(function(row){return row[key];}).sort(function(a,b){return a-b;});return a[Math.floor(a.length*.5)].toFixed(2)+' / '+a[Math.floor(a.length*.95)].toFixed(2);}
                 lines.push((on?'ON':'OFF')+': submit median/p95 '+pair('cpu')+' ms; synchronized '+pair('total')+' ms; cadence '+pair('cadence')+' ms; '+r[0].draws+' draws / '+r[0].triangles+' triangles');

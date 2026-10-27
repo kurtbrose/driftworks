@@ -5,6 +5,18 @@ It is also linked from the index under Technical tests / Performance.
 This is an isolated real WebGL render, not integrated flight gameplay. It changes
 no shield rules, damage, saves or existing flight effects.
 
+## Flight defaults
+
+Flight combat now enables blue hit waves on fighters and capital ships by default.
+External ships use scene geometry without refraction. Player cockpit hits use
+mild angular refraction (0.35 degrees) plus blue glow beneath the HUD. These
+visuals do not change damage rules. Quiet frames do not run the cockpit effect.
+
+The shared presentation path applies this policy to missions, duels and Ellis
+combat. No query flags are needed; ?shields=off disables it for comparison.
+The own and whole flags retain the earlier experimental modes. Fighter
+histories are bounded to four hits and capital histories to 32 localized hits.
+
 ## Visual comparisons
 
 - **Off:** star/grid background and the existing Quaternius Spitfire geometry.
