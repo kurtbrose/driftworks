@@ -239,7 +239,8 @@ for(const geometry of ['full','objects'])for(const side of [0,1])for(const x of 
  const start=frames.length;viewer.render(world,1,0,0);
  const hull=frames.slice(start).flat().filter(d=>Math.abs(d.uniforms.uColor?.[0]-.123)<1e-6);
  assert.equal(hull.length,1,'Each ship is submitted exactly once, never to capture atlases');
- const draw=hull[0];assert.equal(draw.uniforms.uLensMode,3,'Readable hull is not sliced by a distance-dependent aperture rule');
+ const draw=hull[0];assert.equal(draw.uniforms.uLensMode,side===0?3:1,'Only same-chart readable hulls bypass the transmitted aperture');
+ assert(draw.material.fragmentShader.includes('if(uLensMode<1.5&&!aperture)discard'),'remote hull material discards fragments outside the transmission cone');
  if(draw.uniforms.uLensEnabled){
   const columns=[draw.uniforms.uLensX,draw.uniforms.uLensY,draw.uniforms.uLensZ];
   columns.forEach((a,i)=>columns.forEach((b,j)=>assert(Math.abs(a.reduce((sum,v,k)=>sum+v*b[k],0)-(i===j?1:0))<1e-6,'Optical image preserves hull lengths and angles')));
@@ -271,7 +272,7 @@ for(const geometry of ['full','objects']){
   const batches=capital.geometry();viewer.setStudyActors(batches);
   viewer.setSurfaceCamera({region:0,eye:[650/U,-2400/U,1650/U],right:[0,1,0],up:[0,0,1],back:[1,0,0]});
   const start=frames.length;viewer.render(world,1,0,0);
-  const hull=frames.slice(start).flat().filter(d=>d.uniforms.uLensMode===3&&d.uniforms.uColor);
+  const hull=frames.slice(start).flat().filter(d=>(d.uniforms.uLensMode===3||d.uniforms.uLensMode===1)&&d.uniforms.uColor);
   assert.equal(hull.length,batches.length,'every capital material is submitted once at '+t+' s / '+geometry);
   assert.equal(hull.reduce((n,d)=>n+d.geometry.attributes.position.count,0),batches.reduce((n,b)=>n+b.vertices.length/6,0),'all capital vertices survive the throat crossing');
   assert.equal(viewer.getRenderStats().bridgeObjectPaths,1,'all materials use one coherent optical center');

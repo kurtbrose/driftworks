@@ -345,7 +345,9 @@ void main(){
                     if(!p&&(readable(e)||side!==region)){e.object.visible=false;return;}
                     var u=e.uniforms;
                     var localDistance=Math.hypot.apply(null,center.map(function(v,i){return v*units-eye[i];}));
-                    u.uLensMode.value=readable(e)?3:side===region&&localDistance<200&&p?3:side!==region?1:p&&!p.direct&&!p.turning?3:2;
+                    // Every opposite-chart image must remain inside the transmitted cone,
+                    // including rigid presentation hulls whose ends can exceed it.
+                    u.uLensMode.value=side!==region?1:readable(e)?3:localDistance<200&&p?3:p&&!p.direct&&!p.turning?3:2;
                     u.uLensMouth.value=[region*12000/units-pose.eye[0],-2000/units-pose.eye[1],1550/units-pose.eye[2]];u.uLensRadius.value=300/units;
                     u.uLensEnabled.value=p&&!p.direct?1:0;u.uLensDebug.value=params.get('bridgeWarpDebug')==='1'&&p&&p.error>2?1:0;
                     if(p&&!p.direct){u.uLensCenter.value=center;u.uLensViewCenter.value=p.view;u.uLensX.value=p.columns[0];u.uLensY.value=p.columns[1];u.uLensZ.value=p.columns[2];}

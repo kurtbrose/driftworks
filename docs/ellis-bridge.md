@@ -1252,3 +1252,11 @@ node tests/ellis-visibility.cjs --strict --out output/ellis-visibility.json
 
 Strict mode exits nonzero for any affine sample outside the transmission cone.
 Raw measurements: [visibility JSON](benchmarks/ellis-visibility-2026-10-26.json).
+
+Far-side hull visibility correction: readable rigid ships now use the existing
+transmitted-aperture fragment mask whenever their chart differs from the camera,
+in both full and object render routes. Same-chart readable ships retain their
+unmasked local presentation. Production submission tests verify the material
+mask and chart-dependent mode, including every material of the capital patrol.
+This clips invalid hull spill; it does not repair the underlying affine shape
+or establish pixel-perfect lensing inside the aperture.
