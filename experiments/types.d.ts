@@ -44,7 +44,7 @@ export type AegisFlightRig = {
     reset:(combat?:Combat)=>void;
     step:(dt:number,view:FlightView)=>void;
     geometry:()=>Batch[];
-    effects:(pose:Pose)=>Batch[];
+    effects:(pose:Pose,shields?:boolean)=>Batch[];
     readout:()=>string;
     hit:(a:Vector,b:Vector)=>Vector|null;
     damage?:(point:Vector,amount:number,combat:Combat)=>boolean;
@@ -930,7 +930,8 @@ export type ExperimentModules = {
     aegisShieldEnvelope:ShieldEnvelope;
     shieldPixelDiff:{compare:(a:Uint8ClampedArray,b:Uint8ClampedArray,repeatsA:Uint8ClampedArray[],repeatsB:Uint8ClampedArray[])=>{noise:number;changed:number;visibleChanges:number;strong:number;max:number;mean:number;heat:Uint8ClampedArray}};
     capitalShieldPass:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{supported:boolean;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,frame:CapitalShieldFrame,width:number,height:number)=>{draws:number;triangles:number};dispose:()=>void}};
-    flightShields:{preview:(yaw:number,pitch:number,seconds:number)=>number[];tracker:()=>{collect:(view:FlightView,art:Appearance,aspect:number,own?:boolean)=>ShieldDisc[];reset:()=>void};create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,discs:ShieldDisc[],width:number,height:number)=>number;dispose:()=>void}};
+    combatShields:{fighter:(craft:Craft,hits:{normal:number[];time:number}[],now:number,radius:number)=>Batch[];anchor:(envelope:ShieldEnvelope,point:number[])=>number;capital:(envelope:ShieldEnvelope,hits:{anchor:number;time:number;heavy:boolean}[],now:number,origin:number[],heading:number,region:number)=>Batch[]};
+    flightShields:{preview:(yaw:number,pitch:number,seconds:number)=>number[];tracker:()=>{collect:(view:FlightView,art:Appearance,aspect:number,own?:boolean,mode?:string)=>ShieldDisc[];effects:()=>Batch[];reset:()=>void};create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,discs:ShieldDisc[],width:number,height:number,existing?:boolean)=>number;dispose:()=>void}};
     flightPresentation: {
         ohioSignGeometry: (radius:number, texture:HTMLImageElement, surfaceHeight?:number) => Batch[];
         tetherSpin: (lengthKm: number, mode: string) => {tipSpeed: number; angularSpeed: number; periodSeconds: number; tipG: number};

@@ -38,7 +38,7 @@
             var U=DW.sim.METERS_PER_UNIT,t=seconds-cutAt,red=index===2||index===5,region=red?1:0;
             var capitals=rig.telemetry().capitals||[],capital=capitals[red?1:0];
             var target=capital?capital.position.slice():[region*12000/U,-3600/U,1550/U];
-            var offset=index===0?[1100,-1400,850]:index===4?[650,850,400]:[700,-450,260];
+            var offset=index===0?[1100,-1400,850]:index===4?[650,850,400]:index===1||index===5?[900,-850,-230]:[1250,-900,550];
             offset[0]+=Math.sin(t*.06)*140;offset[1]+=t*8;
             var eye=target.map(function(v,i){return v+offset[i]/U;});
             if(index===3){

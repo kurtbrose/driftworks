@@ -1035,7 +1035,7 @@ Initial baseline (26 October 2026):
 | Turning pursuit | 0.34 px | 3.08 px | 8.59 px | 0 / 24,192 |
 | Crossing pursuit | 1.33 px | 187.21 px | 1,340.52 px | 0 / 24,192 |
 
-The crossing case has 142 reference samples outside the viewport; the error
+After the chase-frame correction below, the crossing case has 146 reference samples outside the viewport; the error
 statistics include them. Worst sampled error occurs at 17.5 s. Browser inspection
 at 6.35 s also shows a strongly stretched strip in the affine renderer. This is
 a recorded approximation failure, not an approved image. The headless regression
@@ -1055,7 +1055,7 @@ node tools/measure-ellis-pursuit.cjs --baseline docs/benchmarks/ellis-pursuit-20
 
 The command exits nonzero if missing/offscreen sample counts increase, or if
 median, p95, maximum, or temporal residual error grows by more than the larger
-of 0.05 px and 1% of baseline. It rejects incompatible model/viewport/sample
+of 0.05 px and 1% of baseline. It rejects incompatible model/viewport/sample/fixture-source
 settings and excludes measurement CPU time from comparison. This prevents
 regressions against a known failing baseline; passing does not approve that
 baseline or establish a quality budget. Repeat runs are deterministic for the
@@ -1115,3 +1115,54 @@ batches alongside ships, without manufacturing a capital rig or changing world
 state. Call it with an empty array to clear the calibration target.
 
 Raw yo yo diagnostic: [JSON](benchmarks/ellis-yoyo-2026-10-26.json).
+
+
+### Chase grid investigation: frame continuity and critical lookup range
+
+The three latitude/longitude shells remain at approximately 300.03, 450.015 and
+600 m areal radius in both charts. The chase study did not change their strength
+or replace them with a planar grid. Near 6.7 and 18.7 s the observer is inside all
+three shells in its own chart, looking nearly tangentially. The front fixture,
+by contrast, views the volume from 900 m radius. Far-side shell images still use
+wormhole paths; being inside local shells does not by itself validate those
+images. The grid uses the sky shader, independently of ship affine patches.
+
+The original chase frame used global Z as its up reference, then negated its
+transverse axes at a chart crossing. Off the equator this caused a 13.2086-degree
+roll jump. The corrected frame projects its up reference into the throat's
+angular tangent plane and applies chart parity there. At +/-1 microsecond from
+each observer crossing, the remaining axis mismatch after the chart half-turn
+is at most 0.00431 degrees, dominated by the optical bearing; up mismatch is
+about 0.000118 degrees. A normal-suite regression checks all three frame axes
+at both crossings. This fixes a camera artifact, not the ship or sky optics.
+
+Run `node tools/measure-ellis-lattice.cjs --baseline-camera 22d5a780 --out output/ellis-lattice-comparison.json`.
+The diagnostic transcribes the grid shell intersections and compares packed
+lookup phases with direct 2048/4096-step midpoint quadrature. It samples front,
+rim and 18 chase poses using a 13x13 perspective ray grid, and includes explicit
+critical probes so a camera sample cannot silently miss the table boundary.
+This is a CPU check of intersection phases, not final GPU raster validation or
+an independent proof of the full optical model.
+
+Most sampled phase errors remain around 0.0003 rad. An initial camera sample
+missed a much larger failure, exposed after correcting the camera roll: at
+6.35 / 18.35 s, a ray with b=1.00000366124 has phase error 0.153941 rad (8.82
+degrees) at the 600 m shell. Quadrature refinement changes the reference by
+less than 0.000000125 rad. The ray is closer to the critical b=1 than the packed
+table's nearest entry, b=1+exp(-12)=1.00000614421. The lookup clamps the impact
+parameter coordinate while retaining u derived from the actual ray. This is a
+range-limit problem visible even in CPU double precision, distinct from the
+previous cancellation problem in differences of large finite-source integrals.
+The affected grid copy is partially faded, not completely suppressed.
+
+No grid/sky shader repair is included in this investigation. The strong grid
+bending is therefore not visually accepted as wholly correct. The current
+single-affine ship strip is also a recorded failure and cannot validate or
+invalidate the independently rendered grid. Raw shell/frame measurements:
+[JSON](benchmarks/ellis-lattice-chase-2026-10-26.json).
+
+The pursuit baseline now records a fixture source hash and rejects comparisons
+across fixture changes. The corrected roll changes rectangular-viewport clipping
+(142 to 146 offscreen reference samples), while leaving the measured spatial
+projection error statistics effectively unchanged. The baseline was regenerated
+for the corrected frame; the old frame and data remain in commit 22d5a780.

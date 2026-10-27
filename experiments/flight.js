@@ -127,7 +127,7 @@
     }
     if(cinematic){
         document.body.classList.add('cinematic-demo');get('draw-mothership').checked=false;
-        var demoStyle=document.createElement('style');demoStyle.textContent='body.cinematic-demo.flight-active aside,body.cinematic-demo.flight-active header,body.cinematic-demo.flight-active footer,body.cinematic-demo.flight-active #subsystem-marker{display:none!important}.cinema-caption{position:fixed;bottom:24px;left:28px;color:#d8e6ee;z-index:12;font:12px monospace;letter-spacing:2px;pointer-events:none;text-shadow:0 2px 5px #000}';document.head.appendChild(demoStyle);
+        var demoStyle=document.createElement('style');demoStyle.textContent='body.cinematic-demo #watch-panel{display:none!important}body.cinematic-demo.flight-active aside,body.cinematic-demo.flight-active header,body.cinematic-demo.flight-active footer,body.cinematic-demo.flight-active #subsystem-marker{display:none!important}.cinema-caption{position:fixed;bottom:24px;left:28px;color:#d8e6ee;z-index:12;font:12px monospace;letter-spacing:2px;pointer-events:none;text-shadow:0 2px 5px #000}';document.head.appendChild(demoStyle);
         var caption=document.createElement('div');caption.className='cinema-caption';document.body.appendChild(caption);
         var nextShot=document.createElement('button');nextShot.textContent='Next camera / C';nextShot.onclick=function(){if(director)director.next();};get('fly').after(nextShot);
         window.addEventListener('keydown',function(e){if(e.code==='KeyC'&&director){director.next();e.preventDefault();}});
@@ -264,7 +264,7 @@
         clear();
         controls.release();
         document.body.classList.remove('mouse-captured');
-        get('fly').textContent = watch ? (watch.summary().done ? 'Restart duel' : 'Watch duel') : session.snapshot().combat.dead ? 'Restart flight' : 'Resume flight';
+        get('fly').textContent = cinematic?'Resume demo':watch ? (watch.summary().done ? 'Restart duel' : 'Watch duel') : session.snapshot().combat.dead ? 'Restart flight' : 'Resume flight';
         updateStatus();
     }
     function pose() {
@@ -573,7 +573,7 @@
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
         var demand = cinematic?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:controls.sample();
-        if(director&&!paused){director.advance(elapsed);demoSeconds+=elapsed;if(demoSeconds>=180)reset();}
+        if(director&&!paused){director.advance(elapsed);demoSeconds+=elapsed;}
         var simMs=0,capitalMs=0,phaseStart=performance.now();
         if (!paused) {
             var before = view(), beforeSpeed = Math.hypot.apply(null, view().state.velocity), lastHit = before.combat.lastHit, shield = before.combat.shield, fired = before.guns.fired, contact = before.contact;
@@ -655,7 +655,7 @@
     presentation.ready.then(function(loaded){
         texturesReady=loaded;textureLoadFailed=!loaded;
         get('fly').disabled=!loaded;
-        get('fly').textContent=loaded?'Start flight':'Textures unavailable';
+        get('fly').textContent=loaded?(cinematic?'Start demo':'Start flight'):'Textures unavailable';
         if(loaded){
             status.textContent=importError||'Ready - Start flight when ready';
             if(activeMission.id==='scramble'){controls.startUncaptured();}

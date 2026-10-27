@@ -1214,6 +1214,7 @@
         renderStats.bridgeObjectPaths=bridge.objectPaths;renderStats.bridgeObjectPatches=bridge.objectPatches;renderStats.bridgeObjectError=bridge.objectError;renderStats.bridgeObjectBad=bridge.objectBad;renderStats.bridgeHistoryValid=bridge.historyValid;renderStats.bridgeCaptures=bridge.captures;renderStats.bridgeCpuMs=bridge.cpuMs;
         renderStats.drawCalls=renderStats.drawCalls*(1+bridge.captures)+bridge.compositionPasses;
         renderStats.triangles=renderStats.triangles*(1+bridge.captures)+2*bridge.compositionPasses;
+        if(shieldDiscs.length&&shieldSky&&DW.flightShields){if(!shieldPass)shieldPass=DW.flightShields.create(THREE,renderer,shieldSky);var shieldExtra=shieldPass.render(scene,camera,shieldDiscs,width,height,true);renderStats.drawCalls+=shieldExtra;renderStats.triangles+=shieldExtra*2;}
       }else if(!shadowPass&&capitalShieldFrame&&shieldSky&&DW.capitalShieldPass&&(capitalShieldFrame.mode==='envelope'||capitalShieldFrame.impacts.some(function(hit){return hit.age>=0&&hit.age<(hit.heavy?.65:.36);}))){
         if(!capitalShieldPass)capitalShieldPass=DW.capitalShieldPass.create(THREE,renderer,shieldSky);
         renderStats.shieldFloat=capitalShieldPass.supported?1:0;shieldOutputUniform.value=capitalShieldFrame.mode==='refraction'&&capitalShieldPass.supported?1:0;

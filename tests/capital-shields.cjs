@@ -60,3 +60,11 @@ assert.equal(DW.shieldPixelDiff.compare(pixels,pixels,[pixels],[pixels]).changed
 const unstable=new Uint8ClampedArray(pixels);unstable[0]++;unstable[1]++;assert.equal(DW.shieldPixelDiff.compare(pixels,displaced,[unstable],[displaced]).noise,1,'repeat noise counts pixels once');
 assert.throws(()=>DW.shieldPixelDiff.compare(pixels,new Uint8ClampedArray(4),[],[]),/dimensions/);
 console.log('Shield pixel differences: RGB thresholds, alpha exclusion, repeat controls and heatmap pass.');
+
+vm.runInNewContext(fs.readFileSync('experiments/combat-shields.js','utf8'),sandbox);
+const anchorIndex=4,local=e.vertices.slice(e.anchors[anchorIndex].vertex*6,e.anchors[anchorIndex].vertex*6+3),glowHits=[{anchor:anchorIndex,time:0,heavy:false}],glow=DW.combatShields.capital(e,glowHits,.1,[0,0,0],0,0);
+assert.equal(DW.combatShields.anchor(e,local),anchorIndex);assert.equal(glow.length,1);assert.ok(glow[0].vertices.length>0);assert.ok(glow[0].vertices.every(Number.isFinite));
+const moved=DW.combatShields.capital(e,glowHits,.1,[20,30,40],Math.PI/2,1)[0];assert.equal(moved.region,1);assert.equal(moved.vertices.length,glow[0].vertices.length);
+for(let i=0;i<moved.vertices.length;i+=6){assert.ok(Math.abs(moved.vertices[i]-(20-glow[0].vertices[i+1]))<.0001);assert.ok(Math.abs(moved.vertices[i+1]-(30+glow[0].vertices[i]))<.0001);assert.ok(Math.abs(moved.vertices[i+2]-(40+glow[0].vertices[i+2]))<.0001);assert.ok(Math.abs(moved.vertices[i+3])<=1.00001);}
+assert.equal(DW.combatShields.capital(e,glowHits,.4,[0,0,0],0,0).length,0,'short gun wave expires');assert.ok(DW.combatShields.capital(e,[{anchor:4,time:0,heavy:true}],.4,[0,0,0],0,0).length);
+console.log('Capital production glow: fitted local surface, bounded annular geometry, moving/rotated metre scale, region and expiry pass.');

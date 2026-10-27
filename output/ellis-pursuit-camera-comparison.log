@@ -1,5 +1,6 @@
 {
   "model": "quaternius-ultimate-spaceships:Bob",
+  "fixtureSha256": "ad68ece6082304aee527a1fb00f780e7e2dc84eb5d370a8a4fff804ac6c02147",
   "viewport": [
     1920,
     1080
@@ -25,7 +26,7 @@
         "errorPixels": 8.593971374531339
       },
       "measurementPathSolves": 24576,
-      "measurementCpuMs": 7259.1296999999995
+      "measurementCpuMs": 6866.4696
     },
     {
       "name": "dogfight-crossing",
@@ -43,18 +44,11 @@
         "errorPixels": 1340.5169734118347
       },
       "measurementPathSolves": 24576,
-      "measurementCpuMs": 8707.183800000003
+      "measurementCpuMs": 5796.8505000000005
     }
   ],
   "comparison": {
     "policy": "No increase in missing/offscreen samples; error tolerance max(0.05 px, 1% of baseline). CPU timing excluded. Baseline is a regression reference, not visual acceptance.",
-    "regressions": [
-      {
-        "case": "dogfight-crossing",
-        "metric": "offscreenReferenceSamples",
-        "before": 142,
-        "after": 146
-      }
-    ]
+    "regressions": []
   }
 }

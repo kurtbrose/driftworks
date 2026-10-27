@@ -805,14 +805,15 @@
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;
                     var target = e.targetId ? byId.get(e.targetId) : undefined;
-                    if(target && !(target.hp > 0 && target.team !== e.team && (target.pose.region||0)===(e.pose.region||0) && zoneEligible(e,target)))target=undefined;
+                    if(target && !(target.hp > 0 && target.team !== e.team && ((target.pose.region||0)===(e.pose.region||0)||t.mode==='cinematic') && zoneEligible(e,target)))target=undefined;
+                    if(t.mode==='cinematic'&&target&&(target.pose.region||0)!==(e.pose.region||0)&&living.some(function(other){return other.hp>0&&other.team!==e.team&&(other.pose.region||0)===(e.pose.region||0);}))target=undefined;
                     if (!target || e.retarget <= 0) {
                         // Only the nearest three are used. Stable insertion preserves
                         // roster tie order without sorting every opponent or recomputing distances.
                         /** @type {{craft:Craft,distance:number}[]} */ var choices=[];
                         (e.battleZone?roster:living).forEach(function(other){
-                            if(!(other.hp>0)||other.team===e.team||(other.pose.region||0)!==(e.pose.region||0)||!zoneEligible(e,other))return;
-                            var distance=length(sub(other.pose.eye,e.pose.eye)),at=0;
+                            if(!(other.hp>0)||other.team===e.team||((other.pose.region||0)!==(e.pose.region||0)&&t.mode!=='cinematic')||!zoneEligible(e,other))return;
+                            var distance=length(sub(other.pose.eye,e.pose.eye))+((other.pose.region||0)===(e.pose.region||0)?0:100000),at=0;
                             while(at<choices.length&&choices[at].distance<=distance)at++;
                             if(at<3){choices.splice(at,0,{craft:other,distance:distance});if(choices.length>3)choices.pop();}
                         });
@@ -824,11 +825,18 @@
                     opponent = target ? target.pose : null;
                 }
                 if(!opponent&&!e.battleZone){var candidate=roster.find(function(other){return other.hp>0&&(other.pose.region||0)===(e.pose.region||0)&&(other.team||'enemy')!==(e.team||'enemy');});opponent=candidate?candidate.pose:null;}
-                if (opponent) trackAim(t, e, opponent);
+                var transit=t.mode==='cinematic'&&opponent&&(opponent.region||0)!==(e.pose.region||0);
+                if(transit){
+                    // Navigate to the other chart through its physical mouth, then
+                    // hand the fighter straight back to ordinary pursuit AI.
+                    var mouth=[(e.pose.region||0)*12000/U,-2000/U,1550/U];
+                    e.goal=mouth;e.mode='transit';e.pose.throttle=1;e.decision=0;tracks.delete(e);e.gunValid=false;
+                }
+                else if (opponent) trackAim(t, e, opponent);
                 else { tracks.delete(e); e.gunValid = false; }
-                if(opponent&&(e.opponentStyle==='fso-pursuit'||e.opponentStyle==='fso-breaker'))progressFreeSpace(t,e,opponent,dt);
+                if(opponent&&!transit&&(e.opponentStyle==='fso-pursuit'||e.opponentStyle==='fso-breaker'))progressFreeSpace(t,e,opponent,dt);
                 e.decision -= dt;
-                if (e.decision <= 0 && opponent)
+                if (e.decision <= 0 && opponent && !transit)
                     decide(t, e, opponent);
                 var goal = e.mode === 'attack' && (!e.opponentStyle || e.opponentStyle === 'baseline') ? (e.gunGoal || e.goal) : e.goal;
                 if(e.battleZone) {
@@ -843,7 +851,7 @@
                     }
                 }
                 var future = add(e.pose.eye, scale(e.pose.velocity, 1.6 / U)), avoid = radius + 65 / U;
-                if (!(e.pose.region||0)&&(length(future) < avoid || length(e.pose.eye) < avoid))
+                if (!mission(t).emptySpace&&!(e.pose.region||0)&&(length(future) < avoid || length(e.pose.eye) < avoid))
                     goal = add(e.pose.eye, add(scale(unit(e.pose.eye), 400 / U), scale(e.pose.right, 180 / U)));
                 // Clear the carrier's mouth while still allowing normal break/evade steering.
                 if(t.scramble&&e.pose.eye[1]*U<120&&goal[1]*U<180)goal=add(goal,[0,180/U-goal[1],0]);
@@ -861,14 +869,14 @@
                 stepInput(e, Object.assign({ throttle: e.pose.throttle, throttleRate: 0, fire: false }, control), dt);
                 // Conservative safety shell keeps AI craft clear of the asteroid.
                 var safe = radius + 20 / U;
-                if (!(e.pose.region||0)&&length(e.pose.eye) < safe) {
+                if (!mission(t).emptySpace&&!(e.pose.region||0)&&length(e.pose.eye) < safe) {
                     e.pose.eye = scale(unit(e.pose.eye), safe);
                     e.mode = 'break';
                     e.until = t.time + 2;
                 }
                 var aim = unit(sub(e.gunGoal || e.goal, e.pose.eye)), aligned = dot(aim, scale(e.pose.back, -1));
                 var primary = DW.retailWeapons[e.weaponIndex || 0];
-                e.fire = !!opponent && ((mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > Math.cos(Math.atan2(5, Math.max(130, distance)));
+                e.fire = !!opponent && !transit && ((mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > Math.cos(Math.atan2(5, Math.max(130, distance)));
             }
             neighbors.moved(e);
             collision.moved(t,e);

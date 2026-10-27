@@ -110,6 +110,7 @@ viewer.setStudyActors([{vertices:textured,color:[1,1,1],texture:{width:16,height
 viewer.setSurfaceCamera({eye:[0,-195,93],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
 viewer.render(world,1,0,0);const ordinary=frames.at(-1)[0],rawOrdinary=frames.at(-1)[1],before=frames.length;
 viewer.setStudyBridge(true);viewer.render(world,1,0,0);
+
 assert.equal(frames.length-before,16,'first frame fills charts, primary, half-resolution hit map and compositor');
 assert.equal(viewer.getRenderStats().bridgeCaptures,12);
 assert.equal(frames[before][0].geometry,ordinary.geometry,'captures share production geometry');
@@ -342,3 +343,8 @@ assert.equal(frames.at(-1).length,expectedBlastBatches,'Every explosion layer re
 viewer.setStudyExplosions([]);viewer.render(world,1,0,0);
 assert.equal(viewer.getRenderStats().explosions,0);assert.equal(frames.at(-1).length,0,'Pooled explosion draws clear without stale blasts');
 console.log('PASS explosion capacity: sixty complete blasts, every native layer submitted, input ownership and empty-frame cleanup');
+
+viewer.setStudyBridge(true);
+let bridgeShieldCompositions=0;DW.flightShields={create:()=>({render(scene,camera,discs,w,h,existing){assert.equal(existing,true,'own distortion samples finished Ellis frame');bridgeShieldCompositions++;return 2;},dispose(){}})};
+viewer.setStudyShields([{box:[0,0,1,1],waves:[0,0,-1,.2],depth:0,own:true,degrees:.35}],{});viewer.render(world,1,0,0);assert.equal(bridgeShieldCompositions,1);viewer.setStudyShields([],null);viewer.render(world,1,0,0);assert.equal(bridgeShieldCompositions,1,'Ellis quiet frames omit own postprocess');
+console.log('PASS default own-shield Ellis composition: completed optical frame, single postprocess and no idle capture');

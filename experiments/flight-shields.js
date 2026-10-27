@@ -5,10 +5,12 @@
     /** Presentation history only: never writes to combat state. */
     function tracker(){
         /** @type {Map<string,{shield:number,time:number,hits:{normal:number[],time:number}[]}>} */var history=new Map();
-        /** @param {import('./types').FlightView} view @param {import('./types').Appearance} art @param {number} aspect @param {boolean=} own */
-        function collect(view,art,aspect,own){
+        /** @type {import('./types').Batch[]} */var glowEffects=[];
+        /** @param {import('./types').FlightView} view @param {import('./types').Appearance} art @param {number} aspect @param {boolean=} own @param {string=} mode */
+        function collect(view,art,aspect,own,mode){
+            glowEffects=[];
             var camera=view.camera||view.state,now=view.combat.time,units=DW.sim.METERS_PER_UNIT;
-            var craft=DW.training.alive(view.combat).slice();if(view.observerCraft||own)craft.push(view.combat.player);
+            var craft=DW.training.alive(view.combat).slice();if(view.observerCraft||own||mode)craft.push(view.combat.player);
             var retained=new Set(craft.map(function(c){return c.id;}));history.forEach(function(_,id){if(!retained.has(id))history.delete(id);});
             /** @type {Disc[]} */var discs=[];
             craft.forEach(function(c){
@@ -17,18 +19,19 @@
                 if(!old||now<old.time)old={shield:shield,time:now,hits:[]};
                 if(shield<old.shield&&old.shield>0){
                     // Use the nearest fresh collision flash for the surface direction.
-                    var point=view.combat.flashes.filter(function(f){return !f.destruction&&f.age<.12;}).sort(function(a,b){return Math.hypot.apply(null,a.position.map(function(v,i){return v-c.pose.eye[i];}))-Math.hypot.apply(null,b.position.map(function(v,i){return v-c.pose.eye[i];}));})[0];
-                    var direction=point?point.position.map(function(v,i){return v-c.pose.eye[i];}):camera.eye.map(function(v,i){return v-c.pose.eye[i];});
+                    var impactPoints=view.combat.flashes.concat(craft.flatMap(function(c){return c.guns?c.guns.impacts:[];}));var point=impactPoints.filter(function(f){return !f.destruction&&f.age<.12&&(f.region||0)===(c.pose.region||0);}).sort(function(a,b){return Math.hypot.apply(null,a.position.map(function(v,i){return v-c.pose.eye[i];}))-Math.hypot.apply(null,b.position.map(function(v,i){return v-c.pose.eye[i];}));})[0];
+                    var direction=point?point.position.map(function(v,i){return v-c.pose.eye[i];}):self?camera.back.map(function(v){return -v;}):camera.eye.map(function(v,i){return v-c.pose.eye[i];});
                     var length=Math.hypot.apply(null,direction)||1;direction=direction.map(function(v){return v/length;});
                     /** @param {number[]} a */function dot(a){return a.reduce(function(sum,v,i){return sum+v*direction[i];},0);}
                     old.hits.unshift({normal:[dot(c.pose.right),dot(c.pose.up),dot(c.pose.back)],time:now});old.hits=old.hits.slice(0,4);
                 }
                 old.shield=shield;old.time=now;old.hits=old.hits.filter(function(h){return now-h.time<1.2;});history.set(c.id,old);
-                if(shield<=0)return;
-                if(own&&self){
+                if(mode==='off'||shield<=0&&(!mode||!old.hits.length))return;
+                if((own||mode&&!view.observerCraft)&&self){
                     if(old.hits.length){
                         /** @type {number[]} */var ownWaves=[];old.hits.forEach(function(h){var world=h.normal.map(function(_,i){return c.pose.right[i]*h.normal[0]+c.pose.up[i]*h.normal[1]+c.pose.back[i]*h.normal[2];});[camera.right,camera.up,camera.back].forEach(function(axis){ownWaves.push(axis.reduce(function(sum,v,i){return sum+v*world[i];},0));});ownWaves.push(now-h.time);});discs.push({box:[0,0,1,1],waves:ownWaves,depth:0,own:true});}return;
                 }
+                if(mode){if(old.hits.length&&DW.combatShields){var model=DW.flightPresentation.model(c,view.combat.wave,art),radius=DW.shipPackModels.hullRadius(model)*1.18/units;glowEffects=glowEffects.concat(DW.combatShields.fighter(c,old.hits,now,radius));}return;}
                 var delta=c.pose.eye.map(function(v,i){return v-camera.eye[i];}),depth=-delta.reduce(function(s,v,i){return s+v*camera.back[i];},0);
                 var model=DW.flightPresentation.model(c,view.combat.wave,art),radius=DW.shipPackModels.hullRadius(model)*1.18/units;
                 if(depth<=radius)return;var center=DW.flightSkybox.project(delta,camera,aspect);if(!center)return;
@@ -44,7 +47,7 @@
                 discs.push({box:[center.x,center.y,rx,ry],waves:waves,depth:depth});
             });return discs.sort(function(a,b){return b.depth-a.depth;});
         }
-        return {collect:collect,reset:function(){history.clear();}};
+        return {collect:collect,effects:function(){return glowEffects;},reset:function(){history.clear();glowEffects=[];}};
     }
     /** Native foreground target: hulls are rendered once, then sampled at displaced UVs.
      * @param {import('../src/three-types').Three} THREE @param {import('../src/three-types').Renderer} renderer @param {HTMLCanvasElement} sky */
@@ -71,18 +74,19 @@ color+=glow*vec3(.025,.3,1.)*((own>.5?0.:pow(r2,5.)*.08)+min(wave,2.)*(own>.5?.1
 }`,uniforms:uniforms,side:THREE.DoubleSide,transparent:false,depthTest:false,depthWrite:false,blending:THREE.NoBlending,defaultAttributeValues:{}});
         var post=new THREE.Scene(),camera=new THREE.Camera(),mesh=new THREE.Mesh(geometry,material);mesh.frustumCulled=false;post.add(mesh);
         var width=1,height=1;
-        /** @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} view @param {Disc[]} discs @param {number} w @param {number} h */
-        function render(scene,view,discs,w,h){
-            if(w!==width||h!==height){target.dispose();target=new THREE.WebGLRenderTarget(w,h,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});target.samples=4;target.texture.colorSpace=THREE.LinearSRGBColorSpace;target.texture.internalFormat='RGBA8';uniforms.source.value=target.texture;width=w;height=h;}
+        /** @type {import('../src/three-types').Texture|null} */var framebuffer=null;
+        /** @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} view @param {Disc[]} discs @param {number} w @param {number} h @param {boolean=} existing */
+        function render(scene,view,discs,w,h,existing){
+            if(w!==width||h!==height){if(framebuffer){framebuffer.dispose();framebuffer=null;}target.dispose();target=new THREE.WebGLRenderTarget(w,h,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});target.samples=4;target.texture.colorSpace=THREE.LinearSRGBColorSpace;target.texture.internalFormat='RGBA8';uniforms.source.value=target.texture;width=w;height=h;}
             var projection=view.projectionMatrix&&view.projectionMatrix.elements;uniforms.projection.value=projection?[projection[0],projection[5]]:[1,1];uniforms.resolution.value=[w,h];skyTexture.needsUpdate=true;
             try{
-                renderer.setRenderTarget(target);renderer.setViewport(0,0,w,h);renderer.setClearColor(0,0);renderer.clear();renderer.render(scene,view);
+                if(existing){if(!framebuffer){framebuffer=new THREE.FramebufferTexture(w,h);framebuffer.minFilter=THREE.LinearFilter;framebuffer.magFilter=THREE.LinearFilter;framebuffer.colorSpace=THREE.LinearSRGBColorSpace;}renderer.setRenderTarget(null);renderer.copyFramebufferToTexture(framebuffer);uniforms.source.value=framebuffer;}else{uniforms.source.value=target.texture;renderer.setRenderTarget(target);renderer.setViewport(0,0,w,h);renderer.setClearColor(0,0);renderer.clear();renderer.render(scene,view);}
                 renderer.setRenderTarget(null);renderer.setViewport(0,0,w,h);renderer.clear();uniforms.effect.value=0;uniforms.box.value=[0,0,1,1];renderer.render(post,camera);
                 discs.forEach(function(d){uniforms.angular.value=d.degrees===undefined?0:1;uniforms.degrees.value=d.degrees||0;uniforms.own.value=d.own?1:0;uniforms.glow.value=d.glow===false?0:1;uniforms.effect.value=1;uniforms.box.value=d.box;uniforms.waveCount.value=d.waves.length/4;var hits=/** @type {Float32Array} */(uniforms.hits.value);hits.fill(0);hits.set(d.waves);renderer.render(post,camera);});
             }finally{renderer.setRenderTarget(null);renderer.setViewport(0,0,w,h);}
             return 1+discs.length;
         }
-        return {render:render,dispose:function(){target.dispose();skyTexture.dispose();geometry.dispose();material.dispose();}};
+        return {render:render,dispose:function(){if(framebuffer)framebuffer.dispose();target.dispose();skyTexture.dispose();geometry.dispose();material.dispose();}};
     }
     /** Camera-local directions; +yaw is right, +pitch is above, front is -Z.
      * @param {number} yaw @param {number} pitch @param {number} seconds @returns {number[]} */

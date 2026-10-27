@@ -20,7 +20,7 @@ const groups = {
   dialogue: ['experiments/mumble.js', 'experiments/flight-dialogue.js'],
   flightAi: ['experiments/flight-ai.js', 'experiments/flight-duel.js'],
   flightView: [
-    'experiments/flight-shields.js', 'experiments/shield-pixel-diff.js', 'experiments/flight-presentation.js', 'experiments/flight-diagnostics.js',
+    'experiments/combat-shields.js', 'experiments/flight-shields.js', 'experiments/shield-pixel-diff.js', 'experiments/flight-presentation.js', 'experiments/flight-diagnostics.js',
     'experiments/flight-controls.js', 'experiments/flight-session.js'
   ]
 };

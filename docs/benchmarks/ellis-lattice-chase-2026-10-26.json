@@ -486,6 +486,72 @@
       }
     }
   ],
+  "criticalProbes": [
+    {
+      "impact": 0.9999546000702375,
+      "insideTableDomain": true,
+      "phase": 3.0227758224767927,
+      "referencePhase": 3.0228000857722446,
+      "phaseErrorRadians": 0.000024263295451909528,
+      "fullyPhaseSuppressed": false
+    },
+    {
+      "impact": 1.0000453999297625,
+      "insideTableDomain": true,
+      "phase": 3.038339181542418,
+      "referencePhase": 3.0380533587341403,
+      "phaseErrorRadians": 0.0002858228082778247,
+      "fullyPhaseSuppressed": false
+    },
+    {
+      "impact": 0.9999938557876467,
+      "insideTableDomain": true,
+      "phase": 3.0295055805868176,
+      "referencePhase": 3.0293103061592674,
+      "phaseErrorRadians": 0.00019527442755018498,
+      "fullyPhaseSuppressed": false
+    },
+    {
+      "impact": 1.0000061442123533,
+      "insideTableDomain": true,
+      "phase": 3.031548988061443,
+      "referencePhase": 3.03137422795193,
+      "phaseErrorRadians": 0.0001747601095130058,
+      "fullyPhaseSuppressed": false
+    },
+    {
+      "impact": 0.999997739670593,
+      "insideTableDomain": false,
+      "phase": 2.7183157565672507,
+      "referencePhase": 3.0299612726919825,
+      "phaseErrorRadians": 0.3116455161247318,
+      "fullyPhaseSuppressed": false
+    },
+    {
+      "impact": 1.000002260329407,
+      "insideTableDomain": false,
+      "phase": 2.719052038807055,
+      "referencePhase": 3.030720544808461,
+      "phaseErrorRadians": 0.31166850600140616,
+      "fullyPhaseSuppressed": false
+    },
+    {
+      "impact": 0.9999996940976795,
+      "insideTableDomain": false,
+      "phase": 1.9396241209194498,
+      "referencePhase": 3.030289329754787,
+      "phaseErrorRadians": 1.090665208835337,
+      "fullyPhaseSuppressed": false
+    },
+    {
+      "impact": 1.0000003059023206,
+      "insideTableDomain": false,
+      "phase": 1.9397238136424635,
+      "referencePhase": 3.030392086014329,
+      "phaseErrorRadians": 1.0906682723718655,
+      "fullyPhaseSuppressed": false
+    }
+  ],
   "baselineCamera": {
     "ref": "22d5a780",
     "frameContinuity": [

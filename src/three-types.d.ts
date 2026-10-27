@@ -21,10 +21,12 @@ export interface Renderer {
  setViewport(x:number,y:number,width:number,height:number):void;setScissor(x:number,y:number,width:number,height:number):void;setScissorTest(value:boolean):void;
  setRenderTarget(target:RenderTarget|null):void;
  setClearColor(color:number,alpha:number):void;clear():void;
+ copyFramebufferToTexture(texture:Texture):void;
  initTexture(texture:Texture):void;
  render(scene:Scene,camera:Object3D):void;dispose():void;
 }
 export interface Three {
+ FramebufferTexture:new(width:number,height:number)=>Texture;
  WebGLRenderer:new(options:{canvas:HTMLCanvasElement;antialias:boolean;alpha:boolean;premultipliedAlpha:boolean})=>Renderer;
  Scene:new()=>Scene;Camera:new()=>Object3D;
  AmbientLight:new(color:number,intensity:number)=>Object3D;

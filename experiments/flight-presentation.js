@@ -196,8 +196,8 @@
         });
         var skybox = DW.flightSkybox.create(host);
         var shieldVisible=0,shieldWaves=0,shieldVisibleWave=false;
-        var shieldParams=new URLSearchParams(typeof location==='undefined'?'':location.search),ownShield=shieldParams.get('shields')==='own',shieldEnabled=['whole','own'].includes(shieldParams.get('shields')||''),shieldTracker=shieldEnabled&&DW.flightShields?DW.flightShields.tracker():null;
-        var shieldDegrees=shieldParams.get('shieldUnits')==='angle'?.35:null,shieldGlow=true,shieldTime=0,shieldTest=-Infinity;
+        var shieldParams=new URLSearchParams(typeof location==='undefined'?'':location.search),ownShield=shieldParams.get('shields')==='own',shieldDefault=!['own','whole'].includes(shieldParams.get('shields')||''),shieldEnabled=shieldParams.get('shields')!=='off',shieldTracker=DW.flightShields?DW.flightShields.tracker():null;
+        var shieldDegrees=shieldDefault||shieldParams.get('shieldUnits')==='angle'?.35:null,shieldGlow=true,shieldTime=0,shieldTest=-Infinity;
         /** @type {number[]|null} */var shieldPreview=null;
         var bridgeMode=typeof location==='undefined'?'':new URLSearchParams(location.search).get('bridge');
         if(DW.flightMissions.current().sky.wormhole&&scene.setStudyBridge)scene.setStudyBridge(bridgeMode!=='legacy'&&bridgeMode!=='sky');
@@ -336,7 +336,9 @@
                 parts.forEach(function(p){vertices.set(p.vertices,offset);offset+=p.vertices.length;});
                 effectBatches.push({region:region,vertices:vertices,color:[.25,.65,1]});
             });
-            if(capital)effectBatches=effectBatches.concat(capital.effects(state));
+            var defaultShieldDiscs=shieldDefault&&shieldTracker?shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,false,shieldEnabled?'default':'off'):null;
+            if(shieldDefault&&shieldTracker&&shieldEnabled&&comparison.actors&&comparison.mode!=='empty')effectBatches=effectBatches.concat(shieldTracker.effects());
+            if(capital)effectBatches=effectBatches.concat(capital.effects(state,shieldEnabled&&comparison.actors&&comparison.mode!=='empty'));
             scene.setStudyEffects(effectBatches);
             scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).map(function(f){return {region:f.region||0,position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:Math.round(f.position[0]*31+f.position[1]*17)};}));
             // This conservative revision covers simulation-driven mesh motion,
@@ -349,7 +351,7 @@
             if(skybox.setOccluders)skybox.setOccluders(world.asteroids.map(function(a){return {center:[a.position.x,a.position.y,0],radius:a.radius};}));
             skybox.render(state, comparison.scale, comparison.mode === 'empty',elapsed);
             scene.sync(world);
-            if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,ownShield);shieldTime=view.combat.time;
+            if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=defaultShieldDiscs||shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,ownShield);shieldTime=view.combat.time;
                 if(shieldTime<shieldTest)shieldTest=-Infinity;
                 var testAge=shieldTime-shieldTest;if(testAge>=0&&testAge<1.2){if(ownShield)discs=[{box:[0,0,1,1],waves:[.22,.1,-.97,testAge],depth:0,own:true}];else if(discs.length)discs[discs.length-1].waves=[.6,0,.8,testAge];}
                 if(ownShield&&shieldPreview!==null)discs=shieldPreview.length?[{box:[0,0,1,1],waves:shieldPreview,depth:0,own:true}]:[];

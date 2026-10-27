@@ -1040,6 +1040,10 @@ void main(){
                         gl.uniform3fv(gl.getUniformLocation(sky,'ohioSunCenter'),sun.center);gl.uniform3fv(gl.getUniformLocation(sky,'ohioSunRight'),sun.right);gl.uniform3fv(gl.getUniformLocation(sky,'ohioSunUp'),sun.up);gl.uniform1f(gl.getUniformLocation(sky,'ohioSunGain'),sun.gain);
                     }
                 }
+                if(cinemaSky){
+                    var terrestrial=landmarkTextures[0];gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,terrestrial.texture);gl.uniform1i(gl.getUniformLocation(sky,'ohioPlanet'),2);
+                    gl.uniform3fv(gl.getUniformLocation(sky,'ohioPlanetCenter'),terrestrial.center);gl.uniform3fv(gl.getUniformLocation(sky,'ohioPlanetRight'),terrestrial.right);gl.uniform3fv(gl.getUniformLocation(sky,'ohioPlanetUp'),terrestrial.up);gl.uniform1f(gl.getUniformLocation(sky,'ohioPlanetGain'),terrestrial.gain);
+                }
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindBuffer(gl.ARRAY_BUFFER, quad);
                 var a = gl.getAttribLocation(sky, 'position');

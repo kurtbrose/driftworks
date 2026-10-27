@@ -16,6 +16,15 @@ function frameContinuity(study){return [6.7,18.7].map(time=>{
   }))};
 });}
 const report={reference:'Direct midpoint quadrature of the compact metric, 2048/4096 steps, compared with the production packed lookup. CPU transcription of the lattice shader, not GPU raster verification.',verticalFovDegrees:45,aspect:16/9,screenRayGrid:[13,13],cameraFrameContinuity:frameContinuity(DW.ellisStudy),cases:[]};
+// Explicit critical probes remain useful when a screen grid misses the narrow
+// band where |1-b| is smaller than the texture's last supported interval.
+report.criticalProbes=[];
+for(const exponent of [10,12,13,15])for(const sign of [-1,1]){
+  const b=1+sign*Math.exp(-exponent),start=uAt(b,1.0015),end=uAt(b,2);
+  const phase=optics.lookup(b,end)-optics.lookup(b,start);
+  const reference=optics.integral(b,end,4096)-optics.integral(b,start,4096);
+  report.criticalProbes.push({impact:b,insideTableDomain:exponent<=12,phase,referencePhase:reference,phaseErrorRadians:Math.abs(phase-reference),fullyPhaseSuppressed:Math.abs(phase)>=Math.PI});
+}
 const baselineCamera=process.argv.indexOf('--baseline-camera');
 if(baselineCamera>=0){
   if(!process.argv[baselineCamera+1])throw new Error('--baseline-camera requires a git ref');
