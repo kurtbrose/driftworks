@@ -65,6 +65,15 @@ for(const [camera,time] of [['front',0],['rim',0],...['dogfight','dogfight-cross
   errors.sort((a,b)=>a-b);
   report.cases.push({camera,time,observerChartRadiusMeters:R*300,observerProperRadiusMeters:Math.sqrt(Math.max(0,R*R-1))*300,retainedIntersections:retained,phaseSuppressedIntersections:suppressed,p95PhaseErrorRadians:errors[Math.floor(errors.length*.95)],maxPhaseErrorRadians:errors.at(-1),maxQuadratureRefinementChangeRadians:largestQuadratureChange,worst});
 }
+const toleranceArg=process.argv.indexOf('--max-phase-error');
+if(toleranceArg>=0){
+  const tolerance=Number(process.argv[toleranceArg+1]);
+  if(!(tolerance>0&&Number.isFinite(tolerance)))throw new Error('--max-phase-error requires a positive finite radian tolerance');
+  const failures=report.cases.filter(c=>!Number.isFinite(c.maxPhaseErrorRadians)||c.maxPhaseErrorRadians>tolerance).map(c=>({camera:c.camera,time:c.time,phaseErrorRadians:c.maxPhaseErrorRadians}));
+  for(const probe of report.criticalProbes)if(!probe.fullyPhaseSuppressed&&probe.phaseErrorRadians>tolerance)failures.push({criticalImpact:probe.impact,phaseErrorRadians:probe.phaseErrorRadians});
+  report.validation={toleranceRadians:tolerance,pass:failures.length===0,failures};
+  if(failures.length)process.exitCode=1;
+}
 const json=JSON.stringify(report,null,2)+'\n',out=process.argv.indexOf('--out');
 if(out>=0){if(!process.argv[out+1])throw new Error('--out requires a path');fs.writeFileSync(process.argv[out+1],json);}
 process.stdout.write(json);

@@ -73,6 +73,7 @@ const suites = {
     "ellis-study.cjs",
     "ellis-growth.cjs",
     "ellis-optics.cjs",
+    "ellis-invariants.cjs",
     "flight-skybox.cjs",
     "ship-viewer.cjs",
     {"file":"mining-study-navigation.cjs","setup":"shared"},

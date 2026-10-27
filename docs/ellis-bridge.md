@@ -1166,3 +1166,61 @@ across fixture changes. The corrected roll changes rectangular-viewport clipping
 (142 to 146 offscreen reference samples), while leaving the measured spatial
 projection error statistics effectively unchanged. The baseline was regenerated
 for the corrected frame; the old frame and data remain in commit 22d5a780.
+
+
+### Automated mathematical invariants
+
+`node tests/ellis-invariants.cjs` is part of the normal rendering test group.
+It checks geometry and transport independently of screenshots:
+
+- Rotate both endpoint offsets and directions about the chart centers (without
+  rotating the 12 km storage translation). In 108 configurations across both
+  charts, core, transition and exterior, primary existence, branch flags,
+  observer/source directions and optical length must transform consistently.
+  Direction covariance tolerance is 1e-8 in unit-vector distance; length
+  covariance tolerance is 0.00001 m.
+- Reverse each connecting path. Both endpoint tangent directions must reverse
+  within 0.004 in unit-vector distance. Core endpoint lengths must agree within
+  0.005 m. Exterior/transition length differences are measured separately below.
+- Advance real rays 600 m in 3 m increments. Unit direction, intrinsic unit-speed
+  energy, angular momentum reconstructed from public positions/directions and
+  membership of the initial central plane must be preserved. Cases include both
+  charts, transmitted/turning rays and the compact metric's flattening shell.
+  Energy and momentum tolerances are 2e-6; plane residual tolerance is 1e-10.
+- Reverse each forward ray from its endpoint and advance 600 m back. It must
+  return to the starting chart within 0.02 m and recover the reversed launch
+  direction within 0.0001 in unit-vector distance.
+- Compare 48 intersections across all three grid shells with `tools/ellis-ray-oracle.cjs`, an independent
+  proper-coordinate RK4 solver using the compact metric, no packed lookup and
+  no production ray integrator. Intersections must be on their specified shell and
+  match the oracle point within 0.005 m. Resolved lookup phases must agree within
+  0.001 rad. The critical oracle must converge within 1e-8 rad when its step is
+  halved. These finite tolerances are engineering checks, not proofs.
+
+Measured initial worst errors: rotation 9.60e-15 in unit-vector distance,
+ray energy 1.10e-11, angular momentum 5.49e-12, central-plane residual 4.84e-14,
+forward/reverse return 0.00000263 m, and oracle shell-point error 0.00000244 m.
+Resolved shell lookup phase error is at most 0.000267 rad on these fixtures.
+
+Strict diagnostics deliberately preserve known failures:
+
+```
+node tests/ellis-invariants.cjs --strict --out output/ellis-invariants.json
+node tools/measure-ellis-lattice.cjs --max-phase-error 0.001 --out output/ellis-lattice-validation.json
+```
+
+The first command exits nonzero for critical lookup error >=0.001 rad or any
+inverse primary-path length asymmetry >=0.005 m. The second exits nonzero for
+out-of-tolerance sampled shell phases or explicit unsuppressed critical probes.
+The regular suite does not assert that these known failing optics are accepted.
+
+Currently 20 inverse paths with exterior/transition endpoints exceed the strict
+5 mm reciprocity limit, worst 0.29653 m. Their endpoint tangents pass. The two
+solve directions use different finite-quadrature/analytic-tail routes; repairing
+this asymmetry is separate from adding the checks. The independent ODE also
+confirms the critical phase error of 0.153941 rad, so the earlier lookup finding
+is not merely an artifact of comparing two versions of the same integral code.
+
+Raw invariant measurements: [JSON](benchmarks/ellis-invariants-2026-10-26.json).
+Screen-space grid intersections need not remain right angles under lensing;
+these tests use intrinsic geometry, path conservation and symmetry instead.

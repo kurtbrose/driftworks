@@ -1,0 +1,184 @@
+{
+  "rotations": 108,
+  "reversed": 108,
+  "rotationError": 9.604070888979787e-15,
+  "lengthSymmetry": 0.2965297647715488,
+  "maxEnergy": 1.0975220732234447e-11,
+  "maxMomentum": 5.485167875463048e-12,
+  "maxPlane": 4.8405723873656825e-14,
+  "maxReturn": 0.0000026274288950760885,
+  "crossings": 10,
+  "turns": 4,
+  "shellTests": 48,
+  "maxShellDistance": 0.000002438327949681722,
+  "maxShellPhase": 0.0002665253828871006,
+  "critical": {
+    "startRadius": 1.0015059244150724,
+    "impact": 1.0000036612418444,
+    "shellRadius": 2
+  },
+  "criticalPhaseError": 0.1539409715417861,
+  "criticalOracleStepDifference": 4.440892098500626e-16,
+  "reciprocityFailures": [
+    {
+      "side": 0,
+      "other": false,
+      "R": 310,
+      "S": 1000,
+      "theta": 0.2,
+      "errorMeters": 0.13941010000019105
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 310,
+      "S": 1000,
+      "theta": 0.8,
+      "errorMeters": 0.16333098742495622
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 310,
+      "S": 1000,
+      "theta": 1.7,
+      "errorMeters": 0.2965297647715488
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 430,
+      "S": 1000,
+      "theta": 0.2,
+      "errorMeters": 0.045436930849405144
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 430,
+      "S": 1000,
+      "theta": 0.8,
+      "errorMeters": 0.09019592434253809
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 800,
+      "S": 320,
+      "theta": 0.2,
+      "errorMeters": 0.05182260941353434
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 800,
+      "S": 320,
+      "theta": 0.8,
+      "errorMeters": 0.07005002891048662
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 800,
+      "S": 320,
+      "theta": 1.7,
+      "errorMeters": 0.14671749222839026
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 800,
+      "S": 500,
+      "theta": 0.2,
+      "errorMeters": 0.014877593592700578
+    },
+    {
+      "side": 0,
+      "other": false,
+      "R": 800,
+      "S": 500,
+      "theta": 0.8,
+      "errorMeters": 0.048625963303152275
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 310,
+      "S": 1000,
+      "theta": 0.2,
+      "errorMeters": 0.13941010000019105
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 310,
+      "S": 1000,
+      "theta": 0.8,
+      "errorMeters": 0.16333098742438779
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 310,
+      "S": 1000,
+      "theta": 1.7,
+      "errorMeters": 0.2965297647713214
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 430,
+      "S": 1000,
+      "theta": 0.2,
+      "errorMeters": 0.04543693084951883
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 430,
+      "S": 1000,
+      "theta": 0.8,
+      "errorMeters": 0.0901959243424244
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 800,
+      "S": 320,
+      "theta": 0.2,
+      "errorMeters": 0.05182260941376171
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 800,
+      "S": 320,
+      "theta": 0.8,
+      "errorMeters": 0.07005002891048662
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 800,
+      "S": 320,
+      "theta": 1.7,
+      "errorMeters": 0.14671749222702601
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 800,
+      "S": 500,
+      "theta": 0.2,
+      "errorMeters": 0.014877593592700578
+    },
+    {
+      "side": 1,
+      "other": false,
+      "R": 800,
+      "S": 500,
+      "theta": 0.8,
+      "errorMeters": 0.04862596330417546
+    }
+  ]
+}
