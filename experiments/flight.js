@@ -114,6 +114,12 @@
     }, function (w) {
         session.setWorld(w);
     });
+    var wormholeRendering=document.getElementById('wormhole-rendering'),shipStretching=/** @type {HTMLInputElement|null} */(document.getElementById('wormhole-stretching'));
+    if(wormholeRendering&&shipStretching){
+        wormholeRendering.hidden=!activeMission.sky.wormhole;
+        shipStretching.checked=new URLSearchParams(location.search).get('bridgeShips')==='warped';
+        shipStretching.onchange=function(){presentation.setShipStretching(!!shipStretching&&shipStretching.checked);blurActiveControl();};
+    }
     if(aegis){
         presentation.setCapital(aegis);
         if(aegisMode){

@@ -428,7 +428,7 @@ void main(){
             return {objectPaths:shipStats.objectPaths,objectPatches:shipStats.objectPatches,objectError:shipStats.objectError,objectBad:shipStats.objectBad,compositionPasses:(adaptive?3:1)+(ships.length?1:0)+(projected?1:0),historyValid:valid?1:0,extraPasses:(adaptive?2:0)+(ships.length?1:0)+(projected?1:0),captures:count*2,cpuMs:performance.now()-start};
         }
         function dispose(){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();mapMaterial.dispose();fullMaterial.dispose();refineMaterial.dispose();atlases.forEach(function(t){t.dispose();});lookup.dispose();quad.dispose();material.dispose();}
-        return {render:render,dispose:dispose,invalidate:function(){initialized=false;lastSide=-1;historyPose=null;historyRevision=null;phase=0;}};
+        return {setShipStretching:/** @param {boolean} enabled */function(enabled){readableShips=!enabled;initialized=false;historyPose=null;historyRevision=null;},render:render,dispose:dispose,invalidate:function(){initialized=false;lastSide=-1;historyPose=null;historyRevision=null;phase=0;}};
     }
     DW.ellisRenderer={create:create,faces:faces};
 }());

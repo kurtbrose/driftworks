@@ -449,6 +449,7 @@
     /** @type {Orbit} */ var orbit = { yaw: 0, tilt: 0.48 };
     var studyHeight = 0;
     var diagnostics={mode:'normal',flat:false,scale:1,mothership:true,actors:true};
+    /** @type {boolean|null} */var shipStretchingOverride=null;
     /** @type {import('../experiments/types').EllisRenderPass|null} */var bridgeRenderer=null;
     var renderStats={shieldFloat:-1,explosions:0,explosionBatches:0,effectVertices:0,bridgeObjectPaths:0,bridgeObjectPatches:0,bridgeObjectError:0,bridgeObjectBad:0,bridgeHistoryValid:0,bridgeCaptures:0,bridgeCpuMs:0,drawCalls:0,triangles:0,shadowDrawCalls:0,shadowTriangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
     /** @type {Set<import('./three-types').Geometry>} */ var frameMeshes=new Set();
@@ -1287,11 +1288,12 @@
         background.style.backgroundImage = option && option.url ? 'url("' + option.url + '")' : 'none';
         background.style.filter = 'brightness(' + settings.brightness + ')';
       },
+      setStudyShipStretching:/** @param {boolean} enabled */function(enabled){shipStretchingOverride=enabled;if(bridgeRenderer)bridgeRenderer.setShipStretching(enabled);},
       setStudyBridgeRevision:/** @param {string|null} revision */function(revision){bridgeRevision=revision;},
       /** @param {boolean} enabled */
       setStudyBridge: function(enabled){
         if(!study)return;
-        if(enabled&&!bridgeRenderer&&DW.ellisRenderer)bridgeRenderer=DW.ellisRenderer.create(THREE,renderer);
+        if(enabled&&!bridgeRenderer&&DW.ellisRenderer){bridgeRenderer=DW.ellisRenderer.create(THREE,renderer);if(shipStretchingOverride!==null)bridgeRenderer.setShipStretching(shipStretchingOverride);}
         if(!enabled&&bridgeRenderer){bridgeRenderer.dispose();bridgeRenderer=null;}
       },
       /** @param {{mode:string,flat:boolean,scale:number,mothership:boolean,actors:boolean}} value */

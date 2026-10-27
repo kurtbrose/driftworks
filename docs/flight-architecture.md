@@ -562,3 +562,12 @@ capital damage across the bridge, fighter firing, hangar replacement and camera
 chart ownership. `tools/benchmark-cinematic.cjs` compares capital simulation and
 geometry preparation with and without the optical aim cache. See [cinematic
 performance observations](benchmarks/cinematic-2026-10-26.md).
+
+The pause menu's Settings panel exposes “Stretch ships through the wormhole”
+only on wormhole missions. It starts from `bridgeShips=warped` (otherwise rigid)
+and changes live through `flightPresentation.setShipStretching`,
+`scene3d.setStudyShipStretching` and `EllisRenderPass.setShipStretching`.
+The change preserves simulation and actor meshes, invalidates optical history,
+and survives render-pass recreation. It is a session setting. In the default
+full renderer it enables lensed geometry; the object experiment uses its affine
+patch. Far-side aperture clipping continues to apply to object images.

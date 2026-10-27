@@ -349,3 +349,28 @@ viewer.setStudyBridge(true);
 let bridgeShieldCompositions=0;DW.flightShields={create:()=>({render(scene,camera,discs,w,h,existing){assert.equal(existing,true,'own distortion samples finished Ellis frame');bridgeShieldCompositions++;return 2;},dispose(){}})};
 viewer.setStudyShields([{box:[0,0,1,1],waves:[0,0,-1,.2],depth:0,own:true,degrees:.35}],{});viewer.render(world,1,0,0);assert.equal(bridgeShieldCompositions,1);viewer.setStudyShields([],null);viewer.render(world,1,0,0);assert.equal(bridgeShieldCompositions,1,'Ellis quiet frames omit own postprocess');
 console.log('PASS default own-shield Ellis composition: completed optical frame, single postprocess and no idle capture');
+
+// Pause-menu ship distortion changes the live renderer without replacing actors.
+viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry=objects';viewer.setStudyBridge(true);
+viewer.setSurfaceCamera({region:0,eye:[0,-2380/U,1550/U],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+viewer.setStudyActors([{vertices:data,color:[.123,.456,.789],region:0,origin:[12/U,-2340/U,1550/U],lensCenter:[12/U,-2340/U,1550/U],lensRadius:5}]);
+let toggleGeometry;
+for(const enabled of [false,true,false]){
+ viewer.setStudyShipStretching(enabled);viewer.render(world,1,0,0);
+ assert.equal(viewer.getRenderStats().bridgeObjectPaths,enabled?5:1,'live toggle changes finite-source hull projection');
+ const draw=frames.at(-1)[0];assert(draw);
+ if(toggleGeometry)assert.equal(draw.geometry,toggleGeometry,'toggle reuses the existing mesh');toggleGeometry=draw.geometry;
+ assert.equal(draw.uniforms.uLensMode,3,'nearby hull retains local visibility when switching');
+}
+viewer.setStudyShipStretching(true);viewer.setStudyBridge(false);viewer.setStudyBridge(true);viewer.render(world,1,0,0);
+assert.equal(viewer.getRenderStats().bridgeObjectPaths,5,'selection survives renderer recreation');
+viewer.setStudyShipStretching(false);
+console.log('PASS live Ellis ship distortion: rigid/stretch/rigid, mesh reuse and renderer recreation');
+
+viewer.setStudyBridge(false);context.location.search='?mission=ellis';viewer.setStudyBridge(true);
+for(const enabled of [false,true,false]){
+ viewer.setStudyShipStretching(enabled);viewer.render(world,1,0,0);
+ assert.equal(viewer.getRenderStats().bridgeObjectPaths,enabled?0:1,'default gameplay switches between full lensed geometry and rigid overlay');
+ assert.equal(viewer.getRenderStats().bridgeCaptures,12,'each setting refreshes chart captures instead of reusing the previous hull image');
+}
+console.log('PASS live Ellis gameplay distortion: full geometry/rigid overlay routing and capture invalidation');

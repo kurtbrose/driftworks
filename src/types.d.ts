@@ -396,6 +396,7 @@ export interface DriftworksNamespace {
     inspectionHeight: (world: World) => number;
     create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; viewer?: boolean; zoomToTerrain?:boolean}) => {
       setStudyBridge:(enabled:boolean)=>void;
+      setStudyShipStretching:(enabled:boolean)=>void;
       setStudyBridgeRevision:(revision:string|null)=>void;
       setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean}) => void;
       getRenderStats: () => {shieldFloat?:number;explosions:number;explosionBatches:number;effectVertices:number;bridgeObjectPaths?:number;bridgeObjectPatches?:number;bridgeObjectError?:number;bridgeObjectBad?:number;bridgeHistoryValid?:number;bridgeCaptures?:number;bridgeCpuMs?:number;drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
