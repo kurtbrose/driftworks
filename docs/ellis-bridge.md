@@ -1224,3 +1224,31 @@ is not merely an artifact of comparing two versions of the same integral code.
 Raw invariant measurements: [JSON](benchmarks/ellis-invariants-2026-10-26.json).
 Screen-space grid intersections need not remain right angles under lensing;
 these tests use intrinsic geometry, path conservation and symmetry instead.
+
+### Analytic limits and far-side visibility
+
+The invariant suite also checks 18 radial core paths against exact proper
+radial distance, six exterior paths against Euclidean projection, and 12
+chart-label exchanges. Eight radial distances exceed 2 mm and fail the strict
+mode; exterior and chart-label checks pass. Raw errors are in the invariant JSON.
+
+`node tests/ellis-visibility.cjs` checks the transmission cone independently
+of skybox colors: a ray initially points inward and has conserved impact B<a.
+It compares that classification with 56 forward-integrated rays and checks
+112 opposite-chart finite-source endpoints. All agree, on both charts.
+
+An extended synthetic hull uses the renderer's four-path affine construction
+(4 m forward differences). At observer radii 330, 450 and 800 m, respectively,
+1, 10 and 9 of 121 hull samples spill outside the transmission cone; individually
+solved samples have zero spill. This is a pre-fragment geometric diagnostic,
+not a raster/pixel-coverage acceptance test. It does not exercise fragment masks,
+occlusion, antialiasing or the exact screenshot's mesh. Rigid presentation and
+shader clipping need a rendered identification-mask test before claiming zero
+visible spill. The affine diagnostic is intentionally retained as a known failure:
+
+```
+node tests/ellis-visibility.cjs --strict --out output/ellis-visibility.json
+```
+
+Strict mode exits nonzero for any affine sample outside the transmission cone.
+Raw measurements: [visibility JSON](benchmarks/ellis-visibility-2026-10-26.json).

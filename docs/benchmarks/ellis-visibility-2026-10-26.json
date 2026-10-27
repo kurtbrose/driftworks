@@ -1,0 +1,25 @@
+{
+  "classifications": 56,
+  "endpoints": 112,
+  "footprints": [
+    {
+      "observerRadiusMeters": 330,
+      "samples": 121,
+      "affineOutsideCone": 1,
+      "exactOutsideCone": 0
+    },
+    {
+      "observerRadiusMeters": 450,
+      "samples": 121,
+      "affineOutsideCone": 10,
+      "exactOutsideCone": 0
+    },
+    {
+      "observerRadiusMeters": 800,
+      "samples": 121,
+      "affineOutsideCone": 9,
+      "exactOutsideCone": 0
+    }
+  ],
+  "rasterCoverageVerified": false
+}
