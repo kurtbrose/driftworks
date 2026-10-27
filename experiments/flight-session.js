@@ -160,7 +160,7 @@
             grounded = false;
             remainder = 0;
             configureCombat();
-            if (combat.enabled){
+            if (combat.enabled&&config.mode!=='cinematic'){
                 DW.training.spawn(combat, state, asteroid.radius);
             }
             return snapshot();

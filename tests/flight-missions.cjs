@@ -23,3 +23,11 @@ assert.equal(api.address('Pilot, cover {pilot}.',1,false,ohio),'Neighbor, cover 
 context.window.location.search='?mission=unknown';assert.equal(api.current(),defaults);
 context.window.location.search='?mission=%ZZ';assert.equal(api.current(),defaults);
 console.log('PASS mission definitions: inherited defaults, array replacement, immutable snapshots, fallback, Ohio parity and third-mission overrides');
+
+const cinema=api.resolve('cinematic'),jade=api.resolve('gas-giant'),moonSide=api.resolve('jade-rime');
+assert.equal(JSON.stringify(cinema.sky.jadeSystem),JSON.stringify(jade.sky.jadeSystem),'cinematic destination uses the close Jade gas-giant observer and frame');
+assert.notEqual(JSON.stringify(cinema.sky.jadeSystem.observer),JSON.stringify(moonSide.sky.jadeSystem.observer),'cinematic destination is not the close gray moon view');
+assert.equal(cinema.sky.rimeSurface,'','no nearby moon surface is inherited');
+assert.equal(cinema.sky.wormhole,true);assert.equal(cinema.weaponsDisabled,false);
+assert.equal(moonSide.sky.rimeSurface,'jade-moons-v1/rime-disk-v2.png','moon-side free flight remains available');
+console.log('PASS cinematic sky: close Jade preset, no inherited close moon surface, Ellis and combat preserved');

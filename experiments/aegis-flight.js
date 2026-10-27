@@ -199,12 +199,12 @@
             var relative=sub(local(target),p),velocity=bridge?[0,0,0]:rotate(opponent.velocity,true),time=interceptTime(relative,velocity,heavyWeapon.speed);
             var travelTime=time===null?0:time;
             var aim=time!==null&&time<=heavyWeapon.lifetime?target.map(function(v,i){return v+(bridge?0:opponent.velocity[i]*travelTime/U);}):null;
-            var d=aim?sub(local(aim),p):relative,goalYaw=wrap(Math.atan2(d[1],d[0])-Math.PI),goalElevation=side*clamp(Math.atan2(d[2]*side,Math.hypot(d[0],d[1])),0,Math.PI*.47);
+            var d=aim?sub(local(aim),p):relative,goalYaw=wrap(Math.atan2(d[1],d[0])-Math.PI),goalElevation=side*clamp(Math.atan2(d[2]*side,Math.hypot(d[0],d[1])),bridge?-.2:0,Math.PI*.47);
             m.targetId='capital-'+opponent.team;
             m.yaw+=clamp(wrap(goalYaw-m.yaw),-.35*dt,.35*dt);m.elevation=approach(m.elevation,goalElevation,.25*dt);
             var cy=Math.cos(m.yaw),sy=Math.sin(m.yaw),ce=Math.cos(m.elevation),se=Math.sin(m.elevation),forward=[-cy*ce,-sy*ce,se];
-            var clear=!!aim&&d[2]*side>0&&Math.abs(wrap(goalYaw-m.yaw))<.018&&Math.abs(goalElevation-m.elevation)<.018&&!hullHit(p.map(function(v,i){return v+forward[i]*45.1;}),local(aim));
-            var active=view.combat.enabled&&!view.combat.dead&&!view.combat.roundOver&&options.state.integrity>0&&opponent.integrity>0;
+            var clear=!!aim&&(bridge||d[2]*side>0)&&Math.abs(wrap(goalYaw-m.yaw))<.018&&Math.abs(goalElevation-m.elevation)<.018&&!hullHit(p.map(function(v,i){return v+forward[i]*45.1;}),local(aim));
+            var active=options.state.mainBatteryClear!==false&&view.combat.enabled&&!view.combat.dead&&!view.combat.roundOver&&options.state.integrity>0&&opponent.integrity>0;
             if(clear)m.rest=Math.max(0,m.rest-dt);m.settled=clear?m.settled+dt:0;
             if(!clear&&m.burst>0){m.burst=0;m.rest=3;}
             if(active&&clear&&m.settled>.25&&m.rest<=0&&m.burst<=0)m.burst=.7;
@@ -351,7 +351,7 @@
      * @param {{battlefield?:boolean;bridge?:boolean}} [options] @returns {import('./types').AegisFlightRig} */
     function createBattle(options){
         /** @type {import('./types').AegisCapitalState[]} */var states=[{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},{team:'enemy',position:[120/U,1500/U,1200+180/U],heading:Math.PI,velocity:[0,0,0],integrity:20000}];
-        if(options&&options.bridge){states[0].position=[0,-3600/U,1550/U];states[1].position=[12000/U,-3600/U,1730/U];states.forEach(function(s,i){s.region=i;s.heading=-Math.PI/2;});}
+        if(options&&options.bridge){states[0].position=[0,-2675/U,1550/U];states[1].position=[12000/U,-1325/U,1550/U];states.forEach(function(s,i){s.region=i;s.heading=i*Math.PI;s.mainBatteryClear=true;});}
         var motion=[0,0];
         var starts=states.map(function(s){return {position:s.position.slice(),heading:s.heading};}),seconds=0;
         var configs=states.map(function(state,i){return {state:state,bridge:!!(options&&options.bridge),opponent:states[1-i],opponentRig:/** @type {import('./types').AegisFlightRig|undefined} */(undefined)};});
@@ -370,20 +370,30 @@
                 starts[0].heading=bearing+Math.PI-Math.PI/9;
                 starts[1].heading=bearing+Math.PI/9;
             }
-            states.forEach(function(s,i){s.position.splice(0,3,...starts[i].position);s.heading=starts[i].heading;s.velocity=[0,0,0];s.integrity=20000;rigs[i].reset(i===0&&!(options&&options.battlefield)?combat:undefined);});
+            states.forEach(function(s,i){s.position.splice(0,3,...starts[i].position);s.heading=starts[i].heading;s.velocity=[0,0,0];s.integrity=20000;s.mainBatteryClear=true;rigs[i].reset(i===0&&!(options&&options.battlefield)?combat:undefined);});
         }
         /** @param {number} elapsed @param {FlightView} view */function step(elapsed,view){
             if(!Number.isFinite(elapsed)||elapsed<=0)return;var dt=Math.min(.1,elapsed);seconds+=dt;
             // Bounded, opposing patrol arcs: ~12 m/s, a slow heading swing, no eventual collision/drift.
-            states.forEach(function(s,i){var engines=rigs[i].components?rigs[i].components().filter(function(p){return p.kind==='engine';}):[],power=engines.length?engines.filter(function(p){return p.hp>0;}).length/engines.length:1;motion[i]+=dt*power;var phase=motion[i]*.018,sign=i===0?-1:1,old=s.position.slice();if(s.integrity>0){s.position[0]=starts[i].position[0]+sign*Math.sin(phase)*650/U;s.position[1]=starts[i].position[1]+sign*(1-Math.cos(phase))*120/U;s.heading=starts[i].heading+sign*Math.sin(phase*.7)*.12;}s.velocity=s.position.map(function(v,k){return (v-old[k])*U/dt;});});
+            states.forEach(function(s,i){var engines=rigs[i].components?rigs[i].components().filter(function(p){return p.kind==='engine';}):[],power=engines.length?engines.filter(function(p){return p.hp>0;}).length/engines.length:1;motion[i]+=dt*power;var phase=motion[i]*.018,sign=i===0?-1:1,old=s.position.slice();if(s.integrity>0){
+                if(options&&options.bridge){
+                    var orbit=(i===0?-Math.PI/2:Math.PI/2)+(i===0?1:-1)*motion[i]*.006;
+                    s.position[0]=(i*12000+Math.cos(orbit)*675)/U;s.position[1]=(-2000+Math.sin(orbit)*675)/U;
+                    s.heading=orbit+Math.PI/2;
+                }else{s.position[0]=starts[i].position[0]+sign*Math.sin(phase)*650/U;s.position[1]=starts[i].position[1]+sign*(1-Math.cos(phase))*120/U;s.heading=starts[i].heading+sign*Math.sin(phase*.7)*.12;}
+            }s.velocity=s.position.map(function(v,k){return (v-old[k])*U/dt;});});
+            if(options&&options.bridge){
+                var opposition=Math.cos(-Math.PI+(motion[0]+motion[1])*.006),clear=opposition<-.25;
+                states.forEach(function(s){s.mainBatteryClear=clear;});
+            }
             rigs.forEach(function(rig){rig.step(dt,view);});
         }
         /** @param {Vector} a @param {Vector} b */function hit(a,b){var best=/** @type {Vector|null} */(null),distance=Infinity;rigs.forEach(function(rig){var point=rig.hit(a,b);if(point){var d=Math.hypot.apply(null,sub(point,a));if(d<distance){distance=d;best=point;}}});return best;}
         /** @param {Vector} point @param {number} amount @param {import('./types').Combat} combat */
         function damage(point,amount,combat){var nearest=0,best=Infinity;states.forEach(function(s,i){var d=Math.hypot(...sub(point,s.position));if(d<best){best=d;nearest=i;}});var rig=rigs[nearest];return !!(rig.damage&&rig.damage(point,amount,combat));}
         function components(){return rigs.flatMap(function(r){return r.components?r.components():[];});}
-        function telemetry(){var reports=rigs.map(function(r){return r.telemetry();});return {seconds:seconds,contacts:reports.reduce(function(n,r){return n+r.contacts;},0),launches:reports.reduce(function(n,r){return n+r.launches;},0),shots:reports.reduce(function(n,r){return n+r.shots;},0),hits:reports.reduce(function(n,r){return n+r.hits;},0),mounts:reports.flatMap(function(r){return r.mounts;}),capitals:states.map(function(s,i){return {team:s.team,position:s.position.slice(),heading:s.heading,integrity:s.integrity,shots:reports[i].shots,hits:reports[i].hits};})};}
-        function readout(){return 'AEGIS CAPITAL ENGAGEMENT / 1,305 m each\n'+states.map(function(s,i){var t=rigs[i].telemetry();return (i===0?'GREEN':'RED')+' '+(s.integrity>0?Math.ceil(s.integrity/200)+'% integrity':'disabled')+' · '+t.shots+' rounds / '+t.hits+' hits';}).join('\n')+'\nDisabled: '+components().filter(function(p){return p.hp<=0;}).length+' / '+components().length+' systems\nHangar: '+rigs[0].telemetry().launches+' fighters launched';}
+        function telemetry(){var reports=rigs.map(function(r){return r.telemetry();});return {seconds:seconds,contacts:reports.reduce(function(n,r){return n+r.contacts;},0),launches:reports.reduce(function(n,r){return n+r.launches;},0),shots:reports.reduce(function(n,r){return n+r.shots;},0),hits:reports.reduce(function(n,r){return n+r.hits;},0),mounts:reports.flatMap(function(r){return r.mounts;}),capitals:states.map(function(s,i){return {team:s.team,position:s.position.slice(),heading:s.heading,integrity:s.integrity,mainBatteryClear:s.mainBatteryClear,shots:reports[i].shots,hits:reports[i].hits};})};}
+        function readout(){return 'AEGIS CAPITAL ENGAGEMENT / 1,305 m each\n'+(options&&options.bridge?(states[0].mainBatteryClear?'OPPOSING SIDES / MAIN BATTERIES CLEAR':'SAME SIDE / MAIN BATTERIES MASKED')+'\n':'')+states.map(function(s,i){var t=rigs[i].telemetry();return (i===0?'GREEN':'RED')+' '+(s.integrity>0?Math.ceil(s.integrity/200)+'% integrity':'disabled')+' · '+t.shots+' rounds / '+t.hits+' hits';}).join('\n')+'\nDisabled: '+components().filter(function(p){return p.hp<=0;}).length+' / '+components().length+' systems\nHangar: '+rigs[0].telemetry().launches+' fighters launched';}
         reset();return {reset:reset,step:step,geometry:function(){rigs.forEach(function(r){r.geometry();});return renderBatches;},effects:function(pose,shields){return rigs.flatMap(function(r){return r.effects(pose,shields);});},readout:readout,hit:hit,damage:damage,components:components,telemetry:telemetry};
     }
     /** Unarmed centerline traffic using the same antipodal chart transport as fighters.

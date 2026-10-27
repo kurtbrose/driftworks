@@ -512,3 +512,53 @@ Ohio flight music uses `audio.createOhioMusic()` and local media in `assets/audi
 `tools/trim-ohio-intro.py` derives `radio-intro.wav` from the preserved `radio-intro-source.wav`, shortening only sustained quiet gaps. Longer pauses retain 350 ms for emphasis; shorter gaps retain 160 ms. A 5 ms blend at each cut avoids clicks.
 
 Audible Ohio soundtrack playback calls the mixer's transient `setMusicActive` gate to reduce only the flight engine by 3 dB. Pausing or setting the Ohio music slider to zero restores the engine. This multiplier composes with comms/impact ducking without changing the saved engine slider or other missions.
+
+
+### Cinematic bridge demo
+
+`flight.html?mission=cinematic&bridgeGrid=0&bridgeOutline=0` runs the existing
+Ellis optics and chart transport with two armed Aegis rigs on opposite charts.
+The destination uses the `gas-giant` observer/frame, rather than the nearby gray
+moon preset `jade-rime`. The terrestrial hero panorama is bound separately from the close Jade gas-giant cube; both
+backgrounds pass through the same Ellis sky lens. Capital geometry retains chart
+IDs and shared immutable local meshes. Both hulls circle their respective mouths
+at 675 m radius in opposite directions (0.006 rad/s, about 4 m/s), keeping
+their long broadsides inward. Main batteries engage when their radial directions
+differ by more than 104.5 degrees; the same-side interval masks new main-battery
+fire. Existing rounds finish their trajectories and fighter/point-defense combat
+continues. Bridge batteries may depress up to 0.2 rad toward the lens; the
+existing hull obstruction query still rejects blocked barrels. Heavy guns
+predict target motion in its destination chart before solving their optical
+firing route; projectile segments test only capital hulls in the segment's
+chart. The capital aim cache refreshes at 120 ms intervals staggered across
+mounts, rather than solving all 24 routes every frame. Destruction does not stop
+already-fired optical rounds.
+
+Both hangars launch up to eight living fighters per faction, replacing losses
+with three seconds between launches. After the short straight bay departure,
+fighters use the existing `fso-breaker` pursuit AI at skill 2. Cinematic target
+selection permits opponents in the other chart and prefers local opponents when
+available. A fighter with a remote opponent navigates through the physical
+mouth, then resumes ordinary dogfight decisions, lead, guns, hull collision and
+damage. There are no battle zones or formation tethers. Empty-space missions
+skip asteroid avoidance shells. The cinematic encounter does not end when one
+wing is temporarily wiped out, and the camera does not periodically reset
+combat.
+
+`flightWatch.cinema(rig)` owns only presentation time, subject selection and
+camera poses: six ten-second shots plus a 24-second full orbit of the mouth,
+with C to cut early. The orbit translates the eye around the physical mouth at
+1,050 m horizontal radius with a gentle elevation change, keeping the lens
+centre framed. The fighter shot uses an independent inertial camera with
+acceleration capped at 22 m/s², speed at 240 m/s and damped aim limited to 0.35
+rad/s. It keeps a world-up horizon. Subject death or chart transit causes a
+deliberate cut instead of a camera warp. The stationary session observer stays
+separate from the camera; Escape pauses simulation and the camera clock. This
+remains a prototype director: pursuit shots can face empty space and cuts are
+timed rather than selected by combat salience.
+
+`tests/cinematic-demo.cjs` uses the real headless flight session to exercise
+capital damage across the bridge, fighter firing, hangar replacement and camera
+chart ownership. `tools/benchmark-cinematic.cjs` compares capital simulation and
+geometry preparation with and without the optical aim cache. See [cinematic
+performance observations](benchmarks/cinematic-2026-10-26.md).
