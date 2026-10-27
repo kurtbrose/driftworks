@@ -66,6 +66,15 @@ assert.equal(shieldCompiled.uniforms.uShieldOutput.value,0,'failed capture also 
 viewer.setStudyShields([],null);assert.equal(shieldDisposed,1);
 console.log('PASS shield native color: capture encoding, normal/exception restoration and disabled-pass disposal');
 
+let capitalShieldCalls=0,capitalShieldDisposed=0;
+DW.capitalShieldPass={create:()=>({supported:true,render(){capitalShieldCalls++;assert.equal(shieldCompiled.uniforms.uShieldOutput.value,1);return {draws:2,triangles:100};},dispose(){capitalShieldDisposed++;}})};
+const capitalShieldFrame={mode:'refraction',impacts:[{anchor:0,age:.4,heavy:false}]};
+viewer.setStudyCapitalShield(capitalShieldFrame,{});viewer.render(world,1,0,0);assert.equal(capitalShieldCalls,0,'expired gun waves do not trigger a capture');
+capitalShieldFrame.impacts[0].age=.1;viewer.render(world,1,0,0);assert.equal(capitalShieldCalls,1);assert.equal(shieldCompiled.uniforms.uShieldOutput.value,0);
+capitalShieldFrame.impacts[0].age=.4;viewer.render(world,1,0,0);assert.equal(capitalShieldCalls,1,'quiet frames resume ordinary rendering');
+viewer.setStudyCapitalShield(null,null);assert.equal(capitalShieldDisposed,1);
+console.log('PASS capital shield routing: local lifetime, no idle capture, native encoding and explicit disposal');
+
 viewer.setStudyActors([]);viewer.setStudyEffects([]);
 viewer.setStudyExplosions([{position:[0,0,0],velocity:[1,0,0],age:.3,size:1,seed:4}]);
 viewer.render(world,1,0,0);

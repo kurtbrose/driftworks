@@ -398,11 +398,12 @@ export interface DriftworksNamespace {
       setStudyBridge:(enabled:boolean)=>void;
       setStudyBridgeRevision:(revision:string|null)=>void;
       setStudyDiagnostics: (settings: {mode: string; flat: boolean; scale: number; mothership: boolean; actors: boolean}) => void;
-      getRenderStats: () => {explosions:number;explosionBatches:number;effectVertices:number;bridgeObjectPaths?:number;bridgeObjectPatches?:number;bridgeObjectError?:number;bridgeObjectBad?:number;bridgeHistoryValid?:number;bridgeCaptures?:number;bridgeCpuMs?:number;drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
+      getRenderStats: () => {shieldFloat?:number;explosions:number;explosionBatches:number;effectVertices:number;bridgeObjectPaths?:number;bridgeObjectPatches?:number;bridgeObjectError?:number;bridgeObjectBad?:number;bridgeHistoryValid?:number;bridgeCaptures?:number;bridgeCpuMs?:number;drawCalls: number; triangles: number; lines: number; meshes: number; materials: number; width: number; height: number; pixelRatio: number; cpuMs: number};
       setStudyLightRigs:(rigs:RigLighting[])=>void;
     setRigLightsEnabled:(enabled:boolean)=>void;
     prepareStudyTextures: (images: HTMLImageElement[]) => Promise<void>;
     setStudyActors: (batches: {projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
+      setStudyCapitalShield:(frame:import('../experiments/types').CapitalShieldFrame|null,sky:HTMLCanvasElement|null)=>void;
       setStudyShields:(discs:import('../experiments/types').ShieldDisc[],sky:HTMLCanvasElement|null)=>void;
       completeFrame:()=>void;
       setStudyEffects: (batches: {projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; color: [number,number,number]}[]) => void;

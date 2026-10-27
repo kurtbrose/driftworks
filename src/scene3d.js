@@ -429,6 +429,8 @@
     /** @type {import('../experiments/types').ShieldDisc[]} */var shieldDiscs=[];
     /** @type {HTMLCanvasElement|null} */var shieldSky=null;
     /** @type {ReturnType<NonNullable<import('./types').DriftworksNamespace['flightShields']>['create']>|null} */var shieldPass=null;
+    /** @type {import('../experiments/types').CapitalShieldFrame|null} */var capitalShieldFrame=null;
+    /** @type {ReturnType<NonNullable<import('./types').DriftworksNamespace['capitalShieldPass']>['create']>|null} */var capitalShieldPass=null;
     var shieldOutputUniform={value:0};
     // Common readability floor for native PBR; custom asteroid/mining shaders ignore it.
     scene.add(new THREE.AmbientLight(0xffffff,.35));
@@ -448,7 +450,7 @@
     var studyHeight = 0;
     var diagnostics={mode:'normal',flat:false,scale:1,mothership:true,actors:true};
     /** @type {import('../experiments/types').EllisRenderPass|null} */var bridgeRenderer=null;
-    var renderStats={explosions:0,explosionBatches:0,effectVertices:0,bridgeObjectPaths:0,bridgeObjectPatches:0,bridgeObjectError:0,bridgeObjectBad:0,bridgeHistoryValid:0,bridgeCaptures:0,bridgeCpuMs:0,drawCalls:0,triangles:0,shadowDrawCalls:0,shadowTriangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
+    var renderStats={shieldFloat:-1,explosions:0,explosionBatches:0,effectVertices:0,bridgeObjectPaths:0,bridgeObjectPatches:0,bridgeObjectError:0,bridgeObjectBad:0,bridgeHistoryValid:0,bridgeCaptures:0,bridgeCpuMs:0,drawCalls:0,triangles:0,shadowDrawCalls:0,shadowTriangles:0,lines:0,meshes:0,materials:0,width:0,height:0,pixelRatio:1,cpuMs:0};
     /** @type {Set<import('./three-types').Geometry>} */ var frameMeshes=new Set();
     /** @type {Set<string>} */ var frameMaterials=new Set();
     var materialFinish=0;
@@ -1212,6 +1214,10 @@
         renderStats.bridgeObjectPaths=bridge.objectPaths;renderStats.bridgeObjectPatches=bridge.objectPatches;renderStats.bridgeObjectError=bridge.objectError;renderStats.bridgeObjectBad=bridge.objectBad;renderStats.bridgeHistoryValid=bridge.historyValid;renderStats.bridgeCaptures=bridge.captures;renderStats.bridgeCpuMs=bridge.cpuMs;
         renderStats.drawCalls=renderStats.drawCalls*(1+bridge.captures)+bridge.compositionPasses;
         renderStats.triangles=renderStats.triangles*(1+bridge.captures)+2*bridge.compositionPasses;
+      }else if(!shadowPass&&capitalShieldFrame&&shieldSky&&DW.capitalShieldPass&&(capitalShieldFrame.mode==='envelope'||capitalShieldFrame.impacts.some(function(hit){return hit.age>=0&&hit.age<(hit.heavy?.65:.36);}))){
+        if(!capitalShieldPass)capitalShieldPass=DW.capitalShieldPass.create(THREE,renderer,shieldSky);
+        renderStats.shieldFloat=capitalShieldPass.supported?1:0;shieldOutputUniform.value=capitalShieldFrame.mode==='refraction'&&capitalShieldPass.supported?1:0;
+        try{var capitalExtra=capitalShieldPass.render(scene,camera,capitalShieldFrame,width,height);renderStats.drawCalls+=capitalExtra.draws;renderStats.triangles+=capitalExtra.triangles;}finally{shieldOutputUniform.value=0;}
       }else if(!shadowPass&&shieldDiscs.length&&shieldSky&&DW.flightShields){
         if(!shieldPass)shieldPass=DW.flightShields.create(THREE,renderer,shieldSky);
         shieldOutputUniform.value=1;try{var extra=shieldPass.render(scene,camera,shieldDiscs,width,height);renderStats.drawCalls+=extra;renderStats.triangles+=extra*2;}finally{shieldOutputUniform.value=0;}
@@ -1234,6 +1240,8 @@
       getOrbit: function () { return { yaw: orbit.yaw, tilt: orbit.tilt, height: studyHeight }; },
       /** @param {{yaw: number, tilt: number, height?: number}} value */
       setOrbit: function (value) { if(viewerControls && (viewerControls.isFlying() || viewerControls.isPicking())){var savedCamera=getWorld().camera;viewerControls.reset();var resetWorld=getWorld();setWorld(Object.assign({},resetWorld,{camera:savedCamera}));} if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
+      /** @param {import('../experiments/types').CapitalShieldFrame|null} frame @param {HTMLCanvasElement|null} sky */
+      setStudyCapitalShield:function(frame,sky){capitalShieldFrame=frame;shieldSky=sky;if(!sky&&capitalShieldPass){capitalShieldPass.dispose();capitalShieldPass=null;}},
       /** @param {import('../experiments/types').ShieldDisc[]} discs @param {HTMLCanvasElement|null} sky */
       setStudyShields:function(discs,sky){shieldDiscs=discs;shieldSky=sky;if(!sky&&shieldPass){shieldPass.dispose();shieldPass=null;}},
       completeFrame:function(){var gl=renderer.getContext();gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));},

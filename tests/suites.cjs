@@ -40,6 +40,7 @@ const suites = {
     "refueling-cycle.cjs"
   ],
   rendering: [
+    "capital-shields.cjs",
     "fighter-shields.cjs",
     "flight-shields.cjs",
     "asteroid-terrain.cjs",

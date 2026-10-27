@@ -29,6 +29,7 @@ const profiles = {
   terrain: {entries: ['@simulation', 'src/asteroid-art.js', '@meshes', 'src/asteroid-terrain.js']},
   ellisBenchmark: {entries: ['@flight'], before: [{src: 'experiments/flight.js', entries: ['tests/fixtures/ellis-benchmark-probe.js']}]},
   // Studies share the production flight dependencies while retaining page-owned setup.
+  capitalShields: {entries: ['@flightStudy', 'assets/ships/aegis-kit/shield-envelope.js', 'experiments/capital-shield-pass.js', 'experiments/capital-shields.js']},
   flightStudy: {entries: ['@flight'], omit: ['experiments/flight.js']},
   ellisStudy: {entries: ['@flightStudy', 'experiments/ellis-study.js'], omit: ['experiments/ellis-feedback.js']},
   ellisCapture: {entries: ['@flightStudy'], omit: ['experiments/ellis-feedback.js']},

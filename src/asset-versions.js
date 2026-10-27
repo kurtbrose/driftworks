@@ -1081,6 +1081,7 @@
   "assets/ships/aegis-kit/flight-rig.js": "19ff1c719d6f",
   "assets/ships/aegis-kit/reference-fighter.js": "115e1686a2da",
   "assets/ships/aegis-kit/scorched.svg": "d5cd38ec4855",
+  "assets/ships/aegis-kit/shield-envelope.js": "f1f477be04de",
   "assets/ships/civilian-airliners/commuter-belly-detail.png": "650cdb654f0c",
   "assets/ships/civilian-airliners/commuter-bottom.png": "40ed81919665",
   "assets/ships/civilian-airliners/commuter-bridge.png": "601a9b42df3b",

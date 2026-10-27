@@ -391,6 +391,8 @@ export type RenderStats = {
         materials: number;
     };
 };
+export type ShieldEnvelope={version:number;source:string;sha256:string;parameters:{rings:number;sides:number;inflation:number;gunRadius:number;heavyRadius:number};vertices:number[];indices:number[];anchors:{vertex:number;patches:number[][]}[]};
+export type CapitalShieldFrame={envelope:ShieldEnvelope;target:number[];mode:string;strategy:string;bend:number;impacts:{anchor:number;age:number;heavy:boolean}[]};
 export type ShieldDisc = {box:number[];waves:number[];depth:number};
 export type FlightView = {
     world: World;
@@ -924,6 +926,8 @@ export type ExperimentModules = {
         poses: Record<'standing' | 'servicing', {vertices: number[]; color: [number,number,number]}[]> | null;
         error: string | null;
     };
+    aegisShieldEnvelope:ShieldEnvelope;
+    capitalShieldPass:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{supported:boolean;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,frame:CapitalShieldFrame,width:number,height:number)=>{draws:number;triangles:number};dispose:()=>void}};
     flightShields:{tracker:()=>{collect:(view:FlightView,art:Appearance,aspect:number)=>ShieldDisc[];reset:()=>void};create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,discs:ShieldDisc[],width:number,height:number)=>number;dispose:()=>void}};
     flightPresentation: {
         ohioSignGeometry: (radius:number, texture:HTMLImageElement, surfaceHeight?:number) => Batch[];

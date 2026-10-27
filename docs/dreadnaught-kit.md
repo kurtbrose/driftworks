@@ -1,5 +1,9 @@
 # Aegis modular capital ship study
 
+For the separate fitted shield surface, short local waves and measured patch
+comparison, see [Capital shield patches](capital-shields.md). The shield bake
+does not change the capital's visible mesh, articulation or collision geometry.
+
 Open `experiments/dreadnaught-kit.html` through the ordinary static server. This
 self-contained Three.js experiment uses only the vendored library and controls.
 It is separate from gameplay and does not change simulation or saved ships.
