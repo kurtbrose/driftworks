@@ -1,0 +1,7 @@
+Last measurement: windows / studio
+ABBA · 20 warmup + 90 samples / block
+A CPU 0.7 / 0.8 ms · frame 13.3 / 13.4 ms
+  22 draws · 25872 triangles
+B CPU 0.7 / 0.9 ms · frame 13.3 / 13.4 ms
+  22 draws · 25872 triangles
+2463×1196, 2463×1196 · GPU execution not measured

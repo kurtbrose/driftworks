@@ -459,3 +459,13 @@ instead of the exterior PBR material. Surface toggles and reset restore this
 selection. There are eleven logical idle batches; empty source batches and
 visibility affect submitted draw counts. The pre-window review baseline is
 frozen in `output/aegis-windows-before-rig.js`.
+
+## Approved service panels
+
+The service belt uses atlas tile two for recessed panels, a maintenance hatch
+and ventilation slats. The approved painter lives in
+`tools/lib/aegis-service-panels.cjs` and is included by the existing surface
+atlas bake. Its finish color is `[.065,.075,.08]`; geometry, UV layouts, texture
+dimensions, material ownership and draw batching are unchanged.
+The original atlas is retained in `output/aegis-service-before-atlas.png` for
+the review comparison.

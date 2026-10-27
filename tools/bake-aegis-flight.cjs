@@ -68,7 +68,7 @@ const {pathToFileURL}=require('node:url');
  function finish(b,index){
    const uv=surfaceUV.get(b),textured=uv.some((v,i)=>i%2===0&&Math.abs(v-.875)>1e-5);
    if(!textured)return null;
-   return {uv,color:Math.max(...b.color)<.05?[.026,.034,.04]:b.color.map(v=>Math.min(1,v*1.06)),plainUV:[(1568+index*60)/2048,556/1024]};
+   return {uv,color:Math.max(...b.color)<.05?[.065,.075,.08]:b.color.map(v=>Math.min(1,v*1.06)),plainUV:[(1568+index*60)/2048,556/1024]};
  }
  data.surface={atlas:'surface-atlas.png',batches:data.batches.map(finish),turrets:turrets.map(t=>t.batches.map(b=>finish(b,data.batches.findIndex(h=>h.color.join(',')===b.color.join(',')))))};
  data.surface.batches.forEach((f,i)=>{if(f)f.uv=surface.hangarMarkings(data.batches[i].vertices,f.uv,hangars);});

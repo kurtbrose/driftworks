@@ -10,5 +10,6 @@ const root=path.join(__dirname,'..'),ctx=vm.createContext({window:{},document:{c
 for(const f of ['assets/ships/aegis-kit/flight-rig.js','output/aegis-surface-study.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),ctx);
 const source=ctx.window.Driftworks.aegisFlightAsset;
 const canvas=ctx.window.AegisSurfaceStudy.atlas(source.surface,source);
+require('./lib/aegis-service-panels.cjs')(canvas.getContext('2d'));
 fs.writeFileSync(path.join(root,'assets/ships/aegis-kit/surface-atlas.png'),canvas.toBuffer('image/png'));
 console.log('Baked approved Aegis surface atlas (2048 x 1024)');
