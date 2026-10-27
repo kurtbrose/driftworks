@@ -47,6 +47,9 @@
     }
     /** Immutable mesh buffers are shared across both capital ships and all mounts. */
     var smokeTexture=/** @type {HTMLImageElement|undefined} */(undefined);
+    var surfaceTexture=/** @type {HTMLImageElement|undefined} */(undefined);
+    /** @type {Promise<void>|null} */var surfaceLoad=null;
+    /** @type {WeakMap<Float32Array,Float32Array>} */var surfaceBuffers=new WeakMap();
     var cachedAsset=/** @type {import('./types').AegisFlightAsset|null} */(null);
     /** @type {Map<string,Float32Array>} */var vertexCache=new Map();
     /** Shared prepared resource, invalidated with its authored asset revision. */
@@ -56,25 +59,30 @@
     function prepareIdleAsset(source){
         if(idleAsset)return idleAsset;
         /** @type {Map<string,{color:[number,number,number];vertices:number[]}>} */var groups=new Map();
-        /** @param {{color:[number,number,number];vertices:number[]}} batch @param {Vector} pivot */
-        function add(batch,pivot){
+        /** @type {Map<string,number[]>} */var idleUV=new Map();
+        /** @param {{color:[number,number,number];vertices:number[]}} batch @param {Vector} pivot @param {number[]=} uv */
+        function add(batch,pivot,uv){
             var key=batch.color.join(','),group=groups.get(key);
             if(!group){group={color:batch.color,vertices:[]};groups.set(key,group);}
+            var index=source.batches.findIndex(function(b){return b.color.join(',')===key;}),finish=source.surface&&source.surface.batches[index];
+            var mapped=idleUV.get(key);if(finish&&!mapped){mapped=[];idleUV.set(key,mapped);}
             for(var k=0;k<batch.vertices.length;k+=6){
                 for(var axis=0;axis<3;axis++)group.vertices.push(batch.vertices[k+axis]+pivot[axis]);
                 group.vertices.push(batch.vertices[k+3],batch.vertices[k+4],batch.vertices[k+5]);
+                if(finish&&mapped)mapped.push(uv?uv[k/3]:finish.plainUV[0],uv?uv[k/3+1]:finish.plainUV[1]);
             }
         }
-        source.batches.forEach(function(b){add(b,[0,0,0]);});
+        source.batches.forEach(function(b,i){add(b,[0,0,0],source.surface&&source.surface.batches[i]?.uv);});
         (source.engines||[]).forEach(function(e){e.batches.forEach(function(b){add(b,e.position);});});
         source.turrets.forEach(function(t){t.batches.forEach(function(b){add(b,t.position);});});
         idleAsset=Object.assign({},source,{batches:Array.from(groups.values()),turrets:[],engines:[]});
+        if(source.surface)idleAsset.surface={atlas:source.surface.atlas,batches:idleAsset.batches.map(function(b){var index=source.batches.findIndex(function(s){return s.color.join(',')===b.color.join(',');}),finish=source.surface&&source.surface.batches[index];return finish?Object.assign({},finish,{uv:idleUV.get(b.color.join(','))||[]}):null;})};
         return idleAsset;
     }
     /** @param {import('./types').AegisRigOptions} [options] @returns {import('./types').AegisFlightRig} */
     function create(options){
         var sourceAsset=DW.aegisFlightAsset,unarmed=!!(options&&options.unarmed),origin=options?options.state.position:[0,0,1200],team=options?options.state.team:'ally';
-        if(cachedAsset!==sourceAsset){cachedAsset=sourceAsset;vertexCache.clear();idleAsset=null;}
+        if(cachedAsset!==sourceAsset){cachedAsset=sourceAsset;vertexCache.clear();surfaceBuffers=new WeakMap();idleAsset=null;}
         var asset=unarmed?prepareIdleAsset(sourceAsset):sourceAsset;
         /** @param {number[]} values */function vertices(values){var key=values.join(','),buffer=vertexCache.get(key);if(!buffer){buffer=new Float32Array(values.map(function(v,i){return i%6<3?v/U:v;}));vertexCache.set(key,buffer);}return buffer;}
         /** @param {[number,number,number]} color @returns {[number,number,number]} */function livery(color){return team==='enemy'&&color[2]>color[0]*1.25?[Math.max(.45,color[2]),color[1]*.22,color[0]*.3]:color;}
@@ -164,6 +172,15 @@
         function components(){return parts.map(function(p){return {id:'capital-'+team+'-'+p.id,kind:p.kind,hp:p.hp,maxHp:p.maxHp,position:world(p.position)};});}
         var hullBasis=new Float32Array([1,0,0,0,1,0,0,0,1]);
         /** @type {Batch[]} */var staticBatches=asset.batches.map(function(b){return {vertices:vertices(b.vertices),color:livery(b.color),origin:/** @type {[number,number,number]} */(origin),basis:hullBasis,staticGeometry:true};});
+        var surfaceStates=staticBatches.map(function(b,i){
+            var finish=asset.surface&&asset.surface.batches[i];if(!finish||!surfaceTexture)return null;
+            var prepared=surfaceBuffers.get(b.vertices);
+            if(!prepared){prepared=new Float32Array(b.vertices.length/6*8);for(var k=0,j=0;k<b.vertices.length;k+=6,j+=8){prepared.set(b.vertices.subarray(k,k+6),j);prepared[j+6]=finish.uv[k/3];prepared[j+7]=finish.uv[k/3+1];}surfaceBuffers.set(b.vertices,prepared);}
+            return {batch:b,original:b.vertices,color:b.color,prepared:prepared,finish:livery(finish.color)};
+        });
+        /** Review/benchmark switch; keeps actor arrays, poses and damage ownership stable.
+         * @param {boolean} enabled */function setSurfaceDetail(enabled){surfaceStates.forEach(function(s){if(!s)return;s.batch.vertices=enabled?s.prepared:s.original;s.batch.color=enabled?s.finish:s.color;if(enabled){s.batch.stride=8;s.batch.texture=surfaceTexture;}else{delete s.batch.stride;delete s.batch.texture;}});}
+        setSurfaceDetail(true);
         /** @type {Vector|null} */var lastEye=null;
         var seconds=0,contacts=0,confirmedHits=0;
         /** @type {{anchor:number;time:number;heavy:boolean}[]} */var shieldHits=[];
@@ -345,7 +362,7 @@
         /** @param {import('./types').Pose} pose @param {boolean=} shields */function effects(pose,shields){var batches=DW.flightGuns.geometry({bolts:mounts.flatMap(function(m){return m.guns.bolts.map(function(b){return Object.assign({},b,{team:team});});}),impacts:mounts.flatMap(function(m){return m.guns.impacts;})},pose,!!(options&&options.bridge));shieldHits=shieldHits.filter(function(h){return seconds-h.time<(h.heavy?.65:.36);});if(shields!==false&&shieldHits.length&&DW.combatShields&&DW.aegisShieldEnvelope)batches=batches.concat(DW.combatShields.capital(DW.aegisShieldEnvelope,shieldHits,seconds,origin,options?options.state.heading:0,options&&options.state.region||0));return batches;}
         function readout(){if(unarmed)return 'AEGIS / 1,305 m · UNARMED';var shots=mounts.reduce(function(n,m){return n+m.guns.fired;},0);return 'AEGIS / 1,305 m\n12 heavy batteries standing by · 12 point-defense mounts\nPD: '+shots+' rounds / '+confirmedHits+' confirmed hits\n'+seconds.toFixed(1)+' s · '+contacts+' hull contacts'+(hangars.length?'\nHangar: '+launched+' fighters launched':'');}
         function telemetry(){return {seconds:seconds,contacts:contacts,launches:launched,shots:mounts.reduce(function(n,m){return n+m.guns.fired;},0),hits:confirmedHits,mounts:mounts.map(function(m){return {yaw:m.yaw,elevation:m.elevation,side:m.source.side,kind:m.source.kind,targetId:m.targetId,shots:m.guns.fired,aimPoint:m.source.kind==='heavy'?m.aimOffset.slice():undefined};})};}
-        reset();return {reset:reset,step:step,geometry:geometry,effects:effects,readout:readout,hit:hit,damage:damage,components:components,telemetry:telemetry};
+        reset();return {setSurfaceDetail:setSurfaceDetail,reset:reset,step:step,geometry:geometry,effects:effects,readout:readout,hit:hit,damage:damage,components:components,telemetry:telemetry};
     }
     /** Two runtime rigs share meshes; their mutable transforms and weapons remain independent.
      * @param {{battlefield?:boolean;bridge?:boolean}} [options] @returns {import('./types').AegisFlightRig} */
@@ -394,7 +411,7 @@
         function components(){return rigs.flatMap(function(r){return r.components?r.components():[];});}
         function telemetry(){var reports=rigs.map(function(r){return r.telemetry();});return {seconds:seconds,contacts:reports.reduce(function(n,r){return n+r.contacts;},0),launches:reports.reduce(function(n,r){return n+r.launches;},0),shots:reports.reduce(function(n,r){return n+r.shots;},0),hits:reports.reduce(function(n,r){return n+r.hits;},0),mounts:reports.flatMap(function(r){return r.mounts;}),capitals:states.map(function(s,i){return {team:s.team,position:s.position.slice(),heading:s.heading,integrity:s.integrity,mainBatteryClear:s.mainBatteryClear,shots:reports[i].shots,hits:reports[i].hits};})};}
         function readout(){return 'AEGIS CAPITAL ENGAGEMENT / 1,305 m each\n'+(options&&options.bridge?(states[0].mainBatteryClear?'OPPOSING SIDES / MAIN BATTERIES CLEAR':'SAME SIDE / MAIN BATTERIES MASKED')+'\n':'')+states.map(function(s,i){var t=rigs[i].telemetry();return (i===0?'GREEN':'RED')+' '+(s.integrity>0?Math.ceil(s.integrity/200)+'% integrity':'disabled')+' · '+t.shots+' rounds / '+t.hits+' hits';}).join('\n')+'\nDisabled: '+components().filter(function(p){return p.hp<=0;}).length+' / '+components().length+' systems\nHangar: '+rigs[0].telemetry().launches+' fighters launched';}
-        reset();return {reset:reset,step:step,geometry:function(){rigs.forEach(function(r){r.geometry();});return renderBatches;},effects:function(pose,shields){return rigs.flatMap(function(r){return r.effects(pose,shields);});},readout:readout,hit:hit,damage:damage,components:components,telemetry:telemetry};
+        reset();return {setSurfaceDetail:function(enabled){rigs.forEach(function(r){if(r.setSurfaceDetail)r.setSurfaceDetail(enabled);});},reset:reset,step:step,geometry:function(){rigs.forEach(function(r){r.geometry();});return renderBatches;},effects:function(pose,shields){return rigs.flatMap(function(r){return r.effects(pose,shields);});},readout:readout,hit:hit,damage:damage,components:components,telemetry:telemetry};
     }
     /** Unarmed centerline traffic using the same antipodal chart transport as fighters.
      * Positions are scene units; route distances and speed are metres and m/s.
@@ -403,7 +420,7 @@
         var state={team:/** @type {'ally'} */('ally'),position:[0,-8000/U,1550/U],heading:0,velocity:[0,180,0],integrity:20000};
         var rig=create({state:state,opponent:state,unarmed:true}),region=0,seconds=0,direction=1,turn=0,inbound=true;
         var batches=rig.geometry(),radius=0;
-        batches.forEach(function(b){for(var i=0;i<b.vertices.length;i+=6)radius=Math.max(radius,Math.hypot(b.vertices[i],b.vertices[i+1],b.vertices[i+2]));});
+        batches.forEach(function(b){for(var i=0;i<b.vertices.length;i+=b.stride||6)radius=Math.max(radius,Math.hypot(b.vertices[i],b.vertices[i+1],b.vertices[i+2]));});
         // Share one complete optical image across every hull material.
         batches.forEach(function(b){b.lensCenter=state.position;b.lensRadius=radius*U;});
         function reset(){region=0;seconds=0;direction=1;turn=0;inbound=true;state.position.splice(0,3,0,-8000/U,1550/U);state.heading=-Math.PI/2;rig.reset();}
@@ -426,12 +443,17 @@
             batches.forEach(function(b){b.region=region;});return batches;
         }
         function telemetry(){var report=rig.telemetry();report.seconds=seconds;report.capitals=[{team:state.team,position:state.position.slice(),heading:state.heading,integrity:state.integrity,shots:0,hits:0}];return report;}
-        reset();return {reset:reset,step:step,geometry:geometry,effects:function(){return [];},hit:function(){return null;},readout:function(){return 'AEGIS / ELLIS CENTERLINE PATROL';},telemetry:telemetry};
+        reset();return {setSurfaceDetail:rig.setSurfaceDetail,reset:reset,step:step,geometry:geometry,effects:function(){return [];},hit:function(){return null;},readout:function(){return 'AEGIS / ELLIS CENTERLINE PATROL';},telemetry:telemetry};
     }
     function load(){
         if(!smokeTexture&&typeof Image!=='undefined'){smokeTexture=new Image();smokeTexture.src=assetUrl('../assets/ships/aegis-kit/scorched.svg');}
         /** @param {string} file @param {()=>boolean} ready */function script(file,ready){return new Promise(function(resolve,reject){if(ready()){resolve(undefined);return;}var element=document.createElement('script');element.src=assetUrl('../assets/ships/aegis-kit/'+file);element.onload=function(){if(ready())resolve(undefined);else reject(new Error('Capital asset did not register: '+file));};element.onerror=function(){reject(new Error('Could not load local capital asset: '+file));};document.head.appendChild(element);});}
-        return Promise.all([script('flight-rig.js',function(){return !!DW.aegisFlightAsset;}),script('shield-envelope.js',function(){return !!DW.aegisShieldEnvelope;})]);
+        return Promise.all([script('flight-rig.js',function(){return !!DW.aegisFlightAsset;}),script('shield-envelope.js',function(){return !!DW.aegisShieldEnvelope;})]).then(function(){
+            if(!DW.aegisFlightAsset.surface||typeof Image==='undefined')return;
+            var atlas=DW.aegisFlightAsset.surface.atlas;
+            if(!surfaceLoad)surfaceLoad=new Promise(function(resolve,reject){var image=new Image();image.onload=function(){surfaceTexture=image;resolve();};image.onerror=function(){surfaceLoad=null;reject(new Error('Could not load capital surface atlas'));};image.src=assetUrl('../assets/ships/aegis-kit/'+atlas);});
+            return surfaceLoad;
+        });
     }
     DW.aegisFlight={create:create,createBattle:createBattle,createEllisPatrol:createEllisPatrol,load:load};
 }());

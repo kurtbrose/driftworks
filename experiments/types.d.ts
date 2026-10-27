@@ -34,6 +34,7 @@ export type MissionOverrides = {
 export type Vector = number[];
 export type AegisFlightAsset = {
     name:string; lengthMeters:number; source:string;
+    surface?:{atlas:string;batches:({uv:number[];color:[number,number,number];plainUV:[number,number]}|null)[]};
     batches:{color:[number,number,number];vertices:number[]}[];
     modules?:{id:string;type:string;position:Vector}[];
     hangars?:{id:string;position:Vector;halfWidth:number;halfHeight:number}[];
@@ -41,6 +42,7 @@ export type AegisFlightAsset = {
     turrets:{id:string;kind:'heavy'|'point-defense';position:Vector;side:number;batches:{color:[number,number,number];vertices:number[]}[]}[];
 };
 export type AegisFlightRig = {
+    setSurfaceDetail?:(enabled:boolean)=>void;
     reset:(combat?:Combat)=>void;
     step:(dt:number,view:FlightView)=>void;
     geometry:()=>Batch[];

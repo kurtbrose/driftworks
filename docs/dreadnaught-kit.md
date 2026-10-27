@@ -35,6 +35,53 @@ This remains a geometry study: there are no authored textures, baked occlusion,
 weathering or decals. Small-scale material wear and less repetitive equipment
 layouts are useful future passes after the kit's silhouettes are settled.
 
+### Approved surface treatment / production default
+
+The approved panel treatment is the default on armed and unarmed capital ships.
+The [surface taste test](../output/aegis-surface-review.html) retains the original
+comparison in the production `scene3d` renderer.
+Use A/B with a fixed camera, or the armor, service belt, underside, hangar, stern,
+whole-ship and combat-distance presets. Drag/wheel and slow orbit inspect motion;
+the damage toggle exercises the original rig's destruction/reset presentation.
+Studio and flight-environment lighting use the same settings for both candidates.
+
+This candidate adds a shared 2048 × 1024 surface atlas, per-source-mesh UVs,
+restrained panel layouts, cavity-edge shading and maintenance markings. It keeps
+the original positions, normals, hull scale, material batch boundaries, turret
+pivots and gameplay collision. Moving/damageable assemblies retain their original
+rig-owned batches. `aegisFlight.load()` awaits the local baked atlas before the
+rig is created; immutable UV buffers are shared across instances. It adds no
+triangles, lights, transparent layers or draw calls. Unarmed ships keep seven
+material batches; atlas swatches preserve the plain finish of merged idle parts.
+
+Regenerate the source-bound review UVs with
+`node tools/bake-aegis-flight.cjs --surface-study`; add `--check` to verify freshness.
+This option writes only `output/aegis-surface-data.js`, and refuses a stale
+production rig. The normal bake embeds hull surface metadata in `flight-rig.js`.
+`tools/lib/aegis-surface-uv.cjs` owns UV layout;
+`output/aegis-surface-study.js` owns the atlas and reversible batch adapter.
+`node tests/aegis-surface-study.cjs` checks exact geometry/normals, atlas bounds,
+shared poses, damage ownership and the source hash; it is in the artwork group.
+It also exercises production loading, default textures, unchanged idle draw count,
+exact positions/normals, cross-instance sharing and stride-aware optical bounds.
+The atlas is authored offline with `node tools/bake-aegis-surface-atlas.cjs`
+using a local `@napi-rs/canvas` package (set `NODE_PATH` if needed). This optional
+authoring dependency is not required to serve the site. Re-bake the shield envelope
+after regenerating the rig so its source fingerprint stays current.
+
+`rig.setSurfaceDetail(enabled)` switches presentation only, without replacing
+actor arrays or changing damage, targeting, simulation or pivot ownership.
+Battle and unarmed patrol wrappers forward it. The flight diagnostics include
+**Benchmark capital surface detail**, which freezes the same real combat scene
+and toggles only this finish in ABBA order, restoring the default afterward.
+
+The review's Measure A/B button freezes its camera and runs ABBA with 20 warm-up
+and 90 measured frames per block. Hidden/resized views invalidate the run.
+Measurements cover scene synchronization and render submission, not GPU execution
+or combined combat simulation. See [candidate evidence](benchmarks/aegis-surface-2026-10-26.md).
+The user approved this visual direction. The recorded production comparison uses
+both capitals, eight hostiles and two wingmen; GPU timing remains unmeasured.
+
 ## Kit convention
 
 - Long axis is X; bow is negative X; dorsal is positive Y.

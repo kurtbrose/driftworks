@@ -129,7 +129,8 @@ const suites = {
     "flight-portraits.cjs",
     "portrait-registration.cjs",
     "concept-ships.cjs",
-    "dreadnaught-kit.cjs"
+    "dreadnaught-kit.cjs",
+    "aegis-surface-study.cjs"
   ],
   audio: [
     {"file":"shared.cjs","args":["audio"]},

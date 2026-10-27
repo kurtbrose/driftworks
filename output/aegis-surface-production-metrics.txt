@@ -1,0 +1,6 @@
+Capital surface detail / Frozen scene / ABBA / 20 warm-up + 90 samples per block
+Rendering only; AI and projectiles frozen.
+Asset OFF: CPU median/p95 7.30 / 8.30 ms, frame median/p95 13.30 / 13.40 ms, 317 draws, 250702 triangles
+Asset ON: CPU median/p95 7.20 / 8.50 ms, frame median/p95 13.30 / 13.40 ms, 317 draws, 250702 triangles
+CPU submission only; rAF includes browser pacing, not a GPU timer.
+Backing: 1920 x 1080 main; DPR 1.5; 8 hostiles, 2 wingmen, both capitals visible.

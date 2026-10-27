@@ -534,18 +534,23 @@
         var capitalBenchmarkButton=(activeMission.id==='battle'||activeMission.id==='scramble')?document.createElement('button'):null;
         if(capitalBenchmarkButton){capitalBenchmarkButton.textContent='Benchmark capital ships on / off';benchmarkButton.after(capitalBenchmarkButton);capitalBenchmarkButton.onclick=function(){runBenchmark(true);};}
         benchmarkButton.onclick=function(){runBenchmark(false);};
-        /** @param {boolean} capitals */async function runBenchmark(capitals){
+        var surfaceBenchmarkButton=aegis&&aegis.setSurfaceDetail?document.createElement('button'):null;
+        if(surfaceBenchmarkButton){surfaceBenchmarkButton.textContent='Benchmark capital surface detail';benchmarkButton.after(surfaceBenchmarkButton);surfaceBenchmarkButton.onclick=function(){runBenchmark(true,true);};}
+        /** @param {boolean} capitals @param {boolean=} surfaces */async function runBenchmark(capitals,surfaces){
             if(benchmarking)return;
             pause();benchmarking=true;benchmarkButton.disabled=true;if(capitalBenchmarkButton)capitalBenchmarkButton.disabled=true;
+            if(surfaceBenchmarkButton)surfaceBenchmarkButton.disabled=true;
+            var dimensions=window.innerWidth+','+window.innerHeight+','+window.devicePixelRatio;
             var snapshot=view(),art=presentation.appearance(),settings=diagnostics.settings();
             /** @type {{on:boolean,cpu:number,interval:number,draws:number,triangles:number}[]} */var rows=[];
             try{
                 for(var enabled of [false,true,true,false]){
-                    if(aegis&&((activeMission.id!=='battle'&&activeMission.id!=='scramble')||capitals))presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
+                    if(surfaces&&aegis&&aegis.setSurfaceDetail){aegis.setSurfaceDetail(enabled);presentation.setCapital(aegis);}else if(aegis&&((activeMission.id!=='battle'&&activeMission.id!=='scramble')||capitals))presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
                     var sampled=activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
                     var previous=0;
                     for(var i=0;i<110;i++){
                         var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});
+                        if(document.hidden||dimensions!==window.innerWidth+','+window.innerHeight+','+window.devicePixelRatio)throw new Error('Hidden or resized viewport invalidates comparison');
                         var begin=performance.now();presentation.render(sampled,art,settings,0);
                         var cpu=performance.now()-begin,stats=presentation.renderStats();
                         if(i>=20)rows.push({on:enabled,cpu:cpu,interval:stamp-previous,draws:stats.scene.drawCalls+stats.sky.drawCalls,triangles:stats.scene.triangles+stats.sky.triangles});
@@ -553,7 +558,7 @@
                         benchmarkOutput.textContent='Frozen scene benchmark '+(rows.length)+' / 360 samples';
                     }
                 }
-                var lines=[(capitals?'Capital ships / ':'')+'Frozen scene / ABBA / 20 warm-up + 90 samples per block','Rendering only; AI and projectiles frozen.'];
+                var lines=[(surfaces?'Capital surface detail / ':capitals?'Capital ships / ':'')+'Frozen scene / ABBA / 20 warm-up + 90 samples per block','Rendering only; AI and projectiles frozen.'];
                 [false,true].forEach(function(on){var r=rows.filter(function(row){return row.on===on;});
                     /** @param {keyof Omit<typeof rows[number],'on'>} key */function mean(key){return r.reduce(function(n,row){return n+row[key];},0)/r.length;}
                     function percentile(/** @type {'cpu'|'interval'} */key,/** @type {number} */fraction){var sorted=r.map(function(row){return row[key];}).sort(function(a,b){return a-b;});return sorted[Math.floor((sorted.length-1)*fraction)];}
@@ -562,7 +567,7 @@
                 lines.push('CPU submission only; rAF includes browser pacing, not a GPU timer.');
                 benchmarkOutput.textContent=lines.join('\n');
             }catch(error){benchmarkOutput.textContent='Benchmark interrupted: '+String(error);}
-            finally{if(aegis)presentation.setCapital(aegis);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=true;pause();benchmarking=false;benchmarkButton.disabled=false;if(capitalBenchmarkButton)capitalBenchmarkButton.disabled=false;diagnostics.reset();}
+            finally{if(aegis){if(surfaces&&aegis.setSurfaceDetail)aegis.setSurfaceDetail(true);presentation.setCapital(aegis);}else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=true;pause();benchmarking=false;benchmarkButton.disabled=false;if(capitalBenchmarkButton)capitalBenchmarkButton.disabled=false;if(surfaceBenchmarkButton)surfaceBenchmarkButton.disabled=false;diagnostics.reset();}
         };
     }
     /** @param {number} t */
