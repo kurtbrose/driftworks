@@ -53,6 +53,19 @@ assert.ok(frames.at(-1)[0].material instanceof THREE.RawShaderMaterial,'Lighting
 host.listeners['sky-environment']({detail:{lighting,pose}});viewer.render(world,1,0,0);assert.equal(probeBakes,1,'Probe reused after sky reselect');
 console.log('PASS native sky-lit ships: original rough/nonmetal material, sRGB/UVs, per-renderer PMREM reuse and custom-material isolation');
 
+// Display-space shield capture must not darken native ship PBR or leak to later frames.
+const shieldCompiled={uniforms:{},vertexShader:'',fragmentShader:'#include <colorspace_fragment>'};
+native.material.onBeforeCompile(shieldCompiled);
+assert.match(shieldCompiled.fragmentShader,/if\(uShieldOutput>\.5\)gl_FragColor=sRGBTransferOETF/);
+let shieldDisposed=0,shieldFailure=false;
+DW.flightShields={create:()=>({render(){assert.equal(shieldCompiled.uniforms.uShieldOutput.value,1);if(shieldFailure)throw new Error('capture failure');return 2;},dispose(){shieldDisposed++;}})};
+viewer.setStudyShields([{box:[0,0,.2,.2],waves:[],depth:1}],{});
+viewer.render(world,1,0,0);assert.equal(shieldCompiled.uniforms.uShieldOutput.value,0,'normal rendering output restored');
+shieldFailure=true;assert.throws(()=>viewer.render(world,1,0,0),/capture failure/);
+assert.equal(shieldCompiled.uniforms.uShieldOutput.value,0,'failed capture also restores output');
+viewer.setStudyShields([],null);assert.equal(shieldDisposed,1);
+console.log('PASS shield native color: capture encoding, normal/exception restoration and disabled-pass disposal');
+
 viewer.setStudyActors([]);viewer.setStudyEffects([]);
 viewer.setStudyExplosions([{position:[0,0,0],velocity:[1,0,0],age:.3,size:1,seed:4}]);
 viewer.render(world,1,0,0);

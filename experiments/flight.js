@@ -430,6 +430,44 @@
     });
     // Frozen-snapshot render A/B: same camera, actors and settings, ABBA order.
     var benchmarking=false;
+    var shieldStudy=new URLSearchParams(location.search).get('shields')==='whole',shieldOn=true,shieldPending=false;
+    if(shieldStudy){
+        var shieldStyle=document.createElement('style');shieldStyle.textContent='body.gpu-hud.shield-study.watching-ai #launch{display:none}';document.head.appendChild(shieldStyle);document.body.classList.add('shield-study');
+        var shieldPanel=document.createElement('section'),shieldToggle=document.createElement('button'),shieldBench=document.createElement('button'),shieldFrozen=document.createElement('button'),shieldResume=document.createElement('button'),shieldResult=document.createElement('pre');
+        shieldPanel.id='shield-dogfight';shieldPanel.style.cssText='position:fixed;z-index:7;top:15px;left:15px;max-width:420px;padding:12px;background:#07151de8;border:1px solid #386059;font:12px/1.5 monospace';
+        shieldResult.style.cssText='white-space:pre-wrap;max-height:35vh;overflow:auto';
+        shieldToggle.textContent='Whole-image shields ON / 2px';shieldBench.textContent='Benchmark next shield hit';shieldFrozen.textContent='Benchmark frozen frame';shieldResume.textContent='Pause / resume dogfight';
+        shieldPanel.append(shieldToggle,shieldBench,shieldFrozen,shieldResume,shieldResult);document.body.appendChild(shieldPanel);
+        shieldToggle.onclick=function(){shieldOn=!shieldOn;presentation.setShields(shieldOn);shieldToggle.textContent='Whole-image shields '+(shieldOn?'ON':'OFF')+' / 2px';};
+        shieldFrozen.onclick=function(){if(texturesReady&&presentation.shieldSummary().visible)void benchmarkShields();};
+        shieldResume.onclick=function(){if(paused)resume();else pause();};
+        shieldBench.onclick=function(){shieldPending=true;shieldResult.textContent='Waiting for a visible shield hit...';if(paused)resume();};
+    }
+    async function benchmarkShields(){
+        if(benchmarking)return;shieldPending=false;pause();benchmarking=true;shieldToggle.disabled=true;shieldBench.disabled=true;shieldFrozen.disabled=true;shieldResume.disabled=true;
+        var snapshot=view(),art=presentation.appearance(),settings=diagnostics.settings(),startWidth=host.clientWidth,startHeight=host.clientHeight;
+        if(watch){art.allyArt=watch.replay.options.allyHull;art.enemyArt=watch.replay.options.enemyHull;}
+        var active=presentation.shieldSummary();
+        /** @type {{on:boolean,cpu:number,total:number,cadence:number,draws:number,triangles:number,width:number,height:number}[]} */var rows=[];
+        try{
+            for(var on of [false,true,true,false]){
+                presentation.setShields(on);var previous=0;
+                for(var i=0;i<70;i++){
+                    var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});
+                    if(document.hidden||host.clientWidth!==startWidth||host.clientHeight!==startHeight)throw new Error('Hidden or resized viewport; rerun');
+                    var begin=performance.now();presentation.render(snapshot,art,settings,0);var cpu=performance.now()-begin;presentation.completeFrame();var total=performance.now()-begin,stats=presentation.renderStats();
+                    if(i>=10)rows.push({on:on,cpu:cpu,total:total,cadence:stamp-previous,draws:stats.scene.drawCalls+stats.sky.drawCalls,triangles:stats.scene.triangles+stats.sky.triangles,width:stats.scene.width,height:stats.scene.height});previous=stamp;
+                    shieldResult.textContent='Frozen dogfight ABBA: '+rows.length+' / 240 samples';
+                }
+            }
+            var lines=['Real duel frozen at '+snapshot.combat.time.toFixed(2)+'s; 2px; 4 waves max/ship',active.visible+' visible shields / '+active.waves+' active waves',rows[0].width+' x '+rows[0].height+' backing; DPR '+window.devicePixelRatio,'10 warmup + 60 samples/block, ABBA'];
+            [false,true].forEach(function(on){var r=rows.filter(function(row){return row.on===on;});
+                /** @param {'cpu'|'total'|'cadence'} key */function pair(key){var a=r.map(function(row){return row[key];}).sort(function(a,b){return a-b;});return a[Math.floor(a.length*.5)].toFixed(2)+' / '+a[Math.floor(a.length*.95)].toFixed(2);}
+                lines.push((on?'ON':'OFF')+': submit median/p95 '+pair('cpu')+' ms; synchronized '+pair('total')+' ms; cadence '+pair('cadence')+' ms; '+r[0].draws+' draws / '+r[0].triangles+' triangles');
+            });lines.push('Synchronized includes driver, GPU wait + 1px readback. Not GPU-only. AI/physics frozen. Resume to watch.');shieldResult.textContent=lines.join('\n');
+        }catch(error){shieldResult.textContent=String(error);}finally{presentation.setShields(shieldOn);benchmarking=false;shieldToggle.disabled=false;shieldBench.disabled=false;shieldFrozen.disabled=false;shieldResume.disabled=false;diagnostics.reset();}
+    }
+
     if(aegis||activeMission.id==='evacuation'||activeMission.id==='battle'){
         var benchmarkButton=document.createElement('button'),benchmarkOutput=document.createElement('pre');
         benchmarkButton.textContent=activeMission.id==='scramble'?'Benchmark close furball on / off':activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
@@ -479,6 +517,7 @@
             return;
         }
         var elapsed = timing.elapsed;
+        if(shieldStudy&&!paused&&watch&&watch.summary().done){reset();resume();}
         var appearance = presentation.appearance();
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
@@ -492,7 +531,7 @@
                 elapsed = watch.summary().seconds - previousTime;
                 if (view().guns.fired > fired) DW.audio.playGunshot();
                 if (view().combat.lastHit > lastHit) DW.audio.playImpact(1);
-                if (watch.summary().done) pause();
+                if (watch.summary().done&&!shieldStudy) pause();
             } else session.advance(elapsed, demand, { profile: profile(), weapon: weapon() });
             var after = view();
             bridgeCue=bridgeFeedback.update(after.state,elapsed,!watch,!!DW.flightMissions.resolve(after.combat.mode).sky.wormhole);
@@ -529,12 +568,13 @@
         var comparison = diagnostics.settings();
         phaseStart=performance.now();
         presentation.render(currentView, appearance, comparison, elapsed);
+        if(shieldPending&&presentation.shieldSummary().visibleWave)void benchmarkShields();
         var presentationMs=performance.now()-phaseStart;phaseStart=performance.now();
         drawSubsystem(currentView.state);
         if(aegis){var readout=document.getElementById('aegis-flight-readout');if(readout)readout.textContent=aegis.readout();}
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
-        flightHud.render(Object.assign({}, currentView, { units: units, paused: paused, speakerId: comms.speakerId(), bridgeCue:bridgeCue, weapon: weapon() }, inputView, appearance));
+        flightHud.render(Object.assign({}, currentView, { units: units, paused: paused&&!shieldStudy, speakerId: comms.speakerId(), bridgeCue:bridgeCue, weapon: weapon() }, inputView, appearance));
         captureScreenshot();
         if (watch) get('combat-status').textContent = 'AI DUEL / ' + (watch.summary().category === 'perfect' ? 'PERFECT' : watch.summary().flavor.toUpperCase()) + ' VS ' + currentView.combat.enemies[0].pilot.toUpperCase();
         updateWatch();
@@ -565,6 +605,7 @@
         if(loaded){
             status.textContent=importError||'Ready - Start flight when ready';
             if(activeMission.id==='scramble'){controls.startUncaptured();}
+            if(shieldStudy&&watch)resume();
         }else updateStatus();
     });
     if(importError)status.textContent=importError;

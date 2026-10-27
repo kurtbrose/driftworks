@@ -403,6 +403,8 @@ export interface DriftworksNamespace {
     setRigLightsEnabled:(enabled:boolean)=>void;
     prepareStudyTextures: (images: HTMLImageElement[]) => Promise<void>;
     setStudyActors: (batches: {projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
+      setStudyShields:(discs:import('../experiments/types').ShieldDisc[],sky:HTMLCanvasElement|null)=>void;
+      completeFrame:()=>void;
       setStudyEffects: (batches: {projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; color: [number,number,number]}[]) => void;
       setStudyExplosions: (blasts: {region?:number;position:[number,number,number];velocity?:[number,number,number];age:number;size:number;seed:number}[]) => void;
       getOrbit: () => {yaw: number; tilt: number; height?: number};

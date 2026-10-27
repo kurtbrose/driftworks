@@ -391,6 +391,7 @@ export type RenderStats = {
         materials: number;
     };
 };
+export type ShieldDisc = {box:number[];waves:number[];depth:number};
 export type FlightView = {
     world: World;
     state: FlightState;
@@ -923,6 +924,7 @@ export type ExperimentModules = {
         poses: Record<'standing' | 'servicing', {vertices: number[]; color: [number,number,number]}[]> | null;
         error: string | null;
     };
+    flightShields:{tracker:()=>{collect:(view:FlightView,art:Appearance,aspect:number)=>ShieldDisc[];reset:()=>void};create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer,sky:HTMLCanvasElement)=>{render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,discs:ShieldDisc[],width:number,height:number)=>number;dispose:()=>void}};
     flightPresentation: {
         ohioSignGeometry: (radius:number, texture:HTMLImageElement, surfaceHeight?:number) => Batch[];
         tetherSpin: (lengthKm: number, mode: string) => {tipSpeed: number; angularSpeed: number; periodSeconds: number; tipG: number};
@@ -936,6 +938,9 @@ export type ExperimentModules = {
             pose: (state: Pose) => void;
             render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number) => void;
             renderStats: () => RenderStats;
+            shieldSummary:()=>{visible:number;waves:number;visibleWave:boolean};
+            completeFrame:()=>void;
+            setShields:(enabled:boolean)=>void;
             setCapital: (rig:AegisFlightRig|null)=>void;
         };
     };

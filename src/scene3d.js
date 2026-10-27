@@ -426,6 +426,10 @@
     canvas.addEventListener('webglcontextrestored',function(){if(bridgeRenderer)bridgeRenderer.invalidate();});
     renderer.autoClear=false;renderer.sortObjects=false;
     var scene = new THREE.Scene(), camera = new THREE.Camera();
+    /** @type {import('../experiments/types').ShieldDisc[]} */var shieldDiscs=[];
+    /** @type {HTMLCanvasElement|null} */var shieldSky=null;
+    /** @type {ReturnType<NonNullable<import('./types').DriftworksNamespace['flightShields']>['create']>|null} */var shieldPass=null;
+    var shieldOutputUniform={value:0};
     // Common readability floor for native PBR; custom asteroid/mining shaders ignore it.
     scene.add(new THREE.AmbientLight(0xffffff,.35));
     var blending=THREE.NoBlending, depthWrite=true;
@@ -534,10 +538,11 @@
       // Archived glTF materials: metallicFactor=0, omitted roughnessFactor defaults to 1.
       var result=new THREE.MeshStandardMaterial({metalness:0,roughness:1,side:THREE.DoubleSide,alphaTest:.5});
       result.onBeforeCompile=function(shader){
-        shader.uniforms.uSkyBasis={value:skyBasis};shader.uniforms.uSkyCameraExposure=cameraExposureUniform;
+        shader.uniforms.uShieldOutput=shieldOutputUniform;shader.uniforms.uSkyBasis={value:skyBasis};shader.uniforms.uSkyCameraExposure=cameraExposureUniform;
         shader.uniforms.uShipPaint=snapshot.uPaint;
         shader.uniforms.uShipPaintEnabled=snapshot.uPaintEnabled;
-        shader.fragmentShader='uniform float uSkyCameraExposure;uniform mat3 uSkyBasis;uniform vec3 uShipPaint;uniform float uShipPaintEnabled;\n'+shader.fragmentShader;
+        shader.fragmentShader='uniform float uShieldOutput;uniform float uSkyCameraExposure;uniform mat3 uSkyBasis;uniform vec3 uShipPaint;uniform float uShipPaintEnabled;\n'+shader.fragmentShader;
+        shader.fragmentShader=shader.fragmentShader.replace('#include <colorspace_fragment>','#include <colorspace_fragment>\nif(uShieldOutput>.5)gl_FragColor=sRGBTransferOETF(gl_FragColor);');
         shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>','outgoingLight*=uSkyCameraExposure;\n#include <opaque_fragment>');
         shader.fragmentShader=shader.fragmentShader.replace('#include <envmap_physical_pars_fragment>',THREE.ShaderChunk.envmap_physical_pars_fragment.replace(/envMapRotation \*/g,'uSkyBasis *'));
         shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',THREE.ShaderChunk.map_fragment+
@@ -1207,6 +1212,9 @@
         renderStats.bridgeObjectPaths=bridge.objectPaths;renderStats.bridgeObjectPatches=bridge.objectPatches;renderStats.bridgeObjectError=bridge.objectError;renderStats.bridgeObjectBad=bridge.objectBad;renderStats.bridgeHistoryValid=bridge.historyValid;renderStats.bridgeCaptures=bridge.captures;renderStats.bridgeCpuMs=bridge.cpuMs;
         renderStats.drawCalls=renderStats.drawCalls*(1+bridge.captures)+bridge.compositionPasses;
         renderStats.triangles=renderStats.triangles*(1+bridge.captures)+2*bridge.compositionPasses;
+      }else if(!shadowPass&&shieldDiscs.length&&shieldSky&&DW.flightShields){
+        if(!shieldPass)shieldPass=DW.flightShields.create(THREE,renderer,shieldSky);
+        shieldOutputUniform.value=1;try{var extra=shieldPass.render(scene,camera,shieldDiscs,width,height);renderStats.drawCalls+=extra;renderStats.triangles+=extra*2;}finally{shieldOutputUniform.value=0;}
       }else{if(DW.gpuDiagnostics)DW.gpuDiagnostics.mark('three.direct');renderer.render(scene,camera);}
       renderStats.meshes=frameMeshes.size;renderStats.materials=frameMaterials.size;renderStats.cpuMs=performance.now()-renderStart;
       if (wallDt > 0) fps = fps * 0.9 + Math.min(240, 1 / wallDt) * 0.1;
@@ -1226,6 +1234,9 @@
       getOrbit: function () { return { yaw: orbit.yaw, tilt: orbit.tilt, height: studyHeight }; },
       /** @param {{yaw: number, tilt: number, height?: number}} value */
       setOrbit: function (value) { if(viewerControls && (viewerControls.isFlying() || viewerControls.isPicking())){var savedCamera=getWorld().camera;viewerControls.reset();var resetWorld=getWorld();setWorld(Object.assign({},resetWorld,{camera:savedCamera}));} if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
+      /** @param {import('../experiments/types').ShieldDisc[]} discs @param {HTMLCanvasElement|null} sky */
+      setStudyShields:function(discs,sky){shieldDiscs=discs;shieldSky=sky;if(!sky&&shieldPass){shieldPass.dispose();shieldPass=null;}},
+      completeFrame:function(){var gl=renderer.getContext();gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));},
       /** @param {{vertices:Float32Array,color:V3}[]} batches */
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice();},
       /** @param {typeof studyExplosions} blasts */

@@ -194,6 +194,8 @@
             return false;
         });
         var skybox = DW.flightSkybox.create(host);
+        var shieldVisible=0,shieldWaves=0,shieldVisibleWave=false;
+        var shieldEnabled=typeof location!=='undefined'&&new URLSearchParams(location.search).get('shields')==='whole',shieldTracker=shieldEnabled&&DW.flightShields?DW.flightShields.tracker():null;
         var bridgeMode=typeof location==='undefined'?'':new URLSearchParams(location.search).get('bridge');
         if(DW.flightMissions.current().sky.wormhole&&scene.setStudyBridge)scene.setStudyBridge(bridgeMode!=='legacy'&&bridgeMode!=='sky');
         var roadsideDefinition=DW.flightMissions.current().scenery.find(function(item){return item.kind==='roadside';});
@@ -344,12 +346,13 @@
             if(skybox.setOccluders)skybox.setOccluders(world.asteroids.map(function(a){return {center:[a.position.x,a.position.y,0],radius:a.radius};}));
             skybox.render(state, comparison.scale, comparison.mode === 'empty',elapsed);
             scene.sync(world);
+            if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight);shieldVisibleWave=discs.some(function(d){return d.box[3]>.08&&d.waves.some(function(age,i){return i%4===3&&age>=.2&&age<.8;});});shieldVisible=discs.length;shieldWaves=discs.reduce(function(sum,d){return sum+d.waves.length/4;},0);scene.setStudyShields(shieldEnabled&&comparison.actors&&comparison.mode!=='empty'?discs:[],shieldEnabled&&skyCanvas instanceof HTMLCanvasElement?skyCanvas:null);}
             scene.render(world, 1, 0, elapsed);
         }
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };
         }
-        return { ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
+        return {shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
     }
     DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin, ohioSignGeometry:ohioSignGeometry };
 }());
