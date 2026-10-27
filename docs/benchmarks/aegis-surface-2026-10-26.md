@@ -153,3 +153,35 @@ Evidence: `output/aegis-turret-production-metrics.txt` and matching PNG.
 `output/aegis-turret-production-check.log`. The same process-local exclusion
 for the unrelated partial HTML copy was used. Focused coverage also verifies
 scorched turret buffers survive toggles and reset restores the approved finish.
+
+## Approved hangar markings (2026-10-27)
+
+Candidate 03 was approved. BAY 01 is baked into the existing 2048 x 1024 atlas;
+36 existing vertices on the two hangar roof bevels receive different UVs.
+No mesh, draw, shader, texture dimension, runtime code or gameplay rule changes.
+Before revision: `f30af611`. Marked rig SHA-256: `9f30cd6558122ddefbff3345e5e5a88cfd7a8554bad2f7d1eae709616cef5715`.
+The review page retains unmarked UVs for its historical A/B comparison.
+
+Production readiness used the same initial paused capital encounter, default
+camera, 8 hostiles, no launched wingmen/projectiles, 100% render scale and
+1920 x 1080 backing at DPR 1.5. Both revisions submitted 265 draws and 232,956
+triangles. Each revision used the existing surface on/off ABBA sampler with
+20 warm-up and 90 measured frames per block. Tests were not running during timing.
+
+| Revision | Surface off CPU median / p95 ms | Surface on CPU median / p95 ms |
+| --- | --- | --- |
+| Before markings | 3.90 / 4.70 | 3.70 / 4.20 |
+| With markings | 5.70 / 6.40 | 5.60 / 6.30 |
+
+Cadence was 13.30 / 13.40 ms in both runs. Both the off control and on treatment
+shifted between reloads, so these timings do not isolate a marking cost or prove
+a speedup. The same-tab candidate comparison recorded identical 1.0 / 1.5 ms
+CPU median/p95 and 55 draws / 32,704 triangles. GPU execution is unmeasured.
+Evidence is in `output/aegis-markings-production-before.txt`, `-after.txt`,
+`output/aegis-markings-metrics.json`, and `output/aegis-markings-production.png`.
+The final atlas explicitly uses the approved Consolas Bold glyphs for offline
+and browser authoring; final visual review checks the actual baked PNG.
+The final texture comparison confirms that only reserved tile six changed.
+`npm run check` passed all 131 entries, strict types and asset validation;
+log: `output/aegis-markings-production-check.log`. The focused regression checks
+the 36 remapped vertices, both side orientations and preserved production rigs.

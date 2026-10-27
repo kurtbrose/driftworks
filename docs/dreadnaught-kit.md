@@ -53,6 +53,11 @@ rig-owned batches. `aegisFlight.load()` awaits the local baked atlas before the
 rig is created; immutable UV buffers are shared across instances. It adds no
 triangles, lights, transparent layers or draw calls. Unarmed ships keep seven
 material batches; atlas swatches preserve the plain finish of merged idle parts.
+The approved BAY 01 stencil occupies atlas tile six and twelve existing hangar
+roof-bevel triangles. Both sides have independently oriented UVs. The remaining
+hull, turrets, lights and gameplay geometry are unchanged by this marking pass.
+The [marking comparison](../output/aegis-markings-review.html) keeps the previous
+unmarked UVs as A and the current production finish as B.
 
 Regenerate the source-bound review UVs with
 `node tools/bake-aegis-flight.cjs --surface-study`; add `--check` to verify freshness.
@@ -65,8 +70,11 @@ shared poses, damage ownership and the source hash; it is in the artwork group.
 It also exercises production loading, default textures, unchanged idle draw count,
 exact positions/normals, cross-instance sharing and stride-aware optical bounds.
 The atlas is authored offline with `node tools/bake-aegis-surface-atlas.cjs`
-using a local `@napi-rs/canvas` package (set `NODE_PATH` if needed). This optional
-authoring dependency is not required to serve the site. Re-bake the shield envelope
+using a local `@napi-rs/canvas` package (set `NODE_PATH` if needed). The offline
+bake uses Consolas Bold to match the approved browser lettering; set
+`AEGIS_MARKING_FONT` to that font file when it is not in the default Windows path.
+This font is used only by the offline bake; the runtime loads the PNG.
+These authoring dependencies are not required to serve the site. Re-bake the shield envelope
 after regenerating the rig so its source fingerprint stays current.
 
 `rig.setSurfaceDetail(enabled, scope?)` switches presentation only, without replacing

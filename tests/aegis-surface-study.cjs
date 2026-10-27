@@ -35,6 +35,10 @@ turretCandidate.forEach((b,i)=>{
  for(let v=0;v<full[i].vertices.length/6;v++)for(let k=0;k<6;k++)assert.equal(b.vertices[v*8+k],full[i].vertices[v*6+k]);
 });
 assert.equal(changed,12,'only the twelve heavy turret armor batches change');
+// Markings change only twelve existing triangles, with readable orientation on both sides.
+let marked=0,sides=new Set();
+asset.surface.batches.forEach((f,i)=>{if(!f)return;const before=data.uv[i];assert.equal(f.uv.length,before.length);for(let k=0;k<f.uv.length;k+=2){if(Math.abs(f.uv[k]-before[k])<1e-6&&Math.abs(f.uv[k+1]-before[k+1])<1e-6)continue;marked++;const v=asset.batches[i].vertices,j=k*3;sides.add(Math.sign(v[j+4]));assert(v[j+2]>32&&v[j+5]>.4);assert(f.uv[k]>=.5&&f.uv[k]<=.75&&f.uv[k+1]>=.5&&f.uv[k+1]<=1);}});
+assert.equal(marked,36);assert.equal(sides.size,2);
 console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/normals, unchanged batch count, shared poses and live damage ownership');
 
 (async()=>{

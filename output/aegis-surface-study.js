@@ -45,7 +45,16 @@
   // Tiny constant-color swatches keep merged idle guns/engines at their
   // original material color while sharing the hull's textured material draw.
   if(surface&&source)surface.batches.forEach((b,i)=>{if(!b)return;c.fillStyle='rgb('+source.batches[i].color.map((v,k)=>Math.round(255*v/b.color[k])).join(',')+')';c.fillRect(1552+i*60,540,32,32);});
+  paintMarkings(c);
   return canvas;
+ }
+ function paintMarkings(c){
+  c.save();c.translate(1024,512);c.fillStyle='#e6e7e2';c.fillRect(0,0,512,512);
+  c.strokeStyle='#b6bcb8';c.lineWidth=2;
+  for(let x=20;x<512;x+=118){c.beginPath();c.moveTo(x,0);c.lineTo(x,512);c.stroke();}
+  c.fillStyle='#64706e';c.textAlign='center';c.save();c.translate(256,300);c.scale(1,2.2);c.font='bold 70px "Consolas", monospace';c.fillText('BAY 01',0,0);c.restore();
+  c.fillStyle='#b38e50';c.fillRect(22,36,20,440);c.fillRect(470,36,20,440);
+  c.restore();
  }
  function prepare(batches,data,image,hullCount){
   if(data.uv.length!==hullCount)throw new Error('Surface study does not match the hull batch count');
@@ -71,5 +80,5 @@
   });
   return result;
  }
- window.AegisSurfaceStudy={atlas,prepare,prepareTurrets};
+ window.AegisSurfaceStudy={atlas,prepare,prepareTurrets,paintMarkings};
 })();

@@ -20,4 +20,14 @@ function meshUV(points,color){
  }
  return out;
 }
-module.exports={meshUV};
+// Painted identification uses existing triangles on both hangar roof bevels.
+function hangarMarkings(vertices,uv,hangars){
+ const out=uv.slice();
+ for(const h of hangars)for(let i=0;i<vertices.length;i+=18){
+  const eligible=[0,1,2].every(j=>{const k=i+j*6;return vertices[k]-h.position[0]>-63&&vertices[k]-h.position[0]<-31&&vertices[k+2]>32&&vertices[k+5]>.4&&Math.abs(vertices[k+4])>.4;});
+  if(!eligible)continue;
+  for(let j=0;j<3;j++){const k=i+j*6,u=(vertices[k]-h.position[0]+63)/32;out[k/3]=(1024+16+(vertices[k+4]>0?1-u:u)*480)/2048;out[k/3+1]=(512+16+(38-vertices[k+2])/6*480)/1024;}
+ }
+ return out;
+}
+module.exports={meshUV,hangarMarkings};
