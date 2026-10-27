@@ -32,9 +32,10 @@ export type MissionOverrides = {
 };
 /** Scene-space positions; velocities and engine targets are metres per second. */
 export type Vector = number[];
+export type AegisSurfaceFinish = {uv:number[];color:[number,number,number];plainUV:[number,number]}|null;
 export type AegisFlightAsset = {
     name:string; lengthMeters:number; source:string;
-    surface?:{atlas:string;batches:({uv:number[];color:[number,number,number];plainUV:[number,number]}|null)[]};
+    surface?:{atlas:string;batches:AegisSurfaceFinish[];turrets?:AegisSurfaceFinish[][]};
     batches:{color:[number,number,number];vertices:number[]}[];
     modules?:{id:string;type:string;position:Vector}[];
     hangars?:{id:string;position:Vector;halfWidth:number;halfHeight:number}[];
@@ -42,7 +43,7 @@ export type AegisFlightAsset = {
     turrets:{id:string;kind:'heavy'|'point-defense';position:Vector;side:number;batches:{color:[number,number,number];vertices:number[]}[]}[];
 };
 export type AegisFlightRig = {
-    setSurfaceDetail?:(enabled:boolean)=>void;
+    setSurfaceDetail?:(enabled:boolean,scope?:'turrets')=>void;
     reset:(combat?:Combat)=>void;
     step:(dt:number,view:FlightView)=>void;
     geometry:()=>Batch[];

@@ -57,7 +57,7 @@ material batches; atlas swatches preserve the plain finish of merged idle parts.
 Regenerate the source-bound review UVs with
 `node tools/bake-aegis-flight.cjs --surface-study`; add `--check` to verify freshness.
 This option writes only `output/aegis-surface-data.js`, and refuses a stale
-production rig. The normal bake embeds hull surface metadata in `flight-rig.js`.
+production rig. The normal bake embeds hull and heavy-turret surface metadata in `flight-rig.js`.
 `tools/lib/aegis-surface-uv.cjs` owns UV layout;
 `output/aegis-surface-study.js` owns the atlas and reversible batch adapter.
 `node tests/aegis-surface-study.cjs` checks exact geometry/normals, atlas bounds,
@@ -69,10 +69,12 @@ using a local `@napi-rs/canvas` package (set `NODE_PATH` if needed). This option
 authoring dependency is not required to serve the site. Re-bake the shield envelope
 after regenerating the rig so its source fingerprint stays current.
 
-`rig.setSurfaceDetail(enabled)` switches presentation only, without replacing
+`rig.setSurfaceDetail(enabled, scope?)` switches presentation only, without replacing
 actor arrays or changing damage, targeting, simulation or pivot ownership.
-Battle and unarmed patrol wrappers forward it. The flight diagnostics include
-**Benchmark capital surface detail**, which freezes the same real combat scene
+Battle and unarmed patrol wrappers forward it. The optional `turrets` scope
+compares the heavy-turret finish against the approved hull-only baseline.
+Turret damage uses original collision vertices; reset restores the selected finish. The flight diagnostics include
+**Benchmark capital surface detail** and **Benchmark turret finish**, which freezes the same real combat scene
 and toggles only this finish in ABBA order, restoring the default afterward.
 
 The review's Measure A/B button freezes its camera and runs ABBA with 20 warm-up

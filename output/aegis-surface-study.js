@@ -62,5 +62,14 @@
    return Object.assign({},b,{vertices,stride:8,texture:image,color});
   });
  }
- window.AegisSurfaceStudy={atlas,prepare};
+ function prepareTurrets(batches,data,image,source){
+  const result=batches.slice();let offset=source.batches.length;
+  source.turrets.forEach((t,i)=>{
+   const originals=batches.slice(offset,offset+t.batches.length);
+   const treated=prepare(originals,{uv:data.turrets[i]},image,t.batches.length);
+   treated.forEach((b,j)=>result[offset+j]=b);offset+=t.batches.length;
+  });
+  return result;
+ }
+ window.AegisSurfaceStudy={atlas,prepare,prepareTurrets};
 })();

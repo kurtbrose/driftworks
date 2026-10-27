@@ -25,6 +25,16 @@ assert.ok(textured>=2&&textured<=4,'only neutral structural batches receive surf
 articulated.vertices=new Float32Array([9,9,9]);assert.equal(prepared.at(-1).vertices,articulated.vertices,'damage/reset buffer replacements propagate');
 pose[0]=42;basis[0]=0;assert.equal(prepared[0].origin[0],42);assert.equal(prepared[0].basis[0],0);
 assert.throws(()=>study.prepare(batches,{uv:[]},image,asset.batches.length),/batch count/);
+const full=asset.batches.concat(asset.turrets.flatMap(t=>t.batches),asset.engines.flatMap(e=>e.batches)).map(b=>({vertices:new Float32Array(b.vertices),color:b.color,origin:pose,basis,staticGeometry:true}));
+const turretCandidate=study.prepareTurrets(full,data,image,asset);
+assert.equal(turretCandidate.length,full.length);let changed=0;
+turretCandidate.forEach((b,i)=>{
+ if(b===full[i])return;changed++;assert(i>=asset.batches.length,'turret pass preserves approved hull');
+ assert.equal(b.origin,full[i].origin);assert.equal(b.basis,full[i].basis);
+ assert.equal(b.vertices.length/8,full[i].vertices.length/6);
+ for(let v=0;v<full[i].vertices.length/6;v++)for(let k=0;k<6;k++)assert.equal(b.vertices[v*8+k],full[i].vertices[v*6+k]);
+});
+assert.equal(changed,12,'only the twelve heavy turret armor batches change');
 console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/normals, unchanged batch count, shared poses and live damage ownership');
 
 (async()=>{
@@ -34,7 +44,7 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  for(const f of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','assets/ships/aegis-kit/shield-envelope.js','experiments/aegis-flight.js'])vm.runInContext(read(f),runtime,{filename:f});
  await DW.aegisFlight.load();
  const one=DW.aegisFlight.create(),two=DW.aegisFlight.create(),styled=one.geometry(),buffers=styled.map(b=>b.vertices);
- assert.equal(styled.filter(b=>b.texture).length,4,'loaded armed rig enables approved hull surface by default');
+ assert.equal(styled.filter(b=>b.texture).length,16,'loaded armed rig enables approved hull and heavy turret finish by default');
  assert(styled.every((b,i)=>b.vertices===two.geometry()[i].vertices),'textured GPU data shared across ships');
  one.setSurfaceDetail(false);const plain=styled.map(b=>b.vertices);assert(styled.every(b=>!b.stride&&!b.texture));
  one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===buffers[i]));assert.equal(one.geometry(),styled,'toggle never replaces actor array');
@@ -47,6 +57,8 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  assert(idleB.every(b=>b.vertices.every(Number.isFinite)));
  const idleBefore=idleB.map(b=>b.vertices);idle.setSurfaceDetail(false);const idlePlain=idleB.map(b=>b.vertices);idle.setSurfaceDetail(true);
  idleB.forEach((b,i)=>{assert.equal(b.vertices,idleBefore[i]);for(let k=0;k<idlePlain[i].length/6;k++)for(let j=0;j<6;j++)assert.equal(b.vertices[k*(b.stride||6)+j],idlePlain[i][k*6+j]);});
+ one.setSurfaceDetail(false,'turrets');assert.equal(styled.filter(b=>b.texture).length,4);one.setSurfaceDetail(true,'turrets');
+ const heavy=one.components().find(p=>p.kind==='heavy'),heavyCombat=DW.training.create('training');one.damage(heavy.position,1000,heavyCombat);const destroyed=styled.map(b=>b.vertices);one.setSurfaceDetail(false);one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===destroyed[i]),'surface toggles preserve scorched turret buffers');one.reset();assert(styled.every((b,i)=>b.vertices===buffers[i]),'reset restores textured turret buffers');
  const combat=DW.training.create('training'),part=one.components().find(p=>p.kind==='engine');one.damage(part.position,1000,combat);one.setSurfaceDetail(false);one.setSurfaceDetail(true);assert.equal(one.components().find(p=>p.id===part.id).hp,0,'surface toggles preserve damage');
  one.reset();assert(one.geometry().every((b,i)=>b.vertices===buffers[i]),'reset restores original articulated buffers and keeps textured hull');
  const patrol=DW.aegisFlight.createEllisPatrol();assert(patrol.geometry().every(b=>b.lensRadius>650&&b.lensRadius<1000),'stride-aware bounds preserve optical image radius');

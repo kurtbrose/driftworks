@@ -106,3 +106,50 @@ all 130 entries, strict types, script lists and asset validation. The unrelated
 parallel-work copy `output/alignment-stage/` was excluded through a process-local
 Git excludes file for this validation; no repository ignore rule was changed.
 Log: `output/aegis-surface-production-check.log`.
+
+## Candidate 02: heavy turret finish
+
+The approved hull finish is committed as `c10a5a61` and is the production default.
+The next review-only candidate is at
+`output/aegis-surface-review.html?pass=turrets`. A shows that approved default;
+B adds restrained panels and fittings to twelve heavy turret housings using
+the same loaded atlas. Hulls, barrels, small guns, geometry and pivots stay unchanged.
+
+Studio heavy-turret ABBA comparison, 20 warm-up and 90 measured frames per block,
+DPR 1.5 and 2463 x 1196 backing size:
+
+| Finish | CPU median / p95 ms | Frame median / p95 ms | Draws | Triangles |
+| --- | --- | --- | --- | --- |
+| Approved default | 1.10 / 1.30 | 13.30 / 13.40 | 67 | 34,772 |
+| Turret candidate | 1.10 / 1.20 | 13.30 / 13.40 | 67 | 34,772 |
+
+Evidence: `output/aegis-surface-turret-metrics.json`. GPU execution was not timed.
+Inspected the close-up in studio and flight lighting, underside and whole ship.
+The focused surface-study test checks unchanged geometry and turret transforms.
+This candidate awaits the user taste test; production damage integration and an
+actual-scene readiness pass follow acceptance, before it becomes the next default.
+
+### Turret approval and production integration (2026-10-27)
+
+The user approved candidate 02. The production bake now carries heavy-turret UVs;
+armed mounts retain their own poses and damage ownership, while idle capitals
+retain seven material draws. Destruction reads the original six-float geometry,
+and reset restores the selected surface buffers. A turret-only presentation
+switch preserves the approved hull finish for matched comparisons.
+
+Actual `experiments/flight.html?aegis=1`, production art, 100% resolution,
+1920 x 1080 backing at DPR 1.5, default camera after live firing and launches:
+8 hostiles and 8 wingmen, no disabled systems. The frozen ABBA comparison used
+20 warm-up and 90 measured frames per block, with the test suite finished.
+
+| Turret finish | CPU median / p95 ms | Frame median / p95 ms | Draws | Triangles |
+| --- | --- | --- | --- | --- |
+| Off, approved hull retained | 9.80 / 13.40 | 13.30 / 13.40 | 400 | 277,243 |
+| Approved default | 9.50 / 12.80 | 13.30 / 13.40 | 400 | 277,243 |
+
+No demonstrated submission regression; GPU execution was not measured.
+Evidence: `output/aegis-turret-production-metrics.txt` and matching PNG.
+`npm run check` passed all 130 entries, types and asset checks; log:
+`output/aegis-turret-production-check.log`. The same process-local exclusion
+for the unrelated partial HTML copy was used. Focused coverage also verifies
+scorched turret buffers survive toggles and reset restores the approved finish.

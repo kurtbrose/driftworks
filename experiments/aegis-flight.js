@@ -74,7 +74,7 @@
         }
         source.batches.forEach(function(b,i){add(b,[0,0,0],source.surface&&source.surface.batches[i]?.uv);});
         (source.engines||[]).forEach(function(e){e.batches.forEach(function(b){add(b,e.position);});});
-        source.turrets.forEach(function(t){t.batches.forEach(function(b){add(b,t.position);});});
+        source.turrets.forEach(function(t,i){t.batches.forEach(function(b,j){add(b,t.position,source.surface&&source.surface.turrets?.[i]?.[j]?.uv);});});
         idleAsset=Object.assign({},source,{batches:Array.from(groups.values()),turrets:[],engines:[]});
         if(source.surface)idleAsset.surface={atlas:source.surface.atlas,batches:idleAsset.batches.map(function(b){var index=source.batches.findIndex(function(s){return s.color.join(',')===b.color.join(',');}),finish=source.surface&&source.surface.batches[index];return finish?Object.assign({},finish,{uv:idleUV.get(b.color.join(','))||[]}):null;})};
         return idleAsset;
@@ -159,8 +159,9 @@
             part.hp=Math.max(0,part.hp-amount);
             if(part.hp===0){
                 if(part.mount){part.mount.targetId='';part.mount.burst=0;}
+                var original=part.original;
                 part.batches.forEach(function(b,i){
-                    var v=b.vertices,out=/** @type {number[]} */([]);
+                    var v=original[i].vertices,out=/** @type {number[]} */([]);
                     // Planar UVs follow each face's dominant normal; buffers change once on destruction.
                     for(var j=0;j<v.length;j+=6){var axis=Math.abs(v[j+3])>Math.abs(v[j+4])?0:1;if(Math.abs(v[j+5])>Math.abs(v[j+3+axis]))axis=2;out.push(v[j],v[j+1],v[j+2],v[j+3],v[j+4],v[j+5],(v[j+(axis===0?1:0)]*U/28)%1+.5,(v[j+(axis===2?1:2)]*U/28)%1+.5);}
                     b.vertices=new Float32Array(out);b.stride=8;b.texture=smokeTexture;b.color=[.24,.22,.20];
@@ -172,14 +173,17 @@
         function components(){return parts.map(function(p){return {id:'capital-'+team+'-'+p.id,kind:p.kind,hp:p.hp,maxHp:p.maxHp,position:world(p.position)};});}
         var hullBasis=new Float32Array([1,0,0,0,1,0,0,0,1]);
         /** @type {Batch[]} */var staticBatches=asset.batches.map(function(b){return {vertices:vertices(b.vertices),color:livery(b.color),origin:/** @type {[number,number,number]} */(origin),basis:hullBasis,staticGeometry:true};});
-        var surfaceStates=staticBatches.map(function(b,i){
-            var finish=asset.surface&&asset.surface.batches[i];if(!finish||!surfaceTexture)return null;
+        /** @param {Batch} b @param {import('./types').AegisSurfaceFinish|undefined} finish @param {typeof parts[number]|null} part */
+        function prepareSurface(b,finish,part){if(!finish||!surfaceTexture)return null;
             var prepared=surfaceBuffers.get(b.vertices);
             if(!prepared){prepared=new Float32Array(b.vertices.length/6*8);for(var k=0,j=0;k<b.vertices.length;k+=6,j+=8){prepared.set(b.vertices.subarray(k,k+6),j);prepared[j+6]=finish.uv[k/3];prepared[j+7]=finish.uv[k/3+1];}surfaceBuffers.set(b.vertices,prepared);}
-            return {batch:b,original:b.vertices,color:b.color,prepared:prepared,finish:livery(finish.color)};
-        });
+            return {batch:b,original:b.vertices,color:b.color,prepared:prepared,finish:livery(finish.color),part:part,enabled:true};
+        }
+        var surfaceStates=staticBatches.map(function(b,i){return prepareSurface(b,asset.surface&&asset.surface.batches[i],null);});
+        mounts.forEach(function(m,i){m.batches.forEach(function(b,j){surfaceStates.push(prepareSurface(b,asset.surface&&asset.surface.turrets?.[i]?.[j],parts[i]));});});
         /** Review/benchmark switch; keeps actor arrays, poses and damage ownership stable.
-         * @param {boolean} enabled */function setSurfaceDetail(enabled){surfaceStates.forEach(function(s){if(!s)return;s.batch.vertices=enabled?s.prepared:s.original;s.batch.color=enabled?s.finish:s.color;if(enabled){s.batch.stride=8;s.batch.texture=surfaceTexture;}else{delete s.batch.stride;delete s.batch.texture;}});}
+         * @param {boolean} enabled @param {'turrets'=} scope */function setSurfaceDetail(enabled,scope){surfaceStates.forEach(function(s){if(!s||(scope==='turrets'&&!s.part))return;s.enabled=enabled;applySurface(s);});}
+        /** @param {NonNullable<typeof surfaceStates[number]>} s */function applySurface(s){if(s.part&&s.part.hp<=0)return;var b=s.batch;b.vertices=s.enabled?s.prepared:s.original;b.color=s.enabled?s.finish:s.color;if(s.enabled){b.stride=8;b.texture=surfaceTexture;}else{delete b.stride;delete b.texture;}}
         setSurfaceDetail(true);
         /** @type {Vector|null} */var lastEye=null;
         var seconds=0,contacts=0,confirmedHits=0;
@@ -194,7 +198,7 @@
             hangars.forEach(function(h){if(Math.abs(m.aimOffset[0]-h.position[0])<h.halfWidth&&Math.abs(m.aimOffset[2]-h.position[2])<h.halfHeight)m.aimOffset[0]=h.position[0]+h.halfWidth+10+random()*25;});
         }
         /** @param {import('./types').Combat} [combat] */
-        function reset(combat){shieldHits=[];lastSurface=null;parts.forEach(function(p){p.hp=p.maxHp;p.batches.forEach(function(b,i){b.vertices=p.original[i].vertices;b.color=p.original[i].color;delete b.stride;delete b.texture;});});launchClock=1;launched=0;if(!unarmed&&combat&&hangars.length){combat.hangarSupport=true;combat.enemies=combat.enemies.filter(function(e){return e.team!=='ally';});}lastEye=null;seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.routeWait=-(i%12)*.01;m.route=null;m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.specWait=m.specPause;m.randomState=Math.imul(i+1+(team==='enemy'?97:0),2654435761)>>>0;m.rest=m.source.kind==='heavy'?.15+m.randomState/4294967296*3.5:i*.037;if(m.source.kind==='heavy')randomAim(m);m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
+        function reset(combat){shieldHits=[];lastSurface=null;parts.forEach(function(p){p.hp=p.maxHp;p.batches.forEach(function(b,i){b.vertices=p.original[i].vertices;b.color=p.original[i].color;delete b.stride;delete b.texture;});});surfaceStates.forEach(function(s){if(s)applySurface(s);});launchClock=1;launched=0;if(!unarmed&&combat&&hangars.length){combat.hangarSupport=true;combat.enemies=combat.enemies.filter(function(e){return e.team!=='ally';});}lastEye=null;seconds=0;contacts=0;confirmedHits=0;mounts.forEach(function(m,i){m.routeWait=-(i%12)*.01;m.route=null;m.yaw=0;m.elevation=0;m.targetId='';m.settled=0;m.burst=0;m.specWait=m.specPause;m.randomState=Math.imul(i+1+(team==='enemy'?97:0),2654435761)>>>0;m.rest=m.source.kind==='heavy'?.15+m.randomState/4294967296*3.5:i*.037;if(m.source.kind==='heavy')randomAim(m);m.guns=DW.flightGuns.create();m.guns.cooldown=i*.013;});}
         /** Main batteries engage the opposing hull, never the fighter roster.
          * @param {typeof mounts[number]} m @param {number} dt @param {FlightView} view */
         function stepHeavy(m,dt,view){
@@ -411,7 +415,7 @@
         function components(){return rigs.flatMap(function(r){return r.components?r.components():[];});}
         function telemetry(){var reports=rigs.map(function(r){return r.telemetry();});return {seconds:seconds,contacts:reports.reduce(function(n,r){return n+r.contacts;},0),launches:reports.reduce(function(n,r){return n+r.launches;},0),shots:reports.reduce(function(n,r){return n+r.shots;},0),hits:reports.reduce(function(n,r){return n+r.hits;},0),mounts:reports.flatMap(function(r){return r.mounts;}),capitals:states.map(function(s,i){return {team:s.team,position:s.position.slice(),heading:s.heading,integrity:s.integrity,mainBatteryClear:s.mainBatteryClear,shots:reports[i].shots,hits:reports[i].hits};})};}
         function readout(){return 'AEGIS CAPITAL ENGAGEMENT / 1,305 m each\n'+(options&&options.bridge?(states[0].mainBatteryClear?'OPPOSING SIDES / MAIN BATTERIES CLEAR':'SAME SIDE / MAIN BATTERIES MASKED')+'\n':'')+states.map(function(s,i){var t=rigs[i].telemetry();return (i===0?'GREEN':'RED')+' '+(s.integrity>0?Math.ceil(s.integrity/200)+'% integrity':'disabled')+' · '+t.shots+' rounds / '+t.hits+' hits';}).join('\n')+'\nDisabled: '+components().filter(function(p){return p.hp<=0;}).length+' / '+components().length+' systems\nHangar: '+rigs[0].telemetry().launches+' fighters launched';}
-        reset();return {setSurfaceDetail:function(enabled){rigs.forEach(function(r){if(r.setSurfaceDetail)r.setSurfaceDetail(enabled);});},reset:reset,step:step,geometry:function(){rigs.forEach(function(r){r.geometry();});return renderBatches;},effects:function(pose,shields){return rigs.flatMap(function(r){return r.effects(pose,shields);});},readout:readout,hit:hit,damage:damage,components:components,telemetry:telemetry};
+        reset();return {setSurfaceDetail:function(enabled,scope){rigs.forEach(function(r){if(r.setSurfaceDetail)r.setSurfaceDetail(enabled,scope);});},reset:reset,step:step,geometry:function(){rigs.forEach(function(r){r.geometry();});return renderBatches;},effects:function(pose,shields){return rigs.flatMap(function(r){return r.effects(pose,shields);});},readout:readout,hit:hit,damage:damage,components:components,telemetry:telemetry};
     }
     /** Unarmed centerline traffic using the same antipodal chart transport as fighters.
      * Positions are scene units; route distances and speed are metres and m/s.
