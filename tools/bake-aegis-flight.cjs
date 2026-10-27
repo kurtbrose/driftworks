@@ -82,7 +82,7 @@ const {pathToFileURL}=require('node:url');
  data.interiors=Array.from(interiors.values()).map(b=>({kind:b.kind,vertices:b.vertices,color:b.kind==='ceiling'?[.23,.25,.26]:[.85,.85,.85],finish:b.kind==='ceiling'?null:{uv:b.uv,color:[.85,.85,.85],plainUV:[0,0],atlas:'hangar-v1/'+b.kind+'.png'}}));
  if(process.argv.includes('--windows-study')){const study={windows:windows.map(w=>({...w,batch:data.batches.findIndex(b=>b.color.join(',')===w.color.join(','))}))};const text='window.AegisWindowsData='+JSON.stringify(study)+';\n';const file=path.join(root,'output/aegis-windows-data.js');if(process.argv.includes('--check')){if(fs.readFileSync(file,'utf8')!==text)throw new Error('Windows study is stale');}else fs.writeFileSync(file,text);console.log('Window study: '+windows.length+' existing apertures');return;}
  // Extract every authored viewport, including the narrower prow apertures.
- const glass={kind:'windows',vertices:[],color:[.8,.8,.8],finish:{uv:[],color:[.8,.8,.8],plainUV:[0,0],atlas:'window-atlas.png',shader:-1}},removed=new Map();
+ const glass={kind:'windows',vertices:[],color:[.8,.8,.8],finish:{uv:[],color:[.8,.8,.8],plainUV:[0,0],atlas:'window-atlas.png',shader:-2}},removed=new Map();
  windows.forEach((w,index)=>{
    const b=data.batches.find(b=>b.color.join(',')===w.color.join(','));if(!removed.has(b))removed.set(b,new Set());const omit=removed.get(b),lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
    for(let i=w.start;i<w.start+w.length;i+=6){omit.add(i/6);for(let a=0;a<3;a++){lo[a]=Math.min(lo[a],b.vertices[i+a]);hi[a]=Math.max(hi[a],b.vertices[i+a]);}}

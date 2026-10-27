@@ -1,0 +1,31 @@
+Approved constant window lighting, 2026-10-27.
+The initial distance-dependent fade was rejected because its dimming was visible
+while zooming. The final treatment applies a constant 1.95x illumination boost
+to lit windows at every distance; atlas tiles 2 and 6 remain dark.
+Finish -2 opts into this treatment; finish -1 is retained for baseline reviews.
+Original window dimensions, geometry, UVs, atlas, texture sampling and room/frame
+detail are preserved. No new textures, triangles, draws, lights, glow sprites
+or transparent passes. No pixel-size computation or brightness fade remains.
+
+Visual review: medium distance, distant, close-up; studio and flight lighting.
+User approved constant brighter version as the default.
+Focused production surface, strict type, and Three submission checks passed.
+
+Final constant-lighting A/B, medium/studio: ABBA, 20 warmup + 90 frames/block.
+A CPU median/p95 1.2/1.4 ms; B 1.3/1.8 ms. Both 72 draws,
+34752 triangles, cadence 13.3/13.4 ms, backing 2463x1196.
+
+Actual initial flight encounter: 2 capitals, 8 hostiles, 0 wingmen; fixed initial
+camera, production artwork, 100% scale, 1920x1080 backing / 1280x720 CSS,
+DPR 1.5. AI and projectiles frozen. ABBA asset on/off, 20 warmup and 90 samples
+per block; no concurrent tests or rebuilds.
+Both revisions: 269 draws, 232692 triangles, frame cadence 13.3/13.4 ms.
+Previous windows CPU median/p95 3.7/4.3 ms; brighter windows 3.6/4.1 ms.
+Both asset-off controls: 9 draws, 144452 triangles, CPU 0.6/0.8 ms.
+GPU execution not measured; CPU variation does not establish a speedup.
+
+The prior fade study and pixel-identical close-up captures are superseded.
+The approved constant version is intentionally brighter at close range too.
+
+Final npm run check passed: strict types, script and asset validation, and
+131/131 test entries. No distance-dependent dimming remains in the final shader.

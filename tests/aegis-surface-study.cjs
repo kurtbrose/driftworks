@@ -50,7 +50,7 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  const nozzleAsset=DW.aegisFlightAsset.engines;
  assert.equal(nozzleAsset.reduce((n,e)=>n+e.batches.reduce((m,b)=>m+b.vertices.length/18,0),0),3660,'approved open bells add only 480 triangles across five engines');
  for(const e of nozzleAsset){assert.equal(e.batches.length,5);const throat=e.batches[4];assert.equal(throat.vertices.length/18,32);for(let i=0;i<throat.vertices.length;i+=6)assert(Math.abs(throat.vertices[i]-18.2)<2e-6,'throat is recessed 13.8 m behind the 32 m lip');for(const b of e.batches){assert.equal(b.finish.uv.length,b.vertices.length/3);assert(b.finish.uv.every(v=>Number.isFinite(v)&&v>=0&&v<=1));assert.equal(b.finish.atlas,'engine-atlas.png');}}
- const glass=DW.aegisFlightAsset.interiors.find(b=>b.kind==='windows');assert.equal(glass.vertices.length/216,480);assert.equal(glass.vertices.filter((v,i)=>i%6===0&&v<-320).length/36,48,'all 48 prow windows included');assert.equal(glass.finish.shader,-1);
+ const glass=DW.aegisFlightAsset.interiors.find(b=>b.kind==='windows');assert.equal(glass.vertices.length/216,480);assert.equal(glass.vertices.filter((v,i)=>i%6===0&&v<-320).length/36,48,'all 48 prow windows included');assert.equal(glass.finish.shader,-2);
 
  assert.equal(DW.aegisFlightAsset.interiors.length,4);
  const approved={window:{}};vm.createContext(approved);vm.runInContext(read('output/aegis-hangar-data.js'),approved);

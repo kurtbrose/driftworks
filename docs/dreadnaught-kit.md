@@ -454,7 +454,7 @@ with `tools/bake-aegis-window-atlas.cjs`; its painter lives in
 are painted depth, without transparency, dynamic lights or added triangles.
 
 `AegisSurfaceFinish.shader` optionally selects the renderer finish. Windows use
-`-1`, retaining the custom shader with an interior albedo illumination floor
+`-2`, retaining the custom shader with an interior albedo illumination floor
 instead of the exterior PBR material. Surface toggles and reset restore this
 selection. The window-only revision had eleven logical idle batches; empty source batches and
 visibility affect submitted draw counts. The pre-window review baseline is
@@ -487,3 +487,11 @@ the offline canvas dependency. The idle ship combines finished engine geometry
 into one static atlas batch, giving twelve logical batches rather than eleven.
 The engine texture and GPU geometry are shared across instances; no new dynamic
 lights or transparent glow passes are introduced.
+
+## Constant window illumination
+
+Lit windows use a constant 1.95x albedo illumination boost at every distance.
+The original two unlit atlas tiles remain dark; original geometry, atlas detail,
+frames, mipmaps and window size are retained. There is no distance-dependent
+brightness fade. Finish `-1` remains the original interior treatment for A/B
+review; finish `-2` adds this boost on the existing 4 x 2 window atlas.
