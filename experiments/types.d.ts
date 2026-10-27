@@ -32,11 +32,12 @@ export type MissionOverrides = {
 };
 /** Scene-space positions; velocities and engine targets are metres per second. */
 export type Vector = number[];
-export type AegisSurfaceFinish = {uv:number[];color:[number,number,number];plainUV:[number,number]}|null;
+export type AegisSurfaceFinish = {atlas?:string;uv:number[];color:[number,number,number];plainUV:[number,number]}|null;
 export type AegisFlightAsset = {
     name:string; lengthMeters:number; source:string;
     surface?:{atlas:string;batches:AegisSurfaceFinish[];turrets?:AegisSurfaceFinish[][]};
     batches:{color:[number,number,number];vertices:number[]}[];
+    interiors?:{kind:string;color:[number,number,number];vertices:number[];finish:AegisSurfaceFinish}[];
     modules?:{id:string;type:string;position:Vector}[];
     hangars?:{id:string;position:Vector;halfWidth:number;halfHeight:number}[];
     engines?:{id:string;position:Vector;batches:{color:[number,number,number];vertices:number[]}[]}[];

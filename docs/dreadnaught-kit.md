@@ -422,3 +422,18 @@ These are encounter-local states, not additions to saved RTS worlds.
 Use [the component inspection lab](../output/capital-systems-check.html) for
 whole-ship, turret and drive views, individual destruction/reset and matched
 intact/damaged rendering samples. See [measured readiness](benchmarks/capital-systems-2026-10-26.md).
+
+## Approved hangar interior
+
+The flight bake removes the old raised stripe and light blocks and stores three
+`interiors` batches: deck, ceiling and bulkheads. Each has six-float authored
+vertices; deck and bulkheads carry an `AegisSurfaceFinish` with a local `atlas`
+override. The loader shares those textures and prepared buffers across ships.
+Idle ships retain seven hull batches plus three interior batches. Surface
+toggles/reset preserve the selected textures; collision dimensions, launch
+anchors and articulated component ownership are unchanged.
+
+Art and flight-operations intent are recorded in
+`assets/ships/aegis-kit/hangar-v1/design.txt`. Lift, taxiing and recovery remain
+design intent; the existing launch logic is unchanged. The original review
+baseline is frozen in `output/aegis-hangar-before-rig.js`.

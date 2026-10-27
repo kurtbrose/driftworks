@@ -302,7 +302,7 @@ const patrol=DW.aegisFlight.createEllisPatrol(),patrolBatches=patrol.geometry(),
 assert.equal(patrolBatches[0].region,0);
 assert(patrolBatches.every(b=>b.lensCenter===patrolBatches[0].origin&&b.lensRadius>650),'all capital materials share one complete-hull optical image');
 assert.equal(patrolBatches.reduce((n,b)=>n+b.vertices.length,0),initial.reduce((n,b)=>n+b.vertices.length,0),'material batching preserves all hull and turret triangles');
-assert.equal(patrolBatches.length,new Set(initial.map(b=>b.color.join(','))).size,'one draw per compatible idle material');
+assert.equal(patrolBatches.length,new Set(DW.aegisFlightAsset.batches.map(b=>b.color.join(','))).size+(DW.aegisFlightAsset.interiors||[]).length,'one draw per compatible hull material plus separate interior textures');
 const localX=patrolBatches.flatMap(b=>Array.from(b.vertices).filter((v,i)=>i%6===0));
 assert((localX.reduce((a,b)=>Math.max(a,b),-Infinity)-localX.reduce((a,b)=>Math.min(a,b),Infinity))*U>1300,'batching preserves authored metre-scale length and pivots');
 assert.equal(patrol.telemetry().capitals[0].position[1]*U,-8000);
@@ -335,7 +335,7 @@ assert(idleGeometry.length<initial.length,'generic unarmed factory receives mate
 const expectedIdle=new Map();
 function expectedPart(b,pivot){const key=b.color.join(',');if(!expectedIdle.has(key))expectedIdle.set(key,[]);const out=expectedIdle.get(key);for(let i=0;i<b.vertices.length;i++)out.push(i%6<3?(b.vertices[i]+pivot[i%6])/U:b.vertices[i]);}
 sourceAsset.batches.forEach(b=>expectedPart(b,[0,0,0]));(sourceAsset.engines||[]).forEach(e=>e.batches.forEach(b=>expectedPart(b,e.position)));sourceAsset.turrets.forEach(t=>t.batches.forEach(b=>expectedPart(b,t.position)));
-for(const b of idleGeometry){const expected=expectedIdle.get(b.color.join(','));assert.equal(b.vertices.length,expected.length);for(let i=0;i<expected.length;i++)assert(Math.abs(b.vertices[i]-expected[i])<1e-5,'all authored vertices, pivot offsets and normals survive shared batching');}
+for(const b of idleGeometry.slice(0,idleGeometry.length-(sourceAsset.interiors||[]).length)){const expected=expectedIdle.get(b.color.join(','));assert.equal(b.vertices.length,expected.length);for(let i=0;i<expected.length;i++)assert(Math.abs(b.vertices[i]-expected[i])<1e-5,'all authored vertices, pivot offsets and normals survive shared batching');}
 const noWeapons=fixture();noWeapons.combat.hangarSupport=true;idleOne.reset(noWeapons.combat);
 for(let i=0;i<120;i++)idleOne.step(1/60,noWeapons);
 assert.equal(idleOne.telemetry().shots,0);assert.equal(idleOne.telemetry().launches,0,'unarmed factory disables hangar launches');

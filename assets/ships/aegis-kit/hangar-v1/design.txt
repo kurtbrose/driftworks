@@ -1,0 +1,76 @@
+AEGIS HANGAR — REVIEW CANDIDATE
+
+Status: user-approved and integrated as the production default. Launch gameplay is unchanged.
+Artwork generated with the built-in ImageGen tool; no runtime generation or network dependency.
+Files: deck.png (1536 x 1024), bulkhead.png (2172 x 724).
+
+Flight operations design
+The existing through-bay is approximately 106.2 m fore/aft, 85.5 m across,
+and 23.4 m high. The preserved gameplay passage is narrower: 90 x 20 m.
+The central flush elevator connects the flight deck to below-deck aircraft
+storage. Fore/aft holding stands provide staging and light servicing; the
+workshop shutters connect to internal maintenance compartments. Personnel
+routes follow the bulkheads, outside the central aircraft corridor.
+
+Launch: raise one aircraft on the lift; move it to an available holding stand
+for checks; reserve and clear one mouth; move to the center and launch outward.
+A ready aircraft can launch directly from the lift after checks. Only one
+movement crosses the central corridor at a time. The opposite mouth stays
+clear as an escape route, not a simultaneous opposing traffic lane.
+
+Recovery: suspend launches, reserve one mouth, match carrier velocity and
+enter slowly under guidance; settle on the central platform, shut down, then
+lower to storage or tow to a holding stand. Clear the deck before reopening
+launch operations. Damaged craft need a dedicated recovery cycle rather than
+joining outbound traffic. The lift should be interlocked flush while crossing.
+
+Fueling, arming, and major repair belong below deck or behind workshop doors;
+the open flight deck is for transfer, final checks, launch, and recovery.
+In vacuum, markings are guidance and clearance boundaries, not an aerodynamic
+runway. Aircraft use thrusters; no long takeoff roll is implied.
+
+Current gameplay still creates fighters at the bay center, alternates exits,
+and replenishes up to eight allies on a three-second launch cadence. This art
+does not implement the elevator, taxiing, traffic reservations, or recovery.
+A future operations state machine should replace that instantaneous spawn:
+stored -> lifting -> staged -> cleared -> departing -> airborne -> recovery
+clearance -> approaching -> landed -> lowering -> stored. Launch/recovery
+must share one bay reservation; player obstruction must delay clearance.
+
+Rendering
+The study bake removes 51 small paint/light/portal blocks (612 triangles),
+extracts the existing deck, ceiling, and inward bulkhead faces, and batches
+those surfaces by finish. Structural dimensions and articulated parts stay
+unchanged. Two immutable textures and three batches replace primitive detail.
+The ceiling is neutral paint. No new dynamic lights or per-frame mesh building.
+
+Review measurement, inside approach, studio lighting, DPR 1.5, backing
+2463 x 1196, same camera, ABBA with 20 warmup + 90 measured frames per block:
+A: 19 draws, 26296 triangles; CPU median/p95 0.6/0.7 ms; frame 14.9/15.1 ms.
+B: 22 draws, 25684 triangles; CPU median/p95 0.6/0.7 ms; frame 14.7/15.2 ms.
+GPU execution is unmeasured. This isolated real-renderer review does not
+establish a whole-game speedup. Production scene measurements are recorded
+in output/aegis-hangar-flight-before.txt and aegis-hangar-flight-after.txt.
+
+Reproduce: node tools/bake-aegis-flight.cjs --hangar-study
+Verify: node tools/bake-aegis-flight.cjs --hangar-study --check
+Review: http://localhost:8000/output/aegis-hangar-review.html
+
+Validation: npm run check passed, 131/131 test entries. Production bake
+--check passed. Candidate geometry probe confirmed finite vertices, bounded
+UVs, matching UV counts and exactly 612 fewer triangles. Visually inspected
+both mouths, workshop wall, whole ship, and flight environment lighting.
+Flight lighting remains dim; interior illumination is a subsequent pass.
+
+Production validation: full npm run check passed 130/131 entries; the remaining
+shield-envelope freshness assertion required rebaking after the hull revision.
+Rebaked the shield envelope and reran tests/capital-shields.cjs successfully.
+Strict types and the focused capital surface/default/UV regression also pass.
+Two-capital scene: 265 -> 271 draws, 232956 -> 231732 triangles, including sky
+and fighters. CPU readings varied between reloads; no speedup is claimed.
+
+Repeat matched production measurement after tests completed: baseline CPU
+median/p95 6.0/6.6 ms; approved hangar 6.1/6.8 ms. Both frame cadence
+13.3/13.4 ms. 20 warmup + 90 samples/block, ABBA, initial paused engagement,
+eight enemies, no launched allies, identical camera and settings. Baseline
+265 draws/232956 tris; new 271/231732. GPU execution remains unmeasured.

@@ -48,6 +48,7 @@
     /** Immutable mesh buffers are shared across both capital ships and all mounts. */
     var smokeTexture=/** @type {HTMLImageElement|undefined} */(undefined);
     var surfaceTexture=/** @type {HTMLImageElement|undefined} */(undefined);
+    /** @type {Map<string,HTMLImageElement>} */var interiorTextures=new Map();
     /** @type {Promise<void>|null} */var surfaceLoad=null;
     /** @type {WeakMap<Float32Array,Float32Array>} */var surfaceBuffers=new WeakMap();
     var cachedAsset=/** @type {import('./types').AegisFlightAsset|null} */(null);
@@ -172,18 +173,18 @@
         }
         function components(){return parts.map(function(p){return {id:'capital-'+team+'-'+p.id,kind:p.kind,hp:p.hp,maxHp:p.maxHp,position:world(p.position)};});}
         var hullBasis=new Float32Array([1,0,0,0,1,0,0,0,1]);
-        /** @type {Batch[]} */var staticBatches=asset.batches.map(function(b){return {vertices:vertices(b.vertices),color:livery(b.color),origin:/** @type {[number,number,number]} */(origin),basis:hullBasis,staticGeometry:true};});
+        /** @type {Batch[]} */var staticBatches=asset.batches.concat(asset.interiors||[]).map(function(b){return {vertices:vertices(b.vertices),color:livery(b.color),origin:/** @type {[number,number,number]} */(origin),basis:hullBasis,staticGeometry:true};});
         /** @param {Batch} b @param {import('./types').AegisSurfaceFinish|undefined} finish @param {typeof parts[number]|null} part */
-        function prepareSurface(b,finish,part){if(!finish||!surfaceTexture)return null;
+        function prepareSurface(b,finish,part){if(!finish)return null;var texture=finish.atlas?interiorTextures.get(finish.atlas):surfaceTexture;if(!texture)return null;
             var prepared=surfaceBuffers.get(b.vertices);
             if(!prepared){prepared=new Float32Array(b.vertices.length/6*8);for(var k=0,j=0;k<b.vertices.length;k+=6,j+=8){prepared.set(b.vertices.subarray(k,k+6),j);prepared[j+6]=finish.uv[k/3];prepared[j+7]=finish.uv[k/3+1];}surfaceBuffers.set(b.vertices,prepared);}
-            return {batch:b,original:b.vertices,color:b.color,prepared:prepared,finish:livery(finish.color),part:part,enabled:true};
+            return {batch:b,original:b.vertices,color:b.color,prepared:prepared,finish:livery(finish.color),texture:texture,part:part,enabled:true};
         }
-        var surfaceStates=staticBatches.map(function(b,i){return prepareSurface(b,asset.surface&&asset.surface.batches[i],null);});
+        var surfaceStates=staticBatches.map(function(b,i){return prepareSurface(b,i<asset.batches.length?asset.surface&&asset.surface.batches[i]:asset.interiors?.[i-asset.batches.length]?.finish,null);});
         mounts.forEach(function(m,i){m.batches.forEach(function(b,j){surfaceStates.push(prepareSurface(b,asset.surface&&asset.surface.turrets?.[i]?.[j],parts[i]));});});
         /** Review/benchmark switch; keeps actor arrays, poses and damage ownership stable.
          * @param {boolean} enabled @param {'turrets'=} scope */function setSurfaceDetail(enabled,scope){surfaceStates.forEach(function(s){if(!s||(scope==='turrets'&&!s.part))return;s.enabled=enabled;applySurface(s);});}
-        /** @param {NonNullable<typeof surfaceStates[number]>} s */function applySurface(s){if(s.part&&s.part.hp<=0)return;var b=s.batch;b.vertices=s.enabled?s.prepared:s.original;b.color=s.enabled?s.finish:s.color;if(s.enabled){b.stride=8;b.texture=surfaceTexture;}else{delete b.stride;delete b.texture;}}
+        /** @param {NonNullable<typeof surfaceStates[number]>} s */function applySurface(s){if(s.part&&s.part.hp<=0)return;var b=s.batch;b.vertices=s.enabled?s.prepared:s.original;b.color=s.enabled?s.finish:s.color;if(s.enabled){b.stride=8;b.texture=s.texture;}else{delete b.stride;delete b.texture;}}
         setSurfaceDetail(true);
         /** @type {Vector|null} */var lastEye=null;
         var seconds=0,contacts=0,confirmedHits=0;
@@ -456,7 +457,7 @@
             if(!DW.aegisFlightAsset.surface||typeof Image==='undefined')return;
             var atlas=DW.aegisFlightAsset.surface.atlas;
             if(!surfaceLoad)surfaceLoad=new Promise(function(resolve,reject){var image=new Image();image.onload=function(){surfaceTexture=image;resolve();};image.onerror=function(){surfaceLoad=null;reject(new Error('Could not load capital surface atlas'));};image.src=assetUrl('../assets/ships/aegis-kit/'+atlas);});
-            return surfaceLoad;
+            return Promise.all([surfaceLoad,...(DW.aegisFlightAsset.interiors||[]).map(function(b){const file=b.finish&&b.finish.atlas;if(!file||interiorTextures.has(file))return Promise.resolve();return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){interiorTextures.set(file,image);resolve(undefined);};image.onerror=function(){reject(new Error('Could not load hangar texture: '+file));};image.src=assetUrl('../assets/ships/aegis-kit/'+file);});})]).then(function(){});
         });
     }
     DW.aegisFlight={create:create,createBattle:createBattle,createEllisPatrol:createEllisPatrol,load:load};
