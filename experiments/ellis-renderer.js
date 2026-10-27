@@ -17,6 +17,7 @@
     /** @param {Three} THREE @param {Renderer} renderer */
     function create(THREE,renderer){
         var units=DW.sim.METERS_PER_UNIT,size=384,next=0,initialized=false,lastSide=-1;
+        var finiteShipImages=false;
         var params=new URLSearchParams(location.search),readableShips=params.get('bridgeShips')!=='warped',updates=params.get('bridgeFaces')==='6'?6:1,explicit=params.get('bridgeLod')!=='implicit',objects=params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
         /** @param {number} width @param {number} height */
         function target(width,height){
@@ -282,6 +283,8 @@ void main(){
 
         /** @param {Draw} entry */
         function readable(entry){return readableShips&&!!entry.lensCenter&&(entry.lensRadius||0)>0;}
+        /** @param {Draw} entry */
+        function finiteShip(entry){return (readableShips||finiteShipImages)&&!!entry.lensCenter&&(entry.lensRadius||0)>0;}
         /** Four finite paths define a 3D affine patch; a fifth probes its screen error.
          * @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} camera
          * @param {Draw[]} entries @param {Pose} pose @param {number} focal @param {number} width @param {number} height @param {boolean=} overlay */
@@ -341,7 +344,11 @@ void main(){
                     if(!e.object.visible)return;
                     var side=e.region||0,center=e.lensCenter||/** @type {number[]} */(e.uniforms.uOrigin.value),key=side+':'+center.join(','),p=/** @type {Patch|null} */(null);
                     if(cache.has(key))p=cache.get(key)||null;
-                    else{p=patch(center,side,e.lensRadius||20,readable(e));cache.set(key,p);if(p){maxError=Math.max(maxError,p.error);if(p.error>2)bad++;}}
+                    else{p=patch(center,side,e.lensRadius||20,readable(e));
+                        // An unusable Jacobian must not fall back to ordinary
+                        // perspective while the HUD still uses the optical center.
+                        if(!p&&finiteShipImages&&finiteShip(e))p=patch(center,side,e.lensRadius||20,true);
+                        cache.set(key,p);if(p){maxError=Math.max(maxError,p.error);if(p.error>2)bad++;}}
                     if(!p&&(readable(e)||side!==region)){e.object.visible=false;return;}
                     var u=e.uniforms;
                     var localDistance=Math.hypot.apply(null,center.map(function(v,i){return v*units-eye[i];}));
@@ -365,8 +372,8 @@ void main(){
             var start=performance.now(),region=pose.region||0;
             uniforms.ellisRegion.value=region;
             if(primaryWidth!==width||primaryHeight!==height){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();historyPose=null;historyMap=target(Math.ceil(width/2),Math.ceil(height/2));historyMap.texture.minFilter=THREE.NearestFilter;historyMap.texture.magFilter=THREE.NearestFilter;hitMap=target(Math.ceil(width/2),Math.ceil(height/2));hitMap.texture.minFilter=THREE.NearestFilter;hitMap.texture.magFilter=THREE.NearestFilter;uniforms.hitMap.value=hitMap.texture;uniforms.hitSize.value=[Math.ceil(width/2),Math.ceil(height/2)];primary=target(width,height);effects=target(width,height);uniforms.effectColor.value=effects.texture;uniforms.effectDepth.value=effects.depthTexture;primaryWidth=width;primaryHeight=height;uniforms.sourceColor.value=primary.texture;uniforms.sourceDepth.value=primary.depthTexture;}
-            var originalVisibility=entries.map(function(e){return e.object.visible;}),ships=entries.filter(readable);
-            entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&(e.region||0)===region&&!readable(e)&&!e.projected;});
+            var originalVisibility=entries.map(function(e){return e.object.visible;}),ships=entries.filter(finiteShip);
+            entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&(e.region||0)===region&&!finiteShip(e)&&!e.projected;});
             var lights=entries.filter(function(e){return e.object.visible&&e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending;});
             var visibility=entries.map(function(e){return e.object.visible;}),writes=lights.map(function(e){return e.material.depthWrite;});
             // Additive fragments have no opaque surface depth. Keep them separate
@@ -391,7 +398,7 @@ void main(){
             try{
                 for(var chart=0;chart<2;chart++)for(var i=0;i<count;i++){
                     restore();var worldSide=chart===0?side:1-side;
-                    entries.forEach(function(e,k){e.object.visible=originalVisibility[k]&&!readable(e)&&!e.projected&&(e.region||0)===worldSide&&!(e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending);});
+                    entries.forEach(function(e,k){e.object.visible=originalVisibility[k]&&!finiteShip(e)&&!e.projected&&(e.region||0)===worldSide&&!(e.uniforms.uFinish.value===9&&e.material.blending===THREE.AdditiveBlending);});
                     capture(scene,entries,[worldSide*12000/units,-2000/units,1550/units],chart,(next+i)%6);
                 }
             }finally{restore();renderer.setScissorTest(false);renderer.setRenderTarget(null);renderer.setViewport(0,0,width,height);}
@@ -415,7 +422,7 @@ void main(){
             }
             var shipStats={objectPaths:0,objectPatches:0,objectError:0,objectBad:0};
             if(ships.length){
-                entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&readable(e);});
+                entries.forEach(function(e,i){e.object.visible=originalVisibility[i]&&finiteShip(e);});
                 try{shipStats=renderObjects(scene,camera,ships,pose,focal,width,height,true);}
                 finally{entries.forEach(function(e,i){e.object.visible=originalVisibility[i];});}
             }
@@ -428,7 +435,7 @@ void main(){
             return {objectPaths:shipStats.objectPaths,objectPatches:shipStats.objectPatches,objectError:shipStats.objectError,objectBad:shipStats.objectBad,compositionPasses:(adaptive?3:1)+(ships.length?1:0)+(projected?1:0),historyValid:valid?1:0,extraPasses:(adaptive?2:0)+(ships.length?1:0)+(projected?1:0),captures:count*2,cpuMs:performance.now()-start};
         }
         function dispose(){primary.dispose();effects.dispose();hitMap.dispose();historyMap.dispose();mapMaterial.dispose();fullMaterial.dispose();refineMaterial.dispose();atlases.forEach(function(t){t.dispose();});lookup.dispose();quad.dispose();material.dispose();}
-        return {setShipStretching:/** @param {boolean} enabled */function(enabled){readableShips=!enabled;initialized=false;historyPose=null;historyRevision=null;},render:render,dispose:dispose,invalidate:function(){initialized=false;lastSide=-1;historyPose=null;historyRevision=null;phase=0;}};
+        return {setShipStretching:/** @param {boolean} enabled */function(enabled){finiteShipImages=true;readableShips=!enabled;initialized=false;historyPose=null;historyRevision=null;},render:render,dispose:dispose,invalidate:function(){initialized=false;lastSide=-1;historyPose=null;historyRevision=null;phase=0;}};
     }
     DW.ellisRenderer={create:create,faces:faces};
 }());

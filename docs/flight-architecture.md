@@ -568,6 +568,12 @@ only on wormhole missions. It starts from `bridgeShips=warped` (otherwise rigid)
 and changes live through `flightPresentation.setShipStretching`,
 `scene3d.setStudyShipStretching` and `EllisRenderPass.setShipStretching`.
 The change preserves simulation and actor meshes, invalidates optical history,
-and survives render-pass recreation. It is a session setting. In the default
-full renderer it enables lensed geometry; the object experiment uses its affine
-patch. Far-side aperture clipping continues to apply to object images.
+and survives render-pass recreation. It is a session setting. Both gameplay and
+the object experiment use finite-source ship images: rigid when off and a local
+affine patch when on. The optical center agrees with the HUD primary path; ships
+are excluded from ordinary geometry and mouth captures to avoid duplicate images
+and the full compositor's different near-field policy. Full ray-search geometry
+remains available through the study's explicit mode. Far-side aperture clipping
+continues to apply to ship images. If the local Jacobian is unusable, the live
+mode keeps a rigid image at the optical center rather than reverting to ordinary
+perspective.

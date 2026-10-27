@@ -199,6 +199,7 @@
         var shieldParams=new URLSearchParams(typeof location==='undefined'?'':location.search),ownShield=shieldParams.get('shields')==='own',shieldDefault=!['own','whole'].includes(shieldParams.get('shields')||''),shieldEnabled=shieldParams.get('shields')!=='off',shieldTracker=DW.flightShields?DW.flightShields.tracker():null;
         var shieldDegrees=shieldDefault||shieldParams.get('shieldUnits')==='angle'?.35:null,shieldGlow=true,shieldTime=0,shieldTest=-Infinity;
         /** @type {number[]|null} */var shieldPreview=null;
+        var liveShipImages=false;
         var shipStretching=typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeShips')==='warped';
         var bridgeMode=typeof location==='undefined'?'':new URLSearchParams(location.search).get('bridge');
         if(DW.flightMissions.current().sky.wormhole&&scene.setStudyBridge)scene.setStudyBridge(bridgeMode!=='legacy'&&bridgeMode!=='sky');
@@ -253,7 +254,7 @@
         /** @param {FlightView} view @param {Appearance} appearance @param {Comparison} comparison @param {number} elapsed */
         function render(view, appearance, comparison, elapsed) {
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
-            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
+            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
             var livingArt = /** @type {ArtCraft[]} */ (DW.training.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
             if (view.observerCraft) livingArt.push(view.observerCraft);
             var groups=/** @type {{team:string;region:number;craft:ArtCraft[]}[]} */([]);
@@ -363,7 +364,7 @@
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };
         }
-        return {setShipStretching:/** @param {boolean} enabled */function(enabled){shipStretching=enabled;scene.setStudyShipStretching(enabled);},setShieldPreview:/** @param {number[]|null} waves */function(waves){shieldPreview=waves;},setCalibration:/** @param {Batch[]} batches */function(batches){calibration=batches;},setShieldOptics:/** @param {number|null} degrees @param {boolean} glow */function(degrees,glow){shieldDegrees=degrees;shieldGlow=glow;},injectShieldHit:function(){shieldTest=shieldTime-.12;},shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
+        return {setShipStretching:/** @param {boolean} enabled */function(enabled){liveShipImages=true;shipStretching=enabled;scene.setStudyShipStretching(enabled);},setShieldPreview:/** @param {number[]|null} waves */function(waves){shieldPreview=waves;},setCalibration:/** @param {Batch[]} batches */function(batches){calibration=batches;},setShieldOptics:/** @param {number|null} degrees @param {boolean} glow */function(degrees,glow){shieldDegrees=degrees;shieldGlow=glow;},injectShieldHit:function(){shieldTest=shieldTime-.12;},shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
     }
     DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin, ohioSignGeometry:ohioSignGeometry };
 }());

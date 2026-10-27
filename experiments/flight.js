@@ -118,6 +118,7 @@
     if(wormholeRendering&&shipStretching){
         wormholeRendering.hidden=!activeMission.sky.wormhole;
         shipStretching.checked=new URLSearchParams(location.search).get('bridgeShips')==='warped';
+        if(activeMission.sky.wormhole)presentation.setShipStretching(shipStretching.checked);
         shipStretching.onchange=function(){presentation.setShipStretching(!!shipStretching&&shipStretching.checked);blurActiveControl();};
     }
     if(aegis){

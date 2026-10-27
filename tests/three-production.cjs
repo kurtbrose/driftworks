@@ -370,7 +370,29 @@ console.log('PASS live Ellis ship distortion: rigid/stretch/rigid, mesh reuse an
 viewer.setStudyBridge(false);context.location.search='?mission=ellis';viewer.setStudyBridge(true);
 for(const enabled of [false,true,false]){
  viewer.setStudyShipStretching(enabled);viewer.render(world,1,0,0);
- assert.equal(viewer.getRenderStats().bridgeObjectPaths,enabled?0:1,'default gameplay switches between full lensed geometry and rigid overlay');
+ assert.equal(viewer.getRenderStats().bridgeObjectPaths,enabled?5:1,'default gameplay switches between affine and rigid finite-source overlays');
  assert.equal(viewer.getRenderStats().bridgeCaptures,12,'each setting refreshes chart captures instead of reusing the previous hull image');
 }
-console.log('PASS live Ellis gameplay distortion: full geometry/rigid overlay routing and capture invalidation');
+console.log('PASS live Ellis gameplay distortion: affine/rigid optical overlay routing and capture invalidation');
+
+// The actual raw vertex transform must put the hull origin on the HUD bearing,
+// including ranges straddling the old compositor's ordinary-perspective blend.
+for(const range of [66,101,150,220])for(const side of [0,1]){
+ const eye=[0,-2600,1550],target=[side*12000+20,-2600+range,1558];
+ assert(Math.hypot(target[0]-side*12000,target[1]+2000,target[2]-1550)>=300);
+ const h=DW.ellisOptics.primary(eye,target,0,side);assert(h);
+ viewer.setSurfaceCamera({region:0,eye:eye.map(x=>x/U),right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+ const center=target.map(x=>x/U);
+ viewer.setStudyActors([{vertices:data,color:[.123,.456,.789],region:side,origin:center,lensCenter:center,lensRadius:5}]);
+ for(const stretch of [false,true]){
+  viewer.setStudyShipStretching(stretch);const begin=frames.length;viewer.render(world,1,0,0);
+  const images=frames.slice(begin).flat().filter(d=>Math.abs(d.uniforms.uColor?.[0]-.123)<1e-6);
+  assert.equal(images.length,1,'hull is submitted once, outside ordinary source and mouth captures');
+  const u=images[0].uniforms,q=u.uLensViewCenter;
+  assert.equal(u.uLensEnabled,1);
+  const focal=1/Math.tan(Math.PI/8),hudX=h.direction[0]/h.direction[1]*focal/(host.clientWidth/host.clientHeight),hudY=h.direction[2]/h.direction[1]*focal;
+  const imageX=q[0]/q[2]*u.uView[1]/u.uView[2],imageY=q[1]/q[2]*u.uView[1];
+  assert(Math.hypot((imageX-hudX)*host.clientWidth/2,(imageY-hudY)*host.clientHeight/2)<.001,'rigid and stretched hull origins align with HUD optical bearing within 0.001 px '+JSON.stringify({range,side,stretch,q,view:Array.from(u.uView),hudX,hudY,imageX,imageY}));
+ }
+}
+console.log('PASS Ellis HUD/image agreement: 66/101/150/220 m, both charts, rigid and stretched ship origins');
