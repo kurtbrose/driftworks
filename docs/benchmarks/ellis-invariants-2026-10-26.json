@@ -1,4 +1,57 @@
 {
+  "radialCases": 18,
+  "flatCases": 6,
+  "chartCases": 12,
+  "radialFailures": [
+    {
+      "side": 0,
+      "R": 301,
+      "S": 360,
+      "errorMeters": 0.0036904618341679907
+    },
+    {
+      "side": 0,
+      "R": 301,
+      "S": 440,
+      "errorMeters": 0.015553786725149621
+    },
+    {
+      "side": 0,
+      "R": 330,
+      "S": 440,
+      "errorMeters": 0.003181989916896555
+    },
+    {
+      "side": 0,
+      "R": 420,
+      "S": 305,
+      "errorMeters": 0.008102789908036812
+    },
+    {
+      "side": 1,
+      "R": 301,
+      "S": 360,
+      "errorMeters": 0.0036904618341679907
+    },
+    {
+      "side": 1,
+      "R": 301,
+      "S": 440,
+      "errorMeters": 0.015553786725149621
+    },
+    {
+      "side": 1,
+      "R": 330,
+      "S": 440,
+      "errorMeters": 0.003181989916896555
+    },
+    {
+      "side": 1,
+      "R": 420,
+      "S": 305,
+      "errorMeters": 0.008102789908036812
+    }
+  ],
   "rotations": 108,
   "reversed": 108,
   "rotationError": 9.604070888979787e-15,

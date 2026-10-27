@@ -92,6 +92,31 @@ const phase=optics.lookup(critical.impact,u(critical.impact,2))-optics.lookup(cr
 const criticalPhaseError=Math.abs(phase-b.phase);
 console.log(`PASS Ellis independent shell invariants: ${shellTests} paths; worst intersection ${maxShellDistance.toExponential(2)} m, resolved lookup phase ${maxShellPhase.toExponential(2)} rad`);
 console.log('Ellis critical lookup diagnostic: '+criticalPhaseError.toFixed(6)+' rad; pass='+(criticalPhaseError<.001)+' (not accepted optics)');
+// Analytic limits do not use the inverse solver as their own oracle.
+let radialCases=0,flatCases=0,chartCases=0;
+const radialFailures=[];
+for(const side of [0,1]){
+ for(const R of [301,330,420])for(const S of [305,360,440]){
+  if(R===S)continue;
+  const hit=optics.primary(point([0,-R,0],side),point([0,-S,0],side),side,side);
+  const expected=Math.abs(Math.sqrt(R*R-90000)-Math.sqrt(S*S-90000));
+  assert(hit);if(Math.abs(hit.length-expected)>=.002)radialFailures.push({side,R,S,errorMeters:Math.abs(hit.length-expected)});
+  assert(distance(hit.direction,[0,S>R?-1:1,0])<1e-7,'radial core path has no angular bending');radialCases++;
+ }
+ for(const delta of [[40,80,10],[-120,-60,40],[0,-200,0]]){
+  const O=[100,-900,20],T=O.map((v,i)=>v+delta[i]),hit=optics.primary(point(O,side),point(T,side),side,side);
+  assert(hit&&hit.direct);assert(Math.abs(hit.length-norm(delta))<1e-9);
+  assert(distance(hit.direction,unit(delta))<1e-12,'flat exterior recovers Euclidean perspective');flatCases++;
+ }
+ for(const other of [false,true])for(const theta of [.3,1,2]){
+  const O=[0,-430,0],T=[500*Math.sin(theta),-500*Math.cos(theta),0],dest=other?1-side:side;
+  const a=optics.primary(point(O,side),point(T,dest),side,dest);
+  const b=optics.primary(point(O,1-side),point(T,1-dest),1-side,1-dest);
+  assert.equal(!!a,!!b);if(!a)continue;
+  assert(distance(a.direction,b.direction)<1e-10&&Math.abs(a.length-b.length)<1e-7,'exchanging chart labels changes no optical measurement');chartCases++;
+ }
+}
+console.log(`PASS Ellis analytic limits: ${radialCases} radial fixtures (${radialFailures.length} exceed 2 mm), ${flatCases} Euclidean exterior paths, ${chartCases} chart exchanges`);
 const out=process.argv.indexOf('--out');
-if(out>=0){if(!process.argv[out+1])throw new Error('--out requires a path');fs.writeFileSync(process.argv[out+1],JSON.stringify({rotations,reversed,rotationError,lengthSymmetry,maxEnergy,maxMomentum,maxPlane,maxReturn,crossings,turns,shellTests,maxShellDistance,maxShellPhase,critical,criticalPhaseError,criticalOracleStepDifference:Math.abs(a.phase-b.phase),reciprocityFailures},null,2)+'\n');}
-if(process.argv.includes('--strict')&&(reciprocityFailures.length||criticalPhaseError>=.001))process.exitCode=1;
+if(out>=0){if(!process.argv[out+1])throw new Error('--out requires a path');fs.writeFileSync(process.argv[out+1],JSON.stringify({radialCases,flatCases,chartCases,radialFailures,rotations,reversed,rotationError,lengthSymmetry,maxEnergy,maxMomentum,maxPlane,maxReturn,crossings,turns,shellTests,maxShellDistance,maxShellPhase,critical,criticalPhaseError,criticalOracleStepDifference:Math.abs(a.phase-b.phase),reciprocityFailures},null,2)+'\n');}
+if(process.argv.includes('--strict')&&(radialFailures.length||reciprocityFailures.length||criticalPhaseError>=.001))process.exitCode=1;
