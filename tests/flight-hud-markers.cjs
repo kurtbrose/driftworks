@@ -105,65 +105,66 @@ nearEnemy.pose.eye=[16000/u,-1600/u,1550/u];renderAim();assert.equal(get('target
 DW.flightPresentation=savedPresentation;DW.ellisOptics=savedOptics;
 console.log('PASS truthful Ellis HUD lead: actual firing direction, cross-chart contact, no optical warp and no invalid/out-of-lifetime pip');
 
-// Tunnel forecasts must agree with independently advanced production sessions.
+// Fine road samples must match the production controller, without editing live state.
 const held={throttle:null,throttleRate:0,fire:false};
 function samePose(actual,expected){for(const field of ['eye','right','up','back'])for(let k=0;k<3;k++)assert.ok(Math.abs(actual[field][k]-expected[field][k])<1e-8,field+' matches production movement');}
 let straightPath,straightPose;
 const trajectoryCases=[];
 for(const controls of [{},{yaw:.55},{pitch:.5,roll:.6},{pitch:.4,yaw:.5,roll:.7,boost:true},{side:1,vertical:-.4},{stop:true},{throttleRate:-.5}]){
  const reference=createFlight({mission:'training',seed:29,enabled:false});
- const start=reference.snapshot(),demand={...held,...controls};
- start.state.eye=[0,-10000,5000];
- const before=JSON.stringify(start.combat.player),forecast=DW.flightHud.predictFlightPath(start.combat.player,demand,0,6);
+ const start=reference.snapshot(),demand={...held,...controls};start.state.eye=[0,-10000,5000];
+ const before=JSON.stringify(start.combat.player),forecast=DW.flightHud.predictFlightPath(start.combat.player,demand,6);
  assert.equal(JSON.stringify(start.combat.player),before,'Forecast cannot mutate live craft, arrays, guns or profile');
- assert.equal(forecast.length,12,'Twelve separate hoops ahead, including in straight flight');
+ assert.equal(forecast.length,721,'Retain every physics tick so each painted dash can curve');
+ assert.equal(forecast[0].distance,0);
+ for(let i=1;i<forecast.length;i++){assert.ok(forecast[i].distance>=forecast[i-1].distance);assert.ok(forecast[i].seconds-forecast[i-1].seconds<=1/120+1e-10);}
  trajectoryCases.push({pose:JSON.parse(before).pose,path:forecast});
  let elapsed=0;
- for(const sample of forecast){reference.advance(sample.seconds-elapsed,demand);samePose(sample.pose,reference.snapshot().state);elapsed=sample.seconds;}
+ for(let i=0;i<forecast.length;i+=60){const sample=forecast[i];reference.advance(sample.seconds-elapsed,demand);samePose(sample.pose,reference.snapshot().state);elapsed=sample.seconds;}
  if(!Object.keys(controls).length){straightPath=forecast;straightPose=JSON.parse(before).pose;}
- if(controls.yaw)assert.ok(Math.abs(forecast[3].pose.eye[0]-JSON.parse(before).pose.eye[0])>1,'Held steering bends the forecast');
- if(controls.roll)assert.ok(Math.abs(forecast[1].pose.right[2])>.01,'Roll transports and twists the hoop frames');
+ if(controls.yaw)assert.ok(Math.abs(forecast[240].pose.eye[0]-JSON.parse(before).pose.eye[0])>1,'Held steering bends the road');
+ if(controls.roll)assert.ok(Math.abs(forecast[120].pose.right[2])>.01,'Roll twists the road floor');
 }
-// Global half-second hoop timestamps remain fixed as the ship advances.
-const phased=createFlight({mission:'training',seed:29,enabled:false});phased.snapshot().state.eye=[0,-10000,5000];
-const first=DW.flightHud.predictFlightPath(phased.snapshot().combat.player,held,0,6);
-phased.advance(1/120,held);
-const next=DW.flightHud.predictFlightPath(phased.snapshot().combat.player,held,1/120,6);
-samePose(first[0].pose,next[0].pose);assert.ok(next[0].seconds<first[0].seconds,'Hoops approach rather than remaining attached to the camera');
-function paintTunnel(pose=straightPose,path=straightPath,opacity=.3){calls.length=0;DW.flightHud.paintFlightTunnel(painter,1000,700,pose,10,path,16,opacity);return calls.filter(c=>c.kind==='stroke');}
-const tunnel=paintTunnel();
-assert.ok(tunnel.length>=100,'Straight-ahead view contains a sequence of hoops and connecting rails');
-const widths=new Set(tunnel.filter(c=>Math.abs(c.points[0][1]-c.points[1][1])<1e-6).map(c=>Math.round(Math.abs(c.points[1][0]-c.points[0][0])*1000)));
-assert.ok(widths.size>=8,'Looking straight ahead shows many distinct nested rungs');
-for(const c of tunnel){assert.ok(c.alpha>0&&c.alpha<=.3);for(const [x,y] of c.points)assert.ok(Number.isFinite(x)&&Number.isFinite(y)&&x>=-1e-6&&x<=1000+1e-6&&y>=-1e-6&&y<=700+1e-6,'Hoops and rails are near/frustum clipped');}
-assert.equal(paintTunnel(straightPose,straightPath,0).length,0);
-assert.equal(paintTunnel({...straightPose,back:straightPose.back.map(v=>-v)},straightPath).length,0,'Do not invent forward hoops for a path behind the camera');
-assert.equal(painter.globalAlpha,1,'Tunnel restores painter state');
-console.log('PASS trajectory tunnel: independent real-session forecasts, held steering/roll/boost/throttle/strafe/stop, no live mutation, approaching rungs, nested straight-ahead hoops and clipped rails');
-
-for(const c of trajectoryCases)for(const stroke of paintTunnel(c.pose,c.path))for(const [x,y] of stroke.points)assert.ok(Number.isFinite(x)&&Number.isFinite(y)&&x>=-1e-6&&x<=1000+1e-6&&y>=-1e-6&&y<=700+1e-6,'Curved and spiraling paths clip safely');
-get('flight-tunnel').checked=true;get('flight-tunnel-ahead').value='6';get('flight-tunnel-width').value='24';get('flight-tunnel-opacity').value='85';
+function paintLanes(pose=straightPose,path=straightPath,opacity=.85,phase=0){calls.length=0;DW.flightHud.paintFlightLanes(painter,1000,700,pose,DW.sim.METERS_PER_UNIT,path,16,opacity,phase);return calls.filter(c=>c.kind==='stroke');}
+const road=paintLanes(),ink=road.filter(c=>c.color==='#9aeeff');
+assert.ok(ink.length>=6,'Several separate dashes pass below each side');
+assert.ok(ink.some(c=>c.points.every(p=>p[0]<500))&&ink.some(c=>c.points.every(p=>p[0]>500)),'Both sides of the road are visible');
+assert.ok(ink.every(c=>c.points.every(p=>p[1]>350)),'Straight flight paints only below the eye line');
+assert.ok(ink.some(c=>c.alpha>.5),'Peripheral paint stays clearly readable');
+assert.ok(road.some(c=>c.color==='#020a12'&&c.width===5.5),'Road paint has a dark contrast outline');
+const focal=1/Math.tan(Math.PI/8);
+function checkPaintSpacing(strokes,phase){
+ for(const c of strokes.filter(c=>c.color==='#9aeeff'))for(const [x,y] of c.points){
+  const depth=4*focal*700/(2*(y-350)),position=((depth+phase)%20+20)%20;
+  assert.ok(position<8+1e-6||position>20-1e-6,'Each dash occupies 8 m of a constant 20 m road interval: '+JSON.stringify({depth,phase,position,x,y}));
+  assert.ok(Math.abs(Math.abs((x-500)*2*depth/(700*focal))-8)<1e-6,'Lane separation remains 16 physical metres');
+ }
+}
+checkPaintSpacing(road,0);checkPaintSpacing(paintLanes(straightPose,straightPath,.85,7),7);
+function checkClip(strokes){
+ const radius=Math.max(40,Math.min(72,700*.075))+3;
+ for(const c of strokes)for(let i=1;i<c.points.length;i++){
+  const a=c.points[i-1],b=c.points[i];
+  for(const [x,y] of [a,b])assert.ok(Number.isFinite(x)&&Number.isFinite(y)&&x>=-1e-6&&x<=1000+1e-6&&y>=-1e-6&&y<=700+1e-6,'Road clips before projection');
+  const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((500-a[0])*dx+(350-a[1])*dy)/(dx*dx+dy*dy||1)));
+  assert.ok(Math.hypot(a[0]+t*dx-500,a[1]+t*dy-350)>=radius-1e-6,'No road stroke crosses the protected aiming area');
+ }
+}
+checkClip(road);
+let curved=false;
+for(const c of trajectoryCases){const strokes=paintLanes(c.pose,c.path);checkClip(strokes);
+ for(const stroke of strokes.filter(s=>s.color==='#9aeeff'&&s.points.length>=4)){
+  const a=stroke.points[0],b=stroke.points.at(-1),dx=b[0]-a[0],dy=b[1]-a[1];
+  if(stroke.points.some(p=>Math.abs(dx*(p[1]-a[1])-dy*(p[0]-a[0]))/(Math.hypot(dx,dy)||1)>.1))curved=true;
+ }
+}
+assert.ok(curved,'Individual dashes visibly curve through multiple points instead of straight endpoint chords');
+assert.equal(paintLanes(straightPose,straightPath,0).length,0);
+assert.equal(paintLanes({...straightPose,back:straightPose.back.map(v=>-v)},straightPath).length,0);
+assert.equal(painter.globalAlpha,1);
+get('flight-lanes').checked=true;get('flight-lanes-ahead').value='4';get('flight-lanes-width').value='24';get('flight-lanes-opacity').value='85';
 const guideView={...view,units:10,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map(),flightDemand:held};
-hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff'),'Real HUD mounts the guide using the supplied manual controls');
-hud.render({...guideView,flightDemand:undefined});assert.ok(!calls.some(c=>c.color==='#9aeeff'),'No manual prediction is invented for an AI observer');
-get('flight-tunnel').checked=false;hud.render(guideView);assert.ok(!calls.some(c=>c.color==='#9aeeff'),'Toggle removes tunnel geometry');
-console.log('PASS tunnel integration: real HUD demand plumbing, manual-only scope, checkbox and curved-path viewport clipping');
-
-hud.render({...guideView,flightDemand:held});
-get('flight-tunnel').checked=true;hud.render(guideView);
-const visibleHoops=calls.filter(c=>c.color==='#9aeeff'&&c.width===2.5);
-assert.ok(visibleHoops.length>=40,'Clearly visible hoop strokes');
-assert.ok(visibleHoops.filter(c=>c.points.every(p=>p[0]>400&&p[0]<600&&p[1]>250&&p[1]<450)).every(c=>c.alpha>=.5),'Central distant brackets retain readable brightness');
-assert.ok(calls.some(c=>c.color==='#020a12'&&c.width===5.5),'Dark outline keeps hoops visible over lit terrain');
-assert.ok(calls.some(c=>c.color==='#9aeeff'&&c.width===1.75),'Rails have deliberate visible weight');
-console.log('PASS tunnel visibility: bright cyan hoops, minimum distant opacity, 2.5 px rungs, 1.75 px rails and dark terrain contrast');
-
-// Broken top/bottom edges leave the middle of each rung open.
-const guideInk=paintTunnel(straightPose,straightPath,.85).filter(c=>c.color==='#9aeeff'&&c.width===2.5);
-assert.ok(!guideInk.some(c=>Math.abs(c.points[0][1]-c.points[1][1])<1e-6&&Math.min(...c.points.map(p=>p[0]))<500&&Math.max(...c.points.map(p=>p[0]))>500),'Horizontal rungs leave the centre open');
-function offsetPath(angle){return straightPath.map(s=>({...s,pose:{...s.pose,eye:s.pose.eye.map((v,k)=>v+straightPose.right[k]*Math.tan(angle)*Math.hypot(...s.pose.eye.map((x,j)=>x-straightPose.eye[j])))}}));}
-const aheadInk=paintTunnel(straightPose,straightPath,.85).filter(c=>c.color==='#9aeeff');
-const sideInk=paintTunnel(straightPose,offsetPath(Math.PI/6),.85).filter(c=>c.color==='#9aeeff');
-assert.ok(sideInk.length>0,'Moderately off-axis guidance is still visible');
-assert.ok(sideInk.reduce((n,c)=>n+c.alpha,0)/sideInk.length<aheadInk.reduce((n,c)=>n+c.alpha,0)/aheadInk.length,'Peripheral segments fade instead of dominating the view');
-console.log('PASS segmented tunnel: open rung centres, short rail dashes, readable forward brackets and off-axis fading');
+hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff'),'Real HUD receives held manual inputs');
+hud.render({...guideView,flightDemand:undefined});assert.ok(!calls.some(c=>c.color==='#9aeeff'),'No manual path is invented for an observer');
+get('flight-lanes').checked=false;hud.render(guideView);assert.ok(!calls.some(c=>c.color==='#9aeeff'),'Checkbox removes the road');
+console.log('PASS trajectory lanes: real-session predictions, fine curved dashes, 8/12 m road paint, physical lane spacing, readable lower/peripheral placement, protected aim, clipping and manual HUD toggle');

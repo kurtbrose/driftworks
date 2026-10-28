@@ -357,57 +357,62 @@ changes and GPU context loss/restoration invalidate history. Restoring the GPU
 also forces all radial capture faces to refill. See the
 [temporal experiment report](benchmarks/ellis-temporal-2026-10-24.md).
 
-### Predicted trajectory tunnel
+### Predicted trajectory lane markers
 
-Flight lab Settings / Trajectory tunnel replaces the Cartesian motion grid.
-It draws a series of clipped-corner brackets with four dashed rails along
-where the ship will fly if current controls remain held. Default settings:
-six seconds ahead, 24 m corridor width (18 m high), and 85% maximum line
-opacity. The checkbox, horizon, width and brightness apply immediately.
-Several nested hoops remain visible looking straight ahead. Steering curves
-the corridor and future roll twists its frames, including automatic banking.
+Flight lab Settings / Trajectory lane markers draws only two dashed road
+edges below and beside the ship. There are no hoops, overhead rails or
+crossbars. Default settings: four seconds ahead, 24 m between edges,
+road plane 6 m below the ship, and 85% maximum line opacity. The controls
+adjust the horizon, lane spacing and brightness, or turn the guide off.
+The road plane follows each future craft frame, so steering bends the
+paint and roll twists it. An explicit empty circle around the aiming point
+keeps the guide out of the crosshairs even when a turn curves across them.
 
-`flightHud.predictFlightPath(craft, demand, clock, horizon)` copies all mutable
-movement arrays and runs the production `training.stepInput` at 1/120 s.
-It includes existing velocity, lateral damping, angular rates, throttle
-commands, boost, pitch, yaw and roll. It does not step combat, scenery or
-collision. The live craft, guns and profile stay untouched. This predicts
-unobstructed held-input motion, not safe clearance or collision avoidance.
+`flightHud.predictFlightPath(craft, demand, horizon)` copies the movement
+arrays and runs the production `training.stepInput` at 1/120 s. It returns
+`FlightPathSample[]` with relative seconds, cumulative physical distance
+in metres, and a future pose at every tick, including the starting pose.
+The real craft, guns and profile are never edited. This includes existing
+velocity, lateral damping, angular rates, throttle, boost, pitch, yaw and
+roll, but does not predict combat, scenery motion or collision avoidance.
 
-Rungs fall on global half-second simulation timestamps, beginning at least
-0.25 s ahead. They approach and pass the camera instead of staying fixed
-at a constant screen size. `paintFlightTunnel` uses each future right/up
-frame for the hoop and projects into the current cockpit camera; near-plane
-and viewport clipping happen before perspective division. Hoops use bright
-cyan 2.5 CSS-pixel strokes, rails 1.75 pixels, both with a dark three-pixel
-contrast outline. Far hoops retain 60% of the selected brightness so the
-tunnel stays readable against both open space and lit terrain. Four rails mark corresponding corners, so roll is visible even on a straight
-centre path. Straight hoop edges keep only their outer 18% at each end;
-chamfers remain connected to form corner brackets. Rails show the middle
-30% of each inter-rung span. Segments fade smoothly off axis, starting near
-20 degrees and disappearing around 55 degrees, while forward guidance
-retains its readable cyan weight.
+`paintFlightLanes(ctx, width, height, camera, units, path, spacing, opacity,
+phase)` offsets each future pose along its right vector by half the lane
+spacing, and down by one quarter of the spacing (at least 3 m). Paint is
+8 m long with a 12 m gap, measured along the predicted road centre. The
+HUD's private travel counter advances with actual camera displacement;
+its metre phase is captured with each cached prediction so dashes approach
+and pass the ship at a speed-dependent cadence. This phase is not saved
+and resets when the combat world is replaced or its clock rewinds.
 
-The HUD caches forecasts for up to 0.1 simulated seconds, refreshing changed
-inputs at no more than 20 Hz while flying. Projection updates every rendered
-frame. Paused setting changes and replacement combat objects invalidate the
-cache. The guide is limited to manual ordinary cockpit flight; chase cameras,
-AI observers, non-Euclidean missions and dead pilots suppress it. Predictions
-are bounded to eight seconds. No guide data enters saved world state.
+Each individual dash is a polyline through the fine physics samples.
+Only interval endpoints are interpolated; a turning dash is not a single
+straight chord between coarse future hoops. The two edges have common
+paint intervals and constant physical separation in the future craft frame.
+Near-plane and viewport clipping precede perspective division. A circle
+with radius `clamp(0.075 * viewportHeight, 40, 72) + 3` CSS pixels removes
+road strokes around the aiming point; a further 36-pixel transition fades
+paint into that opening. Angular fading also quiets off-axis marks. Bright
+cyan 2.5-pixel strokes and a dark 5.5-pixel backing retain terrain contrast.
 
-Focused regressions compare every forecast sample with independently stepped
-real sessions for straight flight, yaw, combined pitch/roll, combined turn/roll
-with boost, strafing, braking and throttle changes. They separately check
-source immutability, stable rung timestamps, multiple straight-ahead hoops,
-curved-path clipping, HUD demand plumbing and the toggle.
+Forecasts cache for up to 0.1 simulated seconds; changing held inputs can
+refresh at up to 20 Hz. Projection follows the camera every rendered frame.
+Paused settings and replacement combat objects invalidate the cache. The
+guide is for ordinary manual cockpit flight: AI observers, chase cameras,
+non-Euclidean missions and dead pilots suppress it. Horizon is capped at
+eight seconds. No browser resources or guide data enter simulation saves.
 
-Browser review: 1641x969, straight flight and held mouse pitch/yaw with
-banking, open-void and woven-starlight skies, six-second / 24 m settings.
-Captures: `output/flight-tunnel-straight.jpg` and
-`output/flight-tunnel-turn.jpg` show the initial dim prototype;
-`output/flight-tunnel-visible.jpg` shows the corrected readable treatment. Brightness, corridor width and horizon remain
-experimental. A local Node probe (10 warm-ups, 40 samples, six-second combined
-turn/roll forecast) measured 10.56 ms median / 14.39 ms p95 per forecast;
-this excludes painting and GPU work. Cached projection emits at most 252
-geometric line segments for eight seconds (two strokes each for contrast)
-and does not rebuild a world lattice.
+Focused checks compare fine forecasts against independently advanced real
+sessions for straight flight, yaw, pitch/roll, combined turning/roll with
+boost, strafing, braking and throttle changes. Drawing checks independently
+unproject the straight road to verify 8/12 m paint and physical separation,
+check both sides lie below the eye line, prove all curved strokes clear
+the aiming circle, and detect curvature within individual dash polylines.
+HUD demand plumbing, disabled/observer states, clipping and immutability
+are checked separately.
+
+A local Node probe (10 warm-ups, 40 samples, four-second combined turn/roll
+forecast, stubbed painter) measured forecast median/p95 7.42/10.98 ms and
+road projection 1.52/2.70 ms. These exclude actual GPU HUD submission and
+browser frame cadence; they are not frame budgets. Browser review captures
+are `output/flight-lanes-straight.jpg` and `output/flight-lanes-turn.jpg`.
