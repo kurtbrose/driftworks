@@ -357,10 +357,28 @@ changes and GPU context loss/restoration invalidate history. Restoring the GPU
 also forces all radial capture faces to refill. See the
 [temporal experiment report](benchmarks/ellis-temporal-2026-10-24.md).
 
-### Predicted trajectory lane markers
+### Predicted trajectory guide
 
-Flight lab Settings / Trajectory lane markers draws only two dashed road
-edges below and beside the ship. There are no hoops, overhead rails or
+The default is **Three lanes above & below**: four dashed dividers on each of two road surfaces, offset 6 m above/below the eye at the default 24 m lane width. Lateral offsets are -36, -12, +12 and +36 m, defining three equal lanes on each surface. Every prediction sample transports the whole cross-section with the future craft orientation, so steering curves the paint and roll twists both surfaces together. Dash spacing remains 8 m painted / 12 m gap, phase advances with actual travel, and the protected aiming area stays clear. Width controls lane width; road height is one quarter of that width (minimum 3 m).
+
+
+Flight lab Settings / Trajectory guide also offers Double brackets. Each
+60 m path station has inner angled bars and an independent outer set
+exactly twice as wide and tall. Outer strokes are slightly quieter (80% of
+inner opacity, 2-pixel pale cyan versus 2.5-pixel cyan). Every segment is
+clipped independently: the outer set is not suppressed when the inner set
+leaves the viewport. A regression places the whole inner frame off screen
+while retaining a visible outer edge, checking the steep-turn use case.
+Only the diagonal corner stroke remains: no horizontal/vertical bent hooks.
+Stations are one third as frequent as the original 20 m frames. Both sets
+retain open centres, angular fading, dark contrast outlines and
+the protected aiming circle. `paintFlightBrackets` consumes the same fine
+prediction and metre phase as the road treatment. Captures:
+`output/flight-double-brackets-straight.jpg` and
+`output/flight-double-brackets-turn.jpg`.
+
+The Lane markers style remains available for comparison. It draws only two
+dashed road edges below and beside the ship. There are no hoops, overhead rails or
 crossbars. Default settings: four seconds ahead, 24 m between edges,
 road plane 6 m below the ship, and 85% maximum line opacity. The controls
 adjust the horizon, lane spacing and brightness, or turn the guide off.

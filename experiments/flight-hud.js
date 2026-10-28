@@ -103,12 +103,12 @@
         }
         return path;
     }
-    /** Curved road paint in the future craft's floor plane. No hoops or crosshair paint.
+    /** Curved road paint in transported floor/ceiling planes, clear of the crosshair.
      * @param {import('./gpu-ui-types').PaintContext} ctx @param {number} w @param {number} h
      * @param {import('./types').Pose} camera @param {number} units
      * @param {import('./types').FlightPathSample[]} path
-     * @param {number} width @param {number} opacity @param {number} [phase] */
-    function paintFlightLanes(ctx,w,h,camera,units,path,width,opacity,phase) {
+     * @param {number} width @param {number} opacity @param {number} [phase] @param {boolean} [threeLanes] */
+    function paintFlightLanes(ctx,w,h,camera,units,path,width,opacity,phase,threeLanes) {
         if(path.length<2||!(w>0&&h>0&&units>0&&opacity>0))return;
         var focal=1/Math.tan(Math.PI/8),aspect=w/h,half=Math.max(3,Math.min(24,width/2))/units;
         var floor=Math.max(3,width*.25)/units,aim=Math.max(40,Math.min(72,h*.075))+3;
@@ -150,7 +150,9 @@
             return result;
         }
         ctx.save();
-        [-1,1].forEach(function(side){
+        var dividers=threeLanes?[-3,-1,1,3]:[-1,1];
+        var planes=threeLanes?[-1,1]:[-1];
+        planes.forEach(function(plane){dividers.forEach(function(side){
             /** @type {number[][]} */var run=[];
             var runAlpha=0,runDash=-1;
             function flush(){
@@ -163,7 +165,7 @@
                 run=[];
             }
             /** @param {import('./types').Pose} pose */
-            function lane(pose){return project(pose.eye.map(function(v,k){return v+pose.right[k]*half*side-pose.up[k]*floor;}));}
+            function lane(pose){return project(pose.eye.map(function(v,k){return v+pose.right[k]*half*side+pose.up[k]*floor*plane;}));}
             var previous=lane(path[0].pose);
             for(var i=1;i<path.length;i++){
                 var next=lane(path[i].pose),d0=path[i-1].distance,d1=path[i].distance,span=d1-d0;
@@ -196,7 +198,66 @@
                 previous=next;
             }
             flush();
-        });
+        });});
+        ctx.restore();
+    }
+    /** Paired inner/outer bracket frames; outer edges can remain visible after inner edges leave the viewport.
+     * @param {import('./gpu-ui-types').PaintContext} ctx @param {number} w @param {number} h
+     * @param {import('./types').Pose} camera @param {number} units
+     * @param {import('./types').FlightPathSample[]} path @param {number} width @param {number} opacity @param {number} [phase] */
+    function paintFlightBrackets(ctx,w,h,camera,units,path,width,opacity,phase){
+        if(path.length<2||!(w>0&&h>0&&units>0&&opacity>0))return;
+        var focal=1/Math.tan(Math.PI/8),aspect=w/h,half=Math.max(3,Math.min(24,width/2))/units;
+        var aim=Math.max(40,Math.min(72,h*.075))+3,horizon=path[path.length-1].seconds;
+        /** @param {number[]} a @param {number[]} b @param {number} t */
+        function mix(a,b,t){return a.map(function(v,k){return v+(b[k]-v)*t;});}
+        /** @param {number[]} point */
+        function project(point){var x=(point[0]-camera.eye[0])*units,y=(point[1]-camera.eye[1])*units,z=(point[2]-camera.eye[2])*units;
+            return [(x*camera.right[0]+y*camera.right[1]+z*camera.right[2])*focal/aspect,
+                (x*camera.up[0]+y*camera.up[1]+z*camera.up[2])*focal,-(x*camera.back[0]+y*camera.back[1]+z*camera.back[2])];}
+        /** @param {number[]} a @param {number[]} b @param {number} alpha @param {boolean} outer */
+        function line(a,b,alpha,outer){
+            var lo=0,hi=1,fa=[a[2]-.5,a[2]+a[0],a[2]-a[0],a[2]+a[1],a[2]-a[1]],fb=[b[2]-.5,b[2]+b[0],b[2]-b[0],b[2]+b[1],b[2]-b[1]];
+            for(var k=0;k<5;k++){if(fa[k]<0&&fb[k]<0)return;if(fa[k]<0)lo=Math.max(lo,fa[k]/(fa[k]-fb[k]));if(fb[k]<0)hi=Math.min(hi,fa[k]/(fa[k]-fb[k]));}
+            if(lo>=hi)return;
+            var u=mix(a,b,lo),v=mix(a,b,hi),p=[(u[0]/u[2]+1)*w/2,(1-u[1]/u[2])*h/2],q=[(v[0]/v[2]+1)*w/2,(1-v[1]/v[2])*h/2];
+            var dx=q[0]-p[0],dy=q[1]-p[1],x=p[0]-w/2,y=p[1]-h/2,aa=dx*dx+dy*dy;
+            if(aa<1e-10)return;
+            var bb=2*(x*dx+y*dy),cc=x*x+y*y-aim*aim,disc=bb*bb-4*aa*cc;
+            /** @type {number[][][]} */var parts=[];
+            if(disc<=0){if(cc>=0)parts.push([p,q]);}
+            else {var first=(-bb-Math.sqrt(disc))/(2*aa),last=(-bb+Math.sqrt(disc))/(2*aa);
+                if(last<=0||first>=1)parts.push([p,q]);
+                else {if(first>0)parts.push([p,mix(p,q,first)]);if(last<1)parts.push([mix(p,q,last),q]);}}
+            parts.forEach(function(part){
+                var sx=(part[0][0]+part[1][0])*.5-w/2,sy=(part[0][1]+part[1][1])*.5-h/2;
+                var ax=sx*2/(h*focal),ay=sy*2/(h*focal),facing=1/Math.sqrt(1+ax*ax+ay*ay);
+                var angular=Math.max(0,Math.min(1,(facing-.57)/.37));
+                var ink=alpha*angular*angular*(3-2*angular)*Math.max(0,Math.min(1,(Math.hypot(sx,sy)-aim)/36));
+                if(ink<.025)return;
+                ctx.beginPath();ctx.moveTo(part[0][0],part[0][1]);ctx.lineTo(part[1][0],part[1][1]);
+                ctx.globalAlpha=ink*.85;ctx.lineWidth=outer?5:5.5;ctx.strokeStyle='#020a12';ctx.stroke();
+                ctx.globalAlpha=ink;ctx.lineWidth=outer?2:2.5;ctx.strokeStyle=outer?'#8bd4e8':'#9aeeff';ctx.stroke();
+            });
+        }
+        var corners=[[-1,-.65],[-.65,-1],[.65,-1],[1,-.65],[1,.65],[.65,1],[-.65,1],[-1,.65]];
+        var mark=60-(((phase||0)%60+60)%60);
+        ctx.save();
+        for(var i=1;i<path.length;i++){
+            var previous=path[i-1],next=path[i],span=next.distance-previous.distance;
+            if(span<1e-8)continue;
+            while(mark<=next.distance+1e-8){
+                var t=Math.max(0,Math.min(1,(mark-previous.distance)/span)),eye=mix(previous.pose.eye,next.pose.eye,t),right=mix(previous.pose.right,next.pose.right,t),up=mix(previous.pose.up,next.pose.up,t);
+                var nr=Math.hypot.apply(null,right)||1,nu=Math.hypot.apply(null,up)||1;
+                var seconds=previous.seconds+(next.seconds-previous.seconds)*t;
+                [1,2].forEach(function(scale){
+                    var points=corners.map(function(c){return project(eye.map(function(v,k){return v+right[k]/nr*c[0]*half*scale+up[k]/nu*c[1]*half*.75*scale;}));});
+                    var alpha=Math.min(1,opacity)*(.65+.35*(1-seconds/horizon))*(scale===2?.8:1);
+                    for(var j=0;j<8;j+=2)line(points[j],points[(j+1)%8],alpha,scale===2);
+                });
+                mark+=60;
+            }
+        }
         ctx.restore();
     }
     /** @param {HTMLElement} host */
@@ -245,9 +306,11 @@
                 if(!guidePath||guideCombat!==combat||combat.time<guideClock||combat.time-guideClock>=.1||
                     (key!==guideKey&&(view.paused||wall-guideWall>=.05))) {
                     guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,Number(ahead.value));
-                    guideClock=combat.time;guideWall=wall;guideKey=key;guideCombat=combat;guidePhase=guideTravel%20;
+                    guideClock=combat.time;guideWall=wall;guideKey=key;guideCombat=combat;guidePhase=guideTravel%60;
                 }
-                paintFlightLanes(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guidePhase);
+                var style=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-guide-style'));
+                if(!style||style.value!=='brackets')paintFlightLanes(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guidePhase,!style||style.value!=='lanes');
+                else paintFlightBrackets(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guidePhase);
             }else {guidePath=null;guideLastEye=null;}
             if(mission.weaponsDisabled){
                 get('speed-value').textContent=String(Math.round(speed*speedScale));
@@ -519,5 +582,5 @@
                 radarRangeIndex = (radarRangeIndex + 1) % radarRanges.length;
             } };
     }
-    DW.flightHud = { predictFlightPath:predictFlightPath, paintFlightLanes:paintFlightLanes, paintThroatGuide:paintThroatGuide, paintTargetBearing: paintTargetBearing, mount: mount, targetStatus: targetStatus, paintTargetStatus: paintTargetStatus };
+    DW.flightHud = { predictFlightPath:predictFlightPath, paintFlightLanes:paintFlightLanes, paintFlightBrackets:paintFlightBrackets, paintThroatGuide:paintThroatGuide, paintTargetBearing: paintTargetBearing, mount: mount, targetStatus: targetStatus, paintTargetStatus: paintTargetStatus };
 }());

@@ -986,7 +986,8 @@ export type ExperimentModules = {
     };
     flightHud: {
         predictFlightPath:(craft:Craft,demand:Demand,horizon:number)=>FlightPathSample[];
-        paintFlightLanes:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,camera:Pose,units:number,path:FlightPathSample[],width:number,opacity:number,phase?:number)=>void;
+        paintFlightLanes:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,camera:Pose,units:number,path:FlightPathSample[],width:number,opacity:number,phase?:number,threeLanes?:boolean)=>void;
+        paintFlightBrackets:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,camera:Pose,units:number,path:FlightPathSample[],width:number,opacity:number,phase?:number)=>void;
         paintThroatGuide:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,pose:Pose,cue:EllisCue)=>void;
         paintTargetBearing: (ctx: import('./gpu-ui-types').PaintContext, w: number, h: number, angle: number) => void;
         targetStatus: (previous: TargetStatus | null, target: {id: string; shield?: number; maxShield?: number; hp: number; maxHp: number} | undefined, time: number) => TargetStatus | null;

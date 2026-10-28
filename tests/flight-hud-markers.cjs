@@ -162,9 +162,42 @@ assert.ok(curved,'Individual dashes visibly curve through multiple points instea
 assert.equal(paintLanes(straightPose,straightPath,0).length,0);
 assert.equal(paintLanes({...straightPose,back:straightPose.back.map(v=>-v)},straightPath).length,0);
 assert.equal(painter.globalAlpha,1);
-get('flight-lanes').checked=true;get('flight-lanes-ahead').value='4';get('flight-lanes-width').value='24';get('flight-lanes-opacity').value='85';
+get('flight-guide-style').value='lanes';get('flight-lanes').checked=true;get('flight-lanes-ahead').value='4';get('flight-lanes-width').value='24';get('flight-lanes-opacity').value='85';
 const guideView={...view,units:10,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map(),flightDemand:held};
 hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff'),'Real HUD receives held manual inputs');
 hud.render({...guideView,flightDemand:undefined});assert.ok(!calls.some(c=>c.color==='#9aeeff'),'No manual path is invented for an observer');
 get('flight-lanes').checked=false;hud.render(guideView);assert.ok(!calls.some(c=>c.color==='#9aeeff'),'Checkbox removes the road');
 console.log('PASS trajectory lanes: real-session predictions, fine curved dashes, 8/12 m road paint, physical lane spacing, readable lower/peripheral placement, protected aim, clipping and manual HUD toggle');
+
+function bracketFixture(offset=0){const U=DW.sim.METERS_PER_UNIT;
+ return [40,100].map((depth,i)=>({seconds:i+1,distance:i*60,pose:{eye:straightPose.eye.map((v,k)=>v+straightPose.right[k]*offset/U-straightPose.back[k]*depth/U),right:straightPose.right,up:straightPose.up,back:straightPose.back}}));}
+function paintBrackets(path){calls.length=0;DW.flightHud.paintFlightBrackets(painter,1000,700,straightPose,DW.sim.METERS_PER_UNIT,path,24,.85,0);return calls.filter(c=>c.kind==='stroke');}
+const centred=paintBrackets(bracketFixture()),inner=centred.filter(c=>c.color==='#9aeeff'),outer=centred.filter(c=>c.color==='#8bd4e8');
+assert.ok(inner.length&&outer.length,'Both inner and outer bracket pairs are present');
+function spread(lines,axis){const values=lines.flatMap(c=>c.points.map(p=>p[axis]));return Math.max(...values)-Math.min(...values);}
+assert.ok(Math.abs(spread(outer,0)/spread(inner,0)-2)<1e-8,'Outer brackets are twice as wide');
+assert.ok(Math.abs(spread(outer,1)/spread(inner,1)-2)<1e-8,'Outer brackets are twice as tall');
+const steep=paintBrackets(bracketFixture(75));assert.ok(!steep.some(c=>c.color==='#9aeeff'),'Fixture pushes the inner frame wholly off screen');assert.ok(steep.some(c=>c.color==='#8bd4e8'),'Outer brackets remain visible independently when the inner frame leaves the screen');
+checkClip(centred);checkClip(steep);for(const c of trajectoryCases)checkClip(paintBrackets(c.path));
+get('flight-guide-style').value='brackets';get('flight-lanes').checked=true;hud.render(guideView);assert.ok(calls.some(c=>c.color==='#8bd4e8'),'HUD default restores the double-bracket treatment');
+console.log('PASS double brackets: exact 2x outer frame, independent steep-angle visibility, centre clearance, clipping and HUD style selection');
+
+assert.equal(inner.length,4,'Only the four angled strokes remain in the inner frame');assert.equal(outer.length,4,'Only the four angled strokes remain in the outer frame');
+assert.ok([...inner,...outer].every(c=>Math.abs(c.points[1][0]-c.points[0][0])>1&&Math.abs(c.points[1][1]-c.points[0][1])>1),'No horizontal or vertical hooks remain');
+const shortPath=bracketFixture().map((s,i)=>({...s,distance:i*59}));assert.equal(paintBrackets(shortPath).length,0,'No frame before the new 60 metre station');
+console.log('PASS sparse angled brackets: diagonal-only bars, no bent hooks, 60 m stations and unchanged physical outer size');
+
+// Four equally spaced dividers on each transported road plane.
+calls.length=0;DW.flightHud.paintFlightLanes(painter,1000,700,straightPose,DW.sim.METERS_PER_UNIT,straightPath,24,.85,0,true);
+const pairedRoads=calls.filter(c=>c.kind==='stroke'),roadInk=pairedRoads.filter(c=>c.color==='#9aeeff');
+const offsets=new Set();
+for(const c of roadInk)for(const [x,y] of c.points){
+ const depth=6*focal*700/(2*Math.abs(y-350));
+ const lateral=(x-500)*2*depth/(700*focal);
+ assert.ok([-36,-12,12,36].some(v=>Math.abs(v-lateral)<1e-6),'All four dividers share each road plane at equal physical spacing');
+ offsets.add((y<350?'above:':'below:')+Math.round(lateral));
+}
+assert.equal(offsets.size,8,'Four dividers above and four below define three lanes per plane');checkClip(pairedRoads);
+for(const c of trajectoryCases){calls.length=0;DW.flightHud.paintFlightLanes(painter,1000,700,c.pose,DW.sim.METERS_PER_UNIT,c.path,24,.85,0,true);checkClip(calls.filter(c=>c.kind==='stroke'));}
+get('flight-guide-style').value='roads';hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff')&&!calls.some(c=>c.color==='#8bd4e8'),'Paired roads are selectable in the real HUD');
+console.log('PASS paired three-lane roads: eight physical dividers, coplanar above/below, equal lane widths, curved prediction, clipping and HUD selection');
