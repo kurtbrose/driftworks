@@ -686,7 +686,7 @@
         if(aegis){var readout=document.getElementById('aegis-flight-readout');if(readout)readout.textContent=aegis.readout();}
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
-        if(!cinematic)flightHud.render(Object.assign({}, currentView, { units: units, paused: paused&&!shieldStudy, speakerId: comms.speakerId(), bridgeCue:bridgeCue, weapon: weapon() }, inputView, appearance));
+        if(!cinematic)flightHud.render(Object.assign({}, currentView, { units: units, paused: paused&&!shieldStudy, speakerId: comms.speakerId(), bridgeCue:bridgeCue, flightDemand:watch?undefined:demand, weapon: weapon() }, inputView, appearance));
         captureScreenshot();
         if (watch) get('combat-status').textContent = 'AI DUEL / ' + (watch.summary().category === 'perfect' ? 'PERFECT' : watch.summary().flavor.toUpperCase()) + ' VS ' + currentView.combat.enemies[0].pilot.toUpperCase();
         updateWatch();

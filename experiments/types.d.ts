@@ -413,6 +413,7 @@ export type HudView = FlightView & Appearance & {
     /** Presentation coordinate normalization; defaults to physical world scale. */
     distanceScale?: number;
     bridgeCue?:EllisCue;
+    flightDemand?:Demand;
     asteroid: Asteroid;
     mothership: Ship;
     units: number;
@@ -983,6 +984,8 @@ export type ExperimentModules = {
         };
     };
     flightHud: {
+        predictFlightPath:(craft:Craft,demand:Demand,clock:number,horizon:number)=>{seconds:number;pose:Pose}[];
+        paintFlightTunnel:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,camera:Pose,units:number,path:{seconds:number;pose:Pose}[],width:number,opacity:number)=>void;
         paintThroatGuide:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,pose:Pose,cue:EllisCue)=>void;
         paintTargetBearing: (ctx: import('./gpu-ui-types').PaintContext, w: number, h: number, angle: number) => void;
         targetStatus: (previous: TargetStatus | null, target: {id: string; shield?: number; maxShield?: number; hp: number; maxHp: number} | undefined, time: number) => TargetStatus | null;
