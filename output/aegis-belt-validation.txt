@@ -40,3 +40,13 @@ ImageGen artwork for the window belts. Armor reuses earlier generated source.
 
 Repository npm run check passed: strict types, asset/script validation and
 135/135 test entries. See aegis-belt-check.log.
+
+Personnel-door follow-up: ImageGen edit of the existing bulkhead, saved as
+aegis-hangar-door-scale-v3.png (2172 x 724). Approximately 2.5 m personnel
+frames replace the approximately 4.3 m frames; cargo shutter preserved.
+Eleven suited crew per hangar, including four at the bulkheads.
+Visually inspected doorScale view with a visible 2.0 m suit beside the door;
+proof: aegis-hangar-door-scale-reference.png. Review candidate only.
+No new draw, geometry or texture-memory cost versus original bulkhead.
+Follow-up syntax, check:assets and check:scripts passed. Full 135/135 suite
+passed for the preceding review checkpoint; no production code changed here.

@@ -10,7 +10,7 @@
  const fighter=window.Driftworks.aegisReferenceFighter,vs=fighter.batches.flatMap(b=>b.vertices.filter((v,i)=>i%6===0)),length=Math.max(...vs)-Math.min(...vs),scale=12/length,floor=Math.min(...fighter.batches.flatMap(b=>b.vertices.filter((v,i)=>i%6===2)))*scale;
  box(-223,-60,-5.6,17,14,.2,[.21,.26,.28]);model(fighter.batches,scale,[-223,-60,-5.5-floor]);model(crew,crewScale,[-228,-64,-5.5-Math.min(...zs)*crewScale]);
  const deck=window.Driftworks.aegisFlightAsset.interiors.find(b=>b.kind==='deck'),deckZ=Math.max(...deck.vertices.filter((v,i)=>i%6===2));
- for(const bay of window.Driftworks.aegisFlightAsset.hangars){const bx=bay.position[0];model(fighter.batches,scale,[bx-25,-7,deckZ-floor],Math.PI/2);model(fighter.batches,scale,[bx+25,9,deckZ-floor],-Math.PI/2);for(const [x,y] of [[-35,-15],[-14,-11],[-12,-9],[15,0],[35,15],[36,17],[0,-24]])model(crew,crewScale,[bx+x,y,deckZ-Math.min(...zs)*crewScale]);}
+ for(const bay of window.Driftworks.aegisFlightAsset.hangars){const bx=bay.position[0];model(fighter.batches,scale,[bx-25,-7,deckZ-floor],Math.PI/2);model(fighter.batches,scale,[bx+25,9,deckZ-floor],-Math.PI/2);for(const [x,y] of [[-51.6,-33],[-51.6,33],[51.6,-33],[51.6,33],[-35,-15],[-14,-11],[-12,-9],[15,0],[35,15],[36,17],[0,-24]])model(crew,crewScale,[bx+x,y,deckZ-Math.min(...zs)*crewScale]);}
  box(-264,-49,-.5,.08,.08,10,[.95,.7,.18]);for(let i=0;i<=10;i++)box(-263.7,-49,-5.5+i,.6,.08,.06,[.95,.7,.18]);
  const references=[...groups.values()].map(b=>({...b,vertices:new Float32Array(b.vertices),origin:staticOrigin,staticGeometry:true}));groups.clear();
  for(let z=-28.6;z<30;z+=3.3)box(-248.5,0,z,25,88,.12,[.31,.36,.37]);

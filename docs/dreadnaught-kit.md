@@ -547,6 +547,11 @@ Scale references in `output/aegis-scale-study.js` use the existing Quaternius
 astronaut normalized to 2.0 m including the suit, the shared 12 m Spitfire,
 and one-metre ruler ticks. The optional one-sided cutaway has provisional
 3.3 m deck spacing. Temporary platforms and references are authoring aids only.
-Each hangar contains two calibrated fighters and seven suited crew on its
+Each hangar contains two calibrated fighters and eleven suited crew on its
 actual deck plane. Toggle Scale references to inspect the ship without them.
 The belt probe checks 1182 visibility rays per variant, finite buffers and UVs.
+
+The review also offers a 2.5 m personnel-door texture comparison, with crew
+beside the bulkheads. The large cargo shutter stays unchanged. The generated
+replacement keeps the original 2172 x 724 dimensions and material sampling;
+it adds no texture allocation, triangles or draws. This remains preview-only.
