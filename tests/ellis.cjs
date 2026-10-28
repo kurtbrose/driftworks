@@ -1,8 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict');
+const mission=process.argv.includes('--thin-shell')?'thin-shell':'ellis';
 const {createFlight,dt}=require('../tools/headless.cjs');
 function probe(x,y,offset=0,speed=200){
-    const flight=createFlight({mission:'ellis',enabled:false});
+    const flight=createFlight({mission:mission,enabled:false});
     const {state}=flight.snapshot(),u=flight.DW.sim.METERS_PER_UNIT;
     state.region=x===12000?1:0;state.eye=[x/u,y/u,(1550+offset)/u];
     state.velocity=[0,speed,0];state.back=[0,-Math.sign(speed),0];
@@ -35,12 +36,12 @@ angled.guns.bolts.push({position:[100/p.u,-2283/p.u,1550/p.u],direction:[0,1,0],
 p.flight.advance(dt,{stop:true});const direction=angled.guns.bolts[0].direction;
 assert(direction[0]<0,'off-axis projectile tangent is transported');
 assert(Math.abs(Math.hypot(...direction)-1)<1e-10,'transport preserves projectile direction length');
-const live=createFlight({mission:'ellis'});live.advance(2,{stop:true});
+const live=createFlight({mission:mission});live.advance(2,{stop:true});
 assert.equal(live.snapshot().combat.enemies.length,8);
 assert(live.snapshot().combat.enemies.every(c=>c.pose.eye.every(Number.isFinite)));
 console.log('PASS Ellis bridge: return, overshoot, near miss, no bounce, gunfire and live combat');
 
-const firing=createFlight({mission:'ellis',enabled:false}),fsnap=firing.snapshot(),fu=firing.DW.sim.METERS_PER_UNIT;
+const firing=createFlight({mission:mission,enabled:false}),fsnap=firing.snapshot(),fu=firing.DW.sim.METERS_PER_UNIT;
 Object.assign(fsnap.state,{eye:[0,-2400/fu,1550/fu],right:[1,0,0],up:[0,0,1],back:[0,-1,0],velocity:[0,0,0]});
 firing.advance(.05,{stop:true,fire:true});
 assert(fsnap.guns.fired>0&&fsnap.guns.bolts.length>0,'forward fire emits live bolts inside lens volume');
@@ -49,7 +50,7 @@ console.log('PASS Ellis local firing: live gun emission and forward projectile t
 
 // Region identity, not x position, controls contact, lock and collision eligibility.
 
-const regions=createFlight({mission:'ellis'}),rs=regions.snapshot(),ru=regions.DW.sim.METERS_PER_UNIT;
+const regions=createFlight({mission:mission}),rs=regions.snapshot(),ru=regions.DW.sim.METERS_PER_UNIT;
 assert.equal(rs.combat.enemies.filter(c=>c.pose.region===1).length,4,'two teams populate both regions');
 const remote=rs.combat.enemies.find(c=>c.team==='enemy'&&c.pose.region===1);
 remote.pose.eye=rs.state.eye.map((v,i)=>v-rs.state.back[i]*100/ru);
@@ -67,3 +68,16 @@ console.log('PASS Ellis regions: explicit membership, persistent cross-mouth tar
 regions.DW.training.damageCraft(rs.combat,remote,{...regions.config.weapon,damage:1e9});
 assert.equal(rs.combat.wrecks.at(-1).pose.region,1,'wreck retains region');
 assert.equal(rs.combat.flashes.at(-1).region,1,'explosion retains region');
+
+if(mission==='thin-shell'){
+ const flight=createFlight({mission}),D=flight.DW,s=flight.snapshot(),u=D.sim.METERS_PER_UNIT;
+ const ally=s.combat.enemies.find(e=>e.team==='ally'),enemy=s.combat.enemies.find(e=>e.team==='enemy');
+ s.combat.enemies=[ally,enemy];
+ Object.assign(ally.pose,{region:0,eye:[0,-2310/u,1550/u],right:[1,0,0],up:[0,0,1],back:[0,-1,0],velocity:[0,70,0],ramp:[0,0,70],throttle:1});
+ Object.assign(enemy.pose,{region:1,eye:[12000/u,-1000/u,1550/u],velocity:[0,0,0]});enemy.controller='input';
+ ally.targetId=enemy.id;ally.retarget=3;
+ flight.advance(dt,{stop:true});assert.equal(ally.mode,'transit','NPC pursues remote opposition through the shell');
+ flight.advance(.8,{stop:true});assert.equal(ally.pose.region,1,'NPC actually crosses to continue the dogfight');
+ assert(ally.pose.eye.every(Number.isFinite)&&(!ally.gunGoal||ally.gunGoal.every(Number.isFinite)));
+ console.log('PASS thin-shell AI: remote pursuit, physical crossing and finite post-crossing aim');
+}

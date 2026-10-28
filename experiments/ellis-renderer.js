@@ -16,9 +16,10 @@
     ];
     /** @param {Three} THREE @param {Renderer} renderer */
     function create(THREE,renderer){
+        var thinShell=!!(DW.flightMissions&&DW.flightMissions.current().sky.thinShell),optics=thinShell?DW.thinShellOptics:DW.ellisOptics;
         var units=DW.sim.METERS_PER_UNIT,size=384,next=0,initialized=false,lastSide=-1;
         var finiteShipImages=false;
-        var params=new URLSearchParams(location.search),readableShips=params.get('bridgeShips')!=='warped',updates=params.get('bridgeFaces')==='6'?6:1,explicit=params.get('bridgeLod')!=='implicit',objects=params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
+        var params=new URLSearchParams(location.search),readableShips=params.get('bridgeShips')!=='warped',updates=params.get('bridgeFaces')==='6'?6:1,explicit=params.get('bridgeLod')!=='implicit',objects=thinShell||params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
         /** @param {number} width @param {number} height */
         function target(width,height){
             var t=new THREE.WebGLRenderTarget(width,height,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
@@ -27,7 +28,7 @@
         var atlases=[target(size*3,size*2),target(size*3,size*2)];
         var primary=target(1,1),effects=target(1,1),hitMap=target(1,1),historyMap=target(1,1),primaryWidth=1,primaryHeight=1;
         var historyPose=/** @type {Pose|null} */(null),historyRevision=/** @type {string|null} */(null),historyFocal=0,phase=0;
-        var lookup=new THREE.DataTexture(DW.ellisOptics.table(),512,512,THREE.RGBAFormat);
+        var lookup=new THREE.DataTexture(optics.table(),512,512,THREE.RGBAFormat);
         lookup.minFilter=THREE.LinearFilter;lookup.magFilter=THREE.LinearFilter;lookup.needsUpdate=true;lookup.flipY=false;
         /** @type {Record<string,{value:Value}>} */var uniforms={
             historyMap:{value:historyMap.texture},historyValid:{value:0},historyPhase:{value:0},historyTile:{value:params.get('bridgeTemporalTile')==='1'?1:8},previousRight:{value:[1,0,0]},previousUp:{value:[0,0,1]},previousBack:{value:[0,-1,0]},
@@ -45,7 +46,7 @@ varying vec2 screen;
 uniform sampler2D sourceColor,sourceDepth,localColor,localDepth,otherColor,otherDepth,effectColor,effectDepth;uniform float hasEffects;
 uniform sampler2D hitMap;uniform vec2 hitSize;uniform float useHitMap;
 uniform vec3 eye,right,up,back;uniform float aspect,focal,units,sourceFar;
-${DW.ellisOptics.shader}
+${optics.shader}
 uniform float maxGeometryAngle,smoothShell;
 float linearDepth(float z,float far){return .2*far/(far+.1-(2.*z-1.)*(far-.1));}
 vec2 atlasUV(vec3 p){
@@ -294,7 +295,7 @@ void main(){
             var cache=/** @type {Map<string,Patch|null>} */(new Map());
             /** @param {number[]} point @param {number} side */
             function project(point,side){
-                paths++;var h=DW.ellisOptics.primary(eye,point,region,side);if(!h)return null;
+                paths++;var h=optics.primary(eye,point,region,side);if(!h)return null;
                 var r=h.direction,d=h.length/units;
                 return {hit:h,q:[r.reduce(function(sum,v,i){return sum+v*pose.right[i];},0)*d,r.reduce(function(sum,v,i){return sum+v*pose.up[i];},0)*d,-r.reduce(function(sum,v,i){return sum+v*pose.back[i];},0)*d]};
             }
@@ -354,7 +355,7 @@ void main(){
                     var localDistance=Math.hypot.apply(null,center.map(function(v,i){return v*units-eye[i];}));
                     // Every opposite-chart image must remain inside the transmitted cone,
                     // including rigid presentation hulls whose ends can exceed it.
-                    u.uLensMode.value=side!==region?1:readable(e)?3:localDistance<200&&p?3:p&&!p.direct&&!p.turning?3:2;
+                    u.uLensMode.value=side!==region?1:thinShell?2:readable(e)?3:localDistance<200&&p?3:p&&!p.direct&&!p.turning?3:2;
                     u.uLensMouth.value=[region*12000/units-pose.eye[0],-2000/units-pose.eye[1],1550/units-pose.eye[2]];u.uLensRadius.value=300/units;
                     u.uLensEnabled.value=p&&!p.direct?1:0;u.uLensDebug.value=params.get('bridgeWarpDebug')==='1'&&p&&p.error>2?1:0;
                     if(p&&!p.direct){u.uLensCenter.value=center;u.uLensViewCenter.value=p.view;u.uLensX.value=p.columns[0];u.uLensY.value=p.columns[1];u.uLensZ.value=p.columns[2];}

@@ -255,7 +255,7 @@
         function render(view, appearance, comparison, elapsed, gpuTimer) {
             if(view.state.curvature)view=DW.flightHyperbolic.presentation(view);
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
-            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
+            var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(DW.flightMissions.resolve(combat.mode).sky.thinShell||liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
             var livingArt = /** @type {ArtCraft[]} */ (DW.training.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
             if (view.observerCraft) livingArt.push(view.observerCraft);
             var groups=/** @type {{team:string;region:number;craft:ArtCraft[]}[]} */([]);
@@ -319,11 +319,11 @@
             // Rigid ship placement does not warp individual projectiles. Keep
             // their additive geometry batched per chart in the full renderer.
             // Only the explicit object-warp experiment needs per-effect paths.
-            if(regions.length>1&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects'){
+            if(regions.length>1&&(DW.flightMissions.resolve(combat.mode).sky.thinShell||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects')){
                 allGuns.bolts.forEach(function(b){DW.flightGuns.geometry({bolts:[b],impacts:[]},state).forEach(function(batch){effectBatches.push(Object.assign({},batch,{region:b.region||0,lensCenter:b.position}));});});
                 allGuns.impacts.forEach(function(b){DW.flightGuns.geometry({bolts:[],impacts:[b]},state).forEach(function(batch){effectBatches.push(Object.assign({},batch,{region:b.region||0,lensCenter:b.position}));});});
             }else if(regions.length>1){
-                effectBatches=DW.flightGuns.geometry(allGuns,state,true);
+                effectBatches=DW.flightGuns.geometry(allGuns,state,DW.flightMissions.resolve(combat.mode).sky.thinShell?'thin-shell':true);
             }else{
             regions.forEach(function(region){DW.flightGuns.geometry({bolts:allGuns.bolts.filter(function(b){return (b.region||0)===region;}),impacts:allGuns.impacts.filter(function(b){return (b.region||0)===region;})},state).forEach(function(b){effectBatches.push(Object.assign({},b,{region:region}));});});
             }

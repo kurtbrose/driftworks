@@ -180,6 +180,18 @@ assert(latticeFragment.includes('texture2DLodEXT(ellisTable,uv,0.)'),'Grid looku
 assert(!latticeFragment.includes('texture2D(ellisTable,uv)'));
 gridControl.checked=false;latticeSky.render(latticePose,1,false);assert.equal(values.bridgeGrid,0,'Live toggle bypasses the spatial grid');
 console.log('PASS Ellis lattice: production shader integration, fixed-LOD sampling, pixel width and live toggle');
+// The comparison changes the live sky only; pages without the control keep Ellis.
+assert.equal(values.bridgeThinShell,0,'ordinary Ellis scene defaults to Ellis optics');
+const originalElements=latticeContext.document.getElementById,thinControl={checked:true};
+latticeContext.document.getElementById=id=>id==='bridge-thin-shell'?thinControl:originalElements(id);
+latticeSky.render(latticePose,1,false);assert.equal(values.bridgeThinShell,1,'thin shell activates without rebuilding the renderer');
+thinControl.checked=false;latticeSky.render(latticePose,1,false);assert.equal(values.bridgeThinShell,0,'same-pose comparison restores Ellis');
+thinControl.checked=true;latticeSky.render({...latticePose,region:1},1,false);assert.equal(values.bridgeThinShell,1);assert.equal(values.ellisRegion,1,'thin-shell comparison supports the return chart');
+latticeContext.document.getElementById=originalElements;latticeSky.render(latticePose,1,false);assert.equal(values.bridgeThinShell,0,'removing the study control restores the default');
+assert(latticeFragment.includes('if(bridgeThinShell>.5)')&&latticeFragment.includes('}else if(bridgeLookup>.5)'),'thin shell and Ellis are mutually exclusive ray paths');
+assert(latticeFragment.includes('if(bridgeThinShell<.5&&bridgeLookup>.5&&bridgeOutline>.5)'),'thin shell never draws the Ellis 600 m outline');
+console.log('PASS thin-shell comparison: live toggle, both charts, absent-control default and Ellis overlay isolation');
+
 
 // Exercise the production angular-distance expression independently of the LUT.
 const rimMath=latticeFragment.match(/float eyeRadius=[\s\S]*?float edge=abs\(angle-cone\);/)[0]

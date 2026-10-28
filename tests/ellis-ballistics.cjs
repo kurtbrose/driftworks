@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),{createFlight,dt}=require('../tools/headless.cjs');
-const flight=createFlight({mission:'ellis',enabled:false}),DW=flight.DW,U=DW.sim.METERS_PER_UNIT,g=DW.flightGuns;
+const thin=process.argv.includes('--thin-shell'),mission=thin?'thin-shell':'ellis',bridge=thin?'thin-shell':true;
+const flight=createFlight({mission:mission,enabled:false}),DW=flight.DW,U=DW.sim.METERS_PER_UNIT,g=DW.flightGuns;
 const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),add=(a,b)=>a.map((x,i)=>x+b[i]),scale=(a,s)=>a.map(x=>x*s),sub=(a,b)=>a.map((x,i)=>x-b[i]),unit=a=>scale(a,1/Math.hypot(...a));
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const point=(x,y,z=1550)=>[x/U,y/U,z/U];
@@ -13,10 +14,10 @@ function oracle(start,velocity,time,region){
  return {point:p.map(x=>x/U),region:side};
 }
 // Forward live ray, independent of the inverse finite-source image solve.
-function optical(start,direction,distance,region){const ray=DW.ellisOptics.ray(start.map(v=>v*U),direction,region);DW.ellisOptics.advanceRay(ray,distance*U);return {point:ray.eye.map(v=>v/U),region:ray.region,ray};}
+function optical(start,direction,distance,region){const ray=DW[thin?'thinShellOptics':'ellisOptics'].ray(start.map(v=>v*U),direction,region);DW[thin?'thinShellOptics':'ellisOptics'].advanceRay(ray,distance*U);return {point:ray.eye.map(v=>v/U),region:ray.region,ray};}
 for(const side of [0,1])for(const R of [301,350,600])for(const S of [301,400,900])for(const fraction of [0,.25,.8]){
  const limit=Math.PI-Math.asin(300/R)-Math.asin(300/S),angle=limit*fraction,eye=point(side*12000,-2000-R),target=point((1-side)*12000+S*Math.sin(angle),-2000+S*Math.cos(angle));
- const path=g.ballisticPath(eye,target,side,1-side,true);assert(path);
+ const path=g.ballisticPath(eye,target,side,1-side,bridge);assert(path);
  const end=optical(eye,path.direction,path.distance,side);assert.equal(end.region,1-side);
  assert(Math.hypot(...sub(end.point,target))*U<.5,'image inverse agrees with forward optical projectile transport');
 }
@@ -31,7 +32,7 @@ for(const side of [0,1])for(const spec of [
  {eye:[0,-2400],target:[30,-1600],remote:true,velocity:[0,260,0]},
  {eye:[0,-2400],target:[30,-2600],remote:false,velocity:[0,-260,0]}
 ]){
- const shooter=pose(point(side*12000+spec.eye[0],spec.eye[1]),side,[80,-20,10]),target=pose(point((spec.remote?1-side:side)*12000+spec.target[0],spec.target[1]),spec.remote?1-side:side,spec.velocity),lead=g.lead(shooter,target,weapon,true);
+ const shooter=pose(point(side*12000+spec.eye[0],spec.eye[1]),side,[80,-20,10]),target=pose(point((spec.remote?1-side:side)*12000+spec.target[0],spec.target[1]),spec.remote?1-side:side,spec.velocity),lead=g.lead(shooter,target,weapon,bridge);
  assert(lead,'reachable near-mouth moving target has a firing solution');
  const targetEnd=oracle(target.eye,target.velocity,lead.time,target.region),boltEnd=optical(shooter.eye,lead.direction,lead.distance,side);
  assert.equal(boltEnd.region,targetEnd.region);assert(Math.hypot(...sub(boltEnd.point,targetEnd.point))*U<.5);
@@ -39,18 +40,18 @@ for(const side of [0,1])for(const spec of [
 }
 const long=g.lead(pose(point(0,-4000)),pose(point(0,-6000),0,[0,-100,0]),{...weapon,lifetime:8},false);assert(long&&long.time>2);assert(Math.abs(long.time-(2000-4)/350)<1e-5,'future point is not clamped to two seconds');
 assert.equal(g.lead(pose(point(0,-2400)),pose(point(0,-6000)),weapon,false),null,'outside lifetime has no false pip');
-assert.equal(g.lead(pose(point(0,-2400)),pose(point(12000,-2400),1),weapon,true),null,'unreachable remote hemisphere has no false pip');
+assert.equal(g.lead(pose(point(0,-2400)),pose(point(12000,-2400),1),weapon,bridge),null,'unreachable remote hemisphere has no false pip');
 console.log('PASS truthful lead: moving targets crossing either way, lifetime rejection, muzzle timing and absolute target velocity');
 
 // Fire the real player guns at the solution through the actual fixed-step session.
 function shoot({side=0,remote=true,shooterX=0,shooterY=-2350,targetY=-1660,targetX=0,velocity=[0,0,0],miss=false,movingShooter=false,detailed=false,visible=false}){
- const f=createFlight({mission:'ellis'}),D=f.DW,u=D.sim.METERS_PER_UNIT,s=f.snapshot(),region=remote?1-side:side;
+ const f=createFlight({mission:mission}),D=f.DW,u=D.sim.METERS_PER_UNIT,s=f.snapshot(),region=remote?1-side:side;
  Object.assign(s.state,{region:side,eye:point(side*12000+shooterX,shooterY),velocity:movingShooter?[20,70,0]:[0,0,0],angularVelocity:[0,0,0]});
  const initial=point(region*12000+targetX,targetY),target=D.training.createCraft('pip-target',Object.assign(D.arcade.create(0),pose(initial,region,velocity)),'enemy');target.hp=target.maxHp=1000;target.shield=0;target.maxShield=0;target.collision={kind:'sphere',radiusM:7};
  s.combat.enemies=[target];s.combat.targetId=target.id;s.combat.targetLocked=true;
  if(detailed)D.training.configureHulls(s.combat,'mixed','mixed');
  const solution=D.training.firingSolution(s.combat,s.combat.player,target,f.config.weapon);assert(solution);
- let forward=visible?Array.from(D.ellisOptics.primary(s.state.eye.map(v=>v*u),target.pose.eye.map(v=>v*u),side,region).direction):Array.from(solution.direction);
+ let forward=visible?Array.from(D[thin?'thinShellOptics':'ellisOptics'].primary(s.state.eye.map(v=>v*u),target.pose.eye.map(v=>v*u),side,region).direction):Array.from(solution.direction);
  if(visible){assert(Math.hypot(...sub(forward,solution.direction))<.0001,'stationary visible hull and lead share one direction');}
  if(miss)forward=unit(add(forward,[.65,0,0]));
  s.state.back=scale(forward,-1);s.state.right=unit(cross(forward,[0,0,1]));s.state.up=cross(s.state.right,forward);
@@ -74,7 +75,7 @@ for(const side of [0,1]){
 console.log('PASS headless pip-to-hit: real sessions, twin muzzles across throat, moving shooter/target, both target transit directions and off-pip misses');
 
 // Split a single fast tick at the mouth: collisions beyond the exit must not wait.
-const f=createFlight({mission:'ellis'}),s=f.snapshot(),target=f.DW.training.createCraft('exit-hit',Object.assign(f.DW.arcade.create(0),pose(point(12000,-1688),1)),'enemy');target.hp=1000;target.shield=0;target.collision={kind:'sphere',radiusM:2};s.combat.enemies=[target];
+const f=createFlight({mission:mission}),s=f.snapshot(),target=f.DW.training.createCraft('exit-hit',Object.assign(f.DW.arcade.create(0),pose(point(12000,-1688),1)),'enemy');target.hp=1000;target.shield=0;target.collision={kind:'sphere',radiusM:2};s.combat.enemies=[target];
 Object.assign(s.state,{region:0,eye:point(0,-2400),velocity:[0,0,0]});
 s.guns.bolts.push({region:0,position:point(0,-2301),direction:[0,1,0],age:0,weapon:{...f.config.weapon,speed:18000}});
 f.advance(dt,{stop:true});assert(target.hp<1000,'same-tick post-transit leg hits the remote hull');
@@ -82,7 +83,7 @@ assert(s.guns.impacts.some(x=>x.region===1),'impact belongs to destination chart
 console.log('PASS physical projectile transit: source/exit collision legs and destination impact region');
 
 for(const side of [0,1])for(const incoming of [false,true]){
- const f=createFlight({mission:'ellis'}),D=f.DW,s=f.snapshot(),region=incoming?1-side:side,sign=incoming?-1:1;
+ const f=createFlight({mission:mission}),D=f.DW,s=f.snapshot(),region=incoming?1-side:side,sign=incoming?-1:1;
  Object.assign(s.state,{region:side,eye:point(side*12000,-2350),velocity:[0,60,0],ramp:[0,0,60],rates:[0,0,0]});
  const target=D.training.createCraft('maneuvering-target',Object.assign(D.arcade.create(0),pose(point(region*12000,incoming?-1699:-2301),region,[0,sign*70,0])),'enemy');
  target.profile={...target.profile,maxVelocity:[...target.profile.maxVelocity.slice(0,2),70]};target.pose.ramp=[0,0,70];target.pose.throttle=1;target.pose.back=[0,-sign,0];target.pose.right=[sign,0,0];target.hp=1000;target.shield=0;target.maxShield=0;s.combat.enemies=[target];s.combat.targetId=target.id;s.combat.targetLocked=true;
@@ -113,11 +114,11 @@ shoot({shooterX:180,remote:false,targetY:-2301,velocity:witnessVelocity});
 console.log('PASS lead negative control: old straight-chart cue misses by '+oldMiss.toFixed(1)+' m; new on-pip volley damages target');
 
 const eyeBefore=pose(point(0,-2300.00000001),0),eyeAfter=pose(point(12000,-1699.99999999),1),fixedTarget=pose(point(12030,-1600),1,[20,40,0]);
-const beforeAim=g.lead(eyeBefore,fixedTarget,weapon,true),afterAim=g.lead(eyeAfter,fixedTarget,weapon,true);assert(beforeAim&&afterAim);
+const beforeAim=g.lead(eyeBefore,fixedTarget,weapon,bridge),afterAim=g.lead(eyeAfter,fixedTarget,weapon,bridge);assert(beforeAim&&afterAim);
 assert(Math.hypot(...sub(g.bridgeVector(beforeAim.direction,[0,-1,0]),afterAim.direction))<.001,'firing direction stays continuous in the transported shooter frame');
 assert(Math.abs(beforeAim.time-afterAim.time)<.0001);
 const observing=pose(point(180,-2350)),beforeTarget=pose(point(0,-2300.00000001),0,[50,150,0]),afterTarget=pose(point(12000,-1699.99999999),1,[-50,150,0]);
-const a=g.lead(observing,beforeTarget,weapon,true),b=g.lead(observing,afterTarget,weapon,true);assert(a&&b);
+const a=g.lead(observing,beforeTarget,weapon,bridge),b=g.lead(observing,afterTarget,weapon,bridge);assert(a&&b);
 assert(Math.hypot(...sub(a.direction,b.direction))<.001,'target transit does not switch to a different lead frame');assert(Math.abs(a.time-b.time)<.0001);
 console.log('PASS firing-pip continuity: shooter and target chart transitions preserve launch direction and flight time');
 
@@ -132,22 +133,23 @@ for(const side of [0,1]){
 }
 console.log('PASS aim at visible hull: stationary authored ships hit without a separate ballistic bearing; automatic image acquisition, nearby and remote, both charts');
 for(const side of [0,1])for(const radius of [301,450,599])for(const angle of [0,.4,.9,1.4]){
- const eye=[side*12000,-2000-radius,1550],direction=[Math.sin(angle),Math.cos(angle),0],ray=DW.ellisOptics.ray(eye,direction,side);
- const segments=DW.ellisOptics.advanceRay(ray,1800);assert(segments.length);
+ const eye=[side*12000,-2000-radius,1550],direction=[Math.sin(angle),Math.cos(angle),0],ray=DW[thin?'thinShellOptics':'ellisOptics'].ray(eye,direction,side);
+ const segments=DW[thin?'thinShellOptics':'ellisOptics'].advanceRay(ray,1800);assert(segments.length);
  assert(segments.every(s=>Math.hypot(...sub(s.end,s.start))<=6.01||Math.hypot(...cross(sub(s.end,s.start),s.direction))<1e-4),'collision segments never sweep the inter-chart storage gap');
  assert(Math.abs(Math.hypot(...ray.direction)-1)<1e-10);
  if(ray.active)assert(Math.abs(ray.p*ray.p+ray.b*ray.b/(1+ray.l*ray.l)-1)<1e-6,'conserved optical ray energy');
- const reverse=DW.ellisOptics.ray(ray.eye,ray.direction.map(v=>-v),ray.region);DW.ellisOptics.advanceRay(reverse,1800);
+ const reverse=DW[thin?'thinShellOptics':'ellisOptics'].ray(ray.eye,ray.direction.map(v=>-v),ray.region);DW[thin?'thinShellOptics':'ellisOptics'].advanceRay(reverse,1800);
  assert.equal(reverse.region,side);assert(Math.hypot(...reverse.eye.map((v,i)=>v-eye[i]))<.1,'unguided curved flight is reciprocal');
 }
 console.log('PASS optical projectile transport: conserved energy, normalized direction, reciprocal paths and bounded chart-local swept collision segments');
 
-const visibleEye=point(0,-2350),visibleTarget=point(12080,-1660),visibleDirection=DW.ellisOptics.primary(visibleEye.map(v=>v*U),visibleTarget.map(v=>v*U),0,1).direction;
+const visibleEye=point(0,-2350),visibleTarget=point(12080,-1660),visibleDirection=DW[thin?'thinShellOptics':'ellisOptics'].primary(visibleEye.map(v=>v*U),visibleTarget.map(v=>v*U),0,1).direction;
 let shortcutMiss=Infinity;
 for(let t=0;t<2;t+=.001){const end=oracle(visibleEye,scale(visibleDirection,4+450*t),1,0);if(end.region===1)shortcutMiss=Math.min(shortcutMiss,Math.hypot(...sub(end.point,visibleTarget))*U);}
-assert(shortcutMiss>50,'Old straight-shot model misses the stationary visible hull even with perfect aim');
+if(thin)assert(shortcutMiss<.5,'Thin shell agrees with the independent straight-leg oracle');
+else assert(shortcutMiss>50,'Old straight-shot model misses the stationary visible hull even with perfect aim');
 for(const distance of [8,30,100,180,250,350]){
- const end=optical(visibleEye,visibleDirection,distance/U,0),image=DW.ellisOptics.primary(visibleEye.map(v=>v*U),end.point.map(v=>v*U),0,end.region);assert(image);
+ const end=optical(visibleEye,visibleDirection,distance/U,0),image=DW[thin?'thinShellOptics':'ellisOptics'].primary(visibleEye.map(v=>v*U),end.point.map(v=>v*U),0,end.region);assert(image);
  assert(Math.hypot(...sub(image.direction,visibleDirection))<.001,'Viewed positions of a fired ray stay on its original visible bearing through the throat');
 }
 console.log('PASS visible-ray negative control: old shortcut misses stationary image by '+shortcutMiss.toFixed(1)+' m; curved shot and rendered trail share the image bearing');

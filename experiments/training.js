@@ -116,7 +116,7 @@
         // Finish the gun tick after death to age existing bolts; suppress new fire.
         collisionBatch(t,function(){DW.flightGuns.step(guns, pose, weapon, !mission(t).weaponsDisabled && !t.dead && !openingPending(t) && controls.fire, dt, function (start, end, bolt) {
             return DW.training.trace(t, start, end, bolt, 'player', terrainHit, pose);
-        }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft), t.player.pose.curvature||(!!mission(t).sky.wormhole));});
+        }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft), t.player.pose.curvature||(mission(t).sky.thinShell?'thin-shell':!!mission(t).sky.wormhole));});
         return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore,
             impact: guns.hits > hitsBefore || t.lastHit > hitBefore };
     }
@@ -224,15 +224,15 @@
         return { point: add(position, scale(velocity, Math.min(2, time))), time: time };
     }
     // Sortie-local perception history; never read target velocity for gun aiming.
-    /** @type {WeakMap<Craft, {target: FlightState, at: number, position: Vector, velocity: Vector}>} */
+    /** @type {WeakMap<Craft, {target: FlightState, region:number, at: number, position: Vector, velocity: Vector}>} */
     var tracks = new WeakMap();
     /** Sample positions in world space so own motion does not masquerade as target motion.
      * Between samples extrapolate the last belief, including while maneuvering.
      * @param {Combat} t @param {Craft} e @param {FlightState} target */
     function trackAim(t, e, target) {
         var track = tracks.get(e), interval = [.24, .14, .08][e.skill];
-        if (!track || track.target !== target || t.time < track.at) {
-            track = {target: target, at: t.time, position: target.eye.slice(), velocity: [0, 0, 0]};
+        if (!track || track.target !== target || track.region !== (target.region||0) || t.time < track.at) {
+            track = {target: target, region:target.region||0, at: t.time, position: target.eye.slice(), velocity: [0, 0, 0]};
             tracks.set(e, track);
         } else if (t.time - track.at >= interval) {
             var elapsed = t.time - track.at;
@@ -250,6 +250,14 @@
             var curved=DW.flightGuns.lead(e.pose,predicted,weapon,e.pose.curvature);
             e.gunGoal=curved?offset(e.pose,scale(curved.direction,curved.distance)):position;e.gunValid=!!curved;
             return {point:e.gunGoal,time:curved?curved.time:0};
+        }
+        if(mission(t).sky.thinShell){
+            var future=DW.flightGuns.bridgeTravel(track.position,scale(track.velocity,t.time-track.at),track.region);
+            var velocity=future.normal?DW.flightGuns.bridgeVector(track.velocity,future.normal):track.velocity;
+            var path=DW.flightGuns.lead(e.pose,Object.assign({},target,{eye:future.point,region:future.region,velocity:scale(velocity,U)}),weapon,'thin-shell');
+            e.gunGoal=path?add(e.pose.eye,scale(path.direction,path.distance)):position;
+            e.gunValid=!!path;
+            return {point:e.gunGoal,time:path?path.time:0};
         }
         var solution = intercept(e.pose.eye, position, track.velocity, weapon.speed / U);
         e.gunGoal = solution.point;
@@ -378,7 +386,7 @@
 
         }
         if(t.mode==='evacuation')DW.evacuationMission.start(t,player);
-        if(t.mode==='ellis')t.enemies.forEach(function(e,i){
+        if(t.mode==='ellis'||t.mode==='thin-shell')t.enemies.forEach(function(e,i){
             var region=i%4>=2?1:0,shift=(region-(player.region||0))*12000/U;
             e.pose.region=region;e.pose.eye[0]+=shift;e.goal[0]+=shift;
         });
@@ -600,7 +608,7 @@
     function firingSolution(t,shooter,target,weapon){
         if(shooter.hp<=0||target.hp<=0||(shooter.team||'enemy')===(target.team||'enemy'))return null;
         var anchors=gunAnchors(shooter),launch=anchors&&anchors.length?anchors.reduce(function(sum,p){return sum+Math.max(0,p[1]);},0)/anchors.length:4;
-        return DW.flightGuns.lead(shooter.pose,target.pose,weapon,t.player.pose.curvature||(!!mission(t).sky.wormhole),launch);
+        return DW.flightGuns.lead(shooter.pose,target.pose,weapon,t.player.pose.curvature||(mission(t).sky.thinShell?'thin-shell':!!mission(t).sky.wormhole),launch);
     }
     /** Resolve a shared muzzle aim point only along the crosshair ray; no target snapping or lead.
      * @param {Combat} t @param {Craft} shooter @param {Weapon} weapon @param {TerrainHit} [terrainHit]
@@ -614,6 +622,7 @@
             return solution?offset(shooter.pose,scale(shooter.pose.back,-solution.distance)):null;
         }
         if(shooter.pose.curvature&&shooter.gunValid&&shooter.gunGoal)return offset(shooter.pose,scale(shooter.pose.back,-length(spaceDelta(shooter.pose,shooter.gunGoal))));
+        if(mission(t).sky.thinShell&&shooter.gunValid&&shooter.gunGoal)return add(start,scale(shooter.pose.back,-length(sub(shooter.gunGoal,start))));
         var end = offset(shooter.pose, scale(shooter.pose.back, -weapon.speed * weapon.lifetime / U));
         var terrain = terrainHit&&!(shooter.pose.region||0) ? terrainHit(start, end) : null;
         var best = terrain ? length(sub(terrain, start)) : Infinity;
@@ -800,7 +809,7 @@
             if(t.scramble&&t.time<10&&t.enemies.indexOf(e)>=3&&t.enemies.indexOf(e)<6)return;
             DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
                 return trace(t, start, end, bolt, e, terrainHit, player);
-            }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), t.player.pose.curvature||(!!mission(t).sky.wormhole));
+            }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), t.player.pose.curvature||(mission(t).sky.thinShell?'thin-shell':!!mission(t).sky.wormhole));
         }
         var neighbors=separationGrid(living), roster=participants(t), byId=new Map((t.mode==='battle'?roster:living).map(function(craft){return [craft.id,craft];}));
         collisionBatch(t,function(){t.enemies.forEach(function (e) {
@@ -820,14 +829,14 @@
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;
                     var target = e.targetId ? byId.get(e.targetId) : undefined;
-                    if(target && !(target.hp > 0 && target.team !== e.team && ((target.pose.region||0)===(e.pose.region||0)||t.mode==='cinematic') && zoneEligible(e,target)))target=undefined;
-                    if(t.mode==='cinematic'&&target&&(target.pose.region||0)!==(e.pose.region||0)&&living.some(function(other){return other.hp>0&&other.team!==e.team&&(other.pose.region||0)===(e.pose.region||0);}))target=undefined;
+                    if(target && !(target.hp > 0 && target.team !== e.team && ((target.pose.region||0)===(e.pose.region||0)||(t.mode==='cinematic'||t.mode==='thin-shell')) && zoneEligible(e,target)))target=undefined;
+                    if((t.mode==='cinematic'||t.mode==='thin-shell')&&target&&(target.pose.region||0)!==(e.pose.region||0)&&living.some(function(other){return other.hp>0&&other.team!==e.team&&(other.pose.region||0)===(e.pose.region||0);}))target=undefined;
                     if (!target || e.retarget <= 0) {
                         // Only the nearest three are used. Stable insertion preserves
                         // roster tie order without sorting every opponent or recomputing distances.
                         /** @type {{craft:Craft,distance:number}[]} */ var choices=[];
                         (e.battleZone?roster:living).forEach(function(other){
-                            if(!(other.hp>0)||other.team===e.team||((other.pose.region||0)!==(e.pose.region||0)&&t.mode!=='cinematic')||!zoneEligible(e,other))return;
+                            if(!(other.hp>0)||other.team===e.team||((other.pose.region||0)!==(e.pose.region||0)&&(t.mode!=='cinematic'&&t.mode!=='thin-shell'))||!zoneEligible(e,other))return;
                             var distance=length(spaceDelta(e.pose,other.pose.eye))+((other.pose.region||0)===(e.pose.region||0)?0:100000),at=0;
                             while(at<choices.length&&choices[at].distance<=distance)at++;
                             if(at<3){choices.splice(at,0,{craft:other,distance:distance});if(choices.length>3)choices.pop();}
@@ -840,7 +849,7 @@
                     opponent = target ? target.pose : null;
                 }
                 if(!opponent&&!e.battleZone){var candidate=roster.find(function(other){return other.hp>0&&(other.pose.region||0)===(e.pose.region||0)&&(other.team||'enemy')!==(e.team||'enemy');});opponent=candidate?candidate.pose:null;}
-                var transit=t.mode==='cinematic'&&opponent&&(opponent.region||0)!==(e.pose.region||0);
+                var transit=(t.mode==='cinematic'||t.mode==='thin-shell')&&opponent&&(opponent.region||0)!==(e.pose.region||0);
                 if(transit){
                     // Navigate to the other chart through its physical mouth, then
                     // hand the fighter straight back to ordinary pursuit AI.
@@ -964,7 +973,7 @@
             // Collision itself still tests the authored hull along the curved shot.
             var nearest=Infinity;
             living.forEach(function(craft){
-                var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,true);if(!path)return;
+                var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,mission(t).sky.thinShell?'thin-shell':true);if(!path)return;
                 var along=-dot(path.direction,state.back);if(along<=0)return;
                 var off=path.distance*Math.sqrt(Math.max(0,1-along*along));
                 if(off<=collisionRadius(craft)&&path.distance<nearest){nearest=path.distance;t.targetId=craft.id;}

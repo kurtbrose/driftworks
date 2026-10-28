@@ -35,7 +35,7 @@ const profiles = {
   ellisStudy: {entries: ['@flightStudy', 'experiments/ellis-study.js'], omit: ['experiments/ellis-feedback.js']},
   ellisCapture: {entries: ['@flightStudy'], omit: ['experiments/ellis-feedback.js']},
   asteroidPatrol: {entries: ['@flight'], omit: [
-    'experiments/gpu-diagnostics.js', 'experiments/ellis-optics.js', 'experiments/ellis-renderer.js',
+    'experiments/gpu-diagnostics.js', 'experiments/ellis-optics.js', 'experiments/thin-shell-optics.js', 'experiments/ellis-renderer.js',
     'assets/ships/ohio-vehicles/meshes.js', 'experiments/evacuation-mission.js',
     'experiments/evacuation-scenery.js', 'experiments/gas-giant-flight.js',
     'experiments/aegis-flight.js', 'experiments/ellis-feedback.js'
@@ -49,7 +49,7 @@ const profiles = {
     'src/asset-versions.js', '@simulation', 'src/asteroid-art.js', '@session', '@meshes',
     'src/explosions.js', 'src/asteroid-terrain.js', 'src/ship-models.js',
     'experiments/retail-profiles.js', '@missions', 'experiments/retail-weapons.js',
-    'experiments/ellis-optics.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js', 'experiments/flight-collision.js', 'experiments/training.js',
+    'experiments/ellis-optics.js', 'experiments/thin-shell-optics.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js', 'experiments/flight-collision.js', 'experiments/training.js',
     'experiments/flight-model.js', '@fleet', '@dialogue', 'experiments/evacuation-mission.js',
     'experiments/flight-comms.js', 'experiments/flight-session.js', '@flightAi', 'experiments/flight-study.js'
   ]},
@@ -87,7 +87,7 @@ const profiles = {
     'vendor/three/build/three.global.js', 'src/explosions.js', 'src/asteroid-art.js',
     'src/asteroid-terrain.js', 'src/scene3d.js', 'src/ship-art.js', 'src/game.js', 'experiments/dom.js', 'experiments/retail-profiles.js',
     'experiments/flight-model.js', 'experiments/radar.js', '@missions', 'src/sky-effects.js',
-    'experiments/ellis-feedback.js', 'experiments/ellis-optics.js', 'experiments/ellis-renderer.js',
+    'experiments/ellis-feedback.js', 'experiments/ellis-optics.js', 'experiments/thin-shell-optics.js', 'experiments/ellis-renderer.js',
     'experiments/skybox.js', 'experiments/retail-weapons.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js',
     'experiments/input.js', 'experiments/flight-collision.js', 'experiments/training.js', 'experiments/performance.js',
     '@fleet', '@dialogue', 'experiments/evacuation-mission.js',

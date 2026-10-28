@@ -99,7 +99,8 @@
         emptySpace:false,weaponsDisabled:false,sky:{wormhole:true},
         encounter:{kind:'furball',count:8,immediate:true}
     },'jade-rime');
-    define('cinematic',{emptySpace:true,sky:{jadeSystem:jadeSystem(false),rimeSurface:''},title:'Bridge battle / cinematic demo / Driftworks',heading:'DRIFTWORKS / CINEMATIC DEMO',subtitle:'TWO WORLDS / ENDLESS CAPITAL ENGAGEMENT',hint:'Start demo to watch. Esc pauses; C cuts to the next camera. Fighters launch from both carriers as losses occur.',encounter:{count:0,immediate:false}},'ellis');
+    define('thin-shell',{title:'Thin-shell bridge / Driftworks',heading:'DRIFTWORKS / THIN-SHELL BRIDGE',subtitle:'ASTEROID RANGE / RIME THIN-SHELL DOGFIGHT',sky:{thinShell:true}},'ellis');
+    define('cinematic',{emptySpace:true,sky:{jadeSystem:jadeSystem(false),rimeSurface:''},title:'Bridge battle / cinematic demo / Driftworks',heading:'DRIFTWORKS / CINEMATIC DEMO',subtitle:'TWO WORLDS / ENDLESS CAPITAL ENGAGEMENT',hint:'Start demo to watch. Esc pauses; C cuts to the next camera. Fighters launch from both carriers as losses occur.',encounter:{count:0,immediate:false}},'thin-shell');
     define('planet-hero',{
         title:'Planet hero flight · Driftworks',heading:'DRIFTWORKS / PLANET HERO TEST',subtitle:'STATIC PLANET BACKDROP · LOCAL DOGFIGHT',
         sky:{kind:'landmarks',features:[{asset:'planet-hero-v1/master.png',yaw:90,pitch:-30,roll:0,widthDeg:110,gain:1},{asset:'features/warm-sun-v1.png',yaw:225,pitch:35,roll:0,widthDeg:7,gain:1}]}

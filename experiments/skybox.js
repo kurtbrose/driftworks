@@ -149,6 +149,7 @@
             throw new Error('Flight skybox requires WebGL');
         const gl = context;
         var explicitBridgeLod=!!gl.getExtension('EXT_shader_texture_lod');
+        var bridgeOptics=missionSky.thinShell?window.Driftworks.thinShellOptics:window.Driftworks.ellisOptics;
         var bridgeDerivatives=!!missionSky.wormhole&&!!gl.getExtension('OES_standard_derivatives');
         /** @param {number} type @param {string} source */
         function shader(type, source) {
@@ -187,7 +188,7 @@ precision highp float;
 varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
-uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeGrid,bridgeGridPixel,bridgeOutline;
+uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeThinShell;uniform float bridgeGrid,bridgeGridPixel,bridgeOutline;
 float bridgeFootprint=0.;
 uniform sampler2D panorama;
 uniform sampler2D noiseMap,rimeSurface;uniform float rimeDetailed;
@@ -347,8 +348,8 @@ vec3 jadeSatellites(vec3 sky,vec3 ray){
  }
  return sky;
 }
-${window.Driftworks.ellisOptics?window.Driftworks.ellisOptics.shader:'uniform float ellisRegion; struct EllisRay {float hit;}; EllisRay ellisInit(vec3 e,vec3 r){return EllisRay(0.);} vec3 ellisExit(EllisRay e){return vec3(0.);} vec3 ellisPoint(EllisRay e,float t,out float side){side=0.;return vec3(0.);}'}
-${window.Driftworks.ellisOptics&&window.Driftworks.ellisOptics.latticeShader?window.Driftworks.ellisOptics.latticeShader:'vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){return vec4(0.);}'}
+${bridgeOptics?bridgeOptics.shader:'uniform float ellisRegion; struct EllisRay {float hit;}; EllisRay ellisInit(vec3 e,vec3 r){return EllisRay(0.);} vec3 ellisExit(EllisRay e){return vec3(0.);} vec3 ellisPoint(EllisRay e,float t,out float side){side=0.;return vec3(0.);}'}
+${bridgeOptics&&bridgeOptics.latticeShader?bridgeOptics.latticeShader:'vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){return vec4(0.);}'}
 void main(){
     if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
     if(bridgeEnabled>.5){
@@ -357,7 +358,16 @@ void main(){
         vec3 offset=(bridgeEye-vec3(side*12000.,-2000.,1550.))/300.;
         float along=dot(offset,ray),impact2=dot(offset,offset)-along*along;
         vec3 outgoing=ray;float destination=side;vec4 lattice=vec4(0.);
-        if(bridgeLookup>.5){
+        if(bridgeThinShell>.5){
+            // Flat exteriors glued antipodally at r=a (zero throat length).
+            // Preserve normal velocity and reverse the tangent under the gluing.
+            // A missed shell leaves the local sky exactly undeformed.
+            if(along<0. && impact2<1.){
+                vec3 normal=normalize(offset+ray*(-along-sqrt(max(0.,1.-impact2))));
+                outgoing=normalize(2.*dot(ray,normal)*normal-ray);
+                destination=1.-side;
+            }
+        }else if(bridgeLookup>.5){
             EllisRay bridge=ellisInit(bridgeEye,ray);
             if(bridge.hit>.5){outgoing=ellisExit(bridge);float ignored;ellisPoint(bridge,1.,ignored);destination=ignored;if(bridgeGrid>.5)lattice=ellisLattice(bridge,bridgeEye,bridgeGridPixel);}
         }else{
@@ -397,7 +407,7 @@ void main(){
             gl_FragColor=vec4((texture2D(panorama,uv).rgb+vec3(star*.22)${cinemaSky?'+ohioLandmark(ohioPlanet,outgoing,ohioPlanetCenter,ohioPlanetRight,ohioPlanetUp,ohioPlanetGain)':''})*exposure,1.);
         }
         gl_FragColor.rgb=gl_FragColor.rgb*(1.-lattice.a*.65)+lattice.rgb;
-        if(bridgeLookup>.5&&bridgeOutline>.5){
+        if(bridgeThinShell<.5&&bridgeLookup>.5&&bridgeOutline>.5){
             // Mark the whole 600 m lensing volume, including same-chart
             // returning rays. Inside it every direction can be distorted;
             // there is no silhouette separating bent and untouched sky.
@@ -977,6 +987,8 @@ void main(){
                 uniforms(sky, pose, width / height, dpr);
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.gasGiant ? 23 : missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeEnabled'),missionSky.wormhole?1:0);
+                var thinShellControl=/** @type {HTMLInputElement|null} */(document.getElementById('bridge-thin-shell'));
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeThinShell'),missionSky.thinShell||thinShellControl&&thinShellControl.checked?1:0);
                 var gridControl=/** @type {HTMLInputElement|null} */(document.getElementById('bridge-grid'));
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeGrid'),missionSky.wormhole&&(gridControl?gridControl.checked:new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeGrid')!=='0')?1:0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeOutline'),missionSky.wormhole&&new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeOutline')!=='0'?1:0);

@@ -491,6 +491,13 @@
                 return { point: e.pose.eye, color: e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
             }));
             if(state.curvature)radarContacts=radarContacts.map(function(c){var route=DW.flightHyperbolic.path(state.eye,c.point,state.curvature||650);return Object.assign({},c,{point:state.eye.map(function(v,i){return v+route.direction[i]*route.distance;})});});
+            if(mission.sky.thinShell){
+                radarContacts=[];
+                living.forEach(function(e){
+                    const path=DW.thinShellOptics.primary(state.eye.map(function(v){return v*units;}),e.pose.eye.map(function(v){return v*units;}),state.region||0,e.pose.region||0);
+                    if(path)radarContacts.push({point:state.eye.map(function(v,i){return v+path.direction[i]*path.length/units;}),color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId,speaking:e.id===speakerId});
+                });
+            }
             if(!mission.emptySpace&&!(state.region||0)){
                 radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
                 radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
@@ -501,13 +508,13 @@
             combatHud.textAlign = 'center';
             /** @param {Vector} point @param {number} side */function visualDirection(point,side){
                 if(mission.sky.wormhole&&DW.ellisOptics){
-                    var path=DW.ellisOptics.primary(state.eye.map(function(v){return v*units;}),point.map(function(v){return v*units;}),state.region||0,side);
+                    var path=(mission.sky.thinShell?DW.thinShellOptics:DW.ellisOptics).primary(state.eye.map(function(v){return v*units;}),point.map(function(v){return v*units;}),state.region||0,side);
                     return path?path.direction:null;
                 }
                 return point.map(function(v,i){return v-state.eye[i];});
             }
             /** @param {import('./types').Craft} craft */function rangeText(craft){
-                var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,view.state.curvature||(!!mission.sky.wormhole));
+                var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,view.state.curvature||(mission.sky.thinShell?'thin-shell':!!mission.sky.wormhole));
                 return path?Math.round(path.distance*units*displayScale)+distanceUnit:'—';
             }
             var targetBearing = /** @type {number | null} */ (null);
@@ -660,7 +667,7 @@
                 label(DW.training.callsign(selected).slice(0,22),rightX+14,rightY+44,16,gold);
                 var source=get('target-camera').querySelector('canvas:not(.scene3d-overlay)');
                 if(source instanceof HTMLCanvasElement){var fit=Math.min((pw-24)/source.width,76/source.height);ctx.image(source,rightX+(pw-source.width*fit)/2,rightY+51,source.width*fit,source.height*fit,0,targetRendered);}
-                var path=DW.flightGuns.ballisticPath(view.state.eye,selected.pose.eye,view.state.region||0,selected.pose.region||0,view.state.curvature||(!!mission.sky.wormhole));
+                var path=DW.flightGuns.ballisticPath(view.state.eye,selected.pose.eye,view.state.region||0,selected.pose.region||0,view.state.curvature||(mission.sky.thinShell?'thin-shell':!!mission.sky.wormhole));
                 var distance=path?path.distance*view.units*mission.units.distanceScale*(view.distanceScale||1):null;
                 label(distance===null?'—':Math.round(distance)+' '+mission.units.distanceLabel,rightX+14,rightY+139,11);
                 meter('SHIELD',selected.shield||0,selected.maxShield||1,rightX+14,rightY+157,pw-28,'#79b8e7');

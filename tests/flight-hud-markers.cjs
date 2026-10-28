@@ -105,6 +105,30 @@ nearEnemy.pose.eye=[16000/u,-1600/u,1550/u];renderAim();assert.equal(get('target
 DW.flightPresentation=savedPresentation;DW.ellisOptics=savedOptics;
 console.log('PASS truthful Ellis HUD lead: actual firing direction, cross-chart contact, no optical warp and no invalid/out-of-lifetime pip');
 
+// Thin-shell HUD, radar, range and pip all consume the same finite-source route.
+ellisView.combat.mode='thin-shell';
+DW.flightPresentation={model:()=>({name:'Fixture fighter'})};
+let thinContacts=[];
+DW.flightRadar.draw=function(ctx,state,contacts,...args){thinContacts=contacts;return originalRadar(ctx,state,contacts,...args);};
+for(const side of [0,1]){
+ Object.assign(ellisView.state,{eye:[side*12000/u,-2350/u,1550/u],region:side,velocity:[0,0,0]});
+ Object.assign(nearEnemy.pose,{eye:[((1-side)*12000+40)/u,-1660/u,1550/u],region:1-side,velocity:[20,40,0]});
+ const lead=DW.training.firingSolution(ellisView.combat,ellisView.combat.player,nearEnemy,DW.retailWeapons[0]);assert(lead);
+ const d=Array.from(lead.direction),n=Math.hypot(d[0],d[1]);ellisView.state.back=d.map(x=>-x);ellisView.state.right=[d[1]/n,-d[0]/n,0];ellisView.state.up=[0,0,1];
+ renderAim();
+ assert.equal(get('target-info').dataset.leadState,'valid');
+ assert(calls.some(c=>c.kind==='arc'&&c.r===7&&Math.abs(c.x-500)<1e-6&&Math.abs(c.y-350)<1e-6),'thin-shell lead is the physical firing bearing');
+ const route=DW.thinShellOptics.primary(ellisView.state.eye.map(v=>v*u),nearEnemy.pose.eye.map(v=>v*u),side,1-side);
+ const contact=thinContacts.find(c=>c.selected);assert(contact,'radar includes reachable remote target');
+ assert(Math.hypot(...contact.point.map((v,i)=>v-ellisView.state.eye[i]-route.direction[i]*route.length/u))<1e-9,'radar direction and distance match optical HUD image');
+ const projection=DW.flightSkybox.project(Array.from(route.direction),ellisView.state,1000/700),x=500*(1+projection.x);
+ assert(calls.some(c=>c.kind==='stroke'&&c.color==='#ffe7a3'&&c.points.length===4&&Math.abs(c.points.reduce((sum,p)=>sum+p[0],0)/4-x)<1e-6),'thin-shell contact diamond follows the rendered image');
+ nearEnemy.pose.eye=[(1-side)*12000/u,-2400/u,1550/u];renderAim();
+ assert.equal(get('target-info').dataset.leadState,'unavailable');assert(!thinContacts.some(c=>c.selected),'occluded remote target has no invented radar image');
+}
+DW.flightRadar.draw=originalRadar;DW.flightPresentation=savedPresentation;
+console.log('PASS thin-shell HUD/radar: both charts, optical markers and ranges, firing bearing, remote contact and occlusion');
+
 // Fine road samples must match the production controller, without editing live state.
 const held={throttle:null,throttleRate:0,fire:false};
 function samePose(actual,expected){for(const field of ['eye','right','up','back'])for(let k=0;k<3;k++)assert.ok(Math.abs(actual[field][k]-expected[field][k])<1e-8,field+' matches production movement');}

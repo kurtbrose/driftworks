@@ -81,7 +81,7 @@
     var mixerHost=document.getElementById('flight-settings');
     if(mixerHost && ohioMusic) ohioMusic.mount(mixerHost);
     if(mixerHost)DW.audio.mountMixer(mixerHost);
-    if(mixerHost&&activeMission.sky.wormhole){
+    if(mixerHost&&activeMission.sky.wormhole&&!activeMission.sky.thinShell){
         var latticeLabel=document.createElement('label'),latticeToggle=document.createElement('input');
         latticeToggle.type='checkbox';latticeToggle.id='bridge-grid';latticeToggle.checked=new URLSearchParams(location.search).get('bridgeGrid')!=='0';
         latticeLabel.append(latticeToggle,document.createTextNode(' Wormhole spatial lattice / amber: asteroid, cyan: Rime'));mixerHost.appendChild(latticeLabel);

@@ -7,6 +7,8 @@
     /** @typedef {import('./types').Vector} Vector */
     /** @typedef {import('./types').Bolt} Bolt */
     /** @typedef {import('./types').Batch} Batch */
+    /** @param {boolean|'thin-shell'|undefined} bridge */
+    function metric(bridge){var DW=/** @type {Required<DriftworksNamespace>} */(window.Driftworks);return bridge==='thin-shell'?DW.thinShellOptics:DW.ellisOptics;}
     var DW=/** @type {Required<DriftworksNamespace>} */(window.Driftworks);
     var units = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).sim.METERS_PER_UNIT;
     /** @param {Vector} vector @param {Vector} normal */
@@ -31,18 +33,18 @@
     }
     /** Finite-source firing route in the same compact optical metric as the image.
      * Coordinates/distances are scene units, not metres.
-     * @param {Vector} origin @param {Vector} target @param {number} region @param {number} destination @param {boolean|number} [bridge] */
+     * @param {Vector} origin @param {Vector} target @param {number} region @param {number} destination @param {boolean|'thin-shell'|number} [bridge] */
     function ballisticPath(origin,target,region,destination,bridge){
         if(typeof bridge==='number')return DW.flightHyperbolic.path(origin,target,bridge);
         var delta=target.map(function(v,i){return v-origin[i];}),distance=Math.hypot.apply(null,delta);
         if(!bridge)return region===destination&&distance>1e-10?{direction:delta.map(function(v){return v/distance;}),distance:distance}:null;
-        var path=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics.primary(origin.map(function(v){return v*units;}),target.map(function(v){return v*units;}),region,destination);
+        var path=metric(bridge).primary(origin.map(function(v){return v*units;}),target.map(function(v){return v*units;}),region,destination);
         return path?{direction:path.direction,distance:path.length/units}:null;
     }
     /** An actionable aim direction, never an optically warped future point.
      * Predict target motion with craft transport and solve its optical firing path.
      * A later jink is not knowable; unverified/out-of-lifetime solutions return null.
-     * @param {Pose} shooter @param {Pose & {velocity:Vector}} target @param {Weapon} weapon @param {boolean|number} [bridge] @param {number} [launchMeters]
+     * @param {Pose} shooter @param {Pose & {velocity:Vector}} target @param {Weapon} weapon @param {boolean|'thin-shell'|number} [bridge] @param {number} [launchMeters]
      * @returns {import('./types').FiringSolution|null} */
     function lead(shooter,target,weapon,bridge,launchMeters){
         if(typeof bridge==='number')return DW.flightHyperbolic.lead(shooter,target,weapon,bridge,launchMeters===undefined?4:launchMeters);
@@ -92,7 +94,7 @@
     function create() {
         return { bolts: [], impacts: [], cooldown: 0, fired: 0, hits: 0 };
     }
-    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] @param {boolean|number} [bridge] */
+    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] @param {boolean|'thin-shell'|number} [bridge] */
     function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount, anchors, bridge) {
         var count = mountCount === undefined ? 2 : mountCount;
         if (!Number.isInteger(count) || count < 1 || count > 128) throw new Error('Invalid gun mount count');
@@ -119,7 +121,7 @@
                 var route=DW.flightHyperbolic.travel(bolt.position,bolt.direction,bolt.weapon.speed*travel/units,bridge);
                 end=route.point;hit=hitTest?hitTest(bolt.position,end,bolt):null;bolt.direction=route.direction;
             }else if(bridge){
-                var optics=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics;
+                var optics=metric(bridge);
                 var ray=bolt.opticalRay||(bolt.opticalRay=optics.ray(bolt.position.map(function(v){return v*units;}),bolt.direction,bolt.region||0));
                 var segments=optics.advanceRay(ray,bolt.weapon.speed*travel);
                 for(var leg=0;leg<segments.length;leg++){
@@ -165,7 +167,7 @@
                     aim=space.path(position,curvedGoal,bridge).direction;
                 }else if(bridge){
                     var range=target?Math.max(.001,target.reduce(function(sum,v,i){return sum-(v-pose.eye[i])*pose.back[i];},0)):convergenceM/units;
-                    var optics=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics;
+                    var optics=metric(bridge);
                     var forwardRay=pose.back.map(function(v){return -v;}),goal=optics.ray(pose.eye.map(function(v){return v*units;}),forwardRay,pose.region||0);
                     optics.advanceRay(goal,range*units);
                     var launch=optics.ray(pose.eye.map(function(v){return v*units;}),forwardRay,pose.region||0);optics.advanceRay(launch,launchForward);
@@ -174,7 +176,7 @@
                     position=launch.eye.map(function(v,i){return (v+right[i]*muzzle[0]+up[i]*muzzle[2])/units;});launchRegion=launch.region;
                     // Lateral anchors at the throat can extend into the other chart.
                     var offset=bridgeTravel(launch.eye.map(function(v){return v/units;}),position.map(function(v,i){return v-launch.eye[i]/units;}),launchRegion);position=offset.point;launchRegion=offset.region;
-                    var path=ballisticPath(position,goal.eye.map(function(v){return v/units;}),launchRegion,goal.region,true);
+                    var path=ballisticPath(position,goal.eye.map(function(v){return v/units;}),launchRegion,goal.region,bridge);
                     aim=path?path.direction:launch.direction;
                 }
                 var distance = Math.hypot.apply(null, aim);
@@ -235,7 +237,7 @@
         }
         return null;
     }
-    /** @param {Pick<Guns, 'bolts' | 'impacts'>} guns @param {Pose} pose @param {boolean} [optical] @returns {Batch[]} */
+    /** @param {Pick<Guns, 'bolts' | 'impacts'>} guns @param {Pose} pose @param {boolean|'thin-shell'} [optical] @returns {Batch[]} */
     function geometry(guns, pose, optical) {
         var groups = /** @type {{team: string; color: [number,number,number]; data: number[]}[]} */ ([{ team: 'ally', color: [.15, 1, .35], data: [] }, { team: 'enemy', color: [1, .12, .08], data: [] }, { team: 'player', color: [1, .75, .25], data: [] }]);
         /** @param {Vector} a @param {Vector} b */
@@ -256,7 +258,7 @@
         }
         /** @param {Vector} position @param {number} region */function image(position,region){
             if(!optical)return {position:position,direction:null,source:null};
-            const p=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics.primary(pose.eye.map(function(v){return v*units;}),position.map(function(v){return v*units;}),pose.region||0,region);
+            const p=metric(optical).primary(pose.eye.map(function(v){return v*units;}),position.map(function(v){return v*units;}),pose.region||0,region);
             return p?{position:pose.eye.map(function(v,i){return v+p.direction[i]*p.length/units;}),direction:p.direction,source:p.sourceDirection}:null;
         }
         guns.bolts.forEach(function (bolt) {

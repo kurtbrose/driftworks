@@ -396,3 +396,23 @@ for(const range of [66,101,150,220])for(const side of [0,1]){
  }
 }
 console.log('PASS Ellis HUD/image agreement: 66/101/150/220 m, both charts, rigid and stretched ship origins');
+
+// Thin shell defaults to finite-source object rendering: no Ellis depth marcher.
+for(const file of ['flight-missions.js','thin-shell-optics.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../experiments',file),'utf8'),context);
+viewer.setStudyBridge(false);context.location.search='?mission=thin-shell';viewer.setStudyBridge(true);viewer.setStudyShipStretching(false);
+viewer.setStudyEffects([]);viewer.setStudyExplosions([]);
+for(const region of [0,1]){
+ const eye=[region*12000/U,-2380/U,1550/U],center=[((1-region)*12000+40)/U,-1640/U,1550/U];
+ viewer.setSurfaceCamera({region,eye,right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+ viewer.setStudyActors([{vertices:data,color:[1,1,1],region:1-region,origin:center,lensCenter:center,lensRadius:5}]);
+ const start=frames.length;viewer.render(world,1,0,0);
+ assert.equal(frames.length-start,1);assert.equal(viewer.getRenderStats().bridgeCaptures,0);
+ const draw=frames.at(-1)[0];assert(draw,'remote thin-shell ship is submitted');assert.equal(draw.uniforms.uLensMode,1);
+ const h=DW.thinShellOptics.primary(eye.map(v=>v*U),center.map(v=>v*U),region,1-region),q=draw.uniforms.uLensViewCenter;
+ assert(h);assert(Math.abs(q[0]/q[2]-h.direction[0]/h.direction[1])<1e-9,'rendered center matches HUD and firing metric');
+ const local=[region*12000/U,-2350/U,1550/U];viewer.setStudyActors([{vertices:data,color:[1,1,1],region,origin:local,lensCenter:local,lensRadius:5}]);viewer.render(world,1,0,0);
+ assert.equal(frames.at(-1)[0].uniforms.uLensEnabled,0,'local flat geometry is not bent');assert.equal(frames.at(-1)[0].uniforms.uLensMode,2,'local geometry respects the physical throat occluder');
+ const hidden=[(1-region)*12000/U,-2400/U,1550/U];viewer.setStudyActors([{vertices:data,color:[1,1,1],region:1-region,origin:hidden,lensCenter:hidden,lensRadius:5}]);viewer.render(world,1,0,0);assert.equal(frames.at(-1).length,0,'unreachable remote image is hidden');
+}
+viewer.setStudyBridge(false);
+console.log('PASS thin-shell rendering: default single pass, both charts, image/HUD agreement, local aperture occlusion and unreachable images');

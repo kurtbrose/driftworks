@@ -1284,3 +1284,90 @@ Browser integration was checked at the paused opposite-chart crossing (6.35 s,
 rigid Bob, lattice enabled), with no shader errors. This is a presentation smoke
 check; automated raster ID-mask coverage and the severe single-affine-patch
 shape error near the throat remain unresolved.
+
+
+## Thin-shell sky comparison
+
+Open `experiments/thin-shell-study.html` directly for the sky comparison. The checkbox
+switches between thin-shell and existing compact Ellis optics without moving
+the camera. Distance (301-1200 m), viewing direction, chart and approach
+playback are shared. This comparison page is sky-only. The playable thin-shell mission and its
+shared rendering/ballistics metric are described below.
+
+The thin-shell model joins two flat exteriors at radius a=300 m, with zero
+throat length: ds^2=-dt^2+dl^2+(a+|l|)^2 dOmega^2. It uses the existing
+antipodal chart identification. For a ray d intersecting the shell at outward
+unit normal n, the destination point is -a*n and its direction is
+2*dot(d,n)*n-d. Rays missing the shell remain straight in the source chart;
+there is no extended lensing volume or orbiting photon ring. This is the
+flat-exterior construction, not a Schwarzschild thin shell with exterior
+gravitational lensing. Background: [Bubble universes and traversable wormholes](https://arxiv.org/abs/2201.02203).
+
+The sky renderer reads the optional `bridge-thin-shell` checkbox each frame;
+absent/unchecked preserves Ellis. The study disables the Ellis field grid and
+600 m outline, which do not describe this geometry.
+
+
+## Playable thin-shell dogfight
+
+The index's **Thin-shell Bridge** card now opens
+`experiments/flight.html?mission=thin-shell`. It inherits the eight-fighter
+Ellis encounter, asteroid/Rime charts, ordinary flight controls and carrier
+patrol, but selects `thin-shell-optics.js` for finite-source images and weapons.
+The earlier `thin-shell-study.html` remains an optional sky comparison.
+
+The metric has straight exterior legs joined antipodally at a 300 m shell.
+`primary` solves the monotone angular equation
+`2 asin(b/a) - asin(b/R) - asin(b/S) = angle` with the exact straight-leg
+length. Rays past the grazing limit, and same-chart sources occluded by the
+shell, have no primary image. `advanceRay` intersects the shell analytically,
+transports the tangent, and returns separate chart-local collision segments.
+Ship transport uses the same existing antipodal swept crossing. Headless
+sessions pass the metric explicitly through the gun APIs (`true` means Ellis,
+`'thin-shell'` means thin shell); no global mission switch contaminates other
+sessions. NPC perception resets on chart changes and thin-shell lead uses its
+observed velocity rather than reading future target motion.
+
+HUD contact markers, range, lead, automatic acquisition and radar use that same
+metric. Radar includes reachable remote contacts at their apparent bearing and
+optical distance, never at the 12 km storage translation. Unreachable contacts
+have no radar image or firing solution. NPCs can navigate through the throat
+when opposition remains only in the other chart.
+
+Thin shell defaults to the existing finite-source object renderer. Local meshes
+stay flat and are clipped behind the physical shell; remote meshes are clipped
+to its aperture. Ship centers agree with the HUD; rigid hulls remain the existing
+readable presentation approximation, with the optional affine stretching control.
+This avoids the depth-atlas shader route, which caused GPU context loss during
+initial thin-shell validation. The Ellis renderer/default is unchanged. Thin
+shell has no extended field lattice or 600 m outline.
+
+Validation (2026-10-27):
+
+- `node tests/ellis.cjs --thin-shell`: both-way ship crossings, high-speed sweeps,
+  gunfire, chart isolation, NPC pursuit and actual NPC transit.
+- `node tests/ellis-ballistics.cjs --thin-shell`: inverse-to-forward paths,
+  moving shooter/target, both transit directions, muzzle anchors, authored hull
+  hits, off-pip misses, lead continuity and independent straight-leg oracle.
+- `node tests/flight-hud-markers.cjs`: thin-shell image/marker/radar agreement,
+  both charts, valid lead and unreachable-contact suppression.
+- `node tests/three-production.cjs`: default single-pass thin-shell geometry,
+  both-chart optical centers, flat local meshes, aperture masks and hidden images.
+- `tools/check-thin-shell-browser.cjs --crossings`: real keyboard fire damaged
+  the remote hull from 1000 to 811 HP; live player crossings returned charts
+  `[1,0]`. No browser errors or lost graphics contexts. Labeled captures are in
+  `output/thin-shell-live-hit.png`, `output/thin-shell-live-cross-0.png` and
+  `output/thin-shell-live-cross-1.png`.
+
+The browser tool requires development-only Playwright via
+`DRIFTWORKS_BROWSER_MODULES`. Without `--crossings` it measures a frozen
+1280x800, DPR 1, full-resolution carrier off/on/on/off comparison. The unchanged
+`flight-rig.js` asset (catalog revision `21ffb25bccf7`) adds 11 draws and 44,120 triangles (113/393,294 off; 124/437,414 on).
+Presentation CPU medians were 3.2/3.3/3.4/3.1 ms; p95 4.2/4.4/4.8/3.9 ms.
+Frame medians stayed near 13.3 ms. These are CPU submission and browser cadence,
+not GPU execution times or proof of spare budget. The carrier pose, eight
+fighters, camera and effects were frozen and the foreground canvas stayed live.
+The single-pass route resolves the demonstrated context-loss issue without
+changing carrier assets, scale, materials or immutable GPU buffers. Raw results:
+`output/thin-shell-browser.json`; on/off captures:
+`output/thin-shell-carrier-on.png`, `output/thin-shell-carrier-off.png`.

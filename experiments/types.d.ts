@@ -12,7 +12,7 @@ export type FlightMission = {
     teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
     comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
     portraits:{folder:string;cast:string};
-    sky:{hyperbolic?:number;wormhole?:boolean;kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    sky:{hyperbolic?:number;wormhole?:boolean;thinShell?:boolean;kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
     asteroidBulk?:[number,number,number,number];
     scenery:MissionScenery[];
     encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
@@ -686,6 +686,7 @@ export type ExperimentModules = {
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
     ellisFeedback:{describe:(pose:Pose)=>{region:number;distance:number;gap:number;proximity:number};create:()=>{reset:()=>void;update:(pose:Pose,dt:number,active:boolean,enabled:boolean)=>EllisCue}};
     ellisStudy:{yoYoAt:(distance:number,observerL:number,halfSize?:number)=>YoYoFrame;yoYo:(time:number,name:string)=>YoYoFrame;camera:(name:string,time?:number)=>Pose;sample:(time:number,scenario:string)=>{pose:Pose;velocity:number[]}[]};
+    thinShellOptics:ExperimentModules['ellisOptics'];
     ellisOptics:{ray:(eye:number[],direction:number[],region:number)=>OpticalRay;advanceRay:(ray:OpticalRay,distance:number)=>{start:number[];end:number[];region:number;direction:number[]}[];primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];sourceDirection:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;latticeShader:string;size:number};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
@@ -750,12 +751,12 @@ export type ExperimentModules = {
         bridgeVector:(vector:Vector,normal:Vector)=>Vector;
         crossBridge:(before:Vector,after:Vector,side:number)=>{normal:Vector;fraction:number;entry:Vector;exit:Vector;eye:Vector}|null;
         bridgeTravel:(start:Vector,move:Vector,region:number)=>{point:Vector;region:number;normal:Vector|null;segments:{start:Vector;end:Vector;region:number}[]};
-        ballisticPath:(origin:Vector,target:Vector,region:number,destination:number,bridge?:boolean|number)=>{direction:Vector;distance:number}|null;
-        lead:(shooter:Pose,target:Pose & {velocity:Vector},weapon:Weapon,bridge?:boolean|number,launchMeters?:number)=>FiringSolution|null;
+        ballisticPath:(origin:Vector,target:Vector,region:number,destination:number,bridge?:boolean|'thin-shell'|number)=>{direction:Vector;distance:number}|null;
+        lead:(shooter:Pose,target:Pose & {velocity:Vector},weapon:Weapon,bridge?:boolean|'thin-shell'|number,launchMeters?:number)=>FiringSolution|null;
         create: () => Guns;
-        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[], bridge?:boolean|number) => void;
+        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[], bridge?:boolean|'thin-shell'|number) => void;
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
-        geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose, optical?:boolean) => Batch[];
+        geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose, optical?:boolean|'thin-shell') => Batch[];
     };
     flightCollision: import('./flight-collision-types').FlightCollisionApi;
     training: {
