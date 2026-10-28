@@ -31,6 +31,8 @@ approved from a few spot checks.
 
 ## Run and verify
 
+- Commit completed work in focused commits after the relevant checks pass. Keep
+  unrelated concurrent workspace changes out of each commit.
 - From the repository root, run `python -m http.server 8000`, `serve.bat` on
   Windows, or `./serve.sh` on Unix. Open `http://localhost:8000/`.
 - During development, run focused tests covering the changed code and affected

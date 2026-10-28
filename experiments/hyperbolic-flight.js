@@ -12,19 +12,32 @@
   scene.setSurfaceCamera(camera);scene.setStudyDiagnostics({mode:'normal',flat:false,scale:1,mothership:false,actors:true});
   DW.shipPackModels.populate(ship,false);
   const preferred=Array.from(ship.options).find(o=>/raptor/i.test(o.text));if(preferred)ship.value=preferred.value;
-  let state=H.create(),auto=true,paused=false,target=1,last=0,remainder=0,ready=false,drag=false,stick=[0,0];
+  let state=H.create(),auto=true,paused=false,target=1,last=0,remainder=0,ready=false,drag=false,stick=[0,0],dirty=true;
   let images=/** @type {import('./types').Images} */(new Map());
   const keys=new Set(/** @type {string[]} */([])),colors=['#6ce6d5','#ff8b7f'];
   /** @type {{frames:number;phase:number;cost:number[][];interval:number[][];draws:number[];triangles:number[]}|null} */let measurement=null;
   let statusTime=0;
-  DW.shipPackModels.loadTextures().then(async data=>{images=data;await scene.prepareStudyTextures(DW.shipPackModels.textureSources(data));ready=true;}).catch(/** @param {unknown} error */error=>{get('error').textContent=String(error);});
-  function reset(){state=H.create(Number(radius.value));target=1;remainder=0;scene.resetCombat();}
-  function pause(){paused=!paused;get('pause').textContent=paused?'Resume':'Pause';}
-  get('pilot').onclick=()=>{auto=!auto;get('pilot').textContent=auto?'Take control':'Autopilot';get('pilot').blur();};get('pause').onclick=()=>{pause();get('pause').blur();};radius.onchange=()=>{reset();radius.blur();};ship.onchange=()=>ship.blur();guides.onchange=()=>guides.blur();
+  function invalidate(){dirty=true;if(measurement){measurement=null;get('metrics').textContent='Measurement canceled: scene or viewport changed.';}}
+  let loadSerial=0;
+  async function loadModel(){
+    const serial=++loadSerial;ready=false;invalidate();get('error').textContent='';
+    try{const data=await DW.shipPackModels.loadTextures([ship.value]);
+      if(serial!==loadSerial)return;
+      await scene.prepareStudyTextures(DW.shipPackModels.textureSources(data));
+      if(serial!==loadSerial)return;
+      images=data;ready=true;invalidate();
+    }catch(error){if(serial===loadSerial)get('error').textContent=String(error);}
+  }
+  loadModel();
+  function reset(){state=H.create(Number(radius.value));target=1;remainder=0;invalidate();scene.resetCombat();}
+  function pause(){paused=!paused;invalidate();get('pause').textContent=paused?'Resume':'Pause';}
+  get('pilot').onclick=()=>{auto=!auto;invalidate();get('pilot').textContent=auto?'Take control':'Autopilot';get('pilot').blur();};get('pause').onclick=()=>{pause();get('pause').blur();};radius.onchange=()=>{reset();radius.blur();};ship.onchange=()=>{loadModel();ship.blur();};guides.onchange=()=>{invalidate();guides.blur();};
+  window.addEventListener('resize',invalidate);
   window.addEventListener('keydown',e=>{if(e.target instanceof HTMLSelectElement||e.target instanceof HTMLInputElement||e.target instanceof HTMLButtonElement)return;
     if(['Space','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);
-    if(!e.repeat){if(e.code==='KeyP'||e.code==='Escape')pause();if(e.code==='KeyR')reset();if(e.code==='Tab')target=(target+2)%12;}});
-  window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();drag=false;stick=[0,0];});
+    if(!e.repeat){if(e.code==='KeyP'||e.code==='Escape')pause();if(e.code==='KeyR')reset();if(e.code==='Tab'){target=(target+2)%12;invalidate();}}});
+  window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();drag=false;stick=[0,0];invalidate();});
+  document.addEventListener('visibilitychange',()=>{last=0;keys.clear();drag=false;stick=[0,0];invalidate();});
   host.addEventListener('pointerdown',e=>{drag=true;host.setPointerCapture(e.pointerId);});
   host.addEventListener('pointermove',e=>{if(drag)stick=DW.flightInput.moveStick(stick,e.movementX,e.movementY,200,.7);});
   host.addEventListener('pointerup',()=>{drag=false;stick=[0,0];});
@@ -71,7 +84,7 @@
     const contacts=state.actors.filter(a=>a.id&&a.dead<=0).map(a=>({point:H.relative(state.actors[0],a.p).map(v=>v*state.radius/U),color:colors[a.team],selected:a.id===target}));
     DW.flightRadar.draw(ctx,camera,contacts,U,2500,width,height,paused,'default');
     const me=state.actors[0],stats=scene.getRenderStats();
-    if(performance.now()-statusTime>150){statusTime=performance.now();get('readout').textContent=(paused?'PAUSED':auto?'AUTOPILOT / 6 vs 6':'MANUAL FLIGHT')+'\n'+Math.round(Math.hypot(...me.flight.velocity))+' m/s / '+Math.round(me.flight.throttle*100)+'% THR\nHULL '+Math.max(0,me.hp)+'% / KILLS '+state.score.join(' : ')+'\n'+state.shots+' shots / '+state.hits+' hits'+(me.dead>0?'\nRespawn '+me.dead.toFixed(1)+' s':'')+'\n'+stats.drawCalls+' draws / '+Math.round(stats.triangles).toLocaleString()+' triangles';}
+    if(dirty||performance.now()-statusTime>150){statusTime=performance.now();get('readout').textContent=(paused?'PAUSED':auto?'AUTOPILOT / 6 vs 6':'MANUAL FLIGHT')+'\n'+Math.round(Math.hypot(...me.flight.velocity))+' m/s / '+Math.round(me.flight.throttle*100)+'% THR\nHULL '+Math.max(0,me.hp)+'% / KILLS '+state.score.join(' : ')+'\n'+state.shots+' shots / '+state.hits+' hits'+(me.dead>0?'\nRespawn '+me.dead.toFixed(1)+' s':'')+'\n'+stats.drawCalls+' draws / '+Math.round(stats.triangles).toLocaleString()+' triangles';}
     return {cpu:performance.now()-started,draws:stats.drawCalls,triangles:stats.triangles};
   }
   get('benchmark').onclick=()=>{if(!ready)return;paused=true;get('pause').textContent='Resume';measurement={frames:0,phase:0,cost:[[],[],[],[]],interval:[[],[],[],[]],draws:[],triangles:[]};get('metrics').textContent='Frozen camera: fleet off / on / on / off. Measuring…';get('benchmark').blur();};
@@ -81,10 +94,12 @@
     if(!paused)remainder+=Math.min(.05,interval/1000);
     const mouse=DW.flightInput.stickDemand(stick,.03);
     while(remainder>=1/120){H.step(state,1/120,{auto,pitch:Number(keys.has('ArrowUp'))-Number(keys.has('ArrowDown'))+mouse[0],yaw:Number(keys.has('ArrowLeft'))-Number(keys.has('ArrowRight'))+mouse[1],roll:Number(keys.has('KeyQ'))-Number(keys.has('KeyE')),boost:keys.has('ShiftLeft')||keys.has('ShiftRight'),throttleRate:Number(keys.has('KeyW'))-Number(keys.has('KeyS')),stop:keys.has('KeyX'),fire:keys.has('Space')});remainder-=1/120;}
-    const result=draw(!measurement||measurement.phase===1||measurement.phase===2);
+    if(!paused||measurement||dirty){
+    const result=draw(!measurement||measurement.phase===1||measurement.phase===2);dirty=false;
     if(measurement){const m=measurement;m.frames++;if(m.frames>30){m.cost[m.phase].push(result.cpu);m.interval[m.phase].push(interval);m.draws[m.phase]=result.draws;m.triangles[m.phase]=result.triangles;}
-      if(m.frames>=150){m.frames=0;m.phase++;if(m.phase===4){get('metrics').textContent=m.cost.map((a,i)=>(i===1||i===2?'ON':'OFF')+' CPU '+median(a).toFixed(2)+' / '+p95(a).toFixed(2)+' ms\nCadence '+median(m.interval[i]).toFixed(1)+' / '+p95(m.interval[i]).toFixed(1)+' ms\n'+m.draws[i]+' draws / '+m.triangles[i]+' triangles').join('\n')+'\nMedian / p95';get('metrics').style.whiteSpace='pre-line';measurement=null;}}
+      if(m.frames>=150){m.frames=0;m.phase++;if(m.phase===4){get('metrics').textContent=m.cost.map((a,i)=>(i===1||i===2?'ON':'OFF')+' CPU '+median(a).toFixed(2)+' / '+p95(a).toFixed(2)+' ms\nCadence '+median(m.interval[i]).toFixed(1)+' / '+p95(m.interval[i]).toFixed(1)+' ms\n'+m.draws[i]+' draws / '+m.triangles[i]+' triangles').join('\n')+'\nMedian / p95';get('metrics').style.whiteSpace='pre-line';measurement=null;dirty=true;}}
     }
-  }else if(!ready)draw();requestAnimationFrame(tick);}
+    }
+  }else if(!document.hidden&&!ready&&dirty){draw();dirty=false;}requestAnimationFrame(tick);}
   requestAnimationFrame(tick);
 })();

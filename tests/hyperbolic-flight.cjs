@@ -11,6 +11,15 @@ near(H.dot(H.exp(p,v,2),H.transport(p,v,w,2)),0);
 near(H.dot(H.transport(p,v,w,2),H.transport(p,v,w,2)),1);
 near(H.segmentDistance(p,v,H.exp(p,v,.5),1),0);
 near(H.segmentDistance(p,v,H.exp(p,v,2),1),1);
+for(const radius of [350,650,1800,100000])for(const along of [-10,0,10,30,50])for(const lateral of [0,6,11,13,20]){
+ const center=H.exp(p,v,along/radius),q=H.exp(center,w,lateral/radius);
+ assert.equal(H.segmentHit(p,v,q,30/radius,Math.cosh(12/radius)),H.segmentDistance(p,v,q,30/radius)*radius<12,'hot collision test preserves geodesic segment hits');
+}
+const reuse=H.create(),starArray=reuse.stars,star=reuse.stars[0];
+reuse.actors[0].trail.push(p.slice());const trail=reuse.actors[0].trail[0];
+H.step(reuse,1/120,{auto:true});
+assert.equal(reuse.stars,starArray);assert.equal(reuse.stars[0],star,'star rebasing must reuse owned vectors');
+assert.equal(reuse.actors[0].trail[0],trail,'trail rebasing must reuse owned vectors');
 const a={p:p.slice(),axes:[[0,1,0,0],[0,0,1,0],[0,0,0,1]]};
 H.move(a,[10,20,-50],650);near(H.distance(p,a.p)*650,Math.hypot(10,20,50));
 // Center projection and radar describe the same bearing but different depth.

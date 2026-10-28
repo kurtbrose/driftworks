@@ -159,6 +159,13 @@ Quaternius engine exhaust uses explicit model-specific nozzle mounts in `experim
 
 Faction paint in the ship inspection viewer and flight lab is an optional per-batch `paint` RGB vector (0–1) on source ship geometry. `sourceGeometry` and `sourceFleetGeometry` accept it as their last argument; omitting it restores the source texture. The shared scene shader selects saturated orange texels with feathered hue boundaries and substitutes the primary paint while preserving source texture variation and neutral/weathered detail. Texture images remain shared and unmodified. Destroyed flight craft (`age` present or nonpositive `hp`) use a separate soot/heat-discolored atlas cached by source image in `ship-packs.js`; faction paint is disabled for these batches. Lossless `.wreck.webp` files are baked offline by `tools/bake-wreck-textures.cjs` (authoring requires `sharp`), retaining source resolution, UVs, alpha and the approved soot treatment. `loadTextures` resolves only after both source and wreck images load. `textureSources(images)` supplies both variants to `scene.prepareStudyTextures`, which uploads one image per task before flight publishes the image map. Destruction performs only a texture-cache lookup and shares the original geometry buffers; it never generates pixels, decodes an image or starts a GPU texture upload. Source/derived hashes and sizes live in `assets/ships/wreck-textures.json`. Orange markings in the same hue range also recolor; engines and untextured scenery do not. Flight exposes separate allied/enemy colors and a source-paint toggle; these preview settings are not saved world state.
 
+`shipPackModels.loadTextures(ids?)` can load a selected list of model IDs. An
+omitted argument loads the full catalog; an empty list loads nothing. Both live
+and wreck images still finish before that request resolves. Selected and full
+requests share the existing promise/image cache. The hyperbolic flight study
+uses this to load only the chosen fighter's pair and guards asynchronous model
+switches against stale completion before GPU upload and publication.
+
 The inspection viewer enables faction paint by default. Picking a primary color enables paint immediately (including after restoring source paint), without resetting the orbit or zoom. Turning off faction paint still restores the original texture.
 
 Paint brightness follows the chosen RGB color rather than being normalized to the original orange luminance, so dark liveries remain dark. Default flight liveries are forest green (#607451) and burnt orange (#bd713f); color inputs also suggest dark navy (#415d7d).

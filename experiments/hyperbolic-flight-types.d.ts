@@ -17,6 +17,7 @@ declare module '../src/types' {interface DriftworksNamespace {hyperbolicFlight?:
   create(radius?:number):HyperWorld;
   step(w:HyperWorld,dt:number,input:Input):void;
   segmentDistance(p:number[],v:number[],q:number[],length:number):number;
+  segmentHit(p:number[],v:number[],q:number[],length:number,coshRadius:number):boolean;
   aim(w:HyperWorld,a:Actor,target:Actor):FlightInput & {fire:boolean};
   lead(w:HyperWorld,a:Actor,target:Actor):Lead|null;
 };}}

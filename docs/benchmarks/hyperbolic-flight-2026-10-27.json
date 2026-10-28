@@ -1,0 +1,264 @@
+{
+  "node": "v24.21.0",
+  "warmupSeconds": 3,
+  "sampleSeconds": 15,
+  "frameTicks": 2,
+  "results": [
+    {
+      "source": "dc34df3f:experiments/hyperbolic-flight-model.js",
+      "radius": 350,
+      "mode": "combat",
+      "medianMs": 1.7514000000001033,
+      "p95Ms": 2.5563999999999396,
+      "maxMs": 4.120799999999917,
+      "maxBolts": 16,
+      "shots": 95,
+      "hits": 41,
+      "score": [
+        4,
+        2
+      ],
+      "hash": "47ae2b213cd068be"
+    },
+    {
+      "source": "experiments/hyperbolic-flight-model.js",
+      "radius": 350,
+      "mode": "combat",
+      "medianMs": 1.076799999999821,
+      "p95Ms": 1.6518000000000939,
+      "maxMs": 2.536399999999958,
+      "maxBolts": 16,
+      "shots": 95,
+      "hits": 41,
+      "score": [
+        4,
+        2
+      ],
+      "hash": "47ae2b213cd068be"
+    },
+    {
+      "source": "experiments/hyperbolic-flight-model.js",
+      "radius": 350,
+      "mode": "combat",
+      "medianMs": 1.0289000000002488,
+      "p95Ms": 1.5462999999999738,
+      "maxMs": 2.203599999999824,
+      "maxBolts": 16,
+      "shots": 95,
+      "hits": 41,
+      "score": [
+        4,
+        2
+      ],
+      "hash": "47ae2b213cd068be"
+    },
+    {
+      "source": "dc34df3f:experiments/hyperbolic-flight-model.js",
+      "radius": 350,
+      "mode": "combat",
+      "medianMs": 1.7307000000000698,
+      "p95Ms": 2.390400000000227,
+      "maxMs": 3.2789999999995416,
+      "maxBolts": 16,
+      "shots": 95,
+      "hits": 41,
+      "score": [
+        4,
+        2
+      ],
+      "hash": "47ae2b213cd068be"
+    },
+    {
+      "source": "dc34df3f:experiments/hyperbolic-flight-model.js",
+      "radius": 350,
+      "mode": "escape",
+      "medianMs": 1.9655999999995402,
+      "p95Ms": 2.7453000000004977,
+      "maxMs": 5.119800000000396,
+      "maxBolts": 26,
+      "shots": 205,
+      "hits": 38,
+      "score": [
+        1,
+        3
+      ],
+      "hash": "a0c3966846eccd5f"
+    },
+    {
+      "source": "experiments/hyperbolic-flight-model.js",
+      "radius": 350,
+      "mode": "escape",
+      "medianMs": 1.2388000000009924,
+      "p95Ms": 1.8465999999989435,
+      "maxMs": 2.8400000000001455,
+      "maxBolts": 26,
+      "shots": 205,
+      "hits": 38,
+      "score": [
+        1,
+        3
+      ],
+      "hash": "a0c3966846eccd5f"
+    },
+    {
+      "source": "experiments/hyperbolic-flight-model.js",
+      "radius": 350,
+      "mode": "escape",
+      "medianMs": 1.2340999999996711,
+      "p95Ms": 1.70509999999922,
+      "maxMs": 2.5493999999998778,
+      "maxBolts": 26,
+      "shots": 205,
+      "hits": 38,
+      "score": [
+        1,
+        3
+      ],
+      "hash": "a0c3966846eccd5f"
+    },
+    {
+      "source": "dc34df3f:experiments/hyperbolic-flight-model.js",
+      "radius": 350,
+      "mode": "escape",
+      "medianMs": 2.044400000000678,
+      "p95Ms": 2.983799999999974,
+      "maxMs": 4.23030000000108,
+      "maxBolts": 26,
+      "shots": 205,
+      "hits": 38,
+      "score": [
+        1,
+        3
+      ],
+      "hash": "a0c3966846eccd5f"
+    },
+    {
+      "source": "dc34df3f:experiments/hyperbolic-flight-model.js",
+      "radius": 650,
+      "mode": "combat",
+      "medianMs": 2.3628999999982625,
+      "p95Ms": 3.023400000000038,
+      "maxMs": 4.394000000000233,
+      "maxBolts": 18,
+      "shots": 130,
+      "hits": 52,
+      "score": [
+        6,
+        3
+      ],
+      "hash": "e1c96a06626b8b72"
+    },
+    {
+      "source": "experiments/hyperbolic-flight-model.js",
+      "radius": 650,
+      "mode": "combat",
+      "medianMs": 1.0419000000001688,
+      "p95Ms": 1.5885999999991327,
+      "maxMs": 2.3159000000014203,
+      "maxBolts": 18,
+      "shots": 130,
+      "hits": 52,
+      "score": [
+        6,
+        3
+      ],
+      "hash": "e1c96a06626b8b72"
+    },
+    {
+      "source": "experiments/hyperbolic-flight-model.js",
+      "radius": 650,
+      "mode": "combat",
+      "medianMs": 1.005300000000716,
+      "p95Ms": 1.360000000000582,
+      "maxMs": 2.303299999999581,
+      "maxBolts": 18,
+      "shots": 130,
+      "hits": 52,
+      "score": [
+        6,
+        3
+      ],
+      "hash": "e1c96a06626b8b72"
+    },
+    {
+      "source": "dc34df3f:experiments/hyperbolic-flight-model.js",
+      "radius": 650,
+      "mode": "combat",
+      "medianMs": 1.6860999999989872,
+      "p95Ms": 2.4966999999996915,
+      "maxMs": 3.6261000000013155,
+      "maxBolts": 18,
+      "shots": 130,
+      "hits": 52,
+      "score": [
+        6,
+        3
+      ],
+      "hash": "e1c96a06626b8b72"
+    },
+    {
+      "source": "dc34df3f:experiments/hyperbolic-flight-model.js",
+      "radius": 650,
+      "mode": "escape",
+      "medianMs": 1.8443000000006577,
+      "p95Ms": 2.717899999999645,
+      "maxMs": 3.5569000000032247,
+      "maxBolts": 29,
+      "shots": 197,
+      "hits": 52,
+      "score": [
+        4,
+        4
+      ],
+      "hash": "f4b19a45f23de92b"
+    },
+    {
+      "source": "experiments/hyperbolic-flight-model.js",
+      "radius": 650,
+      "mode": "escape",
+      "medianMs": 1.1144999999996799,
+      "p95Ms": 1.573500000002241,
+      "maxMs": 2.6846000000005006,
+      "maxBolts": 29,
+      "shots": 197,
+      "hits": 52,
+      "score": [
+        4,
+        4
+      ],
+      "hash": "f4b19a45f23de92b"
+    },
+    {
+      "source": "experiments/hyperbolic-flight-model.js",
+      "radius": 650,
+      "mode": "escape",
+      "medianMs": 1.121900000001915,
+      "p95Ms": 1.5614999999997963,
+      "maxMs": 1.956899999997404,
+      "maxBolts": 29,
+      "shots": 197,
+      "hits": 52,
+      "score": [
+        4,
+        4
+      ],
+      "hash": "f4b19a45f23de92b"
+    },
+    {
+      "source": "dc34df3f:experiments/hyperbolic-flight-model.js",
+      "radius": 650,
+      "mode": "escape",
+      "medianMs": 1.7859000000025844,
+      "p95Ms": 2.4601000000002387,
+      "maxMs": 3.443600000002334,
+      "maxBolts": 29,
+      "shots": 197,
+      "hits": 52,
+      "score": [
+        4,
+        4
+      ],
+      "hash": "f4b19a45f23de92b"
+    }
+  ]
+}

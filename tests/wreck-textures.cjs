@@ -14,7 +14,12 @@ vm.runInNewContext(read('experiments/ship-packs.js').toString(),context);
  for(const pack of D.shipPacks)for(const model of pack.models)sources.add('assets/ships/'+pack.id+'/'+model.texture);
  assert.equal(manifest.textures.length,sources.size);
  for(const t of manifest.textures){assert(sources.has(t.source));assert.equal(hash(read(t.source)),t.sha256,'Source changed: rebake '+t.source);const output=read(t.output);assert.equal(hash(output),t.outputSha256);assert.equal(output.length,t.bytes);assert.equal(output.toString('ascii',0,4),'RIFF');assert.equal(output.toString('ascii',8,12),'WEBP');}
- const P=D.shipPackModels,images=await P.loadTextures(),count=loaded.length;
+ const P=D.shipPackModels,chosen=D.shipPacks[0].models[0].id;
+ assert.equal((await P.loadTextures([])).size,0);assert.equal(loaded.length,0,'Empty selections load no textures');
+ const partial=await P.loadTextures([chosen]);assert.deepEqual([...partial.keys()],[chosen]);assert.equal(loaded.length,2,'Selected model loads only its live/wreck pair');
+ await P.loadTextures([chosen]);assert.equal(loaded.length,2,'Selected reload reuses decoded images');
+ const images=await P.loadTextures(),count=loaded.length;
+ assert.equal(images.get(chosen),partial.get(chosen),'Full loading reuses a previously selected model');
  assert.equal(images.size,D.shipPacks.reduce((n,p)=>n+p.models.length,0));
  assert.equal(count,images.size*2,'Both variants finish loading before fleet readiness');
  assert.equal(P.textureSources(images).length,count);

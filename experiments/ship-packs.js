@@ -192,9 +192,13 @@
     }
     /** @type {Map<string, Promise<HTMLImageElement>>} */
     var textureImages = new Map();
-    function loadTextures() {
-        return Promise.all((DW.shipPacks || []).map(function (pack) {
-            return Promise.all(pack.models.map(function (model) {
+    /** Omit IDs for the full catalog; selected-model viewers can load on demand.
+     * @param {string[]} [ids] */
+    function loadTextures(ids) {
+        var wanted=ids===undefined?null:new Set(ids);
+        var selected=(DW.shipPacks||[]).flatMap(function(pack){return pack.models.filter(function(model){return !wanted||wanted.has(model.id);}).map(function(model){return {pack:pack,model:model};});});
+        return Promise.all(selected.map(function (entry) {
+                var pack=entry.pack,model=entry.model;
                 var cached = textureImages.get(model.id);
                 if (cached)
                     return cached;
@@ -215,15 +219,10 @@
                 }));
                 textureImages.set(model.id, pending);
                 return pending;
-            }));
         })).then(function (images) {
             /** @type {Images} */
             var result = new Map();
-            (DW.shipPacks || []).forEach(function (pack, p) {
-                pack.models.forEach(function (model, m) {
-                    result.set(model.id, images[p][m]);
-                });
-            });
+            selected.forEach(function(entry,index){result.set(entry.model.id,images[index]);});
             return result;
         });
     }

@@ -76,6 +76,12 @@
   }
   /** Exact closest distance to a finite geodesic segment. @param {V} p @param {V} v @param {V} q @param {number} length */
   function segmentDistance(p,v,q,length){const ratio=dot(v,q)/-dot(p,q),s=Math.max(0,Math.min(length,Math.atanh(Math.max(-.999999999999,Math.min(.999999999999,ratio)))));return distance(exp(p,v,s),q);}
+  /** Allocation-free equivalent for the hot collision loop. Radius is cosh(r/R).
+   * @param {V} p @param {V} v @param {V} q @param {number} length @param {number} coshRadius */
+  function segmentHit(p,v,q,length,coshRadius){
+    const a=-dot(p,q),b=dot(v,q),s=Math.max(0,Math.min(length,Math.atanh(Math.max(-.999999999999,Math.min(.999999999999,b/a)))));
+    return a*Math.cosh(s)-b*Math.sinh(s)<coshRadius;
+  }
   /** @param {import('./hyperbolic-flight-types').HyperWorld} w @param {number} dt @param {import('./hyperbolic-flight-types').Input} input */
   function step(w,dt,input){
     w.time+=dt;
@@ -83,25 +89,35 @@
       if(a.dead>0){a.dead-=dt;if(a.dead<=0)spawn(w,a);continue;}
       if(a.id&&distance(a.p,w.actors[0].p)*w.radius>Math.min(2800,w.radius*5))spawn(w,a);
       let controls=/** @type {import('./types').FlightInput & {fire?:boolean}} */(input);
-      if(a.id||input.auto){const target=w.actors.filter(b=>b.team!==a.team&&b.dead<=0).sort((b,c)=>distance(a.p,b.p)-distance(a.p,c.p))[0];controls=target?aim(w,a,target):{};a.flight.throttle=1;}
+      if(a.id||input.auto){
+        let target=/** @type {Actor|undefined} */(undefined),nearest=Infinity;
+        // acosh is monotonic: nearest Lorentz dot gives the same stable choice
+        // without sorting a new candidate array or repeatedly taking distances.
+        for(const b of w.actors){if(b.team===a.team||b.dead>0)continue;const d=-dot(a.p,b.p);if(d<nearest){nearest=d;target=b;}}
+        controls=target?aim(w,a,target):{};a.flight.throttle=1;
+      }
       else a.flight.throttle=Math.max(0,Math.min(1,a.flight.throttle+(input.throttleRate||0)*dt*.5));
       if(a.id===0&&input.stop)a.flight.throttle=0;
       fly(a,controls,dt,w.radius);a.cool-=dt;
       if(controls.fire&&a.cool<=0){const dir=a.axes[2].map(v=>-v);w.bolts.push({p:exp(a.p,dir,16/w.radius),v:exp(dir,a.p,16/w.radius),team:a.team,owner:a.id,life:1.6});a.cool=.12;w.shots++;}
       if(Math.floor(w.time*20)!==Math.floor((w.time-dt)*20)){a.trail.push(a.p.slice());if(a.trail.length>36)a.trail.shift();}
     }
+    const hitLimit=Math.cosh(12/w.radius);
     for(const b of w.bolts){const span=1000*dt/w.radius;
-      for(const a of w.actors){if(a.team===b.team||a.dead>0)continue;if(segmentDistance(b.p,b.v,a.p,span)*w.radius<12){a.hp-=20;b.life=0;w.hits++;w.bursts.push({p:a.p.slice(),age:0,large:a.hp<=0});if(a.hp<=0){a.dead=3;w.score[b.team]++;}break;}}
+      for(const a of w.actors){if(a.team===b.team||a.dead>0)continue;
+        if(segmentHit(b.p,b.v,a.p,span,hitLimit)){a.hp-=20;b.life=0;w.hits++;w.bursts.push({p:a.p.slice(),age:0,large:a.hp<=0});if(a.hp<=0){a.dead=3;w.score[b.team]++;}break;}}
       const p=b.p;b.p=exp(p,b.v,span);b.v=exp(b.v,p,span);b.life-=dt;
     }
     w.bolts=w.bolts.filter(b=>b.life>0);w.bursts.forEach(b=>b.age+=dt);w.bursts=w.bursts.filter(b=>b.age<1);
     const eye=w.actors[0];normalize(eye);const p=eye.p.slice(),axes=eye.axes.map(v=>v.slice());
-    /** @param {V} v */const local=v=>[-dot(v,p),...axes.map(a=>dot(v,a))];
-    w.actors.forEach(a=>{a.p=local(a.p);a.axes=a.axes.map(local);normalize(a);a.trail=a.trail.map(local);});
+    // Rebase owned vectors in place. Stars and trails otherwise allocate
+    // hundreds of short arrays every 120 Hz tick, creating avoidable GC spikes.
+    /** @param {V} v */const local=v=>{const t=-dot(v,p),x=dot(v,axes[0]),y=dot(v,axes[1]),z=dot(v,axes[2]);v[0]=t;v[1]=x;v[2]=y;v[3]=z;return v;};
+    w.actors.forEach(a=>{local(a.p);a.axes.forEach(local);normalize(a);a.trail.forEach(local);});
     w.bolts.forEach(b=>{b.p=local(b.p);b.p[0]=Math.hypot(1,...b.p.slice(1));b.v=local(b.v);b.v=mix(b.v,b.p,1,dot(b.v,b.p));const norm=Math.sqrt(Math.max(1e-18,dot(b.v,b.v)));b.v=b.v.map(v=>v/norm);});
     w.bursts.forEach(b=>b.p=local(b.p));
-    w.landmarks=w.landmarks.map(local).filter(p=>p[0]<Math.cosh(5));
-    w.stars=w.stars.map(v=>{const q=local(v);return q.map(x=>x/q[0]);});
+    w.landmarks=w.landmarks.filter(p=>local(p)[0]<Math.cosh(5));
+    w.stars.forEach(v=>{local(v);const t=v[0];for(let i=0;i<4;i++)v[i]/=t;});
   }
-  DW.hyperbolicFlight={dot,mix,distance,exp,transport,tangent,relative,move,normalize,create,step,segmentDistance,aim,lead};
+  DW.hyperbolicFlight={dot,mix,distance,exp,transport,tangent,relative,move,normalize,create,step,segmentDistance,segmentHit,aim,lead};
 })();
