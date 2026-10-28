@@ -107,8 +107,8 @@
      * @param {import('./gpu-ui-types').PaintContext} ctx @param {number} w @param {number} h
      * @param {import('./types').Pose} camera @param {number} units
      * @param {import('./types').FlightPathSample[]} path
-     * @param {number} width @param {number} opacity @param {number} [phase] @param {boolean} [threeLanes] */
-    function paintFlightLanes(ctx,w,h,camera,units,path,width,opacity,phase,threeLanes) {
+     * @param {number} width @param {number} opacity @param {number} [phase] @param {boolean} [outerFour] */
+    function paintFlightLanes(ctx,w,h,camera,units,path,width,opacity,phase,outerFour) {
         if(path.length<2||!(w>0&&h>0&&units>0&&opacity>0))return;
         var focal=1/Math.tan(Math.PI/8),aspect=w/h,half=Math.max(3,Math.min(24,width/2))/units;
         var floor=Math.max(3,width*.25)/units,aim=Math.max(40,Math.min(72,h*.075))+3;
@@ -150,8 +150,8 @@
             return result;
         }
         ctx.save();
-        var dividers=threeLanes?[-3,-1,1,3]:[-1,1];
-        var planes=threeLanes?[-1,1]:[-1];
+        var dividers=outerFour?[-2,2]:[-1,1];
+        var planes=outerFour?[-1,1]:[-1];
         planes.forEach(function(plane){dividers.forEach(function(side){
             /** @type {number[][]} */var run=[];
             var runAlpha=0,runDash=-1;
@@ -159,13 +159,13 @@
                 if(run.length>1){
                     ctx.beginPath();ctx.moveTo(run[0][0],run[0][1]);
                     for(var n=1;n<run.length;n++)ctx.lineTo(run[n][0],run[n][1]);
-                    ctx.globalAlpha=runAlpha*.85;ctx.strokeStyle='#020a12';ctx.lineWidth=5.5;ctx.stroke();
-                    ctx.globalAlpha=runAlpha;ctx.strokeStyle='#9aeeff';ctx.lineWidth=2.5;ctx.stroke();
+                    ctx.globalAlpha=runAlpha*.85;ctx.strokeStyle='#020a12';ctx.lineWidth=5.5;if(ctx.smoothStroke)ctx.smoothStroke();else ctx.stroke();
+                    ctx.globalAlpha=runAlpha;ctx.strokeStyle='#9aeeff';ctx.lineWidth=2.5;if(ctx.smoothStroke)ctx.smoothStroke();else ctx.stroke();
                 }
                 run=[];
             }
             /** @param {import('./types').Pose} pose */
-            function lane(pose){return project(pose.eye.map(function(v,k){return v+pose.right[k]*half*side+pose.up[k]*floor*plane;}));}
+            function lane(pose){return project(pose.eye.map(function(v,k){return v+pose.right[k]*half*side+pose.up[k]*floor*plane*(outerFour?2:1);}));}
             var previous=lane(path[0].pose);
             for(var i=1;i<path.length;i++){
                 var next=lane(path[i].pose),d0=path[i-1].distance,d1=path[i].distance,span=d1-d0;
@@ -260,22 +260,83 @@
         }
         ctx.restore();
     }
-    /** Frozen world-space road generations. Only opacity changes after a generation is emitted.
-     * @param {import('./types').FlightGuideBatch[]} batches @param {import('./types').FlightPathSample[]|null} path
-     * @param {number} time @param {number} width @param {number} phase @param {string} style
-     * @returns {import('./types').FlightGuideBatch[]} */
-    function updateFlightGuide(batches,path,time,width,phase,style){
-        batches=batches.filter(function(b){return b.retired===null||time-b.retired<.75;});
-        if(path){
-            batches.forEach(function(b){if(b.retired===null){b.strength=guideStrength(b,time);b.retired=time;}});
-            batches.push({path:path,born:batches.length?time:time-.45,retired:null,strength:1,width:width,phase:phase,style:style});
+    /** World-anchored Cartesian crosses. Grid coordinates never depend on heading or controls.
+     * @param {import('./types').Pose} camera @param {number} units @param {number} w @param {number} h
+     * @returns {number[][]} world positions in metres */
+    function flightGridPoints(camera,units,w,h){
+        var eye=camera.eye.map(function(v){return v*units;}),spacing=80,range=480,focal=1/Math.tan(Math.PI/8),aspect=w/h;
+        var aim=Math.max(40,Math.min(72,h*.075))+12;
+        /** @type {number[][]} */var points=[];
+        var origin=eye.map(function(v){return Math.floor(v/spacing);});
+        for(var x=origin[0]-6;x<=origin[0]+6;x++)for(var y=origin[1]-6;y<=origin[1]+6;y++)for(var z=origin[2]-6;z<=origin[2]+6;z++){
+            var p=[x*spacing,y*spacing,z*spacing],v=p.map(function(n,k){return n-eye[k];}),distance=Math.hypot.apply(null,v);
+            if(distance<20||distance>range)continue;
+            var depth=-v.reduce(function(sum,n,k){return sum+n*camera.back[k];},0);
+            if(depth<10)continue;
+            var px=v.reduce(function(sum,n,k){return sum+n*camera.right[k];},0)*focal/aspect/depth;
+            var py=v.reduce(function(sum,n,k){return sum+n*camera.up[k];},0)*focal/depth;
+            var margin=2*focal/depth,screenRadius=Math.hypot(px*w/2,py*h/2);
+            if(Math.abs(px)>1-margin||Math.abs(py)>1-margin||screenRadius<aim+margin*h/2)continue;
+            points.push(p);
         }
-        return batches;
+        points.sort(function(a,b){return Math.hypot(a[0]-eye[0],a[1]-eye[1],a[2]-eye[2])-Math.hypot(b[0]-eye[0],b[1]-eye[1],b[2]-eye[2]);});
+        return points.slice(0,20);
+    }
+    /** @param {import('./gpu-ui-types').PaintContext} ctx @param {number} w @param {number} h
+     * @param {import('./types').Pose} camera @param {number} units @param {number} opacity */
+    function paintFlightGrid(ctx,w,h,camera,units,opacity){
+        var focal=1/Math.tan(Math.PI/8),aspect=w/h,eye=camera.eye.map(function(v){return v*units;});
+        /** @param {number[]} p */function project(p){var v=p.map(function(n,k){return n-eye[k];}),depth=-v.reduce(function(sum,n,k){return sum+n*camera.back[k];},0);
+            return [w/2+v.reduce(function(sum,n,k){return sum+n*camera.right[k];},0)*focal/aspect/depth*w/2,h/2-v.reduce(function(sum,n,k){return sum+n*camera.up[k];},0)*focal/depth*h/2];}
+        ctx.save();flightGridPoints(camera,units,w,h).forEach(function(p){
+            var distance=Math.hypot(p[0]-eye[0],p[1]-eye[1],p[2]-eye[2]);
+            var alpha=opacity*.65*Math.min(1,(480-distance)/80);
+            ctx.beginPath();for(var axis=0;axis<3;axis++){var a=p.slice(),b=p.slice();a[axis]-=2;b[axis]+=2;var pa=project(a),pb=project(b);ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);}
+            ctx.globalAlpha=alpha*.7;ctx.strokeStyle='#020a12';ctx.lineWidth=4;ctx.stroke();
+            ctx.globalAlpha=alpha;ctx.strokeStyle='#9aeeff';ctx.lineWidth=1.5;if(ctx.smoothStroke)ctx.smoothStroke();else ctx.stroke();
+        });ctx.restore();
+    }
+    /** Emit one curved eight-metre dash only at the far boundary; never refill nearby space.
+     * @param {import('./types').FlightGuideBatch[]} batches @param {import('./types').FlightPathSample[]|null} path
+     * @param {number} time @param {number} width @param {number} phase @param {string} style @param {number} [range]
+     * @returns {import('./types').FlightGuideBatch[]} */
+    function updateFlightGuide(batches,path,time,width,phase,style,range){
+        batches=batches.filter(function(b){return time-b.born<b.lifetime;});
+        if(path&&path.length>1){
+            var end=path[path.length-1].distance;
+            if(range!==undefined){
+                // A tight predicted loop must not spawn paint beside the cockpit.
+                var origin=path[0].pose.eye,radius=range/DW.sim.METERS_PER_UNIT;end=-1;
+                for(var n=1;n<path.length;n++){
+                    var p=path[n].pose.eye.map(function(v,k){return v-origin[k];});
+                    if(Math.hypot.apply(null,p)<radius)continue;
+                    var q=path[n-1].pose.eye.map(function(v,k){return v-origin[k];}),v=p.map(function(x,k){return x-q[k];});
+                    var aa=v.reduce(function(sum,x){return sum+x*x;},0),bb=2*q.reduce(function(sum,x,k){return sum+x*v[k];},0),cc=q.reduce(function(sum,x){return sum+x*x;},0)-radius*radius;
+                    var t=aa>0?(-bb+Math.sqrt(Math.max(0,bb*bb-4*aa*cc)))/(2*aa):1;
+                    end=path[n-1].distance+(path[n].distance-path[n-1].distance)*Math.max(0,Math.min(1,t));break;
+                }
+            }
+            var start=end-8;
+            if(start<0||path[path.length-1].distance<end)return batches;
+            /** @type {import('./types').FlightPathSample[]} */var dash=[];
+            /** @param {import('./types').FlightPathSample} a @param {import('./types').FlightPathSample} b @param {number} d */
+            function sample(a,b,d){var t=(d-a.distance)/(b.distance-a.distance);
+                /** @param {number[]} x @param {number[]} y */function mix(x,y){return x.map(function(v,k){return v+(y[k]-v)*t;});}
+                return {seconds:a.seconds+(b.seconds-a.seconds)*t,distance:d-start,pose:{eye:mix(a.pose.eye,b.pose.eye),right:mix(a.pose.right,b.pose.right),up:mix(a.pose.up,b.pose.up),back:mix(a.pose.back,b.pose.back)}};
+            }
+            for(var i=1;i<path.length;i++){
+                var a=path[i-1],b=path[i];if(b.distance<=a.distance||b.distance<start||a.distance>end)continue;
+                if(!dash.length)dash.push(sample(a,b,Math.max(start,a.distance)));
+                dash.push(sample(a,b,Math.min(end,b.distance)));if(b.distance>=end)break;
+            }
+            if(dash.length>1)batches.push({path:dash,born:time,lifetime:Math.max(2,Math.min(20,dash[dash.length-1].seconds+1.5)),width:width,phase:0,style:style});
+        }
+        return batches.slice(-128);
     }
     /** @param {import('./types').FlightGuideBatch} batch @param {number} time */
     function guideStrength(batch,time){
-        var t=Math.max(0,Math.min(1,batch.retired===null?(time-batch.born)/.45:1-(time-batch.retired)/.75));
-        return t*t*(3-2*t)*(batch.retired===null?1:batch.strength);
+        var t=Math.max(0,Math.min(1,(batch.lifetime-(time-batch.born))/Math.min(2,batch.lifetime*.5)));
+        return t*t*(3-2*t);
     }
     /** @param {HTMLElement} host */
     function mount(host) {
@@ -294,7 +355,7 @@
         });
         var targetRendered = false;
         /** @type {import('./types').FlightPathSample[]|null} */var guidePath=null;
-        var guideClock=-Infinity,guideKey='',guideTravel=0,guidePhase=0,guideLastClock=-Infinity;
+        var guideClock=-Infinity,guideKey='',guideRange=0,guideSpawn=-Infinity,guideTravel=0,guideLastClock=-Infinity;
         /** @type {import('./types').FlightGuideBatch[]} */var guideBatches=[];
         /** @type {number[]|null} */var guideLastEye=null;
         /** @type {import('./types').Combat|null} */var guideCombat=null;
@@ -316,25 +377,36 @@
                 var ahead=/** @type {HTMLSelectElement} */(document.getElementById('flight-lanes-ahead'));
                 var corridor=/** @type {HTMLSelectElement} */(document.getElementById('flight-lanes-width'));
                 var brightness=/** @type {HTMLInputElement} */(document.getElementById('flight-lanes-opacity'));
-                if(guideCombat!==combat||combat.time<guideLastClock){guideTravel=0;guideLastEye=null;guidePath=null;guideBatches=[];}
-                if(guideLastEye&&combat.time>guideLastClock)guideTravel+=Math.hypot(state.eye[0]-guideLastEye[0],state.eye[1]-guideLastEye[1],state.eye[2]-guideLastEye[2])*units;
-                guideLastEye=state.eye.slice();guideLastClock=combat.time;
                 var style=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-guide-style'));
-                var treatment=style?style.value:'roads';
-                if(guideBatches.length&&guideBatches[guideBatches.length-1].style!==treatment){guidePath=null;guideBatches=[];}
-                var key=JSON.stringify([view.flightDemand,combat.player.profile.name,ahead.value,corridor.value,treatment]);
-                if(!guidePath||combat.time-guideClock>=.75||(key!==guideKey&&combat.time-guideClock>=.25)) {
-                    guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,Number(ahead.value));
-                    guideClock=combat.time;guideKey=key;guideCombat=combat;guidePhase=guideTravel%60;
-                    guideBatches=updateFlightGuide(guideBatches,guidePath,combat.time,Number(corridor.value),guidePhase,treatment);
-                }else guideBatches=updateFlightGuide(guideBatches,null,combat.time,0,0,treatment);
-                var total=guideBatches.reduce(function(sum,b){return sum+guideStrength(b,combat.time);},0);
-                guideBatches.forEach(function(batch){
-                    var ink=Number(brightness.value)/100*guideStrength(batch,combat.time)/Math.max(1,total);
-                    if(ink<.015)return;
-                    if(batch.style==='brackets')paintFlightBrackets(combatHud,w,h,state,units,batch.path,batch.width,ink,batch.phase);
-                    else paintFlightLanes(combatHud,w,h,state,units,batch.path,batch.width,ink,batch.phase,batch.style!=='lanes');
-                });
+                var treatment=style?style.value:'grid';
+                if(treatment==='grid'){
+                    guidePath=null;guideBatches=[];guideLastEye=null;
+                    paintFlightGrid(combatHud,w,h,state,units,Number(brightness.value)/100);
+                }else {
+                var config=JSON.stringify([ahead.value,corridor.value,treatment]);
+                if(guideCombat!==combat||combat.time<guideLastClock||config!==guideKey){
+                    guideTravel=0;guideLastEye=null;guidePath=null;guideBatches=[];guideRange=0;guideSpawn=-Infinity;guideKey=config;
+                }
+                if(guideLastEye&&combat.time>guideLastClock)guideTravel+=Math.hypot(state.eye[0]-guideLastEye[0],state.eye[1]-guideLastEye[1],state.eye[2]-guideLastEye[2])*units;
+                guideLastEye=state.eye.slice();guideLastClock=combat.time;guideCombat=combat;
+                if(!guidePath||combat.time-guideClock>=.1){
+                    guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,8);
+                    guideClock=combat.time;
+                }
+                if(!guideRange){var boundary=guidePath.find(function(p){return p.seconds>=Number(ahead.value);});guideRange=Math.max(60,boundary?boundary.distance:0);}
+                if(treatment==='roads'){
+                    if(guideTravel-guideSpawn>=20){
+                        if(guideClock!==combat.time){guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,8);guideClock=combat.time;}
+                        guideBatches=updateFlightGuide(guideBatches,guidePath,combat.time,Number(corridor.value),0,treatment,guideRange);
+                        guideSpawn=guideTravel;
+                    }else guideBatches=updateFlightGuide(guideBatches,null,combat.time,0,0,treatment);
+                    guideBatches.forEach(function(batch){
+                        var ink=Number(brightness.value)/100*guideStrength(batch,combat.time);
+                        if(ink>=.015)paintFlightLanes(combatHud,w,h,state,units,batch.path,batch.width,ink,0,true);
+                    });
+                }else if(treatment==='brackets')paintFlightBrackets(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guideTravel%60);
+                else paintFlightLanes(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guideTravel%20);
+                }
             }else {guidePath=null;guideLastEye=null;guideBatches=[];}
 
             if(mission.weaponsDisabled){
@@ -607,5 +679,5 @@
                 radarRangeIndex = (radarRangeIndex + 1) % radarRanges.length;
             } };
     }
-    DW.flightHud = { updateFlightGuide:updateFlightGuide, guideStrength:guideStrength, predictFlightPath:predictFlightPath, paintFlightLanes:paintFlightLanes, paintFlightBrackets:paintFlightBrackets, paintThroatGuide:paintThroatGuide, paintTargetBearing: paintTargetBearing, mount: mount, targetStatus: targetStatus, paintTargetStatus: paintTargetStatus };
+    DW.flightHud = { flightGridPoints:flightGridPoints, paintFlightGrid:paintFlightGrid, updateFlightGuide:updateFlightGuide, guideStrength:guideStrength, predictFlightPath:predictFlightPath, paintFlightLanes:paintFlightLanes, paintFlightBrackets:paintFlightBrackets, paintThroatGuide:paintThroatGuide, paintTargetBearing: paintTargetBearing, mount: mount, targetStatus: targetStatus, paintTargetStatus: paintTargetStatus };
 }());

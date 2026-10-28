@@ -187,41 +187,50 @@ assert.ok([...inner,...outer].every(c=>Math.abs(c.points[1][0]-c.points[0][0])>1
 const shortPath=bracketFixture().map((s,i)=>({...s,distance:i*59}));assert.equal(paintBrackets(shortPath).length,0,'No frame before the new 60 metre station');
 console.log('PASS sparse angled brackets: diagonal-only bars, no bent hooks, 60 m stations and unchanged physical outer size');
 
-// Four equally spaced dividers on each transported road plane.
+// Four lines only, at twice the original inner cross-section offsets.
 calls.length=0;DW.flightHud.paintFlightLanes(painter,1000,700,straightPose,DW.sim.METERS_PER_UNIT,straightPath,24,.85,0,true);
-const pairedRoads=calls.filter(c=>c.kind==='stroke'),roadInk=pairedRoads.filter(c=>c.color==='#9aeeff');
-const offsets=new Set();
-for(const c of roadInk)for(const [x,y] of c.points){
- const depth=6*focal*700/(2*Math.abs(y-350));
- const lateral=(x-500)*2*depth/(700*focal);
- assert.ok([-36,-12,12,36].some(v=>Math.abs(v-lateral)<1e-6),'All four dividers share each road plane at equal physical spacing');
+const outerRoad=calls.filter(c=>c.kind==='stroke'),offsets=new Set();
+for(const c of outerRoad.filter(c=>c.color==='#9aeeff'))for(const [x,y] of c.points){
+ const depth=12*focal*700/(2*Math.abs(y-350)),lateral=(x-500)*2*depth/(700*focal);
+ assert.ok(Math.abs(Math.abs(lateral)-24)<1e-6,'Lateral offset is twice the old 12 m inner offset');
  offsets.add((y<350?'above:':'below:')+Math.round(lateral));
 }
-assert.equal(offsets.size,8,'Four dividers above and four below define three lanes per plane');checkClip(pairedRoads);
+assert.equal(offsets.size,4,'Exactly four lines: +/-24 m right, +/-12 m up');checkClip(outerRoad);
 for(const c of trajectoryCases){calls.length=0;DW.flightHud.paintFlightLanes(painter,1000,700,c.pose,DW.sim.METERS_PER_UNIT,c.path,24,.85,0,true);checkClip(calls.filter(c=>c.kind==='stroke'));}
-get('flight-guide-style').value='roads';hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff')&&!calls.some(c=>c.color==='#8bd4e8'),'Paired roads are selectable in the real HUD');
-console.log('PASS paired three-lane roads: eight physical dividers, coplanar above/below, equal lane widths, curved prediction, clipping and HUD selection');
-
-// Emitted geometry and dash phase remain world-fixed through steering and fading.
+get('flight-guide-style').value='roads';hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff')&&!calls.some(c=>c.color==='#8bd4e8'),'Four far markers render in the real HUD');
 const updateGuide=DW.flightHud.updateFlightGuide,strength=DW.flightHud.guideStrength;
-let batches=updateGuide([],straightPath,0,24,7,'roads');
-const frozen=JSON.stringify(batches[0].path),old=batches[0];
-assert.equal(strength(old,0),1,'Initial road is readable immediately');
+let batches=updateGuide([],straightPath,0,24,7,'roads',200);
+assert.equal(batches.length,1);const old=batches[0],frozen=JSON.stringify(old);
+assert.equal(strength(old,0),1,'New distant paint pops in; no nearby opacity growth');
+assert.ok(Math.abs(old.path[0].distance)<1e-8&&Math.abs(old.path.at(-1).distance-8)<1e-8,'One 8 m dash per emission');
+for(const sample of old.path){const forward=sample.pose.eye.reduce((sum,v,k)=>sum+(v-straightPose.eye[k])*(-straightPose.back[k])*DW.sim.METERS_PER_UNIT,0);assert.ok(forward>=192-1e-6&&forward<=200+1e-6,'Every new vertex lies in the last 8 m at maximum distance');}
 const turnPath=trajectoryCases.find(c=>c.path!==straightPath).path;
-batches=updateGuide(batches,turnPath,.25,24,11,'roads');
-assert.equal(JSON.stringify(old.path),frozen,'Steering never moves existing world-space markers');
-assert.equal(old.phase,7,'Existing dash stations do not slide with the new forecast');
-assert.equal(strength(batches[1],.25),0,'New heading grows in from zero opacity');
-assert.ok(strength(old,.6)>0&&strength(old,.6)<1,'Retired geometry fades gradually');
-assert.ok(strength(batches[1],.6)>0&&strength(batches[1],.6)<1,'New heading fades in gradually');
-const paused=JSON.stringify(batches);batches=updateGuide(batches,null,.25,0,0,'roads');assert.equal(JSON.stringify(batches),paused,'Frozen simulation time does not animate history');
-batches=updateGuide(batches,null,1.01,0,0,'roads');assert.ok(!batches.includes(old),'Retired generation expires');
-for(let time=1.25;time<20;time+=.25)batches=updateGuide(batches,turnPath,time,24,time%20,'roads');
-assert.ok(batches.length<=4,'Frantic steering retains at most four generations');
-assert.equal(JSON.stringify(old.path),frozen,'History expiry never edits shared prediction geometry');
-// Camera translation alone changes projection: fly toward the fixed paint.
-function projectBatch(camera){calls.length=0;DW.flightHud.paintFlightLanes(painter,1000,700,camera,DW.sim.METERS_PER_UNIT,straightPath,24,.85,7,true);return calls.filter(c=>c.color==='#9aeeff');}
-const beforeTravel=projectBatch(straightPose),afterTravel=projectBatch({...straightPose,eye:straightPose.eye.map((v,k)=>v-straightPose.back[k]*10/DW.sim.METERS_PER_UNIT)});
-assert.notDeepEqual(afterTravel.map(c=>c.points),beforeTravel.map(c=>c.points),'Camera motion creates actual parallax through fixed world geometry');
-checkClip(afterTravel);
-console.log('PASS anchored road history: fixed geometry/phase, smooth old/new opacity, pause, expiry, bounded frantic steering and camera-driven parallax');
+batches=updateGuide(batches,turnPath,.25,24,11,'roads',200);
+assert.equal(JSON.stringify(old),frozen,'Steering preserves old geometry, phase and lifetime');
+assert.ok(batches.length<=2,'New heading emits at most one distant dash; tight loops stay quiet');
+for(const batch of batches.slice(1))for(const sample of batch.path){const distance=Math.hypot(...sample.pose.eye.map((v,k)=>(v-turnPath[0].pose.eye[k])*DW.sim.METERS_PER_UNIT));assert.ok(distance>=192-1e-6&&distance<=200+1e-6,'Turning forecasts cannot spawn paint inside the distant shell');}
+const paused=JSON.stringify(batches);batches=updateGuide(batches,null,.25,0,0,'roads');assert.equal(JSON.stringify(batches),paused);
+assert.ok(strength(old,old.lifetime-.5)<1&&strength(old,old.lifetime-.5)>0,'Old paint fades late in its lifetime as the ship reaches/passes it');
+batches=updateGuide(batches,null,21,0,0,'roads');assert.equal(batches.length,0,'All old paint expires');
+assert.equal(updateGuide([],straightPath,0,24,0,'roads',1e6).length,0,'Short forecasts never substitute nearby paint');
+// Stationary HUD frames and steering cannot spawn a whole road or another dash.
+const initialInk=calls.filter(c=>c.color==='#9aeeff').map(c=>c.points);
+hud.render({...guideView,flightDemand:{...guideView.flightDemand,yaw:1}});
+assert.deepEqual(calls.filter(c=>c.color==='#9aeeff').map(c=>c.points),initialInk,'Changing controls at zero travel cannot introduce new nearby geometry');
+function projectBatch(camera){calls.length=0;DW.flightHud.paintFlightLanes(painter,1000,700,camera,DW.sim.METERS_PER_UNIT,old.path,24,.85,0,true);return calls.filter(c=>c.color==='#9aeeff');}
+const beforeTravel=projectBatch(straightPose),afterTravel=projectBatch({...straightPose,eye:straightPose.eye.map((v,k)=>v-straightPose.back[k]*40/DW.sim.METERS_PER_UNIT)});
+assert.notDeepEqual(afterTravel.map(c=>c.points),beforeTravel.map(c=>c.points),'Camera motion alone enlarges the approaching fixed dash');checkClip(afterTravel);
+console.log('PASS four distant lane markers: exact 2x offsets, far-only 8 m births, no nearby refill or input-driven pop-in, frozen geometry, late fade, expiry and physical approach');
+
+const grid=DW.flightHud.flightGridPoints(straightPose,DW.sim.METERS_PER_UNIT,1000,700);
+assert.ok(grid.length>=10&&grid.length<=20,'Ten to twenty grid crosses are visible');
+assert.ok(grid.every(p=>p.every(v=>Math.abs(v/80-Math.round(v/80))<1e-9)),'All points belong to the fixed 80 m Cartesian lattice');
+const movedCamera={...straightPose,eye:straightPose.eye.map((v,k)=>v+[5,3,-7][k]/DW.sim.METERS_PER_UNIT)};
+const movedGrid=DW.flightHud.flightGridPoints(movedCamera,DW.sim.METERS_PER_UNIT,1000,700);
+assert.ok(movedGrid.some(p=>grid.some(q=>JSON.stringify(p)===JSON.stringify(q))),'Moving the eye preserves shared world coordinates');
+for(const [w,h] of [[1641,969],[700,1000],[800,600]])assert.ok(DW.flightHud.flightGridPoints(movedCamera,DW.sim.METERS_PER_UNIT,w,h).length<=20);
+calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,straightPose,DW.sim.METERS_PER_UNIT,.85);
+assert.equal(calls.filter(c=>c.color==='#9aeeff').length,grid.length,'One three-axis cross per grid site');
+assert.ok(calls.filter(c=>c.color==='#9aeeff').every(c=>c.points.length===6),'Each cross consists of three perpendicular world-axis bars');
+get('flight-guide-style').value='grid';hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff'),'Static grid is available in the production HUD');
+console.log('PASS static XYZ grid: world-fixed 80 m lattice, three-axis crosses, 10–20 visible, bounded population and camera-only parallax');

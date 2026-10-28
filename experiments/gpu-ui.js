@@ -47,6 +47,11 @@ void main() {
     } else if (s.x < 3.5) {
         color *= s.w < .5 ? texture(monitor, tex) : texture(portrait, tex);
     }
+    if (s.x > 4.5) {
+        float distance = max(abs(p.y) - s.z * .5, max(-p.x, p.x - b.x));
+        float coverage = max(fwidth(distance), .65);
+        alpha = 1. - smoothstep(-coverage * .5, coverage * .5, distance);
+    }
     if (color.a * alpha < .001) discard;
     outColor = vec4(color.rgb, color.a * alpha);
 }`;
@@ -142,6 +147,30 @@ void main() {
         }
         /** @param {string | CanvasGradient | CanvasPattern} style */ function tint(style) { var c=color(style);c[3]*=state.globalAlpha;return c; }
         /** @param {number[]} a @param {number[]} b */ function line(a,b) {var dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);quad((a[0]+b[0])*.5,(a[1]+b[1])*.5,(length+state.lineWidth)*.5,state.lineWidth*.5,[0,state.lineWidth*.5,0,0],tint(state.strokeStyle),undefined,Math.atan2(dy,dx));}
+        // One joined ribbon per open curve: shared cross-sections never alpha-overlap.
+        function smoothStroke(){
+            paths.forEach(function(path){
+                var pts=path.points.filter(function(p,i){return !i||Math.hypot(p[0]-path.points[i-1][0],p[1]-path.points[i-1][1])>.001;});
+                if(pts.length<2)return;
+                var width=state.lineWidth,edge=width*.5+1,c=tint(state.strokeStyle),length=0;
+                /** @type {number[]} */var distances=[0];
+                /** @type {number[][]} */var dirs=[];
+                for(var i=1;i<pts.length;i++){var dx=pts[i][0]-pts[i-1][0],dy=pts[i][1]-pts[i-1][1],len=Math.hypot(dx,dy);dirs.push([dx/len,dy/len]);length+=len;distances.push(length);}
+                /** @type {number[][][]} */var sections=[];
+                for(var i=0;i<pts.length;i++){
+                    var prev=dirs[Math.max(0,i-1)],next=dirs[Math.min(dirs.length-1,i)],nx=-prev[1]-next[1],ny=prev[0]+next[0],nl=Math.hypot(nx,ny);
+                    if(nl<.001){nx=-next[1];ny=next[0];}else {nx/=nl;ny/=nl;}
+                    var scale=Math.min(edge*4,edge/Math.max(.25,nx*(-next[1])+ny*next[0]));
+                    var cap=i===0?-1:i===pts.length-1?1:0,along=distances[i]+cap;
+                    var px=pts[i][0]+next[0]*cap,py=pts[i][1]+next[1]*cap;
+                    sections.push([[px-nx*scale,py-ny*scale,along,-edge],[px+nx*scale,py+ny*scale,along,edge]]);
+                }
+                for(var i=1;i<sections.length;i++){
+                    var a=sections[i-1],b=sections[i];
+                    [a[0],b[0],a[1],a[1],b[0],b[1]].forEach(function(v){vertexAt(point(v[0],v[1]),[v[2],v[3]],[length,0],[5,0,width,0],c,[0,0]);});
+                }
+            });
+        }
         /** @param {boolean} stroke */ function paint(stroke) {
             paths.forEach(function(path){
                 if(path.circle){var c=path.circle;
@@ -161,7 +190,7 @@ void main() {
             translate:function(x,y){var p=point(x,y);state.matrix[4]=p[0];state.matrix[5]=p[1];},rotate:function(a){var m=state.matrix,co=Math.cos(a),si=Math.sin(a);state.matrix=[m[0]*co+m[2]*si,m[1]*co+m[3]*si,m[2]*co-m[0]*si,m[3]*co-m[1]*si,m[4],m[5]];},
             beginPath:function(){paths=[];},moveTo:function(x,y){paths.push({points:[[x,y]],closed:false});},lineTo:function(x,y){if(!paths.length)paths.push({points:[],closed:false});paths[paths.length-1].points.push([x,y]);},closePath:function(){if(paths.length)paths[paths.length-1].closed=true;},
             arc:function(x,y,r,start,end){if(end-start>=Math.PI*2-.001){paths.push({points:[],closed:true,circle:[x,y,r]});}else{var steps=Math.max(8,Math.ceil((end-start)*r/3));for(var i=0;i<=steps;i++){var a=start+(end-start)*i/steps;if(!i)ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r);else ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}}},
-            stroke:function(){paint(true);},fill:function(){paint(false);},setLineDash:function(v){state.dash=v;},
+            smoothStroke:smoothStroke,stroke:function(){paint(true);},fill:function(){paint(false);},setLineDash:function(v){state.dash=v;},
             fillRect:function(x,y,w,h){quad(x+w*.5,y+h*.5,w*.5,h*.5,[0,0,0,0],tint(state.fillStyle));},strokeRect:function(x,y,w,h){quad(x+w*.5,y+h*.5,w*.5,h*.5,[0,0,state.lineWidth,0],tint(state.strokeStyle));},
             fillText:function(value,x,y){var size=Number((state.font.match(/([\d.]+)px/)||[])[1])||12,scale=size/28,text=value.replace(/[–—]/g,'-').replace(/·/g,'.'),advance=16.86*scale; if(state.textAlign==='center')x-=text.length*advance*.5;else if(state.textAlign==='right'||state.textAlign==='end')x-=text.length*advance;for(var i=0;i<text.length;i++){var code=text.charCodeAt(i);if(code<32||code>126)code=63;var col=(code-32)%16,row=Math.floor((code-32)/16);quad(x+i*advance+advance*.5,y-11*scale,24*scale,24*scale,[2,scale,0,0],tint(state.fillStyle),[col*48/1024,row*48/512,(col+1)*48/1024,(row+1)*48/512]);}},
             panel:function(x,y,w,h,r){quad(x+w*.5,y+h*.5,w*.5,h*.5,[0,r,0,0],tint(state.fillStyle));quad(x+w*.5,y+h*.5,w*.5,h*.5,[0,r,state.lineWidth,0],tint(state.strokeStyle));},

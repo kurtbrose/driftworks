@@ -96,3 +96,13 @@ function submitted(code){
 const optimizedData=submitted(currentSource),oracleData=submitted(oracleSource);
 assert.deepEqual(Buffer.from(optimizedData.buffer),Buffer.from(oracleData.buffer),'Direct writes preserve every submitted float, UV, transform and painter order through buffer growth');
 console.log('PASS GPU UI direct-buffer oracle, including capacity growth');
+
+// Joined strokes share one cross-section at each vertex instead of stacking capsules.
+const joined=window.Driftworks.gpuUi.create({appendChild(){}}),jp=joined.painter;joined.begin(800,600);jp.lineWidth=2.5;jp.globalAlpha=.4;
+jp.beginPath();jp.moveTo(0,0);jp.lineTo(30,0);jp.lineTo(60,10);jp.lineTo(90,15);jp.smoothStroke();joined.end();
+const ribbon=frames.at(-1);assert.equal(ribbon.count,18,'Three ribbon spans, one pair of triangles each');
+const rv=i=>Array.from(ribbon.data.slice(i*16,i*16+16));
+for(let i=0;i<ribbon.count;i++){assert.equal(rv(i)[6],5);assert.ok(Math.abs(rv(i)[13]-.4)<1e-6);assert.ok(rv(i).every(Number.isFinite));}
+assert.deepEqual(rv(1),rv(6),'First shared lower join is exactly coincident');assert.deepEqual(rv(5),rv(8),'First shared upper join is exactly coincident');
+assert.ok(ribbon.material.fragmentShader.includes('abs(p.y) - s.z * .5'),'Continuous edge coverage replaces per-segment rounded-cap coverage');joined.dispose();
+console.log('PASS joined HUD strokes: shared ribbon edges, no capsule overlap, uniform alpha and analytic edge/cap antialiasing');

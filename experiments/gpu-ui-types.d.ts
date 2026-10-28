@@ -1,4 +1,5 @@
 export type Painter = Pick<CanvasRenderingContext2D, 'fillStyle'|'strokeStyle'|'globalAlpha'|'lineWidth'|'font'|'textAlign'|'shadowBlur'|'shadowColor'|'save'|'restore'|'translate'|'rotate'|'beginPath'|'moveTo'|'lineTo'|'closePath'|'arc'|'stroke'|'fill'|'setLineDash'|'fillRect'|'strokeRect'|'fillText'> & {
+    smoothStroke?:()=>void;
     panel:(x:number,y:number,w:number,h:number,r:number)=>void;
     image:(source:HTMLCanvasElement,x:number,y:number,w:number,h:number,slot:number,refresh?:boolean)=>void;
 };
