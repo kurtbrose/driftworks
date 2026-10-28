@@ -9,6 +9,7 @@ const suites = {
   ],
   flight: [
     "hyperbolic.cjs",
+    "hyperbolic-flight.cjs",
     {"file":"shared.cjs","args":["flight"]},
     "flight-aim-tracking.cjs",
     "battle-zones.cjs",

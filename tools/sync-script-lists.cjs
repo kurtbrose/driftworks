@@ -5,6 +5,7 @@ const path = require('node:path');
 const manifest = require('./script-manifest.cjs');
 const {hash} = require('./refresh-site-assets.cjs');
 const surfaces = [
+  {file: 'experiments/hyperbolic-flight.html', profile: 'hyperbolicFlight'},
   {file: 'experiments/capital-shields.html', profile: 'capitalShields'},
   {file: 'experiments/ellis-growth.html', profile: 'flightStudy'},
   {file: 'experiments/ellis-study.html', profile: 'ellisStudy'},

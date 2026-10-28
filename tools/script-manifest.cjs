@@ -26,6 +26,7 @@ const groups = {
 };
 
 const profiles = {
+  hyperbolicFlight: {entries: ['@flightStudy', 'experiments/hyperbolic-flight-model.js', 'experiments/hyperbolic-flight.js']},
   terrain: {entries: ['@simulation', 'src/asteroid-art.js', '@meshes', 'src/asteroid-terrain.js']},
   ellisBenchmark: {entries: ['@flight'], before: [{src: 'experiments/flight.js', entries: ['tests/fixtures/ellis-benchmark-probe.js']}]},
   // Studies share the production flight dependencies while retaining page-owned setup.
