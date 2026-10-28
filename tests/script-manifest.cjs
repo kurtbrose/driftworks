@@ -21,6 +21,7 @@ assert.equal(manifest.resolve('flight').filter(script => script.type === 'module
 assert.deepEqual(manifest.resolve('flightStudy'), manifest.resolve('flight').filter(script => script.src !== 'experiments/flight.js'));
 assert.ok(manifest.resolve('ellisStudy').at(-1).src === 'experiments/ellis-study.js');
 const patrol = manifest.resolve('asteroidPatrol');
+assert.ok(patrol.findIndex(script=>script.src==='experiments/gpu-ui.js')>=0&&patrol.findIndex(script=>script.src==='experiments/gpu-ui.js')<patrol.findIndex(script=>script.src==='experiments/flight-hud.js'),'Patrol loads the shared GPU HUD before cockpit motion dots');
 assert.deepEqual(patrol.slice(-2).map(script => script.src), ['experiments/ellis-feedback.js', 'experiments/flight.js']);
 const original = manifest.files('headless');
 original.reverse();

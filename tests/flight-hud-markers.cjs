@@ -247,3 +247,16 @@ calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,centerCamera,DW.sim
 const centerCross=calls.find((c,i)=>c.color==='#9aeeff'&&c.alpha>.5&&calls[i-1]?.kind==='arc'&&Math.abs(calls[i-1].x-500)<1e-6&&Math.abs(calls[i-1].y-350)<1e-6);
 assert.ok(centerCross,'Central dots render at full grid brightness with no aim fade');
 console.log('PASS grid through crosshairs: no center culling or opacity hole');
+
+// Missing experimental controls must not disable the shared cockpit default.
+const lookup=document.getElementById;
+document.getElementById=id=>id.startsWith('flight-lanes')||id==='flight-guide-style'?null:lookup(id);
+for(const mode of ['default','asteroid-patrol','gas-giant','jade-rime','ellis']){
+ const sharedView={...guideView,combat:{...guideView.combat,mode},flightDemand:undefined};
+ hud.render(sharedView);assert.ok(calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'Default motion dots render without lab controls or held inputs in '+mode);
+}
+hud.render({...guideView,combat:{...guideView.combat,dead:true}});assert.ok(!calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'No motion dots after death');
+document.getElementById=lookup;get('flight-guide-style').value='grid';get('flight-lanes').checked=false;hud.render(guideView);assert.ok(!calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'Shared toggle disables motion dots');get('flight-lanes').checked=true;
+console.log('PASS default cockpit motion dots: missing lab controls, no input demand, sorties, free flight, wormhole, death and off switch');
+
+const bodyContains=document.body.classList.contains;document.body.classList.contains=name=>name==='watch-chase';hud.render(guideView);assert.ok(!calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'Chase camera suppresses cockpit motion dots');document.body.classList.contains=bodyContains;

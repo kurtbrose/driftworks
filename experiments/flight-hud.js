@@ -347,6 +347,14 @@
     }
     /** @param {HTMLElement} host */
     function mount(host) {
+        // Every flight page gets the default motion cue, even without lab guide controls.
+        if(!document.getElementById('flight-lanes')){
+            var settings=document.querySelector('#flight-settings section')||document.getElementById('flight-settings');
+            if(settings){var motionLabel=document.createElement('label'),motionToggle=document.createElement('input');
+                motionToggle.type='checkbox';motionToggle.id='flight-lanes';motionToggle.checked=true;
+                motionLabel.appendChild(motionToggle);motionLabel.appendChild(document.createTextNode(' Show motion dots'));settings.appendChild(motionLabel);
+            }
+        }
         var telemetry = get('telemetry'), targetCamera = DW.flightTargetCamera.mount(get('target-camera'));
         /** @type {TargetStatus | null} */
         var status = null;
@@ -380,16 +388,16 @@
             var w = host.clientWidth, h = host.clientHeight;
             gpu.begin(w, h);
             var guide=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes'));
-            if(guide&&guide.checked&&view.flightDemand&&!combat.dead&&!mission.sky.wormhole&&!mission.weaponsDisabled&&!document.body.classList.contains('watch-chase')) {
-                var ahead=/** @type {HTMLSelectElement} */(document.getElementById('flight-lanes-ahead'));
-                var corridor=/** @type {HTMLSelectElement} */(document.getElementById('flight-lanes-width'));
-                var brightness=/** @type {HTMLInputElement} */(document.getElementById('flight-lanes-opacity'));
+            if((!guide||guide.checked)&&!combat.dead&&!document.body.classList.contains('watch-chase')) {
+                var ahead=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-lanes-ahead'));
+                var corridor=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-lanes-width'));
+                var brightness=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes-opacity'));
                 var style=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-guide-style'));
                 var treatment=style?style.value:'grid';
                 if(treatment==='grid'){
                     guidePath=null;guideBatches=[];guideLastEye=null;
-                    paintFlightGrid(combatHud,w,h,state,units,Number(brightness.value)/100);
-                }else {
+                    paintFlightGrid(combatHud,w,h,state,units,Number(brightness?brightness.value:85)/100);
+                }else if(view.flightDemand&&!mission.sky.wormhole&&!mission.weaponsDisabled&&ahead&&corridor){
                 var config=JSON.stringify([ahead.value,corridor.value,treatment]);
                 if(guideCombat!==combat||combat.time<guideLastClock||config!==guideKey){
                     guideTravel=0;guideLastEye=null;guidePath=null;guideBatches=[];guideRange=0;guideSpawn=-Infinity;guideKey=config;
@@ -400,7 +408,8 @@
                     guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,8);
                     guideClock=combat.time;
                 }
-                if(!guideRange){var boundary=guidePath.find(function(p){return p.seconds>=Number(ahead.value);});guideRange=Math.max(60,boundary?boundary.distance:0);}
+                var lookAhead=Number(ahead.value);
+                if(!guideRange){var boundary=guidePath.find(function(p){return p.seconds>=lookAhead;});guideRange=Math.max(60,boundary?boundary.distance:0);}
                 if(treatment==='roads'){
                     if(guideTravel-guideSpawn>=20){
                         if(guideClock!==combat.time){guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,8);guideClock=combat.time;}
@@ -408,11 +417,11 @@
                         guideSpawn=guideTravel;
                     }else guideBatches=updateFlightGuide(guideBatches,null,combat.time,0,0,treatment);
                     guideBatches.forEach(function(batch){
-                        var ink=Number(brightness.value)/100*guideStrength(batch,combat.time);
+                        var ink=Number(brightness?brightness.value:85)/100*guideStrength(batch,combat.time);
                         if(ink>=.015)paintFlightLanes(combatHud,w,h,state,units,batch.path,batch.width,ink,0,true);
                     });
-                }else if(treatment==='brackets')paintFlightBrackets(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guideTravel%60);
-                else paintFlightLanes(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guideTravel%20);
+                }else if(treatment==='brackets')paintFlightBrackets(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness?brightness.value:85)/100,guideTravel%60);
+                else paintFlightLanes(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness?brightness.value:85)/100,guideTravel%20);
                 }
             }else {guidePath=null;guideLastEye=null;guideBatches=[];}
 

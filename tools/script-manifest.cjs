@@ -37,7 +37,7 @@ const profiles = {
   asteroidPatrol: {entries: ['@flight'], omit: [
     'experiments/gpu-diagnostics.js', 'experiments/ellis-optics.js', 'experiments/ellis-renderer.js',
     'assets/ships/ohio-vehicles/meshes.js', 'experiments/evacuation-mission.js',
-    'experiments/evacuation-scenery.js', 'experiments/gpu-ui.js', 'experiments/gas-giant-flight.js',
+    'experiments/evacuation-scenery.js', 'experiments/gas-giant-flight.js',
     'experiments/aegis-flight.js', 'experiments/ellis-feedback.js'
   ], before: [{src: 'experiments/flight.js', entries: ['experiments/ellis-feedback.js']}]},
   tactical: {entries: [
