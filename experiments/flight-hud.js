@@ -293,9 +293,11 @@
             var far=Math.max(0,Math.min(1,(960-distance)/480));
             var edge=Math.max(0,Math.min(1,Math.min(center[0],w-center[0],center[1],h-center[1])/48));
             var alpha=opacity*.65*far*far*(3-2*far)*edge*edge*(3-2*edge);
-            ctx.beginPath();for(var axis=0;axis<3;axis++){var a=p.slice(),b=p.slice();a[axis]-=2;b[axis]+=2;var pa=project(a),pb=project(b);ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);}
-            ctx.globalAlpha=alpha*.7;ctx.strokeStyle='#020a12';ctx.lineWidth=4;ctx.stroke();
-            ctx.globalAlpha=alpha;ctx.strokeStyle='#9aeeff';ctx.lineWidth=1.5;if(ctx.smoothStroke)ctx.smoothStroke();else ctx.stroke();
+            var radius=Math.max(.8,Math.min(2.3,.45*focal*h/(2*distance)));
+            ctx.beginPath();ctx.arc(center[0],center[1],radius+1.2,0,Math.PI*2);
+            ctx.globalAlpha=alpha*.7;ctx.fillStyle='#020a12';ctx.fill();
+            ctx.beginPath();ctx.arc(center[0],center[1],radius,0,Math.PI*2);
+            ctx.globalAlpha=alpha;ctx.fillStyle='#9aeeff';ctx.fill();
         });ctx.restore();
     }
     /** Emit one curved eight-metre dash only at the far boundary; never refill nearby space.

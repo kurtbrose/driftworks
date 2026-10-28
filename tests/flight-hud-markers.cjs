@@ -230,10 +230,11 @@ const movedGrid=DW.flightHud.flightGridPoints(movedCamera,DW.sim.METERS_PER_UNIT
 assert.ok(movedGrid.some(p=>grid.some(q=>JSON.stringify(p)===JSON.stringify(q))),'Moving the eye preserves shared world coordinates');
 for(const [w,h] of [[1641,969],[700,1000],[800,600]])assert.ok(DW.flightHud.flightGridPoints(movedCamera,DW.sim.METERS_PER_UNIT,w,h).length<=100);
 calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,straightPose,DW.sim.METERS_PER_UNIT,.85);
-assert.equal(calls.filter(c=>c.color==='#9aeeff').length,grid.length,'One three-axis cross per grid site');
-assert.ok(calls.filter(c=>c.color==='#9aeeff').every(c=>c.points.length===6),'Each cross consists of three perpendicular world-axis bars');
+assert.equal(calls.filter(c=>c.color==='#9aeeff').length,grid.length,'One dot per grid site');
+assert.ok(calls.filter(c=>c.color==='#9aeeff').every(c=>c.kind==='fill'),'Grid sites use filled dots instead of strokes');
+assert.ok(calls.filter(c=>c.kind==='arc').every(c=>c.r>=.8&&c.r<=3.5),'Dots and their backing remain small');
 get('flight-guide-style').value='grid';hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff'),'Static grid is available in the production HUD');
-console.log('PASS static XYZ grid: world-fixed 160 m lattice, three-axis crosses, distant continuous population, bounded population and camera-only parallax');
+console.log('PASS static XYZ grid: world-fixed 160 m lattice, small filled dots, distant continuous population, bounded population and camera-only parallax');
 
 // Close rank crossings must not replace arbitrary bright crosses.
 const shifted=DW.flightHud.flightGridPoints({...straightPose,eye:straightPose.eye.map((v,k)=>v+(k===0?.001:0))},DW.sim.METERS_PER_UNIT,1000,700);
@@ -243,6 +244,6 @@ calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,straightPose,DW.sim
 const centerCamera={eye:[0,0,0],right:[1,0,0],up:[0,1,0],back:[0,0,1]};
 assert.ok(DW.flightHud.flightGridPoints(centerCamera,DW.sim.METERS_PER_UNIT,1000,700).some(p=>p[0]===0&&p[1]===0&&p[2]===-160),'A cross directly behind the crosshair is retained');
 calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,centerCamera,DW.sim.METERS_PER_UNIT,.85);
-const centerCross=calls.find(c=>c.color==='#9aeeff'&&Math.abs(c.points.reduce((n,p)=>n+p[0],0)/6-500)<1e-6&&Math.abs(c.points.reduce((n,p)=>n+p[1],0)/6-350)<1e-6&&c.alpha>.5);
-assert.ok(centerCross,'Central crosses render at full grid brightness with no aim fade');
+const centerCross=calls.find((c,i)=>c.color==='#9aeeff'&&c.alpha>.5&&calls[i-1]?.kind==='arc'&&Math.abs(calls[i-1].x-500)<1e-6&&Math.abs(calls[i-1].y-350)<1e-6);
+assert.ok(centerCross,'Central dots render at full grid brightness with no aim fade');
 console.log('PASS grid through crosshairs: no center culling or opacity hole');
