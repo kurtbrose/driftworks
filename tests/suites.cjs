@@ -8,6 +8,7 @@ const suites = {
     {"file":"scenarios.cjs","args":["--all"]}
   ],
   flight: [
+    "hyperbolic.cjs",
     {"file":"shared.cjs","args":["flight"]},
     "flight-aim-tracking.cjs",
     "battle-zones.cjs",

@@ -1,5 +1,10 @@
 # Driftworks
 
+Try [Negative space](experiments/hyperbolic.html): a 6-vs-6 dogfight on a
+hyperbolic plane with adjustable curvature, geodesic gunfire and distance/bearing
+radar. Watch autopilot or take control with A/D, W/S and Space. See the
+[geometry notes](docs/hyperbolic-flight.md).
+
 Depot asset prototype: open [Refueling depot study](experiments/refueling-depot.html)
 to inspect the Blender-baked orbital tank farm against the existing planet sky.
 It includes articulated refueling arms, sky stages and true-scale fighters.
