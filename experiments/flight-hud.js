@@ -586,7 +586,7 @@
 
             combatHud.globalAlpha = 1;
             if (selected) {
-                var lead=DW.training.firingSolution(combat,combat.player,selected,view.weapon),q=lead?DW.flightSkybox.project(lead.direction,state,w/h):null;
+                var lead=view.aimingSolution===undefined?DW.training.firingSolution(combat,combat.player,selected,view.weapon):view.aimingSolution,q=lead?DW.flightSkybox.project(lead.direction,state,w/h):null;
                 get('target-info').dataset.leadState=lead?'valid':'unavailable';get('target-info').dataset.leadTime=lead?lead.time.toFixed(4):'';
                 if(!lead){combatHud.fillStyle='#a9e5dc';combatHud.fillText(selected.team==='ally'?'FRIENDLY CONTACT':'NO FIRING SOLUTION',w/2,h/2+54);}
                 if (q && Math.abs(q.x) < 1 && Math.abs(q.y) < 1) {

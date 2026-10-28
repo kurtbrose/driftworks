@@ -5,15 +5,23 @@ using Driftworks' existing `scene3d`, textured fighter source meshes, arcade
 flight dynamics, mouse-stick math, radar painter and explosion renderer. The
 earlier `hyperbolic.html` remains a separate 2D experiment.
 
-Twelve fighters fight continuously. Autopilot starts enabled; Take control
-switches the player to arrows for pitch/yaw, Q/E roll, W/S throttle, Shift boost,
-Space fire and X stop. Dragging the view steers with the existing virtual-stick
-response. Tab cycles hostile markers, P/Esc pauses and R restarts. Changing
-curvature resets the battle; changing the fighter selector changes artwork.
-The cyan circle is the selected target's lead aiming pip: put the central gun
-crosshair on it to intercept the target at its current velocity. It connects to
-the target box with a dashed line and displays flight time. It disappears when
-the target is dead, behind the camera, or unreachable within bolt lifetime.
+Twelve fighters fight continuously. The page mounts the shared `flightHud` GPU
+HUD and `flightControls`, with the normal target monitor, contact diamonds,
+reticle, mouse stick and radar. Start flight begins manual flight; Settings
+contains optional mouse capture (off by default), steering and controller
+bindings. Esc pauses; Tab cycles enemies, L locks and V changes radar range.
+Arrows pitch/yaw, Q/E roll, W/S throttle, Shift boosts, Space fires, X stops,
+and A/D and R/F provide lateral/vertical thrust. C centers the mouse stick.
+Flight lab contains curvature, model, autopilot, restart and measurement controls.
+Curvature changes restart the battle; model changes affect artwork.
+
+The existing dashed cyan aiming circle receives the geodesic intercept solution.
+Put the central gun crosshair on it to intercept the target at its current
+velocity. A null solution suppresses the Euclidean solver fallback. Contact log
+coordinates preserve intrinsic range and center bearing for the shared HUD and
+radar; the 3D renderer retains Gans optical coordinates. HUD target silhouettes
+use orthonormal frames, without optical radial stretch. No Euclidean predicted
+trajectory lanes are shown in this experiment.
 
 The new simulation is isolated from the Euclidean flight session and the Ellis
 bridge scenarios. It calls the real `arcade.step` in each craft's orthonormal
@@ -49,7 +57,7 @@ are deliberately not offered by this experiment. Lighting uses the existing
 renderer rather than a curved-space light-transport solution.
 
 Radar uses the logarithmic map, giving true local bearing, altitude and distance
-on a linear 2.5 km scale. HUD markers and bolts use the same optical bearing as
+on the shared HUD's linear range scale (V cycles 1 / 2.5 / 5 / 10 km). HUD markers and bolts use the same optical bearing as
 the ship centers. The beacons are fixed intrinsic points. Stars at infinity are
 null directions and are transformed by each player-frame boost. The 100 km
 setting is a near-flat comparison, not exactly zero curvature.
@@ -154,3 +162,20 @@ so it establishes current scene cost, not an overall before/after speedup.
 Raptor and Bulldog selection, hull visibility and the aiming pip were checked
 in the browser. The shared mesh catalogs and full-resolution rendering remain
 startup/pixel costs worth revisiting for substantially larger fleets or displays.
+
+## Shared flight HUD verification
+
+The restored shared HUD was checked in the browser at 1280 × 720, DPR 1.5,
+1920 × 1080 scene backing, Raptor, R=650 m. Start entered mouse flight without
+pointer lock; Tab cycled targets, L locked, Esc paused, and the geodesic pip,
+contact markers, target monitor and radar were visually inspected. No browser
+console errors were reported. Capture is an explicit optional setting.
+
+The same frozen OFF/ON/ON/OFF benchmark, including the shared GPU HUD and target
+monitor, measured CPU median / p95 2.8 / 3.4, 4.2 / 4.9, 4.3 / 6.2 and
+4.1 / 5.4 ms. Fleet ON submitted 11 draws / 47,674 triangles in the main scene;
+the target monitor and HUD use additional submissions. Cadence was 13.3 / 13.4
+ms throughout. These are CPU submission timings during concurrent validation,
+not GPU timings or a controlled comparison with the earlier viewport. The
+lifecycle regression still verifies zero main-scene submissions during idle
+pause, selected-model texture loading and benchmark cancellation/restoration.

@@ -96,7 +96,10 @@
         for(const b of w.actors){if(b.team===a.team||b.dead>0)continue;const d=-dot(a.p,b.p);if(d<nearest){nearest=d;target=b;}}
         controls=target?aim(w,a,target):{};a.flight.throttle=1;
       }
-      else a.flight.throttle=Math.max(0,Math.min(1,a.flight.throttle+(input.throttleRate||0)*dt*.5));
+      else {
+        if(input.throttle!==undefined&&input.throttle!==null)a.flight.throttle=input.throttle;
+        a.flight.throttle=Math.max(-1,Math.min(1,a.flight.throttle+(input.throttleRate||0)*dt*.5));
+      }
       if(a.id===0&&input.stop)a.flight.throttle=0;
       fly(a,controls,dt,w.radius);a.cool-=dt;
       if(controls.fire&&a.cool<=0){const dir=a.axes[2].map(v=>-v);w.bolts.push({p:exp(a.p,dir,16/w.radius),v:exp(dir,a.p,16/w.radius),team:a.team,owner:a.id,life:1.6});a.cool=.12;w.shots++;}

@@ -412,6 +412,8 @@ export type FlightGuideBatch = {path:FlightPathSample[];born:number;lifetime:num
 export type FlightPathSample = {seconds:number;distance:number;pose:Pose};
 export type EllisCue = {region:number;distance:number;gap:number;proximity:number;near:boolean;entered:boolean;exited:boolean;crossed:boolean;flash:number};
 export type HudView = FlightView & Appearance & {
+    /** Optional geometry-specific lead; null explicitly suppresses a flat-space fallback. */
+    aimingSolution?: {direction:Vector;time:number}|null;
     /** Presentation coordinate normalization; defaults to physical world scale. */
     distanceScale?: number;
     bridgeCue?:EllisCue;

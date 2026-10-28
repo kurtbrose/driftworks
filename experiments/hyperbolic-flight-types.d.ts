@@ -2,7 +2,7 @@ import type {FlightState,FlightInput} from './types';
 export type Frame={p:number[];axes:number[][]};
 export type Actor=Frame & {id:number;team:number;flight:FlightState;hp:number;dead:number;cool:number;trail:number[][]};
 export type HyperWorld={radius:number;actors:Actor[];bolts:{p:number[];v:number[];team:number;owner:number;life:number}[];bursts:{p:number[];age:number;large:boolean}[];time:number;score:number[];shots:number;hits:number;landmarks:number[][];stars:number[][]};
-export type Input=FlightInput & {auto:boolean;fire?:boolean;throttleRate?:number;stop?:boolean};
+export type Input=FlightInput & {auto:boolean;throttle?:number|null;fire?:boolean;throttleRate?:number;stop?:boolean};
 export type Lead={direction:number[];point:number[];time:number;range:number};
 declare module '../src/types' {interface DriftworksNamespace {hyperbolicFlight?:{
   dot(a:number[],b:number[]):number;
