@@ -408,6 +408,7 @@ export type FlightView = {
     camera?: Pose;
     observerCraft?: ArtCraft;
 };
+export type FlightGuideBatch = {path:FlightPathSample[];born:number;retired:number|null;strength:number;width:number;phase:number;style:string};
 export type FlightPathSample = {seconds:number;distance:number;pose:Pose};
 export type EllisCue = {region:number;distance:number;gap:number;proximity:number;near:boolean;entered:boolean;exited:boolean;crossed:boolean;flash:number};
 export type HudView = FlightView & Appearance & {
@@ -985,6 +986,8 @@ export type ExperimentModules = {
         };
     };
     flightHud: {
+        updateFlightGuide:(batches:FlightGuideBatch[],path:FlightPathSample[]|null,time:number,width:number,phase:number,style:string)=>FlightGuideBatch[];
+        guideStrength:(batch:FlightGuideBatch,time:number)=>number;
         predictFlightPath:(craft:Craft,demand:Demand,horizon:number)=>FlightPathSample[];
         paintFlightLanes:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,camera:Pose,units:number,path:FlightPathSample[],width:number,opacity:number,phase?:number,threeLanes?:boolean)=>void;
         paintFlightBrackets:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,camera:Pose,units:number,path:FlightPathSample[],width:number,opacity:number,phase?:number)=>void;

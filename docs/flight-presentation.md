@@ -359,6 +359,8 @@ also forces all radial capture faces to refill. See the
 
 ### Predicted trajectory guide
 
+Roads now persist in world space. The HUD emits a frozen forecast at most every 0.25 s when inputs change, or every 0.75 s to replenish the forward road. A replacement grows in over 0.45 s; previous generations stay at their original world positions and dash phase while fading out over 0.75 s. Smooth opacity ramps and a combined brightness budget limit overlap during frantic steering. At most four generations survive. Translation/rotation of the live camera supplies apparent motion; old geometry never follows the latest heading. Pausing freezes these lifetimes. Disable, scene replacement, time rewind and style changes clear history. This is a motion-cue experiment, not a claim of reduced nausea.
+
 The default is **Three lanes above & below**: four dashed dividers on each of two road surfaces, offset 6 m above/below the eye at the default 24 m lane width. Lateral offsets are -36, -12, +12 and +36 m, defining three equal lanes on each surface. Every prediction sample transports the whole cross-section with the future craft orientation, so steering curves the paint and roll twists both surfaces together. Dash spacing remains 8 m painted / 12 m gap, phase advances with actual travel, and the protected aiming area stays clear. Width controls lane width; road height is one quarter of that width (minimum 3 m).
 
 

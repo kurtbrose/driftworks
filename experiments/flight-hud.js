@@ -260,6 +260,23 @@
         }
         ctx.restore();
     }
+    /** Frozen world-space road generations. Only opacity changes after a generation is emitted.
+     * @param {import('./types').FlightGuideBatch[]} batches @param {import('./types').FlightPathSample[]|null} path
+     * @param {number} time @param {number} width @param {number} phase @param {string} style
+     * @returns {import('./types').FlightGuideBatch[]} */
+    function updateFlightGuide(batches,path,time,width,phase,style){
+        batches=batches.filter(function(b){return b.retired===null||time-b.retired<.75;});
+        if(path){
+            batches.forEach(function(b){if(b.retired===null){b.strength=guideStrength(b,time);b.retired=time;}});
+            batches.push({path:path,born:batches.length?time:time-.45,retired:null,strength:1,width:width,phase:phase,style:style});
+        }
+        return batches;
+    }
+    /** @param {import('./types').FlightGuideBatch} batch @param {number} time */
+    function guideStrength(batch,time){
+        var t=Math.max(0,Math.min(1,batch.retired===null?(time-batch.born)/.45:1-(time-batch.retired)/.75));
+        return t*t*(3-2*t)*(batch.retired===null?1:batch.strength);
+    }
     /** @param {HTMLElement} host */
     function mount(host) {
         var telemetry = get('telemetry'), targetCamera = DW.flightTargetCamera.mount(get('target-camera'));
@@ -277,7 +294,8 @@
         });
         var targetRendered = false;
         /** @type {import('./types').FlightPathSample[]|null} */var guidePath=null;
-        var guideClock=-Infinity,guideWall=-Infinity,guideKey='',guideTravel=0,guidePhase=0,guideLastClock=-Infinity;
+        var guideClock=-Infinity,guideKey='',guideTravel=0,guidePhase=0,guideLastClock=-Infinity;
+        /** @type {import('./types').FlightGuideBatch[]} */var guideBatches=[];
         /** @type {number[]|null} */var guideLastEye=null;
         /** @type {import('./types').Combat|null} */var guideCombat=null;
         /** @param {HudView} view */
@@ -298,20 +316,27 @@
                 var ahead=/** @type {HTMLSelectElement} */(document.getElementById('flight-lanes-ahead'));
                 var corridor=/** @type {HTMLSelectElement} */(document.getElementById('flight-lanes-width'));
                 var brightness=/** @type {HTMLInputElement} */(document.getElementById('flight-lanes-opacity'));
-                if(guideCombat!==combat||combat.time<guideLastClock){guideTravel=0;guideLastEye=null;}
+                if(guideCombat!==combat||combat.time<guideLastClock){guideTravel=0;guideLastEye=null;guidePath=null;guideBatches=[];}
                 if(guideLastEye&&combat.time>guideLastClock)guideTravel+=Math.hypot(state.eye[0]-guideLastEye[0],state.eye[1]-guideLastEye[1],state.eye[2]-guideLastEye[2])*units;
                 guideLastEye=state.eye.slice();guideLastClock=combat.time;
-                var key=JSON.stringify([view.flightDemand,combat.player.profile.name,ahead.value]);
-                var wall=performance.now()/1000;
-                if(!guidePath||guideCombat!==combat||combat.time<guideClock||combat.time-guideClock>=.1||
-                    (key!==guideKey&&(view.paused||wall-guideWall>=.05))) {
-                    guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,Number(ahead.value));
-                    guideClock=combat.time;guideWall=wall;guideKey=key;guideCombat=combat;guidePhase=guideTravel%60;
-                }
                 var style=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-guide-style'));
-                if(!style||style.value!=='brackets')paintFlightLanes(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guidePhase,!style||style.value!=='lanes');
-                else paintFlightBrackets(combatHud,w,h,state,units,guidePath,Number(corridor.value),Number(brightness.value)/100,guidePhase);
-            }else {guidePath=null;guideLastEye=null;}
+                var treatment=style?style.value:'roads';
+                if(guideBatches.length&&guideBatches[guideBatches.length-1].style!==treatment){guidePath=null;guideBatches=[];}
+                var key=JSON.stringify([view.flightDemand,combat.player.profile.name,ahead.value,corridor.value,treatment]);
+                if(!guidePath||combat.time-guideClock>=.75||(key!==guideKey&&combat.time-guideClock>=.25)) {
+                    guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,Number(ahead.value));
+                    guideClock=combat.time;guideKey=key;guideCombat=combat;guidePhase=guideTravel%60;
+                    guideBatches=updateFlightGuide(guideBatches,guidePath,combat.time,Number(corridor.value),guidePhase,treatment);
+                }else guideBatches=updateFlightGuide(guideBatches,null,combat.time,0,0,treatment);
+                var total=guideBatches.reduce(function(sum,b){return sum+guideStrength(b,combat.time);},0);
+                guideBatches.forEach(function(batch){
+                    var ink=Number(brightness.value)/100*guideStrength(batch,combat.time)/Math.max(1,total);
+                    if(ink<.015)return;
+                    if(batch.style==='brackets')paintFlightBrackets(combatHud,w,h,state,units,batch.path,batch.width,ink,batch.phase);
+                    else paintFlightLanes(combatHud,w,h,state,units,batch.path,batch.width,ink,batch.phase,batch.style!=='lanes');
+                });
+            }else {guidePath=null;guideLastEye=null;guideBatches=[];}
+
             if(mission.weaponsDisabled){
                 get('speed-value').textContent=String(Math.round(speed*speedScale));
                 get('thrust-value').textContent='THRUST '+Math.round(state.throttle*100)+'%';
@@ -582,5 +607,5 @@
                 radarRangeIndex = (radarRangeIndex + 1) % radarRanges.length;
             } };
     }
-    DW.flightHud = { predictFlightPath:predictFlightPath, paintFlightLanes:paintFlightLanes, paintFlightBrackets:paintFlightBrackets, paintThroatGuide:paintThroatGuide, paintTargetBearing: paintTargetBearing, mount: mount, targetStatus: targetStatus, paintTargetStatus: paintTargetStatus };
+    DW.flightHud = { updateFlightGuide:updateFlightGuide, guideStrength:guideStrength, predictFlightPath:predictFlightPath, paintFlightLanes:paintFlightLanes, paintFlightBrackets:paintFlightBrackets, paintThroatGuide:paintThroatGuide, paintTargetBearing: paintTargetBearing, mount: mount, targetStatus: targetStatus, paintTargetStatus: paintTargetStatus };
 }());
