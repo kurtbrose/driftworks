@@ -517,10 +517,11 @@ Audible Ohio soundtrack playback calls the mixer's transient `setMusicActive` ga
 ### Cinematic bridge demo
 
 `flight.html?mission=cinematic&bridgeGrid=0&bridgeOutline=0` runs the existing
-Ellis optics and chart transport with two armed Aegis rigs on opposite charts.
+thin-shell optics and chart transport with two armed Aegis rigs on opposite charts.
 The destination uses the `gas-giant` observer/frame, rather than the nearby gray
 moon preset `jade-rime`. The terrestrial hero panorama is bound separately from the close Jade gas-giant cube; both
-backgrounds pass through the same Ellis sky lens. Capital geometry retains chart
+backgrounds pass through the same thin-shell sky lens. Capital aim, rounds and
+effects select the active mission metric, including point-defense rounds. Capital geometry retains chart
 IDs and shared immutable local meshes. Both hulls circle their respective mouths
 at 675 m radius in opposite directions (0.006 rad/s, about 4 m/s), keeping
 their long broadsides inward. Main batteries engage when their radial directions

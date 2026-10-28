@@ -2,6 +2,9 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {createFlight}=require('../tools/headless.cjs');
 const flight=createFlight({mission:'cinematic'}),DW=flight.DW;
+assert.equal(DW.flightMissions.resolve('cinematic').sky.thinShell,true);
+const ballisticPath=DW.flightGuns.ballisticPath;let bridgeRoutes=0;
+DW.flightGuns.ballisticPath=function(...args){assert.equal(args[4],'thin-shell','capital aim uses the mission metric');bridgeRoutes++;return ballisticPath(...args);};
 const context=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math,console});
 for(const file of ['assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js','experiments/flight-watch.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
 const rig=DW.aegisFlight.createBattle({bridge:true}),director=DW.flightWatch.cinema(rig),U=DW.sim.METERS_PER_UNIT;
@@ -24,6 +27,7 @@ assert.equal(report.capitals[0].mainBatteryClear,radial[0][0]*radial[1][0]+radia
 report.capitals.forEach((c,index)=>{const x=c.position[0]*U-index*12000,y=c.position[1]*U+2000;assert.ok(Math.abs(Math.hypot(x,y)-675)<1e-6,'capital remains just outside 600 m distortion radius');assert.ok(Math.abs(c.position[2]*U-1550)<1e-6,'capital orbit is horizontal at mouth height');assert.ok(Math.abs(Math.cos(c.heading)*x+Math.sin(c.heading)*y)<1e-6,'long hull remains tangent, with its broadside inward');});
 console.log('Fighter rounds:',flight.snapshot().combat.enemies.reduce((n,c)=>n+c.guns.fired,0),'launches:',report.launches);
 assert.ok(flight.snapshot().combat.enemies.some(c=>c.guns.fired>0),'autonomous fighters actually fire at their opponents');
+assert.ok(bridgeRoutes>0,'capital batteries solve thin-shell routes');
 assert.ok(report.shots>0,'capital batteries fire across charts');
 assert.equal(heavyFired.size,24,'broadside placement exposes all twelve heavy batteries on each capital');
 assert.ok(report.capitals.every(c=>c.integrity<20000),'physical bridge rounds damage the opposite capital');

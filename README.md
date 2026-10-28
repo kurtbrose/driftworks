@@ -237,8 +237,8 @@ also links back to it.
 Open [the flight lab](experiments/flight.html) from the same static server.
 
 For a hands-off battle, open [the cinematic demo](experiments/flight.html?mission=cinematic&bridgeGrid=0&bridgeOutline=0).
-Two carriers slowly circle just outside the 600 m distortion boundary at each
-end of the Ellis wormhole in opposite directions,
+Two carriers slowly circle at 675 m radius around each
+end of the thin-shell wormhole in opposite directions,
 exchanging broadsides during opposing-side windows. Both hangars replace lost
 AI fighters. Cameras rotate automatically, including a full orbit of the mouth
 and a damped fighter chase. **C** cuts to the next view; **Esc** pauses.
