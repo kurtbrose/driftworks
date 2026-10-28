@@ -35,10 +35,10 @@ turretCandidate.forEach((b,i)=>{
  for(let v=0;v<full[i].vertices.length/6;v++)for(let k=0;k<6;k++)assert.equal(b.vertices[v*8+k],full[i].vertices[v*6+k]);
 });
 assert.equal(changed,12,'only the twelve heavy turret armor batches change');
-// Markings change only twelve existing triangles, with readable orientation on both sides.
+// Belt clipping splits roof facets; markings retain readable orientation on both sides.
 let marked=0,sides=new Set();
 asset.surface.batches.forEach((f,i)=>{if(!f)return;const before=data.uv[i];assert.equal(f.uv.length,before.length);for(let k=0;k<f.uv.length;k+=2){if(Math.abs(f.uv[k]-before[k])<1e-6&&Math.abs(f.uv[k+1]-before[k+1])<1e-6)continue;marked++;const v=asset.batches[i].vertices,j=k*3;sides.add(Math.sign(v[j+4]));assert(v[j+2]>32&&v[j+5]>.4);assert(f.uv[k]>=.5&&f.uv[k]<=.75&&f.uv[k+1]>=.5&&f.uv[k+1]<=1);}});
-assert.equal(marked,36);assert.equal(sides.size,2);
+assert.equal(marked,48);assert.equal(sides.size,2);
 console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/normals, unchanged batch count, shared poses and live damage ownership');
 
 (async()=>{
@@ -50,7 +50,7 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  const nozzleAsset=DW.aegisFlightAsset.engines;
  assert.equal(nozzleAsset.reduce((n,e)=>n+e.batches.reduce((m,b)=>m+b.vertices.length/18,0),0),3660,'approved open bells add only 480 triangles across five engines');
  for(const e of nozzleAsset){assert.equal(e.batches.length,5);const throat=e.batches[4];assert.equal(throat.vertices.length/18,32);for(let i=0;i<throat.vertices.length;i+=6)assert(Math.abs(throat.vertices[i]-18.2)<2e-6,'throat is recessed 13.8 m behind the 32 m lip');for(const b of e.batches){assert.equal(b.finish.uv.length,b.vertices.length/3);assert(b.finish.uv.every(v=>Number.isFinite(v)&&v>=0&&v<=1));assert.equal(b.finish.atlas,'engine-atlas.png');}}
- const glass=DW.aegisFlightAsset.interiors.find(b=>b.kind==='windows');assert.equal(glass.vertices.length/216,480);assert.equal(glass.vertices.filter((v,i)=>i%6===0&&v<-320).length/36,48,'all 48 prow windows included');assert.equal(glass.finish.shader,-2);
+ const glass=DW.aegisFlightAsset.interiors.find(b=>b.kind==='windows');assert.equal(glass.finish.atlas,'belt-atlas.png');assert(glass.vertices.length/18<480*12,'baked facets replace individual window boxes');assert(glass.vertices.some((v,i)=>i%6===0&&v<-320),'prow belts remain present');assert.equal(glass.finish.uv.length,glass.vertices.length/3);assert(glass.finish.uv.every(v=>Number.isFinite(v)&&v>=0&&v<=1));assert.equal(glass.finish.shader,-2);
 
  assert.equal(DW.aegisFlightAsset.interiors.length,5);
  const approved={window:{}};vm.createContext(approved);vm.runInContext(read('output/aegis-hangar-data.js'),approved);
@@ -58,7 +58,7 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  const structure=DW.aegisFlightAsset.interiors.find(b=>b.kind==='structure');assert.equal(structure.vertices.length/18,6000);assert.equal(structure.finish.atlas,'structure-v1/graphite.png');assert.equal(structure.finish.uv.length,structure.vertices.length/3);assert(structure.finish.uv.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
  const structuralBaseline={window:{}};vm.createContext(structuralBaseline);vm.runInContext(read('output/aegis-structure-before-rig.js'),structuralBaseline);
  const triangles=batches=>batches.flatMap(b=>Array.from({length:b.vertices.length/18},(_,i)=>b.vertices.slice(i*18,i*18+18).join(','))).sort();
- assert.deepEqual(Array.from(triangles(DW.aegisFlightAsset.batches.concat([structure]))),Array.from(triangles(structuralBaseline.window.Driftworks.aegisFlightAsset.batches)),'structural finish retains every hull triangle, position, normal and winding');
+ const originalStructure=new Set(triangles(structuralBaseline.window.Driftworks.aegisFlightAsset.batches));assert.equal(structure.vertices.length/18,6000);assert(triangles([structure]).every(t=>originalStructure.has(t)),'structural finish retains its original triangles, positions, normals and winding while window belts reshape armor');
  const one=DW.aegisFlight.create(),two=DW.aegisFlight.create(),styled=one.geometry(),buffers=styled.map(b=>b.vertices);
  for(const e of nozzleAsset){const p=e.position,ray=y=>one.hit([750/U,(p[1]+y)/U,1200+p[2]/U],[600/U,(p[1]+y)/U,1200+p[2]/U]);const throat=ray(0),rim=ray(21.5);assert(throat&&rim);assert(Math.abs(throat[0]*U-p[0]-18.2)<.001,'center ray reaches recessed throat instead of a phantom flat cap');assert(Math.abs(rim[0]*U-p[0]-32)<.001,'rim ray hits the physical lip');}
  assert.equal(styled.filter(b=>b.texture).length,45,'loaded armed rig enables approved hull and heavy turret finish by default');

@@ -94,7 +94,7 @@
         if(cachedAsset!==sourceAsset){cachedAsset=sourceAsset;vertexCache.clear();surfaceBuffers=new WeakMap();idleAsset=null;}
         var asset=unarmed?prepareIdleAsset(sourceAsset):sourceAsset;
         /** @param {number[]} values */function vertices(values){var key=values.join(','),buffer=vertexCache.get(key);if(!buffer){buffer=new Float32Array(values.map(function(v,i){return i%6<3?v/U:v;}));vertexCache.set(key,buffer);}return buffer;}
-        /** @param {[number,number,number]} color @returns {[number,number,number]} */function livery(color){return team==='enemy'&&color[2]>color[0]*1.25?[Math.max(.45,color[2]),color[1]*.22,color[0]*.3]:color;}
+        /** @param {[number,number,number]} color @returns {[number,number,number]} */function livery(color){if(team!=='enemy'||Math.max(...color)<=.28)return color;if(color[0]>color[2]*1.12&&color[1]>color[2]*1.08)return [color[0]*.9,color[1]*.34,color[2]*.32];return color[2]>color[0]*1.25?[color[2]*.38,color[1]*.12,color[0]*.22]:color;}
         /** @param {Vector} p @param {boolean} [inverse] */function rotate(p,inverse){var a=(options?options.state.heading:0)*(inverse?-1:1),c=Math.cos(a),s=Math.sin(a);return [c*p[0]-s*p[1],s*p[0]+c*p[1],p[2]];}
         var hangars=asset.hangars||[],collisionBoxes=boxes.slice();
         if(!unarmed)collisionBoxes[8]={min:boxes[8].min,max:[652.5,47.5,38]};

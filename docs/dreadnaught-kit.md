@@ -555,3 +555,25 @@ The review also offers a 2.5 m personnel-door texture comparison, with crew
 beside the bulkheads. The large cargo shutter stays unchanged. The generated
 replacement keeps the original 2172 x 724 dimensions and material sampling;
 it adds no texture allocation, triangles or draws. This remains preview-only.
+
+## Production baked windows and faction livery
+
+The production bake now replaces all 480 individual window boxes with the
+approved shallow inset belts on the existing production armor. It uses the
+shared local `belt-atlas.png`; no production resource depends on `output/`.
+`tools/lib/aegis-window-belts.cjs` clips the real hull facets, cuts the openings,
+and adds their shallow returns. The main bake preserves all moving parts,
+anchors and metre coordinates. The broader generated armor-wrap study remains
+separate; promoting the windows does not promote its armor texture.
+
+The personnel frames in `hangar-v1/bulkhead.png` now measure approximately
+2.5 m rather than 4.3 m. The large cargo shutter is unchanged. This replacement
+keeps the same dimensions, material and draw cost. Source edit prompts and the
+2 m suited-crew comparison are retained in `output/aegis-hangar-door-scale-*`.
+
+Both factions share the same geometry and texture images. Enemy armor receives
+a muted oxide-red material tint, while dark machinery, room lights, engine
+textures and hangar interiors retain their original colors. This replaces the
+old rule that raised dark blue-gray metal to bright red. It requires neither
+an extra atlas nor a shader variant. `output/aegis-belt-production-review.html`
+compares allied and red-faction materials using the production loader.

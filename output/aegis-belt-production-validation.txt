@@ -1,0 +1,29 @@
+Production default: shallow inset baked windows, 2.5 m personnel doors,
+oxide-red enemy armor livery. Existing approved production armor retained.
+All 480 source windows assigned by the bake, including the prow.
+Per complete ship: 44120 -> 40364 triangles; 133 batches unchanged.
+Belt atlas 2048 x 1280: about 13.3 MiB RGBA+mips vs old 1.3 MiB;
+one shared allocation across factions. Door texture stays 2172 x 724.
+Faction color changes add no image, draw or geometry allocation.
+
+Actual encounter before/after: frozen initial Aegis encounter, two capitals,
+eight hostile fighters, zero wingmen, effects/simulation frozen. Production
+artwork, 100% scale, 1280 x 720 CSS, 1920 x 1080 backing, DPR 1.5.
+Separate OFF/ON/ON/OFF passes, 20 warmup + 90 samples per block.
+Before ON CPU median/p95 7.10/8.70 ms; after 7.40/8.60 ms.
+Both ON 271 draws; triangles 232692 -> 225180.
+Both OFF 9 draws / 144452 triangles. Cadence 13.30/13.40 ms throughout.
+CPU timings do not establish a speedup; GPU execution unmeasured.
+No reference crew, cutaway or fighter aids in production.
+Raw logs: aegis-belt-production-{before,after}-performance.txt.
+
+Visual inspection through production loader: red armor, dark barrels,
+neutral hangar surfaces, corrected personnel doors, nose windows.
+Proof: aegis-red-production.png and aegis-red-hangar-production.png.
+
+npm run check: 134/136 entries passed on first run. Two affected checks:
+stale shield envelope and legacy surface-study assertions. Regenerated the
+shield and surface fixture; preserved raw UVs through facet clipping;
+updated box-specific assertions for baked belts. Both checks now pass on
+focused rerun. Aegis gameplay tests and new livery invariants pass.
+Final strict types, asset cache/index and script profile checks pass.
