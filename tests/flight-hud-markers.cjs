@@ -223,14 +223,19 @@ assert.notDeepEqual(afterTravel.map(c=>c.points),beforeTravel.map(c=>c.points),'
 console.log('PASS four distant lane markers: exact 2x offsets, far-only 8 m births, no nearby refill or input-driven pop-in, frozen geometry, late fade, expiry and physical approach');
 
 const grid=DW.flightHud.flightGridPoints(straightPose,DW.sim.METERS_PER_UNIT,1000,700);
-assert.ok(grid.length>=10&&grid.length<=20,'Ten to twenty grid crosses are visible');
-assert.ok(grid.every(p=>p.every(v=>Math.abs(v/80-Math.round(v/80))<1e-9)),'All points belong to the fixed 80 m Cartesian lattice');
+assert.ok(grid.length>=10&&grid.length<=100,'Distant grid has a bounded regular population without nearest-marker swaps');
+assert.ok(grid.every(p=>p.every(v=>Math.abs(v/160-Math.round(v/160))<1e-9)),'All points belong to the fixed 160 m Cartesian lattice');
 const movedCamera={...straightPose,eye:straightPose.eye.map((v,k)=>v+[5,3,-7][k]/DW.sim.METERS_PER_UNIT)};
 const movedGrid=DW.flightHud.flightGridPoints(movedCamera,DW.sim.METERS_PER_UNIT,1000,700);
 assert.ok(movedGrid.some(p=>grid.some(q=>JSON.stringify(p)===JSON.stringify(q))),'Moving the eye preserves shared world coordinates');
-for(const [w,h] of [[1641,969],[700,1000],[800,600]])assert.ok(DW.flightHud.flightGridPoints(movedCamera,DW.sim.METERS_PER_UNIT,w,h).length<=20);
+for(const [w,h] of [[1641,969],[700,1000],[800,600]])assert.ok(DW.flightHud.flightGridPoints(movedCamera,DW.sim.METERS_PER_UNIT,w,h).length<=100);
 calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,straightPose,DW.sim.METERS_PER_UNIT,.85);
 assert.equal(calls.filter(c=>c.color==='#9aeeff').length,grid.length,'One three-axis cross per grid site');
 assert.ok(calls.filter(c=>c.color==='#9aeeff').every(c=>c.points.length===6),'Each cross consists of three perpendicular world-axis bars');
 get('flight-guide-style').value='grid';hud.render(guideView);assert.ok(calls.some(c=>c.color==='#9aeeff'),'Static grid is available in the production HUD');
-console.log('PASS static XYZ grid: world-fixed 80 m lattice, three-axis crosses, 10–20 visible, bounded population and camera-only parallax');
+console.log('PASS static XYZ grid: world-fixed 160 m lattice, three-axis crosses, distant continuous population, bounded population and camera-only parallax');
+
+// Close rank crossings must not replace arbitrary bright crosses.
+const shifted=DW.flightHud.flightGridPoints({...straightPose,eye:straightPose.eye.map((v,k)=>v+(k===0?.001:0))},DW.sim.METERS_PER_UNIT,1000,700);
+const overlap=grid.filter(p=>shifted.some(q=>JSON.stringify(p)===JSON.stringify(q)));assert.ok(overlap.length>=grid.length-4,'Tiny camera motion retains the visible lattice instead of swapping a nearest-20 selection');
+calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,straightPose,DW.sim.METERS_PER_UNIT,.85);assert.ok(calls.filter(c=>c.color==='#9aeeff').some(c=>c.alpha<.1),'Distant/edge crosses blend in below full brightness');
