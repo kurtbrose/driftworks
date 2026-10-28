@@ -511,3 +511,42 @@ Textures and prepared buffers remain shared across instances. The shield baker
 includes the redistributed structure so the shield geometry does not change.
 Use `node tools/bake-aegis-flight.cjs --structure-study` to regenerate the
 review data against `output/aegis-structure-before-rig.js`.
+
+## Armor wrap candidate (review only)
+
+`node tools/bake-aegis-flight.cjs --armor-study` exports source-mesh ranges and
+continuous cross-section UVs to `output/aegis-armor-wrap-data.js`, without
+changing the production rig. The authoring helper in
+`output/aegis-armor-wrap.cjs` unwraps the contour around each armor piece,
+with a UV cut on the negative-Z side in authoring space at the window belt.
+Crossing triangles are split on that plane; the shape and flat normals stay
+unchanged. The atlas layout mirrors the generated upper strip for the lower
+half. Axial end surfaces sample a quiet painted region instead of a white
+flat-color swatch. Bay identification retains its separate atlas tile.
+
+The candidate covers the nose, exposed inner ends and articulated armor too.
+It adds 1068 triangles per complete ship, retains the existing draw/material
+batch count, and uses the same 2048 x 1024 atlas footprint. It is awaiting visual
+approval at `output/aegis-armor-review.html`; production still uses the approved
+original armor. The area/bounds/UV-continuity probe and review-only flight rig
+are generated with `node output/aegis-armor-wrap-probe.cjs`.
+
+## Baked-window and scale review
+
+`output/aegis-belt-review.html` compares the existing individual window boxes
+with flat painted belts and shallow inset openings. The study reuses all 480
+approved room images at their authored silhouettes. `--belt-study` exports the
+78 source backing-panel ranges. `output/bake-aegis-belt-study.cjs` clips the
+actual armor surfaces, preserving their bends, and packs twenty reused belt
+layouts into a 2048 x 1280 opaque atlas. The flat version removes 4608 triangles
+per ship; the inset version removes 2964. Both retain the window material draw.
+The atlas costs about 13.3 MiB with RGBA mipmaps, versus 1.3 MiB for the old
+window atlas. This remains a review candidate, not the production default.
+
+Scale references in `output/aegis-scale-study.js` use the existing Quaternius
+astronaut normalized to 2.0 m including the suit, the shared 12 m Spitfire,
+and one-metre ruler ticks. The optional one-sided cutaway has provisional
+3.3 m deck spacing. Temporary platforms and references are authoring aids only.
+Each hangar contains two calibrated fighters and seven suited crew on its
+actual deck plane. Toggle Scale references to inspect the ship without them.
+The belt probe checks 1182 visibility rays per variant, finite buffers and UVs.

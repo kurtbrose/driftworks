@@ -1,0 +1,12 @@
+{
+  "windows": 480,
+  "belts": 78,
+  "patterns": 20,
+  "atlas": [
+    2048,
+    1280
+  ],
+  "baselineTriangles": 45188,
+  "flatTriangles": 40580,
+  "insetTriangles": 42224
+}

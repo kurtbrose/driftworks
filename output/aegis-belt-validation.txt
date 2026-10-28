@@ -1,0 +1,42 @@
+Aegis baked-window / scale review - 2026-10-27
+
+Review: output/aegis-belt-review.html. Production artwork is unchanged.
+All 480 original window images / sizes retained; individual boxes removed.
+78 belts, 20 reused layouts; 2048 x 1280 atlas, 46091 bytes PNG.
+Decoded RGBA + mipmaps ~13.3 MiB (old window atlas ~1.3 MiB).
+Flat surface reuses clipped actual hull facets; no floating overlay offset.
+Inset shifts those facets inward at most 0.75 m and closes opening edges.
+Shape/pivots outside the selected window belts are unchanged.
+Wrapped-armor comparison baseline: 45188 triangles per ship.
+Flat: 40580 (-4608). Inset: 42224 (-2964). No added material draws.
+Original production armor still remains the default; review uses wrap candidate.
+
+Headless: 1182 surface visibility rays per variant passed, including all
+previously visible window centers, nose and hangar bands. Finite vertex/UV
+counts and valid UV bounds passed. Production flight bake --check passed.
+
+Actual paused Aegis encounter: two capitals, eight hostiles, no wingmen;
+1920 x 1080 backing, 1280 x 720 CSS, DPR 1.5, 100 percent scale.
+No reference/cutaway models, no concurrent tests/rebuilds during measurements.
+Each page ABBA asset off/on, 20 warmup + 90 samples/block, frozen AI/projectiles.
+All runs: 271 draws with capitals, 9 without; 144452 triangles without.
+Before: 234828 triangles, CPU med/p95 5.0/6.4 ms; reverse repeat 6.2/8.7 ms.
+Flat: 225612 triangles, CPU 9.7/12.1 ms; reverse repeat 6.1/7.3 ms.
+Inset: 228900 triangles, CPU 6.3/8.5 ms.
+Initial p95 cadence fluctuated to 26.7 ms in both off and on blocks;
+reverse repeats and inset cadence 13.3/13.4 ms. GPU execution is unmeasured.
+Timing is variable; do not claim a demonstrated speedup. Reverse flat/baseline
+submission and cadence are comparable. Raw measurements retained as text.
+
+Scale aids: actual source astronaut normalized to 2.0 m including suit;
+existing Spitfire normalized to 12.0 m along its length (16.76 m wingspan).
+One-metre ruler ticks. Optional rough decks spaced 3.3 m, a provisional study.
+Crew alongside windows, inside cutaway and around two fighters per hangar.
+Hangar references stand on the actual deck plane at z=-11.7 m.
+References/cutaway stay outside production assets and gameplay.
+Visual checks: frontal, oblique, nose, underside, external scale view, deck
+cutaway, hangar wide and close views. Accepted room images reused; no new
+ImageGen artwork for the window belts. Armor reuses earlier generated source.
+
+Repository npm run check passed: strict types, asset/script validation and
+135/135 test entries. See aegis-belt-check.log.
