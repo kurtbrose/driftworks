@@ -185,6 +185,7 @@
         var delta = point.map(function (v, i) {
             return (v - player.eye[i]) * DW.sim.METERS_PER_UNIT;
         }), distance = Math.hypot.apply(null, delta);
+        if(player.curvature){var route=DW.flightHyperbolic.path(player.eye,point,player.curvature);distance=route.distance*DW.sim.METERS_PER_UNIT;delta=route.direction.map(function(v){return v*distance;});}
         if (distance < 1)
             return null;
         /** @param {Vector} axis */

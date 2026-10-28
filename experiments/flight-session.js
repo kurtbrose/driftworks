@@ -47,7 +47,7 @@
         combat.useHullModels = true;
         DW.training.bindPlayer(combat, state).guns = guns;
         var bridgeVector=DW.flightGuns.bridgeVector,crossBridge=DW.flightGuns.crossBridge;
-        var activeProfile = model.profiles[0], remainder = 0;
+        var activeProfile = model.profiles[0], remainder = 0,curvatureOverride=0;
         var opponentStyle = /** @type {import('./types').OpponentStyle} */ ('baseline');
         var hulls = /** @type {{ally: string; enemy: string} | null} */ (null);
         function configureCombat() {
@@ -136,7 +136,7 @@
             DW.training.bindPlayer(combat, state).guns = guns;
             DW.training.configure(combat, activeProfile);
             configureCombat();
-            combat.enabled = enabled&&(!DW.flightMissions.resolve(mode).emptySpace||mode==='cinematic');
+            combat.enabled = enabled&&(!DW.flightMissions.resolve(mode).emptySpace||mode==='cinematic'||!!DW.flightMissions.resolve(mode).sky.hyperbolic);
             if (!combat.enabled) {
                 combat.enemies = [];
                 combat.countdown = 0;
@@ -151,9 +151,10 @@
             combat = DW.training.create(config.mode);
             activeProfile = config.profile;
             DW.training.configure(combat, activeProfile);
-            combat.enabled = config.enabled&&(!DW.flightMissions.resolve(config.mode).emptySpace||config.mode==='cinematic');
+            combat.enabled = config.enabled&&(!DW.flightMissions.resolve(config.mode).emptySpace||config.mode==='cinematic'||!!DW.flightMissions.resolve(config.mode).sky.hyperbolic);
             guns = DW.flightGuns.create();
             state = model.createSortie(asteroid.radius, config.profile, config.mode);
+            if(state.curvature&&curvatureOverride)state.curvature=curvatureOverride;
             combat.useHullModels = true;
             DW.training.bindPlayer(combat, state).guns = guns;
             contact = false;
@@ -206,6 +207,7 @@
                     });
                     if(changed)DW.training.collisionChanged(combat);
                 }:undefined);
+                if(state.curvature)DW.training.rebaseGeometry(combat);
                 if (feedback.fired)
                     environment.onGunshot();
                 if (feedback.impact)
@@ -230,6 +232,7 @@
             return snapshot();
         }
         return { snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance,
+            setCurvature:/** @param {number} radius */function(radius){if(!Number.isFinite(radius)||radius<100)throw new Error('Invalid curvature radius');curvatureOverride=radius;},
             setAsteroidDiameter: setAsteroidDiameter, setStartPosition: setStartPosition,
             setOpponentStyle: setOpponentStyle, configureHulls: configureHulls,
             acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, nextTarget: nextTarget,

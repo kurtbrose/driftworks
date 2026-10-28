@@ -92,13 +92,13 @@
         horizon=Math.max(1,Math.min(8,horizon));
         /** @type {import('./types').FlightPathSample[]} */var path=[];
         /** @param {number} seconds */function sample(seconds){
-            path.push({seconds:seconds,distance:distance,pose:{eye:state.eye.slice(),right:state.right.slice(),up:state.up.slice(),back:state.back.slice()}});
+            path.push({seconds:seconds,distance:distance,pose:{curvature:state.curvature,spaceFrame:state.spaceFrame,eye:state.eye.slice(),right:state.right.slice(),up:state.up.slice(),back:state.back.slice()}});
         }
         sample(0);
         for(var tick=1;tick<=Math.ceil(horizon/dt);tick++) {
             var before=state.eye;
             DW.training.stepInput(copy,demand,dt);
-            distance+=Math.hypot(state.eye[0]-before[0],state.eye[1]-before[1],state.eye[2]-before[2])*units;
+            distance+=(state.curvature?DW.flightHyperbolic.path(before,state.eye,state.curvature).distance:Math.hypot(state.eye[0]-before[0],state.eye[1]-before[1],state.eye[2]-before[2]))*units;
             sample(tick*dt);
         }
         return path;
@@ -109,6 +109,7 @@
      * @param {import('./types').FlightPathSample[]} path
      * @param {number} width @param {number} opacity @param {number} [phase] @param {boolean} [outerFour] */
     function paintFlightLanes(ctx,w,h,camera,units,path,width,opacity,phase,outerFour) {
+        if(camera.curvature)path=path.map(function(p){return Object.assign({},p,{pose:DW.flightHyperbolic.chartPose(p.pose,camera)});});
         if(path.length<2||!(w>0&&h>0&&units>0&&opacity>0))return;
         var focal=1/Math.tan(Math.PI/8),aspect=w/h,half=Math.max(3,Math.min(24,width/2))/units;
         var floor=Math.max(3,width*.25)/units,aim=Math.max(40,Math.min(72,h*.075))+3;
@@ -165,7 +166,7 @@
                 run=[];
             }
             /** @param {import('./types').Pose} pose */
-            function lane(pose){return project(pose.eye.map(function(v,k){return v+pose.right[k]*half*side+pose.up[k]*floor*plane*(outerFour?2:1);}));}
+            function lane(pose){var delta=pose.eye.map(function(_,k){return pose.right[k]*half*side+pose.up[k]*floor*plane*(outerFour?2:1);});return project(camera.curvature?DW.flightHyperbolic.offset(pose.eye,delta,camera.curvature):pose.eye.map(function(v,k){return v+delta[k];}));}
             var previous=lane(path[0].pose);
             for(var i=1;i<path.length;i++){
                 var next=lane(path[i].pose),d0=path[i-1].distance,d1=path[i].distance,span=d1-d0;
@@ -206,6 +207,7 @@
      * @param {import('./types').Pose} camera @param {number} units
      * @param {import('./types').FlightPathSample[]} path @param {number} width @param {number} opacity @param {number} [phase] */
     function paintFlightBrackets(ctx,w,h,camera,units,path,width,opacity,phase){
+        if(camera.curvature)path=path.map(function(p){return Object.assign({},p,{pose:DW.flightHyperbolic.chartPose(p.pose,camera)});});
         if(path.length<2||!(w>0&&h>0&&units>0&&opacity>0))return;
         var focal=1/Math.tan(Math.PI/8),aspect=w/h,half=Math.max(3,Math.min(24,width/2))/units;
         var aim=Math.max(40,Math.min(72,h*.075))+3,horizon=path[path.length-1].seconds;
@@ -251,7 +253,7 @@
                 var nr=Math.hypot.apply(null,right)||1,nu=Math.hypot.apply(null,up)||1;
                 var seconds=previous.seconds+(next.seconds-previous.seconds)*t;
                 [1,2].forEach(function(scale){
-                    var points=corners.map(function(c){return project(eye.map(function(v,k){return v+right[k]/nr*c[0]*half*scale+up[k]/nu*c[1]*half*.75*scale;}));});
+                    var points=corners.map(function(c){var delta=eye.map(function(_,k){return right[k]/nr*c[0]*half*scale+up[k]/nu*c[1]*half*.75*scale;});return project(camera.curvature?DW.flightHyperbolic.offset(eye,delta,camera.curvature):eye.map(function(v,k){return v+delta[k];}));});
                     var alpha=Math.min(1,opacity)*(.65+.35*(1-seconds/horizon))*(scale===2?.8:1);
                     for(var j=0;j<8;j+=2)line(points[j],points[(j+1)%8],alpha,scale===2);
                 });
@@ -264,6 +266,7 @@
      * @param {import('./types').Pose} camera @param {number} units @param {number} w @param {number} h
      * @returns {number[][]} world positions in metres */
     function flightGridPoints(camera,units,w,h){
+        if(camera.curvature)return DW.flightHyperbolic.grid(camera,w,h);
         var eye=camera.eye.map(function(v){return v*units;}),spacing=160,range=960,focal=1/Math.tan(Math.PI/8),aspect=w/h;
         /** @type {number[][]} */var points=[];
         var origin=eye.map(function(v){return Math.floor(v/spacing);});
@@ -288,7 +291,7 @@
         /** @param {number[]} p */function project(p){var v=p.map(function(n,k){return n-eye[k];}),depth=-v.reduce(function(sum,n,k){return sum+n*camera.back[k];},0);
             return [w/2+v.reduce(function(sum,n,k){return sum+n*camera.right[k];},0)*focal/aspect/depth*w/2,h/2-v.reduce(function(sum,n,k){return sum+n*camera.up[k];},0)*focal/depth*h/2];}
         ctx.save();flightGridPoints(camera,units,w,h).forEach(function(p){
-            var distance=Math.hypot(p[0]-eye[0],p[1]-eye[1],p[2]-eye[2]);
+            var distance=Math.hypot(p[0]-eye[0],p[1]-eye[1],p[2]-eye[2]);if(camera.curvature)distance=camera.curvature*Math.asinh(distance/camera.curvature);
             var center=project(p);
             var far=Math.max(0,Math.min(1,(960-distance)/480));
             var edge=Math.max(0,Math.min(1,Math.min(center[0],w-center[0],center[1],h-center[1])/48));
@@ -310,7 +313,7 @@
             var end=path[path.length-1].distance;
             if(range!==undefined){
                 // A tight predicted loop must not spawn paint beside the cockpit.
-                var origin=path[0].pose.eye,radius=range/DW.sim.METERS_PER_UNIT;end=-1;
+                var origin=path[0].pose.eye,radius=path[0].pose.curvature?path[0].pose.curvature/DW.sim.METERS_PER_UNIT*Math.sinh(range/path[0].pose.curvature):range/DW.sim.METERS_PER_UNIT;end=-1;
                 for(var n=1;n<path.length;n++){
                     var p=path[n].pose.eye.map(function(v,k){return v-origin[k];});
                     if(Math.hypot.apply(null,p)<radius)continue;
@@ -326,7 +329,7 @@
             /** @param {import('./types').FlightPathSample} a @param {import('./types').FlightPathSample} b @param {number} d */
             function sample(a,b,d){var t=(d-a.distance)/(b.distance-a.distance);
                 /** @param {number[]} x @param {number[]} y */function mix(x,y){return x.map(function(v,k){return v+(y[k]-v)*t;});}
-                return {seconds:a.seconds+(b.seconds-a.seconds)*t,distance:d-start,pose:{eye:mix(a.pose.eye,b.pose.eye),right:mix(a.pose.right,b.pose.right),up:mix(a.pose.up,b.pose.up),back:mix(a.pose.back,b.pose.back)}};
+                return {seconds:a.seconds+(b.seconds-a.seconds)*t,distance:d-start,pose:{curvature:a.pose.curvature,spaceFrame:a.pose.spaceFrame,eye:mix(a.pose.eye,b.pose.eye),right:mix(a.pose.right,b.pose.right),up:mix(a.pose.up,b.pose.up),back:mix(a.pose.back,b.pose.back)}};
             }
             for(var i=1;i<path.length;i++){
                 var a=path[i-1],b=path[i];if(b.distance<=a.distance||b.distance<start||a.distance>end)continue;
@@ -391,7 +394,7 @@
                 if(guideCombat!==combat||combat.time<guideLastClock||config!==guideKey){
                     guideTravel=0;guideLastEye=null;guidePath=null;guideBatches=[];guideRange=0;guideSpawn=-Infinity;guideKey=config;
                 }
-                if(guideLastEye&&combat.time>guideLastClock)guideTravel+=Math.hypot(state.eye[0]-guideLastEye[0],state.eye[1]-guideLastEye[1],state.eye[2]-guideLastEye[2])*units;
+                if(guideLastEye&&combat.time>guideLastClock)guideTravel+=state.curvature?Math.hypot.apply(null,state.velocity)*(combat.time-guideLastClock):Math.hypot(state.eye[0]-guideLastEye[0],state.eye[1]-guideLastEye[1],state.eye[2]-guideLastEye[2])*units;
                 guideLastEye=state.eye.slice();guideLastClock=combat.time;guideCombat=combat;
                 if(!guidePath||combat.time-guideClock>=.1){
                     guidePath=predictFlightPath(Object.assign({},combat.player,{pose:state}),view.flightDemand,8);
@@ -478,6 +481,7 @@
             var radarContacts = /** @type {RadarContact[]} */ (living.filter(function(e){return (e.pose.region||0)===(state.region||0);}).map(function (e) {
                 return { point: e.pose.eye, color: e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
             }));
+            if(state.curvature)radarContacts=radarContacts.map(function(c){var route=DW.flightHyperbolic.path(state.eye,c.point,state.curvature||650);return Object.assign({},c,{point:state.eye.map(function(v,i){return v+route.direction[i]*route.distance;})});});
             if(!mission.emptySpace&&!(state.region||0)){
                 radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
                 radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
@@ -494,7 +498,7 @@
                 return point.map(function(v,i){return v-state.eye[i];});
             }
             /** @param {import('./types').Craft} craft */function rangeText(craft){
-                var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,!!mission.sky.wormhole);
+                var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,view.state.curvature||(!!mission.sky.wormhole));
                 return path?Math.round(path.distance*units*displayScale)+distanceUnit:'—';
             }
             var targetBearing = /** @type {number | null} */ (null);
@@ -586,7 +590,7 @@
 
             combatHud.globalAlpha = 1;
             if (selected) {
-                var lead=view.aimingSolution===undefined?DW.training.firingSolution(combat,combat.player,selected,view.weapon):view.aimingSolution,q=lead?DW.flightSkybox.project(lead.direction,state,w/h):null;
+                var lead=DW.training.firingSolution(combat,combat.player,selected,view.weapon),q=lead?DW.flightSkybox.project(lead.direction,state,w/h):null;
                 get('target-info').dataset.leadState=lead?'valid':'unavailable';get('target-info').dataset.leadTime=lead?lead.time.toFixed(4):'';
                 if(!lead){combatHud.fillStyle='#a9e5dc';combatHud.fillText(selected.team==='ally'?'FRIENDLY CONTACT':'NO FIRING SOLUTION',w/2,h/2+54);}
                 if (q && Math.abs(q.x) < 1 && Math.abs(q.y) < 1) {
@@ -647,7 +651,7 @@
                 label(DW.training.callsign(selected).slice(0,22),rightX+14,rightY+44,16,gold);
                 var source=get('target-camera').querySelector('canvas:not(.scene3d-overlay)');
                 if(source instanceof HTMLCanvasElement){var fit=Math.min((pw-24)/source.width,76/source.height);ctx.image(source,rightX+(pw-source.width*fit)/2,rightY+51,source.width*fit,source.height*fit,0,targetRendered);}
-                var path=DW.flightGuns.ballisticPath(view.state.eye,selected.pose.eye,view.state.region||0,selected.pose.region||0,!!mission.sky.wormhole);
+                var path=DW.flightGuns.ballisticPath(view.state.eye,selected.pose.eye,view.state.region||0,selected.pose.region||0,view.state.curvature||(!!mission.sky.wormhole));
                 var distance=path?path.distance*view.units*mission.units.distanceScale*(view.distanceScale||1):null;
                 label(distance===null?'—':Math.round(distance)+' '+mission.units.distanceLabel,rightX+14,rightY+139,11);
                 meter('SHIELD',selected.shield||0,selected.maxShield||1,rightX+14,rightY+157,pw-28,'#79b8e7');

@@ -9,7 +9,7 @@
     var activeMission=DW.flightMissions.current();
     if(activeMission.sky.gasGiant&&!DW.gasGiantWeather)await new Promise(/** @param {(value:boolean)=>void} resolve */function(resolve){window.addEventListener('gas-weather-ready',function(){resolve(true);},{once:true});});
     var cinematic=activeMission.id==='cinematic';
-    var impactWatch=!!activeMission.emptySpace&&!cinematic;
+    var impactWatch=!!activeMission.emptySpace&&!cinematic&&!activeMission.sky.hyperbolic;
     if(impactWatch)get('combat-toggle').checked=false;
     if(activeMission.weaponsDisabled){
         get('combat-toggle').disabled=true;get('watch-panel').hidden=true;
@@ -70,6 +70,12 @@
         }, onImpact: function () {
             DW.audio.playImpact(1);
         } });
+    if(activeMission.sky.hyperbolic){
+        var curvatureLabel=document.createElement('label'),curvatureSelect=document.createElement('select');curvatureSelect.id='curvature-radius';
+        curvatureLabel.textContent='Curvature radius';curvatureLabel.htmlFor=curvatureSelect.id;
+        [350,650,1800,100000].forEach(function(r){var option=document.createElement('option');option.value=String(r);option.textContent=r+' m';curvatureSelect.appendChild(option);});curvatureSelect.value=String(activeMission.sky.hyperbolic);
+        document.getElementById('flight-settings')?.append(curvatureLabel,curvatureSelect);curvatureSelect.onchange=function(){session.setCurvature(Number(curvatureSelect.value));reset();};
+    }
     var ohioMusic = activeMission.id === 'ohio' ? DW.audio.createOhioMusic() : null;
     var ohioMusicStarted = false;
     var mixerHost=document.getElementById('flight-settings');
@@ -570,9 +576,9 @@
         };
     }
 
-    if(aegis||activeMission.id==='evacuation'||activeMission.id==='battle'){
+    if(aegis||activeMission.id==='evacuation'||activeMission.id==='battle'||activeMission.sky.hyperbolic){
         var benchmarkButton=document.createElement('button'),benchmarkOutput=document.createElement('pre');
-        benchmarkButton.textContent=activeMission.id==='scramble'?'Benchmark close furball on / off':activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
+        benchmarkButton.textContent=activeMission.sky.hyperbolic?'Benchmark fleet on / off':activeMission.id==='scramble'?'Benchmark close furball on / off':activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
         benchmarkOutput.id='aegis-benchmark-result';benchmarkOutput.style.whiteSpace='pre-wrap';
         get('perf-reset').after(benchmarkButton,benchmarkOutput);
         var capitalBenchmarkButton=(activeMission.id==='battle'||activeMission.id==='scramble')?document.createElement('button'):null;
@@ -592,7 +598,7 @@
             try{
                 for(var enabled of [false,true,true,false]){
                     if(surfaces&&aegis&&aegis.setSurfaceDetail){aegis.setSurfaceDetail(enabled,scope);presentation.setCapital(aegis);}else if(aegis&&((activeMission.id!=='battle'&&activeMission.id!=='scramble')||capitals))presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
-                    var sampled=activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
+                    var sampled=activeMission.sky.hyperbolic?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:enabled?snapshot.combat.enemies:[],wrecks:enabled?snapshot.combat.wrecks:[]})}):activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
                     var previous=0;
                     for(var i=0;i<110;i++){
                         var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});

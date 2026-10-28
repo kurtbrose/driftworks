@@ -229,6 +229,7 @@
         var index=collisionIndex(t);
         var shooter = typeof team === 'object' ? team : index.entries.find(function (e) { return e.craft.id === team; })?.craft;
         var faction = shooter ? shooter.team || 'enemy' : team === 'player' ? 'ally' : 'enemy';
+        if(t.player.pose.curvature)return {candidates:index.entries,shooter:shooter,faction:faction,radius:bolt.weapon.headRadius||0};
         var radius=bolt.weapon.headRadius||0,margin=Math.max(30,radius)/U,sleep=collisionSleeps.get(bolt);
         var sleeping=sleep&&sleep.index===index&&sleep.epoch===index.epoch&&sleep.radius===radius&&sleep.faction===faction&&
             Math.max(Math.hypot(start[0]-sleep.point[0],start[1]-sleep.point[1],start[2]-sleep.point[2]),Math.hypot(end[0]-sleep.point[0],end[1]-sleep.point[1],end[2]-sleep.point[2]))+index.motion-sleep.motion<sleepClearance;

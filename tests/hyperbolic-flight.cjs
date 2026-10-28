@@ -1,57 +1,38 @@
-'use strict';
 const assert=require('node:assert/strict');
-const DW=require('../tools/headless.cjs').loadRuntime();
-global.window={Driftworks:DW};
-require('../experiments/hyperbolic-flight-model.js');
-const H=DW.hyperbolicFlight;
-const near=(a,b,e=1e-6)=>assert.ok(Math.abs(a-b)<e,`${a} != ${b}`);
-const p=[1,0,0,0],v=[0,0,0,-1],w=[0,1,0,0];
-near(H.distance(p,H.exp(p,v,2)),2);
-near(H.dot(H.exp(p,v,2),H.transport(p,v,w,2)),0);
-near(H.dot(H.transport(p,v,w,2),H.transport(p,v,w,2)),1);
-near(H.segmentDistance(p,v,H.exp(p,v,.5),1),0);
-near(H.segmentDistance(p,v,H.exp(p,v,2),1),1);
-for(const radius of [350,650,1800,100000])for(const along of [-10,0,10,30,50])for(const lateral of [0,6,11,13,20]){
- const center=H.exp(p,v,along/radius),q=H.exp(center,w,lateral/radius);
- assert.equal(H.segmentHit(p,v,q,30/radius,Math.cosh(12/radius)),H.segmentDistance(p,v,q,30/radius)*radius<12,'hot collision test preserves geodesic segment hits');
-}
-const reuse=H.create(),starArray=reuse.stars,star=reuse.stars[0];
-reuse.actors[0].trail.push(p.slice());const trail=reuse.actors[0].trail[0];
-H.step(reuse,1/120,{auto:true});
-assert.equal(reuse.stars,starArray);assert.equal(reuse.stars[0],star,'star rebasing must reuse owned vectors');
-assert.equal(reuse.actors[0].trail[0],trail,'trail rebasing must reuse owned vectors');
-const a={p:p.slice(),axes:[[0,1,0,0],[0,0,1,0],[0,0,0,1]]};
-H.move(a,[10,20,-50],650);near(H.distance(p,a.p)*650,Math.hypot(10,20,50));
-// Center projection and radar describe the same bearing but different depth.
-const local=H.relative({p,axes:[[0,1,0,0],[0,0,1,0],[0,0,0,1]]},a.p);
-near(local[0]/local[2],a.p[1]/a.p[3]);
-near(Math.hypot(...local)*650,Math.hypot(10,20,50));
-// Transverse angular size uses R*sinh(d/R), not Euclidean d.
-const center=H.exp(p,v,2),corner=H.exp(center,w,1/650);
-near(corner[1]/-corner[3],Math.tanh(1/650)/Math.sinh(2));
-for(const radius of [350,650,1800,100000]){
- const world=H.create(radius),shooter=world.actors[0],target=world.actors[1];
- target.p=[1,0,0,0];target.axes=shooter.axes.map(v=>v.slice());
- H.move(target,[80,30,-500],radius);target.flight.velocity=[190,20,-50];
- const lead=H.lead(world,shooter,target);assert.ok(lead,'reachable crossing target needs a pip');
- const direction=H.tangent(shooter,lead.direction);
- const bolt=H.exp(shooter.p,direction,(16+1000*lead.time)/radius);
- const future={p:target.p.slice(),axes:target.axes.map(v=>v.slice())};H.move(future,target.flight.velocity.map(v=>v*lead.time),radius);
- assert.ok(H.distance(bolt,future.p)*radius<.01,'aiming at the pip must meet the predicted target');
- assert.ok(Math.abs(lead.direction[0]-H.relative(shooter,target.p)[0]/Math.hypot(...H.relative(shooter,target.p)))>.01,'pip must lead lateral motion');
- target.flight.velocity=[0,0,0];const stationary=H.lead(world,shooter,target);assert.ok(stationary);near(stationary.time,(H.distance(shooter.p,target.p)*radius-16)/1000,1e-5);
- H.move(target,[0,0,-2500],radius);assert.equal(H.lead(world,shooter,target),null,'out-of-lifetime targets have no pip');
- target.dead=1;assert.equal(H.lead(world,shooter,target),null);
-}
-for(const radius of [350,650,1800,100000]){
- const world=H.create(radius);
- for(let i=0;i<7200;i++){
-  H.step(world,1/120,{auto:true});
-  if(i%120===0)for(const actor of world.actors){assert.ok(actor.p.every(Number.isFinite));near(H.dot(actor.p,actor.p),-1,1e-5);actor.axes.forEach(axis=>{near(H.dot(actor.p,axis),0,1e-5);near(H.dot(axis,axis),1,1e-5);});}
+const {loadRuntime,createFlight}=require('../tools/headless.cjs');
+const DW=loadRuntime(),H=DW.flightHyperbolic,U=DW.sim.METERS_PER_UNIT,dt=1/120;
+const near=(a,b,t=1e-5)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=v=>v.map(x=>x/Math.hypot(...v));
+function volley(radius,onPip){
+ const t=DW.training.create('hyperbolic'),p=t.player.pose;p.curvature=radius;p.eye=[0,0,0];
+ const e=DW.training.createCraft('crossing',DW.arcade.create(0),'enemy');
+ Object.assign(e.pose,{curvature:radius,eye:H.offset(p.eye,[90,20,-500].map(v=>v/U),radius),right:[1,0,0],up:[0,1,0],back:[0,0,1],velocity:[100,0,0]});
+ const model=DW.shipPackModels.find('concept-trio:raptor');assert.ok(model,'real fighter model required');
+ e.collision={kind:'model',modelId:model.model.id};t.player.collision={kind:'model',modelId:model.model.id};t.enemies=[e];t.targetId=e.id;
+ const weapon=DW.retailWeapons[0],lead=DW.training.firingSolution(t,t.player,e,weapon);assert.ok(lead);
+ const d=onPip?lead.direction:H.path(p.eye,e.pose.eye,radius).direction;p.back=d.map(v=>-v);p.right=unit(cross(d,[0,1,0]));p.up=cross(p.back,p.right);
+ const future=H.offset(e.pose.eye,e.pose.velocity.map(v=>v*lead.time/U),radius),route=H.path(p.eye,future,radius);const anchors=DW.training.gunAnchors(t.player),launch=anchors.reduce((sum,p)=>sum+Math.max(0,p[1]),0)/anchors.length;near(route.distance*U-launch,weapon.speed*lead.time,.002);
+ const shield=e.shield;
+ for(let i=0;i<Math.ceil((lead.time+.2)/dt);i++){
+  const next=H.offset(e.pose.eye,e.pose.velocity.map(v=>v*dt/U),radius);e.pose.velocity=H.transport(e.pose.eye,next,e.pose.velocity,radius);e.pose.eye=next;t.time+=dt;
+  DW.flightGuns.step(t.player.guns,p,weapon,i===0,dt,(a,b,bolt)=>DW.training.trace(t,a,b,bolt,t.player,undefined,p),()=>DW.training.convergencePoint(t,t.player,weapon),t.player.profile.gunMounts,anchors,radius);
  }
- assert.ok(world.shots>0);assert.ok(world.hits>0);assert.ok(world.score[0]+world.score[1]>0);
- console.log('H3 battle',radius,world.score,world.shots,world.hits);
+ if(onPip){assert.ok(t.player.guns.hits>0,'on-pip native volley hits authored hull');assert.ok(e.shield<shield);near(e.hp,e.maxHp);}else{assert.equal(t.player.guns.hits,0,'off-pip crossing shot misses');near(e.shield,shield);}
+ assert.equal(t.player.guns.fired,anchors.length);
 }
-const escape=H.create(350);
-for(let i=0;i<14400;i++){H.step(escape,1/120,{auto:false,boost:true,fire:true});if(i%120===0)assert.ok(escape.actors.every(a=>a.p.every(Number.isFinite)));}
-console.log('H3 real arcade flight, geodesics, transport, combat and sustained escape passed');
+for(const radius of [350,650,1800,100000]){
+ const p=DW.arcade.create(0);Object.assign(p,{curvature:radius,eye:H.offset([0,0,0],[80,30,-120].map(v=>v/U),radius),velocity:[0,70,0],throttle:1,ramp:[0,0,70]});
+ const before=p.eye.slice();DW.arcade.step(p,DW.arcade.profiles[0],{},dt);near(H.path(before,p.eye,radius).distance*U,70*dt,2e-5);[p.right,p.up,p.back].forEach(a=>near(Math.hypot(...a),1));
+ const report=DW.flightDialogue.contactData(p,H.offset(p.eye,[0,500/U,0],radius));near(report.distance,500,.001);
+ volley(radius,true);volley(radius,false);
+}
+console.log('PASS hyperbolic geometry and pip: native volleys, authored hulls/shields, off-pip negative controls and transported frames at four radii');
+const f=createFlight({mission:'hyperbolic',seed:29}),flat=createFlight({mission:'furball',seed:29});let v=f.snapshot();assert.equal(v.combat.enabled,true);
+assert.equal(JSON.stringify(v.combat.enemies.map(c=>[c.team,c.profile.name,c.hp,c.maxHp,c.shield,c.maxShield,c.skill,c.weaponIndex])),JSON.stringify(flat.snapshot().combat.enemies.map(c=>[c.team,c.profile.name,c.hp,c.maxHp,c.shield,c.maxShield,c.skill,c.weaponIndex])));
+assert.ok(v.combat.enemies.every(c=>c.pose.curvature===650&&c.controller==='ai'&&c.collision.kind==='model'));
+f.advance(2,{fire:true});v=f.snapshot();assert.ok(v.guns.fired>0);assert.ok(v.combat.enemies.some(c=>['attack','break','evade','recover'].includes(c.mode)));assert.ok(v.combat.enemies.some(c=>c.guns.fired>0));near(Math.hypot(...v.state.eye),0);
+v.combat.enemies=[];v.combat.countdown=1000;v.state.throttle=0;const shield=v.combat.shield;f.DW.training.damagePlayer(v.combat,f.DW.retailWeapons[0]);const damaged=v.combat.shield;assert.ok(damaged<shield);f.advance(6.9);near(v.combat.shield,damaged);f.advance(.6);near(v.combat.shield-damaged,6,.11);
+v.combat.player.hp=0;const time=v.combat.time;f.advance(10);near(v.combat.time,time);assert.equal(v.combat.player.hp,0);
+console.log('PASS native pipeline parity: roster/loadouts, retail guns, pursuit AI, shields/recharge, chart rebasing and sortie death without respawn');
+
+const far=DW.training.create('hyperbolic');far.player.pose.curvature=650;far.player.pose.eye=[0,0,0];const remote=DW.training.createCraft('remote',DW.arcade.create(0),'enemy');remote.pose.curvature=650;remote.pose.eye=H.offset([0,0,0],[0,6000/U,0],650);far.enemies=[remote];far.targetId=null;DW.training.acquireTarget(far,far.player.pose);assert.equal(far.targetId,'remote','geometry must not impose a new five-kilometre acquisition cap');

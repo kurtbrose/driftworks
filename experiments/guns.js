@@ -7,6 +7,7 @@
     /** @typedef {import('./types').Vector} Vector */
     /** @typedef {import('./types').Bolt} Bolt */
     /** @typedef {import('./types').Batch} Batch */
+    var DW=/** @type {Required<DriftworksNamespace>} */(window.Driftworks);
     var units = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).sim.METERS_PER_UNIT;
     /** @param {Vector} vector @param {Vector} normal */
     function bridgeVector(vector,normal){var radial=vector.reduce(function(sum,v,i){return sum+v*normal[i];},0);return vector.map(function(v,i){return 2*radial*normal[i]-v;});}
@@ -30,8 +31,9 @@
     }
     /** Finite-source firing route in the same compact optical metric as the image.
      * Coordinates/distances are scene units, not metres.
-     * @param {Vector} origin @param {Vector} target @param {number} region @param {number} destination @param {boolean} [bridge] */
+     * @param {Vector} origin @param {Vector} target @param {number} region @param {number} destination @param {boolean|number} [bridge] */
     function ballisticPath(origin,target,region,destination,bridge){
+        if(typeof bridge==='number')return DW.flightHyperbolic.path(origin,target,bridge);
         var delta=target.map(function(v,i){return v-origin[i];}),distance=Math.hypot.apply(null,delta);
         if(!bridge)return region===destination&&distance>1e-10?{direction:delta.map(function(v){return v/distance;}),distance:distance}:null;
         var path=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics.primary(origin.map(function(v){return v*units;}),target.map(function(v){return v*units;}),region,destination);
@@ -40,9 +42,10 @@
     /** An actionable aim direction, never an optically warped future point.
      * Predict target motion with craft transport and solve its optical firing path.
      * A later jink is not knowable; unverified/out-of-lifetime solutions return null.
-     * @param {Pose} shooter @param {Pose & {velocity:Vector}} target @param {Weapon} weapon @param {boolean} [bridge] @param {number} [launchMeters]
+     * @param {Pose} shooter @param {Pose & {velocity:Vector}} target @param {Weapon} weapon @param {boolean|number} [bridge] @param {number} [launchMeters]
      * @returns {import('./types').FiringSolution|null} */
     function lead(shooter,target,weapon,bridge,launchMeters){
+        if(typeof bridge==='number')return DW.flightHyperbolic.lead(shooter,target,weapon,bridge,launchMeters===undefined?4:launchMeters);
         var speed=weapon.speed/units,launch=Math.max(0,launchMeters===undefined?4:launchMeters)/units,life=weapon.lifetime;
         if(!(speed>0&&life>0))return null;
         /** @param {number} time */function sample(time){
@@ -89,7 +92,7 @@
     function create() {
         return { bolts: [], impacts: [], cooldown: 0, fired: 0, hits: 0 };
     }
-    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] @param {boolean} [bridge] */
+    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] @param {boolean|number} [bridge] */
     function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount, anchors, bridge) {
         var count = mountCount === undefined ? 2 : mountCount;
         if (!Number.isInteger(count) || count < 1 || count > 128) throw new Error('Invalid gun mount count');
@@ -112,7 +115,10 @@
                 return x + bolt.direction[i] * bolt.weapon.speed * travel / units;
             });
             var hit=/** @type {Vector|null} */(null);
-            if(bridge){
+            if(typeof bridge==='number'){
+                var route=DW.flightHyperbolic.travel(bolt.position,bolt.direction,bolt.weapon.speed*travel/units,bridge);
+                end=route.point;hit=hitTest?hitTest(bolt.position,end,bolt):null;bolt.direction=route.direction;
+            }else if(bridge){
                 var optics=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics;
                 var ray=bolt.opticalRay||(bolt.opticalRay=optics.ray(bolt.position.map(function(v){return v*units;}),bolt.direction,bolt.region||0));
                 var segments=optics.advanceRay(ray,bolt.weapon.speed*travel);
@@ -152,7 +158,12 @@
                         -x * (convergenceM - launchForward) - pose.right[i] * muzzle[0] - pose.up[i] * muzzle[2];
                 });
                 var launchRegion=pose.region||0;
-                if(bridge){
+                if(typeof bridge==='number'){
+                    var space=DW.flightHyperbolic;
+                    position=space.offset(pose.eye,pose.right.map(function(v,i){return (v*muzzle[0]+pose.up[i]*muzzle[2]-pose.back[i]*launchForward)/units;}),bridge);
+                    var curvedGoal=target||space.offset(pose.eye,pose.back.map(function(v){return -v*convergenceM/units;}),bridge);
+                    aim=space.path(position,curvedGoal,bridge).direction;
+                }else if(bridge){
                     var range=target?Math.max(.001,target.reduce(function(sum,v,i){return sum-(v-pose.eye[i])*pose.back[i];},0)):convergenceM/units;
                     var optics=(/** @type {Required<DriftworksNamespace>} */ (window.Driftworks)).ellisOptics;
                     var forwardRay=pose.back.map(function(v){return -v;}),goal=optics.ray(pose.eye.map(function(v){return v*units;}),forwardRay,pose.region||0);
@@ -167,7 +178,7 @@
                     aim=path?path.direction:launch.direction;
                 }
                 var distance = Math.hypot.apply(null, aim);
-                guns.bolts.push({ region:launchRegion, position: position, direction: aim.map(function (x) {
+                guns.bolts.push({ curvature:typeof bridge==='number'?bridge:undefined,region:launchRegion, position: position, direction: aim.map(function (x) {
                         return x / distance;
                     }), weapon: weapon, age: 0 });
             }
@@ -233,13 +244,14 @@
                 return sum + x * b[i];
             }, 0);
         }
+        var curvature=0;
         /** @param {number[]} data @param {Vector} center @param {Vector} along @param {Vector} side @param {number} halfLength @param {number} width @param {number} opacity */
         function quad(data, center, along, side, halfLength, width, opacity) {
             var uv = [[-1, -1], [-1, 1], [1, 1], [-1, -1], [1, 1], [1, -1]];
             uv.forEach(function (p) {
-                data.push.apply(data, center.map(function (x, i) {
-                    return x + along[i] * p[0] * halfLength + side[i] * p[1] * width;
-                }).concat([p[0], p[1], opacity]));
+                var offset=along.map(function(v,i){return v*p[0]*halfLength+side[i]*p[1]*width;});
+                var vertex=curvature?DW.flightHyperbolic.offset(center,offset,curvature):center.map(function(v,i){return v+offset[i];});
+                data.push.apply(data,vertex.concat([p[0],p[1],opacity]));
             });
         }
         /** @param {Vector} position @param {number} region */function image(position,region){
@@ -248,6 +260,7 @@
             return p?{position:pose.eye.map(function(v,i){return v+p.direction[i]*p.length/units;}),direction:p.direction,source:p.sourceDirection}:null;
         }
         guns.bolts.forEach(function (bolt) {
+            curvature=bolt.curvature||0;
             var p=image(bolt.position,bolt.region||0);if(!p)return;
             if(optical&&p.direction&&p.source){
                 // The same rigid source-to-observer tangent rotation used for hulls.
@@ -288,6 +301,7 @@
             return { vertices: new Float32Array(g.data), color: g.color, projected:!!optical, region:pose.region||0 };
         });
         var impacts = /** @type {number[]} */ ([]);
+        curvature=pose.curvature||0;
         guns.impacts.forEach(function (hit) {
             var p=image(hit.position,hit.region||0);if(!p)return;
             hit=Object.assign({},hit,{position:p.position});

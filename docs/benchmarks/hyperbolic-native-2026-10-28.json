@@ -1,0 +1,79 @@
+{
+  "revision": "b4623709827b0c41880852f86adaff7a020ca83d",
+  "sources": {
+    "experiments/flight-hyperbolic.js": "337cba6f54d9bb47cab6666e7bbb9300c077e87db432070410c8b5a786599164",
+    "experiments/training.js": "0444ead30d9a267c8a220b5226680612ae87eac583a1da6dd7151d12117641a6",
+    "experiments/guns.js": "aaaa1a9591151f0a9267fd55b5d8db93944990716578902327eb555f73196de2",
+    "experiments/flight-model.js": "0e41fba64b138a07e84e98c6cb7902311ec23f9ec2318d65b2881edfaa1297db",
+    "experiments/flight-session.js": "c3e876ec3e78051ebb34f2f743270079c36c000f8b43816b48499c6077b70f3c",
+    "experiments/flight-comms.js": "c72ab6d5e999af181a8f762b2441002d75376452b99a08960c8e34a7e107e227",
+    "experiments/flight-dialogue.js": "4a86ef22535a148dc8c0b2030f19674495e43ff8a1dcd02c67f3370d67b1e71a"
+  },
+  "configuration": {
+    "mission": "hyperbolic",
+    "radius": 650,
+    "seed": 29,
+    "profile": "GTF Ulysses",
+    "weapon": "Subach HL-7",
+    "actors": 17,
+    "warmupSeconds": 2,
+    "sampleSeconds": 5,
+    "ticksPerSample": 2,
+    "playerPlotArmor": true,
+    "note": "CPU headless native session timing, not renderer or GPU timing"
+  },
+  "results": [
+    {
+      "optimized": false,
+      "medianMs": 22.061099999999897,
+      "p95Ms": 32.51689999999962,
+      "elapsed": 7.000000000000138,
+      "shots": 140,
+      "hits": 0,
+      "totalShots": 545,
+      "totalHits": 137,
+      "kills": 0,
+      "bolts": 118,
+      "sha256": "9bde5e78f574c27ee9fbb10ee10cbe831f732c38859d2fdfb6176665543bf8dd"
+    },
+    {
+      "optimized": true,
+      "medianMs": 10.65350000000035,
+      "p95Ms": 20.968699999999444,
+      "elapsed": 7.000000000000138,
+      "shots": 140,
+      "hits": 0,
+      "totalShots": 545,
+      "totalHits": 137,
+      "kills": 0,
+      "bolts": 118,
+      "sha256": "9bde5e78f574c27ee9fbb10ee10cbe831f732c38859d2fdfb6176665543bf8dd"
+    },
+    {
+      "optimized": true,
+      "medianMs": 10.980199999999968,
+      "p95Ms": 19.52939999999944,
+      "elapsed": 7.000000000000138,
+      "shots": 140,
+      "hits": 0,
+      "totalShots": 545,
+      "totalHits": 137,
+      "kills": 0,
+      "bolts": 118,
+      "sha256": "9bde5e78f574c27ee9fbb10ee10cbe831f732c38859d2fdfb6176665543bf8dd"
+    },
+    {
+      "optimized": false,
+      "medianMs": 22.929299999999785,
+      "p95Ms": 31.313300000001618,
+      "elapsed": 7.000000000000138,
+      "shots": 140,
+      "hits": 0,
+      "totalShots": 545,
+      "totalHits": 137,
+      "kills": 0,
+      "bolts": 118,
+      "sha256": "9bde5e78f574c27ee9fbb10ee10cbe831f732c38859d2fdfb6176665543bf8dd"
+    }
+  ]
+}

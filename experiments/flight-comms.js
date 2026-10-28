@@ -179,9 +179,11 @@
                 var delta = craft.pose.eye.map(function (v, i) {
                     return v - player.eye[i];
                 }), distance = Math.hypot.apply(null, delta);
+                if(player.curvature){var route=DW.flightHyperbolic.path(player.eye,craft.pose.eye,player.curvature);distance=route.distance;delta=route.direction.map(function(v){return v*distance;});}
+                var perceivedVelocity=player.curvature?DW.flightHyperbolic.transport(craft.pose.eye,player.eye,craft.pose.velocity,player.curvature):craft.pose.velocity;
                 if (distance > 0 && craft.pose.velocity)
                     closing = -delta.reduce(function (sum, v, i) {
-                        return sum + v * (craft.pose.velocity[i] - player.velocity[i]);
+                        return sum + v * (perceivedVelocity[i] - player.velocity[i]);
                     }, 0) / distance;
             }
             var passHit = !!(old && old.targetId === craft.targetId && old.mode === 'attack' && (old.passHit || (target && old.targetHp !== null && target.hp < old.targetHp)));
@@ -256,6 +258,7 @@
             var delta = other.pose.eye.map(function (v, i) {
                 return v - pose.eye[i];
             });
+            if(pose.curvature){var route=DW.flightHyperbolic.path(pose.eye,other.pose.eye,pose.curvature);delta=route.direction.map(function(v){return v*route.distance;});}
             var distance = Math.hypot.apply(null, delta);
             return distance > 0 && delta.reduce(function (sum, v, i) {
                 return sum + v * pose.back[i];

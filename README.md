@@ -1,8 +1,9 @@
 # Driftworks
 
-Try [Hyperbolic space / 3D flight](experiments/hyperbolic-flight.html): production
-fighter artwork and flight dynamics in negatively curved 3D space, with geodesic
-gunfire, autopilot and radar. See [geometry and controls](docs/hyperbolic-space.md).
+Try [Hyperbolic space / 3D flight](experiments/flight.html?mission=hyperbolic):
+the existing flight lab, weapons, shields, AI, HUD and radar in negatively curved
+space. The aiming pip follows geodesic projectile travel. See
+[geometry and controls](docs/hyperbolic-space.md).
 
 Also try [Negative space](experiments/hyperbolic.html): a 6-vs-6 dogfight on a
 hyperbolic plane with adjustable curvature, geodesic gunfire and distance/bearing

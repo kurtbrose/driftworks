@@ -50,6 +50,7 @@
     });
     define('scramble',{title:'SCRAMBLE! / Driftworks',heading:'DRIFTWORKS / SCRAMBLE!',subtitle:'SCRIPTED EVENTS / COMBAT LAUNCH',hint:'Launch begins as soon as textures are ready. One wingman left, two right. Fly immediately: W/S throttle / Shift boost / Esc pause.',encounter:{kind:'furball',count:6,immediate:true,callsigns:['Lancer Two','Lancer Three','Lancer Four','Raider One','Raider Two','Raider Three']}});
     define('furball',{encounter:{kind:'furball',count:16}});
+    define('hyperbolic',{emptySpace:true,title:'Hyperbolic flight / Driftworks',heading:'DRIFTWORKS / HYPERBOLIC FLIGHT',subtitle:'CONSTANT NEGATIVE CURVATURE / STANDARD FLIGHT COMBAT',sky:{hyperbolic:650},encounter:{immediate:true}},'furball');
     define('battle',{title:'Battle background / Driftworks',heading:'DRIFTWORKS / BATTLE PROTOTYPE',subtitle:'CAPITAL ENGAGEMENT / SQUADRON ZONE DEFENSE',encounter:{count:30,immediate:true}},'furball');
     /** Frozen fictional system in planet-centered km; all moon centers share one plane.
      * @param {boolean} nearMoon @returns {import('./types').JadeSystem} */

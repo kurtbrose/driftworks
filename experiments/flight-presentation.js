@@ -253,6 +253,7 @@
         }
         /** @param {FlightView} view @param {Appearance} appearance @param {Comparison} comparison @param {number} elapsed @param {(()=>()=>void)=} gpuTimer */
         function render(view, appearance, comparison, elapsed, gpuTimer) {
+            if(view.state.curvature)view=DW.flightHyperbolic.presentation(view);
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
             var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
             var livingArt = /** @type {ArtCraft[]} */ (DW.training.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);

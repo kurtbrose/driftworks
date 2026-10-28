@@ -66,6 +66,10 @@
     function cross(a, b) {
         return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
     }
+    /** @param {Pose} pose @param {Vector} target */
+    function spaceDelta(pose,target){if(!pose.curvature)return sub(target,pose.eye);var path=DW.flightHyperbolic.path(pose.eye,target,pose.curvature);return scale(path.direction,path.distance);}
+    /** @param {Pose} pose @param {Vector} vector */
+    function offset(pose,vector){return pose.curvature?DW.flightHyperbolic.offset(pose.eye,vector,pose.curvature):add(pose.eye,vector);}
     // Cast slots also own the recurring voices; names stay stable across waves.
     var pilotCallsigns = DW.flightMissions.resolve().encounter.callsigns;
     /** @param {Identity | null} [craft] */
@@ -112,7 +116,7 @@
         // Finish the gun tick after death to age existing bolts; suppress new fire.
         collisionBatch(t,function(){DW.flightGuns.step(guns, pose, weapon, !mission(t).weaponsDisabled && !t.dead && !openingPending(t) && controls.fire, dt, function (start, end, bolt) {
             return DW.training.trace(t, start, end, bolt, 'player', terrainHit, pose);
-        }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft), !!mission(t).sky.wormhole);});
+        }, function () { return DW.training.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.training.gunAnchors(craft), t.player.pose.curvature||(!!mission(t).sky.wormhole));});
         return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore,
             impact: guns.hits > hitsBefore || t.lastHit > hitBefore };
     }
@@ -233,13 +237,20 @@
         } else if (t.time - track.at >= interval) {
             var elapsed = t.time - track.at;
             var measured = scale(sub(target.eye, track.position), 1 / elapsed);
+            if(e.pose.curvature){var observed=DW.flightHyperbolic.path(track.position,target.eye,e.pose.curvature);measured=scale(observed.direction,observed.distance/elapsed);track.velocity=DW.flightHyperbolic.transport(track.position,target.eye,track.velocity,e.pose.curvature);measured=DW.flightHyperbolic.transport(track.position,target.eye,measured,e.pose.curvature);}
             var response = 1 - Math.exp(-elapsed / [.65, .32, .14][e.skill]);
             track.velocity = add(track.velocity, scale(sub(measured, track.velocity), response));
             track.position = target.eye.slice();
             track.at = t.time;
         }
-        var position = add(track.position, scale(track.velocity, t.time - track.at));
+        var position = e.pose.curvature?DW.flightHyperbolic.offset(track.position,scale(track.velocity,t.time-track.at),e.pose.curvature):add(track.position, scale(track.velocity, t.time - track.at));
         var weapon = DW.retailWeapons[e.weaponIndex || 0];
+        if(e.pose.curvature){
+            var predicted=Object.assign({},target,{eye:position,velocity:scale(DW.flightHyperbolic.transport(track.position,position,track.velocity,e.pose.curvature),U)});
+            var curved=DW.flightGuns.lead(e.pose,predicted,weapon,e.pose.curvature);
+            e.gunGoal=curved?offset(e.pose,scale(curved.direction,curved.distance)):position;e.gunValid=!!curved;
+            return {point:e.gunGoal,time:curved?curved.time:0};
+        }
         var solution = intercept(e.pose.eye, position, track.velocity, weapon.speed / U);
         e.gunGoal = solution.point;
         e.gunValid = solution.time > 0 && solution.time <= Math.min(2, weapon.lifetime);
@@ -261,7 +272,7 @@
             var pose = DW.arcade.create(radius), lateral = (i - (count - 1) / 2) * 180;
             pose.eye = add(player.eye, add(scale(player.back, -(350 + i * 65) / U), add(scale(player.right, lateral / U), scale(player.up, (85 + (i % 2) * 65) / U))));
             var safe = radius + 90 / U;
-            if (length(pose.eye) < safe)
+            if (!mission(t).emptySpace&&length(pose.eye) < safe)
                 pose.eye = scale(unit(pose.eye), safe);
             face(pose, sub(player.eye, pose.eye));
             pose.throttle = .6;
@@ -280,7 +291,7 @@
         if (mission(t).encounter.kind==='furball') {
             // Two opposing wings meet above the near side of the asteroid.
             var center = add(player.eye, add(scale(player.back, -450 / U), scale(player.up, 40 / U)));
-            if (length(center) < radius + 100 / U)
+            if (!mission(t).emptySpace&&length(center) < radius + 100 / U)
                 center = scale(unit(center), radius + 100 / U);
             var wingSize=Math.ceil(count/2);
             t.enemies.forEach(function (e, i) {
@@ -371,6 +382,7 @@
             var region=i%4>=2?1:0,shift=(region-(player.region||0))*12000/U;
             e.pose.region=region;e.pose.eye[0]+=shift;e.goal[0]+=shift;
         });
+        if(player.curvature)t.enemies.forEach(function(e){e.pose.curvature=player.curvature;e.pose.eye=DW.flightHyperbolic.offset(player.eye,sub(e.pose.eye,player.eye),player.curvature||650);e.goal=DW.flightHyperbolic.offset(player.eye,sub(e.goal,player.eye),player.curvature||650);});
         var target = t.enemies.find(function (e) {
             return e.team !== 'ally'&&(mission(t).sky.wormhole||(e.pose.region||0)===(t.player.pose.region||0));
         });
@@ -385,14 +397,14 @@
     }
     /** @param {Pose} pose @param {Vector} goal @returns {FlightInput} */
     function steer(pose, goal) {
-        var d = unit(sub(goal, pose.eye)), f = -dot(d, pose.back);
+        var d = unit(spaceDelta(pose,goal)), f = -dot(d, pose.back);
         return { pitch: Math.max(-1, Math.min(1, Math.atan2(dot(d, pose.up), f) * 2)), yaw: Math.max(-1, Math.min(1, -Math.atan2(dot(d, pose.right), f) * 2)), roll: 0 };
     }
     /** @param {Combat} t @param {Craft} e @param {FlightState} player */
     function decide(t, e, player) {
         if (e.opponentStyle === 'fso-pursuit' || e.opponentStyle === 'fso-breaker') { decideFreeSpace(t,e,player); return; }
         if (e.opponentStyle && e.opponentStyle !== 'baseline') { decideStyle(t,e,player); return; }
-        var distance = length(sub(player.eye, e.pose.eye)) * U, active = (mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0;
+        var distance = length(spaceDelta(e.pose,player.eye)) * U, active = (mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0;
         if (t.time >= e.until) {
             if (distance < 140) {
                 e.mode = 'break';
@@ -413,15 +425,15 @@
         }
         var goal = (e.gunGoal || player.eye).slice();
         if (e.mode === 'break' || e.mode === 'evade') {
-            var away = unit(sub(e.pose.eye, player.eye)), side = scale(e.pose.right, (e.index % 2 ? 1 : -1) * 220 / U);
-            goal = add(e.pose.eye, add(scale(away, 450 / U), side));
+            var away = scale(unit(spaceDelta(e.pose,player.eye)),-1), side = scale(e.pose.right, (e.index % 2 ? 1 : -1) * 220 / U);
+            goal = offset(e.pose, add(scale(away, 450 / U), side));
         }
         else if (e.mode === 'recover') {
-            goal = add(e.pose.eye, scale(e.pose.back, -220 / U));
+            goal = offset(e.pose, scale(e.pose.back, -220 / U));
         }
         else if (!active) {
             var angle = t.time * .16 + e.index * 2.4;
-            goal = add(player.eye, [Math.cos(angle) * 650 / U, Math.sin(angle) * 650 / U, (150 + Math.sin(angle * .7) * 140) / U]);
+            goal = offset(player, [Math.cos(angle) * 650 / U, Math.sin(angle) * 650 / U, (150 + Math.sin(angle * .7) * 140) / U]);
         }
         e.goal = goal;
         e.pose.throttle = e.mode === 'recover' ? .65 : e.mode === 'attack' && distance < 450 ? .72 : 1;
@@ -430,11 +442,11 @@
     /** FreeSpace-inspired geometry; distances and velocities are explicit SI here.
      * @param {Craft} e @param {FlightState} target */
     function engagement(e,target) {
-        var delta=sub(target.eye,e.pose.eye), distance=length(delta)*U, direction=unit(delta);
-        var forward=scale(e.pose.back,-1), relative=sub(target.velocity,e.pose.velocity);
+        var delta=spaceDelta(e.pose,target.eye), distance=length(delta)*U, direction=unit(delta);
+        var forward=scale(e.pose.back,-1), relative=sub(e.pose.curvature?DW.flightHyperbolic.transport(target.eye,e.pose.eye,target.velocity,e.pose.curvature):target.velocity,e.pose.velocity);
         var weapon=DW.retailWeapons[e.weaponIndex||0];
-        var gun={point:e.gunGoal || target.eye,time:e.gunValid ? length(sub(e.gunGoal || target.eye,e.pose.eye))*U/weapon.speed : 0};
-        var facing=dot(forward,direction), alignment=dot(forward,unit(sub(gun.point,e.pose.eye)));
+        var gun={point:e.gunGoal || target.eye,time:e.gunValid ? length(spaceDelta(e.pose,e.gunGoal || target.eye))*U/weapon.speed : 0};
+        var facing=dot(forward,direction), alignment=dot(forward,unit(spaceDelta(e.pose,gun.point)));
         return {distance:distance,facing:facing,closure:-dot(relative,direction),gun:gun,
             useful:gun.time>0&&gun.time<=weapon.lifetime&&distance>130&&distance<Math.min(760,weapon.speed*weapon.lifetime)&&alignment>.996};
     }
@@ -453,13 +465,13 @@
     function decideFreeSpace(t,e,target) {
         var g=engagement(e,target), now=t.time;
         var active=(mission(t).encounter.kind==='furball')||t.slots.indexOf(e.id)>=0;
-        if(!active){e.mode='reposition';e.goal=add(target.eye,scale(e.pose.right,650/U));e.pose.throttle=.85;e.decision=.42;return;}
+        if(!active){e.mode='reposition';e.goal=offset(target,scale(e.pose.right,650/U));e.pose.throttle=.85;e.decision=.42;return;}
         var breaking=e.mode==='break', recovering=e.mode==='recover';
         if(breaking){
             var held=now-(e.maneuverAt||0);
             if(now>=e.until || held>=(e.breakReason==='no-progress'?2:1.5)&&g.distance>=(e.breakReason==='no-progress'?550:450)){
                 e.mode='recover';e.until=now+2.5;e.maneuverAt=now;
-                e.reentryGoal=add(target.eye,scale(target.velocity,.8/U));
+                e.reentryGoal=offset(target,scale(target.velocity,.8/U));
                 e.breakCooldown=now+6;
             }
         }else if(recovering){
@@ -471,9 +483,9 @@
             if(now>=(e.breakCooldown||0)&&((g.distance<95&&!g.useful)||overshoot||stalled)){
                 e.mode='break';e.maneuverAt=now;e.until=now+(stalled?5:6);
                 // Open range even when the current forward vector points at the target.
-                var ahead=scale(e.pose.back,-1), away=unit(sub(e.pose.eye,target.eye));
+                var ahead=scale(e.pose.back,-1), away=scale(unit(spaceDelta(e.pose,target.eye)),-1);
                 var direction=unit(add(add(scale(ahead,.5),away),scale(e.pose.right,(e.index%2?1:-1)*.65)));
-                e.extensionGoal=add(e.pose.eye,scale(direction,1600/U));
+                e.extensionGoal=offset(e.pose,scale(direction,1600/U));
                 e.breakReason=stalled?'no-progress':'overshoot';
                 e.separations=(e.separations||0)+1;
                 if(stalled){e.progressEscapes=(e.progressEscapes||0)+1;e.noProgress=0;}
@@ -481,9 +493,9 @@
         }
         // Distinct navigation and gun targets: steering prediction is bounded by
         // ship travel time; blend toward projectile lead once facing/range permit.
-        var nav=add(target.eye,scale(target.velocity,Math.min(1.5,g.distance/Math.max(60,e.profile.maxVelocity[2]))/U));
+        var nav=offset(target,scale(target.velocity,Math.min(1.5,g.distance/Math.max(60,e.profile.maxVelocity[2]))/U));
         var blend=Math.max(0,Math.min(1,(g.facing-.3)/.6))*Math.max(0,Math.min(1,(700-g.distance)/350));
-        var goal=add(scale(nav,1-blend),scale(g.gun.point,blend));
+        var goal=e.pose.curvature?DW.flightHyperbolic.offset(nav,scale(spaceDelta(Object.assign({},e.pose,{eye:nav}),g.gun.point),blend),e.pose.curvature):add(scale(nav,1-blend),scale(g.gun.point,blend));
         // Overshoot spacing is navigation only; relinquish it as gun lead takes priority.
         if(g.distance<280&&g.closure>10)goal=add(goal,scale(target.back,(1-blend)*Math.min(100,g.closure*2)/U));
         if(e.mode==='break'&&e.extensionGoal)goal=e.extensionGoal;
@@ -499,28 +511,28 @@
     /** Experimental personalities select goals; shared steering/physics execute them.
      * @param {Combat} t @param {Craft} e @param {FlightState} target */
     function decideStyle(t,e,target) {
-        var delta=sub(target.eye,e.pose.eye), distance=length(delta)*U;
+        var delta=spaceDelta(e.pose,target.eye), distance=length(delta)*U;
         var active=(mission(t).encounter.kind==='furball')||t.slots.indexOf(e.id)>=0;
         var forward=scale(e.pose.back,-1), targetForward=scale(target.back,-1);
-        var behind=dot(unit(sub(e.pose.eye,target.eye)),targetForward)<-.65;
+        var behind=dot(scale(unit(spaceDelta(e.pose,target.eye)),-1),targetForward)<-.65;
         var style=e.opponentStyle, wasExtending=e.mode==='break';
         if(t.time>=e.until){
             if(wasExtending){e.mode='attack';e.until=t.time+1.8;e.extensionGoal=undefined;}
             else if(distance<(style==='aggressor'?95:style==='passer'?280:155)){
                 e.mode='break';e.until=t.time+(style==='passer'?3.8:1.4);
                 // Commit to an escape heading instead of continuously turning away.
-                e.extensionGoal=add(e.pose.eye,scale(unit(add(forward,scale(e.pose.right,.35))),1400/U));
+                e.extensionGoal=offset(e.pose,scale(unit(add(forward,scale(e.pose.right,.35))),1400/U));
             } else {e.mode=active?'attack':'reposition';e.until=t.time+.6;}
         }
         var weapon=DW.retailWeapons[e.weaponIndex||0];
         var lead={point:e.gunGoal || target.eye};
         var goal=lead.point;
         if(e.mode==='break'&&e.extensionGoal)goal=e.extensionGoal;
-        else if(!active)goal=add(target.eye,scale(e.pose.right,650/U));
-        else if(style==='aggressor')goal=add(target.eye,scale(sub(lead.point,target.eye),.35));
+        else if(!active)goal=offset(target,scale(e.pose.right,650/U));
+        else if(style==='aggressor')goal=offset(target,scale(sub(lead.point,target.eye),.35));
         else if(style==='interceptor'&&distance>350&&!behind){
             // Cut toward a bounded future position before settling onto gun lead.
-            goal=add(target.eye,scale(target.velocity,Math.min(1.5,distance/450)/U));
+            goal=offset(target,scale(target.velocity,Math.min(1.5,distance/450)/U));
         }
         e.goal=goal;
         e.pose.throttle=e.mode==='break'||style==='passer'?1:style==='aggressor'?.92:distance<350?.68:1;
@@ -559,7 +571,7 @@
             if (shooter === t.player || shooter === t.player.id)
                 t.playerKills = (t.playerKills || 0) + 1;
             radioEvent(t, { kind: 'destroyed', victim: e.id, team: e.team || 'enemy', index: e.index, killer: shooter && typeof shooter === 'object' ? shooter.id : shooter || null });
-            var pose = { region:e.pose.region||0, eye: e.pose.eye.slice(), right: e.pose.right.slice(), up: e.pose.up.slice(), back: e.pose.back.slice(), velocity: e.pose.velocity.slice(), throttle: 0 };
+            var pose = { curvature:e.pose.curvature,region:e.pose.region||0, eye: e.pose.eye.slice(), right: e.pose.right.slice(), up: e.pose.up.slice(), back: e.pose.back.slice(), velocity: e.pose.velocity.slice(), throttle: 0 };
             var axis = unit(add(pose.right, scale(pose.up, e.index % 2 ? -.7 : .7)));
             t.wrecks.push({ id: e.id + '-wreck', index: e.index, modelId:e.modelId, team: e.team, artWave: t.wave, pose: pose, axis: axis, spin: (e.index % 2 ? -1 : 1) * (.25 + (e.index % 5) * .09), age: 0, scorches: e.scorches || [] });
             // Keep every wreck until its existing 120-second lifecycle expires.
@@ -575,6 +587,7 @@
     /** Geometry is selected by serializable simulation state, never by appearance controls.
      * @param {Craft} craft @param {Vector} start @param {Vector} end @param {number} [boltRadius] */
     function hullHit(craft, start, end, boltRadius) {
+        if(craft.pose.curvature)return DW.flightHyperbolic.hullHit(craft,start,end,boltRadius,hullHit);
         var shape = craft.collision || { kind: 'sphere', radiusM: 9 };
         if (shape.kind === 'sphere') return sphereHit(start, end, craft.pose.eye, (shape.radiusM + (boltRadius || 0)) / U);
         var model = DW.shipPackModels.find(shape.modelId);
@@ -587,20 +600,21 @@
     function firingSolution(t,shooter,target,weapon){
         if(shooter.hp<=0||target.hp<=0||(shooter.team||'enemy')===(target.team||'enemy'))return null;
         var anchors=gunAnchors(shooter),launch=anchors&&anchors.length?anchors.reduce(function(sum,p){return sum+Math.max(0,p[1]);},0)/anchors.length:4;
-        return DW.flightGuns.lead(shooter.pose,target.pose,weapon,!!mission(t).sky.wormhole,launch);
+        return DW.flightGuns.lead(shooter.pose,target.pose,weapon,t.player.pose.curvature||(!!mission(t).sky.wormhole),launch);
     }
     /** Resolve a shared muzzle aim point only along the crosshair ray; no target snapping or lead.
      * @param {Combat} t @param {Craft} shooter @param {Weapon} weapon @param {TerrainHit} [terrainHit]
      * @returns {Vector | null} */
     function convergencePoint(t, shooter, weapon, terrainHit) {
         var start = shooter.pose.eye;
-        if(mission(t).sky.wormhole&&shooter===t.player){
+        if((mission(t).sky.wormhole||shooter.pose.curvature)&&shooter===t.player){
             var target=t.enemies.find(function(c){return c.id===t.targetId&&c.hp>0;}),solution=target?firingSolution(t,shooter,target,weapon):null;
             // Choose convergence RANGE only. The point stays exactly on the
             // player's firing ray; turning off the pip must still miss.
-            return solution?add(start,scale(shooter.pose.back,-solution.distance)):null;
+            return solution?offset(shooter.pose,scale(shooter.pose.back,-solution.distance)):null;
         }
-        var end = add(start, scale(shooter.pose.back, -weapon.speed * weapon.lifetime / U));
+        if(shooter.pose.curvature&&shooter.gunValid&&shooter.gunGoal)return offset(shooter.pose,scale(shooter.pose.back,-length(spaceDelta(shooter.pose,shooter.gunGoal))));
+        var end = offset(shooter.pose, scale(shooter.pose.back, -weapon.speed * weapon.lifetime / U));
         var terrain = terrainHit&&!(shooter.pose.region||0) ? terrainHit(start, end) : null;
         var best = terrain ? length(sub(terrain, start)) : Infinity;
         var point = /** @type {Vector | null} */ (null);
@@ -623,7 +637,7 @@
         var query=collision.query(t,start,end,bolt,team);
         var candidates=query.candidates,shooter=query.shooter,faction=query.faction,radius=query.radius;
         candidates.forEach(function (entry) {
-            var e=entry.craft;if(!collisionNearby(entry,start,end,radius/U))return;
+            var e=entry.craft;if(!player.curvature&&!collisionNearby(entry,start,end,radius/U))return;
             if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction || (e.pose.region||0)!==(bolt.region||0)) return;
             var candidate = hullHit(e, start, end, bolt.weapon.headRadius || 0);
             if (candidate) {
@@ -668,7 +682,7 @@
             w.age += dt;
             if (w.age >= 120)
                 return false;
-            var p = w.pose, next = add(p.eye, scale(p.velocity, dt / U)), hit = terrainHit&&!(p.region||0) ? terrainHit(p.eye, next) : null;
+            var p = w.pose, before=p.eye.slice(),next = add(p.eye, scale(p.velocity, dt / U)), hit = terrainHit&&!(p.region||0) ? terrainHit(p.eye, next) : null;
             if (hit) {
                 p.velocity = [0, 0, 0];
                 w.spin = 0;
@@ -683,6 +697,7 @@
             p.back = unit(rotate(p.back));
             p.right = unit(cross(rotate(p.up), p.back));
             p.up = unit(cross(p.back, p.right));
+            if(p.curvature){var after=DW.flightHyperbolic.offset(before,sub(p.eye,before),p.curvature);p.right=DW.flightHyperbolic.transport(before,after,p.right,p.curvature);p.up=DW.flightHyperbolic.transport(before,after,p.up,p.curvature);p.back=DW.flightHyperbolic.transport(before,after,p.back,p.curvature);p.velocity=DW.flightHyperbolic.transport(before,after,p.velocity,p.curvature);p.eye=after;}
             return true;
         });
     }
@@ -785,7 +800,7 @@
             if(t.scramble&&t.time<10&&t.enemies.indexOf(e)>=3&&t.enemies.indexOf(e)<6)return;
             DW.flightGuns.step(e.guns, e.pose, DW.retailWeapons[e.weaponIndex || 0], e.fire, dt, function (start, end, bolt) {
                 return trace(t, start, end, bolt, e, terrainHit, player);
-            }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), !!mission(t).sky.wormhole);
+            }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), t.player.pose.curvature||(!!mission(t).sky.wormhole));
         }
         var neighbors=separationGrid(living), roster=participants(t), byId=new Map((t.mode==='battle'?roster:living).map(function(craft){return [craft.id,craft];}));
         collisionBatch(t,function(){t.enemies.forEach(function (e) {
@@ -813,7 +828,7 @@
                         /** @type {{craft:Craft,distance:number}[]} */ var choices=[];
                         (e.battleZone?roster:living).forEach(function(other){
                             if(!(other.hp>0)||other.team===e.team||((other.pose.region||0)!==(e.pose.region||0)&&t.mode!=='cinematic')||!zoneEligible(e,other))return;
-                            var distance=length(sub(other.pose.eye,e.pose.eye))+((other.pose.region||0)===(e.pose.region||0)?0:100000),at=0;
+                            var distance=length(spaceDelta(e.pose,other.pose.eye))+((other.pose.region||0)===(e.pose.region||0)?0:100000),at=0;
                             while(at<choices.length&&choices[at].distance<=distance)at++;
                             if(at<3){choices.splice(at,0,{craft:other,distance:distance});if(choices.length>3)choices.pop();}
                         });
@@ -856,16 +871,16 @@
                 // Clear the carrier's mouth while still allowing normal break/evade steering.
                 if(t.scramble&&e.pose.eye[1]*U<120&&goal[1]*U<180)goal=add(goal,[0,180/U-goal[1],0]);
                 // Separate nearby craft using steering demand, never velocity changes.
-                neighbors.nearby(e).forEach(function (other) {
+                (e.pose.curvature?living:neighbors.nearby(e)).forEach(function (other) {
                     if (other.id === e.id||(other.pose.region||0)!==(e.pose.region||0))
                         return;
-                    var away = sub(e.pose.eye, other.pose.eye), d = length(away) * U;
+                    var away = scale(spaceDelta(e.pose,other.pose.eye),-1), d = length(away) * U;
                     if (d < 50)
                         goal = add(goal, scale(unit(away), (50 - d) * 8 / U));
                 });
-                var control = steer(e.pose, goal), distance = opponent ? length(sub(opponent.eye, e.pose.eye)) * U : Infinity;
+                var control = steer(e.pose, goal), distance = opponent ? length(spaceDelta(e.pose,opponent.eye)) * U : Infinity;
                 control.roll = e.mode === 'evade' ? Math.sin(t.time * 1.8 + e.index) * .65 : 0;
-                control.boost = !!opponent && distance > 1200 && dot(unit(sub(goal, e.pose.eye)), scale(e.pose.back, -1)) > .95;
+                control.boost = !!opponent && distance > 1200 && dot(unit(spaceDelta(e.pose,goal)), scale(e.pose.back, -1)) > .95;
                 stepInput(e, Object.assign({ throttle: e.pose.throttle, throttleRate: 0, fire: false }, control), dt);
                 // Conservative safety shell keeps AI craft clear of the asteroid.
                 var safe = radius + 20 / U;
@@ -874,7 +889,7 @@
                     e.mode = 'break';
                     e.until = t.time + 2;
                 }
-                var aim = unit(sub(e.gunGoal || e.goal, e.pose.eye)), aligned = dot(aim, scale(e.pose.back, -1));
+                var aim = unit(spaceDelta(e.pose,e.gunGoal || e.goal)), aligned = dot(aim, scale(e.pose.back, -1));
                 var primary = DW.retailWeapons[e.weaponIndex || 0];
                 e.fire = !!opponent && !transit && ((mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0) && e.mode === 'attack' && distance > 130 && distance < Math.min(760, primary.speed * primary.lifetime) && e.gunValid !== false && aligned > Math.cos(Math.atan2(5, Math.max(130, distance)));
             }
@@ -957,6 +972,7 @@
             return;
         }
         var start = state.eye, move=scale(state.back,-1000000),best=Infinity;
+        if(state.curvature){var extent=living.reduce(function(max,c){return Math.max(max,length(spaceDelta(state,c.pose.eye))+collisionRadius(c));},1);move=sub(offset(state,scale(state.back,-extent)),start);}
         var route=mission(t).sky.wormhole?DW.flightGuns.bridgeTravel(start,move,state.region||0):{segments:[{start:start,end:add(start,move),region:state.region||0}]},traveled=0;
         route.segments.forEach(function(segment){
             living.forEach(function(craft){
@@ -1007,6 +1023,6 @@
         });
         return result;
     }
-    DW.training = { setCollisionMode: setCollisionMode, collisionBatch: collisionBatch, collisionStats: collisionStats, collisionChanged: collisionChanged, stepControlled: stepControlled, acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, firingSolution:firingSolution, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
+    DW.training = { rebaseGeometry:function(t){if(t.player.pose.curvature){DW.flightHyperbolic.rebase(t,function(c){return tracks.get(c);});collision.changed(t);}}, setCollisionMode: setCollisionMode, collisionBatch: collisionBatch, collisionStats: collisionStats, collisionChanged: collisionChanged, stepControlled: stepControlled, acquireTarget: acquireTarget, toggleTargetLock: toggleTargetLock, gunAnchors: gunAnchors, stepInput: stepInput, createCraft: createCraft, participants: participants, configureHulls: configureHulls, bindPlayer: bindPlayer, hullHit: hullHit, firingSolution:firingSolution, convergencePoint: convergencePoint, defaultWeapon:defaultWeapon, configure:configure, equip:equip, callsign: callsign, create: create, alive: alive, spawn: spawn, stepWrecks: stepWrecks, steer: steer, intercept: intercept, sphereHit: sphereHit, damageCraft: damageCraft, damageEnemy: damageCraft, damagePlayer: damagePlayer, trace: trace, step: step, cycle: cycle, geometry: geometry, allGuns: allGuns };
 }());
 

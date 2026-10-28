@@ -27,7 +27,7 @@
             return x * c + k[i] * s + axis[i] * d * (1 - c);
         });
     }
-    /** @param {number} radius */
+    /** @param {number} radius @returns {FlightState} */
     function create(radius) {
         return { eye: [0, -radius * 2.6, 0], right: [1, 0, 0], up: [0, 0, 1], back: [0, -1, 0], velocity: [0, 0, 0], rates: [0, 0, 0], ramp: [0, 0, 0], throttle: 0 };
     }
@@ -36,6 +36,10 @@
     function createSortie(radius, profile, missionId) {
         var state = create(radius);
         var mission=DW.flightMissions.resolve(missionId),spawn=mission.encounter.spawn;
+        if(mission.sky.hyperbolic){
+            state.curvature=mission.sky.hyperbolic;state.eye=[0,0,0];state.throttle=1;
+            state.velocity=state.back.map(function(v){return -v*profile.maxVelocity[2];});state.ramp[2]=profile.maxVelocity[2];return state;
+        }
         if(mission.emptySpace){
             var angle=(mission.sky.gasGiant?0:-30)*Math.PI/180;
             state.eye=[0,-radius*3,radius*2];
@@ -75,6 +79,7 @@
         dt = Math.max(0, Math.min(.05, dt));
         if (!dt)
             return state;
+        var before=state.curvature?state.eye.slice():null;
         var forward = state.back.map(function (x) {
             return -x;
         }), basis = [state.right, state.up, forward];
@@ -130,6 +135,7 @@
         state.back = unit(state.back);
         state.right = unit(cross(state.up, state.back));
         state.up = unit(cross(state.back, state.right));
+        if(before)DW.flightHyperbolic.move(state,before);
         return state;
     }
     /** @param {FlightState} state @param {Vector} point @param {number} radius */

@@ -12,7 +12,7 @@ export type FlightMission = {
     teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
     comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
     portraits:{folder:string;cast:string};
-    sky:{wormhole?:boolean;kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    sky:{hyperbolic?:number;wormhole?:boolean;kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
     asteroidBulk?:[number,number,number,number];
     scenery:MissionScenery[];
     encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
@@ -58,6 +58,8 @@ export type AegisFlightRig = {
 export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number;region?:number;mainBatteryClear?:boolean};
 export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig;unarmed?:boolean;bridge?:boolean};
 export type Pose = {
+    curvature?:number;
+    spaceFrame?:number[][];
     region?: number;
     eye: Vector;
     right: Vector;
@@ -174,6 +176,7 @@ export type Weapon = {
     color2: Vector;
 };
 export type Bolt = {
+    curvature?:number;
     opticalRay?: OpticalRay;
     region?: number;
     position: Vector;
@@ -412,8 +415,6 @@ export type FlightGuideBatch = {path:FlightPathSample[];born:number;lifetime:num
 export type FlightPathSample = {seconds:number;distance:number;pose:Pose};
 export type EllisCue = {region:number;distance:number;gap:number;proximity:number;near:boolean;entered:boolean;exited:boolean;crossed:boolean;flash:number};
 export type HudView = FlightView & Appearance & {
-    /** Optional geometry-specific lead; null explicitly suppresses a flat-space fallback. */
-    aimingSolution?: {direction:Vector;time:number}|null;
     /** Presentation coordinate normalization; defaults to physical world scale. */
     distanceScale?: number;
     bridgeCue?:EllisCue;
@@ -749,15 +750,16 @@ export type ExperimentModules = {
         bridgeVector:(vector:Vector,normal:Vector)=>Vector;
         crossBridge:(before:Vector,after:Vector,side:number)=>{normal:Vector;fraction:number;entry:Vector;exit:Vector;eye:Vector}|null;
         bridgeTravel:(start:Vector,move:Vector,region:number)=>{point:Vector;region:number;normal:Vector|null;segments:{start:Vector;end:Vector;region:number}[]};
-        ballisticPath:(origin:Vector,target:Vector,region:number,destination:number,bridge?:boolean)=>{direction:Vector;distance:number}|null;
-        lead:(shooter:Pose,target:Pose & {velocity:Vector},weapon:Weapon,bridge?:boolean,launchMeters?:number)=>FiringSolution|null;
+        ballisticPath:(origin:Vector,target:Vector,region:number,destination:number,bridge?:boolean|number)=>{direction:Vector;distance:number}|null;
+        lead:(shooter:Pose,target:Pose & {velocity:Vector},weapon:Weapon,bridge?:boolean|number,launchMeters?:number)=>FiringSolution|null;
         create: () => Guns;
-        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[], bridge?:boolean) => void;
+        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[], bridge?:boolean|number) => void;
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose, optical?:boolean) => Batch[];
     };
     flightCollision: import('./flight-collision-types').FlightCollisionApi;
     training: {
+        rebaseGeometry:(combat:Combat)=>void;
         setCollisionMode: (combat: Combat, mode: 'legacy'|'grid'|'tree'|'grid-events'|'tree-events') => void;
         collisionBatch: <T>(combat: Combat, work: () => T) => T;
         collisionChanged: (combat: Combat, craft?: Craft) => void;
@@ -909,6 +911,7 @@ export type ExperimentModules = {
             release: () => void;
         };
     };
+    flightHyperbolic:import('./flight-hyperbolic-types').HyperbolicGeometry;
     flightSession: {
         rotateVector: (vector: number[], angle: number) => number[];
         create: (environment: SessionEnvironment) => {
@@ -919,6 +922,7 @@ export type ExperimentModules = {
                 profile: Profile;
             }) => Snapshot;
             setCombat: (mode: string, enabled: boolean) => Snapshot;
+            setCurvature:(radius:number)=>void;
             setAsteroidDiameter: (meters: number) => boolean;
             setStartPosition: (eye: number[]) => void;
             setOpponentStyle: (style: OpponentStyle) => void;
