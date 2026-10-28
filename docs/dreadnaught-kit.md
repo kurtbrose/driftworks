@@ -35,6 +35,42 @@ This remains a geometry study: there are no authored textures, baked occlusion,
 weathering or decals. Small-scale material wear and less repetitive equipment
 layouts are useful future passes after the kit's silhouettes are settled.
 
+### Armor bevel comparison / review only
+
+Open [the side-by-side bevel study](../output/aegis-bevel-review.html) through the
+static server. It extracts the first armor band of `M_1_standard` from the current
+authoring source, in metres, and compares the original flat-shaded geometry with
+a 0.6 m edge-setback bevel. Both sides use the same neutral material and camera.
+The candidate menu separates bevel-only flat shading from face-area-weighted
+normals; Current on both sides is a camera/lighting control. Drag, zoom, orbit,
+and three-quarter/side/close/underside/distant presets are synchronized.
+
+`node tools/bake-aegis-bevel.cjs` regenerates the isolated data; `--check` checks
+freshness. `tools/lib/convex-bevel.cjs` merges coplanar source triangles into face
+planes, adds bisector cutting planes at manifold edges, intersects the resulting
+convex half-spaces, and weights shared vertex normals by complete polygon area.
+It rejects nonconvex/open input or a bevel that consumes an original face. This
+is deliberately a convex-section experiment, not a general imported-mesh beveler.
+The source geometry, production rig, textures, collision and pivots are unchanged.
+
+Run `node tools/check-aegis-bevel.cjs` for immutable-source, watertightness,
+normal-length and bounds checks. Its optional `--browser` uses a development-only
+Playwright installation selected by `DRIFTWORKS_BROWSER_MODULES`. Captures in
+`output/aegis-bevel-*.png` were visually inspected at three-quarter, edge close-up,
+underside and distant views, plus flat-bevel and matching-original controls.
+The weighted version softens narrow edge transitions; broad faces remain quiet.
+At distance the difference is small. This is a neutral geometry review, without
+approval for full-ship appearance or production integration.
+
+The recorded foreground ABBA measurement uses the existing `scene3d` renderer,
+one active viewport while measuring, 20 warmup + 90 measured frames per block,
+719 x 673 backing pixels at DPR approximately 1, and no combat/effects. It reports
+60 to 316 triangles, one draw each, approximately 0.2 ms median / 0.3 ms p95 CPU
+submission and 13.3 / 13.4 ms frame cadence for both. See
+`output/aegis-bevel-metrics.json` for the source hash and conditions. These small
+timings do not establish a GPU or whole-combat performance budget; those remain
+unmeasured until a full-ship integration is requested.
+
 ### Approved surface treatment / production default
 
 The approved panel treatment is the default on armed and unarmed capital ships.

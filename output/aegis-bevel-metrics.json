@@ -1,0 +1,50 @@
+{
+  "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+  "section": "M_1_standard / first armor band",
+  "width": 0.6,
+  "view": "quarter",
+  "yaw": 0,
+  "pitch": 0,
+  "zoom": 1,
+  "viewport": "1440,950,1.0000000298023224",
+  "backing": [
+    [
+      719,
+      673
+    ],
+    [
+      719,
+      673
+    ]
+  ],
+  "renderer": "scene3d study / neutral finish / no combat or effects",
+  "gpuTimed": false,
+  "warmup": 20,
+  "samplesPerBlock": 90,
+  "order": [
+    "original",
+    "weighted",
+    "weighted",
+    "original"
+  ],
+  "rows": [
+    {
+      "mode": "original",
+      "cpuMedian": 0.20000000018626451,
+      "cpuP95": 0.30000000074505806,
+      "frameMedian": 13.300000000000182,
+      "frameP95": 13.400000000001455,
+      "draws": 1,
+      "triangles": 60
+    },
+    {
+      "mode": "weighted",
+      "cpuMedian": 0.20000000018626451,
+      "cpuP95": 0.30000000074505806,
+      "frameMedian": 13.300000000000182,
+      "frameP95": 13.400000000000546,
+      "draws": 1,
+      "triangles": 316
+    }
+  ]
+}
