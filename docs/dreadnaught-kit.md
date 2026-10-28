@@ -38,7 +38,9 @@ layouts are useful future passes after the kit's silhouettes are settled.
 ### Armor bevel comparison / review only
 
 Open [the side-by-side bevel study](../output/aegis-bevel-review.html) through the
-static server. It extracts the first armor band of `M_1_standard` from the current
+static server. The default now compares real bevels (left) with the baked normal
+map (right); both selectors retain the earlier original/flat-shading controls.
+It extracts the first armor band of `M_1_standard` from the current
 authoring source, in metres, and compares the original flat-shaded geometry with
 a 0.6 m edge-setback bevel. Both sides use the same neutral material and camera.
 The candidate menu separates bevel-only flat shading from face-area-weighted
@@ -62,7 +64,7 @@ The weighted version softens narrow edge transitions; broad faces remain quiet.
 At distance the difference is small. This is a neutral geometry review, without
 approval for full-ship appearance or production integration.
 
-The recorded foreground ABBA measurement uses the existing `scene3d` renderer,
+The earlier geometry-only foreground ABBA measurement uses the existing `scene3d` renderer,
 one active viewport while measuring, 20 warmup + 90 measured frames per block,
 719 x 673 backing pixels at DPR approximately 1, and no combat/effects. It reports
 60 to 316 triangles, one draw each, approximately 0.2 ms median / 0.3 ms p95 CPU
@@ -70,6 +72,62 @@ submission and 13.3 / 13.4 ms frame cadence for both. See
 `output/aegis-bevel-metrics.json` for the source hash and conditions. These small
 timings do not establish a GPU or whole-combat performance budget; those remain
 unmeasured until a full-ship integration is requested.
+
+#### Baked normals and GPU comparison
+
+`node tools/bake-aegis-normal.cjs` projects the actual weighted bevel mesh onto
+26 coplanar charts of the original 60-triangle section. Each atlas texel stores
+an interpolated high-mesh object-space normal, not color or a fixed highlight.
+The offline rasterizer selects the frontmost projected surface, normalizes its
+normal, and dilates chart gutters. The 2048 x 1024 RGBA8 atlas is approximately
+490 KiB on disk, 8 MiB uncompressed, or 10.7 MiB including mipmaps per context.
+The original positions/normals are exact; only UVs are appended. `--check`
+verifies deterministic bake freshness. All authoring dependencies are built-in
+Node modules and locally vendored assets; no runtime network dependency is added.
+
+The review-only `output/aegis-normal-renderer.js` adapter uses the existing
+`scene3d` shader with a compile-time baked-normal variant: one linear-data texture
+sample, decode and normalization. No runtime edge finding occurs, and the real
+bevel shader does not execute this sample. Object-space normals assume this
+isolated section's identity transform; production transforms/normal matrices and
+the ship's material pipeline would require separate integration. Neither runtime
+ship geometry nor the production renderer is changed. The normal map cannot
+round silhouettes or alter geometric shadows. Close-up chart edges are slightly
+sharper than the real bevels at this resolution. Three-quarter, close-up,
+underside, distant and dragged views were visually inspected in
+`output/aegis-normal-*.png`; this is a comparison, not full-ship visual approval.
+
+The GPU button always measures real weighted bevels versus the baked version,
+independently of the display selectors. It uses asynchronous
+`EXT_disjoint_timer_query_webgl2` around the complete `scene3d` render (including
+clear), with the second viewport paused. Each ABBA block has 30 warmup and 120
+measured frames. Hidden/resized views, wrong draw counts, disjoint timing,
+invalid results and query timeouts reject the run. Unsupported timers report
+unavailable, never substitute CPU or frame cadence. UI results identify their
+camera preset; repeat measurements before inferring a speedup.
+
+Two ABBA runs per view on an RTX 3070 Ti / ANGLE D3D11, at 719 x 673 backing
+pixels and DPR approximately 1, produced these ranges of run medians:
+
+| View | Real bevel GPU ms | Baked normal GPU ms |
+| --- | --- | --- |
+| Three-quarter | 0.056-0.178 | 0.102-0.166 |
+| Edge close-up | 0.100-0.224 | 0.110-0.127 |
+| Distant | 0.075-0.078 | 0.081-0.088 |
+
+Both submit one draw, with 316 versus 60 triangles. The runs show substantial
+timing variability (p95 values reach 3.4 ms) and the apparent winner changes
+between runs. These measurements establish **no reliable baked-map speedup**;
+they are not evidence of equivalent performance or a whole-ship/fleet budget.
+The memory cost is clear even though the timing difference is inconclusive.
+Raw samples, per-block summaries, source hashes, device and view conditions are
+saved in `output/aegis-normal-gpu-metrics.json` (240 valid GPU samples per mode
+per run). No disjoint/invalid samples were retained.
+
+`node tools/check-aegis-normal.cjs` verifies geometry preservation, UV bounds and
+source hashes. `--browser` checks actual shader variants and linear texture
+handling, captures the comparison and repeats the GPU runs; `--browser --guards`
+checks rejection of disjoint timers and the unavailable-timer fallback.
 
 ### Approved surface treatment / production default
 
