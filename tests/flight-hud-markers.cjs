@@ -239,3 +239,10 @@ console.log('PASS static XYZ grid: world-fixed 160 m lattice, three-axis crosses
 const shifted=DW.flightHud.flightGridPoints({...straightPose,eye:straightPose.eye.map((v,k)=>v+(k===0?.001:0))},DW.sim.METERS_PER_UNIT,1000,700);
 const overlap=grid.filter(p=>shifted.some(q=>JSON.stringify(p)===JSON.stringify(q)));assert.ok(overlap.length>=grid.length-4,'Tiny camera motion retains the visible lattice instead of swapping a nearest-20 selection');
 calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,straightPose,DW.sim.METERS_PER_UNIT,.85);assert.ok(calls.filter(c=>c.color==='#9aeeff').some(c=>c.alpha<.1),'Distant/edge crosses blend in below full brightness');
+
+const centerCamera={eye:[0,0,0],right:[1,0,0],up:[0,1,0],back:[0,0,1]};
+assert.ok(DW.flightHud.flightGridPoints(centerCamera,DW.sim.METERS_PER_UNIT,1000,700).some(p=>p[0]===0&&p[1]===0&&p[2]===-160),'A cross directly behind the crosshair is retained');
+calls.length=0;DW.flightHud.paintFlightGrid(painter,1000,700,centerCamera,DW.sim.METERS_PER_UNIT,.85);
+const centerCross=calls.find(c=>c.color==='#9aeeff'&&Math.abs(c.points.reduce((n,p)=>n+p[0],0)/6-500)<1e-6&&Math.abs(c.points.reduce((n,p)=>n+p[1],0)/6-350)<1e-6&&c.alpha>.5);
+assert.ok(centerCross,'Central crosses render at full grid brightness with no aim fade');
+console.log('PASS grid through crosshairs: no center culling or opacity hole');

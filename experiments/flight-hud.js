@@ -265,7 +265,6 @@
      * @returns {number[][]} world positions in metres */
     function flightGridPoints(camera,units,w,h){
         var eye=camera.eye.map(function(v){return v*units;}),spacing=160,range=960,focal=1/Math.tan(Math.PI/8),aspect=w/h;
-        var aim=Math.max(40,Math.min(72,h*.075))+12;
         /** @type {number[][]} */var points=[];
         var origin=eye.map(function(v){return Math.floor(v/spacing);});
         for(var x=origin[0]-6;x<=origin[0]+6;x++)for(var y=origin[1]-6;y<=origin[1]+6;y++)for(var z=origin[2]-6;z<=origin[2]+6;z++){
@@ -275,8 +274,8 @@
             if(depth<10)continue;
             var px=v.reduce(function(sum,n,k){return sum+n*camera.right[k];},0)*focal/aspect/depth;
             var py=v.reduce(function(sum,n,k){return sum+n*camera.up[k];},0)*focal/depth;
-            var margin=2*focal/depth,screenRadius=Math.hypot(px*w/2,py*h/2);
-            if(Math.abs(px)>1+margin||Math.abs(py)>1+margin||screenRadius<aim)continue;
+            var margin=2*focal/depth;
+            if(Math.abs(px)>1+margin||Math.abs(py)>1+margin)continue;
             points.push(p);
         }
         points.sort(function(a,b){return Math.hypot(a[0]-eye[0],a[1]-eye[1],a[2]-eye[2])-Math.hypot(b[0]-eye[0],b[1]-eye[1],b[2]-eye[2]);});
@@ -290,11 +289,10 @@
             return [w/2+v.reduce(function(sum,n,k){return sum+n*camera.right[k];},0)*focal/aspect/depth*w/2,h/2-v.reduce(function(sum,n,k){return sum+n*camera.up[k];},0)*focal/depth*h/2];}
         ctx.save();flightGridPoints(camera,units,w,h).forEach(function(p){
             var distance=Math.hypot(p[0]-eye[0],p[1]-eye[1],p[2]-eye[2]);
-            var center=project(p),radius=Math.hypot(center[0]-w/2,center[1]-h/2),aim=Math.max(40,Math.min(72,h*.075))+16;
+            var center=project(p);
             var far=Math.max(0,Math.min(1,(960-distance)/480));
             var edge=Math.max(0,Math.min(1,Math.min(center[0],w-center[0],center[1],h-center[1])/48));
-            var clear=Math.max(0,Math.min(1,(radius-aim)/40));
-            var alpha=opacity*.65*far*far*(3-2*far)*edge*edge*(3-2*edge)*clear*clear*(3-2*clear);
+            var alpha=opacity*.65*far*far*(3-2*far)*edge*edge*(3-2*edge);
             ctx.beginPath();for(var axis=0;axis<3;axis++){var a=p.slice(),b=p.slice();a[axis]-=2;b[axis]+=2;var pa=project(a),pb=project(b);ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);}
             ctx.globalAlpha=alpha*.7;ctx.strokeStyle='#020a12';ctx.lineWidth=4;ctx.stroke();
             ctx.globalAlpha=alpha;ctx.strokeStyle='#9aeeff';ctx.lineWidth=1.5;if(ctx.smoothStroke)ctx.smoothStroke();else ctx.stroke();
