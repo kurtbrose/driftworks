@@ -164,12 +164,8 @@
         }
         /** @param {string} vertex @param {string} fragment */
         function program(vertex, fragment) {
-            if(missionSky.hyperbolic){
-                fragment=fragment.replace('uniform vec3 right,up,back;','uniform vec3 right,up,back; uniform mat4 hyperbolicInverse; vec3 spaceRay(vec3 v){return normalize((hyperbolicInverse*vec4(1.,v)).yzw);}')
-                    .split('normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal)').join('spaceRay(normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal))');
-                if(vertex.includes('attribute vec4 star;'))vertex=vertex.replace('uniform vec3 right,up,back;','uniform mat4 hyperbolicForward;uniform vec3 right,up,back;').split('star.xyz').join('starDirection').replace('void main(){','void main(){vec3 starDirection=normalize((hyperbolicForward*vec4(1.,star.xyz)).yzw);');
-                if(vertex.includes('attribute vec3 direction;'))vertex=vertex.replace('uniform vec3 right,up,back;','uniform mat4 hyperbolicForward;uniform vec3 right,up,back;').split('dot(direction,').join('dot(spaceDirection,').replace('void main(){','void main(){vec3 spaceDirection=normalize((hyperbolicForward*vec4(1.,direction)).yzw);');
-            }
+            // The distant artwork is a translation-invariant background.
+            // Curved travel must not magnify it through the accumulated chart boost.
             var p = gl.createProgram();
             if (!p)
                 throw new Error('Could not allocate skybox program');
@@ -927,12 +923,6 @@ void main(){
         if(!landmarkSky||missionSky.wormhole) image.src = assetUrl(missionSky.wormhole?'../assets/backgrounds/hero-composition-v1-8k.jpg':'../assets/backgrounds/all-sky-milky-way.jpg');
         /** @param {WebGLProgram} p @param {Pose} pose @param {number} aspect @param {number} dpr */
         function uniforms(p, pose, aspect, dpr) {
-            if(missionSky.hyperbolic){
-                var frame=pose.spaceFrame||[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],inverse=/** @type {number[]} */([]);
-                for(var col=0;col<4;col++)for(var row=0;row<4;row++)inverse.push((row===0?-1:1)*(col===0?-1:1)*frame[row][col]);
-                var magnitude=Math.max(1,...frame.flat().map(function(v){return Math.abs(v);}));
-                gl.useProgram(p);gl.uniformMatrix4fv(gl.getUniformLocation(p,'hyperbolicForward'),false,frame.flat().map(function(v){return v/magnitude;}));gl.uniformMatrix4fv(gl.getUniformLocation(p,'hyperbolicInverse'),false,inverse.map(function(v){return v/magnitude;}));
-            }
             gl.useProgram(p); /** @type {('right' | 'up' | 'back')[]} */ /** @type {('right' | 'up' | 'back')[]} */
             (['right', 'up', 'back']).forEach(function (key) {
                 gl.uniform3fv(gl.getUniformLocation(p, key), pose[key]);

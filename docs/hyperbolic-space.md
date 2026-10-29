@@ -39,8 +39,13 @@ it never awards damage.
 After each fixed tick an exact Lorentz isometry recentres the player. It also
 transforms every craft, tactical goal, private AI observation, existing bolt,
 impact, flash and wreck. This is a coordinate change, not a respawn or teleport
-relative to other participants. Sky directions at infinity use the accumulated
-isometry. The radar uses intrinsic logarithmic distance. The existing dot grid
+relative to other participants. The accumulated isometry remains available for
+world-fixed grids and retained trajectory samples. The distant sky artwork is a
+translation-invariant background: only the camera orientation controls sampling.
+It is not a finite shell, and sustained afterburner travel cannot magnify it.
+This background convention does not model observer-dependent magnification of
+an ideal boundary texture. Gameplay space remains unbounded hyperbolic space.
+The radar uses intrinsic logarithmic distance. The existing dot grid
 and predicted trajectory guides use curved positions and transported frames.
 
 Presentation retains immutable source meshes, GPU poses, materials, authored

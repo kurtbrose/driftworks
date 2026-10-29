@@ -235,3 +235,39 @@ assert.equal(values.motionOpacity,.65);assert.equal(values.ellisRegion,0);
 assert.equal(values.motionPixel,2/(600/Math.tan(Math.PI/8)),'Pixel floor uses CSS dimensions rather than device pixels');
 latticeSky.render({...latticePose,region:1},1,false,0,.65);assert.equal(values.ellisRegion,1,'Motion pass follows the live chart');
 console.log('PASS optical motion sky: shared geodesics, explicit-LOD arc table, live opacity/chart and CSS pixel floor');
+
+// Sustained native afterburner travel must not zoom into the background art.
+// Capture the real shader inputs, including any positional matrix uploads.
+const backgroundShaders=[],backgroundUniforms={};
+const backgroundGl=new Proxy({...gl,
+  shaderSource:(_shader,source)=>backgroundShaders.push(source),
+  uniform3fv:(name,value)=>{backgroundUniforms[name]=Array.from(value);},
+  uniformMatrix4fv:(name,_transpose,value)=>{backgroundUniforms[name]=Array.from(value);}
+},{get:(target,key)=>key in target?target[key]:()=>{}});
+const backgroundCanvas={dataset:{},width:0,height:0,setAttribute(){},getContext:()=>backgroundGl};
+const backgroundContext={...context,Image:class {},
+  window:{devicePixelRatio:1,Driftworks:{assetUrl:value=>value,flightMissions:{current:()=>context.window.Driftworks.flightMissions.resolve('hyperbolic')}}},
+  document:{getElementById:()=>null,createElement:name=>name==='canvas'?backgroundCanvas:{}}
+};
+vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../experiments/skybox.js'),'utf8'),backgroundContext);
+const fixedSky=backgroundContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}},{style:3,optics:false});
+const nativeFlight=require('../tools/headless.cjs').createFlight({mission:'hyperbolic',enabled:false,seed:29});
+function backgroundInputs(pose){
+  for(const key of Object.keys(backgroundUniforms))delete backgroundUniforms[key];
+  fixedSky.render(pose,1,false,0);
+  return JSON.parse(JSON.stringify(backgroundUniforms));
+}
+const initialPose=JSON.parse(JSON.stringify(nativeFlight.snapshot().state)),initialInputs=backgroundInputs(initialPose);
+for(const duration of [5,5,50]){
+  nativeFlight.advance(duration,{boost:true});
+  const state=nativeFlight.snapshot().state;
+  assert(Math.max(...state.spaceFrame.flat().map(Math.abs))>1,'Native travel changes the accumulated chart transform');
+  assert.deepEqual(backgroundInputs(state),initialInputs,'Straight afterburner travel leaves every sky direction unchanged');
+}
+assert(!backgroundShaders.some(source=>/hyperbolicForward|hyperbolicInverse/.test(source)),'Background shaders have no accumulated positional boost');
+const distant={...initialPose,eye:[1e30,-1e30,1e30]};
+assert.deepEqual(backgroundInputs(distant),initialInputs,'Background does not acquire finite-shell parallax at large coordinates');
+const turned={...initialPose,right:initialPose.back,back:initialPose.right.map(v=>-v)};
+assert.notDeepEqual(backgroundInputs(turned),initialInputs,'Camera rotation still changes the sky projection');
+assert.deepEqual(backgroundInputs(initialPose),initialInputs,'Returning to the original heading restores the sky projection');
+console.log('PASS hyperbolic sky: 60 seconds native afterburner, distant coordinates and chart boosts leave background sampling unchanged; rotation remains active');

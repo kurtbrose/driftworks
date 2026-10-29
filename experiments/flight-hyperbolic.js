@@ -144,7 +144,7 @@
         combat.wrecks.forEach(function(w){w.axis=vector(w.axis,w.pose.eye);pose(w.pose);});
         new Set(participants.map(function(c){return c.guns;})).forEach(function(g){g.bolts.forEach(function(b){b.direction=vector(b.direction,b.position);b.position=position(b.position);});g.impacts.forEach(function(h){h.position=position(h.position);});});
         combat.flashes.forEach(function(f){if(f.velocity)f.velocity=vector(f.velocity,f.position);f.position=position(f.position);});
-        // Accumulate the inverse chart transform for the sky at infinity.
+        // Retain the chart transform for world-fixed grid and trajectory history.
         var sky=combat.player.pose.spaceFrame||[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
         combat.player.pose.spaceFrame=sky.map(transform);
     }
