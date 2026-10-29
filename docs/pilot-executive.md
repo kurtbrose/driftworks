@@ -1,5 +1,8 @@
 # Two-action tactical executive experiment
 
+The [version-2 curriculum study](pilot-executive-curriculum.md) continues this
+experiment with useful-break cases, tactical history and retained candidates.
+
 This offline experiment learns **attack versus break**, while authored,
 unchanging controllers execute the choice. It uses the production flight,
 weapons, shields, damage and triangle-hull collision paths. It adds no gameplay

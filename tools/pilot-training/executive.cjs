@@ -88,7 +88,8 @@ function episode(DW, weights, options, selector = 'learned', capture = false, re
   while (tick < limit && !combat.dead && enemy.hp > 0) {
     const seconds = tick * DT, g = geometry(DW, own, enemy, weapon);
     if (tick % DECISION_TICKS === 0) {
-      const requested = requestStream ? requestStream[tick / DECISION_TICKS] : choose(selector, weights, own, g, state, seconds);
+      const requested = typeof requestStream === 'function' ? requestStream({own, g, state, seconds})
+        : requestStream ? requestStream[tick / DECISION_TICKS] : choose(selector, weights, own, g, state, seconds);
       if (!['attack', 'break'].includes(requested)) throw Error('Invalid tactical request stream');
       transition(state, requested, g, own, seconds);
       if (capture) decisions.push({seconds, requested, mode: state.mode, range: g.range, closure: g.closure, facing: g.facing, threatFacing: g.threatFacing});

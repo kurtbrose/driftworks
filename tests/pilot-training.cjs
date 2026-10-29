@@ -183,4 +183,45 @@ const singleBreak = Executive.episode(benefitRuntime, executiveWeights, breakBen
 assert.equal(sustainedAttack.outcome, 'timeout');
 assert.equal(singleBreak.outcome, 'win', 'a timely fixed break must retain its demonstrated combat benefit');
 assert.ok(singleBreak.score > sustainedAttack.score);
+const Curriculum = require('../tools/pilot-training/executive-curriculum.cjs');
+const curriculumZero = Array(Curriculum.COUNT).fill(0);
+assert.throws(() => Curriculum.validate([NaN]), /Invalid curriculum weights/);
+assert.deepEqual(Curriculum.episode(DW, curriculumZero, executiveFixture), Executive.episode(DW, executiveWeights, executiveFixture),
+  'adding tactical memory must preserve the same motor actions for a neutral selector');
+const curriculumBreak = curriculumZero.slice(); curriculumBreak[Curriculum.INPUTS] = 2;
+const curriculumCapture = Curriculum.episode(DW, curriculumBreak, executiveFixture, true);
+const {replay: curriculumReplay, ...curriculumOriginal} = curriculumCapture;
+assert.deepEqual(Executive.replay(DW, curriculumReplay), curriculumOriginal, 'v2 policy requests must replay through the v1 flight-input format');
+const context = {own: testOwn, g: executiveGeometry, state: Executive.createState(), seconds: 2};
+const withoutHistory = Curriculum.observe(context);
+context.state.entries = 1; context.state.since = 1;
+assert.notDeepEqual(Curriculum.observe(context), withoutHistory, 'recent-break memory must distinguish otherwise identical tactical states');
+assert.equal(Curriculum.observe(context).length, Curriculum.INPUTS);
+assert.ok(Curriculum.observe(context).every(Number.isFinite));
+assert.throws(() => Curriculum.assertDisjoint({train: [breakBenefitFixture], test: [breakBenefitFixture]}), /Dataset overlap/);
+const syntheticLabels = [-1, -.5, .5, 1].map(x => ({input: [x].concat(Array(Curriculum.INPUTS - 1).fill(0)), label: Number(x > 0)}));
+const fittedSelector = Curriculum.fit(syntheticLabels, 100);
+assert.ok(Curriculum.predict(fittedSelector, syntheticLabels[0].input) < -.2);
+assert.ok(Curriculum.predict(fittedSelector, syntheticLabels[3].input) > .2, 'logistic initialization must learn the supplied action distinction');
+const TimedBaseline = require('../tools/pilot-training/executive-timed-baseline.cjs');
+const timedBenefit = TimedBaseline.evaluate(benefitRuntime, [breakBenefitFixture], 5);
+assert.equal(timedBenefit.wins, 1);
+assert.equal(timedBenefit.rows[0].score, singleBreak.score, 'fixed-timing baseline must use the same controllers and combat reward');
+const curriculumModels = [require('../tools/pilot-training/executive-curriculum-example.json'),
+  require('../tools/pilot-training/executive-curriculum-replication.json')];
+// A version-2 validation encounter, never part of its final test selection.
+const learnedBreakFixture = {scenario: 'hunted', start: 'tail', seed: 2991721438, duration: 25, skill: 0, opponentStyle: 'baseline'};
+const learnedBreakRuntime = Executive.runtime();
+const learnedBreakAttack = Executive.episode(learnedBreakRuntime, executiveWeights, learnedBreakFixture, 'attack');
+assert.equal(learnedBreakAttack.outcome, 'timeout');
+for (const model of curriculumModels) {
+  Curriculum.validate(model.weights);
+  const learnedBreak = Curriculum.episode(learnedBreakRuntime, model.weights, learnedBreakFixture, true);
+  assert.equal(learnedBreak.outcome, 'win', 'both retained neural policies must rescue the documented validation pursuit');
+  assert.ok(learnedBreak.breakEntries > 0 && learnedBreak.score > learnedBreakAttack.score);
+  const {replay: learnedBreakReplay, ...learnedBreakOriginal} = learnedBreak;
+  assert.deepEqual(Executive.replay(learnedBreakRuntime, learnedBreakReplay), learnedBreakOriginal);
+  const ends = Executive.maneuverEvents(learnedBreakReplay.decisions).filter(e => e.kind === 'maneuver-ended' && e.mode === 'break');
+  assert.ok(ends.length > 0 && ends.every(e => e.duration >= 2 - 1e-9), 'learned maneuver events must retain stable physical commitments');
+}
 console.log('Pilot training: combat scenarios and deterministic from-scratch marker control passed');
