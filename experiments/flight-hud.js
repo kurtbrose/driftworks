@@ -396,7 +396,9 @@
                 var treatment=style?style.value:'grid';
                 if(treatment==='grid'){
                     guidePath=null;guideBatches=[];guideLastEye=null;
-                    paintFlightGrid(combatHud,w,h,state,units,Number(brightness?brightness.value:85)/100);
+                    // Wormhole dots are finite sites traced by the sky optics;
+                    // an ordinary HUD grid here would overlay a second flat copy.
+                    if(!mission.sky.wormhole)paintFlightGrid(combatHud,w,h,state,units,Number(brightness?brightness.value:85)/100);
                 }else if(view.flightDemand&&!mission.sky.wormhole&&!mission.weaponsDisabled&&ahead&&corridor){
                 var config=JSON.stringify([ahead.value,corridor.value,treatment]);
                 if(guideCombat!==combat||combat.time<guideLastClock||config!==guideKey){

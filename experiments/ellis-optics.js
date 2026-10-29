@@ -231,7 +231,7 @@ EllisRay ellisInit(vec3 eye,vec3 ray){
     float hit=inside||(along<0.&&impact2<4.)?1.:0.;
     float entry=inside?0.:max(0.,-along-sqrt(max(0.,4.-impact2)));
     vec3 p=offset+ray*entry;
-    float r=max(1.000001,length(p)),l=sqrt(max(0.,r*r-1.));
+    float r=max(1.,length(p)),l=sqrt(max(0.,r*r-1.));
     vec3 radial=p/max(.000001,length(p));
     float cosine=dot(ray,radial),b=min(1.999999,r*sqrt(max(0.,1.-cosine*cosine)));
     // A deterministic perpendicular also keeps exactly radial rays finite.
@@ -320,5 +320,139 @@ vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){
     }
     return result;
 }`;
-    DW.ellisOptics={ray:ray,advanceRay:advanceRay,primary:primary,lookup:lookup,table:table,integral:integral,shader:shader,latticeShader:latticeShader,size:size};
+    /** Optical arc lengths for motion cues, packed like the angular table.
+     * Only the compact core is tabulated; the flat tail stays analytic. */
+    var motionCache=/** @type {Uint8Array|null} */(null);
+    function motionTable(){
+        if(motionCache)return motionCache;
+        var data=new Uint8Array(size*size*4),h=extent/(size-1);
+        for(var x=0;x<size;x++)for(var branch=0;branch<2;branch++){
+            var b=1+(branch?1:-1)*Math.exp(-impactExtent*x/(size-1)),root=Math.sqrt(Math.max(1e-7,Math.abs(1-b*b)));
+            var edge=branch?Math.acosh(Math.max(1,Math.sqrt(3)/root)):Math.asinh(Math.sqrt(3)/root),sum=0;
+            for(var y=0;y<size;y++){
+                var lo=Math.min(Math.max(0,(y-1)*h),edge),hi=Math.min(y*h,edge),u=(lo+hi)*.5;
+                var l=root*(branch?Math.cosh(u):Math.sinh(u)),r2=1+l*l;
+                if(y)sum+=Math.sqrt(r2)*radialScale(r2)*(hi-lo);
+                // Include the analytic tail in texels straddling the join;
+                // clamping those texels to the core biases bilinear samples.
+                var end=root*(branch?Math.cosh(y*h):Math.sinh(y*h));
+                var tail=y*h>edge?Math.sqrt(Math.max(0,1+end*end-b*b))-Math.sqrt(Math.max(0,4-b*b)):0;
+                var value=Math.round(Math.min(32,sum+tail)/32*65535),i=(y*size+x)*4+branch*2;
+                data[i]=value>>8;data[i+1]=value&255;
+            }
+        }
+        motionCache=data;return data;
+    }
+    // Fixed spherical dot sites on both exteriors. Trace rays to each shell,
+    // rather than projecting a single primary image: caustics and wound copies
+    // then use exactly the sky's geodesics, including after a chart crossing.
+    var motionShader=`
+uniform sampler2D motionTable;
+uniform float motionOpacity,motionPixel,motionBorder,motionObserverL;
+uniform vec2 motionViewport;
+vec4 motionSite(vec3 p,float radius,float distance){
+    if(distance<20.||distance>=960.)return vec4(0.);
+    const float pi=3.14159265359;
+    vec3 n=normalize(p);
+    float bands=2.*ceil(pi*radius/320.);
+    float latitude=asin(clamp(n.z,-1.,1.));
+    float row=clamp(floor((latitude+pi*.5)/pi*bands),0.,bands-1.);
+    float lat=-pi*.5+(row+.5)*pi/bands;
+    float columns=2.*max(1.,floor(pi*radius*cos(lat)/160.));
+    float longitude=atan(n.y,n.x+1.e-10),step=2.*pi/columns;
+    float dx=mod(longitude+step*.5,step)-step*.5;
+    float miss=length(vec2((latitude-lat),dx*cos(lat)))*radius;
+    // Physical dots naturally stretch under lensing. A pixel floor keeps
+    // distant sites legible; all widths are in CSS pixels, independent of DPR.
+    float width=clamp(.45,.8*motionPixel*distance,2.3*motionPixel*distance);
+    float aa=.45*motionPixel*distance;
+    float dotAlpha=1.-smoothstep(max(0.,width-aa),width+aa,miss);
+    float backing=1.-smoothstep(width+motionPixel*distance,width+1.6*motionPixel*distance,miss);
+    float fade=1.-smoothstep(480.,960.,distance);
+    vec2 edge=min(gl_FragCoord.xy/motionViewport,1.-gl_FragCoord.xy/motionViewport);
+    float border=smoothstep(0.,motionBorder,min(edge.x*motionViewport.x,edge.y*motionViewport.y));
+    float alpha=motionOpacity*.65*fade*border;
+    float a=alpha*(dotAlpha+(1.-dotAlpha)*backing*.7);
+    return vec4(mix(vec3(.008,.039,.071),vec3(.604,.933,1.),dotAlpha)*a,a);
+}
+void motionOver(inout vec4 result,vec4 site){
+    result.rgb+=site.rgb*(1.-result.a);result.a+=site.a*(1.-result.a);
+}
+#ifndef MOTION_THIN_SHELL
+float motionArc(float b,float u){
+    float root=sqrt(max(.0000001,abs(1.-b*b)));
+    float edge=b<1.?ellisAsinh(sqrt(3.)/root):ellisAcosh(max(1.,sqrt(3.)/root));
+    float x=clamp(-log(max(.000000112535175,abs(1.-b)))/16.,0.,1.);
+    vec2 uv=(vec2(x,clamp(min(u,edge)/12.,0.,1.))*511.+.5)/512.;
+    vec4 encoded=texture2D(motionTable,uv);
+    float arc=(b<1.?dot(encoded.rg,vec2(65280.,255.)):dot(encoded.ba,vec2(65280.,255.)))*32./65535.;
+    if(u>edge){
+        float l=root*(b<1.?ellisSinh(u):ellisCosh(u));
+        arc+=sqrt(max(0.,1.+l*l-b*b))-sqrt(max(0.,4.-b*b));
+    }
+    return arc*300.;
+}
+#endif
+vec4 motionDots(vec3 eye,vec3 ray){
+    vec3 origin=eye-vec3(ellisRegion*12000.,-2000.,1550.);
+    float R=length(origin),along=dot(origin,ray);
+    EllisRay e=ellisInit(eye,ray);
+#ifndef MOTION_THIN_SHELL
+    if(R<600.){
+        // Recover l on the CPU in double precision: squaring a float radius
+        // near a destroys the sub-metre radial coordinate at oblique crossings.
+        float cosine=dot(ray,e.radial),r=sqrt(1.+motionObserverL*motionObserverL/90000.);
+        e.b=min(1.999999,r*sqrt(max(0.,1.-cosine*cosine)));
+        float root=sqrt(max(.0000001,abs(1.-e.b*e.b)));
+        e.u0=e.b<1.?ellisAsinh(motionObserverL/300./root):ellisAcosh(max(1.,motionObserverL/300./root));
+        e.f0=ellisIntegral(e.b,e.u0);
+    }
+#endif
+    float flatEnd=e.hit>.5?e.entry:1.e10;
+    vec4 result=vec4(0.);
+    // Shell IDs are world fixed; the moving window only drops sites beyond
+    // the distance fade. Sixteen shells cover every possible 960 m segment.
+    float nearRadius=max(300.,R-960.);
+    float first=max(0.,floor(sqrt(max(0.,nearRadius*nearRadius-90000.))/160.-.5));
+#ifndef MOTION_THIN_SHELL
+    float startArc=e.hit>.5?motionArc(e.b,e.u0):0.;
+#endif
+    for(int i=0;i<16;i++){
+        float l=(first+float(i)+.5)*160.,radius=sqrt(90000.+l*l);
+        float disc=along*along-dot(origin,origin)+radius*radius;
+        if(disc>=0.)for(int j=0;j<2;j++){
+            float t=-along+(j==0?-1.:1.)*sqrt(disc);
+            if(t>=0.&&t<flatEnd)motionOver(result,motionSite(origin+ray*t,radius,t));
+        }
+        if(e.hit<.5)continue;
+#ifdef MOTION_THIN_SHELL
+        vec3 start=-e.radial*300.;float a=dot(start,e.tangent);
+        float t=-a+sqrt(max(0.,a*a-90000.+radius*radius));
+        motionOver(result,motionSite(start+e.tangent*t,radius,e.entry+t));
+#else
+        float r=radius/300.,root=sqrt(max(.0000001,abs(1.-e.b*e.b)));
+        if(e.b>r)continue;
+        float u=e.b<1.?ellisAsinh(l/300./root):ellisAcosh(max(1.,l/300./root));
+        float phase=ellisIntegral(e.b,u),arc=motionArc(e.b,u);
+        for(int j=0;j<2;j++){
+            float angle,distance,flip=1.;bool visible;
+            if(e.inward>.5){
+                visible=j==1||u<=e.u0;
+                angle=j==0?e.f0-phase:e.f0+phase;
+                distance=e.entry+(j==0?startArc-arc:startArc+arc);
+                if(j==1&&e.b<1.)flip=-1.;
+            }else{
+                visible=j==0&&u>=e.u0;angle=phase-e.f0;
+                distance=e.entry+arc-startArc;
+            }
+            if(visible){
+                vec3 radial=(e.radial*cos(angle)+e.tangent*sin(angle))*flip;
+                motionOver(result,motionSite(radial,radius,distance));
+            }
+        }
+#endif
+    }
+    return result;
+}`;
+    DW.ellisOptics={ray:ray,advanceRay:advanceRay,primary:primary,lookup:lookup,table:table,integral:integral,shader:shader,latticeShader:latticeShader,motionTable:motionTable,motionShader:motionShader,size:size};
 }());

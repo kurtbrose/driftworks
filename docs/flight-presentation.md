@@ -363,6 +363,32 @@ The shared cockpit HUD defaults to the **Static dot grid**, even on pages withou
 
 The **Static dot grid** draws visible grid sites without a nearest-twenty cutoff. Each site is a filled pale cyan dot with a dark backing, perspective-sized between 0.8 and 2.3 CSS pixels in radius. Sites lie on a 160 m Cartesian lattice with a 960 m visibility radius; camera position and rotation only change projection and which sites are visible. They never follow held inputs or attach to the ship. Dots remain visible through the crosshairs, with no central exclusion or aiming-area fade. Sites fade smoothly from 480 to 960 m and at screen edges. Heading-independent landmarks are the current motion-cue experiment.
 
+Wormhole sorties replace the Cartesian sites with fixed spherical dot sites in
+each exterior, rendered by the optical sky pass before scene geometry. Shells
+have Ellis radial coordinates `l = 80 + 160n` metres and areal radii
+`sqrt(300^2 + l^2)`; angular rows have approximately 160 m spacing. These are
+navigation landmarks, not a uniform cubic lattice. Their positions never move
+with the camera. The pass intersects both legs of each geodesic with the shells,
+using the shared sky lookup for returning, transmitted and wound images. A
+second cached 1 MiB packed table supplies optical arc length for the same
+480–960 m distance fade, with an analytic flat-exterior tail. Thin-shell sorties
+use their exact joined straight rays instead. Dots use physical footprints with
+a CSS-pixel visibility floor, so lensing can stretch their images. The same
+toggle, brightness, death and chase rules apply; the HUD omits its flat duplicate.
+`flightSkybox.render` accepts an optional fifth motion-opacity argument (default
+off for standalone studies); the flight presentation supplies the cockpit value.
+Run `tools/check-wormhole-dots-browser.cjs` with Playwright available to capture
+both charts and compare optical dot images across the crossing.
+
+The October 28, 2026 local Chrome check at 1000×700, DPR 1 measured
+0.16–0.52 ms GPU time for the Ellis dot pass and 0.17–0.24 ms for thin-shell
+dots (one additional draw). Straight and oblique crossing fixtures matched
+100% of thresholded dot pixels for Ellis and at least 99.4% for thin-shell.
+The distance table differed from independent quadrature by at most 0.083 m
+in the regression samples. These are local measurements, not universal budgets.
+Cockpit composites from both charts and isolated approach/throat stills were
+visually inspected; motion feel remains a playtest judgment.
+
 The comparison style **Four outer lane markers** draws only four lines: at the default width, their offsets are +/-24 m right and +/-12 m up, exactly twice the old inner offsets. New geometry is born only in the final eight metres of a curve reaching the far radial boundary. The boundary distance is captured from the selected look-ahead forecast when the guide starts (minimum 60 m), and remains fixed until settings/reset change it. Every 20 m of actual travel attempts one new curved dash on each of the four lines. Steering alone never fills nearby space or replaces an existing dash. If an eight-second forecast cannot reach the radial boundary (including tight loops), nothing spawns closer instead. Startup also seeds only the far boundary; it takes flight time for the field to fill.
 
 Dashes remain fixed in world space at full initial opacity, fading only near the end of their forecast travel time plus 1.5 s lifetime (bounded 2–20 s). Camera motion supplies the approach/pass motion. Pausing freezes lifetimes and spawning; disable/reset/rewind/style changes clear history. Storage is bounded to 128 emissions. The legacy two lower lanes and sparse brackets remain selectable comparison treatments.

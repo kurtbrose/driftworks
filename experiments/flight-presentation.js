@@ -360,7 +360,11 @@
             }
             scene.setStudyDiagnostics(comparison);
             if(skybox.setOccluders)skybox.setOccluders(world.asteroids.map(function(a){return {center:[a.position.x,a.position.y,0],radius:a.radius};}));
-            skybox.render(state, comparison.scale, comparison.mode === 'empty',elapsed);
+            var motionToggle=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes'));
+            var motionStyle=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-guide-style'));
+            var motionBrightness=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes-opacity'));
+            var motionOpacity=regions.length>1&&!combat.dead&&!document.body.classList.contains('watch-chase')&&(!motionToggle||motionToggle.checked)&&(!motionStyle||motionStyle.value==='grid')?(motionBrightness?Number(motionBrightness.value)/100:.85):0;
+            skybox.render(state, comparison.scale, comparison.mode === 'empty',elapsed,motionOpacity);
             scene.sync(world);
             if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=defaultShieldDiscs||shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,ownShield);shieldTime=view.combat.time;
                 if(shieldTime<shieldTest)shieldTest=-Infinity;

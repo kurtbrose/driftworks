@@ -174,7 +174,7 @@
             if (!p)
                 throw new Error('Could not allocate skybox program');
             gl.attachShader(p, shader(gl.VERTEX_SHADER, vertex));
-            if(explicitBridgeLod&&fragment.includes('uniform sampler2D ellisTable;'))fragment='#extension GL_EXT_shader_texture_lod : enable\n'+fragment.replace('texture2D(ellisTable,uv)','texture2DLodEXT(ellisTable,uv,0.)');
+            if(explicitBridgeLod&&fragment.includes('uniform sampler2D ellisTable;'))fragment='#extension GL_EXT_shader_texture_lod : enable\n'+fragment.replace('texture2D(ellisTable,uv)','texture2DLodEXT(ellisTable,uv,0.)').replace('texture2D(motionTable,uv)','texture2DLodEXT(motionTable,uv,0.)');
             if(bridgeDerivatives&&fragment.includes('vec3 jadeSatellites('))fragment=fragment.replace('precision highp float;','#extension GL_OES_standard_derivatives : enable\nprecision highp float;');
             gl.attachShader(p, shader(gl.FRAGMENT_SHADER, fragment));
             gl.linkProgram(p);
@@ -898,11 +898,23 @@ void main(){
             image.src=assetUrl(selected===11?'../assets/backgrounds/star-river-woven-v1-8k.jpg':'../assets/backgrounds/star-river-photo-v3-8k.jpg');
         }
         var bridgeMode=typeof location==='undefined'?'':new URLSearchParams(location.search).get('bridge');
-        var bridgeTable=missionSky.wormhole&&window.Driftworks.ellisOptics&&bridgeMode!=='legacy'?gl.createTexture():null;
+        var bridgeTable=missionSky.wormhole&&window.Driftworks.ellisOptics?gl.createTexture():null;
         if(bridgeTable){
             var optics=/** @type {Required<DriftworksNamespace>} */(window.Driftworks).ellisOptics;
             gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);
             gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,optics.size,optics.size,0,gl.RGBA,gl.UNSIGNED_BYTE,optics.table());
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0);
+        }
+        var motionProgram=/** @type {WebGLProgram|null} */(null),motionLengths=/** @type {WebGLTexture|null} */(null);
+        if(bridgeTable&&bridgeOptics){
+            var motionOptics=/** @type {Required<DriftworksNamespace>} */(window.Driftworks).ellisOptics;
+            motionProgram=program('attribute vec2 position;varying vec2 screen;void main(){screen=position;gl_Position=vec4(position,0.,1.);}',
+                'precision highp float;\n'+(missionSky.thinShell?'#define MOTION_THIN_SHELL\n':'')+
+                'varying vec2 screen;uniform vec3 right,up,back,bridgeEye;uniform float aspect,focal;\n'+bridgeOptics.shader+motionOptics.motionShader+
+                '\nvoid main(){vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);gl_FragColor=motionDots(bridgeEye,ray);}');
+            motionLengths=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,motionLengths);
+            gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,512,512,0,gl.RGBA,gl.UNSIGNED_BYTE,motionOptics.motionTable());
             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.activeTexture(gl.TEXTURE0);
         }
@@ -939,7 +951,7 @@ void main(){
                 if(value){var hdrFilter=gl.getExtension('OES_texture_float_linear')?gl.LINEAR:gl.NEAREST;hdrTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,512,256,0,gl.RGBA,gl.FLOAT,value.radiance||null);gl.activeTexture(gl.TEXTURE0);}
             },cueImpact:cueImpact,resetImpact:resetImpact,getImpactState:impactCues.snapshot,setCameraSources:/** @param {import('../src/types').SkyCameraSource[]|null} value */function(value){cameraSources=value;sourceStyle=-1;},setOccluders:/** @param {import('../src/types').SkyOccluder[]} value */function(value){if(effects)effects.setOccluders(value);},setOpticsEnabled:/** @param {boolean} value */function(value){if(effects)effects.setEnabled(value);},setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
-            }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] */ function (pose, renderScale, empty,elapsed) {
+            }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] @param {number} [motionOpacity] */ function (pose, renderScale, empty,elapsed,motionOpacity) {
                 if(window.Driftworks.gpuDiagnostics)window.Driftworks.gpuDiagnostics.mark('sky.render');
                 if(effects&&sourceStyle!==style){
                     effects.setSources(cameraSources||(hdrTexture?[]:landmarkSky&&window.Driftworks.skyEffects?window.Driftworks.skyEffects.fromFeatures(missionSky.features,authoredAssetSources):authoredSources[String(style)]||[]));sourceStyle=style;
@@ -994,7 +1006,7 @@ void main(){
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeOutline'),missionSky.wormhole&&new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeOutline')!=='0'?1:0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeGridPixel'),2.2*dpr/(height*viewFocal));
                 gl.uniform1f(gl.getUniformLocation(sky,'ellisRegion'),pose.region||0);
-                gl.uniform1f(gl.getUniformLocation(sky,'bridgeLookup'),bridgeTable?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeLookup'),bridgeTable&&bridgeMode!=='legacy'?1:0);
                 if(bridgeTable){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);gl.uniform1i(gl.getUniformLocation(sky,'ellisTable'),4);gl.activeTexture(gl.TEXTURE0);}
                 if(missionSky.wormhole)gl.uniform3fv(gl.getUniformLocation(sky,'bridgeEye'),pose.eye.map(function(v){return v*(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT;}));
                 gl.uniform1i(gl.getUniformLocation(sky,'bakedCube'),5);
@@ -1094,7 +1106,28 @@ void main(){
                     gl.disableVertexAttribArray(direction);gl.disableVertexAttribArray(texcoord);
                     stats.drawCalls+=visibleFeatures.length;stats.triangles+=visibleFeatures.length*2;stats.meshes+=visibleFeatures.length;stats.materials+=visibleFeatures.length;
                 }
-                if(missionSky.wormhole)return;
+                if(missionSky.wormhole){
+                    if(motionProgram&&motionOpacity&& !empty){
+                        uniforms(motionProgram,pose,width/height,dpr);
+                        gl.uniform3fv(gl.getUniformLocation(motionProgram,'bridgeEye'),pose.eye.map(function(v){return v*(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT;}));
+                        gl.uniform1f(gl.getUniformLocation(motionProgram,'ellisRegion'),pose.region||0);
+                        gl.uniform1f(gl.getUniformLocation(motionProgram,'motionOpacity'),motionOpacity);
+                        gl.uniform1f(gl.getUniformLocation(motionProgram,'motionPixel'),2/(host.clientHeight*viewFocal));
+                        gl.uniform1f(gl.getUniformLocation(motionProgram,'motionBorder'),48*dpr);
+                        var motionEye=pose.eye.map(function(v){return v*(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT;});
+                        var motionRadius=Math.hypot(motionEye[0]-(pose.region||0)*12000,motionEye[1]+2000,motionEye[2]-1550);
+                        gl.uniform1f(gl.getUniformLocation(motionProgram,'motionObserverL'),Math.sqrt(Math.max(0,(motionRadius-300)*(motionRadius+300))));
+                        gl.uniform2f(gl.getUniformLocation(motionProgram,'motionViewport'),canvas.width,canvas.height);
+                        gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);gl.uniform1i(gl.getUniformLocation(motionProgram,'ellisTable'),0);
+                        gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,motionLengths);gl.uniform1i(gl.getUniformLocation(motionProgram,'motionTable'),1);
+                        gl.bindBuffer(gl.ARRAY_BUFFER,quad);var motionPosition=gl.getAttribLocation(motionProgram,'position');
+                        gl.enableVertexAttribArray(motionPosition);gl.vertexAttribPointer(motionPosition,2,gl.FLOAT,false,0,0);
+                        gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.drawArrays(gl.TRIANGLES,0,6);gl.disable(gl.BLEND);
+                        gl.disableVertexAttribArray(motionPosition);gl.activeTexture(gl.TEXTURE0);
+                        stats.drawCalls++;stats.triangles+=2;stats.meshes++;stats.materials++;
+                    }
+                    return;
+                }
                 uniforms(points, pose, width / height, dpr);
                 gl.bindBuffer(gl.ARRAY_BUFFER, starBuffer);
                 a = gl.getAttribLocation(points, 'star');

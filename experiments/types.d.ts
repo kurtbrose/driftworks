@@ -689,7 +689,7 @@ export type ExperimentModules = {
     ellisFeedback:{describe:(pose:Pose)=>{region:number;distance:number;gap:number;proximity:number};create:()=>{reset:()=>void;update:(pose:Pose,dt:number,active:boolean,enabled:boolean)=>EllisCue}};
     ellisStudy:{yoYoAt:(distance:number,observerL:number,halfSize?:number)=>YoYoFrame;yoYo:(time:number,name:string)=>YoYoFrame;camera:(name:string,time?:number)=>Pose;sample:(time:number,scenario:string)=>{pose:Pose;velocity:number[]}[]};
     thinShellOptics:ExperimentModules['ellisOptics'];
-    ellisOptics:{ray:(eye:number[],direction:number[],region:number)=>OpticalRay;advanceRay:(ray:OpticalRay,distance:number)=>{start:number[];end:number[];region:number;direction:number[]}[];primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];sourceDirection:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;latticeShader:string;size:number};
+    ellisOptics:{ray:(eye:number[],direction:number[],region:number)=>OpticalRay;advanceRay:(ray:OpticalRay,distance:number)=>{start:number[];end:number[];region:number;direction:number[]}[];primary:(eye:number[],target:number[],region:number,destination:number)=>{direction:number[];sourceDirection:number[];length:number;impact:number;direct:boolean;turning:boolean}|null;lookup:(b:number,u:number)=>number;table:()=>Uint8Array;integral:(b:number,u:number,steps?:number)=>number;shader:string;latticeShader:string;motionShader:string;motionTable:()=>Uint8Array;size:number};
     flightMissions:{resolve:(id?:string|boolean)=>FlightMission;current:()=>FlightMission;define:(id:string,overrides:MissionOverrides,parent?:string)=>FlightMission;address:(text:string,index:number,hostile:boolean,mission:FlightMission)=>string};
     commsDisplay: {create: (target: HTMLCanvasElement) => {draw: (source: CanvasImageSource, noise: RadioNoise | null, elapsed: number, speechDuration: number, options?: CommsDisplayOptions) => number}};
     flightPortraits: {
@@ -884,7 +884,7 @@ export type ExperimentModules = {
             getLighting: () => import('../src/types').SkyEnvironmentLighting | null;
             setLightingEnabled: (enabled:boolean) => void;
             getRenderStats: () => RenderStats['sky'];
-            render: (pose: Pose, renderScale: number, empty: boolean, elapsed?:number) => void;
+            render: (pose: Pose, renderScale: number, empty: boolean, elapsed?:number, motionOpacity?:number) => void;
         };
     };
     flightRadar: {

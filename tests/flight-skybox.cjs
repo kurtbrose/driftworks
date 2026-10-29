@@ -226,3 +226,12 @@ const fallbackFragment=shaders.slice(fallbackStart).find(source=>source.includes
 assert(fallbackFragment&&!fallbackFragment.includes('dFdx(outgoing)'),'No derivative calls on unsupported WebGL contexts');
 assert(!fallbackFragment.includes('#extension GL_OES_standard_derivatives'),'No unsupported extension requirement');
 console.log('PASS Ellis limb fallback: shader remains usable without derivative/LOD extensions');
+
+const motionFragment=shaders.find(source=>source.includes('gl_FragColor=motionDots'));
+assert(motionFragment&&motionFragment.includes('ellisIntegral(e.b,u)'),'Motion dots use the shared finite geodesics');
+assert(motionFragment.includes('texture2DLodEXT(motionTable,uv,0.)'),'Motion distance lookup has explicit LOD in divergent branches');
+latticeSky.render(latticePose,1,false,0,.65);
+assert.equal(values.motionOpacity,.65);assert.equal(values.ellisRegion,0);
+assert.equal(values.motionPixel,2/(600/Math.tan(Math.PI/8)),'Pixel floor uses CSS dimensions rather than device pixels');
+latticeSky.render({...latticePose,region:1},1,false,0,.65);assert.equal(values.ellisRegion,1,'Motion pass follows the live chart');
+console.log('PASS optical motion sky: shared geodesics, explicit-LOD arc table, live opacity/chart and CSS pixel floor');

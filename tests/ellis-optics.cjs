@@ -180,3 +180,22 @@ for(const other of [false,true])for(const R of [1.001,1.4,2.1,4])for(const S of 
 assert.equal(remotePaths,36);assert.equal(turningPaths,15);
 assert(arcWorst<.002,'Arc lengths agree with independent proper-radial quadrature within 2 mm');
 console.log('PASS Ellis arc distance: independent proper-radial quadrature for transmitted and turning paths through core, shell and flat exterior');
+
+const motion=optics.motionTable();assert.equal(motion.length,N*N*4);assert.equal(optics.motionTable(),motion);
+function motionArc(b,r){
+ const root=Math.sqrt(Math.max(1e-7,Math.abs(1-b*b)));
+ const u=(b<1?Math.asinh:Math.acosh)(b<1?Math.sqrt(r*r-1)/root:Math.max(1,Math.sqrt(r*r-1)/root));
+ const edge=(b<1?Math.asinh:Math.acosh)(b<1?Math.sqrt(3)/root:Math.max(1,Math.sqrt(3)/root));
+ const x=Math.max(0,Math.min(511,-Math.log(Math.max(Math.exp(-16),Math.abs(1-b)))/16*511)),y=Math.min(u,edge)/12*511;
+ const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,c=b<1?0:2;
+ function read(i,j){const k=(Math.min(511,j)*512+Math.min(511,i))*4+c;return (motion[k]*256+motion[k+1])*32/65535;}
+ let value=(read(ix,iy)*(1-fx)+read(ix+1,iy)*fx)*(1-fy)+(read(ix,iy+1)*(1-fx)+read(ix+1,iy+1)*fx)*fy;
+ if(u>edge)value+=Math.sqrt(Math.max(0,r*r-b*b))-Math.sqrt(Math.max(0,4-b*b));
+ return value*300;
+}
+let motionWorst=0;
+for(const b of [0,.3,.8,.99,.9999,1.0001,1.01,1.4,1.9])for(const r of [Math.max(1.001,b+.001),2,3,6]){
+ const error=Math.abs(motionArc(b,r)-properArc(b,r)*300);motionWorst=Math.max(motionWorst,error);
+}
+assert(motionWorst<1,'Motion-dot distance fade agrees with independent arc quadrature within one metre');
+console.log('PASS Ellis motion distance: cached packed optical-arc table, both branches and analytic flat tail; worst '+motionWorst.toFixed(3)+' m');

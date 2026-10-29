@@ -275,10 +275,12 @@ console.log('PASS grid through crosshairs: no center culling or opacity hole');
 // Missing experimental controls must not disable the shared cockpit default.
 const lookup=document.getElementById;
 document.getElementById=id=>id.startsWith('flight-lanes')||id==='flight-guide-style'?null:lookup(id);
-for(const mode of ['default','asteroid-patrol','gas-giant','jade-rime','ellis']){
+for(const mode of ['default','asteroid-patrol','gas-giant','jade-rime']){
  const sharedView={...guideView,combat:{...guideView.combat,mode},flightDemand:undefined};
  hud.render(sharedView);assert.ok(calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'Default motion dots render without lab controls or held inputs in '+mode);
 }
+hud.render({...guideView,combat:{...guideView.combat,mode:'ellis'}});
+assert.ok(!calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'Wormhole motion dots belong to the optical sky pass, with no flat HUD duplicate');
 hud.render({...guideView,combat:{...guideView.combat,dead:true}});assert.ok(!calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'No motion dots after death');
 document.getElementById=lookup;get('flight-guide-style').value='grid';get('flight-lanes').checked=false;hud.render(guideView);assert.ok(!calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'Shared toggle disables motion dots');get('flight-lanes').checked=true;
 console.log('PASS default cockpit motion dots: missing lab controls, no input demand, sorties, free flight, wormhole, death and off switch');
