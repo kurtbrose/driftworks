@@ -111,6 +111,10 @@
       // A metric ball encloses the entire axial Fermi-mapped source box.
       // Linear transformed boxes can falsely reject a curved hull near the camera.
       var radius=batch.hyperbolicRadius,frame=batch.hyperbolicFrame;
+      if(batch.hyperbolicLocalBasis||batch.hyperbolicLocalOrigin){
+        var localBasis=batch.hyperbolicLocalBasis||new Float32Array([1,0,0,0,1,0,0,0,1]),localOrigin=batch.hyperbolicLocalOrigin||[0,0,0];
+        box={center:/** @type {V3} */([0,1,2].map(function(k){return localOrigin[k]+box.center.reduce(function(n,v,j){return n+v*localBasis[j*3+k];},0);})),half:/** @type {V3} */([0,1,2].map(function(k){return box.half.reduce(function(n,v,j){return n+v*Math.abs(localBasis[j*3+k]);},0);}))};
+      }
       var far=box.center.map(function(v,k){return Math.abs(v)+box.half[k];});
       // Hyperbolic right triangle: cosh(d/R)=cosh(x/R)*cosh(rho/R).
       var extent=Math.acosh(Math.max(1,Math.cosh(far[0]/radius)*Math.cosh(Math.hypot(far[1],far[2])/radius)));
@@ -528,7 +532,7 @@
       '}else{if(uFinish>.5&&uFinish<6.5){float fp=max(.00001,uHullFootprint*vDepth/(max(.01,uHullDepth)*max(.18,abs(dot(n,uBack)))));float near=1.-smoothstep(.02,.1,fp);vec3 gradient=noiseGradient3(vLocal*42.).yzw;vec3 grain=rotateNormal(gradient);n=normalize(n-(grain-n*dot(grain,n))*.09*near);float rough=noise3(vLocal*12.);col*=1.+(rough-.5)*.07*near;vec4 detail=hardwareMasks(vLocal,fp);col*=1.-detail.z*.23;col=mix(col,vec3(.72,.74,.70),detail.x*.72);col=mix(col,col*.72+vec3(.055),detail.y*.6);col=mix(col,vec3(.16,.19,.19),detail.w*.65);n=normalize(n+rotateNormal(vec3(.06,-.04,.03))*detail.y);if(uFinish>2.5&&uFinish<4.5){float joint=abs(mod(abs(vLocal.x)-42.,5.5)-.12);float weld=shipLine(joint,.04,fp);col=mix(col,col*.7,weld*.5);}}vec3 interiorAlbedo=col;float diffuse=max(0.,dot(n,light));col*=uEnvironmentEnabled>.5?skyDiffuse(n):vec3((uFinish>.5?.25+.92*diffuse:.61+.55*diffuse)+uCraftFill);if(uFinish<-.5)col=max(col,interiorAlbedo*.65);if(uEnvironmentEnabled<.5&&uFinish>.5&&uFinish<2.5){vec3 halfVector=normalize(light+uBack);col+=vec3(.85,.90,1.)*pow(max(0.,dot(n,halfVector)),uFinish<1.5?36.:12.)*.28;}if(uFinish>6.5&&uFinish<7.5)col=uColor*.95;else col+=uColor*(rigIllumination(vRelative,n)+vBakedDocking*uRigBakedEnabled);}if(uEnvironmentEnabled>.5 && !(uFinish>6.5&&uFinish<7.5))col+=skySpecular(n);gl_FragColor=vec4(col,uOpacity);}';
     fragmentShader=fragmentShader.replace('precision highp float;','precision highp float;uniform float uCameraExposure;').replace('gl_FragColor=vec4(col,uOpacity);','gl_FragColor=vec4(mix(col*pow(uCameraExposure,1./2.2),vec3(1.,.15,0.),uLensDebug*.55),uOpacity);');
     // Finite hull geometry is evaluated on the GPU; source buffers remain shared.
-    var hyperbolicShader=DW.flightHyperbolic?DW.flightHyperbolic.hullShader:'uniform float uHyperbolicRadius;uniform mat4 uHyperbolicFrame;vec3 hyperbolicPosition(vec3 v){return v;}mat3 hyperbolicNormalMatrix(vec3 v){return mat3(1.);}';
+    var hyperbolicShader=DW.flightHyperbolic?DW.flightHyperbolic.hullShader:'uniform float uHyperbolicRadius;uniform mat4 uHyperbolicFrame;uniform vec3 uHyperbolicLocalOrigin;uniform mat3 uHyperbolicLocalBasis;vec3 hyperbolicPosition(vec3 v){return v;}mat3 hyperbolicNormalMatrix(vec3 v){return mat3(1.);}';
     vertexShader=vertexShader.replace('void main(){',hyperbolicShader+'\nvoid main(){').replace('vLocal=local;', 'if(uHyperbolicRadius>0.){p=hyperbolicPosition(aPosition)-uTarget;vRelative=p;vNormal=normalize(hyperbolicNormalMatrix(aPosition)*aNormal);}vLocal=local;');
     fragmentShader=fragmentShader.replace('void main(){',hyperbolicShader+'\nvoid main(){').replace('float nc=cos(uRotation)', 'if(uHyperbolicRadius>0.)mapped=normalize(hyperbolicNormalMatrix(vLocal)*(texture2D(uArmorNormal,vNormalUV).xyz*2.-1.));float nc=cos(uRotation)');
     var cameraExposureUniform={value:1};
@@ -567,7 +571,7 @@
       result.onBeforeCompile=function(shader){
         shader.uniforms.uShieldOutput=shieldOutputUniform;shader.uniforms.uSkyBasis={value:skyBasis};shader.uniforms.uSkyCameraExposure=cameraExposureUniform;
         shader.uniforms.uArmorNormal=snapshot.uArmorNormal;shader.uniforms.uArmorEnabled=snapshot.uArmorEnabled;
-        shader.uniforms.uHyperbolicRadius=snapshot.uHyperbolicRadius;shader.uniforms.uHyperbolicFrame=snapshot.uHyperbolicFrame;shader.uniforms.uTarget=snapshot.uTarget;
+        shader.uniforms.uHyperbolicLocalOrigin=snapshot.uHyperbolicLocalOrigin;shader.uniforms.uHyperbolicLocalBasis=snapshot.uHyperbolicLocalBasis;shader.uniforms.uHyperbolicRadius=snapshot.uHyperbolicRadius;shader.uniforms.uHyperbolicFrame=snapshot.uHyperbolicFrame;shader.uniforms.uTarget=snapshot.uTarget;
         shader.vertexShader=hyperbolicShader+'uniform vec3 uTarget;\n'+shader.vertexShader;
         shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>','#include <beginnormal_vertex>\nif(uHyperbolicRadius>0.)objectNormal=hyperbolicNormalMatrix(position)*objectNormal;');
         shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nif(uHyperbolicRadius>0.)transformed=hyperbolicPosition(position)-uTarget;');
@@ -633,7 +637,7 @@
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
+    /** @type {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {WeakMap<HTMLImageElement,import('./three-types').Texture>} */ var shipTextures=new WeakMap();
@@ -1205,7 +1209,7 @@
           setUniform('Opacity',batch.opacity===undefined?1:batch.opacity);
           if(translucent){blending=THREE.NormalBlending;depthWrite=false;}
           setFinish(batch.finish===7&&!rigLightsEnabled?8:batch.finish || 0);
-          setUniform('HyperbolicRadius',batch.hyperbolicRadius||0);setUniform('HyperbolicFrame',batch.hyperbolicFrame||emptyHyperbolicFrame);
+          setUniform('HyperbolicLocalOrigin',batch.hyperbolicLocalOrigin||[0,0,0]);setUniform('HyperbolicLocalBasis',batch.hyperbolicLocalBasis||identityBasis);setUniform('HyperbolicRadius',batch.hyperbolicRadius||0);setUniform('HyperbolicFrame',batch.hyperbolicFrame||emptyHyperbolicFrame);
           var actorScale=batch.scale===undefined?1:batch.scale;
           draw(mesh,batch.origin || [0,0,0],[actorScale,actorScale,actorScale],batch.rotation || 0,batch.color,false,false,batch.basis);
           if(translucent){depthWrite=true;blending=THREE.NoBlending;}

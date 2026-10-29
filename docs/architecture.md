@@ -316,3 +316,16 @@ The battle sortie also mounts the existing Aegis capital pair in the same sortie
 frame. Their factory's `battlefield` option preserves zone-fighter ownership
 instead of activating standalone hangar replacement. Capital state remains
 transient in the Aegis rig; see [capital integration](dreadnaught-kit.md).
+
+
+## Hyperbolic carrier battle
+
+`flight.html?mission=hyperbolic` retains the shared flight/session/fighter combat
+pipeline at a default 400 m curvature radius. `hyperbolic-battle.js` owns the two
+browser experiment carrier rigs, articulated finite hulls, capital guns, carrier
+damage and hangar replenishment, following the existing Aegis rig ownership.
+The browser's death handler uses `flightSession.respawn(pose)` to replace only
+the player in the friendly hangar; it does not reset the battle. See
+[hyperbolic space](hyperbolic-space.md#armed-battle-and-respawn-ownership) for the
+Fermi placement, geodesic hull sweeps, private-projectile chart ownership and
+curved-space spatial collision bounds. This adds no RTS save fields.

@@ -246,6 +246,12 @@
             return snapshot();
         }
         return { snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance,
+            respawn:/** @param {import('./types').FlightState} pose */function(pose){
+                state=pose;guns=DW.flightGuns.create();DW.training.bindPlayer(combat,state).guns=guns;
+                DW.training.configure(combat,activeProfile);combat.player.damagedAt=combat.time;combat.player.hitFlash=0;combat.player.fire=false;
+                combat.targetId=null;combat.targetLocked=false;contact=false;grounded=false;remainder=0;
+                DW.training.collisionChanged(combat,combat.player);return snapshot();
+            },
             setCurvature:/** @param {number} radius */function(radius){if(!Number.isFinite(radius)||radius<100)throw new Error('Invalid curvature radius');curvatureOverride=radius;},
             setAsteroidDiameter: setAsteroidDiameter, setStartPosition: setStartPosition,
             setOpponentStyle: setOpponentStyle, configureHulls: configureHulls,

@@ -154,9 +154,12 @@
     var hullShader=`
 uniform float uHyperbolicRadius;
 uniform mat4 uHyperbolicFrame;
+uniform vec3 uHyperbolicLocalOrigin;
+uniform mat3 uHyperbolicLocalBasis;
 // Fermi coordinates about the longitudinal X geodesic. Each YZ section is
 // the same normal-plane exponential map, parallel transported along that axis.
 vec3 hyperbolicPosition(vec3 v){
+    v=uHyperbolicLocalOrigin+uHyperbolicLocalBasis*v;
     float t=v.x/uHyperbolicRadius,ex=exp(t),cx=(ex+1./ex)*.5,sx=(ex-1./ex)*.5;
     float rho=length(v.yz),s=rho/uHyperbolicRadius,e=exp(s),ch=(e+1./e)*.5;
     float shc=s<.001?1.+s*s/6.:(e-1./e)*.5/max(s,1.e-12);
@@ -164,6 +167,7 @@ vec3 hyperbolicPosition(vec3 v){
     return uHyperbolicRadius*axis*ch+(uHyperbolicFrame[2].yzw*v.y+uHyperbolicFrame[3].yzw*v.z)*shc;
 }
 mat3 hyperbolicNormalMatrix(vec3 v){
+    v=uHyperbolicLocalOrigin+uHyperbolicLocalBasis*v;
     float t=v.x/uHyperbolicRadius,ex=exp(t),cx=(ex+1./ex)*.5,sx=(ex-1./ex)*.5;
     float rho=length(v.yz),s=rho/uHyperbolicRadius,e=exp(s),ch=(e+1./e)*.5,sh=(e-1./e)*.5;
     float shc=s<.001?1.+s*s/6.:sh/max(s,1.e-12);
@@ -173,7 +177,7 @@ mat3 hyperbolicNormalMatrix(vec3 v){
     vec3 radial=axis*(s<.001?1./uHyperbolicRadius:sh/max(rho,1.e-12))+transverse*k;
     vec3 x=(uHyperbolicFrame[0].yzw*sx+uHyperbolicFrame[1].yzw*cx)*ch;
     vec3 y=uHyperbolicFrame[2].yzw*shc+radial*v.y,z=uHyperbolicFrame[3].yzw*shc+radial*v.z;
-    return mat3(cross(y,z),cross(z,x),cross(x,y));
+    return mat3(cross(y,z),cross(z,x),cross(x,y))*uHyperbolicLocalBasis;
 }
 `;
     /** Immutable adaptive subdivision preserves UV seams and auxiliary channels.

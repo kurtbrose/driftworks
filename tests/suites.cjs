@@ -10,6 +10,8 @@ const suites = {
   flight: [
     "hyperbolic.cjs",
     "hyperbolic-flight.cjs",
+    "hyperbolic-collision.cjs",
+    "hyperbolic-battle.cjs",
     "hyperbolic-capitals.cjs",
     "hyperbolic-performance.cjs",
     {"file":"shared.cjs","args":["flight"]},

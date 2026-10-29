@@ -987,7 +987,7 @@
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)
             t.countdown = 5;
-        if (t.mode!=='cinematic' && t.mode!=='evacuation' && !mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
+        if (t.mode!=='hyperbolic' && t.mode!=='cinematic' && t.mode!=='evacuation' && !mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
             return e.team === 'ally';
         })) || !nowAlive.some(function (e) {
             return e.team === 'enemy';

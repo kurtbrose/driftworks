@@ -5,12 +5,14 @@ Open `experiments/flight.html?mission=hyperbolic`. The index bookmark
 `hyperbolic.html` remains the independent 2D Asteroids study.
 
 This mode uses the normal `flight.js`, `flightSession`, `training`, `flightGuns`,
-`flightPresentation`, shield pass, HUD, controls, audio and comms. Its open-space
-furball uses the normal 16 NPC roster, ship profiles, weapons, defenses, AI
-skills/decision timing, waves, destruction, wrecks and sortie-death behavior.
-There is no separate cannon, forced-zero shield, hit-sphere replacement,
-experiment AI or three-second respawn. Ship/model and weapon-bank controls are
-the normal flight lab controls. Settings adds a curvature radius selector
+`flightPresentation`, shield pass, HUD, controls, audio and comms. It uses the normal 16-NPC roster, native fighter
+profiles, defenses, AI and weapons. Two armed 1,305 m carriers now fight each other and the opposing
+fighters. Both replenish their living fighter complement from their hangars; retired launch
+actors are pruned while wrecks keep their independent lifecycle.
+The player starts in the friendly hangar; death immediately replaces only the
+player's fighter there, with four seconds of launch protection. Carrier integrity,
+NPCs, projectiles, kills and battle time persist. Normal ship, model and weapon
+controls remain available. Settings selects curvature radius
 (300 / 350 / 400 / 650 / 1800 / 100000 metres); changing it resets the sortie.
 
 ## Geometry boundary
@@ -53,12 +55,11 @@ scale/anchors and the production projectile, engine, shield and explosion
 painters. Explosion randomness is cached by flash-event identity in presentation,
 shared across camera views, so chart recentring cannot reshuffle an active blast.
 The cache is weak and does not add render state to simulation flashes.
-Fighter hull/engine presentation uses transported local tangent frames. Two
-stationary, unarmed Aegis references now use finite-size geometry, at initial
-intrinsic center ranges of approximately 0.90 km and 1.60 km. Each retains its
-authored 1,305 m main hull and original materials, windows, engines and fixed
-turrets. They are visual scenery: they do not fire, launch fighters, block flight
-or receive projectile damage. Normal missions retain their existing geometry.
+Fighter hull/engine presentation uses transported local tangent frames. The battle carriers use finite axial geometry, original materials and independent
+rotating turrets. Capital rounds, damage, destroyed components, hull contact and
+hangar launches use that same curved placement. The clean `flyby=1` comparison
+still uses unarmed stationary reference geometry. Other missions retain their
+existing geometry.
 No persistent RTS world/save schema or runtime network dependency is added.
 
 ## Finite capital hulls
@@ -225,3 +226,54 @@ ship. Remaining strain depends on hull thickness rather than ship length.
 The renderer does not simulate elasticity, density, stress or material failure.
 Translations within one fixed homogeneous hyperbolic space are isometries and
 can move the mapped body without changing its internal distances or volume.
+
+
+## Armed battle and respawn ownership
+
+`hyperbolic-battle.js` adapts the existing armed Aegis asset and component-damage
+rigs. The friendly centre is the canonical origin; the enemy centre is offset by
+(0,900,300) m with opposite longitudinal orientation. The carriers are stationary;
+24 articulated mounts per ship retain their pivots and immutable source buffers.
+Each material first applies its model-local pivot/basis, then the shared body
+Fermi map. Normals use the composed analytic Jacobian. No turret gets a separate
+centre-based body placement.
+
+The normal gun controller owns geodesic rounds, head radius, damage and lifetime.
+Mount controllers solve metric leads and slew actual barrel directions; they do
+not redirect already-fired shots. Heavy guns use 700 m/s, 20-damage rounds and
+point defense uses 600 m/s, 3-damage rounds. Settled bursts and rest periods follow
+the existing capital battle pattern. Disabled mounts stop new fire; fired rounds
+remain live. Native Aegis hull/component boxes are queried through the inverse
+Fermi map in geodesic intervals at most 10 m long. Read-only hit/aim probes never
+apply damage; finalized impacts call the existing component damage resolver.
+
+Private capital rounds and impacts are explicitly re-expressed when the player
+chart changes. Point-only chart matrices are cached instead of transforming three
+unneeded pose axes for each hull sweep. Analytic body tangents replace numerical
+differentiation. Conservative centreline bounds reject unreachable hull queries.
+
+`flightSession.respawn(pose)` replaces the controlled pose and gun bank and restores
+its configured defenses. It preserves combat/world ownership, enemies, wrecks,
+radio history, battle clocks and carrier state. The browser uses the friendly
+asset's actual first hangar anchor and clears input; normal missions still pause
+on death. This is separate from a mission reset. Initial launch and subsequent
+player respawns share this path.
+
+## Curved-space collision broad phase
+
+The former curved-space query returned every participant. Grid/tree modes now
+index conservative metric-ball AABBs in global Klein coordinates, where each
+geodesic sweep is a straight segment. A local Klein hull radius a is enclosed
+by an intrinsic ball R*atanh(a/R); this also encloses the fighter shield envelope.
+The global Klein image is an ellipsoid. Its exact AABB, plus movement padding,
+updates the existing spatial proxies. Projectile queries use a conservative
+padded segment box; authored hull/shield tests still decide actual hits.
+
+All capital gun updates share one `training.collisionBatch`, and explicit roster
+and movement notifications keep proxies current. The legacy full scan remains
+available for parity tests. Flat-space event-deadline/sleep reuse remains flat-only;
+curved queries currently use the spatial tree/grid without those trajectory sleeps.
+`tests/hyperbolic-collision.cjs` compares all indexed modes with full scan across
+radii, authored hulls, shields, grazing shots, near/far coordinates and rebasing.
+`tests/hyperbolic-battle.cjs` covers real damage, reinforcement and repeated
+player-only respawns preserving the fight.

@@ -44,6 +44,8 @@ export type AegisFlightAsset = {
     turrets:{id:string;kind:'heavy'|'point-defense';position:Vector;side:number;batches:{color:[number,number,number];vertices:number[]}[]}[];
 };
 export type AegisFlightRig = {
+    setMountAim?:(index:number,yaw:number,elevation:number)=>void;
+    spawnPlayer?:(camera:Pose)=>FlightState;
     setSurfaceDetail?:(enabled:boolean,scope?:'turrets')=>void;
     reset:(combat?:Combat)=>void;
     step:(dt:number,view:FlightView)=>void;
@@ -353,9 +355,10 @@ export type Pack = {
 // Signed proper metres and outward unit radial in the canonical (region 0) chart.
 export type HullTransit = {proper:number;normal:Vector};
 export type Batch = {
-    /** Finite normal-coordinate hull placement; radius is in scene units. */
+    /** Whole-body axial Fermi placement; radius and model-local origin use scene units. */
     hyperbolicRadius?:number;
     hyperbolicFrame?:Float32Array;
+    hyperbolicLocalOrigin?:Vector;hyperbolicLocalBasis?:Float32Array;
     lensTransit?:HullTransit;
     shieldGlow?:boolean;shieldWaves?:number;
     projected?:boolean;lensRadius?:number;lensCenter?:number[];
@@ -933,6 +936,7 @@ export type ExperimentModules = {
                 profile: Profile;
             }) => Snapshot;
             setCombat: (mode: string, enabled: boolean) => Snapshot;
+            respawn:(pose:FlightState)=>Snapshot;
             setCurvature:(radius:number)=>void;
             setAsteroidDiameter: (meters: number) => boolean;
             setStartPosition: (eye: number[]) => void;
@@ -1188,6 +1192,7 @@ declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
         gpuUi?: {create:(host:HTMLElement)=>import('./gpu-ui-types').GpuUi;color:(value:string|CanvasGradient|CanvasPattern)=>number[]};
         aegisFlightAsset?: AegisFlightAsset;
+        hyperbolicBattle?:{create:()=>AegisFlightRig};
         aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:(options?:{battlefield?:boolean;bridge?:boolean})=>AegisFlightRig;createEllisPatrol:()=>AegisFlightRig;load:()=>Promise<unknown>};
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];

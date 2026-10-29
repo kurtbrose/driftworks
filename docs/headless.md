@@ -77,7 +77,11 @@ fractional time. Controls are the production `Demand` fields in
 `yaw`, `roll`, `side`, `vertical`, and `boost`. Omitted controls preserve throttle
 and request no steering or firing. Each call applies its controls to all ticks
 completed by that call. Nothing advances between calls; no pause command is needed.
-The driver stops on player death, matching the browser's automatic pause.
+The driver stops on player death, matching the ordinary browser mission pause.
+The hyperbolic capital battle adds a browser-side player-only hangar respawn:
+its production rig/session integration is exercised in `tests/hyperbolic-battle.cjs`.
+`flight.session.respawn(pose)` restores the controlled fighter while retaining
+the combat/world objects, NPCs and battle clocks; a mission reset replaces them.
 
 `flight.ticks` and `flight.seconds` report completed ticks and elapsed time.
 `flight.config` contains the production profile/weapon objects used when stepping.

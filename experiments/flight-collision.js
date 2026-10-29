@@ -112,16 +112,28 @@
         if(!engine){engine={mode:mode,index:{entries:[],cells:new Map(/** @type {[string,CollisionEntry[]][]} */([])),large:[],motion:0,epoch:0,time:t.time},ships:makeSpace(mode.indexOf('tree')===0),corridors:makeSpace(mode.indexOf('tree')===0),proxies:new Map(/** @type {[Craft,ShipProxy][]} */([])),events:new WeakMap(),heap:[],activeEvents:0,depth:0,epoch:0,stats:{syncs:0,moves:0,queries:0,reuses:0,popped:0,wakes:0}};collisionEngines.set(t,engine);}
         return engine;
     }
+    /** Global Klein coordinates keep geodesic segments straight. The enclosing
+     * metric ball becomes an ellipsoid; index its exact conservative AABB.
+     * @param {Vector} point @param {number} r @param {number|undefined} curvature @returns {CollisionBox} */
+    function shipBox(point,r,curvature){
+        if(!curvature)return segmentBox(point,point,r);
+        var R=curvature/U,t=r/R;
+        if(!(t<.95))return {min:[-R,-R,-R],max:[R,R,R]};
+        var p=point.map(function(v){return v/R;}),w=Math.hypot(1,...p),sh=t/Math.sqrt(1-t*t),den=w*w+sh*sh;
+        var center=p.map(function(v){return R*w*v/den;}),half=p.map(function(v){return R*sh/Math.sqrt(den)*Math.sqrt(Math.max(0,1-v*v/den))+1e-7;});
+        return {min:center.map(function(v,i){return v-half[i];}),max:center.map(function(v,i){return v+half[i];})};
+    }
+    /** @param {Vector} point @param {number} curvature */function klein(point,curvature){var R=curvature/U,w=Math.hypot(1,...point.map(function(v){return v/R;}));return point.map(function(v){return v/w;});}
     /** @param {CollisionEngine} engine @param {Craft} craft @param {number} order */
     function moveCollisionProxy(engine,craft,order){
         var shape=craft.collision,signature=!shape?'sphere:9':shape.kind==='sphere'?'sphere:'+shape.radiusM:'model:'+shape.modelId;
         var proxy=engine.proxies.get(craft),entry=proxy?proxy.entry:null,p=craft.pose.eye,team=craft.team||'enemy';
         if(!entry||entry.shape!==signature){if(proxy)spaceRemove(engine.ships,proxy.node);entry={craft:craft,x:p[0],y:p[1],z:p[2],r:collisionRadius(craft)*1.18,key:'',shape:signature,team:team,alive:craft.hp>0,order:order};proxy=undefined;engine.epoch++;}
         if(entry.team!==team||entry.alive!==(craft.hp>0)||entry.order!==order){engine.epoch++;entry.team=team;}entry.alive=craft.hp>0;entry.order=order;entry.x=p[0];entry.y=p[1];entry.z=p[2];
-        var actual=segmentBox(p,p,entry.r);
+        var actual=shipBox(p,entry.r,craft.pose.curvature);
         if(!proxy||!boxContains(proxy.node.box,actual)){
             if(proxy)spaceRemove(engine.ships,proxy.node);
-            var padded=segmentBox(p,p,entry.r+32/U);
+            var padded=shipBox(p,entry.r+32/U,craft.pose.curvature);
             // Unknown bounds remain global; their envelope overlaps every corridor.
             spaceQuery(engine.corridors,padded).forEach(function(event){wakeCollision(engine,event);});
             proxy={entry:entry,node:spaceInsert(engine.ships,padded,entry)};engine.proxies.set(craft,proxy);engine.stats.moves++;
@@ -245,7 +257,14 @@
         var index=collisionIndex(t);
         var shooter = typeof team === 'object' ? team : index.entries.find(function (e) { return e.craft.id === team; })?.craft;
         var faction = shooter ? shooter.team || 'enemy' : team === 'player' ? 'ally' : 'enemy';
-        if(t.player.pose.curvature)return {candidates:index.entries,shooter:shooter,faction:faction,radius:bolt.weapon.headRadius||0};
+        if(t.player.pose.curvature){
+            var curvedEngine=getCollisionEngine(t),curvature=t.player.pose.curvature,head=bolt.weapon.headRadius||0;
+            if(!curvedEngine)return {candidates:index.entries,shooter:shooter,faction:faction,radius:head};
+            curvedEngine.stats.queries++;
+            var box=segmentBox(klein(start,curvature),klein(end,curvature),Math.max(30,head)/U);
+            var nearby=spaceQuery(curvedEngine.ships,box).filter(function(e){return e.craft.hp>0&&e.craft!==shooter&&e.team!==faction;}).sort(function(a,b){return a.order-b.order;});
+            return {candidates:nearby,shooter:shooter,faction:faction,radius:head};
+        }
         var radius=bolt.weapon.headRadius||0,margin=Math.max(30,radius)/U,sleep=collisionSleeps.get(bolt);
         var sleeping=sleep&&sleep.index===index&&sleep.epoch===index.epoch&&sleep.radius===radius&&sleep.faction===faction&&
             Math.max(Math.hypot(start[0]-sleep.point[0],start[1]-sleep.point[1],start[2]-sleep.point[2]),Math.hypot(end[0]-sleep.point[0],end[1]-sleep.point[1],end[2]-sleep.point[2]))+index.motion-sleep.motion<sleepClearance;
