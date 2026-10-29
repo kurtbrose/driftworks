@@ -76,7 +76,7 @@
     if(activeMission.sky.hyperbolic){
         var curvatureLabel=document.createElement('label'),curvatureSelect=document.createElement('select');curvatureSelect.id='curvature-radius';
         curvatureLabel.textContent='Curvature radius';curvatureLabel.htmlFor=curvatureSelect.id;
-        [350,650,1800,100000].forEach(function(r){var option=document.createElement('option');option.value=String(r);option.textContent=r+' m';curvatureSelect.appendChild(option);});curvatureSelect.value=String(activeMission.sky.hyperbolic);
+        [300,350,650,1800,100000].forEach(function(r){var option=document.createElement('option');option.value=String(r);option.textContent=r+' m';curvatureSelect.appendChild(option);});curvatureSelect.value=String(activeMission.sky.hyperbolic);
         document.getElementById('flight-settings')?.append(curvatureLabel,curvatureSelect);curvatureSelect.onchange=function(){session.setCurvature(Number(curvatureSelect.value));reset();};
     }
     var ohioMusic = activeMission.id === 'ohio' ? DW.audio.createOhioMusic() : null;

@@ -81,27 +81,36 @@ for(const d of [350,650,1300]){
  near(sizeDistance/parallaxDistance,Math.cosh(d/650),.00002);
  assert.ok(sizeDistance>parallaxDistance,'ordinary size/distance substitution cannot reproduce both calibrated cues');
 }
-for(const r of [350,650,1800,100000]){
- let previous,previousTraffic;
+for(const r of [300,350,650,1800,100000]){
+ let previous,formationDistances;
  for(let t=0;t<=28;t+=.5){
   const p=DW.hyperbolicFlyby.sample(t,r),sf=p.spaceFrame,eye=H.chart([sf[0][0],-sf[0][1],-sf[0][2],-sf[0][3]],r);
   near(Math.hypot(...p.right),1);near(Math.hypot(...p.up),1);near(Math.hypot(...p.back),1);
   if(previous){near(H.path(previous.eye,eye,r).distance*U,15,.0001);for(const key of ['right','up','back'])H.transport(previous.eye,eye,previous.pose[key],r).forEach((v,k)=>near(v,p[key][k],.00001));}
   previous={eye,pose:p};
   const traffic=DW.hyperbolicFlyby.traffic(t,p);
-  assert.equal(traffic.length,4);
+  assert.equal(traffic.length,10);
   const canonical=traffic.map(q=>H.chartPose(q,{...camera,curvature:r}));
   traffic.forEach((q,i)=>{
-   near(Math.hypot(...q.velocity),70);near(q.velocity.reduce((n,v,k)=>n+v*q.back[k],0),-70);
+   const speed=Math.hypot(...q.velocity);assert.ok(speed>70&&speed<85);near(q.velocity.reduce((n,v,k)=>n+v*q.back[k],0),-speed);
    assert.equal(q.spaceFrame,p.spaceFrame,'fighters and capital share the exact observer chart');
-   if(previousTraffic)near(H.path(previousTraffic[i].eye,canonical[i].eye,r).distance*U,35,.0002);
-  });previousTraffic=canonical;
+   const P=H.point(canonical[i].eye,r),clearance=r*Math.asinh(Math.hypot(P[2],P[3]));assert.ok(clearance>130&&clearance<170,'formation remains close beside the hull axis');
+  });
+  const distances=canonical.flatMap((q,i)=>canonical.slice(i+1).map(other=>H.path(q.eye,other.eye,r).distance*U));
+  if(formationDistances)distances.forEach((d,i)=>near(d,formationDistances[i],.001));else formationDistances=distances;
  }
 }
-console.log('PASS rendered angular-size/parallax distances, fixed-speed camera and matched foreground/background fighter passes at four curvatures');
-const crossingCamera=DW.hyperbolicFlyby.sample(14),crossings=DW.hyperbolicFlyby.traffic(14,crossingCamera),hullCenter=mapped(single.geometry(crossingCamera)[0],[0,0,0]);
-const direction=p=>p.map(v=>v/Math.hypot(...p));
-for(const i of [0,2])direction(crossings[i].eye).forEach((v,k)=>near(v,direction(hullCenter)[k],.00001));
-assert.ok(Math.hypot(...crossings[0].eye)<Math.hypot(...hullCenter));
-assert.ok(Math.hypot(...crossings[2].eye)>Math.hypot(...hullCenter));
-console.log('PASS crossing sightline: foreground fighter, capital, background fighter share a ray in correct depth order');
+console.log('PASS rendered angular-size/parallax distances, fixed-speed camera and ten-fighter box: intrinsic spacing, hull clearance and velocity-aligned noses at five curvatures');
+
+// The strong-curvature close pass must remain finite throughout its visible loop.
+for(let t=8;t<=22;t+=.25){
+ const p=DW.hyperbolicFlyby.sample(t,30);
+ assert.equal(p.curvature,30);
+ for(const q of [p,...DW.hyperbolicFlyby.traffic(t,p)]){
+  for(const key of ['eye','right','up','back','velocity'])assert.ok(q[key].every(Number.isFinite),key+' at '+t);
+  for(const key of ['right','up','back'])near(Math.hypot(...q[key]),1,.00001);
+ }
+}
+console.log('PASS 30 m close flyby: finite observer and ten fighter poses across the visible loop');
+
+assert.equal(DW.hyperbolicFlyby.sample(14).curvature,300);

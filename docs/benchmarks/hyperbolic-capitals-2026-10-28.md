@@ -150,3 +150,27 @@ The follow-up full `npm run check` passed type checking, script lists, generated
 asset validation and all 138/138 test entries. Browser checks also verified clean
 Space-pause, Esc controls, Replay, fighter visibility toggling and no runtime
 errors. The final clean playback capture is `output/hyperbolic-flyby/clean-playback.png`.
+
+
+## Close ten-fighter formation, 300 m radius
+
+The flyby now uses a five-column, two-row formation beside the hull. Its default
+radius is 300 m; the wider camera and 30 m/s camera path are retained for this
+setting. Original fighter and capital metre scales are unchanged. The 30 m
+experiment used a closer/slower camera and is not a controlled comparison.
+
+Measured the actual production presentation at source time 14, with ten Raptor
+fighters, shields disabled and the black sky. Foreground viewport 1280x720 CSS,
+DPR 1.5, backing 1920x1080. Capital-off/on/on/off blocks each used 20 warm-up
+frames and 90 retained samples, after the test suite finished. Capital off:
+CPU submission median 0.8 ms, p95 1.1 ms, 11 draws and 43,420 triangles. Capital
+on: median 1.0 ms, p95 1.6 ms, 22 draws and 131,983 triangles. Browser cadence
+was 13.3 ms median / 13.4 ms p95 in both cases. These are CPU and cadence
+measurements, not GPU execution timings or evidence of spare GPU capacity.
+No demonstrated bottleneck required an asset change.
+
+Inspected the actual 300 m playback and the 30 m experiment. The 300 m pose
+regression checks all ten fighters' intrinsic spacing and nose alignment; the
+30 m close pass has finite-pose coverage. The full project check passed 138/138
+entries, with strict types and generated-file checks also passing. The free-flight
+mission retains its 650 m default; 300 m is available in its curvature selector.

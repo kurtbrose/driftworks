@@ -11,7 +11,7 @@ skills/decision timing, waves, destruction, wrecks and sortie-death behavior.
 There is no separate cannon, forced-zero shield, hit-sphere replacement,
 experiment AI or three-second respawn. Ship/model and weapon-bank controls are
 the normal flight lab controls. Settings adds a curvature radius selector
-(350 / 650 / 1800 / 100000 metres); changing it resets the sortie.
+(300 / 350 / 650 / 1800 / 100000 metres); changing it resets the sortie.
 
 ## Geometry boundary
 
@@ -115,27 +115,23 @@ their ordinary origin/basis/scale are not reapplied to that placement.
 ## Clean flyby and controlled fighter passes
 
 Open `experiments/flight.html?mission=hyperbolic&flyby=1`, also linked from the
-index. It autoplays one stationary, full-scale Aegis and four identical Raptor
-fighters against black. There are no HUD numbers, markers, grids, reticles or
-labels during playback. Space freezes/resumes the clean image. Esc opens a small
-pause menu with Resume, Replay, Hide/Show fighters and a return to free flight.
+index. It autoplays one stationary, full-scale Aegis and ten identical Raptor
+fighters against black at a 300 m curvature radius. There are no HUD numbers,
+markers, grids or reticles. Space pauses/resumes; Esc opens the controls.
 
-`hyperbolic-flyby.js` samples a 30 m/s observer geodesic, with attitude parallel
-transported from the closest point. It does not track the capital or apply a
-screen-space bend, scale or pan. Closest approach is about 1.30 km at R=650 m.
-The live segment uses source times 8–22 seconds, then fades to black before the
-loop resets. The active segment lasts 14 seconds; the complete loop lasts 14.
-The camera chart is an exact Lorentz boost to the observer, not an ordinary
-translation of a non-origin camera in the player's Gans chart.
+The strong-curvature camera starts from normal coordinates (-35, -100, 60) m
+and travels a geodesic at 3 m/s with parallel-transported attitude. For radii
+100 m and above, the wider reference pass uses (-350, -600, 170) m and 30 m/s.
+The visible source-time segment is 8–22 seconds, with a fade at the loop reset.
+The observer chart is an exact Lorentz boost, not a Euclidean translation.
 
-The fighters use the original Raptor mesh, textures, engine effects and scale.
-Two staggered passes run at each depth, all at 70 m/s, along parallel-transported
-initial headings. Their lanes tilt upward by 0.6 radians, allowing rear fighters
-to emerge outside the long capital silhouette before/after crossing behind it.
-At source time 14 the first foreground fighter, capital center and first rear
-fighter share one sightline, in that depth order. Occlusion uses the ordinary
-renderer depth buffer. There is no combat, firing, damage or NPC steering. Far
-fighters really do become small; they are not enlarged to advertise the effect.
+Ten original-scale Raptor meshes occupy a five-column, two-row box beside the
+capital. A common longitudinal Lorentz isometry preserves their mutual intrinsic
+spacing. This is a formation-keeping path, not ten freely drifting geodesics;
+noses follow the actual velocity tangent. At 30 m radius, the slots start at
+(x, -65, +/-35) m with x=-50,-25,0,25,50, and the axial boost rate is 6/30 per
+second. The wider reference uses 95 m column spacing, y=-120 m, z=+/-70 m and
+70/R per second. Physical hull sizes are unchanged. There is no combat.
 
 Foreground geometry has been audited against both angular-size and parallax
 relations. For small transverse features at intrinsic range d, static H3 gives

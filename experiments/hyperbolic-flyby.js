@@ -1,37 +1,34 @@
 (function(){
     'use strict';
     var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks),H=DW.flightHyperbolic,U=DW.sim.METERS_PER_UNIT;
-    /** Observer follows one geodesic at 30 m/s. Attitude is parallel transported,
+    /** Observer follows one geodesic (3 m/s at strong curvature, otherwise 30 m/s). Attitude is parallel transported,
      * never aimed at the ship. Return an observer-centred chart, not an ordinary
      * translated camera in the player's Gans chart.
      * @param {number} seconds @param {number} [radius] @returns {import('./types').FlightState} */
     function sample(seconds,radius){
-        radius=radius||650;
-        var anchor=H.offset([0,0,0],[0,-1280/U,220/U],radius),eye=H.offset(anchor,[(seconds-14)*30/U,0,0],radius);
-        var forward=H.path(anchor,[0,0,0],radius).direction,right=[1,0,0],back=forward.map(function(v){return -v;});
-        // cross(back,right) gives the upward axis for a +Y-facing camera.
-        var up=[0,back[2],-back[1]];
+        radius=radius||300;
+        var close=radius<100,speed=close?3:30,location=close?[-35,-100,60]:[-350,-600,170];
+        var anchor=H.offset([0,0,0],location.map(function(v){return v/U;}),radius),eye=H.offset(anchor,[(seconds-14)*speed/U,0,0],radius);
+        var forward=H.path(anchor,[0,0,0],radius).direction,n=Math.hypot(forward[0],forward[1]),right=[forward[1]/n,-forward[0]/n,0],back=forward.map(function(v){return -v;});
+        var up=[back[1]*right[2]-back[2]*right[1],back[2]*right[0]-back[0]*right[2],back[0]*right[1]-back[1]*right[0]];
         var p=H.point(eye,radius),frame=[p.map(function(v,i){return i?-v:v;})];
         for(var k=0;k<3;k++)frame.push([-p[k+1],...p.slice(1).map(function(v,i){return (i===k?1:0)+v*p[k+1]/(p[0]+1);})]);
-        return {curvature:radius,spaceFrame:frame,eye:[0,0,0],right:H.transport(anchor,eye,right,radius),up:H.transport(anchor,eye,up,radius),back:H.transport(anchor,eye,back,radius),velocity:H.transport(anchor,eye,[30,0,0],radius),rates:[0,0,0],ramp:[0,0,0],throttle:0};
+        return {curvature:radius,spaceFrame:frame,eye:[0,0,0],right:H.transport(anchor,eye,right,radius),up:H.transport(anchor,eye,up,radius),back:H.transport(anchor,eye,back,radius),velocity:H.transport(anchor,eye,[speed,0,0],radius),rates:[0,0,0],ramp:[0,0,0],throttle:0};
     }
-    /** Matched unsteered passes: identical ships and local speeds, two depths.
-     * All positions and bases are re-expressed in the SAME observer chart as the
-     * capital. No perspective scaling or screen-space motion is added.
+    /** Ten formation slots move through one common Lorentz isometry, keeping
+     * intrinsic spacing and clearance from the capital's longitudinal axis.
+     * Nose directions use the actual orbit tangent, including formation keeping.
      * @param {number} seconds @param {import('./types').Pose} camera */
     function traffic(seconds,camera){
-        var radius=camera.curvature||650;
-        return [0,1,2,3].map(function(index){
-            // The lane anchors share the central sightline, so actual depth
-            // testing establishes front/behind when the fighters cross the hull.
-            var near=index<2,phase=index%2*4,y=near?-1000:350,anchor=H.offset([0,0,0],[0,y/U,-y*220/1280/U],radius);
-            // A diagonal pass lets the rear lane emerge above/below the hull;
-            // an exactly horizontal rear geodesic can stay hidden for the take.
-            var distance=(14+phase-seconds)*70/U,c=Math.cos(.6),s=Math.sin(.6);
-            var eye=H.offset(anchor,[distance*c,0,-distance*s],radius);
-            var pose={curvature:radius,eye:eye,right:H.transport(anchor,eye,[0,1,0],radius),up:H.transport(anchor,eye,[s,0,c],radius),back:H.transport(anchor,eye,[c,0,-s],radius),velocity:[-70*c,0,70*s],rates:[0,0,0],ramp:[0,0,70],throttle:1};
-            var mapped=H.chartPose(pose,camera);
-            return Object.assign({},pose,mapped,{velocity:mapped.back.map(function(v){return -v*70;})});
+        var radius=camera.curvature||300,close=radius<100,pace=close?6:70,s=(seconds-14)*pace/radius,ch=Math.cosh(s),sh=Math.sinh(s);
+        return Array.from({length:10},/** @param {unknown} _ @param {number} index */function(_,index){
+            var slot=[(index%5-2)*(close?25:95)/U,-(close?65:120)/U,(index<5?1:-1)*(close?35:70)/U],p=H.point(H.offset([0,0,0],slot,radius),radius);
+            var q=[p[0]*ch+p[1]*sh,p[0]*sh+p[1]*ch,p[2],p[3]],eye=H.chart(q,radius);
+            var velocity=H.lower(q,[q[1],q[0],0,0]).map(function(v){return v*pace;}),speed=Math.hypot(...velocity);
+            var forward=velocity.map(function(v){return v/speed;}),back=forward.map(function(v){return -v;}),n=Math.hypot(forward[0],forward[1]);
+            var right=[forward[1]/n,-forward[0]/n,0],up=[back[1]*right[2]-back[2]*right[1],back[2]*right[0]-back[0]*right[2],back[0]*right[1]-back[1]*right[0]];
+            var pose={curvature:radius,eye:eye,right:right,up:up,back:back,velocity:velocity,rates:[0,0,0],ramp:[0,0,speed],throttle:1},mapped=H.chartPose(pose,camera);
+            return Object.assign({},pose,mapped,{velocity:mapped.back.map(function(v){return -v*speed;})});
         });
     }
     /** A clean production-renderer view. Controls exist only while paused.
@@ -52,9 +49,9 @@
         var capital=H.createCapitals({single:true});presentation.setCapital(capital);presentation.setShields(false);
         var appearance=presentation.appearance(),comparison={mode:'normal',flat:false,scale:1,mothership:false,actors:true};
         appearance.allyArt=appearance.enemyArt='concept-trio:raptor';
-        var fighters=[0,1,2,3].map(function(i){return DW.training.createCraft('flyby-'+i,DW.arcade.create(0),'ally');});
+        var fighters=Array.from({length:10},/** @param {unknown} _ @param {number} i */function(_,i){return DW.training.createCraft('flyby-'+i,DW.arcade.create(0),'ally');});
         var time=0,previous=0,paused=false,ready=true,showFighters=true;
-        status.textContent='A stationary capital, with identical fighters passing in front and behind. The camera holds its attitude. Space pauses the image; Esc opens these controls.';
+        status.textContent='Ten fighters fly in a wide box close beside the capital. The camera holds its attitude. Space pauses the image; Esc opens these controls.';
         var play=document.createElement('button'),replay=document.createElement('button'),exit=document.createElement('a');
         play.textContent='Resume';replay.textContent='Replay';exit.textContent='Return to free flight';exit.href='./flight.html?mission=hyperbolic';
         var trafficButton=document.createElement('button');trafficButton.textContent='Hide fighters';
