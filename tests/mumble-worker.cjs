@@ -30,7 +30,7 @@ function radioHarness(options = {}) {
       render(){throw Error('Synthesis must never execute on the UI thread');},transmit(){throw Error('Radio filtering must never execute on the UI thread');}}};
   const window = {Driftworks:DW,addEventListener:(name,handler)=>{events[name]=handler;}};
   if(!options.unsupported)window.Worker=DeferredWorker;
-  const document = {baseURI:'http://localhost/subdir/output/ellis-benchmark.html',currentScript:{getAttribute:()=> '../experiments/flight-radio.js?v=radio'}};
+  const document = {baseURI:'http://localhost/subdir/studies/ellis-benchmark.html',currentScript:{getAttribute:()=> '../experiments/flight-radio.js?v=radio'}};
   vm.runInNewContext(radioSource,{window,document,URL,Float32Array});
   const panel={querySelector:selector=>selector==='[data-speaker]'?fields.speaker:fields.subtitle,classList:{add(){},remove(){},toggle(){}}},toggle={setAttribute(){}};
   const radio=DW.flightRadio.mount(panel,toggle);

@@ -169,8 +169,8 @@ uploads; it has not been implemented or measured here.
 
 Visual validation of the combined path covered frozen broadside reference/batch
 switching with identical impacts, overlap under sustained fire, underside and
-bow views. Labeled UI captures are `output/capital-shields-individual.png` and
-`output/capital-shields-batched.png`. No visible change to wave shapes or hull
+bow views. Labeled UI captures are `studies/capital-shields-individual.png` and
+`studies/capital-shields-batched.png`. No visible change to wave shapes or hull
 occlusion was observed in those views. Tests additionally compare every submitted
 position, normal and impact attribute with the reference patch data and cover
 aging, heavy-hit parameters, buffer reuse and empty-batch suppression. These
@@ -212,10 +212,10 @@ and different impact counts can produce different results.
 The pure `shield-pixel-diff.js` helper has synthetic regressions for per-pixel
 counting, thresholds, RGB-only comparison, repeat instability, heatmap values
 and mismatched dimensions. Actual WebGL/canvas capture is verified separately
-in the browser. Preview: `output/capital-shields-pixel-comparison.png`.
+in the browser. Preview: `studies/capital-shields-pixel-comparison.png`.
 
 A closer broadside at zoom 9.662 with the same 32-wave fixture and 2-pixel cap
 changed 4,292 pixels (0.337%), with 2,162 ≥3/255 and 812 ≥10/255; max 92/255,
 mean 0.0176/255 and zero repeat-control noise. The A/B/single-difference view
 buttons were exercised in this close view. Capture:
-`output/capital-shields-pixel-comparison-close.png`.
+`studies/capital-shields-pixel-comparison-close.png`.

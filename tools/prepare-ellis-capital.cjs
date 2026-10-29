@@ -33,4 +33,4 @@ const probe=String.raw`
 `;
 source=source.replace('    cameraUI();playback();draw();requestAnimationFrame(tick);',probe+'    cameraUI();playback();draw();requestAnimationFrame(tick);').replace('if(!document.hidden&&now-lastDraw', 'if(!measuring&&!document.hidden&&now-lastDraw');
 html=html.replace(/<script src="\.\.\/experiments\/ellis-study.js[^>]*><\/script>/,'<script>'+source+'</script>');
-fs.writeFileSync('output/ellis-capital-benchmark.html',html);
+fs.writeFileSync('studies/ellis-capital-benchmark.html',html);

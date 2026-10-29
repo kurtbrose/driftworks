@@ -178,8 +178,8 @@ Earlier dogfight samples with a missing standard position attribute or mismatche
 offscreen PBR brightness were rejected. Final visual inspection compared the same
 paused frame on/off: both hulls, engines and projectiles remain present, native
 hull brightness is preserved, and the struck opponent displays a blue wave.
-The saved on/off images are `output/shield-dogfight-preview.png` and
-`output/shield-dogfight-off.png`. Motion and repeated duel reset were also viewed.
+The saved on/off images are `studies/shield-dogfight-preview.png` and
+`studies/shield-dogfight-off.png`. Motion and repeated duel reset were also viewed.
 
 This remains a screen-space spherical proxy: intersections and overlapping bubbles
 are approximate, impact positions are inferred, and the shader displays only the
@@ -251,8 +251,8 @@ changed zero pixels. These are different frames, cameras and viewport sizes,
 not matched performance or perceptual comparisons; whole-viewport percentages
 also reflect coverage. The own source used one scripted wave, temporarily replacing retained real
 impacts for inspection. Default duel hull/profile selections were used. PNGs:
-`output/own-shield-angular-on.png`, `output/own-shield-angular-zero.png`,
-`output/fighter-shield-angular.png`. Browser inspection checked the frozen
+`studies/own-shield-angular-on.png`, `studies/own-shield-angular-zero.png`,
+`studies/fighter-shield-angular.png`. Browser inspection checked the frozen
 on/zero switch, glow-off isolation and sharp HUD text/markers/instruments.
 No new GPU/CPU performance claim is made for these angular variants.
 
@@ -266,8 +266,8 @@ A final single-scripted-wave cockpit check at 4.750 s, 1353 × 1409, 1.5 degrees
 glow disabled, changed 848,841 pixels (44.526%); 463,890 ≥3/255 and 149,468
 ≥10/255, maximum 244/255. Repeat controls matched exactly and browser logs had
 no errors. The same frozen frame was inspected with zero displacement and
-restored to the selected angle. Captures: `output/own-shield-angular-strong.png`
-and `output/own-shield-angular-strong-zero.png`. This is an intentionally stronger
+restored to the selected angle. Captures: `studies/own-shield-angular-strong.png`
+and `studies/own-shield-angular-strong-zero.png`. This is an intentionally stronger
 inspection setting, not a default recommendation or evidence of motion comfort.
 
 ## Repeating directional cockpit preview
@@ -304,7 +304,7 @@ cardinal directions, continuous normalization, overlap, cadence and expiry.
 Browser verification exercised all preset controls, a drag to yaw 78° / elevation
 44°, repeated left/right/lower waves across the fixed starfield, and sharp HUD
 instruments. The preview was left playing with left hits and blue glow enabled.
-Capture: `output/shield-direction-preview.png`.
+Capture: `studies/shield-direction-preview.png`.
 
 ### Directional preview render cost
 
@@ -328,4 +328,4 @@ cost or establish a GPU-only time; synchronization uses a one-pixel readback
 and includes driver/GPU wait. This is a fixed two-wave frame, not a temporal
 worst-case scan. Preview emission is bounded to at most two overlapping waves.
 The animation was resumed after measurement. Capture:
-`output/shield-direction-cost.png`. Full project check: 125/125 entries passed.
+`studies/shield-direction-cost.png`. Full project check: 125/125 entries passed.

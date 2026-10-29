@@ -1,13 +1,13 @@
-# Aegis surface candidate 01 — taste-test evidence
+# Aegis surface candidate 01 â€” taste-test evidence
 
 The user approved candidate 01; it is now the production default. Open
-[`output/aegis-surface-review.html`](../../output/aegis-surface-review.html).
+[`studies/aegis-surface-review.html`](../../studies/aegis-surface-review.html).
 Source rig SHA-256: `19ff1c719d6f655dcf201a867b75280aa809f515fc1668511d067b3136320fce`.
 
 ## Matched measurements
 
-Foreground Codex browser, 1642 × 797 CSS rendering area, DPR 1.5,
-2463 × 1196 backing buffers, production `scene3d` renderer. One intact armed
+Foreground Codex browser, 1642 Ã— 797 CSS rendering area, DPR 1.5,
+2463 Ã— 1196 backing buffers, production `scene3d` renderer. One intact armed
 rig, original scale, fixed camera, no fighter simulation, sky draw or effects.
 Each comparison alternates A/B/B/A; each block discards 20 warm-up frames and
 records 90 frames. No concurrent tests or asset builds ran during sampling.
@@ -29,8 +29,8 @@ probe through the renderer's normal environment event. Textured candidate
 batches use its existing PBR path; studio uses its existing raw shader.
 Neither measurement establishes a GPU speedup or final gameplay budget.
 
-Machine-readable evidence: `output/aegis-surface-wide-metrics.json` and
-`output/aegis-surface-flight-metrics.json`. The wide run predates the lighting
+Machine-readable evidence: `studies/aegis-surface-wide-metrics.json` and
+`studies/aegis-surface-flight-metrics.json`. The wide run predates the lighting
 selector and used the same studio setup and backing resolution.
 
 ## Resource changes
@@ -40,7 +40,7 @@ selector and used the same studio setup and backing resolution.
   assemblies retain their existing batches and buffers.
 - Hull vertex buffers increase from 1,726,848 to 2,123,232 bytes: +396,384 bytes.
   The review keeps both versions resident to allow immediate switching.
-- One shared 2048 × 1024 RGBA atlas: approximately 10.67 MiB with mipmaps per
+- One shared 2048 Ã— 1024 RGBA atlas: approximately 10.67 MiB with mipmaps per
   GPU copy. The renderer can retain separate raw/PBR texture copies when both
   lighting modes have been visited. Browser image/canvas and UV-source storage
   are additional. This is an estimate, not measured VRAM.
@@ -53,7 +53,7 @@ selector and used the same studio setup and backing resolution.
 Inspected original/candidate close armor in studio and flight lighting; candidate
 whole ship, underside, service belt, hangar opening, stern, distant hull, and
 destroyed/reset drives and neighboring turrets. Examined the armor during slow
-orbit. Labeled stills are saved as `output/aegis-surface-*.png`.
+orbit. Labeled stills are saved as `studies/aegis-surface-*.png`.
 The atlas adds quiet panel divisions and fittings while preserving broad armor
 planes. Fine details recede at combat distance. Dark service details remain
 subtle, especially in flight lighting. The repeated module silhouette remains.
@@ -77,7 +77,7 @@ atlas swatches compensate merged idle parts for the hull material tint.
 The GPU buffers are shared per source revision; only poses change per frame.
 
 Live `flight.html?aegis=1`, both ships visibly submitted, 8 hostiles and 2 launched
-wingmen, production artwork and effects, DPR 1.5, 1920 × 1080 main backing size.
+wingmen, production artwork and effects, DPR 1.5, 1920 Ã— 1080 main backing size.
 After live combat, freeze the snapshot and run **Benchmark capital surface detail**:
 20 warm-up plus 90 measured frames per ABBA block. Ships, sky, fighters and
 projectiles remain identical; only the approved surface treatment changes.
@@ -89,8 +89,8 @@ projectiles remain identical; only the approved surface treatment changes.
 
 No demonstrated median submission regression; the 0.2 ms p95 difference is
 within the small spread of this run, not evidence of a GPU speedup. GPU execution
-is still unmeasured. Evidence: `output/aegis-surface-production-metrics.txt` and
-`output/aegis-surface-production-benchmark.png`. Visually checked the actual
+is still unmeasured. Evidence: `studies/aegis-surface-production-metrics.txt` and
+`studies/aegis-surface-production-benchmark.png`. Visually checked the actual
 moving two-faction encounter with firing guns and hangar launches. The production
 finish was also compared with the approved close-up in the review renderer.
 
@@ -111,7 +111,7 @@ Log: `output/aegis-surface-production-check.log`.
 
 The approved hull finish is committed as `c10a5a61` and is the production default.
 The next review-only candidate is at
-`output/aegis-surface-review.html?pass=turrets`. A shows that approved default;
+`studies/aegis-surface-review.html?pass=turrets`. A shows that approved default;
 B adds restrained panels and fittings to twelve heavy turret housings using
 the same loaded atlas. Hulls, barrels, small guns, geometry and pivots stay unchanged.
 
@@ -123,7 +123,7 @@ DPR 1.5 and 2463 x 1196 backing size:
 | Approved default | 1.10 / 1.30 | 13.30 / 13.40 | 67 | 34,772 |
 | Turret candidate | 1.10 / 1.20 | 13.30 / 13.40 | 67 | 34,772 |
 
-Evidence: `output/aegis-surface-turret-metrics.json`. GPU execution was not timed.
+Evidence: `studies/aegis-surface-turret-metrics.json`. GPU execution was not timed.
 Inspected the close-up in studio and flight lighting, underside and whole ship.
 The focused surface-study test checks unchanged geometry and turret transforms.
 This candidate awaits the user taste test; production damage integration and an
@@ -148,7 +148,7 @@ Actual `experiments/flight.html?aegis=1`, production art, 100% resolution,
 | Approved default | 9.50 / 12.80 | 13.30 / 13.40 | 400 | 277,243 |
 
 No demonstrated submission regression; GPU execution was not measured.
-Evidence: `output/aegis-turret-production-metrics.txt` and matching PNG.
+Evidence: `studies/aegis-turret-production-metrics.txt` and matching PNG.
 `npm run check` passed all 130 entries, types and asset checks; log:
 `output/aegis-turret-production-check.log`. The same process-local exclusion
 for the unrelated partial HTML copy was used. Focused coverage also verifies
@@ -177,11 +177,15 @@ Cadence was 13.30 / 13.40 ms in both runs. Both the off control and on treatment
 shifted between reloads, so these timings do not isolate a marking cost or prove
 a speedup. The same-tab candidate comparison recorded identical 1.0 / 1.5 ms
 CPU median/p95 and 55 draws / 32,704 triangles. GPU execution is unmeasured.
-Evidence is in `output/aegis-markings-production-before.txt`, `-after.txt`,
-`output/aegis-markings-metrics.json`, and `output/aegis-markings-production.png`.
+Evidence is in `studies/aegis-markings-production-before.txt`, `-after.txt`,
+`studies/aegis-markings-metrics.json`, and `studies/aegis-markings-production.png`.
 The final atlas explicitly uses the approved Consolas Bold glyphs for offline
 and browser authoring; final visual review checks the actual baked PNG.
 The final texture comparison confirms that only reserved tile six changed.
 `npm run check` passed all 131 entries, strict types and asset validation;
 log: `output/aegis-markings-production-check.log`. The focused regression checks
 the 36 remapped vertices, both side orientations and preserved production rigs.
+
+Historical `output/*.log` paths above refer to local validation transcripts.
+Logs are disposable and are not distributed; retained studies and measurements
+live in `studies/`.

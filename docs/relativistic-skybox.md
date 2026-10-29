@@ -30,9 +30,9 @@ Extreme velocities clip highlights and lose faint stars in 8-bit output.
 Finite panorama resolution also limits rear-sky detail; supersampling reduces
 aliasing but cannot recover unresolved stars. No artificial star streaks are added.
 
-The first experiment is `output/relativistic-sky-v1/`, with original, geometry,
+The first experiment is `studies/relativistic-sky-v1/`, with original, geometry,
 and shifted variants at 512 pixels per face, 2x2 samples, beta=.99 along +X.
-Serve the repository and open `/output/relativistic-sky-v1/review.html` for an
+Serve the repository and open `/studies/relativistic-sky-v1/review.html` for an
 inside-cube comparison using the vendored Three renderer. Drag to look, use
 Forward/Rear/Side, and select variants. Nothing changes mission sky selections.
 Manifests retain source hash, relative path, physical and sampling parameters,

@@ -7,7 +7,7 @@ Ellis geometry and sky optics, and up to sixteen replenishing AI fighters.
 
 Foreground in-app browser, 1641 × 969 CSS viewport, 100% render scale, production
 materials, initial establishing camera on the terrestrial chart. The screenshot
-`output/cinematic-ellis-establishing.jpg` records this framing. Backgrounds were
+`studies/cinematic-ellis-establishing.jpg` records this framing. Backgrounds were
 loaded; planet, nearby carrier and opposite-chart carrier were visibly present.
 This records the initial bow-facing placement, before the subsequent broadside
 rotation. The broadside placement has not been remeasured. Simulation and

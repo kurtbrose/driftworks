@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const context={window:{}};vm.runInNewContext(fs.readFileSync('output/aegis-bevel-data.js','utf8'),context);
+const context={window:{}};vm.runInNewContext(fs.readFileSync('studies/aegis-bevel-data.js','utf8'),context);
 const d=context.window.AegisBevelData,{bevel}=require('./lib/convex-bevel.cjs'),before=JSON.stringify(d.original),result=bevel(d.original,d.width);
 assert.equal(JSON.stringify(d.original),before,'source immutable');
 assert.equal(d.original.length/18,60);assert.equal(result.flat.length,d.flat.length);
@@ -26,15 +26,15 @@ if(!process.argv.includes('--browser'))process.exit(0);
  const browser=await chromium.launch({channel:'chrome',headless:false,args:['--disable-backgrounding-occluded-windows']});
  try{
   const page=await browser.newPage({viewport:{width:1440,height:950},deviceScaleFactor:1}),errors=[];page.on('pageerror',e=>errors.push(String(e)));
-  await page.goto('http://localhost:8000/output/aegis-bevel-review.html');await page.waitForFunction(()=>window.bevelStudy?.ready);await page.bringToFront();
+  await page.goto('http://localhost:8000/studies/aegis-bevel-review.html');await page.waitForFunction(()=>window.bevelStudy?.ready);await page.bringToFront();
   for(const view of ['quarter','edge','under','far']){await page.selectOption('#view',view);await page.waitForTimeout(300);await page.screenshot({path:`output/aegis-bevel-${view}.png`});}
   await page.selectOption('#view','quarter');await page.click('#bench');await page.waitForFunction(()=>window.bevelResults,null,{timeout:30000});
-  fs.writeFileSync('output/aegis-bevel-metrics.json',JSON.stringify(await page.evaluate(()=>window.bevelResults),null,2)+'\n');
-  await page.selectOption('#mode','flat');await page.waitForTimeout(300);await page.screenshot({path:'output/aegis-bevel-flat.png'});
-  await page.selectOption('#mode','original');await page.waitForTimeout(300);await page.screenshot({path:'output/aegis-bevel-matching.png'});
+  fs.writeFileSync('studies/aegis-bevel-metrics.json',JSON.stringify(await page.evaluate(()=>window.bevelResults),null,2)+'\n');
+  await page.selectOption('#mode','flat');await page.waitForTimeout(300);await page.screenshot({path:'studies/aegis-bevel-flat.png'});
+  await page.selectOption('#mode','original');await page.waitForTimeout(300);await page.screenshot({path:'studies/aegis-bevel-matching.png'});
   await page.selectOption('#mode','weighted');
   await page.mouse.move(340,450);await page.mouse.down();await page.mouse.move(430,480,{steps:8});await page.mouse.up();await page.mouse.wheel(0,-100);await page.waitForTimeout(300);
-  await page.screenshot({path:'output/aegis-bevel-drag.png'});
+  await page.screenshot({path:'studies/aegis-bevel-drag.png'});
   await page.click('#reset');await page.click('#orbit');await page.waitForTimeout(600);await page.click('#orbit');await page.click('#reset');
   assert.deepEqual(errors,[]);console.log('Browser controls, near/far/underside captures and ABBA measurements completed.');
  }finally{await browser.close();}

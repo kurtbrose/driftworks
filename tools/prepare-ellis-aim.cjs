@@ -30,4 +30,4 @@ function run(){
 }
 let html=fs.readFileSync('experiments/flight.html','utf8').replace(/<script src="flight.js[^>]*><\/script>/,'').replace(/(src|href)="(?![./#]|https?:)([^"]+)"/g,'$1="../experiments/$2"');
 html=html.replace('</body>','<script>('+run.toString()+')();</script></body>');
-fs.writeFileSync('output/ellis-aim-study.html',html);
+fs.writeFileSync('studies/ellis-aim-study.html',html);

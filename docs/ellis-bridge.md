@@ -263,7 +263,7 @@ acceptance can finish. The default was kept full-resolution/unlimited for this
 reason. Existing nearest-shell and capture-update limitations still apply; coarse
 all-miss cells can miss subpixel geometry and require explicit thin-object tests.
 
-After recovery, generate `output/ellis-benchmark.html` with
+After recovery, generate `studies/ellis-benchmark.html` with
 `node tools/prepare-ellis-benchmark.cjs`. Use the same `view=limb&gpu=1` pose for
 `bridgeGeometry=full`, `bridgeGeometry=adaptive`, and each angular budget. Alternate
 full/adaptive/adaptive/full with no tests running. The **Compare hit map** button
@@ -542,7 +542,7 @@ hides it independently of `bridgeGrid=0` for controlled sky studies.
 - `node tests/ellis-optics.cjs` checks independent finite-source quadrature,
   inverse paths, outward convergence to straight rays and the exact flat tail.
 - `node tools/prepare-ellis-boundary.cjs` prepares
-  [the actual-GLSL probe](../output/ellis-boundary-continuity.html): 1,024 rays
+  [the actual-GLSL probe](../studies/ellis-boundary-continuity.html): 1,024 rays
   per view, both charts, five view directions around 600 m and a grazing sweep.
   Its hard-cutoff negative control is reconstructed explicitly, independent of
   Git HEAD. The maximum chord falls from 0.115517 to 0.000183 (about 0.0105
@@ -683,7 +683,7 @@ crossings, turnarounds, reset and immutable buffers. This remains the same rigid
 image approximation and background occlusion limitation described above.
 
 `node tools/prepare-ellis-capital.cjs` generates a frozen observation-scene
-benchmark at `output/ellis-capital-benchmark.html`. It alternates asset off/on/on/off
+benchmark at `studies/ellis-capital-benchmark.html`. It alternates asset off/on/on/off
 with 20 warmup and 60 recorded frames per block. It instruments actual Three
 render submissions rather than the scene's estimated capture multiplier.
 
@@ -701,7 +701,7 @@ asset and 10 draws / 44,256 triangles with it: seven material draws and all
 triangles with CPU 0.70/0.90 ms and frame 13.30/13.50 ms, but the hull was missing
 in its final image. That baseline is not an equivalent-image speedup comparison.
 No GPU execution timer or gameplay AI cost was measured. Raw output is in
-`output/ellis-capital-performance.txt`.
+`studies/ellis-capital-performance.txt`.
 
 Visually checked side view at 5.99 and 6.01 s, above at 6.01 s, and Rime rear
 view at 5.99 and 6.01 s. These retain solid hull geometry; perspective size can
@@ -772,7 +772,7 @@ medians, but the asset-ON frame p95 rose to 26.60 ms. Actual counts were identic
 refinement did not improve that measured tail. This is a known shader/cadence
 cost in a strongly stretched view, not evidence of spare GPU budget; GPU
 execution was not timed separately. Raw measurements are in
-`output/ellis-pose-performance.txt` and `output/ellis-surface-performance.txt`.
+`studies/ellis-pose-performance.txt` and `studies/ellis-surface-performance.txt`.
 
 Visual inspection covered the radial capital at lab time 12 s (rear face aligned
 with the image), offset pursuit at 3.01 s, and the above-camera asteroid at
@@ -846,7 +846,7 @@ moving shooters, target crossings during flight, and off-pip misses. Held yaw,
 pitch and roll trials use the production flight model next to the throat and
 confirm damage while both participants maneuver. HUD tests check that cross-chart
 lead projects onto the crosshair and invalid solutions draw no pip.
-`node tools/prepare-ellis-aim.cjs` builds `output/ellis-aim-study.html`: a controlled
+`node tools/prepare-ellis-aim.cjs` builds `studies/ellis-aim-study.html`: a controlled
 real scene/HUD/session with Aim at pip, Fire, Off-pip test, both chart directions,
 and target-transit/muzzle-straddle cases. Camera alignment is a test control only.
 
@@ -884,13 +884,13 @@ node tools/prepare-ellis-aim-performance.cjs
 node tools/prepare-ellis-effects-performance.cjs
 ```
 
-Open `output/ellis-aim-performance.html` and click Measure aiming. On the local
+Open `studies/ellis-aim-performance.html` and click Measure aiming. On the local
 RTX 3070 Ti desktop, 2,000 calls/block in exhaustive/fast/fast/exhaustive order
 measured 0.2181 versus 0.038625 ms/call (5.65x). Across 300 moving target cases,
 maximum launch-direction vector difference was 4.45e-7 and flight-time
 difference 2.22 microseconds.
 
-Open `output/ellis-effects-performance.html?mission=ellis&bridgeGrid=0` and
+Open `studies/ellis-effects-performance.html?mission=ellis&bridgeGrid=0` and
 click Compare effect batching. The exact same frozen 160-bolt scene alternates
 individual/batched/batched/individual, with 20 warmup + 60 measured frames per
 block. At 1280x720 CSS pixels, DPR 1.5, total scene draw calls fell from 485 to 14;
@@ -1017,7 +1017,7 @@ center in view deliberately isolates hull distortion from camera tracking loss.
 
 Open `experiments/ellis-study.html?pass=dogfight-crossing&camera=dogfight-crossing&bridgeGeometry=objects&bridgeShips=warped`.
 
-Run `node tools/measure-ellis-pursuit.cjs --out output/ellis-pursuit-metrics.json`
+Run `node tools/measure-ellis-pursuit.cjs --out studies/ellis-pursuit-metrics.json`
 for an offline single-affine-patch baseline. It samples vertices and centroids
 from 63 evenly spaced triangles of the real Bob fighter (252 samples per pose),
 at 0.25-second intervals over each 24-second loop. It reproduces the current
@@ -1050,7 +1050,7 @@ Raw baseline: [JSON](benchmarks/ellis-pursuit-2026-10-26.json).
 For an automated before/after check, run:
 
 ```
-node tools/measure-ellis-pursuit.cjs --baseline docs/benchmarks/ellis-pursuit-2026-10-26.json --out output/ellis-pursuit-comparison.json
+node tools/measure-ellis-pursuit.cjs --baseline docs/benchmarks/ellis-pursuit-2026-10-26.json --out studies/ellis-pursuit-comparison.json
 ```
 
 The command exits nonzero if missing/offscreen sample counts increase, or if
@@ -1087,7 +1087,7 @@ an independently ray-traced reference.
 
 Open `experiments/ellis-study.html?pass=yoyo&bridgeGeometry=objects&bridgeShips=warped&bridgeGrid=0`.
 
-Run `node tools/measure-ellis-yoyo.cjs --out output/ellis-yoyo-metrics.json`.
+Run `node tools/measure-ellis-yoyo.cjs --out studies/ellis-yoyo-metrics.json`.
 The offline check uses observer proper radii 120, 10, 1, 0.1 and 0 m, and target distances
 120, 30, 10, 3, 1, 0.3 and 0.1 m. It shrinks the square proportionally to distance
 (half-width = 0.05 * distance) to retain a fixed angular footprint while taking
@@ -1136,7 +1136,7 @@ is at most 0.00431 degrees, dominated by the optical bearing; up mismatch is
 about 0.000118 degrees. A normal-suite regression checks all three frame axes
 at both crossings. This fixes a camera artifact, not the ship or sky optics.
 
-Run `node tools/measure-ellis-lattice.cjs --baseline-camera 22d5a780 --out output/ellis-lattice-comparison.json`.
+Run `node tools/measure-ellis-lattice.cjs --baseline-camera 22d5a780 --out studies/ellis-lattice-comparison.json`.
 The diagnostic transcribes the grid shell intersections and compares packed
 lookup phases with direct 2048/4096-step midpoint quadrature. It samples front,
 rim and 18 chase poses using a 13x13 perspective ray grid, and includes explicit

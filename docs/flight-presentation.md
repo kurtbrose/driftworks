@@ -381,8 +381,8 @@ Stations are one third as frequent as the original 20 m frames. Both sets
 retain open centres, angular fading, dark contrast outlines and
 the protected aiming circle. `paintFlightBrackets` consumes the same fine
 prediction and metre phase as the road treatment. Captures:
-`output/flight-double-brackets-straight.jpg` and
-`output/flight-double-brackets-turn.jpg`.
+`studies/flight-double-brackets-straight.jpg` and
+`studies/flight-double-brackets-turn.jpg`.
 
 The Lane markers style remains available for comparison. It draws only two
 dashed road edges below and beside the ship. There are no hoops, overhead rails or
@@ -440,4 +440,4 @@ A local Node probe (10 warm-ups, 40 samples, four-second combined turn/roll
 forecast, stubbed painter) measured forecast median/p95 7.42/10.98 ms and
 road projection 1.52/2.70 ms. These exclude actual GPU HUD submission and
 browser frame cadence; they are not frame budgets. Browser review captures
-are `output/flight-lanes-straight.jpg` and `output/flight-lanes-turn.jpg`.
+are `studies/flight-lanes-straight.jpg` and `studies/flight-lanes-turn.jpg`.

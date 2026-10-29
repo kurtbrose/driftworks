@@ -37,7 +37,7 @@ layouts are useful future passes after the kit's silhouettes are settled.
 
 ### Armor bevel comparison / review only
 
-Open [the side-by-side bevel study](../output/aegis-bevel-review.html) through the
+Open [the side-by-side bevel study](../studies/aegis-bevel-review.html) through the
 static server. The default now compares real bevels (left) with the baked normal
 map (right); both selectors retain the earlier original/flat-shading controls.
 It extracts the first armor band of `M_1_standard` from the current
@@ -69,7 +69,7 @@ one active viewport while measuring, 20 warmup + 90 measured frames per block,
 719 x 673 backing pixels at DPR approximately 1, and no combat/effects. It reports
 60 to 316 triangles, one draw each, approximately 0.2 ms median / 0.3 ms p95 CPU
 submission and 13.3 / 13.4 ms frame cadence for both. See
-`output/aegis-bevel-metrics.json` for the source hash and conditions. These small
+`studies/aegis-bevel-metrics.json` for the source hash and conditions. These small
 timings do not establish a GPU or whole-combat performance budget; those remain
 unmeasured until a full-ship integration is requested.
 
@@ -85,7 +85,7 @@ The original positions/normals are exact; only UVs are appended. `--check`
 verifies deterministic bake freshness. All authoring dependencies are built-in
 Node modules and locally vendored assets; no runtime network dependency is added.
 
-The review-only `output/aegis-normal-renderer.js` adapter uses the existing
+The review-only `studies/aegis-normal-renderer.js` adapter uses the existing
 `scene3d` shader with a compile-time baked-normal variant: one linear-data texture
 sample, decode and normalization. No runtime edge finding occurs, and the real
 bevel shader does not execute this sample. Object-space normals assume this
@@ -121,7 +121,7 @@ between runs. These measurements establish **no reliable baked-map speedup**;
 they are not evidence of equivalent performance or a whole-ship/fleet budget.
 The memory cost is clear even though the timing difference is inconclusive.
 Raw samples, per-block summaries, source hashes, device and view conditions are
-saved in `output/aegis-normal-gpu-metrics.json` (240 valid GPU samples per mode
+saved in `studies/aegis-normal-gpu-metrics.json` (240 valid GPU samples per mode
 per run). No disjoint/invalid samples were retained.
 
 `node tools/check-aegis-normal.cjs` verifies geometry preservation, UV bounds and
@@ -132,7 +132,7 @@ checks rejection of disjoint timers and the unavailable-timer fallback.
 ### Approved surface treatment / production default
 
 The approved panel treatment is the default on armed and unarmed capital ships.
-The [surface taste test](../output/aegis-surface-review.html) retains the original
+The [surface taste test](../studies/aegis-surface-review.html) retains the original
 comparison in the production `scene3d` renderer.
 Use A/B with a fixed camera, or the armor, service belt, underside, hangar, stern,
 whole-ship and combat-distance presets. Drag/wheel and slow orbit inspect motion;
@@ -150,15 +150,15 @@ material batches; atlas swatches preserve the plain finish of merged idle parts.
 The approved BAY 01 stencil occupies atlas tile six and twelve existing hangar
 roof-bevel triangles. Both sides have independently oriented UVs. The remaining
 hull, turrets, lights and gameplay geometry are unchanged by this marking pass.
-The [marking comparison](../output/aegis-markings-review.html) keeps the previous
+The [marking comparison](../studies/aegis-markings-review.html) keeps the previous
 unmarked UVs as A and the current production finish as B.
 
 Regenerate the source-bound review UVs with
 `node tools/bake-aegis-flight.cjs --surface-study`; add `--check` to verify freshness.
-This option writes only `output/aegis-surface-data.js`, and refuses a stale
+This option writes only `studies/aegis-surface-data.js`, and refuses a stale
 production rig. The normal bake embeds hull and heavy-turret surface metadata in `flight-rig.js`.
 `tools/lib/aegis-surface-uv.cjs` owns UV layout;
-`output/aegis-surface-study.js` owns the atlas and reversible batch adapter.
+`studies/aegis-surface-study.js` owns the atlas and reversible batch adapter.
 `node tests/aegis-surface-study.cjs` checks exact geometry/normals, atlas bounds,
 shared poses, damage ownership and the source hash; it is in the artwork group.
 It also exercises production loading, default textures, unchanged idle draw count,
@@ -513,7 +513,7 @@ local tiled soot texture, including extinguished engine faces. Wreck buffers are
 created once on destruction; reset restores shared intact buffers and health.
 These are encounter-local states, not additions to saved RTS worlds.
 
-Use [the component inspection lab](../output/capital-systems-check.html) for
+Use [the component inspection lab](../studies/capital-systems-check.html) for
 whole-ship, turret and drive views, individual destruction/reset and matched
 intact/damaged rendering samples. See [measured readiness](benchmarks/capital-systems-2026-10-26.md).
 
@@ -530,7 +530,7 @@ anchors and articulated component ownership are unchanged.
 Art and flight-operations intent are recorded in
 `assets/ships/aegis-kit/hangar-v1/design.txt`. Lift, taxiing and recovery remain
 design intent; the existing launch logic is unchanged. The original review
-baseline is frozen in `output/aegis-hangar-before-rig.js`.
+baseline is frozen in `studies/aegis-hangar-before-rig.js`.
 
 Ship albedo textures use trilinear mipmaps, including non-power-of-two images
 (WebGL2), plus anisotropic filtering capped at 4x or the hardware limit. Raw
@@ -552,7 +552,7 @@ are painted depth, without transparency, dynamic lights or added triangles.
 instead of the exterior PBR material. Surface toggles and reset restore this
 selection. The window-only revision had eleven logical idle batches; empty source batches and
 visibility affect submitted draw counts. The pre-window review baseline is
-frozen in `output/aegis-windows-before-rig.js`.
+frozen in `studies/aegis-windows-before-rig.js`.
 
 ## Approved service panels
 
@@ -561,7 +561,7 @@ and ventilation slats. The approved painter lives in
 `tools/lib/aegis-service-panels.cjs` and is included by the existing surface
 atlas bake. Its finish color is `[.065,.075,.08]`; geometry, UV layouts, texture
 dimensions, material ownership and draw batching are unchanged.
-The original atlas is retained in `output/aegis-service-before-atlas.png` for
+The original atlas is retained in `studies/aegis-service-before-atlas.png` for
 the review comparison.
 
 ## Approved open engine bells
@@ -604,14 +604,14 @@ static material draw per visible ship; the idle rig has thirteen logical batches
 Textures and prepared buffers remain shared across instances. The shield baker
 includes the redistributed structure so the shield geometry does not change.
 Use `node tools/bake-aegis-flight.cjs --structure-study` to regenerate the
-review data against `output/aegis-structure-before-rig.js`.
+review data against `studies/aegis-structure-before-rig.js`.
 
 ## Armor wrap candidate (review only)
 
 `node tools/bake-aegis-flight.cjs --armor-study` exports source-mesh ranges and
-continuous cross-section UVs to `output/aegis-armor-wrap-data.js`, without
+continuous cross-section UVs to `studies/aegis-armor-wrap-data.js`, without
 changing the production rig. The authoring helper in
-`output/aegis-armor-wrap.cjs` unwraps the contour around each armor piece,
+`studies/aegis-armor-wrap.cjs` unwraps the contour around each armor piece,
 with a UV cut on the negative-Z side in authoring space at the window belt.
 Crossing triangles are split on that plane; the shape and flat normals stay
 unchanged. The atlas layout mirrors the generated upper strip for the lower
@@ -621,23 +621,23 @@ flat-color swatch. Bay identification retains its separate atlas tile.
 The candidate covers the nose, exposed inner ends and articulated armor too.
 It adds 1068 triangles per complete ship, retains the existing draw/material
 batch count, and uses the same 2048 x 1024 atlas footprint. It is awaiting visual
-approval at `output/aegis-armor-review.html`; production still uses the approved
+approval at `studies/aegis-armor-review.html`; production still uses the approved
 original armor. The area/bounds/UV-continuity probe and review-only flight rig
-are generated with `node output/aegis-armor-wrap-probe.cjs`.
+are generated with `node studies/aegis-armor-wrap-probe.cjs`.
 
 ## Baked-window and scale review
 
-`output/aegis-belt-review.html` compares the existing individual window boxes
+`studies/aegis-belt-review.html` compares the existing individual window boxes
 with flat painted belts and shallow inset openings. The study reuses all 480
 approved room images at their authored silhouettes. `--belt-study` exports the
-78 source backing-panel ranges. `output/bake-aegis-belt-study.cjs` clips the
+78 source backing-panel ranges. `studies/bake-aegis-belt-study.cjs` clips the
 actual armor surfaces, preserving their bends, and packs twenty reused belt
 layouts into a 2048 x 1280 opaque atlas. The flat version removes 4608 triangles
 per ship; the inset version removes 2964. Both retain the window material draw.
 The atlas costs about 13.3 MiB with RGBA mipmaps, versus 1.3 MiB for the old
 window atlas. This remains a review candidate, not the production default.
 
-Scale references in `output/aegis-scale-study.js` use the existing Quaternius
+Scale references in `studies/aegis-scale-study.js` use the existing Quaternius
 astronaut normalized to 2.0 m including the suit, the shared 12 m Spitfire,
 and one-metre ruler ticks. The optional one-sided cutaway has provisional
 3.3 m deck spacing. Temporary platforms and references are authoring aids only.
@@ -669,5 +669,5 @@ Both factions share the same geometry and texture images. Enemy armor receives
 a muted oxide-red material tint, while dark machinery, room lights, engine
 textures and hangar interiors retain their original colors. This replaces the
 old rule that raised dark blue-gray metal to bright red. It requires neither
-an extra atlas nor a shader variant. `output/aegis-belt-production-review.html`
+an extra atlas nor a shader variant. `studies/aegis-belt-production-review.html`
 compares allied and red-faction materials using the production loader.

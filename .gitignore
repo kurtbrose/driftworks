@@ -23,3 +23,8 @@ Thumbs.db
 
 # Original environment downloads; prepared runtime assets have provenance hashes.
 /.asset-imports/
+
+# Disposable renders, captures, profiling and local validation output.
+/output/
+*.log
+*.cpuprofile

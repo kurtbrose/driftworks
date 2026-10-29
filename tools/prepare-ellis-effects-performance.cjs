@@ -1,6 +1,6 @@
 const fs=require('node:fs');
 // Exact same frozen real scene and projectile geometry, alternating batch policy.
-let html=fs.readFileSync('output/ellis-aim-study.html','utf8');
+let html=fs.readFileSync('studies/ellis-aim-study.html','utf8');
 let presentation=fs.readFileSync('experiments/flight-presentation.js','utf8').replace("if(regions.length>1&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects'){", "if(effectComparisonIndividual||(regions.length>1&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects')){");
 html=html.replace(/<script src="\.\.\/experiments\/flight-presentation.js[^>]*><\/script>/,'<script>let effectComparisonIndividual=false,effectComparisonMeasuring=false;</script><script>'+presentation+'</script>');
 html=html.replace('snapshot.combat.hangarSupport=true;',`snapshot.combat.hangarSupport=true;
@@ -15,4 +15,4 @@ html=html.replace(' reset();requestAnimationFrame(frame);',String.raw`
  document.getElementById('aim-result').textContent=JSON.stringify(result,null,2);
  }catch(error){document.getElementById('aim-result').textContent=String(error);}finally{effectComparisonIndividual=false;measure.disabled=false;}}
  reset();requestAnimationFrame(frame);`);
-fs.writeFileSync('output/ellis-effects-performance.html',html);
+fs.writeFileSync('studies/ellis-effects-performance.html',html);

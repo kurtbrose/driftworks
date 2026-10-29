@@ -1,3 +1,0 @@
-Capital shields: closed finite envelope, conservative local patches, expiry, shared half-resolution field, one source capture, buffer reuse and glow path pass.
-Shield pixel differences: RGB thresholds, alpha exclusion, repeat controls and heatmap pass.
-Capital production glow: fitted local surface, bounded annular geometry, moving/rotated metre scale, region and expiry pass.

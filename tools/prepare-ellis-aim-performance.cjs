@@ -17,4 +17,4 @@ document.querySelector('#measure').onclick=()=>{
  const before=(rows[0]+rows[3])/2,after=(rows[1]+rows[2])/2;
  document.querySelector('#result').textContent=JSON.stringify({callsPerBlock:n,order:'exhaustive / fast / fast / exhaustive',beforeMs:before,afterMs:after,speedup:before/after,matchedMovingCases:300,maximumDirectionDifference:worstAngle,maximumFlightTimeDifferenceSeconds:worstTime},null,2);
 };`+'</script>';
-fs.writeFileSync('output/ellis-aim-performance.html',html);
+fs.writeFileSync('studies/ellis-aim-performance.html',html);

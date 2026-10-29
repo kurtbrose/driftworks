@@ -45,7 +45,7 @@ Counters come from Three renderer.info after each submitted render, rather than 
 
 ## Reproduction and artifacts
 
-Run `node tools/prepare-ellis-benchmark.cjs`, then open `/output/ellis-benchmark.html?mission=ellis&view=limb`. Use `ablate=geometry`, `ablate=captures`, `bridge=sky`, `scale=0.75`, or `cap=30` for the corresponding controls. Keep one profiler tab, fixed viewport, and no competing tests/rebuilds. GPU monitoring command: `nvidia-smi --query-gpu=timestamp,utilization.gpu,power.draw,temperature.gpu,fan.speed --format=csv -l 1`.
+Run `node tools/prepare-ellis-benchmark.cjs`, then open `/studies/ellis-benchmark.html?mission=ellis&view=limb`. Use `ablate=geometry`, `ablate=captures`, `bridge=sky`, `scale=0.75`, or `cap=30` for the corresponding controls. Keep one profiler tab, fixed viewport, and no competing tests/rebuilds. GPU monitoring command: `nvidia-smi --query-gpu=timestamp,utilization.gpu,power.draw,temperature.gpu,fan.speed --format=csv -l 1`.
 
 [Raw frame/counter data and source hashes](ellis-performance-2026-10-23.json) · [aligned GPU samples](ellis-performance-gpu-2026-10-23.csv). Production rendering and play settings were not changed by this evaluation.
 

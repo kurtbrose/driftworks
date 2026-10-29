@@ -52,7 +52,7 @@ and probe/nearer-fighter occlusion. These do not constitute a visual review of
 every articulated mount angle. GPU timing and sustained high-fleet combined
 simulation/rendering remain unmeasured.
 
-Captured evidence lives in `output/capital-*-scorched.png`,
-`output/capital-subsystem-target.png` and the two `capital-systems-*-metrics.txt`
+Captured evidence lives in `studies/capital-*-scorched.png`,
+`studies/capital-subsystem-target.png` and the two `capital-systems-*-metrics.txt`
 files. The reusable inspection lab now compares current intact/damaged systems;
 the temporary source-baseline copies used for this measurement were removed.

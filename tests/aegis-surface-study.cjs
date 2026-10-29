@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const root=path.join(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
 cp.execFileSync(process.execPath,[path.join(root,'tools/bake-aegis-flight.cjs'),'--surface-study','--check'],{stdio:'pipe'});
 const ctx=vm.createContext({window:{},Float32Array});
-for(const f of ['assets/ships/aegis-kit/flight-rig.js','output/aegis-surface-data.js','output/aegis-surface-study.js'])vm.runInContext(read(f),ctx);
+for(const f of ['assets/ships/aegis-kit/flight-rig.js','studies/aegis-surface-data.js','studies/aegis-surface-study.js'])vm.runInContext(read(f),ctx);
 const asset=ctx.window.Driftworks.aegisFlightAsset,data=ctx.window.AegisSurfaceData,study=ctx.window.AegisSurfaceStudy;
 assert.equal(data.sourceHash,crypto.createHash('sha256').update(read('assets/ships/aegis-kit/flight-rig.js').replace(/\r\n/g,'\n')).digest('hex'));
 const U=10000/600,pose=[1,2,3],basis=new Float32Array([1,0,0,0,1,0,0,0,1]);
@@ -53,10 +53,10 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  const glass=DW.aegisFlightAsset.interiors.find(b=>b.kind==='windows');assert.equal(glass.finish.atlas,'belt-atlas.png');assert(glass.vertices.length/18<480*12,'baked facets replace individual window boxes');assert(glass.vertices.some((v,i)=>i%6===0&&v<-320),'prow belts remain present');assert.equal(glass.finish.uv.length,glass.vertices.length/3);assert(glass.finish.uv.every(v=>Number.isFinite(v)&&v>=0&&v<=1));assert.equal(glass.finish.shader,-2);
 
  assert.equal(DW.aegisFlightAsset.interiors.length,5);
- const approved={window:{}};vm.createContext(approved);vm.runInContext(read('output/aegis-hangar-data.js'),approved);
+ const approved={window:{}};vm.createContext(approved);vm.runInContext(read('studies/aegis-hangar-data.js'),approved);
  for(const b of DW.aegisFlightAsset.interiors.filter(b=>b.kind!=='windows'&&b.kind!=='structure')){const expected=approved.window.AegisHangarData.interiors.find(x=>x.kind===b.kind);assert.equal(JSON.stringify(b.vertices),JSON.stringify(expected.vertices),'production keeps approved interior geometry');if(b.finish)assert.equal(JSON.stringify(b.finish.uv),JSON.stringify(expected.uv),'production keeps approved UV orientation');}
  const structure=DW.aegisFlightAsset.interiors.find(b=>b.kind==='structure');assert.equal(structure.vertices.length/18,6000);assert.equal(structure.finish.atlas,'structure-v1/graphite.png');assert.equal(structure.finish.uv.length,structure.vertices.length/3);assert(structure.finish.uv.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
- const structuralBaseline={window:{}};vm.createContext(structuralBaseline);vm.runInContext(read('output/aegis-structure-before-rig.js'),structuralBaseline);
+ const structuralBaseline={window:{}};vm.createContext(structuralBaseline);vm.runInContext(read('studies/aegis-structure-before-rig.js'),structuralBaseline);
  const triangles=batches=>batches.flatMap(b=>Array.from({length:b.vertices.length/18},(_,i)=>b.vertices.slice(i*18,i*18+18).join(','))).sort();
  const originalStructure=new Set(triangles(structuralBaseline.window.Driftworks.aegisFlightAsset.batches));assert.equal(structure.vertices.length/18,6000);assert(triangles([structure]).every(t=>originalStructure.has(t)),'structural finish retains its original triangles, positions, normals and winding while window belts reshape armor');
  const one=DW.aegisFlight.create(),two=DW.aegisFlight.create(),styled=one.geometry(),buffers=styled.map(b=>b.vertices);

@@ -16,4 +16,4 @@ function run(){
  if(!(nearest.mean>smooth.mean*3&&smooth.max<.04&&guard.max===0))throw Error(JSON.stringify({nearest,smooth,guard}));
  document.querySelector('#result').textContent='PASS actual shellDepth GLSL / tilted continuous plane\n'+JSON.stringify({nearest,smooth,guard},null,2)+'\nErrors in metres. Empty depth pixels preserve the original silhouette.';
 }
-fs.writeFileSync('output/ellis-surface-regression.html','<!doctype html><meta charset="utf-8"><title>Ellis surface continuity regression</title><style>body{background:#09141c;color:#cee5ed;font:16px monospace}pre{white-space:pre-wrap}</style><canvas width="32" height="32"></canvas><pre id="result">Running…</pre><script>const SHADER='+JSON.stringify(linear+helper)+';('+run.toString()+')();</script>');
+fs.writeFileSync('studies/ellis-surface-regression.html','<!doctype html><meta charset="utf-8"><title>Ellis surface continuity regression</title><style>body{background:#09141c;color:#cee5ed;font:16px monospace}pre{white-space:pre-wrap}</style><canvas width="32" height="32"></canvas><pre id="result">Running…</pre><script>const SHADER='+JSON.stringify(linear+helper)+';('+run.toString()+')();</script>');

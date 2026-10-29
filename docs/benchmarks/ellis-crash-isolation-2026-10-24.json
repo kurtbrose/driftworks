@@ -1637,7 +1637,7 @@
             "time": 211.90000009536743
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "Canvas has an existing context of a different type",
           "canvas": {
@@ -1716,7 +1716,7 @@
             "time": 13495.300000071526
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "Canvas has an existing context of a different type",
           "canvas": {
@@ -1795,7 +1795,7 @@
             "time": 87171.60000002384
           }
         ],
-        "path": "/output/ellis-benchmark.html"
+        "path": "/studies/ellis-benchmark.html"
       },
       {
         "run": "mvm4v2t1",
@@ -1804,7 +1804,7 @@
         "stage": "startup",
         "sequence": 0,
         "recent": [],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "debug": true,
           "mission": "ellis",
@@ -1829,7 +1829,7 @@
             "time": 227.30000007152557
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "Canvas has an existing context of a different type",
           "canvas": {
@@ -1908,7 +1908,7 @@
             "time": 13364.700000047684
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "Canvas has an existing context of a different type",
           "canvas": {
@@ -1987,7 +1987,7 @@
             "time": 70260.80000007153
           }
         ],
-        "path": "/output/ellis-benchmark.html"
+        "path": "/studies/ellis-benchmark.html"
       },
       {
         "run": "mvm4wl0y",
@@ -1996,7 +1996,7 @@
         "stage": "startup",
         "sequence": 0,
         "recent": [],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "debug": true,
           "mission": "ellis",
@@ -2021,7 +2021,7 @@
             "time": 224.69999992847443
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "Canvas has an existing context of a different type",
           "canvas": {
@@ -2100,7 +2100,7 @@
             "time": 14098.199999928474
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "Canvas has an existing context of a different type",
           "canvas": {
@@ -2179,7 +2179,7 @@
             "time": 57036.799999952316
           }
         ],
-        "path": "/output/ellis-benchmark.html"
+        "path": "/studies/ellis-benchmark.html"
       },
       {
         "run": "mvm4xt20",
@@ -2188,7 +2188,7 @@
         "stage": "startup",
         "sequence": 0,
         "recent": [],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "debug": true,
           "mission": "ellis",
@@ -2213,7 +2213,7 @@
             "time": 215.60000002384186
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "Canvas has an existing context of a different type",
           "canvas": {
@@ -2292,7 +2292,7 @@
             "time": 2933.5
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -2371,7 +2371,7 @@
             "time": 2933.5
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -2450,7 +2450,7 @@
             "time": 2933.5
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -2529,7 +2529,7 @@
             "time": 2933.5
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -2608,7 +2608,7 @@
             "time": 4741.100000023842
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -2687,7 +2687,7 @@
             "time": 4741.100000023842
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -2766,7 +2766,7 @@
             "time": 4741.100000023842
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -2845,7 +2845,7 @@
             "time": 11521
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -2924,7 +2924,7 @@
             "time": 11521
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -3003,7 +3003,7 @@
             "time": 11521
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "",
           "canvas": {
@@ -3082,7 +3082,7 @@
             "time": 19097.899999976158
           }
         ],
-        "path": "/output/ellis-benchmark.html",
+        "path": "/studies/ellis-benchmark.html",
         "detail": {
           "status": "Canvas has an existing context of a different type",
           "canvas": {

@@ -7,7 +7,7 @@ const font=process.env.AEGIS_MARKING_FONT||'C:/Windows/Fonts/consolab.ttf';
 if(!fs.existsSync(font))throw new Error('Set AEGIS_MARKING_FONT to the approved Consolas Bold font for a reproducible atlas bake');
 GlobalFonts.registerFromPath(font,'Consolas');
 const root=path.join(__dirname,'..'),ctx=vm.createContext({window:{},document:{createElement:()=>createCanvas(2048,1024)}});
-for(const f of ['assets/ships/aegis-kit/flight-rig.js','output/aegis-surface-study.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),ctx);
+for(const f of ['assets/ships/aegis-kit/flight-rig.js','studies/aegis-surface-study.js'])vm.runInContext(fs.readFileSync(path.join(root,f),'utf8'),ctx);
 const source=ctx.window.Driftworks.aegisFlightAsset;
 const canvas=ctx.window.AegisSurfaceStudy.atlas(source.surface,source);
 require('./lib/aegis-service-panels.cjs')(canvas.getContext('2d'));

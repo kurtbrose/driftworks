@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aegis / baked window belts</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#060d15;color:#e7e9e5;font:14px system-ui}#viewer{position:fixed;inset:180px 0 40px}#viewer canvas{position:absolute;inset:0;width:100%;height:100%}header{position:fixed;inset:0 0 auto;padding:10px 24px;background:#0c1721;border-bottom:1px solid #283c48}h1{font-size:18px;font-weight:500;margin:0 0 10px}button,select{background:#182a37;border:1px solid #465c69;border-radius:4px;color:#e7e9e5;padding:8px 12px;margin:0 5px 4px 0;cursor:pointer}button[aria-pressed=true]{background:#c5b389;color:#111b21;border-color:#e5d7b7}label{font-size:12px;color:#a8b9c1}#label{position:fixed;left:24px;bottom:55px;font-size:16px;color:#d3c4a4;pointer-events:none}footer{position:fixed;inset:auto 0 0;padding:10px 24px;color:#9aaeb9;background:#0c1721;font-size:12px}#report{position:fixed;right:16px;bottom:54px;max-width:650px;white-space:pre-wrap;font:11px monospace;background:#08121ddd;padding:12px;pointer-events:none}.scene3d-controls{display:none!important}#hint{font-size:12px;color:#a9bbc5;margin-top:2px}@media(max-width:800px){header{padding:10px}#viewer{top:170px}#report{max-width:400px;font-size:10px}h1{font-size:15px}}
+</style></head><body><header><h1>AEGIS / surface treatment — taste test</h1>
+<div><button id="old" aria-pressed="false">A · Original</button><button id="new" aria-pressed="true">B · Candidate</button><label>View <select id="view"><option value="armor">Armor flyby</option><option value="wide">Whole ship</option><option value="side">Service belt</option><option value="underside">Underside</option><option value="hangar">Hangar</option><option value="stern">Stern</option><option value="far">Combat distance</option></select></label><label>B belt <select id="treatment"><option value="flat">Flat paint on hull</option><option value="inset" selected>Shallow inset</option></select></label><label><input type="checkbox" id="doors" checked> 2.5 m personnel doors</label><label><input type="checkbox" id="scale" checked> Scale references</label><label><input type="checkbox" id="cutaway"> Cutaway decks</label><button id="motion" aria-pressed="false">Slow orbit</button><button id="damage" aria-pressed="false">Damage systems</button><button id="bench">Measure A/B</button></div>
+<div style="font-size:12px;color:#dfc783">Scale key: suited crew 2.0 m · fighter 12 m · ruler ticks 1 m · provisional decks 3.3 m apart</div><div id="hint">Same camera, lighting and geometry. Press A / B to compare. Drag to orbit · wheel to zoom. <label>Lighting <select id="lighting"><option value="studio">Studio</option><option value="flight">Flight environment</option></select></label></div></header>
+<div id="viewer"></div><div id="label"></div><output id="report">Loading…</output><footer>Candidate 01 · panel hierarchy, recessed machinery, restrained maintenance markings · awaiting art direction</footer>
+<script src="../src/asset-versions.js?v=a9bcdb819afe"></script>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+<!-- script-manifest:ellisCapture -->
+<script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
+<script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+<script src="../src/combat.js?v=ce0e0e6eb149"></script>
+<script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+<script src="../src/mining-landing.js?v=f00997919474"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=a72f9b5b37c8"></script>
+<script src="../src/population.js?v=7a772b14be47"></script>
+<script src="../src/session.js?v=254909ab34f8"></script>
+<script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
+<script src="../src/engine-audio.js?v=061d71eda9b0"></script>
+<script src="../src/audio-mixer.js?v=34c90880514e"></script>
+<script src="../src/audio.js?v=364df02d8266"></script>
+<script src="../src/hud.js?v=be6ea0bd1bf2"></script>
+<script src="../experiments/gpu-diagnostics.js?v=099a7fa723af"></script>
+<script src="../src/mesh-builder.js?v=dc5005c681a3"></script>
+<script src="../src/mining-rig.js?v=ebc32e1f4b09"></script>
+<script src="../src/model-viewer.js?v=02d9b3545d85"></script>
+<script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
+<script src="../src/explosions.js?v=ba20ec3731d9"></script>
+<script src="../src/asteroid-art.js?v=48aad8996df8"></script>
+<script src="../src/asteroid-terrain.js?v=added36e3407"></script>
+<script src="../src/scene3d.js?v=be72cb90b8e8"></script>
+<script src="../src/ship-art.js?v=394ca4b43117"></script>
+<script src="../src/game.js?v=737979d8df21"></script>
+<script src="../experiments/dom.js?v=c1d4287e76cd"></script>
+<script src="../experiments/retail-profiles.js?v=99526ebcd858"></script>
+<script src="../experiments/flight-model.js?v=0e41fba64b13"></script>
+<script src="../experiments/radar.js?v=3a9471d6278e"></script>
+<script src="../experiments/flight-missions.js?v=7d23e8c1a442"></script>
+<script src="../experiments/mission-ohio.js?v=55d50526f5e4"></script>
+<script src="../src/sky-effects.js?v=136fdb626647"></script>
+<script src="../experiments/ellis-optics.js?v=0d8a4f429f2b"></script>
+<script src="../experiments/ellis-renderer.js?v=207aac52c8ca"></script>
+<script src="../experiments/skybox.js?v=2f80d16795ac"></script>
+<script src="../experiments/retail-weapons.js?v=642a0025bb1b"></script>
+<script src="../experiments/guns.js?v=aaaa1a959115"></script>
+<script src="../experiments/input.js?v=f4504aaa17e7"></script>
+<script src="../experiments/flight-collision.js?v=39f97eeb1b65"></script>
+<script src="../experiments/training.js?v=0444ead30d9a"></script>
+<script src="../experiments/performance.js?v=a74bf5aa5b6a"></script>
+<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
+<script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
+<script src="../assets/ships/ohio-vehicles/meshes.js?v=ce57f8e016e3"></script>
+<script src="../experiments/ship-packs.js?v=67e5a3ade96a"></script>
+<script src="../experiments/mumble.js?v=96c5b42f6cc2"></script>
+<script src="../experiments/flight-dialogue.js?v=4a86ef22535a"></script>
+<script src="../experiments/evacuation-mission.js?v=2611bc3f57d1"></script>
+<script type="module" src="../experiments/evacuation-scenery.js?v=f021be84af75"></script>
+<script src="../experiments/flight-comms.js?v=c72ab6d5e999"></script>
+<script src="../experiments/comms-display.js?v=2e3d8d7dcb2f"></script>
+<script src="../experiments/face-blend.js?v=50dea498a8c7"></script>
+<script src="../experiments/flight-portraits.js?v=f897046d4498"></script>
+<script src="../experiments/flight-radio.js?v=9d8cfcd69def"></script>
+<script src="../experiments/target-camera.js?v=1860d2a2f5d6"></script>
+<script src="../experiments/flight-scenery.js?v=efd62ddfb867"></script>
+<script src="../experiments/flight-presentation.js?v=9597c304eae7"></script>
+<script src="../experiments/flight-diagnostics.js?v=7b48f5faca80"></script>
+<script src="../experiments/flight-controls.js?v=1fc5202ba6f7"></script>
+<script src="../experiments/flight-session.js?v=c3e876ec3e78"></script>
+<script src="../experiments/gpu-ui.js?v=029c3b30789a"></script>
+<script src="../experiments/flight-hud.js?v=efb1ec879733"></script>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script>
+<script type="module" src="../assets/characters/quaternius-astronaut/poses.js?v=768978930c66"></script>
+<script src="../experiments/flight-ai.js?v=6aafa3682577"></script>
+<script src="../experiments/flight-duel.js?v=443c69017af7"></script>
+<script src="../experiments/flight-watch.js?v=9ef026a9cf80"></script>
+<script type="module" src="../experiments/gas-giant-flight.js?v=d4c1ae871933"></script>
+<script src="../experiments/aegis-flight.js?v=b845d5f70e97"></script>
+
+<script src="../assets/ships/aegis-kit/flight-rig.js?v=1beda87c9e3b"></script><script src="../experiments/aegis-flight.js?v=b845d5f70e97"></script>
+
+<script src="aegis-surface-data.js?v=ef17831d9d06"></script><script src="aegis-surface-study.js?v=c3659476ba4d"></script><script src="aegis-windows-data.js?v=93a9991d81e4"></script>
+<script src="aegis-engine-flat-study.js?v=860773359bc7"></script>
+<script src="aegis-engine-study.js?v=9c79cbcab733"></script>
+
+<script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script><script src="aegis-scale-study.js?v=4ef59a919bcc"></script><script src="aegis-belt-original-data.js?v=150ec7a702cc"></script><script src="aegis-belt-flat-data.js?v=558e7a294667"></script><script src="aegis-belt-inset-data.js?v=dac0b0471ac3"></script><script src="aegis-belt-review.js?v=b0f154ef4b8d"></script>
+</body></html>

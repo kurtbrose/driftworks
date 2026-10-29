@@ -56,5 +56,5 @@ function run(){
  document.body.dataset.pass=String(result.pass);if(!result.pass)throw Error('Ellis boundary regression failed');
 }
 fs.mkdirSync('output',{recursive:true});
-fs.writeFileSync('output/ellis-boundary-continuity.html','<!doctype html><html><head><meta charset="utf-8"><title>Ellis outer-boundary continuity</title></head><body><h1>600 m boundary / actual shared GLSL</h1><p>Sky direction only: no geometry, grids or outline. Both charts; radial and grazing probes; previous shader negative control.</p><canvas width="32" height="32"></canvas><pre>Running</pre><script>window.Driftworks={};</script><script src="../experiments/ellis-optics.js"></script><script>('+run.toString().replace('OLD_SOURCE',JSON.stringify(oldSource))+')();</script></body></html>\n');
-console.log('Open http://localhost:8000/output/ellis-boundary-continuity.html');
+fs.writeFileSync('studies/ellis-boundary-continuity.html','<!doctype html><html><head><meta charset="utf-8"><title>Ellis outer-boundary continuity</title></head><body><h1>600 m boundary / actual shared GLSL</h1><p>Sky direction only: no geometry, grids or outline. Both charts; radial and grazing probes; previous shader negative control.</p><canvas width="32" height="32"></canvas><pre>Running</pre><script>window.Driftworks={};</script><script src="../experiments/ellis-optics.js"></script><script>('+run.toString().replace('OLD_SOURCE',JSON.stringify(oldSource))+')();</script></body></html>\n');
+console.log('Open http://localhost:8000/studies/ellis-boundary-continuity.html');

@@ -88,7 +88,7 @@ Start the normal server, then run:
 node tools/prepare-ellis-benchmark.cjs
 ```
 
-Open `output/ellis-benchmark.html?mission=ellis&bridge=new&view=approach` on that
+Open `studies/ellis-benchmark.html?mission=ellis&bridge=new&view=approach` on that
 server and click Measure. `bridge=legacy` restores the original numerical sky-only
 prototype; `bridge=sky` uses lookup sky without geometry compositing. `view=rim`,
 `view=moon`, `view=foreground`, `bridgeFaces=6`, and `live=1` select the recorded

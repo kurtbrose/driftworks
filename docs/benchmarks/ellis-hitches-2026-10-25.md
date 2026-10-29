@@ -11,7 +11,7 @@ fixed.
 Run `node tools/prepare-ellis-benchmark.cjs`, then `npm run refresh:assets` and
 serve the repository. Open:
 
-`http://localhost:8000/output/ellis-benchmark.html?mission=ellis&gpu=1&view=before-throat&pan=fast&live=1&fire=1`
+`http://localhost:8000/studies/ellis-benchmark.html?mission=ellis&gpu=1&view=before-throat&pan=fast&live=1&fire=1`
 
 Press **Measure (2 s warmup + 8 s sample)**. The setup uses the production flight
 composition, eight fighters, the Ellis capital patrol, scenery and gunfire. The

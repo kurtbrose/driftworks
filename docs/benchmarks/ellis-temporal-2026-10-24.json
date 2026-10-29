@@ -1419,7 +1419,7 @@
     },
     {
       "level": "error",
-      "message": "Error: Error creating WebGL context.\n    at new WebGLRenderer (http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2:73993:13)\n    at new window.THREE.WebGLRenderer (http://localhost:8000/output/ellis-benchmark.html?mission=ellis&view=limb&bridgeTemporal=1&pan=1&cap=30:120:3)\n    at Object.create (http://localhost:8000/src/scene3d.js?v=364e94f14cf4:752:20)\n    at mount (http://localhost:8000/experiments/flight-presentation.js?v=30c253b84c93:181:32)\n    at DW.flightPresentation.mount (http://localhost:8000/output/ellis-benchmark.html?mission=ellis&view=limb&bridgeTemporal=1&pan=1&cap=30:182:61)\n    at http://localhost:8000/experiments/flight.js?v=19381bcbcf5a:76:46",
+      "message": "Error: Error creating WebGL context.\n    at new WebGLRenderer (http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2:73993:13)\n    at new window.THREE.WebGLRenderer (http://localhost:8000/studies/ellis-benchmark.html?mission=ellis&view=limb&bridgeTemporal=1&pan=1&cap=30:120:3)\n    at Object.create (http://localhost:8000/src/scene3d.js?v=364e94f14cf4:752:20)\n    at mount (http://localhost:8000/experiments/flight-presentation.js?v=30c253b84c93:181:32)\n    at DW.flightPresentation.mount (http://localhost:8000/studies/ellis-benchmark.html?mission=ellis&view=limb&bridgeTemporal=1&pan=1&cap=30:182:61)\n    at http://localhost:8000/experiments/flight.js?v=19381bcbcf5a:76:46",
       "timestamp": "2026-10-24T07:50:42.209Z",
       "url": "http://localhost:8000/vendor/three/build/three.global.js?v=4bf2b130ade2"
     }

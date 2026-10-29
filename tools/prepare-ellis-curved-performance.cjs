@@ -1,5 +1,5 @@
 const fs=require('node:fs');
-let html=fs.readFileSync('output/ellis-aim-study.html','utf8').replace('function run(){','function run(){\n let measuring=false;');
+let html=fs.readFileSync('studies/ellis-aim-study.html','utf8').replace('function run(){','function run(){\n let measuring=false;');
 html=html.replace('if(!document.hidden)draw();requestAnimationFrame(frame);','if(!document.hidden&&!measuring)draw();requestAnimationFrame(frame);');
 html=html.replace(' reset();requestAnimationFrame(frame);',String.raw`
  const bench=document.createElement('button');bench.textContent='Measure 160 curved bolts';panel.appendChild(bench);
@@ -13,4 +13,4 @@ html=html.replace(' reset();requestAnimationFrame(frame);',String.raw`
  document.getElementById('aim-result').textContent=JSON.stringify({bolts:snapshot.guns.bolts.length,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,physicsMs:{median:q('physics',.5),p95:q('physics',.95)},renderAndHudMs:{median:q('cpu',.5),p95:q('cpu',.95)},frameMs:{median:q('frame',.5),p95:q('frame',.95)},draws:q('draws',.5)},null,2);
  }catch(error){document.getElementById('aim-result').textContent=String(error);}finally{bench.disabled=false;}}
  reset();requestAnimationFrame(frame);`);
-fs.writeFileSync('output/ellis-curved-performance.html',html);
+fs.writeFileSync('studies/ellis-curved-performance.html',html);
