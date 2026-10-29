@@ -75,6 +75,60 @@ unmeasured until a full-ship integration is requested.
 
 #### Baked normals and GPU comparison
 
+##### Smaller atlas experiment
+
+Both the section and fleet studies now have an Atlas selector. The section's
+left selector can retain the 2048 map while the right side changes size; the
+fleet benchmark can compare the selected map against either real bevels or the
+2048 reference. For example, open
+[512 versus 2048](../studies/aegis-bevel-review.html?atlas=512&baseline=bakedReference)
+or the [512 fleet](../studies/aegis-fleet-review.html?atlas=512).
+
+`tools/bake-aegis-normal.cjs` also writes 1024 x 512, 512 x 256 and 256 x 128
+variants. Each is filtered directly from the high-resolution linear normal
+vectors and renormalized before encoding. They use identical UVs and geometry;
+there is no extra runtime edge processing. This filtering retains subpixel edge
+contributions instead of missing bevels through sparse geometry sampling.
+
+| Atlas | RGBA8 plus mipmaps | Saving versus original | Visual observation |
+| --- | --- | --- | --- |
+| 2048 x 1024 | 10.67 MiB | reference | Original edge detail |
+| 1024 x 512 | 2.67 MiB | 75% | Close-up remains close to the original |
+| 512 x 256 | 0.67 MiB | 93.75% | Slightly broader/softer highlights; useful at fleet distances |
+| 256 x 128 | 0.17 MiB | 98.44% | More obvious broadening in close-up; distant differences are small |
+
+Visual inspection covered edge close-ups at all three reduced sizes, the 512
+three-quarter/underside section and close fleet view, and 256 three-quarter,
+distant and formation views. Captures are in ignored `output/aegis-atlas-*.png`.
+These are neutral armor comparison observations, not production visual approval.
+1024 is the conservative close-flyby candidate; 512 is a stronger memory-saving
+candidate when modest close-up softening is acceptable. Production assets and
+the original atlas remain unchanged.
+
+All three sizes were compared directly against 2048 in six- and twelve-ship
+overview and close-flyby scenes, twice each, with uncapped Chrome presentation,
+matched poses and resolution (1600 x 720 backing pixels / DPR 1). Each mode gets
+360 valid asynchronous GPU samples per ABBA run after 60 warmup frames per
+block. Both maps use the same 60-triangle armor geometry, same shader and same
+draw count; each selected map is shared among ships. The direct comparisons
+show **no repeatable GPU speedup** from shrinking the map. For example, six-ship
+overview medians for 2048 versus 512 were 1.105/1.103 ms and 1.106/1.112 ms;
+twelve-ship overview was 2.092/2.176 ms and 2.058/2.046 ms. Other runs had larger
+timing variation or regressions. Memory savings are established; a speed gain
+is not. Existing mipmap filtering already samples lower-resolution levels at
+distance, which is a plausible reason shrinking the base texture does not
+automatically reduce rendering time; these timings do not isolate that cause.
+
+The comparison viewer retains the reference and previously used textures for
+switching, so the table is the selected atlas's storage cost, not total viewer
+VRAM usage. These runs do not test behavior under VRAM exhaustion. Summaries,
+per-block timings and conditions are in `studies/aegis-atlas-results.json`; raw
+samples are generated in `output/aegis-atlas-metrics.json`.
+`node tools/check-aegis-atlas.cjs` validates PNG dimensions and encoded normal
+lengths; `--browser` captures comparisons and reruns the measurements, `--visual`
+limits that browser run to section captures, and `--smoke` verifies size deep
+links. The bake's `--check` covers all variants deterministically.
+
 For the follow-up with complete ships, open the
 [fleet comparison](../studies/aegis-fleet-review.html). It offers six or twelve
 Aegis ships, overview, close-flyby, distant and underside cameras, and a GPU ABBA

@@ -1,0 +1,5118 @@
+{
+  "uncapped": true,
+  "errors": [],
+  "results": [
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        1024,
+        512
+      ],
+      "textureBytesWithMips": 2796203,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.091584,
+          "gpuP95": 1.338368,
+          "cpuMedian": 0.8999999910593033,
+          "cpuP95": 1.2999999970197678,
+          "frameMedian": 1,
+          "frameP95": 1.599999999999909,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.091584,
+          "gpuP95": 1.572864,
+          "cpuMedian": 0.8999999910593033,
+          "cpuP95": 1.4000000059604645,
+          "frameMedian": 1.099999999999909,
+          "frameP95": 1.7000000000000455,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.092608,
+          "gpuP95": 1.354752,
+          "cpuMedian": 0.9000000059604645,
+          "cpuP95": 1.2000000029802322,
+          "frameMedian": 1.099999999999909,
+          "frameP95": 1.5,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.091584,
+          "gpuP95": 1.498112,
+          "cpuMedian": 0.9000000059604645,
+          "cpuP95": 1.2000000029802322,
+          "frameMedian": 1.099999999999909,
+          "frameP95": 1.400000000000091,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.091584,
+          "gpuP95": 1.409024,
+          "cpuMedian": 0.8999999910593033,
+          "cpuP95": 1.2999999970197678,
+          "frameMedian": 1,
+          "frameP95": 1.5,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.092608,
+          "gpuP95": 1.434624,
+          "cpuMedian": 0.9000000059604645,
+          "cpuP95": 1.2999999970197678,
+          "frameMedian": 1.099999999999909,
+          "frameP95": 1.6000000000001364,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        1024,
+        512
+      ],
+      "textureBytesWithMips": 2796203,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.094656,
+          "gpuP95": 1.573888,
+          "cpuMedian": 1,
+          "cpuP95": 1.5,
+          "frameMedian": 1.1000000000003638,
+          "frameP95": 1.7999999999997272,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.092608,
+          "gpuP95": 1.429504,
+          "cpuMedian": 0.9000000059604645,
+          "cpuP95": 1.2999999970197678,
+          "frameMedian": 1.099999999999909,
+          "frameP95": 1.699999999999818,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.093632,
+          "gpuP95": 1.572864,
+          "cpuMedian": 0.9000000059604645,
+          "cpuP95": 1.300000011920929,
+          "frameMedian": 1.099999999999909,
+          "frameP95": 1.699999999999818,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.091584,
+          "gpuP95": 1.499136,
+          "cpuMedian": 0.9000000059604645,
+          "cpuP95": 1.2999999970197678,
+          "frameMedian": 1,
+          "frameP95": 1.599999999999909,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.093632,
+          "gpuP95": 1.555456,
+          "cpuMedian": 0.9000000059604645,
+          "cpuP95": 1.3999999910593033,
+          "frameMedian": 1.099999999999909,
+          "frameP95": 1.7000000000002728,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.093632,
+          "gpuP95": 1.532928,
+          "cpuMedian": 0.9000000059604645,
+          "cpuP95": 1.300000011920929,
+          "frameMedian": 1.099999999999909,
+          "frameP95": 1.699999999999818,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        1024,
+        512
+      ],
+      "textureBytesWithMips": 2796203,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.55808,
+          "gpuP95": 2.504704,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.6000000000003638,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.64512,
+          "gpuP95": 2.547712,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 1.699999999999818,
+          "frameP95": 2.600000000000364,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.550912,
+          "gpuP95": 2.514944,
+          "cpuMedian": 1.1000000089406967,
+          "cpuP95": 1.7000000029802322,
+          "frameMedian": 1.5,
+          "frameP95": 2.199999999999818,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.448512,
+          "gpuP95": 2.525184,
+          "cpuMedian": 1,
+          "cpuP95": 1.300000011920929,
+          "frameMedian": 1.3999999999996362,
+          "frameP95": 1.9000000000005457,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.490496,
+          "gpuP95": 2.525184,
+          "cpuMedian": 1.1000000089406967,
+          "cpuP95": 1.5999999940395355,
+          "frameMedian": 1.5,
+          "frameP95": 2.2000000000007276,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.598016,
+          "gpuP95": 2.522112,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.800000011920929,
+          "frameMedian": 1.6000000000003638,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        1024,
+        512
+      ],
+      "textureBytesWithMips": 2796203,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.628736,
+          "gpuP95": 2.290688,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.6000000000003638,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.661504,
+          "gpuP95": 2.520064,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 1.699999999999818,
+          "frameP95": 2.5999999999994543,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.590848,
+          "gpuP95": 2.359296,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 1.6000000000003638,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.520192,
+          "gpuP95": 2.516992,
+          "cpuMedian": 1.1000000089406967,
+          "cpuP95": 1.5999999940395355,
+          "frameMedian": 1.5,
+          "frameP95": 2.300000000000182,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.56832,
+          "gpuP95": 2.497536,
+          "cpuMedian": 1.199999988079071,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.5999999999994543,
+          "frameP95": 2.300000000000182,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.652288,
+          "gpuP95": 2.515968,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 1.6000000000003638,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        1024,
+        512
+      ],
+      "textureBytesWithMips": 2796203,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.829888,
+          "gpuP95": 3.50208,
+          "cpuMedian": 2.2000000029802322,
+          "cpuP95": 3,
+          "frameMedian": 2.699999999999818,
+          "frameP95": 3.699999999999818,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.048,
+          "gpuP95": 3.40992,
+          "cpuMedian": 2.2999999970197678,
+          "cpuP95": 3.1000000089406967,
+          "frameMedian": 2.7000000000007276,
+          "frameP95": 3.7000000000007276,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.113536,
+          "gpuP95": 3.331072,
+          "cpuMedian": 2.2000000029802322,
+          "cpuP95": 3,
+          "frameMedian": 2.7000000000007276,
+          "frameP95": 3.600000000000364,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.637376,
+          "gpuP95": 2.885632,
+          "cpuMedian": 2,
+          "cpuP95": 2.5999999940395355,
+          "frameMedian": 2.399999999999636,
+          "frameP95": 3.100000000000364,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.7408,
+          "gpuP95": 3.075072,
+          "cpuMedian": 2.0999999940395355,
+          "cpuP95": 2.7000000029802322,
+          "frameMedian": 2.5,
+          "frameP95": 3.399999999999636,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.098176,
+          "gpuP95": 3.40992,
+          "cpuMedian": 2.2000000029802322,
+          "cpuP95": 3.0999999940395355,
+          "frameMedian": 2.7000000000007276,
+          "frameP95": 3.7000000000007276,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        1024,
+        512
+      ],
+      "textureBytesWithMips": 2796203,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.871872,
+          "gpuP95": 3.05664,
+          "cpuMedian": 2.0999999940395355,
+          "cpuP95": 2.5,
+          "frameMedian": 2.5,
+          "frameP95": 3.100000000000364,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.973248,
+          "gpuP95": 3.079168,
+          "cpuMedian": 2.1000000089406967,
+          "cpuP95": 2.6000000089406967,
+          "frameMedian": 2.600000000000364,
+          "frameP95": 3.100000000000364,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.657856,
+          "gpuP95": 2.87744,
+          "cpuMedian": 2,
+          "cpuP95": 2.5,
+          "frameMedian": 2.399999999999636,
+          "frameP95": 3,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.701888,
+          "gpuP95": 2.958336,
+          "cpuMedian": 2,
+          "cpuP95": 2.4000000059604645,
+          "frameMedian": 2.3000000000010914,
+          "frameP95": 2.899999999999636,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.821696,
+          "gpuP95": 2.95936,
+          "cpuMedian": 2,
+          "cpuP95": 2.5,
+          "frameMedian": 2.399999999999636,
+          "frameP95": 3.099999999998545,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.821696,
+          "gpuP95": 3.05152,
+          "cpuMedian": 2.0999999940395355,
+          "cpuP95": 2.5999999940395355,
+          "frameMedian": 2.5,
+          "frameP95": 3.100000000000364,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        1024,
+        512
+      ],
+      "textureBytesWithMips": 2796203,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.934912,
+          "gpuP95": 4.475904,
+          "cpuMedian": 1.7999999970197678,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.1999999999989086,
+          "frameP95": 2.7000000000007276,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.930816,
+          "gpuP95": 4.251648,
+          "cpuMedian": 1.7999999970197678,
+          "cpuP95": 2.1000000089406967,
+          "frameMedian": 2.100000000000364,
+          "frameP95": 2.6999999999989086,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.124352,
+          "gpuP95": 4.470784,
+          "cpuMedian": 1.9000000059604645,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.2999999999992724,
+          "frameP95": 2.899999999999636,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.9984,
+          "gpuP95": 4.478976,
+          "cpuMedian": 1.7999999970197678,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.2000000000007276,
+          "frameP95": 2.7000000000007276,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.948224,
+          "gpuP95": 4.478976,
+          "cpuMedian": 1.7999999970197678,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.1999999999989086,
+          "frameP95": 2.7000000000007276,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.022976,
+          "gpuP95": 4.451328,
+          "cpuMedian": 1.7999999970197678,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.2000000000007276,
+          "frameP95": 2.7999999999992724,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        1024,
+        512
+      ],
+      "textureBytesWithMips": 2796203,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.033216,
+          "gpuP95": 4.2496,
+          "cpuMedian": 1.7999999970197678,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.2000000000007276,
+          "frameP95": 2.7000000000007276,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.047552,
+          "gpuP95": 4.262912,
+          "cpuMedian": 1.7999999970197678,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.2000000000007276,
+          "frameP95": 2.7000000000007276,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.13152,
+          "gpuP95": 4.25984,
+          "cpuMedian": 1.9000000059604645,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.3000000000029104,
+          "frameP95": 2.7000000000007276,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.093632,
+          "gpuP95": 4.475904,
+          "cpuMedian": 1.8999999910593033,
+          "cpuP95": 2.300000011920929,
+          "frameMedian": 2.2999999999992724,
+          "frameP95": 2.900000000001455,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.08544,
+          "gpuP95": 4.251648,
+          "cpuMedian": 1.800000011920929,
+          "cpuP95": 2.2999999970197678,
+          "frameMedian": 2.2000000000007276,
+          "frameP95": 2.899999999999636,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.123328,
+          "gpuP95": 4.262912,
+          "cpuMedian": 1.8999999910593033,
+          "cpuP95": 2.2000000029802322,
+          "frameMedian": 2.2999999999992724,
+          "frameP95": 2.7000000000007276,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        512,
+        256
+      ],
+      "textureBytesWithMips": 699051,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.101824,
+          "gpuP95": 1.4336,
+          "cpuMedian": 1,
+          "cpuP95": 1.2000000029802322,
+          "frameMedian": 1.2000000000007276,
+          "frameP95": 1.7000000000007276,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.102848,
+          "gpuP95": 1.44384,
+          "cpuMedian": 1,
+          "cpuP95": 1.2999999970197678,
+          "frameMedian": 1.2999999999992724,
+          "frameP95": 1.7999999999992724,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.102848,
+          "gpuP95": 1.410048,
+          "cpuMedian": 1,
+          "cpuP95": 1.3999999910593033,
+          "frameMedian": 1.2999999999992724,
+          "frameP95": 1.8000000000029104,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.110016,
+          "gpuP95": 1.741824,
+          "cpuMedian": 1.0999999940395355,
+          "cpuP95": 1.5,
+          "frameMedian": 1.5,
+          "frameP95": 2,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.104896,
+          "gpuP95": 1.69472,
+          "cpuMedian": 1,
+          "cpuP95": 1.300000011920929,
+          "frameMedian": 1.3000000000029104,
+          "frameP95": 1.9000000000014552,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.102848,
+          "gpuP95": 1.424384,
+          "cpuMedian": 1,
+          "cpuP95": 1.300000011920929,
+          "frameMedian": 1.2999999999992724,
+          "frameP95": 1.7999999999992724,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        512,
+        256
+      ],
+      "textureBytesWithMips": 699051,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.10592,
+          "gpuP95": 1.718272,
+          "cpuMedian": 1.1000000089406967,
+          "cpuP95": 1.5999999940395355,
+          "frameMedian": 1.5,
+          "frameP95": 2.1999999999970896,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.110016,
+          "gpuP95": 1.696768,
+          "cpuMedian": 1.0999999940395355,
+          "cpuP95": 1.7000000029802322,
+          "frameMedian": 1.5,
+          "frameP95": 2.2999999999992724,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.114112,
+          "gpuP95": 1.573888,
+          "cpuMedian": 1.1000000089406967,
+          "cpuP95": 1.5,
+          "frameMedian": 1.5,
+          "frameP95": 2.100000000002183,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.104896,
+          "gpuP95": 1.593344,
+          "cpuMedian": 1.0999999940395355,
+          "cpuP95": 1.3999999910593033,
+          "frameMedian": 1.5,
+          "frameP95": 1.8999999999978172,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.10592,
+          "gpuP95": 1.697792,
+          "cpuMedian": 1.0999999940395355,
+          "cpuP95": 1.4000000059604645,
+          "frameMedian": 1.5,
+          "frameP95": 2,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.112064,
+          "gpuP95": 1.666048,
+          "cpuMedian": 1.1000000089406967,
+          "cpuP95": 1.699999988079071,
+          "frameMedian": 1.5,
+          "frameP95": 2.2000000000007276,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        512,
+        256
+      ],
+      "textureBytesWithMips": 699051,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.352256,
+          "gpuP95": 2.282496,
+          "cpuMedian": 0.8999999910593033,
+          "cpuP95": 1.2999999970197678,
+          "frameMedian": 1,
+          "frameP95": 1.5999999999985448,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.319488,
+          "gpuP95": 2.289664,
+          "cpuMedian": 0.7999999970197678,
+          "cpuP95": 1.0999999940395355,
+          "frameMedian": 1,
+          "frameP95": 1.3999999999978172,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.306176,
+          "gpuP95": 2.287616,
+          "cpuMedian": 0.7999999970197678,
+          "cpuP95": 1,
+          "frameMedian": 1,
+          "frameP95": 1.2000000000007276,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.288768,
+          "gpuP95": 2.286592,
+          "cpuMedian": 0.7999999970197678,
+          "cpuP95": 1,
+          "frameMedian": 1,
+          "frameP95": 1.2000000000007276,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.311296,
+          "gpuP95": 2.286592,
+          "cpuMedian": 0.800000011920929,
+          "cpuP95": 1.2000000029802322,
+          "frameMedian": 1,
+          "frameP95": 1.5,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.313344,
+          "gpuP95": 2.289664,
+          "cpuMedian": 0.7999999970197678,
+          "cpuP95": 1,
+          "frameMedian": 1,
+          "frameP95": 1.3000000000029104,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        512,
+        256
+      ],
+      "textureBytesWithMips": 699051,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.05984,
+          "gpuP95": 2.848768,
+          "cpuMedian": 1.5,
+          "cpuP95": 2.0999999940395355,
+          "frameMedian": 2.100000000002183,
+          "frameP95": 2.899999999997817,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.1776,
+          "gpuP95": 2.627584,
+          "cpuMedian": 1.5,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 2.099999999998545,
+          "frameP95": 2.600000000002183,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.091584,
+          "gpuP95": 2.738176,
+          "cpuMedian": 1.5,
+          "cpuP95": 2.0999999940395355,
+          "frameMedian": 2,
+          "frameP95": 3,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.887808,
+          "gpuP95": 2.637824,
+          "cpuMedian": 1.4000000059604645,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.9000000000014552,
+          "frameP95": 2.400000000001455,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.9216,
+          "gpuP95": 2.752512,
+          "cpuMedian": 1.5,
+          "cpuP95": 2,
+          "frameMedian": 2,
+          "frameP95": 2.7000000000007276,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.164288,
+          "gpuP95": 2.653184,
+          "cpuMedian": 1.5,
+          "cpuP95": 2,
+          "frameMedian": 2.099999999998545,
+          "frameP95": 2.7999999999992724,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        512,
+        256
+      ],
+      "textureBytesWithMips": 699051,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.092032,
+          "gpuP95": 3.29216,
+          "cpuMedian": 2.4000000059604645,
+          "cpuP95": 3,
+          "frameMedian": 2.7000000000007276,
+          "frameP95": 3.399999999997817,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.299904,
+          "gpuP95": 3.90144,
+          "cpuMedian": 2.7999999970197678,
+          "cpuP95": 3.6000000089406967,
+          "frameMedian": 3.100000000002183,
+          "frameP95": 4.099999999998545,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.122752,
+          "gpuP95": 3.550208,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.300000011920929,
+          "frameMedian": 2.8000000000029104,
+          "frameP95": 3.7000000000007276,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.067456,
+          "gpuP95": 3.497984,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.2000000029802322,
+          "frameMedian": 2.7999999999992724,
+          "frameP95": 3.600000000002183,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.092032,
+          "gpuP95": 3.416064,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.0999999940395355,
+          "frameMedian": 2.7999999999992724,
+          "frameP95": 3.5,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.176,
+          "gpuP95": 3.746816,
+          "cpuMedian": 2.699999988079071,
+          "cpuP95": 3.5999999940395355,
+          "frameMedian": 3,
+          "frameP95": 3.900000000001455,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        512,
+        256
+      ],
+      "textureBytesWithMips": 699051,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.10432,
+          "gpuP95": 3.501056,
+          "cpuMedian": 2.4000000059604645,
+          "cpuP95": 2.9000000059604645,
+          "frameMedian": 2.7000000000007276,
+          "frameP95": 3.3000000000029104,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.99168,
+          "gpuP95": 3.59936,
+          "cpuMedian": 2.6000000089406967,
+          "cpuP95": 3.4000000059604645,
+          "frameMedian": 2.900000000001455,
+          "frameP95": 3.900000000001455,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.072576,
+          "gpuP95": 3.575808,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.4000000059604645,
+          "frameMedian": 2.7999999999992724,
+          "frameP95": 3.899999999997817,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.929216,
+          "gpuP95": 3.270656,
+          "cpuMedian": 2.300000011920929,
+          "cpuP95": 2.9000000059604645,
+          "frameMedian": 2.599999999998545,
+          "frameP95": 3.2999999999992724,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.05824,
+          "gpuP95": 3.39456,
+          "cpuMedian": 2.3999999910593033,
+          "cpuP95": 2.9000000059604645,
+          "frameMedian": 2.7000000000007276,
+          "frameP95": 3.2999999999992724,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.045952,
+          "gpuP95": 3.59936,
+          "cpuMedian": 2.5999999940395355,
+          "cpuP95": 3.4000000059604645,
+          "frameMedian": 2.8000000000029104,
+          "frameP95": 3.899999999997817,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        512,
+        256
+      ],
+      "textureBytesWithMips": 699051,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.34144,
+          "gpuP95": 4.411392,
+          "cpuMedian": 2.2000000029802322,
+          "cpuP95": 2.7999999970197678,
+          "frameMedian": 2.7000000000007276,
+          "frameP95": 3.599999999998545,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.345536,
+          "gpuP95": 4.841472,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.199999988079071,
+          "frameMedian": 3.099999999998545,
+          "frameP95": 3.7999999999992724,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.46432,
+          "gpuP95": 4.826112,
+          "cpuMedian": 2.4000000059604645,
+          "cpuP95": 3.0999999940395355,
+          "frameMedian": 3,
+          "frameP95": 3.8000000000029104,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.44384,
+          "gpuP95": 4.651008,
+          "cpuMedian": 2.4000000059604645,
+          "cpuP95": 3,
+          "frameMedian": 3,
+          "frameP95": 3.599999999998545,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.394688,
+          "gpuP95": 4.614144,
+          "cpuMedian": 2.2999999970197678,
+          "cpuP95": 2.9000000059604645,
+          "frameMedian": 2.8999999999941792,
+          "frameP95": 3.599999999998545,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.395712,
+          "gpuP95": 4.841472,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.0999999940395355,
+          "frameMedian": 3.099999999998545,
+          "frameP95": 3.7999999999992724,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        512,
+        256
+      ],
+      "textureBytesWithMips": 699051,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.625088,
+          "gpuP95": 4.661248,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.2000000029802322,
+          "frameMedian": 2.8999999999941792,
+          "frameP95": 3.8000000000029104,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.462272,
+          "gpuP95": 4.892672,
+          "cpuMedian": 2.4000000059604645,
+          "cpuP95": 3.0999999940395355,
+          "frameMedian": 2.7999999999956344,
+          "frameP95": 3.599999999998545,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.386496,
+          "gpuP95": 4.851712,
+          "cpuMedian": 2.2999999970197678,
+          "cpuP95": 3.1000000089406967,
+          "frameMedian": 2.599999999998545,
+          "frameP95": 3.6000000000058208,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.422336,
+          "gpuP95": 4.859904,
+          "cpuMedian": 2.4000000059604645,
+          "cpuP95": 3.1000000089406967,
+          "frameMedian": 2.7000000000043656,
+          "frameP95": 3.599999999998545,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.50016,
+          "gpuP95": 4.733952,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.2000000029802322,
+          "frameMedian": 2.8000000000029104,
+          "frameP95": 3.7000000000043656,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.406976,
+          "gpuP95": 4.866048,
+          "cpuMedian": 2.3999999910593033,
+          "cpuP95": 3.1000000089406967,
+          "frameMedian": 2.7000000000043656,
+          "frameP95": 3.6000000000058208,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        256,
+        128
+      ],
+      "textureBytesWithMips": 174763,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.106944,
+          "gpuP95": 1.865728,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.5999999940395355,
+          "frameMedian": 1.5,
+          "frameP95": 2,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.125376,
+          "gpuP95": 1.81248,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.5999999940395355,
+          "frameMedian": 1.5,
+          "frameP95": 2,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.13152,
+          "gpuP95": 1.952768,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 1.6000000000058208,
+          "frameP95": 2.400000000001455,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.107968,
+          "gpuP95": 2.006016,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.6000000089406967,
+          "frameMedian": 1.5,
+          "frameP95": 2.1999999999970896,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.107968,
+          "gpuP95": 1.927168,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.6000000089406967,
+          "frameMedian": 1.5,
+          "frameP95": 2.099999999998545,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.130496,
+          "gpuP95": 1.936384,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.800000011920929,
+          "frameMedian": 1.5,
+          "frameP95": 2.3000000000029104,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        256,
+        128
+      ],
+      "textureBytesWithMips": 174763,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.243136,
+          "gpuP95": 1.789952,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.8000000000029104,
+          "frameP95": 2.400000000001455,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.221632,
+          "gpuP95": 1.731584,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.7000000029802322,
+          "frameMedian": 1.7000000000043656,
+          "frameP95": 2.2000000000043656,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.256448,
+          "gpuP95": 1.911808,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 1.7999999999956344,
+          "frameP95": 2.400000000001455,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.226752,
+          "gpuP95": 1.888256,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.699999988079071,
+          "frameMedian": 1.7999999999956344,
+          "frameP95": 2.3000000000029104,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.241088,
+          "gpuP95": 1.844224,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.7999999999956344,
+          "frameP95": 2.400000000001455,
+          "draws": 96,
+          "triangles": 238824
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.238016,
+          "gpuP95": 1.855488,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.7000000029802322,
+          "frameMedian": 1.7000000000043656,
+          "frameP95": 2.3000000000029104,
+          "draws": 96,
+          "triangles": 238824
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        256,
+        128
+      ],
+      "textureBytesWithMips": 174763,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.78848,
+          "gpuP95": 2.639872,
+          "cpuMedian": 1.300000011920929,
+          "cpuP95": 1.7000000029802322,
+          "frameMedian": 1.9000000000014552,
+          "frameP95": 2.3000000000029104,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.651264,
+          "gpuP95": 2.536448,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.5999999940395355,
+          "frameMedian": 1.5999999999985448,
+          "frameP95": 2.099999999998545,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.768,
+          "gpuP95": 2.634752,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.7000000029802322,
+          "frameMedian": 1.8000000000029104,
+          "frameP95": 2.3000000000029104,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.86528,
+          "gpuP95": 2.628608,
+          "cpuMedian": 1.3999999910593033,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 2,
+          "frameP95": 2.599999999998545,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.842752,
+          "gpuP95": 2.639872,
+          "cpuMedian": 1.3999999910593033,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.9000000000014552,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.7168,
+          "gpuP95": 2.627584,
+          "cpuMedian": 1.2000000029802322,
+          "cpuP95": 1.699999988079071,
+          "frameMedian": 1.7000000000043656,
+          "frameP95": 2.3000000000029104,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 6,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            0,
+            -21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            96,
+            -21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            0,
+            21,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            96,
+            21,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        256,
+        128
+      ],
+      "textureBytesWithMips": 174763,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.909312,
+          "gpuP95": 2.610176,
+          "cpuMedian": 1.3999999910593033,
+          "cpuP95": 1.9000000059604645,
+          "frameMedian": 1.9000000000014552,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.816128,
+          "gpuP95": 2.613248,
+          "cpuMedian": 1.2999999970197678,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.8000000000029104,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.144832,
+          "gpuP95": 2.832384,
+          "cpuMedian": 1.5,
+          "cpuP95": 2.199999988079071,
+          "frameMedian": 2.1000000000058208,
+          "frameP95": 2.900000000001455,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 0.77312,
+          "gpuP95": 2.540544,
+          "cpuMedian": 1.3999999910593033,
+          "cpuP95": 1.7999999970197678,
+          "frameMedian": 1.9000000000014552,
+          "frameP95": 2.400000000001455,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 0.830464,
+          "gpuP95": 2.610176,
+          "cpuMedian": 1.3999999910593033,
+          "cpuP95": 1.8999999910593033,
+          "frameMedian": 1.9000000000014552,
+          "frameP95": 2.5,
+          "draws": 95,
+          "triangles": 235164
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.091584,
+          "gpuP95": 2.721792,
+          "cpuMedian": 1.4000000059604645,
+          "cpuP95": 2.1000000089406967,
+          "frameMedian": 2,
+          "frameP95": 2.7999999999956344,
+          "draws": 95,
+          "triangles": 235164
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        256,
+        128
+      ],
+      "textureBytesWithMips": 174763,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.408448,
+          "gpuP95": 3.746816,
+          "cpuMedian": 2.7000000029802322,
+          "cpuP95": 3.2999999970197678,
+          "frameMedian": 3.2999999999956344,
+          "frameP95": 4,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.11456,
+          "gpuP95": 3.801088,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.0999999940395355,
+          "frameMedian": 2.8000000000029104,
+          "frameP95": 3.599999999998545,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.151424,
+          "gpuP95": 3.623936,
+          "cpuMedian": 2.5999999940395355,
+          "cpuP95": 3.2000000029802322,
+          "frameMedian": 2.8000000000029104,
+          "frameP95": 3.599999999998545,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.299904,
+          "gpuP95": 3.885056,
+          "cpuMedian": 2.7000000029802322,
+          "cpuP95": 3.5999999940395355,
+          "frameMedian": 3.099999999998545,
+          "frameP95": 4.099999999998545,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.3296,
+          "gpuP95": 3.878912,
+          "cpuMedian": 2.7000000029802322,
+          "cpuP95": 3.5,
+          "frameMedian": 3.1999999999970896,
+          "frameP95": 4,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.127872,
+          "gpuP95": 3.741696,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.1000000089406967,
+          "frameMedian": 2.8000000000029104,
+          "frameP95": 3.599999999998545,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "quarter",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        256,
+        128
+      ],
+      "textureBytesWithMips": 174763,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.11968,
+          "gpuP95": 3.618816,
+          "cpuMedian": 2.4000000059604645,
+          "cpuP95": 3,
+          "frameMedian": 2.7000000000043656,
+          "frameP95": 3.3000000000029104,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.103296,
+          "gpuP95": 3.615744,
+          "cpuMedian": 2.5999999940395355,
+          "cpuP95": 3.2999999970197678,
+          "frameMedian": 2.900000000001455,
+          "frameP95": 3.6999999999970896,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.37568,
+          "gpuP95": 3.892224,
+          "cpuMedian": 2.9000000059604645,
+          "cpuP95": 3.7000000029802322,
+          "frameMedian": 3.2999999999956344,
+          "frameP95": 4.100000000005821,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 2.316288,
+          "gpuP95": 3.994624,
+          "cpuMedian": 2.7000000029802322,
+          "cpuP95": 3.7000000029802322,
+          "frameMedian": 3.099999999998545,
+          "frameP95": 4.19999999999709,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.161664,
+          "gpuP95": 3.772416,
+          "cpuMedian": 2.5999999940395355,
+          "cpuP95": 3.4000000059604645,
+          "frameMedian": 2.8999999999941792,
+          "frameP95": 3.900000000001455,
+          "draws": 192,
+          "triangles": 477648
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 2.198528,
+          "gpuP95": 3.815424,
+          "cpuMedian": 2.7000000029802322,
+          "cpuP95": 3.5999999940395355,
+          "frameMedian": 3.099999999998545,
+          "frameP95": 4,
+          "draws": 192,
+          "triangles": 477648
+        }
+      ],
+      "repeat": 1
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        256,
+        128
+      ],
+      "textureBytesWithMips": 174763,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.23904,
+          "gpuP95": 4.620288,
+          "cpuMedian": 2.2000000029802322,
+          "cpuP95": 2.8999999910593033,
+          "frameMedian": 2.5,
+          "frameP95": 3.3000000000029104,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.424384,
+          "gpuP95": 4.637696,
+          "cpuMedian": 2.3999999910593033,
+          "cpuP95": 3,
+          "frameMedian": 2.7000000000043656,
+          "frameP95": 3.5,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.527808,
+          "gpuP95": 4.574208,
+          "cpuMedian": 2.5999999940395355,
+          "cpuP95": 3.300000011920929,
+          "frameMedian": 3,
+          "frameP95": 3.8000000000029104,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.409024,
+          "gpuP95": 4.612096,
+          "cpuMedian": 2.3999999910593033,
+          "cpuP95": 3.0999999940395355,
+          "frameMedian": 2.7999999999956344,
+          "frameP95": 3.7000000000043656,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.32096,
+          "gpuP95": 4.620288,
+          "cpuMedian": 2.2999999970197678,
+          "cpuP95": 3,
+          "frameMedian": 2.599999999998545,
+          "frameP95": 3.6999999999970896,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.462272,
+          "gpuP95": 4.625408,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.2000000029802322,
+          "frameMedian": 2.8999999999941792,
+          "frameP95": 3.6999999999970896,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "repeat": 0
+    },
+    {
+      "sourceHash": "2ab9cf1d4a2c0727d33174c5fa4e5887910ce37c9f57359eadec009c6dc06b76",
+      "normalBakeHash": "6502e2f71651aba423edd95502055d07017788400c7205d1ab20c9e202d62f39",
+      "section": "Complete frozen Aegis fleet",
+      "fleetSize": 12,
+      "bandsPerShip": 20,
+      "poses": [
+        {
+          "origin": [
+            -144,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            -42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            -42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            0,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            0,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            -144,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            -48,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        },
+        {
+          "origin": [
+            48,
+            42,
+            1200
+          ],
+          "rotation": -0.08
+        },
+        {
+          "origin": [
+            144,
+            42,
+            1206
+          ],
+          "rotation": 0.08
+        }
+      ],
+      "rigHash": "1beda87c9e3b41bfb29f31f56634443720e88698b05d9075a95e9fa39997a5fc",
+      "sharedNormalImages": 1,
+      "sharedNormalBuffers": 1,
+      "restTriangles": 38604,
+      "armorTriangles": {
+        "weighted": 6320,
+        "baked": 1200
+      },
+      "width": 0.6,
+      "view": "edge",
+      "yaw": 0,
+      "pitch": 0,
+      "zoom": 1,
+      "viewport": "1600,1000,1.0000000298023224,1600,720,1600,720",
+      "backing": [
+        [
+          1600,
+          720
+        ],
+        [
+          1600,
+          720
+        ]
+      ],
+      "renderer": "scene3d complete fleet, frozen poses, production rest textures, neutral replacement armor, no combat/effects",
+      "device": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Ti (0x00002482) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "gpuTimed": true,
+      "gpuScope": "complete scene3d render including clear; asynchronous EXT_disjoint_timer_query_webgl2; no readPixels",
+      "warmup": 60,
+      "samplesPerBlock": 180,
+      "order": [
+        "bakedReference",
+        "baked",
+        "baked",
+        "bakedReference"
+      ],
+      "atlas": [
+        256,
+        128
+      ],
+      "textureBytesWithMips": 174763,
+      "referenceAtlas": [
+        2048,
+        1024
+      ],
+      "blocks": [
+        {
+          "mode": "bakedReference",
+          "block": 0,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.394688,
+          "gpuP95": 4.6592,
+          "cpuMedian": 2.5,
+          "cpuP95": 3.2999999970197678,
+          "frameMedian": 2.8000000000029104,
+          "frameP95": 3.7999999999956344,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 1,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.373184,
+          "gpuP95": 4.731904,
+          "cpuMedian": 2.300000011920929,
+          "cpuP95": 3.2999999970197678,
+          "frameMedian": 2.6999999999970896,
+          "frameP95": 3.8000000000029104,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "block": 2,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.488896,
+          "gpuP95": 4.688896,
+          "cpuMedian": 2.2000000029802322,
+          "cpuP95": 3,
+          "frameMedian": 2.5,
+          "frameP95": 3.599999999998545,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "bakedReference",
+          "block": 3,
+          "samples": 180,
+          "gpuSamples": 180,
+          "gpuMedian": 1.2288,
+          "gpuP95": 4.855808,
+          "cpuMedian": 2.2000000029802322,
+          "cpuP95": 2.7000000029802322,
+          "frameMedian": 2.5,
+          "frameP95": 3.1000000000058208,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "rows": [
+        {
+          "mode": "bakedReference",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.28512,
+          "gpuP95": 4.74624,
+          "cpuMedian": 2.2999999970197678,
+          "cpuP95": 3.0999999940395355,
+          "frameMedian": 2.6999999999970896,
+          "frameP95": 3.599999999998545,
+          "draws": 171,
+          "triangles": 430516
+        },
+        {
+          "mode": "baked",
+          "samples": 360,
+          "gpuSamples": 360,
+          "gpuMedian": 1.449984,
+          "gpuP95": 4.731904,
+          "cpuMedian": 2.2999999970197678,
+          "cpuP95": 3.2000000029802322,
+          "frameMedian": 2.599999999998545,
+          "frameP95": 3.599999999998545,
+          "draws": 171,
+          "triangles": 430516
+        }
+      ],
+      "repeat": 1
+    }
+  ]
+}
