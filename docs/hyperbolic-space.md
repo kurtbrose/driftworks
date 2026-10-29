@@ -63,20 +63,23 @@ No persistent RTS world/save schema or runtime network dependency is added.
 
 ## Finite capital hulls
 
-The body convention is a single Riemann normal-coordinate placement per ship:
-`X(v) = P cosh(|v|/R) + lift(P,Bv) sinh(|v|/R)/|v|`, with consistent physical
-units. Thus authored displacement from the center is intrinsic distance, and the
-axial main hull remains 1,305 m from bow to stern. A Euclidean rigid solid cannot
-preserve every pairwise distance in curved space; this explicit convention fixes
-the hull at its center and maps its entire interior consistently. It is not a
-screen-space bend or a different exponential map for each panel or turret.
+The body uses axial Fermi coordinates about its longitudinal X geodesic.
+For local authored coordinates (x,y,z), let rho=hypot(y,z), A(x) be the point
+x metres along the centreline, and Y,Z be the normal axes parallel transported
+along it. In dimensionless hyperboloid coordinates the placement is
+`Q = cosh(rho/R) A(x) + sinh(rho/R) (y Y + z Z)/rho` (with its smooth axis limit).
+Every section is the same normal-plane geometry carried along the axis: section
+radii and every within-section pairwise distance are independent of x. In
+particular, the ends do not get the additional transverse widening of the old
+centre-based exponential map. The centreline remains 1,305 m long. All panels,
+turrets and interior points use this one placement; no screen-space warp is added.
 
 The existing unarmed Aegis bake merges fixed mounts into shared material batches.
 Immutable triangles are adaptively split until all edges are at most 20 m,
 including interpolated paint UVs, armor-normal UVs and baked lighting channels.
 Both instances share the prepared buffers. Each frame supplies only the Lorentz
 point and three tangent axes, re-expressed through the player's accumulated
-isometry. The vertex shader evaluates the exponential map; both production PBR
+isometry. The vertex shader evaluates the axial map; both production PBR
 and custom interior materials use it. Surface normals and armor normal maps use
 the cofactor of the exact position Jacobian. A conservative metric-ball bound
 replaces flat-box culling for these batches, retaining near-plane intersections
@@ -211,12 +214,14 @@ curvature reset and pause were checked in the browser without console errors.
 
 ### Material interpretation of the capital mapping
 
-The default mission and clean flyby now both use R=400 m. The normal exponential
-map preserves centre-to-point radial distances and angles between initial radial
-directions. It is not an isometry of the original Euclidean solid: at radial
-distance r its transverse differential scale is sinh(r/R)/(r/R), and its volume
-Jacobian is that factor squared. It therefore does not conserve authored material
-volume or every internal beam length. The renderer models geometry, not elastic
-strain, material density, stress or failure during a change of curvature.
+The default mission and clean flyby both use R=400 m. The current axial map
+preserves cross-section geometry along the ship, not every Euclidean distance.
+Its intrinsic metric is
+`ds^2=cosh(rho/R)^2 dx^2+d rho^2+R^2 sinh(rho/R)^2 d theta^2`.
+Thus longitudinal lengths off-axis scale by cosh(rho/R), and within-section
+circumferential lengths scale by sinh(rho/R)/(rho/R). The local volume Jacobian
+is the product of these two factors and does not depend on distance along the
+ship. Remaining strain depends on hull thickness rather than ship length.
+The renderer does not simulate elasticity, density, stress or material failure.
 Translations within one fixed homogeneous hyperbolic space are isometries and
 can move the mapped body without changing its internal distances or volume.

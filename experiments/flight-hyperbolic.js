@@ -154,19 +154,25 @@
     var hullShader=`
 uniform float uHyperbolicRadius;
 uniform mat4 uHyperbolicFrame;
+// Fermi coordinates about the longitudinal X geodesic. Each YZ section is
+// the same normal-plane exponential map, parallel transported along that axis.
 vec3 hyperbolicPosition(vec3 v){
-    float r=length(v),s=r/uHyperbolicRadius,e=exp(s),ch=(e+1./e)*.5;
+    float t=v.x/uHyperbolicRadius,ex=exp(t),cx=(ex+1./ex)*.5,sx=(ex-1./ex)*.5;
+    float rho=length(v.yz),s=rho/uHyperbolicRadius,e=exp(s),ch=(e+1./e)*.5;
     float shc=s<.001?1.+s*s/6.:(e-1./e)*.5/max(s,1.e-12);
-    return uHyperbolicRadius*uHyperbolicFrame[0].yzw*ch+
-        mat3(uHyperbolicFrame[1].yzw,uHyperbolicFrame[2].yzw,uHyperbolicFrame[3].yzw)*v*shc;
+    vec3 axis=uHyperbolicFrame[0].yzw*cx+uHyperbolicFrame[1].yzw*sx;
+    return uHyperbolicRadius*axis*ch+(uHyperbolicFrame[2].yzw*v.y+uHyperbolicFrame[3].yzw*v.z)*shc;
 }
 mat3 hyperbolicNormalMatrix(vec3 v){
-    float r=length(v),s=r/uHyperbolicRadius,e=exp(s),ch=(e+1./e)*.5,sh=(e-1./e)*.5;
+    float t=v.x/uHyperbolicRadius,ex=exp(t),cx=(ex+1./ex)*.5,sx=(ex-1./ex)*.5;
+    float rho=length(v.yz),s=rho/uHyperbolicRadius,e=exp(s),ch=(e+1./e)*.5,sh=(e-1./e)*.5;
     float shc=s<.001?1.+s*s/6.:sh/max(s,1.e-12);
-    float k=s<.001?1./(3.*uHyperbolicRadius*uHyperbolicRadius):(ch-shc)/max(r*r,1.e-20);
-    mat3 axes=mat3(uHyperbolicFrame[1].yzw,uHyperbolicFrame[2].yzw,uHyperbolicFrame[3].yzw);
-    vec3 radial=uHyperbolicFrame[0].yzw*(s<.001?1./uHyperbolicRadius:sh/max(r,1.e-12))+axes*v*k;
-    vec3 x=axes[0]*shc+radial*v.x,y=axes[1]*shc+radial*v.y,z=axes[2]*shc+radial*v.z;
+    float k=s<.001?1./(3.*uHyperbolicRadius*uHyperbolicRadius):(ch-shc)/max(rho*rho,1.e-20);
+    vec3 axis=uHyperbolicFrame[0].yzw*cx+uHyperbolicFrame[1].yzw*sx;
+    vec3 transverse=uHyperbolicFrame[2].yzw*v.y+uHyperbolicFrame[3].yzw*v.z;
+    vec3 radial=axis*(s<.001?1./uHyperbolicRadius:sh/max(rho,1.e-12))+transverse*k;
+    vec3 x=(uHyperbolicFrame[0].yzw*sx+uHyperbolicFrame[1].yzw*cx)*ch;
+    vec3 y=uHyperbolicFrame[2].yzw*shc+radial*v.y,z=uHyperbolicFrame[3].yzw*shc+radial*v.z;
     return mat3(cross(y,z),cross(z,x),cross(x,y));
 }
 `;
@@ -197,8 +203,8 @@ mat3 hyperbolicNormalMatrix(vec3 v){
         entries.push({stride:stride,normalUV:batch.normalUV,bakedDocking:batch.bakedDocking,result:cached});hullMeshes.set(batch.vertices,entries);return Object.assign({},batch,cached);
     }
     /** Two stationary, unarmed visual references. One shared, immutable source hull;
-     * every material uses the SAME normal-coordinate body placement, not separate
-     * exponential maps around turret or panel pivots.
+     * every material uses the SAME axial Fermi placement, not separate
+     * mappings around turret or panel pivots.
      * @param {{single?:boolean}} [options] @returns {import('./types').AegisFlightRig} */
     function createCapitals(options){
         var state={team:/** @type {'ally'} */('ally'),position:[0,0,0],heading:0,velocity:[0,0,0],integrity:20000};

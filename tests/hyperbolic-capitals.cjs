@@ -19,9 +19,10 @@ for(let i=0,j=0;i<prepared.vertices.length;i+=8,j++){
 assert.equal(H.prepareHull(sample).vertices,prepared.vertices);
 assert.notEqual(H.prepareHull({...sample,normalUV:sample.normalUV.slice()}).normalUV,prepared.normalUV,'auxiliary channel identity belongs to the preparation cache');
 // The shader's frame representation must agree with intrinsic exponential-map
-// points, including after actual session rebasing (not just a changed camera).
-function mapped(batch,v){const r=batch.hyperbolicRadius,s=Math.hypot(...v)/r,k=s?Math.sinh(s)/s:1,f=batch.hyperbolicFrame;
- return [0,1,2].map(i=>r*f[i+1]*Math.cosh(s)+k*(f[i+5]*v[0]+f[i+9]*v[1]+f[i+13]*v[2]));}
+// sections, including after actual session rebasing (not just a changed camera).
+function mapped(batch,v){const r=batch.hyperbolicRadius,t=v[0]/r,s=Math.hypot(v[1],v[2])/r,k=s?Math.sinh(s)/s:1,f=batch.hyperbolicFrame;
+ return [0,1,2].map(i=>r*Math.cosh(s)*(f[i+1]*Math.cosh(t)+f[i+5]*Math.sinh(t))+k*(f[i+9]*v[1]+f[i+13]*v[2]));}
+
 const first=rig.geometry(camera),half=first.length/2;
 assert.equal(first.length,26);first.slice(0,half).forEach((b,i)=>assert.equal(b.vertices,first[i+half].vertices,'two ships share prepared buffers'));
 assert.ok(new Set(first.map(b=>b.vertices)).size<first.length);
@@ -36,11 +37,26 @@ for(const radius of [350,650,1800,100000]){
  const base=rig.geometry(c),original=base.map(b=>b.vertices);
  const center=mapped(base[0],[0,0,0]);near(H.path([0,0,0],center,radius).distance*U,Math.hypot(-120,890,-115),.02);
  for(const local of [[0,0,0],[-652.5/U,0,0],[652.5/U,0,0],[20/U,45/U,79/U]]){
- const q=mapped(base[0],local);near(H.path(center,q,radius).distance*U,Math.hypot(...local)*U,.04);
+ const q=mapped(base[0],local);near(H.path(center,q,radius).distance*U,radius*Math.acosh(Math.cosh(local[0]*U/radius)*Math.cosh(Math.hypot(local[1],local[2])*U/radius)),.04);
  }
  rig.geometry(c).forEach((b,i)=>assert.equal(b.vertices,original[i],'no per-frame vertex rebuild'));
  if(radius===100000){const bow=mapped(base[0],[652.5/U,0,0]);const flat=[-120/U+Math.cos(.2)*652.5/U,890/U+Math.sin(.2)*652.5/U,-115/U];bow.forEach((v,i)=>near(v,flat[i],.02));}
 }
+// Cross-sections must be congruent along the full centreline, with no
+// centre-based exponential widening at the bow or stern.
+for(const radius of [300,400,650,100000]){
+ const b=H.createCapitals({single:true}).geometry({...camera,curvature:radius})[0];
+ let reference;
+ for(const x of [-652.5,-400,0,400,652.5]){
+  const section=[[0,0],[47,0],[-47,0],[0,80],[30,60]].map(([y,z])=>mapped(b,[x/U,y/U,z/U]));
+  section.forEach((p,i)=>near(H.path(section[0],p,radius).distance*U,Math.hypot(...[[0,0],[47,0],[-47,0],[0,80],[30,60]][i]),.0001));
+  const lengths=section.flatMap((p,i)=>section.slice(i+1).map(q=>H.path(p,q,radius).distance*U));
+  if(reference)lengths.forEach((v,i)=>near(v,reference[i],.0001));else reference=lengths;
+ }
+ const bow=mapped(b,[-652.5/U,0,0]),stern=mapped(b,[652.5/U,0,0]);
+ near(H.path(bow,stern,radius).distance*U,1305,.001);
+}
+console.log('PASS axial hull mapping: congruent cross-sections and unchanged 1,305 m centreline at four radii');
 const snapshot=f.snapshot(),initial=rig.geometry(snapshot.state),samples=initial.map(b=>mapped(b,[100/U,20/U,10/U]));
 f.advance(3,{afterburner:true});const rebased=rig.geometry(f.snapshot().state);
 rebased.forEach((b,i)=>{
@@ -57,6 +73,14 @@ for(const radius of [350,650,1800,100000])for(const back of [[0,-1,0],[0,1,0],[-
  for(let i=0;i<b.vertices.length;i+=stride*197){const p=mapped(b,Array.from(b.vertices.slice(i,i+3))),depth=-p.reduce((s,v,k)=>s+v*back[k],0),right=[-back[1],back[0],0],x=p.reduce((s,v,k)=>s+v*right[k],0);
  if(depth>.1&&depth<30000&&Math.abs(x)<depth/2&&Math.abs(p[2])<depth/2)assert.ok(visible(b,[0,0,0],{back,right,up:[0,0,1],distance:0,focal:2},1),'visible curved hull never culled');}
  }
+}
+// An axial map can lie outside the old centre-exponential bounding ball.
+// Put the camera just behind a visible corner that the old bound rejected.
+{
+ const b={hyperbolicRadius:350/U,hyperbolicFrame:new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),stride:6,
+  vertices:new Float32Array([600/U,400/U,0,0,0,1,600/U+.001,400/U,0,0,0,1,600/U,400/U+.001,0,0,0,1])};
+ const q=mapped(b,[600/U,400/U,0]),n=q.map(v=>v/Math.hypot(...q)),target=q.map((v,i)=>v-.2*n[i]);
+ assert.equal(visible(b,target,{right:[-n[1],n[0],0],up:[0,0,1],back:n.map(v=>-v),distance:0,focal:2},1),true,'Fermi corner outside old radial ball must remain visible');
 }
 assert.equal(visible(rig.geometry(camera)[0],[0,0,0],{right:[1,0,0],up:[0,0,1],back:[0,1,0],distance:0,focal:2},1),false);
 assert.deepEqual(Array.from(rig.effects(camera)),[]);assert.equal(rig.hit([0,0,0],[0,1,0]),null);

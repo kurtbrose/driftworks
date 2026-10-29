@@ -174,3 +174,42 @@ regression checks all ten fighters' intrinsic spacing and nose alignment; the
 30 m close pass has finite-pose coverage. The full project check passed 138/138
 entries, with strict types and generated-file checks also passing. The free-flight
 mission retains its 650 m default; 300 m is available in its curvature selector.
+
+
+## Axial cross-section placement, R=400 m
+
+Replaced the centre-normal exponential placement with axial Fermi coordinates.
+The centreline length and repeated section geometry are preserved; there is no
+transverse scale growth with distance along the axis. Prepared source buffers,
+textures, material batching, authored scale, ten-fighter formation, camera and
+lighting remain the same. Normal maps and surface normals use the cofactor of
+the new analytic Jacobian in the existing PBR and custom-material paths. The
+culling radius uses the hyperbolic right-triangle distance of the Fermi box.
+
+Matched before/after ABBA measurements used the real production presentation,
+source time 14, R=400 m, ten Raptor fighters, black sky and shields disabled.
+CSS viewport 884x888, DPR 1.5, backing 1326x1332. Each off/on/on/off block used
+20 warm-up frames and 90 retained frames; no test suite or rebuild ran during
+sampling. Before: capital off CPU median/p95 0.8/1.1 ms; on 1.0/1.3 ms. After:
+off 0.8/1.2 ms; on 0.9/1.2 ms. Both mappings submitted 11 draws / 43,420 triangles
+off and 22 draws / 131,983 triangles on. All cadence medians/p95s were 13.3/13.4 ms.
+These are CPU submission and browser cadence measurements, not GPU execution
+measurements; differences are too small to claim a speedup. No asset optimization
+was needed for a demonstrated cost regression.
+
+The actual shader passed 320 transform-feedback position/normal checks across
+R=300,400,650,100000, axial locations -650,-400,0,400,650 m, four cross-section
+positions and four normal directions. Position references use sequential intrinsic
+axis travel and transverse offsets; normals use finite differences of that
+independent placement. Maximum position residual was 0.00573 m and maximum
+1-cos(normal angle) was 1.37e-7. The existing 18 raw/PBR GPU angular projection
+checks passed with maximum centroid residual 0.275 px. Focused headless checks
+verify congruent cross-sections, unchanged 1,305 m centreline, near-flat limit,
+actual-session rebasing and an explicit visible corner outside the obsolete
+centre-map bounding ball. Early, midpoint and late rendered flyby views were
+inspected for materials, normals and hull-edge visibility; no browser errors.
+Evidence is under output/hyperbolic-flyby/axis-* (ignored).
+
+The final full `npm run check` passed strict types, generated-file validation and
+all 138/138 test entries. The clean playback capture is
+`output/hyperbolic-flyby/axial-clean.png`.

@@ -108,10 +108,12 @@
     }
     var box=bounds;
     if(batch.hyperbolicRadius&&batch.hyperbolicFrame){
-      // A metric ball encloses the entire exponential-mapped source box.
+      // A metric ball encloses the entire axial Fermi-mapped source box.
       // Linear transformed boxes can falsely reject a curved hull near the camera.
       var radius=batch.hyperbolicRadius,frame=batch.hyperbolicFrame;
-      var extent=Math.hypot(...box.center.map(function(v,k){return Math.abs(v)+box.half[k];}))/radius;
+      var far=box.center.map(function(v,k){return Math.abs(v)+box.half[k];});
+      // Hyperbolic right triangle: cosh(d/R)=cosh(x/R)*cosh(rho/R).
+      var extent=Math.acosh(Math.max(1,Math.cosh(far[0]/radius)*Math.cosh(Math.hypot(far[1],far[2])/radius)));
       var ch=Math.cosh(extent),sh=Math.sinh(extent);
       /** @param {V3} n @param {number} constant */function curvedOutside(n,constant){
         var a=n[0]*frame[1]+n[1]*frame[2]+n[2]*frame[3];
