@@ -47,6 +47,27 @@
     }
     /** Immutable mesh buffers are shared across both capital ships and all mounts. */
     var smokeTexture=/** @type {HTMLImageElement|undefined} */(undefined);
+    /** @type {{centers:number[][];extent:number[];charts:{n:number[];d:number;u:number[];v:number[];offset:number[]}[]}|null} */ var armorCharts=null;
+    /** @type {HTMLImageElement|undefined} */ var armorNormal;
+    /** @type {Promise<void>|null} */ var armorLoad=null;
+    /** @type {WeakMap<Float32Array,Float32Array|null>} */ var armorUVs=new WeakMap();
+    /** Preserve the paint UVs; project a second channel only onto standard armor.
+     * @param {Float32Array} vertices */
+    function armorUV(vertices){
+        if(!armorCharts)return null;
+        if(armorUVs.has(vertices))return armorUVs.get(vertices)||null;
+        var data=armorCharts,uv=new Float32Array(vertices.length/3),found=false;
+        for(var i=0;i<vertices.length;i+=18){
+            var points=[0,6,12].map(function(j){return Array.from(vertices.subarray(i+j,i+j+3),function(v){return v*U;});});
+            for(var center of data.centers){var local=points.map(function(p){return p.map(function(v,k){return v-center[k];});});
+                if(!local.every(function(p){return p.every(function(v,k){return Math.abs(v)<=data.extent[k]+.002;});}))continue;
+                var face=data.charts.find(function(f){return local.every(function(p){return Math.abs(dot(f.n,p)-f.d)<.002;});});
+                if(!face)continue;
+                for(var j=0;j<3;j++){uv[i/3+j*2]=dot(face.u,local[j])+face.offset[0];uv[i/3+j*2+1]=dot(face.v,local[j])+face.offset[1];}found=true;break;
+            }
+        }
+        armorUVs.set(vertices,found?uv:null);return found?uv:null;
+    }
     var surfaceTexture=/** @type {HTMLImageElement|undefined} */(undefined);
     /** @type {Map<string,HTMLImageElement>} */var interiorTextures=new Map();
     /** @type {Promise<void>|null} */var surfaceLoad=null;
@@ -187,14 +208,15 @@
         function prepareSurface(b,finish,part){if(!finish)return null;var texture=finish.atlas?interiorTextures.get(finish.atlas):surfaceTexture;if(!texture)return null;
             var prepared=surfaceBuffers.get(b.vertices);
             if(!prepared){prepared=new Float32Array(b.vertices.length/6*8);for(var k=0,j=0;k<b.vertices.length;k+=6,j+=8){prepared.set(b.vertices.subarray(k,k+6),j);prepared[j+6]=finish.uv[k/3];prepared[j+7]=finish.uv[k/3+1];}surfaceBuffers.set(b.vertices,prepared);}
-            return {batch:b,original:b.vertices,color:b.color,prepared:prepared,finish:livery(finish.color),shader:finish.shader,texture:texture,part:part,enabled:true};
+            var normalUV=part?null:armorUV(b.vertices);
+            return {normalUV:normalUV,batch:b,original:b.vertices,color:b.color,prepared:prepared,finish:livery(finish.color),shader:finish.shader,texture:texture,part:part,enabled:true};
         }
         var surfaceStates=staticBatches.map(function(b,i){return prepareSurface(b,i<asset.batches.length?asset.surface&&asset.surface.batches[i]:asset.interiors?.[i-asset.batches.length]?.finish,null);});
         mounts.forEach(function(m,i){m.batches.forEach(function(b,j){surfaceStates.push(prepareSurface(b,asset.surface&&asset.surface.turrets?.[i]?.[j],parts[i]));});});
         engines.forEach(function(e,i){e.batches.forEach(function(b,j){surfaceStates.push(prepareSurface(b,e.source.batches[j].finish,parts[mounts.length+i]));});});
         /** Review/benchmark switch; keeps actor arrays, poses and damage ownership stable.
          * @param {boolean} enabled @param {'turrets'=} scope */function setSurfaceDetail(enabled,scope){surfaceStates.forEach(function(s){if(!s||(scope==='turrets'&&(!s.part||s.part.kind==='engine')))return;s.enabled=enabled;applySurface(s);});}
-        /** @param {NonNullable<typeof surfaceStates[number]>} s */function applySurface(s){if(s.part&&s.part.hp<=0)return;var b=s.batch;b.vertices=s.enabled?s.prepared:s.original;b.color=s.enabled?s.finish:s.color;if(s.enabled){b.stride=8;b.texture=s.texture;if(s.shader!==undefined)b.finish=s.shader;}else{delete b.stride;delete b.texture;delete b.finish;}}
+        /** @param {NonNullable<typeof surfaceStates[number]>} s */function applySurface(s){if(s.part&&s.part.hp<=0)return;var b=s.batch;b.vertices=s.enabled?s.prepared:s.original;b.color=s.enabled?s.finish:s.color;if(s.enabled&&s.normalUV&&armorNormal){b.normalUV=s.normalUV;b.normalTexture=armorNormal;}else{delete b.normalUV;delete b.normalTexture;}if(s.enabled){b.stride=8;b.texture=s.texture;if(s.shader!==undefined)b.finish=s.shader;}else{delete b.stride;delete b.texture;delete b.finish;}}
         setSurfaceDetail(true);
         /** @type {Vector|null} */var lastEye=null;
         var seconds=0,contacts=0,confirmedHits=0;
@@ -476,7 +498,8 @@
             if(!surfaceLoad)surfaceLoad=new Promise(function(resolve,reject){var image=new Image();image.onload=function(){surfaceTexture=image;resolve();};image.onerror=function(){surfaceLoad=null;reject(new Error('Could not load capital surface atlas'));};image.src=assetUrl('../assets/ships/aegis-kit/'+atlas);});
             const finishes=[...(DW.aegisFlightAsset.interiors||[]),...(DW.aegisFlightAsset.engines||[]).flatMap(e=>e.batches)];
             const files=Array.from(new Set(finishes.map(b=>b.finish&&b.finish.atlas).filter(Boolean)));
-            return Promise.all([surfaceLoad,...files.map(function(file){if(!file||interiorTextures.has(file))return Promise.resolve();return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){interiorTextures.set(file,image);resolve(undefined);};image.onerror=function(){reject(new Error('Could not load capital texture: '+file));};image.src=assetUrl('../assets/ships/aegis-kit/'+file);});})]).then(function(){});
+            if(!armorLoad)armorLoad=Promise.all([fetch(assetUrl('../assets/ships/aegis-kit/armor-normal.json')).then(function(r){if(!r.ok)throw Error('Armor chart load failed');return r.json();}).then(/** @param {{centers:number[][];extent:number[];charts:{n:number[];d:number;u:number[];v:number[];offset:number[]}[]}} data */function(data){armorCharts=data;}),new Promise(function(resolve,reject){var image=new Image();image.onload=function(){armorNormal=image;resolve(undefined);};image.onerror=reject;image.src=assetUrl('../assets/ships/aegis-kit/armor-normal.png');})]).then(function(){}).catch(/** @param {unknown} error */function(error){armorLoad=null;throw error;});
+            return Promise.all([surfaceLoad,armorLoad,...files.map(function(file){if(!file||interiorTextures.has(file))return Promise.resolve();return new Promise(function(resolve,reject){var image=new Image();image.onload=function(){interiorTextures.set(file,image);resolve(undefined);};image.onerror=function(){reject(new Error('Could not load capital texture: '+file));};image.src=assetUrl('../assets/ships/aegis-kit/'+file);});})]).then(function(){});
         });
     }
     DW.aegisFlight={create:create,createBattle:createBattle,createEllisPatrol:createEllisPatrol,load:load};

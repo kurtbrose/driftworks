@@ -1,7 +1,7 @@
 (async function(){
  'use strict';
  const D=window.Driftworks,data=window.AegisBevelData,U=D.sim.METERS_PER_UNIT,$=id=>document.getElementById(id);
- const requestedAtlas=new URLSearchParams(location.search).get('atlas');if(['2048','1024','512','256'].includes(requestedAtlas))$('atlas').value=requestedAtlas;
+ const requestedAtlas=new URLSearchParams(location.search).get('atlas')||'512';if(['2048','1024','512','256'].includes(requestedAtlas))$('atlas').value=requestedAtlas;
  if(new URLSearchParams(location.search).get('baseline')==='bakedReference')$('baseline').value='bakedReference';
  let world=D.sim.createInitialWorld();world.asteroids=[];world.ships=[];world.hostiles=[];world.structures=[];
  const scenes=['left','right'].map(id=>D.scene3d.create($(id),()=>world,next=>{world=next;},{study:true}));

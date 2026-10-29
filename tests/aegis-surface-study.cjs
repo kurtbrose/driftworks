@@ -44,7 +44,7 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
 (async()=>{
  const DW={sim:{METERS_PER_UNIT:U},assetUrl:v=>v};
  class Image{set src(value){this.url=value;this.width=2048;this.height=1024;Promise.resolve().then(()=>this.onload&&this.onload());}}
- const runtime=vm.createContext({window:{Driftworks:DW},Float32Array,Image,console});
+ const runtime=vm.createContext({window:{Driftworks:DW},Float32Array,Image,console,fetch:async url=>{assert.equal(url,'../assets/ships/aegis-kit/armor-normal.json');return {ok:true,json:async()=>JSON.parse(read('assets/ships/aegis-kit/armor-normal.json'))};}});
  for(const f of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','assets/ships/aegis-kit/shield-envelope.js','experiments/aegis-flight.js'])vm.runInContext(read(f),runtime,{filename:f});
  await DW.aegisFlight.load();
  const nozzleAsset=DW.aegisFlightAsset.engines;
@@ -66,6 +66,12 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  one.setSurfaceDetail(false);const plain=styled.map(b=>b.vertices);assert(styled.every(b=>!b.stride&&!b.texture));
  one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===buffers[i]));assert.equal(one.geometry(),styled,'toggle never replaces actor array');
  styled.forEach((b,i)=>{for(let k=0;k<plain[i].length/6;k++)for(let j=0;j<6;j++)assert.equal(b.vertices[k*(b.stride||6)+j],plain[i][k*6+j]);});
+ const normalBatches=styled.filter(b=>b.normalTexture);
+ assert.equal(normalBatches.length,2);
+ assert.equal(normalBatches.reduce((n,b)=>n+Array.from(b.normalUV).filter((v,i)=>i%2===0&&v>0).length/3,0),1760,'all twenty original armor bands receive normals');
+ assert(styled.every((b,i)=>b.normalUV===two.geometry()[i].normalUV&&b.normalTexture===two.geometry()[i].normalTexture),'normal resources shared between ships');
+ assert(normalBatches.every(b=>b.normalUV.length===b.vertices.length/8*2));
+ assert.equal(new Set(normalBatches.map(b=>b.normalTexture)).size,1);
  const state={team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000};
  const idle=DW.aegisFlight.create({state,opponent:state,unarmed:true}),idleB=idle.geometry();
  assert.equal(idleB.length,13,'unarmed ships retain hull, interior, structural and combined nozzle batches');assert.equal(idleB.filter(b=>b.texture).length,9);

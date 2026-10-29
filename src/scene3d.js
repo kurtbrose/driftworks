@@ -466,10 +466,10 @@
     /** @type {{ event: import('./types').CombatEvent, age: number }[]} */ var effects = [];
     /** @type {Record<string, { key: string, mesh: Mesh, texture: import('./three-types').Texture, visual: import('./types').AsteroidVisual, values: ReturnType<typeof art.uniforms> }>} */ var rocks = {};
     var vertexShader = 
-      'attribute vec3 aBakedDocking; varying vec3 vBakedDocking; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; uniform mat3 uModelBasis; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vBakedDocking=aBakedDocking;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=uModelBasis*(local*uScale); p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);n=uModelBasis*n;vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }';
+      'attribute vec2 aNormalUV;varying vec2 vNormalUV;attribute vec3 aBakedDocking; varying vec3 vBakedDocking; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; uniform mat3 uModelBasis; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vNormalUV=aNormalUV;vBakedDocking=aBakedDocking;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=uModelBasis*(local*uScale); p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);n=uModelBasis*n;vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }';
     vertexShader=vertexShader.replace('attribute vec3 aBakedDocking;','uniform float uLensEnabled;uniform vec3 uLensCenter,uLensViewCenter,uLensX,uLensY,uLensZ;attribute vec3 aBakedDocking;').replace('float d=uView.x-dot(p,uBack);','if(uLensEnabled>.5){vec3 delta=p+uTarget-uLensCenter;vec3 q=uLensViewCenter+uLensX*delta.x+uLensY*delta.y+uLensZ*delta.z;p=uRight*q.x+uUp*q.y+uBack*(uView.x-q.z);vRelative=p;}float d=uView.x-dot(p,uBack);');
     var fragmentShader = art.shaderSource +
-      '\nvarying vec3 vBakedDocking; uniform float uRigBakedEnabled; varying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform float uShadowPass,uWorkShadowEnabled; uniform sampler2D uWorkShadow; uniform vec2 uSpotPower,uSpotFrustum; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
+      '\nvarying vec2 vNormalUV;uniform sampler2D uArmorNormal;uniform float uArmorEnabled;uniform mat3 uModelBasis;varying vec3 vBakedDocking; uniform float uRigBakedEnabled; varying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform float uShadowPass,uWorkShadowEnabled; uniform sampler2D uWorkShadow; uniform vec2 uSpotPower,uSpotFrustum; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
       'uniform float uEnvironmentEnabled;uniform vec3 uEnvironmentSH[9],uEnvironmentEye;uniform mat3 uEnvironmentBasis;uniform sampler2D uEnvironment;'+
       'vec3 skyDiffuse(vec3 n){n=normalize(uEnvironmentBasis*n);float x=n.x,y=n.y,z=n.z;vec3 c=uEnvironmentSH[0]*.282095+uEnvironmentSH[1]*(.488603*y)+uEnvironmentSH[2]*(.488603*z)+uEnvironmentSH[3]*(.488603*x)+uEnvironmentSH[4]*(1.092548*x*y)+uEnvironmentSH[5]*(1.092548*y*z)+uEnvironmentSH[6]*(.315392*(3.*z*z-1.))+uEnvironmentSH[7]*(1.092548*x*z)+uEnvironmentSH[8]*(.546274*(x*x-y*y));return pow(clamp(c+vec3(.18),vec3(.14),vec3(1.35)),vec3(1./2.2));}'+
       'vec3 skySpecular(vec3 n){vec3 incident=normalize(vRelative-uEnvironmentEye);vec3 ray=normalize(uEnvironmentBasis*reflect(incident,n));vec2 uv=vec2(atan(ray.y,ray.x)/6.28318530718+.5,acos(clamp(ray.z,-1.,1.))/3.14159265359);float metal=uFinish>.5&&uFinish<2.5?1.:0.;vec3 radiance=pow(texture2D(uEnvironment,uv,mix(5.,3.,metal)).rgb,vec3(2.2));float fresnel=pow(1.-max(0.,dot(n,-incident)),5.);return radiance*mix(.04,.18,metal)*(.4+.6*fresnel);}'+
@@ -490,7 +490,7 @@
       'else if(uFinish<5.5){float edge=min(abs(x-44.3),abs(x-61.7));float panelEdge=abs(mod(abs(p.y)-12.+4.,8.)-4.);bolt=shipLine(length(vec2(edge,abs(panelEdge-3.1))),.055,fp);channel=shipLine(mod(p.y+.15,.3)-.15,.018,fp);weld=shipLine(edge,.035,fp);}'+
       'else{mark=(.5+.5*cos((p.x+p.y+p.z)*12.))*close;}return vec4(bolt,weld,channel,mark); }'+
       // Feather orange paint; preserve texture variation while respecting target paint brightness.
-      'void main(){if(uShadowPass>.5){if(uOpacity<.99)discard;if(uTextured>.5&&texture2D(uShipTexture,vUV).a<.5)discard;float depth=clamp(dot(vRelative-uSpotPosition,uSpotDirection)/uSpotPower.y,0.,.99999);vec2 depthBytes=fract(vec2(1.,255.)*depth);depthBytes.x-=depthBytes.y/255.;gl_FragColor=vec4(depthBytes,0.,1.);return;}if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);if(glow*vEffect.z<.01)discard;gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85*(1.-step(.5,uHabitat))),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);if(uFinish<-1.5&&uFinish>-2.5){vec2 cell=vUV*vec2(4.,2.);vec2 local=fract(cell);float tile=floor(cell.x)+4.*floor(cell.y);float lit=step(.1,min(abs(tile-2.),abs(tile-6.)));float front=step(.01,local.x)*step(.01,local.y);col*=1.+.95*lit*front;}}'+
+      'void main(){if(uShadowPass>.5){if(uOpacity<.99)discard;if(uTextured>.5&&texture2D(uShipTexture,vUV).a<.5)discard;float depth=clamp(dot(vRelative-uSpotPosition,uSpotDirection)/uSpotPower.y,0.,.99999);vec2 depthBytes=fract(vec2(1.,255.)*depth);depthBytes.x-=depthBytes.y/255.;gl_FragColor=vec4(depthBytes,0.,1.);return;}if(uFinish>8.5){float r=length(vEffect.xy);float glow=exp(-r*r*3.5)*(1.-smoothstep(.65,1.,r));float core=exp(-r*r*30.);if(glow*vEffect.z<.01)discard;gl_FragColor=vec4(mix(uColor,vec3(1.,.95,.86),core*.85*(1.-step(.5,uHabitat))),glow*vEffect.z*.8);return;}if(uFlat>.5){gl_FragColor=vec4(uColor,uOpacity);return;}vec3 n=normalize(vNormal);if(uArmorEnabled>.5&&vNormalUV.x>0.){vec3 mapped=normalize(uModelBasis*(texture2D(uArmorNormal,vNormalUV).xyz*2.-1.));float nc=cos(uRotation),ns=sin(uRotation);n=vec3(nc*mapped.x-ns*mapped.y,ns*mapped.x+nc*mapped.y,mapped.z);}vec3 light=normalize(uLight);vec3 col=uColor;if(uTextured>.5){vec4 tex=texture2D(uShipTexture,vUV);if(tex.a<.5)discard;vec3 rgb=tex.rgb;float hi=max(rgb.r,max(rgb.g,rgb.b));float lo=min(rgb.r,min(rgb.g,rgb.b));float chroma=hi-lo;float orange=(rgb.g-rgb.b)/max(.001,chroma);float mask=smoothstep(.12,.3,chroma/max(.001,hi))*smoothstep(.04,.16,orange)*(1.-smoothstep(.72,.95,orange))*step(rgb.g,rgb.r)*step(rgb.b,rgb.g)*uPaintEnabled;float paintValue=max(uPaint.r,max(uPaint.g,uPaint.b));vec3 paint=mix(vec3(lo*paintValue),uPaint*hi,chroma/max(.001,hi));col*=mix(rgb,paint,mask);if(uFinish<-1.5&&uFinish>-2.5){vec2 cell=vUV*vec2(4.,2.);vec2 local=fract(cell);float tile=floor(cell.x)+4.*floor(cell.y);float lit=step(.1,min(abs(tile-2.),abs(tile-6.)));float front=step(.01,local.x)*step(.01,local.y);col*=1.+.95*lit*front;}}'+
       'if(uRock>.5){vec2 p=vLocal.xy;float q=length(p)/boundary(p);float footprint=max(.000000001,uPixelFootprint*vDepth);'+
       'float dome=.78*sqrt(max(0.,1.-q*q));float exterior=uCut<.5?1.:step(abs(abs(vLocal.z)-dome),.12);'+
       'vec3 sphere=normalize(vec3(vLocal.xy/boundary(p),vLocal.z/.78));vec3 bodyNormal=n;vec4 crater=globeCraters(vLocal);float occ=crater.w*exterior;'+
@@ -524,7 +524,7 @@
     });
     function material() {return new THREE.RawShaderMaterial({vertexShader:vertexShader,fragmentShader:fragmentShader,
       uniforms:uniforms,side:THREE.DoubleSide,transparent:true,depthWrite:depthWrite,blending:blending,
-      defaultAttributeValues:{aUV:[0,0],aBakedDocking:[0,0,0]}});}
+      defaultAttributeValues:{aNormalUV:[0,0],aUV:[0,0],aBakedDocking:[0,0,0]}});}
     /** @type {{object:import('./three-types').Object3D,material:import('./three-types').Material,uniforms:typeof uniforms,lines:boolean,projected?:boolean,lensRadius?:number,lensCenter?:number[],region?:number}[]} */
     var drawPool=[];
     var drawLensRadius=0,drawProjected=false;
@@ -542,6 +542,11 @@
       var result=new THREE.MeshStandardMaterial({metalness:0,roughness:1,side:THREE.DoubleSide,alphaTest:.5});
       result.onBeforeCompile=function(shader){
         shader.uniforms.uShieldOutput=shieldOutputUniform;shader.uniforms.uSkyBasis={value:skyBasis};shader.uniforms.uSkyCameraExposure=cameraExposureUniform;
+        shader.uniforms.uArmorNormal=snapshot.uArmorNormal;shader.uniforms.uArmorEnabled=snapshot.uArmorEnabled;
+        shader.vertexShader='attribute vec2 aNormalUV;varying vec2 vArmorUV;varying mat3 vArmorMatrix;\n'+shader.vertexShader;
+        shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvArmorUV=aNormalUV;vArmorMatrix=normalMatrix;');
+        shader.fragmentShader='uniform sampler2D uArmorNormal;uniform float uArmorEnabled;varying vec2 vArmorUV;varying mat3 vArmorMatrix;\n'+shader.fragmentShader;
+        shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\nif(uArmorEnabled>.5&&vArmorUV.x>0.){normal=normalize(vArmorMatrix*(texture2D(uArmorNormal,vArmorUV).xyz*2.-1.));normal*=gl_FrontFacing?1.:-1.;}');
         shader.uniforms.uShipPaint=snapshot.uPaint;
         shader.uniforms.uShipPaintEnabled=snapshot.uPaintEnabled;
         shader.fragmentShader='uniform float uShieldOutput;uniform float uSkyCameraExposure;uniform mat3 uSkyBasis;uniform vec3 uShipPaint;uniform float uShipPaintEnabled;\n'+shader.fragmentShader;
@@ -573,6 +578,7 @@
     function craterTexture(asteroid){var texture=new THREE.DataTexture(impactBytes(asteroid),1440,1);texture.needsUpdate=true;return texture;}
     /** @type {WeakMap<import('./three-types').Geometry,import('./three-types').Interleaved>} */
     var geometryData=new WeakMap();
+    /** @type {WeakSet<import('./three-types').Geometry>} */ var normalGeometry=new WeakSet();
     /** @param {Float32Array} data @param {number} [stride] @returns {Mesh} */
     function upload(data,stride) {
       var buffer=new THREE.BufferGeometry();updateGeometry(buffer,data,stride||6);
@@ -599,7 +605,7 @@
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{vertices:Float32Array,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,basis?:Float32Array,scale?:number,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
+    /** @type {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,basis?:Float32Array,scale?:number,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {WeakMap<HTMLImageElement,import('./three-types').Texture>} */ var shipTextures=new WeakMap();
@@ -618,7 +624,7 @@
     }
     /** @param {HTMLImageElement | undefined} image */
     function bindShipTexture(image){
-      setUniform('PaintEnabled',0);setUniform('Textured',image?1:0);if(!image)return;
+      setUniform('ArmorEnabled',0);setUniform('PaintEnabled',0);setUniform('Textured',image?1:0);if(!image)return;
       setUniform('ShipTexture',shipTexture(image));
     }
     var box = upload(boxMesh());
@@ -1162,6 +1168,10 @@
           }
           uploadDocking(mesh,batch.bakedDocking);
           bindShipTexture(batch.texture);
+          if(batch.normalUV&&batch.normalTexture){
+            if(!normalGeometry.has(mesh.buffer)){mesh.buffer.setAttribute('aNormalUV',new THREE.BufferAttribute(batch.normalUV,2));normalGeometry.add(mesh.buffer);}
+            setUniform('ArmorNormal',shipTexture(batch.normalTexture));setUniform('ArmorEnabled',1);
+          }
           if(batch.paint){setUniform('Paint',batch.paint);setUniform('PaintEnabled',1);}
           var translucent=batch.opacity!==undefined&&batch.opacity<1;
           setUniform('Opacity',batch.opacity===undefined?1:batch.opacity);
@@ -1254,7 +1264,7 @@
       setStudyEffects: function(batches){if(study)studyEffects=batches.slice();},
       /** @param {typeof studyExplosions} blasts */
       setStudyExplosions:function(blasts){if(study)studyExplosions=blasts.slice();},
-      /** @param {{vertices:Float32Array,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
+      /** @param {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3}[]} batches */
       /** @param {import('./types').RigLighting[]} rigs */
       setStudyLightRigs:function(rigs){studyLightRigs=rigs.slice(0,2);},
       /** @param {boolean} enabled */

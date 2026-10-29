@@ -361,6 +361,8 @@ export type Batch = {
     staticGeometry?: boolean;
     asteroidId?: string;
     vertices: Float32Array;
+    normalUV?: Float32Array;
+    normalTexture?: HTMLImageElement;
     bakedDocking?: Float32Array;
     rigLights?: import('../src/types').RigLighting[];
     color: [
