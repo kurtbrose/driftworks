@@ -350,7 +350,10 @@ export type Pack = {
     url: string;
     models: Model[];
 };
+// Signed proper metres and outward unit radial in the canonical (region 0) chart.
+export type HullTransit = {proper:number;normal:Vector};
 export type Batch = {
+    lensTransit?:HullTransit;
     shieldGlow?:boolean;shieldWaves?:number;
     projected?:boolean;lensRadius?:number;lensCenter?:number[];
     region?: number;
@@ -676,7 +679,7 @@ export type Line = {
     emotion?: Feeling;
 };
 export type CommsDisplayOptions = {breakup?: number; palette?: string; scanlines?: number; reduced?: boolean};
-export type EllisDraw={projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;material:import('../src/three-types').Material;object:import('../src/three-types').Object3D;uniforms:Record<string,{value:import('../src/three-types').UniformValue}>};
+export type EllisDraw={lensTransit?:HullTransit;projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;material:import('../src/three-types').Material;object:import('../src/three-types').Object3D;uniforms:Record<string,{value:import('../src/three-types').UniformValue}>};
 export type YoYoFrame={view:Pose;points:{point:number[];region:number}[];expected:number[][];distance:number;observerL:number;halfSize:number};
 export type EllisRenderPass={setShipStretching:(enabled:boolean)=>void;invalidate:()=>void;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number,revision?:string|null)=>{objectPaths:number;objectPatches:number;objectError:number;objectBad:number;compositionPasses:number;historyValid:number;extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {

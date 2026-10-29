@@ -19,6 +19,10 @@
         var thinShell=!!(DW.flightMissions&&DW.flightMissions.current().sky.thinShell),optics=thinShell?DW.thinShellOptics:DW.ellisOptics;
         var units=DW.sim.METERS_PER_UNIT,size=384,next=0,initialized=false,lastSide=-1;
         var finiteShipImages=false;
+        /** Frozen frames reuse the same sampled spine; moving frames update only uniforms.
+         * @type {WeakMap<import('./types').HullTransit,{key:string;view:Float32Array;x:Float32Array;y:Float32Array;axis:number[];tx:number[];ty:number[];blend:number}>} */
+        var transitCache=new WeakMap();
+        /** @type {WeakMap<number[],import('./types').HullTransit>} */var transitBodies=new WeakMap();
         var params=new URLSearchParams(location.search),readableShips=params.get('bridgeShips')!=='warped',updates=params.get('bridgeFaces')==='6'?6:1,explicit=params.get('bridgeLod')!=='implicit',objects=thinShell||params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
         /** @param {number} width @param {number} height */
         function target(width,height){
@@ -285,7 +289,7 @@ void main(){
         /** @param {Draw} entry */
         function readable(entry){return readableShips&&!!entry.lensCenter&&(entry.lensRadius||0)>0;}
         /** @param {Draw} entry */
-        function finiteShip(entry){return (readableShips||finiteShipImages)&&!!entry.lensCenter&&(entry.lensRadius||0)>0;}
+        function finiteShip(entry){return (readableShips||finiteShipImages||!!entry.lensTransit||(entry.lensRadius||0)>300)&&!!entry.lensCenter&&(entry.lensRadius||0)>0;}
         /** Four finite paths define a 3D affine patch; a fifth probes its screen error.
          * @param {import('../src/three-types').Scene} scene @param {import('../src/three-types').Object3D} camera
          * @param {Draw[]} entries @param {Pose} pose @param {number} focal @param {number} width @param {number} height @param {boolean=} overlay */
@@ -337,7 +341,49 @@ void main(){
                 }
                 return {direct:false,turning:base.hit.turning,view:base.q,columns:columns,error:error};
             }
-            var keys=['uLensEnabled','uLensMode','uLensCenter','uLensViewCenter','uLensX','uLensY','uLensZ','uLensMouth','uLensRadius','uLensDebug'];
+            /** One shared spine, not one optical solve per vertex or material.
+             * @param {Draw} entry */
+            function transitPatch(entry){
+                var body=entry.lensTransit,radius=entry.lensRadius||0;
+                if(!body&&radius>300&&entry.lensCenter){
+                    body=transitBodies.get(entry.lensCenter);
+                    var side=entry.region||0,sign=side?-1:1;
+                    var radial=entry.lensCenter.map(function(v,k){return v*units-[side*12000,-2000,1550][k];}),r=Math.hypot.apply(null,radial);
+                    var proper=sign*(thinShell?Math.max(0,r-300):Math.sqrt(Math.max(0,r*r-90000))),normal=radial.map(function(v){return sign*v/Math.max(r,.000001);});
+                    if(body){body.proper=proper;body.normal=normal;}else body={proper:proper,normal:normal};
+                    transitBodies.set(entry.lensCenter,body);
+                }
+                if(!body||params.get('bridgeTransit')==='legacy')return null;
+                var properCenter=body.proper;
+                if(thinShell&&entry.lensTransit&&entry.lensCenter){
+                    var side=entry.region||0,r=Math.hypot.apply(null,entry.lensCenter.map(function(v,k){return v*units-[side*12000,-2000,1550][k];}));
+                    properCenter=(side?-1:1)*Math.max(0,r-300);
+                }
+                if(Math.abs(properCenter)>=radius*4)return null;
+                var key=[properCenter,...body.normal,entry.region||0,radius,region,thinShell,...pose.eye,...pose.right,...pose.up,...pose.back].join(','),cached=transitCache.get(body);
+                if(cached&&cached.key===key)return cached;
+                var axis=body.normal,reference=Math.abs(axis[2])<.9?[0,0,1]:[0,1,0];
+                var tx=[reference[1]*axis[2]-reference[2]*axis[1],reference[2]*axis[0]-reference[0]*axis[2],reference[0]*axis[1]-reference[1]*axis[0]],length=Math.hypot.apply(null,tx);
+                tx=tx.map(function(v){return v/length;});
+                var ty=[axis[1]*tx[2]-axis[2]*tx[1],axis[2]*tx[0]-axis[0]*tx[2],axis[0]*tx[1]-axis[1]*tx[0]];
+                var view=new Float32Array(99),x=new Float32Array(99),y=new Float32Array(99);
+                for(var i=0;i<33;i++){
+                    var l=properCenter+radius*(i/16-1),side=l<0?1:0,sign=side?-1:1;
+                    var r=thinShell?300+Math.abs(l):Math.hypot(300,l);
+                    var center=axis.map(function(v,k){return ([side*12000,-2000,1550][k]+sign*r*v)/units;});
+                    var p=patch(center,side,radius,true);if(!p)return null;
+                    var columns=p.direct?[pose.right,pose.up,pose.back.map(function(v){return -v;})]:null;
+                    view.set(p.view,i*3);
+                    for(var k=0;k<3;k++){
+                        x[i*3+k]=sign*(columns?columns[k].reduce(function(sum,v,j){return sum+v*tx[j];},0):p.columns.reduce(function(sum,c,j){return sum+c[k]*tx[j];},0));
+                        y[i*3+k]=sign*(columns?columns[k].reduce(function(sum,v,j){return sum+v*ty[j];},0):p.columns.reduce(function(sum,c,j){return sum+c[k]*ty[j];},0));
+                    }
+                }
+                var sideSign=(entry.region||0)?-1:1,t=Math.max(0,Math.min(1,(radius*4-Math.abs(properCenter))/(radius*2)));
+                var result={key:key,view:view,x:x,y:y,axis:axis,tx:tx.map(function(v){return v*sideSign;}),ty:ty.map(function(v){return v*sideSign;}),blend:t*t*(3-2*t)};
+                transitCache.set(body,result);return result;
+            }
+            var keys=['uLensEnabled','uLensMode','uLensCenter','uLensViewCenter','uLensX','uLensY','uLensZ','uLensMouth','uLensRadius','uLensDebug','uTransitBlend','uTransitRadius','uTransitAxis','uTransitTangentX','uTransitTangentY','uTransitView','uTransitX','uTransitY'];
             var saved=entries.map(function(e){return {e:e,visible:e.object.visible,material:/** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(e.object).material,values:keys.map(function(k){return e.uniforms[k].value;})};});
             var autoClear=renderer.autoClear;
             try{
@@ -348,17 +394,31 @@ void main(){
                     else{p=patch(center,side,e.lensRadius||20,readable(e));
                         // An unusable Jacobian must not fall back to ordinary
                         // perspective while the HUD still uses the optical center.
-                        if(!p&&finiteShipImages&&finiteShip(e))p=patch(center,side,e.lensRadius||20,true);
+                        if(!p&&finiteShip(e))p=patch(center,side,e.lensRadius||20,true);
                         cache.set(key,p);if(p){maxError=Math.max(maxError,p.error);if(p.error>2)bad++;}}
                     if(!p&&(readable(e)||side!==region)){e.object.visible=false;return;}
-                    var u=e.uniforms;
+                    var u=e.uniforms,transit=transitPatch(e);
+                    u.uTransitBlend.value=transit?transit.blend:0;
+                    if(transit){
+                        u.uTransitRadius.value=(e.lensRadius||1)/units;u.uTransitAxis.value=transit.axis;
+                        u.uTransitTangentX.value=transit.tx;u.uTransitTangentY.value=transit.ty;
+                        u.uTransitView.value=transit.view;u.uTransitX.value=transit.x;u.uTransitY.value=transit.y;
+                    }
                     var localDistance=Math.hypot.apply(null,center.map(function(v,i){return v*units-eye[i];}));
                     // Every opposite-chart image must remain inside the transmitted cone,
                     // including rigid presentation hulls whose ends can exceed it.
                     u.uLensMode.value=side!==region?1:thinShell?2:readable(e)?3:localDistance<200&&p?3:p&&!p.direct&&!p.turning?3:2;
+                    // A spanning hull already contains both chart images. A mask
+                    // selected from its center would amputate its local section.
+                    if(transit)u.uLensMode.value=3;
                     u.uLensMouth.value=[region*12000/units-pose.eye[0],-2000/units-pose.eye[1],1550/units-pose.eye[2]];u.uLensRadius.value=300/units;
-                    u.uLensEnabled.value=p&&!p.direct?1:0;u.uLensDebug.value=params.get('bridgeWarpDebug')==='1'&&p&&p.error>2?1:0;
-                    if(p&&!p.direct){u.uLensCenter.value=center;u.uLensViewCenter.value=p.view;u.uLensX.value=p.columns[0];u.uLensY.value=p.columns[1];u.uLensZ.value=p.columns[2];}
+                    u.uLensEnabled.value=transit||p&&!p.direct?1:0;u.uLensDebug.value=params.get('bridgeWarpDebug')==='1'&&p&&p.error>2?1:0;
+                    if(p&&(!p.direct||transit)){
+                        u.uLensCenter.value=center;u.uLensViewCenter.value=p.view;
+                        u.uLensX.value=p.direct?[pose.right[0],pose.up[0],-pose.back[0]]:p.columns[0];
+                        u.uLensY.value=p.direct?[pose.right[1],pose.up[1],-pose.back[1]]:p.columns[1];
+                        u.uLensZ.value=p.direct?[pose.right[2],pose.up[2],-pose.back[2]]:p.columns[2];
+                    }
                     // The production raw fallback supports the vertex patch and retains
                     // source textures/colors. Native PBR patching is a later comparison.
                     /** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(e.object).material=e.material;

@@ -312,11 +312,14 @@ assert.equal(patrolBatches.length,new Set(DW.aegisFlightAsset.batches.map(b=>b.c
 const localX=patrolBatches.flatMap(b=>Array.from(b.vertices).filter((v,i)=>i%6===0));
 assert((localX.reduce((a,b)=>Math.max(a,b),-Infinity)-localX.reduce((a,b)=>Math.min(a,b),Infinity))*U>1300,'batching preserves authored metre-scale length and pivots');
 assert.equal(patrol.telemetry().capitals[0].position[1]*U,-8000);
-let crossings=0,lastRegion=0,turning=false;
+let crossings=0,lastRegion=0,turning=false,lastProper=patrolBatches[0].lensTransit.proper;
 for(let i=0;i<24000;i++){
  patrol.step(.05,view);
  const batches=patrol.geometry(),region=batches[0].region,ship=patrol.telemetry().capitals[0];
- if(region!==lastRegion){crossings++;lastRegion=region;assert(Math.abs(ship.position[1]*U+2000)<310,'crosses along throat axis');}
+ const proper=batches[0].lensTransit.proper,travel=Math.abs(proper-lastProper);lastProper=proper;
+ assert(travel<1e-7||Math.abs(travel-9)<1e-7,'patrol advances at 180 m/s in proper distance, including throat transit');
+ assert(batches.every(b=>b.lensTransit===batches[0].lensTransit),'all material batches share intrinsic hull placement');
+ if(region!==lastRegion){assert(Math.abs(proper)<9.000001);crossings++;lastRegion=region;assert(Math.abs(ship.position[1]*U+2000)<310,'crosses along throat axis');}
  assert(Math.abs(ship.position[0]*U-region*12000)<1e-7);
  assert(Math.abs(ship.position[2]*U-1550)<1e-7);
  assert(batches.every((b,k)=>b.vertices===patrolBuffers[k]&&b.region===region&&b.lensCenter===patrolBatches[0].origin));

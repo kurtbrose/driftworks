@@ -39,7 +39,7 @@
 <script src="../src/explosions.js?v=ba20ec3731d9"></script>
 <script src="../src/asteroid-art.js?v=48aad8996df8"></script>
 <script src="../src/asteroid-terrain.js?v=added36e3407"></script>
-<script src="../src/scene3d.js?v=be72cb90b8e8"></script>
+<script src="../src/scene3d.js?v=ee84331eee37"></script>
 <script src="../src/ship-art.js?v=394ca4b43117"></script>
 <script src="../src/game.js?v=737979d8df21"></script>
 <script src="../experiments/dom.js?v=c1d4287e76cd"></script>
@@ -51,7 +51,7 @@
 <script src="../src/sky-effects.js?v=136fdb626647"></script>
 <script src="../experiments/ellis-optics.js?v=72b518e99e0b"></script>
 <script src="../experiments/thin-shell-optics.js?v=2cc2d9b0dcbb"></script>
-<script src="../experiments/ellis-renderer.js?v=207aac52c8ca"></script>
+<script src="../experiments/ellis-renderer.js?v=cbeb175f6a3d"></script>
 <script src="../experiments/skybox.js?v=e965a8681f9a"></script>
 <script src="../experiments/retail-weapons.js?v=642a0025bb1b"></script>
 <script src="../experiments/flight-hyperbolic.js?v=337cba6f54d9"></script>
@@ -90,7 +90,7 @@
 <script src="../experiments/flight-duel.js?v=443c69017af7"></script>
 <script src="../experiments/flight-watch.js?v=9ef026a9cf80"></script>
 <script type="module" src="../experiments/gas-giant-flight.js?v=d4c1ae871933"></script>
-<script src="../experiments/aegis-flight.js?v=d6f79829017f"></script>
+<script src="../experiments/aegis-flight.js?v=434f2c0b80f9"></script>
 <!-- /script-manifest --><script>(function(){
     'use strict';
     /** @typedef {import('./types').Pose} Pose */
@@ -157,7 +157,7 @@
     DW.aegisFlight.load().then(function(){capital=DW.aegisFlight.createEllisPatrol();draw();});
     /** @param {number} t */function capitalAt(t){
         if(!capital)return null;
-        var target=t+5700/180-6;
+        var target=t+Math.sqrt(6000*6000-300*300)/180-6;
         if(target<capitalTime){capital.reset();capitalTime=0;}
         while(capitalTime<target-1e-8){var dt=Math.min(.05,target-capitalTime);capital.step(dt,snapshot);capitalTime+=dt;}
         return capital;
@@ -193,7 +193,7 @@
                 for(var i=0;i<80;i++){
                     var stamp=await new Promise(function(resolve){requestAnimationFrame(resolve);});
                     if(document.hidden)throw Error('Hidden tab invalidates measurement');
-                    var begin=performance.now();capital.geometry();var prep=performance.now()-begin;
+                    var begin=performance.now();if(params.get('benchMotion')==='1')capitalAt(time-1+i/40);capital.geometry();var prep=performance.now()-begin;
                     presentation.setCapital(enabled?capital:null);submitted.draws=0;submitted.triangles=0;begin=performance.now();
                     var view=camera(cameraName,time);presentation.pose(view);presentation.render(Object.assign({},snapshot,{camera:view}),presentation.appearance(),{mode:'normal',scale:1,flat:false,mothership:false,actors:true},0);
                     var cpu=performance.now()-begin,stats=presentation.renderStats();
@@ -201,7 +201,7 @@
                     report.textContent='Measuring '+rows.length+' / 240';
                 }
             }
-            var lines=['Frozen '+cameraName+' camera / t='+time+' / capital crossing','ABBA: 20 warmup + 60 samples per block','bridgeShips='+(params.get('bridgeShips')||'readable')];
+            var lines=['Fixed '+cameraName+' camera / t='+time+' / capital crossing','ABBA: 20 warmup + 60 samples per block','bridgeShips='+(params.get('bridgeShips')||'readable')+' / transit='+(params.get('bridgeTransit')||'continuous')+' / '+(params.get('benchMotion')==='1'?'moving over 2 s':'frozen')];
             [false,true].forEach(function(on){var r=rows.filter(function(x){return x.on===on;});function p(k,f){var a=r.map(function(x){return x[k];}).sort(function(a,b){return a-b;});return a[Math.floor((a.length-1)*f)].toFixed(2);}function mean(k){return (r.reduce(function(n,x){return n+x[k];},0)/r.length).toFixed(0);}lines.push((on?'ON':'OFF')+' CPU '+p('cpu',.5)+' / '+p('cpu',.95)+' ms; frame '+p('frame',.5)+' / '+p('frame',.95)+' ms; prep '+p('prep',.5)+' / '+p('prep',.95)+' ms; '+mean('draws')+' draws / '+mean('triangles')+' tris');});
             lines.push('median / p95; CPU submission and rAF cadence, no GPU timer.');
             lines.push(Array.from(document.querySelectorAll('canvas')).map(function(c){return c.width+'x'+c.height;}).join(', ')+'; DPR '+devicePixelRatio);report.textContent=lines.join('\n');

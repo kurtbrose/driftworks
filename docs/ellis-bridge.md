@@ -1392,3 +1392,37 @@ wrecks retain point transport. A fitting hull still transfers charts as a whole:
 this guard does not resolve visual continuity for a hull spanning both charts.
 `tests/ellis-ballistics.cjs` covers both mouths, swept contact, grazing, retreat,
 resting pressure, oriented needles, small-craft passage and the real flight session.
+
+## Hulls spanning both charts (2026-10-28)
+
+The radial Aegis patrol now advances at 180 m/s in signed Ellis proper distance.
+Its center has a continuous intrinsic coordinate through zero; converting it to
+an areal chart position is storage/presentation, rather than moving the entire
+hull to the other chart at once. The unchanged throat-clearance rule still allows
+long narrow hulls nose-first and rejects oversized transverse sections.
+
+`Batch.lensTransit` optionally carries signed proper metres and a canonical
+region-0 outward unit radial. The patrol shares this descriptor across every
+material. Other large model hulls infer it from their center and chart. Within
+four hull radii of the throat, `ellis-renderer` blends to a 33-sample optical
+spine, fully active within two radii. Each sample independently selects its
+chart and transports its transverse frame; the vertex shader interpolates the
+same field across all original triangles. A center-selected aperture mask must
+not amputate the portion still in the observer's chart. Large spanning hulls use
+this route in both full and object modes, including the ship-stretching option.
+No new mesh buffers, per-frame triangle clipping, extra material draws, or network
+dependencies are introduced. Frozen fields are cached; moving fields solve once
+per hull, shared by its materials. The observation fixture retains its 6 s crossing.
+
+This is a sampled longitudinal/transverse-frame approximation, not exact finite
+body ray tracing or relativistic elasticity. Wide transverse sections and optical
+caustics remain approximate; arbitrary maneuvering hulls and observer-on-hull
+cases do not have broad visual acceptance. The old center-only route remains
+available with `bridgeTransit=legacy` for comparison.
+
+`tests/three-production.cjs` now measures bow, stern and transverse point position
+continuity across the actual patrol crossing, from both observer charts and in
+both renderer routes, plus inferred long-needle rendering and shared material
+fields. `tests/aegis-flight.cjs` checks constant proper speed over repeated
+outbound/return transits and immutable mesh reuse. See the [visual and measured
+comparison](benchmarks/ellis-hull-transit-2026-10-28.md) for coverage and limits.

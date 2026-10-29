@@ -467,7 +467,7 @@
     /** @type {Record<string, { key: string, mesh: Mesh, texture: import('./three-types').Texture, visual: import('./types').AsteroidVisual, values: ReturnType<typeof art.uniforms> }>} */ var rocks = {};
     var vertexShader = 
       'attribute vec2 aNormalUV;varying vec2 vNormalUV;attribute vec3 aBakedDocking; varying vec3 vBakedDocking; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; uniform mat3 uModelBasis; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vNormalUV=aNormalUV;vBakedDocking=aBakedDocking;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=uModelBasis*(local*uScale); p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);n=uModelBasis*n;vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }';
-    vertexShader=vertexShader.replace('attribute vec3 aBakedDocking;','uniform float uLensEnabled;uniform vec3 uLensCenter,uLensViewCenter,uLensX,uLensY,uLensZ;attribute vec3 aBakedDocking;').replace('float d=uView.x-dot(p,uBack);','if(uLensEnabled>.5){vec3 delta=p+uTarget-uLensCenter;vec3 q=uLensViewCenter+uLensX*delta.x+uLensY*delta.y+uLensZ*delta.z;p=uRight*q.x+uUp*q.y+uBack*(uView.x-q.z);vRelative=p;}float d=uView.x-dot(p,uBack);');
+    vertexShader=vertexShader.replace('attribute vec3 aBakedDocking;','uniform float uTransitBlend,uTransitRadius;uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;uniform vec3 uTransitView[33],uTransitX[33],uTransitY[33];uniform float uLensEnabled;uniform vec3 uLensCenter,uLensViewCenter,uLensX,uLensY,uLensZ;attribute vec3 aBakedDocking;').replace('float d=uView.x-dot(p,uBack);','if(uLensEnabled>.5){vec3 delta=p+uTarget-uLensCenter;vec3 q=uLensViewCenter+uLensX*delta.x+uLensY*delta.y+uLensZ*delta.z;if(uTransitBlend>0.){float h=clamp((dot(delta,uTransitAxis)/uTransitRadius+1.)*16.,0.,32.);int k=int(min(31.,floor(h)));float f=h-float(k);vec3 tq=mix(uTransitView[k],uTransitView[k+1],f)+mix(uTransitX[k],uTransitX[k+1],f)*dot(delta,uTransitTangentX)+mix(uTransitY[k],uTransitY[k+1],f)*dot(delta,uTransitTangentY);q=mix(q,tq,uTransitBlend);}p=uRight*q.x+uUp*q.y+uBack*(uView.x-q.z);vRelative=p;}float d=uView.x-dot(p,uBack);');
     var fragmentShader = art.shaderSource +
       '\nvarying vec2 vNormalUV;uniform sampler2D uArmorNormal;uniform float uArmorEnabled;uniform mat3 uModelBasis;varying vec3 vBakedDocking; uniform float uRigBakedEnabled; varying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform float uShadowPass,uWorkShadowEnabled; uniform sampler2D uWorkShadow; uniform vec2 uSpotPower,uSpotFrustum; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
       'uniform float uEnvironmentEnabled;uniform vec3 uEnvironmentSH[9],uEnvironmentEye;uniform mat3 uEnvironmentBasis;uniform sampler2D uEnvironment;'+
@@ -525,9 +525,10 @@
     function material() {return new THREE.RawShaderMaterial({vertexShader:vertexShader,fragmentShader:fragmentShader,
       uniforms:uniforms,side:THREE.DoubleSide,transparent:true,depthWrite:depthWrite,blending:blending,
       defaultAttributeValues:{aNormalUV:[0,0],aUV:[0,0],aBakedDocking:[0,0,0]}});}
-    /** @type {{object:import('./three-types').Object3D,material:import('./three-types').Material,uniforms:typeof uniforms,lines:boolean,projected?:boolean,lensRadius?:number,lensCenter?:number[],region?:number}[]} */
+    /** @type {{object:import('./three-types').Object3D,material:import('./three-types').Material,uniforms:typeof uniforms,lines:boolean,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */
     var drawPool=[];
     var drawLensRadius=0,drawProjected=false;
+    var drawLensTransit=/** @type {import('../experiments/types').HullTransit|undefined} */(undefined);
     var drawLensCenter=/** @type {number[]|null} */(null);
     var drawRegion=0,surfaceRegion=0,bridgeRevision=/** @type {string|null} */(null);
     /** @type {WeakMap<import('./three-types').Material,import('./three-types').StandardMaterial>} */ var standardShips=new WeakMap();
@@ -601,11 +602,11 @@
       if(values)mesh.buffer.setAttribute('aBakedDocking',new THREE.BufferAttribute(values,3));
       else mesh.buffer.deleteAttribute('aBakedDocking');
     }
-    /** @type {{vertices:Float32Array,color:V3,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
+    /** @type {{vertices:Float32Array,color:V3,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,basis?:Float32Array,scale?:number,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
+    /** @type {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {WeakMap<HTMLImageElement,import('./three-types').Texture>} */ var shipTextures=new WeakMap();
@@ -663,7 +664,7 @@
         var object=lines?new THREE.LineSegments(mesh.buffer,drawMaterial):new THREE.Mesh(mesh.buffer,drawMaterial);
         object.frustumCulled=false;entry={object:object,material:drawMaterial,uniforms:snapshot,lines:!!lines};drawPool[drawIndex]=entry;
       }
-      entry.projected=drawProjected;entry.lensRadius=drawLensRadius;entry.region=drawRegion;entry.lensCenter=drawLensCenter||origin;
+      entry.lensTransit=drawLensTransit;entry.projected=drawProjected;entry.lensRadius=drawLensRadius;entry.region=drawRegion;entry.lensCenter=drawLensCenter||origin;
       Object.keys(uniforms).forEach(function(key){entry.uniforms[key].value=uniforms[key].value;});
       // Negative finish is a textured interior with an illumination floor; keep its custom shader.
       var useStandard=materialFinish>=0 && !!activeProbe && !shadowPass && !rock && !lines && uniforms.uTextured.value===1 && uniforms.uFlat.value!==1;
@@ -945,7 +946,7 @@
     /** @param {World} w @param {number} alpha @param {number} dt @param {number} wallDt */
     function renderFrame(w, alpha, dt, wallDt) {
       if(study && !shadowPass)pickBatches=[];
-      drawPool.forEach(function(entry){scene.remove(entry.object);});drawIndex=0;drawProjected=false;drawRegion=0;drawLensRadius=0;drawLensCenter=null;
+      drawPool.forEach(function(entry){scene.remove(entry.object);});drawIndex=0;drawProjected=false;drawRegion=0;drawLensRadius=0;drawLensCenter=null;drawLensTransit=undefined;
       var renderStart=performance.now();renderStats.explosions=0;renderStats.explosionBatches=0;renderStats.effectVertices=0;renderStats.drawCalls=0;renderStats.triangles=0;renderStats.lines=0;frameMeshes.clear();frameMaterials.clear();
       var vp = viewport(); if (vp.width < 1 || vp.height < 1) return;
       var dpr = Math.min(2, window.devicePixelRatio || 1)*(study?diagnostics.scale:1);
@@ -1152,7 +1153,7 @@
         setUniform('CraftFill',.18);
         setFinish(0);setUniform('Habitat',0);pickSpin=0;setUniform('AxialSpin',0);
         studyActors.forEach(function(batch,index){
-          drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;
+          drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;drawLensTransit=batch.lensTransit;
           if(!batch.vertices.length)return;
           if(batch.staticGeometry&&!bridgeRenderer&&!shadowPass&&!viewerEnabled&&!studyBatchVisible(batch,[w.camera.x,w.camera.y,orbit.height||0],v,vp.width/vp.height))return;
           var stride=batch.stride || (batch.texture?8:6);
@@ -1182,7 +1183,7 @@
           if(translucent){depthWrite=true;blending=THREE.NoBlending;}
         });
       }
-      drawRegion=0;drawLensCenter=null;drawLensRadius=0;
+      drawRegion=0;drawLensCenter=null;drawLensRadius=0;drawLensTransit=undefined;
       setUniform('Opacity',1);
       bindShipTexture(undefined);
       setUniform('CraftFill',0);
@@ -1193,7 +1194,7 @@
         studyEffects.forEach(function(batch,index){
           setUniform('Habitat',batch.shieldGlow?1:0);
           drawProjected=!!batch.projected;
-          drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;
+          drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;drawLensTransit=batch.lensTransit;
           if(!batch.vertices.length)return;
           renderStats.effectVertices+=batch.vertices.length/6;
           if(!studyEffectMeshes[index])studyEffectMeshes[index]=upload(new Float32Array(0));

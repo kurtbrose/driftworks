@@ -139,7 +139,7 @@
     DW.aegisFlight.load().then(function(){capital=DW.aegisFlight.createEllisPatrol();draw();});
     /** @param {number} t */function capitalAt(t){
         if(!capital)return null;
-        var target=t+5700/180-6;
+        var target=t+Math.sqrt(6000*6000-300*300)/180-6;
         if(target<capitalTime){capital.reset();capitalTime=0;}
         while(capitalTime<target-1e-8){var dt=Math.min(.05,target-capitalTime);capital.step(dt,snapshot);capitalTime+=dt;}
         return capital;

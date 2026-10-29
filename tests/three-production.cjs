@@ -264,25 +264,67 @@ console.log('PASS Ellis pursuit rendering: intact single hull before/after both 
 
 // Exercise the actual seven-material capital asset and its real patrol crossing.
 for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
-for(const geometry of ['full','objects']){
- viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry='+geometry;viewer.setStudyBridge(true);
- const capital=DW.aegisFlight.createEllisPatrol();let clock=0,previousFrame,previousTime;
- for(const t of [30,31.65,5700/180-.000001,5700/180+.000001,31.7,32,34]){
+for(const geometry of ['full','objects'])for(const observerSide of [0,1])for(const stretching of [false,true])for(const returning of [false,true]){
+ viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry='+geometry+(stretching?'&bridgeShips=warped':'');viewer.setStudyBridge(true);
+ const capital=DW.aegisFlight.createEllisPatrol();let clock=0,previousFrame,previousTime,previousPoints;
+ let crossingTime=Math.sqrt(6000*6000-300*300)/180;
+ if(returning){
+  let before=capital.geometry()[0].lensTransit.proper;
+  for(let i=0;i<2000;i++){
+   capital.step(.05);clock+=.05;
+   const proper=capital.geometry()[0].lensTransit.proper;
+   if(proper>before+.01){crossingTime=clock-proper/180;break;}
+   before=proper;
+  }
+  assert(crossingTime>60,'fixture reaches the actual return leg');
+ }
+ for(const t of [crossingTime-2,crossingTime-.02,crossingTime-.000001,crossingTime+.000001,crossingTime+.02,crossingTime+2]){
   while(clock<t-1e-8){const dt=Math.min(.05,t-clock);capital.step(dt);clock+=dt;}
   const batches=capital.geometry();viewer.setStudyActors(batches);
-  viewer.setSurfaceCamera({region:0,eye:[650/U,-2400/U,1650/U],right:[0,1,0],up:[0,0,1],back:[1,0,0]});
+  viewer.setSurfaceCamera({region:observerSide,eye:[(observerSide*12000+650)/U,(observerSide?-1600:-2400)/U,1650/U],right:[0,1,0],up:[0,0,1],back:[1,0,0]});
   const start=frames.length;viewer.render(world,1,0,0);
   const hull=frames.slice(start).flat().filter(d=>(d.uniforms.uLensMode===3||d.uniforms.uLensMode===1)&&d.uniforms.uColor);
   assert.equal(hull.length,batches.filter(b=>b.vertices.length).length,'every nonempty capital material is submitted once at '+t+' s / '+geometry);
   assert.equal(hull.reduce((n,d)=>n+d.geometry.attributes.position.count,0),batches.reduce((n,b)=>n+b.vertices.length/6,0),'all capital vertices survive the throat crossing');
-  assert.equal(viewer.getRenderStats().bridgeObjectPaths,1,'all materials use one coherent optical center');
+  assert(viewer.getRenderStats().bridgeObjectPaths<=(stretching?38:34),'all materials share one bounded spine solve');
+  assert(hull.every(d=>d.uniforms.uTransitView===hull[0].uniforms.uTransitView),'all materials share the same continuous field');
+  assert(hull.every(d=>d.uniforms.uTransitBlend===1&&d.uniforms.uLensMode===3),'a spanning hull never switches whole-hull aperture masks');
   const d=hull[0],columns=d.uniforms.uLensEnabled?[d.uniforms.uLensX,d.uniforms.uLensY,d.uniforms.uLensZ]:[[0,0,-1],[1,0,0],[0,1,0]];
   const basis=batches[0].basis,orientation=Array.from({length:9},(_,k)=>columns.reduce((sum,c,j)=>sum+c[k%3]*basis[Math.floor(k/3)*3+j],0));
-  if(previousFrame&&t-previousTime<.00001)orientation.forEach((v,i)=>assert(Math.abs(v-previousFrame[i])<.002,'optical hull orientation is continuous across antipodal transport'));
-  previousFrame=orientation;previousTime=t;
+  if(!stretching&&previousFrame&&t-previousTime<.00001)orientation.forEach((v,i)=>assert(Math.abs(v-previousFrame[i])<.002,'optical hull orientation is continuous across antipodal transport'));
+  // Evaluate the actual production vertex deformation, including near/far hull
+  // ends. A submission-count test alone cannot catch a whole-hull position pop.
+  function point(local){
+   const u=d.uniforms,delta=[0,1,2].map(k=>basis[k]*local[0]+basis[3+k]*local[1]+basis[6+k]*local[2]);
+   const dot=(a,b)=>a.reduce((n,v,k)=>n+v*b[k],0),h=Math.max(0,Math.min(32,(dot(delta,u.uTransitAxis)/u.uTransitRadius+1)*16)),i=Math.min(31,Math.floor(h)),f=h-i;
+   return [0,1,2].map(k=>{
+    const at=a=>a[i*3+k]*(1-f)+a[(i+1)*3+k]*f;
+    return at(u.uTransitView)+at(u.uTransitX)*dot(delta,u.uTransitTangentX)+at(u.uTransitY)*dot(delta,u.uTransitTangentY);
+   });
+  }
+  const points=[[-650/U,0,0],[650/U,0,0],[0,80/U,60/U],[0,-80/U,-60/U]].map(point);
+  if(previousPoints&&t-previousTime<.00001)points.forEach((v,k)=>assert(Math.hypot(...v.map((x,j)=>x-previousPoints[k][j]))*U<.05,'bow, stern and transverse hull points remain continuous across center transfer: '+JSON.stringify({v,previous:previousPoints[k],k,t})));
+  assert(batches[0].lensTransit.proper-650<0&&batches[0].lensTransit.proper+650>0,'fixture actually spans both charts');
+  previousFrame=orientation;previousTime=t;previousPoints=points;
  }
 }
-console.log('PASS Ellis capital image: actual patrol hull, every material/vertex, one coherent path before and after crossing');
+console.log('PASS Ellis capital transit: actual hull, shared sampled spine, both charts, bow/stern positional continuity, preserved material draws and immutable meshes');
+
+// The same continuous projection is inferred for long model craft; it is not
+// tied to the patrol's ID, geometry, or explicit intrinsic-coordinate metadata.
+for(const side of [0,1]){
+ viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry=objects';viewer.setStudyBridge(true);
+ const center=[side*12000/U,(-2000+(side?1:-1)*Math.hypot(300,1))/U,1550/U];
+ const needle=new Float32Array([0,-650/U,0,0,0,1,1/U,650/U,0,0,0,1,-1/U,650/U,0,0,0,1]);
+ viewer.setStudyActors([0,1].map(()=>({vertices:needle,color:[.123,.456,.789],region:side,origin:center,lensCenter:center,lensRadius:700,staticGeometry:true})));
+ viewer.setSurfaceCamera({region:0,eye:[650/U,-2400/U,1650/U],right:[0,1,0],up:[0,0,1],back:[1,0,0]});
+ const start=frames.length;viewer.render(world,1,0,0);
+ const hull=frames.slice(start).flat().filter(d=>Math.abs(d.uniforms.uColor?.[0]-.123)<1e-6);
+ assert.equal(hull.length,2);assert(hull.every(d=>d.uniforms.uTransitBlend===1&&d.uniforms.uLensMode===3));
+ assert.equal(hull[0].uniforms.uTransitView,hull[1].uniforms.uTransitView,'inferred needle materials share one field');
+ assert.equal(viewer.getRenderStats().bridgeObjectPaths,34,'inferred needle solves its spine once, not once per material');
+}
+console.log('PASS long needle rendering: automatic continuous transit, both charts and shared per-hull solves');
 
 // A heading along the source-end optical ray must appear along the same image
 // direction at the observer, while all material batches keep an orthonormal pose.
