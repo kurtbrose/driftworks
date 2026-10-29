@@ -1,5 +1,8 @@
 # Pilot learning experiment
 
+For direct pitch/yaw control learned without the aiming scaffold, see
+[from-scratch marker control](marker-training.md).
+
 This optional offline lab evolves a small neural controller against the real
 combat simulation: 120 Hz flight, guns and triangle hull collision. It does
 not change gameplay or require a site build, CDN, server service or runtime ML
