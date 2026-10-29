@@ -6,7 +6,7 @@
      * translated camera in the player's Gans chart.
      * @param {number} seconds @param {number} [radius] @returns {import('./types').FlightState} */
     function sample(seconds,radius){
-        radius=radius||300;
+        radius=radius||400;
         var close=radius<100,speed=close?3:30,location=close?[-35,-100,60]:[-350,-600,170];
         var anchor=H.offset([0,0,0],location.map(function(v){return v/U;}),radius),eye=H.offset(anchor,[(seconds-14)*speed/U,0,0],radius);
         var forward=H.path(anchor,[0,0,0],radius).direction,n=Math.hypot(forward[0],forward[1]),right=[forward[1]/n,-forward[0]/n,0],back=forward.map(function(v){return -v;});
@@ -20,7 +20,7 @@
      * Nose directions use the actual orbit tangent, including formation keeping.
      * @param {number} seconds @param {import('./types').Pose} camera */
     function traffic(seconds,camera){
-        var radius=camera.curvature||300,close=radius<100,pace=close?6:70,s=(seconds-14)*pace/radius,ch=Math.cosh(s),sh=Math.sinh(s);
+        var radius=camera.curvature||400,close=radius<100,pace=close?6:70,s=(seconds-14)*pace/radius,ch=Math.cosh(s),sh=Math.sinh(s);
         return Array.from({length:10},/** @param {unknown} _ @param {number} index */function(_,index){
             var slot=[(index%5-2)*(close?25:95)/U,-(close?65:120)/U,(index<5?1:-1)*(close?35:70)/U],p=H.point(H.offset([0,0,0],slot,radius),radius);
             var q=[p[0]*ch+p[1]*sh,p[0]*sh+p[1]*ch,p[2],p[3]],eye=H.chart(q,radius);

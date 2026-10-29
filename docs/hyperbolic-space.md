@@ -11,7 +11,7 @@ skills/decision timing, waves, destruction, wrecks and sortie-death behavior.
 There is no separate cannon, forced-zero shield, hit-sphere replacement,
 experiment AI or three-second respawn. Ship/model and weapon-bank controls are
 the normal flight lab controls. Settings adds a curvature radius selector
-(300 / 350 / 650 / 1800 / 100000 metres); changing it resets the sortie.
+(300 / 350 / 400 / 650 / 1800 / 100000 metres); changing it resets the sortie.
 
 ## Geometry boundary
 
@@ -83,7 +83,7 @@ replaces flat-box culling for these batches, retaining near-plane intersections
 and views from inside their bounds.
 
 At the starting camera the nearer ship sits below/left, the farther above/right.
-Compare Settings' 650 m default with 350 m and nearly-flat 100000 m. Transverse
+Compare Settings' 400 m default with 350 m and nearly-flat 100000 m. Transverse
 angular size decreases much faster with range in negative curvature. Straight
 geodesic features need not look like bananas; changes in apparent proportions,
 size versus range and perspective during a flyby are the useful cues.
@@ -116,7 +116,7 @@ their ordinary origin/basis/scale are not reapplied to that placement.
 
 Open `experiments/flight.html?mission=hyperbolic&flyby=1`, also linked from the
 index. It autoplays one stationary, full-scale Aegis and ten identical Raptor
-fighters against black at a 300 m curvature radius. There are no HUD numbers,
+fighters against black at a 400 m curvature radius. There are no HUD numbers,
 markers, grids or reticles. Space pauses/resumes; Esc opens the controls.
 
 The strong-curvature camera starts from normal coordinates (-35, -100, 60) m
@@ -207,3 +207,16 @@ It identifies simulation/HUD cost and occasional longer frames as the remaining
 performance risk; refresh-limited FPS does not establish spare GPU budget.
 Native weapon-bank switching, player/target shield meters, radar, geodesic pip,
 curvature reset and pause were checked in the browser without console errors.
+
+
+### Material interpretation of the capital mapping
+
+The default mission and clean flyby now both use R=400 m. The normal exponential
+map preserves centre-to-point radial distances and angles between initial radial
+directions. It is not an isometry of the original Euclidean solid: at radial
+distance r its transverse differential scale is sinh(r/R)/(r/R), and its volume
+Jacobian is that factor squared. It therefore does not conserve authored material
+volume or every internal beam length. The renderer models geometry, not elastic
+strain, material density, stress or failure during a change of curvature.
+Translations within one fixed homogeneous hyperbolic space are isometries and
+can move the mapped body without changing its internal distances or volume.

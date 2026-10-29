@@ -30,7 +30,7 @@ for(const b of first){const stride=b.stride||6;
  const d=Math.hypot(...[0,1,2].map(k=>b.vertices[i+a*stride+k]-b.vertices[i+c*stride+k]));assert.ok(d*U<=20.001,'curved triangle edges bounded');}
  if(b.normalUV)assert.equal(b.normalUV.length,b.vertices.length/stride*2);
 }
-const f=createFlight({mission:'hyperbolic',seed:29});f.snapshot().combat.player.plotArmor=true;
+const f=createFlight({mission:'hyperbolic',seed:29});assert.equal(f.snapshot().state.curvature,400);f.session.setCurvature(650);f.session.reset({mode:'hyperbolic',enabled:true,profile:DW.arcade.profiles[0]});f.snapshot().combat.player.plotArmor=true;
 for(const radius of [350,650,1800,100000]){
  const c={...camera,curvature:radius};
  const base=rig.geometry(c),original=base.map(b=>b.vertices);
@@ -81,7 +81,7 @@ for(const d of [350,650,1300]){
  near(sizeDistance/parallaxDistance,Math.cosh(d/650),.00002);
  assert.ok(sizeDistance>parallaxDistance,'ordinary size/distance substitution cannot reproduce both calibrated cues');
 }
-for(const r of [300,350,650,1800,100000]){
+for(const r of [300,350,400,650,1800,100000]){
  let previous,formationDistances;
  for(let t=0;t<=28;t+=.5){
   const p=DW.hyperbolicFlyby.sample(t,r),sf=p.spaceFrame,eye=H.chart([sf[0][0],-sf[0][1],-sf[0][2],-sf[0][3]],r);
@@ -100,7 +100,7 @@ for(const r of [300,350,650,1800,100000]){
   if(formationDistances)distances.forEach((d,i)=>near(d,formationDistances[i],.001));else formationDistances=distances;
  }
 }
-console.log('PASS rendered angular-size/parallax distances, fixed-speed camera and ten-fighter box: intrinsic spacing, hull clearance and velocity-aligned noses at five curvatures');
+console.log('PASS rendered angular-size/parallax distances, fixed-speed camera and ten-fighter box: intrinsic spacing, hull clearance and velocity-aligned noses at six curvatures');
 
 // The strong-curvature close pass must remain finite throughout its visible loop.
 for(let t=8;t<=22;t+=.25){
@@ -113,4 +113,4 @@ for(let t=8;t<=22;t+=.25){
 }
 console.log('PASS 30 m close flyby: finite observer and ten fighter poses across the visible loop');
 
-assert.equal(DW.hyperbolicFlyby.sample(14).curvature,300);
+assert.equal(DW.hyperbolicFlyby.sample(14).curvature,400);

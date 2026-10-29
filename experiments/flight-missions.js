@@ -50,7 +50,7 @@
     });
     define('scramble',{title:'SCRAMBLE! / Driftworks',heading:'DRIFTWORKS / SCRAMBLE!',subtitle:'SCRIPTED EVENTS / COMBAT LAUNCH',hint:'Launch begins as soon as textures are ready. One wingman left, two right. Fly immediately: W/S throttle / Shift boost / Esc pause.',encounter:{kind:'furball',count:6,immediate:true,callsigns:['Lancer Two','Lancer Three','Lancer Four','Raider One','Raider Two','Raider Three']}});
     define('furball',{encounter:{kind:'furball',count:16}});
-    define('hyperbolic',{emptySpace:true,title:'Hyperbolic flight / Driftworks',heading:'DRIFTWORKS / HYPERBOLIC FLIGHT',subtitle:'NEGATIVE CURVATURE / TWO 1,305 m CAPITAL REFERENCES',hint:'Two stationary Aegis ships start about 0.9 km and 1.6 km away. Fly past their hulls; compare 300 m, 350 m, 650 m and nearly-flat 100000 m curvature in Settings. The ships are unarmed visual references.',sky:{hyperbolic:650},encounter:{immediate:true}},'furball');
+    define('hyperbolic',{emptySpace:true,title:'Hyperbolic flight / Driftworks',heading:'DRIFTWORKS / HYPERBOLIC FLIGHT',subtitle:'NEGATIVE CURVATURE / TWO 1,305 m CAPITAL REFERENCES',hint:'Two stationary Aegis ships start about 0.9 km and 1.6 km away. Fly past their hulls; compare 300 m, 400 m, 650 m and nearly-flat 100000 m curvature in Settings. The ships are unarmed visual references.',sky:{hyperbolic:400},encounter:{immediate:true}},'furball');
     define('battle',{title:'Battle background / Driftworks',heading:'DRIFTWORKS / BATTLE PROTOTYPE',subtitle:'CAPITAL ENGAGEMENT / SQUADRON ZONE DEFENSE',encounter:{count:30,immediate:true}},'furball');
     /** Frozen fictional system in planet-centered km; all moon centers share one plane.
      * @param {boolean} nearMoon @returns {import('./types').JadeSystem} */

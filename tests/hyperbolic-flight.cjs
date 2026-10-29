@@ -29,7 +29,7 @@ for(const radius of [350,650,1800,100000]){
 console.log('PASS hyperbolic geometry and pip: native volleys, authored hulls/shields, off-pip negative controls and transported frames at four radii');
 const f=createFlight({mission:'hyperbolic',seed:29}),flat=createFlight({mission:'furball',seed:29});let v=f.snapshot();assert.equal(v.combat.enabled,true);
 assert.equal(JSON.stringify(v.combat.enemies.map(c=>[c.team,c.profile.name,c.hp,c.maxHp,c.shield,c.maxShield,c.skill,c.weaponIndex])),JSON.stringify(flat.snapshot().combat.enemies.map(c=>[c.team,c.profile.name,c.hp,c.maxHp,c.shield,c.maxShield,c.skill,c.weaponIndex])));
-assert.ok(v.combat.enemies.every(c=>c.pose.curvature===650&&c.controller==='ai'&&c.collision.kind==='model'));
+assert.ok(v.combat.enemies.every(c=>c.pose.curvature===400&&c.controller==='ai'&&c.collision.kind==='model'));
 f.advance(2,{fire:true});v=f.snapshot();assert.ok(v.guns.fired>0);assert.ok(v.combat.enemies.some(c=>['attack','break','evade','recover'].includes(c.mode)));assert.ok(v.combat.enemies.some(c=>c.guns.fired>0));near(Math.hypot(...v.state.eye),0);
 v.combat.enemies=[];v.combat.countdown=1000;v.state.throttle=0;const shield=v.combat.shield;f.DW.training.damagePlayer(v.combat,f.DW.retailWeapons[0]);const damaged=v.combat.shield;assert.ok(damaged<shield);f.advance(6.9);near(v.combat.shield,damaged);f.advance(.6);near(v.combat.shield-damaged,6,.11);
 v.combat.player.hp=0;const time=v.combat.time;f.advance(10);near(v.combat.time,time);assert.equal(v.combat.player.hp,0);
