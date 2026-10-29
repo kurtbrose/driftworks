@@ -13,6 +13,9 @@
     /** @typedef {import('./types').Batch} Batch */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks);
     var assetUrl = /** @type {(value: string, base?: string) => string} */ (window.Driftworks.assetUrl);
+    // Flash coordinates change when hyperbolic flight recentres its chart.
+    // Keep one procedural pattern for the event, shared by all camera views.
+    var explosionSeeds=/** @type {WeakMap<import('./types').Impact, number>} */ (new WeakMap());
     /** Ohio's roadside monument, in asteroid-local world units. Front faces the spawn (-Y).
      * @param {number} radius @param {HTMLImageElement} texture @param {number} [surfaceHeight] @returns {Batch[]}
      */
@@ -344,7 +347,11 @@
             if(capital)effectBatches=effectBatches.concat(capital.effects(state,shieldEnabled&&comparison.actors&&comparison.mode!=='empty'));
             var defaultGlow=shieldDefault?effectBatches.filter(function(b){return b.shieldGlow;}):[];
             scene.setStudyEffects(effectBatches);
-            scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).map(function(f){return {region:f.region||0,position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:Math.round(f.position[0]*31+f.position[1]*17)};}));
+            scene.setStudyExplosions(combat.flashes.filter(function(f){return f.destruction;}).map(function(f){
+                var seed=explosionSeeds.get(f);
+                if(seed===undefined){seed=Math.round(f.position[0]*31+f.position[1]*17);explosionSeeds.set(f,seed);}
+                return {region:f.region||0,position:/** @type {[number,number,number]} */(f.position),velocity:/** @type {[number,number,number]|undefined} */(f.velocity),age:f.age,size:(f.scale||14)/(units*2),seed:seed};
+            }));
             // This conservative revision covers simulation-driven mesh motion,
             // pose changes, asset readiness, appearance edits and actor lifetime.
             // Additive bolts/engines are composited live and never cached.

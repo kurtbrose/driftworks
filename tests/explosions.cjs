@@ -29,3 +29,43 @@ initial.forEach((b,j)=>b.vertices.forEach((v,i)=>{
 const translated=snapshot({...blast,position:[110,220,330]});
 initial.forEach((b,j)=>b.vertices.forEach((v,i)=>{const c=i%6;if(c<3)assert(Math.abs(translated[j].vertices[i]-v-[100,200,300][c])<.0001);}));
 console.log('PASS explosions: deterministic pause/scrub, finite geometry, inherited drift, world anchoring and layer expiry');
+
+// Exercise the real presentation adapter across an actual hyperbolic rebase.
+// The renderer is stubbed; the native blast builder still supplies every lobe.
+const flight=require('../tools/headless.cjs').createFlight({mission:'hyperbolic',seed:29});
+const D=flight.DW,U=D.sim.METERS_PER_UNIT,view=flight.snapshot(),noop=()=>{};
+view.world.asteroids=[];view.world.ships=[];view.combat.enemies=[];view.combat.wrecks=[];
+const flash={position:[30/U,60/U,-100/U],velocity:[0,0,0],age:.24,scale:14,destruction:true};
+view.combat.flashes=[flash];
+let submitted;
+const scene=new Proxy({setStudyExplosions(blasts){submitted=blasts;}},{get:(o,k)=>k in o?o[k]:noop});
+D.scene3d={create:()=>scene,miningPlatformGeometry:D.miningRig.geometry,surfaceFrame:D.asteroidTerrain.surfaceFrame};D.flightSkybox={create:()=>({render:noop,setOccluders:noop})};
+D.shipPackModels.loadTextures=()=>Promise.resolve(new Map());D.shipPackModels.populate=noop;
+const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{value:'',checked:false,insertBefore:noop});return nodes.get(id);};
+D.experimentDom=()=>get;
+const document={body:{classList:{contains:()=>false}},getElementById:get,createElement:()=>({})};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/flight-presentation.js'),'utf8'),{window:{Driftworks:D},document,location:{search:'?mission=hyperbolic'},URLSearchParams});
+const presentation=D.flightPresentation.mount({},()=>view.world,noop,{document});
+function present(p=presentation){p.render(view,p.appearance(),{mode:'normal',scale:1,flat:false,mothership:false,actors:true},0);return submitted[0];}
+const beforeBlast=present(),beforeGeometry=snapshot(beforeBlast),beforePosition=flash.position.slice(),source=JSON.stringify(flash);
+assert.equal(beforeBlast.seed,Math.round(flash.position[0]*31+flash.position[1]*17));
+assert.equal(JSON.stringify(flash),source,'Presentation does not add render state to simulation flashes');
+for(let step=0;step<4;step++){
+  view.state.eye=D.flightHyperbolic.offset(view.state.eye,[70/U,15/U,-40/U],650);
+  D.flightHyperbolic.rebase(view.combat,()=>undefined);
+  assert.notDeepEqual(flash.position,beforePosition,'Real recentering changes the retained flash coordinates');
+  const afterBlast=present(),afterGeometry=snapshot(afterBlast);
+  assert.equal(afterBlast.seed,beforeBlast.seed,'A retained explosion keeps its pattern across chart changes');
+  beforeGeometry.forEach((batch,j)=>{
+    assert.deepEqual(afterGeometry[j].color,batch.color,'Fire texture offsets stay stable');
+    batch.vertices.forEach((value,i)=>{
+      const axis=i%6,shift=axis<3?flash.position[axis]-beforePosition[axis]:0;
+      assert(Math.abs(afterGeometry[j].vertices[i]-value-shift)<.0001,'Fixed-age blast geometry translates without reshuffling');
+    });
+  });
+}
+const secondView=D.flightPresentation.mount({},()=>view.world,noop,{document});
+assert.equal(present(secondView).seed,beforeBlast.seed,'Independent camera views share the event pattern');
+view.combat.flashes=[{...flash,position:[7/U,11/U,-90/U]}];
+assert.notEqual(present().seed,beforeBlast.seed,'New explosion events receive their own patterns');
+console.log('PASS flight explosions: stable shape and texture across real chart rebases and independent camera views');

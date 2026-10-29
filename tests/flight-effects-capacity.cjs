@@ -8,9 +8,9 @@ for(let i=0;i<60;i++)D.training.damageCraft(combat,combat.enemies[i*2],weapon,nu
 assert.equal(combat.flashes.filter(f=>f.destruction).length,60);
 assert.equal(combat.wrecks.length,60);
 const presentation=fs.readFileSync(require.resolve('../experiments/flight-presentation.js'),'utf8');
-const submit=presentation.match(/scene\.setStudyExplosions\(([^\n]+)\);/);assert.ok(submit);
+const submit=presentation.match(/scene\.setStudyExplosions\(([\s\S]+?\}\))\);/);assert.ok(submit);
 let submitted;
-vm.runInNewContext('scene.setStudyExplosions('+submit[1]+');',{scene:{setStudyExplosions:b=>submitted=b},combat,units:D.sim.METERS_PER_UNIT});
+vm.runInNewContext('scene.setStudyExplosions('+submit[1]+');',{scene:{setStudyExplosions:b=>submitted=b},combat,units:D.sim.METERS_PER_UNIT,explosionSeeds:new WeakMap()});
 assert.equal(submitted.length,60,'Presentation passes every live destruction to the scene');
 const bolt={position:state.eye.map((v,i)=>v-state.back[i]*200/D.sim.METERS_PER_UNIT),direction:state.back.map(v=>-v),weapon:D.retailWeapons[0],age:.1};
 combat.enemies.forEach(e=>{e.guns.bolts=Array.from({length:32},()=>({...bolt,position:bolt.position.slice()}));e.guns.impacts=[{position:bolt.position.slice(),age:.05}];});

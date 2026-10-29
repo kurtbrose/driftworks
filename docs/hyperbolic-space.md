@@ -45,7 +45,10 @@ and predicted trajectory guides use curved positions and transported frames.
 
 Presentation retains immutable source meshes, GPU poses, materials, authored
 scale/anchors and the production projectile, engine, shield and explosion
-painters. Hull/engine presentation uses transported local tangent frames;
+painters. Explosion randomness is cached by flash-event identity in presentation,
+shared across camera views, so chart recentring cannot reshuffle an active blast.
+The cache is weak and does not add render state to simulation flashes.
+Hull/engine presentation uses transported local tangent frames;
 large objects would require a separate finite-size geometry study. This mode
 is an open-space fighter encounter, not an asteroid-surface or capital-ship
 curved-scenery implementation. Normal missions retain their existing geometry.
