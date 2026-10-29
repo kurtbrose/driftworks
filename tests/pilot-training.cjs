@@ -90,4 +90,34 @@ const markerEvaluation = M.evaluate(DW, markerExample.weights, M.cases(424242, 8
 assert.equal(markerEvaluation.stableFinalSecond, 8, 'trained export must settle on independent bearings and angular rates');
 assert.ok(markerEvaluation.worstFinalSecondErrorDegrees < 1);
 assert.ok(markerEvaluation.finalSecondRate < .05, 'alignment must settle rather than merely cross the marker');
+const Tracking = require('../tools/pilot-training/tracking.cjs');
+const Arrival = require('../tools/pilot-training/arrival.cjs');
+const trackingInput = [.2, -.3, .9, .05, -.1];
+assert.deepEqual(Tracking.predict(Tracking.transfer(), trackingInput.concat([0, 0])), M.predict(markerExample.weights, trackingInput),
+  'expanding observations must preserve the learned marker policy before training');
+assert.deepEqual(Tracking.cases(42, 8), Tracking.cases(42, 8));
+assert.deepEqual(Tracking.cases(42, 4).map(f => f.kind), ['stationary', 'circle', 'reverse', 'weave']);
+for (const f of Tracking.cases(42, 4)) {
+  const t = 1.3, h = .00001, units = DW.sim.METERS_PER_UNIT;
+  const contact = Tracking.target(f, t, units), next = Tracking.target(f, t + h, units), before = Tracking.target(f, t - h, units);
+  contact.velocity.forEach((v, i) => assert.ok(Math.abs((next.eye[i] - before.eye[i]) * units / (2 * h) - v) < .001,
+    'observed target velocity must match the actual path derivative'));
+}
+const trackingFixture = Tracking.cases(42, 4)[2];
+assert.deepEqual(Tracking.episode(DW, Tracking.transfer(), trackingFixture, 4, true), Tracking.episode(DW, Tracking.transfer(), trackingFixture, 4, true));
+assert.throws(() => Tracking.episode(DW, [], trackingFixture), /Invalid tracking/);
+assert.throws(() => Tracking.episode(DW, Tracking.transfer(), trackingFixture, 3), /duration/);
+assert.ok(Tracking.observe(DW.arcade.create(0), {eye: [0, 0, 0], velocity: [0, 0, 0]}, DW.sim.METERS_PER_UNIT).every(Number.isFinite));
+assert.deepEqual(Arrival.cases(42, 4), Arrival.cases(42, 4));
+assert.equal(Arrival.predict(Array(5).fill(0), [1, .2, .3, 1]), 0, 'zero throttle weights do not contain an arrival controller');
+const arrivalFixture = Arrival.cases(42, 1)[0];
+assert.deepEqual(Arrival.episode(DW, Tracking.transfer(), Array(5).fill(0), arrivalFixture, 2, true),
+  Arrival.episode(DW, Tracking.transfer(), Array(5).fill(0), arrivalFixture, 2, true));
+const trackingExample = require('../tools/pilot-training/tracking-example.json');
+const trackingEvaluation = Tracking.evaluate(DW, trackingExample.weights, Tracking.cases(424242, 8));
+assert.ok(trackingEvaluation.trackingErrorDegrees < .8, 'trained tracking export must follow independent moving markers');
+assert.ok(trackingEvaluation.withinOneDegreeFraction > .9);
+const arrivalExample = require('../tools/pilot-training/arrival-example.json');
+const arrivalEvaluation = Arrival.evaluate(DW, arrivalExample.trackingWeights, arrivalExample.weights, Arrival.cases(424242, 8));
+assert.equal(arrivalEvaluation.successes, 8, 'learned throttle must arrive and remain slow, not merely pass the target');
 console.log('Pilot training: combat scenarios and deterministic from-scratch marker control passed');

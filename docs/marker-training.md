@@ -1,7 +1,10 @@
 # From-scratch marker control
 
+For the follow-up tracking/arrival measurements and the recommended tactical
+executive direction, see [pilot skill studies](pilot-curriculum.md).
+
 This offline experiment asks whether a neural network can learn to turn a
-Hercules toward a stationary marker and settle smoothly. It uses the production
+Ulysses toward a stationary marker and settle smoothly. It uses the production
 `DW.arcade.step` integrator at 120 Hz, including automatic bank during yaw.
 It does not change gameplay, ship physics or deployment dependencies.
 

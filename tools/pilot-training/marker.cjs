@@ -107,7 +107,7 @@ function main() {
   const DW = loadRuntime(), started = Date.now(), result = train(DW, {seed, generations});
   const fixtures = cases(seed + 200000, 64), zero = Array(COUNT).fill(0);
   const report = {version: 1, seed, generations, architecture: [5, 2], parameters: COUNT, dt: DT, policyHz: 1 / (DT * HOLD), throttle: THROTTLE,
-    task: 'Stationary marker at 100 km; Hercules; production physics including automatic yaw bank; random initial bearing 5-150 degrees and pitch/yaw rates.',
+    task: 'Stationary marker at 100 km; ' + DW.arcade.profiles[0].name + '; production physics including automatic yaw bank; random initial bearing 5-150 degrees and pitch/yaw rates.',
     selection: 'Validation every five generations; test split used only after selection.',
     reward: 'Minimize integrated squared angular error + .025 rate squared + .002 control effort; .02 squared control changes; final two seconds additionally 5 absolute angular error + .5 angular speed. Divide by duration.',
     weights: result.best.weights, selectedGeneration: result.best.generation, history: result.history,
