@@ -3,6 +3,9 @@
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
     var get = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).experimentDom(document);
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), model = DW.arcade, host = get('viewer');
+    if(DW.flightMissions.current().sky.hyperbolic&&new URLSearchParams(location.search).get('flyby')==='1'){
+        await DW.hyperbolicFlyby.mount(host);return;
+    }
     var texturesReady=false,textureLoadFailed=false;
     get('fly').disabled=true;get('fly').textContent='Loading ship textures...';
     get('status').textContent='Loading ship textures and preparing graphics...';
@@ -30,7 +33,7 @@
     if(controlsHelp&&activeMission.units.speedScale!==1)controlsHelp.innerHTML=controlsHelp.innerHTML.replace(/5 m\/s/g,Math.round(5*activeMission.units.speedScale)+' '+activeMission.units.speedLabel);
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
-    if(aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'){try{await DW.aegisFlight.load();aegis=activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):cinematic?DW.aegisFlight.createBattle({bridge:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
+    if(activeMission.sky.hyperbolic||aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'){try{await DW.aegisFlight.load();aegis=activeMission.sky.hyperbolic?DW.flightHyperbolic.createCapitals():activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):cinematic?DW.aegisFlight.createBattle({bridge:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
     /** @type {import('./types').TerrainHit} */
     var environmentHit = function (start, end, bolt) {
             var asteroid = session.snapshot().asteroid;
@@ -581,7 +584,7 @@
         benchmarkButton.textContent=activeMission.sky.hyperbolic?'Benchmark fleet on / off':activeMission.id==='scramble'?'Benchmark close furball on / off':activeMission.id==='battle'?'Benchmark distant squadrons on / off':activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
         benchmarkOutput.id='aegis-benchmark-result';benchmarkOutput.style.whiteSpace='pre-wrap';
         get('perf-reset').after(benchmarkButton,benchmarkOutput);
-        var capitalBenchmarkButton=(activeMission.id==='battle'||activeMission.id==='scramble')?document.createElement('button'):null;
+        var capitalBenchmarkButton=(activeMission.id==='battle'||activeMission.id==='scramble'||activeMission.sky.hyperbolic)?document.createElement('button'):null;
         if(capitalBenchmarkButton){capitalBenchmarkButton.textContent='Benchmark capital ships on / off';benchmarkButton.after(capitalBenchmarkButton);capitalBenchmarkButton.onclick=function(){runBenchmark(true);};}
         benchmarkButton.onclick=function(){runBenchmark(false);};
         var surfaceBenchmarkButton=aegis&&aegis.setSurfaceDetail?document.createElement('button'):null;
@@ -597,8 +600,8 @@
             /** @type {{on:boolean,cpu:number,interval:number,draws:number,triangles:number}[]} */var rows=[];
             try{
                 for(var enabled of [false,true,true,false]){
-                    if(surfaces&&aegis&&aegis.setSurfaceDetail){aegis.setSurfaceDetail(enabled,scope);presentation.setCapital(aegis);}else if(aegis&&((activeMission.id!=='battle'&&activeMission.id!=='scramble')||capitals))presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
-                    var sampled=activeMission.sky.hyperbolic?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:enabled?snapshot.combat.enemies:[],wrecks:enabled?snapshot.combat.wrecks:[]})}):activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
+                    if(surfaces&&aegis&&aegis.setSurfaceDetail){aegis.setSurfaceDetail(enabled,scope);presentation.setCapital(aegis);}else if(aegis&&((activeMission.id!=='battle'&&activeMission.id!=='scramble'&&!activeMission.sky.hyperbolic)||capitals))presentation.setCapital(enabled?aegis:null);else if(activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;
+                    var sampled=activeMission.sky.hyperbolic&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:enabled?snapshot.combat.enemies:[],wrecks:enabled?snapshot.combat.wrecks:[]})}):activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
                     var previous=0;
                     for(var i=0;i<110;i++){
                         var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});

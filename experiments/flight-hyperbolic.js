@@ -148,5 +148,74 @@
         var sky=combat.player.pose.spaceFrame||[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
         combat.player.pose.spaceFrame=sky.map(transform);
     }
-    DW.flightHyperbolic={point:point,chart:chart,lift:lift,lower:lower,path:path,offset:offset,transport:transport,travel:travel,move:move,lead:lead,hullHit:hullHit,presentation:presentation,rebase:rebase,chartPose:chartPose,grid:grid};
+    /** Shared finite-body shader, in scene units. Columns are (point,right,up,back)
+     * on the Lorentz hyperboloid. The cofactor is the inverse-transpose Jacobian
+     * up to a positive scalar, including normal-map directions. */
+    var hullShader=`
+uniform float uHyperbolicRadius;
+uniform mat4 uHyperbolicFrame;
+vec3 hyperbolicPosition(vec3 v){
+    float r=length(v),s=r/uHyperbolicRadius,e=exp(s),ch=(e+1./e)*.5;
+    float shc=s<.001?1.+s*s/6.:(e-1./e)*.5/max(s,1.e-12);
+    return uHyperbolicRadius*uHyperbolicFrame[0].yzw*ch+
+        mat3(uHyperbolicFrame[1].yzw,uHyperbolicFrame[2].yzw,uHyperbolicFrame[3].yzw)*v*shc;
+}
+mat3 hyperbolicNormalMatrix(vec3 v){
+    float r=length(v),s=r/uHyperbolicRadius,e=exp(s),ch=(e+1./e)*.5,sh=(e-1./e)*.5;
+    float shc=s<.001?1.+s*s/6.:sh/max(s,1.e-12);
+    float k=s<.001?1./(3.*uHyperbolicRadius*uHyperbolicRadius):(ch-shc)/max(r*r,1.e-20);
+    mat3 axes=mat3(uHyperbolicFrame[1].yzw,uHyperbolicFrame[2].yzw,uHyperbolicFrame[3].yzw);
+    vec3 radial=uHyperbolicFrame[0].yzw*(s<.001?1./uHyperbolicRadius:sh/max(r,1.e-12))+axes*v*k;
+    vec3 x=axes[0]*shc+radial*v.x,y=axes[1]*shc+radial*v.y,z=axes[2]*shc+radial*v.z;
+    return mat3(cross(y,z),cross(z,x),cross(x,y));
+}
+`;
+    /** Immutable adaptive subdivision preserves UV seams and auxiliary channels.
+     * Longest-edge bisection bounds every edge to 20 metres at all supported radii.
+     * @type {WeakMap<Float32Array,{stride:number,normalUV?:Float32Array,bakedDocking?:Float32Array,result:Partial<import('./types').Batch>}[]>} */
+    var hullMeshes=new WeakMap();
+    /** @param {import('./types').Batch} batch */
+    function prepareHull(batch){
+        var stride=batch.stride||(batch.texture?8:6),entries=hullMeshes.get(batch.vertices)||[];
+        var old=entries.find(function(e){return e.stride===stride&&e.normalUV===batch.normalUV&&e.bakedDocking===batch.bakedDocking;});
+        if(old)return Object.assign({},batch,old.result);
+        var channels=[{data:batch.vertices,size:stride}],out=/** @type {number[][]} */([[]]);
+        if(batch.normalUV){channels.push({data:batch.normalUV,size:2});out.push([]);}
+        if(batch.bakedDocking){channels.push({data:batch.bakedDocking,size:3});out.push([]);}
+        /** @param {number} i */function vertex(i){return channels.flatMap(function(c){return Array.from(c.data.subarray(i*c.size,(i+1)*c.size));});}
+        /** @param {V} a @param {V} b @param {V} c */function triangle(a,b,c){
+            var ab=0,bc=0,ca=0;for(var k=0;k<3;k++){ab+=(a[k]-b[k])**2;bc+=(b[k]-c[k])**2;ca+=(c[k]-a[k])**2;}
+            if(Math.max(ab,bc,ca)>(20/U)**2){
+                if(bc>ab&&bc>=ca){triangle(b,c,a);return;}if(ca>ab&&ca>bc){triangle(c,a,b);return;}
+                var m=a.map(function(v,i){return (v+b[i])*.5;});triangle(a,m,c);triangle(m,b,c);return;
+            }
+            [a,b,c].forEach(function(v){var start=0;channels.forEach(function(ch,j){for(var k=0;k<ch.size;k++)out[j].push(v[start+k]);start+=ch.size;});});
+        }
+        for(var i=0;i<batch.vertices.length/stride;i+=3)triangle(vertex(i),vertex(i+1),vertex(i+2));
+        var cached=/** @type {Partial<import('./types').Batch>} */({vertices:new Float32Array(out[0])});var j=1;
+        if(batch.normalUV)cached.normalUV=new Float32Array(out[j++]);if(batch.bakedDocking)cached.bakedDocking=new Float32Array(out[j]);
+        entries.push({stride:stride,normalUV:batch.normalUV,bakedDocking:batch.bakedDocking,result:cached});hullMeshes.set(batch.vertices,entries);return Object.assign({},batch,cached);
+    }
+    /** Two stationary, unarmed visual references. One shared, immutable source hull;
+     * every material uses the SAME normal-coordinate body placement, not separate
+     * exponential maps around turret or panel pivots.
+     * @param {{single?:boolean}} [options] @returns {import('./types').AegisFlightRig} */
+    function createCapitals(options){
+        var state={team:/** @type {'ally'} */('ally'),position:[0,0,0],heading:0,velocity:[0,0,0],integrity:20000};
+        var rig=DW.aegisFlight.create({state:state,opponent:state,unarmed:true}),source=rig.geometry().map(prepareHull);
+        var bodies=options&&options.single?[{offset:[0,0,0],heading:0}]:[{offset:[-120,890,-115],heading:.20},{offset:[480,1510,190],heading:-.35}];
+        var frames=bodies.map(function(){return new Float32Array(16);});
+        var batches=bodies.map(function(_,i){return source.map(function(b){return Object.assign({},b,{hyperbolicFrame:frames[i]});});}),renderBatches=batches.flat();
+        /** @param {import('./types').Pose} [camera] */function geometry(camera){
+            if(!camera||!camera.curvature)return [];
+            var radius=camera.curvature;
+            bodies.forEach(function(body,index){
+                var c=Math.cos(body.heading),s=Math.sin(body.heading),pose=chartPose({curvature:radius,eye:offset([0,0,0],body.offset.map(function(v){return v/U;}),radius),right:[c,s,0],up:[-s,c,0],back:[0,0,1]},camera),p=point(pose.eye,radius);
+                frames[index].set([...p,...lift(p,pose.right),...lift(p,pose.up),...lift(p,pose.back)]);
+                batches[index].forEach(function(b){b.hyperbolicRadius=radius/U;});
+            });return renderBatches;
+        }
+        return {reset:function(){},step:function(){},geometry:geometry,effects:function(){return [];},hit:function(){return null;},readout:function(){return 'AEGIS / TWO STATIONARY 1,305 m REFERENCES\nStart ranges 0.90 km / 1.60 km · unarmed scenery';},telemetry:rig.telemetry};
+    }
+    DW.flightHyperbolic={point:point,chart:chart,lift:lift,lower:lower,path:path,offset:offset,transport:transport,travel:travel,move:move,lead:lead,hullHit:hullHit,presentation:presentation,rebase:rebase,chartPose:chartPose,grid:grid,hullShader:hullShader,prepareHull:prepareHull,createCapitals:createCapitals};
 }());

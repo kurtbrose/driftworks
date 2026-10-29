@@ -53,11 +53,110 @@ scale/anchors and the production projectile, engine, shield and explosion
 painters. Explosion randomness is cached by flash-event identity in presentation,
 shared across camera views, so chart recentring cannot reshuffle an active blast.
 The cache is weak and does not add render state to simulation flashes.
-Hull/engine presentation uses transported local tangent frames;
-large objects would require a separate finite-size geometry study. This mode
-is an open-space fighter encounter, not an asteroid-surface or capital-ship
-curved-scenery implementation. Normal missions retain their existing geometry.
+Fighter hull/engine presentation uses transported local tangent frames. Two
+stationary, unarmed Aegis references now use finite-size geometry, at initial
+intrinsic center ranges of approximately 0.90 km and 1.60 km. Each retains its
+authored 1,305 m main hull and original materials, windows, engines and fixed
+turrets. They are visual scenery: they do not fire, launch fighters, block flight
+or receive projectile damage. Normal missions retain their existing geometry.
 No persistent RTS world/save schema or runtime network dependency is added.
+
+## Finite capital hulls
+
+The body convention is a single Riemann normal-coordinate placement per ship:
+`X(v) = P cosh(|v|/R) + lift(P,Bv) sinh(|v|/R)/|v|`, with consistent physical
+units. Thus authored displacement from the center is intrinsic distance, and the
+axial main hull remains 1,305 m from bow to stern. A Euclidean rigid solid cannot
+preserve every pairwise distance in curved space; this explicit convention fixes
+the hull at its center and maps its entire interior consistently. It is not a
+screen-space bend or a different exponential map for each panel or turret.
+
+The existing unarmed Aegis bake merges fixed mounts into shared material batches.
+Immutable triangles are adaptively split until all edges are at most 20 m,
+including interpolated paint UVs, armor-normal UVs and baked lighting channels.
+Both instances share the prepared buffers. Each frame supplies only the Lorentz
+point and three tangent axes, re-expressed through the player's accumulated
+isometry. The vertex shader evaluates the exponential map; both production PBR
+and custom interior materials use it. Surface normals and armor normal maps use
+the cofactor of the exact position Jacobian. A conservative metric-ball bound
+replaces flat-box culling for these batches, retaining near-plane intersections
+and views from inside their bounds.
+
+At the starting camera the nearer ship sits below/left, the farther above/right.
+Compare Settings' 650 m default with 350 m and nearly-flat 100000 m. Transverse
+angular size decreases much faster with range in negative curvature. Straight
+geodesic features need not look like bananas; changes in apparent proportions,
+size versus range and perspective during a flyby are the useful cues.
+
+A more decisive motion cue is geodesic separation. Two craft initially 100 m
+apart, with equal parallel-transported headings and constant local speeds, remain
+100 m apart in flat space regardless of speed. At R=650 m, unsteered 70 m/s
+flight separates them to 164 m after 10 s and 429 m after 20 s; at 150 m/s the
+corresponding distances are 496 m and 2,688 m. These are intrinsic distances,
+checked with `offset`/`path`. For this symmetric setup the exact separation is
+`2 R asinh(sinh(d0/(2 R)) cosh(v t/R))`. Steering AI does not preserve those
+initial conditions, so an ordinary furball is a poor direct demonstration.
+Those physical gaps are not screen gaps. For a stationary observer at the starting
+midpoint, the receding pair's angular separation is
+`2 atan(sinh(d0/(2 R)) coth(v t/R))`. At 70 m/s and R=650 m this is 17.8 degrees
+after 5 s, 11.1 after 10 s and 9.0 after 20 s, versus flat-space 16.3, 8.2 and
+4.1 degrees. The initially parallel-transported geodesics approach distinct ideal
+endpoints (8.8 degrees apart in this example), rather than one vanishing point.
+Short encounters can still resemble ordinary perspective with unfamiliar speeds
+or distances; intrinsic divergence alone does not establish perceptual salience.
+
+`flightHyperbolic.createCapitals()` supplies the reference rig. The capital rig's
+`geometry(camera?)` interface accepts the observer pose; flat rigs ignore it.
+Batch `hyperbolicRadius` is in scene units and `hyperbolicFrame` is a column-major
+4x4 matrix containing `(P, lift(right), lift(up), lift(back))`, in Lorentz
+`(time,x,y,z)` order. Finite batches use already assembled body-local geometry;
+their ordinary origin/basis/scale are not reapplied to that placement.
+
+## Clean flyby and controlled fighter passes
+
+Open `experiments/flight.html?mission=hyperbolic&flyby=1`, also linked from the
+index. It autoplays one stationary, full-scale Aegis and four identical Raptor
+fighters against black. There are no HUD numbers, markers, grids, reticles or
+labels during playback. Space freezes/resumes the clean image. Esc opens a small
+pause menu with Resume, Replay, Hide/Show fighters and a return to free flight.
+
+`hyperbolic-flyby.js` samples a 30 m/s observer geodesic, with attitude parallel
+transported from the closest point. It does not track the capital or apply a
+screen-space bend, scale or pan. Closest approach is about 1.30 km at R=650 m.
+The live segment uses source times 8–22 seconds, then fades to black before the
+loop resets. The active segment lasts 14 seconds; the complete loop lasts 14.
+The camera chart is an exact Lorentz boost to the observer, not an ordinary
+translation of a non-origin camera in the player's Gans chart.
+
+The fighters use the original Raptor mesh, textures, engine effects and scale.
+Two staggered passes run at each depth, all at 70 m/s, along parallel-transported
+initial headings. Their lanes tilt upward by 0.6 radians, allowing rear fighters
+to emerge outside the long capital silhouette before/after crossing behind it.
+At source time 14 the first foreground fighter, capital center and first rear
+fighter share one sightline, in that depth order. Occlusion uses the ordinary
+renderer depth buffer. There is no combat, firing, damage or NPC steering. Far
+fighters really do become small; they are not enlarged to advertise the effect.
+
+Foreground geometry has been audited against both angular-size and parallax
+relations. For small transverse features at intrinsic range d, static H3 gives
+`D_size=R*sinh(d/R)` and `D_parallax=R*tanh(d/R)` for a small sideways baseline
+with parallel-transported attitude. Tests exercise the actual hull placement
+frames after real session rebasing. An ignored browser probe additionally checks
+rasterized marker positions through the unmodified production renderer, using
+both raw and textured capital materials and the actual capital atlas: 18 cases,
+maximum centroid residual 0.275 backing pixels against analytic ray bearings.
+
+The ordinary flight sky intentionally remains translation-invariant. It is not
+an ideal-boundary texture transported through H3. The flyby uses black specifically
+to omit that convention as a conflicting depth cue; production environment
+lighting/materials remain in use. `flightPresentation.mount` accepts an optional
+`emptySky` flag in its environment argument for this purpose.
+
+This demonstrates the foreground mapping and isolates visual relationships; it
+does not establish that an uncalibrated viewer must recognize curvature. Moving
+fighters add their own motion, and their small distant images can suppress the
+cue. Perceptual salience must be judged from playback separately from the
+mechanical/GPU checks.
 
 ## Verification
 
@@ -67,6 +166,9 @@ sortie death. At four radii, actual native Raptor-anchor volleys hit a moving
 Raptor hull when aimed on the pip; current-bearing negative controls miss.
 `node tests/hyperbolic-performance.cjs` steps the real session at four radii and
 checks finite positions, transported frames and existing projectile ownership.
+`node tests/hyperbolic-capitals.cjs` checks shared tessellation, intrinsic scale,
+the nearly-flat limit, actual-session chart invariance and conservative curved
+culling. See [capital visual and performance checks](benchmarks/hyperbolic-capitals-2026-10-28.md).
 
 `node tools/benchmark-hyperbolic.cjs` compares the conservative rejection test
 with an exact unculled local-chart reference in ABBA order. It checks identical

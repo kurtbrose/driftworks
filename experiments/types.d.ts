@@ -47,7 +47,7 @@ export type AegisFlightRig = {
     setSurfaceDetail?:(enabled:boolean,scope?:'turrets')=>void;
     reset:(combat?:Combat)=>void;
     step:(dt:number,view:FlightView)=>void;
-    geometry:()=>Batch[];
+    geometry:(camera?:Pose)=>Batch[];
     effects:(pose:Pose,shields?:boolean)=>Batch[];
     readout:()=>string;
     hit:(a:Vector,b:Vector,bolt?:Bolt)=>Vector|null;
@@ -353,6 +353,9 @@ export type Pack = {
 // Signed proper metres and outward unit radial in the canonical (region 0) chart.
 export type HullTransit = {proper:number;normal:Vector};
 export type Batch = {
+    /** Finite normal-coordinate hull placement; radius is in scene units. */
+    hyperbolicRadius?:number;
+    hyperbolicFrame?:Float32Array;
     lensTransit?:HullTransit;
     shieldGlow?:boolean;shieldWaves?:number;
     projected?:boolean;lensRadius?:number;lensCenter?:number[];
@@ -919,6 +922,7 @@ export type ExperimentModules = {
         };
     };
     flightHyperbolic:import('./flight-hyperbolic-types').HyperbolicGeometry;
+    hyperbolicFlyby:{sample:(seconds:number,radius?:number)=>FlightState;traffic:(seconds:number,camera:Pose)=>FlightState[];mount:(host:HTMLElement)=>Promise<void>};
     flightSession: {
         rotateVector: (vector: number[], angle: number) => number[];
         create: (environment: SessionEnvironment) => {
@@ -961,6 +965,7 @@ export type ExperimentModules = {
         model: (craft: ArtCraft, wave: number, appearance: Pick<Appearance, 'allyArt' | 'enemyArt'>) => Model;
         mount: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, environment?: {
             document: Document;
+            emptySky?:boolean;
         }) => {
             ready: Promise<boolean>;
             appearance: () => Appearance;

@@ -98,7 +98,7 @@ const profiles = {
     {imports: {three: 'vendor/three/build/three.module.js'}},
     {src: 'assets/characters/quaternius-astronaut/poses.js', type: 'module'},
     '@flightAi', 'experiments/flight-watch.js', {src: 'experiments/gas-giant-flight.js', type: 'module'},
-    'experiments/aegis-flight.js', 'experiments/flight.js'
+    'experiments/aegis-flight.js', 'experiments/hyperbolic-flyby.js', 'experiments/flight.js'
   ]}
 };
 
@@ -115,6 +115,7 @@ const dependencies = {
   'src/game.js': ['src/ship-art.js', 'src/sim.js', 'src/tactical/camera.js', 'src/asteroid-art.js'],
   'experiments/ship-packs.js': ['assets/ships/quaternius-ultimate-spaceships/meshes.js', 'assets/ships/concept-trio/meshes.js'],
   'experiments/flight-session.js': ['src/sim.js', 'experiments/flight-model.js', 'experiments/training.js', 'experiments/flight-comms.js'],
+  'experiments/hyperbolic-flyby.js': ['experiments/flight-hyperbolic.js', 'experiments/flight-session.js', 'experiments/flight-presentation.js'],
   'experiments/flight-duel.js': ['experiments/flight-ai.js'],
   'experiments/flight-study.js': ['experiments/flight-duel.js']
 };

@@ -177,7 +177,7 @@
     function model(craft, wave, appearance) {
         return DW.shipPackModels.craftModel(craft, craft.team === 'ally' ? appearance.allyArt : appearance.enemyArt, wave);
     }
-    /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{document: Document}} [environment] */
+    /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{document: Document,emptySky?:boolean}} [environment] */
     function mount(host, getWorld, setWorld, environment) {
         var document = (environment || globalThis).document, units = DW.sim.METERS_PER_UNIT;
         var get = DW.experimentDom(document);
@@ -312,7 +312,7 @@
                     tetherReadout.textContent=tetherKm+' km tip-to-tip  /  hub '+(distance/1000).toFixed(2)+' km\nTip '+spin.tipSpeed.toFixed(0)+' m/s / '+spin.tipG.toFixed(2)+' g / period '+spin.periodSeconds.toFixed(1)+' s\nFull span at current '+speed.toFixed(0)+' m/s: '+(speed>1?(tetherKm*1000/speed/60).toFixed(1)+' min':'--');
                 }
             }
-            if(capital)actorBatches=actorBatches.concat(capital.geometry());
+            if(capital)actorBatches=actorBatches.concat(capital.geometry(state));
             if(combat.mode==='evacuation'&&DW.evacuationScenery)actorBatches=actorBatches.concat(DW.evacuationScenery.geometry(combat));
             scene.setStudyActors(actorBatches.concat(calibration).concat(crews.map(function (batch) {
                 var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });
@@ -364,7 +364,7 @@
             var motionStyle=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-guide-style'));
             var motionBrightness=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes-opacity'));
             var motionOpacity=regions.length>1&&!combat.dead&&!document.body.classList.contains('watch-chase')&&(!motionToggle||motionToggle.checked)&&(!motionStyle||motionStyle.value==='grid')?(motionBrightness?Number(motionBrightness.value)/100:.85):0;
-            skybox.render(state, comparison.scale, comparison.mode === 'empty',elapsed,motionOpacity);
+            skybox.render(state, comparison.scale, comparison.mode === 'empty'||!!(environment&&environment.emptySky),elapsed,motionOpacity);
             scene.sync(world);
             if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=defaultShieldDiscs||shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,ownShield);shieldTime=view.combat.time;
                 if(shieldTime<shieldTest)shieldTest=-Infinity;
