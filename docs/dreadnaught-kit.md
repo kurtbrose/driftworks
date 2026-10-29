@@ -75,6 +75,64 @@ unmeasured until a full-ship integration is requested.
 
 #### Baked normals and GPU comparison
 
+For the follow-up with complete ships, open the
+[fleet comparison](../studies/aegis-fleet-review.html). It offers six or twelve
+Aegis ships, overview, close-flyby, distant and underside cameras, and a GPU ABBA
+button. Twenty standard armor bands per ship are replaced; all other production
+triangles, textures and authored component poses are retained. Replacement armor
+uses the same neutral finish in both variants. This is a frozen rendering
+workload, not a combat simulation or a full production material integration.
+
+`tools/bake-aegis-fleet.cjs` extracts the band centers from the authoring source
+and records its hash plus the production rig hash. `studies/aegis-fleet-build.js`
+removes the corresponding production surfaces (88 UV-split triangles per band),
+then substitutes either 316 geometric-bevel triangles or 60 baked-normal
+triangles. The frozen rest of the ship is grouped by compatible material.
+Geometry is prepared once and shared between ships in **both** modes. The baked
+mode shares one image, one GPU texture and one armor buffer between all ships;
+the browser check verifies those identities. The atlas remains 10.7 MiB total
+with mipmaps, not 10.7 MiB per ship. Geometry savings likewise are shared:
+339,840 vertex-buffer bytes, while submitted work falls by 5,120 triangles per
+fully visible ship. The review adapter now transforms object-space normals by
+the actor basis and heading; the fleet includes opposing small headings.
+
+At 1600 x 753 backing pixels / DPR 1 on the RTX 3070 Ti (ANGLE D3D11), overview
+submission is 96 draws and 269,544 versus 238,824 triangles for six ships, or 192
+draws and 539,088 versus 477,648 for twelve. Each ABBA block warms for 60 frames
+and samples 180 frames, giving 360 samples per mode per run. Two runs per view
+were recorded. Frustum culling is retained, so flyby views submit fewer batches;
+both modes have matching draw counts. Pose, viewport, visibility and positive
+draw checks are enforced; invalid/disjoint GPU samples reject the run.
+
+Default Chrome presentation gave highly variable GPU elapsed measurements, many
+near the 13.3 ms refresh interval. Those runs did not establish a winner. The
+diagnostic repeat using `--disable-frame-rate-limit --disable-gpu-vsync` gave:
+
+| Fleet / view | Real bevel median GPU ms (two runs) | Shared baked median GPU ms (two runs) |
+| --- | --- | --- |
+| Six / overview | 1.233, 1.244 | 1.139, 1.147 |
+| Six / close flyby | 0.369, 0.364 | 0.336, 0.327 |
+| Twelve / overview | 1.323, 1.403 | 1.282, 1.297 |
+| Twelve / close flyby | 0.428, 0.430 | 0.432, 0.416 |
+
+The uncapped results favor baked normals by about 8-10% for six ships and 3-8%
+for the twelve-ship overview; the twelve-ship close flyby is effectively tied.
+CPU submission and frame cadence change little, and GPU p95 has large outliers
+in flyby views. This supports a modest, view-dependent GPU benefit in this
+rendering workload, not a general FPS improvement or a claim that texture
+mapping always wins. The fixed shared texture memory cost still exceeds the
+saved shared vertex storage. Production combat, effects and other GPUs remain
+unmeasured. No production asset or gameplay behavior is changed.
+
+Per-block summaries, device, poses, source hashes and both presentation modes
+are saved in `studies/aegis-fleet-results.json`. Regenerate raw samples and
+screenshots in ignored `output/` with `node tools/check-aegis-fleet.cjs --browser`
+and `--browser --uncapped` (using the same development Playwright path as the
+section check). Without `--browser`, the check verifies immutable input and
+triangle conservation outside the replaced bands. Overview, close-up, distant
+and underside captures were visually inspected in both modes for six and twelve
+ships. These are geometry-comparison checks, not full-ship visual approval.
+
 `node tools/bake-aegis-normal.cjs` projects the actual weighted bevel mesh onto
 26 coplanar charts of the original 60-triangle section. Each atlas texel stores
 an interpolated high-mesh object-space normal, not color or a fixed highlight.
@@ -88,9 +146,9 @@ Node modules and locally vendored assets; no runtime network dependency is added
 The review-only `studies/aegis-normal-renderer.js` adapter uses the existing
 `scene3d` shader with a compile-time baked-normal variant: one linear-data texture
 sample, decode and normalization. No runtime edge finding occurs, and the real
-bevel shader does not execute this sample. Object-space normals assume this
-isolated section's identity transform; production transforms/normal matrices and
-the ship's material pipeline would require separate integration. Neither runtime
+bevel shader does not execute this sample. The isolated section uses identity transforms; the fleet adapter also applies
+actor basis and heading. Nonuniform scale and the production material pipeline
+would require separate integration. Neither runtime
 ship geometry nor the production renderer is changed. The normal map cannot
 round silhouettes or alter geometric shadows. Close-up chart edges are slightly
 sharper than the real bevels at this resolution. Three-quarter, close-up,

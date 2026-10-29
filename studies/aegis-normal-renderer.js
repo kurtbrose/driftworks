@@ -5,13 +5,13 @@
  T.RawShaderMaterial=class extends BaseMaterial{
   constructor(options){
    if(options?.fragmentShader?.includes('vec3 n=normalize(vNormal);')){
-    const fragmentShader=options.fragmentShader.replace('vec3 n=normalize(vNormal);','vec3 n=normalize(vNormal);\n#ifdef AEGIS_BAKED_NORMAL\nn=normalize(texture2D(uShipTexture,vUV).xyz*2.-1.);\n#endif\n').replace('if(uTextured>.5){vec4 tex=', 'if(uTextured>.5&&uFinish>-2.5){vec4 tex=');
+    const fragmentShader=options.fragmentShader.replace('precision highp float;','precision highp float;\n#ifdef AEGIS_BAKED_NORMAL\nuniform mat3 uModelBasis;\n#endif\n').replace('vec3 n=normalize(vNormal);','vec3 n=normalize(vNormal);\n#ifdef AEGIS_BAKED_NORMAL\nvec3 bn=uModelBasis*(texture2D(uShipTexture,vUV).xyz*2.-1.);float bc=cos(uRotation),bs=sin(uRotation);n=normalize(vec3(bc*bn.x-bs*bn.y,bs*bn.x+bc*bn.y,bn.z));\n#endif\n').replace('if(uTextured>.5){vec4 tex=', 'if(uTextured>.5&&uFinish>-2.5){vec4 tex=');
     super({...options,fragmentShader});this.userData.aegisNormalStudy=true;
    }else super(options);
   }
  };
  T.WebGLRenderer=class extends BaseRenderer{
-  constructor(options){super(options);api.renderers.push(this);const render=this.render.bind(this);this.render=(scene,camera)=>{
+  constructor(options){super(options);api.renderers.push(this);const render=this.render.bind(this);this.render=(scene,camera)=>{this.studyScene=scene;
    scene.traverse(o=>{const m=o.material;if(!m?.userData?.aegisNormalStudy)return;this.studyMaterial=m;const enabled=m.uniforms.uFinish?.value===-3;if(!!m.defines.AEGIS_BAKED_NORMAL!==enabled){m.defines={...m.defines};if(enabled)m.defines.AEGIS_BAKED_NORMAL=1;else delete m.defines.AEGIS_BAKED_NORMAL;m.needsUpdate=true;}});
    render(scene,camera);
   };}

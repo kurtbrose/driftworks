@@ -1,0 +1,34 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aegis fleet / geometry versus shared normal map</title><style>
+*{box-sizing:border-box}body{margin:0;background:#080f17;color:#e5e8e7;font:14px system-ui}header{height:132px;padding:16px 22px}h1{font-size:20px;font-weight:500;margin:0 0 12px}button,select{background:#20313e;color:#e5e8e7;padding:7px;border:1px solid #61727c;margin-right:8px}p{color:#a4b6c0;font-size:12px}.host{position:absolute;inset:132px 0 115px}.host canvas{position:absolute;inset:0;width:100%;height:100%}.scene3d-controls{display:none!important}footer{position:absolute;bottom:0;height:115px;padding:10px 22px;font:12px monospace;white-space:pre-wrap}#candidate-label{position:absolute;right:24px;top:142px;color:#dfcba7;z-index:3}
+</style></head><body><header><h1>AEGIS / fleet rendering comparison</h1><select id="mode"><option value="weighted">Real bevels</option><option value="baked">Shared baked normal map</option></select><select id="fleet"><option value="6">Six capital ships</option><option value="12">Twelve capital ships</option></select><select id="view"><option value="quarter">Formation overview</option><option value="edge">Close flyby</option><option value="far">Distant formation</option><option value="under">Underside</option></select><button id="orbit">Slow orbit</button><button id="reset">Reset camera</button><button id="bench">Measure GPU A/B/B/A</button><p>Complete production ship snapshots; 20 standard armor bands replaced per ship. Shared geometry in both modes; one shared normal atlas. Drag to orbit, wheel to zoom. Frozen poses, no combat simulation. <a href="aegis-fleet-results.json" style="color:#b5d2df">Recorded results</a>. The GPU button uses normal browser pacing; the documented uncapped runs remove that limit.</p></header><div id="left" class="host"></div><div id="candidate-label"></div><footer id="report">Loading fleet...</footer>
+<script src="../src/asset-versions.js?v=a9bcdb819afe"></script>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+
+<script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
+<script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+<script src="../src/combat.js?v=ce0e0e6eb149"></script>
+<script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+<script src="../src/mining-landing.js?v=f00997919474"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=a72f9b5b37c8"></script>
+<script src="../src/population.js?v=7a772b14be47"></script>
+<script src="../src/session.js?v=254909ab34f8"></script>
+<script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
+<script src="../src/engine-audio.js?v=061d71eda9b0"></script>
+<script src="../src/audio-mixer.js?v=34c90880514e"></script>
+<script src="../src/audio.js?v=364df02d8266"></script>
+<script src="../src/hud.js?v=be6ea0bd1bf2"></script>
+<script src="../experiments/gpu-diagnostics.js?v=099a7fa723af"></script>
+<script src="../src/mesh-builder.js?v=dc5005c681a3"></script>
+<script src="../src/mining-rig.js?v=ebc32e1f4b09"></script>
+<script src="../src/model-viewer.js?v=02d9b3545d85"></script>
+<script src="../vendor/three/build/three.global.js?v=4bf2b130ade2"></script>
+<script src="../src/explosions.js?v=ba20ec3731d9"></script>
+<script src="../src/asteroid-art.js?v=48aad8996df8"></script>
+<script src="../src/asteroid-terrain.js?v=added36e3407"></script>
+<script src="../src/scene3d.js?v=be72cb90b8e8"></script>
+<script src="../src/ship-art.js?v=394ca4b43117"></script>
+<script src="../src/game.js?v=737979d8df21"></script>
+<script src="../assets/ships/aegis-kit/flight-rig.js?v=1beda87c9e3b"></script><script src="aegis-bevel-data.js?v=5d7c6d674b9e"></script><script src="aegis-normal-data.js?v=1d7deff1e3c3"></script><script src="aegis-fleet-data.js?v=b1672f17f6ea"></script><script src="aegis-fleet-build.js?v=b8631a6d9f10"></script><script src="aegis-normal-renderer.js?v=a84929d52ad7"></script><script src="aegis-fleet-review.js?v=3deb304b954d"></script></body></html>
