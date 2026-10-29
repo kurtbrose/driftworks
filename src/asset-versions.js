@@ -1078,6 +1078,8 @@
   "assets/portraits/runway-workers/source/kenji-sato-sheet.png": "64c72e7f7742",
   "assets/portraits/runway-workers/source/luis-ortega-sheet.png": "0f302e39d859",
   "assets/portraits/runway-workers/source/nadiya-bell-sheet.png": "f2c41cd6950e",
+  "assets/ships/aegis-kit/armor-normal.json": "55f49aa0e92b",
+  "assets/ships/aegis-kit/armor-normal.png": "b4fb051c5386",
   "assets/ships/aegis-kit/belt-atlas.png": "c686e0d92dab",
   "assets/ships/aegis-kit/engine-atlas.png": "8fd3b6d91b58",
   "assets/ships/aegis-kit/flight-rig.js": "1beda87c9e3b",
