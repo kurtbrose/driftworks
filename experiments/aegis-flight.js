@@ -435,8 +435,11 @@
     function createEllisPatrol(){
         var state={team:/** @type {'ally'} */('ally'),position:[0,-8000/U,1550/U],heading:0,velocity:[0,180,0],integrity:20000};
         var rig=create({state:state,opponent:state,unarmed:true}),region=0,seconds=0,direction=1,turn=0,inbound=true;
-        var batches=rig.geometry(),radius=0;
+        var batches=rig.geometry(),radius=0,crossRadius=0;
         batches.forEach(function(b){for(var i=0;i<b.vertices.length;i+=b.stride||6)radius=Math.max(radius,Math.hypot(b.vertices[i],b.vertices[i+1],b.vertices[i+2]));});
+        // Patrol bow is local X, aligned with the radial route. Length may exceed
+        // the diameter: only the Y/Z cross-section must fit the aperture.
+        batches.forEach(function(b){for(var i=0;i<b.vertices.length;i+=b.stride||6)crossRadius=Math.max(crossRadius,Math.hypot(b.vertices[i+1],b.vertices[i+2]));});
         // Share one complete optical image across every hull material.
         batches.forEach(function(b){b.lensCenter=state.position;b.lensRadius=radius*U;});
         function reset(){region=0;seconds=0;direction=1;turn=0;inbound=true;state.position.splice(0,3,0,-8000/U,1550/U);state.heading=-Math.PI/2;rig.reset();}
@@ -444,7 +447,10 @@
             if(!Number.isFinite(elapsed)||elapsed<=0)return;
             var dt=Math.min(.1,elapsed);seconds+=dt;
             if(turn>0){var used=Math.min(turn,dt);turn-=used;state.heading+=Math.PI*used/12;if(turn<=1e-9){turn=0;direction=-direction;inbound=true;state.heading=direction>0?-Math.PI/2:Math.PI/2;}return;}
+            var previous=state.position.slice();
             state.position[1]+=direction*180*dt/U;
+            var contact=DW.flightGuns.throatContact(previous,state.position,[0,direction*180,0],region,radius,crossRadius);
+            if(contact){state.position.splice(0,3,...contact.eye);state.velocity=contact.velocity;return;}
             var y=state.position[1]*U+2000;
             if(inbound&&y*direction>=-300){
                 inbound=false;region=1-region;state.position[0]=region*12000/U;state.position[1]+=direction*600/U;

@@ -153,3 +153,42 @@ for(const distance of [8,30,100,180,250,350]){
  assert(Math.hypot(...sub(image.direction,visibleDirection))<.001,'Viewed positions of a fired ray stay on its original visible bearing through the throat');
 }
 console.log('PASS visible-ray negative control: old shortcut misses stationary image by '+shortcutMiss.toFixed(1)+' m; curved shot and rendered trail share the image bearing');
+
+// Oversized bodies contact before any hull can be sliced by a center transfer.
+for(const side of [0,1]){
+ const x=side*12000,start=point(x,-3500),end=point(x,0);
+ const hit=g.throatContact(start,end,[25,900,0],side,700/U,400/U);
+ assert(hit);assert(Math.abs((hit.eye[1]*U+2000)+1000)<.001);
+ assert.equal(hit.velocity[0],25);assert.equal(hit.velocity[1],0);
+ assert.equal(g.crossBridge(start,hit.eye,side),null,'contact occurs before region transfer');
+ assert.equal(g.throatContact(start,end,[0,900,0],side,700/U,20/U),null,'long needle fits tip first');
+ assert.equal(g.throatContact(start,end,[0,900,0],side,9/U),null,'ordinary fighters retain transit');
+ assert.equal(g.throatContact(point(x,-3100),point(x,-3500),[0,-100,0],side,700/U,400/U),null,'retreat is free');
+ const grazing=g.throatContact(point(x+1001,-3500),point(x+1001,0),[0,900,0],side,700/U,400/U);
+ assert.equal(grazing,null,'swept near miss is free');
+ const overlap=point(x,-2500),held=g.throatContact(overlap,point(x,-2400),[0,100,0],side,700/U,400/U);
+ assert(held);assert.deepEqual(held.eye,overlap,'an existing overlap must not cause a corrective teleport');
+ const resting=g.throatContact(hit.eye,point(x,-2900),[0,100,0],side,700/U,400/U);
+ assert(resting);assert(Math.abs(resting.eye[1]-hit.eye[1])<1e-6,'repeated pressure remains stable');
+}
+// Exercise model orientation through the actual cached collision-bound API.
+const originalFind=DW.shipPackModels.find;
+const needle={id:'throat-needle',name:'Needle',triangles:0,vertices:[]};
+for(const x of [-10,10])for(const y of [-700,700])for(const z of [-10,10])needle.vertices.push(x,y,z,0,0,1);
+DW.shipPackModels.find=id=>id===needle.id?{model:needle}:originalFind(id);
+const needleCraft=flight.snapshot().combat.player;
+const savedCollision=needleCraft.collision,savedPose=needleCraft.pose;
+needleCraft.collision={kind:'model',modelId:needle.id};
+needleCraft.pose=pose(point(0,-3500));
+assert(DW.flightCollision.throatRadius(needleCraft,[0,1,0])*U<15,'nose-first cross-section ignores length');
+needleCraft.pose.right=[0,1,0];needleCraft.pose.back=[-1,0,0];
+assert(DW.flightCollision.throatRadius(needleCraft,[0,1,0])*U>700,'broadside needle is too wide');
+needleCraft.collision=savedCollision;needleCraft.pose=savedPose;DW.shipPackModels.find=originalFind;
+const blocked=createFlight({mission,enabled:false}),bv=blocked.snapshot();
+bv.combat.player.collision={kind:'sphere',radiusM:400};
+bv.state.eye=point(0,-2700.01);bv.state.velocity=[0,1000,0];
+blocked.advance(.1,{});
+assert.equal(blocked.snapshot().state.region||0,0,'production session keeps oversized craft in its chart');
+assert(blocked.snapshot().state.eye[1]*U<=-2700,'production session stops before hull touches throat');
+assert(Math.abs(blocked.snapshot().state.velocity[1])<.001,'production session removes inward speed');
+console.log('PASS throat clearance: both charts, high-speed sweeps, retreat, grazing, stable contact, needle orientation and production session');

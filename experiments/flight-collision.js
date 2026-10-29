@@ -170,6 +170,22 @@
         if(geometry.id!==shape.modelId)throw new Error('Unknown collision model '+shape.modelId);
         return DW.shipPackModels.hullRadius(geometry)/U;
     }
+    /** @type {WeakMap<import('./types').Model,number[]>} */var throatBounds=new WeakMap();
+    /** Conservative oriented box projection in scene units, cached per mesh.
+     * @param {Craft} craft @param {Vector} normal */
+    function throatRadius(craft,normal){
+        if(!craft.collision||craft.collision.kind==='sphere')return collisionRadius(craft);
+        var model=DW.shipPackModels.find(craft.collision.modelId);if(!model)return collisionRadius(craft);
+        var bounds=throatBounds.get(model.model);
+        if(!bounds){bounds=[0,0,0];var vertices=model.model.vertices;for(var i=0;i<vertices.length;i+=6)for(var k=0;k<3;k++)bounds[k]=Math.max(bounds[k],Math.abs(vertices[i+k]));throatBounds.set(model.model,bounds);}
+        var pose=craft.pose,radius=0;
+        for(var mask=0;mask<8;mask++){
+            var x=bounds[0]*(mask&1?1:-1),y=bounds[1]*(mask&2?1:-1),z=bounds[2]*(mask&4?1:-1);
+            var point=normal.map(function(_,k){return pose.right[k]*x-pose.back[k]*y+pose.up[k]*z;}),along=point.reduce(function(s,v,k){return s+v*normal[k];},0);
+            radius=Math.max(radius,Math.sqrt(Math.max(0,point.reduce(function(s,v){return s+v*v;},0)-along*along))/U);
+        }
+        return radius;
+    }
     /** Refresh against actual poses on EVERY query, including interleaved movement within a step.
      * The cumulative displacement budget makes sleeping safe under acceleration and teleports.
      * No speed prediction, frame-order assumption or delayed damage is needed.
@@ -245,7 +261,7 @@
     function moved(t, e) {
         var engine=getCollisionEngine(t);if(engine){var proxy=engine.proxies.get(e);moveCollisionProxy(engine,e,proxy?proxy.entry.order:0);}
     }
-    DW.flightCollision = {query: query, nearby: collisionNearby, radius: collisionRadius,
+    DW.flightCollision = {query: query, nearby: collisionNearby, radius: collisionRadius, throatRadius:throatRadius,
         setMode: setCollisionMode, batch: collisionBatch, changed: collisionChanged,
         moved: moved, stats: collisionStats};
 }());

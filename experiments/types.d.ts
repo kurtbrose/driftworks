@@ -749,6 +749,7 @@ export type ExperimentModules = {
     };
     flightGuns: {
         bridgeVector:(vector:Vector,normal:Vector)=>Vector;
+        throatContact:(before:Vector,after:Vector,velocity:Vector,side:number,hullRadius:number,crossRadius?:number)=>{eye:Vector;velocity:Vector}|null;
         crossBridge:(before:Vector,after:Vector,side:number)=>{normal:Vector;fraction:number;entry:Vector;exit:Vector;eye:Vector}|null;
         bridgeTravel:(start:Vector,move:Vector,region:number)=>{point:Vector;region:number;normal:Vector|null;segments:{start:Vector;end:Vector;region:number}[]};
         ballisticPath:(origin:Vector,target:Vector,region:number,destination:number,bridge?:boolean|'thin-shell'|number)=>{direction:Vector;distance:number}|null;

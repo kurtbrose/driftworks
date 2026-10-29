@@ -25,6 +25,26 @@
         var exit=center.map(function(v,i){return v+(i===0?(side?-12000:12000)/units:0)-entry[i];});
         return {normal:normal,fraction:t,entry:entry.map(function(v,i){return v+center[i];}),exit:exit,eye:exit.map(function(v,i){return v+remaining[i];})};
     }
+    /** Conservative arcade contact for hulls larger than the throat. The projected cross-section decides fit;
+     * full hull radius supplies early contact clearance. All lengths here are scene units; velocity is m/s.
+     * @param {Vector} before @param {Vector} after @param {Vector} velocity
+     * @param {number} side @param {number} hullRadius @param {number} [crossRadius]
+     */
+    function throatContact(before,after,velocity,side,hullRadius,crossRadius){
+        if(!Number.isFinite(hullRadius)||(crossRadius===undefined?hullRadius:crossRadius)<=300/units)return null;
+        var center=[side*12000/units,-2000/units,1550/units],radius=300/units+hullRadius;
+        var offset=before.map(function(v,i){return v-center[i];}),move=after.map(function(v,i){return v-before[i];});
+        var distance=Math.hypot.apply(null,offset),a=move.reduce(function(s,v){return s+v*v;},0),b=offset.reduce(function(s,v,i){return s+v*move[i];},0),c=distance*distance-radius*radius;
+        var t=0;
+        if(c>1e-9){
+            var disc=b*b-a*c;if(a<1e-20||b>=0||disc<0)return null;
+            t=(-b-Math.sqrt(disc))/a;if(t<0||t>1)return null;
+        }else if(b>0||distance>=radius-1e-8&&b>=0)return null;
+        var point=offset.map(function(v,i){return v+move[i]*t;}),length=Math.hypot.apply(null,point);
+        var normal=point.map(function(v,i){return length>1e-12?v/length:(i===1?-1:0);});
+        var inward=Math.min(0,velocity.reduce(function(s,v,i){return s+v*normal[i];},0));
+        return {eye:c< -1e-9?before.slice():center.map(function(v,i){return v+normal[i]*(radius+1e-7);}),velocity:velocity.map(function(v,i){return v-inward*normal[i];})};
+    }
     /** @param {Vector} start @param {Vector} move @param {number} region */
     function bridgeTravel(start,move,region){
         var end=start.map(function(v,i){return v+move[i];}),crossing=crossBridge(start,end,region);
@@ -316,5 +336,5 @@
         batches.push({ vertices: new Float32Array(impacts), color: [1, .75, .3], projected:!!optical, region:pose.region||0 });
         return batches;
     }
-    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = { bridgeVector:bridgeVector, crossBridge:crossBridge, bridgeTravel:bridgeTravel, ballisticPath:ballisticPath, lead:lead, create: create, step: step, intersect: intersect, geometry: geometry };
+    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = { throatContact:throatContact, bridgeVector:bridgeVector, crossBridge:crossBridge, bridgeTravel:bridgeTravel, ballisticPath:ballisticPath, lead:lead, create: create, step: step, intersect: intersect, geometry: geometry };
 }());

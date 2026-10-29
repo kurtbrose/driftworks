@@ -197,10 +197,24 @@
                 var emptySpace=DW.flightMissions.resolve(combat.mode).emptySpace||(combat.mode==='evacuation'||combat.mode==='scramble');
                 var bridge=DW.flightMissions.resolve(combat.mode).sky.wormhole;
                 var travelers=bridge?[state,...combat.enemies.map(function(c){return c.pose;}),...combat.wrecks.map(function(c){return c.pose;})]:[];
+                var travelingCraft=bridge?[combat.player,...combat.enemies]:[];
                 var previous=travelers.map(function(p){return p.eye.slice();});
+                var previousFrames=travelingCraft.map(function(c){return DW.flightCollision.radius(c)>300/units?{right:c.pose.right.slice(),up:c.pose.up.slice(),back:c.pose.back.slice()}:null;});
                 var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, emptySpace?undefined:environment.terrainHit,undefined,bridge?function(){
                     var changed=false;
                     travelers.forEach(function(pose,index){
+                        var craft=travelingCraft[index],radius=craft?DW.flightCollision.radius(craft):0;
+                        if(craft&&radius>300/units){
+                            var center=[(pose.region||0)*12000/units,-2000/units,1550/units];
+                            var normal=previous[index].map(function(v,k){return v-center[k];}),length=Math.hypot.apply(null,normal);
+                            normal=normal.map(function(v){return v/(length||1);});
+                            var contact=DW.flightGuns.throatContact(previous[index],pose.eye,pose.velocity,pose.region||0,radius,DW.flightCollision.throatRadius(craft,normal));
+                            if(contact){
+                                pose.eye=contact.eye;pose.velocity=contact.velocity;
+                                var frame=previousFrames[index];if(frame){pose.right=frame.right;pose.up=frame.up;pose.back=frame.back;}
+                                changed=true;return;
+                            }
+                        }
                         var crossing=crossBridge(previous[index],pose.eye,pose.region||0);if(!crossing)return;
                         changed=true;pose.region=1-(pose.region||0);pose.eye=crossing.eye;
                         pose.right=bridgeVector(pose.right,crossing.normal);pose.up=bridgeVector(pose.up,crossing.normal);pose.back=bridgeVector(pose.back,crossing.normal);pose.velocity=bridgeVector(pose.velocity,crossing.normal);

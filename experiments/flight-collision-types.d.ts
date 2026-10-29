@@ -12,6 +12,7 @@ export type FlightCollisionApi = {
     nearby: (candidate: CollisionCandidate, start: Vector, end: Vector, margin: number) => boolean;
     // Craft hull bound in scene units, matching candidate coordinates.
     radius: (craft: Craft) => number;
+    throatRadius: (craft: Craft, normal: Vector) => number;
     setMode: (combat: Combat, mode: CollisionMode) => void;
     batch: <T>(combat: Combat, work: () => T) => T;
     changed: (combat: Combat, craft?: Craft) => void;

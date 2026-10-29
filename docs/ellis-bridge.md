@@ -1371,3 +1371,24 @@ The single-pass route resolves the demonstrated context-loss issue without
 changing carrier assets, scale, materials or immutable GPU buffers. Raw results:
 `output/thin-shell-browser.json`; on/off captures:
 `output/thin-shell-carrier-on.png`, `output/thin-shell-carrier-off.png`.
+
+## Conservative throat clearance
+
+Live player/AI craft and the capital centerline patrol check aperture clearance
+before center-based chart transport. A cached model-local box is projected onto
+the plane perpendicular to the craft-to-mouth radial direction; spheres use their
+collision radius. Cross-sections exceeding the 300 m throat radius stop against
+a swept sphere expanded by the full hull bound, retaining tangential velocity and
+removing inward velocity. This is conservative arcade contact, not a material
+rim or a general-relativistic rigid-body solution. It costs eight box-corner
+projections only for potentially oversized model craft; no triangle collision is
+performed per tick. The patrol caches its fixed nose-first cross-section.
+
+Long narrow ships can still pass nose-first. Broadside needles are blocked.
+The box can reject marginal fits and the full-hull contact bound stops a blocked
+ship early. Existing overlaps hold their previous position rather than snapping outward;
+blocked steering restores the previous orientation and retreat remains free. Detached
+wrecks retain point transport. A fitting hull still transfers charts as a whole:
+this guard does not resolve visual continuity for a hull spanning both charts.
+`tests/ellis-ballistics.cjs` covers both mouths, swept contact, grazing, retreat,
+resting pressure, oriented needles, small-craft passage and the real flight session.
