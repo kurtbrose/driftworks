@@ -25,6 +25,7 @@ Thumbs.db
 /.asset-imports/
 
 # Disposable renders, captures, profiling and local validation output.
+/.scratch/
 /output/
 *.log
 *.cpuprofile

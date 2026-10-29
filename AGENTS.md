@@ -4,6 +4,25 @@ Driftworks is a deployable static site: ordinary JavaScript scripts, vendored
 PixiJS, no build step or required package manager. Keep that deployment model;
 use relative URLs and do not introduce runtime network dependencies.
 
+## Scratch work and generated output
+
+- Put disposable scripts, HTML probes, notes, and one-off experiments under
+  `/.scratch/<task>/`; put renders, screenshots, captures, and profiling output
+  under `/output/<task>/`. Both directories are gitignored. Scratch pages can
+  still be served by the local HTTP server using relative URLs to repo assets.
+- Do not add scratch files to tracked `studies/`, `experiments/`, `tools/`,
+  `tests/`, or `assets/` by default. Promote only reusable tools, intentional
+  review pages, regression tests, and final assets needed for the deliverable
+  into those directories. Keep temporary evidence in the ignored directories
+  unless the user requests it be retained in Git.
+- Check `git status --short` before editing and before committing. Stage explicit
+  paths for the task; never force-add ignored scratch output or sweep unrelated
+  work into a commit.
+- Generated deployment files are part of the deliverable: when an asset refresh
+  changes `src/asset-versions.js` and HTML cache URLs, review and commit the
+  relevant generated updates with the source/assets that require them. Do not
+  ignore these tracked files or leave their refresh as unexplained local churn.
+
 ## Large 3D assets
 
 When integrating or substantially revising a large or detailed runtime asset
