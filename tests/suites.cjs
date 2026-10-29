@@ -28,6 +28,7 @@ const suites = {
     "flight-missions.cjs",
     "evacuation-mission.cjs",
     "headless.cjs",
+    "pilot-behavior.cjs",
     "ellis.cjs",
     {file:"ellis.cjs",args:["--thin-shell"]},
     "ellis-ballistics.cjs",

@@ -116,6 +116,10 @@ and emotions when diagnosing callout selection.
 
 ## Events and transcripts
 
+For reproducible AI-versus-AI stress and radio baselines, see
+[pilot behavior](pilot-behavior.md). The runner records pilot histories and full
+transcripts while retaining ordinary production combat and channel scheduling.
+
 `flight.events` is a JS array of detached, timestamped records:
 
 - `source: 'combat'`: copies of the production `combat.radioEvents`, including
