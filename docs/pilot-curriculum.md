@@ -124,6 +124,7 @@ can be tactical, while a low-level gate still checks alignment, range, friendly
 obstruction and weapon availability. Perfect intercept under a motion model
 does not guarantee a future hit against an opponent that can maneuver.
 
-This executive is a proposed next experiment, not an implemented or trained
-feature. These motor studies do not justify continuing an end-to-end pilot as
-the primary gameplay architecture or establish runtime savings.
+The [two-action executive study](pilot-executive.md) now implements this boundary
+as an offline experiment. It is not integrated into gameplay. These motor
+studies do not justify continuing an end-to-end pilot as the primary gameplay
+architecture or establish runtime savings.

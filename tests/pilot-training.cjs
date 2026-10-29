@@ -120,4 +120,67 @@ assert.ok(trackingEvaluation.withinOneDegreeFraction > .9);
 const arrivalExample = require('../tools/pilot-training/arrival-example.json');
 const arrivalEvaluation = Arrival.evaluate(DW, arrivalExample.trackingWeights, arrivalExample.weights, Arrival.cases(424242, 8));
 assert.equal(arrivalEvaluation.successes, 8, 'learned throttle must arrive and remain slow, not merely pass the target');
+const Executive = require('../tools/pilot-training/executive.cjs');
+const executiveWeights = Array(Executive.COUNT).fill(0);
+assert.throws(() => Executive.validate([NaN]), /Invalid executive/);
+assert.equal(Executive.predict(executiveWeights, Array(Executive.INPUTS).fill(1)), 0);
+assert.deepEqual(Executive.cases(42, 4), Executive.cases(42, 4));
+assert.deepEqual(Executive.cases(42, 4).map(f => f.start), ['headOn', 'crossing', 'tail', 'tail']);
+assert.ok(Executive.cases(42, 4, 5, true).every(f => f.opponentStyle !== 'baseline'));
+const testOwn = DW.training.createCraft('executive-probe', DW.arcade.create(0), 'ally');
+DW.training.equip(testOwn, DW.arcade.profiles[0], DW.training.defaultWeapon(DW.arcade.profiles[0]));
+const testTarget = DW.training.createCraft('executive-target', DW.arcade.create(0), 'enemy');
+testTarget.pose.eye = [0, 300 / DW.sim.METERS_PER_UNIT, 0];
+const executiveWeapon = DW.retailWeapons[testOwn.weaponIndex], executiveState = Executive.createState();
+const executiveGeometry = Executive.geometry(DW, testOwn, testTarget, executiveWeapon);
+assert.equal(Executive.transition(executiveState, 'break', executiveGeometry, testOwn, .8), 'attack');
+assert.equal(Executive.transition(executiveState, 'break', executiveGeometry, testOwn, 1), 'break');
+const heldHeading = executiveState.heading.slice();
+assert.equal(Executive.transition(executiveState, 'attack', executiveGeometry, testOwn, 2.8), 'break');
+assert.deepEqual(executiveState.heading, heldHeading, 'break heading must remain latched');
+assert.equal(Executive.controls(testOwn, testTarget, executiveGeometry, executiveState).fire, false);
+for (let i = 0; i < 600; i++) {
+  const g = Executive.geometry(DW, testOwn, testTarget, executiveWeapon);
+  DW.training.stepInput(testOwn, Executive.controls(testOwn, testTarget, g, executiveState), Executive.DT);
+}
+assert.ok(Executive.geometry(DW, testOwn, testTarget, executiveWeapon).range > 450, 'fixed break must demonstrate separation in production physics');
+assert.equal(Executive.transition(executiveState, 'break', executiveGeometry, testOwn, 6), 'attack', 'break deadline must force recovery');
+const executiveFixture = Executive.cases(42, 4, 3)[3];
+const executiveEpisode = Executive.episode(DW, executiveWeights, executiveFixture, 'break', true);
+assert.deepEqual(executiveEpisode, Executive.episode(DW, executiveWeights, executiveFixture, 'break', true));
+const executiveReplay = Executive.replay(DW, executiveEpisode.replay);
+const {replay: executiveRecord, ...executiveOriginal} = executiveEpisode;
+assert.deepEqual(executiveReplay, executiveOriginal, 'replay must preserve physical outcomes and tactical occupancy');
+assert.deepEqual(executiveReplay.metrics, executiveEpisode.metrics);
+assert.equal(executiveReplay.playerHull, executiveEpisode.playerHull);
+assert.equal(executiveReplay.enemyShield, executiveEpisode.enemyShield);
+const executiveEvents = Executive.maneuverEvents(executiveEpisode.replay.decisions, 'pilot-7', 'enemy-2');
+assert.equal(executiveEvents.filter(e => e.kind === 'maneuver-started').length, executiveEpisode.switches + 1);
+assert.ok(executiveEvents.every(e => e.actorId === 'pilot-7' && e.targetId === 'enemy-2'));
+assert.deepEqual(Executive.maneuverEvents([
+  {seconds: 0, mode: 'attack', requested: 'attack', range: 300},
+  {seconds: 1, mode: 'break', requested: 'break', range: 300},
+  {seconds: 6, mode: 'attack', requested: 'break', range: 480}
+]).at(-1).reason, 'duration-limit');
+assert.throws(() => Executive.maneuverEvents([{seconds: 2, mode: 'attack', requested: 'attack'}, {seconds: 1, mode: 'attack', requested: 'attack'}]), /Invalid decision/);
+assert.throws(() => Executive.replay(DW, {...executiveEpisode.replay, inputs: executiveEpisode.replay.inputs.slice(0, -1)}));
+assert.deepEqual(Executive.episode(DW, executiveWeights, executiveFixture, 'attack'), Executive.episode(DW, executiveWeights, executiveFixture, 'learned'),
+  'neutral selector must execute the same fixed attack controller');
+const executiveAttackProbe = Executive.episode(DW, executiveWeights, Executive.cases(42, 4, 2)[2], 'attack');
+assert.ok(executiveAttackProbe.shots > 0 && executiveAttackProbe.metrics.hullDamage + executiveAttackProbe.metrics.shieldDamage > 0,
+  'fixed attack must score real swept-hull hits with production weapons');
+assert.equal(Executive.score({hullDamage: 0, shieldDamage: 0, hullLost: 0, shieldLost: 0, enemyMaxHull: 180, enemyMaxShield: 380, playerMaxHull: 180, playerMaxShield: 380, kill: false, dead: false}), 0,
+  'survival and time alone must not earn reward');
+const fullRuntimeExecutive = require('../tools/headless.cjs').loadRuntime();
+assert.deepEqual(Executive.episode(fullRuntimeExecutive, executiveWeights, executiveFixture), Executive.episode(Executive.runtime(), executiveWeights, executiveFixture),
+  'omitting cosmetic scorch meshes must preserve the entire executive episode');
+Executive.validate(require('../tools/pilot-training/executive-example.json').weights);
+const breakBenefitFixture = {scenario: 'hunted', start: 'tail', seed: 1331364978, duration: 25, skill: 1, opponentStyle: 'baseline'};
+const benefitRuntime = Executive.runtime();
+const sustainedAttack = Executive.episode(benefitRuntime, executiveWeights, breakBenefitFixture, 'attack');
+const breakRequests = Array.from({length: 125}, (_, i) => i >= 25 && i < 35 ? 'break' : 'attack');
+const singleBreak = Executive.episode(benefitRuntime, executiveWeights, breakBenefitFixture, 'learned', false, null, breakRequests);
+assert.equal(sustainedAttack.outcome, 'timeout');
+assert.equal(singleBreak.outcome, 'win', 'a timely fixed break must retain its demonstrated combat benefit');
+assert.ok(singleBreak.score > sustainedAttack.score);
 console.log('Pilot training: combat scenarios and deterministic from-scratch marker control passed');
