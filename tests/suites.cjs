@@ -17,6 +17,7 @@ const suites = {
     "scramble.cjs",
     "flight-evasion.cjs",
     "flight-separation.cjs",
+    "dune-shields.cjs",
     "flight-effects-capacity.cjs",
     "gas-giant-flight.cjs",
     {"file":"gas-giant-flight.cjs","args":["jade-rime"]},

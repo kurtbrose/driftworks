@@ -116,7 +116,7 @@
     function moveCollisionProxy(engine,craft,order){
         var shape=craft.collision,signature=!shape?'sphere:9':shape.kind==='sphere'?'sphere:'+shape.radiusM:'model:'+shape.modelId;
         var proxy=engine.proxies.get(craft),entry=proxy?proxy.entry:null,p=craft.pose.eye,team=craft.team||'enemy';
-        if(!entry||entry.shape!==signature){if(proxy)spaceRemove(engine.ships,proxy.node);entry={craft:craft,x:p[0],y:p[1],z:p[2],r:collisionRadius(craft),key:'',shape:signature,team:team,alive:craft.hp>0,order:order};proxy=undefined;engine.epoch++;}
+        if(!entry||entry.shape!==signature){if(proxy)spaceRemove(engine.ships,proxy.node);entry={craft:craft,x:p[0],y:p[1],z:p[2],r:collisionRadius(craft)*1.18,key:'',shape:signature,team:team,alive:craft.hp>0,order:order};proxy=undefined;engine.epoch++;}
         if(entry.team!==team||entry.alive!==(craft.hp>0)||entry.order!==order){engine.epoch++;entry.team=team;}entry.alive=craft.hp>0;entry.order=order;entry.x=p[0];entry.y=p[1];entry.z=p[2];
         var actual=segmentBox(p,p,entry.r);
         if(!proxy||!boxContains(proxy.node.box,actual)){
@@ -201,7 +201,7 @@
             var shape=craft.collision,signature=!shape?'sphere:9':shape.kind==='sphere'?'sphere:'+shape.radiusM:'model:'+shape.modelId;
             var team=craft.team||'enemy',living=craft.hp>0;
             if(!entry||entry.craft!==craft||entry.shape!==signature){
-                entry={craft:craft,x:p[0],y:p[1],z:p[2],r:collisionRadius(craft),key:'',shape:signature,team:team,alive:living,order:i};
+                entry={craft:craft,x:p[0],y:p[1],z:p[2],r:collisionRadius(craft)*1.18,key:'',shape:signature,team:team,alive:living,order:i};
                 index.entries[i]=entry;index.epoch++;rebuild=true;
             }
             if(entry.team!==team||entry.alive!==living){entry.team=team;entry.alive=living;index.epoch++;}

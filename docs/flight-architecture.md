@@ -350,7 +350,27 @@ small-craft profiles and ten bolt weapons. `training.configure` assigns player
 class hull/shield maxima; `training.equip` assigns craft class defenses and primary
 weapon. Configured spawns use those defenses, and both sides share shield
 absorption/spillover, seven-second delay and 12-points/s recovery. Unconfigured
-test fixtures retain legacy defaults. `DuelOptions` records both profile/weapon
+test fixtures retain legacy defaults.
+
+Flight shields admit relative speeds at or below 30 m/s. Faster craft crossing
+from outside deflect into a glancing pass; fighter pairs share momentum by
+collision-radius-cubed mass. Capital ships act as moving heavy bodies with
+0.8 outward restitution. Collision responses update the flight engine ramp as
+well as velocity, so the next flight tick retains the deflection.
+Slow entrants may accelerate and shoot inside the shield. Projectile traces
+intercept fast outside-origin shots at the shield, while slow rounds and shots
+originating inside apply armor damage directly without draining the shield.
+Fighter contact impulses produce the normal blue shield wave through a small
+shield charge cost; capital contacts use the existing envelope wave anchors.
+Aegis shield cross-sections follow the baked display envelope, while hull
+contacts inside it rebound against hull proxies. Hangar launch corridors retain
+their existing departure exemption. No torpedo loadout is added by this rule.
+
+`TerrainHit` and `AegisFlightRig.hit` accept an optional bolt for finalized
+projectile traces. Visibility and convergence probes omit it and query hulls
+without triggering shield damage or flashes.
+
+`DuelOptions` records both profile/weapon
 choices, hull model IDs and a symmetric unshielded override; replay schema 3
 rejects legacy defense/collision semantics. Watch controls choose handling and
 defense stats independently from the visible/collision hull models. See [retail loadouts](retail-flight-loadouts.md) for unsupported

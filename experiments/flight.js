@@ -32,12 +32,12 @@
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
     if(aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'){try{await DW.aegisFlight.load();aegis=activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):cinematic?DW.aegisFlight.createBattle({bridge:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
     /** @type {import('./types').TerrainHit} */
-    var environmentHit = function (start, end) {
+    var environmentHit = function (start, end, bolt) {
             var asteroid = session.snapshot().asteroid;
             var terrain=DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
                 return DW.asteroidTerrain.rockField(asteroid, /** @type {[number, number, number]} */ (DW.flightSession.rotateVector(point, -asteroid.rotation)));
             });
-            var capital=aegis&&aegis.hit(start,end);
+            var capital=aegis&&aegis.hit(start,end,bolt);
             if(capital&&(!terrain||Math.hypot.apply(null,capital.map(function(v,i){return v-start[i];}))<Math.hypot.apply(null,terrain.map(function(v,i){return v-start[i];}))))return capital;
             return terrain;
         };

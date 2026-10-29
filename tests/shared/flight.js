@@ -2065,7 +2065,7 @@
         if(shot===0) { assertClose(target.shield,10.5);assertClose(target.hp,100); }
         if(shot===1) { assertClose(target.shield,0);assertClose(target.hp,100); }
       }
-      assertClose(target.hp,86.5);assert(target.hitFlash>0&&target.scorches.length===3);
+      assertClose(target.hp,86.5);assert(target.hitFlash>0&&target.scorches.length===1,'Only the unshielded hull hit scorches the plate');
       assert(!models.hullHit(model,pose,[3/U,-2/U,2/U],[3/U,-2/U,-2/U],U,weapon.headRadius),'A near miss outside the visible radius stays a miss');
       var face=models.hullHit(model,pose,[0,0,2/U],[0,0,-2/U],U,weapon.headRadius);
       assertClose(face.fraction,(2-weapon.headRadius)/4);
@@ -2150,8 +2150,12 @@
 
   test('flight', 'Pass fighter commits to an exit while aggressor maintains close pressure', function () {
     var DW=window.Driftworks;
-    var aggressive=DW.flightDuel.run({opponentStyle:'aggressor',duration:12,category:'perfect',start:'headOn',profile:1}).summary();
-    var passer=DW.flightDuel.run({opponentStyle:'passer',duration:12,category:'perfect',start:'headOn',profile:1}).summary();
+    // Keep both pilots alive for the full observation window: shield-envelope
+    // interception can otherwise end a perfect-pilot duel before the first exit.
+    function observe(style){var duel=DW.flightDuel.create({opponentStyle:style,duration:12,category:'perfect',start:'headOn',profile:1});
+      [duel.combat.player,duel.enemy].forEach(function(c){c.hp=c.maxHp=100000;c.shield=c.maxShield=100000;});
+      for(var i=0;i<1440;i++)duel.advance(1/120);return duel.summary();}
+    var aggressive=observe('aggressor'),passer=observe('passer');
     assert(passer.metrics.extendSeconds>aggressive.metrics.extendSeconds,'Pass fighter spends longer on committed exits');
     var duel=DW.flightDuel.create({opponentStyle:'passer',duration:10,category:'perfect',start:'turning'});
     duel.advance(.1);assert(duel.enemy.mode==='break');var goal=duel.enemy.extensionGoal.slice();

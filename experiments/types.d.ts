@@ -50,7 +50,7 @@ export type AegisFlightRig = {
     geometry:()=>Batch[];
     effects:(pose:Pose,shields?:boolean)=>Batch[];
     readout:()=>string;
-    hit:(a:Vector,b:Vector)=>Vector|null;
+    hit:(a:Vector,b:Vector,bolt?:Bolt)=>Vector|null;
     damage?:(point:Vector,amount:number,combat:Combat)=>boolean;
     components?:()=>{id:string;kind:string;hp:number;maxHp:number;position:Vector}[];
     telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string;shots?:number;aimPoint?:Vector}[];capitals?:{team:string;position:Vector;heading:number;integrity:number;shots:number;hits:number}[]};
@@ -200,7 +200,7 @@ export type Guns = {
     fired: number;
     hits: number;
 };
-export type TerrainHit = ((start: Vector, end: Vector) => Vector | null) & {onImpact?:(point:Vector,bolt:Bolt,combat:Combat)=>void};
+export type TerrainHit = ((start: Vector, end: Vector, bolt?:Bolt) => Vector | null) & {onImpact?:(point:Vector,bolt:Bolt,combat:Combat)=>void};
 export type Hit = {
     fraction: number;
     point: Vector;
@@ -404,7 +404,7 @@ export type RenderStats = {
         materials: number;
     };
 };
-export type ShieldEnvelope={version:number;source:string;sha256:string;parameters:{rings:number;sides:number;inflation:number;gunRadius:number;heavyRadius:number};vertices:number[];indices:number[];anchors:{vertex:number;patches:number[][]}[]};
+export type ShieldEnvelope={profiles:{x:number;w:number;lo:number;hi:number}[];version:number;source:string;sha256:string;parameters:{rings:number;sides:number;inflation:number;gunRadius:number;heavyRadius:number};vertices:number[];indices:number[];anchors:{vertex:number;patches:number[][]}[]};
 export type CapitalShieldFrame={envelope:ShieldEnvelope;target:number[];mode:string;strategy:string;submission?:string;bend:number;impacts:{anchor:number;age:number;heavy:boolean}[]};
 export type ShieldDisc = {box:number[];waves:number[];depth:number;degrees?:number;own?:boolean;glow?:boolean};
 export type FlightView = {

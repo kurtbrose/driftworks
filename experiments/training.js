@@ -559,6 +559,44 @@
         var f = (-b - Math.sqrt(disc)) / (2 * a);
         return f >= 0 && f <= 1 ? { fraction: f, point: add(start, scale(delta, f)) } : null;
     }
+    // Shield permeability is measured in m/s relative to the defended craft.
+    var shieldSpeed=30;
+    /** @type {WeakMap<Craft,Vector>} */var contactPositions=new WeakMap();
+    /** @param {Combat} t @param {Craft} craft @param {Vector} point */
+    function shieldImpact(t,craft,point){
+        craft.shield=Math.max(0,(craft.shield||0)-.01);craft.damagedAt=t.time;
+        t.flashes.push({position:point.slice(),region:craft.pose.region||0,age:0});
+    }
+    /** Swept, smooth envelopes avoid trapping craft in concave hull geometry.
+     * Slow entrants remain free to accelerate once inside. @param {Combat} t @param {number} dt */
+    function shieldContacts(t,dt){
+        var roster=participants(t).filter(function(c){return c.hp>0;});
+        for(var i=0;i<roster.length;i++)for(var j=i+1;j<roster.length;j++){
+            var a=roster[i],b=roster[j];if((a.pose.region||0)!==(b.pose.region||0)||!(a.shield||b.shield))continue;
+            var relative=sub(a.pose.velocity,b.pose.velocity);if(length(relative)<=shieldSpeed)continue;
+            var end=spaceDelta(b.pose,a.pose.eye),oldA=contactPositions.get(a),oldB=contactPositions.get(b);
+            var start=oldA&&oldB?spaceDelta(Object.assign({},b.pose,{eye:oldB}),oldA):sub(end,scale(relative,dt/U));
+            var radius=(collisionRadius(a)+collisionRadius(b))*1.18;
+            if(length(start)<radius-1e-7)continue;
+            var hit=sphereHit(start,end,[0,0,0],radius);if(!hit)continue;
+            var normal=unit(hit.point),inward=dot(relative,normal);if(inward>=0)continue;
+            var ra=collisionRadius(a),rb=collisionRadius(b),wa=rb*rb*rb/(ra*ra*ra+rb*rb*rb),wb=1-wa;
+            // Turn closing motion into a glancing pass, with a small outward
+            // component. A head-on hit chooses a stable perpendicular escape.
+            var tangent=sub(relative,scale(normal,inward)),slide=length(tangent);
+            var side=slide>1e-6?scale(tangent,1/slide):unit(cross(normal,Math.abs(normal[2])<.9?[0,0,1]:[0,1,0]));
+            var impulse=add(scale(normal,-1.15*inward),scale(side,Math.sqrt(slide*slide+.9*inward*inward)-slide));
+            a.pose.velocity=add(a.pose.velocity,scale(impulse,wa));
+            b.pose.velocity=sub(b.pose.velocity,scale(impulse,wb));
+            [a,b].forEach(function(c){c.pose.ramp=[dot(c.pose.velocity,c.pose.right),dot(c.pose.velocity,c.pose.up),-dot(c.pose.velocity,c.pose.back)];});
+            var correction=sub(scale(normal,radius+1e-6),end);
+            a.pose.eye=offset(a.pose,scale(correction,wa));b.pose.eye=offset(b.pose,scale(correction,-wb));
+            var point=offset(b.pose,scale(normal,collisionRadius(b)*1.18));
+            if(a.shield)shieldImpact(t,a,point);if(b.shield)shieldImpact(t,b,point);
+            collision.moved(t,a);collision.moved(t,b);
+        }
+        roster.forEach(function(c){contactPositions.set(c,c.pose.eye.slice());});
+    }
     /** Compatibility entry point; all participants use the same damage resolver.
      * @param {Combat} t @param {Weapon} weapon */
     function damagePlayer(t, weapon) { damageCraft(t, t.player, weapon); }
@@ -640,21 +678,25 @@
     /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player @param {number} [scorchInterval] @param {() => void} [onDamage] */
     function trace(t, start, end, bolt, team, terrainHit, player, scorchInterval, onDamage) {
         bindPlayer(t, player);
-        var hit = terrainHit&&!(bolt.region||0) ? terrainHit(start, end) : null, travel = length(sub(end,start));
+        var hit = terrainHit&&!(bolt.region||0) ? terrainHit(start, end, bolt) : null, travel = length(sub(end,start));
         var best = hit && travel > 0 ? length(sub(hit,start)) / travel : Infinity;
+        var shieldContact=false;
         var victim = /** @type {Craft | null} */ (null), surface = /** @type {Hit | null} */ (null);
         var query=collision.query(t,start,end,bolt,team);
         var candidates=query.candidates,shooter=query.shooter,faction=query.faction,radius=query.radius;
         candidates.forEach(function (entry) {
             var e=entry.craft;if(!player.curvature&&!collisionNearby(entry,start,end,radius/U))return;
             if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction || (e.pose.region||0)!==(bolt.region||0)) return;
-            var candidate = hullHit(e, start, end, bolt.weapon.headRadius || 0);
+            var relative=sub(scale(bolt.direction||unit(sub(end,start)),bolt.weapon.speed===undefined?1000:bolt.weapon.speed),e.pose.velocity),shell=collisionRadius(e)*1.18;
+            var blocked=(e.shield||0)>0&&length(relative)>shieldSpeed&&length(spaceDelta(e.pose,start))>=shell;
+            var candidate = blocked?sphereHit(spaceDelta(e.pose,start),spaceDelta(e.pose,end),[0,0,0],shell):hullHit(e, start, end, bolt.weapon.headRadius || 0);
+            if(blocked&&candidate)candidate.point=offset(e.pose,candidate.point);
             if (candidate) {
-                if (candidate.fraction < best) { best = candidate.fraction; hit = candidate.point; victim = e; surface = candidate; }
+                if (candidate.fraction < best) { best = candidate.fraction; hit = candidate.point; victim = e; surface = candidate; shieldContact=blocked; }
             }
         });
         var struck = /** @type {Craft | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
-        if (struck && hull && hull.model && hull.local && hull.normal && (!scorchInterval || t.time-(scorchTimes.get(struck)??-Infinity)>=scorchInterval)) {
+        if (!shieldContact && struck && hull && hull.model && hull.local && hull.normal && (!scorchInterval || t.time-(scorchTimes.get(struck)??-Infinity)>=scorchInterval)) {
             DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });
             if(scorchInterval)scorchTimes.set(struck,t.time);
         }
@@ -662,7 +704,8 @@
         if (!struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
         if (struck) {
             var before=onDamage?struck.hp+(struck.shield||0):0;
-            damageCraft(t, struck, bolt.weapon, shooter || team);
+            if(shieldContact)damageCraft(t,struck,bolt.weapon,shooter||team);
+            else {var shields=struck.shield;struck.shield=0;damageCraft(t,struck,bolt.weapon,shooter||team);struck.shield=shields;}
             if(onDamage&&struck.hp+(struck.shield||0)<before)onDamage();
         }
         // Report close projectile passes, clipped at the first collision so occluded bolts cannot speak.
@@ -906,6 +949,7 @@
             collision.moved(t,e);
             if(!mission(t).sky.wormhole)fireGuns(e);
         });
+        shieldContacts(t,dt);
         if(afterMovement)afterMovement();
         if(mission(t).sky.wormhole)t.enemies.forEach(fireGuns);
         });
