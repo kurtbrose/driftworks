@@ -2,6 +2,25 @@
 
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
+## Flight simulation modules
+
+The shared flight runtime lives in `src/` and loads in this order:
+
+- `flight-collision.js` (`DW.flightCollision`): spatial indexing, candidate
+  scheduling, sphere intersections and authored hull intersections.
+- `flight-combat.js` (`DW.flightCombat`): projectile tracing, shield contacts,
+  damage, destruction and combat radio events. It depends on collision queries.
+- `flight-sim.js` (`DW.flightSim`): craft lifecycle, encounter configuration,
+  steering, targeting and simulation stepping. It orchestrates combat.
+
+Missions remain configuration in `experiments/flight-missions.js` and mission
+scripts; sessions own orchestration. Combat and collision do not depend on the
+flight simulation module. `DW.training` remains an alias of `DW.flightSim` for
+older callers; the shared runtime is no longer owned by a training mode.
+The simulation API retains collision/combat forwarding methods for compatibility.
+Script profiles, browser review pages and Node loaders use the same dependency
+order. These are ordinary local scripts with no build step.
+
 ### Isolated arcade flight lab
 
 `flightSession` owns manual-flight state. Its `snapshot()` is a borrowed live
@@ -16,7 +35,7 @@ Opponent style and hull selection belong to the session and survive sortie
 reset and combat replacement; replacement combat receives them before spawning.
 The composition root updates these settings when UI choices change.
 Hull configuration is allowed while paused and
-shares the training collision/muzzle rules. Renderers and HUDs observe these
+shares the flight collision/muzzle rules. Renderers and HUDs observe these
 choices rather than selecting simulation geometry.
 
 `advanceScenery` owns writes to the current world's elapsed-seconds field.
@@ -87,7 +106,7 @@ soft additive bolt billboards and flashes through the same camera/depth buffer a
 Two generic barrels fire per volley, independent of the original POF gun mounts.
 Their mounts are 3 m left/right, 1.3 m down and 4 m forward of the eye;
 normalized firing directions converge at a shared point on the crosshair ray,
-retaining the weapon speed. At volley emission, `training.convergencePoint`
+retaining the weapon speed. At volley emission, `flightSim.convergencePoint`
 selects the nearest living hostile hull surface within weapon range, excluding
 surfaces within 1 cm of the eye and terrain-occluded hulls. For a surface less
 than 8 m ahead, launch points retract to half its forward distance (normally
@@ -95,7 +114,7 @@ than 8 m ahead, launch points retract to half its forward distance (normally
 accepts an optional lazy aim-point callback, called once per volley; a null point
 falls back to 300 m forward of the eye. Player sessions, duels and AI craft use
 the same query. This does not snap to off-axis targets or predict their motion;
-there is no linked-bank or energy simulation yet. Training combat supplies separate health and enemy logic. Existing synthesized audio
+there is no linked-bank or energy simulation yet. Flight combat supplies separate health and damage rules. Existing synthesized audio
 honors the main game's sound preferences.
 
 Flight effect batches use their three normal slots as unnormalized UV/opacity
@@ -123,10 +142,10 @@ state or tactical saves. Standard and configurable raw mappings share the same
 physical flight/weapon model.
 
 
-### Flight training combat
+### Shared flight simulation and combat
 
-`training.stepControlled` owns the common tick sequence used by manual sessions
-and evaluation duels: `stepInput` for the controlled craft, `training.step` for
+`flightSim.stepControlled` owns the common tick sequence used by manual sessions
+and evaluation duels: `stepInput` for the controlled craft, `flightSim.step` for
 combat/NPCs, then the controlled craft's `flightGuns.step` using shared traces,
 terrain queries, convergence and muzzle anchors. It reports shot/impact feedback
 and whether combat damaged the controlled craft. An optional read-only observer
@@ -138,26 +157,27 @@ asteroid spin, body-frame terrain marks, audio callbacks and post-gun contact;
 death skips contact and discards pending time. Duels pass radius zero without
 terrain and retain metrics, replay inputs and death/opponent-death/duration stops.
 
-`experiments/flight-collision.js` owns broad-phase indices, padded movement
+`src/flight-collision.js` owns broad-phase indices, padded movement
 proxies, projectile candidate caches, grid/tree queries and event scheduling.
-It loads after simulation units and before training. It creates no browser
-resources and does not depend on training, pilot policy or damage callbacks.
+It loads after simulation units and before combat and flight simulation. It
+creates no browser resources and does not depend on training, pilot policy or damage callbacks.
 Optional model bounds are read from the shared ship catalog when queried.
 
 Its `query` returns candidate views in participant order plus shooter/faction
-metadata. Training still performs exact hull intersections, chart/team checks,
+metadata. Collision also performs exact hull intersections. Combat performs
+chart/team checks,
 nearest-hit selection, damage, scorches and near-miss callouts. Candidate entries
 are read-only to callers. All caches, modes and queues remain in module-owned
 WeakMaps rather than serializable combat state.
 
-`training.setCollisionMode`, `collisionBatch`, `collisionChanged` and
+`flightSim.setCollisionMode`, `collisionBatch`, `collisionChanged` and
 `collisionStats` remain compatibility aliases. Batch entry/exit, explicit proxy
 movement updates and roster notifications retain their existing timing. Collision
 variants continue to share the exhaustive-reference regression and exact real
 session comparison in `tests/projectile-broadphase.cjs` and
 `tests/collision-events.cjs`.
 
-`experiments/training.js` owns the isolated wave director, pilot decisions,
+`src/flight-sim.js` owns the isolated wave director, pilot decisions,
 steering primitives, training health, target IDs, and simple enemy geometry.
 The page calls its simulation on the same 1/120 s substeps as player flight.
 The wave director spawns three to six craft and assigns no more than two attack
@@ -326,7 +346,7 @@ executes `flight.js` in an isolated browser-resource fixture, driving actual UI
 callbacks and queued animation frames with real session, diagnostics and duel
 implementations (`tests/flight-transitions.cjs`).
 
-Flight-AI validation keeps three policies distinct: existing `training.js`
+Flight-AI validation keeps three policies distinct: existing `flight-sim.js`
 opponents shape the player experience; `experiments/flight-ai.js` provides a
 best-effort perfect stress pilot and delayed-observation human simulators.
 Testing pilots return complete validated controls and never mutate live flight
@@ -346,8 +366,8 @@ See [flight AI validation](flight-ai-validation.md) for contracts, baseline,
 historical baselines and limits to human/optimal-play claims.
 
 `tools/import-retail-flight.cjs` reads numeric retail VP tables offline into 35
-small-craft profiles and ten bolt weapons. `training.configure` assigns player
-class hull/shield maxima; `training.equip` assigns craft class defenses and primary
+small-craft profiles and ten bolt weapons. `flightSim.configure` assigns player
+class hull/shield maxima; `flightSim.equip` assigns craft class defenses and primary
 weapon. Configured spawns use those defenses, and both sides share shield
 absorption/spillover, seven-second delay and 12-points/s recovery. Unconfigured
 test fixtures retain legacy defaults.
@@ -420,7 +440,7 @@ navigator for adapter regressions. Load it after `input.js` and before `flight.j
 The optional `?aegis=1` flight scenario loads a locally baked capital-ship rig
 before creating the sortie. `experiments/aegis-flight.js` owns ephemeral turret
 angles, projectile banks and collision proxies; it uses `flightGuns.step` and
-`training.trace` for the existing projectile and damage rules. The flight
+`flightCombat.trace` for the existing projectile and damage rules. The flight
 composition root advances the rig only while unpaused and resets it with the
 sortie. Presentation receives the rig through `setCapital`, reuses static hull
 buffers for both hull and turrets, with shared GPU meshes and per-mount rotation
@@ -429,7 +449,7 @@ queries use a weakly cached triangle hierarchy over immutable source geometry,
 with earliest-entry pruning and the existing nearest face/edge/vertex semantics.
 World-space poses remain query inputs; the cache contains no craft pointers.
 PD passes a 0.25 s
-cosmetic scorch interval to `training.trace`, rate-limiting surface projection
+cosmetic scorch interval to `flightCombat.trace`, rate-limiting surface projection
 through a weak per-craft cache while retaining every damage event. The optional
 interval defaults to existing behavior for all ordinary weapons.
 Cached `sourceScorchGeometry` batches also retain fighter/wreck surface marks in

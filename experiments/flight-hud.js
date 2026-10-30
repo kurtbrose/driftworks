@@ -97,7 +97,7 @@
         sample(0);
         for(var tick=1;tick<=Math.ceil(horizon/dt);tick++) {
             var before=state.eye;
-            DW.training.stepInput(copy,demand,dt);
+            DW.flightSim.stepInput(copy,demand,dt);
             distance+=(state.curvature?DW.flightHyperbolic.path(before,state.eye,state.curvature).distance:Math.hypot(state.eye[0]-before[0],state.eye[1]-before[1],state.eye[2]-before[2]))*units;
             sample(tick*dt);
         }
@@ -453,7 +453,7 @@
                 combatHud.arc(sx, sy, 5, 0, Math.PI * 2);
                 combatHud.stroke();
             }
-            var speakerId = view.speakerId, living = DW.training.alive(combat).filter(function(e){return mission.sky.wormhole||(e.pose.region||0)===(state.region||0);}), selected = living.find(function (e) {
+            var speakerId = view.speakerId, living = DW.flightSim.alive(combat).filter(function(e){return mission.sky.wormhole||(e.pose.region||0)===(state.region||0);}), selected = living.find(function (e) {
                 return e.id === combat.targetId;
             });
             status = targetStatus(status, selected, combat.time);
@@ -476,7 +476,7 @@
             targetPanel.hidden = !selected;
             if (selected) {
                 var selection = selected.team === 'ally' ? view.allyArt : view.enemyArt, art = DW.flightPresentation.model(selected, combat.wave, view);
-                get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (selected.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.training.callsign(selected);
+                get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (selected.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.flightSim.callsign(selected);
                 get('target-detail').textContent = (art.name || 'Training fighter') + ' / ' + rangeText(selected)+' / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
                 get('target-hull').max = selected.maxHp;
                 get('target-hull').value = selected.hp;
@@ -571,7 +571,7 @@
                         });
                         combatHud.restore();
                         if (status) paintTargetStatus(combatHud, x, y, status);
-                        combatHud.fillText((e.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.training.callsign(e), x, y - 37);
+                        combatHud.fillText((e.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.flightSim.callsign(e), x, y - 37);
                     }
                 }
                 else {
@@ -608,7 +608,7 @@
 
             combatHud.globalAlpha = 1;
             if (selected) {
-                var lead=DW.training.firingSolution(combat,combat.player,selected,view.weapon),q=lead?DW.flightSkybox.project(lead.direction,state,w/h):null;
+                var lead=DW.flightSim.firingSolution(combat,combat.player,selected,view.weapon),q=lead?DW.flightSkybox.project(lead.direction,state,w/h):null;
                 get('target-info').dataset.leadState=lead?'valid':'unavailable';get('target-info').dataset.leadTime=lead?lead.time.toFixed(4):'';
                 if(!lead){combatHud.fillStyle='#a9e5dc';combatHud.fillText(selected.team==='ally'?'FRIENDLY CONTACT':'NO FIRING SOLUTION',w/2,h/2+54);}
                 if (q && Math.abs(q.x) < 1 && Math.abs(q.y) < 1) {
@@ -651,7 +651,7 @@
                 meter('HULL',combat.hull,combat.maxHull||100,24,54,86,'#91d29b');
                 label(Math.round(Math.hypot.apply(null,view.state.velocity)*mission.units.speedScale)+' '+mission.units.speedLabel,124,32,13);
                 label('THR '+Math.round(view.state.throttle*100)+'%',124,57,13);
-                label(selected ? DW.training.callsign(selected) : 'NO TARGET',12,104,12,gold);
+                label(selected ? DW.flightSim.callsign(selected) : 'NO TARGET',12,104,12,gold);
             } else {
             var leftY=bottom-162;
             panel(margin,leftY,pw,162);
@@ -666,7 +666,7 @@
             panel(rightX,rightY,pw,198);
             label(selected?(combat.targetLocked?'TARGET LOCK':'AUTO TARGET'):'NO TARGET',rightX+14,rightY+22,10,selected?gold:muted);
             if(selected){
-                label(DW.training.callsign(selected).slice(0,22),rightX+14,rightY+44,16,gold);
+                label(DW.flightSim.callsign(selected).slice(0,22),rightX+14,rightY+44,16,gold);
                 var source=get('target-camera').querySelector('canvas:not(.scene3d-overlay)');
                 if(source instanceof HTMLCanvasElement){var fit=Math.min((pw-24)/source.width,76/source.height);ctx.image(source,rightX+(pw-source.width*fit)/2,rightY+51,source.width*fit,source.height*fit,0,targetRendered);}
                 var path=DW.flightGuns.ballisticPath(view.state.eye,selected.pose.eye,view.state.region||0,selected.pose.region||0,view.state.curvature||(mission.sky.thinShell?'thin-shell':!!mission.sky.wormhole));

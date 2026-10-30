@@ -44,7 +44,7 @@ const frames=Number(process.argv[2]||240);
 let sample=[];
 function runFrame(advance){const start=performance.now();if(advance)session.advance(1/60,controls,config);const view=session.snapshot();view.world.elapsedSeconds+=advance?1/60:0;presentation.render(view,appearance,comparison,1/60);
 // The monitor checks bounds when fitting its target.
-const target=DW.training.alive(view.combat)[0];if(target)DW.flightTargetCamera.radius(DW.shipPackModels.craftModel(target,'mixed',view.combat.wave));
+const target=DW.flightSim.alive(view.combat)[0];if(target)DW.flightTargetCamera.radius(DW.shipPackModels.craftModel(target,'mixed',view.combat.wave));
 return performance.now()-start;}
 for(let i=0;i<30;i++)runFrame(true);
 collecting=true;

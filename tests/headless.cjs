@@ -30,7 +30,7 @@ assert.deepEqual(copy({view: flight.snapshot(), transcript: flight.transcript, e
   'Same seed, controls and elapsed time reproduce state, events and dialogue across call chunking');
 
 const {combat} = flight.snapshot(), victim = combat.enemies[0];
-flight.DW.training.damageCraft(combat, victim, {damage: 1e6, shieldFactor: 1, armorFactor: 1}, combat.player);
+flight.DW.flightSim.damageCraft(combat, victim, {damage: 1e6, shieldFactor: 1, armorFactor: 1}, combat.player);
 flight.advance(dt, {stop: true});
 assert(flight.events.some(event => event.source === 'combat' && event.kind === 'destroyed' && event.victim === victim.id));
 const replacement = flight.snapshot().combat.enemies[0];

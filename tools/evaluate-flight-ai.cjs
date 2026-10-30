@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),cryp
 const root=path.resolve(__dirname,'..');
 global.window=global;global.DRIFTWORKS_TEST_MODE=true;
 const sources={};
-for(const file of ['src/propulsion.js','src/combat.js','src/logistics.js','src/formations.js','src/sim.js','experiments/retail-profiles.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/training.js','experiments/flight-model.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','experiments/ship-packs.js','experiments/flight-ai.js','experiments/flight-duel.js']) {
+for(const file of ['src/propulsion.js','src/combat.js','src/logistics.js','src/formations.js','src/sim.js','experiments/retail-profiles.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js','src/flight-combat.js','src/flight-sim.js','experiments/flight-model.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','experiments/ship-packs.js','experiments/flight-ai.js','experiments/flight-duel.js']) {
     const bytes=fs.readFileSync(path.join(root,file));
     sources[file]=crypto.createHash('sha256').update(bytes.toString('utf8').replace(/\r\n/g,'\n')).digest('hex');
     vm.runInThisContext(bytes.toString('utf8'),{filename:file});
@@ -34,7 +34,7 @@ if(replayPath) {
         if(rows.length!==1)throw new Error('--record requires a single start/category/flavor/skill');
         fs.writeFileSync(recordPath,JSON.stringify(Object.assign({},last.replay,{sources}))+'\n');
     }
-    output={schema:1,policy:global.Driftworks.flightAI.version,opponentPolicy:'experiments/training.js',sources,observation:'visible-position-velocity-v1',cadence:api.dt,
+    output={schema:1,policy:global.Driftworks.flightAI.version,opponentPolicy:'src/flight-sim.js',sources,observation:'visible-position-velocity-v1',cadence:api.dt,
         note:'Retail hull/shield capacities for each ship; pooled shields and symmetric Driftworks recharge, profile-derived primary gun counts and unlimited fuel/energy. Human presets uncalibrated; perfect is bounded search.',rows};
 }
 process.stdout.write(JSON.stringify(output,null,2)+'\n');

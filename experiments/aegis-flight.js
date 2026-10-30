@@ -306,7 +306,7 @@
             }
             /** @type {import('./types').TerrainHit} */var surface=function(){return point;};
             surface.onImpact=function(p,round){if(opponentRig&&opponentRig.damage&&opponentRig.damage(p,round.weapon.damage,view.combat))confirmedHits++;};
-            return DW.training.trace(view.combat,a,b,bolt,team==='ally'?'player':'capital-enemy',surface,view.state,.25,function(){confirmedHits++;});
+            return DW.flightSim.trace(view.combat,a,b,bolt,team==='ally'?'player':'capital-enemy',surface,view.state,.25,function(){confirmedHits++;});
         }
         /** @param {number} elapsed @param {FlightView} view */
         function step(elapsed,view){
@@ -314,7 +314,7 @@
             if(!Number.isFinite(elapsed)||elapsed<=0)return;
             var dt=Math.min(.1,elapsed),combat=view.combat;seconds+=dt;
             // A smooth shield catches fast incoming craft before hull corners can trap them.
-            DW.training.participants(combat).forEach(function(craft){
+            DW.flightSim.participants(combat).forEach(function(craft){
             var pose=craft.pose;if(craft.hp<=0||craft.hangarLaunch||options&&(pose.region||0)!==(options.state.region||0))return;
             var lastEye=contactEyes.get(pose),responded=false;
             var current=local(pose.eye),previous=lastEye||current,velocity=sub(pose.velocity,options?options.state.velocity:[0,0,0]);
@@ -331,7 +331,7 @@
                 if(inward<0){responded=true;pose.velocity=pose.velocity.map(function(v,i){return v-1.8*inward*normal[i];});}contacts++;
             }}if(responded)pose.ramp=[dot(pose.velocity,pose.right),dot(pose.velocity,pose.up),-dot(pose.velocity,pose.back)];
             contactEyes.set(pose,local(pose.eye));
-            if(responded)DW.training.collisionChanged(combat,craft);
+            if(responded)DW.flightSim.collisionChanged(combat,craft);
             });
             if(!unarmed&&(team==='ally'||options&&options.bridge)&&combat.hangarSupport&&hangars.length&&combat.enabled&&!combat.dead&&!combat.roundOver&&(!options||options.state.integrity>0)){
                 launchClock=Math.max(0,launchClock-dt);
@@ -339,18 +339,18 @@
                 if(launchClock<=0&&allies.length<8){
                     var hangar=hangars[Math.floor(launched/2)%hangars.length],side=launched%2?1:-1,pose=DW.arcade.create(0);
                     pose.eye=world(hangar.position);pose.right=rotate([side,0,0]);pose.up=[0,0,1];pose.back=rotate([0,-side,0]);pose.velocity=rotate([0,side*60,0]).map(function(v,i){return v+(options?options.state.velocity[i]:0);});pose.throttle=.7;pose.ramp=[0,0,0];pose.region=options&&options.state.region||0;
-                    var craft=DW.training.createCraft('aegis-launch-'+(options&&options.bridge?team+'-':'')+(++launched),pose,team);
+                    var craft=DW.flightSim.createCraft('aegis-launch-'+(options&&options.bridge?team+'-':'')+(++launched),pose,team);
                     craft.index=(launched-1)%8;craft.artWave=combat.wave;craft.callsign='Bay '+launched;craft.controller='ai';craft.opponentStyle=options&&options.bridge?'fso-breaker':combat.opponentStyle||'baseline';if(options&&options.bridge)craft.skill=2;craft.mode='launch';craft.goal=world([hangar.position[0],side*160,hangar.position[2]]);craft.hangarLaunch={remaining:2.2};
-                    DW.training.equip(craft,DW.arcade.profiles[0],DW.training.defaultWeapon(DW.arcade.profiles[0]));
+                    DW.flightSim.equip(craft,DW.arcade.profiles[0],DW.flightSim.defaultWeapon(DW.arcade.profiles[0]));
                     if(combat.useHullModels){var selection=combat.hullModels?combat.hullModels[team]:'mixed';craft.collision={kind:'model',modelId:DW.shipPackModels.craftModel(craft,selection,combat.wave).id};}
                     combat.enemies=combat.enemies.filter(function(e){return e.hp>0||!e.id.startsWith('aegis-launch-');});
                     combat.enemies.push(craft);launchClock=3;
                 }
             }
             if(unarmed)return;
-            var roster=DW.training.alive(combat);if(team==='enemy'&&combat.player.hp>0)roster=roster.concat([combat.player]);
+            var roster=DW.flightSim.alive(combat);if(team==='enemy'&&combat.player.hp>0)roster=roster.concat([combat.player]);
             var targets=roster.filter(function(c){return (c.team||'enemy')!==team&&(!options||!options.bridge||(c.pose.region||0)===(options.state.region||0));}).map(function(c){return {craft:c,position:local(c.pose.eye)};});
-            DW.training.collisionBatch(combat,function(){mounts.forEach(function(m){
+            DW.flightSim.collisionBatch(combat,function(){mounts.forEach(function(m){
                 var part=parts.find(function(p){return p.mount===m;});
                 if(part&&part.hp<=0){DW.flightGuns.step(m.guns,view.state,m.source.kind==='heavy'?heavyWeapon:weapon,false,dt,function(a,b,bolt){return traceRound(m,view,a,b,bolt);},undefined,undefined,undefined,bridgeMetric);return;}
                 if(m.source.kind==='heavy'){stepHeavy(m,dt,view);return;}

@@ -99,7 +99,7 @@
     }
     /** @param {Identity | null} [craft] */
     function callsign(craft) {
-        return craft ? DW.training.callsign(craft) : 'pilot';
+        return craft ? DW.flightSim.callsign(craft) : 'pilot';
     }
     /** @param {CommsState} state @param {Combat} combat @param {Craft[]} living @param {FlightState | undefined} player @returns {Candidate[]} */
     function richer(state, combat, living, player) {
@@ -313,7 +313,7 @@
             if (combat.openingStep === mission.opening.length) { combat.openingStep = mission.opening.length+1; state.wait = 8; return null; }
             var introIndex = combat.openingStep++;
             var opening=mission.opening[introIndex], introCraft = combat.enemies[opening.speakerIndex];
-            return {text: opening.text, speaker: (introCraft.team === 'ally' ? mission.teams.ally.radio+' ' : mission.teams.enemy.radio+' ') + DW.training.callsign(introCraft) + ' / '+opening.channel,
+            return {text: opening.text, speaker: (introCraft.team === 'ally' ? mission.teams.ally.radio+' ' : mission.teams.enemy.radio+' ') + DW.flightSim.callsign(introCraft) + ' / '+opening.channel,
                 voice: 'Scout', hostile: introCraft.team!=='ally', seed: 101 + introIndex * 37, radioSeed: 7919 + introIndex,
                 voiceSettings: pilotVoice(introCraft), portraitIndex: introCraft.index, craftId: introCraft.id, event:'missionIntro'};
         }

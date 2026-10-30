@@ -34,6 +34,6 @@ for (const diameter of [.2, 1, 25, 50]) {
 }
 assert.ok(html.includes('DW.flightHud.mount('));
 assert.ok(html.includes('flightHud.render('));
-assert.ok(html.includes('DW.training.cycle(snapshot.combat)'));
+assert.ok(html.includes('DW.flightSim.cycle(snapshot.combat)'));
 assert.ok(!html.includes("getContext('2d')"),'Growth study must use the production HUD, not a replacement overlay');
 console.log('PASS Ellis growth integration: real flight HUD mount/render, real target cycling, no custom HUD canvas');

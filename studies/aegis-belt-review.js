@@ -4,7 +4,7 @@
  DW.aegisFlightAsset=window.AegisBeltOriginal;await DW.aegisFlight.load();
  let world=DW.sim.createInitialWorld();world.asteroids=[];world.ships=[];world.hostiles=[];world.structures=[];
  const scene=DW.scene3d.create(host,()=>world,next=>{world=next},{study:true});
- const rig=DW.aegisFlight.create(),combat=DW.training.create('training');
+ const rig=DW.aegisFlight.create(),combat=DW.flightSim.create('training');
  const image=rig.geometry().find(b=>b.texture)?.texture;if(!image)throw new Error('Capital surface atlas did not load');
  const original=rig.geometry();
  const doorImage=new Image();doorImage.src='aegis-hangar-door-scale-v3.png';await doorImage.decode();const doorCache=new WeakMap();function scaledDoors(batches){let result=doorCache.get(batches);if(!result){result=batches.map(b=>b.texture&&b.texture.src.includes('/hangar-v1/bulkhead.png')?Object.assign({},b,{texture:doorImage}):b);doorCache.set(batches,result);}return result;}el('doors').onchange=()=>draw();

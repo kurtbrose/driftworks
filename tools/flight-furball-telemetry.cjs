@@ -18,7 +18,7 @@ module.exports=function createTelemetry(DW,combat,dt){
         if(target){
             m.targetSeconds+=dt;m.targets[id]=(m.targets[id]||0)+dt;
             const delta=target.pose.eye.map((v,i)=>v-pose.eye[i]);range=Math.hypot(...delta)*U;
-            const lead=DW.training.intercept(pose.eye,target.pose.eye,target.pose.velocity.map(v=>v/U),weapon.speed/U);
+            const lead=DW.flightSim.intercept(pose.eye,target.pose.eye,target.pose.velocity.map(v=>v/U),weapon.speed/U);
             const aim=lead.point.map((v,i)=>v-pose.eye[i]),length=Math.hypot(...aim);
             leadAligned=lead.time>0&&lead.time<=weapon.lifetime&&length>0&&-dot(aim,pose.back)/length>.996;
         }

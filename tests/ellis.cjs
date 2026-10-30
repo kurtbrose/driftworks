@@ -60,12 +60,12 @@ regions.session.nextTarget();assert(rs.combat.targetId,'target cycling includes 
 const hp=remote.hp,shield=remote.shield;
 const start=remote.pose.eye.map((v,i)=>v+rs.state.back[i]*30/ru),end=remote.pose.eye.map((v,i)=>v-rs.state.back[i]*30/ru);
 const bolt={region:0,position:start,direction:rs.state.back.map(v=>-v),weapon:regions.config.weapon,age:0};
-regions.DW.training.trace(rs.combat,start,end,bolt,'player',undefined,rs.state);
+regions.DW.flightSim.trace(rs.combat,start,end,bolt,'player',undefined,rs.state);
 assert.equal(remote.hp,hp);assert.equal(remote.shield,shield,'bolts cannot hit colocated hull in another region');
-assert.equal(regions.DW.training.convergencePoint(rs.combat,rs.combat.player,regions.config.weapon,undefined),null,'remote hull cannot retract local muzzles');
+assert.equal(regions.DW.flightSim.convergencePoint(rs.combat,rs.combat.player,regions.config.weapon,undefined),null,'remote hull cannot retract local muzzles');
 console.log('PASS Ellis regions: explicit membership, persistent cross-mouth targeting and cross-region collision isolation');
 
-regions.DW.training.damageCraft(rs.combat,remote,{...regions.config.weapon,damage:1e9});
+regions.DW.flightSim.damageCraft(rs.combat,remote,{...regions.config.weapon,damage:1e9});
 assert.equal(rs.combat.wrecks.at(-1).pose.region,1,'wreck retains region');
 assert.equal(rs.combat.flashes.at(-1).region,1,'explosion retains region');
 

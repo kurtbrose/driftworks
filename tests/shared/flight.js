@@ -66,7 +66,7 @@
   });
 
   test('flight', 'controlled craft owns defenses, weapons and legal input just like AI craft', function () {
-    var DW=window.Driftworks,api=DW.training,t=api.create(),pose=DW.arcade.create(0);
+    var DW=window.Driftworks,api=DW.flightSim,t=api.create(),pose=DW.arcade.create(0);
     var own=api.bindPlayer(t,pose),other=api.createCraft('wingman',DW.arcade.create(0),'ally');
     t.enemies=[other];other.pose.eye=[30,30,30];
     assert(api.participants(t)[0]===own&&api.participants(t)[1]===other);
@@ -83,7 +83,7 @@
   });
 
   test('flight', 'all craft use team-aware nearest-hit damage and local death does not stop combat', function () {
-    var DW=window.Driftworks,api=DW.training,t=api.create('furball'),pose=DW.arcade.create(0),U=sim.METERS_PER_UNIT;
+    var DW=window.Driftworks,api=DW.flightSim,t=api.create('furball'),pose=DW.arcade.create(0),U=sim.METERS_PER_UNIT;
     api.bindPlayer(t,pose);pose.eye=[50,50,50];
     var ally=api.createCraft('wingman',DW.arcade.create(0),'ally'),enemy=api.createCraft('raider',DW.arcade.create(0),'enemy');
     ally.pose.eye=[0,20/U,0];enemy.pose.eye=[0,40/U,0];t.enemies=[ally,enemy];
@@ -99,7 +99,7 @@
   });
 
   test('flight', 'simulation collision models survive cosmetic changes and JSON round trips', function () {
-    var DW=window.Driftworks,api=DW.training,session=DW.flightSession.create({});
+    var DW=window.Driftworks,api=DW.flightSim,session=DW.flightSession.create({});
     var view=session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]}),craft=view.combat.enemies[0];
     assert(craft.collision.kind==='model');
     var clone=JSON.parse(JSON.stringify(craft)),U=sim.METERS_PER_UNIT;
@@ -115,7 +115,7 @@
   });
 
   test('flight', 'normal flight hull selections match rendered models across changes, waves and reloads', function () {
-    var DW=window.Driftworks,api=DW.training,models=DW.shipPackModels,U=sim.METERS_PER_UNIT;
+    var DW=window.Driftworks,api=DW.flightSim,models=DW.shipPackModels,U=sim.METERS_PER_UNIT;
     var session=DW.flightSession.create({}),view=session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]});
     var catalog=DW.shipPacks[0].models,choices=[['mixed','mixed'],[catalog[0].id,catalog[1].id],['',''],[catalog[1].id,catalog[0].id]];
     function verify(combat,ally,enemy){
@@ -229,11 +229,11 @@
     assert(find('GTF Hercules').hull===250 && find('GTF Hercules').shield===600);
     assert(find('GTF Hercules Mark II').hull===275 && find('GTF Hercules Mark II').shield===610);
     assert(find('GVF Horus').shield===230 && find('SF Dragon').shield===700 && find('SF Dragon').hull===100);
-    profiles.forEach(function(p){assert(p.hull>0 && p.shield>=0 && p.rotationTime.every(function(v){return v>0;}));assert(DW.training.defaultWeapon(p)>=0);});
+    profiles.forEach(function(p){assert(p.hull>0 && p.shield>=0 && p.rotationTime.every(function(v){return v>0;}));assert(DW.flightSim.defaultWeapon(p)>=0);});
   });
 
   test('flight', 'shield absorption, hull spillover and recharge are symmetric and unshielded is explicit',function(){
-    var DW=window.Driftworks,ai=DW.training,player=DW.arcade.create(0),t=ai.create('training'),p=Object.assign({},DW.arcade.profiles[0],{hull:100,shield:10});
+    var DW=window.Driftworks,ai=DW.flightSim,player=DW.arcade.create(0),t=ai.create('training'),p=Object.assign({},DW.arcade.profiles[0],{hull:100,shield:10});
     ai.configure(t,p);ai.spawn(t,player,0);t.enemies=t.enemies.slice(0,1);var e=t.enemies[0];ai.equip(e,p,0);
     var weapon={damage:30,shieldFactor:1,armorFactor:1};ai.damagePlayer(t,weapon);ai.damageEnemy(t,e,weapon);
     assert(t.shield===0 && e.shield===0 && t.hull===80 && e.hp===80);
@@ -262,7 +262,7 @@
     [duel.combat.player,duel.enemy].forEach(function(craft){
       var U=DW.sim.METERS_PER_UNIT,visible=DW.flightPresentation.model(craft,1,{allyArt:options.allyHull,enemyArt:options.enemyHull});
       var start=craft.pose.eye.map(function(x,i){return x+craft.pose.up[i]*100/U;}),end=craft.pose.eye.map(function(x,i){return x-craft.pose.up[i]*100/U;});
-      var hit=DW.training.hullHit(craft,start,end),expected=DW.shipPackModels.hullHit(visible,craft.pose,start,end,U);
+      var hit=DW.flightSim.hullHit(craft,start,end),expected=DW.shipPackModels.hullHit(visible,craft.pose,start,end,U);
       assert(hit&&expected&&hit.model.id===visible.id);assertClose(hit.fraction,expected.fraction);
     });
     var record=JSON.parse(JSON.stringify(duel.replay));assert(record.version===5);
@@ -294,11 +294,11 @@
   });
 
   test('flight', 'training destruction accepts an explicitly unknown shooter', function () {
-    var DW = window.Driftworks, combat = DW.training.create('training'), pose = DW.arcade.create(20);
-    DW.training.spawn(combat, pose, 20);
+    var DW = window.Driftworks, combat = DW.flightSim.create('training'), pose = DW.arcade.create(20);
+    DW.flightSim.spawn(combat, pose, 20);
     var victim = combat.enemies[0];
     victim.hp = 1;
-    DW.training.damageEnemy(combat, victim, DW.retailWeapons[0], null);
+    DW.flightSim.damageEnemy(combat, victim, DW.retailWeapons[0], null);
     assert(victim.hp === 0 && combat.wrecks.length === 1);
     assert(combat.radioEvents[0].killer === null);
   });
@@ -593,8 +593,8 @@
       assert(Math.hypot.apply(null,e.pose.eye.map(function(v,i){return v-view.state.eye[i];}))*sim.METERS_PER_UNIT<1000);
       e.hp=0;
     });
-    DW.training.step(view.combat,view.state,10,view.asteroid.radius,function(){return null;});
-    assert(view.combat.wave===1 && DW.training.alive(view.combat).length===0,'Cleared patrol never respawns');
+    DW.flightSim.step(view.combat,view.state,10,view.asteroid.radius,function(){return null;});
+    assert(view.combat.wave===1 && DW.flightSim.alive(view.combat).length===0,'Cleared patrol never respawns');
     assert(session.reset(config).combat.enemies.length===2);
     assert(JSON.stringify(session.snapshot().asteroid)===rock,'Restart preserves terrain');
     assert(JSON.stringify(DW.flightSession.create({seed:123}).snapshot().asteroid)===rock);
@@ -645,7 +645,7 @@
     session.setOpponentStyle('passer');
     assert(combat.opponentStyle==='passer' && combat.enemies.every(function(e){return e.opponentStyle==='passer';}));
     assert(old.opponentStyle!=='passer');
-    DW.training.spawn(combat,view.state,view.asteroid.radius);
+    DW.flightSim.spawn(combat,view.state,view.asteroid.radius);
     assert(combat.enemies.every(function(e){return e.opponentStyle==='passer';}),'Future waves inherit style');
     combat.enemies.forEach(function(e,i){e.pose.eye=[100+i*10,100,100];e.collision={kind:'sphere',radiusM:2};});
     view.state.eye=[0,0,100];view.state.back=[0,-1,0];
@@ -667,9 +667,9 @@
       session.setCombat(mode,false);var view=session.setCombat(mode,true);
       assert(view.state===player && view.guns===guns,'Combat toggle preserves the controlled sortie');
       assert(view.combat.opponentStyle==='passer' && view.combat.hullModels.ally==='');
-      if(mode==='training')DW.training.spawn(view.combat,view.state,view.asteroid.radius);
+      if(mode==='training')DW.flightSim.spawn(view.combat,view.state,view.asteroid.radius);
       assert(view.combat.enemies.length>0);
-      DW.training.participants(view.combat).forEach(function(craft){
+      DW.flightSim.participants(view.combat).forEach(function(craft){
         assert(craft.collision.modelId==='blockout','Stored hull selection applies before spawn');
         if(craft!==view.combat.player)assert(craft.opponentStyle==='passer');
       });
@@ -768,7 +768,7 @@
   });
 
   test('flight', 'flight session substeps preserve movement, training, guns, audio and contact order', function () {
-    var DW=window.Driftworks,model=DW.arcade,training=DW.training,guns=DW.flightGuns;
+    var DW=window.Driftworks,model=DW.arcade,training=DW.flightSim,guns=DW.flightGuns;
     var saved=[model.step,training.step,guns.step,training.trace,model.contact],events=[],dead=false;
     var terrain=function(){},session=DW.flightSession.create({terrainHit:terrain,surfaceFrame:function(){events.push('surface');return {point:[1,0,0]};},onGunshot:function(){events.push('shot');},onImpact:function(){events.push('impact');}});
     var config={mode:'training',enabled:false,profile:model.profiles[0],weapon:DW.retailWeapons[0]},view=session.reset(config);
@@ -794,7 +794,7 @@
   });
 
   test('flight', 'shared duel ticks preserve damage sampling, no-terrain stepping and terminal gun work', function () {
-    var DW=window.Driftworks,training=DW.training,guns=DW.flightGuns;
+    var DW=window.Driftworks,training=DW.flightSim,guns=DW.flightGuns;
     var savedStep=training.step,savedGuns=guns.step,savedTrace=training.trace,savedAim=training.convergencePoint;
     try {
       ['timeout','player-win','opponent-win'].forEach(function(outcome){
@@ -983,7 +983,7 @@
     observe(0,true);
     assert(clock.radioSerial===1 && clock.facts.some(function(f){return f.event==='loss';}),'Consume combat events without altering their log');
     session.reset({mode:'furball',enabled:true,profile:DW.arcade.profiles[0]});
-    var fresh=session.snapshot();DW.training.spawn(fresh.combat,fresh.state,fresh.asteroid.radius);
+    var fresh=session.snapshot();DW.flightSim.spawn(fresh.combat,fresh.state,fresh.asteroid.radius);
     observe(1,true);assert(clock.emotionWave===session.snapshot().combat.wave);
     session.snapshot().combat.dead=true;assert(observe(20,false)===null);
     session.setCombat('training',false);observe(1,true);
@@ -1363,7 +1363,7 @@
     });
     var profile=DW.arcade.profiles[0], radius=125, pose=DW.arcade.createSortie(radius,profile,'regression-mission');
     assertClose(pose.eye[1],-radius*3);assertClose(pose.eye[2],radius+500/sim.METERS_PER_UNIT);
-    var combat=DW.training.create('regression-mission');DW.training.spawn(combat,pose,radius);
+    var combat=DW.flightSim.create('regression-mission');DW.flightSim.spawn(combat,pose,radius);
     assert(combat.enemies.length===4&&combat.enemies.filter(function(c){return c.team==='ally';}).length===2);
     assert(combat.enemies[3].callsign==='Four');
     var text=DW.flightDialogue.compose('contact',{range:1000,direction:'right',height:'',bearing:'three oclock'},'regression-mission');
@@ -1476,7 +1476,7 @@
   });
 
   test('flight', 'Ohio reveal gates combat, respects occupied radio, and retains its cast across waves', function () {
-    var DW=window.Driftworks, api=DW.training, U=sim.METERS_PER_UNIT;
+    var DW=window.Driftworks, api=DW.flightSim, U=sim.METERS_PER_UNIT;
     var player=DW.arcade.create(300/U), combat=api.create('ohio'), clock=DW.flightComms.create();
     api.spawn(combat,player,300/U);
     assert(combat.enemies.length===8 && combat.enemies.filter(function(e){return e.team==='ally';}).length===4);
@@ -1711,7 +1711,7 @@
   });
 
   test('flight', 'crosshair selects the nearest living hull and lock holds until released or destroyed', function () {
-    var DW=window.Driftworks,ai=DW.training,t=ai.create(),state=DW.arcade.create(0);
+    var DW=window.Driftworks,ai=DW.flightSim,t=ai.create(),state=DW.arcade.create(0);
     function craft(id,distance,side){
       var pose=DW.arcade.create(0);pose.eye=state.eye.map(function(v,i){return v-state.back[i]*distance+state.right[i]*(side||0);});
       var c=ai.createCraft(id,pose,'enemy');c.collision={kind:'sphere',radiusM:10};return c;
@@ -1861,8 +1861,8 @@
       });
       for(var tick=1;tick<1200;tick++)gun.step(guns,pose,weapon,true,1/120,undefined,undefined,count,anchors);
       assert(guns.fired===300,'Six retail mounts at five volleys/s retain 30 bolts/s for '+model.name);
-      var combat=DW.training.create('training');DW.training.configureHulls(combat,model.id,model.id);
-      assert(DW.training.gunAnchors(combat.player)===anchors,'Same mesh owns collision and muzzles');
+      var combat=DW.flightSim.create('training');DW.flightSim.configureHulls(combat,model.id,model.id);
+      assert(DW.flightSim.gunAnchors(combat.player)===anchors,'Same mesh owns collision and muzzles');
     });
     var striker=DW.shipPacks[0].models.find(function(m){return m.name==='Striker';});
     var pair=DW.shipPackModels.gunAnchors(striker);
@@ -1887,7 +1887,7 @@
     });
   });
   test('flight', 'close tail shots converge on the nearest crosshair hull and both hit', function () {
-    var DW=window.Driftworks,U=sim.METERS_PER_UNIT,ai=DW.training,weapon=DW.retailWeapons[0];
+    var DW=window.Driftworks,U=sim.METERS_PER_UNIT,ai=DW.flightSim,weapon=DW.retailWeapons[0];
     var pose=DW.arcade.create(18),combat=ai.create('training'),player=ai.bindPlayer(combat,pose);
     var enemyPose=DW.arcade.create(18);enemyPose.eye=pose.eye.map(function(x,i){return x-pose.back[i]*30/U;});
     var enemy=ai.createCraft('close-target',enemyPose,'enemy');enemy.collision={kind:'sphere',radiusM:1};enemy.shield=0;
@@ -1914,7 +1914,7 @@
     assert(ai.convergencePoint(combat,player,weapon)===null,'Ignore hulls beyond weapon range');
   });
   test('flight', 'point-blank surfaces before the normal muzzle plane receive both forward shots', function () {
-    var DW=window.Driftworks,U=sim.METERS_PER_UNIT,ai=DW.training,w=DW.retailWeapons[0];
+    var DW=window.Driftworks,U=sim.METERS_PER_UNIT,ai=DW.flightSim,w=DW.retailWeapons[0];
     [.5,2,3.9,4,6,10].forEach(function(distance){
       var pose=DW.arcade.create(18),combat=ai.create('training'),player=ai.bindPlayer(combat,pose);
       var targetPose=DW.arcade.create(18);targetPose.eye=pose.eye.map(function(x,i){return x-pose.back[i]*(distance+.25)/U;});
@@ -2001,10 +2001,10 @@
     pad.buttons[4].pressed=false;assert(api.read(pad,map).side===0);
   });
   test('flight', 'manual throttle passes through zero into weak reverse and stop clears it',function(){
-    var DW=window.Driftworks,state=DW.arcade.create(0),craft=DW.training.createCraft('manual',state,'ally');
-    DW.training.stepInput(craft,{throttle:null,throttleRate:-1,fire:false},.05);
+    var DW=window.Driftworks,state=DW.arcade.create(0),craft=DW.flightSim.createCraft('manual',state,'ally');
+    DW.flightSim.stepInput(craft,{throttle:null,throttleRate:-1,fire:false},.05);
     assert(state.throttle<0 && state.velocity[1]<0);
-    DW.training.stepInput(craft,{throttle:null,throttleRate:0,stop:true,fire:false},.05);
+    DW.flightSim.stepInput(craft,{throttle:null,throttleRate:0,stop:true,fire:false},.05);
     assert(state.throttle===0);
   });
   test('flight', 'arcade contact scales normalized geology by body radius and retains five meter clearance', function () {
@@ -2044,7 +2044,7 @@
   });
 
   test('flight', 'visible bolt width registers shield and hull damage at triangle edges', function () {
-    var DW=window.Driftworks,models=DW.shipPackModels,ai=DW.training,U=sim.METERS_PER_UNIT;
+    var DW=window.Driftworks,models=DW.shipPackModels,ai=DW.flightSim,U=sim.METERS_PER_UNIT;
     var model={id:'test-bolt-plate',name:'Bolt test plate',triangles:1,vertices:[-2,-2,0,0,0,1, 2,-2,0,0,0,1, 0,2,0,0,0,1]};
     var packs=DW.shipPacks;
     try {
@@ -2113,7 +2113,7 @@
     var study=window.Driftworks.flightStudy, DW=window.Driftworks;
     var config={ships:[0],weapons:[-1],starts:['headOn'],pilots:['perfect','practiced'],skills:[1],seeds:3,seed:1,duration:10,pairing:'mirror',defenses:'paired'};
     assert(study.plan(config).length===8);
-    config.weapons.push(DW.training.defaultWeapon(DW.arcade.profiles[0]));
+    config.weapons.push(DW.flightSim.defaultWeapon(DW.arcade.profiles[0]));
     assert(study.plan(config).length===8, 'Equivalent native weapons are not independent trials');
     config.seeds=11;var rejected=false;try{study.plan(config);}catch(e){rejected=true;}assert(rejected);
   });
@@ -2198,13 +2198,13 @@
   });
 
   test('flight', 'Manual training spawns inherit the selected experimental opponent policy', function () {
-    var DW=window.Driftworks,t=DW.training.create('training'),pose=DW.arcade.create(0);
-    t.opponentStyle='fso-breaker';DW.training.spawn(t,pose,0);
+    var DW=window.Driftworks,t=DW.flightSim.create('training'),pose=DW.arcade.create(0);
+    t.opponentStyle='fso-breaker';DW.flightSim.spawn(t,pose,0);
     assert(t.enemies.length>0&&t.enemies.every(function(e){return e.opponentStyle==='fso-breaker';}));
   });
 
   test('flight', 'flight destruction retains drift, pauses and expires independently of gun impacts', function () {
-    var DW=window.Driftworks, api=DW.training, pose=DW.arcade.create(0), combat=api.create('training');
+    var DW=window.Driftworks, api=DW.flightSim, pose=DW.arcade.create(0), combat=api.create('training');
     api.configure(combat,DW.arcade.profiles[0]);api.spawn(combat,pose,0);
     var victim=combat.enemies[0];victim.pose.velocity=[30,-20,10];
     api.damageCraft(combat,victim,{damage:10000,armorFactor:1,shieldFactor:1},combat.player);

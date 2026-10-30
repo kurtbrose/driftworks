@@ -46,7 +46,7 @@ For example, a novice simulator may consistently underestimate closure because o
 
 Share geometry math, intercept math, maneuver execution where appropriate, observation data formats, input validation, replay and physical integration. Keep category objectives and policy settings explicit and independently testable. Do not create one difficulty slider that silently turns opponent concessions into simulated human limitations, or call an opponent preset with zero aim error “perfect.” A simple category selector plus small policy functions is enough initially; separate modules only when actual implementation size warrants them.
 
-The current `training.js` enemies are opponent AI. The scripted player controller in the wave-clearance test is a functional test driver, not an established human simulator or perfect AI. Straight-flight and fixed-turn scripts remain useful diagnostic fixtures, but must not be presented as representative human players. Both additional categories have initial separate implementations in `flight-ai.js`; their limitations and remaining calibration work are documented in the validation guide.
+The current `flight-sim.js` enemies are opponent AI. The scripted player controller in the wave-clearance test is a functional test driver, not an established human simulator or perfect AI. Straight-flight and fixed-turn scripts remain useful diagnostic fixtures, but must not be presented as representative human players. Both additional categories have initial separate implementations in `flight-ai.js`; their limitations and remaining calibration work are documented in the validation guide.
 
 The testing roles are complementary:
 
@@ -67,7 +67,7 @@ FreeSpace Open source was inspected at commit [`c28032a2afa99b508aaafe96ec075b4e
 - [B: `code/ai/aibig.cpp`](https://github.com/scp-fs2open/fs2open.github.com/blob/c28032a2afa99b508aaafe96ec075b4ec4a54b1c/code/ai/aibig.cpp): inspected to establish the separate large-target path; capital-ship strafing is outside this recommendation.
 - [E: early `aicode.cpp`, 2005-03-25](https://github.com/scp-fs2open/fs2open.github.com/blob/36db6a4931b6348f921031df7b556b687b3a3b4a/code/ai/aicode.cpp): the earliest commit under the current file path, described as an AI code move. It already includes Open changes and is **not an untouched 1999 source release**.
 
-Driftworks references are repository-relative links to the inspected working tree, based on HEAD `8e28bf462e37e9e0f3f8df99b07ee92689110686`. Existing unrelated worktree edits were left alone. Principal files: [training.js](../experiments/training.js), [flight-model.js](../experiments/flight-model.js), [guns.js](../experiments/guns.js), [flight-session.js](../experiments/flight-session.js), [retail-profiles.js](../experiments/retail-profiles.js), [retail-weapons.js](../experiments/retail-weapons.js), [types.d.ts](../experiments/types.d.ts), and [tests.js](../tests/tests.js).
+Driftworks references are repository-relative links to the inspected working tree, based on HEAD `8e28bf462e37e9e0f3f8df99b07ee92689110686`. Existing unrelated worktree edits were left alone. Principal files: [training.js](../src/flight-sim.js), [flight-model.js](../experiments/flight-model.js), [guns.js](../experiments/guns.js), [flight-session.js](../experiments/flight-session.js), [retail-profiles.js](../experiments/retail-profiles.js), [retail-weapons.js](../experiments/retail-weapons.js), [types.d.ts](../experiments/types.d.ts), and [tests.js](../tests/tests.js).
 
 Historical confidence:
 
@@ -246,7 +246,7 @@ For initial tuning, investigate a no-progress interval around 6–10 seconds and
 5. **Evaluate burst timing separately.** Recommendation 5 is an AI combat-balance change even if weapon numbers stay constant; compare duty budget and incoming pressure explicitly.
 6. **Only then test group pressure.** Opportunity-based slot handoff with the existing cap, then a modest multi-fighter scenario. Do not begin with an eight-opponent benchmark as the quality target.
 
-Implementation locations: keep tactical geometry/selection and small execution helpers in `experiments/training.js` initially; extend `Craft` in `experiments/types.d.ts` when adding state; preserve `flight-model.js` and `guns.js` physics. Update the flight-lab section of `docs/architecture.md` when interfaces actually change. Mode names are also observed by communications code, so changes must preserve or deliberately adapt that contract. Do not add tactical state to the main persistent world for an isolated lab experiment.
+Implementation locations: keep tactical geometry/selection and small execution helpers in `src/flight-sim.js` initially; extend `Craft` in `experiments/types.d.ts` when adding state; preserve `flight-model.js` and `guns.js` physics. Update the flight-lab section of `docs/architecture.md` when interfaces actually change. Mode names are also observed by communications code, so changes must preserve or deliberately adapt that contract. Do not add tactical state to the main persistent world for an isolated lab experiment.
 
 The terrain safety-shell projection is a pre-existing exception to physical parity, not a maneuver technique. Open-space duel tests isolate it. A later separate safety task should align collision handling for both pilot types; do not quietly remove or weaken collision protection during pursuit work.
 

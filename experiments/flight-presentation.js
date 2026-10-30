@@ -259,7 +259,7 @@
             if(view.state.curvature)view=DW.flightHyperbolic.presentation(view);
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
             var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[0],objectWarp=regions.length>1&&(DW.flightMissions.resolve(combat.mode).sky.thinShell||liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
-            var livingArt = /** @type {ArtCraft[]} */ (DW.training.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
+            var livingArt = /** @type {ArtCraft[]} */ (DW.flightSim.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
             if (view.observerCraft) livingArt.push(view.observerCraft);
             var groups=/** @type {{team:string;region:number;craft:ArtCraft[]}[]} */([]);
             ['ally','enemy'].forEach(function(team){regions.forEach(function(region){var list=livingArt.filter(function(c){return (c.team||'enemy')===team&&(c.pose.region||0)===region;});if(objectWarp)list.forEach(function(c){groups.push({team:team,region:region,craft:[c]});});else groups.push({team:team,region:region,craft:list});});});
@@ -268,7 +268,7 @@
                 var craft = group.craft, selection = team === 'ally' ? appearance.allyArt : appearance.enemyArt;
                 if (!craft.length)
                     return;
-                var batches = selection ? DW.shipPackModels.sourceFleetGeometry(craft, selection, combat.wave, units, appearance.shipImages, appearance.paint[team], true) : DW.training.geometry({ enemies: craft.map(function (e) {
+                var batches = selection ? DW.shipPackModels.sourceFleetGeometry(craft, selection, combat.wave, units, appearance.shipImages, appearance.paint[team], true) : DW.flightSim.geometry({ enemies: craft.map(function (e) {
                         return Object.assign({}, e, { hp: 1 });
                     }) });
                 batches.forEach(function (batch) {
@@ -318,7 +318,7 @@
                 var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });
                 return Object.assign({}, batch, {origin: /** @type {[number,number,number]} */ ([asteroid ? asteroid.position.x : 0, asteroid ? asteroid.position.y : 0, 0]), rotation: asteroid ? asteroid.rotation : 0});
             })));
-            var allGuns=DW.training.allGuns(combat,guns),effectBatches=/** @type {Batch[]} */([]),engineParts=/** @type {{region:number;vertices:Float32Array}[]} */([]);
+            var allGuns=DW.flightSim.allGuns(combat,guns),effectBatches=/** @type {Batch[]} */([]),engineParts=/** @type {{region:number;vertices:Float32Array}[]} */([]);
             // Rigid ship placement does not warp individual projectiles. Keep
             // their additive geometry batched per chart in the full renderer.
             // Only the explicit object-warp experiment needs per-effect paths.

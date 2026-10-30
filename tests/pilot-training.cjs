@@ -127,9 +127,9 @@ assert.equal(Executive.predict(executiveWeights, Array(Executive.INPUTS).fill(1)
 assert.deepEqual(Executive.cases(42, 4), Executive.cases(42, 4));
 assert.deepEqual(Executive.cases(42, 4).map(f => f.start), ['headOn', 'crossing', 'tail', 'tail']);
 assert.ok(Executive.cases(42, 4, 5, true).every(f => f.opponentStyle !== 'baseline'));
-const testOwn = DW.training.createCraft('executive-probe', DW.arcade.create(0), 'ally');
-DW.training.equip(testOwn, DW.arcade.profiles[0], DW.training.defaultWeapon(DW.arcade.profiles[0]));
-const testTarget = DW.training.createCraft('executive-target', DW.arcade.create(0), 'enemy');
+const testOwn = DW.flightSim.createCraft('executive-probe', DW.arcade.create(0), 'ally');
+DW.flightSim.equip(testOwn, DW.arcade.profiles[0], DW.flightSim.defaultWeapon(DW.arcade.profiles[0]));
+const testTarget = DW.flightSim.createCraft('executive-target', DW.arcade.create(0), 'enemy');
 testTarget.pose.eye = [0, 300 / DW.sim.METERS_PER_UNIT, 0];
 const executiveWeapon = DW.retailWeapons[testOwn.weaponIndex], executiveState = Executive.createState();
 const executiveGeometry = Executive.geometry(DW, testOwn, testTarget, executiveWeapon);
@@ -141,7 +141,7 @@ assert.deepEqual(executiveState.heading, heldHeading, 'break heading must remain
 assert.equal(Executive.controls(testOwn, testTarget, executiveGeometry, executiveState).fire, false);
 for (let i = 0; i < 600; i++) {
   const g = Executive.geometry(DW, testOwn, testTarget, executiveWeapon);
-  DW.training.stepInput(testOwn, Executive.controls(testOwn, testTarget, g, executiveState), Executive.DT);
+  DW.flightSim.stepInput(testOwn, Executive.controls(testOwn, testTarget, g, executiveState), Executive.DT);
 }
 assert.ok(Executive.geometry(DW, testOwn, testTarget, executiveWeapon).range > 450, 'fixed break must demonstrate separation in production physics');
 assert.equal(Executive.transition(executiveState, 'break', executiveGeometry, testOwn, 6), 'attack', 'break deadline must force recovery');

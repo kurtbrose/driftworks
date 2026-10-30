@@ -263,7 +263,7 @@ for(const t of [2.99,3.01,4.49,4.51,14.99,15.01,16.49,16.51]){
 console.log('PASS Ellis pursuit rendering: intact single hull before/after both leader and follower crossings');
 
 // Exercise the actual seven-material capital asset and its real patrol crossing.
-for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
+for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js','src/flight-combat.js','src/flight-sim.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
 for(const geometry of ['full','objects'])for(const observerSide of [0,1])for(const stretching of [false,true])for(const returning of [false,true]){
  viewer.setStudyBridge(false);context.location.search='?mission=ellis&bridgeGeometry='+geometry+(stretching?'&bridgeShips=warped':'');viewer.setStudyBridge(true);
  const capital=DW.aegisFlight.createEllisPatrol();let clock=0,previousFrame,previousTime,previousPoints;

@@ -1,11 +1,11 @@
 (function () {
     'use strict';
-    // Broad-phase candidates and scheduling only; no damage, narrow-phase hits or pilot rules.
+    // Spatial candidate queries, scheduling and exact shape intersections; no damage or pilot rules.
     /** @typedef {import('../src/types').DriftworksNamespace} DriftworksNamespace */
-    /** @typedef {import('./types').Vector} Vector */
-    /** @typedef {import('./types').Combat} Combat */
-    /** @typedef {import('./types').Craft} Craft */
-    /** @typedef {import('./types').Bolt} Bolt */
+    /** @typedef {import('../experiments/types').Vector} Vector */
+    /** @typedef {import('../experiments/types').Combat} Combat */
+    /** @typedef {import('../experiments/types').Craft} Craft */
+    /** @typedef {import('../experiments/types').Bolt} Bolt */
     var DW = /** @type {Required<DriftworksNamespace>} */ (window.Driftworks), U = DW.sim.METERS_PER_UNIT;
 
     /** @typedef {{craft:Craft, x:number,y:number,z:number,r:number,key:string,shape:string,team:string,alive:boolean,order:number}} CollisionEntry */
@@ -182,7 +182,7 @@
         if(geometry.id!==shape.modelId)throw new Error('Unknown collision model '+shape.modelId);
         return DW.shipPackModels.hullRadius(geometry)/U;
     }
-    /** @type {WeakMap<import('./types').Model,number[]>} */var throatBounds=new WeakMap();
+    /** @type {WeakMap<import('../experiments/types').Model,number[]>} */var throatBounds=new WeakMap();
     /** Conservative oriented box projection in scene units, cached per mesh.
      * @param {Craft} craft @param {Vector} normal */
     function throatRadius(craft,normal){
@@ -244,7 +244,7 @@
         }
         return result.sort(function(a,b){return a.order-b.order;});
     }
-    /** @param {import('./flight-collision-types').CollisionCandidate} e @param {Vector} a @param {Vector} b @param {number} margin */
+    /** @param {import('../experiments/flight-collision-types').CollisionCandidate} e @param {Vector} a @param {Vector} b @param {number} margin */
     function collisionNearby(e,a,b,margin){
         var r=e.r+margin;
         return e.x>=Math.min(a[0],b[0])-r&&e.x<=Math.max(a[0],b[0])+r&&e.y>=Math.min(a[1],b[1])-r&&e.y<=Math.max(a[1],b[1])+r&&e.z>=Math.min(a[2],b[2])-r&&e.z<=Math.max(a[2],b[2])+r;
@@ -252,7 +252,7 @@
     /** Query caches are derived state, never stored in combat saves.
      * @param {Combat} t @param {Vector} start @param {Vector} end
      * @param {Bolt} bolt @param {Craft | string} team
-     * @returns {{candidates: import('./flight-collision-types').CollisionCandidate[], shooter: Craft | undefined, faction: string, radius: number}} */
+     * @returns {{candidates: import('../experiments/flight-collision-types').CollisionCandidate[], shooter: Craft | undefined, faction: string, radius: number}} */
     function query(t, start, end, bolt, team) {
         var index=collisionIndex(t);
         var shooter = typeof team === 'object' ? team : index.entries.find(function (e) { return e.craft.id === team; })?.craft;
@@ -280,7 +280,56 @@
     function moved(t, e) {
         var engine=getCollisionEngine(t);if(engine){var proxy=engine.proxies.get(e);moveCollisionProxy(engine,e,proxy?proxy.entry.order:0);}
     }
-    DW.flightCollision = {query: query, nearby: collisionNearby, radius: collisionRadius, throatRadius:throatRadius,
+    /** @param {Vector} a @param {Vector} b */
+    function add(a, b) {
+        return a.map(function (x, i) {
+            return x + b[i];
+        });
+    }
+    /** @param {Vector} a @param {Vector} b */
+    function sub(a, b) {
+        return a.map(function (x, i) {
+            return x - b[i];
+        });
+    }
+    /** @param {Vector} v @param {number} n */
+    function scale(v, n) {
+        return v.map(function (x) {
+            return x * n;
+        });
+    }
+    /** @param {Vector} a @param {Vector} b */
+    function dot(a, b) {
+        return a.reduce(function (s, x, i) {
+            return s + x * b[i];
+        }, 0);
+    }
+    /** @param {Vector} start @param {Vector} end @param {Vector} center @param {number} radius */
+    function sphereHit(start, end, center, radius) {
+        var delta = sub(end, start), offset = sub(start, center), a = dot(delta, delta), c = dot(offset, offset) - radius * radius;
+        if (c <= 0)
+            return { fraction: 0, point: start.slice() };
+        if (a < 1e-14)
+            return null;
+        var b = 2 * dot(offset, delta), disc = b * b - 4 * a * c;
+        if (disc < 0)
+            return null;
+        var f = (-b - Math.sqrt(disc)) / (2 * a);
+        return f >= 0 && f <= 1 ? { fraction: f, point: add(start, scale(delta, f)) } : null;
+    }
+    /** Geometry is selected by serializable simulation state, never by appearance controls.
+     * @param {Craft} craft @param {Vector} start @param {Vector} end @param {number} [boltRadius] */
+    function hullHit(craft, start, end, boltRadius) {
+        if(craft.pose.curvature)return DW.flightHyperbolic.hullHit(craft,start,end,boltRadius,hullHit);
+        var shape = craft.collision || { kind: 'sphere', radiusM: 9 };
+        if (shape.kind === 'sphere') return sphereHit(start, end, craft.pose.eye, (shape.radiusM + (boltRadius || 0)) / U);
+        var model = DW.shipPackModels.find(shape.modelId);
+        // The built-in training hull is not part of an asset pack.
+        var geometry = model ? model.model : DW.shipPackModels.craftModel(craft, '', 1);
+        if (geometry.id !== shape.modelId) throw new Error('Unknown collision model ' + shape.modelId);
+        return DW.shipPackModels.hullHit(geometry, craft.pose, start, end, U, boltRadius);
+    }
+    DW.flightCollision = {sphereHit:sphereHit, hullHit:hullHit, query: query, nearby: collisionNearby, radius: collisionRadius, throatRadius:throatRadius,
         setMode: setCollisionMode, batch: collisionBatch, changed: collisionChanged,
         moved: moved, stats: collisionStats};
 }());

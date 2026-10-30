@@ -4,7 +4,7 @@ const flight=require('../tools/headless.cjs').createFlight({mission:'cinematic'}
 vm.runInNewContext(fs.readFileSync('experiments/flight-watch.js','utf8'),{window:{Driftworks:DW}});
 const director=DW.flightWatch.cinema({telemetry:()=>({capitals:[]})}),view=flight.snapshot();
 const pose=DW.arcade.create(0);pose.eye=[0,-200,100];pose.velocity=[70,0,0];
-const fighter=DW.training.createCraft('camera-subject',pose,'ally');view.combat.enemies=[fighter];
+const fighter=DW.flightSim.createCraft('camera-subject',pose,'ally');view.combat.enemies=[fighter];
 for(let i=0;i<3;i++)director.next();
 let previous=director.camera(view),velocity;
 for(let i=0;i<120;i++){

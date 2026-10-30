@@ -105,8 +105,8 @@
             if(oldCamera.spaceFrame!==camera.spaceFrame)bodies.forEach(function(body){body.mounts.forEach(function(m){m.guns.bolts.forEach(function(b){var matrix=chartMatrix(oldCamera,camera),p=H.point(b.position,radius),q=multiply(matrix,p);b.direction=unit(H.lower(q,multiply(matrix,H.lift(p,b.direction))));b.position=H.chart(q,radius);});m.guns.impacts.forEach(function(h){h.position=chart(h.position,oldCamera,camera);});});});
             spawnGrace=Math.max(0,spawnGrace-dt);if(spawnGrace>0)combat.player.plotArmor=true;else delete combat.player.plotArmor;
             if(!combat.enabled)return;combat.roundOver=false;combat.countdown=999;
-            DW.training.collisionBatch(combat,function(){bodies.forEach(function(body,index){
-                var opponent=bodies[1-index],parts=body.rig.components?body.rig.components():[],participants=DW.training.participants(combat).filter(function(c){return c.hp>0&&c.team!==body.state.team&&!c.hangarLaunch;});
+            DW.flightSim.collisionBatch(combat,function(){bodies.forEach(function(body,index){
+                var opponent=bodies[1-index],parts=body.rig.components?body.rig.components():[],participants=DW.flightSim.participants(combat).filter(function(c){return c.hp>0&&c.team!==body.state.team&&!c.hangarLaunch;});
                 body.mounts.forEach(function(m){
                     var heavy=m.source.kind==='heavy',weapon=Object.assign({},DW.retailWeapons[0],{name:heavy?'Hyperbolic main battery':'Hyperbolic point defense',speed:heavy?700:600,lifetime:8,damage:heavy?20:3,fireWait:heavy?.65:.2,length:heavy?35:4,headRadius:heavy?2.5:.2,tailRadius:heavy?2:.1});
                     var p=m.source.position;m.aimWait-=dt;
@@ -130,21 +130,21 @@
                     var fire=alive&&ready&&m.burst>0,pose=fire&&m.guns.cooldown<=dt+1e-9?poseAt(body,tip,forward):camera;
                     DW.flightGuns.step(m.guns,pose,weapon,fire,dt,function(a,b,bolt){
                         var surface=/** @type {import('./types').TerrainHit} */(function(){return hit(a,b,bolt);});surface.onImpact=function(point,round){damage(point,round.weapon.damage,combat);};
-                        return DW.training.trace(combat,a,b,bolt,body.state.team==='ally'?'player':'capital-enemy',surface,view.state,.25);
+                        return DW.flightSim.trace(combat,a,b,bolt,body.state.team==='ally'?'player':'capital-enemy',surface,view.state,.25);
                     },undefined,2,[[-(heavy?7.65:1.683),0,0],[heavy?7.65:1.683,0,0]],radius);
                     if(m.burst>0){m.burst=Math.max(0,m.burst-dt);if(m.burst<=0)m.rest=heavy?3+(m.index%5)*.4:.8+(m.index%5)*.13;}
                 });
                 body.rig.geometry();
                 if(body.state.integrity>0&&seconds%3<dt&&combat.enemies.filter(function(c){return c.hp>0&&c.team===body.state.team;}).length<8){
-                    var hangar=asset.hangars&&asset.hangars[0]?asset.hangars[0].position:[-150,0,-10],pose=poseAt(body,hangar,[0,1,0]),craft=DW.training.createCraft('hyper-bay-'+(++launches),Object.assign({},pose,{velocity:pose.back.map(function(v){return -v*30;}),rates:[0,0,0],ramp:[0,0,30],throttle:.6}),body.state.team);
-                    craft.index=(launches-1)%8;craft.artWave=combat.wave;craft.callsign='Bay '+launches;craft.controller='ai';craft.skill=1;craft.mode='launch';craft.hangarLaunch={remaining:4};craft.goal=chart(world(body,[hangar[0],180,hangar[2]]),canonical(),camera);DW.training.equip(craft,DW.arcade.profiles[0],DW.training.defaultWeapon(DW.arcade.profiles[0]));if(combat.useHullModels){var selected=combat.hullModels?combat.hullModels[body.state.team]:'mixed';craft.collision={kind:'model',modelId:DW.shipPackModels.craftModel(craft,selected,combat.wave).id};}combat.enemies=combat.enemies.filter(function(c){return c.hp>0||!c.id.startsWith('hyper-bay-');});combat.enemies.push(craft);DW.training.collisionChanged(combat);
+                    var hangar=asset.hangars&&asset.hangars[0]?asset.hangars[0].position:[-150,0,-10],pose=poseAt(body,hangar,[0,1,0]),craft=DW.flightSim.createCraft('hyper-bay-'+(++launches),Object.assign({},pose,{velocity:pose.back.map(function(v){return -v*30;}),rates:[0,0,0],ramp:[0,0,30],throttle:.6}),body.state.team);
+                    craft.index=(launches-1)%8;craft.artWave=combat.wave;craft.callsign='Bay '+launches;craft.controller='ai';craft.skill=1;craft.mode='launch';craft.hangarLaunch={remaining:4};craft.goal=chart(world(body,[hangar[0],180,hangar[2]]),canonical(),camera);DW.flightSim.equip(craft,DW.arcade.profiles[0],DW.flightSim.defaultWeapon(DW.arcade.profiles[0]));if(combat.useHullModels){var selected=combat.hullModels?combat.hullModels[body.state.team]:'mixed';craft.collision={kind:'model',modelId:DW.shipPackModels.craftModel(craft,selected,combat.wave).id};}combat.enemies=combat.enemies.filter(function(c){return c.hp>0||!c.id.startsWith('hyper-bay-');});combat.enemies.push(craft);DW.flightSim.collisionChanged(combat);
                 }
             });
-            DW.training.participants(combat).forEach(function(craft){
+            DW.flightSim.participants(combat).forEach(function(craft){
                 if(craft.hp<=0)return;var current=chart(craft.pose.eye,camera,canonical()),previous=contactEyes.get(craft);contactEyes.set(craft,current);
                 if(!previous||craft.hangarLaunch||craft===combat.player&&spawnGrace>0||H.path(previous,current,radius).distance*U<.001)return;
                 var start=chart(previous,canonical(),camera),surface=hit(start,craft.pose.eye);
-                if(surface){craft.pose.eye=start;craft.pose.velocity=craft.pose.velocity.map(function(v){return -.5*v;});craft.pose.ramp=[dot(craft.pose.velocity,craft.pose.right),dot(craft.pose.velocity,craft.pose.up),-dot(craft.pose.velocity,craft.pose.back)];contactEyes.set(craft,previous);DW.training.collisionChanged(combat,craft);contacts++;}
+                if(surface){craft.pose.eye=start;craft.pose.velocity=craft.pose.velocity.map(function(v){return -.5*v;});craft.pose.ramp=[dot(craft.pose.velocity,craft.pose.right),dot(craft.pose.velocity,craft.pose.up),-dot(craft.pose.velocity,craft.pose.back)];contactEyes.set(craft,previous);DW.flightSim.collisionChanged(combat,craft);contacts++;}
             });});
         }
         /** @param {Pose} [view] */function geometry(view){

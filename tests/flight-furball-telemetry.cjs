@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),create=require('../tools/flight-furball-telemetry.cjs');
 const craft=(id,team,y)=>({id,team,hp:100,guns:{fired:0,hits:0},pose:{eye:[0,y,0],back:[0,-1,0],velocity:[0,0,0]},goal:[0,300,0],mode:'attack',targetId:null,decision:.4});
 const a=craft('a','ally',0),b=craft('b','enemy',300),c=craft('c','enemy',350),combat={enemies:[a,b,c]};
-const DW={sim:{METERS_PER_UNIT:1},training:{intercept:(origin,position)=>({point:position,time:1})}},dt=.1;
+const DW={sim:{METERS_PER_UNIT:1},flightSim:{intercept:(origin,position)=>({point:position,time:1})}},dt=.1;
 const telemetry=create(DW,combat,dt),weapon={speed:500,lifetime:2};
 function sample(trigger){const snapshot=telemetry.before(a.guns,a.pose,weapon,trigger);telemetry.after(a.guns,snapshot);}
 a.targetId='b';sample(false); // valid opportunity, burst duty closed

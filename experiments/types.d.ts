@@ -770,8 +770,13 @@ export type ExperimentModules = {
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose, optical?:boolean|'thin-shell') => Batch[];
     };
-    flightCollision: import('./flight-collision-types').FlightCollisionApi;
-    training: {
+    flightCollision: import('./flight-collision-types').FlightCollisionApi & Pick<ExperimentModules['flightSim'], 'sphereHit'|'hullHit'>;
+    training: ExperimentModules['flightSim'];
+    flightCombat: Pick<ExperimentModules['flightSim'], 'damageCraft'|'damagePlayer'|'trace'> & {
+        shieldContacts:(combat:Combat,dt:number)=>void;
+        radioEvent:(combat:Combat,event:Omit<RadioEvent,'serial'|'time'|'wave'>)=>void;
+    };
+    flightSim: {
         rebaseGeometry:(combat:Combat)=>void;
         setCollisionMode: (combat: Combat, mode: 'legacy'|'grid'|'tree'|'grid-events'|'tree-events') => void;
         collisionBatch: <T>(combat: Combat, work: () => T) => T;

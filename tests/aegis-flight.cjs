@@ -2,14 +2,14 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),cp=require('node:child_process');
 const root=path.join(__dirname,'..'),DW={sim:{METERS_PER_UNIT:10000/600}},ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math,console});
 cp.execFileSync(process.execPath,[path.join(root,'tools/bake-aegis-flight.cjs'),'--check'],{stdio:'pipe'});
-for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file});
+for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js','src/flight-combat.js','src/flight-sim.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file});
 const U=DW.sim.METERS_PER_UNIT;
 function position(x,y,z){return [x/U,y/U,1200+z/U];}
 function fixture(targetZ=250){
  const state=DW.arcade.create(0);state.eye=position(0,-1200,200);
- const combat=DW.training.create('training');combat.enabled=true;DW.training.bindPlayer(combat,state);
+ const combat=DW.flightSim.create('training');combat.enabled=true;DW.flightSim.bindPlayer(combat,state);
  const pose=DW.arcade.create(0);pose.eye=position(-1000,0,targetZ);
- const enemy=DW.training.createCraft('target',pose,'enemy');enemy.controller='ai';enemy.hp=enemy.maxHp=10000;enemy.shield=0;enemy.collision.radiusM=15;
+ const enemy=DW.flightSim.createCraft('target',pose,'enemy');enemy.controller='ai';enemy.hp=enemy.maxHp=10000;enemy.shield=0;enemy.collision.radiusM=15;
  combat.enemies=[enemy];return {state,combat,guns:DW.flightGuns.create(),world:{},enemy};
 }
 const rig=DW.aegisFlight.create(),view=fixture();
@@ -60,15 +60,15 @@ const markView=fixture(),fakeModel={id:'mark-test'},savedPacks=DW.shipPackModels
 markView.enemy.collision={kind:'model',modelId:fakeModel.id};
 DW.shipPackModels={find:()=>({model:fakeModel}),hullHit:()=>({fraction:.5,point:markView.enemy.pose.eye,local:[0,0,0],normal:[0,0,1],model:fakeModel}),addScorch:()=>{marks++;}};
 const bolt={weapon:{...DW.retailWeapons[0],damage:1},age:0,position:position(-1001,0,250),direction:[1,0,0]};
-for(let i=0;i<100;i++){markView.combat.time=i*.01;DW.training.trace(markView.combat,position(-1001,0,250),position(-999,0,250),bolt,'player',undefined,markView.state,.25);}
+for(let i=0;i<100;i++){markView.combat.time=i*.01;DW.flightSim.trace(markView.combat,position(-1001,0,250),position(-999,0,250),bolt,'player',undefined,markView.state,.25);}
 assert.equal(marks,4,'PD marks are limited to four per victim per second');assert.ok(markView.enemy.hp<9950,'all projectile damage is still applied');
-DW.training.trace(markView.combat,position(-1001,0,250),position(-999,0,250),bolt,'player',undefined,markView.state);assert.equal(marks,5,'ordinary fighter marks retain existing behavior');
+DW.flightSim.trace(markView.combat,position(-1001,0,250),position(-999,0,250),bolt,'player',undefined,markView.state);assert.equal(marks,5,'ordinary fighter marks retain existing behavior');
 DW.shipPackModels=savedPacks;
 console.log('PASS Aegis flight: baked pivots, bounded tracking, upper/lower arcs, real projectile damage, allied safety, hull contact, pause/reset and static buffer reuse');
 
 // Hit accounting reports real damage directly, once per trace, including lethal hits.
 const reportView=fixture();let reports=0;
-function reportTrace(weapon,terrain){return DW.training.trace(reportView.combat,position(-1001,0,250),position(-999,0,250),{...bolt,weapon},'player',terrain,reportView.state,undefined,()=>reports++);}
+function reportTrace(weapon,terrain){return DW.flightSim.trace(reportView.combat,position(-1001,0,250),position(-999,0,250),{...bolt,weapon},'player',terrain,reportView.state,undefined,()=>reports++);}
 reportTrace({...bolt.weapon,damage:0});assert.equal(reports,0,'zero damage does not count');
 reportTrace({...bolt.weapon,damage:1},()=>position(-1001,0,250));assert.equal(reports,0,'terrain occlusion does not count');
 reportView.enemy.shield=10;reportTrace({...bolt.weapon,damage:1});assert.equal(reports,1,'shield damage counts once');
@@ -78,7 +78,7 @@ reportTrace({...bolt.weapon,damage:100});assert.equal(reports,2,'dead targets do
 const lockedView=fixture(),lockRig=DW.aegisFlight.create();lockedView.enemy.pose.eye=position(0,0,500);lockedView.combat.enabled=false;
 for(let i=0;i<120;i++)lockRig.step(1/60,lockedView);
 const lockedAngles=lockRig.telemetry().mounts.map(m=>m.yaw);
-const intruder=DW.training.createCraft('closer',DW.arcade.create(0),'enemy');intruder.pose.eye=position(0,100,250);lockedView.combat.enemies.unshift(intruder);
+const intruder=DW.flightSim.createCraft('closer',DW.arcade.create(0),'enemy');intruder.pose.eye=position(0,100,250);lockedView.combat.enemies.unshift(intruder);
 for(let i=0;i<120;i++)lockRig.step(1/60,lockedView);
 assert.deepEqual(lockRig.telemetry().mounts.map(m=>m.yaw),lockedAngles,'valid lock is retained despite a nearer contact');
 lockedView.enemy.hp=0;for(let i=0;i<120;i++)lockRig.step(1/60,lockedView);
@@ -114,7 +114,7 @@ console.log('PASS AA ballistics: existing rounds keep their launch heading when 
 
 // Independent random acquisition spreads a shared contact list, including farther craft.
 const spread=fixture();spread.combat.enabled=false;spread.combat.enemies=[];
-for(let i=0;i<4;i++){const e=DW.training.createCraft('spread-'+i,DW.arcade.create(0),'enemy');e.pose.eye=position(0,i*30,350);spread.combat.enemies.push(e);}
+for(let i=0;i<4;i++){const e=DW.flightSim.createCraft('spread-'+i,DW.arcade.create(0),'enemy');e.pose.eye=position(0,i*30,350);spread.combat.enemies.push(e);}
 const spreadRig=DW.aegisFlight.create();spreadRig.step(1/60,spread);
 const locks=spreadRig.telemetry().mounts.map(m=>m.targetId),chosen=new Set(locks.filter(Boolean));
 assert.ok(chosen.size>=3,'six upper AA mounts distribute across at least three available enemies');
@@ -210,19 +210,19 @@ bayView.combat.enabled=true;firstLaunch.hp=0;for(let i=0;i<240;i++)bayRig.step(1
 const bayPause=bayRig.telemetry();bayRig.step(0,bayView);assert.deepEqual(bayRig.telemetry(),bayPause);
 // Use the real training loop to hold a launched ship straight until clear, then hand off to AI.
 vm.runInContext(fs.readFileSync(path.join(root,'experiments/flight-missions.js'),'utf8'),ctx);
-const launchCombat=DW.training.create('furball');launchCombat.wave=1;launchCombat.hangarSupport=true;launchCombat.enabled=true;DW.training.bindPlayer(launchCombat,bayView.state);
+const launchCombat=DW.flightSim.create('furball');launchCombat.wave=1;launchCombat.hangarSupport=true;launchCombat.enabled=true;DW.flightSim.bindPlayer(launchCombat,bayView.state);
 firstLaunch.hp=firstLaunch.maxHp;firstLaunch.pose.eye=position(cx,0,cz);firstLaunch.pose.velocity=[0,-60,0];firstLaunch.hangarLaunch={remaining:2.2};firstLaunch.fire=false;
-const passive=DW.training.createCraft('passive',DW.arcade.create(0),'enemy');passive.pose.eye=position(10000,0,200);passive.controller='input';
+const passive=DW.flightSim.createCraft('passive',DW.arcade.create(0),'enemy');passive.pose.eye=position(10000,0,200);passive.controller='input';
 launchCombat.enemies=[firstLaunch,passive];
-for(let i=0;i<132;i++)DW.training.step(launchCombat,bayView.state,1/60,0);
+for(let i=0;i<132;i++)DW.flightSim.step(launchCombat,bayView.state,1/60,0);
 assert.ok(firstLaunch.pose.eye[1]*U< -125,'craft reaches clear space beyond the hull');
 assert.ok(Math.abs(firstLaunch.pose.eye[0]*U-cx)<1e-7&&Math.abs((firstLaunch.pose.eye[2]-1200)*U-cz)<1e-7,'launch path stays straight in the tunnel');
-DW.training.step(launchCombat,bayView.state,1/60,0);assert.equal(firstLaunch.hangarLaunch,undefined,'launch phase hands off to normal AI');
-launchCombat.enemies=[passive];DW.training.step(launchCombat,bayView.state,1/60,0);assert.equal(launchCombat.roundOver,false,'pending hangar reinforcements keep furball alive without wingmen');
+DW.flightSim.step(launchCombat,bayView.state,1/60,0);assert.equal(firstLaunch.hangarLaunch,undefined,'launch phase hands off to normal AI');
+launchCombat.enemies=[passive];DW.flightSim.step(launchCombat,bayView.state,1/60,0);assert.equal(launchCombat.roundOver,false,'pending hangar reinforcements keep furball alive without wingmen');
 bayRig.reset(bayView.combat);assert.equal(bayRig.telemetry().launches,0);assert.ok(bayView.combat.enemies.every(e=>e.team!=='ally'),'reset restages wingmen instead of leaving old launches');
 console.log('PASS Aegis hangars: mixed hull, through collision/deck/walls, alternating launch mouths, bounded replenishment, straight departure, AI handoff and reset');
 
-launchCombat.enemies=[firstLaunch,passive];const survivorPosition=firstLaunch.pose.eye.slice();DW.training.spawn(launchCombat,bayView.state,0);
+launchCombat.enemies=[firstLaunch,passive];const survivorPosition=firstLaunch.pose.eye.slice();DW.flightSim.spawn(launchCombat,bayView.state,0);
 assert.equal(launchCombat.enemies.filter(e=>e.team==='ally').length,1,'new enemy wave does not teleport in an allied wing');
 assert.ok(launchCombat.enemies.includes(firstLaunch),'surviving hangar fighters remain across waves');assert.deepEqual(firstLaunch.pose.eye,survivorPosition);
 console.log('PASS hangar wave continuity: survivors remain in flight and fresh allies still require launches');
@@ -295,7 +295,7 @@ for(let i=0;i<600;i++)battle.step(1/60,pausedBattle);
 assert.equal(battle.telemetry().shots,0,'combat-disabled capitals never fire');
 // A rotated hostile AA mount uses world-space barrels, enemy damage and red bolts.
 const hostileView=fixture();hostileView.state.eye=position(0,-5000,1000);hostileView.enemy.team='ally';hostileView.enemy.pose.eye=position(0,-500,250);
-const friendly=DW.training.createCraft('red-friendly',DW.arcade.create(0),'enemy');friendly.pose.eye=position(0,-300,250);friendly.hp=10000;hostileView.combat.enemies.push(friendly);
+const friendly=DW.flightSim.createCraft('red-friendly',DW.arcade.create(0),'enemy');friendly.pose.eye=position(0,-300,250);friendly.hp=10000;hostileView.combat.enemies.push(friendly);
 const hostileRig=DW.aegisFlight.create({state:{team:'enemy',position:[0,0,1200],heading:Math.PI/2,velocity:[0,0,0],integrity:20000},opponent:{team:'ally',position:position(0,10000,0),heading:0,velocity:[0,0,0],integrity:20000}});
 for(let i=0;i<600;i++){hostileView.combat.time+=1/60;hostileRig.step(1/60,hostileView);}
 assert.ok(hostileRig.telemetry().hits>0&&hostileView.enemy.hp<10000,'rotated hostile AA aims and damages allied fighters');
@@ -391,9 +391,9 @@ assert.notDeepEqual(crippled.telemetry().capitals[0].position,battleStart.capita
 // Terrain callbacks fire only after nearest fighter/hull resolution, never on a probe.
 const impactView=fixture(),impactBolt={...bolt,weapon:{...DW.retailWeapons[0],damage:1}};let finalized=0;
 const surfaceTrace=()=>position(-998,0,250);surfaceTrace.onImpact=()=>finalized++;
-DW.training.convergencePoint(impactView.combat,impactView.combat.player,impactBolt.weapon,surfaceTrace);assert.equal(finalized,0);
-DW.training.trace(impactView.combat,position(-1001,0,250),position(-997,0,250),impactBolt,'player',surfaceTrace,impactView.state);assert.equal(finalized,0,'a nearer fighter occludes component damage');
-impactView.enemy.hp=0;DW.training.trace(impactView.combat,position(-1001,0,250),position(-997,0,250),impactBolt,'player',surfaceTrace,impactView.state);assert.equal(finalized,1,'final environment impact damages exactly once');
+DW.flightSim.convergencePoint(impactView.combat,impactView.combat.player,impactBolt.weapon,surfaceTrace);assert.equal(finalized,0);
+DW.flightSim.trace(impactView.combat,position(-1001,0,250),position(-997,0,250),impactBolt,'player',surfaceTrace,impactView.state);assert.equal(finalized,0,'a nearer fighter occludes component damage');
+impactView.enemy.hp=0;DW.flightSim.trace(impactView.combat,position(-1001,0,250),position(-997,0,250),impactBolt,'player',surfaceTrace,impactView.state);assert.equal(finalized,1,'final environment impact damages exactly once');
 console.log('PASS capital systems: all 24 guns + 5 engines, localized destruction, disabled firing, engine consequences, cached wrecks, reset, probe/occlusion safety');
 
 // Production capital shield feedback is driven only by finalized damage.

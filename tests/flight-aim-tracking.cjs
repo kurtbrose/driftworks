@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
 const DW = require('../tools/headless.cjs').loadRuntime(), U = DW.sim.METERS_PER_UNIT;
 function probe(skill, motion, style='baseline') {
-    const t=DW.training.create(), player=DW.arcade.create(18);
-    DW.training.spawn(t,player,0);
+    const t=DW.flightSim.create(), player=DW.arcade.create(18);
+    DW.flightSim.spawn(t,player,0);
     const e=t.enemies[0];t.enemies=[e];e.skill=skill;e.opponentStyle=style;
     // Freeze only flight integration and projectiles to isolate perception geometry.
     const move=DW.arcade.step, guns=DW.flightGuns.step;
@@ -13,8 +13,8 @@ function probe(skill, motion, style='baseline') {
             const time=(i+1)/120, sample=motion(time);
             player.eye=[sample.x/U,18,0];player.velocity=[sample.v,0,0];
             e.pose.eye=[0,18,-400/U];e.hp=e.maxHp;e.mode='attack';e.until=100;
-            DW.training.step(t,player,1/120,0);
-            const ideal=DW.training.intercept(e.pose.eye,player.eye,[sample.v/U,0,0],DW.retailWeapons[0].speed/U);
+            DW.flightSim.step(t,player,1/120,0);
+            const ideal=DW.flightSim.intercept(e.pose.eye,player.eye,[sample.v/U,0,0],DW.retailWeapons[0].speed/U);
             errors.push(Math.hypot(...e.gunGoal.map((x,j)=>(x-ideal.point[j])*U)));
         }
     } finally {DW.arcade.step=move;DW.flightGuns.step=guns;}

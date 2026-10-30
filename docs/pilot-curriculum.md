@@ -105,7 +105,7 @@ zero-distance guard; its loss matched the original selected policy exactly.
 
 Keep these skills as training-pipeline studies. For the game, investigate a
 learned tactical executive over reliable authored flight/aiming controllers.
-The existing `training.js` already separates steering, intercept tracking and
+The existing `flight-sim.js` already separates steering, intercept tracking and
 mode/goal decisions, offering an initial boundary for that experiment.
 
 Start with one opponent and two executable actions: attack with intercept

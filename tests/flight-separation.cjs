@@ -1,7 +1,7 @@
 "use strict";
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {fixture}=require('../tools/stress-flight.cjs');
-const source=fs.readFileSync(require.resolve('../experiments/training.js'),'utf8');
+const source=fs.readFileSync(require.resolve('../src/flight-sim.js'),'utf8');
 // Keep the exhaustive roster scan as an independent candidate oracle. Both paths
 // run production steering, sequential movement, guns, damage and session updates.
 let reference=source.replace('neighbors.nearby(e).forEach', 'living.forEach');

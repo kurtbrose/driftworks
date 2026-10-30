@@ -1,6 +1,6 @@
 # Flight AI validation
 
-The flight lab has three AI roles. `experiments/training.js` owns the **opponent AI**, including observation-based gun tracking. `experiments/flight-ai.js` adds initial **perfect** and **human simulator** policies. `experiments/flight-duel.js` evaluates either testing policy in the player seat against one existing opponent in open space. The same simulation powers the lab's watch mode and the command-line evaluator, with no runtime network dependencies.
+The flight lab has three AI roles. `src/flight-sim.js` owns the **opponent AI**, including observation-based gun tracking. `experiments/flight-ai.js` adds initial **perfect** and **human simulator** policies. `experiments/flight-duel.js` evaluates either testing policy in the player seat against one existing opponent in open space. The same simulation powers the lab's watch mode and the command-line evaluator, with no runtime network dependencies.
 
 ## Watch a duel
 

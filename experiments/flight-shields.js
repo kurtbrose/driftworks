@@ -10,7 +10,7 @@
         function collect(view,art,aspect,own,mode){
             glowEffects=[];
             var camera=view.camera||view.state,now=view.combat.time,units=DW.sim.METERS_PER_UNIT;
-            var craft=DW.training.alive(view.combat).slice();if(view.observerCraft||own||mode)craft.push(view.combat.player);
+            var craft=DW.flightSim.alive(view.combat).slice();if(view.observerCraft||own||mode)craft.push(view.combat.player);
             var retained=new Set(craft.map(function(c){return c.id;}));history.forEach(function(_,id){if(!retained.has(id))history.delete(id);});
             /** @type {Disc[]} */var discs=[];
             craft.forEach(function(c){

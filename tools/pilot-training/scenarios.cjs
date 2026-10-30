@@ -34,13 +34,13 @@ function create(DW, options) {
     const team = scenario === '2v1' ? 'ally' : 'enemy', original = team === 'ally' ? own : enemy;
     const pose = JSON.parse(JSON.stringify(original.pose));
     pose.eye = pose.eye.map((x, i) => x + (original.pose.right[i] * 100 + original.pose.up[i] * 45) / U);
-    const extra = DW.training.createCraft('training-' + team + '-2', pose, team);
-    DW.training.equip(extra, original.profile, original.weaponIndex);
+    const extra = DW.flightSim.createCraft('training-' + team + '-2', pose, team);
+    DW.flightSim.equip(extra, original.profile, original.weaponIndex);
     Object.assign(extra, {controller: 'ai', index: 2, skill: enemy.skill, opponentStyle: enemy.opponentStyle,
       mode: 'approach', goal: (team === 'ally' ? enemy : own).pose.eye.slice()});
     combat.enemies.push(extra);
     // Use the production model collider/loadout setup for added participants too.
-    DW.training.configureHulls(combat, duel.replay.options.allyHull, duel.replay.options.enemyHull);
+    DW.flightSim.configureHulls(combat, duel.replay.options.allyHull, duel.replay.options.enemyHull);
   }
   if (scenario === 'wounded-pilot') {own.hp *= .5; own.shield *= .5; own.damagedAt = 0;}
   if (scenario === 'wounded-opponent') {enemy.hp *= .5; enemy.shield *= .5; enemy.damagedAt = 0;}
@@ -95,7 +95,7 @@ function episode(DW, weights, options, capture = false, recordedInputs) {
     let before;
     // Production NPC combat happens first; snapshot here so only damage from
     // controlled pilot projectiles earns credit, never its supporting wingmate.
-    DW.training.stepControlled(combat, {...input, throttleRate: 0}, weapon, DT, 0, undefined, () => {
+    DW.flightSim.stepControlled(combat, {...input, throttleRate: 0}, weapon, DT, 0, undefined, () => {
       hullLost += Math.max(0, hp - own.hp);
       shieldLost += Math.max(0, shield - (own.shield || 0));
       before = ledger.map(e => ({hp: e.craft.hp, shield: e.craft.shield || 0}));

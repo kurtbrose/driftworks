@@ -49,7 +49,7 @@ const profiles = {
     'src/asset-versions.js', '@simulation', 'src/asteroid-art.js', '@session', '@meshes',
     'src/explosions.js', 'src/asteroid-terrain.js', 'src/ship-models.js',
     'experiments/retail-profiles.js', '@missions', 'experiments/retail-weapons.js',
-    'experiments/ellis-optics.js', 'experiments/thin-shell-optics.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js', 'experiments/flight-collision.js', 'experiments/training.js',
+    'experiments/ellis-optics.js', 'experiments/thin-shell-optics.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js', 'src/flight-collision.js', 'src/flight-combat.js','src/flight-sim.js',
     'experiments/flight-model.js', '@fleet', '@dialogue', 'experiments/evacuation-mission.js',
     'experiments/flight-comms.js', 'experiments/flight-session.js', '@flightAi', 'experiments/flight-study.js'
   ]},
@@ -58,7 +58,7 @@ const profiles = {
     '@meshes', 'src/explosions.js', 'src/asteroid-terrain.js', 'src/scene3d.js', 'src/ship-models.js', 'src/ship-art.js', 'src/game.js',
     'tests/scenario.js', 'tests/population-tests.js', 'experiments/dom.js',
     'experiments/retail-profiles.js', '@missions', 'experiments/skybox.js',
-    'experiments/retail-weapons.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js', 'experiments/flight-collision.js', 'experiments/training.js',
+    'experiments/retail-weapons.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js', 'src/flight-collision.js', 'src/flight-combat.js','src/flight-sim.js',
     'experiments/performance.js', 'experiments/input.js', 'experiments/flight-model.js',
     'experiments/radar.js', '@fleet', 'experiments/target-camera.js', '@dialogue',
     'experiments/evacuation-mission.js', 'experiments/flight-comms.js', 'experiments/flight-radio.js',
@@ -78,7 +78,7 @@ const profiles = {
   scenarios: {entries: ['@simulation', 'src/population.js', 'src/session.js', 'tests/scenario.js']},
   studyWorker: {entries: [
     '@simulation', 'experiments/retail-profiles.js', 'experiments/retail-weapons.js',
-    'experiments/flight-hyperbolic.js', 'experiments/guns.js', '@missions', 'experiments/flight-collision.js', 'experiments/training.js', 'experiments/flight-model.js',
+    'experiments/flight-hyperbolic.js', 'experiments/guns.js', '@missions', 'src/flight-collision.js', 'src/flight-combat.js','src/flight-sim.js', 'experiments/flight-model.js',
     '@fleet', '@flightAi', 'experiments/flight-study.js'
   ], omit: ['src/mining-lights.js', 'src/mining-terrain.js', 'src/mining-landing.js', 'assets/ships/ohio-vehicles/meshes.js']},
   flight: {entries: [
@@ -89,7 +89,7 @@ const profiles = {
     'experiments/flight-model.js', 'experiments/radar.js', '@missions', 'src/sky-effects.js',
     'experiments/ellis-feedback.js', 'experiments/ellis-optics.js', 'experiments/thin-shell-optics.js', 'experiments/ellis-renderer.js',
     'experiments/skybox.js', 'experiments/retail-weapons.js', 'experiments/flight-hyperbolic.js', 'experiments/guns.js',
-    'experiments/input.js', 'experiments/flight-collision.js', 'experiments/training.js', 'experiments/performance.js',
+    'experiments/input.js', 'src/flight-collision.js', 'src/flight-combat.js','src/flight-sim.js', 'experiments/performance.js',
     '@fleet', '@dialogue', 'experiments/evacuation-mission.js',
     {src: 'experiments/evacuation-scenery.js', type: 'module'},
     'experiments/flight-comms.js', 'experiments/comms-display.js', 'experiments/face-blend.js',
@@ -104,8 +104,9 @@ const profiles = {
 
 // Required load-time boundaries. Optional renderer resources stay profile-owned.
 const dependencies = {
-  'experiments/flight-collision.js': ['src/sim.js'],
-  'experiments/training.js': ['experiments/flight-collision.js'],
+  'src/flight-collision.js': ['src/sim.js'],
+  'src/flight-combat.js': ['src/flight-collision.js'],
+  'src/flight-sim.js': ['src/flight-combat.js'],
   'src/sim.js': ['src/propulsion.js', 'src/combat.js', 'src/logistics.js', 'src/formations.js'],
   'src/asteroid-art.js': ['src/sim.js'],
   'src/audio.js': ['src/engine-audio.js', 'src/audio-mixer.js'],
@@ -114,7 +115,7 @@ const dependencies = {
   'src/ship-art.js': ['src/sim.js', 'src/asteroid-art.js'],
   'src/game.js': ['src/ship-art.js', 'src/sim.js', 'src/tactical/camera.js', 'src/asteroid-art.js'],
   'experiments/ship-packs.js': ['assets/ships/quaternius-ultimate-spaceships/meshes.js', 'assets/ships/concept-trio/meshes.js'],
-  'experiments/flight-session.js': ['src/sim.js', 'experiments/flight-model.js', 'experiments/training.js', 'experiments/flight-comms.js'],
+  'experiments/flight-session.js': ['src/sim.js', 'experiments/flight-model.js', 'src/flight-combat.js','src/flight-sim.js', 'experiments/flight-comms.js'],
   'experiments/hyperbolic-battle.js': ['experiments/flight-hyperbolic.js', 'experiments/aegis-flight.js'],
     'experiments/hyperbolic-flyby.js': ['experiments/flight-hyperbolic.js', 'experiments/flight-session.js', 'experiments/flight-presentation.js'],
   'experiments/flight-duel.js': ['experiments/flight-ai.js'],

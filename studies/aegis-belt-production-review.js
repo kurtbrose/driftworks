@@ -4,7 +4,7 @@
  await DW.aegisFlight.load();
  let world=DW.sim.createInitialWorld();world.asteroids=[];world.ships=[];world.hostiles=[];world.structures=[];
  const scene=DW.scene3d.create(host,()=>world,next=>{world=next},{study:true});
- const rig=DW.aegisFlight.create(),combat=DW.training.create('training');
+ const rig=DW.aegisFlight.create(),combat=DW.flightSim.create('training');
  const image=rig.geometry().find(b=>b.texture)?.texture;if(!image)throw new Error('Capital surface atlas did not load');
  const enemy=DW.aegisFlight.create({state:{team:'enemy',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000}});
  const original=rig.geometry(),candidate=enemy.geometry();

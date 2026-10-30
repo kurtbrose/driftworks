@@ -6,20 +6,20 @@ function setup(reference=false){
  const DW={sim:{METERS_PER_UNIT:1}};let lookups=0,hulls=0;
  class CountMap extends Map{get(key){if(typeof key==='string')lookups++;return super.get(key);}}
  const context=vm.createContext({window:{Driftworks:DW},Map:CountMap});
- for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-collision.js','experiments/training.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js']){
+ for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js','src/flight-combat.js','src/flight-sim.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js']){
   let source=fs.readFileSync(path.join(root,file),'utf8');
-  if(reference&&file==='experiments/training.js'){
-   const start=source.indexOf('    function trace('),end=source.indexOf('    /** @param {Combat} t @param {number} dt',start);
-   source=source.slice(0,start)+fs.readFileSync(path.join(__dirname,'fixtures/training-trace-reference.txt'),'utf8')+source.slice(end);
+  if(reference&&file==='src/flight-combat.js'){
+   const start=source.indexOf('    function trace('),end=source.indexOf('    DW.flightCombat =',start);
+   source=source.slice(0,start)+fs.readFileSync(path.join(__dirname,'fixtures/training-trace-reference.txt'),'utf8').replace('bindPlayer(t, player);','t.player.pose = player;').replaceAll('participants(t)','[t.player].concat(t.enemies)')+source.slice(end);
   }
   vm.runInContext(source,context,{filename:file});
  }
  const original=DW.shipPackModels.hullHit;DW.shipPackModels.hullHit=(...args)=>{hulls++;return original(...args);};
- const player=DW.arcade.create(0);player.eye=[0,-500,0];const combat=DW.training.create('training');DW.training.bindPlayer(combat,player);
- if(!reference)DW.training.setCollisionMode(combat,mode);
- const add=(id,point,radius=9)=>{const pose=DW.arcade.create(0);pose.eye=point;const craft=DW.training.createCraft(id,pose,'enemy');craft.hp=craft.maxHp=1e9;craft.shield=0;craft.collision={kind:'sphere',radiusM:radius};combat.enemies.push(craft);return craft;};
+ const player=DW.arcade.create(0);player.eye=[0,-500,0];const combat=DW.flightSim.create('training');DW.flightSim.bindPlayer(combat,player);
+ if(!reference)DW.flightSim.setCollisionMode(combat,mode);
+ const add=(id,point,radius=9)=>{const pose=DW.arcade.create(0);pose.eye=point;const craft=DW.flightSim.createCraft(id,pose,'enemy');craft.hp=craft.maxHp=1e9;craft.shield=0;craft.collision={kind:'sphere',radiusM:radius};combat.enemies.push(craft);return craft;};
  const bolt={position:[0,0,0],direction:[1,0,0],age:0,weapon:{...DW.retailWeapons[0],headRadius:.9}};
- return {DW,combat,player,add,bolt,counts:()=>({lookups,hulls}),trace:(a,b,terrain)=>DW.training.trace(combat,a,b,bolt,'player',terrain,player,.25)};
+ return {DW,combat,player,add,bolt,counts:()=>({lookups,hulls}),trace:(a,b,terrain)=>DW.flightSim.trace(combat,a,b,bolt,'player',terrain,player,.25)};
 }
 for(mode of ['legacy','grid','tree','grid-events','tree-events']){
 const optimized=setup(),reference=setup(true);
@@ -47,8 +47,8 @@ for(let step=0;step<240;step++){
 assert.ok(optimized.counts().hulls<reference.counts().hulls/8,'broad phase rejects remote model hulls');
 const sleep=setup();const target=sleep.add('distant',[1000,0,0]);
 for(let i=0;i<32;i++)sleep.add('remote-'+i,[5000+i*500,5000,5000]);
-sleep.trace([0,0,0],[1,0,0]);const first=sleep.DW.training.collisionStats(sleep.combat);
-sleep.trace([1,0,0],[2,0,0]);if(mode.endsWith('-events')){const next=sleep.DW.training.collisionStats(sleep.combat);assert.equal(next.queries,first.queries,'sleep skips spatial queries');assert.equal(next.reuses,first.reuses+1);}
+sleep.trace([0,0,0],[1,0,0]);const first=sleep.DW.flightSim.collisionStats(sleep.combat);
+sleep.trace([1,0,0],[2,0,0]);if(mode.endsWith('-events')){const next=sleep.DW.flightSim.collisionStats(sleep.combat);assert.equal(next.queries,first.queries,'sleep skips spatial queries');assert.equal(next.reuses,first.reuses+1);}
 target.pose.eye=[10,0,0];assert.ok(sleep.trace([2,0,0],[3,0,0]),'teleport wakes sleeping shot immediately, within same simulation time');
 const spawn=setup();spawn.trace([0,0,0],[1,0,0]);spawn.add('new',[10,0,0]);assert.ok(spawn.trace([1,0,0],[2,0,0]),'spawn invalidates clearance');
 const advancing=[setup(),setup(true)];for(const f of advancing)f.add('closing',[400,0,0]);

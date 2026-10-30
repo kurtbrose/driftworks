@@ -4,7 +4,7 @@
  await DW.aegisFlight.load();
  let world=DW.sim.createInitialWorld();world.asteroids=[];world.ships=[];world.hostiles=[];world.structures=[];
  const scene=DW.scene3d.create(host,()=>world,next=>{world=next},{study:true});
- const rig=DW.aegisFlight.create(),combat=DW.training.create('training');
+ const rig=DW.aegisFlight.create(),combat=DW.flightSim.create('training');
  const image=rig.geometry().find(b=>b.texture)?.texture;if(!image)throw new Error('Capital surface atlas did not load');
  const source=rig.geometry().map(b=>Object.assign({},b));
  let original=window.AegisEngineFlatStudy(source,DW.aegisFlightAsset,U),candidate=window.AegisEngineStudy(source,DW.aegisFlightAsset,U);

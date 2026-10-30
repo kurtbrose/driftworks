@@ -4,7 +4,7 @@
  await DW.aegisFlight.load();
  let world=DW.sim.createInitialWorld();world.asteroids=[];world.ships=[];world.hostiles=[];world.structures=[];
  const scene=DW.scene3d.create(host,()=>world,next=>{world=next},{study:true});
- const rig=DW.aegisFlight.create(),combat=DW.training.create('training');
+ const rig=DW.aegisFlight.create(),combat=DW.flightSim.create('training');
  const image=rig.geometry().find(b=>b.texture)?.texture;if(!image)throw new Error('Capital surface atlas did not load');
  let original=rig.geometry().map(b=>Object.assign({},b,b.finish===-2?{finish:-1}:{})),candidate=original.map(b=>b.finish===-1?Object.assign({},b,{finish:-2}):b);
  document.querySelector('h1').textContent='AEGIS / brighter window interiors — taste test';

@@ -12,7 +12,7 @@ const demand={throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,rol
 function step(n){for(let i=0;i<n;i++){session.advance(1/30,demand,{profile:DW.arcade.profiles[0],weapon:DW.retailWeapons[0]});rig.step(1/30,session.snapshot());if(session.snapshot().combat.dead)session.respawn(rig.spawnPlayer(session.snapshot().state));}}
 step(180);let report=rig.telemetry();assert.ok(report.capitals.every(c=>c.shots>0&&c.integrity<20000),'both real capitals fire and suffer real damage');assert.ok(report.hits>0);
 assert.ok(report.mounts.some(m=>m.kind==='point-defense'&&m.shots>0&&m.targetId.startsWith('wave-')),'point defense fires at fighters');
-assert.ok(DW.training.collisionStats(session.snapshot().combat).queries>0,'capital rounds use the spatial collision index');
+assert.ok(DW.flightSim.collisionStats(session.snapshot().combat).queries>0,'capital rounds use the spatial collision index');
 const buffers=rig.geometry(session.snapshot().state).map(b=>b.vertices);assert.ok(buffers.length>20);rig.geometry(session.snapshot().state).forEach((b,i)=>assert.equal(b.vertices,buffers[i],'immutable articulated mesh buffers are reused'));
 assert.ok(rig.effects(session.snapshot().state).every(b=>b.vertices.every(Number.isFinite)));
 const old=session.snapshot(),enemies=old.combat.enemies,enemyIds=enemies.map(c=>c.id),time=old.combat.time,capitalHealth=report.capitals.map(c=>c.integrity),shots=report.shots;
@@ -23,7 +23,7 @@ for(let i=0;i<3;i++){
  assert.equal(restored.combat.hull,restored.combat.maxHull);assert.equal(restored.combat.shield,restored.combat.maxShield);assert.equal(restored.combat.dead,false);assert.equal(restored.state.throttle,0);assert.ok(restored.state.velocity.every(v=>v===0));
  assert.deepEqual(rig.telemetry().capitals.map(c=>c.integrity),capitalHealth);assert.equal(rig.telemetry().shots,shots,'respawn must not restart the battle');
 }
-const retired=DW.training.createCraft('hyper-bay-retired',DW.arcade.create(0),'ally');retired.hp=0;old.combat.enemies.push(retired);
+const retired=DW.flightSim.createCraft('hyper-bay-retired',DW.arcade.create(0),'ally');retired.hp=0;old.combat.enemies.push(retired);
 const casualty=old.combat.enemies.find(c=>c.hp>0&&c.team==='enemy');casualty.hp=0;const launched=rig.telemetry().launches;step(100);assert.ok(rig.telemetry().launches>launched,'carrier replaces a lost fighter from its hangar');assert.ok(!old.combat.enemies.includes(retired),'dead launched actors retire while their independent wrecks can persist');
 const before=rig.telemetry().capitals.map(c=>c.integrity),centre=rig.telemetry().capitals[0].position;
 // Visibility/aim probes are read-only; only finalized impacts apply damage.

@@ -176,7 +176,7 @@
             });
             var box=get('yoyo-box');box.setAttribute('x',String(width/2-half));box.setAttribute('y',String(height/2-half));box.setAttribute('width',String(2*half));box.setAttribute('height',String(2*half));
         }
-        snapshot.combat.enemies=tracks.map(function(track,i){var state=Object.assign(DW.arcade.create(1),track.pose,{velocity:track.velocity,throttle:.5}),craft=DW.training.createCraft('study-'+i,state,i===2?'ally':'enemy');craft.index=i;return craft;});
+        snapshot.combat.enemies=tracks.map(function(track,i){var state=Object.assign(DW.arcade.create(1),track.pose,{velocity:track.velocity,throttle:.5}),craft=DW.flightSim.createCraft('study-'+i,state,i===2?'ally':'enemy');craft.index=i;return craft;});
         snapshot.world.elapsedSeconds=time;
         presentation.pose(view);presentation.render(Object.assign({},snapshot,{camera:view}),presentation.appearance(),{mode:'normal',scale:1,flat:false,mothership:false,actors:true},0);
         timeline.value=String(time);if(document.activeElement!==exactTime)exactTime.value=time.toFixed(2);

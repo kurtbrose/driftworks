@@ -16,12 +16,12 @@ function benchmark(){
   if(!optimized)DW.flightHyperbolic.hullHit=(...args)=>referenceHull(DW,...args);
   f.advance(2,{fire:true});const cpu=[];
   for(let i=0;i<300;i++){const t=performance.now();f.advance(1/60,{fire:true});cpu.push(performance.now()-t);}
-  cpu.sort((a,b)=>a-b);const v=f.snapshot(),state=JSON.stringify(v),guns=DW.training.allGuns(v.combat,v.guns);
-  const participants=DW.training.participants(v.combat);
+  cpu.sort((a,b)=>a-b);const v=f.snapshot(),state=JSON.stringify(v),guns=DW.flightSim.allGuns(v.combat,v.guns);
+  const participants=DW.flightSim.participants(v.combat);
   results.push({optimized,medianMs:cpu[Math.floor(cpu.length*.5)],p95Ms:cpu[Math.floor(cpu.length*.95)],elapsed:v.combat.time,shots:v.guns.fired,hits:v.guns.hits,totalShots:participants.reduce((n,c)=>n+c.guns.fired,0),totalHits:participants.reduce((n,c)=>n+c.guns.hits,0),kills:v.combat.kills,bolts:guns.bolts.length,sha256:crypto.createHash('sha256').update(state).digest('hex')});
  }
  if(new Set(results.map(r=>r.sha256)).size!==1)throw new Error('Broad-phase optimization changed the final native session state');
- const sources=Object.fromEntries(['flight-hyperbolic.js','training.js','guns.js','flight-model.js','flight-session.js','flight-comms.js','flight-dialogue.js'].map(n=>['experiments/'+n,crypto.createHash('sha256').update(fs.readFileSync('experiments/'+n)).digest('hex')]));
+ const sources=Object.fromEntries(['flight-hyperbolic.js','guns.js','flight-model.js','flight-session.js','flight-comms.js','flight-dialogue.js'].map(n=>'experiments/'+n).concat(['src/flight-collision.js','src/flight-combat.js','src/flight-sim.js']).map(n=>[n,crypto.createHash('sha256').update(fs.readFileSync(n)).digest('hex')]));
  return {revision:cp.execFileSync('git',['rev-parse','HEAD']).toString().trim(),sources,configuration:{mission:'hyperbolic',radius:650,seed:29,profile:'GTF Ulysses',weapon:'Subach HL-7',actors:17,warmupSeconds:2,sampleSeconds:5,ticksPerSample:2,playerPlotArmor:true,note:'CPU headless native session timing, not renderer or GPU timing'},results};
 }
 module.exports={referenceHull,benchmark};

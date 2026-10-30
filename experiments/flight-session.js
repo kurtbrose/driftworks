@@ -43,16 +43,16 @@
         world.packets = [];
         world.selectedShipIds = [];
         world.combat.drones = [];
-        var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.training.create('training'), contact = false, grounded = false;
+        var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.flightSim.create('training'), contact = false, grounded = false;
         combat.useHullModels = true;
-        DW.training.bindPlayer(combat, state).guns = guns;
+        DW.flightSim.bindPlayer(combat, state).guns = guns;
         var bridgeVector=DW.flightGuns.bridgeVector,crossBridge=DW.flightGuns.crossBridge;
         var activeProfile = model.profiles[0], remainder = 0,curvatureOverride=0;
         var opponentStyle = /** @type {import('./types').OpponentStyle} */ ('baseline');
         var hulls = /** @type {{ally: string; enemy: string} | null} */ (null);
         function configureCombat() {
             combat.opponentStyle = opponentStyle;
-            if (hulls) DW.training.configureHulls(combat, hulls.ally, hulls.enemy);
+            if (hulls) DW.flightSim.configureHulls(combat, hulls.ally, hulls.enemy);
         }
         // A short-lived view of session-owned objects, not a detached copy.
         // Read again after transitions that may replace state, combat, guns or world.
@@ -89,7 +89,7 @@
          * @param {string} ally @param {string} enemy */
         function configureHulls(ally, enemy) {
             hulls = { ally: ally, enemy: enemy };
-            DW.training.configureHulls(combat, ally, enemy);
+            DW.flightSim.configureHulls(combat, ally, enemy);
         }
         var launchRadius=-1,launchMode='',launchLocal=/** @type {number[]|null} */(null);
         // Match the roadside deck's nine support samples once, then rotate its barn doorway.
@@ -113,9 +113,9 @@
             }
             if(launchLocal){combat.reinforcementOrigin=rotateVector(launchLocal,asteroid.rotation);combat.reinforcementDirection=rotateVector([0,-.6,.8],asteroid.rotation);}
         }
-        function acquireTarget() { DW.training.acquireTarget(combat, state); }
-        function toggleTargetLock() { acquireTarget(); DW.training.toggleTargetLock(combat); }
-        function nextTarget() { DW.training.cycle(combat); }
+        function acquireTarget() { DW.flightSim.acquireTarget(combat, state); }
+        function toggleTargetLock() { acquireTarget(); DW.flightSim.toggleTargetLock(combat); }
+        function nextTarget() { DW.flightSim.cycle(combat); }
         /** Presentation clock: manual frames or completed watch ticks, not physics time.
          * @param {number} elapsed */
         function advanceScenery(elapsed) {
@@ -131,38 +131,38 @@
         /** @param {string} mode @param {boolean} enabled */
         function setCombat(mode, enabled) {
             applyGeology(mode);
-            combat = DW.training.create(mode);
+            combat = DW.flightSim.create(mode);
             combat.useHullModels = true;
-            DW.training.bindPlayer(combat, state).guns = guns;
-            DW.training.configure(combat, activeProfile);
+            DW.flightSim.bindPlayer(combat, state).guns = guns;
+            DW.flightSim.configure(combat, activeProfile);
             configureCombat();
             combat.enabled = enabled&&(!DW.flightMissions.resolve(mode).emptySpace||mode==='cinematic'||!!DW.flightMissions.resolve(mode).sky.hyperbolic);
             if (!combat.enabled) {
                 combat.enemies = [];
                 combat.countdown = 0;
             } else if (DW.flightMissions.resolve(mode).encounter.immediate) {
-                DW.training.spawn(combat, state, asteroid.radius);
+                DW.flightSim.spawn(combat, state, asteroid.radius);
             }
             return snapshot();
         }
         /** @param {{mode: string; enabled: boolean; profile: Profile}} config */
         function reset(config) {
             applyGeology(config.mode);
-            combat = DW.training.create(config.mode);
+            combat = DW.flightSim.create(config.mode);
             activeProfile = config.profile;
-            DW.training.configure(combat, activeProfile);
+            DW.flightSim.configure(combat, activeProfile);
             combat.enabled = config.enabled&&(!DW.flightMissions.resolve(config.mode).emptySpace||config.mode==='cinematic'||!!DW.flightMissions.resolve(config.mode).sky.hyperbolic);
             guns = DW.flightGuns.create();
             state = model.createSortie(asteroid.radius, config.profile, config.mode);
             if(state.curvature&&curvatureOverride)state.curvature=curvatureOverride;
             combat.useHullModels = true;
-            DW.training.bindPlayer(combat, state).guns = guns;
+            DW.flightSim.bindPlayer(combat, state).guns = guns;
             contact = false;
             grounded = false;
             remainder = 0;
             configureCombat();
             if (combat.enabled&&config.mode!=='cinematic'){
-                DW.training.spawn(combat, state, asteroid.radius);
+                DW.flightSim.spawn(combat, state, asteroid.radius);
             }
             return snapshot();
         }
@@ -200,7 +200,7 @@
                 var travelingCraft=bridge?[combat.player,...combat.enemies]:[];
                 var previous=travelers.map(function(p){return p.eye.slice();});
                 var previousFrames=travelingCraft.map(function(c){return DW.flightCollision.radius(c)>300/units?{right:c.pose.right.slice(),up:c.pose.up.slice(),back:c.pose.back.slice()}:null;});
-                var feedback = DW.training.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, emptySpace?undefined:environment.terrainHit,undefined,bridge?function(){
+                var feedback = DW.flightSim.stepControlled(combat, controls, config.weapon, dt, asteroid.radius, emptySpace?undefined:environment.terrainHit,undefined,bridge?function(){
                     var changed=false;
                     travelers.forEach(function(pose,index){
                         var craft=travelingCraft[index],radius=craft?DW.flightCollision.radius(craft):0;
@@ -219,9 +219,9 @@
                         changed=true;pose.region=1-(pose.region||0);pose.eye=crossing.eye;
                         pose.right=bridgeVector(pose.right,crossing.normal);pose.up=bridgeVector(pose.up,crossing.normal);pose.back=bridgeVector(pose.back,crossing.normal);pose.velocity=bridgeVector(pose.velocity,crossing.normal);
                     });
-                    if(changed)DW.training.collisionChanged(combat);
+                    if(changed)DW.flightSim.collisionChanged(combat);
                 }:undefined);
-                if(state.curvature)DW.training.rebaseGeometry(combat);
+                if(state.curvature)DW.flightSim.rebaseGeometry(combat);
                 if (feedback.fired)
                     environment.onGunshot();
                 if (feedback.impact)
@@ -247,10 +247,10 @@
         }
         return { snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance,
             respawn:/** @param {import('./types').FlightState} pose */function(pose){
-                state=pose;guns=DW.flightGuns.create();DW.training.bindPlayer(combat,state).guns=guns;
-                DW.training.configure(combat,activeProfile);combat.player.damagedAt=combat.time;combat.player.hitFlash=0;combat.player.fire=false;
+                state=pose;guns=DW.flightGuns.create();DW.flightSim.bindPlayer(combat,state).guns=guns;
+                DW.flightSim.configure(combat,activeProfile);combat.player.damagedAt=combat.time;combat.player.hitFlash=0;combat.player.fire=false;
                 combat.targetId=null;combat.targetLocked=false;contact=false;grounded=false;remainder=0;
-                DW.training.collisionChanged(combat,combat.player);return snapshot();
+                DW.flightSim.collisionChanged(combat,combat.player);return snapshot();
             },
             setCurvature:/** @param {number} radius */function(radius){if(!Number.isFinite(radius)||radius<100)throw new Error('Invalid curvature radius');curvatureOverride=radius;},
             setAsteroidDiameter: setAsteroidDiameter, setStartPosition: setStartPosition,

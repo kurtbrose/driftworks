@@ -7,7 +7,7 @@ const seconds=Number(value('--seconds','120')),seeds=Number(value('--seeds','5')
 if(!Number.isFinite(seconds)||seconds<=0||!Number.isSafeInteger(seeds)||seeds<1||!['baseline','aggressor','interceptor','passer','fso-pursuit','fso-breaker'].includes(style))throw Error('Invalid seconds, seeds or style');
 global.window=global;global.DRIFTWORKS_TEST_MODE=true;
 const sources={};
-for(const file of ['src/propulsion.js','src/combat.js','src/logistics.js','src/formations.js','src/sim.js','experiments/retail-profiles.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','experiments/training.js','experiments/flight-model.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','experiments/ship-packs.js']){
+for(const file of ['src/propulsion.js','src/combat.js','src/logistics.js','src/formations.js','src/sim.js','experiments/retail-profiles.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js','src/flight-combat.js','src/flight-sim.js','experiments/flight-model.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','experiments/ship-packs.js']){
     const source=fs.readFileSync(path.join(root,file),'utf8');sources[file]=crypto.createHash('sha256').update(source.replace(/\r\n/g,'\n')).digest('hex');vm.runInThisContext(source,{filename:file});
 }
 const DW=global.Driftworks,U=DW.sim.METERS_PER_UNIT,dt=1/120;
@@ -22,10 +22,10 @@ DW.flightGuns.step=function(guns,pose,weapon,trigger,...rest){
     return result;
 };
 function run(size,seed,unshielded,locked=false){
-    const t=DW.training.create('furball'),observer=DW.arcade.create(0);
+    const t=DW.flightSim.create('furball'),observer=DW.arcade.create(0);
     observer.eye=[0,0,10000/U];
-    DW.training.configure(t,DW.arcade.profiles[0],unshielded);
-    DW.training.spawn(t,observer,0);
+    DW.flightSim.configure(t,DW.arcade.profiles[0],unshielded);
+    DW.flightSim.spawn(t,observer,0);
     t.enemies=t.enemies.filter((e,i)=>i<size||(i>=8&&i<8+size));
     // The camera/player is an inert observer, never an extra ally or target.
     t.player.hp=0;
@@ -33,12 +33,12 @@ function run(size,seed,unshielded,locked=false){
     t.enemies.forEach((e,i)=>{
         const j=i%size,side=i<size?-1:1;
         e.index=i;e.skill=1;e.pilot='Veteran';e.opponentStyle=style;
-        DW.training.equip(e,DW.arcade.profiles[j%3===1?1:0],DW.training.defaultWeapon(DW.arcade.profiles[j%3===1?1:0]),unshielded);
+        DW.flightSim.equip(e,DW.arcade.profiles[j%3===1?1:0],DW.flightSim.defaultWeapon(DW.arcade.profiles[j%3===1?1:0]),unshielded);
         e.pose.eye=[side*(300+(j%2)*80)/U,((j-(size-1)/2)*100+(rng()-.5)*60)/U,(10000+((j%3)-1)*85+(rng()-.5)*40)/U];
         e.pose.back=[side,0,0];e.pose.right=[0,-side,0];e.pose.up=[0,0,1];e.pose.velocity=[-side*45,0,0];
         e.goal=[0,0,10000/U];e.decision=rng()*.42;
     });
-    DW.training.configureHulls(t,'mixed','mixed');
+    DW.flightSim.configureHulls(t,'mixed','mixed');
     assert.equal(t.enemies.filter(e=>e.team==='ally').length,size);
     assert.equal(t.enemies.filter(e=>e.team==='enemy').length,size);
     assert(t.enemies.every(e=>e.collision.kind==='model'&&(unshielded?e.maxShield===0:e.maxShield>0)));
@@ -47,7 +47,7 @@ function run(size,seed,unshielded,locked=false){
     telemetry=createTelemetry(DW,t,dt);
     for(let tick=0;tick<Math.ceil(seconds/dt)&&!t.roundOver;tick++){
         if(locked)holdTargets(t,seconds+1);
-        DW.training.step(t,observer,dt,0);
+        DW.flightSim.step(t,observer,dt,0);
         const dead=t.enemies.filter(e=>e.hp<=0).length;
         if(dead>kills){if(firstKill===null)firstKill=t.time;longestQuiet=Math.max(longestQuiet,t.time-lastKill);lastKill=t.time;kills=dead;}
     }

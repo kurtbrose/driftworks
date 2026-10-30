@@ -25,26 +25,26 @@
         var options=Object.assign(/** @type {Required<Options>} */ ({allyHull:'mixed',enemyHull:'mixed',opponentStyle:'baseline',start:'headOn',category:'human',flavor:'practiced',seed:1,skill:1,duration:60,profile:0,opponentProfile:-1,weapon:-1,opponentWeapon:-2,unshielded:false}),configuration);
         if(!styles.includes(options.opponentStyle) || !Object.prototype.hasOwnProperty.call(starts,options.start) || !Number.isFinite(options.duration) || options.duration<=0 || ![0,1,2].includes(options.skill) || !DW.arcade.profiles[options.profile] || !Number.isInteger(options.seed) || options.seed<0 || options.seed>4294967295) throw new Error('Invalid duel options');
         var profile=DW.arcade.profiles[options.profile], enemyProfile=options.opponentProfile === -1 ? profile : DW.arcade.profiles[options.opponentProfile];
-        var weaponIndex=options.weapon === -1 ? DW.training.defaultWeapon(profile) : options.weapon;
+        var weaponIndex=options.weapon === -1 ? DW.flightSim.defaultWeapon(profile) : options.weapon;
         var requestedEnemyWeapon=options.opponentWeapon === -2 ? options.weapon : options.opponentWeapon;
-        var enemyWeaponIndex=requestedEnemyWeapon === -1 ? (enemyProfile ? DW.training.defaultWeapon(enemyProfile) : 0) : requestedEnemyWeapon;
+        var enemyWeaponIndex=requestedEnemyWeapon === -1 ? (enemyProfile ? DW.flightSim.defaultWeapon(enemyProfile) : 0) : requestedEnemyWeapon;
         if (!enemyProfile || !DW.retailWeapons[weaponIndex] || !DW.retailWeapons[enemyWeaponIndex] || typeof options.unshielded !== 'boolean') throw new Error('Invalid duel loadout');
-        var weapon=DW.retailWeapons[weaponIndex], player=DW.arcade.create(0), combat=DW.training.create('training');
-        DW.training.configure(combat,profile,options.unshielded);
+        var weapon=DW.retailWeapons[weaponIndex], player=DW.arcade.create(0), combat=DW.flightSim.create('training');
+        DW.flightSim.configure(combat,profile,options.unshielded);
         setup(player,[0,0,0],[0,1,0],profile);
-        DW.training.spawn(combat,player,0); combat.enemies=combat.enemies.slice(0,1);
+        DW.flightSim.spawn(combat,player,0); combat.enemies=combat.enemies.slice(0,1);
         var enemy=combat.enemies[0], initial=starts[options.start];
-        DW.training.equip(enemy,enemyProfile,enemyWeaponIndex,options.unshielded);
+        DW.flightSim.equip(enemy,enemyProfile,enemyWeaponIndex,options.unshielded);
         enemy.opponentStyle=options.opponentStyle; enemy.skill=options.skill; enemy.pilot=['Rookie','Veteran','Ace'][options.skill]; enemy.decision=0;
         setup(enemy.pose,initial.position,initial.forward,enemyProfile);
         combat.slots=[enemy.id];
         var pilot=DW.flightAI.create(options.category,options.flavor,options.seed), guns=DW.flightGuns.create();
-        DW.training.bindPlayer(combat, player).guns = guns;
+        DW.flightSim.bindPlayer(combat, player).guns = guns;
         combat.player.weaponIndex = weaponIndex;
         [options.allyHull,options.enemyHull].forEach(function(id){
             if(typeof id!=='string'||(id!==''&&id!=='blockout'&&id!=='mixed'&&!DW.shipPackModels.find(id)))throw new Error('Invalid duel hull model');
         });
-        DW.training.configureHulls(combat,options.allyHull,options.enemyHull);
+        DW.flightSim.configureHulls(combat,options.allyHull,options.enemyHull);
         if(combat.player.collision.kind!=='model'||enemy.collision.kind!=='model')throw new Error('Duel requires triangle hulls');
         // Canonical model IDs make mixed defaults reproducible in replays and study links.
         options.allyHull = combat.player.collision.modelId || 'blockout';
@@ -62,7 +62,7 @@
                 var input=inputStream ? DW.flightAI.validate(inputStream[tick]) : pilot.step(time,player,enemy.pose,profile,weapon);
                 replay.inputs.push(input);
                 var hpBefore=0, enemyShieldBefore=0;
-                var feedback=DW.training.stepControlled(combat,Object.assign({throttleRate:0},input),weapon,DT,0,undefined,function(){
+                var feedback=DW.flightSim.stepControlled(combat,Object.assign({throttleRate:0},input),weapon,DT,0,undefined,function(){
                     hpBefore=enemy.hp;enemyShieldBefore=enemy.shield || 0;
                 });
                 if(feedback.playerDamaged) metrics.opponentDamageSteps++;

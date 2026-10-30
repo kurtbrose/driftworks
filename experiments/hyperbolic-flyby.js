@@ -49,7 +49,7 @@
         var capital=H.createCapitals({single:true});presentation.setCapital(capital);presentation.setShields(false);
         var appearance=presentation.appearance(),comparison={mode:'normal',flat:false,scale:1,mothership:false,actors:true};
         appearance.allyArt=appearance.enemyArt='concept-trio:raptor';
-        var fighters=Array.from({length:10},/** @param {unknown} _ @param {number} i */function(_,i){return DW.training.createCraft('flyby-'+i,DW.arcade.create(0),'ally');});
+        var fighters=Array.from({length:10},/** @param {unknown} _ @param {number} i */function(_,i){return DW.flightSim.createCraft('flyby-'+i,DW.arcade.create(0),'ally');});
         var time=0,previous=0,paused=false,ready=true,showFighters=true;
         status.textContent='Ten fighters fly in a wide box close beside the capital. The camera holds its attitude. Space pauses the image; Esc opens these controls.';
         var play=document.createElement('button'),replay=document.createElement('button'),exit=document.createElement('a');

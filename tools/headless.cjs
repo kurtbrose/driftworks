@@ -40,7 +40,7 @@ function createFlight(options = {}) {
   }
   const profile = DW.arcade.profiles[profileIndex];
   if (!Number.isInteger(profileIndex) || !profile) throw new Error('Invalid profile index');
-  const weapon = DW.retailWeapons[weaponIndex === undefined ? DW.training.defaultWeapon(profile) : weaponIndex];
+  const weapon = DW.retailWeapons[weaponIndex === undefined ? DW.flightSim.defaultWeapon(profile) : weaponIndex];
   if ((weaponIndex !== undefined && !Number.isInteger(weaponIndex)) || !weapon) throw new Error('Invalid weapon index');
   const config = {profile, weapon};
   const transcript = [], events = [];

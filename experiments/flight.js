@@ -215,7 +215,7 @@
     var flightHud = DW.flightHud.mount(host);
     var comms = DW.flightComms.mount(get('comms'), get('comms-voice'));
     function weapon() {
-        if (watch) return DW.retailWeapons[watch.replay.options.weapon < 0 ? DW.training.defaultWeapon(model.profiles[watch.replay.options.profile]) : watch.replay.options.weapon];
+        if (watch) return DW.retailWeapons[watch.replay.options.weapon < 0 ? DW.flightSim.defaultWeapon(model.profiles[watch.replay.options.profile]) : watch.replay.options.weapon];
         return DW.retailWeapons[Number(gunSelect.value)];
     }
     function gunLabels() {
@@ -224,7 +224,7 @@
     }
     function banks() {
         gunSelect.textContent = '';
-        var primary = DW.training.defaultWeapon(profile()), indexes = [primary].concat(DW.retailWeapons.map(function (_, i) { return i; }).filter(function (i) { return i !== primary; }));
+        var primary = DW.flightSim.defaultWeapon(profile()), indexes = [primary].concat(DW.retailWeapons.map(function (_, i) { return i; }).filter(function (i) { return i !== primary; }));
         indexes.forEach(function (index) {
             var option = document.createElement('option');
             option.value = String(index);
@@ -300,7 +300,7 @@
         if(cinematic){session.setStartPosition([0,-10000/units,5000/units]);var observer=session.snapshot();observer.state.throttle=0;observer.combat.player.hp=observer.combat.player.maxHp=1e9;observer.combat.hull=observer.combat.maxHull=1e9;observer.combat.enabled=true;get('watch-panel').hidden=true;}
         if(aegis&&aegisMode){
             var snapshot=session.snapshot();aegis.reset(snapshot.combat);var oldEye=snapshot.state.eye.slice(),aegisStart=[-200/units,-1100/units,1200+220/units];
-            DW.training.participants(snapshot.combat).filter(function(c){return c.controller!=='input';}).forEach(function(c){c.pose.eye=c.pose.eye.map(function(v,i){return v+aegisStart[i]-oldEye[i];});});
+            DW.flightSim.participants(snapshot.combat).filter(function(c){return c.controller!=='input';}).forEach(function(c){c.pose.eye=c.pose.eye.map(function(v,i){return v+aegisStart[i]-oldEye[i];});});
             session.setStartPosition(aegisStart);snapshot.state.ramp=[0,0,0];snapshot.state.throttle=0;
             var forward=[200,1100,-220],forwardLength=Math.hypot.apply(null,forward);forward=forward.map(function(v){return v/forwardLength;});
             var rightLength=Math.hypot(forward[0],forward[1]),right=[forward[1]/rightLength,-forward[0]/rightLength,0];

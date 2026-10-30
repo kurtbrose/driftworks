@@ -51,8 +51,8 @@ simulation and asteroid geology and precede `src/game.js`; this is checked as a
 required dependency. `src/asteroid-terrain.js` follows simulation, geology and
 mining geometry; `src/scene3d.js` depends on it. Headless consumers use the CPU
 module directly rather than loading the scene controller for terrain helpers.
-`experiments/flight-collision.js` follows simulation units and precedes
-`experiments/training.js` in browser, headless and study-worker profiles.
+`src/flight-collision.js` follows simulation units and precedes
+`src/flight-combat.js`, then `src/flight-sim.js`, in browser, headless and study-worker profiles.
 
 `npm run check:scripts` checks every declared script exists, checks profile order,
 and rejects stale generated blocks or extra external scripts outside those

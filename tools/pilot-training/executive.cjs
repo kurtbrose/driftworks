@@ -101,7 +101,7 @@ function episode(DW, weights, options, selector = 'learned', capture = false, re
     }
     const hp = own.hp, shield = own.shield;
     let enemyHp, enemyShield;
-    DW.training.stepControlled(combat, {...input, throttleRate: 0}, weapon, DT, 0, undefined, () => {
+    DW.flightSim.stepControlled(combat, {...input, throttleRate: 0}, weapon, DT, 0, undefined, () => {
       metrics.hullLost += Math.max(0, hp - own.hp); metrics.shieldLost += Math.max(0, shield - own.shield);
       enemyHp = enemy.hp; enemyShield = enemy.shield;
     });
@@ -187,7 +187,7 @@ function main() {
   }
   if (!Number.isInteger(config.seed) || config.seed < 0 || config.seed > 0xffffffff - 400000 || !Number.isInteger(config.generations) || config.generations < 1 || config.generations > 999 || !Number.isInteger(config.population) || config.population < 8 || config.population > 128 || !Number.isFinite(config.duration) || config.duration < 10 || config.duration > 120) throw Error('Invalid executive configuration');
   const out = path.resolve(config.out); if (fs.existsSync(path.join(out, 'report.json'))) throw Error('Choose a fresh output directory');
-  const sources = Object.fromEntries(['tools/pilot-training/executive.cjs', 'tools/pilot-training/scenarios.cjs', 'experiments/training.js', 'experiments/flight-ai.js', 'experiments/flight-duel.js', 'experiments/flight-model.js', 'experiments/retail-profiles.js', 'experiments/retail-weapons.js', 'experiments/guns.js'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
+  const sources = Object.fromEntries(['tools/pilot-training/executive.cjs', 'tools/pilot-training/scenarios.cjs', 'src/flight-combat.js','src/flight-sim.js', 'experiments/flight-ai.js', 'experiments/flight-duel.js', 'experiments/flight-model.js', 'experiments/retail-profiles.js', 'experiments/retail-weapons.js', 'experiments/guns.js'].map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
   const DW = runtime(), started = performance.now(), result = train(DW, config);
   const fixtures = cases(config.seed + 200000, 32, config.duration), unseen = cases(config.seed + 300000, 32, config.duration, true);
   const compare = suite => Object.fromEntries(SELECTORS.map(selector => [selector, evaluate(DW, result.best.weights, suite, selector)]));

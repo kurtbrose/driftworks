@@ -31,8 +31,8 @@
                 for(var s=0;s<seeds;s++){
                     var defenses=config.defenses==='paired'?[false,true]:[config.defenses==='unshielded'];
                     defenses.forEach(function(unshielded){
-                        var ownWeapon=weapon===-1?DW.training.defaultWeapon(DW.arcade.profiles[ship]):weapon;
-                        var otherWeapon=weapon===-1?DW.training.defaultWeapon(DW.arcade.profiles[opponent]):weapon;
+                        var ownWeapon=weapon===-1?DW.flightSim.defaultWeapon(DW.arcade.profiles[ship]):weapon;
+                        var otherWeapon=weapon===-1?DW.flightSim.defaultWeapon(DW.arcade.profiles[opponent]):weapon;
                         var key=JSON.stringify([style,ship,opponent,ownWeapon,otherWeapon,start,skill,pilot,config.seed+s,unshielded]);
                         if(seen.has(key))return;
                         seen.add(key);

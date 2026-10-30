@@ -35,7 +35,7 @@
     }
     /** @param {State} own @param {Vector} position @param {Vector} velocity @param {Weapon} weapon */
     function solution(own, position, velocity, weapon) {
-        var lead = DW.training.intercept(own.eye, position, velocity.map(function (v) { return v / U; }), weapon.speed / U);
+        var lead = DW.flightSim.intercept(own.eye, position, velocity.map(function (v) { return v / U; }), weapon.speed / U);
         var delta = sub(lead.point, own.eye), range = Math.hypot.apply(null, sub(position, own.eye)) * U;
         var length = Math.hypot.apply(null, delta), direction = delta.map(function (v) { return v / (length || 1); });
         return { point:lead.point, range:range, dot:-dot(direction, own.back), time:lead.time,

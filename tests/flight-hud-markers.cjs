@@ -86,7 +86,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../experiments/ellis-optics
 const u=DW.sim.METERS_PER_UNIT;
 Object.assign(ellisView.state,{eye:[0,-2350/u,1550/u],region:0,velocity:[20,70,0]});
 Object.assign(nearEnemy.pose,{eye:[12020/u,-1660/u,1550/u],region:1,velocity:[20,40,0]});nearEnemy.hp=100;nearEnemy.shield=0;
-const solution=DW.training.firingSolution(ellisView.combat,ellisView.combat.player,nearEnemy,DW.retailWeapons[0]);assert(solution);
+const solution=DW.flightSim.firingSolution(ellisView.combat,ellisView.combat.player,nearEnemy,DW.retailWeapons[0]);assert(solution);
 const forward=Array.from(solution.direction),norm=Math.hypot(forward[0],forward[1]);ellisView.state.back=forward.map(x=>-x);ellisView.state.right=[forward[1]/norm,-forward[0]/norm,0];ellisView.state.up=[-forward[0]*forward[2]/norm,-forward[1]*forward[2]/norm,norm];
 DW.flightPresentation={model:()=>({name:'Fixture fighter'})};
 function renderAim(){hud.render({...ellisView,paint:{ally:[1,1,1],enemy:[1,1,1]},units:u,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});}
@@ -113,7 +113,7 @@ DW.flightRadar.draw=function(ctx,state,contacts,...args){thinContacts=contacts;r
 for(const side of [0,1]){
  Object.assign(ellisView.state,{eye:[side*12000/u,-2350/u,1550/u],region:side,velocity:[0,0,0]});
  Object.assign(nearEnemy.pose,{eye:[((1-side)*12000+40)/u,-1660/u,1550/u],region:1-side,velocity:[20,40,0]});
- const lead=DW.training.firingSolution(ellisView.combat,ellisView.combat.player,nearEnemy,DW.retailWeapons[0]);assert(lead);
+ const lead=DW.flightSim.firingSolution(ellisView.combat,ellisView.combat.player,nearEnemy,DW.retailWeapons[0]);assert(lead);
  const d=Array.from(lead.direction),n=Math.hypot(d[0],d[1]);ellisView.state.back=d.map(x=>-x);ellisView.state.right=[d[1]/n,-d[0]/n,0];ellisView.state.up=[0,0,1];
  renderAim();
  assert.equal(get('target-info').dataset.leadState,'valid');

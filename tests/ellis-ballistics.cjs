@@ -75,7 +75,7 @@ for(const side of [0,1]){
 console.log('PASS headless pip-to-hit: real sessions, twin muzzles across throat, moving shooter/target, both target transit directions and off-pip misses');
 
 // Split a single fast tick at the mouth: collisions beyond the exit must not wait.
-const f=createFlight({mission:mission}),s=f.snapshot(),target=f.DW.training.createCraft('exit-hit',Object.assign(f.DW.arcade.create(0),pose(point(12000,-1688),1)),'enemy');target.hp=1000;target.shield=0;target.collision={kind:'sphere',radiusM:2};s.combat.enemies=[target];
+const f=createFlight({mission:mission}),s=f.snapshot(),target=f.DW.flightSim.createCraft('exit-hit',Object.assign(f.DW.arcade.create(0),pose(point(12000,-1688),1)),'enemy');target.hp=1000;target.shield=0;target.collision={kind:'sphere',radiusM:2};s.combat.enemies=[target];
 Object.assign(s.state,{region:0,eye:point(0,-2400),velocity:[0,0,0]});
 s.guns.bolts.push({region:0,position:point(0,-2301),direction:[0,1,0],age:0,weapon:{...f.config.weapon,speed:18000}});
 f.advance(dt,{stop:true});assert(target.hp<1000,'same-tick post-transit leg hits the remote hull');
@@ -100,14 +100,14 @@ for(const side of [0,1])for(const incoming of [false,true]){
 }
 console.log('PASS close-throat maneuvers: real flight integration, held yaw/pitch/roll, moving shooter and target crossings in both charts');
 
-const ally=DW.training.createCraft('friendly',Object.assign(DW.arcade.create(0),pose(point(0,-2330))),'ally');
-assert.equal(DW.training.firingSolution(flight.snapshot().combat,flight.snapshot().combat.player,ally,weapon),null,'friendly contacts cannot advertise a damaging shot');
+const ally=DW.flightSim.createCraft('friendly',Object.assign(DW.arcade.create(0),pose(point(0,-2330))),'ally');
+assert.equal(DW.flightSim.firingSolution(flight.snapshot().combat,flight.snapshot().combat.player,ally,weapon),null,'friendly contacts cannot advertise a damaging shot');
 console.log('PASS lead eligibility: no firing pip for friendly/non-damageable contact');
 
 // A witness for the old pip: straight-chart extrapolation misses by tens of
 // metres once a target crosses, although the new physical lead remains hittable.
 const witnessEye=point(180,-2350),witnessTarget=point(0,-2301),witnessVelocity=[50,150,0];
-const old=DW.training.intercept(witnessEye,witnessTarget,scale(witnessVelocity,1/U),450/U),oldDirection=unit(sub(old.point,witnessEye));let oldMiss=Infinity;
+const old=DW.flightSim.intercept(witnessEye,witnessTarget,scale(witnessVelocity,1/U),450/U),oldDirection=unit(sub(old.point,witnessEye));let oldMiss=Infinity;
 for(let time=0;time<1;time+=.0005){const bolt=oracle(witnessEye,scale(oldDirection,4+450*time),1,0),target=oracle(witnessTarget,witnessVelocity,time,0);if(bolt.region===target.region)oldMiss=Math.min(oldMiss,Math.hypot(...sub(bolt.point,target.point))*U);}
 assert(oldMiss>30,'negative control exposes the old cross-chart pip miss');
 shoot({shooterX:180,remote:false,targetY:-2301,velocity:witnessVelocity});

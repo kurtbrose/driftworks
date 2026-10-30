@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const playwright=require(require.resolve('playwright',{paths:[process.env.DRIFTWORKS_BROWSER_MODULES||process.cwd()]}));
 const root=path.resolve(__dirname,'..');
-const sources=Object.fromEntries(['experiments/training.js','experiments/flight-session.js','experiments/flight-collision.js','experiments/ship-packs.js','experiments/gpu-ui.js','experiments/flight-presentation.js','experiments/guns.js','src/explosions.js','src/scene3d.js'].map(file=>[file,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex')]));
+const sources=Object.fromEntries(['src/flight-combat.js','src/flight-sim.js','experiments/flight-session.js','src/flight-collision.js','experiments/ship-packs.js','experiments/gpu-ui.js','experiments/flight-presentation.js','experiments/guns.js','src/explosions.js','src/scene3d.js'].map(file=>[file,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex')]));
 const confirmation=process.argv.includes('--confirm');
 const option=(name,fallback)=>{const i=process.argv.indexOf(name);return i<0?fallback:process.argv[i+1];};
 const counts=option('--counts',confirmation?'100':'16,32,64,128,256,512').split(',').map(Number);
@@ -15,7 +15,7 @@ if(!Number.isInteger(effectBurst)||effectBurst<0||counts.some(n=>effectBurst>n))
 const reference=option('--reference',null);
 const referenceTraining=reference?require('node:child_process').execFileSync('git',['show',reference+':experiments/training.js'],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024}):null;
 const referenceUi=reference?require('node:child_process').execFileSync('git',['show',reference+':experiments/gpu-ui.js'],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024}):null;
-if(referenceTraining)sources['experiments/training.js']=require('node:crypto').createHash('sha256').update(referenceTraining).digest('hex');
+if(referenceTraining)sources['src/flight-sim.js']=require('node:crypto').createHash('sha256').update(referenceTraining).digest('hex');
 if(referenceUi)sources['experiments/gpu-ui.js']=require('node:crypto').createHash('sha256').update(referenceUi).digest('hex');
 function installProbe(count){
  const DW=window.Driftworks,probe=window.flightProbe={rows:[],collect:false,stages:{},frozen:false};
@@ -36,9 +36,9 @@ function installProbe(count){
  const geometry=DW.flightGuns.geometry;
  DW.flightGuns.geometry=function(...args){const batches=geometry.apply(this,args);probe.effectAudit.bolts+=args[0].bolts.length;probe.effectAudit.boltQuads+=batches.slice(0,3).reduce((n,b)=>n+b.vertices.length/36,0);probe.effectAudit.impacts+=args[0].impacts.length;probe.effectAudit.impactQuads+=(batches[3]?.vertices.length||0)/36;return batches;};
  probe.burst=n=>{const {combat}=probe.session.snapshot();
-  for(const e of [combat.player,...combat.enemies]){if(e.hp<=0)continue;e.guns.cooldown=0;DW.flightGuns.step(e.guns,e.pose,DW.retailWeapons[e.weaponIndex||0],true,0,undefined,undefined,e.profile.gunMounts,DW.training.gunAnchors(e));}
+  for(const e of [combat.player,...combat.enemies]){if(e.hp<=0)continue;e.guns.cooldown=0;DW.flightGuns.step(e.guns,e.pose,DW.retailWeapons[e.weaponIndex||0],true,0,undefined,undefined,e.profile.gunMounts,DW.flightSim.gunAnchors(e));}
   const weapon={...DW.retailWeapons[0],damage:1e6,shieldFactor:1,armorFactor:1};
-  for(let i=0;i<n;i++)DW.training.damageCraft(combat,combat.enemies[Math.floor(i*combat.enemies.length/n)],weapon,null);
+  for(let i=0;i<n;i++)DW.flightSim.damageCraft(combat,combat.enemies[Math.floor(i*combat.enemies.length/n)],weapon,null);
   combat.flashes.forEach(f=>{if(f.destruction)f.age=.2;});probe.frozen=true;};
  probe.metrics=()=>{const c=probe.session.snapshot().combat,craft=[c.player,...c.enemies];return {allyShots:craft.filter(e=>e.team==='ally').reduce((n,e)=>n+e.guns.fired,0),enemyShots:craft.filter(e=>e.team==='enemy').reduce((n,e)=>n+e.guns.fired,0),shots:craft.reduce((n,e)=>n+e.guns.fired,0),hits:craft.reduce((n,e)=>n+e.guns.hits,0),alive:c.enemies.filter(e=>e.hp>0).length,kills:c.kills,modes:Object.fromEntries([...new Set(c.enemies.map(e=>e.mode))].map(m=>[m,c.enemies.filter(e=>e.mode===m).length]))};};
  const diagnostics=DW.flightDiagnostics.mount;DW.flightDiagnostics.mount=function(...args){const d=diagnostics.apply(this,args),begin=d.beginFrame,end=d.endFrame;d.beginFrame=function(...a){probe.stages={};probe.effectAudit={bolts:0,boltQuads:0,impacts:0,impactQuads:0};return begin.apply(this,a);};d.endFrame=function(frame,paused,...a){const cpu=performance.now()-frame.started;if(probe.collect&&!paused){if(document.hidden)throw Error('Benchmark tab hidden');const stats=probe.presentation.renderStats(),v=probe.session.snapshot();probe.rows.push({interval:frame.actualElapsed*1000,simElapsed:probe.frozen?0:frame.elapsed*1000,cpu,...probe.stages,...probe.effectAudit,destructions:v.combat.flashes.filter(f=>f.destruction).length,explosions:stats.scene.explosions||0,explosionBatches:stats.scene.explosionBatches||0,firing:v.combat.enemies.filter(e=>e.fire).length,draws:stats.scene.drawCalls+stats.sky.drawCalls,triangles:stats.scene.triangles+stats.sky.triangles,alive:v.combat.enemies.filter(e=>e.hp>0).length});}return end.call(this,frame,paused,...a);};return d;};
@@ -48,7 +48,7 @@ const summary=rows=>{const result={frames:rows.length,wallSeconds:rows.reduce((s
  const browser=await playwright.chromium.launch({channel:'chrome',headless:false,args:['--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
  const page=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});const errors=[];page.on('pageerror',e=>errors.push(String(e)));
  const rows=[];let graphics;
- if(referenceTraining)await page.route('**/training.js?*',route=>route.fulfill({status:200,contentType:'application/javascript',body:referenceTraining}));
+ if(referenceTraining)await page.route('**/flight-sim.js?*',route=>route.fulfill({status:200,contentType:'application/javascript',body:referenceTraining+'\nwindow.Driftworks.flightSim=window.Driftworks.training;'}));
  if(referenceUi)await page.route('**/gpu-ui.js?*',route=>route.fulfill({status:200,contentType:'application/javascript',body:referenceUi}));
  const cdp=process.argv.includes('--profile')?await page.context().newCDPSession(page):null;
  if(cdp)await cdp.send('Profiler.enable');
