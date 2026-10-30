@@ -6,7 +6,7 @@ const gl=new Proxy({createShader:()=>({}),createProgram:()=>({}),createBuffer:()
 },{get:(target,key)=>key in target?target[key]:()=>{}});
 const canvas={dataset:{},setAttribute(){},getContext:()=>gl};
 const context={window:{Driftworks:{assetUrl:value=>value},location:{search:'?sky=impact'},devicePixelRatio:1},document:{getElementById:()=>null,createElement:()=>canvas},Image:class{set src(value){images.push(value);this.onload();}},Float32Array,Uint8Array};
-for(const name of ['flight-missions','skybox'])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/'+name+'.js'),'utf8'),context);
+for(const file of ['experiments/flight-missions.js','src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'])vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),context);
 const sky=context.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
 const pose={right:[1,0,0],up:[0,0,1],back:[0,-1,0],eye:[0,0,0]};
 sky.setImpactTime(22);sky.render(pose,1,false,0);assert.equal(values.impactBlend,.5);assert.equal(canvas.dataset.impact,'ready');

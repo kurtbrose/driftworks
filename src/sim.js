@@ -352,45 +352,38 @@
     return next;
   }
 
-  /** @param {World} world @param {Vec2} target @returns {World} @param {string[]} [shipIds] */
-  function issueContextOrder(world, target, shipIds) {
-    var ids = shipIds === undefined ? world.selectedShipIds : shipIds;
-    var home = findMothership(world);
-    if (home && distance(target, home.position) <= DOCK_DISTANCE + 18) return issueReturnOrder(world, ids);
-    var platform = (world.platforms || []).filter(function (p) {
-      return (p.state === 'deployed' || p.state === 'setting-up') && distance(target, p.position) < 22;
-    })[0];
-    if (platform) return issuePlatformRecovery(world, platform.id, ids);
-    var fighters = world.ships.filter(function (s) { return s.type === 'escort' && ids.indexOf(s.id) !== -1; });
-    if (fighters.length) {
-      var guarded = world.ships.filter(function (s) { return ids.indexOf(s.id) === -1 && distance(s.position, target) <= (s.type === 'mothership' ? 38 : 16); })
-        .sort(function (a, b) { return distance(a.position, target) - distance(b.position, target); })[0];
-      var rest = ids.filter(function (id) { return !fighters.some(function (s) { return s.id === id; }); });
-      var next = rest.length ? issueContextOrder(world, target, rest) : cloneWorld(world);
-      return issueDefendOrder(next, guarded ? guarded.position : target, guarded && guarded.id, ids);
-    }
-    var recoverable = nearestRecoverable(world, target, 26);
-    if (recoverable && selectedType(world, 'tug', ids)) {
-      return issueRecoveryOrder(world, recoverable, ids);
-    }
-    var asteroid = findNearestAsteroid(world, target, 38);
-    var mothership = findMothership(world);
-    var depot = world.depot;
-
-    if (asteroid) {
-      return issueMineOrder(world, asteroid.id, ids);
-    }
-
-    if (depot && distance(target, depot.position) <= 48 && selectedType(world, 'tug', ids)) {
-      return issueBuildOrder(world, ids);
-    }
-
-    if (mothership && distance(target, mothership.position) <= DOCK_DISTANCE + 18) {
-      return issueReturnOrder(world, ids);
-    }
-
-    return issueMoveOrder(world, target, ids);
+  /** Pick physical targets for headless callers; presentation supplies its own hit tests.
+   * @param {World} world @param {Vec2} target @returns {import('./types').ContextPick} */
+  function pickContextOrder(world,target){
+    var home=findMothership(world);
+    var platform=(world.platforms||[]).find(function(p){return (p.state==='deployed'||p.state==='setting-up')&&distance(target,p.position)<22;});
+    return {homeShipId:home&&distance(target,home.position)<=DOCK_DISTANCE+18?home.id:null,
+      platformId:platform?platform.id:null,
+      guardedShipIds:world.ships.filter(function(s){return distance(s.position,target)<=(s.type==='mothership'?38:16);}).sort(function(a,b){return distance(a.position,target)-distance(b.position,target);}).map(function(s){return s.id;}),
+      recovery:nearestRecoverable(world,target,26),asteroidId:(findNearestAsteroid(world,target,38)||{}).id||null,
+      depotHit:!!world.depot&&distance(target,world.depot.position)<=48};
   }
+  /** Apply command priorities once, independently of physical or visual picking.
+   * Picks contain IDs, never entity pointers. @param {World} world @param {Vec2} target
+   * @param {import('./types').ContextPick} picks @param {string[]} [shipIds] @returns {World} */
+  function issuePickedContextOrder(world,target,picks,shipIds){
+    var ids=shipIds===undefined?world.selectedShipIds:shipIds;
+    if(picks.homeShipId)return issueReturnOrder(world,ids);
+    if(picks.platformId)return issuePlatformRecovery(world,picks.platformId,ids);
+    var fighters=world.ships.filter(function(s){return s.type==='escort'&&ids.indexOf(s.id)!==-1;});
+    if(fighters.length){
+      var guardedId=picks.guardedShipIds.find(function(id){return ids.indexOf(id)===-1;}),guarded=world.ships.find(function(s){return s.id===guardedId;});
+      var rest=ids.filter(function(id){return !fighters.some(function(s){return s.id===id;});});
+      var next=rest.length?issuePickedContextOrder(world,target,picks,rest):cloneWorld(world);
+      return issueDefendOrder(next,guarded?guarded.position:target,guarded&&guarded.id,ids);
+    }
+    if(picks.recovery&&selectedType(world,'tug',ids))return issueRecoveryOrder(world,picks.recovery,ids);
+    if(picks.asteroidId)return issueMineOrder(world,picks.asteroidId,ids);
+    if(picks.depotHit&&selectedType(world,'tug',ids))return issueBuildOrder(world,ids);
+    return issueMoveOrder(world,target,ids);
+  }
+  /** @param {World} world @param {Vec2} target @returns {World} @param {string[]} [shipIds] */
+  function issueContextOrder(world,target,shipIds){return issuePickedContextOrder(world,target,pickContextOrder(world,target),shipIds);}
 
   /** @param {World} world @param {string} asteroidId @returns {World} @param {string[]} [shipIds] */
   function issueMineOrder(world, asteroidId, shipIds) {
@@ -1263,7 +1256,7 @@
     selectShips: selectShips,
     selectPlatform: selectPlatform,
     issueMoveOrder: issueMoveOrder,
-    issueContextOrder: issueContextOrder,
+    issueContextOrder: issueContextOrder, issuePickedContextOrder:issuePickedContextOrder,
     issueMineOrder: issueMineOrder,
     issueBuildOrder: issueBuildOrder,
     issueReturnOrder: issueReturnOrder,

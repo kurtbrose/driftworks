@@ -16,7 +16,7 @@ const context={window:{Driftworks:{assetUrl:s=>s},location:{search:'?mission='+m
  Image:class{set src(value){requests.push(value);this.width=this.height=1024;pending.push(this);}},Float32Array,Uint8Array};
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('experiments/gas-giant-weather.js','utf8').replaceAll('export ','')+'\nwindow.Driftworks.gasGiantWeather={gasGiantCells,gasGiantFlash,gasGiantDrift};',context);
-for(const file of ['flight-missions','skybox'])vm.runInContext(fs.readFileSync('experiments/'+file+'.js','utf8'),context);
+for(const file of ['experiments/flight-missions.js','src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),context);
 const DW=context.window.Driftworks,sky=DW.flightSkybox.create({clientWidth:1200,clientHeight:800,prepend(){}},{fov:45});
 assert.equal(requests.length,mission==='jade-rime'?14:13,'Twelve baked faces, sun and close-view-only moon texture');assert(!requests.some(url=>url.endsWith('/dark.png')),'Source card stays offline');assert.equal(requests.filter(url=>url.includes('warm-sun')).length,1);
 pending.forEach(image=>image.onload());assert.equal(canvas.dataset.gas,'ready');assert.equal(canvas.dataset.cube,'ready');

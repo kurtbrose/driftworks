@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {loadRuntime}=require('../tools/headless.cjs');
 const DW=loadRuntime();
-vm.runInNewContext(fs.readFileSync('experiments/skybox.js','utf8'),{window:{Driftworks:DW},Math});
+vm.runInNewContext(['src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'].map(file=>fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8')).join('\n'),{window:{Driftworks:DW},Math});
 vm.runInNewContext(fs.readFileSync('experiments/combat-shields.js','utf8'),{window:{Driftworks:DW},Float32Array,Math});
 vm.runInNewContext(fs.readFileSync('experiments/flight-shields.js','utf8'),{window:{Driftworks:DW},Float32Array,Map,Set,Math});
 DW.flightPresentation={model:(craft,wave,art)=>DW.shipPackModels.craftModel(craft,craft.team==='ally'?art.allyArt:art.enemyArt,wave)};

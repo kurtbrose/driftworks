@@ -325,6 +325,10 @@ export type LandingOptions = {unitsPerMetre?:number; spin?:number};
 export type LandingSample = {time:number; altitude:number; deployment:number; ramps:number; match:number; travel:number; offset:number[]; headingOffset:number; contact:boolean; done:boolean; phase:string};
 export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
+  stationModels?:{habitatMesh:(segments?:number)=>Float32Array;roundedHullMesh:(width:number,length:number,depth:number,radius:number)=>Float32Array;habitatLod:(radiusPixels:number)=>number;mothershipHardware:(detail?:number)=>Record<string,number[]>};
+  tacticalInput3d?:{mount:(host:TacticalInputHost)=>{readonly drag:{start:Vec2;last:Vec2;mode:string}|null;viewerControls:ModelViewer|null;setRigLightsEnabled:(enabled:boolean)=>void}};
+  ohioSoundtrack?:{create:(setMusicActive:(active:boolean)=>void,volumeValue:(value:number,fallback:number)=>number)=>OhioSoundtrack};
+  tacticalPicking?:{pickContext:(world:World,target:Vec2,scale:(type:string,zoom:number)=>number)=>ContextPick};
   asteroidTerrain?: import('./asteroid-terrain-types').AsteroidTerrainApi;
   shipArt?: import('./ship-art-types').ShipArtApi;
   skyEffects?: {
@@ -471,6 +475,7 @@ export type SimApi = {
   issueSalvageAllOrder: (world: World, shipIds?: string[]) => World;
   issueBuildOrder: (world: World, shipIds?: string[]) => World;
   issueMoveOrder: (world: World, target: Vec2, shipIds?: string[]) => World;
+  issuePickedContextOrder:(world:World,target:Vec2,picks:ContextPick,shipIds?:string[])=>World;
   issueContextOrder: (world: World, target: Vec2, shipIds?: string[]) => World;
   FIGHTER_RANGE: number;
   asteroidPhysicalStats: (asteroid: Asteroid) => { diameterM: number };
@@ -483,7 +488,23 @@ export type SimApi = {
   DEPOT_SECTION: { lengthM: number; widthM: number };
   [key: string]: unknown;
 };
-export type AudioApi = { createOhioMusic: () => {isAnnouncing: () => boolean; resume: () => void; pause: () => void; update: () => void; mount: (host: HTMLElement) => void}; getMix: () => import('./engine-types').FlightMix; setMix: (value: Partial<import('./engine-types').FlightMix>) => void; setCommsActive: (active: boolean) => void; commsChannel: () => {context: AudioContext; output: GainNode} | null; mountMixer: (host: HTMLElement) => void; engine: import('./engine-types').EngineTools; flightFeedback: (dt: number, throttle: number, boost: boolean, active: boolean) => {load: number; boost: number}; setFlightEngine: (dt: number, throttle: number, boost: boolean, active: boolean, detail?: {damage?: number; maneuver?: number; thrust?: number; acceleration?: number}) => {load: number; boost: number}; unlock: () => boolean; setSfxEnabled: (enabled: boolean) => void; setSfxVolume: (value: number) => void; setMusicEnabled: (enabled: boolean) => void; setMusicVolume: (value: number) => void; setEngineThrust: (level: number) => void; playSelect: () => void; playMove: () => void; playInvalid: () => void; playMiningTick: () => void; playGunshot: () => void; playImpact: (strength: number) => void; playDock: () => void; playDelivery: () => void; playWarning: () => void; playWormhole:(kind:'enter'|'cross'|'exit')=>void; _test?: Record<string, unknown>; status: () => { available: boolean; sfxVolume: number; musicVolume: number } };
+export type SceneView={right:ViewerVector;up:ViewerVector;back:ViewerVector;distance:number;focal:number};
+export type SceneOrbit={yaw:number;tilt:number;height?:number;surface?:SceneView};
+export type TacticalInputHost={
+    canvas:HTMLCanvasElement;toolbar:HTMLElement;host:HTMLElement;study:boolean;terrainZoom:boolean;viewerEnabled:boolean;orbit:SceneOrbit;
+    focus:boolean;studyHeight:number;rigLightsEnabled:boolean;spotlightEnabled:boolean;workShadowsEnabled:boolean;
+    readonly pickBatches:ViewerPickBatch[];
+    getWorld:()=>World;setWorld:(world:World)=>void;consume:(events:World['combat']['events'])=>void;
+    view:(camera:Camera,viewport:Viewport,orbit:SceneOrbit)=>SceneView;
+    project:(point:ViewerVector,camera:Camera,viewport:Viewport,orbit:SceneOrbit)=>Vec2&{depth:number};
+    unproject:(point:Vec2,camera:Camera,viewport:Viewport,orbit:SceneOrbit,z?:number)=>Vec2|null;
+    pickAsteroid:(point:Vec2,asteroid:Asteroid,camera:Camera,viewport:Viewport,orbit:SceneOrbit)=>{position:ViewerVector;depth:number}|null;
+    platformHeight:(platform:Platform,asteroid:Asteroid|undefined)=>number;
+    pickStudyBatches:(eye:ViewerVector,direction:ViewerVector,batches:ViewerPickBatch[])=>ViewerVector|null;
+};
+export type ContextPick={homeShipId:string|null;platformId:string|null;guardedShipIds:string[];recovery:{kind:'ship'|'wreck';id:string}|null;asteroidId:string|null;depotHit:boolean};
+export type OhioSoundtrack={isAnnouncing:()=>boolean;resume:()=>void;pause:()=>void;update:()=>void;mount:(host:HTMLElement)=>void;resumeIfStarted:()=>void;canSpeak:()=>boolean;updateMission:(combat:import('../experiments/types').Combat,onAnnounceStart:()=>void)=>void};
+export type AudioApi = { createOhioMusic: () => OhioSoundtrack; getMix: () => import('./engine-types').FlightMix; setMix: (value: Partial<import('./engine-types').FlightMix>) => void; setCommsActive: (active: boolean) => void; commsChannel: () => {context: AudioContext; output: GainNode} | null; mountMixer: (host: HTMLElement) => void; engine: import('./engine-types').EngineTools; flightFeedback: (dt: number, throttle: number, boost: boolean, active: boolean) => {load: number; boost: number}; setFlightEngine: (dt: number, throttle: number, boost: boolean, active: boolean, detail?: {damage?: number; maneuver?: number; thrust?: number; acceleration?: number}) => {load: number; boost: number}; unlock: () => boolean; setSfxEnabled: (enabled: boolean) => void; setSfxVolume: (value: number) => void; setMusicEnabled: (enabled: boolean) => void; setMusicVolume: (value: number) => void; setEngineThrust: (level: number) => void; playSelect: () => void; playMove: () => void; playInvalid: () => void; playMiningTick: () => void; playGunshot: () => void; playImpact: (strength: number) => void; playDock: () => void; playDelivery: () => void; playWarning: () => void; playWormhole:(kind:'enter'|'cross'|'exit')=>void; _test?: Record<string, unknown>; status: () => { available: boolean; sfxVolume: number; musicVolume: number } };
 export type HudActions = {
   getPopulation?: () => PopulationState;
   onEndMining: EventListener; onDeployPlatform: EventListener; onSalvageAll: EventListener; onReturnHome: EventListener; onSave: EventListener; onExport: EventListener; onLoad: EventListener; onReset: EventListener;

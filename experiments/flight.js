@@ -80,7 +80,6 @@
         document.getElementById('flight-settings')?.append(curvatureLabel,curvatureSelect);curvatureSelect.onchange=function(){session.setCurvature(Number(curvatureSelect.value));reset();};
     }
     var ohioMusic = activeMission.id === 'ohio' ? DW.audio.createOhioMusic() : null;
-    var ohioMusicStarted = false;
     var mixerHost=document.getElementById('flight-settings');
     if(mixerHost && ohioMusic) ohioMusic.mount(mixerHost);
     if(mixerHost)DW.audio.mountMixer(mixerHost);
@@ -398,7 +397,7 @@
             return;
         }
         DW.audio.unlock();
-        if(ohioMusic && ohioMusicStarted) ohioMusic.resume();
+        if(ohioMusic) ohioMusic.resumeIfStarted();
         comms.unlock();
         clear();
         controls.resetButtons();
@@ -511,15 +510,10 @@
         if (!paused && !watch) session.acquireTarget();
         if (!paused) {
             if (!watch) session.advanceScenery(elapsed);
-            if(!ohioMusic || !ohioMusicStarted || !ohioMusic.isAnnouncing()) {
+            if(!ohioMusic || ohioMusic.canSpeak()) {
                 comms.update(elapsed, currentView.combat, currentView.state);
             }
-            // Comms advances past the opening only after the final transmission ends.
-            if(ohioMusic && !ohioMusicStarted && currentView.combat.openingStep > activeMission.opening.length) {
-                ohioMusicStarted = true;
-                comms.pause();
-                ohioMusic.resume();
-            }
+            if(ohioMusic)ohioMusic.updateMission(currentView.combat,function(){comms.pause();});
         }
         var comparison = diagnostics.settings();
         phaseStart=performance.now();

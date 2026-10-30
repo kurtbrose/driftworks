@@ -670,3 +670,19 @@ at 1920x1080 scene backing resolution in the frozen starting encounter, rigid
 versus stretched CPU medians were 1.40/1.70 ms and scene GPU medians 3.12/3.13 ms,
 with 180/180 valid GPU samples per mode. This one pose does not establish
 performance near the throat or at a larger window resolution.
+
+
+## Prediction and sky services
+
+`src/flight-prediction.js` owns `DW.flightPrediction.predictPath`. It clones craft
+motion state and advances the existing `flightSim.stepInput` at 1/120-second steps;
+the HUD receives path samples and paints lanes, brackets or grid guides.
+`flightHud.predictFlightPath` remains a compatibility alias. Prediction can run
+headlessly and does not mutate the supplied craft.
+
+`src/sky-system.js` derives observer-relative planetary/moon geometry and angular
+sizes from a mission sky definition. `src/sky-lighting.js` owns the shared lazy
+lighting/radiance resource cache. `src/impact-cues.js` owns the queued impact-stage
+timeline. `experiments/skybox.js` retains GL resources, shader/render paths and
+composition of those services; its cue and stage exports remain aliases.
+The source coordinates, timing, cache sharing and rendered sky remain unchanged.

@@ -68,3 +68,11 @@ asset-version compatibility and repeatable generation.
 The study worker still fetches each local dependency once, hashes the fetched
 source, and executes that same source in order. Generation changes the source
 of its list, not its cache or replay policy.
+
+
+The audio group loads `ohio-soundtrack.js` before the audio compatibility facade.
+3D scenes load `station-models.js`, `tactical/picking.js` and `tactical/input3d.js`
+before `scene3d.js`; the Pixi game also depends on tactical picking.
+The skybox follows sky lighting, system geometry and impact-cue modules.
+`flightRuntime` includes numeric trajectory prediction, so it is available to
+headless consumers before the HUD loads.

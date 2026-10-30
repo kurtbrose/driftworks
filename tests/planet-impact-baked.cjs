@@ -9,7 +9,7 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/flight-mi
 // Retained archive format stays covered, but no active mission selects it.
 context.window.Driftworks.flightMissions.define('legacy-impact-test',{sky:{bakedImpact:true}},'planet-hero');
 context.window.location.search='?mission=legacy-impact-test';
-vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/skybox.js'),'utf8'),context);
+vm.runInNewContext(['src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'].map(file=>fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8')).join('\n'),context);
 const handlers={},DW=context.window.Driftworks,sky=DW.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){},addEventListener(name,callback){handlers[name]=callback;}}),pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
 const render=dt=>sky.render(pose,1,false,dt);
 const finish=()=>pending.splice(0).forEach(image=>image.onload());

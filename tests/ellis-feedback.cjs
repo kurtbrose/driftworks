@@ -30,7 +30,7 @@ class AudioContext {
  createBuffer(_channels,length){return {getChannelData:()=>new Float32Array(length)};}
 }
 const audioContext={window:{AudioContext,localStorage:{getItem:()=>null,setItem(){}}},Math,Float32Array};
-for(const file of ['src/engine-audio.js','src/audio-mixer.js','src/audio.js'])vm.runInNewContext(fs.readFileSync(file,'utf8'),audioContext);
+for(const file of ['src/engine-audio.js','src/audio-mixer.js','src/ohio-soundtrack.js', 'src/audio.js'])vm.runInNewContext(fs.readFileSync(file,'utf8'),audioContext);
 const audio=audioContext.window.Driftworks.audio;audio.unlock();let count=oscillators.length;
 audio.playWormhole('enter');assert.equal(oscillators.length-count,2);count=oscillators.length;
 audio.playWormhole('cross');assert.equal(oscillators.length-count,3);assert(oscillators.slice(count).every(n=>n.type==='sine'));

@@ -142,10 +142,10 @@ now live on `Driftworks.sim`, not `Driftworks.game`.
   stress sprites and effects remain session state. Load restores combat and
   clears visual effects; reset creates a fresh world. Audio preferences use
   their own localStorage key.
-- **Two context-order paths exist.** `sim.issueContextOrder` uses simulation
-  distances; `game.issueVisualContextOrder` uses semantic-zoom hit areas before
-  dispatching simulation commands. Changes to right-click priority or eligible
-  targets need inspection of both paths.
+- **Context picking has two policies.** Physical queries use simulation distances;
+  visual picking uses semantic-zoom hit areas. Both pass ID-only picks to
+  `sim.issuePickedContextOrder`, which owns command priority and mixed selections.
+  Eligible hit targets remain a concern of the corresponding picker.
 - **Formation state is duplicated.** Shared groups live in `world.formations`,
   with per-order snapshots for steering and compatibility. Membership is derived
   from active defense orders, not solely from the group's cached member list.
@@ -329,3 +329,34 @@ the player in the friendly hangar; it does not reset the battle. See
 [hyperbolic space](hyperbolic-space.md#armed-battle-and-respawn-ownership) for the
 Fermi placement, geodesic hull sweeps, private-projectile chart ownership and
 curved-space spatial collision bounds. This adds no RTS save fields.
+
+
+## Tactical input and presentation services
+
+`sim.issuePickedContextOrder(world, point, picks, shipIds)` returns a replacement
+world. `ContextPick` identifies the picked home, platform, ordered guard candidates,
+recovery target, asteroid and depot hit using IDs and booleans. It is ephemeral
+command input, not a persistent world field. Simulation owns the priority order:
+home, platform recovery, escort defense with recursive handling of the remaining
+selection, tug recovery, mining, construction, then movement. `issueContextOrder`
+provides physical picks; `src/tactical/picking.js` provides artwork-scale picks.
+Picking does not issue orders or mutate the world.
+
+`src/tactical/input3d.js` owns the 3D canvas pointer/keyboard handlers, selection,
+context commands, pan/orbit/zoom gestures and toolbar callbacks. It receives an
+explicit scene adapter for projection, picking, focus and lighting state. It has
+no dependency on `DW.game`; commands call simulation directly. The renderer reads
+its drag state for the selection rectangle and retains camera/projection math,
+render resources and scene synchronization. Pixi's existing input adapter remains
+in `game.js` and uses the same simulation command dispatcher.
+
+`src/station-models.js` owns procedural habitat, rounded-hull and station-hardware
+mesh construction. `scene3d` retains aliases for existing study callers. Mesh
+coordinates, material grouping and LOD selection are unchanged.
+
+`src/ohio-soundtrack.js` owns Ohio media programming, its volume preference,
+intro/song handoff and the radio-exclusion gate. The generic audio facade retains
+`createOhioMusic`, delegating with its mixer activity callback and volume parser.
+The flight controller supplies mission progress and a callback to pause radio
+when the announcer starts. Pausing, completed-announcement resume and the music
+settling envelope retain their existing behavior.

@@ -1,3 +1,4 @@
+const skyRuntimeSource=['src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'].map(file=>require('node:fs').readFileSync(require('node:path').join(__dirname,'..',file),'utf8')).join('\n');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
@@ -21,7 +22,7 @@ context.document.currentScript={getAttribute:()=> '../src/asset-versions.js'};
 vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../src/asset-versions.js'), 'utf8'), context);
 vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/flight-missions.js'),'utf8'),context);
 vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/mission-ohio.js'),'utf8'),context);
-vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../experiments/skybox.js'), 'utf8'), context);
+vm.runInNewContext(['src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'].map(file=>fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8')).join('\n'), context);
 const sky = context.window.Driftworks.flightSkybox.create({clientWidth: 800, clientHeight: 600, prepend() {}});
 const pose = {right: [1,0,0], up: [0,0,1], back: [0,-1,0]};
 assert.equal(selector.children.length, 13);
@@ -61,7 +62,7 @@ async function testHeroComposition() {
   context.Image=class {set src(value){imageUrls.push(value);queueMicrotask(()=>this.onload());}};
   vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/flight-missions.js'),'utf8'),context);
   vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/mission-ohio.js'),'utf8'),context);
-  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../experiments/skybox.js'),'utf8'),context);
+  vm.runInNewContext(skyRuntimeSource,context);
   selector.children.length=0;
   const api=context.window.Driftworks.flightSkybox;
   const renderer=api.create({clientWidth:800,clientHeight:600,prepend(){}});
@@ -111,7 +112,7 @@ async function testOhioSky() {
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../src/asset-versions.js'),'utf8'),ohioContext);
   vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/flight-missions.js'),'utf8'),ohioContext);
   vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/mission-ohio.js'),'utf8'),ohioContext);
-  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../experiments/skybox.js'),'utf8'),ohioContext);
+  vm.runInNewContext(skyRuntimeSource,ohioContext);
   const renderer=ohioContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
   renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,2,'Pending images still render black placeholders and stars');
@@ -170,7 +171,7 @@ console.log('PASS sky lighting assets: source hash, finite diffuse SH and power-
 const gridControl={checked:true};
 const latticeContext={window:{Driftworks:{assetUrl:context.window.Driftworks.assetUrl,sim:{METERS_PER_UNIT:60}},devicePixelRatio:2,localStorage:{getItem:()=>null},location:{search:'?mission=ellis'}},document:{...context.document,getElementById:id=>id==='bridge-grid'?gridControl:null},Image:class{},Float32Array,URL,URLSearchParams,location:{search:'?mission=ellis'}};
 gl.getExtension=()=>({});
-for(const file of ['flight-missions.js','mission-ohio.js','ellis-optics.js','skybox.js'])vm.runInNewContext(fs.readFileSync(pathLighting.join(__dirname,'../experiments',file),'utf8'),latticeContext);
+for(const file of ['flight-missions.js','mission-ohio.js','ellis-optics.js','skybox.js'])vm.runInNewContext(file==='skybox.js'?skyRuntimeSource:fs.readFileSync(pathLighting.join(__dirname,'../experiments',file),'utf8'),latticeContext);
 const latticeSky=latticeContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
 const latticePose={...pose,eye:[0,-40,1550/60],region:0};latticeSky.render(latticePose,1,false);
 assert.equal(values.bridgeGrid,1);assert(values.bridgeGridPixel>0);
@@ -249,7 +250,7 @@ const backgroundContext={...context,Image:class {},
   window:{devicePixelRatio:1,Driftworks:{assetUrl:value=>value,flightMissions:{current:()=>context.window.Driftworks.flightMissions.resolve('hyperbolic')}}},
   document:{getElementById:()=>null,createElement:name=>name==='canvas'?backgroundCanvas:{}}
 };
-vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../experiments/skybox.js'),'utf8'),backgroundContext);
+vm.runInNewContext(skyRuntimeSource,backgroundContext);
 const fixedSky=backgroundContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}},{style:3,optics:false});
 const nativeFlight=require('../tools/headless.cjs').createFlight({mission:'hyperbolic',enabled:false,seed:29});
 function backgroundInputs(pose){

@@ -21,86 +21,24 @@
         });
         return new Float32Array(vertices);
     }
-    /** @type {Promise<Record<string,import('../src/types').SkyEnvironmentLighting>>|null} */
-    var lightingCache=null;
-    function loadSkyLighting(){
-        if(!lightingCache){
-            var url=new URL(assetUrl('../assets/backgrounds/sky-lighting-v1.json'),window.location.href);
-            lightingCache=window.fetch(url).then(function(response){if(!response.ok)throw new Error('Sky lighting cache unavailable');return response.json();})
-                .then(/** @param {{version:number,families:Record<string,{sh:number[][],map:string,radiance?:string}>}} data */ function(data){
-                    if(data.version!==1 || !data.families)throw new Error('Invalid sky lighting cache');
-                    return Promise.all(Object.keys(data.families).map(function(key){
-                        return new Promise(/** @param {(entry:{key:string,value:import('../src/types').SkyEnvironmentLighting})=>void} resolve */ function(resolve,reject){
-                            var image=new Image();image.onload=async function(){
-                                try{
-                                    var family=data.families[key];
-                                    /** @type {Float32Array|undefined} */ var radiance;
-                                    if(family.radiance){
-                                        var response=await window.fetch(assetUrl(family.radiance,url.href));
-                                        if(!response.ok)throw new Error('Sky radiance cache unavailable');
-                                        var bytes=await response.arrayBuffer();
-                                        if(bytes.byteLength!==512*256*4*4)throw new Error('Invalid sky radiance dimensions');
-                                        radiance=new Float32Array(bytes);
-                                    }
-                                    resolve({key:key,value:{sh:family.sh,map:family.map,image:image,radiance:radiance}});
-                                }catch(error){reject(error);}
-                            };
-                            image.onerror=function(){reject(new Error('Sky reflection cache unavailable'));};image.src=assetUrl(data.families[key].map,url.href);
-                        });
-                    })).then(function(entries){
-                        /** @type {Record<string,import('../src/types').SkyEnvironmentLighting>} */ var result={};
-                        entries.forEach(function(entry){result[entry.key]=entry.value;});return result;
-                    });
-                });
-        }
-        return lightingCache;
-    }
+    var loadSkyLighting=(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).skyLighting.load;
     var missionSky=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).flightMissions.current().sky, landmarkSky=missionSky.kind==='landmarks';
     var cinemaSky=(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).flightMissions.current().id==='cinematic';
-    var system=missionSky.jadeSystem;
-    /** @param {number[]} v */
-    function jadeRotate(v){var frame=system?system.frame:[[1,0,0],[0,1,0],[0,0,1]];return frame[0].map(function(_,j){return v.reduce(function(sum,x,i){return sum+x*frame[i][j];},0);});}
-    var jadeObserver=system?system.observer:[0,-85000,0];
-    var jadeMoons=(system?system.moons:[]).map(function(moon){
-        var delta=moon.position.map(function(v,i){return v-jadeObserver[i];}),rangeKm=Math.hypot(...delta);
-        return {...moon,rangeKm,direction:jadeRotate(delta.map(function(v){return v/rangeKm;})),radius:Math.asin(moon.diameterKm/2/rangeKm)};
-    });
-    var moonData=new Float32Array(jadeMoons.flatMap(function(moon){return moon.direction.concat(Math.sin(moon.radius));}));
-    var moonRanges=new Float32Array(jadeMoons.map(function(m){return m.rangeKm;}));
-    var planetRange=system?Math.hypot(...system.observer):85000;
-    var planetRadius=system?Math.asin(system.planetRadiusKm/planetRange):Math.atan(1.31);
-    var planetDirection=system?jadeRotate(system.observer.map(function(v){return -v/planetRange;})):[0,1,0];
-    var jadePlanetData=new Float32Array(planetDirection.concat(Math.cos(planetRadius)));
-    var gasScale=missionSky.jadeSystem&&planetRange>100000?Math.tan(planetRadius)/1.31:1;
+    var skySystem=(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).skySystem.describe(missionSky);
+    var system=skySystem.system;
+    var jadeRotate=skySystem.jadeRotate;
+    var jadeObserver=skySystem.jadeObserver;
+    var jadeMoons=skySystem.jadeMoons;
+    var moonData=skySystem.moonData;
+    var moonRanges=skySystem.moonRanges;
+    var planetRange=skySystem.planetRange;
+    var planetRadius=skySystem.planetRadius;
+    var planetDirection=skySystem.planetDirection;
+    var jadePlanetData=skySystem.jadePlanetData;
+    var gasScale=skySystem.gasScale;
     var focal = 1 / Math.tan(Math.PI / 8);
-    var impactStages=[{id:'before',label:'Before impact'},{id:'contact',label:'Contact / flash'},{id:'ejecta',label:'Young ejecta'},{id:'plume',label:'Growing plume'},{id:'cooling',label:'Cooling cap'},{id:'fallout',label:'Returning debris'},{id:'aftermath',label:'Regional aftermath'},{id:'fires',label:'Land fires'},{id:'smoke',label:'Smoke veil'}];
-    function createImpactCues(){
-        var held=0,from=0,to=0,age=0,duration=0,active=false,started=false,flashAge=Infinity;
-        /** @type {{stage:number,duration:number}[]} */var queue=[];
-        function snapshot(){var a=active?(duration?Math.min(1,age/duration):1):0;return {from:active?from:held,to:active?to:held,blend:a*a*(3-2*a),stage:impactStages[held].id,transitioning:active,queued:queue.length,flashAge:flashAge};}
-        return {snapshot:snapshot,
-            /** @param {string|number} stage @param {number} [seconds] */
-            trigger:function(stage,seconds){var index=typeof stage==='number'?stage:impactStages.findIndex(function(s){return s.id===stage;}),d=seconds===undefined?8:seconds;
-                if(!Number.isInteger(index)||index<0||index>=impactStages.length)throw new RangeError('Unknown impact cue');
-                if(!Number.isFinite(d)||d<0||d>120)throw new RangeError('Impact transition must be 0–120 seconds');
-                if((active&&index===to)||(queue.length&&queue[queue.length-1].stage===index))return true;
-                if(queue.length>=16)return false;
-                if(!active&&index===held&&!queue.length)return true;
-                queue.push({stage:index,duration:d});return true;},
-            reset:function(){held=from=to=0;age=duration=0;active=started=false;flashAge=Infinity;queue=[];},
-            /** @param {number} elapsed @param {boolean} ready */
-            update:function(elapsed,ready){
-                if(!Number.isFinite(elapsed)||elapsed<0)throw new RangeError('Invalid cue elapsed time');
-                if(!active&&queue.length){var command=queue.shift();if(command){from=held;to=command.stage;duration=command.duration;age=0;active=true;started=false;}}
-                if(ready){
-                    if(active&&!started){started=true;if(to===1)flashAge=0;}
-                    if(Number.isFinite(flashAge))flashAge+=elapsed;
-                    if(active){age=Math.min(duration,age+elapsed);if(age>=duration){held=to;active=false;}}
-                }
-                return snapshot();
-            }
-        };
-    }
+    var impactCuesApi=(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).impactCues;
+    var impactStages=impactCuesApi.stages,createImpactCues=impactCuesApi.create;
     function stars() {
         var data = /** @type {number[]} */ ([]), seed = 58319;
         function random() {

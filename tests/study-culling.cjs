@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const DW={asteroidTerrain:{},sim:{},meshBuilder:{},miningRig:{}},ctx=vm.createContext({window:{Driftworks:DW},Float32Array,WeakMap,Math});
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/scene3d.js'),'utf8'),ctx);
+vm.runInContext(['src/station-models.js','src/tactical/picking.js','src/tactical/input3d.js','src/scene3d.js'].map(file=>fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8')).join('\n'),ctx);
 const visible=DW.scene3d.studyBatchVisible;
 const camera={right:[1,0,0],up:[0,1,0],back:[0,0,1],distance:0,focal:2};
 let seed=503;function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}

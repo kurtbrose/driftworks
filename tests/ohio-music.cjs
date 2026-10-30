@@ -9,7 +9,7 @@ const window = {localStorage: {getItem: () => null}, addEventListener() {}, Audi
 }};
 vm.createContext({window});
 const context=vm.createContext({window});
-for(const file of ['src/engine-audio.js','src/audio-mixer.js','src/audio.js']) vm.runInContext(fs.readFileSync(file,'utf8'),context);
+for(const file of ['src/engine-audio.js','src/audio-mixer.js','src/ohio-soundtrack.js', 'src/audio.js']) vm.runInContext(fs.readFileSync(file,'utf8'),context);
 window.Driftworks.assetUrl = url => url;
 const music=window.Driftworks.audio.createOhioMusic();
 const [intro,song]=media;
@@ -47,18 +47,21 @@ const flightSource=fs.readFileSync('experiments/flight.js','utf8').replace(/\r\n
 const guardStart=flightSource.indexOf('        if (!paused) {\n            if (!watch) session.advanceScenery(elapsed);');
 assert(guardStart>=0);
 const guard=flightSource.slice(guardStart,flightSource.indexOf('        var comparison =',guardStart));
-let radioUpdates=0, djStarts=0, radioStops=0, announcing=true;
+let radioUpdates=0, radioStops=0;
+window.Driftworks.flightMissions=DW.flightMissions;
+const soundtrack=window.Driftworks.audio.createOhioMusic(),djIntro=media[media.length-2];
+soundtrack.resumeIfStarted();assert.equal(djIntro.plays,0,'Resuming before the mission handoff stays quiet');
 const handoff={paused:false,watch:false,elapsed:.01,session:{advanceScenery(){}},
   comms:{update(){radioUpdates++;},pause(){radioStops++;}},
-  ohioMusic:{isAnnouncing:()=>announcing,resume(){djStarts++;}},ohioMusicStarted:false,
-  currentView:{combat:{openingStep:1},state:{}},activeMission:{opening:[{},{}]}};
+  ohioMusic:soundtrack,
+  currentView:{combat:{mode:'ohio',openingStep:1},state:{}},activeMission:{opening:[{},{}]}};
 vm.createContext(handoff);
-vm.runInContext(guard,handoff); assert.equal(radioUpdates,1); assert.equal(djStarts,0);
+vm.runInContext(guard,handoff); assert.equal(radioUpdates,1); assert.equal(djIntro.plays,0);
 handoff.currentView.combat.openingStep=3;
-vm.runInContext(guard,handoff); assert.equal(djStarts,1); assert.equal(radioStops,1);
+vm.runInContext(guard,handoff); assert.equal(djIntro.plays,1); assert.equal(radioStops,1);
 const before=radioUpdates;
 vm.runInContext(guard,handoff); assert.equal(radioUpdates,before,'No chatter during DJ or crossfade');
-announcing=false;
+djIntro.onended();
 vm.runInContext(guard,handoff); assert.equal(radioUpdates,before+1,'Chatter returns once only instrumental remains');
-assert.equal(djStarts,1,'DJ starts once');
+assert.equal(djIntro.plays,1,'DJ starts once');
 console.log('PASS Ohio mutual radio exclusion: opening first, DJ alone, chatter returns for instrumental');

@@ -5,7 +5,7 @@ for(const mission of ['planet-hero-80','planet-hero','planet-hero-140','planet-o
  const gl=new Proxy({createShader:()=>({}),createProgram:()=>({}),createBuffer:()=>({}),createTexture:()=>({}),getShaderParameter:()=>true,getProgramParameter:()=>true,getUniformLocation:(_,name)=>name,getAttribLocation:()=>0,uniform1f:(name,value)=>{values[name]=value;},bufferData:(_,data)=>buffers.push(data),texImage2D:(...args)=>uploads.push(args.at(-1))}, {get:(o,k)=>k in o?o[k]:()=>{}});
  const canvas={dataset:{},setAttribute(){},getContext:()=>gl};
  const context={window:{Driftworks:{assetUrl:s=>s},location:{search:'?mission='+mission},devicePixelRatio:1},document:{getElementById:()=>null,createElement:()=>canvas},Image:class{set src(value){this.file=value;requests.push(value);pending.push(this);}},Float32Array,Uint8Array};
- for(const name of ['flight-missions','skybox'])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/'+name+'.js'),'utf8'),context);
+ for(const file of ['experiments/flight-missions.js','src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'])vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),context);
  const DW=context.window.Driftworks,definition=DW.flightMissions.current(),width=mission.endsWith('80')?80:mission.endsWith('140')?140:110;
  assert.equal(definition.sky.features[0].widthDeg,width);assert.equal(definition.sky.kind,'landmarks');assert.equal(definition.encounter.count,16);
  const sky=DW.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}},{fov:140});

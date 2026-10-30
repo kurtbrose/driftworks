@@ -52,7 +52,7 @@ assert.equal(api.visualFor(other), retained);
 const fixture = path.join(__dirname, 'fixtures/asteroid-terrain.json');
 assert.deepEqual(results, JSON.parse(fs.readFileSync(fixture, 'utf8')));
 // Compatibility loading must reuse the same CPU functions and cache owner.
-vm.runInContext(fs.readFileSync(path.join(root, 'src/scene3d.js'), 'utf8'), context, {filename: 'src/scene3d.js'});
+vm.runInContext(['src/station-models.js','src/tactical/picking.js','src/tactical/input3d.js','src/scene3d.js'].map(file=>fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8')).join('\n'), context, {filename: 'src/scene3d.js'});
 for (const name of ['rockField', 'surfaceFrame', 'asteroidMesh', 'visualFor',
   'setStudyParameters', 'platformSurface', 'platformSurfaceGeometry', 'platformSurfacePose']) {
   assert.equal(DW.scene3d[name], api[name], 'Preserve scene3d alias ' + name);

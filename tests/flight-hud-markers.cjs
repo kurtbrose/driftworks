@@ -23,7 +23,7 @@ DW.experimentDom=()=>get;
 DW.gpuUi={create:()=>({painter,begin(){calls.length=0;},end(){}})};
 DW.flightTargetCamera={mount:()=>({update:()=>false})};
 const context=vm.createContext({window:{Driftworks:DW},document,HTMLCanvasElement:class {},performance:{now:()=>0}});
-for(const file of ['experiments/skybox.js','experiments/radar.js','experiments/flight-hud.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),context);
+for(const file of ['src/sky-lighting.js', 'src/sky-system.js', 'src/impact-cues.js', 'experiments/skybox.js','experiments/radar.js','src/flight-prediction.js', 'experiments/flight-hud.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),context);
 const enemies=view.combat.enemies.filter(c=>c.team==='enemy').slice(0,4),ally=view.combat.enemies.find(c=>c.team==='ally');
 view.combat.enemies=[...enemies,ally];view.combat.targetId=null;
 Object.assign(view.state,{eye:[0,0,0],right:[1,0,0],up:[0,1,0],back:[0,0,1]});

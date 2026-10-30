@@ -5,7 +5,7 @@ const gl=new Proxy({createProgram:()=>({}),createTexture:()=>({}),createShader:(
 const canvas={dataset:{},width:0,height:0,setAttribute(){},getContext:()=>gl};
 const window={Driftworks:{assetUrl:v=>v,flightMissions:{current:()=>({sky:{kind:'selectable',features:[]}})}},devicePixelRatio:1,localStorage:{getItem:()=>null}};
 const scope={window,document:{getElementById:()=>null,createElement:()=>canvas},Image:class{},Float32Array,URL};
-vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/skybox.js'),'utf8'),scope);
+vm.runInNewContext(['src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'].map(file=>fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8')).join('\n'),scope);
 const renderer=window.Driftworks.flightSkybox.create({clientWidth:640,clientHeight:480,prepend(){}},{style:8});
 const environment={sh:Array.from({length:9},()=>[0,0,0]),map:'fixture',image:{},radiance:new Float32Array(512*256*4)};
 environment.radiance[0]=100;

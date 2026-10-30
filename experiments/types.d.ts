@@ -909,6 +909,12 @@ export type ExperimentModules = {
         sample:(seconds:number)=>{from:number;to:number;alpha:number};
         create:()=>Promise<{canvas:HTMLCanvasElement;draw:(seconds:number,enabled?:boolean)=>boolean}>;
     };
+    flightPrediction:{predictPath:ExperimentModules['flightHud']['predictFlightPath']};
+    skyLighting:{load:()=>Promise<Record<string,import('../src/types').SkyEnvironmentLighting>>};
+    impactCues:{stages:ExperimentModules['flightSkybox']['impactStages'];create:ExperimentModules['flightSkybox']['createImpactCues']};
+    skySystem:{describe:(sky:FlightMission['sky'])=>{system:JadeSystem|undefined;jadeRotate:(v:number[])=>number[];jadeObserver:number[];
+        jadeMoons:(JadeSystem['moons'][number]&{rangeKm:number;direction:number[];radius:number})[];moonData:Float32Array;moonRanges:Float32Array;
+        planetRange:number;planetRadius:number;planetDirection:number[];jadePlanetData:Float32Array;gasScale:number;}};
     flightSkybox: {
         impactStages:{id:string;label:string}[];
         createImpactCues:()=>{snapshot:()=>ImpactCueSnapshot;trigger:(stage:string|number,seconds?:number)=>boolean;reset:()=>void;update:(elapsed:number,ready:boolean)=>ImpactCueSnapshot};

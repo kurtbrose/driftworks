@@ -87,7 +87,7 @@ approved from a few spot checks.
 | Orders, movement, formations, mining, construction, recovery | `src/sim.js`: order issuers and `stepWorld` subsystem calls |
 | Fuel, delta-v, launcher/catcher envelope | `src/propulsion.js`; conversions and payload mass in `src/sim.js` |
 | Save compatibility or new persistent fields | `src/sim.js`: constructors, `normalizeWorld`, `stepWorld`, serialization; `docs/world-state.md` |
-| Selection, right-click behavior, camera, zoom | `src/game.js`: `createScene`, `issueVisualContextOrder`, coordinate helpers; also `sim.issueContextOrder` |
+| Selection, right-click behavior, camera, zoom | `src/tactical/input3d.js` for 3D gestures, `src/tactical/picking.js` for artwork hits, `src/game.js` for Pixi input; shared command priorities in `sim.issuePickedContextOrder` |
 | Flight collision, combat and stepping | `src/flight-collision.js`: spatial queries and exact hits; `src/flight-combat.js`: tracing, shields and damage; `src/flight-sim.js`: craft lifecycle and stepping; opponent policies in `src/flight-opponent.js`, mission gates in `src/flight-mission-runtime.js` |
 | Flight ship catalog/art/hulls | `src/ship-catalog.js`, `src/ship-render.js`, `src/ship-assets.js`, `src/ship-hulls.js`; legacy facade in `experiments/ship-packs.js` |
 | Capital flight runtime | `src/aegis-sim.js`, `src/aegis-visual.js`, `src/aegis-battle.js`; composition in `experiments/aegis-flight.js` |
@@ -96,7 +96,7 @@ approved from a few spot checks.
 | Terrain, excavation, surface contacts | `src/asteroid-terrain.js`: CPU fields, meshes, fitting and derived caches |
 | Scene effects, asteroid painting | `src/game.js`: scene lifecycle and effect helpers; geology in `src/asteroid-art.js` |
 | DOM HUD, fleet/readouts, control availability | `src/hud.js`; `styles.css` |
-| Sound and audio preferences | `src/audio.js`; event/telemetry calls in `src/game.js` |
+| Sound and audio preferences | `src/audio.js`; Ohio programming/gates in `src/ohio-soundtrack.js`; event/telemetry calls in `src/game.js` |
 | Script loading or test harness | `index.html`, `rts.html`, `tests/index.html`, `tests/run.cjs` |
 
 ## Constraints to preserve

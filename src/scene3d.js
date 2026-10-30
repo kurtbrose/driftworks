@@ -236,62 +236,8 @@
   var miningPlatformGeometry=/** @type {Required<import('./types').DriftworksNamespace>} */ (DW).miningRig.geometry;
   var miningPlatformLights=/** @type {Required<import('./types').DriftworksNamespace>} */ (DW).miningRig.lights;
 
-  /** Translate the existing rounded 72 x 34 habitat silhouette into a drum. */
-  /** @param {number} [segments] */
-  function habitatMesh(segments) {
-    var count = segments || 96;
-    /** @type {number[]} */ var data = [];
-    var capSteps=count/8, rings=/** @type {number[]} */ ([]);
-    for(var cap=capSteps;cap>=0;cap--)rings.push(-31-5*Math.sin(cap*Math.PI/(2*capSteps)));
-    for(var cap=0;cap<=capSteps;cap++)rings.push(31+5*Math.sin(cap*Math.PI/(2*capSteps)));
-    /** @param {number} x */
-    function radius(x) { return Math.abs(x) <= 31 ? 17 : 12 + Math.sqrt(Math.max(0, 25 - Math.pow(Math.abs(x) - 31, 2))); }
-    /** @param {number} x @param {number} angle @param {number} [cap] */
-    function vertex(x, angle, cap) {
-      var r = radius(x), slope = Math.abs(x) <= 31 ? 0 : -(Math.abs(x) - 31) * Math.sign(x) / Math.sqrt(Math.max(.001, 25 - Math.pow(Math.abs(x) - 31, 2)));
-      var length = Math.hypot(1, slope);
-      data.push(x, r * Math.sin(angle), r * Math.cos(angle), cap || -slope / length, cap ? 0 : Math.sin(angle) / length, cap ? 0 : Math.cos(angle) / length);
-    }
-    for (var ring = 0; ring < rings.length - 1; ring++) for (var i = 0; i < count; i++) {
-      var a = i * Math.PI * 2 / count, b = (i + 1) * Math.PI * 2 / count;
-      vertex(rings[ring], a); vertex(rings[ring + 1], a); vertex(rings[ring + 1], b);
-      vertex(rings[ring], a); vertex(rings[ring + 1], b); vertex(rings[ring], b);
-    }
-    [-1, 1].forEach(function (side) {
-      for (var i = 0; i < count; i++) {
-        data.push(side * 36, 0, 0, side, 0, 0);
-        vertex(side * 36, i * Math.PI * 2 / count, side); vertex(side * 36, (i + 1) * Math.PI * 2 / count, side);
-      }
-    });
-    return new Float32Array(data);
-  }
-
-  /** Rounded extrusions for the original bearing, spine and fixed machinery. */
-  /** @param {number} width @param {number} length @param {number} depth @param {number} radius */
-  function roundedHullMesh(width, length, depth, radius) {
-    /** @type {number[]} */ var data = [];
-    /** @type {Vec2[]} */ var outline = [];
-    for (var corner = 0; corner < 4; corner++) {
-      var angle = corner * Math.PI / 2;
-      var cx = Math.cos(angle + Math.PI / 4) > 0 ? width / 2 - radius : -width / 2 + radius;
-      var cy = Math.sin(angle + Math.PI / 4) > 0 ? length / 2 - radius : -length / 2 + radius;
-      for (var i = 0; i <= 8; i++) { var t = angle + i * Math.PI / 16; outline.push({ x: cx + Math.cos(t) * radius, y: cy + Math.sin(t) * radius }); }
-    }
-    outline.forEach(function (p, i) {
-      var q = outline[(i + 1) % outline.length], nx = q.y - p.y, ny = p.x - q.x;
-      var len = Math.hypot(nx, ny) || 1; nx /= len; ny /= len;
-      data.push(p.x,p.y,-depth/2,nx,ny,0, q.x,q.y,-depth/2,nx,ny,0, q.x,q.y,depth/2,nx,ny,0,
-        p.x,p.y,-depth/2,nx,ny,0, q.x,q.y,depth/2,nx,ny,0, p.x,p.y,depth/2,nx,ny,0);
-      [-1, 1].forEach(function (side) { data.push(0,0,side*depth/2,0,0,side, p.x,p.y,side*depth/2,0,0,side, q.x,q.y,side*depth/2,0,0,side); });
-    });
-    return new Float32Array(data);
-  }
-
-  /** Keep circular silhouette error below roughly half a screen pixel. */
-  /** @param {number} radiusPixels */
-  function habitatLod(radiusPixels) {
-    return radiusPixels > 2000 ? 384 : radiusPixels > 500 ? 192 : 96;
-  }
+  var stationModels=/** @type {NonNullable<import('./types').DriftworksNamespace['stationModels']>} */(DW.stationModels);
+  var habitatMesh=stationModels.habitatMesh,roundedHullMesh=stationModels.roundedHullMesh,habitatLod=stationModels.habitatLod,mothershipHardware=stationModels.mothershipHardware;
 
   /** Nearest two-sided ray/triangle hit, used only when choosing a study focus. */
   /** @param {V3} eye @param {V3} direction @param {ArrayLike<number>[]} meshes @returns {V3 | null} */
@@ -330,109 +276,6 @@
       });return nearest;
   }
 
-  /** Static station hardware is batched by finish, with no per-detail draw calls. */
-  /** @param {number} [detail] */
-  function mothershipHardware(detail) {
-    var refinement=detail || 1;
-    /** @param {V3} v @returns {V3} */
-    function normalize3(v){var length=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/length,v[1]/length,v[2]/length];}
-    /** @param {V3} a @param {V3} b @returns {V3} */
-    function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
-    /** @type {Record<string, number[]>} */ var groups = {};
-    /** @param {string} material @param {V3} a @param {V3} b @param {number} radius @param {number} [sides] */
-    function tube(material, a, b, radius, sides) {
-      var count = Math.min(64,(sides || 8)*refinement), axis = normalize3([b[0]-a[0],b[1]-a[1],b[2]-a[2]]);
-      var right = normalize3(cross(axis, Math.abs(axis[2]) < .9 ? [0,0,1] : [0,1,0])), up = cross(axis,right);
-      var data = groups[material] || (groups[material] = []);
-      /** @param {V3} center @param {number} angle @param {number} [cap] */
-      function vertex(center, angle, cap) {
-        var n = right.map(function(v,i){return v*Math.cos(angle)+up[i]*Math.sin(angle);});
-        data.push(center[0]+n[0]*radius,center[1]+n[1]*radius,center[2]+n[2]*radius,
-          cap ? axis[0]*cap : n[0],cap ? axis[1]*cap : n[1],cap ? axis[2]*cap : n[2]);
-      }
-      for(var i=0;i<count;i++) {
-        var p=i*Math.PI*2/count,q=(i+1)*Math.PI*2/count;
-        vertex(a,p);vertex(b,p);vertex(b,q);vertex(a,p);vertex(b,q);vertex(a,q);
-        [a,b].forEach(function(center,j){var sign=j?1:-1;data.push(center[0],center[1],center[2],axis[0]*sign,axis[1]*sign,axis[2]*sign);vertex(center,p,sign);vertex(center,q,sign);});
-      }
-    }
-    /** @param {string} material @param {V3} center @param {V3} size */
-    function block(material,center,size) {
-      var data=groups[material]||(groups[material]=[]), source=boxMesh();
-      for(var i=0;i<source.length;i+=6)data.push(center[0]+source[i]*size[0],center[1]+source[i+1]*size[1],center[2]+source[i+2]*size[2],source[i+3],source[i+4],source[i+5]);
-    }
-    /** @param {string} material @param {number} x @param {number} radius @param {number} thickness */
-    function ring(material,x,radius,thickness) {
-      var data=groups[material]||(groups[material]=[]), count=96*refinement, sides=8+2*Math.log2(refinement);
-      /** @param {number} along @param {number} around */
-      function vertex(along,around){
-        var nx=Math.sin(around), radial=Math.cos(around), ny=Math.sin(along)*radial,nz=Math.cos(along)*radial;
-        data.push(x+thickness*nx,Math.sin(along)*(radius+thickness*radial),Math.cos(along)*(radius+thickness*radial),nx,ny,nz);
-      }
-      for(var i=0;i<count;i++)for(var j=0;j<sides;j++){
-        var a=i*Math.PI*2/count,b=(i+1)*Math.PI*2/count,c=j*Math.PI*2/sides,d=(j+1)*Math.PI*2/sides;
-        vertex(a,c);vertex(b,c);vertex(b,d);vertex(a,c);vertex(b,d);vertex(a,d);
-      }
-    }
-    // Fixed bearing cages embrace the spinning shell; axial hubs remain stationary.
-    [-38,38].forEach(function(x){
-      ring('metal',x,18.3,.65);ring('dark',x,16.8,1.1);
-      tube('metal',[x-2,0,0],[x+2,0,0],4,24);
-      for(var i=0;i<8;i++){var a=i*Math.PI/4;tube('metal',[x,Math.sin(a)*4,Math.cos(a)*4],[x,Math.sin(a)*17,Math.cos(a)*17],.45);}
-      tube('metal',[x,0,0],[x+(x<0?-6:6),0,0],2.6,24);
-      ring('orange',x+(x<0?-2:2),4.2,.25);
-    });
-    // Coaxial fixed structure extends from the two habitat hubs.
-    [-1,1].forEach(function(end){
-      [-4,4].forEach(function(y){[-4,4].forEach(function(z){tube('metal',[end*42,y,z],[end*64,y,z],.4);});});
-      for(var x=42;x<64;x+=5.5){
-        [-4,4].forEach(function(z){tube('metal',[end*x,-4,z],[end*(x+5.5),4,z],.24);});
-        [-4,4].forEach(function(y){tube('metal',[end*x,y,-4],[end*(x+5.5),y,4],.24);});
-      }
-      tube('shell',[end*44,0,0],[end*53,0,0],3.2,24);
-      tube('dark',[end*48,0,0],[end*48.6,0,0],3.3,24);
-      // Local tank cluster follows the same longitudinal axis.
-      [-1,1].forEach(function(side){
-        tube('tank',[end*54,side*6,0],[end*62,side*6,0],2,16);
-        tube('orange',[end*54,side*6,0],[end*54.3,side*6,0],2.1,16);
-        tube('metal',[end*54,side*4,-2],[end*62,side*6,-2],.2);
-      });
-    });
-    // Aft thermal wings attach beyond the drum, keeping the habitat unobstructed.
-    [-1,1].forEach(function(side){
-      tube('metal',[51,side*4,0],[51,side*31,0],.45);
-      for(var i=0;i<3;i++){
-        var y=side*(12+i*8);
-        block('thermal',[53,y,0],[9,3.5,.18]);
-        [-9,0,9].forEach(function(d){block('metal',[53+d,y,.25],[.12,3.5,.12]);});
-        for(var j=-8;j<=8;j+=2)block('dark',[53+j,y,.22],[.06,3.3,.04]);
-        tube('metal',[43,side*4,0],[44,y,0],.18);
-      }
-      // Forward docking arms, service deck and a small collar.
-      tube('metal',[-56,side*3,0],[-56,side*13,0],1,16);
-      tube('dark',[-56,side*13,0],[-56,side*15,0],1.7,24);
-      tube('orange',[-56,side*15,0],[-56,side*15.3,0],1.8,24);
-      block('dark',[-56,side*9,-2],[4,3,.25]);
-      tube('metal',[-60,side*6,-1],[-60,side*12,-1],.12);
-      tube('metal',[-52,side*6,-1],[-52,side*12,-1],.12);
-      block('light',[-54,side*15,0],[.2,.2,.2]);
-    });
-    // Utility shuttle at the forward collar; propulsion points aft along X.
-    tube('shell',[-56,16.2,0],[-56,18.5,0],.55,12);
-    block('dark',[-56,17.7,.55],[.4,.4,.1]);
-    block('orange',[-56,18.5,0],[.6,.15,.6]);
-    [-3,3].forEach(function(y){
-      tube('tank',[63,y,0],[67,y,0],1.5,16);
-      tube('dark',[67,y,0],[71,y,0],2,20);
-      tube('metal',[70.5,y,0],[71,y,0],2.2,20);
-    });
-    tube('metal',[-64,0,0],[-71,0,4],.15);block('light',[-71,0,4],[.25,.25,.25]);
-    // Drum ribs and access tracks rotate as a single batched mesh about its axis.
-    [-30,-20,-10,0,10,20,30].forEach(function(x){ring('rotor',x,17.12,.16);});
-    for(var i=0;i<12;i++){var a=i*Math.PI/6;tube('rotor',[-31,Math.sin(a)*17.14,Math.cos(a)*17.14],[31,Math.sin(a)*17.14,Math.cos(a)*17.14],.09,6);}
-    return groups;
-  }
-
   /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{study?: boolean, viewer?: boolean, zoomToTerrain?: boolean}} [options] */
   function create(host, getWorld, setWorld, options) {
     var study = !!(options && options.study);
@@ -467,7 +310,7 @@
     if (!overlayContext) throw new Error('Missing tactical overlay context');
     var hud = overlayContext;
     var toolbar = document.createElement('div'); toolbar.className = 'scene3d-controls';
-    toolbar.innerHTML = '<strong>3D RTS prototype</strong><span>Alt + drag: orbit ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Middle / Space + drag: pan ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Wheel: zoom</span><button type="button" data-rig-lights aria-pressed="true">Rig lights</button><button type="button" data-spotlight aria-pressed="false">Work light</button><button type="button" data-work-shadows aria-pressed="true">Shadows</button><button type="button" data-cut>Cutaway</button><button type="button" data-orbit aria-label="Orbit camera">Orbit ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â»</button><button type="button" data-overview>Overview</button><button type="button" data-top>Top view</button><button type="button" data-under>Underside</button><a href="?renderer=2d">2D renderer</a>';
+    toolbar.innerHTML = '<strong>3D RTS prototype</strong><span>Alt + drag: orbit | Middle / Space + drag: pan | Wheel: zoom</span><button type="button" data-rig-lights aria-pressed="true">Rig lights</button><button type="button" data-spotlight aria-pressed="false">Work light</button><button type="button" data-work-shadows aria-pressed="true">Shadows</button><button type="button" data-cut>Cutaway</button><button type="button" data-orbit aria-label="Orbit camera">Orbit 30 deg</button><button type="button" data-overview>Overview</button><button type="button" data-top>Top view</button><button type="button" data-under>Underside</button><a href="?renderer=2d">2D renderer</a>';
     host.appendChild(toolbar);
     /** @type {Orbit} */ var orbit = { yaw: 0, tilt: 0.48 };
     var studyHeight = 0;
@@ -479,13 +322,12 @@
     /** @type {Set<string>} */ var frameMaterials=new Set();
     var materialFinish=0;
     var identityBasis=new Float32Array([1,0,0,0,1,0,0,0,1]),emptyHyperbolicFrame=new Float32Array(16);
-    var focus = false, space = false, stress = false, fps = 0;
+    var focus = false, stress = false, fps = 0;
     var rigLightsEnabled=true;
     /** @type {import('./types').RigLighting[]} */ var studyLightRigs=[];
     var spotlightEnabled = false, workShadowsEnabled = true, shadowPass = false;
     /** @type {Record<string,{visual:import('./types').AsteroidVisual,lamp:ReturnType<typeof surfaceSpotlight>}>} */
     var surfaceLamps = {};
-    /** @type {{ start: Vec2, last: Vec2, mode: string } | null} */ var drag = null;
     /** @type {{ event: import('./types').CombatEvent, age: number }[]} */ var effects = [];
     /** @type {Record<string, { key: string, mesh: Mesh, texture: import('./three-types').Texture, visual: import('./types').AsteroidVisual, values: ReturnType<typeof art.uniforms> }>} */ var rocks = {};
     var vertexShader = 
@@ -757,17 +599,6 @@
       setFinish(0);
     }
     /** @returns {Viewport} */ function viewport() { return { width: host.clientWidth, height: host.clientHeight }; }
-    /** @param {PointerEvent | WheelEvent} e */
-    function pointer(e) { var r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
-    function unlock() { if (DW.audio) DW.audio.unlock(); }
-    /** @param {World} world @param {Vec2} point */
-    function hitShip(world, point) {
-      return world.ships.filter(function (s) { return !s.docked; }).map(function (s) {
-        var p = project([s.position.x, s.position.y, 0], world.camera, viewport(), orbit);
-        return { ship: s, distance: Math.hypot(point.x - p.x, point.y - p.y), depth: p.depth };
-      }).filter(function (h) { return h.depth > 0 && h.distance < Math.max(12, (h.ship.type === 'mothership' ? 38 : 18) * world.camera.zoom * semanticScale(h.ship.type, world.camera.zoom)); })
-        .sort(function (a, b) { return a.distance - b.distance; })[0];
-    }
     /** @param {string} type @param {number} zoom */
     function semanticScale(type, zoom) {
       if(study && type==='mothership')return 1;
@@ -776,158 +607,15 @@
     }
     /** @type {import('./types').ViewerPickBatch[]} */ var pickBatches = [];
     var pickSpin = 0;
-    /** @returns {import('./types').ViewerPose} */
-    function viewerPose() {
-      var w = getWorld(), v = view(w.camera, viewport(), orbit);
-      return {eye:[w.camera.x+v.back[0]*v.distance,w.camera.y+v.back[1]*v.distance,(orbit.height||0)+v.back[2]*v.distance],right:[v.right[0],v.right[1],v.right[2]],up:[v.up[0],v.up[1],v.up[2]],back:[v.back[0],v.back[1],v.back[2]],distance:v.distance,focal:v.focal};
-    }
-    /** @param {import('./types').ViewerPose} pose */
-    function flyViewer(pose) {
-      orbit.surface={right:pose.right,up:pose.up,back:pose.back,distance:1,focal:pose.focal};
-      studyHeight=pose.eye[2]-pose.back[2];orbit.height=studyHeight;
-      var w=getWorld();setWorld(Object.assign({},w,{camera:{x:pose.eye[0]-pose.back[0],y:pose.eye[1]-pose.back[1],zoom:host.clientHeight*pose.focal/2}}));
-    }
-    /** @param {import('./types').ViewerPose} pose @param {V3} target */
-    function orbitViewer(pose,target) {
-      var back=/** @type {V3} */ (pose.eye.map(function(x,i){return x-target[i];})),distance=Math.max(.001,Math.hypot.apply(null,back));
-      delete orbit.surface;studyHeight=target[2];orbit.height=target[2];orbit.yaw=Math.atan2(-back[0],back[1]);orbit.tilt=Math.acos(Math.max(-1,Math.min(1,back[2]/distance)));
-      var w=getWorld();setWorld(Object.assign({},w,{camera:{x:target[0],y:target[1],zoom:host.clientHeight*pose.focal/(2*distance)}}));
-    }
-    var viewerControls = viewerEnabled && DW.modelViewer ? DW.modelViewer.create(host,{pose:viewerPose,fly:flyViewer,orbit:orbitViewer,pick:function(eye,direction){return pickStudyBatches(eye,direction,pickBatches);},worldUp:[0,0,1]}) : null;
-    canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-    canvas.addEventListener('pointerdown', function (e) {
-      if(orbit.surface)return;
-      unlock(); focus = false; var p = pointer(e), w = getWorld();
-      if (!study && e.button === 2 && !e.altKey) {
-        var target = unproject(p, w.camera, viewport(), orbit);
-        var hit = hitShip(w, p); if (hit) target = hit.ship.position;
-        // Surface hits must be mapped to the asteroid, not to the plane behind it.
-        var rockHits = w.asteroids.map(function (a) { return { asteroid: a, hit: pickAsteroid(p, a, w.camera, viewport(), orbit) }; })
-          .filter(function (r) { return r.hit !== null; }).sort(function (a, b) { return (a.hit ? a.hit.depth : Infinity) - (b.hit ? b.hit.depth : Infinity); });
-        var rock = rockHits[0];
-        if (rock && rock.hit && (!hit || rock.hit.depth < hit.depth)) target = rock.asteroid.position;
-        var platform = w.platforms.find(function (platform) {
-          if (platform.state !== 'deployed' && platform.state !== 'setting-up') return false;
-          var a = w.asteroids.find(function (a) { return a.id === platform.asteroidId; });
-          var q = project([platform.position.x, platform.position.y, platformHeight(platform, a)], w.camera, viewport(), orbit);
-          return q.depth > 0 && Math.hypot(q.x - p.x, q.y - p.y) < 14 && (!rock || !rock.hit || q.depth <= rock.hit.depth + 10);
-        });
-        if (platform) target = platform.position;
-        if (!target) return;
-        var game = /** @type {{ issueVisualContextOrder: (world: World, target: Vec2, shipIds?: string[]) => World }} */ (DW.game);
-        setWorld(game.issueVisualContextOrder(w, target, w.selectedShipIds)); if (DW.audio) DW.audio.playMove(); return;
-      }
-      drag = { start: p, last: p, mode: viewerControls ? viewerControls.gesture(e, space) : e.altKey || (study && e.button === 0 && !space) ? 'orbit' : e.button === 1 || space ? 'pan' : 'select' };
-      canvas.setPointerCapture(e.pointerId); e.preventDefault();
+    var input=(/** @type {Required<import('./types').DriftworksNamespace>} */(DW)).tacticalInput3d.mount({
+      canvas:canvas,toolbar:toolbar,host:host,study:study,terrainZoom:terrainZoom,viewerEnabled:viewerEnabled,orbit:orbit,
+      getWorld:getWorld,setWorld:setWorld,consume:consume,view:view,project:project,unproject:unproject,pickAsteroid:pickAsteroid,platformHeight:platformHeight,pickStudyBatches:pickStudyBatches,
+      get pickBatches(){return pickBatches;},get focus(){return focus;},set focus(value){focus=value;},
+      get studyHeight(){return studyHeight;},set studyHeight(value){studyHeight=value;},
+      get rigLightsEnabled(){return rigLightsEnabled;},set rigLightsEnabled(value){rigLightsEnabled=value;},
+      get spotlightEnabled(){return spotlightEnabled;},set spotlightEnabled(value){spotlightEnabled=value;},
+      get workShadowsEnabled(){return workShadowsEnabled;},set workShadowsEnabled(value){workShadowsEnabled=value;}
     });
-    canvas.addEventListener('pointermove', function (e) {
-      if (!drag) return;
-      var p = pointer(e), w = getWorld();
-      if (viewerControls) drag.mode = viewerControls.gesture(e, space);
-      if (drag.mode === 'orbit') {
-        orbit.yaw -= (p.x - drag.last.x) * 0.006;
-        orbit.tilt = Math.max(0.06, Math.min(Math.PI - 0.06, orbit.tilt + (p.y - drag.last.y) * 0.006));
-      } else if (drag.mode === 'pan') {
-        var a = unproject(drag.last, w.camera, viewport(), orbit, orbit.height), b = unproject(p, w.camera, viewport(), orbit, orbit.height);
-        if (a && b) setWorld(Object.assign({}, w, { camera: { x: w.camera.x + a.x - b.x, y: w.camera.y + a.y - b.y, zoom: w.camera.zoom } }));
-      }
-      drag.last = p;
-    });
-    canvas.addEventListener('pointerup', function (e) {
-      if (!drag) return;
-      if (viewerControls && e.buttons) { drag.mode = viewerControls.gesture(e, space); drag.last = pointer(e); return; }
-      if (drag.mode === 'select') {
-        var p = pointer(e), w = getWorld(), start = drag.start;
-        /** @type {string[]} */ var ids = [];
-        if (Math.hypot(p.x - start.x, p.y - start.y) < 5) {
-          /** @type {ReturnType<typeof hitShip> | undefined} */ var hit = hitShip(w, p);
-          var hitDepth = hit ? hit.depth : Infinity;
-          if (hit && w.asteroids.some(function (a) { var rock = pickAsteroid(p, a, w.camera, viewport(), orbit); return rock && rock.depth < hitDepth; })) hit = undefined;
-          if (hit) ids = [hit.ship.id];
-          if (e.shiftKey && hit) { var hitId = hit.ship.id; ids = w.selectedShipIds.indexOf(hitId) >= 0 ? w.selectedShipIds.filter(function (id) { return id !== hitId; }) : w.selectedShipIds.concat(ids); }
-        } else {
-          ids = w.ships.filter(function (s) {
-            var q = project([s.position.x, s.position.y, 0], w.camera, viewport(), orbit);
-            return !s.docked && q.depth > 0 && q.x >= Math.min(p.x, start.x) && q.x <= Math.max(p.x, start.x) && q.y >= Math.min(p.y, start.y) && q.y <= Math.max(p.y, start.y);
-          }).map(function (s) { return s.id; });
-          if (e.shiftKey) ids = Array.from(new Set(w.selectedShipIds.concat(ids)));
-        }
-        var selected = sim.selectShips(w, ids);
-        if (!ids.length && Math.hypot(p.x - start.x, p.y - start.y) < 5) {
-          var platform = w.platforms.find(function (platform) {
-            if (platform.state !== 'deployed' && platform.state !== 'setting-up') return false;
-            var a = w.asteroids.find(function (a) { return a.id === platform.asteroidId; });
-            var q = project([platform.position.x, platform.position.y, platformHeight(platform, a)], w.camera, viewport(), orbit);
-            return q.depth > 0 && Math.hypot(q.x - p.x, q.y - p.y) < 14;
-          });
-          if (platform) selected = sim.selectPlatform(selected, platform.id);
-        }
-        setWorld(selected); if ((ids.length || selected.selectedPlatformId) && DW.audio) DW.audio.playSelect();
-      }
-      drag = null;
-    });
-    canvas.addEventListener('pointercancel', function () { drag = null; });
-    canvas.addEventListener('wheel', function (e) {
-      if(orbit.surface){e.preventDefault();return;}
-      e.preventDefault(); focus = false; var w = getWorld(), p = pointer(e), vp = viewport();
-      if(study && terrainZoom && e.deltaY<0 && w.asteroids[0]) {
-        var hit=pickAsteroid(p,w.asteroids[0],w.camera,vp,orbit);
-        if(hit){studyHeight=hit.position[2];orbit.height=studyHeight;w=Object.assign({},w,{camera:{x:hit.position[0],y:hit.position[1],zoom:w.camera.zoom}});}
-      }
-      var before = unproject(p, w.camera, vp, orbit, orbit.height);
-      var camera = { x: w.camera.x, y: w.camera.y, zoom: Math.max(0.2, Math.min(study ? 512 : 128, w.camera.zoom * Math.exp(-Math.max(-300, Math.min(300, e.deltaY)) * 0.0015))) };
-      var after = unproject(p, camera, vp, orbit, orbit.height);
-      if (before && after) { camera.x += before.x - after.x; camera.y += before.y - after.y; }
-      setWorld(Object.assign({}, w, { camera: camera }));
-    }, { passive: false });
-    window.addEventListener('keydown', function (e) {
-      if(orbit.surface)return;
-      if (e.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-      if (e.code === 'Space') { space = true; e.preventDefault(); }
-      if (e.code === 'KeyF') focus = true;
-      if (e.code === 'KeyH' && !e.repeat) { var next = sim.spawnHostileWave(getWorld()); setWorld(next); consume(next.combat.events); }
-      if (e.code === 'KeyK' && !e.repeat) setWorld(sim.spawnFighter(getWorld()));
-      if (e.code === 'KeyJ' && !e.repeat) {
-        var w = getWorld(), fighter = w.ships.find(function (s) { return s.type === 'escort' && w.selectedShipIds.indexOf(s.id) >= 0; });
-        if (fighter) setWorld(sim.damageFighter(w, fighter.id, 1));
-      }
-    });
-    window.addEventListener('keyup', function (e) { if (e.code === 'Space') space = false; });
-    window.addEventListener('blur', function () { space = false; drag = null; });
-    var rigLightButton=toolbar.querySelector('[data-rig-lights]');
-    if(rigLightButton)rigLightButton.addEventListener('click',function(){rigLightsEnabled=!rigLightsEnabled;if(rigLightButton)rigLightButton.setAttribute('aria-pressed',String(rigLightsEnabled));});
-    var spotlightButton = toolbar.querySelector('[data-spotlight]');
-    if (spotlightButton) spotlightButton.addEventListener('click', function () {
-      spotlightEnabled = !spotlightEnabled;
-      if (spotlightButton) spotlightButton.setAttribute('aria-pressed', String(spotlightEnabled));
-    });
-    var workShadowButton=toolbar.querySelector('[data-work-shadows]');
-    if(workShadowButton)workShadowButton.addEventListener('click',function(){workShadowsEnabled=!workShadowsEnabled;if(workShadowButton)workShadowButton.setAttribute('aria-pressed',String(workShadowsEnabled));});
-    var cutButton = toolbar.querySelector('[data-cut]');
-    var overviewButton = toolbar.querySelector('[data-overview]');
-    var topButton = toolbar.querySelector('[data-top]');
-    var orbitButton = toolbar.querySelector('[data-orbit]');
-    if (!cutButton || !overviewButton || !topButton || !orbitButton) throw new Error('Missing 3D controls');
-    orbitButton.addEventListener('click', function () { orbit.yaw += Math.PI / 6; orbit.tilt = 0.75; });
-    cutButton.addEventListener('click', function () {
-      var w = getWorld(), a = w.asteroids[0]; if (!a) return;
-      focus = false; w = sim.toggleAsteroidExcavation(w, a.id);
-      setWorld(Object.assign({}, w, { camera: { x: a.position.x, y: a.position.y, zoom: Math.min(viewport().height / (a.radius * 2.8), 1.8) } }));
-    });
-    overviewButton.addEventListener('click', function () {
-      focus = false; var w = getWorld();
-      var points = w.asteroids.map(function (a) { return a.position; }).concat(w.ships.map(function (s) { return s.position; }));
-      var xs = points.map(function (p) { return p.x; }), ys = points.map(function (p) { return p.y; });
-      var minX = Math.min.apply(null, xs) - 350, maxX = Math.max.apply(null, xs) + 350;
-      var minY = Math.min.apply(null, ys) - 350, maxY = Math.max.apply(null, ys) + 350;
-      orbit.yaw = 0; orbit.tilt = 0.48;
-      setWorld(Object.assign({}, w, { camera: { x: (minX + maxX) / 2, y: (minY + maxY) / 2,
-        zoom: Math.min(viewport().width / (maxX - minX), viewport().height / (maxY - minY)) * 0.7 } }));
-    });
-    topButton.addEventListener('click', function () { orbit.yaw = 0; orbit.tilt = 0.06; });
-    var underButton = toolbar.querySelector('[data-under]');
-    if (underButton) underButton.addEventListener('click', function () { orbit.tilt = Math.PI - .75; });
-
     /** @param {World} w */
     function sync(w) {
       if(study&&diagnostics.mode!=='normal')return;
@@ -1179,6 +867,7 @@
         if (fx.event.kind === 'weapon-fired' && fx.event.source) line([fx.event.source.x, fx.event.source.y, 0], [fx.event.position.x, fx.event.position.y, 0], 'rgba(255,160,100,' + Math.max(0, 1 - fx.age / 0.2) + ')');
       });
       effects = effects.filter(function (fx) { return fx.age < (fx.event.kind==='ship-destroyed'?5.5:.5); });
+      var drag=input.drag;
       if (drag && drag.mode === 'select') { hud.strokeStyle = '#b4e8ef'; hud.strokeRect(drag.start.x, drag.start.y, drag.last.x - drag.start.x, drag.last.y - drag.start.y); }
       if(study && diagnostics.actors && studyActors.length){
         setUniform('CraftFill',.18);
@@ -1280,7 +969,7 @@
       setSurfaceCamera: function(pose) {
         surfaceRegion=pose&&pose.region||0;
         if(!study)return;
-        if(viewerControls)viewerControls.reset();
+        if(input.viewerControls)input.viewerControls.reset();
         if(!pose){delete orbit.surface;studyHeight=0;orbit.height=0;return;}
         orbit.surface={right:pose.right,up:pose.up,back:pose.back,distance:1,focal:FOCAL};
         studyHeight=pose.eye[2]-pose.back[2];orbit.height=studyHeight;
@@ -1288,7 +977,7 @@
       },
       getOrbit: function () { return { yaw: orbit.yaw, tilt: orbit.tilt, height: studyHeight }; },
       /** @param {{yaw: number, tilt: number, height?: number}} value */
-      setOrbit: function (value) { if(viewerControls && (viewerControls.isFlying() || viewerControls.isPicking())){var savedCamera=getWorld().camera;viewerControls.reset();var resetWorld=getWorld();setWorld(Object.assign({},resetWorld,{camera:savedCamera}));} if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
+      setOrbit: function (value) { if(input.viewerControls && (input.viewerControls.isFlying() || input.viewerControls.isPicking())){var savedCamera=getWorld().camera;input.viewerControls.reset();var resetWorld=getWorld();setWorld(Object.assign({},resetWorld,{camera:savedCamera}));} if(study && value.height!==undefined)studyHeight=value.height;else if(study && getWorld().camera.zoom<1)studyHeight=0; orbit.yaw = value.yaw; orbit.tilt = Math.max(.06, Math.min(Math.PI - .06, value.tilt)); },
       /** @param {import('../experiments/types').CapitalShieldFrame|null} frame @param {HTMLCanvasElement|null} sky */
       setStudyCapitalShield:function(frame,sky){capitalShieldFrame=frame;shieldSky=sky;if(!sky&&capitalShieldPass){capitalShieldPass.dispose();capitalShieldPass=null;}},
       /** @param {import('../experiments/types').ShieldDisc[]} discs @param {HTMLCanvasElement|null} sky */
@@ -1302,7 +991,7 @@
       /** @param {import('./types').RigLighting[]} rigs */
       setStudyLightRigs:function(rigs){studyLightRigs=rigs.slice(0,2);},
       /** @param {boolean} enabled */
-      setRigLightsEnabled:function(enabled){rigLightsEnabled=enabled;if(rigLightButton)rigLightButton.setAttribute('aria-pressed',String(enabled));},
+      setRigLightsEnabled:function(enabled){input.setRigLightsEnabled(enabled);},
       // Upload one image per task while the fleet is loading, before publishing
       // textures to the combat renderer. No first-wreck upload or pixel processing.
       prepareStudyTextures: /** @param {HTMLImageElement[]} images */ async function(images){
