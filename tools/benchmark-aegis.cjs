@@ -1,13 +1,13 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),{performance}=require('node:perf_hooks');
 const root=path.join(__dirname,'..'),DW={sim:{METERS_PER_UNIT:10000/600}},ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math});
-for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js','src/flight-combat.js','src/flight-sim.js','assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
+for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
 const rig=DW.aegisFlight.create(),first=rig.geometry();
 for(let i=0;i<10;i++)rig.geometry();
 const start=performance.now();let replaced=0;
 for(let i=0;i<120;i++){const next=rig.geometry();for(let j=0;j<next.length;j++)if(next[j].vertices!==first[j].vertices)replaced+=next[j].vertices.byteLength;}
 console.log(JSON.stringify({batches:first.length,triangles:first.reduce((n,b)=>n+b.vertices.length/18,0),geometryMsPerFrame:(performance.now()-start)/120,recreatedVertexBytesPerFrame:replaced/120}));
-for(const file of ['assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','experiments/ship-packs.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
+for(const file of ['assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', 'experiments/ship-packs.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx);
 const model=DW.shipPackModels.find('quaternius-ultimate-spaceships:Spitfire').model,v=model.vertices;
 const craft=DW.flightSim.createCraft('benchmark',DW.arcade.create(0),'enemy');
 const impact={fraction:0,point:[0,0,0],model,local:[0,1,2].map(k=>(v[k]+v[k+6]+v[k+12])/3),normal:v.slice(3,6)};

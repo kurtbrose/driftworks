@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ellis observation lab / Driftworks</title>
-<script src="../src/asset-versions.js?v=4b195f7c946c"></script>
+<script src="../src/asset-versions.js?v=3806fa636e11"></script>
 <script>var studyAddress=new URL(location.href);if(!studyAddress.searchParams.has('mission'))studyAddress.searchParams.set('mission','ellis');if(!studyAddress.searchParams.has('bridgeGeometry'))studyAddress.searchParams.set('bridgeGeometry','objects');history.replaceState(null,'',studyAddress);</script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#02070b;color:#c9e5e6;font:13px system-ui,sans-serif}#viewer{position:fixed;inset:0;pointer-events:none}#viewer canvas{position:absolute;inset:0;width:100%;height:100%}#viewer canvas.flight-skybox{position:absolute;inset:0}.scene3d-controls,.night-sky-background{display:none!important}header,.panel{position:fixed;z-index:5;background:#07151de8;border:1px solid #35545e;border-radius:10px;padding:16px;backdrop-filter:blur(8px)}header{left:18px;top:18px;max-width:420px}h1{font-size:20px;margin:5px 0 8px}p{margin:7px 0;color:#a1bdc7;line-height:1.5}a{color:#9ee9dd}button,select,input{font:inherit}button,select{color:#d9efed;background:#102a34;border:1px solid #45636e;border-radius:5px;padding:8px;cursor:pointer}button[aria-pressed=true]{background:#a0e4d4;color:#09202a;border-color:#c1fff0}.cameras{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.panel{bottom:18px;left:18px;right:18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}label{display:flex;gap:7px;align-items:center}#timeline{width:min(40vw,500px)}#readout{position:fixed;right:18px;top:18px;z-index:5;background:#07151dd9;padding:12px;border-radius:8px;white-space:pre-line;font:12px/1.65 ui-monospace,monospace;max-width:340px}#support{display:none}small{font-size:11px;color:#94aeb7}@media(max-width:700px){header{max-width:290px;padding:10px}#readout{top:auto;bottom:170px;font-size:10px;max-width:240px}.panel{gap:8px;padding:10px}#timeline{width:48vw}}
@@ -59,17 +59,24 @@
 <script src="../experiments/input.js?v=f4504aaa17e7"></script>
 <script src="../src/flight-collision.js?v=babf497e155a"></script>
 <script src="../src/flight-combat.js?v=8d36d9e0b0b7"></script>
-<script src="../src/flight-sim.js?v=964ddf4fa55a"></script>
+<script src="../src/flight-mission-runtime.js?v=d37639dba5bc"></script>
+<script src="../src/flight-opponent.js?v=88d78c4f3b2e"></script>
+<script src="../src/flight-blockout.js?v=d6f16d169ff8"></script>
+<script src="../src/flight-sim.js?v=f306524ccaed"></script>
 <script src="../experiments/performance.js?v=a74bf5aa5b6a"></script>
 <script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
 <script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
 <script src="../assets/ships/ohio-vehicles/meshes.js?v=ce57f8e016e3"></script>
-<script src="../experiments/ship-packs.js?v=67e5a3ade96a"></script>
+<script src="../src/ship-catalog.js?v=b0863eab6fca"></script>
+<script src="../src/ship-hulls.js?v=23de2720981a"></script>
+<script src="../src/ship-assets.js?v=19c515897991"></script>
+<script src="../src/ship-render.js?v=a09fc336f2f6"></script>
+<script src="../experiments/ship-packs.js?v=47b193cc205a"></script>
 <script src="../experiments/mumble.js?v=96c5b42f6cc2"></script>
 <script src="../experiments/flight-dialogue.js?v=4a86ef22535a"></script>
 <script src="../experiments/evacuation-mission.js?v=2611bc3f57d1"></script>
 <script type="module" src="../experiments/evacuation-scenery.js?v=f021be84af75"></script>
-<script src="../experiments/flight-comms.js?v=0df0dfa68b8d"></script>
+<script src="../experiments/flight-comms.js?v=328d6450da71"></script>
 <script src="../experiments/comms-display.js?v=2e3d8d7dcb2f"></script>
 <script src="../experiments/face-blend.js?v=50dea498a8c7"></script>
 <script src="../experiments/flight-portraits.js?v=f897046d4498"></script>
@@ -91,9 +98,13 @@
 <script src="../experiments/flight-duel.js?v=a5144c3467aa"></script>
 <script src="../experiments/flight-watch.js?v=9ef026a9cf80"></script>
 <script type="module" src="../experiments/gas-giant-flight.js?v=d4c1ae871933"></script>
-<script src="../experiments/aegis-flight.js?v=fde01b64e38a"></script>
+<script src="../src/aegis-sim.js?v=557457ff0b54"></script>
+<script src="../src/aegis-visual.js?v=f278157b317d"></script>
+<script src="../src/aegis-battle.js?v=6a63752c69ec"></script>
+<script src="../experiments/aegis-flight.js?v=40fb0b8e7444"></script>
 <script src="../experiments/hyperbolic-battle.js?v=06169deeeb35"></script>
 <script src="../experiments/hyperbolic-flyby.js?v=01b42a1d3443"></script>
+<script src="../experiments/flight-studies.js?v=71e564d221a2"></script>
 <!-- /script-manifest --><script>(function(){
     'use strict';
     /** @typedef {import('./types').Pose} Pose */

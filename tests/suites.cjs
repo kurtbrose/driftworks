@@ -16,6 +16,7 @@ const suites = {
     "hyperbolic-performance.cjs",
     {"file":"shared.cjs","args":["flight"]},
     "flight-aim-tracking.cjs",
+    "flight-module-boundaries.cjs",
     "battle-zones.cjs",
     "scramble.cjs",
     "flight-evasion.cjs",

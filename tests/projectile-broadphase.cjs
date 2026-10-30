@@ -6,7 +6,7 @@ function setup(reference=false){
  const DW={sim:{METERS_PER_UNIT:1}};let lookups=0,hulls=0;
  class CountMap extends Map{get(key){if(typeof key==='string')lookups++;return super.get(key);}}
  const context=vm.createContext({window:{Driftworks:DW},Map:CountMap});
- for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js','src/flight-combat.js','src/flight-sim.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js']){
+ for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'assets/ships/quaternius-ultimate-spaceships/meshes.js','src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', 'experiments/ship-packs.js']){
   let source=fs.readFileSync(path.join(root,file),'utf8');
   if(reference&&file==='src/flight-combat.js'){
    const start=source.indexOf('    function trace('),end=source.indexOf('    DW.flightCombat =',start);

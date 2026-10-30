@@ -1,7 +1,10 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),cp=require('node:child_process'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{performance}=require('node:perf_hooks');
 const root=path.resolve(__dirname,'..'),refAt=process.argv.indexOf('--reference'),reference=cp.execFileSync('git',['rev-parse','--verify',(refAt<0?'HEAD':process.argv[refAt+1])+'^{commit}'],{cwd:root,encoding:'utf8'}).trim();
-const runtime='experiments/ship-packs.js',oldRuntime=cp.execFileSync('git',['show',reference+':'+runtime],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024}),newRuntime=fs.readFileSync(path.join(root,runtime),'utf8');
+const runtime='experiments/ship-packs.js',runtimeFiles=['src/ship-catalog.js','src/ship-hulls.js','src/ship-assets.js','src/ship-render.js',runtime];
+const splitReference=!cp.spawnSync('git',['cat-file','-e',reference+':src/ship-catalog.js'],{cwd:root}).status;
+const oldRuntime=(splitReference?runtimeFiles:[runtime]).map(file=>cp.execFileSync('git',['show',reference+':'+file],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024})).join('\n');
+const newRuntime=runtimeFiles.map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n');
 const files=fs.readdirSync(path.join(root,'assets/ships')).map(name=>'assets/ships/'+name+'/meshes.js').filter(file=>fs.existsSync(path.join(root,file)));
 const current=new Map(files.map(file=>[path.resolve(root,file),fs.readFileSync(path.join(root,file),'utf8')])),prior=new Map([...current].map(([file,source])=>[file,source.split('// BEGIN GENERATED HULL INDICES')[0]]));
 function load(old){const DW={shipPacks:[]},context=vm.createContext({window:{Driftworks:DW}});for(const source of (old?prior:current).values())vm.runInContext(source,context);vm.runInContext(old?oldRuntime:newRuntime,context);return DW;}

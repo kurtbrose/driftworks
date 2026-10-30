@@ -6,7 +6,7 @@
 <div><button id="old" aria-pressed="false">A · Original</button><button id="new" aria-pressed="true">B · Candidate</button><label>View <select id="view"><option value="armor">Armor flyby</option><option value="wide">Whole ship</option><option value="side">Service belt</option><option value="underside">Underside</option><option value="hangar">Hangar</option><option value="stern">Stern</option><option value="far">Combat distance</option></select></label><button id="motion" aria-pressed="false">Slow orbit</button><button id="damage" aria-pressed="false">Damage systems</button><button id="bench">Measure A/B</button></div>
 <div id="hint">Same camera, lighting and geometry. Press A / B to compare. Drag to orbit · wheel to zoom. <label>Lighting <select id="lighting"><option value="studio">Studio</option><option value="flight">Flight environment</option></select></label></div></header>
 <div id="viewer"></div><div id="label"></div><output id="report">Loading…</output><footer>Candidate 01 · panel hierarchy, recessed machinery, restrained maintenance markings · awaiting art direction</footer>
-<script src="../src/asset-versions.js?v=4b195f7c946c"></script>
+<script src="../src/asset-versions.js?v=3806fa636e11"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <!-- script-manifest:ellisCapture -->
 <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
@@ -51,17 +51,24 @@
 <script src="../experiments/input.js?v=f4504aaa17e7"></script>
 <script src="../src/flight-collision.js?v=babf497e155a"></script>
 <script src="../src/flight-combat.js?v=8d36d9e0b0b7"></script>
-<script src="../src/flight-sim.js?v=964ddf4fa55a"></script>
+<script src="../src/flight-mission-runtime.js?v=d37639dba5bc"></script>
+<script src="../src/flight-opponent.js?v=88d78c4f3b2e"></script>
+<script src="../src/flight-blockout.js?v=d6f16d169ff8"></script>
+<script src="../src/flight-sim.js?v=f306524ccaed"></script>
 <script src="../experiments/performance.js?v=a74bf5aa5b6a"></script>
 <script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
 <script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
 <script src="../assets/ships/ohio-vehicles/meshes.js?v=ce57f8e016e3"></script>
-<script src="../experiments/ship-packs.js?v=67e5a3ade96a"></script>
+<script src="../src/ship-catalog.js?v=b0863eab6fca"></script>
+<script src="../src/ship-hulls.js?v=23de2720981a"></script>
+<script src="../src/ship-assets.js?v=19c515897991"></script>
+<script src="../src/ship-render.js?v=a09fc336f2f6"></script>
+<script src="../experiments/ship-packs.js?v=47b193cc205a"></script>
 <script src="../experiments/mumble.js?v=96c5b42f6cc2"></script>
 <script src="../experiments/flight-dialogue.js?v=4a86ef22535a"></script>
 <script src="../experiments/evacuation-mission.js?v=2611bc3f57d1"></script>
 <script type="module" src="../experiments/evacuation-scenery.js?v=f021be84af75"></script>
-<script src="../experiments/flight-comms.js?v=0df0dfa68b8d"></script>
+<script src="../experiments/flight-comms.js?v=328d6450da71"></script>
 <script src="../experiments/comms-display.js?v=2e3d8d7dcb2f"></script>
 <script src="../experiments/face-blend.js?v=50dea498a8c7"></script>
 <script src="../experiments/flight-portraits.js?v=f897046d4498"></script>
@@ -80,9 +87,12 @@
 <script src="../experiments/flight-duel.js?v=a5144c3467aa"></script>
 <script src="../experiments/flight-watch.js?v=9ef026a9cf80"></script>
 <script type="module" src="../experiments/gas-giant-flight.js?v=d4c1ae871933"></script>
-<script src="../experiments/aegis-flight.js?v=fde01b64e38a"></script>
+<script src="../src/aegis-sim.js?v=557457ff0b54"></script>
+<script src="../src/aegis-visual.js?v=f278157b317d"></script>
+<script src="../src/aegis-battle.js?v=6a63752c69ec"></script>
+<script src="../experiments/aegis-flight.js?v=40fb0b8e7444"></script>
 
-<script src="aegis-windows-before-rig.js?v=72b182db7751"></script><script src="../experiments/aegis-flight.js?v=fde01b64e38a"></script>
+<script src="aegis-windows-before-rig.js?v=72b182db7751"></script><script src="../experiments/aegis-flight.js?v=40fb0b8e7444"></script>
 
 <script src="aegis-surface-data.js?v=ef17831d9d06"></script><script src="aegis-surface-study.js?v=c3659476ba4d"></script><script src="aegis-windows-data.js?v=93a9991d81e4"></script>
 <script src="aegis-windows-study.js?v=57db013819af"></script>

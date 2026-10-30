@@ -2,24 +2,56 @@
 
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
-## Flight simulation modules
+## Flight runtime ownership
 
-The shared flight runtime lives in `src/` and loads in this order:
+These ordinary scripts retain the static deployment model and load through the
+shared script manifest. The old `shipPackModels`, `training` and `aegisFlight`
+interfaces remain compatible with existing consumers and diagnostic wrappers.
 
-- `flight-collision.js` (`DW.flightCollision`): spatial indexing, candidate
-  scheduling, sphere intersections and authored hull intersections.
-- `flight-combat.js` (`DW.flightCombat`): projectile tracing, shield contacts,
-  damage, destruction and combat radio events. It depends on collision queries.
-- `flight-sim.js` (`DW.flightSim`): craft lifecycle, encounter configuration,
-  steering, targeting and simulation stepping. It orchestrates combat.
+| Module | Owns |
+| --- | --- |
+| `src/ship-catalog.js` | Model lookup and selection, blockout source mesh and reviewed gun/engine anchors |
+| `src/ship-hulls.js` | Source-mesh bounds, triangle indices, swept hull hits and surface burn projection; no browser resources |
+| `src/ship-assets.js` | Source/wreck image loading and catalog DOM options |
+| `src/ship-render.js` | Posed or shared local draw buffers, finishes, engine effects and scorch draw caches |
+| `experiments/ship-packs.js` | Compatibility facade over the four ship modules |
+| `src/flight-collision.js` | Spatial candidate queries, scheduling and shape intersection dispatch |
+| `src/flight-combat.js` | Projectile tracing, shields, damage, destruction and combat events |
+| `src/flight-opponent.js` | Opponent perception history, intercepts, steering and tactical policies |
+| `src/flight-blockout.js` | Fallback fighter draw geometry |
+| `src/flight-mission-runtime.js` | Opening/script cue progression and weapon-opening gate |
+| `src/flight-sim.js` | Craft lifecycle, encounter configuration, targeting and simulation stepping |
+| `src/aegis-sim.js` | Capital weapons, component health, hull/shield contact and launches; can run without a visual adapter or DOM |
+| `src/aegis-visual.js` | Shared capital GPU buffers, textures, material controls, posed meshes and destruction/shield visuals |
+| `src/aegis-battle.js` | Two-capital battle and centerline patrol orchestration |
+| `experiments/aegis-flight.js` | Composes capital simulation and its visual observer behind the existing rig API |
+| `experiments/flight-studies.js` | Shield previews and frozen shield, stretching and capital/fleet benchmark controls |
+| `experiments/flight.js` | Browser composition and frame orchestration, with explicit study hooks |
 
-Missions remain configuration in `experiments/flight-missions.js` and mission
-scripts; sessions own orchestration. Combat and collision do not depend on the
-flight simulation module. `DW.training` remains an alias of `DW.flightSim` for
-older callers; the shared runtime is no longer owned by a training mode.
-The simulation API retains collision/combat forwarding methods for compatibility.
-Script profiles, browser review pages and Node loaders use the same dependency
-order. These are ordinary local scripts with no build step.
+Mission definitions remain configuration in `experiments/flight-missions.js` and
+mission scripts. Communications asks `flightMissionRuntime` for the next cue,
+supplying whether the previous transmission is still occupying the channel.
+Only that lifecycle module advances opening/script cue state. The final opening
+transmission must finish before the weapon gate opens; radio still owns speech,
+voices, speaker formatting and its quiet-period bookkeeping.
+
+Opponent perception caches belong to `flightOpponent`. Simulation explicitly
+forgets a belief on transit and obtains the current belief for geometric rebasing.
+The existing player-evaluation policies in `experiments/flight-ai.js` retain their
+separate role; they do not replace the NPC opponent policy.
+
+Capital simulation accepts the authored numeric asset and exposes a borrowed
+visual view of poses, component health, gun state and local hit events. The view
+is read-only to the visual adapter. Collision meshes preserve the former Float32
+rounding. Component health and weapon behavior never depend on GPU batches or
+texture loading. The visual adapter caches its own buffers and observes component
+destruction/revival; compatibility rig damage/reset calls synchronize immediately.
+Shield hit anchors are computed in the visual adapter, not simulation.
+This refactor preserves existing tick/frame ordering and capital update cadence.
+
+`flightStudies.mount` receives explicit application accessors and callbacks.
+The frame loop reads its activity flags and invokes its before/after-render hooks;
+benchmark controls no longer share the main controller's lexical scope.
 
 ### Isolated arcade flight lab
 
@@ -177,14 +209,15 @@ variants continue to share the exhaustive-reference regression and exact real
 session comparison in `tests/projectile-broadphase.cjs` and
 `tests/collision-events.cjs`.
 
-`src/flight-sim.js` owns the isolated wave director, pilot decisions,
-steering primitives, training health, target IDs, and simple enemy geometry.
+`src/flight-sim.js` owns the isolated wave director, craft state and target IDs.
+Opponent decisions and perception belong to `src/flight-opponent.js`; fallback
+enemy draw geometry belongs to `src/flight-blockout.js`.
 The page calls its simulation on the same 1/120 s substeps as player flight.
 The wave director spawns three to six craft and assigns no more than two attack
 slots. Decisions update every 0.28–0.65 s, with committed break/evade/recover
 windows; continuous steering supplies pitch/yaw/roll/throttle/boost to the same
-`arcade.step` used by the player. Predictive aim uses target velocity with
-pilot-dependent lead and deterministic error. Fire is gated by range, alignment,
+`arcade.step` used by the player. Predictive opponent aim estimates velocity
+from observed target positions, with pilot-dependent sampling and response. Fire is gated by range, alignment,
 attack assignment, and short burst windows. Steering separates nearby enemies
 and avoids a conservative asteroid shell. It does not port FreeSpace source.
 
@@ -438,7 +471,7 @@ or weapon selectors. The optional environment argument supplies document/window/
 navigator for adapter regressions. Load it after `input.js` and before `flight.js`.
 
 The optional `?aegis=1` flight scenario loads a locally baked capital-ship rig
-before creating the sortie. `experiments/aegis-flight.js` owns ephemeral turret
+before creating the sortie. `src/aegis-sim.js` owns ephemeral turret
 angles, projectile banks and collision proxies; it uses `flightGuns.step` and
 `flightCombat.trace` for the existing projectile and damage rules. The flight
 composition root advances the rig only while unpaused and resets it with the

@@ -57,6 +57,25 @@ export type AegisFlightRig = {
     components?:()=>{id:string;kind:string;hp:number;maxHp:number;position:Vector}[];
     telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string;shots?:number;aimPoint?:Vector}[];capitals?:{team:string;position:Vector;heading:number;integrity:number;shots:number;hits:number}[]};
 };
+export type AegisVisualPart=Readonly<{id:string;kind:string;position:Vector;hp:number;maxHp:number}>;
+export type AegisSimulation=Required<Pick<AegisFlightRig,'setMountAim'|'reset'|'step'|'readout'|'hit'|'damage'|'components'|'telemetry'>> & {
+    visualState:()=>{
+        asset:AegisFlightAsset;unarmed:boolean;origin:Vector;team:string;
+        mounts:Readonly<{source:AegisFlightAsset['turrets'][number];yaw:number;elevation:number;guns:Guns}>[];
+        parts:AegisVisualPart[];
+        shieldHits:{point:Vector;time:number;heavy:boolean}[];
+        seconds:number;bridgeMetric:boolean|'thin-shell';
+    };
+};
+export type FlightStudiesHost={
+    readonly watch:ReturnType<ExperimentModules['flightWatch']['create']>|null;
+    readonly paused:boolean;readonly texturesReady:boolean;
+    activeMission:FlightMission;aegis:AegisFlightRig|null;
+    diagnostics:ReturnType<ExperimentModules['flightDiagnostics']['mount']>;
+    get:ElementsGetter;host:HTMLElement;pause:()=>void;resume:()=>void;
+    presentation:ReturnType<ExperimentModules['flightPresentation']['mount']>;
+    shipStretching:HTMLInputElement|null;view:()=>Snapshot;
+};
 export type AegisCapitalState={team:'ally'|'enemy';position:Vector;heading:number;velocity:Vector;integrity:number;region?:number;mainBatteryClear?:boolean};
 export type AegisRigOptions={state:AegisCapitalState;opponent:AegisCapitalState;opponentRig?:AegisFlightRig;unarmed?:boolean;bridge?:boolean};
 export type Pose = {
@@ -776,6 +795,19 @@ export type ExperimentModules = {
         shieldContacts:(combat:Combat,dt:number)=>void;
         radioEvent:(combat:Combat,event:Omit<RadioEvent,'serial'|'time'|'wave'>)=>void;
     };
+    flightMissionRuntime:{openingPending:(combat:Combat)=>boolean;
+        openingCue:(combat:Combat,busy:boolean)=>{index:number;line:FlightMission['opening'][number];craft:Craft}|null;
+        scramblePending:(combat:Combat)=>boolean;
+        scrambleCue:(combat:Combat,busy:boolean)=>{text:string;speaker:string;index:number}|null|undefined;};
+    flightStudies:{mount:(host:FlightStudiesHost)=>{readonly benchmarking:boolean;readonly enabled:boolean;beforeRender:(time:number)=>void;afterRender:()=>void}};
+    flightBlockout:Pick<ExperimentModules['flightSim'],'geometry'>;
+    flightOpponent:Pick<ExperimentModules['flightSim'],'intercept'|'steer'> & {
+        trackAim:(combat:Combat,craft:Craft,target:FlightState)=>{point:Vector;time:number};
+        decide:(combat:Combat,craft:Craft,target:FlightState)=>void;
+        progressFreeSpace:(combat:Combat,craft:Craft,target:FlightState,dt:number)=>void;
+        forget:(craft:Craft)=>void;
+        trackFor:(craft:Craft)=>{target:FlightState;region:number;at:number;position:Vector;velocity:Vector}|undefined;
+    };
     flightSim: {
         rebaseGeometry:(combat:Combat)=>void;
         setCollisionMode: (combat: Combat, mode: 'legacy'|'grid'|'tree'|'grid-events'|'tree-events') => void;
@@ -821,6 +853,10 @@ export type ExperimentModules = {
         }) => Batch[];
         allGuns: (combat: Combat, playerGuns: Guns) => Pick<Guns, 'bolts' | 'impacts'>;
     };
+    shipCatalog: Pick<ExperimentModules['shipPackModels'],'find'|'mixedModel'|'craftModel'|'gunAnchors'|'engineAnchors'>;
+    shipHulls: Pick<ExperimentModules['shipPackModels'],'hullRadius'|'hullHit'|'addScorch'>;
+    shipAssets: Pick<ExperimentModules['shipPackModels'],'loadTextures'|'textureSources'|'populate'> & {wreckTexture:(image:HTMLImageElement|undefined)=>HTMLImageElement|undefined};
+    shipRender: Pick<ExperimentModules['shipPackModels'],'geometry'|'detailedGeometry'|'fleetGeometry'|'sourceGeometry'|'sourceDraw'|'sourceFleetGeometry'|'engineGeometry'|'scorchGeometry'|'sourceScorchGeometry'|'paintColor'>;
     shipPackModels: {
         find: (id: string) => {
             pack: Pack;
@@ -1198,6 +1234,9 @@ declare module '../src/types' {
         gpuUi?: {create:(host:HTMLElement)=>import('./gpu-ui-types').GpuUi;color:(value:string|CanvasGradient|CanvasPattern)=>number[]};
         aegisFlightAsset?: AegisFlightAsset;
         hyperbolicBattle?:{create:()=>AegisFlightRig};
+        aegisSim?:{create:(options?:AegisRigOptions)=>AegisSimulation};
+        aegisVisual?:{create:(simulation:AegisSimulation,options?:AegisRigOptions)=>Pick<AegisFlightRig,'geometry'|'effects'|'setSurfaceDetail'>&{sync:()=>void};load:()=>Promise<unknown>};
+        aegisBattle?:Pick<NonNullable<DriftworksNamespace['aegisFlight']>,'createBattle'|'createEllisPatrol'>;
         aegisFlight?: {create:(options?:AegisRigOptions)=>AegisFlightRig;createBattle:(options?:{battlefield?:boolean;bridge?:boolean})=>AegisFlightRig;createEllisPatrol:()=>AegisFlightRig;load:()=>Promise<unknown>};
         fighterCockpit?: {crew:{vertices:number[];color:[number,number,number];name:string}[];chair:{vertices:number[];color:[number,number,number];name:string}[]};
         retailFlightProfiles?: Profile[];

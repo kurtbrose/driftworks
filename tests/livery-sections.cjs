@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),path=require('node:path');
 const c={window:{Driftworks:{}},Float32Array};vm.createContext(c);
-for(const file of ['src/mesh-builder.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/ship-packs.js','experiments/hull-panels.js','experiments/livery-sections.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8').replaceAll('export function','function'),c);
+for(const file of ['src/mesh-builder.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', 'experiments/ship-packs.js','experiments/hull-panels.js','experiments/livery-sections.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8').replaceAll('export function','function'),c);
 const DW=c.window.Driftworks,entry=DW.shipPacks.flatMap(p=>p.models).find(m=>m.name==='Spitfire'),batch=DW.shipPackModels.sourceGeometry(entry,[{eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]}],1),v=batch.vertices,stride=batch.stride||6;
 const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(let i=0;i<v.length;i+=stride)for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],v[i+k]);hi[k]=Math.max(hi[k],v[i+k]);}const extent=Math.max(...hi.map((x,k)=>x-lo[k]));for(let i=0;i<v.length;i+=stride)for(let k=0;k<3;k++)v[i+k]=(v[i+k]-(lo[k]+hi[k])/2)*2/extent;
 const source=v.slice(),artistRegions=c.analyzeHull([batch]),plan=c.tubularSections(artistRegions);

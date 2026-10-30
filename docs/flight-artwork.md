@@ -217,3 +217,15 @@ Primary gun counts in the flight lab come from retail POF GPNT bank records, imp
 The flight lab accepts `?tether=100&start=hub` with spans 100, 50, 20, 10 or 2 km and hub/tip/overview starts. `flightPresentation.tetherGeometry(lengthKm)` emits cached static grey batches using mesh-builder, converted from metres to world units once. Presentation rotates them about a fixed hub 20 km above the asteroid origin using the flight elapsed-seconds clock (independent of combat) and `tetherSpin` angular speed. Flight composition owns the selector, reset pose and initial combat-off setting. These are unsaved visual scenery, with no collision or momentum exchange simulation; tactical worlds and propulsion rules are unchanged.
 
 Operational spin assumes a symmetric hub at midspan: radius = span / 2, tip speed = sqrt(loadG * 9.80665 * radius), angular speed = tip speed / radius, and period = 2 pi / angular speed. The study defaults to 1 g tip acceleration, with 2 g and 3 g options (`spin=1g`, `spin=2g`, `spin=3g`). Old or invalid spin parameters fall back to 1 g. No material, taper, payload mass or safety-factor feasibility is calculated. Tether resets zero the local flight clock so tip starts align at phase zero; pausing freezes rotation. Rotation uses the real flight elapsed clock even with combat disabled.
+
+
+## Shared ship module ownership
+
+`src/ship-catalog.js` owns model selection and reviewed attachments;
+`src/ship-hulls.js` owns renderer-independent hull queries and burn projection;
+`src/ship-assets.js` owns browser image loading and catalog controls; and
+`src/ship-render.js` owns draw geometry and immutable buffer caches.
+`experiments/ship-packs.js` retains the `DW.shipPackModels` compatibility facade.
+The separation preserves source mesh coordinates, material data, attachment
+positions and the existing baked hull indices. See [flight architecture](flight-architecture.md)
+for capital simulation/visual ownership and load-order contracts.

@@ -6,7 +6,7 @@ assert.equal(DW.flightMissions.resolve('cinematic').sky.thinShell,true);
 const ballisticPath=DW.flightGuns.ballisticPath;let bridgeRoutes=0;
 DW.flightGuns.ballisticPath=function(...args){assert.equal(args[4],'thin-shell','capital aim uses the mission metric');bridgeRoutes++;return ballisticPath(...args);};
 const context=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math,console});
-for(const file of ['assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js','experiments/flight-watch.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
+for(const file of ['assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js','experiments/flight-watch.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
 const rig=DW.aegisFlight.createBattle({bridge:true}),director=DW.flightWatch.cinema(rig),U=DW.sim.METERS_PER_UNIT;
 flight.session.setStartPosition([0,-10000/U,5000/U]);
 const observer=flight.snapshot().combat;observer.player.hp=observer.player.maxHp=observer.hull=observer.maxHull=1e9;

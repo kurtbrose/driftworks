@@ -1143,6 +1143,7 @@
   "assets/ships/concept-trio/raptor.gltf": "8aef80fa74a4",
   "assets/ships/concept-trio/raptor.json": "7c0bc87eb1dc",
   "assets/ships/concept-trio/reference.png": "776d844561ec",
+  "assets/ships/industrial-kit/kit.js": "e7b204a1a186",
   "assets/ships/ohio-vehicles/meshes.js": "ce57f8e016e3",
   "assets/ships/ohio-vehicles/palette.png": "f4cdc950e0ab",
   "assets/ships/ohio-vehicles/palette.wreck.webp": "6e89cf31b268",

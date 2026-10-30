@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const reference=require('./fixtures/bolt-triangle-reference.cjs'),DW={};
-vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/ship-packs.js'),'utf8'),{window:{Driftworks:DW}});
+for(const file of ['src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', "experiments/ship-packs.js"])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),{window:{Driftworks:DW}});
 const pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
 let seed=29;const random=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;};
 const vector=()=>[0,0,0].map(()=>random()*12-6);

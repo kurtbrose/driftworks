@@ -83,6 +83,7 @@ module.exports = function runFlightTransitions(namespace) {
       URLSearchParams, location:{search}, performance:{now:() => now},
       requestAnimationFrame:callback => { frame = callback; }});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/ellis-feedback.js'), 'utf8'), context, {filename:'experiments/ellis-feedback.js'});
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight-studies.js'), 'utf8'), context, {filename:'experiments/flight-studies.js'});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight.js'), 'utf8'), context, {filename:'experiments/flight.js'});
     return {get, actions, session, elapsed, document, captures, clipboard, finishTextures,
       tick(time) { now = time; const callback = frame; frame = null; callback(time); assert(frame); }};

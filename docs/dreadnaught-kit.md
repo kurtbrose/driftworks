@@ -808,3 +808,34 @@ CPU medians 0.6 ms original / 0.7 ms rounded, frame medians 0.8 / 0.9 ms on the
 local uncapped browser. These are CPU/cadence measurements, not GPU timings or a
 speedup claim. The earlier fleet GPU experiment remains the evidence for the
 geometry comparison; reducing atlas size primarily saves memory.
+
+
+### Runtime ownership separation
+
+The production rig now composes `src/aegis-sim.js` (numeric weapons, health,
+collision and launches), `src/aegis-visual.js` (shared buffers, materials,
+textures and effects) and `src/aegis-battle.js` (battle/patrol orchestration).
+`experiments/aegis-flight.js` preserves the existing rig interface.
+
+The 2026-10-29 comparison used the unchanged `flight-rig.js` revision
+`1beda87c9e3b`. The production armor review scene at 1600 x 828 backing pixels,
+DPR 1, used the same fixed close-armor camera and studio lighting. Four ABBA
+blocks used 20 warm-up and 60 measured frames each. Both versions submitted
+56 draws and 28,136 triangles. CPU submission medians were 0.7 ms before and
+0.6 ms after; p95 was 0.9–1.0 ms before and 0.8 ms after. These small local
+CPU differences do not establish a speedup; GPU execution was not measured.
+The geometry probe retained 133 batches / 40,364 triangles and zero recreated
+vertex bytes per frame. Complete capital-battle state and posed geometry matched
+the prior implementation across 360 frames including component destruction and
+reset. Whole-ship, close armor, underside, hangar, stern and far captures were
+inspected; metre scale, materials, turrets, windows and engine appearance remain
+consistent. The browser flight and extracted shield controls also loaded without
+runtime errors. Temporary captures and timings are in `output/module-boundaries/`.
+
+The actual battle flight scene was also compared frozen before launch at time
+zero, seed 29, 1600 x 1000 backing pixels, DPR 1, using the same ABBA warm-up
+and sample counts. Each version contained 30 fighters and two capital rigs and
+submitted 201 draws / 460,759 triangles. Submission medians ranged 3.4–3.6 ms
+before and 3.4–3.7 ms after; p95 ranged 4.2–4.4 ms before and 3.8–4.5 ms after.
+No new bottleneck was demonstrated. This checks the production rendering path;
+it does not establish a live-combat GPU or whole-game frame budget.

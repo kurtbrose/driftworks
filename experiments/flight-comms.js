@@ -297,22 +297,18 @@
     /** @param {CommsState} state @param {number} dt @param {Combat} combat @param {boolean} busy @param {(() => number)} [random] @param {FlightState} [player] @returns {Line | null} */
     function step(state, dt, combat, busy, random, player) {
         var mission=DW.flightMissions.resolve(combat.mode);
-        if(combat.scramble){
-            var cue=combat.scramble.radio,at=[.1,.8,2.1,3.2,8],texts=['ALL FIGHTERS, SCRAMBLE! SCRAMBLE! Clear the flight deck!','Incoming! Plunging fire, high twelve!','Two is gone! Keep accelerating!','Three hit! Still flying. Go, go!','Flight, weapons free. Take the fight to them!'];
-            if(cue<at.length){
-                if(busy||combat.time<at[cue]||(cue===2&&combat.enemies[0].hp>0))return null;
-                combat.scramble.radio++;
-                return {text:texts[cue],speaker:cue===3?'LANCER THREE':'FLIGHT CONTROL',voice:'Scout',hostile:false,seed:101,radioSeed:7919,voiceSettings:pilotVoice(combat.enemies[cue===3?1:2]),portraitIndex:cue===3?1:2,craftId:'scramble-control',event:'scrambleStory'};
-            }
+        if(DW.flightMissionRuntime.scramblePending(combat)){
+            var story=DW.flightMissionRuntime.scrambleCue(combat,busy);
+            if(!story)return null;
+            return {text:story.text,speaker:story.speaker,voice:'Scout',hostile:false,seed:101,radioSeed:7919,voiceSettings:pilotVoice(combat.enemies[story.index]),portraitIndex:story.index,craftId:'scramble-control',event:'scrambleStory'};
         }
         if(combat.mode==='evacuation')return DW.evacuationMission.step(combat,Math.max(0,dt),busy);
         dt = Math.max(0, dt);
         state.time += dt;
-        if (combat.enabled && mission.opening.length && combat.openingStep < mission.opening.length+1) {
-            if (busy || combat.time < 1 || mission.opening.some(function(line){return !combat.enemies[line.speakerIndex];})) return null;
-            if (combat.openingStep === mission.opening.length) { combat.openingStep = mission.opening.length+1; state.wait = 8; return null; }
-            var introIndex = combat.openingStep++;
-            var opening=mission.opening[introIndex], introCraft = combat.enemies[opening.speakerIndex];
+        if (DW.flightMissionRuntime.openingPending(combat) && combat.enabled) {
+            var intro=DW.flightMissionRuntime.openingCue(combat,busy);
+            if(!intro){if(!DW.flightMissionRuntime.openingPending(combat))state.wait=8;return null;}
+            var introIndex=intro.index,opening=intro.line,introCraft=intro.craft;
             return {text: opening.text, speaker: (introCraft.team === 'ally' ? mission.teams.ally.radio+' ' : mission.teams.enemy.radio+' ') + DW.flightSim.callsign(introCraft) + ' / '+opening.channel,
                 voice: 'Scout', hostile: introCraft.team!=='ally', seed: 101 + introIndex * 37, radioSeed: 7919 + introIndex,
                 voiceSettings: pilotVoice(introCraft), portraitIndex: introCraft.index, craftId: introCraft.id, event:'missionIntro'};

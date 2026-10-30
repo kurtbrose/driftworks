@@ -3,7 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),{performance}=require('node:pe
 const {createFlight}=require('./headless.cjs');
 function sample(cached){
  const flight=createFlight({mission:'cinematic'}),DW=flight.DW,context=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math});
- for(const file of ['assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js']){
+ for(const file of ['assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js']){
   let source=fs.readFileSync(file,'utf8');if(!cached)source=source.replace('m.routeWait+=.12','m.routeWait=0');vm.runInContext(source,context,{filename:file});
  }
  const rig=DW.aegisFlight.createBattle({bridge:true}),view=flight.snapshot();rig.reset();view.state.eye=[0,-600,300];view.combat.hangarSupport=false;

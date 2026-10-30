@@ -3,7 +3,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..'),DW={};
 const context=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math});
-for(const file of ['assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','experiments/ship-packs.js','src/study-viewer.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
+for(const file of ['assets/ships/quaternius-ultimate-spaceships/meshes.js','assets/ships/concept-trio/meshes.js','src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', 'experiments/ship-packs.js','src/study-viewer.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
 const entry=DW.shipPackModels.find('quaternius-ultimate-spaceships:Spitfire');
 const batches=DW.studyViewer.referenceFighter(12,9,[0,0,0],-Math.PI/2).map(b=>({color:b.color,vertices:Array.from(b.vertices,v=>Number(v.toFixed(6)))}));
 const source={id:entry.model.id,author:'Quaternius',license:'CC0-1.0',url:'https://quaternius.com/packs/ultimatespaceships.html',sha256:entry.model.sha256,lengthMeters:12,metersPerUnit:9};

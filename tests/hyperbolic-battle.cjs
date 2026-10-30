@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{loadRuntime}=require('../tools/headless.cjs');
 const DW=loadRuntime(),H=DW.flightHyperbolic,U=DW.sim.METERS_PER_UNIT,ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,WeakMap,Math});
-for(const file of ['assets/ships/aegis-kit/flight-rig.js','experiments/aegis-flight.js','experiments/hyperbolic-battle.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),ctx,{filename:file});
+for(const file of ['assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js','experiments/hyperbolic-battle.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),ctx,{filename:file});
 let rig;const surface=(a,b,bolt)=>rig?rig.hit(a,b,bolt):null;surface.onImpact=(p,b,c)=>rig.damage(p,b.weapon.damage,c);
 const session=DW.flightSession.create({terrainHit:surface,surfaceFrame:()=>({point:[0,0,0],normal:[0,0,1]}),onGunshot:()=>{},onImpact:()=>{}});
 session.reset({mode:'hyperbolic',enabled:true,profile:DW.arcade.profiles[0]});rig=DW.hyperbolicBattle.create();rig.reset(session.snapshot().combat);session.respawn(rig.spawnPlayer(session.snapshot().state));

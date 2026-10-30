@@ -52,7 +52,12 @@ required dependency. `src/asteroid-terrain.js` follows simulation, geology and
 mining geometry; `src/scene3d.js` depends on it. Headless consumers use the CPU
 module directly rather than loading the scene controller for terrain helpers.
 `src/flight-collision.js` follows simulation units and precedes
-`src/flight-combat.js`, then `src/flight-sim.js`, in browser, headless and study-worker profiles.
+`src/flight-combat.js`. The `flightRuntime` group then loads mission lifecycle,
+opponent policy and fallback artwork before `src/flight-sim.js`, in browser,
+headless and study-worker profiles. Ship catalog, hull queries, browser assets
+and rendering load before the legacy `ship-packs.js` facade. Capital simulation,
+visual resources and battle orchestration load before `aegis-flight.js`.
+The browser controller loads `flight-studies.js` before `flight.js`.
 
 `npm run check:scripts` checks every declared script exists, checks profile order,
 and rejects stale generated blocks or extra external scripts outside those

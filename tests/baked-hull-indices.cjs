@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),cryp
 const root=path.resolve(__dirname,'..'),DW={shipPacks:[]},context=vm.createContext({window:{Driftworks:DW}});
 const files=fs.readdirSync(path.join(root,'assets/ships')).map(name=>'assets/ships/'+name+'/meshes.js').filter(file=>fs.existsSync(path.join(root,file)));
 for(const file of files)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
-vm.runInContext(fs.readFileSync(path.join(root,'experiments/ship-packs.js'),'utf8'),context);
+for(const file of ['src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', "experiments/ship-packs.js"])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
 const {build}=require('../tools/bake-hull-indices.cjs'),scorchReference=require('./fixtures/scorch-reference.cjs');
 const pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]},copy=value=>JSON.parse(JSON.stringify(value));
 let models=0;for(const pack of DW.shipPacks)for(const model of pack.models){

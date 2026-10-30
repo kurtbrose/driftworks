@@ -88,7 +88,9 @@ approved from a few spot checks.
 | Fuel, delta-v, launcher/catcher envelope | `src/propulsion.js`; conversions and payload mass in `src/sim.js` |
 | Save compatibility or new persistent fields | `src/sim.js`: constructors, `normalizeWorld`, `stepWorld`, serialization; `docs/world-state.md` |
 | Selection, right-click behavior, camera, zoom | `src/game.js`: `createScene`, `issueVisualContextOrder`, coordinate helpers; also `sim.issueContextOrder` |
-| Flight collision, combat and stepping | `src/flight-collision.js`: spatial queries and exact hits; `src/flight-combat.js`: tracing, shields and damage; `src/flight-sim.js`: craft lifecycle and stepping |
+| Flight collision, combat and stepping | `src/flight-collision.js`: spatial queries and exact hits; `src/flight-combat.js`: tracing, shields and damage; `src/flight-sim.js`: craft lifecycle and stepping; opponent policies in `src/flight-opponent.js`, mission gates in `src/flight-mission-runtime.js` |
+| Flight ship catalog/art/hulls | `src/ship-catalog.js`, `src/ship-render.js`, `src/ship-assets.js`, `src/ship-hulls.js`; legacy facade in `experiments/ship-packs.js` |
+| Capital flight runtime | `src/aegis-sim.js`, `src/aegis-visual.js`, `src/aegis-battle.js`; composition in `experiments/aegis-flight.js` |
 | Hostiles, weapons, threat director | `src/combat.js`; update ordering in `src/sim.js`; event-driven effects in `src/game.js` |
 | Craft/platform artwork | `src/ship-art.js`: Pixi painters, semantic scale, thrusters and platform presentation |
 | Terrain, excavation, surface contacts | `src/asteroid-terrain.js`: CPU fields, meshes, fitting and derived caches |

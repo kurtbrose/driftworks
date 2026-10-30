@@ -8,7 +8,7 @@ class Image {
 }
 const D={assetUrl:value=>value},context={window:{Driftworks:D},Image,console};
 for(const folder of ['quaternius-ultimate-spaceships','concept-trio','ohio-vehicles'])vm.runInNewContext(read('assets/ships/'+folder+'/meshes.js').toString(),context);
-vm.runInNewContext(read('experiments/ship-packs.js').toString(),context);
+for(const file of ['src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', "experiments/ship-packs.js"])vm.runInNewContext(read(file).toString(),context);
 (async()=>{
  const sources=new Set();
  for(const pack of D.shipPacks)for(const model of pack.models)sources.add('assets/ships/'+pack.id+'/'+model.texture);

@@ -22,7 +22,7 @@ const sandbox={setTimeout:callback=>callback(),devicePixelRatio:1,window:{Driftw
 vm.createContext(sandbox);
 vm.runInContext(read('src/mesh-builder.js'),sandbox);
 vm.runInContext(read('assets/ships/quaternius-ultimate-spaceships/meshes.js'),sandbox);
-vm.runInContext(read('experiments/ship-packs.js'),sandbox);
+for(const file of ['src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', "experiments/ship-packs.js"])vm.runInContext(read(file),sandbox);
 DW.shipPackModels.loadTextures=()=>new Promise(()=>{});
 // The mothership fixture itself is browser-verified; a compact stand-in keeps this
 // harness independent of unrelated terrain/shader setup in scene3d.

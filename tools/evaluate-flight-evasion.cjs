@@ -42,7 +42,7 @@ function audit(rows) {
 }
 function report(rows) {
     const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),sources={};
-    for(const file of ['tools/evaluate-flight-evasion.cjs','tools/headless.cjs','src/flight-combat.js','src/flight-sim.js','experiments/flight-model.js','experiments/guns.js','experiments/flight-duel.js','experiments/ship-packs.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/retail-profiles.js','experiments/retail-weapons.js'])
+    for(const file of ['tools/evaluate-flight-evasion.cjs','tools/headless.cjs','src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'experiments/flight-model.js','experiments/guns.js','experiments/flight-duel.js','src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', 'experiments/ship-packs.js','assets/ships/quaternius-ultimate-spaceships/meshes.js','experiments/retail-profiles.js','experiments/retail-weapons.js'])
         sources[file]=crypto.createHash('sha256').update(fs.readFileSync(path.join(__dirname,'..',file),'utf8').replace(/\r\n/g,'\n')).digest('hex');
     return {schema:1,duration:20,sources,note:'Unarmed legal inputs; identical initial state per matched case; unshielded Ulysses/Subach, blockout triangle hulls; seeds vary jink phase only; death censors duration/damage; not human calibration. Findings are unmet design goals, not expected passes.',findings:audit(rows),rows};
 }

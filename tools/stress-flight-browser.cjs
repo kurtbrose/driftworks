@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const playwright=require(require.resolve('playwright',{paths:[process.env.DRIFTWORKS_BROWSER_MODULES||process.cwd()]}));
 const root=path.resolve(__dirname,'..');
-const sources=Object.fromEntries(['src/flight-combat.js','src/flight-sim.js','experiments/flight-session.js','src/flight-collision.js','experiments/ship-packs.js','experiments/gpu-ui.js','experiments/flight-presentation.js','experiments/guns.js','src/explosions.js','src/scene3d.js'].map(file=>[file,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex')]));
+const sources=Object.fromEntries(['src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'experiments/flight-session.js','src/flight-collision.js', 'src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', 'experiments/ship-packs.js','experiments/gpu-ui.js','experiments/flight-presentation.js','experiments/guns.js','src/explosions.js','src/scene3d.js'].map(file=>[file,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex')]));
 const confirmation=process.argv.includes('--confirm');
 const option=(name,fallback)=>{const i=process.argv.indexOf(name);return i<0?fallback:process.argv[i+1];};
 const counts=option('--counts',confirmation?'100':'16,32,64,128,256,512').split(',').map(Number);
@@ -13,10 +13,16 @@ if(!counts.length||counts.some(n=>!Number.isInteger(n)||n<2||n>2048)||!scales.le
 const effectBurst=Number(option('--effect-burst','0'));
 if(!Number.isInteger(effectBurst)||effectBurst<0||counts.some(n=>effectBurst>n))throw Error('Effect burst must be between zero and the fighter count');
 const reference=option('--reference',null);
-const referenceTraining=reference?require('node:child_process').execFileSync('git',['show',reference+':experiments/training.js'],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024}):null;
-const referenceUi=reference?require('node:child_process').execFileSync('git',['show',reference+':experiments/gpu-ui.js'],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024}):null;
-if(referenceTraining)sources['src/flight-sim.js']=require('node:crypto').createHash('sha256').update(referenceTraining).digest('hex');
-if(referenceUi)sources['experiments/gpu-ui.js']=require('node:crypto').createHash('sha256').update(referenceUi).digest('hex');
+const referenceSources={};
+if(reference){
+ const cp=require('node:child_process'),exists=file=>!cp.spawnSync('git',['cat-file','-e',reference+':'+file],{cwd:root}).status;
+ const read=file=>cp.execFileSync('git',['show',reference+':'+file],{cwd:root,encoding:'utf8',maxBuffer:8*1024*1024});
+ const legacy=exists('experiments/training.js');
+ referenceSources['src/flight-sim.js']=read(legacy?'experiments/training.js':'src/flight-sim.js')+(legacy?'\nwindow.Driftworks.flightSim=window.Driftworks.training;':'');
+ if(!legacy)for(const file of ['src/flight-opponent.js','src/flight-blockout.js','src/flight-mission-runtime.js','src/flight-combat.js'])if(exists(file))referenceSources[file]=read(file);
+ referenceSources['experiments/gpu-ui.js']=read('experiments/gpu-ui.js');
+ for(const [file,source] of Object.entries(referenceSources))sources[file]=require('node:crypto').createHash('sha256').update(source).digest('hex');
+}
 function installProbe(count){
  const DW=window.Driftworks,probe=window.flightProbe={rows:[],collect:false,stages:{},frozen:false};
  const resolve=DW.flightMissions.resolve;
@@ -48,8 +54,7 @@ const summary=rows=>{const result={frames:rows.length,wallSeconds:rows.reduce((s
  const browser=await playwright.chromium.launch({channel:'chrome',headless:false,args:['--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
  const page=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});const errors=[];page.on('pageerror',e=>errors.push(String(e)));
  const rows=[];let graphics;
- if(referenceTraining)await page.route('**/flight-sim.js?*',route=>route.fulfill({status:200,contentType:'application/javascript',body:referenceTraining+'\nwindow.Driftworks.flightSim=window.Driftworks.training;'}));
- if(referenceUi)await page.route('**/gpu-ui.js?*',route=>route.fulfill({status:200,contentType:'application/javascript',body:referenceUi}));
+ for(const [file,source] of Object.entries(referenceSources))await page.route('**/'+path.basename(file)+'?*',route=>route.fulfill({status:200,contentType:'application/javascript',body:source}));
  const cdp=process.argv.includes('--profile')?await page.context().newCDPSession(page):null;
  if(cdp)await cdp.send('Profiler.enable');
  try{for(const count of counts)for(const scale of scales){
