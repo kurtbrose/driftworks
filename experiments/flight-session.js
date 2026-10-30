@@ -101,14 +101,7 @@
                 var roadside=definition.scenery.find(function(item){return item.kind==='roadside';});
                 var building=roadside&&roadside.placements&&roadside.placements.find(function(item){return item.model===reserve.launchModel;});
                 if(roadside&&building){
-                    var anchor=roadside.anchor||[0,0],offset=roadside.offset||[0,0],scale=roadside.scale===undefined?1:roadside.scale,r=asteroid.radius*units,deck=0;
-                    [-1000,-25,950].forEach(function(x){[-1000,-450,100].forEach(function(y){
-                        var px=anchor[0]+(x-anchor[0])*scale+offset[0],py=anchor[1]+(y-anchor[1])*scale+offset[1];
-                        deck=Math.max(deck,environment.surfaceFrame(asteroid,[px,py,Math.sqrt(Math.max(r*r*.05,r*r-px*px-py*py))]).point[2]*asteroid.radius);
-                    });});
-                    var front=building.size*scale*.3;
-                    launchLocal=[(anchor[0]+(building.x-anchor[0])*scale+offset[0]+Math.sin(building.yaw)*front)/units,
-                        (anchor[1]+(building.y-anchor[1])*scale+offset[1]-Math.cos(building.yaw)*front)/units,deck+9/units];
+                    launchLocal=DW.roadsideLayout.describe(asteroid,roadside,environment.surfaceFrame).launchOrigin(building);
                 }
             }
             if(launchLocal){combat.reinforcementOrigin=rotateVector(launchLocal,asteroid.rotation);combat.reinforcementDirection=rotateVector([0,-.6,.8],asteroid.rotation);}
@@ -165,6 +158,21 @@
                 DW.flightSim.spawn(combat, state, asteroid.radius);
             }
             return snapshot();
+        }
+        /** Configure the stationary cinematic observer after the encounter rig resets. */
+        function prepareCinematicObserver(){
+            setStartPosition([0,-10000/units,5000/units]);
+            state.throttle=0;combat.player.hp=combat.player.maxHp=1e9;
+            combat.hull=combat.maxHull=1e9;combat.enabled=true;
+        }
+        /** Preserve the encounter's relative placement while facing the Aegis study hull. */
+        function prepareAegisStudy(){
+            var oldEye=state.eye.slice(),start=[-200/units,-1100/units,1200+220/units];
+            DW.flightSim.participants(combat).filter(function(c){return c.controller!=='input';}).forEach(function(c){c.pose.eye=c.pose.eye.map(function(v,i){return v+start[i]-oldEye[i];});});
+            setStartPosition(start);state.ramp=[0,0,0];state.throttle=0;
+            var forward=[200,1100,-220],length=Math.hypot.apply(null,forward);forward=forward.map(function(v){return v/length;});
+            var rightLength=Math.hypot(forward[0],forward[1]),right=[forward[1]/rightLength,-forward[0]/rightLength,0];
+            state.right=right;state.back=forward.map(function(v){return -v;});state.up=[right[1]*forward[2],-right[0]*forward[2],right[0]*forward[1]-right[1]*forward[0]];
         }
         /** @param {number} elapsed @param {Demand} controls @param {{profile: Profile; weapon: Weapon}} config */
         function advance(elapsed, controls, config) {
@@ -245,7 +253,7 @@
             }
             return snapshot();
         }
-        return { snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance,
+        return { prepareCinematicObserver:prepareCinematicObserver, prepareAegisStudy:prepareAegisStudy, snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance,
             respawn:/** @param {import('./types').FlightState} pose */function(pose){
                 state=pose;guns=DW.flightGuns.create();DW.flightSim.bindPlayer(combat,state).guns=guns;
                 DW.flightSim.configure(combat,activeProfile);combat.player.damagedAt=combat.time;combat.player.hitFlash=0;combat.player.fire=false;

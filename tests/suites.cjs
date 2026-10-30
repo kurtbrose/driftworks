@@ -6,6 +6,7 @@ const suites = {
     {"file":"shared.cjs","args":["simulation"]},
     "campaign-intro.cjs",
     "tactical-boundaries.cjs",
+    "encounter-boundaries.cjs",
     {"file":"scenarios.cjs","args":["--all"]}
   ],
   flight: [

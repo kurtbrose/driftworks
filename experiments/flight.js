@@ -296,15 +296,8 @@
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
         if(aegis&&!aegisMode)aegis.reset(activeMission.id==='battle'||cinematic||activeMission.sky.hyperbolic?session.snapshot().combat:undefined);
         if(aegis&&aegis.spawnPlayer)session.respawn(aegis.spawnPlayer(session.snapshot().state));
-        if(cinematic){session.setStartPosition([0,-10000/units,5000/units]);var observer=session.snapshot();observer.state.throttle=0;observer.combat.player.hp=observer.combat.player.maxHp=1e9;observer.combat.hull=observer.combat.maxHull=1e9;observer.combat.enabled=true;get('watch-panel').hidden=true;}
-        if(aegis&&aegisMode){
-            var snapshot=session.snapshot();aegis.reset(snapshot.combat);var oldEye=snapshot.state.eye.slice(),aegisStart=[-200/units,-1100/units,1200+220/units];
-            DW.flightSim.participants(snapshot.combat).filter(function(c){return c.controller!=='input';}).forEach(function(c){c.pose.eye=c.pose.eye.map(function(v,i){return v+aegisStart[i]-oldEye[i];});});
-            session.setStartPosition(aegisStart);snapshot.state.ramp=[0,0,0];snapshot.state.throttle=0;
-            var forward=[200,1100,-220],forwardLength=Math.hypot.apply(null,forward);forward=forward.map(function(v){return v/forwardLength;});
-            var rightLength=Math.hypot(forward[0],forward[1]),right=[forward[1]/rightLength,-forward[0]/rightLength,0];
-            snapshot.state.right=right;snapshot.state.back=forward.map(function(v){return -v;});snapshot.state.up=[right[1]*forward[2],-right[0]*forward[2],right[0]*forward[1]-right[1]*forward[0]];
-        }
+        if(cinematic){session.prepareCinematicObserver();get('watch-panel').hidden=true;}
+        if(aegis&&aegisMode){aegis.reset(session.snapshot().combat);session.prepareAegisStudy();}
         if(tetherStudy) {
             var start=tetherParams.get('start');
             session.setStartPosition([start==='tip'?(tetherKm*500-20)/units:0,-(start==='overview'?tetherKm*800:300)/units,1200]);

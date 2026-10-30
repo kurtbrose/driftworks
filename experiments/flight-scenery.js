@@ -13,16 +13,8 @@
         var groups=/** @type {Map<string,{vertices:number[];color:[number,number,number]}>} */(new Map());
         /** @param {[number,number,number]} color */
         function group(color){var key=color.map(function(v){return v.toFixed(5);}).join(','),entry=groups.get(key);if(!entry){entry={vertices:[],color:color};groups.set(key,entry);}return entry.vertices;}
-        // A deliberately flat roadside platform, resting on the highest sampled rock.
-        var deck=0;
-        [-1000,-25,950].forEach(function(x){[-1000,-450,100].forEach(function(y){
-            var px=anchor[0]+(x-anchor[0])*scale+offset[0],py=anchor[1]+(y-anchor[1])*scale+offset[1];
-            var frame=DW.scene3d.surfaceFrame(asteroid,[px,py,Math.sqrt(Math.max(r*r*.05,r*r-px*px-py*py))]);
-            deck=Math.max(deck,frame.point[2]*asteroid.radius);
-        });});
-        deck+=1/units;
-        /** @param {number} x @param {number} y */
-        function ground(x,y){return {point:[(anchor[0]+(x-anchor[0])*scale+offset[0])/r,(anchor[1]+(y-anchor[1])*scale+offset[1])/r,deck/asteroid.radius],normal:[0,0,1]};}
+        var layout=DW.roadsideLayout.describe(asteroid,definition,DW.scene3d.surfaceFrame);
+        var ground=layout.ground;
         (definition.placements||[]).forEach(function(item){
             var model=catalog.models[item.model];if(!model)throw new Error('Unknown roadside model '+item.model);
             var frame=ground(item.x,item.y),z=frame.normal,len=1;

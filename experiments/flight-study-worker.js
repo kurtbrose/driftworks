@@ -4,7 +4,7 @@
     scope.window=scope;
     scope.DRIFTWORKS_TEST_MODE=true;
     /* script-manifest:studyWorker */
-    var files=["../src/propulsion.js","../src/combat.js","../src/logistics.js","../src/formations.js","../src/sim.js","retail-profiles.js","retail-weapons.js","flight-hyperbolic.js","guns.js","flight-missions.js","mission-ohio.js","../src/flight-collision.js","../src/flight-combat.js","../src/flight-mission-runtime.js","../src/flight-opponent.js","../src/flight-blockout.js","../src/flight-sim.js","../src/flight-prediction.js","flight-model.js","../assets/ships/quaternius-ultimate-spaceships/meshes.js","../assets/ships/concept-trio/meshes.js","../src/ship-catalog.js","../src/ship-hulls.js","../src/ship-assets.js","../src/ship-render.js","ship-packs.js","flight-ai.js","flight-duel.js","flight-study.js"];
+    var files=["../src/propulsion.js","../src/combat.js","../src/logistics.js","../src/formations.js","../src/sim.js","retail-profiles.js","retail-weapons.js","flight-hyperbolic.js","guns.js","flight-missions.js","mission-ohio.js","../src/roadside-layout.js","../src/flight-collision.js","../src/flight-combat.js","../src/flight-mission-runtime.js","../src/flight-opponent.js","../src/flight-blockout.js","../src/flight-sim.js","../src/flight-prediction.js","flight-model.js","../assets/ships/quaternius-ultimate-spaceships/meshes.js","../assets/ships/concept-trio/meshes.js","../src/ship-catalog.js","../src/ship-hulls.js","../src/ship-assets.js","../src/ship-render.js","ship-packs.js","flight-ai.js","flight-duel.js","flight-study.js"];
     /* /script-manifest */
     scope.onmessage=async function(event){
         try {

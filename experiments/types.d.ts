@@ -713,6 +713,7 @@ export type ExperimentModules = {
     evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};
     evacuationScenery:{geometry:(combat:Combat)=>Batch[];status:()=>string;visible:boolean};
     gasGiantWeather:typeof import('./gas-giant-weather');
+    roadsideLayout:{describe:(asteroid:Asteroid,definition:MissionScenery,surfaceFrame:(asteroid:Asteroid,direction:[number,number,number])=>{point:number[]})=>{scale:number;deckHeight:number;ground:(x:number,y:number)=>{point:number[];normal:number[]};launchOrigin:(building:NonNullable<MissionScenery['placements']>[number])=>number[]}};
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
     ellisFeedback:{describe:(pose:Pose)=>{region:number;distance:number;gap:number;proximity:number};create:()=>{reset:()=>void;update:(pose:Pose,dt:number,active:boolean,enabled:boolean)=>EllisCue}};
     ellisStudy:{yoYoAt:(distance:number,observerL:number,halfSize?:number)=>YoYoFrame;yoYo:(time:number,name:string)=>YoYoFrame;camera:(name:string,time?:number)=>Pose;sample:(time:number,scenario:string)=>{pose:Pose;velocity:number[]}[]};
@@ -976,6 +977,8 @@ export type ExperimentModules = {
     flightSession: {
         rotateVector: (vector: number[], angle: number) => number[];
         create: (environment: SessionEnvironment) => {
+            prepareCinematicObserver:()=>void;
+            prepareAegisStudy:()=>void;
             snapshot: () => Snapshot;
             reset: (config: {
                 mode: string;

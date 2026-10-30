@@ -5,7 +5,7 @@ assert.equal(raw.length,catalog.bytes);assert.equal(crypto.createHash('sha256').
 for(const source of catalog.sources)assert.equal(crypto.createHash('sha256').update(fs.readFileSync('assets/'+source.path)).digest('hex'),source.sha256);
 let queries=0;
 const context={window:{Driftworks:{sim:{METERS_PER_UNIT:10},scene3d:{surfaceFrame(_asteroid,direction){queries++;const length=Math.hypot(...direction),normal=direction.map(v=>v/length);return {point:normal,normal};}}}}};
-vm.createContext(context);for(const file of ['experiments/flight-missions.js','experiments/mission-ohio.js','experiments/flight-scenery.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
+vm.createContext(context);for(const file of ['experiments/flight-missions.js','experiments/mission-ohio.js','src/roadside-layout.js','experiments/flight-scenery.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
 const DW=context.window.Driftworks,definition=DW.flightMissions.resolve('ohio').scenery.find(item=>item.kind==='roadside');
 assert.equal(definition.scale,1/3);
 for(const name of ['Tractor','Truck','Flatbed'])assert(definition.placements.some(p=>p.model===name));

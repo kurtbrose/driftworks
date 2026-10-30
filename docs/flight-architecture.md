@@ -686,3 +686,19 @@ lighting/radiance resource cache. `src/impact-cues.js` owns the queued impact-st
 timeline. `experiments/skybox.js` retains GL resources, shader/render paths and
 composition of those services; its cue and stage exports remain aliases.
 The source coordinates, timing, cache sharing and rendered sky remain unchanged.
+
+## Encounter setup and roadside anchors
+
+`flightSession.prepareCinematicObserver()` owns observer placement, stationary
+controls and encounter health overrides. `prepareAegisStudy()` preserves NPC
+relative positions while setting the study start and facing basis. Call these
+after the encounter rig resets (and after any carrier player spawn); ordinary
+`reset()` restores the standard sortie. The browser owns rig selection and reset
+ordering, while these session methods can also run through the headless API.
+
+`src/roadside-layout.js` computes the flat roadside deck from nine terrain support
+samples and supplies both artwork ground frames and reinforcement launch anchors.
+The pavement is one metre above the highest support; the barn launch origin is
+eight metres above that pavement. Coordinates are asteroid-local scene units,
+with metre conversions explicit. Rendering and gameplay share the placement
+calculation without loading each other's resources.
