@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Industrial kit · Driftworks</title>
+<style>body{margin:0;background:#20282c;color:#e0dfd4;font:14px/1.5 system-ui}canvas{display:block;width:100%;height:100vh}aside{position:absolute;top:22px;left:22px;width:250px;background:#172024ed;border:1px solid #536066;padding:20px;border-radius:6px}h1{font-size:24px;margin:8px 0}small{color:#baaa83}select,button{font:inherit;color:inherit;background:#354047;border:1px solid #677275;padding:8px;margin:4px 0;width:100%}p{color:#b8c2c4}#stats{font-variant-numeric:tabular-nums}@media(max-width:650px){aside{width:190px;padding:12px;top:8px;left:8px;font-size:12px}}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
+<body><aside><small>DRIFTWORKS / CONSTRUCTION STUDY 01</small><h1>Industrial ship kit</h1><select id="model" aria-label="Assembly"><option value="kit">Six reusable parts</option><option value="tug">Yard tug</option><option value="hauler" selected>Spine hauler</option><option value="tanker">Orbital tanker</option><option value="cabin">Crew cabin</option><option value="truss">Truss bay</option><option value="cargo">Cargo pod</option><option value="tank">Tank cage</option><option value="engine">Engine module</option><option value="coupler">Coupler</option></select><button id="export">Download glTF</button><button id="reset">Reset view</button><label><input type="checkbox" id="wire"> Wireframe</label><p>Drag to orbit · Wheel to zoom · Right drag to pan.</p><p>Metre scale. Repeated 12 m structural bays, shared cabin and aft engine clusters. First geometry pass; no flight integration.</p><p id="stats"></p></aside>
+<script type="module">
+import * as T from 'three';
+import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js?v=b97879c74817';
+import {assembly,part,exportGLTF} from '../assets/ships/industrial-kit/kit.js?v=e7b204a1a186';
+const scene=new T.Scene();scene.background=new T.Color(0x20282c);
+const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=T.SRGBColorSpace;document.body.append(renderer.domElement);
+function viewport(){const left=innerWidth>650?320:0;renderer.domElement.style.position='fixed';renderer.domElement.style.left=left+'px';return innerWidth-left;}
+const camera=new T.PerspectiveCamera(36,viewport()/innerHeight,.1,2000);renderer.setSize(viewport(),innerHeight);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
+scene.add(new T.HemisphereLight(0xdae5ef,0x40382a,2));const light=new T.DirectionalLight(0xffe2b7,3.2);light.position.set(-30,70,40);scene.add(light);const rim=new T.DirectionalLight(0x9bc8ed,2);rim.position.set(30,20,-40);scene.add(rim);
+const grid=new T.GridHelper(160,32,0x586269,0x343e43);grid.position.y=-11;scene.add(grid);
+let model;const select=document.querySelector('#model');
+function reset(){const b=new T.Box3().setFromObject(model),c=b.getCenter(new T.Vector3()),s=b.getSize(new T.Vector3()).length();controls.target.copy(c);camera.position.copy(c).add(new T.Vector3(-.85,.65,1).normalize().multiplyScalar(s*1.5/Math.min(1,camera.aspect)));camera.lookAt(c);controls.update();}
+function load(){if(model)scene.remove(model);model=['kit','tug','hauler','tanker'].includes(select.value)?assembly(select.value):part(select.value);scene.add(model);wire();reset();}
+function wire(){if(model)model.traverse(o=>{if(o.isMesh)o.material.wireframe=document.querySelector('#wire').checked;});}
+select.onchange=load;document.querySelector('#wire').onchange=wire;document.querySelector('#reset').onclick=reset;
+document.querySelector('#export').onclick=()=>{const url=URL.createObjectURL(new Blob([exportGLTF(model)],{type:'model/gltf+json'}));const a=document.createElement('a');a.href=url;a.download='industrial-'+select.value+'.gltf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+onresize=()=>{camera.aspect=viewport()/innerHeight;camera.updateProjectionMatrix();renderer.setSize(viewport(),innerHeight);};load();
+function frame(){requestAnimationFrame(frame);controls.update();renderer.render(scene,camera);document.querySelector('#stats').textContent=renderer.info.render.triangles.toLocaleString()+' triangles · '+renderer.info.render.calls+' draws (review scene)';}frame();
+window.industrialReview={scene,model:()=>model,renderer,camera,exportGLTF};
+</script></body></html>
