@@ -1,26 +1,197 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Industrial kit · Driftworks</title>
-<style>body{margin:0;background:#20282c;color:#e0dfd4;font:14px/1.5 system-ui}canvas{display:block;width:100%;height:100vh}aside{position:absolute;top:22px;left:22px;width:250px;background:#172024ed;border:1px solid #536066;padding:20px;border-radius:6px}h1{font-size:24px;margin:8px 0}small{color:#baaa83}select,button{font:inherit;color:inherit;background:#354047;border:1px solid #677275;padding:8px;margin:4px 0;width:100%}p{color:#b8c2c4}#stats{font-variant-numeric:tabular-nums}@media(max-width:650px){aside{width:190px;padding:12px;top:8px;left:8px;font-size:12px}}</style>
-<script src="../src/asset-versions.js?v=83ffcffdc3a5"></script>
-<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head>
-<body><aside><small>DRIFTWORKS / CONSTRUCTION STUDY 01</small><h1>Industrial ship kit</h1><select id="model" aria-label="Assembly"><option value="kit">Six reusable parts</option><option value="tug">Yard tug</option><option value="hauler" selected>Spine hauler</option><option value="tanker">Orbital tanker</option><option value="cabin">Crew cabin</option><option value="truss">Truss bay</option><option value="cargo">Cargo pod</option><option value="tank">Tank cage</option><option value="engine">Engine module</option><option value="coupler">Coupler</option></select><button id="export">Download glTF</button><button id="reset">Reset view</button><label><input type="checkbox" id="wire"> Wireframe</label><p>Drag to orbit · Wheel to zoom · Right drag to pan.</p><p>Metre scale. Repeated 12 m structural bays, shared cabin and aft engine clusters. First geometry pass; no flight integration.</p><p id="stats"></p></aside>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Industrial shipyard · Driftworks</title>
+<style>
+:root{color-scheme:dark;--ink:#e6e1d3;--muted:#9babae;--line:#3b494b;--gold:#cba966}
+*{box-sizing:border-box}body{margin:0;background:#20282b;color:var(--ink);font:13px/1.55 system-ui,sans-serif;display:grid;grid-template-columns:260px minmax(0,1fr);height:100dvh;overflow:hidden}
+aside{z-index:3;background:#182125;border-right:1px solid var(--line);padding:26px 22px;overflow:auto}h1{font-size:25px;line-height:1.1;font-weight:550;letter-spacing:-.8px;margin:10px 0 20px}small,.eyebrow{color:var(--gold);letter-spacing:2px;font-size:10px;text-transform:uppercase}label{display:block;color:var(--muted);font-size:11px;letter-spacing:.7px;margin:20px 0 8px}select,button{color:var(--ink);font:inherit;border:1px solid #4c5b5e;background:#263439;border-radius:3px;padding:9px;width:100%}select{padding-right:1px}button{cursor:pointer}button:hover{background:#3c4c50;border-color:#a39370}button:disabled{opacity:.45;cursor:wait}.primary{background:#b69a60;color:#151e20;border-color:#b69a60;font-weight:650;margin-top:15px}.primary:hover{background:#d0b47e}.views{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}.views button{font-size:11px;padding:7px 2px}.checks{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}.checks label{margin:0;color:var(--ink);font-size:11px;letter-spacing:0;display:flex;align-items:center;gap:5px}.checks input{accent-color:var(--gold)}p{color:var(--muted);font-size:12px}#description{margin-top:16px}#dimensions{color:#d2c9b6;font-size:12px;font-variant-numeric:tabular-nums}details{border-top:1px solid var(--line);margin-top:22px;padding-top:12px}summary{color:#b5c0bd;font-size:11px;cursor:pointer}#stats,#perf-result,#export-status{white-space:pre-line;font-size:11px;color:#a8b6b7;font-variant-numeric:tabular-nums}details button{font-size:11px;margin:6px 0}a{color:#cbb783}main{min-width:0;position:relative;overflow:hidden}.heading{position:absolute;z-index:2;top:26px;left:30px;pointer-events:none}.heading h2{font-size:24px;font-weight:450;letter-spacing:-.5px;margin:3px 0}#subtitle{color:#a0b0b3;font-size:11px}.corner{position:absolute;bottom:23px;left:30px;color:#8b9c9e;font-size:11px;pointer-events:none}#stage{position:absolute;inset:0}canvas{display:block;width:100%;height:100%}#crane-control[hidden]{display:none}input[type=range]{width:100%;accent-color:var(--gold)}.quiet{font-size:10px;color:#839598;margin-top:18px}.error{color:#f1ae94!important}
+main{grid-column:2}.focus aside{display:none}body.focus{grid-template-columns:0 minmax(0,1fr)}#focus{position:absolute;top:25px;right:24px;z-index:3;width:auto;padding:7px 11px;font-size:11px;background:#283538c9}#render{margin-top:6px;font-size:11px}
+@media(max-width:650px){body{grid-template-columns:190px minmax(0,1fr)}aside{padding:18px 12px}h1{font-size:21px}.heading{top:18px;left:15px}.heading h2{font-size:19px}.views{grid-template-columns:1fr 1fr}label{margin-top:13px}}
+</style>
+<script src="../src/asset-versions.js?v=68b45d641cef"></script>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script>
+</head>
+<body>
+<aside>
+<small>Driftworks / Study 02</small><h1>Industrial<br>shipyard</h1>
+<label for="model">VESSELS & COMPONENTS</label>
+<select id="model" aria-label="Assembly">
+<optgroup label="Working vessels"><option value="modular">Route assembly / standard modules</option><option value="hauler" selected>02 / Spine hauler</option><option value="tug">01 / Yard tug</option><option value="tanker">03 / Orbital tanker</option><option value="salvager">04 / Salvage carrier</option><option value="bulkCarrier">05 / Bulk-fluid carrier</option><option value="fleet">Family at shared scale</option></optgroup>
+<optgroup label="Construction kit"><option value="kit">Eleven reusable components</option><option value="bulkTank">Bulk fluid tank / 28 m module</option><option value="latticeCrane">Lattice capture arm</option><option value="cabin">Crew pressure cabin</option><option value="truss">12 m truss bay</option><option value="cargo">Standard cargo module</option><option value="tank">Pressure vessel & cage</option><option value="engine">Drive module</option><option value="coupler">Spine coupler</option><option value="service">Service cassette</option><option value="crane">Recovery arm</option><option value="rcs">Maneuvering block</option></optgroup>
+</select>
+<p id="description"></p><div id="dimensions"></div>
+<section id="consist-controls" hidden>
+<label for="route">ROUTE LOADOUT</label><select id="route" aria-label="Route loadout"><option value="mixed">Mixed freight</option><option value="container">Container run</option><option value="fluid">Bulk-fluid transfer</option><option value="support">Field support</option><option value="custom" disabled>Custom consist</option></select>
+<p class="quiet">DW-14 · 14 m bays · rigid four-corner locks<br>Change the inserts or reorder whole modules.</p>
+<div id="manifest"></div><button id="add-bay" style="margin-top:8px">+ Add scaffold bay</button>
+<label for="separation">ASSEMBLY SEPARATION</label><input id="separation" type="range" min="0" max="6" step=".1" value="0" aria-label="Assembly separation">
+<p id="consist-note" class="quiet"></p></section>
+<label>INSPECTION VIEWS</label><div class="views">
+<button data-view="hero">3/4</button><button data-view="side">Side</button><button data-view="top">Top</button><button data-view="front">Bow</button><button data-view="rear">Engines</button><button data-view="bottom">Belly</button>
+</div>
+<div class="checks"><label><input type="checkbox" id="wire">Wireframe</label><label><input type="checkbox" id="grid">Grid</label><label><input type="checkbox" id="spin">Rotate</label></div>
+<div class="checks"><label><input type="checkbox" id="scale" checked>Suited crew + fighter</label></div><p id="scale-note" class="quiet"></p>
+<div id="crane-control" hidden><label for="crane">ARM CONFIGURATION</label><input id="crane" type="range" min="0" max="1" step=".01" value="0"></div>
+<div id="hoist-control" hidden><label for="hoist">ARM REACH</label><input id="hoist" type="range" min="0" max="1" step=".01" value="0"></div>
+<button id="export" class="primary" disabled>Download editable glTF</button><button id="render">Save PNG render</button><p id="export-status">Loading surface atlas…</p>
+<details><summary>Geometry & performance</summary><p id="stats"></p><div class="checks"><label><input type="checkbox" id="batch" checked>Batch static display</label></div><button id="benchmark">Compare source / batched</button><p id="perf-result"></p><button id="validate">Preview exported glTF</button></details>
+<p class="quiet">Orbit: drag · Zoom: wheel · Pan: right drag<br>Models in metres. Export preserves parts,<br>materials, textures and arm pivots.</p>
+<p class="quiet">Standalone modeling study.<br><a href="../assets/ships/industrial-kit/README.md">Construction notes</a></p>
+</aside>
+<main><button id="focus">Focus view</button><div class="heading"><span class="eyebrow">Modular civilian fleet</span><h2 id="title">Spine hauler</h2><span id="subtitle">EXPOSED STRUCTURE / SHARED HARDWARE</span></div><div id="stage" aria-label="3D industrial ship preview"></div><div class="corner">IVORY ENAMEL · OXIDE PRIMER · GALVANIZED STEEL</div></main>
+<script src="../assets/ships/aegis-kit/reference-fighter.js?v=115e1686a2da"></script>
 <script type="module">
+import '../assets/characters/quaternius-astronaut/poses.js';
+import {makeReferenceTemplates,createScaleReferences} from '../assets/ships/industrial-kit/scale.js?v=974d2130042b';
 import * as T from 'three';
 import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js?v=b97879c74817';
-import {assembly,part,exportGLTF} from '../assets/ships/industrial-kit/kit.js?v=e7b204a1a186';
-const scene=new T.Scene();scene.background=new T.Color(0x20282c);
-const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=T.SRGBColorSpace;document.body.append(renderer.domElement);
-function viewport(){const left=innerWidth>650?320:0;renderer.domElement.style.position='fixed';renderer.domElement.style.left=left+'px';return innerWidth-left;}
-const camera=new T.PerspectiveCamera(36,viewport()/innerHeight,.1,2000);renderer.setSize(viewport(),innerHeight);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
-scene.add(new T.HemisphereLight(0xdae5ef,0x40382a,2));const light=new T.DirectionalLight(0xffe2b7,3.2);light.position.set(-30,70,40);scene.add(light);const rim=new T.DirectionalLight(0x9bc8ed,2);rim.position.set(30,20,-40);scene.add(rim);
-const grid=new T.GridHelper(160,32,0x586269,0x343e43);grid.position.y=-11;scene.add(grid);
-let model;const select=document.querySelector('#model');
-function reset(){const b=new T.Box3().setFromObject(model),c=b.getCenter(new T.Vector3()),s=b.getSize(new T.Vector3()).length();controls.target.copy(c);camera.position.copy(c).add(new T.Vector3(-.85,.65,1).normalize().multiplyScalar(s*1.5/Math.min(1,camera.aspect)));camera.lookAt(c);controls.update();}
-function load(){if(model)scene.remove(model);model=['kit','tug','hauler','tanker'].includes(select.value)?assembly(select.value):part(select.value);scene.add(model);wire();reset();}
-function wire(){if(model)model.traverse(o=>{if(o.isMesh)o.material.wireframe=document.querySelector('#wire').checked;});}
-select.onchange=load;document.querySelector('#wire').onchange=wire;document.querySelector('#reset').onclick=reset;
-document.querySelector('#export').onclick=()=>{const url=URL.createObjectURL(new Blob([exportGLTF(model)],{type:'model/gltf+json'}));const a=document.createElement('a');a.href=url;a.download='industrial-'+select.value+'.gltf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-onresize=()=>{camera.aspect=viewport()/innerHeight;camera.updateProjectionMatrix();renderer.setSize(viewport(),innerHeight);};load();
-function frame(){requestAnimationFrame(frame);controls.update();renderer.render(scene,camera);document.querySelector('#stats').textContent=renderer.info.render.triangles.toLocaleString()+' triangles · '+renderer.info.render.calls+' draws (review scene)';}frame();
-window.industrialReview={scene,model:()=>model,renderer,camera,exportGLTF};
-</script></body></html>
+import {GLTFLoader} from '../vendor/three/examples/jsm/loaders/GLTFLoader.js?v=67ac5551fdaf';
+import {buildConsist,routePresets,moduleStandard,assembly,part,shipNames,setSurfaceTexture,setCranePose,setArmExtension,setHoistPayout,batchStatic,disposeBatch,exportGLTF} from '../assets/ships/industrial-kit/kit.js?v=ff90512804d8';
+
+const $=id=>document.getElementById(id),host=$('stage');
+let consistTypes=routePresets.mixed.slice();
+const payloadLabels={cargo:'Container rack',tank:'Fluid sphere',bulkFluid:'Bulk vessel / 2 bays',machinery:'Service machinery',habitat:'Crew pressure module',empty:'Empty scaffold'};
+
+const descriptions={
+modular:['Route-built freighter','A rigid hull assembled from standard scaffold modules. Containers, fluid vessels, machinery and crew inserts share the same interfaces; an empty bay exposes the structure.'],
+bulkCarrier:['Bulk-fluid carrier','Two large domed fluid vessels in circumferential restraint frames, with pump cassettes, linked transfer lines and a radially mounted capture arm.'],
+bulkTank:['Bulk fluid tank','A 24 m domed vessel on a 28 m transport frame: circumferential restraints, service bus, fill/drain manifold and pump cassette.'],
+latticeCrane:['Lattice capture arm','A rigid articulated manipulator with telescoping reach and three positive capture jaws. Operates in any orientation.'],
+hauler:['Spine hauler','An open load-bearing spine with staggered, removable cargo. A clear service bay breaks the rhythm of the containers.'],
+tug:['Yard tug','A compact twin-drive workboat: offset bridge, pressure cabin below, exposed service machinery and a three-point capture fitting.'],
+tanker:['Orbital tanker','Three pressure vessels restrained by independent cages, with external transfer lines, EVA handholds and a small forward crew section.'],
+salvager:['Salvage carrier','A broad, open recovery cradle. Offset operations cabin, mismatched stores and two articulated capture arms leave the centre free for recovered hardware.'],
+fleet:['Industrial family','Five vessels at the same metre scale. Shared cabin, truss, tank and drive hardware; different working silhouettes.'],
+kit:['Construction kit','Eleven reusable components on a parts bench. Hull panels, fasteners, service pipes and machinery are modeled; paint markings share a local atlas.'],
+cabin:['Crew pressure cabin','Rounded pressure capsule, recessed octagonal viewports, radial EVA handholds and sealed access collars.'],
+truss:['12 m truss bay','Square structural longerons, alternating diagonal braces, attachment nodes, utility lines and an external equipment bus.'],
+cargo:['Standard cargo module','Chamfered container, corner castings, twin sealed doors, locking bars and external handling rails.'],
+tank:['Pressure vessel & cage','A spherical vessel in a 12 m structural cradle, with retaining bands, restraints, transfer lines and radial service access.'],
+engine:['Drive module','Cowled machinery, exposed feed lines, heat-resistant throat and a genuinely hollow, reinforced expansion bell.'],
+coupler:['Spine coupler','Bolted flanges, a central transfer duct and external locking rods.'],
+service:['Service cassette','A replaceable machinery block with heat exchangers, top access and paired accumulator cylinders.'],
+crane:['Recovery arm','Separate slew, shoulder, elbow and grapple groups. Use the deployment control to inspect the joints.'],
+rcs:['Maneuvering block','A replaceable three-axis thruster cassette with a marked handling surface.']
+};
+const scene=new T.Scene();scene.background=new T.Color(0x242c2e);
+const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;host.append(renderer.domElement);
+const camera=new T.OrthographicCamera(-40,40,30,-30,.1,2000),controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minZoom=.3;controls.maxZoom=8;
+scene.add(new T.HemisphereLight(0xdbe5e7,0x756955,2));
+const key=new T.DirectionalLight(0xffedd6,3.6);key.position.set(-35,65,30);key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.bias=-.0003;key.shadow.normalBias=.035;scene.add(key);scene.add(key.target);
+const rim=new T.DirectionalLight(0xa3c6d4,2.5);rim.position.set(30,30,-40);scene.add(rim);
+const fill=new T.DirectionalLight(0xd2e5e5,.65);fill.position.set(-25,5,45);scene.add(fill);const bounce=new T.DirectionalLight(0xa9bdc4,1.25);bounce.position.set(-20,-35,30);scene.add(bounce);
+const grid=new T.GridHelper(240,48,0x576568,0x374446);grid.visible=false;scene.add(grid);
+const referenceTemplates=window.Driftworks.miningStudyCrew.poses?makeReferenceTemplates(window.Driftworks.miningStudyCrew.poses.standing,window.Driftworks.aegisReferenceFighter):null;
+let scaleActors=new T.Group();scene.add(scaleActors);
+let model,display,imported=null,displayIsBatch=false,bounds,baseSpan=40,busy=false,profiling=false,textureReady=false,frames=[],submission=[],last=0;
+const preset={hero:[-.92,.65,1],side:[0,.08,1],top:[0,1,.001],front:[-1,.02,.001],rear:[1,.03,.001],bottom:[-.45,-1,.45]};
+function fit(direction=preset.hero){
+  bounds=new T.Box3().setFromObject(model);const frameBounds=bounds.clone();if(scaleActors.visible&&scaleActors.children.length)frameBounds.union(new T.Box3().setFromObject(scaleActors));const center=frameBounds.getCenter(new T.Vector3()),size=frameBounds.getSize(new T.Vector3());
+  controls.target.copy(center);camera.zoom=1;camera.position.copy(center).add(new T.Vector3(...direction).normalize().multiplyScalar(size.length()*2+40));camera.up.set(0,1,0);camera.lookAt(center);camera.updateMatrixWorld();
+  // Fit the actual projection, including very tall/narrow viewports.
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;const v=new T.Vector3();
+  for(const root of [model,...(scaleActors.visible?[scaleActors]:[])]){root.updateMatrixWorld(true);root.traverse(o=>{if(!o.isMesh)return;const positions=o.geometry.attributes.position;for(let i=0;i<positions.count;i++){v.fromBufferAttribute(positions,i).applyMatrix4(o.matrixWorld).applyMatrix4(camera.matrixWorldInverse);minX=Math.min(minX,v.x);maxX=Math.max(maxX,v.x);minY=Math.min(minY,v.y);maxY=Math.max(maxY,v.y);}});}
+  const width=maxX-minX,height=maxY-minY,shift=new T.Vector3((minX+maxX)/2,(minY+maxY)/2,0).applyQuaternion(camera.quaternion);camera.position.add(shift);controls.target.add(shift);
+  baseSpan=Math.max(height,width/(host.clientWidth/host.clientHeight))*1.10;resize();controls.update();
+  const s=size.length();key.position.copy(center).add(new T.Vector3(-s*.55,s,s*.6));key.target.position.copy(center);const sc=key.shadow.camera;sc.left=sc.bottom=-s*.65;sc.right=sc.top=s*.65;sc.near=.1;sc.far=s*3;sc.updateProjectionMatrix();renderer.shadowMap.needsUpdate=true;
+  grid.position.set(center.x,bounds.min.y-.4,center.z);grid.scale.setScalar(Math.max(1,s/180));
+}
+function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);const aspect=w/h;camera.left=-baseSpan*aspect/2;camera.right=baseSpan*aspect/2;camera.top=baseSpan/2;camera.bottom=-baseSpan/2;camera.updateProjectionMatrix();}
+function clearImported(){
+  if(!imported)return;scene.remove(imported);const geos=new Set(),mats=new Set(),textures=new Set();imported.traverse(o=>{if(o.isMesh){geos.add(o.geometry);mats.add(o.material);if(o.material.map)textures.add(o.material.map);}});
+  for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const t of textures)t.dispose();imported=null;$('validate').textContent='Preview exported glTF';$('subtitle').textContent='EXPOSED STRUCTURE / SHARED HARDWARE';
+}
+function rebuildDisplay(){clearImported();
+  if(display){scene.remove(display);if(displayIsBatch)disposeBatch(display);}
+  displayIsBatch=$('batch').checked;display=displayIsBatch?batchStatic(model):model;scene.add(display);renderer.shadowMap.needsUpdate=true;
+}
+function updateScaleCaption(){document.querySelector('.corner').textContent=scaleActors.visible&&scaleActors.children.length?'CREW 1.80 m · REFERENCE FIGHTER 12 m · METRE SCALE':'IVORY ENAMEL · OXIDE PRIMER · GALVANIZED STEEL';}
+function updateScaleActors(){
+  scene.remove(scaleActors);scaleActors=referenceTemplates?createScaleReferences(model,$('model').value,referenceTemplates):new T.Group();
+  scaleActors.visible=$('scale').checked;scene.add(scaleActors);updateScaleCaption();
+  $('scale-note').textContent=referenceTemplates?(scaleActors.children.length?'Crew 1.80 m · Spitfire 12 m\nViewer references; excluded from ship exports.':'Scale references appear in vessel views.'):'Scale crew could not load: '+window.Driftworks.miningStudyCrew.error;
+}
+function load(){
+  if(busy)return;
+  $('perf-result').textContent='';frames=[];submission=[];if(textureReady)$('export-status').textContent='Embedded textures · Named component groups';
+  const value=$('model').value;model=value==='modular'?buildConsist(consistTypes,{separation:Number($('separation').value)}):[...shipNames,'kit','fleet'].includes(value)?assembly(value):part(value);setCranePose(model,Number($('crane').value));setArmExtension(model,Number($('hoist').value));rebuildDisplay();updateScaleActors();fit();
+  $('title').textContent=descriptions[value][0];$('description').textContent=descriptions[value][1];$('crane-control').hidden=!['modular','crane','salvager','fleet','kit','latticeCrane','bulkCarrier'].includes(value)||(value==='modular'&&!consistTypes.includes('machinery'));$('hoist-control').hidden=!['latticeCrane','bulkCarrier','fleet','kit'].includes(value);
+  const reviewURL=new URL(location.href);reviewURL.searchParams.set('model',value);history.replaceState(null,'',reviewURL);
+  $('consist-controls').hidden=value!=='modular';if(value==='modular')renderManifest();
+  const size=bounds.getSize(new T.Vector3());$('dimensions').textContent=size.x.toFixed(1)+' × '+size.z.toFixed(1)+' × '+size.y.toFixed(1)+' m  /  L × W × H';
+}
+function renderManifest(){
+  const host=$('manifest');host.replaceChildren();
+  consistTypes.forEach((type,index)=>{
+    const row=document.createElement('div');row.style.cssText='border:1px solid #3b494b;padding:8px;margin:8px 0';
+    const label=document.createElement('label');label.textContent='MODULE '+String(index+1).padStart(2,'0');label.style.margin='0 0 5px';label.htmlFor='payload-'+index;
+    const select=document.createElement('select');select.id='payload-'+index;select.setAttribute('aria-label','Module '+(index+1)+' payload');
+    for(const payload of moduleStandard.payloads){const option=document.createElement('option');option.value=payload;option.textContent=payloadLabels[payload];select.append(option);}select.value=type;
+    select.onchange=()=>{consistTypes[index]=select.value;customConsist();};
+    const actions=document.createElement('div');actions.style.cssText='display:flex;gap:4px;margin-top:5px';
+    for(const [text,title,disabled,action] of [
+      ['←','Move module '+(index+1)+' forward',index===0,()=>{[consistTypes[index-1],consistTypes[index]]=[consistTypes[index],consistTypes[index-1]];}],
+      ['→','Move module '+(index+1)+' aft',index===consistTypes.length-1,()=>{[consistTypes[index+1],consistTypes[index]]=[consistTypes[index],consistTypes[index+1]];}],
+      ['Remove','Remove module '+(index+1),consistTypes.length===1,()=>{consistTypes.splice(index,1);}]
+    ]){const button=document.createElement('button');button.textContent=text;button.setAttribute('aria-label',title);button.disabled=disabled;button.onclick=()=>{action();customConsist();};actions.append(button);}
+    row.append(label,select,actions);host.append(row);
+  });
+  $('add-bay').disabled=consistTypes.length>=6;
+  const spans=consistTypes.reduce((n,t)=>n+(t==='bulkFluid'?2:1),0),gap=Number($('separation').value);
+  $('consist-note').textContent=spans+' standard '+(spans===1?'bay':'bays')+' · '+(spans*14)+' m structure\n'+(gap?'Exploded assembly · '+gap.toFixed(1)+' m between modules':'Coupled · perimeter locks carry structural loads');
+}
+function customConsist(){$('route').value='custom';load();}
+$('route').onchange=()=>{if(routePresets[$('route').value]){consistTypes=routePresets[$('route').value].slice();$('separation').value='0';load();}};
+$('add-bay').onclick=()=>{if(consistTypes.length<6){consistTypes.push('empty');customConsist();}};
+$('separation').oninput=load;
+
+function save(data,name,type){const url=URL.createObjectURL(new Blob([data],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function lock(on){busy=on;controls.enabled=!on;for(const el of document.querySelectorAll('aside input,aside select,aside button,#focus'))el.disabled=on||(el.id==='export'&&!textureReady);if(!on&&$('model').value==='modular')renderManifest();}
+$('focus').onclick=()=>{document.body.classList.toggle('focus');$('focus').textContent=document.body.classList.contains('focus')?'Show controls':'Focus view';};
+$('render').onclick=()=>{if(busy)return;renderer.render(scene,camera);renderer.domElement.toBlob(blob=>{if(blob)save(blob,'industrial-'+$('model').value+'-study02.png','image/png');});};
+$('scale').onchange=()=>{scaleActors.visible=$('scale').checked;updateScaleCaption();fit(camera.position.clone().sub(controls.target).normalize().toArray());renderer.shadowMap.needsUpdate=true;};
+$('model').onchange=load;$('batch').onchange=rebuildDisplay;$('wire').onchange=()=>{model.traverse(o=>{if(o.isMesh)o.material.wireframe=$('wire').checked;});renderer.shadowMap.needsUpdate=true;};$('grid').onchange=()=>grid.visible=$('grid').checked;
+$('crane').oninput=()=>{if(busy)return;setCranePose(model,Number($('crane').value));rebuildDisplay();const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());$('dimensions').textContent=size.x.toFixed(1)+' × '+size.z.toFixed(1)+' × '+size.y.toFixed(1)+' m  /  L × W × H';};
+$('hoist').oninput=()=>{if(busy)return;setArmExtension(model,Number($('hoist').value));rebuildDisplay();const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());$('dimensions').textContent=size.x.toFixed(1)+' × '+size.z.toFixed(1)+' × '+size.y.toFixed(1)+' m  /  L × W × H';};
+for(const button of document.querySelectorAll('[data-view]'))button.onclick=()=>{if(!busy){$('spin').checked=false;fit(preset[button.dataset.view]);}};
+$('export').onclick=()=>save(exportGLTF(model),'industrial-'+$('model').value+'-study02.gltf','model/gltf+json');
+$('validate').onclick=async()=>{
+  if(!textureReady||busy)return;if(imported){rebuildDisplay();$('export-status').textContent='Editable construction tree restored.';return;}lock(true);$('export-status').textContent='Re-importing embedded glTF…';
+  try{const data=exportGLTF(model),result=await new GLTFLoader().parseAsync(data,'');const a=new T.Box3().setFromObject(model,true),b=new T.Box3().setFromObject(result.scene,true),delta=a.min.distanceTo(b.min)+a.max.distanceTo(b.max);let textures=0,expectedTextures=0;result.scene.traverse(o=>{if(o.isMesh&&o.material.map)textures++;});model.traverse(o=>{if(o.isMesh&&o.material.map)expectedTextures++;});if(delta>.0001||textures!==expectedTextures)throw new Error('Export bounds/texture mismatch');scene.remove(display);if(displayIsBatch)disposeBatch(display);imported=result.scene;display=imported;displayIsBatch=false;imported.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(imported);renderer.shadowMap.needsUpdate=true;$('validate').textContent='Return to source';$('subtitle').textContent='RE-IMPORTED glTF / EMBEDDED PAINT & PART PIVOTS';$('export-status').textContent='glTF round trip passed.\nViewing the re-imported export.';}catch(e){$('export-status').textContent=String(e);$('export-status').className='error';}finally{lock(false);}
+};
+function quantile(values,q){const sorted=values.slice().sort((a,b)=>a-b);return sorted[Math.min(sorted.length-1,Math.floor(sorted.length*q))]||0;}
+$('benchmark').onclick=async()=>{
+  if(busy||document.hidden)return;lock(true);$('spin').checked=false;
+  const scaleVisible=scaleActors.visible;scaleActors.visible=false;
+  const state=$('batch').checked,results=[];const next=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+  try{
+    for(const batch of [false,true,true,false]){
+      $('batch').checked=batch;rebuildDisplay();$('perf-result').textContent='Measuring '+(batch?'batched':'editable source')+'…';
+      for(let i=0;i<25;i++)await next();const cpu=[],cadence=[];let prev=performance.now();profiling=true;
+      for(let i=0;i<90;i++){await next();if(document.hidden)throw new Error('Keep this tab foreground for the comparison.');const now=performance.now();cadence.push(now-prev);prev=now;const start=performance.now();renderer.render(scene,camera);cpu.push(performance.now()-start);}
+      profiling=false;results.push({batch,median:quantile(cpu,.5),p95:quantile(cpu,.95),frameMedian:quantile(cadence,.5),frameP95:quantile(cadence,.95),draws:renderer.info.render.calls,triangles:renderer.info.render.triangles});
+    }
+    const source=results.filter(r=>!r.batch),batched=results.filter(r=>r.batch),mean=(rows,k)=>rows.reduce((s,r)=>s+r[k],0)/rows.length;
+    $('perf-result').textContent='Source → batched\n'+source[0].draws+' → '+batched[0].draws+' draws\n'+mean(source,'median').toFixed(2)+' → '+mean(batched,'median').toFixed(2)+' ms submit median\n'+mean(source,'p95').toFixed(2)+' → '+mean(batched,'p95').toFixed(2)+' ms submit p95\n'+mean(source,'frameMedian').toFixed(1)+' → '+mean(batched,'frameMedian').toFixed(1)+' ms cadence median\n'+mean(source,'frameP95').toFixed(1)+' → '+mean(batched,'frameP95').toFixed(1)+' ms cadence p95\nCPU submission only; GPU time unmeasured.';
+    const report={model:$('model').value,viewport:[host.clientWidth,host.clientHeight],backing:renderer.getDrawingBufferSize(new T.Vector2()).toArray(),dpr:renderer.getPixelRatio(),shadows:'2048 static cached',camera:{position:camera.position.toArray(),target:controls.target.toArray(),zoom:camera.zoom},warmup:25,samples:90,order:'A/B/B/A',results};
+    save(JSON.stringify(report,null,2),'industrial-'+$('model').value+'-performance.json','application/json');
+  }catch(error){$('perf-result').textContent=String(error);}finally{profiling=false;$('batch').checked=state;scaleActors.visible=scaleVisible;rebuildDisplay();lock(false);}
+};
+const atlasURL=window.Driftworks.assetUrl('../assets/ships/industrial-kit/panels.png');
+new T.TextureLoader().load(atlasURL,texture=>{
+  const canvas=document.createElement('canvas');canvas.width=texture.image.width;canvas.height=texture.image.height;canvas.getContext('2d').drawImage(texture.image,0,0);setSurfaceTexture(texture,canvas.toDataURL('image/png'));textureReady=true;$('export').disabled=false;$('export-status').textContent='Embedded textures · Named component groups';renderer.shadowMap.needsUpdate=true;
+},undefined,error=>{$('export-status').textContent='Surface atlas failed to load. Reload to retry.';$('export-status').className='error';console.error(error);});
+const requestedModel=new URLSearchParams(location.search).get('model');if(requestedModel&&Array.from($('model').options).some(option=>option.value===requestedModel))$('model').value=requestedModel;
+new ResizeObserver(()=>{if(model)fit();}).observe(host);load();
+function frame(now){
+  requestAnimationFrame(frame);const dt=last?Math.min(.1,(now-last)/1000):0;last=now;if(document.hidden||profiling)return;
+  if(!busy){controls.update();if($('spin').checked){const v=camera.position.clone().sub(controls.target);v.applyAxisAngle(new T.Vector3(0,1,0),dt*.16);camera.position.copy(controls.target).add(v);camera.lookAt(controls.target);}}
+  const start=performance.now();renderer.render(scene,camera);submission.push(performance.now()-start);frames.push(dt*1000);if(submission.length>120){submission.shift();frames.shift();}
+  if(Math.floor(now/400)!==Math.floor((now-dt*1000)/400)){let parts=0,meshes=0;model.traverse(o=>{if(o.userData.part)parts++;if(o.isMesh)meshes++;});$('stats').textContent=parts+' reusable modules / '+meshes+' source meshes\n'+renderer.info.render.triangles.toLocaleString()+' triangles / '+renderer.info.render.calls+' display draws\n'+quantile(submission,.5).toFixed(2)+' ms render submit median\n'+quantile(frames,.95).toFixed(1)+' ms cadence p95\nNo simulation, effects or GPU timing.';}
+}
+requestAnimationFrame(frame);
+window.Driftworks.industrialReview={scene,model:()=>model,renderer,camera,exportGLTF};
+</script>
+</body></html>

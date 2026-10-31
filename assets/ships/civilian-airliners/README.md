@@ -135,8 +135,8 @@ The regression checks fitting dimensions, six-triangle glazing and seal counts.
 | 72 m commuter | 248,507 | 242,291 | 6,216 (2.5%) |
 | 180 m liner | 380,774 | 347,918 | 32,856 (8.6%) |
 
-The flight exports retain nine material batches per ship. The depot's existing
-static batching helper produces thirteen groups per revised ship versus fourteen
+The window-only flight exports retain nine material batches per ship. The depot's
+static batching helper produced thirteen groups per ship versus fourteen
 for the originals (geometry layouts can split a material into several groups).
 These are geometry/submission counts, not a measured frame-rate improvement.
 
@@ -148,3 +148,29 @@ frame median/p95 remained 13.3/13.4 ms at the display cap; CPU submission was
 0.9/0.8 ms including the sky. GPU completion and a busy flight/combat workload
 were not measured. The neutral-gray review independently shows 14 → 13 draws
 per ship at 1326 × 931, DPR 1.5, with unchanged 13.3/13.4 ms frame cadence.
+
+## Recessed drive throats
+
+The engine detail pass replaces the stacked solid cylinders with an open nacelle,
+an annular red shoulder, a hollow titanium collar and a tapered graphite liner.
+The blue throat sits 0.85 nozzle radii behind the mouth: 2.2185 m on the commuter,
+3.57 m on the liner. A separate titanium hub meets its inner edge. These are real
+surfaces, so camera movement reveals depth without extra lights or textures.
+
+The mouth occupies the original rearmost hub plane. Full exported bounds remain
+the same within float precision; engine positions, radii, hulls, navigation lights,
+refueling contacts and amber window materials are preserved. There are still two
+drives on the commuter and three on the liner.
+
+Compared with the approved window pass, the commuter drops from 242,291 to
+242,131 triangles and the liner from 347,918 to 347,678: 400 fewer triangles total.
+Both still use nine flight material batches. The existing depot batching helper
+now produces twelve groups per ship, down from thirteen, because the open red
+nacelles can share the hull's material/attribute layout. The regression checks
+the open collar topology, actual throat recession and original rear bound.
+
+The matched depot overview (same 906 × 1332 backing pixels and DPR 1.5 as above)
+now submits 185 draws / 984,162 triangles, versus 187 / 984,562 after the window
+pass. Frame median/p95 remains 13.3/13.4 ms at the display cap; CPU submission
+remains 0.8 ms including the sky. GPU completion is not measured. The full
+`npm run check` passed all 145 test entries for this engine pass.

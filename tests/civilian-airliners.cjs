@@ -119,6 +119,39 @@ for (const key of ['commuter','double-decker']) {
   const sightlines = JSON.parse(fs.readFileSync(path.join(root,key+'-visibility.json')));
   assert.equal(sightlines.rays.length,30);
   assert(sightlines.rays.every(ray=>ray.blocked.length===0));
+  const engineCount=key==='commuter'?2:3;
+  const collars=gltf.nodes.filter(n=>n.name?.startsWith('Titanium drive collar'));
+  const throats=gltf.nodes.filter(n=>n.name?.startsWith('Recessed luminous drive throat'));
+  assert.equal(collars.length,engineCount);
+  assert.equal(throats.length,engineCount);
+  assert.equal(gltf.nodes.filter(n=>n.name?.startsWith('Tapered exhaust liner')).length,engineCount);
+  const radius=dimensions.beam*(key==='commuter'?.145:.14);
+  const mouth=dimensions.length*.532+.16;
+  for(const collar of collars) {
+    const points=vertices(collar);
+    assert(Math.abs(Math.max(...points.map(p=>p[2]))-mouth)<1e-4,
+      'exhaust rim preserves the original rearmost engine bound');
+    const center=[0,1].map(axis=>points.reduce((sum,p)=>sum+p[axis],0)/points.length);
+    const a=gltf.accessors[gltf.meshes[collar.mesh].primitives[0].indices];
+    const view=gltf.bufferViews[a.bufferView],size=a.componentType===5123?2:4;
+    const offset=binStart+(view.byteOffset||0)+(a.byteOffset||0);
+    const index=i=>size===2?bytes.readUInt16LE(offset+i*size):bytes.readUInt32LE(offset+i*size);
+    const cross=(a,b,p)=>(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
+    for(let i=0;i<a.count;i+=3) {
+      const p=[points[index(i)],points[index(i+1)],points[index(i+2)]];
+      if(Math.abs(cross(p[0],p[1],p[2]))<1e-8)continue;
+      const sides=p.map((v,j)=>cross(v,p[(j+1)%3],center));
+      assert(!(sides.every(v=>v>=-1e-8)||sides.every(v=>v<=1e-8)),
+        'no collar triangle may cap the exhaust centerline');
+    }
+  }
+  for(const throat of throats) {
+    const depth=vertices(throat).map(p=>mouth-p[2]);
+    assert(depth.every(v=>Math.abs(v-radius*.85)<1e-4),
+      'luminous throat is physically recessed behind the open mouth');
+  }
+  assert(!gltf.nodes.some(n=>n.name?.startsWith('Dark exhaust well')),
+    'no solid cylinder cap may cover the recessed exhaust');
   const cargo=gltf.nodes.filter(n=>n.name?.startsWith('Cargo clamshell leaf'));
   const gear=gltf.nodes.filter(n=>n.name?.startsWith('Stowed landing gear housing recessed floor'));
   const vents=gltf.nodes.filter(n=>n.name?.startsWith('Ventral heat exchanger recessed floor'));

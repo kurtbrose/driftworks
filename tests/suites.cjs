@@ -144,6 +144,7 @@ const suites = {
     "flight-portraits.cjs",
     "portrait-registration.cjs",
     "concept-ships.cjs",
+    "industrial-kit.cjs",
     "dreadnaught-kit.cjs",
     "aegis-surface-study.cjs"
   ],

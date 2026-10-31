@@ -382,14 +382,34 @@ def build(key, length, width, height, decks):
             a = 1.12 if side == 1 else math.pi-1.12
             patch('Dorsal heat exchanger', y, y+length*.007, a-.045, a+.045, 'dark', .12, 2)
     engines = [-.28, .28] if decks == 1 else [-.30, 0, .30]
+
+    def drive_shell(name, x, z, rings, mat):
+        # Open revolved surfaces, with no hidden caps across the exhaust path.
+        segments = 48
+        verts = [(x+radius*math.cos(k*math.tau/segments),y,
+                  z+radius*math.sin(k*math.tau/segments))
+                 for y,radius in rings for k in range(segments)]
+        faces = [(j*segments+k,j*segments+(k+1)%segments,
+                  (j+1)*segments+(k+1)%segments,(j+1)*segments+k)
+                 for j in range(len(rings)-1) for k in range(segments)]
+        return mesh(name,verts,faces,mat,True)
+
     for i, x in enumerate(engines):
         r = width*(.145 if decks == 1 else .14)
         z = -height*.03 if i != 1 or decks == 1 else height*.12
-        cylinder('Red drive nacelle', (x*width, -length*.455, z), r*1.17, length*.13, 'red')
-        cylinder('Titanium drive collar', (x*width, -length*.515, z), r*1.05, length*.025, 'metal')
-        cylinder('Dark exhaust well', (x*width, -length*.529, z), r*.90, .15, 'dark')
-        cylinder('Luminous drive throat', (x*width, -length*.531-.09, z), r*.66, .06, 'cool')
-        cylinder('Exhaust hub', (x*width, -length*.532-.13, z), r*.27, .06, 'metal')
+        mouth = -length*.532-.16  # Original rearmost hub plane; preserve bounds.
+        throat = mouth+r*.85
+        drive_shell('Red drive nacelle',x*width,z,
+                    [(-length*.39,r*1.17),(-length*.52,r*1.17),
+                     (-length*.52,r*1.05)],'red')
+        drive_shell('Titanium drive collar',x*width,z,
+                    [(-length*.5025,r*1.05),(mouth,r*1.05),
+                     (mouth,r*.90),(mouth+r*.16,r*.90)],'metal')
+        drive_shell('Tapered exhaust liner',x*width,z,
+                    [(mouth+r*.16,r*.90),(throat,r*.66)],'dark')
+        drive_shell('Recessed luminous drive throat',x*width,z,
+                    [(throat,r*.66),(throat,r*.27)],'cool')
+        cylinder('Exhaust hub', (x*width, throat+.03, z), r*.27, .06, 'metal')
         for k in range(12):
             a = k*math.tau/12
             box('Nozzle radial fin', (x*width+math.cos(a)*r, -length*.516, z+math.sin(a)*r),
