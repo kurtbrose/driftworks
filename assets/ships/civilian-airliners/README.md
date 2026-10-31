@@ -22,7 +22,7 @@ blender --background --python tools/build-civilian-airliners.py
 ```
 
 These are exterior art studies, not flight-ready simulation entities. Cabin
-occupancy is suggested through glazing, sills and seat silhouettes; there is no
+occupancy is suggested through warm glowing glazing and darker unlit panes; there is no
 complete interior. Scale is an authoring choice rather than a passenger capacity
 claim. The local render iteration smoothed hull stations, corrected outward
 surface normals, lowered dorsal fairings and added layered glazing and panels.
@@ -103,3 +103,48 @@ The evacuation cockpit imports the same refueling timeline and arm solver used
 by the depot study. Its dock basis maps the authored bow to flight +Z, with
 vertical clearance/departure and independent retracting arm links. See
 `docs/flight-missions.md` for the first-cycle scope and benchmark control.
+
+## Passenger window detail pass
+
+Passenger windows retain their 0.65 × 0.80 m dimensions and 1.00 m pitch. Narrow
+titanium seals surround clipped corners; a deterministic
+pattern of darker panes break up the cabin lighting without animation, alpha
+blending or textures. The original amber cabin material and emission strength
+are preserved. Opaque repeated seat cutouts have been removed.
+The warm light material now contributes its amber emission alone: its reflective
+base is black and metallic, suppressing both diffuse paint lighting and the white
+dielectric highlight. Sunlit and shaded windows therefore retain the same bulb
+color. This reuses the existing material group, including the warm service lamps.
+The flight exporter uses emission as the visible color for a pure emitter, so a
+black reflective base cannot turn its flight-rendered windows black.
+The 2026-10-30 material follow-up was visually checked on both ships with studio
+lights on/off and with the liner rolled 180 degrees. The updated depot sample
+retained 187 draws / 984,562 triangles, 13.3/13.4 ms frame median/p95 and 0.8 ms
+CPU submission under the overview conditions below. Flight geometry binaries
+are unchanged by this material-only follow-up.
+Seal rings and glazing meet edge-to-edge on the same surface instead of layering
+cards a few millimetres apart, avoiding depth fighting at viewing distance.
+
+Each window assembly uses twenty-two triangles (sixteen seal, six glazing),
+replacing ninety-six triangles from three subdivided patches. The flight
+and depot material batches retain their existing cabin finish and draw count.
+The regression checks fitting dimensions, six-triangle glazing and seal counts.
+
+| Asset | Before triangles | Window pass triangles | Saved |
+| --- | ---: | ---: | ---: |
+| 72 m commuter | 248,507 | 242,291 | 6,216 (2.5%) |
+| 180 m liner | 380,774 | 347,918 | 32,856 (8.6%) |
+
+The flight exports retain nine material batches per ship. The depot's existing
+static batching helper produces thirteen groups per revised ship versus fourteen
+for the originals (geometry layouts can split a material into several groups).
+These are geometry/submission counts, not a measured frame-rate improvement.
+
+In the fixed depot overview on 2026-10-29 (906 × 1332 backing pixels, DPR 1.5,
+both ships visible, static batching, five-second samples after warm-up), the
+originals submitted 189 draws / 1,023,634 scene triangles; the window pass submits
+187 / 984,562. With ships hidden the scene submits 159 / 394,353. Before and after
+frame median/p95 remained 13.3/13.4 ms at the display cap; CPU submission was
+0.9/0.8 ms including the sky. GPU completion and a busy flight/combat workload
+were not measured. The neutral-gray review independently shows 14 → 13 draws
+per ship at 1326 × 931, DPR 1.5, with unchanged 13.3/13.4 ms frame cadence.

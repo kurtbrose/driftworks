@@ -25,6 +25,19 @@ for (const key of ['commuter','double-decker']) {
   const gltf = JSON.parse(bytes.subarray(20,20+jsonLength));
   const binStart = 20+jsonLength+8;
   const dimensions = JSON.parse(fs.readFileSync(path.join(root,key+'-dimensions.json')));
+  const cabin=gltf.materials.find(m=>m.name.startsWith('Occupied cabin'));
+  assert(cabin,'preserve the original warm cabin material');
+  assert(gltf.materials.length<=9,'window detailing must reuse the nine existing materials');
+  for(const [i,value] of [.76,.44,.144].entries())
+    assert(Math.abs(cabin.emissiveFactor[i]-value)<1e-5,'preserve original amber bulb emission');
+  assert.deepEqual(cabin.pbrMetallicRoughness.baseColorFactor,[0,0,0,1],
+    'cabin glow must not add reflected paint color');
+  assert.equal(cabin.pbrMetallicRoughness.metallicFactor??1,1,
+    'black metallic base suppresses the white dielectric reflection');
+  const flight=JSON.parse(fs.readFileSync(path.join(root,key+'-flight.json')));
+  const glow=flight.batches.find(b=>b.material.startsWith('Occupied cabin'));
+  assert(glow.color.every((v,i)=>Math.abs(v-cabin.emissiveFactor[i])<1e-5),
+    'flight emitter color must retain amber emission, not the black reflective base');
   assert(!gltf.nodes.some(n=>/Dorsal red ribbon|Graphite ventral keel/.test(n.name||'')),
     'livery must not overlay the hull as a competing surface');
   const hull = gltf.nodes.find(n=>n.name==='Continuous pressure hull');
@@ -72,6 +85,29 @@ for (const key of ['commuter','double-decker']) {
   for (const node of windows) {
     assert(Math.abs(extent(node,1)-.80)<1e-4,'actual window height');
     assert(Math.abs(extent(node,2)-.65)<1e-4,'actual window width');
+    const pane=gltf.meshes[node.mesh].primitives[0];
+    assert(gltf.accessors[pane.indices].count<=18,'clipped-corner glazing uses at most six triangles');
+    for(const [x,z,negativeY] of vertices(node)) {
+      const [w,h]=section(-negativeY,dimensions);
+      assert(Math.abs(x)-w*Math.sqrt(1-(z/h)**2)>.06,
+        'glazing must cover the raised hull seams');
+    }
+  }
+  assert(!gltf.nodes.some(n=>n.name?.startsWith('Seat silhouette')),
+    'passenger glazing must not repeat opaque seat cutouts');
+  assert(!gltf.nodes.some(n=>n.name?.startsWith('Cabin upper shadow')),
+    'window details must not layer overlapping shadow cards over glazing');
+  const seals=gltf.nodes.filter(n=>n.name?.startsWith('Passenger window seal'));
+  assert.equal(seals.length,windows.length);
+  const sealEdges=seals.map(node=>vertices(node));
+  for(const seal of seals) {
+    assert.equal(gltf.accessors[gltf.meshes[seal.mesh].primitives[0].indices].count,48,
+      'window seals are open rings, not solid cards behind glazing');
+  }
+  for(const window of windows) {
+    const pane=vertices(window);
+    assert(sealEdges.some(edge=>pane.every(p=>edge.some(q=>p.every((v,k)=>Math.abs(v-q[k])<1e-5)))),
+      'seal and glazing meet at shared boundaries without depth offsets');
   }
   const panes = gltf.nodes.filter(n=>n.name?.startsWith('Flush airline windshield'));
   assert.equal(panes.length,4);

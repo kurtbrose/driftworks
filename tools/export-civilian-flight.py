@@ -56,11 +56,15 @@ def export(name):
         material = gltf['materials'][index]
         pbr = material.get('pbrMetallicRoughness', {})
         color = pbr.get('baseColorFactor', [1, 1, 1, 1])
-        batches.append(dict(offset=len(data), count=len(values), color=color[:3],
+        emissive = material.get('emissiveFactor', [0, 0, 0])
+        # Flight finish 7 draws the supplied glow color directly. A pure emitter
+        # has a black reflective base; retain its light instead of exporting black.
+        visible_color = emissive if max(color[:3]) == 0 and max(emissive) > 0 else color[:3]
+        batches.append(dict(offset=len(data), count=len(values), color=visible_color,
                             opacity=color[3], material=material['name'],
                             roughness=pbr.get('roughnessFactor', 1),
                             metallic=pbr.get('metallicFactor', 1),
-                            emissive=material.get('emissiveFactor', [0, 0, 0])))
+                            emissive=emissive))
         data.extend(struct.pack('<' + 'f'*len(values), *values))
     # Ray from below at authored x=2, y=0, matching the study's ventral contact.
     contacts = []

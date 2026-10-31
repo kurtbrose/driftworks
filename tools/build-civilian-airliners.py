@@ -109,6 +109,12 @@ def material(name, color, metal=.25, glow=0):
     p.inputs['Roughness'].default_value = .36
     p.inputs['Emission Color'].default_value = (*color, 1)
     p.inputs['Emission Strength'].default_value = glow
+    if name == 'Occupied cabin':
+        # A black metallic base contributes neither diffuse paint nor a white
+        # dielectric highlight. Preserve the original amber emission alone.
+        p.inputs['Base Color'].default_value = (0, 0, 0, 1)
+        p.inputs['Metallic'].default_value = 1
+        p.inputs['Roughness'].default_value = 1
     return m
 
 
@@ -180,18 +186,18 @@ def build(key, length, width, height, decks):
         return obj
 
     def box(name, loc, size, mat, bevel=.05):
-        bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
-        obj = bpy.context.object
-        obj.name = name
-        obj.scale = size
-        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-        obj.data.materials.append(mats[mat])
+        # Data API avoids a whole-scene operator/dependency update per fitting.
+        x,y,z = (v/2 for v in size)
+        obj = mesh(name,[(-x,-y,-z),(x,-y,-z),(x,y,-z),(-x,y,-z),
+                         (-x,-y,z),(x,-y,z),(x,y,z),(-x,y,z)],
+                   [(3,2,1,0),(4,5,6,7),(0,1,5,4),(1,2,6,5),
+                    (2,3,7,6),(3,0,4,7)],mat)
+        obj.location = loc
         if bevel:
             mod = obj.modifiers.new('Machined radii', 'BEVEL')
             mod.width = bevel
             mod.segments = 3
             obj.modifiers.new('Weighted normals', 'WEIGHTED_NORMAL')
-        parts.append(obj)
         return obj
 
     def cylinder(name, loc, radius, depth, mat, axis='Y'):
@@ -294,6 +300,26 @@ def build(key, length, width, height, decks):
                 faces.append(f if side == 1 else tuple(reversed(f)))
         return mesh(name,verts,faces,mat,True)
 
+    def cabin_pane(name, side, y, z, w, h, mat, offset, frame=False):
+        # Eight corner vertices follow the hull; no hidden seat boxes or dense grids.
+        bevel = .075
+        outline = [(-w/2+bevel,-h/2),(w/2-bevel,-h/2),
+                   (w/2,-h/2+bevel),(w/2,h/2-bevel),
+                   (w/2-bevel,h/2),(-w/2+bevel,h/2),
+                   (-w/2,h/2-bevel),(-w/2,-h/2+bevel)]
+        if frame:
+            iw,ih=w-.07,h-.07
+            outline += [(-iw/2+bevel,-ih/2),(iw/2-bevel,-ih/2),
+                        (iw/2,-ih/2+bevel),(iw/2,ih/2-bevel),
+                        (iw/2-bevel,ih/2),(-iw/2+bevel,ih/2),
+                        (-iw/2,ih/2-bevel),(-iw/2,-ih/2+bevel)]
+        verts = []
+        for dy,dz in outline:
+            width_at_y,height_at_y = section(y+dy)
+            verts.append((side*(width_at_y*math.sqrt(1-((z+dz)/height_at_y)**2)+offset),y+dy,z+dz))
+        faces = [(i,(i+1)%8,(i+1)%8+8,i+8) for i in range(8)] if frame else [tuple(range(8))]
+        return mesh(name,verts,faces if side == 1 else [tuple(reversed(f)) for f in faces],mat,True)
+
     for side in [1, -1]:
         a = .62 if side == 1 else math.pi-.62
         patch('Sweeping red cabin shoulder stripe', -length*.43, length*.40,
@@ -311,14 +337,11 @@ def build(key, length, width, height, decks):
                 y = y_start+.5+i*window_pitch
                 if any(abs(y-d)<1.0 for d in door_ys):
                     continue
-                side_panel('Passenger glazing D%d %03d'%(deck+1,i+1),side,
-                           y-window_width/2,y+window_width/2,
-                           window_z-window_height/2,window_z+window_height/2,
-                           'warm' if i%9 != 3 else 'glass',.025)
-                side_panel('Cabin upper shadow',side,y-.325,y+.325,
-                           window_z+.21,window_z+.40,'glass',.032)
-                side_panel('Seat silhouette',side,y-.12,y+.10,
-                           window_z-.40,window_z-.09,'dark',.036)
+                cabin_pane('Passenger window seal',side,y,window_z,
+                           window_width+.07,window_height+.07,'metal',.065,True)
+                cabin_pane('Passenger glazing D%d %03d'%(deck+1,i+1),side,y,window_z,
+                           window_width,window_height,
+                           'warm' if (i+deck*3+(side==1)*2)%9 != 3 else 'glass',.065)
                 window_records.append(dict(deck=deck+1,side=side,width=window_width,
                                            height=window_height,center=[y,window_z]))
             for y in door_ys:
@@ -606,6 +629,7 @@ def build(key, length, width, height, decks):
     camera.rotation_euler=(-camera.location).to_track_quat('-Z','Y').to_euler()
     camera.data.ortho_scale=length*1.12
     bpy.context.preferences.filepaths.save_version = 0
+    bpy.context.preferences.filepaths.file_preview_type = 'NONE'
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/(key+'.blend')))
 
 
@@ -627,4 +651,5 @@ elif '--refresh-crew' in sys.argv:
 else:
     if '--only-liner' not in sys.argv:
         build('commuter', 72, 18, 11, 1)
-    build('double-decker', 180, 30, 16.5, 2)
+    if '--only-commuter' not in sys.argv:
+        build('double-decker', 180, 30, 16.5, 2)
