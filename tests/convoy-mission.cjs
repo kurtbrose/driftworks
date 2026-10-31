@@ -37,11 +37,15 @@ const batches=f.DW.convoyScenery.geometry(c),buffers=batches.map(b=>b.vertices);
 assert.equal(batches.length,26,'Instance the 30 authored ships without losing any materials');
 assert(batches.every(b=>b.instanceOffsets.length===30),'Ten copies of each authored configuration');
 assert.equal(new Set(buffers).size,26,'Repeated ships share the 26 immutable material buffers');
-assert.equal(new Set(c.convoy.ships.map(s=>s.slot[2])).size,2,'Two vertical tiers');
-assert.equal(new Set(c.convoy.ships.map(s=>s.slot[0])).size,3,'Three lanes');
-assert.equal(new Set(c.convoy.ships.map(s=>s.slot[1])).size,5,'Five rows');
+assert.equal(new Set(c.convoy.ships.map(s=>s.packet)).size,5,'Five readable packets');
+for(let p=0;p<5;p++){
+    const ships=c.convoy.ships.filter(s=>s.packet===p);assert.equal(ships.length,6);
+    assert.equal(ships[0].callsign,f.DW.convoyMission.packets[p].ship);
+    assert(new Set(ships.map(s=>s.slot[2])).size>2,'Each packet occupies volume');
+}
 const extent=k=>Math.max(...c.convoy.ships.map(s=>s.slot[k]))-Math.min(...c.convoy.ships.map(s=>s.slot[k]));
-assert(extent(0)*U<100&&extent(2)*U<40&&extent(1)*U<450,'Compact 3D formation');
+assert(extent(0)*U>600&&extent(0)*U<700&&extent(2)*U>400&&extent(2)*U<450&&extent(1)*U<850,'Bounded 3D packet formation with crossing corridors');
+for(let i=0;i<30;i++)for(let j=i+1;j<30;j++)assert(Math.hypot(...c.convoy.ships[i].slot.map((v,k)=>v-c.convoy.ships[j].slot[k]))*U>100,'Safe staggered centre spacing');
 const initialVertices=Array.from(buffers[0]);
 
 const separation=e=>Math.hypot(...e.pose.eye.map((v,i)=>(v-player.eye[i])*U));
@@ -122,6 +126,8 @@ const targets=f.DW.convoyMission.targets(c);assert.equal(targets.length,30);
 assert.equal(targets[24].hp,c.convoy.ships[24].hull);
 assert(c.enemies.filter(e=>e.team==='enemy').every(e=>e.targetId.startsWith('cargo-')));
 f.advance(12,{stop:true});
+assert(c.convoy.ships.every(s=>s.hull===s.maxHull),'Distant approach gives the player an interception window');
+f.advance(40,{stop:true});
 assert(c.enemies.filter(e=>e.team==='enemy').some(e=>e.guns.fired>0),'Raiders fire real projectiles');
 assert(c.enemies.filter(e=>e.team==='ally').some(e=>e.guns.fired>0),'Wingmen fight the raiders');
 assert(c.convoy.ships.some(s=>s.hull<s.maxHull),'Actual raider rounds damage cargo');
@@ -158,3 +164,28 @@ assert(!c.dead&&c.playerKills>0,'Pilot can intercept and kill real attackers');
 assert(c.enemies.filter(e=>e.team==='enemy').every(e=>e.hp<=0),'The fixed raid can be defeated');
 assert(c.convoy.ships.every(s=>s.hull>0),'Prompt interception can save the whole convoy');
 console.log('PASS playable escort loop: real controls, interception, lead, gunfire, raider kills and convoy survival');
+
+// Channel ownership and character identity must survive real threat changes.
+f.reset();c=f.snapshot().combat;
+const radio=(dt=3,busy=false)=>f.DW.flightComms.step(f.DW.flightComms.create(),dt,c,busy,()=>.5,f.snapshot().state);
+assert.equal(radio(2,true),null);assert.equal(c.convoy.radio.opening,0,'Busy channel cannot consume an introduction');
+assert.match(radio().speaker,/CONTROL \/ Rook/);
+const nearby=radio();assert.match(nearby.text,/outside the convoy/);
+assert(!c.convoy.radio.said.includes('range'),'No weapons-range warning while distant');
+const raiders=c.enemies.filter(e=>e.team==='enemy'),attacker=raiders[0],target=c.convoy.ships[24];
+attacker.pose.eye=at(target,[700,0,0]);
+assert.match(radio().text,/entering weapons range.*rear packet/);
+attacker.fire=true;attacker.guns.fired=1;assert.match(radio().text,/Raider firing/);attacker.fire=false;
+target.hull-=100;const damaged=radio();assert.equal(damaged.craftId,target.id);assert.equal(damaged.civilianPortraitIndex,5);assert.match(damaged.speaker,/Thomas Reed/);
+target.hull=0;assert.match(radio().text,/Last Light lost/);
+raiders.forEach(e=>{e.hp=0;});assert.match(radio().text,/No hostile contacts/);
+const cast=[];for(let i=0;i<8;i++){const line=radio();if(line)cast.push(line);}
+assert.equal(cast.filter(l=>typeof l.civilianPortraitIndex==='number').length,4,'Only surviving packet captains introduce themselves');
+assert(!cast.some(l=>l.craftId===target.id),'Destroyed captain cannot speak');
+assert.deepEqual(cast.map(l=>l.civilianPortraitIndex),[0,1,2,4],'Portrait identities match the established civilian roster');
+f.reset();c=f.snapshot().combat;assert.deepEqual(Array.from(c.convoy.radio.said),[]);assert.equal(c.convoy.radio.opening,0);
+const closeRaider=c.enemies.find(e=>e.team==='enemy');closeRaider.pose.eye=at(c.convoy.ships[24],[600,0,0]);closeRaider.fire=true;closeRaider.guns.fired=1;
+assert.match(radio().text,/Raider firing/);
+for(let i=0;i<8;i++)radio();
+assert(!c.convoy.radio.said.includes('range')&&!c.convoy.radio.said.includes('nearby'),'A busy channel never reports an obsolete lower tension stage after firing');
+console.log('PASS convoy cast: Control, stable captain/ship identities, busy-channel preservation, live tension reports, damage/loss and reset');

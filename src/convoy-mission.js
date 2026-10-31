@@ -2,9 +2,17 @@
     'use strict';
     var DW=/** @type {Required<import('./types').DriftworksNamespace>} */(window.Driftworks),U=DW.sim.METERS_PER_UNIT;
     var WING_SIZE=3;
+    // Packet centres in metres. Local slots remain orderly without shared road-like rows.
+    var packets=[
+        {name:'Upper',center:[-100,210,175],ship:'Wayfarer',pilot:'Mara Vale',id:'mara-vale',portrait:0,voice:1},
+        {name:'Port',center:[-275,10,5],ship:'Long Haul',pilot:'Daniel Okafor',id:'daniel-okafor',portrait:1,voice:0},
+        {name:'Lower',center:[55,120,-170],ship:'Keel',pilot:'Elena Park',id:'elena-park',portrait:2,voice:3},
+        {name:'Starboard',center:[270,190,50],ship:'Good Measure',pilot:'Ines Duarte',id:'ines-duarte',portrait:4,voice:5},
+        {name:'Rear',center:[0,-310,-20],ship:'Last Light',pilot:'Thomas Reed',id:'thomas-reed',portrait:5,voice:4}
+    ];
     /** @param {import('../experiments/types').Combat} combat @param {import('../experiments/types').FlightState} player */
     function start(combat,player){
-        player.eye=[0,-225/U,1200+50/U];player.right=[1,0,0];player.up=[0,0,1];player.back=[0,-1,0];
+        player.eye=[0,-680/U,1200+80/U];player.right=[1,0,0];player.up=[0,0,1];player.back=[0,-1,0];
         player.velocity=[0,25,0];player.ramp=[0,0,25];player.throttle=25/combat.player.profile.maxVelocity[2];
         combat.enemies.forEach(function(c,i){
             DW.flightSim.equip(c,combat.player.profile,DW.flightSim.defaultWeapon(combat.player.profile));
@@ -15,14 +23,15 @@
             c.mode='escort';c.targetId=null;
             if(combat.useHullModels)c.collision={kind:'model',modelId:DW.shipPackModels.craftModel(c,combat.hullModels?combat.hullModels.ally:'mixed',combat.wave).id};
         });
-        combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
-            var slot=[(i%3-1)*45/U,(4-Math.floor(i/6))*110/U,1200+(Math.floor(i/3)%2?17.5:-17.5)/U];
-            return {id:'cargo-'+String(i+1).padStart(2,'0'),callsign:'Cargo '+String(i+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
+        combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,radio:{wait:1,opening:0,said:[]},ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
+            var packet=packets[Math.floor(i/6)],local=i%6,row=Math.floor(local/2),side=local%2?1:-1;
+            var slot=[(packet.center[0]+side*48+(row-1)*11)/U,(packet.center[1]+(1-row)*125+(side>0?-35:25))/U,1200+(packet.center[2]+side*32+[ -12,8,4 ][row])/U];
+            return {id:'cargo-'+String(i+1).padStart(2,'0'),packet:Math.floor(i/6),callsign:local===0?packet.ship:packet.name+' '+String(local+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
         })};
         targets(combat);
         for(var j=0;j<3;j++){
             var target=combat.convoy.ships[24+j],pose=DW.arcade.create(0),side=j===1?-1:1;
-            pose.eye=target.position.map(function(v,k){return v+[side*(500+j*65),250+j*80,100+j*35][k]/U;});
+            pose.eye=target.position.map(function(v,k){return v+[side*(2500+j*150),1100+j*100,350+j*70][k]/U;});
             var delta=target.position.map(function(v,k){return v-pose.eye[k];}),length=Math.hypot.apply(null,delta),forward=delta.map(function(v){return v/length;});
             var horizontal=Math.hypot(forward[0],forward[1]);pose.right=[forward[1]/horizontal,-forward[0]/horizontal,0];pose.up=[pose.right[1]*forward[2],-pose.right[0]*forward[2],pose.right[0]*forward[1]-pose.right[1]*forward[0]];pose.back=forward.map(function(v){return -v;});
             pose.velocity=forward.map(function(v){return v*60;});pose.ramp=[0,0,60];pose.throttle=.85;
@@ -148,5 +157,44 @@
         ship.hull=Math.max(0,ship.hull-weapon.damage*weapon.armorFactor);
         combat.flashes.push({position:point.slice(),velocity:ship.velocity.map(function(v){return v/U;}),age:0,scale:ship.hull>0?1:70,destruction:ship.hull<=0});
     }
-    DW.convoyMission={hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
+    /** The radio channel consumes a cue only when free. Urgent live facts precede introductions.
+     * @param {import('../experiments/types').Combat} combat @param {number} dt @param {boolean} busy @returns {import('../experiments/types').Line|null} */
+    function radio(combat,dt,busy){
+        const s=combat.convoy;if(!s||!combat.enabled||combat.dead)return null;
+        var r=s.radio;const radioShips=s.ships;r.wait=Math.max(0,r.wait-dt);if(busy||r.wait>0)return null;
+        /** @param {string} key @param {string} text @param {number} [packetIndex] */
+        function cue(key,text,packetIndex){
+            r.said.push(key);r.wait=2;
+            var p=typeof packetIndex==='number'?packets[packetIndex]:null,index=p?p.voice:6;
+            return {text:text,speaker:p?p.ship+' / Captain '+p.pilot:'CONTROL / Rook',voice:'Scout',hostile:false,seed:211+index*37,radioSeed:r.said.length*7919,
+                voiceSettings:DW.flightDialogue.pilotVoice(/** @type {import('../experiments/types').Craft} */({id:p?p.id:'convoy-control-rook',index:index})),
+                portraitIndex:-1,civilianPortraitIndex:p?p.portrait:undefined,craftId:p?radioShips[(packetIndex||0)*6].id:'control',event:'convoyRadio'};
+        }
+        var alive=s.ships.filter(function(ship){return ship.hull>0;}),enemies=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0;});
+        for(var ship of s.ships){
+            if(ship.hull<=0&&!r.said.includes('loss-'+ship.id))return cue('loss-'+ship.id,ship.callsign+' lost. '+packets[ship.packet].name+' packet, hold your spacing. Lancer, cover the survivors.');
+            if(ship.hull>0&&ship.hull<ship.maxHull&&!r.said.includes('hit-'+ship.id)){
+                var lead=s.ships[ship.packet*6],p=packets[ship.packet];
+                return lead.hull>0?cue('hit-'+ship.id,p.ship+' here. '+(lead===ship?'We are taking hits. Hull holding.':'Hits on '+ship.callsign+'.')+' We need cover on the '+p.name.toLowerCase()+' packet.',ship.packet):cue('hit-'+ship.id,'Hits confirmed on '+ship.callsign+'. Lancer, defend the '+p.name.toLowerCase()+' packet.');
+            }
+        }
+        if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Surviving freighters across the line. '+alive.length+' accounted for. Lancer, escort complete.':'All freighter signals lost. Lancer, disengage.');
+        if(!enemies.length&&!r.said.includes('clear'))return cue('clear','No hostile contacts remaining. Lancer, resume the screen. Captains, maintain twenty-five metres per second.');
+        var aimed=enemies.map(function(e){var ship=s.ships.find(function(ship){return ship.id===e.targetId&&ship.hull>0;});return {enemy:e,ship:ship,distance:ship?Math.hypot.apply(null,ship.position.map(function(v,k){return v-e.pose.eye[k];}))*U:Infinity};});
+        var shooting=aimed.find(function(a){return a.ship&&a.enemy.fire&&a.enemy.guns.fired>0;}),ranged=aimed.find(function(a){var w=DW.retailWeapons[a.enemy.weaponIndex||0];return a.ship&&a.distance<w.speed*w.lifetime;});
+        if(shooting&&shooting.ship&&!r.said.includes('firing'))return cue('firing','Raider firing on the '+packets[shooting.ship.packet].name.toLowerCase()+' packet. Lancer, break up that run.');
+        if(ranged&&ranged.ship&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('range','Raiders entering weapons range of the '+packets[ranged.ship.packet].name.toLowerCase()+' packet. Intercept now.');
+        if(r.opening===0){r.opening++;return cue('intro-control','Lancer, Control. Rook on the channel. Thirty freighters in five packets. Keep the corridors clear; I will call the threats.');}
+        if(enemies.length&&!r.said.includes('nearby')&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('nearby',enemies.length+' hostile contacts outside the convoy. Closing on the rear packet. Lancer, meet them beyond the freighters.');
+        var introductions=[
+            'Wayfarer, Mara Vale. Upper packet has all six. We will hold course so you can work around us.',
+            'Long Haul, Okafor. Port packet, six ships. First time this cargo has had a fighter escort. Trying not to feel expensive.',
+            'Keel, Park. Lower packet checked. Twenty-five metres per second. Keeping your crossing corridor clear.',
+            'Good Measure, Duarte. Starboard six are steady. Give us warning before you send anyone through our lane.',
+            'Last Light, Reed. Rear packet reporting six. I have the tail. I would prefer it stayed that way.'
+        ];
+        while(r.opening<=5){var n=r.opening++-1;if(s.ships[n*6].hull>0)return cue('intro-'+n,introductions[n],n);}
+        return null;
+    }
+    DW.convoyMission={radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
 }());

@@ -504,6 +504,11 @@
                 combatHud.save();combatHud.font='14px system-ui';combatHud.textAlign='center';combatHud.fillStyle='#b9e7ed';combatHud.strokeStyle='#72c8d5';
                 var survivors=convoy.ships.filter(function(s){return s.hull>0;}).length,raiders=living.filter(function(e){return e.team==='enemy';}).length;
                 combatHud.fillText(!survivors?'CONVOY LOST / Esc to restart':convoy.complete?'ESCORT COMPLETE / '+survivors+' ARRIVED':'DEFEND '+survivors+' FREIGHTERS / '+raiders+' RAIDERS / '+(remaining/1000).toFixed(1)+' km remaining',w/2,86);
+                DW.convoyMission.packets.forEach(function(packet,index){
+                    var ships=convoy.ships.filter(function(s){return s.packet===index&&s.hull>0;});if(!ships.length)return;
+                    var center=[0,1,2].map(function(k){return ships.reduce(function(n,s){return n+s.position[k];},0)/ships.length;}),q=DW.flightSkybox.project(center.map(function(v,k){return v-state.eye[k];}),state,w/h);
+                    if(q&&Math.abs(q.x)<.9&&Math.abs(q.y)<.68){combatHud.fillText(packet.name.toUpperCase()+' / '+ships.length,w*(q.x+1)/2,h*(1-q.y)/2-35);}
+                });
                 var nearestCargo=convoy.ships.filter(function(ship){return ship.hull>0;}).reduce(function(best,ship){var range=function(/** @type {typeof convoy.ships[number]} */s){return Math.hypot.apply(null,s.position.map(function(v,k){return v-state.eye[k];}));};return !best||range(ship)<range(best)?ship:best;},/** @type {typeof convoy.ships[number]|null} */(null));
                 convoy.ships.forEach(function(ship){
                     if(ship.hull<=0)return;

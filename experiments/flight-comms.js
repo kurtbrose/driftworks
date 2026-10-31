@@ -303,6 +303,7 @@
             return {text:story.text,speaker:story.speaker,voice:'Scout',hostile:false,seed:101,radioSeed:7919,voiceSettings:pilotVoice(combat.enemies[story.index]),portraitIndex:story.index,craftId:'scramble-control',event:'scrambleStory'};
         }
         if(combat.mode==='evacuation')return DW.evacuationMission.step(combat,Math.max(0,dt),busy);
+        if(combat.mode==='convoy')return DW.convoyMission.radio(combat,Math.max(0,dt),busy);
         dt = Math.max(0, dt);
         state.time += dt;
         if (DW.flightMissionRuntime.openingPending(combat) && combat.enabled) {

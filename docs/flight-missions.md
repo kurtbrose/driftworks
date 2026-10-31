@@ -6,9 +6,13 @@ Open `experiments/flight.html?mission=convoy` or select Convoy Escort on the
 missions page. Thirty authored DW-14 modular freighters cross a 7.5 km route at 25 m/s.
 Ten each use the container, mixed-freight and bulk-fluid configurations from
 the industrial shipyard. Their original metre scale, atlas UVs, materials and
-geometry are retained. The convoy occupies three lanes, two vertical tiers
-and five rows: 45 m lateral, 35 m vertical and 110 m longitudinal spacing.
-The player starts 225 m behind the rear row and 50 m above the convoy centre,
+geometry are retained. Five packets of six ships occupy a staggered volume:
+Upper, Port, Lower, Starboard and Rear. Each packet has two offset columns,
+three longitudinal ranks and varying height. Local columns are 96 m apart,
+ranks 125 m apart with a 60 m stagger; packet centres provide larger crossing
+corridors. The full formation spans roughly 663 x 830 x 409 m, with no coincident
+rows or a shared flight plane. All noses stay aligned with the route.
+The player starts 680 m behind the route origin and 80 m above it,
 already matching convoy speed. The crossing takes
 five minutes of simulation time; Esc pauses it and Reset starts a fresh route.
 All ships stop at their own formation slots in the arrival corridor.
@@ -28,11 +32,47 @@ headlessly and in the browser. Reset rebuilds the roster with the same IDs.
 The HUD shows route distance/time, nearby cargo labels, cargo radar contacts
 and arrival counts. The training asteroid and mothership are absent.
 
-The playtest includes a fixed three-raider attack from launch, with weapons live.
-Raiders initially attack three rear freighters using the regular pursuit, aiming
+The playtest includes a fixed three-raider approach from launch, with weapons live.
+Raiders start over 2.5 km from the rear packet, outside their gun reach, giving
+the escort time to intercept. Raiders initially attack three rear freighters using the regular pursuit, aiming
 and weapon systems; wingmen engage them and return to escort formation once the
 attack is defeated. The player can intercept, lock and shoot the raiders. There
-is no adaptive battle director or Control vectoring yet.
+is no adaptive battle director or waypoint vectoring yet.
+
+Control's callsign is Rook: calm, concise and concerned with the entire convoy.
+Five recurring civilian captains lead the packets, reusing their existing roster
+identities, portraits and voice settings (no new portrait artwork):
+
+| Packet | Ship | Captain | Character voice |
+| --- | --- | --- | --- |
+| Upper | Wayfarer | Mara Vale | Patient, reassuring; holds course for the escorts. |
+| Port | Long Haul | Daniel Okafor | Unhurried veteran; dry humor about an expensive escort. |
+| Lower | Keel | Elena Park | Economical, precise reports and clear corridors. |
+| Starboard | Good Measure | Ines Duarte | Firm about crew safety and advance warning. |
+| Rear | Last Light | Thomas Reed | Formal, dependable, uneasy about covering the tail. |
+
+`convoyMission.radio` owns serializable per-sortie cue bookkeeping in
+`combat.convoy.radio`; `flightComms` routes convoy calls through the normal shared
+audio/subtitle channel. Busy-channel cues are not consumed. Damage and loss
+reports take priority over introductions; destroyed captains never speak.
+Rook reports nearby contacts, actual weapon reach, and a live firing run against
+cargo, then all-clear and escort completion. Reports use current survivors and
+target assignments rather than a scheduled attack script. Packet labels in the
+HUD show live ship counts. Radio does not steer fighters or grant invulnerability.
+
+Packet-layout rendering check (2026-10-31): foreground in-app browser, 1280 x
+720 CSS pixels, DPR 1.5, 1920 x 1080 backing, production scale/materials and
+unchanged `convoy-flight.json`/`.bin` assets. Frozen launch camera and simulation,
+radio suppressed only in the ignored measurement fixture; no tests or rebuilds
+running. Fleet OFF/ON/ON/OFF, 20 warm-up and 90 measured frames per block:
+render-submission CPU median/p95 was 0.40/0.40-0.50 ms OFF and 0.80/0.90 ms ON.
+The fleet adds 26 draws and 1,922,020 triangles (27 / 1,922,064 total ON).
+Browser cadence was 13.40/26.70 ms median/p95 in all four blocks. Existing
+instanced buffers remain sufficient for this view; no new rendering bottleneck
+was demonstrated. These are CPU/cadence observations, not GPU timings or a
+live-combat budget. Live browser inspection also covered packet separation,
+labels, Rook's opening and an actual captain damage report. Existing portrait
+artwork was reused; no new portrait visual approval is claimed.
 
 Freighters have 5,000 hull points, no shields, and real projectile damage. The
 shared weapon trace compares cargo surfaces against fighter/terrain hits and
