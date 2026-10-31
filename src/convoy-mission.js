@@ -174,29 +174,51 @@
                 portraitIndex:-1,civilianPortraitIndex:p?p.portrait:undefined,craftId:p?radioShips[(packetIndex||0)*6].id:'control',event:'convoyRadio'};
         }
         var alive=s.ships.filter(function(ship){return ship.hull>0;}),enemies=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0;});
-        if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Escort complete. '+alive.length+' freighters accounted for.':'All freighter signals lost. Lancer, disengage.');
-        if(!enemies.length&&!r.said.includes('clear'))return cue('clear','No hostile contacts. Lancer, resume the screen.');
+        if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Lancer, Control. '+alive.length+' transports through. Escort complete.':'Lancer, Control. Convoy lost. Withdraw.');
+        if(!enemies.length&&!r.said.includes('clear'))return cue('clear','Lancer, Control. No further contacts. Resume escort.');
         for(var ship of s.ships){
             var lossKey='loss-packet-'+ship.packet,hitKey='hit-packet-'+ship.packet;
-            if(ship.hull<=0&&!r.said.includes(lossKey))return cue(lossKey,'Freighter loss in the '+packets[ship.packet].name.toLowerCase()+' packet. Cover the survivors.');
+            if(ship.hull<=0&&!r.said.includes(lossKey))return cue(lossKey,'Lancer, Control. Transport lost in the '+packets[ship.packet].name.toLowerCase()+' group. Cover the remaining ships.');
             if(enemies.length&&ship.hull>0&&ship.hull<ship.maxHull*.9&&!r.said.includes(hitKey)){
                 var lead=s.ships[ship.packet*6],p=packets[ship.packet];
-                return lead.hull>0?cue(hitKey,p.ship+'. Taking damage. We need cover on the '+p.name.toLowerCase()+' packet.',ship.packet):cue(hitKey,'Damage in the '+p.name.toLowerCase()+' packet. Lancer, provide cover.');
+                var distress=[
+                    "Wayfarer here. We're getting hit up here. Can you get them off us?",
+                    "Long Haul. They're putting holes in the cargo. Could use a hand, Lancer.",
+                    'Keel to Lancer. Hits in the lower group. Request immediate cover.',
+                    "Good Measure! I've got crews aboard these ships. Get those fighters away from us!",
+                    "Last Light! They're on the rear group. Lancer, we need help back here!"
+                ];
+                return lead.hull>0?cue(hitKey,distress[ship.packet],ship.packet):cue(hitKey,'Lancer, Control. '+p.name+' group taking damage. Provide cover.');
             }
         }
         var aimed=enemies.map(function(e){var ship=s.ships.find(function(ship){return ship.id===e.targetId&&ship.hull>0;});return {enemy:e,ship:ship,distance:ship?Math.hypot.apply(null,ship.position.map(function(v,k){return v-e.pose.eye[k];}))*U:Infinity};});
         var shooting=aimed.find(function(a){return a.ship&&a.enemy.fire&&a.enemy.guns.fired>0;}),ranged=aimed.find(function(a){var w=DW.retailWeapons[a.enemy.weaponIndex||0];return a.ship&&a.distance<w.speed*w.lifetime;});
-        if(shooting&&shooting.ship&&!r.said.includes('firing'))return cue('firing','Raider firing on the '+packets[shooting.ship.packet].name.toLowerCase()+' packet. Lancer, break up that run.');
-        if(ranged&&ranged.ship&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('range','Raiders entering weapons range of the '+packets[ranged.ship.packet].name.toLowerCase()+' packet. Intercept now.');
-        if(r.opening===0&&r.wait===0){r.opening++;return cue('intro-control','Lancer, Rook. Thirty freighters, five packets. I will call the threats.');}
-        if(enemies.length&&!r.said.includes('nearby')&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('nearby',enemies.length+' hostile contacts outside the convoy. Closing on the rear packet. Lancer, meet them beyond the freighters.');
+        if(shooting&&shooting.ship&&!r.said.includes('firing'))return cue('firing','Lancer, Control. Bandit firing on the '+packets[shooting.ship.packet].name.toLowerCase()+' group. Engage.');
+        if(ranged&&ranged.ship&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('range','Lancer, Control. Bandits entering weapons range of the '+packets[ranged.ship.packet].name.toLowerCase()+' group. Intercept.');
+        var contactReport=r.said.includes('range')||r.said.includes('firing');
+        if(r.opening===0&&!contactReport){
+            if(r.wait>0)return null;
+            r.opening++;return cue('intro-control','Lancer flight, Control. Convoy should be in visual range now.');
+        }
+        if(r.opening>0&&!contactReport&&!r.said.includes('visual-reply')){
+            const wing=combat.enemies.find(function(e){return e.team==='ally'&&e.hp>0;});
+            if(wing&&alive.some(function(ship){return Math.hypot.apply(null,ship.position.map(function(v,k){return v-wing.pose.eye[k];}))*U<2000;})){
+                var reply=cue('visual-reply','Affirmative, Control. Convoy in sight.');
+                reply.speaker=wing.callsign+' / FLIGHT';reply.craftId=wing.id;reply.portraitIndex=wing.index;reply.voiceSettings=DW.flightDialogue.pilotVoice(wing);reply.seed=reply.voiceSettings.seed;return reply;
+            }
+        }
+        if(r.said.includes('visual-reply')&&!contactReport&&!r.said.includes('welcome')&&s.ships[0].hull>0)return cue('welcome','Lancer, Wayfarer. Glad to have you with us.',0);
+        if(enemies.length&&!r.said.includes('nearby')&&!contactReport)return cue('nearby','Lancer, Control. '+enemies.length+' bandits approaching the rear of the convoy. Intercept.');
+        // Do not deliver an arrival briefing after the engagement has already begun.
+        if(contactReport&&r.opening===0)r.opening=1;
         if(enemies.length||r.wait>0)return null;
+        var counts=packets.map(function(packet,index){return alive.filter(function(ship){return ship.packet===index;}).length;});
         var introductions=[
-            'Wayfarer, Mara Vale. Upper packet has all six. We will hold course so you can work around us.',
-            'Long Haul, Okafor. Port packet, six ships. First time this cargo has had a fighter escort. Trying not to feel expensive.',
-            'Keel, Park. Lower packet checked. Twenty-five metres per second. Keeping your crossing corridor clear.',
-            'Good Measure, Duarte. Starboard six are steady. Give us warning before you send anyone through our lane.',
-            'Last Light, Reed. Rear packet reporting six. I have the tail. I would prefer it stayed that way.'
+            "Wayfarer here. I've got "+counts[0]+" ships with me. We're holding together.",
+            "Long Haul. Port group holding course. The freight's quieter than my engine.",
+            'Keel. Lower group, '+counts[2]+' ships. Course and speed unchanged.',
+            "Good Measure. "+counts[3]+" ships with me. Mind our bows when you come through, would you?",
+            "Last Light. Still bringing up the rear. Don't forget about us back here."
         ];
         while(r.opening<=5){var n=r.opening++-1;if(s.ships[n*6].hull>0)return cue('intro-'+n,introductions[n],n);}
         return null;

@@ -40,13 +40,22 @@ attack is defeated. The player can intercept, lock and shoot the raiders. There
 is no adaptive battle director or waypoint vectoring yet.
 
 Control's callsign is Rook: calm, concise and concerned with the entire convoy.
+Control and fighter calls use addressee/caller, observation and order. The opening
+is a visual-acquisition exchange: Control advises that the convoy should be in
+visual range; a surviving nearby wingman acknowledges sighting it; Wayfarer
+welcomes the escort if the tactical situation still permits. Related replies
+use the three-second silent gap; urgent traffic takes precedence and cancels
+stale greetings once attackers reach weapons range. Control never explains game
+features. Captains use ship callsigns rather than personal introductions, with
+warmer or less disciplined language appropriate to each character. Quiet-period
+reports use live ship counts and avoid claims that lost ships are still present.
 Five recurring civilian captains lead the packets, reusing their existing roster
 identities, portraits and voice settings (no new portrait artwork):
 
 | Packet | Ship | Captain | Character voice |
 | --- | --- | --- | --- |
 | Upper | Wayfarer | Mara Vale | Patient, reassuring; holds course for the escorts. |
-| Port | Long Haul | Daniel Okafor | Unhurried veteran; dry humor about an expensive escort. |
+| Port | Long Haul | Daniel Okafor | Unhurried veteran; dry humor about the job. |
 | Lower | Keel | Elena Park | Economical, precise reports and clear corridors. |
 | Starboard | Good Measure | Ines Duarte | Firm about crew safety and advance warning. |
 | Rear | Last Light | Thomas Reed | Formal, dependable, uneasy about covering the tail. |
