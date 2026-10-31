@@ -55,6 +55,11 @@ identities, portraits and voice settings (no new portrait artwork):
 `combat.convoy.radio`; `flightComms` routes convoy calls through the normal shared
 audio/subtitle channel. Busy-channel cues are not consumed. Damage and loss
 reports take priority over introductions; destroyed captains never speak.
+Routine introductions require 28 seconds of actual channel silence and only
+run when no hostiles remain. Urgent facts require at least three silent seconds
+after the preceding transmission. Speech does not count toward either gap.
+Damage reports require more than 10% hull loss and are limited to one per packet
+per sortie, as are loss reports, rather than queueing one call per freighter.
 Rook reports nearby contacts, actual weapon reach, and a live firing run against
 cargo, then all-clear and escort completion. Reports use current survivors and
 target assignments rather than a scheduled attack script. Packet labels in the

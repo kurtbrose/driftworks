@@ -167,7 +167,7 @@ console.log('PASS playable escort loop: real controls, interception, lead, gunfi
 
 // Channel ownership and character identity must survive real threat changes.
 f.reset();c=f.snapshot().combat;
-const radio=(dt=3,busy=false)=>f.DW.flightComms.step(f.DW.flightComms.create(),dt,c,busy,()=>.5,f.snapshot().state);
+const radio=(dt=30,busy=false)=>f.DW.flightComms.step(f.DW.flightComms.create(),dt,c,busy,()=>.5,f.snapshot().state);
 assert.equal(radio(2,true),null);assert.equal(c.convoy.radio.opening,0,'Busy channel cannot consume an introduction');
 assert.match(radio().speaker,/CONTROL \/ Rook/);
 const nearby=radio();assert.match(nearby.text,/outside the convoy/);
@@ -176,8 +176,8 @@ const raiders=c.enemies.filter(e=>e.team==='enemy'),attacker=raiders[0],target=c
 attacker.pose.eye=at(target,[700,0,0]);
 assert.match(radio().text,/entering weapons range.*rear packet/);
 attacker.fire=true;attacker.guns.fired=1;assert.match(radio().text,/Raider firing/);attacker.fire=false;
-target.hull-=100;const damaged=radio();assert.equal(damaged.craftId,target.id);assert.equal(damaged.civilianPortraitIndex,5);assert.match(damaged.speaker,/Thomas Reed/);
-target.hull=0;assert.match(radio().text,/Last Light lost/);
+target.hull-=600;const damaged=radio();assert.equal(damaged.craftId,target.id);assert.equal(damaged.civilianPortraitIndex,5);assert.match(damaged.speaker,/Thomas Reed/);
+target.hull=0;assert.match(radio().text,/Freighter loss in the rear packet/);
 raiders.forEach(e=>{e.hp=0;});assert.match(radio().text,/No hostile contacts/);
 const cast=[];for(let i=0;i<8;i++){const line=radio();if(line)cast.push(line);}
 assert.equal(cast.filter(l=>typeof l.civilianPortraitIndex==='number').length,4,'Only surviving packet captains introduce themselves');
@@ -189,3 +189,20 @@ assert.match(radio().text,/Raider firing/);
 for(let i=0;i<8;i++)radio();
 assert(!c.convoy.radio.said.includes('range')&&!c.convoy.radio.said.includes('nearby'),'A busy channel never reports an obsolete lower tension stage after firing');
 console.log('PASS convoy cast: Control, stable captain/ship identities, busy-channel preservation, live tension reports, damage/loss and reset');
+
+f.reset();c=f.snapshot().combat;
+assert.match(radio(1).speaker,/Rook/);
+assert.equal(c.convoy.radio.wait,28);
+assert.equal(radio(60,true),null);assert.equal(c.convoy.radio.wait,28,'Speaking never consumes the silence gap');
+assert.equal(radio(2),null,'Even urgent facts leave breathing room');
+assert.match(radio(1).text,/outside the convoy/);
+assert.equal(radio(60),null,'Captains do not run a roll call during combat');
+const threatened=c.convoy.ships[24];threatened.hull-=100;
+assert.equal(radio(),null,'Minor damage does not trigger chatter');
+threatened.hull-=500;assert.match(radio().speaker,/Thomas Reed/);
+c.convoy.ships[25].hull-=1000;
+assert.equal(radio(),null,'Several damaged ships in one packet produce one report');
+c.enemies.filter(e=>e.team==='enemy').forEach(e=>{e.hp=0;});assert.match(radio().text,/No hostile contacts/);
+assert.equal(radio(27),null,'Routine chatter waits for 28 actual silent seconds');
+assert.match(radio(1).speaker,/Mara Vale/);
+console.log('PASS convoy radio pacing: silence after speech, urgent gap, no combat roll call, damage threshold and packet aggregation');

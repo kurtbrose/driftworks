@@ -161,31 +161,36 @@
      * @param {import('../experiments/types').Combat} combat @param {number} dt @param {boolean} busy @returns {import('../experiments/types').Line|null} */
     function radio(combat,dt,busy){
         const s=combat.convoy;if(!s||!combat.enabled||combat.dead)return null;
-        var r=s.radio;const radioShips=s.ships;r.wait=Math.max(0,r.wait-dt);if(busy||r.wait>0)return null;
+        var r=s.radio;const radioShips=s.ships;
+        // Count silence, not time spent speaking. Urgent facts still leave a short gap.
+        if(busy)return null;
+        r.wait=Math.max(0,r.wait-dt);if(r.wait>25)return null;
         /** @param {string} key @param {string} text @param {number} [packetIndex] */
         function cue(key,text,packetIndex){
-            r.said.push(key);r.wait=2;
+            r.said.push(key);r.wait=28;
             var p=typeof packetIndex==='number'?packets[packetIndex]:null,index=p?p.voice:6;
             return {text:text,speaker:p?p.ship+' / Captain '+p.pilot:'CONTROL / Rook',voice:'Scout',hostile:false,seed:211+index*37,radioSeed:r.said.length*7919,
                 voiceSettings:DW.flightDialogue.pilotVoice(/** @type {import('../experiments/types').Craft} */({id:p?p.id:'convoy-control-rook',index:index})),
                 portraitIndex:-1,civilianPortraitIndex:p?p.portrait:undefined,craftId:p?radioShips[(packetIndex||0)*6].id:'control',event:'convoyRadio'};
         }
         var alive=s.ships.filter(function(ship){return ship.hull>0;}),enemies=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0;});
+        if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Escort complete. '+alive.length+' freighters accounted for.':'All freighter signals lost. Lancer, disengage.');
+        if(!enemies.length&&!r.said.includes('clear'))return cue('clear','No hostile contacts. Lancer, resume the screen.');
         for(var ship of s.ships){
-            if(ship.hull<=0&&!r.said.includes('loss-'+ship.id))return cue('loss-'+ship.id,ship.callsign+' lost. '+packets[ship.packet].name+' packet, hold your spacing. Lancer, cover the survivors.');
-            if(ship.hull>0&&ship.hull<ship.maxHull&&!r.said.includes('hit-'+ship.id)){
+            var lossKey='loss-packet-'+ship.packet,hitKey='hit-packet-'+ship.packet;
+            if(ship.hull<=0&&!r.said.includes(lossKey))return cue(lossKey,'Freighter loss in the '+packets[ship.packet].name.toLowerCase()+' packet. Cover the survivors.');
+            if(enemies.length&&ship.hull>0&&ship.hull<ship.maxHull*.9&&!r.said.includes(hitKey)){
                 var lead=s.ships[ship.packet*6],p=packets[ship.packet];
-                return lead.hull>0?cue('hit-'+ship.id,p.ship+' here. '+(lead===ship?'We are taking hits. Hull holding.':'Hits on '+ship.callsign+'.')+' We need cover on the '+p.name.toLowerCase()+' packet.',ship.packet):cue('hit-'+ship.id,'Hits confirmed on '+ship.callsign+'. Lancer, defend the '+p.name.toLowerCase()+' packet.');
+                return lead.hull>0?cue(hitKey,p.ship+'. Taking damage. We need cover on the '+p.name.toLowerCase()+' packet.',ship.packet):cue(hitKey,'Damage in the '+p.name.toLowerCase()+' packet. Lancer, provide cover.');
             }
         }
-        if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Surviving freighters across the line. '+alive.length+' accounted for. Lancer, escort complete.':'All freighter signals lost. Lancer, disengage.');
-        if(!enemies.length&&!r.said.includes('clear'))return cue('clear','No hostile contacts remaining. Lancer, resume the screen. Captains, maintain twenty-five metres per second.');
         var aimed=enemies.map(function(e){var ship=s.ships.find(function(ship){return ship.id===e.targetId&&ship.hull>0;});return {enemy:e,ship:ship,distance:ship?Math.hypot.apply(null,ship.position.map(function(v,k){return v-e.pose.eye[k];}))*U:Infinity};});
         var shooting=aimed.find(function(a){return a.ship&&a.enemy.fire&&a.enemy.guns.fired>0;}),ranged=aimed.find(function(a){var w=DW.retailWeapons[a.enemy.weaponIndex||0];return a.ship&&a.distance<w.speed*w.lifetime;});
         if(shooting&&shooting.ship&&!r.said.includes('firing'))return cue('firing','Raider firing on the '+packets[shooting.ship.packet].name.toLowerCase()+' packet. Lancer, break up that run.');
         if(ranged&&ranged.ship&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('range','Raiders entering weapons range of the '+packets[ranged.ship.packet].name.toLowerCase()+' packet. Intercept now.');
-        if(r.opening===0){r.opening++;return cue('intro-control','Lancer, Control. Rook on the channel. Thirty freighters in five packets. Keep the corridors clear; I will call the threats.');}
+        if(r.opening===0&&r.wait===0){r.opening++;return cue('intro-control','Lancer, Rook. Thirty freighters, five packets. I will call the threats.');}
         if(enemies.length&&!r.said.includes('nearby')&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('nearby',enemies.length+' hostile contacts outside the convoy. Closing on the rear packet. Lancer, meet them beyond the freighters.');
+        if(enemies.length||r.wait>0)return null;
         var introductions=[
             'Wayfarer, Mara Vale. Upper packet has all six. We will hold course so you can work around us.',
             'Long Haul, Okafor. Port packet, six ships. First time this cargo has had a fighter escort. Trying not to feel expensive.',
