@@ -28,17 +28,30 @@ headlessly and in the browser. Reset rebuilds the roster with the same IDs.
 The HUD shows route distance/time, nearby cargo labels, cargo radar contacts
 and arrival counts. The training asteroid and mothership are absent.
 
-This is a quiet escort layout and pacing playtest. There are no attackers,
-director decisions, Control vectors, patrol assignments or authored dialogue.
-Weapons are disabled. Freighter hulls now collide with the player and wingmen.
-The existing indexed triangle sweep uses the authored hull geometry, preserving
-open scaffolding rather than filling each ship with a solid box. Each fighter's
-conservative collision radius is swept against those triangles in the moving
-freighter's frame, preventing tunneling and handling a freighter overtaking a
-stopped fighter. Contact pushes the fighter clear and deflects its normal velocity;
-engine ramps are synchronized to that response. Freighters retain their route
-and take no ram or combat damage in this pass. Reaching the corridor completes the cargo route regardless
-of player position; there is no proximity-based success/failure gate yet.
+The playtest includes a fixed three-raider attack from launch, with weapons live.
+Raiders initially attack three rear freighters using the regular pursuit, aiming
+and weapon systems; wingmen engage them and return to escort formation once the
+attack is defeated. The player can intercept, lock and shoot the raiders. There
+is no adaptive battle director or Control vectoring yet.
+
+Freighters have 5,000 hull points, no shields, and real projectile damage. The
+shared weapon trace compares cargo surfaces against fighter/terrain hits and
+stops at the nearest surface; cargo blocks crossfire, including friendly rounds.
+Destroyed freighters explode, leave their formation slots empty, cease collision,
+and are removed from target selection. Hull and loss readouts reflect live state.
+Aim at a cargo hull to select/lock it; Tab continues to cycle hostiles. Derived
+cargo target views alias the cargo hull value and never enter the fighter movement
+or rendering roster. The target camera uses the actual freighter geometry.
+
+An escort succeeds when surviving cargo arrives and the raiders have been cleared.
+Losing every freighter fails the escort. Arriving while attackers survive keeps
+the defense objective active. Destroying raiders does not spawn generic new waves.
+
+Freighter hulls also collide with the player and wingmen. The indexed triangle
+sweep preserves open scaffolding rather than filling each ship with a solid box.
+Fighter radii are swept in the moving freighter frame to prevent tunneling and
+handle a freighter overtaking a stopped fighter. Contacts deflect fighters and
+synchronize their engine ramps; ram damage is not added.
 
 `experiments/convoy-scenery.js` loads the industrial kit flight bake and paint
 atlas. Repeated ships share immutable GPU geometry (26 material buffers across

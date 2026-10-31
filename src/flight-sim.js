@@ -374,6 +374,7 @@
             // The gun controller retracts its launch points for point-blank surfaces.
             if (distance * U > .01 && distance < best) { best = distance; point = hit.point; }
         });
+        if(t.convoy){var cargo=DW.convoyMission.trace(t,start,end,0);if(cargo&&length(sub(cargo.point,start))<best)point=cargo.point;}
         return point;
     }
     /** @param {Combat} t @param {number} dt @param {TerrainHit} [terrainHit] */
@@ -503,7 +504,7 @@
                 return trace(t, start, end, bolt, e, terrainHit, player);
             }, function () { return convergencePoint(t, e, DW.retailWeapons[e.weaponIndex || 0], terrainHit); }, e.profile.gunMounts, gunAnchors(e), t.player.pose.curvature||(mission(t).sky.thinShell?'thin-shell':!!mission(t).sky.wormhole));
         }
-        var neighbors=separationGrid(living), roster=participants(t), byId=new Map((t.mode==='battle'?roster:living).map(function(craft){return [craft.id,craft];}));
+        var neighbors=separationGrid(living), roster=participants(t).concat(t.convoy?DW.convoyMission.targets(t):[]), byId=new Map((t.mode==='battle'||t.convoy?roster:living).map(function(craft){return [craft.id,craft];}));
         collisionBatch(t,function(){t.enemies.forEach(function (e) {
             if (e.controller !== 'input') e.fire = false;
             if(e.hp>0&&e.hangarLaunch){
@@ -517,7 +518,7 @@
                 e.hangarLaunch.remaining-=dt;e.fire=false;
                 if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;if(t.scramble&&e.team==='enemy')delete e.plotArmor;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
-                if(t.convoy){DW.convoyMission.stepWing(e,player,e.index,dt);return;}
+                if(t.convoy&&e.team==='ally'&&!living.some(function(c){return c.team==='enemy';})){DW.convoyMission.stepWing(e,player,e.index,dt);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;
@@ -528,7 +529,7 @@
                         // Only the nearest three are used. Stable insertion preserves
                         // roster tie order without sorting every opponent or recomputing distances.
                         /** @type {{craft:Craft,distance:number}[]} */ var choices=[];
-                        (e.battleZone?roster:living).forEach(function(other){
+                        (e.battleZone||t.convoy&&e.team==='enemy'?roster:living).forEach(function(other){
                             if(!(other.hp>0)||other.team===e.team||((other.pose.region||0)!==(e.pose.region||0)&&(t.mode!=='cinematic'&&t.mode!=='thin-shell'))||!zoneEligible(e,other))return;
                             var distance=length(spaceDelta(e.pose,other.pose.eye))+((other.pose.region||0)===(e.pose.region||0)?0:100000),at=0;
                             while(at<choices.length&&choices[at].distance<=distance)at++;
@@ -637,7 +638,7 @@
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)
             t.countdown = 5;
-        if (t.mode!=='hyperbolic' && t.mode!=='cinematic' && t.mode!=='evacuation' && !mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
+        if (t.mode!=='hyperbolic' && t.mode!=='cinematic' && t.mode!=='evacuation' && t.mode!=='convoy' && !mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
             return e.team === 'ally';
         })) || !nowAlive.some(function (e) {
             return e.team === 'enemy';
@@ -648,7 +649,7 @@
         var targets = nowAlive.filter(function (e) {
             return e.team !== 'ally'&&(mission(t).sky.wormhole||(e.pose.region||0)===(t.player.pose.region||0));
         });
-        if (t.targetId && !nowAlive.some(function (e) {
+        if (t.targetId && !nowAlive.concat(t.convoy?DW.convoyMission.targets(t):[]).some(function (e) {
             return e.id === t.targetId&&(mission(t).sky.wormhole||(e.pose.region||0)===(player.region||0));
         }))
             { t.targetId = targets.length ? targets[0].id : null; t.targetLocked = false; }
@@ -656,7 +657,7 @@
     /** Acquire the nearest hull crossed by the forward sight line; retain the last contact in empty space.
      * @param {Combat} t @param {FlightState} state */
     function acquireTarget(t, state) {
-        var living = alive(t).filter(function(e){return mission(t).sky.wormhole||(e.pose.region||0)===(state.region||0);});
+        var living = alive(t).concat(t.convoy?DW.convoyMission.targets(t):[]).filter(function(e){return mission(t).sky.wormhole||(e.pose.region||0)===(state.region||0);});
         if (!living.some(function (e) { return e.id === t.targetId; })) {
             t.targetId = null;
             t.targetLocked = false;
@@ -687,7 +688,7 @@
     }
     /** @param {Combat} t */
     function toggleTargetLock(t) {
-        t.targetLocked = !t.targetLocked && alive(t).some(function (e) { return e.id === t.targetId; });
+        t.targetLocked = !t.targetLocked && alive(t).concat(t.convoy?DW.convoyMission.targets(t):[]).some(function (e) { return e.id === t.targetId; });
     }
     /** @param {Combat} t */
     function cycle(t) {

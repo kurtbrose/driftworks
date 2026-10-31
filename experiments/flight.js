@@ -11,6 +11,7 @@
     get('status').textContent='Loading ship textures and preparing graphics...';
     var activeMission=DW.flightMissions.current();
     if(activeMission.sky.gasGiant&&!DW.gasGiantWeather)await new Promise(/** @param {(value:boolean)=>void} resolve */function(resolve){window.addEventListener('gas-weather-ready',function(){resolve(true);},{once:true});});
+    if(activeMission.id==='convoy')host.setAttribute('aria-label','Convoy escort / intercept raiders and protect thirty freighters');
     var cinematic=activeMission.id==='cinematic';
     var impactWatch=!!activeMission.emptySpace&&!cinematic&&!activeMission.sky.hyperbolic;
     if(impactWatch)get('combat-toggle').checked=false;
@@ -547,7 +548,7 @@
         get('fly').disabled=!loaded;
         get('fly').textContent=loaded?(cinematic?'Start demo':'Start flight'):'Textures unavailable';
         if(loaded){
-            status.textContent=importError||(activeMission.id==='convoy'?'Ready / 7.5 km crossing at 25 m/s, approximately five minutes. Starting throttle matches the convoy. Two wingmates follow you.':'Ready - Start flight when ready');
+            status.textContent=importError||(activeMission.id==='convoy'?'Weapons free / Three raiders are attacking the convoy. Intercept the red contacts and protect the freighters. Tab cycles hostiles; L locks; Space or click fires.':'Ready - Start flight when ready');
             if(activeMission.id==='scramble'){controls.startUncaptured();}
             if(cinematic)resume();
             if(studies.enabled&&watch)resume();

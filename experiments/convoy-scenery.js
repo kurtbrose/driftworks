@@ -27,7 +27,7 @@
             new Promise(/** @param {(value:boolean)=>void} resolve @param {(reason:Error)=>void} reject */function(resolve,reject){image.onload=function(){resolve(true);};image.onerror=function(){reject(Error('Industrial paint atlas unavailable'));};image.src=assetUrl('../assets/ships/industrial-kit/panels.png');})
         ]).then(function(values){install(/** @type {import('./types').ConvoyAsset} */(values[0]),values[1],image);return true;}).catch(/** @param {unknown} error */function(error){console.error('Convoy ships:',error);return false;});
     }
-    DW.convoyScenery={visible:true,ready:ready,texture:texture,install:install,geometry:function(combat){
+    DW.convoyScenery={preview:function(name){return models[name]||[];},visible:true,ready:ready,texture:texture,install:install,geometry:function(combat){
         if(!combat.convoy||!this.visible)return [];
         var state=combat.convoy,key=state.ships.map(function(s){return s.hull>0?'1':'0';}).join(''),cached=cache.get(state);
         if(!cached||cached.key!==key){

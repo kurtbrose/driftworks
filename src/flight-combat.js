@@ -162,13 +162,16 @@
                 if (candidate.fraction < best) { best = candidate.fraction; hit = candidate.point; victim = e; surface = candidate; shieldContact=blocked; }
             }
         });
+        var cargo=t.convoy?DW.convoyMission.trace(t,start,end,bolt.weapon.headRadius||0):null;
+        if(cargo&&cargo.fraction<best){best=cargo.fraction;hit=cargo.point;victim=null;surface=null;shieldContact=false;}else cargo=null;
+        if(cargo)DW.convoyMission.damage(t,cargo.shipId,bolt.weapon,cargo.point);
         var struck = /** @type {Craft | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
         if (!shieldContact && struck && hull && hull.model && hull.local && hull.normal && (!scorchInterval || t.time-(scorchTimes.get(struck)??-Infinity)>=scorchInterval)) {
             DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });
             if(scorchInterval)scorchTimes.set(struck,t.time);
         }
-        if (!struck && hit && terrainHit && terrainHit.onImpact) terrainHit.onImpact(hit,bolt,t);
-        if (!struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
+        if (!cargo && !struck && hit && terrainHit && terrainHit.onImpact) terrainHit.onImpact(hit,bolt,t);
+        if (!cargo && !struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
         if (struck) {
             var before=onDamage?struck.hp+(struck.shield||0):0;
             if(shieldContact)damageCraft(t,struck,bolt.weapon,shooter||team);

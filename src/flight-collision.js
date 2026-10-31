@@ -320,6 +320,7 @@
     /** Geometry is selected by serializable simulation state, never by appearance controls.
      * @param {Craft} craft @param {Vector} start @param {Vector} end @param {number} [boltRadius] */
     function hullHit(craft, start, end, boltRadius) {
+        if(craft.convoyModel)return DW.convoyMission.hitModel(craft,start,end,boltRadius);
         if(craft.pose.curvature)return DW.flightHyperbolic.hullHit(craft,start,end,boltRadius,hullHit);
         var shape = craft.collision || { kind: 'sphere', radiusM: 9 };
         if (shape.kind === 'sphere') return sphereHit(start, end, craft.pose.eye, (shape.radiusM + (boltRadius || 0)) / U);

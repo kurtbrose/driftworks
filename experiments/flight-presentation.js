@@ -175,6 +175,7 @@
     }
     /** @param {ArtCraft} craft @param {number} wave @param {Pick<Appearance, 'allyArt' | 'enemyArt'>} appearance */
     function model(craft, wave, appearance) {
+        if(craft.convoyModel)return DW.convoyMission.model(craft.convoyModel);
         return DW.shipPackModels.craftModel(craft, craft.team === 'ally' ? appearance.allyArt : appearance.enemyArt, wave);
     }
     /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{document: Document,emptySky?:boolean}} [environment] */

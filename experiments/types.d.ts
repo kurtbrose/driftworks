@@ -239,6 +239,7 @@ export type Scorch = {
     layers: number[][];
 };
 export type ArtCraft = {
+    convoyModel?:string;
     modelId?:string;
     index: number;
     pose: Pose & {
@@ -716,8 +717,8 @@ export type EllisRenderPass={setShipStretching:(enabled:boolean)=>void;invalidat
 export type ExperimentModules = {
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
-    convoyMission:{installCollision:(meta:ConvoyAsset,bytes:ArrayBuffer)=>void;trace:(combat:Combat,start:Vector,end:Vector,radiusM:number,previousShips?:Vector[])=>ConvoyHit|null;collide:(combat:Combat,previousCraft:Vector[],previousShips:Vector[],dt:number)=>boolean;WING_SIZE:number;start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number)=>void;stepWing:(craft:Craft,player:FlightState,index:number,dt:number)=>void};
-    convoyScenery:{visible:boolean;ready:Promise<boolean>;texture:HTMLImageElement|undefined;install:(meta:ConvoyAsset,bytes:ArrayBuffer,image?:HTMLImageElement)=>void;geometry:(combat:Combat)=>Batch[]};
+    convoyMission:{hitModel:(craft:Craft,start:Vector,end:Vector,radius?:number)=>HullHit|null;targets:(combat:Combat)=>Craft[];model:(name:string)=>Model;damage:(combat:Combat,id:string,weapon:Weapon,point:Vector)=>void;installCollision:(meta:ConvoyAsset,bytes:ArrayBuffer)=>void;trace:(combat:Combat,start:Vector,end:Vector,radiusM:number,previousShips?:Vector[])=>ConvoyHit|null;collide:(combat:Combat,previousCraft:Vector[],previousShips:Vector[],dt:number)=>boolean;WING_SIZE:number;start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number)=>void;stepWing:(craft:Craft,player:FlightState,index:number,dt:number)=>void};
+    convoyScenery:{preview:(name:string)=>Batch[];visible:boolean;ready:Promise<boolean>;texture:HTMLImageElement|undefined;install:(meta:ConvoyAsset,bytes:ArrayBuffer,image?:HTMLImageElement)=>void;geometry:(combat:Combat)=>Batch[]};
     evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};
     evacuationScenery:{geometry:(combat:Combat)=>Batch[];status:()=>string;visible:boolean};
     gasGiantWeather:typeof import('./gas-giant-weather');

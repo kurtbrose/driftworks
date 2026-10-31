@@ -5,9 +5,11 @@ const f=createFlight({mission:'convoy',seed:29});
 let {combat:c,state:player,world}=f.snapshot();
 const U=f.DW.sim.METERS_PER_UNIT;
 assert.equal(f.DW.convoyMission.WING_SIZE,3);
-assert.equal(c.enemies.length,2);
+assert.equal(c.enemies.length,5);
 assert(c.convoy.speedMps<c.player.profile.maxVelocity[2]/2,'Freighters are substantially slower than fighters');
-assert(c.enemies.every(e=>e.team==='ally'));
+assert.equal(c.enemies.filter(e=>e.team==='ally').length,2);
+assert.equal(c.enemies.filter(e=>e.team==='enemy').length,3);
+c.enemies.filter(e=>e.team==='enemy').forEach(e=>{e.hp=0;});
 assert.equal(world.asteroids.length,0);
 assert.equal(world.ships.length,0);
 assert.equal(c.convoy.ships.length,30);
@@ -54,24 +56,24 @@ for(const s of c.convoy.ships){
     assert.equal(s.hull,s.maxHull);
     assert(!s.arrived);
 }
-assert(c.enemies.every(e=>separation(e)<180),'Both wingmen keep up at convoy speed');
+assert(c.enemies.filter(e=>e.team==='ally').every(e=>separation(e)<180),'Both wingmen keep up at convoy speed');
 // Turns, boost, and a stopped player exercise actual wing flight, not rigid placement.
 f.advance(2,{yaw:.3,boost:true});
 f.advance(8,{yaw:0,boost:false});
 f.advance(25,{stop:true});
-assert(c.enemies.every(e=>separation(e)<500),'Wingmen recover after a boost and turn');
+assert(c.enemies.filter(e=>e.team==='ally').every(e=>separation(e)<500),'Wingmen recover after a boost and turn');
 f.advance(204.9,{stop:true});
 assert(!c.convoy.complete,'Cannot arrive early');
 f.advance(.1,{stop:true});
 assert(c.convoy.complete);
 assert(c.convoy.ships.every(s=>s.arrived&&s.velocity.every(v=>v===0)));
-assert.equal(c.wave,1,'Quiet missions never spawn training waves');
-assert.equal(c.enemies.length,2);
+assert.equal(c.wave,1,'Convoy encounter never spawns generic training waves');
+assert.equal(c.enemies.length,5);
 assert.equal(JSON.stringify(c.convoy.ships.map(s=>s.slot)),slots);
 const positions=JSON.stringify(c.convoy.ships.map(s=>s.position));
 f.advance(10,{fire:true,stop:true});
 assert.equal(JSON.stringify(c.convoy.ships.map(s=>s.position)),positions,'Arrival preserves formation');
-assert.equal(c.player.guns.bolts.length,0,'Quiet escort weapons are disabled');
+assert(c.player.guns.fired>0,'Escort weapons are live');
 f.reset();c=f.snapshot().combat;
 assert.equal(c.convoy.elapsed,0);
 assert(!c.convoy.complete);
@@ -112,3 +114,47 @@ assert(pose.velocity[1]>0,'Contact is resolved relative to freighter velocity');
 f.reset();c=f.snapshot().combat;
 assert.equal(f.DW.convoyMission.trace(c,[10000,10000,10000],[10001,10000,10000],7),null);
 console.log('PASS convoy collision: authored surfaces and open bays, high-speed CCD, wingmen, moving hulls, clearance and reset');
+
+// The playable encounter starts armed and threatens actual damageable cargo.
+f.reset();c=f.snapshot().combat;
+assert(!f.DW.flightMissions.resolve('convoy').weaponsDisabled);
+const targets=f.DW.convoyMission.targets(c);assert.equal(targets.length,30);
+assert.equal(targets[24].hp,c.convoy.ships[24].hull);
+assert(c.enemies.filter(e=>e.team==='enemy').every(e=>e.targetId.startsWith('cargo-')));
+f.advance(12,{stop:true});
+assert(c.enemies.filter(e=>e.team==='enemy').some(e=>e.guns.fired>0),'Raiders fire real projectiles');
+assert(c.enemies.filter(e=>e.team==='ally').some(e=>e.guns.fired>0),'Wingmen fight the raiders');
+assert(c.convoy.ships.some(s=>s.hull<s.maxHull),'Actual raider rounds damage cargo');
+// A player volley hits the same surface, then destruction removes that target.
+f.reset();c=f.snapshot().combat;c.enemies.forEach(e=>{e.hp=0;});pose=f.snapshot().state;
+const victim=c.convoy.ships[24];pose.eye=at(victim,[-40,0,2.6]);pose.right=[0,-1,0];pose.up=[0,0,1];pose.back=[-1,0,0];pose.velocity=[0,25,0];pose.ramp=[0,0,0];pose.throttle=0;
+f.session.acquireTarget();assert.equal(c.targetId,victim.id,'Crosshair acquires cargo hull');
+f.session.toggleTargetLock();assert(c.targetLocked);
+const hp=victim.hull;f.advance(.5,{fire:true,stop:true});assert(victim.hull<hp,'Player rounds damage freighters');
+const proxy=f.DW.convoyMission.targets(c).find(t=>t.id===victim.id);assert.equal(proxy.hp,victim.hull,'HUD health aliases actual cargo health');
+f.DW.convoyMission.damage(c,victim.id,{damage:1e9,armorFactor:1},victim.position);
+assert.equal(victim.hull,0);assert(!f.DW.convoyMission.targets(c).some(t=>t.id===victim.id));
+assert(c.flashes.some(e=>e.destruction),'Cargo loss produces a visible explosion');
+f.advance(1/120,{stop:true});assert.notEqual(c.targetId,victim.id,'Destroyed cargo cannot retain a target lock');
+// Surviving attackers keep the escort unresolved after the arrival time.
+f.reset();c=f.snapshot().combat;c.convoy.elapsed=300;
+c.convoy.ships.forEach(s=>{s.arrived=true;s.position[1]=s.slot[1]+c.convoy.destinationY;});
+f.DW.convoyMission.step(c,1/120);assert(!c.convoy.complete);
+c.enemies.filter(e=>e.team==='enemy').forEach(e=>{e.hp=0;});f.DW.convoyMission.step(c,1/120);assert(c.convoy.complete);
+f.reset();c=f.snapshot().combat;c.convoy.ships.forEach(s=>{s.hull=0;});f.DW.convoyMission.step(c,1/120);assert(c.convoy.complete,'Total cargo loss ends the escort');
+console.log('PASS escort combat: weapons, real raiders and defending wingmen, cargo damage/targets/losses, victory and failure');
+
+// Close the actual chase/aim/shoot loop through the normal control and gun paths.
+f.reset();c=f.snapshot().combat;
+for(let i=0;i<1200&&!c.dead;i++){
+    const enemies=c.enemies.filter(e=>e.team==='enemy'&&e.hp>0);if(!enemies.length)break;
+    const target=enemies.find(e=>e.id===c.targetId)||enemies[0];c.targetId=target.id;
+    const state=f.snapshot().state,weapon=f.DW.retailWeapons[c.player.weaponIndex];
+    const lead=f.DW.flightSim.firingSolution(c,c.player,target,weapon),steering=f.DW.flightSim.steer(state,lead?lead.point:target.pose.eye);
+    const distance=Math.hypot(...state.eye.map((v,k)=>v-target.pose.eye[k]))*U;
+    f.advance(.05,{...steering,throttle:1,fire:true,boost:distance>900});
+}
+assert(!c.dead&&c.playerKills>0,'Pilot can intercept and kill real attackers');
+assert(c.enemies.filter(e=>e.team==='enemy').every(e=>e.hp<=0),'The fixed raid can be defeated');
+assert(c.convoy.ships.every(s=>s.hull>0),'Prompt interception can save the whole convoy');
+console.log('PASS playable escort loop: real controls, interception, lead, gunfire, raider kills and convoy survival');

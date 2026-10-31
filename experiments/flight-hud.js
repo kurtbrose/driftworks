@@ -432,7 +432,7 @@
                 combatHud.arc(sx, sy, 5, 0, Math.PI * 2);
                 combatHud.stroke();
             }
-            var speakerId = view.speakerId, living = DW.flightSim.alive(combat).filter(function(e){return mission.sky.wormhole||(e.pose.region||0)===(state.region||0);}), selected = living.find(function (e) {
+            var speakerId = view.speakerId, living = DW.flightSim.alive(combat).concat(combat.convoy?DW.convoyMission.targets(combat):[]).filter(function(e){return mission.sky.wormhole||(e.pose.region||0)===(state.region||0);}), selected = living.find(function (e) {
                 return e.id === combat.targetId;
             });
             status = targetStatus(status, selected, combat.time);
@@ -441,7 +441,7 @@
             }).length + (' '+mission.teams.enemy.status+' / ') + living.filter(function (e) {
                 return e.team === 'ally';
             }).length + (' '+mission.teams.ally.status+' / ') + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
-            if(combat.convoy){var convoy=combat.convoy,arrived=convoy.ships.filter(function(s){return s.arrived;}).length;get('combat-status').textContent=combat.dead?'SORTIE OVER / Esc to restart':(convoy.complete?'CONVOY ARRIVED':'ESCORT CONVOY')+' / '+arrived+'/30 ARRIVED / '+(living.length+1)+' FIGHTERS';}
+            if(combat.convoy){var convoy=combat.convoy,arrived=convoy.ships.filter(function(s){return s.arrived&&s.hull>0;}).length,lost=convoy.ships.filter(function(s){return s.hull<=0;}).length;get('combat-status').textContent=combat.dead?'SORTIE OVER / Esc to restart':(lost===30?'CONVOY LOST':convoy.complete?'ESCORT COMPLETE':'DEFEND CONVOY')+' / '+arrived+' ARRIVED / '+lost+' LOST / '+living.filter(function(e){return e.team==='enemy';}).length+' RAIDERS';}
             get('shield-meter').max = Math.max(1, combat.maxShield === undefined ? 120 : combat.maxShield);
             get('shield-meter').value = combat.shield;
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
@@ -456,7 +456,7 @@
             targetPanel.hidden = !selected;
             if (selected) {
                 var selection = selected.team === 'ally' ? view.allyArt : view.enemyArt, art = DW.flightPresentation.model(selected, combat.wave, view);
-                get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (selected.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.flightSim.callsign(selected);
+                get('target-label').textContent = (combat.targetLocked ? 'LOCKED / ' : 'AUTO / ') + (selected.convoyModel?'CARGO':selected.team === 'ally' ? mission.teams.ally.target : mission.teams.enemy.target)+' / ' + DW.flightSim.callsign(selected);
                 get('target-detail').textContent = (art.name || 'Training fighter') + ' / ' + rangeText(selected)+' / ' + Math.ceil(selected.hp / selected.maxHp * 100) + '% HULL / ' + Math.ceil(selected.shield || 0) + ' SHIELD';
                 get('target-hull').max = selected.maxHp;
                 get('target-hull').value = selected.hp;
@@ -470,9 +470,8 @@
                 combatHud.fillRect(0, 0, w, h);
             }
             var radarContacts = /** @type {RadarContact[]} */ (living.filter(function(e){return (e.pose.region||0)===(state.region||0);}).map(function (e) {
-                return { point: e.pose.eye, color: e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
+                return { point: e.pose.eye, color: e.convoyModel?'#72c8d5':e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
             }));
-            if(combat.convoy)combat.convoy.ships.filter(function(s){return s.hull>0;}).forEach(function(s){radarContacts.push({point:s.position,color:'#72c8d5',landmark:true});});
             if(state.curvature)radarContacts=radarContacts.map(function(c){var route=DW.flightHyperbolic.path(state.eye,c.point,state.curvature||650);return Object.assign({},c,{point:state.eye.map(function(v,i){return v+route.direction[i]*route.distance;})});});
             if(mission.sky.thinShell){
                 radarContacts=[];
@@ -503,20 +502,21 @@
             if(combat.convoy){
                 var convoy=combat.convoy,remaining=Math.max(0,convoy.destinationY*units-convoy.elapsed*convoy.speedMps);
                 combatHud.save();combatHud.font='14px system-ui';combatHud.textAlign='center';combatHud.fillStyle='#b9e7ed';combatHud.strokeStyle='#72c8d5';
-                combatHud.fillText(convoy.complete?'ARRIVAL COMPLETE / Esc to restart':'CONVOY ROUTE / '+(remaining/1000).toFixed(1)+' km remaining / '+Math.ceil(remaining/convoy.speedMps)+' s',w/2,86);
+                var survivors=convoy.ships.filter(function(s){return s.hull>0;}).length,raiders=living.filter(function(e){return e.team==='enemy';}).length;
+                combatHud.fillText(!survivors?'CONVOY LOST / Esc to restart':convoy.complete?'ESCORT COMPLETE / '+survivors+' ARRIVED':'DEFEND '+survivors+' FREIGHTERS / '+raiders+' RAIDERS / '+(remaining/1000).toFixed(1)+' km remaining',w/2,86);
                 var nearestCargo=convoy.ships.filter(function(ship){return ship.hull>0;}).reduce(function(best,ship){var range=function(/** @type {typeof convoy.ships[number]} */s){return Math.hypot.apply(null,s.position.map(function(v,k){return v-state.eye[k];}));};return !best||range(ship)<range(best)?ship:best;},/** @type {typeof convoy.ships[number]|null} */(null));
                 convoy.ships.forEach(function(ship){
                     if(ship.hull<=0)return;
                     var direction=ship.position.map(function(v,k){return v-state.eye[k];}),q=DW.flightSkybox.project(direction,state,w/h);
                     if(!q||Math.abs(q.x)>.92||Math.abs(q.y)>.75)return;
                     var x=w*(q.x+1)/2,y=h*(1-q.y)/2,distance=Math.hypot.apply(null,direction)*units;
-                    combatHud.strokeRect(x-3,y-3,6,6);
-                    if(ship===nearestCargo&&distance<650){combatHud.fillText(ship.callsign,x,y-17);combatHud.fillText(Math.round(distance)+' m',x,y+22);}
+                    var selectedCargo=ship.id===combat.targetId,r=selectedCargo?12:3;combatHud.strokeRect(x-r,y-r,r*2,r*2);
+                    if(selectedCargo||ship===nearestCargo&&distance<650){combatHud.fillText(ship.callsign,x,y-17);combatHud.fillText(Math.round(distance)+' m',x,y+22);}
                 });
                 combatHud.restore();
             }
             var targetBearing = /** @type {number | null} */ (null);
-            living.forEach(function (e) {
+            living.filter(function(e){return !e.convoyModel;}).forEach(function (e) {
                 var direction=visualDirection(e.pose.eye,e.pose.region||0);if(!direction)return;
                 var q = DW.flightSkybox.project(direction,state,w/h), target = e.id === combat.targetId;
                 combatHud.globalAlpha = 1;

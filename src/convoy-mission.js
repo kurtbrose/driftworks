@@ -13,12 +13,27 @@
             c.pose.right=player.right.slice();c.pose.up=player.up.slice();c.pose.back=player.back.slice();
             c.pose.velocity=player.velocity.slice();c.pose.ramp=[0,0,25];c.pose.throttle=25/c.profile.maxVelocity[2];
             c.mode='escort';c.targetId=null;
+            if(combat.useHullModels)c.collision={kind:'model',modelId:DW.shipPackModels.craftModel(c,combat.hullModels?combat.hullModels.ally:'mixed',combat.wave).id};
         });
         combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
             var slot=[(i%3-1)*45/U,(4-Math.floor(i/6))*110/U,1200+(Math.floor(i/3)%2?17.5:-17.5)/U];
-            return {id:'cargo-'+String(i+1).padStart(2,'0'),callsign:'Cargo '+String(i+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:100,maxHull:100,arrived:false};
+            return {id:'cargo-'+String(i+1).padStart(2,'0'),callsign:'Cargo '+String(i+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
         })};
-        combat.targetId=null;combat.roundOver=false;
+        targets(combat);
+        for(var j=0;j<3;j++){
+            var target=combat.convoy.ships[24+j],pose=DW.arcade.create(0),side=j===1?-1:1;
+            pose.eye=target.position.map(function(v,k){return v+[side*(500+j*65),250+j*80,100+j*35][k]/U;});
+            var delta=target.position.map(function(v,k){return v-pose.eye[k];}),length=Math.hypot.apply(null,delta),forward=delta.map(function(v){return v/length;});
+            var horizontal=Math.hypot(forward[0],forward[1]);pose.right=[forward[1]/horizontal,-forward[0]/horizontal,0];pose.up=[pose.right[1]*forward[2],-pose.right[0]*forward[2],pose.right[0]*forward[1]-pose.right[1]*forward[0]];pose.back=forward.map(function(v){return -v;});
+            pose.velocity=forward.map(function(v){return v*60;});pose.ramp=[0,0,60];pose.throttle=.85;
+            var raider=DW.flightSim.createCraft('convoy-raider-'+(j+1),pose,'enemy');
+            raider.index=2+j;raider.callsign='Raider '+(j+1);raider.controller='ai';raider.skill=1;raider.pilot='Veteran';raider.mode='approach';raider.opponentStyle='baseline';
+            DW.flightSim.equip(raider,DW.arcade.profiles[0],DW.flightSim.defaultWeapon(DW.arcade.profiles[0]));raider.hp=raider.maxHp=120;raider.shield=raider.maxShield=80;
+            raider.goal=target.position.slice();raider.targetId=target.id;raider.retarget=1e9;
+            if(combat.useHullModels)raider.collision={kind:'model',modelId:DW.shipPackModels.craftModel(raider,combat.hullModels?combat.hullModels.enemy:'mixed',combat.wave).id};
+            combat.enemies.push(raider);
+        }
+        combat.targetId='convoy-raider-1';combat.roundOver=false;
     }
     /** @param {import('../experiments/types').Combat} combat @param {number} dt */
     function step(combat,dt){
@@ -29,7 +44,7 @@
             ship.position[1]=ship.slot[1]+Math.min(s.destinationY,s.elapsed*s.speedMps/U);
             if(ship.position[1]>=s.destinationY+ship.slot[1]){ship.arrived=true;ship.velocity=[0,0,0];}
         });
-        s.complete=s.ships.every(function(ship){return ship.arrived||ship.hull<=0;});
+        s.complete=!s.ships.some(function(ship){return ship.hull>0;})||(s.ships.every(function(ship){return ship.arrived||ship.hull<=0;})&&!combat.enemies.some(function(e){return e.team==='enemy'&&e.hp>0;}));
     }
     /** Follow a moving slot using ordinary fighter steering and acceleration.
      * @param {import('../experiments/types').Craft} craft @param {import('../experiments/types').FlightState} player @param {number} index @param {number} dt */
@@ -109,5 +124,29 @@
         });
         return playerImpact;
     }
-    DW.convoyMission={installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
+    /** Derived target views alias cargo health; they never enter the fighter renderer or movement roster. */
+    /** @type {WeakMap<import('../experiments/types').ConvoyState,import('../experiments/types').Craft[]>} */var targetViews=new WeakMap();
+    /** @param {import('../experiments/types').Combat} combat */
+    function targets(combat){
+        const state=combat.convoy;if(!state)return [];
+        var views=targetViews.get(state);
+        if(!views){views=state.ships.map(function(ship,index){
+            var craft=DW.flightSim.createCraft(ship.id,DW.arcade.create(0),'ally');
+            craft.index=index;craft.callsign=ship.callsign;craft.convoyModel=ship.model;craft.maxShield=0;craft.shield=0;
+            Object.defineProperties(craft,{hp:{get:function(){return ship.hull;},set:function(/** @type {number} */v){ship.hull=v;}},maxHp:{get:function(){return ship.maxHull;}}});return craft;
+        });targetViews.set(state,views);}
+        views.forEach(function(c,i){c.pose.eye=state.ships[i].position;c.pose.velocity=state.ships[i].velocity;c.collision={kind:'sphere',radiusM:hulls[c.convoyModel||'']?DW.shipHulls.hullRadius(hulls[c.convoyModel||''].model):80};});
+        return views.filter(function(c){return c.hp>0;});
+    }
+    /** @param {import('../experiments/types').Craft} craft @param {number[]} start @param {number[]} end @param {number} [radius] */
+    function hitModel(craft,start,end,radius){var h=hulls[craft.convoyModel||''];return h?DW.shipHulls.hullHit(h.model,craft.pose,start,end,U,radius):null;}
+    /** @param {string} name */function model(name){const hull=hulls[name];if(!hull)throw Error('Convoy hull not loaded: '+name);return hull.model;}
+    /** @param {import('../experiments/types').Combat} combat @param {string} id @param {import('../experiments/types').Weapon} weapon @param {number[]} point */
+    function damage(combat,id,weapon,point){
+        const state=combat.convoy;if(!state)return;
+        var ship=state.ships.find(function(s){return s.id===id;});if(!ship||ship.hull<=0)return;
+        ship.hull=Math.max(0,ship.hull-weapon.damage*weapon.armorFactor);
+        combat.flashes.push({position:point.slice(),velocity:ship.velocity.map(function(v){return v/U;}),age:0,scale:ship.hull>0?1:70,destruction:ship.hull<=0});
+    }
+    DW.convoyMission={hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
 }());
