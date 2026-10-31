@@ -41,3 +41,24 @@ const launching=t.enemies[0],before=launching.pose.eye.slice();api.step(t,player
 assert(launching.pose.eye[2]>before[2]);assert.equal(launching.fire,false);assert(launching.hangarLaunch.remaining<4);
 const regular=api.create('furball');api.spawn(regular,player,125);assert.equal(regular.enemies.length,16);assert(!regular.rosterNext);
 console.log('PASS Ohio flying roster: 4v4, headlight guns/rear engines, mixed fighters/vehicles, unique rotating cast, immediate barn launches, vehicle wrecks and standard-mission isolation');
+
+// Camera motion may turn ribbon width, but never move or bend its axial endpoints.
+{
+ const pose={eye:[17,8,12],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,0,0],throttle:1};
+ const norm=v=>v.map(x=>x/Math.hypot(...v)),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+ for(const mounts of [undefined,[[3,-10,2,1.8]]]){
+  let reference;
+  for(const eye of [[0,0,0],[80,-20,50],[17,-80,12],[17,80,12],[17.3,-80,12.2]])for(const back of [[0,-1,0],norm([.7,-.3,.6]),norm([-.4,.6,-.7])])for(const roll of [0,.73]){
+   const r=norm(cross([0,0,1],back)),u=cross(back,r),right=r.map((x,i)=>x*Math.cos(roll)+u[i]*Math.sin(roll)),up=u.map((x,i)=>x*Math.cos(roll)-r[i]*Math.sin(roll)),view={eye,right,up,back};
+   const v=DW.shipRender.engineGeometry([{index:0,hp:1,pose}],'',1,10,view,0,mounts).vertices;
+   const point=i=>Array.from(v.slice((6+i)*6,(6+i)*6+3));
+   const mid=(a,b)=>a.map((x,i)=>(x+b[i])/2),start=mid(point(0),point(1)),end=mid(point(2),point(5));
+   const axis=end.map((x,i)=>x-start[i]);
+   assert(Math.hypot(...cross(axis,pose.back))<1e-5,'exhaust stays parallel to ship under pitch/yaw/roll/translation');
+   const endpoints=[...start,...end];
+   if(reference)endpoints.forEach((x,i)=>assert(Math.abs(x-reference[i])<1e-5,'camera-independent flame endpoints'));
+   reference=endpoints;assert(v.every(Number.isFinite));
+  }
+ }
+ console.log('PASS exhaust axis: fixed ship-space endpoints through off-axis camera translation, pitch, yaw and roll for fighter and capital mounts');
+}

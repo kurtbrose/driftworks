@@ -40,8 +40,10 @@ Flight-lab hull finishes use a brighter armor palette and a study-actor-only .18
 fill contribution, leaving production geology and mothership lighting unchanged.
 `shipPackModels.engineAnchors` caches one or two aft-facing surface anchors per
 model. `engineGeometry` emits a blue-white halo and throttle-scaled exhaust per
-anchor into one additive effect batch shared by both teams. Camera-facing quads
-use the existing soft emissive shader and depth testing; they are visual cues,
+anchor into one additive effect batch shared by both teams. The halo faces the
+camera; the flame ribbon's long axis stays on the ship's aft axis, with only its
+width rotating toward the observer. This preserves nozzle alignment during
+camera rotation and off-center perspective views. Both use the existing soft emissive shader and depth testing; they are visual cues,
 not dynamic lights or bloom. Disabled/idle craft emit no exhaust. The study effect
 budget is five batches (the existing four gun/impact batches plus engines).
 

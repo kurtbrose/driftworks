@@ -219,22 +219,19 @@
                     return sum + v * view.back[i];
                 }, 0));
                 quad(center, view.up, view.right, radius * 1.4 * pulse, radius * 1.4 * pulse, (.3 + .7 * facing) * (.45 + .55 * power));
-                var projected = p.back.map(function (v, i) {
-                    return v - view.back[i] * p.back.reduce(function (sum, n, j) {
-                        return sum + n * view.back[j];
-                    }, 0);
-                });
-                var size = Math.hypot.apply(null, projected);
-                var along = size > .001 ? projected.map(function (v) {
-                    return v / size;
-                }) : view.up;
-                var side = [view.back[1] * along[2] - view.back[2] * along[1], view.back[2] * along[0] - view.back[0] * along[2], view.back[0] * along[1] - view.back[1] * along[0]];
+                // Axis-locked ribbon: only its width turns toward the observer.
+                // Flattening the long axis into the camera plane skews off-axis
+                // exhaust under perspective when the cockpit pitches or yaws.
+                var sight = view.eye.map(function(v,i){return v-center[i];});
+                var side = [p.back[1]*sight[2]-p.back[2]*sight[1], p.back[2]*sight[0]-p.back[0]*sight[2], p.back[0]*sight[1]-p.back[1]*sight[0]];
+                var sideLength = Math.hypot.apply(null,side);
+                side = sideLength > .000001 ? side.map(function(v){return v/sideLength;}) : p.right;
                 var tail = radius * (2.8 + power * 6) * pulse;
                 // Large authored mouths need the soft flame root to overlap the bell.
                 var plume = center.map(function (v, i) {
                     return v + p.back[i] * tail * (mounts ? .24 : .5) / units;
                 });
-                quad(plume, along, side, Math.max(radius * .15, tail * (mounts ? .62 : .5) * size), radius * (.6 + power * .3), .6 + power * .35);
+                quad(plume, p.back, side, tail * (mounts ? .62 : .5), radius * (.6 + power * .3), .6 + power * .35);
             });
         });
         return { vertices: new Float32Array(data), color: [.25, .65, 1] };
