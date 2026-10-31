@@ -519,6 +519,7 @@
                 if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;if(t.scramble&&e.team==='enemy')delete e.plotArmor;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
                 if(t.convoy&&e.team==='ally'&&!living.some(function(c){return c.team==='enemy';})){DW.convoyMission.stepWing(e,player,e.index,dt);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
+                if(t.convoy&&e.team==='enemy'&&DW.convoyMission.stepRaider(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;

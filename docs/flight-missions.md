@@ -36,12 +36,31 @@ The playtest opens with sixty seconds of quiet escort, including the arrival
 exchange and roughly forty-five seconds to settle into formation afterward.
 No hostile fighters exist during this leg; weapons and cargo damage remain live.
 At sixty active-flight seconds, the fixed three-raider approach begins once.
-Raiders spawn relative to the convoy's current location, over 2.5 km from the
-rear packet, outside their gun reach, giving
-the escort time to intercept. Raiders initially attack three rear freighters using the regular pursuit, aiming
-and weapon systems; wingmen engage them and return to escort formation once the
-attack is defeated. The player can intercept, lock and shoot the raiders. There
-is no adaptive battle director or waypoint vectoring yet.
+Raiders spawn as one loose three-fighter wedge on a common starboard-aft bearing,
+over 2.5 km from the rear packet. Formation slots are 130 m to either side,
+180 m astern and 40 m above/below the lead. Shared steering and acceleration
+maintain the formation; positions are assigned only at spawn. The wing releases
+into its roles within 1.4 km of cargo or when escorts intercept it.
+
+Two raiders make strike runs; the third covers them against escorts. Normal
+GTF Ulysses durability is retained (180 hull / 380 shield), with Veteran skill
+and the existing FreeSpace-inspired breaking/pursuit policy. Threat response
+observes distance, facing, live rounds and recent damage, never the player's
+selected target or future input. Strikers can be peeled off their run; the cover
+pilot can engage the interceptor. Target assignments are reconsidered instead
+of holding the old effectively infinite cargo lock.
+
+Strafing passes stop after five seconds of firing or close approach. Critical
+hull damage also aborts a run. The wing regroups off the convoy after the strikes
+finish or its engagement window expires, then reforms for another approach.
+These goals use normal flight physics, gun tracing, shields and collision. A
+survivor assumes leadership if the lead is destroyed. `combat.convoy.raid` owns
+the group phase/leader ID; each craft's `convoyRaider` stores its role and pass
+bookkeeping, with JSON-safe IDs rather than entity pointers. `stepRaider` returns
+true only when it has performed formation/cover/extension movement; its caller
+still ages guns and updates collision/neighbour indices. Engaged targeting uses
+the normal combat path. Wingmen return to escort after the raid is defeated.
+There is no adaptive battle director or waypoint vectoring yet.
 
 Control's callsign is Rook: calm, concise and concerned with the entire convoy.
 Control and fighter calls use addressee/caller, observation and order. The opening
