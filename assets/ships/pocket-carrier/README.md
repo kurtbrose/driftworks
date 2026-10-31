@@ -1,7 +1,12 @@
-# Pocket carrier: first blockout
+# Pocket carrier — WIP
 
 Original model reconstructed from the user's carrier screenshots, without the
 paywalled source mesh. This is an offline concept review, not a gameplay asset.
+
+Work in progress, saved as a baseline for continued design iteration. The smooth
+hull is the current direction; proportions, hangar operations, internal layout,
+materials and engine integration remain open for refinement. This is not an
+approved final design.
 
 - Editable source: `pocket-carrier.blend`; portable export: `pocket-carrier.glb`.
 - Authoring coordinates: metres, +Y forward, +Z dorsal. Standard glTF export
