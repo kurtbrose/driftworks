@@ -140,7 +140,17 @@
             if(options&&options.bridge)renderBatches.forEach(function(b){b.region=options.state.region||0;b.lensCenter=options.state.position;b.lensRadius=750;});
             return renderBatches;
         }
-        /** @param {import('../experiments/types').Pose} pose @param {boolean=} shields */function effects(pose,shields){var state=simulation.visualState(),mounts=state.mounts,bridgeMetric=state.bridgeMetric,seconds=state.seconds,shieldHits=state.shieldHits;var batches=DW.flightGuns.geometry({bolts:mounts.flatMap(function(m){return m.guns.bolts.map(function(b){return Object.assign({},b,{team:team});});}),impacts:mounts.flatMap(function(m){return m.guns.impacts;})},pose,bridgeMetric);shieldHits=shieldHits.filter(function(h){return seconds-h.time<(h.heavy?.65:.36);});if(shields!==false&&shieldHits.length&&DW.combatShields&&DW.aegisShieldEnvelope)batches=batches.concat(DW.combatShields.capital(DW.aegisShieldEnvelope,shieldHits.map(function(h){return {anchor:DW.combatShields.anchor(DW.aegisShieldEnvelope,h.point),time:h.time,heavy:h.heavy};}),seconds,origin,options?options.state.heading:0,options&&options.state.region||0));return batches;}
+        // Authored bell mouths are 32 m aft of each independent engine pivot.
+        /** @param {import('../experiments/types').Pose} view @param {number} seconds */
+        function flames(view,seconds){
+            var heading=options?options.state.heading:0,c=Math.cos(heading),s=Math.sin(heading);
+            var anchors=(sourceAsset.engines||[]).filter(function(e){var part=parts.find(function(p){return p.id===e.id;});return !part||part.hp>0;}).map(function(e){return [e.position[1],-e.position[0]-32,e.position[2],18];});
+            var pose={eye:origin,right:[-s,c,0],back:[c,s,0],up:[0,0,1],velocity:[0,0,0],throttle:1};
+            var batch=DW.shipRender.engineGeometry([{index:0,hp:options?options.state.integrity:1,pose:pose}],'',1,U,view,seconds,anchors);
+            if(options){batch.region=options.state.region||0;batch.lensCenter=origin;batch.lensRadius=750;}
+            return batch;
+        }
+        /** @param {import('../experiments/types').Pose} pose @param {boolean=} shields */function effects(pose,shields){var state=simulation.visualState(),mounts=state.mounts,bridgeMetric=state.bridgeMetric,seconds=state.seconds,shieldHits=state.shieldHits;var batches=DW.flightGuns.geometry({bolts:mounts.flatMap(function(m){return m.guns.bolts.map(function(b){return Object.assign({},b,{team:team});});}),impacts:mounts.flatMap(function(m){return m.guns.impacts;})},pose,bridgeMetric);shieldHits=shieldHits.filter(function(h){return seconds-h.time<(h.heavy?.65:.36);});if(shields!==false&&shieldHits.length&&DW.combatShields&&DW.aegisShieldEnvelope)batches=batches.concat(DW.combatShields.capital(DW.aegisShieldEnvelope,shieldHits.map(function(h){return {anchor:DW.combatShields.anchor(DW.aegisShieldEnvelope,h.point),time:h.time,heavy:h.heavy};}),seconds,origin,options?options.state.heading:0,options&&options.state.region||0));batches.push(flames(pose,seconds));return batches;}
         return {geometry:geometry,effects:effects,setSurfaceDetail:setSurfaceDetail,sync:sync};
     }
     function load(){

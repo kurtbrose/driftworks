@@ -719,9 +719,9 @@ export type ExperimentModules = {
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
     convoyMission:{packets:ConvoyPacket[];radio:(combat:Combat,dt:number,busy:boolean)=>Line|null;hitModel:(craft:Craft,start:Vector,end:Vector,radius?:number)=>HullHit|null;targets:(combat:Combat)=>Craft[];model:(name:string)=>Model;damage:(combat:Combat,id:string,weapon:Weapon,point:Vector)=>void;installCollision:(meta:ConvoyAsset,bytes:ArrayBuffer)=>void;trace:(combat:Combat,start:Vector,end:Vector,radiusM:number,previousShips?:Vector[])=>ConvoyHit|null;collide:(combat:Combat,previousCraft:Vector[],previousShips:Vector[],dt:number)=>boolean;WING_SIZE:number;start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number)=>void;stepWing:(craft:Craft,player:FlightState,index:number,dt:number)=>void};
-    convoyScenery:{preview:(name:string)=>Batch[];visible:boolean;ready:Promise<boolean>;texture:HTMLImageElement|undefined;install:(meta:ConvoyAsset,bytes:ArrayBuffer,image?:HTMLImageElement)=>void;geometry:(combat:Combat)=>Batch[]};
+    convoyScenery:{effects:(combat:Combat,view:Pose)=>Batch[];preview:(name:string)=>Batch[];visible:boolean;ready:Promise<boolean>;texture:HTMLImageElement|undefined;install:(meta:ConvoyAsset,bytes:ArrayBuffer,image?:HTMLImageElement)=>void;geometry:(combat:Combat)=>Batch[]};
     evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};
-    evacuationScenery:{geometry:(combat:Combat)=>Batch[];status:()=>string;visible:boolean};
+    evacuationScenery:{effects:(combat:Combat,view:Pose)=>Batch[];geometry:(combat:Combat)=>Batch[];status:()=>string;visible:boolean};
     gasGiantWeather:typeof import('./gas-giant-weather');
     roadsideLayout:{describe:(asteroid:Asteroid,definition:MissionScenery,surfaceFrame:(asteroid:Asteroid,direction:[number,number,number])=>{point:number[]})=>{scale:number;deckHeight:number;ground:(x:number,y:number)=>{point:number[];normal:number[]};launchOrigin:(building:NonNullable<MissionScenery['placements']>[number])=>number[]}};
     flightScenery:{build:(asteroid:import('../src/types').Asteroid,definition:MissionScenery,catalog:RoadsideCatalog,data:Float32Array)=>Batch[];create:(definition:MissionScenery)=>{render:(asteroid:import('../src/types').Asteroid)=>Batch[];status:()=>string}};
@@ -884,7 +884,7 @@ export type ExperimentModules = {
         textureSources: (images: Images) => HTMLImageElement[];
         gunAnchors: (model: Model) => Vector[];
         engineAnchors: (model: Model) => number[][];
-        engineGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, view: Pose, time: number) => Batch;
+        engineGeometry: (craft: ArtCraft[], selection: string, wave: number, units: number, view: Pose, time: number, mounts?: number[][]) => Batch;
         craftModel: (craft: ArtCraft, selection: string, wave: number) => Model;
         hullRadius: (model: Model) => number;
         hullHit: (model: Model, pose: Pose, start: Vector, end: Vector, units: number, boltRadius?: number) => HullHit | null;

@@ -192,8 +192,8 @@
         });
         return batches;
     }
-    /** @param {ArtCraft[]} craft @param {string} selection @param {number} wave @param {number} units @param {Pose} view @param {number} time @returns {Batch} */
-    function engineGeometry(craft, selection, wave, units, view, time) {
+    /** @param {ArtCraft[]} craft @param {string} selection @param {number} wave @param {number} units @param {Pose} view @param {number} time @param {number[][]} [mounts] @returns {Batch} */
+    function engineGeometry(craft, selection, wave, units, view, time, mounts) {
         var data = /** @type {number[]} */ ([]);
         /** @param {Vector} center @param {Vector} along @param {Vector} side @param {number} length @param {number} width @param {number} opacity */
         function quad(center, along, side, length, width, opacity) {
@@ -207,7 +207,7 @@
             if ((e.hp !== undefined && e.hp <= 0) || e.age !== undefined || e.pose.throttle <= 0)
                 return;
             var entry = (e.modelId ? find(e.modelId)?.model : null) || (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model);
-            var anchors = entry ? engineAnchors(entry) : [[0, -6, 0]], p = e.pose;
+            var anchors = mounts || (entry ? engineAnchors(entry) : [[0, -6, 0]]), p = e.pose;
             var power = Math.min(1, Math.max(0, p.throttle)), pulse = 1 + .035 * Math.sin(time * 23 + e.index * 2.7);
             anchors.forEach(function (anchor) {
                 var radius = anchor[3] || .65;
@@ -230,10 +230,11 @@
                 }) : view.up;
                 var side = [view.back[1] * along[2] - view.back[2] * along[1], view.back[2] * along[0] - view.back[0] * along[2], view.back[0] * along[1] - view.back[1] * along[0]];
                 var tail = radius * (2.8 + power * 6) * pulse;
+                // Large authored mouths need the soft flame root to overlap the bell.
                 var plume = center.map(function (v, i) {
-                    return v + p.back[i] * tail * .5 / units;
+                    return v + p.back[i] * tail * (mounts ? .24 : .5) / units;
                 });
-                quad(plume, along, side, Math.max(radius * .15, tail * .5 * size), radius * (.6 + power * .3), .6 + power * .35);
+                quad(plume, along, side, Math.max(radius * .15, tail * (mounts ? .62 : .5) * size), radius * (.6 + power * .3), .6 + power * .35);
             });
         });
         return { vertices: new Float32Array(data), color: [.25, .65, 1] };

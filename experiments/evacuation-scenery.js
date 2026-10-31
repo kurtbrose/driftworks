@@ -9,6 +9,7 @@ import * as arms from './depot-arm.js';
     /** @typedef {import('./depot-asset').DepotBatch} SourceBatch */
     /** @typedef {{materials:Record<string,[number,number,number]>;batches:SourceBatch[]}} Asset */
     /** @type {{batches:Batch[];port:number[]}[]} */var transports=[];
+    /** @type {import('./types').ArtCraft[]} */var exhaust=[];
     var status='Loading depot and civilian liners';
     var paint=new Image();paint.src=assetUrl('../assets/depots/refueling-v1/caution-paint.png');
     /** @typedef {{refuel:number[];batches:{offset:number;count:number;color:[number,number,number];opacity:number;emissive:number[]}[]}} Transport */
@@ -36,7 +37,17 @@ import * as arms from './depot-arm.js';
     /** @type {WeakMap<import('./types').Combat,{last:number;five:import('./refueling-cycle').RefuelingCycle;six:import('./refueling-cycle').RefuelingCycle}>} */var cycles=new WeakMap();
     var dockBasis=new Float32Array([1,0,0,0,0,1,0,-1,0]);
     var panel=/** @type {HTMLElement|null} */(null);
-    DW.evacuationScenery={visible:true,status:function(){return status;},geometry:function(combat){
+    DW.evacuationScenery={visible:true,status:function(){return status;},effects:function(combat,view){
+        if(!this.visible)return [];
+        return exhaust.map(function(c){
+            var large=c.index===1,w=large?30:18,l=large?180:72,h=large?16.5:11;
+            var mouths=(large?[-.3,0,.3]:[-.28,.28]).map(function(x,i){
+                return [x*w,-l*.532-.16,-h*.03+(large&&i===1?h*.15:0),w*(large?.14:.145)*.85];
+            });
+            return DW.shipRender.engineGeometry([c],'',1,U,view,combat.evacuation?combat.evacuation.elapsed:0,mouths);
+        });
+    },geometry:function(combat){
+        exhaust=[];
         if(!combat.evacuation)return [];const s=combat.evacuation;
         if(!panel){panel=document.createElement('div');panel.id='evacuation-objective';panel.style.cssText='position:fixed;top:18px;left:20px;color:#dce9ef;background:#0a1725c9;padding:12px;pointer-events:none;font:14px system-ui;white-space:pre-line';document.body.appendChild(panel);}
         panel.textContent=status!=='Ready'?status:s.complete?'CYCLE A COMPLETE\nSix away / Eight holding. Esc to restart.':s.scene===3?'PROTECT FUEL OPERATIONS\nClear remaining hostiles / Six refueling':s.scene>=6?'COVER SHUTTLE SIX\nDeparture corridor':s.scene>=4?'HOLD THE CORRIDOR\nEight diverted / Six awaiting clearance':'HOLD STATION\nSix refueling / Demolition charges safed';
@@ -64,6 +75,7 @@ import * as arms from './depot-arm.js';
             // Same dock attitude, standoff, clearance and departure as the depot study.
             // Its Y-up vertical axis maps onto +Z in the flight renderer.
             var origin=/** @type {[number,number,number]} */([(arm-port[0])/U,(-61+port[2])/U,1200+(-23-port[1]+18*sample.clearance+240*sample.departure)/U]);
+            exhaust.push({index:index,hp:1,pose:{eye:origin,right:[1,0,0],back:[0,0,-1],up:[0,-1,0],velocity:[0,0,0],throttle:sample.phase==='depart'?1:0}});
             ship.batches.forEach(function(b){result.push(Object.assign({},b,{origin:origin,basis:dockBasis}));});
         });
         return result;

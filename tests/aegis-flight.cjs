@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),cp=require('node:child_process');
 const root=path.join(__dirname,'..'),DW={sim:{METERS_PER_UNIT:10000/600}},ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,Math,console});
 cp.execFileSync(process.execPath,[path.join(root,'tools/bake-aegis-flight.cjs'),'--check'],{stdio:'pipe'});
-for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file});
+for(const file of ['experiments/retail-profiles.js','experiments/flight-model.js','experiments/retail-weapons.js','experiments/guns.js','experiments/flight-missions.js','experiments/mission-ohio.js','src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'src/ship-catalog.js','src/ship-assets.js','src/ship-render.js','assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file});
 const U=DW.sim.METERS_PER_UNIT;
 function position(x,y,z){return [x/U,y/U,1200+z/U];}
 function fixture(targetZ=250){
@@ -399,9 +399,22 @@ console.log('PASS capital systems: all 24 guns + 5 engines, localized destructio
 // Production capital shield feedback is driven only by finalized damage.
 for(const file of ['assets/ships/aegis-kit/shield-envelope.js','experiments/combat-shields.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file});
 const glowState={team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},glowRig=DW.aegisFlight.create({state:glowState,opponent:glowState}),glowView=fixture();glowView.combat.enabled=false;
-assert.equal(glowRig.effects(glowView.state).flatMap(b=>Array.from(b.vertices)).length,0,'no idle shield geometry');
-const glowPoint=glowRig.hit(position(-2000,0,0),position(2000,0,0),{weapon:DW.retailWeapons[0],direction:[1,0,0],position:position(-2000,0,0),age:0});assert.ok(glowPoint);assert.equal(glowRig.effects(glowView.state).filter(b=>b.vertices.length).length,0,'collision probes never spawn shield effects');
+assert.equal(glowRig.effects(glowView.state).filter(b=>b.color[0]!==.25).flatMap(b=>Array.from(b.vertices)).length,0,'no idle shield geometry');
+const glowPoint=glowRig.hit(position(-2000,0,0),position(2000,0,0),{weapon:DW.retailWeapons[0],direction:[1,0,0],position:position(-2000,0,0),age:0});assert.ok(glowPoint);assert.equal(glowRig.effects(glowView.state).filter(b=>b.color[0]!==.25).filter(b=>b.vertices.length).length,0,'collision probes never spawn shield effects');
 assert.ok(glowRig.damage(glowPoint,5,glowView.combat));assert.equal(glowState.integrity,19995,'shield visuals preserve damage rules');glowRig.step(.1,glowView);
-const glowBatch=glowRig.effects(glowView.state).filter(b=>b.color[2]===1&&b.color[0]===.035);assert.ok(glowBatch.length);assert.ok(glowBatch.every(b=>b.vertices.every(Number.isFinite)));assert.equal(glowRig.effects(glowView.state,false).filter(b=>b.vertices.length).length,0,'shield override does not fabricate weapon effects');
-for(let i=0;i<8;i++)glowRig.step(.1,glowView);assert.equal(glowRig.effects(glowView.state).filter(b=>b.vertices.length).length,0,'capital waves expire');glowRig.reset();assert.equal(glowRig.effects(glowView.state).filter(b=>b.vertices.length).length,0,'reset clears transient history');
+const glowBatch=glowRig.effects(glowView.state).filter(b=>b.color[0]!==.25).filter(b=>b.color[2]===1&&b.color[0]===.035);assert.ok(glowBatch.length);assert.ok(glowBatch.every(b=>b.vertices.every(Number.isFinite)));assert.equal(glowRig.effects(glowView.state,false).filter(b=>b.color[0]!==.25).filter(b=>b.vertices.length).length,0,'shield override does not fabricate weapon effects');
+for(let i=0;i<8;i++)glowRig.step(.1,glowView);assert.equal(glowRig.effects(glowView.state).filter(b=>b.color[0]!==.25).filter(b=>b.vertices.length).length,0,'capital waves expire');glowRig.reset();assert.equal(glowRig.effects(glowView.state).filter(b=>b.color[0]!==.25).filter(b=>b.vertices.length).length,0,'reset clears transient history');
 console.log('PASS default capital shields: finalized hull damage, preserved integrity, no probe/idle feedback, expiry and reset');
+
+// Capital exhaust reuses the fighter effect and respects independent engine damage.
+const flameState={team:'ally',position:[12,34,1200],heading:Math.PI/2,velocity:[0,0,0],integrity:20000};
+const flameRig=DW.aegisFlight.create({state:flameState,opponent:flameState});
+const flameBatch=()=>flameRig.effects(glowView.state,false).find(b=>b.color[0]===.25);
+assert.equal(flameBatch().vertices.length,5*12*6,'two six-vertex flame cards per capital nozzle');
+assert.ok(flameBatch().vertices.every(Number.isFinite));
+const engines=flameRig.components().filter(p=>p.kind==='engine');
+assert.ok(flameRig.damage(engines[0].position,1000,glowView.combat));
+assert.equal(flameBatch().vertices.length,4*12*6,'destroyed engine loses its flame');
+flameState.integrity=0;
+assert.equal(flameBatch().vertices.length,0,'destroyed hull loses all flames');
+console.log('PASS capital exhaust: nozzle count, finite rotated geometry, individual engine and hull destruction');

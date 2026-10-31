@@ -45,6 +45,24 @@ use the existing soft emissive shader and depth testing; they are visual cues,
 not dynamic lights or bloom. Disabled/idle craft emit no exhaust. The study effect
 budget is five batches (the existing four gun/impact batches plus engines).
 
+Capital ships use the same blue-white additive exhaust at their existing bell
+mouths. `engineGeometry` accepts optional local metre mounts `[right, forward,
+up, radius]` for ships outside the fighter catalog; their flame overlaps the mouth
+to avoid a detached glow at capital scale. Aegis flames track each engine's health
+and hull integrity, including idle and curved-space capital variants. Convoy
+mounts follow the DW-14 terminal bank and join the shared engine batch. Civilian
+liner mounts follow the dock basis and ignite during departure, after refueling.
+These effects do not change the authored meshes, materials, collision or thrust.
+
+A 1400 × 900, DPR 1 production-renderer stern comparison (15 warm-up and 50
+samples per ABBA block, frozen simulation) added one draw and 20 triangles for
+five Aegis engines: 131 to 132 draws, 40,364 to 40,384 triangles. Median submission
+was 1.4 / 1.5 ms without / with flames, p95 1.9 / 1.9 ms; frame cadence was
+11.9 ms median and 12.5 ms p95 for both. This is renderer submission and cadence,
+not GPU timing or a whole-mission benchmark. Visual checks covered Aegis stern
+and close views, all three convoy variants, and both liner meshes. Scratch
+captures and measurements live under ignored `output/capital-flames/`.
+
 Flight lab communications live in `experiments/flight-comms.js`. The pure
 `create`/`step` scheduler consumes active flight seconds and living training
 combatants. `mount` owns subtitles and a gesture-unlocked Web Audio context,

@@ -123,6 +123,7 @@ const dependencies = {
   'src/audio.js': ['src/engine-audio.js','src/audio-mixer.js','src/ohio-soundtrack.js'],
   'src/game.js': ['src/tactical/picking.js','src/ship-art.js', 'src/sim.js', 'src/tactical/camera.js', 'src/asteroid-art.js'],
   'src/ship-assets.js': ['src/ship-catalog.js'],
+  'src/aegis-visual.js': ['src/ship-render.js'],
   'src/ship-render.js': ['src/ship-catalog.js', 'src/ship-assets.js'],
   'experiments/ship-packs.js': ['src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.js', 'src/ship-render.js', 'assets/ships/quaternius-ultimate-spaceships/meshes.js', 'assets/ships/concept-trio/meshes.js'],
   'experiments/flight-scenery.js': ['src/roadside-layout.js'],

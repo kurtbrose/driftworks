@@ -95,7 +95,7 @@
             batches.forEach(function(b){b.region=region;});return batches;
         }
         function telemetry(){var report=rig.telemetry();report.seconds=seconds;report.capitals=[{team:state.team,position:state.position.slice(),heading:state.heading,integrity:state.integrity,shots:0,hits:0}];return report;}
-        reset();return {setSurfaceDetail:rig.setSurfaceDetail,reset:reset,step:step,geometry:geometry,effects:function(){return [];},hit:function(){return null;},readout:function(){return 'AEGIS / ELLIS CENTERLINE PATROL';},telemetry:telemetry};
+        reset();return {setSurfaceDetail:rig.setSurfaceDetail,reset:reset,step:step,geometry:geometry,effects:function(pose){var effects=rig.effects(pose,false),basis=batches[0].basis;if(!basis)return effects;effects.forEach(function(b){b.region=region;b.lensCenter=state.position;b.lensRadius=radius*U;b.lensTransit=transit;});if(region===1)effects.forEach(function(b){for(var i=0;i<b.vertices.length;i+=6){b.vertices[i]=2*state.position[0]-b.vertices[i];b.vertices[i+2]=2*state.position[2]-b.vertices[i+2];}});return effects;},hit:function(){return null;},readout:function(){return 'AEGIS / ELLIS CENTERLINE PATROL';},telemetry:telemetry};
     }
     DW.aegisBattle={createBattle:createBattle,createEllisPatrol:createEllisPatrol};
 }());

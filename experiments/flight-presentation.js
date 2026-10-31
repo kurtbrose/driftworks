@@ -348,6 +348,8 @@
                 var engine=Object.assign({},DW.shipPackModels.engineGeometry(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units, state, world.elapsedSeconds),{region:group.region,lensRadius:objectWarp?DW.shipPackModels.hullRadius(DW.shipPackModels.craftModel(craft[0],team==='ally'?appearance.allyArt:appearance.enemyArt,combat.wave)):undefined,lensCenter:objectWarp?craft[0].pose.eye:undefined});
                 if(objectWarp)effectBatches.push(engine);else engineParts.push(engine);
             });
+            if(combat.convoy)DW.convoyScenery.effects(combat,state).forEach(function(b){if(objectWarp)effectBatches.push(b);else engineParts.push({region:0,vertices:b.vertices});});
+            if(combat.mode==='evacuation'&&DW.evacuationScenery)DW.evacuationScenery.effects(combat,state).forEach(function(b){if(objectWarp)effectBatches.push(b);else engineParts.push({region:0,vertices:b.vertices});});
             if(!objectWarp)regions.forEach(function(region){
                 var parts=engineParts.filter(function(p){return p.region===region;}),vertices=new Float32Array(parts.reduce(function(n,p){return n+p.vertices.length;},0)),offset=0;
                 parts.forEach(function(p){vertices.set(p.vertices,offset);offset+=p.vertices.length;});

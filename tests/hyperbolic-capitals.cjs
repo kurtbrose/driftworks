@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const {loadRuntime,createFlight}=require('../tools/headless.cjs');
 const DW=loadRuntime(),H=DW.flightHyperbolic,U=DW.sim.METERS_PER_UNIT;
 const ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,WeakMap,Math});
-for(const file of ['assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js','src/station-models.js', 'src/tactical/picking.js', 'src/tactical/input3d.js', 'src/scene3d.js','experiments/hyperbolic-flyby.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),ctx);
+for(const file of ['src/ship-catalog.js','src/ship-assets.js','src/ship-render.js','assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js','src/station-models.js', 'src/tactical/picking.js', 'src/tactical/input3d.js', 'src/scene3d.js','experiments/hyperbolic-flyby.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),ctx);
 const rig=H.createCapitals(),camera={curvature:650,eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
 const near=(a,b,t=1e-4)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 // A long textured triangle exercises independent auxiliary channels and seams.
@@ -83,7 +83,7 @@ for(const radius of [350,650,1800,100000])for(const back of [[0,-1,0],[0,1,0],[-
  assert.equal(visible(b,target,{right:[-n[1],n[0],0],up:[0,0,1],back:n.map(v=>-v),distance:0,focal:2},1),true,'Fermi corner outside old radial ball must remain visible');
 }
 assert.equal(visible(rig.geometry(camera)[0],[0,0,0],{right:[1,0,0],up:[0,0,1],back:[0,1,0],distance:0,focal:2},1),false);
-assert.deepEqual(Array.from(rig.effects(camera)),[]);assert.equal(rig.hit([0,0,0],[0,1,0]),null);
+assert.equal(rig.effects(camera).length,2);assert.ok(rig.effects(camera).every(b=>b.vertices.length===360&&b.vertices.every(Number.isFinite)),'both curved capitals have finite nozzle flames');assert.equal(rig.hit([0,0,0],[0,1,0]),null);
 console.log('PASS finite capital hulls: metre scale, shared tessellation, near-flat limit, real-session isometry invariance and conservative curved culling');
 
 // Audit the finite-hull frame used by the shader, not just path(). A tiny known

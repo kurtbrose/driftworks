@@ -2,6 +2,7 @@ import type {Pose,FlightState,FlightView,Craft,Combat,Hit,Weapon,FiringSolution}
 type V=number[];
 export interface HyperbolicGeometry {
     hullShader:string;
+    capitalEffects:(rig:import('./types').AegisFlightRig,frame:Float32Array,camera:Pose)=>import('./types').Batch[];
     prepareHull:(batch:import('./types').Batch)=>import('./types').Batch;
     createCapitals:(options?:{single?:boolean})=>import('./types').AegisFlightRig;
     point:(eye:V,radius:number)=>V;

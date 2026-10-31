@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{loadRuntime}=require('../tools/headless.cjs');
 const DW=loadRuntime(),H=DW.flightHyperbolic,U=DW.sim.METERS_PER_UNIT,ctx=vm.createContext({window:{Driftworks:DW},Float32Array,Map,WeakMap,Math});
-for(const file of ['assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js','experiments/hyperbolic-battle.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),ctx,{filename:file});
+for(const file of ['src/ship-catalog.js','src/ship-assets.js','src/ship-render.js','assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js','experiments/hyperbolic-battle.js'])vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8'),ctx,{filename:file});
 let rig;const surface=(a,b,bolt)=>rig?rig.hit(a,b,bolt):null;surface.onImpact=(p,b,c)=>rig.damage(p,b.weapon.damage,c);
 const session=DW.flightSession.create({terrainHit:surface,surfaceFrame:()=>({point:[0,0,0],normal:[0,0,1]}),onGunshot:()=>{},onImpact:()=>{}});
 session.reset({mode:'hyperbolic',enabled:true,profile:DW.arcade.profiles[0]});rig=DW.hyperbolicBattle.create();rig.reset(session.snapshot().combat);session.respawn(rig.spawnPlayer(session.snapshot().state));
@@ -14,6 +14,7 @@ step(180);let report=rig.telemetry();assert.ok(report.capitals.every(c=>c.shots>
 assert.ok(report.mounts.some(m=>m.kind==='point-defense'&&m.shots>0&&m.targetId.startsWith('wave-')),'point defense fires at fighters');
 assert.ok(DW.flightSim.collisionStats(session.snapshot().combat).queries>0,'capital rounds use the spatial collision index');
 const buffers=rig.geometry(session.snapshot().state).map(b=>b.vertices);assert.ok(buffers.length>20);rig.geometry(session.snapshot().state).forEach((b,i)=>assert.equal(b.vertices,buffers[i],'immutable articulated mesh buffers are reused'));
+assert.ok(rig.effects(session.snapshot().state).some(b=>b.color[0]===.25&&b.vertices.length),'battle capitals show engine flames');
 assert.ok(rig.effects(session.snapshot().state).every(b=>b.vertices.every(Number.isFinite)));
 const old=session.snapshot(),enemies=old.combat.enemies,enemyIds=enemies.map(c=>c.id),time=old.combat.time,capitalHealth=report.capitals.map(c=>c.integrity),shots=report.shots;
 for(let i=0;i<3;i++){

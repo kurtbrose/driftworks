@@ -206,6 +206,23 @@ mat3 hyperbolicNormalMatrix(vec3 v){
         if(batch.normalUV)cached.normalUV=new Float32Array(out[j++]);if(batch.bakedDocking)cached.bakedDocking=new Float32Array(out[j]);
         entries.push({stride:stride,normalUV:batch.normalUV,bakedDocking:batch.bakedDocking,result:cached});hullMeshes.set(batch.vertices,entries);return Object.assign({},batch,cached);
     }
+    /** Map local capital flames through the hull's axial Fermi frame.
+     * @param {import('./types').AegisFlightRig} rig @param {Float32Array} frame
+     * @param {import('./types').Pose} camera */
+    function capitalEffects(rig,frame,camera){
+        if(!camera.curvature)return [];
+        var radius=camera.curvature/U;
+        var axes=[Array.from(frame.slice(4,8)),Array.from(frame.slice(8,12)),Array.from(frame.slice(12,16))];
+        var observer=point(camera.eye,camera.curvature||650);
+        /** @param {V} v */function local(v){var lifted=lift(observer,v),out=axes.map(function(axis){return dot(axis,lifted);}),n=Math.hypot(...out);return out.map(function(x){return x/(n||1);});}
+        var view=Object.assign({},camera,{right:local(camera.right),up:local(camera.up),back:local(camera.back)});
+        return rig.effects(view,false).filter(function(b){return b.color[0]===.25&&b.vertices.length>0;}).map(function(batch){
+            var vertices=batch.vertices;
+            for(var i=0;i<vertices.length;i+=6){var x=vertices[i]/radius,y=vertices[i+1],z=vertices[i+2],s=Math.hypot(y,z)/radius,k=s?Math.sinh(s)/s:1;
+                for(var a=0;a<3;a++)vertices[i+a]=radius*Math.cosh(s)*(frame[a+1]*Math.cosh(x)+frame[a+5]*Math.sinh(x))+k*(frame[a+9]*y+frame[a+13]*z);
+            }return batch;
+        });
+    }
     /** Two stationary, unarmed visual references. One shared, immutable source hull;
      * every material uses the SAME axial Fermi placement, not separate
      * mappings around turret or panel pivots.
@@ -225,7 +242,15 @@ mat3 hyperbolicNormalMatrix(vec3 v){
                 batches[index].forEach(function(b){b.hyperbolicRadius=radius/U;});
             });return renderBatches;
         }
-        return {reset:function(){},step:function(){},geometry:geometry,effects:function(){return [];},hit:function(){return null;},readout:function(){return 'AEGIS / TWO STATIONARY 1,305 m REFERENCES\nStart ranges 0.90 km / 1.60 km · unarmed scenery';},telemetry:rig.telemetry};
+        /** Exhaust follows the same axial placement as the finite hull.
+         * @param {import('./types').Pose} camera */
+        function effects(camera){
+            if(!camera.curvature)return [];
+            geometry(camera);
+            return frames.flatMap(function(frame){return capitalEffects(rig,frame,camera);});
+        }
+
+        return {reset:function(){},step:function(){},geometry:geometry,effects:effects,hit:function(){return null;},readout:function(){return 'AEGIS / TWO STATIONARY 1,305 m REFERENCES\nStart ranges 0.90 km / 1.60 km · unarmed scenery';},telemetry:rig.telemetry};
     }
-    DW.flightHyperbolic={point:point,chart:chart,lift:lift,lower:lower,path:path,offset:offset,transport:transport,travel:travel,move:move,lead:lead,hullHit:hullHit,presentation:presentation,rebase:rebase,chartPose:chartPose,grid:grid,hullShader:hullShader,prepareHull:prepareHull,createCapitals:createCapitals};
+    DW.flightHyperbolic={point:point,chart:chart,lift:lift,lower:lower,path:path,offset:offset,transport:transport,travel:travel,move:move,lead:lead,hullHit:hullHit,presentation:presentation,rebase:rebase,chartPose:chartPose,grid:grid,hullShader:hullShader,capitalEffects:capitalEffects,prepareHull:prepareHull,createCapitals:createCapitals};
 }());
