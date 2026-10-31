@@ -45,7 +45,7 @@ aside select{max-width:100%}
 <section id="weapons" class="flight-plate"><small>PRIMARY / G TO SWITCH</small><strong id="weapon-name"></strong><span>UNLIMITED ENERGY</span></section><section id="target-info" class="flight-plate" hidden aria-label="Selected target monitor"><div id="target-label"></div><div id="target-camera" aria-label="Live target camera"></div><div id="target-detail"></div><div class="target-integrity"><label>SHIELD <meter id="target-shield" min="0" max="100" value="100" aria-label="Target shield"></meter></label><label>HULL <meter id="target-hull" min="0" max="100" value="100" aria-label="Target hull"></meter></label></div></section><div id="hud-help">ESC PAUSE &middot; L LOCK &middot; TAB TARGET &middot; V RADAR &middot; F3 LAB</div>
 <section id="comms" aria-label="Flight communications"><div class="comms-head"><span data-speaker>RANGE COMMS</span><span data-emotion></span></div><p data-subtitle role="status">Standing by for flight.</p></section>
 <footer>W/S throttle · X stop · Shift afterburner<br>Arrows pitch/yaw · Q/E roll · A/D lateral / R/F vertical (5 m/s)<br>Space / left or right mouse fire · G switch bank<br>V radar range / Tab target / L lock · Mouse virtual stick · C center stick · Esc pause & release · 1–4 profiles<br>Original sky panorama: ESO/S. Brunier / Alternative skies: procedural</footer>
-<script src="../src/asset-versions.js?v=7fd4b1a85d09"></script>
+<script src="../src/asset-versions.js?v=1b4029492191"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <!-- script-manifest:flight -->
 <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
@@ -76,14 +76,14 @@ aside select{max-width:100%}
 <script src="../src/station-models.js?v=83eca9d90de0"></script>
 <script src="../src/tactical/picking.js?v=df9c50cb476a"></script>
 <script src="../src/tactical/input3d.js?v=33734a02311e"></script>
-<script src="../src/scene3d.js?v=6c8b92190d85"></script>
+<script src="../src/scene3d.js?v=b8f81bc72c74"></script>
 <script src="../src/ship-art.js?v=394ca4b43117"></script>
 <script src="../src/game.js?v=c5f16cbfa061"></script>
 <script src="dom.js?v=c1d4287e76cd"></script>
 <script src="retail-profiles.js?v=99526ebcd858"></script>
 <script src="flight-model.js?v=0e41fba64b13"></script>
 <script src="radar.js?v=3a9471d6278e"></script>
-<script src="flight-missions.js?v=f85fae14a004"></script>
+<script src="flight-missions.js?v=42cc5426273b"></script>
 <script src="mission-ohio.js?v=55d50526f5e4"></script>
 <script src="../src/sky-effects.js?v=136fdb626647"></script>
 <script src="ellis-feedback.js?v=8e207a58bf86"></script>
@@ -98,13 +98,14 @@ aside select{max-width:100%}
 <script src="flight-hyperbolic.js?v=46499cb954d2"></script>
 <script src="guns.js?v=f2abeb996425"></script>
 <script src="input.js?v=f4504aaa17e7"></script>
+<script src="../src/convoy-mission.js?v=bdf017f1516e"></script>
 <script src="../src/roadside-layout.js?v=a64b5dd480ed"></script>
 <script src="../src/flight-collision.js?v=babf497e155a"></script>
 <script src="../src/flight-combat.js?v=8d36d9e0b0b7"></script>
 <script src="../src/flight-mission-runtime.js?v=d37639dba5bc"></script>
 <script src="../src/flight-opponent.js?v=88d78c4f3b2e"></script>
 <script src="../src/flight-blockout.js?v=d6f16d169ff8"></script>
-<script src="../src/flight-sim.js?v=f306524ccaed"></script>
+<script src="../src/flight-sim.js?v=a03c4ef67ce5"></script>
 <script src="../src/flight-prediction.js?v=46643f423546"></script>
 <script src="performance.js?v=a74bf5aa5b6a"></script>
 <script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
@@ -126,15 +127,16 @@ aside select{max-width:100%}
 <script src="flight-radio.js?v=9d8cfcd69def"></script>
 <script src="target-camera.js?v=1860d2a2f5d6"></script>
 <script src="flight-scenery.js?v=d93adc771986"></script>
+<script src="convoy-scenery.js?v=89ad755dd1c1"></script>
 <script src="combat-shields.js?v=ef734d17248b"></script>
 <script src="flight-shields.js?v=0ea60d95057c"></script>
 <script src="shield-pixel-diff.js?v=9a863e0ae736"></script>
-<script src="flight-presentation.js?v=cc899ff80c90"></script>
+<script src="flight-presentation.js?v=a567d9debb0b"></script>
 <script src="flight-diagnostics.js?v=7b48f5faca80"></script>
 <script src="flight-controls.js?v=1fc5202ba6f7"></script>
-<script src="flight-session.js?v=a7039604338d"></script>
+<script src="flight-session.js?v=5904b10c00a5"></script>
 <script src="gpu-ui.js?v=029c3b30789a"></script>
-<script src="flight-hud.js?v=5d138a0a167e"></script>
+<script src="flight-hud.js?v=241da835c18b"></script>
 <script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script>
 <script type="module" src="../assets/characters/quaternius-astronaut/poses.js?v=768978930c66"></script>
 <script src="flight-ai.js?v=9b70ad92df99"></script>
@@ -147,6 +149,6 @@ aside select{max-width:100%}
 <script src="aegis-flight.js?v=40fb0b8e7444"></script>
 <script src="hyperbolic-battle.js?v=06169deeeb35"></script>
 <script src="hyperbolic-flyby.js?v=01b42a1d3443"></script>
-<script src="flight-studies.js?v=71e564d221a2"></script>
-<script src="flight.js?v=23675c9d2aea"></script>
+<script src="flight-studies.js?v=4ad41f0b2f36"></script>
+<script src="flight.js?v=1fe45e56f8c3"></script>
 <!-- /script-manifest --></body></html>

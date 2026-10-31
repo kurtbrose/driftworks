@@ -407,7 +407,7 @@ export interface DriftworksNamespace {
       setStudyLightRigs:(rigs:RigLighting[])=>void;
     setRigLightsEnabled:(enabled:boolean)=>void;
     prepareStudyTextures: (images: HTMLImageElement[]) => Promise<void>;
-    setStudyActors: (batches: {projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
+    setStudyActors: (batches: {instanceOffsets?:Float32Array;projected?:boolean;lensRadius?:number;lensCenter?:number[];region?:number;vertices: Float32Array; bakedDocking?:Float32Array; rigLights?:RigLighting[]; color: [number,number,number]; opacity?: number; origin?: [number,number,number]; rotation?: number; staticGeometry?: boolean; basis?: Float32Array; scale?: number}[]) => void;
       setStudyCapitalShield:(frame:import('../experiments/types').CapitalShieldFrame|null,sky:HTMLCanvasElement|null)=>void;
       setStudyShields:(discs:import('../experiments/types').ShieldDisc[],sky:HTMLCanvasElement|null)=>void;
       completeFrame:()=>void;

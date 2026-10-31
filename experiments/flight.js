@@ -16,8 +16,8 @@
     if(impactWatch)get('combat-toggle').checked=false;
     if(activeMission.weaponsDisabled){
         get('combat-toggle').disabled=true;get('watch-panel').hidden=true;
-        host.setAttribute('aria-label',activeMission.id==='jade-rime'?'Free flight near Rime, with the jade giant overhead':'Free flight above a jade gas giant');
-        ['weapons','integrity','target-info'].forEach(function(id){var panel=document.getElementById(id);if(panel)panel.hidden=true;});
+        host.setAttribute('aria-label',activeMission.id==='convoy'?'Escort thirty cargo vessels with two wingmates':activeMission.id==='jade-rime'?'Free flight near Rime, with the jade giant overhead':'Free flight above a jade gas giant');
+        (activeMission.id==='convoy'?['weapons']:['weapons','integrity','target-info']).forEach(function(id){var panel=document.getElementById(id);if(panel)panel.hidden=true;});
         var footer=document.querySelector('footer');if(footer)footer.textContent='W/S throttle · X stop · Shift boost · arrows steer · Q/E roll · A/D lateral · R/F vertical · Esc pause';
     }
     if(activeMission.id!=='default'){
@@ -547,7 +547,7 @@
         get('fly').disabled=!loaded;
         get('fly').textContent=loaded?(cinematic?'Start demo':'Start flight'):'Textures unavailable';
         if(loaded){
-            status.textContent=importError||'Ready - Start flight when ready';
+            status.textContent=importError||(activeMission.id==='convoy'?'Ready / 7.5 km crossing at 25 m/s, approximately five minutes. Starting throttle matches the convoy. Two wingmates follow you.':'Ready - Start flight when ready');
             if(activeMission.id==='scramble'){controls.startUncaptured();}
             if(cinematic)resume();
             if(studies.enabled&&watch)resume();

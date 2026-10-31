@@ -458,3 +458,25 @@ for(const region of [0,1]){
 }
 viewer.setStudyBridge(false);
 console.log('PASS thin-shell rendering: default single pass, both charts, image/HUD agreement, local aperture occlusion and unreachable images');
+
+// Immutable local translations share one native instance draw without expanding vertices.
+const instancedViewer=DW.scene3d.create(element(),()=>world,w=>{world=w;},{study:true});
+instancedViewer.setSurfaceCamera({eye:[0,-10,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
+const instanceOffsets=new Float32Array([0,0,0,5,0,0]);
+const instanceBatch={vertices:data,color:[.2,.3,.4],origin:[0,0,0],staticGeometry:true,instanceOffsets};
+instancedViewer.setStudyActors([instanceBatch]);instancedViewer.render(world,1,0,0);
+const instanceDraw=frames.at(-1)[0];
+assert.equal(frames.at(-1).length,1,'Two copies submit one native draw');
+assert(instanceDraw.geometry instanceof THREE.InstancedBufferGeometry);
+assert.equal(instanceDraw.geometry.instanceCount,2);
+assert.equal(instanceDraw.geometry.getAttribute('aInstanceOffset').array,instanceOffsets);
+assert.equal(instanceDraw.geometry.getAttribute('aPosition').data.array,data,'No expanded copy of source geometry');
+instancedViewer.render(world,1,0,0);
+assert.equal(frames.at(-1)[0].geometry,instanceDraw.geometry,'Instances retain GPU geometry across frames');
+assert.equal(instancedViewer.getRenderStats().triangles,2,'Submitted triangle accounting includes every instance');
+const camera={right:[1,0,0],up:[0,0,1],back:[0,-1,0],distance:10,focal:1};
+assert(DW.scene3d.studyBatchVisible({...instanceBatch,instanceOffsets:new Float32Array([1000,0,0,0,0,0])},[0,0,0],camera,1),'A visible copy cannot be culled by an offscreen template');
+assert(!DW.scene3d.studyBatchVisible({...instanceBatch,instanceOffsets:new Float32Array([1000,0,0,1001,0,0])},[0,0,0],camera,1),'Wholly offscreen instance groups can be culled');
+instancedViewer.setStudyActors([]);instancedViewer.render(world,1,0,0);
+assert.equal(frames.at(-1).length,0,'Removing instances clears native draws');
+console.log('PASS native study instances: immutable source buffers, local translations, group culling, draw/triangle accounting and removal');

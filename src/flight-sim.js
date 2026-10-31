@@ -321,6 +321,7 @@
             });
 
         }
+        if(t.mode==='convoy')DW.convoyMission.start(t,player);
         if(t.mode==='evacuation')DW.evacuationMission.start(t,player);
         if(t.mode==='ellis'||t.mode==='thin-shell')t.enemies.forEach(function(e,i){
             var region=i%4>=2?1:0,shift=(region-(player.region||0))*12000/U;
@@ -474,9 +475,10 @@
             f.age += dt;
             return f.age < (f.destruction ? 5.5 : .22);
         });
+        if(t.convoy)DW.convoyMission.step(t,dt);
         replenish(t,player,radius);
         var living = alive(t);
-        if (!t.dead && t.mode !== 'cinematic' && t.mode !== 'asteroid-patrol' && t.mode !== 'evacuation' && t.mode !== 'scramble' && (!living.length || t.roundOver)) {
+        if (!t.dead && t.mode !== 'cinematic' && t.mode !== 'asteroid-patrol' && t.mode !== 'evacuation' && t.mode !== 'scramble' && t.mode !== 'convoy' && (!living.length || t.roundOver)) {
             t.countdown -= dt;
             if (t.countdown <= 0) {
                 spawn(t, player, radius);
@@ -512,6 +514,7 @@
                 e.hangarLaunch.remaining-=dt;e.fire=false;
                 if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;if(t.scramble&&e.team==='enemy')delete e.plotArmor;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
+                if(t.convoy){DW.convoyMission.stepWing(e,player,e.index,dt);return;}
                 /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;

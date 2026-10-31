@@ -187,12 +187,21 @@
         var calibration = /** @type {Batch[]} */ ([]);
         var burns = /** @type {WeakMap<Vector, Batch[]>} */ (new WeakMap());
         var crewKey = '', crewPoses = DW.miningStudyCrew && DW.miningStudyCrew.poses, crews = /** @type {Batch[]} */ ([]);
-        var ready=DW.shipPackModels.loadTextures().then(function (images) {
+        /** @param {import('./types').Images} images */
+        function prepareImages(images){
             if (!scene.prepareStudyTextures) { shipImages = images; return true; }
             return Promise.resolve(scene.prepareStudyTextures(DW.shipPackModels.textureSources(images))).then(function () {
                 shipImages = images;
                 return true;
             });
+        }
+        var ready=DW.shipPackModels.loadTextures().then(function(images){
+            if(DW.flightMissions.current().id==='convoy')return DW.convoyScenery.ready.then(function(loaded){
+                if(!loaded)throw Error('Convoy assets unavailable');
+                if(DW.convoyScenery.texture)images.set('convoy-panels',DW.convoyScenery.texture);
+                return prepareImages(images);
+            });
+            return prepareImages(images);
         }).catch(/** @param {unknown} error */ function (error) {
             get('art-credit').textContent = String(error);
             return false;
@@ -313,6 +322,7 @@
                 }
             }
             if(capital)actorBatches=actorBatches.concat(capital.geometry(state));
+            if(combat.convoy)actorBatches=actorBatches.concat(DW.convoyScenery.geometry(combat));
             if(combat.mode==='evacuation'&&DW.evacuationScenery)actorBatches=actorBatches.concat(DW.evacuationScenery.geometry(combat));
             scene.setStudyActors(actorBatches.concat(calibration).concat(crews.map(function (batch) {
                 var asteroid = world.asteroids.find(function (a) { return a.id === batch.asteroidId; });

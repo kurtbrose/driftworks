@@ -96,6 +96,7 @@
   // Immutable source-space bounds; transforms and camera planes remain frame-local.
   /** @type {WeakMap<Float32Array, {center:V3,half:V3}>} */
   var studyBounds=new WeakMap();
+  /** @type {WeakMap<Float32Array, {center:V3,half:V3}>} */var instanceBounds=new WeakMap();
   /** Conservative box/frustum test matching the study vertex shader. No shadow/picking use.
    * @param {import('../experiments/types').Batch} batch @param {V3} target @param {View} camera @param {number} aspect */
   function studyBatchVisible(batch,target,camera,aspect){
@@ -107,6 +108,12 @@
       studyBounds.set(batch.vertices,bounds);
     }
     var box=bounds;
+    if(batch.instanceOffsets){
+      var offsets=batch.instanceOffsets,placementBounds=instanceBounds.get(offsets);
+      if(!placementBounds){var low=[Infinity,Infinity,Infinity],high=[-Infinity,-Infinity,-Infinity];for(var j=0;j<offsets.length;j++) {var axis=j%3;low[axis]=Math.min(low[axis],offsets[j]);high[axis]=Math.max(high[axis],offsets[j]);}placementBounds={center:/** @type {V3} */(low.map(function(v,k){return (v+high[k])/2;})),half:/** @type {V3} */(low.map(function(v,k){return (high[k]-v)/2;}))};instanceBounds.set(offsets,placementBounds);}
+      const spread=placementBounds;
+      box={center:/** @type {V3} */(bounds.center.map(function(v,k){return v+spread.center[k];})),half:/** @type {V3} */(bounds.half.map(function(v,k){return v+spread.half[k];}))};
+    }
     if(batch.hyperbolicRadius&&batch.hyperbolicFrame){
       // A metric ball encloses the entire axial Fermi-mapped source box.
       // Linear transformed boxes can falsely reject a curved hull near the camera.
@@ -331,7 +338,7 @@
     /** @type {{ event: import('./types').CombatEvent, age: number }[]} */ var effects = [];
     /** @type {Record<string, { key: string, mesh: Mesh, texture: import('./three-types').Texture, visual: import('./types').AsteroidVisual, values: ReturnType<typeof art.uniforms> }>} */ var rocks = {};
     var vertexShader = 
-      'attribute vec2 aNormalUV;varying vec2 vNormalUV;attribute vec3 aBakedDocking; varying vec3 vBakedDocking; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; uniform mat3 uModelBasis; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vNormalUV=aNormalUV;vBakedDocking=aBakedDocking;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=uModelBasis*(local*uScale); p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);n=uModelBasis*n;vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }';
+      'attribute vec3 aInstanceOffset;attribute vec2 aNormalUV;varying vec2 vNormalUV;attribute vec3 aBakedDocking; varying vec3 vBakedDocking; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; uniform mat3 uModelBasis; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vNormalUV=aNormalUV;vBakedDocking=aBakedDocking;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);vec3 p=uModelBasis*((local+aInstanceOffset)*uScale); p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);n=uModelBasis*n;vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }';
     vertexShader=vertexShader.replace('attribute vec3 aBakedDocking;','uniform float uTransitBlend,uTransitRadius;uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;uniform vec3 uTransitView[33],uTransitX[33],uTransitY[33];uniform float uLensEnabled;uniform vec3 uLensCenter,uLensViewCenter,uLensX,uLensY,uLensZ;attribute vec3 aBakedDocking;').replace('float d=uView.x-dot(p,uBack);','if(uLensEnabled>.5){vec3 delta=p+uTarget-uLensCenter;vec3 q=uLensViewCenter+uLensX*delta.x+uLensY*delta.y+uLensZ*delta.z;if(uTransitBlend>0.){float h=clamp((dot(delta,uTransitAxis)/uTransitRadius+1.)*16.,0.,32.);int k=int(min(31.,floor(h)));float f=h-float(k);vec3 tq=mix(uTransitView[k],uTransitView[k+1],f)+mix(uTransitX[k],uTransitX[k+1],f)*dot(delta,uTransitTangentX)+mix(uTransitY[k],uTransitY[k+1],f)*dot(delta,uTransitTangentY);q=mix(q,tq,uTransitBlend);}p=uRight*q.x+uUp*q.y+uBack*(uView.x-q.z);vRelative=p;}float d=uView.x-dot(p,uBack);');
     var fragmentShader = art.shaderSource +
       '\nvarying vec2 vNormalUV;uniform sampler2D uArmorNormal;uniform float uArmorEnabled;uniform mat3 uModelBasis;varying vec3 vBakedDocking; uniform float uRigBakedEnabled; varying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform float uShadowPass,uWorkShadowEnabled; uniform sampler2D uWorkShadow; uniform vec2 uSpotPower,uSpotFrustum; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
@@ -393,7 +400,7 @@
     });
     function material() {return new THREE.RawShaderMaterial({vertexShader:vertexShader,fragmentShader:fragmentShader,
       uniforms:uniforms,side:THREE.DoubleSide,transparent:true,depthWrite:depthWrite,blending:blending,
-      defaultAttributeValues:{aNormalUV:[0,0],aUV:[0,0],aBakedDocking:[0,0,0]}});}
+      defaultAttributeValues:{aInstanceOffset:[0,0,0],aNormalUV:[0,0],aUV:[0,0],aBakedDocking:[0,0,0]}});}
     /** @type {{object:import('./three-types').Object3D,material:import('./three-types').Material,uniforms:typeof uniforms,lines:boolean,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */
     var drawPool=[];
     var drawLensRadius=0,drawProjected=false;
@@ -410,7 +417,10 @@
     function shipMaterial(snapshot){
       // Archived glTF materials: metallicFactor=0, omitted roughnessFactor defaults to 1.
       var result=new THREE.MeshStandardMaterial({metalness:0,roughness:1,side:THREE.DoubleSide,alphaTest:.5});
+      result.defaultAttributeValues={aInstanceOffset:[0,0,0]};
       result.onBeforeCompile=function(shader){
+        shader.vertexShader='attribute vec3 aInstanceOffset;\n'+shader.vertexShader;
+        shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed+=aInstanceOffset;');
         shader.uniforms.uShieldOutput=shieldOutputUniform;shader.uniforms.uSkyBasis={value:skyBasis};shader.uniforms.uSkyCameraExposure=cameraExposureUniform;
         shader.uniforms.uArmorNormal=snapshot.uArmorNormal;shader.uniforms.uArmorEnabled=snapshot.uArmorEnabled;
         shader.uniforms.uHyperbolicLocalOrigin=snapshot.uHyperbolicLocalOrigin;shader.uniforms.uHyperbolicLocalBasis=snapshot.uHyperbolicLocalBasis;shader.uniforms.uHyperbolicRadius=snapshot.uHyperbolicRadius;shader.uniforms.uHyperbolicFrame=snapshot.uHyperbolicFrame;shader.uniforms.uTarget=snapshot.uTarget;
@@ -453,9 +463,10 @@
     /** @type {WeakMap<import('./three-types').Geometry,import('./three-types').Interleaved>} */
     var geometryData=new WeakMap();
     /** @type {WeakSet<import('./three-types').Geometry>} */ var normalGeometry=new WeakSet();
-    /** @param {Float32Array} data @param {number} [stride] @returns {Mesh} */
-    function upload(data,stride) {
-      var buffer=new THREE.BufferGeometry();updateGeometry(buffer,data,stride||6);
+    /** @param {Float32Array} data @param {number} [stride] @param {Float32Array} [instances] @returns {Mesh} */
+    function upload(data,stride,instances) {
+      var buffer=instances?new THREE.InstancedBufferGeometry():new THREE.BufferGeometry();updateGeometry(buffer,data,stride||6);
+      if(instances){buffer.setAttribute('aInstanceOffset',new THREE.InstancedBufferAttribute(instances,3));buffer.instanceCount=instances.length/3;}
       return {buffer:buffer,data:viewerEnabled?data:undefined,count:data.length/(stride||6),stride:stride||6};
     }
     /** @param {import('./three-types').Geometry} geometry @param {Float32Array} data @param {number} stride */
@@ -479,9 +490,10 @@
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
+    /** @type {{instanceOffsets?:Float32Array,vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
+    /** @type {Map<Float32Array,Map<Float32Array,Mesh>>} */var instancedActorMeshes=new Map();
     /** @type {WeakMap<HTMLImageElement,import('./three-types').Texture>} */ var shipTextures=new WeakMap();
     /** @param {HTMLImageElement} image */
     // WebGL2 supports mipmaps for non-power-of-two images too.
@@ -564,7 +576,7 @@
       submitted.blending=blending;submitted.depthWrite=depthWrite;
       entry.material.blending=blending;entry.material.depthWrite=depthWrite;entry.object.geometry=mesh.buffer;
       scene.add(entry.object);drawIndex++;
-      renderStats.drawCalls++;if(lines)renderStats.lines+=mesh.count/2;else renderStats.triangles+=mesh.count/3;
+      renderStats.drawCalls++;if(lines)renderStats.lines+=mesh.count/2;else renderStats.triangles+=mesh.count/3*(mesh.buffer.instanceCount||1);
       frameMeshes.add(mesh.buffer);frameMaterials.add(materialFinish+':'+!!rock+':'+color.join(','));
     }
     /** Existing layout in ship-local coordinates; only the habitat surface spins. */
@@ -879,8 +891,10 @@
           var stride=batch.stride || (batch.texture?8:6);
           /** @type {Mesh | undefined} */ var mesh;
           if(batch.staticGeometry){
-            mesh=staticActorMeshes.get(batch.vertices);
-            if(!mesh){mesh=upload(batch.vertices,stride);staticActorMeshes.set(batch.vertices,mesh);}
+            if(batch.instanceOffsets){
+              var cache=instancedActorMeshes.get(batch.instanceOffsets);if(!cache){cache=new Map();instancedActorMeshes.set(batch.instanceOffsets,cache);}
+              mesh=cache.get(batch.vertices);if(!mesh){mesh=upload(batch.vertices,stride,batch.instanceOffsets);cache.set(batch.vertices,mesh);}
+            }else{mesh=staticActorMeshes.get(batch.vertices);if(!mesh){mesh=upload(batch.vertices,stride);staticActorMeshes.set(batch.vertices,mesh);}}
           }else{
             if(!studyActorMeshes[index])studyActorMeshes[index]=upload(new Float32Array(0));
             mesh=studyActorMeshes[index];
@@ -1007,6 +1021,8 @@
         studyActors=batches.slice();
         var retained=new Set(batches.filter(function(b){return b.staticGeometry;}).map(function(b){return b.vertices;}));
         staticActorMeshes.forEach(function(mesh,data){if(!retained.has(data)){mesh.buffer.dispose();staticActorMeshes.delete(data);}});
+        var keptOffsets=new Set(batches.map(function(b){return b.instanceOffsets;}).filter(Boolean));
+        instancedActorMeshes.forEach(function(cache,offsets){cache.forEach(function(mesh,data){if(!keptOffsets.has(offsets)||!retained.has(data)){mesh.buffer.dispose();cache.delete(data);}});if(!cache.size)instancedActorMeshes.delete(offsets);});
       },
       sync: sync, render: render, consumeCombatEvents: consume,
       resetCombat: function () { effects = []; studyExplosions=[]; focus = false; },

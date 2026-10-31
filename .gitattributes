@@ -6,3 +6,4 @@
 
 # Derived binary geometry must retain its exact byte layout.
 /assets/depots/refueling-v1/*.glb -text
+/assets/ships/industrial-kit/*-flight.bin -text

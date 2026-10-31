@@ -406,7 +406,7 @@
                 }
             }else {guidePath=null;guideLastEye=null;guideBatches=[];}
 
-            if(mission.weaponsDisabled){
+            if(mission.weaponsDisabled&&!combat.convoy){
                 get('speed-value').textContent=String(Math.round(speed*speedScale));
                 get('thrust-value').textContent='THRUST '+Math.round(state.throttle*100)+'%';
                 get('thrust-meter').value=Math.abs(state.throttle);
@@ -441,6 +441,7 @@
             }).length + (' '+mission.teams.enemy.status+' / ') + living.filter(function (e) {
                 return e.team === 'ally';
             }).length + (' '+mission.teams.ally.status+' / ') + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
+            if(combat.convoy){var convoy=combat.convoy,arrived=convoy.ships.filter(function(s){return s.arrived;}).length;get('combat-status').textContent=combat.dead?'SORTIE OVER / Esc to restart':(convoy.complete?'CONVOY ARRIVED':'ESCORT CONVOY')+' / '+arrived+'/30 ARRIVED / '+(living.length+1)+' FIGHTERS';}
             get('shield-meter').max = Math.max(1, combat.maxShield === undefined ? 120 : combat.maxShield);
             get('shield-meter').value = combat.shield;
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
@@ -471,6 +472,7 @@
             var radarContacts = /** @type {RadarContact[]} */ (living.filter(function(e){return (e.pose.region||0)===(state.region||0);}).map(function (e) {
                 return { point: e.pose.eye, color: e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
             }));
+            if(combat.convoy)combat.convoy.ships.filter(function(s){return s.hull>0;}).forEach(function(s){radarContacts.push({point:s.position,color:'#72c8d5',landmark:true});});
             if(state.curvature)radarContacts=radarContacts.map(function(c){var route=DW.flightHyperbolic.path(state.eye,c.point,state.curvature||650);return Object.assign({},c,{point:state.eye.map(function(v,i){return v+route.direction[i]*route.distance;})});});
             if(mission.sky.thinShell){
                 radarContacts=[];
@@ -479,7 +481,7 @@
                     if(path)radarContacts.push({point:state.eye.map(function(v,i){return v+path.direction[i]*path.length/units;}),color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId,speaking:e.id===speakerId});
                 });
             }
-            if(!mission.emptySpace&&!(state.region||0)){
+            if(!mission.emptySpace&&!combat.convoy&&!(state.region||0)){
                 radarContacts.push({ point: [0, 0, 0], color: '#a6aeb7', landmark: true });
                 radarContacts.push({ point: [mothership.position.x, mothership.position.y, 0], color: '#69cfff', landmark: true });
             }
@@ -497,6 +499,21 @@
             /** @param {import('./types').Craft} craft */function rangeText(craft){
                 var path=DW.flightGuns.ballisticPath(state.eye,craft.pose.eye,state.region||0,craft.pose.region||0,view.state.curvature||(mission.sky.thinShell?'thin-shell':!!mission.sky.wormhole));
                 return path?Math.round(path.distance*units*displayScale)+distanceUnit:'—';
+            }
+            if(combat.convoy){
+                var convoy=combat.convoy,remaining=Math.max(0,convoy.destinationY*units-convoy.elapsed*convoy.speedMps);
+                combatHud.save();combatHud.font='14px system-ui';combatHud.textAlign='center';combatHud.fillStyle='#b9e7ed';combatHud.strokeStyle='#72c8d5';
+                combatHud.fillText(convoy.complete?'ARRIVAL COMPLETE / Esc to restart':'CONVOY ROUTE / '+(remaining/1000).toFixed(1)+' km remaining / '+Math.ceil(remaining/convoy.speedMps)+' s',w/2,86);
+                var nearestCargo=convoy.ships.filter(function(ship){return ship.hull>0;}).reduce(function(best,ship){var range=function(/** @type {typeof convoy.ships[number]} */s){return Math.hypot.apply(null,s.position.map(function(v,k){return v-state.eye[k];}));};return !best||range(ship)<range(best)?ship:best;},/** @type {typeof convoy.ships[number]|null} */(null));
+                convoy.ships.forEach(function(ship){
+                    if(ship.hull<=0)return;
+                    var direction=ship.position.map(function(v,k){return v-state.eye[k];}),q=DW.flightSkybox.project(direction,state,w/h);
+                    if(!q||Math.abs(q.x)>.92||Math.abs(q.y)>.75)return;
+                    var x=w*(q.x+1)/2,y=h*(1-q.y)/2,distance=Math.hypot.apply(null,direction)*units;
+                    combatHud.strokeRect(x-3,y-3,6,6);
+                    if(ship===nearestCargo&&distance<650){combatHud.fillText(ship.callsign,x,y-17);combatHud.fillText(Math.round(distance)+' m',x,y+22);}
+                });
+                combatHud.restore();
             }
             var targetBearing = /** @type {number | null} */ (null);
             living.forEach(function (e) {
@@ -618,7 +635,7 @@
             function label(text,x,y,size,color){ctx.font=(size||11)+'px monospace';ctx.fillStyle=color||ink;ctx.textAlign='left';ctx.fillText(text,x,y);}
             /** @param {string} name @param {number} value @param {number} max @param {number} x @param {number} y @param {number} width @param {string} color */
             function meter(name,value,max,x,y,width,color){var fraction=Math.max(0,Math.min(1,value/Math.max(1,max)));label(name,x,y,10,muted);label(Math.round(fraction*100)+'%',x+width-27,y,10,ink);ctx.fillStyle='#233c43';ctx.fillRect(x,y+6,width,4);ctx.fillStyle=color;ctx.fillRect(x,y+6,width*fraction,4);}
-            if(mission.weaponsDisabled){
+            if(mission.weaponsDisabled&&!combat.convoy){
                 panel(margin,bottom-65,220,65);
                 label('JADE WEATHER / FREE FLIGHT',margin+12,bottom-43,10,muted);
                 label(Math.round(Math.hypot.apply(null,view.state.velocity)*mission.units.speedScale)+' '+mission.units.speedLabel+' / THR '+Math.round(view.state.throttle*100)+'%',margin+12,bottom-19,12);

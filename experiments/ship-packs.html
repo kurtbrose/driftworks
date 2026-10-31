@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ship model catalog - Driftworks</title><link rel="stylesheet" href="../styles.css?v=8732c3648e27"><style>
 body{margin:0;background:#080f16;color:#d9e8ec;font:14px/1.6 system-ui;overflow:hidden}#viewer{position:fixed;inset:0 0 0 330px;width:calc(100% - 330px);height:100%}.scene3d-controls{display:none}aside{position:fixed;z-index:5;top:20px;left:20px;width:290px;max-height:85vh;overflow:auto;padding:20px;background:#101e2ced;border:1px solid #405867;border-radius:8px}h1{font-size:22px;margin:0 0 16px}select,button{padding:8px;background:#182d3c;color:inherit;border:1px solid #5a7e90;border-radius:4px;max-width:100%;font:inherit}label{display:block;margin:14px 0 5px}a{color:#a9e7dc}#metadata{white-space:pre-line}small{color:#a1b4bf}footer{position:fixed;bottom:20px;right:20px;pointer-events:none} @media(max-width:650px){#viewer{inset:45vh 0 0;width:100%;height:55vh}aside{width:210px;font-size:12px;padding:12px;max-height:40vh}footer{font-size:11px}}
 </style></head><body><div id="viewer" class="scene" aria-label="Ship model preview"></div><aside><h1>Ship model catalog</h1><label for="ship-model">Creator / model</label><select id="ship-model"></select><p id="metadata"></p><p><a id="source" target="_blank" rel="noopener">Creator's pack page</a> · <a id="provenance">Local provenance notes</a></p><small>Imported ships retain their source textures and normals. Driftworks originals use procedural geometry and project materials. All models fit a 17 m sphere for comparison, independent of their intended scale.</small><label><input id="paint-enabled" type="checkbox" checked> Faction paint</label><label for="paint-color">Primary color</label><input id="paint-color" type="color" list="military-paints" value="#607451"><label><input id="show-engines" type="checkbox" checked> Engine exhaust preview</label><p><button id="rear-view">Rear view</button> <button id="spin">Pause rotation</button> <button id="reset-view">Reset view</button></p><p><a href="flight.html">Try in flight lab</a> · <a href="../">Index</a></p><datalist id="military-paints"><option value="#607451" label="Forest green"></option><option value="#bd713f" label="Burnt orange"></option><option value="#415d7d" label="Dark navy"></option></datalist></aside><footer>Drag to orbit · Wheel to zoom</footer>
-<script src="../src/asset-versions.js?v=7fd4b1a85d09"></script>
+<script src="../src/asset-versions.js?v=1b4029492191"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
 <script src="../src/propulsion.js?v=fc0b16cad22a"></script>
@@ -25,7 +25,7 @@ body{margin:0;background:#080f16;color:#d9e8ec;font:14px/1.6 system-ui;overflow:
 <script src="../src/station-models.js?v=83eca9d90de0"></script>
 <script src="../src/tactical/picking.js?v=df9c50cb476a"></script>
 <script src="../src/tactical/input3d.js?v=33734a02311e"></script>
-<script src="../src/scene3d.js?v=6c8b92190d85"></script>
+<script src="../src/scene3d.js?v=b8f81bc72c74"></script>
 <script src="../src/ship-art.js?v=394ca4b43117"></script>
 <script src="../src/game.js?v=c5f16cbfa061"></script>
 <script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script><script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script><script src="dom.js?v=c1d4287e76cd"></script>

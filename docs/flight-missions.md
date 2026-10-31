@@ -1,5 +1,59 @@
 # Flight mission definitions, version 1
 
+## Convoy escort / first step
+
+Open `experiments/flight.html?mission=convoy` or select Convoy Escort on the
+missions page. Thirty authored DW-14 modular freighters cross a 7.5 km route at 25 m/s.
+Ten each use the container, mixed-freight and bulk-fluid configurations from
+the industrial shipyard. Their original metre scale, atlas UVs, materials and
+geometry are retained. The convoy occupies three lanes, two vertical tiers
+and five rows: 45 m lateral, 35 m vertical and 110 m longitudinal spacing.
+The player starts 260 m behind the rear row and 50 m above the convoy centre,
+already matching convoy speed. The crossing takes
+five minutes of simulation time; Esc pauses it and Reset starts a fresh route.
+All ships stop at their own formation slots in the arrival corridor.
+
+The standard escort wing has three fighters: the player, Lancer Two and Lancer
+Three. This mission equips both wingmates with the player's handling profile
+so a slower randomly assigned hull cannot fall behind. They follow moving
+player-relative slots through ordinary steering, throttle and boost, rather
+than teleporting with the player. The shared `convoyMission.WING_SIZE` is 3;
+older encounter presets retain their authored counts.
+
+`src/convoy-mission.js` owns transient `combat.convoy`: stable cargo IDs and
+callsigns, starting formation slots, current positions and velocities, hull,
+arrival flags, route speed and elapsed time. Positions use scene units;
+velocities and speed use m/s. It runs in the same fixed-step flight session
+headlessly and in the browser. Reset rebuilds the roster with the same IDs.
+The HUD shows route distance/time, nearby cargo labels, cargo radar contacts
+and arrival counts. The training asteroid and mothership are absent.
+
+This is a quiet escort layout and pacing playtest. There are no attackers,
+director decisions, Control vectors, patrol assignments or authored dialogue.
+Weapons are disabled. Cargo hull values are preparatory state: freighters do
+not yet participate in combat damage or physical collision, and a player can
+fly through them. Reaching the corridor completes the cargo route regardless
+of player position; there is no proximity-based success/failure gate yet.
+
+`experiments/convoy-scenery.js` loads the industrial kit flight bake and paint
+atlas. Repeated ships share immutable GPU geometry (26 material buffers across
+three configurations); ten GPU instances of each configuration retain all triangles
+in 26 draws. Immutable `Batch.instanceOffsets` contains model-local scene-unit
+translation triples for flat-space repeated assets. Both raw and native textured
+materials apply them before the shared batch transform; group culling includes
+every copy, and triangle counters include the instance count. Offsets and source
+vertices are cached independently and released when their batches leave the scene.
+Only the convoy origin moves during the crossing. The launch gate waits for
+freighter geometry, the atlas and GPU texture preparation. Regenerate the local
+flight bake after editing the authored kit with `node tools/export-convoy-flight.cjs`.
+The bake preserves factory pivots and converts +X aft / +Y dorsal into flight
++Y forward / +Z dorsal, including normals and texture orientation. As with the
+existing civilian flight adapter, shared flight shading approximates the study
+materials rather than duplicating its four-light inspection setup.
+Flight lab & diagnostics includes **Benchmark convoy on / off**, which freezes
+the camera and simulation for an ABBA render comparison. Headless behavior
+coverage lives in `tests/convoy-mission.cjs`.
+
 ## Evacuation cockpit dry run
 
 Open `experiments/flight.html?mission=evacuation` from the static server (also

@@ -129,6 +129,7 @@
     define('planet-impact-baked',{emptySpace:false,title:'Orbital impact dogfight · Driftworks'},'planet-orbital-cube');
     define('planet-impact-watch',{emptySpace:true,title:'Orbital impact watch · Driftworks'},'planet-orbital-cube');
     define('evacuation',{emptySpace:false,title:'Evacuation / cockpit dry run',heading:'DRIFTWORKS / EVACUATION',subtitle:'CYCLE A / HOLD THE REFUELING CORRIDOR',hint:'Protect fuel operations. Three fighters, one occupied bay. First-cycle radio playtest; Esc pauses.',encounter:{kind:'furball',count:6,immediate:true,callsigns:['Actual','Finch','Raider One','Raider Two','Raider Three','Raider Four']}},'planet-orbital-cube');
+    define('convoy',{title:'Convoy escort / Driftworks',heading:'DRIFTWORKS / CONVOY ESCORT',subtitle:'30 FREIGHTERS / THREE-FIGHTER WING',hint:'Escort 30 cargo vessels to the arrival line, 7.5 km ahead. Convoy speed 25 m/s; starting throttle matches. Lancer Two and Three follow you. W/S throttle / X stop / Shift boost / Esc pause. Quiet route: approximately five minutes.',weaponsDisabled:true,encounter:{kind:'patrol',count:2,immediate:true,callsigns:['Lancer Two','Lancer Three']}});
     define('asteroid-patrol',{encounter:{kind:'patrol',count:2,immediate:true}});
     /** Boolean support retains the old compose(kind,data,true) API during migration. @param {string|boolean} [id] */
     function resolve(id){return definitions[id===true?'ohio':typeof id==='string'?id:'default']||definitions.default;}
