@@ -51,8 +51,7 @@ welcomes the escort if the tactical situation still permits. Related replies
 use the three-second silent gap; urgent traffic takes precedence and cancels
 stale greetings once attackers reach weapons range. Control never explains game
 features. Captains use ship callsigns rather than personal introductions, with
-warmer or less disciplined language appropriate to each character. Quiet-period
-reports use live ship counts and avoid claims that lost ships are still present.
+warmer or less disciplined language appropriate to each character.
 Five recurring civilian captains lead the packets, reusing their existing roster
 identities, portraits and voice settings (no new portrait artwork):
 
@@ -66,13 +65,26 @@ identities, portraits and voice settings (no new portrait artwork):
 
 `convoyMission.radio` owns serializable per-sortie cue bookkeeping in
 `combat.convoy.radio`; `flightComms` routes convoy calls through the normal shared
-audio/subtitle channel. Busy-channel cues are not consumed. Damage and loss
-reports take priority over introductions; destroyed captains never speak.
-Routine introductions require 28 seconds of actual channel silence and only
-run when no hostiles remain. Urgent facts require at least three silent seconds
-after the preceding transmission. Speech does not count toward either gap.
-Damage reports require more than 10% hull loss and are limited to one per packet
-per sortie, as are loss reports, rather than queueing one call per freighter.
+audio/subtitle channel. Radio phases are arrival, cruise, combat, damage report
+and completion. After combat, Control requests an assessment; a surviving wingman
+reports actual hull/shield condition and friendly losses, the most affected
+packet reports damaged/lost ship counts, and Control acknowledges the remaining
+transports before returning to cruise. A destroyed packet leader is replaced by
+a Control report, never a ghost captain. No casual conversation plays during
+combat or this assessment. The HUD returns to escort status when contacts clear.
+
+Cruising chatter consists of brief, finite two-person conversations between
+freighter crews about diners, machinery and hauling jobs. It replaces the old
+five-captain status roll call. Each new conversation requires 28 seconds of
+actual channel silence. Related replies, damage-report turns and urgent facts
+require at least three silent seconds; speech counts toward neither gap. New
+hostiles cancel pending casual replies and restart the combat/assessment cycle.
+The initial quiet escort leg retains only its arrival exchange.
+
+Combat distress calls require more than 10% hull loss and are limited to one per
+packet per sortie, as are loss alerts, rather than queueing one call per freighter.
+The later assessment includes even minor actual damage and makes no invented
+claims about crew casualties or repairs.
 Rook reports nearby contacts, actual weapon reach, and a live firing run against
 cargo, then all-clear and escort completion. Reports use current survivors and
 target assignments rather than a scheduled attack script. Packet labels in the

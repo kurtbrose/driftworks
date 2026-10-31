@@ -166,6 +166,9 @@ for(let i=0;i<1200&&!c.dead;i++){
 assert(!c.dead&&c.playerKills>0,'Pilot can intercept and kill real attackers');
 assert(c.enemies.filter(e=>e.team==='enemy').every(e=>e.hp<=0),'The fixed raid can be defeated');
 assert(c.convoy.ships.every(s=>s.hull>0),'Prompt interception can save the whole convoy');
+f.advance(50,{stop:true});
+assert.equal(c.convoy.radio.phase,'cruise','A real completed fight passes through assessment and returns to cruise');
+assert(c.convoy.radio.said.includes('flight-report')&&c.convoy.radio.said.includes('convoy-report')&&c.convoy.radio.said.includes('report-complete'));
 console.log('PASS playable escort loop: real controls, interception, lead, gunfire, raider kills and convoy survival');
 
 // Channel ownership and character identity must survive real threat changes.
@@ -187,10 +190,11 @@ target.hull-=600;const damaged=radio();assert.equal(damaged.craftId,target.id);a
 target.hull=0;assert.match(radio().text,/Transport lost in the rear group/);
 raiders.forEach(e=>{e.hp=0;});assert.match(radio().text,/No further contacts/);
 const cast=[];for(let i=0;i<8;i++){const line=radio();if(line)cast.push(line);}
-assert.equal(cast.filter(l=>typeof l.civilianPortraitIndex==='number').length,4,'Only surviving packet captains introduce themselves');
+assert.equal(cast.filter(l=>typeof l.civilianPortraitIndex==='number').length,4,'Only surviving captains join the cruising conversations');
 assert(!cast.some(l=>l.craftId===target.id),'Destroyed captain cannot speak');
-assert.deepEqual(cast.map(l=>l.civilianPortraitIndex),[0,1,2,4],'Portrait identities match the established civilian roster');
+assert.deepEqual(cast.filter(l=>typeof l.civilianPortraitIndex==='number').map(l=>l.civilianPortraitIndex).sort(),[0,1,2,4],'Portrait identities match the established civilian roster');
 f.reset();c=f.snapshot().combat;assert.deepEqual(Array.from(c.convoy.radio.said),[]);assert.equal(c.convoy.radio.opening,0);
+assert.equal(c.convoy.radio.phase,'arrival');assert.equal(c.convoy.radio.report,0);assert.equal(c.convoy.radio.chat,0);assert.equal(c.convoy.radio.chatTurn,0);
 startRaid();
 const closeRaider=c.enemies.find(e=>e.team==='enemy');closeRaider.pose.eye=at(c.convoy.ships[24],[600,0,0]);closeRaider.fire=true;closeRaider.guns.fired=1;
 assert.match(radio().text,/Bandit firing/);
@@ -215,8 +219,12 @@ threatened.hull-=500;assert.match(radio().speaker,/Thomas Reed/);
 c.convoy.ships[25].hull-=1000;
 assert.equal(radio(),null,'Several damaged ships in one packet produce one report');
 c.enemies.filter(e=>e.team==='enemy').forEach(e=>{e.hp=0;});assert.match(radio().text,/No further contacts/);
+assert.match(radio(3).text,/Remaining on station/);
+assert.match(radio(3).text,/Rear group: 2 damaged, 0 lost/);
+assert.match(radio(3).text,/Maintain course and speed/);
 assert.equal(radio(27),null,'Routine chatter waits for 28 actual silent seconds');
-assert.match(radio(1).speaker,/Mara Vale/);
+assert.match(radio(1).text,/dockside diner/);
+assert.match(radio(3).speaker,/Mara Vale/);
 console.log('PASS convoy radio pacing: silence after speech, urgent gap, no combat roll call, damage threshold and packet aggregation');
 
 const arrivalFlight=createFlight({mission:'convoy',seed:29});arrivalFlight.advance(13,{stop:true});
@@ -243,3 +251,30 @@ assert(breathingFlight.transcript.some(l=>/bandits approaching/.test(l.text)),'C
 breathingFlight.DW.convoyMission.step(bc,0);assert.equal(bc.enemies.length,5,'First raid spawns only once');
 breathingFlight.reset();assert(!breathingFlight.snapshot().combat.convoy.raidStarted);assert.equal(breathingFlight.snapshot().combat.enemies.length,2);
 console.log('PASS convoy breathing room: quiet first minute, live weapons, moving-frame approach, contact report, target-lock agency and reset');
+
+// Assess real damage before a short civilian conversation; combat can break in again.
+f.reset();c=f.snapshot().combat;startRaid();radio();
+c.enemies.filter(e=>e.team==='enemy').forEach(e=>{e.hp=0;});
+c.enemies[0].hp=c.enemies[0].maxHp*.6;c.enemies[1].hp=0;
+c.convoy.ships[6].hull-=1;c.convoy.ships[7].hull-=400;c.convoy.ships[8].hull=0;
+assert.match(radio().text,/report damage/);assert.equal(c.convoy.radio.phase,'damage-report');
+assert.equal(radio(60,true),null);assert.equal(c.convoy.radio.report,1,'Busy channel preserves the requested report');
+assert.equal(radio(2),null);
+const flightReport=radio(1);assert.equal(flightReport.craftId,c.enemies[0].id);assert.match(flightReport.text,/Hull at 60 percent/);assert.match(flightReport.text,/1 fighter lost/);
+const freightReport=radio(3);assert.equal(freightReport.civilianPortraitIndex,1);assert.match(freightReport.text,/Port group: 2 damaged, 1 lost/);
+assert.match(radio(3).text,/29 transports accounted for; 2 damaged, 1 lost/);assert.equal(c.convoy.radio.phase,'cruise');
+assert.equal(radio(27),null,'Assessment closes before a full quiet gap');
+assert.match(radio(1).text,/dockside diner/);assert.equal(c.convoy.radio.chatTurn,1);
+const renewed=c.enemies.find(e=>e.team==='enemy');renewed.hp=renewed.maxHp;
+assert.equal(radio(0,true),null);assert.equal(c.convoy.radio.phase,'combat');assert.equal(c.convoy.radio.chatTurn,0);assert.equal(c.convoy.radio.chat,1,'Renewed contact discards a pending casual reply');
+assert.match(radio().text,/bandits approaching/);
+renewed.hp=0;assert.match(radio().text,/report damage/);
+radio();radio();radio();assert.equal(c.convoy.radio.phase,'cruise');
+assert.match(radio().text,/rattle yours or mine/);assert.match(radio(3).text,/If it stops/);
+assert(!c.convoy.radio.said.includes('chat-0-1'),'The abandoned diner reply is never replayed');
+
+f.reset();c=f.snapshot().combat;startRaid();radio();c.enemies.filter(e=>e.team==='enemy').forEach(e=>{e.hp=0;});
+radio();assert.match(radio(3).text,/No damage/);assert.match(radio(3).text,/no damage reported/);assert.match(radio(3).text,/0 damaged, 0 lost/);
+f.reset();c=f.snapshot().combat;startRaid();radio();c.enemies.forEach(e=>{e.hp=0;});c.convoy.ships[0].hull=0;
+radio();assert.match(radio(3).text,/No wingman response/);const absentLead=radio(3);assert.equal(absentLead.craftId,'control');assert.equal(absentLead.civilianPortraitIndex,undefined);assert.match(absentLead.text,/Upper group: 0 damaged, 1 lost/);
+console.log('PASS convoy radio phases: factual damage assessment, dead/missing speakers, sparse CB exchanges, renewed-contact interruption and fresh debrief');

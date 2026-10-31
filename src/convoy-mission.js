@@ -23,7 +23,7 @@
             c.mode='escort';c.targetId=null;
             if(combat.useHullModels)c.collision={kind:'model',modelId:DW.shipPackModels.craftModel(c,combat.hullModels?combat.hullModels.ally:'mixed',combat.wave).id};
         });
-        combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,raidStarted:false,radio:{wait:1,opening:0,said:[]},ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
+        combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,raidStarted:false,radio:{wait:1,opening:0,said:[],phase:'arrival',report:0,chat:0,chatTurn:0},ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
             var packet=packets[Math.floor(i/6)],local=i%6,row=Math.floor(local/2),side=local%2?1:-1;
             var slot=[(packet.center[0]+side*48+(row-1)*11)/U,(packet.center[1]+(1-row)*125+(side>0?-35:25))/U,1200+(packet.center[2]+side*32+[ -12,8,4 ][row])/U];
             return {id:'cargo-'+String(i+1).padStart(2,'0'),packet:Math.floor(i/6),callsign:local===0?packet.ship:packet.name+' '+String(local+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
@@ -168,11 +168,19 @@
         ship.hull=Math.max(0,ship.hull-weapon.damage*weapon.armorFactor);
         combat.flashes.push({position:point.slice(),velocity:ship.velocity.map(function(v){return v/U;}),age:0,scale:ship.hull>0?1:70,destruction:ship.hull<=0});
     }
-    /** The radio channel consumes a cue only when free. Urgent live facts precede introductions.
+    /** The radio channel consumes a cue only when free. Combat interrupts reports and conversation.
      * @param {import('../experiments/types').Combat} combat @param {number} dt @param {boolean} busy @returns {import('../experiments/types').Line|null} */
     function radio(combat,dt,busy){
         const s=combat.convoy;if(!s||!combat.enabled||combat.dead)return null;
         var r=s.radio;const radioShips=s.ships;
+        var alive=s.ships.filter(function(ship){return ship.hull>0;}),enemies=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0;});
+        // Observe transitions even while another transmission owns the channel.
+        if(s.complete)r.phase='complete';
+        else if(enemies.length){
+            if(r.phase!=='combat')r.said=r.said.filter(function(key){return key!=='nearby'&&key!=='range'&&key!=='firing';});
+            if(r.phase!=='combat'&&r.chatTurn){r.chat++;r.chatTurn=0;}
+            r.phase='combat';r.report=0;
+        }else if(r.phase==='combat'){r.phase='damage-report';r.report=0;}
         // Count silence, not time spent speaking. Urgent facts still leave a short gap.
         if(busy)return null;
         r.wait=Math.max(0,r.wait-dt);if(r.wait>25)return null;
@@ -184,12 +192,39 @@
                 voiceSettings:DW.flightDialogue.pilotVoice(/** @type {import('../experiments/types').Craft} */({id:p?p.id:'convoy-control-rook',index:index})),
                 portraitIndex:-1,civilianPortraitIndex:p?p.portrait:undefined,craftId:p?radioShips[(packetIndex||0)*6].id:'control',event:'convoyRadio'};
         }
-        var alive=s.ships.filter(function(ship){return ship.hull>0;}),enemies=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0;});
+        /** @param {string} key @param {string} text @param {import('../experiments/types').Craft} wing */
+        function fighterCue(key,text,wing){
+            var reply=cue(key,text);reply.speaker=wing.callsign+' / FLIGHT';reply.craftId=wing.id;reply.portraitIndex=wing.index;reply.voiceSettings=DW.flightDialogue.pilotVoice(wing);reply.seed=reply.voiceSettings.seed;return reply;
+        }
+        /** @param {number} index */
+        function condition(index){
+            var ships=radioShips.filter(function(ship){return ship.packet===index;});
+            return {damaged:ships.filter(function(ship){return ship.hull>0&&ship.hull<ship.maxHull;}).length,lost:ships.filter(function(ship){return ship.hull<=0;}).length};
+        }
         if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Lancer, Control. '+alive.length+' transports through. Escort complete.':'Lancer, Control. Convoy lost. Withdraw.');
-        if(s.raidStarted&&!enemies.length&&!r.said.includes('clear'))return cue('clear','Lancer, Control. No further contacts. Resume escort.');
+        if(r.phase==='complete')return null;
+        if(r.phase==='damage-report'){
+            if(r.report===0){r.report++;return cue('clear','Lancer, Control. No further contacts. Flight and convoy leads, report damage.');}
+            if(r.report===1){
+                r.report++;
+                const wing=combat.enemies.find(function(e){return e.team==='ally'&&e.hp>0;});
+                var lost=combat.enemies.filter(function(e){return e.team==='ally'&&e.hp<=0;}).length;
+                if(wing)return fighterCue('flight-report',(lost?lost+' fighter lost. ':'')+(wing.hp<wing.maxHp?'Hull at '+Math.ceil(wing.hp/wing.maxHp*100)+' percent.':(wing.shield||0)<(wing.maxShield||0)?'Hull intact. Shields recovering.':'No damage.')+' Remaining on station.',wing);
+                return cue('flight-report','Control. No wingman response. Lancer, maintain escort.');
+            }
+            if(r.report===2){
+                r.report++;
+                var index=0;packets.forEach(function(p,i){var a=condition(i),b=condition(index);if(a.lost*10+a.damaged>b.lost*10+b.damaged)index=i;});
+                var damage=condition(index),lead=radioShips[index*6];
+                return lead.hull>0?cue('convoy-report',packets[index].ship+'. '+packets[index].name+' group: '+(damage.damaged||damage.lost?damage.damaged+' damaged, '+damage.lost+' lost. We are checking the holds.':'no damage reported.'),index):cue('convoy-report','Control. '+packets[index].name+' group: '+damage.damaged+' damaged, '+damage.lost+' lost.');
+            }
+            r.phase='cruise';
+            packets.forEach(function(p,i){var key='loss-packet-'+i;if(condition(i).lost&&!r.said.includes(key))r.said.push(key);});
+            return cue('report-complete','Copy. '+alive.length+' transports accounted for; '+alive.filter(function(ship){return ship.hull<ship.maxHull;}).length+' damaged, '+(radioShips.length-alive.length)+' lost. Maintain course and speed. Lancer, resume the screen.');
+        }
         for(var ship of s.ships){
             var lossKey='loss-packet-'+ship.packet,hitKey='hit-packet-'+ship.packet;
-            if(ship.hull<=0&&!r.said.includes(lossKey))return cue(lossKey,'Lancer, Control. Transport lost in the '+packets[ship.packet].name.toLowerCase()+' group. Cover the remaining ships.');
+            if(enemies.length&&ship.hull<=0&&!r.said.includes(lossKey))return cue(lossKey,'Lancer, Control. Transport lost in the '+packets[ship.packet].name.toLowerCase()+' group. Cover the remaining ships.');
             if(enemies.length&&ship.hull>0&&ship.hull<ship.maxHull*.9&&!r.said.includes(hitKey)){
                 var lead=s.ships[ship.packet*6],p=packets[ship.packet];
                 var distress=[
@@ -207,31 +242,34 @@
         if(shooting&&shooting.ship&&!r.said.includes('firing'))return cue('firing','Lancer, Control. Bandit firing on the '+packets[shooting.ship.packet].name.toLowerCase()+' group. Engage.');
         if(ranged&&ranged.ship&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('range','Lancer, Control. Bandits entering weapons range of the '+packets[ranged.ship.packet].name.toLowerCase()+' group. Intercept.');
         var contactReport=r.said.includes('range')||r.said.includes('firing');
-        if(r.opening===0&&!contactReport){
+        if(!s.raidStarted&&r.opening===0&&!contactReport){
             if(r.wait>0)return null;
             r.opening++;return cue('intro-control','Lancer flight, Control. Convoy should be in visual range now.');
         }
-        if(r.opening>0&&!contactReport&&!r.said.includes('visual-reply')){
+        if(!s.raidStarted&&r.opening>0&&!contactReport&&!r.said.includes('visual-reply')){
             const wing=combat.enemies.find(function(e){return e.team==='ally'&&e.hp>0;});
             if(wing&&alive.some(function(ship){return Math.hypot.apply(null,ship.position.map(function(v,k){return v-wing.pose.eye[k];}))*U<2000;})){
-                var reply=cue('visual-reply','Affirmative, Control. Convoy in sight.');
-                reply.speaker=wing.callsign+' / FLIGHT';reply.craftId=wing.id;reply.portraitIndex=wing.index;reply.voiceSettings=DW.flightDialogue.pilotVoice(wing);reply.seed=reply.voiceSettings.seed;return reply;
+                return fighterCue('visual-reply','Affirmative, Control. Convoy in sight.',wing);
             }
         }
-        if(r.said.includes('visual-reply')&&!contactReport&&!r.said.includes('welcome')&&s.ships[0].hull>0)return cue('welcome','Lancer, Wayfarer. Glad to have you with us.',0);
+        if(!s.raidStarted&&r.said.includes('visual-reply')&&!contactReport&&!r.said.includes('welcome')&&s.ships[0].hull>0){r.phase='cruise';return cue('welcome','Lancer, Wayfarer. Glad to have you with us.',0);}
         if(enemies.length&&!r.said.includes('nearby')&&!contactReport)return cue('nearby','Lancer, Control. '+enemies.length+' bandits approaching the rear of the convoy. Intercept.');
         // Do not deliver an arrival briefing after the engagement has already begun.
         if(contactReport&&r.opening===0)r.opening=1;
-        if(!s.raidStarted||enemies.length||r.wait>0)return null;
-        var counts=packets.map(function(packet,index){return alive.filter(function(ship){return ship.packet===index;}).length;});
-        var introductions=[
-            "Wayfarer here. I've got "+counts[0]+" ships with me. We're holding together.",
-            "Long Haul. Port group holding course. The freight's quieter than my engine.",
-            'Keel. Lower group, '+counts[2]+' ships. Course and speed unchanged.',
-            "Good Measure. "+counts[3]+" ships with me. Mind our bows when you come through, would you?",
-            "Last Light. Still bringing up the rear. Don't forget about us back here."
+        if(!s.raidStarted||enemies.length||r.phase!=='cruise')return null;
+        /** @type {{speakers:number[];lines:string[]}[]} */var conversations=[
+            {speakers:[1,0],lines:["Wayfarer, you know if the dockside diner still does breakfast all shift?","If you're buying, I'm willing to find out."]},
+            {speakers:[4,1],lines:["Long Haul, is that rattle yours or mine?","Mine. If it stops, then we worry."]},
+            {speakers:[3,2],lines:["Keel, remind me to stop taking jobs marked 'routine delivery.'","You said that on the last one, Good Measure."]}
         ];
-        while(r.opening<=5){var n=r.opening++-1;if(s.ships[n*6].hull>0)return cue('intro-'+n,introductions[n],n);}
+        while(r.chat<conversations.length){
+            var conversation=conversations[r.chat];
+            if(conversation.speakers.some(function(i){return radioShips[i*6].hull<=0;})){r.chat++;r.chatTurn=0;continue;}
+            if(!r.chatTurn&&r.wait>0)return null;
+            var turn=r.chatTurn,chat=r.chat,line=cue('chat-'+chat+'-'+turn,conversation.lines[turn],conversation.speakers[turn]);
+            if(turn){r.chat++;r.chatTurn=0;}else r.chatTurn=1;
+            return line;
+        }
         return null;
     }
     DW.convoyMission={radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
