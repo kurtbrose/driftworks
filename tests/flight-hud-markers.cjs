@@ -286,3 +286,16 @@ document.getElementById=lookup;get('flight-guide-style').value='grid';get('fligh
 console.log('PASS default cockpit motion dots: missing lab controls, no input demand, sorties, free flight, wormhole, death and off switch');
 
 const bodyContains=document.body.classList.contains;document.body.classList.contains=name=>name==='watch-chase';hud.render(guideView);assert.ok(!calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'Chase camera suppresses cockpit motion dots');document.body.classList.contains=bodyContains;
+
+// Control orders are independent of the selected weapon target and remain visible off-screen.
+const escort=createFlight({mission:'convoy',seed:29}),escortView=escort.snapshot();
+escort.DW.convoyMission.step(escortView.combat,1);
+function drawEscort(){escortView.combat.targetId=null;hud.render({...guideView,...escortView});}
+drawEscort();assert(calls.some(c=>c.kind==='text'&&c.text.startsWith('CONTROL / PATROL')));
+escortView.combat.convoy.elapsed=60;escort.DW.convoyMission.step(escortView.combat,0);
+const assignment=escortView.combat.convoy.director.waypoint;assert.equal(assignment.kind,'intercept');
+assignment.position=escortView.state.eye.map((v,k)=>v+escortView.state.back[k]*100);
+drawEscort();const order=calls.find(c=>c.kind==='text'&&c.text.startsWith('CONTROL / INTERCEPT'));
+assert(order&&Number.isFinite(order.x)&&Number.isFinite(order.y)&&order.x>0&&order.x<1000&&order.y>0&&order.y<700,'Behind-camera order remains at a visible edge');
+escortView.combat.convoy.complete=true;drawEscort();assert(!calls.some(c=>c.kind==='text'&&c.text.startsWith('CONTROL /')));
+console.log('PASS convoy Control markers: patrol, intercept, off-screen bearing, finite edge placement and completion');

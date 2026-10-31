@@ -11,7 +11,7 @@ assert.equal(c.enemies.filter(e=>e.team==='ally').length,2);
 assert.equal(c.enemies.filter(e=>e.team==='enemy').length,0);
 assert(!c.convoy.raidStarted);
 // Isolate route/formation checks from the separately tested first-contact gate.
-c.convoy.raidStarted=true;
+c.convoy.raidStarted=true;c.convoy.director.raids=3;
 assert.equal(world.asteroids.length,0);
 assert.equal(world.ships.length,0);
 assert.equal(c.convoy.ships.length,30);
@@ -148,7 +148,7 @@ assert.equal(victim.hull,0);assert(!f.DW.convoyMission.targets(c).some(t=>t.id==
 assert(c.flashes.some(e=>e.destruction),'Cargo loss produces a visible explosion');
 f.advance(1/120,{stop:true});assert.notEqual(c.targetId,victim.id,'Destroyed cargo cannot retain a target lock');
 // Surviving attackers keep the escort unresolved after the arrival time.
-f.reset();c=f.snapshot().combat;c.convoy.elapsed=300;
+f.reset();c=f.snapshot().combat;c.convoy.elapsed=60;f.DW.convoyMission.step(c,0);c.convoy.elapsed=300;
 c.convoy.ships.forEach(s=>{s.arrived=true;s.position[1]=s.slot[1]+c.convoy.destinationY;});
 f.DW.convoyMission.step(c,1/120);assert(!c.convoy.complete);
 c.enemies.filter(e=>e.team==='enemy').forEach(e=>{e.hp=0;});f.DW.convoyMission.step(c,1/120);assert(c.convoy.complete);

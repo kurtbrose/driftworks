@@ -1,6 +1,6 @@
 # Flight mission definitions, version 1
 
-## Convoy escort / first step
+## Convoy escort / battle director
 
 Open `experiments/flight.html?mission=convoy` or select Convoy Escort on the
 missions page. Thirty authored DW-14 modular freighters cross a 7.5 km route at 25 m/s.
@@ -35,7 +35,7 @@ and arrival counts. The training asteroid and mothership are absent.
 The playtest opens with sixty seconds of quiet escort, including the arrival
 exchange and roughly forty-five seconds to settle into formation afterward.
 No hostile fighters exist during this leg; weapons and cargo damage remain live.
-At sixty active-flight seconds, the fixed three-raider approach begins once.
+At sixty active-flight seconds, the first three-raider approach begins.
 Raiders spawn as one loose three-fighter wedge on a common starboard-aft bearing,
 over 2.5 km from the rear packet. Formation slots are 130 m to either side,
 180 m astern and 40 m above/below the lead. Shared steering and acceleration
@@ -60,7 +60,30 @@ bookkeeping, with JSON-safe IDs rather than entity pointers. `stepRaider` return
 true only when it has performed formation/cover/extension movement; its caller
 still ages guns and updates collision/neighbour indices. Engaged targeting uses
 the normal combat path. Wingmen return to escort after the raid is defeated.
-There is no adaptive battle director or waypoint vectoring yet.
+The first battle-director pass owns `combat.convoy.director`. It observes live
+hostile proximity to cargo, actual cargo-directed firing, recent cargo hull loss,
+player hull and surviving wingmates. Pressure is smoothed over three seconds;
+the director never changes weapon damage, durability, aim or existing positions.
+Its observable stages are opening, patrol, contact, threatened, under-fire and
+recovery. These describe the real situation, rather than forcing a firing cue
+when no shots are being taken.
+
+A raid must be eliminated before another wing can spawn. Recovery lasts 45–85
+seconds after the last hostile dies; recent cargo damage and player strain earn
+more time. Damage reports finish before another attack. The sortie has a budget
+of three three-fighter wings, with no new spawn after 210 route seconds. Later
+wings approach Upper and Port packets from different common bearings; each wing
+arrives together, and raider IDs remain unique. No allied reinforcement spawning
+is included in this first pass.
+
+Control provides a cyan moving patrol station during quiet periods and an amber
+intercept waypoint during threats. Patrol stations move with the cargo and rotate
+through packets after arrival or a 40-second watch. Intercept positions lie
+between the nearest hostile and threatened cargo, with cargo-motion lead. The
+marker clamps to screen edges when outside view; its label includes packet,
+assignment and range. Control's contact call refers to the observed threatened
+packet and marked intercept. Target locks remain under player control. Completion
+clears the waypoint; reset rebuilds all director state.
 
 Control's callsign is Rook: calm, concise and concerned with the entire convoy.
 Control and fighter calls use addressee/caller, observation and order. The opening
