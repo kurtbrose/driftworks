@@ -5,11 +5,13 @@ const f=createFlight({mission:'convoy',seed:29});
 let {combat:c,state:player,world}=f.snapshot();
 const U=f.DW.sim.METERS_PER_UNIT;
 assert.equal(f.DW.convoyMission.WING_SIZE,3);
-assert.equal(c.enemies.length,5);
+assert.equal(c.enemies.length,2);
 assert(c.convoy.speedMps<c.player.profile.maxVelocity[2]/2,'Freighters are substantially slower than fighters');
 assert.equal(c.enemies.filter(e=>e.team==='ally').length,2);
-assert.equal(c.enemies.filter(e=>e.team==='enemy').length,3);
-c.enemies.filter(e=>e.team==='enemy').forEach(e=>{e.hp=0;});
+assert.equal(c.enemies.filter(e=>e.team==='enemy').length,0);
+assert(!c.convoy.raidStarted);
+// Isolate route/formation checks from the separately tested first-contact gate.
+c.convoy.raidStarted=true;
 assert.equal(world.asteroids.length,0);
 assert.equal(world.ships.length,0);
 assert.equal(c.convoy.ships.length,30);
@@ -72,7 +74,7 @@ f.advance(.1,{stop:true});
 assert(c.convoy.complete);
 assert(c.convoy.ships.every(s=>s.arrived&&s.velocity.every(v=>v===0)));
 assert.equal(c.wave,1,'Convoy encounter never spawns generic training waves');
-assert.equal(c.enemies.length,5);
+assert.equal(c.enemies.length,2);
 assert.equal(JSON.stringify(c.convoy.ships.map(s=>s.slot)),slots);
 const positions=JSON.stringify(c.convoy.ships.map(s=>s.position));
 f.advance(10,{fire:true,stop:true});
@@ -122,6 +124,7 @@ console.log('PASS convoy collision: authored surfaces and open bays, high-speed 
 // The playable encounter starts armed and threatens actual damageable cargo.
 f.reset();c=f.snapshot().combat;
 assert(!f.DW.flightMissions.resolve('convoy').weaponsDisabled);
+f.advance(60);assert(c.convoy.raidStarted);
 const targets=f.DW.convoyMission.targets(c);assert.equal(targets.length,30);
 assert.equal(targets[24].hp,c.convoy.ships[24].hull);
 assert(c.enemies.filter(e=>e.team==='enemy').every(e=>e.targetId.startsWith('cargo-')));
@@ -151,7 +154,7 @@ f.reset();c=f.snapshot().combat;c.convoy.ships.forEach(s=>{s.hull=0;});f.DW.conv
 console.log('PASS escort combat: weapons, real raiders and defending wingmen, cargo damage/targets/losses, victory and failure');
 
 // Close the actual chase/aim/shoot loop through the normal control and gun paths.
-f.reset();c=f.snapshot().combat;
+f.reset();c=f.snapshot().combat;f.advance(60);
 for(let i=0;i<1200&&!c.dead;i++){
     const enemies=c.enemies.filter(e=>e.team==='enemy'&&e.hp>0);if(!enemies.length)break;
     const target=enemies.find(e=>e.id===c.targetId)||enemies[0];c.targetId=target.id;
@@ -168,10 +171,12 @@ console.log('PASS playable escort loop: real controls, interception, lead, gunfi
 // Channel ownership and character identity must survive real threat changes.
 f.reset();c=f.snapshot().combat;
 const radio=(dt=30,busy=false)=>f.DW.flightComms.step(f.DW.flightComms.create(),dt,c,busy,()=>.5,f.snapshot().state);
+const startRaid=()=>f.DW.convoyMission.step(c,Math.max(0,60-c.convoy.elapsed));
 assert.equal(radio(2,true),null);assert.equal(c.convoy.radio.opening,0,'Busy channel cannot consume an introduction');
 assert.match(radio().speaker,/CONTROL \/ Rook/);
 const visualReply=radio();assert.match(visualReply.text,/Affirmative, Control/);assert.equal(visualReply.craftId,c.enemies[0].id);assert.equal(visualReply.portraitIndex,c.enemies[0].index);
 const welcome=radio();assert.match(welcome.text,/Glad to have you/);assert.equal(welcome.civilianPortraitIndex,0);
+startRaid();
 const nearby=radio();assert.match(nearby.text,/bandits approaching/);
 assert(!c.convoy.radio.said.includes('range'),'No weapons-range warning while distant');
 const raiders=c.enemies.filter(e=>e.team==='enemy'),attacker=raiders[0],target=c.convoy.ships[24];
@@ -186,6 +191,7 @@ assert.equal(cast.filter(l=>typeof l.civilianPortraitIndex==='number').length,4,
 assert(!cast.some(l=>l.craftId===target.id),'Destroyed captain cannot speak');
 assert.deepEqual(cast.map(l=>l.civilianPortraitIndex),[0,1,2,4],'Portrait identities match the established civilian roster');
 f.reset();c=f.snapshot().combat;assert.deepEqual(Array.from(c.convoy.radio.said),[]);assert.equal(c.convoy.radio.opening,0);
+startRaid();
 const closeRaider=c.enemies.find(e=>e.team==='enemy');closeRaider.pose.eye=at(c.convoy.ships[24],[600,0,0]);closeRaider.fire=true;closeRaider.guns.fired=1;
 assert.match(radio().text,/Bandit firing/);
 for(let i=0;i<8;i++)radio();
@@ -200,6 +206,7 @@ assert.equal(radio(60,true),null);assert.equal(c.convoy.radio.wait,28,'Speaking 
 assert.equal(radio(2),null,'Even urgent facts leave breathing room');
 assert.match(radio(1).text,/Affirmative, Control/);
 assert.match(radio(3).text,/Glad to have you/);
+startRaid();
 assert.match(radio(3).text,/bandits approaching/);
 assert.equal(radio(60),null,'Captains do not run a roll call during combat');
 const threatened=c.convoy.ships[24];threatened.hull-=100;
@@ -219,3 +226,20 @@ assert.equal(arrivalLines[0].craftId,'control');assert.match(arrivalLines[0].tex
 assert.equal(arrivalLines[1].craftId,arrivalFlight.snapshot().combat.enemies[0].id);
 assert.equal(arrivalLines[2].civilianPortraitIndex,0);assert.match(arrivalLines[2].text,/Glad to have you/);
 console.log('PASS convoy arrival radio: real channel timing, Control observation, wing acknowledgment and civilian welcome');
+
+const breathingFlight=createFlight({mission:'convoy',seed:29}),bc=breathingFlight.snapshot().combat;
+breathingFlight.advance(1,{fire:true});assert(bc.player.guns.fired>0,'Weapons stay live in the quiet leg');
+breathingFlight.advance(58.9);
+assert(!bc.convoy.raidStarted);assert.equal(bc.enemies.length,2,'Only the two wingmen exist before first contact');
+assert(bc.convoy.ships.every(s=>s.hull===s.maxHull));
+assert.equal(breathingFlight.transcript.length,3,'Opening exchange is followed by quiet, without a false all-clear or roll call');
+bc.targetId=bc.convoy.ships[0].id;bc.targetLocked=true;
+breathingFlight.advance(.1);
+assert(bc.convoy.raidStarted);const incoming=bc.enemies.filter(e=>e.team==='enemy');assert.equal(incoming.length,3);
+assert.equal(bc.targetId,bc.convoy.ships[0].id,'Contact does not override a deliberate target lock');
+assert(incoming.every(e=>e.guns.fired===0),'Contact starts as a distant approach, without immediate gunfire');
+assert(incoming.every(e=>bc.convoy.ships.every(s=>Math.hypot(...s.position.map((v,k)=>v-e.pose.eye[k]))*U>2000)),'Approach spawns outside the entire moving formation');
+assert(breathingFlight.transcript.some(l=>/bandits approaching/.test(l.text)),'Control reports the new approach');
+breathingFlight.DW.convoyMission.step(bc,0);assert.equal(bc.enemies.length,5,'First raid spawns only once');
+breathingFlight.reset();assert(!breathingFlight.snapshot().combat.convoy.raidStarted);assert.equal(breathingFlight.snapshot().combat.enemies.length,2);
+console.log('PASS convoy breathing room: quiet first minute, live weapons, moving-frame approach, contact report, target-lock agency and reset');

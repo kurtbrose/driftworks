@@ -26,14 +26,18 @@ older encounter presets retain their authored counts.
 
 `src/convoy-mission.js` owns transient `combat.convoy`: stable cargo IDs and
 callsigns, starting formation slots, current positions and velocities, hull,
-arrival flags, route speed and elapsed time. Positions use scene units;
+arrival flags, route speed, elapsed time and the first-raid lifecycle flag. Positions use scene units;
 velocities and speed use m/s. It runs in the same fixed-step flight session
 headlessly and in the browser. Reset rebuilds the roster with the same IDs.
 The HUD shows route distance/time, nearby cargo labels, cargo radar contacts
 and arrival counts. The training asteroid and mothership are absent.
 
-The playtest includes a fixed three-raider approach from launch, with weapons live.
-Raiders start over 2.5 km from the rear packet, outside their gun reach, giving
+The playtest opens with sixty seconds of quiet escort, including the arrival
+exchange and roughly forty-five seconds to settle into formation afterward.
+No hostile fighters exist during this leg; weapons and cargo damage remain live.
+At sixty active-flight seconds, the fixed three-raider approach begins once.
+Raiders spawn relative to the convoy's current location, over 2.5 km from the
+rear packet, outside their gun reach, giving
 the escort time to intercept. Raiders initially attack three rear freighters using the regular pursuit, aiming
 and weapon systems; wingmen engage them and return to escort formation once the
 attack is defeated. The player can intercept, lock and shoot the raiders. There

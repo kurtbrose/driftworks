@@ -548,7 +548,7 @@
         get('fly').disabled=!loaded;
         get('fly').textContent=loaded?(cinematic?'Start demo':'Start flight'):'Textures unavailable';
         if(loaded){
-            status.textContent=importError||(activeMission.id==='convoy'?'Weapons free / Three raiders are attacking the convoy. Intercept the red contacts and protect the freighters. Tab cycles hostiles; L locks; Space or click fires.':'Ready - Start flight when ready');
+            status.textContent=importError||(activeMission.id==='convoy'?'Rendezvous / Join the convoy and take up escort stations. Tab cycles hostiles; L locks; Space or click fires.':'Ready - Start flight when ready');
             if(activeMission.id==='scramble'){controls.startUncaptured();}
             if(cinematic)resume();
             if(studies.enabled&&watch)resume();

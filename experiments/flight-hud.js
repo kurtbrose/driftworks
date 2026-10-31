@@ -441,7 +441,7 @@
             }).length + (' '+mission.teams.enemy.status+' / ') + living.filter(function (e) {
                 return e.team === 'ally';
             }).length + (' '+mission.teams.ally.status+' / ') + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
-            if(combat.convoy){var convoy=combat.convoy,arrived=convoy.ships.filter(function(s){return s.arrived&&s.hull>0;}).length,lost=convoy.ships.filter(function(s){return s.hull<=0;}).length;get('combat-status').textContent=combat.dead?'SORTIE OVER / Esc to restart':(lost===30?'CONVOY LOST':convoy.complete?'ESCORT COMPLETE':'DEFEND CONVOY')+' / '+arrived+' ARRIVED / '+lost+' LOST / '+living.filter(function(e){return e.team==='enemy';}).length+' RAIDERS';}
+            if(combat.convoy){var convoy=combat.convoy,arrived=convoy.ships.filter(function(s){return s.arrived&&s.hull>0;}).length,lost=convoy.ships.filter(function(s){return s.hull<=0;}).length;get('combat-status').textContent=combat.dead?'SORTIE OVER / Esc to restart':(lost===30?'CONVOY LOST':convoy.complete?'ESCORT COMPLETE':convoy.raidStarted?'DEFEND CONVOY':'ESCORT CONVOY')+' / '+arrived+' ARRIVED / '+lost+' LOST / '+living.filter(function(e){return e.team==='enemy';}).length+' RAIDERS';}
             get('shield-meter').max = Math.max(1, combat.maxShield === undefined ? 120 : combat.maxShield);
             get('shield-meter').value = combat.shield;
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
@@ -503,7 +503,7 @@
                 var convoy=combat.convoy,remaining=Math.max(0,convoy.destinationY*units-convoy.elapsed*convoy.speedMps);
                 combatHud.save();combatHud.font='14px system-ui';combatHud.textAlign='center';combatHud.fillStyle='#b9e7ed';combatHud.strokeStyle='#72c8d5';
                 var survivors=convoy.ships.filter(function(s){return s.hull>0;}).length,raiders=living.filter(function(e){return e.team==='enemy';}).length;
-                combatHud.fillText(!survivors?'CONVOY LOST / Esc to restart':convoy.complete?'ESCORT COMPLETE / '+survivors+' ARRIVED':'DEFEND '+survivors+' FREIGHTERS / '+raiders+' RAIDERS / '+(remaining/1000).toFixed(1)+' km remaining',w/2,86);
+                combatHud.fillText(!survivors?'CONVOY LOST / Esc to restart':convoy.complete?'ESCORT COMPLETE / '+survivors+' ARRIVED':(convoy.raidStarted?'DEFEND ':'ESCORT ')+survivors+' FREIGHTERS / '+raiders+' RAIDERS / '+(remaining/1000).toFixed(1)+' km remaining',w/2,86);
                 DW.convoyMission.packets.forEach(function(packet,index){
                     var ships=convoy.ships.filter(function(s){return s.packet===index&&s.hull>0;});if(!ships.length)return;
                     var center=[0,1,2].map(function(k){return ships.reduce(function(n,s){return n+s.position[k];},0)/ships.length;}),q=DW.flightSkybox.project(center.map(function(v,k){return v-state.eye[k];}),state,w/h);

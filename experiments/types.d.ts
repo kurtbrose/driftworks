@@ -314,7 +314,7 @@ export type EvacuationState = {scene:number;line:number;wait:number;elapsed:numb
 export type ConvoyHit = {shipIndex:number;shipId:string;fraction:number;point:Vector;normal:Vector};
 export type ConvoyAsset = {variants:Record<string,{collision?:Model['hullIndex'];manifest:string[];batches:{offset:number;count:number;color:[number,number,number];textured:boolean;roughness:number;metallic:number;emissive:number[];emissiveIntensity:number}[]}>};
 export type ConvoyPacket = {name:string;center:Vector;ship:string;pilot:string;id:string;portrait:number;voice:number};
-export type ConvoyState = {elapsed:number;speedMps:number;destinationY:number;complete:boolean;radio:{wait:number;opening:number;said:string[]};ships:{id:string;packet:number;callsign:string;model:string;slot:Vector;position:Vector;velocity:Vector;hull:number;maxHull:number;arrived:boolean}[]};
+export type ConvoyState = {elapsed:number;speedMps:number;destinationY:number;complete:boolean;raidStarted:boolean;radio:{wait:number;opening:number;said:string[]};ships:{id:string;packet:number;callsign:string;model:string;slot:Vector;position:Vector;velocity:Vector;hull:number;maxHull:number;arrived:boolean}[]};
 export type Combat = {
     convoy?:ConvoyState;
     scramble?:{beat:number;radio:number};

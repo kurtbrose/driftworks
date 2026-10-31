@@ -1,7 +1,7 @@
 (function(){
     'use strict';
     var DW=/** @type {Required<import('./types').DriftworksNamespace>} */(window.Driftworks),U=DW.sim.METERS_PER_UNIT;
-    var WING_SIZE=3;
+    var WING_SIZE=3,FIRST_CONTACT_SECONDS=60;
     // Packet centres in metres. Local slots remain orderly without shared road-like rows.
     var packets=[
         {name:'Upper',center:[-100,210,175],ship:'Wayfarer',pilot:'Mara Vale',id:'mara-vale',portrait:0,voice:1},
@@ -23,14 +23,22 @@
             c.mode='escort';c.targetId=null;
             if(combat.useHullModels)c.collision={kind:'model',modelId:DW.shipPackModels.craftModel(c,combat.hullModels?combat.hullModels.ally:'mixed',combat.wave).id};
         });
-        combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,radio:{wait:1,opening:0,said:[]},ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
+        combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,raidStarted:false,radio:{wait:1,opening:0,said:[]},ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
             var packet=packets[Math.floor(i/6)],local=i%6,row=Math.floor(local/2),side=local%2?1:-1;
             var slot=[(packet.center[0]+side*48+(row-1)*11)/U,(packet.center[1]+(1-row)*125+(side>0?-35:25))/U,1200+(packet.center[2]+side*32+[ -12,8,4 ][row])/U];
             return {id:'cargo-'+String(i+1).padStart(2,'0'),packet:Math.floor(i/6),callsign:local===0?packet.ship:packet.name+' '+String(local+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
         })};
         targets(combat);
+        combat.targetId=null;combat.roundOver=false;
+    }
+    /** Spawn the first approach relative to the moving convoy, after the quiet escort leg.
+     * @param {import('../experiments/types').Combat} combat */
+    function beginRaid(combat){
+        const s=combat.convoy;if(!s||s.raidStarted)return;
+        var survivors=s.ships.filter(function(ship){return ship.hull>0;});if(!survivors.length)return;
+        s.raidStarted=true;
         for(var j=0;j<3;j++){
-            var target=combat.convoy.ships[24+j],pose=DW.arcade.create(0),side=j===1?-1:1;
+            var target=survivors[(24+j)%survivors.length],pose=DW.arcade.create(0),side=j===1?-1:1;
             pose.eye=target.position.map(function(v,k){return v+[side*(2500+j*150),1100+j*100,350+j*70][k]/U;});
             var delta=target.position.map(function(v,k){return v-pose.eye[k];}),length=Math.hypot.apply(null,delta),forward=delta.map(function(v){return v/length;});
             var horizontal=Math.hypot(forward[0],forward[1]);pose.right=[forward[1]/horizontal,-forward[0]/horizontal,0];pose.up=[pose.right[1]*forward[2],-pose.right[0]*forward[2],pose.right[0]*forward[1]-pose.right[1]*forward[0]];pose.back=forward.map(function(v){return -v;});
@@ -42,7 +50,8 @@
             if(combat.useHullModels)raider.collision={kind:'model',modelId:DW.shipPackModels.craftModel(raider,combat.hullModels?combat.hullModels.enemy:'mixed',combat.wave).id};
             combat.enemies.push(raider);
         }
-        combat.targetId='convoy-raider-1';combat.roundOver=false;
+        if(!combat.targetLocked)combat.targetId='convoy-raider-1';
+        DW.flightSim.collisionChanged(combat);
     }
     /** @param {import('../experiments/types').Combat} combat @param {number} dt */
     function step(combat,dt){
@@ -53,7 +62,8 @@
             ship.position[1]=ship.slot[1]+Math.min(s.destinationY,s.elapsed*s.speedMps/U);
             if(ship.position[1]>=s.destinationY+ship.slot[1]){ship.arrived=true;ship.velocity=[0,0,0];}
         });
-        s.complete=!s.ships.some(function(ship){return ship.hull>0;})||(s.ships.every(function(ship){return ship.arrived||ship.hull<=0;})&&!combat.enemies.some(function(e){return e.team==='enemy'&&e.hp>0;}));
+        if(!s.raidStarted&&s.elapsed>=FIRST_CONTACT_SECONDS)beginRaid(combat);
+        s.complete=!s.ships.some(function(ship){return ship.hull>0;})||(s.raidStarted&&s.ships.every(function(ship){return ship.arrived||ship.hull<=0;})&&!combat.enemies.some(function(e){return e.team==='enemy'&&e.hp>0;}));
     }
     /** Follow a moving slot using ordinary fighter steering and acceleration.
      * @param {import('../experiments/types').Craft} craft @param {import('../experiments/types').FlightState} player @param {number} index @param {number} dt */
@@ -121,7 +131,8 @@
         DW.flightSim.participants(combat).forEach(function(craft,index){
             if(craft.hp<=0)return;
             var pose=craft.pose,radius=DW.flightCollision.radius(craft)*U;
-            const hit=trace(combat,previousCraft[index],pose.eye,radius,previousShips);if(!hit)return;
+            // An approach may spawn during this tick; new craft have no earlier sample.
+            const hit=trace(combat,previousCraft[index]||pose.eye,pose.eye,radius,previousShips);if(!hit)return;
             var ship=state.ships[hit.shipIndex],velocity=ship.position.map(function(v,k){return (v-previousShips[hit.shipIndex][k])*U/dt;});
             var relative=pose.velocity.map(function(v,k){return v-velocity[k];}),inward=relative.reduce(function(n,v,k){return n+v*hit.normal[k];},0);
             pose.eye=hit.point.map(function(v,k){return v+hit.normal[k]*(radius+.02)/U;});
@@ -175,7 +186,7 @@
         }
         var alive=s.ships.filter(function(ship){return ship.hull>0;}),enemies=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0;});
         if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Lancer, Control. '+alive.length+' transports through. Escort complete.':'Lancer, Control. Convoy lost. Withdraw.');
-        if(!enemies.length&&!r.said.includes('clear'))return cue('clear','Lancer, Control. No further contacts. Resume escort.');
+        if(s.raidStarted&&!enemies.length&&!r.said.includes('clear'))return cue('clear','Lancer, Control. No further contacts. Resume escort.');
         for(var ship of s.ships){
             var lossKey='loss-packet-'+ship.packet,hitKey='hit-packet-'+ship.packet;
             if(ship.hull<=0&&!r.said.includes(lossKey))return cue(lossKey,'Lancer, Control. Transport lost in the '+packets[ship.packet].name.toLowerCase()+' group. Cover the remaining ships.');
@@ -211,7 +222,7 @@
         if(enemies.length&&!r.said.includes('nearby')&&!contactReport)return cue('nearby','Lancer, Control. '+enemies.length+' bandits approaching the rear of the convoy. Intercept.');
         // Do not deliver an arrival briefing after the engagement has already begun.
         if(contactReport&&r.opening===0)r.opening=1;
-        if(enemies.length||r.wait>0)return null;
+        if(!s.raidStarted||enemies.length||r.wait>0)return null;
         var counts=packets.map(function(packet,index){return alive.filter(function(ship){return ship.packet===index;}).length;});
         var introductions=[
             "Wayfarer here. I've got "+counts[0]+" ships with me. We're holding together.",
