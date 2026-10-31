@@ -122,7 +122,8 @@ const suites = {
     "retail-gun-mounts.cjs",
     "character-assets.cjs",
     "portrait-assets.cjs",
-    "ohio-portraits.cjs"
+    "ohio-portraits.cjs",
+    "convoy-portraits.cjs"
   ],
   artwork: [
     {"file":"shared.cjs","args":["artwork"]},

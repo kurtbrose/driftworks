@@ -6,27 +6,31 @@ body{background:#0b1115;color:#d7e4e9;font:16px/1.5 system-ui;margin:24px}a{colo
 @media(max-width:900px){main{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){main{grid-template-columns:1fr}}
 </style>
 <h1>Flight cast</h1>
-<nav><a href="flight-cast.html">Military pilots & Control</a> / <a href="flight-cast.html?mission=ohio">Ohio winter cast</a> / <a href="civilian-cast.html">Civilian shuttle pilots</a> / <a href="civilian-cast.html?category=runway-workers">Runway workers</a></nav>
+<nav><a href="flight-cast.html">Military pilots & Control</a> / <a href="flight-cast.html?mission=ohio">Ohio winter cast</a> / <a href="civilian-cast.html">Civilian shuttle pilots</a> / <a href="civilian-cast.html?category=runway-workers">Runway workers</a> / <a href="civilian-cast.html?category=convoy">Convoy crews</a></nav>
 <p id="description">Experienced passenger crews in airline uniforms. Six reusable mission characters, ages 36–62. Mouths follow the same Mumble syllable plan used by radio voices; blinking and expressions remain active between calls.</p>
 <label>Expression <select id="mood"><option value="neutral">Neutral</option><option value="smile">Relieved</option><option value="angry">Frustrated</option><option value="afraid">Worried</option></select></label>
+<label>Portrait size <select id="size"><option value="160">Radio size</option><option value="320" selected>Review size</option></select></label>
 <label>Test transmission <input id="line" value="Shuttle control, all passengers are aboard. We are ready for departure."></label>
 <p id="status" role="status">Loading civilian shuttle pilots…</p><main></main>
-<script src="../src/asset-versions.js?v=68b45d641cef"></script>
+<script src="../src/asset-versions.js?v=1ca48f8b93f6"></script>
 <script src="mumble.js?v=96c5b42f6cc2"></script><script src="face-blend.js?v=50dea498a8c7"></script>
 <script>
 (async function(){
 const DW=window.Driftworks,views=[];let audio=null,speech=null,active=null,closed=false;
+const convoy=new URLSearchParams(location.search).get('category')==='convoy';
 const workers=new URLSearchParams(location.search).get('category')==='runway-workers';
-const pool=workers?'runway-workers':'civilian-shuttle',field=workers?'runwayPortraitIndex':'civilianPortraitIndex',label=workers?'runway workers':'civilian shuttle pilots';
+const pool=convoy?'convoy':workers?'runway-workers':'civilian-shuttle',field=convoy?'portraitSlot':workers?'runwayPortraitIndex':'civilianPortraitIndex',label=convoy?'convoy crews':workers?'runway workers':'civilian shuttle pilots';
 document.title=(workers?'Runway workers':'Civilian shuttle pilots')+' · Driftworks';
 if(workers){document.querySelector('#description').textContent='Spaceport ground crews in high-vis pressure suits: marshalling, fueling, cargo, maintenance and launch support. Mouths follow the same Mumble syllable plan used by radio voices, with blinking and emotional expressions.';document.querySelector('#line').value='Flight deck, servicing is complete. All equipment is clear. You are ready for departure.';}
-const ready='Ready · six animated '+label;
+if(convoy){document.title='Convoy crews · Driftworks';document.querySelector('#description').textContent='Lancer military flight officers and independent cargo haulers. Calibrated expressions, speech and blinking.';document.querySelector('#line').value='Control, convoy is in visual range. Taking up escort station.';}
+const ready='Ready · '+(convoy?'seven':'six')+' animated '+label;
 document.querySelector('#status').textContent='Loading '+label+'…';
 const roster=await (await fetch(DW.assetUrl('../assets/portraits/'+pool+'/roster.json'))).json();
 const moods=document.querySelector('#mood'),status=document.querySelector('#status');
+const size=document.querySelector('#size');function resize(){document.querySelector('main').style.gridTemplateColumns='repeat(auto-fit,minmax(0,'+size.value+'px))';}size.onchange=resize;resize();
 for(const person of roster.characters){
  const figure=document.createElement('figure'),canvas=document.createElement('canvas'),caption=document.createElement('figcaption'),title=document.createElement('h2'),details=document.createElement('small'),bio=document.createElement('p'),button=document.createElement('button');
- title.textContent=workers?person.name:person.rank+' '+person.name;details.textContent=person.age+' · '+(workers?person.rank:'Civilian shuttle pilot');bio.textContent=person.personality;button.textContent='Hear transmission';caption.append(title,details,bio,button);figure.append(canvas,caption);document.querySelector('main').append(figure);
+ title.textContent=workers?person.name:person.rank+' '+person.name;details.textContent=person.age+' · '+(convoy?(person.portraitSlot<2?'Lancer flight officer':'Freighter captain'):workers?person.rank:'Civilian shuttle pilot');bio.textContent=person.personality;button.textContent='Hear transmission';caption.append(title,details,bio,button);figure.append(canvas,caption);document.querySelector('main').append(figure);
  const response=await fetch(DW.assetUrl('../assets/portraits/'+pool+'/runtime/portrait-'+person[field]+'.png'));
  if(!response.ok)throw new Error('Portrait unavailable: '+person.id);
  const bitmap=await createImageBitmap(await response.blob()),frames={};

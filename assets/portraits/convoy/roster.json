@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "characters": [
+    {
+      "id": "lancer-three",
+      "name": "Lancer Three",
+      "age": 29,
+      "rank": "Lieutenant",
+      "portraitSlot": 0,
+      "voiceIndex": 1,
+      "personality": "Lancer wing officer; precise and composed."
+    },
+    {
+      "id": "lancer-two",
+      "name": "Lancer Two",
+      "age": 34,
+      "rank": "Lieutenant",
+      "portraitSlot": 1,
+      "voiceIndex": 0,
+      "personality": "Lancer wing officer; direct and dependable."
+    },
+    {
+      "id": "mara-vale",
+      "name": "Mara Vale",
+      "age": 58,
+      "rank": "Captain",
+      "portraitSlot": 17,
+      "voiceIndex": 1,
+      "personality": "Wayfarer owner-operator; warm, dry humor."
+    },
+    {
+      "id": "daniel-okafor",
+      "name": "Daniel Okafor",
+      "age": 62,
+      "rank": "Captain",
+      "portraitSlot": 18,
+      "voiceIndex": 0,
+      "personality": "Long Haul veteran; unhurried and practical."
+    },
+    {
+      "id": "elena-park",
+      "name": "Elena Park",
+      "age": 46,
+      "rank": "Captain",
+      "portraitSlot": 19,
+      "voiceIndex": 3,
+      "personality": "Keel skipper; careful about machinery and margins."
+    },
+    {
+      "id": "ines-duarte",
+      "name": "Ines Duarte",
+      "age": 53,
+      "rank": "Captain",
+      "portraitSlot": 21,
+      "voiceIndex": 5,
+      "personality": "Good Measure captain; protective of her crew."
+    },
+    {
+      "id": "thomas-reed",
+      "name": "Thomas Reed",
+      "age": 36,
+      "rank": "Captain",
+      "portraitSlot": 22,
+      "voiceIndex": 4,
+      "personality": "Last Light hauler; good-natured, still proving himself."
+    }
+  ]
+}

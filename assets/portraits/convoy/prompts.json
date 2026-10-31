@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "generator": "OpenAI built-in image_gen",
+  "method": "Individual wardrobe edits; offline packer restores calibrated original expression faces.",
+  "jobs": [
+    {
+      "id": "lancer-three",
+      "index": 0,
+      "source": "assets/portraits/dogfight/runtime/portrait-0.png",
+      "name": "Lancer Three",
+      "voiceIndex": 1,
+      "prompt": "Edit this square game radio portrait into a disciplined military fighter officer in dark slate flight suit, matching olive armored survival vest and shoulder harness, silver lieutenant rank bars at collar, small subdued military wing badge, close-fitting olive flight helmet with visor raised above forehead covering dyed hair, integral communications earcups. Maintain the exact original person's face, skin, eyes, nose, mouth, closed neutral expression, head angle, face pixel coordinates, scale and framing. Face stays exactly registered: eyes around 44%, mouth 61% image height. Change clothing and headgear only. Detailed crisp illustrated pixel art matching original, near-black navy background, full square head and shoulders. No text, frame, panels, UI or watermark."
+    },
+    {
+      "id": "lancer-two",
+      "index": 1,
+      "source": "assets/portraits/dogfight/runtime/portrait-1.png",
+      "name": "Lancer Two",
+      "voiceIndex": 0,
+      "prompt": "Edit this square game radio portrait into a disciplined military fighter officer in dark slate flight suit, matching olive armored survival vest and shoulder harness, silver lieutenant rank bars at collar, small subdued military wing badge, close-fitting olive flight helmet with visor raised above forehead covering ALL long hair, integral communications earcups. No loose long hair. Maintain the exact original person's face, skin, eyes, nose, mouth, closed neutral expression, head angle, face pixel coordinates, scale and framing. Face stays exactly registered: eyes around 44%, mouth 61% image height. Change clothing and headgear only. Detailed crisp illustrated pixel art matching original, near-black navy background, full square head and shoulders. No text, frame, panels, UI or watermark."
+    },
+    {
+      "id": "mara-vale",
+      "index": 17,
+      "source": "assets/portraits/civilian-shuttle/runtime/portrait-0.png",
+      "name": "Mara Vale",
+      "voiceIndex": 1,
+      "prompt": "Edit this square game radio portrait into an experienced independent cargo hauler captain in faded rust-orange utility coveralls, weathered charcoal canvas work vest, heavy practical pressure seal collar BELOW chin, patched fabric, headset. No epaulettes, no tie, no white shirt, no airline badge. Maintain the exact original person's face, skin, eyes, nose, mouth, closed neutral expression, head angle, face pixel coordinates, scale and framing. Face stays exactly registered: eyes around 44%, mouth 61% image height. Change clothing and headgear only. Detailed crisp illustrated pixel art matching original, near-black navy background, full square head and shoulders. No text, frame, panels, UI or watermark."
+    },
+    {
+      "id": "daniel-okafor",
+      "index": 18,
+      "source": "assets/portraits/civilian-shuttle/runtime/portrait-1.png",
+      "name": "Daniel Okafor",
+      "voiceIndex": 0,
+      "prompt": "Edit this square game radio portrait into an old cargo freighter captain in worn olive work overalls, heavy brown canvas jacket, low pressure seal collar, tiny brass wrench charm clipped to chest pocket, headset. No epaulettes, no tie, no white shirt, no airline badge. Maintain the exact original person's face, skin, eyes, nose, mouth, closed neutral expression, head angle, face pixel coordinates, scale and framing. Face stays exactly registered: eyes around 44%, mouth 61% image height. Change clothing and headgear only. Detailed crisp illustrated pixel art matching original, near-black navy background, full square head and shoulders. No text, frame, panels, UI or watermark."
+    },
+    {
+      "id": "elena-park",
+      "index": 19,
+      "source": "assets/portraits/civilian-shuttle/runtime/portrait-2.png",
+      "name": "Elena Park",
+      "voiceIndex": 3,
+      "prompt": "Edit this square game radio portrait into a working cargo hauler skipper in faded blue mechanic coveralls, battered gray padded pressure vest, practical safety-orange shoulder tabs without rank, headset. No epaulettes, no tie, no white shirt, no airline badge. Maintain the exact original person's face, skin, eyes, nose, mouth, closed neutral expression, head angle, face pixel coordinates, scale and framing. Face stays exactly registered: eyes around 44%, mouth 61% image height. Change clothing and headgear only. Detailed crisp illustrated pixel art matching original, near-black navy background, full square head and shoulders. No text, frame, panels, UI or watermark."
+    },
+    {
+      "id": "ines-duarte",
+      "index": 21,
+      "source": "assets/portraits/civilian-shuttle/runtime/portrait-4.png",
+      "name": "Ines Duarte",
+      "voiceIndex": 5,
+      "prompt": "Edit this square game radio portrait into a veteran freighter captain in burgundy work coveralls, weathered tan duck canvas utility vest with a patched shoulder and cargo manifest tucked in chest pocket, headset. No epaulettes, no tie, no white shirt, no airline badge. Maintain the exact original person's face, skin, eyes, nose, mouth, closed neutral expression, head angle, face pixel coordinates, scale and framing. Face stays exactly registered: eyes around 44%, mouth 61% image height. Change clothing and headgear only. Detailed crisp illustrated pixel art matching original, near-black navy background, full square head and shoulders. No text, frame, panels, UI or watermark."
+    },
+    {
+      "id": "thomas-reed",
+      "index": 22,
+      "source": "assets/portraits/civilian-shuttle/runtime/portrait-5.png",
+      "name": "Thomas Reed",
+      "voiceIndex": 4,
+      "prompt": "Edit this square game radio portrait into a younger independent freighter captain in ochre utility coveralls, dark teal padded work jacket, scuffed low pressure collar and headset. No epaulettes, no tie, no white shirt, no airline badge. Maintain the exact original person's face, skin, eyes, nose, mouth, closed neutral expression, head angle, face pixel coordinates, scale and framing. Face stays exactly registered: eyes around 44%, mouth 61% image height. Change clothing and headgear only. Detailed crisp illustrated pixel art matching original, near-black navy background, full square head and shoulders. No text, frame, panels, UI or watermark."
+    }
+  ]
+}

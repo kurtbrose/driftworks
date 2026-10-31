@@ -97,3 +97,20 @@ cells. Preserve source art, prompts and provenance hashes.
 Run focused portrait tests, the visual acceptance gate, asset-version refresh
 and `npm run check`. Report mechanical validation and visual acceptance
 separately; unresolved artwork stays unresolved.
+
+## Convoy wardrobe variants
+
+The convoy uses seven mission-specific atlases in `assets/portraits/convoy`.
+Slots 0/1 are Lancer Three/Two; 17/18/19/21/22 are Mara, Daniel, Elena,
+Ines and Thomas. `portraits.cast: "convoy"` overrides only those radio slots;
+Control, raiders and other missions retain their existing casts. Voice and
+character IDs stay unchanged. `prompts.json` records individual wardrobe edits;
+`roster.json` describes the convoy roles.
+
+Run `./tools/prepare-convoy-portraits.ps1` after changing wardrobe sources or
+recalibrating the original dogfight/civilian faces. It retains the calibrated
+seven facial poses, freezes clothing across poses, and records source, wardrobe,
+builder and output hashes. This mechanical preservation does not waive visual
+review. Review the `convoy` pool in `experiments/portrait-review.html` and live
+speech in `experiments/civilian-cast.html?category=convoy`; the latter offers
+radio and enlarged review sizes.

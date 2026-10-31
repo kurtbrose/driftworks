@@ -4,20 +4,21 @@
 <style>body{background:#0b1115;color:#d7e4e9;font:16px system-ui;margin:24px}select{font:inherit;margin:8px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(256px,256px));gap:12px}figure{margin:0}canvas{width:100%;image-rendering:pixelated}small{display:block}a{color:#a7d9dc}</style>
 <h1>Portrait registration review</h1>
 <p>Frozen combinations: compare each resting expression with AH, OO and blink. No speech clock or radio noise hides placement errors. <a href="../docs/portrait-authoring.md">Authoring workflow</a></p>
-<label>Cast <select id="pool"><option>dogfight</option><option>ohio</option><option>civilian-shuttle</option><option>runway-workers</option></select></label>
+<label>Cast <select id="pool"><option>dogfight</option><option>ohio</option><option>civilian-shuttle</option><option>runway-workers</option><option>convoy</option></select></label>
 <label>Portrait slot <select id="slot"></select></label>
 <label><input type="checkbox" id="raw"> Show raw source poses instead</label>
 <button id="download" disabled>Show labeled contact sheet</button>
 <p><strong>Visual approval pending.</strong> Pixel checks below only test compositing. Inspect eyes, brows, nose, lips, chin and seams in every still at 256px or larger, then inspect transitions in the cast gallery.</p>
 <p id="status" role="status"></p><section id="proof"></section><main></main>
-<script src="../src/asset-versions.js?v=68b45d641cef"></script>
+<script src="../src/asset-versions.js?v=1ca48f8b93f6"></script>
 <script src="face-blend.js?v=50dea498a8c7"></script>
 <script>
 (function(){
  const DW=window.Driftworks,$=id=>document.getElementById(id),names=['master','ah','oo','blink','smile','angry','afraid'];
  let generation=0,bitmap=null,renderers=[],stills=[];
  const castNames={dogfight:['Jinx','Rook','Echo','Flint','Mako','Sable','Patch','Nova','Viper','Wraith','Razor','Hex','Talon','Knell','Cinder','Shade','Control'],ohio:['Buckeye Bandit','Cuyahoga Cryptid','Aunt Barb','Lake Erie Larry','Doug','Deb','Big Dale','Marge','Turnpike Wraith','Tammy','Cousin Donnie','Sheryl','Scooter','Hocking Goblin','Uncle Rick','Joanie','Control'],'civilian-shuttle':['Mara Vale','Daniel Okafor','Elena Park','Samir Haddad','Ines Duarte','Thomas Reed'],'runway-workers':['Jo Mercer','Luis Ortega','Asha Menon','Ben Harlow','Nadiya Bell','Kenji Sato']};
- function slots(){const cast=castNames[$('pool').value];$('slot').replaceChildren(...cast.map((name,i)=>{const o=document.createElement('option');o.value=i;o.textContent=i+' · '+name;return o;}));review();}
+ castNames.convoy=Array.from({length:23},(_,i)=>({0:'Lancer Three',1:'Lancer Two',17:'Mara Vale',18:'Daniel Okafor',19:'Elena Park',21:'Ines Duarte',22:'Thomas Reed'}[i]||''));
+ function slots(){const cast=castNames[$('pool').value];$('slot').replaceChildren(...cast.map((name,i)=>{const o=document.createElement('option');o.value=i;o.textContent=i+' · '+name;o.hidden=!name;return o;}).filter(o=>!o.hidden));review();}
  async function review(){
   const ticket=++generation;$('status').textContent='Loading…';$('download').disabled=true;
   try{

@@ -45,6 +45,7 @@
       if(cached){cache.delete(index);cache.set(index,cached);return cached.promise;}
       /** @type {Entry} */ var entry={controller:new AbortController(),bitmap:null,promise:Promise.resolve({})};
       var url=index>=23?'../assets/portraits/runway-workers/runtime/portrait-'+(index-23)+'.png':index>=17?'../assets/portraits/civilian-shuttle/runtime/portrait-'+(index-17)+'.png':portraitRoot+'portrait-'+index+'.png';
+      if(portraits.cast==='convoy'&&[0,1,17,18,19,21,22].indexOf(index)>=0)url='../assets/portraits/convoy/runtime/portrait-'+index+'.png';
       entry.promise=fetch(assetUrl(url),{signal:entry.controller.signal}).then(function(response){
         if(!response.ok)throw new Error('Portrait request failed: '+response.status);
         return response.blob();

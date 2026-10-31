@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "tileSize": 256,
+  "frames": [
+    "neutral",
+    "ah",
+    "oo",
+    "blink",
+    "smile",
+    "angry",
+    "afraid"
+  ],
+  "builderSha256": "6753a8d43ab444370b8b411d1ab2fe22fba129ab15e90ddba38981d3199e9d15",
+  "sources": {
+    "portrait-22.png": "da55cc899cf5b9cd0fddcf69a78656c3d25ea26a1b4f597de8d60b94c4178f56",
+    "portrait-0.png": "f291953e963a230b4d2d1429cd47bc33568c69e892cb794ee0efffafdcaed28c",
+    "portrait-18.png": "3f2791dde736bc5b241915e89faee3379f1cb08271803ea58e5ded398398bb41",
+    "portrait-1.png": "95890342512e4169056ff01e7e0c113c6e5044b128df8b67d169880b29fe1c8b",
+    "portrait-19.png": "40cb4f863ef044dd0e11b6d8e656b3c6d6d5196ffaea55f42a93d30bcacc97e4",
+    "portrait-21.png": "041339b3fe344f0e53ef22000f9225c914b19d3acff78ed17d0dbcf246d5f291",
+    "portrait-17.png": "ade51dcc694a3f8bd7b2e85d82e1254a6fd4765dd156d5629850a07e85ba009f"
+  },
+  "generated": {
+    "portrait-22.png": "3b9b5fe21e5d3974d1e64d41e710a37b8e95aff5497a2e1b33714b8237140e2f",
+    "portrait-0.png": "59c33f5fd8e748c3ef0b8aa77d96b42bd398c9e227838f0808a6995089744a88",
+    "portrait-18.png": "8a35c9c2c722cdb9fb3acefa38160290f8c079039cff2d36af496235da35f278",
+    "portrait-1.png": "cddc3526b472fae5419627b36939266bc45379701f4ce1eaf1854c5e008d681a",
+    "portrait-19.png": "38b0cc2246061c97d3653d0e409e1cc905f647d4c60b2e884b01016af081e4d9",
+    "portrait-21.png": "576ba258b5a0fe9ae7f0420b2b6f016345b02e79f3336809b8ccad3dbf81274b",
+    "portrait-17.png": "755a48a907992c7f9c019588b5e4b0cc9c05502874741f25d4cb6b581ff4e140"
+  },
+  "outputs": {
+    "portrait-22.png": "455b44688f6d42ee7d1c421a3ebfe35b4fa839215321ea5c14c3ac6aa70c5f54",
+    "portrait-0.png": "7552d9e3291b53b9d7aaa4225a347e87c6aed53c39bde3bc897804bc888dcafb",
+    "portrait-18.png": "350601c217dfc05b27a51fb24e96404b0bcb4fa73f9da66ffc60b0652399cbe6",
+    "portrait-1.png": "ef16a67c01bffbbe2b42b21c63a5f98fef49aabb26191658a4e77e398d3bb705",
+    "portrait-19.png": "54a452054df287d0ebd4526c06812da80cad0bedf1d3f3f5e1baa6183dfa9aad",
+    "portrait-21.png": "390e270f2eda060059f39a206cfe5b4b11c5a050c6e6beebeaff3477f7029b98",
+    "portrait-17.png": "ab09e62e22b90ae8945b7e463b2600c5136467e470909c2b00dbef96cab4ae2f"
+  }
+}
