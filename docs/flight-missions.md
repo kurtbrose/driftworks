@@ -8,7 +8,7 @@ Ten each use the container, mixed-freight and bulk-fluid configurations from
 the industrial shipyard. Their original metre scale, atlas UVs, materials and
 geometry are retained. The convoy occupies three lanes, two vertical tiers
 and five rows: 45 m lateral, 35 m vertical and 110 m longitudinal spacing.
-The player starts 260 m behind the rear row and 50 m above the convoy centre,
+The player starts 225 m behind the rear row and 50 m above the convoy centre,
 already matching convoy speed. The crossing takes
 five minutes of simulation time; Esc pauses it and Reset starts a fresh route.
 All ships stop at their own formation slots in the arrival corridor.
@@ -30,9 +30,14 @@ and arrival counts. The training asteroid and mothership are absent.
 
 This is a quiet escort layout and pacing playtest. There are no attackers,
 director decisions, Control vectors, patrol assignments or authored dialogue.
-Weapons are disabled. Cargo hull values are preparatory state: freighters do
-not yet participate in combat damage or physical collision, and a player can
-fly through them. Reaching the corridor completes the cargo route regardless
+Weapons are disabled. Freighter hulls now collide with the player and wingmen.
+The existing indexed triangle sweep uses the authored hull geometry, preserving
+open scaffolding rather than filling each ship with a solid box. Each fighter's
+conservative collision radius is swept against those triangles in the moving
+freighter's frame, preventing tunneling and handling a freighter overtaking a
+stopped fighter. Contact pushes the fighter clear and deflects its normal velocity;
+engine ramps are synchronized to that response. Freighters retain their route
+and take no ram or combat damage in this pass. Reaching the corridor completes the cargo route regardless
 of player position; there is no proximity-based success/failure gate yet.
 
 `experiments/convoy-scenery.js` loads the industrial kit flight bake and paint
@@ -46,6 +51,12 @@ vertices are cached independently and released when their batches leave the scen
 Only the convoy origin moves during the crossing. The launch gate waits for
 freighter geometry, the atlas and GPU texture preparation. Regenerate the local
 flight bake after editing the authored kit with `node tools/export-convoy-flight.cjs`.
+The bake includes three shared triangle BVHs in the manifest. Physics installs
+those same material-batch vertices without UVs, in authored metres; the renderer
+and headless loader install identical collision data before starting. The fixed
+tick records prior fighter and freighter positions before either moves, then
+resolves contacts before controlled gun processing. Collision indexes and source
+meshes are asset caches, not serializable fields on the convoy or strategy world.
 The bake preserves factory pivots and converts +X aft / +Y dorsal into flight
 +Y forward / +Z dorsal, including normals and texture orientation. As with the
 existing civilian flight adapter, shared flight shading approximates the study

@@ -7,20 +7,24 @@ const context={console,AbortController};context.window=context;vm.createContext(
 vm.runInContext(fs.readFileSync('vendor/three/build/three.global.js','utf8'),context);
 const source=fs.readFileSync('assets/ships/industrial-kit/kit.js','utf8');
 vm.runInContext(source.replace(/^import .*?;\s*/m,'const T=THREE;\n').replace(/^export (?=(?:const|function) )/gm,'')+'\nglobalThis.kit={buildConsist,routePresets,batchStatic};',context);
+const {build}=require('./bake-hull-indices.cjs');
 const variants={};let offset=0;const chunks=[];
 for(const name of ['container','mixed','fluid']){
- const root=context.kit.buildConsist(context.kit.routePresets[name]),baked=context.kit.batchStatic(root),batches=[];
+ const root=context.kit.buildConsist(context.kit.routePresets[name]),baked=context.kit.batchStatic(root),batches=[],collisionVertices=[];
  for(const mesh of baked.children){
   const geo=mesh.geometry,p=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv,vertices=new Float32Array(p.count*8);
   for(let i=0;i<p.count;i++)vertices.set([p.getZ(i),-p.getX(i),p.getY(i),n.getZ(i),-n.getX(i),n.getY(i),uv.getX(i),1-uv.getY(i)],i*8);
   // Axis conversion changes handedness; keep outward triangles and their UVs.
   for(let i=0;i<vertices.length;i+=24)for(let k=0;k<8;k++){const v=vertices[i+8+k];vertices[i+8+k]=vertices[i+16+k];vertices[i+16+k]=v;}
+  for(let i=0;i<vertices.length;i+=8)for(let k=0;k<6;k++)collisionVertices.push(vertices[i+k]);
   const material=mesh.material,buffer=Buffer.from(vertices.buffer);
   const srgb=material.color.clone().convertLinearToSRGB().toArray();
   batches.push({offset,count:vertices.length,color:srgb,textured:material.color.getHex()===0xffffff,roughness:material.roughness,metallic:material.metalness,emissive:material.emissive.toArray(),emissiveIntensity:material.emissiveIntensity});
   chunks.push(buffer);offset+=buffer.length;
  }
- variants[name]={manifest:Array.from(context.kit.routePresets[name]),batches};
+ let radius=0;for(let i=0;i<collisionVertices.length;i+=6)radius=Math.max(radius,Math.hypot(collisionVertices[i],collisionVertices[i+1],collisionVertices[i+2]));
+ const collision={version:1,vertexCount:collisionVertices.length,sourceHash:crypto.createHash('sha256').update(Buffer.from(new Float32Array(collisionVertices).buffer)).digest('hex'),radius,tree:build(collisionVertices,Array.from({length:collisionVertices.length/18},(_,i)=>i*18))};
+ variants[name]={manifest:Array.from(context.kit.routePresets[name]),batches,collision};
  console.log(name,batches.length,batches.reduce((n,b)=>n+b.count/24,0),'triangles');
 }
 const manifest={version:1,source:'kit.js',sourceSha256:crypto.createHash('sha256').update(source).digest('hex'),units:'metres',forward:'+Y',up:'+Z',binary:'convoy-flight.bin',variants};

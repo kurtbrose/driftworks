@@ -17,6 +17,11 @@ require('node:vm').runInNewContext(require('node:fs').readFileSync('experiments/
 const fs=require('node:fs'),meta=JSON.parse(fs.readFileSync('assets/ships/industrial-kit/convoy-flight.json','utf8')),bytes=fs.readFileSync('assets/ships/industrial-kit/convoy-flight.bin');
 const data=new Float32Array(bytes.buffer,bytes.byteOffset,bytes.byteLength/4);
 for(const variant of Object.values(meta.variants)){
+    assert.equal(variant.collision.vertexCount,variant.batches.reduce((n,b)=>n+b.count/8*6,0),'Collision index covers the exact render triangles');
+    assert.equal(variant.collision.version,1);
+    const collisionVertices=new Float32Array(variant.collision.vertexCount);let offset=0;
+    for(const b of variant.batches)for(let i=b.offset/4;i<b.offset/4+b.count;i+=8)for(let k=0;k<6;k++)collisionVertices[offset++]=data[i+k];
+    assert.equal(variant.collision.sourceHash,require('node:crypto').createHash('sha256').update(Buffer.from(collisionVertices.buffer)).digest('hex'),'Baked hull index fingerprints the render mesh positions and normals');
     assert(variant.batches.reduce((n,b)=>n+b.count/24,0)>50000,'Use detailed authored DW-14 ships');
     assert.equal(variant.batches.filter(b=>b.textured).length,1,'Retain the authored paint atlas material');
     for(const b of variant.batches)for(let i=b.offset/4;i<b.offset/4+b.count;i+=24){
@@ -73,3 +78,37 @@ assert(!c.convoy.complete);
 assert.equal(c.convoy.ships.map(s=>s.id).join(','),ids);
 assert(c.convoy.ships.every(s=>!s.arrived&&s.hull===s.maxHull));
 console.log('PASS convoy: 30 stable freighters, three-fighter wing, real follow flight, 7.5 km route, arrival, no waves, reset');
+
+// Exact source hulls retain both solid payloads and the open scaffold interior.
+f.reset();c=f.snapshot().combat;
+const cargo=c.convoy.ships[24],mixed=c.convoy.ships[25];
+const at=(ship,p)=>p.map((v,k)=>ship.position[k]+v/U);
+const solid=f.DW.convoyMission.trace(c,at(cargo,[-20,0,2.6]),at(cargo,[20,0,2.6]),.1);
+assert(solid&&solid.shipId===cargo.id,'Container/truss geometry is collidable');
+assert.equal(f.DW.convoyMission.trace(c,at(mixed,[0,-42,-4]),at(mixed,[0,-42,4]),.1),null,'Empty scaffold remains hollow');
+assert.equal(f.DW.convoyMission.trace(c,at(cargo,[-30,0,70]),at(cargo,[30,0,70]),7),null,'Clearance above the actual hull is unobstructed');
+// A real fixed tick must stop a fighter even when it crosses the whole ship.
+let pose=f.snapshot().state;
+pose.eye=at(cargo,[-30,0,2.6]);pose.right=[0,-1,0];pose.up=[0,0,1];pose.back=[-1,0,0];
+pose.velocity=[20000,25,0];pose.ramp=[0,0,20000];pose.throttle=1;
+f.advance(1/120);
+assert((pose.eye[0]-cargo.position[0])*U< -5,'Swept contact prevents high-speed tunneling');
+assert(pose.velocity[0]<0,'Normal velocity rebounds from the heavy freighter');
+assert.deepEqual(Array.from(cargo.velocity),[0,25,0],'Ramming does not derail the convoy');
+assert(pose.ramp.every(Number.isFinite));
+// Repeat for an AI wingman, through the same participant collision path.
+f.reset();c=f.snapshot().combat;const wing=c.enemies[0],ship=c.convoy.ships[24];
+wing.pose.eye=at(ship,[-30,0,2.6]);wing.pose.right=[0,-1,0];wing.pose.up=[0,0,1];wing.pose.back=[-1,0,0];
+wing.pose.velocity=[20000,25,0];wing.pose.ramp=[0,0,20000];
+f.advance(1/120);
+assert((wing.pose.eye[0]-ship.position[0])*U< -5,'Wingmen also collide with freighters');
+// Freighter motion matters even when the fighter requests no movement.
+f.reset();c=f.snapshot().combat;pose=f.snapshot().state;const overtaker=c.convoy.ships[24];
+c.convoy.ships.forEach(s=>{if(s!==overtaker)s.hull=0;});c.enemies.forEach(e=>{e.hp=0;});
+pose.eye=at(overtaker,[2.6,50,2.6]);pose.velocity=[0,0,0];pose.ramp=[0,0,0];pose.throttle=0;
+const startY=pose.eye[1];f.advance(3,{stop:true});
+assert(pose.eye[1]>startY+.1/U,'Moving hull pushes a stationary fighter out of its way');
+assert(pose.velocity[1]>0,'Contact is resolved relative to freighter velocity');
+f.reset();c=f.snapshot().combat;
+assert.equal(f.DW.convoyMission.trace(c,[10000,10000,10000],[10001,10000,10000],7),null);
+console.log('PASS convoy collision: authored surfaces and open bays, high-speed CCD, wingmen, moving hulls, clearance and reset');

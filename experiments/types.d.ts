@@ -310,7 +310,8 @@ export type RadioEvent = {
     wave: number;
 };
 export type EvacuationState = {scene:number;line:number;wait:number;elapsed:number;quiet:number;departure:number;complete:boolean;reserve:Craft[];origin:[number,number,number]};
-export type ConvoyAsset = {variants:Record<string,{manifest:string[];batches:{offset:number;count:number;color:[number,number,number];textured:boolean;roughness:number;metallic:number;emissive:number[];emissiveIntensity:number}[]}>};
+export type ConvoyHit = {shipIndex:number;shipId:string;fraction:number;point:Vector;normal:Vector};
+export type ConvoyAsset = {variants:Record<string,{collision?:Model['hullIndex'];manifest:string[];batches:{offset:number;count:number;color:[number,number,number];textured:boolean;roughness:number;metallic:number;emissive:number[];emissiveIntensity:number}[]}>};
 export type ConvoyState = {elapsed:number;speedMps:number;destinationY:number;complete:boolean;ships:{id:string;callsign:string;model:string;slot:Vector;position:Vector;velocity:Vector;hull:number;maxHull:number;arrived:boolean}[]};
 export type Combat = {
     convoy?:ConvoyState;
@@ -715,7 +716,7 @@ export type EllisRenderPass={setShipStretching:(enabled:boolean)=>void;invalidat
 export type ExperimentModules = {
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
-    convoyMission:{WING_SIZE:number;start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number)=>void;stepWing:(craft:Craft,player:FlightState,index:number,dt:number)=>void};
+    convoyMission:{installCollision:(meta:ConvoyAsset,bytes:ArrayBuffer)=>void;trace:(combat:Combat,start:Vector,end:Vector,radiusM:number,previousShips?:Vector[])=>ConvoyHit|null;collide:(combat:Combat,previousCraft:Vector[],previousShips:Vector[],dt:number)=>boolean;WING_SIZE:number;start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number)=>void;stepWing:(craft:Craft,player:FlightState,index:number,dt:number)=>void};
     convoyScenery:{visible:boolean;ready:Promise<boolean>;texture:HTMLImageElement|undefined;install:(meta:ConvoyAsset,bytes:ArrayBuffer,image?:HTMLImageElement)=>void;geometry:(combat:Combat)=>Batch[]};
     evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};
     evacuationScenery:{geometry:(combat:Combat)=>Batch[];status:()=>string;visible:boolean};

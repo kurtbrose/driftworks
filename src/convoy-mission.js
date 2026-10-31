@@ -42,5 +42,72 @@
         craft.pose.throttle=Math.min(1,Math.max(0,(speed+(distance-90)*.4)/craft.profile.maxVelocity[2]));
         DW.flightSim.stepInput(craft,Object.assign({throttle:craft.pose.throttle,throttleRate:0,fire:false},demand),dt);
     }
-    DW.convoyMission={start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
+    /** @type {Record<string,{model:import('../experiments/types').Model;min:number[];max:number[]}>} */var hulls={};
+    var hullPose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+    /** One shared triangle index per authored variant, independent of rendering.
+     * @param {import('../experiments/types').ConvoyAsset} meta @param {ArrayBuffer} bytes */
+    function installCollision(meta,bytes){
+        hulls={};
+        Object.keys(meta.variants).forEach(function(name){
+            /** @type {number[]} */var vertices=[];
+            var min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+            meta.variants[name].batches.forEach(function(batch){
+                var source=new Float32Array(bytes,batch.offset,batch.count);
+                for(var i=0;i<source.length;i+=8){
+                    for(var k=0;k<6;k++)vertices.push(source[i+k]);
+                    for(var axis=0;axis<3;axis++){min[axis]=Math.min(min[axis],source[i+axis]);max[axis]=Math.max(max[axis],source[i+axis]);}
+                }
+            });
+            var model={id:'convoy-'+name,name:name,vertices:vertices,triangles:vertices.length/18,hullIndex:meta.variants[name].collision};
+            // Warm the existing shared hull BVH before the sortie can start.
+            DW.shipHulls.hullHit(model,hullPose,[0,-1000,0],[0,1000,0],1,.01);
+            hulls[name]={model:model,min:min,max:max};
+        });
+    }
+    /** Sweep in each freighter's moving frame. Inputs and output points use scene units.
+     * @param {import('../experiments/types').Combat} combat @param {number[]} start @param {number[]} end
+     * @param {number} radiusM @param {number[][]} [previousShips]
+     * @returns {import('../experiments/types').ConvoyHit|null} */
+    function trace(combat,start,end,radiusM,previousShips){
+        var state=combat.convoy;if(!state)return null;
+        /** @type {import('../experiments/types').ConvoyHit|null} */var best=null;
+        for(var i=0;i<state.ships.length;i++){
+            var ship=state.ships[i],hull=hulls[ship.model];if(ship.hull<=0||!hull)continue;
+            var old=previousShips?previousShips[i]:ship.position,miss=false;
+            for(var k=0;k<3;k++){
+                var a=(start[k]-old[k])*U,b=(end[k]-ship.position[k])*U;
+                if(Math.min(a,b)>hull.max[k]+radiusM||Math.max(a,b)<hull.min[k]-radiusM){miss=true;break;}
+            }
+            if(miss)continue;
+            var from=start.map(function(v,k){return v-old[k];}),to=end.map(function(v,k){return v-ship.position[k];});
+            const hit=DW.shipHulls.hullHit(hull.model,hullPose,from,to,U,radiusM);
+            if(!hit||best&&hit.fraction>=best.fraction)continue;
+            var away=from.map(function(v,k){return (v+(to[k]-v)*hit.fraction)*U-hit.local[k];}),length=Math.hypot.apply(null,away);
+            var normal=length>1e-7?away.map(function(v){return v/length;}):hit.normal;
+            best={shipIndex:i,shipId:ship.id,fraction:hit.fraction,point:ship.position.map(function(v,k){return v+hit.local[k]/U;}),normal:normal};
+        }
+        return best;
+    }
+    /** Heavy freighters keep their route; fighters deflect in the freighter's frame.
+     * @param {import('../experiments/types').Combat} combat @param {number[][]} previousCraft
+     * @param {number[][]} previousShips @param {number} dt */
+    function collide(combat,previousCraft,previousShips,dt){
+        const state=combat.convoy;if(!state||!combat.enabled||!(dt>0))return false;
+        var playerImpact=false;
+        DW.flightSim.participants(combat).forEach(function(craft,index){
+            if(craft.hp<=0)return;
+            var pose=craft.pose,radius=DW.flightCollision.radius(craft)*U;
+            const hit=trace(combat,previousCraft[index],pose.eye,radius,previousShips);if(!hit)return;
+            var ship=state.ships[hit.shipIndex],velocity=ship.position.map(function(v,k){return (v-previousShips[hit.shipIndex][k])*U/dt;});
+            var relative=pose.velocity.map(function(v,k){return v-velocity[k];}),inward=relative.reduce(function(n,v,k){return n+v*hit.normal[k];},0);
+            pose.eye=hit.point.map(function(v,k){return v+hit.normal[k]*(radius+.02)/U;});
+            if(inward<0)pose.velocity=pose.velocity.map(function(v,k){return v-1.2*inward*hit.normal[k];});
+            var dot=/** @param {number[]} axis */function(axis){return pose.velocity.reduce(function(n,v,k){return n+v*axis[k];},0);};
+            pose.ramp=[dot(pose.right),dot(pose.up),-dot(pose.back)];
+            DW.flightSim.collisionChanged(combat,craft);
+            if(craft===combat.player&&inward< -1)playerImpact=true;
+        });
+        return playerImpact;
+    }
+    DW.convoyMission={installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
 }());

@@ -1144,7 +1144,7 @@
   "assets/ships/concept-trio/raptor.json": "7c0bc87eb1dc",
   "assets/ships/concept-trio/reference.png": "776d844561ec",
   "assets/ships/industrial-kit/convoy-flight.bin": "a352de2cefe8",
-  "assets/ships/industrial-kit/convoy-flight.json": "aa0ee6ff5318",
+  "assets/ships/industrial-kit/convoy-flight.json": "db03bcbcf3b5",
   "assets/ships/industrial-kit/kit.js": "e7b204a1a186",
   "assets/ships/industrial-kit/panels.png": "a6b74e1ef335",
   "assets/ships/ohio-vehicles/meshes.js": "ce57f8e016e3",

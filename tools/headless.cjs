@@ -38,6 +38,11 @@ function createFlight(options = {}) {
   if (typeof mission !== 'string' || (mission !== 'training' && DW.flightMissions.resolve(mission).id !== mission)) {
     throw new Error('Unknown mission: ' + mission);
   }
+  if(mission==='convoy'){
+    const meta=JSON.parse(fs.readFileSync(path.join(root,'assets/ships/industrial-kit/convoy-flight.json'),'utf8'));
+    const bytes=fs.readFileSync(path.join(root,'assets/ships/industrial-kit/convoy-flight.bin'));
+    DW.convoyMission.installCollision(meta,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
+  }
   const profile = DW.arcade.profiles[profileIndex];
   if (!Number.isInteger(profileIndex) || !profile) throw new Error('Invalid profile index');
   const weapon = DW.retailWeapons[weaponIndex === undefined ? DW.flightSim.defaultWeapon(profile) : weaponIndex];

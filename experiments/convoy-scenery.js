@@ -6,6 +6,7 @@
     /** Authored factory origins, metre scale, normals and atlas UVs; shared GPU buffers.
      * @param {import('./types').ConvoyAsset} meta @param {ArrayBuffer} bytes @param {HTMLImageElement} [image] */
     function install(meta,bytes,image){
+        DW.convoyMission.installCollision(meta,bytes);
         models={};cache=new WeakMap();
         Object.keys(meta.variants).forEach(function(name){
             models[name]=meta.variants[name].batches.map(function(b){

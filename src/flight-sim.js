@@ -112,9 +112,12 @@
      * @param {() => void} [afterCombat] @param {() => void} [afterMovement] */
     function stepControlled(t, controls, weapon, dt, radius, terrainHit, afterCombat, afterMovement) {
         var craft = t.player, pose = craft.pose, guns = craft.guns;
+        var convoyCraft=t.convoy?participants(t).map(function(c){return c.pose.eye.slice();}):null;
+        var convoyShips=t.convoy?t.convoy.ships.map(function(s){return s.position.slice();}):null;
         DW.flightSim.stepInput(craft, controls, dt);
         var hullBefore = t.hull, shieldBefore = t.shield, hitBefore = t.lastHit;
         DW.flightSim.step(t, pose, dt, radius, terrainHit, afterMovement);
+        var convoyImpact=convoyCraft&&convoyShips?DW.convoyMission.collide(t,convoyCraft,convoyShips,dt):false;
         var playerDamaged = t.hull < hullBefore || t.shield < shieldBefore;
         if (afterCombat) afterCombat();
         var firedBefore = guns.fired, hitsBefore = guns.hits;
@@ -123,7 +126,7 @@
             return DW.flightSim.trace(t, start, end, bolt, 'player', terrainHit, pose);
         }, function () { return DW.flightSim.convergencePoint(t, craft, weapon, terrainHit); }, craft.profile.gunMounts, DW.flightSim.gunAnchors(craft), t.player.pose.curvature||(mission(t).sky.thinShell?'thin-shell':!!mission(t).sky.wormhole));});
         return { playerDamaged: playerDamaged, fired: guns.fired > firedBefore,
-            impact: guns.hits > hitsBefore || t.lastHit > hitBefore };
+            impact: convoyImpact || guns.hits > hitsBefore || t.lastHit > hitBefore };
     }
     /** @param {Combat} t @returns {Craft[]} */
     function participants(t) { return [t.player].concat(t.enemies); }
