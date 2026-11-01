@@ -19,7 +19,7 @@
         get('combat-toggle').disabled=true;get('watch-panel').hidden=true;
         host.setAttribute('aria-label',activeMission.id==='convoy'?'Escort thirty cargo vessels with two wingmates':activeMission.id==='jade-rime'?'Free flight near Rime, with the jade giant overhead':'Free flight above a jade gas giant');
         (activeMission.id==='convoy'?['weapons']:['weapons','integrity','target-info']).forEach(function(id){var panel=document.getElementById(id);if(panel)panel.hidden=true;});
-        var footer=document.querySelector('footer');if(footer)footer.textContent='W/S throttle · X stop · Shift boost · arrows steer · Q/E roll · A/D lateral · R/F vertical · Esc pause';
+        var footer=document.querySelector('footer');if(footer)footer.textContent='W/S throttle · X stop · hold W at max / double-tap W boost · arrows steer · Q/E roll · A/D lateral · R/F vertical · Esc pause';
     }
     if(activeMission.id!=='default'){
         var modeOption=Array.from(get('combat-mode').options).some(function(option){return option.value===activeMission.id;});
@@ -468,7 +468,7 @@
         var appearance = presentation.appearance();
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
-        var demand = cinematic?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:controls.sample();
+        var demand = cinematic?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:controls.sample(view().state.throttle);
         if(director&&!paused){director.advance(elapsed);demoSeconds+=elapsed;}
         var simMs=0,capitalMs=0,phaseStart=performance.now();
         if (!paused) {

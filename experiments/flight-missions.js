@@ -48,7 +48,7 @@
         portraits:{folder:'dogfight',cast:'standard'},sky:{kind:'selectable',features:[]},scenery:[],
         encounter:{kind:'training',count:0,immediate:false,callsigns:['Rook','Jinx','Flint','Echo','Mako','Sable','Patch','Nova','Viper','Wraith','Razor','Hex','Talon','Knell','Cinder','Shade'],spawn:{backRadii:2.6,altitudeMeters:300}},opening:[]
     });
-    define('scramble',{title:'SCRAMBLE! / Driftworks',heading:'DRIFTWORKS / SCRAMBLE!',subtitle:'SCRIPTED EVENTS / COMBAT LAUNCH',hint:'Launch begins as soon as textures are ready. One wingman left, two right. Fly immediately: W/S throttle / Shift boost / Esc pause.',encounter:{kind:'furball',count:6,immediate:true,callsigns:['Lancer Two','Lancer Three','Lancer Four','Raider One','Raider Two','Raider Three']}});
+    define('scramble',{title:'SCRAMBLE! / Driftworks',heading:'DRIFTWORKS / SCRAMBLE!',subtitle:'SCRIPTED EVENTS / COMBAT LAUNCH',hint:'Launch begins as soon as textures are ready. One wingman left, two right. Fly immediately: W/S throttle / hold W at max / double-tap W boost / Esc pause.',encounter:{kind:'furball',count:6,immediate:true,callsigns:['Lancer Two','Lancer Three','Lancer Four','Raider One','Raider Two','Raider Three']}});
     define('furball',{encounter:{kind:'furball',count:16}});
     define('hyperbolic',{emptySpace:true,title:'Hyperbolic flight / Driftworks',heading:'DRIFTWORKS / HYPERBOLIC FLIGHT',subtitle:'NEGATIVE CURVATURE / CAPITAL SHIP BATTLE',hint:'Two armed Aegis carriers fight each other and the opposing fighters. Launch from the friendly hangar; death returns you there while the battle continues. Curvature defaults to 400 m; compare other radii in Settings.',sky:{hyperbolic:400},encounter:{immediate:true}},'furball');
     define('battle',{title:'Battle background / Driftworks',heading:'DRIFTWORKS / BATTLE PROTOTYPE',subtitle:'CAPITAL ENGAGEMENT / SQUADRON ZONE DEFENSE',encounter:{count:30,immediate:true}},'furball');
@@ -80,7 +80,7 @@
         emptySpace:true,weaponsDisabled:true,
         title:'Jade weather / free flight · Driftworks',heading:'DRIFTWORKS / JADE WEATHER',
         subtitle:'GAS GIANT / QUIET FREE FLIGHT',
-        hint:'No combat. W/S throttle · X stop · arrows steer · Q/E roll · Shift boost · Esc pause. Fly and watch the storms.',
+        hint:'No combat. W/S throttle · X stop · arrows steer · Q/E roll · hold W at max / double-tap W boost · Esc pause. Fly and watch the storms.',
         sky:{kind:'landmarks',gasGiant:true,jadeSystem:jadeSystem(false),cubeFaces:['px','nx','py','ny','pz','nz'].map(function(face){return 'gas-giant-lightning-v1/dark-cube/'+face+'.png';}),features:[
             {asset:'gas-giant-lightning-v1/dark.png',yaw:90,pitch:0,roll:0,widthDeg:110,gain:1},
             {asset:'features/warm-sun-v1.png',yaw:20,pitch:20,roll:0,widthDeg:7,gain:1}
@@ -95,7 +95,7 @@
     define('ellis',{
         title:'Ellis bridge / Driftworks',heading:'DRIFTWORKS / ELLIS BRIDGE',
         subtitle:'ASTEROID RANGE / RIME WORMHOLE DOGFIGHT',
-        hint:'Fly through the spherical mouth ahead, above the asteroid. Turn around to return. W/S throttle / Shift boost / X stop / Esc pause.',
+        hint:'Fly through the spherical mouth ahead, above the asteroid. Turn around to return. W/S throttle / hold W at max / double-tap W boost / X stop / Esc pause.',
         emptySpace:false,weaponsDisabled:false,sky:{wormhole:true},
         encounter:{kind:'furball',count:8,immediate:true}
     },'jade-rime');
@@ -129,7 +129,7 @@
     define('planet-impact-baked',{emptySpace:false,title:'Orbital impact dogfight · Driftworks'},'planet-orbital-cube');
     define('planet-impact-watch',{emptySpace:true,title:'Orbital impact watch · Driftworks'},'planet-orbital-cube');
     define('evacuation',{emptySpace:false,title:'Evacuation / cockpit dry run',heading:'DRIFTWORKS / EVACUATION',subtitle:'CYCLE A / HOLD THE REFUELING CORRIDOR',hint:'Protect fuel operations. Three fighters, one occupied bay. First-cycle radio playtest; Esc pauses.',encounter:{kind:'furball',count:6,immediate:true,callsigns:['Actual','Finch','Raider One','Raider Two','Raider Three','Raider Four']}},'planet-orbital-cube');
-    define('convoy',{portraits:{cast:'convoy'},title:'Convoy escort / Driftworks',heading:'DRIFTWORKS / CONVOY ESCORT',subtitle:'30 FREIGHTERS / THREE-FIGHTER WING / ESCORT RENDEZVOUS',hint:'Follow Control\'s cyan patrol and amber intercept markers. Weapons free. W/S throttle / Shift boost / Click or Space fire / Tab cycle hostiles / L lock target / Esc pause. Cargo cruises at 25 m/s; your fighter can overtake it. Escort survivors along the 7.5 km route.',encounter:{kind:'furball',count:2,immediate:true,callsigns:['Lancer Two','Lancer Three']}});
+    define('convoy',{portraits:{cast:'convoy'},title:'Convoy escort / Driftworks',heading:'DRIFTWORKS / CONVOY ESCORT',subtitle:'30 FREIGHTERS / THREE-FIGHTER WING / ESCORT RENDEZVOUS',hint:'Follow Control\'s cyan patrol and amber intercept markers. Weapons free. W/S throttle / hold W at max / double-tap W boost / Click or Space fire / Tab cycle hostiles / L lock target / Esc pause. Cargo cruises at 25 m/s; your fighter can overtake it. Escort survivors along the 7.5 km route.',encounter:{kind:'furball',count:2,immediate:true,callsigns:['Lancer Two','Lancer Three']}});
     define('asteroid-patrol',{encounter:{kind:'patrol',count:2,immediate:true}});
     /** Boolean support retains the old compose(kind,data,true) API during migration. @param {string|boolean} [id] */
     function resolve(id){return definitions[id===true?'ohio':typeof id==='string'?id:'default']||definitions.default;}

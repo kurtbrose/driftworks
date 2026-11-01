@@ -41,6 +41,7 @@
             try { window.localStorage.setItem('driftworks.flight.sensitivity', sensitivity.value); } catch (error) { /* Optional preference. */ }
         };
         var keys = /** @type {Record<string, boolean>} */ ({}), mouse = [0, 0], mapping = input.defaults(true), padSignature = '', lastPad = /** @type {number | null} */ (null), previousButtons = { bank: false, lock: false, pause: false };
+        var lastWPress = -Infinity, doubleWBoost = false;
         var rumble = get('rumble');
         rumble.checked = true;
         try { rumble.checked = window.localStorage.getItem('driftworks.flight.rumble') !== 'off'; } catch (error) { /* Optional preference. */ }
@@ -199,6 +200,7 @@
         }
         function clear() {
             stopRumble();
+            lastWPress = -Infinity; doubleWBoost = false;
             clearTouch();
             keys = /** @type {Record<string, boolean>} */ ({});
             mouse = [0, 0];
@@ -409,14 +411,22 @@
                 actions.selectProfile(Number(e.code.slice(-1)) - 1);
                 return;
             }
-            if (['Space', 'KeyW', 'KeyS', 'KeyX', 'KeyQ', 'KeyE', 'KeyA', 'KeyD', 'KeyR', 'KeyF', 'ShiftLeft', 'ShiftRight', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0) {
+            if (['Space', 'KeyW', 'KeyS', 'KeyX', 'KeyQ', 'KeyE', 'KeyA', 'KeyD', 'KeyR', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0) {
                 e.preventDefault();
-                if (!actions.isPaused())
+                if (!actions.isPaused()) {
+                    if (e.code === 'KeyW' && !e.repeat && !keys.KeyW) {
+                        var now = Number.isFinite(e.timeStamp) ? e.timeStamp : Date.now();
+                        doubleWBoost = now >= lastWPress && now - lastWPress <= 300;
+                        lastWPress = now;
+                    }
+                    if (e.code === 'KeyS' || e.code === 'KeyX') { doubleWBoost = false; lastWPress = -Infinity; }
                     keys[e.code] = true;
+                }
             }
         });
         window.addEventListener('keyup', function (e) {
             delete keys[e.code];
+            if (e.code === 'KeyW') doubleWBoost = false;
         });
         host.addEventListener('contextmenu', function (e) {
             e.preventDefault();
@@ -451,7 +461,8 @@
         function axis(a, b) {
             return (keys[a] ? 1 : 0) - (keys[b] ? 1 : 0);
         }
-        function sample() {
+        /** @param {number} [currentThrottle] Current simulation throttle, before this frame. */
+        function sample(currentThrottle) {
             if (inputMode.value === 'touch') {
                 if (actions.isPaused()) clearTouch();
                 return {pitch: touch.pitch, yaw: touch.yaw, fire: touch.fire, boost: touch.boost, throttleRate: touch.throttleRate, throttle: null};
@@ -556,7 +567,8 @@
             if (!actions.isPaused() && controls.lock && !previousButtons.lock) actions.toggleTargetLock();
             previousButtons = { bank: controls.bank, lock: controls.lock, pause: controls.pause };
             var look = inputMode.value === 'mouse' && mouseActive ? input.stickDemand(mouse, .08, steeringPreset.value === 'medium-soft' ? 1.6 : 1) : [0, 0];
-            return { throttle: controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: keys.ShiftLeft || keys.ShiftRight || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
+            var wBoost = !!keys.KeyW && !keys.KeyS && !keys.KeyX && !actions.isPaused() && (doubleWBoost || (currentThrottle || 0) >= 1);
+            return { throttle: wBoost ? 1 : controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: wBoost || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
         }
         function view() {
             return { mouse: mouse, inputMode: inputMode.value, uncapturedMouse:uncapturedMouse, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };

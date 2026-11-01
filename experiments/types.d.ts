@@ -974,7 +974,7 @@ export type ExperimentModules = {
     flightControls: {
         mount: (host: HTMLElement, actions: ControlActions, environment?: ControlEnvironment) => {
             haptics: (dt: number, feedback: {boost?: boolean; hit?: boolean; shieldBreak?: boolean; fire?: boolean; contact?: boolean; throat?:number; transit?:boolean}) => void;
-            sample: () => Demand;
+            sample: (currentThrottle?: number) => Demand;
             view: () => {
                 mouse: number[];
                 inputMode: string;

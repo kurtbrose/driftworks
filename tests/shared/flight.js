@@ -399,11 +399,28 @@
     });
     assert(f.counts.pause===0&&f.counts.performance===0&&f.counts.diagnostics===0);
     assert(f.counts.weapon===0&&f.counts.radar===0&&f.counts.target===0&&f.counts.profile===undefined);
-    f.key('ShiftLeft');assert(f.controls.sample().boost);
+    f.key('ShiftLeft');assert(!f.controls.sample().boost);
     f.win.emit('keyup',{code:'ShiftLeft',metaKey:true});assert(!f.controls.sample().boost);
     f.key('KeyP');assert(f.counts.performance===1);
   });
 
+  test('flight', 'W combines throttle and held afterburner, with intentional double taps and safe clearing',function(){
+    var f=flightControlsFixture(),c=f.controls;
+    function down(time,repeat){f.win.emit('keydown',{code:'KeyW',timeStamp:time,repeat:!!repeat,target:{tagName:'BODY'},preventDefault:function(){}});}
+    function up(){f.win.emit('keyup',{code:'KeyW'});}
+    down(1000);assert(!c.sample(.5).boost && c.sample(.5).throttleRate===1);
+    assert(c.sample(1).boost && c.sample(1).throttle===1);
+    up();assert(!c.sample(1).boost && c.sample(1).throttleRate===0);
+    down(1200);assert(c.sample(.2).boost && c.sample(.2).throttle===1);
+    up();assert(!c.sample(.2).boost);
+    down(1600);assert(!c.sample(.2).boost);
+    down(1650,true);assert(!c.sample(.2).boost,'Auto-repeat is not a second tap');
+    up();c.clear();down(1700);assert(!c.sample(.2).boost,'Clear resets tap history');
+    up();down(1800);assert(c.sample(.2).boost);f.key('KeyS');assert(!c.sample(1).boost);
+    f.win.emit('keyup',{code:'KeyS'});f.key('KeyX');assert(!c.sample(1).boost);
+    c.clear();up();down(1900);assert(!c.sample(.2).boost);
+    f.win.emit('blur');assert(!c.sample(1).boost);up();down(1950);assert(!c.sample(.2).boost);
+  });
   test('flight', 'flight controls retain keyboard focus guards, shortcuts and pause clearing',function(){
     var f=flightControlsFixture(),c=f.controls;
     assert(f.key('KeyW').prevented);assert(c.sample().throttleRate===1);

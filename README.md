@@ -281,7 +281,7 @@ The maneuver values are extracted exactly from the installed retail FreeSpace 2
 fields and the source table hash. Hercules means the original Hercules, not Mk II.
 
 Click **Fly / resume**. W/S raises/lowers throttle, X cuts throttle and brakes,
-Shift holds afterburner, arrows pitch/yaw, Q/E roll.
+Hold W at maximum throttle for afterburner, or double-tap W within 300 ms to select maximum throttle and engage afterburner immediately. Keep W held to boost; releasing W ends afterburner and holds maximum throttle. S or X cancels keyboard boost. Arrows pitch/yaw, Q/E roll.
 The original four profiles have zero lateral/reverse speeds. Alien profiles preserve their table capabilities, but current pilots and normal controls continue to use forward dogfighting rather than lateral aiming. Captured mouse movement steers. Escape, losing focus, or hiding the tab pauses flight.
 Keys 1â€“4 select profiles and reset the starting pose; changing the dropdown also
 resets it. After using a form control, click Fly to return to flight input.
@@ -402,7 +402,7 @@ profiles. There are no external runtime dependencies or tactical-save changes.
 
 ### Flight renderer profiling
 
-Flight shortcuts ignore Ctrl, Alt, and Windows/Command combinations so browser and OS shortcuts remain available. Shift alone still boosts. Screenshot overlays that take focus or release pointer lock still pause flight; use a full-screen capture shortcut that keeps the game focused to capture it in motion.
+Flight shortcuts ignore Ctrl, Alt, and Windows/Command combinations so browser and OS shortcuts remain available. W combines throttle and afterburner; Shift has no flight action. Screenshot overlays that take focus or release pointer lock still pause flight; use a full-screen capture shortcut that keeps the game focused to capture it in motion.
 
 The flight pause screen offers **Copy screenshot** and **Copy screenshot (no HUD)**. Both capture the frozen scene without the pause menu at the display's pixel resolution. A PNG download link is also available, including when the browser blocks image clipboard access.
 
