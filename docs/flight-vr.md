@@ -40,7 +40,7 @@ Unrecognized mappings are ignored instead of guessing button indices.
 | --- | --- |
 | Left stick | Pitch / yaw |
 | Right stick horizontal | Roll |
-| Right stick vertical | Adjust throttle; neutral holds current throttle |
+| Right stick vertical | Adjust throttle; hold fully forward at maximum throttle for afterburner |
 | Hold left grip + right stick | Sideways / vertical thrust |
 | Right trigger | Fire |
 | A / right lower face button | Boost |
@@ -50,6 +50,15 @@ Unrecognized mappings are ignored instead of guessing button indices.
 | B / right upper face button | Pause / resume; restart after destruction |
 | X / left lower face button | Recenter seated position and forward heading |
 | Headset system menu | Leave immersive VR |
+
+Quest steering and roll use a 6% deadzone with a squared response: 20% travel
+beyond the deadzone commands 4% rotation, while full travel keeps full turning
+speed. Throttle and grip strafing remain linear. Holding forward above 95% demand
+at maximum throttle engages afterburner on both XR and desktop controllers;
+release ends it. Grip strafing does not engage afterburner.
+
+Damage flashes cover the full view of each eye, independent of the forward HUD
+bounds and head direction.
 
 Head rotation is a presentation input. Physical walking and leaning are cancelled
 from the flight viewpoint; the two eyes retain their physical separation. Ship

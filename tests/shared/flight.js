@@ -23,6 +23,25 @@
     right.gamepad.mapping='';a=api.read([right]);assert(!a.fire&&a.roll===0,'Unknown controller mappings must not guess button indices');
   });
 
+  test('flight', 'XR sticks allow fine aim without sacrificing full turn rate',function(){
+    var pad={handedness:'left',gamepad:{mapping:'xr-standard',axes:[0,0,0,0],buttons:[]}};
+    function aim(value){pad.gamepad.axes[2]=value;return window.Driftworks.flightVr.read([pad]).yaw;}
+    assertClose(aim(.05),0);assertClose(aim(.248),-.04);assertClose(aim(-.248),.04);
+    assertClose(aim(1),-1);assertClose(aim(-1),1);
+    assert(aim(.07)<0&&Math.abs(aim(.07))<.001,'Crossing the reduced deadzone remains gentle');
+  });
+
+  test('flight', 'Holding gamepad throttle forward at maximum engages afterburner and release stops it',function(){
+    var f=flightControlsFixture(),pad={index:0,id:'Standard',connected:true,mapping:'standard',axes:[0,0,0,-1],buttons:[]};
+    f.setPads([pad]);f.controls.sample();f.setPaused(false);
+    assert(!f.controls.sample(.9).boost);assert(f.controls.sample(1).boost);
+    pad.axes[3]=0;assert(!f.controls.sample(1).boost);
+    pad.axes[3]=-.5;assert(!f.controls.sample(1).boost);
+    pad.axes[3]=1;assert(!f.controls.sample(1).boost);
+    pad.axes[3]=-1;pad.buttons[4]={pressed:true,value:1};assert(!f.controls.sample(1).boost,'Grip strafe must not burn');
+    pad.buttons=[];f.setPaused(true);assert(!f.controls.sample(1).boost);
+  });
+
   test('flight', 'XR control edges pause and resume without repeating, suppress paused fire, and preserve desktop fallback',function(){
     var DW=window.Driftworks,original=DW.flightVr.forHost,active=true,tracked=true,centers=0;
     var left={handedness:'left',gamepad:{mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},function(){return {pressed:false,value:0};})}};
@@ -31,6 +50,8 @@
     try{
       var f=flightControlsFixture(),c=f.controls;
       f.key('ArrowLeft');right.gamepad.buttons[0].pressed=true;assert(c.sample().yaw===0&&c.sample().fire,'Desktop input must not leak into XR');
+      right.gamepad.axes[3]=-1;assert(!c.sample(.9).boost&&c.sample(1).boost);
+      right.gamepad.axes[3]=0;assert(!c.sample(1).boost);
       right.gamepad.buttons[5].pressed=true;assert(!c.sample().fire);c.sample();assert(f.counts.pause===1&&f.counts.resume===0);
       right.gamepad.buttons[5].pressed=false;c.sample();right.gamepad.buttons[5].pressed=true;c.sample();c.sample();assert(f.counts.resume===1);
       left.gamepad.buttons[5].pressed=true;left.gamepad.buttons[0].pressed=true;right.gamepad.buttons[1].pressed=true;left.gamepad.buttons[4].pressed=true;c.sample();c.sample();

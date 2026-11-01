@@ -15,9 +15,11 @@
         /** @param {Source|undefined} source @param {number} index */
         function button(source,index) { var b=source&&source.gamepad&&source.gamepad.buttons[index];return !!(b&&(b.pressed||b.value>.5)); }
         /** @param {Source|undefined} source @param {number} index */
-        function axis(source,index) { return DW.flightInput.deadzone(source&&source.gamepad ? source.gamepad.axes[index] : 0,.12); }
+        function axis(source,index) { return DW.flightInput.deadzone(source&&source.gamepad ? source.gamepad.axes[index] : 0,.06); }
+        /** @param {number} value */
+        function steer(value) { return Math.sign(value)*value*value; }
         var maneuver=button(left,1), x=axis(right,2), y=-axis(right,3), length=Math.max(1,Math.hypot(x,y));
-        return {pitch:-axis(left,3),yaw:-axis(left,2),roll:maneuver?0:-x,side:maneuver?x/length:0,vertical:maneuver?y/length:0,
+        return {pitch:steer(-axis(left,3)),yaw:steer(-axis(left,2)),roll:maneuver?0:steer(-x),side:maneuver?x/length:0,vertical:maneuver?y/length:0,
             throttle:null,throttleRate:maneuver?0:y,fire:button(right,0),boost:button(right,4),bank:button(left,5),lock:button(left,0),
             pause:button(right,5),target:button(right,1),recenter:button(left,4)};
     }
@@ -68,6 +70,11 @@
             if(nativeHud){nativeHud.geometry=frame.geometry;nativeHud.visible=true;}
             renderer.render(hudScene,camera);
         }
+        var damageMaterial=new T.RawShaderMaterial({glslVersion:T.GLSL3,side:T.DoubleSide,defaultAttributeValues:{},transparent:true,depthTest:false,depthWrite:false,blending:T.NormalBlending,
+            uniforms:{alpha:{value:0}},vertexShader:'precision highp float;in vec3 position;void main(){gl_Position=vec4(position.xy,0.,1.);}',
+            fragmentShader:'precision highp float;uniform float alpha;out vec4 color;void main(){color=vec4(1.,55./255.,25./255.,alpha);}'});
+        var damageGeometry=new T.BufferGeometry();damageGeometry.setAttribute('position',new T.BufferAttribute(new Float32Array([-1,-1,0,3,-1,0,-1,3,0]),3));
+        var damage=new T.Mesh(damageGeometry,damageMaterial);damage.frustumCulled=false;damage.renderOrder=-1;damage.visible=false;hudScene.add(damage);
         /** @param {number[]} local */
         function rotate(local){return local.map(function(_,k){return right[k]*local[0]+up[k]*local[1]+back[k]*local[2];});}
         var api={active:active,tracking:tracking,sources:function(){var session=renderer.xr.getSession();return tracking()&&session?Array.from(session.inputSources):[];},bind:bind,
@@ -118,9 +125,10 @@
                 var m=head.matrix;
                 return Object.assign({},pose,{right:rotate([m[0],m[1],m[2]]),up:rotate([m[4],m[5],m[6]]),back:rotate([m[8],m[9],m[10]])});
             },
-            overlay:/** @param {HTMLCanvasElement} canvas */function(canvas){
+            overlay:/** @param {HTMLCanvasElement} canvas @param {number} [hitFlash] */function(canvas,hitFlash){
                 if(!active())return;
                 var paused=actions&&actions.isPaused();
+                damageMaterial.uniforms.alpha.value=paused?0:Math.max(0,Math.min(1,(hitFlash||0)*.28));damage.visible=damageMaterial.uniforms.alpha.value>0;
                 var gpu=DW.gpuUi,frame=gpu&&gpu.frame(canvas);
                 if(frame&&gpu){
                     if(paused){

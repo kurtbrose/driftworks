@@ -495,7 +495,7 @@
                 get('target-shield').value = selected.shield || 0;
                 targetRendered = targetCamera.update(selected, selection, combat.wave, units, shipImages, view.paint[selected.team === 'ally' ? 'ally' : 'enemy'], state, performance.now() / 1000);
             }
-            if (combat.hitFlash > 0) {
+            if (combat.hitFlash > 0 && !immersive) {
                 combatHud.fillStyle = 'rgba(255,55,25,' + (combat.hitFlash * .28) + ')';
                 combatHud.fillRect(0, 0, w, h);
             }

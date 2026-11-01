@@ -1050,7 +1050,7 @@ export type ExperimentModules = {
             appearance: () => Appearance;
             pose: (state: Pose) => void;
             setAnimationLoop:(callback:(time:number)=>void)=>void;
-            vrOverlay:()=>void;
+            vrOverlay:(hitFlash?:number)=>void;
             render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number, gpuTimer?:()=>()=>void) => void;
             renderStats: () => RenderStats;
             setShieldOptics:(degrees:number|null,glow:boolean)=>void;

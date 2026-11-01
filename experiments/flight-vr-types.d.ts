@@ -11,7 +11,7 @@ export type Bridge = {
  frame:(frame?:Frame)=>void;
  prepare:(right:number[],up:number[],back:number[],distance:number)=>void;
  skyPose:(pose:import('./types').Pose)=>import('./types').Pose;
- overlay:(canvas:HTMLCanvasElement)=>void;
+ overlay:(canvas:HTMLCanvasElement,hitFlash?:number)=>void;
  bind:(object:import('../src/three-types').Object3D,material:import('../src/three-types').Material)=>void;
  setSkyRenderer:(draw:(context:WebGL2RenderingContext,eye:SkyEye)=>void)=>void;
  resetRenderer:()=>void;

@@ -465,6 +465,9 @@
         function axis(a, b) {
             return (keys[a] ? 1 : 0) - (keys[b] ? 1 : 0);
         }
+        /** Full forward hold continues from throttle into afterburner, like W.
+         * @param {number} rate @param {number|undefined} throttle */
+        function forwardBoost(rate,throttle) { return rate >= .95 && (throttle || 0) >= 1; }
         /** @param {number} [currentThrottle] Current simulation throttle, before this frame. */
         function sample(currentThrottle) {
             if(vr&&vr.active()){
@@ -478,6 +481,7 @@
                 }
                 xrButtons={pause:demand.pause,bank:demand.bank,lock:demand.lock,target:demand.target,recenter:demand.recenter};
                 if(!vr.tracking()||actions.isPaused())return {pitch:0,yaw:0,roll:0,side:0,vertical:0,throttle:null,throttleRate:0,fire:false,boost:false};
+                demand.boost=demand.boost||forwardBoost(demand.throttleRate,currentThrottle);
                 return demand;
             }
             xrButtons={pause:false,bank:false,lock:false,target:false,recenter:false};
@@ -586,7 +590,7 @@
             previousButtons = { bank: controls.bank, lock: controls.lock, pause: controls.pause };
             var look = inputMode.value === 'mouse' && mouseActive ? input.stickDemand(mouse, .08, steeringPreset.value === 'medium-soft' ? 1.6 : 1) : [0, 0];
             var wBoost = !!keys.KeyW && !keys.KeyS && !keys.KeyX && !actions.isPaused() && (doubleWBoost || (currentThrottle || 0) >= 1);
-            return { throttle: wBoost ? 1 : controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: wBoost || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
+            return { throttle: wBoost ? 1 : controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: wBoost || controls.boost || (!keys.KeyS && !keys.KeyX && !actions.isPaused() && forwardBoost(controls.throttleRate,currentThrottle)), fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
         }
         function view() {
             if(vr&&vr.active())return {mouse:[0,0],inputMode:'controller',uncapturedMouse:false,stickRange:stickRange(),showMouseStick:false};

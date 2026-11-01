@@ -348,8 +348,10 @@ select **Controller / keyboard** to fly without capturing the pointer.
 
 The **Gamepad / joystick setup** section detects devices exposed by the browser's
 Gamepad API; press a device button if it hasn't appeared. Standard gamepads use
-left-stick pitch/yaw, right-stick X roll, D-pad up/down throttle, RT fire, A boost,
-Y switch bank and Start pause. Nonstandard joysticks default to axes 0/1 for
+left-stick pitch/yaw, right-stick X roll, right-stick Y or D-pad up/down throttle, RT fire, A boost,
+Y switch bank and Start pause. Hold the throttle stick fully forward at maximum
+throttle for afterburner; release to stop boosting. LB/L1 plus right stick strafes
+without engaging afterburner. Nonstandard joysticks default to axes 0/1 for
 yaw/pitch, axis 2 roll and axis 3 throttle, with buttons 0/1/2/7 for fire/boost/
 bank/pause. Select the device and remap any axis/button, invert axes and adjust
 the deadzone using live values. Axis throttle is absolute; choose None to use
