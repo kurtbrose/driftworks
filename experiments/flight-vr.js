@@ -127,12 +127,13 @@
             mount:/** @param {import('./types').ControlActions} value */function(value){
                 actions=value;if(button)return;
                 var xr=/** @type {{xr?:import('./flight-vr-types').XR}} */ (navigator).xr;
-                if(!xr)return;
-                button=document.createElement('button');button.type='button';button.textContent='Enter VR';button.disabled=true;
+                button=document.createElement('button');button.type='button';button.textContent='Checking VR...';button.disabled=true;
                 status=document.createElement('span');status.setAttribute('role','status');
                 var row=document.createElement('div');row.className='flight-vr-controls';row.append(button,status);
-                var launch=document.getElementById('launch');(launch||host).appendChild(row);
-                xr.isSessionSupported('immersive-vr').then(function(supported){if(button){button.disabled=!supported;button.hidden=!supported;}}).catch(function(){if(button)button.hidden=true;});
+                row.style.cssText='position:fixed;top:12px;right:12px;z-index:100;display:flex;flex-direction:column;gap:5px;max-width:280px;padding:8px;background:#07121fee;color:#d2e8ee;border:1px solid #578178;border-radius:5px;font:12px monospace';
+                document.body.appendChild(row);
+                if(!xr){button.textContent='VR unavailable';status.textContent=window.isSecureContext===false?'VR needs HTTPS. Open the temporary HTTPS link.':'WebXR is unavailable here. Open this link directly in Meta Quest Browser.';return;}
+                xr.isSessionSupported('immersive-vr').then(function(supported){if(button){button.disabled=!supported;button.textContent=supported?'Enter VR':'VR unavailable';}if(status)status.textContent=supported?'Head tracking + hand controllers':'This browser reports immersive VR unavailable.';}).catch(/** @param {unknown} error */function(error){if(button)button.textContent='VR unavailable';if(status)status.textContent='VR support check failed: '+String(error);});
                 button.onclick=async function(){
                     if(!xr||entering)return;if(active()){var existing=renderer.xr.getSession();if(existing)await existing.end();return;}
                     entering=true;if(button)button.disabled=true;

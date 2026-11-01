@@ -3,8 +3,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const root=path.join(__dirname,'..'),context=vm.createContext({console,AbortController,window:{}});
 vm.runInContext(fs.readFileSync(path.join(root,'vendor/three/build/three.global.js'),'utf8'),context);
 const T=context.window.THREE;
-function element(){return {children:[],append(...items){this.children.push(...items);},appendChild(item){this.children.push(item);},setAttribute(){},getContext(){return null;}};}
-const launch=element(),document={createElement:element,getElementById:()=>launch};
+function element(){return {style:{},children:[],append(...items){this.children.push(...items);},appendChild(item){this.children.push(item);},setAttribute(){},getContext(){return null;}};}
+const launch=element(),body=element(),document={body,createElement:element,getElementById:()=>launch};
 let supported=true,reject=false,active=false,session=null,reference,offsets=[],pauses=0;
 const base={getOffsetReferenceSpace(transform){offsets.push(transform);return {...base,offset:true};}};
 function makeSession(){const listeners={};return {inputSources:[],visibilityState:'visible',addEventListener(name,fn){(listeners[name]||=[]).push(fn);},emit(name){for(const fn of listeners[name]||[])fn();},async end(){active=false;session=null;this.emit('end');}};}
@@ -24,7 +24,8 @@ const actions={pause(){pauses++;paused=true;},isPaused:()=>paused,isDead:()=>fal
 const pose={eye:[10,20,30],right:[1,0,0],up:[0,1,0],back:[0,0,1],velocity:[0,0,0]};
 (async()=>{
   assert.equal(DW.flightVr.forHost(host),bridge);bridge.mount(actions);
-  await Promise.resolve();const button=launch.children[0].children[0],status=launch.children[0].children[1];assert.equal(button.disabled,false);
+  await Promise.resolve();const row=body.children[0],button=row.children[0],status=row.children[1];assert.equal(button.disabled,false);
+  assert.equal(launch.children.length,0,'VR entry must survive hiding the start/pause panel');assert.match(row.style.cssText,/position:fixed/);
   await button.onclick();assert(bridge.active());assert(paused);assert.equal(button.textContent,'Exit VR');
   const matrix=new T.Matrix4().makeRotationY(Math.PI/2);matrix.setPosition(.2,1.7,-.1);
   const transform={matrix:new Float32Array(matrix.elements),position:{x:.2,y:1.7,z:-.1}};
@@ -44,5 +45,9 @@ const pose={eye:[10,20,30],right:[1,0,0],up:[0,1,0],back:[0,0,1],velocity:[0,0,0
   candidate.visibilityState='visible-blurred';bridge.frame({getViewerPose:()=>({transform})});assert.equal(bridge.tracking(),false);
   await candidate.end();bridge.prepare(pose.right,pose.up,pose.back,1);assert.equal(camera.parent,null);assert.equal(button.textContent,'Enter VR');assert(paused);
   reject=true;await button.onclick();assert.match(status.textContent,/declined/);assert.equal(button.disabled,false);assert.equal(active,false);
+  supported=false;const unsupported=DW.flightVr.create(element(),renderer,new T.Scene(),new T.PerspectiveCamera());unsupported.mount(actions);await Promise.resolve();
+  const unavailable=body.children[1];assert.equal(unavailable.children[0].textContent,'VR unavailable');assert.notEqual(unavailable.children[0].hidden,true);assert.match(unavailable.children[1].textContent,/immersive VR unavailable/);
+  navigator.xr=undefined;window.isSecureContext=false;DW.flightVr.create(element(),renderer,new T.Scene(),new T.PerspectiveCamera()).mount(actions);
+  assert.match(body.children[2].children[1].textContent,/HTTPS/);
   console.log('PASS VR session lifecycle, denied entry, recentering, head/ship separation, physical stereo, tracking loss and desktop restoration');
 })().catch(error=>{console.error(error);process.exitCode=1;});

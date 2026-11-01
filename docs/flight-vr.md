@@ -4,6 +4,9 @@ The shared flight composition supports WebXR `immersive-vr`. Quest 3's standalon
 browser is the initial hardware target. Open a flight sortie over HTTPS, wait for
 assets to load, and choose **Enter VR**. The session starts paused; press **B** to
 fly. Ordinary browser fullscreen remains a flat screen and does not start VR.
+VR entry stays fixed at the top right, outside the scrolling start/pause panel,
+including during ordinary flight. Unsupported browsers show **VR unavailable**
+with a reason instead of silently hiding the entry point.
 All sorties using `flight.js`, `flightPresentation` and `flightControls` inherit
 the integration. No mission-specific controller wiring or runtime downloads are
 required. The tactical RTS and independent artwork viewers do not enter VR.
