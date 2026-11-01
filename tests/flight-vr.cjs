@@ -10,15 +10,12 @@ const base={getOffsetReferenceSpace(transform){offsets.push(transform);return {.
 function makeSession(){const listeners={};return {inputSources:[],visibilityState:'visible',addEventListener(name,fn){(listeners[name]||=[]).push(fn);},emit(name){for(const fn of listeners[name]||[])fn();},async end(){active=false;session=null;this.emit('end');}};}
 const candidate=makeSession();
 const navigator={xr:{async isSessionSupported(){return supported;},async requestSession(){if(reject)throw Error('declined');return candidate;}}};
-const renderer={xr:{get isPresenting(){return active;},enabled:false,getSession:()=>session,getReferenceSpace:()=>reference,setReferenceSpace(value){reference=value;},setReferenceSpaceType(value){assert.equal(value,'local');},async setSession(value){session=value;active=true;reference=base;}},render(){}};
+const renderer={xr:{get isPresenting(){return active;},enabled:false,setFoveation(value){assert.equal(value,0);},getSession:()=>session,getReferenceSpace:()=>reference,setReferenceSpace(value){reference=value;},setReferenceSpaceType(value){assert.equal(value,'local');},async setSession(value){session=value;active=true;reference=base;}},render(){}};
 const DW={sim:{METERS_PER_UNIT:20},audio:{unlock(){}}};
 const window={THREE:T,Driftworks:DW,XRRigidTransform:class{constructor(position,orientation){this.position=position;this.orientation=orientation;}}};
 Object.assign(context,{window,document,navigator});
 vm.runInContext(fs.readFileSync(path.join(root,'experiments/flight-vr.js'),'utf8'),context);
 const scene=new T.Scene(),camera=new T.PerspectiveCamera(),host=element(),bridge=DW.flightVr.create(host,renderer,scene,camera);
-const skyMesh=scene.children.find(item=>item.geometry);
-assert.equal(skyMesh.geometry.drawRange.count,6,'Raw panel geometry must have a finite draw range');
-assert.equal(skyMesh.material.uniforms.image.value.generateMipmaps,false,'Dynamic sky must not regenerate mipmaps every frame');
 let paused=true;
 const actions={pause(){pauses++;paused=true;},isPaused:()=>paused,isDead:()=>false};
 const pose={eye:[10,20,30],right:[1,0,0],up:[0,1,0],back:[0,0,1],velocity:[0,0,0]};
@@ -32,14 +29,45 @@ const pose={eye:[10,20,30],right:[1,0,0],up:[0,1,0],back:[0,0,1],velocity:[0,0,0
   bridge.frame({getViewerPose:()=>({transform})});assert(bridge.tracking());assert.equal(offsets.length,1);
   assert(Math.abs(offsets[0].orientation.y-Math.SQRT1_2)<1e-6);assert.equal(offsets[0].position.y,1.7);
   const looked=bridge.skyPose(pose);assert(Math.abs(looked.back[0]-1)<1e-6);assert.deepEqual(pose.back,[0,0,1]);assert.equal(looked.eye,pose.eye);
-  bridge.prepare(pose.right,pose.up,pose.back,1);assert(camera.parent);assert(Math.abs(camera.parent.matrixWorld.elements[0]-.05)<1e-8);assert.equal(camera.parent.matrixWorld.elements[14],1);
+  bridge.prepare(pose.right,pose.up,pose.back,1);assert(camera.parent);assert(Math.abs(camera.parent.matrixWorld.elements[0]-.05)<1e-8);
+  const centered=new T.Vector3().setFromMatrixPosition(new T.Matrix4().multiplyMatrices(camera.parent.matrixWorld,matrix));
+  assert(centered.distanceTo(new T.Vector3(0,0,1))<1e-7,'Physical head translation must not move the flight eye centre');
   // Real Three matrices confirm physical eye separation survives the metre conversion.
   const left=new T.PerspectiveCamera(),right=new T.PerspectiveCamera();
-  left.matrixWorld.copy(camera.parent.matrixWorld).multiply(new T.Matrix4().makeTranslation(-.032,0,0));right.matrixWorld.copy(camera.parent.matrixWorld).multiply(new T.Matrix4().makeTranslation(.032,0,0));
+  left.matrixWorld.copy(camera.parent.matrixWorld).multiply(matrix).multiply(new T.Matrix4().makeTranslation(-.032,0,0));right.matrixWorld.copy(camera.parent.matrixWorld).multiply(matrix).multiply(new T.Matrix4().makeTranslation(.032,0,0));
   left.matrixWorldInverse.copy(left.matrixWorld).invert();right.matrixWorldInverse.copy(right.matrixWorld).invert();
   const uniforms={uXRActive:{value:0},uXRView:{value:null},uXRProjection:{value:null}},material={uniforms},mesh=new T.Object3D();bridge.bind(mesh,material);
   mesh.onBeforeRender(renderer,scene,left);const l=Array.from(uniforms.uXRView.value);mesh.onBeforeRender(renderer,scene,right);const r=Array.from(uniforms.uXRView.value);
   assert(Math.abs(l[12]-r[12]-.064)<1e-6);assert.equal(uniforms.uXRActive.value,1);assert(material.uniformsNeedUpdate);
+  for(const position of [[0,0,0],[1,.5,-2],[-.4,1.8,3]]){
+    const walking=new T.Matrix4().makeRotationFromEuler(new T.Euler(.2,.8,-.1));walking.setPosition(...position);
+    bridge.frame({getViewerPose:()=>({transform:{matrix:new Float32Array(walking.elements),position:{x:position[0],y:position[1],z:position[2]}}})});
+    bridge.prepare(pose.right,pose.up,pose.back,1);
+    const eyeCentre=new T.Vector3().setFromMatrixPosition(new T.Matrix4().multiplyMatrices(camera.parent.matrixWorld,walking));
+    assert(eyeCentre.distanceTo(new T.Vector3(0,0,1))<1e-7,'Walking/leaning must cancel on all three axes');
+  }
+  let overlayScene;renderer.render=scene=>{overlayScene=scene;};bridge.overlay(element());
+  const glyphShader=fs.readFileSync(path.join(root,'experiments/gpu-ui.js'),'utf8').match(/var fragment = `([\s\S]*?)`;/)[1];
+  const nativeFrame={geometry:new T.BufferGeometry(),fragmentShader:glyphShader,width:1000,height:600,uniforms:{viewport:{value:[1000,600]},atlas:{value:{}},pixelRatio:{value:1}}};
+  DW.gpuUi={frame:()=>nativeFrame};paused=false;bridge.overlay(element());
+  const textHud=overlayScene.children.find(item=>item.material.glslVersion===T.GLSL3);
+  assert(textHud);assert.equal(textHud.geometry,nativeFrame.geometry);assert.equal(textHud.material.uniforms.atlas,nativeFrame.uniforms.atlas);
+  assert.match(textHud.material.vertexShader,/float r2=dot\(q,q\)/);assert.match(textHud.material.vertexShader,/\(1\.\+r2\)/);assert(!textHud.material.vertexShader.includes('anchor'),'All glyph vertices must use the same continuous conformal spherical field');
+  assert.match(textHud.material.fragmentShader,/coverage = max\(fwidth\(distance\), 1\. \/ 255\.\)/);
+  assert.equal(textHud.material.uniforms.image,undefined,'Native text must not sample a rasterized HUD screenshot');
+  DW.gpuUi=undefined;
+  bridge.frame({getViewerPose:()=>({transform})});
+  const xrTarget={},gl={},eyeDraws=[],renderEvents=[];
+  left.viewport={x:0,y:0,z:720,w:900};right.viewport={x:720,y:0,z:720,w:900};
+  renderer.xr.updateCamera=()=>renderEvents.push('camera');renderer.xr.getCamera=()=>({cameras:[left,right]});
+  renderer.getRenderTarget=()=>xrTarget;renderer.getContext=()=>gl;renderer.resetState=()=>renderEvents.push('reset');
+  renderer.setRenderTarget=target=>assert.equal(target,xrTarget);renderer.setViewport=(...viewport)=>renderEvents.push(viewport);
+  bridge.setSkyRenderer((context,eye)=>{assert.equal(context,gl);eyeDraws.push(eye);});bridge.prepare(pose.right,pose.up,pose.back,1);bridge.renderSky();
+  assert.equal(eyeDraws.length,2);assert.equal(eyeDraws[1].viewport.x,720);assert.equal(scene.children.length,0,'Native VR must not allocate a copied canvas sky or HUD surface');
+  for(const eye of eyeDraws)assert(Math.abs(Math.hypot(...eye.right)-1)<1e-8);
+  assert.equal(renderEvents.at(-1),'reset','Raw sky state must be invalidated before Three resumes');
+  bridge.setSkyRenderer(()=>{throw Error('sky draw failed');});assert.throws(()=>bridge.renderSky(),/sky draw failed/);assert.equal(renderEvents.at(-1),'reset');
+  bridge.setSkyRenderer(()=>{});
   bridge.recenter();bridge.frame({getViewerPose:()=>({transform})});assert.equal(offsets.length,2);
   paused=false;const prior=pauses;bridge.frame({getViewerPose:()=>null});assert.equal(pauses,prior+1);assert.equal(bridge.tracking(),false);assert.equal(bridge.sources().length,0);
   candidate.visibilityState='visible-blurred';bridge.frame({getViewerPose:()=>({transform})});assert.equal(bridge.tracking(),false);

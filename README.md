@@ -241,7 +241,7 @@ An experimental **Enter VR** button appears in compatible WebXR browsers. Quest 
 is the initial target: use an HTTPS deployment, enter VR, then press B to fly.
 Head motion looks around independently of steering, while the HUD stays mounted
 forward. See [VR controls and current limitations](docs/flight-vr.md). Physical
-headset validation is still pending.
+headset validation of the revised rotation-only view and angular HUD is pending.
 
 For a hands-off battle, open [the cinematic demo](experiments/flight.html?mission=cinematic&bridgeGrid=0&bridgeOutline=0).
 Two carriers slowly circle at 675 m radius around each

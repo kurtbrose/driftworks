@@ -6,4 +6,5 @@ export type Painter = Pick<CanvasRenderingContext2D, 'fillStyle'|'strokeStyle'|'
 export type PaintContext = Omit<Painter, 'panel'|'image'>;
 export type State = Pick<Painter,'fillStyle'|'strokeStyle'|'globalAlpha'|'lineWidth'|'font'|'textAlign'|'shadowBlur'|'shadowColor'> & {matrix:number[];dash:number[]};
 export type Path = {points:number[][];closed:boolean;circle?:number[]};
-export interface GpuUi {painter:Painter;canvas:HTMLCanvasElement;begin:(w:number,h:number)=>void;end:()=>void;dispose:()=>void;stats:()=>{vertices:number;capacity:number;textures:number;drawCalls:number}}
+export type NativeFrame = {geometry:import('../src/three-types').Geometry;uniforms:Record<string,{value:import('../src/three-types').UniformValue}>;fragmentShader:string;width:number;height:number};
+export interface GpuUi {painter:Painter;canvas:HTMLCanvasElement;nativeFrame:()=>NativeFrame;begin:(w:number,h:number,minimumFontSize?:number)=>void;end:(nativeOnly?:boolean)=>void;dispose:()=>void;stats:()=>{vertices:number;capacity:number;textures:number;drawCalls:number}}

@@ -62,9 +62,10 @@
         var depth = -dot(direction, pose.back);
         return depth > 0 ? { x: dot(direction, pose.right) * focal / aspect / depth, y: dot(direction, pose.up) * focal / depth } : null;
     }
-    /** @param {HTMLElement} host @param {{style?:number,fov?:number,cueControls?:boolean,sources?:import('../src/types').SkyCameraSource[],optics?:boolean}=} config */
+    /** @param {HTMLElement} host @param {{style?:number,fov?:number,cueControls?:boolean,sources?:import('../src/types').SkyCameraSource[],optics?:boolean,preserveDrawingBuffer?:boolean,styleControls?:boolean,context?:WebGL2RenderingContext}=} config */
     function create(host, config) {
-        var effects=window.Driftworks.skyEffects?window.Driftworks.skyEffects.create(host):null;
+        var external=!!(config&&config.context);
+        var effects=!external&&window.Driftworks.skyEffects?window.Driftworks.skyEffects.create(host):null;
         var opticsControl=/** @type {HTMLInputElement|null} */(document.getElementById('skybox-optics'));
         if(effects){effects.setEnabled(config&&config.optics!==undefined?config.optics:!opticsControl||opticsControl.checked);if(opticsControl)opticsControl.addEventListener('change',function(){if(effects&&opticsControl)effects.setEnabled(opticsControl.checked);});}
         /** @type {import('../src/types').SkyCameraSource[]|null} */var cameraSources=config&&config.sources?config.sources:null;
@@ -80,9 +81,11 @@
         var canvas = document.createElement('canvas');
         canvas.className = 'flight-skybox';
         canvas.setAttribute('aria-hidden', 'true');
-        host.prepend(canvas);
+        if(!external)host.prepend(canvas);
         if(window.Driftworks.gpuDiagnostics)window.Driftworks.gpuDiagnostics.mark('sky.create');
-        var context = canvas.getContext('webgl', { alpha: false, antialias: false });
+        // The XR renderer samples this canvas from another WebGL context.
+        // Retain its completed image across browser compositor boundaries.
+        var context = config&&config.context||canvas.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer:!!(config&&config.preserveDrawingBuffer) });
         if (!context)
             throw new Error('Flight skybox requires WebGL');
         const gl = context;
@@ -91,6 +94,15 @@
         var bridgeDerivatives=!!missionSky.wormhole&&!!gl.getExtension('OES_standard_derivatives');
         /** @param {number} type @param {string} source */
         function shader(type, source) {
+            if(external){
+                var fragment=type===gl.FRAGMENT_SHADER;
+                source=source.replace(/#extension GL_(?:EXT_shader_texture_lod|OES_standard_derivatives)[^\n]*\n/g,'');
+                source='uniform highp vec2 xrProjectionCenter;\n'+source.replace(/\bscreen\.x\b/g,'(screen.x+xrProjectionCenter.x)').replace(/\bscreen\.y\b/g,'(screen.y+xrProjectionCenter.y)');
+                if(!fragment&&!/screen\s*=/.test(source))source=source.replace(/}\s*$/,'gl_Position.xy-=xrProjectionCenter*gl_Position.w;}');
+                source=source.replace(/\battribute\b/g,'in').replace(/\bvarying\b/g,fragment?'in':'out').replace(/\btexture2DLodEXT\b/g,'textureLod').replace(/\btexture(?:2D|Cube)\b/g,'texture');
+                if(fragment)source='out highp vec4 xrColor;\n'+source.replace(/\bgl_FragColor\b/g,'xrColor');
+                source='#version 300 es\n'+source;
+            }
             var sh = gl.createShader(type);
             if (!sh)
                 throw new Error('Could not allocate skybox shader');
@@ -596,7 +608,8 @@ void main(){
             });
         }
         var style = config && typeof config.style==='number' ? config.style : 7;
-        var exposure = 1;
+        var exposure = 1,frameExposure=1;
+        /** @type {import('./types').ImpactCueSnapshot|null} */var sharedCue=null;
         var quality = 1;
         var brightnessControl = /** @type {HTMLInputElement|null} */ (document.getElementById('skybox-brightness'));
         var qualityControl = /** @type {HTMLSelectElement|null} */ (document.getElementById('skybox-quality'));
@@ -608,7 +621,7 @@ void main(){
             const control = qualityControl;
             control.addEventListener('change', function () { quality = [1,1.5,2].includes(Number(control.value)) ? Number(control.value) : 1; });
         }
-        var selector = /** @type {HTMLSelectElement|null} */ (config ? null : document.getElementById('skybox-style'));
+        var selector = /** @type {HTMLSelectElement|null} */ (config&&!config.styleControls ? null : document.getElementById('skybox-style'));
         if (selector) {
             const control = selector;
             options.forEach(function (label, index) {
@@ -725,7 +738,7 @@ void main(){
                     trigger.onclick=function(){cueImpact(target.value,Number(duration.value));};reset.onclick=resetImpact;
                 }
             }
-            impactCues.update(0,false);var cue=impactCues.snapshot();
+            impactCues.update(0,false);var cue=sharedCue||impactCues.snapshot();
             var from=0;for(var i=1;i<impactTimes.length;i++)if(impactTime>=impactTimes[i])from=i;
             var to=Math.min(from+1,impactTimes.length-1);
             if(cueMode){from=cue.from;to=cue.to;}
@@ -733,7 +746,7 @@ void main(){
             bakedMaps.forEach(function(entry,index){if(keep.indexOf(index)<0){gl.deleteTexture(entry.texture);bakedMaps.delete(index);}});
             var a=bakedMap(from),b=bakedMap(to);keep.forEach(bakedMap);
             var ready=a.ready&&b.ready,blend=from===to?0:Math.max(0,Math.min(1,(impactTime-impactTimes[from])/(impactTimes[to]-impactTimes[from])));
-            if(cueMode){cue=impactCues.update(elapsed,ready);a=bakedMap(cue.from);b=bakedMap(cue.to);blend=cue.blend;}
+            if(cueMode){cue=sharedCue||impactCues.update(elapsed,ready);a=bakedMap(cue.from);b=bakedMap(cue.to);blend=cue.blend;}
             if(ready)impactMotion+=Math.max(0,elapsed);
             if(ready&&canvas.dataset.bakedImpact!=='error'){canvas.dataset.bakedImpact='ready';if(missionSky.cubeStages){canvas.dataset.cube='ready';canvas.dataset.ohio='ready';}}
             if(impactSlider)impactSlider.value=String(impactTime);
@@ -878,13 +891,23 @@ void main(){
             (['right', 'up', 'back']).forEach(function (key) {
                 gl.uniform3fv(gl.getUniformLocation(p, key), pose[key]);
             });
-            gl.uniform1f(gl.getUniformLocation(p, 'aspect'), aspect);
+            gl.uniform1f(gl.getUniformLocation(p, 'aspect'), eyeFrame?eyeFrame.projection[5]/eyeFrame.projection[0]:aspect);
             gl.uniform1f(gl.getUniformLocation(p, 'focal'), viewFocal);
             gl.uniform1f(gl.getUniformLocation(p, 'pixelRatio'), dpr);
+            if(external)gl.uniform2f(gl.getUniformLocation(p,'xrProjectionCenter'),eyeFrame?eyeFrame.projection[8]:0,eyeFrame?eyeFrame.projection[9]:0);
         }
+        /** @type {import('./flight-vr-types').SkyEye|null} */var eyeFrame=null;
         var stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
         if(!landmarkSky&&typeof window.location!=='undefined'&&/(?:[?&])sky=impact(?:&|$)/.test(window.location.search||'')){style=12;if(selector)selector.value='12';}
-        return {setFov:/** @param {number} degrees */function(degrees){viewFocal=1/Math.tan(degrees*Math.PI/360);},setEnvironment:/** @param {import('../src/types').SkyEnvironmentLighting|null} value */function(value){
+        /** @type {ReturnType<Required<DriftworksNamespace>['flightSkybox']['create']>} */
+        var api={getStyle:function(){return style;},
+            getFrameState:function(){return {style:style,exposure:frameExposure,impactTime:impactTime,impactMotion:impactMotion,gasTime:gasTime,cueMode:cueMode,cue:sharedCue||impactCues.snapshot()};},
+            setFrameState:function(state){style=state.style;exposure=state.exposure;impactTime=state.impactTime;impactMotion=state.impactMotion;gasTime=state.gasTime;cueMode=state.cueMode;sharedCue=state.cue;},
+            renderEye:function(pose,eye,empty,elapsed,motionOpacity,arrival){
+            var savedFocal=viewFocal;eyeFrame=eye;viewFocal=eye.projection[5];
+            gl.disable(gl.DEPTH_TEST);gl.depthMask(false);gl.disable(gl.CULL_FACE);gl.disable(gl.SCISSOR_TEST);
+            try{api.render(pose,1,empty,0,motionOpacity,arrival);}finally{viewFocal=savedFocal;eyeFrame=null;}
+        },setFov:/** @param {number} degrees */function(degrees){viewFocal=1/Math.tan(degrees*Math.PI/360);},setEnvironment:/** @param {import('../src/types').SkyEnvironmentLighting|null} value */function(value){
                 if(value===environmentOverride)return;
                 if(value&&(!value.radiance||value.radiance.length!==512*256*4||!value.radiance.every(Number.isFinite)||value.sh.length!==9||value.sh.some(function(row){return row.length!==3||!row.every(Number.isFinite);})))throw new Error('Expected cached 512x256 RGBA linear HDR radiance and nine RGB SH coefficients');
                 if(value&&!gl.getExtension('OES_texture_float'))throw new Error('HDR sky requires float textures');
@@ -898,21 +921,21 @@ void main(){
                     effects.setSources(cameraSources||(hdrTexture?[]:landmarkSky&&window.Driftworks.skyEffects?window.Driftworks.skyEffects.fromFeatures(missionSky.features,authoredAssetSources):authoredSources[String(style)]||[]));sourceStyle=style;
                 }
                 var cameraExposure=effects?effects.render(pose,viewFocal,performance.now()/1000,empty):1;
-                var effectiveExposure=exposure*cameraExposure;
+                var effectiveExposure=exposure*cameraExposure;frameExposure=effectiveExposure;
                 // Shared renderer integration: the host delivers the probe and sky basis.
                 // No mission or material code needs to choose lights.
-                if(typeof host.dispatchEvent==='function' && typeof CustomEvent==='function') {
+                if(!external&&typeof host.dispatchEvent==='function' && typeof CustomEvent==='function') {
                     host.dispatchEvent(new CustomEvent('sky-environment',{detail:{lighting:getLighting(),pose:pose,exposure:cameraExposure}}));
                 }
                 // Keep sky sampling and point footprints independent of scene resolution.
-                var dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1) * quality), width = Math.round(host.clientWidth * dpr), height = Math.round(host.clientHeight * dpr);
+                var dpr = eyeFrame?1:Math.min(3, Math.max(1, window.devicePixelRatio || 1) * quality), width = eyeFrame?eyeFrame.viewport.width:Math.round(host.clientWidth * dpr), height = eyeFrame?eyeFrame.viewport.height:Math.round(host.clientHeight * dpr);
                 if (!width || !height)
                     return;
-                if (canvas.width !== width || canvas.height !== height) {
+                if (!external&&(canvas.width !== width || canvas.height !== height)) {
                     canvas.width = width;
                     canvas.height = height;
                 }
-                gl.viewport(0, 0, width, height);
+                gl.viewport(eyeFrame?eyeFrame.viewport.x:0, eyeFrame?eyeFrame.viewport.y:0, width, height);
                 if(impactControls)impactControls.hidden=!missionSky.bakedImpact&&(style!==12||landmarkSky);
                 if (empty) {
                     gl.clearColor(0, 0, 0, 1);
@@ -963,6 +986,7 @@ void main(){
                 if(rimeTexture){gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,rimeTexture);}
                 gl.uniform1f(gl.getUniformLocation(sky,'hdrEnabled'),hdrTexture?1:0);gl.uniform1i(gl.getUniformLocation(sky,'hdrEnvironment'),4);
                 if(hdrTexture){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.activeTexture(gl.TEXTURE0);}
+                gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,noiseTexture);gl.activeTexture(gl.TEXTURE0);
                 gl.uniform1i(gl.getUniformLocation(sky, 'noiseMap'), 1);
                 var flash=impactTime>=0&&impactTime<.8?Math.exp(-impactTime/.12)*(1-Math.exp(-impactTime/.008)):0;
                 var impactPlanet=landmarkTextures[0],eventDirection=[0,1,0];
@@ -1008,7 +1032,7 @@ void main(){
                     var frame=system?system.frame:[[1,0,0],[0,1,0],[0,0,1]];
                     ['gasFrameX','gasFrameY','gasFrameZ'].forEach(function(name,i){gl.uniform3fv(gl.getUniformLocation(sky,name),frame[i]);});
                     gl.uniform1f(gl.getUniformLocation(sky,'gasScale'),gasScale);
-                    gl.uniform1f(gl.getUniformLocation(sky,'moonPixel'),1/(focal*canvas.height));
+                    gl.uniform1f(gl.getUniformLocation(sky,'moonPixel'),eyeFrame?1/(viewFocal*height):1/(focal*canvas.height));
                     if(cubeLoaded===6&&gasLitLoaded===6)gasTime+=Math.max(0,elapsed||0);
                     if(weather){
                         gl.uniform4fv(gl.getUniformLocation(sky,'gasCells[0]'),gasCellData);
@@ -1056,12 +1080,12 @@ void main(){
                         gl.uniform3fv(gl.getUniformLocation(motionProgram,'bridgeEye'),pose.eye.map(function(v){return v*(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT;}));
                         gl.uniform1f(gl.getUniformLocation(motionProgram,'ellisRegion'),pose.region||0);
                         gl.uniform1f(gl.getUniformLocation(motionProgram,'motionOpacity'),motionOpacity);
-                        gl.uniform1f(gl.getUniformLocation(motionProgram,'motionPixel'),2/(host.clientHeight*viewFocal));
+                        gl.uniform1f(gl.getUniformLocation(motionProgram,'motionPixel'),2/((eyeFrame?height:host.clientHeight)*viewFocal));
                         gl.uniform1f(gl.getUniformLocation(motionProgram,'motionBorder'),48*dpr);
                         var motionEye=pose.eye.map(function(v){return v*(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT;});
                         var motionRadius=Math.hypot(motionEye[0]-(pose.region||0)*12000,motionEye[1]+2000,motionEye[2]-1550);
                         gl.uniform1f(gl.getUniformLocation(motionProgram,'motionObserverL'),Math.sqrt(Math.max(0,(motionRadius-300)*(motionRadius+300))));
-                        gl.uniform2f(gl.getUniformLocation(motionProgram,'motionViewport'),canvas.width,canvas.height);
+                        gl.uniform2f(gl.getUniformLocation(motionProgram,'motionViewport'),width,height);
                         gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);gl.uniform1i(gl.getUniformLocation(motionProgram,'ellisTable'),0);
                         gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,motionLengths);gl.uniform1i(gl.getUniformLocation(motionProgram,'motionTable'),1);
                         gl.bindBuffer(gl.ARRAY_BUFFER,quad);var motionPosition=gl.getAttribLocation(motionProgram,'position');
@@ -1082,6 +1106,7 @@ void main(){
                 gl.drawArrays(gl.POINTS, 0, starData.length / 4);
                 gl.disableVertexAttribArray(a);
             } };
+        return api;
     }
     /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightSkybox = { create: create, createImpactCues:createImpactCues,impactStages:impactStages, stars: stars, project: project, options: options, featureFrame: featureFrame };
 }());

@@ -681,6 +681,7 @@
     }
     /** @param {World} w @param {number} alpha @param {number} dt @param {number} wallDt */
     function renderFrame(w, alpha, dt, wallDt) {
+      if(vr)vr.resetRenderer();
       if(study && !shadowPass)pickBatches=[];
       drawPool.forEach(function(entry){scene.remove(entry.object);});drawIndex=0;drawProjected=false;drawRegion=0;drawLensRadius=0;drawLensCenter=null;drawLensTransit=undefined;
       var renderStart=performance.now();renderStats.explosions=0;renderStats.explosionBatches=0;renderStats.effectVertices=0;renderStats.drawCalls=0;renderStats.triangles=0;renderStats.lines=0;frameMeshes.clear();frameMaterials.clear();
@@ -965,7 +966,7 @@
         setFinish(0);setUniform('Spin',w.elapsedSeconds);setUniform('Flat',0);depthWrite=true;blending=THREE.NoBlending;
       }
       renderStats.bridgeObjectPaths=0;renderStats.bridgeObjectPatches=0;renderStats.bridgeObjectError=0;renderStats.bridgeObjectBad=0;renderStats.bridgeHistoryValid=0;renderStats.bridgeCaptures=0;renderStats.bridgeCpuMs=0;
-      if(vr&&vr.active()){renderer.render(scene,camera);
+      if(vr&&vr.active()){vr.renderSky();renderer.render(scene,camera);
       }else if(bridgeRenderer&&!shadowPass){
         var target=/** @type {number[]} */(uniforms.uTarget.value);
         var bridge=bridgeRenderer.render(scene,camera,drawPool.slice(0,drawIndex),{region:surfaceRegion,eye:target.map(function(x,i){return x+v.back[i]*v.distance;}),right:v.right,up:v.up,back:v.back},v.focal,v.distance+30000,width,height,bridgeRevision);

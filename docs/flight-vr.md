@@ -51,12 +51,16 @@ Unrecognized mappings are ignored instead of guessing button indices.
 | X / left lower face button | Recenter seated position and forward heading |
 | Headset system menu | Leave immersive VR |
 
-Head rotation and translation are presentation inputs. Ship state, weapon aim,
-physics, distances and saves do not receive the headset pose. The HUD occupies
-a ship-forward surface two metres from the seated eye, with the ordinary
-45-degree vertical layout. Turning away leaves it behind. The pause card occupies
-the same surface and lists the controls. Initial entry and recentering remove the
-current seated translation and heading while retaining head pitch and roll.
+Head rotation is a presentation input. Physical walking and leaning are cancelled
+from the flight viewpoint; the two eyes retain their physical separation. Ship
+state, weapon aim, physics, distances and saves do not receive the headset pose.
+The HUD is a ship-forward angular overlay at infinity, with a 45-degree vertical
+layout, rendered above world geometry. Its primitives share one continuous
+stereographic (locally angle-preserving) spherical projection. Text is not
+given individual billboard orientations or copied from a screenshot. It has no finite glass-plane
+depth, convergence or positional parallax. Turning away leaves it behind. Pause
+controls use the same projection without a large opaque screen. Initial entry and
+recentering reset the seated heading while retaining head pitch and roll.
 
 ## Shared implementation
 
@@ -73,21 +77,35 @@ visibility loss and session exit pause gameplay; resuming is explicit.
 The native renderer submits the world for each eye. Raw engine materials receive
 the actual eye view/projection matrices through `onBeforeRender`; native PBR
 materials use Three's XR camera. The camera rig converts headset metres into
-simulation world units, including physical eye separation and leaning. Forward
-screen-frustum culling is bypassed so turning around does not discard ships.
+simulation world units and cancels the tracked head centre each frame, retaining
+rotation and physical eye separation. Forward screen-frustum culling is bypassed so turning around does not discard ships.
 
-The existing sky renders once at 140 degrees around the current head orientation.
-Its canvas is sampled by a direction-only background surface in the XR renderer,
-without eye translation parallax for the distant sky. The existing GPU HUD renders
-once per frame, then is sampled by the forward cockpit surface in both eyes.
-These textures are transferred between the existing graphics contexts; this is a
-prototype performance cost to measure on Quest hardware.
+The ordinary sky renderer remains the owner of appearance, lighting and animation
+clocks. XR draws the same authored sky directly into the headset framebuffer for
+each eye, using the world renderer's WebGL 2 context. The sky shader adapter
+converts to GLSL 3, applies each eye's asymmetric projection centre and explicit
+viewport, and restores Three's framebuffer/state before world geometry. Native
+sky draws borrow one frame snapshot and never advance animation separately for
+the two eyes. Sky images are not copied from a live canvas into an XR plane.
+
+The GPU HUD supplies its retained primitive geometry, immutable distance-field
+font atlas and small image slots directly to the XR renderer. Its original CSS
+pixel coordinates share a continuous conformal spherical field; glyph coverage
+uses derivatives at the actual per-eye output resolution. There are no per-glyph
+billboard orientations. The XR layout uses 600 logical pixels vertically and a
+14px minimum font, independent of the browser's desktop-window resolution. The
+HUD is submitted last with depth testing/writes disabled. `GpuUi.nativeFrame()` on a UI instance
+returns borrowed geometry and samplers for that frame; the UI retains ownership.
+Native-only pause batches need no separate WebGL canvas render. Fixed foveation
+is set to zero during this quality trial; its performance cost needs hardware
+measurement.
 
 ## Validation and current limits
 
 Automated checks cover controller signs, handedness, missing sources, grip strafe,
 button edges, pause suppression, ordinary-input isolation, headset frame pacing,
-session rejection/end, recentering, tracking loss and physical stereo matrices.
+session rejection/end, recentering, tracking loss, three-axis translation
+cancellation, angular HUD projection and physical stereo matrices.
 
 A disposable browser XR emulator exercised the actual vendored Three XR render
 loop with two views. The asteroid-range sortie was visually inspected paused and
@@ -96,10 +114,18 @@ the world and forward HUD/pause card; looking sideways removed the HUD and chang
 the world view. No browser errors were reported during those checks. Captures are
 in ignored `output/vr/`; the emulator is in ignored `.scratch/vr/`.
 
-This has **not been tested in a physical Quest 3**. Headset comfort, controller
-behavior, text readability, sustained frame timing and performance in larger
-missions remain unverified. Controller haptics and a full in-headset settings
-menu are not implemented; configure ordinary settings before entering VR.
+The first user Quest 3 trial found sky flicker, unwanted finite-glass HUD
+perspective and physical walking/leaning. Buffer retention alone did not resolve
+the flicker. A whole-image spherical HUD lost text clarity; individual glyph
+billboards improved readability but introduced inconsistent text perspective.
+The current native HUD uses continuous conformal projection (pause label **P4**),
+with direct per-eye SDF text, and the sky uses the shared graphics context.
+These render in the emulator without browser errors, but **current Quest visual
+acceptance is pending**. Prior reports of legibility do not approve the latest
+projection or establish that flicker is fixed. Headset comfort, sustained frame
+timing and performance in larger missions remain unverified. Controller haptics
+and a full in-headset settings menu are not implemented; configure ordinary
+settings before entering VR.
 
 Desktop screen-space shield refraction, work-light shadow passes and the special
 Ellis multi-chart compositor are bypassed in XR. World geometry and additive

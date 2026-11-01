@@ -208,6 +208,7 @@
             return false;
         });
         var skybox = DW.flightSkybox.create(host);
+        /** @type {ReturnType<typeof DW.flightSkybox.create>|null} */var xrSkybox=null;
         var shieldVisible=0,shieldWaves=0,shieldVisibleWave=false;
         var shieldParams=new URLSearchParams(typeof location==='undefined'?'':location.search),ownShield=shieldParams.get('shields')==='own',shieldDefault=!['own','whole'].includes(shieldParams.get('shields')||''),shieldEnabled=shieldParams.get('shields')!=='off',shieldTracker=DW.flightShields?DW.flightShields.tracker():null;
         var shieldDegrees=shieldDefault||shieldParams.get('shieldUnits')==='angle'?.35:null,shieldGlow=true,shieldTime=0,shieldTest=-Infinity;
@@ -389,7 +390,12 @@
                 if(ownShield&&shieldPreview!==null)discs=shieldPreview.length?[{box:[0,0,1,1],waves:shieldPreview,depth:0,own:true}]:[];
                 discs.forEach(function(d){if(shieldDegrees!==null)d.degrees=shieldDegrees;d.glow=shieldGlow;});shieldVisibleWave=discs.some(function(d){return d.box[3]>.08&&d.waves.some(function(age,i){return i%4===3&&age>=.2&&age<.8;});});shieldVisible=discs.length+defaultGlow.length;shieldVisibleWave=shieldVisibleWave||defaultGlow.some(function(b){return b.vertices.length>0;});shieldWaves=defaultGlow.reduce(function(n,b){return n+(b.shieldWaves||0);},0)+discs.reduce(function(sum,d){return sum+d.waves.length/4;},0);scene.setStudyShields(shieldEnabled&&comparison.actors&&comparison.mode!=='empty'?discs:[],shieldEnabled&&skyCanvas instanceof HTMLCanvasElement?skyCanvas:null);}
             var endGpu=gpuTimer?gpuTimer():null;
-            if(immersive&&vr){var skySource=host.querySelector('canvas.flight-skybox');if(skySource instanceof HTMLCanvasElement)vr.background(skySource,1/Math.tan(140*Math.PI/360),host.clientWidth/host.clientHeight);}
+            if(immersive&&vr)vr.setSkyRenderer(function(context,eye){
+                if(!xrSkybox)xrSkybox=DW.flightSkybox.create(host,{context:context,cueControls:false});
+                xrSkybox.setFrameState(skybox.getFrameState());
+                xrSkybox.renderEye(Object.assign({},state,{eye:state.eye.map(function(x,i){return x+eye.offset[i];}),right:eye.right,up:eye.up,back:eye.back}),eye,
+                    comparison.mode==='empty'||!!(environment&&environment.emptySky),elapsed,motionOpacity,arrival);
+            });
             try{scene.render(world, 1, 0, elapsed);}finally{if(endGpu)endGpu();}
         }
         function renderStats() {

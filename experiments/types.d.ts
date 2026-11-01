@@ -3,6 +3,7 @@ export type FiringSolution={direction:number[];distance:number;time:number;point
 export type JadeSystem={planetRadiusKm:number;planetMassKg:number;planeNormal:number[];observer:number[];frame:number[][];moons:{name:string;diameterKm:number;orbitKm:number;phaseDeg:number;position:number[]}[]};
 export type TargetStatus = {id: string; shield: number; hull: number; shieldTrail: number; hullTrail: number; shieldAge: number; hullAge: number; flash: number; time: number};
 export type ImpactCueSnapshot = {from:number;to:number;blend:number;stage:string;transitioning:boolean;queued:number;flashAge:number};
+export type SkyFrameState = {style:number;exposure:number;impactTime:number;impactMotion:number;gasTime:number;cueMode:boolean;cue:ImpactCueSnapshot};
 import type { Asteroid, Ship, World, DriftworksNamespace } from '../src/types';
 export type FlightMission = {
     version:1; id:string;
@@ -945,7 +946,11 @@ export type ExperimentModules = {
             x: number;
             y: number;
         } | null;
-        create: (host: HTMLElement, config?:{style?:number;fov?:number;cueControls?:boolean;sources?:import('../src/types').SkyCameraSource[];optics?:boolean}) => {
+        create: (host: HTMLElement, config?:{style?:number;fov?:number;cueControls?:boolean;sources?:import('../src/types').SkyCameraSource[];optics?:boolean;preserveDrawingBuffer?:boolean;styleControls?:boolean;context?:WebGL2RenderingContext}) => {
+            getStyle:()=>number;
+            getFrameState:()=>SkyFrameState;
+            setFrameState:(state:SkyFrameState)=>void;
+            renderEye:(pose:Pose,eye:import('./flight-vr-types').SkyEye,empty:boolean,elapsed?:number,motionOpacity?:number,arrival?:{position:Vector;radius:number}|null)=>void;
             setFov:(degrees:number)=>void;
             cueImpact:(stage:string|number,seconds?:number)=>boolean;
             resetImpact:()=>void;
@@ -1263,7 +1268,7 @@ export type ElementsGetter = <K extends keyof Elements>(id: K) => Elements[K];
 export type VoiceNumberKey = Exclude<keyof Voice, "compactWords" | "emotion">;
 declare module '../src/types' {
     interface DriftworksNamespace extends Partial<ExperimentModules> {
-        gpuUi?: {create:(host:HTMLElement)=>import('./gpu-ui-types').GpuUi;color:(value:string|CanvasGradient|CanvasPattern)=>number[]};
+        gpuUi?: {create:(host:HTMLElement,options?:{preserveDrawingBuffer?:boolean;nativeOnly?:boolean})=>import('./gpu-ui-types').GpuUi;frame:(canvas:HTMLCanvasElement)=>import('./gpu-ui-types').NativeFrame|undefined;color:(value:string|CanvasGradient|CanvasPattern)=>number[]};
         aegisFlightAsset?: AegisFlightAsset;
         hyperbolicBattle?:{create:()=>AegisFlightRig};
         aegisSim?:{create:(options?:AegisRigOptions)=>AegisSimulation};

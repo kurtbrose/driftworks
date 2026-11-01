@@ -393,7 +393,9 @@
                 telemetry.textContent=((state.region||0)?'RIME':'ASTEROID RANGE')+' REGION / '+Math.round(mouthDistance*(view.distanceScale||1))+' m TO THROAT\n'+guns.fired+' SHOTS / '+guns.hits+' HITS';
             }
             var w = host.clientWidth, h = host.clientHeight;
-            gpu.begin(w, h);
+            var immersive=!!(DW.flightVr&&DW.flightVr.forHost(host)?.active());
+            if(immersive){w=Math.max(800,Math.min(1120,w/Math.max(1,h)*600));h=600;}
+            gpu.begin(w, h,immersive?14:0);
             var guide=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes'));
             if((!guide||guide.checked)&&!combat.dead&&!document.body.classList.contains('watch-chase')) {
                 var ahead=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-lanes-ahead'));
@@ -438,7 +440,7 @@
                 get('speed-value').textContent=String(Math.round(speed*speedScale));
                 get('thrust-value').textContent='THRUST '+Math.round(state.throttle*100)+'%';
                 get('thrust-meter').value=Math.abs(state.throttle);
-                instruments(view,undefined,w,h);gpu.end();return;
+                instruments(view,undefined,w,h);gpu.end(immersive);return;
             }
             var chase = document.body.classList.contains('watch-chase');
             if (!paused && view.showMouseStick) {
@@ -667,10 +669,10 @@
             }
             // Chase-camera projection differs from the pilot's sight line. Keep
             // instruments while suppressing pilot-relative markers and radar.
-            if (chase) gpu.begin(w, h);
+            if (chase) gpu.begin(w, h,immersive?14:0);
             instruments(view, selected, w, h);
             if (!chase && targetBearing !== null) paintTargetBearing(bearingHud, w, h, targetBearing);
-            gpu.end();
+            gpu.end(immersive);
         }
         /** @param {HudView} view @param {import('./types').Craft | undefined} selected @param {number} w @param {number} h */
         function instruments(view, selected, w, h) {

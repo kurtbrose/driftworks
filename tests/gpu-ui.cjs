@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const resources = [], frames = [], listeners = {};
+let rendererOptions;
 class Resource {
   constructor() { this.disposals=0; resources.push(this); }
   dispose() { this.disposals++; }
@@ -15,7 +16,7 @@ class Geometry extends Resource {
   setDrawRange(start, count) { this.count=count; }
 }
 class Renderer extends Resource {
-  constructor(options) { super(); this.canvas=options.canvas; assert.equal(options.antialias,true); }
+  constructor(options) { super();rendererOptions=options; this.canvas=options.canvas; assert.equal(options.antialias,true); }
   setClearColor() {}
   setSize(w,h) { this.canvas.width=w;this.canvas.height=h; }
   render(scene) {
@@ -36,7 +37,8 @@ const context = {fillText(){},getImageData(){return {data:new Uint8ClampedArray(
 const document = {createElement(){return {setAttribute(){},getContext(){return context;},remove(){this.removed=true;}};}};
 const window = {THREE,Driftworks:{},devicePixelRatio:1.5,addEventListener(name,cb){listeners[name]=cb;}};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../experiments/gpu-ui.js'),'utf8'),{window,document});
-const ui=window.Driftworks.gpuUi.create({appendChild(){}}),p=ui.painter;
+const ui=window.Driftworks.gpuUi.create({appendChild(){}},{preserveDrawingBuffer:true}),p=ui.painter;
+assert.equal(rendererOptions.preserveDrawingBuffer,true,'XR HUD source must survive browser compositing before texture upload');
 ui.begin(800,600);
 assert.equal(ui.canvas.width,1200);assert.equal(ui.canvas.height,900);
 p.fillStyle='#80c0ff80';p.globalAlpha=.5;p.save();p.translate(100,40);p.rotate(Math.PI/2);p.fillRect(0,0,20,10);p.restore();
@@ -106,3 +108,10 @@ for(let i=0;i<ribbon.count;i++){assert.equal(rv(i)[6],5);assert.ok(Math.abs(rv(i
 assert.deepEqual(rv(1),rv(6),'First shared lower join is exactly coincident');assert.deepEqual(rv(5),rv(8),'First shared upper join is exactly coincident');
 assert.ok(ribbon.material.fragmentShader.includes('abs(p.y) - s.z * .5'),'Continuous edge coverage replaces per-segment rounded-cap coverage');joined.dispose();
 console.log('PASS joined HUD strokes: shared ribbon edges, no capsule overlap, uniform alpha and analytic edge/cap antialiasing');
+
+const renderedCount=frames.length,nativeUi=window.Driftworks.gpuUi.create({appendChild(){}},{nativeOnly:true});
+nativeUi.begin(1000,600);nativeUi.painter.font='22px monospace';nativeUi.painter.fillText('VR TEXT',40,100);nativeUi.end(true);
+assert.equal(frames.length,renderedCount,'A native HUD batch must not rasterize into a separate canvas');
+const nativeBatch=window.Driftworks.gpuUi.frame(nativeUi.canvas);assert(nativeBatch);assert.equal(nativeBatch.height,600);
+nativeUi.dispose();assert.equal(window.Driftworks.gpuUi.frame(nativeUi.canvas),undefined);
+console.log('PASS native HUD batches: no raster pass, retained geometry/SDF data and lifecycle');

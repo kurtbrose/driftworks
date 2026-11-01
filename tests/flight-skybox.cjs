@@ -4,19 +4,22 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const shaders = [], values = {}, handlers = {}, mipmaps = [];
 const gl = new Proxy({
+  VERTEX_SHADER:35633,FRAGMENT_SHADER:35632,
   createShader: () => ({}), createProgram: () => ({}), createBuffer: () => ({}), createTexture: () => ({}),
   getShaderParameter: () => true, getProgramParameter: () => true,
   shaderSource: (_shader, source) => shaders.push(source),
   getUniformLocation: (_program, name) => name,
   uniform1f: (name, value) => { values[name] = value; }, getAttribLocation: () => 0,
   uniform4fv: (name,value) => {values[name]=Array.from(value);},
+  uniform2f:(name,x,y)=>{values[name]=[x,y];},viewport:(...viewport)=>{values.viewport=viewport;},
   uniform3fv: (name,value) => {values[name]=Array.from(value);},
   generateMipmap: target => mipmaps.push(target)
 }, { get: (target, key) => key in target ? target[key] : () => {} });
 const selector = {value: '', children: [], appendChild(option) { this.children.push(option); }, addEventListener(name, fn) { handlers[name] = fn; }};
 const brightness = {value: '1', addEventListener(name, fn) { this[name] = fn; }};
 const quality = {value: '1.5', addEventListener(name, fn) { this[name] = fn; }};
-const canvas = {dataset:{},width: 0, height: 0, setAttribute() {}, getContext: () => gl};
+let skyContextOptions;
+const canvas = {dataset:{},width: 0, height: 0, setAttribute() {}, getContext: (_type,options) => {skyContextOptions=options;return gl;}};
 let stored = '3';
 const context = {window: {Driftworks: {}, devicePixelRatio: 2, localStorage: {getItem: () => stored, setItem: (_key, value) => { stored = value; }}}, document: {getElementById: id => ({'skybox-style': selector, 'skybox-brightness': brightness, 'skybox-quality': quality}[id] || null), createElement: name => name === 'canvas' ? canvas : {}}, Image: class {}, Float32Array};
 context.URL=URL; context.document.baseURI='http://localhost:8000/experiments/flight.html';
@@ -25,7 +28,8 @@ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../src/
 vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/flight-missions.js'),'utf8'),context);
 vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../experiments/mission-ohio.js'),'utf8'),context);
 vm.runInNewContext(['src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js'].map(file=>fs.readFileSync(require('node:path').join(__dirname,'..',file),'utf8')).join('\n'), context);
-const sky = context.window.Driftworks.flightSkybox.create({clientWidth: 800, clientHeight: 600, prepend() {}});
+const sky = context.window.Driftworks.flightSkybox.create({clientWidth: 800, clientHeight: 600, prepend() {}},{preserveDrawingBuffer:true,styleControls:true});
+assert.equal(skyContextOptions.preserveDrawingBuffer,true,'XR sky sampling must retain the completed WebGL image');
 const pose = {right: [1,0,0], up: [0,0,1], back: [0,-1,0]};
 assert.equal(selector.children.length, 13);
 assert.equal(selector.value, '3', 'restores the selected flight sky');
@@ -280,3 +284,16 @@ const turned={...initialPose,right:initialPose.back,back:initialPose.right.map(v
 assert.notDeepEqual(backgroundInputs(turned),initialInputs,'Camera rotation still changes the sky projection');
 assert.deepEqual(backgroundInputs(initialPose),initialInputs,'Returning to the original heading restores the sky projection');
 console.log('PASS hyperbolic sky: 60 seconds native afterburner, distant coordinates and chart boosts leave background sampling unchanged; rotation remains active');
+
+// Native XR draws use the world renderer's context and each eye's asymmetric projection.
+const originalSize=[canvas.width,canvas.height],beforeXRShaders=shaders.length;
+const nativeSky=context.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){throw Error('Native sky must not create an onscreen canvas');}},{context:gl,style:3,cueControls:false});
+const projection=[.9,0,0,0,0,1.2,0,0,.07,-.03,-1,-1,0,0,-.1,0];
+nativeSky.renderEye(pose,{right:pose.right,up:pose.up,back:pose.back,offset:[0,0,0],projection,viewport:{x:720,y:0,width:720,height:900}},false);
+assert.deepEqual(values.viewport,[720,0,720,900]);assert.deepEqual(values.xrProjectionCenter,[.07,-.03]);
+assert.equal(values.focal,1.2);assert(Math.abs(values.aspect-1.2/.9)<1e-12);assert.deepEqual([canvas.width,canvas.height],originalSize);
+const nativeShaders=shaders.slice(beforeXRShaders);assert(nativeShaders.every(source=>source.startsWith('#version 300 es')));
+assert(nativeShaders.some(source=>source.includes('out highp vec4 xrColor;')));
+assert(nativeShaders.some(source=>source.includes('gl_Position.xy-=xrProjectionCenter*gl_Position.w;')));
+assert(nativeShaders.some(source=>source.includes('(screen.x+xrProjectionCenter.x)')));
+console.log('PASS native XR sky: shared context, explicit eye viewport, asymmetric projection, GLSL 3 conversion and no source canvas resize');
