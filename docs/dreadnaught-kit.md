@@ -839,3 +839,44 @@ submitted 201 draws / 460,759 triangles. Submission medians ranged 3.4–3.6 ms
 before and 3.4–3.7 ms after; p95 ranged 4.2–4.4 ms before and 3.8–4.5 ms after.
 No new bottleneck was demonstrated. This checks the production rendering path;
 it does not establish a live-combat GPU or whole-game frame budget.
+
+## Standard-parts battle fleet exploration
+
+Open [the military fleet shipyard](../studies/aegis-modular-fleet.html) for eight
+capital configurations at the same metre scale: picket frigate, missile destroyer,
+fleet cruiser, escort carrier, battlecruiser, fleet carrier, arsenal dreadnaught,
+and command/support cruiser. The separate industrial study is preserved at
+[the civilian fleet review](../studies/industrial-fleet.html).
+
+This review uses the original procedural armor, prow, drive, turret and bridge
+language. `node tools/extract-aegis-kit.cjs` extracts those primitives from the
+original authoring page into `studies/aegis-module-primitives.js`; `--check`
+rejects stale copies. No source is fetched or evaluated at runtime. Import-map
+aliases ensure the section builder and viewer share one primitive module.
+
+`studies/aegis-modular-kit.js` adds four proposed 144 m mission sections: missile
+magazine, flight operations with external control galleries, reactor/cooling
+wings, and sensor cheeks. Original armored, through-hangar and utility sections
+remain available. Each recipe defines the hull sequence and independent upper
+and lower socket fits. The bridge uses a common stern-terminal mount, keeping
+mission-section roofs clear of its footprint. Select a ship to swap individual sections and attachments,
+reset its recipe, or separate the spine modules. Whole-fleet and section-bench
+views are labeled and retain a common physical scale; individual views refit the
+camera. Authoring geometry retains its exact nine metres per unit conversion.
+
+These are offline geometry concepts, not flight-ready assets. Static batching
+preserves the editable assembly and turret pivots in the source tree, while the
+review copy freezes their current pose. Production textures, shield envelopes,
+weapons/magazines, thermal rules, collision, hangar launch contracts and actual
+flight-scene performance still require integration and validation. The new
+external cooling/sensor geometry exceeds the original hull envelope. Existing
+production rigs, physical dimensions and gameplay remain unchanged.
+
+Visual inspection for this pass covered the labeled eight-ship overview, all
+seven section types on the bench, the missile destroyer assembled and separated,
+and the fleet carrier in three-quarter and top views. Browser interaction also
+verified a destroyer section swap and the resulting custom manifest. Captures
+are under `output/aegis-modular/` (ignored). Individual undersides, every custom
+combination, and runtime behavior remain unreviewed. Reserved mission hardware
+sockets cannot receive additional attachments; other combinations are geometry
+proposals rather than validated combat/engineering loadouts.

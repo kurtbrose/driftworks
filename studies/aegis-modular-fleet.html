@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aegis / standard-module battle fleet</title>
+<style>body{margin:0;background:#101922;color:#e3e6df;font:14px system-ui;overflow:hidden}aside{position:absolute;left:18px;top:18px;bottom:18px;overflow:auto;width:280px;z-index:2;background:#17232eed;padding:18px;border:1px solid #526575}h1{font-size:29px;margin:9px 0}p{line-height:1.45;color:#b7c7d1}select,button{background:#283d4e;color:#fff;border:1px solid #748995;padding:9px;margin:4px 0;width:100%}canvas{display:block;margin-left:345px}small{color:#ddbb74}#stats{font:12px monospace}a{color:#ddbb74}.label{position:absolute;pointer-events:none;font:12px system-ui;color:#d5e1e9;text-shadow:0 2px 3px #000;white-space:nowrap;transform:translate(-50%,0)}#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}@media(max-width:700px){aside{width:190px;padding:10px;left:6px}canvas{margin-left:222px}h1{font-size:23px}}</style>
+<script src="../src/asset-versions.js?v=1ca48f8b93f6"></script>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d","aegis-parts":"../studies/aegis-module-primitives.js?v=dee61f101702","aegis-kit":"../studies/aegis-modular-kit.js?v=ec95ae2d154d"}}</script></head><body>
+<aside><small>AEGIS / STANDARD PARTS STUDY</small><h1>One shipyard.<br>A battle fleet.</h1><p>Eight military capital configurations, all at the same metre scale. Familiar armor, prows, drives and gun mounts; four proposed mission sections.</p><select id="model" aria-label="Fleet or capital ship"></select><button id="view">View from above</button><button id="parts">Show standard section bench</button><label><input id="explode" type="checkbox"> Separate spine modules</label><p id="note"></p><div id="manifest"></div><div id="stats"></div><p>Drag to orbit · Wheel to zoom · Right drag to pan</p><p>Standalone geometry proposals. Production textures, weapons, collision, launch behavior and performance are separate integration work.</p><p><a href="../experiments/dreadnaught-kit.html">Original capital ship builder</a><br><a href="industrial-fleet.html">Preserved industrial fleet study</a></p></aside><div id="labels"></div>
+<script type="module">
+import * as T from 'three';
+import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js?v=b97879c74817';
+import {fleet,vessel,partsBench,recipes,labels,hullTypes,socketChoices,batchStatic,disposeBatch} from 'aegis-kit';
+const $=id=>document.getElementById(id),scene=new T.Scene();scene.background=new T.Color(0x101922);
+const left=()=>innerWidth<700?222:345,viewport=()=>({width:Math.max(100,innerWidth-left()),height:innerHeight});
+const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(viewport().width,viewport().height);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;document.body.append(renderer.domElement);
+const camera=new T.PerspectiveCamera(35,viewport().width/viewport().height,1,50000),controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
+scene.add(new T.HemisphereLight(0xc3d2df,0x39322a,1.8));for(const [p,c,intensity] of [[[0,200,100],0xffe2b1,3.4],[[-100,50,-100],0xabcfe7,1.7],[[0,-100,30],0xb3c5cb,.8]]){const l=new T.DirectionalLight(c,intensity);l.position.set(...p);scene.add(l);}
+let source,display,top=false,parts=false,anchors=[],overrides={};
+$('model').innerHTML='<option value="fleet">Whole battle fleet / same scale</option>'+recipes.map((r,i)=>`<option value="${i}">${r.name}</option>`).join('');
+function show(){
+ if(display){scene.remove(display);disposeBatch(display);}const value=$('model').value;
+ $('explode').disabled=parts||value==='fleet';$('view').textContent=top?'View in 3/4':'View from above';$('parts').textContent=parts?'Return to vessels':'Show standard section bench';
+ source=parts?partsBench():value==='fleet'?fleet():vessel(Number(value),{...overrides[value],separation:$('explode').checked?6:0});display=batchStatic(source);scene.add(display);
+ const bounds=new T.Box3().setFromObject(display),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
+ const dir=new T.Vector3(top?0:-.45,top?1:.8,top?.001:1).normalize();camera.position.copy(center).addScaledVector(dir,size.length()*2);camera.lookAt(center);camera.updateMatrixWorld(true);
+ // Fit projected corners, so a narrow viewport still includes the whole assembly.
+ const inverse=camera.matrixWorldInverse;let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+ for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){const p=new T.Vector3(x,y,z).applyMatrix4(inverse);minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);}
+ const fov=Math.tan(T.MathUtils.degToRad(camera.fov/2)),distance=Math.max((maxY-minY)/2/fov,(maxX-minX)/2/fov/camera.aspect)*1.18+size.length()*.3;
+ controls.target.copy(center);camera.position.copy(center).addScaledVector(dir,distance);camera.near=Math.max(1,distance/10000);camera.far=distance*8;camera.updateProjectionMatrix();controls.update();
+ $('note').textContent=parts?'Seven 144 m sections. New proposals: missile magazine, flight-control galleries, reactor/cooling wings and sensor cheeks. Existing armor, through hangar and utility frames remain interchangeable.':value==='fleet'?'A mixed screen and battle line: different lengths, mission rhythms, upper/lower fits and drive banks. Ships retain their real relative size.':overrides[value]?'Custom configuration based on '+recipes[Number(value)].name+'. Mission hardware reserves occupied sockets; remaining upper and lower mounts are interchangeable.':recipes[Number(value)].note;
+ $('stats').textContent=parts?'144 m standard hull pitch':value==='fleet'?'8 classes · common scale':`${recipes[Number(value)].modules.length} mid-hulls · ${source.userData.nominalLengthMetres} m nominal length`;
+ if(!parts&&value!=='fleet')$('stats').textContent+='\n'+source.userData.manifest.map(t=>labels[t]).join(' / ');
+ $('manifest').replaceChildren();
+ if(!parts&&value!=='fleet'){
+  const r=recipes[Number(value)],custom=overrides[value]||r;
+  source.userData.manifest.forEach((type,i)=>{
+   const row=document.createElement('div');row.style.borderTop='1px solid #526575';
+   const caption=document.createElement('small');caption.textContent='SECTION '+(i+1)+' / BOW TO STERN';row.append(caption);
+   for(const [field,title,choices] of [['modules','Hull',hullTypes],['upper','Upper socket',socketChoices(type,'upper')],['lower','Lower socket',socketChoices(type,'lower')]]){
+    const select=document.createElement('select');select.setAttribute('aria-label','Section '+(i+1)+' '+title);
+    choices.forEach(t=>{const option=document.createElement('option');option.value=t;option.textContent=field==='modules'?labels[t]:title+' / '+t;select.append(option);});select.value=custom[field][i];
+    select.onchange=()=>{overrides[value]||={modules:r.modules.slice(),upper:r.upper.slice(),lower:r.lower.slice()};overrides[value][field][i]=select.value;if(field==='modules')for(const bank of ['upper','lower'])if(!socketChoices(select.value,bank).includes(overrides[value][bank][i]))overrides[value][bank][i]='none';show();};row.append(select);
+   }
+   $('manifest').append(row);
+  });
+  const reset=document.createElement('button');reset.textContent='Reset this recipe';reset.onclick=()=>{delete overrides[value];show();};$('manifest').append(reset);
+ }
+ $('labels').replaceChildren();anchors=[];
+ if(parts||value==='fleet')source.children.forEach((child,i)=>{const b=new T.Box3().setFromObject(child),p=b.getCenter(new T.Vector3());p.y=b.min.y-25;const element=document.createElement('div');element.className='label';element.textContent=parts?labels[hullTypes[i]]:recipes[i].name;$('labels').append(element);anchors.push({p,element});});
+}
+$('model').onchange=()=>{parts=false;show();};$('view').onclick=()=>{top=!top;show();};$('parts').onclick=()=>{parts=!parts;show();};$('explode').onchange=show;
+show();addEventListener('resize',()=>{renderer.setSize(viewport().width,viewport().height);camera.aspect=viewport().width/viewport().height;show();});
+renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);for(const {p,element} of anchors){const v=p.clone().project(camera);element.style.left=left()+(v.x*.5+.5)*viewport().width+'px';element.style.top=(-v.y*.5+.5)*viewport().height+12+'px';element.hidden=v.z>1||v.z< -1;}});
+</script></body></html>

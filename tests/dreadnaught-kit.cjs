@@ -105,6 +105,36 @@ const {pathToFileURL} = require('node:url');
       fs.writeFileSync(path.join(dir,`aegis-${preset}.obj`),obj);
     }
   }
+  // The fleet exploration shares original primitives, at the same 9 m/unit scale.
+  require('node:child_process').execFileSync(process.execPath,[path.join(root,'tools/extract-aegis-kit.cjs'),'--check']);
+  const fleetScope=vm.createContext({THREE:real,T:real});
+  const primitiveSource=fs.readFileSync(path.join(root,'studies/aegis-module-primitives.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export .*;$/gm,'');
+  vm.runInContext(primitiveSource,fleetScope);
+  const fleetSource=fs.readFileSync(path.join(root,'studies/aegis-modular-kit.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
+  vm.runInContext(fleetSource+'\nglobalThis.kit={hullTypes,recipes,section,vessel,fleet,batchStatic,disposeBatch};',fleetScope);
+  const kit=fleetScope.kit;
+  const triangleCount=obj=>{let count=0;obj.traverse(o=>{if(o.isMesh)count+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;});return count;};
+  for(let i=0;i<kit.recipes.length;i++){
+    const obj=kit.vessel(i),recipe=kit.recipes[i],bounds=new real.Box3().setFromObject(obj,true);
+    assert.equal(obj.scale.x,9);assert.equal(obj.children.length,recipe.modules.length+2);
+    assert(obj.children.at(-1).getObjectByName('command_citadel'),'command bridge belongs to the common stern terminal');
+    assert(obj.children.slice(1,-1).every(o=>!o.getObjectByName('command_citadel')),'mission hardware keeps its full section roof');
+    assert.deepEqual(Array.from(obj.userData.manifest),Array.from(recipe.modules));
+    for(let j=2;j<obj.children.length-1;j++)assert.equal((obj.children[j].position.x-obj.children[j-1].position.x)*9,144,'hull coupling pitch remains 144 metres');
+    obj.traverse(o=>{if(o.isMesh)assert([...o.geometry.attributes.position.array].every(Number.isFinite));});
+    const batch=kit.batchStatic(obj),actual=new real.Box3().setFromObject(batch,true);
+    assert(bounds.min.distanceTo(actual.min)<.001&&bounds.max.distanceTo(actual.max)<.001,'batch keeps metre scale and bounds');
+    assert.equal(triangleCount(batch),triangleCount(obj));assert(batch.children.length<=9);kit.disposeBatch(batch);
+  }
+  const operations=kit.section('operations');operations.updateMatrixWorld(true);
+  assert.equal(new real.Raycaster(new real.Vector3(0,0,-20),new real.Vector3(0,0,1)).intersectObject(operations,true).length,0,'control galleries preserve the through hangar');
+  const custom=kit.vessel(0,{modules:['operations','missile'],upper:['none','none'],lower:['none','none'],separation:6});
+  assert.deepEqual(Array.from(custom.userData.manifest),['operations','missile']);
+  assert(custom.children[2].position.x-custom.children[1].position.x>16,'exploded view separates modules');
+  assert.equal(kit.recipes[0].modules[0],'sensor','custom assemblies do not mutate presets');
+  assert.throws(()=>kit.vessel(0,{modules:['hangar']}));assert.throws(()=>kit.vessel(0,{upper:['wrong','none']}));assert.throws(()=>kit.section('unknown'));assert.throws(()=>kit.vessel(0,{modules:['missile','standard'],upper:['turret','turret']}));
+  assert.equal(kit.fleet().children.length,8);
+  console.log('PASS Aegis fleet study: shared source freshness, physical pitch, swappable manifests, through passage and batching');
   console.log('PASS Aegis kit: outward armor, open couplings, viewport framing, two attachment banks, shared true-scale fighters and stable ship-only OBJ exports');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
