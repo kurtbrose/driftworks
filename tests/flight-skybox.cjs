@@ -9,6 +9,8 @@ const gl = new Proxy({
   shaderSource: (_shader, source) => shaders.push(source),
   getUniformLocation: (_program, name) => name,
   uniform1f: (name, value) => { values[name] = value; }, getAttribLocation: () => 0,
+  uniform4fv: (name,value) => {values[name]=Array.from(value);},
+  uniform3fv: (name,value) => {values[name]=Array.from(value);},
   generateMipmap: target => mipmaps.push(target)
 }, { get: (target, key) => key in target ? target[key] : () => {} });
 const selector = {value: '', children: [], appendChild(option) { this.children.push(option); }, addEventListener(name, fn) { handlers[name] = fn; }};
@@ -49,6 +51,12 @@ assert.equal(values.style, 0, 'invalid choices recover to the original sky');
 sky.render(pose, 1, true);
 assert.equal(sky.getRenderStats().points, 0, 'empty comparison still hides the sky');
 console.log('PASS flight skybox: selection, persistence, native resolution and fixed star sizes');
+context.window.Driftworks.sim={METERS_PER_UNIT:20};
+sky.render({...pose,eye:[10,20,30]},1,false,0,0,{position:[12,22,32],radius:210});
+assert.deepEqual(values.arrivalMouth,[240,440,640,210]);assert.deepEqual(values.arrivalEye,[200,400,600]);
+sky.render(pose,1,false);assert.deepEqual(values.arrivalMouth,[0,0,0,0],'Expired mouths clear their lens uniforms');
+console.log('PASS local arrival lens: metre conversion, translated observer and expired-mouth reset');
+
 
 async function testHeroComposition() {
   const layout=JSON.parse(fs.readFileSync(require('node:path').join(__dirname,'../assets/backgrounds/hero-layout-v1.json'),'utf8'));

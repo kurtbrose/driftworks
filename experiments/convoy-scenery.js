@@ -49,9 +49,32 @@
     DW.convoyScenery={createArrivalFleet:createArrivalFleet,arrivalPreparationMs:0,preview:function(name){return models[name]||[];},visible:true,ready:ready,texture:texture,install:install,effects:function(combat,view){
         if(!combat.convoy||!this.visible)return [];
         var state=combat.convoy,y=Math.min(state.destinationY,state.elapsed*state.speedMps/U);
-        return state.ships.filter(function(s){return s.hull>0;}).map(function(s,index){
+        var effects=state.ships.filter(function(s){return s.hull>0;}).map(function(s,index){
             return DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:[s.slot[0],s.slot[1]+y,s.slot[2]],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,y<state.destinationY?state.speedMps:0,0],throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);
         });
+        const portal=state.arrivalPortal;
+        if(portal&&combat.time<portal.closesAt){
+            var age=combat.time-portal.opensAt,growth=Math.min(1,age/3,(portal.closesAt-combat.time)/2),radius=210*Math.max(0,growth)/U;
+            /** @type {number[]} */var vertices=[];
+            // Tangent silhouette of the spherical mouth, rather than a debug globe.
+            var normal=view.eye.map(function(v,k){return v-portal.position[k];}),distance=Math.hypot.apply(null,normal);
+            if(distance>radius&&radius>0){
+                normal=normal.map(function(v){return v/distance;});
+                var axis=Math.abs(normal[2])<.9?[0,0,1]:[0,1,0];
+                var right=[normal[1]*axis[2]-normal[2]*axis[1],normal[2]*axis[0]-normal[0]*axis[2],normal[0]*axis[1]-normal[1]*axis[0]],length=Math.hypot.apply(null,right);
+                right=right.map(function(v){return v/length;});
+                var up=[normal[1]*right[2]-normal[2]*right[1],normal[2]*right[0]-normal[0]*right[2],normal[0]*right[1]-normal[1]*right[0]],rim=radius*Math.sqrt(1-radius*radius/(distance*distance));
+                for(var i=0;i<96;i++){
+                    var a=i*Math.PI/48,b=(i+1)*Math.PI/48;
+                    [[a,-1],[b,-1],[b,1],[a,-1],[b,1],[a,1]].forEach(function(pair){
+                        var angle=pair[0],r=rim*(1+pair[1]*.018),point=portal.position.map(function(v,k){return v+normal[k]*radius*radius/distance+(right[k]*Math.cos(angle)+up[k]*Math.sin(angle))*r;});
+                        vertices.push(point[0],point[1],point[2],pair[1],0,Math.min(1,age));
+                    });
+                }
+            }
+            effects.push({vertices:new Float32Array(vertices),color:[.3,.12,1],shieldGlow:true});
+        }
+        return effects;
     },geometry:function(combat){
         if(!combat.convoy||!this.visible)return [];
         var state=combat.convoy,key=state.ships.map(function(s){return s.hull>0?'1':'0';}).join(''),cached=cache.get(state);

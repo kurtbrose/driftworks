@@ -26,7 +26,7 @@ const poke=fixture();poke.step(60);poke.step(18);const reserve=poke.members(1)[0
 // Sustained overload relieves pressure while enemies are alive; a brief spike does not.
 const hurt=fixture();hurt.step(60);const striker=hurt.members(0)[0],victim=hurt.s.ships[24];striker.pose.eye=victim.position.map((v,k)=>v+(k===1?-500/hurt.U:0));striker.targetId=victim.id;striker.fire=true;striker.guns.fired=1;hurt.c.player.hp*=.3;victim.hull-=600;hurt.step(3);assert.notEqual(hurt.s.raids[0].phase,'withdraw');hurt.step(3);assert.equal(hurt.s.raids[0].phase,'withdraw');assert(hurt.members(0).every(e=>e.hp>0));
 // Reports gate a later encounter; the finite budget and arrival cutoff remain intact.
-const clean=fixture();clean.step(60);clean.members(0).forEach(e=>{e.hp=0;});clean.step(1);const recovery=clean.s.director.nextRaidAt-clean.s.elapsed;assert(recovery>=45&&recovery<=85);clean.s.radio.phase='damage-report';clean.step(recovery);assert.equal(clean.s.director.raids,1);clean.s.radio.phase='cruise';clean.step(0);assert.equal(clean.s.director.raids,2);
+const clean=fixture();clean.step(60);clean.members(0).forEach(e=>{e.hp=0;});clean.step(1);const recovery=clean.s.director.nextRaidAt-clean.s.elapsed;assert(recovery>=45&&recovery<=85);clean.s.radio.phase='damage-report';clean.step(recovery);assert.equal(clean.s.director.raids,1);clean.s.radio.phase='cruise';clean.step(0);assert(clean.s.arrivalPortal);assert.equal(clean.s.director.raids,1);clean.step(4);assert.equal(clean.s.director.raids,2);
 clean.members(1).forEach(e=>{e.hp=0;});clean.step(1);clean.s.elapsed=211;clean.s.director.nextRaidAt=211;clean.step(0);assert.equal(clean.s.director.raids,2);clean.s.elapsed=300;clean.step(0);assert(clean.s.complete);assert.equal(clean.s.director.waypoint,null);
 const arrival=fixture();arrival.step(60);arrival.s.elapsed=300;arrival.step(0);assert(!arrival.s.complete);assert(arrival.s.director.waypoint);assert.equal(arrival.s.arrivalFleet.length,2);assert(arrival.s.arrivalFleet.every(ship=>Math.abs(ship.position[0]*arrival.U)>1000));
 const late=fixture();late.step(60);late.s.elapsed=300;late.members(0).slice(1).forEach(e=>{e.hp=0;});late.step(0);const leaving=late.members(0)[0];leaving.pose.eye=late.s.ships[24].position.map((v,k)=>v+(k===0?9000/late.U:0));late.step(4);assert(late.s.complete,'Withdrawal timers keep running after the route clock reaches arrival');assert(!late.c.enemies.includes(leaving));
@@ -43,3 +43,21 @@ const retreat=createFlight({mission:'convoy',seed:29,convoyBattlefield:false}),r
 const attackers=rc.enemies.filter(e=>e.team==='enemy'),escaping=attackers[0],departureStart=escaping.pose.eye.slice();attackers.slice(1).forEach(e=>{e.hp=0;});rc.enemies.filter(e=>e.team==='ally').forEach(e=>{e.hp=0;});retreat.advance(70,{stop:true});
 assert.equal(rc.convoy.director.withdrawn,1);assert(!rc.enemies.includes(escaping));assert.equal(rc.playerKills,0);assert(Math.hypot(...escaping.pose.eye.map((v,k)=>v-departureStart[k]))*retreat.DW.sim.METERS_PER_UNIT>2000,'Retreat covers physical distance before departure');
 console.log('PASS convoy tactics: independent wings, held reserves, gap commits, contested holds, live retreats, earned relief, overload response, player locks, pacing, arrival fleet and reset');
+
+// The arrival tool telegraphs a fixed location; no craft exists until the mouth opens.
+const gate=fixture();gate.step(60);gate.members(0).forEach(e=>e.hp=0);gate.step(1);
+const before=gate.c.enemies.length;assert(gate.f.DW.convoyMission.openReinforcementPortal(gate.c));
+const mouth=gate.s.arrivalPortal,location=mouth.position.slice();assert(!mouth.spawned);
+assert(!gate.f.DW.convoyMission.openReinforcementPortal(gate.c),'No overlapping mouths');
+gate.step(3.9);assert.equal(gate.c.enemies.length,before);assert.deepEqual(mouth.position,location);
+gate.c.targetLocked=true;gate.c.targetId='locked-contact';gate.step(.1);
+assert(mouth.spawned);assert.equal(gate.members(1).length,3);assert.equal(gate.c.targetId,'locked-contact');
+assert.deepEqual(gate.members(1)[0].pose.eye,location);assert(gate.members(1).every(e=>e.hp===e.maxHp));
+const unsafe=fixture();unsafe.step(60);unsafe.c.player.hp*=.4;assert(!unsafe.f.DW.convoyMission.openReinforcementPortal(unsafe.c));
+unsafe.c.player.hp=unsafe.c.player.maxHp;unsafe.s.director.pressure=.7;assert(!unsafe.f.DW.convoyMission.openReinforcementPortal(unsafe.c));
+unsafe.s.director.pressure=0;unsafe.s.elapsed=207;assert(!unsafe.f.DW.convoyMission.openReinforcementPortal(unsafe.c));
+
+const liveGate=fixture();liveGate.step(60);liveGate.c.player.pose.eye[0]+=5000/liveGate.U;
+assert(liveGate.f.DW.convoyMission.openReinforcementPortal(liveGate.c));liveGate.step(4);
+assert(liveGate.s.arrivalPortal.spawned,'A queued arrival completes even during an active interception');
+liveGate.f.reset();assert.equal(liveGate.f.snapshot().combat.convoy.arrivalPortal,undefined);

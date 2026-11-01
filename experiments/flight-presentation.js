@@ -377,7 +377,8 @@
             var motionStyle=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-guide-style'));
             var motionBrightness=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes-opacity'));
             var motionOpacity=regions.length>1&&!combat.dead&&!document.body.classList.contains('watch-chase')&&(!motionToggle||motionToggle.checked)&&(!motionStyle||motionStyle.value==='grid')?(motionBrightness?Number(motionBrightness.value)/100:.85):0;
-            skybox.render(state, comparison.scale, comparison.mode === 'empty'||!!(environment&&environment.emptySky),elapsed,motionOpacity);
+            var mouth=combat.convoy&&combat.convoy.arrivalPortal,arrival=mouth&&combat.time<mouth.closesAt?{position:mouth.position,radius:210*Math.max(0,Math.min(1,(combat.time-mouth.opensAt)/3,(mouth.closesAt-combat.time)/2))}:null;
+            skybox.render(state, comparison.scale, comparison.mode === 'empty'||!!(environment&&environment.emptySky),elapsed,motionOpacity,arrival);
             scene.sync(world);
             if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=defaultShieldDiscs||shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,ownShield);shieldTime=view.combat.time;
                 if(shieldTime<shieldTest)shieldTest=-Infinity;

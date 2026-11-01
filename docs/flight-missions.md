@@ -506,3 +506,23 @@ bottleneck was demonstrated. This frozen comparison excludes AI execution
 and does not measure GPU time or establish a live-combat frame budget.
 Live cockpit inspection also checked nearby crossing fighters, banking,
 projectiles, the wingmen breaking out of formation, and the left fighter loss.
+
+### Nearby reinforcement arrival tool
+
+`convoyMission.openReinforcementPortal(combat)` offers the director a localized
+reinforcement entrance. Later recovery encounters use it instead of a distant
+spawn. The first contact and held reserve retain their existing approach.
+The mouth stays fixed 1.1 km forward and 350 m to starboard of the player's
+pose when chosen. Placement rejects nearby cargo, reception hulls and fighters.
+Control announces the opening; a spherical violet energy outline grows over
+three seconds, and the ordinary three-fighter raid appears four seconds after
+the cue, then flies toward cargo using the existing physics and tactics.
+The outline collapses after thirteen seconds. The sky inside the mouth uses
+the existing thin-shell bridge's antipodal ray mapping, revealing a distorted
+remote starfield. This localized entrance does not permit player transit or
+use the full Ellis spacetime compositor.
+
+The tool spends the existing three-wing budget and rejects overlapping mouths,
+high pressure, a player below half hull, and late arrivals. Once telegraphed,
+an arrival completes at its fixed position, without moving existing actors or
+changing their durability or weapons. All timing uses active simulation time.

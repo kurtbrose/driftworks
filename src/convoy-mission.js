@@ -42,7 +42,9 @@
         s.raidStarted=true;
         var wave=s.director.raids++,wingId=s.raids.length,base=wave*3,packet=[4,0,1][wave],offset=[[2600,-1000,500],[-2600,900,650],[2100,1800,-700]][wave];
         if(reserve)offset=offset.map(function(v){return v*1.7;});
+        var portal=!reserve&&s.arrivalPortal&&!s.arrivalPortal.spawned?s.arrivalPortal:null;
         var objective=survivors.find(function(ship){return ship.packet===packet;})||survivors[0],origin=objective.position.map(function(v,k){return v+offset[k]/U;});
+        if(portal){origin=portal.position.slice();portal.spawned=true;offset=origin.map(function(v,k){return (v-objective.position[k])*U;});}
         var raid={id:wingId,phase:reserve?'hold':'approach',leaderId:'convoy-raider-'+(base+1),until:0,offset:offset,packet:objective.packet,createdAt:combat.time,committedAt:reserve?-1:combat.time,passes:0};
         s.raids.push(/** @type {import('../experiments/types').ConvoyRaid} */(raid));
         s.director.phase='contact';s.director.quietSince=-1;
@@ -63,6 +65,17 @@
         if(!reserve&&!combat.targetLocked)combat.targetId='convoy-raider-'+(base+1);
         DW.flightSim.collisionChanged(combat);if(!reserve)direct(combat,0);
     }
+    /** Director toolkit: a fixed, telegraphed arrival ahead of the current flight path.
+     * @param {import('../experiments/types').Combat} combat @returns {boolean} */
+    function openReinforcementPortal(combat){
+        const s=combat.convoy;if(!s||combat.dead||s.complete||s.elapsed<60||s.elapsed>=206||s.director.raids>=3||s.director.pressure>=.5||combat.player.hp/combat.player.maxHp<.5||s.ships.every(function(ship){return ship.hull<=0||ship.arrived;}))return false;
+        if(s.arrivalPortal&&combat.time<s.arrivalPortal.closesAt)return false;
+        var pose=combat.player.pose,position=pose.eye.map(function(v,k){return v+(-pose.back[k]*1100+pose.right[k]*350)/U;});
+        // Keep the mouth clear of freighters, reception hulls and existing fighters.
+        if(s.ships.some(function(ship){return ship.hull>0&&range(position,ship.position)<600;})||s.arrivalFleet.some(function(ship){return range(position,ship.position)<1700;})||DW.flightSim.participants(combat).some(function(c){return c.hp>0&&range(position,c.pose.eye)<500;}))return false;
+        s.arrivalPortal={position:position,opensAt:combat.time,closesAt:combat.time+13,spawned:false};
+        s.director.events.push({wing:-1,kind:'portal'});return true;
+    }
     /** @param {import('../experiments/types').Combat} combat @param {number} dt */
     function step(combat,dt){
         const s=combat.convoy;if(!s||combat.dead||s.complete)return;
@@ -72,6 +85,7 @@
             ship.position[1]=ship.slot[1]+Math.min(s.destinationY,s.elapsed*s.speedMps/U);
             if(ship.position[1]>=s.destinationY+ship.slot[1]){ship.arrived=true;ship.velocity=[0,0,0];}
         });
+        if(s.arrivalPortal&&!s.arrivalPortal.spawned&&combat.time>=s.arrivalPortal.opensAt+4)beginRaid(combat);
         DW.convoyBattle.update(combat);
         direct(combat,dt);
         updateRaid(combat);
@@ -142,7 +156,10 @@
         if((s.elapsed-d.stationAt>22&&range(combat.player.pose.eye,station)<220)||s.elapsed-d.stationAt>40){d.patrol++;d.stationAt=s.elapsed;}
         d.waypoint={kind:'patrol',packet:group[0].packet,position:station,targetId:null};
         // No new wing while an attack survives, during reports, or near arrival.
-        if(!hostiles.length&&d.raids<3&&s.elapsed>=d.nextRaidAt&&s.elapsed<210&&s.radio.phase!=='damage-report')beginRaid(combat);
+        if((!s.arrivalPortal||s.arrivalPortal.spawned)&&!hostiles.length&&d.raids<3&&s.elapsed>=d.nextRaidAt&&s.elapsed<206&&s.radio.phase!=='damage-report'){
+            if(d.raids===0)beginRaid(combat);
+            else openReinforcementPortal(combat);
+        }
     }
     /** Observe proximity, facing and real rounds/damage, never the player's selected target or future input.
      * @param {import('../experiments/types').Combat} combat @param {import('../experiments/types').Craft} raider */
@@ -423,6 +440,7 @@
         if(ranged&&ranged.ship&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('range','Lancer, Control. Bandits entering weapons range of the '+packets[ranged.ship.packet].name.toLowerCase()+' group. Intercept.');
         while(s.director.events.length){
             const instruction=s.director.events.shift();if(!instruction)break;
+            if(instruction.kind==='portal'&&s.arrivalPortal&&combat.time<s.arrivalPortal.closesAt)return cue('portal-'+s.arrivalPortal.opensAt,'Lancer, Control. Wormhole opening ahead of you. Enemy reinforcements incoming.');
             const group=s.raids.find(function(group){return group.id===instruction.wing;});if(!group)continue;
             if(instruction.kind==='breakthrough'&&group.phase!=='withdraw'&&group.phase!=='departed')return cue('breakthrough-'+group.id,'Lancer, Control. Bandits through the '+packets[group.packet].name.toLowerCase()+' screen. Intercept before they reach the convoy.');
             if(instruction.kind==='hold'&&group.phase==='hold'){var waiting=enemies.filter(function(e){return e.convoyRaider&&e.convoyRaider.wing===group.id;}).length;return cue('reserve-'+group.id,'Lancer, Control. '+waiting+' additional contacts holding outside the convoy. Maintain the screen.');}
@@ -461,5 +479,5 @@
         }
         return null;
     }
-    DW.convoyMission={arrivalFleet:arrivalFleet,stepRaider:stepRaider,radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
+    DW.convoyMission={openReinforcementPortal:openReinforcementPortal,arrivalFleet:arrivalFleet,stepRaider:stepRaider,radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
 }());
