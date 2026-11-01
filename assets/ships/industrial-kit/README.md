@@ -262,3 +262,28 @@ persisted, so this does not establish GPU headroom or a whole-game speedup.
 The full repository check passed **145/145 entries**. Visual inspection covered
 all four route presets, the mixed consist coupled/exploded, six-module limits,
 reordering/swapping/removal, and textured mixed-consist glTF re-import.
+
+## Standard-parts fleet exploration
+
+Open [the fleet study](../../../studies/industrial-fleet.html) for nine proposed
+working configurations at a common metre scale and an interchangeable insert bench.
+The standalone recipe module is `studies/industrial-fleet-kit.js`; it reuses
+DW-14 frames and the original cabin, drive, cargo, service and manipulator parts.
+Four new insert proposals add external thermal panels, a workshop, a sensor mast
+and service stores. Single spines vary in length and loading; paired spines and
+a transverse three-hull carrier explore broader silhouettes. Each lane retains
+its own pressure cabin and drive bank. These are rigid assemblies, not docking
+or construction gameplay. The original route builder and flight assets are unchanged.
+
+The power insert has external wings and the survey insert has an external mast;
+the old internal payload envelope does not describe these appendages. Treat them
+as concept geometry until attachment loads, clearance, collision, thermal behavior
+and flight-scene performance are established. Static display batching preserves
+the editable source assemblies. No production readiness is claimed.
+
+Visual review for this pass covered the nine-ship overview at shared scale,
+the eight-insert bench, and the recovery catamaran close-up in three-quarter
+view. The overview capture is `output/industrial-fleet/fleet.png` (ignored).
+Undersides, every individual recipe, deployed-arm clearance and flight behavior
+remain unreviewed. Regression checks cover standard interfaces, lane/bay counts
+and preserved geometry under static batching.

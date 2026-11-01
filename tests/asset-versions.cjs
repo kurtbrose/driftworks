@@ -55,6 +55,16 @@ try {
   assert.ok(beforeCatalog.includes('assets/ships/rig.js'), 'dynamic asset scripts remain versioned');
   assert.ok(!beforeCatalog.includes('src/app.js'), 'ordinary code is versioned by its HTML caller');
   assert.equal(refresh(root, true), 0);
+  fs.mkdirSync(path.join(root, 'studies'));
+  const studyPage=path.join(root,'studies/review.html'),studyModule=path.join(root,'studies/modules.js');
+  fs.writeFileSync(studyModule,'export const revision=1;');
+  fs.writeFileSync(studyPage,'<script type="module" src="./modules.js"></script>');
+  refresh(root);
+  const studyBefore=fs.readFileSync(studyPage,'utf8');
+  assert.match(studyBefore,/modules.js\?v=[a-f0-9]{12}/);
+  assert.equal(fs.readFileSync(path.join(root,'src/asset-versions.js'),'utf8'),beforeCatalog,'study code stays out of the runtime asset catalog');
+  fs.writeFileSync(studyModule,'export const revision=2;');refresh(root);
+  assert.notEqual(fs.readFileSync(studyPage,'utf8'),studyBefore,'study module edits refresh their HTML caller');
   fs.writeFileSync(path.join(root, 'src/app.js'), "image.src='../assets/backgrounds/features/sky.png';");
   assert.ok(refresh(root, true), 'new dynamic requests must use the URL helper');
   process.exitCode = 0;

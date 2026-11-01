@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Standard parts / busy fleet</title>
+<style>body{margin:0;background:#172228;color:#e3e6df;font:14px system-ui}aside{position:absolute;left:24px;top:20px;width:285px;z-index:2;background:#172228ed;padding:20px;border:1px solid #536268}h1{font-size:28px;margin:8px 0}p{line-height:1.5;color:#b5c3c5}select,button{background:#2a3c43;color:#fff;border:1px solid #74858a;padding:9px;margin:4px 0;width:100%}canvas{display:block;margin-left:360px}small{color:#ddbb74}#stats{font:12px monospace}a{color:#ddbb74}@media(max-width:650px){aside{width:210px;left:8px;top:8px;padding:12px}}</style>
+<script src="../src/asset-versions.js?v=1ca48f8b93f6"></script>
+<script type="importmap">{"imports":{"industrial-kit":"../assets/ships/industrial-kit/kit.js?v=ff90512804d8","three":"../vendor/three/build/three.module.js?v=c8211c69345d"}}</script></head><body>
+<aside><small>DRIFTWORKS / ASSEMBLY STUDY</small><h1>Standard parts.<br>Busy fleet.</h1><p>Nine working configurations at one metre scale. Shared DW-14 frames, cabins, drives and fittings.</p><select id="model" aria-label="Fleet or vessel"></select><button id="view">View from above</button><button id="parts">Show interchangeable modules</button><label><input id="spin" type="checkbox"> Rotate slowly</label><p id="note"></p><div id="stats"></div><p>Drag to orbit · Wheel to zoom · Right drag to pan</p><p>Offline concept study. External radiators and sensor gear need clearance/collision contracts before flight integration.</p><a href="industrial-kit.html?model=modular">Original route builder</a></aside>
+<script type="module">
+import * as T from 'three';
+import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js?v=b97879c74817';
+import {batchStatic,disposeBatch,setSurfaceTexture} from 'industrial-kit';
+import {fleet,vessel,bay,inserts,recipes} from '../studies/industrial-fleet-kit.js?v=df0153081c6d';
+const $=id=>document.getElementById(id),scene=new T.Scene();scene.background=new T.Color(0x172228);
+const viewport=()=>({width:Math.max(320,innerWidth-360),height:innerHeight});
+const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(viewport().width,viewport().height);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.4;document.body.append(renderer.domElement);
+const camera=new T.PerspectiveCamera(38,viewport().width/viewport().height,.1,5000),controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
+scene.add(new T.HemisphereLight(0xd2e8ef,0x777064,2.4));for(const [p,c,intensity] of [[[0,200,100],0xffe2b1,3],[[-100,50,-100],0xabcfe7,2],[[0,-100,30],0xb3c5cb,1]]){const l=new T.DirectionalLight(c,intensity);l.position.set(...p);scene.add(l);}
+let source,display,top=false,parts=false;
+$('model').innerHTML='<option value="fleet">Whole working fleet / same scale</option>'+recipes.map((r,i)=>`<option value="${i}">${r.name}</option>`).join('');
+function show(){if(display){scene.remove(display);disposeBatch(display);}const value=$('model').value;source=parts?new T.Group():value==='fleet'?fleet():vessel(Number(value));if(parts)inserts.forEach((name,i)=>{const p=bay(name);p.position.set((i%4)*25,0,Math.floor(i/4)*34);source.add(p);});display=batchStatic(source);scene.add(display);
+ const bounds=new T.Box3().setFromObject(display),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());const distance=size.length()*(innerWidth<900?1.65:1.2);controls.target.copy(center);camera.position.copy(center).add(new T.Vector3(top?0:-.8,top?1:.9,top?.001:1).normalize().multiplyScalar(distance));camera.far=distance*8;camera.updateProjectionMatrix();controls.update();
+ $('note').textContent=parts?'Insert bench: cargo rack, fluid sphere, crew capsule, empty scaffold, radiator/power cassette, workshop with manipulator, sensor mast, service stores. All use the same four-corner frame.':value==='fleet'?'A proposed traffic mix: tenders, feeders, crew transport, survey, fuel, mixed freight and broad recovery/support hulls. No ship is resized to fill its slot.':recipes[Number(value)].note;
+ requestAnimationFrame(()=>{$('stats').textContent=`${Math.round(size.x)} × ${Math.round(size.z)} × ${Math.round(size.y)} m overall · ${renderer.info.render.calls} batched draws`;});}
+$('model').onchange=()=>{parts=false;show();};$('view').onclick=()=>{top=!top;show();};$('parts').onclick=()=>{parts=!parts;show();};
+new T.TextureLoader().load('../assets/ships/industrial-kit/panels.png',texture=>{setSurfaceTexture(texture);show();});show();
+addEventListener('resize',()=>{renderer.setSize(viewport().width,viewport().height);camera.aspect=viewport().width/viewport().height;camera.updateProjectionMatrix();});
+renderer.setAnimationLoop(()=>{if($('spin').checked&&display)display.rotation.y+=.001;controls.update();renderer.render(scene,camera);});
+</script></body></html>

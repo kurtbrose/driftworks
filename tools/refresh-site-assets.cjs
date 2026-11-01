@@ -20,7 +20,7 @@ function refresh(root, check = false) {
   // Keep code shipped as an asset (e.g. dynamically loaded ship rigs), plus all
   // non-code resources; retain a full lookup for static imports and CSS URLs.
   const dynamicVersions = {};
-  for (const name of names.filter(name => name !== 'src/asset-versions.js' && /^(assets|src|experiments|vendor)\//.test(name) && /\.(?:js|css|png|jpe?g|webp|svg|gif|json|glb|gltf|mp3|m4a|wav|ogg|bin)$/.test(name))) {
+  for (const name of names.filter(name => name !== 'src/asset-versions.js' && (/^(assets|src|experiments|vendor)\//.test(name) || /^studies\/.+\.js$/.test(name)) && /\.(?:js|css|png|jpe?g|webp|svg|gif|json|glb|gltf|mp3|m4a|wav|ogg|bin)$/.test(name))) {
     versions[name] = hash(fs.readFileSync(path.join(root, name)), /\.(js|css|json|svg|gltf)$/.test(name));
   }
   for (const [name, version] of Object.entries(versions)) {

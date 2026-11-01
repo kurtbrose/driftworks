@@ -103,3 +103,23 @@ console.log('Industrial kit: geometry, transformed batching, crane pivots and em
   const inline=page.split('<script type="module">')[1].split('</script>')[0].replace(/^import .*;$/gm,'');
   assert.doesNotThrow(()=>new vm.Script(inline),'route viewer module remains syntactically valid');
 }
+
+// Concept fleet reuses DW-14 bays without changing the production kit.
+{
+  const fs=require('node:fs'),vm=require('node:vm');
+  const scope={T,part:kit.part,standardBay:kit.standardBay,buildConsist:kit.buildConsist};vm.createContext(scope);
+  const source=fs.readFileSync(require('node:path').join(__dirname,'../studies/industrial-fleet-kit.js'),'utf8').replace(/^import .*;\n/gm,'').replace(/^export /gm,'');
+  vm.runInContext(source+'\nglobalThis.study={inserts,bay,recipes,vessel,fleet};',scope);
+  const study=scope.study;
+  for(const type of study.inserts){const module=study.bay(type);assert.equal(module.userData.span,1);assert.equal(module.userData.interface,kit.moduleStandard.interface);}
+  for(let i=0;i<study.recipes.length;i++){
+    const ship=study.vessel(i),bounds=new T.Box3().setFromObject(ship,true);assert(Number.isFinite(bounds.min.x));
+    const bays=[];ship.traverse(o=>{if(o.userData.standardBay)bays.push(o);});
+    const recipe=study.recipes[i],lanes=recipe.layout==='single'?1:recipe.layout==='twin'?2:3;
+    assert.equal(bays.length,recipe.load.length*lanes,'all lanes retain their standard modules');
+    const batch=kit.batchStatic(ship);assert.equal(triangles(batch),triangles(ship));kit.disposeBatch(batch);
+  }
+  assert.equal(study.fleet().children.length,study.recipes.length);
+  assert.throws(()=>study.bay('unknown'));assert.throws(()=>study.vessel(-1));
+  console.log('Fleet concept: standard interfaces, recipe bay counts and batching pass.');
+}
