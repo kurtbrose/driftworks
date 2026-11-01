@@ -1970,12 +1970,12 @@
       assertClose(state.up.reduce(function(sum,x,i){return sum+x*state.back[i];},0),0);
     });
   });
-  test('flight', 'maneuvering thrusters ease toward five m/s, cap diagonals and brake on release', function () {
+  test('flight', 'maneuvering thrusters respond quickly, cap diagonals and brake on release', function () {
     var model=window.Driftworks.arcade;
     model.profiles.forEach(function(p){
       var state=model.create(0);
       model.step(state,p,{side:1,vertical:1,boost:true},.05);
-      assert(Math.hypot(state.velocity[0],state.velocity[2])<.13);
+      assert(Math.hypot(state.velocity[0],state.velocity[2])>2.8);
       for(var i=0;i<2000;i++)model.step(state,p,{side:1,vertical:1},.01);
       assertClose(Math.hypot(state.velocity[0],state.velocity[2]),5,.01);
       for(var j=0;j<2000;j++)model.step(state,p,{},.01);
@@ -1987,6 +1987,43 @@
       state.throttle=-.5;
       for(var n=0;n<2000;n++)model.step(state,p,{},.01);
       assertClose(state.velocity[1],-2.5,.01);
+    });
+  });
+  test('flight', 'maneuver starts, reverses and releases within 200 ms independently of passive damping', function () {
+    var model=window.Driftworks.arcade;
+    model.profiles.forEach(function(p){
+      [.05,1/120].forEach(function(dt){
+        var state=model.create(0),count=Math.round(.2/dt);
+        for(var i=0;i<count;i++)model.step(state,p,{side:1},dt);
+        assert(state.velocity[0]>4.8 && state.velocity[0]<=5);
+        for(var j=0;j<count;j++)model.step(state,p,{side:-1},dt);
+        assert(state.velocity[0]<-4.6 && state.velocity[0]>=-5);
+        for(var k=0;k<count;k++)model.step(state,p,{},dt);
+        assert(Math.abs(state.velocity[0])<.2);
+        var slip=model.create(0);slip.velocity=[3,0,0];
+        model.step(slip,p,{},dt);
+        assertClose(slip.velocity[0],p.damp<.0001?0:3*Math.exp(-dt/p.damp));
+      });
+    });
+  });
+  test('flight', 'left and right maneuver symmetrically and override turn drift in either direction', function () {
+    var model=window.Driftworks.arcade;
+    model.profiles.forEach(function(p){
+      [-.4,0,.4].forEach(function(yaw){
+        [-1,1].forEach(function(side){
+          var state=model.create(0);state.throttle=1;state.ramp[2]=p.maxVelocity[2];
+          state.velocity=state.back.map(function(v){return -v*p.maxVelocity[2];});
+          for(var i=0;i<48;i++)model.step(state,p,{yaw:yaw},1/120);
+          for(var j=0;j<48;j++)model.step(state,p,{yaw:yaw,side:side},1/120);
+          var speed=state.velocity.reduce(function(n,v,k){return n+v*state.right[k];},0);
+          assertClose(speed,side*5,.1);
+          for(var k=0;k<24;k++)model.step(state,p,{yaw:yaw,side:-side},1/120);
+          var reversed=state.velocity.reduce(function(n,v,k){return n+v*state.right[k];},0);
+          assert(reversed*-side>4.6);
+          for(var n=0;n<24;n++)model.step(state,p,{yaw:yaw},1/120);
+          assert(Math.abs(state.velocity.reduce(function(sum,v,k){return sum+v*state.right[k];},0))<.2);
+        });
+      });
     });
   });
   test('flight', 'LB maneuvering preserves steering and D-pad throttle while replacing right-stick controls', function () {
@@ -2022,7 +2059,7 @@
     assertClose(Math.hypot.apply(null,state.velocity),p.afterburnerVelocity[2],.01);
     var before=state.eye.slice();model.step(state,p,{boost:true},.01);
     assertClose((state.eye[1]-before[1])*sim.METERS_PER_UNIT,p.afterburnerVelocity[2]*.01);
-    var side=model.create(18);model.step(side,p,{side:1},.05);assert(side.velocity[0]>0 && side.velocity[0]<.13);
+    var side=model.create(18);model.step(side,p,{side:1},.05);assert(side.velocity[0]>2.8 && side.velocity[0]<5);
     assert(model.profiles[2].maxVelocity[2]>p.maxVelocity[2]);
   });
 

@@ -90,20 +90,25 @@
         var length = Math.max(1, Math.hypot(side, vertical));
         var target = [side / length * 5, vertical / length * 5,
             input.boost ? max[2] : state.throttle < 0 ? 5 * Math.max(-1, state.throttle) : max[2] * state.throttle];
-        var taus = [2, 2, state.throttle < 0 && !input.boost ? 2 :
+        var maneuverTau = .06, previousRamp = state.ramp.slice();
+        var maneuvering = Math.hypot(side, vertical) > 0 || Math.hypot(previousRamp[0], previousRamp[1]) > .001;
+        var lateralTau = maneuvering ? maneuverTau : p.damp;
+        var taus = [maneuverTau, maneuverTau, state.throttle < 0 && !input.boost ? 2 :
             target[2] > 0 && target[2] >= state.ramp[2] ? (input.boost ? p.afterburnerAccel : p.forwardAccel) : p.forwardDecel];
         state.ramp = state.ramp.map(function (v, i) {
-            return ramp(v, target[i], taus[i], dt);
+            return i < 2 ? target[i] + (v - target[i]) * Math.exp(-dt / maneuverTau) : ramp(v, target[i], taus[i], dt);
         });
-        // Retail normal flight damps lateral slip, while forward speed follows the engine ramp directly.
+        // Active maneuvering controls total sideways motion, including turn drift.
+        // With no maneuver demand or release tail, retain retail passive damping.
         var local = basis.map(function (axis) {
             return dot(state.velocity, axis);
         });
         var next = local.map(function (v, i) {
-            return i === 2 || p.damp < .0001 ? state.ramp[i] : state.ramp[i] + (v - state.ramp[i]) * Math.exp(-dt / p.damp);
+            return i === 2 ? state.ramp[i] : lateralTau < .0001 ? target[i] : target[i] + (v - target[i]) * Math.exp(-dt / lateralTau);
         });
         var displacement = local.map(function (v, i) {
-            return i === 2 || p.damp < .0001 ? state.ramp[i] * dt : state.ramp[i] * dt + (v - state.ramp[i]) * p.damp * (1 - Math.exp(-dt / p.damp));
+            if (i === 2) return state.ramp[i] * dt;
+            return lateralTau < .0001 ? target[i] * dt : target[i] * dt + (v - target[i]) * lateralTau * (1 - Math.exp(-dt / lateralTau));
         });
         state.velocity = [0, 1, 2].map(function (i) {
             return basis.reduce(function (sum, axis, j) {
@@ -135,6 +140,14 @@
         state.back = unit(state.back);
         state.right = unit(cross(state.up, state.back));
         state.up = unit(cross(state.back, state.right));
+        if (maneuvering) {
+            // Carry controlled sideways components into the newly turned frame;
+            // otherwise forward momentum immediately reintroduces an opposing slip.
+            var backSpeed = dot(state.velocity, state.back);
+            state.velocity = state.right.map(function (v, i) {
+                return v * next[0] + state.up[i] * next[1] + state.back[i] * backSpeed;
+            });
+        }
         if(before)DW.flightHyperbolic.move(state,before);
         return state;
     }
