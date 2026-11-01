@@ -29,10 +29,10 @@ function surfaceMaps(){
  const size=256,color=new Uint8Array(size*size*4),rough=new Uint8Array(size*size*4);let seed=417;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-  const i=(y*size+x)*4,grain=random(),panel=(x<128?0:3)+(y<128?0:-2),seam=x===0||y===0||x===128||y===128;
-  const value=Math.round(seam?225:247+panel+(grain-.5)*7);
+  const i=(y*size+x)*4,grain=random();
+  const value=Math.round(247+(grain-.5)*7);
   color[i]=color[i+1]=color[i+2]=value;color[i+3]=255;
-  rough[i]=rough[i+1]=rough[i+2]=Math.round(225+panel*2+(grain-.5)*22);rough[i+3]=255;
+  rough[i]=rough[i+1]=rough[i+2]=Math.round(225+(grain-.5)*22);rough[i+3]=255;
  }
  function texture(data,srgb){const t=new T.DataTexture(data,size,size,T.RGBAFormat);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.LinearFilter;t.minFilter=T.LinearMipmapLinearFilter;t.generateMipmaps=true;t.colorSpace=srgb?T.SRGBColorSpace:T.NoColorSpace;t.needsUpdate=true;return t;}
  maps={color:texture(color,true),rough:texture(rough,false)};return maps;

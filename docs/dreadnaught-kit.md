@@ -935,3 +935,32 @@ The general pass is subtle and does not replace surface-specific work: hangar
 deck paint, missile identifiers, sensor faces and engine collar finishes are the
 stronger next targeted candidates. Undersides, all rotations, fleet-distance
 readability and actual combat performance remain outside this visual pass.
+
+### Lighting inspection and surface-line correction
+
+The toybox's Lighting button cycles Studio, White grazing, Amber/blue,
+Magenta/cyan and Hard rim rigs. A light sweep rotates the same lights around
+the part while the camera stays in place. Pause it, or scrub Light angle, to
+compare Original/Candidate at an identical illumination phase. Manual scrubbing
+pauses the sweep. Rig and phase are preserved in `lighting` and `lightAngle`
+query parameters; e.g. `&lighting=grazing&lightAngle=0`. Preset and finish changes
+do not rebuild the part or reset the camera. Low-fill rigs deliberately reveal
+moving specular highlights rather than judging roughness under the studio wash.
+The three directional lights and hemisphere light are reused; no shadows or
+additional geometry are introduced.
+
+The earlier candidate texture's dark grid and stepped quadrants were removed:
+they crossed authored armor plates and looked like spurious seams. The shared
+maps now contain only low-amplitude surface grain and roughness variation.
+Existing structural panel boundaries remain authored geometry. This correction
+does not imply approval of the overall material candidate.
+
+Browser validation covered all five lighting modes, cycle wraparound, playing
+the sweep and pausing by manual scrubbing. Fixed-camera original/candidate
+captures under white grazing light were compared for both three-quarter and
+underside views; rendered surface pixels change, although the dark underside
+remains a subtle comparison. The corrected underside no longer shows the old
+texture-grid line. Colored and rim-light captures are in
+`output/aegis-toybox-lighting/` (ignored). These checks exercise inspection tools
+and this reported artifact, not every material/view combination or approval of
+the candidate finish.

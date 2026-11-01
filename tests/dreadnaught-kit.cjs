@@ -163,6 +163,18 @@ const {pathToFileURL} = require('node:url');
     finish.applyReviewFinish(batch,false);for(const {o,material} of before)assert.equal(o.material,material,'A/B restores exact original materials');kit.disposeBatch(batch);
   }
   assert.equal(sharedColorMaps.size,1,'one shared paint map across the inventory');assert.equal(sharedRoughnessMaps.size,1,'one shared roughness map across the inventory');
+  for(const map of sharedColorMaps)for(let i=0;i<map.image.data.length;i+=4)assert(map.image.data[i]>=240,'surface grain contains no artificial dark seam rows or columns');
+  const lightingScope=vm.createContext({T:real});
+  const lightingSource=fs.readFileSync(path.join(root,'studies/aegis-toybox-lighting.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
+  vm.runInContext(lightingSource+'\nglobalThis.lighting={lightingPresets,createReviewLighting};',lightingScope);
+  const lightingScene=new real.Scene(),rig=lightingScope.lighting.createReviewLighting(lightingScene),count=lightingScene.children.length;
+  const lightingBounds=new real.Box3(new real.Vector3(10,-2,30),new real.Vector3(50,12,80)),lightCenter=lightingBounds.getCenter(new real.Vector3());
+  for(const preset of lightingScope.lighting.lightingPresets)for(const angle of [-180,0,90,180]){
+    rig.update(preset.id,angle,lightingBounds);assert.equal(lightingScene.children.length,count,'light sweeps reuse the same rig');
+    lightingScene.traverse(o=>{if(o.isDirectionalLight){assert(o.target.position.distanceTo(lightCenter)<.00001);assert(o.position.toArray().every(Number.isFinite));}});
+  }
+  rig.update('studio',0,lightingBounds);const studioAmbient=lightingScene.children[0].intensity;rig.update('grazing',0,lightingBounds);assert(lightingScene.children[0].intensity<studioAmbient/5,'grazing inspection reduces ambient wash');
+  console.log('PASS toybox lighting: preset/sweep reuse, centered light targets, finite positions and reduced grazing fill');
   console.log('PASS toybox material review: per-part notes, finite UVs, unchanged geometry/draws and exact original restoration');
   console.log('PASS Aegis toybox: complete unique inventory, real scale, separate nonoverlapping parts and batched geometry');
   console.log('PASS Aegis fleet study: shared source freshness, physical pitch, swappable manifests, through passage and batching');
