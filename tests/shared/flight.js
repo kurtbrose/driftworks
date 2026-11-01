@@ -23,12 +23,12 @@
     right.gamepad.mapping='';a=api.read([right]);assert(!a.fire&&a.roll===0,'Unknown controller mappings must not guess button indices');
   });
 
-  test('flight', 'XR sticks allow fine aim without sacrificing full turn rate',function(){
+  test('flight', 'XR sticks are linear through centre with no deadzone',function(){
     var pad={handedness:'left',gamepad:{mapping:'xr-standard',axes:[0,0,0,0],buttons:[]}};
     function aim(value){pad.gamepad.axes[2]=value;return window.Driftworks.flightVr.read([pad]).yaw;}
-    assertClose(aim(.05),0);assertClose(aim(.248),-.04);assertClose(aim(-.248),.04);
+    assertClose(aim(.05),-.05);assertClose(aim(.248),-.248);assertClose(aim(-.248),.248);
     assertClose(aim(1),-1);assertClose(aim(-1),1);
-    assert(aim(.07)<0&&Math.abs(aim(.07))<.001,'Crossing the reduced deadzone remains gentle');
+    assertClose(aim(.001),-.001);assertClose(aim(0),0);
   });
 
   test('flight', 'Holding gamepad throttle forward at maximum engages afterburner and release stops it',function(){

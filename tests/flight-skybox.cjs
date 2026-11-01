@@ -42,7 +42,7 @@ assert.equal(values.style, 6, 'selection reaches the sky shader');
 assert.equal(stored, '6');
 assert.equal(canvas.width, 1600, 'sky defaults to native resolution independently of scene quality');
 assert.equal(values.pixelRatio, 2);
-assert.ok(shaders.find(source => source.includes('gl_PointSize=(0.75+star.w*1.05)*pixelRatio')), 'star size does not depend on depth or focal length');
+assert.ok(shaders.find(source => source.includes('float size=(0.75+star.w*1.05)*pixelRatio;gl_PointSize=size;')), 'star size does not depend on depth or focal length');
 brightness.value='2'; brightness.input();
 quality.value='1'; quality.change(); sky.render(pose, .25, false);
 assert.equal(values.exposure, 2, 'brightness reaches the sky independently of star brightness');
@@ -103,15 +103,16 @@ async function testHeroComposition() {
   selector.value='1';handlers.change();renderer.render(pose,1,false);
   assert.equal(renderer.getRenderStats().drawCalls,2,'procedural choices do not draw hero features');
   const second=api.create({clientWidth:800,clientHeight:600,prepend(){}},{style:8});second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);renderer.setStyle(8);assert.equal(second.getLighting(),renderer.getLighting(),'multiple renderer instances share one precomputed environment cache');assert.equal(requests,8,'second scene loads its layout but reuses lighting and HDR probes');
+  const panoramaMips=mipmaps.length;
   second.setStyle(10);second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);assert.equal(second.getRenderStats().drawCalls,2,'river panorama and crisp foreground stars use two draws');assert.equal(JSON.stringify(second.getLighting().sh),JSON.stringify(lighting.families.river.sh),'stellar streams select their derived lighting');assert.equal(canvas.dataset.river,'ready');assert.ok(imageUrls.some(url=>url.includes('star-river-photo-v3-8k.jpg')),'river uses the local generated photographic texture');
-  assert.equal(mipmaps.length,1,'River mipmaps are baked once on texture upload');second.render(pose,1,false);assert.equal(mipmaps.length,1,'No per-frame sky mipmap generation');
+  assert.equal(mipmaps.length-panoramaMips,1,'River mipmaps are baked once on texture upload');second.render(pose,1,false);assert.equal(mipmaps.length-panoramaMips,1,'No per-frame sky mipmap generation');
   second.setStyle(11);second.render(pose,1,false);await new Promise(setImmediate);second.render(pose,1,false);
   assert.equal(canvas.dataset.woven,'ready');assert.equal(second.getRenderStats().drawCalls,2,'Woven sky stays one baked panorama plus one star batch');
   assert.equal(values.style,11,'Selectable woven style reaches panorama shader without entering mission landmark branch');
   assert.equal(JSON.stringify(second.getLighting().sh),JSON.stringify(lighting.families.woven.sh));
   assert.ok(imageUrls.some(url=>url.includes('star-river-woven-v1-8k.jpg')));
-  assert.equal(mipmaps.length,2,'Each distinct panorama uploads once');
-  second.setStyle(10);second.render(pose,1,false);second.setStyle(11);second.render(pose,1,false);assert.equal(mipmaps.length,2,'Panoramas cached across selection changes');
+  assert.equal(mipmaps.length-panoramaMips,2,'Each distinct panorama uploads once');
+  second.setStyle(10);second.render(pose,1,false);second.setStyle(11);second.render(pose,1,false);assert.equal(mipmaps.length-panoramaMips,2,'Panoramas cached across selection changes');
   console.log('PASS hero sky: local asset reuse, fixed layout, sphere seams, orientation and separate star pass');
 }
 async function testOhioSky() {
@@ -287,13 +288,18 @@ console.log('PASS hyperbolic sky: 60 seconds native afterburner, distant coordin
 
 // Native XR draws use the world renderer's context and each eye's asymmetric projection.
 const originalSize=[canvas.width,canvas.height],beforeXRShaders=shaders.length;
+const nativeImages=[],savedImage=context.Image;context.Image=class{set src(value){nativeImages.push(this);}};
 const nativeSky=context.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){throw Error('Native sky must not create an onscreen canvas');}},{context:gl,style:3,cueControls:false});
+context.Image=savedImage;
+const nativeMipCount=mipmaps.length;nativeImages[0].onload();assert.equal(mipmaps.length,nativeMipCount+1,'XR panorama builds a filtered mip chain on upload');
 const projection=[.9,0,0,0,0,1.2,0,0,.07,-.03,-1,-1,0,0,-.1,0];
 nativeSky.renderEye(pose,{right:pose.right,up:pose.up,back:pose.back,offset:[0,0,0],projection,viewport:{x:720,y:0,width:720,height:900}},false);
 assert.deepEqual(values.viewport,[720,0,720,900]);assert.deepEqual(values.xrProjectionCenter,[.07,-.03]);
+assert.equal(mipmaps.length,nativeMipCount+1,'Eye frames reuse the uploaded mip chain');
 assert.equal(values.focal,1.2);assert(Math.abs(values.aspect-1.2/.9)<1e-12);assert.deepEqual([canvas.width,canvas.height],originalSize);
 const nativeShaders=shaders.slice(beforeXRShaders);assert(nativeShaders.every(source=>source.startsWith('#version 300 es')));
 assert(nativeShaders.some(source=>source.includes('out highp vec4 xrColor;')));
 assert(nativeShaders.some(source=>source.includes('gl_Position.xy-=xrProjectionCenter*gl_Position.w;')));
 assert(nativeShaders.some(source=>source.includes('(screen.x+xrProjectionCenter.x)')));
+assert(nativeShaders.some(source=>source.includes('max(3.,size)')&&source.includes('brightness*=size*size')),'XR stars have a stable footprint with energy normalization');
 console.log('PASS native XR sky: shared context, explicit eye viewport, asymmetric projection, GLSL 3 conversion and no source canvas resize');

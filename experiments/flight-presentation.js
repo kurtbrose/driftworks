@@ -381,7 +381,9 @@
             var mouth=combat.convoy&&combat.convoy.arrivalPortal,arrival=mouth&&combat.time<mouth.closesAt?{position:mouth.position,radius:210*Math.max(0,Math.min(1,(combat.time-mouth.opensAt)/3,(mouth.closesAt-combat.time)/2))}:null;
             var vr=DW.flightVr&&DW.flightVr.forHost(host),immersive=!!(vr&&vr.active());
             skybox.setFov(immersive?140:45);
-            var skyState=vr?vr.skyPose(state):state;
+            // This pass supplies the world lighting basis and exposure. Head rotation
+            // belongs only to the native per-eye sky, never to the light probe.
+            var skyState=state;
             skybox.render(skyState, comparison.scale, comparison.mode === 'empty'||!!(environment&&environment.emptySky),elapsed,motionOpacity,arrival);
             scene.sync(world);
             if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=defaultShieldDiscs||shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,ownShield);shieldTime=view.combat.time;

@@ -503,6 +503,7 @@ void main(){
                 image.onload = function () {
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
                     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,feature.asset==='planet-hero-v1/master.png'&&planetOverride?planetOverride:image);
+                    filterXR(gl.TEXTURE_2D);
                     entry.loaded=true;
                     if(canvas.dataset.ohio!=='error')canvas.dataset.ohio=landmarkTextures.every(function(item){return item.loaded;})?'ready':'loading';
                 };
@@ -523,7 +524,7 @@ void main(){
                 gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,cubeTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
                 gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+index,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
                 cubeLoaded++;if(cubeLoaded===6&&canvas.dataset.cube!=='error'){
-                    if(missionSky.gasGiant){gl.generateMipmap(gl.TEXTURE_CUBE_MAP);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);}
+                    if(missionSky.gasGiant||external){gl.generateMipmap(gl.TEXTURE_CUBE_MAP);gl.texParameteri(gl.TEXTURE_CUBE_MAP,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);}
                     canvas.dataset.cube='ready';canvas.dataset.ohio='ready';
                 }
             };image.onerror=function(){canvas.dataset.cube='error';};image.src=assetUrl('../assets/backgrounds/'+file);});
@@ -538,7 +539,7 @@ void main(){
             canvas.dataset.rime='loading';
             var rimeImage=new Image();rimeImage.onload=function(){
                 gl.activeTexture(gl.TEXTURE0+7);gl.bindTexture(gl.TEXTURE_2D,rimeTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
-                gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,rimeImage);rimeLoaded=true;canvas.dataset.rime='ready';gl.activeTexture(gl.TEXTURE0);
+                gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,rimeImage);filterXR(gl.TEXTURE_2D);rimeLoaded=true;canvas.dataset.rime='ready';gl.activeTexture(gl.TEXTURE0);
             };rimeImage.onerror=function(){canvas.dataset.rime='error';};rimeImage.src=assetUrl('../assets/backgrounds/'+missionSky.rimeSurface);
             gl.activeTexture(gl.TEXTURE0);
         }
@@ -587,6 +588,7 @@ void main(){
                             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
                             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
                             gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+                            filterXR(gl.TEXTURE_2D);
                             resolve({key:key,texture:texture});
                         };
                         image.onerror=function () {reject(new Error('Could not load sky feature '+key));};
@@ -637,7 +639,7 @@ void main(){
                 try { window.localStorage.setItem('driftworks-flight-skybox-v1', String(style)); } catch (error) { /* Storage is optional. */ }
             });
         }
-        var points = program('attribute vec4 star;uniform vec3 right,up,back; uniform float aspect,focal,pixelRatio;varying float brightness;void main(){float depth=-dot(star.xyz,back);brightness=star.w;gl_Position=depth>0.?vec4(dot(star.xyz,right)*focal/aspect,dot(star.xyz,up)*focal,0.,depth):vec4(2.,2.,2.,1.);gl_PointSize=(0.75+star.w*1.05)*pixelRatio;}', 'precision mediump float;varying float brightness;void main(){float r=length(gl_PointCoord-.5)*2.;float alpha=(1.-smoothstep(.15,1.,r))*brightness;gl_FragColor=vec4(.82,.9,1.,alpha);}');
+        var points = program('attribute vec4 star;uniform vec3 right,up,back; uniform float aspect,focal,pixelRatio;varying float brightness;void main(){float depth=-dot(star.xyz,back);brightness=star.w;gl_Position=depth>0.?vec4(dot(star.xyz,right)*focal/aspect,dot(star.xyz,up)*focal,0.,depth):vec4(2.,2.,2.,1.);float size=(0.75+star.w*1.05)*pixelRatio;gl_PointSize=' + (external?'max(3.,size);brightness*=size*size/(gl_PointSize*gl_PointSize);':'size;') + '}', 'precision mediump float;varying float brightness;void main(){float r=length(gl_PointCoord-.5)*2.;float alpha=(1.-smoothstep(.15,1.,r))*brightness;gl_FragColor=vec4(.82,.9,1.,alpha);}');
         // Image-only environment: the existing sky pass projects an outpainted
         // sphere and the untouched native-detail hero plate in the same direction space.
         var impactProgram=program('attribute vec2 position;varying vec2 screen;void main(){screen=position;gl_Position=vec4(position,0.,1.);}',`
@@ -699,7 +701,7 @@ void main(){
                     if(image.width!==1024||image.height!==1024){canvas.dataset.bakedImpact='error';return;}
                     gl.activeTexture(gl.TEXTURE0+5);gl.bindTexture(gl.TEXTURE_CUBE_MAP,entry.texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
                     gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X+faceIndex,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
-                    loaded++;entry.ready=loaded===6;
+                    loaded++;entry.ready=loaded===6;if(entry.ready)filterXR(gl.TEXTURE_CUBE_MAP);
                 };image.onerror=function(){canvas.dataset.bakedImpact='error';};image.src=assetUrl('../assets/backgrounds/'+missionSky.cubeStages+index+'/'+name+'.png');});
                 return entry;
             }
@@ -712,6 +714,7 @@ void main(){
                 if(image.width!==4096||image.height!==2048||Number(gl.getParameter(gl.MAX_TEXTURE_SIZE))<4096){canvas.dataset.bakedImpact='error';return;}
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);
                 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);entry.ready=true;
+                filterXR(gl.TEXTURE_2D);
             };image.onerror=function(){canvas.dataset.bakedImpact='error';};
             image.src=assetUrl('../assets/backgrounds/planet-hero-v1/baked-cues-v1/'+index+'.png');return entry;
         }
@@ -770,6 +773,7 @@ void main(){
                 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
                 var image=new Image();image.onload=function(){
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);
+                    filterXR(gl.TEXTURE_2D);
                     impactLoaded++;if(impactLoaded===8)canvas.dataset.impact='ready';
                 };image.onerror=function(){canvas.dataset.impact='error';};image.src=assetUrl('../assets/backgrounds/impact-v1/'+name+'.png');
             });
@@ -880,11 +884,21 @@ void main(){
         }
         var image = new Image();
         image.onload = function () {
-            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+            filterXR(gl.TEXTURE_2D);
             canvas.dataset.panorama = 'ready';
         };
         if(!landmarkSky||missionSky.wormhole) image.src = assetUrl(missionSky.wormhole?'../assets/backgrounds/hero-composition-v1-8k.jpg':'../assets/backgrounds/all-sky-milky-way.jpg');
+        /** Filter the full source footprint on the smaller XR eye buffers.
+         * WebGL2 accepts mipmaps for NPOT images. Desktop art stays unchanged.
+         * @param {number} target */
+        function filterXR(target) {
+            if(!external)return;
+            gl.generateMipmap(target);gl.texParameteri(target,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+            var anisotropy=gl.getExtension('EXT_texture_filter_anisotropic');
+            if(anisotropy)gl.texParameterf(target,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+        }
         /** @param {WebGLProgram} p @param {Pose} pose @param {number} aspect @param {number} dpr */
         function uniforms(p, pose, aspect, dpr) {
             gl.useProgram(p); /** @type {('right' | 'up' | 'back')[]} */ /** @type {('right' | 'up' | 'back')[]} */

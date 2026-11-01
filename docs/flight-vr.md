@@ -51,11 +51,18 @@ Unrecognized mappings are ignored instead of guessing button indices.
 | X / left lower face button | Recenter seated position and forward heading |
 | Headset system menu | Leave immersive VR |
 
-Quest steering and roll use a 6% deadzone with a squared response: 20% travel
-beyond the deadzone commands 4% rotation, while full travel keeps full turning
-speed. Throttle and grip strafing remain linear. Holding forward above 95% demand
-at maximum throttle engages afterburner on both XR and desktop controllers;
-release ends it. Grip strafing does not engage afterburner.
+Quest axes currently use a linear response with zero deadzone, including steering,
+roll, throttle and grip strafing. Tiny hardware offsets are passed through for this
+headset trial. Desktop gamepads retain their configurable 12% default deadzone.
+Holding forward above 95% demand at maximum throttle engages afterburner on both
+XR and desktop controllers; release ends it. Grip strafing does not engage it.
+
+The lighting probe and exposure use the ship's world orientation, while the native
+sky uses each tracked eye. Head rotation must not rotate illumination. XR uses the
+desktop-equivalent 2 m near plane to preserve depth separation on distant hulls;
+geometry within 2 m is clipped. Source sky images receive mip filtering in WebGL2,
+and tiny point stars use wider energy-normalized footprints to reduce shimmer.
+These target reported flicker; headset confirmation remains necessary.
 
 Damage flashes cover the full view of each eye, independent of the forward HUD
 bounds and head direction.

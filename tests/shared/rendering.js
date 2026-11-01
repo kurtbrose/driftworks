@@ -88,7 +88,8 @@
   });
 
   test('rendering', 'flight presentation shares appearance and preserves fleet, wreck and effect submission order',function(){
-    var DW=window.Driftworks,doc=flightDisplayDocument(),saved={packs:DW.shipPackModels,scene:DW.scene3d.create,sky:DW.flightSkybox.create,gunGeometry:DW.flightGuns.geometry,blockout:DW.flightSim.geometry};
+    var DW=window.Driftworks,doc=flightDisplayDocument(),saved={packs:DW.shipPackModels,scene:DW.scene3d.create,vr:DW.flightVr.forHost,sky:DW.flightSkybox.create,gunGeometry:DW.flightGuns.geometry,blockout:DW.flightSim.geometry};
+    var immersive=false;
     var events=[],fleets=[],scorches=[],engines=[],actors,effects,hullQuery,textureImages=new Map(),sourceWorld={},world=sourceWorld,sceneStats={},skyStats={};
     var scene={setStudyExplosions:function(){},setSurfaceCamera:function(pose){events.push('pose');assert(pose.eye===player.eye);},setStudyActors:function(value){events.push('actors');actors=value;},setStudyEffects:function(value){events.push('effects');effects=value;},setStudyDiagnostics:function(value){events.push('diagnostics');assert(value===comparison);},sync:function(value){events.push('sync');assert(value===world);},render:function(value,a,b,dt){events.push('scene');assert(value===world&&a===1&&b===0&&dt===.05);},getRenderStats:function(){return sceneStats;}};
     var player=DW.arcade.create(20),comparison={mode:'empty',scale:.5};
@@ -97,7 +98,8 @@
     combat.enemies=[ally,enemy,dead];combat.wrecks=[wreck];combat.wave=3;world.elapsedSeconds=7;
     try{
       DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&options.viewer===false&&getWorld()===sourceWorld);setWorld({elapsedSeconds:7,asteroids:[]});assert(getWorld()===world);return scene;};
-      DW.flightSkybox.create=function(){return {setFov:function(degrees){assert(degrees===45);},render:function(state,scale,empty){events.push('sky');assert(state===player&&scale===.5&&empty);},getRenderStats:function(){return skyStats;}};};
+      DW.flightVr.forHost=function(){return {active:function(){return immersive;},skyPose:function(){throw Error('Head pose must not rotate the light probe');},setSkyRenderer:function(){}};};
+      DW.flightSkybox.create=function(){return {setFov:function(degrees){assert(degrees===(immersive?140:45));},render:function(state,scale,empty){events.push('sky');assert(state===player&&scale===.5&&empty);},getRenderStats:function(){return skyStats;}};};
       DW.shipPackModels=Object.assign({},saved.packs,{
         populate:function(){},loadTextures:function(){return {then:function(fn){fn(textureImages);return {catch:function(){}};}};},
         craftModel:function(craft,selection,wave){return {id:selection+':'+wave+':'+craft.id};},
@@ -117,6 +119,7 @@
       assert(!presentation.hullHit, 'Presentation does not supply authoritative collision');
       presentation.pose(player);presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);
       assert(events.join(',')==='pose,actors,effects,diagnostics,sky,sync,scene');
+      immersive=true;presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},appearance,comparison,.05);immersive=false;
       assert(actors.map(function(batch){return batch.kind;}).join(',')==='hull,hull,scorch,scorch');
       assert(fleets[0].craft[0]===ally&&fleets[0].craft[1]===wreck&&fleets[1].craft.length===1&&fleets[1].craft[0]===enemy);
       assert(fleets[0].paint===appearance.paint.ally&&fleets[1].paint===appearance.paint.enemy&&fleets[1].selection==='hostile');
@@ -178,7 +181,7 @@
       presentation.render({state:player,combat:combat,guns:DW.flightGuns.create(),world:world},plain,comparison,.05);
       assert(blockouts.length===2&&blockouts[0].length===2&&blockouts[0].every(function(craft){return craft.hp===1;}));
       assert(wreck.hp===0&&ally.hp===90,'Blockout batching must not mutate combatants or wrecks');
-    }finally{DW.shipPackModels=saved.packs;DW.scene3d.create=saved.scene;DW.flightSkybox.create=saved.sky;DW.flightGuns.geometry=saved.gunGeometry;DW.flightSim.geometry=saved.blockout;}
+    }finally{DW.shipPackModels=saved.packs;DW.scene3d.create=saved.scene;DW.flightVr.forHost=saved.vr;DW.flightSkybox.create=saved.sky;DW.flightGuns.geometry=saved.gunGeometry;DW.flightSim.geometry=saved.blockout;}
   });
   test('rendering', 'faction paint is optional and stays separate from shared source textures',function(){
     var api=window.Driftworks.shipPackModels,model=window.Driftworks.shipPacks[0].models[0],texture={},images=new Map([[model.id,texture]]),pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},craft=[{index:0,pose:pose}];

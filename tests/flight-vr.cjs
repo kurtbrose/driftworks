@@ -46,6 +46,9 @@ const pose={eye:[10,20,30],right:[1,0,0],up:[0,1,0],back:[0,0,1],velocity:[0,0,0
     const eyeCentre=new T.Vector3().setFromMatrixPosition(new T.Matrix4().multiplyMatrices(camera.parent.matrixWorld,walking));
     assert(eyeCentre.distanceTo(new T.Vector3(0,0,1))<1e-7,'Walking/leaning must cancel on all three axes');
   }
+  assert.equal(camera.near,2,'XR retains desktop physical near distance for depth precision');
+  function depth(z){return camera.far/(camera.far-camera.near)*(1-camera.near/z);}
+  assert(Math.abs(depth(1000)-depth(1000.1))>1/16777216,'10 cm surface separation at 1 km survives a 24-bit depth buffer');
   let overlayScene;renderer.render=scene=>{overlayScene=scene;};bridge.overlay(element());
   const glyphShader=fs.readFileSync(path.join(root,'experiments/gpu-ui.js'),'utf8').match(/var fragment = `([\s\S]*?)`;/)[1];
   const nativeFrame={geometry:new T.BufferGeometry(),fragmentShader:glyphShader,width:1000,height:600,uniforms:{viewport:{value:[1000,600]},atlas:{value:{}},pixelRatio:{value:1}}};

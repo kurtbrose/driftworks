@@ -15,11 +15,9 @@
         /** @param {Source|undefined} source @param {number} index */
         function button(source,index) { var b=source&&source.gamepad&&source.gamepad.buttons[index];return !!(b&&(b.pressed||b.value>.5)); }
         /** @param {Source|undefined} source @param {number} index */
-        function axis(source,index) { return DW.flightInput.deadzone(source&&source.gamepad ? source.gamepad.axes[index] : 0,.06); }
-        /** @param {number} value */
-        function steer(value) { return Math.sign(value)*value*value; }
+        function axis(source,index) { return DW.flightInput.deadzone(source&&source.gamepad ? source.gamepad.axes[index] : 0,0); }
         var maneuver=button(left,1), x=axis(right,2), y=-axis(right,3), length=Math.max(1,Math.hypot(x,y));
-        return {pitch:steer(-axis(left,3)),yaw:steer(-axis(left,2)),roll:maneuver?0:steer(-x),side:maneuver?x/length:0,vertical:maneuver?y/length:0,
+        return {pitch:-axis(left,3),yaw:-axis(left,2),roll:maneuver?0:-x,side:maneuver?x/length:0,vertical:maneuver?y/length:0,
             throttle:null,throttleRate:maneuver?0:y,fire:button(right,0),boost:button(right,4),bank:button(left,5),lock:button(left,0),
             pause:button(right,5),target:button(right,1),recenter:button(left,4)};
     }
@@ -116,7 +114,9 @@
                     var offset=head?rotate([head.matrix[12],head.matrix[13],head.matrix[14]]):[0,0,0];
                     rig.matrix.fromArray([r[0]*s,r[1]*s,r[2]*s,0,u[0]*s,u[1]*s,u[2]*s,0,b[0]*s,b[1]*s,b[2]*s,0,b[0]*distance-offset[0]*s,b[1]*distance-offset[1]*s,b[2]*distance-offset[2]*s,1]);
                     camera.matrix.fromArray(identity);rig.updateMatrixWorld(true);
-                    camera.near=.05;camera.far=30000*units;
+                    // Match the desktop 0.1-world-unit near plane (2 metres), rather than
+                    // spending most depth precision on an invisible 5 cm cockpit volume.
+                    camera.near=.1*units;camera.far=30000*units;
                 }else if(camera.parent===rig){rig.remove(camera);camera.updateMatrixWorld(true);}
             },
             skyPose:/** @param {import('./types').Pose} pose */function(pose){
