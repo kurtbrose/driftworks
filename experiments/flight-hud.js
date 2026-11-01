@@ -516,6 +516,10 @@
                     combatHud.fillText(Math.round(Math.hypot.apply(null,direction)*units)+' m',x,y+27);
                     combatHud.strokeStyle='#72c8d5';combatHud.fillStyle='#b9e7ed';
                 }
+                convoy.arrivalFleet.forEach(function(ship){
+                    var direction=ship.position.map(function(v,k){return v-state.eye[k];}),q=DW.flightSkybox.project(direction,state,w/h);
+                    if(q&&Math.abs(q.x)<.85&&Math.abs(q.y)<.65)combatHud.fillText('RECEPTION / '+ship.callsign.toUpperCase(),w*(q.x+1)/2,h*(1-q.y)/2-45);
+                });
                 DW.convoyMission.packets.forEach(function(packet,index){
                     var ships=convoy.ships.filter(function(s){return s.packet===index&&s.hull>0;});if(!ships.length)return;
                     var center=[0,1,2].map(function(k){return ships.reduce(function(n,s){return n+s.position[k];},0)/ships.length;}),q=DW.flightSkybox.project(center.map(function(v,k){return v-state.eye[k];}),state,w/h);

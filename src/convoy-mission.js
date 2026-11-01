@@ -10,6 +10,8 @@
         {name:'Starboard',center:[270,190,50],ship:'Good Measure',pilot:'Ines Duarte',id:'ines-duarte',portrait:4,voice:5},
         {name:'Rear',center:[0,-310,-20],ship:'Last Light',pilot:'Thomas Reed',id:'thomas-reed',portrait:5,voice:4}
     ];
+    /** Stationary reception ships flank the arrival corridor; source Aegis geometry stays in metres. */
+    function arrivalFleet(){return [-1,1].map(function(side,i){return {id:'reception-'+i,callsign:i?'Vigilant':'Bastion',position:[side*1450/U,(7500+(i?450:950))/U,1200+(i?110:-70)/U],heading:Math.PI/2};});}
     /** @param {import('../experiments/types').Combat} combat @param {import('../experiments/types').FlightState} player */
     function start(combat,player){
         player.eye=[0,-680/U,1200+80/U];player.right=[1,0,0];player.up=[0,0,1];player.back=[0,-1,0];
@@ -23,7 +25,7 @@
             c.mode='escort';c.targetId=null;
             if(combat.useHullModels)c.collision={kind:'model',modelId:DW.shipPackModels.craftModel(c,combat.hullModels?combat.hullModels.ally:'mixed',combat.wave).id};
         });
-        combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,raidStarted:false,director:{phase:'opening',raids:0,nextRaidAt:FIRST_CONTACT_SECONDS,pressure:0,lastHull:150000,lastDamageAt:-100,quietSince:0,patrol:0,stationAt:0,waypoint:null},radio:{wait:1,opening:0,said:[],phase:'arrival',report:0,chat:0,chatTurn:0},ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
+        combat.convoy={elapsed:0,speedMps:25,destinationY:7500/U,complete:false,raidStarted:false,arrivalFleet:arrivalFleet(),raids:[],director:{phase:'opening',raids:0,reservePlanned:false,overload:0,withdrawn:0,events:[],nextRaidAt:FIRST_CONTACT_SECONDS,pressure:0,lastHull:150000,lastDamageAt:-100,quietSince:0,patrol:0,stationAt:0,waypoint:null},radio:{wait:1,opening:0,said:[],phase:'arrival',report:0,chat:0,chatTurn:0},ships:Array.from({length:30},function(/** @type {unknown} */unused,i){
             var packet=packets[Math.floor(i/6)],local=i%6,row=Math.floor(local/2),side=local%2?1:-1;
             var slot=[(packet.center[0]+side*48+(row-1)*11)/U,(packet.center[1]+(1-row)*125+(side>0?-35:25))/U,1200+(packet.center[2]+side*32+[ -12,8,4 ][row])/U];
             return {id:'cargo-'+String(i+1).padStart(2,'0'),packet:Math.floor(i/6),callsign:local===0?packet.ship:packet.name+' '+String(local+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
@@ -32,14 +34,16 @@
         combat.targetId=null;combat.roundOver=false;
     }
     /** Spawn one coherent approach relative to the moving convoy.
-     * @param {import('../experiments/types').Combat} combat */
-    function beginRaid(combat){
+     * @param {import('../experiments/types').Combat} combat @param {boolean} [reserve] */
+    function beginRaid(combat,reserve){
         const s=combat.convoy;if(!s||s.director.raids>=3)return;
         var survivors=s.ships.filter(function(ship){return ship.hull>0;});if(!survivors.length)return;
         s.raidStarted=true;
         var wave=s.director.raids++,base=wave*3,packet=[4,0,1][wave],offset=[[2600,-1000,500],[-2600,900,650],[2100,1800,-700]][wave];
+        if(reserve)offset=offset.map(function(v){return v*1.7;});
         var objective=survivors.find(function(ship){return ship.packet===packet;})||survivors[0],origin=objective.position.map(function(v,k){return v+offset[k]/U;});
-        s.raid={phase:'approach',leaderId:'convoy-raider-'+(base+1),until:0,offset:offset,packet:objective.packet};
+        var raid={id:wave,phase:reserve?'hold':'approach',leaderId:'convoy-raider-'+(base+1),until:0,offset:offset,packet:objective.packet,createdAt:combat.time,committedAt:reserve?-1:combat.time,passes:0};
+        s.raids.push(/** @type {import('../experiments/types').ConvoyRaid} */(raid));
         s.director.phase='contact';s.director.quietSince=-1;
         for(var j=0;j<3;j++){
             var target=survivors.find(function(ship){return ship.id===s.ships[objective.packet*6+j].id;})||objective,pose=DW.arcade.create(0);
@@ -50,13 +54,13 @@
             var raider=DW.flightSim.createCraft('convoy-raider-'+(base+j+1),pose,'enemy');
             raider.index=2+j;raider.callsign='Raider '+(base+j+1);raider.controller='ai';raider.skill=1;raider.pilot='Veteran';raider.mode='approach';raider.opponentStyle='fso-breaker';
             DW.flightSim.equip(raider,DW.arcade.profiles[0],DW.flightSim.defaultWeapon(DW.arcade.profiles[0]));
-            raider.convoyRaider={slot:j,role:j===2?'cover':'strike',cargoId:target.id,stage:'form',holdUntil:0,runAt:-1,fired:0};
+            raider.convoyRaider={wing:wave,slot:j,role:j===2?'cover':'strike',cargoId:target.id,stage:'form',holdUntil:0,runAt:-1,fired:0};
             raider.goal=target.position.slice();raider.targetId=j===2?null:target.id;raider.retarget=.75;
             if(combat.useHullModels)raider.collision={kind:'model',modelId:DW.shipPackModels.craftModel(raider,combat.hullModels?combat.hullModels.enemy:'mixed',combat.wave).id};
             combat.enemies.push(raider);
         }
-        if(!combat.targetLocked)combat.targetId='convoy-raider-'+(base+1);
-        DW.flightSim.collisionChanged(combat);direct(combat,0);
+        if(!reserve&&!combat.targetLocked)combat.targetId='convoy-raider-'+(base+1);
+        DW.flightSim.collisionChanged(combat);if(!reserve)direct(combat,0);
     }
     /** @param {import('../experiments/types').Combat} combat @param {number} dt */
     function step(combat,dt){
@@ -84,23 +88,58 @@
         var recent=s.elapsed-d.lastDamageAt<10,health=combat.player.hp/combat.player.maxHp,wing=combat.enemies.filter(function(e){return e.team==='ally'&&e.hp>0;}).length;
         var observed=hostiles.length?Math.min(1,.15+(inRange?.25:0)+(firing?.3:0)+(recent?.2:0)+(health<.5?.2:0)+(wing<2?.1:0)):0;
         d.pressure+=(observed-d.pressure)*Math.min(1,dt/3);
+        if(!cargo.length){d.waypoint=null;return;}
+        d.overload=d.pressure>.62?d.overload+dt:Math.max(0,d.overload-dt*2);
+        var groups=s.raids.filter(function(group){return group.phase!=='departed'&&hostiles.some(function(e){return e.convoyRaider&&e.convoyRaider.wing===group.id;});});
+        var active=groups.filter(function(group){return group.phase!=='hold'&&group.phase!=='withdraw';});
+        /** @param {import('../experiments/types').ConvoyRaid} group @param {string} kind */
+        function event(group,kind){if(d.events.length<10)d.events.push({wing:group.id,kind:kind});}
+        groups.forEach(function(group){
+            var members=hostiles.filter(function(e){return e.convoyRaider&&e.convoyRaider.wing===group.id;});
+            var depleted=members.length===1||members.reduce(function(n,e){return n+e.hp/e.maxHp;},0)/members.length<.45;
+            if(group.phase==='hold'&&depleted){group.phase='withdraw';group.until=combat.time;event(group,'withdraw');}
+            if(group.phase==='hold'){
+                if(members.some(function(e){return !!threat(combat,e)||combat.time-e.damagedAt<2;})){
+                    group.phase='engage';group.until=combat.time+24;group.committedAt=combat.time;event(group,'commit');
+                }else if(!active.length&&combat.time-group.createdAt>6){group.phase='withdraw';group.until=combat.time;event(group,'withdraw');}
+                else if(combat.time-group.createdAt>=20&&d.pressure<.5){
+                    var escorts=DW.flightSim.participants(combat).filter(function(e){return e.team==='ally'&&e.hp>0;});
+                    var exposed=cargo.reduce(function(best,ship){var gap=Math.min.apply(null,escorts.map(function(e){return range(e.pose.eye,ship.position);}));return gap>best.gap?{ship:ship,gap:gap}:best;},{ship:cargo[0],gap:0});
+                    if(exposed.ship&&exposed.gap>1400){
+                        group.packet=exposed.ship.packet;group.phase='approach';group.committedAt=combat.time;
+                        members.forEach(function(e){if(e.convoyRaider)e.convoyRaider.cargoId=exposed.ship.id;});event(group,'commit');
+                    }
+                }
+            }else if(group.phase!=='withdraw'&&(depleted||group.passes>=2||d.overload>=6)){
+                group.phase='withdraw';group.until=combat.time;event(group,'withdraw');
+            }
+            if(group.phase==='withdraw'&&combat.time-group.until>3&&members.every(function(e){return cargo.every(function(ship){return range(e.pose.eye,ship.position)>5500;});})){
+                var leaving=members.map(function(e){return e.id;});combat.enemies=combat.enemies.filter(function(e){return !leaving.includes(e.id);});group.phase='departed';d.withdrawn+=members.length;DW.flightSim.collisionChanged(combat);
+            }
+        });
+        if(!d.reservePlanned&&d.raids===1&&active.some(function(group){return group.phase!=='withdraw';})&&combat.time-s.raids[0].createdAt>=18&&s.elapsed<180){d.reservePlanned=true;beginRaid(combat,true);event(s.raids[s.raids.length-1],'hold');}
         if(!cargo.length||(!hostiles.length&&cargo.every(function(ship){return ship.arrived;}))){d.waypoint=null;return;}
-        if(hostiles.length){
+        // Holding and departing groups remain real, interceptable ships, but are not an attack order.
+        var threats=hostiles.filter(function(e){var group=s.raids.find(function(group){return e.convoyRaider&&group.id===e.convoyRaider.wing;});return !group||group.phase!=='hold'&&group.phase!=='withdraw'&&group.phase!=='departed';});
+        if(threats.length){nearest=Infinity;threats.forEach(function(e){cargo.forEach(function(ship){var distance=range(e.pose.eye,ship.position);if(distance<nearest){nearest=distance;focus=e;objective=ship;}});});}
+
+        if(threats.length){
             d.phase=firing||recent?'under-fire':inRange?'threatened':'contact';d.quietSince=-1;
             d.waypoint={kind:'intercept',packet:objective.packet,position:objective.position.map(function(v,k){return v+(focus.pose.eye[k]-v)*.6+objective.velocity[k]*8/U;}),targetId:focus.id};
             return;
         }
-        if(d.quietSince<0){
+        if(hostiles.length){d.quietSince=-1;}
+        if(!hostiles.length&&d.quietSince<0){
             d.quietSince=s.elapsed;d.nextRaidAt=s.elapsed+45+Math.max(d.pressure,recent?.8:0,1-health)*40;
         }
-        d.phase=!s.raidStarted?'opening':s.elapsed<d.nextRaidAt?'recovery':'patrol';
+        d.phase=hostiles.length?'recovery':!s.raidStarted?'opening':s.elapsed<d.nextRaidAt?'recovery':'patrol';
         var packet=packets[d.patrol%packets.length],group=cargo.filter(function(ship){return ship.packet===d.patrol%packets.length;});if(!group.length)group=cargo;
         var center=[0,1,2].map(function(k){return group.reduce(function(n,ship){return n+ship.position[k];},0)/group.length;});
         var station=center.map(function(v,k){return v+([0,-500,300][k]+(k===0?packet.center[0]*.8:0))/U;});
         if((s.elapsed-d.stationAt>22&&range(combat.player.pose.eye,station)<220)||s.elapsed-d.stationAt>40){d.patrol++;d.stationAt=s.elapsed;}
         d.waypoint={kind:'patrol',packet:group[0].packet,position:station,targetId:null};
         // No new wing while an attack survives, during reports, or near arrival.
-        if(d.raids<3&&s.elapsed>=d.nextRaidAt&&s.elapsed<210&&s.radio.phase!=='damage-report')beginRaid(combat);
+        if(!hostiles.length&&d.raids<3&&s.elapsed>=d.nextRaidAt&&s.elapsed<210&&s.radio.phase!=='damage-report')beginRaid(combat);
     }
     /** Observe proximity, facing and real rounds/damage, never the player's selected target or future input.
      * @param {import('../experiments/types').Combat} combat @param {import('../experiments/types').Craft} raider */
@@ -116,8 +155,9 @@
     }
     /** @param {import('../experiments/types').Combat} combat */
     function updateRaid(combat){
-        const s=combat.convoy;if(!s||!s.raid)return;
-        const raid=s.raid,members=combat.enemies.filter(function(e){return e.convoyRaider&&e.hp>0;});if(!members.length)return;
+        const s=combat.convoy;if(!s)return;
+        s.raids.forEach(function(raid){
+        const members=combat.enemies.filter(function(e){return e.convoyRaider&&e.convoyRaider.wing===raid.id&&e.hp>0;});if(!members.length)return;
         var leader=members.find(function(e){return e.id===raid.leaderId;})||members[0];raid.leaderId=leader.id;
         if(!members.some(function(e){return e.convoyRaider&&e.convoyRaider.role==='strike';})&&leader.convoyRaider)leader.convoyRaider.role='strike';
         const cargo=s.ships.find(function(ship){return ship.id===(leader.convoyRaider&&leader.convoyRaider.cargoId)&&ship.hull>0;})||s.ships.find(function(ship){return ship.hull>0;});if(!cargo)return;
@@ -126,9 +166,10 @@
         if(raid.phase==='regroup'){
             var rally=cargo.position.map(function(v,k){return v+raid.offset[k]*.65/U;});
             if(combat.time>=raid.until||members.every(function(e){return range(e.pose.eye,rally)<350;})){
-                raid.phase='approach';members.forEach(function(e){if(e.convoyRaider){e.convoyRaider.stage='form';e.convoyRaider.runAt=-1;e.convoyRaider.fired=e.guns.fired;}});
+                raid.phase='approach';raid.passes++;members.forEach(function(e){if(e.convoyRaider){e.convoyRaider.stage='form';e.convoyRaider.runAt=-1;e.convoyRaider.fired=e.guns.fired;}});
             }
         }
+        });
     }
     /** Shared physical steering, without directly replacing position or velocity.
      * @param {import('../experiments/types').Craft} craft @param {number[]} goal @param {number} speed @param {boolean} boost @param {number} dt */
@@ -140,10 +181,21 @@
     /** Return true when formation/extension movement replaces the generic combat step.
      * @param {import('../experiments/types').Combat} combat @param {import('../experiments/types').Craft} craft @param {number} dt */
     function stepRaider(combat,craft,dt){
-        const s=combat.convoy,r=craft.convoyRaider;if(!s||!s.raid||!r)return false;
-        const raid=s.raid,members=combat.enemies.filter(function(e){return e.convoyRaider&&e.hp>0;});
+        const s=combat.convoy,r=craft.convoyRaider;if(!s||!r)return false;
+        const raid=s.raids.find(function(group){return group.id===r.wing;});if(!raid)return false;
+        const members=combat.enemies.filter(function(e){return e.convoyRaider&&e.convoyRaider.wing===raid.id&&e.hp>0;});
         var leader=members.find(function(e){return e.id===raid.leaderId;})||craft;
         const cargo=s.ships.find(function(ship){return ship.id===r.cargoId&&ship.hull>0;})||s.ships.find(function(ship){return ship.hull>0;});if(!cargo)return false;r.cargoId=cargo.id;
+        if(raid.phase==='withdraw'){
+            craft.mode='withdraw';craft.targetId=null;r.stage='extend';craft.retarget=.75;
+            flyRaider(craft,cargo.position.map(function(v,k){return v+raid.offset[k]*3/U;}),craft.profile.maxVelocity[2],true,dt);return true;
+        }
+        if(raid.phase==='hold'){
+            craft.mode='holding';craft.targetId=null;craft.retarget=.75;
+            var angle=(combat.time-raid.createdAt)/12+r.slot*.2;
+            var holding=cargo.position.map(function(v,k){return v+(raid.offset[k]+(k===0?Math.cos(angle)*500:k===1?Math.sin(angle)*500:r.slot*100))/U;});
+            flyRaider(craft,holding,craft.profile.maxVelocity[2]*.65,false,dt);return true;
+        }
         if(raid.phase==='approach'){
             craft.mode='approach';r.stage='form';craft.targetId=r.role==='strike'?cargo.id:null;craft.retarget=.75;
             var slot=members.indexOf(craft),aim=cargo.position.map(function(v,k){return v+cargo.velocity[k]*2/U;}),speed=craft.profile.maxVelocity[2]*.9;
@@ -358,6 +410,14 @@
         var shooting=aimed.find(function(a){return a.ship&&a.enemy.fire&&a.enemy.guns.fired>0;}),ranged=aimed.find(function(a){var w=DW.retailWeapons[a.enemy.weaponIndex||0];return a.ship&&a.distance<w.speed*w.lifetime;});
         if(shooting&&shooting.ship&&!r.said.includes('firing'))return cue('firing','Lancer, Control. Bandit firing on the '+packets[shooting.ship.packet].name.toLowerCase()+' group. Engage.');
         if(ranged&&ranged.ship&&!r.said.includes('range')&&!r.said.includes('firing'))return cue('range','Lancer, Control. Bandits entering weapons range of the '+packets[ranged.ship.packet].name.toLowerCase()+' group. Intercept.');
+        while(s.director.events.length){
+            const instruction=s.director.events.shift();if(!instruction)break;
+            const group=s.raids.find(function(group){return group.id===instruction.wing;});if(!group)continue;
+            if(instruction.kind==='hold'&&group.phase==='hold'){var waiting=enemies.filter(function(e){return e.convoyRaider&&e.convoyRaider.wing===group.id;}).length;return cue('reserve-'+group.id,'Lancer, Control. '+waiting+' additional contacts holding outside the convoy. Maintain the screen.');}
+            if(instruction.kind==='commit'&&group.phase!=='hold'&&group.phase!=='withdraw'&&group.phase!=='departed')return cue('commit-'+group.id,'Lancer, Control. Reserve bandits turning toward the '+packets[group.packet].name.toLowerCase()+' group. Shift to the marked intercept.');
+            if(instruction.kind==='withdraw'&&(group.phase==='withdraw'||group.phase==='departed'))return cue('withdraw-'+group.id,'Lancer, Control. Bandit wing breaking off. Stay with the convoy.');
+        }
+        if(s.elapsed>=240&&!r.said.includes('reception'))return cue('reception','Lancer, Control. Reception fleet in sight. Bastion and Vigilant are holding the arrival corridor.');
         var contactReport=r.said.includes('range')||r.said.includes('firing');
         if(!s.raidStarted&&r.opening===0&&!contactReport){
             if(r.wait>0)return null;
@@ -370,7 +430,7 @@
             }
         }
         if(!s.raidStarted&&r.said.includes('visual-reply')&&!contactReport&&!r.said.includes('welcome')&&s.ships[0].hull>0){r.phase='cruise';return cue('welcome','Lancer, Wayfarer. Glad to have you with us.',0);}
-        if(enemies.length&&!r.said.includes('nearby')&&!contactReport){var assignment=s.director.waypoint,group=assignment?packets[assignment.packet].name.toLowerCase():'rear';return cue('nearby','Lancer, Control. '+enemies.length+' bandits in one group, approaching the '+group+' group. Proceed to the marked intercept.');}
+        if(enemies.length&&!r.said.includes('nearby')&&!contactReport){var assignment=s.director.waypoint,packetName=assignment?packets[assignment.packet].name.toLowerCase():'rear';const contact=enemies.find(function(e){return assignment&&e.id===assignment.targetId;});var count=contact&&contact.convoyRaider?enemies.filter(function(e){return e.convoyRaider&&contact.convoyRaider&&e.convoyRaider.wing===contact.convoyRaider.wing;}).length:enemies.length;return cue('nearby','Lancer, Control. '+count+' bandits in one group, approaching the '+packetName+' group. Proceed to the marked intercept.');}
         // Do not deliver an arrival briefing after the engagement has already begun.
         if(contactReport&&r.opening===0)r.opening=1;
         if(!s.raidStarted||enemies.length||r.phase!=='cruise')return null;
@@ -389,5 +449,5 @@
         }
         return null;
     }
-    DW.convoyMission={stepRaider:stepRaider,radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
+    DW.convoyMission={arrivalFleet:arrivalFleet,stepRaider:stepRaider,radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
 }());

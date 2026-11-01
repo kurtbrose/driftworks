@@ -30,7 +30,23 @@
             new Promise(/** @param {(value:boolean)=>void} resolve @param {(reason:Error)=>void} reject */function(resolve,reject){image.onload=function(){resolve(true);};image.onerror=function(){reject(Error('Industrial paint atlas unavailable'));};image.src=assetUrl('../assets/ships/industrial-kit/panels.png');})
         ]).then(function(values){install(/** @type {import('./types').ConvoyAsset} */(values[0]),values[1],image);return true;}).catch(/** @param {unknown} error */function(error){console.error('Convoy ships:',error);return false;});
     }
-    DW.convoyScenery={preview:function(name){return models[name]||[];},visible:true,ready:ready,texture:texture,install:install,effects:function(combat,view){
+    /** Reuse the production idle Aegis rig, including its materials, scale and hull contacts.
+     * @returns {import('./types').AegisFlightRig} */
+    function createArrivalFleet(){
+        var started=performance.now(),layout=DW.convoyMission.arrivalFleet();
+        var ships=layout.map(function(ship){var state={team:/** @type {'ally'} */('ally'),position:ship.position.slice(),heading:ship.heading,velocity:[0,0,0],integrity:20000};return DW.aegisFlight.create({state:state,opponent:state,unarmed:true});});
+        // These actors are stationary. Prepare once; each ship keeps its own GPU pose.
+        var batches=ships.flatMap(function(ship){return ship.geometry();});
+        DW.convoyScenery.arrivalPreparationMs=performance.now()-started;
+        return {reset:function(combat){ships.forEach(function(ship){ship.reset(combat);});},
+            step:function(dt,view){ships.forEach(function(ship){ship.step(dt,view);});},
+            geometry:function(){return batches;},effects:function(pose,shields){return ships.flatMap(function(ship){return ship.effects(pose,shields);});},
+            readout:function(){return 'RECEPTION FLEET / BASTION + VIGILANT';},
+            hit:function(a,b,bolt){var hits=ships.map(function(ship){return ship.hit(a,b,bolt);}).filter(function(hit){return !!hit;});hits.sort(function(one,two){return Math.hypot.apply(null,one.map(function(v,k){return v-a[k];}))-Math.hypot.apply(null,two.map(function(v,k){return v-a[k];}));});return hits[0]||null;},
+            damage:function(point,amount,combat){return ships.some(function(ship){return !!ship.damage&&ship.damage(point,amount,combat);});},
+            telemetry:function(){var stats=ships.map(function(ship){return ship.telemetry();});return {seconds:stats[0].seconds,contacts:stats.reduce(function(n,s){return n+s.contacts;},0),launches:0,shots:0,hits:0,mounts:[]};}};
+    }
+    DW.convoyScenery={createArrivalFleet:createArrivalFleet,arrivalPreparationMs:0,preview:function(name){return models[name]||[];},visible:true,ready:ready,texture:texture,install:install,effects:function(combat,view){
         if(!combat.convoy||!this.visible)return [];
         var state=combat.convoy,y=Math.min(state.destinationY,state.elapsed*state.speedMps/U);
         return state.ships.filter(function(s){return s.hull>0;}).map(function(s,index){

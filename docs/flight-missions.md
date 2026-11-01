@@ -54,8 +54,8 @@ Strafing passes stop after five seconds of firing or close approach. Critical
 hull damage also aborts a run. The wing regroups off the convoy after the strikes
 finish or its engagement window expires, then reforms for another approach.
 These goals use normal flight physics, gun tracing, shields and collision. A
-survivor assumes leadership if the lead is destroyed. `combat.convoy.raid` owns
-the group phase/leader ID; each craft's `convoyRaider` stores its role and pass
+survivor assumes leadership if the lead is destroyed. `combat.convoy.raids` owns
+independent numeric wing IDs, phases and leader IDs; each craft's `convoyRaider` stores its wing ID, role and pass
 bookkeeping, with JSON-safe IDs rather than entity pointers. `stepRaider` returns
 true only when it has performed formation/cover/extension movement; its caller
 still ages guns and updates collision/neighbour indices. Engaged targeting uses
@@ -68,13 +68,46 @@ Its observable stages are opening, patrol, contact, threatened, under-fire and
 recovery. These describe the real situation, rather than forcing a firing cue
 when no shots are being taken.
 
-A raid must be eliminated before another wing can spawn. Recovery lasts 45–85
-seconds after the last hostile dies; recent cargo damage and player strain earn
-more time. Damage reports finish before another attack. The sortie has a budget
-of three three-fighter wings, with no new spawn after 210 route seconds. Later
-wings approach Upper and Port packets from different common bearings; each wing
-arrives together, and raider IDs remain unique. No allied reinforcement spawning
-is included in this first pass.
+Wings now have separate `hold`, `approach`, `engage`, `regroup`, `withdraw`
+and `departed` orders. Eighteen seconds into an active first encounter, the
+planned reserve can arrive as one physical three-ship wing at a distant holding
+station. It waits at least twenty seconds before exploiting a cargo packet with
+no escort within 1.4 km, and only while pressure is below 0.5. A tight screen
+keeps it held. Intercepting it makes it defend immediately. Beating the main raid
+makes an uncommitted reserve withdraw, rather than automatically replacing losses.
+
+A wing withdraws after losing two pilots, falling below 45% average hull,
+completing two passes, or six seconds of sustained pressure above 0.62. It flies
+out under ordinary steering/boost with weapons held. Only survivors beyond
+5.5 km from every freighter are removed from the roster; they are counted as
+withdrawals, not kills. No actor teleports or receives a durability/aim change.
+Control reports current holding, commitment and breakoff orders through the
+existing spaced channel; stale instructions are dropped.
+
+After every hostile has been defeated or physically departed, recovery lasts
+45–85 seconds; recent cargo damage and player strain earn more time. Damage
+reports finish before another encounter. The sortie retains a total budget of
+three three-fighter wings, including reserves, and no new spawn after 210 route
+seconds. Separate wings can approach from different bearings, while each wing
+stays coherent. No automatic allied fighter reinforcement spawning is included.
+
+### Reception fleet
+
+Bastion and Vigilant are two production Aegis capitals at their original roughly
+1.3 km length, stationary either side of the arrival corridor, 2.9 km apart.
+They are part of the scene from launch and grow in view as the convoy approaches;
+they do not pop into existence at arrival. Their opposed vertical offsets and
+staggered along-route positions leave the cargo route unobstructed. Control
+identifies the reception fleet on the final approach.
+
+`convoyMission.arrivalFleet()` supplies JSON-safe poses and IDs to each sortie.
+`convoyScenery.createArrivalFleet()` composes two existing idle Aegis rigs. They
+retain production textures, material finishes, metre scale, shared immutable
+local buffers, separate GPU poses, weapon traces and fighter hull contacts.
+They receive the convoy without automatically starting a capital battle.
+Flight-lab diagnostics provide reception approach/underside/stern cameras and
+a capital-only frozen ABBA comparison, independently of the freighter toggle.
+See [the measured arrival-fleet readiness pass](benchmarks/convoy-arrival-2026-10-31.md).
 
 Control provides a cyan moving patrol station during quiet periods and an amber
 intercept waypoint during threats. Patrol stations move with the cargo and rotate

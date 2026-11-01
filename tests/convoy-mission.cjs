@@ -133,8 +133,8 @@ c.enemies.filter(e=>e.team==='ally').forEach(e=>{e.hp=0;});
 Object.assign(f.snapshot().state,{eye:[-10000/U,-10000/U,1200+5000/U],velocity:[0,0,0],ramp:[0,0,0],throttle:0});
 f.advance(12,{stop:true});
 assert(c.convoy.ships.every(s=>s.hull===s.maxHull),'Distant approach gives the player an interception window');
-f.advance(78,{stop:true});
-assert(c.enemies.filter(e=>e.team==='enemy').some(e=>e.guns.fired>0),'Raiders fire real projectiles');
+let raiderFired=false;for(let i=0;i<78;i++){f.advance(1,{stop:true});raiderFired=raiderFired||c.enemies.some(e=>e.team==='enemy'&&e.guns.fired>0);}
+assert(raiderFired,'Raiders fire real projectiles before breaking off');
 assert(c.convoy.ships.some(s=>s.hull<s.maxHull),'Actual raider rounds damage cargo');
 // A player volley hits the same surface, then destruction removes that target.
 f.reset();c=f.snapshot().combat;c.enemies.forEach(e=>{e.hp=0;});pose=f.snapshot().state;
@@ -156,7 +156,7 @@ f.reset();c=f.snapshot().combat;c.convoy.ships.forEach(s=>{s.hull=0;});f.DW.conv
 console.log('PASS escort combat: weapons, real raiders and defending wingmen, cargo damage/targets/losses, victory and failure');
 
 // Close the actual chase/aim/shoot loop through the normal control and gun paths.
-f.reset();c=f.snapshot().combat;f.advance(60);
+f.reset();c=f.snapshot().combat;f.advance(60);c.convoy.director.raids=3;
 // Form the screen with the wing rather than boosting alone into three healthy fighters.
 f.advance(4);
 for(let i=0;i<2400&&!c.dead;i++){
@@ -288,28 +288,28 @@ console.log('PASS convoy radio phases: factual damage assessment, dead/missing s
 f.reset();c=f.snapshot().combat;startRaid();
 const raidWing=c.enemies.filter(e=>e.team==='enemy'),raidLeader=raidWing[0];
 for(const e of raidWing){assert.equal(e.maxHp,e.profile.hull);assert.equal(e.maxShield,e.profile.shield);assert(e.retarget<5);assert.equal(e.opponentStyle,'fso-breaker');}
-assert.equal(c.convoy.raid.phase,'approach');
+assert.equal(c.convoy.raids[0].phase,'approach');
 assert(raidWing.every(e=>(e.pose.eye[0]-c.convoy.ships[24].position[0])*U>2000),'All three arrive from the same starboard quarter');
 const wingSpan=()=>Math.max(...raidWing.flatMap(a=>raidWing.map(b=>Math.hypot(...a.pose.eye.map((v,k)=>v-b.pose.eye[k]))*U)));
 assert(wingSpan()<350,'Initial loose wedge is one group');
 c.enemies.filter(e=>e.team==='ally').forEach(e=>{e.hp=0;});
 pose=f.snapshot().state;Object.assign(pose,{eye:[-10000/U,-10000/U,1500],velocity:[0,0,0],ramp:[0,0,0],throttle:0});
 const leaderStart=raidLeader.pose.eye.slice();f.advance(10,{stop:true});
-assert.equal(c.convoy.raid.phase,'approach');assert(wingSpan()<400,'Actual steering retains cohesion over the approach');
+assert.equal(c.convoy.raids[0].phase,'approach');assert(wingSpan()<400,'Actual steering retains cohesion over the approach');
 assert(Math.hypot(...raidLeader.pose.eye.map((v,k)=>v-leaderStart[k]))*U>300);
 assert(raidWing.every(e=>e.guns.fired===0),'Formation approach does not fire prematurely');
 pose.eye=raidLeader.pose.eye.map((v,k)=>v-raidLeader.pose.back[k]*600/U);pose.right=raidLeader.pose.right.map(v=>-v);pose.up=raidLeader.pose.up.slice();pose.back=raidLeader.pose.back.map(v=>-v);
 c.targetId='cargo-01';
 f.DW.flightSim.damageCraft(c,raidLeader,{damage:20,shieldFactor:1,armorFactor:1},c.player);
 f.advance(1/60,{stop:true});
-assert.equal(c.convoy.raid.phase,'engage');assert.equal(raidLeader.targetId,'player','A struck raider responds to the interceptor, regardless of the player selection');
+assert.equal(c.convoy.raids[0].phase,'engage');assert.equal(raidLeader.targetId,'player','A struck raider responds to the interceptor, regardless of the player selection');
 assert.equal(raidWing[2].targetId,'player','Cover pilot supports the intercepted wing');
 assert.equal(raidWing[1].targetId,raidWing[1].convoyRaider.cargoId,'An unengaged striker can still threaten the cargo');
 raidLeader.shield=0;f.DW.flightSim.damageCraft(c,raidLeader,{damage:raidLeader.maxHp*.65,shieldFactor:1,armorFactor:1},c.player);
 f.advance(1/60,{stop:true});assert.equal(raidLeader.convoyRaider.stage,'extend');assert.equal(raidLeader.mode,'regroup','Critical damage aborts the run');
-raidWing[1].convoyRaider.stage='extend';f.advance(1/60,{stop:true});assert.equal(c.convoy.raid.phase,'regroup','Finished or aborted passes regroup as a wing');
-raidLeader.hp=0;f.advance(1/60,{stop:true});assert.equal(c.convoy.raid.leaderId,raidWing[1].id,'Surviving pilot assumes the lead');
-raidWing[1].hp=0;f.advance(1/60,{stop:true});assert.equal(c.convoy.raid.leaderId,raidWing[2].id);assert.equal(raidWing[2].convoyRaider.role,'strike');
+raidWing[1].convoyRaider.stage='extend';f.advance(1/60,{stop:true});assert.equal(c.convoy.raids[0].phase,'regroup','Finished or aborted passes regroup as a wing');
+raidLeader.hp=0;f.advance(1/60,{stop:true});assert.equal(c.convoy.raids[0].leaderId,raidWing[1].id,'Surviving pilot assumes the lead');
+raidWing[1].hp=0;f.advance(1/60,{stop:true});assert.equal(c.convoy.raids[0].leaderId,raidWing[2].id);assert.equal(raidWing[2].convoyRaider.role,'strike');
 assert(raidWing[2].pose.eye.every(Number.isFinite));
-f.reset();assert.equal(f.snapshot().combat.convoy.raid,undefined);assert.equal(f.snapshot().combat.enemies.length,2);
+f.reset();assert.equal(f.snapshot().combat.convoy.raids.length,0);assert.equal(f.snapshot().combat.enemies.length,2);
 console.log('PASS convoy raider wing: normal defenses, same-bearing formation, shared physical flight, cover/strike roles, interceptor response, abort/regroup, succession and reset');

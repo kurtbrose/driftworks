@@ -129,9 +129,16 @@
         benchmarkButton.textContent=owner.activeMission.id==='convoy'?'Benchmark convoy on / off':owner.activeMission.sky.hyperbolic?'Benchmark fleet on / off':owner.activeMission.id==='scramble'?'Benchmark close furball on / off':owner.activeMission.id==='battle'?'Benchmark distant squadrons on / off':owner.activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
         benchmarkOutput.id='aegis-benchmark-result';benchmarkOutput.style.whiteSpace='pre-wrap';
         owner.get('perf-reset').after(benchmarkButton,benchmarkOutput);
-        var capitalBenchmarkButton=(owner.activeMission.id==='battle'||owner.activeMission.id==='scramble'||owner.activeMission.sky.hyperbolic)?document.createElement('button'):null;
+        var capitalBenchmarkButton=(owner.activeMission.id==='convoy'||owner.activeMission.id==='battle'||owner.activeMission.id==='scramble'||owner.activeMission.sky.hyperbolic)?document.createElement('button'):null;
         if(capitalBenchmarkButton){capitalBenchmarkButton.textContent='Benchmark capital ships on / off';benchmarkButton.after(capitalBenchmarkButton);capitalBenchmarkButton.onclick=function(){runBenchmark(true);};}
         benchmarkButton.onclick=function(){runBenchmark(false);};
+        if(owner.activeMission.id==='convoy'){
+            [['Reception approach',0,3000,120],['Reception underside',-1450,8450,-400],['Reception stern',-1450,10450,150]].forEach(function(preset){
+                var button=document.createElement('button');button.textContent=String(preset[0]);benchmarkOutput.before(button);
+                button.onclick=function(){owner.pause();var pose=owner.view().state,U=DW.sim.METERS_PER_UNIT;pose.eye=[Number(preset[1])/U,Number(preset[2])/U,1200+Number(preset[3])/U];pose.velocity=[0,0,0];pose.ramp=[0,0,0];pose.throttle=0;var target=Number(preset[1])<0?[-1450/U,8450/U,1200-70/U]:[0,8300/U,1200];var forward=target.map(function(v,k){return v-pose.eye[k];}),length=Math.hypot.apply(null,forward);forward=forward.map(function(v){return v/length;});var horizontal=Math.hypot(forward[0],forward[1]);pose.right=horizontal>1e-6?[forward[1]/horizontal,-forward[0]/horizontal,0]:[1,0,0];pose.up=[pose.right[1]*forward[2],-pose.right[0]*forward[2],pose.right[0]*forward[1]-pose.right[1]*forward[0]];pose.back=forward.map(function(v){return -v;});owner.presentation.pose(pose);};
+            });
+        }
+
         var surfaceBenchmarkButton=owner.aegis&&owner.aegis.setSurfaceDetail?document.createElement('button'):null;
         if(surfaceBenchmarkButton){surfaceBenchmarkButton.textContent='Benchmark capital surface detail';benchmarkButton.after(surfaceBenchmarkButton);surfaceBenchmarkButton.onclick=function(){runBenchmark(true,true);};}
         var turretBenchmarkButton=surfaceBenchmarkButton?document.createElement('button'):null;
@@ -145,7 +152,7 @@
             /** @type {{on:boolean,cpu:number,interval:number,draws:number,triangles:number}[]} */var rows=[];
             try{
                 for(var enabled of [false,true,true,false]){
-                    if(surfaces&&owner.aegis&&owner.aegis.setSurfaceDetail){owner.aegis.setSurfaceDetail(enabled,scope);owner.presentation.setCapital(owner.aegis);}else if(owner.aegis&&((owner.activeMission.id!=='battle'&&owner.activeMission.id!=='scramble'&&!owner.activeMission.sky.hyperbolic)||capitals))owner.presentation.setCapital(enabled?owner.aegis:null);else if(owner.activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;else if(owner.activeMission.id==='convoy')DW.convoyScenery.visible=enabled;
+                    if(surfaces&&owner.aegis&&owner.aegis.setSurfaceDetail){owner.aegis.setSurfaceDetail(enabled,scope);owner.presentation.setCapital(owner.aegis);}else if(owner.aegis&&((owner.activeMission.id!=='battle'&&owner.activeMission.id!=='scramble'&&owner.activeMission.id!=='convoy'&&!owner.activeMission.sky.hyperbolic)||capitals))owner.presentation.setCapital(enabled?owner.aegis:null);else if(owner.activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;else if(owner.activeMission.id==='convoy')DW.convoyScenery.visible=enabled;
                     var sampled=owner.activeMission.sky.hyperbolic&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:enabled?snapshot.combat.enemies:[],wrecks:enabled?snapshot.combat.wrecks:[]})}):owner.activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):owner.activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
                     var previous=0;
                     for(var i=0;i<110;i++){
@@ -164,10 +171,11 @@
                     function percentile(/** @type {'cpu'|'interval'} */key,/** @type {number} */fraction){var sorted=r.map(function(row){return row[key];}).sort(function(a,b){return a-b;});return sorted[Math.floor((sorted.length-1)*fraction)];}
                     lines.push((on?'Asset ON':'Asset OFF')+': CPU median/p95 '+percentile('cpu',.5).toFixed(2)+' / '+percentile('cpu',.95).toFixed(2)+' ms, frame median/p95 '+percentile('interval',.5).toFixed(2)+' / '+percentile('interval',.95).toFixed(2)+' ms, '+mean('draws').toFixed(0)+' draws, '+mean('triangles').toFixed(0)+' triangles');
                 });
+                if(owner.activeMission.id==='convoy'){var renderStats=owner.presentation.renderStats();lines.push('Backing '+renderStats.scene.width+' x '+renderStats.scene.height+'; DPR '+window.devicePixelRatio+'; capital preparation '+DW.convoyScenery.arrivalPreparationMs.toFixed(2)+' ms');if(capitals&&rows.filter(function(r){return r.on;}).every(function(r){return r.triangles<=rows[0].triangles;}))throw Error('Reception ships are not visible; invalid comparison');}
                 lines.push('CPU submission only; rAF includes browser pacing, not a GPU timer.');
                 benchmarkOutput.textContent=lines.join('\n');
             }catch(error){benchmarkOutput.textContent='Benchmark interrupted: '+String(error);}
-            finally{if(owner.aegis){if(surfaces&&owner.aegis.setSurfaceDetail)owner.aegis.setSurfaceDetail(true,scope);owner.presentation.setCapital(owner.aegis);}else if(owner.activeMission.id==='evacuation')DW.evacuationScenery.visible=true;else if(owner.activeMission.id==='convoy')DW.convoyScenery.visible=true;owner.pause();benchmarking=false;benchmarkButton.disabled=false;if(capitalBenchmarkButton)capitalBenchmarkButton.disabled=false;if(surfaceBenchmarkButton)surfaceBenchmarkButton.disabled=false;owner.diagnostics.reset();}
+            finally{if(owner.aegis){if(surfaces&&owner.aegis.setSurfaceDetail)owner.aegis.setSurfaceDetail(true,scope);owner.presentation.setCapital(owner.aegis);}if(owner.activeMission.id==='evacuation')DW.evacuationScenery.visible=true;if(owner.activeMission.id==='convoy')DW.convoyScenery.visible=true;owner.pause();benchmarking=false;benchmarkButton.disabled=false;if(capitalBenchmarkButton)capitalBenchmarkButton.disabled=false;if(surfaceBenchmarkButton)surfaceBenchmarkButton.disabled=false;owner.diagnostics.reset();}
         };
     }
 
