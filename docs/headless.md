@@ -188,3 +188,8 @@ Use headless validation first for spawning, targeting, mission rules, callout
 selection and timing. Browser checks remain necessary for layout, visual effects,
 real input, audio quality and device behavior. CPU geometry tests can check
 transforms, finite vertices and expiry without establishing visual quality.
+
+For isolated convoy escort/raid regressions or a battlefield ablation, pass
+`convoyBattlefield: false` to `createFlight`. The normal convoy defaults to
+108 real background fighters; the option suppresses only their initial creation.
+It leaves cargo, Lancer, raid tactics, collision, radio and mission timing intact.

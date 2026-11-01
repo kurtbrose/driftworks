@@ -288,7 +288,7 @@ console.log('PASS default cockpit motion dots: missing lab controls, no input de
 const bodyContains=document.body.classList.contains;document.body.classList.contains=name=>name==='watch-chase';hud.render(guideView);assert.ok(!calls.some(c=>c.color==='#9aeeff'&&c.kind==='fill'),'Chase camera suppresses cockpit motion dots');document.body.classList.contains=bodyContains;
 
 // Control orders are independent of the selected weapon target and remain visible off-screen.
-const escort=createFlight({mission:'convoy',seed:29}),escortView=escort.snapshot();
+const escort=createFlight({mission:'convoy',seed:29,convoyBattlefield:false}),escortView=escort.snapshot();
 escort.DW.convoyMission.step(escortView.combat,1);
 function drawEscort(){escortView.combat.targetId=null;hud.render({...guideView,...escortView});}
 drawEscort();assert(calls.some(c=>c.kind==='text'&&c.text.startsWith('CONTROL / PATROL')));

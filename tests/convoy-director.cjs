@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),{createFlight}=require('../tools/headless.cjs');
-function fixture(){const f=createFlight({mission:'convoy',seed:29}),c=f.snapshot().combat,s=c.convoy,U=f.DW.sim.METERS_PER_UNIT;return {f,c,s,U,step:dt=>{c.time+=dt;f.DW.convoyMission.step(c,dt);},members:wing=>c.enemies.filter(e=>e.hp>0&&e.convoyRaider?.wing===wing)};}
+function fixture(){const f=createFlight({mission:'convoy',seed:29,convoyBattlefield:false}),c=f.snapshot().combat,s=c.convoy,U=f.DW.sim.METERS_PER_UNIT;return {f,c,s,U,step:dt=>{c.time+=dt;f.DW.convoyMission.step(c,dt);},members:wing=>c.enemies.filter(e=>e.hp>0&&e.convoyRaider?.wing===wing)};}
 const q=fixture(),{f,c,s,step,members,U}=q;
 step(1);assert.equal(s.director.waypoint.kind,'patrol');const initial=s.director.waypoint.position.slice();step(1);assert(Math.abs((s.director.waypoint.position[1]-initial[1])*U-25)<1e-6);
 step(57);assert.equal(s.raids.length,0);step(1);assert.equal(members(0).length,3);assert.equal(s.director.phase,'contact');assert.equal(s.director.waypoint.kind,'intercept');
@@ -39,7 +39,7 @@ radioCase.members(1)[0].hp=0;radioCase.step(0);assert.equal(radioCase.s.raids[1]
 const stale=fixture();stale.step(60);stale.step(18);stale.members(0).forEach(e=>{e.hp=0;});stale.step(7);stale.s.radio.wait=0;
 const call=stale.f.DW.convoyMission.radio(stale.c,3,false);assert.match(call.text,/breaking off/);assert(!call.text.includes('holding outside'));
 // A surviving raider must actually fly out through the production fixed-step session.
-const retreat=createFlight({mission:'convoy',seed:29}),rc=retreat.snapshot().combat;retreat.advance(60);rc.convoy.director.raids=3;
+const retreat=createFlight({mission:'convoy',seed:29,convoyBattlefield:false}),rc=retreat.snapshot().combat;retreat.advance(60);rc.convoy.director.raids=3;
 const attackers=rc.enemies.filter(e=>e.team==='enemy'),escaping=attackers[0],departureStart=escaping.pose.eye.slice();attackers.slice(1).forEach(e=>{e.hp=0;});rc.enemies.filter(e=>e.team==='ally').forEach(e=>{e.hp=0;});retreat.advance(70,{stop:true});
 assert.equal(rc.convoy.director.withdrawn,1);assert(!rc.enemies.includes(escaping));assert.equal(rc.playerKills,0);assert(Math.hypot(...escaping.pose.eye.map((v,k)=>v-departureStart[k]))*retreat.DW.sim.METERS_PER_UNIT>2000,'Retreat covers physical distance before departure');
 console.log('PASS convoy tactics: independent wings, held reserves, gap commits, contested holds, live retreats, earned relief, overload response, player locks, pacing, arrival fleet and reset');

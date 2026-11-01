@@ -27,7 +27,9 @@
     var combat=DW.flightCombat;
     var shieldContacts=combat.shieldContacts, damageCraft=combat.damageCraft;
     var damagePlayer=combat.damagePlayer, trace=combat.trace, radioEvent=combat.radioEvent;
-    var setCollisionMode=collision.setMode,collisionBatch=collision.batch;
+    var setCollisionMode=collision.setMode;
+    /** @template T @param {Combat} t @param {()=>T} run @returns {T} */
+    function collisionBatch(t,run){return collision.batch(t,function(){return t.convoy?DW.convoyMission.batchTrace(t,run):run();});}
     var collisionChanged=collision.changed,collisionStats=collision.stats;
     var collisionRadius=collision.radius,collisionNearby=collision.nearby;
     /** @param {Combat} combat */
@@ -518,7 +520,7 @@
                 e.hangarLaunch.remaining-=dt;e.fire=false;
                 if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;if(t.scramble&&e.team==='enemy')delete e.plotArmor;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
-                if(t.convoy&&e.team==='ally'&&!living.some(function(c){return c.team==='enemy';})){DW.convoyMission.stepWing(e,player,e.index,dt);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
+                if(t.convoy&&e.team==='ally'&&!e.convoyBattle&&(!t.convoy.battle?!living.some(function(c){return c.team==='enemy';}):length(sub(e.pose.eye,player.eye))*U>2200||!living.some(function(c){return c.team==='enemy'&&length(sub(c.pose.eye,player.eye))*U<2200;}))){e.targetId=null;DW.convoyMission.stepWing(e,player,e.index,dt);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 if(t.convoy&&e.team==='enemy'&&DW.convoyMission.stepRaider(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {

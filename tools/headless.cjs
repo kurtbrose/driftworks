@@ -35,6 +35,7 @@ function createFlight(options = {}) {
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('Invalid seed');
   if (typeof enabled !== 'boolean') throw new Error('Invalid enabled flag');
   const DW = loadRuntime();
+  if(options.convoyBattlefield===false){const start=DW.convoyMission.start;DW.convoyMission.start=(combat,player)=>start(combat,player,false);}
   if (typeof mission !== 'string' || (mission !== 'training' && DW.flightMissions.resolve(mission).id !== mission)) {
     throw new Error('Unknown mission: ' + mission);
   }

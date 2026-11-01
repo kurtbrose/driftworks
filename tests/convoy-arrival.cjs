@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{performance}=require('node:perf_hooks');
-const {createFlight}=require('../tools/headless.cjs'),f=createFlight({mission:'convoy',seed:29}),DW=f.DW,U=DW.sim.METERS_PER_UNIT;
+const {createFlight}=require('../tools/headless.cjs'),f=createFlight({mission:'convoy',seed:29,convoyBattlefield:false}),DW=f.DW,U=DW.sim.METERS_PER_UNIT;
 const context=vm.createContext({window:{Driftworks:DW},performance,Float32Array,Map,Math,console});
 for(const file of ['assets/ships/aegis-kit/flight-rig.js','src/aegis-sim.js','src/aegis-visual.js','src/aegis-battle.js','experiments/aegis-flight.js','experiments/convoy-scenery.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
 const fleet=DW.convoyScenery.createArrivalFleet(),batches=fleet.geometry(),half=batches.length/2;

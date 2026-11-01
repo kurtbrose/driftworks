@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {createFlight}=require('../tools/headless.cjs');
-const f=createFlight({mission:'convoy',seed:29});
+const f=createFlight({mission:'convoy',seed:29,convoyBattlefield:false});
 let {combat:c,state:player,world}=f.snapshot();
 const U=f.DW.sim.METERS_PER_UNIT;
 assert.equal(f.DW.convoyMission.WING_SIZE,3);
@@ -119,6 +119,16 @@ assert(pose.eye[1]>startY+.1/U,'Moving hull pushes a stationary fighter out of i
 assert(pose.velocity[1]>0,'Contact is resolved relative to freighter velocity');
 f.reset();c=f.snapshot().combat;
 assert.equal(f.DW.convoyMission.trace(c,[10000,10000,10000],[10001,10000,10000],7),null);
+// The gun-batch broadphase must preserve exact hits, hollow bays and swept cargo motion.
+const probes=c.convoy.ships.flatMap(ship=>[[-80,0,2.6],[0,-42,0],[0,0,90]].map(p=>({a:at(ship,p),b:at(ship,[80,p[1],p[2]])})));probes.push({a:[-10000,0,0],b:[10000,0,0]});
+for(const radius of [.1,7]){
+ const expected=probes.map(p=>f.DW.convoyMission.trace(c,p.a,p.b,radius));
+ const result=f.DW.flightSim.collisionBatch(c,()=>probes.map(p=>f.DW.convoyMission.trace(c,p.a,p.b,radius)));
+ assert.deepEqual(result,expected,'Broadphase preserves exact trace results and generic batch return values');
+}
+assert.throws(()=>f.DW.convoyMission.batchTrace(c,()=>{throw Error('cleanup');}),/cleanup/);
+const movedCargoForBounds=c.convoy.ships[24],saved=movedCargoForBounds.position.slice();movedCargoForBounds.position[0]+=10000;
+assert(f.DW.convoyMission.trace(c,at(movedCargoForBounds,[-20,0,2.6]),at(movedCargoForBounds,[20,0,2.6]),.1),'Batch bounds cannot outlive the synchronous call');movedCargoForBounds.position=saved;
 console.log('PASS convoy collision: authored surfaces and open bays, high-speed CCD, wingmen, moving hulls, clearance and reset');
 
 // The playable encounter starts armed and threatens actual damageable cargo.
@@ -232,7 +242,7 @@ assert.match(radio(1).text,/dockside diner/);
 assert.match(radio(3).speaker,/Mara Vale/);
 console.log('PASS convoy radio pacing: silence after speech, urgent gap, no combat roll call, damage threshold and packet aggregation');
 
-const arrivalFlight=createFlight({mission:'convoy',seed:29});arrivalFlight.advance(13,{stop:true});
+const arrivalFlight=createFlight({mission:'convoy',seed:29,convoyBattlefield:false});arrivalFlight.advance(13,{stop:true});
 const arrivalLines=arrivalFlight.transcript;
 assert.equal(arrivalLines.length,3,'The actual channel delivers one short arrival exchange');
 assert.equal(arrivalLines[0].craftId,'control');assert.match(arrivalLines[0].text,/visual range/);
@@ -240,7 +250,7 @@ assert.equal(arrivalLines[1].craftId,arrivalFlight.snapshot().combat.enemies[0].
 assert.equal(arrivalLines[2].civilianPortraitIndex,0);assert.match(arrivalLines[2].text,/Glad to have you/);
 console.log('PASS convoy arrival radio: real channel timing, Control observation, wing acknowledgment and civilian welcome');
 
-const breathingFlight=createFlight({mission:'convoy',seed:29}),bc=breathingFlight.snapshot().combat;
+const breathingFlight=createFlight({mission:'convoy',seed:29,convoyBattlefield:false}),bc=breathingFlight.snapshot().combat;
 breathingFlight.advance(1,{fire:true});assert(bc.player.guns.fired>0,'Weapons stay live in the quiet leg');
 breathingFlight.advance(58.9);
 assert(!bc.convoy.raidStarted);assert.equal(bc.enemies.length,2,'Only the two wingmen exist before first contact');

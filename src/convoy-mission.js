@@ -12,8 +12,8 @@
     ];
     /** Stationary reception ships flank the arrival corridor; source Aegis geometry stays in metres. */
     function arrivalFleet(){return [-1,1].map(function(side,i){return {id:'reception-'+i,callsign:i?'Vigilant':'Bastion',position:[side*1450/U,(7500+(i?450:950))/U,1200+(i?110:-70)/U],heading:Math.PI/2};});}
-    /** @param {import('../experiments/types').Combat} combat @param {import('../experiments/types').FlightState} player */
-    function start(combat,player){
+    /** @param {import('../experiments/types').Combat} combat @param {import('../experiments/types').FlightState} player @param {boolean} [battlefield] */
+    function start(combat,player,battlefield){
         player.eye=[0,-680/U,1200+80/U];player.right=[1,0,0];player.up=[0,0,1];player.back=[0,-1,0];
         player.velocity=[0,25,0];player.ramp=[0,0,25];player.throttle=25/combat.player.profile.maxVelocity[2];
         combat.enemies.forEach(function(c,i){
@@ -30,6 +30,7 @@
             var slot=[(packet.center[0]+side*48+(row-1)*11)/U,(packet.center[1]+(1-row)*125+(side>0?-35:25))/U,1200+(packet.center[2]+side*32+[ -12,8,4 ][row])/U];
             return {id:'cargo-'+String(i+1).padStart(2,'0'),packet:Math.floor(i/6),callsign:local===0?packet.ship:packet.name+' '+String(local+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
         })};
+        if(battlefield!==false)DW.convoyBattle.start(combat);
         targets(combat);
         combat.targetId=null;combat.roundOver=false;
     }
@@ -39,10 +40,10 @@
         const s=combat.convoy;if(!s||s.director.raids>=3)return;
         var survivors=s.ships.filter(function(ship){return ship.hull>0;});if(!survivors.length)return;
         s.raidStarted=true;
-        var wave=s.director.raids++,base=wave*3,packet=[4,0,1][wave],offset=[[2600,-1000,500],[-2600,900,650],[2100,1800,-700]][wave];
+        var wave=s.director.raids++,wingId=s.raids.length,base=wave*3,packet=[4,0,1][wave],offset=[[2600,-1000,500],[-2600,900,650],[2100,1800,-700]][wave];
         if(reserve)offset=offset.map(function(v){return v*1.7;});
         var objective=survivors.find(function(ship){return ship.packet===packet;})||survivors[0],origin=objective.position.map(function(v,k){return v+offset[k]/U;});
-        var raid={id:wave,phase:reserve?'hold':'approach',leaderId:'convoy-raider-'+(base+1),until:0,offset:offset,packet:objective.packet,createdAt:combat.time,committedAt:reserve?-1:combat.time,passes:0};
+        var raid={id:wingId,phase:reserve?'hold':'approach',leaderId:'convoy-raider-'+(base+1),until:0,offset:offset,packet:objective.packet,createdAt:combat.time,committedAt:reserve?-1:combat.time,passes:0};
         s.raids.push(/** @type {import('../experiments/types').ConvoyRaid} */(raid));
         s.director.phase='contact';s.director.quietSince=-1;
         for(var j=0;j<3;j++){
@@ -54,7 +55,7 @@
             var raider=DW.flightSim.createCraft('convoy-raider-'+(base+j+1),pose,'enemy');
             raider.index=2+j;raider.callsign='Raider '+(base+j+1);raider.controller='ai';raider.skill=1;raider.pilot='Veteran';raider.mode='approach';raider.opponentStyle='fso-breaker';
             DW.flightSim.equip(raider,DW.arcade.profiles[0],DW.flightSim.defaultWeapon(DW.arcade.profiles[0]));
-            raider.convoyRaider={wing:wave,slot:j,role:j===2?'cover':'strike',cargoId:target.id,stage:'form',holdUntil:0,runAt:-1,fired:0};
+            raider.convoyRaider={wing:wingId,slot:j,role:j===2?'cover':'strike',cargoId:target.id,stage:'form',holdUntil:0,runAt:-1,fired:0};
             raider.goal=target.position.slice();raider.targetId=j===2?null:target.id;raider.retarget=.75;
             if(combat.useHullModels)raider.collision={kind:'model',modelId:DW.shipPackModels.craftModel(raider,combat.hullModels?combat.hullModels.enemy:'mixed',combat.wave).id};
             combat.enemies.push(raider);
@@ -71,9 +72,11 @@
             ship.position[1]=ship.slot[1]+Math.min(s.destinationY,s.elapsed*s.speedMps/U);
             if(ship.position[1]>=s.destinationY+ship.slot[1]){ship.arrived=true;ship.velocity=[0,0,0];}
         });
+        DW.convoyBattle.update(combat);
         direct(combat,dt);
         updateRaid(combat);
-        s.complete=!s.ships.some(function(ship){return ship.hull>0;})||(s.ships.every(function(ship){return ship.arrived||ship.hull<=0;})&&!combat.enemies.some(function(e){return e.team==='enemy'&&e.hp>0;}));
+        DW.convoyBattle.dispatch(combat);
+        s.complete=!s.ships.some(function(ship){return ship.hull>0;})||(s.ships.every(function(ship){return ship.arrived||ship.hull<=0;})&&!combat.enemies.some(function(e){return e.team==='enemy'&&e.hp>0&&!e.convoyBattle;}));
     }
     /** @param {number[]} a @param {number[]} b */
     function range(a,b){return Math.hypot.apply(null,a.map(function(v,k){return v-b[k];}))*U;}
@@ -81,11 +84,11 @@
      * @param {import('../experiments/types').Combat} combat @param {number} dt */
     function direct(combat,dt){
         const s=combat.convoy;if(!s)return;const d=s.director;
-        const cargo=s.ships.filter(function(ship){return ship.hull>0;}),hostiles=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0;});
+        const cargo=s.ships.filter(function(ship){return ship.hull>0;}),hostiles=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0&&!e.convoyBattle;});
         var hull=s.ships.reduce(function(n,ship){return n+ship.hull;},0);if(hull<d.lastHull)d.lastDamageAt=s.elapsed;d.lastHull=hull;
         var nearest=Infinity,focus=hostiles[0],objective=cargo[0],firing=false,inRange=false;
         hostiles.forEach(function(enemy){var weapon=DW.retailWeapons[enemy.weaponIndex||0];cargo.forEach(function(ship){var distance=range(enemy.pose.eye,ship.position);if(distance<nearest){nearest=distance;focus=enemy;objective=ship;}if(distance<weapon.speed*weapon.lifetime)inRange=true;if(enemy.targetId===ship.id&&enemy.fire&&enemy.guns.fired>0)firing=true;});});
-        var recent=s.elapsed-d.lastDamageAt<10,health=combat.player.hp/combat.player.maxHp,wing=combat.enemies.filter(function(e){return e.team==='ally'&&e.hp>0;}).length;
+        var recent=s.elapsed-d.lastDamageAt<10,health=combat.player.hp/combat.player.maxHp,wing=combat.enemies.filter(function(e){return e.team==='ally'&&e.hp>0&&!e.convoyBattle;}).length;
         var observed=hostiles.length?Math.min(1,.15+(inRange?.25:0)+(firing?.3:0)+(recent?.2:0)+(health<.5?.2:0)+(wing<2?.1:0)):0;
         d.pressure+=(observed-d.pressure)*Math.min(1,dt/3);
         if(!cargo.length){d.waypoint=null;return;}
@@ -103,7 +106,7 @@
                     group.phase='engage';group.until=combat.time+24;group.committedAt=combat.time;event(group,'commit');
                 }else if(!active.length&&combat.time-group.createdAt>6){group.phase='withdraw';group.until=combat.time;event(group,'withdraw');}
                 else if(combat.time-group.createdAt>=20&&d.pressure<.5){
-                    var escorts=DW.flightSim.participants(combat).filter(function(e){return e.team==='ally'&&e.hp>0;});
+                    var escorts=DW.flightSim.participants(combat).filter(function(e){return e.team==='ally'&&e.hp>0&&!e.convoyBattle;});
                     var exposed=cargo.reduce(function(best,ship){var gap=Math.min.apply(null,escorts.map(function(e){return range(e.pose.eye,ship.position);}));return gap>best.gap?{ship:ship,gap:gap}:best;},{ship:cargo[0],gap:0});
                     if(exposed.ship&&exposed.gap>1400){
                         group.packet=exposed.ship.packet;group.phase='approach';group.committedAt=combat.time;
@@ -267,15 +270,27 @@
             hulls[name]={model:model,min:min,max:max};
         });
     }
+    /** Bounds live only inside a synchronous gun batch; external pose edits never leave stale caches.
+     * @type {WeakMap<import('../experiments/types').Combat,{min:number[],max:number[],packets:{min:number[],max:number[]}[]}>} */var traceBounds=new WeakMap();
+    /** @template T @param {import('../experiments/types').Combat} combat @param {()=>T} run @returns {T} */
+    function batchTrace(combat,run){
+        const state=combat.convoy;if(!state||traceBounds.has(combat))return run();
+        var min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity],groups=packets.map(function(){return {min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity]};});
+        state.ships.forEach(function(ship){const h=hulls[ship.model];if(!h||ship.hull<=0)return;for(var k=0;k<3;k++){min[k]=Math.min(min[k],ship.position[k]+h.min[k]/U);max[k]=Math.max(max[k],ship.position[k]+h.max[k]/U);var group=groups[ship.packet];group.min[k]=Math.min(group.min[k],ship.position[k]+h.min[k]/U);group.max[k]=Math.max(group.max[k],ship.position[k]+h.max[k]/U);}});
+        traceBounds.set(combat,{min:min,max:max,packets:groups});try{return run();}finally{traceBounds.delete(combat);}
+    }
     /** Sweep in each freighter's moving frame. Inputs and output points use scene units.
      * @param {import('../experiments/types').Combat} combat @param {number[]} start @param {number[]} end
      * @param {number} radiusM @param {number[][]} [previousShips]
      * @returns {import('../experiments/types').ConvoyHit|null} */
     function trace(combat,start,end,radiusM,previousShips){
         var state=combat.convoy;if(!state)return null;
+        var bounds=!previousShips&&traceBounds.get(combat);
+        if(bounds)for(var axis=0;axis<3;axis++)if(Math.min(start[axis],end[axis])>bounds.max[axis]+radiusM/U||Math.max(start[axis],end[axis])<bounds.min[axis]-radiusM/U)return null;
+        var eligible=bounds?bounds.packets.map(function(group){for(var k=0;k<3;k++)if(Math.min(start[k],end[k])>group.max[k]+radiusM/U||Math.max(start[k],end[k])<group.min[k]-radiusM/U)return false;return true;}):null;
         /** @type {import('../experiments/types').ConvoyHit|null} */var best=null;
         for(var i=0;i<state.ships.length;i++){
-            var ship=state.ships[i],hull=hulls[ship.model];if(ship.hull<=0||!hull)continue;
+            var ship=state.ships[i],hull=hulls[ship.model];if(ship.hull<=0||!hull||eligible&&!eligible[ship.packet])continue;
             var old=previousShips?previousShips[i]:ship.position,miss=false;
             for(var k=0;k<3;k++){
                 var a=(start[k]-old[k])*U,b=(end[k]-ship.position[k])*U;
@@ -342,10 +357,11 @@
     function radio(combat,dt,busy){
         const s=combat.convoy;if(!s||!combat.enabled||combat.dead)return null;
         var r=s.radio;const radioShips=s.ships;
-        var alive=s.ships.filter(function(ship){return ship.hull>0;}),enemies=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0;});
+        var alive=s.ships.filter(function(ship){return ship.hull>0;}),enemies=combat.enemies.filter(function(e){return e.team==='enemy'&&e.hp>0&&!e.convoyBattle;});
+        var nearFight=combat.enemies.some(function(e){return e.hp>0&&e.team==='enemy'&&e.convoyBattle&&range(e.pose.eye,combat.player.pose.eye)<1400;});
         // Observe transitions even while another transmission owns the channel.
         if(s.complete)r.phase='complete';
-        else if(enemies.length){
+        else if(enemies.length||nearFight){
             if(r.phase!=='combat')r.said=r.said.filter(function(key){return key!=='nearby'&&key!=='range'&&key!=='firing';});
             if(r.phase!=='combat'&&r.chatTurn){r.chat++;r.chatTurn=0;}
             r.phase='combat';r.report=0;
@@ -372,12 +388,18 @@
         }
         if(s.complete&&!r.said.includes('complete'))return cue('complete',alive.length?'Lancer, Control. '+alive.length+' transports through. Escort complete.':'Lancer, Control. Convoy lost. Withdraw.');
         if(r.phase==='complete')return null;
+        const battle=s.battle;
+        if(battle&&battle.pending&&combat.time-battle.lastCall>=8){
+            battle.pending=false;battle.lastCall=combat.time;const order=battle.order;
+            if(order)return cue('task-'+order.id+'-'+Math.floor(combat.time),'Lancer, Control. '+(order.kind==='assist'?order.label+' needs support. Reinforce the marked position.':'Bandits threatening the '+order.label.toLowerCase()+'. Break off and intercept at the mark.'));
+            return cue('screen-stable-'+Math.floor(combat.time),'Lancer, Control. Immediate screen stabilized. Resume marked patrol.');
+        }
         if(r.phase==='damage-report'){
-            if(r.report===0){r.report++;return cue('clear','Lancer, Control. No further contacts. Flight and convoy leads, report damage.');}
+            if(r.report===0){r.report++;return cue('clear',s.battle?'Lancer, Control. Local screen clear. Flight and convoy leads, report damage.':'Lancer, Control. No further contacts. Flight and convoy leads, report damage.');}
             if(r.report===1){
                 r.report++;
-                const wing=combat.enemies.find(function(e){return e.team==='ally'&&e.hp>0;});
-                var lost=combat.enemies.filter(function(e){return e.team==='ally'&&e.hp<=0;}).length;
+                const wing=combat.enemies.find(function(e){return e.team==='ally'&&e.hp>0&&!e.convoyBattle;});
+                var lost=combat.enemies.filter(function(e){return e.team==='ally'&&e.hp<=0&&!e.convoyBattle;}).length;
                 if(wing)return fighterCue('flight-report',(lost?lost+' fighter lost. ':'')+(wing.hp<wing.maxHp?'Hull at '+Math.ceil(wing.hp/wing.maxHp*100)+' percent.':(wing.shield||0)<(wing.maxShield||0)?'Hull intact. Shields recovering.':'No damage.')+' Remaining on station.',wing);
                 return cue('flight-report','Control. No wingman response. Lancer, maintain escort.');
             }
@@ -413,6 +435,7 @@
         while(s.director.events.length){
             const instruction=s.director.events.shift();if(!instruction)break;
             const group=s.raids.find(function(group){return group.id===instruction.wing;});if(!group)continue;
+            if(instruction.kind==='breakthrough'&&group.phase!=='withdraw'&&group.phase!=='departed')return cue('breakthrough-'+group.id,'Lancer, Control. Bandits through the '+packets[group.packet].name.toLowerCase()+' screen. Intercept before they reach the convoy.');
             if(instruction.kind==='hold'&&group.phase==='hold'){var waiting=enemies.filter(function(e){return e.convoyRaider&&e.convoyRaider.wing===group.id;}).length;return cue('reserve-'+group.id,'Lancer, Control. '+waiting+' additional contacts holding outside the convoy. Maintain the screen.');}
             if(instruction.kind==='commit'&&group.phase!=='hold'&&group.phase!=='withdraw'&&group.phase!=='departed')return cue('commit-'+group.id,'Lancer, Control. Reserve bandits turning toward the '+packets[group.packet].name.toLowerCase()+' group. Shift to the marked intercept.');
             if(instruction.kind==='withdraw'&&(group.phase==='withdraw'||group.phase==='departed'))return cue('withdraw-'+group.id,'Lancer, Control. Bandit wing breaking off. Stay with the convoy.');
@@ -424,7 +447,7 @@
             r.opening++;return cue('intro-control','Lancer flight, Control. Convoy should be in visual range now.');
         }
         if(!s.raidStarted&&r.opening>0&&!contactReport&&!r.said.includes('visual-reply')){
-            const wing=combat.enemies.find(function(e){return e.team==='ally'&&e.hp>0;});
+            const wing=combat.enemies.find(function(e){return e.team==='ally'&&e.hp>0&&!e.convoyBattle;});
             if(wing&&alive.some(function(ship){return Math.hypot.apply(null,ship.position.map(function(v,k){return v-wing.pose.eye[k];}))*U<2000;})){
                 return fighterCue('visual-reply','Affirmative, Control. Convoy in sight.',wing);
             }
@@ -433,7 +456,7 @@
         if(enemies.length&&!r.said.includes('nearby')&&!contactReport){var assignment=s.director.waypoint,packetName=assignment?packets[assignment.packet].name.toLowerCase():'rear';const contact=enemies.find(function(e){return assignment&&e.id===assignment.targetId;});var count=contact&&contact.convoyRaider?enemies.filter(function(e){return e.convoyRaider&&contact.convoyRaider&&e.convoyRaider.wing===contact.convoyRaider.wing;}).length:enemies.length;return cue('nearby','Lancer, Control. '+count+' bandits in one group, approaching the '+packetName+' group. Proceed to the marked intercept.');}
         // Do not deliver an arrival briefing after the engagement has already begun.
         if(contactReport&&r.opening===0)r.opening=1;
-        if(!s.raidStarted||enemies.length||r.phase!=='cruise')return null;
+        if(!s.raidStarted||enemies.length||nearFight||s.battle&&s.battle.order||r.phase!=='cruise')return null;
         /** @type {{speakers:number[];lines:string[]}[]} */var conversations=[
             {speakers:[1,0],lines:["Wayfarer, you know if the dockside diner still does breakfast all shift?","If you're buying, I'm willing to find out."]},
             {speakers:[4,1],lines:["Long Haul, is that rattle yours or mine?","Mine. If it stops, then we worry."]},
@@ -449,5 +472,5 @@
         }
         return null;
     }
-    DW.convoyMission={arrivalFleet:arrivalFleet,stepRaider:stepRaider,radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
+    DW.convoyMission={batchTrace:batchTrace,arrivalFleet:arrivalFleet,stepRaider:stepRaider,radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
 }());

@@ -1,6 +1,6 @@
 # Flight mission definitions, version 1
 
-## Convoy escort / battle director
+## Convoy escort / battlefield direction
 
 Open `experiments/flight.html?mission=convoy` or select Convoy Escort on the
 missions page. Thirty authored DW-14 modular freighters cross a 7.5 km route at 25 m/s.
@@ -109,10 +109,50 @@ Flight-lab diagnostics provide reception approach/underside/stern cameras and
 a capital-only frozen ABBA comparison, independently of the freighter toggle.
 See [the measured arrival-fleet readiness pass](benchmarks/convoy-arrival-2026-10-31.md).
 
+### Wider battle and Control dispatch
+
+The normal convoy includes 108 background fighters from launch: 54 friendly and
+54 hostile, in three-ship wings across Port screen, Starboard screen, Forward
+screen and Rear picket. Together with Lancer this is 111 fighters before any
+local raid. These are ordinary armed craft, with standard hull/shield profiles,
+real collisions, projectiles, damage and casualties. They do not wait for the
+player to kill a scripted wave. Each front has an independent 1.1 km pursuit
+zone whose goal moves with the convoy; actors themselves move only by physics.
+The cargo's first minute remains protected from direct attack, while distant
+screens are already fighting.
+
+`src/convoy-battle.js` owns initial sector rosters, half-second strength
+assessments and dispatch decisions. `combat.convoy.battle` stores numeric front
+IDs, counts, health summaries and the current order. A screen losing by four
+fighters after the opening can release one existing enemy three-ship wing
+toward the cargo: IDs, positions, health and guns are retained, and zone ownership
+is exchanged for normal convoy-raider orders. Breakthroughs consume real forces,
+not newly spawned replacements.
+
+Control ranks immediate cargo firing, weapons-range threats, approaching strike
+wings and weakened friendly fronts. Background assignments require a real
+friendly deficit or damage. Orders have an 18-second service window and a
+55-point improvement threshold; an immediate convoy threat can interrupt them.
+Assignments clear when the local need disappears, without requiring every
+fighter in the larger battle to die. Control announces the current assignment
+only when the radio is free, replacing stale pending orders rather than queuing
+an obsolete itinerary. It does not change the player's weapon target or lock.
+Lancer's two wingmates engage near the player and regroup when drawn too far
+away; sector fighters remain with their own fronts.
+
+Far background contacts remain visible as ships and gunfire, but get individual
+HUD brackets only when selected or within 1.8 km. The radar retains the larger
+contact picture. Mission completion requires the freighters and immediate
+convoy threats to be resolved, not the destruction of every distant opponent.
+The surrounding battle can continue after escort completion. See the
+[measured battlefield readiness pass](benchmarks/convoy-battle-2026-10-31.md)
+for the current CPU limit and collision-query optimization.
+
 Control provides a cyan moving patrol station during quiet periods and an amber
 intercept waypoint during threats. Patrol stations move with the cargo and rotate
 through packets after arrival or a 40-second watch. Intercept positions lie
-between the nearest hostile and threatened cargo, with cargo-motion lead. The
+between the assigned hostile and threatened cargo, with cargo-motion lead;
+support orders mark the friendly front. The
 marker clamps to screen edges when outside view; its label includes packet,
 assignment and range. Control's contact call refers to the observed threatened
 packet and marked intercept. Target locks remain under player control. Completion

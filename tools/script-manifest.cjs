@@ -19,7 +19,7 @@ const groups = {
   ],
   dialogue: ['experiments/mumble.js', 'experiments/flight-dialogue.js'],
   flightRuntime: [
-    'src/convoy-mission.js', 'src/roadside-layout.js', 'src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js',
+    'src/convoy-battle.js', 'src/convoy-mission.js', 'src/roadside-layout.js', 'src/flight-collision.js', 'src/flight-combat.js', 'src/flight-mission-runtime.js',
     'src/flight-opponent.js', 'src/flight-blockout.js', 'src/flight-sim.js', 'src/flight-prediction.js'
   ],
   flightAi: ['experiments/flight-ai.js', 'experiments/flight-duel.js'],
@@ -110,6 +110,7 @@ const profiles = {
 const dependencies = {
   'src/flight-collision.js': ['src/sim.js'],
   'src/flight-combat.js': ['src/flight-collision.js'],
+  'src/convoy-mission.js': ['src/convoy-battle.js'],
   'src/flight-sim.js': ['src/flight-combat.js', 'src/flight-mission-runtime.js', 'src/flight-opponent.js', 'src/flight-blockout.js'],
   'src/sim.js': ['src/propulsion.js', 'src/combat.js', 'src/logistics.js', 'src/formations.js'],
   'src/asteroid-art.js': ['src/sim.js'],

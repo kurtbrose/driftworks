@@ -132,6 +132,7 @@
         var capitalBenchmarkButton=(owner.activeMission.id==='convoy'||owner.activeMission.id==='battle'||owner.activeMission.id==='scramble'||owner.activeMission.sky.hyperbolic)?document.createElement('button'):null;
         if(capitalBenchmarkButton){capitalBenchmarkButton.textContent='Benchmark capital ships on / off';benchmarkButton.after(capitalBenchmarkButton);capitalBenchmarkButton.onclick=function(){runBenchmark(true);};}
         benchmarkButton.onclick=function(){runBenchmark(false);};
+        if(owner.activeMission.id==='convoy'){var backgroundBenchmark=document.createElement('button');backgroundBenchmark.textContent='Benchmark background fighters on / off';benchmarkButton.after(backgroundBenchmark);backgroundBenchmark.onclick=function(){runBenchmark(false,false,undefined,true);};}
         if(owner.activeMission.id==='convoy'){
             [['Reception approach',0,3000,120],['Reception underside',-1450,8450,-400],['Reception stern',-1450,10450,150]].forEach(function(preset){
                 var button=document.createElement('button');button.textContent=String(preset[0]);benchmarkOutput.before(button);
@@ -143,7 +144,7 @@
         if(surfaceBenchmarkButton){surfaceBenchmarkButton.textContent='Benchmark capital surface detail';benchmarkButton.after(surfaceBenchmarkButton);surfaceBenchmarkButton.onclick=function(){runBenchmark(true,true);};}
         var turretBenchmarkButton=surfaceBenchmarkButton?document.createElement('button'):null;
         if(turretBenchmarkButton&&surfaceBenchmarkButton){turretBenchmarkButton.textContent='Benchmark turret finish';surfaceBenchmarkButton.after(turretBenchmarkButton);turretBenchmarkButton.onclick=function(){runBenchmark(true,true,'turrets');};}
-        /** @param {boolean} capitals @param {boolean=} surfaces @param {'turrets'=} scope */async function runBenchmark(capitals,surfaces,scope){
+        /** @param {boolean} capitals @param {boolean=} surfaces @param {'turrets'=} scope @param {boolean=} background */async function runBenchmark(capitals,surfaces,scope,background){
             if(benchmarking)return;
             owner.pause();benchmarking=true;benchmarkButton.disabled=true;if(capitalBenchmarkButton)capitalBenchmarkButton.disabled=true;
             if(surfaceBenchmarkButton)surfaceBenchmarkButton.disabled=true;
@@ -152,8 +153,8 @@
             /** @type {{on:boolean,cpu:number,interval:number,draws:number,triangles:number}[]} */var rows=[];
             try{
                 for(var enabled of [false,true,true,false]){
-                    if(surfaces&&owner.aegis&&owner.aegis.setSurfaceDetail){owner.aegis.setSurfaceDetail(enabled,scope);owner.presentation.setCapital(owner.aegis);}else if(owner.aegis&&((owner.activeMission.id!=='battle'&&owner.activeMission.id!=='scramble'&&owner.activeMission.id!=='convoy'&&!owner.activeMission.sky.hyperbolic)||capitals))owner.presentation.setCapital(enabled?owner.aegis:null);else if(owner.activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;else if(owner.activeMission.id==='convoy')DW.convoyScenery.visible=enabled;
-                    var sampled=owner.activeMission.sky.hyperbolic&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:enabled?snapshot.combat.enemies:[],wrecks:enabled?snapshot.combat.wrecks:[]})}):owner.activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):owner.activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
+                    if(background){}else if(surfaces&&owner.aegis&&owner.aegis.setSurfaceDetail){owner.aegis.setSurfaceDetail(enabled,scope);owner.presentation.setCapital(owner.aegis);}else if(owner.aegis&&((owner.activeMission.id!=='battle'&&owner.activeMission.id!=='scramble'&&owner.activeMission.id!=='convoy'&&!owner.activeMission.sky.hyperbolic)||capitals))owner.presentation.setCapital(enabled?owner.aegis:null);else if(owner.activeMission.id==='evacuation')DW.evacuationScenery.visible=enabled;else if(owner.activeMission.id==='convoy')DW.convoyScenery.visible=enabled;
+                    var sampled=background?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.convoyBattle;})})}):owner.activeMission.sky.hyperbolic&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:enabled?snapshot.combat.enemies:[],wrecks:enabled?snapshot.combat.wrecks:[]})}):owner.activeMission.id==='scramble'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c,index){return enabled||index<6;})})}):owner.activeMission.id==='battle'&&!capitals?Object.assign({},snapshot,{combat:Object.assign({},snapshot.combat,{enemies:snapshot.combat.enemies.filter(function(c){return enabled||!c.battleZone||c.battleZone.id===0;})})}):snapshot;
                     var previous=0;
                     for(var i=0;i<110;i++){
                         var stamp=await new Promise(/** @param {(t:number)=>void} resolve */function(resolve){requestAnimationFrame(resolve);});
@@ -165,7 +166,7 @@
                         benchmarkOutput.textContent='Frozen scene benchmark '+(rows.length)+' / 360 samples';
                     }
                 }
-                var lines=[(surfaces?(scope==='turrets'?'Turret finish / ':'Capital surface detail / '):capitals?'Capital ships / ':'')+'Frozen scene / ABBA / 20 warm-up + 90 samples per block','Rendering only; AI and projectiles frozen.'];
+                var lines=[(background?'Background battle / ':surfaces?(scope==='turrets'?'Turret finish / ':'Capital surface detail / '):capitals?'Capital ships / ':'')+'Frozen scene / ABBA / 20 warm-up + 90 samples per block','Rendering only; AI and projectiles frozen.'];
                 [false,true].forEach(function(on){var r=rows.filter(function(row){return row.on===on;});
                     /** @param {keyof Omit<typeof rows[number],'on'>} key */function mean(key){return r.reduce(function(n,row){return n+row[key];},0)/r.length;}
                     function percentile(/** @type {'cpu'|'interval'} */key,/** @type {number} */fraction){var sorted=r.map(function(row){return row[key];}).sort(function(a,b){return a-b;});return sorted[Math.floor((sorted.length-1)*fraction)];}

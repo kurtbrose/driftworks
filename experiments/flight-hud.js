@@ -441,7 +441,7 @@
             }).length + (' '+mission.teams.enemy.status+' / ') + living.filter(function (e) {
                 return e.team === 'ally';
             }).length + (' '+mission.teams.ally.status+' / ') + combat.kills + ' KILLS' + (!living.length && combat.mode === 'asteroid-patrol' ? ' / MISSION COMPLETE' : !living.length || combat.roundOver ? ' / NEXT WAVE ' + Math.max(0, Math.ceil(combat.countdown)) + 's' : '');
-            if(combat.convoy){var convoy=combat.convoy,arrived=convoy.ships.filter(function(s){return s.arrived&&s.hull>0;}).length,lost=convoy.ships.filter(function(s){return s.hull<=0;}).length;get('combat-status').textContent=combat.dead?'SORTIE OVER / Esc to restart':(lost===30?'CONVOY LOST':convoy.complete?'ESCORT COMPLETE':living.some(function(e){return e.team==='enemy';})?'DEFEND CONVOY':'ESCORT CONVOY')+' / '+arrived+' ARRIVED / '+lost+' LOST / '+living.filter(function(e){return e.team==='enemy';}).length+' RAIDERS';}
+            if(combat.convoy){var convoy=combat.convoy,arrived=convoy.ships.filter(function(s){return s.arrived&&s.hull>0;}).length,lost=convoy.ships.filter(function(s){return s.hull<=0;}).length;get('combat-status').textContent=combat.dead?'SORTIE OVER / Esc to restart':(lost===30?'CONVOY LOST':convoy.complete?'ESCORT COMPLETE':living.some(function(e){return e.team==='enemy'&&!e.convoyBattle;})?'DEFEND CONVOY':'ESCORT CONVOY')+' / '+arrived+' ARRIVED / '+lost+' LOST / '+living.filter(function(e){return e.team==='enemy'&&!e.convoyBattle;}).length+' RAIDERS';}
             get('shield-meter').max = Math.max(1, combat.maxShield === undefined ? 120 : combat.maxShield);
             get('shield-meter').value = combat.shield;
             get('hull-meter').max = combat.maxHull === undefined ? 100 : combat.maxHull;
@@ -502,7 +502,7 @@
             if(combat.convoy){
                 var convoy=combat.convoy,remaining=Math.max(0,convoy.destinationY*units-convoy.elapsed*convoy.speedMps);
                 combatHud.save();combatHud.font='14px system-ui';combatHud.textAlign='center';combatHud.fillStyle='#b9e7ed';combatHud.strokeStyle='#72c8d5';
-                var survivors=convoy.ships.filter(function(s){return s.hull>0;}).length,raiders=living.filter(function(e){return e.team==='enemy';}).length;
+                var survivors=convoy.ships.filter(function(s){return s.hull>0;}).length,raiders=living.filter(function(e){return e.team==='enemy'&&!e.convoyBattle;}).length;
                 combatHud.fillText(!survivors?'CONVOY LOST / Esc to restart':convoy.complete?'ESCORT COMPLETE / '+survivors+' ARRIVED':(raiders?'DEFEND ':'ESCORT ')+survivors+' FREIGHTERS / '+raiders+' RAIDERS / '+(remaining/1000).toFixed(1)+' km remaining',w/2,86);
                 var assignment=convoy.director.waypoint;
                 if(assignment&&!convoy.complete){
@@ -510,9 +510,9 @@
                     var lateral=direction.reduce(function(n,v,k){return n+v*state.right[k];},0),vertical=direction.reduce(function(n,v,k){return n+v*state.up[k];},0);
                     var mx=mark?Math.max(-.7,Math.min(.7,mark.x)):(lateral<0?-.7:.7),my=mark?Math.max(-.6,Math.min(.6,mark.y)):Math.max(-.6,Math.min(.6,vertical));
                     var x=w*(mx+1)/2,y=h*(1-my)/2;
-                    combatHud.strokeStyle=assignment.kind==='intercept'?'#ffca72':'#72c8d5';combatHud.fillStyle=combatHud.strokeStyle;
+                    combatHud.strokeStyle=assignment.kind!=='patrol'?'#ffca72':'#72c8d5';combatHud.fillStyle=combatHud.strokeStyle;
                     combatHud.strokeRect(x-9,y-9,18,18);
-                    combatHud.fillText('CONTROL / '+assignment.kind.toUpperCase()+' '+DW.convoyMission.packets[assignment.packet].name.toUpperCase(),x,y-19);
+                    combatHud.fillText('CONTROL / '+assignment.kind.toUpperCase()+' '+(assignment.label||DW.convoyMission.packets[assignment.packet].name).toUpperCase(),x,y-19);
                     combatHud.fillText(Math.round(Math.hypot.apply(null,direction)*units)+' m',x,y+27);
                     combatHud.strokeStyle='#72c8d5';combatHud.fillStyle='#b9e7ed';
                 }
@@ -537,7 +537,7 @@
                 combatHud.restore();
             }
             var targetBearing = /** @type {number | null} */ (null);
-            living.filter(function(e){return !e.convoyModel;}).forEach(function (e) {
+            living.filter(function(e){return !e.convoyModel&&(!e.convoyBattle||e.id===combat.targetId||Math.hypot.apply(null,e.pose.eye.map(function(v,k){return v-state.eye[k];}))*units<1800);}).forEach(function (e) {
                 var direction=visualDirection(e.pose.eye,e.pose.region||0);if(!direction)return;
                 var q = DW.flightSkybox.project(direction,state,w/h), target = e.id === combat.targetId;
                 combatHud.globalAlpha = 1;
