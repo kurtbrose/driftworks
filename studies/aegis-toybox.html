@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aegis toybox / every part</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101922;color:#e3e6df;font:14px system-ui;display:grid;grid-template-columns:310px 1fr;height:100dvh;overflow:hidden}aside{padding:22px;background:#17232e;border-right:1px solid #526575;overflow:auto}h1{font-size:30px;margin:7px 0}small,.eyebrow{color:#ddbb74;letter-spacing:.08em;font-size:11px}p{line-height:1.5;color:#b7c7d1}button,select{font:inherit;background:#283d4e;color:#fff;border:1px solid #748995;border-radius:3px;padding:9px;width:100%;margin:4px 0}button{cursor:pointer}button:hover{background:#39576d}button:disabled{opacity:.4;cursor:default}.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}label{display:block;margin-top:18px;font-size:12px;color:#c5d1d9}main{min-width:0;position:relative;overflow:hidden}#stage{position:absolute;inset:100px 0 65px}canvas{display:block}.heading{position:absolute;z-index:1;top:22px;left:25px;pointer-events:none}.heading h2{font-size:25px;font-weight:500;margin:5px 0}#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}.part-label{position:absolute;transform:translate(-50%,0);pointer-events:auto;font-size:11px;line-height:1.3;background:#13212be8;border:1px solid #566e7d;width:max-content;max-width:190px;padding:5px 8px;margin:0;text-align:center}.part-label b{color:#ddbb74;margin-right:4px;font-weight:500}#dimensions{font:12px/1.6 monospace;white-space:pre-line;color:#c5d1d9;padding-top:10px}a{color:#ddbb74}.quiet{font-size:12px}#status{position:absolute;bottom:15px;right:20px;font:12px system-ui;color:#a4b5c2;pointer-events:none}button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid #ffe3a1;outline-offset:3px}@media(max-width:700px){body{grid-template-columns:215px 1fr}aside{padding:14px}h1{font-size:24px}.heading{left:15px}.heading h2{font-size:19px}.part-label{font-size:10px;max-width:145px}}
+</style>
+<script src="../src/asset-versions.js?v=1ca48f8b93f6"></script>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js?v=c8211c69345d","aegis-parts":"../studies/aegis-module-primitives.js?v=dee61f101702","aegis-kit":"../studies/aegis-modular-kit.js?v=ec95ae2d154d","aegis-toys":"../studies/aegis-toybox-kit.js?v=2ae61cb36d07"}}</script></head><body>
+<aside><small>AEGIS / PARTS INVENTORY</small><h1>The toybox.</h1><p>Every hull section and attachment, unpacked. Select a label to inspect a part, or walk through the inventory one by one.</p>
+<button id="overview">All parts / shared scale</button><label for="part">INSPECT A PART</label><select id="part"></select><div class="pair"><button id="previous">← Previous</button><button id="next">Next →</button></div>
+<label for="angle">INSPECTION ANGLE</label><select id="angle"><option value="quarter">Three-quarter</option><option value="top">Top</option><option value="side">Side</option><option value="bottom">Underside</option><option value="front">Bow / forward face</option><option value="rear">Aft / engines</option></select><button id="reset">Reset framing</button><p id="description"></p><div id="dimensions"></div>
+<p class="quiet">The fixed top overview uses one metre scale for all pieces. Individual inspection changes the camera framing so small fittings remain visible.</p><p class="quiet">Drag to orbit · Wheel to zoom · Right drag to pan. These remain geometry proposals.</p><p><a href="aegis-modular-fleet.html">Return to the battle fleet</a></p></aside>
+<main><div id="stage"></div><div class="heading"><span class="eyebrow" id="category">ALL STANDARD PARTS</span><h2 id="title">Unpacked and labeled</h2></div><div id="labels"></div><div id="status"></div></main>
+<script type="module">
+import * as T from 'three';
+import {OrbitControls} from '../vendor/three/examples/jsm/controls/OrbitControls.js?v=b97879c74817';
+import {batchStatic,disposeBatch} from 'aegis-kit';
+import {toyParts,toyPart,toybox} from 'aegis-toys';
+const $=id=>document.getElementById(id),host=$('stage'),scene=new T.Scene();scene.background=new T.Color(0x101922);
+const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;host.append(renderer.domElement);
+const camera=new T.OrthographicCamera(-1,1,1,-1,.05,50000),controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
+scene.add(new T.HemisphereLight(0xc3d2df,0x39322a,1.8));for(const [p,color,intensity] of [[[0,200,100],0xffe2b1,3.4],[[-100,50,-100],0xabcfe7,1.7],[[0,-100,30],0xb3c5cb,.8]]){const light=new T.DirectionalLight(color,intensity);light.position.set(...p);scene.add(light);}
+const all=document.createElement('option');all.value='all';all.textContent='All 19 parts / shared scale';$('part').append(all);
+for(const category of [...new Set(toyParts.map(p=>p.category))]){const group=document.createElement('optgroup');group.label=category;toyParts.filter(p=>p.category===category).forEach(p=>{const option=document.createElement('option');option.value=p.id;option.textContent=p.code+' / '+p.name;group.append(option);});$('part').append(group);}
+let display,source,bounds,anchors=[],current='all';
+const columns=()=>Math.max(2,Math.min(5,Math.round(Math.sqrt(toyParts.length*host.clientWidth/host.clientHeight*380/420))));
+const views={quarter:[-.6,.85,1],top:[0,1,.001],side:[0,.02,1],bottom:[-.5,-.85,1],front:[-1,.02,.001],rear:[1,.02,.001]};
+function fit(){
+ const size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3()),direction=new T.Vector3(...views[$('angle').value]).normalize();
+ const aspect=host.clientWidth/host.clientHeight;camera.position.copy(center).addScaledVector(direction,size.length()*2+10);camera.up.set(0,1,0);camera.lookAt(center);camera.updateMatrixWorld(true);
+ let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+ for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){const local=new T.Vector3(x,y,z).applyMatrix4(camera.matrixWorldInverse);minX=Math.min(minX,local.x);maxX=Math.max(maxX,local.x);minY=Math.min(minY,local.y);maxY=Math.max(maxY,local.y);}
+ const span=Math.max(maxY-minY,(maxX-minX)/aspect)*1.2;
+ camera.left=-span*aspect/2;camera.right=span*aspect/2;camera.top=span/2;camera.bottom=-span/2;camera.zoom=1;
+ controls.target.copy(center);camera.near=.05;camera.far=Math.max(500,size.length()*8);camera.updateProjectionMatrix();controls.update();
+
+}
+function choose(id){
+ const entry=toyParts.find(p=>p.id===id);if(!entry)id='all';if(id==='all')$('angle').value='top';else if(current==='all')$('angle').value='quarter';current=id;$('part').value=id;$('angle').disabled=id==='all';controls.enableRotate=id!=='all';
+ if(display){scene.remove(display);disposeBatch(display);}source=id==='all'?toybox(columns()):toyPart(id);display=batchStatic(source);scene.add(display);bounds=new T.Box3().setFromObject(display);if(id==='all')for(const child of source.children)for(const x of [-210,210])for(const z of [-140,230])bounds.expandByPoint(new T.Vector3(child.position.x+x,0,child.position.z+z));fit();
+ const index=toyParts.findIndex(p=>p.id===id);$('previous').disabled=index<=0;$('next').disabled=index===toyParts.length-1;
+ $('category').textContent=entry?entry.category.toUpperCase()+' / '+entry.code:'ALL STANDARD PARTS';$('title').textContent=entry?entry.name:'Unpacked and labeled';
+ $('description').textContent=entry?entry.note:'19 pieces: two prows, seven mid-hulls, two drive blocks, six attachment entries and two structural fittings. The complete gun battery is shown alongside its individual weapons.';
+ const size=bounds.getSize(new T.Vector3()),format=n=>n<10?n.toFixed(1):String(Math.round(n));
+ $('dimensions').textContent=entry?`${index+1} / ${toyParts.length}\n${format(size.x)} × ${format(size.z)} × ${format(size.y)} m\nActual external L × W × H`:'Common physical scale · no enlarged small parts';
+ $('status').textContent=entry?'Individual inspection / camera fitted to this part':'Click any label to inspect';
+ $('labels').replaceChildren();anchors=[];
+ if(id==='all')source.children.forEach((child,i)=>{const b=new T.Box3().setFromObject(child),p=child.position.clone();p.z+=155;const button=document.createElement('button');button.className='part-label';button.style.maxWidth=Math.max(85,Math.min(190,420/(camera.right-camera.left)*host.clientWidth-8))+'px';button.setAttribute('aria-label','Inspect '+toyParts[i].name);const code=document.createElement('b');code.textContent=toyParts[i].code;button.append(code,document.createTextNode(toyParts[i].name));button.onclick=()=>choose(toyParts[i].id);$('labels').append(button);anchors.push({p,button});});
+ const url=new URL(location.href);url.searchParams.set('part',id);history.replaceState(null,'',url);
+}
+$('part').onchange=()=>choose($('part').value);$('overview').onclick=()=>choose('all');$('previous').onclick=()=>{const i=toyParts.findIndex(p=>p.id===$('part').value);if(i>0)choose(toyParts[i-1].id);};$('next').onclick=()=>{const i=toyParts.findIndex(p=>p.id===$('part').value);if(i<toyParts.length-1)choose(toyParts[i+1].id);};$('angle').onchange=fit;$('reset').onclick=fit;
+function resize(){renderer.setSize(host.clientWidth,host.clientHeight);if(bounds){if(current==='all')choose('all');else fit();}}new ResizeObserver(resize).observe(host);resize();choose(new URL(location.href).searchParams.get('part')||'all');
+renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);for(const {p,button} of anchors){const v=p.clone().project(camera);button.style.left=host.offsetLeft+(v.x*.5+.5)*host.clientWidth+'px';button.style.top=host.offsetTop+(-v.y*.5+.5)*host.clientHeight+10+'px';button.hidden=v.z>1||v.z< -1;}});
+</script></body></html>

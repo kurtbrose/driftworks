@@ -134,6 +134,22 @@ const {pathToFileURL} = require('node:url');
   assert.equal(kit.recipes[0].modules[0],'sensor','custom assemblies do not mutate presets');
   assert.throws(()=>kit.vessel(0,{modules:['hangar']}));assert.throws(()=>kit.vessel(0,{upper:['wrong','none']}));assert.throws(()=>kit.section('unknown'));assert.throws(()=>kit.vessel(0,{modules:['missile','standard'],upper:['turret','turret']}));
   assert.equal(kit.fleet().children.length,8);
+  const toysSource=fs.readFileSync(path.join(root,'studies/aegis-toybox-kit.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
+  vm.runInContext(toysSource+'\nglobalThis.toys={toyParts,toyPart,toybox};',fleetScope);
+  const toys=fleetScope.toys;assert.equal(toys.toyParts.length,19);assert.equal(new Set(toys.toyParts.map(p=>p.id)).size,19);
+  for(const type of kit.hullTypes)assert(toys.toyParts.some(p=>p.type===type),'every mission hull is in the inventory');
+  for(const entry of toys.toyParts){
+    const obj=toys.toyPart(entry.id),bounds=new real.Box3().setFromObject(obj,true);
+    assert.equal(obj.scale.x,9);assert.equal(obj.userData.partId,entry.id);assert(triangleCount(obj)>0);
+    obj.traverse(o=>{if(o.isMesh)assert([...o.geometry.attributes.position.array].every(Number.isFinite));});
+    const batch=kit.batchStatic(obj),actual=new real.Box3().setFromObject(batch,true);
+    assert.equal(triangleCount(batch),triangleCount(obj));assert(bounds.min.distanceTo(actual.min)+bounds.max.distanceTo(actual.max)<.001);kit.disposeBatch(batch);
+  }
+  const bench=toys.toybox();assert.equal(bench.children.length,19);
+  const boxes=bench.children.map(o=>new real.Box3().setFromObject(o,true));
+  boxes.forEach((b,i)=>boxes.slice(i+1).forEach(other=>assert(!b.intersectsBox(other),'unpacked inventory parts do not overlap')));
+  assert.throws(()=>toys.toyPart('missing'));
+  console.log('PASS Aegis toybox: complete unique inventory, real scale, separate nonoverlapping parts and batched geometry');
   console.log('PASS Aegis fleet study: shared source freshness, physical pitch, swappable manifests, through passage and batching');
   console.log('PASS Aegis kit: outward armor, open couplings, viewport framing, two attachment banks, shared true-scale fighters and stable ship-only OBJ exports');
 })().catch(error=>{console.error(error);process.exitCode=1;});

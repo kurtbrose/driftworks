@@ -880,3 +880,30 @@ are under `output/aegis-modular/` (ignored). Individual undersides, every custom
 combination, and runtime behavior remain unreviewed. Reserved mission hardware
 sockets cannot receive additional attachments; other combinations are geometry
 proposals rather than validated combat/engineering loadouts.
+
+### Labeled parts toybox
+
+Open [the toybox](../studies/aegis-toybox.html) to unpack the whole military kit:
+two prows, seven mid-hulls, two drives, six attachment entries, and the command
+citadel and coupling ring. The complete gun bank is listed alongside its main
+and point-defense turrets, so its subassemblies can be inspected separately.
+The catalog in `studies/aegis-toybox-kit.js` constructs each item from the same
+factories as the fleet; it does not rescale parts for display. All overview items
+retain nine metres per authoring unit, with nonoverlapping layout bounds.
+
+Click an overview label or choose an inventory entry to focus on one part.
+Previous/Next walks the 19 entries in catalog order. Individual inspection offers six camera presets including top, side, underside
+and engine views; orbit/zoom remain available. The overview uses a fixed top
+camera and adapts its grid to the viewport so labels stay separated. Individual
+inspection fits the camera and reports actual external dimensions; these are
+not nominal coupling lengths or collision envelopes. `?part=attachment-pd`, for
+example, opens a stable part link. The bare socket is its actual mounting plate,
+not a fictional hull section. The bridge is unpacked from the stern terminal,
+and upper/lower installations reuse the same attachment geometry by rotation.
+
+Toybox visual checks covered the labeled overview in narrow/tall and wide
+viewports, point-defense close-up, through-hangar underside and heavy-drive rear.
+Label selection, Next navigation, camera switching and part-link reload were
+exercised in the browser. Captures are in `output/aegis-toybox/` (ignored).
+This verifies the inventory presentation, not every part from every angle or
+production readiness. Original capital and industrial fleet views are retained.
