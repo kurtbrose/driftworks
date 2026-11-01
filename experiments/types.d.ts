@@ -1075,6 +1075,7 @@ export type ExperimentModules = {
         };
     };
     flightHud: {
+        paintManeuver:(ctx:import('./gpu-ui-types').PaintContext,x:number,y:number,view:HudView)=>void;
         flightGridPoints:(camera:Pose,units:number,w:number,h:number)=>number[][];
         paintFlightGrid:(ctx:import('./gpu-ui-types').PaintContext,w:number,h:number,camera:Pose,units:number,opacity:number)=>void;
         updateFlightGuide:(batches:FlightGuideBatch[],path:FlightPathSample[]|null,time:number,width:number,phase:number,style:string,range?:number)=>FlightGuideBatch[];

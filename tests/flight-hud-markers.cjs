@@ -299,3 +299,12 @@ drawEscort();const order=calls.find(c=>c.kind==='text'&&c.text.startsWith('CONTR
 assert(order&&Number.isFinite(order.x)&&Number.isFinite(order.y)&&order.x>0&&order.x<1000&&order.y>0&&order.y<700,'Behind-camera order remains at a visible edge');
 escortView.combat.convoy.complete=true;drawEscort();assert(!calls.some(c=>c.kind==='text'&&c.text.startsWith('CONTROL /')));
 console.log('PASS convoy Control markers: patrol, intercept, off-screen bearing, finite edge placement and completion');
+
+function maneuver(demand,extra={}){calls.length=0;DW.flightHud.paintManeuver(painter,0,0,{...view,paused:false,flightDemand:demand,...extra});return calls.filter(c=>c.kind==='text').map(c=>c.text);}
+assert.ok(maneuver({side:1,vertical:1}).includes('100%'));
+assert.equal(calls.filter(c=>c.kind==='fill'&&c.color==='#9aeeff').length,2);
+assert.ok(maneuver({side:.25,vertical:0}).includes('25%'));
+assert.ok(maneuver({side:0,vertical:0},{state:{...view.state,velocity:[3,4,0]}}).includes('5.0 m/s'));
+assert.equal(calls.filter(c=>c.kind==='fill'&&c.color==='#9aeeff').length,0);
+assert.ok(maneuver({side:1},{paused:true}).includes('—'));
+assert.ok(maneuver(undefined).includes('—'));

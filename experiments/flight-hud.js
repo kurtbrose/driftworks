@@ -50,6 +50,34 @@
         }
         ctx.restore();
     }
+    /** Active maneuver demand, separate from residual sideways velocity.
+     * @param {import('./gpu-ui-types').PaintContext} ctx @param {number} x @param {number} y
+     * @param {HudView} view */
+    function paintManeuver(ctx,x,y,view){
+        var live=!view.paused&&!view.combat.dead;
+        var demand=live?view.flightDemand:undefined;
+        var side=demand?(demand.side||0):0,up=demand?(demand.vertical||0):0;
+        var norm=Math.max(1,Math.hypot(side,up));side/=norm;up/=norm;
+        var slip=Math.hypot(view.state.velocity.reduce(function(n,v,k){return n+v*view.state.right[k];},0),
+            view.state.velocity.reduce(function(n,v,k){return n+v*view.state.up[k];},0));
+        ctx.save();ctx.fillStyle='rgba(3,15,21,.78)';ctx.strokeStyle='rgba(111,185,171,.38)';ctx.lineWidth=1;
+        ctx.fillRect(x,y,154,84);ctx.strokeRect(x,y,154,84);
+        var cx=x+39,cy=y+42,r=27;
+        [[0,-1,Math.max(0,up)],[1,0,Math.max(0,side)],[0,1,Math.max(0,-up)],[-1,0,Math.max(0,-side)]].forEach(function(a){
+            var dx=a[0],dy=a[1],amount=a[2];
+            ctx.beginPath();ctx.moveTo(cx+dx*4,cy+dy*4);
+            ctx.lineTo(cx+dx*r-dy*11,cy+dy*r+dx*11);
+            ctx.lineTo(cx+dx*(r+7),cy+dy*(r+7));
+            ctx.lineTo(cx+dx*r+dy*11,cy+dy*r-dx*11);ctx.closePath();
+            ctx.fillStyle='#233c43';ctx.fill();ctx.strokeStyle='#719a98';ctx.stroke();
+            if(amount>0){ctx.globalAlpha=.3+.7*amount;ctx.fillStyle='#9aeeff';ctx.fill();ctx.globalAlpha=1;}
+        });
+        ctx.textAlign='left';ctx.font='10px monospace';ctx.fillStyle='#b9e9dc';ctx.fillText('LATERAL',x+79,y+19);
+        ctx.font='16px monospace';ctx.fillStyle=side||up?'#9aeeff':'#719a98';
+        ctx.fillText(demand?Math.round(Math.hypot(side,up)*100)+'%':'—',x+79,y+40);
+        ctx.font='10px monospace';ctx.fillStyle='#b9e9dc';ctx.fillText(slip.toFixed(1)+' m/s',x+79,y+59);
+        ctx.fillStyle='#719a98';ctx.fillText('A/D · R/F',x+79,y+74);ctx.restore();
+    }
     /** Brief chart-crossing confirmation; the spatial lattice lives in the sky optics.
      * @param {import('./gpu-ui-types').PaintContext} ctx @param {number} w @param {number} h
      * @param {import('./types').Pose} pose @param {import('./types').EllisCue} cue */
@@ -656,6 +684,7 @@
             function label(text,x,y,size,color){ctx.font=(size||11)+'px monospace';ctx.fillStyle=color||ink;ctx.textAlign='left';ctx.fillText(text,x,y);}
             /** @param {string} name @param {number} value @param {number} max @param {number} x @param {number} y @param {number} width @param {string} color */
             function meter(name,value,max,x,y,width,color){var fraction=Math.max(0,Math.min(1,value/Math.max(1,max)));label(name,x,y,10,muted);label(Math.round(fraction*100)+'%',x+width-27,y,10,ink);ctx.fillStyle='#233c43';ctx.fillRect(x,y+6,width,4);ctx.fillStyle=color;ctx.fillRect(x,y+6,width*fraction,4);}
+            paintManeuver(ctx,margin,document.body.classList.contains('touch-flight')?114:bottom-270,view);
             if(mission.weaponsDisabled&&!combat.convoy){
                 panel(margin,bottom-65,220,65);
                 label('JADE WEATHER / FREE FLIGHT',margin+12,bottom-43,10,muted);
@@ -722,5 +751,5 @@
                 radarRangeIndex = (radarRangeIndex + 1) % radarRanges.length;
             } };
     }
-    DW.flightHud = { flightGridPoints:flightGridPoints, paintFlightGrid:paintFlightGrid, updateFlightGuide:updateFlightGuide, guideStrength:guideStrength, predictFlightPath:predictFlightPath, paintFlightLanes:paintFlightLanes, paintFlightBrackets:paintFlightBrackets, paintThroatGuide:paintThroatGuide, paintTargetBearing: paintTargetBearing, mount: mount, targetStatus: targetStatus, paintTargetStatus: paintTargetStatus };
+    DW.flightHud = { paintManeuver:paintManeuver, flightGridPoints:flightGridPoints, paintFlightGrid:paintFlightGrid, updateFlightGuide:updateFlightGuide, guideStrength:guideStrength, predictFlightPath:predictFlightPath, paintFlightLanes:paintFlightLanes, paintFlightBrackets:paintFlightBrackets, paintThroatGuide:paintThroatGuide, paintTargetBearing: paintTargetBearing, mount: mount, targetStatus: targetStatus, paintTargetStatus: paintTargetStatus };
 }());
