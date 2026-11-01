@@ -34,7 +34,7 @@
         if(!combat.convoy||!this.visible)return [];
         var state=combat.convoy,y=Math.min(state.destinationY,state.elapsed*state.speedMps/U);
         return state.ships.filter(function(s){return s.hull>0;}).map(function(s,index){
-            return DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:[s.slot[0],s.slot[1]+y,s.slot[2]],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,0,0],throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);
+            return DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:[s.slot[0],s.slot[1]+y,s.slot[2]],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,y<state.destinationY?state.speedMps:0,0],throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);
         });
     },geometry:function(combat){
         if(!combat.convoy||!this.visible)return [];

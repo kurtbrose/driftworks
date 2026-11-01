@@ -62,3 +62,18 @@ console.log('PASS Ohio flying roster: 4v4, headlight guns/rear engines, mixed fi
  }
  console.log('PASS exhaust axis: fixed ship-space endpoints through off-axis camera translation, pitch, yaw and roll for fighter and capital mounts');
 }
+
+// Big-ship speed changes the flame, without borrowing the observer's velocity.
+{
+ const pose={eye:[0,0,0],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,0,0],throttle:1};
+ const view={eye:[20,-40,15],right:[1,0,0],back:[0,-1,0],up:[0,0,1]},mounts=[[0,-8,0,2]];
+ const sample=speed=>{pose.velocity=[0,speed,0];return DW.shipRender.engineGeometry([{index:0,hp:1,pose}],'',1,10,view,0,mounts).vertices;};
+ const length=v=>Math.abs(v[6*6+1]-v[8*6+1]),idle=sample(0),slow=sample(10),cruise=sample(25),fast=sample(50);
+ assert(length(idle)<length(slow)&&length(slow)<length(cruise)&&length(cruise)<length(fast),'speed increases physical flame length');
+ assert(idle[6*6+5]<slow[6*6+5]&&slow[6*6+5]<fast[6*6+5],'speed increases brightness');
+ assert.deepEqual(sample(1000),fast,'high speeds are bounded');
+ pose.velocity=[50,0,0];assert.deepEqual(DW.shipRender.engineGeometry([{index:0,hp:1,pose}],'',1,10,view,0,mounts).vertices,fast,'speed magnitude is independent of heading');
+ pose.velocity=[0,0,0];const fighterIdle=DW.shipRender.engineGeometry([{index:0,hp:1,pose}],'',1,10,view,0).vertices;
+ pose.velocity=[0,100,0];assert.deepEqual(DW.shipRender.engineGeometry([{index:0,hp:1,pose}],'',1,10,view,0).vertices,fighterIdle,'fighter throttle response is preserved');
+ console.log('PASS capital exhaust speed: increasing length/brightness, idle, saturation, heading independence and unchanged fighter response');
+}

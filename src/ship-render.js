@@ -208,7 +208,8 @@
                 return;
             var entry = (e.modelId ? find(e.modelId)?.model : null) || (selection === 'mixed' ? mixedModel(e.index, e.artWave || wave) : find(selection)?.model);
             var anchors = mounts || (entry ? engineAnchors(entry) : [[0, -6, 0]]), p = e.pose;
-            var power = Math.min(1, Math.max(0, p.throttle)), pulse = 1 + .035 * Math.sin(time * 23 + e.index * 2.7);
+            // Authored big-ship mounts use scene velocity in metres/second, never observer speed.
+            var power = mounts ? Math.min(1, Math.hypot.apply(null,p.velocity)/50) : Math.min(1, Math.max(0, p.throttle)), pulse = 1 + .035 * Math.sin(time * 23 + e.index * 2.7);
             anchors.forEach(function (anchor) {
                 var radius = anchor[3] || .65;
                 var center = p.eye.map(function (x, i) {
@@ -218,7 +219,7 @@
                 var facing = Math.max(0, p.back.reduce(function (sum, v, i) {
                     return sum + v * view.back[i];
                 }, 0));
-                quad(center, view.up, view.right, radius * 1.4 * pulse, radius * 1.4 * pulse, (.3 + .7 * facing) * (.45 + .55 * power));
+                quad(center, view.up, view.right, radius * 1.4 * pulse, radius * 1.4 * pulse, (.3 + .7 * facing) * (mounts ? .18 + .82 * power : .45 + .55 * power));
                 // Axis-locked ribbon: only its width turns toward the observer.
                 // Flattening the long axis into the camera plane skews off-axis
                 // exhaust under perspective when the cockpit pitches or yaws.
@@ -226,12 +227,12 @@
                 var side = [p.back[1]*sight[2]-p.back[2]*sight[1], p.back[2]*sight[0]-p.back[0]*sight[2], p.back[0]*sight[1]-p.back[1]*sight[0]];
                 var sideLength = Math.hypot.apply(null,side);
                 side = sideLength > .000001 ? side.map(function(v){return v/sideLength;}) : p.right;
-                var tail = radius * (2.8 + power * 6) * pulse;
+                var tail = radius * (mounts ? .6 + power * 8.2 : 2.8 + power * 6) * pulse;
                 // Large authored mouths need the soft flame root to overlap the bell.
                 var plume = center.map(function (v, i) {
                     return v + p.back[i] * tail * (mounts ? .24 : .5) / units;
                 });
-                quad(plume, p.back, side, tail * (mounts ? .62 : .5), radius * (.6 + power * .3), .6 + power * .35);
+                quad(plume, p.back, side, tail * (mounts ? .62 : .5), radius * (mounts ? .3 + power * .6 : .6 + power * .3), mounts ? .08 + power * .87 : .6 + power * .35);
             });
         });
         return { vertices: new Float32Array(data), color: [.25, .65, 1] };

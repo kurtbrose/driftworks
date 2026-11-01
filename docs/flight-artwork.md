@@ -54,6 +54,11 @@ to avoid a detached glow at capital scale. Aegis flames track each engine's heal
 and hull integrity, including idle and curved-space capital variants. Convoy
 mounts follow the DW-14 terminal bank and join the shared engine batch. Civilian
 liner mounts follow the dock basis and ignite during departure, after refueling.
+Big-ship flame length, width and brightness respond to the ship's own speed in
+metres per second, reaching full size at 50 m/s. Stopped capitals retain a small,
+dim idle glow. Convoys use their actual route speed (zero after arrival), Aegis
+uses simulation velocity, and liners use the derivative of their departure path.
+Camera motion cannot change this response. Fighter exhaust remains throttle-driven.
 These effects do not change the authored meshes, materials, collision or thrust.
 
 A 1400 × 900, DPR 1 production-renderer stern comparison (15 warm-up and 50

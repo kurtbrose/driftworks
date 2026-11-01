@@ -70,12 +70,16 @@ import * as arms from './depot-arm.js';
             var axis=points[k+1].map(function(v,i){return v-points[k][i];}),len=Math.hypot.apply(null,axis);axis=axis.map(function(v){return v/len;});
             return Object.assign({},m.batch,{origin:/** @type {[number,number,number]} */(points[k].map(function(v,i){return v/U+s.origin[i];})),basis:new Float32Array([1,0,0,0,axis[1],axis[2],0,-axis[2],axis[1]])});
         });
+        var clocks=[c.five,c.six];
         transports.forEach(function(ship,index){var sample=samples[index];if(sample.phase==='complete')return;
             var arm=index===0?-112:0,port=ship.port;
             // Same dock attitude, standoff, clearance and departure as the depot study.
             // Its Y-up vertical axis maps onto +Z in the flight renderer.
             var origin=/** @type {[number,number,number]} */([(arm-port[0])/U,(-61+port[2])/U,1200+(-23-port[1]+18*sample.clearance+240*sample.departure)/U]);
-            exhaust.push({index:index,hp:1,pose:{eye:origin,right:[1,0,0],back:[0,0,-1],up:[0,-1,0],velocity:[0,0,0],throttle:sample.phase==='depart'?1:0}});
+            // Derivative of the existing 240 m / 10 s quintic departure path, in m/s.
+            var clock=clocks[index],t=Math.max(0,Math.min(1,clock.elapsed/10));
+            var speed=sample.phase==='depart'?240/10*30*t*t*(1-t)*(1-t):0;
+            exhaust.push({index:index,hp:1,pose:{eye:origin,right:[1,0,0],back:[0,0,-1],up:[0,-1,0],velocity:[0,0,speed],throttle:sample.phase==='depart'?1:0}});
             ship.batches.forEach(function(b){result.push(Object.assign({},b,{origin:origin,basis:dockBasis}));});
         });
         return result;

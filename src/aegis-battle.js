@@ -70,11 +70,12 @@
         batches.forEach(function(b){for(var i=0;i<b.vertices.length;i+=b.stride||6)crossRadius=Math.max(crossRadius,Math.hypot(b.vertices[i+1],b.vertices[i+2]));});
         // Share one intrinsic hull placement across every material.
         batches.forEach(function(b){b.lensCenter=state.position;b.lensRadius=radius*U;b.lensTransit=transit;});
-        function reset(){transit.proper=Math.sqrt(6000*6000-300*300);region=0;seconds=0;direction=1;turn=0;inbound=true;state.position.splice(0,3,0,-8000/U,1550/U);state.heading=-Math.PI/2;rig.reset();}
+        function reset(){transit.proper=Math.sqrt(6000*6000-300*300);region=0;seconds=0;direction=1;turn=0;inbound=true;state.position.splice(0,3,0,-8000/U,1550/U);state.heading=-Math.PI/2;state.velocity=[0,180,0];rig.reset();}
         /** @param {number} elapsed */function step(elapsed){
             if(!Number.isFinite(elapsed)||elapsed<=0)return;
             var dt=Math.min(.1,elapsed);seconds+=dt;
-            if(turn>0){var used=Math.min(turn,dt);turn-=used;state.heading+=Math.PI*used/12;if(turn<=1e-9){turn=0;direction=-direction;inbound=true;state.heading=direction>0?-Math.PI/2:Math.PI/2;}return;}
+            if(turn>0){state.velocity=[0,0,0];var used=Math.min(turn,dt);turn-=used;state.heading+=Math.PI*used/12;if(turn<=1e-9){turn=0;direction=-direction;inbound=true;state.heading=direction>0?-Math.PI/2:Math.PI/2;}return;}
+            state.velocity=[0,direction*180,0];
             var previous=state.position.slice();
             var nextProper=transit.proper-direction*180*dt,nextRegion=nextProper<0?1:0;
             var nextPosition=[nextRegion*12000/U,(-2000-(nextRegion?-1:1)*Math.hypot(300,nextProper))/U,1550/U];

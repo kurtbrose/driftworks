@@ -145,7 +145,7 @@
         function flames(view,seconds){
             var heading=options?options.state.heading:0,c=Math.cos(heading),s=Math.sin(heading);
             var anchors=(sourceAsset.engines||[]).filter(function(e){var part=parts.find(function(p){return p.id===e.id;});return !part||part.hp>0;}).map(function(e){return [e.position[1],-e.position[0]-32,e.position[2],18];});
-            var pose={eye:origin,right:[-s,c,0],back:[c,s,0],up:[0,0,1],velocity:[0,0,0],throttle:1};
+            var pose={eye:origin,right:[-s,c,0],back:[c,s,0],up:[0,0,1],velocity:options?options.state.velocity:[0,0,0],throttle:1};
             var batch=DW.shipRender.engineGeometry([{index:0,hp:options?options.state.integrity:1,pose:pose}],'',1,U,view,seconds,anchors);
             if(options){batch.region=options.state.region||0;batch.lensCenter=origin;batch.lensRadius=750;}
             return batch;
