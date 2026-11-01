@@ -149,6 +149,21 @@ const {pathToFileURL} = require('node:url');
   const boxes=bench.children.map(o=>new real.Box3().setFromObject(o,true));
   boxes.forEach((b,i)=>boxes.slice(i+1).forEach(other=>assert(!b.intersectsBox(other),'unpacked inventory parts do not overlap')));
   assert.throws(()=>toys.toyPart('missing'));
+  const finishSource=fs.readFileSync(path.join(root,'studies/aegis-toybox-finish.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
+  vm.runInContext(finishSource+'\nglobalThis.finish={applyReviewFinish,finishNotes,finishCost};',fleetScope);
+  const sharedColorMaps=new Set(),sharedRoughnessMaps=new Set();
+  const finish=fleetScope.finish;assert.equal(finish.finishCost.extraDraws,0);assert.equal(finish.finishCost.extraTriangles,0);
+  for(const entry of toys.toyParts){
+    assert.equal(finish.finishNotes[entry.id].length,2,'every part has its own review notes');
+    const batch=kit.batchStatic(toys.toyPart(entry.id)),before=[];
+    batch.traverse(o=>{if(o.isMesh)before.push({o,material:o.material,positions:o.geometry.attributes.position,normals:o.geometry.attributes.normal});});
+    finish.applyReviewFinish(batch,true);assert.equal(batch.children.length,before.length);
+    for(const {o,material} of before){if(o.material.map)sharedColorMaps.add(o.material.map);if(o.material.roughnessMap)sharedRoughnessMaps.add(o.material.roughnessMap);if(material.emissiveIntensity>1)assert.equal(o.material,material,'lights stay unchanged');}
+    for(const {o,positions,normals} of before){assert.equal(o.geometry.attributes.position,positions);assert.equal(o.geometry.attributes.normal,normals);assert.equal(o.geometry.attributes.uv.count,positions.count);assert([...o.geometry.attributes.uv.array].every(Number.isFinite));}
+    finish.applyReviewFinish(batch,false);for(const {o,material} of before)assert.equal(o.material,material,'A/B restores exact original materials');kit.disposeBatch(batch);
+  }
+  assert.equal(sharedColorMaps.size,1,'one shared paint map across the inventory');assert.equal(sharedRoughnessMaps.size,1,'one shared roughness map across the inventory');
+  console.log('PASS toybox material review: per-part notes, finite UVs, unchanged geometry/draws and exact original restoration');
   console.log('PASS Aegis toybox: complete unique inventory, real scale, separate nonoverlapping parts and batched geometry');
   console.log('PASS Aegis fleet study: shared source freshness, physical pitch, swappable manifests, through passage and batching');
   console.log('PASS Aegis kit: outward armor, open couplings, viewport framing, two attachment banks, shared true-scale fighters and stable ship-only OBJ exports');

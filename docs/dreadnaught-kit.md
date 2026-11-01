@@ -907,3 +907,31 @@ Label selection, Next navigation, camera switching and part-link reload were
 exercised in the browser. Captures are in `output/aegis-toybox/` (ignored).
 This verifies the inventory presentation, not every part from every angle or
 production readiness. Original capital and industrial fleet views are retained.
+
+### Low-cost surface review
+
+The toybox now includes Original/Candidate material switching and two focused
+improvement notes for every inventory entry. `?part=prow-lance&finish=candidate`
+opens the first comparison. Switching finish preserves camera pose, and switching
+parts retains the selected finish. Targeted stencils, deck paint, array patterns,
+bridge glazing and heat stains in the notes are proposals, not applied artwork.
+
+The first candidate in `studies/aegis-toybox-finish.js` uses two deterministic
+256-square RGBA textures shared across all treated materials: restrained paint
+variation and a roughness map. Their RGBA8 storage with mipmaps is about 683 KiB.
+One-time triangle-plane UV projection adds two floats per batched vertex, with
+one 64 m repeat pitch across differently sized parts. The material-role changes
+separate painted armor, dull recesses and exposed metal; emissive materials are
+left unchanged. No triangles or draws are added, but texture sampling, UV buffers
+and extra material variants have a cost. Actual flight performance is unmeasured.
+The adapter operates on the disposable review batches; production assets and
+shared authoring materials remain untouched. Original mode restores the exact
+original material objects.
+
+Individual original/candidate captures for all nineteen entries were visually
+reviewed at the common three-quarter inspection angle via labeled contact
+sheets. Captures and sheets are under `output/aegis-toybox-finish/` (ignored).
+The general pass is subtle and does not replace surface-specific work: hangar
+deck paint, missile identifiers, sensor faces and engine collar finishes are the
+stronger next targeted candidates. Undersides, all rotations, fleet-distance
+readability and actual combat performance remain outside this visual pass.
