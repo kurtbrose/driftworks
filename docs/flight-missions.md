@@ -232,6 +232,16 @@ An escort succeeds when surviving cargo arrives and the raiders have been cleare
 Losing every freighter fails the escort. Arriving while attackers survive keeps
 the defense objective active. Destroying raiders does not spawn generic new waves.
 
+Freighter target views participate in `flight-collision.js`'s shared spatial
+index and projectile corridor scheduling. They remain outside the fighter
+movement/render roster. Enemy and friendly rounds both test their exact authored
+hulls, preserving cargo friendly fire. The common nearest-hit resolver chooses
+between cargo, fighter shields/hulls and terrain; it applies only one hit.
+Convergence uses the same indexed segment candidates. Swept body contacts query
+the shared index with a conservative radius including target displacement, then
+retain moving-frame narrow phase. The public convoy trace remains an exhaustive
+geometry oracle/CCD helper, not a separate per-projectile gameplay pass.
+
 Freighter hulls also collide with the player and wingmen. The indexed triangle
 sweep preserves open scaffolding rather than filling each ship with a solid box.
 Fighter radii are swept in the moving freighter frame to prevent tunneling and

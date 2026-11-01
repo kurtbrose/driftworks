@@ -140,14 +140,17 @@
         }
         return entry;
     }
+    /** Cargo shares projectile broadphase/scheduling without entering fighter movement or rendering.
+     * @param {Combat} t */
+    function collisionRoster(t){return [t.player].concat(t.enemies,t.convoy?DW.convoyMission.targets(t):[]);}
     /** Full observation is retained for public direct queries; managed batches notify movement explicitly.
      * @param {Combat} t @param {CollisionEngine} engine */
     function syncCollisionEngine(t,engine){
         if(engine.depth)return;engine.stats.syncs++;
         if(t.time<engine.index.time){engine.heap.forEach(function(event){wakeCollision(engine,event);});engine.heap.length=0;engine.epoch++;}engine.index.time=t.time;
-        var seen=new Set(/** @type {Craft[]} */([])),entries=engine.index.entries;
-        for(var i=0;i<=t.enemies.length;i++){var craft=i?t.enemies[i-1]:t.player;seen.add(craft);entries[i]=moveCollisionProxy(engine,craft,i);}
-        if(entries.length!==t.enemies.length+1)engine.epoch++;entries.length=t.enemies.length+1;
+        var seen=new Set(/** @type {Craft[]} */([])),entries=engine.index.entries,roster=collisionRoster(t);
+        for(var i=0;i<roster.length;i++){var craft=roster[i];seen.add(craft);entries[i]=moveCollisionProxy(engine,craft,i);}
+        if(entries.length!==roster.length)engine.epoch++;entries.length=roster.length;
         engine.proxies.forEach(function(proxy,craft){if(!seen.has(craft)){spaceRemove(engine.ships,proxy.node);engine.proxies.delete(craft);engine.epoch++;}});
         drainCollisionEvents(engine,t.time);
     }
@@ -167,7 +170,7 @@
         var remaining=bolt.weapon.lifetime-bolt.age,horizon=Number.isFinite(remaining)&&Number.isFinite(bolt.weapon.speed)&&bolt.weapon.speed>0?Math.min(.25,Math.max(0,remaining)):0,span=Math.hypot(end[0]-start[0],end[1]-start[1],end[2]-start[2]);
         if(scheduled&&horizon>0&&span>0){var travel=bolt.weapon.speed*horizon/U,future=end.map(function(v,k){return v+(end[k]-start[k])/span*travel;});raw=segmentBox(start,future,0);}
         var query={min:raw.min.map(function(v){return v-margin;}),max:raw.max.map(function(v){return v+margin;})};engine.stats.queries++;
-        var candidates=spaceQuery(engine.ships,query).filter(function(e){return e.craft.hp>0&&e.craft!==shooter&&e.team!==faction;}).sort(function(a,b){return a.order-b.order;});
+        var candidates=spaceQuery(engine.ships,query).filter(function(e){return e.craft.hp>0&&e.craft!==shooter&&(!!e.craft.convoyModel||e.team!==faction);}).sort(function(a,b){return a.order-b.order;});
         if(scheduled&&horizon>0){event={at:t.time+horizon,active:true,epoch:engine.epoch,faction:faction,radius:radius,raw:raw,node:null,candidates:candidates};event.node=spaceInsert(engine.corridors,query,event);engine.events.set(bolt,event);engine.activeEvents++;pushCollisionEvent(engine,event);}
         return candidates;
     }
@@ -206,10 +209,10 @@
         var engine=getCollisionEngine(t);if(engine){syncCollisionEngine(t,engine);return engine.index;}
         var index=collisionIndices.get(t);
         if(!index){index={entries:[],cells:new Map(/** @type {[string,CollisionEntry[]][]} */([])),large:[],motion:0,epoch:0,time:t.time};collisionIndices.set(t,index);}
-        var rebuild=index.entries.length!==t.enemies.length+1;
+        var roster=collisionRoster(t),rebuild=index.entries.length!==roster.length;
         if(t.time<index.time){index.epoch++;}index.time=t.time;
-        for(var i=0;i<=t.enemies.length;i++){
-            var craft=i?t.enemies[i-1]:t.player,entry=index.entries[i],p=craft.pose.eye;
+        for(var i=0;i<roster.length;i++){
+            var craft=roster[i],entry=index.entries[i],p=craft.pose.eye;
             var shape=craft.collision,signature=!shape?'sphere:9':shape.kind==='sphere'?'sphere:'+shape.radiusM:'model:'+shape.modelId;
             var team=craft.team||'enemy',living=craft.hp>0;
             if(!entry||entry.craft!==craft||entry.shape!==signature){
@@ -224,7 +227,7 @@
                 if(key!==entry.key){entry.key=key;rebuild=true;}
             }
         }
-        if(index.entries.length>t.enemies.length+1){index.entries.length=t.enemies.length+1;index.epoch++;}
+        if(index.entries.length>roster.length){index.entries.length=roster.length;index.epoch++;}
         if(rebuild){index.cells.clear();index.large.length=0;for(var j=0;j<index.entries.length;j++){var e=index.entries[j];
             if(e.r>collisionCell){index.large.push(e);continue;}
             var bucket=index.cells.get(e.key);if(!bucket){bucket=[];index.cells.set(e.key,bucket);}bucket.push(e);
@@ -262,7 +265,7 @@
             if(!curvedEngine)return {candidates:index.entries,shooter:shooter,faction:faction,radius:head};
             curvedEngine.stats.queries++;
             var box=segmentBox(klein(start,curvature),klein(end,curvature),Math.max(30,head)/U);
-            var nearby=spaceQuery(curvedEngine.ships,box).filter(function(e){return e.craft.hp>0&&e.craft!==shooter&&e.team!==faction;}).sort(function(a,b){return a.order-b.order;});
+            var nearby=spaceQuery(curvedEngine.ships,box).filter(function(e){return e.craft.hp>0&&e.craft!==shooter&&(!!e.craft.convoyModel||e.team!==faction);}).sort(function(a,b){return a.order-b.order;});
             return {candidates:nearby,shooter:shooter,faction:faction,radius:head};
         }
         var radius=bolt.weapon.headRadius||0,margin=Math.max(30,radius)/U,sleep=collisionSleeps.get(bolt);
@@ -270,10 +273,18 @@
             Math.max(Math.hypot(start[0]-sleep.point[0],start[1]-sleep.point[1],start[2]-sleep.point[2]),Math.hypot(end[0]-sleep.point[0],end[1]-sleep.point[1],end[2]-sleep.point[2]))+index.motion-sleep.motion<sleepClearance;
         var engine=getCollisionEngine(t);
         var candidates=engine?eventCollisionCandidates(t,engine,start,end,bolt,faction,shooter):sleeping?[]:collisionCandidates(index,start,end,margin+sleepClearance).filter(function(entry){
-            return entry.craft.hp>0&&entry.craft!==shooter&&entry.team!==faction&&collisionNearby(entry,start,end,margin+sleepClearance);
+            return entry.craft.hp>0&&entry.craft!==shooter&&(!!entry.craft.convoyModel||entry.team!==faction)&&collisionNearby(entry,start,end,margin+sleepClearance);
         });
         if(!engine&&!sleeping&&!candidates.length)collisionSleeps.set(bolt,{index:index,epoch:index.epoch,motion:index.motion,point:end.slice(),radius:radius,faction:faction});
         return {candidates: candidates, shooter: shooter, faction: faction, radius: radius};
+    }
+    /** Unscheduled flat-space swept-body query. Margin includes body radius and maximum target motion.
+     * Uses the same proxies/tree/grid as projectiles; narrow phase owns moving-frame hull tests.
+     * @param {Combat} t @param {Vector} start @param {Vector} end @param {number} radiusM */
+    function sweep(t,start,end,radiusM){
+        var index=collisionIndex(t),engine=getCollisionEngine(t),margin=radiusM/U;
+        if(engine){engine.stats.queries++;return spaceQuery(engine.ships,segmentBox(start,end,margin)).filter(function(e){return e.craft.hp>0;}).sort(function(a,b){return a.order-b.order;});}
+        return collisionCandidates(index,start,end,margin).filter(function(e){return e.craft.hp>0&&collisionNearby(e,start,end,margin);});
     }
     /** Preserve the in-step proxy update without exposing engines to training.
      * @param {Combat} t @param {Craft} e */
@@ -330,7 +341,7 @@
         if (geometry.id !== shape.modelId) throw new Error('Unknown collision model ' + shape.modelId);
         return DW.shipPackModels.hullHit(geometry, craft.pose, start, end, U, boltRadius);
     }
-    DW.flightCollision = {sphereHit:sphereHit, hullHit:hullHit, query: query, nearby: collisionNearby, radius: collisionRadius, throatRadius:throatRadius,
+    DW.flightCollision = {sphereHit:sphereHit, hullHit:hullHit, query: query, sweep:sweep, nearby: collisionNearby, radius: collisionRadius, throatRadius:throatRadius,
         setMode: setCollisionMode, batch: collisionBatch, changed: collisionChanged,
         moved: moved, stats: collisionStats};
 }());

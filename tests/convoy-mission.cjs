@@ -119,16 +119,6 @@ assert(pose.eye[1]>startY+.1/U,'Moving hull pushes a stationary fighter out of i
 assert(pose.velocity[1]>0,'Contact is resolved relative to freighter velocity');
 f.reset();c=f.snapshot().combat;
 assert.equal(f.DW.convoyMission.trace(c,[10000,10000,10000],[10001,10000,10000],7),null);
-// The gun-batch broadphase must preserve exact hits, hollow bays and swept cargo motion.
-const probes=c.convoy.ships.flatMap(ship=>[[-80,0,2.6],[0,-42,0],[0,0,90]].map(p=>({a:at(ship,p),b:at(ship,[80,p[1],p[2]])})));probes.push({a:[-10000,0,0],b:[10000,0,0]});
-for(const radius of [.1,7]){
- const expected=probes.map(p=>f.DW.convoyMission.trace(c,p.a,p.b,radius));
- const result=f.DW.flightSim.collisionBatch(c,()=>probes.map(p=>f.DW.convoyMission.trace(c,p.a,p.b,radius)));
- assert.deepEqual(result,expected,'Broadphase preserves exact trace results and generic batch return values');
-}
-assert.throws(()=>f.DW.convoyMission.batchTrace(c,()=>{throw Error('cleanup');}),/cleanup/);
-const movedCargoForBounds=c.convoy.ships[24],saved=movedCargoForBounds.position.slice();movedCargoForBounds.position[0]+=10000;
-assert(f.DW.convoyMission.trace(c,at(movedCargoForBounds,[-20,0,2.6]),at(movedCargoForBounds,[20,0,2.6]),.1),'Batch bounds cannot outlive the synchronous call');movedCargoForBounds.position=saved;
 console.log('PASS convoy collision: authored surfaces and open bays, high-speed CCD, wingmen, moving hulls, clearance and reset');
 
 // The playable encounter starts armed and threatens actual damageable cargo.

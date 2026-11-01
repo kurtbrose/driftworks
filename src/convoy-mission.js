@@ -270,27 +270,15 @@
             hulls[name]={model:model,min:min,max:max};
         });
     }
-    /** Bounds live only inside a synchronous gun batch; external pose edits never leave stale caches.
-     * @type {WeakMap<import('../experiments/types').Combat,{min:number[],max:number[],packets:{min:number[],max:number[]}[]}>} */var traceBounds=new WeakMap();
-    /** @template T @param {import('../experiments/types').Combat} combat @param {()=>T} run @returns {T} */
-    function batchTrace(combat,run){
-        const state=combat.convoy;if(!state||traceBounds.has(combat))return run();
-        var min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity],groups=packets.map(function(){return {min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity]};});
-        state.ships.forEach(function(ship){const h=hulls[ship.model];if(!h||ship.hull<=0)return;for(var k=0;k<3;k++){min[k]=Math.min(min[k],ship.position[k]+h.min[k]/U);max[k]=Math.max(max[k],ship.position[k]+h.max[k]/U);var group=groups[ship.packet];group.min[k]=Math.min(group.min[k],ship.position[k]+h.min[k]/U);group.max[k]=Math.max(group.max[k],ship.position[k]+h.max[k]/U);}});
-        traceBounds.set(combat,{min:min,max:max,packets:groups});try{return run();}finally{traceBounds.delete(combat);}
-    }
     /** Sweep in each freighter's moving frame. Inputs and output points use scene units.
      * @param {import('../experiments/types').Combat} combat @param {number[]} start @param {number[]} end
-     * @param {number} radiusM @param {number[][]} [previousShips]
+     * @param {number} radiusM @param {number[][]} [previousShips] @param {number[]} [shipIndices]
      * @returns {import('../experiments/types').ConvoyHit|null} */
-    function trace(combat,start,end,radiusM,previousShips){
+    function trace(combat,start,end,radiusM,previousShips,shipIndices){
         var state=combat.convoy;if(!state)return null;
-        var bounds=!previousShips&&traceBounds.get(combat);
-        if(bounds)for(var axis=0;axis<3;axis++)if(Math.min(start[axis],end[axis])>bounds.max[axis]+radiusM/U||Math.max(start[axis],end[axis])<bounds.min[axis]-radiusM/U)return null;
-        var eligible=bounds?bounds.packets.map(function(group){for(var k=0;k<3;k++)if(Math.min(start[k],end[k])>group.max[k]+radiusM/U||Math.max(start[k],end[k])<group.min[k]-radiusM/U)return false;return true;}):null;
         /** @type {import('../experiments/types').ConvoyHit|null} */var best=null;
-        for(var i=0;i<state.ships.length;i++){
-            var ship=state.ships[i],hull=hulls[ship.model];if(ship.hull<=0||!hull||eligible&&!eligible[ship.packet])continue;
+        for(var j=0;j<(shipIndices?shipIndices.length:state.ships.length);j++){
+            var i=shipIndices?shipIndices[j]:j,ship=state.ships[i],hull=hulls[ship.model];if(ship.hull<=0||!hull)continue;
             var old=previousShips?previousShips[i]:ship.position,miss=false;
             for(var k=0;k<3;k++){
                 var a=(start[k]-old[k])*U,b=(end[k]-ship.position[k])*U;
@@ -311,12 +299,13 @@
      * @param {number[][]} previousShips @param {number} dt */
     function collide(combat,previousCraft,previousShips,dt){
         const state=combat.convoy;if(!state||!combat.enabled||!(dt>0))return false;
-        var playerImpact=false;
-        DW.flightSim.participants(combat).forEach(function(craft,index){
+        var playerImpact=false,maxMotion=state.ships.reduce(function(n,ship,i){return Math.max(n,Math.hypot.apply(null,ship.position.map(function(v,k){return v-previousShips[i][k];}))*U);},0);
+        DW.flightCollision.batch(combat,function(){DW.flightSim.participants(combat).forEach(function(craft,index){
             if(craft.hp<=0)return;
             var pose=craft.pose,radius=DW.flightCollision.radius(craft)*U;
             // An approach may spawn during this tick; new craft have no earlier sample.
-            const hit=trace(combat,previousCraft[index]||pose.eye,pose.eye,radius,previousShips);if(!hit)return;
+            var from=previousCraft[index]||pose.eye,indices=DW.flightCollision.sweep(combat,from,pose.eye,radius+maxMotion).filter(function(entry){return !!entry.craft.convoyModel;}).map(function(entry){return entry.craft.index;});
+            const hit=trace(combat,from,pose.eye,radius,previousShips,indices);if(!hit)return;
             var ship=state.ships[hit.shipIndex],velocity=ship.position.map(function(v,k){return (v-previousShips[hit.shipIndex][k])*U/dt;});
             var relative=pose.velocity.map(function(v,k){return v-velocity[k];}),inward=relative.reduce(function(n,v,k){return n+v*hit.normal[k];},0);
             pose.eye=hit.point.map(function(v,k){return v+hit.normal[k]*(radius+.02)/U;});
@@ -325,7 +314,7 @@
             pose.ramp=[dot(pose.right),dot(pose.up),-dot(pose.back)];
             DW.flightSim.collisionChanged(combat,craft);
             if(craft===combat.player&&inward< -1)playerImpact=true;
-        });
+        });});
         return playerImpact;
     }
     /** Derived target views alias cargo health; they never enter the fighter renderer or movement roster. */
@@ -472,5 +461,5 @@
         }
         return null;
     }
-    DW.convoyMission={batchTrace:batchTrace,arrivalFleet:arrivalFleet,stepRaider:stepRaider,radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
+    DW.convoyMission={arrivalFleet:arrivalFleet,stepRaider:stepRaider,radio:radio,packets:packets,hitModel:hitModel,targets:targets,model:model,damage:damage,installCollision:installCollision,trace:trace,collide:collide,start:start,step:step,stepWing:stepWing,WING_SIZE:WING_SIZE};
 }());

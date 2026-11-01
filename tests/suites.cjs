@@ -34,6 +34,7 @@ const suites = {
     "convoy-director.cjs",
     "convoy-arrival.cjs",
     "convoy-battle.cjs",
+    "convoy-collision.cjs",
     "headless.cjs",
     "pilot-behavior.cjs",
     "ellis.cjs",

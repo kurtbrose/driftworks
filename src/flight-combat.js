@@ -153,7 +153,7 @@
         var candidates=query.candidates,shooter=query.shooter,faction=query.faction,radius=query.radius;
         candidates.forEach(function (entry) {
             var e=entry.craft;if(!player.curvature&&!collisionNearby(entry,start,end,radius/U))return;
-            if (e.hp <= 0 || e === shooter || (e.team || 'enemy') === faction || (e.pose.region||0)!==(bolt.region||0)) return;
+            if (e.hp <= 0 || e === shooter || (!e.convoyModel&&(e.team || 'enemy') === faction) || (e.pose.region||0)!==(bolt.region||0)) return;
             var relative=sub(scale(bolt.direction||unit(sub(end,start)),bolt.weapon.speed===undefined?1000:bolt.weapon.speed),e.pose.velocity),shell=collisionRadius(e)*1.18;
             var blocked=(e.shield||0)>0&&length(relative)>shieldSpeed&&length(spaceDelta(e.pose,start))>=shell;
             var candidate = blocked?sphereHit(spaceDelta(e.pose,start),spaceDelta(e.pose,end),[0,0,0],shell):hullHit(e, start, end, bolt.weapon.headRadius || 0);
@@ -162,19 +162,17 @@
                 if (candidate.fraction < best) { best = candidate.fraction; hit = candidate.point; victim = e; surface = candidate; shieldContact=blocked; }
             }
         });
-        var cargo=t.convoy?DW.convoyMission.trace(t,start,end,bolt.weapon.headRadius||0):null;
-        if(cargo&&cargo.fraction<best){best=cargo.fraction;hit=cargo.point;victim=null;surface=null;shieldContact=false;}else cargo=null;
-        if(cargo)DW.convoyMission.damage(t,cargo.shipId,bolt.weapon,cargo.point);
         var struck = /** @type {Craft | null} */ (victim), hull = /** @type {Hit | null} */ (surface);
-        if (!shieldContact && struck && hull && hull.model && hull.local && hull.normal && (!scorchInterval || t.time-(scorchTimes.get(struck)??-Infinity)>=scorchInterval)) {
+        if (!shieldContact && struck && !struck.convoyModel && hull && hull.model && hull.local && hull.normal && (!scorchInterval || t.time-(scorchTimes.get(struck)??-Infinity)>=scorchInterval)) {
             DW.shipPackModels.addScorch(struck, { fraction: hull.fraction, point: hull.point, model: hull.model, local: hull.local, normal: hull.normal });
             if(scorchInterval)scorchTimes.set(struck,t.time);
         }
-        if (!cargo && !struck && hit && terrainHit && terrainHit.onImpact) terrainHit.onImpact(hit,bolt,t);
-        if (!cargo && !struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
+        if (!struck && hit && terrainHit && terrainHit.onImpact) terrainHit.onImpact(hit,bolt,t);
+        if (!struck && hit && t.onTerrainImpact) t.onTerrainImpact(hit);
         if (struck) {
             var before=onDamage?struck.hp+(struck.shield||0):0;
-            if(shieldContact)damageCraft(t,struck,bolt.weapon,shooter||team);
+            if(struck.convoyModel)DW.convoyMission.damage(t,struck.id,bolt.weapon,hit||struck.pose.eye);
+            else if(shieldContact)damageCraft(t,struck,bolt.weapon,shooter||team);
             else {var shields=struck.shield;struck.shield=0;damageCraft(t,struck,bolt.weapon,shooter||team);struck.shield=shields;}
             if(onDamage&&struck.hp+(struck.shield||0)<before)onDamage();
         }
@@ -193,7 +191,7 @@
         }
         candidates.forEach(function (entry) {
             var e=entry.craft;
-            if (e.hp > 0 && (e.team || 'enemy') !== faction && victim !== e)
+            if (!e.convoyModel && e.hp > 0 && (e.team || 'enemy') !== faction && victim !== e)
                 near(e.pose, e, e.id, e.team || 'enemy');
         });
         return hit;

@@ -9,6 +9,7 @@ export type FlightCollisionApi = {
     query: (combat: Combat, start: Vector, end: Vector, bolt: Bolt, team: Craft | string) => {
         candidates: CollisionCandidate[]; shooter: Craft | undefined; faction: string; radius: number;
     };
+    sweep: (combat: Combat, start: Vector, end: Vector, radiusM: number) => CollisionCandidate[];
     nearby: (candidate: CollisionCandidate, start: Vector, end: Vector, margin: number) => boolean;
     // Craft hull bound in scene units, matching candidate coordinates.
     radius: (craft: Craft) => number;

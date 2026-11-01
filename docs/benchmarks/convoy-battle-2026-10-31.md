@@ -47,10 +47,10 @@ four measured) attributed about 5.0 seconds of self samples to convoy hull
 tracing, more than any other function. Every projectile checked all 30 cargo
 bounds, even when well outside the convoy.
 
-Gun updates now build a convoy and five packet bounds once per synchronous
+The initial patch built a convoy and five packet bounds once per synchronous
 collision batch. A segment outside those bounds cannot reach cargo; possible
 hits still traverse the original per-ship bounds and exact authored hull BVH.
-Bounds are discarded in `finally`; direct trace calls, moved hulls and swept
+Those bounds were discarded in `finally`; direct trace calls, moved hulls and swept
 ramming retain the uncached path. This preserves hollow scaffolding and damage.
 
 A CPU-only OFF/ON/ON/OFF replay used seed 29, one simulated second warm-up and
@@ -83,3 +83,50 @@ selected distant targets remain marked. A live unmodified sortie naturally
 produced `CONTROL / ASSIST FORWARD SCREEN` before local raiders arrived, with
 all 30 freighters surviving (`control-dispatch.png`). This pass does not visually approve new
 portraits or change the authored capital artwork.
+
+
+## Follow-up: shared collision integration
+
+The packet-bounds patch above has been removed. It reused the hull BVH but
+bypassed the optimized spatial index and projectile corridor reuse. Cargo now
+has stable target views in the existing collision roster; projectile broadphase,
+movement invalidation and scheduling operate on freighters and fighters together.
+The common nearest-hit loop retains exact cargo hulls and friendly-fire damage.
+Ramming and convergence also use the shared index; moving-frame hull contact
+remains the narrow phase. Cargo does not enter fighter stepping or rendering.
+
+A same-process source comparison loaded the previous commit's four runtime
+modules only for baseline runs, then the revised modules, in OFF/ON/ON/OFF order.
+Each real seed-29 convoy replay warmed for one simulated second and measured
+120 batches at 60 Hz (two production ticks per batch):
+
+| Shared cargo index | CPU batch median / p95 |
+| --- | --- |
+| Before | 31.44 / 49.60 ms |
+| After | 30.14 / 41.83 ms |
+| After | 34.04 / 49.79 ms |
+| Before | 35.43 / 52.71 ms |
+
+All four produced the same complete snapshot digest, 1,284 shots, and 150,000
+cargo hull. All produced 82,413 scheduled candidate reuses. The revised code
+extends that reuse to cargo instead of doing a cargo scan after each reuse.
+Timings still drift and overlap: this is a correctness/integration repair with
+a modest CPU improvement, not evidence that the entire FPS problem is solved.
+
+Live integration was inspected in a new foreground tab with no concurrent tests
+or rebuilds: normal quality, fixed forward cockpit camera, 1280 × 720 CSS,
+1920 × 1080 backing, DPR 1.5. It submitted 243 draws / 2,233,025 triangles after
+warm-up, with 7,362 additive effect vertices. The overlay read 21.4 FPS,
+46.7 ms/frame, p95 59.7 ms, 45.64 ms combined CPU and 3.7 ms scene submission;
+stage indicators use a separate rolling window and overlap. Startup explosions
+had larger spikes. This viewport and evolving battle differ from the earlier
+narrow view, so the FPS values are not a before/after comparison. No GPU time
+was measured and the wider scene remains CPU-limited. Raw comparison data and
+the actual runtime capture are in ignored `output/convoy-collision/`.
+
+Focused regression covers all five collision modes, exact cargo contact points,
+friendly rounds, nearest fighter obstruction, no double hit, convergence without
+calling the exhaustive convoy trace, corridor reuse and movement wakeups,
+conservative moving-target sweeps, destruction/reset, and full production state
+parity between exhaustive and scheduled modes. The existing full escort test
+also passes the moving hull, hollow scaffold, high-speed CCD and gunplay checks.

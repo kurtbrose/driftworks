@@ -27,9 +27,7 @@
     var combat=DW.flightCombat;
     var shieldContacts=combat.shieldContacts, damageCraft=combat.damageCraft;
     var damagePlayer=combat.damagePlayer, trace=combat.trace, radioEvent=combat.radioEvent;
-    var setCollisionMode=collision.setMode;
-    /** @template T @param {Combat} t @param {()=>T} run @returns {T} */
-    function collisionBatch(t,run){return collision.batch(t,function(){return t.convoy?DW.convoyMission.batchTrace(t,run):run();});}
+    var setCollisionMode=collision.setMode,collisionBatch=collision.batch;
     var collisionChanged=collision.changed,collisionStats=collision.stats;
     var collisionRadius=collision.radius,collisionNearby=collision.nearby;
     /** @param {Combat} combat */
@@ -368,15 +366,16 @@
         var terrain = terrainHit&&!(shooter.pose.region||0) ? terrainHit(start, end) : null;
         var best = terrain ? length(sub(terrain, start)) : Infinity;
         var point = /** @type {Vector | null} */ (null);
-        participants(t).forEach(function (craft) {
-            if (craft === shooter || craft.hp <= 0 || (craft.team || 'enemy') === (shooter.team || 'enemy') || (craft.pose.region||0)!==(shooter.pose.region||0)) return;
+        /** @param {Craft} craft */function checkHull(craft) {
+            if (craft === shooter || craft.hp <= 0 || (!craft.convoyModel&&(craft.team || 'enemy') === (shooter.team || 'enemy')) || (craft.pose.region||0)!==(shooter.pose.region||0)) return;
             var hit = hullHit(craft, start, end);
             if (!hit) return;
             var distance = length(sub(hit.point, start));
             // The gun controller retracts its launch points for point-blank surfaces.
             if (distance * U > .01 && distance < best) { best = distance; point = hit.point; }
-        });
-        if(t.convoy){var cargo=DW.convoyMission.trace(t,start,end,0);if(cargo&&length(sub(cargo.point,start))<best)point=cargo.point;}
+        }
+        if(t.convoy)collision.sweep(t,start,end,0).forEach(function(entry){checkHull(entry.craft);});
+        else participants(t).forEach(checkHull);
         return point;
     }
     /** @param {Combat} t @param {number} dt @param {TerrainHit} [terrainHit] */
