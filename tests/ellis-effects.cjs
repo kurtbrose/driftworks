@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const f=require('../tools/headless.cjs').createFlight({mission:'ellis'}),D=f.DW,U=D.sim.METERS_PER_UNIT,s=f.snapshot();
 s.world.asteroids=[];s.world.ships=[];s.combat.enemies=[];s.combat.wrecks=[];s.combat.flashes=[];
 const noop=()=>{},scene=new Proxy({setStudyEffects(b){this.effects=b;}},{get:(o,k)=>k in o?o[k]:noop});
-D.scene3d={create:()=>scene,miningPlatformGeometry:D.miningRig.geometry,surfaceFrame:D.asteroidTerrain.surfaceFrame};const sky={render:noop,setOccluders:noop};D.flightSkybox={create:()=>sky};
+D.scene3d={create:()=>scene,miningPlatformGeometry:D.miningRig.geometry,surfaceFrame:D.asteroidTerrain.surfaceFrame};const sky={render:noop,setOccluders:noop,setFov:noop};D.flightSkybox={create:()=>sky};
 D.shipPackModels.loadTextures=()=>Promise.resolve(new Map());D.shipPackModels.populate=noop;
 const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{value:'',checked:false,insertBefore:noop});return nodes.get(id);};
 D.experimentDom=()=>get;

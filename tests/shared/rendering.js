@@ -97,7 +97,7 @@
     combat.enemies=[ally,enemy,dead];combat.wrecks=[wreck];combat.wave=3;world.elapsedSeconds=7;
     try{
       DW.scene3d.create=function(host,getWorld,setWorld,options){assert(options.study&&options.viewer===false&&getWorld()===sourceWorld);setWorld({elapsedSeconds:7,asteroids:[]});assert(getWorld()===world);return scene;};
-      DW.flightSkybox.create=function(){return {render:function(state,scale,empty){events.push('sky');assert(state===player&&scale===.5&&empty);},getRenderStats:function(){return skyStats;}};};
+      DW.flightSkybox.create=function(){return {setFov:function(degrees){assert(degrees===45);},render:function(state,scale,empty){events.push('sky');assert(state===player&&scale===.5&&empty);},getRenderStats:function(){return skyStats;}};};
       DW.shipPackModels=Object.assign({},saved.packs,{
         populate:function(){},loadTextures:function(){return {then:function(fn){fn(textureImages);return {catch:function(){}};}};},
         craftModel:function(craft,selection,wave){return {id:selection+':'+wave+':'+craft.id};},

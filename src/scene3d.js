@@ -283,7 +283,7 @@
       });return nearest;
   }
 
-  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{study?: boolean, viewer?: boolean, zoomToTerrain?: boolean}} [options] */
+  /** @param {HTMLElement} host @param {() => World} getWorld @param {(world: World) => void} setWorld @param {{study?: boolean, viewer?: boolean, zoomToTerrain?: boolean, flight?:boolean}} [options] */
   function create(host, getWorld, setWorld, options) {
     var study = !!(options && options.study);
     var viewerEnabled = study && !!(options && options.viewer);
@@ -298,7 +298,8 @@
     canvas.addEventListener('webglcontextlost',function(){if(bridgeRenderer)bridgeRenderer.invalidate();});
     canvas.addEventListener('webglcontextrestored',function(){if(bridgeRenderer)bridgeRenderer.invalidate();});
     renderer.autoClear=false;renderer.sortObjects=false;
-    var scene = new THREE.Scene(), camera = new THREE.Camera();
+    var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera();
+    var vr=study&&options&&options.flight&&DW.flightVr?DW.flightVr.create(host,renderer,scene,camera):null;
     /** @type {import('../experiments/types').ShieldDisc[]} */var shieldDiscs=[];
     /** @type {HTMLCanvasElement|null} */var shieldSky=null;
     /** @type {ReturnType<NonNullable<import('./types').DriftworksNamespace['flightShields']>['create']>|null} */var shieldPass=null;
@@ -393,6 +394,9 @@
     `);
     /** @type {Record<string,{value:number|number[]|Float32Array|import('./three-types').Texture|null}>} */
     var uniforms = {};
+    vertexShader='uniform float uXRActive;uniform mat4 uXRView,uXRProjection;'+vertexShader;
+    // XR view coordinates are metres; procedural material footprints use world units.
+    vertexShader=vertexShader.replace(/}\s*$/, 'if(uXRActive>.5){vec4 eye=uXRView*vec4(p,1.);vDepth=-eye.z/'+sim.METERS_PER_UNIT.toFixed(8)+';gl_Position=uXRProjection*eye;}}');
     // RawShaderMaterial preserves the established display-space art, including packed shadows.
     var declarations=vertexShader+'\n'+fragmentShader;
     declarations.replace(/uniform\s+(float|vec[234]|mat[34]|sampler2D)\s+([^;]+);/g,/** @param {string} _ @param {string} type @param {string} names */ function(_,type,names){
@@ -548,6 +552,7 @@
         drawMaterial.uniforms=snapshot;
         var object=lines?new THREE.LineSegments(mesh.buffer,drawMaterial):new THREE.Mesh(mesh.buffer,drawMaterial);
         object.frustumCulled=false;entry={object:object,material:drawMaterial,uniforms:snapshot,lines:!!lines};drawPool[drawIndex]=entry;
+        if(vr)vr.bind(object,drawMaterial);
       }
       entry.lensTransit=drawLensTransit;entry.projected=drawProjected;entry.lensRadius=drawLensRadius;entry.region=drawRegion;entry.lensCenter=drawLensCenter||origin;
       Object.keys(uniforms).forEach(function(key){entry.uniforms[key].value=uniforms[key].value;});
@@ -665,7 +670,7 @@
     /** @param {World} w @param {number} alpha @param {number} dt @param {number} wallDt */
     function render(w, alpha, dt, wallDt) {
       var started=performance.now(), shadowCalls=0, shadowTriangles=0;
-      if(spotlightEnabled && workShadowsEnabled && w.asteroids.length && diagnostics.mode==='normal'){
+      if(!(vr&&vr.active()) && spotlightEnabled && workShadowsEnabled && w.asteroids.length && diagnostics.mode==='normal'){
         allocateWorkShadow();shadowPass=true;
         try {renderFrame(w,alpha,0,0);shadowCalls=renderStats.drawCalls;shadowTriangles=renderStats.triangles;}
         finally {shadowPass=false;renderer.setRenderTarget(null);}
@@ -682,8 +687,8 @@
       var vp = viewport(); if (vp.width < 1 || vp.height < 1) return;
       var dpr = Math.min(2, window.devicePixelRatio || 1)*(study?diagnostics.scale:1);
       var width = Math.round(vp.width * dpr), height = Math.round(vp.height * dpr);
-      if (canvas.width !== width || canvas.height !== height) { renderer.setSize(width,height,false); overlay.width = width; overlay.height = height; }
-      renderer.setRenderTarget(shadowPass?workShadow:null);
+      if (!(vr&&vr.active()) && (canvas.width !== width || canvas.height !== height)) { renderer.setSize(width,height,false); overlay.width = width; overlay.height = height; }
+      if(!(vr&&vr.active()))renderer.setRenderTarget(shadowPass?workShadow:null);
       renderer.setClearColor(shadowPass?0xffffff:0x000000,shadowPass?1:0);renderer.clear();blending=THREE.NoBlending;depthWrite=true;
       renderStats.width=width;renderStats.height=height;renderStats.pixelRatio=dpr;
       if(study&&diagnostics.mode==='empty'){hud.clearRect(0,0,overlay.width,overlay.height);renderStats.meshes=0;renderStats.materials=0;renderStats.cpuMs=performance.now()-renderStart;return;}
@@ -696,6 +701,7 @@
       camera.matrixWorld.copy(camera.matrix);camera.matrixWorldInverse.copy(camera.matrix).invert();
       var top=.1/v.focal,right=top*vp.width/vp.height;
       camera.projectionMatrix.makePerspective(-right,right,top,-top,.1,v.distance+30000);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+      if(vr)vr.prepare(v.right,v.up,v.back,v.distance);
       activeProbe=null;
       setUniform('EnvironmentEnabled',environment?1:0);setUniform('CameraExposure',shadowPass?1:cameraExposureUniform.value);
       if(environment){
@@ -887,7 +893,7 @@
         studyActors.forEach(function(batch,index){
           drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;drawLensTransit=batch.lensTransit;
           if(!batch.vertices.length)return;
-          if(batch.staticGeometry&&!bridgeRenderer&&!shadowPass&&!viewerEnabled&&!studyBatchVisible(batch,[w.camera.x,w.camera.y,orbit.height||0],v,vp.width/vp.height))return;
+          if(!(vr&&vr.active())&&batch.staticGeometry&&!bridgeRenderer&&!shadowPass&&!viewerEnabled&&!studyBatchVisible(batch,[w.camera.x,w.camera.y,orbit.height||0],v,vp.width/vp.height))return;
           var stride=batch.stride || (batch.texture?8:6);
           /** @type {Mesh | undefined} */ var mesh;
           if(batch.staticGeometry){
@@ -959,7 +965,8 @@
         setFinish(0);setUniform('Spin',w.elapsedSeconds);setUniform('Flat',0);depthWrite=true;blending=THREE.NoBlending;
       }
       renderStats.bridgeObjectPaths=0;renderStats.bridgeObjectPatches=0;renderStats.bridgeObjectError=0;renderStats.bridgeObjectBad=0;renderStats.bridgeHistoryValid=0;renderStats.bridgeCaptures=0;renderStats.bridgeCpuMs=0;
-      if(bridgeRenderer&&!shadowPass){
+      if(vr&&vr.active()){renderer.render(scene,camera);
+      }else if(bridgeRenderer&&!shadowPass){
         var target=/** @type {number[]} */(uniforms.uTarget.value);
         var bridge=bridgeRenderer.render(scene,camera,drawPool.slice(0,drawIndex),{region:surfaceRegion,eye:target.map(function(x,i){return x+v.back[i]*v.distance;}),right:v.right,up:v.up,back:v.back},v.focal,v.distance+30000,width,height,bridgeRevision);
         renderStats.bridgeObjectPaths=bridge.objectPaths;renderStats.bridgeObjectPatches=bridge.objectPatches;renderStats.bridgeObjectError=bridge.objectError;renderStats.bridgeObjectBad=bridge.objectBad;renderStats.bridgeHistoryValid=bridge.historyValid;renderStats.bridgeCaptures=bridge.captures;renderStats.bridgeCpuMs=bridge.cpuMs;
@@ -979,6 +986,7 @@
       if (DW.audio) DW.audio.setEngineThrust(Math.min(1, Math.max.apply(null, w.ships.map(function (s) { return s.disabled || s.docked ? 0 : Math.hypot(s.velocity.x - s.previousVelocity.x, s.velocity.y - s.previousVelocity.y) / Math.max(1, s.acceleration / 30); }))));
     }
     return {
+      setFlightAnimationLoop:/** @param {(time:number)=>void} callback */function(callback){renderer.setAnimationLoop(function(time,frame){if(vr)vr.frame(frame);callback(time);});},
       /** @param {{eye: V3, right: V3, up: V3, back: V3, region?:number} | null} pose */
       setSurfaceCamera: function(pose) {
         surfaceRegion=pose&&pose.region||0;

@@ -501,6 +501,11 @@ join hull/scorch batches, while only living craft emit engine effects. Submissio
 remains hulls, scorches, surface scenery, gun effects, engines, diagnostic settings, sky, scene
 sync, scene render. `pose` forwards the player camera; `renderStats` supplies
 scene and sky counters. It does not advance the session or own its world.
+
+Flight VR is shared by the main renderer, presentation and controls. The main
+renderer opts into `flightVr` with `{flight:true}` and owns the animation loop;
+headset pose stays outside simulation state. See [browser VR](flight-vr.md) for
+the stereo shader contract, controller mapping and prototype validation limits.
 Three design 07 (`rampdock`) mining rigs and their source Quaternius EVA crew use geometry anchored
 with `scene3d.surfaceFrame`, at 36 m hull length and 1.8 m suit height. The flight and study share
 `assets/characters/quaternius-astronaut/poses.js`. Material batches are cached by asteroid

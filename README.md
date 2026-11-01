@@ -237,6 +237,12 @@ also links back to it.
 
 Open [the flight lab](experiments/flight.html) from the same static server.
 
+An experimental **Enter VR** button appears in compatible WebXR browsers. Quest 3
+is the initial target: use an HTTPS deployment, enter VR, then press B to fly.
+Head motion looks around independently of steering, while the HUD stays mounted
+forward. See [VR controls and current limitations](docs/flight-vr.md). Physical
+headset validation is still pending.
+
 For a hands-off battle, open [the cinematic demo](experiments/flight.html?mission=cinematic&bridgeGrid=0&bridgeOutline=0).
 Two carriers slowly circle at 675 m radius around each
 end of the thin-shell wormhole in opposite directions,

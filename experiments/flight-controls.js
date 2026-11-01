@@ -26,6 +26,9 @@
     function mount(host, actions, environment) {
         environment = environment || { document: globalThis.document, window: globalThis.window, navigator: globalThis.navigator };
         var document = environment.document, window = environment.window, navigator = environment.navigator;
+        var vr=DW.flightVr&&DW.flightVr.forHost(host);
+        if(vr)vr.mount(actions);
+        var xrButtons={pause:false,bank:false,lock:false,target:false,recenter:false};
         var get = DW.experimentDom(document);
         var inputMode = get('input-mode'), device = get('device'), bindingHost = get('bindings'), input = DW.flightInput;
         var sensitivity = get('sensitivity'), preferredDevice = '';
@@ -62,6 +65,7 @@
         };
         /** @param {number} dt @param {{boost?: boolean; hit?: boolean; shieldBreak?: boolean; fire?: boolean; contact?: boolean; throat?:number; transit?:boolean}} feedback */
         function haptics(dt, feedback) {
+            if(vr&&vr.active()){stopRumble();return;}
             var pad = pads().find(function (p) { return String(p.index) === device.value; });
             var next = pad && pad.vibrationActuator;
             if (next !== actuator) { stopRumble(); actuator = next || null; }
@@ -463,6 +467,20 @@
         }
         /** @param {number} [currentThrottle] Current simulation throttle, before this frame. */
         function sample(currentThrottle) {
+            if(vr&&vr.active()){
+                var demand=DW.flightVr.read(vr.sources());
+                if(demand.pause&&!xrButtons.pause){if(actions.isDead()&&actions.restart)actions.restart();else if(actions.isPaused())actions.resume();else actions.pause();}
+                if(demand.recenter&&!xrButtons.recenter)vr.recenter();
+                if(!actions.isPaused()){
+                    if(demand.bank&&!xrButtons.bank)actions.nextWeapon();
+                    if(demand.lock&&!xrButtons.lock)actions.toggleTargetLock();
+                    if(demand.target&&!xrButtons.target)actions.nextTarget();
+                }
+                xrButtons={pause:demand.pause,bank:demand.bank,lock:demand.lock,target:demand.target,recenter:demand.recenter};
+                if(!vr.tracking()||actions.isPaused())return {pitch:0,yaw:0,roll:0,side:0,vertical:0,throttle:null,throttleRate:0,fire:false,boost:false};
+                return demand;
+            }
+            xrButtons={pause:false,bank:false,lock:false,target:false,recenter:false};
             if (inputMode.value === 'touch') {
                 if (actions.isPaused()) clearTouch();
                 return {pitch: touch.pitch, yaw: touch.yaw, fire: touch.fire, boost: touch.boost, throttleRate: touch.throttleRate, throttle: null};
@@ -571,6 +589,7 @@
             return { throttle: wBoost ? 1 : controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: wBoost || controls.boost, fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
         }
         function view() {
+            if(vr&&vr.active())return {mouse:[0,0],inputMode:'controller',uncapturedMouse:false,stickRange:stickRange(),showMouseStick:false};
             return { mouse: mouse, inputMode: inputMode.value, uncapturedMouse:uncapturedMouse, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };
         }
         return { haptics: haptics, sample: sample, view: view, clear: clear, resetButtons: resetButtons, capture: capture, startUncaptured:startUncaptured, release: release };

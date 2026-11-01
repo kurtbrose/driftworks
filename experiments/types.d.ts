@@ -505,6 +505,7 @@ export type PadDemand = {
     pause: boolean;
 };
 export type ControlActions = {
+    restart?:()=>void;
     pause: () => void;
     resume: () => void;
     captureFailure: (error?: unknown) => void;
@@ -901,6 +902,7 @@ export type ExperimentModules = {
         populate: (select: HTMLSelectElement, blockout?: boolean) => void;
         paintColor: (hex: string) => Vector | undefined;
     };
+    flightVr: import('./flight-vr-types').API;
     flightInput: {
         deadzone: (value: number, zone: number) => number;
         moveStick: (position: number[], dx: number, dy: number, range: number, sensitivity: number) => number[];
@@ -944,6 +946,7 @@ export type ExperimentModules = {
             y: number;
         } | null;
         create: (host: HTMLElement, config?:{style?:number;fov?:number;cueControls?:boolean;sources?:import('../src/types').SkyCameraSource[];optics?:boolean}) => {
+            setFov:(degrees:number)=>void;
             cueImpact:(stage:string|number,seconds?:number)=>boolean;
             resetImpact:()=>void;
             getImpactState:()=>ImpactCueSnapshot;
@@ -1041,6 +1044,8 @@ export type ExperimentModules = {
             ready: Promise<boolean>;
             appearance: () => Appearance;
             pose: (state: Pose) => void;
+            setAnimationLoop:(callback:(time:number)=>void)=>void;
+            vrOverlay:()=>void;
             render: (view: FlightView, appearance: Appearance, comparison: Comparison, elapsed: number, gpuTimer?:()=>()=>void) => void;
             renderStats: () => RenderStats;
             setShieldOptics:(degrees:number|null,glow:boolean)=>void;
@@ -1059,7 +1064,7 @@ export type ExperimentModules = {
             document: Document;
             performance: Pick<Performance, 'now'>;
         }) => {
-            beginFrame: (t: number, paused: boolean) => Frame | null;
+            beginFrame: (t: number, paused: boolean, immersive?:boolean) => Frame | null;
             endFrame: (frame: Frame, paused: boolean, comparison: Comparison, readStats: () => RenderStats) => void;
             settings: () => Comparison;
             reset: () => void;

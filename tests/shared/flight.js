@@ -10,6 +10,43 @@
     var flightDisplayDocument = fixtures.flightDisplayDocument;
     var flightControlsFixture = fixtures.flightControlsFixture;
 
+  test('flight', 'XR controllers combine by handedness with standard flight signs and grip strafe',function(){
+    var api=window.Driftworks.flightVr;
+    function source(hand){return {handedness:hand,gamepad:{mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},function(){return {pressed:false,value:0};})}};}
+    var left=source('left'),right=source('right');
+    left.gamepad.axes[2]=1;left.gamepad.axes[3]=-1;right.gamepad.axes[2]=1;right.gamepad.axes[3]=-1;
+    right.gamepad.buttons[0].value=1;right.gamepad.buttons[4].pressed=true;
+    var a=api.read([right,left]);assert(a.pitch===1&&a.yaw===-1&&a.roll===-1&&a.throttleRate===1&&a.fire&&a.boost&&a.throttle===null);
+    left.gamepad.buttons[1].pressed=true;a=api.read([left,right]);assert(a.roll===0&&a.throttleRate===0);assertClose(Math.hypot(a.side,a.vertical),1);
+    assert(a.side>0&&a.vertical>0);
+    a=api.read([]);assert(a.pitch===0&&a.yaw===0&&a.roll===0&&!a.fire&&!a.boost);
+    right.gamepad.mapping='';a=api.read([right]);assert(!a.fire&&a.roll===0,'Unknown controller mappings must not guess button indices');
+  });
+
+  test('flight', 'XR control edges pause and resume without repeating, suppress paused fire, and preserve desktop fallback',function(){
+    var DW=window.Driftworks,original=DW.flightVr.forHost,active=true,tracked=true,centers=0;
+    var left={handedness:'left',gamepad:{mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},function(){return {pressed:false,value:0};})}};
+    var right={handedness:'right',gamepad:{mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},function(){return {pressed:false,value:0};})}};
+    DW.flightVr.forHost=function(){return {mount:function(){},active:function(){return active;},tracking:function(){return tracked;},sources:function(){return tracked?[right,left]:[];},recenter:function(){centers++;}};};
+    try{
+      var f=flightControlsFixture(),c=f.controls;
+      f.key('ArrowLeft');right.gamepad.buttons[0].pressed=true;assert(c.sample().yaw===0&&c.sample().fire,'Desktop input must not leak into XR');
+      right.gamepad.buttons[5].pressed=true;assert(!c.sample().fire);c.sample();assert(f.counts.pause===1&&f.counts.resume===0);
+      right.gamepad.buttons[5].pressed=false;c.sample();right.gamepad.buttons[5].pressed=true;c.sample();c.sample();assert(f.counts.resume===1);
+      left.gamepad.buttons[5].pressed=true;left.gamepad.buttons[0].pressed=true;right.gamepad.buttons[1].pressed=true;left.gamepad.buttons[4].pressed=true;c.sample();c.sample();
+      assert(f.counts.weapon===1&&f.counts.lock===1&&f.counts.target===1&&centers===1);
+      tracked=false;assert(!c.sample().fire&&c.sample().pitch===0);assert(!c.view().showMouseStick);
+      active=false;f.key('ArrowLeft');assert(c.sample().yaw===1,'Leaving XR restores ordinary controls');
+    }finally{DW.flightVr.forHost=original;}
+  });
+
+  test('flight', 'XR frame pacing follows headset frames even while paused',function(){
+    var doc=flightDisplayDocument();doc.getElementById('fps-cap').value='30';
+    var diagnostics=window.Driftworks.flightDiagnostics.mount({document:doc,performance:{now:function(){return 100;}}});
+    assert(diagnostics.beginFrame(1000,true));assert(!diagnostics.beginFrame(1001,true));
+    assert(diagnostics.beginFrame(1002,true,true));assert(diagnostics.beginFrame(1003,true,true));
+  });
+
 
   test('flight', 'Selected offscreen bearing has a large filled edge arrow and a fixed central double chevron', function () {
     var translations=[],rotations=[],widths=[],points=[],fills=0,depth=0;

@@ -39,7 +39,7 @@ const flash={position:[30/U,60/U,-100/U],velocity:[0,0,0],age:.24,scale:14,destr
 view.combat.flashes=[flash];
 let submitted;
 const scene=new Proxy({setStudyExplosions(blasts){submitted=blasts;}},{get:(o,k)=>k in o?o[k]:noop});
-D.scene3d={create:()=>scene,miningPlatformGeometry:D.miningRig.geometry,surfaceFrame:D.asteroidTerrain.surfaceFrame};D.flightSkybox={create:()=>({render:noop,setOccluders:noop})};
+D.scene3d={create:()=>scene,miningPlatformGeometry:D.miningRig.geometry,surfaceFrame:D.asteroidTerrain.surfaceFrame};D.flightSkybox={create:()=>({render:noop,setOccluders:noop,setFov:noop})};
 D.shipPackModels.loadTextures=()=>Promise.resolve(new Map());D.shipPackModels.populate=noop;
 const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{value:'',checked:false,insertBefore:noop});return nodes.get(id);};
 D.experimentDom=()=>get;

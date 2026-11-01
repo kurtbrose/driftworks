@@ -884,7 +884,7 @@ void main(){
         }
         var stats = { drawCalls: 0, triangles: 0, points: 0, meshes: 0, materials: 0 };
         if(!landmarkSky&&typeof window.location!=='undefined'&&/(?:[?&])sky=impact(?:&|$)/.test(window.location.search||'')){style=12;if(selector)selector.value='12';}
-        return {setEnvironment:/** @param {import('../src/types').SkyEnvironmentLighting|null} value */function(value){
+        return {setFov:/** @param {number} degrees */function(degrees){viewFocal=1/Math.tan(degrees*Math.PI/360);},setEnvironment:/** @param {import('../src/types').SkyEnvironmentLighting|null} value */function(value){
                 if(value===environmentOverride)return;
                 if(value&&(!value.radiance||value.radiance.length!==512*256*4||!value.radiance.every(Number.isFinite)||value.sh.length!==9||value.sh.some(function(row){return row.length!==3||!row.every(Number.isFinite);})))throw new Error('Expected cached 512x256 RGBA linear HDR radiance and nine RGB SH coefficients');
                 if(value&&!gl.getExtension('OES_texture_float'))throw new Error('HDR sky requires float textures');

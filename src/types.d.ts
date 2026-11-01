@@ -398,7 +398,7 @@ export interface DriftworksNamespace {
     pickAsteroid: (point: Vec2, asteroid: Asteroid, camera: Camera, viewport: Viewport, orbit: { yaw: number; tilt: number; height?: number }) => { position: [number, number, number]; depth: number } | null;
     platformHeight: (platform: Platform, asteroid: Asteroid | undefined) => number;
     inspectionHeight: (world: World) => number;
-    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; viewer?: boolean; zoomToTerrain?:boolean}) => {
+    create: (host: HTMLElement, getWorld: () => World, setWorld: (world: World) => void, options?: {study?: boolean; viewer?: boolean; zoomToTerrain?:boolean; flight?:boolean}) => {
       setStudyBridge:(enabled:boolean)=>void;
       setStudyShipStretching:(enabled:boolean)=>void;
       setStudyBridgeRevision:(revision:string|null)=>void;
@@ -415,6 +415,7 @@ export interface DriftworksNamespace {
       setStudyExplosions: (blasts: {region?:number;position:[number,number,number];velocity?:[number,number,number];age:number;size:number;seed:number}[]) => void;
       getOrbit: () => {yaw: number; tilt: number; height?: number};
       setSurfaceCamera: (pose: {region?:number;eye: [number, number, number]; right: [number, number, number]; up: [number, number, number]; back: [number, number, number]} | null) => void;
+      setFlightAnimationLoop:(callback:(time:number)=>void)=>void;
       setOrbit: (value: {yaw: number; tilt: number; height?: number}) => void;
       sync: (world: World) => void;
       render: (world: World, alpha: number, dt: number, wallDt: number) => void;

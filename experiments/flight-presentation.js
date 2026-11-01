@@ -182,7 +182,7 @@
     function mount(host, getWorld, setWorld, environment) {
         var document = (environment || globalThis).document, units = DW.sim.METERS_PER_UNIT;
         var get = DW.experimentDom(document);
-        var scene = DW.scene3d.create(host, getWorld, setWorld, { study: true, viewer: false });
+        var scene = DW.scene3d.create(host, getWorld, setWorld, { study: true, viewer: false, flight: true });
         /** @type {import('./types').Images} */
         var shipImages = new Map();
         var calibration = /** @type {Batch[]} */ ([]);
@@ -378,7 +378,10 @@
             var motionBrightness=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes-opacity'));
             var motionOpacity=regions.length>1&&!combat.dead&&!document.body.classList.contains('watch-chase')&&(!motionToggle||motionToggle.checked)&&(!motionStyle||motionStyle.value==='grid')?(motionBrightness?Number(motionBrightness.value)/100:.85):0;
             var mouth=combat.convoy&&combat.convoy.arrivalPortal,arrival=mouth&&combat.time<mouth.closesAt?{position:mouth.position,radius:210*Math.max(0,Math.min(1,(combat.time-mouth.opensAt)/3,(mouth.closesAt-combat.time)/2))}:null;
-            skybox.render(state, comparison.scale, comparison.mode === 'empty'||!!(environment&&environment.emptySky),elapsed,motionOpacity,arrival);
+            var vr=DW.flightVr&&DW.flightVr.forHost(host),immersive=!!(vr&&vr.active());
+            skybox.setFov(immersive?140:45);
+            var skyState=vr?vr.skyPose(state):state;
+            skybox.render(skyState, comparison.scale, comparison.mode === 'empty'||!!(environment&&environment.emptySky),elapsed,motionOpacity,arrival);
             scene.sync(world);
             if(scene.setStudyShields&&shieldTracker){var skyCanvas=host.querySelector('canvas.flight-skybox'),discs=defaultShieldDiscs||shieldTracker.collect(view,appearance,host.clientWidth/host.clientHeight,ownShield);shieldTime=view.combat.time;
                 if(shieldTime<shieldTest)shieldTest=-Infinity;
@@ -386,12 +389,13 @@
                 if(ownShield&&shieldPreview!==null)discs=shieldPreview.length?[{box:[0,0,1,1],waves:shieldPreview,depth:0,own:true}]:[];
                 discs.forEach(function(d){if(shieldDegrees!==null)d.degrees=shieldDegrees;d.glow=shieldGlow;});shieldVisibleWave=discs.some(function(d){return d.box[3]>.08&&d.waves.some(function(age,i){return i%4===3&&age>=.2&&age<.8;});});shieldVisible=discs.length+defaultGlow.length;shieldVisibleWave=shieldVisibleWave||defaultGlow.some(function(b){return b.vertices.length>0;});shieldWaves=defaultGlow.reduce(function(n,b){return n+(b.shieldWaves||0);},0)+discs.reduce(function(sum,d){return sum+d.waves.length/4;},0);scene.setStudyShields(shieldEnabled&&comparison.actors&&comparison.mode!=='empty'?discs:[],shieldEnabled&&skyCanvas instanceof HTMLCanvasElement?skyCanvas:null);}
             var endGpu=gpuTimer?gpuTimer():null;
+            if(immersive&&vr){var skySource=host.querySelector('canvas.flight-skybox');if(skySource instanceof HTMLCanvasElement)vr.background(skySource,1/Math.tan(140*Math.PI/360),host.clientWidth/host.clientHeight);}
             try{scene.render(world, 1, 0, elapsed);}finally{if(endGpu)endGpu();}
         }
         function renderStats() {
             return { scene: scene.getRenderStats(), sky: skybox.getRenderStats() };
         }
-        return {setShipStretching:/** @param {boolean} enabled */function(enabled){liveShipImages=true;shipStretching=enabled;scene.setStudyShipStretching(enabled);},setShieldPreview:/** @param {number[]|null} waves */function(waves){shieldPreview=waves;},setCalibration:/** @param {Batch[]} batches */function(batches){calibration=batches;},setShieldOptics:/** @param {number|null} degrees @param {boolean} glow */function(degrees,glow){shieldDegrees=degrees;shieldGlow=glow;},injectShieldHit:function(){shieldTest=shieldTime-.12;},shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
+        return {setAnimationLoop:scene.setFlightAnimationLoop,vrOverlay:function(){var vr=DW.flightVr&&DW.flightVr.forHost(host),canvas=document.querySelector('canvas.gpu-flight-hud');if(vr&&canvas instanceof HTMLCanvasElement)vr.overlay(canvas);},setShipStretching:/** @param {boolean} enabled */function(enabled){liveShipImages=true;shipStretching=enabled;scene.setStudyShipStretching(enabled);},setShieldPreview:/** @param {number[]|null} waves */function(waves){shieldPreview=waves;},setCalibration:/** @param {Batch[]} batches */function(batches){calibration=batches;},setShieldOptics:/** @param {number|null} degrees @param {boolean} glow */function(degrees,glow){shieldDegrees=degrees;shieldGlow=glow;},injectShieldHit:function(){shieldTest=shieldTime-.12;},shieldSummary:function(){return {visible:shieldVisible,waves:shieldWaves,visibleWave:shieldVisibleWave};},completeFrame:function(){scene.completeFrame();},setShields:/** @param {boolean} enabled */function(enabled){shieldEnabled=enabled;}, ready:ready, appearance: appearance, pose: pose, render: render, renderStats: renderStats, setCapital:/** @param {import('./types').AegisFlightRig|null} rig */function(rig){capital=rig;} };
     }
     DW.flightPresentation = { mount: mount, model: model, tetherGeometry: tetherGeometry, tetherSpin: tetherSpin, ohioSignGeometry:ohioSignGeometry };
 }());

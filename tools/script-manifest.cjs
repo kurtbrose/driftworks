@@ -24,6 +24,7 @@ const groups = {
   ],
   flightAi: ['experiments/flight-ai.js', 'experiments/flight-duel.js'],
   flightView: [
+    'experiments/flight-vr.js',
     'experiments/convoy-scenery.js', 'experiments/combat-shields.js', 'experiments/flight-shields.js', 'experiments/shield-pixel-diff.js', 'experiments/flight-presentation.js', 'experiments/flight-diagnostics.js',
     'experiments/flight-controls.js', 'experiments/flight-session.js'
   ]

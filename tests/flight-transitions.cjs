@@ -63,7 +63,7 @@ module.exports = function runFlightTransitions(namespace) {
       }},
       flightPresentation:{mount() { return {
         ready:{then(callback) { finishTextures=callback; if(loaded!==null)callback(loaded); }},
-        pose:noop, render:noop,
+        pose:noop, render:noop,vrOverlay:noop,setAnimationLoop:callback => {frame=callback;},
         appearance:() => ({allyArt:get('ally-art').value, enemyArt:get('enemy-art').value}),
         renderStats:() => ({scene:{cpuMs:0,drawCalls:0,triangles:0,meshes:0,materials:0,width:1,height:1,pixelRatio:1},sky:{drawCalls:0,triangles:0,points:0}})
       }; }},
@@ -86,7 +86,7 @@ module.exports = function runFlightTransitions(namespace) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight-studies.js'), 'utf8'), context, {filename:'experiments/flight-studies.js'});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight.js'), 'utf8'), context, {filename:'experiments/flight.js'});
     return {get, actions, session, elapsed, document, captures, clipboard, finishTextures,
-      tick(time) { now = time; const callback = frame; frame = null; callback(time); assert(frame); }};
+      tick(time) { now = time; assert.equal(typeof frame,'function');frame(time); }};
   }
 
   const loading=mount('',null);

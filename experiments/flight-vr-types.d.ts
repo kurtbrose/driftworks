@@ -1,0 +1,18 @@
+export type Source = {handedness:string; gamepad?:{mapping:string;axes:readonly number[];buttons:readonly {pressed:boolean;value:number}[]}};
+export type Transform = {matrix:Float32Array;position:{x:number;y:number;z:number}};
+export type Space = {getOffsetReferenceSpace(transform:unknown):Space};
+export type Frame = {getViewerPose(space:Space):{transform:Transform}|null};
+export type Session = {inputSources:Source[];visibilityState:string;end():Promise<void>;addEventListener(name:string,listener:()=>void):void};
+export type XR = {isSessionSupported(mode:string):Promise<boolean>;requestSession(mode:string,options:{optionalFeatures:string[]}):Promise<Session>};
+export type Bridge = {
+ active:()=>boolean; tracking:()=>boolean; sources:()=>Source[];
+ mount:(actions:import('./types').ControlActions)=>void;
+ frame:(frame?:Frame)=>void;
+ prepare:(right:number[],up:number[],back:number[],distance:number)=>void;
+ skyPose:(pose:import('./types').Pose)=>import('./types').Pose;
+ background:(canvas:HTMLCanvasElement,focal:number,aspect:number)=>void;
+ overlay:(canvas:HTMLCanvasElement)=>void;
+ bind:(object:import('../src/three-types').Object3D,material:import('../src/three-types').Material)=>void;
+ recenter:()=>void;
+};
+export type API = {create:(host:HTMLElement,renderer:import('../src/three-types').Renderer,scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D)=>Bridge;forHost:(host:HTMLElement)=>Bridge|undefined;read:(sources:Source[])=>import('./types').PadDemand&{target:boolean;recenter:boolean}};

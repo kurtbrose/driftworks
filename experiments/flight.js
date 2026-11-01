@@ -429,6 +429,7 @@
         gunLabels();
     }
     var controls = DW.flightControls.mount(host, {
+        restart:function(){reset();resume();},
         pause: pause, resume: resume, captureFailure: captureFailure,
         isPaused: function () {
             return paused;
@@ -457,10 +458,9 @@
     /** @param {number} t */
     function frame(t) {
         if(ohioMusic && !paused) ohioMusic.update();
-        if(studies.benchmarking){requestAnimationFrame(frame);return;}
-        var timing = diagnostics.beginFrame(t, paused);
+        if(studies.benchmarking)return;
+        var timing = diagnostics.beginFrame(t, paused, !!(DW.flightVr&&DW.flightVr.forHost(host)?.active()));
         if (!timing) {
-            requestAnimationFrame(frame);
             return;
         }
         var elapsed = timing.elapsed;
@@ -468,7 +468,8 @@
         var appearance = presentation.appearance();
         if(watch){appearance.allyArt=watch.replay.options.allyHull==='blockout'?'':watch.replay.options.allyHull;appearance.enemyArt=watch.replay.options.enemyHull==='blockout'?'':watch.replay.options.enemyHull;}
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
-        var demand = cinematic?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:controls.sample(view().state.throttle);
+        var pilotDemand=controls.sample(view().state.throttle);
+        var demand = cinematic?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:pilotDemand;
         if(director&&!paused){director.advance(elapsed);demoSeconds+=elapsed;}
         var simMs=0,capitalMs=0,phaseStart=performance.now();
         if (!paused) {
@@ -520,13 +521,13 @@
         var inputView = controls.view();
         if (watch) inputView.showMouseStick = false;
         if(!cinematic)flightHud.render(Object.assign({}, currentView, { units: units, paused: paused&&!studies.enabled, speakerId: comms.speakerId(), bridgeCue:bridgeCue, flightDemand:watch?undefined:demand, weapon: weapon() }, inputView, appearance));
+        presentation.vrOverlay();
         captureScreenshot();
         if (watch) get('combat-status').textContent = 'AI DUEL / ' + (watch.summary().category === 'perfect' ? 'PERFECT' : watch.summary().flavor.toUpperCase()) + ' VS ' + currentView.combat.enemies[0].pilot.toUpperCase();
         updateWatch();
         var hudMs=performance.now()-phaseStart;
         diagnostics.endFrame(timing, paused, comparison, presentation.renderStats);
         if(aegis&&get('perf-enabled').checked){var perf=get('perf-overlay');perf.textContent=perf.textContent.split('\nStages:')[0]+'\nStages: sim '+simMs.toFixed(1)+' / PD '+capitalMs.toFixed(1)+' / scene '+presentationMs.toFixed(1)+' / HUD '+hudMs.toFixed(1)+' ms';}
-        requestAnimationFrame(frame);
     }
     labels();
     banks();
@@ -555,7 +556,7 @@
         }else updateStatus();
     });
     if(importError)status.textContent=importError;
-    requestAnimationFrame(frame);
+    presentation.setAnimationLoop(frame);
 }()).catch(/** @param {unknown} error */function(error){
     console.error(error);
     var status=document.getElementById('status'),button=document.getElementById('fly');

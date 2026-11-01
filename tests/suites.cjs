@@ -10,6 +10,7 @@ const suites = {
     {"file":"scenarios.cjs","args":["--all"]}
   ],
   flight: [
+    "flight-vr.cjs",
     "hyperbolic.cjs",
     "hyperbolic-flight.cjs",
     "hyperbolic-collision.cjs",

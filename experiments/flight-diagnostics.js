@@ -27,10 +27,10 @@
             get(id).addEventListener('change', resetMeasurements);
         });
         get('perf-reset').onclick = resetMeasurements;
-        /** @param {number} t @param {boolean} paused */
-        function beginFrame(t, paused) {
+        /** @param {number} t @param {boolean} paused @param {boolean} [immersive] */
+        function beginFrame(t, paused, immersive) {
             var cap = Number(get('fps-cap').value), limit = paused ? Math.min(cap || 60, 15) : cap;
-            if (!performanceTools.due(pace, t, limit))
+            if (!immersive && !performanceTools.due(pace, t, limit))
                 return null;
             var started = clock.now();
             var actualElapsed = previous ? (t - previous) / 1000 : 0;
