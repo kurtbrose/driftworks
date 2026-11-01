@@ -1,9 +1,10 @@
 import * as T from 'three';
 import {armor,pale,dark,trim,gold} from 'aegis-parts';
+import {ventBaseMaterial,ventCandidateMaterial} from 'aegis-vents';
 
 // Review-only material experiment. One shared pair of 256px maps, no mesh additions.
 export const finishNotes={
- 'prow-lance':['Break up the broad armor with restrained paint/roughness variation.','Add sparse bow identifiers later; avoid turning every plate into a warning label.'],
+ 'prow-lance':['Candidate: louvered vent texture on the sixteen existing roof inserts. Switch to Original to compare.','A shared tile supplies recessed slots, metal lips and corner fasteners, aligned inside each insert.'],
  'prow-command':['Use the same armor finish as the long prow so both belong to one shipyard.','A small crest or service stencil would distinguish its broad side faces.'],
  'hull-standard':['Highest reuse: improve the shared armor and recessed service-band finish first.','Keep the broad panels quiet; the existing ribs, hatches and windows already supply scale.'],
  'hull-hangar':['Keep the exterior armor consistent with the standard hull.','Next targeted texture: directional deck paint and darker bulkhead recesses inside the open passage.'],
@@ -39,6 +40,7 @@ function surfaceMaps(){
 }
 const candidates=new WeakMap();
 function candidate(original){
+ if(original===ventBaseMaterial)return ventCandidateMaterial();
  if(candidates.has(original))return candidates.get(original);
  if(original!==armor&&original!==pale&&original!==dark&&original!==trim&&original!==gold)return original;
  const material=original.clone(),textures=surfaceMaps();

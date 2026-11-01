@@ -79,10 +79,10 @@ export function fleet(){const root=new T.Group();recipes.forEach((r,i)=>{const s
 // Static study copy only. Preserve editable part and turret trees above.
 export function batchStatic(root){
  root.updateMatrixWorld(true);const buckets=new Map(),v=new T.Vector3(),n=new T.Vector3();
- root.traverse(o=>{if(!o.isMesh)return;const geo=o.geometry,p=geo.attributes.position,normals=geo.attributes.normal,nm=new T.Matrix3().getNormalMatrix(o.matrixWorld);let b=buckets.get(o.material);if(!b)buckets.set(o.material,b={positions:[],normals:[]});
+ root.traverse(o=>{if(!o.isMesh)return;const geo=o.geometry,p=geo.attributes.position,normals=geo.attributes.normal,nm=new T.Matrix3().getNormalMatrix(o.matrixWorld);let b=buckets.get(o.material);if(!b)buckets.set(o.material,b={positions:[],normals:[],uvs:o.material.userData.preserveAuthorUV?[]:null});
  const count=geo.index?geo.index.count:p.count,flip=o.matrixWorld.determinant()<0;
- for(let j=0;j<count;j++){const order=flip?Math.floor(j/3)*3+[0,2,1][j%3]:j,k=geo.index?geo.index.getX(order):order;v.fromBufferAttribute(p,k).applyMatrix4(o.matrixWorld);n.fromBufferAttribute(normals,k).applyNormalMatrix(nm);b.positions.push(v.x,v.y,v.z);b.normals.push(n.x,n.y,n.z);}
+ for(let j=0;j<count;j++){const order=flip?Math.floor(j/3)*3+[0,2,1][j%3]:j,k=geo.index?geo.index.getX(order):order;v.fromBufferAttribute(p,k).applyMatrix4(o.matrixWorld);n.fromBufferAttribute(normals,k).applyNormalMatrix(nm);b.positions.push(v.x,v.y,v.z);b.normals.push(n.x,n.y,n.z);if(b.uvs){const uv=geo.attributes.uv;b.uvs.push(uv.getX(k),uv.getY(k));}}
  });
- const result=new T.Group();for(const [material,b] of buckets){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(b.positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(b.normals,3));result.add(new T.Mesh(geo,material));}return result;
+ const result=new T.Group();for(const [material,b] of buckets){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(b.positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(b.normals,3));if(b.uvs)geo.setAttribute('uv',new T.Float32BufferAttribute(b.uvs,2));result.add(new T.Mesh(geo,material));}return result;
 }
 export function disposeBatch(root){root.traverse(o=>{if(o.isMesh)o.geometry.dispose();});}

@@ -964,3 +964,29 @@ texture-grid line. Colored and rim-light captures are in
 `output/aegis-toybox-lighting/` (ignored). These checks exercise inspection tools
 and this reported artifact, not every material/view combination or approval of
 the candidate finish.
+
+### P01 roof vent texture
+
+P01 Candidate mode now replaces its sixteen existing flat roof inserts with a
+shared louvered vent treatment: seven recessed slots, metal lips, a perimeter
+frame, corner fasteners and two restrained ochre alignment tabs. Original mode
+retains the previous flat finish. `studies/aegis-prow-vents.js` constructs one
+deterministic 256-square color tile; it uses the original box-face UVs rather
+than projecting a pattern across the hull. The static batcher preserves those
+UVs only for the explicitly marked roof material; ordinary surface materials
+retain their existing projection path.
+
+This review adds no geometry, preserves all part dimensions, and costs one
+additional material batch for the isolated roof inserts and about 341 KiB for
+the shared RGBA8 tile with mipmaps. Both modes keep the same isolated batch;
+this is one draw more than the earlier unsplit toybox prow. P02, the other parts,
+the military fleet and production rigs are unchanged. The texture is a baked
+visual treatment, not modeled vent depth or a gameplay cooling system.
+
+Visual checks covered P01 Original/Candidate at the same three-quarter camera
+in ordinary Studio light, the Candidate under white grazing light and from
+above, and the Candidate zoomed
+out to about 150 px long. At that distant size the louvers merge into stable
+vent patches; individual slats and fasteners are close-view detail. Captures
+are in `output/aegis-prow-vents/` (ignored). This is a focused toybox proposal,
+not approval of the full ship or all lighting/view combinations.

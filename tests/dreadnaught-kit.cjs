@@ -134,6 +134,8 @@ const {pathToFileURL} = require('node:url');
   assert.equal(kit.recipes[0].modules[0],'sensor','custom assemblies do not mutate presets');
   assert.throws(()=>kit.vessel(0,{modules:['hangar']}));assert.throws(()=>kit.vessel(0,{upper:['wrong','none']}));assert.throws(()=>kit.section('unknown'));assert.throws(()=>kit.vessel(0,{modules:['missile','standard'],upper:['turret','turret']}));
   assert.equal(kit.fleet().children.length,8);
+  const ventSource=fs.readFileSync(path.join(root,'studies/aegis-prow-vents.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
+  vm.runInContext(ventSource,fleetScope);
   const toysSource=fs.readFileSync(path.join(root,'studies/aegis-toybox-kit.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
   vm.runInContext(toysSource+'\nglobalThis.toys={toyParts,toyPart,toybox};',fleetScope);
   const toys=fleetScope.toys;assert.equal(toys.toyParts.length,19);assert.equal(new Set(toys.toyParts.map(p=>p.id)).size,19);
@@ -151,17 +153,26 @@ const {pathToFileURL} = require('node:url');
   assert.throws(()=>toys.toyPart('missing'));
   const finishSource=fs.readFileSync(path.join(root,'studies/aegis-toybox-finish.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
   vm.runInContext(finishSource+'\nglobalThis.finish={applyReviewFinish,finishNotes,finishCost};',fleetScope);
-  const sharedColorMaps=new Set(),sharedRoughnessMaps=new Set();
+  const sharedColorMaps=new Set(),sharedRoughnessMaps=new Set(),ventMaps=new Set();
   const finish=fleetScope.finish;assert.equal(finish.finishCost.extraDraws,0);assert.equal(finish.finishCost.extraTriangles,0);
   for(const entry of toys.toyParts){
     assert.equal(finish.finishNotes[entry.id].length,2,'every part has its own review notes');
     const batch=kit.batchStatic(toys.toyPart(entry.id)),before=[];
     batch.traverse(o=>{if(o.isMesh)before.push({o,material:o.material,positions:o.geometry.attributes.position,normals:o.geometry.attributes.normal});});
     finish.applyReviewFinish(batch,true);assert.equal(batch.children.length,before.length);
-    for(const {o,material} of before){if(o.material.map)sharedColorMaps.add(o.material.map);if(o.material.roughnessMap)sharedRoughnessMaps.add(o.material.roughnessMap);if(material.emissiveIntensity>1)assert.equal(o.material,material,'lights stay unchanged');}
+    for(const {o,material} of before){if(o.material.userData.finishRole==='prow-vent')ventMaps.add(o.material.map);else if(o.material.map)sharedColorMaps.add(o.material.map);if(o.material.roughnessMap)sharedRoughnessMaps.add(o.material.roughnessMap);if(material.emissiveIntensity>1)assert.equal(o.material,material,'lights stay unchanged');}
     for(const {o,positions,normals} of before){assert.equal(o.geometry.attributes.position,positions);assert.equal(o.geometry.attributes.normal,normals);assert.equal(o.geometry.attributes.uv.count,positions.count);assert([...o.geometry.attributes.uv.array].every(Number.isFinite));}
     finish.applyReviewFinish(batch,false);for(const {o,material} of before)assert.equal(o.material,material,'A/B restores exact original materials');kit.disposeBatch(batch);
   }
+  const ventProw=toys.toyPart('prow-lance'),ventMeshes=[];ventProw.traverse(o=>{if(o.userData.prowVent)ventMeshes.push(o);});
+  assert.equal(ventProw.userData.prowVentCount,16);assert.equal(ventMeshes.length,16);assert.equal(new Set(ventMeshes.map(o=>o.material)).size,1);
+  const ventBatch=kit.batchStatic(ventProw),ventBucket=ventBatch.children.find(o=>o.material.userData.preserveAuthorUV),panelUV=ventBucket.geometry.attributes.uv;
+  assert([...panelUV.array].every(v=>v>=0&&v<=1),'vent tile stays inside each original panel UV rectangle');
+  finish.applyReviewFinish(ventBatch,true);assert.equal(ventBucket.geometry.attributes.uv,panelUV,'generic surface projection does not overwrite panel UVs');
+  assert.equal(ventMaps.size,1,'all roof panels share one vent texture');
+  const plainProw=toys.toyPart('prow-lance'),plainTrim=vm.runInContext('trim',fleetScope);plainProw.traverse(o=>{if(o.userData.prowVent)o.material=plainTrim;});
+  const plainBatch=kit.batchStatic(plainProw);assert.equal(ventBatch.children.length,plainBatch.children.length+1,'isolating the vents costs exactly one material batch');assert.equal(triangleCount(ventBatch),triangleCount(plainBatch));
+  kit.disposeBatch(ventBatch);kit.disposeBatch(plainBatch);
   assert.equal(sharedColorMaps.size,1,'one shared paint map across the inventory');assert.equal(sharedRoughnessMaps.size,1,'one shared roughness map across the inventory');
   for(const map of sharedColorMaps)for(let i=0;i<map.image.data.length;i+=4)assert(map.image.data[i]>=240,'surface grain contains no artificial dark seam rows or columns');
   const lightingScope=vm.createContext({T:real});

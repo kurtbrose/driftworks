@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {section,hullTypes,labels} from 'aegis-kit';
 import {wedge,drive,attach,bridge,turret,connector} from 'aegis-parts';
+import {prepareProwVents} from 'aegis-vents';
 
 // Inventory of the current military kit, including the pieces inside a gun bank.
 export const toyParts=[
@@ -32,6 +33,7 @@ export function toyPart(id){
  }else if(id==='structure-bridge'){
   const mounting=new T.Group();mounting.position.set(-3.5,-4,0);root.add(mounting);bridge(mounting);
  }else connector(root,0);
+ if(id==='prow-lance')prepareProwVents(root);
  root.scale.setScalar(9);return root;
 }
 export function toybox(columns=4){
