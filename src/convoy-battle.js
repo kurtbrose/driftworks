@@ -3,7 +3,7 @@
     var DW=/** @type {Required<import('./types').DriftworksNamespace>} */(window.Driftworks),U=DW.sim.METERS_PER_UNIT;
     /** @typedef {import('../experiments/types').Combat} Combat */
     /** @typedef {import('../experiments/types').ConvoyBattleOrder} Order */
-    var layout=[{name:'Port screen',offset:[-1800,2100,400],packet:1,count:15},{name:'Starboard screen',offset:[1800,2700,-350],packet:3,count:15},{name:'Forward screen',offset:[-700,4200,800],packet:0,count:12},{name:'Rear picket',offset:[0,-2400,-650],packet:4,count:12}];
+    var layout=[{name:'Port screen',offset:[-1800,2100,400],packet:1,count:3},{name:'Starboard screen',offset:[1800,2700,-350],packet:3,count:3},{name:'Forward screen',offset:[-700,4200,800],packet:0,count:3},{name:'Rear picket',offset:[0,-2400,-650],packet:4,count:3}];
     /** @param {number[]} a @param {number[]} b */function range(a,b){return Math.hypot.apply(null,a.map(function(v,k){return v-b[k];}))*U;}
     /** @param {import('../experiments/types').FlightState} pose @param {number[]} direction */
     function face(pose,direction){var length=Math.hypot.apply(null,direction),f=direction.map(function(v){return v/length;}),h=Math.hypot(f[0],f[1]);pose.right=[f[1]/h,-f[0]/h,0];pose.up=[pose.right[1]*f[2],-pose.right[0]*f[2],pose.right[0]*f[1]-pose.right[1]*f[0]];pose.back=f.map(function(v){return -v;});pose.velocity=f.map(function(v){return v*50;});pose.ramp=[0,0,50];pose.throttle=.8;}
@@ -16,7 +16,7 @@
         s.battle.fronts.forEach(function(front){var count=layout[front.id].count;
             for(var side=0;side<2;side++)for(var i=0;i<count;i++){
                 var wing=Math.floor(i/3),slot=i%3,pose=DW.arcade.create(0),sign=side?1:-1;
-                pose.eye=front.center.map(function(v,k){return v+(k===0?sign*(350+slot*65):k===1?(wing-(count/3-1)/2)*170:(slot-1)*90+(wing%2?100:-100))/U;});face(pose,[-sign,0,.05*(slot-1)]);
+                pose.eye=front.center.map(function(v,k){return v+(k===0?sign*(900+slot*60):k===1?(slot-1)*120:(slot-1)*90+(wing%2?100:-100))/U;});face(pose,[-sign,0,.05*(slot-1)]);
                 var craft=DW.flightSim.createCraft('screen-'+front.id+'-'+side+'-'+i,pose,side?'enemy':'ally');craft.index=2+serial++;craft.callsign=(side?'Bandit ':'Screen ')+front.id+'-'+(i+1);craft.controller='ai';craft.skill=1+(i%5===0?1:0);craft.pilot=craft.skill===2?'Ace':'Veteran';craft.opponentStyle='fso-breaker';craft.mode='approach';craft.decision=(i%7)*.04;craft.retarget=(i%3)*.1;
                 craft.convoyBattle={front:front.id,wing:wing,slot:slot};craft.battleZone={id:front.id,center:front.center.slice(),radiusM:front.radiusM};
                 DW.flightSim.equip(craft,DW.arcade.profiles[i%3],DW.flightSim.defaultWeapon(DW.arcade.profiles[i%3]));
@@ -34,7 +34,7 @@
         b.fronts.forEach(function(front){
             var members=combat.enemies.filter(function(c){return c.hp>0&&c.convoyBattle&&c.convoyBattle.front===front.id;}),allies=members.filter(function(c){return c.team==='ally';}),enemies=members.filter(function(c){return c.team==='enemy';});
             front.allies=allies.length;front.enemies=enemies.length;front.alliedHull=allies.length?allies.reduce(function(n,c){return n+c.hp/c.maxHp;},0)/allies.length:0;
-            if(!front.released&&s.elapsed>=60&&s.elapsed<230&&enemies.length>=3&&enemies.length-allies.length>=4){
+            if(!front.released&&s.elapsed>=60&&s.elapsed<230&&enemies.length>=3&&enemies.length-allies.length>=2){
                 var lead=enemies[0],wing=lead.convoyBattle&&lead.convoyBattle.wing,breaking=enemies.filter(function(c){return c.convoyBattle&&c.convoyBattle.wing===wing;}).slice(0,3);if(breaking.length<3)return;
                 var id=s.raids.length;const cargo=s.ships.find(function(ship){return ship.packet===front.packet&&ship.hull>0;});if(!cargo)return;
                 s.raids.push({id:id,phase:'approach',leaderId:lead.id,until:0,offset:front.offset.slice(),packet:front.packet,createdAt:combat.time,committedAt:combat.time,passes:0});

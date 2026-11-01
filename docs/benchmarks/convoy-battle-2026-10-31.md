@@ -1,5 +1,9 @@
 # Convoy battlefield readiness pass — 2026-10-31
 
+The 108-fighter background configuration below is historical. The current
+playtest uses 24 background fighters plus Lancer (27 total); see the smaller
+engagement follow-up at the end.
+
 The convoy now starts with 108 real background fighters, 54 per side in four
 screens, plus the player's three-ship wing. The 30 authored freighters and two
 1.2 km Aegis reception ships remain. Standard weapons, health, collision,
@@ -130,3 +134,31 @@ calling the exhaustive convoy trace, corridor reuse and movement wakeups,
 conservative moving-target sweeps, destruction/reset, and full production state
 parity between exhaustive and scheduled modes. The existing full escort test
 also passes the moving hull, hollow scaffold, high-speed CCD and gunplay checks.
+
+
+## Follow-up: smaller engagements
+
+The opening population has been reduced from 111 to 27 total fighters: Lancer's
+three ships plus four fronts, each with one friendly and one hostile three-ship
+wing. Opposing wings start at least 1.8 km apart instead of 700 m. Within each
+wing the three ships are staggered laterally, vertically and fore/aft. Health,
+weapons, real damage, physics rate, cargo geometry and reception capitals are
+unchanged. The screen breakthrough threshold is now a two-fighter deficit,
+which is attainable with a single wing; Control still has four fronts to assess.
+
+The production foreground view was checked at 884 × 888 CSS pixels,
+1326 × 1332 backing, DPR 1.5, normal quality and the 60 FPS cap, with no concurrent
+tests or rebuilds. A rolling live sample read 56.3 FPS / 17.8 ms/frame, then
+60.1 FPS / 16.6 ms/frame as the battle evolved. The latter showed 87 draws,
+2,030,861 triangles, 2,400 additive effect vertices, 5.88 ms combined CPU and
+1.70 ms scene submission. The sample history still included startup outliers
+(p95 26.7 ms, worst 558.9 ms). Stage indicators overlap and use another rolling
+window. No GPU execution timing was collected. This is a short live integration
+check, not a sustained frame-budget guarantee or a matched per-fighter speedup.
+The population reduction is intentional gameplay tuning. Capture:
+`output/convoy-small/live.png` (ignored).
+
+The focused battlefield regression checks exact per-front wing counts and the
+minimum opposing separation, along with real fire/damage, the protected opening,
+smaller-front dispatch priority, hysteresis, urgent preemption, physical
+breakthroughs, mission completion and reset.

@@ -191,5 +191,5 @@ transforms, finite vertices and expiry without establishing visual quality.
 
 For isolated convoy escort/raid regressions or a battlefield ablation, pass
 `convoyBattlefield: false` to `createFlight`. The normal convoy defaults to
-108 real background fighters; the option suppresses only their initial creation.
+24 real background fighters; the option suppresses only their initial creation.
 It leaves cargo, Lancer, raid tactics, collision, radio and mission timing intact.

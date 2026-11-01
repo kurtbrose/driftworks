@@ -111,19 +111,20 @@ See [the measured arrival-fleet readiness pass](benchmarks/convoy-arrival-2026-1
 
 ### Wider battle and Control dispatch
 
-The normal convoy includes 108 background fighters from launch: 54 friendly and
-54 hostile, in three-ship wings across Port screen, Starboard screen, Forward
-screen and Rear picket. Together with Lancer this is 111 fighters before any
+The normal convoy includes 24 background fighters from launch: 12 friendly and
+12 hostile, in three-ship wings across Port screen, Starboard screen, Forward
+screen and Rear picket. Together with Lancer this is 27 fighters before any
 local raid. These are ordinary armed craft, with standard hull/shield profiles,
 real collisions, projectiles, damage and casualties. They do not wait for the
-player to kill a scripted wave. Each front has an independent 1.1 km pursuit
+player to kill a scripted wave. Each front starts with one three-ship wing per
+side, separated by at least 1.8 km for an approach before engagement. Each has an independent 1.1 km pursuit
 zone whose goal moves with the convoy; actors themselves move only by physics.
 The cargo's first minute remains protected from direct attack, while distant
 screens are already fighting.
 
 `src/convoy-battle.js` owns initial sector rosters, half-second strength
 assessments and dispatch decisions. `combat.convoy.battle` stores numeric front
-IDs, counts, health summaries and the current order. A screen losing by four
+IDs, counts, health summaries and the current order. A screen losing by two
 fighters after the opening can release one existing enemy three-ship wing
 toward the cargo: IDs, positions, health and guns are retained, and zone ownership
 is exchanged for normal convoy-raider orders. Breakthroughs consume real forces,
