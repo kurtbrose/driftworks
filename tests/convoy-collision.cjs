@@ -7,6 +7,22 @@ function fixture(mode='grid-events'){
  const at=p=>p.map(v=>v/U),bolt=()=>({age:0,position:at([-40,0,2.6]),direction:[1,0,0],weapon:{...DW.retailWeapons[0],headRadius:.1}});
  return {f,DW,c,U,ship,at,bolt,trace:(a,b,shot=bolt(),shooter='player')=>DW.flightCombat.trace(c,at(a),at(b),shot,shooter,undefined,c.player.pose)};
 }
+// Exact hull queries and instance bases follow each ship's independent heading.
+{
+ const {DW,c,ship,at}=fixture(),localStart=[-40,0,2.6],localEnd=[40,0,2.6];
+ const original=DW.convoyMission.trace(c,at(localStart),at(localEnd),.1);assert(original);
+ ship.forward=[.6,.48,.64];const basis=DW.fleetGuidance.frame(ship.forward);
+ const rotate=p=>p.map((_,k)=>basis.right[k]*p[0]+ship.forward[k]*p[1]+basis.up[k]*p[2]);
+ const hit=DW.convoyMission.trace(c,at(rotate(localStart)),at(rotate(localEnd)),.1);assert(hit);
+ rotate(original.point).forEach((v,k)=>assert(Math.abs(v-hit.point[k])<1e-7,'Posed exact hull retains the authored contact'));
+ const fs=require('node:fs'),vm=require('node:vm'),meta=JSON.parse(fs.readFileSync('assets/ships/industrial-kit/convoy-flight.json','utf8')),bytes=fs.readFileSync('assets/ships/industrial-kit/convoy-flight.bin');
+ vm.runInNewContext(fs.readFileSync('experiments/convoy-scenery.js','utf8'),{window:{Driftworks:DW},Float32Array});
+ DW.convoyScenery.install(meta,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
+ const batches=DW.convoyScenery.geometry(c),source=batches.map(b=>b.vertices);
+ batches.forEach(b=>[b.instanceRights,b.instanceForwards,b.instanceUps].forEach((values,i)=>[basis.right,ship.forward,basis.up][i].forEach((v,k)=>assert(Math.abs(values[k]-v)<1e-6))));
+ ship.forward=[1,0,0];const next=DW.convoyScenery.geometry(c);
+ next.forEach((b,i)=>{assert.equal(b.vertices,source[i]);assert.equal(b.instanceForwards,batches[i].instanceForwards);assert.equal(b.instanceForwards[0],1);});
+}
 for(const mode of modes){
  const q=fixture(mode),{DW,c,ship,at,bolt,trace}=q;
  const pose=JSON.stringify(c.enemies),expected=DW.convoyMission.trace(c,at([-40,0,2.6]),at([40,0,2.6]),.1),before=ship.hull;

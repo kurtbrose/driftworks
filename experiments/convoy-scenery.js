@@ -50,7 +50,8 @@
         if(!combat.convoy||!this.visible)return [];
         var state=combat.convoy;
         var effects=state.ships.filter(function(s){return s.hull>0;}).map(function(s,index){
-            return DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:s.position,right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:s.velocity,throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);
+            var axes=DW.fleetGuidance.frame(s.forward||[0,1,0]);
+            return DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:s.position,right:axes.right,back:axes.back,up:axes.up,velocity:s.velocity,throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);
         });
         const portal=state.arrivalPortal;
         if(portal&&combat.time<portal.closesAt){
@@ -77,13 +78,14 @@
         return effects;
     },geometry:function(combat){
         if(!combat.convoy||!this.visible)return [];
-        var state=combat.convoy,key=state.ships.map(function(s){return s.hull>0?'1':'0';}).join(''),cached=cache.get(state);
+        var state=combat.convoy,key=state.ships.map(function(s){return s.id+':'+s.model+':'+(s.hull>0?'1':'0');}).join('|'),cached=cache.get(state);
         if(!cached||cached.key!==key){
             /** @type {Batch[]} */var batches=[];
             Object.keys(models).forEach(function(name){
                 var ships=state.ships.filter(function(s){return s.hull>0&&s.model===name;});if(!ships.length)return;
                 var offsets=new Float32Array(ships.flatMap(function(s){return [s.slot[0],s.slot[1],s.slot[2]-1200];}));
-                models[name].forEach(function(batch){batches.push(Object.assign({},batch,{instanceOffsets:offsets}));});
+                var rights=new Float32Array(offsets.length),forwards=new Float32Array(offsets.length),ups=new Float32Array(offsets.length);
+                models[name].forEach(function(batch){batches.push(Object.assign({},batch,{instanceOffsets:offsets,instanceRights:rights,instanceForwards:forwards,instanceUps:ups}));});
             });
             cached={key:key,batches:batches};cache.set(state,cached);
         }
@@ -93,7 +95,8 @@
             var ships=state.ships.filter(function(s){return s.hull>0&&s.model===name;}),batch=currentBatches.find(function(b){return b.vertices===models[name][0].vertices;});
             if(!batch||!batch.instanceOffsets)return;
             var offsets=batch.instanceOffsets;
-            ships.forEach(function(s,i){offsets.set([s.position[0],s.position[1],s.position[2]-1200],i*3);});
+            var rights=batch.instanceRights,forwards=batch.instanceForwards,ups=batch.instanceUps;
+            ships.forEach(function(s,i){offsets.set([s.position[0],s.position[1],s.position[2]-1200],i*3);var axes=DW.fleetGuidance.frame(s.forward||[0,1,0]);if(rights)rights.set(axes.right,i*3);if(forwards)forwards.set(axes.back.map(function(v){return -v;}),i*3);if(ups)ups.set(axes.up,i*3);});
         });
         return cached.batches.map(function(batch){return Object.assign({},batch,{origin:origin,dynamicInstances:true});});
     }};

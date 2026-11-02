@@ -1,119 +1,95 @@
 (function () {
     'use strict';
     /** All positions, velocities, radii and acceleration use SI units. No renderer or mission dependencies.
-     * @typedef {{id:string,position:number[],velocity:number[],radius:number,crossRadius?:number,halfSize?:number[]}} Body
+     * @typedef {{id:string,position:number[],velocity:number[],radius:number,crossRadius?:number,halfSize?:number[],forward?:number[],packet?:number,turnRate?:number,neighborIds?:string[],localGoal?:number[],cohesionError?:number,intent?:number[],targetSpeed?:number}} Body
      * @typedef {{position:number[],radius:number,weight:number}} Threat
-     * @typedef {{anchor:number[],velocity:number[],offset:number[],forward:number[],slots:Record<string,number[]>,assignments:Record<string,string>}} Formation
+     * @typedef {{anchor:number[],velocity:number[],offset:number[],forward:number[],slots:Record<string,number[]>,assignments:Record<string,string>,controlCountdown?:number,controls?:Record<string,Control>}} Formation
      */
+    /** @typedef {{intent:number[],targetSpeed:number,neighborIds:string[],localGoal:number[],cohesionError:number}} Control */
     /** @param {number[]} v @param {number} limit */
     function capped(v,limit){var n=Math.hypot.apply(null,v);return v.map(function(x){return x*Math.min(1,limit/(n||1));});}
-    /** Generate a compact shape or fit an authored packet template, preserving its clustering.
-     * The caller supplies ship-forward; transverse clearance uses beam, not axial hull length.
+    /** @param {number[]} v @param {number[]} [fallback] */
+    function unit(v,fallback){var n=Math.hypot.apply(null,v);return n>1e-8?v.map(function(x){return x/n;}):(fallback||[0,1,0]).slice();}
+    /** Authored hulls face +Y. @param {number[]} forward */
+    function frame(forward){var f=unit(forward),reference=Math.abs(f[2])<.98?[0,0,1]:[0,1,0],r=unit([f[1]*reference[2]-f[2]*reference[1],f[2]*reference[0]-f[0]*reference[2],f[0]*reference[1]-f[1]*reference[0]]);return {right:r,up:[r[1]*f[2]-r[2]*f[1],r[2]*f[0]-r[0]*f[2],r[0]*f[1]-r[1]*f[0]],back:f.map(function(v){return -v;})};}
+    /** Initial geometry is a launch condition, never a persistent position target.
      * @param {Body[]} bodies @param {number[]} [forward] @param {number[][]} [template] @returns {Formation} */
     function create(bodies,forward,template){
-        var axis=forward||[0,1,0],length=Math.hypot.apply(null,axis)||1;axis=axis.map(function(v){return v/length;});
-        if(Math.hypot.apply(null,axis)<.5)axis=[0,1,0];
-        var reference=Math.abs(axis[2])<.9?[0,0,1]:[0,1,0];
-        var right=[axis[1]*reference[2]-axis[2]*reference[1],axis[2]*reference[0]-axis[0]*reference[2],axis[0]*reference[1]-axis[1]*reference[0]],size=Math.hypot.apply(null,right);
-        right=right.map(function(v){return v/size;});
-        var up=[right[1]*axis[2]-right[2]*axis[1],right[2]*axis[0]-right[0]*axis[2],right[0]*axis[1]-right[1]*axis[0]];
         var anchor=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/Math.max(1,bodies.length);});
-        var spacing=2*bodies.reduce(function(n,b){return Math.max(n,b.crossRadius===undefined?b.radius:b.crossRadius);},0)+80,ring=Math.ceil(Math.sqrt(bodies.length));
-        /** @type {number[][]} */var cells=[];
-        for(var row=-ring;row<=ring;row++)for(var col=-ring;col<=ring;col++)cells.push([(col+row*.5)*spacing,row*Math.sqrt(3)/2*spacing]);
-        cells.sort(function(a,b){return Math.hypot.apply(null,a)-Math.hypot.apply(null,b)||a[0]-b[0]||a[1]-b[1];});cells=cells.slice(0,bodies.length);
-        var radius=cells.reduce(function(n,p){return Math.max(n,Math.hypot.apply(null,p));},0)+spacing*.5;
-        var available=cells.map(function(p,i){var depth=Math.sin(i*2.399963)*Math.sqrt(Math.max(0,radius*radius-p[0]*p[0]-p[1]*p[1]))*.85;return axis.map(function(v,k){return right[k]*p[0]+up[k]*p[1]+v*depth;});});
-        if(template&&template.length===bodies.length){
-            var clearance=2*bodies.reduce(function(n,b){return Math.max(n,b.crossRadius===undefined?b.radius:b.crossRadius);},0)+18;
-            /** @type {number[][]} */var placed=[];
-            /** @type {number[][]} */var offsets=[];for(var a=-12;a<=12;a++)for(var b=-12;b<=12;b++)offsets.push([a*8,b*8]);
-            offsets.sort(function(a,b){return Math.hypot.apply(null,a)-Math.hypot.apply(null,b);});
-            available=template.map(function(point){
-                var candidate=point.slice(),found=false;
-                for(var offset of offsets){
-                    candidate=point.map(function(v,k){return v+right[k]*offset[0]+up[k]*offset[1];});
-                    if(placed.every(function(p){var delta=candidate.map(function(v,k){return v-p[k];}),along=delta.reduce(function(n,v,k){return n+v*axis[k];},0);return Math.hypot.apply(null,delta.map(function(v,k){return v-along*axis[k];}))>=clearance;})){found=true;break;}
-                }
-                if(!found)throw Error('Formation template cannot satisfy transverse clearance');
-                placed.push(candidate);return candidate;
-            });
-        }
-        var centroid=[0,1,2].map(function(k){return available.reduce(function(n,p){return n+p[k];},0)/Math.max(1,available.length);});
-        available=available.map(function(p){return p.map(function(v,k){return v-centroid[k];});});
-        /** @type {Record<string,number[]>} */var slots={};
-        bodies.slice().sort(function(a,b){return a.id.localeCompare(b.id);}).forEach(function(b){
-            var best=0,cost=Infinity;available.forEach(function(p,i){var d=Math.hypot.apply(null,p.map(function(v,k){return anchor[k]+v-b.position[k];}));if(d<cost){cost=d;best=i;}});
-            slots[b.id]=available.splice(best,1)[0];
-        });
-        return {anchor:anchor,velocity:[0,0,0],offset:[0,0,0],forward:axis,slots:slots,assignments:{}};
+        bodies.forEach(function(body){body.forward=unit(body.forward||body.velocity,forward);});
+        return {anchor:anchor,velocity:[0,0,0],offset:[0,0,0],forward:unit(forward||[0,1,0]),slots:{},assignments:{}};
     }
-    /** A threat-weighted diversion in the plane perpendicular to travel. Symmetric threats cancel.
-     * @param {Formation} group @param {Threat[]} threats @param {number[]} forward */
-    function diversion(group,threats,forward){
-        var out=[0,0,0];threats.forEach(function(t){
-            var delta=group.anchor.map(function(v,k){return v-t.position[k];}),distance=Math.hypot.apply(null,delta),along=delta.reduce(function(n,v,k){return n+v*forward[k];},0);
-            if(distance>t.radius||distance<1)return;
-            var lateral=delta.map(function(v,k){return v-forward[k]*along;}),length=Math.hypot.apply(null,lateral);
-            if(length<1)return;
-            var amount=t.weight*(1-distance/t.radius)*350;
-            out=out.map(function(v,k){return v+lateral[k]/length*amount;});
-        });return capped(out,350);
-    }
-    /** Bounded acceleration, feed-forward slot pursuit and predictive clearance. Actors never teleport.
-     * The caller supplies a route point/velocity, not per-ship positions.
+    /** Local flocking: predictive hull separation, velocity alignment, comfortable-distance
+     * cohesion, route preference and directional exhaust avoidance. No per-ship slots.
+     * The group centre is observed after integration; it never drags the actors.
      * @param {Formation} group @param {Body[]} bodies @param {number[]} route @param {number[]} cruise
      * @param {Threat[]} threats @param {number} dt */
     function step(group,bodies,route,cruise,threats,dt){
         if(!(dt>0)||!bodies.length)return;
-        var memberIds=new Set(bodies.map(function(b){return b.id;}));
-        Object.keys(group.slots).forEach(function(id){if(!memberIds.has(id))delete group.slots[id];});
-        var missing=bodies.filter(function(b){return !group.slots[b.id];});
-        if(missing.length){
-            var proposal=create(bodies,group.forward),spacing=2*bodies.reduce(function(n,b){return Math.max(n,b.crossRadius===undefined?b.radius:b.crossRadius);},0)+80;
-            var axis=Math.abs(group.forward[0])<.9?[1,0,0]:[0,1,0],dot=axis.reduce(function(n,v,k){return n+v*group.forward[k];},0);
-            var right=axis.map(function(v,k){return v-dot*group.forward[k];}),length=Math.hypot.apply(null,right);right=right.map(function(v){return v/length;});
-            var up=[right[1]*group.forward[2]-right[2]*group.forward[1],right[2]*group.forward[0]-right[0]*group.forward[2],right[0]*group.forward[1]-right[1]*group.forward[0]];
-            missing.forEach(function(b){
-                var occupied=Object.keys(group.slots).map(function(id){return group.slots[id];});
-                var candidates=occupied.flatMap(function(p){return [0,1,2,3,4,5].map(function(i){return p.map(function(v,k){return v+(right[k]*Math.cos(i*Math.PI/3)+up[k]*Math.sin(i*Math.PI/3))*spacing;});});});
-                if(!candidates.length)candidates.push(proposal.slots[b.id]);
-                candidates=candidates.filter(function(slot){return occupied.every(function(p){var delta=slot.map(function(v,k){return v-p[k];}),along=delta.reduce(function(n,v,k){return n+v*group.forward[k];},0);return Math.hypot.apply(null,delta.map(function(v,k){return v-along*group.forward[k];}))>=spacing-1e-6;});});
-                // Expand the compact perimeter, rather than append newcomers down a trailing column.
-                candidates.sort(function(a,b){return Math.hypot.apply(null,a)-Math.hypot.apply(null,b);});
-                group.slots[b.id]=candidates[0]||proposal.slots[b.id];
+        if(dt>.05){var steps=Math.ceil(dt/.05);for(var tick=0;tick<steps;tick++)step(group,bodies,route,cruise,threats,dt/steps);return;}
+        var speed=Math.hypot.apply(null,cruise),travel=unit(cruise,group.forward);
+        var center=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/bodies.length;});
+        var controls=group.controls||(group.controls={});
+        bodies.forEach(function(body){var cached=controls[body.id];if(!body.intent&&cached){body.intent=cached.intent;body.targetSpeed=cached.targetSpeed;body.neighborIds=cached.neighborIds;body.localGoal=cached.localGoal;body.cohesionError=cached.cohesionError;}});
+        group.controlCountdown=(group.controlCountdown||0)-dt;
+        var assess=group.controlCountdown<=1e-8||bodies.some(function(b){return !b.intent;});
+        if(assess){group.controlCountdown=.1;
+        bodies.forEach(function(body){
+            var forward=unit(body.forward||body.velocity,travel),basis=frame(forward);
+            var nearby=bodies.filter(function(other){return other!==body&&Math.hypot.apply(null,other.position.map(function(v,k){return v-body.position[k];}))<500;}).sort(function(a,b){
+                var da=Math.hypot.apply(null,a.position.map(function(v,k){return v-body.position[k];})),db=Math.hypot.apply(null,b.position.map(function(v,k){return v-body.position[k];}));return da-db||a.id.localeCompare(b.id);
+            }).slice(0,10);
+            var aligned=[0,0,0],cohesion=[0,0,0],avoid=[0,0,0],weight=0,urgency=0;
+            nearby.forEach(function(other){
+                var delta=body.position.map(function(v,k){return v-other.position[k];}),distance=Math.hypot.apply(null,delta),same=body.packet!==undefined&&body.packet===other.packet,w=same?2:1;
+                weight+=w;aligned=aligned.map(function(v,k){return v+other.velocity[k]*w;});
+                var comfortable=same?105:165,attraction=Math.max(0,distance-comfortable)*.026*w;
+                cohesion=cohesion.map(function(v,k){return v-delta[k]/Math.max(1,distance)*attraction;});
+                var otherForward=unit(other.forward||other.velocity,travel),relative=body.velocity.map(function(v,k){return v-other.velocity[k];}),relativeSpeed=relative.reduce(function(n,v){return n+v*v;},0);
+                var horizon=Math.max(8,speed/1.2),closest=Math.max(0,Math.min(horizon,-delta.reduce(function(n,v,k){return n+v*relative[k];},0)/Math.max(.01,relativeSpeed)));
+                var predicted=delta.map(function(v,k){return v+relative[k]*closest;});
+                var axis=unit(forward.map(function(v,k){return v+otherForward[k]*(forward.reduce(function(n,x,j){return n+x*otherForward[j];},0)<0?-1:1);}),forward);
+                var along=predicted.reduce(function(n,v,k){return n+v*axis[k];},0),side=predicted.map(function(v,k){return v-along*axis[k];}),sideLength=Math.hypot.apply(null,side);
+                var beam=(body.crossRadius||body.radius)+(other.crossRadius||other.radius)+16,length=(body.halfSize?body.halfSize[1]:body.radius)+(other.halfSize?other.halfSize[1]:other.radius)+16;
+                var parallel=Math.abs(forward.reduce(function(n,v,k){return n+v*otherForward[k];},0));
+                var q=parallel>.8?Math.hypot(along/length,sideLength/beam):Math.hypot.apply(null,predicted)/length;
+                if(q<1.35){
+                    var severity=(1.35-q)*Math.max(.25,1-closest/horizon),direction=sideLength>2?unit(side):frame(body.id<other.id?forward:otherForward).right.map(function(v){return v*(body.id<other.id?-1:1);});
+                    avoid=avoid.map(function(v,k){return v+direction[k]*severity*25;});urgency=Math.max(urgency,Math.min(1,severity));
+                }
+                // A widening aft cone discourages following another engine directly.
+                var aft=delta.reduce(function(n,v,k){return n+v*otherForward[k];},0),wakeSide=delta.map(function(v,k){return v-aft*otherForward[k];}),wakeDistance=Math.hypot.apply(null,wakeSide);
+                var rear=other.halfSize?other.halfSize[1]:other.radius,wakeRadius=beam+Math.max(0,-aft-rear)*.08;
+                if(aft< -rear&&aft> -rear-260&&wakeDistance<wakeRadius){
+                    var out=wakeDistance>2?unit(wakeSide):frame(otherForward).right.map(function(v){return v*(body.id<other.id?-1:1);});
+                    avoid=avoid.map(function(v,k){return v+out[k]*(1-wakeDistance/wakeRadius)*9;});
+                }
             });
-        }
-        if(dt>.1){var count=Math.ceil(dt/.1);for(var tick=0;tick<count;tick++)step(group,bodies,route,cruise,threats,dt/count);return;}
-        var speed=Math.hypot.apply(null,cruise),forward=cruise.map(function(v){return v/(speed||1);}),avoid=diversion(group,threats,forward);
-        group.offset=group.offset.map(function(v,k){return v+(avoid[k]-v)*(1-Math.exp(-dt/12));});
-        var error=bodies.reduce(function(n,b){var p=group.slots[b.id];return p?Math.max(n,Math.hypot.apply(null,p.map(function(v,k){return group.anchor[k]+v-b.position[k];}))):n;},0);
-        var cohesion=Math.max(0,1-Math.max(0,error-100)/500);
-        var desired=capped(route.map(function(v,k){return cruise[k]*cohesion+(v+group.offset[k]-group.anchor[k])*.08;}),speed*1.15*cohesion);
-        var change=capped(desired.map(function(v,k){return v-group.velocity[k];}),.7*dt);
-        group.velocity=group.velocity.map(function(v,k){return v+change[k];});
-        group.anchor=group.anchor.map(function(v,k){return v+group.velocity[k]*dt;});
-        var velocities=bodies.map(function(b){
-            var slot=group.slots[b.id];if(!slot)return b.velocity.slice();
-            var wanted=slot.map(function(v,k){return group.velocity[k]+(group.anchor[k]-group.velocity[k]*dt+v-b.position[k])*.12;});
-            bodies.forEach(function(other){if(other===b)return;
-                var x=b.position[0]-other.position[0]+(b.velocity[0]-other.velocity[0])*3;
-                var y=b.position[1]-other.position[1]+(b.velocity[1]-other.velocity[1])*3;
-                var z=b.position[2]-other.position[2]+(b.velocity[2]-other.velocity[2])*3;
-                var amount=0,distance=Math.hypot(x,y,z);
-                if(b.halfSize&&other.halfSize){
-                    // Aligned long hulls need beam clearance alongside, not a ship-length sphere.
-                    var one=b.halfSize,two=other.halfSize;
-                    var ratio=Math.max(Math.abs(x)/(one[0]+two[0]+12),Math.abs(y)/(one[1]+two[1]+12),Math.abs(z)/(one[2]+two[2]+12));
-                    if(ratio<1)amount=(1-ratio)*12;
-                }else{var safe=b.radius+other.radius+25;if(distance<safe)amount=(safe-distance)*.5;}
-                if(amount&&distance>1e-6){wanted[0]+=x/distance*amount;wanted[1]+=y/distance*amount;wanted[2]+=z/distance*amount;}
-            });
-            wanted=capped(wanted,speed*1.6);
-            var acceleration=capped(wanted.map(function(v,k){return v-b.velocity[k];}),1.2*dt);
-            return b.velocity.map(function(v,k){return v+acceleration[k];});
+            var local=weight?aligned.map(function(v){return v/weight;}):cruise;
+            cohesion=capped(cohesion.map(function(v){return v/Math.max(1,weight);}),5);
+            var routeDelta=route.map(function(v,k){return v-body.position[k];}),alongRoute=routeDelta.reduce(function(n,v,k){return n+v*travel[k];},0);
+            var corridor=capped(routeDelta.map(function(v,k){return (v-alongRoute*travel[k])*.007;}),3);
+            var toFleet=center.map(function(v,k){return v-body.position[k];}),isolation=Math.hypot.apply(null,toFleet),regroup=isolation>460?capped(toFleet.map(function(v){return v*.025;}),12):[0,0,0];
+            var pressure=[0,0,0];threats.forEach(function(threat){var delta=body.position.map(function(v,k){return v-threat.position[k];}),d=Math.hypot.apply(null,delta),amount=threat.weight*Math.max(0,1-d/threat.radius);pressure=pressure.map(function(v,k){return v+delta[k]/Math.max(1,d)*amount*12;});});pressure=capped(pressure,18);
+            var desired=cruise.map(function(v,k){return v*.65+local[k]*.35+cohesion[k]+corridor[k]+regroup[k]+pressure[k];});
+            var safety=capped(avoid,22);desired=desired.map(function(v,k){return v+safety[k];});
+            var targetSpeed=Math.min(speed*1.5,Math.hypot.apply(null,desired))*(1-urgency*.7),wanted=unit(desired,forward);
+            body.intent=wanted;body.targetSpeed=targetSpeed;body.neighborIds=nearby.map(function(b){return b.id;});body.localGoal=body.position.map(function(v,k){return v+wanted[k]*200;});body.cohesionError=Math.max(0,isolation-460);controls[body.id]={intent:wanted,targetSpeed:targetSpeed,neighborIds:body.neighborIds,localGoal:body.localGoal,cohesionError:body.cohesionError};
+        });var ids=new Set(bodies.map(function(b){return b.id;}));Object.keys(controls).forEach(function(id){if(!ids.has(id))delete controls[id];});}
+        var states=bodies.map(function(body){
+            var forward=unit(body.forward||body.velocity,travel),wanted=body.intent||travel,targetSpeed=body.targetSpeed===undefined?speed:body.targetSpeed;
+            var angle=Math.acos(Math.max(-1,Math.min(1,forward.reduce(function(n,v,k){return n+v*wanted[k];},0)))),maxTurn=body.turnRate||.045;
+            var axis=[forward[1]*wanted[2]-forward[2]*wanted[1],forward[2]*wanted[0]-forward[0]*wanted[2],forward[0]*wanted[1]-forward[1]*wanted[0]];
+            axis=unit(axis,frame(forward).up);var turn=Math.min(angle,maxTurn*dt),tangent=[axis[1]*forward[2]-axis[2]*forward[1],axis[2]*forward[0]-axis[0]*forward[2],axis[0]*forward[1]-axis[1]*forward[0]];
+            var nose=unit(forward.map(function(v,k){return v*Math.cos(turn)+tangent[k]*Math.sin(turn);}),forward);
+            var demand=nose.map(function(v,k){return (v*targetSpeed-body.velocity[k])/Math.max(.001,dt);}),longitudinal=demand.reduce(function(n,v,k){return n+v*nose[k];},0),longLimit=longitudinal<0?1.8:1.2;
+            var axial=Math.max(-longLimit,Math.min(longLimit,longitudinal)),lateral=capped(demand.map(function(v,k){return v-longitudinal*nose[k];}),.35);
+            return {forward:nose,velocity:body.velocity.map(function(v,k){return v+(nose[k]*axial+lateral[k])*dt;})};
         });
-        bodies.forEach(function(b,i){b.velocity=velocities[i];b.position=b.position.map(function(v,k){return v+b.velocity[k]*dt;});});
+        bodies.forEach(function(body,i){var state=states[i];body.forward=state.forward;body.velocity=state.velocity;body.position=body.position.map(function(v,k){return v+state.velocity[k]*dt;});});
+        group.anchor=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/bodies.length;});
+        group.velocity=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.velocity[k];},0)/bodies.length;});
+        group.forward=travel;var error=group.anchor.map(function(v,k){return v-route[k];}),axial=error.reduce(function(n,v,k){return n+v*travel[k];},0);group.offset=error.map(function(v,k){return v-axial*travel[k];});
     }
     /** Generate coverage jobs around exposed/damaged protected ships, allocating each escort once.
      * Assignment hysteresis prevents small score changes from shuffling the entire screen.
@@ -145,5 +121,5 @@
             goals[escort.id]=best.position.map(function(v,k){return v+direction[k]*clearance+best.velocity[k]*3;});
         });return goals;
     }
-    window.Driftworks.fleetGuidance={create:create,step:step,cover:cover};
+    window.Driftworks.fleetGuidance={create:create,step:step,cover:cover,frame:frame};
 }());

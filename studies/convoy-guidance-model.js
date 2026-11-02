@@ -21,14 +21,14 @@
         function transit(body,goal,speed,dt){
             var delta=goal.map(function(v,k){return v-body.position[k];}),d=Math.hypot.apply(null,delta),demand=delta.map(function(v){return v/(d||1)*Math.min(speed,d*.2);});
             var change=demand.map(function(v,k){return v-body.velocity[k];}),a=Math.hypot.apply(null,change),blend=Math.min(1,dt*(body.role==='escort'?12:1.2)/(a||1));
-            body.velocity=body.velocity.map(function(v,k){return v+change[k]*blend;});body.position=body.position.map(function(v,k){return v+body.velocity[k]*dt;});
+            body.velocity=body.velocity.map(function(v,k){return v+change[k]*blend;});body.position=body.position.map(function(v,k){return v+body.velocity[k]*dt;});var n=Math.hypot.apply(null,body.velocity);if(n>1)body.forward=body.velocity.map(function(v){return v/n;});
         }
-        function advance(seconds){
+        function advance(seconds,inspect){
             var ticks=Math.round(seconds*60);
             for(var tick=0;tick<ticks;tick++){
                 time+=1/60;frames++;
                 var turn=(scenario==='turn'||scenario==='combined')&&time>=20;
-                if(turn&&!flags.turn){flags.turn=true;event('90° route order; hull headings remain fixed (+Y)');}
+                if(turn&&!flags.turn){flags.turn=true;event('90° route order; each ship turns through its own local steering');}
                 if((scenario==='traffic'||scenario==='combined')&&time>=20&&!flags.leave){flags.leave=true;leave(3);}
                 if((scenario==='traffic'||scenario==='combined')&&time>=40&&!flags.join){flags.join=true;join(3);}
                 var attack=(scenario==='attack'||scenario==='combined')&&time>=12&&time<75;
@@ -38,25 +38,24 @@
                 threats=attack?[0,1,2].map(function(i){return {position:group.anchor.map(function(v,k){return v+[Math.cos(angle)*(850+i*90),Math.sin(angle)*(850+i*90),(-1+i)*120][k];}),radius:2500,weight:settings.power};}):[];
                 var route=center.map(function(v,k){return v+(turn?[settings.speed*(time-20),settings.speed*20,0]:[0,settings.speed*time,0])[k];});
                 DW.fleetGuidance.step(group,bodies,route,turn?[settings.speed,0,0]:[0,settings.speed,0],threats,1/60);
-                bodies.forEach(function(b){var slot=group.slots[b.id];if(b.role==='joining'&&slot&&distance(b.position,slot.map(function(v,k){return v+group.anchor[k];}))<30){b.role='freighter';event(b.id+' acquired its formation slot');}});
+                bodies.forEach(function(b){if(b.role==='joining'&&b.neighborIds&&b.neighborIds.length>=3&&(b.cohesionError||0)<40){b.role='freighter';event(b.id+' merged into the local flow');}});
                 if(time>=nextCover){nextCover=time+1;goals=DW.fleetGuidance.cover(group,bodies,escorts,threats);}
                 escorts.forEach(function(b){if(goals[b.id])transit(b,goals[b.id],70,1/60);});
                 departing.forEach(function(b){transit(b,b.departure,35,1/60);});
                 if(frames%6===0)bodies.concat(departing,escorts).forEach(function(b){var trail=history[b.id]||(history[b.id]=[]);trail.push(b.position.slice());if(trail.length>240)trail.shift();});
             }
-            return snapshot();
+            return inspect===false?null:snapshot();
         }
         function snapshot(){
-            var errors=bodies.map(function(b){var slot=group.slots[b.id];return slot?distance(b.position,slot.map(function(v,k){return v+group.anchor[k];})):0;});
+            var errors=bodies.map(function(b){return b.cohesionError||0;});
             var spans=[0,1,2].map(function(k){return Math.max.apply(null,bodies.map(function(b){return b.position[k];}))-Math.min.apply(null,bodies.map(function(b){return b.position[k];}));});
             var traffic=bodies.concat(departing),overlaps=0;
-            for(var i=0;i<traffic.length;i++)for(var j=i+1;j<traffic.length;j++){
-                var a=traffic[i],b=traffic[j],one=a.halfSize||[9,61,7],two=b.halfSize||[9,61,7];
-                var lowA=a.hullMin||one.map(function(v){return -v;}),highA=a.hullMax||one,lowB=b.hullMin||two.map(function(v){return -v;}),highB=b.hullMax||two;
-                if([0,1,2].every(function(k){return a.position[k]+lowA[k]<b.position[k]+highB[k]&&a.position[k]+highA[k]>b.position[k]+lowB[k];}))overlaps++;
-            }
+            var boxes=traffic.map(function(body){var half=body.halfSize||[9,61,7],low=body.hullMin||half.map(function(v){return -v;}),high=body.hullMax||half,axes=DW.fleetGuidance.frame(body.forward||[0,1,0]),min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+                for(var mask=0;mask<8;mask++){var corner=[0,1,2].map(function(k){return mask&(1<<k)?high[k]:low[k];});for(var k=0;k<3;k++){var value=body.position[k]+axes.right[k]*corner[0]-axes.back[k]*corner[1]+axes.up[k]*corner[2];min[k]=Math.min(min[k],value);max[k]=Math.max(max[k],value);}}return {min:min,max:max};
+            });
+            for(var i=0;i<traffic.length;i++)for(var j=i+1;j<traffic.length;j++)if([0,1,2].every(function(k){return boxes[i].min[k]<boxes[j].max[k]&&boxes[i].max[k]>boxes[j].min[k];}))overlaps++;
             return {time:time,scenario:scenario,settings:settings,bodies:bodies,departing:departing,escorts:escorts,group:group,goals:goals,threats:threats,events:events,history:history,center:center,
-                metrics:{overlaps:overlaps,pending:bodies.filter(function(b){return !group.slots[b.id];}).length,maxError:Math.max.apply(null,errors),speed:Math.hypot.apply(null,group.velocity),spans:spans,assigned:new Set(Object.values(group.assignments)).size}};
+                metrics:{overlaps:overlaps,pending:0,maxError:Math.max.apply(null,errors),speed:Math.hypot.apply(null,group.velocity),spans:spans,assigned:new Set(Object.values(group.assignments)).size}};
         }
         event('Original close packet profile / production guidance and coverage');
         return {advance:advance,snapshot:snapshot,join:join,leave:leave};

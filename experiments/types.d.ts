@@ -321,7 +321,7 @@ export type ConvoyReceptionShip={id:string;callsign:string;position:Vector;headi
 export type ConvoyRaid={id:number;phase:'hold'|'approach'|'engage'|'regroup'|'withdraw'|'departed';leaderId:string;until:number;offset:Vector;packet:number;createdAt:number;committedAt:number;passes:number};
 export type ConvoyBattleOrder={id:string;kind:'assist'|'intercept';front:number|null;packet:number;targetId:string;position:Vector;label:string;priority:number;since:number};
 export type ConvoyBattleState={fronts:{id:number;name:string;offset:Vector;center:Vector;packet:number;radiusM:number;allies:number;enemies:number;alliedHull:number;released:boolean}[];nextAssessment:number;nextDispatch:number;order:ConvoyBattleOrder|null;pending:boolean;lastCall:number};
-export type ConvoyState = {navigation?:import("../src/types").FleetFormation;coverage?:Record<string,number[]>;nextCoverage?:number;elapsed:number;speedMps:number;destinationY:number;complete:boolean;raidStarted:boolean;arrivalPortal?:{position:Vector;opensAt:number;closesAt:number;spawned:boolean};battle?:ConvoyBattleState;arrivalFleet:ConvoyReceptionShip[];raids:ConvoyRaid[];director:{phase:'opening'|'patrol'|'contact'|'threatened'|'under-fire'|'recovery';raids:number;reservePlanned:boolean;overload:number;withdrawn:number;events:{wing:number;kind:string}[];nextRaidAt:number;pressure:number;lastHull:number;lastDamageAt:number;quietSince:number;patrol:number;stationAt:number;waypoint:{kind:'patrol'|'intercept'|'assist';label?:string;front?:number|null;packet:number;position:Vector;targetId:string|null}|null};radio:{wait:number;opening:number;said:string[];phase:'arrival'|'cruise'|'combat'|'damage-report'|'complete';report:number;chat:number;chatTurn:number};ships:{id:string;packet:number;callsign:string;model:string;slot:Vector;position:Vector;velocity:Vector;hull:number;maxHull:number;arrived:boolean}[]};
+export type ConvoyState = {navigation?:import("../src/types").FleetFormation;coverage?:Record<string,number[]>;nextCoverage?:number;elapsed:number;speedMps:number;destinationY:number;complete:boolean;raidStarted:boolean;arrivalPortal?:{position:Vector;opensAt:number;closesAt:number;spawned:boolean};battle?:ConvoyBattleState;arrivalFleet:ConvoyReceptionShip[];raids:ConvoyRaid[];director:{phase:'opening'|'patrol'|'contact'|'threatened'|'under-fire'|'recovery';raids:number;reservePlanned:boolean;overload:number;withdrawn:number;events:{wing:number;kind:string}[];nextRaidAt:number;pressure:number;lastHull:number;lastDamageAt:number;quietSince:number;patrol:number;stationAt:number;waypoint:{kind:'patrol'|'intercept'|'assist';label?:string;front?:number|null;packet:number;position:Vector;targetId:string|null}|null};radio:{wait:number;opening:number;said:string[];phase:'arrival'|'cruise'|'combat'|'damage-report'|'complete';report:number;chat:number;chatTurn:number};ships:{id:string;packet:number;callsign:string;model:string;slot:Vector;position:Vector;velocity:Vector;forward?:Vector;hull:number;maxHull:number;arrived:boolean}[]};
 export type Combat = {
     convoy?:ConvoyState;
     scramble?:{beat:number;radio:number};
@@ -387,8 +387,9 @@ export type Pack = {
 // Signed proper metres and outward unit radial in the canonical (region 0) chart.
 export type HullTransit = {proper:number;normal:Vector};
 export type Batch = {
-    /** Immutable model-local translation triples for native GPU instancing. */
+    /** Placement triples for native GPU instancing; dynamicInstances marks changing poses. */
     instanceOffsets?:Float32Array;
+    instanceRights?:Float32Array;instanceForwards?:Float32Array;instanceUps?:Float32Array;
     dynamicInstances?:boolean;
     /** Whole-body axial Fermi placement; radius and model-local origin use scene units. */
     hyperbolicRadius?:number;

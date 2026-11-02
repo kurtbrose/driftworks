@@ -2,7 +2,7 @@
     'use strict';
     var DW=/** @type {Required<import('./types').DriftworksNamespace>} */(window.Driftworks),U=DW.sim.METERS_PER_UNIT;
     var WING_SIZE=3,FIRST_CONTACT_SECONDS=60;
-    // Packet centres in metres. Local slots remain orderly without shared road-like rows.
+    // Authored launch centres in metres; local flocking takes over after launch.
     var packets=[
         {name:'Upper',center:[-100,210,175],ship:'Wayfarer',pilot:'Mara Vale',id:'mara-vale',portrait:0,voice:1},
         {name:'Port',center:[-275,10,5],ship:'Long Haul',pilot:'Daniel Okafor',id:'daniel-okafor',portrait:1,voice:0},
@@ -33,14 +33,8 @@
         var bodies=freighters(combat);
         var center=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/Math.max(1,bodies.length);});
         var template=bodies.map(function(b){return b.position.map(function(v,k){return v-center[k];});});
-        var navigation=DW.fleetGuidance.create(bodies,[0,1,0],template);navigation.velocity=[0,25,0];
-        // Preserve the authored close packets; generic guidance owns their actual motion.
-        combat.convoy.navigation=navigation;
-        // Start near, but not rigidly snapped into, generated wash-safe stations.
-        combat.convoy.ships.forEach(function(ship,i){
-            ship.position=navigation.slots[ship.id].map(function(v,k){return (navigation.anchor[k]+v+([Math.sin(i*2.4)*2,Math.cos(i*1.7)*8,Math.cos(i*2.4)*2][k]))/U;});
-            ship.slot=ship.position.slice();
-        });
+        var navigation=DW.fleetGuidance.create(bodies,[0,1,0],template);navigation.velocity=[0,25,0];combat.convoy.navigation=navigation;
+        // The authored packets seed the scene. Local flocking owns all subsequent motion.
         if(battlefield!==false)DW.convoyBattle.start(combat);
         targets(combat);
         combat.targetId=null;combat.roundOver=false;
@@ -95,13 +89,13 @@
         if(navigation){
             var route=[0,Math.min(s.destinationY*U,s.elapsed*s.speedMps),1200*U];
             DW.fleetGuidance.step(navigation,bodies,route,[0,s.speedMps,0],navigationThreats(combat),dt);
-            var slots=navigation.slots;
+
             bodies.forEach(function(body){
                 var ship=s.ships.find(function(candidate){return candidate.id===body.id;});if(!ship)return;
-                ship.position=body.position.map(function(v){return v/U;});ship.velocity=body.velocity;
-                var slot=slots[body.id];
-                if(s.elapsed*s.speedMps>=s.destinationY*U&&ship.position[1]*U>=s.destinationY*U+slot[1]){ship.arrived=true;ship.velocity=[0,0,0];}
+                ship.position=body.position.map(function(v){return v/U;});ship.velocity=body.velocity;ship.forward=body.forward;
+
             });
+            if(s.elapsed*s.speedMps>=s.destinationY*U&&s.ships.every(function(ship){return ship.hull<=0||ship.position[1]>=s.destinationY;}))s.ships.forEach(function(ship){if(ship.hull>0){ship.arrived=true;ship.velocity=[0,0,0];}});
             if(combat.time>=(s.nextCoverage||0)){
                 s.nextCoverage=combat.time+1;
                 var escorts=DW.flightSim.participants(combat).filter(function(c){return c.team==='ally'&&c.hp>0&&c!==combat.player&&!c.convoyBattle;}).map(function(c){return {id:c.id,position:c.pose.eye.map(function(v){return v*U;}),velocity:c.pose.velocity,radius:10};});
@@ -117,7 +111,7 @@
     }
     /** Adapt mission entities to the reusable SI guidance contract.
      * @param {import('../experiments/types').Combat} combat */
-    function freighters(combat){return combat.convoy?combat.convoy.ships.filter(function(s){return s.hull>0&&!s.arrived;}).map(function(s){var hull=hulls[s.model],halfSize=hull?hull.max.map(function(v,k){return Math.max(Math.abs(v),Math.abs(hull.min[k]));}):[9,61,7];return {id:s.id,position:s.position.map(function(v){return v*U;}),velocity:s.velocity.slice(),radius:hull?DW.shipHulls.hullRadius(hull.model):80,crossRadius:Math.hypot(halfSize[0],halfSize[2]),halfSize:halfSize};}):[];}
+    function freighters(combat){return combat.convoy?combat.convoy.ships.filter(function(s){return s.hull>0&&!s.arrived;}).map(function(s){var hull=hulls[s.model],halfSize=hull?hull.max.map(function(v,k){return Math.max(Math.abs(v),Math.abs(hull.min[k]));}):[9,61,7];return {id:s.id,position:s.position.map(function(v){return v*U;}),velocity:s.velocity.slice(),radius:hull?DW.shipHulls.hullRadius(hull.model):80,crossRadius:Math.hypot(halfSize[0],halfSize[2]),halfSize:halfSize,packet:s.packet,forward:s.forward,turnRate:.035+12/(halfSize[1]*20)};}):[];}
     /** Only attackers committed to the cargo influence its route; distant screen fights do not.
      * @param {import('../experiments/types').Combat} combat */
     function navigationThreats(combat){return combat.enemies.filter(function(c){return c.hp>0&&c.team==='enemy'&&!!c.convoyRaider&&!!combat.convoy&&combat.convoy.raids.some(function(r){return !!c.convoyRaider&&r.id===c.convoyRaider.wing&&r.phase!=='hold'&&r.phase!=='withdraw'&&r.phase!=='departed';});}).map(function(c){return {position:c.pose.eye.map(function(v){return v*U;}),radius:2500,weight:1};});}
@@ -328,18 +322,15 @@
         /** @type {import('../experiments/types').ConvoyHit|null} */var best=null;
         for(var j=0;j<(shipIndices?shipIndices.length:state.ships.length);j++){
             var i=shipIndices?shipIndices[j]:j,ship=state.ships[i],hull=hulls[ship.model];if(ship.hull<=0||!hull)continue;
-            var old=previousShips?previousShips[i]:ship.position,miss=false;
-            for(var k=0;k<3;k++){
-                var a=(start[k]-old[k])*U,b=(end[k]-ship.position[k])*U;
-                if(Math.min(a,b)>hull.max[k]+radiusM||Math.max(a,b)<hull.min[k]-radiusM){miss=true;break;}
-            }
-            if(miss)continue;
-            var from=start.map(function(v,k){return v-old[k];}),to=end.map(function(v,k){return v-ship.position[k];});
+            var old=previousShips?previousShips[i]:ship.position,axes=DW.fleetGuidance.frame(ship.forward||[0,1,0]),forward=axes.back.map(function(v){return -v;});
+            var local=function(/** @type {number[]} */point,/** @type {number[]} */origin){var delta=point.map(function(v,k){return v-origin[k];});return [axes.right,forward,axes.up].map(function(axis){return delta.reduce(function(n,v,k){return n+v*axis[k];},0);});};
+            var from=local(start,old),to=local(end,ship.position);
+            var miss=[0,1,2].some(function(k){return Math.min(from[k],to[k])*U>hull.max[k]+radiusM||Math.max(from[k],to[k])*U<hull.min[k]-radiusM;});if(miss)continue;
             const hit=DW.shipHulls.hullHit(hull.model,hullPose,from,to,U,radiusM);
             if(!hit||best&&hit.fraction>=best.fraction)continue;
             var away=from.map(function(v,k){return (v+(to[k]-v)*hit.fraction)*U-hit.local[k];}),length=Math.hypot.apply(null,away);
             var normal=length>1e-7?away.map(function(v){return v/length;}):hit.normal;
-            best={shipIndex:i,shipId:ship.id,fraction:hit.fraction,point:ship.position.map(function(v,k){return v+hit.local[k]/U;}),normal:normal};
+            best={shipIndex:i,shipId:ship.id,fraction:hit.fraction,point:ship.position.map(function(v,k){return v+(axes.right[k]*hit.local[0]+forward[k]*hit.local[1]+axes.up[k]*hit.local[2])/U;}),normal:normal.map(function(v,k){return axes.right[k]*normal[0]+forward[k]*normal[1]+axes.up[k]*normal[2];})};
         }
         return best;
     }
@@ -377,7 +368,7 @@
             craft.index=index;craft.callsign=ship.callsign;craft.convoyModel=ship.model;craft.maxShield=0;craft.shield=0;
             Object.defineProperties(craft,{hp:{get:function(){return ship.hull;},set:function(/** @type {number} */v){ship.hull=v;}},maxHp:{get:function(){return ship.maxHull;}}});return craft;
         });targetViews.set(state,views);}
-        views.forEach(function(c,i){c.pose.eye=state.ships[i].position;c.pose.velocity=state.ships[i].velocity;c.collision={kind:'sphere',radiusM:hulls[c.convoyModel||'']?DW.shipHulls.hullRadius(hulls[c.convoyModel||''].model):80};});
+        views.forEach(function(c,i){c.pose.eye=state.ships[i].position;c.pose.velocity=state.ships[i].velocity;var axes=DW.fleetGuidance.frame(state.ships[i].forward||[0,1,0]);c.pose.right=axes.right;c.pose.up=axes.up;c.pose.back=axes.back;c.collision={kind:'sphere',radiusM:hulls[c.convoyModel||'']?DW.shipHulls.hullRadius(hulls[c.convoyModel||''].model):80};});
         return views.filter(function(c){return c.hp>0;});
     }
     /** @param {import('../experiments/types').Craft} craft @param {number[]} start @param {number[]} end @param {number} [radius] */

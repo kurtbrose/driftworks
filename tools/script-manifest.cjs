@@ -31,7 +31,7 @@ const groups = {
 };
 
 const profiles = {
-  convoyGuidanceReview: {entries: ['@headless', 'studies/convoy-guidance-model.js', 'studies/convoy-guidance-review.js']},
+  convoyGuidanceReview: {entries: ['@headless', 'vendor/three/build/three.global.js', 'src/station-models.js', 'src/tactical/picking.js', 'src/tactical/input3d.js', 'src/scene3d.js', 'src/sky-lighting.js', 'src/sky-system.js', 'src/impact-cues.js', 'experiments/skybox.js', 'experiments/convoy-scenery.js', 'studies/convoy-guidance-model.js', 'studies/convoy-guidance-review.js']},
   hyperbolicFlight: {entries: ['@flight']},
   terrain: {entries: ['@simulation', 'src/asteroid-art.js', '@meshes', 'src/asteroid-terrain.js']},
   ellisBenchmark: {entries: ['@flight'], before: [{src: 'experiments/flight.js', entries: ['tests/fixtures/ellis-benchmark-probe.js']}]},
