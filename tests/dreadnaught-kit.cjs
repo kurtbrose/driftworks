@@ -191,11 +191,12 @@ const {pathToFileURL} = require('node:url');
   console.log('PASS toybox material review: per-part notes, finite UVs, unchanged geometry/draws and exact original restoration');
   console.log('PASS Aegis toybox: complete unique inventory, real scale, separate nonoverlapping parts and batched geometry');
   const sensorPart=toys.toyPart('attachment-sensor'),commandPart=toys.toyPart('structure-bridge');
-  assert(sensorPart.getObjectByName('sensor mast / detailed'));assert(sensorPart.getObjectByName('four-face sensor array'));assert(sensorPart.getObjectByName('sensor radome'));
-  assert(sensorPart.getObjectByName('communications dish'));
+  assert(sensorPart.getObjectByName('sensor mast / detailed'));assert(sensorPart.getObjectByName('four-face sensor array'));assert(sensorPart.getObjectByName('enclosed sensor mast'));
+  assert(!sensorPart.getObjectByName('communications dish'));
+  const sensorBounds=new real.Box3().setFromObject(sensorPart),sensorSize=sensorBounds.getSize(new real.Vector3());assert(sensorSize.y<sensorSize.z,'sensor assembly stays broader than tall');
   const citadel=commandPart.getObjectByName('command_citadel'),windows=[];citadel.traverse(o=>{if(o.name==='command window')windows.push(o);});
   assert.equal(windows.length,citadel.userData.windowCount);assert(windows.length>=200,'window banks read as multiple occupied decks');
-  assert(citadel.getObjectByName('command communications mast'));assert(citadel.getObjectByName('command radome'));
+  assert(citadel.getObjectByName('command communications mast'));assert(citadel.getObjectByName('enclosed command mast'));
   for(const pane of windows){const sizes=pane.geometry.parameters;assert(Math.abs(sizes.height*9-.675)<.001,'window height stays at human scale');}
   const sensorHull=kit.section('sensor');assert(sensorHull.getObjectByName('sensor mast / detailed'),'sensor hull reuses detailed hardware');
   const installed=kit.vessel(0);assert(installed.getObjectByName('command communications mast'),'fleet terminals reuse the detailed command mast');

@@ -14,10 +14,10 @@ export const toyParts=[
  {id:'attachment-battery',code:'A01',name:'Gun battery / complete',category:'Attachments',note:'The actual gun-bank attachment: twin main battery, point-defense turret and mounting plate. A02 and A03 unpack its two weapons.'},
  {id:'attachment-main',code:'A02',name:'Twin main battery',category:'Attachments',note:'Main turret on its own. Yaw and barrel-pitch groups remain separate in the source assembly.'},
  {id:'attachment-pd',code:'A03',name:'Point-defense turret',category:'Attachments',note:'Small close-defense turret from the gun-bank attachment, shown at its actual relative size.'},
- {id:'attachment-sensor',code:'A04',name:'Sensor mast attachment',category:'Attachments',note:'Four-face sensor array, braced mast, radome and offset communications dish on the standard mounting plate. Shared with the sensor hull.'},
+ {id:'attachment-sensor',code:'A04',name:'Sensor mast attachment',category:'Attachments',note:'Compact armored deckhouse with integrated four-face sensor arrays on the standard mounting plate. Shared with the sensor hull.'},
  {id:'attachment-cargo',code:'A05',name:'Cargo / stores attachment',category:'Attachments',note:'Armored service-stores pod on the standard mounting plate.'},
  {id:'attachment-empty',code:'A06',name:'Empty attachment socket',category:'Attachments',note:'The bare mounting plate left when an upper or lower socket is set to None.'},
- {id:'structure-bridge',code:'S01',name:'Command citadel',category:'Structure',note:'Occupied command decks with wraparound window banks, a braced communications mast and two dishes. Unpacked from the stern terminal.'},
+ {id:'structure-bridge',code:'S01',name:'Command citadel',category:'Structure',note:'Occupied command decks with wraparound window banks, an enclosed mast and solid bridge wings. Unpacked from the stern terminal.'},
  {id:'structure-coupler',code:'S02',name:'Spine coupling ring',category:'Structure',note:'Open coupling collar and its perimeter locks. Repeated by the existing hull and prow factories.'}
 ];
 export function toyPart(id){

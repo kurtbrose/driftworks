@@ -993,32 +993,26 @@ not approval of the full ship or all lighting/view combinations.
 
 ### Sensor and command equipment detailing
 
-`studies/aegis-equipment-detail.js` supplies shared detailed sensor, attachment
-and command factories to the toybox and military fleet study. The original
-extracted primitives remain unchanged. The sensor replaces the five-rod sketch
-with a braced trunk, four planar array faces, radome, crossarm receivers and an
-offset communications dish. The command citadel retains its stepped decks,
-adds 286 individual window panes in recessed-looking wraparound banks, and
-replaces its bare pole cluster with a braced communications mast, compact array
-head, radome, crossarms and paired dishes. Window openings are approximately
-1.2 m wide by 0.675 m high; grouped banks establish occupied-deck scale.
+`studies/aegis-equipment-detail.js` supplies shared sensor, attachment and
+command factories to the toybox and military fleet study. The revised naval
+silhouette uses broad armored deckhouses, integrated planar sensor faces,
+roof overhangs and short enclosed upper structures. Exposed lattice bracing,
+crossarms, dishes and radome poles have been removed. The sensor assembly is
+approximately 40 × 38 × 33 m; the command citadel is 46 × 56 × 47 m.
 
-Mount origins, fore/aft orientation and nine metres per authoring unit are
-preserved. Equipment envelopes grow to include the new hardware; these review
-bounds are not production collision or shield envelopes. The detail is geometry
-shared by both finish modes; Original/Candidate still compares surface finishes.
-The military study's sensor hull, sensor sockets and command-drive terminals
-reuse these same factories. Existing gameplay rigs and saved ships are unchanged.
-Static display batching retains the palette, including shared window-glass and non-emissive array-face
-materials. Dishes are low-resolution double-faced surfaces, not separate textures
-or per-window lights. Actual flight integration and performance remain untested.
+The original stepped command decks retain 286 individual window panes in
+wraparound banks, with additional panes on solid bridge wings. The main panes
+are approximately 1.2 m wide by 0.675 m high. Mount origins, fore/aft orientation
+and nine metres per authoring unit are preserved. These review bounds are not
+production collision or shield envelopes. Geometry is shared by both finish
+modes; Original/Candidate still compares surface finishes. The military study's
+sensor hull, sensor sockets and command-drive terminals reuse these factories.
+Existing gameplay rigs and saved ships are unchanged. Materials remain shared
+and static geometry is merged by material; there are no individual window lights.
+Actual flight integration and performance remain untested.
 
-The unfinished imagegen vent experiment was saved separately in a recoverable
-Git stash named `Paused P01 imagegen vent exploration`; it is not part of this
-sensor/command change.
-
-Visual review covered the sensor and command parts in studio lighting, command
-rear faces and dish supports, and both assemblies on the complete picket ship.
-Labeled before/after captures are retained under output/aegis-equipment/
-(ignored). Focused equipment checks passed. The full check passed 152/153
-entries, with the separately modified convoy-mission interception check failing.
+Visual inspection covered the command and sensor parts at three-quarter studio
+lighting, plus both assemblies on the complete picket ship. Captures are retained in `output/aegis-naval/` (ignored). Focused checks
+cover enclosed structures, sensor proportions, window scale, normals and batching.
+The earlier imagegen vent experiment remains separately recoverable in the Git
+stash named `Paused P01 imagegen vent exploration`.

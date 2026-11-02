@@ -18,10 +18,10 @@ export const finishNotes={
  'attachment-battery':['Use painted turret armor and smoother exposed barrels as separate material roles.','Next targeted texture: mounting-ring wear and a small battery identifier.'],
  'attachment-main':['The broad turret cheeks benefit from restrained paint and roughness breakup.','Keep barrel interiors dark; add heat discoloration locally rather than dirtying the whole turret.'],
  'attachment-pd':['Reuse the main battery finish; avoid bespoke tiny texture assets.','Judge the small turret at fleet distance before spending time on fine stencils.'],
- 'attachment-sensor':['Detailed four-face arrays, diagonal mast supports, radome and offset dish now define the silhouette.','The same assembly is reused on sensor hulls and upper/lower sensor sockets.'],
+ 'attachment-sensor':['Broad armored tiers and inset array faces replace exposed aerials.','The same assembly is reused on sensor hulls and upper/lower sensor sockets.'],
  'attachment-cargo':['Use a painted casing with more metallic restraint bands.','Next targeted texture: access-panel seams and one service identifier.'],
  'attachment-empty':['Use a darker mounting face and a more metallic perimeter.','A socket index and alignment marks would make the bare plate useful as assembly language.'],
- 'structure-bridge':['Window banks wrap the occupied tiers on all four sides, with a mix of lit and dark panes.','A braced communications mast, array head and paired dishes replace the old row of thin rods.'],
+ 'structure-bridge':['Window banks wrap the occupied tiers on all four sides, with a mix of lit and dark panes.','A compact enclosed mast and solid bridge wings give the command decks a naval silhouette.'],
  'structure-coupler':['Use bare-metal locks against a duller collar face.','Next targeted texture: alignment ticks and a few fastener heads instead of more ring geometry.']
 };
 let maps;
