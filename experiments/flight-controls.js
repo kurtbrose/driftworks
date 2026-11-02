@@ -367,7 +367,7 @@
                 actions.pause();
         });
         window.addEventListener('keydown', function (e) {
-            // Leave browser and OS shortcuts alone; Shift by itself remains boost.
+            // Leave browser and OS shortcuts alone; Shift by itself holds the tactical camera.
             if (e.ctrlKey || e.altKey || e.metaKey) {
                 keys = {};
                 return;
@@ -415,7 +415,7 @@
                 actions.selectProfile(Number(e.code.slice(-1)) - 1);
                 return;
             }
-            if (['Space', 'KeyW', 'KeyS', 'KeyX', 'KeyQ', 'KeyE', 'KeyA', 'KeyD', 'KeyR', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0) {
+            if (['ShiftLeft', 'ShiftRight', 'Space', 'KeyW', 'KeyS', 'KeyX', 'KeyQ', 'KeyE', 'KeyA', 'KeyD', 'KeyR', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0) {
                 e.preventDefault();
                 if (!actions.isPaused()) {
                     if (e.code === 'KeyW' && !e.repeat && !keys.KeyW) {
@@ -593,8 +593,8 @@
             return { throttle: wBoost ? 1 : controls.throttle, throttleRate: axis('KeyW', 'KeyS') + controls.throttleRate, stop: keys.KeyX, pitch: axis('ArrowUp', 'ArrowDown') + look[0] + controls.pitch, yaw: axis('ArrowLeft', 'ArrowRight') + look[1] + controls.yaw, roll: axis('KeyQ', 'KeyE') + controls.roll, side: axis('KeyD', 'KeyA') + (controls.side || 0), vertical: axis('KeyR', 'KeyF') + (controls.vertical || 0), boost: wBoost || controls.boost || (!keys.KeyS && !keys.KeyX && !actions.isPaused() && forwardBoost(controls.throttleRate,currentThrottle)), fire: keys.Space || keys.mouse0 || keys.mouse2 || controls.fire };
         }
         function view() {
-            if(vr&&vr.active())return {mouse:[0,0],inputMode:'controller',uncapturedMouse:false,stickRange:stickRange(),showMouseStick:false};
-            return { mouse: mouse, inputMode: inputMode.value, uncapturedMouse:uncapturedMouse, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };
+            if(vr&&vr.active())return {mouse:[0,0],inputMode:'controller',tactical:false,uncapturedMouse:false,stickRange:stickRange(),showMouseStick:false};
+            return { tactical: !!(keys.ShiftLeft || keys.ShiftRight) && !actions.isPaused(), mouse: mouse, inputMode: inputMode.value, uncapturedMouse:uncapturedMouse, stickRange: stickRange(), showMouseStick: mouseActive && inputMode.value === 'mouse' };
         }
         return { haptics: haptics, sample: sample, view: view, clear: clear, resetButtons: resetButtons, capture: capture, startUncaptured:startUncaptured, release: release };
     }

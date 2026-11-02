@@ -78,3 +78,6 @@ body.touch-flight #launch select,body.touch-flight #launch summary,body.touch-fl
 @media(max-height:450px){#touch-stick{width:124px;height:124px;bottom:16px}#touch-knob{left:34px;top:34px}.touch-throttle{bottom:154px}.touch-actions{bottom:16px}}
 
 #touch-controls .touch-fullscreen{position:absolute;top:max(12px,env(safe-area-inset-top));right:92px;min-height:48px;padding:0 12px;border-radius:12px;font-size:12px}
+
+/* Exterior chase retains contact markers; cockpit panels stay hidden. */
+body.tactical-view .flight-vr-controls,body.tactical-view .flight-plate,body.tactical-view #comms,body.tactical-view header,body.tactical-view #hud-help,body.tactical-view #target-info{display:none!important}

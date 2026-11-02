@@ -210,6 +210,22 @@
     assert(api.validate(valid)!==valid);
   });
 
+  test('flight', 'held tactical camera preserves physics and returns to cockpit', function () {
+    var DW=window.Driftworks,session=DW.flightSession.create({}),camera=DW.flightWatch.tactical();
+    var before=JSON.stringify(session.snapshot().state),view;
+    for(var i=0;i<60;i++){view=session.snapshot();camera(view,true,1/60);}
+    assert(view.camera && view.observerCraft.pose===view.state);
+    assert(Math.hypot.apply(null,view.camera.eye.map(function(v,k){return v-view.state.eye[k];}))>0);
+    assert(Math.abs(view.camera.right.reduce(function(n,v,k){return n+v*view.camera.up[k];},0))<1e-8);
+    assert(JSON.stringify(session.snapshot().state)===before,'Camera cannot move the simulated ship');
+    var offset=view.camera.eye.map(function(v,k){return (v-view.state.eye[k])*DW.sim.METERS_PER_UNIT;});
+    assert(Math.abs(Math.hypot.apply(null,offset)-Math.hypot(150,95))<1e-6,'Local camera has a fixed metre-scale pullback');
+    var far=session.snapshot();far.combat.targetId=null;camera(far,true,1/60);
+    assert(far.camera.eye.every(function(v,k){return Math.abs(v-view.camera.eye[k])<1e-8;}),'No target distance can drag the chase camera away');
+    for(var j=0;j<90;j++){view=session.snapshot();camera(view,false,1/60);}
+    assert(!view.camera&&!view.observerCraft,'Release restores exact cockpit and hides observer hull');
+  });
+
   test('flight', 'watch playback uses the benchmark clock and cameras never alter duel state', function () {
     var DW=window.Driftworks,session=DW.flightSession.create({terrainHit:function(){return null;},surfaceFrame:function(){return {point:[0,0,1]};},onGunshot:function(){},onImpact:function(){}});
     var options={start:'crossing',category:'human',flavor:'novice',seed:29,duration:3},watch=DW.flightWatch.create(session,options),reference=DW.flightDuel.run(options);

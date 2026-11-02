@@ -87,5 +87,31 @@
         }
         return {reset:reset,advance:advance,next:next,camera:camera,label:function(){return names[index];}};
     }
-    DW.flightWatch = {create:create,cinema:cinema};
+    /** Hold-to-survey camera; all distances are converted from metres.
+     * @returns {(view:import('./types').FlightView,held:boolean,dt:number)=>void} */
+    function tactical() {
+        var progress = 0;
+        /** @param {number[]} a @param {number[]} b */
+        function cross(a,b) { return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]; }
+        /** @param {number[]} a */
+        function unit(a) { var n=Math.hypot.apply(null,a)||1;return a.map(function(v){return v/n;}); }
+        return function(view,held,dt) {
+            progress = Math.max(0,Math.min(1,progress+Math.max(0,dt)*(held?2.5:-3.5)));
+            if(!progress)return;
+            var amount=progress*progress*(3-2*progress);
+            var own=view.state, units=DW.sim.METERS_PER_UNIT;
+            // A local maneuvering view: target distance never changes the camera.
+            // At 45 degrees this frames about 150 m vertically through the ship.
+            var lift=95/units, retreat=150/units;
+            // First emerge directly aft; only then rise and widen toward the pair.
+            var rise=Math.max(0,(amount-.35)/.65);rise=rise*rise*(3-2*rise);
+            var eye=own.eye.map(function(v,i){return v+rise*own.up[i]*lift+amount*own.back[i]*retreat;});
+            var focus=own.eye.map(function(v,i){return v+(1-rise)*(-own.back[i]*150/units);});
+            var back=unit(eye.map(function(v,i){return v-focus[i];}));
+            var right=unit(cross(own.up,back)), up=unit(cross(back,right));
+            view.camera={eye:eye,right:right,up:up,back:back,region:own.region||0};
+            if(Math.hypot.apply(null,eye.map(function(v,i){return v-own.eye[i];}))>25/units)view.observerCraft=Object.assign({},view.combat.player,{pose:own});
+        };
+    }
+    DW.flightWatch = {create:create,cinema:cinema,tactical:tactical};
 }());

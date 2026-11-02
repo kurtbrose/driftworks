@@ -383,6 +383,7 @@
         /** @type {import('./types').Combat|null} */var guideCombat=null;
         /** @param {HudView} view */
         function render(view) {
+            var tactical=document.body.classList.contains('tactical-view');
             var state = view.state, combat = view.combat, guns = view.guns, asteroid = view.asteroid, mothership = view.mothership, units = view.units, paused = view.paused, mouse = view.mouse, shipImages = view.shipImages;
             var mission=DW.flightMissions.resolve(combat.mode), displayScale=mission.units.distanceScale*(view.distanceScale||1), distanceUnit=' '+mission.units.distanceLabel, speedScale=mission.units.speedScale, speedLabel=mission.units.speedLabel;
             var shipDistance = Math.hypot(state.eye[0] - mothership.position.x, state.eye[1] - mothership.position.y, state.eye[2]) * units;
@@ -436,7 +437,7 @@
                 }
             }else {guidePath=null;guideLastEye=null;guideBatches=[];}
 
-            if(mission.weaponsDisabled&&!combat.convoy){
+            if(mission.weaponsDisabled&&!combat.convoy&&!tactical){
                 get('speed-value').textContent=String(Math.round(speed*speedScale));
                 get('thrust-value').textContent='THRUST '+Math.round(state.throttle*100)+'%';
                 get('thrust-meter').value=Math.abs(state.throttle);
@@ -566,13 +567,15 @@
                 });
                 combatHud.restore();
             }
+            // Exterior view retains only spatial contacts, in the actual moving camera.
+            if(tactical){gpu.begin(w,h,immersive?14:0);if(view.camera)state=Object.assign({},state,view.camera);}
             var targetBearing = /** @type {number | null} */ (null);
             living.filter(function(e){return !e.convoyModel&&(!e.convoyBattle||e.id===combat.targetId||Math.hypot.apply(null,e.pose.eye.map(function(v,k){return v-state.eye[k];}))*units<1800);}).forEach(function (e) {
                 var direction=visualDirection(e.pose.eye,e.pose.region||0);if(!direction)return;
                 var q = DW.flightSkybox.project(direction,state,w/h), target = e.id === combat.targetId;
                 combatHud.globalAlpha = 1;
                 combatHud.lineWidth = 1.5;
-                combatHud.strokeStyle = target ? '#ffe7a3' : e.team === 'ally' ? '#63f58d' : '#ff655d';
+                combatHud.strokeStyle = target && !tactical ? '#ffe7a3' : e.team === 'ally' ? '#63f58d' : '#ff655d';
                 combatHud.fillStyle = combatHud.strokeStyle;
                 if (q && Math.abs(q.x) < .9 && Math.abs(q.y) < .78) {
                     var x = w * (q.x + 1) / 2, y = h * (1 - q.y) / 2, r = target ? 18 : 12;
@@ -598,10 +601,10 @@
                         combatHud.restore();
                         combatHud.stroke();
                     }
-                    if (e.id === speakerId)
+                    if (!tactical && e.id === speakerId)
                         DW.flightRadar.speakerHalo(combatHud, x, y, r + 6);
-                    if (target || e.id === speakerId) combatHud.fillText(rangeText(e), x, y + r + 15);
-                    if (target) {
+                    if (!tactical && (target || e.id === speakerId)) combatHud.fillText(rangeText(e), x, y + r + 15);
+                    if (target && !tactical) {
                         combatHud.save();
                         combatHud.strokeStyle = '#ffe7a3';
                         combatHud.lineWidth = 2;
@@ -648,12 +651,13 @@
                     if (e.team === 'enemy') combatHud.fill();
                     combatHud.stroke();
                     combatHud.restore();
-                    if (e.id === speakerId)
+                    if (!tactical && e.id === speakerId)
                         DW.flightRadar.speakerHalo(combatHud, x, y, 13);
                 }
             });
 
             combatHud.globalAlpha = 1;
+            if(tactical){gpu.end(immersive);return;}
             if (selected) {
                 var lead=DW.flightSim.firingSolution(combat,combat.player,selected,view.weapon),q=lead?DW.flightSkybox.project(lead.direction,state,w/h):null;
                 get('target-info').dataset.leadState=lead?'valid':'unavailable';get('target-info').dataset.leadTime=lead?lead.time.toFixed(4):'';

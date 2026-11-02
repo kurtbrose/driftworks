@@ -43,6 +43,20 @@ assert.ok(calls.some(c=>c.kind==='rect'&&c.color==='#63f58d'&&c.w===24),'Allied 
 assert.ok(calls.filter(c=>c.color==='#05090f'&&c.width===3.5).length>=5,'Contact outlines have dark contrast backing');
 console.log('PASS flight HUD markers: real session contacts, unselected enemies, rear/offscreen arrows, readable size/opacity and contrast');
 
+// Local chase keeps contact geometry while removing every cockpit instrument.
+const tacticalBodyContains=document.body.classList.contains;
+document.body.classList.contains=name=>name==='tactical-view';
+const exterior={...view.state,eye:[5,0,0]};
+hud.render({...view,camera:exterior,units:10,paused:false,speakerId:null,mouse:[0,0],showMouseStick:true,stickRange:240,weapon:DW.retailWeapons[0],shipImages:new Map()});
+assert(!calls.some(c=>c.kind==='text'||c.kind==='arc'),'Exterior contains no text, radar, reticle or steering guide');
+const exteriorContact=calls.find(c=>c.kind==='stroke'&&c.color==='#ff655d'&&c.points.length===4);
+const exteriorQ=DW.flightSkybox.project([-15,0,-100],exterior,1000/700);
+assert(Math.abs(exteriorContact.points.reduce((n,p)=>n+p[0],0)/4-1000*(exteriorQ.x+1)/2)<1e-6,'Contact follows the translated camera, not cockpit projection');
+assert(calls.some(c=>c.kind==='rect'&&c.color==='#63f58d'),'Allied boxes remain visible');
+assert(calls.some(c=>c.kind==='stroke'&&c.color==='#ff655d'&&c.points.length===3),'Hostile edge arrows remain visible');
+document.body.classList.contains=tacticalBodyContains;
+console.log('PASS local chase HUD: moving-camera boxes/arrows, no cockpit instruments');
+
 // Keep the pre-GPU steering guide and reticle dimensions, including after resize.
 const host={clientWidth:1000,clientHeight:700},guidanceHud=DW.flightHud.mount(host);
 for(const [w,h,range] of [[1000,700,240],[2048,1532,240],[390,844,120],[844,390,160]]){

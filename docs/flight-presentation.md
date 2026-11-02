@@ -467,3 +467,14 @@ forecast, stubbed painter) measured forecast median/p95 7.42/10.98 ms and
 road projection 1.52/2.70 ms. These exclude actual GPU HUD submission and
 browser frame cadence; they are not frame budgets. Browser review captures
 are `studies/flight-lanes-straight.jpg` and `studies/flight-lanes-turn.jpg`.
+
+Manual flight supports a held Shift local elevated chase camera. Over 400 ms
+it pulls 150 m directly aft out of the player hull, then rises 95 m and looks
+back at the player. The fixed 45-degree field frames roughly 150 m vertically
+through the ship; horizontal coverage follows viewport aspect. Target distance
+never changes the pullback. Release returns to the cockpit in 286 ms; steering
+remains ship-relative. The observer hull is presentation only. Only green/red
+contact shapes and off-screen arrows remain during the excursion, projected
+through the moving camera. Cockpit panels return inside. VR and AI observer
+cameras retain camera ownership. Focus loss and pause clear the held input;
+pause restores the cockpit immediately.

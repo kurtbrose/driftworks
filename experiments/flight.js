@@ -283,6 +283,7 @@
         get('fly').textContent = cinematic?'Resume demo':watch ? (watch.summary().done ? 'Restart duel' : 'Watch duel') : session.snapshot().combat.dead ? 'Restart flight' : 'Resume flight';
         updateStatus();
     }
+    var tacticalCamera = DW.flightWatch.tactical();
     function pose() {
         var current = view();
         presentation.pose(current.camera || current.state);
@@ -501,6 +502,12 @@
         }
         if(cinematic&&director){var captionNode=document.querySelector('.cinema-caption');if(captionNode)captionNode.textContent='DRIFTWORKS / '+director.label().toUpperCase()+' / C NEXT / ESC PAUSE';}
         var currentView = view();
+        if (!watch && !cinematic && !(DW.flightVr&&DW.flightVr.forHost(host)?.active())) {
+            tacticalCamera(currentView, controls.view().tactical, paused ? 1 : timing.elapsed);
+            presentation.pose(currentView.camera || currentView.state);
+            currentView.world = view().world;
+        }
+        document.body.classList.toggle('tactical-view', !watch && !cinematic && !paused && !!currentView.camera);
         if(paused)bridgeCue=bridgeFeedback.update(currentView.state,0,false,!!DW.flightMissions.resolve(currentView.combat.mode).sky.wormhole);
         if (!paused && !watch) session.acquireTarget();
         if (!paused) {
