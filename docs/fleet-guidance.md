@@ -114,3 +114,24 @@ offsets. Guidance still moves ships physically and responds to threats.
 Regression checks bound both the whole convoy and individual six-ship packets.
 A same-camera browser toggle in `.scratch/fleet-guidance/density.html` compares
 the original authored geometry with the corrected guidance launch geometry.
+
+## Interactive review dashboard
+
+Open `studies/convoy-guidance.html` for cruise, a 90-degree route order, heavy
+one-sided pressure, departures/arrivals, or their combination. The review model
+calls the production `fleetGuidance.step` and `cover` with the live convoy seed
+and measured hull bounds. It provides fixed-step replay, pause/step/scrub,
+manual join/release orders, cruise/threat parameters, three projections,
+ship selection, trails, slot/coverage/velocity overlays, conservative hull-bound
+overlap counts and PNG export. The overlap count includes departing freighters;
+it is a broad-phase review signal, not an exact triangle contact result.
+
+Seeking replays preset orders from launch and clears manual orders. Parameter
+changes reset the scenario. The displayed tactical hull footprints use authored
+bounds; they are not the full flight renderer. Six review escorts and departing
+ships use a bounded transit adapter. Threat contacts exercise guidance pressure,
+not weapons or damage. Hull headings remain fixed, so the 90-degree case
+explicitly exposes the existing translation-only limitation. In the combined
+case, a world-fixed port threat becomes astern after the route changes; the
+production lateral-only diversion can therefore diminish. These are useful
+review results, not behavior hidden by the dashboard.

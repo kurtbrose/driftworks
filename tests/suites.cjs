@@ -32,6 +32,7 @@ const suites = {
     "flight-missions.cjs",
     "evacuation-mission.cjs",
     "fleet-guidance.cjs",
+    "convoy-guidance-review.cjs",
     "convoy-mission.cjs",
     "convoy-director.cjs",
     "convoy-arrival.cjs",

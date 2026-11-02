@@ -31,6 +31,7 @@ const groups = {
 };
 
 const profiles = {
+  convoyGuidanceReview: {entries: ['@headless', 'studies/convoy-guidance-model.js', 'studies/convoy-guidance-review.js']},
   hyperbolicFlight: {entries: ['@flight']},
   terrain: {entries: ['@simulation', 'src/asteroid-art.js', '@meshes', 'src/asteroid-terrain.js']},
   ellisBenchmark: {entries: ['@flight'], before: [{src: 'experiments/flight.js', entries: ['tests/fixtures/ellis-benchmark-probe.js']}]},
@@ -164,7 +165,7 @@ function resolve(name, definitions = {groups, profiles, dependencies}) {
   for (const [index, script] of scripts.entries()) {
     const paths = script.imports ? Object.values(script.imports) : [script.src];
     for (const file of paths) {
-      if (typeof file !== 'string' || !/^(src|experiments|assets|tests|vendor)\/[\w/.-]+\.js$/.test(file) || file.split('/').includes('..')) {
+      if (typeof file !== 'string' || !/^(src|experiments|assets|tests|vendor|studies)\/[\w/.-]+\.js$/.test(file) || file.split('/').includes('..')) {
         throw new Error(name + ': expected repository-relative JavaScript path: ' + file);
       }
     }

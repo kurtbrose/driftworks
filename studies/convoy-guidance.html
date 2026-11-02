@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Convoy traffic lab / Driftworks</title>
+<style>
+:root{color-scheme:dark;--bg:#08131b;--panel:#10232d;--line:#28424e;--ink:#d8e9e9;--muted:#8da8b2;--mint:#a4f2da;--red:#ff8d85}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px system-ui,sans-serif}header{padding:20px 24px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:20px}h1{font-size:23px;margin:4px 0}p{color:var(--muted);margin:7px 0;line-height:1.5}.eyebrow,.mono{font:11px ui-monospace,monospace;letter-spacing:1.5px;color:var(--mint)}a{color:var(--mint)}main{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:14px;padding:16px 24px}.stage{min-width:0}.toolbar,.timeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}button,select{font:inherit;color:var(--ink);background:#172e39;border:1px solid #375361;border-radius:5px;padding:8px 10px;cursor:pointer}button:hover{border-color:var(--mint)}button.primary{background:var(--mint);color:#102329;border:0;font-weight:700}button[aria-pressed=true]{border-color:var(--mint);color:var(--mint)}button:disabled{opacity:.5;cursor:wait}input{accent-color:var(--mint)}label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;color:var(--muted)}select{max-width:190px}.viewport{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#07131d}canvas{display:block;width:100%;height:min(68vh,760px);min-height:410px;touch-action:none}.hint{font-size:12px;margin:8px 0 14px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.card,section{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:13px}.card strong{display:block;font:21px ui-monospace,monospace;color:var(--mint);margin-top:4px}.card span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}aside{display:flex;flex-direction:column;gap:12px}h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:1px}.badge{font:10px ui-monospace,monospace;background:#3c2c24;color:#ffcb94;padding:6px 8px;border-radius:4px;display:inline-block}#scenario-note{min-height:42px}#events{max-height:180px;overflow:auto;font:12px/1.65 ui-monospace,monospace;color:var(--muted)}#events div{padding:5px 0;border-bottom:1px solid var(--line)}#details{font:12px/1.7 ui-monospace,monospace;white-space:pre-wrap;color:var(--muted)}.timeline input{flex:1;min-width:120px}.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);flex-wrap:wrap;margin:10px 0}.legend b{color:var(--mint)}.status{font:12px ui-monospace,monospace;color:var(--mint)}footer{padding:0 24px 20px;color:var(--muted);font-size:12px}@media(max-width:900px){main{grid-template-columns:1fr;padding:12px}header{padding:16px}aside{display:grid;grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr 1fr}canvas{height:60vh}header>div:last-child{display:none}}@media(max-width:550px){aside{grid-template-columns:1fr}.toolbar button{padding:7px}}
+</style></head><body>
+<header><div><div class="eyebrow">DRIFTWORKS / BEHAVIOR REVIEW</div><h1>Convoy traffic lab</h1><p>Inspect the close packets, watch the traffic, find the failure cases.</p></div><div><a href="../experiments/flight.html?mission=convoy">Open convoy flight ↗</a><p class="mono">SI UNITS · FIXED 60 Hz · LOCAL ONLY</p></div></header>
+<main><div class="stage"><div class="toolbar"><select id="scenario" aria-label="Scenario"><option value="cruise">01 / Formation cruise</option><option value="turn">02 / 90° turn order</option><option value="attack">03 / One-sided assault</option><option value="traffic">04 / Departures + arrivals</option><option value="combined">05 / Combined stress test</option></select><button id="play" class="primary" disabled>Loading…</button><button id="reset">Reset</button><button id="step">+1 s</button><button id="jump">+10 s</button><select id="rate" aria-label="Playback rate"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="4">4×</option></select><button id="export">Export PNG</button></div>
+<div class="timeline"><span id="clock" class="mono">000.0 s</span><input id="time" aria-label="Scenario time" type="range" min="0" max="180" value="0" step="1"><span class="mono">180 s</span></div>
+<div class="viewport"><canvas id="view" aria-label="Interactive convoy traffic projection"></canvas></div><div class="legend"><span><b>■</b> Freighters / five packet colors</span><span style="color:#ffe29a">▲ Escorts</span><span style="color:#ffb07f">■ Departing</span><span style="color:#ff8d85">✦ Threat stimulus</span><span>○ Assigned slot</span></div>
+<div class="cards"><div class="card"><span>Protected / departing</span><strong id="count">—</strong></div><div class="card"><span>Formation speed</span><strong id="speed">—</strong></div><div class="card"><span>Largest slot error</span><strong id="error">—</strong></div><div class="card"><span>Extent X / Y / Z</span><strong id="extent" style="font-size:16px">—</strong><small id="clearance">Hull bounds: —</small></div></div><p class="hint">Drag to pan · wheel to zoom · click a ship to inspect · fixed scale makes stretching visible. Seeking replays the preset from launch; manual orders are cleared.</p></div>
+<aside><section><h2>Scenario controls</h2><div id="scenario-note"></div><label>Cruise <span><input id="cruise" aria-label="Cruise speed" type="range" min="10" max="40" value="25" step="5"><output id="cruise-value">25 m/s</output></span></label><label>Threat strength <input id="power" aria-label="Threat strength" type="range" min="0" max="4" value="2" step="0.5"></label><label>Threat bearing <select id="bearing"><option value="180">Port / −X</option><option value="0">Starboard / +X</option><option value="90">Ahead / +Y</option><option value="270">Astern / −Y</option></select></label><p style="font-size:11px">Scenario/parameter changes reset the run. Assault pressure begins at 12 s and ends at 75 s. Traffic departs at 20 s; arrivals join at 40 s.</p><div class="toolbar"><button id="join">Join 3 now</button><button id="leave">Release 3 now</button></div></section>
+<section><h2>View + traffic overlays</h2><label>Projection<select id="projection"><option value="oblique">Oblique / XYZ</option><option value="plan">Plan / XY</option><option value="side">Side / YZ</option></select></label><label><span>Trails / last 24 s</span><input id="trails" type="checkbox" checked></label><label><span>Slot pursuit lines</span><input id="slots" type="checkbox" checked></label><label><span>Escort assignments</span><input id="coverage" type="checkbox" checked></label><label><span>Velocity vectors</span><input id="vectors" type="checkbox"></label><label><span>Follow formation center</span><input id="follow" type="checkbox" checked></label><button id="fit">Fit traffic</button><p class="status" id="status">Preparing production formation…</p></section>
+<section><h2>Selected ship</h2><div id="details">Click a ship to inspect its slot and coverage assignment.</div></section><section><h2>Order log</h2><div id="events"></div></section></aside></main>
+<footer><span class="badge">GUIDANCE REVIEW · HULL HEADINGS FIXED</span><p>Production fleet guidance and escort allocation, seeded from the live convoy. Tactical hull silhouettes use actual authored bounds. Escorts and departing ships use a bounded transit adapter. Threats apply pressure to guidance; this page does not simulate weapon damage. The 90° order tests translation and formation cohesion; banking/heading control is not implemented.</p></footer>
+<script src="../src/asset-versions.js?v=1ca48f8b93f6"></script>
+<script>window.DRIFTWORKS_TEST_MODE=true;</script>
+<!-- script-manifest:convoyGuidanceReview -->
+<script src="../src/propulsion.js?v=fc0b16cad22a"></script>
+<script src="../src/combat.js?v=ce0e0e6eb149"></script>
+<script src="../src/mining-lights.js?v=ae2487ac46ba"></script>
+<script src="../src/mining-terrain.js?v=ed43e8f7cf82"></script>
+<script src="../src/mining-landing.js?v=f00997919474"></script>
+<script src="../src/logistics.js?v=9fbb6cae3bc9"></script>
+<script src="../src/formations.js?v=c6006cf590e5"></script>
+<script src="../src/sim.js?v=754fbebc4cb6"></script>
+<script src="../src/asteroid-art.js?v=48aad8996df8"></script>
+<script src="../src/population.js?v=7a772b14be47"></script>
+<script src="../src/session.js?v=254909ab34f8"></script>
+<script src="../src/tactical/camera.js?v=ceebf21c5f4f"></script>
+<script src="../src/mesh-builder.js?v=dc5005c681a3"></script>
+<script src="../src/mining-rig.js?v=ebc32e1f4b09"></script>
+<script src="../src/explosions.js?v=ba20ec3731d9"></script>
+<script src="../src/asteroid-terrain.js?v=added36e3407"></script>
+<script src="../src/ship-models.js?v=48f669716916"></script>
+<script src="../experiments/retail-profiles.js?v=99526ebcd858"></script>
+<script src="../experiments/flight-missions.js?v=6a919f4f6745"></script>
+<script src="../experiments/mission-ohio.js?v=55d50526f5e4"></script>
+<script src="../experiments/retail-weapons.js?v=642a0025bb1b"></script>
+<script src="../experiments/ellis-optics.js?v=72b518e99e0b"></script>
+<script src="../experiments/thin-shell-optics.js?v=2cc2d9b0dcbb"></script>
+<script src="../experiments/flight-hyperbolic.js?v=3d31cd76303a"></script>
+<script src="../experiments/guns.js?v=f2abeb996425"></script>
+<script src="../src/fleet-guidance.js?v=706da5ec85c2"></script>
+<script src="../src/convoy-battle.js?v=bb8bdbf353b5"></script>
+<script src="../src/convoy-mission.js?v=a4e1a0d7a9dc"></script>
+<script src="../src/roadside-layout.js?v=a64b5dd480ed"></script>
+<script src="../src/flight-collision.js?v=b9e653108f6e"></script>
+<script src="../src/flight-combat.js?v=18fbde89e95b"></script>
+<script src="../src/flight-mission-runtime.js?v=d37639dba5bc"></script>
+<script src="../src/flight-opponent.js?v=88d78c4f3b2e"></script>
+<script src="../src/flight-blockout.js?v=d6f16d169ff8"></script>
+<script src="../src/flight-sim.js?v=05d4faa70abc"></script>
+<script src="../src/flight-prediction.js?v=46643f423546"></script>
+<script src="../experiments/flight-model.js?v=86c92caac3e9"></script>
+<script src="../assets/ships/quaternius-ultimate-spaceships/meshes.js?v=1da423c13c1f"></script>
+<script src="../assets/ships/concept-trio/meshes.js?v=5f1109282945"></script>
+<script src="../assets/ships/ohio-vehicles/meshes.js?v=ce57f8e016e3"></script>
+<script src="../src/ship-catalog.js?v=b0863eab6fca"></script>
+<script src="../src/ship-hulls.js?v=23de2720981a"></script>
+<script src="../src/ship-assets.js?v=19c515897991"></script>
+<script src="../src/ship-render.js?v=f8b7bce5ff38"></script>
+<script src="../experiments/ship-packs.js?v=47b193cc205a"></script>
+<script src="../experiments/mumble.js?v=96c5b42f6cc2"></script>
+<script src="../experiments/flight-dialogue.js?v=4a86ef22535a"></script>
+<script src="../experiments/evacuation-mission.js?v=2611bc3f57d1"></script>
+<script src="../experiments/flight-comms.js?v=707925128715"></script>
+<script src="../experiments/flight-session.js?v=5904b10c00a5"></script>
+<script src="../experiments/flight-ai.js?v=9b70ad92df99"></script>
+<script src="../experiments/flight-duel.js?v=a5144c3467aa"></script>
+<script src="../experiments/flight-study.js?v=f4de6faa4f84"></script>
+<script src="convoy-guidance-model.js?v=bb112c54510d"></script>
+<script src="convoy-guidance-review.js?v=c0a67ca0dec3"></script>
+<!-- /script-manifest -->
+</body></html>
