@@ -1,9 +1,10 @@
 export type UniformValue = number | number[] | Float32Array | Texture | null;
-export interface Attribute {}
+export interface Attribute {needsUpdate?:boolean}
 export interface Interleaved extends Attribute {array:Float32Array;stride:number;needsUpdate:boolean}
 export interface Geometry {
  instanceCount?:number;
  setAttribute(name:string,attribute:Attribute):void;
+ getAttribute(name:string):Attribute;
  deleteAttribute(name:string):void;
  setDrawRange(start:number,count:number):void;
  dispose():void;

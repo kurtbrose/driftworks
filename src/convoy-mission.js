@@ -30,6 +30,15 @@
             var slot=[(packet.center[0]+side*48+(row-1)*11)/U,(packet.center[1]+(1-row)*125+(side>0?-35:25))/U,1200+(packet.center[2]+side*32+[ -12,8,4 ][row])/U];
             return {id:'cargo-'+String(i+1).padStart(2,'0'),packet:Math.floor(i/6),callsign:local===0?packet.ship:packet.name+' '+String(local+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
         })};
+        var bodies=freighters(combat);
+        var navigation=DW.fleetGuidance.create(bodies);navigation.velocity=[0,25,0];
+        // Mission packet labels are independent of generated navigation slots.
+        combat.convoy.navigation=navigation;
+        // Start near, but not rigidly snapped into, generated wash-safe stations.
+        combat.convoy.ships.forEach(function(ship,i){
+            ship.position=navigation.slots[ship.id].map(function(v,k){return (navigation.anchor[k]+v+([Math.sin(i*2.4)*12,Math.cos(i*1.7)*70,Math.cos(i*2.4)*12][k]))/U;});
+            ship.slot=ship.position.slice();
+        });
         if(battlefield!==false)DW.convoyBattle.start(combat);
         targets(combat);
         combat.targetId=null;combat.roundOver=false;
@@ -80,11 +89,23 @@
     function step(combat,dt){
         const s=combat.convoy;if(!s||combat.dead||s.complete)return;
         s.elapsed=Math.min(s.destinationY*U/s.speedMps,s.elapsed+dt+1e-12);
-        s.ships.forEach(function(ship){
-            if(ship.hull<=0||ship.arrived)return;
-            ship.position[1]=ship.slot[1]+Math.min(s.destinationY,s.elapsed*s.speedMps/U);
-            if(ship.position[1]>=s.destinationY+ship.slot[1]){ship.arrived=true;ship.velocity=[0,0,0];}
-        });
+        var bodies=freighters(combat),navigation=s.navigation;
+        if(navigation){
+            var route=[0,Math.min(s.destinationY*U,s.elapsed*s.speedMps),1200*U];
+            DW.fleetGuidance.step(navigation,bodies,route,[0,s.speedMps,0],navigationThreats(combat),dt);
+            var slots=navigation.slots;
+            bodies.forEach(function(body){
+                var ship=s.ships.find(function(candidate){return candidate.id===body.id;});if(!ship)return;
+                ship.position=body.position.map(function(v){return v/U;});ship.velocity=body.velocity;
+                var slot=slots[body.id];
+                if(s.elapsed*s.speedMps>=s.destinationY*U&&ship.position[1]*U>=s.destinationY*U+slot[1]){ship.arrived=true;ship.velocity=[0,0,0];}
+            });
+            if(combat.time>=(s.nextCoverage||0)){
+                s.nextCoverage=combat.time+1;
+                var escorts=DW.flightSim.participants(combat).filter(function(c){return c.team==='ally'&&c.hp>0&&c!==combat.player&&!c.convoyBattle;}).map(function(c){return {id:c.id,position:c.pose.eye.map(function(v){return v*U;}),velocity:c.pose.velocity,radius:10};});
+                s.coverage=DW.fleetGuidance.cover(navigation,bodies,escorts,navigationThreats(combat));
+            }
+        }
         if(s.arrivalPortal&&!s.arrivalPortal.spawned&&combat.time>=s.arrivalPortal.opensAt+4)beginRaid(combat);
         DW.convoyBattle.update(combat);
         direct(combat,dt);
@@ -92,6 +113,12 @@
         DW.convoyBattle.dispatch(combat);
         s.complete=!s.ships.some(function(ship){return ship.hull>0;})||(s.ships.every(function(ship){return ship.arrived||ship.hull<=0;})&&!combat.enemies.some(function(e){return e.team==='enemy'&&e.hp>0&&!e.convoyBattle;}));
     }
+    /** Adapt mission entities to the reusable SI guidance contract.
+     * @param {import('../experiments/types').Combat} combat */
+    function freighters(combat){return combat.convoy?combat.convoy.ships.filter(function(s){return s.hull>0&&!s.arrived;}).map(function(s){return {id:s.id,position:s.position.map(function(v){return v*U;}),velocity:s.velocity.slice(),radius:hulls[s.model]?DW.shipHulls.hullRadius(hulls[s.model].model):80};}):[];}
+    /** Only attackers committed to the cargo influence its route; distant screen fights do not.
+     * @param {import('../experiments/types').Combat} combat */
+    function navigationThreats(combat){return combat.enemies.filter(function(c){return c.hp>0&&c.team==='enemy'&&!!c.convoyRaider&&!!combat.convoy&&combat.convoy.raids.some(function(r){return !!c.convoyRaider&&r.id===c.convoyRaider.wing&&r.phase!=='hold'&&r.phase!=='withdraw'&&r.phase!=='departed';});}).map(function(c){return {position:c.pose.eye.map(function(v){return v*U;}),radius:2500,weight:1};});}
     /** @param {number[]} a @param {number[]} b */
     function range(a,b){return Math.hypot.apply(null,a.map(function(v,k){return v-b[k];}))*U;}
     /** Observe the real battle; pacing never changes damage, aim, shields or existing positions.
@@ -255,11 +282,14 @@
         craft.retarget=.75;return false;
     }
     /** Follow a moving slot using ordinary fighter steering and acceleration.
-     * @param {import('../experiments/types').Craft} craft @param {import('../experiments/types').FlightState} player @param {number} index @param {number} dt */
-    function stepWing(craft,player,index,dt){
+     * @param {import('../experiments/types').Craft} craft @param {import('../experiments/types').FlightState} player @param {number} index @param {number} dt @param {import('../experiments/types').Combat} [combat] */
+    function stepWing(craft,player,index,dt,combat){
         var goal=player.eye.map(function(v,k){return v+(player.right[k]*(index?90:-90)+player.back[k]*80+player.velocity[k]*1.5)/U;});
+        var coverage=combat&&combat.convoy&&combat.convoy.coverage;
+        if(coverage&&coverage[craft.id])goal=coverage[craft.id].map(function(v){return v/U;});
         var delta=goal.map(function(v,k){return (v-craft.pose.eye[k])*U;}),distance=Math.hypot.apply(null,delta);
-        var demand=DW.flightSim.steer(craft.pose,goal),speed=Math.hypot.apply(null,player.velocity);
+        var convoy=combat&&combat.convoy,followVelocity=coverage&&convoy&&convoy.navigation?convoy.navigation.velocity:player.velocity;
+        var demand=DW.flightSim.steer(craft.pose,goal),speed=Math.hypot.apply(null,followVelocity);
         craft.goal=goal;craft.mode='escort';craft.fire=false;
         demand.boost=distance>350||speed>craft.profile.maxVelocity[2]+5;
         craft.pose.throttle=Math.min(1,Math.max(0,(speed+(distance-90)*.4)/craft.profile.maxVelocity[2]));

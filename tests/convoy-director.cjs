@@ -2,7 +2,16 @@
 const assert=require('node:assert/strict'),{createFlight}=require('../tools/headless.cjs');
 function fixture(){const f=createFlight({mission:'convoy',seed:29,convoyBattlefield:false}),c=f.snapshot().combat,s=c.convoy,U=f.DW.sim.METERS_PER_UNIT;return {f,c,s,U,step:dt=>{c.time+=dt;f.DW.convoyMission.step(c,dt);},members:wing=>c.enemies.filter(e=>e.hp>0&&e.convoyRaider?.wing===wing)};}
 const q=fixture(),{f,c,s,step,members,U}=q;
-step(1);assert.equal(s.director.waypoint.kind,'patrol');const initial=s.director.waypoint.position.slice();step(1);assert(Math.abs((s.director.waypoint.position[1]-initial[1])*U-25)<1e-6);
+// A local guard must release a stale distant target when its assigned area is threatened.
+const guard=fixture();guard.step(60);
+const escort=guard.c.enemies.find(e=>e.team==='ally'),area=guard.s.coverage[escort.id],bandits=guard.members(0);
+guard.s.nextCoverage=guard.c.time+100;
+bandits.forEach((e,i)=>{e.pose.eye=[(10000+i*300)/guard.U,0,1200];});
+const local=bandits[1];local.pose.eye=area.map((v,k)=>(v+(k===1?100:0))/guard.U);
+escort.targetId=bandits[0].id;escort.retarget=20;
+guard.f.advance(1/120);
+assert.equal(escort.targetId,local.id,'Escorts intercept threats to their coverage instead of chasing stale distant targets');
+step(1);assert.equal(s.director.waypoint.kind,'patrol');const initial=s.director.waypoint.position.slice();step(1);assert((s.director.waypoint.position[1]-initial[1])*U>10,'Patrol point advances with actual protected ships');
 step(57);assert.equal(s.raids.length,0);step(1);assert.equal(members(0).length,3);assert.equal(s.director.phase,'contact');assert.equal(s.director.waypoint.kind,'intercept');
 const cargo=s.ships[24],attacker=members(0)[0];attacker.pose.eye=cargo.position.map((v,k)=>v+(k===1?-800/U:0));step(0);assert.equal(s.director.phase,'threatened');attacker.targetId=cargo.id;attacker.fire=true;attacker.guns.fired=1;step(3);assert.equal(s.director.phase,'under-fire');attacker.fire=false;
 // Existing actors hold outside the fight, with unchanged durability and no scripted shots.
@@ -27,9 +36,9 @@ const poke=fixture();poke.step(60);poke.step(18);const reserve=poke.members(1)[0
 const hurt=fixture();hurt.step(60);const striker=hurt.members(0)[0],victim=hurt.s.ships[24];striker.pose.eye=victim.position.map((v,k)=>v+(k===1?-500/hurt.U:0));striker.targetId=victim.id;striker.fire=true;striker.guns.fired=1;hurt.c.player.hp*=.3;victim.hull-=600;hurt.step(3);assert.notEqual(hurt.s.raids[0].phase,'withdraw');hurt.step(3);assert.equal(hurt.s.raids[0].phase,'withdraw');assert(hurt.members(0).every(e=>e.hp>0));
 // Reports gate a later encounter; the finite budget and arrival cutoff remain intact.
 const clean=fixture();clean.step(60);clean.members(0).forEach(e=>{e.hp=0;});clean.step(1);const recovery=clean.s.director.nextRaidAt-clean.s.elapsed;assert(recovery>=45&&recovery<=85);clean.s.radio.phase='damage-report';clean.step(recovery);assert.equal(clean.s.director.raids,1);clean.s.radio.phase='cruise';clean.step(0);assert(clean.s.arrivalPortal);assert.equal(clean.s.director.raids,1);clean.step(4);assert.equal(clean.s.director.raids,2);
-clean.members(1).forEach(e=>{e.hp=0;});clean.step(1);clean.s.elapsed=211;clean.s.director.nextRaidAt=211;clean.step(0);assert.equal(clean.s.director.raids,2);clean.s.elapsed=300;clean.step(0);assert(clean.s.complete);assert.equal(clean.s.director.waypoint,null);
+clean.members(1).forEach(e=>{e.hp=0;});clean.step(1);clean.s.elapsed=211;clean.s.director.nextRaidAt=211;clean.step(0);assert.equal(clean.s.director.raids,2);clean.s.elapsed=300;clean.s.ships.forEach(ship=>{ship.arrived=true;});clean.step(0);assert(clean.s.complete);assert.equal(clean.s.director.waypoint,null);
 const arrival=fixture();arrival.step(60);arrival.s.elapsed=300;arrival.step(0);assert(!arrival.s.complete);assert(arrival.s.director.waypoint);assert.equal(arrival.s.arrivalFleet.length,2);assert(arrival.s.arrivalFleet.every(ship=>Math.abs(ship.position[0]*arrival.U)>1000));
-const late=fixture();late.step(60);late.s.elapsed=300;late.members(0).slice(1).forEach(e=>{e.hp=0;});late.step(0);const leaving=late.members(0)[0];leaving.pose.eye=late.s.ships[24].position.map((v,k)=>v+(k===0?9000/late.U:0));late.step(4);assert(late.s.complete,'Withdrawal timers keep running after the route clock reaches arrival');assert(!late.c.enemies.includes(leaving));
+const late=fixture();late.step(60);late.s.elapsed=300;late.s.ships.forEach(ship=>{ship.arrived=true;});late.members(0).slice(1).forEach(e=>{e.hp=0;});late.step(0);const leaving=late.members(0)[0];leaving.pose.eye=late.s.ships[24].position.map((v,k)=>v+(k===0?9000/late.U:0));late.step(4);assert(late.s.complete,'Withdrawal timers keep running after the route clock reaches arrival');assert(!late.c.enemies.includes(leaving));
 f.reset();assert.equal(f.snapshot().combat.convoy.raids.length,0);assert.equal(f.snapshot().combat.convoy.director.withdrawn,0);assert.doesNotThrow(()=>JSON.stringify(s));
 // Radio orders wait for channel ownership and report the current order, not a stale queue entry.
 const radioCase=fixture();radioCase.step(60);radioCase.step(18);radioCase.members(1)[0].hp=0;radioCase.s.radio.wait=0;

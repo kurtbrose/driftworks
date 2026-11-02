@@ -28,7 +28,7 @@
      * @param {Combat} combat */
     function update(combat){
         const s=combat.convoy,b=s&&s.battle;if(!s||!b)return;
-        b.fronts.forEach(function(front){front.center[1]=(front.offset[1]+s.elapsed*s.speedMps)/U;});
+        b.fronts.forEach(function(front){front.center=front.offset.map(function(v,k){return (v+(s.navigation?s.navigation.anchor[k]:[0,s.elapsed*s.speedMps,1200*U][k]))/U;});});
         combat.enemies.forEach(function(c){if(c.convoyBattle&&c.battleZone){var front=b.fronts[c.convoyBattle.front];for(var k=0;k<3;k++)c.battleZone.center[k]=front.center[k];}});
         if(combat.time<b.nextAssessment)return;b.nextAssessment=combat.time+.5;
         b.fronts.forEach(function(front){

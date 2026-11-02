@@ -31,6 +31,7 @@ const suites = {
     "flight-hud-markers.cjs",
     "flight-missions.cjs",
     "evacuation-mission.cjs",
+    "fleet-guidance.cjs",
     "convoy-mission.cjs",
     "convoy-director.cjs",
     "convoy-arrival.cjs",

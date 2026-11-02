@@ -110,7 +110,7 @@
     var box=bounds;
     if(batch.instanceOffsets){
       var offsets=batch.instanceOffsets,placementBounds=instanceBounds.get(offsets);
-      if(!placementBounds){var low=[Infinity,Infinity,Infinity],high=[-Infinity,-Infinity,-Infinity];for(var j=0;j<offsets.length;j++) {var axis=j%3;low[axis]=Math.min(low[axis],offsets[j]);high[axis]=Math.max(high[axis],offsets[j]);}placementBounds={center:/** @type {V3} */(low.map(function(v,k){return (v+high[k])/2;})),half:/** @type {V3} */(low.map(function(v,k){return (high[k]-v)/2;}))};instanceBounds.set(offsets,placementBounds);}
+      if(!placementBounds||batch.dynamicInstances){var low=[Infinity,Infinity,Infinity],high=[-Infinity,-Infinity,-Infinity];for(var j=0;j<offsets.length;j++) {var axis=j%3;low[axis]=Math.min(low[axis],offsets[j]);high[axis]=Math.max(high[axis],offsets[j]);}placementBounds={center:/** @type {V3} */(low.map(function(v,k){return (v+high[k])/2;})),half:/** @type {V3} */(low.map(function(v,k){return (high[k]-v)/2;}))};instanceBounds.set(offsets,placementBounds);}
       const spread=placementBounds;
       box={center:/** @type {V3} */(bounds.center.map(function(v,k){return v+spread.center[k];})),half:/** @type {V3} */(bounds.half.map(function(v,k){return v+spread.half[k];}))};
     }
@@ -494,7 +494,7 @@
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{instanceOffsets?:Float32Array,vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
+    /** @type {{dynamicInstances?:boolean,instanceOffsets?:Float32Array,vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {Map<Float32Array,Map<Float32Array,Mesh>>} */var instancedActorMeshes=new Map();
@@ -901,6 +901,7 @@
             if(batch.instanceOffsets){
               var cache=instancedActorMeshes.get(batch.instanceOffsets);if(!cache){cache=new Map();instancedActorMeshes.set(batch.instanceOffsets,cache);}
               mesh=cache.get(batch.vertices);if(!mesh){mesh=upload(batch.vertices,stride,batch.instanceOffsets);cache.set(batch.vertices,mesh);}
+              if(batch.dynamicInstances)mesh.buffer.getAttribute('aInstanceOffset').needsUpdate=true;
             }else{mesh=staticActorMeshes.get(batch.vertices);if(!mesh){mesh=upload(batch.vertices,stride);staticActorMeshes.set(batch.vertices,mesh);}}
           }else{
             if(!studyActorMeshes[index])studyActorMeshes[index]=upload(new Float32Array(0));

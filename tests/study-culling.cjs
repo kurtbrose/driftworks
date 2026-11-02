@@ -34,6 +34,12 @@ assert.equal(visible(point(5.1,0,-10),[0,0,0],camera,1),false);
 assert.equal(visible(point(0,0,-30001),[0,0,0],camera,1),false,'far plane');
 const huge={vertices:new Float32Array([-100,-100,-10,0,0,1,100,100,10,0,0,1]),color:[1,1,1]};
 assert.equal(visible(huge,[0,0,0],camera,1),true,'camera inside or near-plane intersection stays visible');
+const moving=Object.assign(point(0,0,0),{instanceOffsets:new Float32Array([100,0,-10]),dynamicInstances:true});
+assert.equal(visible(moving,[0,0,0],camera,1),false);
+moving.instanceOffsets.set([0,0,-10]);
+assert.equal(visible(moving,[0,0,0],camera,1),true,'A moving instance can enter the view with the same placement buffer');
+moving.instanceOffsets.set([100,0,-10]);
+assert.equal(visible(moving,[0,0,0],camera,1),false,'Dynamic placement bounds also follow instances leaving view');
 console.log('PASS static actor culling: 1,500 transformed box/clip-plane comparisons, edge/near/far/camera-inside cases');
 
 

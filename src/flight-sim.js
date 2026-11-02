@@ -519,12 +519,16 @@
                 e.hangarLaunch.remaining-=dt;e.fire=false;
                 if(e.hangarLaunch.remaining<=0){delete e.hangarLaunch;if(t.scramble&&e.team==='enemy')delete e.plotArmor;e.mode='approach';e.goal=player.eye.slice();e.decision=0;}
             } else if (e.hp > 0 && e.controller !== 'input') {
-                if(t.convoy&&e.team==='ally'&&!e.convoyBattle&&(!t.convoy.battle?!living.some(function(c){return c.team==='enemy';}):length(sub(e.pose.eye,player.eye))*U>2200||!living.some(function(c){return c.team==='enemy'&&length(sub(c.pose.eye,player.eye))*U<2200;}))){e.targetId=null;DW.convoyMission.stepWing(e,player,e.index,dt);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
+                var coverage=t.convoy&&t.convoy.coverage&&t.convoy.coverage[e.id];
+                var coveragePoint=coverage?coverage.map(function(v){return v/U;}):null;
+                var escortThreat=coveragePoint&&living.some(function(c){return c.team==='enemy'&&coveragePoint&&length(sub(c.pose.eye,coveragePoint))*U<1800;});
+                if(t.convoy&&e.team==='ally'&&!e.convoyBattle&&!escortThreat){e.targetId=null;DW.convoyMission.stepWing(e,player,e.index,dt,t);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 if(t.convoy&&e.team==='enemy'&&DW.convoyMission.stepRaider(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 /** @type {FlightState|null} */ var opponent = null;
                 if (mission(t).encounter.kind==='furball') {
                     e.retarget -= dt;
                     var target = e.targetId ? byId.get(e.targetId) : undefined;
+                    if(target&&coveragePoint&&length(sub(target.pose.eye,coveragePoint))*U>2200)target=undefined;
                     if(target && !(target.hp > 0 && target.team !== e.team && ((target.pose.region||0)===(e.pose.region||0)||(t.mode==='cinematic'||t.mode==='thin-shell')) && zoneEligible(e,target)))target=undefined;
                     if((t.mode==='cinematic'||t.mode==='thin-shell')&&target&&(target.pose.region||0)!==(e.pose.region||0)&&living.some(function(other){return other.hp>0&&other.team!==e.team&&(other.pose.region||0)===(e.pose.region||0);}))target=undefined;
                     if (!target || e.retarget <= 0) {
@@ -532,6 +536,7 @@
                         // roster tie order without sorting every opponent or recomputing distances.
                         /** @type {{craft:Craft,distance:number}[]} */ var choices=[];
                         (e.battleZone||t.convoy&&e.team==='enemy'?roster:living).forEach(function(other){
+                            if(coverage&&length(sub(other.pose.eye,coverage.map(function(v){return v/U;})))*U>2200)return;
                             if(!(other.hp>0)||other.team===e.team||((other.pose.region||0)!==(e.pose.region||0)&&(t.mode!=='cinematic'&&t.mode!=='thin-shell'))||!zoneEligible(e,other))return;
                             var distance=length(spaceDelta(e.pose,other.pose.eye))+((other.pose.region||0)===(e.pose.region||0)?0:100000),at=0;
                             while(at<choices.length&&choices[at].distance<=distance)at++;

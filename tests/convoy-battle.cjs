@@ -22,7 +22,7 @@ assert(c.enemies.some(e=>e.convoyBattle&&e.guns.fired>0),'Background fighters sh
 f.advance(46.9);assert(!s.raidStarted);assert(s.ships.every(ship=>ship.hull===ship.maxHull));assert(c.enemies.some(e=>e.convoyBattle&&e.hp<e.maxHp),'Background fights have real consequences');
 f.advance(.1);assert(s.raidStarted);assert(s.raids.length>0);assert(!c.dead);
 // Arrival resolves the escort without demanding that the player erase every distant battle.
-c.enemies.filter(e=>e.convoyRaider).forEach(e=>{e.hp=0;});s.elapsed=300;f.DW.convoyMission.step(c,0);assert(s.complete);assert(c.enemies.some(e=>e.convoyBattle&&e.team==='enemy'&&e.hp>0));
+c.enemies.filter(e=>e.convoyRaider).forEach(e=>{e.hp=0;});s.elapsed=300;s.ships.forEach(ship=>{ship.arrived=true;ship.velocity=[0,0,0];});f.DW.convoyMission.step(c,0);assert(s.complete);assert(c.enemies.some(e=>e.convoyBattle&&e.team==='enemy'&&e.hp>0));
 f.reset();assert.equal(f.snapshot().combat.convoy.battle.fronts.length,4);assert.equal(f.snapshot().combat.convoy.battle.order,null);assert.equal(f.snapshot().combat.enemies.length,26);assert.doesNotThrow(()=>JSON.stringify(f.snapshot().combat.convoy));
 const isolated=createFlight({mission:'convoy',seed:29,convoyBattlefield:false});assert(!isolated.snapshot().combat.convoy.battle);assert.equal(isolated.snapshot().combat.enemies.length,2);
 console.log('PASS convoy battlefield: 24 real background fighters, live fire/losses, quiet local opening, four fronts, dispatch priority/hysteresis, urgent preemption, physical breakthroughs, arrival and reset');

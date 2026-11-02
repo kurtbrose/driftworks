@@ -46,31 +46,42 @@ for(let p=0;p<5;p++){
     assert(new Set(ships.map(s=>s.slot[2])).size>2,'Each packet occupies volume');
 }
 const extent=k=>Math.max(...c.convoy.ships.map(s=>s.slot[k]))-Math.min(...c.convoy.ships.map(s=>s.slot[k]));
-assert(extent(0)*U>600&&extent(0)*U<700&&extent(2)*U>400&&extent(2)*U<450&&extent(1)*U<850,'Bounded 3D packet formation with crossing corridors');
-for(let i=0;i<30;i++)for(let j=i+1;j<30;j++)assert(Math.hypot(...c.convoy.ships[i].slot.map((v,k)=>v-c.convoy.ships[j].slot[k]))*U>100,'Safe staggered centre spacing');
+assert(Math.max(...[0,1,2].map(k=>extent(k)))/Math.min(...[0,1,2].map(k=>extent(k)))<2,'Freighters form a compact defensive ball, not a stretched column');
+function assertWashClearance(){for(let i=0;i<30;i++)for(let j=i+1;j<30;j++){
+    const a=c.convoy.ships[i],b=c.convoy.ships[j],clearance=f.DW.shipHulls.hullRadius(f.DW.convoyMission.model(a.model))+f.DW.shipHulls.hullRadius(f.DW.convoyMission.model(b.model))+40;
+    assert(Math.hypot((a.position[0]-b.position[0])*U,(a.position[2]-b.position[2])*U)>clearance,'No freighter is stationed in another ship’s engine-wash corridor');
+}}
+assertWashClearance();
 const initialVertices=Array.from(buffers[0]);
 
 const separation=e=>Math.hypot(...e.pose.eye.map((v,i)=>(v-player.eye[i])*U));
 f.advance(60);
 assert(Math.abs(c.convoy.elapsed-60)<1e-6);
+assertWashClearance();
 const moved=f.DW.convoyScenery.geometry(c);
 assert(moved.every((b,i)=>b.vertices===buffers[i]),'Moving fleet reuses immutable GPU geometry');
 assert.deepEqual(Array.from(buffers[0]),initialVertices);
-assert(Math.abs(moved[0].origin[1]*U-1500)<1e-5,'GPU origin follows the simulation route');
+assert(moved.every(b=>b.dynamicInstances),'Independent ships use dynamic placement buffers');
+const containerShips=c.convoy.ships.filter(s=>s.model==='container'),renderOffsets=moved.find(b=>b.vertices===buffers[0]).instanceOffsets;
+containerShips.forEach((s,i)=>assert(Math.abs(renderOffsets[i*3+1]-s.position[1])<1e-4,'Rendered instances follow actual simulation positions'));
+assert(Math.abs(c.convoy.navigation.anchor[1]-1500)<120,'Convoy makes route progress while assembling');
 for(const s of c.convoy.ships){
-    assert(Math.abs((s.position[1]-s.slot[1])*U-1500)<1e-5);
+    assert((s.position[1]-s.slot[1])*U>1300,'Every freighter advances through normal guidance');
+    assert(s.velocity.every(Number.isFinite));
     assert.equal(s.hull,s.maxHull);
     assert(!s.arrived);
 }
-assert(c.enemies.filter(e=>e.team==='ally').every(e=>separation(e)<180),'Both wingmen keep up at convoy speed');
+assert.equal(new Set(Object.values(c.convoy.navigation.assignments)).size,2,'Wingmen cover different freighters');
+assert(c.enemies.filter(e=>e.team==='ally').every(e=>e.goal.every(Number.isFinite)),'Coverage produces valid flight goals');
 // Turns, boost, and a stopped player exercise actual wing flight, not rigid placement.
 f.advance(2,{yaw:.3,boost:true});
 f.advance(8,{yaw:0,boost:false});
 f.advance(25,{stop:true});
-assert(c.enemies.filter(e=>e.team==='ally').every(e=>separation(e)<500),'Wingmen recover after a boost and turn');
+assert(c.enemies.filter(e=>e.team==='ally').every(e=>separation(e)>500),'Escorts keep protecting cargo when the player leaves');
 f.advance(204.9,{stop:true});
 assert(!c.convoy.complete,'Cannot arrive early');
 f.advance(.1,{stop:true});
+for(let i=0;i<20&&!c.convoy.complete;i++)f.advance(1,{stop:true});
 assert(c.convoy.complete);
 assert(c.convoy.ships.every(s=>s.arrived&&s.velocity.every(v=>v===0)));
 assert.equal(c.wave,1,'Convoy encounter never spawns generic training waves');
@@ -102,7 +113,7 @@ pose.velocity=[20000,25,0];pose.ramp=[0,0,20000];pose.throttle=1;
 f.advance(1/120);
 assert((pose.eye[0]-cargo.position[0])*U< -5,'Swept contact prevents high-speed tunneling');
 assert(pose.velocity[0]<0,'Normal velocity rebounds from the heavy freighter');
-assert.deepEqual(Array.from(cargo.velocity),[0,25,0],'Ramming does not derail the convoy');
+assert(Math.hypot(cargo.velocity[0],cargo.velocity[1]-25,cargo.velocity[2])<=1.2/120+1e-8,'Ramming adds no impulse beyond bounded navigation acceleration');
 assert(pose.ramp.every(Number.isFinite));
 // Repeat for an AI wingman, through the same participant collision path.
 f.reset();c=f.snapshot().combat;const wing=c.enemies[0],ship=c.convoy.ships[24];
@@ -157,15 +168,15 @@ console.log('PASS escort combat: weapons, real raiders and defending wingmen, ca
 
 // Close the actual chase/aim/shoot loop through the normal control and gun paths.
 f.reset();c=f.snapshot().combat;f.advance(60);c.convoy.director.raids=3;
-// Form the screen with the wing rather than boosting alone into three healthy fighters.
-f.advance(4);
+// Give the independent screen time to approach before joining the interception.
+f.advance(12);
 for(let i=0;i<2400&&!c.dead;i++){
     const enemies=c.enemies.filter(e=>e.team==='enemy'&&e.hp>0);if(!enemies.length)break;
-    const target=enemies.find(e=>e.id===c.targetId)||enemies[0];c.targetId=target.id;
+    const own=f.snapshot().state;const target=enemies.slice().sort((a,b)=>Math.hypot(...a.pose.eye.map((v,k)=>v-own.eye[k]))-Math.hypot(...b.pose.eye.map((v,k)=>v-own.eye[k])))[0];c.targetId=target.id;
     const state=f.snapshot().state,weapon=f.DW.retailWeapons[c.player.weaponIndex];
     const lead=f.DW.flightSim.firingSolution(c,c.player,target,weapon),steering=f.DW.flightSim.steer(state,lead?lead.point:target.pose.eye);
     const distance=Math.hypot(...state.eye.map((v,k)=>v-target.pose.eye[k]))*U;
-    f.advance(.05,{...steering,throttle:1,fire:true,boost:distance>900});
+    f.advance(.05,{...steering,throttle:distance>350?1:.5,fire:true,boost:distance>1800});
 }
 assert(!c.dead&&c.playerKills>0,'Pilot can intercept and kill real attackers');
 assert(c.enemies.filter(e=>e.team==='enemy').every(e=>e.hp<=0),'The fixed raid can be defeated');

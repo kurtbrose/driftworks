@@ -48,9 +48,9 @@
     }
     DW.convoyScenery={createArrivalFleet:createArrivalFleet,arrivalPreparationMs:0,preview:function(name){return models[name]||[];},visible:true,ready:ready,texture:texture,install:install,effects:function(combat,view){
         if(!combat.convoy||!this.visible)return [];
-        var state=combat.convoy,y=Math.min(state.destinationY,state.elapsed*state.speedMps/U);
+        var state=combat.convoy;
         var effects=state.ships.filter(function(s){return s.hull>0;}).map(function(s,index){
-            return DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:[s.slot[0],s.slot[1]+y,s.slot[2]],right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:[0,y<state.destinationY?state.speedMps:0,0],throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);
+            return DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:s.position,right:[1,0,0],back:[0,-1,0],up:[0,0,1],velocity:s.velocity,throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);
         });
         const portal=state.arrivalPortal;
         if(portal&&combat.time<portal.closesAt){
@@ -87,7 +87,14 @@
             });
             cached={key:key,batches:batches};cache.set(state,cached);
         }
-        var origin=/** @type {[number,number,number]} */([0,Math.min(state.destinationY,state.elapsed*state.speedMps/U),1200]);
-        return cached.batches.map(function(batch){return Object.assign({},batch,{origin:origin});});
+        var origin=/** @type {[number,number,number]} */([0,0,1200]);
+        var currentBatches=cached.batches;
+        Object.keys(models).forEach(function(name){
+            var ships=state.ships.filter(function(s){return s.hull>0&&s.model===name;}),batch=currentBatches.find(function(b){return b.vertices===models[name][0].vertices;});
+            if(!batch||!batch.instanceOffsets)return;
+            var offsets=batch.instanceOffsets;
+            ships.forEach(function(s,i){offsets.set([s.position[0],s.position[1],s.position[2]-1200],i*3);});
+        });
+        return cached.batches.map(function(batch){return Object.assign({},batch,{origin:origin,dynamicInstances:true});});
     }};
 }());
