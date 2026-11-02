@@ -219,7 +219,7 @@
     assert(Math.abs(view.camera.right.reduce(function(n,v,k){return n+v*view.camera.up[k];},0))<1e-8);
     assert(JSON.stringify(session.snapshot().state)===before,'Camera cannot move the simulated ship');
     var offset=view.camera.eye.map(function(v,k){return (v-view.state.eye[k])*DW.sim.METERS_PER_UNIT;});
-    assert(Math.abs(Math.hypot.apply(null,offset)-Math.hypot(150,95))<1e-6,'Local camera has a fixed metre-scale pullback');
+    assert(Math.abs(Math.hypot.apply(null,offset)-Math.hypot(75,47.5))<1e-6,'Local camera has a fixed metre-scale pullback');
     var far=session.snapshot();far.combat.targetId=null;camera(far,true,1/60);
     assert(far.camera.eye.every(function(v,k){return Math.abs(v-view.camera.eye[k])<1e-8;}),'No target distance can drag the chase camera away');
     for(var j=0;j<90;j++){view=session.snapshot();camera(view,false,1/60);}

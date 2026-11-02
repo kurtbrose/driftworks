@@ -101,8 +101,8 @@
             var amount=progress*progress*(3-2*progress);
             var own=view.state, units=DW.sim.METERS_PER_UNIT;
             // A local maneuvering view: target distance never changes the camera.
-            // At 45 degrees this frames about 150 m vertically through the ship.
-            var lift=95/units, retreat=150/units;
+            // At 45 degrees this frames about 75 m vertically through the ship.
+            var lift=47.5/units, retreat=75/units;
             // First emerge directly aft; only then rise and widen toward the pair.
             var rise=Math.max(0,(amount-.35)/.65);rise=rise*rise*(3-2*rise);
             var eye=own.eye.map(function(v,i){return v+rise*own.up[i]*lift+amount*own.back[i]*retreat;});
