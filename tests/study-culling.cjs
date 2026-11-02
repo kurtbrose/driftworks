@@ -25,6 +25,19 @@ for(let i=0;i<1500;i++){
  // Oracle uses actual Float32 source corners, not the pre-rounding inputs.
  const actual=Array.from({length:8},(_,j)=>Array.from(vertices.slice(j*stride,j*stride+3)));
  assert.equal(visible(batch,target,cam,aspect),oracle(batch,target,cam,aspect,actual),'transformed corners and shader clip planes agree');
+ // Asymmetric eye frusta cannot be represented by the desktop focal/aspect pair.
+ // Compare the optional plane path against all transformed source corners too.
+ const back=cam.back,d=cam.distance,planes=[back.map(v=>-v).concat(d-.1),back.concat(30000)];
+ for(const [direction,tangent] of [[cam.right,aspect/cam.focal],[cam.up,1/cam.focal]])for(const sign of [-1,1]){
+  const t=tangent*(sign<0?.7:1.3);planes.push(back.map((v,k)=>-v*t+sign*direction[k]).concat(d*t));
+ }
+ const cullByCorners=!planes.some(plane=>actual.every(p=>{
+  p=p.map(v=>v*batch.scale);const b=batch.basis;
+  p=[0,1,2].map(k=>p[0]*b[k]+p[1]*b[k+3]+p[2]*b[k+6]);
+  p=[Math.cos(batch.rotation)*p[0]-Math.sin(batch.rotation)*p[1]+batch.origin[0]-target[0],Math.sin(batch.rotation)*p[0]+Math.cos(batch.rotation)*p[1]+batch.origin[1]-target[1],p[2]+batch.origin[2]-target[2]];
+  return p.reduce((sum,v,k)=>sum+v*plane[k],plane[3]) < -1e-5;
+ }));
+ assert.equal(visible(batch,target,cam,aspect,planes),cullByCorners,'asymmetric XR planes respect scale, basis, origin and camera-relative target');
 }
 function point(x,y,z){return {vertices:new Float32Array([x,y,z,0,0,1]),color:[1,1,1]};}
 assert.equal(visible(point(0,0,-10),[0,0,0],camera,1),true);
@@ -34,13 +47,17 @@ assert.equal(visible(point(5.1,0,-10),[0,0,0],camera,1),false);
 assert.equal(visible(point(0,0,-30001),[0,0,0],camera,1),false,'far plane');
 const huge={vertices:new Float32Array([-100,-100,-10,0,0,1,100,100,10,0,0,1]),color:[1,1,1]};
 assert.equal(visible(huge,[0,0,0],camera,1),true,'camera inside or near-plane intersection stays visible');
+const clipPlanes=[[0,0,-1,-.1],[0,0,1,30000],[1,0,-.5,0],[-1,0,-.5,0],[0,1,-.5,0],[0,-1,-.5,0]];
+assert.equal(visible(huge,[0,0,0],camera,1,clipPlanes),true,'XR camera-inside and near-plane intersections stay visible');
+assert.equal(visible(point(5,0,-10),[0,0,0],camera,1,clipPlanes),true,'XR clip-plane boundary retained');
+assert.equal(visible(point(5.1,0,-10),[0,0,0],camera,1,clipPlanes),false,'XR outside edge rejected');
 const moving=Object.assign(point(0,0,0),{instanceOffsets:new Float32Array([100,0,-10]),dynamicInstances:true});
 assert.equal(visible(moving,[0,0,0],camera,1),false);
 moving.instanceOffsets.set([0,0,-10]);
 assert.equal(visible(moving,[0,0,0],camera,1),true,'A moving instance can enter the view with the same placement buffer');
 moving.instanceOffsets.set([100,0,-10]);
 assert.equal(visible(moving,[0,0,0],camera,1),false,'Dynamic placement bounds also follow instances leaving view');
-console.log('PASS static actor culling: 1,500 transformed box/clip-plane comparisons, edge/near/far/camera-inside cases');
+console.log('PASS static actor culling: 1,500 desktop and 1,500 asymmetric XR box/clip-plane comparisons, edge/near/far/camera-inside cases');
 
 
 // Exercise the real setter body: fighter fire + engines occupy the first five

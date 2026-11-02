@@ -7,6 +7,7 @@ export type XR = {isSessionSupported(mode:string):Promise<boolean>;requestSessio
 export type SkyEye = {right:number[];up:number[];back:number[];offset:number[];projection:number[];viewport:{x:number;y:number;width:number;height:number}};
 export type Bridge = {
  active:()=>boolean; tracking:()=>boolean; sources:()=>Source[];
+ frusta:()=>number[][][];
  mount:(actions:import('./types').ControlActions)=>void;
  frame:(frame?:Frame)=>void;
  prepare:(right:number[],up:number[],back:number[],distance:number)=>void;

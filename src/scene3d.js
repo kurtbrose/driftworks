@@ -98,8 +98,9 @@
   var studyBounds=new WeakMap();
   /** @type {WeakMap<Float32Array, {center:V3,half:V3}>} */var instanceBounds=new WeakMap();
   /** Conservative box/frustum test matching the study vertex shader. No shadow/picking use.
-   * @param {import('../experiments/types').Batch} batch @param {V3} target @param {View} camera @param {number} aspect */
-  function studyBatchVisible(batch,target,camera,aspect){
+   * Optional normalized XR planes use the same camera-relative coordinates as the shader.
+   * @param {import('../experiments/types').Batch} batch @param {V3} target @param {View} camera @param {number} aspect @param {number[][]} [planes] */
+  function studyBatchVisible(batch,target,camera,aspect,planes){
     var bounds=studyBounds.get(batch.vertices);
     if(!bounds){
       var lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity],stride=batch.stride||(batch.texture?8:6);
@@ -130,6 +131,7 @@
         var a=n[0]*frame[1]+n[1]*frame[2]+n[2]*frame[3];
         return radius*(a*ch+Math.sqrt(dot(n,n)+a*a)*sh)+constant-dot(n,target)<-1e-5;
       }
+      if(planes)return !planes.some(function(p){return curvedOutside([p[0],p[1],p[2]],p[3]);});
       var back=camera.back,d=camera.distance;
       if(curvedOutside(/** @type {V3} */(back.map(function(v){return -v;})),d-.1)||curvedOutside(back,30000))return false;
       for(var dimension=0;dimension<2;dimension++){
@@ -148,6 +150,7 @@
       var support=Math.abs(nx*a00+ny*a10+nz*a20)*box.half[0]+Math.abs(nx*a01+ny*a11+nz*a21)*box.half[1]+Math.abs(nx*a02+ny*a12+nz*a22)*box.half[2];
       return nx*x+ny*y+nz*z+constant+support < -1e-5;
     }
+    if(planes)return !planes.some(function(p){return outside(p[0],p[1],p[2],p[3]);});
     var back=camera.back,d=camera.distance;
     if(outside(-back[0],-back[1],-back[2],d-.1)||outside(back[0],back[1],back[2],30000))return false;
     for(var dimension=0;dimension<2;dimension++){
@@ -703,6 +706,9 @@
       var top=.1/v.focal,right=top*vp.width/vp.height;
       camera.projectionMatrix.makePerspective(-right,right,top,-top,.1,v.distance+30000);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
       if(vr)vr.prepare(v.right,v.up,v.back,v.distance);
+      // Static batches have shader/GPU poses, so Three's object bounds cannot
+      // cull them. Reject only outside BOTH current, asymmetric XR eye frusta.
+      var xrFrusta=vr&&vr.active()?vr.frusta():null;
       activeProbe=null;
       setUniform('EnvironmentEnabled',environment?1:0);setUniform('CameraExposure',shadowPass?1:cameraExposureUniform.value);
       if(environment){
@@ -894,7 +900,11 @@
         studyActors.forEach(function(batch,index){
           drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;drawLensTransit=batch.lensTransit;
           if(!batch.vertices.length)return;
-          if(!(vr&&vr.active())&&batch.staticGeometry&&!bridgeRenderer&&!shadowPass&&!viewerEnabled&&!studyBatchVisible(batch,[w.camera.x,w.camera.y,orbit.height||0],v,vp.width/vp.height))return;
+          if(batch.staticGeometry&&!bridgeRenderer&&!shadowPass&&!viewerEnabled){
+            var target=/** @type {V3} */([w.camera.x,w.camera.y,orbit.height||0]);
+            var visible=xrFrusta? !xrFrusta.length||xrFrusta.some(function(planes){return studyBatchVisible(batch,target,v,vp.width/vp.height,planes);}):studyBatchVisible(batch,target,v,vp.width/vp.height);
+            if(!visible)return;
+          }
           var stride=batch.stride || (batch.texture?8:6);
           /** @type {Mesh | undefined} */ var mesh;
           if(batch.staticGeometry){

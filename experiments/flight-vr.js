@@ -37,6 +37,31 @@
         /** @type {((context:WebGL2RenderingContext,eye:import('./flight-vr-types').SkyEye)=>void)|null} */var skyDraw=null;
         function active(){return renderer.xr.isPresenting;}
         function tracking(){var s=renderer.xr.getSession();return active()&&!!head&&!!s&&s.visibilityState==='visible';}
+        /** Current per-eye clip planes in the renderer's camera-relative scene units.
+         * Read after prepare(), so head rotation, eye offsets and rig scale match drawing.
+         * An unavailable/invalid eye disables rejection rather than hiding visible art.
+         * @returns {number[][][]} */
+        function frusta(){
+            if(!active()||!tracking())return [];
+            renderer.xr.updateCamera(camera);
+            var eyes=renderer.xr.getCamera().cameras;
+            /** @type {number[][][]} */var result=[];
+            if(!eyes.length)return [];
+            for(var eye of eyes){
+                var p=eye.projectionMatrix.elements,v=eye.matrixWorldInverse.elements;
+                /** @type {number[]} */var m=new Array(16).fill(0);
+                for(var column=0;column<4;column++)for(var row=0;row<4;row++)for(var k=0;k<4;k++)m[column*4+row]+=p[k*4+row]*v[column*4+k];
+                /** @type {number[][]} */var planes=[];
+                for(var axis=0;axis<3;axis++)for(var sign of [-1,1]){
+                    var plane=[0,1,2,3].map(function(j){return m[j*4+3]+sign*m[j*4+axis];});
+                    var length=Math.hypot(plane[0],plane[1],plane[2]);
+                    if(!plane.every(Number.isFinite)||!Number.isFinite(length)||length<1e-12)return [];
+                    planes.push(plane.map(function(n){return n/length;}));
+                }
+                result.push(planes);
+            }
+            return result;
+        }
         /** Per-eye matrices also cover the engine's raw shaders, which bypass Three's projection.
          * @param {Object3D} object @param {Material} material */
         function bind(object,material) {
@@ -75,7 +100,7 @@
         var damage=new T.Mesh(damageGeometry,damageMaterial);damage.frustumCulled=false;damage.renderOrder=-1;damage.visible=false;hudScene.add(damage);
         /** @param {number[]} local */
         function rotate(local){return local.map(function(_,k){return right[k]*local[0]+up[k]*local[1]+back[k]*local[2];});}
-        var api={active:active,tracking:tracking,sources:function(){var session=renderer.xr.getSession();return tracking()&&session?Array.from(session.inputSources):[];},bind:bind,
+        var api={active:active,tracking:tracking,frusta:frusta,sources:function(){var session=renderer.xr.getSession();return tracking()&&session?Array.from(session.inputSources):[];},bind:bind,
             setSkyRenderer:/** @param {(context:WebGL2RenderingContext,eye:import('./flight-vr-types').SkyEye)=>void} draw */function(draw){skyDraw=draw;},
             resetRenderer:function(){if(!skyDraw)return;var target=renderer.getRenderTarget();renderer.resetState();renderer.setRenderTarget(target);},
             renderSky:function(){

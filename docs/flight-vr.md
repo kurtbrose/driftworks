@@ -94,7 +94,14 @@ The native renderer submits the world for each eye. Raw engine materials receive
 the actual eye view/projection matrices through `onBeforeRender`; native PBR
 materials use Three's XR camera. The camera rig converts headset metres into
 simulation world units and cancels the tracked head centre each frame, retaining
-rotation and physical eye separation. Forward screen-frustum culling is bypassed so turning around does not discard ships.
+rotation and physical eye separation. Static actor batches are culled against
+both current eye frusta, using each eye's actual projection and inverse world
+matrix after the rig is prepared. A batch is kept if either eye can see its
+transformed bounds; the desktop forward camera is never used to reject XR
+actors. Missing tracking or invalid eye data conservatively retains batches.
+This preserves head turns, asymmetric projections, near-plane intersections and
+physical eye separation. Simulation and cached mesh ownership are unaffected.
+It does not change asteroid backface/material handling or the dynamic-effect path.
 
 The ordinary sky renderer remains the owner of appearance, lighting and animation
 clocks. XR draws the same authored sky directly into the headset framebuffer for
@@ -121,7 +128,14 @@ measurement.
 Automated checks cover controller signs, handedness, missing sources, grip strafe,
 button edges, pause suppression, ordinary-input isolation, headset frame pacing,
 session rejection/end, recentering, tracking loss, three-axis translation
-cancellation, angular HUD projection and physical stereo matrices.
+cancellation, angular HUD projection and physical stereo matrices. Culling
+regressions compare 8,000 points against actual per-eye clip-space projection
+with head/ship rotation and asymmetric eyes, plus 1,500 transformed box cases
+against an independent corner oracle for XR planes.
+
+The [local culling comparison](benchmarks/vr-culling-2026-11-01.md) records the
+matched CPU/draw reductions and native WebXR emulator visual checks. Desktop
+proxy timings are not Quest frame-time measurements.
 
 A disposable browser XR emulator exercised the actual vendored Three XR render
 loop with two views. The asteroid-range sortie was visually inspected paused and

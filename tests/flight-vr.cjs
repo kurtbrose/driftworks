@@ -78,8 +78,48 @@ const pose={eye:[10,20,30],right:[1,0,0],up:[0,1,0],back:[0,0,1],velocity:[0,0,0
   assert.equal(renderEvents.at(-1),'reset','Raw sky state must be invalidated before Three resumes');
   bridge.setSkyRenderer(()=>{throw Error('sky draw failed');});assert.throws(()=>bridge.renderSky(),/sky draw failed/);assert.equal(renderEvents.at(-1),'reset');
   bridge.setSkyRenderer(()=>{});
+  // Compare the actual bridge's planes with projection * view clipping using
+  // vendored Three, including asymmetric eye projections and metre-scaled rigs.
+  let checks=0,onlyLeft=0,onlyRight=0,seed=407;
+  function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
+  const originals=[left.projectionMatrix.clone(),right.projectionMatrix.clone()];
+  left.projectionMatrix.makePerspective(-1.4,1,1.1,-.9,2,600000);
+  right.projectionMatrix.makePerspective(-1,1.4,1.1,-.9,2,600000);
+  let tracked=new T.Matrix4();
+  const updateCamera=renderer.xr.updateCamera;
+  renderer.xr.updateCamera=()=>{
+    for(const [eye,offset] of [[left,-.032],[right,.032]]){
+      eye.matrixWorld.copy(camera.parent.matrixWorld).multiply(tracked).multiply(new T.Matrix4().makeTranslation(offset,0,0));
+      eye.matrixWorldInverse.copy(eye.matrixWorld).invert();
+    }
+  };
+  for(const shipYaw of [0,.8])for(const yaw of [0,Math.PI/2,Math.PI,-.7]){
+    tracked.makeRotationFromEuler(new T.Euler(.2,yaw,-.15));tracked.setPosition(.4,1.8,-.2);
+    bridge.frame({getViewerPose:()=>({transform:{matrix:new Float32Array(tracked.elements),position:{x:.4,y:1.8,z:-.2}}})});
+    const r=[Math.cos(shipYaw),0,-Math.sin(shipYaw)],b=[Math.sin(shipYaw),0,Math.cos(shipYaw)];
+    bridge.prepare(r,[0,1,0],b,1);
+    const frusta=bridge.frusta();assert.equal(frusta.length,2);
+    for(let sample=0;sample<1000;sample++){
+      const point=[random()*12-6,random()*12-6,random()*12-6];
+      const inside=[left,right].map(eye=>{
+        const clip=new T.Vector4(...point,1).applyMatrix4(eye.matrixWorldInverse).applyMatrix4(eye.projectionMatrix);
+        return clip.x>=-clip.w&&clip.x<=clip.w&&clip.y>=-clip.w&&clip.y<=clip.w&&clip.z>=-clip.w&&clip.z<=clip.w;
+      });
+      const culled=frusta.map(planes=>!planes.some(p=>p[0]*point[0]+p[1]*point[1]+p[2]*point[2]+p[3]<0));
+      assert.deepEqual(Array.from(culled),inside,'planes agree with actual per-eye shader projection after head/ship rotation');
+      if(inside[0]&&!inside[1])onlyLeft++;if(inside[1]&&!inside[0])onlyRight++;checks++;
+    }
+  }
+  assert(onlyLeft>0&&onlyRight>0,'both eyes have independently visible regions that the union must retain');
+  assert.equal(checks,8000);
+  const saved=left.projectionMatrix.elements[0];left.projectionMatrix.elements[0]=NaN;
+  assert.equal(bridge.frusta().length,0,'invalid eye data conservatively disables rejection');left.projectionMatrix.elements[0]=saved;
+  const getCamera=renderer.xr.getCamera;renderer.xr.getCamera=()=>({cameras:[]});assert.equal(bridge.frusta().length,0,'no stale frusta when eyes are unavailable');renderer.xr.getCamera=getCamera;
+  originals.forEach((m,i)=>[left,right][i].projectionMatrix.copy(m));renderer.xr.updateCamera=updateCamera;
+  console.log('PASS XR culling planes: 8,000 independent stereo clip comparisons, head/ship rotations, asymmetric eyes and invalid-data fallback');
   bridge.recenter();bridge.frame({getViewerPose:()=>({transform})});assert.equal(offsets.length,2);
   paused=false;const prior=pauses;bridge.frame({getViewerPose:()=>null});assert.equal(pauses,prior+1);assert.equal(bridge.tracking(),false);assert.equal(bridge.sources().length,0);
+  assert.equal(bridge.frusta().length,0,'tracking loss never reuses old culling planes');
   candidate.visibilityState='visible-blurred';bridge.frame({getViewerPose:()=>({transform})});assert.equal(bridge.tracking(),false);
   await candidate.end();bridge.prepare(pose.right,pose.up,pose.back,1);assert.equal(camera.parent,null);assert.equal(button.textContent,'Enter VR');assert(paused);
   reject=true;await button.onclick();assert.match(status.textContent,/declined/);assert.equal(button.disabled,false);assert.equal(active,false);
