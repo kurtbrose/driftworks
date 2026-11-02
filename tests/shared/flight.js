@@ -428,6 +428,24 @@
     f.elements.fly.emit('click');assert(requests===1);
   });
 
+  test('flight', 'pause menu offers fullscreen in every input mode and tracks browser exit',function(){
+    var f=flightControlsFixture(undefined,true),requests=0,exits=0;
+    var button=f.elements.launch.children.filter(function(child){return child.id==='pause-fullscreen';})[0];
+    assert(button&&button.textContent==='Full screen');
+    f.doc.documentElement={requestFullscreen:function(){requests++;return Promise.resolve();}};
+    f.doc.exitFullscreen=function(){exits++;return Promise.resolve();};
+    ['mouse','controller','touch'].forEach(function(mode){f.elements['input-mode'].value=mode;button.onclick();});
+    assert(requests===3);
+    f.doc.fullscreenElement={};f.doc.emit('fullscreenchange');
+    assert(button.textContent==='Exit full screen');button.onclick();assert(exits===1);
+    f.doc.fullscreenElement=null;f.doc.emit('fullscreenchange');assert(button.textContent==='Full screen');
+    delete f.doc.documentElement;button.onclick();
+    var status=f.elements.launch.children.filter(function(child){return child.textContent==='Full screen is unavailable in this browser.';})[0];
+    assert(status);
+    f.doc.documentElement={requestFullscreen:function(){throw new Error('declined');}};button.onclick();
+    assert(status.textContent.indexOf('retry')>=0);
+  });
+
   test('flight', 'touch flight keeps two pointers independent and releases on cancellation and pause',function(){
     var f=flightControlsFixture(undefined,true),root=f.elements['touch-controls'],stick=f.elements['touch-stick'];
     function event(id,x,y){return {pointerId:id,clientX:x,clientY:y,preventDefault:function(){}};}

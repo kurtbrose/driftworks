@@ -346,6 +346,8 @@ The configuration panel hides while captured. Mouse sensitivity is adjustable;
 turn rates still obey each ship's maneuvering limits. If capture is unavailable,
 select **Controller / keyboard** to fly without capturing the pointer.
 
+The launch/pause menu always offers **Full screen** (or **Exit full screen**) for mouse, touch, and controller input. If the browser cannot open fullscreen, the menu displays a status message.
+
 The **Gamepad / joystick setup** section detects devices exposed by the browser's
 Gamepad API; press a device button if it hasn't appeared. Standard gamepads use
 left-stick pitch/yaw, right-stick X roll, right-stick Y or D-pad up/down throttle, RT fire, A boost,

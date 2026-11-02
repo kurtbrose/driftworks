@@ -12,7 +12,7 @@
 
   // A small event/DOM fixture exercises the browser adapter without real devices.
   function flightControlsFixture(storage,withTouch,deviceOptions){
-    function target(){return {listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},emit:function(name,event){if(this.listeners[name])this.listeners[name](event||{});},appendChild:function(child){this.children.push(child);if(this.value===''&&child.value!==undefined)this.value=child.value;},children:[],value:'',textContent:'',setAttribute:function(){}};}
+    function target(){return {listeners:{},addEventListener:function(name,fn){this.listeners[name]=fn;},emit:function(name,event){if(this.listeners[name])this.listeners[name](event||{});},appendChild:function(child){this.children.push(child);if(this.value===''&&child.value!==undefined)this.value=child.value;},insertBefore:function(child,reference){var index=this.children.indexOf(reference);this.children.splice(index<0?this.children.length:index,0,child);},children:[],value:'',textContent:'',setAttribute:function(){}};}
     var elements={},doc=target(),win=target(),host=target(),pads=[],counts={pause:0,weapon:0,target:0,lock:0,radar:0,diagnostics:0,performance:0,resume:0,failure:0},paused=false,dead=false,controls;
     doc.getElementById=function(id){return elements[id]||(elements[id]=target());};
     doc.createElement=target;doc.createTextNode=function(text){return {textContent:text};};

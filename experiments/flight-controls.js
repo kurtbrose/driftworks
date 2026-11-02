@@ -106,20 +106,43 @@
         };
         mountTouchUi(document, inputMode);
         var fullscreenButton = document.getElementById('flight-fullscreen');
-        function enterFullscreen() {
-            if (document.fullscreenElement || !document.documentElement || !document.documentElement.requestFullscreen) return;
-            document.documentElement.requestFullscreen().catch(function () {
-                if (fullscreenButton) fullscreenButton.title = 'Fullscreen was declined. Tap Full screen to retry.';
-            });
+        // The pause menu belongs to every input mode, including phone gamepads.
+        var pauseFullscreen = document.createElement('button');
+        pauseFullscreen.id = 'pause-fullscreen';
+        pauseFullscreen.type = 'button';
+        get('launch').insertBefore(pauseFullscreen, get('fly').nextSibling);
+        var fullscreenStatus = document.createElement('small');
+        fullscreenStatus.setAttribute('role', 'status');
+        get('launch').insertBefore(fullscreenStatus, pauseFullscreen.nextSibling);
+        function updateFullscreen() {
+            var label = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+            pauseFullscreen.textContent = label;
+            if (fullscreenButton) fullscreenButton.textContent = label;
         }
-        if (fullscreenButton) fullscreenButton.onclick = function () {
-            if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
-            else enterFullscreen();
-        };
+        function fullscreenFailure() {
+            fullscreenStatus.textContent = 'Full screen could not open. Tap Full screen to retry.';
+        }
+        function enterFullscreen() {
+            if (document.fullscreenElement) return;
+            if (!document.documentElement || !document.documentElement.requestFullscreen) {
+                fullscreenStatus.textContent = 'Full screen is unavailable in this browser.';
+                return;
+            }
+            fullscreenStatus.textContent = '';
+            try { document.documentElement.requestFullscreen().catch(fullscreenFailure); }
+            catch (error) { fullscreenFailure(); }
+        }
+        function toggleFullscreen() {
+            if (document.fullscreenElement) {
+                try { document.exitFullscreen().catch(fullscreenFailure); }
+                catch (error) { fullscreenFailure(); }
+            } else enterFullscreen();
+        }
+        pauseFullscreen.onclick = toggleFullscreen;
+        if (fullscreenButton) fullscreenButton.onclick = toggleFullscreen;
+        updateFullscreen();
         get('fly').addEventListener('click', function () { if (inputMode.value === 'touch') enterFullscreen(); });
-        document.addEventListener('fullscreenchange', function () {
-            if (fullscreenButton) fullscreenButton.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
-        });
+        document.addEventListener('fullscreenchange', updateFullscreen);
         // Pointer IDs keep both thumbs independent; cancellation always releases demand.
         var touch = {pitch: 0, yaw: 0, fire: false, boost: false, throttleRate: 0};
         var touchRoot = document.getElementById('touch-controls');
