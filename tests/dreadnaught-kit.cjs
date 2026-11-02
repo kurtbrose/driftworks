@@ -110,6 +110,8 @@ const {pathToFileURL} = require('node:url');
   const fleetScope=vm.createContext({THREE:real,T:real});
   const primitiveSource=fs.readFileSync(path.join(root,'studies/aegis-module-primitives.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export .*;$/gm,'');
   vm.runInContext(primitiveSource,fleetScope);
+  const equipmentSource=fs.readFileSync(path.join(root,'studies/aegis-equipment-detail.js'),'utf8').replace(/^import \{bridge as.*;$/gm,'const originalBridge=bridge,originalAttach=attach;').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
+  vm.runInContext(equipmentSource+'\nsensor=detailedSensor;bridge=detailedBridge;attach=detailedAttachment;',fleetScope);
   const fleetSource=fs.readFileSync(path.join(root,'studies/aegis-modular-kit.js'),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,'');
   vm.runInContext(fleetSource+'\nglobalThis.kit={hullTypes,recipes,section,vessel,fleet,batchStatic,disposeBatch};',fleetScope);
   const kit=fleetScope.kit;
@@ -188,6 +190,20 @@ const {pathToFileURL} = require('node:url');
   console.log('PASS toybox lighting: preset/sweep reuse, centered light targets, finite positions and reduced grazing fill');
   console.log('PASS toybox material review: per-part notes, finite UVs, unchanged geometry/draws and exact original restoration');
   console.log('PASS Aegis toybox: complete unique inventory, real scale, separate nonoverlapping parts and batched geometry');
+  const sensorPart=toys.toyPart('attachment-sensor'),commandPart=toys.toyPart('structure-bridge');
+  assert(sensorPart.getObjectByName('sensor mast / detailed'));assert(sensorPart.getObjectByName('four-face sensor array'));assert(sensorPart.getObjectByName('sensor radome'));
+  assert(sensorPart.getObjectByName('communications dish'));
+  const citadel=commandPart.getObjectByName('command_citadel'),windows=[];citadel.traverse(o=>{if(o.name==='command window')windows.push(o);});
+  assert.equal(windows.length,citadel.userData.windowCount);assert(windows.length>=200,'window banks read as multiple occupied decks');
+  assert(citadel.getObjectByName('command communications mast'));assert(citadel.getObjectByName('command radome'));
+  for(const pane of windows){const sizes=pane.geometry.parameters;assert(Math.abs(sizes.height*9-.675)<.001,'window height stays at human scale');}
+  const sensorHull=kit.section('sensor');assert(sensorHull.getObjectByName('sensor mast / detailed'),'sensor hull reuses detailed hardware');
+  const installed=kit.vessel(0);assert(installed.getObjectByName('command communications mast'),'fleet terminals reuse the detailed command mast');
+  for(const object of [sensorPart,commandPart]){
+    object.traverse(o=>{if(!o.isMesh)return;const normals=o.geometry.attributes.normal;for(let i=0;i<normals.count;i++)assert(Math.abs(Math.hypot(normals.getX(i),normals.getY(i),normals.getZ(i))-1)<.001,'new equipment has finite unit normals');});
+    const batch=kit.batchStatic(object);assert.equal(triangleCount(batch),triangleCount(object));assert(batch.children.length<=9,'equipment detail remains palette-batched');kit.disposeBatch(batch);
+  }
+  console.log('PASS detailed equipment: connected sensor assemblies, command windows at metre scale, shared fleet hardware and palette batching');
   console.log('PASS Aegis fleet study: shared source freshness, physical pitch, swappable manifests, through passage and batching');
   console.log('PASS Aegis kit: outward armor, open couplings, viewport framing, two attachment banks, shared true-scale fighters and stable ship-only OBJ exports');
 })().catch(error=>{console.error(error);process.exitCode=1;});

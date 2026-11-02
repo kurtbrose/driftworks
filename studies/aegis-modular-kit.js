@@ -1,5 +1,6 @@
 import * as T from 'three';
-import {mid,wedge,drive,attach,bridge,box,loft,sensor,armor,pale,dark,trim,blue,amber} from 'aegis-parts';
+import {mid,wedge,drive,box,loft,armor,pale,dark,trim,blue,amber} from 'aegis-parts';
+import {detailedSensor as sensor,detailedBridge as bridge,detailedAttachment as attach} from 'aegis-equipment';
 
 // Authoring units are exactly nine metres; all final roots use that conversion.
 export const hullTypes=['standard','hangar','utility','missile','operations','reactor','sensor'];
