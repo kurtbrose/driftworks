@@ -1,5 +1,15 @@
 # Flight mission definitions, version 1
 
+## Local mission workshop
+
+Open `tools/mission-workshop/` on the local static server to rehearse and revise
+evacuation Cycle A and convoy escort dialogue. The workshop groups characters,
+scenes and source-linked lines, stores takes locally, and exports guarded script
+revisions. See [the workshop workflow](../tools/mission-workshop/README.md) for
+catalog refresh, backups, applying revisions and the boundary between fixed
+lines and dynamic runtime reports. Plot and trigger notes remain authoring
+drafts until integrated into mission logic.
+
 ## Convoy escort / battlefield direction
 
 Open `experiments/flight.html?mission=convoy` or select Convoy Escort on the

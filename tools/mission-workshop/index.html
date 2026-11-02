@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mission workshop · Driftworks</title>
+<link rel="stylesheet" href="workshop.css?v=03edf0210932">
+</head>
+<body>
+<header><div><span class="eyebrow">DRIFTWORKS / LOCAL AUTHORING</span><h1>Mission workshop</h1></div><div class="actions"><button id="backup">Back up session + audio</button><label class="button">Restore backup<input id="restore" type="file" accept="application/json" hidden></label><button id="revision">Export script revisions</button><a href="../../experiments/missions.html">Fly missions ↗</a></div></header>
+<div class="status"><span id="storage" role="status">Opening local session…</span><span id="message" role="status" aria-live="polite"></span></div>
+<main>
+<aside>
+<span class="eyebrow">01 / CHARACTER</span><label>Perform as<select id="character"></select></label><button id="add-character" class="subtle">+ Character</button>
+<span class="eyebrow section">02 / MISSION & SCENE</span><label>Mission<select id="mission"></select></label><div id="scenes" class="scene-list"></div><button id="add-scene" class="subtle">+ Scene</button>
+<details><summary>Microphone & monitoring</summary><button id="connect">Enable microphone</button><label>Input<select id="device"><option value="">System default</option></select></label><label class="check"><input id="monitor" type="checkbox">Hear input (use headphones)</label><meter id="level" min="0" max="1" value="0" aria-label="Input peak"></meter><p id="audio-status">Choose a voice converter’s virtual microphone here to record its output. Conversion is external.</p></details>
+<p class="footnote">Saved in this browser at this address. Back up before clearing browser data or moving to another address. One workshop tab at a time.</p>
+</aside>
+<section class="workspace">
+<div class="scene-heading"><div><span class="eyebrow" id="mission-label"></span><h2 id="scene-title"></h2></div><div class="actions"><button id="play-scene">Play chosen takes</button><button id="stop-scene">Stop playback</button><button id="add-line">+ Line</button></div></div>
+<p id="mission-context" class="muted"></p>
+<details open><summary>Scene & plot desk</summary><div class="desk"><label>Scene situation / trigger<textarea id="context" rows="3"></textarea></label><label>Mission / plot notes<textarea id="plot" rows="3" placeholder="What changes here? What should the player understand? What feels wrong when spoken?"></textarea></label></div></details>
+<div class="line-header"><span class="eyebrow">03 / LINES & TAKES</span><span id="progress"></span></div>
+<div id="lines"></div>
+<details id="dynamic-panel"><summary id="dynamic-summary">Dynamic runtime cues</summary><p>These reports contain live counts, group names or branches. Source expressions are references, not fixed lines for recording. Draft a proposed replacement as a new line and include integration notes.</p><div id="dynamic"></div></details>
+</section>
+</main>
+<footer>Read the scene. Say it aloud. Change what doesn’t work. <a href="README.md">Workflow & export instructions</a></footer>
+<script src="../../src/asset-versions.js?v=1ca48f8b93f6"></script>
+<script src="catalog.js?v=f79b9fb41519"></script><script src="model.js?v=6e7cc236829c"></script><script src="workshop.js?v=f50136f13433"></script>
+</body></html>

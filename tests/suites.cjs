@@ -167,6 +167,7 @@ const suites = {
   ],
   tooling: [
     {"file":"shared.cjs","args":["tooling"]},
+    "mission-workshop.cjs",
     "script-manifest.cjs",
     "test-runner.cjs"
   ]
