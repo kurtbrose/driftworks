@@ -46,9 +46,14 @@ for(let p=0;p<5;p++){
     assert(new Set(ships.map(s=>s.slot[2])).size>2,'Each packet occupies volume');
 }
 const extent=k=>Math.max(...c.convoy.ships.map(s=>s.slot[k]))-Math.min(...c.convoy.ships.map(s=>s.slot[k]));
-assert(Math.max(...[0,1,2].map(k=>extent(k)))/Math.min(...[0,1,2].map(k=>extent(k)))<2,'Freighters form a compact defensive ball, not a stretched column');
+assert(extent(1)*U<870,'The compact authored convoy is not stretched into a trailing column');
+const beamRadii={};
+for(const name of ['container','mixed','fluid']){const vertices=f.DW.convoyMission.model(name).vertices;let radius=0;for(let k=0;k<vertices.length;k+=6)radius=Math.max(radius,Math.hypot(vertices[k],vertices[k+2]));beamRadii[name]=radius;}
+assert(extent(0)*U<710&&extent(1)*U<870&&extent(2)*U<460,'Convoy retains the original clustered formation envelope');
+for(let p=0;p<5;p++){const members=c.convoy.ships.filter(s=>s.packet===p),span=k=>(Math.max(...members.map(s=>s.position[k]))-Math.min(...members.map(s=>s.position[k])))*U;assert(span(0)<180&&span(2)<120,'Six-ship packets remain close rather than scattering through a sphere');}
 function assertWashClearance(){for(let i=0;i<30;i++)for(let j=i+1;j<30;j++){
-    const a=c.convoy.ships[i],b=c.convoy.ships[j],clearance=f.DW.shipHulls.hullRadius(f.DW.convoyMission.model(a.model))+f.DW.shipHulls.hullRadius(f.DW.convoyMission.model(b.model))+40;
+    const a=c.convoy.ships[i],b=c.convoy.ships[j];
+    const clearance=beamRadii[a.model]+beamRadii[b.model]+10;
     assert(Math.hypot((a.position[0]-b.position[0])*U,(a.position[2]-b.position[2])*U)>clearance,'No freighter is stationed in another ship’s engine-wash corridor');
 }}
 assertWashClearance();

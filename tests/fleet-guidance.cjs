@@ -45,6 +45,20 @@ const endangered=cargo[3],newThreat={position:endangered.position.slice(),radius
 api.cover(group,cargo,escorts,[newThreat]);assert(Object.values(group.assignments).includes(endangered.id),'A major new threat can preempt routine coverage');
 assert.deepEqual(Object.keys(api.cover(group,[],escorts,[])),[]);
 const rotated=api.create(bodies(12),[1,0,0]);
+const packetBodies=bodies(6).map((b,i)=>({...b,position:[i%2*95,Math.floor(i/2)*125,Math.floor(i/2)*20],radius:61,crossRadius:11,halfSize:[9,61,7]}));
+const packetCenter=[0,1,2].map(k=>packetBodies.reduce((n,b)=>n+b.position[k],0)/6);
+const template=packetBodies.map(b=>b.position.map((v,k)=>v-packetCenter[k]));
+const packet=api.create(packetBodies,[0,1,0],template);
+for(const b of packetBodies)assert(distance(packet.slots[b.id],b.position.map((v,k)=>v-packetCenter[k]))<50,'Authored close packet shape survives local engine-wash correction');
+// Long, narrow freighters must not acquire ship-length sideways gaps or repel
+// one another back into a loose cloud after entering their compact slots.
+const narrow=bodies(30).map(b=>({...b,radius:61,crossRadius:11,halfSize:[9,61,7]})),tight=api.create(narrow);
+const spread=()=>[0,1,2].map(k=>Math.max(...narrow.map(b=>b.position[k]))-Math.min(...narrow.map(b=>b.position[k])));
+narrow.forEach(b=>{b.position=tight.slots[b.id].map((v,k)=>v+tight.anchor[k]);});tight.velocity=[0,20,0];
+assert(Math.max(...spread())<600,'Long hulls use their beam, not their length, for transverse placement');
+const start=tight.anchor.slice();
+for(let i=0;i<1200;i++)api.step(tight,narrow,[start[0],start[1]+(i+1)*2,start[2]],[0,20,0],[],.1);
+assert(Math.max(...spread())<600,'Local avoidance preserves the close formation in motion');
 const stations=Object.values(rotated.slots);
 for(let i=0;i<stations.length;i++)for(let j=i+1;j<stations.length;j++)assert(Math.hypot(stations[i][1]-stations[j][1],stations[i][2]-stations[j][2])>=150-1e-6,'Wash clearance uses supplied ship-forward, not a hardcoded world axis');
 const lagging=bodies(7),hold=api.create(lagging);hold.velocity=[0,20,0];lagging[0].position[1]-=1500;

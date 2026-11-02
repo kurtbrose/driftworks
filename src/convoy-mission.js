@@ -31,12 +31,14 @@
             return {id:'cargo-'+String(i+1).padStart(2,'0'),packet:Math.floor(i/6),callsign:local===0?packet.ship:packet.name+' '+String(local+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
         })};
         var bodies=freighters(combat);
-        var navigation=DW.fleetGuidance.create(bodies);navigation.velocity=[0,25,0];
-        // Mission packet labels are independent of generated navigation slots.
+        var center=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/Math.max(1,bodies.length);});
+        var template=bodies.map(function(b){return b.position.map(function(v,k){return v-center[k];});});
+        var navigation=DW.fleetGuidance.create(bodies,[0,1,0],template);navigation.velocity=[0,25,0];
+        // Preserve the authored close packets; generic guidance owns their actual motion.
         combat.convoy.navigation=navigation;
         // Start near, but not rigidly snapped into, generated wash-safe stations.
         combat.convoy.ships.forEach(function(ship,i){
-            ship.position=navigation.slots[ship.id].map(function(v,k){return (navigation.anchor[k]+v+([Math.sin(i*2.4)*12,Math.cos(i*1.7)*70,Math.cos(i*2.4)*12][k]))/U;});
+            ship.position=navigation.slots[ship.id].map(function(v,k){return (navigation.anchor[k]+v+([Math.sin(i*2.4)*2,Math.cos(i*1.7)*8,Math.cos(i*2.4)*2][k]))/U;});
             ship.slot=ship.position.slice();
         });
         if(battlefield!==false)DW.convoyBattle.start(combat);
@@ -115,7 +117,7 @@
     }
     /** Adapt mission entities to the reusable SI guidance contract.
      * @param {import('../experiments/types').Combat} combat */
-    function freighters(combat){return combat.convoy?combat.convoy.ships.filter(function(s){return s.hull>0&&!s.arrived;}).map(function(s){return {id:s.id,position:s.position.map(function(v){return v*U;}),velocity:s.velocity.slice(),radius:hulls[s.model]?DW.shipHulls.hullRadius(hulls[s.model].model):80};}):[];}
+    function freighters(combat){return combat.convoy?combat.convoy.ships.filter(function(s){return s.hull>0&&!s.arrived;}).map(function(s){var hull=hulls[s.model],halfSize=hull?hull.max.map(function(v,k){return Math.max(Math.abs(v),Math.abs(hull.min[k]));}):[9,61,7];return {id:s.id,position:s.position.map(function(v){return v*U;}),velocity:s.velocity.slice(),radius:hull?DW.shipHulls.hullRadius(hull.model):80,crossRadius:Math.hypot(halfSize[0],halfSize[2]),halfSize:halfSize};}):[];}
     /** Only attackers committed to the cargo influence its route; distant screen fights do not.
      * @param {import('../experiments/types').Combat} combat */
     function navigationThreats(combat){return combat.enemies.filter(function(c){return c.hp>0&&c.team==='enemy'&&!!c.convoyRaider&&!!combat.convoy&&combat.convoy.raids.some(function(r){return !!c.convoyRaider&&r.id===c.convoyRaider.wing&&r.phase!=='hold'&&r.phase!=='withdraw'&&r.phase!=='departed';});}).map(function(c){return {position:c.pose.eye.map(function(v){return v*U;}),radius:2500,weight:1};});}

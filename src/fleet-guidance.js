@@ -1,16 +1,16 @@
 (function () {
     'use strict';
     /** All positions, velocities, radii and acceleration use SI units. No renderer or mission dependencies.
-     * @typedef {{id:string,position:number[],velocity:number[],radius:number}} Body
+     * @typedef {{id:string,position:number[],velocity:number[],radius:number,crossRadius?:number,halfSize?:number[]}} Body
      * @typedef {{position:number[],radius:number,weight:number}} Threat
      * @typedef {{anchor:number[],velocity:number[],offset:number[],forward:number[],slots:Record<string,number[]>,assignments:Record<string,string>}} Formation
      */
     /** @param {number[]} v @param {number} limit */
     function capped(v,limit){var n=Math.hypot.apply(null,v);return v.map(function(x){return x*Math.min(1,limit/(n||1));});}
-    /** Compact ball with unique transverse exhaust corridors. The caller supplies ship-forward;
-     * projected clearance is conservative for every fore/aft pair, irrespective of wash length.
-     * @param {Body[]} bodies @param {number[]} [forward] @returns {Formation} */
-    function create(bodies,forward){
+    /** Generate a compact shape or fit an authored packet template, preserving its clustering.
+     * The caller supplies ship-forward; transverse clearance uses beam, not axial hull length.
+     * @param {Body[]} bodies @param {number[]} [forward] @param {number[][]} [template] @returns {Formation} */
+    function create(bodies,forward,template){
         var axis=forward||[0,1,0],length=Math.hypot.apply(null,axis)||1;axis=axis.map(function(v){return v/length;});
         if(Math.hypot.apply(null,axis)<.5)axis=[0,1,0];
         var reference=Math.abs(axis[2])<.9?[0,0,1]:[0,1,0];
@@ -18,12 +18,27 @@
         right=right.map(function(v){return v/size;});
         var up=[right[1]*axis[2]-right[2]*axis[1],right[2]*axis[0]-right[0]*axis[2],right[0]*axis[1]-right[1]*axis[0]];
         var anchor=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/Math.max(1,bodies.length);});
-        var spacing=2*bodies.reduce(function(n,b){return Math.max(n,b.radius);},0)+80,ring=Math.ceil(Math.sqrt(bodies.length));
+        var spacing=2*bodies.reduce(function(n,b){return Math.max(n,b.crossRadius===undefined?b.radius:b.crossRadius);},0)+80,ring=Math.ceil(Math.sqrt(bodies.length));
         /** @type {number[][]} */var cells=[];
         for(var row=-ring;row<=ring;row++)for(var col=-ring;col<=ring;col++)cells.push([(col+row*.5)*spacing,row*Math.sqrt(3)/2*spacing]);
         cells.sort(function(a,b){return Math.hypot.apply(null,a)-Math.hypot.apply(null,b)||a[0]-b[0]||a[1]-b[1];});cells=cells.slice(0,bodies.length);
         var radius=cells.reduce(function(n,p){return Math.max(n,Math.hypot.apply(null,p));},0)+spacing*.5;
         var available=cells.map(function(p,i){var depth=Math.sin(i*2.399963)*Math.sqrt(Math.max(0,radius*radius-p[0]*p[0]-p[1]*p[1]))*.85;return axis.map(function(v,k){return right[k]*p[0]+up[k]*p[1]+v*depth;});});
+        if(template&&template.length===bodies.length){
+            var clearance=2*bodies.reduce(function(n,b){return Math.max(n,b.crossRadius===undefined?b.radius:b.crossRadius);},0)+18;
+            /** @type {number[][]} */var placed=[];
+            /** @type {number[][]} */var offsets=[];for(var a=-12;a<=12;a++)for(var b=-12;b<=12;b++)offsets.push([a*8,b*8]);
+            offsets.sort(function(a,b){return Math.hypot.apply(null,a)-Math.hypot.apply(null,b);});
+            available=template.map(function(point){
+                var candidate=point.slice(),found=false;
+                for(var offset of offsets){
+                    candidate=point.map(function(v,k){return v+right[k]*offset[0]+up[k]*offset[1];});
+                    if(placed.every(function(p){var delta=candidate.map(function(v,k){return v-p[k];}),along=delta.reduce(function(n,v,k){return n+v*axis[k];},0);return Math.hypot.apply(null,delta.map(function(v,k){return v-along*axis[k];}))>=clearance;})){found=true;break;}
+                }
+                if(!found)throw Error('Formation template cannot satisfy transverse clearance');
+                placed.push(candidate);return candidate;
+            });
+        }
         var centroid=[0,1,2].map(function(k){return available.reduce(function(n,p){return n+p[k];},0)/Math.max(1,available.length);});
         available=available.map(function(p){return p.map(function(v,k){return v-centroid[k];});});
         /** @type {Record<string,number[]>} */var slots={};
@@ -55,7 +70,7 @@
         Object.keys(group.slots).forEach(function(id){if(!memberIds.has(id))delete group.slots[id];});
         var missing=bodies.filter(function(b){return !group.slots[b.id];});
         if(missing.length){
-            var proposal=create(bodies,group.forward),spacing=2*bodies.reduce(function(n,b){return Math.max(n,b.radius);},0)+80;
+            var proposal=create(bodies,group.forward),spacing=2*bodies.reduce(function(n,b){return Math.max(n,b.crossRadius===undefined?b.radius:b.crossRadius);},0)+80;
             var axis=Math.abs(group.forward[0])<.9?[1,0,0]:[0,1,0],dot=axis.reduce(function(n,v,k){return n+v*group.forward[k];},0);
             var right=axis.map(function(v,k){return v-dot*group.forward[k];}),length=Math.hypot.apply(null,right);right=right.map(function(v){return v/length;});
             var up=[right[1]*group.forward[2]-right[2]*group.forward[1],right[2]*group.forward[0]-right[0]*group.forward[2],right[0]*group.forward[1]-right[1]*group.forward[0]];
@@ -82,8 +97,17 @@
             var slot=group.slots[b.id];if(!slot)return b.velocity.slice();
             var wanted=slot.map(function(v,k){return group.velocity[k]+(group.anchor[k]-group.velocity[k]*dt+v-b.position[k])*.12;});
             bodies.forEach(function(other){if(other===b)return;
-                var delta=b.position.map(function(v,k){return v-other.position[k]+(b.velocity[k]-other.velocity[k])*3;}),distance=Math.hypot.apply(null,delta),safe=b.radius+other.radius+25;
-                if(distance<safe&&distance>1e-6)wanted=wanted.map(function(v,k){return v+delta[k]/distance*(safe-distance)*.5;});
+                var x=b.position[0]-other.position[0]+(b.velocity[0]-other.velocity[0])*3;
+                var y=b.position[1]-other.position[1]+(b.velocity[1]-other.velocity[1])*3;
+                var z=b.position[2]-other.position[2]+(b.velocity[2]-other.velocity[2])*3;
+                var amount=0,distance=Math.hypot(x,y,z);
+                if(b.halfSize&&other.halfSize){
+                    // Aligned long hulls need beam clearance alongside, not a ship-length sphere.
+                    var one=b.halfSize,two=other.halfSize;
+                    var ratio=Math.max(Math.abs(x)/(one[0]+two[0]+12),Math.abs(y)/(one[1]+two[1]+12),Math.abs(z)/(one[2]+two[2]+12));
+                    if(ratio<1)amount=(1-ratio)*12;
+                }else{var safe=b.radius+other.radius+25;if(distance<safe)amount=(safe-distance)*.5;}
+                if(amount&&distance>1e-6){wanted[0]+=x/distance*amount;wanted[1]+=y/distance*amount;wanted[2]+=z/distance*amount;}
             });
             wanted=capped(wanted,speed*1.6);
             var acceleration=capped(wanted.map(function(v,k){return v-b.velocity[k];}),1.2*dt);

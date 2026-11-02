@@ -3,7 +3,7 @@ export type SkyOccluder = {center:number[];radius:number};
 export type SkyEnvironmentLighting = {sh:number[][];map:string;image:HTMLImageElement;radiance?:Float32Array};
 /** Shared, checkable contracts for the plain-JavaScript simulation. */
 
-export type FleetBody = {id:string;position:number[];velocity:number[];radius:number};
+export type FleetBody = {id:string;position:number[];velocity:number[];radius:number;crossRadius?:number;halfSize?:number[]};
 export type FleetThreat = {position:number[];radius:number;weight:number};
 export type FleetFormation = {anchor:number[];velocity:number[];offset:number[];forward:number[];slots:Record<string,number[]>;assignments:Record<string,string>};
 export type Vec2 = { x: number; y: number };
@@ -329,7 +329,7 @@ export type LandingSample = {time:number; altitude:number; deployment:number; ra
 export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
   fleetGuidance?: {
-    create:(bodies:FleetBody[],forward?:number[])=>FleetFormation;
+    create:(bodies:FleetBody[],forward?:number[],template?:number[][])=>FleetFormation;
     step:(group:FleetFormation,bodies:FleetBody[],route:number[],cruise:number[],threats:FleetThreat[],dt:number)=>void;
     cover:(group:FleetFormation,bodies:FleetBody[],escorts:FleetBody[],threats:FleetThreat[])=>Record<string,number[]>;
   };
