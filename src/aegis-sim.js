@@ -121,7 +121,7 @@
         }
         /** @param {Vector} a @param {Vector} b */
         function shieldHit(a,b){
-            if(unarmed||options&&options.state.integrity<=0||shieldField(a)<0)return null;
+            if(unarmed||options&&options.state.integrity<=10000||shieldField(a)<0)return null;
             if(!traceBoxes(a,b,[{min:[-820,-200,-200],max:[820,200,200]}]))return null;
             var distance=Math.hypot(...sub(b,a)),steps=Math.max(1,Math.ceil(distance/4)),previous=0;
             for(var i=1;i<=steps;i++){
@@ -135,11 +135,11 @@
         /** Finalized projectile impacts only: visibility/convergence probes never mutate health.
          * @param {Vector} point @param {number} amount @param {import('../experiments/types').Combat} combat */
         function damage(point,amount,combat){
-            if(unarmed||!Number.isFinite(amount)||amount<=0)return false;
-            if(lastSurface&&lastSurface.shield&&Math.hypot(...sub(point,lastSurface.point))<1e-7){shieldHits.push({point:local(point),time:seconds,heavy:amount>=20});if(shieldHits.length>32)shieldHits.shift();if(options)options.state.integrity=Math.max(0,options.state.integrity-amount);return true;}
+            if(unarmed||options&&options.state.integrity<=0||!Number.isFinite(amount)||amount<=0)return false;
+            if(lastSurface&&lastSurface.shield&&Math.hypot(...sub(point,lastSurface.point))<1e-7){shieldHits.push({point:local(point),time:seconds,heavy:amount>=20});if(shieldHits.length>32)shieldHits.shift();damageHull(amount,combat);return true;}
             var p=local(point),part=lastSurface&&Math.hypot(...sub(point,lastSurface.point))<1e-7?lastSurface.part:parts.find(function(part){var q=partLocal(part,p);return q.every(function(v,k){return v>=part.box.min[k]-.05&&v<=part.box.max[k]+.05;});});
             if(!part&&!collisionBoxes.some(function(box){return p.every(function(v,k){return v>=box.min[k]-.05&&v<=box.max[k]+.05;});}))return false;
-            if(options)options.state.integrity=Math.max(0,options.state.integrity-amount);
+            damageHull(amount,combat);
             if(!part||part.hp<=0)return !!options;
             part.hp=Math.max(0,part.hp-amount);
             if(part.hp===0){
@@ -147,6 +147,17 @@
                 combat.flashes.push({position:world(part.position),velocity:options?options.state.velocity.map(function(v){return v/U;}):[0,0,0],age:0,scale:part.kind==='heavy'?6:4,destruction:true});
             }
             return true;
+        }
+        /** Hull destruction disables every surviving system once; wrecks remain collidable.
+         * @param {number} amount @param {import('../experiments/types').Combat} combat */
+        function damageHull(amount,combat){
+            if(!options)return;
+            var before=options.state.integrity;
+            options.state.integrity=Math.max(0,before-amount);
+            if(before>0&&options.state.integrity===0){
+                parts.forEach(function(p){p.hp=0;if(p.mount){p.mount.targetId='';p.mount.burst=0;}});
+                combat.flashes.push({position:origin.slice(),velocity:options.state.velocity.map(function(v){return v/U;}),age:0,scale:40,destruction:true,region:options.state.region||0});
+            }
         }
         function components(){return parts.map(function(p){return {id:'capital-'+team+'-'+p.id,kind:p.kind,hp:p.hp,maxHp:p.maxHp,position:world(p.position)};});}
         /** @type {WeakMap<import('../experiments/types').FlightState,Vector>} */var contactEyes=new WeakMap();
@@ -158,6 +169,13 @@
          * @param {typeof mounts[number]} m */function randomAim(m){
             /** @returns {number} */function random(){m.randomState=(Math.imul(m.randomState,1664525)+1013904223)>>>0;return m.randomState/4294967296;}
             m.aimOffset=[-300+random()*920,-40+random()*80,-32+random()*64];
+            // Alternate hull pressure with live subsystem targets to avoid a disarmed stalemate.
+            var rig=options&&options.opponentRig,candidates=rig&&rig.components?rig.components().filter(function(p){return p.hp>0;}):[];
+            if(options&&options.opponent.integrity<=10000&&candidates.length&&random()<.5){
+                var chosen=candidates[Math.floor(random()*candidates.length)],delta=chosen.position.map(function(v,i){return (v-options.opponent.position[i])*U;}),angle=options.opponent.heading,c=Math.cos(angle),s=Math.sin(angle);
+                m.aimOffset=[c*delta[0]+s*delta[1],-s*delta[0]+c*delta[1],delta[2]];
+                return;
+            }
             // Avoid deliberately aiming down an empty through-hangar passage.
             hangars.forEach(function(h){if(Math.abs(m.aimOffset[0]-h.position[0])<h.halfWidth&&Math.abs(m.aimOffset[2]-h.position[2])<h.halfHeight)m.aimOffset[0]=h.position[0]+h.halfWidth+10+random()*25;});
         }

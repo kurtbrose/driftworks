@@ -422,3 +422,26 @@ assert.equal(flameBatch().vertices.length,4*12*6,'destroyed engine loses its fla
 flameState.integrity=0;
 assert.equal(flameBatch().vertices.length,0,'destroyed hull loses all flames');
 console.log('PASS capital exhaust: nozzle count, finite rotated geometry, individual engine and hull destruction');
+
+// Sustained fire opens the shield, exposing the existing physical subsystems.
+const vulnerableState={team:'enemy',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000};
+const vulnerable=DW.aegisFlight.create({state:vulnerableState,opponent:vulnerableState}),attack=fixture();
+const round={direction:[0,1,0],weapon:{speed:700,damage:20}};
+let shieldPoint=vulnerable.hit(position(0,-400,0),position(0,0,0),round);assert(shieldPoint);
+assert(vulnerable.damage(shieldPoint,10000,attack.combat));
+assert.equal(vulnerableState.integrity,10000);
+const exposed=vulnerable.hit(position(0,-400,0),position(0,0,0),round);assert(exposed);
+assert(Math.abs(exposed[1])<Math.abs(shieldPoint[1]),'depleted shield admits real projectiles to hull');
+const drive=vulnerable.components().find(p=>p.kind==='engine');assert(drive);
+assert(vulnerable.damage(drive.position,240,attack.combat));
+assert.equal(vulnerable.components().find(p=>p.id===drive.id).hp,0,'fighter impact path can destroy exposed engine');
+assert(vulnerable.damage(position(0,-47.5,0),20000,attack.combat));
+assert.equal(vulnerableState.integrity,0);assert(vulnerable.components().every(p=>p.hp===0));
+assert.equal(attack.combat.flashes.filter(f=>f.scale===40).length,1,'capital destruction fires once');
+assert.equal(vulnerable.damage(position(0,-47.5,0),20,attack.combat),false,'wreck cannot be killed twice');
+console.log('PASS capital shield collapse, exposed fighter subsystem damage and terminal destruction');
+
+const duel=DW.aegisFlight.createBattle(),duelView=fixture();duelView.combat.enemies=[];
+let elapsed=0;for(;elapsed<1200;elapsed+=.1){duel.step(.1,duelView);duelView.combat.flashes.length=0;if(duel.telemetry().capitals.some(c=>c.integrity===0))break;}
+console.log('PASS autonomous capital duel reaches destruction in '+elapsed.toFixed(1)+' simulated seconds');
+assert(duel.telemetry().capitals.some(c=>c.integrity===0),'autonomous duel reaches a capital kill');

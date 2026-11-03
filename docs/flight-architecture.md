@@ -707,3 +707,12 @@ The pavement is one metre above the highest support; the barn launch origin is
 eight metres above that pavement. Coordinates are asteroid-local scene units,
 with metre conversions explicit. Rendering and gameplay share the placement
 calculation without loading each other's resources.
+
+Capital damage: Aegis shields intercept projectiles above 10,000 of 20,000 hull
+integrity. At half integrity the shield collapses until reset, exposing physical
+hull, turret and engine intersections. Main batteries mix hull aim points with
+live subsystem pivots after collapse. Fighter shots use the same damage path.
+Lost mounts stop firing; lost engines reduce powered maneuvering. Zero integrity
+disables every system and emits one capital explosion; wrecks remain collidable.
+Reset restores all health. Targeting currently uses battery AI and manual fighter
+aim; a player subsystem lock selector is not yet implemented.
