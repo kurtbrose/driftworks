@@ -543,7 +543,8 @@
     function draw(mesh, origin, scale, rotation, color, rock, lines, basis) {
       if (viewerEnabled && !shadowPass && !lines && mesh.data && mesh.data.length) pickBatches.push({data:mesh.data,stride:mesh.stride||6,origin:origin,scale:scale,rotation:rotation,basis:basis,spin:pickSpin});
       if (shadowPass && lines) return;
-      setUniform('RigBaked',mesh.bakedValues?1:0);setUniform('RigBakedEnabled',rigLightsEnabled?1:0);
+      // Missing attributes can inherit a constant from another GPU program; no data means no baked light.
+      setUniform('RigBaked',mesh.bakedValues?1:0);setUniform('RigBakedEnabled',rigLightsEnabled&&!!mesh.bakedValues?1:0);
       setUniform('ModelBasis',basis||identityBasis);setUniform('Origin',origin);setUniform('Scale',scale);setUniform('Color',color);
       setUniform('Rotation',rotation);setUniform('Rock',rock?1:0);
       mesh.buffer.setDrawRange(0,mesh.count);

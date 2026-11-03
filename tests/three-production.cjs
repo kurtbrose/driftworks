@@ -22,11 +22,18 @@ const first=frames[0];assert.equal(first.length,3);
 assert.deepEqual(Array.from(first[0].uniforms.uColor),batches[0].color);assert.deepEqual(Array.from(first[1].uniforms.uColor),batches[1].color);
 assert.deepEqual(Array.from(first[0].uniforms.uOrigin),batches[0].origin,'Queued draws retain their own transforms');
 assert.equal(first[0].blending,THREE.NoBlending);assert.equal(first[1].blending,THREE.NormalBlending);assert.equal(first[2].blending,THREE.AdditiveBlending);assert.equal(first[1].depthWrite,false);
+assert.equal(first[0].uniforms.uRigBakedEnabled,0,'Meshes without baked data cannot consume stale constant vertex attributes as colored light');
 assert.ok(first[0].geometry instanceof THREE.BufferGeometry);assert.ok(first[0].material instanceof THREE.RawShaderMaterial);
 viewer.render(world,1,0,0);assert.equal(frames[1][0].geometry,first[0].geometry,'Static geometry retained');assert.equal(frames[1][0].material,first[0].material,'Draw materials pooled');
 const dynamic=frames[1][1].geometry.getAttribute('aPosition').data;viewer.render(world,1,0,0);assert.equal(frames[2][1].geometry.getAttribute('aPosition').data,dynamic,'Same-size dynamic uploads reuse GPU buffers');
 viewer.setStudyActors([batches[0]]);viewer.setStudyEffects([]);viewer.render(world,1,0,0);assert.equal(frames.at(-1).length,1,'Unused pooled draws are removed');
 console.log('PASS Three production submission: native geometry/materials, per-draw uniforms, alpha/additive ordering, one render per pass and buffer/material reuse');
+
+const baked=new Float32Array([.3,.1,0,0,.2,0,0,0,.4]);
+viewer.setStudyActors([{...batches[0],bakedDocking:baked}]);viewer.render(world,1,0,0);
+assert.equal(frames.at(-1)[0].uniforms.uRigBakedEnabled,1,'Authored baked-light data still participates');
+viewer.setStudyActors([batches[0]]);viewer.render(world,1,0,0);
+assert.equal(frames.at(-1)[0].uniforms.uRigBakedEnabled,0,'Removing a light buffer clears the enable state on a reused mesh');
 
 
 // Probe generation is GPU work; this test verifies ownership/cache and native material wiring.
