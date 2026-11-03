@@ -78,13 +78,19 @@
         });var ids=new Set(bodies.map(function(b){return b.id;}));Object.keys(controls).forEach(function(id){if(!ids.has(id))delete controls[id];});}
         var states=bodies.map(function(body){
             var forward=unit(body.forward||body.velocity,travel),wanted=body.intent||travel,targetSpeed=body.targetSpeed===undefined?speed:body.targetSpeed;
-            var angle=Math.acos(Math.max(-1,Math.min(1,forward.reduce(function(n,v,k){return n+v*wanted[k];},0)))),maxTurn=body.turnRate||.045;
+            var alignment=Math.max(-1,Math.min(1,forward.reduce(function(n,v,k){return n+v*wanted[k];},0)));
+            // Brake before a sharp course change. Turn only as fast as transverse
+            // thrusters can bend the existing velocity, rather than crabbing sideways.
+            targetSpeed*=Math.max(.25,alignment);
+            var velocitySpeed=Math.hypot.apply(null,body.velocity);
+            var angle=Math.acos(alignment),maxTurn=Math.min(body.turnRate||.045,.6/Math.max(5,velocitySpeed));
             var axis=[forward[1]*wanted[2]-forward[2]*wanted[1],forward[2]*wanted[0]-forward[0]*wanted[2],forward[0]*wanted[1]-forward[1]*wanted[0]];
             axis=unit(axis,frame(forward).up);var turn=Math.min(angle,maxTurn*dt),tangent=[axis[1]*forward[2]-axis[2]*forward[1],axis[2]*forward[0]-axis[0]*forward[2],axis[0]*forward[1]-axis[1]*forward[0]];
             var nose=unit(forward.map(function(v,k){return v*Math.cos(turn)+tangent[k]*Math.sin(turn);}),forward);
             var demand=nose.map(function(v,k){return (v*targetSpeed-body.velocity[k])/Math.max(.001,dt);}),longitudinal=demand.reduce(function(n,v,k){return n+v*nose[k];},0),longLimit=longitudinal<0?1.8:1.2;
-            var axial=Math.max(-longLimit,Math.min(longLimit,longitudinal)),lateral=capped(demand.map(function(v,k){return v-longitudinal*nose[k];}),.35);
-            return {forward:nose,velocity:body.velocity.map(function(v,k){return v+(nose[k]*axial+lateral[k])*dt;})};
+            var axial=Math.max(-longLimit,Math.min(longLimit,longitudinal)),lateral=capped(demand.map(function(v,k){return v-longitudinal*nose[k];}),.75);
+            var acceleration=capped(nose.map(function(v,k){return v*axial+lateral[k];}),1.83);
+            return {forward:nose,velocity:body.velocity.map(function(v,k){return v+acceleration[k]*dt;})};
         });
         bodies.forEach(function(body,i){var state=states[i];body.forward=state.forward;body.velocity=state.velocity;body.position=body.position.map(function(v,k){return v+state.velocity[k]*dt;});});
         group.anchor=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/bodies.length;});

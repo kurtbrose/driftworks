@@ -5,6 +5,13 @@ scripts and headless Node sessions. Distances are metres and time is seconds.
 
 ## Behavior
 
+The art direction is cinematic fleet choreography: deliberate capital-ship
+arcs, readable breakaways and a coherent volume of traffic. Handling numbers
+support that appearance; maximizing use of fictional thruster limits is not
+the objective. Nose/travel alignment matters more than strict spaceflight
+realism. Future maneuver policies should preserve local independence while
+giving group turns and departures a readable shared intent.
+
 The convoy's authored staggered packets are a launch condition and a qualitative
 visual target. There are no assigned positions or moving formation frames that
 pull the ships around. `create(bodies, forward)` observes the starting centre;
@@ -22,7 +29,13 @@ These heuristics are not a formal collision-free planner.
 
 Each body owns its heading. Heading changes are bounded (default 0.045 rad/s),
 including a defined axis for a 180-degree reversal. Main thrust, braking and
-lateral acceleration have separate limits (1.2 / 1.8 / 0.35 m/s²). Physics runs
+lateral acceleration have separate limits (1.2 / 1.8 / 0.75 m/s²), with
+combined acceleration capped at 1.83 m/s². Ships brake for sharp course changes,
+and their turn rate also respects the transverse acceleration available at
+their current speed (0.6 m/s² reserved for bending the flight path). This keeps
+the nose and actual velocity aligned instead of letting the hull swing
+broadside to its existing motion. Side thrust corrects slip; it does not
+provide a separate sideways cruising goal. Physics runs
 at the caller's timestep; local steering assessments are cached by body ID in
 `group.controls`. This cache survives the mission adapter rebuilding body views.
 The observed centre and mean velocity are recomputed after integration. Actors
@@ -87,6 +100,12 @@ buffers change as the ships turn.
 
 - Craig Reynolds, [Boids](https://red3d.com/cwr/boids/) and
   [Steering Behaviors](https://www.red3d.com/cwr/steer/gdc99/).
+- Reynolds' [OpenSteer implementation and demos](https://opensteer.sourceforge.net/doc.html)
+  provide practical steering examples and emphasize visual tuning.
+- Dru Erridge, [Group Pathfinding & Movement in RTS Style Games](https://www.gamedeveloper.com/programming/group-pathfinding-movement-in-rts-style-games),
+  discusses production group movement and game-specific priorities.
+- Davis, Karamouzas and Guy, [NH-TTC](https://arxiv.org/abs/1907.05945),
+  explores anticipatory avoidance with constrained vehicle motion models.
 - Olfati-Saber, [Flocking with Obstacle Avoidance](https://authors.library.caltech.edu/records/nqd0k-mws17).
 
 The current implementation borrows the local steering structure; it does not
