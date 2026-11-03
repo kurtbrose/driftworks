@@ -18,6 +18,21 @@ pull the ships around. `create(bodies, forward)` observes the starting centre;
 the legacy optional template argument is ignored. `group.slots` is retained as
 an empty compatibility field and is never read by steering.
 
+`settle(bodies, {forward?, speed?, iterations?})` prepares an established cruise
+before time zero. It infers a common heading from initial headings/velocities
+(or accepts the mission's course), relaxes local hull and exhaust clearances,
+and preserves the initial centroid. It returns a formation with `settled`,
+`settleIterations`, `settleShift` and a broad `cruiseRadius`. This is an offline
+layout preparation, not a visible maneuver or an assertion of physical flight.
+The settled bodies start with aligned forward velocity. Opposing headings use
+a stable ID tie break. Empty inputs remain valid.
+
+Settled cruise disables continual cohesion polishing and uses a broad route
+tube instead of attraction to a centerline. Local collision/exhaust response,
+alignment, isolation recovery, turns and threat pressure remain active. There
+are no remembered per-ship destinations. The aim is a volume that could have
+been cruising for hours without constantly rearranging itself.
+
 Each ship observes up to ten nearby neighbors within 500 m. A 10 Hz local
 assessment combines predictive hull separation, velocity alignment, comfortable
 distance cohesion, a route preference, and avoidance of a widening aft engine
@@ -79,6 +94,12 @@ velocity and coverage overlays are optional and off by default. Preset seeking
 clears manual orders. Pressure contacts exercise guidance, not weapon damage.
 Review escorts and departing ships use a bounded transit adapter. Hull-bound
 overlap counts are conservative review signals, not exact mesh contacts.
+
+Startup defaults to Already cruising. Raw launch spacing exposes the startup
+corrections for comparison; Mixed headings provides a deterministic unprepared
+fleet. Settle start prepares the current ships, infers their course, and resets
+the scenario clock. These controls alter the simulation's initial conditions,
+not the camera or the geometry scale.
 
 The important visual checks are compactness, readable independent turns, smooth
 local merging, plausible clearances and absence of catastrophic traffic behavior.

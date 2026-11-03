@@ -31,10 +31,10 @@
             return {id:'cargo-'+String(i+1).padStart(2,'0'),packet:Math.floor(i/6),callsign:local===0?packet.ship:packet.name+' '+String(local+1).padStart(2,'0'),model:['container','mixed','fluid'][i%3],slot:slot.slice(),position:slot.slice(),velocity:[0,25,0],hull:5000,maxHull:5000,arrived:false};
         })};
         var bodies=freighters(combat);
-        var center=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/Math.max(1,bodies.length);});
-        var template=bodies.map(function(b){return b.position.map(function(v,k){return v-center[k];});});
-        var navigation=DW.fleetGuidance.create(bodies,[0,1,0],template);navigation.velocity=[0,25,0];combat.convoy.navigation=navigation;
-        // The authored packets seed the scene. Local flocking owns all subsequent motion.
+        var navigation=DW.fleetGuidance.settle(bodies,{forward:[0,1,0],speed:25});combat.convoy.navigation=navigation;
+        var settledShips=combat.convoy.ships;
+        bodies.forEach(function(body){var ship=settledShips.find(function(s){return s.id===body.id;});if(ship){ship.position=body.position.map(function(v){return v/U;});ship.forward=body.forward;ship.velocity=body.velocity;}});
+        // Begin as an established cruise; startup spacing relaxation happens before time zero.
         if(battlefield!==false)DW.convoyBattle.start(combat);
         targets(combat);
         combat.targetId=null;combat.roundOver=false;

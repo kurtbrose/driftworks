@@ -425,10 +425,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 40180,
-        "end": 40249,
+        "start": 40189,
+        "end": 40258,
         "line": 424,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -439,10 +439,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 41148,
-        "end": 41204,
+        "start": 41157,
+        "end": 41213,
         "line": 433,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -453,10 +453,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 44700,
-        "end": 44780,
+        "start": 44709,
+        "end": 44789,
         "line": 466,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -467,10 +467,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 45883,
-        "end": 45949,
+        "start": 45892,
+        "end": 45958,
         "line": 471,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -481,10 +481,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 46042,
-        "end": 46141,
+        "start": 46051,
+        "end": 46150,
         "line": 473,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -495,10 +495,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 46370,
-        "end": 46433,
+        "start": 46379,
+        "end": 46442,
         "line": 477,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -509,10 +509,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 46843,
-        "end": 46883,
+        "start": 46852,
+        "end": 46892,
         "line": 482,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -523,10 +523,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 47077,
-        "end": 47122,
+        "start": 47086,
+        "end": 47131,
         "line": 485,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -537,10 +537,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 42872,
-        "end": 42940,
+        "start": 42881,
+        "end": 42949,
         "line": 451,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -551,10 +551,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 42962,
-        "end": 43036,
+        "start": 42971,
+        "end": 43045,
         "line": 452,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -565,10 +565,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 43058,
-        "end": 43125,
+        "start": 43067,
+        "end": 43134,
         "line": 453,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -579,10 +579,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 43147,
-        "end": 43230,
+        "start": 43156,
+        "end": 43239,
         "line": 454,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -593,10 +593,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 43252,
-        "end": 43324,
+        "start": 43261,
+        "end": 43333,
         "line": 455,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -607,10 +607,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 48092,
-        "end": 48166,
+        "start": 48101,
+        "end": 48175,
         "line": 491,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -621,10 +621,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 48167,
-        "end": 48211,
+        "start": 48176,
+        "end": 48220,
         "line": 491,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -635,10 +635,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 48250,
-        "end": 48292,
+        "start": 48259,
+        "end": 48301,
         "line": 492,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -649,10 +649,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 48293,
-        "end": 48328,
+        "start": 48302,
+        "end": 48337,
         "line": 492,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -663,10 +663,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 48367,
-        "end": 48431,
+        "start": 48376,
+        "end": 48440,
         "line": 493,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     },
     {
@@ -677,10 +677,10 @@ window.MissionWorkshopCatalog = {
       "direction": "",
       "source": {
         "file": "src/convoy-mission.js",
-        "start": 48432,
-        "end": 48478,
+        "start": 48441,
+        "end": 48487,
         "line": 493,
-        "hash": "54a8633f98f72d3d6d79a19b1f1565307a27bbb0ffadb09259818a834fcf5480"
+        "hash": "e184f14969efb710f08caf84b82a76622c9e3a4fc7aa1807ca9fc10f77b009b5"
       }
     }
   ],

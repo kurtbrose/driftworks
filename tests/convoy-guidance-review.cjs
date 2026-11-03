@@ -5,6 +5,11 @@ const flight=createFlight({mission:'convoy',seed:29,convoyBattlefield:false}),DW
 vm.runInNewContext(fs.readFileSync('studies/convoy-guidance-model.js','utf8'),{window:{Driftworks:DW}});
 const seed=flight.snapshot().combat.convoy.ships.map(s=>({id:s.id,position:s.position.map((v,k)=>v*U-(k===2?1200*U:0)),velocity:s.velocity.slice(),radius:61,crossRadius:11,halfSize:[9,61,7],packet:s.packet}));
 const factory=DW.convoyGuidanceReview.create;
+const established=factory(seed,'cruise'),cruiseStart=established.snapshot().bodies.map(b=>b.position.slice());established.advance(20);
+assert(established.snapshot().group.settled,'The review starts as an established cruise by default');
+assert(established.snapshot().bodies.every((b,i)=>Math.hypot(...b.position.map((v,k)=>v-cruiseStart[i][k]-(k===1?500:0)))<1),'Cruise does not begin by correcting its spacing');
+const thrown=factory(seed,'cruise',{startup:'mixed'});assert(!thrown.snapshot().group.settled);thrown.advance(1);thrown.settle();
+assert.equal(thrown.snapshot().time,0);assert(thrown.snapshot().group.settled);assert(thrown.snapshot().group.forward.every(Number.isFinite));assert(thrown.snapshot().events.some(e=>e.text.includes('inferred course')));
 for(const scenario of ['cruise','turn','attack','traffic','combined']){
     const sim=factory(seed,scenario);sim.advance(60);const state=sim.snapshot();
     assert.equal(state.bodies.length,30);assert(state.bodies.every(b=>b.position.every(Number.isFinite)));

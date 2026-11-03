@@ -6,7 +6,7 @@ export type SkyEnvironmentLighting = {sh:number[][];map:string;image:HTMLImageEl
 export type FleetBody = {id:string;position:number[];velocity:number[];radius:number;crossRadius?:number;halfSize?:number[];forward?:number[];packet?:number;turnRate?:number;neighborIds?:string[];localGoal?:number[];cohesionError?:number;intent?:number[];targetSpeed?:number};
 export type FleetThreat = {position:number[];radius:number;weight:number};
 export type FleetControl = {intent:number[];targetSpeed:number;neighborIds:string[];localGoal:number[];cohesionError:number};
-export type FleetFormation = {anchor:number[];velocity:number[];offset:number[];forward:number[];slots:Record<string,number[]>;assignments:Record<string,string>;controlCountdown?:number;controls?:Record<string,FleetControl>};
+export type FleetFormation = {anchor:number[];velocity:number[];offset:number[];forward:number[];slots:Record<string,number[]>;assignments:Record<string,string>;controlCountdown?:number;controls?:Record<string,FleetControl>;settled?:boolean;cruiseRadius?:number;settleIterations?:number;settleShift?:number};
 export type Vec2 = { x: number; y: number };
 export type Camera = Vec2 & { zoom: number };
 export type Viewport = { width: number; height: number };
@@ -330,6 +330,7 @@ export type LandingSample = {time:number; altitude:number; deployment:number; ra
 export type LandingPose = LandingSample & {angle:number; world:(p:number[])=>number[]; rotate:(p:number[])=>number[]; ground:(p:number[])=>number[]};
 export interface DriftworksNamespace {
   fleetGuidance?: {
+    settle:(bodies:FleetBody[],options?:{forward?:number[];speed?:number;iterations?:number})=>FleetFormation;
     frame:(forward:number[])=>{right:number[];up:number[];back:number[]};
     create:(bodies:FleetBody[],forward?:number[],template?:number[][])=>FleetFormation;
     step:(group:FleetFormation,bodies:FleetBody[],route:number[],cruise:number[],threats:FleetThreat[],dt:number)=>void;

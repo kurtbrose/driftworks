@@ -26,4 +26,16 @@ const escorts=[{id:'alpha',position:left[0].position.slice(),velocity:[0,25,0],r
 const goals=api.cover(group,left,escorts,[]);assert.equal(new Set(Object.values(group.assignments)).size,2);assert(Object.values(goals).every(p=>p.every(Number.isFinite)));
 const joined={...bodies(1)[0],id:'newcomer',position:[700,group.anchor[1]-500,100]};left.push(joined);api.step(group,left,group.anchor,[0,25,0],[],.05);assert(joined.neighborIds);left.splice(0,1);api.step(group,left,group.anchor,[0,25,0],[],.05);assert(left.every(b=>b.position.every(Number.isFinite)));
 for(const forward of [[0,1,0],[1,0,0],[0,0,1],[.2,.3,.95]]){const f=api.frame(forward),dot=(a,b)=>a.reduce((n,v,k)=>n+v*b[k],0);assert(Math.abs(dot(f.right,f.up))<1e-8);assert(Math.abs(dot(f.back,f.up))<1e-8);assert(Math.abs(Math.hypot(...f.right)-1)<1e-8);}
-console.log('PASS local flocking: no slots, emergent relative motion, bounded headings/acceleration, pressure, membership and escort coverage');
+const cruising=bodies(30),settled=api.settle(cruising,{speed:25}),start=cruising.map(b=>b.position.slice()),origin=settled.anchor.slice();
+assert(settled.settled);assert(settled.settleShift>0);assert.equal(Object.keys(settled.slots).length,0);
+for(let i=0;i<600;i++)api.step(settled,cruising,origin.map((v,k)=>v+(k===1?25*(i+1)/20:0)),[0,25,0],[],.05);
+assert(Math.max(...cruising.map((b,i)=>distance(b.position,start[i].map((v,k)=>v+(k===1?750:0)))))<1,'An established cruise does not shuffle after time zero');
+const quietPositions=cruising.map(b=>b.position.slice());
+for(let i=0;i<200;i++)api.step(settled,cruising,settled.anchor,[0,25,0],[{position:[settled.anchor[0]-300,settled.anchor[1],settled.anchor[2]],radius:1500,weight:3}],.05);
+assert(cruising.some((b,i)=>Math.abs(b.position[0]-quietPositions[i][0])>3),'A settled fleet still reacts to a new threat');
+const mixed=bodies(4);mixed.forEach(b=>{b.forward=[1,0,0];b.velocity=[25,0,0];});const inferred=api.settle(mixed);assert(inferred.forward[0]>.999);assert(mixed.every(b=>b.velocity[0]===25));
+const empty=api.settle([]);assert(empty.anchor.every(Number.isFinite));assert(empty.forward.every(Number.isFinite));
+const piled=bodies(7);piled.forEach(b=>{b.position=[0,0,0];});api.settle(piled);
+assert(piled.every(b=>b.position.every(Number.isFinite)));assert(Math.max(...piled.map(b=>b.position[2]))-Math.min(...piled.map(b=>b.position[2]))>10,'Coincident ships resolve into volume rather than a ruler-straight row');
+const tie=bodies(2);tie[0].id='a';tie[1].id='b';tie[0].forward=[1,0,0];tie[1].forward=[-1,0,0];assert(api.settle(tie).forward[0]>.999,'Opposing headings use a stable ID tie break');
+console.log('PASS local flocking: independent motion, bounded handling, settled cruise without startup shuffle, inferred course and reactive pressure');

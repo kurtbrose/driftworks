@@ -51,8 +51,11 @@ assert(extent(0)*U<710&&extent(1)*U<870&&extent(2)*U<460,'Authored close packets
 const initialVertices=Array.from(buffers[0]);
 
 const separation=e=>Math.hypot(...e.pose.eye.map((v,i)=>(v-player.eye[i])*U));
+const cruiseStart=c.convoy.ships.map(s=>s.position.slice());
+assert(c.convoy.navigation.settled,'The live mission starts as an established cruise');
 f.advance(60);
 assert(Math.abs(c.convoy.elapsed-60)<1e-6);
+assert(c.convoy.ships.every((ship,i)=>Math.hypot(...ship.position.map((v,k)=>(v-cruiseStart[i][k])*U-(k===1?1500:0)))<1),'The quiet opening does not polish the freighter spacing');
 
 const moved=f.DW.convoyScenery.geometry(c);
 assert(moved.every((b,i)=>b.vertices===buffers[i]),'Moving fleet reuses immutable GPU geometry');
