@@ -167,8 +167,14 @@ console.log('PASS escort combat: weapons, real raiders and defending wingmen, ca
 
 // Close the actual chase/aim/shoot loop through the normal control and gun paths.
 f.reset();c=f.snapshot().combat;f.advance(60);c.convoy.director.raids=3;
-// Join the actual escort engagement instead of charging ahead of the independently moving screen.
-for(let i=0;i<120&&!c.enemies.some(e=>e.team==='ally'&&e.guns.fired>0);i++)f.advance(.5);
+// Approach with the screen. Waiting idle behind it can let the wingmen finish
+// the fight before this replay's player ever reaches firing range.
+for(let i=0;i<1200&&!c.dead&&!c.enemies.some(e=>e.team==='ally'&&e.guns.fired>0);i++){
+    const buddy=c.enemies.find(e=>e.team==='ally'&&e.hp>0);if(!buddy)break;
+    const state=f.snapshot().state,goal=buddy.pose.eye.map((v,k)=>v+buddy.pose.back[k]*200/U);
+    const distance=Math.hypot(...goal.map((v,k)=>v-state.eye[k]))*U;
+    f.advance(.05,{...f.DW.flightSim.steer(state,goal),throttle:distance>300?1:.5,boost:distance>1800});
+}
 for(let i=0;i<2400&&!c.dead;i++){
     const enemies=c.enemies.filter(e=>e.team==='enemy'&&e.hp>0);if(!enemies.length)break;
     const own=f.snapshot().state;const target=enemies.slice().sort((a,b)=>Math.hypot(...a.pose.eye.map((v,k)=>v-own.eye[k]))-Math.hypot(...b.pose.eye.map((v,k)=>v-own.eye[k])))[0];c.targetId=target.id;

@@ -1,11 +1,11 @@
 (function () {
     'use strict';
     /** All positions, velocities, radii and acceleration use SI units. No renderer or mission dependencies.
-     * @typedef {{id:string,position:number[],velocity:number[],radius:number,crossRadius?:number,halfSize?:number[],forward?:number[],packet?:number,turnRate?:number,neighborIds?:string[],localGoal?:number[],cohesionError?:number,intent?:number[],targetSpeed?:number}} Body
+     * @typedef {{id:string,position:number[],velocity:number[],radius:number,crossRadius?:number,halfSize?:number[],forward?:number[],packet?:number,turnRate?:number,angularVelocity?:number[],neighborIds?:string[],localGoal?:number[],cohesionError?:number,intent?:number[],targetSpeed?:number}} Body
      * @typedef {{position:number[],radius:number,weight:number}} Threat
      * @typedef {{anchor:number[],velocity:number[],offset:number[],forward:number[],slots:Record<string,number[]>,assignments:Record<string,string>,controlCountdown?:number,controls?:Record<string,Control>,settled?:boolean,cruiseRadius?:number,settleIterations?:number,settleShift?:number}} Formation
      */
-    /** @typedef {{intent:number[],targetSpeed:number,neighborIds:string[],localGoal:number[],cohesionError:number}} Control */
+    /** @typedef {{intent:number[],targetSpeed:number,neighborIds:string[],localGoal:number[],cohesionError:number,angularVelocity?:number[]}} Control */
     /** @param {number[]} v @param {number} limit */
     function capped(v,limit){var n=Math.hypot.apply(null,v);return v.map(function(x){return x*Math.min(1,limit/(n||1));});}
     /** @param {number[]} v @param {number[]} [fallback] */
@@ -48,7 +48,7 @@
             var mean=[0,1,2].map(function(k){return changes.reduce(function(n,v){return n+v[k];},0)/Math.max(1,bodies.length);}),largest=0;
             bodies.forEach(function(body,i){var change=changes[i].map(function(v,k){return v-mean[k];});largest=Math.max(largest,Math.hypot.apply(null,change));body.position=body.position.map(function(v,k){return v+change[k];});});iterations=tick+1;if(largest<.025)break;
         }
-        bodies.forEach(function(body){body.forward=forward.slice();body.velocity=forward.map(function(v){return v*speed;});delete body.intent;delete body.targetSpeed;delete body.localGoal;delete body.neighborIds;delete body.cohesionError;});
+        bodies.forEach(function(body){body.forward=forward.slice();body.angularVelocity=[0,0,0];body.velocity=forward.map(function(v){return v*speed;});delete body.intent;delete body.targetSpeed;delete body.localGoal;delete body.neighborIds;delete body.cohesionError;});
         group.anchor=origin;group.forward=forward;group.velocity=forward.map(function(v){return v*speed;});group.settled=true;group.settleIterations=iterations;
         group.settleShift=Math.max(0,...bodies.map(function(b,i){return Math.hypot.apply(null,b.position.map(function(v,k){return v-initial[i][k];}));}));
         group.cruiseRadius=Math.max(100,...bodies.map(function(b){var d=b.position.map(function(v,k){return v-origin[k];}),along=d.reduce(function(n,v,k){return n+v*forward[k];},0);return Math.hypot.apply(null,d)+50;}));return group;
@@ -64,7 +64,7 @@
         var speed=Math.hypot.apply(null,cruise),travel=unit(cruise,group.forward);
         var center=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/bodies.length;});
         var controls=group.controls||(group.controls={});
-        bodies.forEach(function(body){var cached=controls[body.id];if(!body.intent&&cached){body.intent=cached.intent;body.targetSpeed=cached.targetSpeed;body.neighborIds=cached.neighborIds;body.localGoal=cached.localGoal;body.cohesionError=cached.cohesionError;}});
+        bodies.forEach(function(body){var cached=controls[body.id];if(!body.intent&&cached){body.intent=cached.intent;body.targetSpeed=cached.targetSpeed;body.angularVelocity=cached.angularVelocity;body.neighborIds=cached.neighborIds;body.localGoal=cached.localGoal;body.cohesionError=cached.cohesionError;}});
         group.controlCountdown=(group.controlCountdown||0)-dt;
         var assess=group.controlCountdown<=1e-8||bodies.some(function(b){return !b.intent;});
         if(assess){group.controlCountdown=.1;
@@ -109,7 +109,7 @@
             var desired=cruise.map(function(v,k){return v*.65+local[k]*.35+cohesion[k]+corridor[k]+regroup[k]+pressure[k];});
             var safety=capped(avoid,22);desired=desired.map(function(v,k){return v+safety[k];});
             var targetSpeed=Math.min(speed*1.5,Math.hypot.apply(null,desired))*(1-urgency*.7),wanted=unit(desired,forward);
-            body.intent=wanted;body.targetSpeed=targetSpeed;body.neighborIds=nearby.map(function(b){return b.id;});body.localGoal=body.position.map(function(v,k){return v+wanted[k]*200;});body.cohesionError=Math.max(0,isolation-Math.max(460,group.settled?group.cruiseRadius||0:0));controls[body.id]={intent:wanted,targetSpeed:targetSpeed,neighborIds:body.neighborIds,localGoal:body.localGoal,cohesionError:body.cohesionError};
+            body.intent=wanted;body.targetSpeed=targetSpeed;body.neighborIds=nearby.map(function(b){return b.id;});body.localGoal=body.position.map(function(v,k){return v+wanted[k]*200;});body.cohesionError=Math.max(0,isolation-Math.max(460,group.settled?group.cruiseRadius||0:0));controls[body.id]={intent:wanted,targetSpeed:targetSpeed,neighborIds:body.neighborIds,localGoal:body.localGoal,cohesionError:body.cohesionError,angularVelocity:body.angularVelocity||[0,0,0]};
         });var ids=new Set(bodies.map(function(b){return b.id;}));Object.keys(controls).forEach(function(id){if(!ids.has(id))delete controls[id];});}
         var states=bodies.map(function(body){
             var forward=unit(body.forward||body.velocity,travel),wanted=body.intent||travel,targetSpeed=body.targetSpeed===undefined?speed:body.targetSpeed;
@@ -120,14 +120,22 @@
             var velocitySpeed=Math.hypot.apply(null,body.velocity);
             var angle=Math.acos(alignment),maxTurn=Math.min(body.turnRate||.045,.6/Math.max(5,velocitySpeed));
             var axis=[forward[1]*wanted[2]-forward[2]*wanted[1],forward[2]*wanted[0]-forward[0]*wanted[2],forward[0]*wanted[1]-forward[1]*wanted[0]];
-            axis=unit(axis,frame(forward).up);var turn=Math.min(angle,maxTurn*dt),tangent=[axis[1]*forward[2]-axis[2]*forward[1],axis[2]*forward[0]-axis[0]*forward[2],axis[0]*forward[1]-axis[1]*forward[0]];
+            axis=unit(axis,frame(forward).up);
+            // Critically damped heading servo: ease out near the course rather
+            // than reversing a full-rate correction at each 10 Hz assessment.
+            var requested=axis.map(function(v){return v*Math.min(maxTurn,Math.max(0,angle-.0015)*.5);}),rate=body.angularVelocity||[0,0,0];
+            var rateChange=capped(requested.map(function(v,k){return (v-rate[k])*2;}),.04);
+            rate=capped(rate.map(function(v,k){return v+rateChange[k]*dt;}),maxTurn);
+            var spin=rate.reduce(function(n,v,k){return n+v*forward[k];},0);rate=rate.map(function(v,k){return v-spin*forward[k];});
+            var magnitude=Math.hypot.apply(null,rate);if(angle<.0015&&magnitude<.00005){rate=[0,0,0];magnitude=0;}
+            axis=unit(rate,axis);var turn=magnitude*dt,tangent=[axis[1]*forward[2]-axis[2]*forward[1],axis[2]*forward[0]-axis[0]*forward[2],axis[0]*forward[1]-axis[1]*forward[0]];
             var nose=unit(forward.map(function(v,k){return v*Math.cos(turn)+tangent[k]*Math.sin(turn);}),forward);
             var demand=nose.map(function(v,k){return (v*targetSpeed-body.velocity[k])/Math.max(.001,dt);}),longitudinal=demand.reduce(function(n,v,k){return n+v*nose[k];},0),longLimit=longitudinal<0?1.8:1.2;
             var axial=Math.max(-longLimit,Math.min(longLimit,longitudinal)),lateral=capped(demand.map(function(v,k){return v-longitudinal*nose[k];}),.75);
             var acceleration=capped(nose.map(function(v,k){return v*axial+lateral[k];}),1.83);
-            return {forward:nose,velocity:body.velocity.map(function(v,k){return v+acceleration[k]*dt;})};
+            return {forward:nose,angularVelocity:rate,velocity:body.velocity.map(function(v,k){return v+acceleration[k]*dt;})};
         });
-        bodies.forEach(function(body,i){var state=states[i];body.forward=state.forward;body.velocity=state.velocity;body.position=body.position.map(function(v,k){return v+state.velocity[k]*dt;});});
+        bodies.forEach(function(body,i){var state=states[i];body.forward=state.forward;body.angularVelocity=state.angularVelocity;if(controls[body.id])controls[body.id].angularVelocity=state.angularVelocity;body.velocity=state.velocity;body.position=body.position.map(function(v,k){return v+state.velocity[k]*dt;});});
         group.anchor=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.position[k];},0)/bodies.length;});
         group.velocity=[0,1,2].map(function(k){return bodies.reduce(function(n,b){return n+b.velocity[k];},0)/bodies.length;});
         group.forward=travel;var error=group.anchor.map(function(v,k){return v-route[k];}),axial=error.reduce(function(n,v,k){return n+v*travel[k];},0);group.offset=error.map(function(v,k){return v-axial*travel[k];});

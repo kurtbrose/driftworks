@@ -3,9 +3,9 @@ export type SkyOccluder = {center:number[];radius:number};
 export type SkyEnvironmentLighting = {sh:number[][];map:string;image:HTMLImageElement;radiance?:Float32Array};
 /** Shared, checkable contracts for the plain-JavaScript simulation. */
 
-export type FleetBody = {id:string;position:number[];velocity:number[];radius:number;crossRadius?:number;halfSize?:number[];forward?:number[];packet?:number;turnRate?:number;neighborIds?:string[];localGoal?:number[];cohesionError?:number;intent?:number[];targetSpeed?:number};
+export type FleetBody = {id:string;position:number[];velocity:number[];radius:number;crossRadius?:number;halfSize?:number[];forward?:number[];packet?:number;turnRate?:number;angularVelocity?:number[];neighborIds?:string[];localGoal?:number[];cohesionError?:number;intent?:number[];targetSpeed?:number};
 export type FleetThreat = {position:number[];radius:number;weight:number};
-export type FleetControl = {intent:number[];targetSpeed:number;neighborIds:string[];localGoal:number[];cohesionError:number};
+export type FleetControl = {intent:number[];targetSpeed:number;neighborIds:string[];localGoal:number[];cohesionError:number;angularVelocity?:number[]};
 export type FleetFormation = {anchor:number[];velocity:number[];offset:number[];forward:number[];slots:Record<string,number[]>;assignments:Record<string,string>;controlCountdown?:number;controls?:Record<string,FleetControl>;settled?:boolean;cruiseRadius?:number;settleIterations?:number;settleShift?:number};
 export type Vec2 = { x: number; y: number };
 export type Camera = Vec2 & { zoom: number };

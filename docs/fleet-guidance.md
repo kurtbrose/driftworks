@@ -43,7 +43,14 @@ Safety steering can reduce desired speed and steer away from future proximity.
 These heuristics are not a formal collision-free planner.
 
 Each body owns its heading. Heading changes are bounded (default 0.045 rad/s),
-including a defined axis for a 180-degree reversal. Main thrust, braking and
+including a defined axis for a 180-degree reversal. A damped heading servo eases
+the turn rate toward the requested course, with a 0.04 rad/s² angular acceleration
+limit and a 0.0015 rad course tolerance. Small neighbor corrections therefore do
+not repeatedly reverse a full-rate turn. Angular velocity is cached alongside
+the steering intent by ID, including when callers rebuild body views each tick.
+The cached `angularVelocity` vector uses world-space radians per second.
+Settling resets angular velocity; older state without it starts from zero.
+Main thrust, braking and
 lateral acceleration have separate limits (1.2 / 1.8 / 0.75 m/s²), with
 combined acceleration capped at 1.83 m/s². Ships brake for sharp course changes,
 and their turn rate also respects the transverse acceleration available at
