@@ -19,10 +19,18 @@ const batches=[{vertices:data,color:[.2,.3,.4],origin:[1,2,3],staticGeometry:tru
 viewer.setStudyActors(batches);viewer.setStudyEffects([{vertices:new Float32Array(data),color:[1,.2,.1]}]);
 viewer.render(world,1,0,0);assert.equal(frames.length,1,'One Three render submits the whole pass');
 const first=frames[0];assert.equal(first.length,3);
+assert(first[0].material.vertexShader.startsWith('#define THIN_SHELL_HULL 0'),'ordinary scenes compile without thin-shell visibility code');
 assert.deepEqual(Array.from(first[0].uniforms.uColor),batches[0].color);assert.deepEqual(Array.from(first[1].uniforms.uColor),batches[1].color);
 assert.deepEqual(Array.from(first[0].uniforms.uOrigin),batches[0].origin,'Queued draws retain their own transforms');
 assert.equal(first[0].blending,THREE.NoBlending);assert.equal(first[1].blending,THREE.NormalBlending);assert.equal(first[2].blending,THREE.AdditiveBlending);assert.equal(first[1].depthWrite,false);
 assert.equal(first[0].uniforms.uRigBakedEnabled,0,'Meshes without baked data cannot consume stale constant vertex attributes as colored light');
+assert.equal(first[0].uniforms.uInstanced,0);assert.equal(first[0].uniforms.uInstancePose,0);
+// Generic attribute constants can be zeroed by another program/VAO. Evaluate
+// the actual shader's basis expression with poisoned constants, not GL defaults.
+const basisExpression=first[0].material.vertexShader.match(/mat3 instanceBasis=([^;]+);/)[1];
+const basisAt=new Function('uInstancePose','aInstanceRight','aInstanceForward','aInstanceUp','mat3','return '+basisExpression);
+const mat3Shell=(...v)=>v.length===1?[v[0],0,0,0,v[0],0,0,0,v[0]]:v.flat();
+assert.deepEqual(basisAt(0,[0,0,0],[0,0,0],[0,0,0],mat3Shell),[1,0,0,0,1,0,0,0,1],'ordinary hulls retain identity with poisoned generic instance attributes');
 assert.ok(first[0].geometry instanceof THREE.BufferGeometry);assert.ok(first[0].material instanceof THREE.RawShaderMaterial);
 viewer.render(world,1,0,0);assert.equal(frames[1][0].geometry,first[0].geometry,'Static geometry retained');assert.equal(frames[1][0].material,first[0].material,'Draw materials pooled');
 const dynamic=frames[1][1].geometry.getAttribute('aPosition').data;viewer.render(world,1,0,0);assert.equal(frames[2][1].geometry.getAttribute('aPosition').data,dynamic,'Same-size dynamic uploads reuse GPU buffers');
@@ -63,6 +71,7 @@ console.log('PASS native sky-lit ships: original rough/nonmetal material, sRGB/U
 // Display-space shield capture must not darken native ship PBR or leak to later frames.
 const shieldCompiled={uniforms:{},vertexShader:'',fragmentShader:'#include <colorspace_fragment>'};
 native.material.onBeforeCompile(shieldCompiled);
+assert.equal(shieldCompiled.uniforms.uInstancePose.value,0,'native materials receive explicit pose ownership');
 assert.match(shieldCompiled.fragmentShader,/if\(uShieldOutput>\.5\)gl_FragColor=sRGBTransferOETF/);
 let shieldDisposed=0,shieldFailure=false;
 DW.flightShields={create:()=>({render(){assert.equal(shieldCompiled.uniforms.uShieldOutput.value,1);if(shieldFailure)throw new Error('capture failure');return 2;},dispose(){shieldDisposed++;}})};
@@ -466,6 +475,61 @@ for(const region of [0,1]){
 viewer.setStudyBridge(false);
 console.log('PASS thin-shell rendering: default single pass, both charts, image/HUD agreement, local aperture occlusion and unreachable images');
 
+// A single occluded spine sample or center must not erase visible hull sections.
+// Use the actual capital, both travel directions, both mouths and elevated views.
+viewer.setStudyBridge(false);context.location.search='?mission=thin-shell';viewer.setStudyBridge(true);
+const shellUnits=DW.sim.METERS_PER_UNIT;
+let shellViews=0,shellVisible=0,shellOccluded=0;
+const dotShell=(a,b)=>a.reduce((n,v,k)=>n+v*b[k],0);
+for(const returning of [false,true]){
+ const patrol=DW.aegisFlight.createEllisPatrol();let elapsed=0,crossing=Math.sqrt(6000*6000-90000)/180;
+ if(returning){
+  let previous=patrol.geometry()[0].lensTransit.proper;
+  for(let i=0;i<3000;i++){
+   patrol.step(.05);elapsed+=.05;const proper=patrol.geometry()[0].lensTransit.proper;
+   if(proper>previous+.01){crossing=elapsed-proper/180;break;}previous=proper;
+  }
+  assert(crossing>60);
+ }
+ for(const offset of [-4,-2,-.02,.02,2,4]){
+  const time=crossing+offset;
+  while(elapsed<time-1e-8){const dt=Math.min(.05,time-elapsed);patrol.step(dt);elapsed+=dt;}
+  const batches=patrol.geometry(),source=batches.map(b=>b.vertices),axis=batches[0].lensTransit.normal;
+  viewer.setStudyActors(batches);
+  for(const region of [0,1])for(const degrees of [0,60,90,105,120,150,180])for(const elevation of [-45,0,45]){
+   const angle=degrees*Math.PI/180,pitch=elevation*Math.PI/180;
+   const back=[Math.sin(angle)*Math.cos(pitch),(region?1:-1)*Math.cos(angle)*Math.cos(pitch),Math.sin(pitch)];
+   const right=[-back[1]/Math.cos(pitch),back[0]/Math.cos(pitch),0];
+   const up=[right[1]*back[2],-right[0]*back[2],right[0]*back[1]-right[1]*back[0]];
+   const eye=back.map((v,k)=>[region*12000,-2000,1550][k]+1500*v);
+   viewer.setSurfaceCamera({region,eye:eye.map(v=>v/shellUnits),right,up,back});viewer.render(world,1,0,0);
+   const draws=frames.at(-1);assert.equal(draws.length,batches.filter(b=>b.vertices.length).length);
+   const u=draws[0].uniforms;
+   assert.equal(u.uTransitBlend,1);assert.equal(u.uLensMode,3);assert.equal(u.uTransitShell[0],1);
+   assert(draws.every(d=>d.uniforms.uTransitView===u.uTransitView),'one shared spine for all materials');
+   assert.equal(viewer.getRenderStats().bridgeCaptures,0);
+   for(let i=0;i<33;i++){
+    const l=(u.uTransitShell[1]+u.uTransitRadius*(i/16-1))*shellUnits,side=l<0?1:0,sign=side?-1:1;
+    const target=axis.map((v,k)=>[side*12000,-2000,1550][k]+sign*(300+Math.abs(l))*v);
+    const h=DW.thinShellOptics.primary(eye,target,region,side);
+    assert(Array.from(u.uTransitView.slice(i*3,i*3+3)).every(Number.isFinite));
+    if(!h){shellOccluded++;continue;}shellVisible++;
+    const expected=[dotShell(h.direction,right),dotShell(h.direction,up),-dotShell(h.direction,back)].map(v=>v*h.length/shellUnits);
+    expected.forEach((v,k)=>assert(Math.abs(v-u.uTransitView[i*3+k])<.0001,'visible sections retain their actual optical position'));
+   }
+   batches.forEach((b,i)=>assert.equal(b.vertices,source[i]));shellViews++;
+  }
+ }
+}
+assert(shellVisible>0&&shellOccluded>0,'sweep exercises partially hidden hulls');
+assert.equal(shellViews,504);
+const shellFragment=frames.at(-1)[0].material.fragmentShader;
+assert(shellFragment.startsWith('#define THIN_SHELL_HULL 1'),'thin-shell scene enables its own visibility variant');
+assert(shellFragment.includes('if(uTransitShell.x>.5)')&&shellFragment.includes('along-sqrt(disc)<distance-.00001)discard;'),'local sections retain physical shell occlusion');
+assert(shellFragment.includes('if(-dot(observer,source)/max(.000001,R*S)<limit-.000001)discard;'),'unreachable remote sections are rejected per fragment');
+viewer.setStudyBridge(false);
+console.log('PASS thin-shell hull transit: 504 views, outbound/return, both charts, elevated/occluded-center views, finite shared spines and immutable meshes');
+
 // Immutable local translations share one native instance draw without expanding vertices.
 const instancedViewer=DW.scene3d.create(element(),()=>world,w=>{world=w;},{study:true});
 instancedViewer.setSurfaceCamera({eye:[0,-10,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]});
@@ -478,9 +542,14 @@ assert(instanceDraw.geometry instanceof THREE.InstancedBufferGeometry);
 assert.equal(instanceDraw.geometry.instanceCount,2);
 assert.equal(instanceDraw.geometry.getAttribute('aInstanceOffset').array,instanceOffsets);
 assert.equal(instanceDraw.geometry.getAttribute('aPosition').data.array,data,'No expanded copy of source geometry');
+assert.equal(instanceDraw.uniforms.uInstanced,1);assert.equal(instanceDraw.uniforms.uInstancePose,0,'translation-only instances use identity without generic basis attributes');
 instancedViewer.render(world,1,0,0);
 assert.equal(frames.at(-1)[0].geometry,instanceDraw.geometry,'Instances retain GPU geometry across frames');
 assert.equal(instancedViewer.getRenderStats().triangles,2,'Submitted triangle accounting includes every instance');
+const rights=new Float32Array([0,1,0,0,1,0]),forwards=new Float32Array([-1,0,0,-1,0,0]),ups=new Float32Array([0,0,1,0,0,1]);
+instancedViewer.setStudyActors([{...instanceBatch,instanceRights:rights,instanceForwards:forwards,instanceUps:ups},batches[0]]);instancedViewer.render(world,1,0,0);
+assert.equal(frames.at(-1)[0].uniforms.uInstancePose,1,'posed instances consume their supplied basis');
+assert.equal(frames.at(-1)[1].uniforms.uInstancePose,0);assert.equal(frames.at(-1)[1].uniforms.uInstanced,0,'following ordinary hull does not inherit the previous instance pose');
 const camera={right:[1,0,0],up:[0,0,1],back:[0,-1,0],distance:10,focal:1};
 assert(DW.scene3d.studyBatchVisible({...instanceBatch,instanceOffsets:new Float32Array([1000,0,0,0,0,0])},[0,0,0],camera,1),'A visible copy cannot be culled by an offscreen template');
 assert(!DW.scene3d.studyBatchVisible({...instanceBatch,instanceOffsets:new Float32Array([1000,0,0,1001,0,0])},[0,0,0],camera,1),'Wholly offscreen instance groups can be culled');

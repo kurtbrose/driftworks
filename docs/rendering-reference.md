@@ -2,6 +2,21 @@
 
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
+## Instance pose ownership
+
+Raw and native ship materials use `uInstanced` only when the geometry supplies
+instance offsets, and `uInstancePose` only when all three instance-basis buffers
+exist. Ordinary hulls and translation-only instances explicitly use an identity
+basis in the shader. WebGL generic attribute constants are context state, not
+VAO state; missing instance attributes must never supply a hull's pose through
+cached default constants. Other programs can leave those constants at zero,
+collapsing a complete hull while separately rendered components remain visible.
+
+`tests/three-production.cjs` covers poisoned basis constants, ordinary/native
+draws, offset-only instances and transitions back from posed instances. A real
+late fleet replay reproduces the old collapsed hulls and verifies complete native
+hulls after the repair; captures are under `output/thin-shell-hulls/fleet-fixed-*`.
+
 ## Flight effect capacity
 
 Flight retains every active projectile, impact and destruction flash. Explosions

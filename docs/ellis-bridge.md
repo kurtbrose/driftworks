@@ -1442,6 +1442,36 @@ caustics remain approximate; arbitrary maneuvering hulls and observer-on-hull
 cases do not have broad visual acceptance. The old center-only route remains
 available with `bridgeTransit=legacy` for comparison.
 
+Thin-shell hulls keep this field active even when the center or individual
+spine samples are occluded. `thinShellOptics.continuation` supplies a
+rendering-only extension at the grazing limit for otherwise unreachable samples;
+`primary` still rejects those paths for gameplay, weapons and HUD. The fragment
+shader reconstructs each section's chart-local source position from signed
+longitudinal distance and transverse coordinates. Local sections use a
+segment/sphere visibility test; remote sections use the exact angular grazing
+limit. Invisible sections are discarded individually, rather than cancelling
+the shared field or hiding the entire hull. Small finite hulls near the shell
+also infer this field. The opt-in Ellis sky does not alter these thin-shell rules.
+
+The thin-shell regression covers 504 capital views: outbound and return,
+both observer charts, seven azimuths, three elevations and six crossing poses.
+It checks finite shared fields, the optical positions of visible spine samples,
+unchanged source arrays and the single-pass/no-capture route. Actual browser
+captures from both charts include the formerly failing 90/105/120/150-degree
+views; evidence is under `output/thin-shell-hulls/`. This fixes the demonstrated
+whole-hull rejection and fallback slicing; it does not make the sampled
+transverse mapping exact or establish arbitrary maneuver/near-plane acceptance.
+
+A frozen production-scene comparison at the same 32.5-second patrol pose used
+1280x800 backing pixels, DPR 1, uncapped presentation, and a 1500 m side observer.
+Baseline/repair/repair/baseline runs each alternated capital OFF/ON/ON/OFF,
+with 350 ms warmup and 90 retained frames per block. Capital-on submissions
+remained 12 draws / 40,384 triangles; presentation CPU medians were 0.8 ms
+baseline and 0.8–0.9 ms repaired, with 0.9–1.1 ms p95 in both. Frame medians
+remained 13.3–13.4 ms. These are frozen cache/submission and browser-cadence
+measurements, not GPU execution or a moving-combat budget. Raw conditions and
+samples are in `output/thin-shell-hulls/performance.json`.
+
 `tests/three-production.cjs` now measures bow, stern and transverse point position
 continuity across the actual patrol crossing, from both observer charts and in
 both renderer routes, plus inferred long-needle rendering and shared material

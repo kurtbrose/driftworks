@@ -20,7 +20,7 @@
         var units=DW.sim.METERS_PER_UNIT,size=384,next=0,initialized=false,lastSide=-1;
         var finiteShipImages=false;
         /** Frozen frames reuse the same sampled spine; moving frames update only uniforms.
-         * @type {WeakMap<import('./types').HullTransit,{key:string;view:Float32Array;x:Float32Array;y:Float32Array;axis:number[];tx:number[];ty:number[];blend:number}>} */
+         * @type {WeakMap<import('./types').HullTransit,{key:string;view:Float32Array;x:Float32Array;y:Float32Array;axis:number[];tx:number[];ty:number[];blend:number;proper:number}>} */
         var transitCache=new WeakMap();
         /** @type {WeakMap<number[],import('./types').HullTransit>} */var transitBodies=new WeakMap();
         var params=new URLSearchParams(location.search),readableShips=params.get('bridgeShips')!=='warped',updates=params.get('bridgeFaces')==='6'?6:1,explicit=params.get('bridgeLod')!=='implicit',objects=thinShell||params.get('bridgeGeometry')==='objects',temporal=params.get('bridgeTemporal')==='1',adaptive=temporal||params.get('bridgeGeometry')==='adaptive';
@@ -297,15 +297,15 @@ void main(){
             var start=performance.now(),eye=pose.eye.map(function(v){return v*units;}),region=pose.region||0,paths=0,maxError=0,bad=0;
             /** @typedef {{direct:boolean;turning:boolean;view:number[];columns:number[][];error:number}} Patch */
             var cache=/** @type {Map<string,Patch|null>} */(new Map());
-            /** @param {number[]} point @param {number} side */
-            function project(point,side){
-                paths++;var h=optics.primary(eye,point,region,side);if(!h)return null;
+            /** @param {number[]} point @param {number} side @param {boolean=} continuation */
+            function project(point,side,continuation){
+                paths++;var h=continuation&&thinShell?DW.thinShellOptics.continuation(eye,point,region,side):optics.primary(eye,point,region,side);if(!h)return null;
                 var r=h.direction,d=h.length/units;
                 return {hit:h,q:[r.reduce(function(sum,v,i){return sum+v*pose.right[i];},0)*d,r.reduce(function(sum,v,i){return sum+v*pose.up[i];},0)*d,-r.reduce(function(sum,v,i){return sum+v*pose.back[i];},0)*d]};
             }
-            /** @param {number[]} center @param {number} side @param {number} radius @param {boolean} rigid @returns {Patch|null} */
-            function patch(center,side,radius,rigid){
-                var meters=center.map(function(v){return v*units;});const base=project(meters,side);
+            /** @param {number[]} center @param {number} side @param {number} radius @param {boolean} rigid @param {boolean=} continuation @returns {Patch|null} */
+            function patch(center,side,radius,rigid,continuation){
+                var meters=center.map(function(v){return v*units;});const base=project(meters,side,continuation);
                 if(!base||(!rigid&&base.q[2]<.001))return null;
                 if(base.hit.direct)return {direct:true,turning:false,view:base.q,columns:[],error:0};
                 if(rigid){
@@ -345,7 +345,7 @@ void main(){
              * @param {Draw} entry */
             function transitPatch(entry){
                 var body=entry.lensTransit,radius=entry.lensRadius||0;
-                if(!body&&radius>300&&entry.lensCenter){
+                if(!body&&(radius>300||thinShell&&radius>0)&&entry.lensCenter){
                     body=transitBodies.get(entry.lensCenter);
                     var side=entry.region||0,sign=side?-1:1;
                     var radial=entry.lensCenter.map(function(v,k){return v*units-[side*12000,-2000,1550][k];}),r=Math.hypot.apply(null,radial);
@@ -371,7 +371,7 @@ void main(){
                     var l=properCenter+radius*(i/16-1),side=l<0?1:0,sign=side?-1:1;
                     var r=thinShell?300+Math.abs(l):Math.hypot(300,l);
                     var center=axis.map(function(v,k){return ([side*12000,-2000,1550][k]+sign*r*v)/units;});
-                    var p=patch(center,side,radius,true);if(!p)return null;
+                    var p=patch(center,side,radius,true,thinShell);if(!p)return null;
                     var columns=p.direct?[pose.right,pose.up,pose.back.map(function(v){return -v;})]:null;
                     view.set(p.view,i*3);
                     for(var k=0;k<3;k++){
@@ -380,10 +380,10 @@ void main(){
                     }
                 }
                 var sideSign=(entry.region||0)?-1:1,t=Math.max(0,Math.min(1,(radius*4-Math.abs(properCenter))/(radius*2)));
-                var result={key:key,view:view,x:x,y:y,axis:axis,tx:tx.map(function(v){return v*sideSign;}),ty:ty.map(function(v){return v*sideSign;}),blend:t*t*(3-2*t)};
+                var result={key:key,view:view,x:x,y:y,axis:axis,tx:tx.map(function(v){return v*sideSign;}),ty:ty.map(function(v){return v*sideSign;}),blend:thinShell?1:t*t*(3-2*t),proper:properCenter};
                 transitCache.set(body,result);return result;
             }
-            var keys=['uLensEnabled','uLensMode','uLensCenter','uLensViewCenter','uLensX','uLensY','uLensZ','uLensMouth','uLensRadius','uLensDebug','uTransitBlend','uTransitRadius','uTransitAxis','uTransitTangentX','uTransitTangentY','uTransitView','uTransitX','uTransitY'];
+            var keys=['uTransitShell','uLensEnabled','uLensMode','uLensCenter','uLensViewCenter','uLensX','uLensY','uLensZ','uLensMouth','uLensRadius','uLensDebug','uTransitBlend','uTransitRadius','uTransitAxis','uTransitTangentX','uTransitTangentY','uTransitView','uTransitX','uTransitY'].filter(function(k){return thinShell||k!=='uTransitShell';});
             var saved=entries.map(function(e){return {e:e,visible:e.object.visible,material:/** @type {import('../src/three-types').Object3D & {material:import('../src/three-types').Material}} */(e.object).material,values:keys.map(function(k){return e.uniforms[k].value;})};});
             var autoClear=renderer.autoClear;
             try{
@@ -396,8 +396,18 @@ void main(){
                         // perspective while the HUD still uses the optical center.
                         if(!p&&finiteShip(e))p=patch(center,side,e.lensRadius||20,true);
                         cache.set(key,p);if(p){maxError=Math.max(maxError,p.error);if(p.error>2)bad++;}}
-                    if(!p&&(readable(e)||side!==region)){e.object.visible=false;return;}
-                    var u=e.uniforms,transit=transitPatch(e);
+                    var transit=transitPatch(e);
+                    // A hidden center cannot reject a hull with visible sections.
+                    if(!p&&thinShell&&transit){
+                        var continuationKey=key+':continuation';
+                        if(!cache.has(continuationKey))cache.set(continuationKey,patch(center,side,e.lensRadius||20,true,true));
+                        p=cache.get(continuationKey)||null;
+                    }
+                    if(!p&&(!thinShell||!transit)&&(readable(e)||side!==region)){e.object.visible=false;return;}
+                    var u=e.uniforms;
+                    // active, signed proper scene distance, entry-chart sign,
+                    // observer chart. The fragment shader tests each section.
+                    if(thinShell)u.uTransitShell.value=transit?[1,transit.proper/units,side?-1:1,region]:[0,0,0,0];
                     u.uTransitBlend.value=transit?transit.blend:0;
                     if(transit){
                         u.uTransitRadius.value=(e.lensRadius||1)/units;u.uTransitAxis.value=transit.axis;

@@ -343,8 +343,10 @@
     /** @type {{ event: import('./types').CombatEvent, age: number }[]} */ var effects = [];
     /** @type {Record<string, { key: string, mesh: Mesh, texture: import('./three-types').Texture, visual: import('./types').AsteroidVisual, values: ReturnType<typeof art.uniforms> }>} */ var rocks = {};
     var vertexShader = 
-      'attribute vec3 aInstanceRight,aInstanceForward,aInstanceUp;attribute vec3 aInstanceOffset;attribute vec2 aNormalUV;varying vec2 vNormalUV;attribute vec3 aBakedDocking; varying vec3 vBakedDocking; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; uniform mat3 uModelBasis; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vNormalUV=aNormalUV;vBakedDocking=aBakedDocking;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);mat3 instanceBasis=mat3(aInstanceRight,aInstanceForward,aInstanceUp);vec3 p=uModelBasis*((instanceBasis*local+aInstanceOffset)*uScale); p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);n=uModelBasis*instanceBasis*n;vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }';
+      'uniform float uInstanced,uInstancePose;attribute vec3 aInstanceRight,aInstanceForward,aInstanceUp;attribute vec3 aInstanceOffset;attribute vec2 aNormalUV;varying vec2 vNormalUV;attribute vec3 aBakedDocking; varying vec3 vBakedDocking; attribute vec2 aUV; varying vec2 vUV; attribute vec3 aPosition,aNormal; uniform vec3 uOrigin,uScale,uTarget,uRight,uUp,uBack; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform vec2 uSpotPower,uSpotFrustum; uniform float uShadowPass; uniform vec4 uView; uniform float uRotation,uAxialSpin; uniform mat3 uModelBasis; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; void main(){vNormalUV=aNormalUV;vBakedDocking=aBakedDocking;vUV=aUV;vEffect=aNormal; float c=cos(uRotation),s=sin(uRotation); vec3 local=aPosition; float ac=cos(uAxialSpin),as=sin(uAxialSpin);local=vec3(local.x,ac*local.y+as*local.z,-as*local.y+ac*local.z);mat3 instanceBasis=uInstancePose>.5?mat3(aInstanceRight,aInstanceForward,aInstanceUp):mat3(1.);vec3 p=uModelBasis*((instanceBasis*local+(uInstanced>.5?aInstanceOffset:vec3(0.)))*uScale); p=vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z)+uOrigin-uTarget; vRelative=p; vec3 n=aNormal/uScale; n=vec3(n.x,ac*n.y+as*n.z,-as*n.y+ac*n.z);n=uModelBasis*instanceBasis*n;vNormal=normalize(vec3(c*n.x-s*n.y,s*n.x+c*n.y,n.z)); vLocal=local; float d=uView.x-dot(p,uBack); vDepth=d; float far=uView.x+30000.; if(uShadowPass>.5){vec3 beam=p-uSpotPosition;float z=dot(beam,uSpotDirection),near=uSpotPower.y*uSpotFrustum.y;gl_Position=vec4(dot(beam,uSpotRight)*uSpotFrustum.x,dot(beam,uSpotUp)*uSpotFrustum.x,((uSpotPower.y+near)*z-2.*uSpotPower.y*near)/(uSpotPower.y-near),z);return;}gl_Position=vec4(dot(p,uRight)*uView.y/uView.z,dot(p,uUp)*uView.y,((far+.1)/(far-.1))*d-2.*far*.1/(far-.1),d); }';
     vertexShader=vertexShader.replace('attribute vec3 aBakedDocking;','uniform float uTransitBlend,uTransitRadius;uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;uniform vec3 uTransitView[33],uTransitX[33],uTransitY[33];uniform float uLensEnabled;uniform vec3 uLensCenter,uLensViewCenter,uLensX,uLensY,uLensZ;attribute vec3 aBakedDocking;').replace('float d=uView.x-dot(p,uBack);','if(uLensEnabled>.5){vec3 delta=p+uTarget-uLensCenter;vec3 q=uLensViewCenter+uLensX*delta.x+uLensY*delta.y+uLensZ*delta.z;if(uTransitBlend>0.){float h=clamp((dot(delta,uTransitAxis)/uTransitRadius+1.)*16.,0.,32.);int k=int(min(31.,floor(h)));float f=h-float(k);vec3 tq=mix(uTransitView[k],uTransitView[k+1],f)+mix(uTransitX[k],uTransitX[k+1],f)*dot(delta,uTransitTangentX)+mix(uTransitY[k],uTransitY[k+1],f)*dot(delta,uTransitTangentY);q=mix(q,tq,uTransitBlend);}p=uRight*q.x+uUp*q.y+uBack*(uView.x-q.z);vRelative=p;}float d=uView.x-dot(p,uBack);');
+    var thinShellHull=!!(DW.flightMissions&&DW.flightMissions.current().sky.thinShell);
+    vertexShader=vertexShader.replace('uniform float uTransitBlend','\n#if THIN_SHELL_HULL\nuniform vec4 uTransitShell;varying vec3 vTransitLocal;\n#endif\nuniform float uTransitBlend').replace('if(uLensEnabled>.5){vec3 delta=p+uTarget-uLensCenter;','\n#if THIN_SHELL_HULL\nvTransitLocal=vec3(0.);\n#endif\nif(uLensEnabled>.5){vec3 delta=p+uTarget-uLensCenter;\n#if THIN_SHELL_HULL\nvTransitLocal=vec3(uTransitShell.y+dot(delta,uTransitAxis),dot(delta,uTransitTangentX),dot(delta,uTransitTangentY));\n#endif\n');
     var fragmentShader = art.shaderSource +
       '\nvarying vec2 vNormalUV;uniform sampler2D uArmorNormal;uniform float uArmorEnabled;uniform mat3 uModelBasis;varying vec3 vBakedDocking; uniform float uRigBakedEnabled; varying vec2 vUV; uniform sampler2D uShipTexture; uniform float uTextured,uPaintEnabled; uniform vec3 uPaint; varying vec3 vNormal,vLocal,vRelative; varying float vDepth; varying vec3 vEffect; uniform vec3 uSpotPosition,uSpotDirection,uSpotRight,uSpotUp; uniform float uShadowPass,uWorkShadowEnabled; uniform sampler2D uWorkShadow; uniform vec2 uSpotPower,uSpotFrustum; uniform vec3 uColor,uBack; uniform float uOpacity,uFlat,uRock,uRockDistance,uRotation,uCut,uCutHeight,uHabitat,uSpin,uHullFootprint,uHullDepth,uFinish,uCraftFill;\n'+
       'uniform float uEnvironmentEnabled;uniform vec3 uEnvironmentSH[9],uEnvironmentEye;uniform mat3 uEnvironmentBasis;uniform sampler2D uEnvironment;'+
@@ -396,6 +398,30 @@
     fragmentShader=fragmentShader.replace('precision highp float;','precision highp float;uniform float uLensMode,uLensRadius,uLensDebug;uniform vec3 uLensMouth;uniform vec4 uView;').replace('void main(){',`void main(){
       if(uLensMode>.5){vec3 offset=vRelative-uBack*uView.x;vec3 ray=normalize(offset);float along=dot(uLensMouth,ray),disc=along*along-dot(uLensMouth,uLensMouth)+uLensRadius*uLensRadius;bool aperture=along>0.&&disc>=0.;if(uLensMode<1.5&&!aperture)discard;if(uLensMode>1.5&&uLensMode<2.5&&aperture&&length(offset)>along-sqrt(max(0.,disc))+.001)discard;}
     `);
+    // Keep the additional varyings and section tests out of ordinary programs.
+    fragmentShader=fragmentShader.replace('precision highp float;',`precision highp float;
+#if THIN_SHELL_HULL
+uniform vec4 uTransitShell;varying vec3 vTransitLocal;
+uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
+#endif
+`).replace('void main(){',`void main(){
+#if THIN_SHELL_HULL
+      if(uTransitShell.x>.5){
+        float side=vTransitLocal.x<0.?1.:0.,sign=1.-2.*side,a=uLensRadius;
+        vec3 source=sign*(uTransitAxis*(a+abs(vTransitLocal.x))+uTransitShell.z*(uTransitTangentX*vTransitLocal.y+uTransitTangentY*vTransitLocal.z));
+        vec3 observer=-uLensMouth;float R=length(observer),S=length(source);
+        if(abs(side-uTransitShell.w)<.5){
+          vec3 delta=source-observer;float distance=length(delta);vec3 ray=delta/max(distance,.000001);
+          float along=-dot(observer,ray),disc=along*along-R*R+a*a;
+          if(along>0.&&disc>0.&&along-sqrt(disc)<distance-.00001)discard;
+        }else{
+          float r=clamp(a/max(a,R),0.,1.),s=clamp(a/max(a,S),0.,1.);
+          float limit=r*s-sqrt(max(0.,1.-r*r))*sqrt(max(0.,1.-s*s));
+          if(-dot(observer,source)/max(.000001,R*S)<limit-.000001)discard;
+        }
+      }
+#endif
+`);
     /** @type {Record<string,{value:number|number[]|Float32Array|import('./three-types').Texture|null}>} */
     var uniforms = {};
     vertexShader='uniform float uXRActive;uniform mat4 uXRView,uXRProjection;'+vertexShader;
@@ -406,7 +432,7 @@
     declarations.replace(/uniform\s+(float|vec[234]|mat[34]|sampler2D)\s+([^;]+);/g,/** @param {string} _ @param {string} type @param {string} names */ function(_,type,names){
       names.split(',').forEach(function(name){var key=name.trim().replace(/\[.*$/, ''),size=type==='float'?1:type==='mat3'?9:type==='mat4'?16:Number(type.slice(-1));var count=Number((name.match(/\[(\d+)\]/)||[])[1]||1);uniforms[key]={value:type==='sampler2D'?null:size*count===1?0:new Float32Array(size*count)};});return '';
     });
-    function material() {return new THREE.RawShaderMaterial({vertexShader:vertexShader,fragmentShader:fragmentShader,
+    function material() {var shellDefine='#define THIN_SHELL_HULL '+(thinShellHull?1:0)+'\n';return new THREE.RawShaderMaterial({vertexShader:shellDefine+vertexShader,fragmentShader:shellDefine+fragmentShader,
       uniforms:uniforms,side:THREE.DoubleSide,transparent:true,depthWrite:depthWrite,blending:blending,
       defaultAttributeValues:{aInstanceRight:[1,0,0],aInstanceForward:[0,1,0],aInstanceUp:[0,0,1],aInstanceOffset:[0,0,0],aNormalUV:[0,0],aUV:[0,0],aBakedDocking:[0,0,0]}});}
     /** @type {{object:import('./three-types').Object3D,material:import('./three-types').Material,uniforms:typeof uniforms,lines:boolean,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */
@@ -427,16 +453,17 @@
       var result=new THREE.MeshStandardMaterial({metalness:0,roughness:1,side:THREE.DoubleSide,alphaTest:.5});
       result.defaultAttributeValues={aInstanceOffset:[0,0,0],aInstanceRight:[1,0,0],aInstanceForward:[0,1,0],aInstanceUp:[0,0,1]};
       result.onBeforeCompile=function(shader){
-        shader.vertexShader='attribute vec3 aInstanceOffset,aInstanceRight,aInstanceForward,aInstanceUp;\n'+shader.vertexShader;
-        shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed=mat3(aInstanceRight,aInstanceForward,aInstanceUp)*transformed+aInstanceOffset;');
+        shader.uniforms.uInstanced=snapshot.uInstanced;shader.uniforms.uInstancePose=snapshot.uInstancePose;
+        shader.vertexShader='uniform float uInstanced,uInstancePose;attribute vec3 aInstanceOffset,aInstanceRight,aInstanceForward,aInstanceUp;\n'+shader.vertexShader;
+        shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nif(uInstancePose>.5)transformed=mat3(aInstanceRight,aInstanceForward,aInstanceUp)*transformed;if(uInstanced>.5)transformed+=aInstanceOffset;');
         shader.uniforms.uShieldOutput=shieldOutputUniform;shader.uniforms.uSkyBasis={value:skyBasis};shader.uniforms.uSkyCameraExposure=cameraExposureUniform;
         shader.uniforms.uArmorNormal=snapshot.uArmorNormal;shader.uniforms.uArmorEnabled=snapshot.uArmorEnabled;
         shader.uniforms.uHyperbolicLocalOrigin=snapshot.uHyperbolicLocalOrigin;shader.uniforms.uHyperbolicLocalBasis=snapshot.uHyperbolicLocalBasis;shader.uniforms.uHyperbolicRadius=snapshot.uHyperbolicRadius;shader.uniforms.uHyperbolicFrame=snapshot.uHyperbolicFrame;shader.uniforms.uTarget=snapshot.uTarget;
         shader.vertexShader=hyperbolicShader+'uniform vec3 uTarget;\n'+shader.vertexShader;
-        shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>','#include <beginnormal_vertex>\nobjectNormal=mat3(aInstanceRight,aInstanceForward,aInstanceUp)*objectNormal;if(uHyperbolicRadius>0.)objectNormal=hyperbolicNormalMatrix(position)*objectNormal;');
+        shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>','#include <beginnormal_vertex>\nif(uInstancePose>.5)objectNormal=mat3(aInstanceRight,aInstanceForward,aInstanceUp)*objectNormal;if(uHyperbolicRadius>0.)objectNormal=hyperbolicNormalMatrix(position)*objectNormal;');
         shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nif(uHyperbolicRadius>0.)transformed=hyperbolicPosition(position)-uTarget;');
         shader.vertexShader='attribute vec2 aNormalUV;varying vec2 vArmorUV;varying mat3 vArmorMatrix;\n'+shader.vertexShader;
-        shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvArmorUV=aNormalUV;vArmorMatrix=normalMatrix*mat3(aInstanceRight,aInstanceForward,aInstanceUp);if(uHyperbolicRadius>0.)vArmorMatrix=normalMatrix*hyperbolicNormalMatrix(position);');
+        shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvArmorUV=aNormalUV;vArmorMatrix=normalMatrix*(uInstancePose>.5?mat3(aInstanceRight,aInstanceForward,aInstanceUp):mat3(1.));if(uHyperbolicRadius>0.)vArmorMatrix=normalMatrix*hyperbolicNormalMatrix(position);');
         shader.fragmentShader='uniform sampler2D uArmorNormal;uniform float uArmorEnabled;varying vec2 vArmorUV;varying mat3 vArmorMatrix;\n'+shader.fragmentShader;
         shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\nif(uArmorEnabled>.5&&vArmorUV.x>0.){normal=normalize(vArmorMatrix*(texture2D(uArmorNormal,vArmorUV).xyz*2.-1.));normal*=gl_FrontFacing?1.:-1.;}');
         shader.uniforms.uShipPaint=snapshot.uPaint;
@@ -545,6 +572,10 @@
       if (shadowPass && lines) return;
       // Missing attributes can inherit a constant from another GPU program; no data means no baked light.
       setUniform('RigBaked',mesh.bakedValues?1:0);setUniform('RigBakedEnabled',rigLightsEnabled&&!!mesh.bakedValues?1:0);
+      // Missing generic vertex attributes are global GPU state, not VAO state.
+      // Never use their cached constants as the pose of an ordinary hull.
+      setUniform('Instanced',mesh.buffer.getAttribute('aInstanceOffset')?1:0);
+      setUniform('InstancePose',mesh.buffer.getAttribute('aInstanceRight')&&mesh.buffer.getAttribute('aInstanceForward')&&mesh.buffer.getAttribute('aInstanceUp')?1:0);
       setUniform('ModelBasis',basis||identityBasis);setUniform('Origin',origin);setUniform('Scale',scale);setUniform('Color',color);
       setUniform('Rotation',rotation);setUniform('Rock',rock?1:0);
       mesh.buffer.setDrawRange(0,mesh.count);
@@ -1071,6 +1102,12 @@
       /** @param {boolean} enabled */
       setStudyBridge: function(enabled){
         if(!study)return;
+        var shell=!!(enabled&&DW.flightMissions&&DW.flightMissions.current().sky.thinShell);
+        if(shell!==thinShellHull){
+          thinShellHull=shell;
+          drawPool.forEach(function(entry){scene.remove(entry.object);entry.material.dispose();});
+          drawPool=[];drawIndex=0;
+        }
         if(enabled&&!bridgeRenderer&&DW.ellisRenderer){bridgeRenderer=DW.ellisRenderer.create(THREE,renderer);if(shipStretchingOverride!==null)bridgeRenderer.setShipStretching(shipStretchingOverride);}
         if(!enabled&&bridgeRenderer){bridgeRenderer.dispose();bridgeRenderer=null;}
       },

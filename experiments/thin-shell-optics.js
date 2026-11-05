@@ -10,8 +10,8 @@
     /** @param {number[]} v @param {number[]} n */
     function transport(v,n){var d=dot(v,n);return v.map(function(x,i){return 2*d*n[i]-x;});}
     /** Exact straight legs joined at the antipodal 300 m shell. Distances are metres.
-     * @param {number[]} eye @param {number[]} target @param {number} region @param {number} destination */
-    function primary(eye,target,region,destination){
+     * @param {number[]} eye @param {number[]} target @param {number} region @param {number} destination @param {boolean=} continuation */
+    function image(eye,target,region,destination,continuation){
         var O=eye.map(function(v,i){return v-center(region)[i];}),T=target.map(function(v,i){return v-center(destination)[i];});
         var R=Math.hypot.apply(null,O),S=Math.hypot.apply(null,T),a=300;
         if(S<a){T=T.map(function(v){return -v*(2*a-S)/Math.max(1e-12,S);});S=2*a-S;destination=1-destination;}
@@ -20,14 +20,14 @@
         var n=unit(O),m=unit(T),delta=T.map(function(v,i){return v-O[i];}),length=Math.hypot.apply(null,delta),direction=unit(delta);
         if(region===destination){
             var along=-dot(O,direction),impact2=R*R-along*along;
-            if(along>0&&impact2<a*a-1e-7&&along-Math.sqrt(Math.max(0,a*a-impact2))<length-1e-7)return null;
+            if(!continuation&&along>0&&impact2<a*a-1e-7&&along-Math.sqrt(Math.max(0,a*a-impact2))<length-1e-7)return null;
             return {direction:direction,sourceDirection:direction,length:length,impact:Math.sqrt(Math.max(0,impact2))/a,direct:true,turning:false};
         }
         var cosine=Math.max(-1,Math.min(1,-dot(n,m))),angle=Math.acos(cosine);
         // A flat exterior has no wound or returning images. Past the grazing
         // limit there is no connecting null ray, so HUD and guns must agree.
         var limit=Math.PI-Math.asin(a/R)-Math.asin(a/S);
-        if(angle>limit+1e-10)return null;
+        if(!continuation&&angle>limit+1e-10)return null;
         var tangent=unit(m.map(function(v,i){return -v-n[i]*cosine;})),low=0,high=a;
         for(var i=0;i<48;i++){
             var b=(low+high)*.5,phase=2*Math.asin(b/a)-Math.asin(b/R)-Math.asin(b/S);
@@ -77,5 +77,11 @@ vec3 ellisPointPhase(EllisRay e,float t,out float side,out float travel){
 vec3 ellisPoint(EllisRay e,float t,out float side){float travel;return ellisPointPhase(e,t,side,travel);}
 vec3 ellisExit(EllisRay e){return e.tangent;}
 `;
-    DW.thinShellOptics=Object.assign({},DW.ellisOptics,{primary:primary,advanceRay:advanceRay,shader:shader,latticeShader:'vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){return vec4(0.);}'});
+    /** @param {number[]} eye @param {number[]} target @param {number} region @param {number} destination */
+    function primary(eye,target,region,destination){return image(eye,target,region,destination,false);}
+    // Rendering continuation only: fills invisible spine samples at the grazing
+    // limit. Fragment visibility rejects them; gameplay never uses these paths.
+    /** @param {number[]} eye @param {number[]} target @param {number} region @param {number} destination */
+    function continuation(eye,target,region,destination){return image(eye,target,region,destination,true);}
+    DW.thinShellOptics=Object.assign({},DW.ellisOptics,{primary:primary,continuation:continuation,advanceRay:advanceRay,shader:shader,latticeShader:'vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){return vec4(0.);}'});
 }());
