@@ -1,46 +1,78 @@
-# Client-only multiplayer experiment
+# Multiplayer flight experiment
 
-Open `experiments/multiplayer.html` from the static site. Choose **Create host
-offer** in one browser and **Join as guest** in the other. Copy the host's
-connection text into the guest's received-text box and apply it. Copy the guest's
-answer back into the host and apply it. Once connected, click each arena to fly
-with WASD or the arrow keys. Disconnect/reset starts a fresh session.
+Open `experiments/multiplayer.html` (it redirects to `flight.html?multiplayer=1`).
+This uses the production 3D scene, fighter models, keyboard/controller/mouse
+controls, flight physics, terrain and gun effects. Each browser owns its local
+pilot and sends validated pose/loadout/trigger snapshots to its wingmate. Both
+pilots start facing each other, 90 metres apart, above the same asteroid.
 
-The page uses native WebRTC data channels with manual SDP exchange and an empty
-ICE server list. No signaling backend, external library, STUN or TURN service is
-required. Two local tabs are the easiest first test. Devices on the same LAN may
-connect; firewall, browser address masking and NAT policy can prevent direct
-connections. Different networks will often need STUN and possibly a TURN relay.
-HTTPS or localhost is recommended; clipboard access depends on a secure context.
-Connection text contains network information and should go only to the intended
-peer. Reset clears the connection; nothing is saved.
+## Connect
 
-The host owns both ships and advances a standalone arena at 30 ticks per second.
-The guest sends bounded steering/thrust plus an increasing sequence number.
-The host ignores old input packets and releases guest controls after 300 ms
-without fresh input. Snapshots carry increasing ticks; the guest rejects older
-snapshots. Both directions use an unordered channel without retransmission,
-and drop outgoing updates when its buffer grows. The guest displays snapshot age
-and marks a stalled host. Browser background throttling can pause/slow the host;
-the experiment does not catch up missed ticks. Keep both windows visible to test
-movement timing.
+1. Host chooses **Create host offer** in the Multiplayer panel and sends the
+   generated text to the guest.
+2. Guest chooses **Join as guest**, pastes the offer and applies it. The guest
+   sends their generated answer back to the host.
+3. Host pastes and applies the answer. Both pilots choose Start / resume flight.
+   The panel collapses when connected; Esc returns to the normal game controls.
 
-`experiments/multiplayer-model.js` owns the JSON-safe arena model and packet
-validation; the HTML owns WebRTC, keyboard focus and canvas drawing. This is a
-transport/control experiment, separate from production flight sessions. There is
-no prediction, interpolation, combat, host migration, reconnect, matchmaking,
-authentication or cheat resistance. The host is trusted. The next integration
-decision is which production mode to share and how remote input maps onto its
-craft lifecycle. Full simulation snapshots are not yet a stable network protocol.
+Flight remains available before connection, after disconnect, and after failed
+attempts. Disconnect / retry closes the peer and resets the connection controls
+without reloading the game. Starting a new connection repositions the local
+pilot at their role's start. Normal sortie reset preserves that role.
 
-Run `node tests/multiplayer.cjs` for the dependency-free model regression.
-Browser acceptance requires exchanging a real offer and answer, moving both
-ships, checking snapshot delivery and disconnecting. A local two-tab success does
-not establish connectivity across different networks.
+The data channel uses manual WebRTC SDP exchange. No external service is contacted
+by default. An empty ICE server list supports direct connections only. A successful
+same-machine connection does not establish cross-device or internet connectivity.
+Routers, firewalls, browser address masking and browser policies may block direct
+connections. Both pilots can provide their own ICE server JSON array under
+Network options: STUN can discover routes; TURN can relay when direct routes are
+blocked. TURN credentials stay in the tab and are not persisted or sent to the
+other pilot by this code. Connection text contains network information; send it
+only to the intended peer. Clipboard failure selects the text for manual copying.
 
-Initial verification (2026-11-04): the model regression and strict application
-type check passed. A headless Chrome two-tab test exchanged real offers/answers,
-moved both ships, received snapshots, rejected malformed connection text and
-detected peer disconnect, with no page errors. The host screenshot was visually
-inspected. Captures remain under ignored `output/multiplayer/`. Cross-device and
-cross-network connectivity have not been verified.
+After the host applies an answer, connection establishment has a 20-second
+limit. The guest has a 60-second limit to allow answer exchange. Failure closes
+the peer and restores the Host/Guest buttons with a route/retry explanation.
+Candidate gathering has a separate 10-second limit. Existing sessions expire
+following five seconds without valid peer updates. Network heartbeats use wall
+time while the local simulation is paused; stale trigger input is released after
+300 ms. Browser background suspension can still interrupt a session.
+
+## Ownership and limits
+
+`multiplayer-model.js` validates versioned packets, finite bounded vectors,
+orthonormal attitude bases, loadout indices and increasing sequence numbers.
+Only known pose fields enter the session. `multiplayer-flight.js` owns browser
+resources, connection deadlines, UI and packet exchange (up to 20 Hz with buffer
+limits, unordered delivery and no retransmission). `flight-session.js` exposes
+`prepareMultiplayer(guest)` and `setRemotePilot(pilot|null)` to configure co-flight
+and observe the other pilot through ordinary craft rendering and gun effects.
+The guest follows the host's asteroid rotation.
+
+This is two-player co-flight in the actual game. Shared damage, missions, NPC
+simulation, ship-to-ship collision, authoritative combat, prediction, interpolation,
+host migration and matchmaking are not implemented. Peers are trusted; local
+movement is not cheat checked. A remote craft cannot damage the local pilot.
+Local pause pauses local physics; the other pilot may continue flying and their
+pose continues to update. Existing single-player saves are unaffected.
+
+## Verification
+
+`node tests/multiplayer.cjs` exercises real headless sessions, independent local
+flight, remote craft/weapon observation, disconnect/reset, packet validation and
+sequence rejection. `node tests/headless.cjs` checks existing session behavior.
+
+With the site served on port 8000 and optional Playwright installed, run
+`node tools/check-multiplayer-browser.cjs` (set `DRIFTWORKS_BROWSER_MODULES` to the
+development package directory if needed). It exchanges real offers/answers in
+two Chrome tabs, checks production ship poses and keyboard movement, captures
+both views, disconnects, and simulates a blocked connection to verify timeout
+recovery and continued flight. Evidence is ignored under `output/multiplayer-flight/`.
+Cross-device and cross-network connectivity require separate verification.
+
+Verified 2026-11-04: model/session regressions, existing headless session checks,
+module-boundary checks, strict application types and manifest tests passed.
+The two-tab Chrome probe passed movement in both directions, real gun firing,
+disconnect recovery and a forced blocked-route timeout followed by keyboard
+flight. No page errors or external resource requests were recorded. Both
+connected screenshots and the timeout screenshot were visually inspected.

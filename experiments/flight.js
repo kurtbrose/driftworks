@@ -10,6 +10,9 @@
     get('fly').disabled=true;get('fly').textContent='Loading ship textures...';
     get('status').textContent='Loading ship textures and preparing graphics...';
     var activeMission=DW.flightMissions.current();
+    var multiplayerMode=new URLSearchParams(location.search).get('multiplayer')==='1';
+    /** @type {ReturnType<typeof import('./multiplayer-flight').mount>|null} */var multiplayer=null;
+    if(multiplayerMode&&!DW.multiplayerFlight)await new Promise(/** @param {(value:void)=>void} resolve */function(resolve){window.addEventListener('multiplayer-flight-ready',function(){resolve();},{once:true});});
     if(activeMission.sky.gasGiant&&!DW.gasGiantWeather)await new Promise(/** @param {(value:boolean)=>void} resolve */function(resolve){window.addEventListener('gas-weather-ready',function(){resolve(true);},{once:true});});
     if(activeMission.id==='convoy')host.setAttribute('aria-label','Convoy escort / intercept raiders and protect thirty freighters');
     var cinematic=activeMission.id==='cinematic';
@@ -296,6 +299,7 @@
         comms.reset();
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
+        if(multiplayerMode)session.prepareMultiplayer(multiplayer?multiplayer.isGuest():false);
         if(aegis&&!aegisMode)aegis.reset(activeMission.id==='battle'||cinematic||activeMission.sky.hyperbolic?session.snapshot().combat:undefined);
         if(aegis&&aegis.spawnPlayer)session.respawn(aegis.spawnPlayer(session.snapshot().state));
         if(cinematic){session.prepareCinematicObserver();get('watch-panel').hidden=true;}
@@ -316,6 +320,7 @@
         document.body.classList.toggle('watching-ai', observing);
         get('watch-panel').classList.toggle('watch-running', observing);
         [select, gunSelect, get('combat-mode'), get('diameter'), get('combat-toggle'),get('ally-art'),get('enemy-art')].forEach(function (control) { control.disabled = observing; });
+        if(multiplayerMode){get('combat-mode').disabled=get('diameter').disabled=get('combat-toggle').disabled=true;}
         get('fly').textContent = observing ? 'Watch duel' : 'Start flight';
         status.textContent = observing ? 'AI duel paused · Play to watch' : 'Ready · Start flight when ready';
         updateWatch();
@@ -471,6 +476,7 @@
         if (!watch) session.configureHulls(appearance.allyArt, appearance.enemyArt);
         var pilotDemand=controls.sample(view().state.throttle);
         var demand = cinematic?{throttle:0,throttleRate:0,fire:false,boost:false,pitch:0,yaw:0,roll:0}:pilotDemand;
+        if(multiplayer)multiplayer.update(demand,paused);
         if(director&&!paused){director.advance(elapsed);demoSeconds+=elapsed;}
         var simMs=0,capitalMs=0,phaseStart=performance.now();
         if (!paused) {
@@ -551,6 +557,13 @@
         }
     }catch(error){importError='Could not load study case: '+(error instanceof Error?error.message:String(error));}
     reset();
+    if(multiplayerMode){
+        const net=DW.multiplayerFlight;
+        multiplayer=net.mount(session,()=>({profile:Number(select.value),weapon:DW.retailWeapons.indexOf(weapon()),model:DW.shipCatalog.craftModel(session.snapshot().combat.player,presentation.appearance().allyArt,0).id}));
+        get('watch-panel').hidden=true;get('combat-toggle').checked=false;get('combat-toggle').disabled=true;get('combat-mode').disabled=true;get('diameter').disabled=true;
+        const networkHeading=document.querySelector('header h1');if(networkHeading)networkHeading.textContent='DRIFTWORKS / MULTIPLAYER FLIGHT';
+        var hint=document.querySelector('#launch > p');if(hint)hint.textContent='Fly with a wingmate. Open Multiplayer to connect. Each pilot controls their own fighter; shared combat is not enabled yet.';
+    }
     presentation.ready.then(function(loaded){
         texturesReady=loaded;textureLoadFailed=!loaded;
         get('fly').disabled=!loaded;

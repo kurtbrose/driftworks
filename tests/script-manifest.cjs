@@ -17,7 +17,7 @@ assert.ok(!manifest.files('headless').some(file => file.startsWith('vendor/') ||
 assert.throws(() => manifest.files('flight'), /cannot execute module scripts or import maps/);
 assert.throws(() => manifest.files('unknown'), /Unknown script profile/);
 assert.equal(manifest.resolve('flight').filter(script => script.imports).length, 1);
-assert.equal(manifest.resolve('flight').filter(script => script.type === 'module').length, 3);
+assert.equal(manifest.resolve('flight').filter(script => script.type === 'module').length, 4);
 assert.deepEqual(manifest.resolve('flightStudy'), manifest.resolve('flight').filter(script => script.src !== 'experiments/flight.js'));
 assert.ok(manifest.resolve('ellisStudy').at(-1).src === 'experiments/ellis-study.js');
 const patrol = manifest.resolve('asteroidPatrol');

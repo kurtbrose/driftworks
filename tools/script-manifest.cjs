@@ -104,7 +104,7 @@ const profiles = {
     {imports: {three: 'vendor/three/build/three.module.js'}},
     {src: 'assets/characters/quaternius-astronaut/poses.js', type: 'module'},
     '@flightAi', 'experiments/flight-watch.js', {src: 'experiments/gas-giant-flight.js', type: 'module'},
-    'src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js', 'experiments/hyperbolic-battle.js', 'experiments/hyperbolic-flyby.js', 'experiments/flight-studies.js', 'experiments/flight.js'
+    'src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js', 'experiments/hyperbolic-battle.js', 'experiments/hyperbolic-flyby.js', 'experiments/flight-studies.js', {src:'experiments/multiplayer-flight.js',type:'module'}, 'experiments/flight.js'
   ]}
 };
 

@@ -48,6 +48,25 @@
         DW.flightSim.bindPlayer(combat, state).guns = guns;
         var bridgeVector=DW.flightGuns.bridgeVector,crossBridge=DW.flightGuns.crossBridge;
         var activeProfile = model.profiles[0], remainder = 0,curvatureOverride=0;
+        /** @type {import('./types').Craft|null} */var remotePilot=null;
+        /** @param {boolean} guest */
+        function prepareMultiplayer(guest){
+            setCombat('training',false);remotePilot=null;
+            setStartPosition([(guest?45:-45)/units,-asteroid.radius*1.6,asteroid.radius*.9]);
+            state.right=[0,guest?1:-1,0];state.up=[0,0,1];state.back=[guest?1:-1,0,0];
+            state.ramp=[0,0,0];state.rates=[0,0,0];state.throttle=0;
+        }
+        /** Peer-owned pose; this observer cannot damage local craft.
+         * @param {import('./multiplayer-model').RemotePilot|null} pilot */
+        function setRemotePilot(pilot){
+            if(!pilot){if(remotePilot)combat.enemies=combat.enemies.filter(c=>c!==remotePilot);remotePilot=null;return;}
+            const profile=DW.arcade.profiles[pilot.profile],weapon=DW.retailWeapons[pilot.weapon];
+            if(!profile||!weapon||(pilot.model!=='blockout'&&!DW.shipCatalog.find(pilot.model)))return;
+            if(!remotePilot){remotePilot=DW.flightSim.createCraft('remote-pilot',pilot.pose,'ally');remotePilot.callsign='Wingmate';combat.enemies.push(remotePilot);}
+            remotePilot.pose=pilot.pose;remotePilot.profile=profile;remotePilot.weaponIndex=pilot.weapon;
+            remotePilot.modelId=pilot.model;remotePilot.fire=pilot.fire;
+            DW.flightSim.collisionChanged(combat,remotePilot);
+        }
         var opponentStyle = /** @type {import('./types').OpponentStyle} */ ('baseline');
         var hulls = /** @type {{ally: string; enemy: string} | null} */ (null);
         function configureCombat() {
@@ -123,6 +142,7 @@
         }
         /** @param {string} mode @param {boolean} enabled */
         function setCombat(mode, enabled) {
+            remotePilot=null;
             applyGeology(mode);
             combat = DW.flightSim.create(mode);
             combat.useHullModels = true;
@@ -140,6 +160,7 @@
         }
         /** @param {{mode: string; enabled: boolean; profile: Profile}} config */
         function reset(config) {
+            remotePilot=null;
             applyGeology(config.mode);
             combat = DW.flightSim.create(config.mode);
             activeProfile = config.profile;
@@ -230,6 +251,9 @@
                     if(changed)DW.flightSim.collisionChanged(combat);
                 }:undefined);
                 if(state.curvature)DW.flightSim.rebaseGeometry(combat);
+                if(remotePilot){
+                    DW.flightGuns.step(remotePilot.guns,remotePilot.pose,DW.retailWeapons[remotePilot.weaponIndex||0],remotePilot.fire,dt,environment.terrainHit);
+                }
                 if (feedback.fired)
                     environment.onGunshot();
                 if (feedback.impact)
@@ -253,7 +277,7 @@
             }
             return snapshot();
         }
-        return { prepareCinematicObserver:prepareCinematicObserver, prepareAegisStudy:prepareAegisStudy, snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance,
+        return {prepareMultiplayer:prepareMultiplayer,setRemotePilot:setRemotePilot, prepareCinematicObserver:prepareCinematicObserver, prepareAegisStudy:prepareAegisStudy, snapshot: snapshot, reset: reset, setCombat: setCombat, advance: advance,
             respawn:/** @param {import('./types').FlightState} pose */function(pose){
                 state=pose;guns=DW.flightGuns.create();DW.flightSim.bindPlayer(combat,state).guns=guns;
                 DW.flightSim.configure(combat,activeProfile);combat.player.damagedAt=combat.time;combat.player.hitFlash=0;combat.player.fire=false;

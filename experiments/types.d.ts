@@ -726,6 +726,7 @@ export type EllisDraw={lensTransit?:HullTransit;projected?:boolean;lensRadius?:n
 export type YoYoFrame={view:Pose;points:{point:number[];region:number}[];expected:number[][];distance:number;observerL:number;halfSize:number};
 export type EllisRenderPass={setShipStretching:(enabled:boolean)=>void;invalidate:()=>void;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number,revision?:string|null)=>{objectPaths:number;objectPatches:number;objectError:number;objectBad:number;compositionPasses:number;historyValid:number;extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {
+    multiplayerFlight:{mount:(session:ReturnType<ExperimentModules['flightSession']['create']>,loadout:()=>{profile:number;weapon:number;model:string})=>{isGuest:()=>boolean;update:(demand:Demand,paused:boolean)=>void}};
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
     convoyBattle:{start:(combat:Combat)=>void;update:(combat:Combat)=>void;dispatch:(combat:Combat)=>void;tasks:(combat:Combat)=>ConvoyBattleOrder[]};
@@ -1005,6 +1006,8 @@ export type ExperimentModules = {
     flightSession: {
         rotateVector: (vector: number[], angle: number) => number[];
         create: (environment: SessionEnvironment) => {
+            prepareMultiplayer:(guest:boolean)=>void;
+            setRemotePilot:(pilot:import('./multiplayer-model').RemotePilot|null)=>void;
             prepareCinematicObserver:()=>void;
             prepareAegisStudy:()=>void;
             snapshot: () => Snapshot;
