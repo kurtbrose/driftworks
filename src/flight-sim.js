@@ -324,7 +324,7 @@
             });
 
         }
-        if(t.mode==='convoy')DW.convoyMission.start(t,player);
+        if(t.mode==='convoy'||t.mode==='fleet-evacuation')DW.convoyMission.start(t,player);
         if(t.mode==='evacuation')DW.evacuationMission.start(t,player);
         if(t.mode==='ellis'||t.mode==='thin-shell')t.enemies.forEach(function(e,i){
             var region=i%4>=2?1:0,shift=(region-(player.region||0))*12000/U;
@@ -483,7 +483,7 @@
         if(t.convoy)DW.convoyMission.step(t,dt);
         replenish(t,player,radius);
         var living = alive(t);
-        if (!t.dead && t.mode !== 'cinematic' && t.mode !== 'asteroid-patrol' && t.mode !== 'evacuation' && t.mode !== 'scramble' && t.mode !== 'convoy' && (!living.length || t.roundOver)) {
+        if (!t.dead && t.mode !== 'cinematic' && t.mode !== 'asteroid-patrol' && t.mode !== 'evacuation' && t.mode !== 'scramble' && t.mode !== 'convoy' && t.mode !== 'fleet-evacuation' && (!living.length || t.roundOver)) {
             t.countdown -= dt;
             if (t.countdown <= 0) {
                 spawn(t, player, radius);
@@ -522,6 +522,7 @@
                 var coverage=t.convoy&&t.convoy.coverage&&t.convoy.coverage[e.id];
                 var coveragePoint=coverage?coverage.map(function(v){return v/U;}):null;
                 var escortThreat=coveragePoint&&living.some(function(c){return c.team==='enemy'&&coveragePoint&&length(sub(c.pose.eye,coveragePoint))*U<1800;});
+                if(DW.convoyBattle.stepEvacuationWing(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 if(t.convoy&&e.team==='ally'&&!e.convoyBattle&&!escortThreat){e.targetId=null;DW.convoyMission.stepWing(e,player,e.index,dt,t);neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 if(t.convoy&&e.team==='enemy'&&DW.convoyMission.stepRaider(t,e,dt)){neighbors.moved(e);collision.moved(t,e);fireGuns(e);return;}
                 /** @type {FlightState|null} */ var opponent = null;
@@ -645,7 +646,7 @@
         var nowAlive = alive(t);
         if (living.length && !nowAlive.length)
             t.countdown = 5;
-        if (t.mode!=='hyperbolic' && t.mode!=='cinematic' && t.mode!=='evacuation' && t.mode!=='convoy' && !mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
+        if (t.mode!=='hyperbolic' && t.mode!=='cinematic' && t.mode!=='evacuation' && t.mode!=='convoy' && t.mode!=='fleet-evacuation' && !mission(t).encounter.reinforcements && (mission(t).encounter.kind==='furball') && !t.roundOver && t.wave > 0 && ((!t.hangarSupport&&!nowAlive.some(function (e) {
             return e.team === 'ally';
         })) || !nowAlive.some(function (e) {
             return e.team === 'enemy';

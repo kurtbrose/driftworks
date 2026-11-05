@@ -10,6 +10,52 @@ catalog refresh, backups, applying revisions and the boundary between fixed
 lines and dynamic runtime reports. Plot and trigger notes remain authoring
 drafts until integrated into mission logic.
 
+## Fleet evacuation prototype
+
+Open `experiments/flight.html?mission=fleet-evacuation` for a separate battle
+built on convoy escort. Thirty transports cross the same 7.5 km route, then
+leave the active scene individually at the cyan extraction mouth. Three opposing
+screen pairs (18 fighters) and the two player wingmates start in flight. Control
+assigns crossing cover, support for a weakened screen, or interception of a real
+cargo threat. Existing priority hysteresis keeps assignments stable and urgent
+attacks can interrupt them; orders never change the player's selected target.
+
+Bastion covers the convoy while Harrow advances to intercept it. Their positions
+and SI velocities belong to JSON-safe `combat.convoy.evacuation.capitals`;
+`convoyBattle.updateEvacuation` moves them in the fixed-step mission. The
+browser's armed Aegis rigs observe those same states, retaining original scale,
+materials, collision and component damage. Capital weapons use the existing
+presentation-side Aegis simulation, so the ordinary headless session does not
+include their gunfire. `tests/evacuation-capitals.cjs` separately exercises the
+actual capital facade and numeric/visual state ownership without a GPU.
+
+The plan changes from crossing to pressure at 90 seconds and withdrawal at 210.
+Capitals below 7,000 integrity also retreat; destroyed capitals stop. Losing
+Bastion triggers an early emergency withdrawal and a matching Control call. Screens
+withdraw when depleted, when their opponents are gone, or in stages during the
+final withdrawal. Fighters steer to exit stations and leave only after physically
+reaching them; withdrawal is neither a kill nor a teleport.
+
+Enemy reserves contain nine fighters, released in three-ship packets through a
+fixed violet entry mouth. The first window is at 45 seconds, subsequent windows
+are at least 65 seconds apart, each mouth appears four seconds before release,
+and no arrival window opens with more than three active raiders. Existing
+screen breakthroughs reuse surviving actors. Capital hangars do not replenish
+this roster. Raid regrouping and abort rules remain the convoy rules.
+
+All transports either escaping or being destroyed ends the mission, regardless
+of surviving hostiles. Escape removes rendering, targeting and collision without
+destroying transport hull. The route anchor continues beyond the exit so trailing
+formation members can finish; the seeded unattended regression finishes at about
+330 seconds. This is an initial pacing experiment: it has no bomber-specific
+weapons, rearming, distant-combat abstraction, or branching campaign outcome.
+
+`Flight lab & diagnostics` includes Battle overview and Bastion underside review
+cameras plus the existing frozen capital ABBA benchmark. Focused checks:
+`node tests/fleet-evacuation.cjs`, `node tests/evacuation-capitals.cjs`, and the
+convoy battle/director/arrival checks. Render measurements and visual inspection
+are recorded in `docs/benchmarks/fleet-evacuation.md`.
+
 ## Convoy escort / battlefield direction
 
 Open `experiments/flight.html?mission=convoy` or select Convoy Escort on the

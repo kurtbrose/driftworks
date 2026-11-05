@@ -14,14 +14,14 @@
     /** @type {ReturnType<typeof import('./multiplayer-flight').mount>|null} */var multiplayer=null;
     if(multiplayerMode&&!DW.multiplayerFlight)await new Promise(/** @param {(value:void)=>void} resolve */function(resolve){window.addEventListener('multiplayer-flight-ready',function(){resolve();},{once:true});});
     if(activeMission.sky.gasGiant&&!DW.gasGiantWeather)await new Promise(/** @param {(value:boolean)=>void} resolve */function(resolve){window.addEventListener('gas-weather-ready',function(){resolve(true);},{once:true});});
-    if(activeMission.id==='convoy')host.setAttribute('aria-label','Convoy escort / intercept raiders and protect thirty freighters');
+    if(['convoy','fleet-evacuation'].includes(activeMission.id))host.setAttribute('aria-label','Convoy escort / intercept raiders and protect thirty freighters');
     var cinematic=activeMission.id==='cinematic';
     var impactWatch=!!activeMission.emptySpace&&!cinematic&&!activeMission.sky.hyperbolic;
     if(impactWatch)get('combat-toggle').checked=false;
     if(activeMission.weaponsDisabled){
         get('combat-toggle').disabled=true;get('watch-panel').hidden=true;
-        host.setAttribute('aria-label',activeMission.id==='convoy'?'Escort thirty cargo vessels with two wingmates':activeMission.id==='jade-rime'?'Free flight near Rime, with the jade giant overhead':'Free flight above a jade gas giant');
-        (activeMission.id==='convoy'?['weapons']:['weapons','integrity','target-info']).forEach(function(id){var panel=document.getElementById(id);if(panel)panel.hidden=true;});
+        host.setAttribute('aria-label',['convoy','fleet-evacuation'].includes(activeMission.id)?'Escort thirty cargo vessels with two wingmates':activeMission.id==='jade-rime'?'Free flight near Rime, with the jade giant overhead':'Free flight above a jade gas giant');
+        (['convoy','fleet-evacuation'].includes(activeMission.id)?['weapons']:['weapons','integrity','target-info']).forEach(function(id){var panel=document.getElementById(id);if(panel)panel.hidden=true;});
         var footer=document.querySelector('footer');if(footer)footer.textContent='W/S throttle · X stop · hold W at max / double-tap W boost · arrows steer · Q/E roll · A/D lateral · R/F vertical · Esc pause';
     }
     if(activeMission.id!=='default'){
@@ -37,7 +37,7 @@
     if(controlsHelp&&activeMission.units.speedScale!==1)controlsHelp.innerHTML=controlsHelp.innerHTML.replace(/5 m\/s/g,Math.round(5*activeMission.units.speedScale)+' '+activeMission.units.speedLabel);
     var aegisMode=new URLSearchParams(location.search).get('aegis')==='1';
     /** @type {import('./types').AegisFlightRig|null} */var aegis=null;
-    if(activeMission.sky.hyperbolic||aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'||activeMission.id==='convoy'){try{await DW.aegisFlight.load();aegis=activeMission.id==='convoy'?DW.convoyScenery.createArrivalFleet():activeMission.sky.hyperbolic?DW.hyperbolicBattle.create():activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):cinematic?DW.aegisFlight.createBattle({bridge:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
+    if(activeMission.sky.hyperbolic||aegisMode||activeMission.id==='battle'||activeMission.sky.wormhole||activeMission.id==='scramble'||['convoy','fleet-evacuation'].includes(activeMission.id)){try{await DW.aegisFlight.load();aegis=['convoy','fleet-evacuation'].includes(activeMission.id)?DW.convoyScenery.createArrivalFleet():activeMission.sky.hyperbolic?DW.hyperbolicBattle.create():activeMission.id==='scramble'?DW.aegisFlight.create({state:{team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000},opponent:{team:'enemy',position:[0,2000/DW.sim.METERS_PER_UNIT,1200],heading:0,velocity:[0,0,0],integrity:20000},unarmed:true}):cinematic?DW.aegisFlight.createBattle({bridge:true}):activeMission.sky.wormhole?DW.aegisFlight.createEllisPatrol():DW.aegisFlight.createBattle({battlefield:activeMission.id==='battle'});}catch(error){get('status').textContent='Aegis flight could not start: '+String(error);return;}}
     /** @type {import('./types').TerrainHit} */
     var environmentHit = function (start, end, bolt) {
             var asteroid = session.snapshot().asteroid;
@@ -300,7 +300,7 @@
         var pilot = get('watch-pilot').value, observing = pilot !== 'manual';
         session.reset({ mode: get('combat-mode').value, enabled: !observing && get('combat-toggle').checked, profile: model.profiles[Number(select.value) || 0] });
         if(multiplayerMode)session.prepareMultiplayer(multiplayer?multiplayer.isGuest():false);
-        if(aegis&&!aegisMode)aegis.reset(activeMission.id==='battle'||cinematic||activeMission.sky.hyperbolic?session.snapshot().combat:undefined);
+        if(aegis&&!aegisMode)aegis.reset(activeMission.id==='fleet-evacuation'||activeMission.id==='battle'||cinematic||activeMission.sky.hyperbolic?session.snapshot().combat:undefined);
         if(aegis&&aegis.spawnPlayer)session.respawn(aegis.spawnPlayer(session.snapshot().state));
         if(cinematic){session.prepareCinematicObserver();get('watch-panel').hidden=true;}
         if(aegis&&aegisMode){aegis.reset(session.snapshot().combat);session.prepareAegisStudy();}
@@ -569,7 +569,7 @@
         get('fly').disabled=!loaded;
         get('fly').textContent=loaded?(cinematic?'Start demo':'Start flight'):'Textures unavailable';
         if(loaded){
-            status.textContent=importError||(activeMission.id==='convoy'?'Rendezvous / Join the convoy and take up escort stations. Tab cycles hostiles; L locks; Space or click fires.':'Ready - Start flight when ready');
+            status.textContent=importError||(['convoy','fleet-evacuation'].includes(activeMission.id)?'Rendezvous / Join the convoy and take up escort stations. Tab cycles hostiles; L locks; Space or click fires.':'Ready - Start flight when ready');
             if(activeMission.id==='scramble'){controls.startUncaptured();}
             if(cinematic)resume();
             if(studies.enabled&&watch)resume();

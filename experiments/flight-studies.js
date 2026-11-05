@@ -129,7 +129,7 @@
         benchmarkButton.textContent=owner.activeMission.id==='convoy'?'Benchmark convoy on / off':owner.activeMission.sky.hyperbolic?'Benchmark fleet on / off':owner.activeMission.id==='scramble'?'Benchmark close furball on / off':owner.activeMission.id==='battle'?'Benchmark distant squadrons on / off':owner.activeMission.id==='evacuation'?'Benchmark depot / transports on / off':'Benchmark Aegis on / off';
         benchmarkOutput.id='aegis-benchmark-result';benchmarkOutput.style.whiteSpace='pre-wrap';
         owner.get('perf-reset').after(benchmarkButton,benchmarkOutput);
-        var capitalBenchmarkButton=(owner.activeMission.id==='convoy'||owner.activeMission.id==='battle'||owner.activeMission.id==='scramble'||owner.activeMission.sky.hyperbolic)?document.createElement('button'):null;
+        var capitalBenchmarkButton=(owner.activeMission.id==='fleet-evacuation'||owner.activeMission.id==='convoy'||owner.activeMission.id==='battle'||owner.activeMission.id==='scramble'||owner.activeMission.sky.hyperbolic)?document.createElement('button'):null;
         if(capitalBenchmarkButton){capitalBenchmarkButton.textContent='Benchmark capital ships on / off';benchmarkButton.after(capitalBenchmarkButton);capitalBenchmarkButton.onclick=function(){runBenchmark(true);};}
         benchmarkButton.onclick=function(){runBenchmark(false);};
         if(owner.activeMission.id==='convoy'){var backgroundBenchmark=document.createElement('button');backgroundBenchmark.textContent='Benchmark background fighters on / off';benchmarkButton.after(backgroundBenchmark);backgroundBenchmark.onclick=function(){runBenchmark(false,false,undefined,true);};}
@@ -137,6 +137,21 @@
             [['Reception approach',0,3000,120],['Reception underside',-1450,8450,-400],['Reception stern',-1450,10450,150]].forEach(function(preset){
                 var button=document.createElement('button');button.textContent=String(preset[0]);benchmarkOutput.before(button);
                 button.onclick=function(){owner.pause();var pose=owner.view().state,U=DW.sim.METERS_PER_UNIT;pose.eye=[Number(preset[1])/U,Number(preset[2])/U,1200+Number(preset[3])/U];pose.velocity=[0,0,0];pose.ramp=[0,0,0];pose.throttle=0;var target=Number(preset[1])<0?[-1450/U,8450/U,1200-70/U]:[0,8300/U,1200];var forward=target.map(function(v,k){return v-pose.eye[k];}),length=Math.hypot.apply(null,forward);forward=forward.map(function(v){return v/length;});var horizontal=Math.hypot(forward[0],forward[1]);pose.right=horizontal>1e-6?[forward[1]/horizontal,-forward[0]/horizontal,0]:[1,0,0];pose.up=[pose.right[1]*forward[2],-pose.right[0]*forward[2],pose.right[0]*forward[1]-pose.right[1]*forward[0]];pose.back=forward.map(function(v){return -v;});owner.presentation.pose(pose);};
+            });
+        }
+        if(owner.activeMission.id==='fleet-evacuation'){
+            ['Battle overview','Bastion underside'].forEach(function(label){
+                var button=document.createElement('button');button.textContent=label;benchmarkOutput.before(button);
+                button.onclick=function(){
+                    owner.pause();var view=owner.view(),plan=view.combat.convoy&&view.combat.convoy.evacuation;if(!plan)return;
+                    var pose=view.state,U=DW.sim.METERS_PER_UNIT,capital=plan.capitals[0];
+                    const capitals=plan.capitals;
+                    var target=label==='Battle overview'?capitals[0].position.map(function(v,k){return (v+capitals[1].position[k])/2;}):capital.position;
+                    pose.eye=label==='Battle overview'?target.map(function(v,k){return v+([0,-5000,1300][k])/U;}):capital.position.map(function(v,k){return v+([180,-200,-400][k])/U;});
+                    pose.velocity=[0,0,0];pose.ramp=[0,0,0];pose.throttle=0;
+                    var forward=target.map(function(v,k){return v-pose.eye[k];}),axes=DW.fleetGuidance.frame(forward);
+                    pose.right=axes.right;pose.up=axes.up;pose.back=axes.back;owner.presentation.pose(pose);
+                };
             });
         }
 
@@ -173,6 +188,7 @@
                     lines.push((on?'Asset ON':'Asset OFF')+': CPU median/p95 '+percentile('cpu',.5).toFixed(2)+' / '+percentile('cpu',.95).toFixed(2)+' ms, frame median/p95 '+percentile('interval',.5).toFixed(2)+' / '+percentile('interval',.95).toFixed(2)+' ms, '+mean('draws').toFixed(0)+' draws, '+mean('triangles').toFixed(0)+' triangles');
                 });
                 if(owner.activeMission.id==='convoy'){var renderStats=owner.presentation.renderStats();lines.push('Backing '+renderStats.scene.width+' x '+renderStats.scene.height+'; DPR '+window.devicePixelRatio+'; capital preparation '+DW.convoyScenery.arrivalPreparationMs.toFixed(2)+' ms');if(capitals&&rows.filter(function(r){return r.on;}).every(function(r){return r.triangles<=rows[0].triangles;}))throw Error('Reception ships are not visible; invalid comparison');}
+                if(owner.activeMission.id==='fleet-evacuation'){var fleetStats=owner.presentation.renderStats();lines.push('Backing '+fleetStats.scene.width+' x '+fleetStats.scene.height+'; DPR '+window.devicePixelRatio);if(capitals&&rows.filter(function(r){return r.on;}).every(function(r){return r.triangles<=rows[0].triangles;}))throw Error('Capital ships are not visible; invalid comparison');}
                 lines.push('CPU submission only; rAF includes browser pacing, not a GPU timer.');
                 benchmarkOutput.textContent=lines.join('\n');
             }catch(error){benchmarkOutput.textContent='Benchmark interrupted: '+String(error);}

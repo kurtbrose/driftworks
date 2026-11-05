@@ -137,7 +137,7 @@
         /** @param {string} mode */
         function applyGeology(mode) {
             var mission=DW.flightMissions.resolve(mode);
-            world.asteroids=mission.emptySpace||(mode==='evacuation'||mode==='scramble'||mode==='convoy')?[]:[asteroid];world.ships=mission.emptySpace||(mode==='evacuation'||mode==='scramble'||mode==='convoy')?[]:[mothership];
+            world.asteroids=mission.emptySpace||(mode==='evacuation'||mode==='scramble'||mode==='convoy'||mode==='fleet-evacuation')?[]:[asteroid];world.ships=mission.emptySpace||(mode==='evacuation'||mode==='scramble'||mode==='convoy'||mode==='fleet-evacuation')?[]:[mothership];
             DW.asteroidTerrain.setStudyParameters(asteroid, {bulk: mission.asteroidBulk});
         }
         /** @param {string} mode @param {boolean} enabled */
@@ -223,7 +223,7 @@
                     if (marks.length > 96) marks.shift();
                 };
                 updateLaunchOrigin();
-                var emptySpace=DW.flightMissions.resolve(combat.mode).emptySpace||(combat.mode==='evacuation'||combat.mode==='scramble'||combat.mode==='convoy');
+                var emptySpace=DW.flightMissions.resolve(combat.mode).emptySpace||(combat.mode==='evacuation'||combat.mode==='scramble'||combat.mode==='convoy'||combat.mode==='fleet-evacuation');
                 var bridge=DW.flightMissions.resolve(combat.mode).sky.wormhole;
                 var travelers=bridge?[state,...combat.enemies.map(function(c){return c.pose;}),...combat.wrecks.map(function(c){return c.pose;})]:[];
                 var travelingCraft=bridge?[combat.player,...combat.enemies]:[];

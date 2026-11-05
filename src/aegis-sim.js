@@ -227,7 +227,9 @@
             if(m.source.kind==='heavy'){
                 if(point===other&&other&&options){
                     if(opponentRig&&opponentRig.damage)opponentRig.damage(other,bolt.weapon.damage,view.combat);else options.opponent.integrity=Math.max(0,options.opponent.integrity-bolt.weapon.damage);
-                    confirmedHits++;view.combat.flashes.push({position:other.slice(),velocity:options.opponent.velocity.map(function(v){return v/U;}),age:0,scale:5,destruction:true,region:options.opponent.region||0});
+                    // Sustained evacuation salvos use impact flashes; actual capital
+                    // destruction still owns its full breakup/explosion effect.
+                    confirmedHits++;view.combat.flashes.push({position:other.slice(),velocity:options.opponent.velocity.map(function(v){return v/U;}),age:0,scale:5,destruction:view.combat.mode!=='fleet-evacuation',region:options.opponent.region||0});
                 }return point;
             }
             /** @type {import('../experiments/types').TerrainHit} */var surface=function(){return point;};

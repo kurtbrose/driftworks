@@ -39,7 +39,7 @@ function createFlight(options = {}) {
   if (typeof mission !== 'string' || (mission !== 'training' && DW.flightMissions.resolve(mission).id !== mission)) {
     throw new Error('Unknown mission: ' + mission);
   }
-  if(mission==='convoy'){
+  if(mission==='convoy'||mission==='fleet-evacuation'){
     const meta=JSON.parse(fs.readFileSync(path.join(root,'assets/ships/industrial-kit/convoy-flight.json'),'utf8'));
     const bytes=fs.readFileSync(path.join(root,'assets/ships/industrial-kit/convoy-flight.bin'));
     DW.convoyMission.installCollision(meta,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
