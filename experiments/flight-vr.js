@@ -84,7 +84,7 @@
                 nativeHudMaterial=new T.RawShaderMaterial({glslVersion:T.GLSL3,side:T.DoubleSide,transparent:true,depthTest:false,depthWrite:false,blending:T.NormalBlending,defaultAttributeValues:{},
                     uniforms:{uXRActive:{value:1},uXRView:{value:new Float32Array(identity)},uXRProjection:{value:new Float32Array(identity)},right:{value:right},up:{value:up},back:{value:back},angularPixel:{value:1}},
                     vertexShader:'precision highp float;in vec2 position,local,bounds,uv;in vec4 params,tint;uniform vec2 viewport;uniform float angularPixel;uniform vec3 right,up,back;uniform mat4 uXRView,uXRProjection;out vec2 p,b,tex;out vec4 s,c;void main(){p=local;b=bounds;s=params;c=tint;tex=uv;vec2 q=(position-viewport*.5)*vec2(angularPixel,-angularPixel);float r2=dot(q,q);vec3 direction=(right*(2.*q.x)+up*(2.*q.y)-back*(1.-r2))/(1.+r2);gl_Position=uXRProjection*vec4(mat3(uXRView)*direction,0.);gl_Position.z=gl_Position.w*.999999;}',
-                    fragmentShader:frame.fragmentShader.replace('float coverage = 1. / (16. * max(s.y, .01) * pixelRatio);','float coverage = max(fwidth(distance), 1. / 255.);')});
+                    fragmentShader:frame.fragmentShader.replace('float coverage = glyphCoverage;','float coverage = max(fwidth(distance), 1. / 255.);')});
                 nativeHud=new T.Mesh(frame.geometry,nativeHudMaterial);nativeHud.frustumCulled=false;bind(nativeHud,nativeHudMaterial);hudScene.add(nativeHud);
             }
             var material=nativeHudMaterial;
@@ -172,7 +172,9 @@
                 status=document.createElement('span');status.setAttribute('role','status');
                 var row=document.createElement('div');row.className='flight-vr-controls';row.append(button,status);
                 row.style.cssText='display:flex;flex-direction:column;gap:5px;margin:12px 0;font:12px monospace';
-                (document.getElementById('launch') || document.body).appendChild(row);
+                var settings=document.getElementById('flight-settings');
+                if(settings)settings.appendChild(row);
+                else {var options=document.createElement('details'),summary=document.createElement('summary');summary.textContent='VR settings';options.append(summary,row);(document.getElementById('launch') || document.body).appendChild(options);}
                 var mobile = document.createElement('button');mobile.type='button';mobile.textContent='Use phone / touch controls';row.appendChild(mobile);
                 mobile.onclick=async function(){var session=renderer.xr.getSession();if(session)await session.end();var mode=/** @type {HTMLSelectElement|null} */(document.getElementById('input-mode'));if(mode){mode.value='touch';mode.dispatchEvent(new Event('change'));}};
                 if(!xr){button.textContent='VR unavailable';status.textContent=window.isSecureContext===false?'VR needs HTTPS. Open the temporary HTTPS link.':'WebXR is unavailable here. Open this link directly in Meta Quest Browser.';return;}

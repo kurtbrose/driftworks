@@ -27,6 +27,12 @@ in vec2 p, b, tex;
 in vec4 s, c;
 out vec4 outColor;
 void main() {
+    // Evaluate derivatives before primitive branches: adjacent pixels can belong
+    // to different HUD shapes in this single batch.
+    vec2 footprint = abs(dFdx(p)) + abs(dFdy(p));
+    float edgeCoverage = max(max(footprint.x, footprint.y), 1. / pixelRatio);
+    float glyphDistance = textureLod(atlas, tex, 0.).a;
+    float glyphCoverage = max(fwidth(glyphDistance), 1. / (16. * max(s.y, .01) * pixelRatio));
     float alpha = 1.;
     vec4 color = c;
     if (s.x < 1.5) {
@@ -37,20 +43,20 @@ void main() {
             distance = length(max(q, 0.)) + min(max(q.x, q.y), 0.) - s.y;
         }
         if (s.z > 0.) distance = abs(distance) - s.z * .5;
-        float coverage = max(fwidth(distance), .65);
+        float coverage = edgeCoverage;
         alpha = 1. - smoothstep(-coverage * .5, coverage * .5, distance);
     } else if (s.x < 2.5) {
-        float distance = textureLod(atlas, tex, 0.).a;
+        float distance = glyphDistance;
         // Atlas distances span sixteen source pixels. Derive glyph coverage
         // from its known scale, independent of adjacent primitives in the batch.
-        float coverage = 1. / (16. * max(s.y, .01) * pixelRatio);
+        float coverage = glyphCoverage;
         alpha = smoothstep(.5 - coverage * .5, .5 + coverage * .5, distance);
     } else if (s.x < 3.5) {
         color *= s.w < .5 ? texture(monitor, tex) : texture(portrait, tex);
     }
     if (s.x > 4.5) {
         float distance = max(abs(p.y) - s.z * .5, max(-p.x, p.x - b.x));
-        float coverage = max(fwidth(distance), .65);
+        float coverage = edgeCoverage;
         alpha = 1. - smoothstep(-coverage * .5, coverage * .5, distance);
     }
     if (color.a * alpha < .001) discard;

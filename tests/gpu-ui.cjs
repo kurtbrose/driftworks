@@ -115,3 +115,6 @@ assert.equal(frames.length,renderedCount,'A native HUD batch must not rasterize 
 const nativeBatch=window.Driftworks.gpuUi.frame(nativeUi.canvas);assert(nativeBatch);assert.equal(nativeBatch.height,600);
 nativeUi.dispose();assert.equal(window.Driftworks.gpuUi.frame(nativeUi.canvas),undefined);
 console.log('PASS native HUD batches: no raster pass, retained geometry/SDF data and lifecycle');
+
+assert.ok(currentSource.includes('float edgeCoverage = max(max(footprint.x, footprint.y), 1. / pixelRatio)'));
+assert.ok(currentSource.indexOf('fwidth(glyphDistance)') < currentSource.indexOf('if (s.x < 1.5)'), 'Glyph derivatives must be evaluated before divergent primitive branches');

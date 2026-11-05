@@ -31,11 +31,11 @@
                     image.onload = function () {
                         var wreck = new Image();
                         wreck.onload = function () { wreckTextures.set(image, wreck); resolve(image); };
-                        wreck.onerror = function () { reject(new Error('Could not load wreck texture: ' + model.texture)); };
+                        wreck.onerror = function () { reject(new Error('Could not load wreck texture: ' + pack.id + '/' + texturePath.replace(/\.[^.]+$/, '.wreck.webp'))); };
                         wreck.src = assetUrl('../assets/ships/' + pack.id + '/' + texturePath.replace(/\.[^.]+$/, '.wreck.webp'));
                     };
                     image.onerror = function () {
-                        reject(new Error('Could not load ' + model.texture));
+                        reject(new Error('Could not load ship texture: ' + pack.id + '/' + texturePath));
                     };
                     image.src = assetUrl('../assets/ships/' + pack.id + '/' + texturePath);
                 }));
