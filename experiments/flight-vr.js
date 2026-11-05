@@ -172,11 +172,10 @@
                 status=document.createElement('span');status.setAttribute('role','status');
                 var row=document.createElement('div');row.className='flight-vr-controls';row.append(button,status);
                 row.style.cssText='display:flex;flex-direction:column;gap:5px;margin:12px 0;font:12px monospace';
-                var settings=document.getElementById('flight-settings');
-                if(settings)settings.appendChild(row);
-                else {var options=document.createElement('details'),summary=document.createElement('summary');summary.textContent='VR settings';options.append(summary,row);(document.getElementById('launch') || document.body).appendChild(options);}
-                var mobile = document.createElement('button');mobile.type='button';mobile.textContent='Use phone / touch controls';row.appendChild(mobile);
-                mobile.onclick=async function(){var session=renderer.xr.getSession();if(session)await session.end();var mode=/** @type {HTMLSelectElement|null} */(document.getElementById('input-mode'));if(mode){mode.value='touch';mode.dispatchEvent(new Event('change'));}};
+                var options=document.createElement('details'),summary=document.createElement('summary');
+                options.id='flight-vr-settings';summary.textContent='VR headset';options.append(summary,row);
+                var launch=document.getElementById('launch'),start=document.getElementById('fly');
+                if(launch)launch.insertBefore(options,start?start.nextSibling:null);else document.body.appendChild(options);
                 if(!xr){button.textContent='VR unavailable';status.textContent=window.isSecureContext===false?'VR needs HTTPS. Open the temporary HTTPS link.':'WebXR is unavailable here. Open this link directly in Meta Quest Browser.';return;}
                 xr.isSessionSupported('immersive-vr').then(function(supported){if(button){button.disabled=!supported;button.textContent=supported?'Enter VR':'VR unavailable';}if(status)status.textContent=supported?'Head tracking + hand controllers':'This browser reports immersive VR unavailable.';}).catch(/** @param {unknown} error */function(error){if(button)button.textContent='VR unavailable';if(status)status.textContent='VR support check failed: '+String(error);});
                 button.onclick=async function(){

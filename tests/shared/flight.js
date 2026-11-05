@@ -431,6 +431,19 @@
     assert(flightControlsFixture(storage,true,{search:'?note=mobile=1'}).controls.view().inputMode==='controller');
   });
 
+  test('flight', 'phone shortcut restores touch input from a saved phone override without WebXR',function(){
+    var stored={'driftworks.flight.input-mode':'controller','driftworks.flight.touch-input-mode':'controller'};
+    var storage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};
+    var f=flightControlsFixture(storage,true,{coarse:true});
+    assert(f.controls.view().inputMode==='controller');
+    var button=f.elements.launch.children.filter(function(child){return child.id==='phone-controls';})[0];
+    assert(button&&button.textContent==='Use phone / touch controls');
+    button.onclick();
+    assert(f.controls.view().inputMode==='touch');
+    assert(stored['driftworks.flight.touch-input-mode']==='touch');
+    assert(flightControlsFixture(storage,true,{coarse:true}).controls.view().inputMode==='touch');
+  });
+
   test('flight', 'touch start requests document fullscreen while desktop start does not',function(){
     var f=flightControlsFixture(undefined,true),requests=0,exits=0;
     f.doc.documentElement={requestFullscreen:function(){requests++;return Promise.resolve();}};

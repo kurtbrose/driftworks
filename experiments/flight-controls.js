@@ -105,6 +105,16 @@
             try { window.localStorage.setItem('driftworks.flight.steering', steeringPreset.value); } catch (error) { /* Session controls still work. */ }
         };
         mountTouchUi(document, inputMode);
+        // Phone recovery belongs on the start/pause screen, independently of WebXR.
+        var phoneControls = document.createElement('button');
+        phoneControls.id = 'phone-controls';
+        phoneControls.type = 'button';
+        phoneControls.textContent = 'Use phone / touch controls';
+        get('launch').insertBefore(phoneControls, get('fly'));
+        phoneControls.onclick = function () {
+            inputMode.value = 'touch';
+            updateInputMode();
+        };
         var fullscreenButton = document.getElementById('flight-fullscreen');
         // The pause menu belongs to every input mode, including phone gamepads.
         var pauseFullscreen = document.createElement('button');
@@ -421,7 +431,8 @@
             get('deadzone').value = String(mapping.deadzone);
             saveBindings();
         };
-        inputMode.onchange = function () {
+        inputMode.onchange = updateInputMode;
+        function updateInputMode() {
             actions.pause();
             touchLayout();
             try {

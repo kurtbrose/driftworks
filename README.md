@@ -683,4 +683,4 @@ The [Ellis sky continuity study](experiments/ellis-sky-study.html) isolates the
 sky with exact distance controls and 1/100-speed sweeps across the outer lensing
 boundary. It hides ships and navigation overlays for comparing sky motion.
 
-Phone fullscreen remains available independently of VR. VR entry lives in the pause menu; **Use phone / touch controls** ends an active VR session and selects the mobile UI. **Flight input** also lets you return to touch controls or select your controller.
+Phone fullscreen remains available independently of VR. **Use phone / touch controls** is directly on the start/pause screen and restores touch input even after a saved mouse or controller choice. Expand **VR headset** on that screen to enter VR explicitly. Both choices disappear during flight and return when paused. **Flight input** also lets you select touch controls or your controller.
