@@ -25,7 +25,7 @@
         // Flight sticks use X for bank and twist for yaw. Browser axis layouts
         // vary; every binding remains editable in the controller settings.
         var joystick = !standard && deviceId !== undefined;
-        return { pitch: 1, yaw: joystick ? 2 : 0, roll: joystick ? 0 : 2, throttle: standard ? -1 : 3, pitchInvert: standard || joystick, yawInvert: false, rollInvert: false, throttleInvert: true, fire: standard ? 7 : 0, boost: standard ? 0 : 1, bank: standard ? 3 : 2, lock: standard ? 2 : 3, pause: standard ? 9 : 7, up: joystick ? -1 : 12, down: joystick ? -1 : 13, deadzone: .12 };
+        return { throttleRate: standard ? 3 : -1, throttleRateInvert: true, fireAxis: -1, fireThreshold: .5, fireAxisInvert: false, pitch: 1, yaw: joystick ? 2 : 0, roll: joystick ? 0 : 2, throttle: standard ? -1 : 3, pitchInvert: standard || joystick, yawInvert: false, rollInvert: false, throttleInvert: true, fire: standard ? 7 : 0, boost: standard ? 0 : 1, bank: standard ? 3 : 2, lock: standard ? 2 : 3, pause: standard ? 9 : 7, up: joystick ? -1 : 12, down: joystick ? -1 : 13, deadzone: .12 };
     }
     /** @param {Gamepad} pad @param {Mapping} map */
     function read(pad, map) {
@@ -42,12 +42,14 @@
             return !!(b && (b.pressed || b.value > .5));
         }
         var raw = pad.axes[map.throttle], throttle = map.throttle >= 0 && Number.isFinite(raw) ? Math.max(0, Math.min(1, (1 + (map.throttleInvert ? -raw : raw)) / 2)) : null;
-        var maneuver = pad.mapping === 'standard' && !!(pad.buttons[4] && (pad.buttons[4].pressed || pad.buttons[4].value > .5));
+        var maneuver = pad.mapping === 'standard' && map.roll === 2 && map.throttleRate === 3 && !!(pad.buttons[4] && (pad.buttons[4].pressed || pad.buttons[4].value > .5));
         var side = maneuver ? deadzone(pad.axes[2], map.deadzone) : 0;
         var vertical = maneuver ? -deadzone(pad.axes[3], map.deadzone) : 0;
         var length = Math.max(1, Math.hypot(side, vertical));
-        var stickThrottle = pad.mapping === 'standard' && !maneuver && map.throttle < 0 ? -deadzone(pad.axes[3], map.deadzone) : 0;
-        return { pitch: axis('pitch'), yaw: -axis('yaw'), roll: maneuver ? 0 : -axis('roll'), side: side / length, vertical: vertical / length, throttle: throttle, throttleRate: Math.max(-1, Math.min(1, stickThrottle + (button('up') ? 1 : 0) - (button('down') ? 1 : 0))), fire: button('fire'), boost: button('boost'), bank: button('bank'), lock: button('lock'), pause: button('pause') };
+        var stickThrottle = !maneuver && map.throttleRate >= 0 ? deadzone(pad.axes[map.throttleRate], map.deadzone) * (map.throttleRateInvert ? -1 : 1) : 0;
+        var trigger = pad.axes[map.fireAxis];
+        var axisFire = map.fireAxis >= 0 && Number.isFinite(trigger) && (map.fireAxisInvert ? trigger < map.fireThreshold : trigger > map.fireThreshold);
+        return { pitch: axis('pitch'), yaw: -axis('yaw'), roll: maneuver ? 0 : -axis('roll'), side: side / length, vertical: vertical / length, throttle: throttle, throttleRate: Math.max(-1, Math.min(1, stickThrottle + (button('up') ? 1 : 0) - (button('down') ? 1 : 0))), fire: button('fire') || axisFire, boost: button('boost'), bank: button('bank'), lock: button('lock'), pause: button('pause') };
     }
     /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightInput = { deadzone: deadzone, moveStick: moveStick, stickDemand: stickDemand, defaults: defaults, read: read };
 }());

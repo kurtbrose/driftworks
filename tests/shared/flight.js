@@ -402,6 +402,21 @@
     frame=diagnostics.beginFrame(3300,true);diagnostics.endFrame(frame,true,comparison,stats);assert(!overlay.hidden&&overlay.textContent.indexOf('PAUSED / 15 FPS CAP')===0);
   });
 
+  test('flight', 'guided bindings capture Android axes and triggers without resuming flight',function(){
+    var stored={},storage={getItem:function(k){return stored[k]||null;},setItem:function(k,v){stored[k]=v;}};
+    var f=flightControlsFixture(storage,true),pad={index:0,id:'Android controller',connected:true,mapping:'standard',axes:[0,0,0,0,0,-1],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
+    f.setPads([pad]);f.controls.sample();assert(!f.elements.bindings.hidden);
+    function bind(row){var children=f.elements.bindings.children[row].children;children[children.length-1].onclick();f.controls.sample();}
+    bind(0);pad.axes[4]=1;assert(!f.controls.sample().fire);assert(f.counts.resume===0);
+    pad.axes[4]=0;f.elements['input-mode'].value='controller';assertClose(f.controls.sample().pitch,0);
+    pad.axes[4]=1;assertClose(f.controls.sample().pitch,1);pad.axes[4]=0;
+    bind(11);pad.axes[2]=-1;f.controls.sample();pad.axes[2]=0;assert(f.controls.sample().throttle===null);
+    pad.axes[2]=-.56;assertClose(f.controls.sample().throttleRate,.5);pad.axes[2]=0;
+    bind(4);pad.axes[5]=1;f.controls.sample();assert(f.controls.sample().fire);pad.axes[5]=-1;assert(!f.controls.sample().fire);
+    assert(f.counts.resume===0,'Binding and testing controls must keep settings paused');
+    var next=flightControlsFixture(storage);next.setPads([pad]);next.controls.sample();pad.axes[5]=1;assert(next.controls.sample().fire,'Axis trigger binding survives reload');
+  });
+
   test('flight', 'phone input detection ignores legacy desktop preference and retains explicit phone overrides',function(){
     var stored={'driftworks.flight.input-mode':'mouse'},storage={getItem:function(key){return stored[key]||null;},setItem:function(key,value){stored[key]=value;}};
     var phone=flightControlsFixture(storage,true,{coarse:true});
@@ -631,7 +646,7 @@
 
   test('flight', 'flight controls retain controller edges, editable bindings and disconnect pause',function(){
     var f=flightControlsFixture(),c=f.controls,pad={index:0,id:'Test controller',connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},function(){return {pressed:false,value:0};})};
-    f.setPads([null,pad,null]);c.sample();assert(f.elements.bindings.children.length===11);
+    f.setPads([null,pad,null]);c.sample();assert(f.elements.bindings.children.length===12);
     pad.buttons[3].pressed=true;c.sample();c.sample();assert(f.counts.weapon===1);
     pad.buttons[3].pressed=false;c.sample();pad.buttons[3].pressed=true;c.sample();assert(f.counts.weapon===2);
     var pitchSelect=f.elements.bindings.children[0].children[0];pitchSelect.value='0';pitchSelect.onchange();pad.axes[0]=1;assertClose(c.sample().pitch,-1);

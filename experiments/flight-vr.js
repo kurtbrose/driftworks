@@ -171,8 +171,10 @@
                 button=document.createElement('button');button.type='button';button.textContent='Checking VR...';button.disabled=true;
                 status=document.createElement('span');status.setAttribute('role','status');
                 var row=document.createElement('div');row.className='flight-vr-controls';row.append(button,status);
-                row.style.cssText='position:fixed;top:12px;right:12px;z-index:100;display:flex;flex-direction:column;gap:5px;max-width:280px;padding:8px;background:#07121fee;color:#d2e8ee;border:1px solid #578178;border-radius:5px;font:12px monospace';
-                document.body.appendChild(row);
+                row.style.cssText='display:flex;flex-direction:column;gap:5px;margin:12px 0;font:12px monospace';
+                (document.getElementById('launch') || document.body).appendChild(row);
+                var mobile = document.createElement('button');mobile.type='button';mobile.textContent='Use phone / touch controls';row.appendChild(mobile);
+                mobile.onclick=async function(){var session=renderer.xr.getSession();if(session)await session.end();var mode=/** @type {HTMLSelectElement|null} */(document.getElementById('input-mode'));if(mode){mode.value='touch';mode.dispatchEvent(new Event('change'));}};
                 if(!xr){button.textContent='VR unavailable';status.textContent=window.isSecureContext===false?'VR needs HTTPS. Open the temporary HTTPS link.':'WebXR is unavailable here. Open this link directly in Meta Quest Browser.';return;}
                 xr.isSessionSupported('immersive-vr').then(function(supported){if(button){button.disabled=!supported;button.textContent=supported?'Enter VR':'VR unavailable';}if(status)status.textContent=supported?'Head tracking + hand controllers':'This browser reports immersive VR unavailable.';}).catch(/** @param {unknown} error */function(error){if(button)button.textContent='VR unavailable';if(status)status.textContent='VR support check failed: '+String(error);});
                 button.onclick=async function(){

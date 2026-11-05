@@ -233,6 +233,7 @@
             mouse = [0, 0];
         }
         function resetButtons() {
+            bindingEditing = false; learning = null; cancelBinding.hidden = true;
             previousButtons = { bank: false, lock: false, pause: false };
         }
         function release() {
@@ -254,6 +255,7 @@
             actions.resume();
         }
         function capture() {
+            bindingEditing = false; learning = null;
             uncapturedMouse=false;capturePending=true;var generation=++captureGeneration;
             if (!host.requestPointerLock) {
                 captureFallback();
@@ -280,35 +282,79 @@
                 return [];
             }
         }
+        var bindingNotice = document.createElement('small');
+        bindingNotice.setAttribute('role', 'status');
+        var cancelBinding = document.createElement('button');
+        cancelBinding.type = 'button'; cancelBinding.textContent = 'Cancel binding'; cancelBinding.hidden = true;
+        (bindingHost.parentNode || get('launch')).appendChild(bindingNotice);
+        (bindingHost.parentNode || get('launch')).appendChild(cancelBinding);
+        /** @type {{name: Exclude<keyof Mapping, 'deadzone' | `${string}Invert`>, axes:number[], buttons:boolean[], armed:boolean, select:HTMLSelectElement, button:HTMLButtonElement}|null} */
+        var learning = null, bindingEditing = false;
+        cancelBinding.onclick = function () { learning = null; cancelBinding.hidden = true; bindingNotice.textContent = 'Binding canceled.'; };
         /** @param {Gamepad} pad */
-        function configure(pad) {
+        function learnInput(pad) {
+            if (!learning) return false;
+            var capture = learning;
+            if (!capture.armed) {
+                capture.buttons = pad.buttons.map(function (b) { return b.pressed || b.value > .5; });
+                capture.armed = !pad.buttons.some(function (b) { return b.pressed || b.value > .5; });
+                capture.axes = Array.from(pad.axes);
+                return true;
+            }
+            var isAxis = ['pitch','yaw','roll','throttle','throttleRate'].indexOf(capture.name) >= 0;
+            var index = isAxis ? -1 : pad.buttons.findIndex(function (b, i) { return (b.pressed || b.value > .5) && !capture.buttons[i]; });
+            var moved = pad.axes.findIndex(function (value, i) { return Math.abs(value - capture.axes[i]) > .65; });
+            if (isAxis) index = moved;
+            if (index >= 0) {
+                mapping[capture.name] = index;
+                if (isAxis) {
+                    mapping[/** @type {'pitchInvert'} */(capture.name + 'Invert')] = (capture.name === 'yaw' || capture.name === 'roll') ? pad.axes[index] > capture.axes[index] : pad.axes[index] < capture.axes[index];
+                    if (capture.name === 'throttleRate') mapping.throttle = -1;
+                }
+                if (capture.name === 'fire') mapping.fireAxis = -1;
+                capture.select.value = String(index);
+            } else if (capture.name === 'fire' && moved >= 0) {
+                mapping.fire = -1; mapping.fireAxis = moved;
+                mapping.fireAxisInvert = pad.axes[moved] < capture.axes[moved];
+                mapping.fireThreshold = (pad.axes[moved] + capture.axes[moved]) / 2;
+            } else return true;
+            saveBindings(); learning = null; cancelBinding.hidden = true;
+            bindingNotice.textContent = 'Saved ' + capture.name + '. Release controls before resuming.';
+            configure(pad, true);
+            return true;
+        }
+        /** @param {Gamepad} pad @param {boolean} [keepMapping] */
+        function configure(pad, keepMapping) {
+            learning = null;
             stopRumble();
             lastAxes = [];
-            mapping = input.defaults(pad.mapping === 'standard', pad.id);
-            try {
-                /** @type {unknown} */
-                var saved = JSON.parse(window.localStorage.getItem('driftworks.flight.bindings.' + pad.id) || 'null');
-                if (saved && typeof saved === 'object') {
-                    Object.keys(mapping).forEach(function (key) {
-                        var name = /** @type {keyof Mapping} */ (key);
-                        var value = /** @type {Record<string, unknown>} */ (saved)[key];
-                        if (typeof mapping[name] === 'boolean' && typeof value === 'boolean')
-                            mapping[/** @type {'pitchInvert'} */ (name)] = value;
-                        else if (typeof mapping[name] === 'number' && typeof value === 'number' && Number.isFinite(value))
-                            mapping[/** @type {'pitch'} */ (name)] = name === 'deadzone' ? Math.max(0, Math.min(.5, value)) : Math.max(-1, Math.floor(value));
-                    });
-                }
-            } catch (error) { /* Defaults work when storage is unavailable. */ }
+            if (!keepMapping) {
+                mapping = input.defaults(pad.mapping === 'standard', pad.id);
+                try {
+                    /** @type {unknown} */
+                    var saved = JSON.parse(window.localStorage.getItem('driftworks.flight.bindings.' + pad.id) || 'null');
+                    if (saved && typeof saved === 'object') {
+                        Object.keys(mapping).forEach(function (key) {
+                            var name = /** @type {keyof Mapping} */ (key);
+                            var value = /** @type {Record<string, unknown>} */ (saved)[key];
+                            if (typeof mapping[name] === 'boolean' && typeof value === 'boolean')
+                                mapping[/** @type {'pitchInvert'} */ (name)] = value;
+                            else if (typeof mapping[name] === 'number' && typeof value === 'number' && Number.isFinite(value))
+                                mapping[/** @type {'pitch'} */ (name)] = name === 'fireThreshold' ? Math.max(-1, Math.min(1, value)) : name === 'deadzone' ? Math.max(0, Math.min(.5, value)) : Math.max(-1, Math.floor(value));
+                        });
+                    }
+                } catch (error) { /* Defaults work when storage is unavailable. */ }
+            }
             bindingHost.textContent = '';
-            bindingHost.hidden = pad.mapping === 'standard';
+            bindingHost.hidden = false;
             get('controller-layout').hidden = pad.mapping !== 'standard';
             get('deadzone').value = String(mapping.deadzone);
-            /** @type {(Exclude<keyof Mapping, 'deadzone' | `${string}Invert`>)[]} */ (['pitch', 'yaw', 'roll', 'throttle', 'fire', 'boost', 'bank', 'pause', 'up', 'down', 'lock']).forEach(function (name) {
+            /** @type {(Exclude<keyof Mapping, 'deadzone' | `${string}Invert`>)[]} */ (['pitch', 'yaw', 'roll', 'throttle', 'fire', 'boost', 'bank', 'pause', 'up', 'down', 'lock', 'throttleRate']).forEach(function (name) {
                 var label = document.createElement('label');
-                label.textContent = (name === 'yaw' && pad.mapping !== 'standard' ? 'Yaw / twist axis' : name === 'roll' && pad.mapping !== 'standard' ? 'Roll / stick X axis' : name === 'throttle' ? 'Throttle axis (absolute)' : name === 'up' ? 'Throttle increase button' : name === 'down' ? 'Throttle decrease button' : name) + ' ';
+                label.textContent = (name === 'roll' ? 'Roll stick (move left)' : name === 'throttle' ? 'Throttle lever (absolute; use None for a stick)' : name === 'up' ? 'Throttle increase button' : name === 'down' ? 'Throttle decrease button' : name === 'throttleRate' ? 'Throttle stick (push forward)' : name === 'pitch' ? 'Turning stick (pull back)' : name === 'yaw' ? 'Turning stick (move left)' : name) + ' ';
                 var selectBinding = document.createElement('select');
                 selectBinding.setAttribute('aria-label', name + ' binding');
-                var isAxis = ['pitch', 'yaw', 'roll', 'throttle'].indexOf(name) >= 0, count = isAxis ? pad.axes.length : pad.buttons.length;
+                var isAxis = ['pitch', 'yaw', 'roll', 'throttle', 'throttleRate'].indexOf(name) >= 0, count = isAxis ? pad.axes.length : pad.buttons.length;
                 for (var n = -1; n < count; n++) {
                     var option = document.createElement('option');
                     option.value = String(n);
@@ -319,21 +365,34 @@
                 mapping[name] = Number(selectBinding.value);
                 selectBinding.onchange = function () {
                     mapping[name] = Number(selectBinding.value);
+                    if (name === 'fire') mapping.fireAxis = -1;
                     saveBindings();
                 };
                 label.appendChild(selectBinding);
+                var learn = document.createElement('button');
+                learn.type = 'button'; learn.textContent = 'Bind';
+                learn.onclick = function () {
+                    cancelBinding.hidden = false;
+                    bindingEditing = true;
+                    actions.pause();
+                    var current = pads().find(function (p) { return p.index === pad.index; });
+                    if (!current) return;
+                    learning = {name: name, axes: Array.from(current.axes), buttons: current.buttons.map(function (b) { return b.pressed || b.value > .5; }), armed: false, select: selectBinding, button: learn};
+                    bindingNotice.textContent = 'Release controls, then ' + (isAxis ? 'move only this axis in the labeled direction.' : 'press the button or trigger.') + ' Tap Cancel to stop.';
+                };
                 if (isAxis) {
                     var invert = document.createElement('input');
                     invert.type = 'checkbox';
-                    invert.checked = mapping[ /** @type {'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert'} */(name + 'Invert')];
+                    invert.checked = mapping[ /** @type {'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert' | 'throttleRateInvert'} */(name + 'Invert')];
                     invert.setAttribute('aria-label', 'Invert ' + name);
                     invert.onchange = function () {
-                        mapping[ /** @type {'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert'} */(name + 'Invert')] = invert.checked;
+                        mapping[ /** @type {'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert' | 'throttleRateInvert'} */(name + 'Invert')] = invert.checked;
                         saveBindings();
                     };
                     label.appendChild(invert);
                     label.appendChild(document.createTextNode(' invert'));
                 }
+                label.appendChild(learn);
                 bindingHost.appendChild(label);
             });
             previousButtons = { bank: false, lock: false, pause: false };
@@ -508,10 +567,6 @@
                 return demand;
             }
             xrButtons={pause:false,bank:false,lock:false,target:false,recenter:false};
-            if (inputMode.value === 'touch') {
-                if (actions.isPaused()) clearTouch();
-                return {pitch: touch.pitch, yaw: touch.yaw, fire: touch.fire, boost: touch.boost, throttleRate: touch.throttleRate, throttle: null};
-            }
             var connected = pads(), signature = connected.map(function (p) {
                 return p.index + ':' + p.id;
             }).join('|');
@@ -584,11 +639,16 @@
             }).filter(function (v) {
                 return v !== null;
             }).join(', ') : '';
+            if (pad && learnInput(pad)) { previousButtons = {bank:false,lock:false,pause:false}; return {pitch:0,yaw:0,roll:0,throttle:null,throttleRate:0,fire:false,boost:false}; }
+            if (inputMode.value === 'touch') {
+                if (actions.isPaused()) clearTouch();
+                return {pitch: touch.pitch, yaw: touch.yaw, fire: touch.fire, boost: touch.boost, throttleRate: touch.throttleRate, throttle: null};
+            }
             var controls = pad ? input.read(pad, mapping) : { pitch: 0, yaw: 0, roll: 0, side: 0, vertical: 0, throttle: null, throttleRate: 0, fire: false, boost: false, bank: false, lock: false, pause: false };
             if (activePad) {
                 mouseActive = false;
                 mouse = [0, 0];
-                if (pressedButton && actions.isPaused() && !actions.isDead() && !controls.pause && !document.hidden)
+                if (!bindingEditing && pressedButton && actions.isPaused() && !actions.isDead() && !controls.pause && !document.hidden)
                     actions.resume();
             }
             // A held stick or tiny hardware noise must not reclaim input after mouse movement.

@@ -492,7 +492,7 @@ export type Measurements = {
 export type Pacer = {
     next: number | null;
 };
-export type Mapping = Record<'pitch' | 'yaw' | 'roll' | 'throttle' | 'fire' | 'boost' | 'bank' | 'lock' | 'pause' | 'up' | 'down' | 'deadzone', number> & Record<'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert', boolean>;
+export type Mapping = Record<'pitch' | 'yaw' | 'roll' | 'throttle' | 'fire' | 'boost' | 'bank' | 'lock' | 'pause' | 'up' | 'down' | 'deadzone' | 'throttleRate' | 'fireAxis' | 'fireThreshold', number> & Record<'pitchInvert' | 'yawInvert' | 'rollInvert' | 'throttleInvert' | 'throttleRateInvert' | 'fireAxisInvert', boolean>;
 export type PadDemand = {
     side: number;
     vertical: number;
