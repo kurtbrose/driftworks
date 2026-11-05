@@ -68,10 +68,15 @@ approved from a few spot checks.
   stepping, live state access and transcripts. Turn useful probes into focused
   regressions. Use browser checks for presentation/input/audio and integration
   that the headless API does not exercise.
-- Run `npm run check` once before considering a code task complete. It performs
-  type checking, asset validation, and the dependency-free test suite. Repeat it
-  only when subsequent changes, failures, or unresolved concerns justify it.
-  Documentation-only changes need a review of the diff, not the full suite.
+- Complete local code tasks with focused checks for the changed behavior and
+  affected callers; do not run the full suite or `npm run check` by default,
+  including before committing. Run type, script-list or asset checks separately
+  when relevant. Use the existing CI `Check` workflow for occasional full-suite
+  verification; inspect results for the relevant revision when checking CI.
+  Run a full local check only when explicitly requested or when a specific
+  unresolved failure requires it. Report what was checked locally and do not
+  imply CI passed without inspecting its result. Documentation-only changes
+  need a review of the diff, not the full suite.
 - Run the dependency-free suite with `node tests/run.cjs`, or open
   `http://localhost:8000/tests/`. Both execute `tests/tests.js`.
 - For a captured gameplay bug, follow [scenario replay](docs/scenarios.md).

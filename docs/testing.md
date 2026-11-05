@@ -1,8 +1,18 @@
 # Test groups
 
-`npm test` or `node tests/run.cjs` runs every group. `npm run check` remains the
-complete gate: types, script-list consistency, asset validation and all tests.
-The test runner itself needs only Node and its standard library.
+Local development and completion use focused checks for changed behavior and
+affected callers, including before committing. Do not run the full suite by
+default. Run `npm run check:types`, `npm run check:scripts` or
+`npm run check:assets` separately when relevant to the change.
+
+The existing GitHub Actions `Check` workflow runs `npm run check` on pushes and
+pull requests: types, script-list consistency, asset validation and all tests.
+Use its results for occasional full-suite verification, checking the relevant
+revision before reporting a CI pass. A full local run is reserved for an explicit
+request or a specific unresolved failure that requires it.
+
+`npm test` or `node tests/run.cjs` still runs every group when needed. The test
+runner itself needs only Node and its standard library.
 
 Use focused groups while developing:
 
