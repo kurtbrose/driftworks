@@ -90,7 +90,12 @@
             throw new Error('Flight skybox requires WebGL');
         const gl = context;
         var explicitBridgeLod=!!gl.getExtension('EXT_shader_texture_lod');
-        var bridgeOptics=missionSky.thinShell?window.Driftworks.thinShellOptics:window.Driftworks.ellisOptics;
+        // Optional presentation hybrid: gameplay and finite-source optics stay
+        // thin shell; only the background and its motion cues use Ellis rays.
+        var hybridSky=!!missionSky.thinShell&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeSky')==='ellis';
+        var thinShellSky=!!missionSky.thinShell&&!hybridSky;
+        var bridgeOptics=thinShellSky?window.Driftworks.thinShellOptics:window.Driftworks.ellisOptics;
+        if(missionSky.wormhole)canvas.dataset.bridgeSky=thinShellSky?'thin-shell':'ellis';
         var bridgeDerivatives=!!missionSky.wormhole&&!!gl.getExtension('OES_standard_derivatives');
         /** @param {number} type @param {string} source */
         function shader(type, source) {
@@ -874,7 +879,7 @@ void main(){
         if(bridgeTable&&bridgeOptics){
             var motionOptics=/** @type {Required<DriftworksNamespace>} */(window.Driftworks).ellisOptics;
             motionProgram=program('attribute vec2 position;varying vec2 screen;void main(){screen=position;gl_Position=vec4(position,0.,1.);}',
-                'precision highp float;\n'+(missionSky.thinShell?'#define MOTION_THIN_SHELL\n':'')+
+                'precision highp float;\n'+(thinShellSky?'#define MOTION_THIN_SHELL\n':'')+
                 'varying vec2 screen;uniform vec3 right,up,back,bridgeEye;uniform float aspect,focal;\n'+bridgeOptics.shader+motionOptics.motionShader+
                 '\nvoid main(){vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);gl_FragColor=motionDots(bridgeEye,ray);}');
             motionLengths=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,motionLengths);
@@ -981,10 +986,10 @@ void main(){
                 if(arrival)gl.uniform3fv(gl.getUniformLocation(sky,'arrivalEye'),pose.eye.map(function(v){return v*units;}));
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeEnabled'),missionSky.wormhole?1:0);
                 var thinShellControl=/** @type {HTMLInputElement|null} */(document.getElementById('bridge-thin-shell'));
-                gl.uniform1f(gl.getUniformLocation(sky,'bridgeThinShell'),missionSky.thinShell||thinShellControl&&thinShellControl.checked?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeThinShell'),!hybridSky&&(thinShellSky||thinShellControl&&thinShellControl.checked)?1:0);
                 var gridControl=/** @type {HTMLInputElement|null} */(document.getElementById('bridge-grid'));
-                gl.uniform1f(gl.getUniformLocation(sky,'bridgeGrid'),missionSky.wormhole&&(gridControl?gridControl.checked:new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeGrid')!=='0')?1:0);
-                gl.uniform1f(gl.getUniformLocation(sky,'bridgeOutline'),missionSky.wormhole&&new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeOutline')!=='0'?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeGrid'),!hybridSky&&missionSky.wormhole&&(gridControl?gridControl.checked:new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeGrid')!=='0')?1:0);
+                gl.uniform1f(gl.getUniformLocation(sky,'bridgeOutline'),!hybridSky&&missionSky.wormhole&&new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeOutline')!=='0'?1:0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeGridPixel'),2.2*dpr/(height*viewFocal));
                 gl.uniform1f(gl.getUniformLocation(sky,'ellisRegion'),pose.region||0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeLookup'),bridgeTable&&bridgeMode!=='legacy'?1:0);

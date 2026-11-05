@@ -1372,6 +1372,28 @@ changing carrier assets, scale, materials or immutable GPU buffers. Raw results:
 `output/thin-shell-browser.json`; on/off captures:
 `output/thin-shell-carrier-on.png`, `output/thin-shell-carrier-off.png`.
 
+## Optional Ellis sky with thin-shell gameplay
+
+Open `experiments/flight.html?mission=thin-shell&bridgeSky=ellis` to try the
+hybrid presentation. Omit `bridgeSky=ellis` for the normal thin-shell sky.
+The background and its motion cues use the existing compact Ellis lookup;
+ships, scenery, weapons, HUD, collision and traversal retain thin-shell rules
+and the single-pass object renderer. The Ellis lattice and outer field outline
+are suppressed because they do not describe the gameplay geometry.
+
+This intentionally mixes optical models: background rings and the apparent
+sky aperture can disagree with object silhouettes and the traversable shell,
+especially near the rim and during crossing. It is an opt-in visual experiment,
+not a physically consistent metric or a newly measured performance result.
+
+Validation: focused skybox, production rendering, thin-shell traversal and
+ballistics checks passed. The hybrid browser run inspected approach and
+near-mouth views in both charts, fired through the shell (1000 to 811 hull HP),
+and crossed to Rime and back without browser errors or a lost graphics context.
+Captures and the live result are under `output/hybrid-sky/`. The sky/object
+optical mismatch remains intentional; these checks do not establish a GPU budget
+or full visual continuity at grazing angles.
+
 ## Conservative throat clearance
 
 Live player/AI craft and the capital centerline patrol check aperture clearance

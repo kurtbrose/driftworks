@@ -303,3 +303,22 @@ assert(nativeShaders.some(source=>source.includes('gl_Position.xy-=xrProjectionC
 assert(nativeShaders.some(source=>source.includes('(screen.x+xrProjectionCenter.x)')));
 assert(nativeShaders.some(source=>source.includes('max(3.,size)')&&source.includes('brightness*=size*size')),'XR stars have a stable footprint with energy normalization');
 console.log('PASS native XR sky: shared context, explicit eye viewport, asymmetric projection, GLSL 3 conversion and no source canvas resize');
+
+// The hybrid changes sky rays and motion cues, without mutating mission optics.
+for(const query of ['?mission=thin-shell','?mission=thin-shell&bridgeSky=ellis']){
+ const hybrid=query.includes('bridgeSky=ellis');
+ const scope={...latticeContext,window:{...latticeContext.window,Driftworks:{...latticeContext.window.Driftworks},location:{search:query}},location:{search:query}};
+ for(const file of ['flight-missions.js','thin-shell-optics.js','skybox.js'])vm.runInNewContext(file==='skybox.js'?skyRuntimeSource:fs.readFileSync(pathLighting.join(__dirname,'../experiments',file),'utf8'),scope);
+ const start=shaders.length,renderer=scope.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
+ for(const region of [0,1]){
+  renderer.render({...latticePose,region},1,false);
+  assert.equal(values.bridgeThinShell,hybrid?0:1);
+  assert.equal(values.ellisRegion,region);
+  if(hybrid){assert.equal(values.bridgeGrid,0);assert.equal(values.bridgeOutline,0);}
+ }
+ const motion=shaders.slice(start).find(source=>source.includes('uniform float motionOpacity'));
+ assert(motion,'wormhole motion shader compiled');
+ assert.equal(motion.includes('#define MOTION_THIN_SHELL'),!hybrid,'motion cues use the selected sky metric');
+ assert.equal(scope.window.Driftworks.flightMissions.current().sky.thinShell,true,'finite-source and gameplay metric stays thin shell');
+}
+console.log('PASS hybrid sky: opt-in Ellis background and motion in both charts, thin-shell gameplay preserved');
