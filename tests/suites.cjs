@@ -60,6 +60,7 @@ const suites = {
     "baked-hull-indices.cjs",
     "projectile-broadphase.cjs",
     "collision-events.cjs",
+    "flight-properties.cjs",
     "refueling-cycle.cjs"
   ],
   rendering: [

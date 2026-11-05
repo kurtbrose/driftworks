@@ -5,6 +5,32 @@ renderer. It loads the actual ordinary application scripts into an isolated Node
 VM. There is no DOM, WebGL context, audio context, server, or network access.
 No installation or build step is needed.
 
+## Seeded property checks
+
+Run `node tests/flight-properties.cjs` for the bounded default seed corpus, or
+`node tests/flight-properties.cjs 29` to reproduce one seed. This check also runs
+in the flight test group and `npm run check`. Failures identify the seed and
+collision step or simulation tick; rerunning a seed regenerates its inputs.
+
+Each seed compares 160 generated sphere scenes across five collision modes
+against an independent segment-to-sphere distance reference. It covers broad
+phase candidate completeness followed by exact hits, including zero-length
+segments, large spheres, movement, death/revival and roster reversal. Hit sets
+are compared without imposing an insertion-independent winner on equal hits.
+This does not prove mesh, curved-space or event-cache correctness; their focused
+tests remain necessary.
+
+The same check drives a real furball session with 480 generated control ticks,
+then resets and replays the inputs, comparing state, event and dialogue hashes
+after every tick. `tools/flight-invariants.cjs` exports
+`assertFlightInvariants(snapshot)` for development probes: finite combat time,
+health and pose vectors, plus unique craft IDs. Checks run on live values before
+serialization, so NaN cannot silently turn into null. These assertions are
+development tools and add no browser cost. Historical event references and
+negative health are intentionally outside this initial contract. The bounded
+corpus is a starting point, not exhaustive simulation coverage or automatic
+failure shrinking; reduce new failures to permanent scenario regressions.
+
 The loader consumes the `headless` profile in `tools/script-manifest.cjs`;
 change shared dependencies there rather than adding a second list to the driver.
 See [script loading](script-loading.md) for the browser, test and worker profiles.
