@@ -3,6 +3,7 @@
 // Each executable check belongs to one group. Legacy globals require explicit setup.
 const suites = {
   simulation: [
+    "multiplayer.cjs",
     {"file":"shared.cjs","args":["simulation"]},
     "campaign-intro.cjs",
     "tactical-boundaries.cjs",
