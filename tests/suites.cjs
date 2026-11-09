@@ -13,6 +13,7 @@ const suites = {
   flight: [
     "wormholes.cjs",
     "wormhole-traversal.cjs",
+    "wormhole-ballistics.cjs",
     "flight-vr.cjs",
     "hyperbolic.cjs",
     "hyperbolic-flight.cjs",

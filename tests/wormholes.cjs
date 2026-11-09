@@ -82,3 +82,5 @@ const unobscured=context.window.Driftworks.convoyScenery.effects(combat,{eye:[0,
 assert(rings[0].vertices.length>0&&rings[0].vertices.length<unobscured[0].vertices.length,'Near mouth hides only the overlapping portion of the far rim');
 assert.equal(rings[1].vertices.length,unobscured[0].vertices.length,'Far mouth must not obscure the near rim');
 console.log('PASS production mouth rims: near/far occlusion and closed-mouth restoration');
+
+const independentRound={vertices:new Float32Array(18),independent:true,region:42};W.own([independentRound],owner);assert.equal(independentRound.placement,undefined,'Fired projectiles must not inherit the firing hull mask');assert.equal(independentRound.region,42);

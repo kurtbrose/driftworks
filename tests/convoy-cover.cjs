@@ -13,6 +13,7 @@ for(const direction of [[1,0],[-1,0],[0,1],[0,-1]]){
  assert(delta[0]*direction[0]+delta[1]*direction[1]>=1400,'Bastion stations toward the threat, not a fixed side of the exit');
  for(const ship of s.ships)assert(Math.hypot(...ship.position.map((v,k)=>v*U-e.coverGoal[k]))>=850,'Whole capital hull clears the formation');
 }
+for(const mouth of [s.arrivalPortal,e.exit])if(mouth&&DW.wormholes.phase(s.elapsed,mouth).visible)assert(Math.hypot(...e.coverGoal.map((v,k)=>v-mouth.position[k]*U))>=(mouth.radiusM||210)+800-1e-6,'Cover station keeps the whole hull outside wormhole volumes');
 const old=e.coverGoal.slice();s.ships.forEach(ship=>{ship.position[0]+=500/U;});DW.convoyBattle.updateEvacuation(c,.1);assert.notDeepEqual(e.coverGoal,old,'Cover follows moving cargo');
 // Native point defense must hold fire against real cargo geometry, then resume
 // when the same firing lane clears. No fake ray-test result or weapon stub.

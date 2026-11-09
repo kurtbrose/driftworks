@@ -50,6 +50,7 @@
     /** @type {WeakMap<number[],Float32Array>} */var collisionBuffers=new WeakMap();
     /** @param {import('../experiments/types').AegisRigOptions} [options] @returns {import('../experiments/types').AegisSimulation} */
     function create(options){
+        /** @type {import('../experiments/types').ShotSpace} */var shotMetric=false;
         /** @type {boolean|'thin-shell'} */var bridgeMetric=options&&options.bridge?(DW.flightMissions.current().sky.thinShell?'thin-shell':true):false;
         var sourceAsset=DW.aegisFlightAsset,unarmed=!!(options&&options.unarmed),origin=options?options.state.position:[0,0,1200],team=options?options.state.team:'ally';
         var asset=unarmed?Object.assign({},sourceAsset,{turrets:[],engines:[]}):sourceAsset;
@@ -191,12 +192,12 @@
             var opponent=options.opponent,p=m.source.position,side=m.source.side;
             var ch=Math.cos(opponent.heading),sh=Math.sin(opponent.heading),offset=m.aimOffset;
             var target=opponent.position.map(function(v,i){return v+(i===0?ch*offset[0]-sh*offset[1]:i===1?sh*offset[0]+ch*offset[1]:offset[2])/U;});
-            var bridge=!!options.bridge,path=/** @type {{direction:Vector;distance:number}|null} */(null);
+            var bridge=!!options.bridge||!!(view.combat.wormholes&&view.combat.wormholes.length),path=/** @type {{direction:Vector;distance:number}|null} */(null);
             if(bridge){
                 m.routeWait-=dt;
                 if(m.routeWait<=0){
-                    var start=world(p),route=DW.flightGuns.ballisticPath(start,target,options.state.region||0,opponent.region||0,bridgeMetric);
-                    if(route){var travel=route.distance*U/heavyWeapon.speed;target=target.map(function(v,i){return v+opponent.velocity[i]*travel/U;});route=DW.flightGuns.ballisticPath(start,target,options.state.region||0,opponent.region||0,bridgeMetric);}
+                    var start=world(p),route=DW.flightGuns.ballisticPath(start,target,options.state.region||0,opponent.region||0,shotMetric);
+                    if(route){var travel=route.distance*U/heavyWeapon.speed;target=target.map(function(v,i){return v+opponent.velocity[i]*travel/U;});route=DW.flightGuns.ballisticPath(start,target,options.state.region||0,opponent.region||0,shotMetric);}
                     m.route=route;m.routeWait+=.12;
                 }
                 path=m.route;
@@ -204,18 +205,22 @@
             if(bridge&&path){const route=path;target=world(p).map(function(v,i){return v+route.direction[i]*route.distance;});}
             var relative=sub(local(target),p),velocity=bridge?[0,0,0]:rotate(opponent.velocity,true),time=interceptTime(relative,velocity,heavyWeapon.speed);
             var travelTime=time===null?0:time;
-            var aim=time!==null&&time<=heavyWeapon.lifetime?target.map(function(v,i){return v+(bridge?0:opponent.velocity[i]*travelTime/U);}):null;
+            var aim=(!bridge?(options.state.region||0)===(opponent.region||0):!!path)&&time!==null&&time<=heavyWeapon.lifetime?target.map(function(v,i){return v+(bridge?0:opponent.velocity[i]*travelTime/U);}):null;
             var d=aim?sub(local(aim),p):relative,goalYaw=wrap(Math.atan2(d[1],d[0])-Math.PI),goalElevation=side*clamp(Math.atan2(d[2]*side,Math.hypot(d[0],d[1])),bridge?-.2:0,Math.PI*.47);
             m.targetId='capital-'+opponent.team;
             m.yaw+=clamp(wrap(goalYaw-m.yaw),-.35*dt,.35*dt);m.elevation=approach(m.elevation,goalElevation,.25*dt);
             var cy=Math.cos(m.yaw),sy=Math.sin(m.yaw),ce=Math.cos(m.elevation),se=Math.sin(m.elevation),forward=[-cy*ce,-sy*ce,se];
             var clear=!!aim&&(bridge||d[2]*side>0)&&Math.abs(wrap(goalYaw-m.yaw))<.018&&Math.abs(goalElevation-m.elevation)<.018&&!hullHit(p.map(function(v,i){return v+forward[i]*45.1;}),local(aim));
+            if(clear&&aim&&view.combat.wormholes&&view.combat.wormholes.length){
+                var actual=DW.wormholes.advanceRay(view.combat.wormholes,world(p),rotate(forward),Math.hypot(...sub(local(aim),p))/U,options.state.region||0,view.combat.time,U);
+                if(actual.region!==(opponent.region||0))clear=false;
+            }
             var active=options.state.mainBatteryClear!==false&&weaponsEnabled(view.combat)&&!view.combat.dead&&!view.combat.roundOver&&options.state.integrity>0&&opponent.integrity>0;
             if(clear)m.rest=Math.max(0,m.rest-dt);m.settled=clear?m.settled+dt:0;
             if(!clear&&m.burst>0){m.burst=0;m.rest=3;}
             if(active&&clear&&m.settled>.25&&m.rest<=0&&m.burst<=0)m.burst=.7;
             DW.flightGuns.step(m.guns,{region:options&&options.state.region||0,eye:world(p),right:rotate([-sy,cy,0]),up:rotate([cy*se,sy*se,ce]),back:rotate(forward.map(function(v){return -v;}))},heavyWeapon,active&&clear&&m.burst>0,dt,
-                function(a,b,bolt){return traceRound(m,view,a,b,bolt);},aim?function(){return aim;}:undefined,2,[[-7.65,45.09,-.45*side],[7.65,45.09,-.45*side]],bridgeMetric);
+                function(a,b,bolt){return traceRound(m,view,a,b,bolt);},aim?function(){return aim;}:undefined,2,[[-7.65,45.09,-.45*side],[7.65,45.09,-.45*side]],shotMetric);
             if(m.burst>0){m.burst=Math.max(0,m.burst-dt);if(m.burst<=0){
                 m.randomState=(Math.imul(m.randomState,1664525)+1013904223)>>>0;
                 m.rest=2.8+m.randomState/4294967296*2.4;
@@ -225,7 +230,7 @@
         /** Already-fired rounds retain their damage after a mount is destroyed.
          * @param {typeof mounts[number]} m @param {FlightView} view @param {Vector} a @param {Vector} b @param {import('../experiments/types').Bolt} bolt */
         function traceRound(m,view,a,b,bolt){
-            var own=options&&options.bridge&&(bolt.region||0)!==(options.state.region||0)?null:hit(a,b,m,bolt),opponentRig=options&&options.opponentRig,other=opponentRig&&(!options||!options.bridge||(bolt.region||0)===(options.opponent.region||0))?opponentRig.hit(a,b,bolt):null;
+            var own=(bolt.region||0)!==(options&&options.state.region||0)?null:hit(a,b,m,bolt),opponentRig=options&&options.opponentRig,other=opponentRig&&(!options||(bolt.region||0)===(options.opponent.region||0))?opponentRig.hit(a,b,bolt):null;
             var point=other&&(!own||Math.hypot(...sub(other,a))<Math.hypot(...sub(own,a)))?other:own;
             if(m.source.kind==='heavy'){
                 if(point===other&&other&&options){
@@ -242,6 +247,7 @@
         /** @param {number} elapsed @param {FlightView} view */
         function step(elapsed,view){
             bridgeMetric=options&&options.bridge?(DW.flightMissions.resolve(view.combat.mode).sky.thinShell?'thin-shell':true):false;
+            shotMetric=view.combat.wormholes&&view.combat.wormholes.length?{links:view.combat.wormholes,time:view.combat.time}:bridgeMetric;
             if(!Number.isFinite(elapsed)||elapsed<=0)return;
             var dt=Math.min(.1,elapsed),combat=view.combat;seconds+=dt;
             // A smooth shield catches fast incoming craft before hull corners can trap them.
@@ -280,10 +286,10 @@
             }
             if(unarmed)return;
             var roster=DW.flightSim.alive(combat);if(team==='enemy'&&combat.player.hp>0)roster=roster.concat([combat.player]);
-            var targets=roster.filter(function(c){return (c.team||'enemy')!==team&&(!options||!options.bridge||(c.pose.region||0)===(options.state.region||0));}).map(function(c){return {craft:c,position:local(c.pose.eye)};});
+            var targets=roster.filter(function(c){return (c.team||'enemy')!==team&&(c.pose.region||0)===(options&&options.state.region||0);}).map(function(c){return {craft:c,position:local(c.pose.eye)};});
             DW.flightSim.collisionBatch(combat,function(){mounts.forEach(function(m){
                 var part=parts.find(function(p){return p.mount===m;});
-                if(part&&part.hp<=0){DW.flightGuns.step(m.guns,view.state,m.source.kind==='heavy'?heavyWeapon:weapon,false,dt,function(a,b,bolt){return traceRound(m,view,a,b,bolt);},undefined,undefined,undefined,bridgeMetric);return;}
+                if(part&&part.hp<=0){DW.flightGuns.step(m.guns,view.state,m.source.kind==='heavy'?heavyWeapon:weapon,false,dt,function(a,b,bolt){return traceRound(m,view,a,b,bolt);},undefined,undefined,undefined,shotMetric);return;}
                 if(m.source.kind==='heavy'){stepHeavy(m,dt,view);return;}
                 var p=m.source.position,side=m.source.side;
                 // Retain a valid lock; each mount independently samples a new contact.
@@ -306,7 +312,12 @@
                     var d=sub(local(target.pose.eye),p),flight=interceptTime(d,rotate(target.pose.velocity,true),weapon.speed);
                     if(flight!==null&&flight<=weapon.lifetime){
                         var travelTime=flight,velocity=target.pose.velocity;aim=target.pose.eye.map(function(v,i){return v+velocity[i]*travelTime/U;});
-                        d=sub(local(aim),p);goalYaw=wrap(Math.atan2(d[1],d[0])-Math.PI);
+                        if(combat.wormholes&&combat.wormholes.length){
+                            var visible=DW.flightGuns.ballisticPath(world(p),target.pose.eye,options&&options.state.region||0,target.pose.region||0,shotMetric);
+                            const linkedAim=visible?DW.flightGuns.lead({eye:world(p),right:[1,0,0],up:[0,0,1],back:[0,-1,0],region:options&&options.state.region||0},target.pose,weapon,shotMetric,10):null;
+                            aim=linkedAim?world(p).map(function(v,k){return v+linkedAim.direction[k]*linkedAim.distance;}):null;
+                        }
+                        d=sub(local(aim||target.pose.eye),p);goalYaw=wrap(Math.atan2(d[1],d[0])-Math.PI);
                         goalElevation=side*clamp(Math.atan2(d[2]*side,Math.hypot(d[0],d[1])),0,Math.PI*.47);
                     }
                 }
@@ -337,7 +348,12 @@
                         speculative=!hullHit(launch,end);
                     }
                 }
-                var trigger=(stable&&m.burst>0)||speculative;
+                var trigger=((stable&&m.burst>0)||speculative)&&(!(combat.wormholes&&combat.wormholes.length)||!!aim);
+                if(trigger&&combat.wormholes&&combat.wormholes.length&&target){
+                    var shotStart=world(p),direction=rotate(forward),reach=aim?Math.hypot(...sub(local(aim),p)):weapon.speed*weapon.lifetime;
+                    var actual=DW.wormholes.advanceRay(combat.wormholes,shotStart,direction,reach/U,options&&options.state.region||0,combat.time,U);
+                    if(actual.region!==(target.pose.region||0))trigger=false;
+                }
                 if(trigger&&combat.convoy){
                     var reach=aim?Math.hypot(...sub(local(aim),p)):weapon.speed*weapon.lifetime;
                     var muzzle=world(p.map(function(v,k){return v+forward[k]*10.12;}));
@@ -351,7 +367,7 @@
                     function(a,b,bolt){
                         return traceRound(m,view,a,b,bolt);
                     },
-                    !speculative&&aim?function(){return aim;}:undefined,2,[[-1.683,9.9,-.099*side],[1.683,9.9,-.099*side]],bridgeMetric);
+                    !speculative&&aim?function(){return aim;}:undefined,2,[[-1.683,9.9,-.099*side],[1.683,9.9,-.099*side]],shotMetric);
                 if(m.guns.fired>firedBefore){m.specWait=m.specPause;if(speculative)m.rest=m.burstPause;}
                 if(m.burst>0){m.burst=Math.max(0,m.burst-dt);if(m.burst<=0)m.rest=m.burstPause;}
             });});
@@ -366,7 +382,7 @@
         }
         function readout(){if(unarmed)return 'AEGIS / 1,305 m · UNARMED';var shots=mounts.reduce(function(n,m){return n+m.guns.fired;},0);return 'AEGIS / 1,305 m\n12 heavy batteries standing by · 12 point-defense mounts\nPD: '+shots+' rounds / '+confirmedHits+' confirmed hits\n'+seconds.toFixed(1)+' s · '+contacts+' hull contacts'+(hangars.length?'\nHangar: '+launched+' fighters launched':'');}
         function telemetry(){return {seconds:seconds,contacts:contacts,launches:launched,shots:mounts.reduce(function(n,m){return n+m.guns.fired;},0),hits:confirmedHits,mounts:mounts.map(function(m){return {yaw:m.yaw,elevation:m.elevation,side:m.source.side,kind:m.source.kind,targetId:m.targetId,shots:m.guns.fired,aimPoint:m.source.kind==='heavy'?m.aimOffset.slice():undefined};})};}
-        function visualState(){return {asset:sourceAsset,unarmed:unarmed,origin:origin,team:team,mounts:mounts,parts:parts,shieldHits:shieldHits,seconds:seconds,bridgeMetric:bridgeMetric};}
+        function visualState(){return {linkedShots:typeof shotMetric==='object',asset:sourceAsset,unarmed:unarmed,origin:origin,team:team,mounts:mounts,parts:parts,shieldHits:shieldHits,seconds:seconds,bridgeMetric:bridgeMetric};}
         reset();return {visualState:visualState,setMountAim:function(index,yaw,elevation){var m=mounts[index];if(m){m.yaw=yaw;m.elevation=elevation;}},reset:reset,step:step,readout:readout,hit:/** @param {Vector} a @param {Vector} b @param {import('../experiments/types').Bolt} [bolt] */function(a,b,bolt){return hit(a,b,undefined,bolt);},damage:damage,components:components,telemetry:telemetry};
     }
     DW.aegisSim={create:create};

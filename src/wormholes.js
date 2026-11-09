@@ -114,9 +114,53 @@
         });
         if(!views.length)return null;return Object.assign(views[0],views[1]?{other:views[1]}:{});
     }
+    /** Ballistic straight legs joined by the same gluing as craft traversal.
+     * Coordinates and travel distance are scene units; link endpoints are metres.
+     * @param {Link[]} links @param {number[]} start @param {number[]} direction @param {number} distance
+     * @param {number} space @param {number} time @param {number} units */
+    function advanceRay(links,start,direction,distance,space,time,units){
+        var point=start.slice(),heading=direction.slice(),remaining=distance;
+        var segments=/** @type {{start:number[];end:number[];region:number;direction:number[]}[]} */([]);
+        for(var bounce=0;bounce<8&&remaining>1e-10;bounce++){
+            var end=point.map(function(v,k){return v+heading[k]*remaining;}),best=/** @type {{hit:NonNullable<ReturnType<typeof cross>>;from:Link['mouths'][0];to:Link['mouths'][0];distance:number}|null} */(null);
+            links.forEach(function(link){if(!phase(time,link.lifecycle).traversable)return;var side=link.mouths.findIndex(function(m){return m.space===space;});if(side<0)return;
+                const hit=cross(link,point.map(function(v){return v*units;}),end.map(function(v){return v*units;}),space);if(!hit)return;
+                var from=link.mouths[side],to=link.mouths[1-side],entry=from.position.map(function(v,k){return (v+hit.normal[k]*from.radius)/units;}),travel=Math.hypot.apply(null,entry.map(function(v,k){return v-point[k];}));
+                if(!best||travel<best.distance)best={hit:hit,from:from,to:to,distance:travel};
+            });
+            const crossing=/** @type {typeof best} */(best);
+            if(!crossing){segments.push({start:point,end:end,region:space,direction:heading});point=end;remaining=0;break;}
+            var entry=crossing.from.position.map(function(v,k){return (v+crossing.hit.normal[k]*crossing.from.radius)/units;});
+            segments.push({start:point,end:entry,region:space,direction:heading});remaining=Math.max(0,remaining-crossing.distance);
+            point=crossing.to.position.map(function(v,k){return (v-crossing.hit.normal[k]*crossing.to.radius)/units;});space=crossing.to.space;heading=transport(heading,crossing.hit.normal);
+        }
+        return {point:point,region:space,direction:heading,segments:segments};
+    }
+    /** Solve one-link thin-shell routes in a normalized chart, then verify against
+     * the actual graph so a second mouth cannot silently redirect the shot.
+     * @param {Link[]} links @param {number[]} start @param {number[]} target @param {number} space
+     * @param {number} destination @param {number} time @param {number} units */
+    function ballisticPath(links,start,target,space,destination,time,units){
+        if(links.some(function(link){return phase(time,link.lifecycle).traversable&&link.mouths.some(function(m){return (m.space===space&&Math.hypot.apply(null,start.map(function(v,k){return v*units-m.position[k];}))<m.radius-1e-5)||(m.space===destination&&Math.hypot.apply(null,target.map(function(v,k){return v*units-m.position[k];}))<m.radius-1e-5);});}))return null;
+        var delta=target.map(function(v,k){return v-start[k];}),distance=Math.hypot.apply(null,delta),best=/** @type {{direction:number[];distance:number}|null} */(null);
+        /** @param {number[]} direction @param {number} length */function accept(direction,length){
+            var shot=advanceRay(links,start,direction,length,space,time,units);
+            if(shot.region===destination&&Math.hypot.apply(null,shot.point.map(function(v,k){return v-target[k];}))*units<.02&&(!best||length<best.distance))best={direction:direction,distance:length};
+        }
+        if(distance>1e-10)accept(delta.map(function(v){return v/distance;}),distance);
+        if(best)return best;
+        links.forEach(function(link){if(!phase(time,link.lifecycle).traversable)return;var from=link.mouths.find(function(m){return m.space===space;}),to=link.mouths.find(function(m){return m.space===destination;});if(!from||!to)return;
+            var a=from,b=to;
+            if(Math.hypot.apply(null,start.map(function(v,k){return v*units-a.position[k];}))<a.radius-1e-5||Math.hypot.apply(null,target.map(function(v,k){return v*units-b.position[k];}))<b.radius-1e-5)return;
+            var scale=300/a.radius,side=space===destination?0:1;
+            var eye=start.map(function(v,k){return [0,-2000,1550][k]+(v*units-a.position[k])*scale;}),goal=target.map(function(v,k){return [side*12000,-2000,1550][k]+(v*units-b.position[k])*scale;});
+            var path=DW.thinShellOptics.primary(eye,goal,0,side);if(path)accept(path.direction,path.length/scale/units);
+        });
+        return best;
+    }
     /** One transient owner is shared by all material and attached-effect batches.
      * @param {import('../experiments/types').Batch[]} batches @param {Placement} placement */
-    function own(batches,placement){batches.forEach(function(batch){batch.placement=placement;});return batches;}
+    function own(batches,placement){batches.forEach(function(batch){batch.placement=batch.independent?undefined:placement;});return batches;}
     /** @param {import('../experiments/types').Batch} batch @returns {Placement} */
     function resolve(batch){return batch.placement||batch;}
     /** @param {Placement} placement */
@@ -137,5 +181,5 @@
         placement.clipPlane=mode==='aperture'?undefined:normal.map(function(v){return v*sign;}).concat(-sign*dot(normal,position));
         return placement;
     }
-    DW.wormholes={linkPortal:linkPortal,travel:travel,skyView:skyView,occluded:occluded,separate:separate,phase:phase,request:request,define:define,cross:cross,transport:transport,own:own,resolve:resolve,clear:clear,bindRig:bindRig,mouth:mouth};
+    DW.wormholes={advanceRay:advanceRay,ballisticPath:ballisticPath,linkPortal:linkPortal,travel:travel,skyView:skyView,occluded:occluded,separate:separate,phase:phase,request:request,define:define,cross:cross,transport:transport,own:own,resolve:resolve,clear:clear,bindRig:bindRig,mouth:mouth};
 }());

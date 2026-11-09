@@ -41,14 +41,15 @@
     /** @type {import('./types').TerrainHit} */
     var environmentHit = function (start, end, bolt) {
             var asteroid = session.snapshot().asteroid;
-            var terrain=DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
+            var terrain=bolt&&bolt.region?null:DW.flightGuns.intersect(start, end, asteroid.radius, function (point) {
                 return DW.asteroidTerrain.rockField(asteroid, /** @type {[number, number, number]} */ (DW.flightSession.rotateVector(point, -asteroid.rotation)));
             });
             var capital=aegis&&aegis.hit(start,end,bolt);
             if(capital&&(!terrain||Math.hypot.apply(null,capital.map(function(v,i){return v-start[i];}))<Math.hypot.apply(null,terrain.map(function(v,i){return v-start[i];}))))return capital;
             return terrain;
         };
-    environmentHit.onImpact=function(point,bolt,combat){if(aegis&&aegis.damage)aegis.damage(point,bolt.weapon.damage,combat);};
+    environmentHit.allRegions=true;
+    environmentHit.onImpact=function(point,bolt,combat){if(aegis&&aegis.damage)aegis.damage(point,bolt.weapon.damage,combat,bolt.region||0);};
     var subsystemId='';
     var subsystemMarker=document.createElement('div');
     subsystemMarker.style.cssText='position:absolute;z-index:8;pointer-events:none;color:#ffd18b;font:12px monospace;text-align:center;white-space:pre;text-shadow:0 1px 3px #000';

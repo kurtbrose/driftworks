@@ -90,15 +90,15 @@
                 renderCombat=combat;
                 plan=combat&&combat.convoy?combat.convoy.evacuation:undefined;
                 var fresh=plan?plan.capitals:DW.convoyBattle.capitals();
-                states.forEach(function(state,i){var source=fresh[i];state.position.splice(0,3,...source.position);state.heading=source.heading;state.velocity=source.velocity.slice();state.integrity=source.integrity;state.present=!!source.present;state.remote=!!source.remote;state.mainBatteryClear=source.mainBatteryClear;ships[i].reset();});
+                states.forEach(function(state,i){var source=fresh[i];state.position.splice(0,3,...source.position);state.heading=source.heading;state.velocity=source.velocity.slice();state.integrity=source.integrity;state.present=!!source.present;state.remote=!!source.remote;state.region=source.region||0;state.mainBatteryClear=source.mainBatteryClear;ships[i].reset();});
                 if(plan){plan.capitals=states;if(combat&&combat.convoy)combat.convoy.arrivalFleet=states;}
             },step:function(dt,view){if(view.combat.convoy&&states[0].present)ships[0].step(dt,view);},
             geometry:geometry,
             effects:function(pose,shields){updatePlacements(pose.region);return states[0].present?ships[0].effects(pose,shields):[];},
             readout:function(){return states.filter(function(s){return s.present;}).map(function(ship){return ship.callsign+' / '+Math.ceil(ship.integrity/200)+'%';}).join(' / ');},
-            hit:function(a,b,bolt){return states[0].present&&!(bolt&&bolt.region||0)?ships[0].hit(a,b,bolt):null;},
-            damage:function(point,amount,combat){const ship=ships[0];return !!states[0].present&&!!ship.damage&&ship.damage(point,amount,combat);},
-            components:function(){return states[0].present&&ships[0].components?ships[0].components():[];},
+            hit:function(a,b,bolt){var space=bolt&&bolt.region||0,hits=ships.flatMap(function(ship,i){var point=states[i].present&&(states[i].region||0)===space?ship.hit(a,b,bolt):null;return point?[point]:[];});hits.sort(function(one,two){return Math.hypot(...one.map(function(v,k){return v-a[k];}))-Math.hypot(...two.map(function(v,k){return v-a[k];}));});return hits[0]||null;},
+            damage:function(point,amount,combat,region){var space=region===undefined?combat.player.pose.region||0:region;return ships.some(function(ship,i){return !!states[i].present&&(states[i].region||0)===space&&!!ship.damage&&ship.damage(point,amount,combat);});},
+            components:function(){var space=renderCombat&&renderCombat.player.pose.region||0;return ships.flatMap(function(ship,i){return states[i].present&&(states[i].region||0)===space&&ship.components?ship.components():[];});},
             telemetry:function(){var stats=ships.map(function(ship){return ship.telemetry();});return {seconds:stats[0].seconds,contacts:stats.reduce(function(n,s){return n+s.contacts;},0),launches:0,shots:stats.reduce(function(n,s){return n+s.shots;},0),hits:stats.reduce(function(n,s){return n+s.hits;},0),mounts:stats.flatMap(function(s){return s.mounts;}),capitals:states.map(function(ship,i){return {team:ship.team,position:ship.position.slice(),heading:ship.heading,integrity:ship.integrity,shots:stats[i].shots,hits:stats[i].hits};})};}};
     }
     DW.convoyScenery={createArrivalFleet:createArrivalFleet,arrivalPreparationMs:0,preview:function(name){return models[name]||[];},visible:true,ready:ready,texture:texture,install:install,effects:function(combat,view){

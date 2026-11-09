@@ -37,18 +37,32 @@ assert(growing.some(batch=>batch.placement.portalClip[3]<plan.exit.radiusM/U),'R
 view.combat.time=view.combat.convoy.elapsed=99;
 const geometry=rig.geometry(),buffers=geometry.map(batch=>batch.vertices);assert(geometry.length>remote.length);assert(geometry.some(batch=>DW.wormholes.resolve(batch).clipPlane),'Bastion emerges across the rescue plane');
 const owner=geometry.find(batch=>DW.wormholes.resolve(batch).clipPlane).placement;
-const plumes=rig.effects(view.state,false);assert(plumes.length>0);assert(plumes.every(batch=>batch.placement===owner),'capital hull and effects have one owner');
+const plumes=rig.effects(view.state,false);assert(plumes.length>0);assert(plumes.filter(batch=>!batch.independent).every(batch=>batch.placement===owner),'capital hull and effects have one owner');
 const b=plan.capitals[0],target=view.combat.enemies.find(ship=>ship.team==='enemy');assert(target);
+// Isolate local support well clear of both mouth volumes. Gun positions inside
+// an excised mouth are not valid local firing positions.
+b.position.splice(0,3,...plan.exit.position.map((v,k)=>v+(k===0?10000/U:0)));
 target.hp=target.maxHp=10000;target.shield=0;const local=[-650,-500,220],co=Math.cos(b.heading),si=Math.sin(b.heading);
 target.pose.eye=b.position.map((v,k)=>v+([co*local[0]-si*local[1],si*local[0]+co*local[1],local[2]][k])/U);
 target.pose.velocity=[0,0,0];
 view.combat.enemies=view.combat.enemies.filter(ship=>ship.team==='ally'||ship===target);DW.flightSim.collisionChanged(view.combat);
+target.pose.region=1;DW.flightSim.collisionChanged(view.combat);const shotsBefore=rig.telemetry().shots;
+for(let i=0;i<120;i++)rig.step(1/30,view);
+assert.equal(rig.telemetry().shots,shotsBefore,'Point defense must not fire at same-coordinate craft in another space');
+assert(rig.telemetry().mounts.filter(m=>m.kind!=='heavy').every(m=>m.targetId!==target.id));
+target.pose.region=0;DW.flightSim.collisionChanged(view.combat);
 for(let i=0;i<600;i++)rig.step(1/30,view);
+const liveEffects=rig.effects(view.state,false),rounds=liveEffects.filter(batch=>batch.independent);assert(rounds.some(batch=>batch.vertices.length>0),'Actual capital rounds reach the effect renderer');assert(rounds.every(batch=>!batch.placement&&(batch.region||0)===0),'Rounds own their physical space rather than the firing hull mask');
 const report=rig.telemetry();assert(report.shots>0&&report.hits>0,'Bastion provides actual point-defense support after arriving');assert(target.hp<10000);assert.equal(report.launches,0);
 assert(report.mounts.filter(m=>m.kind==='heavy').every(m=>m.shots===0),'Bastion does not fire at remote capital coordinates');
 view.combat.enemies=view.combat.enemies.filter(ship=>ship.team==='ally');DW.flightSim.collisionChanged(view.combat);
 const quietShots=rig.telemetry().shots;for(let i=0;i<300;i++)rig.step(1/30,view);assert.equal(rig.telemetry().shots,quietShots,'No live fighter targets means no fresh volleys during extraction');
 assert.equal(rig.geometry(),geometry);assert(rig.geometry().every((batch,i)=>batch.vertices===buffers[i]));assert(remoteBuffers.every(buffer=>geometry.some(batch=>batch.vertices===buffer)),'Arrival retains shared immutable buffers');
+const remoteState=plan.capitals[1];assert.equal(remoteState.region,1,'Remote capital retains physical space membership after rig reset');
+const rayStart=remoteState.position.map((v,k)=>v+(k===0?2000/U:0)),rayEnd=remoteState.position.map((v,k)=>v-(k===0?2000/U:0));
+const remoteRound={region:1,position:rayStart,direction:[-1,0,0],weapon:DW.retailWeapons[0],age:0};
+const remoteContact=rig.hit(rayStart,rayEnd,remoteRound);assert(remoteContact,'Remote capital participates in collision in its own space');
+const integrityBefore=remoteState.integrity;assert(rig.damage(remoteContact,10,view.combat,1));assert(remoteState.integrity<integrityBefore,'Region-aware impact damages the remote capital');
 const initial=b.position.slice();DW.convoyBattle.updateEvacuation(view.combat,1);assert.notDeepEqual(rig.telemetry().capitals[0].position,initial,'Renderer observes mission-owned movement');
 flight.reset();const reset=flight.snapshot();rig.reset(reset.combat);assert.equal(rig.geometry().length,0);assert(rig.telemetry().capitals.every(ship=>ship.integrity===20000));
 reset.combat.convoy.complete=true;const shots=rig.telemetry().shots;rig.step(1/30,reset);assert.equal(rig.telemetry().shots,shots);

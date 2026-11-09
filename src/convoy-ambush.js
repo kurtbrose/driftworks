@@ -8,8 +8,14 @@
      * @param {Combat} combat */function coverPlan(combat){
         const s=combat.convoy,e=s&&s.evacuation;var here=center(combat);
         var toward=unit(e?e.entry.map(function(v,k){return k===2?0:v*U-here[k];}):[0,1,0]);
+        if(Math.hypot(...toward)<.1)toward=[0,1,0];
         var spread=s?s.ships.filter(function(ship){return ship.hull>0&&!ship.arrived;}).reduce(function(radius,ship){return Math.max(radius,Math.hypot(...ship.position.map(function(v,k){return v*U-here[k];})));},0):0;
-        return {here:here,toward:toward,goal:here.map(function(v,k){return v+toward[k]*Math.max(1400,spread+900)+(k===2?200:0);})};
+        var goal=here.map(function(v,k){return v+toward[k]*Math.max(1400,spread+900)+(k===2?200:0);});
+        var mouths=s&&e?[s.arrivalPortal,e.exit].flatMap(function(portal){return portal&&DW.wormholes.phase(s.elapsed,portal).visible?[{position:portal.position.map(function(v){return v*U;}),radius:portal.radiusM||210}]:[];}):[];
+        // Keep a 700 m hull envelope outside the excised mouth volumes, while
+        // retaining its threat-facing station and the outboard emergence route.
+        goal=DW.wormholes.separate(goal,[toward[1],-toward[0],0],700,mouths,100);
+        return {here:here,toward:toward,goal:goal};
     }
     /** @param {Combat} combat */function start(combat){
         const s=combat.convoy;if(!s)return;
@@ -17,7 +23,7 @@
         capitals.forEach(function(c,i){c.present=false;c.remote=i===1;});
         // Harrow is a remote aperture view, not a local capital firing solution.
         capitals[0].mainBatteryClear=false;
-        capitals[1].position.splice(0,3,0,6500/U,1200+180/U);capitals[1].heading=Math.PI/2;
+        capitals[1].region=1;capitals[1].position.splice(0,3,0,6500/U,1200+180/U);capitals[1].heading=Math.PI/2;
         s.evacuation={coverGoal:[0,0,1200*U],warningAt:null,incidentAt:null,bombardUntil:0,phase:'patrol',withdrawalAt:null,capitals:capitals,nextWaveAt:1000000,waves:0,reserves:12,
             entry:[0,1500/U,1200],rally:[-1600,2300,1200*U],rescueAt:1000000,bastionClearAt:1000000,
             exit:{position:[0,0,1200],normal:[0,1,0],radiusM:800,opensAt:1000000,closesAt:1000000,spawned:true},

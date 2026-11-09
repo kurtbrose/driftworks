@@ -53,9 +53,10 @@
     }
     /** Finite-source firing route in the same compact optical metric as the image.
      * Coordinates/distances are scene units, not metres.
-     * @param {Vector} origin @param {Vector} target @param {number} region @param {number} destination @param {boolean|'thin-shell'|number} [bridge] */
+     * @param {Vector} origin @param {Vector} target @param {number} region @param {number} destination @param {import('./types').ShotSpace} [bridge] */
     function ballisticPath(origin,target,region,destination,bridge){
         if(typeof bridge==='number')return DW.flightHyperbolic.path(origin,target,bridge);
+        if(typeof bridge==='object')return DW.wormholes.ballisticPath(bridge.links,origin,target,region,destination,bridge.time,units);
         var delta=target.map(function(v,i){return v-origin[i];}),distance=Math.hypot.apply(null,delta);
         if(!bridge)return region===destination&&distance>1e-10?{direction:delta.map(function(v){return v/distance;}),distance:distance}:null;
         var path=metric(bridge).primary(origin.map(function(v){return v*units;}),target.map(function(v){return v*units;}),region,destination);
@@ -64,16 +65,21 @@
     /** An actionable aim direction, never an optically warped future point.
      * Predict target motion with craft transport and solve its optical firing path.
      * A later jink is not knowable; unverified/out-of-lifetime solutions return null.
-     * @param {Pose} shooter @param {Pose & {velocity:Vector}} target @param {Weapon} weapon @param {boolean|'thin-shell'|number} [bridge] @param {number} [launchMeters]
+     * @param {Pose} shooter @param {Pose & {velocity:Vector}} target @param {Weapon} weapon @param {import('./types').ShotSpace} [bridge] @param {number} [launchMeters]
      * @returns {import('./types').FiringSolution|null} */
     function lead(shooter,target,weapon,bridge,launchMeters){
         if(typeof bridge==='number')return DW.flightHyperbolic.lead(shooter,target,weapon,bridge,launchMeters===undefined?4:launchMeters);
         var speed=weapon.speed/units,launch=Math.max(0,launchMeters===undefined?4:launchMeters)/units,life=weapon.lifetime;
         if(!(speed>0&&life>0))return null;
         /** @param {number} time */function sample(time){
-            var move=target.velocity.map(function(v){return v*time/units;}),future=bridge?bridgeTravel(target.eye,move,target.region||0):{point:target.eye.map(function(v,i){return v+move[i];}),region:target.region||0};
+            var move=target.velocity.map(function(v){return v*time/units;}),future=typeof bridge==='object'?DW.wormholes.advanceRay(bridge.links,target.eye,target.velocity.map(function(v){return v/(Math.hypot.apply(null,target.velocity)||1);}),Math.hypot.apply(null,move),target.region||0,bridge.time,units):bridge?bridgeTravel(target.eye,move,target.region||0):{point:target.eye.map(function(v,i){return v+move[i];}),region:target.region||0};
             var path=ballisticPath(shooter.eye,future.point,shooter.region||0,future.region,bridge);if(!path)return null;
             return {direction:path.direction,distance:path.distance,time:time,point:future.point,region:future.region,error:path.distance-Math.min(launch,path.distance*.5)-speed*time};
+        }
+        if(typeof bridge==='object'){
+            var initial=sample(0),targetSpeed=Math.hypot.apply(null,target.velocity)/units;
+            if(!initial&&targetSpeed<1e-10)return null;
+            if(initial&&initial.distance-launch>(speed+targetSpeed)*life)return null;
         }
         // Most combat targets move much slower than a bolt. Fixed-point flight
         // time converges quickly there, without a lifetime-wide route scan.
@@ -94,7 +100,7 @@
             }
         }
         var times=Array.from({length:65},/** @param {unknown} _ @param {number} i */function(_,i){return life*i/64;});
-        if(bridge){var crossing=crossBridge(target.eye,target.eye.map(function(v,i){return v+target.velocity[i]*life/units;}),target.region||0);if(crossing){var event=crossing.fraction*life;times.push(Math.max(0,event-1e-7),event,Math.min(life,event+1e-7));times.sort(function(a,b){return a-b;});}}
+        if(bridge&&typeof bridge!=='object'){var crossing=crossBridge(target.eye,target.eye.map(function(v,i){return v+target.velocity[i]*life/units;}),target.region||0);if(crossing){var event=crossing.fraction*life;times.push(Math.max(0,event-1e-7),event,Math.min(life,event+1e-7));times.sort(function(a,b){return a-b;});}}
         var previous=sample(0);
         for(var i=1;i<times.length;i++){
             var current=sample(times[i]);
@@ -114,7 +120,7 @@
     function create() {
         return { bolts: [], impacts: [], cooldown: 0, fired: 0, hits: 0 };
     }
-    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] @param {boolean|'thin-shell'|number} [bridge] */
+    /** @param {Guns} guns @param {Pose} pose @param {Weapon} weapon @param {boolean} trigger @param {number} dt @param {((start: Vector, end: Vector, bolt: Bolt) => Vector | null)} [hitTest] @param {(() => Vector | null)} [aimPoint] @param {number} [mountCount] @param {Vector[]} [anchors] @param {import('./types').ShotSpace} [bridge] */
     function step(guns, pose, weapon, trigger, dt, hitTest, aimPoint, mountCount, anchors, bridge) {
         var count = mountCount === undefined ? 2 : mountCount;
         if (!Number.isInteger(count) || count < 1 || count > 128) throw new Error('Invalid gun mount count');
@@ -137,7 +143,11 @@
                 return x + bolt.direction[i] * bolt.weapon.speed * travel / units;
             });
             var hit=/** @type {Vector|null} */(null);
-            if(typeof bridge==='number'){
+            if(typeof bridge==='object'){
+                var journey=DW.wormholes.advanceRay(bridge.links,bolt.position,bolt.direction,bolt.weapon.speed*travel/units,bolt.region||0,bridge.time,units);
+                for(const segment of journey.segments){bolt.region=segment.region;bolt.direction=segment.direction;hit=hitTest?hitTest(segment.start,segment.end,bolt):null;if(hit)break;}
+                end=journey.point;if(!hit){bolt.region=journey.region;bolt.direction=journey.direction;}
+            }else if(typeof bridge==='number'){
                 var route=DW.flightHyperbolic.travel(bolt.position,bolt.direction,bolt.weapon.speed*travel/units,bridge);
                 end=route.point;hit=hitTest?hitTest(bolt.position,end,bolt):null;bolt.direction=route.direction;
             }else if(bridge){
@@ -169,6 +179,7 @@
             var forward = target ? Math.max(0, target.reduce(function (sum, x, i) {
                 return sum - (x - pose.eye[i]) * pose.back[i] * units;
             }, 0) * .5) : 4;
+            var emitted=0;
             for (var mount = 0; mount < muzzles.length; mount++) {
                 var muzzle = muzzles[mount];
                 var launchForward = target ? Math.min(muzzle[1], forward) : muzzle[1];
@@ -185,6 +196,13 @@
                     position=space.offset(pose.eye,pose.right.map(function(v,i){return (v*muzzle[0]+pose.up[i]*muzzle[2]-pose.back[i]*launchForward)/units;}),bridge);
                     var curvedGoal=target||space.offset(pose.eye,pose.back.map(function(v){return -v*convergenceM/units;}),bridge);
                     aim=space.path(position,curvedGoal,bridge).direction;
+                }else if(typeof bridge==='object'){
+                    var displacement=position.map(function(v,k){return v-pose.eye[k];}),length=Math.hypot.apply(null,displacement);
+                    var linkedLaunch=DW.wormholes.advanceRay(bridge.links,pose.eye,displacement.map(function(v){return v/(length||1);}),length,pose.region||0,bridge.time,units);
+                    var reach=target?Math.max(.001,target.reduce(function(sum,v,k){return sum-(v-pose.eye[k])*pose.back[k];},0)):convergenceM/units;
+                    var linkedGoal=DW.wormholes.advanceRay(bridge.links,pose.eye,pose.back.map(function(v){return -v;}),reach,pose.region||0,bridge.time,units);
+                    var route=DW.wormholes.ballisticPath(bridge.links,linkedLaunch.point,linkedGoal.point,linkedLaunch.region,linkedGoal.region,bridge.time,units);if(!route)continue;
+                    position=linkedLaunch.point;launchRegion=linkedLaunch.region;aim=route.direction;
                 }else if(bridge){
                     var range=target?Math.max(.001,target.reduce(function(sum,v,i){return sum-(v-pose.eye[i])*pose.back[i];},0)):convergenceM/units;
                     var optics=metric(bridge);
@@ -202,9 +220,9 @@
                 var distance = Math.hypot.apply(null, aim);
                 guns.bolts.push({ curvature:typeof bridge==='number'?bridge:undefined,region:launchRegion, position: position, direction: aim.map(function (x) {
                         return x / distance;
-                    }), weapon: weapon, age: 0 });
+                    }), weapon: weapon, age: 0 });emitted++;
             }
-            guns.fired += muzzles.length;
+            guns.fired += emitted;
             guns.cooldown += interval;
         }
     }

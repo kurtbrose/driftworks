@@ -145,7 +145,7 @@
     /** @param {Combat} t @param {Vector} start @param {Vector} end @param {Bolt} bolt @param {Craft | string} team @param {TerrainHit | undefined} terrainHit @param {FlightState} player @param {number} [scorchInterval] @param {() => void} [onDamage] */
     function trace(t, start, end, bolt, team, terrainHit, player, scorchInterval, onDamage) {
         t.player.pose = player;
-        var hit = terrainHit&&!(bolt.region||0) ? terrainHit(start, end, bolt) : null, travel = length(sub(end,start));
+        var hit = terrainHit&&(terrainHit.allRegions||!(bolt.region||0)) ? terrainHit(start, end, bolt) : null, travel = length(sub(end,start));
         var best = hit && travel > 0 ? length(sub(hit,start)) / travel : Infinity;
         var shieldContact=false;
         var victim = /** @type {Craft | null} */ (null), surface = /** @type {Hit | null} */ (null);

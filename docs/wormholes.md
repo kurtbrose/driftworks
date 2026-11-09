@@ -62,8 +62,8 @@ space while the player is away.
 
 Capital emergence and freighter evacuation still use the staged mask adapter.
 This change does not provide general recursive geometry views through arbitrary
-links, transfer cargo lifecycle into a destination simulation, or trace projectiles
-through the new fleet links. The dedicated Ellis/thin-shell optical compositor
+links, transfer cargo lifecycle into a destination simulation, or solve arbitrary
+multi-link firing images. The dedicated Ellis/thin-shell optical compositor
 retains its existing projectile and finite-hull crossing implementation.
 
 ## Automated verification
@@ -71,6 +71,8 @@ retains its existing projectile and finite-hull crossing implementation.
 - `node tests/wormholes.cjs`: 1,000 generated translated/scaled crossings,
   destination identity, overshoot, vector reciprocity, immutable geometry,
   owner inheritance and the source boundary against per-mission mask code.
+- `node tests/wormhole-ballistics.cjs`: direct/blocked/routed/closed firing
+  paths, oblique ray verification, AI lead, actual remote damage and chart isolation.
 - `node tests/wormhole-traversal.cjs`: real session crossings into both fleet
   spaces and back, forming-mouth gate, sky identity, frame/speed and reset.
 - `node tests/evacuation-capitals.cjs`: actual capital hull/effect ownership,
@@ -129,3 +131,44 @@ for rim segments, so the farther rim stops behind the nearer aperture. This
 does not add recursive views through multiple wormholes. Local checks include
 1,000 generated placements, production rim construction, the fleet mission replay
 and a GPU pixel comparison after swapping the near/far sky input order.
+
+## Weapon paths and AI
+
+Registered fleet links now share ballistic transport with craft transport. A
+`ShotSpace` carrying links and simulation time is accepted by `flightGuns.lead`,
+`ballisticPath` and `step`. Direct rays must reach their intended space and
+endpoint. One-link thin-shell firing paths normalize into the established optical
+solver and are then verified through the actual graph; another mouth can invalidate
+a candidate. Closed links leave ordinary space intact. Aim solvers decline missing,
+out-of-lifetime and unsupported multi-link paths rather than using stored coordinates.
+
+Projectile sweeps test each source/destination leg in its own space and retain the
+space of the first impact. Fighter tracking and the final AI trigger gate consult
+the same solver. Capital point defense acquires only local targets and refuses
+shots interrupted by a mouth; main batteries require an actual routed aim. Harrow
+has space 1 membership even when its hull is displayed through the source aperture.
+Bastion's mission main-battery mask remains in place: this is still a portal attack,
+not a visible pursuing-capital encounter.
+
+Fired rounds are independent batches, not attached hull effects. Registered
+capital rounds are selected in the observer's space and bypass the hull owner's
+mask; engines and shields retain their owner. This prevents transferred rounds
+from being drawn in their launch space or disappearing with their firing hull.
+
+Fighters in adjacent spaces can pursue through a declared mouth when a target is
+beyond firing range; nearby routed opportunities use the optical range. A blocked
+same-space pursuit chooses an exterior detour instead of blindly crossing the
+obstructing mouth. The final trigger checks the actual barrel ray's destination,
+including narrow mouths where a loose angular alignment test would miss.
+
+Browser-owned capital collision callbacks opt into `TerrainHit.allRegions` and
+dispatch hit/damage by region. Ordinary terrain remains source-only. This keeps
+remote capital hulls damageable without leaking the source asteroid into their
+space. The ballistic regression exercises the actual NPC trigger, pursuit return,
+local detour, and a foreign-space collision callback; the capital regression also
+checks remote hull hits and damage.
+
+Bastion's cover station also reserves a 700 m hull envelope plus 100 m clearance
+from both open mouths. This prevents a supposedly local gun from being stationed
+in the excised throat volume. The emergence direction and threat-facing station
+remain intact; the shared placement constraint shifts it onto the clear flank.

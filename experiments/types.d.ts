@@ -54,7 +54,7 @@ export type AegisFlightRig = {
     effects:(pose:Pose,shields?:boolean)=>Batch[];
     readout:()=>string;
     hit:(a:Vector,b:Vector,bolt?:Bolt)=>Vector|null;
-    damage?:(point:Vector,amount:number,combat:Combat)=>boolean;
+    damage?:(point:Vector,amount:number,combat:Combat,region?:number)=>boolean;
     components?:()=>{id:string;kind:string;hp:number;maxHp:number;position:Vector}[];
     telemetry:()=>{seconds:number;contacts:number;launches:number;shots:number;hits:number;mounts:{yaw:number;elevation:number;side:number;kind:string;targetId:string;shots?:number;aimPoint?:Vector}[];capitals?:{team:string;position:Vector;heading:number;integrity:number;shots:number;hits:number}[]};
 };
@@ -65,7 +65,7 @@ export type AegisSimulation=Required<Pick<AegisFlightRig,'setMountAim'|'reset'|'
         mounts:Readonly<{source:AegisFlightAsset['turrets'][number];yaw:number;elevation:number;guns:Guns}>[];
         parts:AegisVisualPart[];
         shieldHits:{point:Vector;time:number;heavy:boolean}[];
-        seconds:number;bridgeMetric:boolean|'thin-shell';
+        linkedShots?:boolean;seconds:number;bridgeMetric:boolean|'thin-shell';
     };
 };
 export type FlightStudiesHost={
@@ -222,7 +222,7 @@ export type Guns = {
     fired: number;
     hits: number;
 };
-export type TerrainHit = ((start: Vector, end: Vector, bolt?:Bolt) => Vector | null) & {onImpact?:(point:Vector,bolt:Bolt,combat:Combat)=>void};
+export type TerrainHit = ((start: Vector, end: Vector, bolt?:Bolt) => Vector | null) & {allRegions?:boolean;onImpact?:(point:Vector,bolt:Bolt,combat:Combat)=>void};
 export type Hit = {
     fraction: number;
     point: Vector;
@@ -327,6 +327,7 @@ export type ConvoyRaid={id:number;phase:'hold'|'approach'|'engage'|'regroup'|'wi
 export type ConvoyBattleOrder={id:string;kind:'assist'|'intercept'|'escort';front:number|null;packet:number;targetId:string;position:Vector;label:string;priority:number;since:number};
 export type ConvoyBattleState={fronts:{id:number;name:string;offset:Vector;center:Vector;packet:number;radiusM:number;allies:number;enemies:number;alliedHull:number;released:boolean}[];nextAssessment:number;nextDispatch:number;order:ConvoyBattleOrder|null;pending:boolean;lastCall:number};
 export type ConvoyState = {evacuation?:FleetEvacuation;navigation?:import("../src/types").FleetFormation;coverage?:Record<string,number[]>;nextCoverage?:number;elapsed:number;speedMps:number;destinationY:number;complete:boolean;raidStarted:boolean;arrivalPortal?:ConvoyPortal;battle?:ConvoyBattleState;arrivalFleet:ConvoyReceptionShip[];raids:ConvoyRaid[];director:{attention:DirectorAttention;phase:'opening'|'patrol'|'contact'|'threatened'|'under-fire'|'recovery';raids:number;reservePlanned:boolean;overload:number;withdrawn:number;events:{wing:number;kind:string}[];nextRaidAt:number;pressure:number;lastHull:number;lastDamageAt:number;quietSince:number;patrol:number;stationAt:number;waypoint:{kind:'patrol'|'intercept'|'assist'|'escort';label?:string;front?:number|null;packet:number;position:Vector;targetId:string|null}|null};radio:{wait:number;opening:number;said:string[];phase:'arrival'|'cruise'|'combat'|'damage-report'|'complete';report:number;chat:number;chatTurn:number};ships:{id:string;packet:number;callsign:string;model:string;slot:Vector;position:Vector;velocity:Vector;forward?:Vector;hull:number;maxHull:number;arrived:boolean}[]};
+export type ShotSpace=boolean|'thin-shell'|number|{links:WormholeLink[];time:number};
 export type PortalSkyView={position:Vector;radius:number;sky?:number;localSky?:number;other?:PortalSkyView};
 export type Combat = {
     wormholes?:WormholeLink[];
@@ -397,6 +398,7 @@ export type WormholeLife={initialOpen?:boolean;opensAt?:number;closesAt?:number;
 export type WormholeLink={lifecycle?:WormholeLife;id:string;mouths:[{space:number;position:number[];radius:number;sky:string},{space:number;position:number[];radius:number;sky:string}]};
 export type RenderPlacement={visible?:boolean;portalClip?:number[];clipPlane?:number[];region?:number;lensCenter?:number[];lensRadius?:number;lensTransit?:HullTransit};
 export type Batch = {
+    independent?:boolean;
     placement?:RenderPlacement;
     portalClip?:number[];clipPlane?:number[];
     /** Placement triples for native GPU instancing; dynamicInstances marks changing poses. */
@@ -740,7 +742,7 @@ export type EllisDraw={lensTransit?:HullTransit;projected?:boolean;lensRadius?:n
 export type YoYoFrame={view:Pose;points:{point:number[];region:number}[];expected:number[][];distance:number;observerL:number;halfSize:number};
 export type EllisRenderPass={setShipStretching:(enabled:boolean)=>void;invalidate:()=>void;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number,revision?:string|null)=>{objectPaths:number;objectPatches:number;objectError:number;objectBad:number;compositionPasses:number;historyValid:number;extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {
-    wormholes:{linkPortal:(combat:Combat,portal:ConvoyPortal,id:string,destination:number,sky:string,units:number)=>WormholeLink;travel:(links:WormholeLink[],before:number[],pose:Pose,time:number,units:number)=>boolean;skyView:(links:WormholeLink[],space:number,time:number,units:number)=>PortalSkyView|null;occluded:(eye:number[],point:number[],mouths:{position:number[];radius:number}[])=>boolean;separate:(position:number[],axis:number[],radius:number,others:{position:number[];radius:number}[],clearance:number)=>number[];phase:(time:number,life?:WormholeLife)=>{amount:number;visible:boolean;traversable:boolean;state:string};request:(life:WormholeLife,open:boolean,time:number)=>void;clear:(placement:RenderPlacement)=>RenderPlacement;define:(link:WormholeLink)=>WormholeLink;cross:(link:WormholeLink,before:number[],after:number[],space:number)=>{region:number;eye:number[];normal:number[];sky:string}|null;transport:(v:number[],normal:number[])=>number[];own:(batches:Batch[],placement:RenderPlacement)=>Batch[];resolve:(batch:Batch)=>RenderPlacement;bindRig:(rig:AegisFlightRig,placement:RenderPlacement)=>AegisFlightRig;mouth:(placement:RenderPlacement,position:number[],normal:number[],radius:number,mode:'aperture'|'front'|'back')=>RenderPlacement};
+    wormholes:{advanceRay:(links:WormholeLink[],start:number[],direction:number[],distance:number,space:number,time:number,units:number)=>{point:number[];region:number;direction:number[];segments:{start:number[];end:number[];region:number;direction:number[]}[]};ballisticPath:(links:WormholeLink[],start:number[],target:number[],space:number,destination:number,time:number,units:number)=>{direction:number[];distance:number}|null;linkPortal:(combat:Combat,portal:ConvoyPortal,id:string,destination:number,sky:string,units:number)=>WormholeLink;travel:(links:WormholeLink[],before:number[],pose:Pose,time:number,units:number)=>boolean;skyView:(links:WormholeLink[],space:number,time:number,units:number)=>PortalSkyView|null;occluded:(eye:number[],point:number[],mouths:{position:number[];radius:number}[])=>boolean;separate:(position:number[],axis:number[],radius:number,others:{position:number[];radius:number}[],clearance:number)=>number[];phase:(time:number,life?:WormholeLife)=>{amount:number;visible:boolean;traversable:boolean;state:string};request:(life:WormholeLife,open:boolean,time:number)=>void;clear:(placement:RenderPlacement)=>RenderPlacement;define:(link:WormholeLink)=>WormholeLink;cross:(link:WormholeLink,before:number[],after:number[],space:number)=>{region:number;eye:number[];normal:number[];sky:string}|null;transport:(v:number[],normal:number[])=>number[];own:(batches:Batch[],placement:RenderPlacement)=>Batch[];resolve:(batch:Batch)=>RenderPlacement;bindRig:(rig:AegisFlightRig,placement:RenderPlacement)=>AegisFlightRig;mouth:(placement:RenderPlacement,position:number[],normal:number[],radius:number,mode:'aperture'|'front'|'back')=>RenderPlacement};
     multiplayerFlight:{mount:(session:ReturnType<ExperimentModules['flightSession']['create']>,loadout:()=>{profile:number;weapon:number;model:string})=>{isGuest:()=>boolean;update:(demand:Demand,paused:boolean)=>void}};
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
@@ -821,10 +823,10 @@ export type ExperimentModules = {
         throatContact:(before:Vector,after:Vector,velocity:Vector,side:number,hullRadius:number,crossRadius?:number)=>{eye:Vector;velocity:Vector}|null;
         crossBridge:(before:Vector,after:Vector,side:number)=>{normal:Vector;fraction:number;entry:Vector;exit:Vector;eye:Vector}|null;
         bridgeTravel:(start:Vector,move:Vector,region:number)=>{point:Vector;region:number;normal:Vector|null;segments:{start:Vector;end:Vector;region:number}[]};
-        ballisticPath:(origin:Vector,target:Vector,region:number,destination:number,bridge?:boolean|'thin-shell'|number)=>{direction:Vector;distance:number}|null;
-        lead:(shooter:Pose,target:Pose & {velocity:Vector},weapon:Weapon,bridge?:boolean|'thin-shell'|number,launchMeters?:number)=>FiringSolution|null;
+        ballisticPath:(origin:Vector,target:Vector,region:number,destination:number,bridge?:ShotSpace)=>{direction:Vector;distance:number}|null;
+        lead:(shooter:Pose,target:Pose & {velocity:Vector},weapon:Weapon,bridge?:ShotSpace,launchMeters?:number)=>FiringSolution|null;
         create: () => Guns;
-        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[], bridge?:boolean|'thin-shell'|number) => void;
+        step: (guns: Guns, pose: Pose, weapon: Weapon, trigger: boolean, dt: number, hitTest?: (start: Vector, end: Vector, bolt: Bolt) => Vector | null, aimPoint?: () => Vector | null, mountCount?: number, anchors?: Vector[], bridge?:ShotSpace) => void;
         intersect: (start: Vector, end: Vector, radius: number, field: (point: Vector) => number) => Vector | null;
         geometry: (guns: Pick<Guns, 'bolts' | 'impacts'>, pose: Pose, optical?:boolean|'thin-shell') => Batch[];
     };

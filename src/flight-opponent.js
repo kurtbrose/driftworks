@@ -108,6 +108,12 @@
             e.gunGoal=curved?offset(e.pose,scale(curved.direction,curved.distance)):position;e.gunValid=!!curved;
             return {point:e.gunGoal,time:curved?curved.time:0};
         }
+        if(t.wormholes&&t.wormholes.length){
+            var space={links:t.wormholes,time:t.time},visible=DW.flightGuns.ballisticPath(e.pose.eye,position,e.pose.region||0,target.region||0,space);
+            var linked=visible?DW.flightGuns.lead(e.pose,Object.assign({},target,{eye:position,velocity:scale(track.velocity,U)}),weapon,space):null;
+            e.gunGoal=linked?add(e.pose.eye,scale(linked.direction,linked.distance)):position;e.gunValid=!!linked;
+            return {point:e.gunGoal,time:linked?linked.time:0};
+        }
         if(mission(t).sky.thinShell){
             var future=DW.flightGuns.bridgeTravel(track.position,scale(track.velocity,t.time-track.at),track.region);
             var velocity=future.normal?DW.flightGuns.bridgeVector(track.velocity,future.normal):track.velocity;
@@ -130,7 +136,7 @@
     function decide(t, e, player) {
         if (e.opponentStyle === 'fso-pursuit' || e.opponentStyle === 'fso-breaker') { decideFreeSpace(t,e,player); return; }
         if (e.opponentStyle && e.opponentStyle !== 'baseline') { decideStyle(t,e,player); return; }
-        var distance = length(spaceDelta(e.pose,player.eye)) * U, active = (mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0;
+        var distance = length(spaceDelta(e.pose,(e.pose.region||0)!==(player.region||0)&&e.gunValid&&e.gunGoal?e.gunGoal:player.eye)) * U, active = (mission(t).encounter.kind==='furball') || t.slots.indexOf(e.id) >= 0;
         if (t.time >= e.until) {
             if (distance < 140) {
                 e.mode = 'break';
@@ -168,7 +174,7 @@
     /** FreeSpace-inspired geometry; distances and velocities are explicit SI here.
      * @param {Craft} e @param {FlightState} target */
     function engagement(e,target) {
-        var delta=spaceDelta(e.pose,target.eye), distance=length(delta)*U, direction=unit(delta);
+        var delta=spaceDelta(e.pose,(e.pose.region||0)!==(target.region||0)&&e.gunValid&&e.gunGoal?e.gunGoal:target.eye), distance=length(delta)*U, direction=unit(delta);
         var forward=scale(e.pose.back,-1), relative=sub(e.pose.curvature?DW.flightHyperbolic.transport(target.eye,e.pose.eye,target.velocity,e.pose.curvature):target.velocity,e.pose.velocity);
         var weapon=DW.retailWeapons[e.weaponIndex||0];
         var gun={point:e.gunGoal || target.eye,time:e.gunValid ? length(spaceDelta(e.pose,e.gunGoal || target.eye))*U/weapon.speed : 0};
