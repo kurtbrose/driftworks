@@ -1,5 +1,12 @@
 # Shared wormhole contracts
 
+For background rendering, follow the
+[skybox runtime contract](skybox-authoring.md#shared-environment-boundary).
+Links select spaces and environments; their traversal geometry does not select
+sky optics. The fleet sky path described below is the current legacy
+implementation, with unresolved Ellis/compositing gaps documented in that
+contract. It is not the reference for new background rendering.
+
 `src/wormholes.js` owns the shared link and render-placement boundary. Missions
 declare endpoints and bind render owners; they do not assign shader masks to
 individual hull materials or separately generated plumes.

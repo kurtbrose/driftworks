@@ -1,4 +1,78 @@
-# Hero sky authoring
+# Skybox authoring and runtime contract
+
+This is the shared contract for authored skies and their runtime integration.
+Read it for background rendering and wormhole changes as well as asset work.
+Use the personal `make-skybox` skill for composition/baking; the six-camera
+instructions below are the repository fallback. The skill governs asset
+creation; runtime integration must also satisfy this contract.
+
+## Shared environment boundary
+
+Each space supplies one complete directional environment: galaxies, nebulae,
+haze and distant stars are composed together. Reusable cards and recipes are
+authoring inputs. Bake static compositions with the existing six-camera tool
+and retain the recipe, six faces and manifest. A panorama is a supported legacy
+source format, not evidence of a six-camera bake. Do not rebuild a baked sky
+from separate source cards during gameplay.
+
+The rendering order is complete source/destination environments, then shared
+sky optics, then foreground geometry and presentation. Wormhole sky optics
+choose the outgoing direction and source space before sampling the environment.
+Transmitted rays replace the local sky; returning rays sample the local sky
+with the same optical calculation. No background galaxy, haze or star pass may
+paint an undeformed local sky over that result. Multiple draws used to compose
+an environment do not make those components independent gameplay layers.
+
+Sky optics and finite-distance foreground/gameplay optics have separate
+ownership. The intended wormhole presentation retains the established Ellis
+background while ships remain readable under the foreground model. A change
+to shell traversal, ship projection, collision or mouth registration must not
+silently select thin-shell background mapping. Missions declare environments,
+mouth positions/radii and destination identities; they do not own sky samplers
+or implement special mouth textures. Keep runtime sky sampling/compositing in
+the shared `experiments/skybox.js` renderer and its shared sky modules.
+
+View-dependent glare belongs after environment sampling. It must respect
+source visibility/occlusion. Optional live background animation must pass
+through the same sky optics; an unwarped overlay is not an animation solution.
+
+## Current implementation gaps
+
+This contract describes the required architecture. It is not a claim that all
+existing modes implement it. The older flight renderer in
+`experiments/skybox.js` composes procedural backgrounds, hero image cards and
+point stars in separate runtime draws. Some newer mission families already
+load baked cubes, but that has not migrated every sky mode.
+
+The fleet arrival/linked-mouth path currently samples a panorama using
+thin-shell surface-normal mapping before the established Ellis branch. Local
+hero cards and stars can subsequently draw over its result. The
+`bridgeSky=ellis` option is scoped to the thin-shell mission and does not make
+the fleet path use Ellis. These are unresolved integration defects; preserve
+this distinction when reporting checks or choosing code to reuse. Fix them at
+the shared environment boundary, not by adding per-feature aperture masks or
+another mission-specific sky renderer. Existing legacy paths are migration
+targets, not exceptions permitting new bypasses.
+
+## Integration review
+
+For any runtime sky or wormhole change, identify the selected environment,
+every background draw, the sky optics path, and the foreground optics path.
+Check both desktop and XR when their sampling/compositing changes. Validate in
+the production 3D scene at fixed camera poses against the established Ellis sky:
+approach, oblique rim, near-throat, crossing and return from both spaces.
+Include distinct local/destination landmarks, haze and stars so background
+leakage is visible. Check ship readability separately. Retain labeled captures
+under `output/<task>/` and state which views remain uninspected.
+
+`tests/flight-skybox.cjs` checks shader wiring and controls; `tests/sky-cube.cjs`
+checks baked artifacts/projection; the wormhole GPU check exercises selected
+rendering fixtures. None currently proves that the complete fleet sky passes
+through Ellis or that later background draws cannot overwrite it. Add focused
+coverage for those defects with the runtime repair. Do not equate an asset bake,
+a shader-string assertion, or traversal success with visual acceptance.
+
+## Existing modes and authoring history
 
 For deterministic offline velocity distortion of an existing panorama, see
 [relativistic skybox baking](relativistic-skybox.md).
@@ -37,9 +111,10 @@ flight world without asteroid, mothership, contacts or collision.
 See [physical timing and bake notes](impact-timing.md). Other planet missions
 continue using the static baseline.
 
-The flight sky has three independent layers: black space, fixed authored hero
-features, and crisp stars. Stars keep a fixed CSS-pixel footprint while the camera
-turns; ship position never moves the sky. The original procedural choices remain
+The legacy flight sky has three runtime layers: black space, fixed authored hero
+features, and crisp stars. This describes the older implementation, not the
+shared environment contract above. Stars keep a fixed CSS-pixel footprint while
+the camera turns; ship position never moves the sky. The original procedural choices remain
 available in Settings. **G / Hero galaxy**, **H / Hero nebula**, and **I / Hero sun** use the generated image library as three separate compositions.
 
 ## Library and layout

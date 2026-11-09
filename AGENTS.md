@@ -18,6 +18,28 @@ use relative URLs and do not introduce runtime network dependencies.
 
 ## Flight visuals and experiments
 
+- For sky creation, sky rendering, background stars/galaxies, or wormhole sky
+  changes, read `docs/skybox-authoring.md` before editing. Apply `$make-skybox`
+  (`~/.codex/skills/make-skybox/SKILL.md`) for composition and baking; if the
+  skill is unavailable, follow the repository's six-camera bake instructions.
+- Treat each space's complete sky as one directional environment. Compose
+  galaxies, nebulae, haze and background stars before wormhole optics sample it.
+  Missions select environment/link data; they must not introduce another sky
+  renderer, a special mouth texture, or post-lensing background overlays.
+- Keep sky optics independent of foreground/gameplay optics. The intended
+  wormhole presentation uses the established Ellis background calculation with
+  readable foreground ships. Thin-shell traversal or foreground rendering does
+  not authorize replacing Ellis sky optics. Do not patch sky leaks with local
+  galaxy/star masks; fix the shared environment/compositing boundary.
+- The existing layered sky and fleet arrival path are legacy migration work,
+  not templates for new implementations. See the known gaps in
+  `docs/skybox-authoring.md`. Do not claim this contract is enforced by the
+  current renderer or that skybox baking proves wormhole integration works.
+- Sky integration acceptance requires the actual production scene: fixed-pose
+  comparisons against the established Ellis sky, approach/rim/near-throat and
+  both-side crossing views, local-background replacement on transmitted rays,
+  and foreground readability. Check the complete sky, including stars and
+  haze. Headless/source checks alone do not establish visual acceptance.
 - Evaluate flight artwork, projectiles and effects in a real 3D scene with
   perspective, world-space trajectories, depth and ship-scale context. Reuse
   the production scene, ship assets and effect paths where practical.
