@@ -322,3 +322,13 @@ for(const query of ['?mission=thin-shell','?mission=thin-shell&bridgeSky=ellis']
  assert.equal(scope.window.Driftworks.flightMissions.current().sky.thinShell,true,'finite-source and gameplay metric stays thin shell');
 }
 console.log('PASS hybrid sky: opt-in Ellis background and motion in both charts, thin-shell gameplay preserved');
+
+// Sky ownership comes from the same mouth declaration used for traversal.
+const skyLink={id:'swapped',mouths:[{space:0,position:[0,-2000,1550],radius:300,sky:'rime'},{space:1,position:[12000,-2000,1550],radius:300,sky:'asteroid'}]};
+skyLink.mouths.reverse();
+latticeContext.window.Driftworks.flightMissions.define('sky-link-test',{sky:{connection:skyLink}},'ellis');
+latticeContext.window.location.search=latticeContext.location.search='?mission=sky-link-test';
+vm.runInNewContext(skyRuntimeSource,latticeContext);
+const linkedSky=latticeContext.window.Driftworks.flightSkybox.create({clientWidth:800,clientHeight:600,prepend(){}});
+linkedSky.render(latticePose,1,false);assert.deepEqual(values.bridgeSpaceSkies,[1,0],'destination skies follow mouth data rather than a mission-specific region switch');
+console.log('PASS wormhole sky ownership: both endpoint presets come from the shared space link');

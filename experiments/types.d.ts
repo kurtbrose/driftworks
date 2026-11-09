@@ -13,7 +13,7 @@ export type FlightMission = {
     teams:{ally:{status:string;target:string;radio:string};enemy:{status:string;target:string;radio:string}};
     comms:{calls:Record<string,string[]>;named:Record<string,string[]>;friendlyAddress:string[];hostileAddress:string[];ambientCast:boolean};
     portraits:{folder:string;cast:string};
-    sky:{hyperbolic?:number;wormhole?:boolean;thinShell?:boolean;kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
+    sky:{connection?:WormholeLink;hyperbolic?:number;wormhole?:boolean;thinShell?:boolean;kind:string;gasGiant?:boolean;jadeSystem?:JadeSystem;rimeSurface?:string;bakedImpact?:boolean;cubeFaces?:string[];cubeStages?:string;features:{asset:string;yaw:number;pitch:number;roll:number;widthDeg:number;gain:number}[]};
     asteroidBulk?:[number,number,number,number];
     scenery:MissionScenery[];
     encounter:{reinforcements?:{launchModel:string;rosterSplit:number;launchSeconds:number;launchSpeed:number}|null;craftModels?:string[];kind:string;count:number;immediate:boolean;callsigns:string[];spawn:{backRadii:number;altitudeMeters:number}};
@@ -390,7 +390,10 @@ export type Pack = {
 };
 // Signed proper metres and outward unit radial in the canonical (region 0) chart.
 export type HullTransit = {proper:number;normal:Vector};
+export type WormholeLink={id:string;mouths:[{space:number;position:number[];radius:number;sky:string},{space:number;position:number[];radius:number;sky:string}]};
+export type RenderPlacement={visible?:boolean;portalClip?:number[];clipPlane?:number[];region?:number;lensCenter?:number[];lensRadius?:number;lensTransit?:HullTransit};
 export type Batch = {
+    placement?:RenderPlacement;
     portalClip?:number[];clipPlane?:number[];
     /** Placement triples for native GPU instancing; dynamicInstances marks changing poses. */
     instanceOffsets?:Float32Array;
@@ -733,6 +736,7 @@ export type EllisDraw={lensTransit?:HullTransit;projected?:boolean;lensRadius?:n
 export type YoYoFrame={view:Pose;points:{point:number[];region:number}[];expected:number[][];distance:number;observerL:number;halfSize:number};
 export type EllisRenderPass={setShipStretching:(enabled:boolean)=>void;invalidate:()=>void;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number,revision?:string|null)=>{objectPaths:number;objectPatches:number;objectError:number;objectBad:number;compositionPasses:number;historyValid:number;extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {
+    wormholes:{clear:(placement:RenderPlacement)=>RenderPlacement;define:(link:WormholeLink)=>WormholeLink;cross:(link:WormholeLink,before:number[],after:number[],space:number)=>{region:number;eye:number[];normal:number[];sky:string}|null;transport:(v:number[],normal:number[])=>number[];own:(batches:Batch[],placement:RenderPlacement)=>Batch[];resolve:(batch:Batch)=>RenderPlacement;bindRig:(rig:AegisFlightRig,placement:RenderPlacement)=>AegisFlightRig;mouth:(placement:RenderPlacement,position:number[],normal:number[],radius:number,mode:'aperture'|'front'|'back')=>RenderPlacement};
     multiplayerFlight:{mount:(session:ReturnType<ExperimentModules['flightSession']['create']>,loadout:()=>{profile:number;weapon:number;model:string})=>{isGuest:()=>boolean;update:(demand:Demand,paused:boolean)=>void}};
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};

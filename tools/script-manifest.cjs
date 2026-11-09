@@ -8,7 +8,7 @@ const groups = {
     'src/mining-terrain.js', 'src/mining-landing.js', 'src/logistics.js',
     'src/formations.js', 'src/sim.js'
   ],
-  session: ['src/population.js', 'src/session.js', 'src/tactical/camera.js'],
+  session: ['src/population.js', 'src/session.js', 'src/tactical/camera.js', 'src/wormholes.js'],
   audio: ['src/engine-audio.js', 'src/audio-mixer.js', 'src/ohio-soundtrack.js', 'src/audio.js', 'src/hud.js'],
   meshes: ['src/mesh-builder.js', 'src/mining-rig.js'],
   missions: ['experiments/flight-missions.js', 'experiments/mission-ohio.js'],
@@ -117,7 +117,7 @@ const dependencies = {
   'src/sim.js': ['src/propulsion.js', 'src/combat.js', 'src/logistics.js', 'src/formations.js'],
   'src/asteroid-art.js': ['src/sim.js'],
   'src/asteroid-terrain.js': ['src/sim.js', 'src/asteroid-art.js', 'src/mining-rig.js'],
-  'src/scene3d.js': ['src/station-models.js','src/tactical/picking.js','src/tactical/input3d.js','src/asteroid-terrain.js', 'src/sim.js', 'src/asteroid-art.js', 'src/mesh-builder.js', 'src/mining-rig.js'],
+  'src/scene3d.js': ['src/wormholes.js','src/station-models.js','src/tactical/picking.js','src/tactical/input3d.js','src/asteroid-terrain.js', 'src/sim.js', 'src/asteroid-art.js', 'src/mesh-builder.js', 'src/mining-rig.js'],
   'src/tactical/input3d.js': ['src/sim.js','src/tactical/picking.js'],
   'src/station-models.js': ['src/mesh-builder.js'],
   'experiments/skybox.js': ['src/sky-lighting.js','src/sky-system.js','src/impact-cues.js'],

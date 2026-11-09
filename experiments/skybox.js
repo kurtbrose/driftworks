@@ -95,6 +95,13 @@
         var hybridSky=!!missionSky.thinShell&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeSky')==='ellis';
         var thinShellSky=!!missionSky.thinShell&&!hybridSky;
         var bridgeOptics=thinShellSky?window.Driftworks.thinShellOptics:window.Driftworks.ellisOptics;
+        var skyMouths=missionSky.connection?missionSky.connection.mouths.slice().sort(function(a,b){return a.space-b.space;}):null;
+        if(skyMouths&&(skyMouths[0].space!==0||skyMouths[1].space!==1))throw new Error('Bridge compositor requires space slots 0 and 1');
+        var bridgeSkies=skyMouths?skyMouths.map(function(mouth){
+            if(mouth.sky==='asteroid')return 0;
+            if(mouth.sky==='rime')return 1;
+            throw new Error('Unsupported bridge sky preset: '+mouth.sky);
+        }):[0,1];
         if(missionSky.wormhole)canvas.dataset.bridgeSky=thinShellSky?'thin-shell':'ellis';
         var bridgeDerivatives=!!missionSky.wormhole&&!!gl.getExtension('OES_standard_derivatives');
         /** @param {number} type @param {string} source */
@@ -140,7 +147,7 @@ varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
 uniform vec4 arrivalMouth;uniform vec3 arrivalEye;
-uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeThinShell;uniform float bridgeGrid,bridgeGridPixel,bridgeOutline;
+uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeThinShell;uniform float bridgeGrid,bridgeGridPixel,bridgeOutline;uniform vec2 bridgeSpaceSkies;
 float bridgeFootprint=0.;
 uniform sampler2D panorama;
 uniform sampler2D noiseMap,rimeSurface;uniform float rimeDetailed;
@@ -359,6 +366,7 @@ void main(){
         }
         }
         ${bridgeDerivatives?'bridgeFootprint=max(length(dFdx(outgoing)),length(dFdy(outgoing)));':''}
+        destination=destination<.5?bridgeSpaceSkies.x:bridgeSpaceSkies.y;
         if(destination>.5){
             vec3 local=vec3(dot(outgoing,gasFrameX),dot(outgoing,gasFrameY),dot(outgoing,gasFrameZ));
             vec3 sourceRay=normalize(vec3(local.x/gasScale,local.y,local.z/gasScale));
@@ -992,6 +1000,7 @@ void main(){
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeOutline'),!hybridSky&&missionSky.wormhole&&new URLSearchParams(typeof location==='undefined'?'':location.search).get('bridgeOutline')!=='0'?1:0);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeGridPixel'),2.2*dpr/(height*viewFocal));
                 gl.uniform1f(gl.getUniformLocation(sky,'ellisRegion'),pose.region||0);
+                gl.uniform2f(gl.getUniformLocation(sky,'bridgeSpaceSkies'),bridgeSkies[0],bridgeSkies[1]);
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeLookup'),bridgeTable&&bridgeMode!=='legacy'?1:0);
                 if(bridgeTable){gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,bridgeTable);gl.uniform1i(gl.getUniformLocation(sky,'ellisTable'),4);gl.activeTexture(gl.TEXTURE0);}
                 if(missionSky.wormhole)gl.uniform3fv(gl.getUniformLocation(sky,'bridgeEye'),pose.eye.map(function(v){return v*(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT;}));

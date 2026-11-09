@@ -11,6 +11,7 @@ const suites = {
     {"file":"scenarios.cjs","args":["--all"]}
   ],
   flight: [
+    "wormholes.cjs",
     "flight-vr.cjs",
     "hyperbolic.cjs",
     "hyperbolic-flight.cjs",

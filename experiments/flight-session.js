@@ -46,7 +46,7 @@
         var state = model.create(asteroid.radius), guns = DW.flightGuns.create(), combat = DW.flightSim.create('training'), contact = false, grounded = false;
         combat.useHullModels = true;
         DW.flightSim.bindPlayer(combat, state).guns = guns;
-        var bridgeVector=DW.flightGuns.bridgeVector,crossBridge=DW.flightGuns.crossBridge;
+        var bridgeVector=DW.wormholes.transport,crossBridge=DW.flightGuns.crossBridge;
         var activeProfile = model.profiles[0], remainder = 0,curvatureOverride=0;
         /** @type {import('./types').Craft|null} */var remotePilot=null;
         /** @param {boolean} guest */
@@ -244,8 +244,10 @@
                                 changed=true;return;
                             }
                         }
-                        var crossing=crossBridge(previous[index],pose.eye,pose.region||0);if(!crossing)return;
-                        changed=true;pose.region=1-(pose.region||0);pose.eye=crossing.eye;
+                        var link=DW.flightMissions.resolve(combat.mode).sky.connection;
+                        var crossing=link?DW.wormholes.cross(link,previous[index].map(function(v){return v*units;}),pose.eye.map(function(v){return v*units;}),pose.region||0):null;
+                        if(!crossing){if(link)return;var legacy=crossBridge(previous[index],pose.eye,pose.region||0);if(!legacy)return;crossing={region:1-(pose.region||0),eye:legacy.eye.map(function(v){return v*units;}),normal:legacy.normal,sky:''};}
+                        changed=true;pose.region=crossing.region;pose.eye=crossing.eye.map(function(v){return v/units;});
                         pose.right=bridgeVector(pose.right,crossing.normal);pose.up=bridgeVector(pose.up,crossing.normal);pose.back=bridgeVector(pose.back,crossing.normal);pose.velocity=bridgeVector(pose.velocity,crossing.normal);
                     });
                     if(changed)DW.flightSim.collisionChanged(combat);

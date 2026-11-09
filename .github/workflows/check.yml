@@ -15,3 +15,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  wormhole-gpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - name: Serve static test page
+        run: python3 -m http.server 8000 > /tmp/driftworks-http.log 2>&1 &
+      - run: node tools/check-wormhole-placement-browser.cjs

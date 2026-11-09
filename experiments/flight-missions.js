@@ -96,7 +96,7 @@
         title:'Ellis bridge / Driftworks',heading:'DRIFTWORKS / ELLIS BRIDGE',
         subtitle:'ASTEROID RANGE / RIME WORMHOLE DOGFIGHT',
         hint:'Fly through the spherical mouth ahead, above the asteroid. Turn around to return. W/S throttle / hold W at max / double-tap W boost / X stop / Esc pause.',
-        emptySpace:false,weaponsDisabled:false,sky:{wormhole:true},
+        emptySpace:false,weaponsDisabled:false,sky:{wormhole:true,connection:{id:'asteroid-rime',mouths:[{space:0,position:[0,-2000,1550],radius:300,sky:'asteroid'},{space:1,position:[12000,-2000,1550],radius:300,sky:'rime'}]}},
         encounter:{kind:'furball',count:8,immediate:true}
     },'jade-rime');
     define('thin-shell',{title:'Thin-shell bridge / Driftworks',heading:'DRIFTWORKS / THIN-SHELL BRIDGE',subtitle:'ASTEROID RANGE / RIME THIN-SHELL DOGFIGHT',sky:{thinShell:true}},'ellis');

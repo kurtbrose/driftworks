@@ -11,10 +11,12 @@ const rig=DW.convoyScenery.createArrivalFleet(),view=flight.snapshot();rig.reset
 const plan=view.combat.convoy.evacuation,U=DW.sim.METERS_PER_UNIT;
 assert.equal(rig.geometry().length,0,'Patrol does not reveal either capital');
 view.combat.time=view.combat.convoy.elapsed=32;DW.convoyMission.step(view.combat,0);
-const remote=rig.geometry();assert(remote.length>0&&remote.every(batch=>batch.portalClip),'Remote capital is visible only through the hostile aperture');assert.equal(rig.telemetry().shots,0);
+const remote=rig.geometry();assert(remote.length>0&&remote.every(batch=>DW.wormholes.resolve(batch).portalClip),'Remote capital is visible only through the hostile aperture');assert.equal(rig.telemetry().shots,0);
 const remoteBuffers=remote.map(batch=>batch.vertices);
 view.combat.time=view.combat.convoy.elapsed=96;DW.convoyMission.step(view.combat,0);
-const geometry=rig.geometry(),buffers=geometry.map(batch=>batch.vertices);assert(geometry.length>remote.length);assert(geometry.some(batch=>batch.clipPlane),'Bastion emerges across the rescue plane');
+const geometry=rig.geometry(),buffers=geometry.map(batch=>batch.vertices);assert(geometry.length>remote.length);assert(geometry.some(batch=>DW.wormholes.resolve(batch).clipPlane),'Bastion emerges across the rescue plane');
+const owner=geometry.find(batch=>DW.wormholes.resolve(batch).clipPlane).placement;
+const plumes=rig.effects(view.state,false);assert(plumes.length>0);assert(plumes.every(batch=>batch.placement===owner),'capital hull and effects have one owner');
 const b=plan.capitals[0],target=view.combat.enemies.find(ship=>ship.team==='enemy');assert(target);
 target.hp=target.maxHp=10000;target.shield=0;const local=[-650,-500,220],co=Math.cos(b.heading),si=Math.sin(b.heading);
 target.pose.eye=b.position.map((v,k)=>v+([co*local[0]-si*local[1],si*local[0]+co*local[1],local[2]][k])/U);

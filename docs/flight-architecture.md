@@ -4,6 +4,10 @@
 
 ## Flight runtime ownership
 
+Wormhole link declarations, swept crossings and shared hull/effect placement
+are described in [Shared wormhole contracts](wormholes.md). New mission portal
+masks must be attached to a render owner through that API, not individual batches.
+
 These ordinary scripts retain the static deployment model and load through the
 shared script manifest. The old `shipPackModels`, `training` and `aegisFlight`
 interfaces remain compatible with existing consumers and diagnostic wrappers.

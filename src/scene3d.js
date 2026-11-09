@@ -428,6 +428,10 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
     // XR view coordinates are metres; procedural material footprints use world units.
     vertexShader=vertexShader.replace(/}\s*$/, 'if(uXRActive>.5){vec4 eye=uXRView*vec4(p,1.);vDepth=-eye.z/'+sim.METERS_PER_UNIT.toFixed(8)+';gl_Position=uXRProjection*eye;}}');
     // RawShaderMaterial preserves the established display-space art, including packed shadows.
+    // World-space aperture masks keep the remote hull inside the visible mouth;
+    // a plane reveals local hulls as they emerge or leave in the opposite direction.
+    fragmentShader=fragmentShader.replace('precision highp float;','precision highp float;uniform vec4 uPortalClip,uPortalPlane;uniform vec3 uPortalEye,uPortalTarget;');
+    fragmentShader=fragmentShader.replace('void main(){', 'void main(){vec3 portalPoint=vRelative+uPortalTarget;if(dot(uPortalPlane.xyz,uPortalPlane.xyz)>.1&&dot(vec4(portalPoint,1.),uPortalPlane)<0.)discard;if(uPortalClip.w>0.){vec3 ray=portalPoint-uPortalEye,rel=uPortalEye-uPortalClip.xyz;float a=dot(ray,ray),b=dot(rel,ray),c=dot(rel,rel)-uPortalClip.w*uPortalClip.w,disc=b*b-a*c;if(disc<0.||a<.000001)discard;float enter=(-b-sqrt(max(0.,disc)))/a,leave=(-b+sqrt(max(0.,disc)))/a;if(leave<0.||enter>1.)discard;}');
     var declarations=vertexShader+'\n'+fragmentShader;
     declarations.replace(/uniform\s+(float|vec[234]|mat[34]|sampler2D)\s+([^;]+);/g,/** @param {string} _ @param {string} type @param {string} names */ function(_,type,names){
       names.split(',').forEach(function(name){var key=name.trim().replace(/\[.*$/, ''),size=type==='float'?1:type==='mat3'?9:type==='mat4'?16:Number(type.slice(-1));var count=Number((name.match(/\[(\d+)\]/)||[])[1]||1);uniforms[key]={value:type==='sampler2D'?null:size*count===1?0:new Float32Array(size*count)};});return '';
@@ -441,6 +445,13 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
     var drawLensTransit=/** @type {import('../experiments/types').HullTransit|undefined} */(undefined);
     var drawLensCenter=/** @type {number[]|null} */(null);
     var drawRegion=0,surfaceRegion=0,bridgeRevision=/** @type {string|null} */(null);
+    /** One submission path for hulls and effects, including uniform reset. @param {import('../experiments/types').Batch} batch */
+    function place(batch){
+      var p=(/** @type {Required<import('./types').DriftworksNamespace>} */(DW)).wormholes.resolve(batch);
+      drawRegion=p.region||0;drawLensCenter=p.lensCenter||null;drawLensRadius=p.lensRadius||0;drawLensTransit=p.lensTransit;
+      setUniform('PortalClip',p.portalClip||[0,0,0,0]);setUniform('PortalPlane',p.clipPlane||[0,0,0,0]);
+      return p.visible!==false;
+    }
     /** @type {WeakMap<import('./three-types').Material,import('./three-types').StandardMaterial>} */ var standardShips=new WeakMap();
     /** @type {Map<HTMLImageElement,import('./three-types').RenderTarget>} */ var probes=new Map();
     /** @type {WeakMap<import('./three-types').Texture,import('./three-types').Texture>} */ var pbrTextures=new WeakMap();
@@ -521,11 +532,11 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       if(values)mesh.buffer.setAttribute('aBakedDocking',new THREE.BufferAttribute(values,3));
       else mesh.buffer.deleteAttribute('aBakedDocking');
     }
-    /** @type {{vertices:Float32Array,color:V3,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
+    /** @type {{placement?:import('../experiments/types').RenderPlacement,vertices:Float32Array,color:V3,shieldGlow?:boolean,origin?:V3,rotation?:number,projected?:boolean,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyEffects=[];
     /** @type {(Parameters<NonNullable<typeof DW.explosions>['build']>[0]&{region?:number})[]} */ var studyExplosions=[];
     /** @type {Mesh[]} */ var explosionMeshes=[];
     /** @type {Mesh[]} */ var studyEffectMeshes=[];
-    /** @type {{instanceRights?:Float32Array,instanceForwards?:Float32Array,instanceUps?:Float32Array,dynamicInstances?:boolean,instanceOffsets?:Float32Array,vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
+    /** @type {{placement?:import('../experiments/types').RenderPlacement,portalClip?:number[],clipPlane?:number[],instanceRights?:Float32Array,instanceForwards?:Float32Array,instanceUps?:Float32Array,dynamicInstances?:boolean,instanceOffsets?:Float32Array,vertices:Float32Array,normalUV?:Float32Array,normalTexture?:HTMLImageElement,bakedDocking?:Float32Array,rigLights?:import('./types').RigLighting[],color:V3,finish?:number,texture?:HTMLImageElement,stride?:number,paint?:V3,opacity?:number,origin?:V3,rotation?:number,staticGeometry?:boolean,hyperbolicRadius?:number,hyperbolicFrame?:Float32Array,hyperbolicLocalOrigin?:number[],hyperbolicLocalBasis?:Float32Array,basis?:Float32Array,scale?:number,lensTransit?:import('../experiments/types').HullTransit,lensRadius?:number,lensCenter?:number[],region?:number}[]} */ var studyActors=[];
     /** @type {Mesh[]} */ var studyActorMeshes=[];
     /** @type {Map<Float32Array,Mesh>} */ var staticActorMeshes=new Map();
     /** @type {Map<Float32Array,Map<Float32Array,Mesh>>} */var instancedActorMeshes=new Map();
@@ -593,7 +604,8 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       entry.lensTransit=drawLensTransit;entry.projected=drawProjected;entry.lensRadius=drawLensRadius;entry.region=drawRegion;entry.lensCenter=drawLensCenter||origin;
       Object.keys(uniforms).forEach(function(key){entry.uniforms[key].value=uniforms[key].value;});
       // Negative finish is a textured interior with an illumination floor; keep its custom shader.
-      var useStandard=materialFinish>=0 && !!activeProbe && !shadowPass && !rock && !lines && uniforms.uTextured.value===1 && uniforms.uFlat.value!==1;
+      var aperture=/** @type {Float32Array} */(uniforms.uPortalClip.value),plane=/** @type {Float32Array} */(uniforms.uPortalPlane.value);
+      var useStandard=aperture[3]===0&&plane[0]===0&&plane[1]===0&&plane[2]===0&&materialFinish>=0 && !!activeProbe && !shadowPass && !rock && !lines && uniforms.uTextured.value===1 && uniforms.uFlat.value!==1;
       var submitted=entry.material;
       if(useStandard && activeProbe){
         var standard=standardShips.get(entry.material);
@@ -733,6 +745,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
       setUniform('Target', [w.camera.x, w.camera.y, orbit.height || 0]); setUniform('Right', v.right);
       setUniform('Up', v.up); setUniform('Back', v.back);
       setUniform('View', [v.distance, v.focal, vp.width / vp.height, 0]);
+      var portalTarget=[w.camera.x,w.camera.y,orbit.height||0];setUniform('PortalTarget',portalTarget);setUniform('PortalEye',portalTarget.map(function(p,k){return p+v.back[k]*v.distance;}));setUniform('PortalClip',[0,0,0,0]);setUniform('PortalPlane',[0,0,0,0]);
       camera.matrixAutoUpdate=false;
       camera.matrix.fromArray([v.right[0],v.right[1],v.right[2],0,v.up[0],v.up[1],v.up[2],0,v.back[0],v.back[1],v.back[2],0,v.back[0]*v.distance,v.back[1]*v.distance,v.back[2]*v.distance,1]);
       camera.matrixWorld.copy(camera.matrix);camera.matrixWorldInverse.copy(camera.matrix).invert();
@@ -931,7 +944,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
         setUniform('CraftFill',.18);
         setFinish(0);setUniform('Habitat',0);pickSpin=0;setUniform('AxialSpin',0);
         studyActors.forEach(function(batch,index){
-          drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;drawLensTransit=batch.lensTransit;
+          if(!place(batch))return;
           if(!batch.vertices.length)return;
           if(batch.staticGeometry&&!bridgeRenderer&&!shadowPass&&!viewerEnabled){
             var target=/** @type {V3} */([w.camera.x,w.camera.y,orbit.height||0]);
@@ -974,7 +987,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
           if(translucent){depthWrite=true;blending=THREE.NoBlending;}
         });
       }
-      setUniform('HyperbolicRadius',0);
+      setUniform('HyperbolicRadius',0);setUniform('PortalClip',[0,0,0,0]);setUniform('PortalPlane',[0,0,0,0]);
       drawRegion=0;drawLensCenter=null;drawLensRadius=0;drawLensTransit=undefined;
       setUniform('Opacity',1);
       bindShipTexture(undefined);
@@ -986,7 +999,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
         studyEffects.forEach(function(batch,index){
           setUniform('Habitat',batch.shieldGlow?1:0);
           drawProjected=!!batch.projected;
-          drawRegion=batch.region||0;drawLensCenter=batch.lensCenter||null;drawLensRadius=batch.lensRadius||0;drawLensTransit=batch.lensTransit;
+          if(!place(batch))return;
           if(!batch.vertices.length)return;
           renderStats.effectVertices+=batch.vertices.length/6;
           if(!studyEffectMeshes[index])studyEffectMeshes[index]=upload(new Float32Array(0));
@@ -995,7 +1008,7 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
         });
         depthWrite=true;blending=THREE.NoBlending;setFinish(0);setUniform('Habitat',0);
       }
-      drawProjected=false;
+      drawProjected=false;setUniform('PortalClip',[0,0,0,0]);setUniform('PortalPlane',[0,0,0,0]);
       if(DW.explosions){
         var blasts=study?studyExplosions:effects.filter(function(fx){return fx.event.kind==='ship-destroyed';}).map(function(fx){var event=fx.event;return {position:/** @type {V3} */([event.position.x,event.position.y,0]),velocity:/** @type {V3} */([event.velocity?event.velocity.x:0,event.velocity?event.velocity.y:0,0]),age:fx.age,size:2,seed:Math.round(event.position.x*31+event.position.y*17)};});
         var explosionIndex=0;
