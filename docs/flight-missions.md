@@ -22,7 +22,7 @@ The fixed-step encounter in `src/convoy-ambush.js` consumes the convoy director'
 `attention` state. It observes nearby player firing, incoming attacks, player
 hull/shield damage and threats/damage to cargo. A distant surviving enemy alone
 does not count as a dogfight. The phases are settling, combat, cooling, rest and
-ready. Eight continuous quiet seconds earn a replayable, variable 10–30 second
+ready. Eight continuous quiet seconds earn a replayable, variable 10-30 second
 rest; renewed combat resets both cooling and rest. Optional exposition waits for
 rest, and a busy radio holds the next incident. Tactical warnings and live
 interception orders remain available under fire. The physical simulation keeps
@@ -56,8 +56,13 @@ The encounter owns the following beats:
   interception assignments and amber TASK radar/ship/edge cues identify live wings.
 - After at least two wings and 120 seconds since the incident, the next earned
   rest can end with relief instead of another wing (four-wing maximum). The
-  rescue mouth opens ahead of the rerouted convoy. Bastion emerges
-  toward the convoy, then moves aside. Its actual Aegis weapons provide cover.
+  rescue mouth opens outboard of the defensive station. Bastion emerges along
+  that defensive line instead of across the cargo; transports escape around
+  its flank through the same mouth in the opposite direction. Bastion emerges
+  toward the convoy, then takes a station toward the hostile mouth, outside the
+  live convoy's full hull envelope. Cargo holds its rally route during emergence.
+  Point defense inhibits any firing lane intersecting a live freighter hull;
+  both ordinary and speculative twin volleys obey that civilian-clearance check.
 - Twenty seconds after relief arrives: transports cross that mouth in the opposite direction.
   Escape requires crossing its plane inside the aperture, not reaching an elapsed
   time or deleting every remaining enemy. Damage, targeting, rendering and reset
@@ -66,8 +71,10 @@ The encounter owns the following beats:
   move, hit and expire; completion never freezes visible projectiles.
 
 `combat.convoy.evacuation` is transient, JSON-safe mission state. Positions use
-scene units; routes, rally and cruise intent use SI units. Harrow's outgoing
-rounds are stepped headlessly as well as in the browser; its remote hull does
+scene units; routes, rally, coverGoal and cruise intent use SI units. Bastion's main batteries are masked: Harrow is a remote aperture view, not a
+valid local capital target. Point defense engages real local fighters. A moving
+capital duel or routed cross-mouth main-battery fire is not part of this mission.
+Harrow's outgoing rounds are stepped headlessly as well as in the browser; its remote hull does
 not collide with local fighters. Bastion's native Aegis combat remains owned by
 the browser facade and has a separate actual-rig regression. The seeded unattended
 route test (durable test pilot only) runs through separated fights, earned
@@ -85,7 +92,7 @@ dead, withdrawing and departed ships and never changes the player's target lock.
 Focused checks: `node tests/fleet-evacuation.cjs`,
 `node tests/evacuation-capitals.cjs`, `node tests/flight-hud-markers.cjs`, and the
 `node tests/convoy-ambush-tactics.cjs`, `node tests/convoy-pacing.cjs` and
-`node tests/convoy-projectile-cleanup.cjs` regressions, plus the
+`node tests/convoy-projectile-cleanup.cjs` and `node tests/convoy-cover.cjs` regressions, plus the
 convoy battle/director/arrival checks. Original prototype measurements are retained
 in `docs/benchmarks/fleet-evacuation.md`; they predate this staged encounter.
 

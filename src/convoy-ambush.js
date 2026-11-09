@@ -4,12 +4,21 @@
     /** @typedef {import('../experiments/types').Combat} Combat */
     /** @param {number[]} v */function unit(v){var n=Math.hypot(...v)||1;return v.map(function(x){return x/n;});}
     /** @param {Combat} combat */function center(combat){const s=combat.convoy;var ships=s?s.ships.filter(function(c){return c.hull>0&&!c.arrived;}):[];return [0,1,2].map(function(k){return ships.reduce(function(n,c){return n+c.position[k]*U;},0)/Math.max(1,ships.length);});}
+    /** SI defensive station on the hostile side of the live formation.
+     * @param {Combat} combat */function coverPlan(combat){
+        const s=combat.convoy,e=s&&s.evacuation;var here=center(combat);
+        var toward=unit(e?e.entry.map(function(v,k){return k===2?0:v*U-here[k];}):[0,1,0]);
+        var spread=s?s.ships.filter(function(ship){return ship.hull>0&&!ship.arrived;}).reduce(function(radius,ship){return Math.max(radius,Math.hypot(...ship.position.map(function(v,k){return v*U-here[k];})));},0):0;
+        return {here:here,toward:toward,goal:here.map(function(v,k){return v+toward[k]*Math.max(1400,spread+900)+(k===2?200:0);})};
+    }
     /** @param {Combat} combat */function start(combat){
         const s=combat.convoy;if(!s)return;
         var capitals=DW.convoyBattle.capitals();
         capitals.forEach(function(c,i){c.present=false;c.remote=i===1;});
+        // Harrow is a remote aperture view, not a local capital firing solution.
+        capitals[0].mainBatteryClear=false;
         capitals[1].position.splice(0,3,0,6500/U,1200+180/U);capitals[1].heading=Math.PI/2;
-        s.evacuation={warningAt:null,incidentAt:null,bombardUntil:0,phase:'patrol',withdrawalAt:null,capitals:capitals,nextWaveAt:1000000,waves:0,reserves:12,
+        s.evacuation={coverGoal:[0,0,1200*U],warningAt:null,incidentAt:null,bombardUntil:0,phase:'patrol',withdrawalAt:null,capitals:capitals,nextWaveAt:1000000,waves:0,reserves:12,
             entry:[0,1500/U,1200],rally:[-1600,2300,1200*U],rescueAt:1000000,bastionClearAt:1000000,
             exit:{position:[0,0,1200],normal:[0,1,0],radiusM:800,opensAt:1000000,closesAt:1000000,spawned:true},
             guns:DW.flightGuns.create(),nextSalvo:0,salvos:0,capitalHits:0,route:[0,7500,1200*U],cruise:[0,25,0]};
@@ -20,9 +29,9 @@
      * @param {Combat} combat */function navigation(combat){
         const s=combat.convoy,e=s&&s.evacuation;if(!s||!e)return null;
         var here=center(combat),goal=e.phase==='patrol'||e.phase==='warning'?[0,7500,1200*U]:e.rally;
-        if(e.phase==='rescue'||e.phase==='extraction')goal=e.exit.position.map(function(v,k){return v*U+e.exit.normal[k]*1800;});
+        if(e.phase==='extraction')goal=e.exit.position.map(function(v,k){return v*U+e.exit.normal[k]*1800;});
         var delta=goal.map(function(v,k){return v-here[k];}),distance=Math.hypot(...delta),forward=unit(delta),speed=e.phase==='patrol'||e.phase==='warning'?25:35;
-        if((e.phase==='ambush'||e.phase==='defense')&&distance<400){forward=unit([-delta[1]-100,delta[0],0]);speed=22;}
+        if((e.phase==='ambush'||e.phase==='defense'||e.phase==='rescue')&&distance<400){forward=unit([-delta[1]-100,delta[0],0]);speed=22;}
         e.route=goal;e.cruise=forward.map(function(v){return v*speed;});return {route:goal,cruise:e.cruise};
     }
     /** @param {Combat} combat @param {number} dt */function step(combat,dt){
@@ -37,6 +46,7 @@
             var here=center(combat);e.entry=here.map(function(v,k){return (v+(k===1?1500:0))/U;});
             e.capitals[1].position=e.entry.map(function(v,k){return v+([0,5000,180][k])/U;});
             s.arrivalPortal={position:e.entry.slice(),normal:[0,-1,0],radiusM:650,opensAt:t,closesAt:1000000,spawned:true};e.capitals[1].present=true;e.nextWaveAt=t+4;
+            DW.wormholes.linkPortal(combat,s.arrivalPortal,'fleet-hostile',1,'hostile',U);
             e.rally=e.entry.map(function(v,k){return v*U+([-1600,800,0][k]);});
         }
         // One encounter at a time. Even a single pursued survivor can postpone a
@@ -51,14 +61,20 @@
         e.phase=e.warningAt===null?'patrol':!s.arrivalPortal?'warning':e.incidentAt!==null&&t<e.incidentAt+10?'ambush':t<e.rescueAt?'defense':t<e.bastionClearAt?'rescue':'extraction';
         if(t>=e.rescueAt){
             if(!e.capitals[0].present){
-                var here=center(combat),forward=unit(e.cruise);e.exit.normal=forward;
-                e.exit.position=DW.wormholes.separate(here.map(function(v,k){return (v+forward[k]*1100)/U;}),forward,e.exit.radiusM/U,
+                var cover=coverPlan(combat),forward=[cover.toward[1],-cover.toward[0],0];e.exit.normal=forward;
+                // Arrive along an outboard defensive line. Bastion can slide into
+                // cover without crossing the cargo; evacuation goes around its flank.
+                e.exit.position=DW.wormholes.separate(cover.goal.map(function(v,k){return (v+forward[k]*2000)/U;}),forward,e.exit.radiusM/U,
                     s.arrivalPortal?[{position:s.arrivalPortal.position,radius:(s.arrivalPortal.radiusM||210)/U}]:[],250/U);
                 const bastion=e.capitals[0];bastion.present=true;bastion.position.splice(0,3,...e.exit.position.map(function(v,k){return v+forward[k]*900/U;}));bastion.heading=Math.atan2(forward[1],forward[0]);
+                DW.wormholes.linkPortal(combat,e.exit,'fleet-rescue',2,'reception',U);
                 e.withdrawalAt=t;
             }
-            const b=e.capitals[0];var forward=e.exit.normal,right=[forward[1],-forward[0],0],age=t-e.rescueAt;
-            var goal=e.exit.position.map(function(v,k){return v*U-forward[k]*850+right[k]*(age>20?700:0);});
+            const b=e.capitals[0];var forward=e.exit.normal,age=t-e.rescueAt;
+            // Keep the entire 1.3 km hull outside the convoy, between cargo and
+            // the hostile mouth. Follow the live formation, not a portal-relative side.
+            e.coverGoal=coverPlan(combat).goal;
+            var goal=age>20?e.coverGoal:e.exit.position.map(function(v,k){return v*U-forward[k]*850;});
             var delta=goal.map(function(v,k){return v-b.position[k]*U;}),distance=Math.hypot(...delta),speed=Math.min(95,distance/2);
             b.velocity=unit(delta).map(function(v){return b.integrity>0?v*speed:0;});b.position.forEach(function(v,k){b.position[k]=v+b.velocity[k]*dt/U;});
             var arrived=0;s.ships.forEach(function(ship){

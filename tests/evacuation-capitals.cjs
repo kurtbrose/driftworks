@@ -10,6 +10,7 @@ DW.flightMissions.current=()=>DW.flightMissions.resolve('fleet-evacuation');
 const rig=DW.convoyScenery.createArrivalFleet(),view=flight.snapshot();rig.reset(view.combat);
 const plan=view.combat.convoy.evacuation,U=DW.sim.METERS_PER_UNIT;
 assert.equal(rig.geometry().length,0,'Patrol does not reveal either capital');
+assert.equal(plan.capitals[0].mainBatteryClear,false,'Remote Harrow is not a local main-battery target');
 if(view.combat.convoy.director.attention){
  plan.warningAt=22;plan.incidentAt=28;view.combat.convoy.director.attention.phase='ready';
  view.combat.time=view.combat.convoy.elapsed=28;DW.convoyMission.step(view.combat,0);
@@ -44,6 +45,9 @@ target.pose.velocity=[0,0,0];
 view.combat.enemies=view.combat.enemies.filter(ship=>ship.team==='ally'||ship===target);DW.flightSim.collisionChanged(view.combat);
 for(let i=0;i<600;i++)rig.step(1/30,view);
 const report=rig.telemetry();assert(report.shots>0&&report.hits>0,'Bastion provides actual point-defense support after arriving');assert(target.hp<10000);assert.equal(report.launches,0);
+assert(report.mounts.filter(m=>m.kind==='heavy').every(m=>m.shots===0),'Bastion does not fire at remote capital coordinates');
+view.combat.enemies=view.combat.enemies.filter(ship=>ship.team==='ally');DW.flightSim.collisionChanged(view.combat);
+const quietShots=rig.telemetry().shots;for(let i=0;i<300;i++)rig.step(1/30,view);assert.equal(rig.telemetry().shots,quietShots,'No live fighter targets means no fresh volleys during extraction');
 assert.equal(rig.geometry(),geometry);assert(rig.geometry().every((batch,i)=>batch.vertices===buffers[i]));assert(remoteBuffers.every(buffer=>geometry.some(batch=>batch.vertices===buffer)),'Arrival retains shared immutable buffers');
 const initial=b.position.slice();DW.convoyBattle.updateEvacuation(view.combat,1);assert.notDeepEqual(rig.telemetry().capitals[0].position,initial,'Renderer observes mission-owned movement');
 flight.reset();const reset=flight.snapshot();rig.reset(reset.combat);assert.equal(rig.geometry().length,0);assert(rig.telemetry().capitals.every(ship=>ship.integrity===20000));

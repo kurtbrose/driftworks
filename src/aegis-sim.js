@@ -337,8 +337,17 @@
                         speculative=!hullHit(launch,end);
                     }
                 }
+                var trigger=(stable&&m.burst>0)||speculative;
+                if(trigger&&combat.convoy){
+                    var reach=aim?Math.hypot(...sub(local(aim),p)):weapon.speed*weapon.lifetime;
+                    var muzzle=world(p.map(function(v,k){return v+forward[k]*10.12;}));
+                    var end=world(p.map(function(v,k){return v+forward[k]*reach;}));
+                    // Cover both barrels, not only the central aim ray. Never fire
+                    // through live civilian hulls, even during an imperfect volley.
+                    if(DW.convoyMission.trace(combat,muzzle,end,weapon.headRadius+2))trigger=false;
+                }
                 var firedBefore=m.guns.fired;
-                DW.flightGuns.step(m.guns,{region:options&&options.state.region||0,eye:world(p),right:rotate(right),up:rotate(up),back:rotate(forward.map(function(v){return -v;}))},weapon,(stable&&m.burst>0)||speculative,dt,
+                DW.flightGuns.step(m.guns,{region:options&&options.state.region||0,eye:world(p),right:rotate(right),up:rotate(up),back:rotate(forward.map(function(v){return -v;}))},weapon,trigger,dt,
                     function(a,b,bolt){
                         return traceRound(m,view,a,b,bolt);
                     },
