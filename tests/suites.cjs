@@ -89,6 +89,7 @@ const suites = {
     "star-glare.cjs",
     "impact-lab.cjs",
     "bolt-lab.cjs",
+    "projectile-visuals.cjs",
     "impact-sky.cjs",
     "planet-hero.cjs",
     "sky-cube.cjs",

@@ -275,6 +275,15 @@
         }
         return null;
     }
+    var visualOptions={mode:'current',radius:3,exposure:.8},visualInterval=1/60,visualTime=NaN;
+    /** Session-only rendering preferences; never alter gun or weapon state.
+     * @param {{mode:string,radius:number,exposure:number}} value */
+    function setVisualOptions(value){
+        if(!['current','multiples','overlap','orb'].includes(value.mode)||!Number.isFinite(value.radius)||value.radius<.5||value.radius>8||!Number.isFinite(value.exposure)||value.exposure<0||value.exposure>1)throw new Error('Invalid projectile visual options');
+        visualOptions={mode:value.mode,radius:value.radius,exposure:value.exposure};
+    }
+    /** @param {number} seconds */
+    function visualFrame(seconds){var elapsed=seconds-visualTime;if(elapsed>0&&elapsed<=.25)visualInterval=elapsed;else if(elapsed<0)visualInterval=1/60;visualTime=seconds;}
     /** @param {Pick<Guns, 'bolts' | 'impacts'>} guns @param {Pose} pose @param {boolean|'thin-shell'} [optical] @returns {Batch[]} */
     function geometry(guns, pose, optical) {
         var groups = /** @type {{team: string; color: [number,number,number]; data: number[]}[]} */ ([{ team: 'ally', color: [.15, 1, .35], data: [] }, { team: 'enemy', color: [1, .12, .08], data: [] }, { team: 'player', color: [1, .75, .25], data: [] }]);
@@ -301,6 +310,7 @@
         }
         guns.bolts.forEach(function (bolt) {
             curvature=bolt.curvature||0;
+            var sourceBolt=bolt;
             var p=image(bolt.position,bolt.region||0);if(!p)return;
             if(optical&&p.direction&&p.source){
                 // The same rigid source-to-observer tangent rotation used for hulls.
@@ -322,6 +332,25 @@
                 return x - pose.eye[i];
             })) * units;
             var visualScale = Math.min(1, distanceM / 30);
+            if(visualOptions.mode!=='current'){
+                /** Reverse only the rendered exposure; simulation/collision retain the true head.
+                 * @param {number} ago */
+                function sample(ago){
+                    var point=sourceBolt.position.map(function(v,i){return v-sourceBolt.direction[i]*sourceBolt.weapon.speed*ago/units;}),region=sourceBolt.region||0;
+                    if(sourceBolt.curvature)point=DW.flightHyperbolic.travel(sourceBolt.position,sourceBolt.direction.map(function(v){return -v;}),sourceBolt.weapon.speed*ago/units,sourceBolt.curvature).point;
+                    else if(optical){var ray=metric(optical).ray(sourceBolt.position.map(function(v){return v*units;}),sourceBolt.direction.map(function(v){return -v;}),region);metric(optical).advanceRay(ray,sourceBolt.weapon.speed*ago);point=ray.eye.map(function(v){return v/units;});region=ray.region;}
+                    return image(point,region);
+                }
+                var duration=Math.min(sourceBolt.age,visualInterval*visualOptions.exposure),head=sample(0),tail=sample(duration);
+                var radius=visualOptions.radius/units*visualScale,count=1;
+                if(head&&tail&&radius>0){
+                    var a=head.position.map(function(v,i){return v-pose.eye[i];}),b=tail.position.map(function(v,i){return v-pose.eye[i];}),az=-dot(a,pose.back),bz=-dot(b,pose.back);
+                    if(az>.001&&bz>.001){var travel=Math.hypot(dot(a,pose.right)/az-dot(b,pose.right)/bz,dot(a,pose.up)/az-dot(b,pose.up)/bz);count=Math.min(visualOptions.mode==='multiples'?5:visualOptions.mode==='overlap'?24:1,Math.max(1,Math.ceil(travel/(radius/az*(visualOptions.mode==='multiples'?2.5:1.1)))+1));}
+                }
+                var budget=0;for(var j=1;j<count;j++)budget+=1-j/count;
+                for(var j=count-1;j>=0;j--){var exposure=sample(count>1?duration*j/(count-1):0);if(exposure)quad(group.data,exposure.position,pose.right,pose.up,radius,radius,j===0?1:(1-j/count)/budget*(visualOptions.mode==='overlap'?1.6:.85));}
+                return;
+            }
             var halfLength = bolt.weapon.length * .5 / units * visualScale;
             var center = bolt.position.map(function (x, i) {
                 return x - bolt.direction[i] * halfLength;
@@ -354,5 +383,5 @@
         batches.push({ vertices: new Float32Array(impacts), color: [1, .75, .3], projected:!!optical, region:pose.region||0 });
         return batches;
     }
-    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = { throatContact:throatContact, bridgeVector:bridgeVector, crossBridge:crossBridge, bridgeTravel:bridgeTravel, ballisticPath:ballisticPath, lead:lead, create: create, step: step, intersect: intersect, geometry: geometry };
+    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightGuns = {setVisualOptions:setVisualOptions,getVisualOptions:function(){return Object.assign({},visualOptions);},visualFrame:visualFrame, throatContact:throatContact, bridgeVector:bridgeVector, crossBridge:crossBridge, bridgeTravel:bridgeTravel, ballisticPath:ballisticPath, lead:lead, create: create, step: step, intersect: intersect, geometry: geometry };
 }());

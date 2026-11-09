@@ -1,5 +1,32 @@
 # 3D bolt range
 
+## Experimental projectile visuals in gameplay
+
+In the actual flight game, open **F3 / Flight lab & diagnostics / Experimental
+projectile visuals**. Choose current flight bolts, plasma with sharp multiples,
+plasma with overlapping exposures, or a bare plasma ball. Radius is in metres;
+exposure covers 50%, 80% or 100% of the last rendered simulation interval.
+Changes apply immediately to player, fighter and capital guns. Preferences are
+session-only and default to the current production bolts. The former
+`studies/plasma-motion.html` comparison now links to the actual battle.
+
+Only gun artwork changes. The production scene, HUD, skybox, input, AI, shot
+positions, collision, damage and weapon timing retain their existing ownership.
+The current mode uses the original tracer geometry. Experimental modes place
+round camera-facing quads along the real shot path, clipped at launch. Sharp
+multiples cap at five samples; overlapping exposures cap at 24. Tail brightness
+stays fixed as sample count changes. Perspective and the scene depth test apply
+to every sample. Optical and curved-space shots sample the corresponding reverse
+ray/geodesic for their exposure positions. Pausing retains the last exposure
+interval; resetting the simulation clock resets it to the default interval.
+
+`node tests/projectile-visuals.cjs` checks production gun geometry, sample caps,
+trajectory adherence, launch clipping, energy budgets and unchanged gun state.
+Use gameplay to judge motion and visual readability; these experiments are not
+visual acceptance for the production weapon set.
+
+## Atlas bolt range
+
 Serve the repository and open `experiments/bolt-lab.html`. This standalone
 Three.js study uses the vendored runtime, relative assets and no build step.
 It does not replace production flight weapons.

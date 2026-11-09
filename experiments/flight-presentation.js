@@ -182,6 +182,15 @@
     function mount(host, getWorld, setWorld, environment) {
         var document = (environment || globalThis).document, units = DW.sim.METERS_PER_UNIT;
         var get = DW.experimentDom(document);
+        var projectileHost=document.querySelector('#flight-lab aside')||document.getElementById('flight-settings');
+        if(projectileHost&&!document.getElementById('projectile-visual-style')){
+            var projectileMenu=document.createElement('details');
+            projectileMenu.innerHTML='<summary>Experimental projectile visuals</summary><label for="projectile-visual-style">Bolt appearance</label><select id="projectile-visual-style"><option value="current">Current flight bolts</option><option value="multiples">Plasma / sharp multiples</option><option value="overlap">Plasma / overlapping exposures</option><option value="orb">Plasma / bare ball</option></select><label for="projectile-visual-radius">Plasma radius (m)</label><input id="projectile-visual-radius" type="number" min="0.5" max="8" step="0.5" value="3"><label for="projectile-visual-exposure">Exposure</label><select id="projectile-visual-exposure"><option value="0.5">50% frame</option><option value="0.8" selected>80% frame</option><option value="1">100% frame</option></select><small>Live appearance only. Flight, damage, collision and weapon timing are unchanged. Applies to your guns and other combatants.</small>';
+            projectileHost.prepend(projectileMenu);
+            var projectileMode=/** @type {HTMLSelectElement} */(projectileMenu.querySelector('#projectile-visual-style')),projectileRadius=/** @type {HTMLInputElement} */(projectileMenu.querySelector('#projectile-visual-radius')),projectileExposure=/** @type {HTMLSelectElement} */(projectileMenu.querySelector('#projectile-visual-exposure'));
+            function projectileChange(){var radius=Number(projectileRadius.value);if(!Number.isFinite(radius)||radius<.5||radius>8)return;DW.flightGuns.setVisualOptions({mode:projectileMode.value,radius:radius,exposure:Number(projectileExposure.value)});}
+            projectileMode.onchange=projectileChange;projectileRadius.oninput=projectileChange;projectileExposure.onchange=projectileChange;
+        }
         var scene = DW.scene3d.create(host, getWorld, setWorld, { study: true, viewer: false, flight: true });
         /** @type {import('./types').Images} */
         var shipImages = new Map();
@@ -269,6 +278,7 @@
         function render(view, appearance, comparison, elapsed, gpuTimer) {
             if(view.state.curvature)view=DW.flightHyperbolic.presentation(view);
             var state = view.camera || view.state, combat = view.combat, guns = view.guns, world = view.world;
+            DW.flightGuns.visualFrame(world.elapsedSeconds);
             var regions=DW.flightMissions.resolve(combat.mode).sky.wormhole?[0,1]:[state.region||0],objectWarp=regions.length>1&&(DW.flightMissions.resolve(combat.mode).sky.thinShell||liveShipImages||!shipStretching||typeof location!=='undefined'&&new URLSearchParams(location.search).get('bridgeGeometry')==='objects');
             var livingArt = /** @type {ArtCraft[]} */ (DW.flightSim.alive(combat)).concat(combat.wrecks), actorBatches = /** @type {Batch[]} */ ([]);
             if (view.observerCraft) livingArt.push(view.observerCraft);

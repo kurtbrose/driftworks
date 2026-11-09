@@ -819,6 +819,9 @@ export type ExperimentModules = {
         contact: (state: FlightState, point: Vector, radius: number) => boolean;
     };
     flightGuns: {
+        setVisualOptions:(value:{mode:string;radius:number;exposure:number})=>void;
+        getVisualOptions:()=>{mode:string;radius:number;exposure:number};
+        visualFrame:(seconds:number)=>void;
         bridgeVector:(vector:Vector,normal:Vector)=>Vector;
         throatContact:(before:Vector,after:Vector,velocity:Vector,side:number,hullRadius:number,crossRadius?:number)=>{eye:Vector;velocity:Vector}|null;
         crossBridge:(before:Vector,after:Vector,side:number)=>{normal:Vector;fraction:number;entry:Vector;exit:Vector;eye:Vector}|null;
