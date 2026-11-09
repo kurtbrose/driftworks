@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Capital systems inspection</title><style>body{margin:0;background:#02070b;color:#e6e6dd;font:14px monospace}#viewer{position:fixed;inset:0}#viewer canvas{position:absolute;inset:0;width:100%;height:100%}aside{position:fixed;z-index:10;top:12px;left:12px;padding:16px;background:#07131ded}button{padding:10px;margin:4px}output{display:block;white-space:pre;font-size:12px;margin-top:10px}.scene3d-controls{display:none!important}</style></head><body><div id="viewer"></div><aside><b>CAPITAL SYSTEMS / RUNTIME INSPECTION</b><div><select id="part" aria-label="Component"></select><button id="wide">Whole ship</button><button id="turret">Turret closeup</button><button id="engine">Engine closeup</button><button id="destroy">Destroy selected</button><button id="reset">Reset</button><button id="bench">Measure ABBA</button></div><output id="report"></output></aside><script src="../src/asset-versions.js?v=c0c1e2041bdf"></script>
+<!doctype html><html><head><meta charset="utf-8"><title>Capital systems inspection</title><style>body{margin:0;background:#02070b;color:#e6e6dd;font:14px monospace}#viewer{position:fixed;inset:0}#viewer canvas{position:absolute;inset:0;width:100%;height:100%}aside{position:fixed;z-index:10;top:12px;left:12px;padding:16px;background:#07131ded}button{padding:10px;margin:4px}output{display:block;white-space:pre;font-size:12px;margin-top:10px}.scene3d-controls{display:none!important}</style></head><body><div id="viewer"></div><aside><b>CAPITAL SYSTEMS / RUNTIME INSPECTION</b><div><select id="part" aria-label="Component"></select><button id="wide">Whole ship</button><button id="turret">Turret closeup</button><button id="engine">Engine closeup</button><button id="destroy">Destroy selected</button><button id="reset">Reset</button><button id="bench">Measure ABBA</button></div><output id="report"></output></aside><script src="../src/asset-versions.js?v=c63b29363757"></script>
 <script>window.DRIFTWORKS_TEST_MODE=true;</script>
 <!-- script-manifest:ellisCapture -->
 <script src="../vendor/pixi/pixi.min.js?v=9ddba9cd78bc"></script>
@@ -30,7 +30,7 @@
 <script src="../src/tactical/picking.js?v=df9c50cb476a"></script>
 <script src="../src/tactical/input3d.js?v=33734a02311e"></script>
 <script src="../src/wormholes.js?v=ceec2ee57222"></script>
-<script src="../src/scene3d.js?v=427aa4e0668d"></script>
+<script src="../src/scene3d.js?v=83b0d8de4bcc"></script>
 <script src="../src/ship-art.js?v=394ca4b43117"></script>
 <script src="../src/game.js?v=c5f16cbfa061"></script>
 <script src="../experiments/dom.js?v=c1d4287e76cd"></script>
@@ -73,7 +73,7 @@
 <script src="../experiments/face-blend.js?v=50dea498a8c7"></script>
 <script src="../experiments/flight-portraits.js?v=e889fc189a95"></script>
 <script src="../experiments/flight-radio.js?v=2ebe7c04fe6b"></script>
-<script src="../experiments/target-camera.js?v=5ca46aff4d13"></script>
+<script src="../experiments/target-camera.js?v=832deac65468"></script>
 <script src="../experiments/flight-scenery.js?v=d93adc771986"></script>
 <script src="../experiments/flight-presentation.js?v=55cfeaf11321"></script>
 <script src="../experiments/flight-diagnostics.js?v=2542f9bcc6c5"></script>
@@ -93,7 +93,7 @@
 <script src="../src/aegis-battle.js?v=e681a31dbd58"></script>
 <script src="../experiments/aegis-flight.js?v=40fb0b8e7444"></script>
 
-<script src="../assets/ships/aegis-kit/flight-rig.js?v=7840064a7cbf"></script><script src="../experiments/aegis-flight.js?v=40fb0b8e7444"></script>
+<script src="../assets/ships/aegis-kit/flight-rig.js?v=1beda87c9e3b"></script><script src="../experiments/aegis-flight.js?v=40fb0b8e7444"></script>
 <script>(async function(){
 const DW=Driftworks,U=DW.sim.METERS_PER_UNIT;await DW.aegisFlight.load();
 let world=DW.sim.createInitialWorld();world.asteroids=[];world.ships=[];world.hostiles=[];world.structures=[];

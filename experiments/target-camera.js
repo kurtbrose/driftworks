@@ -51,7 +51,7 @@
                 // Track aspect relative to the player's view, with a small elevated sensor angle.
                 var yaw = Math.atan2(view.back[0], -view.back[1]);
                 scene.setOrbit({ yaw: yaw, tilt: 1.12, height: 0 });
-                scene.setStudyActors(target.convoyModel?DW.convoyScenery.preview(target.convoyModel):model.texturedVertices ? [DW.shipPackModels.sourceDraw(model, pose, units, images.get(model.id), paint)] : DW.shipPackModels.geometry(model, [pose], units));
+                scene.setStudyActors(target.convoyModel?DW.convoyScenery.preview(target.convoyModel,target.id):model.texturedVertices ? [DW.shipPackModels.sourceDraw(model, pose, units, images.get(model.id), paint)] : DW.shipPackModels.geometry(model, [pose], units));
                 scene.setStudyEffects(target.convoyModel?[]:DW.shipPackModels.scorchGeometry([centered], selection, wave, units));
                 scene.sync(world);
                 scene.render(world, 1, 0, 1 / 15);

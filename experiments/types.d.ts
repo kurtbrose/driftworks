@@ -317,7 +317,7 @@ export type RadioEvent = {
 };
 export type EvacuationState = {scene:number;line:number;wait:number;elapsed:number;quiet:number;departure:number;complete:boolean;reserve:Craft[];origin:[number,number,number]};
 export type ConvoyHit = {shipIndex:number;shipId:string;fraction:number;point:Vector;normal:Vector};
-export type ConvoyAsset = {variants:Record<string,{collision?:Model['hullIndex'];manifest:string[];engineMouths?:number[][];batches:{offset:number;count:number;color:[number,number,number];textured:boolean;roughness:number;metallic:number;emissive:number[];emissiveIntensity:number}[]}>};
+export type ConvoyAsset = {variants:Record<string,{collision?:Model['hullIndex'];manifest:string[];cargoSlots?:number;engineMouths?:number[][];batches:{offset:number;count:number;color:[number,number,number];textured:boolean;roughness:number;metallic:number;emissive:number[];emissiveIntensity:number}[]}>};
 export type ConvoyPacket = {name:string;center:Vector;ship:string;pilot:string;id:string;portrait:number;voice:number};
 export type ConvoyReceptionShip={id:string;callsign:string;position:Vector;heading:number};
 export type EvacuationCapital=AegisCapitalState & {id:string;callsign:string;present?:boolean;remote?:boolean};
@@ -404,7 +404,7 @@ export type Batch = {
     portalClip?:number[];clipPlane?:number[];
     /** Placement triples for native GPU instancing; dynamicInstances marks changing poses. */
     instanceOffsets?:Float32Array;
-    instanceRights?:Float32Array;instanceForwards?:Float32Array;instanceUps?:Float32Array;
+    instanceCargoSeeds?:Float32Array;cargoSeed?:number;instanceRights?:Float32Array;instanceForwards?:Float32Array;instanceUps?:Float32Array;
     dynamicInstances?:boolean;
     /** Whole-body axial Fermi placement; radius and model-local origin use scene units. */
     hyperbolicRadius?:number;
@@ -750,7 +750,7 @@ export type ExperimentModules = {
     convoyAmbush:{start:(combat:Combat)=>void;step:(combat:Combat,dt:number)=>void;navigation:(combat:Combat)=>{route:Vector;cruise:Vector}|null;radio:(combat:Combat)=>{key:string;text:string;wing?:boolean;civilian?:boolean;priority?:boolean}|null};
     convoyBattle:{assignmentTargets:(combat:Combat)=>Craft[];stepEvacuationWing:(combat:Combat,craft:Craft,dt:number)=>boolean;capitals:()=>EvacuationCapital[];startEvacuation:(combat:Combat)=>void;updateEvacuation:(combat:Combat,dt:number)=>void;start:(combat:Combat)=>void;update:(combat:Combat)=>void;dispatch:(combat:Combat)=>void;tasks:(combat:Combat)=>ConvoyBattleOrder[]};
     convoyMission:{openReinforcementPortal:(combat:Combat)=>boolean;arrivalFleet:()=>ConvoyReceptionShip[];stepRaider:(combat:Combat,craft:Craft,dt:number)=>boolean;packets:ConvoyPacket[];radio:(combat:Combat,dt:number,busy:boolean)=>Line|null;hitModel:(craft:Craft,start:Vector,end:Vector,radius?:number)=>HullHit|null;targets:(combat:Combat)=>Craft[];model:(name:string)=>Model;damage:(combat:Combat,id:string,weapon:Weapon,point:Vector)=>void;installCollision:(meta:ConvoyAsset,bytes:ArrayBuffer)=>void;trace:(combat:Combat,start:Vector,end:Vector,radiusM:number,previousShips?:Vector[],shipIndices?:number[])=>ConvoyHit|null;collide:(combat:Combat,previousCraft:Vector[],previousShips:Vector[],dt:number)=>boolean;WING_SIZE:number;start:(combat:Combat,player:FlightState,battlefield?:boolean)=>void;step:(combat:Combat,dt:number)=>void;stepWing:(craft:Craft,player:FlightState,index:number,dt:number,combat?:Combat)=>void};
-    convoyScenery:{createArrivalFleet:()=>AegisFlightRig;arrivalPreparationMs:number;effects:(combat:Combat,view:Pose)=>Batch[];preview:(name:string)=>Batch[];visible:boolean;ready:Promise<boolean>;texture:HTMLImageElement|undefined;install:(meta:ConvoyAsset,bytes:ArrayBuffer,image?:HTMLImageElement)=>void;geometry:(combat:Combat)=>Batch[]};
+    convoyScenery:{createArrivalFleet:()=>AegisFlightRig;arrivalPreparationMs:number;effects:(combat:Combat,view:Pose)=>Batch[];preview:(name:string,id?:string)=>Batch[];visible:boolean;ready:Promise<boolean>;texture:HTMLImageElement|undefined;install:(meta:ConvoyAsset,bytes:ArrayBuffer,image?:HTMLImageElement)=>void;geometry:(combat:Combat)=>Batch[]};
     evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};
     evacuationScenery:{effects:(combat:Combat,view:Pose)=>Batch[];geometry:(combat:Combat)=>Batch[];status:()=>string;visible:boolean};
     gasGiantWeather:typeof import('./gas-giant-weather');

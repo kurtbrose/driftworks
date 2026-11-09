@@ -61,11 +61,7 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  const originalStructure=new Set(triangles(structuralBaseline.window.Driftworks.aegisFlightAsset.batches));assert.equal(structure.vertices.length/18,6000);assert(triangles([structure]).every(t=>originalStructure.has(t)),'structural finish retains its original triangles, positions, normals and winding while window belts reshape armor');
  const one=DW.aegisFlight.create(),two=DW.aegisFlight.create(),styled=one.geometry(),buffers=styled.map(b=>b.vertices);
  for(const e of nozzleAsset){const p=e.position,ray=y=>one.hit([750/U,(p[1]+y)/U,1200+p[2]/U],[600/U,(p[1]+y)/U,1200+p[2]/U]);const throat=ray(0),rim=ray(21.5);assert(throat&&rim);assert(Math.abs(throat[0]*U-p[0]-18.2)<.001,'center ray reaches recessed throat instead of a phantom flat cap');assert(Math.abs(rim[0]*U-p[0]-32)<.001,'rim ray hits the physical lip');}
- const ceiling=DW.aegisFlightAsset.interiors.find(b=>b.kind==='ceiling');
- assert.equal(ceiling.finish.atlas,'hangar-v1/ceiling.png');
- assert.equal(ceiling.finish.uv.length,ceiling.vertices.length/3);
- assert(ceiling.finish.uv.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
- assert.equal(styled.filter(b=>b.texture).length,46,'loaded armed rig includes the textured hangar ceiling');
+ assert.equal(styled.filter(b=>b.texture).length,45,'loaded armed rig enables approved hull and heavy turret finish by default');
  assert(styled.every((b,i)=>b.vertices===two.geometry()[i].vertices),'textured GPU data shared across ships');
  one.setSurfaceDetail(false);const plain=styled.map(b=>b.vertices);assert(styled.every(b=>!b.stride&&!b.texture));
  one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===buffers[i]));assert.equal(one.geometry(),styled,'toggle never replaces actor array');
@@ -78,13 +74,13 @@ console.log('PASS Aegis surface study: fresh source, finite UVs, exact geometry/
  assert.equal(new Set(normalBatches.map(b=>b.normalTexture)).size,1);
  const state={team:'ally',position:[0,0,1200],heading:0,velocity:[0,0,0],integrity:20000};
  const idle=DW.aegisFlight.create({state,opponent:state,unarmed:true}),idleB=idle.geometry();
- assert.equal(idleB.length,13,'unarmed ships retain hull, interior, structural and combined nozzle batches');assert.equal(idleB.filter(b=>b.texture).length,10);
+ assert.equal(idleB.length,13,'unarmed ships retain hull, interior, structural and combined nozzle batches');assert.equal(idleB.filter(b=>b.texture).length,9);
  const total=b=>b.reduce((n,p)=>n+p.vertices.length/(p.stride||6),0);
  assert.equal(total(idleB),total(styled),'idle batching retains every vertex');
  assert(idleB.every(b=>b.vertices.every(Number.isFinite)));
  const idleBefore=idleB.map(b=>b.vertices);idle.setSurfaceDetail(false);const idlePlain=idleB.map(b=>b.vertices);idle.setSurfaceDetail(true);
  idleB.forEach((b,i)=>{assert.equal(b.vertices,idleBefore[i]);for(let k=0;k<idlePlain[i].length/6;k++)for(let j=0;j<6;j++)assert.equal(b.vertices[k*(b.stride||6)+j],idlePlain[i][k*6+j]);});
- one.setSurfaceDetail(false,'turrets');assert.equal(styled.filter(b=>b.texture).length,34);one.setSurfaceDetail(true,'turrets');
+ one.setSurfaceDetail(false,'turrets');assert.equal(styled.filter(b=>b.texture).length,33);one.setSurfaceDetail(true,'turrets');
  const heavy=one.components().find(p=>p.kind==='heavy'),heavyCombat=DW.flightSim.create('training');one.damage(heavy.position,1000,heavyCombat);const destroyed=styled.map(b=>b.vertices);one.setSurfaceDetail(false);one.setSurfaceDetail(true);assert(styled.every((b,i)=>b.vertices===destroyed[i]),'surface toggles preserve scorched turret buffers');one.reset();assert(styled.every((b,i)=>b.vertices===buffers[i]),'reset restores textured turret buffers');
  const nozzleBatches=styled.slice(-25);assert(nozzleBatches.every(b=>b.texture===nozzleBatches[0].texture),'all five engines share one atlas');
  const combat=DW.flightSim.create('training'),part=one.components().find(p=>p.kind==='engine');one.damage(part.position,1000,combat);one.setSurfaceDetail(false);one.setSurfaceDetail(true);assert.equal(one.components().find(p=>p.id===part.id).hp,0,'surface toggles preserve damage');

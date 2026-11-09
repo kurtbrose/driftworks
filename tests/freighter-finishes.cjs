@@ -145,8 +145,19 @@ const warningBounds=bounds(caution),housingBounds=bounds(rcs.getObjectByName('iv
 assert(warningBounds.max.y-warningBounds.min.y<1e-6,'paint has no physical thickness');
 assert(warningBounds.min.y-housingBounds.max.y>0&&warningBounds.min.y-housingBounds.max.y<.005,'marking sits flush to housing roof');
 assert(warningBounds.max.x<.59&&warningBounds.min.x>-.59&&warningBounds.max.z<.415&&warningBounds.min.z>-.415,'warning field stays on the flat roof, clear of bevels');
+// The broad carrier mixes every paint recipe while retaining the shared paint batch.
+const carrier=kit.buildFreighter('container'),variants=new Set();
+carrier.traverse(o=>{if(o.userData.part==='cargo')variants.add(o.userData.paintVariant);});
+assert.equal(variants.size,8,'eight paint jobs from the neutral cargo sheet');
 // Production bake keeps source-authored mouths in the flight coordinate convention.
 const meta=require('../assets/ships/industrial-kit/convoy-flight.json');
 assert.equal(meta.sourceSha256,require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync('assets/ships/industrial-kit/kit.js')).digest('hex'),'flight bake matches its editable source');
+const binary=require('node:fs').readFileSync('assets/ships/industrial-kit/convoy-flight.bin');
+for(const name of ['container','mixed']){
+ const slots=new Set();
+ for(const batch of meta.variants[name].batches)if(batch.textured)for(let i=6;i<batch.count;i+=8){const u=binary.readFloatLE(batch.offset+i*4);if(u>=2)slots.add(Math.floor(u)-2);}
+ assert.equal(slots.size,name==='container'?24:8,'each cargo box has its own atlas-selection identity');
+ assert.equal(meta.variants[name].cargoSlots,slots.size);
+}
 for(const name of ['container','mixed','fluid'])assert.deepEqual(meta.variants[name].engineMouths,JSON.parse(JSON.stringify(kit.buildFreighter(name).userData.engineMouths)));
 console.log('Freighter packaging: full-size cargo, tight pitch, four uncaged tanks, shared batches and authored exhaust anchors pass.');

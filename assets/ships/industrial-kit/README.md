@@ -721,3 +721,50 @@ the generated dome and barrel regions, adding a small dark-edge footprint so
 fine welds retain more coverage when minified. Broad paint and highlights are
 preserved. Compared the same rear-quarter view before/after; no texture-size,
 geometry, material, shader or draw-count changes.
+
+## Cargo paint and operator atlas (2026-11-09)
+
+Cargo modules retain their approximately 9.65x4.55x4.55m bodies and existing
+heavy corner interfaces. Generated cargo-source-v1.png supplies one neutral
+512-square face sheet in previously blank atlas pixels (2048,2048). Its long
+side, end doors and roof have separate UV regions. The shipped PNG contains
+only that neutral recipe; cargo-paint.js builds eight colored tiles once in
+Canvas, with white ink and dark hardware protected from the recolor.
+
+Eight operators have distinct names, simple emblems and serials. Two of eight finishes (one quarter of a balanced load)
+carry broad bands, diagonal sashes or contrasting roof bands that remain
+visible at gameplay distance; others stay mostly solid. Corrugation pitch, faded
+paint, repair patches and identification bands add variation without another
+image download. Logos and liveries are ordinary Canvas drawings, not shaders.
+The same prepared texture feeds study meshes, flight batches and target views.
+
+Atlas dimensions and GPU storage remain 4096x3072 / about 64 MiB with mipmaps.
+The neutral tile adds 367,803 bytes to the PNG versus the preceding commit;
+small paint/decal recipes are code. Palette preparation measured about 212ms
+once in the initial study and 281ms in the final flight load on this machine, excluding flight PNG encoding/decoding.
+There is no per-frame recoloring. No frame-time speedup is claimed.
+
+Baked corrugation and registry artwork replace small side-rib/label meshes.
+Container carrier: 48,426 triangles / seven batches; feeder: 23,358 / seven.
+The production binary shrinks from 11,070,528 to 9,448,512 bytes. Source geometry,
+paint selection and exporter UVs have focused coverage, as do label color
+protection, one-time preparation and variant placement. Browser glTF exports
+can embed a prepared painted atlas; offline Node exports use the neutral source
+region as a fallback. Original generated source images are authoring inputs
+and are not fetched by gameplay.
+
+### Stable random cargo loads
+
+Each freighter ID yields a stable seed and each box has an independent slot.
+A small integer recipe selects one of eight recipes per box; repeats are allowed
+and bold liveries average one quarter fleet-wide. The review page has a Shuffle
+cargo button. Source factories accept cargoSeed for reproducible inspection.
+
+The flight bake encodes box identity in the integer part of cargo U coordinates.
+The existing raw and PBR vertex stages decode that identity and choose an atlas
+tile from one four-byte seed per instance. Fragment shading, texture size, mesh
+buffers and instance/draw counts remain shared. Non-cargo batches explicitly
+disable this selection, and target previews use the same freighter seed.
+Regression coverage checks the actual cargo-01..cargo-30 IDs produce thirty
+distinct stable load combinations and verifies all 24/8 box identities in the
+production binary. Geometry/collision positions remain unchanged by seeding.

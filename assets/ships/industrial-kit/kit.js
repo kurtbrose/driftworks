@@ -1,3 +1,4 @@
+import {prepareCargoAtlas,cargoVariant} from './cargo-paint.js';
 import * as T from 'three';
 
 // Metres; +X aft, +Y up, +Z starboard. Named groups retain module/joint pivots.
@@ -17,7 +18,7 @@ const materials={
 };
 const geometries=new Map();
 let atlasURI=null;
-export function setSurfaceTexture(texture,uri){texture.repeat.set(.5,2/3);texture.offset.y=1/3;texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=8;materials.paint.map=texture;materials.paint.needsUpdate=true;atlasURI=uri;}
+export function setSurfaceTexture(texture,uri){if(typeof document!=='undefined'&&texture.image){texture.image=prepareCargoAtlas(texture.image);if(uri)uri=texture.image.toDataURL('image/png');}texture.repeat.set(.5,2/3);texture.offset.y=1/3;texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=8;materials.paint.map=texture;materials.paint.needsUpdate=true;atlasURI=uri;}
 function geometry(key,make){if(!geometries.has(key))geometries.set(key,make());return geometries.get(key);}
 function mesh(g,geo,mat,p=[0,0,0],name=mat){const m=new T.Mesh(geo,materials[mat]);m.name=name;m.position.set(...p);m.castShadow=true;m.receiveShadow=true;g.add(m);return m;}
 
@@ -161,21 +162,39 @@ function truss(g,options={}){
   panel(g,[2.1,.8,1.6],[2,-1.85,0],'service',.09);
   g.userData.sockets={forward:[-6,0,0],aft:[6,0,0],port:[0,0,-2.5],starboard:[0,0,2.5]};
 }
+function cargoPaintPanel(g,size,position,variant,doorHalf=null,bevel=.30){
+  const geo=geometry(['cargo paint',...size,variant,doorHalf,bevel].join(','),()=>{
+    const geo=chamferGeometry(size,Math.min(bevel,...size.map(v=>v*.24)),'cargo'),p=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv;
+    const tileX=2048+(variant%4)*512,tileY=2048+Math.floor(variant/4)*512;
+    for(let i=0;i<p.count;i++){
+      const nx=n.getX(i),ny=n.getY(i),nz=n.getZ(i);
+      let x,y;
+      if(Math.max(Math.abs(nx),Math.abs(ny),Math.abs(nz))<.99){x=240;y=100;}
+      else if(Math.abs(nx)>.99){
+        let u=.5+(nx<0?1:-1)*p.getZ(i)/size[2];
+        if(doorHalf!==null)u=(doorHalf+u)/2;
+        x=4+u*248;y=260+(.5-p.getY(i)/size[1])*248;
+      }else if(Math.abs(ny)>.99){x=260+(.5+p.getX(i)/size[0])*248;y=260+(.5+p.getZ(i)/size[2])*248;}
+      else{x=4+(.5+(nz<0?-1:1)*p.getX(i)/size[0])*504;y=4+(.5-p.getY(i)/size[1])*248;}
+      uv.setXY(i,(tileX+x)/2048,1-(tileY+y)/2048);
+    }
+    delete geo.userData.bevelPaintTile;geo.userData.cargoVariant=variant;return geo;
+  });
+  const m=mesh(g,geo,'paint',position,'container painted shell');m.userData.cargoVariant=variant;return m;
+}
 function cargo(g,options={}){
-  const color=options.color||'cargo';panel(g,[9.65,4.55,4.55],[0,0,0],color,.30);
+  const color=options.color||'cargo',variant=options.variant??({cargo:5,blue:2,rust:0,ochrePaint:1}[color]??5);g.userData.paintVariant=variant;cargoPaintPanel(g,[9.65,4.55,4.55],[0,0,0],variant);
   for(const x of [-4.8,4.8]){
-    panel(g,[.28,4.9,4.9],[x,0,0],'dark',.1);
+    cargoPaintPanel(g,[.28,4.9,4.9],[x,0,0],variant,null,.1);
     for(const y of [-2.13,2.13])for(const z of [-2.13,2.13]){panel(g,[.65,.62,.62],[x,y,z],'ochrePaint',.09);box(g,[.10,.23,.24],[x+Math.sign(x)*.33,y,z],'rubber',.03);}
   }
   for(const z of [-1.05,1.05]){
-    panel(g,[.16,3.86,1.94],[-4.99,0,z],color,.08);
+    cargoPaintPanel(g,[.16,3.86,1.94],[-4.99,0,z],variant,z<0?0:1,.08);
     for(const dz of [-.55,.55])cylinder(g,.055,.055,3.35,[-5.13,0,z+dz],'edge','y',8);
     box(g,[.12,.12,.6],[-5.24,-.22,z],'ochre');
     for(const y of [-1.4,1.4])box(g,[.18,.3,.42],[-5.15,y,z],'steel');
   }
   for(const z of [-2.3,2.3]){
-    for(const x of [-3.6,-1.8,0,1.8,3.6])panel(g,[.13,3.8,.13],[x,0,z],'service',.025);
-    hardwarePanel(g,[1.5,.56,.08],[2.6,.9,z+Math.sign(z)*.05],'registry',.025);
     panel(g,[7.7,.14,.18],[0,-2.12,z],'edge',.025);
   }
   for(const z of [-1.8,1.8])panel(g,[8.9,.18,.2],[0,2.25,z],'service',.03);
@@ -574,14 +593,14 @@ export function buildFreighter(name,options={}){
     for(const z of [-3.15,3.15]){cylinder(g,.4,.4,.7,[end+1,-1,z],'ochre','z').name='transfer port collar';cylinder(g,.28,.28,.8,[end+1,-1,z],'steel','z').name='capped transfer port';}
     g.userData.payloadCount=4;g.userData.layout='four close-packed capsule tanks';
   }else{
-    const rows=name==='container'?3:2,columns=name==='container'?[-7.65,-2.55,2.55,7.65]:[-2.55,2.55];
+    let cargoSlot=0;const rows=name==='container'?3:2,columns=name==='container'?[-7.65,-2.55,2.55,7.65]:[-2.55,2.55];
     for(let i=0;i<rows;i++){
       const x=-1.7+i*10.6,cassette=group(g,'exchangeable cargo cassette',[x,0,0]);
       cassette.userData.loading='Remove complete cassette radially; release corner locks';
       // Thin shear web in the occupied utility channel links the corner locks.
       panel(cassette,[10.2,.24,columns.length*5.1],[0,0,0],'dark',.06);
       for(const y of [-3,3])for(const z of columns){
-        addPart(cassette,'cargo',[0,y,z],{color:y>0?(z>0?'cargo':'blue'):(z>0?'rust':'ochrePaint')});
+        addPart(cassette,'cargo',[0,y,z],{variant:options.cargoSeed===undefined?(i*3+columns.indexOf(z)*2+(y>0?1:0))%8:cargoVariant(options.cargoSeed,cargoSlot++)});
         for(const dx of [-4.8,4.8])for(const dz of [-2.13,2.13]){
           panel(cassette,[.7,.64,.55],[dx,Math.sign(y)*.38,z+dz],'ochrePaint',.06).name='cassette corner lock';
         }
@@ -694,7 +713,7 @@ export function exportGLTF(root){
     if(obj.isMesh){
       const geo=obj.geometry,mat=obj.material;
       if(!matMap.has(mat)){const pbr={baseColorFactor:[...mat.color.toArray(),1],metallicFactor:mat.metalness,roughnessFactor:mat.roughness};if(mat===materials.paint&&atlasURI)pbr.baseColorTexture={index:0};const entry={name:Object.keys(materials).find(k=>materials[k]===mat),pbrMetallicRoughness:pbr};if(mat.emissive&&mat.emissive.getHex()>0){entry.emissiveFactor=mat.emissive.toArray();if(mat.emissiveIntensity!==1){entry.extensions={KHR_materials_emissive_strength:{emissiveStrength:mat.emissiveIntensity}};doc.extensionsUsed=["KHR_materials_emissive_strength"];}}matMap.set(mat,doc.materials.length);doc.materials.push(entry);}
-      if(!geoMap.has(geo)){const attrs={POSITION:accessor(geo.attributes.position.array,'VEC3',34962),NORMAL:accessor(geo.attributes.normal.array,'VEC3',34962)};if(geo.attributes.uv)attrs.TEXCOORD_0=accessor(Float32Array.from(geo.attributes.uv.array,(value,i)=>i%2?(1-value)*2/3:value*.5),"VEC2",34962);const primitive={attributes:attrs};if(geo.index)primitive.indices=accessor(geo.index.array,'SCALAR',34963);geoMap.set(geo,primitive);}
+      if(!geoMap.has(geo)){const attrs={POSITION:accessor(geo.attributes.position.array,'VEC3',34962),NORMAL:accessor(geo.attributes.normal.array,'VEC3',34962)};if(geo.attributes.uv){const variant=geo.userData.cargoVariant,neutral=typeof document==='undefined'&&variant!==undefined;attrs.TEXCOORD_0=accessor(Float32Array.from(geo.attributes.uv.array,(value,i)=>{if(neutral)value+=i%2?Math.floor(variant/4)*.25:-(variant%4)*.25;return i%2?(1-value)*2/3:value*.5;}),"VEC2",34962);}const primitive={attributes:attrs};if(geo.index)primitive.indices=accessor(geo.index.array,'SCALAR',34963);geoMap.set(geo,primitive);}
       const key=geo.uuid+':'+mat.uuid;if(!meshMap.has(key)){meshMap.set(key,doc.meshes.length);doc.meshes.push({name:obj.name,primitives:[{...geoMap.get(geo),material:matMap.get(mat)}]});}node.mesh=meshMap.get(key);
     }
     if(obj.children.length)node.children=obj.children.map(visit);return index;

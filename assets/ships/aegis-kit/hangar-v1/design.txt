@@ -2,7 +2,7 @@ AEGIS HANGAR — REVIEW CANDIDATE
 
 Status: user-approved and integrated as the production default. Launch gameplay is unchanged.
 Artwork generated with the built-in ImageGen tool; no runtime generation or network dependency.
-Files: deck.png (1536 x 1024), bulkhead.png (2172 x 724), ceiling.png (1402 x 1122).
+Files: deck.png (1536 x 1024), bulkhead.png (2172 x 724).
 
 Flight operations design
 The existing through-bay is approximately 106.2 m fore/aft, 85.5 m across,
@@ -41,8 +41,8 @@ Rendering
 The study bake removes 51 small paint/light/portal blocks (612 triangles),
 extracts the existing deck, ceiling, and inward bulkhead faces, and batches
 those surfaces by finish. Structural dimensions and articulated parts stay
-unchanged. Three immutable textures and three batches replace primitive detail.
-The ceiling uses dark service panels, recessed hatches, vents and painted light strips. No new dynamic lights or per-frame mesh building.
+unchanged. Two immutable textures and three batches replace primitive detail.
+The ceiling is neutral paint. No new dynamic lights or per-frame mesh building.
 
 Review measurement, inside approach, studio lighting, DPR 1.5, backing
 2463 x 1196, same camera, ABBA with 20 warmup + 90 measured frames per block:
@@ -74,16 +74,3 @@ median/p95 6.0/6.6 ms; approved hangar 6.1/6.8 ms. Both frame cadence
 13.3/13.4 ms. 20 warmup + 90 samples/block, ABBA, initial paused engagement,
 eight enemies, no launched allies, identical camera and settings. Baseline
 265 draws/232956 tris; new 271/231732. GPU execution remains unmeasured.
-
-Ceiling finish, 2026-11-09
-Generated with built-in ImageGen. Prompt: flat orthographic spaceship hangar
-ceiling albedo; dark cool-grey service panels, structural beams, maintenance
-hatches, ventilation channels and restrained off-white recessed light strips;
-subtle wear, uniform diffuse lighting, no text or perspective.
-Mapped through the existing authored ceiling UVs and shared texture loader.
-Production renderer visual review: inside looking up and both bay mouths.
-Fixed 1280 x 800, DPR 1, studio lighting, ABBA, 20 warmup + 90 samples/block:
-both finishes 10 submitted draws / 19,802 triangles; CPU median 0.4-0.5 ms
-before, 0.4 ms after; p95 0.5-0.7 ms before, 0.6 ms after. Frame median
-13.3 ms both. GPU execution and whole-game performance remain unmeasured.
-Evidence: output/hangar-ceiling/{inside,mouth,opposite}.png and measurements.json.

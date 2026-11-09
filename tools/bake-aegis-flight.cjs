@@ -93,7 +93,7 @@ const {pathToFileURL}=require('node:url');
    if(process.argv.includes('--check')){if(fs.readFileSync(target,'utf8')!==text)throw new Error('Hangar study is stale');}else fs.writeFileSync(target,text);
    console.log('Hangar study: removed '+removedMeshes+' paint/light blocks ('+removedTriangles+' triangles), '+interiors.size+' interior finishes');return;
  }
- data.interiors=Array.from(interiors.values()).map(b=>({kind:b.kind,vertices:b.vertices,color:[.85,.85,.85],finish:{uv:b.uv,color:[.85,.85,.85],plainUV:[0,0],atlas:'hangar-v1/'+b.kind+'.png'}}));
+ data.interiors=Array.from(interiors.values()).map(b=>({kind:b.kind,vertices:b.vertices,color:b.kind==='ceiling'?[.23,.25,.26]:[.85,.85,.85],finish:b.kind==='ceiling'?null:{uv:b.uv,color:[.85,.85,.85],plainUV:[0,0],atlas:'hangar-v1/'+b.kind+'.png'}}));
  if(process.argv.includes('--windows-study')){const study={windows:windows.map(w=>({...w,batch:data.batches.findIndex(b=>b.color.join(',')===w.color.join(','))}))};const text='window.AegisWindowsData='+JSON.stringify(study)+';\n';const file=path.join(root,'studies/aegis-windows-data.js');if(process.argv.includes('--check')){if(fs.readFileSync(file,'utf8')!==text)throw new Error('Windows study is stale');}else fs.writeFileSync(file,text);console.log('Window study: '+windows.length+' existing apertures');return;}
  // Extract every authored viewport, including the narrower prow apertures.
  const glass={kind:'windows',vertices:[],color:[.8,.8,.8],finish:{uv:[],color:[.8,.8,.8],plainUV:[0,0],atlas:'window-atlas.png',shader:-2}},removed=new Map();

@@ -180,6 +180,15 @@ for y in range(1024):
         mp[x,y] = round(255*min(1, x/32, (2047-x)/32))
 barrel = Image.composite(barrel, Image.new("RGB", barrel.size, PALETTE[15][1]), mask)
 wide.paste(barrel, (0, 2048))
+# Only one neutral cargo tile ships. Browser Canvas creates the colored copies.
+cargo = Image.open(ROOT / "assets/ships/industrial-kit/cargo-source-v1.png").convert("RGB")
+w,h = cargo.size
+sheet = Image.new("RGB", (512,512), (128,128,128))
+split = round(h*.453)
+sheet.paste(cargo.crop((0,0,w,split)).resize((512,256),Image.Resampling.LANCZOS),(0,0))
+sheet.paste(cargo.crop((0,split,w//2,h)).resize((256,256),Image.Resampling.LANCZOS),(0,256))
+sheet.paste(cargo.crop((w//2,split,w,h)).resize((256,256),Image.Resampling.LANCZOS),(256,256))
+wide.paste(sheet,(2048,2048))
 atlas = wide
 
 target = ROOT / "assets/ships/industrial-kit/panels.png"

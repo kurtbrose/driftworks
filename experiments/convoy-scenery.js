@@ -3,6 +3,7 @@
     var DW=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks),U=DW.sim.METERS_PER_UNIT;
     /** @typedef {import('./types').Batch} Batch */
     /** @type {Record<string,Batch[]>} */var models={};
+    var cargoRecipes={cargoSeed:function(id){var seed=17;for(var i=0;i<String(id).length;i++)seed=(seed*31+String(id).charCodeAt(i))%4093;return seed;}};
     /** @type {Record<string,number[][]>} */var mouths={};
     /** Authored factory origins, metre scale, normals and atlas UVs; shared GPU buffers.
      * @param {import('./types').ConvoyAsset} meta @param {ArrayBuffer} bytes @param {HTMLImageElement} [image] */
@@ -36,7 +37,7 @@
             fetch(assetUrl('../assets/ships/industrial-kit/convoy-flight.json')).then(function(r){if(!r.ok)throw Error(r.statusText);return /** @type {Promise<import('./types').ConvoyAsset>} */(r.json());}),
             fetch(assetUrl('../assets/ships/industrial-kit/convoy-flight.bin')).then(function(r){if(!r.ok)throw Error(r.statusText);return r.arrayBuffer();}),
             new Promise(/** @param {(value:boolean)=>void} resolve @param {(reason:Error)=>void} reject */function(resolve,reject){image.onload=function(){resolve(true);};image.onerror=function(){reject(Error('Industrial paint atlas unavailable'));};image.src=assetUrl('../assets/ships/industrial-kit/panels.png');})
-        ]).then(function(values){install(/** @type {import('./types').ConvoyAsset} */(values[0]),values[1],image);return true;}).catch(/** @param {unknown} error */function(error){console.error('Convoy ships:',error);return false;});
+        ]).then(async function(values){var paint=await import(assetUrl('../assets/ships/industrial-kit/cargo-paint.js'));cargoRecipes=paint;var painted=await paint.prepareCargoImage(image);texture=painted;DW.convoyScenery.texture=painted;image.onload=null;image.onerror=null;image.removeAttribute('src');install(/** @type {import('./types').ConvoyAsset} */(values[0]),values[1],painted);return true;}).catch(/** @param {unknown} error */function(error){console.error('Convoy ships:',error);return false;});
     }
     /** Reuse the production idle Aegis rig, including its materials, scale and hull contacts.
      * @returns {import('./types').AegisFlightRig} */
@@ -105,7 +106,7 @@
             components:function(){var space=renderCombat&&renderCombat.player.pose.region||0;return ships.flatMap(function(ship,i){return states[i].present&&(states[i].region||0)===space&&ship.components?ship.components():[];});},
             telemetry:function(){var stats=ships.map(function(ship){return ship.telemetry();});return {seconds:stats[0].seconds,contacts:stats.reduce(function(n,s){return n+s.contacts;},0),launches:0,shots:stats.reduce(function(n,s){return n+s.shots;},0),hits:stats.reduce(function(n,s){return n+s.hits;},0),mounts:stats.flatMap(function(s){return s.mounts;}),capitals:states.map(function(ship,i){return {team:ship.team,position:ship.position.slice(),heading:ship.heading,integrity:ship.integrity,shots:stats[i].shots,hits:stats[i].hits};})};}};
     }
-    DW.convoyScenery={createArrivalFleet:createArrivalFleet,arrivalPreparationMs:0,preview:function(name){return models[name]||[];},visible:true,ready:ready,texture:texture,install:install,effects:function(combat,view){
+    DW.convoyScenery={createArrivalFleet:createArrivalFleet,arrivalPreparationMs:0,preview:function(name,id){return (models[name]||[]).map(function(batch){return Object.assign({},batch,{cargoSeed:id?cargoRecipes.cargoSeed(id):0});});},visible:true,ready:ready,texture:texture,install:install,effects:function(combat,view){
         if(!combat.convoy||!this.visible)return [];
         var state=combat.convoy,placement=cargoPlacement(state);
         var effects=state.ships.filter(function(s){return s.hull>0&&(!state.evacuation||!s.arrived);}).map(function(s,index){
@@ -150,7 +151,7 @@
                 var ships=state.ships.filter(function(s){return s.hull>0&&(!state.evacuation||!s.arrived)&&s.model===name;});if(!ships.length)return;
                 var offsets=new Float32Array(ships.flatMap(function(s){return [s.slot[0],s.slot[1],s.slot[2]-1200];}));
                 var rights=new Float32Array(offsets.length),forwards=new Float32Array(offsets.length),ups=new Float32Array(offsets.length);
-                models[name].forEach(function(batch){batches.push(Object.assign({},batch,{instanceOffsets:offsets,instanceRights:rights,instanceForwards:forwards,instanceUps:ups}));});
+                models[name].forEach(function(batch){batches.push(Object.assign({},batch,{instanceOffsets:offsets,instanceCargoSeeds:new Float32Array(ships.map(function(s){return cargoRecipes.cargoSeed(s.id);})),instanceRights:rights,instanceForwards:forwards,instanceUps:ups}));});
             });
             cached={key:key,batches:batches};cache.set(state,cached);
         }
