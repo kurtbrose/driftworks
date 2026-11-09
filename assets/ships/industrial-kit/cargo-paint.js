@@ -36,6 +36,12 @@ export const tankerOperators=[
  ['POLAR TRANSFER','#a9c4d9','#315d84'],['MERIDIAN CHEMICAL','#c6bdce','#665473']
 ];
 export function tankerOperator(seed,pod){const owner=cargoVariant(seed,0)%4;return pod===3&&cargoVariant(seed,11)===7?(owner+1)%4:owner;}
+export const tankerBands=[
+ {heads:[],barrel:[]},
+ {heads:[[474,32]],barrel:[[82,72]]},
+ {heads:[[450,12],[474,12]],barrel:[[82,20],[126,20],[170,20]]},
+ {heads:[[474,44]],barrel:[[60,100],[936,16],[968,16]]}
+];
 // Only warm, light, low-chroma paint is replaced; printed details retain RGB.
 export function tankerPaintPixel(r,g,b,color){
  const l=(r+g+b)/3,chroma=Math.max(r,g,b)-Math.min(r,g,b);
@@ -53,7 +59,7 @@ function tankerPaint(ctx,image){
   const x=2048+(i%2)*1024,y=Math.floor(i/2)*1024;
   ctx.drawImage(image,2048,0,2048,2048,x,y,1024,1024);
   replaceTankPaint(ctx,x,y,1024,1024,paint);
-  ctx.strokeStyle=stripe;ctx.lineWidth=i===1?35:24;ctx.beginPath();ctx.arc(x+512,y+512,474,0,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle=stripe;tankerBands[i].heads.forEach(([radius,width])=>{ctx.lineWidth=width;ctx.beginPath();ctx.arc(x+512,y+512,radius,0,Math.PI*2);ctx.stroke();});
   ctx.fillStyle=stripe;ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(name,x+512,y+345,620);
   // Keep the inspection disk and its stencils clear below the operator name.
   ctx.save();ctx.translate(0,20);ctx.beginPath();
@@ -68,7 +74,7 @@ function tankerPaint(ctx,image){
   // same barrel. Circumferential welds remain aligned through the label zones.
   for(const row of [96,352])ctx.drawImage(image,0,2080,2048,100,bx,by+row,1024,84);
   replaceTankPaint(ctx,bx,by,1024,512,paint);
-  ctx.fillStyle=stripe;ctx.fillRect(bx+82,by,64,512);if(i===2)ctx.fillRect(bx+172,by,24,512);
+  ctx.fillStyle=stripe;tankerBands[i].barrel.forEach(([offset,width])=>ctx.fillRect(bx+offset,by,width,512));
   for(const row of [0,256]){
     ctx.font='bold 25px monospace';ctx.fillText('FLUID / 04',bx+275,by+133+row,138);
     ctx.font='14px monospace';ctx.fillText('DW TRANSPORT',bx+275,by+155+row,138);

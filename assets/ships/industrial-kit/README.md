@@ -804,3 +804,12 @@ The paint mask includes warm blended weld-edge pixels so beige halos do not
 remain against blue/green finishes. It preserves highly saturated ochre decals
 and dark/neutral printed details; regressions include a warm antialiased fringe
 and unchanged stencil/ochre/highlight samples.
+
+### Operator-specific band patterns
+
+Solstar has no colored rings or barrel bands. Verdant has one broad head ring
+and one barrel band. Polar uses paired thin head rings and three narrow barrel
+bands. Meridian uses one broad ring and an asymmetric barrel arrangement: one
+wide band near one end and two thin accents at the far end. Text areas stay
+clear, and recipes remain coherent per ship. These are one-time Canvas markings;
+no download image, geometry, texture allocation or renderer feature was added.

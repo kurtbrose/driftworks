@@ -7,7 +7,7 @@ const tiles=[],context={quadraticCurveTo(){},strokeRect(){},fillRect(){},bezierC
 let canvases=0;
 const sandbox={console:{info(){}},performance:{now(){return 0;}},document:{createElement(){canvases++;return {getContext(){return context;}};}}};
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync('assets/ships/industrial-kit/cargo-paint.js','utf8').replace(/^export /gm,'')+'\nglobalThis.paint={prepareCargoAtlas,cargoPalette,cargoSeed,cargoVariant,tankerOperator,tankerPaintPixel};',sandbox);
+vm.runInContext(fs.readFileSync('assets/ships/industrial-kit/cargo-paint.js','utf8').replace(/^export /gm,'')+'\nglobalThis.paint={prepareCargoAtlas,cargoPalette,cargoSeed,cargoVariant,tankerOperator,tankerPaintPixel,tankerBands};',sandbox);
 const image={};sandbox.paint.prepareCargoAtlas(image);sandbox.paint.prepareCargoAtlas(image);
 assert.equal(canvases,1,'prepare once per downloaded source image');assert.equal(tiles.length,8);
 assert.equal(new Set(tiles.map(t=>t.x+','+t.y)).size,8,'separate recipe regions');
@@ -44,3 +44,8 @@ assert.notDeepEqual(Array.from(sandbox.paint.tankerPaintPixel(198,200,188,[160,1
 
 const fringe=Array.from(sandbox.paint.tankerPaintPixel(190,178,145,[160,190,210]));
 assert(fringe[2]>fringe[0],'warm blended seam fringes follow the new cool paint instead of staying beige');
+
+const bands=sandbox.paint.tankerBands;
+assert.equal(bands[0].heads.length+bands[0].barrel.length,0,'one fleet has no colored bands');
+assert.equal(new Set(bands.map(b=>JSON.stringify(b))).size,4,'each fleet has a different band treatment');
+for(const profile of bands)for(const [x,width] of profile.barrel)assert(x+width<206||x>920,'bands stay outside the registry and operator text');

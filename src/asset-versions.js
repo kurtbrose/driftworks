@@ -1162,7 +1162,7 @@
   "assets/ships/concept-trio/raptor.json": "7c0bc87eb1dc",
   "assets/ships/concept-trio/reference.png": "776d844561ec",
   "assets/ships/industrial-kit/barrel-source-v1.png": "d4ec0e5f93c3",
-  "assets/ships/industrial-kit/cargo-paint.js": "64056132090d",
+  "assets/ships/industrial-kit/cargo-paint.js": "0967ae2909cf",
   "assets/ships/industrial-kit/cargo-source-v1.png": "262a1896cf4c",
   "assets/ships/industrial-kit/convoy-flight.bin": "416e1dc08fcf",
   "assets/ships/industrial-kit/convoy-flight.json": "a070df4569bb",
