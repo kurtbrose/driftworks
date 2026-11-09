@@ -6,6 +6,13 @@ In the actual flight game, open **F3 / Flight lab & diagnostics / Experimental
 projectile visuals**. Choose current flight bolts, plasma with sharp multiples,
 plasma with overlapping exposures, or a bare plasma ball. Radius is in metres;
 exposure covers 50%, 80% or 100% of the last rendered simulation interval.
+Additional modes put the bright exposure at the real bolt position with faded
+samples fore and aft, either discrete or overlapping. Forward samples are a
+visual prediction capped at the weapon lifetime; rear samples are clipped at
+launch. Leading-edge-only draws a narrow glowing forward hemisphere without a
+filled center, oriented by projected travel. Viewed straight along the axis,
+it becomes a hollow ring. These can be switched live like the earlier modes.
+
 Changes apply immediately to player, fighter and capital guns. Preferences are
 session-only and default to the current production bolts. The former
 `studies/plasma-motion.html` comparison now links to the actual battle.

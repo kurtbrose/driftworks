@@ -37,6 +37,28 @@ assert(Array.from(curved[0].vertices).every(Number.isFinite),'Curved-space sampl
 assert.throws(()=>guns.setVisualOptions({mode:'invalid',radius:3,exposure:.8}));
 const copy=guns.getVisualOptions();copy.radius=100;
 assert.equal(guns.getVisualOptions().radius,1.5,'Preferences are returned by value');
+for(const mode of ['centered','centered-overlap']){
+    guns.setVisualOptions({mode,radius:1.5,exposure:.8});
+    const vertices=guns.geometry(state,pose)[0].vertices,centers=[],weights=[];
+    for(let i=0;i<vertices.length;i+=36){let x=0;for(let j=0;j<6;j++)x+=vertices[i+j*6]/6;centers.push(x);weights.push(vertices[i+5]);}
+    assert(centers.some(x=>x>bolt.position[0]+1e-5),'Faint samples ahead of the real bolt');
+    assert(centers.some(x=>x<bolt.position[0]-1e-5),'Faint samples behind the real bolt');
+    assert(Math.abs(centers.at(-1)-bolt.position[0])<1e-5,'Bright center stays at the true position');
+    assert.equal(weights.at(-1),1);
+    assert(weights.slice(0,-1).every(w=>w<1),'Both sides fade below the center brightness');
+    assert(centers.length<=(mode==='centered'?5:23));
+    const dying={...bolt,age:bolt.weapon.lifetime};
+    const end=guns.geometry({bolts:[dying],impacts:[]},pose)[0].vertices;
+    for(let i=0;i<end.length;i+=36){let x=0;for(let j=0;j<6;j++)x+=end[i+j*6]/6;assert(x<=bolt.position[0]+1e-5,'Forward exposures stop at weapon lifetime');}
+}
+guns.setVisualOptions({mode:'leading-edge',radius:1.5,exposure:.8});
+const rim=guns.geometry(state,pose)[0].vertices;
+for(let i=0;i<rim.length;i+=6){
+    const x=(rim[i]-bolt.position[0])*U,z=(rim[i+2]-bolt.position[2])*U,r=Math.hypot(x,z);
+    assert(x>=-1e-5,'Only the leading hemisphere is drawn for crossing fire');
+    assert(r>1.5*.63&&r<1.5*.99,'The body center stays hollow');
+}
+assert.equal(JSON.stringify(state),original,'All new treatments are presentation-only');
 guns.setVisualOptions({mode:'current',radius:3,exposure:.8});
 assert.deepEqual(guns.geometry(state,pose),baseline,'Current mode exactly preserves the production reference');
 console.log('PASS gameplay projectile visuals: production reference, 3D samples, launch clipping, energy, impacts and physics isolation');

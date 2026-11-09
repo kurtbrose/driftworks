@@ -279,7 +279,7 @@
     /** Session-only rendering preferences; never alter gun or weapon state.
      * @param {{mode:string,radius:number,exposure:number}} value */
     function setVisualOptions(value){
-        if(!['current','multiples','overlap','orb'].includes(value.mode)||!Number.isFinite(value.radius)||value.radius<.5||value.radius>8||!Number.isFinite(value.exposure)||value.exposure<0||value.exposure>1)throw new Error('Invalid projectile visual options');
+        if(!['current','multiples','overlap','centered','centered-overlap','leading-edge','orb'].includes(value.mode)||!Number.isFinite(value.radius)||value.radius<.5||value.radius>8||!Number.isFinite(value.exposure)||value.exposure<0||value.exposure>1)throw new Error('Invalid projectile visual options');
         visualOptions={mode:value.mode,radius:value.radius,exposure:value.exposure};
     }
     /** @param {number} seconds */
@@ -337,15 +337,45 @@
                  * @param {number} ago */
                 function sample(ago){
                     var point=sourceBolt.position.map(function(v,i){return v-sourceBolt.direction[i]*sourceBolt.weapon.speed*ago/units;}),region=sourceBolt.region||0;
-                    if(sourceBolt.curvature)point=DW.flightHyperbolic.travel(sourceBolt.position,sourceBolt.direction.map(function(v){return -v;}),sourceBolt.weapon.speed*ago/units,sourceBolt.curvature).point;
-                    else if(optical){var ray=metric(optical).ray(sourceBolt.position.map(function(v){return v*units;}),sourceBolt.direction.map(function(v){return -v;}),region);metric(optical).advanceRay(ray,sourceBolt.weapon.speed*ago);point=ray.eye.map(function(v){return v/units;});region=ray.region;}
+                    if(sourceBolt.curvature)point=DW.flightHyperbolic.travel(sourceBolt.position,sourceBolt.direction.map(function(v){return ago>=0?-v:v;}),sourceBolt.weapon.speed*Math.abs(ago)/units,sourceBolt.curvature).point;
+                    else if(optical){var ray=metric(optical).ray(sourceBolt.position.map(function(v){return v*units;}),sourceBolt.direction.map(function(v){return ago>=0?-v:v;}),region);metric(optical).advanceRay(ray,sourceBolt.weapon.speed*Math.abs(ago));point=ray.eye.map(function(v){return v/units;});region=ray.region;}
                     return image(point,region);
                 }
-                var duration=Math.min(sourceBolt.age,visualInterval*visualOptions.exposure),head=sample(0),tail=sample(duration);
+                var centered=visualOptions.mode==='centered'||visualOptions.mode==='centered-overlap',dense=visualOptions.mode==='overlap'||visualOptions.mode==='centered-overlap';
+                var span=visualInterval*visualOptions.exposure;
+                var duration=Math.min(sourceBolt.age,span*(centered?.5:1)),ahead=centered?Math.min(Math.max(0,sourceBolt.weapon.lifetime-sourceBolt.age),span*.5):0;
+                var head=sample(0),tail=sample(duration),front=sample(-ahead);
                 var radius=visualOptions.radius/units*visualScale,count=1;
                 if(head&&tail&&radius>0){
                     var a=head.position.map(function(v,i){return v-pose.eye[i];}),b=tail.position.map(function(v,i){return v-pose.eye[i];}),az=-dot(a,pose.back),bz=-dot(b,pose.back);
-                    if(az>.001&&bz>.001){var travel=Math.hypot(dot(a,pose.right)/az-dot(b,pose.right)/bz,dot(a,pose.up)/az-dot(b,pose.up)/bz);count=Math.min(visualOptions.mode==='multiples'?5:visualOptions.mode==='overlap'?24:1,Math.max(1,Math.ceil(travel/(radius/az*(visualOptions.mode==='multiples'?2.5:1.1)))+1));}
+                    if(az>.001&&bz>.001){var travel=Math.hypot(dot(a,pose.right)/az-dot(b,pose.right)/bz,dot(a,pose.up)/az-dot(b,pose.up)/bz);if(centered&&front){var f=front.position.map(function(v,i){return v-pose.eye[i];}),fz=-dot(f,pose.back);if(fz>.001)travel+=Math.hypot(dot(f,pose.right)/fz-dot(a,pose.right)/az,dot(f,pose.up)/fz-dot(a,pose.up)/az);}
+                    count=Math.min(visualOptions.mode==='multiples'||centered&&!dense?5:dense?24:1,Math.max(1,Math.ceil(travel/(radius/az*(dense?1.1:2.5)))+1));}
+                }
+                if(visualOptions.mode==='leading-edge'&&head){
+                    // A narrow luminous ribbon on the forward hemisphere, with no filled disk.
+                    var relative=head.position.map(function(v,i){return v-pose.eye[i];}),depth=-dot(relative,pose.back);
+                    var mx=dot(bolt.direction,pose.right)*depth+dot(relative,pose.right)*dot(bolt.direction,pose.back);
+                    var my=dot(bolt.direction,pose.up)*depth+dot(relative,pose.up)*dot(bolt.direction,pose.back);
+                    var axial=Math.hypot(mx,my)<1e-8,edgeCenter=head.position,edgeData=group.data;
+                    var angle=Math.atan2(my,mx),arc=axial?Math.PI:Math.PI*.5,segments=axial?24:16;
+                    for(var segment=0;segment<segments;segment++){
+                        [[0,0],[0,1],[1,1],[0,0],[1,1],[1,0]].forEach(function(corner){
+                            var theta=-arc+(segment+corner[0])/segments*arc*2,rad=radius*(corner[1]?.98:.64);
+                            var offset=pose.right.map(function(v,i){return rad*(v*Math.cos(angle+theta)+pose.up[i]*Math.sin(angle+theta));});
+                            var vertex=curvature?DW.flightHyperbolic.offset(edgeCenter,offset,curvature):edgeCenter.map(function(v,i){return v+offset[i];});
+                            edgeData.push.apply(edgeData,vertex.concat([0,corner[1]?1:-1,axial?.8:1-.65*Math.abs(theta)/arc]));
+                        });
+                    }
+                    return;
+                }
+                if(centered&&count>1){
+                    var perSide=Math.max(1,Math.floor((count-1)/2)),weights=perSide*(perSide+1)/2;
+                    for(var sideIndex=-1;sideIndex<=1;sideIndex+=2){
+                        var reach=sideIndex<0?duration:ahead;if(reach<=0)continue;
+                        for(var k=perSide;k>=1;k--){var ghost=sample(-sideIndex*reach*k/perSide);if(ghost)quad(group.data,ghost.position,pose.right,pose.up,radius,radius,(perSide+1-k)/weights*(dense?.8:.425));}
+                    }
+                    if(head)quad(group.data,head.position,pose.right,pose.up,radius,radius,1);
+                    return;
                 }
                 var budget=0;for(var j=1;j<count;j++)budget+=1-j/count;
                 for(var j=count-1;j>=0;j--){var exposure=sample(count>1?duration*j/(count-1):0);if(exposure)quad(group.data,exposure.position,pose.right,pose.up,radius,radius,j===0?1:(1-j/count)/budget*(visualOptions.mode==='overlap'?1.6:.85));}
