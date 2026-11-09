@@ -14,6 +14,8 @@ for(const name of ['container','mixed','fluid']){
  const root=context.kit.buildFreighter(name);let cargoSlots=0;
  // Carry each box's identity in integer U; the vertex stage selects its atlas tile.
  root.traverse(o=>{if(o.userData.part!=='cargo')return;const slot=cargoSlots++;o.traverse(m=>{if(!m.isMesh||m.geometry.userData.cargoVariant===undefined)return;m.geometry=m.geometry.clone();const uv=m.geometry.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,uv.getX(i)+4+slot*2);});});
+ let tankerPods=0;
+ root.traverse(o=>{if(!o.userData.capacityShell)return;const pod=tankerPods++;o.traverse(m=>{if(!m.isMesh||m.name!=='domed bulk-fluid vessel')return;m.geometry=m.geometry.clone();const uv=m.geometry.attributes.uv;for(let i=0;i<uv.count;i++){const u=uv.getX(i),v=uv.getY(i);if(u>1)uv.setXY(i,(64+pod*2+(u-1))*2,1-(1-v));else uv.setXY(i,(65+pod*2+u)*2,1-(-v*2));}});});
  const baked=context.kit.batchStatic(root),batches=[],collisionVertices=[];
  for(const mesh of baked.children){
   const geo=mesh.geometry,p=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv,vertices=new Float32Array(p.count*8);
@@ -28,7 +30,7 @@ for(const name of ['container','mixed','fluid']){
  }
  let radius=0;for(let i=0;i<collisionVertices.length;i+=6)radius=Math.max(radius,Math.hypot(collisionVertices[i],collisionVertices[i+1],collisionVertices[i+2]));
  const collision={version:1,vertexCount:collisionVertices.length,sourceHash:crypto.createHash('sha256').update(Buffer.from(new Float32Array(collisionVertices).buffer)).digest('hex'),radius,tree:build(collisionVertices,Array.from({length:collisionVertices.length/18},(_,i)=>i*18))};
- variants[name]={cargoSlots,manifest:Array.from(root.userData.manifest),engineMouths:root.userData.engineMouths,batches,collision};
+ variants[name]={tankerPods,cargoSlots,manifest:Array.from(root.userData.manifest),engineMouths:root.userData.engineMouths,batches,collision};
  console.log(name,batches.length,batches.reduce((n,b)=>n+b.count/24,0),'triangles');
 }
 const manifest={version:1,source:'kit.js',sourceSha256:crypto.createHash('sha256').update(source).digest('hex'),units:'metres',forward:'+Y',up:'+Z',binary:'convoy-flight.bin',variants};

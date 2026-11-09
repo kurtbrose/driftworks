@@ -31,6 +31,53 @@ function decals(ctx,x,y,variant){
   ctx.font='9px monospace';ctx.fillText('DW-10 / HEAVY FREIGHT',365,71,134);
   ctx.restore();
 }
+export const tankerOperators=[
+ ['SOLSTAR ENERGY','#d8bd9e','#a3412b'],['VERDANT FUELS','#a9c5ac','#285d4e'],
+ ['POLAR TRANSFER','#a9c4d9','#315d84'],['MERIDIAN CHEMICAL','#c6bdce','#665473']
+];
+export function tankerOperator(seed,pod){const owner=cargoVariant(seed,0)%4;return pod===3&&cargoVariant(seed,11)===7?(owner+1)%4:owner;}
+// Only warm, light, low-chroma paint is replaced; printed details retain RGB.
+export function tankerPaintPixel(r,g,b,color){
+ const l=(r+g+b)/3,chroma=Math.max(r,g,b)-Math.min(r,g,b);
+ const clamp=v=>Math.max(0,Math.min(1,v));
+ const mask=clamp((r+g-2*b-1)/10)*clamp((l-75)/45)*clamp((250-l)/15)*(1-clamp((chroma-95)/25));
+ return [r,g,b].map((v,c)=>Math.round(v*(1-mask)+Math.min(255,color[c]*l/198)*mask));
+}
+function replaceTankPaint(ctx,x,y,w,h,color){
+ const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)),pixels=ctx.getImageData(x,y,w,h),cache=new Map();
+ for(let i=0;i<pixels.data.length;i+=4){const p=pixels.data,key=p[i]*65536+p[i+1]*256+p[i+2];let result=cache.get(key);if(!result){result=tankerPaintPixel(p[i],p[i+1],p[i+2],rgb);cache.set(key,result);}p[i]=result[0];p[i+1]=result[1];p[i+2]=result[2];}
+ ctx.putImageData(pixels,x,y);
+}
+function tankerPaint(ctx,image){
+ tankerOperators.forEach(([name,paint,stripe],i)=>{
+  const x=2048+(i%2)*1024,y=Math.floor(i/2)*1024;
+  ctx.drawImage(image,2048,0,2048,2048,x,y,1024,1024);
+  replaceTankPaint(ctx,x,y,1024,1024,paint);
+  ctx.strokeStyle=stripe;ctx.lineWidth=i===1?35:24;ctx.beginPath();ctx.arc(x+512,y+512,474,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle=stripe;ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.fillText(name,x+512,y+345,620);
+  // Keep the inspection disk and its stencils clear below the operator name.
+  ctx.save();ctx.translate(0,20);ctx.beginPath();
+  if(i===0){for(let k=0;k<10;k++){const a=k*Math.PI/5-Math.PI/2,r=k%2?20:45;const px=x+512+Math.cos(a)*r,py=y+260+Math.sin(a)*r;k?ctx.lineTo(px,py):ctx.moveTo(px,py);}}
+  else if(i===1){ctx.moveTo(x+470,y+280);ctx.quadraticCurveTo(x+475,y+210,x+550,y+220);ctx.quadraticCurveTo(x+545,y+290,x+470,y+280);}
+  else if(i===2){ctx.moveTo(x+465,y+280);ctx.lineTo(x+512,y+215);ctx.lineTo(x+560,y+280);ctx.lineTo(x+532,y+265);ctx.lineTo(x+510,y+245);ctx.lineTo(x+493,y+280);}
+  else{ctx.moveTo(x+465,y+250);ctx.lineTo(x+512,y+215);ctx.lineTo(x+560,y+250);ctx.lineTo(x+512,y+285);}
+  ctx.closePath();ctx.fill();ctx.restore();
+  const bx=(i%2)*1024,by=2048+Math.floor(i/2)*512;
+  ctx.drawImage(image,0,2048,2048,1024,bx,by,1024,512);
+  // Remove the two baked registry/service rows using unlettered paint from the
+  // same barrel. Circumferential welds remain aligned through the label zones.
+  for(const row of [96,352])ctx.drawImage(image,0,2080,2048,100,bx,by+row,1024,84);
+  replaceTankPaint(ctx,bx,by,1024,512,paint);
+  ctx.fillStyle=stripe;ctx.fillRect(bx+82,by,64,512);if(i===2)ctx.fillRect(bx+172,by,24,512);
+  for(const row of [0,256]){
+    ctx.font='bold 25px monospace';ctx.fillText('FLUID / 04',bx+275,by+133+row,138);
+    ctx.font='14px monospace';ctx.fillText('DW TRANSPORT',bx+275,by+155+row,138);
+    ctx.font='bold 30px sans-serif';ctx.fillText(name,bx+660,by+133+row,520);
+    ctx.font='16px monospace';ctx.fillText('FLEET '+String(i+1).padStart(2,'0')+' / TRANSFER SERVICE',bx+660,by+157+row,510);
+  }
+  ctx.textAlign='start';
+ });
+}
 const prepared=new WeakMap();
 export function prepareCargoAtlas(image){
   if(prepared.has(image))return prepared.get(image);
@@ -87,7 +134,7 @@ export function prepareCargoAtlas(image){
     }
     ctx.restore();decals(ctx,x,y,variant);
   });
-  console.info('Cargo paint preparation: '+(performance.now()-started).toFixed(1)+' ms (eight variants, once)');
+  tankerPaint(ctx,image);console.info('Fleet paint preparation: '+(performance.now()-started).toFixed(1)+' ms (cargo and tanker variants, once)');
   prepared.set(image,canvas);return canvas;
 }
 // Flight batches use the established HTMLImageElement texture contract.

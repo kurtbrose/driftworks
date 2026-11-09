@@ -153,6 +153,15 @@ assert.equal(variants.size,8,'eight paint jobs from the neutral cargo sheet');
 const meta=require('../assets/ships/industrial-kit/convoy-flight.json');
 assert.equal(meta.sourceSha256,require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync('assets/ships/industrial-kit/kit.js')).digest('hex'),'flight bake matches its editable source');
 const binary=require('node:fs').readFileSync('assets/ships/industrial-kit/convoy-flight.bin');
+assert.equal(meta.variants.fluid.tankerPods,4);
+const tankIds=new Set();
+for(const batch of meta.variants.fluid.batches)if(batch.textured)for(let i=6;i<batch.count;i+=8){const u=binary.readFloatLE(batch.offset+i*4);if(u>=64)tankIds.add(Math.floor((Math.floor(u)-64)/2));}
+assert.equal(tankIds.size,4,'four independently identified pods retain shared geometry');
+for(const seed of [1,17,299]){
+ const fleet=kit.buildFreighter('fluid',{cargoSeed:seed}),pods=fleet.children.filter(o=>o.userData.capacityShell);
+ assert.equal(pods[0].userData.operator,pods[1].userData.operator);assert.equal(pods[1].userData.operator,pods[2].userData.operator);
+ assert(bounds(fleet).min.distanceTo(bounds(kit.buildFreighter('fluid')).min)<1e-5,'livery never changes metre bounds');
+}
 for(const name of ['container','mixed']){
  const slots=new Set();
  for(const batch of meta.variants[name].batches)if(batch.textured)for(let i=6;i<batch.count;i+=8){const u=binary.readFloatLE(batch.offset+i*4);if(u>=2)slots.add(Math.floor(u)-2);}

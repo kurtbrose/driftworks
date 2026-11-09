@@ -1,4 +1,4 @@
-import {prepareCargoAtlas,cargoVariant} from './cargo-paint.js';
+import {prepareCargoAtlas,cargoVariant,tankerOperator} from './cargo-paint.js';
 import * as T from 'three';
 
 // Metres; +X aft, +Y up, +Z starboard. Named groups retain module/joint pivots.
@@ -263,6 +263,16 @@ function service(g){
 }
 function crane(g){handlingArm(g,false);}
 
+function paintTankerShell(shell,owner){
+  shell.geometry=shell.geometry.clone();const uv=shell.geometry.attributes.uv;
+  const base=shell.geometry.userData.tankerBaseUV||Array.from(uv.array);
+  shell.geometry.userData.tankerBaseUV=base;
+  for(let n=0;n<uv.count;n++){
+    const u=base[n*2],v=base[n*2+1];
+    if(u>1)uv.setXY(n,1+(owner%2)*.5+(u-1)*.5,1-Math.floor(owner/2)*.5-(1-v)*.5);
+    else uv.setXY(n,(owner%2)*.5+u*.5,-Math.floor(owner/2)*.25+v*.5);
+  }
+}
 function bulkTank(g){
   // A continuous 24 m shell: 16 m barrel and two ellipsoidal domed heads.
   const shell=geometry('bulk fluid shell / 24m',()=>{
@@ -274,7 +284,7 @@ function bulkTank(g){
     for(let i=0;i<stations.length-1;i++)for(let j=0;j<segments;j++){if(Math.abs(stations[i+1].x-stations[i].x)<1e-8)continue;const a=i*(segments+1)+j,b=a+segments+1,c=a+1,d=b+1;if(i>0)indices.push(a,c,b);if(i<stations.length-2)indices.push(b,c,d);}
     const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.setIndex(indices);return geo;
   });
-  mesh(g,shell,'paint',[0,0,0],'domed bulk-fluid vessel');
+  const vessel=mesh(g,shell,'paint',[0,0,0],'domed bulk-fluid vessel');if(typeof document!=='undefined')paintTankerShell(vessel,0);
   for(const x of [-7.5,0,7.5]){
     const strap=geometry('bulk structural band',()=>{const p=[[5.5,-.18],[5.68,-.18],[5.68,.18],[5.5,.18],[5.5,-.18]].map(([r,y])=>new T.Vector2(r,y));const geo=new T.LatheGeometry(p,48);geo.normalizeNormals();return geo;});
     const band=mesh(g,strap,x===0?'ochre':'edge',[x,0,0],'structural tank band');band.rotation.z=-Math.PI/2;
@@ -572,7 +582,13 @@ export function buildFreighter(name,options={}){
     const source=part('bulkTank').getObjectByName('domed bulk-fluid vessel');
     for(const x of [5,30])for(const z of [-6.2,6.2]){
       const vessel=group(g,'permanent fluid vessel',[x,0,z]);vessel.userData.capacityShell={length:24,diameter:11};
-      vessel.add(source.clone());
+      const shell=source.clone();
+      if(options.cargoSeed!==undefined){
+        const pod=(x===5?0:2)+(z>0?1:0),owner=tankerOperator(options.cargoSeed,pod);
+        paintTankerShell(shell,owner);
+        vessel.userData.operator=owner;vessel.userData.podNumber=pod+1;
+      }
+      vessel.add(shell);
       for(const dx of [-7.5,7.5]){
         ring(vessel,dx,5.62,'edge',.18).name='load collar';
         for(const y of [-2.8,2.8])beam(g,[x+dx,Math.sign(y)*.5,0],[x+dx,y,z-Math.sign(z)*4.88],.32,'steel');
@@ -713,7 +729,7 @@ export function exportGLTF(root){
     if(obj.isMesh){
       const geo=obj.geometry,mat=obj.material;
       if(!matMap.has(mat)){const pbr={baseColorFactor:[...mat.color.toArray(),1],metallicFactor:mat.metalness,roughnessFactor:mat.roughness};if(mat===materials.paint&&atlasURI)pbr.baseColorTexture={index:0};const entry={name:Object.keys(materials).find(k=>materials[k]===mat),pbrMetallicRoughness:pbr};if(mat.emissive&&mat.emissive.getHex()>0){entry.emissiveFactor=mat.emissive.toArray();if(mat.emissiveIntensity!==1){entry.extensions={KHR_materials_emissive_strength:{emissiveStrength:mat.emissiveIntensity}};doc.extensionsUsed=["KHR_materials_emissive_strength"];}}matMap.set(mat,doc.materials.length);doc.materials.push(entry);}
-      if(!geoMap.has(geo)){const attrs={POSITION:accessor(geo.attributes.position.array,'VEC3',34962),NORMAL:accessor(geo.attributes.normal.array,'VEC3',34962)};if(geo.attributes.uv){const variant=geo.userData.cargoVariant,neutral=typeof document==='undefined'&&variant!==undefined;attrs.TEXCOORD_0=accessor(Float32Array.from(geo.attributes.uv.array,(value,i)=>{if(neutral)value+=i%2?Math.floor(variant/4)*.25:-(variant%4)*.25;return i%2?(1-value)*2/3:value*.5;}),"VEC2",34962);}const primitive={attributes:attrs};if(geo.index)primitive.indices=accessor(geo.index.array,'SCALAR',34963);geoMap.set(geo,primitive);}
+      if(!geoMap.has(geo)){const attrs={POSITION:accessor(geo.attributes.position.array,'VEC3',34962),NORMAL:accessor(geo.attributes.normal.array,'VEC3',34962)};if(geo.attributes.uv){const variant=geo.userData.cargoVariant,neutral=typeof document==='undefined'&&variant!==undefined;attrs.TEXCOORD_0=accessor(Float32Array.from(geo.attributes.uv.array,(value,i)=>{if(typeof document==='undefined'&&geo.userData.tankerBaseUV)value=geo.userData.tankerBaseUV[i];if(neutral)value+=i%2?Math.floor(variant/4)*.25:-(variant%4)*.25;return i%2?(1-value)*2/3:value*.5;}),"VEC2",34962);}const primitive={attributes:attrs};if(geo.index)primitive.indices=accessor(geo.index.array,'SCALAR',34963);geoMap.set(geo,primitive);}
       const key=geo.uuid+':'+mat.uuid;if(!meshMap.has(key)){meshMap.set(key,doc.meshes.length);doc.meshes.push({name:obj.name,primitives:[{...geoMap.get(geo),material:matMap.get(mat)}]});}node.mesh=meshMap.get(key);
     }
     if(obj.children.length)node.children=obj.children.map(visit);return index;

@@ -768,3 +768,39 @@ disable this selection, and target previews use the same freighter seed.
 Regression coverage checks the actual cargo-01..cargo-30 IDs produce thirty
 distinct stable load combinations and verifies all 24/8 box identities in the
 production binary. Geometry/collision positions remain unchanged by seeding.
+
+## Tanker operator liveries (2026-11-09)
+
+Four fictional operators reuse the downloaded dome/barrel artwork: Solstar
+Energy, Verdant Fuels, Polar Transfer and Meridian Chemical. Canvas replaces
+only warm, light, low-chroma beige paint; dark stencils, gray weld details,
+ochre accents and highlights retain their original color. Operator rings,
+emblems and names are separate one-time painted markings. The dome ring sits
+outside technical stencils; barrel registry rows are cleared using aligned
+unlettered source paint and redrawn in space separate from the livery bands.
+
+A ship's stable seed selects a coherent operator; three pods always match and
+the fourth occasionally has a replacement operator. The source review uses
+the same recipe and the Shuffle fleet control. Existing per-instance atlas
+selection also covers tank shells and target previews. No vertices, draws,
+material batches or texture dimensions were added. Tanker UV tags start at U64
+and encode pod plus head/barrel identity; the vertex stage restores the correct
+operator's projected dome and periodic barrel region.
+
+Runtime packing divides the former 2048-square dome into four 1024-square
+operator regions, and the former 2048x1024 barrel into four 1024x512 regions.
+This trades close-up texel density for four fleet liveries while keeping the
+4096x3072 atlas allocation and the downloaded image bytes unchanged. The source
+art is retained at its original resolution; offline Node glTF keeps neutral
+full-resolution artwork as a fallback. The prepared atlas measured 771ms once
+for cargo and tanker recipes combined on this machine, excluding flight image
+encoding/decoding. No steady-state frame-time claim is made.
+
+Reviewed dome/side label clearances and the selectively recolored quarter view.
+Focused tests cover operator coherence, occasional replacement selection, exact
+RGB preservation of non-beige examples, export geometry and renderer submission.
+
+The paint mask includes warm blended weld-edge pixels so beige halos do not
+remain against blue/green finishes. It preserves highly saturated ochre decals
+and dark/neutral printed details; regressions include a warm antialiased fringe
+and unchanged stencil/ochre/highlight samples.
