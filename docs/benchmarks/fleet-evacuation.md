@@ -1,5 +1,55 @@
 # Fleet evacuation prototype readiness
 
+## Staged Jade ambush follow-up
+
+The current mission replaces the original opening battle below with a quiet
+patrol, a hostile opening, a physical convoy dodge, capital bombardment and delayed
+relief. The earlier measurements remain historical, not current timing claims.
+
+The actual armed rig was stepped alongside the real mission through Bastion's
+96–126 s arrival window, without moving the enemy fighters into a test firing
+range. After keeping Bastion nearer the convoy and fixing premature strike-wing
+withdrawal, the seed-29 probe recorded 832 point-defense rounds and 264 confirmed
+capital-rig hits. Two successive wings fired 80 cargo-directed fighter rounds
+before relief. Only the test pilot's durability was increased; cargo, opponents,
+weapons, steering and shields retained their normal rules. These are combat
+behavior measurements, not frame-time measurements.
+
+A separate foreground frozen review at roughly 120 s used the real session and
+production artwork over Jade, 1920 × 1080 backing, DPR 1.5, 100% render scale.
+The review fast-forwards convoy physics without capital scenery fire, then resumes;
+it is useful for presentation inspection, not an exact replay of capital casualties.
+Camera: about 2.3 km before the rescue mouth and 450 m above it, facing the mouth.
+The same camera, actors and effects were frozen for OFF/ON/ON/OFF, with 20 warm-up
+and 90 samples per block. No tests or rebuilds were launched by this chat during
+sampling; another development chat was active, so background machine load was
+not fully controlled.
+
+| Capital actors | CPU submission median / p95 | Frame median / p95 | Draws | Triangles |
+| --- | --- | --- | --- | --- |
+| OFF | 2.50 / 3.10 ms | 13.30 / 13.50 ms | 60 | 1,752,100 |
+| ON | 8.10 / 9.70 ms | 13.30 / 13.50 ms | 325 | 1,832,858 |
+
+The added armed capital/effects submission is about 5.6 ms median in this view.
+That is a real cost; refresh-limited cadence does not establish spare live-combat
+budget. GPU execution remains unmeasured. Shared immutable hull/turret buffers
+remain in use; the focused capital regression checks reuse and replacement-state
+reset. Larger fleets should be profiled before adding actors.
+
+Visually inspected the initial Jade patrol, Bastion's cover position and close
+underside, including hull crossing the viewport boundary. Original scale,
+finishes and articulated geometry were preserved. The shared-wormhole work in
+the other chat owns traversal/destination skies and attached-effect placement;
+this encounter pass does not claim that integration complete.
+
+Ignored evidence: `output/convoy-ambush/tactics-final.txt`,
+`fighter-intent-before.jsonl`, `fighter-intent-after.jsonl`, `capital-abba.txt`,
+`bastion-cover.png`, and `bastion-underside.png`. The before probe caught healthy
+waves 2 and 3 withdrawing with zero shots; the regression now guards against
+that exact failure and against retreat goals too close to satisfy departure.
+
+## Original battle prototype
+
 Two original Aegis capitals replace the convoy's idle reception pair in the
 separate `fleet-evacuation` sortie. They retain authored metre scale, materials,
 component pivots, hull/shield contacts and projectile damage. Eighteen screen
