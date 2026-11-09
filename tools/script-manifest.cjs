@@ -31,6 +31,7 @@ const groups = {
 };
 
 const profiles = {
+  objectViewer: {entries: ['@headless', '@audio', 'src/model-viewer.js', 'vendor/three/build/three.global.js', 'src/station-models.js', 'src/tactical/picking.js', 'src/tactical/input3d.js', 'src/scene3d.js', 'src/ship-art.js', 'src/game.js', 'src/sky-effects.js', 'src/sky-lighting.js', 'src/sky-system.js', 'src/impact-cues.js', 'experiments/skybox.js', 'src/aegis-sim.js', 'src/aegis-visual.js', 'src/aegis-battle.js', 'experiments/aegis-flight.js', 'experiments/convoy-scenery.js', {src:'studies/object-viewer.js',type:'module'}]},
   convoyGuidanceReview: {entries: ['@headless', 'vendor/three/build/three.global.js', 'src/station-models.js', 'src/tactical/picking.js', 'src/tactical/input3d.js', 'src/scene3d.js', 'src/sky-lighting.js', 'src/sky-system.js', 'src/impact-cues.js', 'experiments/skybox.js', 'experiments/convoy-scenery.js', 'studies/convoy-guidance-model.js', 'studies/convoy-guidance-review.js']},
   hyperbolicFlight: {entries: ['@flight']},
   terrain: {entries: ['@simulation', 'src/asteroid-art.js', '@meshes', 'src/asteroid-terrain.js']},

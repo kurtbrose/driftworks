@@ -1,5 +1,9 @@
 # Flight artwork
 
+Use the [universal object viewer](object-viewer.md) as the main inspection entry
+point for flight fighters, capitals, freighters and wormholes. Older pages
+retain their specialized authoring and comparison roles.
+
 [Architecture overview](architecture.md) · [Script loading](script-loading.md) · [Test groups](testing.md)
 
 ## Imported flight artwork experiment

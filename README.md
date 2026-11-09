@@ -5,6 +5,10 @@ static browser site. The main experience is the [3D flight lab](experiments/flig
 with fighters, capital ships, weapons, shields, AI and space environments.
 The root page indexes flight missions, asset viewers and experiments.
 
+Inspect fighters, the Aegis capital ship, freighters and wormholes in the
+[universal object viewer](studies/object-viewer.html). Choose a sky, orbit and
+zoom, or shuffle cargo. See [viewer controls](docs/object-viewer.md).
+
 Start with the [flight architecture](docs/flight-architecture.md),
 [flight artwork](docs/flight-artwork.md) and
 [flight presentation](docs/flight-presentation.md) references for development.
