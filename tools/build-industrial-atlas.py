@@ -145,9 +145,22 @@ source = source.resize((2048, 2048), Image.Resampling.LANCZOS)
 center = source.getpixel((24, 24))
 channels = source.split()
 source = Image.merge("RGB", tuple(ch.point(lambda v, delta=PALETTE[15][1][i]-center[i]: max(0,min(255,v+delta))) for i,ch in enumerate(channels)))
-wide = Image.new("RGB", (4096, 2048))
+wide = Image.new("RGB", (4096, 3072), PALETTE[15][1])
 wide.paste(atlas, (0, 0))
 wide.paste(source, (2048, 0))
+# A padded 2048x1024 barrel strip, with a quiet wrap join.
+barrel = Image.open(ROOT / "assets/ships/industrial-kit/barrel-source-v1.png").convert("RGB")
+base = barrel.getpixel((12, 12))
+barrel = Image.merge("RGB", tuple(ch.point(lambda v, delta=PALETTE[15][1][i]-base[i]: max(0,min(255,v+delta))) for i,ch in enumerate(barrel.split())))
+barrel = barrel.resize((2048, 1024), Image.Resampling.LANCZOS)
+# Blend perimeter to quiet ivory so the wrap and head joins cannot form a hard line.
+mask = Image.new("L", barrel.size, 255)
+mp = mask.load()
+for y in range(1024):
+    for x in range(2048):
+        mp[x,y] = round(255*min(1, x/32, (2047-x)/32, y/32, (1023-y)/32))
+barrel = Image.composite(barrel, Image.new("RGB", barrel.size, PALETTE[15][1]), mask)
+wide.paste(barrel, (0, 2048))
 atlas = wide
 
 target = ROOT / "assets/ships/industrial-kit/panels.png"

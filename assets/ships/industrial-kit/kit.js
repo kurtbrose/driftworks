@@ -17,7 +17,7 @@ const materials={
 };
 const geometries=new Map();
 let atlasURI=null;
-export function setSurfaceTexture(texture,uri){texture.repeat.x=.5;texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=8;materials.paint.map=texture;materials.paint.needsUpdate=true;atlasURI=uri;}
+export function setSurfaceTexture(texture,uri){texture.repeat.set(.5,2/3);texture.offset.y=1/3;texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=8;materials.paint.map=texture;materials.paint.needsUpdate=true;atlasURI=uri;}
 function geometry(key,make){if(!geometries.has(key))geometries.set(key,make());return geometries.get(key);}
 function mesh(g,geo,mat,p=[0,0,0],name=mat){const m=new T.Mesh(geo,materials[mat]);m.name=name;m.position.set(...p);m.castShadow=true;m.receiveShadow=true;g.add(m);return m;}
 
@@ -251,7 +251,7 @@ function bulkTank(g){
     for(let i=0;i<=10;i++){const a=-Math.PI/2+i*Math.PI/20;stations.push({x:-8+4*Math.sin(a),r:radius*Math.cos(a),nx:Math.sin(a)/4,nr:Math.cos(a)/radius,head:true});}
     for(const x of [-8,-4,0,4,8])stations.push({x,r:radius,nx:0,nr:1/radius});
     for(let i=0;i<=10;i++){const a=i*Math.PI/20;stations.push({x:8+4*Math.sin(a),r:radius*Math.cos(a),nx:Math.sin(a)/4,nr:Math.cos(a)/radius,head:true});}
-    for(const s of stations)for(let j=0;j<=segments;j++){const a=j*Math.PI*2/segments,c=Math.cos(a),z=Math.sin(a),n=new T.Vector3(s.nx,s.nr*c,s.nr*z).normalize();positions.push(s.x,s.r*c,s.r*z);normals.push(n.x,n.y,n.z);if(s.head)uvs.push(1.5-Math.sign(s.x)*s.r*z/radius*.46,.5+s.r*c/radius*.46);else uvs.push((3+.008+(s.x+12)/24*.984)/4,(.008+(1-j/segments)*.984)/4);}
+    for(const s of stations)for(let j=0;j<=segments;j++){const a=j*Math.PI*2/segments,c=Math.cos(a),z=Math.sin(a),n=new T.Vector3(s.nx,s.nr*c,s.nr*z).normalize();positions.push(s.x,s.r*c,s.r*z);normals.push(n.x,n.y,n.z);if(s.head)uvs.push(1.5-Math.sign(s.x)*s.r*z/radius*.46,.5+s.r*c/radius*.46);else uvs.push(.008+(s.x+8)/16*.984,-.49+(1-j/segments)*.48);}
     for(let i=0;i<stations.length-1;i++)for(let j=0;j<segments;j++){if(Math.abs(stations[i+1].x-stations[i].x)<1e-8)continue;const a=i*(segments+1)+j,b=a+segments+1,c=a+1,d=b+1;if(i>0)indices.push(a,c,b);if(i<stations.length-2)indices.push(b,c,d);}
     const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geo.setIndex(indices);return geo;
   });
@@ -694,7 +694,7 @@ export function exportGLTF(root){
     if(obj.isMesh){
       const geo=obj.geometry,mat=obj.material;
       if(!matMap.has(mat)){const pbr={baseColorFactor:[...mat.color.toArray(),1],metallicFactor:mat.metalness,roughnessFactor:mat.roughness};if(mat===materials.paint&&atlasURI)pbr.baseColorTexture={index:0};const entry={name:Object.keys(materials).find(k=>materials[k]===mat),pbrMetallicRoughness:pbr};if(mat.emissive&&mat.emissive.getHex()>0){entry.emissiveFactor=mat.emissive.toArray();if(mat.emissiveIntensity!==1){entry.extensions={KHR_materials_emissive_strength:{emissiveStrength:mat.emissiveIntensity}};doc.extensionsUsed=["KHR_materials_emissive_strength"];}}matMap.set(mat,doc.materials.length);doc.materials.push(entry);}
-      if(!geoMap.has(geo)){const attrs={POSITION:accessor(geo.attributes.position.array,'VEC3',34962),NORMAL:accessor(geo.attributes.normal.array,'VEC3',34962)};if(geo.attributes.uv)attrs.TEXCOORD_0=accessor(Float32Array.from(geo.attributes.uv.array,(value,i)=>i%2?1-value:value*.5),"VEC2",34962);const primitive={attributes:attrs};if(geo.index)primitive.indices=accessor(geo.index.array,'SCALAR',34963);geoMap.set(geo,primitive);}
+      if(!geoMap.has(geo)){const attrs={POSITION:accessor(geo.attributes.position.array,'VEC3',34962),NORMAL:accessor(geo.attributes.normal.array,'VEC3',34962)};if(geo.attributes.uv)attrs.TEXCOORD_0=accessor(Float32Array.from(geo.attributes.uv.array,(value,i)=>i%2?(1-value)*2/3:value*.5),"VEC2",34962);const primitive={attributes:attrs};if(geo.index)primitive.indices=accessor(geo.index.array,'SCALAR',34963);geoMap.set(geo,primitive);}
       const key=geo.uuid+':'+mat.uuid;if(!meshMap.has(key)){meshMap.set(key,doc.meshes.length);doc.meshes.push({name:obj.name,primitives:[{...geoMap.get(geo),material:matMap.get(mat)}]});}node.mesh=meshMap.get(key);
     }
     if(obj.children.length)node.children=obj.children.map(visit);return index;

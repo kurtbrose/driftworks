@@ -688,3 +688,19 @@ collision positions are unchanged: tanker 26,638 triangles and six batches. The
 atlas doubles base RGBA storage from 16 to 32 MiB (about 21.3 MiB additional
 with mipmaps), shared by the fleet. No frame-time improvement is claimed.
 Front close-up reviewed; evidence lives in output/freighter-dome-uv/.
+
+## Illustrated cylinder barrels (2026-11-08)
+
+barrel-source-v1.png is generated matching ivory panel artwork (native 1254
+square). The atlas builder prepares a 2048x1024 strip with a 32-pixel quiet
+perimeter, normalizes the paint field, and packs it below the existing sheet.
+The atlas is now 4096x3072, shared by the fleet. Barrel UVs map the full 16m
+length and circumference into that strip; domes keep their separate projection.
+No custom shader, geometry or material batch was added.
+
+The authoring map now uses repeat (.5, 2/3) and offset (0, 1/3). Flight and glTF
+exports bake U*.5 and (1-V)*2/3, keeping every atlas region in the same pixel
+location. Base RGBA storage is 48 MiB (about 64 MiB with mipmaps), 16 MiB base
+more than the dome-only atlas. Frame time is not benchmarked for this art pass.
+Front/quarter and side surfaces and ordinary flight integration were reviewed;
+focused geometry/export and collision checks cover the rebuilt production bake.
