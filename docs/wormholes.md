@@ -97,3 +97,18 @@ The GPU regression also checks closed/opening/closed pixel counts and an offscre
 source mouth. These checks do not prove destination-space continuation for the
 staged fleet adapter. The main traversable Ellis compositor retains its existing
 steady-open behavior; this formation envelope is currently wired to staged mouths.
+
+## Several mouths in one space
+
+`separate(position, axis, radius, others, clearance)` finds the first clear
+position along an approach axis. It unions the forbidden intervals from all
+existing same-space mouths; input geometry is unchanged. The staged rescue mouth
+uses this constraint with 250 metres of surface clearance from the hostile mouth.
+
+Separated spheres can still overlap in screen projection. The staged sky chooses
+the nearest positive sphere entry for each pixel, independently of array order.
+`occluded(eye, point, mouths)` performs the corresponding finite sightline check
+for rim segments, so the farther rim stops behind the nearer aperture. This
+does not add recursive views through multiple wormholes. Local checks include
+1,000 generated placements, production rim construction, the fleet mission replay
+and a GPU pixel comparison after swapping the near/far sky input order.

@@ -26,6 +26,8 @@ view.combat.time=portal.closesAt;rig.geometry();assert.equal(remoteOwner.visible
 view.combat.time=32;
 plan.rescueAt=96;plan.bastionClearAt=116;plan.exit.opensAt=96;
 view.combat.time=view.combat.convoy.elapsed=96;DW.convoyMission.step(view.combat,0);
+const gap=Math.hypot(...plan.exit.position.map((v,k)=>(v-portal.position[k])*U));
+assert(gap>=plan.exit.radiusM+portal.radiusM+250-1e-6,'Rescue and hostile mouths must have disjoint physical volumes with clearance');
 const atOpening=rig.geometry(),openingOwners=[...new Set(atOpening.map(batch=>batch.placement))];
 assert(openingOwners.some(owner=>owner.visible===false),'A newly opening rescue mouth cannot reveal its capital at zero aperture');
 view.combat.time=view.combat.convoy.elapsed=97;

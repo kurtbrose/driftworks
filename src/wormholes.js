@@ -26,6 +26,28 @@
     /** Reversals start at the current value, rather than restarting or popping.
      * @param {import('../experiments/types').WormholeLife} life @param {boolean} open @param {number} time */
     function request(life,open,time){var from=phase(time,life).amount,to=open?1:0,duration=(open?(life.openSeconds||3):(life.closeSeconds||2))*Math.abs(to-from);life.transition={at:time,from:from,to:to,duration:Math.max(.001,duration)};}
+    /** Whether another mouth lies before a world-space point on its sightline.
+     * @param {number[]} eye @param {number[]} point @param {{position:number[];radius:number}[]} mouths */
+    function occluded(eye,point,mouths){
+        var ray=point.map(function(v,k){return v-eye[k];}),a=dot(ray,ray);if(a<1e-20)return false;
+        return mouths.some(function(m){if(m.radius<=0)return false;var rel=eye.map(function(v,k){return v-m.position[k];}),b=dot(rel,ray),c=dot(rel,rel)-m.radius*m.radius,disc=b*b-a*c;
+            if(disc<=0)return false;var enter=(-b-Math.sqrt(disc))/a;return enter>=0&&enter<1-1e-6;
+        });
+    }
+    /** Move a proposed mouth along its approach axis until it clears existing mouths.
+     * All arguments share caller units. Existing mouths are in the same space.
+     * @param {number[]} position @param {number[]} axis @param {number} radius
+     * @param {{position:number[];radius:number}[]} others @param {number} clearance */
+    function separate(position,axis,radius,others,clearance){
+        var length=Math.hypot.apply(null,axis);if(!length||radius<=0||clearance<0)throw Error('Invalid mouth placement');
+        var direction=axis.map(function(v){return v/length;}),intervals=others.map(function(other){
+            var delta=position.map(function(v,k){return v-other.position[k];}),along=dot(delta,direction),limit=radius+other.radius+clearance;
+            var disc=along*along-dot(delta,delta)+limit*limit;
+            return disc>0?[-along-Math.sqrt(disc),-along+Math.sqrt(disc)]:[Infinity,-Infinity];
+        }).sort(function(a,b){return a[0]-b[0];}),shift=0;
+        intervals.forEach(function(interval){if(interval[0]<shift&&interval[1]>shift)shift=interval[1];});
+        return position.map(function(v,k){return v+direction[k]*shift;});
+    }
     /** Antipodal thin-shell gluing. All positions/radii use the caller's scene units.
      * @param {number[]} v @param {number[]} normal */
     function transport(v,normal){var d=dot(v,normal);return v.map(function(x,k){return 2*d*normal[k]-x;});}
@@ -73,5 +95,5 @@
         placement.clipPlane=mode==='aperture'?undefined:normal.map(function(v){return v*sign;}).concat(-sign*dot(normal,position));
         return placement;
     }
-    DW.wormholes={phase:phase,request:request,define:define,cross:cross,transport:transport,own:own,resolve:resolve,clear:clear,bindRig:bindRig,mouth:mouth};
+    DW.wormholes={occluded:occluded,separate:separate,phase:phase,request:request,define:define,cross:cross,transport:transport,own:own,resolve:resolve,clear:clear,bindRig:bindRig,mouth:mouth};
 }());

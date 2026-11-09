@@ -5,8 +5,8 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const {chromium}=require(require.resolve('playwright',{paths:[process.env.DRIFTWORKS_BROWSER_MODULES||process.cwd()]}));
 const root=path.resolve(__dirname,'..'),scratch=path.join(root,'.scratch/wormhole-placement'),output=path.join(root,'output/wormhole-placement');
 fs.mkdirSync(scratch,{recursive:true});fs.mkdirSync(output,{recursive:true});
-const scripts=require('./script-manifest.cjs').files('threeTests');
-const html=`<!doctype html><style>html,body{margin:0;background:black}#view{width:640px;height:480px}</style><div id="view"></div><script>window.DRIFTWORKS_TEST_MODE=true;</script>${scripts.map(f=>`<script src="../../${f}"></script>`).join('\n')}`;
+const scripts=[...new Set(require('./script-manifest.cjs').files('threeTests').concat(['src/asset-versions.js','experiments/flight-missions.js','src/sky-lighting.js','src/sky-system.js','src/impact-cues.js','experiments/skybox.js']))];
+const html=`<!doctype html><base href="/experiments/"><style>html,body{margin:0;background:black}#view{width:640px;height:480px}</style><div id="view"></div><script>window.DRIFTWORKS_TEST_MODE=true;</script>${scripts.map(f=>`<script src="../../${f}"></script>`).join('\n')}`;
 fs.writeFileSync(path.join(scratch,'browser.html'),html);
 (async()=>{
  const browser=await chromium.launch({channel:process.env.DRIFTWORKS_BROWSER_CHANNEL||(process.platform==='win32'?'chrome':undefined),headless:!process.argv.includes('--visible'),args:process.env.CI?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
@@ -65,8 +65,24 @@ fs.writeFileSync(path.join(scratch,'browser.html'),html);
    owner.visible=true;owner.clipPlane=undefined;owner.portalClip=undefined;pixels([hull],[effect]);
    return {rows,opening,hidden,negativeControl,width:canvas.width,height:canvas.height};
   });
+  await page.evaluate(()=>{
+   const host=document.createElement('div');Object.assign(host.style,{width:'320px',height:'240px'});document.body.appendChild(host);
+   window.overlapSky=Driftworks.flightSkybox.create(host,{preserveDrawingBuffer:true});window.overlapHost=host;
+  });
+  await page.waitForLoadState('networkidle');
+  const skyOverlap=await page.evaluate(()=>{
+   const sky=window.overlapSky,canvas=window.overlapHost.querySelector('canvas'),gl=canvas.getContext('webgl');
+   const pose={eye:[0,0,0],right:[1,0,0],up:[0,0,1],back:[0,-1,0]};
+   const near={position:[0,20,0],radius:100},far={position:[3,40,0],radius:200};
+   function pixels(a,b){sky.render(pose,1,false,0,0,{...a,other:b});const p=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,p);return p;}
+   const first=pixels(near,far),second=pixels(far,near);let mismatch=0,lit=0;
+   for(let i=0;i<first.length;i++){if(first[i]!==second[i])mismatch++;if(i%4!==3&&first[i]>0)lit++;}
+   if(mismatch)throw Error('Overlapping mouth order changes sky pixels: '+mismatch);
+   if(!lit)throw Error('Overlapping sky fixture is empty');
+   return {mismatch,lit};
+  });
   assert.equal(results.rows.length,27);assert.deepEqual(errors,[]);
-  await page.screenshot({path:path.join(output,'gpu-fixture.png')});fs.writeFileSync(path.join(output,'gpu.json'),JSON.stringify({results,errors},null,2)+'\n');
-  console.log('PASS shared wormhole GPU placement: 27 hull/effect pixel-mask comparisons and hidden-owner suppression');
+  await page.screenshot({path:path.join(output,'gpu-fixture.png')});fs.writeFileSync(path.join(output,'gpu.json'),JSON.stringify({results,skyOverlap,errors},null,2)+'\n');
+  console.log('PASS shared wormhole GPU placement: 27 hull/effect pixel-mask comparisons and hidden-owner suppression; nearest-mouth sky order verified');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

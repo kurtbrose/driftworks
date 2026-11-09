@@ -311,19 +311,23 @@ ${bridgeOptics?bridgeOptics.shader:'uniform float ellisRegion; struct EllisRay {
 ${bridgeOptics&&bridgeOptics.latticeShader?bridgeOptics.latticeShader:'vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){return vec4(0.);}'}
 void main(){
     if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
+    vec3 arrivalRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+    float nearestMouth=1.e30;vec3 nearestNormal=vec3(0.);
     for(int mouthIndex=0;mouthIndex<2;mouthIndex++){vec4 mouth=mouthIndex==0?arrivalMouth:arrivalMouth2;
     if(mouth.w>0.){
-        vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
+        vec3 ray=arrivalRay;
         vec3 offset=(arrivalEye-mouth.xyz)/mouth.w;
         float along=dot(offset,ray),impact2=dot(offset,offset)-along*along;
         if(along<0. && impact2<1. && dot(offset,offset)>1.){
-            // The same antipodal gluing used by the traversable thin-shell bridge.
-            vec3 normal=normalize(offset+ray*(-along-sqrt(max(0.,1.-impact2))));
-            vec3 outgoing=normalize(2.*dot(ray,normal)*normal-ray);
-            vec2 uv=vec2(atan(outgoing.y,outgoing.x)/6.28318530718+.5,acos(clamp(outgoing.z,-1.,1.))/3.14159265359);
-            gl_FragColor=vec4(texture2D(panorama,uv).rgb*exposure,1.);return;
+            float entry=-along-sqrt(max(0.,1.-impact2)),distance=entry*mouth.w;
+            if(distance<nearestMouth){nearestMouth=distance;nearestNormal=normalize(offset+ray*entry);}
         }
     }}
+    if(nearestMouth<1.e29){
+        vec3 outgoing=normalize(2.*dot(arrivalRay,nearestNormal)*nearestNormal-arrivalRay);
+        vec2 uv=vec2(atan(outgoing.y,outgoing.x)/6.28318530718+.5,acos(clamp(outgoing.z,-1.,1.))/3.14159265359);
+        gl_FragColor=vec4(texture2D(panorama,uv).rgb*exposure,1.);return;
+    }
     if(bridgeEnabled>.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         float side=ellisRegion;

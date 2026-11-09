@@ -55,3 +55,30 @@ const reversible={initialOpen:false};assert.equal(W.phase(0,reversible).amount,0
 const midway=W.phase(1,reversible).amount;W.request(reversible,false,1);assert.equal(W.phase(1,reversible).amount,midway);assert.equal(W.phase(4,reversible).amount,0);
 W.mouth(owner,[0,0,0],[0,1,0],0,'aperture');assert.equal(owner.portalClip,undefined);assert.equal(owner.visible,false,'A closed remote aperture must hide its owner, not clear its mask and reveal the whole ship');
 console.log('PASS wormhole lifecycle: scheduled endpoints, monotonic opening, closure and continuous reversal');
+
+// Mouth placement clears physical volumes, independent of observer projection.
+for(let i=0;i<1000;i++){
+ const axis=[random()-.5,random()-.5,random()-.5],position=[0,0,0],radius=10+random()*100;
+ const others=Array.from({length:5},()=>({position:[random()*200-100,random()*200-100,random()*200-100],radius:10+random()*100}));
+ const result=W.separate(position,axis,radius,others,25);
+ for(const m of others)assert(Math.hypot(...result.map((v,k)=>v-m.position[k]))>=radius+m.radius+25-1e-7);
+ assert(W.separate(result,axis,radius,others,25).every((v,k)=>Math.abs(v-result[k])<1e-6));
+}
+assert(W.occluded([0,0,0],[0,10,0],[{position:[0,5,0],radius:1}]));
+assert(!W.occluded([0,0,0],[0,3,0],[{position:[0,5,0],radius:1}]),'A mouth behind the rim must not hide it');
+assert(!W.occluded([0,0,0],[0,10,0],[{position:[0,5,0],radius:0}]),'Closed mouths cannot occlude rims');
+assert(!W.occluded([0,0,0],[0,10,0],[{position:[5,5,0],radius:1}]));
+console.log('PASS mouth overlap: 1000 clearance placements, stable results and finite sightline occlusion');
+
+// Exercise production rim construction with overlapping projections of disjoint mouths.
+context.window.Driftworks.sim={METERS_PER_UNIT:1};
+context.window.Driftworks.flightMissions={current:()=>({id:'fixture'})};
+vm.runInNewContext(fs.readFileSync(require('node:path').join(root,'experiments/convoy-scenery.js'),'utf8'),context);
+const farMouth={position:[2,10,0],radiusM:2,opensAt:0,closesAt:100},nearMouth={position:[0,4,0],normal:[0,1,0],radiusM:1,opensAt:0,closesAt:100};
+const combat={time:10,convoy:{elapsed:10,ships:[],arrivalPortal:farMouth,evacuation:{rescueAt:100,exit:nearMouth}}};
+const rings=context.window.Driftworks.convoyScenery.effects(combat,{eye:[0,0,0]});
+nearMouth.closesAt=0;
+const unobscured=context.window.Driftworks.convoyScenery.effects(combat,{eye:[0,0,0]});
+assert(rings[0].vertices.length>0&&rings[0].vertices.length<unobscured[0].vertices.length,'Near mouth hides only the overlapping portion of the far rim');
+assert.equal(rings[1].vertices.length,unobscured[0].vertices.length,'Far mouth must not obscure the near rim');
+console.log('PASS production mouth rims: near/far occlusion and closed-mouth restoration');

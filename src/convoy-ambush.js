@@ -52,7 +52,8 @@
         if(t>=e.rescueAt){
             if(!e.capitals[0].present){
                 var here=center(combat),forward=unit(e.cruise);e.exit.normal=forward;
-                e.exit.position=here.map(function(v,k){return (v+forward[k]*1100)/U;});
+                e.exit.position=DW.wormholes.separate(here.map(function(v,k){return (v+forward[k]*1100)/U;}),forward,e.exit.radiusM/U,
+                    s.arrivalPortal?[{position:s.arrivalPortal.position,radius:(s.arrivalPortal.radiusM||210)/U}]:[],250/U);
                 const bastion=e.capitals[0];bastion.present=true;bastion.position.splice(0,3,...e.exit.position.map(function(v,k){return v+forward[k]*900/U;}));bastion.heading=Math.atan2(forward[1],forward[0]);
                 e.withdrawalAt=t;
             }

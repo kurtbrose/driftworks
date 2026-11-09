@@ -105,7 +105,8 @@
             var axes=DW.fleetGuidance.frame(s.forward||[0,1,0]);
             var batch=DW.shipRender.engineGeometry([{index:index,hp:1,pose:{eye:s.position,right:axes.right,back:axes.back,up:axes.up,velocity:s.velocity,throttle:1}}],'',1,U,view,state.elapsed,mouths[s.model]||[]);DW.wormholes.own([batch],placement);return batch;
         });
-        [state.arrivalPortal,state.evacuation?state.evacuation.exit:undefined].forEach(function(portal){
+        var portals=[state.arrivalPortal,state.evacuation?state.evacuation.exit:undefined];
+        portals.forEach(function(portal){
         if(portal&&combat.time>=portal.opensAt&&combat.time<portal.closesAt){
             var age=combat.time-portal.opensAt,radius=(portal.radiusM||210)*DW.wormholes.phase(combat.time,portal).amount/U;
             /** @type {number[]} */var vertices=[];
@@ -117,8 +118,11 @@
                 var right=[normal[1]*axis[2]-normal[2]*axis[1],normal[2]*axis[0]-normal[0]*axis[2],normal[0]*axis[1]-normal[1]*axis[0]],length=Math.hypot.apply(null,right);
                 right=right.map(function(v){return v/length;});
                 var up=[normal[1]*right[2]-normal[2]*right[1],normal[2]*right[0]-normal[0]*right[2],normal[0]*right[1]-normal[1]*right[0]],rim=radius*Math.sqrt(1-radius*radius/(distance*distance));
-                for(var i=0;i<96;i++){
-                    var a=i*Math.PI/48,b=(i+1)*Math.PI/48;
+                var occluders=portals.flatMap(function(other){return other&&other!==portal?[{position:other.position,radius:(other.radiusM||210)*DW.wormholes.phase(combat.time,other).amount/U}]:[];});
+                for(var i=0;i<192;i++){
+                    var a=i*Math.PI/96,b=(i+1)*Math.PI/96,middle=(a+b)/2;
+                    var sample=portal.position.map(function(v,k){return v+normal[k]*radius*radius/distance+(right[k]*Math.cos(middle)+up[k]*Math.sin(middle))*rim;});
+                    if(DW.wormholes.occluded(view.eye,sample,occluders))continue;
                     [[a,-1],[b,-1],[b,1],[a,-1],[b,1],[a,1]].forEach(function(pair){
                         var angle=pair[0],r=rim*(1+pair[1]*.018),point=portal.position.map(function(v,k){return v+normal[k]*radius*radius/distance+(right[k]*Math.cos(angle)+up[k]*Math.sin(angle))*r;});
                         vertices.push(point[0],point[1],point[2],pair[1],0,Math.min(1,age));
