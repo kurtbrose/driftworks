@@ -13,12 +13,15 @@ drafts until integrated into mission logic.
 ## Fleet evacuation / Jade ambush
 
 Open `experiments/flight.html?mission=fleet-evacuation`. Thirty transports and
-the player's two wingmates begin a quiet patrol over Jade. The earlier capital
+the player's two wingmates begin a quiet patrol over Jade. The mission rotates
+the existing Jade tableau 65 degrees down: the night-side limb sits below the
+convoy and its forward course clears the planet disk toward open stars. The earlier capital
 battle prototype has become a staged ambush; convoy escort remains separate.
 
 The fixed-step encounter in `src/convoy-ambush.js` owns the following beats:
 
-- 3 / 11 seconds: two short, tired patrol exchanges. No hostile or capital is
+- 3 seconds: one military time-on-station / formation report. Fighter comms stay
+  disciplined; conversational chatter belongs to civilian transports. No hostile or capital is
   active, and cargo cannot take encounter damage during this quiet opening.
 - 22 seconds: Control interrupts with "Warning. Spatial discontinuity detected."
 - 28 seconds: the hostile mouth opens directly on the original route. Freighters

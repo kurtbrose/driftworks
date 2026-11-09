@@ -80,8 +80,7 @@
         if(t>=28&&t<e.rescueAt&&!said.includes('break-course'))return {key:'break-course',priority:true,text:'All transports, break port! Clear that mouth. Lancer, weapons free. Keep the fighters off the freighters.'};
         if(t>=38&&t<e.rescueAt&&!said.includes('rally'))return {key:'rally',text:'Enemy capital firing through the discontinuity. New rally point marked. Bastion is inbound, one minute out. Lancer, hold them off.'};
         if(t>=e.bastionClearAt&&!said.includes('exit-open'))return {key:'exit-open',text:'Bastion is clear. Transports, take the mouth in the opposite direction. Lancer, cover the last ships through.'};
-        if(t>=3&&t<10&&!said.includes('bored-wing'))return {key:'bored-wing',wing:true,text:'Six hours. Same clouds. Same cargo. I think that storm has lapped us twice.'};
-        if(t>=11&&t<22&&!said.includes('bored-cargo'))return {key:'bored-cargo',civilian:true,text:'Wayfarer. You can have my next watch if you are enjoying the view that much.'};
+        if(t>=3&&t<10&&!said.includes('patrol-status'))return {key:'patrol-status',wing:true,text:'Six hours on station. Holding formation.'};
         return null;
     }
     DW.convoyAmbush={start:start,step:step,navigation:navigation,radio:radio};
