@@ -670,3 +670,21 @@ of wrapping rectangular panel borders into rings and pinching pixels at the
 poles. Duplicated tangent vertices separate barrel and head UVs while keeping
 the same positions, smooth normals, triangle count and material batches. Barrel
 seams remain. Reviewed the tanker front view and regenerated production bakes.
+
+## Illustrated dome texture (2026-11-08)
+
+Generated head-on ivory pressure-shell artwork is retained in dome-source-v1.png
+(native 1254 square). The atlas builder resamples it once with Lanczos, matches
+the ivory field and packs a 2048-square region beside the original atlas, making
+panels.png 4096 by 2048. Resampling does not add source detail. Domed-head UVs
+project local Y/Z onto this drawing, with opposite U orientation at each end to
+keep stencils readable. Separate tangent vertices keep the barrel mapping intact.
+There is no polar UV pinch and no custom shader. Existing texture filtering and
+mipmaps handle minification; unlimited close-up magnification is not pixel-free.
+
+Authoring texture repeat.x is 0.5; both flight and glTF exporters bake that scale
+into U. Original atlas regions and material batches stay shared. Geometry and
+collision positions are unchanged: tanker 26,638 triangles and six batches. The
+atlas doubles base RGBA storage from 16 to 32 MiB (about 21.3 MiB additional
+with mipmaps), shared by the fleet. No frame-time improvement is claimed.
+Front close-up reviewed; evidence lives in output/freighter-dome-uv/.

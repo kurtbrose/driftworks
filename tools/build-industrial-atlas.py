@@ -137,6 +137,19 @@ for index, (name, color) in enumerate(PALETTE):
     ImageDraw.Draw(tile).rectangle((0, 0, 7, 7), fill=color)
     atlas.paste(tile, ((index % 4)*SIZE, (index // 4)*SIZE))
 
+# One-time planar artwork preparation, packed beside the original atlas.
+# Preserve generated seam drawing; normalize its ivory field to vessel paint.
+source = Image.open(ROOT / "assets/ships/industrial-kit/dome-source-v1.png").convert("RGB")
+source = source.resize((2048, 2048), Image.Resampling.LANCZOS)
+# Match the quiet background at the center, without baking directional lighting.
+center = source.getpixel((24, 24))
+channels = source.split()
+source = Image.merge("RGB", tuple(ch.point(lambda v, delta=PALETTE[15][1][i]-center[i]: max(0,min(255,v+delta))) for i,ch in enumerate(channels)))
+wide = Image.new("RGB", (4096, 2048))
+wide.paste(atlas, (0, 0))
+wide.paste(source, (2048, 0))
+atlas = wide
+
 target = ROOT / "assets/ships/industrial-kit/panels.png"
 atlas.save(target, optimize=True)
 print(target.relative_to(ROOT))

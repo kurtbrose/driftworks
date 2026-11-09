@@ -13,7 +13,7 @@ for(const name of ['container','mixed','fluid']){
  const root=context.kit.buildFreighter(name),baked=context.kit.batchStatic(root),batches=[],collisionVertices=[];
  for(const mesh of baked.children){
   const geo=mesh.geometry,p=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv,vertices=new Float32Array(p.count*8);
-  for(let i=0;i<p.count;i++)vertices.set([p.getZ(i),-p.getX(i),p.getY(i),n.getZ(i),-n.getX(i),n.getY(i),uv.getX(i),1-uv.getY(i)],i*8);
+  for(let i=0;i<p.count;i++)vertices.set([p.getZ(i),-p.getX(i),p.getY(i),n.getZ(i),-n.getX(i),n.getY(i),uv.getX(i)*.5,1-uv.getY(i)],i*8);
   // Axis conversion changes handedness; keep outward triangles and their UVs.
   for(let i=0;i<vertices.length;i+=24)for(let k=0;k<8;k++){const v=vertices[i+8+k];vertices[i+8+k]=vertices[i+16+k];vertices[i+16+k]=v;}
   for(let i=0;i<vertices.length;i+=8)for(let k=0;k<6;k++)collisionVertices.push(vertices[i+k]);
