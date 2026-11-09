@@ -146,7 +146,7 @@ precision highp float;
 varying vec2 screen;
 uniform vec3 right,up,back;
 uniform float aspect,focal,style;
-uniform vec4 arrivalMouth;uniform vec3 arrivalEye;
+uniform vec4 arrivalMouth,arrivalMouth2;uniform vec3 arrivalEye;
 uniform vec3 bridgeEye;uniform float bridgeEnabled;uniform float bridgeLookup;uniform float bridgeThinShell;uniform float bridgeGrid,bridgeGridPixel,bridgeOutline;uniform vec2 bridgeSpaceSkies;
 float bridgeFootprint=0.;
 uniform sampler2D panorama;
@@ -311,9 +311,10 @@ ${bridgeOptics?bridgeOptics.shader:'uniform float ellisRegion; struct EllisRay {
 ${bridgeOptics&&bridgeOptics.latticeShader?bridgeOptics.latticeShader:'vec4 ellisLattice(EllisRay e,vec3 eye,float pixel){return vec4(0.);}'}
 void main(){
     if(hdrEnabled>.5){vec3 hdrRay=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);vec2 uv=vec2(atan(hdrRay.y,hdrRay.x)/6.28318530718+.5,acos(clamp(hdrRay.z,-1.,1.))/3.14159265359);vec3 radiance=max(vec3(0.),texture2D(hdrEnvironment,uv).rgb);gl_FragColor=vec4(pow(vec3(1.)-exp(-radiance*exposure),vec3(1./2.2)),1.);return;}
-    if(arrivalMouth.w>0.){
+    for(int mouthIndex=0;mouthIndex<2;mouthIndex++){vec4 mouth=mouthIndex==0?arrivalMouth:arrivalMouth2;
+    if(mouth.w>0.){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
-        vec3 offset=(arrivalEye-arrivalMouth.xyz)/arrivalMouth.w;
+        vec3 offset=(arrivalEye-mouth.xyz)/mouth.w;
         float along=dot(offset,ray),impact2=dot(offset,offset)-along*along;
         if(along<0. && impact2<1. && dot(offset,offset)>1.){
             // The same antipodal gluing used by the traversable thin-shell bridge.
@@ -322,7 +323,7 @@ void main(){
             vec2 uv=vec2(atan(outgoing.y,outgoing.x)/6.28318530718+.5,acos(clamp(outgoing.z,-1.,1.))/3.14159265359);
             gl_FragColor=vec4(texture2D(panorama,uv).rgb*exposure,1.);return;
         }
-    }
+    }}
     if(bridgeEnabled>.5){
         vec3 ray=normalize(-back+right*screen.x*aspect/focal+up*screen.y/focal);
         float side=ellisRegion;
@@ -942,7 +943,7 @@ void main(){
                 if(value){var hdrFilter=gl.getExtension('OES_texture_float_linear')?gl.LINEAR:gl.NEAREST;hdrTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,hdrTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,hdrFilter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,512,256,0,gl.RGBA,gl.FLOAT,value.radiance||null);gl.activeTexture(gl.TEXTURE0);}
             },cueImpact:cueImpact,resetImpact:resetImpact,getImpactState:impactCues.snapshot,setCameraSources:/** @param {import('../src/types').SkyCameraSource[]|null} value */function(value){cameraSources=value;sourceStyle=-1;},setOccluders:/** @param {import('../src/types').SkyOccluder[]} value */function(value){if(effects)effects.setOccluders(value);},setOpticsEnabled:/** @param {boolean} value */function(value){if(effects)effects.setEnabled(value);},setPlanetImage:setPlanetImage,setImpactTime:setImpactTime,getLighting:getLighting,setLightingEnabled:/** @param {boolean} enabled */ function(enabled){lightingEnabled=enabled;}, setExposure: /** @param {number} value */ function (value) {exposure=Number.isFinite(value)?Math.max(.25,Math.min(3,value)):1;}, setStyle: /** @param {number} value */ function (value) {style=Number.isInteger(value) && value>=0 && value<options.length ? value : 7;}, getRenderStats: function () {
                 return stats;
-            }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] @param {number} [motionOpacity] @param {{position:number[];radius:number}|null} [arrival] */ function (pose, renderScale, empty,elapsed,motionOpacity,arrival) {
+            }, render: /** @param {Pose} pose @param {number} renderScale @param {boolean} empty @param {number} [elapsed] @param {number} [motionOpacity] @param {{position:number[];radius:number;other?:{position:number[];radius:number}}|null} [arrival] */ function (pose, renderScale, empty,elapsed,motionOpacity,arrival) {
                 if(window.Driftworks.gpuDiagnostics)window.Driftworks.gpuDiagnostics.mark('sky.render');
                 if(effects&&sourceStyle!==style){
                     effects.setSources(cameraSources||(hdrTexture?[]:landmarkSky&&window.Driftworks.skyEffects?window.Driftworks.skyEffects.fromFeatures(missionSky.features,authoredAssetSources):authoredSources[String(style)]||[]));sourceStyle=style;
@@ -991,6 +992,7 @@ void main(){
                 gl.uniform1f(gl.getUniformLocation(sky, 'style'), missionSky.gasGiant ? 23 : missionSky.cubeFaces ? 22 : missionSky.bakedImpact ? 21 : landmarkSky ? 20 : style);
                 var units=arrival?(/** @type {Required<DriftworksNamespace>} */(window.Driftworks)).sim.METERS_PER_UNIT:1;
                 gl.uniform4fv(gl.getUniformLocation(sky,'arrivalMouth'),arrival?arrival.position.map(function(v){return v*units;}).concat(arrival.radius):[0,0,0,0]);
+                var other=arrival&&arrival.other;gl.uniform4fv(gl.getUniformLocation(sky,'arrivalMouth2'),other?other.position.map(function(v){return v*units;}).concat(other.radius):[0,0,0,0]);
                 if(arrival)gl.uniform3fv(gl.getUniformLocation(sky,'arrivalEye'),pose.eye.map(function(v){return v*units;}));
                 gl.uniform1f(gl.getUniformLocation(sky,'bridgeEnabled'),missionSky.wormhole?1:0);
                 var thinShellControl=/** @type {HTMLInputElement|null} */(document.getElementById('bridge-thin-shell'));

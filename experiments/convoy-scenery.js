@@ -27,7 +27,7 @@
         var p=cargoPlacements.get(state);if(!p){p={};cargoPlacements.set(state,p);}
         DW.wormholes.clear(p);
         var exit=state.evacuation&&state.elapsed>=state.evacuation.rescueAt?state.evacuation.exit:null;
-        if(exit)DW.wormholes.mouth(p,exit.position,exit.normal,exit.radiusM/U,'back');
+        if(exit)DW.wormholes.mouth(p,exit.position,exit.normal,exit.radiusM/U*DW.wormholes.phase(state.elapsed,exit).amount,'back');
         return p;
     }
     if(['convoy','fleet-evacuation'].includes(DW.flightMissions.current().id)){
@@ -62,12 +62,18 @@
         var placements=states.map(function(){return /** @type {import('./types').RenderPlacement} */({visible:false});});
         var ships=configs.map(function(config,i){return DW.wormholes.bindRig(DW.aegisFlight.create(config),placements[i]);});configs.forEach(function(config,i){config.opponentRig=ships[1-i];});
         /** @type {import('./types').FleetEvacuation|undefined} */var plan;
+        /** @type {Parameters<import('./types').AegisFlightRig['reset']>[0]} */var renderCombat;
         var groups=ships.map(function(ship){return ship.geometry();}),batches=groups.flat();
         function updatePlacements(){
             placements.forEach(function(p,i){p.visible=!!states[i].present;DW.wormholes.clear(p);});
             if(plan){
-                DW.wormholes.mouth(placements[1],plan.entry,[0,1,0],650/U,'aperture');
-                DW.wormholes.mouth(placements[0],plan.exit.position,plan.exit.normal,plan.exit.radiusM/U,'back');
+                var time=renderCombat?renderCombat.time:0,entry=renderCombat&&renderCombat.convoy&&renderCombat.convoy.arrivalPortal;
+                var entryPhase=entry?DW.wormholes.phase(time,entry):{amount:0,visible:false};
+                placements[1].visible=!!states[1].present&&entryPhase.visible;
+                DW.wormholes.mouth(placements[1],plan.entry,[0,1,0],650/U*entryPhase.amount,'aperture');
+                var exitPhase=DW.wormholes.phase(time,plan.exit);
+                placements[0].visible=!!states[0].present&&exitPhase.visible;
+                DW.wormholes.mouth(placements[0],plan.exit.position,plan.exit.normal,plan.exit.radiusM/U*exitPhase.amount,exitPhase.amount<1?'aperture':'back');
             }
         }
         function geometry(){
@@ -78,6 +84,7 @@
             return batches;
         }
         return {reset:function(combat){
+                renderCombat=combat;
                 plan=combat&&combat.convoy?combat.convoy.evacuation:undefined;
                 var fresh=plan?plan.capitals:DW.convoyBattle.capitals();
                 states.forEach(function(state,i){var source=fresh[i];state.position.splice(0,3,...source.position);state.heading=source.heading;state.velocity=source.velocity.slice();state.integrity=source.integrity;state.present=!!source.present;state.remote=!!source.remote;state.mainBatteryClear=source.mainBatteryClear;ships[i].reset();});
@@ -100,7 +107,7 @@
         });
         [state.arrivalPortal,state.evacuation?state.evacuation.exit:undefined].forEach(function(portal){
         if(portal&&combat.time>=portal.opensAt&&combat.time<portal.closesAt){
-            var age=combat.time-portal.opensAt,growth=Math.min(1,age/3,(portal.closesAt-combat.time)/2),radius=(portal.radiusM||210)*Math.max(0,growth)/U;
+            var age=combat.time-portal.opensAt,radius=(portal.radiusM||210)*DW.wormholes.phase(combat.time,portal).amount/U;
             /** @type {number[]} */var vertices=[];
             // Tangent silhouette of the spherical mouth, rather than a debug globe.
             var normal=view.eye.map(function(v,k){return v-portal.position[k];}),distance=Math.hypot.apply(null,normal);

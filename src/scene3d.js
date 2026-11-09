@@ -431,7 +431,18 @@ uniform vec3 uTransitAxis,uTransitTangentX,uTransitTangentY;
     // World-space aperture masks keep the remote hull inside the visible mouth;
     // a plane reveals local hulls as they emerge or leave in the opposite direction.
     fragmentShader=fragmentShader.replace('precision highp float;','precision highp float;uniform vec4 uPortalClip,uPortalPlane;uniform vec3 uPortalEye,uPortalTarget;');
-    fragmentShader=fragmentShader.replace('void main(){', 'void main(){vec3 portalPoint=vRelative+uPortalTarget;if(dot(uPortalPlane.xyz,uPortalPlane.xyz)>.1&&dot(vec4(portalPoint,1.),uPortalPlane)<0.)discard;if(uPortalClip.w>0.){vec3 ray=portalPoint-uPortalEye,rel=uPortalEye-uPortalClip.xyz;float a=dot(ray,ray),b=dot(rel,ray),c=dot(rel,rel)-uPortalClip.w*uPortalClip.w,disc=b*b-a*c;if(disc<0.||a<.000001)discard;float enter=(-b-sqrt(max(0.,disc)))/a,leave=(-b+sqrt(max(0.,disc)))/a;if(leave<0.||enter>1.)discard;}');
+    fragmentShader=fragmentShader.replace('void main(){', `void main(){
+      vec3 portalPoint=vRelative+uPortalTarget;
+      bool planeActive=dot(uPortalPlane.xyz,uPortalPlane.xyz)>.1;
+      if(uPortalClip.w>0.){
+        vec3 ray=portalPoint-uPortalEye,rel=uPortalEye-uPortalClip.xyz;
+        float a=dot(ray,ray),b=dot(rel,ray),c=dot(rel,rel)-uPortalClip.w*uPortalClip.w,disc=b*b-a*c;
+        bool through=false;
+        if(disc>=0.&&a>.000001){float enter=(-b-sqrt(disc))/a,leave=(-b+sqrt(disc))/a;through=leave>=0.&&enter<=1.;}
+        if(planeActive){if(through&&dot(vec4(portalPoint,1.),uPortalPlane)<0.)discard;}
+        else if(!through)discard;
+      }else if(planeActive&&dot(vec4(portalPoint,1.),uPortalPlane)<0.)discard;
+    `);
     var declarations=vertexShader+'\n'+fragmentShader;
     declarations.replace(/uniform\s+(float|vec[234]|mat[34]|sampler2D)\s+([^;]+);/g,/** @param {string} _ @param {string} type @param {string} names */ function(_,type,names){
       names.split(',').forEach(function(name){var key=name.trim().replace(/\[.*$/, ''),size=type==='float'?1:type==='mat3'?9:type==='mat4'?16:Number(type.slice(-1));var count=Number((name.match(/\[(\d+)\]/)||[])[1]||1);uniforms[key]={value:type==='sampler2D'?null:size*count===1?0:new Float32Array(size*count)};});return '';

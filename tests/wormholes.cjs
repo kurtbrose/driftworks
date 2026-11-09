@@ -27,7 +27,7 @@ for(const mode of ['front','back','aperture']){
  W.mouth(owner,[12,34,56],[0,1,0],20,mode);
  assert.equal(W.resolve(hull[0]),owner);assert.equal(W.resolve(plumes[0]),owner);
  assert.deepEqual(hull[0].vertices,positions,'placement never rebuilds source geometry');
- assert.equal(!!owner.portalClip,mode==='aperture');assert.equal(!!owner.clipPlane,mode!=='aperture');
+ assert(owner.portalClip,'every mask is bounded by its mouth');assert.equal(!!owner.clipPlane,mode!=='aperture');
 }
 owner.visible=false;assert.equal(W.resolve(plumes[0]).visible,false);
 const root=require('node:path').resolve(__dirname,'..');
@@ -44,3 +44,14 @@ for(const file of require('node:child_process').execFileSync('git',['ls-files','
  if(scene>=0)assert(html.indexOf('wormholes.js')>=0&&html.indexOf('wormholes.js')<scene,'Shared placement dependency must precede every renderer: '+file);
 }
 console.log('PASS wormhole links: 1000 generated crossings, destination sky/space, overshoot, reciprocal vector transport and shared hull/effect ownership');
+
+// One lifecycle drives aperture size, remote visibility and rules gating.
+const life={opensAt:10,closesAt:20};
+for(const t of [0,9,10,20,21])assert.equal(W.phase(t,life).visible,false);
+assert.equal(W.phase(13,life).traversable,true);
+for(let i=1;i<30;i++)assert(W.phase(10+i/10,life).amount>=W.phase(10+(i-1)/10,life).amount);
+assert(W.phase(19,life).amount>0&&W.phase(19,life).amount<1);
+const reversible={initialOpen:false};assert.equal(W.phase(0,reversible).amount,0);W.request(reversible,true,0);
+const midway=W.phase(1,reversible).amount;W.request(reversible,false,1);assert.equal(W.phase(1,reversible).amount,midway);assert.equal(W.phase(4,reversible).amount,0);
+W.mouth(owner,[0,0,0],[0,1,0],0,'aperture');assert.equal(owner.portalClip,undefined);assert.equal(owner.visible,false,'A closed remote aperture must hide its owner, not clear its mask and reveal the whole ship');
+console.log('PASS wormhole lifecycle: scheduled endpoints, monotonic opening, closure and continuous reversal');

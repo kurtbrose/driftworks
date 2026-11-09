@@ -391,7 +391,8 @@ export type Pack = {
 };
 // Signed proper metres and outward unit radial in the canonical (region 0) chart.
 export type HullTransit = {proper:number;normal:Vector};
-export type WormholeLink={id:string;mouths:[{space:number;position:number[];radius:number;sky:string},{space:number;position:number[];radius:number;sky:string}]};
+export type WormholeLife={initialOpen?:boolean;opensAt?:number;closesAt?:number;openSeconds?:number;closeSeconds?:number;transition?:{at:number;from:number;to:number;duration:number}};
+export type WormholeLink={lifecycle?:WormholeLife;id:string;mouths:[{space:number;position:number[];radius:number;sky:string},{space:number;position:number[];radius:number;sky:string}]};
 export type RenderPlacement={visible?:boolean;portalClip?:number[];clipPlane?:number[];region?:number;lensCenter?:number[];lensRadius?:number;lensTransit?:HullTransit};
 export type Batch = {
     placement?:RenderPlacement;
@@ -737,7 +738,7 @@ export type EllisDraw={lensTransit?:HullTransit;projected?:boolean;lensRadius?:n
 export type YoYoFrame={view:Pose;points:{point:number[];region:number}[];expected:number[][];distance:number;observerL:number;halfSize:number};
 export type EllisRenderPass={setShipStretching:(enabled:boolean)=>void;invalidate:()=>void;render:(scene:import('../src/three-types').Scene,camera:import('../src/three-types').Object3D,draws:EllisDraw[],pose:Pose,focal:number,far:number,width:number,height:number,revision?:string|null)=>{objectPaths:number;objectPatches:number;objectError:number;objectBad:number;compositionPasses:number;historyValid:number;extraPasses:number;captures:number;cpuMs:number};dispose:()=>void};
 export type ExperimentModules = {
-    wormholes:{clear:(placement:RenderPlacement)=>RenderPlacement;define:(link:WormholeLink)=>WormholeLink;cross:(link:WormholeLink,before:number[],after:number[],space:number)=>{region:number;eye:number[];normal:number[];sky:string}|null;transport:(v:number[],normal:number[])=>number[];own:(batches:Batch[],placement:RenderPlacement)=>Batch[];resolve:(batch:Batch)=>RenderPlacement;bindRig:(rig:AegisFlightRig,placement:RenderPlacement)=>AegisFlightRig;mouth:(placement:RenderPlacement,position:number[],normal:number[],radius:number,mode:'aperture'|'front'|'back')=>RenderPlacement};
+    wormholes:{phase:(time:number,life?:WormholeLife)=>{amount:number;visible:boolean;traversable:boolean;state:string};request:(life:WormholeLife,open:boolean,time:number)=>void;clear:(placement:RenderPlacement)=>RenderPlacement;define:(link:WormholeLink)=>WormholeLink;cross:(link:WormholeLink,before:number[],after:number[],space:number)=>{region:number;eye:number[];normal:number[];sky:string}|null;transport:(v:number[],normal:number[])=>number[];own:(batches:Batch[],placement:RenderPlacement)=>Batch[];resolve:(batch:Batch)=>RenderPlacement;bindRig:(rig:AegisFlightRig,placement:RenderPlacement)=>AegisFlightRig;mouth:(placement:RenderPlacement,position:number[],normal:number[],radius:number,mode:'aperture'|'front'|'back')=>RenderPlacement};
     multiplayerFlight:{mount:(session:ReturnType<ExperimentModules['flightSession']['create']>,loadout:()=>{profile:number;weapon:number;model:string})=>{isGuest:()=>boolean;update:(demand:Demand,paused:boolean)=>void}};
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};

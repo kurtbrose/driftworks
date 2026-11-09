@@ -29,7 +29,7 @@ fs.writeFileSync(path.join(scratch,'browser.html'),html);
     owner.visible=true;owner.clipPlane=undefined;owner.portalClip=undefined;const full=mask(pixels([hull],[])).filter(Boolean).length;
     if(full<1000)throw Error('Empty/undersized GPU fixture');
     for(const mode of ['front','back','aperture'])for(const offset of [-.5,0,.5]){
-     D.wormholes.mouth(owner,[offset,-1,0],[1,0,0],.35,mode);
+     D.wormholes.mouth(owner,[offset,mode==='aperture'?-1:0,0],[1,0,0],.35,mode);
      const h=mask(pixels([hull],[])),e=mask(pixels([],[effect]));let mismatch=0,hits=0;
      for(let i=0;i<h.length;i++){if(h[i]!==e[i])mismatch++;if(h[i])hits++;}
      if(mismatch>Math.max(12,full*.02))throw Error('Hull/effect pixel masks differ: '+JSON.stringify({degrees,mode,offset,mismatch,full,hits}));
@@ -37,6 +37,23 @@ fs.writeFileSync(path.join(scratch,'browser.html'),html);
      rows.push({degrees,mode,offset,mismatch,full,hits});
     }
    }
+   // A closed aperture must not reveal an unmasked remote object. Also check
+   // that a tiny opening reveals only a small fraction of its final image.
+   const opening=[];
+   for(const time of [9,10,10.5,11,12,13,19,20,21]){
+    const phase=D.wormholes.phase(time,{opensAt:10,closesAt:20});
+    owner.visible=true;D.wormholes.mouth(owner,[0,-1,0],[1,0,0],.35*phase.amount,'aperture');
+    const count=mask(pixels([hull],[effect])).filter(Boolean).length;
+    if(!phase.visible&&count)throw Error('Closed aperture leaked remote pixels at '+time);
+    opening.push({time,amount:phase.amount,count});
+   }
+   if(!(opening[2].count<opening[5].count&&opening[5].count>0))throw Error('Growing aperture did not bound the remote image');
+   owner.visible=true;
+   // A source-side mask must never slice geometry outside the mouth silhouette.
+   D.wormholes.clear(owner);const uncut=mask(pixels([hull],[]));
+   D.wormholes.mouth(owner,[100,0,0],[1,0,0],.35,'front');
+   const outside=mask(pixels([hull],[]));
+   if(outside.some((v,i)=>v!==uncut[i]))throw Error('Offscreen mouth sliced an unrelated hull');
    // Negative control: the old missing-effect-owner bug must fail this oracle.
    D.wormholes.mouth(owner,[0,0,0],[1,0,0],.35,'front');
    const correct=mask(pixels([hull],[]));effect.placement=undefined;
@@ -46,7 +63,7 @@ fs.writeFileSync(path.join(scratch,'browser.html'),html);
    effect.placement=owner;
    owner.visible=false;const hidden=mask(pixels([hull],[effect])).filter(Boolean).length;if(hidden)throw Error('Hidden owner leaked pixels');
    owner.visible=true;owner.clipPlane=undefined;owner.portalClip=undefined;pixels([hull],[effect]);
-   return {rows,hidden,negativeControl,width:canvas.width,height:canvas.height};
+   return {rows,opening,hidden,negativeControl,width:canvas.width,height:canvas.height};
   });
   assert.equal(results.rows.length,27);assert.deepEqual(errors,[]);
   await page.screenshot({path:path.join(output,'gpu-fixture.png')});fs.writeFileSync(path.join(output,'gpu.json'),JSON.stringify({results,errors},null,2)+'\n');

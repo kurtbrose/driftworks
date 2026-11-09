@@ -5,6 +5,27 @@
     /** @typedef {import('../experiments/types').RenderPlacement} Placement */
     /** @param {number[]} a @param {number[]} b */
     function dot(a,b){return a.reduce(function(n,v,k){return n+v*b[k];},0);}
+    /** Shared, deterministic formation envelope. closesAt is the fully closed time.
+     * @param {number} time @param {import('../experiments/types').WormholeLife=} life */
+    function phase(time,life){
+        /** @param {number} x */function ease(x){x=Math.max(0,Math.min(1,x));return x*x*x*(x*(x*6-15)+10);}
+        var amount=1,state='open';
+        if(life){
+            var opening=Math.max(.001,life.openSeconds===undefined?3:life.openSeconds),closing=Math.max(.001,life.closeSeconds===undefined?2:life.closeSeconds);
+            if(life.transition){var tr=life.transition,t=(time-tr.at)/tr.duration;amount=tr.from+(tr.to-tr.from)*ease(t);state=tr.from===tr.to||t>=1?(tr.to?'open':'closed'):(tr.to?'opening':'closing');}
+            else{
+                var start=life.opensAt===undefined?(life.initialOpen===false?Infinity:-Infinity):life.opensAt,end=life.closesAt===undefined?Infinity:life.closesAt,closeStart=Math.max(start,end-closing);
+                if(time<start){amount=0;state='closed';}
+                else if(time>=end){amount=0;state='closed';}
+                else if(time>=closeStart){var peak=start===-Infinity?1:ease((closeStart-start)/opening);amount=peak*(1-ease((time-closeStart)/Math.max(.001,end-closeStart)));state='closing';}
+                else{amount=start===-Infinity?1:ease((time-start)/opening);state=amount>=1?'open':'opening';}
+            }
+        }
+        return {amount:amount,visible:amount>0,traversable:state==='open',state:state};
+    }
+    /** Reversals start at the current value, rather than restarting or popping.
+     * @param {import('../experiments/types').WormholeLife} life @param {boolean} open @param {number} time */
+    function request(life,open,time){var from=phase(time,life).amount,to=open?1:0,duration=(open?(life.openSeconds||3):(life.closeSeconds||2))*Math.abs(to-from);life.transition={at:time,from:from,to:to,duration:Math.max(.001,duration)};}
     /** Antipodal thin-shell gluing. All positions/radii use the caller's scene units.
      * @param {number[]} v @param {number[]} normal */
     function transport(v,normal){var d=dot(v,normal);return v.map(function(x,k){return 2*d*normal[k]-x;});}
@@ -46,10 +67,11 @@
     /** Central mask construction; missions select a mouth and side, not shader planes.
      * @param {Placement} placement @param {number[]} position @param {number[]} normal @param {number} radius @param {'aperture'|'front'|'back'} mode */
     function mouth(placement,position,normal,radius,mode){
-        placement.portalClip=mode==='aperture'?position.concat(radius):undefined;
+        if(radius<=0){if(mode==='aperture')placement.visible=false;return clear(placement);}
+        placement.portalClip=position.concat(radius);
         var sign=mode==='front'?1:-1;
         placement.clipPlane=mode==='aperture'?undefined:normal.map(function(v){return v*sign;}).concat(-sign*dot(normal,position));
         return placement;
     }
-    DW.wormholes={define:define,cross:cross,transport:transport,own:own,resolve:resolve,clear:clear,bindRig:bindRig,mouth:mouth};
+    DW.wormholes={phase:phase,request:request,define:define,cross:cross,transport:transport,own:own,resolve:resolve,clear:clear,bindRig:bindRig,mouth:mouth};
 }());

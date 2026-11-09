@@ -78,3 +78,22 @@ presentation CPU 4.0–4.1 ms; capital-off was 50 draws / 1,744,123 triangles an
 1.8–2.0 ms. These are final-scene CPU/counter measurements, not a before/after
 speedup or GPU budget. Source buffers remain shared and unchanged. Raw samples
 and captures are in `output/shared-wormholes/`.
+
+## Formation and closure
+
+`phase(time, lifecycle)` returns a deterministic smooth aperture amount, visibility
+and an open-state traversal flag. Schedules use `opensAt` and `closesAt` (the
+fully closed deadline), with default three-second opening and two-second closure.
+`request(lifecycle, open, time)` reverses from the current amount without a value
+jump. With no lifecycle the amount stays one for compatibility.
+
+The staged fleet uses this same amount for its sky aperture, rim, remote capital
+visibility and hull/effect masks. A zero-radius remote aperture hides its owner;
+clearing a closed aperture must never expose the whole remote ship. Source-side
+plane cuts are bounded by the mouth silhouette, so an offscreen mouth cannot
+cut unrelated geometry. Effect batching must preserve owner-bearing batches.
+
+The GPU regression also checks closed/opening/closed pixel counts and an offscreen
+source mouth. These checks do not prove destination-space continuation for the
+staged fleet adapter. The main traversable Ellis compositor retains its existing
+steady-open behavior; this formation envelope is currently wired to staged mouths.

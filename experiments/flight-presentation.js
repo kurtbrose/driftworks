@@ -349,8 +349,8 @@
                 var engine=Object.assign({},DW.shipPackModels.engineGeometry(craft, team === 'ally' ? appearance.allyArt : appearance.enemyArt, combat.wave, units, state, world.elapsedSeconds),{region:group.region,lensRadius:objectWarp?DW.shipPackModels.hullRadius(DW.shipPackModels.craftModel(craft[0],team==='ally'?appearance.allyArt:appearance.enemyArt,combat.wave)):undefined,lensCenter:objectWarp?craft[0].pose.eye:undefined});
                 if(objectWarp)effectBatches.push(engine);else engineParts.push(engine);
             });
-            if(combat.convoy)DW.convoyScenery.effects(combat,state).forEach(function(b){if(objectWarp)effectBatches.push(b);else engineParts.push({region:0,vertices:b.vertices});});
-            if(combat.mode==='evacuation'&&DW.evacuationScenery)DW.evacuationScenery.effects(combat,state).forEach(function(b){if(objectWarp)effectBatches.push(b);else engineParts.push({region:0,vertices:b.vertices});});
+            if(combat.convoy)DW.convoyScenery.effects(combat,state).forEach(function(b){if(objectWarp||b.placement||b.shieldGlow)effectBatches.push(b);else engineParts.push({region:0,vertices:b.vertices});});
+            if(combat.mode==='evacuation'&&DW.evacuationScenery)DW.evacuationScenery.effects(combat,state).forEach(function(b){if(objectWarp||b.placement||b.shieldGlow)effectBatches.push(b);else engineParts.push({region:0,vertices:b.vertices});});
             if(!objectWarp)regions.forEach(function(region){
                 var parts=engineParts.filter(function(p){return p.region===region;}),vertices=new Float32Array(parts.reduce(function(n,p){return n+p.vertices.length;},0)),offset=0;
                 parts.forEach(function(p){vertices.set(p.vertices,offset);offset+=p.vertices.length;});
@@ -378,7 +378,8 @@
             var motionStyle=/** @type {HTMLSelectElement|null} */(document.getElementById('flight-guide-style'));
             var motionBrightness=/** @type {HTMLInputElement|null} */(document.getElementById('flight-lanes-opacity'));
             var motionOpacity=regions.length>1&&!combat.dead&&!document.body.classList.contains('watch-chase')&&(!motionToggle||motionToggle.checked)&&(!motionStyle||motionStyle.value==='grid')?(motionBrightness?Number(motionBrightness.value)/100:.85):0;
-            var mouth=combat.convoy&&combat.convoy.arrivalPortal,arrival=mouth&&combat.time<mouth.closesAt?{position:mouth.position,radius:210*Math.max(0,Math.min(1,(combat.time-mouth.opensAt)/3,(mouth.closesAt-combat.time)/2))}:null;
+            var plan=combat.convoy&&combat.convoy.evacuation;var mouth=plan&&combat.time>=plan.exit.opensAt?plan.exit:combat.convoy&&combat.convoy.arrivalPortal,arrival=mouth&&combat.time>=mouth.opensAt&&combat.time<mouth.closesAt?{position:mouth.position,radius:(mouth.radiusM||210)*DW.wormholes.phase(combat.time,mouth).amount}:null;
+            var hostile=combat.convoy&&combat.convoy.arrivalPortal;if(arrival&&plan&&mouth===plan.exit&&hostile)Object.assign(arrival,{other:{position:hostile.position,radius:(hostile.radiusM||210)*DW.wormholes.phase(combat.time,hostile).amount}});
             var vr=DW.flightVr&&DW.flightVr.forHost(host),immersive=!!(vr&&vr.active());
             skybox.setFov(immersive?140:45);
             // This pass supplies the world lighting basis and exposure. Head rotation
