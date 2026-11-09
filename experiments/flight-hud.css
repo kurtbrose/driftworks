@@ -86,3 +86,12 @@ body.tactical-view .flight-vr-controls,body.tactical-view .flight-plate,body.tac
 #phone-controls{display:block;width:100%;margin:0 0 12px;padding:12px;pointer-events:auto}
 #flight-vr-settings{margin-top:12px;padding:12px;border:1px solid #578178;border-radius:8px;pointer-events:auto;text-align:left}
 #flight-vr-settings summary{cursor:pointer;text-align:center;font:600 16px system-ui}
+
+/* Native disclosure controls remain keyboard-accessible and show their state. */
+#launch details>summary{display:flex;align-items:center;gap:12px;min-height:44px;margin:8px 0;padding:12px 14px;border:1px solid #52727b;border-radius:6px;background:#102730;color:#d9eee9;cursor:pointer;list-style:none;text-align:left;font:600 14px system-ui}
+#launch details>summary::-webkit-details-marker{display:none}
+#launch details>summary::before{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg)}
+#launch details[open]>summary{background:#1b3942;border-color:#8bc9c0}
+#launch details[open]>summary::before{transform:rotate(45deg)}
+#launch details>summary:hover{background:#24434b;border-color:#a7ded2}
+#launch details>summary:focus-visible{outline:2px solid #b8f4df;outline-offset:3px}
