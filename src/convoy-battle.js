@@ -68,6 +68,25 @@
         }
         return list.sort(function(a,b){return b.priority-a.priority||a.id.localeCompare(b.id);});
     }
+    /** Resolve live assignment members, including survivors after the original focus dies.
+     * Derived views only: orders keep IDs rather than craft references.
+     * @param {Combat} combat @returns {import('../experiments/types').Craft[]} */
+    function assignmentTargets(combat){
+        const s=combat.convoy;if(!s||s.complete)return [];
+        const order=s.battle&&s.battle.order,waypoint=order||s.director.waypoint;
+        if(!waypoint||waypoint.kind!=='intercept'&&waypoint.kind!=='assist')return [];
+        var focus=combat.enemies.find(function(c){return c.id===waypoint.targetId;});
+        var raid=order?s.raids.find(function(group){return order.id==='raid-'+group.id;}):undefined;
+        if(!raid&&focus&&focus.convoyRaider){const wing=focus.convoyRaider.wing;raid=s.raids.find(function(group){return group.id===wing;});}
+        if(raid&&['hold','withdraw','departed'].includes(raid.phase))return [];
+        const group=raid;
+        return combat.enemies.filter(function(c){
+            if(c.hp<=0||c.team!=='enemy'||c.mode==='withdraw'||c.mode==='departed')return false;
+            if(group)return !!c.convoyRaider&&c.convoyRaider.wing===group.id;
+            if(waypoint.kind==='assist'&&typeof waypoint.front==='number')return !!c.convoyBattle&&c.convoyBattle.front===waypoint.front;
+            return c.id===waypoint.targetId;
+        });
+    }
     /** Bounded dispatch with urgency preemption and assignment hysteresis; never changes the player's target.
      * @param {Combat} combat */
     function dispatch(combat){
@@ -139,5 +158,5 @@
         if(range(craft.pose.eye,goal)<300&&!craft.guns.bolts.length)craft.mode='departed';
         return true;
     }
-    DW.convoyBattle={start:start,update:update,dispatch:dispatch,tasks:tasks,capitals:capitals,startEvacuation:startEvacuation,updateEvacuation:updateEvacuation,stepEvacuationWing:stepEvacuationWing};
+    DW.convoyBattle={start:start,update:update,dispatch:dispatch,tasks:tasks,assignmentTargets:assignmentTargets,capitals:capitals,startEvacuation:startEvacuation,updateEvacuation:updateEvacuation,stepEvacuationWing:stepEvacuationWing};
 }());

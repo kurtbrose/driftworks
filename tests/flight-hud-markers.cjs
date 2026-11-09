@@ -322,3 +322,41 @@ assert.ok(maneuver({side:0,vertical:0},{state:{...view.state,velocity:[3,4,0]}})
 assert.equal(calls.filter(c=>c.kind==='fill'&&c.color==='#9aeeff').length,0);
 assert.ok(maneuver({side:1},{paused:true}).includes('—'));
 assert.ok(maneuver(undefined).includes('—'));
+
+// Control assignments follow the real wing, not a stale marker or selected ship.
+const taskFlight=createFlight({mission:'fleet-evacuation',seed:29}),taskView=taskFlight.snapshot(),tc=taskView.combat,ts=tc.convoy,tu=taskFlight.DW.sim.METERS_PER_UNIT;
+DW.flightPresentation={model:()=>({name:'Fixture fighter'})};
+tc.time=ts.elapsed=45;taskFlight.DW.convoyMission.step(tc,0);
+tc.time=ts.elapsed=49;taskFlight.DW.convoyMission.step(tc,0);
+tc.time=ts.elapsed=64;taskFlight.DW.convoyBattle.dispatch(tc);
+assert.equal(ts.battle.order.kind,'intercept');
+let members=DW.convoyBattle.assignmentTargets(tc);assert.equal(members.length,3,'Mark the entire assigned raid wing');
+const assignedIds=new Set(members.map(c=>c.id));
+tc.targetId=tc.enemies.find(c=>c.team==='ally').id;tc.targetLocked=true;const selectedId=tc.targetId;
+members.forEach((craft,i)=>{craft.pose.eye=taskView.state.eye.map((v,k)=>v+(-taskView.state.back[k]*(i===2?9000:600+i*200)+taskView.state.right[k]*i*90)/tu);});
+let taskContacts=[];DW.flightRadar.draw=function(ctx,state,contacts,...args){taskContacts=contacts;return originalRadar(ctx,state,contacts,...args);};
+function renderTasks(){hud.render({...taskView,paint:{ally:[1,1,1],enemy:[1,1,1]},units:tu,paused:false,speakerId:null,mouse:[0,0],showMouseStick:false,weapon:DW.retailWeapons[0],shipImages:new Map()});}
+renderTasks();
+assert.equal(taskContacts.filter(c=>c.assigned).length,3);assert(taskContacts.filter(c=>c.assigned).every(c=>!c.selected&&c.color==='#ff655d'));
+assert(calls.some(c=>c.kind==='text'&&c.text==='TASK 3 / 1 OUT'),'Out-of-range assigned contacts stay on the radar rim with an explicit count');
+assert(calls.filter(c=>c.kind==='stroke'&&c.color==='#ffca72'&&c.points.length===12).length>=6,'Radar, visible ships and offscreen arrows carry amber task brackets');
+assert(calls.some(c=>c.kind==='text'&&c.text.includes('3 TASK')));
+assert(calls.some(c=>c.kind==='text'&&c.text==='600 m'),'Intercept guidance follows the nearest attacker instead of the authored space marker');
+members[0].hp=0;renderTasks();assert.equal(taskContacts.filter(c=>c.assigned).length,2,'Dead focus transfers highlighting to survivors immediately');assert(calls.some(c=>c.kind==='text'&&c.text.includes('2 TASK')));
+assert.equal(tc.targetId,selectedId);assert(tc.targetLocked,'Assignment cues never steal a manual target lock');
+ts.raids[0].phase='withdraw';renderTasks();assert(!taskContacts.some(c=>c.assigned));assert(!calls.some(c=>c.kind==='text'&&c.text.includes('CONTROL / INTERCEPT')),'No stale intercept marker after the wing breaks off');
+const front=ts.battle.fronts[1],screen=tc.enemies.filter(c=>c.hp>0&&c.team==='enemy'&&c.convoyBattle?.front===front.id);
+ts.battle.order={id:'front-'+front.id,kind:'assist',front:front.id,packet:front.packet,targetId:screen[0].id,position:front.center,label:front.name,priority:100,since:tc.time};
+members=DW.convoyBattle.assignmentTargets(tc);assert.equal(members.length,3);assert(members.every(c=>!assignedIds.has(c.id)),'Reassignment clears the old group and marks only the new screen');
+screen[0].mode='withdraw';assert.equal(DW.convoyBattle.assignmentTargets(tc).length,2);
+ts.battle.order=null;ts.director.waypoint={kind:'patrol',packet:0,targetId:null,position:[0,0,0]};assert.equal(DW.convoyBattle.assignmentTargets(tc).length,0);
+ts.complete=true;assert.equal(DW.convoyBattle.assignmentTargets(tc).length,0);
+taskFlight.reset();assert.equal(DW.convoyBattle.assignmentTargets(taskFlight.snapshot().combat).length,0);
+DW.flightRadar.draw=originalRadar;
+DW.flightPresentation=savedPresentation;
+console.log('PASS assignment HUD: whole-wing membership, live guidance, radar/ship/edge brackets, out-of-range cues, leader loss, retreat, reassignment, completion/reset and preserved locks');
+calls.length=0;
+originalRadar(painter,taskView.state,[{point:taskView.state.eye.map((v,k)=>v+(taskView.state.back[k]*.35+taskView.state.up[k])*8000/tu),color:'#ff655d',selected:true,speaking:true,assigned:true}],tu,5000,1000,700,false,'fleet-evacuation');
+assert(calls.some(c=>c.kind==='arc'&&c.r===7)&&calls.some(c=>c.kind==='arc'&&c.r===10),'Selection and speech remain visible alongside TASK brackets');
+assert(calls.some(c=>c.kind==='text'&&c.text==='TASK 1 / 1 OUT'));
+assert(calls.filter(c=>c.points).every(c=>c.points.flat().every(Number.isFinite)),'Near-vertical out-of-range cues remain finite at the radar rim');

@@ -37,6 +37,14 @@
         ctx.stroke();
         ctx.restore();
     }
+    /** Amber corner brackets distinguish Control's assignment from selection and speech.
+     * @param {import('./gpu-ui-types').PaintContext} ctx @param {number} x @param {number} y @param {number} radius */
+    function taskBracket(ctx,x,y,radius){
+        ctx.save();ctx.setLineDash([]);ctx.globalAlpha=1;ctx.beginPath();
+        [-1,1].forEach(function(a){[-1,1].forEach(function(b){ctx.moveTo(x+a*radius,y+b*radius*.5);ctx.lineTo(x+a*radius,y+b*radius);ctx.lineTo(x+a*radius*.5,y+b*radius);});});
+        ctx.strokeStyle='rgba(0,0,0,.8)';ctx.lineWidth=4;ctx.stroke();
+        ctx.strokeStyle='#ffca72';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+    }
     /** @param {import('./gpu-ui-types').PaintContext} ctx @param {Pose} state @param {RadarContact[]} contacts @param {number} units @param {number} range @param {number} w @param {number} h @param {boolean} paused @param {string|boolean} [missionId] @param {boolean} [compact] */
     function draw(ctx, state, contacts, units, range, w, h, paused, missionId, compact) {
         var mission=/** @type {Required<import('../src/types').DriftworksNamespace>} */(window.Driftworks).flightMissions.resolve(missionId);
@@ -66,13 +74,19 @@
         ctx.fillStyle = '#91bdb5';
         ctx.fillText('FWD', 0, -radius + 12);
         ctx.fillText('AFT', 0, radius - 6);
-        var count = 0;
+        var count = 0,assigned=0,outside=0;
         contacts.forEach(function (c) {
             var p = project(state, c.point, units, range);
+            var edge=false;
+            if(c.assigned){
+                assigned++;
+                if(!p){var distance=Math.hypot.apply(null,c.point.map(function(v,k){return (v-state.eye[k])*units;}));p=project(state,c.point,units,distance+1);edge=true;outside++;}
+            }
             if (!p)
                 return;
             count++;
             var x = p.x * radius, y = p.y * radius, tip = y - p.altitude * radius * .35;
+            if(edge){var length=Math.hypot(x,tip);if(length<1e-6){tip=p.altitude>0?-1:1;length=1;}x=x/length*radius*.94;tip=tip/length*radius*.94;y=tip;}
             ctx.strokeStyle = c.selected ? '#ffe7a3' : c.color;
             ctx.fillStyle = ctx.strokeStyle;
             ctx.beginPath();
@@ -94,7 +108,9 @@
                 ctx.arc(x, tip, 7, 0, Math.PI * 2);
                 ctx.stroke();
             }
+            if(c.assigned)taskBracket(ctx,x,tip,10);
         });
+        if(assigned){ctx.fillStyle='#ffca72';ctx.fillText('TASK '+assigned+(outside?' / '+outside+' OUT':''),0,-radius-17);}
         ctx.fillStyle = '#dcfff3';
         ctx.beginPath();
         ctx.moveTo(0, -5);
@@ -105,5 +121,5 @@
         ctx.fillText((mission.units.radarKilometers ? (range/1000)+' km' : Math.round(range*mission.units.distanceScale)+' '+mission.units.distanceLabel), 0, radius + 19);
         ctx.restore();
     }
-    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightRadar = { project: project, draw: draw, speakerHalo: speakerHalo };
+    /** @type {Required<DriftworksNamespace>} */ (window.Driftworks).flightRadar = { project: project, draw: draw, speakerHalo: speakerHalo, taskBracket:taskBracket };
 }());

@@ -550,6 +550,7 @@ export type RadarContact = {
     color: string;
     selected?: boolean;
     speaking?: boolean;
+    assigned?: boolean;
     landmark?: boolean;
 };
 export type Voice = Record<'pitch' | 'resonance' | 'formant1' | 'formant2' | 'formant3' | 'brightness' | 'nasality' | 'creak' | 'clipping' | 'contour' | 'roughness' | 'tremor' | 'breath' | 'speed' | 'pauseScale' | 'enunciation' | 'variation' | 'volume' | 'seed', number> & {
@@ -731,7 +732,7 @@ export type ExperimentModules = {
     multiplayerFlight:{mount:(session:ReturnType<ExperimentModules['flightSession']['create']>,loadout:()=>{profile:number;weapon:number;model:string})=>{isGuest:()=>boolean;update:(demand:Demand,paused:boolean)=>void}};
     gpuDiagnostics:{mark:(stage:string)=>void;snapshot:()=>string};
     ellisRenderer:{create:(three:import('../src/three-types').Three,renderer:import('../src/three-types').Renderer)=>EllisRenderPass;faces:{right:number[];up:number[];back:number[]}[]};
-    convoyBattle:{stepEvacuationWing:(combat:Combat,craft:Craft,dt:number)=>boolean;capitals:()=>EvacuationCapital[];startEvacuation:(combat:Combat)=>void;updateEvacuation:(combat:Combat,dt:number)=>void;start:(combat:Combat)=>void;update:(combat:Combat)=>void;dispatch:(combat:Combat)=>void;tasks:(combat:Combat)=>ConvoyBattleOrder[]};
+    convoyBattle:{assignmentTargets:(combat:Combat)=>Craft[];stepEvacuationWing:(combat:Combat,craft:Craft,dt:number)=>boolean;capitals:()=>EvacuationCapital[];startEvacuation:(combat:Combat)=>void;updateEvacuation:(combat:Combat,dt:number)=>void;start:(combat:Combat)=>void;update:(combat:Combat)=>void;dispatch:(combat:Combat)=>void;tasks:(combat:Combat)=>ConvoyBattleOrder[]};
     convoyMission:{openReinforcementPortal:(combat:Combat)=>boolean;arrivalFleet:()=>ConvoyReceptionShip[];stepRaider:(combat:Combat,craft:Craft,dt:number)=>boolean;packets:ConvoyPacket[];radio:(combat:Combat,dt:number,busy:boolean)=>Line|null;hitModel:(craft:Craft,start:Vector,end:Vector,radius?:number)=>HullHit|null;targets:(combat:Combat)=>Craft[];model:(name:string)=>Model;damage:(combat:Combat,id:string,weapon:Weapon,point:Vector)=>void;installCollision:(meta:ConvoyAsset,bytes:ArrayBuffer)=>void;trace:(combat:Combat,start:Vector,end:Vector,radiusM:number,previousShips?:Vector[],shipIndices?:number[])=>ConvoyHit|null;collide:(combat:Combat,previousCraft:Vector[],previousShips:Vector[],dt:number)=>boolean;WING_SIZE:number;start:(combat:Combat,player:FlightState,battlefield?:boolean)=>void;step:(combat:Combat,dt:number)=>void;stepWing:(craft:Craft,player:FlightState,index:number,dt:number,combat?:Combat)=>void};
     convoyScenery:{createArrivalFleet:()=>AegisFlightRig;arrivalPreparationMs:number;effects:(combat:Combat,view:Pose)=>Batch[];preview:(name:string)=>Batch[];visible:boolean;ready:Promise<boolean>;texture:HTMLImageElement|undefined;install:(meta:ConvoyAsset,bytes:ArrayBuffer,image?:HTMLImageElement)=>void;geometry:(combat:Combat)=>Batch[]};
     evacuationMission:{start:(combat:Combat,player:FlightState)=>void;step:(combat:Combat,dt:number,busy:boolean)=>Line|null};
@@ -982,6 +983,7 @@ export type ExperimentModules = {
             distance: number;
         } | null;
         speakerHalo: (ctx: import('./gpu-ui-types').PaintContext, x: number, y: number, radius: number) => void;
+        taskBracket: (ctx: import('./gpu-ui-types').PaintContext, x: number, y: number, radius: number) => void;
         draw: (ctx: import('./gpu-ui-types').PaintContext, state: Pose, contacts: RadarContact[], units: number, range: number, w: number, h: number, paused: boolean, missionId?:string|boolean, compact?:boolean) => void;
     };
     flightControls: {

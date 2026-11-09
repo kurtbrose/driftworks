@@ -20,6 +20,18 @@ assigns crossing cover, support for a weakened screen, or interception of a real
 cargo threat. Existing priority hysteresis keeps assignments stable and urgent
 attacks can interrupt them; orders never change the player's selected target.
 
+Control's assigned enemies carry amber TASK corner brackets on radar, ship
+markers and offscreen arrows. The whole live raid wing (or enemy screen for a
+support order) is marked, rather than only its original leader. Beyond radar
+range, assigned contacts remain bracketed at the rim and the TASK legend reports
+the count outside range. Intercept orders use a fixed task banner and distance
+to the nearest surviving attacker, replacing the floating waypoint square;
+individual brackets/arrows show where to fly. `convoyBattle.assignmentTargets`
+derives this membership from the current order on each render, excluding dead,
+withdrawing and departed ships;
+escort/patrol orders and completed missions have no hostile TASK highlights.
+Selection rings, faction colors and speaker halos retain their own meanings.
+
 Bastion covers the convoy while Harrow advances to intercept it. Their positions
 and SI velocities belong to JSON-safe `combat.convoy.evacuation.capitals`;
 `convoyBattle.updateEvacuation` moves them in the fixed-step mission. The

@@ -500,15 +500,16 @@
                 combatHud.fillStyle = 'rgba(255,55,25,' + (combat.hitFlash * .28) + ')';
                 combatHud.fillRect(0, 0, w, h);
             }
+            var taskMembers=DW.convoyBattle.assignmentTargets(combat),taskIds=new Set(taskMembers.map(function(c){return c.id;}));
             var radarContacts = /** @type {RadarContact[]} */ (living.filter(function(e){return (e.pose.region||0)===(state.region||0);}).map(function (e) {
-                return { point: e.pose.eye, color: e.convoyModel?'#72c8d5':e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId };
+                return { point: e.pose.eye, color: e.convoyModel?'#72c8d5':e.team === 'ally' ? '#63f58d' : '#ff655d', selected: e.id === combat.targetId, speaking: e.id === speakerId,assigned:taskIds.has(e.id) };
             }));
             if(state.curvature)radarContacts=radarContacts.map(function(c){var route=DW.flightHyperbolic.path(state.eye,c.point,state.curvature||650);return Object.assign({},c,{point:state.eye.map(function(v,i){return v+route.direction[i]*route.distance;})});});
             if(mission.sky.thinShell){
                 radarContacts=[];
                 living.forEach(function(e){
                     const path=DW.thinShellOptics.primary(state.eye.map(function(v){return v*units;}),e.pose.eye.map(function(v){return v*units;}),state.region||0,e.pose.region||0);
-                    if(path)radarContacts.push({point:state.eye.map(function(v,i){return v+path.direction[i]*path.length/units;}),color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId,speaking:e.id===speakerId});
+                    if(path)radarContacts.push({point:state.eye.map(function(v,i){return v+path.direction[i]*path.length/units;}),color:e.team==='ally'?'#63f58d':'#ff655d',selected:e.id===combat.targetId,speaking:e.id===speakerId,assigned:taskIds.has(e.id)});
                 });
             }
             if(!mission.emptySpace&&!combat.convoy&&!(state.region||0)){
@@ -541,16 +542,18 @@
                     if(exit){combatHud.fillStyle='#72eaff';combatHud.fillText('EVACUATION EXIT',w*(exit.x+1)/2,h*(1-exit.y)/2-25);}
                 }
                 var assignment=convoy.director.waypoint;
-                if(assignment&&!convoy.complete){
-                    var direction=assignment.position.map(function(v,k){return v-state.eye[k];}),mark=DW.flightSkybox.project(direction,state,w/h);
+                if(assignment&&!convoy.complete&&(assignment.kind!=='intercept'||taskMembers.length)){
+                    var nearest=taskMembers.reduce(function(best,c){return !best||Math.hypot(...c.pose.eye.map(function(v,k){return v-state.eye[k];}))<Math.hypot(...best.pose.eye.map(function(v,k){return v-state.eye[k];}))?c:best;},/** @type {import('./types').Craft|null} */(null));
+                    var assignmentPoint=assignment.kind==='intercept'&&nearest?nearest.pose.eye:assignment.position;
+                    var direction=assignmentPoint.map(function(v,k){return v-state.eye[k];}),mark=DW.flightSkybox.project(direction,state,w/h);
                     var lateral=direction.reduce(function(n,v,k){return n+v*state.right[k];},0),vertical=direction.reduce(function(n,v,k){return n+v*state.up[k];},0);
                     var mx=mark?Math.max(-.7,Math.min(.7,mark.x)):(lateral<0?-.7:.7),my=mark?Math.max(-.6,Math.min(.6,mark.y)):Math.max(-.6,Math.min(.6,vertical));
                     var x=w*(mx+1)/2,y=h*(1-my)/2;
                     combatHud.strokeStyle=assignment.kind!=='patrol'?'#ffca72':'#72c8d5';combatHud.fillStyle=combatHud.strokeStyle;
-                    combatHud.strokeRect(x-9,y-9,18,18);
-                    var label='CONTROL / '+assignment.kind.toUpperCase()+' '+(assignment.label||DW.convoyMission.packets[assignment.packet].name).toUpperCase(),half=Math.min(w-40,label.length*9)/2;
-                    combatHud.fillText(label,Math.max(20+half,Math.min(w-20-half,x)),y-19,w-40);
-                    combatHud.fillText(Math.round(Math.hypot.apply(null,direction)*units)+' m',x,y+27);
+                    if(assignment.kind!=='intercept')combatHud.strokeRect(x-9,y-9,18,18);
+                    var label='CONTROL / '+assignment.kind.toUpperCase()+' '+(assignment.label||DW.convoyMission.packets[assignment.packet].name).toUpperCase()+(taskMembers.length?' / '+taskMembers.length+' TASK':''),half=Math.min(w-40,label.length*9)/2;
+                    combatHud.fillText(label,assignment.kind==='intercept'?w/2:Math.max(20+half,Math.min(w-20-half,x)),assignment.kind==='intercept'?211:y-19,w-40);
+                    combatHud.fillText(Math.round(Math.hypot.apply(null,direction)*units)+' m',assignment.kind==='intercept'?w/2:x,assignment.kind==='intercept'?231:y+27);
                     combatHud.strokeStyle='#72c8d5';combatHud.fillStyle='#b9e7ed';
                 }
                 convoy.arrivalFleet.forEach(function(ship){
@@ -576,7 +579,7 @@
             // Exterior view retains only spatial contacts, in the actual moving camera.
             if(tactical){gpu.begin(w,h,immersive?14:0);if(view.camera)state=Object.assign({},state,view.camera);}
             var targetBearing = /** @type {number | null} */ (null);
-            living.filter(function(e){return !e.convoyModel&&(!e.convoyBattle||e.id===combat.targetId||Math.hypot.apply(null,e.pose.eye.map(function(v,k){return v-state.eye[k];}))*units<1800);}).forEach(function (e) {
+            living.filter(function(e){return !e.convoyModel&&(!e.convoyBattle||taskIds.has(e.id)||e.id===combat.targetId||Math.hypot.apply(null,e.pose.eye.map(function(v,k){return v-state.eye[k];}))*units<1800);}).forEach(function (e) {
                 var direction=visualDirection(e.pose.eye,e.pose.region||0);if(!direction)return;
                 var q = DW.flightSkybox.project(direction,state,w/h), target = e.id === combat.targetId;
                 combatHud.globalAlpha = 1;
@@ -609,6 +612,7 @@
                     }
                     if (!tactical && e.id === speakerId)
                         DW.flightRadar.speakerHalo(combatHud, x, y, r + 6);
+                    if(!tactical&&taskIds.has(e.id)){DW.flightRadar.taskBracket(combatHud,x,y,r+5);combatHud.fillStyle='#ffca72';combatHud.fillText('TASK',x,y+r+(target||e.id===speakerId?30:15));combatHud.fillStyle=combatHud.strokeStyle;}
                     if (!tactical && (target || e.id === speakerId)) combatHud.fillText(rangeText(e), x, y + r + 15);
                     if (target && !tactical) {
                         combatHud.save();
@@ -659,6 +663,7 @@
                     combatHud.restore();
                     if (!tactical && e.id === speakerId)
                         DW.flightRadar.speakerHalo(combatHud, x, y, 13);
+                    if(!tactical&&taskIds.has(e.id))DW.flightRadar.taskBracket(combatHud,x,y,13);
                 }
             });
 
