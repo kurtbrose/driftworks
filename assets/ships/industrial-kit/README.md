@@ -560,3 +560,58 @@ panes, planar glazing, outward winding, authored scale and shared batches. The
 industrial geometry/export and five-mode convoy collision suites passed.
 Visual inspection covered close front-quarter and top views plus the complete
 container carrier. Captures are under ignored `output/freighter-prow/`.
+
+
+## Production freighter alignment passes (2026-11-08)
+
+Structural attachment, service-plumbing and whole-assembly checks corrected:
+
+- Cargo locks had a 60 mm gap above the shear web. Their bases now overlap the
+  web and reach the container corner fittings.
+- Container RCS pods occupied the narrow inter-container channel, with jets
+  entering payload space. They now sit on short outboard brackets; opposite
+  sides orient their lateral nozzles outward. Cargo packing remains unchanged.
+- Tanker RCS pods intersected a domed tank or the rear pump package. Fore pods
+  now attach at the forward coupling; rear pods attach outside the pump housing.
+  Clearance checks cover the domed tank envelope and pump geometry.
+- Radiators crossed upper engine housings and vent packs, and their booms began
+  outside solid supports. The panels now sit 2.2 m farther forward, ahead of the
+  drives, with booms rooted inside the service housing and meeting panel undersides.
+- Coupling reinforcement rails stood away from their shaft and ended unsupported.
+  The compact freighters now seat those rails into the coupling cylinder.
+- Tank valve bodies, handwheels and pipe runs did not share an axis or a complete
+  connection to the common bus. Each branch now has a tank-penetrating outlet,
+  aligned valve, vertical stem, three-spoke handwheel and connected riser/crosslink.
+  Wheels sit above the shared manifold with clearance.
+- The pump shield touched hatch handles and lacked supports. It now clears the
+  handles on four standoffs. Transfer ports formerly buried inside the cassette
+  now project from the lower fascia, clear of ventilation grilles and RCS pods.
+
+The legacy framed comparison and original assembly layouts retain their earlier
+geometry. These fixes apply to the three compact production freighters. Engine
+positions, exhaust anchors, cargo/tank dimensions, materials and metre scale are
+preserved. The container carrier's overall width grows to about 24.4 m because
+its small maneuvering pods now sit outside the 20.4 m cargo block.
+
+The review adds Cargo cassette, Tank valve branch, Pump + shield and RCS mounting
+inspection views. Source and batched transformed bounds, actual lock/web/cargo
+contact, radiator/drive separation, boom anchor containment, coupling seating,
+RCS orientation and clearance, valve/stem/wheel alignment, manifold connections,
+shield/hatch clearance and exposed transfer ports have focused regressions.
+Visual inspection covered container and tanker undersides, the feeder as a whole,
+engine bank front/rear quarters, cassette side, RCS mount quarter, valve quarter/top
+and the pump/shield package. Captures are in ignored `output/freighter-alignment/`.
+
+Final container / feeder / tanker counts are 61,266 / 27,750 / 27,846 triangles,
+still 7 / 7 / 6 material batches. The binary is 11,218,752 bytes. Collision trees
+were rebuilt from the exact final geometry. No simulation rules were changed.
+
+The industrial geometry/export suite, attachment regressions and five-mode convoy
+collision suite passed on this pass. A foreground production readiness sample
+used the starting cockpit pose, 1838 x 1461 backing pixels, DPR 1.5, 100% production
+artwork, normal effects, frozen AI/projectiles, and idle builds/tests. OFF/ON/ON/OFF
+blocks warmed for 20 frames and sampled 90. ON CPU submission median/p95 was
+3.10/3.60 ms, 89 draws, 1,292,598 triangles; OFF was 1.50/1.90 ms, 39 draws,
+123,498 triangles. Both had 13.30/13.40 ms median/p95 rAF cadence. GPU execution
+was unmeasured. This establishes the current scene cost, not a whole-game
+speedup; capital preparation was 1,680.3 ms outside sampling.

@@ -17,7 +17,8 @@ for(const name of ['container','mixed','fluid']){
  for(const mouth of root.userData.engineMouths)assert.equal(mouth[1],-root.userData.payloadEnd-11.4,'exhaust follows new physical length');
  assert(size(root).x<size(legacy).x,'reduce vacant longitudinal space without shrinking payloads');
  if(name==='container'){
-  assert(size(root).z<size(legacy).z*.85,'remove the vacant lane gap');
+  const block=new T.Group();root.children.filter(o=>o.name==='exchangeable cargo cassette').forEach(o=>block.add(o.clone()));
+  assert(size(block).z<size(legacy).z*.85,'remove vacant lane space in the cargo block');
   const boxes=[];root.traverse(o=>{if(o.userData.part==='cargo')boxes.push(o);});assert.equal(boxes.length,24);
   const first=boxes[0],original=kit.part('cargo');assert(size(first).distanceTo(size(original))<1e-5,'container dimensions unchanged');
   assert.equal(root.userData.containerPitch,10.6);
@@ -26,6 +27,50 @@ for(const name of ['container','mixed','fluid']){
   const tanks=root.children.filter(o=>o.userData.capacityShell);assert.equal(tanks.length,4);
   for(const t of tanks){assert.equal(t.userData.capacityShell.length,24);assert.equal(t.userData.capacityShell.diameter,11);assert.equal(t.getObjectByName('domed bulk-fluid vessel').scale.x,1);}
   assert(root.getObjectByName('common transfer manifold'));assert(root.getObjectByName('valve impact shield'));
+ }
+}
+// Attachment checks use actual transformed geometry, not only socket labels.
+for(const name of ['container','mixed','fluid']){
+ const root=kit.buildFreighter(name);root.updateWorldMatrix(true,true);const end=root.userData.payloadEnd;
+ const drives=root.children.filter(o=>o.name==='drive module');
+ for(const wing of root.children.filter(o=>o.name==='drive radiator'))for(const drive of drives)assert(!bounds(wing).intersectsBox(bounds(drive)),'radiators clear drive housings and vents');
+ const service=root.children.find(o=>o.userData.part==='service'&&Math.abs(o.position.x-end-4)<1e-6);
+ for(const support of root.children.filter(o=>o.name==='radiator support'))assert(bounds(service.getObjectByName('service panel')).containsPoint(new T.Vector3(...support.userData.attachment.start)),'radiator booms start in solid service housing');
+ for(const rail of root.children.filter(o=>o.name==='seated coupling rail'))assert(Math.hypot(Math.abs(rail.position.y)-.09,Math.abs(rail.position.z)-.09)<rail.userData.shaftRadius,'reinforcement rails intersect their coupling shaft');
+ const cassettes=root.children.filter(o=>o.name==='exchangeable cargo cassette');
+ for(const cassette of cassettes){
+  const web=cassette.children.find(o=>o.isMesh&&o.name!=='cassette corner lock'),cargo=cassette.children.filter(o=>o.userData.part==='cargo');
+  for(const lock of cassette.children.filter(o=>o.name==='cassette corner lock')){assert(bounds(lock).intersectsBox(bounds(web)),'corner locks contact the shear web');assert(cargo.some(o=>bounds(lock).intersectsBox(bounds(o))),'corner locks reach container fittings');}
+ }
+ const cargo=cassettes.flatMap(c=>c.children.filter(o=>o.userData.part==='cargo'));
+ for(const mount of root.children.filter(o=>o.name==='RCS mounting assembly')){
+  const pod=mount.getObjectByName('rcs');const outrigger=mount.getObjectByName('RCS outrigger');if(outrigger){assert(bounds(outrigger).intersectsBox(bounds(pod)),'outrigger meets pod housing');if(mount.userData.mountKind==='cargo')assert(cassettes.some(c=>bounds(outrigger).intersectsBox(bounds(c.children.find(o=>o.isMesh&&o.name!=='cassette corner lock')))),'outrigger meets cargo web');else assert(root.children.filter(o=>o.userData.part==='service'&&Math.abs(o.position.x-end-1)<1e-6).some(o=>bounds(outrigger).intersectsBox(bounds(o))),'outrigger meets pump housing');}for(const box of cargo)assert(!bounds(pod).intersectsBox(bounds(box)),'RCS jets and housings clear cargo');
+  const axis=new T.Vector3(0,0,1).applyQuaternion(pod.quaternion);assert(axis.z*Math.sign(mount.position.z)>0,'lateral RCS nozzles face outboard');
+ }
+ if(name==='fluid'){
+  const vessels=root.children.filter(o=>o.userData.capacityShell);
+  for(const mount of root.children.filter(o=>o.name==='RCS mounting assembly'))mount.traverse(o=>{
+   if(!o.isMesh)return;const p=o.geometry.attributes.position;
+   for(let i=0;i<p.count;i++){const v=new T.Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);for(const tank of vessels){const dx=Math.abs(v.x-tank.position.x);if(dx>=12)continue;const radius=dx<=8?5.5:5.5*Math.sqrt(1-((dx-8)/4)**2);assert(Math.hypot(v.y,v.z-tank.position.z)>=radius-1e-4,'tanker RCS clears the actual domed vessel');}}
+  });
+  const branches=root.children.filter(o=>o.name==='tank transfer branch');assert.equal(branches.length,4);
+  for(const branch of branches){
+   const wheel=branch.getObjectByName('valve handwheel'),stem=branch.getObjectByName('valve stem'),valve=branch.getObjectByName('transfer isolation valve');
+   const axis=new T.Vector3(0,0,1).applyQuaternion(wheel.quaternion);assert(Math.abs(axis.y)>.999,'handwheel axis follows its vertical stem');
+   assert.equal(wheel.position.x,stem.position.x);assert.equal(wheel.position.z,stem.position.z);assert.equal(valve.position.z,stem.position.z);
+   assert(stem.position.y+stem.geometry.parameters.height/2>=wheel.position.y-1e-6,'stem reaches handwheel');
+   assert.equal(branch.children.filter(o=>o.name==='handwheel spoke').length,3,'rim connects to hub');
+   assert(wheel.position.y-wheel.geometry.parameters.tube>.92,'handwheel clears shared manifold');
+   const outlet=branch.getObjectByName('tank outlet penetration');assert(Math.abs(outlet.position.z)+outlet.geometry.parameters.height/2>.7,'outlet penetrates tank shell');
+   assert(branch.getObjectByName('transfer riser'));assert(branch.getObjectByName('manifold branch connection'));
+  }
+  const shield=root.getObjectByName('valve impact shield'),pumps=root.children.filter(o=>o.userData.part==='service'&&Math.abs(o.position.x-end-1)<1e-6);
+  assert(pumps.every(p=>bounds(p).max.y<bounds(shield).min.y),'shield clears pump hatches and handles');
+  const allService=root.children.filter(o=>o.userData.part==='service');
+  for(const mount of root.children.filter(o=>o.name==='RCS mounting assembly'))for(const pump of allService)assert(!bounds(mount.getObjectByName('rcs')).intersectsBox(bounds(pump)),'tanker RCS housings and nozzles clear pump packages');
+  const collars=root.children.filter(o=>o.name==='transfer port collar');assert.equal(collars.length,2);
+  for(const port of collars){assert(Math.abs(port.position.z)+port.geometry.parameters.height/2>3.05,'transfer ports protrude beyond pump housings');for(const pump of pumps)pump.traverse(o=>{if(o.name==='vent panel')assert(!bounds(port).intersectsBox(bounds(o)),'transfer ports clear ventilation grilles');});}
+  const posts=root.children.filter(o=>o.name==='shield standoff');assert.equal(posts.length,4);for(const post of posts)assert(bounds(post).intersectsBox(bounds(shield)),'shield standoffs meet plate');
  }
 }
 // Hardware shells and trim address the dedicated padded sheet, not full cargo art.

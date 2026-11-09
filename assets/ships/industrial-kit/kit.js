@@ -315,9 +315,9 @@ const builders={cabin,truss,cargo,tank,engine,coupler,service,crane,rcs,bulkTank
 export function part(name,options={}){if(!builders[name])throw new Error('Unknown industrial part: '+name);const g=new T.Group();g.name=name;g.userData.part=name;builders[name](g,options);return g;}
 function addPart(g,name,p,options={}){const m=part(name,options);m.position.set(...p);g.add(m);return m;}
 function rack(g,x,y,z){const side=Math.sign(z);for(const dx of [-3.8,3.8]){beam(g,[x+dx,y,side*2.5],[x+dx,y,z],.24);beam(g,[x+dx,y-1.7,side*2.5],[x+dx,y,z],.16,'edge');panel(g,[.65,.4,.7],[x+dx,y,z],'ochrePaint',.07);}}
-function engineBank(g,x,layout){
+function engineBank(g,x,layout,aligned=false){
   for(const [y,z] of layout){beam(g,[x-3,0,0],[x-3,y,z],.4);const e=addPart(g,'engine',[x,y,z]);e.name='drive module';}
-  for(const z of [-1,1]){panel(g,[3.4,.2,4],[x-4,3.2,z*5.5],'radiator',.08);beam(g,[x-4,1.5,z*2],[x-4,3.1,z*5.5],.15);}
+  for(const z of [-1,1]){const px=aligned?x-6.2:x-4;const wing=panel(g,[3.4,.2,4],[px,3.2,z*5.5],'radiator',.08);wing.name='drive radiator';const start=aligned?[x-4,.9,z*1.25]:[x-4,1.5,z*2];const support=beam(g,start,[px,3.1,z*5.5],.15);support.name='radiator support';support.userData.attachment={start,end:[px,3.1,z*5.5]};}
   addPart(g,'service',[x-4,0,0]);
 }
 function smallPressurePod(g,p,scale=1){
@@ -329,7 +329,7 @@ function smallPressurePod(g,p,scale=1){
   return pod;
 }
 
-function neck(g,from,to){const dx=to-from;cylinder(g,.72,.72,dx,[(from+to)/2,0,0],'steel');for(const z of [-1.05,1.05])beam(g,[from,-.85,z],[to,-.85,z],.18,'edge');}
+function neck(g,from,to,aligned=false){const dx=to-from,shaft=cylinder(g,.72,.72,dx,[(from+to)/2,0,0],'steel');if(aligned)shaft.name='coupling shaft';for(const z of [-1,1]){const y=aligned?-.52:-.85,side=z*(aligned?.6:1.05),rail=beam(g,[from,y,side],[to,y,side],.18,'edge');if(aligned){rail.name='seated coupling rail';rail.userData.shaftRadius=.72;}}}
 function undercarriage(g,x,z){
   const u=group(g,'external utility saddle',[x,-3.3,z]);
   panel(u,[5,.45,2.3],[0,0,0],'dark',.10);
@@ -553,16 +553,23 @@ export function buildFreighter(name,options={}){
         ring(vessel,dx,5.62,'edge',.18).name='load collar';
         for(const y of [-2.8,2.8])beam(g,[x+dx,Math.sign(y)*.5,0],[x+dx,y,z-Math.sign(z)*4.88],.32,'steel');
       }
-      // Inboard outlet, isolation valve and protected connection to the common bus.
-      cylinder(g,.12,.12,.3,[x,0,Math.sign(z)*.55],'ochre','z');
-      cylinder(g,.12,.12,2,[x+1,0,Math.sign(z)*.4],'ochre');
-      cylinder(g,.36,.36,.7,[x+1,0,Math.sign(z)*.7],'edge');
-      ring(g,x+1,.43,'ochre',.07).position.set(x+1,.55,Math.sign(z)*.7);
+      // Aligned outlet, valve, rising branch and handwheel above the shared bus.
+      const branch=group(g,'tank transfer branch',[x,0,0]);branch.userData.side=Math.sign(z);
+      const side=Math.sign(z),runZ=side*.4;
+      cylinder(branch,.12,.12,.42,[0,0,side*.61],'ochre','z').name='tank outlet penetration';
+      cylinder(branch,.12,.12,2,[1,0,runZ],'ochre');
+      const valve=cylinder(branch,.36,.36,.7,[1,0,runZ],'edge');valve.name='transfer isolation valve';
+      const stem=cylinder(branch,.07,.07,.9,[1,.65,runZ],'steel','y');stem.name='valve stem';
+      const wheel=ring(branch,1,.3,'ochre',.05,20,4);wheel.position.set(1,1.1,runZ);wheel.rotation.set(Math.PI/2,0,0);wheel.name='valve handwheel';
+      for(let k=0;k<3;k++){const a=k*Math.PI*2/3;beam(branch,[1,1.1,runZ],[1+Math.cos(a)*.3,1.1,runZ+Math.sin(a)*.3],.045,'ochre').name='handwheel spoke';}
+      cylinder(branch,.12,.12,.7,[2,.35,runZ],'ochre','y').name='transfer riser';
+      cylinder(branch,.12,.12,.4,[2,.7,side*.2],'ochre','z').name='manifold branch connection';
     }
     pipe(g,[[-6,.7,0],[17.5,.7,0],[end+2,.7,0]],.22,'edge').name='common transfer manifold';
     for(const z of [-1.5,1.5])addPart(g,'service',[end+1,0,z]);
-    panel(g,[3.4,.22,5.0],[end+1,1.7,0],'service',.12).name='valve impact shield';
-    for(const z of [-2.5,2.5]){cylinder(g,.5,.5,.7,[end+1,0,z],'ochre','z');cylinder(g,.36,.36,.8,[end+1,0,z],'steel','z');}
+    panel(g,[3.4,.22,5.0],[end+1,2.0,0],'service',.12).name='valve impact shield';
+    for(const dx of [-1.4,1.4])for(const z of [-2.3,2.3])beam(g,[end+1+dx,1.2,z],[end+1+dx,1.92,z],.14,'steel').name='shield standoff';
+    for(const z of [-3.15,3.15]){cylinder(g,.4,.4,.7,[end+1,-1,z],'ochre','z').name='transfer port collar';cylinder(g,.28,.28,.8,[end+1,-1,z],'steel','z').name='capped transfer port';}
     g.userData.payloadCount=4;g.userData.layout='four close-packed capsule tanks';
   }else{
     const rows=name==='container'?3:2,columns=name==='container'?[-7.65,-2.55,2.55,7.65]:[-2.55,2.55];
@@ -574,7 +581,7 @@ export function buildFreighter(name,options={}){
       for(const y of [-3,3])for(const z of columns){
         addPart(cassette,'cargo',[0,y,z],{color:y>0?(z>0?'cargo':'blue'):(z>0?'rust':'ochrePaint')});
         for(const dx of [-4.8,4.8])for(const dz of [-2.13,2.13]){
-          panel(cassette,[.7,.48,.55],[dx,Math.sign(y)*.42,z+dz],'ochrePaint',.06).name='cassette corner lock';
+          panel(cassette,[.7,.64,.55],[dx,Math.sign(y)*.38,z+dz],'ochrePaint',.06).name='cassette corner lock';
         }
       }
     }
@@ -582,11 +589,17 @@ export function buildFreighter(name,options={}){
       panel(g,[.7,1.0,columns.length*5.1],[x,0,0],'dark',.12).name='load spreading bulkhead';
       for(const z of [-1,1])beam(g,[x,0,0],[x+(x<0?-3:3),0,z*3],.35,'steel');
     }
-    g.userData.payloadCount=rows*columns.length*2;g.userData.containerPitch=10.6;g.userData.layout=name==='container'?'24-container compact block':'8-container local feeder';
+    g.userData.payloadCount=rows*columns.length*2;g.userData.containerPitch=10.6;g.userData.payloadHalfWidth=columns.length*2.55;g.userData.layout=name==='container'?'24-container compact block':'8-container local feeder';
   }
-  freightCommand(g);neck(g,-10.2,-7);
-  engineBank(g,end+8,[[-2.8,-3],[-2.8,3],[2.8,-3],[2.8,3]]);neck(g,end,end+3);
-  for(const x of [-6,end-1])for(const z of [-1,1])addPart(g,'rcs',[x,0,z*(name==='fluid'?1:5.1)]);
+  freightCommand(g);neck(g,-10.2,-7,true);
+  engineBank(g,end+8,[[-2.8,-3],[-2.8,3],[2.8,-3],[2.8,3]],true);neck(g,end,end+3,true);
+  const rcsStations=name==='fluid'?[-7.6,end+2.8]:[-6,end-1];
+  for(const x of rcsStations)for(const side of [-1,1]){
+    const pumpMount=name==='fluid'&&x>0,outboard=pumpMount?3.95:name==='fluid'?1:g.userData.payloadHalfWidth+.9;
+    const mount=group(g,'RCS mounting assembly',[x,pumpMount?.15:0,side*outboard]);mount.userData.outboard=outboard;mount.userData.mountKind=pumpMount?'pump':name==='fluid'?'spine':'cargo';
+    if(name!=='fluid'||pumpMount)beam(mount,[0,0,-side*(pumpMount?1.25:1.3)],[0,0,0],.24,'steel').name='RCS outrigger';
+    const pod=addPart(mount,'rcs',[0,0,0]);if(side<0)pod.rotation.y=Math.PI;
+  }
   return g;
 }
 
