@@ -55,11 +55,17 @@ assert(engine.getObjectByName('engineId identification'));
 assert(engine.getObjectByName('engine bell inner liner').material.color.getHex()<engine.getObjectByName('recessed engine bell').material.color.getHex(),'darker internal liner');
 const command=kit.buildFreighter('container').getObjectByName('freight command module');
 assert(command.getObjectByName('commandId identification'));
-const ports=command.children.filter(o=>o.name==='cylinder / glass');
-for(const port of ports){
- const ring=command.children.find(o=>o.name==='retaining hoop'&&Math.abs(o.position.z-port.position.z)<1e-6);
- assert(port.position.x-port.geometry.parameters.height/2-(ring.position.x-ring.geometry.parameters.tube)>.08,'glass sits behind the protective port rim');
+const bay=command.getObjectByName('freight observation bay');assert(bay);
+const windows=bay.children.filter(o=>o.userData.observationWindow);assert.equal(windows.length,7,'two forward panes, sides and overhead glazing');
+command.updateWorldMatrix(true,true);assert(new T.Box3().setFromObject(bay,true).min.x< -18.9,'observation bay projects ahead of the pressure housing in ship metres');
+assert.equal(command.children.filter(o=>o.name==='cylinder / glass').length,0,'replace the small portholes');
+for(const pane of windows){
+ const p=pane.geometry.attributes.position,n=pane.geometry.attributes.normal;
+ const origin=new T.Vector3().fromBufferAttribute(p,0),normal=new T.Vector3().fromBufferAttribute(n,0);
+ for(let j=0;j<p.count;j++)assert(Math.abs(new T.Vector3().fromBufferAttribute(p,j).sub(origin).dot(normal))<1e-5,'each glazing panel remains planar');
+ for(let i=0;i<p.count;i+=3){const a=new T.Vector3().fromBufferAttribute(p,i),b=new T.Vector3().fromBufferAttribute(p,i+1),c=new T.Vector3().fromBufferAttribute(p,i+2);assert(b.sub(a).cross(c.sub(a)).dot(new T.Vector3().fromBufferAttribute(n,i))>0,'canopy triangle winding follows outward normals');}
 }
+assert.equal(kit.batchStatic(command).children.length,5,'canopy reuses existing command materials');
 assert.equal(kit.batchStatic(engine).children.length,5,'polish reuses existing engine material batches');
 // Production bake keeps source-authored mouths in the flight coordinate convention.
 const meta=require('../assets/ships/industrial-kit/convoy-flight.json');

@@ -451,6 +451,50 @@ export function buildFrameFreighter(name,options={}){
 }
 
 // Command hardware uses the drive cassette's chamfers, collars and service packs.
+// Faceted observation bay: seven opaque glazed panes avoid transparency sorting.
+function observationBay(cabin){
+  const bay=group(cabin,'freight observation bay');bay.userData.windowCount=7;
+  const section=[[-.6,-.85],[-.6,.85],[-.25,1.15],[.85,1.15],[1.2,.8],[1.2,-.8],[.85,-1.15],[-.25,-1.15]];
+  const front=section.map(([y,z])=>[-5,y,z]);
+  const rear=section.map(([y,z])=>[-3.45,.3+(y-.3)*1.22,z*1.22]);
+  function rib(a,b,width=.14){
+    const av=new T.Vector3(...a),bv=new T.Vector3(...b),delta=bv.clone().sub(av);
+    const geo=geometry('cupola mullion '+width,()=>{const geo=new T.BoxGeometry(width,1,width),uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,1124/2048,1-1636/2048);return geo;});
+    const m=mesh(bay,geo,'paint',av.add(bv).multiplyScalar(.5).toArray(),'ivory canopy mullion');
+    m.scale.y=delta.length();m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());
+  }
+  function face(name,points,material,desired){
+    let vertices=points.map(p=>new T.Vector3(...p));
+    let normal=vertices[1].clone().sub(vertices[0]).cross(vertices[2].clone().sub(vertices[0])).normalize();
+    if(normal.dot(new T.Vector3(...desired))<0){vertices.reverse();normal.negate();}
+    const geo=geometry('canopy '+name+JSON.stringify(points),()=>{
+      const geo=new T.BufferGeometry(),positions=[],normals=[],uvs=[];
+      for(let i=1;i<vertices.length-1;i++)for(const p of [vertices[0],vertices[i],vertices[i+1]]){positions.push(...p.toArray());normals.push(...normal.toArray());uvs.push(1124/2048,1-1636/2048);}
+      geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));return geo;
+    });
+    return mesh(bay,geo,material,[0,0,0],name);
+  }
+  function windowPane(name,points,desired){
+    face(name+' gasket',points,'steel',desired);
+    const a=new T.Vector3(...points[0]),b=new T.Vector3(...points[1]),c=new T.Vector3(...points[2]);
+    const normal=b.sub(a).cross(c.sub(a)).normalize();if(normal.dot(new T.Vector3(...desired))<0)normal.negate();
+    const center=points.reduce((sum,p)=>sum.add(new T.Vector3(...p)),new T.Vector3()).multiplyScalar(1/points.length);
+    const inset=points.map(p=>new T.Vector3(...p).sub(center).multiplyScalar(.90).add(center).addScaledVector(normal,.008).toArray());
+    const glass=face(name,inset,'glass',desired);glass.userData.observationWindow=true;
+  }
+  for(let i=0;i<8;i++){
+    const j=(i+1)%8;
+    rib(front[i],front[j],.16);rib(rear[i],rear[j],.18);rib(front[i],rear[i],.12);
+    const points=[front[i],front[j],rear[j],rear[i]],out=[0,(section[i][0]+section[j][0])/2-.3,(section[i][1]+section[j][1])/2];
+    if([2,3,4,5,6].includes(i))windowPane('canopy side/roof '+i,points,out);
+    else face('observation sill '+i,points,'paint',out);
+  }
+  const left=[[-.6,0],[-.6,-.85],[-.25,-1.15],[.85,-1.15],[1.2,-.8],[1.2,0]];
+  for(const sign of [-1,1])windowPane('forward canopy '+sign,left.map(([y,z])=>[-5,y,z*sign]),[-1,0,0]);
+  rib([-5,-.6,0],[-5,1.2,0],.12);
+  return bay;
+}
+
 function freightCommand(g){
   const cabin=group(g,'freight command module',[-14,0,0]);
   cabin.userData.designFamily='industrial drive cassette';
@@ -459,12 +503,7 @@ function freightCommand(g){
   cylinder(cabin,1.32,1.32,1.8,[3.0,0,0],'steel','x',16);
   cylinder(cabin,1.52,1.52,.22,[.15,0,0],'ochre','x',16);
   cylinder(cabin,1.52,1.52,.22,[2.8,0,0],'edge','x',16);
-  // Small instrument/view ports in an opaque forward plate, not a windshield.
-  hardwarePanel(cabin,[.12,1.1,2.1],[-3.73,.35,0],'frame',.08);
-  for(const z of [-.58,.58]){
-    cylinder(cabin,.29,.29,.02,[-3.80,.35,z],'glass','x',16);
-    ring(cabin,-3.86,.34,'edge',.055,24,4).position.set(-3.86,.35,z);
-  }
+  observationBay(cabin);
   for(const z of [-1.68,1.68]){
     hardwarePanel(cabin,[2.4,1.7,.45],[-1.6,0,z],'frame',.14);
     hardwarePanel(cabin,[1.85,1.22,.12],[-1.6,0,z+Math.sign(z)*.26],'access',.04);
@@ -473,7 +512,7 @@ function freightCommand(g){
   hardwarePanel(cabin,[2.8,.4,1.6],[-2,-1.7,0],'frame',.1);
   hardwarePanel(cabin,[2.0,.24,1.7],[1.2,1.65,0],'vent',.08);
   hardwareMark(cabin,'commandId',[1.05,.28],[-1.8,1.579,0],[0,1,0]);
-  cabin.userData.portRecessM=.105;
+  cabin.userData.observationBay=true;
   return cabin;
 }
 

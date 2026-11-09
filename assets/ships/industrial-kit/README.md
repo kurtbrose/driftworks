@@ -501,3 +501,39 @@ triangles. Both had 13.30/13.40 ms median/p95 rAF cadence. GPU execution was not
 measured; this is a readiness sample, not a whole-game speedup claim. Capital
 preparation was 1,744.5 ms, outside sampling. Counts preserve existing draws and
 remove 19,860 triangles from the preceding 30-ship snapshot.
+
+
+## Observation-bay cockpit variant (2026-11-08)
+
+The compact command module now has a projecting, faceted observation bay in
+place of its two small portholes. Two broad forward panes, two side panes and
+three overhead panes wrap around the pilot-facing end. An octagonal ivory
+pressure frame, central front mullion and protected opaque lower sill retain
+the industrial design language shared with the engine housings. Each glass
+panel is planar, slightly inset in a darker gasket, with outward triangle
+winding. The glass uses the existing opaque glazing material; there is no added
+transparency pass, environment-map fetch or interior model.
+
+The command module is now about 9.0 m long rather than 7.8 m, preserving its
+attachment point and metre scale. Cargo packing, spine, engines, exhaust anchors
+and model IDs are unchanged. The canopy uses simple twelve-triangle mullions;
+the module has 1,368 triangles rather than the former 1,582, and still five
+material batches. Complete container / feeder / tanker assets have
+61,140 / 27,624 / 28,064 triangles and retain 7 / 7 / 6 batches. The geometry
+binary is 11,215,488 bytes. The exact collision bake includes the projecting bay.
+
+Focused freighter regressions verify seven windows, the forward projection,
+replacement of the old glass cylinders, planar panes, outward winding, shared
+materials and matching source bake. The industrial geometry/export suite and
+five-mode convoy collision suite passed. Visual inspection covered the command
+front-quarter, front and roof, plus the complete container carrier silhouette.
+Labeled captures are under ignored `output/freighter-cupola/`.
+
+A foreground starting-cockpit readiness sample used 1838 x 1461 backing pixels,
+DPR 1.5, 100% production artwork, normal effects and frozen AI/projectiles.
+OFF/ON/ON/OFF blocks warmed for 20 frames and sampled 90, with builds/tests idle.
+ON CPU submission median/p95 was 3.00/3.40 ms, 89 draws and 1,292,258 triangles;
+OFF was 1.40/1.80 ms, 39 draws and 123,498 triangles. Both had 13.30/13.40 ms
+median/p95 rAF cadence. GPU execution was not measured; these are current-scene
+readiness figures, not a claimed whole-game speedup. Capital preparation was
+1,496.0 ms outside sampling. The additional glazing introduces no material draws.
