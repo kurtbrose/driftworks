@@ -55,12 +55,8 @@ for(const name of ['container','mixed','fluid']){
   });
   const branches=root.children.filter(o=>o.name==='tank transfer branch');assert.equal(branches.length,4);
   for(const branch of branches){
-   const wheel=branch.getObjectByName('valve handwheel'),stem=branch.getObjectByName('valve stem'),valve=branch.getObjectByName('transfer isolation valve');
-   const axis=new T.Vector3(0,0,1).applyQuaternion(wheel.quaternion);assert(Math.abs(axis.y)>.999,'handwheel axis follows its vertical stem');
-   assert.equal(wheel.position.x,stem.position.x);assert.equal(wheel.position.z,stem.position.z);assert.equal(valve.position.z,stem.position.z);
-   assert(stem.position.y+stem.geometry.parameters.height/2>=wheel.position.y-1e-6,'stem reaches handwheel');
-   assert.equal(branch.children.filter(o=>o.name==='handwheel spoke').length,3,'rim connects to hub');
-   assert(wheel.position.y-wheel.geometry.parameters.tube>.92,'handwheel clears shared manifold');
+   assert(branch.getObjectByName('transfer isolation valve'));
+   for(const name of ['valve handwheel','valve stem','handwheel spoke'])assert(!branch.getObjectByName(name),'no exposed manual valve hardware');
    const outlet=branch.getObjectByName('tank outlet penetration');assert(Math.abs(outlet.position.z)+outlet.geometry.parameters.height/2>.7,'outlet penetrates tank shell');
    assert(branch.getObjectByName('transfer riser'));assert(branch.getObjectByName('manifold branch connection'));
   }

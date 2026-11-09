@@ -654,3 +654,11 @@ pixel clusters when stretched over vessel shells. Pressure and bulk vessel
 tiles also omit scattered scratch strokes. Seams, identification markings and
 subtle paint grain remain. Texture dimensions, geometry and material batches
 are unchanged. Freighter checks passed; tanker surfaces were visually reviewed.
+
+## Sealed transfer hardware (2026-11-08)
+
+Removed exposed valve handwheels, spokes and stems from the compact tanker
+branches, plus manual wheel fittings from the source bulk-tank module. Retained
+the isolation bodies and connected transfer plumbing. The production tanker
+now has 26,638 triangles (1,040 fewer), still six material batches. Regenerated
+geometry and exact collision bakes; reviewed the isolated transfer branch.

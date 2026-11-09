@@ -280,8 +280,6 @@ function bulkTank(g){
   const pump=group(g,'fluid transfer cassette',[3.5,-4.7,6.9]);service(pump);pump.scale.set(.85,.7,.6);
   for(const x of [-3.5,0]){
     cylinder(g,.28,.28,1.1,[x,-4.7,6.8],'edge','z');
-    const valve=ring(g,0,.42,'ochre',.055);valve.rotation.set(0,0,0);valve.position.set(x,-4.7,7.4);
-    for(const y of [-.2,.2])beam(g,[x-.24,-4.7+y,7.4],[x+.24,-4.7-y,7.4],.045,'edge');
   }
   panel(g,[6,.18,.35],[-2,-5.2,6.4],'service',.04);
   g.userData.sockets={forward:[-14,0,0],aft:[14,0,0],saddleForward:[-7.5,-6.3,0],saddleAft:[7.5,-6.3,0]};
@@ -560,15 +558,12 @@ export function buildFreighter(name,options={}){
         ring(vessel,dx,5.62,'edge',.18).name='load collar';
         for(const y of [-2.8,2.8])beam(g,[x+dx,Math.sign(y)*.5,0],[x+dx,y,z-Math.sign(z)*4.88],.32,'steel');
       }
-      // Aligned outlet, valve, rising branch and handwheel above the shared bus.
+      // Sealed isolation body and rising branch connect to the shared transfer bus.
       const branch=group(g,'tank transfer branch',[x,0,0]);branch.userData.side=Math.sign(z);
       const side=Math.sign(z),runZ=side*.4;
       cylinder(branch,.12,.12,.42,[0,0,side*.61],'ochre','z').name='tank outlet penetration';
       cylinder(branch,.12,.12,2,[1,0,runZ],'ochre');
       const valve=cylinder(branch,.36,.36,.7,[1,0,runZ],'edge');valve.name='transfer isolation valve';
-      const stem=cylinder(branch,.07,.07,.9,[1,.65,runZ],'steel','y');stem.name='valve stem';
-      const wheel=ring(branch,1,.3,'ochre',.05,20,4);wheel.position.set(1,1.1,runZ);wheel.rotation.set(Math.PI/2,0,0);wheel.name='valve handwheel';
-      for(let k=0;k<3;k++){const a=k*Math.PI*2/3;beam(branch,[1,1.1,runZ],[1+Math.cos(a)*.3,1.1,runZ+Math.sin(a)*.3],.045,'ochre').name='handwheel spoke';}
       cylinder(branch,.12,.12,.7,[2,.35,runZ],'ochre','y').name='transfer riser';
       cylinder(branch,.12,.12,.4,[2,.7,side*.2],'ochre','z').name='manifold branch connection';
     }
