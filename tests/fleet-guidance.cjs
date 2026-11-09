@@ -60,3 +60,24 @@ for(let tick=0;tick<1200;tick++){
 }
 assert(adapted.every((b,i)=>distance(b.forward,continuous[i].forward)<1e-9&&distance(b.position,continuous[i].position)<1e-7),'Transient body views retain the same damped motion');
 console.log('PASS local flocking: independent motion, bounded handling, settled cruise without startup shuffle, inferred course and reactive pressure');
+
+// Both production 30-transport missions preserve independent steering through
+// their real mission adapter; authored launch slots cannot tether moving ships.
+for(const mission of ['convoy','fleet-evacuation']){
+ const flight=require('../tools/headless.cjs').createFlight({mission,seed:29});
+ const combat=flight.snapshot().combat,state=combat.convoy,U=flight.DW.sim.METERS_PER_UNIT;
+ assert.equal(state.ships.length,30);assert(state.navigation.settled);
+ assert.equal(Object.keys(state.navigation.slots).length,0);
+ const slots=JSON.stringify(state.ships.map(ship=>ship.slot));
+ // Disturb one vessel after settling: neighbors must react without translating
+ // or rotating the whole fleet as one rigid object.
+ state.ships[0].position=state.ships[1].position.map((v,k)=>v+(k===0?18/U:0));
+ const initial=state.ships.map(ship=>ship.position.slice());
+ for(let tick=0;tick<400;tick++){combat.time+=.05;flight.DW.convoyMission.step(combat,.05);}
+ const shifts=state.ships.map((ship,i)=>ship.position.map((v,k)=>(v-initial[i][k])*U));
+ assert(shifts.some(shift=>distance(shift,shifts[29])>2),mission+' reacts locally rather than moving on invisible rods');
+ assert(state.ships.some(ship=>Math.abs(ship.forward[0])+Math.abs(ship.forward[2])>.001),mission+' turns actual hull headings to maneuver');
+ assert.equal(JSON.stringify(state.ships.map(ship=>ship.slot)),slots);
+ assert(Object.values(state.navigation.controls).some(control=>control.angularVelocity),'Angular steering survives mission body reconstruction');
+}
+console.log('PASS independent freighter steering in convoy and fleet evacuation missions');

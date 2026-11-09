@@ -47,6 +47,14 @@ for(const file of ['src/ship-catalog.js', 'src/ship-hulls.js', 'src/ship-assets.
  finishUpload();await new Promise(setImmediate);
  assert.equal(presentation.appearance().shipImages,fleetImages,'Fleet is published after preparation resolves');
  assert.equal(await presentation.ready,true,'Readiness resolves only with published textures');
+ for(const mission of ['convoy','fleet-evacuation']){
+  F.flightMissions.current=()=>F.flightMissions.resolve(mission);
+  const panels={mission};F.convoyScenery={ready:Promise.resolve(true),texture:panels};
+  fleetImages.delete('convoy-panels');
+  const convoyPresentation=F.flightPresentation.mount({},()=>f.snapshot().world,noop,{document});
+  assert.equal(await convoyPresentation.ready,true);
+  assert.equal(fleetImages.get('convoy-panels'),panels,mission+' prepares the convoy atlas before launch');
+ }
  F.shipPackModels.loadTextures=()=>Promise.reject(new Error('fixture texture failure'));
  const failed=F.flightPresentation.mount({},()=>f.snapshot().world,noop,{document});
  assert.equal(await failed.ready,false,'Failed assets never release launch readiness');

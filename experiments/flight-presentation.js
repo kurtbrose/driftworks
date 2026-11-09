@@ -197,7 +197,7 @@
             });
         }
         var ready=DW.shipPackModels.loadTextures().then(function(images){
-            if(DW.flightMissions.current().id==='convoy')return DW.convoyScenery.ready.then(function(loaded){
+            if(['convoy','fleet-evacuation'].includes(DW.flightMissions.current().id))return DW.convoyScenery.ready.then(function(loaded){
                 if(!loaded)throw Error('Convoy assets unavailable');
                 if(DW.convoyScenery.texture)images.set('convoy-panels',DW.convoyScenery.texture);
                 return prepareImages(images);

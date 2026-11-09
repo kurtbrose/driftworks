@@ -3,6 +3,13 @@
 `src/fleet-guidance.js` exposes `Driftworks.fleetGuidance` to ordinary browser
 scripts and headless Node sessions. Distances are metres and time is seconds.
 
+Both 30-freighter missions, Convoy Escort (`convoy`) and Fleet Evacuation
+(`fleet-evacuation`), use this production guidance through `convoyMission`.
+Each transport owns its position, velocity and heading; the renderer follows
+those live values. Quiet cruising intentionally preserves the settled spacing;
+nearby hazards and attackers provoke local course corrections. The current
+mission destinations still follow the authored straight crossing route.
+
 ## Behavior
 
 The art direction is cinematic fleet choreography: deliberate capital-ship
