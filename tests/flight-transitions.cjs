@@ -49,10 +49,11 @@ module.exports = function runFlightTransitions(namespace) {
     get('viewer').clientWidth=640;get('viewer').clientHeight=360;
     get('viewer').querySelectorAll=() => layers;
     let actions, session, frame, finishTextures, now = 0;
-    const elapsed = [];
+    const elapsed = [], errors = [], engine = [];
+    let renderError = null;
     const noop = () => {};
     const DW = Object.assign({}, namespace, {
-      audio:{mountMixer:noop, unlock:noop, setFlightEngine:noop, playGunshot:noop, playImpact:noop, playWormhole:noop},
+      audio:{mountMixer:noop, unlock:noop, setFlightEngine:(...args) => engine.push(args), playGunshot:noop, playImpact:noop, playWormhole:noop},
       flightDiagnostics:{mount:() => namespace.flightDiagnostics.mount({document, performance:{now:() => now}})},
       asteroidTerrain:Object.assign({}, namespace.asteroidTerrain, {surfaceFrame:(_asteroid, direction) => ({point:direction})}),
       flightSession:{create(environment) {
@@ -63,7 +64,7 @@ module.exports = function runFlightTransitions(namespace) {
       }},
       flightPresentation:{mount() { return {
         ready:{then(callback) { finishTextures=callback; if(loaded!==null)callback(loaded); }},
-        pose:noop, render:noop,vrOverlay:noop,setAnimationLoop:callback => {frame=callback;},
+        pose:noop, render:() => {if(renderError)throw renderError;},vrOverlay:noop,setAnimationLoop:callback => {frame=callback;},
         appearance:() => ({allyArt:get('ally-art').value, enemyArt:get('enemy-art').value}),
         renderStats:() => ({scene:{cpuMs:0,drawCalls:0,triangles:0,meshes:0,materials:0,width:1,height:1,pixelRatio:1},sky:{drawCalls:0,triangles:0,points:0}})
       }; }},
@@ -80,14 +81,26 @@ module.exports = function runFlightTransitions(namespace) {
       navigator:{clipboard:{write(items) { clipboard.push(items); return Promise.resolve(); }}},
       ClipboardItem:class { constructor(data) { this.data=data; } },
       URL:{createObjectURL:() => 'blob:test',revokeObjectURL() {}},
-      URLSearchParams, location:{search}, performance:{now:() => now},
+      console:{error:(...args) => errors.push(args)}, URLSearchParams, location:{search}, performance:{now:() => now},
       requestAnimationFrame:callback => { frame = callback; }});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/ellis-feedback.js'), 'utf8'), context, {filename:'experiments/ellis-feedback.js'});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight-studies.js'), 'utf8'), context, {filename:'experiments/flight-studies.js'});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../experiments/flight.js'), 'utf8'), context, {filename:'experiments/flight.js'});
-    return {get, actions, session, elapsed, document, captures, clipboard, finishTextures,
+    return {get, actions, session, elapsed, document, captures, clipboard, finishTextures, errors, engine,
+      failRender(error){renderError=error;},
       tick(time) { now = time; assert.equal(typeof frame,'function');frame(time); }};
   }
+
+  const broken=mount();broken.actions.resume();broken.tick(1000);
+  broken.failRender(new Error('fixture render failure'));broken.tick(1100);
+  assert(broken.actions.isPaused(),'A frame failure pauses the real session');
+  assert.equal(broken.get('fly').disabled,true);
+  assert(broken.get('status').textContent.includes('fixture render failure'),'The actual exception is visible without devtools');
+  assert.deepEqual(broken.engine.at(-1),[0,0,false,false],'Persistent engine audio stops');
+  const frames=broken.elapsed.length;broken.tick(1200);broken.actions.resume();broken.tick(1300);
+  assert.equal(broken.elapsed.length,frames,'A failed loop cannot keep advancing or be resumed');
+  assert.equal(broken.errors.length,1,'The full error is logged once, without a per-frame flood');
+  console.log('PASS frame failure containment: pause, engine silence, visible cause, console stack and reload gate');
 
   const loading=mount('',null);
   assert.equal(loading.get('fly').disabled,true);

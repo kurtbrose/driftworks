@@ -6,7 +6,7 @@
     if(DW.flightMissions.current().sky.hyperbolic&&new URLSearchParams(location.search).get('flyby')==='1'){
         await DW.hyperbolicFlyby.mount(host);return;
     }
-    var texturesReady=false,textureLoadFailed=false;
+    var texturesReady=false,textureLoadFailed=false,flightError='';
     get('fly').disabled=true;get('fly').textContent='Loading ship textures...';
     get('status').textContent='Loading ship textures and preparing graphics...';
     var activeMission=DW.flightMissions.current();
@@ -261,6 +261,7 @@
         controls.clear();
     }
     function updateStatus() {
+        if(flightError){status.textContent=flightError;return;}
         if(!texturesReady){
             get('fly').disabled=true;
             get('fly').textContent=textureLoadFailed?'Textures unavailable':'Loading ship textures...';
@@ -391,6 +392,7 @@
             active.blur();
     }
     function resume() {
+        if(flightError)return;
         if(!texturesReady){updateStatus();return;}
         if (!watch && session.snapshot().combat.dead) {
             updateStatus();
@@ -576,10 +578,22 @@
         }else updateStatus();
     });
     if(importError)status.textContent=importError;
-    presentation.setAnimationLoop(frame);
+    presentation.setAnimationLoop(function(t){
+        if(flightError)return;
+        try{frame(t);}catch(error){
+            console.error('Flight frame failed',error);
+            flightError='Flight stopped: '+String(error)+'. Reload to retry; console has the full stack trace.';
+            try{pause();}catch(pauseError){console.error('Flight cleanup failed',pauseError);}
+            // Silence persistent engine audio even if another pause handler failed.
+            DW.audio.setFlightEngine(0,0,false,false);
+            document.body.classList.remove('flight-active');
+            get('fly').disabled=true;get('fly').textContent='Flight stopped / reload';
+            status.textContent=flightError;
+        }
+    });
 }()).catch(/** @param {unknown} error */function(error){
     console.error(error);
     var status=document.getElementById('status'),button=document.getElementById('fly');
-    if(status)status.textContent='Flight could not start. Reload to try again.';
+    if(status)status.textContent='Flight could not start: '+String(error)+'. Reload to retry; console has the full stack trace.';
     if(button instanceof HTMLButtonElement){button.disabled=true;button.textContent='Unable to start flight';}
 });
