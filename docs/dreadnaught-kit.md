@@ -636,7 +636,7 @@ intact/damaged rendering samples. See [measured readiness](benchmarks/capital-sy
 
 The flight bake removes the old raised stripe and light blocks and stores three
 `interiors` batches: deck, ceiling and bulkheads. Each has six-float authored
-vertices; deck and bulkheads carry an `AegisSurfaceFinish` with a local `atlas`
+vertices; deck, ceiling and bulkheads carry an `AegisSurfaceFinish` with a local `atlas`
 override. The loader shares those textures and prepared buffers across ships.
 Idle ships retain seven hull batches plus the interior batches. Surface
 toggles/reset preserve the selected textures; collision dimensions, launch
