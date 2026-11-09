@@ -48,6 +48,10 @@ function for actors and additive effects, including uniform reset. Unrelated
 explosions reset portal masks after the owned-effect pass. Source vertices,
 metre scale, materials, collision and simulation ownership remain unchanged.
 
+Staged capitals also put their ship center and finite-body radius on that owner.
+Component pivots and world-space exhaust buffers must not choose different optical
+images when registered links are enabled.
+
 `mouth` constructs masks centrally; `clear` removes an owner's mask. Direct
 mission assignments to `portalClip` or `clipPlane` are prohibited by the
 boundary regression. Legacy batch fields remain readable for compatibility.

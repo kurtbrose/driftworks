@@ -37,6 +37,8 @@ assert(growing.some(batch=>batch.placement.portalClip[3]<plan.exit.radiusM/U),'R
 view.combat.time=view.combat.convoy.elapsed=99;
 const geometry=rig.geometry(),buffers=geometry.map(batch=>batch.vertices);assert(geometry.length>remote.length);assert(geometry.some(batch=>DW.wormholes.resolve(batch).clipPlane),'Bastion emerges across the rescue plane');
 const owner=geometry.find(batch=>DW.wormholes.resolve(batch).clipPlane).placement;
+assert.equal(owner.lensCenter,plan.capitals[0].position,'Bastion hull parts share one optical center instead of individual component pivots');
+assert.equal(owner.lensRadius,750,'Bastion hull and plumes share finite-body optics');
 const plumes=rig.effects(view.state,false);assert(plumes.length>0);assert(plumes.filter(batch=>!batch.independent).every(batch=>batch.placement===owner),'capital hull and effects have one owner');
 const b=plan.capitals[0],target=view.combat.enemies.find(ship=>ship.team==='enemy');assert(target);
 // Isolate local support well clear of both mouth volumes. Gun positions inside

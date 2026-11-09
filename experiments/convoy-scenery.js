@@ -66,7 +66,7 @@
         var groups=ships.map(function(ship){return ship.geometry();}),batches=groups.flat();
         /** @param {number} [space] */function updatePlacements(space){
             space=space||0;
-            placements.forEach(function(p,i){p.visible=!!states[i].present;p.region=space;DW.wormholes.clear(p);});
+            placements.forEach(function(p,i){p.visible=!!states[i].present;p.region=space;p.lensCenter=states[i].position;p.lensRadius=750;DW.wormholes.clear(p);});
             if(plan){
                 var time=renderCombat?renderCombat.time:0,entry=renderCombat&&renderCombat.convoy&&renderCombat.convoy.arrivalPortal;
                 var entryPhase=entry?DW.wormholes.phase(time,entry):{amount:0,visible:false};
